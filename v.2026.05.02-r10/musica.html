@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Música · Pixer.ai x Admira.xp</title>
+  <meta name="description" content="Brief operativo de Música: identidad musical y piezas adaptativas para Admira.xp.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="musica">
+  <canvas id="matrix-rain" aria-hidden="true"></canvas>
+  <header class="topnav">
+    <div class="brand"><a href="index.html" class="brand-link"><span class="brand-name">Pixer.ai × Admira.xp</span><span class="brand-version">v.2026.05.02-r10</span></a></div>
+    <nav class="primary-nav">
+      <a href="index.html" data-nav="home">Inicio</a>
+      <a href="audio.html" data-nav="audio">Audio</a>
+      <a href="musica.html" data-nav="musica">Música</a>
+      <a href="imagenes.html" data-nav="imagenes">Imágenes</a>
+      <a href="video.html" data-nav="video">Video</a>
+      <a href="plataforma.html" data-nav="plataforma">Plataforma</a>
+      <a href="admira-xp.html" data-nav="admira-xp">Admira.xp</a>
+    </nav>
+    <div class="topnav-actions">
+      <button type="button" class="btn-back" onclick="history.length>1?history.back():location.href='index.html'">← Volver</button>
+    </div>
+  </header>
+
+  <header class="page-head">
+    <p class="eyebrow music">Tipo de contenido · Música</p>
+    <h1>Identidad musical y piezas adaptativas.</h1>
+    <p class="lead">Música generada para menús, trailers, ambientes, marcas, eventos y escenas. Define mapa emocional, capas, BPM y versiones; el brief se exporta listo para producción.</p>
+  </header>
+
+  <main>
+    <form id="briefForm">
+      <div class="field" style="margin-bottom: 16px;">
+        <label for="proj-cliente">Cliente / proyecto</label>
+        <input id="proj-cliente" name="cliente" type="text" placeholder="Ej. Aena Mallorca - Campaña primavera">
+      </div>
+
+      <article class="module">
+        <div class="module-head"><h3><span class="accent" style="background: var(--music);"></span>Música</h3><small>identidad + loop + energía</small></div>
+        <div data-motor-section="musica"></div>
+        <div class="field"><label>Mapa emocional</label>
+          <div class="chips" data-name="musica.emocion">
+            <label class="chip"><input type="checkbox" value="Calma">Calma</label>
+            <label class="chip"><input type="checkbox" value="Tension">Tensión</label>
+            <label class="chip"><input type="checkbox" value="Descubrimiento">Descubrimiento</label>
+            <label class="chip"><input type="checkbox" value="Celebracion">Celebración</label>
+            <label class="chip"><input type="checkbox" value="Marca">Marca</label>
+            <label class="chip"><input type="checkbox" value="Transicion">Transición</label>
+          </div>
+        </div>
+        <div class="field"><label>Capas</label>
+          <div class="chips" data-name="musica.capas">
+            <label class="chip"><input type="checkbox" value="Base">Base</label>
+            <label class="chip"><input type="checkbox" value="Percusion">Percusión</label>
+            <label class="chip"><input type="checkbox" value="Melodia">Melodía</label>
+            <label class="chip"><input type="checkbox" value="Stinger">Stinger</label>
+            <label class="chip"><input type="checkbox" value="Pad">Pad</label>
+            <label class="chip"><input type="checkbox" value="Bed">Bed</label>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="m-bpm">BPM</label><input id="m-bpm" name="musica.bpm" type="text" placeholder="92"></div>
+          <div class="field"><label for="m-tonalidad">Tonalidad</label><input id="m-tonalidad" name="musica.tonalidad" type="text" placeholder="C menor"></div>
+        </div>
+        <div class="field"><label for="m-versiones">Versiones a entregar</label><input id="m-versiones" name="musica.versiones" type="text" placeholder="Loop limpio, versión 30s, versión extendida 2min"></div>
+        <div class="field"><label for="m-uso">Uso en experiencia</label><input id="m-uso" name="musica.uso" type="text" placeholder="Bed de menú + stinger de cierre"></div>
+      </article>
+
+      <div class="brief-area">
+        <div class="brief-head">
+          <h3>Brief de Música</h3>
+          <div class="brief-actions">
+            <button class="btn play" type="button" id="playOutput">▶ REPRODUCIR</button>
+            <button class="btn" type="button" id="genBrief">Generar brief</button>
+            <button class="btn" type="button" id="copyBrief">Copiar JSON</button>
+            <button class="btn" type="button" id="copyMd">Copiar Markdown</button>
+            <button class="btn" type="button" id="dlBrief">Descargar .json</button>
+            <button class="btn" type="button" id="clearAll">Limpiar Música</button>
+          </div>
+        </div>
+        <pre class="brief" id="briefOut">// Rellena los campos y pulsa "Generar brief".</pre>
+      </div>
+      <div id="player" class="player-area" hidden></div>
+    </form>
+  </main>
+
+  <footer>
+    <p>AdmiraNext AI Workspace · Pixer.ai × Admira.xp · v.2026.05.02-r10</p>
+  </footer>
+
+  <script src="matrix-rain.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

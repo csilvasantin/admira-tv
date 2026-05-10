@@ -1,0 +1,5 @@
+{
+  "latest": "v.2026.05.02-r51",
+  "updatedAt": "2026-05-10T09:32:21Z",
+  "auto": "Actualizado por .github/workflows/update-pixer-manifest.yml en cada push a main que toque v.*/"
+}

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pixer Signage · Admira XP Display</title>
+<style>
+  :root { --matrix:#00ff41; --matrix-deep:#00b82e; --bg:#020602; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { height:100%; background:var(--bg); color:var(--matrix); font-family:"JetBrains Mono",ui-monospace,monospace; overflow:hidden; }
+  #stage {
+    position:fixed; inset:0; display:grid; place-items:center; background:#000;
+  }
+  #stage img, #stage video {
+    max-width:100%; max-height:100%; object-fit:contain; display:block;
+    box-shadow:0 0 64px rgba(0,255,65,.2);
+  }
+  #stage .audio-card {
+    border:1px solid var(--matrix); padding:48px 64px; background:#020602;
+    box-shadow:0 0 48px rgba(0,255,65,.4); text-align:center;
+    display:grid; gap:24px;
+  }
+  #stage .audio-card strong { font-size:24px; letter-spacing:.12em; text-shadow:0 0 12px var(--matrix); }
+  #stage .audio-card audio { width:480px; }
+  #stage .empty { text-align:center; opacity:.6; font-size:18px; letter-spacing:.2em; animation:blink 1.4s steps(2) infinite; }
+  @keyframes blink { 50%{ opacity:.2 } }
+  /* HUD */
+  #hud {
+    position:fixed; left:0; right:0; bottom:0; padding:14px 24px;
+    background:linear-gradient(0deg,rgba(0,0,0,.85),rgba(0,0,0,0));
+    display:grid; grid-template-columns:1fr auto auto; gap:24px; align-items:center;
+    font-size:12px; letter-spacing:.08em;
+  }
+  #hud .title { color:var(--matrix); text-shadow:0 0 6px var(--matrix); font-weight:700; }
+  #hud .meta { color:#7dff9e; opacity:.85; }
+  #hud .live { color:var(--matrix); }
+  #hud .live::before { content:"●"; margin-right:6px; animation:pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50%{ opacity:.3 } }
+  #hud .id { font-size:11px; opacity:.7; }
+  /* Top header */
+  #top {
+    position:fixed; left:0; right:0; top:0; padding:10px 24px;
+    background:linear-gradient(180deg,rgba(0,0,0,.85),rgba(0,0,0,0));
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+  }
+  #top .brand { color:var(--matrix); text-shadow:0 0 6px var(--matrix); font-weight:700; }
+  #top .clock { color:#c8ffd0; opacity:.7; font-variant-numeric:tabular-nums; }
+  /* Scanlines */
+  body::after {
+    content:""; position:fixed; inset:0; z-index:100; pointer-events:none;
+    background:repeating-linear-gradient(180deg,rgba(0,255,65,.04) 0,rgba(0,255,65,.04) 1px,transparent 1px,transparent 3px);
+    mix-blend-mode:overlay;
+  }
+</style>
+</head>
+<body>
+
+<div id="top">
+  <div class="brand">PIXER SIGNAGE · ADMIRA XP // XPACE OS</div>
+  <div class="clock" id="clock">--:--:--</div>
+</div>
+
+<div id="stage"><div class="empty">// esperando contenido del feed...</div></div>
+
+<div id="hud">
+  <div class="title" id="title">// inicializando</div>
+  <div class="meta" id="meta">poll cada 5s · feed: pixer-eleven</div>
+  <div class="live" id="live">conectando</div>
+</div>
+
+<script>
+const WORKER = 'https://pixer-eleven.csilvasantin.workers.dev';
+const POLL_MS = 5000;
+let lastShownId = null;
+let totalCount = 0;
+
+// Identificador de pantalla persistente
+const SCREEN_KEY = 'pixer-signage-screen-id';
+let screenId = localStorage.getItem(SCREEN_KEY);
+if (!screenId) {
+  screenId = 'screen-' + Math.random().toString(36).slice(2,8);
+  localStorage.setItem(SCREEN_KEY, screenId);
+}
+
+function setLive(state, ok) {
+  const el = document.getElementById('live');
+  el.textContent = state;
+  el.style.color = ok ? 'var(--matrix)' : '#ff8e3c';
+}
+
+function updateClock() {
+  const d = new Date();
+  document.getElementById('clock').textContent =
+    String(d.getHours()).padStart(2,'0') + ':' +
+    String(d.getMinutes()).padStart(2,'0') + ':' +
+    String(d.getSeconds()).padStart(2,'0');
+}
+setInterval(updateClock, 1000); updateClock();
+
+function renderItem(item) {
+  const stage = document.getElementById('stage');
+  let html = '';
+  if (item.kind === 'image') {
+    html = `<img src="${item.url}" alt="${item.title || ''}">`;
+  } else if (item.kind === 'video') {
+    html = `<video src="${item.url}" autoplay muted loop playsinline></video>`;
+  } else if (item.kind === 'audio') {
+    html = `<div class="audio-card">
+      <strong>♪ ${item.title || 'audio'}</strong>
+      <audio src="${item.url}" controls autoplay></audio>
+    </div>`;
+  } else {
+    html = `<div class="empty">// kind desconocido: ${item.kind}</div>`;
+  }
+  stage.innerHTML = html;
+  document.getElementById('title').textContent = '▶ ' + (item.title || item.kind);
+  document.getElementById('meta').textContent =
+    `${item.kind} · ${new Date(item.ts).toLocaleString()} · screen ${screenId}`;
+  document.getElementById('hud').dataset.id = item.id;
+  document.getElementById('hud').insertAdjacentHTML('beforeend',
+    `<div class="id" id="idBadge">id ${item.id.slice(-8)}</div>`);
+  // Limpiar badge anterior
+  const old = document.querySelectorAll('.id');
+  if (old.length > 1) old[0].remove();
+}
+
+async function ackItem(id) {
+  try {
+    await fetch(`${WORKER}/signage/ack/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ screen: screenId }),
+    });
+  } catch {}
+}
+
+async function heartbeat(showing_id, feed_count) {
+  try {
+    await fetch(WORKER + '/signage/heartbeat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ screen: screenId, showing_id: showing_id || null, feed_count: feed_count || 0 }),
+    });
+  } catch {}
+}
+
+async function tick() {
+  try {
+    const r = await fetch(WORKER + '/signage/feed?limit=10');
+    if (!r.ok) {
+      setLive('feed error ' + r.status, false);
+      heartbeat(lastShownId, 0);
+      return;
+    }
+    const data = await r.json();
+    totalCount = (data.items || []).length;
+    setLive(`LIVE · ${totalCount} items en feed`, true);
+    const item = (data.items || [])[0];
+    if (!item) {
+      const stage = document.getElementById('stage');
+      if (lastShownId !== null) {
+        stage.innerHTML = '<div class="empty">// feed vacío</div>';
+        lastShownId = null;
+      }
+      heartbeat(null, 0);
+      return;
+    }
+    if (item.id !== lastShownId) {
+      lastShownId = item.id;
+      renderItem(item);
+      await ackItem(item.id);
+    }
+    // Heartbeat siempre, esté mostrando lo mismo o algo nuevo
+    heartbeat(lastShownId, totalCount);
+  } catch (e) {
+    setLive('offline: ' + String(e).slice(0,40), false);
+    heartbeat(lastShownId, 0);
+  }
+}
+tick();
+setInterval(tick, POLL_MS);
+</script>
+</body>
+</html>

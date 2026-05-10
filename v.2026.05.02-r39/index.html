@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pixer.ai x Admira.xp | Contenidos IA</title>
+  <meta name="description" content="Menu operativo para crear contenidos de Audio, Musica, Imagenes y Video desde Pixer.ai conectados con Admira.xp.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="home">
+  <canvas id="matrix-rain" aria-hidden="true"></canvas>
+  <header class="topnav">
+    <div class="brand"><a href="index.html" class="brand-link"><span class="brand-name">Pixer.ai × Admira.xp</span><span class="brand-version">v.2026.05.02-r39</span></a></div>
+    <nav class="primary-nav">      <a href="audio.html" data-nav="audio">Audio</a>
+      <a href="musica.html" data-nav="musica">Música</a>
+      <a href="imagenes.html" data-nav="imagenes">Imágenes</a>
+      <a href="video.html" data-nav="video">Video</a>      <a href="admira-xp.html" data-nav="admira-xp">Admira.xp</a>
+    </nav>
+    <div class="topnav-actions">
+      <span id="xtoreStatus" class="xtore-badge" title="Estado de la pantalla Xtore (signage.html)">🔴 XTORE</span>
+      <button type="button" class="btn" id="openImport" title="Importa un video/audio de YouTube vía yt-dlp local">📥 IMPORTAR</button>
+      </div>
+  </header>
+
+  <header class="page-head has-gif"><figure class="page-gif"><img src="https://upload.wikimedia.org/wikipedia/commons/2/20/Matrix_Digital_rain_banner.gif" alt="Banner Matrix · The One" loading="lazy"><figcaption>// Banner Matrix · The One</figcaption></figure>
+    <p class="eyebrow home">Pixer.ai conectado con Admira.xp</p>
+    <h1>Cuatro motores de contenido para crear experiencias completas.</h1>
+    <p class="lead">El trabajo se ordena en Audio, Música, Imágenes y Video. Cada tipo tiene su página operativa con formulario de brief; la Plataforma consolida los cuatro y Admira.xp orquesta la salida.</p>
+    <div class="topbar">
+      <span class="pill">Versión v.2026.05.02-r39</span>
+      <span class="pill">Brief estructurado en JSON / Markdown</span>
+      <span class="pill">Salida: GitHub Pages + Telegram</span>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <h2>Tipos de contenido</h2>
+      <div class="home-grid">
+        <a class="home-card" href="audio.html">
+          <span class="badge audio">A</span>
+          <div>
+            <h3>Audio</h3>
+            <p>Voces, locuciones y paisajes sonoros para asistentes, narrativas y respuestas de producto.</p>
+            <small>voz · guion · escena</small>
+          </div>
+        </a>
+        <a class="home-card" href="musica.html">
+          <span class="badge music">M</span>
+          <div>
+            <h3>Música</h3>
+            <p>Identidad musical y piezas adaptativas: loops, stingers, beds y motivos por momento.</p>
+            <small>identidad · loop · energía</small>
+          </div>
+        </a>
+        <a class="home-card" href="imagenes.html">
+          <span class="badge image">I</span>
+          <div>
+            <h3>Imágenes</h3>
+            <p>Visuales, assets y mundos de marca con prompts, paleta y consistencia entre series.</p>
+            <small>assets · estilo · consistencia</small>
+          </div>
+        </a>
+        <a class="home-card" href="video.html">
+          <span class="badge video">V</span>
+          <div>
+            <h3>Video</h3>
+            <p>Clips, reels, demos y escenas que reúnen audio, música e imágenes ya aprobadas.</p>
+            <small>guion · planos · montaje</small>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section>
+      <h2>Operativa</h2>
+      <div class="home-grid">
+        <a class="home-card" href="plataforma.html">
+          <span class="badge platform">P</span>
+          <div>
+            <h3>Plataforma</h3>
+            <p>Vista global con los cuatro módulos en una sola pantalla y brief consolidado del proyecto.</p>
+            <small>brief unificado · JSON · Markdown</small>
+          </div>
+        </a>
+        <a class="home-card" href="admira-xp.html">
+          <span class="badge xp">XP</span>
+          <div>
+            <h3>Admira.xp</h3>
+            <p>Capa de experiencia que recibe los outputs de Pixer.ai y los convierte en escenas y triggers.</p>
+            <small>entrada · generación · orquestación · salida</small>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section>
+      <div class="platform-head">
+        <div>
+          <h2>Motor IA por sección</h2>
+          <p class="meta" style="color: var(--muted);">Por defecto cada sección usa una opción gratuita. Las dos profesionales se pueden activar en la página de cada tipo o en Plataforma. <em>Costes orientativos a 2026-05-02.</em></p>
+        </div>
+      </div>
+      <div class="platform-grid" data-motor-catalog></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>AdmiraNext AI Workspace · Pixer.ai × Admira.xp · v.2026.05.02-r39</p>
+  </footer>
+
+  <dialog id="importModal" class="keys-modal">
+    <form method="dialog" class="keys-form">
+      <h3>📥 IMPORTAR DESDE URL</h3>
+      <p class="keys-warn">yt-dlp en Mac Mini (audio mp3 + video mp4). Hosts permitidos: YouTube, Vimeo, Twitter/X, TikTok, Instagram. Si abres en local también funciona suno-local (:3777).</p>
+      <div class="field"><label for="import-url">URL</label><input id="import-url" type="text" autocomplete="off" placeholder="https://www.youtube.com/watch?v=..."></div>
+      <div class="field">
+        <label>Formato</label>
+        <div class="chips">
+          <label class="chip"><input type="radio" name="import-fmt" value="audio" checked> Audio (mp3)</label>
+          <label class="chip"><input type="radio" name="import-fmt" value="video"> Video (mp4)</label>
+        </div>
+      </div>
+      <div class="keys-actions">
+        <button type="button" class="btn primary" id="doImport">Importar</button>
+        <button type="button" class="btn" id="closeImport">Cerrar</button>
+      </div>
+      <pre class="brief" id="importStatus" style="display:none;font-size:11px;max-height:200px;"></pre>
+    </form>
+  </dialog>
+  <dialog id="keysModal" class="keys-modal">
+    <form method="dialog" class="keys-form">
+      <h3>⚙ API KEYS</h3>
+      <p class="keys-warn">Las claves se guardan solo en este navegador (localStorage). No se envían a ningún servidor de Pixer.ai.</p>      <div class="field"><label for="key-elevenlabs-voice">ElevenLabs Voice ID</label><input id="key-elevenlabs-voice" type="text" autocomplete="off" placeholder="EXAVITQu4vr4xnSDxMaL (Bella · default)"></div>      <div class="keys-actions">
+        <button type="button" class="btn primary" id="saveKeys">Guardar</button>
+        <button type="button" class="btn" id="clearKeys">Borrar todas</button>
+        <button type="button" class="btn" id="closeKeys">Cerrar</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="matrix-rain.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

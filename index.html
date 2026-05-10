@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Pixer.ia · AInimation Studio</title>
+  <meta name="description" content="Pixer.ia · plataforma de creación de contenido multimedia (Admira)">
+  <link rel="canonical" href="https://admira.tv/">
+  <meta name="robots" content="index,follow">
+  <style>
+    html,body{margin:0;height:100%;background:#0b1418;color:#cceef5;font-family:"JetBrains Mono",ui-monospace,monospace;display:flex;align-items:center;justify-content:center}
+    .box{text-align:center;padding:24px}
+    .brand{font-size:22px;letter-spacing:.04em;color:#78f3ff}
+    .sub{font-size:11px;opacity:.6;margin-top:6px}
+    a{color:#ffd86b;text-decoration:none;border-bottom:1px dashed rgba(255,216,107,.4)}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="brand">Pixer.ia × AInimation Studio</div>
+    <div class="sub">cargando última versión…</div>
+    <noscript><p>JavaScript requerido. <a href="manifest.json">Manifest</a></p></noscript>
+  </div>
+  <script>
+    (async () => {
+      try {
+        const r = await fetch('manifest.json', { cache: 'no-cache' });
+        const data = await r.json();
+        if (data && data.latest) {
+          location.replace(data.latest + '/');
+          return;
+        }
+      } catch (e) {}
+      // Fallback estático si falla el manifest
+      location.replace('v.2026.05.02-r50/');
+    })();
+  </script>
+</body>
+</html>

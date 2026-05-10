@@ -1,0 +1,70 @@
+name: update-pixer-manifest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'v.*/**'
+      - '.github/workflows/update-pixer-manifest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Detect latest pixer-ai-content version
+        id: detect
+        run: |
+          set -euo pipefail
+          LATEST=$(ls -1 . 2>/dev/null \
+            | grep -E '^v\.[0-9]{4}\.[0-9]{2}\.[0-9]{2}-r[0-9]+$' \
+            | sort -t'r' -k2 -n \
+            | tail -n1)
+          if [ -z "$LATEST" ]; then
+            echo "::error::No se encontró ningún directorio v.* en la raíz"
+            exit 1
+          fi
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "Detectado: $LATEST"
+
+      - name: Update manifest.json if changed
+        id: write
+        run: |
+          set -euo pipefail
+          MANIFEST="manifest.json"
+          LATEST="${{ steps.detect.outputs.latest }}"
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          CURRENT=""
+          if [ -f "$MANIFEST" ]; then
+            CURRENT=$(grep -oE '"latest"\s*:\s*"[^"]+"' "$MANIFEST" | sed 's/.*"\([^"]*\)"$/\1/' || true)
+          fi
+          if [ "$CURRENT" = "$LATEST" ]; then
+            echo "Manifest ya está al día ($CURRENT). Nada que hacer."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          jq -n \
+            --arg latest "$LATEST" \
+            --arg now "$NOW" \
+            --arg auto "Actualizado por .github/workflows/update-pixer-manifest.yml en cada push a main que toque v.*/" \
+            '{latest: $latest, updatedAt: $now, auto: $auto}' > "$MANIFEST"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "previousLatest=$CURRENT" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push manifest update
+        if: steps.write.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          git commit -m "auto: pixer-ai-content latest → ${{ steps.detect.outputs.latest }}"
+          git push

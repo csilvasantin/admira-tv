@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pixer.ai x Admira.xp | Contenidos IA</title>
+  <meta name="description" content="Menu operativo para crear contenidos de Audio, Musica, Imagenes y Video desde Pixer.ai conectados con Admira.xp.">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07090d;
+      --panel: #101620;
+      --panel-2: #151d29;
+      --ink: #f4f7fb;
+      --muted: #9da8b8;
+      --line: #283446;
+      --audio: #6ee7ff;
+      --music: #c6f66f;
+      --image: #ff8cb3;
+      --video: #ffc766;
+      --xp: #9b8cff;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 14% 8%, rgba(110, 231, 255, .18), transparent 26%),
+        radial-gradient(circle at 86% 6%, rgba(155, 140, 255, .18), transparent 30%),
+        linear-gradient(180deg, #07090d, #0a0d13 46%, #07090d);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+    header, main, footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+    header { padding: 58px 0 34px; }
+    .eyebrow { margin: 0 0 14px; color: var(--audio); font-size: 13px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { margin: 0; max-width: 960px; font-size: clamp(42px, 7.4vw, 88px); line-height: .94; letter-spacing: 0; }
+    .lead { margin: 24px 0 0; max-width: 780px; color: var(--muted); font-size: clamp(18px, 2vw, 23px); }
+    .topbar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+    .pill { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; color: var(--muted); background: rgba(255,255,255,.04); font-size: 14px; }
+    section { padding: 28px 0; }
+    h2 { margin: 0 0 18px; font-size: clamp(28px, 4vw, 46px); line-height: 1; letter-spacing: 0; }
+    h3 { margin: 0 0 10px; font-size: 20px; }
+    p { margin: 0; }
+    .workspace {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr) 320px;
+      gap: 16px;
+      align-items: start;
+    }
+    .menu, .panel, .xp-panel, .module {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(16, 22, 32, .88);
+    }
+    .menu { position: sticky; top: 18px; padding: 14px; }
+    .menu-title { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 10px; }
+    .menu a {
+      display: grid;
+      grid-template-columns: 12px 1fr;
+      gap: 10px;
+      align-items: center;
+      min-height: 48px;
+      padding: 10px;
+      border-radius: 8px;
+      color: var(--ink);
+      text-decoration: none;
+      border: 1px solid transparent;
+    }
+    .menu a:hover { background: rgba(255,255,255,.05); border-color: var(--line); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot.audio { background: var(--audio); }
+    .dot.music { background: var(--music); }
+    .dot.image { background: var(--image); }
+    .dot.video { background: var(--video); }
+    .panel { padding: 22px; }
+    .content-grid { display: grid; gap: 14px; }
+    .content-card {
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr);
+      gap: 18px;
+      padding: 18px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 8px;
+      background: rgba(255,255,255,.035);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      border-radius: 8px;
+      font-weight: 850;
+      color: #061014;
+    }
+    .badge.audio { background: var(--audio); }
+    .badge.music { background: var(--music); }
+    .badge.image { background: var(--image); }
+    .badge.video { background: var(--video); }
+    .content-card p, .xp-panel p, .module p, .module li { color: var(--muted); }
+    .content-card ul, .module ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); }
+    .xp-panel { padding: 22px; background: linear-gradient(180deg, rgba(155,140,255,.14), rgba(16,22,32,.92)); }
+    .xp-panel h2 { font-size: 30px; }
+    .xp-flow { display: grid; gap: 10px; margin-top: 18px; }
+    .xp-step { border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: 12px; background: rgba(255,255,255,.04); }
+    .xp-step strong { display: block; margin-bottom: 4px; color: var(--xp); }
+    .platform-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .module { padding: 22px; min-height: 260px; }
+    .module-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .module small { color: var(--muted); }
+    .flowline { display: grid; gap: 8px; margin-top: 14px; }
+    .flowline span { border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: 10px; color: var(--muted); background: rgba(255,255,255,.035); }
+    footer { padding: 36px 0 56px; color: var(--muted); }
+    @media (max-width: 980px) {
+      .workspace { grid-template-columns: 1fr; }
+      .menu { position: static; }
+      .platform-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      header, main, footer { width: min(100% - 28px, 1180px); }
+      .content-card { grid-template-columns: 1fr; }
+      h1 { font-size: 44px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Pixer.ai conectado con Admira.xp</p>
+    <h1>Cuatro motores de contenido para crear experiencias completas.</h1>
+    <p class="lead">El trabajo se ordena en Audio, Musica, Imagenes y Video. Cada tipo tiene su menu operativo, su conexion con Admira.xp y una zona de plataforma donde definiremos prompts, flujos, outputs y criterios de publicacion.</p>
+    <div class="topbar">
+      <span class="pill">Version v.2026.05.02-r5</span>
+      <span class="pill">Salida obligatoria: GitHub Pages + Telegram</span>
+      <span class="pill">Foco: creacion de contenidos IA</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="workspace" aria-label="Menu de contenidos y conexion Admira.xp">
+      <nav class="menu" aria-label="Tipos de contenidos">
+        <p class="menu-title">Menu contenidos</p>
+        <a href="#audio"><span class="dot audio"></span><span>Audio</span></a>
+        <a href="#musica"><span class="dot music"></span><span>Musica</span></a>
+        <a href="#imagenes"><span class="dot image"></span><span>Imagenes</span></a>
+        <a href="#video"><span class="dot video"></span><span>Video</span></a>
+        <a href="#plataforma"><span class="dot"></span><span>Plataforma</span></a>
+      </nav>
+
+      <div class="panel">
+        <h2>Tipos de contenido</h2>
+        <div class="content-grid">
+          <article id="audio" class="content-card">
+            <span class="badge audio">Audio</span>
+            <div>
+              <h3>Voces, locuciones y paisajes sonoros</h3>
+              <p>Piezas habladas para asistentes, narrativas, guias, anuncios, experiencias interactivas y respuestas de producto.</p>
+              <ul>
+                <li>Guiones, voces, tonos y duraciones.</li>
+                <li>Versiones por idioma, marca o personaje.</li>
+                <li>Export para Admira.xp como clip, escena o respuesta.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article id="musica" class="content-card">
+            <span class="badge music">Musica</span>
+            <div>
+              <h3>Identidad musical y piezas adaptativas</h3>
+              <p>Musica generada para menus, trailers, ambientes, marcas, eventos, escenas y loops sincronizados con experiencia.</p>
+              <ul>
+                <li>Motivos, loops, stingers y beds.</li>
+                <li>Variantes por energia, duracion o momento.</li>
+                <li>Capas para experiencias interactivas en Admira.xp.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article id="imagenes" class="content-card">
+            <span class="badge image">Imagenes</span>
+            <div>
+              <h3>Visuales, assets y mundos de marca</h3>
+              <p>Imagenes para campanas, producto, personajes, fondos, miniaturas, banners, social posts y referencias visuales.</p>
+              <ul>
+                <li>Prompts visuales, estilos y composicion.</li>
+                <li>Series coherentes por campana o cliente.</li>
+                <li>Assets listos para publicar o animar.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article id="video" class="content-card">
+            <span class="badge video">Video</span>
+            <div>
+              <h3>Clips, reels, demos y escenas animadas</h3>
+              <p>Video vertical, horizontal o modular para storytelling, anuncios, demostraciones, tutoriales y contenido social.</p>
+              <ul>
+                <li>Guion, storyboard, ritmo y plano.</li>
+                <li>Versiones por canal y duracion.</li>
+                <li>Conexion con audio, musica e imagenes ya aprobadas.</li>
+              </ul>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <aside class="xp-panel" aria-label="Conexion con Admira.xp">
+        <h2>Admira.xp</h2>
+        <p>Admira.xp funciona como capa de experiencia: recibe contenidos generados en Pixer.ai, los organiza por escena, canal o interaccion y los convierte en experiencias navegables, medibles y reutilizables.</p>
+        <div class="xp-flow">
+          <div class="xp-step"><strong>Entrada</strong><span>Brief, cliente, objetivo y tipo de contenido.</span></div>
+          <div class="xp-step"><strong>Generacion</strong><span>Pixer.ai produce audio, musica, imagenes o video.</span></div>
+          <div class="xp-step"><strong>Orquestacion</strong><span>Admira.xp conecta piezas, estados, escenas y triggers.</span></div>
+          <div class="xp-step"><strong>Salida</strong><span>Publicacion web, experiencia, demo, campana o presentacion.</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <section id="plataforma">
+      <h2>Plataforma</h2>
+      <div class="platform-grid">
+        <article class="module">
+          <div class="module-head"><h3>Audio</h3><small>voz + guion + escena</small></div>
+          <p>Trabajaremos la creacion de voz, locucion y sonido como piezas versionadas.</p>
+          <div class="flowline">
+            <span>Brief de voz: personaje, tono, idioma, ritmo.</span>
+            <span>Guion y variantes: corto, largo, CTA, respuesta.</span>
+            <span>Export: nombre, duracion, uso en Admira.xp.</span>
+          </div>
+        </article>
+
+        <article class="module">
+          <div class="module-head"><h3>Musica</h3><small>identidad + loop + energia</small></div>
+          <p>Definiremos musica por momentos de experiencia: espera, accion, cierre, marca y transicion.</p>
+          <div class="flowline">
+            <span>Mapa emocional: calma, tension, descubrimiento, celebracion.</span>
+            <span>Capas: base, percusion, melodia, stinger.</span>
+            <span>Export: loop limpio, version corta y version extendida.</span>
+          </div>
+        </article>
+
+        <article class="module">
+          <div class="module-head"><h3>Imagenes</h3><small>assets + estilo + consistencia</small></div>
+          <p>Crearemos familias visuales coherentes para que el contenido no parezca una coleccion aleatoria de outputs IA.</p>
+          <div class="flowline">
+            <span>Guia visual: paleta, encuadre, luz, textura, nivel de realismo.</span>
+            <span>Prompts por asset: personaje, fondo, producto, miniatura, banner.</span>
+            <span>Revision: artefactos, composicion, coherencia y publicacion.</span>
+          </div>
+        </article>
+
+        <article class="module">
+          <div class="module-head"><h3>Video</h3><small>guion + planos + montaje</small></div>
+          <p>El video sera la capa donde se unen imagenes, musica, audio y narrativa para piezas finales.</p>
+          <div class="flowline">
+            <span>Storyboard: hook, desarrollo, cierre y CTA.</span>
+            <span>Produccion: clips, transiciones, ritmo y versiones por canal.</span>
+            <span>Salida: reel, demo, landing, presentacion o experiencia Admira.xp.</span>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>AdmiraNext AI Workspace · Pixer.ai x Admira.xp · v.2026.05.02-r5</p>
+  </footer>
+</body>
+</html>

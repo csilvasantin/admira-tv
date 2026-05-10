@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plataforma · Pixer.ai x Admira.xp</title>
+  <meta name="description" content="Vista global con los cuatro módulos y brief consolidado del proyecto.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="plataforma">
+  <canvas id="matrix-rain" aria-hidden="true"></canvas>
+  <header class="topnav">
+    <div class="brand"><a href="index.html" class="brand-link"><span class="brand-name">Pixer.ai × Admira.xp</span><span class="brand-version">v.2026.05.02-r17</span></a></div>
+    <nav class="primary-nav">      <a href="audio.html" data-nav="audio">Audio</a>
+      <a href="musica.html" data-nav="musica">Música</a>
+      <a href="imagenes.html" data-nav="imagenes">Imágenes</a>
+      <a href="video.html" data-nav="video">Video</a>      <a href="admira-xp.html" data-nav="admira-xp">Admira.xp</a>
+    </nav>
+    <div class="topnav-actions">
+      <button type="button" class="btn" id="openSettings" title="API keys">⚙ KEYS</button>
+      <button type="button" class="btn-back" onclick="history.length>1?history.back():location.href='index.html'">← Volver</button>
+    </div>
+  </header>
+
+  <header class="page-head has-gif"><figure class="page-gif"><img src="https://upload.wikimedia.org/wikipedia/commons/8/8f/Digital_rain_animation_medium_letters_4_clear.gif" alt="Plataforma · grid Matrix" loading="lazy"><figcaption>// Plataforma · grid Matrix</figcaption></figure>
+    <p class="eyebrow xp">Operativa · Plataforma</p>
+    <h1>Brief consolidado de los cuatro módulos.</h1>
+    <p class="lead">Edita los cuatro módulos en una sola pantalla. Los datos se sincronizan con las páginas individuales (Audio · Música · Imágenes · Video) — lo que rellenes aquí también aparece allí.</p>
+  </header>
+
+  <main>
+    <a class="xp-launch" href="https://csilvasantin.github.io/01.-AdmiraXperience-Game/" target="_blank" rel="noopener">
+      <span class="xp-launch-tag">[ JUEGO LIVE ]</span>
+      <span class="xp-launch-title">▶ LANZAR ADMIRAXPERIENCE GAME</span>
+      <span class="xp-launch-url">csilvasantin.github.io/01.-AdmiraXperience-Game ↗</span>
+    </a>
+    <form id="briefForm">
+      <div class="platform-head">
+        <div class="field" style="flex:1; min-width: 260px;">
+          <label for="proj-cliente">Cliente / proyecto</label>
+          <input id="proj-cliente" name="cliente" type="text" placeholder="Ej. Aena Mallorca - Campaña primavera">
+        </div>
+        <div class="brief-actions">
+          <button class="btn" type="button" id="loadDemo">Cargar demo</button>
+        </div>
+      </div>
+
+      <div class="platform-grid">
+        <article class="module" id="mod-audio">
+          <div class="module-head"><h3><span class="accent" style="background: var(--audio);"></span>Audio</h3><small><a href="audio.html" style="color:var(--muted);">abrir →</a></small></div>
+          <div data-motor-section="audio"></div>
+          <div class="row2">
+            <div class="field"><label for="a-personaje">Personaje / locutor</label><input id="a-personaje" name="audio.personaje" type="text" placeholder="Voz adulta cálida"></div>
+            <div class="field"><label for="a-idioma">Idioma</label>
+              <select id="a-idioma" name="audio.idioma">
+                <option value="">—</option><option>Espanol (ES)</option><option>Espanol (LATAM)</option><option>Catalan</option><option>Ingles (UK)</option><option>Ingles (US)</option><option>Frances</option><option>Aleman</option><option>Portugues</option>
+              </select>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field"><label for="a-tono">Tono</label>
+              <select id="a-tono" name="audio.tono">
+                <option value="">—</option><option>Cercano</option><option>Institucional</option><option>Energico</option><option>Misterioso</option><option>Documental</option><option>Comercial</option>
+              </select>
+            </div>
+            <div class="field"><label for="a-ritmo">Ritmo / duración</label><input id="a-ritmo" name="audio.ritmo" type="text" placeholder="20s, ritmo medio"></div>
+          </div>
+          <div class="field"><label for="a-guion">Guion</label><textarea id="a-guion" name="audio.guion" placeholder="Bienvenido a..."></textarea></div>
+          <div class="field"><label for="a-cta">CTA</label><input id="a-cta" name="audio.cta" type="text" placeholder="Reserva ahora en admira.xp"></div>
+        </article>
+
+        <article class="module" id="mod-musica">
+          <div class="module-head"><h3><span class="accent" style="background: var(--music);"></span>Música</h3><small><a href="musica.html" style="color:var(--muted);">abrir →</a></small></div>
+          <div data-motor-section="musica"></div>
+          <div class="field"><label>Mapa emocional</label>
+            <div class="chips" data-name="musica.emocion">
+              <label class="chip"><input type="checkbox" value="Calma">Calma</label>
+              <label class="chip"><input type="checkbox" value="Tension">Tensión</label>
+              <label class="chip"><input type="checkbox" value="Descubrimiento">Descubrimiento</label>
+              <label class="chip"><input type="checkbox" value="Celebracion">Celebración</label>
+              <label class="chip"><input type="checkbox" value="Marca">Marca</label>
+              <label class="chip"><input type="checkbox" value="Transicion">Transición</label>
+            </div>
+          </div>
+          <div class="field"><label>Capas</label>
+            <div class="chips" data-name="musica.capas">
+              <label class="chip"><input type="checkbox" value="Base">Base</label>
+              <label class="chip"><input type="checkbox" value="Percusion">Percusión</label>
+              <label class="chip"><input type="checkbox" value="Melodia">Melodía</label>
+              <label class="chip"><input type="checkbox" value="Stinger">Stinger</label>
+              <label class="chip"><input type="checkbox" value="Pad">Pad</label>
+              <label class="chip"><input type="checkbox" value="Bed">Bed</label>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field"><label for="m-bpm">BPM</label><input id="m-bpm" name="musica.bpm" type="text" placeholder="92"></div>
+            <div class="field"><label for="m-tonalidad">Tonalidad</label><input id="m-tonalidad" name="musica.tonalidad" type="text" placeholder="C menor"></div>
+          </div>
+          <div class="field"><label for="m-versiones">Versiones</label><input id="m-versiones" name="musica.versiones" type="text" placeholder="Loop limpio, 30s, extendida 2min"></div>
+          <div class="field"><label for="m-uso">Uso</label><input id="m-uso" name="musica.uso" type="text" placeholder="Bed de menú + stinger de cierre"></div>
+        </article>
+
+        <article class="module" id="mod-imagenes">
+          <div class="module-head"><h3><span class="accent" style="background: var(--image);"></span>Imágenes</h3><small><a href="imagenes.html" style="color:var(--muted);">abrir →</a></small></div>
+          <div data-motor-section="imagenes"></div>
+          <div class="row2">
+            <div class="field"><label for="i-paleta">Paleta</label><input id="i-paleta" name="imagenes.paleta" type="text" placeholder="Coral + crema + azul"></div>
+            <div class="field"><label for="i-encuadre">Encuadre</label>
+              <select id="i-encuadre" name="imagenes.encuadre">
+                <option value="">—</option><option>Vertical 9:16</option><option>Cuadrado 1:1</option><option>Horizontal 16:9</option><option>Banner 3:1</option><option>Mixto</option>
+              </select>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field"><label for="i-luz">Luz</label><input id="i-luz" name="imagenes.luz" type="text" placeholder="Atardecer suave"></div>
+            <div class="field"><label for="i-realismo">Realismo</label>
+              <select id="i-realismo" name="imagenes.realismo">
+                <option value="">—</option><option>Foto realista</option><option>Editorial</option><option>Ilustracion</option><option>3D estilizado</option><option>Pixel art</option>
+              </select>
+            </div>
+          </div>
+          <div class="field"><label for="i-prompt">Prompt</label><textarea id="i-prompt" name="imagenes.prompt" placeholder="Familia disfrutando..."></textarea></div>
+          <div class="field"><label for="i-assets">Assets a generar</label><input id="i-assets" name="imagenes.assets" type="text" placeholder="3 banners + 5 miniaturas"></div>
+        </article>
+
+        <article class="module" id="mod-video">
+          <div class="module-head"><h3><span class="accent" style="background: var(--video);"></span>Video</h3><small><a href="video.html" style="color:var(--muted);">abrir →</a></small></div>
+          <div data-motor-section="video"></div>
+          <div class="field"><label for="v-hook">Hook</label><input id="v-hook" name="video.hook" type="text" placeholder="Pregunta directa"></div>
+          <div class="field"><label for="v-desarrollo">Desarrollo</label><textarea id="v-desarrollo" name="video.desarrollo" placeholder="Producto, beneficios..."></textarea></div>
+          <div class="row2">
+            <div class="field"><label for="v-cierre">Cierre</label><input id="v-cierre" name="video.cierre" type="text" placeholder="Logo + claim"></div>
+            <div class="field"><label for="v-cta">CTA</label><input id="v-cta" name="video.cta" type="text" placeholder="Visita admira.xp"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label for="v-canal">Canal</label>
+              <select id="v-canal" name="video.canal">
+                <option value="">—</option><option>Reel vertical 9:16</option><option>YouTube 16:9</option><option>Demo producto 16:9</option><option>Pantalla evento 16:9</option><option>Carrusel cuadrado 1:1</option>
+              </select>
+            </div>
+            <div class="field"><label for="v-duracion">Duración</label><input id="v-duracion" name="video.duracion" type="text" placeholder="30s"></div>
+          </div>
+          <div class="field"><label>Reusa</label>
+            <div class="chips" data-name="video.reusa">
+              <label class="chip"><input type="checkbox" value="audio">Audio</label>
+              <label class="chip"><input type="checkbox" value="musica">Música</label>
+              <label class="chip"><input type="checkbox" value="imagenes">Imágenes</label>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="brief-area">
+        <div class="brief-head">
+          <h3>Brief consolidado</h3>
+          <div class="brief-actions">
+            <button class="btn play" type="button" id="playOutput"><span class="play-label">✨ CREAR</span></button>
+            <button class="btn" type="button" id="genBrief">Generar brief</button>
+            <button class="btn" type="button" id="copyBrief">Copiar JSON</button>
+            <button class="btn" type="button" id="copyMd">Copiar Markdown</button>
+            <button class="btn" type="button" id="dlBrief">Descargar .json</button>
+            <button class="btn" type="button" id="clearAll">Limpiar todo</button>
+          </div>
+        </div>
+        <pre class="brief" id="briefOut">// Rellena los módulos y pulsa "Generar brief".</pre>
+      </div>
+      <div id="player" class="player-area" hidden></div>
+    </form>
+  </main>
+
+  <footer>
+    <p>AdmiraNext AI Workspace · Pixer.ai × Admira.xp · v.2026.05.02-r17</p>
+  </footer>
+
+  <script>
+    window.PIXER_DEMO = {
+      fields: {
+        'cliente': 'Aena Mallorca - Campaña primavera',
+        'audio.personaje': 'Voz femenina, adulta, cálida',
+        'audio.idioma': 'Espanol (ES)',
+        'audio.tono': 'Cercano',
+        'audio.ritmo': '25s, ritmo medio, pausas claras',
+        'audio.guion': 'Llega la primavera a Mallorca. Vuelos directos, terraza al sol y el mar a 20 minutos.',
+        'audio.cta': 'Reserva en admira.xp/mallorca',
+        'musica.bpm': '92',
+        'musica.tonalidad': 'C mayor',
+        'musica.versiones': 'Loop 30s + versión extendida 2min + stinger 3s',
+        'musica.uso': 'Bed de spot + stinger de cierre + bed de pantalla en aeropuerto',
+        'imagenes.paleta': 'Coral, crema, azul mediterráneo',
+        'imagenes.encuadre': 'Mixto',
+        'imagenes.luz': 'Atardecer dorado, contraste medio',
+        'imagenes.realismo': 'Editorial',
+        'imagenes.prompt': 'Familia llegando a Mallorca, terraza con vistas al mar, luz dorada, ropa de lino, sin marcas reales.',
+        'imagenes.assets': '3 banners 16:9 + 5 miniaturas 1:1 + 2 fondos pantalla aeropuerto',
+        'video.hook': 'Pregunta: ¿A qué hora estás en la playa?',
+        'video.desarrollo': 'Aterrizaje, recogida rápida, taxi, terraza con mojito en menos de 1h.',
+        'video.cierre': 'Logo Aena + claim',
+        'video.cta': 'Reserva en admira.xp/mallorca',
+        'video.canal': 'Reel vertical 9:16',
+        'video.duracion': '30s'
+      },
+      chips: {
+        'musica.emocion': ['Calma', 'Descubrimiento', 'Marca'],
+        'musica.capas': ['Base', 'Pad', 'Stinger'],
+        'video.reusa': ['audio', 'musica', 'imagenes']
+      }
+    };
+  </script>
+  <dialog id="keysModal" class="keys-modal">
+    <form method="dialog" class="keys-form">
+      <h3>⚙ API KEYS</h3>
+      <p class="keys-warn">Las claves se guardan solo en este navegador (localStorage). No se envían a ningún servidor de Pixer.ai.</p>
+      <div class="field"><label for="key-elevenlabs">ElevenLabs API Key</label><input id="key-elevenlabs" type="password" autocomplete="off" placeholder="sk_..."></div>
+      <div class="field"><label for="key-elevenlabs-voice">ElevenLabs Voice ID</label><input id="key-elevenlabs-voice" type="text" autocomplete="off" placeholder="EXAVITQu4vr4xnSDxMaL (Bella · default)"></div>
+      <div class="field"><label for="key-xai">xAI / Grok API Key</label><input id="key-xai" type="password" autocomplete="off" placeholder="xai-..."></div>
+      <div class="keys-actions">
+        <button type="button" class="btn primary" id="saveKeys">Guardar</button>
+        <button type="button" class="btn" id="clearKeys">Borrar todas</button>
+        <button type="button" class="btn" id="closeKeys">Cerrar</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="matrix-rain.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

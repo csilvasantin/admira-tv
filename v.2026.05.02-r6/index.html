@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pixer.ai x Admira.xp | Contenidos IA</title>
+  <meta name="description" content="Plataforma operativa para crear briefs de Audio, Musica, Imagenes y Video desde Pixer.ai conectados con Admira.xp.">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07090d;
+      --panel: #101620;
+      --panel-2: #151d29;
+      --ink: #f4f7fb;
+      --muted: #9da8b8;
+      --line: #283446;
+      --audio: #6ee7ff;
+      --music: #c6f66f;
+      --image: #ff8cb3;
+      --video: #ffc766;
+      --xp: #9b8cff;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 14% 8%, rgba(110, 231, 255, .18), transparent 26%),
+        radial-gradient(circle at 86% 6%, rgba(155, 140, 255, .18), transparent 30%),
+        linear-gradient(180deg, #07090d, #0a0d13 46%, #07090d);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+    header, main, footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+    header { padding: 58px 0 34px; }
+    .eyebrow { margin: 0 0 14px; color: var(--audio); font-size: 13px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { margin: 0; max-width: 960px; font-size: clamp(42px, 7.4vw, 88px); line-height: .94; letter-spacing: 0; }
+    .lead { margin: 24px 0 0; max-width: 780px; color: var(--muted); font-size: clamp(18px, 2vw, 23px); }
+    .topbar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+    .pill { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; color: var(--muted); background: rgba(255,255,255,.04); font-size: 14px; }
+    section { padding: 28px 0; }
+    h2 { margin: 0 0 18px; font-size: clamp(28px, 4vw, 46px); line-height: 1; letter-spacing: 0; }
+    h3 { margin: 0 0 10px; font-size: 20px; }
+    p { margin: 0; }
+    .workspace {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr) 320px;
+      gap: 16px;
+      align-items: start;
+    }
+    .menu, .panel, .xp-panel, .module {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(16, 22, 32, .88);
+    }
+    .menu { position: sticky; top: 18px; padding: 14px; }
+    .menu-title { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 10px; }
+    .menu a {
+      display: grid;
+      grid-template-columns: 12px 1fr;
+      gap: 10px;
+      align-items: center;
+      min-height: 48px;
+      padding: 10px;
+      border-radius: 8px;
+      color: var(--ink);
+      text-decoration: none;
+      border: 1px solid transparent;
+    }
+    .menu a:hover { background: rgba(255,255,255,.05); border-color: var(--line); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot.audio { background: var(--audio); }
+    .dot.music { background: var(--music); }
+    .dot.image { background: var(--image); }
+    .dot.video { background: var(--video); }
+    .dot.xp { background: var(--xp); }
+    .panel { padding: 22px; }
+    .content-grid { display: grid; gap: 14px; }
+    .content-card {
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr);
+      gap: 18px;
+      padding: 18px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 8px;
+      background: rgba(255,255,255,.035);
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      text-decoration: none;
+      color: inherit;
+    }
+    .content-card:hover { border-color: rgba(255,255,255,.22); background: rgba(255,255,255,.06); }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      border-radius: 8px;
+      font-weight: 850;
+      color: #061014;
+    }
+    .badge.audio { background: var(--audio); }
+    .badge.music { background: var(--music); }
+    .badge.image { background: var(--image); }
+    .badge.video { background: var(--video); }
+    .content-card p, .xp-panel p, .module p, .module li { color: var(--muted); }
+    .content-card ul, .module ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); }
+    .xp-panel { padding: 22px; background: linear-gradient(180deg, rgba(155,140,255,.14), rgba(16,22,32,.92)); }
+    .xp-panel h2 { font-size: 30px; }
+    .xp-flow { display: grid; gap: 10px; margin-top: 18px; }
+    .xp-step { border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: 12px; background: rgba(255,255,255,.04); }
+    .xp-step strong { display: block; margin-bottom: 4px; color: var(--xp); }
+
+    /* Plataforma operativa */
+    .platform-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; justify-content: space-between; margin-bottom: 18px; }
+    .platform-head h2 { margin: 0; }
+    .platform-head .meta { color: var(--muted); font-size: 14px; max-width: 540px; }
+    .platform-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .module { padding: 22px; }
+    .module-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .module-head h3 { margin: 0; }
+    .module small { color: var(--muted); }
+    .module .accent { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; vertical-align: middle; }
+    .module form { display: grid; gap: 12px; }
+    .field { display: grid; gap: 6px; }
+    .field label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: rgba(7, 9, 13, .7);
+      color: var(--ink);
+      font: inherit;
+      font-size: 14px;
+    }
+    .field textarea { min-height: 70px; resize: vertical; }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none;
+      border-color: rgba(255,255,255,.32);
+      background: rgba(7, 9, 13, .95);
+    }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 10px; border-radius: 999px;
+      border: 1px solid var(--line); background: rgba(255,255,255,.03);
+      color: var(--muted); font-size: 13px; cursor: pointer; user-select: none;
+    }
+    .chip input { display: none; }
+    .chip.active { color: var(--ink); border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.08); }
+
+    /* Brief output */
+    .brief-area {
+      margin-top: 28px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(7,9,13,.7);
+      padding: 18px;
+    }
+    .brief-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .brief-head h3 { margin: 0; font-size: 18px; }
+    .brief-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 9px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn:hover { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.32); }
+    .btn.primary { background: var(--xp); color: #08070f; border-color: transparent; }
+    .btn.primary:hover { filter: brightness(1.08); }
+    pre.brief {
+      margin: 0;
+      padding: 14px;
+      background: #05070b;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      max-height: 420px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .toast {
+      position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+      background: rgba(155,140,255,.95); color: #08070f;
+      padding: 10px 16px; border-radius: 999px; font-weight: 700; font-size: 14px;
+      box-shadow: 0 12px 32px rgba(0,0,0,.35);
+      opacity: 0; pointer-events: none; transition: opacity .18s;
+    }
+    .toast.show { opacity: 1; }
+
+    footer { padding: 36px 0 56px; color: var(--muted); }
+    @media (max-width: 980px) {
+      .workspace { grid-template-columns: 1fr; }
+      .menu { position: static; }
+      .platform-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      header, main, footer { width: min(100% - 28px, 1180px); }
+      .content-card { grid-template-columns: 1fr; }
+      .row2 { grid-template-columns: 1fr; }
+      h1 { font-size: 44px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Pixer.ai conectado con Admira.xp</p>
+    <h1>Cuatro motores de contenido para crear experiencias completas.</h1>
+    <p class="lead">El trabajo se ordena en Audio, Musica, Imagenes y Video. Cada tipo tiene su menu operativo, su conexion con Admira.xp y una zona de plataforma donde se rellenan briefs reales que generan el output estructurado para produccion.</p>
+    <div class="topbar">
+      <span class="pill">Version v.2026.05.02-r6</span>
+      <span class="pill">Plataforma operativa: briefs en JSON</span>
+      <span class="pill">Salida: GitHub Pages + Telegram</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="workspace" aria-label="Menu de contenidos y conexion Admira.xp">
+      <nav class="menu" aria-label="Tipos de contenidos">
+        <p class="menu-title">Menu contenidos</p>
+        <a href="#audio"><span class="dot audio"></span><span>Audio</span></a>
+        <a href="#musica"><span class="dot music"></span><span>Musica</span></a>
+        <a href="#imagenes"><span class="dot image"></span><span>Imagenes</span></a>
+        <a href="#video"><span class="dot video"></span><span>Video</span></a>
+        <a href="#plataforma"><span class="dot xp"></span><span>Plataforma</span></a>
+      </nav>
+
+      <div class="panel">
+        <h2>Tipos de contenido</h2>
+        <div class="content-grid">
+          <a id="audio" class="content-card" href="#mod-audio">
+            <span class="badge audio">Audio</span>
+            <div>
+              <h3>Voces, locuciones y paisajes sonoros</h3>
+              <p>Piezas habladas para asistentes, narrativas, guias, anuncios, experiencias interactivas y respuestas de producto.</p>
+              <ul>
+                <li>Guiones, voces, tonos y duraciones.</li>
+                <li>Versiones por idioma, marca o personaje.</li>
+                <li>Export para Admira.xp como clip, escena o respuesta.</li>
+              </ul>
+            </div>
+          </a>
+
+          <a id="musica" class="content-card" href="#mod-musica">
+            <span class="badge music">Musica</span>
+            <div>
+              <h3>Identidad musical y piezas adaptativas</h3>
+              <p>Musica generada para menus, trailers, ambientes, marcas, eventos, escenas y loops sincronizados con experiencia.</p>
+              <ul>
+                <li>Motivos, loops, stingers y beds.</li>
+                <li>Variantes por energia, duracion o momento.</li>
+                <li>Capas para experiencias interactivas en Admira.xp.</li>
+              </ul>
+            </div>
+          </a>
+
+          <a id="imagenes" class="content-card" href="#mod-imagenes">
+            <span class="badge image">Imagenes</span>
+            <div>
+              <h3>Visuales, assets y mundos de marca</h3>
+              <p>Imagenes para campanas, producto, personajes, fondos, miniaturas, banners, social posts y referencias visuales.</p>
+              <ul>
+                <li>Prompts visuales, estilos y composicion.</li>
+                <li>Series coherentes por campana o cliente.</li>
+                <li>Assets listos para publicar o animar.</li>
+              </ul>
+            </div>
+          </a>
+
+          <a id="video" class="content-card" href="#mod-video">
+            <span class="badge video">Video</span>
+            <div>
+              <h3>Clips, reels, demos y escenas animadas</h3>
+              <p>Video vertical, horizontal o modular para storytelling, anuncios, demostraciones, tutoriales y contenido social.</p>
+              <ul>
+                <li>Guion, storyboard, ritmo y plano.</li>
+                <li>Versiones por canal y duracion.</li>
+                <li>Conexion con audio, musica e imagenes ya aprobadas.</li>
+              </ul>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <aside class="xp-panel" aria-label="Conexion con Admira.xp">
+        <h2>Admira.xp</h2>
+        <p>Admira.xp funciona como capa de experiencia: recibe contenidos generados en Pixer.ai, los organiza por escena, canal o interaccion y los convierte en experiencias navegables, medibles y reutilizables.</p>
+        <div class="xp-flow">
+          <div class="xp-step"><strong>Entrada</strong><span>Brief, cliente, objetivo y tipo de contenido.</span></div>
+          <div class="xp-step"><strong>Generacion</strong><span>Pixer.ai produce audio, musica, imagenes o video.</span></div>
+          <div class="xp-step"><strong>Orquestacion</strong><span>Admira.xp conecta piezas, estados, escenas y triggers.</span></div>
+          <div class="xp-step"><strong>Salida</strong><span>Publicacion web, experiencia, demo, campana o presentacion.</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <section id="plataforma">
+      <div class="platform-head">
+        <div>
+          <h2>Plataforma</h2>
+          <p class="meta">Rellena los modulos relevantes y genera un brief estructurado en JSON, listo para Pixer.ai y Admira.xp.</p>
+        </div>
+        <div class="brief-actions">
+          <button class="btn" type="button" id="loadDemo">Cargar demo</button>
+          <button class="btn" type="button" id="clearAll">Limpiar todo</button>
+        </div>
+      </div>
+
+      <form id="briefForm">
+        <div class="field" style="margin-bottom: 16px;">
+          <label for="proj-cliente">Cliente / proyecto</label>
+          <input id="proj-cliente" name="cliente" type="text" placeholder="Ej. Aena Mallorca - Campana primavera">
+        </div>
+
+        <div class="platform-grid">
+          <article class="module" id="mod-audio">
+            <div class="module-head"><h3><span class="accent" style="background: var(--audio);"></span>Audio</h3><small>voz + guion + escena</small></div>
+            <div class="row2">
+              <div class="field"><label for="a-personaje">Personaje / locutor</label><input id="a-personaje" name="audio.personaje" type="text" placeholder="Voz adulta calida"></div>
+              <div class="field"><label for="a-idioma">Idioma</label>
+                <select id="a-idioma" name="audio.idioma">
+                  <option value="">—</option>
+                  <option>Espanol (ES)</option>
+                  <option>Espanol (LATAM)</option>
+                  <option>Catalan</option>
+                  <option>Ingles (UK)</option>
+                  <option>Ingles (US)</option>
+                  <option>Frances</option>
+                  <option>Aleman</option>
+                  <option>Portugues</option>
+                </select>
+              </div>
+            </div>
+            <div class="row2">
+              <div class="field"><label for="a-tono">Tono</label>
+                <select id="a-tono" name="audio.tono">
+                  <option value="">—</option>
+                  <option>Cercano</option>
+                  <option>Institucional</option>
+                  <option>Energico</option>
+                  <option>Misterioso</option>
+                  <option>Documental</option>
+                  <option>Comercial</option>
+                </select>
+              </div>
+              <div class="field"><label for="a-ritmo">Ritmo / duracion</label><input id="a-ritmo" name="audio.ritmo" type="text" placeholder="20s, ritmo medio"></div>
+            </div>
+            <div class="field"><label for="a-guion">Guion / texto a locutar</label><textarea id="a-guion" name="audio.guion" placeholder="Bienvenido a..."></textarea></div>
+            <div class="field"><label for="a-cta">CTA / final</label><input id="a-cta" name="audio.cta" type="text" placeholder="Reserva ahora en admira.xp"></div>
+          </article>
+
+          <article class="module" id="mod-musica">
+            <div class="module-head"><h3><span class="accent" style="background: var(--music);"></span>Musica</h3><small>identidad + loop + energia</small></div>
+            <div class="field"><label>Mapa emocional</label>
+              <div class="chips" data-name="musica.emocion">
+                <label class="chip"><input type="checkbox" value="Calma">Calma</label>
+                <label class="chip"><input type="checkbox" value="Tension">Tension</label>
+                <label class="chip"><input type="checkbox" value="Descubrimiento">Descubrimiento</label>
+                <label class="chip"><input type="checkbox" value="Celebracion">Celebracion</label>
+                <label class="chip"><input type="checkbox" value="Marca">Marca</label>
+                <label class="chip"><input type="checkbox" value="Transicion">Transicion</label>
+              </div>
+            </div>
+            <div class="field"><label>Capas</label>
+              <div class="chips" data-name="musica.capas">
+                <label class="chip"><input type="checkbox" value="Base">Base</label>
+                <label class="chip"><input type="checkbox" value="Percusion">Percusion</label>
+                <label class="chip"><input type="checkbox" value="Melodia">Melodia</label>
+                <label class="chip"><input type="checkbox" value="Stinger">Stinger</label>
+                <label class="chip"><input type="checkbox" value="Pad">Pad</label>
+                <label class="chip"><input type="checkbox" value="Bed">Bed</label>
+              </div>
+            </div>
+            <div class="row2">
+              <div class="field"><label for="m-bpm">BPM</label><input id="m-bpm" name="musica.bpm" type="text" placeholder="92"></div>
+              <div class="field"><label for="m-tonalidad">Tonalidad</label><input id="m-tonalidad" name="musica.tonalidad" type="text" placeholder="C menor"></div>
+            </div>
+            <div class="field"><label for="m-versiones">Versiones a entregar</label><input id="m-versiones" name="musica.versiones" type="text" placeholder="Loop limpio, version 30s, version extendida 2min"></div>
+            <div class="field"><label for="m-uso">Uso en experiencia</label><input id="m-uso" name="musica.uso" type="text" placeholder="Bed de menu + stinger de cierre"></div>
+          </article>
+
+          <article class="module" id="mod-imagenes">
+            <div class="module-head"><h3><span class="accent" style="background: var(--image);"></span>Imagenes</h3><small>assets + estilo + consistencia</small></div>
+            <div class="row2">
+              <div class="field"><label for="i-paleta">Paleta</label><input id="i-paleta" name="imagenes.paleta" type="text" placeholder="Coral + crema + azul medianoche"></div>
+              <div class="field"><label for="i-encuadre">Encuadre</label>
+                <select id="i-encuadre" name="imagenes.encuadre">
+                  <option value="">—</option>
+                  <option>Vertical 9:16</option>
+                  <option>Cuadrado 1:1</option>
+                  <option>Horizontal 16:9</option>
+                  <option>Banner 3:1</option>
+                  <option>Mixto</option>
+                </select>
+              </div>
+            </div>
+            <div class="row2">
+              <div class="field"><label for="i-luz">Luz</label><input id="i-luz" name="imagenes.luz" type="text" placeholder="Atardecer suave, contraste medio"></div>
+              <div class="field"><label for="i-realismo">Nivel de realismo</label>
+                <select id="i-realismo" name="imagenes.realismo">
+                  <option value="">—</option>
+                  <option>Foto realista</option>
+                  <option>Editorial</option>
+                  <option>Ilustracion</option>
+                  <option>3D estilizado</option>
+                  <option>Pixel art</option>
+                </select>
+              </div>
+            </div>
+            <div class="field"><label for="i-prompt">Prompt principal</label><textarea id="i-prompt" name="imagenes.prompt" placeholder="Familia disfrutando del aeropuerto, luz dorada..."></textarea></div>
+            <div class="field"><label for="i-assets">Assets a generar</label><input id="i-assets" name="imagenes.assets" type="text" placeholder="3 banners + 5 miniaturas + 2 fondos"></div>
+          </article>
+
+          <article class="module" id="mod-video">
+            <div class="module-head"><h3><span class="accent" style="background: var(--video);"></span>Video</h3><small>guion + planos + montaje</small></div>
+            <div class="field"><label for="v-hook">Hook (3s iniciales)</label><input id="v-hook" name="video.hook" type="text" placeholder="Pregunta directa al espectador"></div>
+            <div class="field"><label for="v-desarrollo">Desarrollo</label><textarea id="v-desarrollo" name="video.desarrollo" placeholder="Mostrar producto, beneficios, prueba social..."></textarea></div>
+            <div class="row2">
+              <div class="field"><label for="v-cierre">Cierre</label><input id="v-cierre" name="video.cierre" type="text" placeholder="Logo + claim"></div>
+              <div class="field"><label for="v-cta">CTA</label><input id="v-cta" name="video.cta" type="text" placeholder="Visita admira.xp"></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label for="v-canal">Canal / formato</label>
+                <select id="v-canal" name="video.canal">
+                  <option value="">—</option>
+                  <option>Reel vertical 9:16</option>
+                  <option>YouTube 16:9</option>
+                  <option>Demo producto 16:9</option>
+                  <option>Pantalla evento 16:9</option>
+                  <option>Carrusel cuadrado 1:1</option>
+                </select>
+              </div>
+              <div class="field"><label for="v-duracion">Duracion</label><input id="v-duracion" name="video.duracion" type="text" placeholder="30s"></div>
+            </div>
+            <div class="field"><label>Reusa de otros modulos</label>
+              <div class="chips" data-name="video.reusa">
+                <label class="chip"><input type="checkbox" value="audio">Audio</label>
+                <label class="chip"><input type="checkbox" value="musica">Musica</label>
+                <label class="chip"><input type="checkbox" value="imagenes">Imagenes</label>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="brief-area">
+          <div class="brief-head">
+            <h3>Brief generado</h3>
+            <div class="brief-actions">
+              <button class="btn primary" type="button" id="genBrief">Generar brief</button>
+              <button class="btn" type="button" id="copyBrief">Copiar JSON</button>
+              <button class="btn" type="button" id="copyMd">Copiar Markdown</button>
+              <button class="btn" type="button" id="dlBrief">Descargar .json</button>
+            </div>
+          </div>
+          <pre class="brief" id="briefOut">// Rellena los modulos y pulsa &quot;Generar brief&quot;.</pre>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <p>AdmiraNext AI Workspace · Pixer.ai x Admira.xp · v.2026.05.02-r6</p>
+  </footer>
+
+  <div class="toast" id="toast">Copiado</div>
+
+  <script>
+    (function () {
+      const form = document.getElementById('briefForm');
+      const out = document.getElementById('briefOut');
+      const toast = document.getElementById('toast');
+
+      // Chip toggle
+      document.querySelectorAll('.chip').forEach(chip => {
+        const input = chip.querySelector('input');
+        const sync = () => chip.classList.toggle('active', input.checked);
+        sync();
+        input.addEventListener('change', sync);
+      });
+
+      function setNested(obj, path, value) {
+        const keys = path.split('.');
+        let ref = obj;
+        for (let i = 0; i < keys.length - 1; i++) {
+          ref[keys[i]] = ref[keys[i]] || {};
+          ref = ref[keys[i]];
+        }
+        ref[keys[keys.length - 1]] = value;
+      }
+
+      function collect() {
+        const data = { meta: { version: 'v.2026.05.02-r6', generado: new Date().toISOString() } };
+        // simple inputs
+        form.querySelectorAll('input[type=text], select, textarea').forEach(el => {
+          if (!el.name || !el.value.trim()) return;
+          setNested(data, el.name, el.value.trim());
+        });
+        // chip groups
+        document.querySelectorAll('.chips[data-name]').forEach(group => {
+          const name = group.dataset.name;
+          const values = Array.from(group.querySelectorAll('input:checked')).map(i => i.value);
+          if (values.length) setNested(data, name, values);
+        });
+        return data;
+      }
+
+      function pruneEmpty(obj) {
+        if (Array.isArray(obj)) return obj;
+        if (obj && typeof obj === 'object') {
+          const out = {};
+          for (const k of Object.keys(obj)) {
+            const v = pruneEmpty(obj[k]);
+            if (v && (typeof v !== 'object' || Object.keys(v).length || Array.isArray(v))) out[k] = v;
+          }
+          return out;
+        }
+        return obj;
+      }
+
+      function toMarkdown(d) {
+        const lines = [];
+        lines.push('# Brief Pixer.ai x Admira.xp');
+        if (d.cliente) lines.push(`**Cliente / proyecto:** ${d.cliente}`);
+        lines.push(`**Version:** ${d.meta.version}  ·  **Generado:** ${d.meta.generado}`);
+        const sections = [
+          ['audio', 'Audio'],
+          ['musica', 'Musica'],
+          ['imagenes', 'Imagenes'],
+          ['video', 'Video'],
+        ];
+        for (const [key, title] of sections) {
+          if (!d[key]) continue;
+          lines.push('', `## ${title}`);
+          for (const [k, v] of Object.entries(d[key])) {
+            const val = Array.isArray(v) ? v.join(', ') : v;
+            lines.push(`- **${k}:** ${val}`);
+          }
+        }
+        return lines.join('\n');
+      }
+
+      function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => toast.classList.remove('show'), 1400);
+      }
+
+      function getBrief() {
+        return pruneEmpty(collect());
+      }
+
+      document.getElementById('genBrief').addEventListener('click', () => {
+        const d = getBrief();
+        out.textContent = JSON.stringify(d, null, 2);
+      });
+
+      document.getElementById('copyBrief').addEventListener('click', async () => {
+        const d = getBrief();
+        await navigator.clipboard.writeText(JSON.stringify(d, null, 2));
+        showToast('JSON copiado');
+      });
+
+      document.getElementById('copyMd').addEventListener('click', async () => {
+        const d = getBrief();
+        await navigator.clipboard.writeText(toMarkdown(d));
+        showToast('Markdown copiado');
+      });
+
+      document.getElementById('dlBrief').addEventListener('click', () => {
+        const d = getBrief();
+        const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const slug = (d.cliente || 'brief').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'brief';
+        a.href = url;
+        a.download = `${slug}-pixer-admira-${d.meta.version}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById('clearAll').addEventListener('click', () => {
+        form.reset();
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        out.textContent = '// Rellena los modulos y pulsa "Generar brief".';
+      });
+
+      document.getElementById('loadDemo').addEventListener('click', () => {
+        const demo = {
+          'cliente': 'Aena Mallorca - Campana primavera',
+          'audio.personaje': 'Voz femenina, adulta, calida',
+          'audio.idioma': 'Espanol (ES)',
+          'audio.tono': 'Cercano',
+          'audio.ritmo': '25s, ritmo medio, pausas claras',
+          'audio.guion': 'Llega la primavera a Mallorca. Vuelos directos, terraza al sol y el mar a 20 minutos.',
+          'audio.cta': 'Reserva en admira.xp/mallorca',
+          'musica.bpm': '92',
+          'musica.tonalidad': 'C mayor',
+          'musica.versiones': 'Loop 30s + version extendida 2min + stinger 3s',
+          'musica.uso': 'Bed de spot + stinger de cierre + bed de pantalla en aeropuerto',
+          'imagenes.paleta': 'Coral, crema, azul mediterraneo',
+          'imagenes.encuadre': 'Mixto',
+          'imagenes.luz': 'Atardecer dorado, contraste medio',
+          'imagenes.realismo': 'Editorial',
+          'imagenes.prompt': 'Familia llegando a Mallorca, terraza con vistas al mar, luz dorada, ropa de lino, sin marcas reales.',
+          'imagenes.assets': '3 banners 16:9 + 5 miniaturas 1:1 + 2 fondos pantalla aeropuerto',
+          'video.hook': 'Pregunta: ¿A que hora estas en la playa?',
+          'video.desarrollo': 'Aterrizaje, recogida rapida, taxi, terraza con mojito en menos de 1h.',
+          'video.cierre': 'Logo Aena + claim',
+          'video.cta': 'Reserva en admira.xp/mallorca',
+          'video.canal': 'Reel vertical 9:16',
+          'video.duracion': '30s',
+        };
+        Object.entries(demo).forEach(([name, value]) => {
+          const el = form.querySelector(`[name="${name}"]`);
+          if (el) el.value = value;
+        });
+        // chips
+        const chipDemo = {
+          'musica.emocion': ['Calma', 'Descubrimiento', 'Marca'],
+          'musica.capas': ['Base', 'Pad', 'Stinger'],
+          'video.reusa': ['audio', 'musica', 'imagenes'],
+        };
+        Object.entries(chipDemo).forEach(([name, vals]) => {
+          const group = document.querySelector(`.chips[data-name="${name}"]`);
+          if (!group) return;
+          group.querySelectorAll('input').forEach(i => {
+            i.checked = vals.includes(i.value);
+            i.dispatchEvent(new Event('change'));
+          });
+        });
+        document.getElementById('genBrief').click();
+        document.getElementById('plataforma').scrollIntoView({ behavior: 'smooth' });
+      });
+    })();
+  </script>
+</body>
+</html>

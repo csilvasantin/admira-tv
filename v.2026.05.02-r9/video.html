@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Video · Pixer.ai x Admira.xp</title>
+  <meta name="description" content="Brief operativo de Video: clips, reels, demos y escenas animadas para Admira.xp.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="video">
+  <canvas id="matrix-rain" aria-hidden="true"></canvas>
+  <header class="topnav">
+    <div class="brand"><a href="index.html" class="brand-link"><span class="brand-name">Pixer.ai × Admira.xp</span><span class="brand-version">v.2026.05.02-r9</span></a></div>
+    <nav class="primary-nav">
+      <a href="index.html" data-nav="home">Inicio</a>
+      <a href="audio.html" data-nav="audio">Audio</a>
+      <a href="musica.html" data-nav="musica">Música</a>
+      <a href="imagenes.html" data-nav="imagenes">Imágenes</a>
+      <a href="video.html" data-nav="video">Video</a>
+      <a href="plataforma.html" data-nav="plataforma">Plataforma</a>
+      <a href="admira-xp.html" data-nav="admira-xp">Admira.xp</a>
+    </nav>
+    <div class="topnav-actions">
+      <button type="button" class="btn-back" onclick="history.length>1?history.back():location.href='index.html'">← Volver</button>
+    </div>
+  </header>
+
+  <header class="page-head">
+    <p class="eyebrow video">Tipo de contenido · Video</p>
+    <h1>Clips, reels, demos y escenas animadas.</h1>
+    <p class="lead">Video vertical, horizontal o modular para storytelling, anuncios, demostraciones y tutoriales. Define hook, desarrollo, cierre y reusa audio, música e imágenes ya aprobadas.</p>
+  </header>
+
+  <main>
+    <form id="briefForm">
+      <div class="field" style="margin-bottom: 16px;">
+        <label for="proj-cliente">Cliente / proyecto</label>
+        <input id="proj-cliente" name="cliente" type="text" placeholder="Ej. Aena Mallorca - Campaña primavera">
+      </div>
+
+      <article class="module">
+        <div class="module-head"><h3><span class="accent" style="background: var(--video);"></span>Video</h3><small>guion + planos + montaje</small></div>
+        <div data-motor-section="video"></div>
+        <div class="field"><label for="v-hook">Hook (3s iniciales)</label><input id="v-hook" name="video.hook" type="text" placeholder="Pregunta directa al espectador"></div>
+        <div class="field"><label for="v-desarrollo">Desarrollo</label><textarea id="v-desarrollo" name="video.desarrollo" placeholder="Mostrar producto, beneficios, prueba social..."></textarea></div>
+        <div class="row2">
+          <div class="field"><label for="v-cierre">Cierre</label><input id="v-cierre" name="video.cierre" type="text" placeholder="Logo + claim"></div>
+          <div class="field"><label for="v-cta">CTA</label><input id="v-cta" name="video.cta" type="text" placeholder="Visita admira.xp"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="v-canal">Canal / formato</label>
+            <select id="v-canal" name="video.canal">
+              <option value="">—</option>
+              <option>Reel vertical 9:16</option>
+              <option>YouTube 16:9</option>
+              <option>Demo producto 16:9</option>
+              <option>Pantalla evento 16:9</option>
+              <option>Carrusel cuadrado 1:1</option>
+            </select>
+          </div>
+          <div class="field"><label for="v-duracion">Duración</label><input id="v-duracion" name="video.duracion" type="text" placeholder="30s"></div>
+        </div>
+        <div class="field"><label>Reusa de otros módulos</label>
+          <div class="chips" data-name="video.reusa">
+            <label class="chip"><input type="checkbox" value="audio">Audio</label>
+            <label class="chip"><input type="checkbox" value="musica">Música</label>
+            <label class="chip"><input type="checkbox" value="imagenes">Imágenes</label>
+          </div>
+        </div>
+      </article>
+
+      <div class="brief-area">
+        <div class="brief-head">
+          <h3>Brief de Video</h3>
+          <div class="brief-actions">
+            <button class="btn primary" type="button" id="genBrief">Generar brief</button>
+            <button class="btn" type="button" id="copyBrief">Copiar JSON</button>
+            <button class="btn" type="button" id="copyMd">Copiar Markdown</button>
+            <button class="btn" type="button" id="dlBrief">Descargar .json</button>
+            <button class="btn" type="button" id="clearAll">Limpiar Video</button>
+          </div>
+        </div>
+        <pre class="brief" id="briefOut">// Rellena los campos y pulsa "Generar brief".</pre>
+      </div>
+    </form>
+  </main>
+
+  <footer>
+    <p>AdmiraNext AI Workspace · Pixer.ai × Admira.xp · v.2026.05.02-r9</p>
+  </footer>
+
+  <script src="matrix-rain.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

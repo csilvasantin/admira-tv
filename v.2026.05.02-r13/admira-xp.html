@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admira.xp · Pixer.ai x Admira.xp</title>
+  <meta name="description" content="Capa de experiencia que orquesta los outputs de Pixer.ai en escenas, triggers y publicaciones.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="admira-xp">
+  <canvas id="matrix-rain" aria-hidden="true"></canvas>
+  <header class="topnav">
+    <div class="brand"><a href="index.html" class="brand-link"><span class="brand-name">Pixer.ai × Admira.xp</span><span class="brand-version">v.2026.05.02-r13</span></a></div>
+    <nav class="primary-nav">
+      <a href="index.html" data-nav="home">Inicio</a>
+      <a href="audio.html" data-nav="audio">Audio</a>
+      <a href="musica.html" data-nav="musica">Música</a>
+      <a href="imagenes.html" data-nav="imagenes">Imágenes</a>
+      <a href="video.html" data-nav="video">Video</a>
+      <a href="plataforma.html" data-nav="plataforma">Plataforma</a>
+      <a href="admira-xp.html" data-nav="admira-xp">Admira.xp</a>
+    </nav>
+    <div class="topnav-actions">
+      <button type="button" class="btn" id="openSettings" title="API keys">⚙ KEYS</button>
+      <button type="button" class="btn-back" onclick="history.length>1?history.back():location.href='index.html'">← Volver</button>
+    </div>
+  </header>
+
+  <header class="page-head">
+    <p class="eyebrow xp">Capa de experiencia · Admira.xp</p>
+    <h1>De los outputs de Pixer.ai a una experiencia navegable.</h1>
+    <p class="lead">Admira.xp recibe los contenidos generados en Pixer.ai (audio, música, imágenes, video) y los organiza por escena, canal o interacción. El resultado: experiencias medibles y reutilizables, no piezas sueltas.</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Flujo Pixer.ai → Admira.xp</h2>
+      <div class="xp-flow">
+        <div class="xp-step"><strong>1 · Entrada</strong><p>Brief de cliente, objetivo, tipo de contenido y restricciones de marca. Llega desde la página de cada tipo o desde Plataforma.</p></div>
+        <div class="xp-step"><strong>2 · Generación</strong><p>Pixer.ai produce las piezas: voces y guiones, loops y stingers, assets visuales, video editado por canal.</p></div>
+        <div class="xp-step"><strong>3 · Orquestación</strong><p>Admira.xp conecta piezas, define escenas, estados y triggers; añade reglas de reutilización por momento o canal.</p></div>
+        <div class="xp-step"><strong>4 · Salida</strong><p>Publicación: web, demo, presentación, pantalla en evento, campaña multicanal o experiencia interactiva.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Roles que cubre Admira.xp</h2>
+      <div class="xp-roles">
+        <div class="xp-role"><h4>Director de experiencia</h4><p>Decide qué pieza aparece en qué momento, según escena, canal o interacción del usuario.</p></div>
+        <div class="xp-role"><h4>Bibliotecario</h4><p>Indexa los outputs por cliente, campaña, idioma y estado (borrador, aprobado, publicado).</p></div>
+        <div class="xp-role"><h4>Orquestador</h4><p>Conecta audio + música + imagen + video como un único paquete reutilizable por canal.</p></div>
+        <div class="xp-role"><h4>Publicador</h4><p>Empaqueta la salida para web, evento o presentación, con las versiones por formato y duración.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Cómo se usa desde aquí</h2>
+      <div class="home-grid">
+        <a class="home-card" href="plataforma.html">
+          <span class="badge platform">P</span>
+          <div>
+            <h3>Ir a Plataforma</h3>
+            <p>Rellena el brief consolidado y descarga el JSON. Es la entrada estándar para Admira.xp.</p>
+            <small>brief unificado → entrada Admira.xp</small>
+          </div>
+        </a>
+        <a class="home-card" href="index.html">
+          <span class="badge xp">XP</span>
+          <div>
+            <h3>Volver al inicio</h3>
+            <p>Vista general de los cuatro tipos de contenido y de las dos capas operativas.</p>
+            <small>mapa del workspace</small>
+          </div>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>AdmiraNext AI Workspace · Pixer.ai × Admira.xp · v.2026.05.02-r13</p>
+  </footer>
+
+  <dialog id="keysModal" class="keys-modal">
+    <form method="dialog" class="keys-form">
+      <h3>⚙ API KEYS</h3>
+      <p class="keys-warn">Las claves se guardan solo en este navegador (localStorage). No se envían a ningún servidor de Pixer.ai.</p>
+      <div class="field"><label for="key-elevenlabs">ElevenLabs API Key</label><input id="key-elevenlabs" type="password" autocomplete="off" placeholder="sk_..."></div>
+      <div class="field"><label for="key-elevenlabs-voice">ElevenLabs Voice ID</label><input id="key-elevenlabs-voice" type="text" autocomplete="off" placeholder="EXAVITQu4vr4xnSDxMaL (Bella · default)"></div>
+      <div class="field"><label for="key-xai">xAI / Grok API Key</label><input id="key-xai" type="password" autocomplete="off" placeholder="xai-..."></div>
+      <div class="keys-actions">
+        <button type="button" class="btn primary" id="saveKeys">Guardar</button>
+        <button type="button" class="btn" id="clearKeys">Borrar todas</button>
+        <button type="button" class="btn" id="closeKeys">Cerrar</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="matrix-rain.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Imágenes · Pixer.ai x Admira.xp</title>
+  <meta name="description" content="Brief operativo de Imágenes: visuales, assets y mundos de marca para Admira.xp.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="imagenes">
+  <canvas id="matrix-rain" aria-hidden="true"></canvas>
+  <header class="topnav">
+    <div class="brand"><a href="index.html" class="brand-link"><span class="brand-name">Pixer.ai × Admira.xp</span><span class="brand-version">v.2026.05.02-r38</span></a></div>
+    <nav class="primary-nav">      <a href="audio.html" data-nav="audio">Audio</a>
+      <a href="musica.html" data-nav="musica">Música</a>
+      <a href="imagenes.html" data-nav="imagenes">Imágenes</a>
+      <a href="video.html" data-nav="video">Video</a>      <a href="admira-xp.html" data-nav="admira-xp">Admira.xp</a>
+    </nav>
+    <div class="topnav-actions">
+      <span id="xtoreStatus" class="xtore-badge" title="Estado de la pantalla Xtore (signage.html)">🔴 XTORE</span>
+      <button type="button" class="btn" id="openImport" title="Importa un video/audio de YouTube vía yt-dlp local">📥 IMPORTAR</button>
+      <button type="button" class="btn-back" onclick="history.length>1?history.back():location.href='index.html'">← Volver</button>
+    </div>
+  </header>
+
+  <header class="page-head has-gif"><figure class="page-gif"><img src="https://upload.wikimedia.org/wikipedia/commons/4/41/Digital_rain_animation_big_letters_green_and_white.gif" alt="Imágenes · letras grandes verdes" loading="lazy"><figcaption>// Imágenes · letras grandes verdes</figcaption></figure>
+    <p class="eyebrow image">Tipo de contenido · Imágenes</p>
+    <h1>Visuales, assets y mundos de marca.</h1>
+    <p class="lead">Imágenes para campañas, producto, personajes, fondos, miniaturas y banners. Define paleta, encuadre, luz y prompt para series coherentes listas para publicar o animar.</p>
+  </header>
+
+  <main>
+    <form id="briefForm">
+      <div class="field" style="margin-bottom: 16px; display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:end;">
+        <div>
+          <label for="proj-cliente">Cliente / proyecto</label>
+          <input id="proj-cliente" name="cliente" type="text" placeholder="Ej. Aena Mallorca - Campaña primavera">
+        </div>
+        <button type="button" class="btn" id="sendToAdmiraXP" title="Envía el último contenido generado al feed de Admira XP">📺 ENVIAR A ADMIRA XP</button>
+          <a class="btn" href="/pixer-ai-content/signage.html" target="_blank" rel="noopener" title="Abre la pantalla de signage para ver lo enviado">↗ VER PANTALLA</a>
+      </div>
+      <div id="signageStatus" class="signage-status" hidden style="margin-bottom:16px;">
+        <img class="signage-thumb" alt="">
+        <div class="signage-info">
+          <div class="signage-info-row">
+            <span class="signage-stage">📤 Iniciando...</span>
+            <span class="signage-id"></span>
+          </div>
+          <div class="signage-bar"><div class="signage-bar-fill"></div></div>
+          <div class="signage-log"></div>
+        </div>
+      </div
+
+      <article class="module">
+        <div class="module-head"><h3><span class="accent" style="background: var(--image);"></span>Imágenes</h3><small>assets + estilo + consistencia</small></div>
+        <div data-motor-section="imagenes"></div>
+        <div class="row2">
+          <div class="field"><label for="i-paleta">Paleta</label><input id="i-paleta" name="imagenes.paleta" type="text" placeholder="Coral + crema + azul medianoche"></div>
+          <div class="field"><label for="i-encuadre">Encuadre</label>
+            <select id="i-encuadre" name="imagenes.encuadre">
+              <option value="">—</option>
+              <option>Vertical 9:16</option>
+              <option>Cuadrado 1:1</option>
+              <option>Horizontal 16:9</option>
+              <option>Banner 3:1</option>
+              <option>Mixto</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="i-luz">Luz</label><input id="i-luz" name="imagenes.luz" type="text" placeholder="Atardecer suave, contraste medio"></div>
+          <div class="field"><label for="i-realismo">Nivel de realismo</label>
+            <select id="i-realismo" name="imagenes.realismo">
+              <option value="">—</option>
+              <option>Foto realista</option>
+              <option>Editorial</option>
+              <option>Ilustracion</option>
+              <option>3D estilizado</option>
+              <option>Pixel art</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label for="i-prompt">Prompt principal</label><textarea id="i-prompt" name="imagenes.prompt" placeholder="Familia disfrutando del aeropuerto, luz dorada..."></textarea></div>
+        <div class="field"><label for="i-assets">Assets a generar</label><input id="i-assets" name="imagenes.assets" type="text" placeholder="3 banners + 5 miniaturas + 2 fondos"></div>
+      </article>
+
+      <div class="brief-area">
+        <div class="brief-head">
+          <h3>Brief de Imágenes</h3>
+          <div class="brief-actions">
+            <button class="btn play" type="button" id="playOutput"><span class="play-label">✨ CREAR</span></button>
+            <button class="btn" type="button" id="genBrief">Generar brief</button>
+            <button class="btn" type="button" id="copyBrief">Copiar JSON</button>
+            <button class="btn" type="button" id="copyMd">Copiar Markdown</button>
+            <button class="btn" type="button" id="dlBrief">Descargar .json</button>
+            <button class="btn" type="button" id="clearAll">Limpiar Imágenes</button>
+          </div>
+        </div>
+        <pre class="brief" id="briefOut">// Rellena los campos y pulsa "Generar brief".</pre>
+      </div>
+      <div id="player" class="player-area" hidden></div>
+    </form>
+  </main>
+
+  <footer>
+    <p>AdmiraNext AI Workspace · Pixer.ai × Admira.xp · v.2026.05.02-r38</p>
+  </footer>
+
+  <dialog id="importModal" class="keys-modal">
+    <form method="dialog" class="keys-form">
+      <h3>📥 IMPORTAR DESDE URL</h3>
+      <p class="keys-warn">yt-dlp en Mac Mini (audio mp3 + video mp4). Hosts permitidos: YouTube, Vimeo, Twitter/X, TikTok, Instagram. Si abres en local también funciona suno-local (:3777).</p>
+      <div class="field"><label for="import-url">URL</label><input id="import-url" type="text" autocomplete="off" placeholder="https://www.youtube.com/watch?v=..."></div>
+      <div class="field">
+        <label>Formato</label>
+        <div class="chips">
+          <label class="chip"><input type="radio" name="import-fmt" value="audio" checked> Audio (mp3)</label>
+          <label class="chip"><input type="radio" name="import-fmt" value="video"> Video (mp4)</label>
+        </div>
+      </div>
+      <div class="keys-actions">
+        <button type="button" class="btn primary" id="doImport">Importar</button>
+        <button type="button" class="btn" id="closeImport">Cerrar</button>
+      </div>
+      <pre class="brief" id="importStatus" style="display:none;font-size:11px;max-height:200px;"></pre>
+    </form>
+  </dialog>
+  <dialog id="keysModal" class="keys-modal">
+    <form method="dialog" class="keys-form">
+      <h3>⚙ API KEYS</h3>
+      <p class="keys-warn">Las claves se guardan solo en este navegador (localStorage). No se envían a ningún servidor de Pixer.ai.</p>      <div class="field"><label for="key-elevenlabs-voice">ElevenLabs Voice ID</label><input id="key-elevenlabs-voice" type="text" autocomplete="off" placeholder="EXAVITQu4vr4xnSDxMaL (Bella · default)"></div>      <div class="keys-actions">
+        <button type="button" class="btn primary" id="saveKeys">Guardar</button>
+        <button type="button" class="btn" id="clearKeys">Borrar todas</button>
+        <button type="button" class="btn" id="closeKeys">Cerrar</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="matrix-rain.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
