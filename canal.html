@@ -4,50 +4,62 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Admira.tv · Digital Signage Loop</title>
-<meta name="description" content="Canal de cartelería vertical de Admira.tv: emite en bucle los últimos vídeos creados en Pixeria, en un MUPI DOOH.">
+<meta name="description" content="Canal de cartelería vertical de Admira.tv: emite en bucle todo el media creado en Pixeria (vídeo, imagen, audio, música, locución), segmentable por audiencia, categoría, edad y franja.">
 <style>
   :root{ --air:#ff4444; --grn:#39d353; --blue:#7db8ff; --bg:#05080c; }
   *{ box-sizing:border-box; margin:0; padding:0; }
   html,body{ height:100%; background:var(--bg); color:var(--grn); font-family:ui-monospace,"JetBrains Mono",monospace; overflow:hidden; }
   #wrap{ position:fixed; inset:0; display:grid; place-items:center; }
-  /* MUPI vertical 9:16 con bisel */
   #mupi{ position:relative; height:96vh; aspect-ratio:9/16; max-width:96vw; background:#000; border-radius:16px; overflow:hidden;
     box-shadow:0 0 0 8px #11161d, 0 0 0 10px #060a0f, 0 30px 90px rgba(0,0,0,.65), 0 0 80px rgba(125,184,255,.07); }
   #stage{ position:absolute; inset:0; display:grid; place-items:center; background:#000; }
-  #stage video{ width:100%; height:100%; object-fit:cover; display:block; }
+  #stage video, #stage img{ width:100%; height:100%; object-fit:cover; display:block; }
+  #stage img.pixel{ object-fit:contain; image-rendering:pixelated; background:#0a140a; }
   .empty{ opacity:.5; letter-spacing:.22em; text-align:center; padding:24px; animation:blink 1.5s steps(2) infinite; }
   @keyframes blink{ 50%{ opacity:.15 } }
+  /* tarjeta de audio */
+  .audio-card{ display:grid; gap:22px; place-items:center; text-align:center; padding:32px; }
+  .audio-card .ico{ font-size:64px; color:var(--blue); text-shadow:0 0 24px var(--blue); }
+  .audio-card strong{ font-size:18px; letter-spacing:.06em; color:#eafff0; }
+  .audio-card .wave{ display:flex; gap:5px; height:46px; align-items:flex-end; }
+  .audio-card .wave i{ width:6px; background:var(--grn); border-radius:3px; animation:wv 1s ease-in-out infinite; }
+  @keyframes wv{ 0%,100%{ height:10px } 50%{ height:46px } }
   /* cabecera */
   #top{ position:absolute; left:0; right:0; top:0; z-index:3; padding:18px 18px 30px; display:flex; justify-content:space-between; align-items:flex-start;
     background:linear-gradient(180deg,rgba(0,0,0,.8),transparent); }
   #top .brand{ font-weight:800; letter-spacing:.02em; font-size:19px; color:#e7f0ff; text-shadow:0 0 12px rgba(125,184,255,.55); }
   #top .brand b{ color:var(--air); }
   #top .sub{ font-size:9px; letter-spacing:.26em; color:var(--blue); opacity:.9; margin-top:3px; }
+  #top .r{ text-align:right; }
   #top .clock{ font-size:11px; color:#c8ffd0; opacity:.7; font-variant-numeric:tabular-nums; }
+  #top .seg{ display:inline-block; margin-top:6px; cursor:pointer; font-size:10px; letter-spacing:.1em; color:var(--blue); border:1px solid rgba(125,184,255,.35); border-radius:999px; padding:3px 9px; background:rgba(8,14,22,.5); }
   /* hud inferior */
-  #hud{ position:absolute; left:0; right:0; bottom:0; z-index:3; padding:26px 18px 16px;
-    background:linear-gradient(0deg,rgba(0,0,0,.88),transparent); }
+  #hud{ position:absolute; left:0; right:0; bottom:0; z-index:3; padding:26px 18px 16px; background:linear-gradient(0deg,rgba(0,0,0,.88),transparent); }
   #hud .now{ font-size:14px; color:#eafff0; text-shadow:0 0 6px var(--grn); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #hud .line{ display:flex; justify-content:space-between; gap:12px; font-size:10px; letter-spacing:.1em; margin-top:9px; color:#7dff9e; opacity:.85; }
-  #hud .live{ color:var(--air); }
-  #hud .live::before{ content:"●"; margin-right:5px; animation:pulse 1.3s infinite; }
+  #hud .live{ color:var(--air); } #hud .live::before{ content:"●"; margin-right:5px; animation:pulse 1.3s infinite; }
   @keyframes pulse{ 50%{ opacity:.25 } }
-  /* barra de progreso del spot */
-  #bar{ position:absolute; left:0; bottom:0; height:3px; width:0; background:var(--air); z-index:4; box-shadow:0 0 8px var(--air); transition:width .25s linear; }
-  /* scanlines CRT */
+  #bar{ position:absolute; left:0; bottom:0; height:3px; width:0; background:var(--air); z-index:4; box-shadow:0 0 8px var(--air); }
   #mupi::after{ content:""; position:absolute; inset:0; z-index:5; pointer-events:none;
     background:repeating-linear-gradient(180deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px); }
-  /* aviso de autoplay (algunos navegadores piden gesto) */
-  #tap{ position:absolute; inset:0; z-index:6; display:none; place-items:center; background:rgba(0,0,0,.6); cursor:pointer;
-    font-size:13px; letter-spacing:.12em; color:#eafff0; text-align:center; }
+  #tap{ position:absolute; inset:0; z-index:6; display:none; place-items:center; background:rgba(0,0,0,.6); cursor:pointer; font-size:13px; letter-spacing:.12em; color:#eafff0; text-align:center; }
   #tap.show{ display:grid; }
+  /* panel de segmentación */
+  #seg{ position:absolute; z-index:8; top:0; right:0; bottom:0; width:min(86%,300px); transform:translateX(101%); transition:transform .25s ease;
+    background:rgba(5,9,14,.96); border-left:1px solid rgba(125,184,255,.25); padding:20px 18px; display:flex; flex-direction:column; gap:14px; overflow:auto; }
+  #seg.open{ transform:none; }
+  #seg h4{ font-size:11px; letter-spacing:.18em; color:var(--blue); text-transform:uppercase; }
+  #seg label{ display:block; font-size:10px; letter-spacing:.1em; color:#7dff9e; margin-bottom:4px; text-transform:uppercase; opacity:.8; }
+  #seg select, #seg input{ width:100%; background:#0b1119; color:#eafff0; border:1px solid rgba(125,184,255,.3); border-radius:8px; padding:8px 10px; font:inherit; font-size:12px; }
+  #seg .count{ font-size:11px; color:var(--grn); }
+  #seg .close{ align-self:flex-end; cursor:pointer; color:#9fb4cc; font-size:18px; line-height:1; }
 </style>
 </head>
 <body>
 <div id="wrap"><div id="mupi">
   <div id="top">
     <div><div class="brand">ADMIRA<b>.TV</b></div><div class="sub">DIGITAL SIGNAGE LOOP</div></div>
-    <div class="clock" id="clock">--:--</div>
+    <div class="r"><div class="clock" id="clock">--:--</div><span class="seg" id="segBtn">⚙ segmentar</span></div>
   </div>
   <div id="stage"><div class="empty">// cargando feed de pixeria…</div></div>
   <div id="bar"></div>
@@ -56,62 +68,133 @@
     <div class="now" id="now">// inicializando</div>
     <div class="line"><span id="meta">feed: pixer-eleven · stock</span><span class="live" id="live">conectando</span></div>
   </div>
+  <div id="seg">
+    <span class="close" id="segClose">×</span>
+    <h4>Segmentar el canal</h4>
+    <div><label>Medio</label><select id="f-medio"><option value="all">Todo el media</option><option value="video">Vídeo</option><option value="image">Imagen</option><option value="audio">Audio / música / voz</option></select></div>
+    <div><label>Audiencia</label><select id="f-audience"><option value="all">Todas</option><option value="f">Mujeres</option><option value="m">Hombres</option></select></div>
+    <div><label>Categoría</label><select id="f-category"><option value="all">Todas</option><option value="atraer">Atraer</option><option value="producto">Producto</option><option value="promo">Promo</option><option value="marca">Marca</option></select></div>
+    <div><label>Edad</label><select id="f-age"><option value="all">Todas</option><option value="nino">Niño</option><option value="joven">Joven</option><option value="adulto">Adulto</option><option value="senior">Senior</option><option value="vejez">Vejez</option></select></div>
+    <div><label>Franja</label><select id="f-slot"><option value="all">Todas</option><option value="auto">Auto (según hora)</option><option value="manana">Mañana</option><option value="mediodia">Mediodía</option><option value="tarde">Tarde</option><option value="noche">Noche</option></select></div>
+    <div><label>Etiqueta</label><input id="f-tag" type="text" placeholder="ej. lujo, navidad…" autocomplete="off"></div>
+    <div class="count" id="segCount">—</div>
+  </div>
 </div></div>
 
 <script>
-// Canal de cartelería vertical: coge los últimos vídeos del Stock de Pixeria
-// (índice público R2, CORS abierto) y los emite en bucle en este MUPI.
+// Canal de cartelería vertical de Admira.tv:
+// coge TODO el media del Stock de Pixeria (índice público R2, CORS abierto) y lo
+// emite en bucle en este MUPI, segmentable por audiencia/categoría/edad/franja/etiqueta.
 const INDEX = 'https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json';
-const REFRESH_MS = 30000;   // re-consulta el feed cada 30s (entran vídeos nuevos)
-const MAX = 12;             // últimos N vídeos en rotación
+const REFRESH_MS = 30000;   // re-consulta el feed cada 30s
+const MAX = 50;             // tope de items en rotación
+const IMG_MS = 9000;        // duración de una imagen
+const AUDIO_FALLBACK_MS = 18000;
+// tipos de media que emite el canal (todo lo de pixeria; fuera 'link' y 'furni'=mobiliario)
+const MEDIA = ['video','animation','image','digital-twin','audio','music','locucion'];
+const KIND = { video:'video', animation:'video', image:'image', 'digital-twin':'image', 'twin-npc':'image', audio:'audio', music:'audio', locucion:'audio' };
 
-let playlist = [], idx = 0, seen = '';
-const stage = document.getElementById('stage'), nowEl = document.getElementById('now'),
-      liveEl = document.getElementById('live'), metaEl = document.getElementById('meta'),
-      bar = document.getElementById('bar'), tap = document.getElementById('tap');
+const qs = new URLSearchParams(location.search);
+const seg = {
+  medio:    qs.get('medio')    || 'all',
+  audience: qs.get('audience') || 'all',
+  category: qs.get('category') || 'all',
+  age:      qs.get('age')      || 'all',
+  slot:     qs.get('slot')     || 'all',
+  tag:     (qs.get('tag')      || '').toLowerCase().trim(),
+};
 
-function clock(){ const d=new Date(); document.getElementById('clock').textContent =
+let all = [], playlist = [], idx = 0, seenSig = '', timer = null, barTimer = null;
+const $ = id => document.getElementById(id);
+const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=$('bar'), tap=$('tap');
+
+function clock(){ const d=new Date(); $('clock').textContent =
   String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 clock(); setInterval(clock,1000);
 function setLive(t,ok){ liveEl.textContent=t; liveEl.style.color = ok?'var(--air)':'#ff8e3c'; }
+
+function madridSlot(){
+  let h = 12; try{ h = +new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ h = new Date().getHours(); }
+  if(h<12) return 'manana'; if(h<16) return 'mediodia'; if(h<21) return 'tarde'; return 'noche';
+}
+
+// Lógica de segmentación: los items "universales" (campo nulo o 'all') siempre entran;
+// los segmentados sólo entran si casan con el segmento elegido.
+function matches(it){
+  const k = KIND[it.type];
+  if(seg.medio !== 'all' && k !== seg.medio) return false;
+  if(seg.audience !== 'all'){ const a=it.audience; if(a && a!=='all' && a!==seg.audience) return false; }
+  if(seg.category !== 'all'){ if(it.category && it.category!==seg.category) return false; }
+  if(seg.age !== 'all'){ const g=it.ageBucket; if(g && g!==seg.age) return false; }
+  if(seg.slot !== 'all'){ const want = seg.slot==='auto'?madridSlot():seg.slot; const s=it.timeSlot; if(s && s!==want) return false; }
+  if(seg.tag){ const tg=(it.tags||[]).map(x=>String(x).toLowerCase()); if(!tg.some(t=>t.includes(seg.tag))) return false; }
+  return true;
+}
+
+function rebuild(restart){
+  playlist = all.filter(matches).slice(0, MAX);
+  $('segCount').textContent = playlist.length + ' en este segmento';
+  const slotTxt = seg.slot==='auto' ? ('auto·'+madridSlot()) : seg.slot;
+  const tags = [seg.medio,seg.audience,seg.age,slotTxt].filter(v=>v&&v!=='all');
+  setLive('LIVE · ' + playlist.length + ' en loop', playlist.length>0);
+  if(restart || !stage.querySelector('video,img,audio')){ idx = 0; advance(); }
+}
+
+function stopBar(){ if(barTimer){ clearInterval(barTimer); barTimer=null; } bar.style.width='0'; }
+function runBar(ms){ stopBar(); const t0=Date.now(); barTimer=setInterval(()=>{ bar.style.width = Math.min(100,(Date.now()-t0)/ms*100)+'%'; }, 120); }
+
+function advance(){
+  clearTimeout(timer);
+  if(!playlist.length){ stopBar(); stage.innerHTML = '<div class="empty">// sin media en este segmento</div>'; nowEl.textContent='// segmento vacío'; return; }
+  const it = playlist[idx % playlist.length]; idx++;
+  const k = KIND[it.type] || 'image';
+  stage.innerHTML=''; stopBar();
+  const title = (it.title || it.prompt || 'sin título').replace(/\n/g,' ').slice(0,64);
+  nowEl.textContent = '▶ ' + title;
+  metaEl.textContent = it.type + ' · ' + ((idx-1)%playlist.length+1) + '/' + playlist.length + ' · ' + (it.motor||'stock');
+
+  if(k === 'video'){
+    const v=document.createElement('video'); v.src=it.url; v.muted=true; v.autoplay=true; v.playsInline=true; v.preload='auto';
+    v.onended=advance; v.onerror=()=>setTimeout(advance,600);
+    v.ontimeupdate=()=>{ if(v.duration) bar.style.width=(v.currentTime/v.duration*100)+'%'; };
+    stage.appendChild(v); v.play().then(()=>tap.classList.remove('show')).catch(()=>tap.classList.add('show'));
+  } else if(k === 'image'){
+    const im=document.createElement('img'); im.src=it.url; im.alt=title;
+    if(it.type==='twin-npc') im.className='pixel';
+    im.onerror=()=>setTimeout(advance,600);
+    stage.appendChild(im); runBar(IMG_MS); timer=setTimeout(advance, IMG_MS);
+  } else { // audio
+    stage.innerHTML = '<div class="audio-card"><div class="ico">♪</div><strong>'+title+'</strong>'
+      + '<div class="wave">'+Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div></div>';
+    const a=document.createElement('audio'); a.src=it.url; a.autoplay=true;
+    a.onended=advance; a.onerror=()=>setTimeout(advance,600);
+    a.ontimeupdate=()=>{ if(a.duration) bar.style.width=(a.currentTime/a.duration*100)+'%'; };
+    stage.querySelector('.audio-card').appendChild(a);
+    a.play().catch(()=>{}); runBar(AUDIO_FALLBACK_MS); timer=setTimeout(advance, AUDIO_FALLBACK_MS);
+  }
+}
 
 async function loadFeed(){
   try{
     const r = await fetch(INDEX + '?t=' + Date.now(), { cache:'no-store' });
     const d = await r.json();
     const items = d.items || (Array.isArray(d) ? d : []);
-    let vids = items.filter(i => i && (i.type==='video' || i.type==='animation') && i.url);
-    vids.sort((a,b) => String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
-    vids = vids.slice(0, MAX);
-    if(!vids.length){ setLive('feed vacío', false); return; }
-    const ids = vids.map(v=>v.id).join(',');
-    if(ids !== seen){
-      seen = ids; playlist = vids;
-      setLive('LIVE · ' + vids.length + ' en loop', true);
-      if(!stage.querySelector('video')){ idx = 0; playNext(); }  // arranca si está parado
-    }
+    all = items.filter(i => i && MEDIA.includes(i.type) && i.url)
+               .sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+    const sig = all.map(v=>v.id).join(',') + '|' + JSON.stringify(seg);
+    if(sig !== seenSig){ seenSig = sig; rebuild(false); }
   }catch(e){ setLive('offline', false); }
 }
 
-function playNext(){
-  if(!playlist.length){ stage.innerHTML = '<div class="empty">// sin vídeos en el feed</div>'; return; }
-  const it = playlist[idx % playlist.length]; idx++;
-  const v = document.createElement('video');
-  v.src = it.url; v.muted = true; v.autoplay = true; v.playsInline = true; v.preload = 'auto';
-  v.onended = playNext;
-  v.onerror = () => setTimeout(playNext, 600);
-  v.ontimeupdate = () => { if(v.duration) bar.style.width = (v.currentTime / v.duration * 100) + '%'; };
-  stage.innerHTML = ''; bar.style.width = '0'; stage.appendChild(v);
-  v.play().then(() => tap.classList.remove('show')).catch(() => tap.classList.add('show'));
-  nowEl.textContent = '▶ ' + ((it.title || it.prompt || 'sin título').replace(/\n/g,' ').slice(0,64));
-  metaEl.textContent = 'feed: pixer-eleven · ' + ((idx-1) % playlist.length + 1) + '/' + playlist.length + ' · ' + (it.motor || 'stock');
-}
+// panel de segmentación
+function applySeg(restart){ ['medio','audience','category','age','slot'].forEach(k=>seg[k]=$('f-'+k).value); seg.tag=$('f-tag').value.toLowerCase().trim(); seenSig=''; rebuild(true); }
+['medio','audience','category','age','slot'].forEach(k=>{ $('f-'+k).value=seg[k]; $('f-'+k).onchange=()=>applySeg(true); });
+$('f-tag').value=seg.tag; $('f-tag').oninput=()=>{ clearTimeout($('f-tag')._t); $('f-tag')._t=setTimeout(()=>applySeg(true),400); };
+$('segBtn').onclick=()=>$('seg').classList.toggle('open');
+$('segClose').onclick=()=>$('seg').classList.remove('open');
+tap.addEventListener('click', ()=>{ const m=stage.querySelector('video,audio'); if(m) m.play().catch(()=>{}); tap.classList.remove('show'); });
 
-// fallback de autoplay: si el navegador exige gesto, un toque arranca
-tap.addEventListener('click', () => { const v = stage.querySelector('video'); if(v) v.play().catch(()=>{}); tap.classList.remove('show'); });
-
-loadFeed();
-setInterval(loadFeed, REFRESH_MS);
+loadFeed(); setInterval(loadFeed, REFRESH_MS);
 </script>
 </body>
 </html>
