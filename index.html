@@ -1,38 +1,206 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Pixer.ia · AInimation Studio</title>
-  <meta name="description" content="Pixer.ia · plataforma de creación de contenido multimedia (Admira)">
-  <link rel="canonical" href="https://admira.tv/">
-  <meta name="robots" content="index,follow">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClearChannel.tv · El canal de emisión DOOH</title>
+  <meta name="description" content="ClearChannel.tv: el canal de emisión DOOH en vivo del ecosistema Admira. Donde el contenido creado en Pixeria y operado en XpaceOS sale a antena en la red de pantallas.">
+  <meta name="theme-color" content="#070a10">
+  <meta property="og:title" content="ClearChannel.tv · El canal de emisión DOOH">
+  <meta property="og:description" content="Donde el contenido sale a antena. La capa de emisión de la trilogía Admira: Pixeria · XpaceOS · ClearChannel.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+  <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/nav.css">
+  <link rel="preload" as="style" href="https://www.carlossilva.info/admira-design/contact-panel.css" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://www.carlossilva.info/admira-design/contact-panel.css"></noscript>
+  <script defer src="https://www.carlossilva.info/admira-design/contact-panel.js"></script>
   <style>
-    html,body{margin:0;height:100%;background:#0b1418;color:#cceef5;font-family:"JetBrains Mono",ui-monospace,monospace;display:flex;align-items:center;justify-content:center}
-    .box{text-align:center;padding:24px}
-    .brand{font-size:22px;letter-spacing:.04em;color:#78f3ff}
-    .sub{font-size:11px;opacity:.6;margin-top:6px}
-    a{color:#ffd86b;text-decoration:none;border-bottom:1px dashed rgba(255,216,107,.4)}
+    :root{ --air:var(--admira-red,#ff4444); }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--admira-bg,#070a10);color:var(--admira-text,#e8eef6);font-family:var(--admira-font-sans,system-ui,sans-serif);line-height:1.5;-webkit-font-smoothing:antialiased}
+    a{color:inherit}
+    /* textura broadcast: scanlines muy sutiles */
+    body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px);opacity:.6}
+    .wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:0 22px}
+    .mono{font-family:var(--admira-font-mono,ui-monospace,monospace)}
+    .eyebrow{font-family:var(--admira-font-mono,monospace);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--admira-text-muted,#8a97a8)}
+
+    /* ON AIR badge */
+    .onair{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--air);color:var(--air);border-radius:999px;padding:5px 12px;font-family:var(--admira-font-mono,monospace);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+    .onair .dot{width:9px;height:9px;border-radius:50%;background:var(--air);box-shadow:0 0 0 0 rgba(255,68,68,.6);animation:pulse 1.6s infinite}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,68,68,.55)}70%{box-shadow:0 0 0 9px rgba(255,68,68,0)}100%{box-shadow:0 0 0 0 rgba(255,68,68,0)}}
+
+    /* hero */
+    .hero{padding:96px 0 40px;text-align:center}
+    .hero h1{font-size:clamp(48px,9vw,108px);line-height:.96;margin:18px 0 10px;letter-spacing:-.02em;font-weight:800}
+    .hero h1 .tv{color:var(--air)}
+    .hero .lead{font-size:clamp(17px,2.4vw,22px);color:var(--admira-text-dim,#aab6c6);max-width:680px;margin:0 auto}
+    .hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+    .btn{display:inline-flex;align-items:center;gap:8px;border-radius:var(--admira-radius-pill,999px);padding:12px 22px;font-weight:700;font-size:14px;text-decoration:none;border:1px solid var(--admira-border-strong,#2a3850);transition:transform .12s,background .2s,border-color .2s}
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{background:var(--air);border-color:var(--air);color:#190406}
+    .btn.ghost{background:transparent;color:var(--admira-text,#e8eef6)}
+
+    /* EN ANTENA — strip en vivo */
+    .air-panel{margin:34px 0 12px;border:1px solid var(--admira-border,#1c2738);border-radius:var(--admira-radius-lg,16px);background:linear-gradient(180deg,rgba(255,68,68,.06),rgba(7,10,16,.4));overflow:hidden}
+    .air-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--admira-border,#1c2738);flex-wrap:wrap}
+    .air-head .net{font-family:var(--admira-font-mono,monospace);font-size:12px;color:var(--admira-text-muted,#8a97a8)}
+    .air-now{display:grid;grid-template-columns:1.4fr 1fr;gap:0}
+    @media(max-width:720px){.air-now{grid-template-columns:1fr}}
+    .air-spot{padding:22px;border-right:1px solid var(--admira-border,#1c2738)}
+    @media(max-width:720px){.air-spot{border-right:0;border-bottom:1px solid var(--admira-border,#1c2738)}}
+    .air-spot .label{font-family:var(--admira-font-mono,monospace);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--air)}
+    .air-spot h3{margin:6px 0 4px;font-size:24px}
+    .air-spot p{margin:0;color:var(--admira-text-dim,#aab6c6);font-size:14px}
+    .air-spot .bar{height:5px;background:rgba(255,255,255,.08);border-radius:99px;margin-top:16px;overflow:hidden}
+    .air-spot .bar i{display:block;height:100%;width:38%;background:var(--air);border-radius:99px;animation:prog 9s linear infinite}
+    @keyframes prog{from{width:4%}to{width:100%}}
+    .air-screens{padding:18px 22px;display:flex;flex-direction:column;gap:10px;justify-content:center}
+    .air-screen{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--admira-text-dim,#aab6c6)}
+    .air-screen .live{width:7px;height:7px;border-radius:50%;background:var(--admira-green,#39d353);box-shadow:0 0 8px var(--admira-green,#39d353)}
+    .air-screen b{color:var(--admira-text,#e8eef6);font-weight:600}
+    .air-screen .pix{margin-left:auto;font-family:var(--admira-font-mono,monospace);font-size:11px;color:var(--admira-text-muted,#8a97a8)}
+
+    /* trilogía */
+    section{padding:54px 0}
+    .sec-head{text-align:center;margin-bottom:30px}
+    .sec-head h2{font-size:clamp(28px,4vw,40px);margin:8px 0 0;letter-spacing:-.01em}
+    .flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:26px;font-family:var(--admira-font-mono,monospace);font-size:13px;color:var(--admira-text-muted,#8a97a8)}
+    .flow b{color:var(--admira-text,#e8eef6)}
+    .tri{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    @media(max-width:760px){.tri{grid-template-columns:1fr}}
+    .pillar{display:block;text-decoration:none;border:1px solid var(--admira-border,#1c2738);border-radius:var(--admira-radius-lg,16px);background:var(--admira-bg-elev,#0c1018);padding:22px;transition:transform .14s,border-color .2s,box-shadow .2s}
+    .pillar:hover{transform:translateY(-3px)}
+    .pillar .role{font-family:var(--admira-font-mono,monospace);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+    .pillar h3{margin:8px 0 6px;font-size:22px}
+    .pillar p{margin:0 0 14px;color:var(--admira-text-dim,#aab6c6);font-size:14px;min-height:40px}
+    .pillar .go{font-family:var(--admira-font-mono,monospace);font-size:12px;opacity:.85}
+    .pillar.p-create{--c:var(--admira-green,#39d353)}
+    .pillar.p-operate{--c:var(--admira-cyan,#50c8ff)}
+    .pillar.p-emit{--c:var(--air)}
+    .pillar.p-emit{border-color:color-mix(in srgb,var(--air) 55%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--air) 30%,transparent)}
+    .pillar .role,.pillar .go{color:var(--c)}
+    .pillar:hover{border-color:var(--c)}
+
+    .footer{border-top:1px solid var(--admira-border,#1c2738);padding:26px 0;margin-top:30px;color:var(--admira-text-muted,#8a97a8);font-size:13px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+    .footer a{color:var(--admira-text-dim,#aab6c6);text-decoration:none;margin-right:14px}
+    .footer a:hover{color:var(--air)}
   </style>
 </head>
 <body>
-  <div class="box">
-    <div class="brand">Pixer.ia × AInimation Studio</div>
-    <div class="sub">cargando última versión…</div>
-    <noscript><p>JavaScript requerido. <a href="manifest.json">Manifest</a></p></noscript>
-  </div>
+  <nav class="admira-nav admira-nav-static" aria-label="Admira · Xperience">
+    <a class="admira-nav-brand" href="https://www.admira.app">
+      <span class="admira-nav-brand-name">Admira</span>
+      <span class="admira-nav-brand-tag">Xperience</span>
+    </a>
+    <div class="admira-nav-items">
+      <a class="admira-nav-link admira-nav-link-external" href="https://www.pixeria.com">Pixeria</a>
+      <a class="admira-nav-link admira-nav-link-external" href="https://www.xpaceos.com">XpaceOS</a>
+      <a class="admira-nav-link admira-nav-link-active" href="https://www.clearchannel.tv">ClearChannel</a>
+      <a class="admira-nav-link admira-nav-link-external" href="https://www.admira.live">Live</a>
+      <a class="admira-nav-link admira-nav-link-cta" href="#contact" data-admira-contact>Contacto</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <span class="onair"><span class="dot"></span>On air</span>
+      <h1>Clear<span class="tv">Channel</span><span style="opacity:.5">.tv</span></h1>
+      <p class="lead">El canal de emisión DOOH en vivo. Donde el contenido <strong>sale a antena</strong> en la red de pantallas: la capa de <em>emitir</em> de la trilogía Admira.</p>
+      <div class="hero-actions">
+        <a class="btn primary" href="#antena">▶ Ver qué está en antena</a>
+        <a class="btn ghost" href="https://www.xpaceos.com/control/" target="_blank" rel="noopener">Planificar emisión ↗</a>
+      </div>
+
+      <!-- EN ANTENA AHORA (demo · se conectará al backbone /grid) -->
+      <div class="air-panel" id="antena">
+        <div class="air-head">
+          <span class="onair" style="font-size:11px"><span class="dot"></span>En antena ahora</span>
+          <span class="net">Red Admira · <b id="screenCount">6</b> pantallas activas · <span id="clock" class="mono"></span></span>
+        </div>
+        <div class="air-now">
+          <div class="air-spot">
+            <span class="label">Emitiendo</span>
+            <h3 id="spotTitle">Campaña primavera · Aena Mallorca</h3>
+            <p id="spotMeta">Vídeo 16:9 · 12 s · creado en Pixeria · operado por XpaceOS</p>
+            <div class="bar"><i></i></div>
+          </div>
+          <div class="air-screens" id="airScreens"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">La trilogía Admira</p>
+        <h2>Una experiencia, tres capas.</h2>
+      </div>
+      <div class="flow"><b>Crear</b> <span>→</span> <b>Operar</b> <span>→</span> <b>Emitir</b></div>
+      <div class="tri">
+        <a class="pillar p-create" href="https://www.pixeria.com" target="_blank" rel="noopener">
+          <div class="role">01 · Crear</div>
+          <h3>Pixeria</h3>
+          <p>Crear contenido con IA y criterio humano: imagen, vídeo, música, NPCs y campañas listas para publicar.</p>
+          <div class="go">pixeria.com ↗</div>
+        </a>
+        <a class="pillar p-operate" href="https://www.xpaceos.com" target="_blank" rel="noopener">
+          <div class="role">02 · Operar</div>
+          <h3>XpaceOS</h3>
+          <p>El sistema operativo del espacio: el gemelo digital de la tienda, audiencias, programática y control en vivo.</p>
+          <div class="go">xpaceos.com ↗</div>
+        </a>
+        <a class="pillar p-emit" href="https://www.clearchannel.tv">
+          <div class="role">03 · Emitir</div>
+          <h3>ClearChannel</h3>
+          <p>El canal: la emisión sale a antena en la red de pantallas, con parrilla compartida y medición por superficie.</p>
+          <div class="go">clearchannel.tv ↗</div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer wrap">
+    <div>
+      <a href="https://www.pixeria.com" target="_blank" rel="noopener">Pixeria</a>
+      <a href="https://www.xpaceos.com" target="_blank" rel="noopener">XpaceOS</a>
+      <a href="https://www.admira.live" target="_blank" rel="noopener">Live</a>
+      <a href="#contact" data-admira-contact>Contacto</a>
+    </div>
+    <div class="mono">ClearChannel.tv · Canal de emisión · trilogía Admira Xperience</div>
+  </footer>
+
   <script>
-    (async () => {
-      try {
-        const r = await fetch('manifest.json', { cache: 'no-cache' });
-        const data = await r.json();
-        if (data && data.latest) {
-          location.replace(data.latest + '/');
-          return;
-        }
-      } catch (e) {}
-      // Fallback estático si falla el manifest
-      location.replace('v.2026.05.02-r50/');
-    })();
+  (function(){
+    // EN ANTENA — demo en vivo (placeholder hasta conectar el API /grid del worker).
+    const screens = [
+      ['Xtanco BCN · LED frontal','Portal de l’Àngel'],
+      ['Aena Mallorca · Vestíbulo','Palma'],
+      ['Xtanco BCN · Escaparate','Portal de l’Àngel'],
+      ['Retail Madrid Centro','Gran Vía'],
+      ['Aena Jones · Pasillo','T1'],
+      ['Xpacio Sitges','Passeig'],
+    ];
+    const spots = [
+      ['Campaña primavera · Aena Mallorca','Vídeo 16:9 · 12 s · creado en Pixeria · operado por XpaceOS'],
+      ['Lanzamiento · Vapes con tu recarga','Imagen 9:16 · 8 s · segmento adulto · franja tarde'],
+      ['Sorteo Club Xtanco','Vídeo 16:9 · 10 s · audiencia detectada: familias'],
+      ['Press & drinks · upsell','Imagen 1:1 · 6 s · gancho a quien entra'],
+    ];
+    const elScreens = document.getElementById('airScreens');
+    elScreens.innerHTML = screens.map(s =>
+      '<div class="air-screen"><span class="live"></span><b>'+s[0]+'</b> <span class="pix">'+s[1]+'</span></div>'
+    ).join('');
+    document.getElementById('screenCount').textContent = screens.length;
+    // rota el spot "en antena" cada 9s (igual que la barra de progreso)
+    let i = 0;
+    const t = document.getElementById('spotTitle'), m = document.getElementById('spotMeta');
+    setInterval(() => { i = (i+1) % spots.length; t.textContent = spots[i][0]; m.textContent = spots[i][1]; }, 9000);
+    // reloj Madrid
+    const clk = document.getElementById('clock');
+    const tick = () => { try { clk.textContent = new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'Europe/Madrid'}); } catch(_){} };
+    tick(); setInterval(tick, 1000);
+  })();
   </script>
 </body>
 </html>
