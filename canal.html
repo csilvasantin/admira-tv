@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Admira.tv · Digital Signage Loop</title>
-<meta name="description" content="Canal de cartelería vertical de Admira.tv: emite en bucle todo el media creado en Pixeria (vídeo, imagen, audio, música, locución), segmentable por audiencia, categoría, edad y franja.">
+<meta name="description" content="Canal de cartelería vertical de Admira.tv: emite en bucle todo el media de Pixeria, segmentable y configurable por pantalla/circuito.">
+<script src="https://admira.app/locations.js"></script>
 <style>
   :root{ --air:#ff4444; --grn:#39d353; --blue:#7db8ff; --bg:#05080c; }
   *{ box-sizing:border-box; margin:0; padding:0; }
@@ -28,6 +29,7 @@
   #top .brand{ font-weight:800; letter-spacing:.02em; font-size:19px; color:#e7f0ff; text-shadow:0 0 12px rgba(125,184,255,.55); }
   #top .brand b{ color:var(--air); }
   #top .sub{ font-size:9px; letter-spacing:.26em; color:var(--blue); opacity:.9; margin-top:3px; }
+  #top .screen{ font-size:9px; letter-spacing:.08em; color:#9fe6b4; opacity:.85; margin-top:3px; }
   #top .r{ text-align:right; }
   #top .clock{ font-size:11px; color:#c8ffd0; opacity:.7; font-variant-numeric:tabular-nums; }
   #top .seg{ display:inline-block; margin-top:6px; cursor:pointer; font-size:10px; letter-spacing:.1em; color:var(--blue); border:1px solid rgba(125,184,255,.35); border-radius:999px; padding:3px 9px; background:rgba(8,14,22,.5); }
@@ -36,36 +38,36 @@
   #hud .line{ display:flex; justify-content:space-between; gap:12px; font-size:10px; letter-spacing:.1em; margin-top:9px; color:#7dff9e; opacity:.85; }
   #hud .live{ color:var(--air); } #hud .live::before{ content:"●"; margin-right:5px; animation:pulse 1.3s infinite; }
   @keyframes pulse{ 50%{ opacity:.25 } }
-  /* controles de reproducción */
   #ctrls{ display:flex; align-items:center; gap:12px; margin:0 0 14px; transition:opacity .3s; }
   .cbtn{ width:40px; height:40px; border-radius:50%; border:1px solid rgba(125,184,255,.4); background:rgba(8,14,22,.7); color:#eafff0;
     font-size:16px; cursor:pointer; display:grid; place-items:center; transition:background .15s,border-color .15s,transform .1s; }
-  .cbtn:hover{ border-color:var(--grn); background:rgba(12,22,16,.9); }
-  .cbtn:active{ transform:scale(.92); }
+  .cbtn:hover{ border-color:var(--grn); background:rgba(12,22,16,.9); } .cbtn:active{ transform:scale(.92); }
   .vol{ flex:1; max-width:180px; height:4px; -webkit-appearance:none; appearance:none; background:rgba(255,255,255,.18); border-radius:99px; outline:none; cursor:pointer; }
   .vol::-webkit-slider-thumb{ -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--grn); box-shadow:0 0 8px var(--grn); cursor:pointer; }
   .vol::-moz-range-thumb{ width:14px; height:14px; border:0; border-radius:50%; background:var(--grn); box-shadow:0 0 8px var(--grn); cursor:pointer; }
   body.idle #ctrls, body.idle #top .seg{ opacity:0; pointer-events:none; }
   #bar{ position:absolute; left:0; bottom:0; height:3px; width:0; background:var(--air); z-index:4; box-shadow:0 0 8px var(--air); }
-  #mupi::after{ content:""; position:absolute; inset:0; z-index:5; pointer-events:none;
-    background:repeating-linear-gradient(180deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px); }
+  #mupi::after{ content:""; position:absolute; inset:0; z-index:5; pointer-events:none; background:repeating-linear-gradient(180deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px); }
   #tap{ position:absolute; inset:0; z-index:6; display:none; place-items:center; background:rgba(0,0,0,.6); cursor:pointer; font-size:13px; letter-spacing:.12em; color:#eafff0; text-align:center; }
   #tap.show{ display:grid; }
-  #seg{ position:absolute; z-index:8; top:0; right:0; bottom:0; width:min(86%,300px); transform:translateX(101%); transition:transform .25s ease;
-    background:rgba(5,9,14,.96); border-left:1px solid rgba(125,184,255,.25); padding:20px 18px; display:flex; flex-direction:column; gap:14px; overflow:auto; }
+  #seg{ position:absolute; z-index:8; top:0; right:0; bottom:0; width:min(88%,320px); transform:translateX(101%); transition:transform .25s ease;
+    background:rgba(5,9,14,.97); border-left:1px solid rgba(125,184,255,.25); padding:18px 18px 30px; display:flex; flex-direction:column; gap:11px; overflow:auto; }
   #seg.open{ transform:none; }
-  #seg h4{ font-size:11px; letter-spacing:.18em; color:var(--blue); text-transform:uppercase; }
-  #seg label{ display:block; font-size:10px; letter-spacing:.1em; color:#7dff9e; margin-bottom:4px; text-transform:uppercase; opacity:.8; }
+  #seg h4{ font-size:11px; letter-spacing:.16em; color:var(--blue); text-transform:uppercase; margin-top:8px; border-top:1px solid rgba(125,184,255,.12); padding-top:12px; }
+  #seg h4:first-of-type{ border-top:0; padding-top:0; margin-top:0; }
+  #seg label{ display:block; font-size:10px; letter-spacing:.08em; color:#7dff9e; margin-bottom:3px; text-transform:uppercase; opacity:.8; }
   #seg select, #seg input{ width:100%; background:#0b1119; color:#eafff0; border:1px solid rgba(125,184,255,.3); border-radius:8px; padding:8px 10px; font:inherit; font-size:12px; }
+  #seg .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   #seg .count{ font-size:11px; color:var(--grn); }
-  #seg .close{ align-self:flex-end; cursor:pointer; color:#9fb4cc; font-size:18px; line-height:1; }
+  #seg .hint{ font-size:9px; color:#9fb4cc; opacity:.7; line-height:1.4; }
+  #seg .close{ position:absolute; top:14px; right:16px; cursor:pointer; color:#9fb4cc; font-size:20px; line-height:1; }
 </style>
 </head>
 <body>
 <div id="wrap"><div id="mupi">
   <div id="top">
-    <div><div class="brand">ADMIRA<b>.TV</b></div><div class="sub">DIGITAL SIGNAGE LOOP</div></div>
-    <div class="r"><div class="clock" id="clock">--:--</div><span class="seg" id="segBtn">⚙ segmentar</span></div>
+    <div><div class="brand">ADMIRA<b>.TV</b></div><div class="sub">DIGITAL SIGNAGE LOOP</div><div class="screen" id="screenLbl"></div></div>
+    <div class="r"><div class="clock" id="clock">--:--</div><span class="seg" id="segBtn">⚙ configurar</span></div>
   </div>
   <div id="stage"><div class="empty">// cargando feed de pixeria…</div></div>
   <div id="bar"></div>
@@ -82,78 +84,98 @@
   </div>
   <div id="seg">
     <span class="close" id="segClose">×</span>
-    <h4>Segmentar el canal</h4>
-    <div><label>Medio</label><select id="f-medio"><option value="all">Todo el media</option><option value="video">Vídeo</option><option value="image">Imagen</option><option value="audio">Audio / música / voz</option></select></div>
-    <div><label>Audiencia</label><select id="f-audience"><option value="all">Todas</option><option value="f">Mujeres</option><option value="m">Hombres</option></select></div>
-    <div><label>Categoría</label><select id="f-category"><option value="all">Todas</option><option value="atraer">Atraer</option><option value="producto">Producto</option><option value="promo">Promo</option><option value="marca">Marca</option></select></div>
-    <div><label>Edad</label><select id="f-age"><option value="all">Todas</option><option value="nino">Niño</option><option value="joven">Joven</option><option value="adulto">Adulto</option><option value="senior">Senior</option><option value="vejez">Vejez</option></select></div>
-    <div><label>Franja</label><select id="f-slot"><option value="all">Todas</option><option value="auto">Auto (según hora)</option><option value="manana">Mañana</option><option value="mediodia">Mediodía</option><option value="tarde">Tarde</option><option value="noche">Noche</option></select></div>
-    <div><label>Etiqueta</label><input id="f-tag" type="text" placeholder="ej. lujo, navidad…" autocomplete="off"></div>
+    <h4>📍 Pantalla</h4>
+    <div><label>Circuito / tienda</label><select id="f-store"><option value="">— todas / sin asignar —</option></select></div>
+    <div><label>ID de pantalla</label><input id="f-screen" type="text" placeholder="ej. xtanco-led-frontal" autocomplete="off"></div>
+    <p class="hint">La identidad de pantalla queda lista para la parrilla por pantalla (backbone /grid). Hoy el contenido sale del Stock + segmento.</p>
+
+    <h4>🎯 Segmento</h4>
+    <div class="grid2">
+      <div><label>Medio</label><select id="f-medio"><option value="all">Todo</option><option value="video">Vídeo</option><option value="image">Imagen</option><option value="audio">Audio</option></select></div>
+      <div><label>Audiencia</label><select id="f-audience"><option value="all">Todas</option><option value="f">Mujeres</option><option value="m">Hombres</option></select></div>
+      <div><label>Categoría</label><select id="f-category"><option value="all">Todas</option><option value="atraer">Atraer</option><option value="producto">Producto</option><option value="promo">Promo</option><option value="marca">Marca</option></select></div>
+      <div><label>Edad</label><select id="f-age"><option value="all">Todas</option><option value="nino">Niño</option><option value="joven">Joven</option><option value="adulto">Adulto</option><option value="senior">Senior</option><option value="vejez">Vejez</option></select></div>
+      <div><label>Franja</label><select id="f-slot"><option value="all">Todas</option><option value="auto">Auto</option><option value="manana">Mañana</option><option value="mediodia">Mediodía</option><option value="tarde">Tarde</option><option value="noche">Noche</option></select></div>
+      <div><label>Etiqueta</label><input id="f-tag" type="text" placeholder="lujo…" autocomplete="off"></div>
+    </div>
     <div class="count" id="segCount">—</div>
+
+    <h4>⚙ Reproducción</h4>
+    <div class="grid2">
+      <div><label>Imagen (s)</label><input id="c-img" type="number" min="2" max="120" step="1"></div>
+      <div><label>Audio (s)</label><input id="c-audio" type="number" min="3" max="300" step="1"></div>
+      <div><label>Refresco (s)</label><input id="c-refresh" type="number" min="10" max="900" step="5"></div>
+      <div><label>Máx. en loop</label><input id="c-max" type="number" min="1" max="200" step="1"></div>
+    </div>
+    <p class="hint">Ajustes guardados en esta pantalla (localStorage). Compartibles por URL: <br>?screen= &circuit= &medio= &audience= &category= &age= &slot= &tag= &img= &audio= &refresh= &max=</p>
   </div>
 </div></div>
 
 <script>
-// Canal de cartelería vertical de Admira.tv: coge TODO el media del Stock de
-// Pixeria (índice público R2, CORS abierto) y lo emite en bucle en este MUPI,
-// segmentable, con controles de reproducción (anterior/siguiente/mute/volumen).
 const INDEX = 'https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json';
-const REFRESH_MS = 30000, MAX = 50, IMG_MS = 9000, AUDIO_FALLBACK_MS = 18000;
 const MEDIA = ['video','animation','image','digital-twin','audio','music','locucion'];
 const KIND = { video:'video', animation:'video', image:'image', 'digital-twin':'image', 'twin-npc':'image', audio:'audio', music:'audio', locucion:'audio' };
-
 const qs = new URLSearchParams(location.search);
+const LS = (k,d)=>{ try{ const v=localStorage.getItem(k); return v==null?d:v; }catch(_){ return d; } };
+const save = (k,v)=>{ try{ localStorage.setItem(k,v); }catch(_){} };
+
+// segmento (URL > localStorage > default)
+const segSaved = JSON.parse(LS('adtv_seg','{}')||'{}');
 const seg = {
-  medio: qs.get('medio')||'all', audience: qs.get('audience')||'all', category: qs.get('category')||'all',
-  age: qs.get('age')||'all', slot: qs.get('slot')||'all', tag: (qs.get('tag')||'').toLowerCase().trim(),
+  medio: qs.get('medio')||segSaved.medio||'all', audience: qs.get('audience')||segSaved.audience||'all',
+  category: qs.get('category')||segSaved.category||'all', age: qs.get('age')||segSaved.age||'all',
+  slot: qs.get('slot')||segSaved.slot||'all', tag: (qs.get('tag')||segSaved.tag||'').toLowerCase().trim(),
 };
+// configuración de reproducción
+const cfg = {
+  imgSec:  +(qs.get('img')||LS('adtv_img',9)),
+  audioSec:+(qs.get('audio')||LS('adtv_audio',18)),
+  refreshSec:+(qs.get('refresh')||LS('adtv_refresh',30)),
+  max:     +(qs.get('max')||LS('adtv_max',50)),
+};
+// identidad de pantalla
+const scr = { circuit: qs.get('circuit')||LS('adtv_circuit',''), screen: qs.get('screen')||LS('adtv_screen',''), name: LS('adtv_screenName','') };
+// audio
+let muted  = (LS('adtv_muted','1'))==='1';
+let volume = Math.max(0,Math.min(1,parseFloat(LS('adtv_vol','1'))));
 
-let all = [], playlist = [], cur = -1, seenSig = '', timer = null, barTimer = null, mediaEl = null;
-// estado de audio persistente (la pantalla recuerda mute/volumen)
-let muted  = (localStorage.getItem('adtv_muted') ?? '1') === '1';
-let volume = Math.max(0, Math.min(1, parseFloat(localStorage.getItem('adtv_vol') ?? '1')));
-
+let all=[], playlist=[], cur=-1, seenSig='', timer=null, barTimer=null, mediaEl=null, feedTimer=null;
 const $ = id => document.getElementById(id);
 const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=$('bar'), tap=$('tap');
 
-function clock(){ const d=new Date(); $('clock').textContent = String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function clock(){ const d=new Date(); $('clock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 clock(); setInterval(clock,1000);
-function setLive(t,ok){ liveEl.textContent=t; liveEl.style.color = ok?'var(--air)':'#ff8e3c'; }
+function setLive(t,ok){ liveEl.textContent=t; liveEl.style.color=ok?'var(--air)':'#ff8e3c'; }
 function madridSlot(){ let h=12; try{ h=+new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ h=new Date().getHours(); } return h<12?'manana':h<16?'mediodia':h<21?'tarde':'noche'; }
+function screenLbl(){ $('screenLbl').textContent = scr.name ? ('📍 '+scr.name+(scr.screen?(' · '+scr.screen):'')) : (scr.screen?('📍 '+scr.screen):''); }
 
 function matches(it){
-  const k = KIND[it.type];
-  if(seg.medio!=='all' && k!==seg.medio) return false;
-  if(seg.audience!=='all'){ const a=it.audience; if(a && a!=='all' && a!==seg.audience) return false; }
-  if(seg.category!=='all'){ if(it.category && it.category!==seg.category) return false; }
-  if(seg.age!=='all'){ const g=it.ageBucket; if(g && g!==seg.age) return false; }
-  if(seg.slot!=='all'){ const want = seg.slot==='auto'?madridSlot():seg.slot; const s=it.timeSlot; if(s && s!==want) return false; }
+  const k=KIND[it.type];
+  if(seg.medio!=='all'&&k!==seg.medio) return false;
+  if(seg.audience!=='all'){ const a=it.audience; if(a&&a!=='all'&&a!==seg.audience) return false; }
+  if(seg.category!=='all'){ if(it.category&&it.category!==seg.category) return false; }
+  if(seg.age!=='all'){ const g=it.ageBucket; if(g&&g!==seg.age) return false; }
+  if(seg.slot!=='all'){ const want=seg.slot==='auto'?madridSlot():seg.slot; const s=it.timeSlot; if(s&&s!==want) return false; }
   if(seg.tag){ const tg=(it.tags||[]).map(x=>String(x).toLowerCase()); if(!tg.some(t=>t.includes(seg.tag))) return false; }
   return true;
 }
 
-// estado de audio (mute/volumen) → al elemento actual + UI + persistencia
 function applyAudio(){
-  if(mediaEl && 'muted' in mediaEl){ mediaEl.muted = muted; mediaEl.volume = volume; }
-  $('mute').textContent = (muted || volume===0) ? '🔇' : (volume<0.5 ? '🔉' : '🔊');
-  $('vol').value = volume;
-  localStorage.setItem('adtv_muted', muted?'1':'0');
-  localStorage.setItem('adtv_vol', String(volume));
+  if(mediaEl&&'muted'in mediaEl){ mediaEl.muted=muted; mediaEl.volume=volume; }
+  $('mute').textContent=(muted||volume===0)?'🔇':(volume<0.5?'🔉':'🔊'); $('vol').value=volume;
+  save('adtv_muted',muted?'1':'0'); save('adtv_vol',String(volume));
 }
-
 function stopBar(){ if(barTimer){ clearInterval(barTimer); barTimer=null; } bar.style.width='0'; }
 function runBar(ms){ stopBar(); const t0=Date.now(); barTimer=setInterval(()=>{ bar.style.width=Math.min(100,(Date.now()-t0)/ms*100)+'%'; },120); }
 
 function play(i){
   clearTimeout(timer); stopBar(); mediaEl=null;
   if(!playlist.length){ stage.innerHTML='<div class="empty">// sin media en este segmento</div>'; nowEl.textContent='// segmento vacío'; return; }
-  cur = ((i % playlist.length) + playlist.length) % playlist.length;
-  const it = playlist[cur], k = KIND[it.type] || 'image';
-  const title = (it.title || it.prompt || 'sin título').replace(/\n/g,' ').slice(0,64);
-  stage.innerHTML='';
-  nowEl.textContent = '▶ ' + title;
-  metaEl.textContent = it.type + ' · ' + (cur+1) + '/' + playlist.length + ' · ' + (it.motor||'stock');
-
+  cur=((i%playlist.length)+playlist.length)%playlist.length;
+  const it=playlist[cur], k=KIND[it.type]||'image';
+  const title=(it.title||it.prompt||'sin título').replace(/\n/g,' ').slice(0,64);
+  stage.innerHTML=''; nowEl.textContent='▶ '+title;
+  metaEl.textContent=it.type+' · '+(cur+1)+'/'+playlist.length+' · '+(it.motor||'stock');
   if(k==='video'){
     const v=document.createElement('video'); v.src=it.url; v.autoplay=true; v.playsInline=true; v.preload='auto';
     v.onended=next; v.onerror=()=>setTimeout(next,600);
@@ -163,64 +185,85 @@ function play(i){
   } else if(k==='image'){
     const im=document.createElement('img'); im.src=it.url; im.alt=title; if(it.type==='twin-npc') im.className='pixel';
     im.onerror=()=>setTimeout(next,600); stage.appendChild(im);
-    runBar(IMG_MS); timer=setTimeout(next, IMG_MS);
+    const ms=Math.max(2,cfg.imgSec)*1000; runBar(ms); timer=setTimeout(next,ms);
   } else {
     stage.innerHTML='<div class="audio-card"><div class="ico">♪</div><strong>'+title+'</strong><div class="wave">'
-      + Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div></div>';
+      +Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div></div>';
     const a=document.createElement('audio'); a.src=it.url; a.autoplay=true;
     a.onended=next; a.onerror=()=>setTimeout(next,600);
     a.ontimeupdate=()=>{ if(a.duration) bar.style.width=(a.currentTime/a.duration*100)+'%'; };
     mediaEl=a; applyAudio(); stage.querySelector('.audio-card').appendChild(a);
     a.play().then(()=>tap.classList.remove('show')).catch(()=>{ if(!muted) tap.classList.add('show'); });
-    runBar(AUDIO_FALLBACK_MS); timer=setTimeout(next, AUDIO_FALLBACK_MS);
+    const ms=Math.max(3,cfg.audioSec)*1000; runBar(ms); timer=setTimeout(next,ms);
   }
 }
-function next(){ play(cur+1); }
-function prev(){ play(cur-1); }
+function next(){ play(cur+1); } function prev(){ play(cur-1); }
 
 function rebuild(restart){
-  playlist = all.filter(matches).slice(0, MAX);
-  $('segCount').textContent = playlist.length + ' en este segmento';
-  setLive('LIVE · ' + playlist.length + ' en loop', playlist.length>0);
-  if(restart || cur<0 || !stage.querySelector('video,img,audio')){ play(0); }
+  playlist=all.filter(matches).slice(0,Math.max(1,cfg.max));
+  $('segCount').textContent=playlist.length+' en este segmento';
+  setLive('LIVE · '+playlist.length+' en loop', playlist.length>0);
+  if(restart||cur<0||!stage.querySelector('video,img,audio')){ play(0); }
 }
 
 async function loadFeed(){
   try{
-    const r = await fetch(INDEX + '?t=' + Date.now(), { cache:'no-store' });
-    const d = await r.json(); const items = d.items || (Array.isArray(d)?d:[]);
-    all = items.filter(i=>i && MEDIA.includes(i.type) && i.url).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
-    const sig = all.map(v=>v.id).join(',') + '|' + JSON.stringify(seg);
+    const r=await fetch(INDEX+'?t='+Date.now(),{cache:'no-store'});
+    const d=await r.json(); const items=d.items||(Array.isArray(d)?d:[]);
+    all=items.filter(i=>i&&MEDIA.includes(i.type)&&i.url).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+    const sig=all.map(v=>v.id).join(',')+'|'+JSON.stringify(seg)+'|'+cfg.max;
     if(sig!==seenSig){ seenSig=sig; rebuild(false); }
-  }catch(e){ setLive('offline', false); }
+  }catch(e){ setLive('offline',false); }
 }
+function restartFeed(){ if(feedTimer) clearInterval(feedTimer); feedTimer=setInterval(loadFeed, Math.max(10,cfg.refreshSec)*1000); }
 
 // ── controles ──
-$('prev').onclick = prev;
-$('next').onclick = next;
-$('mute').onclick = () => { muted = !muted; if(!muted && volume===0){ volume=0.6; } if(!muted && mediaEl) mediaEl.play&&mediaEl.play().catch(()=>{}); applyAudio(); };
-$('vol').oninput = (e) => { volume = parseFloat(e.target.value); muted = (volume===0); applyAudio(); };
-window.addEventListener('keydown', (e) => {
-  if(e.key==='ArrowRight'){ next(); } else if(e.key==='ArrowLeft'){ prev(); }
-  else if(e.key.toLowerCase()==='m'){ $('mute').click(); }
+$('prev').onclick=prev; $('next').onclick=next;
+$('mute').onclick=()=>{ muted=!muted; if(!muted&&volume===0) volume=0.6; if(!muted&&mediaEl&&mediaEl.play) mediaEl.play().catch(()=>{}); applyAudio(); };
+$('vol').oninput=e=>{ volume=parseFloat(e.target.value); muted=(volume===0); applyAudio(); };
+window.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
+  if(e.key==='ArrowRight') next(); else if(e.key==='ArrowLeft') prev();
+  else if(e.key.toLowerCase()==='m') $('mute').click();
   else if(e.key==='ArrowUp'){ volume=Math.min(1,volume+0.1); muted=false; applyAudio(); e.preventDefault(); }
   else if(e.key==='ArrowDown'){ volume=Math.max(0,volume-0.1); muted=(volume===0); applyAudio(); e.preventDefault(); }
 });
-tap.addEventListener('click', ()=>{ if(mediaEl) mediaEl.play&&mediaEl.play().catch(()=>{}); tap.classList.remove('show'); });
-
-// auto-ocultar controles tras inactividad (estilo reproductor)
+tap.addEventListener('click',()=>{ if(mediaEl&&mediaEl.play) mediaEl.play().catch(()=>{}); tap.classList.remove('show'); });
 let hideT; function ui(){ document.body.classList.remove('idle'); clearTimeout(hideT); hideT=setTimeout(()=>document.body.classList.add('idle'),3500); }
-['mousemove','touchstart','keydown','click'].forEach(ev=>window.addEventListener(ev, ui)); ui();
+['mousemove','touchstart','keydown','click'].forEach(ev=>window.addEventListener(ev,ui)); ui();
 
-// panel de segmentación
-function applySeg(){ ['medio','audience','category','age','slot'].forEach(k=>seg[k]=$('f-'+k).value); seg.tag=$('f-tag').value.toLowerCase().trim(); seenSig=''; rebuild(true); }
+// ── panel: pantalla ──
+function loadStores(){
+  const locs=(window.OMNIP_LOCATIONS_DEFAULT||window.OMNIP_LOCATIONS_EXTRA||[]);
+  const sel=$('f-store');
+  if(Array.isArray(locs)&&locs.length){
+    sel.innerHTML='<option value="">— todas / sin asignar —</option>'+
+      locs.map(l=>'<option value="'+(l.id||'')+'">'+((l.name||l.id||'').replace(/</g,'&lt;'))+'</option>').join('');
+  }
+  sel.value=scr.circuit||'';
+}
+$('f-store').onchange=()=>{ const o=$('f-store').selectedOptions[0]; scr.circuit=$('f-store').value; scr.name=o?o.textContent:''; if(scr.circuit&&!scr.screen){ scr.screen=scr.circuit+'-led'; $('f-screen').value=scr.screen; } save('adtv_circuit',scr.circuit); save('adtv_screenName',scr.name); save('adtv_screen',scr.screen); screenLbl(); };
+$('f-screen').value=scr.screen; $('f-screen').oninput=()=>{ scr.screen=$('f-screen').value.trim(); save('adtv_screen',scr.screen); screenLbl(); };
+
+// ── panel: segmento ──
+function applySeg(){ ['medio','audience','category','age','slot'].forEach(k=>seg[k]=$('f-'+k).value); seg.tag=$('f-tag').value.toLowerCase().trim(); save('adtv_seg',JSON.stringify(seg)); seenSig=''; rebuild(true); }
 ['medio','audience','category','age','slot'].forEach(k=>{ $('f-'+k).value=seg[k]; $('f-'+k).onchange=applySeg; });
 $('f-tag').value=seg.tag; $('f-tag').oninput=()=>{ clearTimeout($('f-tag')._t); $('f-tag')._t=setTimeout(applySeg,400); };
+
+// ── panel: configuración ──
+$('c-img').value=cfg.imgSec; $('c-audio').value=cfg.audioSec; $('c-refresh').value=cfg.refreshSec; $('c-max').value=cfg.max;
+$('c-img').onchange=()=>{ cfg.imgSec=+$('c-img').value||9; save('adtv_img',cfg.imgSec); };
+$('c-audio').onchange=()=>{ cfg.audioSec=+$('c-audio').value||18; save('adtv_audio',cfg.audioSec); };
+$('c-refresh').onchange=()=>{ cfg.refreshSec=+$('c-refresh').value||30; save('adtv_refresh',cfg.refreshSec); restartFeed(); };
+$('c-max').onchange=()=>{ cfg.max=+$('c-max').value||50; save('adtv_max',cfg.max); seenSig=''; rebuild(true); };
+
 $('segBtn').onclick=()=>$('seg').classList.toggle('open');
 $('segClose').onclick=()=>$('seg').classList.remove('open');
 
-applyAudio();
-loadFeed(); setInterval(loadFeed, REFRESH_MS);
+// persistir identidad de pantalla si venía por URL
+if(qs.get('circuit')) save('adtv_circuit',scr.circuit); if(qs.get('screen')) save('adtv_screen',scr.screen);
+loadStores(); screenLbl(); applyAudio();
+loadFeed(); restartFeed();
 </script>
 </body>
 </html>
