@@ -17,14 +17,12 @@
   #stage img.pixel{ object-fit:contain; image-rendering:pixelated; background:#0a140a; }
   .empty{ opacity:.5; letter-spacing:.22em; text-align:center; padding:24px; animation:blink 1.5s steps(2) infinite; }
   @keyframes blink{ 50%{ opacity:.15 } }
-  /* tarjeta de audio */
   .audio-card{ display:grid; gap:22px; place-items:center; text-align:center; padding:32px; }
   .audio-card .ico{ font-size:64px; color:var(--blue); text-shadow:0 0 24px var(--blue); }
   .audio-card strong{ font-size:18px; letter-spacing:.06em; color:#eafff0; }
   .audio-card .wave{ display:flex; gap:5px; height:46px; align-items:flex-end; }
   .audio-card .wave i{ width:6px; background:var(--grn); border-radius:3px; animation:wv 1s ease-in-out infinite; }
   @keyframes wv{ 0%,100%{ height:10px } 50%{ height:46px } }
-  /* cabecera */
   #top{ position:absolute; left:0; right:0; top:0; z-index:3; padding:18px 18px 30px; display:flex; justify-content:space-between; align-items:flex-start;
     background:linear-gradient(180deg,rgba(0,0,0,.8),transparent); }
   #top .brand{ font-weight:800; letter-spacing:.02em; font-size:19px; color:#e7f0ff; text-shadow:0 0 12px rgba(125,184,255,.55); }
@@ -33,18 +31,26 @@
   #top .r{ text-align:right; }
   #top .clock{ font-size:11px; color:#c8ffd0; opacity:.7; font-variant-numeric:tabular-nums; }
   #top .seg{ display:inline-block; margin-top:6px; cursor:pointer; font-size:10px; letter-spacing:.1em; color:var(--blue); border:1px solid rgba(125,184,255,.35); border-radius:999px; padding:3px 9px; background:rgba(8,14,22,.5); }
-  /* hud inferior */
-  #hud{ position:absolute; left:0; right:0; bottom:0; z-index:3; padding:26px 18px 16px; background:linear-gradient(0deg,rgba(0,0,0,.88),transparent); }
+  #hud{ position:absolute; left:0; right:0; bottom:0; z-index:3; padding:24px 18px 16px; background:linear-gradient(0deg,rgba(0,0,0,.9),transparent); }
   #hud .now{ font-size:14px; color:#eafff0; text-shadow:0 0 6px var(--grn); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #hud .line{ display:flex; justify-content:space-between; gap:12px; font-size:10px; letter-spacing:.1em; margin-top:9px; color:#7dff9e; opacity:.85; }
   #hud .live{ color:var(--air); } #hud .live::before{ content:"●"; margin-right:5px; animation:pulse 1.3s infinite; }
   @keyframes pulse{ 50%{ opacity:.25 } }
+  /* controles de reproducción */
+  #ctrls{ display:flex; align-items:center; gap:12px; margin:0 0 14px; transition:opacity .3s; }
+  .cbtn{ width:40px; height:40px; border-radius:50%; border:1px solid rgba(125,184,255,.4); background:rgba(8,14,22,.7); color:#eafff0;
+    font-size:16px; cursor:pointer; display:grid; place-items:center; transition:background .15s,border-color .15s,transform .1s; }
+  .cbtn:hover{ border-color:var(--grn); background:rgba(12,22,16,.9); }
+  .cbtn:active{ transform:scale(.92); }
+  .vol{ flex:1; max-width:180px; height:4px; -webkit-appearance:none; appearance:none; background:rgba(255,255,255,.18); border-radius:99px; outline:none; cursor:pointer; }
+  .vol::-webkit-slider-thumb{ -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--grn); box-shadow:0 0 8px var(--grn); cursor:pointer; }
+  .vol::-moz-range-thumb{ width:14px; height:14px; border:0; border-radius:50%; background:var(--grn); box-shadow:0 0 8px var(--grn); cursor:pointer; }
+  body.idle #ctrls, body.idle #top .seg{ opacity:0; pointer-events:none; }
   #bar{ position:absolute; left:0; bottom:0; height:3px; width:0; background:var(--air); z-index:4; box-shadow:0 0 8px var(--air); }
   #mupi::after{ content:""; position:absolute; inset:0; z-index:5; pointer-events:none;
     background:repeating-linear-gradient(180deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px); }
   #tap{ position:absolute; inset:0; z-index:6; display:none; place-items:center; background:rgba(0,0,0,.6); cursor:pointer; font-size:13px; letter-spacing:.12em; color:#eafff0; text-align:center; }
   #tap.show{ display:grid; }
-  /* panel de segmentación */
   #seg{ position:absolute; z-index:8; top:0; right:0; bottom:0; width:min(86%,300px); transform:translateX(101%); transition:transform .25s ease;
     background:rgba(5,9,14,.96); border-left:1px solid rgba(125,184,255,.25); padding:20px 18px; display:flex; flex-direction:column; gap:14px; overflow:auto; }
   #seg.open{ transform:none; }
@@ -65,6 +71,12 @@
   <div id="bar"></div>
   <div id="tap">▶ Toca para arrancar el canal</div>
   <div id="hud">
+    <div id="ctrls">
+      <button class="cbtn" id="prev" title="Anterior (←)" aria-label="Anterior">⏮</button>
+      <button class="cbtn" id="next" title="Siguiente (→)" aria-label="Siguiente">⏭</button>
+      <button class="cbtn" id="mute" title="Silencio (M)" aria-label="Silencio">🔇</button>
+      <input id="vol" class="vol" type="range" min="0" max="1" step="0.05" value="1" title="Volumen (↑/↓)" aria-label="Volumen">
+    </div>
     <div class="now" id="now">// inicializando</div>
     <div class="line"><span id="meta">feed: pixer-eleven · stock</span><span class="live" id="live">conectando</span></div>
   </div>
@@ -82,118 +94,132 @@
 </div></div>
 
 <script>
-// Canal de cartelería vertical de Admira.tv:
-// coge TODO el media del Stock de Pixeria (índice público R2, CORS abierto) y lo
-// emite en bucle en este MUPI, segmentable por audiencia/categoría/edad/franja/etiqueta.
+// Canal de cartelería vertical de Admira.tv: coge TODO el media del Stock de
+// Pixeria (índice público R2, CORS abierto) y lo emite en bucle en este MUPI,
+// segmentable, con controles de reproducción (anterior/siguiente/mute/volumen).
 const INDEX = 'https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json';
-const REFRESH_MS = 30000;   // re-consulta el feed cada 30s
-const MAX = 50;             // tope de items en rotación
-const IMG_MS = 9000;        // duración de una imagen
-const AUDIO_FALLBACK_MS = 18000;
-// tipos de media que emite el canal (todo lo de pixeria; fuera 'link' y 'furni'=mobiliario)
+const REFRESH_MS = 30000, MAX = 50, IMG_MS = 9000, AUDIO_FALLBACK_MS = 18000;
 const MEDIA = ['video','animation','image','digital-twin','audio','music','locucion'];
 const KIND = { video:'video', animation:'video', image:'image', 'digital-twin':'image', 'twin-npc':'image', audio:'audio', music:'audio', locucion:'audio' };
 
 const qs = new URLSearchParams(location.search);
 const seg = {
-  medio:    qs.get('medio')    || 'all',
-  audience: qs.get('audience') || 'all',
-  category: qs.get('category') || 'all',
-  age:      qs.get('age')      || 'all',
-  slot:     qs.get('slot')     || 'all',
-  tag:     (qs.get('tag')      || '').toLowerCase().trim(),
+  medio: qs.get('medio')||'all', audience: qs.get('audience')||'all', category: qs.get('category')||'all',
+  age: qs.get('age')||'all', slot: qs.get('slot')||'all', tag: (qs.get('tag')||'').toLowerCase().trim(),
 };
 
-let all = [], playlist = [], idx = 0, seenSig = '', timer = null, barTimer = null;
+let all = [], playlist = [], cur = -1, seenSig = '', timer = null, barTimer = null, mediaEl = null;
+// estado de audio persistente (la pantalla recuerda mute/volumen)
+let muted  = (localStorage.getItem('adtv_muted') ?? '1') === '1';
+let volume = Math.max(0, Math.min(1, parseFloat(localStorage.getItem('adtv_vol') ?? '1')));
+
 const $ = id => document.getElementById(id);
 const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=$('bar'), tap=$('tap');
 
-function clock(){ const d=new Date(); $('clock').textContent =
-  String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function clock(){ const d=new Date(); $('clock').textContent = String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 clock(); setInterval(clock,1000);
 function setLive(t,ok){ liveEl.textContent=t; liveEl.style.color = ok?'var(--air)':'#ff8e3c'; }
+function madridSlot(){ let h=12; try{ h=+new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ h=new Date().getHours(); } return h<12?'manana':h<16?'mediodia':h<21?'tarde':'noche'; }
 
-function madridSlot(){
-  let h = 12; try{ h = +new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ h = new Date().getHours(); }
-  if(h<12) return 'manana'; if(h<16) return 'mediodia'; if(h<21) return 'tarde'; return 'noche';
-}
-
-// Lógica de segmentación: los items "universales" (campo nulo o 'all') siempre entran;
-// los segmentados sólo entran si casan con el segmento elegido.
 function matches(it){
   const k = KIND[it.type];
-  if(seg.medio !== 'all' && k !== seg.medio) return false;
-  if(seg.audience !== 'all'){ const a=it.audience; if(a && a!=='all' && a!==seg.audience) return false; }
-  if(seg.category !== 'all'){ if(it.category && it.category!==seg.category) return false; }
-  if(seg.age !== 'all'){ const g=it.ageBucket; if(g && g!==seg.age) return false; }
-  if(seg.slot !== 'all'){ const want = seg.slot==='auto'?madridSlot():seg.slot; const s=it.timeSlot; if(s && s!==want) return false; }
+  if(seg.medio!=='all' && k!==seg.medio) return false;
+  if(seg.audience!=='all'){ const a=it.audience; if(a && a!=='all' && a!==seg.audience) return false; }
+  if(seg.category!=='all'){ if(it.category && it.category!==seg.category) return false; }
+  if(seg.age!=='all'){ const g=it.ageBucket; if(g && g!==seg.age) return false; }
+  if(seg.slot!=='all'){ const want = seg.slot==='auto'?madridSlot():seg.slot; const s=it.timeSlot; if(s && s!==want) return false; }
   if(seg.tag){ const tg=(it.tags||[]).map(x=>String(x).toLowerCase()); if(!tg.some(t=>t.includes(seg.tag))) return false; }
   return true;
 }
 
-function rebuild(restart){
-  playlist = all.filter(matches).slice(0, MAX);
-  $('segCount').textContent = playlist.length + ' en este segmento';
-  const slotTxt = seg.slot==='auto' ? ('auto·'+madridSlot()) : seg.slot;
-  const tags = [seg.medio,seg.audience,seg.age,slotTxt].filter(v=>v&&v!=='all');
-  setLive('LIVE · ' + playlist.length + ' en loop', playlist.length>0);
-  if(restart || !stage.querySelector('video,img,audio')){ idx = 0; advance(); }
+// estado de audio (mute/volumen) → al elemento actual + UI + persistencia
+function applyAudio(){
+  if(mediaEl && 'muted' in mediaEl){ mediaEl.muted = muted; mediaEl.volume = volume; }
+  $('mute').textContent = (muted || volume===0) ? '🔇' : (volume<0.5 ? '🔉' : '🔊');
+  $('vol').value = volume;
+  localStorage.setItem('adtv_muted', muted?'1':'0');
+  localStorage.setItem('adtv_vol', String(volume));
 }
 
 function stopBar(){ if(barTimer){ clearInterval(barTimer); barTimer=null; } bar.style.width='0'; }
-function runBar(ms){ stopBar(); const t0=Date.now(); barTimer=setInterval(()=>{ bar.style.width = Math.min(100,(Date.now()-t0)/ms*100)+'%'; }, 120); }
+function runBar(ms){ stopBar(); const t0=Date.now(); barTimer=setInterval(()=>{ bar.style.width=Math.min(100,(Date.now()-t0)/ms*100)+'%'; },120); }
 
-function advance(){
-  clearTimeout(timer);
-  if(!playlist.length){ stopBar(); stage.innerHTML = '<div class="empty">// sin media en este segmento</div>'; nowEl.textContent='// segmento vacío'; return; }
-  const it = playlist[idx % playlist.length]; idx++;
-  const k = KIND[it.type] || 'image';
-  stage.innerHTML=''; stopBar();
+function play(i){
+  clearTimeout(timer); stopBar(); mediaEl=null;
+  if(!playlist.length){ stage.innerHTML='<div class="empty">// sin media en este segmento</div>'; nowEl.textContent='// segmento vacío'; return; }
+  cur = ((i % playlist.length) + playlist.length) % playlist.length;
+  const it = playlist[cur], k = KIND[it.type] || 'image';
   const title = (it.title || it.prompt || 'sin título').replace(/\n/g,' ').slice(0,64);
+  stage.innerHTML='';
   nowEl.textContent = '▶ ' + title;
-  metaEl.textContent = it.type + ' · ' + ((idx-1)%playlist.length+1) + '/' + playlist.length + ' · ' + (it.motor||'stock');
+  metaEl.textContent = it.type + ' · ' + (cur+1) + '/' + playlist.length + ' · ' + (it.motor||'stock');
 
-  if(k === 'video'){
-    const v=document.createElement('video'); v.src=it.url; v.muted=true; v.autoplay=true; v.playsInline=true; v.preload='auto';
-    v.onended=advance; v.onerror=()=>setTimeout(advance,600);
+  if(k==='video'){
+    const v=document.createElement('video'); v.src=it.url; v.autoplay=true; v.playsInline=true; v.preload='auto';
+    v.onended=next; v.onerror=()=>setTimeout(next,600);
     v.ontimeupdate=()=>{ if(v.duration) bar.style.width=(v.currentTime/v.duration*100)+'%'; };
-    stage.appendChild(v); v.play().then(()=>tap.classList.remove('show')).catch(()=>tap.classList.add('show'));
-  } else if(k === 'image'){
-    const im=document.createElement('img'); im.src=it.url; im.alt=title;
-    if(it.type==='twin-npc') im.className='pixel';
-    im.onerror=()=>setTimeout(advance,600);
-    stage.appendChild(im); runBar(IMG_MS); timer=setTimeout(advance, IMG_MS);
-  } else { // audio
-    stage.innerHTML = '<div class="audio-card"><div class="ico">♪</div><strong>'+title+'</strong>'
-      + '<div class="wave">'+Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div></div>';
+    mediaEl=v; applyAudio(); stage.appendChild(v);
+    v.play().then(()=>tap.classList.remove('show')).catch(()=>tap.classList.add('show'));
+  } else if(k==='image'){
+    const im=document.createElement('img'); im.src=it.url; im.alt=title; if(it.type==='twin-npc') im.className='pixel';
+    im.onerror=()=>setTimeout(next,600); stage.appendChild(im);
+    runBar(IMG_MS); timer=setTimeout(next, IMG_MS);
+  } else {
+    stage.innerHTML='<div class="audio-card"><div class="ico">♪</div><strong>'+title+'</strong><div class="wave">'
+      + Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div></div>';
     const a=document.createElement('audio'); a.src=it.url; a.autoplay=true;
-    a.onended=advance; a.onerror=()=>setTimeout(advance,600);
+    a.onended=next; a.onerror=()=>setTimeout(next,600);
     a.ontimeupdate=()=>{ if(a.duration) bar.style.width=(a.currentTime/a.duration*100)+'%'; };
-    stage.querySelector('.audio-card').appendChild(a);
-    a.play().catch(()=>{}); runBar(AUDIO_FALLBACK_MS); timer=setTimeout(advance, AUDIO_FALLBACK_MS);
+    mediaEl=a; applyAudio(); stage.querySelector('.audio-card').appendChild(a);
+    a.play().then(()=>tap.classList.remove('show')).catch(()=>{ if(!muted) tap.classList.add('show'); });
+    runBar(AUDIO_FALLBACK_MS); timer=setTimeout(next, AUDIO_FALLBACK_MS);
   }
+}
+function next(){ play(cur+1); }
+function prev(){ play(cur-1); }
+
+function rebuild(restart){
+  playlist = all.filter(matches).slice(0, MAX);
+  $('segCount').textContent = playlist.length + ' en este segmento';
+  setLive('LIVE · ' + playlist.length + ' en loop', playlist.length>0);
+  if(restart || cur<0 || !stage.querySelector('video,img,audio')){ play(0); }
 }
 
 async function loadFeed(){
   try{
     const r = await fetch(INDEX + '?t=' + Date.now(), { cache:'no-store' });
-    const d = await r.json();
-    const items = d.items || (Array.isArray(d) ? d : []);
-    all = items.filter(i => i && MEDIA.includes(i.type) && i.url)
-               .sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+    const d = await r.json(); const items = d.items || (Array.isArray(d)?d:[]);
+    all = items.filter(i=>i && MEDIA.includes(i.type) && i.url).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
     const sig = all.map(v=>v.id).join(',') + '|' + JSON.stringify(seg);
-    if(sig !== seenSig){ seenSig = sig; rebuild(false); }
+    if(sig!==seenSig){ seenSig=sig; rebuild(false); }
   }catch(e){ setLive('offline', false); }
 }
 
+// ── controles ──
+$('prev').onclick = prev;
+$('next').onclick = next;
+$('mute').onclick = () => { muted = !muted; if(!muted && volume===0){ volume=0.6; } if(!muted && mediaEl) mediaEl.play&&mediaEl.play().catch(()=>{}); applyAudio(); };
+$('vol').oninput = (e) => { volume = parseFloat(e.target.value); muted = (volume===0); applyAudio(); };
+window.addEventListener('keydown', (e) => {
+  if(e.key==='ArrowRight'){ next(); } else if(e.key==='ArrowLeft'){ prev(); }
+  else if(e.key.toLowerCase()==='m'){ $('mute').click(); }
+  else if(e.key==='ArrowUp'){ volume=Math.min(1,volume+0.1); muted=false; applyAudio(); e.preventDefault(); }
+  else if(e.key==='ArrowDown'){ volume=Math.max(0,volume-0.1); muted=(volume===0); applyAudio(); e.preventDefault(); }
+});
+tap.addEventListener('click', ()=>{ if(mediaEl) mediaEl.play&&mediaEl.play().catch(()=>{}); tap.classList.remove('show'); });
+
+// auto-ocultar controles tras inactividad (estilo reproductor)
+let hideT; function ui(){ document.body.classList.remove('idle'); clearTimeout(hideT); hideT=setTimeout(()=>document.body.classList.add('idle'),3500); }
+['mousemove','touchstart','keydown','click'].forEach(ev=>window.addEventListener(ev, ui)); ui();
+
 // panel de segmentación
-function applySeg(restart){ ['medio','audience','category','age','slot'].forEach(k=>seg[k]=$('f-'+k).value); seg.tag=$('f-tag').value.toLowerCase().trim(); seenSig=''; rebuild(true); }
-['medio','audience','category','age','slot'].forEach(k=>{ $('f-'+k).value=seg[k]; $('f-'+k).onchange=()=>applySeg(true); });
-$('f-tag').value=seg.tag; $('f-tag').oninput=()=>{ clearTimeout($('f-tag')._t); $('f-tag')._t=setTimeout(()=>applySeg(true),400); };
+function applySeg(){ ['medio','audience','category','age','slot'].forEach(k=>seg[k]=$('f-'+k).value); seg.tag=$('f-tag').value.toLowerCase().trim(); seenSig=''; rebuild(true); }
+['medio','audience','category','age','slot'].forEach(k=>{ $('f-'+k).value=seg[k]; $('f-'+k).onchange=applySeg; });
+$('f-tag').value=seg.tag; $('f-tag').oninput=()=>{ clearTimeout($('f-tag')._t); $('f-tag')._t=setTimeout(applySeg,400); };
 $('segBtn').onclick=()=>$('seg').classList.toggle('open');
 $('segClose').onclick=()=>$('seg').classList.remove('open');
-tap.addEventListener('click', ()=>{ const m=stage.querySelector('video,audio'); if(m) m.play().catch(()=>{}); tap.classList.remove('show'); });
 
+applyAudio();
 loadFeed(); setInterval(loadFeed, REFRESH_MS);
 </script>
 </body>
