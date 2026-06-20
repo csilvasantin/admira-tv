@@ -262,7 +262,7 @@ function renderRail(){
   else { for(let d=-3;d<=3;d++) idxs.push(((cur+d)%len+len)%len); }
   host.innerHTML='<div class="rail-hd">▲ arrastra para reordenar ▼</div>'+idxs.map(i=>{ const it=playlist[i];
     const t=(it.title||it.prompt||'—').replace(/[<>]/g,'').slice(0,42);
-    return '<div class="rail-it'+(i===cur?' cur':'')+'" draggable="true" data-i="'+i+'"><div class="th">'+thumbHtml(it)+'</div><div class="tx"><div class="tt">'+t+'</div><div class="ty">'+(i===cur?'● ahora':it.type)+'</div></div></div>';
+    return '<div class="rail-it'+(i===cur?' cur':'')+'" draggable="true" data-i="'+i+'"><div class="th">'+thumbHtml(it)+'</div><div class="tx"><div class="tt">'+t+'</div><div class="ty">'+(it._num?'#'+it._num+' · ':'')+(i===cur?'ahora':it.type)+'</div></div></div>';
   }).join('');
 }
 // reordenar la cola arrastrando (persiste el orden por id en localStorage)
@@ -296,16 +296,21 @@ function fitMupi(){ const mupi=$('mupi'); if(!mupi) return;
   mupi.style.height=Math.round(h)+'px'; mupi.style.width=Math.round(w)+'px'; mupi.style.aspectRatio='auto';
 }
 window.addEventListener('resize',fitMupi);
-function play(i){
+function play(i, forced){
   clearTimeout(timer); stopBar(); bar.style.width='0'; mediaEl=null; usesAdv=false;
   paused=false; document.body.classList.remove('paused'); $('pause').textContent='⏸';
-  if(!playlist.length){ stage.innerHTML='<div class="empty">// sin media en este segmento</div>'; nowEl.textContent='// segmento vacío'; renderRail(); return; }
-  cur=((i%playlist.length)+playlist.length)%playlist.length;
-  const it=playlist[cur], k=KIND[it.type]||'image';
+  let it;
+  if(forced){ it=forced; const fi=playlist.findIndex(p=>p&&p.id===it.id); if(fi>=0) cur=fi; } // /play<N>: por encima del filtro
+  else {
+    if(!playlist.length){ stage.innerHTML='<div class="empty">// sin media en este segmento</div>'; nowEl.textContent='// segmento vacío'; renderRail(); return; }
+    cur=((i%playlist.length)+playlist.length)%playlist.length;
+    it=playlist[cur];
+  }
+  const k=KIND[it.type]||'image';
   mupiAR=itemAR(it); fitMupi();   // marco 9:16 / 16:9 según el formato del contenido
   const title=(it.title||it.prompt||'sin título').replace(/\n/g,' ').slice(0,64);
   stage.innerHTML=''; nowEl.textContent='▶ '+title;
-  metaEl.textContent=it.type+' · '+(cur+1)+'/'+playlist.length+' · '+(it.motor||'stock')+(it._dim?(' · '+it._dim.w+'×'+it._dim.h):'');
+  metaEl.textContent=it.type+(it._num?' · #'+it._num:'')+' · '+(cur+1)+'/'+playlist.length+' · '+(it.motor||'stock')+(it._dim?(' · '+it._dim.w+'×'+it._dim.h):'');
   renderRail();
   if(k==='video'){
     const v=document.createElement('video'); v.src=it.url; v.autoplay=true; v.playsInline=true; v.preload='auto';
@@ -361,6 +366,8 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   try{
   const r=await fetch(INDEX+'?t='+Date.now(),{cache:'no-store'}); const d=await r.json(); const items=d.items||(Array.isArray(d)?d:[]);
   all=items.filter(i=>i&&MEDIA.includes(i.type)&&i.url).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  // número de importación único: #1 = el más antiguo, #N = el último importado (= all.length). Para /play<N>.
+  all.slice().sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||''))).forEach((it,i)=>{ it._num=i+1; });
   // etiquetas de formato/aspecto/resolución desde la caché de dimensiones (instantáneo).
   for(const it of all){ const dd=dimCache[it.id]; if(dd){ applyFmt(it,dd); it._fmtDone=true; } }
   // la firma incluye tags+categoría: si editas el metadato de un vídeo, se detecta y reordena.
@@ -399,6 +406,21 @@ function flashCli(msg){ const i=$('railCliIn'); if(!i) return; if(!i.dataset.ph)
 const IMPORT_URL='https://api.admira.store/tube/import';
 function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   const cmd=v.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
+  // /play<N> o /play <N> → reproduce el asset con número de importación N, POR ENCIMA
+  // de cualquier filtro (forzado). #1 = el más antiguo, #N = el último importado.
+  let pn=null;
+  if(cmd==='play'){ pn=parseInt(v.replace(/^\s*\/?play\s*/i,'').trim(),10); }
+  else if(/^play\d+$/.test(cmd)){ pn=parseInt(cmd.slice(4),10); }
+  if(pn!=null){
+    if(isNaN(pn)){ flashCli('uso: /play<N>  (1-'+all.length+')'); return; }
+    const asc=all.slice().sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+    if(pn<1||pn>asc.length){ flashCli('asset #'+pn+' no existe (1-'+asc.length+')'); return; }
+    const target=asc[pn-1];
+    if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
+    play(0,target);                                  // forzado: manda por encima del filtro
+    flashCli('▶ asset #'+pn+' · '+String(target.title||target.prompt||'').slice(0,24));
+    return;
+  }
   // /import <url> → importa a pixeria.com/stock (igual que @AdmiraXPBot en Telegram).
   // Al publicarse entra en el feed y aparece solo en admira.tv (refresco en cada avance).
   if(cmd==='import'){ const u=v.replace(/^\s*\/?import\s*/i,'').trim();
