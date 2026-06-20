@@ -406,6 +406,11 @@ function flashCli(msg){ const i=$('railCliIn'); if(!i) return; if(!i.dataset.ph)
 const IMPORT_URL='https://api.admira.store/tube/import';
 function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   const cmd=v.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
+  // navegación de la cola por comando (equivalente a las flechas)
+  if(cmd==='playnext'||cmd==='next'){ next(); flashCli('▶ siguiente'); return; }
+  if(cmd==='playprevious'||cmd==='playprev'||cmd==='previous'||cmd==='prev'){ prev(); flashCli('◀ anterior'); return; }
+  if(cmd==='playfirst'||cmd==='first'){ if(!directOn&&playlist.length) play(0); flashCli('▶ primera'); return; }
+  if(cmd==='playlast'||cmd==='last'){ if(!directOn&&playlist.length) play(playlist.length-1); flashCli('▶ última'); return; }
   // /play<N> o /play <N> → reproduce el asset con número de importación N, POR ENCIMA
   // de cualquier filtro (forzado). #1 = el más antiguo, #N = el último importado.
   let pn=null;
