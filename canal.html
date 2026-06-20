@@ -380,7 +380,7 @@ const SITES={
   app:'https://www.admira.app', live:'https://www.admira.live', tv:'https://admira.tv/canal.html'
 };
 function flashCli(msg){ const i=$('railCliIn'); if(!i) return; if(!i.dataset.ph) i.dataset.ph=i.placeholder; i.placeholder=msg; clearTimeout(i._t); i._t=setTimeout(()=>{ i.placeholder=i.dataset.ph; },2400); }
-const IMPORT_URL='https://pixer-eleven.csilvasantin.workers.dev/tube/import';
+const IMPORT_URL='https://api.admira.store/tube/import';
 function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   const cmd=v.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
   // /import <url> → importa a pixeria.com/stock (igual que @AdmiraXPBot en Telegram).
