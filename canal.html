@@ -221,6 +221,7 @@ let customOrder=[]; try{ const o=JSON.parse(LS('adtv_order','[]')); if(Array.isA
 let _lastFeed=0;
 let dimCache={}; try{ const c=JSON.parse(LS('adtv_dims','{}')); if(c&&typeof c==='object') dimCache=c; }catch(_){}
 let pendingImport=null, _measuring=false, _statusT=null, _statusT2=null;
+let directOn=false; try{ if(localStorage.getItem('adtv_direct')) directOn=true; }catch(_){}
 let paused=false, usesAdv=false, advTotal=0, advElapsed=0, advStart=0;
 const $ = id => document.getElementById(id);
 const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=$('bar'), tap=$('tap');
@@ -300,8 +301,8 @@ function play(i){
 }
 // antes de cada nuevo contenido, revisa si hay novedades en stock (nuevas
 // importaciones o tags/categorías editados) — con throttle para no saturar.
-function next(){ if(Date.now()-_lastFeed>5000){ try{ loadFeed(false); }catch(_){} } play(cur+1); }
-function prev(){ play(cur-1); }
+function next(){ if(directOn) return; if(Date.now()-_lastFeed>5000){ try{ loadFeed(false); }catch(_){} } play(cur+1); }
+function prev(){ if(directOn) return; play(cur-1); }
 
 function setPaused(p){
   paused=p; document.body.classList.toggle('paused',p); $('pause').textContent=p?'▶':'⏸';
@@ -311,7 +312,9 @@ function setPaused(p){
 
 function rebuild(restart){ playlist=all.filter(matches).slice(0,Math.max(1,cfg.max));
   if(customOrder.length){ const pos=id=>{ const k=customOrder.indexOf(id); return k<0?1e9:k; }; playlist.sort((a,b)=>pos(a.id)-pos(b.id)); }
-  $('segCount').textContent=playlist.length+' en este segmento'; setLive('LIVE · '+playlist.length+' en loop', playlist.length>0); renderChan(); if(restart||cur<0||!stage.querySelector('video,img,audio')){ play(0); } else { renderRail(); } }
+  $('segCount').textContent=playlist.length+' en este segmento'; setLive(directOn?'● DIRECTO':('LIVE · '+playlist.length+' en loop'), directOn||playlist.length>0); renderChan();
+  if(directOn){ renderRail(); return; }   // en directo no tocamos el escenario
+  if(restart||cur<0||!stage.querySelector('video,img,audio')){ play(0); } else { renderRail(); } }
 
 // showStatus=true → semáforo en la CLI (ciclo de 30s); false → refresco silencioso (avances).
 async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
@@ -338,7 +341,7 @@ function restartFeed(){ if(feedTimer) clearInterval(feedTimer); feedTimer=setInt
 $('prev').onclick=prev; $('next').onclick=next; $('pause').onclick=()=>setPaused(!paused);
 $('mute').onclick=()=>{ muted=!muted; if(!muted&&volume===0) volume=0.6; if(!muted&&mediaEl&&mediaEl.play&&!paused) mediaEl.play().catch(()=>{}); applyAudio(); };
 $('vol').oninput=e=>{ volume=parseFloat(e.target.value); muted=(volume===0); applyAudio(); };
-$('rail').addEventListener('click',e=>{ const it=e.target.closest('.rail-it'); if(it) play(+it.dataset.i); });
+$('rail').addEventListener('click',e=>{ const it=e.target.closest('.rail-it'); if(!it) return; if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} } play(+it.dataset.i); });
 // ── reordenar la cola arrastrando ──
 let _dragSrc=-1; const _railHost=$('railItems');
 if(_railHost){
@@ -368,6 +371,11 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
       .then(r=>r.json()).then(d=>{ if(!(d&&d.ok)){ setImp('⚠️ '+((d&&d.error)||'error')+'<div class="ip"></div>','done'); pendingImport=null; setTimeout(()=>setImp(null),5000); } })
       .catch(()=>{ setImp('⚠️ sin conexión<div class="ip"></div>','done'); pendingImport=null; setTimeout(()=>setImp(null),5000); });
     return; }
+  // /direct <url> → emite esa URL en directo (embed) hasta /direct off
+  if(cmd==='direct'||cmd==='directo'){ const rest=v.replace(/^\s*\/?(direct|directo)\s*/i,'').trim();
+    if(rest.toLowerCase()==='off'){ exitDirect(); return; }
+    if(!rest){ flashCli(directOn?'directo ON · /direct off':'uso: /direct <url>'); return; }
+    enterDirect(rest); return; }
   if(cmd==='reset'||cmd==='orden'){ customOrder=[]; save('adtv_order','[]'); seenSig=''; rebuild(true); flashCli('✓ orden reiniciado'); return; }
   if(cmd==='help'||cmd==='?'){ flashCli(Object.keys(SITES).map(k=>'/'+k).join(' ')); return; }
   if(SITES[cmd]){ flashCli('→ '+cmd); location.href=SITES[cmd]; return; }
@@ -459,6 +467,42 @@ function importTimeout(){ setImp('⌛ tardando… aviso por Telegram<div class="
 // semáforo de stock en la CLI: 🟡 revisando · 🟢 al día · 🔴 novedad · ⚫ sin conexión
 function setStockStatus(s){ const e=$('stockDot'); if(!e) return; e.className='sd '+s;
   e.title = s==='checking'?'revisando stock…' : s==='new'?'¡novedad en stock! actualizando' : s==='off'?'sin conexión' : 'al día'; }
+// ── /direct: emite EN DIRECTO una URL (embed) sin descargarla, hasta /direct off ──
+function ytId(u){ const m=String(u).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|live\/|v\/|shorts\/))([\w-]{11})/); return m?m[1]:null; }
+function directEmbed(url){
+  const id=ytId(url); if(id) return {type:'iframe', src:'https://www.youtube.com/embed/'+id+'?autoplay=1&mute='+(muted?1:0)+'&playsinline=1&rel=0&modestbranding=1'};
+  const vm=url.match(/vimeo\.com\/(\d+)/); if(vm) return {type:'iframe', src:'https://player.vimeo.com/video/'+vm[1]+'?autoplay=1&muted='+(muted?1:0)};
+  if(/\.(mp4|webm|ogg|m3u8)(\?|#|$)/i.test(url)) return {type:'video', src:url};
+  return {type:'iframe', src:url};
+}
+function enterDirect(url){
+  const m=String(url||'').match(/https?:\/\/\S+/); if(!m){ flashCli('uso: /direct <url>'); return; }
+  const u=m[0]; directOn=true; try{ save('adtv_direct',u); }catch(_){}
+  clearTimeout(timer); stopBar(); bar.style.width='0'; mediaEl=null; tap.classList.remove('show');
+  paused=false; document.body.classList.remove('paused'); $('pause').textContent='⏸';
+  let host=''; try{ host=new URL(u).hostname.replace(/^www\./,''); }catch(_){}
+  const emb=directEmbed(u);
+  stage.innerHTML='';
+  if(emb.type==='video'){
+    const v=document.createElement('video'); v.src=emb.src; v.autoplay=true; v.loop=true; v.playsInline=true; v.muted=muted; v.volume=volume;
+    v.onerror=()=>{ stage.innerHTML='<div class="empty">// no se pudo emitir esta URL</div>'; };
+    mediaEl=v; stage.appendChild(v); v.play().then(()=>tap.classList.remove('show')).catch(()=>tap.classList.add('show'));
+  } else {
+    const f=document.createElement('iframe'); f.src=emb.src; f.style.cssText='width:100%;height:100%;border:0;display:block;';
+    f.setAttribute('allow','autoplay; encrypted-media; fullscreen; picture-in-picture'); f.setAttribute('allowfullscreen','');
+    stage.appendChild(f);
+  }
+  nowEl.textContent='🔴 EN DIRECTO · '+host;
+  metaEl.textContent='directo · '+u.slice(0,46);
+  setLive('● DIRECTO', true);
+  renderRail();
+  flashCli('🔴 directo: '+(host||'on')+' · /direct off para salir');
+}
+function exitDirect(){
+  directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){}
+  flashCli('⏹ directo apagado · vuelve el loop');
+  seenSig=''; rebuild(true);
+}
 function segBase(){ return { medio:'all', audience:'all', category:'all', age:'all', slot:'all', tag:'' }; }
 function syncSegPanel(){ ['medio','audience','category','age','slot'].forEach(k=>{ const el=$('f-'+k); if(el) el.value=seg[k]; }); const ft=$('f-tag'); if(ft) ft.value=seg.tag; }
 // El TIPO de contenido (medio/categoría) y el METATAG COMBINAN. Los temas se
@@ -510,6 +554,8 @@ $('chan').addEventListener('click',e=>{
 });
 
 loadStores(); screenLbl(); applyAudio(); renderChan(); loadFeed(true); restartFeed();
+// directo persistente (sobrevive recarga) o por URL ?direct=
+const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
 </body>
 </html>
