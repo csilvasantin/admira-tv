@@ -200,6 +200,7 @@ let volume = Math.max(0,Math.min(1,parseFloat(qs.get('volume')||LS('adtv_vol','1
 
 let all=[], playlist=[], cur=-1, seenSig='', timer=null, barTimer=null, mediaEl=null, feedTimer=null;
 let customOrder=[]; try{ const o=JSON.parse(LS('adtv_order','[]')); if(Array.isArray(o)) customOrder=o; }catch(_){}
+let _lastFeed=0;
 let paused=false, usesAdv=false, advTotal=0, advElapsed=0, advStart=0;
 const $ = id => document.getElementById(id);
 const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=$('bar'), tap=$('tap');
@@ -277,7 +278,10 @@ function play(i){
     startAdv(Math.max(3,cfg.audioSec)*1000);
   }
 }
-function next(){ play(cur+1); } function prev(){ play(cur-1); }
+// antes de cada nuevo contenido, revisa si hay novedades en stock (nuevas
+// importaciones o tags/categorías editados) — con throttle para no saturar.
+function next(){ if(Date.now()-_lastFeed>5000){ try{ loadFeed(); }catch(_){} } play(cur+1); }
+function prev(){ play(cur-1); }
 
 function setPaused(p){
   paused=p; document.body.classList.toggle('paused',p); $('pause').textContent=p?'▶':'⏸';
@@ -289,10 +293,11 @@ function rebuild(restart){ playlist=all.filter(matches).slice(0,Math.max(1,cfg.m
   if(customOrder.length){ const pos=id=>{ const k=customOrder.indexOf(id); return k<0?1e9:k; }; playlist.sort((a,b)=>pos(a.id)-pos(b.id)); }
   $('segCount').textContent=playlist.length+' en este segmento'; setLive('LIVE · '+playlist.length+' en loop', playlist.length>0); renderChan(); if(restart||cur<0||!stage.querySelector('video,img,audio')){ play(0); } else { renderRail(); } }
 
-async function loadFeed(){ try{
+async function loadFeed(){ _lastFeed=Date.now(); try{
   const r=await fetch(INDEX+'?t='+Date.now(),{cache:'no-store'}); const d=await r.json(); const items=d.items||(Array.isArray(d)?d:[]);
   all=items.filter(i=>i&&MEDIA.includes(i.type)&&i.url).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
-  const sig=all.map(v=>v.id).join(',')+'|'+JSON.stringify(seg)+'|'+cfg.max;
+  // la firma incluye tags+categoría: si editas el metadato de un vídeo, se detecta y reordena.
+  const sig=all.map(v=>v.id+'~'+((v.tags||[]).join('.'))+'~'+(v.category||'')).join(',')+'|'+JSON.stringify(seg)+'|'+cfg.max;
   if(sig!==seenSig){ seenSig=sig; rebuild(false); }
 }catch(e){ setLive('offline',false); } }
 function restartFeed(){ if(feedTimer) clearInterval(feedTimer); feedTimer=setInterval(loadFeed,Math.max(10,cfg.refreshSec)*1000); }
@@ -317,8 +322,18 @@ const SITES={
   app:'https://www.admira.app', live:'https://www.admira.live', tv:'https://admira.tv/canal.html'
 };
 function flashCli(msg){ const i=$('railCliIn'); if(!i) return; if(!i.dataset.ph) i.dataset.ph=i.placeholder; i.placeholder=msg; clearTimeout(i._t); i._t=setTimeout(()=>{ i.placeholder=i.dataset.ph; },2400); }
+const IMPORT_URL='https://pixer-eleven.csilvasantin.workers.dev/tube/import';
 function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   const cmd=v.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
+  // /import <url> → importa a pixeria.com/stock (igual que @AdmiraXPBot en Telegram).
+  // Al publicarse entra en el feed y aparece solo en admira.tv (refresco en cada avance).
+  if(cmd==='import'){ const u=v.replace(/^\s*\/?import\s*/i,'').trim();
+    if(!u){ flashCli('uso: /import <url>'); return; }
+    flashCli('📥 importando…');
+    fetch(IMPORT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:u})})
+      .then(r=>r.json()).then(d=>{ flashCli(d&&d.ok?('📥 importando '+(d.host||'')+'… aparecerá solo'):'⚠️ '+((d&&d.error)||'error')); })
+      .catch(()=>flashCli('⚠️ sin conexión'));
+    return; }
   if(cmd==='reset'||cmd==='orden'){ customOrder=[]; save('adtv_order','[]'); seenSig=''; rebuild(true); flashCli('✓ orden reiniciado'); return; }
   if(cmd==='help'||cmd==='?'){ flashCli(Object.keys(SITES).map(k=>'/'+k).join(' ')); return; }
   if(SITES[cmd]){ flashCli('→ '+cmd); location.href=SITES[cmd]; return; }
