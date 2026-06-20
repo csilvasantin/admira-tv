@@ -30,6 +30,16 @@
   #railCli input{ flex:1; min-width:0; background:transparent; border:0; outline:0; color:#dfe9ff; font:inherit; font-size:10px; letter-spacing:.02em; }
   #railCli input::placeholder{ color:#5d6e76; }
   body.idle #railCli{ opacity:.4; }
+  /* barra de progreso de importación */
+  #impBar{ display:none; border-radius:8px; font-size:8.5px; letter-spacing:.02em; color:#9fe6b4; }
+  #impBar.on{ display:block; padding:6px 9px; border:1px solid rgba(57,211,83,.35); background:rgba(10,20,14,.7); }
+  #impBar .ip{ position:relative; height:3px; border-radius:2px; background:rgba(255,255,255,.12); margin-top:5px; overflow:hidden; }
+  #impBar .ip::after{ content:""; position:absolute; left:-40%; top:0; height:100%; width:40%; background:var(--grn); border-radius:2px; box-shadow:0 0 6px var(--grn); animation:ipmove 1.05s linear infinite; }
+  #impBar.done .ip::after{ animation:none; left:0; width:100%; }
+  @keyframes ipmove{ to{ left:110%; } }
+  /* sección formato: chips algo más apagados que los temas de contenido */
+  #chan .ch-tags.fmt .ch-tag{ color:#cfd9e6; border-color:rgba(125,184,255,.14); }
+  #chan .ch-tags.fmt .ch-tag.cur{ color:#fff; border-color:var(--air); }
   .rail-it{ display:flex; gap:8px; align-items:center; height:44px; border:1px solid rgba(125,184,255,.12); border-radius:8px; padding:5px; background:rgba(8,14,22,.5); cursor:pointer; overflow:hidden; opacity:.55; transition:opacity .2s,border-color .2s,transform .15s; }
   .rail-it:hover{ opacity:.95; border-color:rgba(125,184,255,.4); }
   .rail-it.cur{ opacity:1; border-color:var(--air); box-shadow:0 0 0 1px var(--air); transform:scale(1.03); }
@@ -127,7 +137,8 @@
 <div id="wrap">
   <aside id="rail">
     <div id="railItems"></div>
-    <form id="railCli" autocomplete="off"><span class="rc-pre">›</span><input id="railCliIn" type="text" placeholder="/studio /store /app /tv…" spellcheck="false"></form>
+    <div id="impBar"></div>
+    <form id="railCli" autocomplete="off"><span class="rc-pre">›</span><input id="railCliIn" type="text" placeholder="/import <url>  ·  /studio /store…" spellcheck="false"></form>
   </aside>
   <div id="mupi">
   <div id="top">
@@ -201,6 +212,8 @@ let volume = Math.max(0,Math.min(1,parseFloat(qs.get('volume')||LS('adtv_vol','1
 let all=[], playlist=[], cur=-1, seenSig='', timer=null, barTimer=null, mediaEl=null, feedTimer=null;
 let customOrder=[]; try{ const o=JSON.parse(LS('adtv_order','[]')); if(Array.isArray(o)) customOrder=o; }catch(_){}
 let _lastFeed=0;
+let dimCache={}; try{ const c=JSON.parse(LS('adtv_dims','{}')); if(c&&typeof c==='object') dimCache=c; }catch(_){}
+let pendingImport=null, _measuring=false;
 let paused=false, usesAdv=false, advTotal=0, advElapsed=0, advStart=0;
 const $ = id => document.getElementById(id);
 const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=$('bar'), tap=$('tap');
@@ -258,7 +271,7 @@ function play(i){
   const it=playlist[cur], k=KIND[it.type]||'image';
   const title=(it.title||it.prompt||'sin título').replace(/\n/g,' ').slice(0,64);
   stage.innerHTML=''; nowEl.textContent='▶ '+title;
-  metaEl.textContent=it.type+' · '+(cur+1)+'/'+playlist.length+' · '+(it.motor||'stock');
+  metaEl.textContent=it.type+' · '+(cur+1)+'/'+playlist.length+' · '+(it.motor||'stock')+(it._dim?(' · '+it._dim.w+'×'+it._dim.h):'');
   renderRail();
   if(k==='video'){
     const v=document.createElement('video'); v.src=it.url; v.autoplay=true; v.playsInline=true; v.preload='auto';
@@ -296,9 +309,15 @@ function rebuild(restart){ playlist=all.filter(matches).slice(0,Math.max(1,cfg.m
 async function loadFeed(){ _lastFeed=Date.now(); try{
   const r=await fetch(INDEX+'?t='+Date.now(),{cache:'no-store'}); const d=await r.json(); const items=d.items||(Array.isArray(d)?d:[]);
   all=items.filter(i=>i&&MEDIA.includes(i.type)&&i.url).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  // etiquetas de formato/aspecto/resolución desde la caché de dimensiones (instantáneo).
+  for(const it of all){ const d=dimCache[it.id]; if(d){ applyFmt(it,d); it._fmtDone=true; } }
   // la firma incluye tags+categoría: si editas el metadato de un vídeo, se detecta y reordena.
   const sig=all.map(v=>v.id+'~'+((v.tags||[]).join('.'))+'~'+(v.category||'')).join(',')+'|'+JSON.stringify(seg)+'|'+cfg.max;
   if(sig!==seenSig){ seenSig=sig; rebuild(false); }
+  // ¿terminó una importación pendiente? (apareció un id nuevo) → feedback ✓
+  if(pendingImport){ const fresh=all.find(it=>!pendingImport.base.has(it.id));
+    if(fresh) importDone(fresh); else if(Date.now()-pendingImport.t0>240000) importTimeout(); }
+  measurePass(); // mide en segundo plano lo que no esté en caché y añade los tags de formato
 }catch(e){ setLive('offline',false); } }
 function restartFeed(){ if(feedTimer) clearInterval(feedTimer); feedTimer=setInterval(loadFeed,Math.max(10,cfg.refreshSec)*1000); }
 
@@ -329,10 +348,12 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   // Al publicarse entra en el feed y aparece solo en admira.tv (refresco en cada avance).
   if(cmd==='import'){ const u=v.replace(/^\s*\/?import\s*/i,'').trim();
     if(!u){ flashCli('uso: /import <url>'); return; }
-    flashCli('📥 importando…');
+    let host=''; try{ host=new URL((u.match(/https?:\/\/\S+/)||[u])[0]).hostname; }catch(_){}
+    pendingImport={ base:new Set(all.map(i=>i.id)), t0:Date.now(), host };
+    setImp('📥 importando '+(host||'…')+'<div class="ip"></div>');
     fetch(IMPORT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:u})})
-      .then(r=>r.json()).then(d=>{ flashCli(d&&d.ok?('📥 importando '+(d.host||'')+'… aparecerá solo'):'⚠️ '+((d&&d.error)||'error')); })
-      .catch(()=>flashCli('⚠️ sin conexión'));
+      .then(r=>r.json()).then(d=>{ if(!(d&&d.ok)){ setImp('⚠️ '+((d&&d.error)||'error')+'<div class="ip"></div>','done'); pendingImport=null; setTimeout(()=>setImp(null),5000); } })
+      .catch(()=>{ setImp('⚠️ sin conexión<div class="ip"></div>','done'); pendingImport=null; setTimeout(()=>setImp(null),5000); });
     return; }
   if(cmd==='reset'||cmd==='orden'){ customOrder=[]; save('adtv_order','[]'); seenSig=''; rebuild(true); flashCli('✓ orden reiniciado'); return; }
   if(cmd==='help'||cmd==='?'){ flashCli(Object.keys(SITES).map(k=>'/'+k).join(' ')); return; }
@@ -386,6 +407,42 @@ const CH_THEMES = [
   ['negocio','💼'],['finanzas','📈'],['deporte','⚽'],['mobiliario','🪑'],['videojuego','🎮'],
   ['motivacional','✨'],['humor','😄'],['videoclip','🎬'],['tutorial','🎓'],['entrevista','🎙']
 ];
+// ── FORMATO técnico: etiquetas presentes en TODOS los vídeos/imágenes, derivadas
+//    de la resolución real (medida en cliente si el stock no la trae). ──
+const FMT_FORMATO=['horizontal','vertical','especial'];
+const FMT_ASPECT=['16:9','9:16','4:3','3:4','1:1','21:9','9:21','custom'];
+const FMT_RES=['4k','1080p','720p','480p','sd'];
+const FMT_ALL=new Set([].concat(FMT_FORMATO,FMT_ASPECT,FMT_RES));
+function fmtTags(w,h){ if(!w||!h) return [];
+  const r=w/h, std=[[16/9,'16:9','h'],[4/3,'4:3','h'],[21/9,'21:9','h'],[9/16,'9:16','v'],[3/4,'3:4','v'],[9/21,'9:21','v'],[1,'1:1','s']];
+  let best=null,bd=1e9; for(const s of std){ const d=Math.abs(r-s[0])/s[0]; if(d<bd){ bd=d; best=s; } }
+  const isStd=bd<=0.06, aspect=isStd?best[1]:'custom';
+  let formato=!isStd?'especial':(best[2]==='h'?'horizontal':best[2]==='v'?'vertical':'especial');
+  if(formato==='especial'&&Math.abs(r-1)>0.12) formato=r>1?'horizontal':'vertical';
+  const mx=Math.max(w,h), res=mx>=3840?'4k':mx>=1920?'1080p':mx>=1280?'720p':mx>=854?'480p':'sd';
+  return [formato,aspect,res];
+}
+function applyFmt(it,dim){ if(!dim||!dim.w||!dim.h) return; it._dim=dim; it.tags=it.tags||[];
+  for(const t of fmtTags(dim.w,dim.h)){ if(t&&it.tags.indexOf(t)<0) it.tags.push(t); } }
+function measureMedia(it){ return new Promise(res=>{ const k=KIND[it.type]||'image'; if(k==='audio'){ res(null); return; }
+  if(k==='video'){ const v=document.createElement('video'); v.preload='metadata'; v.muted=true; let dn=false;
+    const fin=(w,h)=>{ if(dn)return; dn=true; try{v.src='';}catch(_){} res(w&&h?{w:w,h:h}:null); };
+    v.onloadedmetadata=()=>fin(v.videoWidth,v.videoHeight); v.onerror=()=>fin(0,0); setTimeout(()=>fin(0,0),9000); v.src=it.url; }
+  else { const im=new Image(); let dn=false; const fin=(w,h)=>{ if(dn)return; dn=true; res(w&&h?{w:w,h:h}:null); };
+    im.onload=()=>fin(im.naturalWidth,im.naturalHeight); im.onerror=()=>fin(0,0); setTimeout(()=>fin(0,0),9000); im.src=it.url; }
+}); }
+async function measurePass(){ if(_measuring) return;
+  const todo=all.filter(it=>{ const k=KIND[it.type]; return (k==='video'||k==='image')&&!it._fmtDone; }); if(!todo.length) return;
+  _measuring=true; let i=0, changed=false;
+  async function wk(){ while(i<todo.length){ const it=todo[i++]; let dim=dimCache[it.id];
+    if(!dim){ dim=await measureMedia(it); if(dim) dimCache[it.id]=dim; } it._fmtDone=true; if(dim){ applyFmt(it,dim); changed=true; } } }
+  await Promise.all([wk(),wk(),wk(),wk()]); _measuring=false;
+  if(changed){ try{ save('adtv_dims',JSON.stringify(dimCache)); }catch(_){} seenSig=''; renderChan(); renderRail(); }
+}
+// feedback de importación (barra)
+function setImp(html,cls){ const e=$('impBar'); if(!e) return; if(html===null){ e.className=''; e.innerHTML=''; return; } e.className='on'+(cls?' '+cls:''); e.innerHTML=html; }
+function importDone(it){ const t=String(it.title||it.prompt||'contenido').replace(/[<>]/g,'').slice(0,26); setImp('✓ importado · '+t+'<div class="ip"></div>','done'); pendingImport=null; setTimeout(()=>setImp(null),6000); }
+function importTimeout(){ setImp('⌛ tardando… aviso por Telegram<div class="ip"></div>','done'); pendingImport=null; setTimeout(()=>setImp(null),6000); }
 function segBase(){ return { medio:'all', audience:'all', category:'all', age:'all', slot:'all', tag:'' }; }
 function syncSegPanel(){ ['medio','audience','category','age','slot'].forEach(k=>{ const el=$('f-'+k); if(el) el.value=seg[k]; }); const ft=$('f-tag'); if(ft) ft.value=seg.tag; }
 // El TIPO de contenido (medio/categoría) y el METATAG COMBINAN. Los temas se
@@ -419,11 +476,16 @@ function renderChan(){
   html+='</div><div class="ch-hd"># temas'+(tlbl?' · '+tlbl:'')+'</div><div class="ch-tags">';
   const shown=new Set(); const chips=[];
   CH_THEMES.forEach(([t,ic])=>{ if(counts[t]){ shown.add(t); chips.push([t,ic,counts[t]]); } });
-  Object.keys(counts).filter(t=>!shown.has(t)&&!CH_DENY.has(t)&&counts[t]>=4&&t.length<=16)
+  Object.keys(counts).filter(t=>!shown.has(t)&&!CH_DENY.has(t)&&!FMT_ALL.has(t)&&counts[t]>=4&&t.length<=16)
     .sort((a,b)=>counts[b]-counts[a]).slice(0,6).forEach(t=>chips.push([t,'',counts[t]]));
   html+=chips.map(([t,ic,n])=>'<span class="ch-tag'+(seg.tag===t?' cur':'')+'" data-tag="'+t.replace(/"/g,'')+'">'+(ic?ic+' ':'')+t+' <b>'+n+'</b></span>').join('');
   if(!chips.length) html+='<span class="ch-tag" style="opacity:.4;cursor:default">cargando…</span>';
   html+='</div>';
+  // ── FORMATO: etiquetas técnicas (formato/aspecto/resolución) por resolución ──
+  const fChip=t=>'<span class="ch-tag'+(seg.tag===t?' cur':'')+'" data-tag="'+t+'">'+t+' <b>'+counts[t]+'</b></span>';
+  const fLine=arr=>arr.filter(t=>counts[t]).map(fChip).join('');
+  const fF=fLine(FMT_FORMATO), fA=fLine(FMT_ASPECT), fR=fLine(FMT_RES);
+  if(fF||fA||fR){ html+='<div class="ch-hd">▣ formato</div><div class="ch-tags fmt">'+fF+fA+fR+'</div>'; }
   el.innerHTML=html;
 }
 $('chan').addEventListener('click',e=>{
