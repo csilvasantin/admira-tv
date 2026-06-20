@@ -27,6 +27,13 @@
   /* línea de comandos (saltar entre sites) bajo la cola */
   #railCli{ display:flex; align-items:center; gap:6px; border:1px solid rgba(125,184,255,.2); border-radius:8px; padding:6px 9px; background:rgba(8,14,22,.6); }
   #railCli .rc-pre{ color:var(--air); font-size:12px; line-height:1; }
+  /* semáforo de stock: 🟢 al día · 🟡 revisando · 🔴 novedad · ⚫ sin conexión */
+  #railCli .sd{ width:8px; height:8px; border-radius:50%; flex:0 0 8px; background:#39d353; box-shadow:0 0 6px #39d353; transition:background .3s,box-shadow .3s; }
+  #railCli .sd.ok{ background:#39d353; box-shadow:0 0 6px #39d353; }
+  #railCli .sd.checking{ background:#ffd24a; box-shadow:0 0 7px #ffd24a; animation:sdpulse .7s ease-in-out infinite; }
+  #railCli .sd.new{ background:#ff4444; box-shadow:0 0 8px #ff4444; animation:sdpulse .55s ease-in-out infinite; }
+  #railCli .sd.off{ background:#566; box-shadow:none; }
+  @keyframes sdpulse{ 50%{ opacity:.3 } }
   #railCli input{ flex:1; min-width:0; background:transparent; border:0; outline:0; color:#dfe9ff; font:inherit; font-size:10px; letter-spacing:.02em; }
   #railCli input::placeholder{ color:#5d6e76; }
   body.idle #railCli{ opacity:.4; }
@@ -138,7 +145,7 @@
   <aside id="rail">
     <div id="railItems"></div>
     <div id="impBar"></div>
-    <form id="railCli" autocomplete="off"><span class="rc-pre">›</span><input id="railCliIn" type="text" placeholder="/import <url>  ·  /studio /store…" spellcheck="false"></form>
+    <form id="railCli" autocomplete="off"><span id="stockDot" class="sd ok" title="al día"></span><span class="rc-pre">›</span><input id="railCliIn" type="text" placeholder="/import <url>  ·  /studio /store…" spellcheck="false"></form>
   </aside>
   <div id="mupi">
   <div id="top">
@@ -213,7 +220,7 @@ let all=[], playlist=[], cur=-1, seenSig='', timer=null, barTimer=null, mediaEl=
 let customOrder=[]; try{ const o=JSON.parse(LS('adtv_order','[]')); if(Array.isArray(o)) customOrder=o; }catch(_){}
 let _lastFeed=0;
 let dimCache={}; try{ const c=JSON.parse(LS('adtv_dims','{}')); if(c&&typeof c==='object') dimCache=c; }catch(_){}
-let pendingImport=null, _measuring=false;
+let pendingImport=null, _measuring=false, _statusT=null, _statusT2=null;
 let paused=false, usesAdv=false, advTotal=0, advElapsed=0, advStart=0;
 const $ = id => document.getElementById(id);
 const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=$('bar'), tap=$('tap');
@@ -293,7 +300,7 @@ function play(i){
 }
 // antes de cada nuevo contenido, revisa si hay novedades en stock (nuevas
 // importaciones o tags/categorías editados) — con throttle para no saturar.
-function next(){ if(Date.now()-_lastFeed>5000){ try{ loadFeed(); }catch(_){} } play(cur+1); }
+function next(){ if(Date.now()-_lastFeed>5000){ try{ loadFeed(false); }catch(_){} } play(cur+1); }
 function prev(){ play(cur-1); }
 
 function setPaused(p){
@@ -306,20 +313,26 @@ function rebuild(restart){ playlist=all.filter(matches).slice(0,Math.max(1,cfg.m
   if(customOrder.length){ const pos=id=>{ const k=customOrder.indexOf(id); return k<0?1e9:k; }; playlist.sort((a,b)=>pos(a.id)-pos(b.id)); }
   $('segCount').textContent=playlist.length+' en este segmento'; setLive('LIVE · '+playlist.length+' en loop', playlist.length>0); renderChan(); if(restart||cur<0||!stage.querySelector('video,img,audio')){ play(0); } else { renderRail(); } }
 
-async function loadFeed(){ _lastFeed=Date.now(); try{
+// showStatus=true → semáforo en la CLI (ciclo de 30s); false → refresco silencioso (avances).
+async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
+  if(showStatus) setStockStatus('checking');                  // 🟡 revisando stock
+  try{
   const r=await fetch(INDEX+'?t='+Date.now(),{cache:'no-store'}); const d=await r.json(); const items=d.items||(Array.isArray(d)?d:[]);
   all=items.filter(i=>i&&MEDIA.includes(i.type)&&i.url).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   // etiquetas de formato/aspecto/resolución desde la caché de dimensiones (instantáneo).
-  for(const it of all){ const d=dimCache[it.id]; if(d){ applyFmt(it,d); it._fmtDone=true; } }
+  for(const it of all){ const dd=dimCache[it.id]; if(dd){ applyFmt(it,dd); it._fmtDone=true; } }
   // la firma incluye tags+categoría: si editas el metadato de un vídeo, se detecta y reordena.
   const sig=all.map(v=>v.id+'~'+((v.tags||[]).join('.'))+'~'+(v.category||'')).join(',')+'|'+JSON.stringify(seg)+'|'+cfg.max;
-  if(sig!==seenSig){ seenSig=sig; rebuild(false); }
+  const isNew=(sig!==seenSig);
+  if(isNew){ seenSig=sig; rebuild(false); }                   // 🔴 hay novedad → actualiza
   // ¿terminó una importación pendiente? (apareció un id nuevo) → feedback ✓
   if(pendingImport){ const fresh=all.find(it=>!pendingImport.base.has(it.id));
     if(fresh) importDone(fresh); else if(Date.now()-pendingImport.t0>240000) importTimeout(); }
   measurePass(); // mide en segundo plano lo que no esté en caché y añade los tags de formato
-}catch(e){ setLive('offline',false); } }
-function restartFeed(){ if(feedTimer) clearInterval(feedTimer); feedTimer=setInterval(loadFeed,Math.max(10,cfg.refreshSec)*1000); }
+  if(showStatus){ const hold=Math.max(0,5000-(Date.now()-_t0)); clearTimeout(_statusT); // amarillo mínimo 5s
+    _statusT=setTimeout(()=>{ if(isNew){ setStockStatus('new'); clearTimeout(_statusT2); _statusT2=setTimeout(()=>setStockStatus('ok'),4500); } else setStockStatus('ok'); }, hold); }
+}catch(e){ setLive('offline',false); if(showStatus){ clearTimeout(_statusT); setStockStatus('off'); } } }
+function restartFeed(){ if(feedTimer) clearInterval(feedTimer); feedTimer=setInterval(()=>loadFeed(true),Math.max(10,cfg.refreshSec)*1000); }
 
 // ── controles ──
 $('prev').onclick=prev; $('next').onclick=next; $('pause').onclick=()=>setPaused(!paused);
@@ -443,6 +456,9 @@ async function measurePass(){ if(_measuring) return;
 function setImp(html,cls){ const e=$('impBar'); if(!e) return; if(html===null){ e.className=''; e.innerHTML=''; return; } e.className='on'+(cls?' '+cls:''); e.innerHTML=html; }
 function importDone(it){ const t=String(it.title||it.prompt||'contenido').replace(/[<>]/g,'').slice(0,26); setImp('✓ importado · '+t+'<div class="ip"></div>','done'); pendingImport=null; setTimeout(()=>setImp(null),6000); }
 function importTimeout(){ setImp('⌛ tardando… aviso por Telegram<div class="ip"></div>','done'); pendingImport=null; setTimeout(()=>setImp(null),6000); }
+// semáforo de stock en la CLI: 🟡 revisando · 🟢 al día · 🔴 novedad · ⚫ sin conexión
+function setStockStatus(s){ const e=$('stockDot'); if(!e) return; e.className='sd '+s;
+  e.title = s==='checking'?'revisando stock…' : s==='new'?'¡novedad en stock! actualizando' : s==='off'?'sin conexión' : 'al día'; }
 function segBase(){ return { medio:'all', audience:'all', category:'all', age:'all', slot:'all', tag:'' }; }
 function syncSegPanel(){ ['medio','audience','category','age','slot'].forEach(k=>{ const el=$('f-'+k); if(el) el.value=seg[k]; }); const ft=$('f-tag'); if(ft) ft.value=seg.tag; }
 // El TIPO de contenido (medio/categoría) y el METATAG COMBINAN. Los temas se
@@ -493,7 +509,7 @@ $('chan').addEventListener('click',e=>{
   const tg=e.target.closest('[data-tag]'); if(tg && tg.dataset.tag){ const t=tg.dataset.tag; applyTheme(seg.tag===t?'':t); }
 });
 
-loadStores(); screenLbl(); applyAudio(); renderChan(); loadFeed(); restartFeed();
+loadStores(); screenLbl(); applyAudio(); renderChan(); loadFeed(true); restartFeed();
 </script>
 </body>
 </html>
