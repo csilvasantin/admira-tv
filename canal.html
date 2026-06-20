@@ -77,6 +77,7 @@
   body.idle #chan{ opacity:.32; }
   @media (max-width:1100px){ #chan{ display:none; } }
   #mupi{ position:relative; height:96vh; aspect-ratio:9/16; max-width:100%; background:#000; border-radius:16px; overflow:hidden;
+    transition:width .35s ease, height .35s ease;
     box-shadow:0 0 0 8px #11161d, 0 0 0 10px #060a0f, 0 30px 90px rgba(0,0,0,.65), 0 0 80px rgba(125,184,255,.07); }
   #stage{ position:absolute; inset:0; display:grid; place-items:center; background:#000; }
   #stage video, #stage img{ width:100%; height:100%; object-fit:cover; display:block; }
@@ -271,12 +272,34 @@ function moveItem(src,dst){
   renderRail();
 }
 
+// ── El marco del reproductor se adapta al formato del contenido: 9:16 para
+//    vertical, 16:9 para horizontal (así el vídeo se ve bien, sin recortes). ──
+let mupiAR=9/16;
+function itemAR(it){
+  if(it&&it._dim&&it._dim.w&&it._dim.h){ const r=it._dim.w/it._dim.h; return Math.max(9/21,Math.min(21/9,r)); }
+  const tg=(it&&it.tags)||[];
+  if(tg.indexOf('horizontal')>=0||tg.indexOf('16:9')>=0||tg.indexOf('4:3')>=0||tg.indexOf('21:9')>=0) return 16/9;
+  if(tg.indexOf('vertical')>=0||tg.indexOf('9:16')>=0||tg.indexOf('3:4')>=0) return 9/16;
+  return 9/16;
+}
+function fitMupi(){ const mupi=$('mupi'); if(!mupi) return;
+  const clean=document.documentElement.classList.contains('clean');
+  const railEl=$('rail'), chanEl=$('chan');
+  const rW=(railEl&&getComputedStyle(railEl).display!=='none')?railEl.offsetWidth:0;
+  const cW=(chanEl&&getComputedStyle(chanEl).display!=='none')?chanEl.offsetWidth:0;
+  const aH=(clean?1:0.96)*window.innerHeight;
+  const aW=window.innerWidth-rW-cW-(clean?4:(rW||cW?56:24));
+  let h=aH, w=h*mupiAR; if(w>aW){ w=aW; h=w/mupiAR; }
+  mupi.style.height=Math.round(h)+'px'; mupi.style.width=Math.round(w)+'px'; mupi.style.aspectRatio='auto';
+}
+window.addEventListener('resize',fitMupi);
 function play(i){
   clearTimeout(timer); stopBar(); bar.style.width='0'; mediaEl=null; usesAdv=false;
   paused=false; document.body.classList.remove('paused'); $('pause').textContent='⏸';
   if(!playlist.length){ stage.innerHTML='<div class="empty">// sin media en este segmento</div>'; nowEl.textContent='// segmento vacío'; renderRail(); return; }
   cur=((i%playlist.length)+playlist.length)%playlist.length;
   const it=playlist[cur], k=KIND[it.type]||'image';
+  mupiAR=itemAR(it); fitMupi();   // marco 9:16 / 16:9 según el formato del contenido
   const title=(it.title||it.prompt||'sin título').replace(/\n/g,' ').slice(0,64);
   stage.innerHTML=''; nowEl.textContent='▶ '+title;
   metaEl.textContent=it.type+' · '+(cur+1)+'/'+playlist.length+' · '+(it.motor||'stock')+(it._dim?(' · '+it._dim.w+'×'+it._dim.h):'');
@@ -458,7 +481,8 @@ async function measurePass(){ if(_measuring) return;
   async function wk(){ while(i<todo.length){ const it=todo[i++]; let dim=dimCache[it.id];
     if(!dim){ dim=await measureMedia(it); if(dim) dimCache[it.id]=dim; } it._fmtDone=true; if(dim){ applyFmt(it,dim); changed=true; } } }
   await Promise.all([wk(),wk(),wk(),wk()]); _measuring=false;
-  if(changed){ try{ save('adtv_dims',JSON.stringify(dimCache)); }catch(_){} seenSig=''; renderChan(); renderRail(); }
+  if(changed){ try{ save('adtv_dims',JSON.stringify(dimCache)); }catch(_){} seenSig=''; renderChan(); renderRail();
+    if(!directOn&&playlist[cur]){ mupiAR=itemAR(playlist[cur]); fitMupi(); } }
 }
 // feedback de importación (barra)
 function setImp(html,cls){ const e=$('impBar'); if(!e) return; if(html===null){ e.className=''; e.innerHTML=''; return; } e.className='on'+(cls?' '+cls:''); e.innerHTML=html; }
@@ -482,9 +506,11 @@ function enterDirect(url){
   paused=false; document.body.classList.remove('paused'); $('pause').textContent='⏸';
   let host=''; try{ host=new URL(u).hostname.replace(/^www\./,''); }catch(_){}
   const emb=directEmbed(u);
+  mupiAR=16/9; fitMupi();   // el directo suele ser horizontal; si es vídeo, lo afinamos al medir
   stage.innerHTML='';
   if(emb.type==='video'){
     const v=document.createElement('video'); v.src=emb.src; v.autoplay=true; v.loop=true; v.playsInline=true; v.muted=muted; v.volume=volume;
+    v.onloadedmetadata=()=>{ if(v.videoWidth&&v.videoHeight){ mupiAR=v.videoWidth/v.videoHeight; fitMupi(); } };
     v.onerror=()=>{ stage.innerHTML='<div class="empty">// no se pudo emitir esta URL</div>'; };
     mediaEl=v; stage.appendChild(v); v.play().then(()=>tap.classList.remove('show')).catch(()=>tap.classList.add('show'));
   } else {
@@ -553,7 +579,7 @@ $('chan').addEventListener('click',e=>{
   const tg=e.target.closest('[data-tag]'); if(tg && tg.dataset.tag){ const t=tg.dataset.tag; applyTheme(seg.tag===t?'':t); }
 });
 
-loadStores(); screenLbl(); applyAudio(); renderChan(); loadFeed(true); restartFeed();
+loadStores(); screenLbl(); applyAudio(); renderChan(); fitMupi(); loadFeed(true); restartFeed();
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
