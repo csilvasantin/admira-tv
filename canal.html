@@ -211,6 +211,7 @@ const seg = {
   medio: qs.get('medio')||segSaved.medio||'all', audience: qs.get('audience')||segSaved.audience||'all',
   category: qs.get('category')||segSaved.category||'all', age: qs.get('age')||segSaved.age||'all',
   slot: qs.get('slot')||segSaved.slot||'all', tag: (qs.get('tag')||segSaved.tag||'').toLowerCase().trim(),
+  format: (qs.get('format')||segSaved.format||'').toLowerCase().trim(),
 };
 const cfg = { imgSec:+(qs.get('img')||LS('adtv_img',9)), audioSec:+(qs.get('audio')||LS('adtv_audio',18)), refreshSec:+(qs.get('refresh')||LS('adtv_refresh',30)), max:+(qs.get('max')||LS('adtv_max',50)) };
 const scr = { circuit: qs.get('circuit')||LS('adtv_circuit',''), screen: qs.get('screen')||LS('adtv_screen',''), name: LS('adtv_screenName','') };
@@ -238,7 +239,8 @@ function matchesSeg(it,s){ const k=KIND[it.type];
   if(s.category!=='all'){ if(it.category&&it.category!==s.category) return false; }
   if(s.age!=='all'){ const g=it.ageBucket; if(g&&g!==s.age) return false; }
   if(s.slot!=='all'){ const want=s.slot==='auto'?madridSlot():s.slot; const ts=it.timeSlot; if(ts&&ts!==want) return false; }
-  if(s.tag){ const tg=(it.tags||[]).map(x=>String(x).toLowerCase()); if(!tg.some(t=>t.includes(s.tag))) return false; } return true; }
+  if(s.tag){ const tg=(it.tags||[]).map(x=>String(x).toLowerCase()); if(!tg.some(t=>t.includes(s.tag))) return false; }
+  if(s.format){ const tg=(it.tags||[]).map(x=>String(x).toLowerCase()); if(!tg.includes(s.format)) return false; } return true; }
 function matches(it){ return matchesSeg(it,seg); }
 function applyAudio(){ if(mediaEl&&'muted'in mediaEl){ mediaEl.muted=muted; mediaEl.volume=volume; } $('mute').textContent=(muted||volume===0)?'🔇':(volume<0.5?'🔉':'🔊'); $('vol').value=volume; save('adtv_muted',muted?'1':'0'); save('adtv_vol',String(volume)); }
 
@@ -542,17 +544,19 @@ function exitDirect(){
   flashCli('⏹ directo apagado · vuelve el loop');
   seenSig=''; rebuild(true);
 }
-function segBase(){ return { medio:'all', audience:'all', category:'all', age:'all', slot:'all', tag:'' }; }
+function segBase(){ return { medio:'all', audience:'all', category:'all', age:'all', slot:'all', tag:'', format:'' }; }
 function syncSegPanel(){ ['medio','audience','category','age','slot'].forEach(k=>{ const el=$('f-'+k); if(el) el.value=seg[k]; }); const ft=$('f-tag'); if(ft) ft.value=seg.tag; }
 // El TIPO de contenido (medio/categoría) y el METATAG COMBINAN. Los temas se
 // recalculan según el tipo elegido (solo los que tiene ese tipo, con su conteo).
 function applyPlaylist(pl){
   if(pl.id==='all'){ seg.medio='all'; seg.category='all'; }
   else { const o=pl.seg||{}; if('medio'in o) seg.medio=o.medio; if('category'in o) seg.category=o.category; }
-  if(seg.tag){ const cc=tagCounts(); if(!cc[seg.tag]) seg.tag=''; } // el tema ya no existe en este tipo → se suelta
+  if(seg.tag){ const cc=tagCounts(); if(!cc[seg.tag]) seg.tag=''; }       // el tema ya no existe en este tipo → se suelta
+  if(seg.format){ const fc=formatCounts(); if(!fc[seg.format]) seg.format=''; } // el formato tampoco → se suelta
   save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true);
 }
 function applyTheme(tag){ seg.tag=tag||''; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); }
+function applyFormat(f){ seg.format=f||''; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); }
 function isPlaylistActive(pl){ const o=pl.seg||{};
   if(pl.id==='all') return seg.medio==='all'&&seg.category==='all';
   if('medio'in o) return seg.medio===o.medio;
@@ -562,6 +566,9 @@ function countFor(over){ const s=Object.assign({},seg,over); return all.filter(i
 // conteo de tags DENTRO del tipo actual (medio+categoría), ignorando el propio tag
 function tagCounts(){ const c={}; const s=Object.assign({},seg,{tag:''});
   for(const it of all){ if(!matchesSeg(it,s)) continue; for(const t of (it.tags||[])){ const k=String(t).toLowerCase().trim(); if(k) c[k]=(c[k]||0)+1; } } return c; }
+// conteo de FORMATOS dentro del medio+categoría+TEMA actual (ignorando el propio formato)
+function formatCounts(){ const c={}; const s=Object.assign({},seg,{format:''});
+  for(const it of all){ if(!matchesSeg(it,s)) continue; for(const t of (it.tags||[])){ const k=String(t).toLowerCase().trim(); if(k&&FMT_ALL.has(k)) c[k]=(c[k]||0)+1; } } return c; }
 function renderChan(){
   const el=$('chan'); if(!el) return;
   const counts=tagCounts();
@@ -580,15 +587,17 @@ function renderChan(){
   html+=chips.map(([t,ic,n])=>'<span class="ch-tag'+(seg.tag===t?' cur':'')+'" data-tag="'+t.replace(/"/g,'')+'">'+(ic?ic+' ':'')+t+' <b>'+n+'</b></span>').join('');
   if(!chips.length) html+='<span class="ch-tag" style="opacity:.4;cursor:default">cargando…</span>';
   html+='</div>';
-  // ── FORMATO: etiquetas técnicas (formato/aspecto/resolución) por resolución ──
-  const fChip=t=>'<span class="ch-tag'+(seg.tag===t?' cur':'')+'" data-tag="'+t+'">'+t+' <b>'+counts[t]+'</b></span>';
-  const fLine=arr=>arr.filter(t=>counts[t]).map(fChip).join('');
+  // ── FORMATO: eje independiente (combina con tipología y tema) ──
+  const fcounts=formatCounts();
+  const fChip=t=>'<span class="ch-tag'+(seg.format===t?' cur':'')+'" data-fmt="'+t+'">'+t+' <b>'+(fcounts[t]||0)+'</b></span>';
+  const fLine=arr=>arr.filter(t=>fcounts[t]).map(fChip).join('');
   const fF=fLine(FMT_FORMATO), fA=fLine(FMT_ASPECT), fR=fLine(FMT_RES);
   if(fF||fA||fR){ html+='<div class="ch-hd">▣ formato</div><div class="ch-tags fmt">'+fF+fA+fR+'</div>'; }
   el.innerHTML=html;
 }
 $('chan').addEventListener('click',e=>{
   const pl=e.target.closest('[data-pl]'); if(pl){ const p=CH_PLAYLISTS.find(x=>x.id===pl.dataset.pl); if(p) applyPlaylist(p); return; }
+  const fm=e.target.closest('[data-fmt]'); if(fm){ const f=fm.dataset.fmt; applyFormat(seg.format===f?'':f); return; }
   const tg=e.target.closest('[data-tag]'); if(tg && tg.dataset.tag){ const t=tg.dataset.tag; applyTheme(seg.tag===t?'':t); }
 });
 
