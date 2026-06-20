@@ -366,8 +366,8 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   try{
   const r=await fetch(INDEX+'?t='+Date.now(),{cache:'no-store'}); const d=await r.json(); const items=d.items||(Array.isArray(d)?d:[]);
   all=items.filter(i=>i&&MEDIA.includes(i.type)&&i.url).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
-  // número de importación único: #1 = el más antiguo, #N = el último importado (= all.length). Para /play<N>.
-  all.slice().sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||''))).forEach((it,i)=>{ it._num=i+1; });
+  // número PERSISTENTE de cada asset (lo asigna el worker y va en el meta/stock). Para /play<N>.
+  all.forEach(it=>{ it._num=it.num; });
   // etiquetas de formato/aspecto/resolución desde la caché de dimensiones (instantáneo).
   for(const it of all){ const dd=dimCache[it.id]; if(dd){ applyFmt(it,dd); it._fmtDone=true; } }
   // la firma incluye tags+categoría: si editas el metadato de un vídeo, se detecta y reordena.
@@ -418,9 +418,8 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   else if(/^play\d+$/.test(cmd)){ pn=parseInt(cmd.slice(4),10); }
   if(pn!=null){
     if(isNaN(pn)){ flashCli('uso: /play<N>  (1-'+all.length+')'); return; }
-    const asc=all.slice().sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
-    if(pn<1||pn>asc.length){ flashCli('asset #'+pn+' no existe (1-'+asc.length+')'); return; }
-    const target=asc[pn-1];
+    const target=all.find(it=>it._num===pn);
+    if(!target){ flashCli('#'+pn+' no existe o no es reproducible'); return; }
     if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
     play(0,target);                                  // forzado: manda por encima del filtro
     flashCli('▶ asset #'+pn+' · '+String(target.title||target.prompt||'').slice(0,24));
