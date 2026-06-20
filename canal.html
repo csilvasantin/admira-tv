@@ -173,7 +173,7 @@
     <h4>📍 Pantalla</h4>
     <div><label>Circuito / tienda</label><select id="f-store"><option value="">— todas / sin asignar —</option></select></div>
     <div><label>ID de pantalla</label><input id="f-screen" type="text" placeholder="ej. xtanco-led-frontal" autocomplete="off"></div>
-    <p class="hint">La identidad de pantalla queda lista para la parrilla por pantalla (backbone /grid). Hoy el contenido sale del Stock + segmento.</p>
+    <p class="hint">La pantalla lee su <b>parrilla real</b> (/grid): lo vendido/programado de la franja actual entra en el loop. El resto sale del Stock + segmento.</p>
 
     <h4>🎯 Segmento</h4>
     <div class="grid2">
@@ -184,6 +184,7 @@
       <div><label>Franja</label><select id="f-slot"><option value="all">Todas</option><option value="auto">Auto</option><option value="manana">Mañana</option><option value="mediodia">Mediodía</option><option value="tarde">Tarde</option><option value="noche">Noche</option></select></div>
       <div><label>Etiqueta</label><input id="f-tag" type="text" placeholder="lujo…" autocomplete="off"></div>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;font-size:13px;color:#cfe9ff"><input type="checkbox" id="f-cam" style="accent-color:#7dffd0"> 📷 Audiencia por cámara <span style="opacity:.5;font-size:11px">— anónimo, en local</span></label>
     <div class="count" id="segCount">—</div>
 
     <h4>⚙ Reproducción</h4>
@@ -341,6 +342,70 @@ function emitFlush(){ _emitTimer=null; if(!_emitDirty) return;
     totalPlays:t.totalPlays, totalSecs:t.totalSecs, byType:t.byType, bySeg:t.bySeg, assets:t.assets })}).catch(()=>{}); }catch(_){}
 }
 window.addEventListener('beforeunload',()=>{ try{ emitFlush(); }catch(_){} });
+
+// ── SEGMENTACIÓN POR CÁMARA (anonimizada, en el navegador, sin backend) ──────────
+// face-api.js detecta caras y estima edad/género SOLO en local: nunca sube imágenes,
+// solo cuenta agregada. Auto-fija seg.audience/seg.age → el loop emite contenido
+// segmentado y la Sala de Emisión lo desglosa por segmento (bySeg). El frame se
+// procesa y se descarta. ?cam=1 lo arranca; ?simcam=adulto_f simula sin cámara.
+const FACEAPI_SRC='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js';
+const FACEAPI_MODELS='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model';
+const CAM={ on:false, fa:null, video:null, raw:null, timer:null };
+const AGE_LBL={nino:'Niño',joven:'Joven',adulto:'Adulto',senior:'Senior'};
+function camAgeBucket(a){ return a<13?'nino':a<30?'joven':a<60?'adulto':'senior'; }
+function camHud(html,on){ let h=$('camHud'); if(!h){ h=document.createElement('div'); h.id='camHud'; h.style.cssText='position:absolute;top:8px;left:8px;z-index:40;background:rgba(4,14,22,.8);border:1px solid rgba(125,255,208,.4);color:#bfeaff;border-radius:999px;padding:4px 11px;font:12px ui-monospace,Menlo,monospace;letter-spacing:.04em;backdrop-filter:blur(4px)'; ($('mupi')||document.body).appendChild(h); } h.style.display=on?'block':'none'; h.innerHTML=html; }
+async function camLoadFaceApi(){ if(window.faceapi){ CAM.fa=window.faceapi; }
+  else { await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=FACEAPI_SRC; s.onload=res; s.onerror=()=>rej(new Error('no se pudo cargar face-api')); document.head.appendChild(s); }); CAM.fa=window.faceapi; }
+  await CAM.fa.nets.tinyFaceDetector.loadFromUri(FACEAPI_MODELS);
+  await CAM.fa.nets.ageGenderNet.loadFromUri(FACEAPI_MODELS);
+  return CAM.fa;
+}
+async function camStart(){ if(CAM.on) return; const sim=qs.get('simcam'); camHud('📷 activando…',true);
+  try{
+    if(!sim){ CAM.raw=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:320,height:240},audio:false});
+      CAM.video=document.createElement('video'); CAM.video.srcObject=CAM.raw; CAM.video.muted=true; CAM.video.playsInline=true; await CAM.video.play();
+      await camLoadFaceApi(); }
+    CAM.on=true; save('adtv_cam','1'); const cb=$('f-cam'); if(cb) cb.checked=true; camLoop();
+  }catch(e){ camHud('📷 sin cámara: '+((e&&e.message)||'error'),true); setTimeout(()=>camHud('',false),3500); CAM.on=false; const cb=$('f-cam'); if(cb) cb.checked=false; }
+}
+function camStop(){ CAM.on=false; save('adtv_cam','0'); if(CAM.timer){ clearTimeout(CAM.timer); CAM.timer=null; } if(CAM.raw){ try{ CAM.raw.getTracks().forEach(t=>t.stop()); }catch(_){} CAM.raw=null; } camHud('',false); camApply('all','all'); }
+async function camDetect(){ const sim=qs.get('simcam');
+  if(sim!=null){ if(sim==='0'||sim==='none'||sim==='') return {faces:0}; const p=sim.split('_'); return {faces:1, age:p[0]||'adulto', gender:(p[1]==='m'?'m':'f')}; }
+  const fa=CAM.fa; if(!fa||!CAM.video) return {faces:0};
+  const res=await fa.detectAllFaces(CAM.video, new fa.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:.5})).withAgeAndGender();
+  if(!res.length) return {faces:0};
+  let m=0,f=0,ageSum=0; for(const r of res){ if(r.gender==='male') m++; else f++; ageSum+=r.age; }
+  return { faces:res.length, age:camAgeBucket(ageSum/res.length), gender:(m>=f?'m':'f') };
+}
+async function camLoop(){ if(!CAM.on) return;
+  try{ const d=await camDetect();
+    if(!d.faces){ camHud('👥 0 · sin audiencia',true); camApply('all','all'); }
+    else { camHud('👥 '+d.faces+' · '+(AGE_LBL[d.age]||d.age)+' · '+(d.gender==='f'?'♀ Mujer':'♂ Hombre'),true); camApply(d.gender,d.age); }
+  }catch(_){}
+  CAM.timer=setTimeout(camLoop,3500);
+}
+function camApply(aud,age){ if(seg.audience===aud && seg.age===age) return; seg.audience=aud; seg.age=age; try{ syncSegPanel(); }catch(_){} rebuild(true); }
+function wireCam(){ const cb=$('f-cam'); if(cb) cb.onchange=()=>{ cb.checked?camStart():camStop(); };
+  if(qs.get('cam')==='1' || qs.get('simcam')!=null || LS('adtv_cam','0')==='1'){ if(cb) cb.checked=true; camStart(); } }
+
+// ── PARRILLA REAL POR PANTALLA (/grid) — lo vendido/programado entra en el loop ──
+// Lee /grid/day de la pantalla; los creativos own/paid de la franja ACTUAL se
+// inyectan como assets prioritarios (universales) y el HUD muestra qué manda la
+// parrilla. Si no hay grid o no responde, el canal sigue con el Stock normal.
+const GRID_API='https://api.admira.store';
+let gridInjected=[];
+function gridBadge(txt){ let b=$('gridBadge'); if(!b){ b=document.createElement('div'); b.id='gridBadge'; b.style.cssText='position:absolute;top:8px;right:8px;z-index:40;background:rgba(22,16,4,.82);border:1px solid rgba(255,200,90,.45);color:#ffd866;border-radius:999px;padding:4px 11px;font:12px ui-monospace,Menlo,monospace;backdrop-filter:blur(4px)'; ($('mupi')||document.body).appendChild(b); } b.style.display=txt?'block':'none'; b.textContent=txt; }
+async function loadGrid(){ if(!scr.screen) return;
+  try{ const d=await fetch(GRID_API+'/grid/day?screen='+encodeURIComponent(scr.screen),{cache:'no-store'}).then(r=>r.json());
+    if(!d||!d.ok){ return; }
+    const cur=(d.bands||[]).find(b=>b.isNow); const out=[]; const seen=new Set();
+    if(cur) for(const s of cur.slots){ if((s.kind==='own'||s.kind==='paid') && s.creative && s.creative.url && !seen.has(s.bookingId)){ seen.add(s.bookingId);
+      out.push({ id:'grid:'+s.bookingId, url:s.creative.url, type:(s.creative.type==='video'?'video':'image'), title:s.title||s.advertiser||'Parrilla', motor:'parrilla', category:'parrilla', _grid:true, createdAt:'9'+Date.now() }); } }
+    gridInjected=out;
+    const np=d.nowPlaying; gridBadge(np&&!np.free?('📅 '+((np.advertiser)||'Parrilla')+(np.title?(' · '+np.title):'')):'');
+    all=all.filter(a=>!a._grid).concat(gridInjected); rebuild(false);
+  }catch(_){}
+}
 function play(i, forced){
   clearTimeout(timer); stopBar(); bar.style.width='0'; mediaEl=null; usesAdv=false;
   paused=false; document.body.classList.remove('paused'); $('pause').textContent='⏸';
@@ -680,6 +745,7 @@ $('chan').addEventListener('click',e=>{
 });
 
 loadStores(); screenLbl(); applyAudio(); renderChan(); fitMupi(); loadFeed(true); restartFeed();
+wireCam(); loadGrid(); setInterval(loadGrid, 60000);
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
