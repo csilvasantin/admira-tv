@@ -333,8 +333,21 @@ function setPaused(p){
   else { if(mediaEl&&mediaEl.play) mediaEl.play().catch(()=>{}); if(usesAdv){ advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,Math.max(0,advTotal-advElapsed)); stopBar(); barTimer=setInterval(barFromAdv,120); } }
 }
 
+// Orden POR DEFECTO: por categoría y fecha de importación (más reciente primero).
+// La categoría con el import más nuevo va primera, y dentro lo más nuevo primero
+// → el loop empieza siempre por el último elemento importado.
+function defaultOrder(arr){
+  const catNewest={};
+  for(const it of arr){ const c=it.category||'~'; const d=String(it.createdAt||''); if(!catNewest[c]||d>catNewest[c]) catNewest[c]=d; }
+  return arr.slice().sort((a,b)=>{
+    const ca=a.category||'~', cb=b.category||'~';
+    if(ca!==cb) return (catNewest[cb]||'').localeCompare(catNewest[ca]||'');
+    return String(b.createdAt||'').localeCompare(String(a.createdAt||''));
+  });
+}
 function rebuild(restart){ playlist=all.filter(matches).slice(0,Math.max(1,cfg.max));
   if(customOrder.length){ const pos=id=>{ const k=customOrder.indexOf(id); return k<0?1e9:k; }; playlist.sort((a,b)=>pos(a.id)-pos(b.id)); }
+  else { playlist=defaultOrder(playlist); }   // categoría + fecha (último import primero)
   $('segCount').textContent=playlist.length+' en este segmento'; setLive(directOn?'● DIRECTO':('LIVE · '+playlist.length+' en loop'), directOn||playlist.length>0); renderChan();
   if(directOn){ renderRail(); return; }   // en directo no tocamos el escenario
   if(restart||cur<0||!stage.querySelector('video,img,audio')){ play(0); } else { renderRail(); } }
