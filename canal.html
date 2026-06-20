@@ -351,8 +351,11 @@ window.addEventListener('beforeunload',()=>{ try{ emitFlush(); }catch(_){} });
 const FACEAPI_SRC='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js';
 const FACEAPI_MODELS='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model';
 const CAM={ on:false, fa:null, video:null, raw:null, timer:null };
-const AGE_LBL={nino:'Niño',joven:'Joven',adulto:'Adulto',senior:'Senior'};
-function camAgeBucket(a){ return a<13?'nino':a<30?'joven':a<60?'adulto':'senior'; }
+const AGE_LBL={nino:'Niño',joven:'Joven',adulto:'Adulto',senior:'Senior',vejez:'Vejez'};
+function camAgeBucket(a){ return a<13?'nino':a<30?'joven':a<60?'adulto':a<75?'senior':'vejez'; }
+// Suavizado temporal: exige 2 lecturas seguidas iguales (~7s) antes de cambiar el
+// segmento, para que el contenido no parpadee con cada microvariación de la cámara.
+function camStable(key){ if(CAM.cand===key){ CAM.candN=(CAM.candN||0)+1; } else { CAM.cand=key; CAM.candN=1; } return CAM.candN>=2; }
 function camHud(html,on){ let h=$('camHud'); if(!h){ h=document.createElement('div'); h.id='camHud'; h.style.cssText='position:absolute;top:8px;left:8px;z-index:40;background:rgba(4,14,22,.8);border:1px solid rgba(125,255,208,.4);color:#bfeaff;border-radius:999px;padding:4px 11px;font:12px ui-monospace,Menlo,monospace;letter-spacing:.04em;backdrop-filter:blur(4px)'; ($('mupi')||document.body).appendChild(h); } h.style.display=on?'block':'none'; h.innerHTML=html; }
 async function camLoadFaceApi(){ if(window.faceapi){ CAM.fa=window.faceapi; }
   else { await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=FACEAPI_SRC; s.onload=res; s.onerror=()=>rej(new Error('no se pudo cargar face-api')); document.head.appendChild(s); }); CAM.fa=window.faceapi; }
@@ -379,8 +382,9 @@ async function camDetect(){ const sim=qs.get('simcam');
 }
 async function camLoop(){ if(!CAM.on) return;
   try{ const d=await camDetect();
-    if(!d.faces){ camHud('👥 0 · sin audiencia',true); camApply('all','all'); }
-    else { camHud('👥 '+d.faces+' · '+(AGE_LBL[d.age]||d.age)+' · '+(d.gender==='f'?'♀ Mujer':'♂ Hombre'),true); camApply(d.gender,d.age); }
+    const aud=d.faces?d.gender:'all', age=d.faces?d.age:'all';
+    camHud(d.faces?('👥 '+d.faces+' · '+(AGE_LBL[age]||age)+' · '+(aud==='f'?'♀ Mujer':'♂ Hombre')):'👥 0 · sin audiencia',true);
+    if(camStable(aud+'_'+age)) camApply(aud,age);   // solo cambia tras 2 lecturas estables
   }catch(_){}
   CAM.timer=setTimeout(camLoop,3500);
 }
@@ -405,6 +409,19 @@ async function loadGrid(){ if(!scr.screen) return;
     const np=d.nowPlaying; gridBadge(np&&!np.free?('📅 '+((np.advertiser)||'Parrilla')+(np.title?(' · '+np.title):'')):'');
     all=all.filter(a=>!a._grid).concat(gridInjected); rebuild(false);
   }catch(_){}
+}
+// Entrelaza los creativos de la parrilla (own/paid) a cadencia fija para que AIREN
+// de verdad en su franja, en vez de aparecer 1 vez en un loop de 50. Cicla la lista
+// de la franja cada EVERY piezas de Stock.
+function gridWeave(pl){
+  if(!gridInjected.length) return pl;
+  const gids=new Set(gridInjected.map(g=>g.id));
+  const base=pl.filter(p=>!gids.has(p.id)), grid=gridInjected;
+  if(!base.length) return grid.slice();
+  const EVERY=4, out=[]; let gi=0;
+  for(let i=0;i<base.length;i++){ out.push(base[i]); if((i+1)%EVERY===0){ out.push(grid[gi%grid.length]); gi++; } }
+  if(gi===0) for(const g of grid) out.push(g);
+  return out;
 }
 function play(i, forced){
   clearTimeout(timer); stopBar(); bar.style.width='0'; mediaEl=null; usesAdv=false;
@@ -468,6 +485,7 @@ function defaultOrder(arr){
 function rebuild(restart){ playlist=all.filter(matches).slice(0,Math.max(1,cfg.max));
   if(customOrder.length){ const pos=id=>{ const k=customOrder.indexOf(id); return k<0?1e9:k; }; playlist.sort((a,b)=>pos(a.id)-pos(b.id)); }
   else { playlist=defaultOrder(playlist); }   // categoría + fecha (último import primero)
+  playlist=gridWeave(playlist);   // la parrilla vendida/propia entra a cadencia fija
   $('segCount').textContent=playlist.length+' en este segmento'; setLive(directOn?'● DIRECTO':('LIVE · '+playlist.length+' en loop'), directOn||playlist.length>0); renderChan();
   if(directOn){ renderRail(); return; }   // en directo no tocamos el escenario
   if(restart||cur<0||!stage.querySelector('video,img,audio')){ play(0); } else { renderRail(); } }
