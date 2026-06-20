@@ -324,20 +324,35 @@ const CH_THEMES = [
 ];
 function segBase(){ return { medio:'all', audience:'all', category:'all', age:'all', slot:'all', tag:'' }; }
 function syncSegPanel(){ ['medio','audience','category','age','slot'].forEach(k=>{ const el=$('f-'+k); if(el) el.value=seg[k]; }); const ft=$('f-tag'); if(ft) ft.value=seg.tag; }
-function applyPlaylist(pl){ const b=segBase(); Object.assign(b, pl.seg||{}); Object.assign(seg,b); save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); }
-function applyTheme(tag){ const b=segBase(); b.tag=tag||''; Object.assign(seg,b); save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); }
-function activePlaylistId(){ if(seg.tag) return null; if(seg.medio!=='all') return seg.medio; if(seg.category==='producto') return 'producto'; if(seg.category==='marca') return 'marca'; if(seg.category!=='all'||seg.audience!=='all'||seg.age!=='all'||seg.slot!=='all') return null; return 'all'; }
-function tagCounts(){ const c={}; for(const it of all){ for(const t of (it.tags||[])){ const k=String(t).toLowerCase().trim(); if(k) c[k]=(c[k]||0)+1; } } return c; }
+// El TIPO de contenido (medio/categoría) y el METATAG COMBINAN. Los temas se
+// recalculan según el tipo elegido (solo los que tiene ese tipo, con su conteo).
+function applyPlaylist(pl){
+  if(pl.id==='all'){ seg.medio='all'; seg.category='all'; }
+  else { const o=pl.seg||{}; if('medio'in o) seg.medio=o.medio; if('category'in o) seg.category=o.category; }
+  if(seg.tag){ const cc=tagCounts(); if(!cc[seg.tag]) seg.tag=''; } // el tema ya no existe en este tipo → se suelta
+  save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true);
+}
+function applyTheme(tag){ seg.tag=tag||''; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); }
+function isPlaylistActive(pl){ const o=pl.seg||{};
+  if(pl.id==='all') return seg.medio==='all'&&seg.category==='all';
+  if('medio'in o) return seg.medio===o.medio;
+  if('category'in o) return seg.category===o.category;
+  return false; }
+function countFor(over){ const s=Object.assign({},seg,over); return all.filter(it=>matchesSeg(it,s)).length; }
+// conteo de tags DENTRO del tipo actual (medio+categoría), ignorando el propio tag
+function tagCounts(){ const c={}; const s=Object.assign({},seg,{tag:''});
+  for(const it of all){ if(!matchesSeg(it,s)) continue; for(const t of (it.tags||[])){ const k=String(t).toLowerCase().trim(); if(k) c[k]=(c[k]||0)+1; } } return c; }
 function renderChan(){
   const el=$('chan'); if(!el) return;
-  const counts=tagCounts(); const apid=activePlaylistId();
+  const counts=tagCounts();
   let html='<div class="ch-hd">▦ playlists</div><div class="ch-sec">';
   html+=CH_PLAYLISTS.map(pl=>{
-    const test=segBase(); Object.assign(test, pl.seg);
-    const cnt = pl.id==='all' ? all.length : all.filter(it=>matchesSeg(it,test)).length;
-    return '<div class="ch-chip'+(pl.id===apid?' cur':'')+'" data-pl="'+pl.id+'"><span class="ch-ico">'+pl.ico+'</span><span class="ch-nm">'+pl.label+'</span><span class="ch-ct">'+cnt+'</span></div>';
+    const cnt = pl.id==='all' ? countFor({medio:'all',category:'all'}) : countFor(pl.seg);
+    return '<div class="ch-chip'+(isPlaylistActive(pl)?' cur':'')+'" data-pl="'+pl.id+'"><span class="ch-ico">'+pl.ico+'</span><span class="ch-nm">'+pl.label+'</span><span class="ch-ct">'+cnt+'</span></div>';
   }).join('');
-  html+='</div><div class="ch-hd"># temas</div><div class="ch-tags">';
+  const tlbl = seg.medio!=='all' ? ((CH_PLAYLISTS.find(p=>(p.seg||{}).medio===seg.medio)||{}).label||'')
+             : (seg.category!=='all' ? ((CH_PLAYLISTS.find(p=>(p.seg||{}).category===seg.category)||{}).label||'') : '');
+  html+='</div><div class="ch-hd"># temas'+(tlbl?' · '+tlbl:'')+'</div><div class="ch-tags">';
   const shown=new Set(); const chips=[];
   CH_THEMES.forEach(([t,ic])=>{ if(counts[t]){ shown.add(t); chips.push([t,ic,counts[t]]); } });
   Object.keys(counts).filter(t=>!shown.has(t)&&!CH_DENY.has(t)&&counts[t]>=4&&t.length<=16)
