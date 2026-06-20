@@ -61,6 +61,7 @@
   /* selector de canal (playlists + metatags) a la derecha */
   #chan{ width:174px; height:96vh; display:flex; flex-direction:column; gap:6px; justify-content:center; transition:opacity .3s; overflow:hidden; }
   #chan .ch-hd{ font-size:8px; letter-spacing:.16em; color:#7db8ff; opacity:.55; text-transform:uppercase; text-align:center; padding:4px 0 1px; }
+  #chan .ch-hd .ch-total{ color:#7dff9e; opacity:.9; }
   #chan .ch-sec{ display:flex; flex-direction:column; gap:5px; }
   #chan .ch-chip{ display:flex; align-items:center; gap:7px; height:32px; border:1px solid rgba(125,184,255,.14); border-radius:8px; padding:5px 8px; background:rgba(8,14,22,.5); cursor:pointer; opacity:.6; transition:opacity .18s,border-color .18s,transform .12s; }
   #chan .ch-chip:hover{ opacity:.95; border-color:rgba(125,184,255,.4); }
@@ -572,7 +573,7 @@ function formatCounts(){ const c={}; const s=Object.assign({},seg,{format:''});
 function renderChan(){
   const el=$('chan'); if(!el) return;
   const counts=tagCounts();
-  let html='<div class="ch-hd">▦ playlists</div><div class="ch-sec">';
+  let html='<div class="ch-hd">▦ playlists <span class="ch-total">/ '+all.length+' assets</span></div><div class="ch-sec">';
   html+=CH_PLAYLISTS.map(pl=>{
     const cnt = pl.id==='all' ? countFor({medio:'all',category:'all'}) : countFor(pl.seg);
     return '<div class="ch-chip'+(isPlaylistActive(pl)?' cur':'')+'" data-pl="'+pl.id+'"><span class="ch-ico">'+pl.ico+'</span><span class="ch-nm">'+pl.label+'</span><span class="ch-ct">'+cnt+'</span></div>';
