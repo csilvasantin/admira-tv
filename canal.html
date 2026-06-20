@@ -296,6 +296,51 @@ function fitMupi(){ const mupi=$('mupi'); if(!mupi) return;
   mupi.style.height=Math.round(h)+'px'; mupi.style.width=Math.round(w)+'px'; mupi.style.aspectRatio='auto';
 }
 window.addEventListener('resize',fitMupi);
+// ── PROOF-OF-PLAY → "Informe de emisión" en clearchannel.tv (worker pixer-eleven) ──
+// Cada pase suma al acumulado del día de ESTA pantalla (localStorage) y, con debounce,
+// lo manda entero a /emit (cumulativo, sin carreras). Solo se imputa si la pantalla
+// tiene circuito asignado. bySeg queda listo para la fase 2 (segmentado por cámara).
+const EMIT_API='https://api.admira.store/emit';
+function emitDateStr(){ const d=new Date(); return ''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
+function emitSeg(it){ // segmentación del asset → clave gender_age de clearchannel (best-effort)
+  try{ const s=it.segmentation||null; if(!s) return null;
+    const g=(s.genders||[]), a=(s.ageBuckets||s.ages||[]);
+    if(g.length!==1||a.length!==1) return null;
+    const gm={hombre:'m',male:'m',m:'m',mujer:'f',female:'f',f:'f'}[String(g[0]).toLowerCase()];
+    const age=String(a[0]).toLowerCase();
+    if(!gm||['nino','joven','adulto','senior'].indexOf(age)<0) return null;
+    return age+'_'+gm;
+  }catch(_){ return null; }
+}
+let _emitTally=null, _emitDate='', _emitTimer=null, _emitDirty=false;
+function emitLoad(){ const d=emitDateStr();
+  if(_emitDate===d && _emitTally) return _emitTally;
+  _emitDate=d;
+  try{ const raw=localStorage.getItem('adtv_emit:'+scr.screen+':'+d); _emitTally=raw?JSON.parse(raw):null; }catch(_){ _emitTally=null; }
+  if(!_emitTally) _emitTally={ totalPlays:0, totalSecs:0, byType:{}, bySeg:{}, assets:{} };
+  return _emitTally;
+}
+function emitRecord(it){
+  if(!it||!it.id) return;
+  const t=emitLoad(), type=it.type||'image', seg=emitSeg(it);
+  const secs = (type==='video'||type==='animation') ? (it._dur||15)
+             : ((KIND[type]||'image')==='image' ? Math.max(2,cfg.imgSec) : Math.max(3,cfg.audioSec));
+  t.totalPlays++; t.totalSecs+=Math.round(secs);
+  t.byType[type]=(t.byType[type]||0)+1;
+  if(seg) t.bySeg[seg]=(t.bySeg[seg]||0)+1;
+  const a=t.assets[it.id]||(t.assets[it.id]={n:0,type:type,seg:seg,title:(it.title||it.prompt||'').slice(0,80),num:it._num||null,secs:0});
+  a.n++; a.secs+=Math.round(secs); a.last=Date.now(); a.type=type; if(seg) a.seg=seg;
+  try{ localStorage.setItem('adtv_emit:'+scr.screen+':'+_emitDate, JSON.stringify(t)); }catch(_){}
+  _emitDirty=true; if(!_emitTimer) _emitTimer=setTimeout(emitFlush,12000);
+}
+function emitFlush(){ _emitTimer=null; if(!_emitDirty) return;
+  const t=_emitTally; if(!t||!scr.circuit) return;   // sin circuito no hay a quién imputar
+  _emitDirty=false;
+  try{ fetch(EMIT_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({
+    loc:scr.circuit, screen:scr.screen||(scr.circuit+'-led'), date:_emitDate,
+    totalPlays:t.totalPlays, totalSecs:t.totalSecs, byType:t.byType, bySeg:t.bySeg, assets:t.assets })}).catch(()=>{}); }catch(_){}
+}
+window.addEventListener('beforeunload',()=>{ try{ emitFlush(); }catch(_){} });
 function play(i, forced){
   clearTimeout(timer); stopBar(); bar.style.width='0'; mediaEl=null; usesAdv=false;
   paused=false; document.body.classList.remove('paused'); $('pause').textContent='⏸';
@@ -314,6 +359,7 @@ function play(i, forced){
   renderRail();
   if(k==='video'){
     const v=document.createElement('video'); v.src=it.url; v.autoplay=true; v.playsInline=true; v.preload='auto';
+    v.onloadedmetadata=()=>{ if(v.duration&&isFinite(v.duration)) it._dur=Math.round(v.duration); };
     v.onended=next; v.onerror=()=>setTimeout(next,600);
     v.ontimeupdate=()=>{ if(v.duration&&!paused) bar.style.width=(v.currentTime/v.duration*100)+'%'; };
     mediaEl=v; applyAudio(); stage.appendChild(v);
@@ -329,6 +375,7 @@ function play(i, forced){
     a.play().then(()=>tap.classList.remove('show')).catch(()=>{ if(!muted) tap.classList.add('show'); });
     startAdv(Math.max(3,cfg.audioSec)*1000);
   }
+  try{ emitRecord(it); }catch(_){}
 }
 // antes de cada nuevo contenido, revisa si hay novedades en stock (nuevas
 // importaciones o tags/categorías editados) — con throttle para no saturar.
