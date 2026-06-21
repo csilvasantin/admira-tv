@@ -55,6 +55,12 @@
     <label>Dispositivo (opcional)</label>
     <input id="device" placeholder="MacBook Pro 14" maxlength="60">
 
+    <label>Orientación de la pantalla</label>
+    <select id="orient" style="width:100%;background:#08121b;border:1px solid var(--line);border-radius:9px;color:var(--txt);padding:11px 12px;font-size:15px;margin-bottom:16px">
+      <option value="portrait">Vertical · 9:16 (MUPI)</option>
+      <option value="landscape">Horizontal · 16:9 (pantalla)</option>
+    </select>
+
     <button type="button" id="geo" class="geo">📍 Detectar mi ubicación</button>
     <label style="margin-top:14px">Dirección</label>
     <input id="addr" placeholder="Se rellena al detectar ubicación" maxlength="160">
@@ -119,7 +125,7 @@ $('form').addEventListener('submit',async e=>{
   try{
     const r=await fetch(API+'/locations/register',{
       method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ name, circuit:effId(), addr:$('addr').value.trim(), device:$('device').value.trim(), coords })
+      body:JSON.stringify({ name, circuit:effId(), addr:$('addr').value.trim(), device:$('device').value.trim(), orientation:$('orient').value, coords })
     });
     const j=await r.json();
     if(!r.ok || !j.ok){ setMsg('Error: '+(j.hint||j.error||r.status),'err'); $('go').disabled=false; $('go').textContent='Dar de alta'; return; }
