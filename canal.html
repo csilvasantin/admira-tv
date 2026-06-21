@@ -219,19 +219,25 @@ const cfg = { imgSec:+(qs.get('img')||LS('adtv_img',9)), audioSec:+(qs.get('audi
 const scr = { circuit: qs.get('circuit')||LS('adtv_circuit',''), screen: qs.get('screen')||LS('adtv_screen',''), name: LS('adtv_screenName','') };
 let muted  = qs.has('muted') ? qs.get('muted') !== '0' : (LS('adtv_muted','1'))==='1';
 let volume = Math.max(0,Math.min(1,parseFloat(qs.get('volume')||LS('adtv_vol','1'))));
+const modeParam = qs.get('mode') ?? qs.get('admiraMode') ?? qs.get('playout');
 const syncParam = qs.get('sincro') ?? qs.get('sync') ?? qs.get('syncro');
 const syncSlotSec = Math.max(5,Math.min(120,parseInt(qs.get('syncSlot')||LS('adtv_sync_slot','20'),10)||20));
 const SYNC_MAX = 200;
-let syncOn = syncParam==null ? LS('adtv_sincro','0')==='1' : !/^(0|off|false|no)$/i.test(String(syncParam));
+let playoutMode = canonicalAdmiraMode(modeParam || LS('adtv_mode','local'));
+let syncOn = syncParam==null ? (playoutMode==='sync'||LS('adtv_sincro','0')==='1') : !/^(0|off|false|no)$/i.test(String(syncParam));
+if(syncOn) playoutMode='sync';
+if(playoutMode==='conditional') syncOn=false;
 save('adtv_sync_slot',String(syncSlotSec));
+save('adtv_mode',playoutMode);
 
-let all=[], playlist=[], cur=-1, seenSig='', timer=null, barTimer=null, mediaEl=null, feedTimer=null;
+let all=[], playlist=[], cur=-1, seenSig='', timer=null, barTimer=null, mediaEl=null, feedTimer=null, xplTimer=null;
 let customOrder=[]; try{ const o=JSON.parse(LS('adtv_order','[]')); if(Array.isArray(o)) customOrder=o; }catch(_){}
 let _lastFeed=0;
 let dimCache={}; try{ const c=JSON.parse(LS('adtv_dims','{}')); if(c&&typeof c==='object') dimCache=c; }catch(_){}
 let pendingImport=null, _measuring=false, _statusT=null, _statusT2=null;
 let directOn=false; try{ if(localStorage.getItem('adtv_direct')) directOn=true; }catch(_){}
 if(syncOn&&directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
+let applyingXpl=false;
 let paused=false, usesAdv=false, advTotal=0, advElapsed=0, advStart=0;
 const $ = id => document.getElementById(id);
 const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=$('bar'), tap=$('tap');
@@ -242,6 +248,7 @@ function setLive(t,ok){ liveEl.textContent=t; liveEl.style.color=ok?'var(--air)'
 function madridSlot(){ let h=12; try{ h=+new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ h=new Date().getHours(); } return h<12?'manana':h<16?'mediodia':h<21?'tarde':'noche'; }
 function screenLbl(){ $('screenLbl').textContent = scr.name ? ('📍 '+scr.name+(scr.screen?(' · '+scr.screen):'')) : (scr.screen?('📍 '+scr.screen):''); }
 function normTag(v){ return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+function canonicalAdmiraMode(v){ const m=normTag(v); if(['sync','sincro','sincronizado','admiratvsincro'].includes(m)) return 'sync'; if(['conditional','condicional','xpl','admiratvcondicional'].includes(m)) return 'conditional'; return 'local'; }
 function canonicalPlayTag(v){ const t=normTag(v).replace(/^#/,'').replace(/\s+/g,'-'); if(['music','musica','muscia'].includes(t)) return 'musica'; if(['tecnologia','technology','tech'].includes(t)) return 'tecnologia'; return t; }
 function tagNeedles(v){ const t=canonicalPlayTag(v); if(t==='musica') return ['musica','music','muscia']; if(t==='tecnologia') return ['tecnologia','technology','tech']; return [t]; }
 function matchesSeg(it,s){ const k=KIND[it.type];
@@ -269,12 +276,20 @@ function syncSlotMs(){ return syncSlotSec*1000; }
 function syncElapsedMs(){ return Date.now()%syncSlotMs(); }
 function syncRemainingMs(){ return Math.max(300,syncSlotMs()-syncElapsedMs()); }
 function syncIndex(){ return playlist.length ? Math.floor(Date.now()/syncSlotMs())%playlist.length : 0; }
+function xplUrl(){
+  const base=qs.get('xpl')||LS('adtv_xpl','https://xpl.xpaceos.com/admira-tv.json');
+  try{ save('adtv_xpl',base); }catch(_){}
+  return base;
+}
 function disableAdmiraSync(){
-  if(!syncOn) return;
-  syncOn=false; save('adtv_sincro','0'); seenSig='';
+  if(applyingXpl&&playoutMode==='conditional') return;
+  if(!syncOn&&playoutMode==='local') return;
+  syncOn=false; playoutMode='local'; save('adtv_sincro','0'); save('adtv_mode','local'); seenSig='';
+  if(xplTimer){ clearInterval(xplTimer); xplTimer=null; }
 }
 function setAdmiraSync(on){
-  syncOn=!!on; save('adtv_sincro',syncOn?'1':'0'); seenSig='';
+  syncOn=!!on; playoutMode=syncOn?'sync':'local'; save('adtv_sincro',syncOn?'1':'0'); save('adtv_mode',playoutMode); seenSig='';
+  if(xplTimer){ clearInterval(xplTimer); xplTimer=null; }
   if(syncOn){
     if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
     customOrder=[]; save('adtv_order','[]');
@@ -284,6 +299,56 @@ function setAdmiraSync(on){
     rebuild(true);
     flashCli('🔗 admiraTVsincro OFF');
   }
+}
+function setAdmiraMode(mode){
+  mode=canonicalAdmiraMode(mode);
+  if(mode==='sync'){ setAdmiraSync(true); return; }
+  syncOn=false; playoutMode=mode; save('adtv_sincro','0'); save('adtv_mode',mode); seenSig='';
+  if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
+  if(mode==='conditional'){
+    customOrder=[]; save('adtv_order','[]');
+    restartXpl();
+    rebuild(true);
+    flashCli('◆ admiraTVcondicional · XPL');
+  } else {
+    if(xplTimer){ clearInterval(xplTimer); xplTimer=null; }
+    rebuild(true);
+    flashCli('● admiraTVlocal');
+  }
+}
+function restartXpl(){
+  if(xplTimer) clearInterval(xplTimer);
+  fetchXplDirective();
+  xplTimer=setInterval(fetchXplDirective,Math.max(10,cfg.refreshSec||30)*1000);
+}
+function applyXplDirective(d){
+  if(!d||typeof d!=='object') return false;
+  applyingXpl=true;
+  try{
+    if(d.mode||d.playout){ const m=canonicalAdmiraMode(d.mode||d.playout); if(m!=='conditional'){ setAdmiraMode(m); return true; } }
+    const command=d.command||d.cli;
+    if(command&&typeof command==='string'&&!/^\/?admiraTVcondicional/i.test(command)){ runCli(command); return true; }
+    const direct=d.direct||d.embed||((d.type==='direct'||d.type==='url')&&d.url);
+    if(direct&&typeof direct==='string'){ enterDirect(direct); return true; }
+    let changed=false;
+    ['medio','audience','category','age','slot','tag','format'].forEach(k=>{ if(d[k]!=null&&seg[k]!==String(d[k]).toLowerCase()){ seg[k]=String(d[k]).toLowerCase(); changed=true; } });
+    ['max','refreshSec','imgSec','audioSec'].forEach(k=>{ if(d[k]!=null){ const n=parseInt(d[k],10); if(n&&cfg[k]!==n){ cfg[k]=n; changed=true; } } });
+    if(d.refresh!=null){ const n=parseInt(d.refresh,10); if(n&&cfg.refreshSec!==n){ cfg.refreshSec=n; changed=true; } }
+    if(d.muted!=null){ muted=!!d.muted; applyAudio(); }
+    if(d.volume!=null){ volume=Math.max(0,Math.min(1,parseFloat(d.volume)||0)); muted=volume===0; applyAudio(); }
+    if(changed){ save('adtv_seg',JSON.stringify(seg)); save('adtv_max',cfg.max); save('adtv_refresh',cfg.refreshSec); syncSegPanel(); seenSig=''; rebuild(true); }
+    return changed;
+  } finally { applyingXpl=false; }
+}
+async function fetchXplDirective(){
+  if(playoutMode!=='conditional') return;
+  try{
+    const u=xplUrl()+(xplUrl().indexOf('?')>=0?'&':'?')+'screen='+encodeURIComponent(scr.screen||'default')+'&t='+Date.now();
+    const r=await fetch(u,{cache:'no-store'}); if(!r.ok) throw new Error('xpl '+r.status);
+    const d=await r.json();
+    if(applyXplDirective(d)) flashCli('◆ XPL actualizado');
+    else setLive('CONDICIONAL · '+playlist.length+' en loop', playlist.length>0);
+  }catch(_){ if(playoutMode==='conditional') setLive('CONDICIONAL · XPL pendiente', playlist.length>0); }
 }
 
 function thumbHtml(it){ const k=KIND[it.type]||'image';
@@ -531,7 +596,9 @@ function rebuild(restart){ playlist=syncOn ? defaultOrder(all).slice(0,SYNC_MAX)
   if(customOrder.length){ const pos=id=>{ const k=customOrder.indexOf(id); return k<0?1e9:k; }; playlist.sort((a,b)=>pos(a.id)-pos(b.id)); }
   else { playlist=defaultOrder(playlist); }   // categoría + fecha (último import primero)
   playlist=gridWeave(playlist);   // la parrilla vendida/propia entra a cadencia fija
-  $('segCount').textContent=playlist.length+' en este segmento'; setLive(directOn?'● DIRECTO':('LIVE · '+playlist.length+' en loop'), directOn||playlist.length>0); renderChan();
+  $('segCount').textContent=playlist.length+(playoutMode==='conditional'?' en condicional XPL':' en este segmento');
+  setLive(directOn?'● DIRECTO':((playoutMode==='conditional'?'CONDICIONAL · ':'LIVE · ')+playlist.length+' en loop'), directOn||playlist.length>0);
+  renderChan();
   if(directOn){ renderRail(); return; }   // en directo no tocamos el escenario
   if(restart||cur<0||!stage.querySelector('video,img,audio')){ play(0); } else { renderRail(); } }
 
@@ -546,7 +613,7 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   // etiquetas de formato/aspecto/resolución desde la caché de dimensiones (instantáneo).
   for(const it of all){ const dd=dimCache[it.id]; if(dd){ applyFmt(it,dd); it._fmtDone=true; } }
   // la firma incluye tags+categoría: si editas el metadato de un vídeo, se detecta y reordena.
-  const sig=all.map(v=>v.id+'~'+((v.tags||[]).join('.'))+'~'+(v.category||'')).join(',')+'|'+JSON.stringify(seg)+'|'+cfg.max;
+  const sig=all.map(v=>v.id+'~'+((v.tags||[]).join('.'))+'~'+(v.category||'')).join(',')+'|'+JSON.stringify(seg)+'|'+cfg.max+'|'+playoutMode;
   const isNew=(sig!==seenSig);
   if(isNew){ seenSig=sig; rebuild(false); }                   // 🔴 hay novedad → actualiza
   // ¿terminó una importación pendiente? (apareció un id nuevo) → feedback ✓
@@ -556,7 +623,7 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   if(showStatus){ const hold=Math.max(0,5000-(Date.now()-_t0)); clearTimeout(_statusT); // amarillo mínimo 5s
     _statusT=setTimeout(()=>{ if(isNew){ setStockStatus('new'); clearTimeout(_statusT2); _statusT2=setTimeout(()=>setStockStatus('ok'),4500); } else setStockStatus('ok'); }, hold); }
 }catch(e){ setLive('offline',false); if(showStatus){ clearTimeout(_statusT); setStockStatus('off'); } } }
-function restartFeed(){ if(feedTimer) clearInterval(feedTimer); feedTimer=setInterval(()=>loadFeed(true),Math.max(10,cfg.refreshSec)*1000); }
+function restartFeed(){ if(feedTimer) clearInterval(feedTimer); feedTimer=setInterval(()=>loadFeed(true),Math.max(10,cfg.refreshSec)*1000); if(playoutMode==='conditional') restartXpl(); }
 
 // ── controles ──
 $('prev').onclick=prev; $('next').onclick=next; $('pause').onclick=()=>setPaused(!paused);
@@ -616,11 +683,10 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='audioon'||cmd==='soundon'||cmd==='unmute'||(cmd==='audio'&&rest.toLowerCase()!=='off')){ setAudio(true,rest); flashCli('🔊 audio on'); return; }
   if(cmd==='audiooff'||cmd==='soundoff'||cmd==='muteoff'||(cmd==='audio'&&rest.toLowerCase()==='off')){ setAudio(false); flashCli('🔇 audio off'); return; }
   if(cmd==='mute'||cmd==='muted'){ setAudio(rest==='0'); flashCli(rest==='0'?'🔊 audio on':'🔇 audio off'); return; }
-  if(cmd==='admiratvsincro'||cmd==='admiratvsync'||cmd==='sincro'||cmd==='sync'){
-    setAdmiraSync(!/^(off|0|false|no)$/i.test(rest));
-    return;
-  }
-  if(cmd==='admiratvsincrooff'||cmd==='sincrooff'||cmd==='syncoff'){ setAdmiraSync(false); return; }
+  if(cmd==='admiratvsincro'||cmd==='admiratvsync'||cmd==='sincro'||cmd==='sync'){ setAdmiraMode(/^(off|0|false|no|local)$/i.test(rest)?'local':'sync'); return; }
+  if(cmd==='admiratvcondicional'||cmd==='admiratvconditional'||cmd==='condicional'||cmd==='conditional'||cmd==='xpl'){ setAdmiraMode('conditional'); return; }
+  if(cmd==='admiratvlocal'||cmd==='local'){ setAdmiraMode('local'); return; }
+  if(cmd==='admiratvsincrooff'||cmd==='sincrooff'||cmd==='syncoff'){ setAdmiraMode('local'); return; }
   if(cmd==='playcamera'||cmd==='camera'){ camStart(); flashCli('📷 camera on'); return; }
   if(cmd==='stopcamera'||cmd==='camerastop'){ camStop(); flashCli('📷 camera off'); return; }
   const playTag=parsePlayTag(v,cmd);
@@ -674,7 +740,7 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
     if(!rest){ flashCli(directOn?'directo ON · /direct off':'uso: /direct <url>'); return; }
     enterDirect(rest); return; }
   if(cmd==='orden'){ customOrder=[]; save('adtv_order','[]'); seenSig=''; rebuild(true); flashCli('✓ orden reiniciado'); return; }
-  if(cmd==='help'||cmd==='?'){ flashCli('/admiraTVsincro /playnext /playtagmusic /audioon /audiooff /playcamera /vertical /tag /reload'); return; }
+  if(cmd==='help'||cmd==='?'){ flashCli('/admiraTVsincro /admiraTVcondicional /admiraTVlocal /playnext /playtagmusic /audioon /vertical /tag /reload'); return; }
   if(SITES[cmd]){ flashCli('→ '+cmd); location.href=SITES[cmd]; return; }
   flashCli('?? /'+cmd+' · prueba /help');
 }
@@ -703,10 +769,11 @@ window.addEventListener('message',event=>{
     else if(cmd==='audiooff'||cmd==='soundoff'||cmd==='mute'){ setAudio(false); msg='🔇 audio off'; }
     else if(cmd==='admiratvsincro'||cmd==='admiratvsync'||cmd==='sincro'||cmd==='sync'){
       const rest=raw.replace(/^\s*\/?\S+\s*/,'').trim();
-      setAdmiraSync(!/^(off|0|false|no)$/i.test(rest));
-      msg=syncOn?'🔗 admiraTVsincro ON':'🔗 admiraTVsincro OFF';
+      setAdmiraMode(/^(off|0|false|no|local)$/i.test(rest)?'local':'sync');
+      msg=syncOn?'🔗 admiraTVsincro':'● admiraTVlocal';
     }
-    else if(cmd==='admiratvsincrooff'||cmd==='sincrooff'||cmd==='syncoff'){ setAdmiraSync(false); msg='🔗 admiraTVsincro OFF'; }
+    else if(cmd==='admiratvcondicional'||cmd==='admiratvconditional'||cmd==='condicional'||cmd==='conditional'||cmd==='xpl'){ setAdmiraMode('conditional'); msg='◆ admiraTVcondicional'; }
+    else if(cmd==='admiratvlocal'||cmd==='local'||cmd==='admiratvsincrooff'||cmd==='sincrooff'||cmd==='syncoff'){ setAdmiraMode('local'); msg='● admiraTVlocal'; }
     else if(parsePlayTag(raw,cmd)){ const tag=parsePlayTag(raw,cmd); const n=applyPlayTag(tag); msg='▶ tag '+canonicalPlayTag(tag)+' · '+n+' assets'; }
     else if(cmd==='play'||/^play\d+$/.test(cmd)){ runCli(raw); msg='▶ '+raw.replace(/^\//,''); }
     else { ok=false; msg='unsupported command'; }
