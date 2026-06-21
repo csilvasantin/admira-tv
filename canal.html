@@ -559,15 +559,47 @@ function applyPlayTag(tag){
   seg.tag=clean; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true);
   return playlist.length;
 }
+function applyCliSegment(msg){
+  if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
+  save('adtv_seg',JSON.stringify(seg));
+  syncSegPanel();
+  seenSig='';
+  rebuild(true);
+  if(msg) flashCli(msg+' · '+playlist.length+' assets');
+}
 function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   const cmd=v.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
+  const rest=v.replace(/^\s*\/?\S+\s*/,'').trim();
   // navegación de la cola por comando (equivalente a las flechas)
   if(cmd==='playnext'||cmd==='next'){ next(); flashCli('▶ siguiente'); return; }
   if(cmd==='playprevious'||cmd==='playprev'||cmd==='previous'||cmd==='prev'){ prev(); flashCli('◀ anterior'); return; }
   if(cmd==='playfirst'||cmd==='first'){ if(!directOn&&playlist.length) play(0); flashCli('▶ primera'); return; }
   if(cmd==='playlast'||cmd==='last'){ if(!directOn&&playlist.length) play(playlist.length-1); flashCli('▶ última'); return; }
+  if(cmd==='audioon'||cmd==='soundon'||cmd==='unmute'||(cmd==='audio'&&rest.toLowerCase()!=='off')){ setAudio(true,rest); flashCli('🔊 audio on'); return; }
+  if(cmd==='audiooff'||cmd==='soundoff'||cmd==='muteoff'||(cmd==='audio'&&rest.toLowerCase()==='off')){ setAudio(false); flashCli('🔇 audio off'); return; }
+  if(cmd==='mute'||cmd==='muted'){ setAudio(rest==='0'); flashCli(rest==='0'?'🔊 audio on':'🔇 audio off'); return; }
+  if(cmd==='playcamera'||cmd==='camera'){ camStart(); flashCli('📷 camera on'); return; }
+  if(cmd==='stopcamera'||cmd==='camerastop'){ camStop(); flashCli('📷 camera off'); return; }
   const playTag=parsePlayTag(v,cmd);
   if(playTag){ const n=applyPlayTag(playTag); flashCli('▶ tag '+canonicalPlayTag(playTag)+' · '+n+' assets'); return; }
+  if(cmd==='reload'){ seenSig=''; loadFeed(true); rebuild(true); flashCli('↻ feed recargado'); return; }
+  if(cmd==='vertical'||cmd==='portrait'){ seg.tag='vertical'; seg.format='9:16'; applyCliSegment('✓ vertical 9:16'); return; }
+  if(cmd==='tag'){ seg.tag=canonicalPlayTag(rest||''); applyCliSegment('✓ tag '+(seg.tag||'all')); return; }
+  if(cmd==='medio'||cmd==='media'){
+    const medio=(rest||'all').toLowerCase();
+    if(['all','video','image','audio'].indexOf(medio)<0){ flashCli('medio: all/video/image/audio'); return; }
+    seg.medio=medio; applyCliSegment('✓ medio '+medio); return;
+  }
+  if(cmd==='category'||cmd==='categoria'){ seg.category=(rest||'all').toLowerCase(); applyCliSegment('✓ category '+seg.category); return; }
+  if(cmd==='slot'){
+    const slot=(rest||'auto').toLowerCase();
+    if(['auto','all','manana','mediodia','tarde','noche'].indexOf(slot)<0){ flashCli('slot: auto/all/manana/mediodia/tarde/noche'); return; }
+    seg.slot=slot; applyCliSegment('✓ slot '+slot); return;
+  }
+  if(cmd==='max'){ cfg.max=Math.max(1,Math.min(200,parseInt(rest,10)||cfg.max||50)); save('adtv_max',cfg.max); seenSig=''; rebuild(true); flashCli('✓ max '+cfg.max); return; }
+  if(cmd==='refresh'){ cfg.refreshSec=Math.max(10,Math.min(900,parseInt(rest,10)||cfg.refreshSec||30)); save('adtv_refresh',cfg.refreshSec); restartFeed(); flashCli('✓ refresh '+cfg.refreshSec+'s'); return; }
+  if(cmd==='screen'){ scr.screen=rest||scr.screen; save('adtv_screen',scr.screen); const fs=$('f-screen'); if(fs) fs.value=scr.screen; screenLbl(); flashCli('✓ screen '+scr.screen); return; }
+  if(cmd==='reset'||cmd==='clear'){ Object.assign(seg,segBase()); save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); flashCli('✓ filtros reset'); return; }
   // /play<N> o /play <N> → reproduce el asset con número de importación N, POR ENCIMA
   // de cualquier filtro (forzado). #1 = el más antiguo, #N = el último importado.
   let pn=null;
@@ -598,8 +630,8 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
     if(rest.toLowerCase()==='off'){ exitDirect(); return; }
     if(!rest){ flashCli(directOn?'directo ON · /direct off':'uso: /direct <url>'); return; }
     enterDirect(rest); return; }
-  if(cmd==='reset'||cmd==='orden'){ customOrder=[]; save('adtv_order','[]'); seenSig=''; rebuild(true); flashCli('✓ orden reiniciado'); return; }
-  if(cmd==='help'||cmd==='?'){ flashCli(Object.keys(SITES).map(k=>'/'+k).join(' ')); return; }
+  if(cmd==='orden'){ customOrder=[]; save('adtv_order','[]'); seenSig=''; rebuild(true); flashCli('✓ orden reiniciado'); return; }
+  if(cmd==='help'||cmd==='?'){ flashCli('/playnext /playtagmusic /playtagtecnologia /audioon /audiooff /playcamera /stopcamera /vertical /tag /medio /slot /reload'); return; }
   if(SITES[cmd]){ flashCli('→ '+cmd); location.href=SITES[cmd]; return; }
   flashCli('?? /'+cmd+' · prueba /help');
 }
