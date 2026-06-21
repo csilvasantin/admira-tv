@@ -451,6 +451,23 @@ function emitFlush(){ _emitTimer=null; if(!_emitDirty) return;
 }
 window.addEventListener('beforeunload',()=>{ try{ emitFlush(); }catch(_){} });
 
+// ── /signage/now → ESPEJO EN VIVO: publica el asset que se está emitiendo AHORA para
+// que clearchannel.tv lo muestre como preview real de la pantalla. Funciona en
+// cualquier modo (local/sync/cámara) porque refleja el asset real, no un reloj.
+const NOW_API='https://api.admira.store/signage/now';
+let _nowItem=null, _nowKeep=null;
+function signageNowPush(it){
+  if(!it||!it.id||!scr.screen||!it.url) return;
+  const item={ id:it.id, url:it.url, type:it.type||'image', ar:(mupiAR||itemAR(it)||(9/16)),
+    title:(it.title||it.prompt||'').slice(0,80), ts:Date.now() };
+  _nowItem=item;
+  try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
+    body:JSON.stringify({ screen:scr.screen, item })}).catch(()=>{}); }catch(_){}
+  if(!_nowKeep) _nowKeep=setInterval(()=>{ if(!_nowItem) return; _nowItem.ts=Date.now();
+    try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
+      body:JSON.stringify({ screen:scr.screen, item:_nowItem })}).catch(()=>{}); }catch(_){} }, 60000);
+}
+
 // ── SEGMENTACIÓN POR CÁMARA (anonimizada, en el navegador, sin backend) ──────────
 // face-api.js detecta caras y estima edad/género SOLO en local: nunca sube imágenes,
 // solo cuenta agregada. Auto-fija seg.audience/seg.age → el loop emite contenido
@@ -569,6 +586,7 @@ function play(i, forced){
     startAdv(syncOn?syncRemainingMs():Math.max(3,cfg.audioSec)*1000);
   }
   try{ emitRecord(it); }catch(_){}
+  try{ signageNowPush(it); }catch(_){}
 }
 // antes de cada nuevo contenido, revisa si hay novedades en stock (nuevas
 // importaciones o tags/categorías editados) — con throttle para no saturar.
