@@ -577,6 +577,31 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   flashCli('?? /'+cmd+' · prueba /help');
 }
 const _cliForm=$('railCli'); if(_cliForm) _cliForm.addEventListener('submit',e=>{ e.preventDefault(); const i=$('railCliIn'); runCli(i.value); i.value=''; });
+function bridgeOriginAllowed(origin){
+  return origin === 'https://www.xpaceos.com'
+    || origin === 'https://xpaceos.com'
+    || /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin || '');
+}
+function bridgeReply(event, ok, message){
+  try{ event.source.postMessage({ source:'admira-tv-canal', requestId:event.data&&event.data.requestId, ok, message }, event.origin); }catch(_){}
+}
+window.addEventListener('message',event=>{
+  if(!bridgeOriginAllowed(event.origin)) return;
+  const data=event.data||{};
+  if(data.source!=='xpaceos-robot-cli') return;
+  const raw=String(data.command||'').trim();
+  const cmd=raw.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
+  let ok=true, msg='ok';
+  try{
+    if(cmd==='playnext'||cmd==='next'){ next(); msg='▶ siguiente'; }
+    else if(cmd==='playprevious'||cmd==='playprev'||cmd==='previous'||cmd==='prev'){ prev(); msg='◀ anterior'; }
+    else if(cmd==='playfirst'||cmd==='first'){ if(!directOn&&playlist.length) play(0); msg='▶ primera'; }
+    else if(cmd==='playlast'||cmd==='last'){ if(!directOn&&playlist.length) play(playlist.length-1); msg='▶ última'; }
+    else if(cmd==='play'||/^play\d+$/.test(cmd)){ runCli(raw); msg='▶ '+raw.replace(/^\//,''); }
+    else { ok=false; msg='unsupported command'; }
+  }catch(e){ ok=false; msg=(e&&e.message)||'command failed'; }
+  bridgeReply(event,ok,msg);
+});
 window.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
   // Flechas: → siguiente · ← anterior · ↑ primera · ↓ última (de la cola actual)
