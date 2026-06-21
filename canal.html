@@ -85,12 +85,13 @@
   #stage img.pixel{ object-fit:contain; image-rendering:pixelated; background:#0a140a; }
   .empty{ opacity:.5; letter-spacing:.22em; text-align:center; padding:24px; animation:blink 1.5s steps(2) infinite; }
   @keyframes blink{ 50%{ opacity:.15 } }
-  .audio-card{ display:grid; gap:22px; place-items:center; text-align:center; padding:32px; }
-  .audio-card .ico{ font-size:64px; color:var(--blue); text-shadow:0 0 24px var(--blue); }
-  .audio-card strong{ font-size:18px; letter-spacing:.06em; color:#eafff0; }
-  .audio-card .wave{ display:flex; gap:5px; height:46px; align-items:flex-end; }
-  .audio-card .wave i{ width:6px; background:var(--grn); border-radius:3px; animation:wv 1s ease-in-out infinite; }
+  .audio-card{ display:grid; gap:20px; place-items:center; align-content:center; text-align:center; padding:24px; height:100%; }
+  .audio-card .ico{ font-size:78px; line-height:1; color:var(--blue); text-shadow:0 0 34px var(--blue),0 0 10px var(--blue); animation:notePulse 2.2s ease-in-out infinite; }
+  .audio-card strong{ font-size:13px; font-weight:600; letter-spacing:.05em; color:#cfe8ff; opacity:.78; max-width:86%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .audio-card .wave{ display:flex; gap:5px; height:42px; align-items:flex-end; }
+  .audio-card .wave i{ width:6px; background:var(--grn); border-radius:3px; box-shadow:0 0 10px var(--grn); animation:wv 1s ease-in-out infinite; }
   body.paused .audio-card .wave i{ animation-play-state:paused; }
+  @keyframes notePulse{ 0%,100%{ transform:translateY(0) scale(1); opacity:.92 } 50%{ transform:translateY(-4px) scale(1.07); opacity:1 } }
   @keyframes wv{ 0%,100%{ height:10px } 50%{ height:46px } }
   #top{ position:absolute; left:0; right:0; top:0; z-index:3; padding:18px 18px 30px; display:flex; justify-content:space-between; align-items:flex-start;
     background:linear-gradient(180deg,rgba(0,0,0,.8),transparent); }
@@ -138,6 +139,7 @@
   .clean #hud,
   .clean #bar,
   .clean #tap,
+  .clean #camHud,
   .clean #seg{ display:none!important; }
   .clean #mupi::after{ background:repeating-linear-gradient(180deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px); }
 </style>
@@ -587,8 +589,8 @@ function play(i, forced){
     const im=document.createElement('img'); im.src=it.url; im.alt=title; if(it.type==='twin-npc') im.className='pixel';
     im.onerror=()=>setTimeout(next,600); stage.appendChild(im); startAdv(syncOn?syncRemainingMs():Math.max(2,cfg.imgSec)*1000);
   } else {
-    stage.innerHTML='<div class="audio-card"><div class="ico">♪</div><strong>'+title+'</strong><div class="wave">'
-      +Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div></div>';
+    stage.innerHTML='<div class="audio-card"><div class="ico">♫</div><div class="wave">'
+      +Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div><strong>'+title+'</strong></div>';
     const a=document.createElement('audio'); a.src=it.url; a.autoplay=true; a.onerror=()=>setTimeout(next,600); a.onended=()=>syncOn?play(syncIndex()):next();
     mediaEl=a; applyAudio(); stage.querySelector('.audio-card').appendChild(a);
     a.play().then(()=>tap.classList.remove('show')).catch(()=>{ if(!muted) tap.classList.add('show'); });
