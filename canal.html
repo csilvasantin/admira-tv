@@ -235,14 +235,17 @@ clock(); setInterval(clock,1000);
 function setLive(t,ok){ liveEl.textContent=t; liveEl.style.color=ok?'var(--air)':'#ff8e3c'; }
 function madridSlot(){ let h=12; try{ h=+new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ h=new Date().getHours(); } return h<12?'manana':h<16?'mediodia':h<21?'tarde':'noche'; }
 function screenLbl(){ $('screenLbl').textContent = scr.name ? ('📍 '+scr.name+(scr.screen?(' · '+scr.screen):'')) : (scr.screen?('📍 '+scr.screen):''); }
+function normTag(v){ return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+function canonicalPlayTag(v){ const t=normTag(v).replace(/^#/,'').replace(/\s+/g,'-'); if(['music','musica','muscia'].includes(t)) return 'musica'; if(['tecnologia','technology','tech'].includes(t)) return 'tecnologia'; return t; }
+function tagNeedles(v){ const t=canonicalPlayTag(v); if(t==='musica') return ['musica','music','muscia']; if(t==='tecnologia') return ['tecnologia','technology','tech']; return [t]; }
 function matchesSeg(it,s){ const k=KIND[it.type];
   if(s.medio!=='all'&&k!==s.medio) return false;
   if(s.audience!=='all'){ const a=it.audience; if(a&&a!=='all'&&a!==s.audience) return false; }
   if(s.category!=='all'){ if(it.category&&it.category!==s.category) return false; }
   if(s.age!=='all'){ const g=it.ageBucket; if(g&&g!==s.age) return false; }
   if(s.slot!=='all'){ const want=s.slot==='auto'?madridSlot():s.slot; const ts=it.timeSlot; if(ts&&ts!==want) return false; }
-  if(s.tag){ const tg=(it.tags||[]).map(x=>String(x).toLowerCase()); if(!tg.some(t=>t.includes(s.tag))) return false; }
-  if(s.format){ const tg=(it.tags||[]).map(x=>String(x).toLowerCase()); if(!tg.includes(s.format)) return false; } return true; }
+  if(s.tag){ const tg=(it.tags||[]).map(normTag), needles=tagNeedles(s.tag); if(!tg.some(t=>needles.some(n=>t.includes(n)))) return false; }
+  if(s.format){ const tg=(it.tags||[]).map(normTag); if(!tg.includes(normTag(s.format))) return false; } return true; }
 function matches(it){ return matchesSeg(it,seg); }
 function applyAudio(){ if(mediaEl&&'muted'in mediaEl){ mediaEl.muted=muted; mediaEl.volume=volume; } $('mute').textContent=(muted||volume===0)?'🔇':(volume<0.5?'🔉':'🔊'); $('vol').value=volume; save('adtv_muted',muted?'1':'0'); save('adtv_vol',String(volume)); }
 
@@ -534,6 +537,22 @@ const SITES={
 };
 function flashCli(msg){ const i=$('railCliIn'); if(!i) return; if(!i.dataset.ph) i.dataset.ph=i.placeholder; i.placeholder=msg; clearTimeout(i._t); i._t=setTimeout(()=>{ i.placeholder=i.dataset.ph; },2400); }
 const IMPORT_URL='https://api.admira.store/tube/import';
+function parsePlayTag(raw,cmd){
+  const base=String(raw||'').trim().replace(/^\//,'');
+  const parts=base.split(/\s+/);
+  const first=(parts.shift()||'').toLowerCase();
+  const command=(cmd||first).toLowerCase();
+  if(command==='playtag') return canonicalPlayTag(parts.join(' '));
+  if(command.indexOf('playtag')===0) return canonicalPlayTag(command.slice(7)+(parts.length?(' '+parts.join(' ')):''));
+  return '';
+}
+function applyPlayTag(tag){
+  const clean=canonicalPlayTag(tag);
+  if(!clean) return 0;
+  if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
+  seg.tag=clean; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true);
+  return playlist.length;
+}
 function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   const cmd=v.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
   // navegación de la cola por comando (equivalente a las flechas)
@@ -541,6 +560,8 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='playprevious'||cmd==='playprev'||cmd==='previous'||cmd==='prev'){ prev(); flashCli('◀ anterior'); return; }
   if(cmd==='playfirst'||cmd==='first'){ if(!directOn&&playlist.length) play(0); flashCli('▶ primera'); return; }
   if(cmd==='playlast'||cmd==='last'){ if(!directOn&&playlist.length) play(playlist.length-1); flashCli('▶ última'); return; }
+  const playTag=parsePlayTag(v,cmd);
+  if(playTag){ const n=applyPlayTag(playTag); flashCli('▶ tag '+canonicalPlayTag(playTag)+' · '+n+' assets'); return; }
   // /play<N> o /play <N> → reproduce el asset con número de importación N, POR ENCIMA
   // de cualquier filtro (forzado). #1 = el más antiguo, #N = el último importado.
   let pn=null;
@@ -597,6 +618,7 @@ window.addEventListener('message',event=>{
     else if(cmd==='playprevious'||cmd==='playprev'||cmd==='previous'||cmd==='prev'){ prev(); msg='◀ anterior'; }
     else if(cmd==='playfirst'||cmd==='first'){ if(!directOn&&playlist.length) play(0); msg='▶ primera'; }
     else if(cmd==='playlast'||cmd==='last'){ if(!directOn&&playlist.length) play(playlist.length-1); msg='▶ última'; }
+    else if(parsePlayTag(raw,cmd)){ const tag=parsePlayTag(raw,cmd); const n=applyPlayTag(tag); msg='▶ tag '+canonicalPlayTag(tag)+' · '+n+' assets'; }
     else if(cmd==='play'||/^play\d+$/.test(cmd)){ runCli(raw); msg='▶ '+raw.replace(/^\//,''); }
     else { ok=false; msg='unsupported command'; }
   }catch(e){ ok=false; msg=(e&&e.message)||'command failed'; }
