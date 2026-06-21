@@ -455,7 +455,7 @@ window.addEventListener('beforeunload',()=>{ try{ emitFlush(); }catch(_){} });
 // que clearchannel.tv lo muestre como preview real de la pantalla. Funciona en
 // cualquier modo (local/sync/cámara) porque refleja el asset real, no un reloj.
 const NOW_API='https://api.admira.store/signage/now';
-let _nowItem=null, _nowKeep=null;
+let _nowItem=null, _nowKeep=null, _lastAud=null;
 function _postNow(item){ try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
   body:JSON.stringify({ screen:scr.screen, item })}).catch(()=>{}); }catch(_){} }
 function signageNowPush(it){
@@ -465,9 +465,15 @@ function signageNowPush(it){
   // calcula la posición en vivo (now-startedAt) y hace seek. El keepalive refresca
   // solo `ts` (frescura), NUNCA startedAt, para no romper el sync de posición.
   const item={ id:it.id, url:it.url, type:it.type||'image', ar:(mupiAR||itemAR(it)||(9/16)),
-    title:(it.title||it.prompt||'').slice(0,80), dur:(it._dur||0), startedAt:now, ts:now };
+    title:(it.title||it.prompt||'').slice(0,80), dur:(it._dur||0), startedAt:now, ts:now, aud:_lastAud };
   _nowItem=item; _postNow(item);
   if(!_nowKeep) _nowKeep=setInterval(()=>{ if(!_nowItem) return; _nowItem.ts=Date.now(); _postNow(_nowItem); }, 60000);
+}
+// Audiencia por cámara → /signage/now (clearchannel la muestra bajo impr/day y CPM).
+// Se actualiza cuando cambia (no solo en cada pase) re-publicando el item actual.
+function setNowAudience(a){
+  _lastAud=a;
+  if(_nowItem){ _nowItem.aud=a; _nowItem.ts=Date.now(); _postNow(_nowItem); }
 }
 
 // ── SEGMENTACIÓN POR CÁMARA (anonimizada, en el navegador, sin backend) ──────────
@@ -498,7 +504,7 @@ async function camStart(){ if(CAM.on) return; const sim=qs.get('simcam'); camHud
     CAM.on=true; save('adtv_cam','1'); const cb=$('f-cam'); if(cb) cb.checked=true; camLoop();
   }catch(e){ camHud('📷 sin cámara: '+((e&&e.message)||'error'),true); setTimeout(()=>camHud('',false),3500); CAM.on=false; const cb=$('f-cam'); if(cb) cb.checked=false; }
 }
-function camStop(){ CAM.on=false; save('adtv_cam','0'); if(CAM.timer){ clearTimeout(CAM.timer); CAM.timer=null; } if(CAM.raw){ try{ CAM.raw.getTracks().forEach(t=>t.stop()); }catch(_){} CAM.raw=null; } camHud('',false); camApply('all','all'); }
+function camStop(){ CAM.on=false; save('adtv_cam','0'); if(CAM.timer){ clearTimeout(CAM.timer); CAM.timer=null; } if(CAM.raw){ try{ CAM.raw.getTracks().forEach(t=>t.stop()); }catch(_){} CAM.raw=null; } camHud('',false); camApply('all','all'); try{ setNowAudience(null); }catch(_){} }
 async function camDetect(){ const sim=qs.get('simcam');
   if(sim!=null){ if(sim==='0'||sim==='none'||sim==='') return {faces:0}; const p=sim.split('_'); return {faces:1, age:p[0]||'adulto', gender:(p[1]==='m'?'m':'f')}; }
   const fa=CAM.fa; if(!fa||!CAM.video) return {faces:0};
@@ -511,6 +517,7 @@ async function camLoop(){ if(!CAM.on) return;
   try{ const d=await camDetect();
     const aud=d.faces?d.gender:'all', age=d.faces?d.age:'all';
     camHud(d.faces?('👥 '+d.faces+' · '+(AGE_LBL[age]||age)+' · '+(aud==='f'?'♀ Mujer':'♂ Hombre')):'👥 0 · sin audiencia',true);
+    try{ setNowAudience({ cam:true, faces:d.faces||0, gender:d.faces?d.gender:null, age:d.faces?d.age:null }); }catch(_){}
     if(camStable(aud+'_'+age)) camApply(aud,age);   // solo cambia tras 2 lecturas estables
   }catch(_){}
   CAM.timer=setTimeout(camLoop,3500);
