@@ -248,6 +248,12 @@ function matchesSeg(it,s){ const k=KIND[it.type];
   if(s.format){ const tg=(it.tags||[]).map(normTag); if(!tg.includes(normTag(s.format))) return false; } return true; }
 function matches(it){ return matchesSeg(it,seg); }
 function applyAudio(){ if(mediaEl&&'muted'in mediaEl){ mediaEl.muted=muted; mediaEl.volume=volume; } $('mute').textContent=(muted||volume===0)?'🔇':(volume<0.5?'🔉':'🔊'); $('vol').value=volume; save('adtv_muted',muted?'1':'0'); save('adtv_vol',String(volume)); }
+function setAudio(on, level){
+  muted=!on;
+  if(on) volume=Math.max(0.1,Math.min(1,parseFloat(level)||volume||1));
+  applyAudio();
+  if(on&&mediaEl&&mediaEl.play&&!paused) mediaEl.play().catch(()=>{ try{ tap.classList.add('show'); }catch(_){} });
+}
 
 // barra/avance temporizado (imagen y audio) — pausable
 function stopBar(){ if(barTimer){ clearInterval(barTimer); barTimer=null; } }
@@ -618,6 +624,8 @@ window.addEventListener('message',event=>{
     else if(cmd==='playprevious'||cmd==='playprev'||cmd==='previous'||cmd==='prev'){ prev(); msg='◀ anterior'; }
     else if(cmd==='playfirst'||cmd==='first'){ if(!directOn&&playlist.length) play(0); msg='▶ primera'; }
     else if(cmd==='playlast'||cmd==='last'){ if(!directOn&&playlist.length) play(playlist.length-1); msg='▶ última'; }
+    else if(cmd==='audioon'||cmd==='soundon'||cmd==='unmute'||cmd==='audio'){ setAudio(true,data.volume); msg='🔊 audio on'; }
+    else if(cmd==='audiooff'||cmd==='soundoff'||cmd==='mute'){ setAudio(false); msg='🔇 audio off'; }
     else if(parsePlayTag(raw,cmd)){ const tag=parsePlayTag(raw,cmd); const n=applyPlayTag(tag); msg='▶ tag '+canonicalPlayTag(tag)+' · '+n+' assets'; }
     else if(cmd==='play'||/^play\d+$/.test(cmd)){ runCli(raw); msg='▶ '+raw.replace(/^\//,''); }
     else { ok=false; msg='unsupported command'; }
