@@ -224,8 +224,11 @@ const syncParam = qs.get('sincro') ?? qs.get('sync') ?? qs.get('syncro');
 const syncSlotSec = Math.max(5,Math.min(120,parseInt(qs.get('syncSlot')||LS('adtv_sync_slot','20'),10)||20));
 const SYNC_MASTER = 'www.admira.tv/canal';
 const SYNC_MASTER_MAX = 50;
-let playoutMode = canonicalAdmiraMode(modeParam || LS('adtv_mode','local'));
+const CANONICAL_SYNC_PARAMS = ['mode','admiraMode','playout','sincro','sync','syncro','clean','embed','chrome','screen','circuit','xpl','direct','tag','medio','media','format','slot','category','audience','age'];
+const isCanonicalSyncMaster = !CANONICAL_SYNC_PARAMS.some(k=>qs.has(k));
+let playoutMode = canonicalAdmiraMode(modeParam || (isCanonicalSyncMaster ? 'sync' : LS('adtv_mode','local')));
 let syncOn = syncParam==null ? (playoutMode==='sync'||LS('adtv_sincro','0')==='1') : !/^(0|off|false|no)$/i.test(String(syncParam));
+if(isCanonicalSyncMaster) syncOn=true;
 if(syncOn) playoutMode='sync';
 if(playoutMode==='conditional') syncOn=false;
 save('adtv_sync_slot',String(syncSlotSec));
@@ -240,6 +243,7 @@ let directOn=false; try{ if(localStorage.getItem('adtv_direct')) directOn=true; 
 if(syncOn&&directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
 let applyingXpl=false;
 let paused=false, usesAdv=false, advTotal=0, advElapsed=0, advStart=0;
+let syncTimeOffset=0;
 const $ = id => document.getElementById(id);
 const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=$('bar'), tap=$('tap');
 
@@ -273,10 +277,11 @@ function setAudio(on, level){
 function stopBar(){ if(barTimer){ clearInterval(barTimer); barTimer=null; } }
 function barFromAdv(){ const el=advElapsed+(paused?0:Date.now()-advStart); bar.style.width=Math.min(100,el/advTotal*100)+'%'; }
 function startAdv(ms){ usesAdv=true; advTotal=ms; advElapsed=0; advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,ms); stopBar(); barTimer=setInterval(barFromAdv,120); }
+function syncNow(){ return Date.now()+syncTimeOffset; }
 function syncSlotMs(){ return syncSlotSec*1000; }
-function syncElapsedMs(){ return Date.now()%syncSlotMs(); }
+function syncElapsedMs(){ return syncNow()%syncSlotMs(); }
 function syncRemainingMs(){ return Math.max(300,syncSlotMs()-syncElapsedMs()); }
-function syncIndex(){ return playlist.length ? Math.floor(Date.now()/syncSlotMs())%playlist.length : 0; }
+function syncIndex(){ return playlist.length ? Math.floor(syncNow()/syncSlotMs())%playlist.length : 0; }
 function syncMasterOrder(){ return defaultOrder(all.filter(it=>!it._grid)).slice(0,SYNC_MASTER_MAX); }
 function xplUrl(){
   const base=qs.get('xpl')||LS('adtv_xpl','https://xpl.xpaceos.com/admira-tv.json');
@@ -609,7 +614,18 @@ function rebuild(restart){ playlist=syncOn ? syncMasterOrder() : all.filter(matc
 async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   if(showStatus) setStockStatus('checking');                  // 🟡 revisando stock
   try{
-  const r=await fetch(INDEX+'?t='+Date.now(),{cache:'no-store'}); const d=await r.json(); const items=d.items||(Array.isArray(d)?d:[]);
+  const _reqT=Date.now();
+  const r=await fetch(INDEX+'?t='+_reqT,{cache:'no-store'});
+  const _dateHdr=r.headers.get('date');
+  if(_dateHdr){
+    const _serverT=Date.parse(_dateHdr);
+    if(Number.isFinite(_serverT)){
+      const _midT=(_reqT+Date.now())/2;
+      const _nextOffset=_serverT-_midT;
+      syncTimeOffset=syncTimeOffset ? (syncTimeOffset*0.7+_nextOffset*0.3) : _nextOffset;
+    }
+  }
+  const d=await r.json(); const items=d.items||(Array.isArray(d)?d:[]);
   all=items.filter(i=>i&&MEDIA.includes(i.type)&&i.url).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   // número PERSISTENTE de cada asset (lo asigna el worker y va en el meta/stock). Para /play<N>.
   all.forEach(it=>{ it._num=it.num; });
