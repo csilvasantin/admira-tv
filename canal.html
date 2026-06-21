@@ -219,6 +219,11 @@ const cfg = { imgSec:+(qs.get('img')||LS('adtv_img',9)), audioSec:+(qs.get('audi
 const scr = { circuit: qs.get('circuit')||LS('adtv_circuit',''), screen: qs.get('screen')||LS('adtv_screen',''), name: LS('adtv_screenName','') };
 let muted  = qs.has('muted') ? qs.get('muted') !== '0' : (LS('adtv_muted','1'))==='1';
 let volume = Math.max(0,Math.min(1,parseFloat(qs.get('volume')||LS('adtv_vol','1'))));
+const syncParam = qs.get('sincro') ?? qs.get('sync') ?? qs.get('syncro');
+const syncSlotSec = Math.max(5,Math.min(120,parseInt(qs.get('syncSlot')||LS('adtv_sync_slot','20'),10)||20));
+const SYNC_MAX = 200;
+let syncOn = syncParam==null ? LS('adtv_sincro','0')==='1' : !/^(0|off|false|no)$/i.test(String(syncParam));
+save('adtv_sync_slot',String(syncSlotSec));
 
 let all=[], playlist=[], cur=-1, seenSig='', timer=null, barTimer=null, mediaEl=null, feedTimer=null;
 let customOrder=[]; try{ const o=JSON.parse(LS('adtv_order','[]')); if(Array.isArray(o)) customOrder=o; }catch(_){}
@@ -226,6 +231,7 @@ let _lastFeed=0;
 let dimCache={}; try{ const c=JSON.parse(LS('adtv_dims','{}')); if(c&&typeof c==='object') dimCache=c; }catch(_){}
 let pendingImport=null, _measuring=false, _statusT=null, _statusT2=null;
 let directOn=false; try{ if(localStorage.getItem('adtv_direct')) directOn=true; }catch(_){}
+if(syncOn&&directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
 let paused=false, usesAdv=false, advTotal=0, advElapsed=0, advStart=0;
 const $ = id => document.getElementById(id);
 const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=$('bar'), tap=$('tap');
@@ -259,6 +265,26 @@ function setAudio(on, level){
 function stopBar(){ if(barTimer){ clearInterval(barTimer); barTimer=null; } }
 function barFromAdv(){ const el=advElapsed+(paused?0:Date.now()-advStart); bar.style.width=Math.min(100,el/advTotal*100)+'%'; }
 function startAdv(ms){ usesAdv=true; advTotal=ms; advElapsed=0; advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,ms); stopBar(); barTimer=setInterval(barFromAdv,120); }
+function syncSlotMs(){ return syncSlotSec*1000; }
+function syncElapsedMs(){ return Date.now()%syncSlotMs(); }
+function syncRemainingMs(){ return Math.max(300,syncSlotMs()-syncElapsedMs()); }
+function syncIndex(){ return playlist.length ? Math.floor(Date.now()/syncSlotMs())%playlist.length : 0; }
+function disableAdmiraSync(){
+  if(!syncOn) return;
+  syncOn=false; save('adtv_sincro','0'); seenSig='';
+}
+function setAdmiraSync(on){
+  syncOn=!!on; save('adtv_sincro',syncOn?'1':'0'); seenSig='';
+  if(syncOn){
+    if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
+    customOrder=[]; save('adtv_order','[]');
+    rebuild(true);
+    flashCli('🔗 admiraTVsincro ON · '+syncSlotSec+'s');
+  } else {
+    rebuild(true);
+    flashCli('🔗 admiraTVsincro OFF');
+  }
+}
 
 function thumbHtml(it){ const k=KIND[it.type]||'image';
   if(k==='image') return '<img class="'+(it.type==='twin-npc'?'pixel':'')+'" src="'+it.url+'" alt="">';
@@ -278,6 +304,7 @@ function renderRail(){
 // reordenar la cola arrastrando (persiste el orden por id en localStorage)
 function moveItem(src,dst){
   if(src<0||dst<0||src>=playlist.length||dst>=playlist.length||src===dst) return;
+  disableAdmiraSync();
   const playing=playlist[cur];
   const [it]=playlist.splice(src,1); playlist.splice(dst,0,it);
   cur=Math.max(0,playlist.indexOf(playing));
@@ -439,6 +466,7 @@ function play(i, forced){
   if(forced){ it=forced; const fi=playlist.findIndex(p=>p&&p.id===it.id); if(fi>=0) cur=fi; } // /play<N>: por encima del filtro
   else {
     if(!playlist.length){ stage.innerHTML='<div class="empty">// sin media en este segmento</div>'; nowEl.textContent='// segmento vacío'; renderRail(); return; }
+    if(syncOn) i=syncIndex();
     cur=((i%playlist.length)+playlist.length)%playlist.length;
     it=playlist[cur];
   }
@@ -446,37 +474,38 @@ function play(i, forced){
   mupiAR=itemAR(it); fitMupi();   // marco 9:16 / 16:9 según el formato del contenido
   const title=(it.title||it.prompt||'sin título').replace(/\n/g,' ').slice(0,64);
   stage.innerHTML=''; nowEl.textContent='▶ '+title;
-  metaEl.textContent=it.type+(it._num?' · #'+it._num:'')+' · '+(cur+1)+'/'+playlist.length+' · '+(it.motor||'stock')+(it._dim?(' · '+it._dim.w+'×'+it._dim.h):'');
+  metaEl.textContent=(syncOn?'sincro · ':'')+it.type+(it._num?' · #'+it._num:'')+' · '+(cur+1)+'/'+playlist.length+' · '+(it.motor||'stock')+(it._dim?(' · '+it._dim.w+'×'+it._dim.h):'');
   renderRail();
   if(k==='video'){
     const v=document.createElement('video'); v.src=it.url; v.autoplay=true; v.playsInline=true; v.preload='auto';
-    v.onloadedmetadata=()=>{ if(v.duration&&isFinite(v.duration)) it._dur=Math.round(v.duration); };
-    v.onended=next; v.onerror=()=>setTimeout(next,600);
+    v.onloadedmetadata=()=>{ if(v.duration&&isFinite(v.duration)){ it._dur=Math.round(v.duration); if(syncOn&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,(syncElapsedMs()/1000)%v.duration); }catch(_){} } } };
+    v.onended=()=>syncOn?play(syncIndex()):next(); v.onerror=()=>setTimeout(next,600);
     v.ontimeupdate=()=>{ if(v.duration&&!paused) bar.style.width=(v.currentTime/v.duration*100)+'%'; };
     mediaEl=v; applyAudio(); stage.appendChild(v);
     v.play().then(()=>tap.classList.remove('show')).catch(()=>tap.classList.add('show'));
+    if(syncOn) timer=setTimeout(next,syncRemainingMs());
   } else if(k==='image'){
     const im=document.createElement('img'); im.src=it.url; im.alt=title; if(it.type==='twin-npc') im.className='pixel';
-    im.onerror=()=>setTimeout(next,600); stage.appendChild(im); startAdv(Math.max(2,cfg.imgSec)*1000);
+    im.onerror=()=>setTimeout(next,600); stage.appendChild(im); startAdv(syncOn?syncRemainingMs():Math.max(2,cfg.imgSec)*1000);
   } else {
     stage.innerHTML='<div class="audio-card"><div class="ico">♪</div><strong>'+title+'</strong><div class="wave">'
       +Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div></div>';
-    const a=document.createElement('audio'); a.src=it.url; a.autoplay=true; a.onerror=()=>setTimeout(next,600); a.onended=next;
+    const a=document.createElement('audio'); a.src=it.url; a.autoplay=true; a.onerror=()=>setTimeout(next,600); a.onended=()=>syncOn?play(syncIndex()):next();
     mediaEl=a; applyAudio(); stage.querySelector('.audio-card').appendChild(a);
     a.play().then(()=>tap.classList.remove('show')).catch(()=>{ if(!muted) tap.classList.add('show'); });
-    startAdv(Math.max(3,cfg.audioSec)*1000);
+    startAdv(syncOn?syncRemainingMs():Math.max(3,cfg.audioSec)*1000);
   }
   try{ emitRecord(it); }catch(_){}
 }
 // antes de cada nuevo contenido, revisa si hay novedades en stock (nuevas
 // importaciones o tags/categorías editados) — con throttle para no saturar.
-function next(){ if(directOn) return; if(Date.now()-_lastFeed>5000){ try{ loadFeed(false); }catch(_){} } play(cur+1); }
-function prev(){ if(directOn) return; play(cur-1); }
+function next(){ if(directOn) return; if(Date.now()-_lastFeed>5000){ try{ loadFeed(false); }catch(_){} } if(syncOn){ play(syncIndex()); return; } play(cur+1); }
+function prev(){ if(directOn) return; if(syncOn){ play(syncIndex()); return; } play(cur-1); }
 
 function setPaused(p){
   paused=p; document.body.classList.toggle('paused',p); $('pause').textContent=p?'▶':'⏸';
   if(p){ if(mediaEl&&mediaEl.pause) mediaEl.pause(); if(usesAdv){ advElapsed+=Date.now()-advStart; clearTimeout(timer); timer=null; } stopBar(); }
-  else { if(mediaEl&&mediaEl.play) mediaEl.play().catch(()=>{}); if(usesAdv){ advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,Math.max(0,advTotal-advElapsed)); stopBar(); barTimer=setInterval(barFromAdv,120); } }
+  else { if(syncOn){ play(syncIndex()); return; } if(mediaEl&&mediaEl.play) mediaEl.play().catch(()=>{}); if(usesAdv){ advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,Math.max(0,advTotal-advElapsed)); stopBar(); barTimer=setInterval(barFromAdv,120); } }
 }
 
 // Orden POR DEFECTO: por categoría y fecha de importación (más reciente primero).
@@ -491,7 +520,14 @@ function defaultOrder(arr){
     return String(b.createdAt||'').localeCompare(String(a.createdAt||''));
   });
 }
-function rebuild(restart){ playlist=all.filter(matches).slice(0,Math.max(1,cfg.max));
+function rebuild(restart){ playlist=syncOn ? defaultOrder(all).slice(0,SYNC_MAX) : all.filter(matches).slice(0,Math.max(1,cfg.max));
+  if(syncOn){
+    $('segCount').textContent=playlist.length+' en sincro global';
+    setLive('SINCRO · '+playlist.length+' en loop', playlist.length>0);
+    renderChan();
+    play(syncIndex());
+    return;
+  }
   if(customOrder.length){ const pos=id=>{ const k=customOrder.indexOf(id); return k<0?1e9:k; }; playlist.sort((a,b)=>pos(a.id)-pos(b.id)); }
   else { playlist=defaultOrder(playlist); }   // categoría + fecha (último import primero)
   playlist=gridWeave(playlist);   // la parrilla vendida/propia entra a cadencia fija
@@ -526,7 +562,7 @@ function restartFeed(){ if(feedTimer) clearInterval(feedTimer); feedTimer=setInt
 $('prev').onclick=prev; $('next').onclick=next; $('pause').onclick=()=>setPaused(!paused);
 $('mute').onclick=()=>{ muted=!muted; if(!muted&&volume===0) volume=0.6; if(!muted&&mediaEl&&mediaEl.play&&!paused) mediaEl.play().catch(()=>{}); applyAudio(); };
 $('vol').oninput=e=>{ volume=parseFloat(e.target.value); muted=(volume===0); applyAudio(); };
-$('rail').addEventListener('click',e=>{ const it=e.target.closest('.rail-it'); if(!it) return; if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} } play(+it.dataset.i); });
+$('rail').addEventListener('click',e=>{ const it=e.target.closest('.rail-it'); if(!it) return; disableAdmiraSync(); if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} } play(+it.dataset.i); });
 // ── reordenar la cola arrastrando ──
 let _dragSrc=-1; const _railHost=$('railItems');
 if(_railHost){
@@ -555,11 +591,13 @@ function parsePlayTag(raw,cmd){
 function applyPlayTag(tag){
   const clean=canonicalPlayTag(tag);
   if(!clean) return 0;
+  disableAdmiraSync();
   if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
   seg.tag=clean; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true);
   return playlist.length;
 }
 function applyCliSegment(msg){
+  disableAdmiraSync();
   if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
   save('adtv_seg',JSON.stringify(seg));
   syncSegPanel();
@@ -578,6 +616,11 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='audioon'||cmd==='soundon'||cmd==='unmute'||(cmd==='audio'&&rest.toLowerCase()!=='off')){ setAudio(true,rest); flashCli('🔊 audio on'); return; }
   if(cmd==='audiooff'||cmd==='soundoff'||cmd==='muteoff'||(cmd==='audio'&&rest.toLowerCase()==='off')){ setAudio(false); flashCli('🔇 audio off'); return; }
   if(cmd==='mute'||cmd==='muted'){ setAudio(rest==='0'); flashCli(rest==='0'?'🔊 audio on':'🔇 audio off'); return; }
+  if(cmd==='admiratvsincro'||cmd==='admiratvsync'||cmd==='sincro'||cmd==='sync'){
+    setAdmiraSync(!/^(off|0|false|no)$/i.test(rest));
+    return;
+  }
+  if(cmd==='admiratvsincrooff'||cmd==='sincrooff'||cmd==='syncoff'){ setAdmiraSync(false); return; }
   if(cmd==='playcamera'||cmd==='camera'){ camStart(); flashCli('📷 camera on'); return; }
   if(cmd==='stopcamera'||cmd==='camerastop'){ camStop(); flashCli('📷 camera off'); return; }
   const playTag=parsePlayTag(v,cmd);
@@ -599,7 +642,7 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='max'){ cfg.max=Math.max(1,Math.min(200,parseInt(rest,10)||cfg.max||50)); save('adtv_max',cfg.max); seenSig=''; rebuild(true); flashCli('✓ max '+cfg.max); return; }
   if(cmd==='refresh'){ cfg.refreshSec=Math.max(10,Math.min(900,parseInt(rest,10)||cfg.refreshSec||30)); save('adtv_refresh',cfg.refreshSec); restartFeed(); flashCli('✓ refresh '+cfg.refreshSec+'s'); return; }
   if(cmd==='screen'){ scr.screen=rest||scr.screen; save('adtv_screen',scr.screen); const fs=$('f-screen'); if(fs) fs.value=scr.screen; screenLbl(); flashCli('✓ screen '+scr.screen); return; }
-  if(cmd==='reset'||cmd==='clear'){ Object.assign(seg,segBase()); save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); flashCli('✓ filtros reset'); return; }
+  if(cmd==='reset'||cmd==='clear'){ disableAdmiraSync(); Object.assign(seg,segBase()); save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); flashCli('✓ filtros reset'); return; }
   // /play<N> o /play <N> → reproduce el asset con número de importación N, POR ENCIMA
   // de cualquier filtro (forzado). #1 = el más antiguo, #N = el último importado.
   let pn=null;
@@ -631,7 +674,7 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
     if(!rest){ flashCli(directOn?'directo ON · /direct off':'uso: /direct <url>'); return; }
     enterDirect(rest); return; }
   if(cmd==='orden'){ customOrder=[]; save('adtv_order','[]'); seenSig=''; rebuild(true); flashCli('✓ orden reiniciado'); return; }
-  if(cmd==='help'||cmd==='?'){ flashCli('/playnext /playtagmusic /playtagtecnologia /audioon /audiooff /playcamera /stopcamera /vertical /tag /medio /slot /reload'); return; }
+  if(cmd==='help'||cmd==='?'){ flashCli('/admiraTVsincro /playnext /playtagmusic /audioon /audiooff /playcamera /vertical /tag /reload'); return; }
   if(SITES[cmd]){ flashCli('→ '+cmd); location.href=SITES[cmd]; return; }
   flashCli('?? /'+cmd+' · prueba /help');
 }
@@ -658,6 +701,12 @@ window.addEventListener('message',event=>{
     else if(cmd==='playlast'||cmd==='last'){ if(!directOn&&playlist.length) play(playlist.length-1); msg='▶ última'; }
     else if(cmd==='audioon'||cmd==='soundon'||cmd==='unmute'||cmd==='audio'){ setAudio(true,data.volume); msg='🔊 audio on'; }
     else if(cmd==='audiooff'||cmd==='soundoff'||cmd==='mute'){ setAudio(false); msg='🔇 audio off'; }
+    else if(cmd==='admiratvsincro'||cmd==='admiratvsync'||cmd==='sincro'||cmd==='sync'){
+      const rest=raw.replace(/^\s*\/?\S+\s*/,'').trim();
+      setAdmiraSync(!/^(off|0|false|no)$/i.test(rest));
+      msg=syncOn?'🔗 admiraTVsincro ON':'🔗 admiraTVsincro OFF';
+    }
+    else if(cmd==='admiratvsincrooff'||cmd==='sincrooff'||cmd==='syncoff'){ setAdmiraSync(false); msg='🔗 admiraTVsincro OFF'; }
     else if(parsePlayTag(raw,cmd)){ const tag=parsePlayTag(raw,cmd); const n=applyPlayTag(tag); msg='▶ tag '+canonicalPlayTag(tag)+' · '+n+' assets'; }
     else if(cmd==='play'||/^play\d+$/.test(cmd)){ runCli(raw); msg='▶ '+raw.replace(/^\//,''); }
     else { ok=false; msg='unsupported command'; }
@@ -764,6 +813,7 @@ function directEmbed(url){
 }
 function enterDirect(url){
   const m=String(url||'').match(/https?:\/\/\S+/); if(!m){ flashCli('uso: /direct <url>'); return; }
+  disableAdmiraSync();
   const u=m[0]; directOn=true; try{ save('adtv_direct',u); }catch(_){}
   clearTimeout(timer); stopBar(); bar.style.width='0'; mediaEl=null; tap.classList.remove('show');
   paused=false; document.body.classList.remove('paused'); $('pause').textContent='⏸';
@@ -797,14 +847,15 @@ function syncSegPanel(){ ['medio','audience','category','age','slot'].forEach(k=
 // El TIPO de contenido (medio/categoría) y el METATAG COMBINAN. Los temas se
 // recalculan según el tipo elegido (solo los que tiene ese tipo, con su conteo).
 function applyPlaylist(pl){
+  disableAdmiraSync();
   if(pl.id==='all'){ seg.medio='all'; seg.category='all'; }
   else { const o=pl.seg||{}; if('medio'in o) seg.medio=o.medio; if('category'in o) seg.category=o.category; }
   if(seg.tag){ const cc=tagCounts(); if(!cc[seg.tag]) seg.tag=''; }       // el tema ya no existe en este tipo → se suelta
   if(seg.format){ const fc=formatCounts(); if(!fc[seg.format]) seg.format=''; } // el formato tampoco → se suelta
   save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true);
 }
-function applyTheme(tag){ seg.tag=tag||''; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); }
-function applyFormat(f){ seg.format=f||''; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); }
+function applyTheme(tag){ disableAdmiraSync(); seg.tag=tag||''; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); }
+function applyFormat(f){ disableAdmiraSync(); seg.format=f||''; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); }
 function isPlaylistActive(pl){ const o=pl.seg||{};
   if(pl.id==='all') return seg.medio==='all'&&seg.category==='all';
   if('medio'in o) return seg.medio===o.medio;
