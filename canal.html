@@ -456,16 +456,18 @@ window.addEventListener('beforeunload',()=>{ try{ emitFlush(); }catch(_){} });
 // cualquier modo (local/sync/cámara) porque refleja el asset real, no un reloj.
 const NOW_API='https://api.admira.store/signage/now';
 let _nowItem=null, _nowKeep=null;
+function _postNow(item){ try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
+  body:JSON.stringify({ screen:scr.screen, item })}).catch(()=>{}); }catch(_){} }
 function signageNowPush(it){
   if(!it||!it.id||!scr.screen||!it.url) return;
+  const now=Date.now();
+  // startedAt = instante real en que ESTA pantalla empezó el asset → el preview
+  // calcula la posición en vivo (now-startedAt) y hace seek. El keepalive refresca
+  // solo `ts` (frescura), NUNCA startedAt, para no romper el sync de posición.
   const item={ id:it.id, url:it.url, type:it.type||'image', ar:(mupiAR||itemAR(it)||(9/16)),
-    title:(it.title||it.prompt||'').slice(0,80), ts:Date.now() };
-  _nowItem=item;
-  try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
-    body:JSON.stringify({ screen:scr.screen, item })}).catch(()=>{}); }catch(_){}
-  if(!_nowKeep) _nowKeep=setInterval(()=>{ if(!_nowItem) return; _nowItem.ts=Date.now();
-    try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
-      body:JSON.stringify({ screen:scr.screen, item:_nowItem })}).catch(()=>{}); }catch(_){} }, 60000);
+    title:(it.title||it.prompt||'').slice(0,80), dur:(it._dur||0), startedAt:now, ts:now };
+  _nowItem=item; _postNow(item);
+  if(!_nowKeep) _nowKeep=setInterval(()=>{ if(!_nowItem) return; _nowItem.ts=Date.now(); _postNow(_nowItem); }, 60000);
 }
 
 // ── SEGMENTACIÓN POR CÁMARA (anonimizada, en el navegador, sin backend) ──────────
