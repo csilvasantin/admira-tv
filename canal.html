@@ -683,6 +683,14 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='audioon'||cmd==='soundon'||cmd==='unmute'||(cmd==='audio'&&rest.toLowerCase()!=='off')){ setAudio(true,rest); flashCli('🔊 audio on'); return; }
   if(cmd==='audiooff'||cmd==='soundoff'||cmd==='muteoff'||(cmd==='audio'&&rest.toLowerCase()==='off')){ setAudio(false); flashCli('🔇 audio off'); return; }
   if(cmd==='mute'||cmd==='muted'){ setAudio(rest==='0'); flashCli(rest==='0'?'🔊 audio on':'🔇 audio off'); return; }
+  if(cmd==='admiratv'){
+    const mode=rest.toLowerCase();
+    if(['sincro','sync','sincronizado'].includes(mode)){ setAdmiraMode('sync'); return; }
+    if(['cond','condicional','conditional','xpl'].includes(mode)){ setAdmiraMode('conditional'); return; }
+    if(['local','off'].includes(mode)){ setAdmiraMode('local'); return; }
+    flashCli('uso: /admiraTV sincro|condicional|local');
+    return;
+  }
   if(cmd==='admiratvsincro'||cmd==='admiratvsync'||cmd==='sincro'||cmd==='sync'){ setAdmiraMode(/^(off|0|false|no|local)$/i.test(rest)?'local':'sync'); return; }
   if(cmd==='admiratvcondicional'||cmd==='admiratvconditional'||cmd==='condicional'||cmd==='conditional'||cmd==='xpl'){ setAdmiraMode('conditional'); return; }
   if(cmd==='admiratvlocal'||cmd==='local'){ setAdmiraMode('local'); return; }
@@ -767,6 +775,13 @@ window.addEventListener('message',event=>{
     else if(cmd==='playlast'||cmd==='last'){ if(!directOn&&playlist.length) play(playlist.length-1); msg='▶ última'; }
     else if(cmd==='audioon'||cmd==='soundon'||cmd==='unmute'||cmd==='audio'){ setAudio(true,data.volume); msg='🔊 audio on'; }
     else if(cmd==='audiooff'||cmd==='soundoff'||cmd==='mute'){ setAudio(false); msg='🔇 audio off'; }
+    else if(cmd==='admiratv'){
+      const rest=raw.replace(/^\s*\/?\S+\s*/,'').trim().toLowerCase();
+      if(['sincro','sync','sincronizado'].includes(rest)){ setAdmiraMode('sync'); msg='🔗 admiraTVsincro'; }
+      else if(['cond','condicional','conditional','xpl'].includes(rest)){ setAdmiraMode('conditional'); msg='◆ admiraTVcondicional'; }
+      else if(['local','off'].includes(rest)){ setAdmiraMode('local'); msg='● admiraTVlocal'; }
+      else { ok=false; msg='usage: /admiraTV sincro|condicional|local'; }
+    }
     else if(cmd==='admiratvsincro'||cmd==='admiratvsync'||cmd==='sincro'||cmd==='sync'){
       const rest=raw.replace(/^\s*\/?\S+\s*/,'').trim();
       setAdmiraMode(/^(off|0|false|no|local)$/i.test(rest)?'local':'sync');
