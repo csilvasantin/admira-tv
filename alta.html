@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Alta de equipo · Admira</title>
+<meta name="description" content="Da de alta este dispositivo como pantalla MUPI del circuito Admira: detecta su ubicación, lo registra y arranca el canal.">
+<style>
+  :root{ --bg:#070d12; --panel:#0d1722; --line:#1d2c3a; --txt:#e8f1f6; --mut:#7f97a6; --acc:#34d0c0; --good:#3ddc84; --bad:#ff6b6b; }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#0e1c28,var(--bg));color:var(--txt);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100%}
+  .wrap{max-width:480px;margin:0 auto;padding:32px 20px 60px}
+  .brand{font-size:12px;letter-spacing:3px;color:var(--mut);text-transform:uppercase;margin-bottom:6px}
+  h1{font-size:24px;margin:0 0 4px;font-weight:650}
+  .sub{color:var(--mut);font-size:13px;margin:0 0 24px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
+  label{display:block;font-size:12px;letter-spacing:.4px;color:var(--mut);text-transform:uppercase;margin:0 0 6px}
+  input{width:100%;background:#08121b;border:1px solid var(--line);border-radius:9px;color:var(--txt);padding:11px 12px;font-size:15px;margin-bottom:16px}
+  input:focus{outline:none;border-color:var(--acc)}
+  .row{display:flex;gap:10px}
+  .row>div{flex:1}
+  .hint{font-size:12px;color:var(--mut);margin:-10px 0 16px}
+  .id-prev{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--acc)}
+  button{width:100%;border:0;border-radius:10px;padding:13px;font-size:15px;font-weight:600;cursor:pointer}
+  .geo{background:#10212e;color:var(--txt);border:1px solid var(--line);margin-bottom:8px}
+  .geo.ok{border-color:var(--good);color:var(--good)}
+  .go{background:linear-gradient(180deg,var(--acc),#1ba99a);color:#04201d}
+  .go:disabled{opacity:.45;cursor:not-allowed}
+  .msg{font-size:13px;margin:10px 0 0;min-height:18px}
+  .msg.err{color:var(--bad)}
+  .msg.ok{color:var(--good)}
+  .done{display:none}
+  .done.show{display:block}
+  .done a.btn{display:block;text-align:center;text-decoration:none;background:var(--good);color:#042310;border-radius:10px;padding:13px;font-weight:650;margin-bottom:10px}
+  .done a.alt{display:block;text-align:center;text-decoration:none;color:var(--acc);font-size:14px;padding:8px}
+  code{background:#08121b;border:1px solid var(--line);border-radius:6px;padding:2px 6px;font-size:12px;word-break:break-all}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid var(--mut);border-top-color:transparent;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">Admira · circuito DOOH</div>
+  <h1>Alta de equipo</h1>
+  <p class="sub">Registra ESTA pantalla en el mapa y arranca su canal. Tarda un minuto.</p>
+
+  <form id="form" class="card" autocomplete="off">
+    <label>Nombre del sitio</label>
+    <input id="name" placeholder="p. ej. Admira Gran Vía" maxlength="80" required>
+
+    <label>Circuito / id</label>
+    <input id="circuit" placeholder="admira-granvia" maxlength="48">
+    <p class="hint">id: <span id="idPrev" class="id-prev">—</span> · pantalla: <span id="scrPrev" class="id-prev">—</span></p>
+
+    <label>Dispositivo (opcional)</label>
+    <input id="device" placeholder="MacBook Pro 14" maxlength="60">
+
+    <button type="button" id="geo" class="geo">📍 Detectar mi ubicación</button>
+    <label style="margin-top:14px">Dirección</label>
+    <input id="addr" placeholder="Se rellena al detectar ubicación" maxlength="160">
+    <p class="hint">coords: <span id="coordsPrev" class="id-prev">— sin detectar —</span></p>
+
+    <button type="submit" id="go" class="go" disabled>Dar de alta</button>
+    <p id="msg" class="msg"></p>
+  </form>
+
+  <div id="done" class="done card">
+    <p class="msg ok" style="margin-bottom:14px">✅ Equipo dado de alta. Abre el canal en ESTA pantalla:</p>
+    <a id="openCanal" class="btn" href="#">▶ Abrir canal en esta pantalla</a>
+    <a id="viewMap" class="alt" href="#" target="_blank">Ver en el mapa de Clear Channel ↗</a>
+    <p class="hint" style="margin-top:14px">Canal: <code id="canalUrl"></code></p>
+  </div>
+</div>
+
+<script>
+const API='https://omnipublicity-api.csilvasantin.workers.dev';
+const $=id=>document.getElementById(id);
+let coords=null;
+
+function slug(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,48); }
+function effId(){ return slug($('circuit').value || $('name').value); }
+function refreshPrev(){
+  const id=effId();
+  $('idPrev').textContent=id||'—';
+  $('scrPrev').textContent=id?id+'-mupi':'—';
+  $('go').disabled=!(id && coords);
+}
+$('name').addEventListener('input',()=>{ if(!$('circuit').dataset.touched) $('circuit').value=slug($('name').value); refreshPrev(); });
+$('circuit').addEventListener('input',()=>{ $('circuit').dataset.touched='1'; refreshPrev(); });
+
+$('geo').addEventListener('click',()=>{
+  if(!navigator.geolocation){ setMsg('Este navegador no tiene geolocalización.','err'); return; }
+  $('geo').innerHTML='<span class="spin"></span>Detectando…';
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const lat=pos.coords.latitude, lon=pos.coords.longitude;
+    coords=[lon,lat]; // [lng,lat] como el resto del sistema
+    $('coordsPrev').textContent=lat.toFixed(5)+', '+lon.toFixed(5);
+    $('geo').className='geo ok'; $('geo').textContent='📍 Ubicación detectada ✓';
+    refreshPrev();
+    try{
+      const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='+lat+'&lon='+lon+'&accept-language=es',{headers:{'Accept':'application/json'}});
+      const j=await r.json();
+      if(j && j.display_name && !$('addr').value) $('addr').value=j.display_name;
+    }catch(_){}
+  }, err=>{
+    $('geo').className='geo'; $('geo').textContent='📍 Detectar mi ubicación';
+    setMsg(err.code===1?'Permiso de ubicación denegado. Actívalo y reintenta.':'No se pudo obtener la ubicación.','err');
+  }, {enableHighAccuracy:true, timeout:12000, maximumAge:0});
+});
+
+function setMsg(t,cls){ const m=$('msg'); m.textContent=t||''; m.className='msg'+(cls?' '+cls:''); }
+
+$('form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const name=$('name').value.trim();
+  if(!name){ setMsg('Pon un nombre.','err'); return; }
+  if(!coords){ setMsg('Detecta la ubicación primero.','err'); return; }
+  $('go').disabled=true; $('go').innerHTML='<span class="spin"></span>Registrando…';
+  try{
+    const r=await fetch(API+'/locations/register',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ name, circuit:effId(), addr:$('addr').value.trim(), device:$('device').value.trim(), coords })
+    });
+    const j=await r.json();
+    if(!r.ok || !j.ok){ setMsg('Error: '+(j.hint||j.error||r.status),'err'); $('go').disabled=false; $('go').textContent='Dar de alta'; return; }
+    // OK → mostrar accesos
+    $('form').style.display='none';
+    $('done').classList.add('show');
+    $('openCanal').href=j.canal;
+    $('canalUrl').textContent=j.canal;
+    $('viewMap').href='https://clearchannel.tv/?loc='+encodeURIComponent(j.id);
+  }catch(err){
+    setMsg('Fallo de red: '+(err&&err.message||err),'err');
+    $('go').disabled=false; $('go').textContent='Dar de alta';
+  }
+});
+refreshPrev();
+</script>
+</body>
+</html>
