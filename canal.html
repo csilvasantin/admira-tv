@@ -539,13 +539,14 @@ function play(i, forced){
   }
   const k=KIND[it.type]||'image';
   mupiAR=itemAR(it); fitMupi();   // marco 9:16 / 16:9 según el formato del contenido
+  emitFrameState(it);
   const title=(it.title||it.prompt||'sin título').replace(/\n/g,' ').slice(0,64);
   stage.innerHTML=''; nowEl.textContent='▶ '+title;
   metaEl.textContent=(syncOn?'sincro canal · ':'')+it.type+(it._num?' · #'+it._num:'')+' · '+(cur+1)+'/'+playlist.length+' · '+(it.motor||'stock')+(it._dim?(' · '+it._dim.w+'×'+it._dim.h):'');
   renderRail();
   if(k==='video'){
     const v=document.createElement('video'); v.src=it.url; v.autoplay=true; v.playsInline=true; v.preload='auto';
-    v.onloadedmetadata=()=>{ if(v.duration&&isFinite(v.duration)){ it._dur=Math.round(v.duration); if(syncOn&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,(syncElapsedMs()/1000)%v.duration); }catch(_){} } } };
+    v.onloadedmetadata=()=>{ if(v.duration&&isFinite(v.duration)){ it._dur=Math.round(v.duration); if(v.videoWidth&&v.videoHeight){ mupiAR=v.videoWidth/v.videoHeight; fitMupi(); emitFrameState(it); } if(syncOn&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,(syncElapsedMs()/1000)%v.duration); }catch(_){} } } };
     v.onended=()=>syncOn?play(syncIndex()):next(); v.onerror=()=>setTimeout(next,600);
     v.ontimeupdate=()=>{ if(v.duration&&!paused) bar.style.width=(v.currentTime/v.duration*100)+'%'; };
     mediaEl=v; applyAudio(); stage.appendChild(v);
@@ -762,6 +763,13 @@ function bridgeOriginAllowed(origin){
 }
 function bridgeReply(event, ok, message){
   try{ event.source.postMessage({ source:'admira-tv-canal', requestId:event.data&&event.data.requestId, ok, message }, event.origin); }catch(_){}
+}
+function emitFrameState(it){
+  try{
+    if(window.parent===window) return;
+    const aspect=mupiAR||itemAR(it)||1;
+    window.parent.postMessage({ source:'admira-tv-canal', event:'media-state', orientation:aspect>=1?'landscape':'portrait', aspect, mode:playoutMode, sync:!!syncOn, id:it&&it.id }, '*');
+  }catch(_){}
 }
 window.addEventListener('message',event=>{
   if(!bridgeOriginAllowed(event.origin)) return;
