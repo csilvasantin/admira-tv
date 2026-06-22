@@ -250,6 +250,18 @@ if(syncOn&&directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'
 let applyingXpl=false;
 let paused=false, usesAdv=false, advTotal=0, advElapsed=0, advStart=0;
 let syncTimeOffset=0;
+// SINCRO: máster central (única autoridad). Si está cargado, manda sobre el cálculo
+// local → todas las pantallas en sync emiten EXACTAMENTE lo mismo (mismo orden+reloj).
+const SYNC_API='https://omnipublicity-api.csilvasantin.workers.dev/sync/state';
+let SYNC_REMOTE=null, syncStateTimer=null;
+function fetchSyncState(){
+  fetch(SYNC_API+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+    if(d&&Array.isArray(d.items)&&d.items.length){
+      SYNC_REMOTE={ items:d.items, slotMs:d.slotMs||20000, offset:(d.serverNow||Date.now())-Date.now() };
+      if(syncOn) rebuild(true);
+    }
+  }).catch(()=>{});
+}
 const $ = id => document.getElementById(id);
 const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=$('bar'), tap=$('tap');
 
@@ -285,12 +297,13 @@ function setAudio(on, level){
 function stopBar(){ if(barTimer){ clearInterval(barTimer); barTimer=null; } }
 function barFromAdv(){ const el=advElapsed+(paused?0:Date.now()-advStart); bar.style.width=Math.min(100,el/advTotal*100)+'%'; }
 function startAdv(ms){ usesAdv=true; advTotal=ms; advElapsed=0; advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,ms); stopBar(); barTimer=setInterval(barFromAdv,120); }
-function syncNow(){ return Date.now()+syncTimeOffset; }
-function syncSlotMs(){ return syncSlotSec*1000; }
+function syncNow(){ return Date.now()+(SYNC_REMOTE?SYNC_REMOTE.offset:syncTimeOffset); }   // reloj del máster central si está
+function syncSlotMs(){ return (SYNC_REMOTE&&SYNC_REMOTE.slotMs)?SYNC_REMOTE.slotMs:syncSlotSec*1000; }
 function syncElapsedMs(){ return syncNow()%syncSlotMs(); }
 function syncRemainingMs(){ return Math.max(300,syncSlotMs()-syncElapsedMs()); }
 function syncIndex(){ return playlist.length ? Math.floor(syncNow()/syncSlotMs())%playlist.length : 0; }
-function syncMasterOrder(){ return defaultOrder(all.filter(it=>!it._grid)).slice(0,SYNC_MASTER_MAX); }
+// El máster lo dicta el worker (única autoridad) si está cargado; si no, cálculo local determinista.
+function syncMasterOrder(){ return (SYNC_REMOTE&&SYNC_REMOTE.items&&SYNC_REMOTE.items.length)?SYNC_REMOTE.items:defaultOrder(all.filter(it=>!it._grid)).slice(0,SYNC_MASTER_MAX); }
 function xplUrl(){
   const base=qs.get('xpl')||LS('adtv_xpl','https://xpl.xpaceos.com/admira-tv.json');
   try{ save('adtv_xpl',base); }catch(_){}
@@ -301,6 +314,7 @@ function disableAdmiraSync(){
   if(!syncOn&&playoutMode==='local') return;
   syncOn=false; playoutMode='local'; save('adtv_sincro','0'); save('adtv_mode','local'); seenSig='';
   if(xplTimer){ clearInterval(xplTimer); xplTimer=null; }
+  if(syncStateTimer){ clearInterval(syncStateTimer); syncStateTimer=null; } SYNC_REMOTE=null;
   if(window.XPLCanal) XPLCanal.stop();
 }
 function setAdmiraSync(on){
@@ -309,9 +323,13 @@ function setAdmiraSync(on){
   if(syncOn){
     if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
     customOrder=[]; save('adtv_order','[]');
+    fetchSyncState();                                     // espeja el máster central (única autoridad)
+    if(syncStateTimer) clearInterval(syncStateTimer);
+    syncStateTimer=setInterval(fetchSyncState,30000);
     rebuild(true);
     flashCli('🔗 admiraTVsincro · '+SYNC_MASTER);
   } else {
+    if(syncStateTimer){ clearInterval(syncStateTimer); syncStateTimer=null; } SYNC_REMOTE=null;
     rebuild(true);
     flashCli('🔗 admiraTVsincro OFF');
   }
@@ -1254,6 +1272,8 @@ function pollMode(){
     }).catch(()=>{});
 }
 pollMode(); setInterval(pollMode, 12000);
+// si arrancamos ya en sincro (persistido/URL), engancha el máster central
+if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); syncStateTimer=setInterval(fetchSyncState,30000); }
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
