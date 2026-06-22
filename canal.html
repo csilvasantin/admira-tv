@@ -872,7 +872,24 @@ window.addEventListener('keydown',e=>{
   else if(e.key==='+'||e.key==='='){ volume=Math.min(1,volume+0.1); muted=false; applyAudio(); e.preventDefault(); }   // volumen a +/−
   else if(e.key==='-'){ volume=Math.max(0,volume-0.1); muted=(volume===0); applyAudio(); e.preventDefault(); }
 });
-tap.addEventListener('click',()=>{ if(mediaEl&&mediaEl.play) mediaEl.play().catch(()=>{}); tap.classList.remove('show'); });
+// ── KIOSKO DOOH: pantalla completa + PORTRAIT forzado ────────────────────────
+// Las pantallas de señalética son verticales. Al primer gesto del usuario pedimos
+// fullscreen y bloqueamos la orientación a portrait (Screen Orientation API) — el
+// SO/Android ignora el giro por adb, pero esto sí manda desde la página. ?kiosk=1
+// o el modo clean lo activan; ?kiosk=0 lo desactiva. Requiere UN toque (los
+// navegadores exigen gesto para fullscreen y para fijar orientación).
+const KIOSK = qs.get('kiosk')==='1' || (document.documentElement.classList.contains('clean') && qs.get('kiosk')!=='0');
+async function enterKiosk(){
+  if(!KIOSK) return;
+  try{ const el=document.documentElement; if(el.requestFullscreen && !document.fullscreenElement) await el.requestFullscreen({navigationUI:'hide'}); }catch(_){}
+  try{ if(screen.orientation && screen.orientation.lock) await screen.orientation.lock('portrait'); }catch(_){}
+}
+if(KIOSK){
+  // gesto inicial claro: un toque concede fullscreen + audio + (si procede) cámara
+  try{ tap.textContent='▶ Toca para pantalla completa'; tap.classList.add('show'); }catch(_){}
+  document.addEventListener('pointerdown', enterKiosk);   // cada toque reasegura el kiosko
+}
+tap.addEventListener('click',()=>{ enterKiosk(); if(mediaEl&&mediaEl.play) mediaEl.play().catch(()=>{}); tap.classList.remove('show'); });
 let hideT; function ui(){ document.body.classList.remove('idle'); clearTimeout(hideT); hideT=setTimeout(()=>document.body.classList.add('idle'),3500); }
 ['mousemove','touchstart','keydown','click'].forEach(ev=>window.addEventListener(ev,ui)); ui();
 
