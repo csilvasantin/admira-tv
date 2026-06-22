@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admira · CMS — Control de flota</title>
+<meta name="description" content="CMS de Admira.tv: qué dispositivos están conectados y qué están emitiendo en tiempo real.">
+<style>
+  :root{ --bg:#070a10; --panel:#0e131c; --panel2:#121a27; --line:#1e2940; --ink:#cdd8e8; --dim:#8595ad;
+         --air:#39d98a; --off:#ff5a5a; --amber:#ffb44c; --accent:#7aa2ff; --robot:#c08bff; }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#11203a33,transparent),var(--bg);
+       color:var(--ink);font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+  header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+         padding:14px 20px;background:#070a10e6;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .brand{font-weight:800;letter-spacing:.5px;font-size:18px}
+  .brand b{color:var(--accent)}
+  .sub{color:var(--dim);font-size:12px}
+  .spacer{flex:1}
+  .live{display:flex;align-items:center;gap:7px;font:600 12px ui-monospace,monospace;color:var(--dim)}
+  .live .dot{width:8px;height:8px;border-radius:50%;background:var(--air);box-shadow:0 0 8px var(--air);animation:pulse 1.6s infinite}
+  @keyframes pulse{50%{opacity:.4}}
+  .kpis{display:flex;gap:12px;flex-wrap:wrap;padding:18px 20px 4px}
+  .kpi{flex:1;min-width:130px;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+       border-radius:14px;padding:14px 16px}
+  .kpi .n{font:800 28px ui-monospace,monospace;line-height:1}
+  .kpi .l{color:var(--dim);font-size:12px;margin-top:4px;text-transform:uppercase;letter-spacing:.6px}
+  .kpi.air .n{color:var(--air)} .kpi.amber .n{color:var(--amber)} .kpi.accent .n{color:var(--accent)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;padding:14px 20px 40px}
+  .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;
+        overflow:hidden;display:flex;flex-direction:column}
+  .card .top{display:flex;align-items:center;gap:10px;padding:13px 15px;border-bottom:1px solid var(--line)}
+  .ava{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:20px;
+       background:#0c1320;border:1px solid var(--line);flex:none}
+  .ava.robot{border-color:#5a3c8a;color:var(--robot)}
+  .nm{font-weight:700;font-size:15px;line-height:1.15}
+  .meta{color:var(--dim);font-size:11.5px;margin-top:1px}
+  .st{margin-left:auto;display:flex;align-items:center;gap:6px;font:700 11px ui-monospace,monospace;
+      padding:4px 9px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+  .st .d{width:8px;height:8px;border-radius:50%}
+  .st.on{color:var(--air);border-color:#1f5e44} .st.on .d{background:var(--air);box-shadow:0 0 7px var(--air)}
+  .st.off{color:var(--off);border-color:#5e2630} .st.off .d{background:var(--off)}
+  .body{padding:13px 15px;display:flex;flex-direction:column;gap:11px;flex:1}
+  .now{display:flex;align-items:center;gap:11px}
+  .thumb{width:74px;height:46px;border-radius:8px;background:#000;border:1px solid var(--line);overflow:hidden;flex:none;
+         display:grid;place-items:center;color:var(--dim);font-size:20px}
+  .thumb img,.thumb video{width:100%;height:100%;object-fit:cover}
+  .now .tx{min-width:0}
+  .now .tt{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .now .ty{color:var(--dim);font-size:11.5px;margin-top:2px}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--dim)}
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);font-size:11.5px}
+  .pill.aud{color:var(--air);border-color:#1f5e44} .pill.aud0{color:var(--amber);border-color:#5e4a26}
+  .pill.pos{color:var(--accent);border-color:#2a3a66}
+  .pill.moved{color:var(--robot);border-color:#5a3c8a}
+  .acts{display:flex;gap:8px;margin-top:2px}
+  a.btn{flex:1;text-align:center;text-decoration:none;color:var(--ink);background:#13203a;border:1px solid #26385e;
+        border-radius:9px;padding:8px 10px;font-weight:600;font-size:12.5px}
+  a.btn:hover{background:#1a2c4e}
+  a.btn.ghost{background:#0e1420;border-color:var(--line);color:var(--dim)}
+  .empty{padding:60px 20px;text-align:center;color:var(--dim)}
+  footer{padding:10px 20px 30px;color:var(--dim);font-size:11.5px;text-align:center}
+  code{color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="brand">Admira · <b>CMS</b></div>
+    <div class="sub">Control de flota — dispositivos conectados y qué emiten</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="live"><span class="dot"></span><span id="liveTxt">en vivo</span></div>
+</header>
+
+<div class="kpis">
+  <div class="kpi accent"><div class="n" id="k-total">—</div><div class="l">dispositivos</div></div>
+  <div class="kpi air"><div class="n" id="k-online">—</div><div class="l">emitiendo ahora</div></div>
+  <div class="kpi amber"><div class="n" id="k-aud">—</div><div class="l">con audiencia</div></div>
+  <div class="kpi"><div class="n" id="k-robot">—</div><div class="l">móviles / robot</div></div>
+</div>
+
+<div class="grid" id="grid"><div class="empty">Cargando flota…</div></div>
+<footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span></footer>
+
+<script>
+const FLEET   = 'https://omnipublicity-api.csilvasantin.workers.dev/locations?selfreg=1';
+const SIGNAGE = 'https://api.admira.store/signage/now?screen=';
+const CANAL   = 'https://admira.tv/canal.html';
+const ONLINE_MS = 180000;            // signage/now fresco < 180 s = en antena
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+const ageTxt = ms => { const s=Math.max(0,Math.round(ms/1000)); return s<60?s+'s':s<3600?Math.round(s/60)+'min':Math.round(s/3600)+'h'; };
+
+function canalUrl(d){
+  const u = new URL(CANAL);
+  u.searchParams.set('screen', d.screen||'');
+  u.searchParams.set('circuit', d.id||'');
+  u.searchParams.set('clean','1'); u.searchParams.set('mode','conditional');
+  if(d.orientation==='portrait') u.searchParams.set('format','9:16');
+  if(d.deviceType==='robot') u.searchParams.set('mobile','1');
+  return u.toString();
+}
+function thumbHtml(it){
+  if(!it) return '<span>—</span>';
+  if(it.type==='image'||it.type==='animation') return '<img src="'+esc(it.url||'')+'" alt="">';
+  if(it.type==='video') return it.url?'<video src="'+esc(it.url)+'" muted></video>':'▶';
+  return it.type==='audio'?'♪':'▦';
+}
+function audPill(aud){
+  if(!aud||!aud.cam) return '<span class="pill">📷 sin cámara</span>';
+  if(!aud.faces) return '<span class="pill aud0">👁 0 · sin público</span>';
+  const g = aud.gender==='f'?'♀':aud.gender==='m'?'♂':'';
+  return '<span class="pill aud">👥 '+aud.faces+(g?(' · '+g):'')+(aud.age?(' '+esc(aud.age)):'')+'</span>';
+}
+
+async function fetchNow(screen){
+  if(!screen) return null;
+  try{ const r=await fetch(SIGNAGE+encodeURIComponent(screen),{cache:'no-store'}); if(!r.ok) return null;
+       const d=await r.json(); return d.item||d||null; }catch(_){ return null; }
+}
+
+async function load(){
+  let devs=[];
+  try{ const r=await fetch(FLEET,{cache:'no-store'}); const d=await r.json(); devs=(d.locations||d||[]).filter(x=>x&&x.id); }
+  catch(_){ $('liveTxt').textContent='sin conexión con la flota'; return; }
+  // ordena: robot/móvil primero, luego por nombre
+  devs.sort((a,b)=> (b.deviceType==='robot')-(a.deviceType==='robot') || String(a.name||a.id).localeCompare(String(b.name||b.id)));
+  const nows = await Promise.all(devs.map(d=>fetchNow(d.screen)));
+  const now = Date.now();
+  let online=0, withAud=0, robots=0;
+  const cards = devs.map((d,i)=>{
+    const it = nows[i];
+    const isOn = it && it.ts && (now - it.ts) < ONLINE_MS;
+    if(isOn) online++;
+    if(it && it.aud && it.aud.faces>0) withAud++;
+    const isRobot = d.deviceType==='robot'; if(isRobot) robots++;
+    const startedAgo = (it&&it.startedAt)? ('hace '+ageTxt(now-it.startedAt)) : '';
+    const moved = d.movedAt ? '<span class="pill moved" title="posición actualizada">📍 movido '+ageTxt(now-d.movedAt*1000)+'</span>' : '';
+    return `<div class="card">
+      <div class="top">
+        <div class="ava ${isRobot?'robot':''}">${isRobot?'🤖':(d.orientation==='landscape'?'🖥️':'📱')}</div>
+        <div style="min-width:0">
+          <div class="nm">${esc(d.name||d.id)}</div>
+          <div class="meta">${esc(d.id)} · ${isRobot?'robot móvil':'pantalla'} · ${esc(d.orientation||'portrait')}</div>
+        </div>
+        <div class="st ${isOn?'on':'off'}"><span class="d"></span>${isOn?'EN ANTENA':'sin señal'}</div>
+      </div>
+      <div class="body">
+        <div class="now">
+          <div class="thumb">${isOn?thumbHtml(it):'—'}</div>
+          <div class="tx">
+            <div class="tt">${isOn?esc(it.title||it.id||'emitiendo'):'<span style="color:var(--dim)">no está emitiendo</span>'}</div>
+            <div class="ty">${isOn?(esc(it.type||'')+(startedAgo?(' · '+startedAgo):'')):(it&&it.ts?('última señal hace '+ageTxt(now-it.ts)):'sin registro de emisión')}</div>
+          </div>
+        </div>
+        <div class="row">
+          ${isOn?audPill(it.aud):''}
+          ${d.addr?('<span class="pill pos" title="'+esc(d.addr)+'">📍 '+esc(String(d.addr).split('·')[0].trim())+'</span>'):''}
+          ${moved}
+        </div>
+        <div class="acts">
+          <a class="btn" href="${esc(canalUrl(d))}" target="_blank" rel="noopener">▶ Abrir canal</a>
+          <a class="btn ghost" href="https://www.clearchannel.tv/?screen=${encodeURIComponent(d.screen||'')}" target="_blank" rel="noopener">🛰 Sala</a>
+        </div>
+      </div>
+    </div>`;
+  });
+  $('grid').innerHTML = cards.length?cards.join(''):'<div class="empty">No hay dispositivos auto-registrados todavía. Da de alta uno en <code>admira.tv/alta.html</code>.</div>';
+  $('k-total').textContent=devs.length; $('k-online').textContent=online;
+  $('k-aud').textContent=withAud; $('k-robot').textContent=robots;
+  $('stamp').textContent='actualizado '+new Date().toLocaleTimeString('es-ES');
+  // reproduce los thumbs de vídeo (preview en bucle)
+  document.querySelectorAll('.thumb video').forEach(v=>{ v.loop=true; v.muted=true; v.play&&v.play().catch(()=>{}); });
+}
+load(); setInterval(load, 10000);
+</script>
+</body>
+</html>
