@@ -104,7 +104,7 @@
         <table id="segTable">
           <thead><tr>
             <th>#</th><th>Género</th><th>Edad</th><th>Mín. personas</th>
-            <th>→ Categoría</th><th>Tema (tag)</th><th>Medio</th><th></th>
+            <th>→ Categoría</th><th>Tema (tag)</th><th>Medio</th><th>Stock</th><th></th>
           </tr></thead>
           <tbody id="segRows"></tbody>
         </table>
@@ -224,8 +224,38 @@ const GENDERS=[['any','cualquiera'],['m','hombre'],['f','mujer']];
 const AGES=[['any','cualquiera'],['nino','niño'],['joven','joven'],['adulto','adulto'],['senior','senior']];
 const CATS=[['any','cualquiera'],['atraer','atraer'],['producto','producto'],['marca','marca'],['promo','promo']];
 const MEDIOS=[['any','cualquiera'],['video','vídeo'],['image','imagen']];
-const TAGS=['musica','tecnologia','mobiliario','negocio','motivacional','videoclip','noticias','pop','flamenco','ciencia','ia','publi'];
+let TAGS=['música','tecnología','mobiliario','negocio','motivacional','videoclip','noticias','deporte','gaming','humor'];  // fallback hasta cargar el Stock
+let STOCK_ITEMS=[], TAGCOUNT={};
 let segMatrix={rules:[],default:{category:'atraer',tag:'',medio:'any'}};
+const normTag=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+// Cuántos assets del Stock casan con una regla (categoría + tema + medio): el "link
+// con los contenidos" — Carlos ve si un segmento tiene contenido (y en rojo si ≈0).
+function matchCount(r){
+  if(!STOCK_ITEMS.length) return null;
+  const tag=normTag(r.tag);
+  return STOCK_ITEMS.filter(it=>{
+    if(r.category&&r.category!=='any'&&it.category!==r.category) return false;
+    if(tag && !((it.tags||[]).some(x=>normTag(x).includes(tag)))) return false;
+    if(r.medio&&r.medio!=='any'&&it.type!==r.medio) return false;
+    return true;
+  }).length;
+}
+function updateSegCounts(){
+  const m=readSeg();
+  document.querySelectorAll('#segRows td[data-cnt]').forEach(td=>{
+    const n=matchCount(m.rules[+td.dataset.cnt]);
+    td.textContent=(n==null)?'…':('≈'+n);
+    td.style.color=(n===0)?'#ff8a8a':'var(--dim)';
+  });
+}
+async function loadStockVocab(){
+  try{ const r=await fetch('https://api.admira.store/stock/list?limit=300',{cache:'no-store'}); const d=await r.json();
+    STOCK_ITEMS=(d.items||[]).filter(it=>['image','video','animation'].includes(it.type));
+    const c={}; STOCK_ITEMS.forEach(it=>(it.tags||[]).forEach(t=>{ if(t) c[t]=(c[t]||0)+1; }));
+    TAGCOUNT=c; const ks=Object.keys(c).filter(t=>c[t]>=2).sort((a,b)=>c[b]-c[a]); if(ks.length) TAGS=ks;
+    renderSeg();
+  }catch(_){}
+}
 const opt=(arr,val)=>arr.map(([v,l])=>'<option value="'+v+'"'+(v===val?' selected':'')+'>'+l+'</option>').join('');
 function renderSeg(){
   $('segRows').innerHTML = segMatrix.rules.map((r,i)=>
@@ -237,12 +267,14 @@ function renderSeg(){
       '<td><select data-k="category">'+opt(CATS,r.category)+'</select></td>'+
       '<td><input data-k="tag" list="segTags" value="'+esc(r.tag||'')+'" style="width:120px"></td>'+
       '<td><select data-k="medio">'+opt(MEDIOS,r.medio)+'</select></td>'+
+      '<td data-cnt="'+i+'" title="assets del Stock que casan" style="color:var(--dim);font:600 12px ui-monospace,monospace">…</td>'+
       '<td style="white-space:nowrap"><button class="miniBtn" data-act="up">▲</button><button class="miniBtn" data-act="down">▼</button><button class="miniBtn" data-act="del">✕</button></td>'+
     '</tr>').join('');
   $('defCat').innerHTML=opt(CATS,segMatrix.default.category||'atraer');
   $('defMedio').innerHTML=opt(MEDIOS,segMatrix.default.medio||'any');
   $('defTag').value=segMatrix.default.tag||'';
-  $('segTags').innerHTML=TAGS.map(t=>'<option value="'+t+'">').join('');
+  $('segTags').innerHTML=TAGS.map(t=>'<option value="'+esc(t)+'" label="'+(TAGCOUNT[t]||'')+'">').join('');
+  updateSegCounts();
 }
 function readSeg(){
   const rules=[...document.querySelectorAll('#segRows tr')].map(tr=>{
@@ -277,7 +309,9 @@ $('segRows').addEventListener('click',e=>{
   else if(b.dataset.act==='down'&&i<R.length-1){ [R[i+1],R[i]]=[R[i],R[i+1]]; }
   renderSeg();
 });
+$('segRows').addEventListener('input', updateSegCounts);   // recuenta al editar
 loadSeg();
+loadStockVocab();
 </script>
 </body>
 </html>
