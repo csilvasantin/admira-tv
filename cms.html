@@ -70,6 +70,7 @@
   #segWrap input[type=number]{width:64px}
   .miniBtn{background:#13203a;border:1px solid #26385e;color:var(--ink);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;margin-left:3px}
   .miniBtn:hover{background:#1a2c4e}
+  .modeSel{background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:12.5px -apple-system,Segoe UI,sans-serif;transition:border-color .3s}
 </style>
 </head>
 <body>
@@ -103,7 +104,7 @@
       <div style="overflow-x:auto">
         <table id="segTable">
           <thead><tr>
-            <th>#</th><th>Género</th><th>Edad</th><th>Mín. personas</th>
+            <th>#</th><th>Género</th><th>Edad</th><th>Mín. personas</th><th>Franja</th>
             <th>→ Categoría</th><th>Tema (tag)</th><th>Medio</th><th>Stock</th><th></th>
           </tr></thead>
           <tbody id="segRows"></tbody>
@@ -202,6 +203,12 @@ async function load(){
           ${d.addr?('<span class="pill pos" title="'+esc(d.addr)+'">📍 '+esc(String(d.addr).split('·')[0].trim())+'</span>'):''}
           ${moved}
         </div>
+        <div class="row" style="gap:7px;align-items:center;margin-top:2px">
+          <span class="meta" style="flex:none">Modo de emisión</span>
+          <select class="modeSel" data-id="${esc(d.id)}" style="flex:1">
+            ${['conditional','local','sync'].map(mo=>'<option value="'+mo+'"'+((d.mode||'conditional')===mo?' selected':'')+'>'+MODE_LBL[mo]+'</option>').join('')}
+          </select>
+        </div>
         <div class="acts">
           <a class="btn" href="${esc(canalUrl(d))}" target="_blank" rel="noopener">▶ Abrir canal</a>
           <a class="btn ghost" href="https://www.clearchannel.tv/?screen=${encodeURIComponent(d.screen||'')}" target="_blank" rel="noopener">🛰 Sala</a>
@@ -218,12 +225,25 @@ async function load(){
 }
 load(); setInterval(load, 10000);
 
+/* Desplegable de MODO por dispositivo → controla el player en remoto. */
+$('grid').addEventListener('change', async e=>{
+  const sel=e.target.closest('.modeSel'); if(!sel) return;
+  const id=sel.dataset.id, mode=sel.value; sel.disabled=true;
+  try{ const r=await fetch(MODE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,mode})});
+       const d=await r.json(); sel.style.borderColor=(d&&d.ok)?'#1f5e44':'#5e2630'; }
+  catch(_){ sel.style.borderColor='#5e2630'; }
+  sel.disabled=false; setTimeout(()=>{ sel.style.borderColor=''; },1600);
+});
+
 /* ── EDITOR DE SEGMENTACIÓN cámara → contenido ─────────────────────────────── */
 const SEG_API = 'https://omnipublicity-api.csilvasantin.workers.dev/segmentation';
 const GENDERS=[['any','cualquiera'],['m','hombre'],['f','mujer']];
 const AGES=[['any','cualquiera'],['nino','niño'],['joven','joven'],['adulto','adulto'],['senior','senior']];
 const CATS=[['any','cualquiera'],['atraer','atraer'],['producto','producto'],['marca','marca'],['promo','promo']];
 const MEDIOS=[['any','cualquiera'],['video','vídeo'],['image','imagen']];
+const SLOTS=[['any','cualquiera'],['manana','mañana'],['mediodia','mediodía'],['tarde','tarde'],['noche','noche']];
+const MODE_API='https://omnipublicity-api.csilvasantin.workers.dev/locations/mode';
+const MODE_LBL={conditional:'Condicional · cámara/contexto',local:'Local · su programación',sync:'Sincro · lo que manda admira.tv'};
 let TAGS=['música','tecnología','mobiliario','negocio','motivacional','videoclip','noticias','deporte','gaming','humor'];  // fallback hasta cargar el Stock
 let STOCK_ITEMS=[], TAGCOUNT={};
 let segMatrix={rules:[],default:{category:'atraer',tag:'',medio:'any'}};
@@ -263,7 +283,8 @@ function renderSeg(){
       '<td style="color:var(--dim)">'+(i+1)+'</td>'+
       '<td><select data-k="gender">'+opt(GENDERS,r.gender)+'</select></td>'+
       '<td><select data-k="age">'+opt(AGES,r.age)+'</select></td>'+
-      '<td><input data-k="minCount" type="number" min="1" max="9" value="'+(r.minCount||1)+'"></td>'+
+      '<td><input data-k="minCount" type="number" min="0" max="9" title="0 = sin cámara (patrón por tiempo)" value="'+(r.minCount!=null?r.minCount:1)+'"></td>'+
+      '<td><select data-k="slot">'+opt(SLOTS,r.slot||'any')+'</select></td>'+
       '<td><select data-k="category">'+opt(CATS,r.category)+'</select></td>'+
       '<td><input data-k="tag" list="segTags" value="'+esc(r.tag||'')+'" style="width:120px"></td>'+
       '<td><select data-k="medio">'+opt(MEDIOS,r.medio)+'</select></td>'+
@@ -279,7 +300,8 @@ function renderSeg(){
 function readSeg(){
   const rules=[...document.querySelectorAll('#segRows tr')].map(tr=>{
     const g=k=>tr.querySelector('[data-k="'+k+'"]').value;
-    return { gender:g('gender'), age:g('age'), minCount:parseInt(g('minCount'),10)||1,
+    const mc=parseInt(g('minCount'),10);
+    return { gender:g('gender'), age:g('age'), minCount:isNaN(mc)?1:mc, slot:g('slot'),
              category:g('category'), tag:g('tag').trim(), medio:g('medio') };
   });
   return { rules, default:{ category:$('defCat').value, tag:$('defTag').value.trim(), medio:$('defMedio').value } };

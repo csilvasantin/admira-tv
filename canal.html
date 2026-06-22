@@ -1173,13 +1173,16 @@ const XPLCanal = (function(){
   }
   function camSeg(){
     const c=window.__xplCam; const f=(c&&c.faces>0&&(Date.now()-c.ts)<6000)?c:null;
-    return { gender: f?(f.gender==='m'?'m':f.gender==='f'?'f':null):null, age: f?(f.age||null):null, count: f?f.faces:0 };
+    return { gender: f?(f.gender==='m'?'m':f.gender==='f'?'f':null):null, age: f?(f.age||null):null,
+             count: f?f.faces:0, slot: (typeof madridSlot==='function'?madridSlot():'') };
   }
   function matchMatrix(s){
     for(const r of (MATRIX.rules||[])){
+      const mc = (r.minCount==null?1:r.minCount);   // 0 = NO necesita cámara (patrón por tiempo)
+      if(mc > s.count) continue;
       if(r.gender&&r.gender!=='any'&&r.gender!==s.gender) continue;
       if(r.age&&r.age!=='any'&&r.age!==s.age) continue;
-      if((r.minCount||1) > s.count) continue;
+      if(r.slot&&r.slot!=='any'&&r.slot!==s.slot) continue;
       return r;
     }
     return MATRIX.default||{category:'atraer'};
@@ -1223,6 +1226,21 @@ wireCam(); loadGrid(); setInterval(loadGrid, 60000);
 startPositionBeat();   // equipos móviles (robot/taxi/bus): latido de posición
 // si arrancamos ya en modo conditional (persistido/URL), enciende el motor XPL
 if(playoutMode==='conditional' && window.XPLCanal) XPLCanal.start();
+
+// ── MODO REMOTO: el CMS fija el modo de emisión de ESTE equipo y el player reacciona.
+//   sync = lo que manda admira.tv (red sincronizada) · local = su programación ·
+//   conditional = lo que dicta su cámara/contexto. Poleteo del modo asignado.
+const MODE_API='https://omnipublicity-api.csilvasantin.workers.dev/locations/mode';
+function pollMode(){
+  if(!scr.circuit) return;   // sólo equipos registrados (con circuito/id)
+  fetch(MODE_API+'?id='+encodeURIComponent(scr.circuit)+'&t='+Date.now(),{cache:'no-store'})
+    .then(r=>r.ok?r.json():null).then(d=>{
+      if(!d||!d.mode) return;
+      const m=canonicalAdmiraMode(d.mode);
+      if(m!==playoutMode){ setAdmiraMode(m); flashCli('◆ modo remoto: '+m); }
+    }).catch(()=>{});
+}
+pollMode(); setInterval(pollMode, 12000);
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
