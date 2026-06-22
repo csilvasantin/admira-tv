@@ -567,9 +567,11 @@ async function camLoop(){ if(!CAM.on) return;
     window.__xplCam = { faces:d.faces||0, gender:d.faces?d.gender:null, age:d.faces?d.age:null, ts:Date.now() };
     camHud(d.faces?('👥 '+d.faces+' · '+(AGE_LBL[age]||age)+' · '+(aud==='f'?'♀ Mujer':'♂ Hombre')):'👥 0 · sin audiencia',true);
     try{ setNowAudience({ cam:true, faces:d.faces||0, gender:d.faces?d.gender:null, age:d.faces?d.age:null }); }catch(_){}
-    if(camStable(aud+'_'+age)) camApply(aud,age);   // solo cambia tras 2 lecturas estables
+    if(camStable(aud+'_'+age)) camApply(aud,age);   // solo cambia tras 2 lecturas estables (modo local)
+    // CONDICIONAL: aplica la matriz YA con esta lectura (no esperes al tick de 3s del XPL)
+    if(playoutMode==='conditional' && window.XPLCanal){ try{ XPLCanal.tick(); }catch(_){} }
   }catch(_){}
-  CAM.timer=setTimeout(camLoop,3500);
+  CAM.timer=setTimeout(camLoop, 1000);   // detección ágil (antes 3500ms): la persona no se va antes
 }
 function camApply(aud,age){
   // En modo CONDICIONAL manda la matriz de segmentación (cámara=condición, no filtro
@@ -660,11 +662,23 @@ function schedulePrecache(){
   if(_precQ.length) precacheLoop();
   cacheBadge();
 }
-// Mantiene la cache acotada: borra lo que ya no está en la playlist (si ha crecido).
+// Pre-descarga los assets CONDICIONALES (los de la matriz de segmentación) ANTES de que
+// la cámara los dispare, para que el cambio carrusel→condicional sea instantáneo (blob de
+// disco) y no se vea el hueco de carga con el botón de play. Resuelve ids→url desde `all`.
+let _condUrls=new Set();
+function precacheIds(ids){
+  if(!ids||!ids.length||!all.length) return;
+  const byId=new Map(all.map(it=>[String(it.id),it]));
+  const qids=new Set(_precQ.map(x=>x.id));
+  for(const id of ids){ const it=byId.get(String(id)); if(!it||!it.url) continue; _condUrls.add(it.url);
+    if(cacheable(it)&&!_ready.has(it.id)&&!qids.has(it.id)){ _precQ.push(it); qids.add(it.id); } }
+  if(_precQ.length) precacheLoop();
+}
+// Mantiene la cache acotada: borra lo que ya no está en la playlist NI es condicional.
 async function pruneCache(){
   const c=await cacheOpen(); if(!c) return;
   try{ const keys=await c.keys(); if(keys.length<=PRECACHE_MAX+12) return;
-    const keep=new Set(playlist.map(it=>it&&it.url).filter(Boolean));
+    const keep=new Set([...playlist.map(it=>it&&it.url).filter(Boolean), ..._condUrls]);
     for(const req of keys){ if(!keep.has(req.url)){ try{ await c.delete(req); }catch(_){} } }
   }catch(_){}
 }
@@ -710,6 +724,11 @@ async function play(i, forced){
   const _csrc=await cachedSrc(it); if(_tok!==_playTok) return; const SRC=_csrc||it.url; it._fromCache=!!_csrc;
   if(k==='video'){
     const v=document.createElement('video'); v.src=SRC; v.autoplay=true; v.playsInline=true; v.preload='auto';
+    // Oculto hasta que el vídeo PINTE frames: así nunca se ve el botón de play nativo
+    // del navegador (Samsung Internet/WebView) en el hueco de carga entre contenidos.
+    v.style.opacity='0';
+    const _reveal=()=>{ try{ v.style.opacity='1'; }catch(_){} };
+    v.addEventListener('playing', _reveal, {once:true}); setTimeout(_reveal, 1200);
     v.onloadedmetadata=()=>{ if(v.duration&&isFinite(v.duration)){ it._dur=Math.round(v.duration); if(v.videoWidth&&v.videoHeight){ mupiAR=v.videoWidth/v.videoHeight; fitMupi(); emitFrameState(it); } if(syncOn&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,(syncElapsedMs()/1000)%v.duration); }catch(_){} } } };
     v.onended=()=>syncOn?play(syncIndex()):next(); v.onerror=()=>setTimeout(next,600);
     v.ontimeupdate=()=>{ if(v.duration&&!paused) bar.style.width=(v.currentTime/v.duration*100)+'%'; };
@@ -1292,7 +1311,13 @@ const XPLCanal = (function(){
   function fetchMatrix(){
     var tgt = (typeof scr==='object' && scr.circuit) ? scr.circuit : 'all';
     fetch(SEG_URL+'?target='+encodeURIComponent(tgt)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
-      if(d && Array.isArray(d.rules)) MATRIX=d;
+      if(d && Array.isArray(d.rules)){ MATRIX=d;
+        // pre-descarga a disco los assets de la matriz (condicionales) para que el
+        // disparo carrusel→condicional sea INSTANTÁNEO y sin botón de play de carga.
+        try{ const ids=[]; for(const r of (d.rules||[])) for(const a of (r.assets||[])) ids.push(a);
+          for(const a of ((d.default&&d.default.assets)||[])) ids.push(a);
+          if(ids.length && typeof precacheIds==='function') precacheIds(ids); }catch(_){}
+      }
     }).catch(()=>{});
   }
   function camSeg(){
@@ -1345,8 +1370,8 @@ const XPLCanal = (function(){
     if(timer) clearInterval(timer);
     if(mtimer) clearInterval(mtimer);
     tick();
-    timer=setInterval(tick, 3000);
-    mtimer=setInterval(fetchMatrix, 30000);          // refresca la matriz que edita el CMS
+    timer=setInterval(tick, 2000);
+    mtimer=setInterval(fetchMatrix, 15000);          // refresca la matriz que edita el CMS + pre-cachea sus assets
     try{ flashCli('◆ segmentación cámara→contenido activa'); }catch(_){}
   }
   function stop(){ if(timer){ clearInterval(timer); timer=null; } if(mtimer){ clearInterval(mtimer); mtimer=null; }
