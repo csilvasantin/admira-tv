@@ -6,6 +6,10 @@
 <title>Admira.tv · Digital Signage Loop</title>
 <meta name="description" content="Canal de cartelería vertical de Admira.tv: emite en bucle todo el media de Pixeria, con playlist, controles y configuración por pantalla/circuito.">
 <script src="https://admira.app/locations.js"></script>
+<!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
+     del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
+     en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
+<script src="xpl-runtime.js?v=1"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -295,6 +299,7 @@ function disableAdmiraSync(){
   if(!syncOn&&playoutMode==='local') return;
   syncOn=false; playoutMode='local'; save('adtv_sincro','0'); save('adtv_mode','local'); seenSig='';
   if(xplTimer){ clearInterval(xplTimer); xplTimer=null; }
+  if(window.XPLCanal) XPLCanal.stop();
 }
 function setAdmiraSync(on){
   syncOn=!!on; playoutMode=syncOn?'sync':'local'; save('adtv_sincro',syncOn?'1':'0'); save('adtv_mode',playoutMode); seenSig='';
@@ -317,10 +322,12 @@ function setAdmiraMode(mode){
   if(mode==='conditional'){
     customOrder=[]; save('adtv_order','[]');
     restartXpl();
+    if(window.XPLCanal) XPLCanal.start();   // motor XPL local conduce el segmento
     rebuild(true);
     flashCli('◆ admiraTVcondicional · XPL');
   } else {
     if(xplTimer){ clearInterval(xplTimer); xplTimer=null; }
+    if(window.XPLCanal) XPLCanal.stop();
     rebuild(true);
     flashCli('● admiraTVlocal');
   }
@@ -518,6 +525,9 @@ async function camDetect(){ const sim=qs.get('simcam');
 async function camLoop(){ if(!CAM.on) return;
   try{ const d=await camDetect();
     const aud=d.faces?d.gender:'all', age=d.faces?d.age:'all';
+    // hook para el motor XPL: la última lectura de cámara como fuente de HECHOS
+    // (audGender/audAge/viewers). Anónimo; solo el agregado, nunca el frame.
+    window.__xplCam = { faces:d.faces||0, gender:d.faces?d.gender:null, age:d.faces?d.age:null, ts:Date.now() };
     camHud(d.faces?('👥 '+d.faces+' · '+(AGE_LBL[age]||age)+' · '+(aud==='f'?'♀ Mujer':'♂ Hombre')):'👥 0 · sin audiencia',true);
     try{ setNowAudience({ cam:true, faces:d.faces||0, gender:d.faces?d.gender:null, age:d.faces?d.age:null }); }catch(_){}
     if(camStable(aud+'_'+age)) camApply(aud,age);   // solo cambia tras 2 lecturas estables
@@ -1037,8 +1047,90 @@ $('chan').addEventListener('click',e=>{
   const tg=e.target.closest('[data-tag]'); if(tg && tg.dataset.tag){ const t=tg.dataset.tag; applyTheme(seg.tag===t?'':t); }
 });
 
+/* ── MOTOR CONDICIONAL XPL EN EL CANAL ───────────────────────────────────────
+ * El motor (xpl-runtime.js) corre LOCAL: lee HECHOS (reloj real + cámara + clima
+ * opcional), evalúa las reglas y, vía la acción showContent, fija la INTENCIÓN de
+ * contenido (la categoría). El adapter la traduce a una directiva {category} que
+ * pasa por applyXplDirective() — la MISMA ruta segura que el canal ya usa para
+ * fijar el segmento y rebuild. La cámara sigue siendo dueña de audiencia/edad
+ * (camApply). Reglas: cascada del xpl-store por pantalla/circuito, con semilla de
+ * respaldo. Solo actúa en modo 'conditional'; no toca local/sync/parrilla. */
+const XPLCanal = (function(){
+  if(!window.XPL){ console.warn('[XPLCanal] runtime XPL no cargado'); return { start(){}, stop(){}, tick(){} }; }
+  const XPL = window.XPL;
+  const STORE = 'https://xpl.admira.store';
+  let engine=null, timer=null, REMOTE=null, want={category:'all'};
+
+  function camFresh(){ const c=window.__xplCam; return (c && c.faces>0 && (Date.now()-c.ts)<6000) ? c : null; }
+  function nowH(){ try{ return +new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ return new Date().getHours(); } }
+  function seasonNow(){ const m=new Date().getMonth(); return (m>=2&&m<=4)?'spring':(m>=5&&m<=7)?'summer':(m>=8&&m<=10)?'autumn':'winter'; }
+  const world = {
+    fact(id){
+      const w = window.__xplWeather||{};   // clima opcional (otra capa puede setearlo)
+      switch(id){
+        case 'hour':        return nowH();
+        case 'dayPart':     { const h=nowH(); return h<12?'morning':h<15?'noon':h<21?'afternoon':'night'; }
+        case 'night':       { const h=nowH(); return h<8||h>=21; }
+        case 'weekend':     { const d=new Date().getDay(); return d===0||d===6; }
+        case 'season':      return seasonNow();
+        case 'rain':        return !!w.rain;
+        case 'wind':        return !!w.wind;
+        case 'temperature': return typeof w.temperature==='number'?w.temperature:20;
+        case 'viewers':     { const c=camFresh(); return c?c.faces:0; }
+        case 'audGender':   { const c=camFresh(); return c?(c.gender==='m'?'male':c.gender==='f'?'female':'mixed'):'none'; }
+        case 'audAge':      { const c=camFresh(); return c?(c.age||'adulto'):'none'; }
+        case 'holiday':     return false;
+      }
+      return 0;
+    },
+    npcs(){ return []; },
+    act(id, value){
+      // En el canal solo importa showContent: fija la categoría/intención del Stock.
+      if(id==='showContent'){ want.category = (value && value!=='auto') ? value : 'all'; }
+    }
+  };
+
+  function seeds(){
+    return [
+      { id:'seed-young', name:'Público joven → marca', priority:5, enabled:true,
+        when:{join:'and',conds:[{fact:'audAge',value:'joven'}]}, who:{group:'all'}, do:[{id:'showContent',value:'marca'}] },
+      { id:'seed-base', name:'Por defecto → contenido real (auto)', priority:1, enabled:true,
+        when:{join:'and',conds:[]}, who:{group:'all'}, do:[{id:'showContent',value:'auto'}] }
+    ];
+  }
+  function loadRules(){ return (REMOTE && REMOTE.length) ? REMOTE : seeds(); }
+  function fetchRemote(){
+    const u = STORE+'/xpl/resolve?screen='+encodeURIComponent(scr.screen||'default')+(scr.circuit?('&circuit='+encodeURIComponent(scr.circuit)):'')+'&t='+Date.now();
+    fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+      if(d && Array.isArray(d.rules) && d.rules.length){ REMOTE=d.rules; if(engine) engine.setRules(loadRules()); }
+    }).catch(()=>{});
+  }
+
+  function tick(){
+    if(playoutMode!=='conditional' || !engine) return;
+    want={category:'all'};
+    engine.tick();                                  // reglas vivas → want.category
+    applyXplDirective({ category: want.category||'all' });  // ruta segura → seg + rebuild
+  }
+  function start(){
+    if(!engine){ engine=XPL.createEngine(world); }
+    engine.setRules(loadRules());
+    fetchRemote();
+    if(timer) clearInterval(timer);
+    tick();
+    timer=setInterval(tick, 3000);
+    try{ flashCli('◆ motor XPL · '+engine.rules.length+' reglas'); }catch(_){}
+  }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; } }
+
+  return { start, stop, tick, get world(){ return world; }, get want(){ return want; }, get engine(){ return engine; } };
+})();
+window.XPLCanal = XPLCanal;
+
 loadStores(); screenLbl(); applyAudio(); renderChan(); fitMupi(); loadFeed(true); restartFeed();
 wireCam(); loadGrid(); setInterval(loadGrid, 60000);
+// si arrancamos ya en modo conditional (persistido/URL), enciende el motor XPL
+if(playoutMode==='conditional' && window.XPLCanal) XPLCanal.start();
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
