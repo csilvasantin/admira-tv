@@ -534,7 +534,11 @@ async function camLoop(){ if(!CAM.on) return;
   }catch(_){}
   CAM.timer=setTimeout(camLoop,3500);
 }
-function camApply(aud,age){ if(seg.audience===aud && seg.age===age) return; seg.audience=aud; seg.age=age; try{ syncSegPanel(); }catch(_){} rebuild(true); }
+function camApply(aud,age){
+  // En modo CONDICIONAL manda la matriz de segmentación (cámara=condición, no filtro
+  // directo): no tocamos seg.audience/age aquí para no doble-filtrar. En modo local sí.
+  if(playoutMode==='conditional') return;
+  if(seg.audience===aud && seg.age===age) return; seg.audience=aud; seg.age=age; try{ syncSegPanel(); }catch(_){} rebuild(true); }
 function wireCam(){ const cb=$('f-cam'); if(cb) cb.onchange=()=>{ cb.checked?camStart():camStop(); };
   if(qs.get('cam')==='1' || qs.get('simcam')!=null || LS('adtv_cam','0')==='1'){ if(cb) cb.checked=true; camStart(); } }
 
@@ -1113,7 +1117,8 @@ const XPLCanal = (function(){
   if(!window.XPL){ console.warn('[XPLCanal] runtime XPL no cargado'); return { start(){}, stop(){}, tick(){} }; }
   const XPL = window.XPL;
   const STORE = 'https://xpl.admira.store';
-  let engine=null, timer=null, REMOTE=null, want={category:'all'};
+  const SEG_URL = 'https://omnipublicity-api.csilvasantin.workers.dev/segmentation';
+  let engine=null, timer=null, mtimer=null, REMOTE=null, want={category:'all'}, MATRIX=null;
 
   function camFresh(){ const c=window.__xplCam; return (c && c.faces>0 && (Date.now()-c.ts)<6000) ? c : null; }
   function nowH(){ try{ return +new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ return new Date().getHours(); } }
@@ -1160,22 +1165,54 @@ const XPLCanal = (function(){
     }).catch(()=>{});
   }
 
+  // — matriz de segmentación cámara→contenido (editable en el CMS) —
+  function fetchMatrix(){
+    fetch(SEG_URL+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+      if(d && Array.isArray(d.rules)) MATRIX=d;
+    }).catch(()=>{});
+  }
+  function camSeg(){
+    const c=window.__xplCam; const f=(c&&c.faces>0&&(Date.now()-c.ts)<6000)?c:null;
+    return { gender: f?(f.gender==='m'?'m':f.gender==='f'?'f':null):null, age: f?(f.age||null):null, count: f?f.faces:0 };
+  }
+  function matchMatrix(s){
+    for(const r of (MATRIX.rules||[])){
+      if(r.gender&&r.gender!=='any'&&r.gender!==s.gender) continue;
+      if(r.age&&r.age!=='any'&&r.age!==s.age) continue;
+      if((r.minCount||1) > s.count) continue;
+      return r;
+    }
+    return MATRIX.default||{category:'atraer'};
+  }
   function tick(){
-    if(playoutMode!=='conditional' || !engine) return;
-    want={category:'all'};
-    engine.tick();                                  // reglas vivas → want.category
-    applyXplDirective({ category: want.category||'all' });  // ruta segura → seg + rebuild
+    if(playoutMode!=='conditional') return;
+    if(MATRIX && Array.isArray(MATRIX.rules)){
+      // El segmento de cámara es la CONDICIÓN; el resultado fija el TEMA/categoría.
+      // audience/age van a 'all' a propósito: el tema filtra, no doble-filtramos por demografía.
+      const r=matchMatrix(camSeg());
+      applyXplDirective({
+        category: (r.category&&r.category!=='any')?r.category:'all',
+        tag: r.tag||'',
+        medio: (r.medio&&r.medio!=='any')?r.medio:'all',
+        audience:'all', age:'all'
+      });
+    } else if(engine){                                // fallback: reglas semilla del runtime
+      want={category:'all'}; engine.tick();
+      applyXplDirective({ category: want.category||'all' });
+    }
   }
   function start(){
     if(!engine){ engine=XPL.createEngine(world); }
     engine.setRules(loadRules());
-    fetchRemote();
+    fetchRemote(); fetchMatrix();
     if(timer) clearInterval(timer);
+    if(mtimer) clearInterval(mtimer);
     tick();
     timer=setInterval(tick, 3000);
-    try{ flashCli('◆ motor XPL · '+engine.rules.length+' reglas'); }catch(_){}
+    mtimer=setInterval(fetchMatrix, 30000);          // refresca la matriz que edita el CMS
+    try{ flashCli('◆ segmentación cámara→contenido activa'); }catch(_){}
   }
-  function stop(){ if(timer){ clearInterval(timer); timer=null; } }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; } if(mtimer){ clearInterval(mtimer); mtimer=null; } }
 
   return { start, stop, tick, get world(){ return world; }, get want(){ return want; }, get engine(){ return engine; } };
 })();

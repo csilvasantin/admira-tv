@@ -61,6 +61,15 @@
   .empty{padding:60px 20px;text-align:center;color:var(--dim)}
   footer{padding:10px 20px 30px;color:var(--dim);font-size:11.5px;text-align:center}
   code{color:var(--accent)}
+  /* editor de segmentación */
+  #segWrap{padding:14px 20px 0}
+  #segTable{width:100%;border-collapse:collapse;font-size:13px}
+  #segTable th{padding:6px;color:var(--dim);text-align:left;font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px}
+  #segTable td{padding:5px 6px;border-bottom:1px solid #131c2b;vertical-align:middle}
+  #segWrap select,#segWrap input{background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font:13px -apple-system,Segoe UI,sans-serif}
+  #segWrap input[type=number]{width:64px}
+  .miniBtn{background:#13203a;border:1px solid #26385e;color:var(--ink);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;margin-left:3px}
+  .miniBtn:hover{background:#1a2c4e}
 </style>
 </head>
 <body>
@@ -79,6 +88,40 @@
   <div class="kpi amber"><div class="n" id="k-aud">—</div><div class="l">con audiencia</div></div>
   <div class="kpi"><div class="n" id="k-robot">—</div><div class="l">móviles / robot</div></div>
 </div>
+
+<section id="segWrap">
+  <div class="card" style="display:block">
+    <div class="top">
+      <div class="ava">🎯</div>
+      <div style="min-width:0">
+        <div class="nm">Segmentación de audiencia → contenido</div>
+        <div class="meta">La cámara detecta el público; cada regla asigna qué contenido emitir. Orden = prioridad (la primera que casa, gana).</div>
+      </div>
+      <div class="st on" id="segStatus" style="margin-left:auto"><span class="d"></span>cargando…</div>
+    </div>
+    <div class="body" style="display:block">
+      <div style="overflow-x:auto">
+        <table id="segTable">
+          <thead><tr>
+            <th>#</th><th>Género</th><th>Edad</th><th>Mín. personas</th>
+            <th>→ Categoría</th><th>Tema (tag)</th><th>Medio</th><th></th>
+          </tr></thead>
+          <tbody id="segRows"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <button class="miniBtn" id="segAdd" style="padding:7px 12px">+ Añadir regla</button>
+        <div style="flex:1;min-width:20px"></div>
+        <span class="meta">Por defecto (sin público):</span>
+        <select id="defCat"></select>
+        <input id="defTag" list="segTags" placeholder="tema" style="width:120px">
+        <select id="defMedio"></select>
+        <button class="miniBtn" id="segSave" style="padding:7px 14px;background:#16432c;border-color:#1f5e44;color:var(--air);font-weight:700">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+  <datalist id="segTags"></datalist>
+</section>
 
 <div class="grid" id="grid"><div class="empty">Cargando flota…</div></div>
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span></footer>
@@ -174,6 +217,67 @@ async function load(){
   document.querySelectorAll('.thumb video').forEach(v=>{ v.loop=true; v.muted=true; v.play&&v.play().catch(()=>{}); });
 }
 load(); setInterval(load, 10000);
+
+/* ── EDITOR DE SEGMENTACIÓN cámara → contenido ─────────────────────────────── */
+const SEG_API = 'https://omnipublicity-api.csilvasantin.workers.dev/segmentation';
+const GENDERS=[['any','cualquiera'],['m','hombre'],['f','mujer']];
+const AGES=[['any','cualquiera'],['nino','niño'],['joven','joven'],['adulto','adulto'],['senior','senior']];
+const CATS=[['any','cualquiera'],['atraer','atraer'],['producto','producto'],['marca','marca'],['promo','promo']];
+const MEDIOS=[['any','cualquiera'],['video','vídeo'],['image','imagen']];
+const TAGS=['musica','tecnologia','mobiliario','negocio','motivacional','videoclip','noticias','pop','flamenco','ciencia','ia','publi'];
+let segMatrix={rules:[],default:{category:'atraer',tag:'',medio:'any'}};
+const opt=(arr,val)=>arr.map(([v,l])=>'<option value="'+v+'"'+(v===val?' selected':'')+'>'+l+'</option>').join('');
+function renderSeg(){
+  $('segRows').innerHTML = segMatrix.rules.map((r,i)=>
+    '<tr data-i="'+i+'">'+
+      '<td style="color:var(--dim)">'+(i+1)+'</td>'+
+      '<td><select data-k="gender">'+opt(GENDERS,r.gender)+'</select></td>'+
+      '<td><select data-k="age">'+opt(AGES,r.age)+'</select></td>'+
+      '<td><input data-k="minCount" type="number" min="1" max="9" value="'+(r.minCount||1)+'"></td>'+
+      '<td><select data-k="category">'+opt(CATS,r.category)+'</select></td>'+
+      '<td><input data-k="tag" list="segTags" value="'+esc(r.tag||'')+'" style="width:120px"></td>'+
+      '<td><select data-k="medio">'+opt(MEDIOS,r.medio)+'</select></td>'+
+      '<td style="white-space:nowrap"><button class="miniBtn" data-act="up">▲</button><button class="miniBtn" data-act="down">▼</button><button class="miniBtn" data-act="del">✕</button></td>'+
+    '</tr>').join('');
+  $('defCat').innerHTML=opt(CATS,segMatrix.default.category||'atraer');
+  $('defMedio').innerHTML=opt(MEDIOS,segMatrix.default.medio||'any');
+  $('defTag').value=segMatrix.default.tag||'';
+  $('segTags').innerHTML=TAGS.map(t=>'<option value="'+t+'">').join('');
+}
+function readSeg(){
+  const rules=[...document.querySelectorAll('#segRows tr')].map(tr=>{
+    const g=k=>tr.querySelector('[data-k="'+k+'"]').value;
+    return { gender:g('gender'), age:g('age'), minCount:parseInt(g('minCount'),10)||1,
+             category:g('category'), tag:g('tag').trim(), medio:g('medio') };
+  });
+  return { rules, default:{ category:$('defCat').value, tag:$('defTag').value.trim(), medio:$('defMedio').value } };
+}
+async function loadSeg(){
+  try{ const r=await fetch(SEG_API+'?t='+Date.now(),{cache:'no-store'}); const d=await r.json();
+    if(d&&Array.isArray(d.rules)) segMatrix=d; renderSeg();
+    $('segStatus').innerHTML='<span class="d"></span>'+segMatrix.rules.length+' reglas'; }
+  catch(_){ $('segStatus').innerHTML='<span class="d"></span>sin conexión'; }
+}
+async function saveSeg(){
+  const m=readSeg(); const btn=$('segSave'); btn.textContent='Guardando…';
+  try{ const r=await fetch(SEG_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(m)});
+    const d=await r.json(); segMatrix=m;
+    btn.textContent=d&&d.ok?('✓ Guardado ('+d.count+')'):'✗ error'; }
+  catch(_){ btn.textContent='✗ sin conexión'; }
+  setTimeout(()=>{ btn.textContent='💾 Guardar'; },2200);
+}
+$('segAdd').onclick=()=>{ segMatrix=readSeg(); segMatrix.rules.push({gender:'any',age:'any',minCount:1,category:'any',tag:'',medio:'any'}); renderSeg(); };
+$('segSave').onclick=saveSeg;
+$('segRows').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-act]'); if(!b) return;
+  const i=+b.closest('tr').dataset.i; segMatrix=readSeg();
+  const R=segMatrix.rules;
+  if(b.dataset.act==='del') R.splice(i,1);
+  else if(b.dataset.act==='up'&&i>0){ [R[i-1],R[i]]=[R[i],R[i-1]]; }
+  else if(b.dataset.act==='down'&&i<R.length-1){ [R[i+1],R[i]]=[R[i],R[i+1]]; }
+  renderSeg();
+});
+loadSeg();
 </script>
 </body>
 </html>
