@@ -389,6 +389,7 @@ async function saveSeg(){
   const m=readSeg(); const btn=$('segSave'); btn.textContent='Guardando…';
   try{ const r=await fetch(SEG_API+'?target='+encodeURIComponent(segTargetSel),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(m)});
     const d=await r.json(); segMatrix=m; try{ load(); }catch(_){}   // refresca las cajas amarillas
+    if(d&&d.ok){ $('segStatus').innerHTML='<span class="d"></span>'+m.rules.length+' reglas · '+(segTargetSel==='all'?'global':'propia'); }
     btn.textContent=d&&d.ok?('✓ Guardado ('+d.count+')'):'✗ error'; }
   catch(_){ btn.textContent='✗ sin conexión'; }
   setTimeout(()=>{ btn.textContent='💾 Guardar'; },2200);
