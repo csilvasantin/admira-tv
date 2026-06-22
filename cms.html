@@ -324,7 +324,7 @@ async function load(){
           <div class="meta">${esc(d.id)} · ${isRobot?'robot móvil':'pantalla'} · ${esc(d.orientation||'portrait')}${d.device?(' · 💻 '+esc(d.device)):''}${(it&&it._ip)?(' · 🌐 '+esc(it._ip)):''}</div>
         </div>
         <span class="cmode ${cmode}" title="${MODE_LBL[cmode]}">${CMICON[cmode]}</span>
-        <div class="st ${isOn?'on':'off'}"><span class="d"></span>${isOn?'EN ANTENA':'sin señal'}</div>
+        <div class="st ${isOn?'on':'off'}"><span class="d"></span>${isOn?'Emitiendo':'sin señal'}</div>
         <span class="collChev" aria-hidden="true">▾</span>
       </div>
       <div class="body">
