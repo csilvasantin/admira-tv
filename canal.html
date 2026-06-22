@@ -227,6 +227,11 @@ const seg = {
 };
 const cfg = { imgSec:+(qs.get('img')||LS('adtv_img',9)), audioSec:+(qs.get('audio')||LS('adtv_audio',18)), refreshSec:+(qs.get('refresh')||LS('adtv_refresh',30)), max:+(qs.get('max')||LS('adtv_max',50)) };
 const scr = { circuit: qs.get('circuit')||LS('adtv_circuit',''), screen: qs.get('screen')||LS('adtv_screen',''), name: LS('adtv_screenName','') };
+// Si el equipo se registró/abrió sin circuito pero sí con screen ('<id>-mupi'),
+// derivamos el circuito del screen. Sin esto, un equipo sin circuit no recibe
+// control remoto (pollMode/pollCmd hacen return), su segmentación cae a la global
+// ('all') en vez de la suya, y el proof-of-play no se imputa. El id = screen sin '-mupi'.
+if(!scr.circuit && scr.screen){ scr.circuit = String(scr.screen).replace(/-mupi$/,''); save('adtv_circuit', scr.circuit); }
 let muted  = qs.has('muted') ? qs.get('muted') !== '0' : (LS('adtv_muted','1'))==='1';
 let volume = Math.max(0,Math.min(1,parseFloat(qs.get('volume')||LS('adtv_vol','1'))));
 const modeParam = qs.get('mode') ?? qs.get('admiraMode') ?? qs.get('playout');
