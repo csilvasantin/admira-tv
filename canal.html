@@ -207,7 +207,11 @@
 </div>
 
 <script>
-const INDEX = 'https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json';
+// Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
+// directo (pub-…r2.dev): más resiliente y evita bloqueos de DNS/filtrado en algunas
+// redes (p.ej. Google Nest WiFi) que dejan pasar admira.tv pero no r2.dev. Los assets
+// también vienen por api.admira.store, así que toda la media carga por la misma vía.
+const INDEX = 'https://api.admira.store/stock/list?limit=300';
 const MEDIA = ['video','animation','image','digital-twin','audio','music','locucion'];
 const KIND = { video:'video', animation:'video', image:'image', 'digital-twin':'image', 'twin-npc':'image', audio:'audio', music:'audio', locucion:'audio' };
 const qs = new URLSearchParams(location.search);
@@ -678,7 +682,7 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   if(showStatus) setStockStatus('checking');                  // 🟡 revisando stock
   try{
   const _reqT=Date.now();
-  const r=await fetch(INDEX+'?t='+_reqT,{cache:'no-store'});
+  const r=await fetch(INDEX+(INDEX.indexOf('?')>=0?'&':'?')+'t='+_reqT,{cache:'no-store'});
   const _dateHdr=r.headers.get('date');
   if(_dateHdr){
     const _serverT=Date.parse(_dateHdr);
