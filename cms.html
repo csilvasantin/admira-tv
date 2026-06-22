@@ -76,6 +76,15 @@
   .card.assigned{border-color:#caa23a;box-shadow:0 0 0 1px #caa23a66, 0 0 22px #caa23a22}
   .card.assigned .ava{border-color:#caa23a;color:#ffd866}
   .badge-cond{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid #5e4a26;color:#ffd866;font-size:11.5px;background:#1a160488}
+  /* caja VERDE = match en vivo ("cazado") */
+  .card.matched{border-color:var(--air);box-shadow:0 0 0 1px var(--air), 0 0 26px #39d98a44}
+  .card.matched .ava{border-color:var(--air);color:var(--air)}
+  .badge-match{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid #1f5e44;color:var(--air);font-size:11.5px;background:#0c2018;font-weight:700}
+  /* preview de la pieza que se disparará */
+  .firePrev{display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 8px;border-radius:10px;background:#0c1320;border:1px solid var(--line)}
+  .firePrev.on{border-color:#1f5e44;background:#0b1a14}
+  .firePrev .ft{width:58px;height:36px;border-radius:6px;overflow:hidden;background:#000;display:grid;place-items:center;color:var(--dim);font-size:17px;flex:none}
+  .firePrev .ft img,.firePrev .ft video{width:100%;height:100%;object-fit:cover}
   /* navegador de Stock (modal) */
   #mediaModal{position:fixed;inset:0;z-index:50;background:#060912f2;backdrop-filter:blur(5px);display:none;flex-direction:column;padding:18px 20px}
   #mediaModal .mHd{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
@@ -198,6 +207,20 @@ async function fetchNow(screen){
        const d=await r.json(); return d.item||d||null; }catch(_){ return null; }
 }
 
+// franja Madrid actual (igual que el canal) para evaluar reglas de tiempo
+function curSlot(){ let h=12; try{ h=+new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ h=new Date().getHours(); } return h<12?'manana':h<16?'mediodia':h<21?'tarde':'noche'; }
+// segmento actual a partir de la audiencia que publica el player (signage/now)
+function audSeg(aud){ const a=aud||{}; const f=a.faces||0; return { gender:f?(a.gender==='m'?'m':a.gender==='f'?'f':null):null, age:f?(a.age||null):null, count:f, slot:curSlot() }; }
+// mismo matchMatrix que el canal: 1ª regla que casa (o default)
+function matchRule(matrix,seg){ for(const r of (matrix.rules||[])){ const mc=(r.minCount==null?1:r.minCount); if(mc>seg.count) continue;
+  if(r.gender&&r.gender!=='any'&&r.gender!==seg.gender) continue; if(r.age&&r.age!=='any'&&r.age!==seg.age) continue;
+  if(r.slot&&r.slot!=='any'&&r.slot!==seg.slot) continue; return {rule:r,matched:true}; }
+  return {rule:matrix.default||{},matched:false}; }
+function assetById(id){ return STOCK_ITEMS.find(x=>x.id===id)||null; }
+function mediaThumb(a){ if(!a) return '🎬'; if(a.type==='image'||a.type==='animation') return '<img src="'+esc(a.url)+'" alt="">'; if(a.thumbnail) return '<img src="'+esc(a.thumbnail)+'" alt="">'; return a.type==='video'?'▶':'♪'; }
+function condText(r){ const G={any:'cualquier género',m:'♂ hombre',f:'♀ mujer'}, A={any:'cualquier edad',nino:'niño',joven:'joven',adulto:'adulto',senior:'senior',vejez:'vejez'}, S={any:'cualquier hora',manana:'mañana',mediodia:'mediodía',tarde:'tarde',noche:'noche'};
+  const p=(r.minCount===0)?'sin cámara':''; return [G[r.gender||'any'],A[r.age||'any'],S[r.slot||'any']].concat(p?[p]:[]).join(' · '); }
+
 async function load(){
   let devs=[];
   try{ const r=await fetch(FLEET,{cache:'no-store'}); const d=await r.json(); devs=(d.locations||d||[]).filter(x=>x&&x.id); }
@@ -207,6 +230,9 @@ async function load(){
   // players con segmentación PROPIA asignada (caja amarilla)
   let ASSIGNED=new Set();
   try{ const a=await fetch(SEG_API+'/assigned?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()); ASSIGNED=new Set(a.assigned||[]); }catch(_){}
+  // segmentación propia de cada player asignado (para evaluar el match y previsualizar la pieza)
+  const segByPlayer={};
+  await Promise.all([...ASSIGNED].map(id=>fetch(SEG_API+'?target='+encodeURIComponent(id)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(d=>{segByPlayer[id]=d;}).catch(()=>{})));
   // rellena el selector de destino del editor (Todos + cada player), conservando la selección
   if($('segTarget')) $('segTarget').innerHTML='<option value="all">🌐 Todos (toda la red)</option>'+
     devs.map(d=>'<option value="'+esc(d.id)+'"'+(segTargetSel===d.id?' selected':'')+'>'+(ASSIGNED.has(d.id)?'🟡 ':'')+esc(d.name||d.id)+'</option>').join('');
@@ -222,7 +248,23 @@ async function load(){
     const startedAgo = (it&&it.startedAt)? ('hace '+ageTxt(now-it.startedAt)) : '';
     const moved = d.movedAt ? '<span class="pill moved" title="posición actualizada">📍 movido '+ageTxt(now-d.movedAt*1000)+'</span>' : '';
     const hasCond = ASSIGNED.has(d.id);   // tiene segmentación propia asignada → caja amarilla
-    return `<div class="card ${hasCond?'assigned':''}">
+    // evalúa el match en vivo (audiencia actual del player vs sus reglas) y prepara el preview
+    let matched=false, firePrev='';
+    if(hasCond && segByPlayer[d.id]){
+      const mtx=segByPlayer[d.id], seg=audSeg(it&&it.aud), mr=matchRule(mtx,seg);
+      matched=mr.matched;
+      const rule = matched ? mr.rule : ((mtx.rules&&mtx.rules[0]) || mtx.default || {});
+      const asset = (rule.assets&&rule.assets[0]) ? assetById(rule.assets[0]) : null;
+      const fireTxt = asset ? (asset.title||asset.id) : ('tema: '+(rule.tag||rule.category||'auto'));
+      firePrev = '<div class="firePrev '+(matched?'on':'')+'">'+
+          '<div class="ft">'+(asset?mediaThumb(asset):'🎬')+'</div>'+
+          '<div style="min-width:0">'+
+            '<div style="font-size:11px;color:'+(matched?'var(--air)':'#ffd866')+'">'+(matched?'✅ CAZADO':'🎯 se disparará')+' · '+esc(condText(rule))+'</div>'+
+            '<div style="font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(String(fireTxt).slice(0,42))+'</div>'+
+          '</div></div>';
+    }
+    const cardCls = matched?'matched':(hasCond?'assigned':'');
+    return `<div class="card ${cardCls}">
       <div class="top">
         <div class="ava ${isRobot?'robot':''}">${isRobot?'🤖':(d.orientation==='landscape'?'🖥️':'📱')}</div>
         <div style="min-width:0">
@@ -243,8 +285,9 @@ async function load(){
           ${isOn?audPill(it.aud):''}
           ${d.addr?('<span class="pill pos" title="'+esc(d.addr)+'">📍 '+esc(String(d.addr).split('·')[0].trim())+'</span>'):''}
           ${moved}
-          ${hasCond?'<span class="badge-cond" title="tiene segmentación propia asignada">🎯 condiciones propias</span>':''}
+          ${matched?'<span class="badge-match" title="el público actual cumple una condición">✅ ¡cazado!</span>':(hasCond?'<span class="badge-cond" title="tiene segmentación propia asignada">🎯 condiciones propias</span>':'')}
         </div>
+        ${firePrev}
         <div class="row" style="gap:7px;align-items:center;margin-top:2px">
           <span class="meta" style="flex:none">Modo de emisión</span>
           <select class="modeSel" data-id="${esc(d.id)}" style="flex:1">
