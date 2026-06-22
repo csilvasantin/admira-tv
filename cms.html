@@ -71,6 +71,20 @@
   .miniBtn{background:#13203a;border:1px solid #26385e;color:var(--ink);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;margin-left:3px}
   .miniBtn:hover{background:#1a2c4e}
   .modeSel{background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:12.5px -apple-system,Segoe UI,sans-serif;transition:border-color .3s}
+  /* navegador de Stock (modal) */
+  #mediaModal{position:fixed;inset:0;z-index:50;background:#060912f2;backdrop-filter:blur(5px);display:none;flex-direction:column;padding:18px 20px}
+  #mediaModal .mHd{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  #mediaModal h3{margin:0;font-size:18px;white-space:nowrap}
+  #mediaSearch{flex:1;min-width:160px;background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font:14px -apple-system,Segoe UI,sans-serif}
+  #mediaGrid{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;align-content:start}
+  .mItem{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .1s,border-color .15s}
+  .mItem:hover{transform:translateY(-2px);border-color:#33415e}
+  .mItem.on{border-color:var(--air);box-shadow:0 0 0 2px var(--air) inset}
+  .mItem.on::after{content:'✓';position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;background:var(--air);color:#04110b;font:800 13px sans-serif;display:grid;place-items:center;z-index:2}
+  .mTh{height:94px;background:#000;display:grid;place-items:center;color:var(--dim);font-size:26px;overflow:hidden}
+  .mTh img{width:100%;height:100%;object-fit:cover}
+  .mTt{padding:7px 9px 1px;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mTy{padding:0 9px 8px;font-size:11px;color:var(--dim)}
 </style>
 </head>
 <body>
@@ -105,7 +119,7 @@
         <table id="segTable">
           <thead><tr>
             <th>#</th><th>Género</th><th>Edad</th><th>Mín. personas</th><th>Franja</th>
-            <th>→ Categoría</th><th>Tema (tag)</th><th>Medio</th><th>Stock</th><th></th>
+            <th>→ Categoría</th><th>Tema (tag)</th><th>Medio</th><th>Media concreta</th><th>Stock</th><th></th>
           </tr></thead>
           <tbody id="segRows"></tbody>
         </table>
@@ -125,6 +139,17 @@
 </section>
 
 <div class="grid" id="grid"><div class="empty">Cargando flota…</div></div>
+<div id="mediaModal">
+  <div class="mHd">
+    <h3>🎬 Stock de Pixeria</h3>
+    <input id="mediaSearch" placeholder="Buscar por título, tag o categoría…">
+    <span class="meta" id="mediaCount">—</span>
+    <button class="miniBtn" id="mediaClear">Limpiar selección</button>
+    <button class="miniBtn" id="mediaDone" style="background:#16432c;border-color:#1f5e44;color:var(--air);padding:7px 16px;font-weight:700">✓ Hecho</button>
+  </div>
+  <div id="mediaGrid"></div>
+</div>
+
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span></footer>
 
 <script>
@@ -288,7 +313,8 @@ function renderSeg(){
       '<td><select data-k="category">'+opt(CATS,r.category)+'</select></td>'+
       '<td><input data-k="tag" list="segTags" value="'+esc(r.tag||'')+'" style="width:120px"></td>'+
       '<td><select data-k="medio">'+opt(MEDIOS,r.medio)+'</select></td>'+
-      '<td data-cnt="'+i+'" title="assets del Stock que casan" style="color:var(--dim);font:600 12px ui-monospace,monospace">…</td>'+
+      '<td><button class="miniBtn pickMedia" data-i="'+i+'" title="elegir piezas concretas del Stock">'+((r.assets&&r.assets.length)?('🎬 '+r.assets.length+' pieza'+(r.assets.length>1?'s':'')):'🎬 elegir')+'</button></td>'+
+      '<td data-cnt="'+i+'" title="assets del Stock que casan por tema" style="color:var(--dim);font:600 12px ui-monospace,monospace">…</td>'+
       '<td style="white-space:nowrap"><button class="miniBtn" data-act="up">▲</button><button class="miniBtn" data-act="down">▼</button><button class="miniBtn" data-act="del">✕</button></td>'+
     '</tr>').join('');
   $('defCat').innerHTML=opt(CATS,segMatrix.default.category||'atraer');
@@ -300,12 +326,39 @@ function renderSeg(){
 function readSeg(){
   const rules=[...document.querySelectorAll('#segRows tr')].map(tr=>{
     const g=k=>tr.querySelector('[data-k="'+k+'"]').value;
+    const i=+tr.dataset.i;
     const mc=parseInt(g('minCount'),10);
+    // los assets no están en inputs → se preservan desde segMatrix por índice
+    const assets=(segMatrix.rules[i]&&Array.isArray(segMatrix.rules[i].assets))?segMatrix.rules[i].assets.slice():[];
     return { gender:g('gender'), age:g('age'), minCount:isNaN(mc)?1:mc, slot:g('slot'),
-             category:g('category'), tag:g('tag').trim(), medio:g('medio') };
+             category:g('category'), tag:g('tag').trim(), medio:g('medio'), assets };
   });
   return { rules, default:{ category:$('defCat').value, tag:$('defTag').value.trim(), medio:$('defMedio').value } };
 }
+/* ── NAVEGADOR DE STOCK: elegir piezas concretas por regla ─────────────────── */
+let pickIdx=-1;
+function openMedia(i){ pickIdx=i; segMatrix=readSeg(); $('mediaSearch').value=''; renderGallery(''); $('mediaModal').style.display='flex'; setTimeout(()=>$('mediaSearch').focus(),50); }
+function closeMedia(){ $('mediaModal').style.display='none'; pickIdx=-1; }
+function selSet(){ const r=segMatrix.rules[pickIdx]; return new Set((r&&r.assets)||[]); }
+function renderGallery(q){
+  q=normTag(q||''); const sel=selSet();
+  const items=STOCK_ITEMS.filter(it=> !q || normTag((it.title||'')+' '+((it.tags||[]).join(' '))+' '+(it.category||'')).indexOf(q)>=0 );
+  $('mediaCount').textContent=items.length+' piezas · '+sel.size+' elegidas';
+  $('mediaGrid').innerHTML=items.slice(0,240).map(it=>{
+    const on=sel.has(it.id);
+    const th=(it.type==='image'||it.type==='animation')?('<img src="'+esc(it.url)+'" loading="lazy" alt="">'):(it.thumbnail?('<img src="'+esc(it.thumbnail)+'" loading="lazy" alt="">'):(it.type==='video'?'▶':'♪'));
+    return '<div class="mItem'+(on?' on':'')+'" data-id="'+esc(it.id)+'"><div class="mTh">'+th+'</div><div class="mTt">'+esc(String(it.title||it.id).slice(0,44))+'</div><div class="mTy">'+esc(it.type)+(it.category?(' · '+esc(it.category)):'')+'</div></div>';
+  }).join('')||'<div style="padding:40px;color:var(--dim)">Sin resultados</div>';
+}
+$('mediaGrid').addEventListener('click',e=>{
+  const el=e.target.closest('.mItem'); if(!el||pickIdx<0) return;
+  const id=el.dataset.id, r=segMatrix.rules[pickIdx]; r.assets=r.assets||[];
+  const k=r.assets.indexOf(id); if(k>=0) r.assets.splice(k,1); else r.assets.push(id);
+  renderGallery($('mediaSearch').value);
+});
+$('mediaSearch').addEventListener('input',()=>renderGallery($('mediaSearch').value));
+$('mediaClear').onclick=()=>{ if(pickIdx>=0&&segMatrix.rules[pickIdx]){ segMatrix.rules[pickIdx].assets=[]; renderGallery($('mediaSearch').value); } };
+$('mediaDone').onclick=()=>{ closeMedia(); renderSeg(); };
 async function loadSeg(){
   try{ const r=await fetch(SEG_API+'?t='+Date.now(),{cache:'no-store'}); const d=await r.json();
     if(d&&Array.isArray(d.rules)) segMatrix=d; renderSeg();
@@ -323,6 +376,7 @@ async function saveSeg(){
 $('segAdd').onclick=()=>{ segMatrix=readSeg(); segMatrix.rules.push({gender:'any',age:'any',minCount:1,category:'any',tag:'',medio:'any'}); renderSeg(); };
 $('segSave').onclick=saveSeg;
 $('segRows').addEventListener('click',e=>{
+  const pm=e.target.closest('.pickMedia'); if(pm){ openMedia(+pm.dataset.i); return; }   // abre el navegador de Stock
   const b=e.target.closest('button[data-act]'); if(!b) return;
   const i=+b.closest('tr').dataset.i; segMatrix=readSeg();
   const R=segMatrix.rules;

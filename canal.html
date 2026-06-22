@@ -262,7 +262,9 @@ function normTag(v){ return String(v||'').toLowerCase().normalize('NFD').replace
 function canonicalAdmiraMode(v){ const m=normTag(v); if(['sync','sincro','sincronizado','admiratvsincro'].includes(m)) return 'sync'; if(['conditional','condicional','xpl','admiratvcondicional'].includes(m)) return 'conditional'; return 'local'; }
 function canonicalPlayTag(v){ const t=normTag(v).replace(/^#/,'').replace(/\s+/g,'-'); if(['music','musica','muscia'].includes(t)) return 'musica'; if(['tecnologia','technology','tech'].includes(t)) return 'tecnologia'; return t; }
 function tagNeedles(v){ const t=canonicalPlayTag(v); if(t==='musica') return ['musica','music','muscia']; if(t==='tecnologia') return ['tecnologia','technology','tech']; return [t]; }
-function matchesSeg(it,s){ const k=KIND[it.type];
+function matchesSeg(it,s){
+  if(s.ids&&s.ids.length){ return s.ids.indexOf(it.id)>=0; }   // assets CONCRETOS elegidos en el CMS → solo esos
+  const k=KIND[it.type];
   if(s.medio!=='all'&&k!==s.medio) return false;
   if(s.audience!=='all'){ const a=it.audience; if(a&&a!=='all'&&a!==s.audience) return false; }
   if(s.category!=='all'){ if(it.category&&it.category!==s.category) return false; }
@@ -1118,7 +1120,7 @@ const XPLCanal = (function(){
   const XPL = window.XPL;
   const STORE = 'https://xpl.admira.store';
   const SEG_URL = 'https://omnipublicity-api.csilvasantin.workers.dev/segmentation';
-  let engine=null, timer=null, mtimer=null, REMOTE=null, want={category:'all'}, MATRIX=null;
+  let engine=null, timer=null, mtimer=null, REMOTE=null, want={category:'all'}, MATRIX=null, lastSig='';
 
   function camFresh(){ const c=window.__xplCam; return (c && c.faces>0 && (Date.now()-c.ts)<6000) ? c : null; }
   function nowH(){ try{ return +new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ return new Date().getHours(); } }
@@ -1187,21 +1189,31 @@ const XPLCanal = (function(){
     }
     return MATRIX.default||{category:'atraer'};
   }
+  // Aplica el resultado de una regla al segmento, unificado y con dedup por firma:
+  //  - si la regla trae assets CONCRETOS → se emiten exactamente esos (seg.ids).
+  //  - si no → el TEMA (categoría/tag/medio); audience/age a 'all' (no doble-filtro).
+  function applySeg(next){
+    const ids=(next.ids&&next.ids.length)?next.ids.slice():null;
+    const sig=JSON.stringify([ids, next.category||'all', next.tag||'', next.medio||'all']);
+    if(sig===lastSig) return;
+    lastSig=sig;
+    seg.ids=ids;
+    seg.category=ids?'all':(next.category||'all');
+    seg.tag=ids?'':(next.tag||'');
+    seg.medio=ids?'all':(next.medio||'all');
+    seg.audience='all'; seg.age='all';
+    try{ syncSegPanel(); }catch(_){}
+    seenSig=''; rebuild(true);
+  }
   function tick(){
     if(playoutMode!=='conditional') return;
     if(MATRIX && Array.isArray(MATRIX.rules)){
-      // El segmento de cámara es la CONDICIÓN; el resultado fija el TEMA/categoría.
-      // audience/age van a 'all' a propósito: el tema filtra, no doble-filtramos por demografía.
       const r=matchMatrix(camSeg());
-      applyXplDirective({
-        category: (r.category&&r.category!=='any')?r.category:'all',
-        tag: r.tag||'',
-        medio: (r.medio&&r.medio!=='any')?r.medio:'all',
-        audience:'all', age:'all'
-      });
+      applySeg({ ids:r.assets, category:(r.category&&r.category!=='any')?r.category:'all',
+                 tag:r.tag||'', medio:(r.medio&&r.medio!=='any')?r.medio:'all' });
     } else if(engine){                                // fallback: reglas semilla del runtime
       want={category:'all'}; engine.tick();
-      applyXplDirective({ category: want.category||'all' });
+      applySeg({ category: want.category||'all' });
     }
   }
   function start(){
@@ -1215,7 +1227,8 @@ const XPLCanal = (function(){
     mtimer=setInterval(fetchMatrix, 30000);          // refresca la matriz que edita el CMS
     try{ flashCli('◆ segmentación cámara→contenido activa'); }catch(_){}
   }
-  function stop(){ if(timer){ clearInterval(timer); timer=null; } if(mtimer){ clearInterval(mtimer); mtimer=null; } }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; } if(mtimer){ clearInterval(mtimer); mtimer=null; }
+    lastSig=''; if(typeof seg==='object'&&seg.ids){ seg.ids=null; } }   // no dejar local/sync filtrado a assets
 
   return { start, stop, tick, get world(){ return world; }, get want(){ return want; }, get engine(){ return engine; } };
 })();
