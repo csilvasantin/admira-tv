@@ -597,7 +597,85 @@ function gridWeave(pl){
   if(gi===0) for(const g of grid) out.push(g);
   return out;
 }
-function play(i, forced){
+
+// ── PSEUDO-STREAMING: pre-descarga a la Cache API y reproduce DESDE DISCO ────────
+// El servidor manda la playlist (parrilla + segmento). Aquí cada pieza se DESCARGA
+// entera ANTES de reproducirla (no streaming directo) y el estado de descarga se
+// reporta al worker (/screen/cache) para que el CMS marque qué tiene cada player.
+const CACHE_NAME='admira-canal-v1';
+const CACHE_API='https://api.admira.store/screen/cache';
+const PRECACHE_MAX=Math.max(8, cfg.max||40);   // piezas del loop a mantener bajadas
+let _playTok=0;
+let _cache=null, _ready=new Set(), _dl=new Map(), _cBytes=0, _precaching=false, _precQ=[], _objURLs=new Map(), _lastCacheRep=0;
+async function cacheOpen(){ if(_cache!==null) return _cache; try{ _cache=await caches.open(CACHE_NAME); }catch(_){ _cache=false; } return _cache; }
+function cacheable(it){ return !!(it&&it.url&&/^https?:/i.test(it.url)); }
+// Descarga la pieza con progreso (stream + content-length) y la guarda en la cache.
+async function fetchToCache(it){
+  const c=await cacheOpen(); if(!c||!cacheable(it)) return false;
+  try{
+    if(await c.match(it.url)){ _ready.add(it.id); return true; }
+    const resp=await fetch(it.url,{mode:'cors',cache:'force-cache'});
+    if(!resp||!resp.ok) return false;
+    if(!resp.body){ await c.put(it.url, resp.clone()); _ready.add(it.id); return true; }
+    const total=+(resp.headers.get('content-length')||0);
+    const reader=resp.body.getReader(); const chunks=[]; let recv=0; _dl.set(it.id,0);
+    for(;;){ const {done,value}=await reader.read(); if(done) break;
+      chunks.push(value); recv+=value.length; _cBytes+=value.length;
+      if(total){ _dl.set(it.id, Math.min(99, Math.round(recv/total*100))); cacheReportThrottled(); } }
+    const blob=new Blob(chunks,{type:resp.headers.get('content-type')||''});
+    await c.put(it.url, new Response(blob,{headers:{'content-type':blob.type||'application/octet-stream'}}));
+    _dl.delete(it.id); _ready.add(it.id); return true;
+  }catch(_){ _dl.delete(it.id); return false; }
+}
+// URL reproducible desde la cache (objectURL) o null si la pieza aún no está bajada.
+async function cachedSrc(it){
+  const c=await cacheOpen(); if(!c||!cacheable(it)) return null;
+  try{ if(_objURLs.has(it.url)) return _objURLs.get(it.url);
+    const hit=await c.match(it.url); if(!hit) return null;
+    const u=URL.createObjectURL(await hit.blob()); _objURLs.set(it.url,u);
+    if(_objURLs.size>6){ const k=_objURLs.keys().next().value; if(k!==it.url){ try{URL.revokeObjectURL(_objURLs.get(k));}catch(_){} _objURLs.delete(k); } }
+    return u;
+  }catch(_){ return null; }
+}
+async function precacheLoop(){ if(_precaching) return; _precaching=true;
+  try{ while(_precQ.length){ const it=_precQ.shift(); if(!it||_ready.has(it.id)||!cacheable(it)) continue; await fetchToCache(it); cacheReport(); } }
+  finally{ _precaching=false; try{ await pruneCache(); }catch(_){} cacheReport(); }
+}
+function schedulePrecache(){
+  const head=playlist.slice(0,PRECACHE_MAX), qids=new Set(_precQ.map(x=>x.id));
+  for(const it of head){ if(cacheable(it)&&!_ready.has(it.id)&&!qids.has(it.id)){ _precQ.push(it); qids.add(it.id); } }
+  if(_precQ.length) precacheLoop();
+  cacheBadge();
+}
+// Mantiene la cache acotada: borra lo que ya no está en la playlist (si ha crecido).
+async function pruneCache(){
+  const c=await cacheOpen(); if(!c) return;
+  try{ const keys=await c.keys(); if(keys.length<=PRECACHE_MAX+12) return;
+    const keep=new Set(playlist.map(it=>it&&it.url).filter(Boolean));
+    for(const req of keys){ if(!keep.has(req.url)){ try{ await c.delete(req); }catch(_){} } }
+  }catch(_){}
+}
+function cacheReadyInPlaylist(){ let n=0; const seen=new Set(); for(const it of playlist){ if(it&&_ready.has(it.id)&&!seen.has(it.id)){ seen.add(it.id); n++; } } return n; }
+function cacheReportPayload(){
+  const ready=[], seen=new Set();
+  for(const it of playlist){ if(it&&_ready.has(it.id)&&!seen.has(it.id)){ seen.add(it.id); ready.push(it.id); } }
+  const downloading=[..._dl.entries()].slice(0,20).map(([id,pct])=>({id,pct}));
+  return { screen:scr.screen, ready, total:playlist.length, downloading, bytes:_cBytes };
+}
+function cacheReport(){ if(!scr.screen) return; _lastCacheRep=Date.now();
+  try{ fetch(CACHE_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify(cacheReportPayload())}).catch(()=>{}); }catch(_){}
+  cacheBadge();
+}
+function cacheReportThrottled(){ if(Date.now()-_lastCacheRep>4000) cacheReport(); }
+// Badge opcional de descarga (solo con ?cachehud=1; el MUPI público queda limpio).
+function cacheBadge(){ if(qs.get('cachehud')!=='1') return;
+  let b=$('cacheBadge'); if(!b){ b=document.createElement('div'); b.id='cacheBadge'; b.style.cssText='position:absolute;bottom:8px;left:8px;z-index:40;background:rgba(4,14,22,.82);border:1px solid rgba(125,255,208,.4);color:#bfeaff;border-radius:999px;padding:4px 11px;font:12px ui-monospace,Menlo,monospace;backdrop-filter:blur(4px)'; ($('mupi')||document.body).appendChild(b); }
+  const n=cacheReadyInPlaylist(), m=playlist.length, dl=_dl.size;
+  b.textContent='📥 '+n+'/'+m+(dl?(' · ⏳ '+dl):'')+(_cBytes?(' · '+(_cBytes/1048576).toFixed(1)+'MB'):'');
+}
+
+async function play(i, forced){
+  const _tok=++_playTok;
   clearTimeout(timer); stopBar(); bar.style.width='0'; mediaEl=null; usesAdv=false;
   paused=false; document.body.classList.remove('paused'); $('pause').textContent='⏸';
   let it;
@@ -615,8 +693,10 @@ function play(i, forced){
   stage.innerHTML=''; nowEl.textContent='▶ '+title;
   metaEl.textContent=(syncOn?'sincro canal · ':'')+it.type+(it._num?' · #'+it._num:'')+' · '+(cur+1)+'/'+playlist.length+' · '+(it.motor||'stock')+(it._dim?(' · '+it._dim.w+'×'+it._dim.h):'');
   renderRail();
+  // pseudo-streaming: reproduce DESDE DISCO si la pieza está descargada; si no, stream directo
+  const _csrc=await cachedSrc(it); if(_tok!==_playTok) return; const SRC=_csrc||it.url; it._fromCache=!!_csrc;
   if(k==='video'){
-    const v=document.createElement('video'); v.src=it.url; v.autoplay=true; v.playsInline=true; v.preload='auto';
+    const v=document.createElement('video'); v.src=SRC; v.autoplay=true; v.playsInline=true; v.preload='auto';
     v.onloadedmetadata=()=>{ if(v.duration&&isFinite(v.duration)){ it._dur=Math.round(v.duration); if(v.videoWidth&&v.videoHeight){ mupiAR=v.videoWidth/v.videoHeight; fitMupi(); emitFrameState(it); } if(syncOn&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,(syncElapsedMs()/1000)%v.duration); }catch(_){} } } };
     v.onended=()=>syncOn?play(syncIndex()):next(); v.onerror=()=>setTimeout(next,600);
     v.ontimeupdate=()=>{ if(v.duration&&!paused) bar.style.width=(v.currentTime/v.duration*100)+'%'; };
@@ -624,12 +704,12 @@ function play(i, forced){
     v.play().then(()=>tap.classList.remove('show')).catch(()=>tap.classList.add('show'));
     if(syncOn) timer=setTimeout(next,syncRemainingMs());
   } else if(k==='image'){
-    const im=document.createElement('img'); im.src=it.url; im.alt=title; if(it.type==='twin-npc') im.className='pixel';
+    const im=document.createElement('img'); im.src=SRC; im.alt=title; if(it.type==='twin-npc') im.className='pixel';
     im.onerror=()=>setTimeout(next,600); stage.appendChild(im); startAdv(syncOn?syncRemainingMs():Math.max(2,cfg.imgSec)*1000);
   } else {
     stage.innerHTML='<div class="audio-card"><div class="ico">♫</div><div class="wave">'
       +Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div><strong>'+title+'</strong></div>';
-    const a=document.createElement('audio'); a.src=it.url; a.autoplay=true; a.onerror=()=>setTimeout(next,600); a.onended=()=>syncOn?play(syncIndex()):next();
+    const a=document.createElement('audio'); a.src=SRC; a.autoplay=true; a.onerror=()=>setTimeout(next,600); a.onended=()=>syncOn?play(syncIndex()):next();
     mediaEl=a; applyAudio(); stage.querySelector('.audio-card').appendChild(a);
     a.play().then(()=>tap.classList.remove('show')).catch(()=>{ if(!muted) tap.classList.add('show'); });
     startAdv(syncOn?syncRemainingMs():Math.max(3,cfg.audioSec)*1000);
@@ -1263,6 +1343,10 @@ window.XPLCanal = XPLCanal;
 loadStores(); screenLbl(); applyAudio(); renderChan(); fitMupi(); loadFeed(true); restartFeed();
 wireCam(); loadGrid(); setInterval(loadGrid, 60000);
 startPositionBeat();   // equipos móviles (robot/taxi/bus): latido de posición
+// pseudo-streaming: pre-descarga la playlist a disco y reporta el estado al worker
+setTimeout(()=>{ try{ schedulePrecache(); }catch(_){} }, 3000);
+setInterval(()=>{ try{ schedulePrecache(); }catch(_){} }, 12000);
+setInterval(()=>{ try{ cacheReport(); }catch(_){} }, 30000);
 // si arrancamos ya en modo conditional (persistido/URL), enciende el motor XPL
 if(playoutMode==='conditional' && window.XPLCanal) XPLCanal.start();
 
