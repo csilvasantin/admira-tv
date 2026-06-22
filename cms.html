@@ -126,6 +126,15 @@
   .plc{color:var(--dim);white-space:nowrap;flex:none}
   .pld{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
   .plm{font:600 10px ui-monospace,monospace;color:var(--dim);border:1px solid var(--line);border-radius:5px;padding:0 5px;margin-left:auto;flex:none}
+  /* Estado de descarga (pseudo-streaming): qué tiene bajado cada player */
+  .dl{margin-top:7px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#0b121d}
+  .dlhdr{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--dim);margin-bottom:6px;flex-wrap:wrap}
+  .dlhdr b{color:var(--ink);font-weight:700}
+  .dlc{color:var(--dim)}
+  .dlok{color:var(--air);font-weight:700}
+  .dlbar{height:6px;background:#0d1f2b;border:1px solid var(--line);border-radius:99px;overflow:hidden}
+  .dlbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--air));border-radius:99px;transition:width .5s}
+  .dldl{font:600 10.5px ui-monospace,monospace;color:var(--amber);margin-top:5px;display:flex;flex-wrap:wrap;gap:9px}
   /* Fichas contraíbles (para flotas grandes) + botón global en la nav */
   .cmsNav button{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border:1px solid var(--line);border-radius:8px;background:#0e1420;color:var(--ink);font:600 12px ui-monospace,monospace;cursor:pointer;white-space:nowrap}
   .cmsNav button:hover{border-color:var(--accent);color:#fff}
@@ -216,6 +225,7 @@
 <script>
 const FLEET   = 'https://omnipublicity-api.csilvasantin.workers.dev/locations?selfreg=1';
 const SIGNAGE = 'https://api.admira.store/signage/now?screen=';
+const CACHEAPI= 'https://api.admira.store/screen/cache?screen=';   // estado de descarga (pseudo-streaming)
 const CANAL   = 'https://admira.tv/canal.html';
 const ONLINE_MS = 180000;            // signage/now fresco < 180 s = en antena
 // Estado de fichas CONTRAÍDAS (persiste en localStorage; sobrevive al re-render cada 10s).
@@ -255,6 +265,12 @@ async function fetchNow(screen){
        if(it && typeof it==='object' && d.ip) it._ip=d.ip;   // IP pública del player (capturada por el worker en el POST)
        return it; }catch(_){ return null; }
 }
+// estado de pseudo-streaming de un player: qué piezas tiene DESCARGADAS a disco
+async function fetchCache(screen){
+  if(!screen) return null;
+  try{ const r=await fetch(CACHEAPI+encodeURIComponent(screen),{cache:'no-store'}); if(!r.ok) return null;
+       const d=await r.json(); return (d&&d.cache)?d.cache:null; }catch(_){ return null; }
+}
 
 // franja Madrid actual (igual que el canal) para evaluar reglas de tiempo
 function curSlot(){ let h=12; try{ h=+new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ h=new Date().getHours(); } return h<12?'manana':h<16?'mediodia':h<21?'tarde':'noche'; }
@@ -288,6 +304,7 @@ async function load(){
   if($('segTarget')) $('segTarget').innerHTML='<option value="all">🌐 Todos (toda la red)</option>'+
     devs.map(d=>'<option value="'+esc(d.id)+'"'+(segTargetSel===d.id?' selected':'')+'>'+(ASSIGNED.has(d.id)?'🟡 ':'')+esc(d.name||d.id)+'</option>').join('');
   const nows = await Promise.all(devs.map(d=>fetchNow(d.screen)));
+  const dlStates = await Promise.all(devs.map(d=>fetchCache(d.screen)));   // descargas por player
   const now = Date.now();
   let online=0, withAud=0, robots=0;
   const cards = devs.map((d,i)=>{
@@ -360,6 +377,20 @@ async function load(){
             body=head+rows+more+dflt;
           }
           return '<div class="pl"><div class="plhdr"><span class="plmode '+mode+'">'+ML[mode]+'</span><span class="plttl">Playlist asignada</span></div><div class="plbody">'+body+'</div></div>';
+        })()}
+        ${(()=>{ const cc=dlStates[i]; if(!cc) return '';
+          const total=cc.total||0, ready=(cc.readyCount!=null?cc.readyCount:(cc.ready||[]).length);
+          const pct=total?Math.min(100,Math.round(ready/total*100)):0;
+          const dling=(cc.downloading||[]);
+          const mb=cc.bytes?((cc.bytes/1048576).toFixed(cc.bytes>10485760?0:1)+' MB'):'';
+          const fresh=cc.at?('hace '+ageTxt(now-cc.at)):'';
+          const full=total>0&&ready>=total&&!dling.length;
+          const dlrows=dling.slice(0,4).map(x=>'<span>⏳ …'+esc(String(x.id).slice(-6))+' '+(x.pct|0)+'%</span>').join('');
+          return '<div class="dl">'+
+            '<div class="dlhdr"><span>📥</span><b>'+ready+'/'+total+'</b>&nbsp;descargado'+(full?' <span class="dlok">· listo ✓</span>':'')+(mb?(' <span class="dlc">· '+mb+'</span>'):'')+(fresh?(' <span class="dlc">· '+fresh+'</span>'):'')+'</div>'+
+            '<div class="dlbar"><i style="width:'+pct+'%"></i></div>'+
+            (dlrows?('<div class="dldl">'+dlrows+'</div>'):'')+
+          '</div>';
         })()}
         <div class="acts">
           <a class="btn" href="${esc(canalUrl(d))}" target="_blank" rel="noopener">▶ Abrir canal</a>
