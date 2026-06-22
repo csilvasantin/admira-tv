@@ -1186,8 +1186,11 @@ const XPLCanal = (function(){
   }
 
   // — matriz de segmentación cámara→contenido (editable en el CMS) —
+  // Pide la segmentación de ESTE equipo (target=su circuito); el worker devuelve su
+  // matriz propia si la tiene asignada, o la global ('all') en su defecto.
   function fetchMatrix(){
-    fetch(SEG_URL+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+    var tgt = (typeof scr==='object' && scr.circuit) ? scr.circuit : 'all';
+    fetch(SEG_URL+'?target='+encodeURIComponent(tgt)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
       if(d && Array.isArray(d.rules)) MATRIX=d;
     }).catch(()=>{});
   }

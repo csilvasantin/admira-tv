@@ -71,6 +71,11 @@
   .miniBtn{background:#13203a;border:1px solid #26385e;color:var(--ink);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;margin-left:3px}
   .miniBtn:hover{background:#1a2c4e}
   .modeSel{background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:12.5px -apple-system,Segoe UI,sans-serif;transition:border-color .3s}
+  #segTarget{background:#1a1604;color:#ffd866;border:1px solid #5e4a26;border-radius:8px;padding:7px 10px;font:600 13px -apple-system,Segoe UI,sans-serif}
+  /* caja AMARILLA = el player tiene condiciones (segmentación propia) asignadas */
+  .card.assigned{border-color:#caa23a;box-shadow:0 0 0 1px #caa23a66, 0 0 22px #caa23a22}
+  .card.assigned .ava{border-color:#caa23a;color:#ffd866}
+  .badge-cond{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid #5e4a26;color:#ffd866;font-size:11.5px;background:#1a160488}
   /* navegador de Stock (modal) */
   #mediaModal{position:fixed;inset:0;z-index:50;background:#060912f2;backdrop-filter:blur(5px);display:none;flex-direction:column;padding:18px 20px}
   #mediaModal .mHd{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
@@ -112,7 +117,11 @@
         <div class="nm">Segmentación de audiencia → contenido</div>
         <div class="meta">La cámara detecta el público; cada regla asigna qué contenido emitir. Orden = prioridad (la primera que casa, gana).</div>
       </div>
-      <div class="st on" id="segStatus" style="margin-left:auto"><span class="d"></span>cargando…</div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="meta">Asignar a:</span>
+        <select id="segTarget"><option value="all">🌐 Todos (toda la red)</option></select>
+        <div class="st on" id="segStatus"><span class="d"></span>cargando…</div>
+      </div>
     </div>
     <div class="body" style="display:block">
       <div style="overflow-x:auto">
@@ -195,6 +204,12 @@ async function load(){
   catch(_){ $('liveTxt').textContent='sin conexión con la flota'; return; }
   // ordena: robot/móvil primero, luego por nombre
   devs.sort((a,b)=> (b.deviceType==='robot')-(a.deviceType==='robot') || String(a.name||a.id).localeCompare(String(b.name||b.id)));
+  // players con segmentación PROPIA asignada (caja amarilla)
+  let ASSIGNED=new Set();
+  try{ const a=await fetch(SEG_API+'/assigned?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()); ASSIGNED=new Set(a.assigned||[]); }catch(_){}
+  // rellena el selector de destino del editor (Todos + cada player), conservando la selección
+  if($('segTarget')) $('segTarget').innerHTML='<option value="all">🌐 Todos (toda la red)</option>'+
+    devs.map(d=>'<option value="'+esc(d.id)+'"'+(segTargetSel===d.id?' selected':'')+'>'+(ASSIGNED.has(d.id)?'🟡 ':'')+esc(d.name||d.id)+'</option>').join('');
   const nows = await Promise.all(devs.map(d=>fetchNow(d.screen)));
   const now = Date.now();
   let online=0, withAud=0, robots=0;
@@ -206,7 +221,8 @@ async function load(){
     const isRobot = d.deviceType==='robot'; if(isRobot) robots++;
     const startedAgo = (it&&it.startedAt)? ('hace '+ageTxt(now-it.startedAt)) : '';
     const moved = d.movedAt ? '<span class="pill moved" title="posición actualizada">📍 movido '+ageTxt(now-d.movedAt*1000)+'</span>' : '';
-    return `<div class="card">
+    const hasCond = ASSIGNED.has(d.id);   // tiene segmentación propia asignada → caja amarilla
+    return `<div class="card ${hasCond?'assigned':''}">
       <div class="top">
         <div class="ava ${isRobot?'robot':''}">${isRobot?'🤖':(d.orientation==='landscape'?'🖥️':'📱')}</div>
         <div style="min-width:0">
@@ -227,6 +243,7 @@ async function load(){
           ${isOn?audPill(it.aud):''}
           ${d.addr?('<span class="pill pos" title="'+esc(d.addr)+'">📍 '+esc(String(d.addr).split('·')[0].trim())+'</span>'):''}
           ${moved}
+          ${hasCond?'<span class="badge-cond" title="tiene segmentación propia asignada">🎯 condiciones propias</span>':''}
         </div>
         <div class="row" style="gap:7px;align-items:center;margin-top:2px">
           <span class="meta" style="flex:none">Modo de emisión</span>
@@ -272,6 +289,7 @@ const MODE_LBL={conditional:'Condicional · cámara/contexto',local:'Local · su
 let TAGS=['música','tecnología','mobiliario','negocio','motivacional','videoclip','noticias','deporte','gaming','humor'];  // fallback hasta cargar el Stock
 let STOCK_ITEMS=[], TAGCOUNT={};
 let segMatrix={rules:[],default:{category:'atraer',tag:'',medio:'any'}};
+let segTargetSel='all';   // a quién se aplica la segmentación que se está editando
 const normTag=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
 // Cuántos assets del Stock casan con una regla (categoría + tema + medio): el "link
 // con los contenidos" — Carlos ve si un segmento tiene contenido (y en rojo si ≈0).
@@ -360,15 +378,17 @@ $('mediaSearch').addEventListener('input',()=>renderGallery($('mediaSearch').val
 $('mediaClear').onclick=()=>{ if(pickIdx>=0&&segMatrix.rules[pickIdx]){ segMatrix.rules[pickIdx].assets=[]; renderGallery($('mediaSearch').value); } };
 $('mediaDone').onclick=()=>{ closeMedia(); renderSeg(); };
 async function loadSeg(){
-  try{ const r=await fetch(SEG_API+'?t='+Date.now(),{cache:'no-store'}); const d=await r.json();
+  try{ const r=await fetch(SEG_API+'?target='+encodeURIComponent(segTargetSel)+'&t='+Date.now(),{cache:'no-store'}); const d=await r.json();
     if(d&&Array.isArray(d.rules)) segMatrix=d; renderSeg();
-    $('segStatus').innerHTML='<span class="d"></span>'+segMatrix.rules.length+' reglas'; }
+    const tag=segTargetSel==='all'?'global':(d&&d.assigned?'propia':'hereda la global');
+    $('segStatus').innerHTML='<span class="d"></span>'+segMatrix.rules.length+' reglas · '+tag; }
   catch(_){ $('segStatus').innerHTML='<span class="d"></span>sin conexión'; }
 }
+$('segTarget').addEventListener('change',e=>{ segTargetSel=e.target.value; loadSeg(); });
 async function saveSeg(){
   const m=readSeg(); const btn=$('segSave'); btn.textContent='Guardando…';
-  try{ const r=await fetch(SEG_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(m)});
-    const d=await r.json(); segMatrix=m;
+  try{ const r=await fetch(SEG_API+'?target='+encodeURIComponent(segTargetSel),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(m)});
+    const d=await r.json(); segMatrix=m; try{ load(); }catch(_){}   // refresca las cajas amarillas
     btn.textContent=d&&d.ok?('✓ Guardado ('+d.count+')'):'✗ error'; }
   catch(_){ btn.textContent='✗ sin conexión'; }
   setTimeout(()=>{ btn.textContent='💾 Guardar'; },2200);
