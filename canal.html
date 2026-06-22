@@ -1047,6 +1047,43 @@ $('chan').addEventListener('click',e=>{
   const tg=e.target.closest('[data-tag]'); if(tg && tg.dataset.tag){ const t=tg.dataset.tag; applyTheme(seg.tag===t?'':t); }
 });
 
+/* ── POSICIÓN DINÁMICA (robots / móviles) — latido de geolocalización ─────────
+ * Los displays asociados a un ROBOT (o taxi/bus) cambian de sitio: su ubicación
+ * es dinámica. Si el equipo es móvil (?mobile=1 / ?robot=1, o persistido), el canal
+ * latea sus coords al worker y el marcador del mapa de clearchannel se mueve en
+ * vivo. Permiso de ubicación one-shot; solo se envía la propia posición del equipo.
+ * Throttle: re-envía al desplazarse > ~60 m o, como tope, cada 5 min. */
+const POS_API='https://omnipublicity-api.csilvasantin.workers.dev';
+const isMobileScreen = qs.get('mobile')==='1' || qs.get('robot')==='1' || LS('adtv_mobile','0')==='1';
+let _lastPos=null, _lastPosSent=0, _posInFlight=false;
+function _haversine(a,b){ const R=6371000,t=x=>x*Math.PI/180; const dla=t(b[1]-a[1]),dlo=t(b[0]-a[0]);
+  const s=Math.sin(dla/2)**2+Math.cos(t(a[1]))*Math.cos(t(b[1]))*Math.sin(dlo/2)**2; return 2*R*Math.asin(Math.sqrt(s)); }
+function pushPosition(coords){
+  if(!scr.circuit || _posInFlight){ return; }   // sin id no hay a quién mover; guarda anti-solapamiento
+  _posInFlight=true;
+  const prev=_lastPos, prevT=_lastPosSent;
+  _lastPos=coords; _lastPosSent=Date.now();      // throttle OPTIMISTA (eventos seguidos no spamean)
+  fetch(POS_API+'/locations/position',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ id:scr.circuit, coords })}).then(r=>r.ok?r.json():null).then(d=>{
+      _posInFlight=false;
+      if(d&&d.ok){ try{ flashCli('📍 posición actualizada'); }catch(_){} }
+      else { _lastPos=prev; _lastPosSent=prevT; }  // falló → revierte para reintentar en el próximo fix
+    }).catch(()=>{ _posInFlight=false; _lastPos=prev; _lastPosSent=prevT; });
+}
+function onGeo(pos){
+  const coords=[pos.coords.longitude, pos.coords.latitude];   // [lng,lat] como el resto del sistema
+  const movedFar = !_lastPos || _haversine(_lastPos,coords)>60;
+  const stale = (Date.now()-_lastPosSent)>5*60*1000;
+  if(movedFar || stale) pushPosition(coords);
+}
+function startPositionBeat(){
+  if(!isMobileScreen || !navigator.geolocation) return;
+  save('adtv_mobile','1');
+  const opt={ enableHighAccuracy:true, maximumAge:30000, timeout:20000 };
+  navigator.geolocation.getCurrentPosition(onGeo, ()=>{}, opt);
+  try{ navigator.geolocation.watchPosition(onGeo, ()=>{}, { enableHighAccuracy:true, maximumAge:30000, timeout:60000 }); }catch(_){}
+}
+
 /* ── MOTOR CONDICIONAL XPL EN EL CANAL ───────────────────────────────────────
  * El motor (xpl-runtime.js) corre LOCAL: lee HECHOS (reloj real + cámara + clima
  * opcional), evalúa las reglas y, vía la acción showContent, fija la INTENCIÓN de
@@ -1129,6 +1166,7 @@ window.XPLCanal = XPLCanal;
 
 loadStores(); screenLbl(); applyAudio(); renderChan(); fitMupi(); loadFeed(true); restartFeed();
 wireCam(); loadGrid(); setInterval(loadGrid, 60000);
+startPositionBeat();   // equipos móviles (robot/taxi/bus): latido de posición
 // si arrancamos ya en modo conditional (persistido/URL), enciende el motor XPL
 if(playoutMode==='conditional' && window.XPLCanal) XPLCanal.start();
 // directo persistente (sobrevive recarga) o por URL ?direct=
