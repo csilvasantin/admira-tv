@@ -121,6 +121,7 @@
   </div>
   <div class="spacer"></div>
   <nav class="cmsNav" aria-label="Admira">
+    <a href="/canal.html" target="_blank" rel="noopener">📺 Canal</a>
     <a href="/alta.html">➕ Alta</a>
     <a href="https://www.xpaceos.com/control/" target="_blank" rel="noopener">📅 Parrilla</a>
   </nav>
@@ -220,7 +221,9 @@ function audPill(aud){
 async function fetchNow(screen){
   if(!screen) return null;
   try{ const r=await fetch(SIGNAGE+encodeURIComponent(screen),{cache:'no-store'}); if(!r.ok) return null;
-       const d=await r.json(); return d.item||d||null; }catch(_){ return null; }
+       const d=await r.json(); const it=d.item||d||null;
+       if(it && typeof it==='object' && d.ip) it._ip=d.ip;   // IP pública del player (capturada por el worker en el POST)
+       return it; }catch(_){ return null; }
 }
 
 // franja Madrid actual (igual que el canal) para evaluar reglas de tiempo
@@ -285,7 +288,7 @@ async function load(){
         <div class="ava ${isRobot?'robot':''}">${isRobot?'🤖':(d.orientation==='landscape'?'🖥️':'📱')}</div>
         <div style="min-width:0">
           <div class="nm">${esc(d.name||d.id)}</div>
-          <div class="meta">${esc(d.id)} · ${isRobot?'robot móvil':'pantalla'} · ${esc(d.orientation||'portrait')}</div>
+          <div class="meta">${esc(d.id)} · ${isRobot?'robot móvil':'pantalla'} · ${esc(d.orientation||'portrait')}${d.device?(' · 💻 '+esc(d.device)):''}${(it&&it._ip)?(' · 🌐 '+esc(it._ip)):''}</div>
         </div>
         <div class="st ${isOn?'on':'off'}"><span class="d"></span>${isOn?'EN ANTENA':'sin señal'}</div>
       </div>
