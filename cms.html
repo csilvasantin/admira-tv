@@ -85,6 +85,14 @@
   .firePrev.on{border-color:#1f5e44;background:#0b1a14}
   .firePrev .ft{width:58px;height:36px;border-radius:6px;overflow:hidden;background:#000;display:grid;place-items:center;color:var(--dim);font-size:17px;flex:none}
   .firePrev .ft img,.firePrev .ft video{width:100%;height:100%;object-fit:cover}
+  /* control remoto por player (audio/transporte/CLI) */
+  .remote{display:flex;align-items:center;gap:6px;margin-top:8px}
+  .rbtn{flex:none;width:34px;height:32px;display:grid;place-items:center;background:#13203a;border:1px solid #26385e;border-radius:8px;color:var(--ink);cursor:pointer;font-size:14px}
+  .rbtn:hover{background:#1a2c4e}
+  .rbtn.flash{background:var(--accent);color:#04110b}
+  .rvol{flex:1;min-width:50px;accent-color:var(--air);cursor:pointer}
+  .rcli{margin-top:7px;width:100%;background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:12.5px ui-monospace,Menlo,monospace}
+  .rcli::placeholder{color:var(--dim)}
   /* navegador de Stock (modal) */
   #mediaModal{position:fixed;inset:0;z-index:50;background:#060912f2;backdrop-filter:blur(5px);display:none;flex-direction:column;padding:18px 20px}
   #mediaModal .mHd{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
@@ -298,6 +306,14 @@ async function load(){
           <a class="btn" href="${esc(canalUrl(d))}" target="_blank" rel="noopener">▶ Abrir canal</a>
           <a class="btn ghost" href="https://www.clearchannel.tv/?screen=${encodeURIComponent(d.screen||'')}" target="_blank" rel="noopener">🛰 Sala</a>
         </div>
+        <div class="remote" data-id="${esc(d.id)}" title="control remoto del player">
+          <button class="rbtn" data-cmd="prev" title="anterior">⏮</button>
+          <button class="rbtn" data-cmd="audiooff" title="silenciar (audio off)">🔇</button>
+          <input class="rvol" type="range" min="0" max="100" value="60" title="volumen remoto">
+          <button class="rbtn" data-cmd="audioon" title="sonido (audio on)">🔊</button>
+          <button class="rbtn" data-cmd="next" title="siguiente">⏭</button>
+        </div>
+        <input class="rcli" data-id="${esc(d.id)}" placeholder="/comando remoto (p.ej. tag musica, mute 1)…">
       </div>
     </div>`;
   });
@@ -312,12 +328,36 @@ load(); setInterval(load, 10000);
 
 /* Desplegable de MODO por dispositivo → controla el player en remoto. */
 $('grid').addEventListener('change', async e=>{
-  const sel=e.target.closest('.modeSel'); if(!sel) return;
-  const id=sel.dataset.id, mode=sel.value; sel.disabled=true;
-  try{ const r=await fetch(MODE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,mode})});
-       const d=await r.json(); sel.style.borderColor=(d&&d.ok)?'#1f5e44':'#5e2630'; }
-  catch(_){ sel.style.borderColor='#5e2630'; }
-  sel.disabled=false; setTimeout(()=>{ sel.style.borderColor=''; },1600);
+  const sel=e.target.closest('.modeSel');
+  if(sel){
+    const id=sel.dataset.id, mode=sel.value; sel.disabled=true;
+    try{ const r=await fetch(MODE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,mode})});
+         const d=await r.json(); sel.style.borderColor=(d&&d.ok)?'#1f5e44':'#5e2630'; }
+    catch(_){ sel.style.borderColor='#5e2630'; }
+    sel.disabled=false; setTimeout(()=>{ sel.style.borderColor=''; },1600); return;
+  }
+  const vol=e.target.closest('.rvol');   // slider de volumen → comando volume
+  if(vol){ const id=vol.closest('.remote').dataset.id; sendCmd(id,'volume '+vol.value); }
+});
+
+/* ── CONTROL REMOTO: el CMS encola comandos al player (worker /locations/cmd) ── */
+const CMD_API='https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd';
+async function sendCmd(id,cmd){
+  if(!id||!cmd) return false;
+  try{ const r=await fetch(CMD_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,cmd})}); const d=await r.json(); return !!(d&&d.ok); }
+  catch(_){ return false; }
+}
+$('grid').addEventListener('click', e=>{
+  const b=e.target.closest('.rbtn'); if(!b) return;
+  const id=b.closest('.remote').dataset.id;
+  sendCmd(id, b.dataset.cmd);
+  b.classList.add('flash'); setTimeout(()=>b.classList.remove('flash'),400);
+});
+$('grid').addEventListener('keydown', e=>{
+  const cli=e.target.closest('.rcli'); if(!cli||e.key!=='Enter') return;
+  const cmd=cli.value.trim(); if(!cmd) return;
+  sendCmd(cli.dataset.id, cmd.replace(/^\//,''));   // admite con o sin '/'
+  cli.value=''; cli.placeholder='✓ enviado'; setTimeout(()=>{ cli.placeholder='/comando remoto…'; },1500);
 });
 
 /* ── EDITOR DE SEGMENTACIÓN cámara → contenido ─────────────────────────────── */

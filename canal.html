@@ -765,6 +765,7 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='audioon'||cmd==='soundon'||cmd==='unmute'||(cmd==='audio'&&rest.toLowerCase()!=='off')){ setAudio(true,rest); flashCli('🔊 audio on'); return; }
   if(cmd==='audiooff'||cmd==='soundoff'||cmd==='muteoff'||(cmd==='audio'&&rest.toLowerCase()==='off')){ setAudio(false); flashCli('🔇 audio off'); return; }
   if(cmd==='mute'||cmd==='muted'){ setAudio(rest==='0'); flashCli(rest==='0'?'🔊 audio on':'🔇 audio off'); return; }
+  if(cmd==='volume'||cmd==='vol'){ let v=parseFloat(rest); if(v>1) v=v/100; v=Math.max(0,Math.min(1, isNaN(v)?volume:v)); volume=v; muted=(v<=0); applyAudio(); if(!muted&&mediaEl&&mediaEl.play&&!paused) mediaEl.play().catch(()=>{}); flashCli('🔊 '+Math.round(v*100)+'%'); return; }
   if(cmd==='admiratv'){
     const mode=rest.toLowerCase();
     if(['sincro','sync','sincronizado'].includes(mode)){ setAdmiraMode('sync'); return; }
@@ -1275,6 +1276,23 @@ function pollMode(){
     }).catch(()=>{});
 }
 pollMode(); setInterval(pollMode, 12000);
+
+// ── CONTROL REMOTO POR COMANDOS: el CMS encola (next/prev/audio/volume…) y este
+//   player los ejecuta con su propio runCli. Ignora el backlog al arrancar.
+const CMD_API='https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd';
+let __cmdSince=0, __cmdInit=false;
+function pollCmd(){
+  if(!scr.circuit) return;
+  fetch(CMD_API+'?id='+encodeURIComponent(scr.circuit)+'&since='+__cmdSince+'&t='+Date.now(),{cache:'no-store'})
+    .then(r=>r.ok?r.json():null).then(d=>{
+      if(!d) return;
+      if(!__cmdInit){ __cmdSince=d.seq||0; __cmdInit=true; return; }   // no re-ejecutar comandos viejos al recargar
+      if(!Array.isArray(d.commands)) return;
+      for(const c of d.commands){ if(c.cid>__cmdSince) __cmdSince=c.cid; try{ runCli(String(c.cmd)); }catch(_){} }
+    }).catch(()=>{});
+}
+pollCmd(); setInterval(pollCmd, 3000);
+
 // si arrancamos ya en sincro (persistido/URL), engancha el máster central
 if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); syncStateTimer=setInterval(fetchSyncState,30000); }
 // directo persistente (sobrevive recarga) o por URL ?direct=
