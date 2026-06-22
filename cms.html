@@ -283,7 +283,11 @@ function matchRule(matrix,seg){ for(const r of (matrix.rules||[])){ const mc=(r.
   return {rule:matrix.default||{},matched:false}; }
 function assetById(id){ return STOCK_ITEMS.find(x=>x.id===id)||null; }
 function mediaThumb(a){ if(!a) return '🎬'; if(a.type==='image'||a.type==='animation') return '<img src="'+esc(a.url)+'" alt="">'; if(a.thumbnail) return '<img src="'+esc(a.thumbnail)+'" alt="">'; return a.type==='video'?'▶':'♪'; }
-function condText(r){ const G={any:'cualquier género',m:'♂ hombre',f:'♀ mujer'}, A={any:'cualquier edad',nino:'niño',joven:'joven',adulto:'adulto',senior:'senior',vejez:'vejez'}, S={any:'cualquier hora',manana:'mañana',mediodia:'mediodía',tarde:'tarde',noche:'noche'};
+function condText(r){
+  // Regla "atemporal": catch-all sin filtros (carrusel completo, no atada a público ni hora).
+  const allAny=(!r.gender||r.gender==='any')&&(!r.age||r.age==='any')&&(!r.slot||r.slot==='any');
+  if(r.id==='atemporal' || (allAny && r.minCount===0 && !(r.assets&&r.assets.length))) return '🔁 atemporal · carrusel';
+  const G={any:'cualquier género',m:'♂ hombre',f:'♀ mujer'}, A={any:'cualquier edad',nino:'niño',joven:'joven',adulto:'adulto',senior:'senior',vejez:'vejez'}, S={any:'cualquier hora',manana:'mañana',mediodia:'mediodía',tarde:'tarde',noche:'noche'};
   const p=(r.minCount===0)?'sin cámara':''; return [G[r.gender||'any'],A[r.age||'any'],S[r.slot||'any']].concat(p?[p]:[]).join(' · '); }
 
 async function load(){
@@ -371,7 +375,12 @@ async function load(){
           else if(mode==='local') body='<div class="plrow nb"><span class="pld">Loop del Stock de Pixeria</span><span class="plc">· programación local</span></div>';
           else { const own=(hasCond&&segByPlayer[d.id])?segByPlayer[d.id]:null; const mtx=own||(typeof GLOBAL_SEG!=='undefined'?GLOBAL_SEG:null)||{rules:[],default:{}}; const rs=mtx.rules||[];
             const head='<div class="plhead">'+rs.length+' '+(own?(rs.length===1?'regla propia':'reglas propias'):(rs.length===1?'regla global':'reglas globales'))+'</div>';
-            const rows=rs.slice(0,3).map(r=>{ const a=(r.assets&&r.assets[0])?assetById(r.assets[0]):null; const dst=a?(a.title||a.id):('tema '+(r.tag||r.category||'auto')); return '<div class="plrow"><span class="plc">'+esc(condText(r))+'</span><span class="plc">→</span><span class="pld">'+esc(String(dst).slice(0,26))+'</span><span class="plm">'+esc(r.medio||'any')+'</span></div>'; }).join('');
+            const rows=rs.slice(0,3).map(r=>{
+              const carousel=r.id==='atemporal' || ((!r.gender||r.gender==='any')&&(!r.age||r.age==='any')&&(!r.slot||r.slot==='any')&&r.minCount===0&&!(r.assets&&r.assets.length));
+              const a=(r.assets&&r.assets[0])?assetById(r.assets[0]):null;
+              const dst=a?(a.title||a.id):(carousel?'todo el Stock':('tema '+(r.tag||r.category||'auto')));
+              const med=carousel?'':('<span class="plm">'+esc(r.medio||'any')+'</span>');
+              return '<div class="plrow"><span class="plc">'+esc(condText(r))+'</span><span class="plc">→</span><span class="pld">'+esc(String(dst).slice(0,26))+'</span>'+med+'</div>'; }).join('');
             const more=rs.length>3?'<div class="plrow" style="opacity:.55">+'+(rs.length-3)+' más…</div>':'';
             const dflt='<div class="plrow"><span class="plc">por defecto</span><span class="plc">→</span><span class="pld">'+esc((mtx.default&&(mtx.default.tag||mtx.default.category))||'atraer')+'</span></div>';
             body=head+rows+more+dflt;
