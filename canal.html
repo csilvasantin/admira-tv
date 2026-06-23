@@ -899,6 +899,17 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='admiratvsincrooff'||cmd==='sincrooff'||cmd==='syncoff'){ setAdmiraMode('local'); return; }
   if(cmd==='playcamera'||cmd==='camera'){ camStart(); flashCli('📷 camera on'); return; }
   if(cmd==='stopcamera'||cmd==='camerastop'){ camStop(); flashCli('📷 camera off'); return; }
+  // Forzar público SIN cámara: simula un hombre/mujer delante para disparar el condicional.
+  // `forcecam m|hombre|chico` · `forcecam f|mujer|chica` · `forcecam off|x` (volver a cámara real).
+  if(cmd==='forcecam'||cmd==='forzar'||cmd==='simaud'){
+    const r=rest.toLowerCase();
+    if(/female|mujer|chica|^f$|^w$/.test(r)){ window.__xplForce={gender:'f',age:'adulto'}; flashCli('👩 forzado: mujer'); }
+    else if(/male|hombre|chico|^m$|^h$/.test(r)){ window.__xplForce={gender:'m',age:'adulto'}; flashCli('👨 forzado: hombre'); }
+    else { window.__xplForce=null; flashCli('📷 público real (cámara)'); }
+    try{ setAdmiraMode('conditional'); }catch(_){}                 // el forzado tiene sentido en condicional
+    try{ if(window.XPLCanal&&XPLCanal.tick) XPLCanal.tick(); }catch(_){}   // re-evalúa ya
+    return;
+  }
   const playTag=parsePlayTag(v,cmd);
   if(playTag){ const n=applyPlayTag(playTag); flashCli('▶ tag '+canonicalPlayTag(playTag)+' · '+n+' assets'); return; }
   if(cmd==='reload'){ seenSig=''; loadFeed(true); rebuild(true); flashCli('↻ feed recargado'); return; }
@@ -1260,7 +1271,7 @@ const XPLCanal = (function(){
   const SEG_URL = 'https://omnipublicity-api.csilvasantin.workers.dev/segmentation';
   let engine=null, timer=null, mtimer=null, REMOTE=null, want={category:'all'}, MATRIX=null, lastSig='';
 
-  function camFresh(){ const c=window.__xplCam; return (c && c.faces>0 && (Date.now()-c.ts)<6000) ? c : null; }
+  function camFresh(){ if(window.__xplForce){ const F=window.__xplForce; return {faces:1, gender:F.gender, age:F.age||'adulto', ts:Date.now()}; } const c=window.__xplCam; return (c && c.faces>0 && (Date.now()-c.ts)<6000) ? c : null; }
   function nowH(){ try{ return +new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ return new Date().getHours(); } }
   function seasonNow(){ const m=new Date().getMonth(); return (m>=2&&m<=4)?'spring':(m>=5&&m<=7)?'summer':(m>=8&&m<=10)?'autumn':'winter'; }
   const world = {
@@ -1321,7 +1332,7 @@ const XPLCanal = (function(){
     }).catch(()=>{});
   }
   function camSeg(){
-    const c=window.__xplCam; const f=(c&&c.faces>0&&(Date.now()-c.ts)<6000)?c:null;
+    const f=camFresh();   // honra el forzado (__xplForce) y, si no, la cámara real
     return { gender: f?(f.gender==='m'?'m':f.gender==='f'?'f':null):null, age: f?(f.age||null):null,
              count: f?f.faces:0, slot: (typeof madridSlot==='function'?madridSlot():'') };
   }

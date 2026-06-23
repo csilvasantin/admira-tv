@@ -93,6 +93,13 @@
   .rvol{flex:1;min-width:50px;accent-color:var(--air);cursor:pointer}
   .rcli{margin-top:7px;width:100%;background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:12.5px ui-monospace,Menlo,monospace}
   .rcli::placeholder{color:var(--dim)}
+  /* forzar público sin cámara (chico/chica) */
+  .force{display:flex;align-items:center;gap:6px;margin-top:7px;flex-wrap:wrap}
+  .fbtn{flex:1;min-width:74px;display:inline-flex;align-items:center;justify-content:center;gap:5px;background:#13203a;border:1px solid #26385e;border-radius:8px;color:var(--ink);cursor:pointer;font-weight:600;font-size:12.5px;padding:7px 8px}
+  .fbtn:hover{background:#1a2c4e}
+  .fbtn.fx{flex:none;width:34px;min-width:0;color:var(--dim)}
+  .fbtn.on{background:var(--air);border-color:var(--air);color:#04110b}
+  .fbtn.flash{outline:2px solid var(--accent)}
   /* navegador de Stock (modal) */
   #mediaModal{position:fixed;inset:0;z-index:50;background:#060912f2;backdrop-filter:blur(5px);display:none;flex-direction:column;padding:18px 20px}
   #mediaModal .mHd{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
@@ -400,7 +407,7 @@ async function load(){
         })()}
         <div class="acts">
           <a class="btn" href="${esc(canalUrl(d))}" target="_blank" rel="noopener">▶ Abrir canal</a>
-          <a class="btn ghost" href="https://www.clearchannel.tv/?screen=${encodeURIComponent(d.screen||'')}" target="_blank" rel="noopener">🛰 Sala</a>
+          <a class="btn ghost" href="${(d.coords&&d.coords.length===2)?('https://www.admira.app/?lng='+d.coords[0]+'&lat='+d.coords[1]+'&label='+encodeURIComponent(d.name||d.id)):'https://www.admira.app/'}" target="_blank" rel="noopener" title="ver este punto en el mapa">🗺 Mapa</a>
         </div>
         <div class="remote" data-id="${esc(d.id)}" title="control remoto del player">
           <button class="rbtn" data-cmd="prev" title="anterior">⏮</button>
@@ -408,6 +415,12 @@ async function load(){
           <input class="rvol" type="range" min="0" max="100" value="60" title="volumen remoto">
           <button class="rbtn" data-cmd="audioon" title="sonido (audio on)">🔊</button>
           <button class="rbtn" data-cmd="next" title="siguiente">⏭</button>
+        </div>
+        <div class="force" data-id="${esc(d.id)}" title="forzar público sin cámara → dispara el condicional">
+          <span class="meta" style="flex:none">Forzar:</span>
+          <button class="fbtn" data-aud="m" title="como si hubiera un hombre delante">👨 Chico</button>
+          <button class="fbtn" data-aud="f" title="como si hubiera una mujer delante">👩 Chica</button>
+          <button class="fbtn fx" data-aud="x" title="volver a la cámara real">✕</button>
         </div>
         <input class="rcli" data-id="${esc(d.id)}" placeholder="/comando remoto (p.ej. tag musica, mute 1)…">
       </div>
@@ -463,6 +476,12 @@ async function sendCmd(id,cmd){
   catch(_){ return false; }
 }
 $('grid').addEventListener('click', e=>{
+  // forzar público (chico/chica/limpiar) → comando forcecam al player
+  const f=e.target.closest('.fbtn');
+  if(f){ const wrap=f.closest('.force'); const id=wrap.dataset.id, aud=f.dataset.aud;
+    sendCmd(id, 'forcecam '+aud);
+    wrap.querySelectorAll('.fbtn:not(.fx)').forEach(x=>x.classList.toggle('on', x===f && aud!=='x'));
+    f.classList.add('flash'); setTimeout(()=>f.classList.remove('flash'),450); return; }
   const b=e.target.closest('.rbtn'); if(!b) return;
   const id=b.closest('.remote').dataset.id;
   sendCmd(id, b.dataset.cmd);
