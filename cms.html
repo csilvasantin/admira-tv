@@ -105,7 +105,25 @@
   .fp{flex:1;display:flex;align-items:center;gap:7px;background:#0b121d;border:1px solid var(--line);border-radius:9px;padding:5px 7px;min-width:0}
   .fp .ft{width:44px;height:28px;border-radius:5px;overflow:hidden;background:#000;display:grid;place-items:center;color:var(--dim);font-size:13px;flex:none}
   .fp .ft img,.fp .ft video{width:100%;height:100%;object-fit:cover}
+  .fp{cursor:pointer;transition:border-color .12s}
+  .fp:hover{border-color:var(--accent)}
   .fp .fpt{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;color:var(--ink)}
+  .fp .fpedit{flex:none;margin-left:auto;color:var(--dim);font-size:12px}
+  .fp:hover .fpedit{color:var(--accent)}
+  /* modal: elegir otro contenido del Stock para un género */
+  #fpModal{position:fixed;inset:0;z-index:60;background:#060912f2;backdrop-filter:blur(5px);display:none;flex-direction:column;padding:18px 20px}
+  #fpModal .fpHd{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  #fpModal h3{margin:0;font-size:18px;white-space:nowrap}
+  #fpSearch{flex:1;min-width:160px;background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font:14px -apple-system,Segoe UI,sans-serif}
+  #fpGrid{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;align-content:start}
+  .fpItem{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .1s,border-color .15s}
+  .fpItem:hover{transform:translateY(-2px);border-color:#33415e}
+  .fpItem.on{border-color:var(--air);box-shadow:0 0 0 2px var(--air) inset}
+  .fpItem.on::after{content:'✓ actual';position:absolute;top:6px;right:6px;padding:1px 7px;border-radius:999px;background:var(--air);color:#04110b;font:800 10px sans-serif;z-index:2}
+  .fpTh{height:94px;background:#000;display:grid;place-items:center;color:var(--dim);font-size:26px;overflow:hidden}
+  .fpTh img{width:100%;height:100%;object-fit:cover}
+  .fpItt{padding:7px 9px 1px;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fpIty{padding:0 9px 8px;font-size:11px;color:var(--dim)}
   /* navegador de Stock (modal) */
   #mediaModal{position:fixed;inset:0;z-index:50;background:#060912f2;backdrop-filter:blur(5px);display:none;flex-direction:column;padding:18px 20px}
   #mediaModal .mHd{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
@@ -232,6 +250,19 @@
 </div>
 
 <div class="grid" id="grid"><div class="empty">Cargando flota…</div></div>
+
+<div id="fpModal">
+  <div class="fpHd">
+    <h3>🎬 Stock de Pixeria</h3>
+    <span class="meta" id="fpTitle">—</span>
+    <input id="fpSearch" placeholder="Buscar por título, tag o categoría…">
+    <span class="meta" id="fpCount">—</span>
+    <span class="meta" id="fpHint"></span>
+    <button class="miniBtn" id="fpClose">✕ Cerrar</button>
+  </div>
+  <div id="fpGrid"></div>
+</div>
+
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span></footer>
 
 <script src="xpl-runtime.js?v=1"></script>
@@ -321,6 +352,7 @@ async function load(){
   catch(_){ $('liveTxt').textContent='sin conexión con la flota'; return; }
   // ordena: robot/móvil primero, luego por nombre
   devs.sort((a,b)=> (b.deviceType==='robot')-(a.deviceType==='robot') || String(a.name||a.id).localeCompare(String(b.name||b.id)));
+  DEV_NAMES=Object.fromEntries(devs.map(d=>[d.id,d.name||d.id]));   // id→nombre (para el picker de Stock)
   // players con segmentación PROPIA asignada (caja amarilla)
   let ASSIGNED=new Set();
   try{ const a=await fetch(SEG_API+'/assigned?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()); ASSIGNED=new Set(a.assigned||[]); }catch(_){}
@@ -444,7 +476,7 @@ async function load(){
           if(!mtx||!Array.isArray(mtx.rules)) return '';
           const prev=(g)=>{ const r=(matchRule(mtx,{gender:g,age:'adulto',count:1,slot:curSlot()})||{}).rule||{}; const a=pieceFor(r);
             const lbl=a?(a.title||a.id):('tema '+(r.tag||r.category||'auto'));
-            return '<div class="fp"><div class="ft">'+(a?mediaThumb(a):'🎬')+'</div><div class="fpt" title="'+esc(lbl)+'">'+esc(String(lbl).slice(0,30))+'</div></div>'; };
+            return '<div class="fp" data-aud="'+g+'" title="clic para elegir otro contenido del Stock"><div class="ft">'+(a?mediaThumb(a):'🎬')+'</div><div class="fpt" title="'+esc(lbl)+'">'+esc(String(lbl).slice(0,30))+'</div><span class="fpedit">✎</span></div>'; };
           return '<div class="forcePrev">'+prev('m')+prev('f')+'</div>';
         })()}
         <input class="rcli" data-id="${esc(d.id)}" placeholder="/comando remoto (p.ej. tag musica, mute 1)…">
@@ -501,6 +533,9 @@ async function sendCmd(id,cmd){
   catch(_){ return false; }
 }
 $('grid').addEventListener('click', e=>{
+  // clic en el PREVIEW de chico/chica → abre el Stock para elegir otro contenido
+  const fp=e.target.closest('.fp');
+  if(fp){ const card=fp.closest('.card'); if(card) openFpPicker(card.dataset.id, fp.dataset.aud); return; }
   // forzar público (chico/chica/limpiar) → comando forcecam al player
   const f=e.target.closest('.fbtn');
   if(f){ const wrap=f.closest('.force'); const id=wrap.dataset.id, aud=f.dataset.aud;
@@ -523,12 +558,63 @@ $('grid').addEventListener('keydown', e=>{
 const SEG_API = 'https://omnipublicity-api.csilvasantin.workers.dev/segmentation';
 const MODE_API='https://omnipublicity-api.csilvasantin.workers.dev/locations/mode';
 const MODE_LBL={conditional:'Condicional · cámara/contexto',local:'Local · su programación',sync:'Sincro · lo que manda admira.tv'};
-let STOCK_ITEMS=[];
+let STOCK_ITEMS=[], DEV_NAMES={};
 async function loadStockVocab(){
   try{ const r=await fetch('https://api.admira.store/stock/list?limit=300',{cache:'no-store'}); const d=await r.json();
     STOCK_ITEMS=(d.items||[]).filter(it=>['image','video','animation'].includes(it.type)); }catch(_){}
 }
 loadStockVocab();
+
+/* ── ELEGIR OTRO CONTENIDO para chico/chica desde el Stock de Pixeria ──────────
+ * Clic en el preview → modal del Stock → al elegir, se fija ese asset en la regla
+ * del género de la matriz del player (crea override propio si no lo tenía) y se
+ * ordena al player recargar su matriz: lo descarga y sustituye al vuelo. */
+let fpPlayer=null, fpGender=null, fpMatrix=null;
+const _fpNorm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+async function openFpPicker(playerId, gender){
+  if(!playerId||!gender) return;
+  fpPlayer=playerId; fpGender=gender;
+  try{ fpMatrix=await fetch(SEG_API+'?target='+encodeURIComponent(playerId)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.json()); }
+  catch(_){ fpMatrix={rules:[],default:{category:'any',tag:'',medio:'any'}}; }
+  $('fpTitle').textContent=(gender==='m'?'👨 Chico':'👩 Chica')+' · '+(DEV_NAMES[playerId]||playerId);
+  $('fpHint').textContent=''; $('fpSearch').value=''; renderFpGrid('');
+  $('fpModal').style.display='flex'; setTimeout(()=>$('fpSearch').focus(),50);
+}
+function closeFp(){ $('fpModal').style.display='none'; fpPlayer=null; fpGender=null; }
+function curFpAssetId(){ if(!fpMatrix) return null; const r=(matchRule(fpMatrix,{gender:fpGender,age:'adulto',count:1,slot:curSlot()})||{}).rule||{}; return (r.assets&&r.assets[0])||null; }
+function renderFpGrid(q){
+  q=_fpNorm(q); const cur=curFpAssetId();
+  const items=STOCK_ITEMS.filter(it=> !q || _fpNorm((it.title||'')+' '+((it.tags||[]).join(' '))+' '+(it.category||'')).indexOf(q)>=0 );
+  $('fpCount').textContent=items.length+' piezas';
+  $('fpGrid').innerHTML=items.slice(0,240).map(it=>{
+    const on=it.id===cur;
+    const th=(it.type==='image'||it.type==='animation')?('<img src="'+esc(it.url)+'" loading="lazy" alt="">'):(it.thumbnail?('<img src="'+esc(it.thumbnail)+'" loading="lazy" alt="">'):(it.type==='video'?'▶':'♪'));
+    return '<div class="fpItem'+(on?' on':'')+'" data-id="'+esc(it.id)+'"><div class="fpTh">'+th+'</div><div class="fpItt">'+esc(String(it.title||it.id).slice(0,40))+'</div><div class="fpIty">'+esc(it.type)+(it.category?(' · '+esc(it.category)):'')+'</div></div>';
+  }).join('')||'<div style="padding:40px;color:var(--dim)">Sin resultados</div>';
+}
+$('fpSearch').addEventListener('input',()=>renderFpGrid($('fpSearch').value));
+$('fpClose').onclick=closeFp;
+$('fpModal').addEventListener('click',e=>{ if(e.target===$('fpModal')) closeFp(); });
+$('fpGrid').addEventListener('click', async e=>{
+  const el=e.target.closest('.fpItem'); if(!el||!fpPlayer) return;
+  const id=el.dataset.id;
+  // copia la matriz del player y fija el asset en la regla de este género (la crea si no existe)
+  const src=(fpMatrix&&Array.isArray(fpMatrix.rules))?fpMatrix:{rules:[],default:{category:'any',tag:'',medio:'any'}};
+  const m={ rules:src.rules.map(r=>({...r, assets:(r.assets||[]).slice(), conds:(r.conds||[]).slice()})), default:{...(src.default||{})} };
+  let idx=m.rules.findIndex(r=>r.gender===fpGender);
+  if(idx<0){ m.rules.unshift({id:fpGender==='m'?'r-hombre':'r-mujer',gender:fpGender,age:'any',minCount:1,slot:'any',conds:[],join:'and',category:'any',tag:'',medio:'any',assets:[id]}); }
+  else { m.rules[idx].assets=[id]; }
+  $('fpHint').textContent='Guardando…';
+  try{
+    const d=await fetch(SEG_API+'?target='+encodeURIComponent(fpPlayer),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(m)}).then(r=>r.json());
+    fpMatrix=m;
+    if(d&&d.ok){ $('fpHint').textContent='✓ asignado · el player lo descargará y sustituirá';
+      try{ sendCmd(fpPlayer,'reloadmatrix'); }catch(_){}   // que recargue su matriz ya (no espera 15s)
+      renderFpGrid($('fpSearch').value);
+      setTimeout(()=>{ closeFp(); try{ load(); }catch(_){} }, 900);
+    } else { $('fpHint').textContent='✗ error al guardar'; }
+  }catch(_){ $('fpHint').textContent='✗ sin conexión'; }
+});
 </script>
 </body>
 </html>

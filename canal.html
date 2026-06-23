@@ -904,6 +904,8 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='admiratvsincrooff'||cmd==='sincrooff'||cmd==='syncoff'){ setAdmiraMode('local'); return; }
   if(cmd==='playcamera'||cmd==='camera'){ camStart(); flashCli('📷 camera on'); return; }
   if(cmd==='stopcamera'||cmd==='camerastop'){ camStop(); flashCli('📷 camera off'); return; }
+  // recarga la matriz de segmentación YA (no espera al poll de 15s) y precachea lo nuevo
+  if(cmd==='reloadmatrix'||cmd==='refreshrules'){ try{ if(window.XPLCanal&&XPLCanal.refreshMatrix){ XPLCanal.refreshMatrix(); setTimeout(()=>{ try{ XPLCanal.tick(); }catch(_){} },1200); } }catch(_){} flashCli('↻ reglas actualizadas'); return; }
   // Forzar público SIN cámara: simula un hombre/mujer delante para disparar el condicional.
   // `forcecam m|hombre|chico` · `forcecam f|mujer|chica` · `forcecam off|x` (volver a cámara real).
   if(cmd==='forcecam'||cmd==='forzar'||cmd==='simaud'){
@@ -1412,7 +1414,7 @@ const XPLCanal = (function(){
   function stop(){ if(timer){ clearInterval(timer); timer=null; } if(mtimer){ clearInterval(mtimer); mtimer=null; }
     lastSig=''; if(typeof seg==='object'&&seg.ids){ seg.ids=null; } }   // no dejar local/sync filtrado a assets
 
-  return { start, stop, tick, get world(){ return world; }, get want(){ return want; }, get engine(){ return engine; } };
+  return { start, stop, tick, refreshMatrix:fetchMatrix, get world(){ return world; }, get want(){ return want; }, get engine(){ return engine; } };
 })();
 window.XPLCanal = XPLCanal;
 
