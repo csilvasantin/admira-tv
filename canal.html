@@ -665,12 +665,12 @@ function schedulePrecache(){
 // Pre-descarga los assets CONDICIONALES (los de la matriz de segmentación) ANTES de que
 // la cámara los dispare, para que el cambio carrusel→condicional sea instantáneo (blob de
 // disco) y no se vea el hueco de carga con el botón de play. Resuelve ids→url desde `all`.
-let _condUrls=new Set();
+let _condUrls=new Set(), _condItems=new Map();   // assets condicionales (variantes que puede disparar la cámara)
 function precacheIds(ids){
   if(!ids||!ids.length||!all.length) return;
   const byId=new Map(all.map(it=>[String(it.id),it]));
   const qids=new Set(_precQ.map(x=>x.id));
-  for(const id of ids){ const it=byId.get(String(id)); if(!it||!it.url) continue; _condUrls.add(it.url);
+  for(const id of ids){ const it=byId.get(String(id)); if(!it||!it.url) continue; _condUrls.add(it.url); _condItems.set(String(it.id), it);
     if(cacheable(it)&&!_ready.has(it.id)&&!qids.has(it.id)){ _precQ.push(it); qids.add(it.id); } }
   if(_precQ.length) precacheLoop();
 }
@@ -684,10 +684,15 @@ async function pruneCache(){
 }
 function cacheReadyInPlaylist(){ let n=0; const seen=new Set(); for(const it of playlist){ if(it&&_ready.has(it.id)&&!seen.has(it.id)){ seen.add(it.id); n++; } } return n; }
 function cacheReportPayload(){
-  const ready=[], seen=new Set();
-  for(const it of playlist){ if(it&&_ready.has(it.id)&&!seen.has(it.id)){ seen.add(it.id); ready.push(it.id); } }
+  // Inventario del player = playlist actual ∪ assets CONDICIONALES (las variantes que la
+  // cámara puede disparar). Así el CMS ve, p.ej., 1/3 = loop + condicional chico + chica,
+  // y no 1/1 (solo lo que se está emitiendo ahora).
+  const seen=new Set(), inv=[];
+  for(const it of playlist){ if(it&&it.id!=null&&!seen.has(it.id)){ seen.add(it.id); inv.push(it); } }
+  for(const it of _condItems.values()){ if(it&&it.id!=null&&!seen.has(it.id)){ seen.add(it.id); inv.push(it); } }
+  const ready=[]; for(const it of inv){ if(_ready.has(it.id)) ready.push(it.id); }
   const downloading=[..._dl.entries()].slice(0,20).map(([id,pct])=>({id,pct}));
-  return { screen:scr.screen, ready, total:playlist.length, downloading, bytes:_cBytes };
+  return { screen:scr.screen, ready, total:inv.length, downloading, bytes:_cBytes };
 }
 function cacheReport(){ if(!scr.screen) return; _lastCacheRep=Date.now();
   try{ fetch(CACHE_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify(cacheReportPayload())}).catch(()=>{}); }catch(_){}

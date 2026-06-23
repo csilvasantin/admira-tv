@@ -100,6 +100,12 @@
   .fbtn.fx{flex:none;width:34px;min-width:0;color:var(--dim)}
   .fbtn.on{background:var(--air);border-color:var(--air);color:#04110b}
   .fbtn.flash{outline:2px solid var(--accent)}
+  /* preview de lo que emitiría cada forzado (debajo de chico/chica) */
+  .forcePrev{display:flex;gap:6px;margin-top:6px}
+  .fp{flex:1;display:flex;align-items:center;gap:7px;background:#0b121d;border:1px solid var(--line);border-radius:9px;padding:5px 7px;min-width:0}
+  .fp .ft{width:44px;height:28px;border-radius:5px;overflow:hidden;background:#000;display:grid;place-items:center;color:var(--dim);font-size:13px;flex:none}
+  .fp .ft img,.fp .ft video{width:100%;height:100%;object-fit:cover}
+  .fp .fpt{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;color:var(--ink)}
   /* navegador de Stock (modal) */
   #mediaModal{position:fixed;inset:0;z-index:50;background:#060912f2;backdrop-filter:blur(5px);display:none;flex-direction:column;padding:18px 20px}
   #mediaModal .mHd{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
@@ -289,6 +295,18 @@ function matchRule(matrix,seg){ for(const r of (matrix.rules||[])){ const mc=(r.
   if(r.slot&&r.slot!=='any'&&r.slot!==seg.slot) continue; return {rule:r,matched:true}; }
   return {rule:matrix.default||{},matched:false}; }
 function assetById(id){ return STOCK_ITEMS.find(x=>x.id===id)||null; }
+// pieza que dispararía una regla: su asset concreto, o el 1º del Stock que casa por tema
+function pieceFor(r){
+  if(!r) return null;
+  if(r.assets&&r.assets[0]){ const a=assetById(r.assets[0]); if(a) return a; }
+  const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+  const tag=norm(r.tag);
+  return STOCK_ITEMS.find(it=>{
+    if(r.category&&r.category!=='any'&&it.category!==r.category) return false;
+    if(tag && !((it.tags||[]).some(x=>norm(x).includes(tag)))) return false;
+    return true;
+  })||null;
+}
 function mediaThumb(a){ if(!a) return '🎬'; if(a.type==='image'||a.type==='animation') return '<img src="'+esc(a.url)+'" alt="">'; if(a.thumbnail) return '<img src="'+esc(a.thumbnail)+'" alt="">'; return a.type==='video'?'▶':'♪'; }
 function condText(r){
   // Regla "atemporal": catch-all sin filtros (carrusel completo, no atada a público ni hora).
@@ -422,6 +440,13 @@ async function load(){
           <button class="fbtn" data-aud="f" title="como si hubiera una mujer delante">👩 Chica</button>
           <button class="fbtn fx" data-aud="x" title="volver a la cámara real">✕</button>
         </div>
+        ${(()=>{ const mtx=(hasCond&&segByPlayer[d.id])?segByPlayer[d.id]:(typeof GLOBAL_SEG!=='undefined'?GLOBAL_SEG:null);
+          if(!mtx||!Array.isArray(mtx.rules)) return '';
+          const prev=(g)=>{ const r=(matchRule(mtx,{gender:g,age:'adulto',count:1,slot:curSlot()})||{}).rule||{}; const a=pieceFor(r);
+            const lbl=a?(a.title||a.id):('tema '+(r.tag||r.category||'auto'));
+            return '<div class="fp"><div class="ft">'+(a?mediaThumb(a):'🎬')+'</div><div class="fpt" title="'+esc(lbl)+'">'+esc(String(lbl).slice(0,30))+'</div></div>'; };
+          return '<div class="forcePrev">'+prev('m')+prev('f')+'</div>';
+        })()}
         <input class="rcli" data-id="${esc(d.id)}" placeholder="/comando remoto (p.ej. tag musica, mute 1)…">
       </div>
     </div>`;
@@ -431,7 +456,7 @@ async function load(){
   $('k-aud').textContent=withAud; $('k-robot').textContent=robots;
   $('stamp').textContent='actualizado '+new Date().toLocaleTimeString('es-ES');
   // reproduce los thumbs de vídeo (preview en bucle)
-  document.querySelectorAll('.thumb video').forEach(v=>{ v.loop=true; v.muted=true; v.play&&v.play().catch(()=>{}); });
+  document.querySelectorAll('.thumb video, .fp video').forEach(v=>{ v.loop=true; v.muted=true; v.play&&v.play().catch(()=>{}); });
 }
 load(); setInterval(load, 10000);
 
