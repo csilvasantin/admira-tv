@@ -276,6 +276,11 @@ const ONLINE_MS = 180000;            // signage/now fresco < 180 s = en antena
 const COLLKEY='cms_collapsed';
 let COLLAPSED=new Set((()=>{try{return JSON.parse(localStorage.getItem(COLLKEY)||'[]')}catch(_){return[]}})());
 function saveColl(){try{localStorage.setItem(COLLKEY,JSON.stringify([...COLLAPSED]))}catch(_){}}
+// Estado de FORZADO por player ('m'|'f' o sin entrada = loop). Persiste para dar
+// feedback en remoto (botón verde) que sobreviva al re-render cada 10s.
+const FORCEKEY='cms_forced';
+let FORCED=(()=>{try{return JSON.parse(localStorage.getItem(FORCEKEY)||'{}')}catch(_){return{}}})();
+function saveForced(){try{localStorage.setItem(FORCEKEY,JSON.stringify(FORCED))}catch(_){}}
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 const ageTxt = ms => { const s=Math.max(0,Math.round(ms/1000)); return s<60?s+'s':s<3600?Math.round(s/60)+'min':Math.round(s/3600)+'h'; };
@@ -468,9 +473,9 @@ async function load(){
         </div>
         <div class="force" data-id="${esc(d.id)}" title="forzar público sin cámara → dispara el condicional">
           <span class="meta" style="flex:none">Forzar:</span>
-          <button class="fbtn" data-aud="m" title="como si hubiera un hombre delante">👨 Chico</button>
-          <button class="fbtn" data-aud="f" title="como si hubiera una mujer delante">👩 Chica</button>
-          <button class="fbtn fx" data-aud="x" title="volver a la cámara real">✕</button>
+          <button class="fbtn${FORCED[d.id]==='m'?' on':''}" data-aud="m" title="como si hubiera un hombre delante">👨 Chico</button>
+          <button class="fbtn${FORCED[d.id]==='f'?' on':''}" data-aud="f" title="como si hubiera una mujer delante">👩 Chica</button>
+          <button class="fbtn fx" data-aud="x" title="volver al loop (cámara real)">✕</button>
         </div>
         ${(()=>{ const mtx=(hasCond&&segByPlayer[d.id])?segByPlayer[d.id]:(typeof GLOBAL_SEG!=='undefined'?GLOBAL_SEG:null);
           if(!mtx||!Array.isArray(mtx.rules)) return '';
@@ -540,7 +545,10 @@ $('grid').addEventListener('click', e=>{
   const f=e.target.closest('.fbtn');
   if(f){ const wrap=f.closest('.force'); const id=wrap.dataset.id, aud=f.dataset.aud;
     sendCmd(id, 'forcecam '+aud);
-    wrap.querySelectorAll('.fbtn:not(.fx)').forEach(x=>x.classList.toggle('on', x===f && aud!=='x'));
+    // estado persistente: 'm'/'f' queda seleccionado (verde) hasta ✕ o el género contrario; ✕ = loop
+    if(aud==='x') delete FORCED[id]; else FORCED[id]=aud;
+    saveForced();
+    wrap.querySelectorAll('.fbtn').forEach(x=>{ const a=x.dataset.aud; x.classList.toggle('on', a!=='x' && a===FORCED[id]); });
     f.classList.add('flash'); setTimeout(()=>f.classList.remove('flash'),450); return; }
   const b=e.target.closest('.rbtn'); if(!b) return;
   const id=b.closest('.remote').dataset.id;
