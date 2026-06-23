@@ -1354,12 +1354,29 @@ const XPLCanal = (function(){
     try{ syncSegPanel(); }catch(_){}
     seenSig=''; rebuild(true);
   }
+  // Reporta un "cazado" al worker: audiencia real + regla CONCRETA (no default) que
+  // discrimina por público/contexto. Dedupe por firma → solo en cambio (no cada 2s).
+  let lastHitSig='';
+  function reportHit(s, r){
+    if(!(s.count>0)) return;                            // sin público no es cazado
+    const idx=(MATRIX.rules||[]).indexOf(r);
+    if(idx<0) return;                                   // default → no es match específico
+    const discrim=(r.gender&&r.gender!=='any')||(r.age&&r.age!=='any')||(r.slot&&r.slot!=='any')||(r.conds&&r.conds.length);
+    if(!discrim) return;                                // catch-all puro → no cuenta como caza
+    const piece=(r.assets&&r.assets[0])||('tema:'+((r.tag||r.category)||'auto'));
+    const sig=idx+'|'+piece+'|'+s.gender+'|'+s.age;
+    if(sig===lastHitSig) return; lastHitSig=sig;
+    try{ fetch(SEG_URL+'/hit',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
+      body:JSON.stringify({ id:scr.circuit||'', screen:scr.screen||'', ruleId:r.id||('r'+idx), ruleIdx:idx,
+        piece:String(piece).slice(0,80), aud:{gender:s.gender,age:s.age,faces:s.count}, slot:s.slot })}).catch(()=>{}); }catch(_){}
+  }
   function tick(){
     if(playoutMode!=='conditional') return;
     if(MATRIX && Array.isArray(MATRIX.rules)){
-      const r=matchMatrix(camSeg());
+      const s=camSeg(), r=matchMatrix(s);
       applySeg({ ids:r.assets, category:(r.category&&r.category!=='any')?r.category:'all',
                  tag:r.tag||'', medio:(r.medio&&r.medio!=='any')?r.medio:'all' });
+      reportHit(s, r);
     } else if(engine){                                // fallback: reglas semilla del runtime
       want={category:'all'}; engine.tick();
       applySeg({ category: want.category||'all' });
