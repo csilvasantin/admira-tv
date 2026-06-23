@@ -1332,6 +1332,8 @@ const XPLCanal = (function(){
       if(r.gender&&r.gender!=='any'&&r.gender!==s.gender) continue;
       if(r.age&&r.age!=='any'&&r.age!==s.age) continue;
       if(r.slot&&r.slot!=='any'&&r.slot!==s.slot) continue;
+      // condiciones XPL extra (clima/día) → se evalúan con el world y el motor XPL
+      if(r.conds&&r.conds.length&&window.XPL&&!XPL.evalCondition({join:r.join||'and',conds:r.conds},world)) continue;
       return r;
     }
     return MATRIX.default||{category:'atraer'};

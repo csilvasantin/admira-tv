@@ -145,6 +145,41 @@
   .card.collapsed .collChev{transform:rotate(-90deg)}
   .card.collapsed .body{display:none}
   .card.collapsed .top{border-bottom:0}
+  /* simulador XPL */
+  #simWrap{padding:12px 20px 0}
+  .simCard{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .simGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:14px 16px}
+  .simF{background:#0b121d;border:1px solid var(--line);border-radius:10px;padding:8px 11px}
+  .simF>label{display:block;font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .simF select{width:100%}
+  .simF input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer}
+  .simF .val{font:700 11.5px ui-monospace,monospace;color:var(--accent)}
+  .simToggle{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:12.5px}
+  .simToggle .sw{width:34px;height:20px;border-radius:99px;background:#1a2436;border:1px solid var(--line);position:relative;transition:.15s;flex:none}
+  .simToggle .sw::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#5b6b85;transition:.15s}
+  .simToggle.on .sw{background:#16432c;border-color:#1f5e44}
+  .simToggle.on .sw::after{left:16px;background:var(--air)}
+  .simOut{display:flex;align-items:center;gap:14px;padding:14px 16px;border-top:1px solid var(--line);background:#0a1018}
+  .simOut .ft{width:104px;height:64px;border-radius:9px;overflow:hidden;background:#000;display:grid;place-items:center;color:var(--dim);font-size:26px;flex:none;border:1px solid var(--line)}
+  .simOut .ft img,.simOut .ft video{width:100%;height:100%;object-fit:cover}
+  .simHitlbl{font:700 11.5px ui-monospace,monospace;padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .simHitlbl.hit{color:var(--air);border:1px solid #1f5e44;background:#0c2018}
+  .simHitlbl.def{color:#ffd866;border:1px solid #5e4a26;background:#1a160488}
+  tr.simhit td{background:rgba(57,217,138,.09)}
+  tr.simhit td:first-child{box-shadow:inset 3px 0 0 var(--air)}
+  .pickCond.has{border-color:#5a4a1e;color:#ffd866}
+  /* modal de condiciones extra (clima/día) por regla */
+  #condModal{position:fixed;inset:0;z-index:55;background:#060912f2;backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px}
+  .condBox{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:540px;width:100%;padding:18px 20px}
+  .condBox h3{margin:0 0 3px;font-size:17px}
+  .condList{display:flex;flex-direction:column;gap:8px;margin:14px 0 10px}
+  .condItem{display:flex;align-items:center;gap:9px;background:#0b121d;border:1px solid var(--line);border-radius:10px;padding:8px 10px;flex-wrap:wrap}
+  .condItem .cf{flex:1;min-width:120px;font-size:13px}
+  .condItem select,.condItem input{background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:5px 8px;font:13px -apple-system,Segoe UI,sans-serif}
+  .cBtnCol{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:7px}
+  .cChip{background:#0e1420;border:1px solid var(--line);border-radius:8px;padding:7px 9px;color:var(--ink);font-size:12px;cursor:pointer;text-align:left}
+  .cChip:hover{border-color:var(--accent)}
+  .condBtns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
 </style>
 </head>
 <body>
@@ -188,7 +223,7 @@
       <div style="overflow-x:auto">
         <table id="segTable">
           <thead><tr>
-            <th>#</th><th>Género</th><th>Edad</th><th>Mín. personas</th><th>Franja</th>
+            <th>#</th><th>Género</th><th>Edad</th><th>Mín. personas</th><th>Franja</th><th>Contexto</th>
             <th>→ Categoría</th><th>Tema (tag)</th><th>Medio</th><th>Media concreta</th><th>Stock</th><th></th>
           </tr></thead>
           <tbody id="segRows"></tbody>
@@ -208,6 +243,54 @@
   <datalist id="segTags"></datalist>
 </section>
 
+<section id="simWrap">
+  <div class="simCard">
+    <div class="top">
+      <div class="ava">🧪</div>
+      <div style="min-width:0">
+        <div class="nm">Simulador de condiciones <span style="font:600 11px ui-monospace,monospace;color:var(--dim)">· motor XPL</span></div>
+        <div class="meta">Mueve el público, la hora y el clima y comprueba en seco qué regla "caza" y qué pieza se emitiría. No afecta a la emisión real.</div>
+      </div>
+      <div style="margin-left:auto"><span class="meta" id="simTgtLbl"></span></div>
+    </div>
+    <div class="simGrid">
+      <div class="simF"><label>👥 Género del público</label>
+        <select id="sim-gender">
+          <option value="m">♂ hombre</option><option value="f">♀ mujer</option>
+          <option value="mixed">⚥ mixto</option><option value="none">— nadie —</option>
+        </select></div>
+      <div class="simF"><label>🎂 Edad</label>
+        <select id="sim-age">
+          <option value="adulto">adulto</option><option value="nino">niño</option>
+          <option value="joven">joven</option><option value="senior">senior</option><option value="vejez">vejez</option>
+        </select></div>
+      <div class="simF"><label>👁 Personas: <span class="val" id="sim-countv">2</span></label>
+        <input id="sim-count" type="range" min="0" max="8" value="2"></div>
+      <div class="simF"><label>🕐 Hora: <span class="val" id="sim-hourv">12:00</span></label>
+        <input id="sim-hour" type="range" min="0" max="23" value="12"></div>
+      <div class="simF"><label>🌡️ Temperatura: <span class="val" id="sim-tempv">22°</span></label>
+        <input id="sim-temp" type="range" min="-5" max="42" value="22"></div>
+      <div class="simF"><label>Clima / día</label>
+        <div class="simToggle" data-k="rain"><span class="sw"></span><span>🌧️ llueve</span></div>
+        <div class="simToggle" data-k="weekend" style="margin-top:7px"><span class="sw"></span><span>📅 finde</span></div>
+        <div class="simToggle" data-k="holiday" style="margin-top:7px"><span class="sw"></span><span>🎉 festivo</span></div>
+      </div>
+    </div>
+    <div class="simOut" id="simOut"><div class="ft">🎬</div><div class="meta">cargando Stock…</div></div>
+  </div>
+</section>
+
+<div id="condModal"><div class="condBox">
+  <h3>🌦️ Condiciones de contexto</h3>
+  <div class="meta" id="condSub">Regla #—</div>
+  <div class="condList" id="condList"></div>
+  <div id="condAdd"></div>
+  <div class="condBtns">
+    <button class="miniBtn" id="condCancel">Cancelar</button>
+    <button class="miniBtn" id="condSave" style="background:#16432c;border-color:#1f5e44;color:var(--air);font-weight:700;padding:7px 16px">✓ Aplicar</button>
+  </div>
+</div></div>
+
 <div class="grid" id="grid"><div class="empty">Cargando flota…</div></div>
 <div id="mediaModal">
   <div class="mHd">
@@ -222,6 +305,7 @@
 
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span></footer>
 
+<script src="xpl-runtime.js?v=1"></script>
 <script>
 const FLEET   = 'https://omnipublicity-api.csilvasantin.workers.dev/locations?selfreg=1';
 const SIGNAGE = 'https://api.admira.store/signage/now?screen=';
@@ -511,6 +595,7 @@ function updateSegCounts(){
     td.textContent=(n==null)?'…':('≈'+n);
     td.style.color=(n===0)?'#ff8a8a':'var(--dim)';
   });
+  try{ runSim(); }catch(_){}
 }
 async function loadStockVocab(){
   try{ const r=await fetch('https://api.admira.store/stock/list?limit=300',{cache:'no-store'}); const d=await r.json();
@@ -529,6 +614,7 @@ function renderSeg(){
       '<td><select data-k="age">'+opt(AGES,r.age)+'</select></td>'+
       '<td><input data-k="minCount" type="number" min="0" max="9" title="0 = sin cámara (patrón por tiempo)" value="'+(r.minCount!=null?r.minCount:1)+'"></td>'+
       '<td><select data-k="slot">'+opt(SLOTS,r.slot||'any')+'</select></td>'+
+      '<td><button class="miniBtn pickCond'+((r.conds&&r.conds.length)?' has':'')+'" data-i="'+i+'" title="condiciones de clima/día (motor XPL)">'+condBtnLbl(r)+'</button></td>'+
       '<td><select data-k="category">'+opt(CATS,r.category)+'</select></td>'+
       '<td><input data-k="tag" list="segTags" value="'+esc(r.tag||'')+'" style="width:120px"></td>'+
       '<td><select data-k="medio">'+opt(MEDIOS,r.medio)+'</select></td>'+
@@ -547,9 +633,12 @@ function readSeg(){
     const g=k=>tr.querySelector('[data-k="'+k+'"]').value;
     const i=+tr.dataset.i;
     const mc=parseInt(g('minCount'),10);
-    // los assets no están en inputs → se preservan desde segMatrix por índice
-    const assets=(segMatrix.rules[i]&&Array.isArray(segMatrix.rules[i].assets))?segMatrix.rules[i].assets.slice():[];
+    // los assets y las condiciones XPL (clima/día) no están en inputs → se preservan por índice
+    const cur=segMatrix.rules[i]||{};
+    const assets=Array.isArray(cur.assets)?cur.assets.slice():[];
+    const conds=Array.isArray(cur.conds)?cur.conds.map(c=>({...c})):[];
     return { gender:g('gender'), age:g('age'), minCount:isNaN(mc)?1:mc, slot:g('slot'),
+             conds, join:cur.join||'and',
              category:g('category'), tag:g('tag').trim(), medio:g('medio'), assets };
   });
   return { rules, default:{ category:$('defCat').value, tag:$('defTag').value.trim(), medio:$('defMedio').value } };
@@ -595,10 +684,11 @@ async function saveSeg(){
   catch(_){ btn.textContent='✗ sin conexión'; }
   setTimeout(()=>{ btn.textContent='💾 Guardar'; },2200);
 }
-$('segAdd').onclick=()=>{ segMatrix=readSeg(); segMatrix.rules.push({gender:'any',age:'any',minCount:1,category:'any',tag:'',medio:'any'}); renderSeg(); };
+$('segAdd').onclick=()=>{ segMatrix=readSeg(); segMatrix.rules.push({gender:'any',age:'any',minCount:1,slot:'any',category:'any',tag:'',medio:'any',conds:[],join:'and'}); renderSeg(); };
 $('segSave').onclick=saveSeg;
 $('segRows').addEventListener('click',e=>{
   const pm=e.target.closest('.pickMedia'); if(pm){ openMedia(+pm.dataset.i); return; }   // abre el navegador de Stock
+  const pc=e.target.closest('.pickCond'); if(pc){ openCond(+pc.dataset.i); return; }       // condiciones de clima/día (XPL)
   const b=e.target.closest('button[data-act]'); if(!b) return;
   const i=+b.closest('tr').dataset.i; segMatrix=readSeg();
   const R=segMatrix.rules;
@@ -610,6 +700,139 @@ $('segRows').addEventListener('click',e=>{
 $('segRows').addEventListener('input', updateSegCounts);   // recuenta al editar
 loadSeg();
 loadStockVocab();
+
+/* ── CONDICIONES DE CONTEXTO (clima/día) + SIMULADOR XPL ───────────────────────
+ * Reutiliza el MOTOR real (window.XPL, xpl-runtime.js): las condiciones extra de
+ * una regla se evalúan con XPL.evalCondition(world), igual que en el canal. El
+ * simulador construye un "world" en seco con los mandos y muestra qué regla caza. */
+const COND_CATALOG=[
+  {fact:'rain',       type:'bool', es:'🌧️ Llueve'},
+  {fact:'wind',       type:'bool', es:'💨 Hace viento'},
+  {fact:'night',      type:'bool', es:'🌙 Es de noche'},
+  {fact:'weekend',    type:'bool', es:'📅 Fin de semana'},
+  {fact:'holiday',    type:'bool', es:'🎉 Festivo'},
+  {fact:'season',     type:'enum', es:'🍂 Estación', values:[['spring','primavera'],['summer','verano'],['autumn','otoño'],['winter','invierno']]},
+  {fact:'temperature',type:'num',  es:'🌡️ Temperatura', unit:'°'},
+  {fact:'hour',       type:'num',  es:'🕐 Hora', unit:'h'}
+];
+const condFact=f=>COND_CATALOG.find(c=>c.fact===f)||null;
+function condBtnLbl(r){ return (r.conds&&r.conds.length)?('🌦️ '+r.conds.length):'🌦️ +'; }
+// resumen textual de las condiciones extra (para la frase del simulador)
+function condsText(r){
+  if(!r.conds||!r.conds.length) return '';
+  const j=(r.join==='or')?' o ':' y ';
+  return ' · '+r.conds.map(c=>{ const cat=condFact(c.fact)||{es:c.fact,type:'bool'}; const nm=cat.es.replace(/^\S+\s/,'');
+    if(cat.type==='bool') return (c.value===false?'no ':'')+nm.toLowerCase();
+    if(cat.type==='num')  return nm.toLowerCase()+' '+c.op+c.value+(cat.unit||'');
+    return (cat.values.find(x=>x[0]===c.value)||[])[1]||c.value;
+  }).join(j);
+}
+
+/* ── modal de condiciones extra por regla ─────────────────────────────────── */
+let condIdx=-1, condDraft=[];
+function openCond(i){ condIdx=i; segMatrix=readSeg(); condDraft=(segMatrix.rules[i].conds||[]).map(c=>({...c})); renderCond(); $('condModal').style.display='flex'; }
+function closeCond(){ $('condModal').style.display='none'; condIdx=-1; }
+function renderCond(){
+  const r=segMatrix.rules[condIdx]||{};
+  $('condSub').innerHTML='Regla #'+(condIdx+1)+' · se cumplen <b>TODAS</b> (Y) además del público/hora';
+  $('condList').innerHTML = condDraft.length ? condDraft.map((c,j)=>{
+    const cat=condFact(c.fact)||{es:c.fact,type:'bool'};
+    let ctrl;
+    if(cat.type==='bool') ctrl='<select data-j="'+j+'" data-f="value"><option value="true"'+(c.value!==false?' selected':'')+'>sí se cumple</option><option value="false"'+(c.value===false?' selected':'')+'>NO se cumple</option></select>';
+    else if(cat.type==='enum') ctrl='<select data-j="'+j+'" data-f="value">'+cat.values.map(([v,l])=>'<option value="'+v+'"'+(c.value===v?' selected':'')+'>'+l+'</option>').join('')+'</select>';
+    else ctrl='<select data-j="'+j+'" data-f="op">'+['>=','>','<=','<','=='].map(o=>'<option'+((c.op||'>=')===o?' selected':'')+'>'+o+'</option>').join('')+'</select> <input data-j="'+j+'" data-f="value" type="number" value="'+(c.value!=null?c.value:0)+'" style="width:72px"> '+(cat.unit||'');
+    return '<div class="condItem"><span class="cf">'+cat.es+'</span>'+ctrl+'<button class="miniBtn condDel" data-j="'+j+'" title="quitar">✕</button></div>';
+  }).join('') : '<div class="meta" style="padding:6px 2px">Sin condiciones de contexto. La regla depende solo del público y la hora.</div>';
+  const used=new Set(condDraft.map(c=>c.fact));
+  const avail=COND_CATALOG.filter(c=>!used.has(c.fact));
+  $('condAdd').innerHTML = avail.length ? ('<div class="meta" style="margin-bottom:6px">Añadir:</div><div class="cBtnCol">'+avail.map(c=>'<button class="cChip condAddBtn" data-f="'+c.fact+'">+ '+c.es+'</button>').join('')+'</div>') : '';
+}
+$('condModal').addEventListener('click',e=>{
+  const add=e.target.closest('.condAddBtn');
+  if(add){ const cat=condFact(add.dataset.f); if(!cat) return;
+    const c={fact:cat.fact}; if(cat.type==='bool') c.value=true; else if(cat.type==='enum') c.value=cat.values[0][0]; else { c.op='>='; c.value=(cat.fact==='temperature')?20:12; }
+    condDraft.push(c); renderCond(); return; }
+  const del=e.target.closest('.condDel'); if(del){ condDraft.splice(+del.dataset.j,1); renderCond(); return; }
+  if(e.target===$('condModal')) closeCond();
+});
+$('condModal').addEventListener('change',e=>{
+  const el=e.target.closest('[data-j]'); if(!el) return;
+  const j=+el.dataset.j, f=el.dataset.f, c=condDraft[j]; if(!c) return;
+  if(f==='value'){ const cat=condFact(c.fact); c.value = cat&&cat.type==='bool' ? (el.value==='true') : cat&&cat.type==='num' ? Number(el.value) : el.value; }
+  else if(f==='op') c.op=el.value;
+});
+$('condCancel').onclick=closeCond;
+$('condSave').onclick=()=>{ if(condIdx>=0&&segMatrix.rules[condIdx]){ segMatrix.rules[condIdx].conds=condDraft.slice(); segMatrix.rules[condIdx].join='and'; } closeCond(); renderSeg(); };
+
+/* ── SIMULADOR: world en seco + evaluación con el motor XPL ────────────────── */
+let simFlags={rain:false,weekend:false,holiday:false};
+function simSeason(){ const m=new Date().getMonth(); return (m>=2&&m<=4)?'spring':(m>=5&&m<=7)?'summer':(m>=8&&m<=10)?'autumn':'winter'; }
+function slotOf(h){ return h<12?'manana':h<16?'mediodia':h<21?'tarde':'noche'; }
+function readSim(){ return { gender:$('sim-gender').value, age:$('sim-age').value, count:+$('sim-count').value,
+  hour:+$('sim-hour').value, temp:+$('sim-temp').value, rain:simFlags.rain, weekend:simFlags.weekend, holiday:simFlags.holiday, wind:false }; }
+function simWorldOf(s){ return { fact(id){ switch(id){
+  case 'hour':        return s.hour;
+  case 'dayPart':     return s.hour<12?'morning':s.hour<15?'noon':s.hour<21?'afternoon':'night';
+  case 'night':       return s.hour<8||s.hour>=21;
+  case 'weekend':     return !!s.weekend;
+  case 'holiday':     return !!s.holiday;
+  case 'season':      return simSeason();
+  case 'rain':        return !!s.rain;
+  case 'wind':        return !!s.wind;
+  case 'temperature': return s.temp;
+  case 'viewers':     return s.count;
+  case 'audGender':   return s.count>0?(s.gender==='m'?'male':s.gender==='f'?'female':s.gender==='mixed'?'mixed':'none'):'none';
+  case 'audAge':      return s.count>0?(s.age==='none'?'adulto':s.age):'none';
+} return 0; }, npcs(){return[];}, act(){} }; }
+function ruleMatchesSim(r,s,world){
+  const mc=(r.minCount==null?1:r.minCount); if(mc>s.count) return false;
+  const g=s.count>0?s.gender:null;
+  if(r.gender&&r.gender!=='any'&&r.gender!==g) return false;
+  const a=s.count>0?s.age:null;
+  if(r.age&&r.age!=='any'&&r.age!==a) return false;
+  if(r.slot&&r.slot!=='any'&&r.slot!==slotOf(s.hour)) return false;
+  if(r.conds&&r.conds.length&&window.XPL&&!XPL.evalCondition({join:r.join||'and',conds:r.conds},world)) return false;
+  return true;
+}
+function firstStockFor(r){
+  if(r.assets&&r.assets.length){ const a=assetById(r.assets[0]); if(a) return a; }
+  const tag=normTag(r.tag);
+  return STOCK_ITEMS.find(it=>{
+    if(r.category&&r.category!=='any'&&it.category!==r.category) return false;
+    if(tag && !((it.tags||[]).some(x=>normTag(x).includes(tag)))) return false;
+    if(r.medio&&r.medio!=='any'&&it.type!==r.medio) return false;
+    return true;
+  })||null;
+}
+function runSim(){
+  if(!$('simOut')) return;
+  const s=readSim(), m=readSeg(), world=simWorldOf(s);
+  if($('sim-countv')) $('sim-countv').textContent=s.count+(s.count===0?' · sin público':'');
+  if($('sim-hourv')) $('sim-hourv').textContent=String(s.hour).padStart(2,'0')+':00 · '+slotOf(s.hour);
+  if($('sim-tempv')) $('sim-tempv').textContent=s.temp+'°';
+  if($('simTgtLbl')) $('simTgtLbl').textContent='sobre: '+(segTargetSel==='all'?'🌐 global':('🟡 '+segTargetSel));
+  let hit=-1;
+  for(let i=0;i<m.rules.length;i++){ if(ruleMatchesSim(m.rules[i],s,world)){ hit=i; break; } }
+  const rule = hit>=0 ? m.rules[hit] : (m.default||{});
+  const asset=firstStockFor(rule);
+  const piece = asset?(asset.title||asset.id):('tema: '+((rule.tag||rule.category)||'auto'));
+  const lbl = hit>=0 ? '<span class="simHitlbl hit">✅ CAZA · regla #'+(hit+1)+'</span>'
+                     : '<span class="simHitlbl def">— ninguna regla · por defecto</span>';
+  const phrase = hit>=0 ? (esc(condText(rule))+esc(condsText(rule))) : 'sin público / ninguna coincidencia';
+  $('simOut').innerHTML='<div class="ft">'+(asset?mediaThumb(asset):'🎬')+'</div>'+
+    '<div style="min-width:0;flex:1">'+
+      '<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:5px">'+lbl+'<span class="meta">'+phrase+'</span></div>'+
+      '<div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(String(piece))+'</div>'+
+      (asset?('<div class="meta">'+esc(asset.type||'')+(asset.category?(' · '+esc(asset.category)):'')+'</div>')
+            :'<div class="meta" style="color:#ffb44c">⚠ no hay pieza en el Stock para esta regla</div>')+
+    '</div>';
+  document.querySelectorAll('#segRows tr').forEach(tr=>tr.classList.toggle('simhit', +tr.dataset.i===hit));
+  // reproduce el thumb de vídeo del simulador en bucle
+  const v=$('simOut').querySelector('video'); if(v){ v.loop=true; v.muted=true; v.play&&v.play().catch(()=>{}); }
+}
+['sim-gender','sim-age','sim-count','sim-hour','sim-temp'].forEach(id=>{ const el=$(id); if(el){ el.addEventListener('input',runSim); el.addEventListener('change',runSim); } });
+document.querySelectorAll('#simWrap .simToggle').forEach(t=>t.addEventListener('click',()=>{ const k=t.dataset.k; simFlags[k]=!simFlags[k]; t.classList.toggle('on',simFlags[k]); runSim(); }));
+runSim();
 </script>
 </body>
 </html>
