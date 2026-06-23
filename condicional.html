@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admira · Condicional — segmentación + simulador</title>
+<meta name="description" content="Condicional de Admira.tv: crea reglas de segmentación de audiencia y simula en seco qué se emitiría.">
+<style>
+  :root{ --bg:#070a10; --panel:#0e131c; --panel2:#121a27; --line:#1e2940; --ink:#cdd8e8; --dim:#8595ad;
+         --air:#39d98a; --off:#ff5a5a; --amber:#ffb44c; --accent:#7aa2ff; --robot:#c08bff; }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#11203a33,transparent),var(--bg);
+       color:var(--ink);font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+  header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+         padding:14px 20px;background:#070a10e6;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .brand{font-weight:800;letter-spacing:.5px;font-size:18px}
+  .brand b{color:var(--accent)}
+  .sub{color:var(--dim);font-size:12px}
+  .spacer{flex:1}
+  .live{display:flex;align-items:center;gap:7px;font:600 12px ui-monospace,monospace;color:var(--dim)}
+  .live .dot{width:8px;height:8px;border-radius:50%;background:var(--air);box-shadow:0 0 8px var(--air);animation:pulse 1.6s infinite}
+  @keyframes pulse{50%{opacity:.4}}
+  .kpis{display:flex;gap:12px;flex-wrap:wrap;padding:18px 20px 4px}
+  .kpi{flex:1;min-width:130px;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+       border-radius:14px;padding:14px 16px}
+  .kpi .n{font:800 28px ui-monospace,monospace;line-height:1}
+  .kpi .l{color:var(--dim);font-size:12px;margin-top:4px;text-transform:uppercase;letter-spacing:.6px}
+  .kpi.air .n{color:var(--air)} .kpi.amber .n{color:var(--amber)} .kpi.accent .n{color:var(--accent)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;padding:14px 20px 40px}
+  .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;
+        overflow:hidden;display:flex;flex-direction:column}
+  .card .top{display:flex;align-items:center;gap:10px;padding:13px 15px;border-bottom:1px solid var(--line)}
+  .ava{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:20px;
+       background:#0c1320;border:1px solid var(--line);flex:none}
+  .ava.robot{border-color:#5a3c8a;color:var(--robot)}
+  .nm{font-weight:700;font-size:15px;line-height:1.15}
+  .meta{color:var(--dim);font-size:11.5px;margin-top:1px}
+  .st{margin-left:auto;display:flex;align-items:center;gap:6px;font:700 11px ui-monospace,monospace;
+      padding:4px 9px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+  .st .d{width:8px;height:8px;border-radius:50%}
+  .st.on{color:var(--air);border-color:#1f5e44} .st.on .d{background:var(--air);box-shadow:0 0 7px var(--air)}
+  .st.off{color:var(--off);border-color:#5e2630} .st.off .d{background:var(--off)}
+  .body{padding:13px 15px;display:flex;flex-direction:column;gap:11px;flex:1}
+  .now{display:flex;align-items:center;gap:11px}
+  .thumb{width:74px;height:46px;border-radius:8px;background:#000;border:1px solid var(--line);overflow:hidden;flex:none;
+         display:grid;place-items:center;color:var(--dim);font-size:20px}
+  .thumb img,.thumb video{width:100%;height:100%;object-fit:cover}
+  .now .tx{min-width:0}
+  .now .tt{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .now .ty{color:var(--dim);font-size:11.5px;margin-top:2px}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--dim)}
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);font-size:11.5px}
+  .pill.aud{color:var(--air);border-color:#1f5e44} .pill.aud0{color:var(--amber);border-color:#5e4a26}
+  .pill.pos{color:var(--accent);border-color:#2a3a66}
+  .pill.moved{color:var(--robot);border-color:#5a3c8a}
+  .acts{display:flex;gap:8px;margin-top:2px}
+  a.btn{flex:1;text-align:center;text-decoration:none;color:var(--ink);background:#13203a;border:1px solid #26385e;
+        border-radius:9px;padding:8px 10px;font-weight:600;font-size:12.5px}
+  a.btn:hover{background:#1a2c4e}
+  a.btn.ghost{background:#0e1420;border-color:var(--line);color:var(--dim)}
+  .empty{padding:60px 20px;text-align:center;color:var(--dim)}
+  footer{padding:10px 20px 30px;color:var(--dim);font-size:11.5px;text-align:center}
+  code{color:var(--accent)}
+  /* editor de segmentación */
+  #segWrap{padding:14px 20px 0}
+  #segTable{width:100%;border-collapse:collapse;font-size:13px}
+  #segTable th{padding:6px;color:var(--dim);text-align:left;font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px}
+  #segTable td{padding:5px 6px;border-bottom:1px solid #131c2b;vertical-align:middle}
+  #segWrap select,#segWrap input{background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font:13px -apple-system,Segoe UI,sans-serif}
+  #segWrap input[type=number]{width:64px}
+  .miniBtn{background:#13203a;border:1px solid #26385e;color:var(--ink);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;margin-left:3px}
+  .miniBtn:hover{background:#1a2c4e}
+  .modeSel{background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:12.5px -apple-system,Segoe UI,sans-serif;transition:border-color .3s}
+  #segTarget{background:#1a1604;color:#ffd866;border:1px solid #5e4a26;border-radius:8px;padding:7px 10px;font:600 13px -apple-system,Segoe UI,sans-serif}
+  /* caja AMARILLA = el player tiene condiciones (segmentación propia) asignadas */
+  .card.assigned{border-color:#caa23a;box-shadow:0 0 0 1px #caa23a66, 0 0 22px #caa23a22}
+  .card.assigned .ava{border-color:#caa23a;color:#ffd866}
+  .badge-cond{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid #5e4a26;color:#ffd866;font-size:11.5px;background:#1a160488}
+  /* caja VERDE = match en vivo ("cazado") */
+  .card.matched{border-color:var(--air);box-shadow:0 0 0 1px var(--air), 0 0 26px #39d98a44}
+  .card.matched .ava{border-color:var(--air);color:var(--air)}
+  .badge-match{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid #1f5e44;color:var(--air);font-size:11.5px;background:#0c2018;font-weight:700}
+  /* preview de la pieza que se disparará */
+  .firePrev{display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 8px;border-radius:10px;background:#0c1320;border:1px solid var(--line)}
+  .firePrev.on{border-color:#1f5e44;background:#0b1a14}
+  .firePrev .ft{width:58px;height:36px;border-radius:6px;overflow:hidden;background:#000;display:grid;place-items:center;color:var(--dim);font-size:17px;flex:none}
+  .firePrev .ft img,.firePrev .ft video{width:100%;height:100%;object-fit:cover}
+  /* control remoto por player (audio/transporte/CLI) */
+  .remote{display:flex;align-items:center;gap:6px;margin-top:8px}
+  .rbtn{flex:none;width:34px;height:32px;display:grid;place-items:center;background:#13203a;border:1px solid #26385e;border-radius:8px;color:var(--ink);cursor:pointer;font-size:14px}
+  .rbtn:hover{background:#1a2c4e}
+  .rbtn.flash{background:var(--accent);color:#04110b}
+  .rvol{flex:1;min-width:50px;accent-color:var(--air);cursor:pointer}
+  .rcli{margin-top:7px;width:100%;background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:12.5px ui-monospace,Menlo,monospace}
+  .rcli::placeholder{color:var(--dim)}
+  /* navegador de Stock (modal) */
+  #mediaModal{position:fixed;inset:0;z-index:50;background:#060912f2;backdrop-filter:blur(5px);display:none;flex-direction:column;padding:18px 20px}
+  #mediaModal .mHd{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  #mediaModal h3{margin:0;font-size:18px;white-space:nowrap}
+  #mediaSearch{flex:1;min-width:160px;background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font:14px -apple-system,Segoe UI,sans-serif}
+  #mediaGrid{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;align-content:start}
+  .mItem{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .1s,border-color .15s}
+  .mItem:hover{transform:translateY(-2px);border-color:#33415e}
+  .mItem.on{border-color:var(--air);box-shadow:0 0 0 2px var(--air) inset}
+  .mItem.on::after{content:'✓';position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;background:var(--air);color:#04110b;font:800 13px sans-serif;display:grid;place-items:center;z-index:2}
+  .mTh{height:94px;background:#000;display:grid;place-items:center;color:var(--dim);font-size:26px;overflow:hidden}
+  .mTh img{width:100%;height:100%;object-fit:cover}
+  .mTt{padding:7px 9px 1px;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mTy{padding:0 9px 8px;font-size:11px;color:var(--dim)}
+  /* Enlaces del menú superior: Alta (registrar equipo) y Parrilla (planificar emisión) */
+  .cmsNav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .cmsNav a{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border:1px solid var(--line);border-radius:8px;background:#0e1420;color:var(--ink);font:600 12px ui-monospace,monospace;text-decoration:none;white-space:nowrap}
+  .cmsNav a:hover{border-color:var(--accent);color:#fff}
+  /* Bloque "Playlist asignada" + chip de modo por player */
+  .pl{margin-top:7px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#0b121d}
+  .plhdr{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+  .plmode{font:700 11px ui-monospace,Menlo,monospace;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+  .plmode.conditional{color:var(--amber);border-color:#5a4a1e;background:rgba(255,180,76,.10)}
+  .plmode.local{color:var(--accent);border-color:#2a3a66;background:rgba(122,162,255,.10)}
+  .plmode.sync{color:var(--air);border-color:#1e5a3a;background:rgba(57,217,138,.10)}
+  .plttl{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+  .plbody{font-size:12px;color:var(--ink)}
+  .plhead{font-size:10.5px;color:var(--dim);margin-bottom:3px}
+  .plrow{display:flex;gap:6px;align-items:center;padding:2px 0;border-top:1px dashed rgba(255,255,255,.05)}
+  .plrow.nb{border-top:0}
+  .plc{color:var(--dim);white-space:nowrap;flex:none}
+  .pld{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .plm{font:600 10px ui-monospace,monospace;color:var(--dim);border:1px solid var(--line);border-radius:5px;padding:0 5px;margin-left:auto;flex:none}
+  /* Estado de descarga (pseudo-streaming): qué tiene bajado cada player */
+  .dl{margin-top:7px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#0b121d}
+  .dlhdr{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--dim);margin-bottom:6px;flex-wrap:wrap}
+  .dlhdr b{color:var(--ink);font-weight:700}
+  .dlc{color:var(--dim)}
+  .dlok{color:var(--air);font-weight:700}
+  .dlbar{height:6px;background:#0d1f2b;border:1px solid var(--line);border-radius:99px;overflow:hidden}
+  .dlbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--air));border-radius:99px;transition:width .5s}
+  .dldl{font:600 10.5px ui-monospace,monospace;color:var(--amber);margin-top:5px;display:flex;flex-wrap:wrap;gap:9px}
+  /* Fichas contraíbles (para flotas grandes) + botón global en la nav */
+  .cmsNav button{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border:1px solid var(--line);border-radius:8px;background:#0e1420;color:var(--ink);font:600 12px ui-monospace,monospace;cursor:pointer;white-space:nowrap}
+  .cmsNav button:hover{border-color:var(--accent);color:#fff}
+  .card .top{cursor:pointer;user-select:none}
+  .cmode{flex:none;font-size:13px;line-height:1;width:24px;height:24px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:#0c1320}
+  .cmode.conditional{border-color:#5a4a1e} .cmode.local{border-color:#2a3a66} .cmode.sync{border-color:#1e5a3a}
+  .collChev{flex:none;color:var(--dim);font-size:11px;transition:transform .15s;width:14px;text-align:center}
+  .card.collapsed .collChev{transform:rotate(-90deg)}
+  .card.collapsed .body{display:none}
+  .card.collapsed .top{border-bottom:0}
+  /* simulador XPL */
+  #simWrap{padding:12px 20px 0}
+  .simCard{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .simGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:14px 16px}
+  .simF{background:#0b121d;border:1px solid var(--line);border-radius:10px;padding:8px 11px}
+  .simF>label{display:block;font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .simF select{width:100%}
+  .simF input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer}
+  .simF .val{font:700 11.5px ui-monospace,monospace;color:var(--accent)}
+  .simToggle{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:12.5px}
+  .simToggle .sw{width:34px;height:20px;border-radius:99px;background:#1a2436;border:1px solid var(--line);position:relative;transition:.15s;flex:none}
+  .simToggle .sw::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#5b6b85;transition:.15s}
+  .simToggle.on .sw{background:#16432c;border-color:#1f5e44}
+  .simToggle.on .sw::after{left:16px;background:var(--air)}
+  .simOut{display:flex;align-items:center;gap:14px;padding:14px 16px;border-top:1px solid var(--line);background:#0a1018}
+  .simOut .ft{width:104px;height:64px;border-radius:9px;overflow:hidden;background:#000;display:grid;place-items:center;color:var(--dim);font-size:26px;flex:none;border:1px solid var(--line)}
+  .simOut .ft img,.simOut .ft video{width:100%;height:100%;object-fit:cover}
+  .simHitlbl{font:700 11.5px ui-monospace,monospace;padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .simHitlbl.hit{color:var(--air);border:1px solid #1f5e44;background:#0c2018}
+  .simHitlbl.def{color:#ffd866;border:1px solid #5e4a26;background:#1a160488}
+  tr.simhit td{background:rgba(57,217,138,.09)}
+  tr.simhit td:first-child{box-shadow:inset 3px 0 0 var(--air)}
+  .pickCond.has{border-color:#5a4a1e;color:#ffd866}
+  /* modal de condiciones extra (clima/día) por regla */
+  #condModal{position:fixed;inset:0;z-index:55;background:#060912f2;backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px}
+  .condBox{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:540px;width:100%;padding:18px 20px}
+  .condBox h3{margin:0 0 3px;font-size:17px}
+  .condList{display:flex;flex-direction:column;gap:8px;margin:14px 0 10px}
+  .condItem{display:flex;align-items:center;gap:9px;background:#0b121d;border:1px solid var(--line);border-radius:10px;padding:8px 10px;flex-wrap:wrap}
+  .condItem .cf{flex:1;min-width:120px;font-size:13px}
+  .condItem select,.condItem input{background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:5px 8px;font:13px -apple-system,Segoe UI,sans-serif}
+  .cBtnCol{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:7px}
+  .cChip{background:#0e1420;border:1px solid var(--line);border-radius:8px;padding:7px 9px;color:var(--ink);font-size:12px;cursor:pointer;text-align:left}
+  .cChip:hover{border-color:var(--accent)}
+  .condBtns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+  /* historial de "cazados" */
+  #hitsWrap{padding:12px 20px 0}
+  .hitsCard{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .hitsList{max-height:240px;overflow:auto;padding:6px 8px 8px}
+  .hitRow{display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:9px}
+  .hitRow:hover{background:#0b121d}
+  .hitRow .ht{font:600 11px ui-monospace,monospace;color:var(--dim);white-space:nowrap;flex:none;width:62px}
+  .hitRow .hp{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none;max-width:140px}
+  .hitRow .harrow{color:var(--dim);flex:none}
+  .hitRow .hpiece{color:var(--air);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+  .hitRow .hslot{font:600 10px ui-monospace,monospace;color:var(--dim);border:1px solid var(--line);border-radius:5px;padding:1px 6px;flex:none}
+  .hitsEmpty{padding:22px 14px;text-align:center;color:var(--dim);font-size:12.5px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="brand">Admira · <b>Condicional</b></div>
+    <div class="sub">Segmentación de audiencia → contenido · reglas y simulador</div>
+  </div>
+  <div class="spacer"></div>
+  <nav class="cmsNav" aria-label="Admira">
+    <a href="/cms.html">🛰 Flota</a>
+    <a href="/canal.html" target="_blank" rel="noopener">📺 Canal</a>
+    <a href="/alta.html">➕ Alta</a>
+    <a href="https://www.xpaceos.com/control/" target="_blank" rel="noopener">📅 Parrilla</a>
+  </nav>
+  <div class="live"><span class="dot"></span><span id="liveTxt">en vivo</span></div>
+</header>
+
+<section id="segWrap">
+  <div class="card" style="display:block">
+    <div class="top">
+      <div class="ava">🎯</div>
+      <div style="min-width:0">
+        <div class="nm">Segmentación de audiencia → contenido</div>
+        <div class="meta">La cámara detecta el público; cada regla asigna qué contenido emitir. Orden = prioridad (la primera que casa, gana).</div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="meta">Asignar a:</span>
+        <select id="segTarget"><option value="all">🌐 Todos (toda la red)</option></select>
+        <div class="st on" id="segStatus"><span class="d"></span>cargando…</div>
+      </div>
+    </div>
+    <div class="body" style="display:block">
+      <div style="overflow-x:auto">
+        <table id="segTable">
+          <thead><tr>
+            <th>#</th><th>Género</th><th>Edad</th><th>Mín. personas</th><th>Franja</th><th>Contexto</th>
+            <th>→ Categoría</th><th>Tema (tag)</th><th>Medio</th><th>Media concreta</th><th>Stock</th><th></th>
+          </tr></thead>
+          <tbody id="segRows"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <button class="miniBtn" id="segAdd" style="padding:7px 12px">+ Añadir regla</button>
+        <div style="flex:1;min-width:20px"></div>
+        <span class="meta">Por defecto (sin público):</span>
+        <select id="defCat"></select>
+        <input id="defTag" list="segTags" placeholder="tema" style="width:120px">
+        <select id="defMedio"></select>
+        <button class="miniBtn" id="segSave" style="padding:7px 14px;background:#16432c;border-color:#1f5e44;color:var(--air);font-weight:700">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+  <datalist id="segTags"></datalist>
+</section>
+
+<section id="simWrap">
+  <div class="simCard">
+    <div class="top">
+      <div class="ava">🧪</div>
+      <div style="min-width:0">
+        <div class="nm">Simulador de condiciones <span style="font:600 11px ui-monospace,monospace;color:var(--dim)">· motor XPL</span></div>
+        <div class="meta">Mueve el público, la hora y el clima y comprueba en seco qué regla "caza" y qué pieza se emitiría. No afecta a la emisión real.</div>
+      </div>
+      <div style="margin-left:auto"><span class="meta" id="simTgtLbl"></span></div>
+    </div>
+    <div class="simGrid">
+      <div class="simF"><label>👥 Género del público</label>
+        <select id="sim-gender">
+          <option value="m">♂ hombre</option><option value="f">♀ mujer</option>
+          <option value="mixed">⚥ mixto</option><option value="none">— nadie —</option>
+        </select></div>
+      <div class="simF"><label>🎂 Edad</label>
+        <select id="sim-age">
+          <option value="adulto">adulto</option><option value="nino">niño</option>
+          <option value="joven">joven</option><option value="senior">senior</option><option value="vejez">vejez</option>
+        </select></div>
+      <div class="simF"><label>👁 Personas: <span class="val" id="sim-countv">2</span></label>
+        <input id="sim-count" type="range" min="0" max="8" value="2"></div>
+      <div class="simF"><label>🕐 Hora: <span class="val" id="sim-hourv">12:00</span></label>
+        <input id="sim-hour" type="range" min="0" max="23" value="12"></div>
+      <div class="simF"><label>🌡️ Temperatura: <span class="val" id="sim-tempv">22°</span></label>
+        <input id="sim-temp" type="range" min="-5" max="42" value="22"></div>
+      <div class="simF"><label>Clima / día</label>
+        <div class="simToggle" data-k="rain"><span class="sw"></span><span>🌧️ llueve</span></div>
+        <div class="simToggle" data-k="weekend" style="margin-top:7px"><span class="sw"></span><span>📅 finde</span></div>
+        <div class="simToggle" data-k="holiday" style="margin-top:7px"><span class="sw"></span><span>🎉 festivo</span></div>
+      </div>
+    </div>
+    <div class="simOut" id="simOut"><div class="ft">🎬</div><div class="meta">cargando Stock…</div></div>
+  </div>
+</section>
+
+<div id="condModal"><div class="condBox">
+  <h3>🌦️ Condiciones de contexto</h3>
+  <div class="meta" id="condSub">Regla #—</div>
+  <div class="condList" id="condList"></div>
+  <div id="condAdd"></div>
+  <div class="condBtns">
+    <button class="miniBtn" id="condCancel">Cancelar</button>
+    <button class="miniBtn" id="condSave" style="background:#16432c;border-color:#1f5e44;color:var(--air);font-weight:700;padding:7px 16px">✓ Aplicar</button>
+  </div>
+</div></div>
+
+<section id="hitsWrap">
+  <div class="hitsCard">
+    <div class="top">
+      <div class="ava">🎯</div>
+      <div style="min-width:0">
+        <div class="nm">Cazados recientes</div>
+        <div class="meta">Cada vez que el público real de un player dispara una regla concreta. Histórico de 7 días.</div>
+      </div>
+      <div style="margin-left:auto"><span class="meta" id="hitsCount">—</span></div>
+    </div>
+    <div class="hitsList" id="hitsList"><div class="hitsEmpty">cargando…</div></div>
+  </div>
+</section>
+
+<div id="mediaModal">
+  <div class="mHd">
+    <h3>🎬 Stock de Pixeria</h3>
+    <input id="mediaSearch" placeholder="Buscar por título, tag o categoría…">
+    <span class="meta" id="mediaCount">—</span>
+    <button class="miniBtn" id="mediaClear">Limpiar selección</button>
+    <button class="miniBtn" id="mediaDone" style="background:#16432c;border-color:#1f5e44;color:var(--air);padding:7px 16px;font-weight:700">✓ Hecho</button>
+  </div>
+  <div id="mediaGrid"></div>
+</div>
+
+<footer>Reglas + cazados desde <code>omnipublicity-api</code> · motor <code>XPL</code> · <span id="stamp"></span></footer>
+
+<script src="xpl-runtime.js?v=1"></script>
+<script>
+const FLEET = 'https://omnipublicity-api.csilvasantin.workers.dev/locations?selfreg=1';
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+const ageTxt = ms => { const s=Math.max(0,Math.round(ms/1000)); return s<60?s+'s':s<3600?Math.round(s/60)+'min':Math.round(s/3600)+'h'; };
+
+function assetById(id){ return STOCK_ITEMS.find(x=>x.id===id)||null; }
+function mediaThumb(a){ if(!a) return '🎬'; if(a.type==='image'||a.type==='animation') return '<img src="'+esc(a.url)+'" alt="">'; if(a.thumbnail) return '<img src="'+esc(a.thumbnail)+'" alt="">'; return a.type==='video'?'▶':'♪'; }
+function condText(r){
+  // Regla "atemporal": catch-all sin filtros (carrusel completo, no atada a público ni hora).
+  const allAny=(!r.gender||r.gender==='any')&&(!r.age||r.age==='any')&&(!r.slot||r.slot==='any');
+  if(r.id==='atemporal' || (allAny && r.minCount===0 && !(r.assets&&r.assets.length))) return '🔁 atemporal · carrusel';
+  const G={any:'cualquier género',m:'♂ hombre',f:'♀ mujer'}, A={any:'cualquier edad',nino:'niño',joven:'joven',adulto:'adulto',senior:'senior',vejez:'vejez'}, S={any:'cualquier hora',manana:'mañana',mediodia:'mediodía',tarde:'tarde',noche:'noche'};
+  const p=(r.minCount===0)?'sin cámara':''; return [G[r.gender||'any'],A[r.age||'any'],S[r.slot||'any']].concat(p?[p]:[]).join(' · '); }
+
+// Carga la lista de equipos SOLO para el selector "Asignar a" + nombres del feed de cazados.
+async function loadTargets(){
+  let devs=[];
+  try{ const r=await fetch(FLEET,{cache:'no-store'}); const d=await r.json(); devs=(d.locations||d||[]).filter(x=>x&&x.id); }
+  catch(_){ if($('liveTxt')) $('liveTxt').textContent='sin conexión'; return; }
+  devs.sort((a,b)=> (b.deviceType==='robot')-(a.deviceType==='robot') || String(a.name||a.id).localeCompare(String(b.name||b.id)));
+  DEV_NAMES=Object.fromEntries(devs.map(d=>[d.id,d.name||d.id]));
+  let ASSIGNED=new Set();
+  try{ const a=await fetch(SEG_API+'/assigned?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()); ASSIGNED=new Set(a.assigned||[]); }catch(_){}
+  if($('segTarget')) $('segTarget').innerHTML='<option value="all">🌐 Todos (toda la red)</option>'+
+    devs.map(d=>'<option value="'+esc(d.id)+'"'+(segTargetSel===d.id?' selected':'')+'>'+(ASSIGNED.has(d.id)?'🟡 ':'')+esc(d.name||d.id)+'</option>').join('');
+  if($('stamp')) $('stamp').textContent='actualizado '+new Date().toLocaleTimeString('es-ES');
+}
+loadTargets(); setInterval(loadTargets, 30000);
+
+/* ── EDITOR DE SEGMENTACIÓN cámara → contenido ─────────────────────────────── */
+const SEG_API = 'https://omnipublicity-api.csilvasantin.workers.dev/segmentation';
+const GENDERS=[['any','cualquiera'],['m','hombre'],['f','mujer']];
+const AGES=[['any','cualquiera'],['nino','niño'],['joven','joven'],['adulto','adulto'],['senior','senior']];
+const CATS=[['any','cualquiera'],['atraer','atraer'],['producto','producto'],['marca','marca'],['promo','promo']];
+const MEDIOS=[['any','cualquiera'],['video','vídeo'],['image','imagen']];
+const SLOTS=[['any','cualquiera'],['manana','mañana'],['mediodia','mediodía'],['tarde','tarde'],['noche','noche']];
+const MODE_API='https://omnipublicity-api.csilvasantin.workers.dev/locations/mode';
+const MODE_LBL={conditional:'Condicional · cámara/contexto',local:'Local · su programación',sync:'Sincro · lo que manda admira.tv'};
+let TAGS=['música','tecnología','mobiliario','negocio','motivacional','videoclip','noticias','deporte','gaming','humor'];  // fallback hasta cargar el Stock
+let STOCK_ITEMS=[], TAGCOUNT={};
+let segMatrix={rules:[],default:{category:'atraer',tag:'',medio:'any'}};
+let segTargetSel='all';   // a quién se aplica la segmentación que se está editando
+const normTag=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+// Cuántos assets del Stock casan con una regla (categoría + tema + medio): el "link
+// con los contenidos" — Carlos ve si un segmento tiene contenido (y en rojo si ≈0).
+function matchCount(r){
+  if(!STOCK_ITEMS.length) return null;
+  const tag=normTag(r.tag);
+  return STOCK_ITEMS.filter(it=>{
+    if(r.category&&r.category!=='any'&&it.category!==r.category) return false;
+    if(tag && !((it.tags||[]).some(x=>normTag(x).includes(tag)))) return false;
+    if(r.medio&&r.medio!=='any'&&it.type!==r.medio) return false;
+    return true;
+  }).length;
+}
+function updateSegCounts(){
+  const m=readSeg();
+  document.querySelectorAll('#segRows td[data-cnt]').forEach(td=>{
+    const n=matchCount(m.rules[+td.dataset.cnt]);
+    td.textContent=(n==null)?'…':('≈'+n);
+    td.style.color=(n===0)?'#ff8a8a':'var(--dim)';
+  });
+  try{ runSim(); }catch(_){}
+}
+async function loadStockVocab(){
+  try{ const r=await fetch('https://api.admira.store/stock/list?limit=300',{cache:'no-store'}); const d=await r.json();
+    STOCK_ITEMS=(d.items||[]).filter(it=>['image','video','animation'].includes(it.type));
+    const c={}; STOCK_ITEMS.forEach(it=>(it.tags||[]).forEach(t=>{ if(t) c[t]=(c[t]||0)+1; }));
+    TAGCOUNT=c; const ks=Object.keys(c).filter(t=>c[t]>=2).sort((a,b)=>c[b]-c[a]); if(ks.length) TAGS=ks;
+    renderSeg();
+  }catch(_){}
+}
+const opt=(arr,val)=>arr.map(([v,l])=>'<option value="'+v+'"'+(v===val?' selected':'')+'>'+l+'</option>').join('');
+function renderSeg(){
+  $('segRows').innerHTML = segMatrix.rules.map((r,i)=>
+    '<tr data-i="'+i+'">'+
+      '<td style="color:var(--dim)">'+(i+1)+'</td>'+
+      '<td><select data-k="gender">'+opt(GENDERS,r.gender)+'</select></td>'+
+      '<td><select data-k="age">'+opt(AGES,r.age)+'</select></td>'+
+      '<td><input data-k="minCount" type="number" min="0" max="9" title="0 = sin cámara (patrón por tiempo)" value="'+(r.minCount!=null?r.minCount:1)+'"></td>'+
+      '<td><select data-k="slot">'+opt(SLOTS,r.slot||'any')+'</select></td>'+
+      '<td><button class="miniBtn pickCond'+((r.conds&&r.conds.length)?' has':'')+'" data-i="'+i+'" title="condiciones de clima/día (motor XPL)">'+condBtnLbl(r)+'</button></td>'+
+      '<td><select data-k="category">'+opt(CATS,r.category)+'</select></td>'+
+      '<td><input data-k="tag" list="segTags" value="'+esc(r.tag||'')+'" style="width:120px"></td>'+
+      '<td><select data-k="medio">'+opt(MEDIOS,r.medio)+'</select></td>'+
+      '<td><button class="miniBtn pickMedia" data-i="'+i+'" title="elegir piezas concretas del Stock">'+((r.assets&&r.assets.length)?('🎬 '+r.assets.length+' pieza'+(r.assets.length>1?'s':'')):'🎬 elegir')+'</button></td>'+
+      '<td data-cnt="'+i+'" title="assets del Stock que casan por tema" style="color:var(--dim);font:600 12px ui-monospace,monospace">…</td>'+
+      '<td style="white-space:nowrap"><button class="miniBtn" data-act="up">▲</button><button class="miniBtn" data-act="down">▼</button><button class="miniBtn" data-act="del">✕</button></td>'+
+    '</tr>').join('');
+  $('defCat').innerHTML=opt(CATS,segMatrix.default.category||'atraer');
+  $('defMedio').innerHTML=opt(MEDIOS,segMatrix.default.medio||'any');
+  $('defTag').value=segMatrix.default.tag||'';
+  $('segTags').innerHTML=TAGS.map(t=>'<option value="'+esc(t)+'" label="'+(TAGCOUNT[t]||'')+'">').join('');
+  updateSegCounts();
+}
+function readSeg(){
+  const rules=[...document.querySelectorAll('#segRows tr')].map(tr=>{
+    const g=k=>tr.querySelector('[data-k="'+k+'"]').value;
+    const i=+tr.dataset.i;
+    const mc=parseInt(g('minCount'),10);
+    // los assets y las condiciones XPL (clima/día) no están en inputs → se preservan por índice
+    const cur=segMatrix.rules[i]||{};
+    const assets=Array.isArray(cur.assets)?cur.assets.slice():[];
+    const conds=Array.isArray(cur.conds)?cur.conds.map(c=>({...c})):[];
+    return { gender:g('gender'), age:g('age'), minCount:isNaN(mc)?1:mc, slot:g('slot'),
+             conds, join:cur.join||'and',
+             category:g('category'), tag:g('tag').trim(), medio:g('medio'), assets };
+  });
+  return { rules, default:{ category:$('defCat').value, tag:$('defTag').value.trim(), medio:$('defMedio').value } };
+}
+/* ── NAVEGADOR DE STOCK: elegir piezas concretas por regla ─────────────────── */
+let pickIdx=-1;
+function openMedia(i){ pickIdx=i; segMatrix=readSeg(); $('mediaSearch').value=''; renderGallery(''); $('mediaModal').style.display='flex'; setTimeout(()=>$('mediaSearch').focus(),50); }
+function closeMedia(){ $('mediaModal').style.display='none'; pickIdx=-1; }
+function selSet(){ const r=segMatrix.rules[pickIdx]; return new Set((r&&r.assets)||[]); }
+function renderGallery(q){
+  q=normTag(q||''); const sel=selSet();
+  const items=STOCK_ITEMS.filter(it=> !q || normTag((it.title||'')+' '+((it.tags||[]).join(' '))+' '+(it.category||'')).indexOf(q)>=0 );
+  $('mediaCount').textContent=items.length+' piezas · '+sel.size+' elegidas';
+  $('mediaGrid').innerHTML=items.slice(0,240).map(it=>{
+    const on=sel.has(it.id);
+    const th=(it.type==='image'||it.type==='animation')?('<img src="'+esc(it.url)+'" loading="lazy" alt="">'):(it.thumbnail?('<img src="'+esc(it.thumbnail)+'" loading="lazy" alt="">'):(it.type==='video'?'▶':'♪'));
+    return '<div class="mItem'+(on?' on':'')+'" data-id="'+esc(it.id)+'"><div class="mTh">'+th+'</div><div class="mTt">'+esc(String(it.title||it.id).slice(0,44))+'</div><div class="mTy">'+esc(it.type)+(it.category?(' · '+esc(it.category)):'')+'</div></div>';
+  }).join('')||'<div style="padding:40px;color:var(--dim)">Sin resultados</div>';
+}
+$('mediaGrid').addEventListener('click',e=>{
+  const el=e.target.closest('.mItem'); if(!el||pickIdx<0) return;
+  const id=el.dataset.id, r=segMatrix.rules[pickIdx]; r.assets=r.assets||[];
+  const k=r.assets.indexOf(id); if(k>=0) r.assets.splice(k,1); else r.assets.push(id);
+  renderGallery($('mediaSearch').value);
+});
+$('mediaSearch').addEventListener('input',()=>renderGallery($('mediaSearch').value));
+$('mediaClear').onclick=()=>{ if(pickIdx>=0&&segMatrix.rules[pickIdx]){ segMatrix.rules[pickIdx].assets=[]; renderGallery($('mediaSearch').value); } };
+$('mediaDone').onclick=()=>{ closeMedia(); renderSeg(); };
+async function loadSeg(){
+  try{ const r=await fetch(SEG_API+'?target='+encodeURIComponent(segTargetSel)+'&t='+Date.now(),{cache:'no-store'}); const d=await r.json();
+    if(d&&Array.isArray(d.rules)) segMatrix=d; renderSeg();
+    const tag=segTargetSel==='all'?'global':(d&&d.assigned?'propia':'hereda la global');
+    $('segStatus').innerHTML='<span class="d"></span>'+segMatrix.rules.length+' reglas · '+tag; }
+  catch(_){ $('segStatus').innerHTML='<span class="d"></span>sin conexión'; }
+}
+$('segTarget').addEventListener('change',e=>{ segTargetSel=e.target.value; loadSeg(); });
+async function saveSeg(){
+  const m=readSeg(); const btn=$('segSave'); btn.textContent='Guardando…';
+  try{ const r=await fetch(SEG_API+'?target='+encodeURIComponent(segTargetSel),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(m)});
+    const d=await r.json(); segMatrix=m; try{ loadTargets(); }catch(_){}   // refresca marcas del selector
+    if(d&&d.ok){ $('segStatus').innerHTML='<span class="d"></span>'+m.rules.length+' reglas · '+(segTargetSel==='all'?'global':'propia'); }
+    btn.textContent=d&&d.ok?('✓ Guardado ('+d.count+')'):'✗ error'; }
+  catch(_){ btn.textContent='✗ sin conexión'; }
+  setTimeout(()=>{ btn.textContent='💾 Guardar'; },2200);
+}
+$('segAdd').onclick=()=>{ segMatrix=readSeg(); segMatrix.rules.push({gender:'any',age:'any',minCount:1,slot:'any',category:'any',tag:'',medio:'any',conds:[],join:'and'}); renderSeg(); };
+$('segSave').onclick=saveSeg;
+$('segRows').addEventListener('click',e=>{
+  const pm=e.target.closest('.pickMedia'); if(pm){ openMedia(+pm.dataset.i); return; }   // abre el navegador de Stock
+  const pc=e.target.closest('.pickCond'); if(pc){ openCond(+pc.dataset.i); return; }       // condiciones de clima/día (XPL)
+  const b=e.target.closest('button[data-act]'); if(!b) return;
+  const i=+b.closest('tr').dataset.i; segMatrix=readSeg();
+  const R=segMatrix.rules;
+  if(b.dataset.act==='del') R.splice(i,1);
+  else if(b.dataset.act==='up'&&i>0){ [R[i-1],R[i]]=[R[i],R[i-1]]; }
+  else if(b.dataset.act==='down'&&i<R.length-1){ [R[i+1],R[i]]=[R[i],R[i+1]]; }
+  renderSeg();
+});
+$('segRows').addEventListener('input', updateSegCounts);   // recuenta al editar
+loadSeg();
+loadStockVocab();
+
+/* ── CONDICIONES DE CONTEXTO (clima/día) + SIMULADOR XPL ───────────────────────
+ * Reutiliza el MOTOR real (window.XPL, xpl-runtime.js): las condiciones extra de
+ * una regla se evalúan con XPL.evalCondition(world), igual que en el canal. El
+ * simulador construye un "world" en seco con los mandos y muestra qué regla caza. */
+const COND_CATALOG=[
+  {fact:'rain',       type:'bool', es:'🌧️ Llueve'},
+  {fact:'wind',       type:'bool', es:'💨 Hace viento'},
+  {fact:'night',      type:'bool', es:'🌙 Es de noche'},
+  {fact:'weekend',    type:'bool', es:'📅 Fin de semana'},
+  {fact:'holiday',    type:'bool', es:'🎉 Festivo'},
+  {fact:'season',     type:'enum', es:'🍂 Estación', values:[['spring','primavera'],['summer','verano'],['autumn','otoño'],['winter','invierno']]},
+  {fact:'temperature',type:'num',  es:'🌡️ Temperatura', unit:'°'},
+  {fact:'hour',       type:'num',  es:'🕐 Hora', unit:'h'}
+];
+const condFact=f=>COND_CATALOG.find(c=>c.fact===f)||null;
+function condBtnLbl(r){ return (r.conds&&r.conds.length)?('🌦️ '+r.conds.length):'🌦️ +'; }
+// resumen textual de las condiciones extra (para la frase del simulador)
+function condsText(r){
+  if(!r.conds||!r.conds.length) return '';
+  const j=(r.join==='or')?' o ':' y ';
+  return ' · '+r.conds.map(c=>{ const cat=condFact(c.fact)||{es:c.fact,type:'bool'}; const nm=cat.es.replace(/^\S+\s/,'');
+    if(cat.type==='bool') return (c.value===false?'no ':'')+nm.toLowerCase();
+    if(cat.type==='num')  return nm.toLowerCase()+' '+c.op+c.value+(cat.unit||'');
+    return (cat.values.find(x=>x[0]===c.value)||[])[1]||c.value;
+  }).join(j);
+}
+
+/* ── modal de condiciones extra por regla ─────────────────────────────────── */
+let condIdx=-1, condDraft=[];
+function openCond(i){ condIdx=i; segMatrix=readSeg(); condDraft=(segMatrix.rules[i].conds||[]).map(c=>({...c})); renderCond(); $('condModal').style.display='flex'; }
+function closeCond(){ $('condModal').style.display='none'; condIdx=-1; }
+function renderCond(){
+  const r=segMatrix.rules[condIdx]||{};
+  $('condSub').innerHTML='Regla #'+(condIdx+1)+' · se cumplen <b>TODAS</b> (Y) además del público/hora';
+  $('condList').innerHTML = condDraft.length ? condDraft.map((c,j)=>{
+    const cat=condFact(c.fact)||{es:c.fact,type:'bool'};
+    let ctrl;
+    if(cat.type==='bool') ctrl='<select data-j="'+j+'" data-f="value"><option value="true"'+(c.value!==false?' selected':'')+'>sí se cumple</option><option value="false"'+(c.value===false?' selected':'')+'>NO se cumple</option></select>';
+    else if(cat.type==='enum') ctrl='<select data-j="'+j+'" data-f="value">'+cat.values.map(([v,l])=>'<option value="'+v+'"'+(c.value===v?' selected':'')+'>'+l+'</option>').join('')+'</select>';
+    else ctrl='<select data-j="'+j+'" data-f="op">'+['>=','>','<=','<','=='].map(o=>'<option'+((c.op||'>=')===o?' selected':'')+'>'+o+'</option>').join('')+'</select> <input data-j="'+j+'" data-f="value" type="number" value="'+(c.value!=null?c.value:0)+'" style="width:72px"> '+(cat.unit||'');
+    return '<div class="condItem"><span class="cf">'+cat.es+'</span>'+ctrl+'<button class="miniBtn condDel" data-j="'+j+'" title="quitar">✕</button></div>';
+  }).join('') : '<div class="meta" style="padding:6px 2px">Sin condiciones de contexto. La regla depende solo del público y la hora.</div>';
+  const used=new Set(condDraft.map(c=>c.fact));
+  const avail=COND_CATALOG.filter(c=>!used.has(c.fact));
+  $('condAdd').innerHTML = avail.length ? ('<div class="meta" style="margin-bottom:6px">Añadir:</div><div class="cBtnCol">'+avail.map(c=>'<button class="cChip condAddBtn" data-f="'+c.fact+'">+ '+c.es+'</button>').join('')+'</div>') : '';
+}
+$('condModal').addEventListener('click',e=>{
+  const add=e.target.closest('.condAddBtn');
+  if(add){ const cat=condFact(add.dataset.f); if(!cat) return;
+    const c={fact:cat.fact}; if(cat.type==='bool') c.value=true; else if(cat.type==='enum') c.value=cat.values[0][0]; else { c.op='>='; c.value=(cat.fact==='temperature')?20:12; }
+    condDraft.push(c); renderCond(); return; }
+  const del=e.target.closest('.condDel'); if(del){ condDraft.splice(+del.dataset.j,1); renderCond(); return; }
+  if(e.target===$('condModal')) closeCond();
+});
+$('condModal').addEventListener('change',e=>{
+  const el=e.target.closest('[data-j]'); if(!el) return;
+  const j=+el.dataset.j, f=el.dataset.f, c=condDraft[j]; if(!c) return;
+  if(f==='value'){ const cat=condFact(c.fact); c.value = cat&&cat.type==='bool' ? (el.value==='true') : cat&&cat.type==='num' ? Number(el.value) : el.value; }
+  else if(f==='op') c.op=el.value;
+});
+$('condCancel').onclick=closeCond;
+$('condSave').onclick=()=>{ if(condIdx>=0&&segMatrix.rules[condIdx]){ segMatrix.rules[condIdx].conds=condDraft.slice(); segMatrix.rules[condIdx].join='and'; } closeCond(); renderSeg(); };
+
+/* ── SIMULADOR: world en seco + evaluación con el motor XPL ────────────────── */
+let simFlags={rain:false,weekend:false,holiday:false};
+function simSeason(){ const m=new Date().getMonth(); return (m>=2&&m<=4)?'spring':(m>=5&&m<=7)?'summer':(m>=8&&m<=10)?'autumn':'winter'; }
+function slotOf(h){ return h<12?'manana':h<16?'mediodia':h<21?'tarde':'noche'; }
+function readSim(){ return { gender:$('sim-gender').value, age:$('sim-age').value, count:+$('sim-count').value,
+  hour:+$('sim-hour').value, temp:+$('sim-temp').value, rain:simFlags.rain, weekend:simFlags.weekend, holiday:simFlags.holiday, wind:false }; }
+function simWorldOf(s){ return { fact(id){ switch(id){
+  case 'hour':        return s.hour;
+  case 'dayPart':     return s.hour<12?'morning':s.hour<15?'noon':s.hour<21?'afternoon':'night';
+  case 'night':       return s.hour<8||s.hour>=21;
+  case 'weekend':     return !!s.weekend;
+  case 'holiday':     return !!s.holiday;
+  case 'season':      return simSeason();
+  case 'rain':        return !!s.rain;
+  case 'wind':        return !!s.wind;
+  case 'temperature': return s.temp;
+  case 'viewers':     return s.count;
+  case 'audGender':   return s.count>0?(s.gender==='m'?'male':s.gender==='f'?'female':s.gender==='mixed'?'mixed':'none'):'none';
+  case 'audAge':      return s.count>0?(s.age==='none'?'adulto':s.age):'none';
+} return 0; }, npcs(){return[];}, act(){} }; }
+function ruleMatchesSim(r,s,world){
+  const mc=(r.minCount==null?1:r.minCount); if(mc>s.count) return false;
+  const g=s.count>0?s.gender:null;
+  if(r.gender&&r.gender!=='any'&&r.gender!==g) return false;
+  const a=s.count>0?s.age:null;
+  if(r.age&&r.age!=='any'&&r.age!==a) return false;
+  if(r.slot&&r.slot!=='any'&&r.slot!==slotOf(s.hour)) return false;
+  if(r.conds&&r.conds.length&&window.XPL&&!XPL.evalCondition({join:r.join||'and',conds:r.conds},world)) return false;
+  return true;
+}
+function firstStockFor(r){
+  if(r.assets&&r.assets.length){ const a=assetById(r.assets[0]); if(a) return a; }
+  const tag=normTag(r.tag);
+  return STOCK_ITEMS.find(it=>{
+    if(r.category&&r.category!=='any'&&it.category!==r.category) return false;
+    if(tag && !((it.tags||[]).some(x=>normTag(x).includes(tag)))) return false;
+    if(r.medio&&r.medio!=='any'&&it.type!==r.medio) return false;
+    return true;
+  })||null;
+}
+function runSim(){
+  if(!$('simOut')) return;
+  const s=readSim(), m=readSeg(), world=simWorldOf(s);
+  if($('sim-countv')) $('sim-countv').textContent=s.count+(s.count===0?' · sin público':'');
+  if($('sim-hourv')) $('sim-hourv').textContent=String(s.hour).padStart(2,'0')+':00 · '+slotOf(s.hour);
+  if($('sim-tempv')) $('sim-tempv').textContent=s.temp+'°';
+  if($('simTgtLbl')) $('simTgtLbl').textContent='sobre: '+(segTargetSel==='all'?'🌐 global':('🟡 '+segTargetSel));
+  let hit=-1;
+  for(let i=0;i<m.rules.length;i++){ if(ruleMatchesSim(m.rules[i],s,world)){ hit=i; break; } }
+  const rule = hit>=0 ? m.rules[hit] : (m.default||{});
+  const asset=firstStockFor(rule);
+  const piece = asset?(asset.title||asset.id):('tema: '+((rule.tag||rule.category)||'auto'));
+  const lbl = hit>=0 ? '<span class="simHitlbl hit">✅ CAZA · regla #'+(hit+1)+'</span>'
+                     : '<span class="simHitlbl def">— ninguna regla · por defecto</span>';
+  const phrase = hit>=0 ? (esc(condText(rule))+esc(condsText(rule))) : 'sin público / ninguna coincidencia';
+  $('simOut').innerHTML='<div class="ft">'+(asset?mediaThumb(asset):'🎬')+'</div>'+
+    '<div style="min-width:0;flex:1">'+
+      '<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:5px">'+lbl+'<span class="meta">'+phrase+'</span></div>'+
+      '<div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(String(piece))+'</div>'+
+      (asset?('<div class="meta">'+esc(asset.type||'')+(asset.category?(' · '+esc(asset.category)):'')+'</div>')
+            :'<div class="meta" style="color:#ffb44c">⚠ no hay pieza en el Stock para esta regla</div>')+
+    '</div>';
+  document.querySelectorAll('#segRows tr').forEach(tr=>tr.classList.toggle('simhit', +tr.dataset.i===hit));
+  // reproduce el thumb de vídeo del simulador en bucle
+  const v=$('simOut').querySelector('video'); if(v){ v.loop=true; v.muted=true; v.play&&v.play().catch(()=>{}); }
+}
+['sim-gender','sim-age','sim-count','sim-hour','sim-temp'].forEach(id=>{ const el=$(id); if(el){ el.addEventListener('input',runSim); el.addEventListener('change',runSim); } });
+document.querySelectorAll('#simWrap .simToggle').forEach(t=>t.addEventListener('click',()=>{ const k=t.dataset.k; simFlags[k]=!simFlags[k]; t.classList.toggle('on',simFlags[k]); runSim(); }));
+runSim();
+
+/* ── HISTORIAL DE "CAZADOS": feed del worker (/segmentation/hits) ───────────── */
+const HITS_API='https://omnipublicity-api.csilvasantin.workers.dev/segmentation/hits';
+let DEV_NAMES={};
+const GICON={m:'♂',f:'♀'};
+function audChip(a){ a=a||{}; const g=GICON[a.gender]||'•'; return '<span class="pill aud">👥 '+(a.faces||1)+' · '+g+(a.age?(' '+esc(a.age)):'')+'</span>'; }
+async function loadHits(){
+  if(!$('hitsList')) return;
+  let hits=[];
+  try{ hits=(await fetch(HITS_API+'?limit=40&t='+Date.now(),{cache:'no-store'}).then(r=>r.json())).hits||[]; }catch(_){ return; }
+  $('hitsCount').textContent=hits.length?(hits.length+' cazados'):'sin cazados aún';
+  if(!hits.length){ $('hitsList').innerHTML='<div class="hitsEmpty">Aún no hay cazados. Cuando un player en modo condicional detecte público que cumpla una regla concreta, aparecerá aquí.</div>'; return; }
+  const now=Date.now();
+  $('hitsList').innerHTML=hits.map(h=>{
+    const nm=DEV_NAMES[h.id]||h.id;
+    return '<div class="hitRow"><span class="ht">hace '+ageTxt(now-(h.ts*1000))+'</span>'+
+      '<span class="hp" title="'+esc(nm)+'">'+esc(nm)+'</span>'+audChip(h.aud)+
+      '<span class="harrow">→</span><span class="hpiece" title="'+esc(h.piece)+'">'+esc(h.piece)+'</span>'+
+      (h.slot?('<span class="hslot">'+esc(h.slot)+'</span>'):'')+'</div>';
+  }).join('');
+}
+loadHits(); setInterval(loadHits, 10000);
+</script>
+</body>
+</html>
