@@ -407,7 +407,7 @@ async function load(){
         })()}
         <div class="acts">
           <a class="btn" href="${esc(canalUrl(d))}" target="_blank" rel="noopener">▶ Abrir canal</a>
-          <a class="btn ghost" href="${(d.coords&&d.coords.length===2)?('https://www.admira.app/?lng='+d.coords[0]+'&lat='+d.coords[1]+'&label='+encodeURIComponent(d.name||d.id)):'https://www.admira.app/'}" target="_blank" rel="noopener" title="ver este punto en el mapa">🗺 Mapa</a>
+          <a class="btn ghost" href="${(d.coords&&d.coords.length===2)?('https://www.clearchannel.tv/?lng='+d.coords[0]+'&lat='+d.coords[1]+'&label='+encodeURIComponent(d.name||d.id)):('https://www.clearchannel.tv/?screen='+encodeURIComponent(d.screen||''))}" target="_blank" rel="noopener" title="ver este punto en el mapa">🗺 Mapa</a>
         </div>
         <div class="remote" data-id="${esc(d.id)}" title="control remoto del player">
           <button class="rbtn" data-cmd="prev" title="anterior">⏮</button>
