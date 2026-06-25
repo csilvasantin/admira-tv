@@ -101,6 +101,12 @@ despliegas N pantallas con un enlace:
 
 - **pixeria.com** (Crear) y **xpaceos.com** (Operar) enlazan a admira.tv en su nav.
 - El landing **admira.tv** → botón «Ver el canal en antena» → `canal.html`.
+- **Player de cartelería (kiosko)**: las apps reproductoras (Electron macOS
+  `digital-signage-player`, y la flota Android/iOS) abren `www.admira.tv` a pantalla
+  completa. El `index.html` detecta su User-Agent (`AdmiraMacOSPlayer` /
+  `AdmiraPlayer` / `AdmiraKiosk`) y **redirige solo al canal en modo emisión limpia**
+  (`canal.html?embed=mupi`), preservando cualquier query (`?circuit=`, `?screen=`…).
+  Un navegador normal sigue viendo el landing. Escape manual: `?nokiosk=1`.
 
 ## Pendiente / siguiente paso
 
