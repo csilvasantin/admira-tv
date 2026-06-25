@@ -2,6 +2,23 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
+  <!-- Kiosko Admira: si abre el player de cartelería (Electron macOS / fleet),
+       el landing no aplica → salta directo al canal en modo emisión limpia.
+       El player se identifica con UA "AdmiraMacOSPlayer/x.y". Escape manual: ?nokiosk=1 -->
+  <script>
+  (function(){
+    try{
+      var p = new URLSearchParams(location.search);
+      if (p.get('nokiosk') === '1') return;                 // ver el landing aun desde el kiosko
+      var ua = navigator.userAgent || '';
+      var isKiosk = /AdmiraMacOSPlayer|AdmiraPlayer|AdmiraKiosk/i.test(ua);
+      if (isKiosk) {
+        var qs = location.search ? location.search.replace(/^\?/, '&') : '';
+        location.replace('canal.html?embed=mupi' + qs);     // emisión a pantalla completa, sin chrome
+      }
+    }catch(e){ /* ante cualquier fallo, se queda en el landing */ }
+  })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Admira.tv · El canal de emisión DOOH</title>
   <meta name="description" content="Admira.tv: el canal de emisión DOOH en vivo del ecosistema Admira. Donde el contenido creado en Pixeria y operado en XpaceOS sale a antena en la red de pantallas.">
