@@ -127,6 +127,10 @@
   /* ── Programar parrilla (/grid) ── */
   .cmsNav button.navbtn,.navbtn{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border:1px solid var(--line);border-radius:8px;background:#0e1420;color:var(--ink);font:600 12px ui-monospace,monospace;cursor:pointer;white-space:nowrap;text-decoration:none}
   .cmsNav button.navbtn:hover,.navbtn:hover{border-color:var(--accent);color:#fff}
+  .canalSel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--accent);border-radius:9px;padding:5px 10px;background:rgba(122,162,255,.08)}
+  .canalSel span{font-size:14px}
+  #canalSel{background:transparent;color:var(--ink);border:0;font:700 13px ui-monospace,monospace;cursor:pointer;outline:none}
+  #canalSel option{background:var(--panel);color:var(--ink)}
   #progModal{position:fixed;inset:0;z-index:62;background:#060912f5;backdrop-filter:blur(6px);display:none;flex-direction:column;padding:18px 20px}
   #progModal .pgHd{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
   #progModal h3{margin:0;font-size:18px;white-space:nowrap}
@@ -262,6 +266,7 @@
     <div class="sub">Control de flota — dispositivos conectados y qué emiten</div>
   </div>
   <div class="spacer"></div>
+  <label class="canalSel" title="Canal / proyecto — filtra la flota y la programación"><span>📡</span><select id="canalSel"></select></label>
   <nav class="cmsNav" aria-label="Admira">
     <button id="collapseAll" type="button" title="Contraer / expandir todas las fichas">▾ Contraer</button>
     <a href="/condicional.html">🎯 Condicional</a>
@@ -313,6 +318,15 @@
 <script src="xpl-runtime.js?v=1"></script>
 <script>
 const FLEET   = 'https://omnipublicity-api.csilvasantin.workers.dev/locations?selfreg=1';
+const PROJECTS_API = 'https://api.admira.store/grid/projects';
+// ── Canal/proyecto: agrupa circuitos; filtra flota + programación ──
+let PROJECTS=[], CANAL_SEL=(()=>{try{return localStorage.getItem('cms_canal')||'all'}catch(_){return'all'}})();
+const circuitOf = d => String((d&&d.circuit)||(d&&d.id)||'').toLowerCase().split('-')[0];
+const curProject = () => PROJECTS.find(p=>p.id===CANAL_SEL)||null;
+const canalCircuits = () => { const p=curProject(); return p?p.circuits.map(c=>String(c).toLowerCase()):null; };
+const filterByCanal = arr => { const c=canalCircuits(); return c? arr.filter(d=>c.includes(circuitOf(d))) : arr; };
+async function loadProjects(){ try{ const d=await fetch(PROJECTS_API,{cache:'no-store'}).then(r=>r.json()); PROJECTS=d.projects||[]; }catch(_){ PROJECTS=[]; }
+  const s=$('canalSel'); if(s){ s.innerHTML='<option value="all">Todos los canales</option>'+PROJECTS.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join(''); s.value=CANAL_SEL; } }
 const SIGNAGE = 'https://api.admira.store/signage/now?screen=';
 const CACHEAPI= 'https://api.admira.store/screen/cache?screen=';   // estado de descarga (pseudo-streaming)
 const CANAL   = 'https://admira.tv/canal.html';
@@ -400,6 +414,7 @@ async function load(){
   let devs=[];
   try{ const r=await fetch(FLEET,{cache:'no-store'}); const d=await r.json(); devs=(d.locations||d||[]).filter(x=>x&&x.id); }
   catch(_){ $('liveTxt').textContent='sin conexión con la flota'; return; }
+  devs=filterByCanal(devs);   // canal/proyecto seleccionado (o todos)
   // ordena: robot/móvil primero, luego por nombre
   devs.sort((a,b)=> (b.deviceType==='robot')-(a.deviceType==='robot') || String(a.name||a.id).localeCompare(String(b.name||b.id)));
   DEV_NAMES=Object.fromEntries(devs.map(d=>[d.id,d.name||d.id]));   // id→nombre (para el picker de Stock)
@@ -540,7 +555,8 @@ async function load(){
   // reproduce los thumbs de vídeo (preview en bucle)
   document.querySelectorAll('.thumb video, .fp video').forEach(v=>{ v.loop=true; v.muted=true; v.play&&v.play().catch(()=>{}); });
 }
-load(); setInterval(load, 10000);
+loadProjects().then(load); setInterval(load, 10000);
+$('canalSel').addEventListener('change',()=>{ CANAL_SEL=$('canalSel').value; try{localStorage.setItem('cms_canal',CANAL_SEL)}catch(_){} load(); });
 
 // ── Fichas contraíbles: clic en el header (.top) contrae/expande; estado persistido ──
 $('grid').addEventListener('click', e=>{
@@ -691,7 +707,9 @@ async function openProg(){
   $('progKey').value=gkGet();
   if(!PROG_SCREENS.length){ try{ const d=await fetch(GRID_BASE+'/grid/screens',{cache:'no-store'}).then(r=>r.json()); PROG_SCREENS=(d.screens||[]); }catch(_){ PROG_SCREENS=[]; } }
   const sel=$('progScreen'), byC={};
-  PROG_SCREENS.forEach(s=>{(byC[s.circuit||'—']=byC[s.circuit||'—']||[]).push(s);});
+  const cc=canalCircuits();
+  const scrs=cc?PROG_SCREENS.filter(s=>cc.includes(String(s.circuit||'').toLowerCase())):PROG_SCREENS;
+  scrs.forEach(s=>{(byC[s.circuit||'—']=byC[s.circuit||'—']||[]).push(s);});
   sel.innerHTML=Object.keys(byC).sort().map(c=>'<optgroup label="'+esc(c)+'">'+byC[c].map(s=>'<option value="'+esc(s.screen)+'">'+esc(s.name||s.screen)+'</option>').join('')+'</optgroup>').join('')||'<option value="">(sin pantallas)</option>';
   if(progScreen && PROG_SCREENS.some(s=>s.screen===progScreen)) sel.value=progScreen; else progScreen=sel.value;
   if(!progDateSel || progDateSel<todayMadrid()) progDateSel=todayMadrid();
