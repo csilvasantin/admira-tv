@@ -135,6 +135,8 @@
   #progBands{flex:1;overflow:auto;display:flex;flex-direction:column;gap:12px;align-content:start}
   .pgBand{border:1px solid var(--line);border-radius:13px;background:linear-gradient(180deg,var(--panel2),var(--panel));padding:12px 14px}
   .pgBand.now{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber),0 0 22px #ffb44c33}
+  .pgBand.past{opacity:.5}
+  .pgBh .pasttag{color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:2px 8px;font:700 11px ui-monospace,monospace}
   .pgBh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:9px}
   .pgBh .lbl{font-weight:700;font-size:15px}
   .pgBh .rng{color:var(--dim);font:12px ui-monospace,monospace}
@@ -299,6 +301,7 @@
     <input id="progKey" type="password" placeholder="clave GRID_KEY (para escribir)" autocomplete="off">
     <span class="pgDateNav"><button id="progPrev" class="miniBtn" title="Día anterior">◀</button><input id="progDateInput" type="date"><button id="progNext" class="miniBtn" title="Día siguiente">▶</button><button id="progToday" class="miniBtn" title="Hoy">hoy</button></span>
     <span class="spacer" style="flex:1"></span>
+    <button id="progDup" class="navbtn" title="Duplicar la programación de este día a otro día">⧉ Duplicar día</button>
     <a href="/canal.html" id="progCanal" target="_blank" rel="noopener" class="navbtn" title="Ver esta pantalla en antena">📺 Ver en antena ↗</a>
     <button class="miniBtn" id="progClose">✕ Cerrar</button>
   </div>
@@ -709,14 +712,18 @@ async function loadProgDay(){
 }
 function renderProg(){
   const d=progDay; if(!d||!d.ok){ $('progBands').innerHTML='<div class="empty">Parrilla no disponible.</div>'; return; }
+  const isToday=(progDateSel||todayMadrid())===todayMadrid();
+  const hhmm2min=s=>{const m=/^(\d{1,2}):(\d{2})$/.exec(String(s||''));return m?(+m[1])*60+(+m[2]):0;};
+  let nowMin=0; try{ const hm=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date()); nowMin=hhmm2min(hm); }catch(_){}
   $('progBands').innerHTML=(d.bands||[]).map(b=>{
+    const isPast=isToday && !b.isNow && hhmm2min(b.to)<=nowMin;
     const booked=(b.slots||[]).filter(s=>s.kind==='own'||s.kind==='paid');
     const slots=booked.map(s=>{ const it=s.creative||{};
       const th=(it.type==='audio')?'♪':(it.type==='video')?'▶':(it.url?'<img src="'+esc(it.url)+'" loading="lazy" alt="">':'🖼');
       return '<div class="pgSlot '+(s.kind==='own'?'own':'paid')+'"><div class="th">'+th+'</div><div class="nm" title="'+esc(s.title||'')+'">'+esc(s.title||s.advertiser||s.kind)+'</div>'+(s.kind==='own'?'<span class="x" data-unbook="'+esc(s.bookingId)+'" title="Quitar">✕</span>':'')+'</div>';
     }).join('');
     const add=b.free>0?'<button class="pgAdd" data-band="'+esc(b.id)+'">+ Programar del Stock ('+b.free+' libre'+(b.free>1?'s':'')+')</button>':'<span class="rng" style="color:var(--dim);font:12px ui-monospace,monospace">franja completa</span>';
-    return '<div class="pgBand'+(b.isNow?' now':'')+'"><div class="pgBh"><span class="lbl">'+esc(b.label||b.id)+'</span><span class="rng">'+esc(b.from)+'–'+esc(b.to)+'</span>'+(b.isNow?'<span class="nowtag">● en antena ahora</span>':'')+'<span class="cnt">'+b.own+' propio · '+b.paid+' pagado · '+b.free+' libre</span></div><div class="pgSlots">'+slots+add+'</div></div>';
+    return '<div class="pgBand'+(b.isNow?' now':'')+(isPast?' past':'')+'"><div class="pgBh"><span class="lbl">'+esc(b.label||b.id)+'</span><span class="rng">'+esc(b.from)+'–'+esc(b.to)+'</span>'+(b.isNow?'<span class="nowtag">● en antena ahora</span>':'')+(isPast?'<span class="pasttag">pasada</span>':'')+'<span class="cnt">'+b.own+' propio · '+b.paid+' pagado · '+b.free+' libre</span></div><div class="pgSlots">'+slots+add+'</div></div>';
   }).join('')||'<div class="empty">Esta pantalla no tiene franjas configuradas.</div>';
 }
 function openProgPicker(bandId){
@@ -753,6 +760,18 @@ $('progDateInput').addEventListener('change',()=>setProgDate($('progDateInput').
 $('progPrev').onclick=()=>setProgDate(shiftDay(progDateSel||todayMadrid(),-1));
 $('progNext').onclick=()=>setProgDate(shiftDay(progDateSel||todayMadrid(),1));
 $('progToday').onclick=()=>setProgDate(todayMadrid());
+$('progDup').onclick=()=>{ const src=progDateSel||todayMadrid(); const def=shiftDay(src,1); const t=(prompt('Duplicar la programación de '+src+' a otro día (YYYY-MM-DD):', def)||'').trim(); if(t) duplicateDay(t); };
+async function duplicateDay(target){
+  const key=gkGet(); if(!key){ alert('Falta la clave GRID_KEY'); return; }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(target)){ alert('Fecha no válida (YYYY-MM-DD)'); return; }
+  if(target<todayMadrid()){ alert('No se puede duplicar a un día pasado'); return; }
+  const srcDate=progDateSel||todayMadrid(); if(target===srcDate){ alert('Es el mismo día'); return; }
+  const own=[]; ((progDay&&progDay.bands)||[]).forEach(b=>{ const seen=new Set(); (b.slots||[]).forEach(s=>{ if(s.kind==='own'&&s.creative&&!seen.has(s.bookingId)){ seen.add(s.bookingId); own.push({bandId:b.id,s}); } }); });
+  if(!own.length){ alert('Este día no tiene contenido propio que duplicar'); return; }
+  let ok=0; for(const o of own){ try{ const r=await fetch(GRID_BASE+'/grid/book',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ key, screen:progScreen, date:target, bandId:o.bandId, status:'own', advertiser:o.s.advertiser||((progDay.config&&progDay.config.name)||progScreen), title:o.s.title||'', category:o.s.category||null, creative:o.s.creative })}).then(r=>r.json()); if(r&&r.ok) ok++; }catch(_){} }
+  alert('Duplicadas '+ok+'/'+own.length+' piezas de '+srcDate+' a '+target);
+  setProgDate(target);
+}
 $('progKey').addEventListener('change',()=>gkSet($('progKey').value.trim()));
 $('progModal').addEventListener('click',e=>{ if(e.target===$('progModal')) closeProg(); });
 $('progBands').addEventListener('click',e=>{
