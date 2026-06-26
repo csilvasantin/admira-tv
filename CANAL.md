@@ -108,12 +108,24 @@ despliegas N pantallas con un enlace:
   (`canal.html?embed=mupi`), preservando cualquier query (`?circuit=`, `?screen=`…).
   Un navegador normal sigue viendo el landing. Escape manual: `?nokiosk=1`.
 
+## Programar la parrilla (desde admira.tv)
+
+El backbone **`/grid`** del worker `pixer-eleven` **ya está implementado** (handlers
+`/grid/day|config|book|unbook|offer|decide|control|emit|upload|screens`) y `canal.html`
+**ya lee su parrilla**: en cada franja inyecta en el loop los creativos `own`/`paid`
+de esa banda (`gridWeave`, cadencia fija) y muestra el badge 📅 de lo que manda la
+parrilla; si no hay nada programado cae al Stock+segmento.
+
+Para **programar contenido propio** sin salir de admira.tv: `cms.html` → botón
+**📅 Programar**. Eliges pantalla (`/grid/screens`) → franja → pieza del **Stock de
+Pixeria**, y se reserva como `own` (`POST /grid/book`). Las escrituras piden la
+`GRID_KEY` (se teclea una vez, se guarda en el navegador como `grid_key`). El control
+de propietario completo (ofertas/política/lista negra) sigue en `xpaceos.com/control/`.
+
 ## Pendiente / siguiente paso
 
-- **Backbone `/grid`** en el worker `pixer-eleven` (NO implementado): el componente
-  compartido `emission-calendar` + el contrato ya existen (`admira-design`), y el
-  control owner vive en `xpaceos.com/control/`. Cuando se implementen los handlers
-  `/grid/*`, el selector de pantalla pasará de fijar identidad a leer la **parrilla
-  real por pantalla** (lo vendido/programado), cerrando el bucle de monetización.
+- Soportar en `canal.html` `gridWeave` los creativos de tipo audio/música (hoy solo
+  vídeo/imagen entran en el loop de parrilla).
+- Programación por día futuro (hoy el panel de `cms.html` programa el día en curso).
 
-_Build documentado: 2026-06-19._
+_Build documentado: 2026-06-19. Bucle /grid activado desde cms.html: 2026-06-26._
