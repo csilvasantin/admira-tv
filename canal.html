@@ -593,7 +593,7 @@ async function loadGrid(){ if(!scr.screen) return;
     if(!d||!d.ok){ return; }
     const cur=(d.bands||[]).find(b=>b.isNow); const out=[]; const seen=new Set();
     if(cur) for(const s of cur.slots){ if((s.kind==='own'||s.kind==='paid') && s.creative && s.creative.url && !seen.has(s.bookingId)){ seen.add(s.bookingId);
-      out.push({ id:'grid:'+s.bookingId, url:s.creative.url, type:(s.creative.type==='video'?'video':'image'), title:s.title||s.advertiser||'Parrilla', motor:'parrilla', category:'parrilla', _grid:true, createdAt:'9'+Date.now() }); } }
+      out.push({ id:'grid:'+s.bookingId, url:s.creative.url, type:(s.creative.type==='audio'?'audio':s.creative.type==='video'?'video':'image'), title:s.title||s.advertiser||'Parrilla', motor:'parrilla', category:'parrilla', _grid:true, createdAt:'9'+Date.now() }); } }
     gridInjected=out;
     const np=d.nowPlaying; gridBadge(np&&!np.free?('📅 '+((np.advertiser)||'Parrilla')+(np.title?(' · '+np.title):'')):'');
     all=all.filter(a=>!a._grid).concat(gridInjected); rebuild(false);
