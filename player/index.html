@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admira.tv · Player — Descargas</title>
+  <meta name="description" content="Descarga el player de Admira.tv para cada plataforma: macOS, Windows, iOS, Android y Linux. Pantallas que emiten el canal DOOH de Admira.">
+  <meta name="theme-color" content="#070a10">
+  <meta property="og:title" content="Admira.tv · Player">
+  <meta property="og:description" content="El player de Admira.tv en cada pantalla. Descargas por plataforma.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+  <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/nav.css">
+  <link rel="preload" as="style" href="https://www.carlossilva.info/admira-design/contact-panel.css" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://www.carlossilva.info/admira-design/contact-panel.css"></noscript>
+  <script defer src="https://www.carlossilva.info/admira-design/contact-panel.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--admira-bg,#070a10);color:var(--admira-text,#e8eef6);font-family:var(--admira-font-sans,system-ui,sans-serif);line-height:1.55;-webkit-font-smoothing:antialiased}
+    a{color:inherit}
+    body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px);opacity:.6}
+    .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 22px}
+    .mono{font-family:var(--admira-font-mono,ui-monospace,monospace)}
+    .eyebrow{font-family:var(--admira-font-mono,monospace);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--admira-text-muted,#8a97a8)}
+
+    .hero{padding:72px 0 26px;text-align:center}
+    .hero h1{font-size:clamp(40px,7vw,82px);line-height:.98;margin:16px 0 12px;letter-spacing:-.02em;font-weight:800}
+    .hero h1 .tv{color:var(--admira-red,#ff4444)}
+    .hero .lead{font-size:clamp(16px,2.2vw,20px);color:var(--admira-text-dim,#aab6c6);max-width:640px;margin:0 auto}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px;margin:30px 0 10px}
+    .card{position:relative;border:1px solid var(--admira-border,#1c2738);border-radius:var(--admira-radius-lg,16px);background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(7,10,16,.3));padding:22px;display:flex;flex-direction:column;gap:12px}
+    .card.soon{opacity:.66}
+    .card .top{display:flex;align-items:center;gap:13px}
+    .glyph{width:44px;height:44px;flex:0 0 44px;display:grid;place-items:center;border:1px solid var(--admira-border,#1c2738);border-radius:12px;background:#0b1019}
+    .glyph svg{width:24px;height:24px;fill:var(--admira-text,#e8eef6)}
+    .card h2{margin:0;font-size:20px;font-weight:700}
+    .card .req{font-family:var(--admira-font-mono,monospace);font-size:12px;color:var(--admira-text-muted,#8a97a8)}
+    .badge{margin-left:auto;font-family:var(--admira-font-mono,monospace);font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;border-radius:999px;padding:5px 11px;border:1px solid}
+    .badge.ok{color:var(--admira-green,#39d353);border-color:rgba(57,211,83,.4);background:rgba(57,211,83,.08)}
+    .badge.soon{color:var(--admira-text-muted,#8a97a8);border-color:var(--admira-border,#1c2738)}
+    .ver{font-family:var(--admira-font-mono,monospace);font-size:13px;color:var(--admira-text-dim,#aab6c6)}
+    .notes{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+    .notes li{position:relative;padding-left:18px;font-size:13.5px;color:var(--admira-text-dim,#aab6c6)}
+    .notes li::before{content:"›";position:absolute;left:2px;color:var(--admira-red,#ff4444);font-weight:700}
+    .actions{margin-top:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:4px}
+    .btn{display:inline-flex;align-items:center;gap:8px;border-radius:var(--admira-radius-pill,999px);padding:11px 20px;font-weight:700;font-size:14px;text-decoration:none;border:1px solid var(--admira-border-strong,#2a3850);transition:transform .12s,background .2s,border-color .2s}
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{background:var(--admira-red,#ff4444);border-color:var(--admira-red,#ff4444);color:#190406}
+    .btn.primary:hover{background:#ff5d5d}
+    .link{font-family:var(--admira-font-mono,monospace);font-size:12.5px;color:var(--admira-text-muted,#8a97a8);text-decoration:none;border-bottom:1px dashed var(--admira-border,#1c2738)}
+    .link:hover{color:var(--admira-text,#e8eef6)}
+    .size{font-family:var(--admira-font-mono,monospace);font-size:12px;color:var(--admira-text-muted,#8a97a8)}
+
+    .agents{margin:28px 0 8px;border:1px solid var(--admira-border,#1c2738);border-radius:14px;background:#0a1019;padding:16px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+    .agents .t{font-size:14px;color:var(--admira-text-dim,#aab6c6)}
+    .agents code{font-family:var(--admira-font-mono,monospace);font-size:13px;color:var(--admira-red,#ff8a8a)}
+    footer{color:var(--admira-text-muted,#8a97a8);font-size:13px;margin:40px 0 64px;border-top:1px solid var(--admira-border,#1c2738);padding-top:18px}
+    footer a{color:var(--admira-text-dim,#aab6c6)}
+  </style>
+</head>
+<body>
+  <nav class="admira-nav admira-nav-static" aria-label="Admira · Xperience">
+    <a class="admira-nav-brand" href="https://www.admira.app">
+      <span class="admira-nav-brand-name">Admira</span>
+      <span class="admira-nav-brand-tag">Xperience</span>
+    </a>
+    <div class="admira-nav-items">
+      <a class="admira-nav-link admira-nav-link-external" href="https://www.pixeria.com">Pixeria</a>
+      <a class="admira-nav-link admira-nav-link-external" href="https://www.xpaceos.com">XpaceOS</a>
+      <a class="admira-nav-link admira-nav-link-active" href="https://admira.tv">Admira.tv</a>
+      <a class="admira-nav-link admira-nav-link-external" href="https://www.admira.live">Live</a>
+      <a class="admira-nav-link admira-nav-link-cta" href="#contact" data-admira-contact>Contacto</a>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <header class="hero">
+      <div class="eyebrow">Admira.tv · Player</div>
+      <h1>El player en cada <span class="tv">pantalla</span></h1>
+      <p class="lead">La app que pone una pantalla a emitir el canal de Admira.tv. Kiosko desatendido, a pantalla completa, que se recupera solo. Descárgala para tu plataforma.</p>
+    </header>
+
+    <main id="grid" class="grid" aria-label="Descargas por plataforma"></main>
+
+    <div class="agents">
+      <span class="t">¿Eres un agente? Toda la info del player por <b>MCP</b>:</span>
+      <code>tool player_info · https://mcp-tv.admira.store/mcp</code>
+      <a class="link" href="https://admira.tv/mcp/">ver MCP →</a>
+    </div>
+
+    <footer>
+      Admira.tv · capa <b>Emitir</b> de la trilogía Admira ·
+      <a href="https://www.pixeria.com/mcp/">Pixeria</a> (Crear) ·
+      <a href="https://www.xpaceos.com/mcp/">XpaceOS</a> (Operar) ·
+      <a href="https://admira.tv/mcp/">MCP</a>
+    </footer>
+  </div>
+
+  <script>
+  /* Catálogo de players. Añadir versiones nuevas = editar este array.
+     status: 'available' (con download) | 'soon' (próximamente). */
+  const ICONS = {
+    apple:'<svg viewBox="0 0 24 24"><path d="M16.4 12.9c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.8-3-.8c-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7 2-1.1 2.8-2.2c.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.8zM14.3 6.1c.6-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.1 1.8-1 2.9 1.1.1 2.2-.6 2.8-1.4z"/></svg>',
+    windows:'<svg viewBox="0 0 24 24"><path d="M3 5.6l7.5-1v7.2H3V5.6zm0 12.8l7.5 1v-7.1H3v6.1zm8.4 1.1L21 21V12.4h-9.6v7.1zM11.4 4L21 2.7v8.6h-9.6V4z"/></svg>',
+    ios:'<svg viewBox="0 0 24 24"><path d="M16.4 12.9c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.8-3-.8c-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7 2-1.1 2.8-2.2c.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.8zM14.3 6.1c.6-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.1 1.8-1 2.9 1.1.1 2.2-.6 2.8-1.4z"/></svg>',
+    android:'<svg viewBox="0 0 24 24"><path d="M17.6 9.5l1.4-2.5c.1-.2 0-.4-.1-.4-.2-.1-.4 0-.4.1L17 9.3c-1.2-.5-2.6-.8-4-.8s-2.8.3-4 .8L7.6 6.8c-.1-.2-.3-.2-.4-.1-.2.1-.2.3-.1.4L8.4 9.5C6 10.8 4.4 13.2 4 16h16c-.4-2.8-2-5.2-4.4-6.5zM9 14a.9.9 0 110-1.8.9.9 0 010 1.8zm6 0a.9.9 0 110-1.8.9.9 0 010 1.8z"/></svg>',
+    linux:'<svg viewBox="0 0 24 24"><path d="M12 2c-1.7 0-3 1.6-3 3.6 0 1 .2 1.6.5 2.4.2.6-.4 1.2-.9 2-.8 1.2-2 2.6-2.4 4.3-.4 1.5-.2 2.7.2 3.4-.3.6-.2 1.3.3 1.6.4.2.9.1 1.4-.1.6.4 1.4.7 2.4.8.3 0 .5.2.6.5.3.7 1.1 1 1.9 1s1.6-.3 1.9-1c.1-.3.3-.5.6-.5 1-.1 1.8-.4 2.4-.8.5.2 1 .3 1.4.1.5-.3.6-1 .3-1.6.4-.7.6-1.9.2-3.4-.4-1.7-1.6-3.1-2.4-4.3-.5-.8-1.1-1.4-.9-2 .3-.8.5-1.4.5-2.4C15 3.6 13.7 2 12 2zm-1.3 4.1c.4 0 .7.4.7.9s-.3.9-.7.9-.7-.4-.7-.9.3-.9.7-.9zm2.6 0c.4 0 .7.4.7.9s-.3.9-.7.9-.7-.4-.7-.9.3-.9.7-.9z"/></svg>'
+  };
+  const PLATFORMS = [
+    {
+      os:'macOS', icon:'apple', status:'available', req:'macOS 14+ · Apple Silicon',
+      version:'v.26.06.26.r2', size:'5.5 MB',
+      download:'downloads/AdmiraSignageMac-v.26.06.26.r2.zip',
+      notes:[
+        'Kiosko a pantalla completa · anti-reposo · auto-reconexión',
+        'Recuperación ante crash y watchdog de pantalla colgada',
+        'Salir del kiosko: tecla Escape',
+        'Tras descomprimir: xattr -dr com.apple.quarantine AdmiraSignageMac.app'
+      ]
+    },
+    { os:'Windows', icon:'windows', status:'soon', req:'Windows 10 / 11' },
+    { os:'iOS · iPadOS', icon:'ios', status:'soon', req:'iOS / iPadOS 17+' },
+    { os:'Android', icon:'android', status:'soon', req:'Android 9+' },
+    { os:'Linux', icon:'linux', status:'soon', req:'x86_64 / ARM' }
+  ];
+
+  const esc = s => String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+  const grid = document.getElementById('grid');
+  grid.innerHTML = PLATFORMS.map(p => {
+    const glyph = `<div class="glyph">${ICONS[p.icon]||''}</div>`;
+    if (p.status === 'available') {
+      const notes = (p.notes||[]).map(n=>`<li>${esc(n)}</li>`).join('');
+      return `<section class="card">
+        <div class="top">${glyph}<div><h2>${esc(p.os)}</h2><div class="req">${esc(p.req)}</div></div><span class="badge ok">Disponible</span></div>
+        <div class="ver">${esc(p.version)}</div>
+        <ul class="notes">${notes}</ul>
+        <div class="actions">
+          <a class="btn primary" href="${esc(p.download)}" download>↓ Descargar</a>
+          <span class="size">${esc(p.size||'')}</span>
+        </div>
+      </section>`;
+    }
+    return `<section class="card soon">
+      <div class="top">${glyph}<div><h2>${esc(p.os)}</h2><div class="req">${esc(p.req)}</div></div><span class="badge soon">Próximamente</span></div>
+      <ul class="notes"><li>En preparación — disponible aquí cuando salga.</li></ul>
+    </section>`;
+  }).join('');
+  </script>
+</body>
+</html>
