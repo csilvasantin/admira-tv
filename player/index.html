@@ -42,6 +42,12 @@
     .notes{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
     .notes li{position:relative;padding-left:18px;font-size:13.5px;color:var(--admira-text-dim,#aab6c6)}
     .notes li::before{content:"›";position:absolute;left:2px;color:var(--admira-red,#ff4444);font-weight:700}
+    .cmd-label{font-family:var(--admira-font-mono,monospace);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--admira-green,#39d353)}
+    .cmd{display:flex;align-items:center;gap:8px;background:#0b1019;border:1px solid var(--admira-border,#1c2738);border-radius:10px;padding:9px 11px}
+    .cmd code{flex:1;min-width:0;overflow:auto;white-space:nowrap;font-family:var(--admira-font-mono,monospace);font-size:12.5px;color:#cfe9f5}
+    .cmd .copy{flex:0 0 auto;border:1px solid var(--admira-border,#1c2738);background:#0e1622;color:var(--admira-text-dim,#aab6c6);border-radius:7px;padding:5px 10px;font:600 11px var(--admira-font-mono,monospace);cursor:pointer}
+    .cmd .copy:hover{border-color:var(--admira-red,#ff4444);color:var(--admira-text,#e8eef6)}
+    .gate{margin:0;font-size:12px;line-height:1.5;color:var(--admira-text-muted,#8a97a8);border-left:2px solid var(--admira-border,#1c2738);padding-left:10px}
     .actions{margin-top:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:4px}
     .btn{display:inline-flex;align-items:center;gap:8px;border-radius:var(--admira-radius-pill,999px);padding:11px 20px;font-weight:700;font-size:14px;text-decoration:none;border:1px solid var(--admira-border-strong,#2a3850);transition:transform .12s,background .2s,border-color .2s}
     .btn:hover{transform:translateY(-1px)}
@@ -110,12 +116,13 @@
     {
       os:'macOS', icon:'apple', status:'available', req:'macOS 14+ · Apple Silicon',
       version:'v.26.06.26.r2', size:'5.5 MB',
-      download:'downloads/AdmiraSignageMac-v.26.06.26.r2.zip',
+      download:'https://pub-9a6a58b67f2c4ed990b1ff036631ff33.r2.dev/AdmiraSignageMac-v.26.06.26.r2.zip',
+      install:'curl -fsSL https://admira.tv/player/install-macos.sh | bash',
+      gatekeeper:'Si la bajas con el navegador y macOS dice que “no se ha podido verificar”: Ajustes del Sistema → Privacidad y seguridad → “Abrir igualmente”. O usa el comando de instalación (no da ese aviso).',
       notes:[
         'Kiosko a pantalla completa · anti-reposo · auto-reconexión',
         'Recuperación ante crash y watchdog de pantalla colgada',
-        'Salir del kiosko: tecla Escape',
-        'Tras descomprimir: xattr -dr com.apple.quarantine AdmiraSignageMac.app'
+        'Salir del kiosko: tecla Escape'
       ]
     },
     { os:'Windows', icon:'windows', status:'soon', req:'Windows 10 / 11' },
@@ -130,14 +137,20 @@
     const glyph = `<div class="glyph">${ICONS[p.icon]||''}</div>`;
     if (p.status === 'available') {
       const notes = (p.notes||[]).map(n=>`<li>${esc(n)}</li>`).join('');
+      const cmd = p.install ? `
+        <div class="cmd-label">Instalar por terminal · sin avisos de seguridad</div>
+        <div class="cmd"><code>${esc(p.install)}</code><button class="copy" data-cmd="${esc(p.install)}">copiar</button></div>` : '';
+      const gate = p.gatekeeper ? `<p class="gate">${esc(p.gatekeeper)}</p>` : '';
       return `<section class="card">
         <div class="top">${glyph}<div><h2>${esc(p.os)}</h2><div class="req">${esc(p.req)}</div></div><span class="badge ok">Disponible</span></div>
         <div class="ver">${esc(p.version)}</div>
         <ul class="notes">${notes}</ul>
+        ${cmd}
         <div class="actions">
-          <a class="btn primary" href="${esc(p.download)}" download>↓ Descargar</a>
+          <a class="btn primary" href="${esc(p.download)}" download>↓ Descargar .app</a>
           <span class="size">${esc(p.size||'')}</span>
         </div>
+        ${gate}
       </section>`;
     }
     return `<section class="card soon">
@@ -145,6 +158,15 @@
       <ul class="notes"><li>En preparación — disponible aquí cuando salga.</li></ul>
     </section>`;
   }).join('');
+
+  // Copiar comando de instalación al portapapeles.
+  grid.addEventListener('click', e => {
+    const b = e.target.closest('.copy'); if (!b) return;
+    navigator.clipboard.writeText(b.dataset.cmd).then(()=>{
+      const prev = b.textContent; b.textContent = '✓ copiado';
+      setTimeout(()=>{ b.textContent = prev; }, 1600);
+    });
+  });
   </script>
 </body>
 </html>
