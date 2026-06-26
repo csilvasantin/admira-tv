@@ -131,6 +131,16 @@
   .canalSel span{font-size:14px}
   #canalSel{background:transparent;color:var(--ink);border:0;font:700 13px ui-monospace,monospace;cursor:pointer;outline:none}
   #canalSel option{background:var(--panel);color:var(--ink)}
+  #canalModal{position:fixed;inset:0;z-index:64;background:#060912f5;backdrop-filter:blur(6px);display:none;flex-direction:column;padding:18px 20px}
+  #canalModal .pgHd{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  #canalModal h3{margin:0;font-size:18px;white-space:nowrap}
+  #canalKey{background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 11px;font:13px -apple-system,Segoe UI,sans-serif;min-width:160px}
+  #canalRows{flex:1;overflow:auto;display:flex;flex-direction:column;gap:10px;align-content:start;max-width:780px}
+  .canalRow{display:grid;grid-template-columns:1fr 2fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:11px;background:linear-gradient(180deg,var(--panel2),var(--panel));padding:10px 12px}
+  .canalRow input{background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:13px -apple-system,Segoe UI,sans-serif;width:100%}
+  .canalRow .lbl{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+  .canalRow .x{cursor:pointer;color:var(--off);font-weight:700;padding:6px 10px;border:1px solid var(--line);border-radius:8px}
+  .canalRow .x:hover{border-color:var(--off)}
   #progModal{position:fixed;inset:0;z-index:62;background:#060912f5;backdrop-filter:blur(6px);display:none;flex-direction:column;padding:18px 20px}
   #progModal .pgHd{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
   #progModal h3{margin:0;font-size:18px;white-space:nowrap}
@@ -267,6 +277,7 @@
   </div>
   <div class="spacer"></div>
   <label class="canalSel" title="Canal / proyecto — filtra la flota y la programación"><span>📡</span><select id="canalSel"></select></label>
+  <button id="canalEdit" class="navbtn" title="Editar canales (crear/renombrar/asignar circuitos)">✎</button>
   <nav class="cmsNav" aria-label="Admira">
     <button id="collapseAll" type="button" title="Contraer / expandir todas las fichas">▾ Contraer</button>
     <a href="/condicional.html">🎯 Condicional</a>
@@ -313,6 +324,19 @@
   <div id="progBands"><div class="empty">Cargando parrilla…</div></div>
 </div>
 
+<div id="canalModal">
+  <div class="pgHd">
+    <h3>📡 Canales</h3>
+    <input id="canalKey" type="password" placeholder="clave GRID_KEY (para guardar)" autocomplete="off">
+    <span class="meta" id="canalHint"></span>
+    <span class="spacer" style="flex:1"></span>
+    <button class="navbtn" id="canalAdd">+ Añadir canal</button>
+    <button class="navbtn" id="canalSave">💾 Guardar</button>
+    <button class="miniBtn" id="canalClose">✕ Cerrar</button>
+  </div>
+  <div id="canalRows"></div>
+</div>
+
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span></footer>
 
 <script src="xpl-runtime.js?v=1"></script>
@@ -320,7 +344,7 @@
 const FLEET   = 'https://omnipublicity-api.csilvasantin.workers.dev/locations?selfreg=1';
 const PROJECTS_API = 'https://api.admira.store/grid/projects';
 // ── Canal/proyecto: agrupa circuitos; filtra flota + programación ──
-let PROJECTS=[], CANAL_SEL=(()=>{try{return localStorage.getItem('cms_canal')||'all'}catch(_){return'all'}})();
+let PROJECTS=[], CANAL_SEL=(()=>{try{return localStorage.getItem('cms_canal')||'admiranext'}catch(_){return'admiranext'}})();   // arranca en Canal AdmiraNeXT, no en "Todos" (8765 equipos = muy pesado)
 const circuitOf = d => String((d&&d.circuit)||(d&&d.id)||'').toLowerCase().split('-')[0];
 const curProject = () => PROJECTS.find(p=>p.id===CANAL_SEL)||null;
 const canalCircuits = () => { const p=curProject(); return p?p.circuits.map(c=>String(c).toLowerCase()):null; };
@@ -557,6 +581,45 @@ async function load(){
 }
 loadProjects().then(load); setInterval(load, 10000);
 $('canalSel').addEventListener('change',()=>{ CANAL_SEL=$('canalSel').value; try{localStorage.setItem('cms_canal',CANAL_SEL)}catch(_){} load(); });
+// ── Editor de canales (POST /grid/projects) ──
+let CANAL_EDIT=[];
+function renderCanalRows(list){
+  $('canalRows').innerHTML=(list||[]).map((p,i)=>'<div class="canalRow" data-i="'+i+'">'
+    +'<div><div class="lbl">Nombre</div><input class="cName" value="'+esc(p.name||'')+'" placeholder="Canal…"></div>'
+    +'<div><div class="lbl">Circuitos (coma)</div><input class="cCirc" value="'+esc((p.circuits||[]).join(', '))+'" placeholder="kiosko, metro…"></div>'
+    +'<div class="x" data-del="'+i+'" title="Eliminar canal">✕</div></div>').join('')||'<div class="empty">No hay canales. Pulsa «+ Añadir canal».</div>';
+}
+function readCanalRows(){
+  return [...document.querySelectorAll('#canalRows .canalRow')].map(r=>{
+    const name=r.querySelector('.cName').value.trim();
+    const circuits=r.querySelector('.cCirc').value.split(',').map(s=>s.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'')).filter(Boolean);
+    const id=name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'').slice(0,40)||('c'+Math.random().toString(36).slice(2,7));
+    return { id, name, circuits };
+  }).filter(p=>p.name);
+}
+function openCanalEditor(){ CANAL_EDIT=JSON.parse(JSON.stringify(PROJECTS||[])); $('canalKey').value=gkGet(); $('canalHint').textContent=''; renderCanalRows(CANAL_EDIT); $('canalModal').style.display='flex'; }
+function closeCanalEditor(){ $('canalModal').style.display='none'; }
+async function saveCanals(){
+  const key=$('canalKey').value.trim(); if(key) gkSet(key);
+  if(!key){ $('canalHint').textContent='Falta la clave GRID_KEY'; return; }
+  const projects=readCanalRows();
+  $('canalHint').textContent='Guardando…';
+  try{ const r=await fetch(PROJECTS_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,projects})}).then(r=>r.json());
+    if(r&&r.ok){ PROJECTS=r.projects||projects; $('canalHint').textContent='✓ guardado';
+      const s=$('canalSel'), prev=CANAL_SEL;
+      s.innerHTML='<option value="all">Todos los canales</option>'+PROJECTS.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
+      if(prev!=='all' && !PROJECTS.some(p=>p.id===prev)){ CANAL_SEL=(PROJECTS[0]&&PROJECTS[0].id)||'all'; try{localStorage.setItem('cms_canal',CANAL_SEL)}catch(_){} }
+      s.value=CANAL_SEL;
+      setTimeout(()=>{ closeCanalEditor(); load(); },650);
+    } else { $('canalHint').textContent='✗ '+((r&&r.error)||'error al guardar'); }
+  }catch(_){ $('canalHint').textContent='✗ sin conexión'; }
+}
+$('canalEdit').onclick=openCanalEditor;
+$('canalClose').onclick=closeCanalEditor;
+$('canalAdd').onclick=()=>{ CANAL_EDIT=readCanalRows(); CANAL_EDIT.push({id:'',name:'',circuits:[]}); renderCanalRows(CANAL_EDIT); };
+$('canalSave').onclick=saveCanals;
+$('canalRows').addEventListener('click',e=>{ const d=e.target.closest('[data-del]'); if(d){ CANAL_EDIT=readCanalRows(); CANAL_EDIT.splice(+d.dataset.del,1); renderCanalRows(CANAL_EDIT); } });
+$('canalModal').addEventListener('click',e=>{ if(e.target===$('canalModal')) closeCanalEditor(); });
 
 // ── Fichas contraíbles: clic en el header (.top) contrae/expande; estado persistido ──
 $('grid').addEventListener('click', e=>{
