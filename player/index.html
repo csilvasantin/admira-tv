@@ -117,6 +117,7 @@
       os:'macOS', icon:'apple', status:'available', req:'macOS 14+ · Apple Silicon',
       version:'v.26.06.26.r2', size:'5.5 MB',
       download:'https://pub-9a6a58b67f2c4ed990b1ff036631ff33.r2.dev/AdmiraSignageMac-v.26.06.26.r2.zip',
+      dlLabel:'Descargar .app',
       install:'curl -fsSL https://admira.tv/player/install-macos.sh | bash',
       gatekeeper:'Si la bajas con el navegador y macOS dice que “no se ha podido verificar”: Ajustes del Sistema → Privacidad y seguridad → “Abrir igualmente”. O usa el comando de instalación (no da ese aviso).',
       notes:[
@@ -125,10 +126,34 @@
         'Salir del kiosko: tecla Escape'
       ]
     },
-    { os:'Windows', icon:'windows', status:'soon', req:'Windows 10 / 11' },
+    {
+      os:'Windows', icon:'windows', status:'available', req:'Windows 10 / 11 · x64',
+      version:'v.26.06.27.r1', size:'78 MB',
+      download:'https://pub-9a6a58b67f2c4ed990b1ff036631ff33.r2.dev/AdmiraSignagePlayer-win-x64-v.26.06.27.r1.exe',
+      dlLabel:'Descargar .exe',
+      download2:'https://pub-9a6a58b67f2c4ed990b1ff036631ff33.r2.dev/AdmiraSignagePlayer-win-x64-v.26.06.27.r1.zip',
+      dlLabel2:'.zip portable',
+      gatekeeper:'App sin firmar todavía: si Windows SmartScreen avisa, pulsa “Más información → Ejecutar de todas formas”.',
+      notes:[
+        'Kiosko a pantalla completa · anti-reposo · auto-reconexión',
+        'Recuperación ante crash y watchdog de pantalla colgada',
+        'Salir del kiosko: tecla Escape'
+      ]
+    },
     { os:'iOS · iPadOS', icon:'ios', status:'soon', req:'iOS / iPadOS 17+' },
     { os:'Android', icon:'android', status:'soon', req:'Android 9+' },
-    { os:'Linux', icon:'linux', status:'soon', req:'x86_64 / ARM' }
+    {
+      os:'Linux', icon:'linux', status:'available', req:'x86_64 · AppImage',
+      version:'v.26.06.27.r1', size:'103 MB',
+      download:'https://pub-9a6a58b67f2c4ed990b1ff036631ff33.r2.dev/AdmiraSignagePlayer-linux-x86_64-v.26.06.27.r1.AppImage',
+      dlLabel:'Descargar AppImage',
+      install:'chmod +x AdmiraSignagePlayer-linux-x86_64-v.26.06.27.r1.AppImage && ./AdmiraSignagePlayer-linux-x86_64-v.26.06.27.r1.AppImage',
+      notes:[
+        'Kiosko a pantalla completa · anti-reposo · auto-reconexión',
+        'Recuperación ante crash y watchdog de pantalla colgada',
+        'Salir del kiosko: tecla Escape'
+      ]
+    }
   ];
 
   const esc = s => String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
@@ -147,7 +172,8 @@
         <ul class="notes">${notes}</ul>
         ${cmd}
         <div class="actions">
-          <a class="btn primary" href="${esc(p.download)}" download>↓ Descargar .app</a>
+          <a class="btn primary" href="${esc(p.download)}" download>↓ ${esc(p.dlLabel||'Descargar')}</a>
+          ${p.download2 ? `<a class="btn" href="${esc(p.download2)}" download>${esc(p.dlLabel2||'Descargar')}</a>` : ''}
           <span class="size">${esc(p.size||'')}</span>
         </div>
         ${gate}

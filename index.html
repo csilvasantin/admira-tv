@@ -11,7 +11,7 @@
       var p = new URLSearchParams(location.search);
       if (p.get('nokiosk') === '1') return;                 // ver el landing aun desde el kiosko
       var ua = navigator.userAgent || '';
-      var isKiosk = /AdmiraMacOSPlayer|AdmiraPlayer|AdmiraKiosk/i.test(ua);
+      var isKiosk = /AdmiraMacOSPlayer|AdmiraWindowsPlayer|AdmiraLinuxPlayer|AdmiraAndroidPlayer|AdmiraPlayer|AdmiraKiosk/i.test(ua);
       if (isKiosk) {
         var qs = location.search ? location.search.replace(/^\?/, '&') : '';
         location.replace('canal.html?embed=mupi' + qs);     // emisión a pantalla completa, sin chrome
