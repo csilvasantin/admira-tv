@@ -76,6 +76,7 @@
   .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:760px;width:100%;max-height:85vh;overflow:auto;padding:18px 20px}
   .modal h3{margin:0 0 14px;font-size:16px;text-transform:lowercase} .modal h3::first-letter{text-transform:uppercase}
   .scr{margin-bottom:16px} .scr .sh{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--teal)}
+  .seglink{font-size:11px;font-weight:400;color:var(--dim);margin-left:8px} .seglink:hover{color:var(--teal)}
   .bands{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
   .band{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;gap:8px;align-items:center}
   .band img{width:40px;height:40px;object-fit:cover;border-radius:5px;flex:none;background:#000}
@@ -144,6 +145,7 @@
     <button id="today">Hoy</button>
     <button id="salesBtn" title="Informe de ventas del periodo">📊 Ventas</button>
     <button id="realBtn" title="Planificado vs emitido real (proof-of-play)">📡 Real</button>
+    <button id="cloneBtn" title="Clonar la programación de otro Xpacio a este">🏭 Clonar</button>
     <button id="keybtn" title="Clave de edición (GRID_KEY)">🔑</button>
   </div>
   <div class="stats" id="stats"></div>
@@ -179,6 +181,15 @@
 <div class="ov" id="hourov"><div class="modal"><span class="x" id="hourx">✕</span><h3 id="hourh">Hora</h3><div id="hourb"></div></div></div>
 <div class="ov" id="salesov"><div class="modal"><span class="x" id="salesx">✕</span><h3 id="salesh">Ventas</h3><div id="salesb"></div></div></div>
 <div class="ov" id="realov"><div class="modal"><span class="x" id="realx">✕</span><h3 id="realh">Emisión real</h3><div id="realb"></div></div></div>
+<div class="ov" id="cloneov"><div class="modal"><span class="x" id="clonex">✕</span><h3>🏭 Clonar programación de otro Xpacio</h3>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+    <span style="font-size:12px;color:var(--dim)">Copiar de</span>
+    <select id="cloneSrc" style="flex:1;min-width:180px"></select>
+    <span style="font-size:12px;color:var(--dim)">a este Xpacio ·</span>
+    <select id="cloneScope"><option value="day">este día</option><option value="week">esta semana</option><option value="month">este mes</option></select>
+    <button id="cloneGo">Clonar</button>
+  </div>
+  <div id="cloneb" style="font-size:12px;color:var(--dim)">Copia el contenido propio del día del Xpacio origen a los dispositivos de este Xpacio (emparejados por orden).</div></div></div>
 
 <script src="https://www.clearchannel.tv/locations.js"></script>
 <script>
@@ -536,7 +547,7 @@ async function buildDay(key,host,opts){
         `<button data-act="sell" data-s="${s.id}" data-b="${bid}" title="vender cuña/spot a un anunciante">💶</button>`+
         `${has?`<button data-act="clr" data-s="${s.id}" data-b="${bid}" title="quitar">✕</button>`:''}</div></div>`;
     }).join('');
-    html+=`<div class="scr"><div class="sh">${s.label}</div><div class="bands">${bands}</div>`+
+    html+=`<div class="scr"><div class="sh">${s.label}${s.audio?'':` <a class="seglink" href="/condicional.html?target=${encodeURIComponent(s.id)}" target="_blank" rel="noopener" title="Segmentar por audiencia (cámara→contenido)">🎯 segmentar</a>`}</div><div class="bands">${bands}</div>`+
       (opts.matrix?'':`<div class="hrslabel">Desglose por horas · clic para ver los minutos</div><div class="hours">${hoursBar(dayBands,s.id,key)}</div>`)+`</div>`;
   });
   host.innerHTML=html;
@@ -609,10 +620,43 @@ async function openReal(){
   });
   let html=`<div class="stats" style="margin-bottom:14px"><div class="stat"><div class="k">Reproducciones</div><div class="v">${totPlays}</div></div><div class="stat"><div class="k">Segundos emitidos</div><div class="v">${totSecs}</div></div><div class="stat"><div class="k">Dispositivos activos</div><div class="v">${rows.filter(r=>r.plays>0).length}/${rows.length}</div></div></div>`;
   html+=`<table class="saletbl"><thead><tr><th>Dispositivo</th><th>Programado</th><th>Emitido</th><th>Segundos</th><th class="r">Estado</th></tr></thead><tbody>`+
-    rows.map(r=>`<tr><td>${r.label}</td><td>${r.planned} slots</td><td>${r.plays}</td><td>${r.secs}s</td><td class="r">${r.plays>0?'<span style="color:var(--teal)">● emitiendo</span>':'<span style="color:var(--dim)">○ sin emisión</span>'}</td></tr>`).join('')+`</tbody></table>`;
+    rows.map(r=>`<tr><td>${r.label}</td><td>${r.planned} slots</td><td>${r.plays}</td><td>${r.secs}s</td><td class="r">${r.plays>0?'<span style="color:var(--teal)">● emitiendo</span>':(r.planned>0?'<span style="color:#e87ba4">⚠ programado, no emite</span>':'<span style="color:var(--dim)">○ —</span>')}</td></tr>`).join('')+`</tbody></table>`;
   const top=Object.values(assetAgg).sort((x,y)=>y.n-x.n).slice(0,8);
   if(top.length)html+=`<div class="hsub">Más emitido</div>`+top.map(t=>`<div class="lrow"><span style="flex:1">${(t.title||'—').slice(0,42)}</span><span style="color:var(--teal)">${t.n}×</span></div>`).join('');
   body.innerHTML=html;
+}
+function openClone(){
+  const sel=document.getElementById('cloneSrc');
+  sel.innerHTML=Object.entries(LOCATIONS).filter(([k])=>k!==locId).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
+  document.getElementById('cloneb').innerHTML='Copia el contenido propio del día del Xpacio origen a los dispositivos de <b>'+LOCATIONS[locId].name+'</b> (emparejados por orden).';
+  document.getElementById('cloneov').classList.add('show');
+}
+async function doClone(){
+  const k=ensureKey();if(!k)return;
+  const srcId=document.getElementById('cloneSrc').value;const scope=document.getElementById('cloneScope').value;
+  const src=LOCATIONS[srcId],tgt=LOCATIONS[locId];if(!src)return;
+  const cb=document.getElementById('cloneb');cb.innerHTML='Clonando…';
+  // fechas destino según scope, tomando como base el cursor
+  const d=new Date(cursor);let dates=[];
+  if(scope==='day')dates=[ymd(d)];
+  else if(scope==='week'){const a=weekStart(d);for(let i=0;i<7;i++){const x=new Date(a);x.setDate(a.getDate()+i);if(x.getFullYear()>=MIN_YEAR&&x.getFullYear()<=MAX_YEAR)dates.push(ymd(x));}}
+  else{const y=d.getFullYear(),m=d.getMonth(),dim=new Date(y,m+1,0).getDate();for(let i=1;i<=dim;i++)dates.push(ymd(new Date(y,m,i)));}
+  const srcDate=ymd(cursor);
+  const n=Math.min(src.screens.length,tgt.screens.length);let done=0,booked=0;
+  for(let i=0;i<n;i++){
+    const sId=src.screens[i].id,tId=tgt.screens[i].id;
+    let j=null;try{j=await (await fetch(`${API}/grid/day?screen=${sId}&date=${srcDate}&_=${Date.now()}`,{cache:'no-store'})).json();}catch(e){}
+    const own={};const seen=new Set();((j&&j.bands)||[]).forEach(b=>(b.slots||[]).forEach(sl=>{if(sl.kind==='own'&&sl.creative&&!seen.has(sl.bookingId)){seen.add(sl.bookingId);(own[b.id]=own[b.id]||[]).push(sl);}}));
+    for(const date of dates){
+      for(const [bandId,sls] of Object.entries(own)){
+        for(const id of await bandOwnIds(tId,date,bandId))await gpost('/grid/unbook',{key:k,screen:tId,date,id});
+        for(const sl of sls){await gpost('/grid/book',{key:k,screen:tId,date,bandId,status:'own',advertiser:tgt.name,title:sl.title||'',category:sl.category||null,creative:sl.creative});booked++;}
+      }
+    }
+    done++;cb.innerHTML=`Clonando… dispositivo ${done}/${n} · ${booked} reservas`;
+  }
+  cb.innerHTML=`✅ Clonado de <b>${src.name}</b>: ${booked} reservas en ${dates.length} día(s).`;
+  render();
 }
 const isModal=()=>document.getElementById('ov').classList.contains('show');
 async function refreshEdit(){ if(isModal())await buildDay(curDay,document.getElementById('mb')); render(); }
@@ -689,6 +733,10 @@ document.getElementById('salesov').onclick=e=>{if(e.target.id==='salesov')docume
 document.getElementById('realBtn').onclick=openReal;
 document.getElementById('realx').onclick=()=>document.getElementById('realov').classList.remove('show');
 document.getElementById('realov').onclick=e=>{if(e.target.id==='realov')document.getElementById('realov').classList.remove('show');};
+document.getElementById('cloneBtn').onclick=openClone;
+document.getElementById('cloneGo').onclick=doClone;
+document.getElementById('clonex').onclick=()=>document.getElementById('cloneov').classList.remove('show');
+document.getElementById('cloneov').onclick=e=>{if(e.target.id==='cloneov')document.getElementById('cloneov').classList.remove('show');};
 function step(dir){
   if(view==='year')cursor.setFullYear(cursor.getFullYear()+dir);
   else if(view==='week')cursor.setDate(cursor.getDate()+7*dir);
