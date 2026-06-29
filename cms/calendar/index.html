@@ -156,7 +156,13 @@
 </div>
 
 <div class="ov" id="ov"><div class="modal"><span class="x" id="mx">✕</span><h3 id="mh">Día</h3><div id="mb"></div></div></div>
-<div class="ov" id="pickov"><div class="modal"><span class="x" id="pickx">✕</span><h3>Elegir creativo del Stock</h3><input id="pickq" placeholder="Filtrar por título o categoría…" style="width:100%;margin-bottom:10px"><div id="pickgrid" class="pickgrid"></div></div></div>
+<div class="ov" id="pickov"><div class="modal"><span class="x" id="pickx">✕</span><h3>Elegir creativo del Stock</h3>
+  <div id="sellbar" style="display:none;gap:8px;margin-bottom:10px">
+    <input id="sellAdv" placeholder="Anunciante" style="flex:1">
+    <input id="sellCpm" type="number" min="0" step="1" placeholder="CPM €" style="width:120px">
+    <span style="align-self:center;font-size:11px;color:var(--dim)">→ elige la cuña</span>
+  </div>
+  <input id="pickq" placeholder="Filtrar por título o categoría…" style="width:100%;margin-bottom:10px"><div id="pickgrid" class="pickgrid"></div></div></div>
 <div class="ov" id="hourov"><div class="modal"><span class="x" id="hourx">✕</span><h3 id="hourh">Hora</h3><div id="hourb"></div></div></div>
 
 <script>
@@ -318,6 +324,13 @@ async function clearBand(screen,bandId,key){
   await Promise.all(scopeDates(key).map(async date=>{for(const id of await bandOwnIds(screen,date,bandId)) await gpost('/grid/unbook',{key:k,screen,date,id});}));
   return true;
 }
+async function sellSpot(screen,bandId,item,advertiser,cpm,key){ // vende una cuña/spot: slot 'sold' (additivo, no toca el own)
+  const k=ensureKey();if(!k)return false;
+  await Promise.all(scopeDates(key).map(async date=>{
+    await gpost('/grid/book',{key:k,screen,date,bandId,status:'sold',advertiser:advertiser||'Anunciante',title:item.title||item.id,category:item.category||null,cpm:cpm||0,creative:{type:item.type,url:item.url,name:item.title||item.id}});
+  }));
+  return true;
+}
 
 function monthCells(base){
   const first=new Date(base.getFullYear(),base.getMonth(),1);
@@ -456,7 +469,8 @@ async function buildDay(key,host){
       const th=has?(img?`<img src="${u}" alt="" loading="lazy">`:`<div class="ph">▶</div>`):`<div class="ph" style="color:var(--dim)">∅</div>`;
       const name=has?(sl.title||'').slice(0,38):'— Stock (vacío)';
       return `<div class="band"><div class="thwrap">${th}</div><div class="bgrow"><div class="bt">${blab}</div><div class="bn"${has?'':' style="color:var(--dim)"'}>${name}</div></div>`+
-        `<div class="bact"><button data-act="set" data-s="${s.id}" data-b="${bid}" title="${has?'cambiar':'programar'}">${has?'✎':'+'}</button>`+
+        `<div class="bact"><button data-act="set" data-s="${s.id}" data-b="${bid}" title="${has?'cambiar contenido propio':'programar contenido propio'}">${has?'✎':'+'}</button>`+
+        `<button data-act="sell" data-s="${s.id}" data-b="${bid}" title="vender cuña/spot a un anunciante">💶</button>`+
         `${has?`<button data-act="clr" data-s="${s.id}" data-b="${bid}" title="quitar">✕</button>`:''}</div></div>`;
     }).join('');
     html+=`<div class="scr"><div class="sh">${s.label}</div><div class="bands">${bands}</div>`+
@@ -466,7 +480,8 @@ async function buildDay(key,host){
   host.querySelectorAll('.hr[data-h]').forEach(el=>el.onclick=()=>openHour(el.dataset.s,+el.dataset.h));
   host.querySelectorAll('[data-act]').forEach(el=>el.onclick=async()=>{
     const act=el.dataset.act,sc=el.dataset.s,bd=el.dataset.b;
-    if(act==='set'){openPicker(sc,bd);return;}
+    if(act==='set'){openPicker(sc,bd,false);return;}
+    if(act==='sell'){openPicker(sc,bd,true);return;}
     if(!ensureKey())return;el.disabled=true;el.textContent='…';
     await clearBand(sc,bd,curDay);await refreshEdit();
   });
@@ -492,11 +507,12 @@ async function renderDay(){
   setStats([['Ocupación',occOf(mm)+'%'],['Propio · vendido',mm.own+' · '+mm.paid],['Ingresos',eur(mm.rev)],['Pendientes',mm.pend]]);
   setNote();
 }
-async function openPicker(screen,bandId){
+async function openPicker(screen,bandId,sell){
   if(!ensureKey())return;
   const surf=activeScreens().find(s=>s.id===screen)||{};
-  pickCtx={screen,bandId,audio:!!surf.audio};
-  document.querySelector('#pickov h3').textContent=surf.audio?'Elegir audio del Stock (Hilo Musical)':'Elegir creativo del Stock';
+  pickCtx={screen,bandId,audio:!!surf.audio,sell:!!sell};
+  document.querySelector('#pickov h3').textContent=sell?('💶 Vender '+(surf.audio?'cuña de audio':'spot')+' · '+surf.label):(surf.audio?'Elegir audio del Stock (Hilo Musical)':'Elegir creativo del Stock');
+  document.getElementById('sellbar').style.display=sell?'flex':'none';
   document.getElementById('pickov').classList.add('show');
   document.getElementById('pickgrid').innerHTML='<div class="loading">Cargando Stock…</div>';
   renderPick(await loadStock());
@@ -510,7 +526,13 @@ function renderPick(items){
   grid.querySelectorAll('.pk').forEach(el=>el.onclick=async()=>{
     const it=items.find(x=>x.id===el.dataset.id);if(!it)return;
     el.style.opacity=.4;
-    await setBand(pickCtx.screen,pickCtx.bandId,it,curDay);
+    if(pickCtx&&pickCtx.sell){
+      const adv=(document.getElementById('sellAdv').value||'Anunciante').trim();
+      const cpm=+document.getElementById('sellCpm').value||0;
+      await sellSpot(pickCtx.screen,pickCtx.bandId,it,adv,cpm,curDay);
+    }else{
+      await setBand(pickCtx.screen,pickCtx.bandId,it,curDay);
+    }
     document.getElementById('pickov').classList.remove('show');
     document.getElementById('hourov').classList.remove('show');
     await refreshEdit();
