@@ -361,6 +361,17 @@ async function uploadCreative(file){ // sube un creativo nuevo al Stock (/stock/
   if(STOCK)STOCK.unshift(it);
   return it;
 }
+async function genCreative(label,xpacio){ // PixerIA: genera un creativo visual temático y lo publica al Stock
+  const prompt=`Cartel publicitario DOOH para ${xpacio} (retail físico), temática "${label}": composición comercial muy atractiva, producto protagonista, gran contraste, iluminación de tienda, estética de cartelería premium, fotografía publicitaria de alta calidad.`;
+  const g=await gpost('/imagen/generate',{prompt,aspectRatio:'1:1',numberOfImages:1,model:'imagen-4.0-generate-001'});
+  const p=(g&&g.predictions||[])[0]||{};const b64=p.bytesBase64Encoded;if(!b64)throw new Error('imagen sin resultado');
+  const pub=await gpost('/stock/publish',{type:'image',motor:'imagen-4.0-generate-001',mime:p.mimeType||'image/png',base64:b64,title:label,prompt,tags:['ia',SLUG(label).slice(0,20)]});
+  if(!pub||!pub.url)throw new Error('publish');
+  const it={id:pub.id,type:'image',url:pub.url,title:label,category:'producto'};
+  if(STOCK)STOCK.unshift(it);
+  return it;
+}
+async function genFill(screen,bandId,label){ const k=ensureKey();if(!k)return false; const it=await genCreative(label,LOCATIONS[locId].name); return setBand(screen,bandId,it,curDay); }
 async function sellSpot(screen,bandId,item,advertiser,cpm,key){ // vende una cuña/spot: slot 'sold' (additivo, no toca el own)
   const k=ensureKey();if(!k)return false;
   await Promise.all(scopeDates(key).map(async date=>{
@@ -490,6 +501,7 @@ async function buildDay(key,host){
   }));
   DAY={};byScreen.forEach(x=>{DAY[x.s.id]={bands:x.bands,cfg:x.cfg};});
   let html=`<div class="editbar">Aplicar a <select id="scope"><option value="day">solo este día</option><option value="week">esta semana</option><option value="month">este mes</option></select>`+
+    `<button id="fillai" title="Generar con IA y programar todas las franjas vacías visibles">✨ Rellenar huecos</button>`+
     `<span class="kstate">${gkGet()?'🔓 edición activa':'🔒 pon la clave para editar'}</span></div>`;
   const pend=byScreen.flatMap(({s,pending})=>pending.map(o=>({s,o})));
   if(pend.length){
@@ -507,6 +519,7 @@ async function buildDay(key,host){
       const name=has?(sl.title||'').slice(0,38):'— Stock (vacío)';
       return `<div class="band"><div class="thwrap">${th}</div><div class="bgrow"><div class="bt">${blab}</div><div class="bn"${has?'':' style="color:var(--dim)"'}>${name}</div></div>`+
         `<div class="bact"><button data-act="set" data-s="${s.id}" data-b="${bid}" title="${has?'cambiar contenido propio':'programar contenido propio'}">${has?'✎':'+'}</button>`+
+        `${(!has&&!s.audio)?`<button data-act="gen" data-s="${s.id}" data-b="${bid}" data-label="${(s.label||'').replace(/"/g,'')}" title="generar con IA y programar">✨</button>`:''}`+
         `<button data-act="sell" data-s="${s.id}" data-b="${bid}" title="vender cuña/spot a un anunciante">💶</button>`+
         `${has?`<button data-act="clr" data-s="${s.id}" data-b="${bid}" title="quitar">✕</button>`:''}</div></div>`;
     }).join('');
@@ -519,9 +532,19 @@ async function buildDay(key,host){
     const act=el.dataset.act,sc=el.dataset.s,bd=el.dataset.b;
     if(act==='set'){openPicker(sc,bd,false);return;}
     if(act==='sell'){openPicker(sc,bd,true);return;}
+    if(act==='gen'){if(!ensureKey())return;el.disabled=true;el.textContent='✨…';try{await genFill(sc,bd,el.dataset.label);}catch(e){}await refreshEdit();return;}
     if(!ensureKey())return;el.disabled=true;el.textContent='…';
     await clearBand(sc,bd,curDay);await refreshEdit();
   });
+  const fa=host.querySelector('#fillai');
+  if(fa)fa.onclick=async()=>{
+    if(!ensureKey())return;
+    const btns=[...host.querySelectorAll('[data-act="gen"]')];
+    if(!btns.length){fa.textContent='✨ sin huecos';return;}
+    fa.disabled=true;fa.textContent='✨ generando 0/'+btns.length;let n=0;
+    for(const b of btns){b.disabled=true;b.textContent='…';try{await genFill(b.dataset.s,b.dataset.b,b.dataset.label);}catch(e){}fa.textContent='✨ generando '+(++n)+'/'+btns.length;}
+    await refreshEdit();
+  };
   host.querySelectorAll('[data-dec]').forEach(el=>el.onclick=async()=>{
     const k=ensureKey();if(!k)return;el.disabled=true;
     await gpost('/grid/decide',{key:k,screen:el.dataset.s,date:curDay,id:el.dataset.id,decision:el.dataset.dec});
