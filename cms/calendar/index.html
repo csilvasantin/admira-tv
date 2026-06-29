@@ -176,22 +176,38 @@
 <div class="ov" id="salesov"><div class="modal"><span class="x" id="salesx">✕</span><h3 id="salesh">Ventas</h3><div id="salesb"></div></div></div>
 <div class="ov" id="realov"><div class="modal"><span class="x" id="realx">✕</span><h3 id="realh">Emisión real</h3><div id="realb"></div></div></div>
 
+<script src="https://www.clearchannel.tv/locations.js"></script>
 <script>
 const API='https://api.admira.store';
-const LOCATIONS={
-  'xtanco-valencia':{name:'Xtanco Valencia',circuit:'xtanco',screens:[
-    {id:'xtanco-valencia-a',label:'A · Lotería'},
-    {id:'xtanco-valencia-b',label:'B · Vapeo/Tabaco'},
-    {id:'xtanco-valencia-c',label:'C · Bebidas'},
-    {id:'xtanco-valencia-d',label:'D · Ofertas'},
-    {id:'xtanco-valencia-musica',label:'🎵 Hilo Musical',audio:true},
-  ]},
-};
+// Multi-Xpacio automático: descubre Xpacios y dispositivos del catálogo curado
+// (OMNIP_LOCATIONS_DEFAULT). Deriva el id de cada dispositivo por el contrato
+// (slug(tienda)-slug(superficie)) y añade un 🎵 Hilo Musical por Xpacio.
+const FALLBACK_LOC={'xtanco-valencia':{name:'Xtanco Valencia',circuit:'xtanco',screens:[
+  {id:'xtanco-valencia-a',label:'Pantalla A · Lotería'},{id:'xtanco-valencia-b',label:'Pantalla B · Vapeo/Tabaco'},
+  {id:'xtanco-valencia-c',label:'Pantalla C · Bebidas'},{id:'xtanco-valencia-d',label:'Pantalla D · Ofertas'},
+  {id:'xtanco-valencia-musica',label:'🎵 Hilo Musical',audio:true}]}};
+const SLUG=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+const PROG_SURF=['pantalla','escaparate','vending','mostrador'];
+function buildLocations(){
+  const cat=(window.OMNIP_LOCATIONS_DEFAULT||[]).concat(window.OMNIP_LOCATIONS_EXTRA||[]);
+  if(!Array.isArray(cat)||!cat.length)return null;
+  const ents=cat.map(L=>{
+    const surfs=(L.surfaces||[]).filter(s=>PROG_SURF.includes(s.surface));
+    if(!surfs.length&&!L.twin)return null;
+    const screens=surfs.map(s=>({id:s.screen||(SLUG(L.id)+'-'+SLUG(s.name)),label:s.name||s.surface}));
+    screens.push({id:SLUG(L.id)+'-musica',label:'🎵 Hilo Musical',audio:true});
+    return {id:L.id,name:L.name||L.id,circuit:L.circuit||(SLUG(L.id).split('-')[0]),screens,twin:!!L.twin};
+  }).filter(Boolean);
+  ents.sort((a,b)=>{if(a.id==='xtanco-valencia')return -1;if(b.id==='xtanco-valencia')return 1;if(a.twin!==b.twin)return a.twin?-1:1;return (a.name||'').localeCompare(b.name||'');});
+  const out={};ents.forEach(e=>out[e.id]={name:e.name,circuit:e.circuit,screens:e.screens});
+  return Object.keys(out).length?out:null;
+}
+const LOCATIONS=buildLocations()||FALLBACK_LOC;
 const BANDS=[['manana','Mañana'],['mediodia','Mediodía'],['tarde','Tarde'],['noche','Noche']];
 const MONTHS=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const DOW=['lun','mar','mié','jue','vie','sáb','dom'];
 const qs=new URLSearchParams(location.search);
-let locId=qs.get('loc')&&LOCATIONS[qs.get('loc')]?qs.get('loc'):'xtanco-valencia';
+let locId=qs.get('loc')&&LOCATIONS[qs.get('loc')]?qs.get('loc'):(LOCATIONS['xtanco-valencia']?'xtanco-valencia':Object.keys(LOCATIONS)[0]);
 let scrId=qs.get('screen')||'';
 let view=['day','week','month','year'].includes(qs.get('view'))?qs.get('view'):'month';
 const MIN_YEAR=2026, MAX_YEAR=2035; // el calendario empieza en 2026 y dura 10 años
