@@ -117,6 +117,7 @@
   .lrow{display:flex;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--line);font-size:12px} .lrow.now{color:var(--teal)}
   .lrow .lt{color:var(--dim);font-size:11px;min-width:96px;flex:none}
   .hedit{margin-top:12px} .hedit button{padding:7px 12px;font-size:12px}
+  .saletbl{width:100%;border-collapse:collapse;font-size:13px} .saletbl th{text-align:left;color:var(--dim);font-weight:400;font-size:11px;padding:4px 8px;border-bottom:1px solid var(--line)} .saletbl td{padding:6px 8px;border-bottom:1px solid var(--line)} .saletbl .r{text-align:right}
 </style>
 </head>
 <body>
@@ -137,6 +138,7 @@
     <div class="mtitle" id="mtitle">—</div>
     <button id="next">›</button>
     <button id="today">Hoy</button>
+    <button id="salesBtn" title="Informe de ventas del periodo">📊 Ventas</button>
     <button id="keybtn" title="Clave de edición (GRID_KEY)">🔑</button>
   </div>
   <div class="stats" id="stats"></div>
@@ -170,6 +172,7 @@
   </div>
   <div id="pickgrid" class="pickgrid"></div></div></div>
 <div class="ov" id="hourov"><div class="modal"><span class="x" id="hourx">✕</span><h3 id="hourh">Hora</h3><div id="hourb"></div></div></div>
+<div class="ov" id="salesov"><div class="modal"><span class="x" id="salesx">✕</span><h3 id="salesh">Ventas</h3><div id="salesb"></div></div></div>
 
 <script>
 const API='https://api.admira.store';
@@ -507,6 +510,29 @@ async function buildDay(key,host){
     await refreshEdit();
   });
 }
+function currentRange(){
+  if(view==='day')return [new Date(cursor),new Date(cursor)];
+  if(view==='week'){const a=weekStart(cursor),b=new Date(a);b.setDate(a.getDate()+6);return [a,b];}
+  if(view==='year')return [new Date(cursor.getFullYear(),0,1),new Date(cursor.getFullYear(),11,31)];
+  return [new Date(cursor.getFullYear(),cursor.getMonth(),1),new Date(cursor.getFullYear(),cursor.getMonth()+1,0)];
+}
+async function openSales(){
+  const [a,b]=currentRange();const ids=activeScreens().map(s=>s.id).join(',');
+  const body=document.getElementById('salesb');
+  document.getElementById('salesh').textContent='📊 Ventas · '+ymd(a)+(ymd(a)!==ymd(b)?' → '+ymd(b):'');
+  body.innerHTML='<div class="loading">Cargando ventas…</div>';document.getElementById('salesov').classList.add('show');
+  let d={sales:[],revenue:0,count:0};
+  try{d=await (await fetch(`${API}/grid/sales?screens=${encodeURIComponent(ids)}&from=${ymd(a)}&to=${ymd(b)}&_=${Date.now()}`,{cache:'no-store'})).json();}catch(e){}
+  const sales=d.sales||[];
+  if(!sales.length){body.innerHTML='<div class="loading">Sin ventas en este periodo. Vende cuñas/spots con el botón 💶.</div>';return;}
+  const byAdv={};sales.forEach(s=>{const r=byAdv[s.advertiser]||(byAdv[s.advertiser]={adv:s.advertiser,slots:0,rev:0,n:0});r.slots+=s.slots;r.rev+=s.revenue;r.n++;});
+  const rows=Object.values(byAdv).sort((x,y)=>y.rev-x.rev);
+  let html=`<div class="stats" style="margin-bottom:14px"><div class="stat"><div class="k">Ingresos</div><div class="v">${eur(d.revenue)}</div></div><div class="stat"><div class="k">Ventas</div><div class="v">${d.count}</div></div><div class="stat"><div class="k">Anunciantes</div><div class="v">${rows.length}</div></div></div>`;
+  html+=`<table class="saletbl"><thead><tr><th>Anunciante</th><th>Ventas</th><th>Slots</th><th class="r">Ingresos</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td>${r.adv}</td><td>${r.n}</td><td>${r.slots}</td><td class="r" style="color:var(--teal)">${eur(r.rev)}</td></tr>`).join('')+`</tbody></table>`;
+  html+=`<div class="hsub">Detalle</div>`+sales.slice().sort((x,y)=>x.date<y.date?-1:1).map(s=>`<div class="lrow"><span class="lt">${s.date}</span><span style="flex:1">${s.advertiser} · ${(s.title||'').slice(0,28)} <span style="color:var(--dim)">· ${s.screenName} · ${s.bandId}${s.offer?' · oferta':''}</span></span><span style="color:var(--teal)">${eur(s.revenue)}</span></div>`).join('');
+  body.innerHTML=html;
+}
 const isModal=()=>document.getElementById('ov').classList.contains('show');
 async function refreshEdit(){ if(isModal())await buildDay(curDay,document.getElementById('mb')); render(); }
 async function openDay(key){
@@ -576,6 +602,9 @@ const closeHour=()=>{clearInterval(hourTimer);hourTimer=null;document.getElement
 document.getElementById('hourx').onclick=closeHour;
 document.getElementById('hourov').onclick=e=>{if(e.target.id==='hourov')closeHour();};
 document.getElementById('keybtn').onclick=()=>{const k=(prompt('Clave de edición (GRID_KEY):',gkGet())||'').trim();gkSet(k);refreshEdit();};
+document.getElementById('salesBtn').onclick=openSales;
+document.getElementById('salesx').onclick=()=>document.getElementById('salesov').classList.remove('show');
+document.getElementById('salesov').onclick=e=>{if(e.target.id==='salesov')document.getElementById('salesov').classList.remove('show');};
 function step(dir){
   if(view==='year')cursor.setFullYear(cursor.getFullYear()+dir);
   else if(view==='week')cursor.setDate(cursor.getDate()+7*dir);
