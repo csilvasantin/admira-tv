@@ -90,9 +90,16 @@
   <div class="stats" id="stats"></div>
   <div id="view"><div class="loading">Cargando parrilla…</div></div>
   <div class="legend">
-    <span><span class="sw" style="background:#0c241a;border:1px solid var(--teal2)"></span>completo (todas las pantallas)</span>
-    <span><span class="sw" style="background:#241f0c;border:1px solid var(--amber2)"></span>parcial</span>
-    <span><span class="sw" style="background:var(--panel2)"></span>vacío · loop de Stock</span>
+    <span style="display:flex;align-items:center;gap:6px">Ocupación
+      <span class="sw" style="background:#13211c" title="0%"></span>
+      <span class="sw" style="background:#0d3527" title="&lt;15%"></span>
+      <span class="sw" style="background:#0f5a3f" title="15–30%"></span>
+      <span class="sw" style="background:#13885f" title="30–50%"></span>
+      <span class="sw" style="background:#17b87d" title="50–75%"></span>
+      <span class="sw" style="background:#1ee8a1" title="75–100%"></span>
+      <span style="color:var(--dim)">más llena →</span>
+    </span>
+    <span><span class="sw" style="background:#13211c"></span>0% · loop de Stock</span>
     <span><span class="sw" style="background:transparent;border:2px solid var(--teal)"></span>hoy</span>
   </div>
   <div class="note" id="note"></div>
@@ -145,15 +152,28 @@ function updateNav(){
   document.getElementById('yr').value=String(y);
 }
 
-async function range(fromY,toY){ // suma own por fecha (todas las pantallas activas) en 1 petición
+async function range(fromY,toY){ // own/paid/total por fecha (suma de pantallas activas) en 1 petición
   const ids=activeScreens().map(s=>s.id).join(',');
   const url=`${API}/grid/range?screens=${encodeURIComponent(ids)}&from=${ymd(fromY)}&to=${ymd(toY)}&_=${Date.now()}`;
   const map={};
   try{
     const d=await (await fetch(url,{cache:'no-store'})).json();
-    Object.values(d.screens||{}).forEach(sc=>(sc.days||[]).forEach(x=>{map[x.date]=(map[x.date]||0)+x.own;}));
+    Object.values(d.screens||{}).forEach(sc=>(sc.days||[]).forEach(x=>{
+      const m=map[x.date]||(map[x.date]={own:0,paid:0,total:0});
+      m.own+=x.own||0; m.paid+=x.paid||0; m.total+=x.total||0;
+    }));
   }catch(e){}
   return map;
+}
+const occOf=m=>(m&&m.total)?Math.round((m.own+m.paid)/m.total*100):0;
+// Heatmap: intensidad de teal según ocupación (own+vendidos / capacidad). Devuelve [bg,fg,borde].
+function heat(occ){
+  if(occ<=0)  return ['#13211c','var(--dim)','transparent'];
+  if(occ<15)  return ['#0d3527','#8fd6bd','#15573f'];
+  if(occ<30)  return ['#0f5a3f','#cdeede','#1a7e5a'];
+  if(occ<50)  return ['#13885f','#eafff6','#20ad7b'];
+  if(occ<75)  return ['#17b87d','#04140d','#36e6a4'];
+  return        ['#1ee8a1','#04140d','#62ffc2'];
 }
 
 function monthCells(base){
@@ -169,24 +189,25 @@ async function renderMonth(){
   const host=document.getElementById('view');host.innerHTML='<div class="loading">Cargando parrilla…</div>';
   const first=new Date(cursor.getFullYear(),cursor.getMonth(),1),last=new Date(cursor.getFullYear(),cursor.getMonth()+1,0);
   const data=await range(first,last);
-  const exp=expectedPerDay();const cells=monthCells(cursor);
-  let prog=0,tot=0,inMonth=0;
+  const cells=monthCells(cursor);
+  let inMonth=0,occSum=0,emit=0,ownTot=0,paidTot=0;
   let html='<div class="dow">'+DOW.map(d=>`<div>${d}</div>`).join('')+'</div><div class="cal">';
   cells.forEach(d=>{
-    const out=d.getMonth()!==cursor.getMonth();const key=ymd(d);const own=data[key]||0;
-    let cls='cell',foot='—',fc='';
+    const out=d.getMonth()!==cursor.getMonth();const key=ymd(d);const m=data[key]||{own:0,paid:0,total:0};const occ=occOf(m);
+    let cls='cell',style='';
     if(out)cls+=' out';
-    else{inMonth++;tot+=own;
-      if(own>=exp){cls+=' full';foot='✓ '+own;fc='ok';prog++;}
-      else if(own>0){cls+=' part';foot='◑ '+own;fc='warn';}
-      else foot='Stock';
+    else{inMonth++;occSum+=occ;ownTot+=m.own;paidTot+=m.paid;if(occ>0)emit++;
+      const[bg,fg,bd]=heat(occ);style=`background:${bg};border-color:${bd};`;
     }
     if(isToday(d))cls+=' today';
-    html+=`<div class="${cls}" ${out?'':`data-d="${key}"`}><div class="cnum">${d.getDate()}</div><div class="cfoot ${fc}">${foot}</div></div>`;
+    const foot=out?'':(occ>0?`<span style="color:${heat(occ)[1]}">${occ}%</span>`:'Stock');
+    const title=out?'':`${key} · ocupación ${occ}% · ${m.own} own${m.paid?' · '+m.paid+' vendidos':''}`;
+    html+=`<div class="${cls}" style="${style}" ${out?'':`data-d="${key}" title="${title}"`}><div class="cnum">${d.getDate()}</div><div class="cfoot">${foot}</div></div>`;
   });
   html+='</div>';host.innerHTML=html;
   host.querySelectorAll('[data-d]').forEach(el=>el.onclick=()=>openDay(el.dataset.d));
-  setStats([['Xpacio',LOCATIONS[locId].name],['Pantallas',activeScreens().length],['Días completos',prog+' / '+inMonth],['Piezas own (mes)',tot]]);
+  const avg=inMonth?Math.round(occSum/inMonth):0;
+  setStats([['Xpacio',LOCATIONS[locId].name],['Ocupación media',avg+'%'],['Días con emisión',emit+' / '+inMonth],['own · vendidos',ownTot+' · '+paidTot]]);
   setNote();
 }
 
@@ -195,41 +216,38 @@ async function renderYear(){
   document.getElementById('mtitle').textContent=Y;
   const host=document.getElementById('view');host.innerHTML='<div class="loading">Cargando el año…</div>';
   const data=await range(new Date(Y,0,1),new Date(Y,11,31));
-  const exp=expectedPerDay();
-  let progDays=0,totalDays=0;
+  let yOccSum=0,yEmit=0,yDays=0;
   let html='<div class="year">';
   for(let m=0;m<12;m++){
     const first=new Date(Y,m,1),off=(first.getDay()+6)%7,dim=new Date(Y,m+1,0).getDate();
-    let full=0,any=0;
+    let mOccSum=0;
     let g='';
     for(let i=0;i<off;i++)g+='<div class="yd blank"></div>';
     for(let day=1;day<=dim;day++){
-      const d=new Date(Y,m,day),key=ymd(d),own=data[key]||0;
-      let cls='yd';
-      if(own>=exp){cls+=' full';full++;}
-      else if(own>0)cls+=' part';
-      if(own>0)any++;
-      if(isToday(d))cls+=' today';
-      g+=`<div class="${cls}" data-d="${key}" title="${key} · ${own} own">${day}</div>`;
+      const d=new Date(Y,m,day),key=ymd(d),mm=data[key]||{own:0,paid:0,total:0},occ=occOf(mm);
+      mOccSum+=occ;yOccSum+=occ;yDays++;if(occ>0)yEmit++;
+      const[bg,fg,bd]=heat(occ);
+      let cls='yd'+(isToday(d)?' today':'');
+      const title=`${key} · ocupación ${occ}% · ${mm.own} own${mm.paid?' · '+mm.paid+' vendidos':''}`;
+      g+=`<div class="${cls}" data-d="${key}" title="${title}" style="background:${bg};color:${fg};border-color:${bd}">${day}</div>`;
     }
-    progDays+=full;totalDays+=dim;
-    const pct=Math.round(full/dim*100);
-    html+=`<div class="ym"><h4 data-m="${m}"><span>${MONTHS[m]}</span><span class="pct">${pct}%</span></h4>`+
+    const mAvg=Math.round(mOccSum/dim);
+    html+=`<div class="ym"><h4 data-m="${m}"><span>${MONTHS[m]}</span><span class="pct">${mAvg}%</span></h4>`+
           '<div class="ydow">'+DOW.map(x=>`<div>${x[0]}</div>`).join('')+'</div>'+
           `<div class="yg">${g}</div></div>`;
   }
   html+='</div>';host.innerHTML=html;
   host.querySelectorAll('.yd[data-d]').forEach(el=>el.onclick=()=>openDay(el.dataset.d));
   host.querySelectorAll('h4[data-m]').forEach(el=>el.onclick=()=>{cursor=new Date(Y,+el.dataset.m,1);view='month';render();});
-  setStats([['Xpacio',LOCATIONS[locId].name],['Pantallas',activeScreens().length],['Días programados',progDays+' / '+totalDays],['Año',Y]]);
+  setStats([['Xpacio',LOCATIONS[locId].name],['Ocupación media',Math.round(yOccSum/yDays)+'%'],['Días con emisión',yEmit+' / '+yDays],['Año',Y]]);
   setNote();
 }
 
 const setStats=arr=>{document.getElementById('stats').innerHTML=arr.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');};
-const setNote=()=>{const exp=expectedPerDay();document.getElementById('note').innerHTML=
-  `Cada día completo lleva ${exp} piezas propias (${activeScreens().length} pantalla${activeScreens().length>1?'s':''} × 4 franjas). `+
-  'Una ventana rodante de un año se mantiene programada automáticamente cada madrugada. '+
-  'Los días vacíos emiten el loop de Stock genérico. Clic en un día para ver los creativos.';};
+const setNote=()=>{document.getElementById('note').innerHTML=
+  'La intensidad del color de cada día indica su <b>ocupación</b> (contenido propio + vendido sobre la capacidad de las pantallas): a más lleno, más intenso. '+
+  'Una ventana rodante de un año se mantiene programada automáticamente cada madrugada; el calendario abarca 2026–2035. '+
+  'Los días al 0% emiten el loop de Stock genérico. Clic en un día para ver los creativos por pantalla y franja.';};
 
 function render(){fillSelectors();updateNav();(view==='year'?renderYear:renderMonth)();}
 
