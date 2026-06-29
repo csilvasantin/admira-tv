@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ayuda · Admira.tv CMS</title>
+<meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, multi-Xpacio, PixerIA y alertas.">
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root{--bg:#070b0a;--panel:#0e1714;--panel2:#13211c;--line:#1d3329;--txt:#dff5ec;--dim:#7fa595;--teal:#19e89a;--amber:#f5b431}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;-webkit-font-smoothing:antialiased;line-height:1.7}
+  a{color:var(--teal);text-decoration:none} a:hover{text-decoration:underline}
+  header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.04em}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px var(--teal)}
+  .wrap{max-width:880px;margin:0 auto;padding:24px 20px 80px}
+  h1{font-size:24px;font-weight:600;margin:0 0 6px}
+  .lead{color:var(--dim);margin:0 0 24px}
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}
+  .toc a{font-size:12px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:5px 12px;color:var(--dim)}
+  .toc a:hover{border-color:var(--teal);color:var(--teal);text-decoration:none}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:14px}
+  section h2{font-size:17px;font-weight:600;margin:0 0 10px;color:var(--teal);scroll-margin-top:16px}
+  section p{margin:0 0 10px} section ul{margin:0 0 6px;padding-left:18px} section li{margin:4px 0}
+  code,.k{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:13px}
+  .pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:12px;margin-right:4px}
+  .links{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:6px}
+  .links a{display:block;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+  .links a:hover{border-color:var(--teal);text-decoration:none}
+  .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
+  .note{font-size:13px;color:var(--dim)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span> ADMIRA.TV · CMS · AYUDA</div>
+  <div><a href="/cms/calendar/">Calendario</a> · <a href="/cms.html">CMS</a> · <a href="/canal.html">Canal</a></div>
+</header>
+<div class="wrap">
+  <h1>Guía del CMS de emisión</h1>
+  <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
+
+  <nav class="toc">
+    <a href="#concepto">Concepto</a><a href="#vistas">Vistas</a><a href="#dispositivos">Dispositivos</a>
+    <a href="#ocupacion">Ocupación</a><a href="#editar">Editar</a><a href="#vender">Vender cuñas</a>
+    <a href="#ventas">Informe de ventas</a><a href="#real">Planificado vs real</a><a href="#segmentar">Segmentación</a>
+    <a href="#hilo">Hilo Musical</a><a href="#multixpacio">Multi-Xpacio</a><a href="#ia">PixerIA</a>
+    <a href="#clonar">Clonar</a><a href="#alertas">Alertas</a><a href="#auto">Automatización</a><a href="#enlaces">Enlaces</a>
+  </nav>
+
+  <section id="concepto"><h2>Concepto</h2>
+    <p>Cada <b>Xpacio</b> (tienda/gemelo digital) tiene varios <b>dispositivos</b>: pantallas DOOH y un <span class="pill">🎵 Hilo Musical</span>. Cada dispositivo emite un bucle por <b>franja</b> del día (<code>Mañana</code> · <code>Mediodía</code> · <code>Tarde</code> · <code>Noche</code>). El contenido puede ser <b>propio</b> (own) o <b>vendido</b> (cuñas/spots de anunciantes); las franjas sin programar emiten el loop de <b>Stock</b> genérico.</p>
+  </section>
+
+  <section id="vistas"><h2>Vistas y zoom</h2>
+    <ul>
+      <li><b>Día / Semana / Mes / Año</b> — alternables arriba. El calendario abarca <b>2026–2035</b>.</li>
+      <li><b>Día por horas</b>: rejilla dispositivo × 24 h. Clic en una hora → <b>minuto tipo</b> (qué suena segundo a segundo, con el slot que va “ahora” en vivo).</li>
+      <li><b>Semana</b>: rejilla dispositivo × día. <b>Mes/Año</b>: heatmap de ocupación; clic en un mes (vista Año) entra al mes.</li>
+    </ul>
+  </section>
+
+  <section id="dispositivos"><h2>Dispositivos</h2>
+    <p>El selector <b>Dispositivo</b> incluye las pantallas y el <span class="pill">🎵 Hilo Musical</span> del Xpacio (elige <code>Todos</code> o uno). El Hilo Musical es la superficie de audio (uno por Xpacio, suena igual en todo el local).</p>
+  </section>
+
+  <section id="ocupacion"><h2>Ocupación (heatmap)</h2>
+    <p>La intensidad del color de cada día/hora indica su <b>ocupación</b> = (contenido propio + vendido) / capacidad. A más lleno, más intenso. Días al 0 % emiten Stock.</p>
+  </section>
+
+  <section id="editar"><h2>Editar la parrilla</h2>
+    <p>Pulsa el <span class="pill">🔑</span> e introduce la clave de edición (<code>GRID_KEY</code>, la misma del CMS). Luego, en el modal de un día o en la vista Día, por cada franja:</p>
+    <ul>
+      <li><span class="pill">+ / ✎</span> programar o cambiar el contenido propio (elige del Stock).</li>
+      <li><span class="pill">✕</span> quitar el contenido propio (vuelve a Stock).</li>
+      <li><span class="pill">⬆ Subir</span> sube un creativo nuevo al Stock y lo programa al momento.</li>
+      <li><b>Aplicar a</b>: solo este día · esta semana · este mes (propaga el cambio).</li>
+    </ul>
+  </section>
+
+  <section id="vender"><h2>Vender cuñas / spots</h2>
+    <p><span class="pill">💶</span> en una franja: vende una <b>cuña</b> (audio en el Hilo Musical) o <b>spot</b> (visual en pantallas) a un anunciante con su <b>CPM</b>. Se reserva como slot <i>vendido</i> (no toca el propio), suma a Ingresos y entra en el bucle del gemelo. También llegan <b>ofertas de marketplace</b>: aparecen como <b>pendientes</b> en el día para <b>Aceptar/Rechazar</b>.</p>
+  </section>
+
+  <section id="ventas"><h2>📊 Informe de ventas</h2>
+    <p>Botón <span class="pill">📊 Ventas</span>: ingresos, nº de ventas y anunciantes del periodo de la vista, con tabla por anunciante y detalle de cada venta.</p>
+  </section>
+
+  <section id="real"><h2>📡 Planificado vs emitido real</h2>
+    <p>Botón <span class="pill">📡 Real</span>: cruza lo programado con el <b>proof-of-play</b> real de los players — reproducciones, segundos y <b>estado</b> de cada dispositivo (emitiendo / <span style="color:#e87ba4">programado pero no emite</span>) + ranking de lo más emitido.</p>
+  </section>
+
+  <section id="segmentar"><h2>🎯 Segmentación por audiencia</h2>
+    <p>El canal puede mostrar contenido distinto según quién mira (cámara→contenido: género/edad/franja). Desde cada dispositivo, el enlace <span class="pill">🎯 segmentar</span> abre el editor de reglas en <a href="/condicional.html">condicional.html</a>.</p>
+  </section>
+
+  <section id="hilo"><h2>🎵 Hilo Musical</h2>
+    <p>Superficie de audio comercializable del Xpacio. Se programa/vende como un dispositivo más y <b>suena en el gemelo 3D</b> (botón 🎵 del gemelo) en bucle, siguiendo la franja actual. Música propia + cuñas vendidas.</p>
+  </section>
+
+  <section id="multixpacio"><h2>🏢 Multi-Xpacio</h2>
+    <p>El selector <b>Xpacio</b> se llena automáticamente del catálogo de tiendas. Cada tienda es un Xpacio con sus dispositivos; el calendario funciona igual para cualquiera.</p>
+  </section>
+
+  <section id="ia"><h2>✨ PixerIA — relleno de huecos</h2>
+    <p>Las franjas vacías muestran <span class="pill">✨</span>: genera con IA (Imagen-4) un creativo temático del dispositivo y lo programa. <span class="pill">✨ Rellenar huecos</span> lo hace para todas las franjas vacías a la vista — ideal para dar de alta un Xpacio nuevo.</p>
+  </section>
+
+  <section id="clonar"><h2>🏭 Clonar Xpacio</h2>
+    <p>Botón <span class="pill">🏭 Clonar</span>: copia la programación propia del día de otro Xpacio a este (dispositivos emparejados por orden), con alcance día/semana/mes. Para replicar una tienda de referencia en otras.</p>
+  </section>
+
+  <section id="alertas"><h2>🚨 Alertas</h2>
+    <p>En <span class="pill">📡 Real</span> se marca en rojo cualquier dispositivo <b>programado que no está emitiendo</b>. Además, un proceso automático avisa por <b>Telegram</b> si por la tarde un dispositivo programado sigue sin emitir (posible player caído).</p>
+  </section>
+
+  <section id="auto"><h2>🔁 Automatización</h2>
+    <p>Una ventana rodante de <b>un año</b> se mantiene programada automáticamente cada madrugada. El relleno automático <b>respeta las ediciones manuales</b> (solo completa franjas vacías).</p>
+  </section>
+
+  <section id="enlaces"><h2>Enlaces</h2>
+    <div class="links">
+      <a href="/cms/calendar/"><b>Calendario de emisión</b><br><span>admira.tv/cms/calendar</span></a>
+      <a href="/cms.html"><b>CMS de flota</b><br><span>admira.tv/cms.html</span></a>
+      <a href="/canal.html"><b>Canal en antena</b><br><span>admira.tv/canal.html</span></a>
+      <a href="/condicional.html"><b>Segmentación</b><br><span>admira.tv/condicional.html</span></a>
+      <a href="https://www.pixeria.com/xpacios/xtanco-valencia/"><b>Gemelo · Xtanco Valencia</b><br><span>pixeria.com/xpacios/…</span></a>
+    </div>
+  </section>
+
+  <p class="note">Admira.tv · Retail Media OS · capa de emisión de la trilogía Admira.</p>
+</div>
+</body>
+</html>
