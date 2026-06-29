@@ -114,6 +114,7 @@
   .lslot:last-child{border-right:0} .lslot img{width:28px;height:28px;object-fit:cover;border-radius:3px} .lslot.now{outline:2px solid var(--teal);outline-offset:-2px}
   .lrow{display:flex;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--line);font-size:12px} .lrow.now{color:var(--teal)}
   .lrow .lt{color:var(--dim);font-size:11px;min-width:96px;flex:none}
+  .hedit{margin-top:12px} .hedit button{padding:7px 12px;font-size:12px}
 </style>
 </head>
 <body>
@@ -127,7 +128,7 @@
     <select id="loc"></select>
     <label style="font-size:12px;color:var(--dim)">Pantalla</label>
     <select id="scr"><option value="">Todas</option></select>
-    <span class="seg"><button id="vWeek">Semana</button><button id="vMonth" class="on">Mes</button><button id="vYear">Año</button></span>
+    <span class="seg"><button id="vDay">Día</button><button id="vWeek">Semana</button><button id="vMonth" class="on">Mes</button><button id="vYear">Año</button></span>
     <span style="flex:1"></span>
     <select id="yr" title="Ir al año"></select>
     <button id="prev">‹</button>
@@ -174,7 +175,7 @@ const DOW=['lun','mar','mié','jue','vie','sáb','dom'];
 const qs=new URLSearchParams(location.search);
 let locId=qs.get('loc')&&LOCATIONS[qs.get('loc')]?qs.get('loc'):'xtanco-valencia';
 let scrId=qs.get('screen')||'';
-let view=['week','month','year'].includes(qs.get('view'))?qs.get('view'):'month';
+let view=['day','week','month','year'].includes(qs.get('view'))?qs.get('view'):'month';
 const MIN_YEAR=2026, MAX_YEAR=2035; // el calendario empieza en 2026 y dura 10 años
 const today=new Date();
 function clampCursor(){const y=cursor.getFullYear();if(y<MIN_YEAR)cursor=new Date(MIN_YEAR,0,1);else if(y>MAX_YEAR)cursor=new Date(MAX_YEAR,11,1);}
@@ -190,6 +191,7 @@ const expectedPerDay=()=>activeScreens().length*4;
 function fillSelectors(){
   document.getElementById('loc').innerHTML=Object.entries(LOCATIONS).map(([k,v])=>`<option value="${k}" ${k===locId?'selected':''}>${v.name}</option>`).join('');
   document.getElementById('scr').innerHTML='<option value="">Todas</option>'+LOCATIONS[locId].screens.map(s=>`<option value="${s.id}" ${s.id===scrId?'selected':''}>${s.label}</option>`).join('');
+  document.getElementById('vDay').classList.toggle('on',view==='day');
   document.getElementById('vWeek').classList.toggle('on',view==='week');
   document.getElementById('vMonth').classList.toggle('on',view==='month');
   document.getElementById('vYear').classList.toggle('on',view==='year');
@@ -201,6 +203,7 @@ function updateNav(){
   let atMin,atMax;
   if(view==='year'){atMin=y<=MIN_YEAR;atMax=y>=MAX_YEAR;}
   else if(view==='week'){const ws=weekStart(cursor);atMin=ws<=new Date(MIN_YEAR,0,1);atMax=ws>=weekStart(new Date(MAX_YEAR,11,31));}
+  else if(view==='day'){atMin=cursor<=new Date(MIN_YEAR,0,1);atMax=cursor>=new Date(MAX_YEAR,11,31);}
   else{atMin=y<MIN_YEAR||(y===MIN_YEAR&&m===0);atMax=y>MAX_YEAR||(y===MAX_YEAR&&m===11);}
   document.getElementById('prev').disabled=atMin;
   document.getElementById('next').disabled=atMax;
@@ -225,7 +228,15 @@ const eur=n=>'€'+Math.round(n||0).toLocaleString('es-ES');
 // marcadores de venta (oro) y ofertas pendientes (ámbar) por celda
 function marks(m){let s='';if(m&&m.paid)s+='<span class="mk sold" title="'+m.paid+' vendido(s) · '+eur(m.rev)+'"></span>';if(m&&m.pend)s+='<span class="mk pend" title="'+m.pend+' oferta(s) pendiente(s)"></span>';return s?`<span class="mks">${s}</span>`:'';}
 // ── desglose por horas y zoom a minutos ──
-let DAY={}; // screenId -> {bands, cfg} de la última apertura de día
+let DAY={},hourTimer=null; // screenId -> {bands, cfg} de la última apertura de día
+function hourTick(screenId,hr){
+  const dd=DAY[screenId]||{};const b=bandAt(dd.bands,hr);if(!b)return;
+  const ss=(dd.cfg&&dd.cfg.slotSeconds)||10;const cap=b.capacity||(b.slots||[]).length||1;const nd=new Date();
+  if(!(curDay===ymd(nd)&&nd.getHours()===hr)){clearInterval(hourTimer);hourTimer=null;return;}
+  const idx=Math.floor((nd.getMinutes()*60+nd.getSeconds())/ss)%cap;
+  document.querySelectorAll('#hourb .lslot').forEach((el,i)=>el.classList.toggle('now',i===idx));
+  document.querySelectorAll('#hourb .lrow').forEach((el,i)=>el.classList.toggle('now',i===idx));
+}
 const kindLabel=k=>k==='own'?'Propio':k==='paid'?'Vendido':k==='pending'?'Pendiente':'Stock';
 function bandAt(bands,h){return (bands||[]).find(b=>{const f=parseInt(b.from)||0;const t=(b.to==='23:59'||b.to==='24:00')?24:(parseInt(b.to)||0);return h>=f&&h<t;});}
 function hoursBar(bands,screenId,key){
@@ -257,7 +268,11 @@ function openHour(screenId,hr){
     return `<div class="lrow${i===nowIdx?' now':''}"><span class="lt">${mmss(i*ss)}–${mmss(i*ss+ss)}</span>${th}<span style="min-width:62px">${kindLabel(sl.kind)}</span><span style="color:var(--dim)">${(sl.title||(sl.kind==='free'?'loop de Stock':'')).slice(0,34)}</span></div>`;}).join('');
   hb.innerHTML=`<div class="hsum">Franja <b style="color:var(--teal)">${b.label}</b> · bucle de ${cap} slots × ${ss}s = ${looplen}s · se repite ${reps}× durante la hora${nowIdx>=0?' · <b style="color:var(--teal)">▶ ahora</b>':''}</div>`+
     `<div class="loopbar">${seg}</div>`+
-    `<div class="hsub">Minuto tipo — qué suena segundo a segundo (se repite toda la hora):</div>${list}`;
+    `<div class="hsub">Minuto tipo — qué suena segundo a segundo (se repite toda la hora):</div>${list}`+
+    `<div class="hedit"><button id="hbedit">✎ Cambiar contenido de la franja ${b.label}</button></div>`;
+  const he=document.getElementById('hbedit');if(he)he.onclick=()=>openPicker(screenId,b.id);
+  clearInterval(hourTimer);hourTimer=null;
+  if(nowIdx>=0)hourTimer=setInterval(()=>hourTick(screenId,hr),1000);
 }
 // Heatmap: intensidad de teal según ocupación (own+vendidos / capacidad). Devuelve [bg,fg,borde].
 function heat(occ){
@@ -409,14 +424,11 @@ const setNote=()=>{document.getElementById('note').innerHTML=
   'Una ventana rodante de un año se mantiene programada automáticamente cada madrugada; el calendario abarca 2026–2035. '+
   'Los días al 0% emiten el loop de Stock genérico. Clic en un día para ver o <b>editar</b> los creativos por pantalla y franja (con la clave 🔑).';};
 
-function render(){fillSelectors();updateNav();(view==='year'?renderYear:view==='week'?renderWeek:renderMonth)();}
+function render(){fillSelectors();updateNav();(view==='year'?renderYear:view==='week'?renderWeek:view==='day'?renderDay:renderMonth)();}
 
-async function openDay(key){
+async function buildDay(key,host){
   curDay=key;
-  const ov=document.getElementById('ov'),mb=document.getElementById('mb');
-  const d=new Date(key+'T00:00:00');
-  document.getElementById('mh').textContent=d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  mb.innerHTML='<div class="loading">Cargando creativos…</div>';ov.classList.add('show');
+  host.innerHTML='<div class="loading">Cargando creativos…</div>';
   const screens=activeScreens();
   const byScreen=await Promise.all(screens.map(async s=>{
     let j=null;try{j=await (await fetch(`${API}/grid/day?screen=${s.id}&date=${key}&_=${Date.now()}`,{cache:'no-store'})).json();}catch(e){}
@@ -448,19 +460,35 @@ async function openDay(key){
     html+=`<div class="scr"><div class="sh">${s.label}</div><div class="bands">${bands}</div>`+
       `<div class="hrslabel">Desglose por horas · clic para ver los minutos</div><div class="hours">${hoursBar(dayBands,s.id,key)}</div></div>`;
   });
-  mb.innerHTML=html;
-  mb.querySelectorAll('.hr[data-h]').forEach(el=>el.onclick=()=>openHour(el.dataset.s,+el.dataset.h));
-  mb.querySelectorAll('[data-act]').forEach(el=>el.onclick=async()=>{
+  host.innerHTML=html;
+  host.querySelectorAll('.hr[data-h]').forEach(el=>el.onclick=()=>openHour(el.dataset.s,+el.dataset.h));
+  host.querySelectorAll('[data-act]').forEach(el=>el.onclick=async()=>{
     const act=el.dataset.act,sc=el.dataset.s,bd=el.dataset.b;
     if(act==='set'){openPicker(sc,bd);return;}
     if(!ensureKey())return;el.disabled=true;el.textContent='…';
-    await clearBand(sc,bd,curDay);await openDay(curDay);render();
+    await clearBand(sc,bd,curDay);await refreshEdit();
   });
-  mb.querySelectorAll('[data-dec]').forEach(el=>el.onclick=async()=>{
+  host.querySelectorAll('[data-dec]').forEach(el=>el.onclick=async()=>{
     const k=ensureKey();if(!k)return;el.disabled=true;
     await gpost('/grid/decide',{key:k,screen:el.dataset.s,date:curDay,id:el.dataset.id,decision:el.dataset.dec});
-    await openDay(curDay);render();
+    await refreshEdit();
   });
+}
+const isModal=()=>document.getElementById('ov').classList.contains('show');
+async function refreshEdit(){ if(isModal())await buildDay(curDay,document.getElementById('mb')); render(); }
+async function openDay(key){
+  cursor=new Date(key+'T00:00:00');clampCursor();
+  document.getElementById('mh').textContent=new Date(key+'T00:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('ov').classList.add('show');
+  await buildDay(key,document.getElementById('mb'));
+}
+async function renderDay(){
+  const key=ymd(cursor);
+  document.getElementById('mtitle').textContent=new Date(key+'T00:00:00').toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  await buildDay(key,document.getElementById('view'));
+  const mm=(await range(cursor,cursor))[key]||{own:0,paid:0,total:0,rev:0,pend:0};
+  setStats([['Ocupación',occOf(mm)+'%'],['Propio · vendido',mm.own+' · '+mm.paid],['Ingresos',eur(mm.rev)],['Pendientes',mm.pend]]);
+  setNote();
 }
 async function openPicker(screen,bandId){
   if(!ensureKey())return;
@@ -479,7 +507,8 @@ function renderPick(items){
     el.style.opacity=.4;
     await setBand(pickCtx.screen,pickCtx.bandId,it,curDay);
     document.getElementById('pickov').classList.remove('show');
-    await openDay(curDay);render();
+    document.getElementById('hourov').classList.remove('show');
+    await refreshEdit();
   });
 }
 
@@ -488,12 +517,14 @@ document.getElementById('ov').onclick=e=>{if(e.target.id==='ov')document.getElem
 document.getElementById('pickx').onclick=()=>document.getElementById('pickov').classList.remove('show');
 document.getElementById('pickov').onclick=e=>{if(e.target.id==='pickov')document.getElementById('pickov').classList.remove('show');};
 document.getElementById('pickq').oninput=()=>renderPick(STOCK||[]);
-document.getElementById('hourx').onclick=()=>document.getElementById('hourov').classList.remove('show');
-document.getElementById('hourov').onclick=e=>{if(e.target.id==='hourov')document.getElementById('hourov').classList.remove('show');};
-document.getElementById('keybtn').onclick=()=>{const k=(prompt('Clave de edición (GRID_KEY):',gkGet())||'').trim();gkSet(k);if(curDay&&document.getElementById('ov').classList.contains('show'))openDay(curDay);};
+const closeHour=()=>{clearInterval(hourTimer);hourTimer=null;document.getElementById('hourov').classList.remove('show');};
+document.getElementById('hourx').onclick=closeHour;
+document.getElementById('hourov').onclick=e=>{if(e.target.id==='hourov')closeHour();};
+document.getElementById('keybtn').onclick=()=>{const k=(prompt('Clave de edición (GRID_KEY):',gkGet())||'').trim();gkSet(k);refreshEdit();};
 function step(dir){
   if(view==='year')cursor.setFullYear(cursor.getFullYear()+dir);
   else if(view==='week')cursor.setDate(cursor.getDate()+7*dir);
+  else if(view==='day')cursor.setDate(cursor.getDate()+dir);
   else cursor.setMonth(cursor.getMonth()+dir,1);
   clampCursor();render();
 }
@@ -501,6 +532,7 @@ document.getElementById('prev').onclick=()=>step(-1);
 document.getElementById('next').onclick=()=>step(1);
 document.getElementById('today').onclick=()=>{cursor=new Date(today.getFullYear(),today.getMonth(),today.getDate());clampCursor();render();};
 document.getElementById('yr').onchange=e=>{cursor.setFullYear(+e.target.value);clampCursor();render();};
+document.getElementById('vDay').onclick=()=>{view='day';render();};
 document.getElementById('vWeek').onclick=()=>{view='week';render();};
 document.getElementById('vMonth').onclick=()=>{view='month';render();};
 document.getElementById('vYear').onclick=()=>{view='year';render();};
