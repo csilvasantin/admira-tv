@@ -4,54 +4,67 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calendario de emisión · Admira.tv CMS</title>
-<meta name="description" content="Calendario de emisión en vivo de las pantallas DOOH del Xpacio — qué emite cada pantalla cada día, por franjas. Admira.tv CMS.">
+<meta name="description" content="Calendario de emisión en vivo de las pantallas DOOH del Xpacio — vista de año y de mes, qué emite cada pantalla por franjas. Admira.tv CMS.">
 <link rel="icon" href="/favicon.ico">
 <style>
-  :root{--bg:#070b0a;--panel:#0e1714;--panel2:#13211c;--line:#1d3329;--txt:#dff5ec;--dim:#7fa595;--teal:#19e89a;--teal2:#0f7e5a;--amber:#f5b431;--gray:#33433d}
+  :root{--bg:#070b0a;--panel:#0e1714;--panel2:#13211c;--line:#1d3329;--txt:#dff5ec;--dim:#7fa595;--teal:#19e89a;--teal2:#0f7e5a;--amber:#f5b431;--amber2:#7a5a12}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--txt);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;-webkit-font-smoothing:antialiased}
   a{color:var(--teal);text-decoration:none}
   header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
   .brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.04em}
   .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px var(--teal)}
-  .wrap{max-width:1080px;margin:0 auto;padding:18px 20px 60px}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 20px 60px}
   .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}
   select,button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:13px;cursor:pointer}
   button:hover{border-color:var(--teal2)}
-  .mtitle{font-size:18px;font-weight:600;min-width:170px;text-align:center;text-transform:capitalize}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{border:0;border-radius:0;background:var(--panel)}
+  .seg button.on{background:var(--teal2);color:#fff}
+  .mtitle{font-size:18px;font-weight:600;min-width:150px;text-align:center;text-transform:capitalize}
   .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
   .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px}
-  .stat .k{font-size:11px;color:var(--dim)}
-  .stat .v{font-size:22px;font-weight:600}
+  .stat .k{font-size:11px;color:var(--dim)} .stat .v{font-size:22px;font-weight:600}
+  /* mes */
   .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;font-size:11px;color:var(--dim);text-align:center;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em}
   .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-  .cell{min-height:66px;border-radius:9px;border:1px solid var(--line);background:var(--panel);padding:7px 8px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;transition:transform .08s,border-color .12s}
+  .cell{min-height:64px;border-radius:9px;border:1px solid var(--line);background:var(--panel);padding:7px 8px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;transition:transform .08s,border-color .12s}
   .cell:hover{border-color:var(--teal);transform:translateY(-1px)}
-  .cell.out{opacity:.35;cursor:default}
-  .cell.out:hover{transform:none;border-color:var(--line)}
+  .cell.out{opacity:.32;cursor:default} .cell.out:hover{transform:none;border-color:var(--line)}
   .cell.full{background:#0c241a;border-color:var(--teal2)}
-  .cell.part{background:#241f0c;border-color:#7a5a12}
+  .cell.part{background:#241f0c;border-color:var(--amber2)}
   .cell.today{outline:2px solid var(--teal);outline-offset:-1px}
   .cnum{font-size:14px;font-weight:600}
   .cfoot{font-size:11px;color:var(--dim);display:flex;align-items:center;gap:4px}
   .cfoot.ok{color:var(--teal)} .cfoot.warn{color:var(--amber)}
-  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:var(--dim);align-items:center}
+  /* año */
+  .year{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+  .ym{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 12px}
+  .ym h4{margin:0 0 8px;font-size:13px;font-weight:600;text-transform:capitalize;cursor:pointer;display:flex;justify-content:space-between}
+  .ym h4 .pct{color:var(--dim);font-weight:400}
+  .ym h4:hover{color:var(--teal)}
+  .ydow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:9px;color:var(--dim);text-align:center;margin-bottom:3px}
+  .yg{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .yd{aspect-ratio:1;border-radius:3px;background:var(--panel2);border:1px solid transparent;font-size:9px;display:flex;align-items:center;justify-content:center;color:var(--dim);cursor:pointer}
+  .yd.full{background:#0c241a;border-color:var(--teal2);color:var(--teal)}
+  .yd.part{background:#241f0c;border-color:var(--amber2);color:var(--amber)}
+  .yd.today{outline:1.5px solid var(--teal);outline-offset:-1px}
+  .yd.blank{background:transparent;cursor:default}
+  .yd:not(.blank):hover{border-color:var(--teal)}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px;font-size:12px;color:var(--dim);align-items:center}
   .sw{width:13px;height:13px;border-radius:3px;display:inline-block;vertical-align:-2px;margin-right:5px}
   .note{margin-top:14px;font-size:12px;color:var(--dim);line-height:1.6}
-  /* modal */
+  .loading{color:var(--dim);font-size:13px;padding:24px 0;text-align:center}
   .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
   .ov.show{display:flex}
   .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:760px;width:100%;max-height:85vh;overflow:auto;padding:18px 20px}
-  .modal h3{margin:0 0 14px;font-size:16px;text-transform:lowercase}
-  .modal h3::first-letter{text-transform:uppercase}
-  .scr{margin-bottom:16px}
-  .scr .sh{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--teal)}
+  .modal h3{margin:0 0 14px;font-size:16px;text-transform:lowercase} .modal h3::first-letter{text-transform:uppercase}
+  .scr{margin-bottom:16px} .scr .sh{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--teal)}
   .bands{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
   .band{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;gap:8px;align-items:center}
   .band img{width:40px;height:40px;object-fit:cover;border-radius:5px;flex:none;background:#000}
   .band .bt{font-size:11px;color:var(--dim)} .band .bn{font-size:12px}
   .x{float:right;cursor:pointer;color:var(--dim);font-size:18px;line-height:1}
-  .loading{color:var(--dim);font-size:13px;padding:20px 0;text-align:center}
 </style>
 </head>
 <body>
@@ -65,6 +78,7 @@
     <select id="loc"></select>
     <label style="font-size:12px;color:var(--dim)">Pantalla</label>
     <select id="scr"><option value="">Todas</option></select>
+    <span class="seg"><button id="vMonth" class="on">Mes</button><button id="vYear">Año</button></span>
     <span style="flex:1"></span>
     <button id="prev">‹</button>
     <div class="mtitle" id="mtitle">—</div>
@@ -72,12 +86,11 @@
     <button id="today">Hoy</button>
   </div>
   <div class="stats" id="stats"></div>
-  <div class="dow"><div>lun</div><div>mar</div><div>mié</div><div>jue</div><div>vie</div><div>sáb</div><div>dom</div></div>
-  <div class="cal" id="cal"><div class="loading">Cargando parrilla…</div></div>
+  <div id="view"><div class="loading">Cargando parrilla…</div></div>
   <div class="legend">
     <span><span class="sw" style="background:#0c241a;border:1px solid var(--teal2)"></span>completo (todas las pantallas)</span>
-    <span><span class="sw" style="background:#241f0c;border:1px solid #7a5a12"></span>parcial</span>
-    <span><span class="sw" style="background:var(--panel);border:1px solid var(--line)"></span>vacío · loop de Stock</span>
+    <span><span class="sw" style="background:#241f0c;border:1px solid var(--amber2)"></span>parcial</span>
+    <span><span class="sw" style="background:var(--panel2)"></span>vacío · loop de Stock</span>
     <span><span class="sw" style="background:transparent;border:2px solid var(--teal)"></span>hoy</span>
   </div>
   <div class="note" id="note"></div>
@@ -97,112 +110,144 @@ const LOCATIONS={
 };
 const BANDS=[['manana','Mañana'],['mediodia','Mediodía'],['tarde','Tarde'],['noche','Noche']];
 const MONTHS=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DOW=['lun','mar','mié','jue','vie','sáb','dom'];
 const qs=new URLSearchParams(location.search);
 let locId=qs.get('loc')&&LOCATIONS[qs.get('loc')]?qs.get('loc'):'xtanco-valencia';
 let scrId=qs.get('screen')||'';
+let view=qs.get('view')==='year'?'year':'month';
 const today=new Date();
-let view=new Date(today.getFullYear(),today.getMonth(),1);
+let cursor=new Date(today.getFullYear(),today.getMonth(),1);
 
-const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const isToday=d=>ymd(d)===ymd(today);
-function activeScreens(){const L=LOCATIONS[locId];return scrId?L.screens.filter(s=>s.id===scrId):L.screens;}
+const activeScreens=()=>{const L=LOCATIONS[locId];return scrId?L.screens.filter(s=>s.id===scrId):L.screens;};
+const expectedPerDay=()=>activeScreens().length*4;
 
 function fillSelectors(){
-  const locSel=document.getElementById('loc');
-  locSel.innerHTML=Object.entries(LOCATIONS).map(([k,v])=>`<option value="${k}" ${k===locId?'selected':''}>${v.name}</option>`).join('');
-  const scrSel=document.getElementById('scr');
-  scrSel.innerHTML='<option value="">Todas</option>'+LOCATIONS[locId].screens.map(s=>`<option value="${s.id}" ${s.id===scrId?'selected':''}>${s.label}</option>`).join('');
+  document.getElementById('loc').innerHTML=Object.entries(LOCATIONS).map(([k,v])=>`<option value="${k}" ${k===locId?'selected':''}>${v.name}</option>`).join('');
+  document.getElementById('scr').innerHTML='<option value="">Todas</option>'+LOCATIONS[locId].screens.map(s=>`<option value="${s.id}" ${s.id===scrId?'selected':''}>${s.label}</option>`).join('');
+  document.getElementById('vMonth').classList.toggle('on',view==='month');
+  document.getElementById('vYear').classList.toggle('on',view==='year');
 }
 
-async function gridDay(screen,date){
-  try{const r=await fetch(`${API}/grid/day?screen=${encodeURIComponent(screen)}&date=${date}`,{cache:'no-store'});return await r.json();}
-  catch(e){return null;}
+async function range(fromY,toY){ // suma own por fecha (todas las pantallas activas) en 1 petición
+  const ids=activeScreens().map(s=>s.id).join(',');
+  const url=`${API}/grid/range?screens=${encodeURIComponent(ids)}&from=${ymd(fromY)}&to=${ymd(toY)}`;
+  const map={};
+  try{
+    const d=await (await fetch(url,{cache:'no-store'})).json();
+    Object.values(d.screens||{}).forEach(sc=>(sc.days||[]).forEach(x=>{map[x.date]=(map[x.date]||0)+x.own;}));
+  }catch(e){}
+  return map;
 }
 
-function monthDays(){ // celdas del calendario (lunes a domingo) que cubren el mes de `view`
-  const first=new Date(view.getFullYear(),view.getMonth(),1);
-  const startOffset=(first.getDay()+6)%7; // 0=lunes
-  const start=new Date(first);start.setDate(first.getDate()-startOffset);
+function monthCells(base){
+  const first=new Date(base.getFullYear(),base.getMonth(),1);
+  const off=(first.getDay()+6)%7;const start=new Date(first);start.setDate(first.getDate()-off);
   const cells=[];for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);cells.push(d);}
-  // recortar última semana si está entera fuera del mes
-  while(cells.length>35 && cells[cells.length-1].getMonth()!==view.getMonth() && cells[cells.length-7].getMonth()!==view.getMonth()) cells.splice(-7);
+  while(cells.length>35&&cells[cells.length-1].getMonth()!==base.getMonth()&&cells[cells.length-7].getMonth()!==base.getMonth())cells.splice(-7);
   return cells;
 }
 
-async function render(){
-  fillSelectors();
-  document.getElementById('mtitle').textContent=MONTHS[view.getMonth()]+' '+view.getFullYear();
-  const cal=document.getElementById('cal');
-  cal.innerHTML='<div class="loading">Cargando parrilla…</div>';
-  const cells=monthDays();
-  const screens=activeScreens();
-  const expected=screens.length; // 1 pieza own/franja → ownSlots esperado por pantalla = 4; "completo" = todas las pantallas con own>0 en las 4 franjas
-  // pedir ownSlots por (día,pantalla) en paralelo
-  const inMonth=cells.filter(d=>d.getMonth()===view.getMonth());
-  const data={}; // ymd -> own total
-  await Promise.all(inMonth.flatMap(d=>screens.map(async s=>{
-    const j=await gridDay(s.id,ymd(d));
-    const own=(j&&j.totals&&j.totals.ownSlots)||0;
-    data[ymd(d)]=(data[ymd(d)]||0)+own;
-  })));
-  const maxOwn=expected*4; // 4 franjas
-  let progDays=0,totalOwn=0;
-  cal.innerHTML='';
+async function renderMonth(){
+  document.getElementById('mtitle').textContent=MONTHS[cursor.getMonth()]+' '+cursor.getFullYear();
+  const host=document.getElementById('view');host.innerHTML='<div class="loading">Cargando parrilla…</div>';
+  const first=new Date(cursor.getFullYear(),cursor.getMonth(),1),last=new Date(cursor.getFullYear(),cursor.getMonth()+1,0);
+  const data=await range(first,last);
+  const exp=expectedPerDay();const cells=monthCells(cursor);
+  let prog=0,tot=0,inMonth=0;
+  let html='<div class="dow">'+DOW.map(d=>`<div>${d}</div>`).join('')+'</div><div class="cal">';
   cells.forEach(d=>{
-    const out=d.getMonth()!==view.getMonth();
-    const key=ymd(d);const own=data[key]||0;
-    const div=document.createElement('div');
-    div.className='cell'+(out?' out':'')+(isToday(d)?' today':'');
-    let foot='—',fc='';
-    if(!out){
-      if(own>=maxOwn){div.classList.add('full');foot='<i>✓</i> '+own;fc='ok';progDays++;}
-      else if(own>0){div.classList.add('part');foot='◑ '+own;fc='warn';}
-      else{foot='Stock';}
-      totalOwn+=own;
-      div.onclick=()=>openDay(d);
+    const out=d.getMonth()!==cursor.getMonth();const key=ymd(d);const own=data[key]||0;
+    let cls='cell',foot='—',fc='';
+    if(out)cls+=' out';
+    else{inMonth++;tot+=own;
+      if(own>=exp){cls+=' full';foot='✓ '+own;fc='ok';prog++;}
+      else if(own>0){cls+=' part';foot='◑ '+own;fc='warn';}
+      else foot='Stock';
     }
-    div.innerHTML=`<div class="cnum">${d.getDate()}</div><div class="cfoot ${fc}">${foot}</div>`;
-    cal.appendChild(div);
+    if(isToday(d))cls+=' today';
+    html+=`<div class="${cls}" ${out?'':`data-d="${key}"`}><div class="cnum">${d.getDate()}</div><div class="cfoot ${fc}">${foot}</div></div>`;
   });
-  document.getElementById('stats').innerHTML=
-    stat('Xpacio',LOCATIONS[locId].name)+
-    stat('Pantallas',screens.length)+
-    stat('Días completos',progDays+' / '+inMonth.length)+
-    stat('Piezas own (mes)',totalOwn);
-  document.getElementById('note').innerHTML=
-    'Cada día completo lleva '+(expected*4)+' piezas propias ('+expected+' pantalla'+(expected>1?'s':'')+' × 4 franjas). '+
-    'Una ventana rodante de 30 días se mantiene programada automáticamente cada madrugada. '+
-    'Los días vacíos emiten el loop de Stock genérico. Clic en un día para ver los creativos.';
+  html+='</div>';host.innerHTML=html;
+  host.querySelectorAll('[data-d]').forEach(el=>el.onclick=()=>openDay(el.dataset.d));
+  setStats([['Xpacio',LOCATIONS[locId].name],['Pantallas',activeScreens().length],['Días completos',prog+' / '+inMonth],['Piezas own (mes)',tot]]);
+  setNote();
 }
-const stat=(k,v)=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`;
 
-async function openDay(d){
-  const ov=document.getElementById('ov');const mb=document.getElementById('mb');
+async function renderYear(){
+  const Y=cursor.getFullYear();
+  document.getElementById('mtitle').textContent=Y;
+  const host=document.getElementById('view');host.innerHTML='<div class="loading">Cargando el año…</div>';
+  const data=await range(new Date(Y,0,1),new Date(Y,11,31));
+  const exp=expectedPerDay();
+  let progDays=0,totalDays=0;
+  let html='<div class="year">';
+  for(let m=0;m<12;m++){
+    const first=new Date(Y,m,1),off=(first.getDay()+6)%7,dim=new Date(Y,m+1,0).getDate();
+    let full=0,any=0;
+    let g='';
+    for(let i=0;i<off;i++)g+='<div class="yd blank"></div>';
+    for(let day=1;day<=dim;day++){
+      const d=new Date(Y,m,day),key=ymd(d),own=data[key]||0;
+      let cls='yd';
+      if(own>=exp){cls+=' full';full++;}
+      else if(own>0)cls+=' part';
+      if(own>0)any++;
+      if(isToday(d))cls+=' today';
+      g+=`<div class="${cls}" data-d="${key}" title="${key} · ${own} own">${day}</div>`;
+    }
+    progDays+=full;totalDays+=dim;
+    const pct=Math.round(full/dim*100);
+    html+=`<div class="ym"><h4 data-m="${m}"><span>${MONTHS[m]}</span><span class="pct">${pct}%</span></h4>`+
+          '<div class="ydow">'+DOW.map(x=>`<div>${x[0]}</div>`).join('')+'</div>'+
+          `<div class="yg">${g}</div></div>`;
+  }
+  html+='</div>';host.innerHTML=html;
+  host.querySelectorAll('.yd[data-d]').forEach(el=>el.onclick=()=>openDay(el.dataset.d));
+  host.querySelectorAll('h4[data-m]').forEach(el=>el.onclick=()=>{cursor=new Date(Y,+el.dataset.m,1);view='month';render();});
+  setStats([['Xpacio',LOCATIONS[locId].name],['Pantallas',activeScreens().length],['Días programados',progDays+' / '+totalDays],['Año',Y]]);
+  setNote();
+}
+
+const setStats=arr=>{document.getElementById('stats').innerHTML=arr.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');};
+const setNote=()=>{const exp=expectedPerDay();document.getElementById('note').innerHTML=
+  `Cada día completo lleva ${exp} piezas propias (${activeScreens().length} pantalla${activeScreens().length>1?'s':''} × 4 franjas). `+
+  'Una ventana rodante de un año se mantiene programada automáticamente cada madrugada. '+
+  'Los días vacíos emiten el loop de Stock genérico. Clic en un día para ver los creativos.';};
+
+function render(){fillSelectors();(view==='year'?renderYear:renderMonth)();}
+
+async function openDay(key){
+  const ov=document.getElementById('ov'),mb=document.getElementById('mb');
+  const d=new Date(key+'T00:00:00');
   document.getElementById('mh').textContent=d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   mb.innerHTML='<div class="loading">Cargando creativos…</div>';ov.classList.add('show');
   const screens=activeScreens();
   const parts=await Promise.all(screens.map(async s=>{
-    const j=await gridDay(s.id,ymd(d));
-    const byBand={};const seen=new Set();
-    ((j&&j.bands)||[]).forEach(b=>{(b.slots||[]).forEach(sl=>{
-      if(sl.kind==='own'&&sl.creative&&!seen.has(sl.bookingId)){seen.add(sl.bookingId);byBand[b.id]=sl;}
-    });});
+    let j=null;try{j=await (await fetch(`${API}/grid/day?screen=${s.id}&date=${key}`,{cache:'no-store'})).json();}catch(e){}
+    const byBand={},seen=new Set();
+    ((j&&j.bands)||[]).forEach(b=>(b.slots||[]).forEach(sl=>{if(sl.kind==='own'&&sl.creative&&!seen.has(sl.bookingId)){seen.add(sl.bookingId);byBand[b.id]=sl;}}));
     const bands=BANDS.map(([bid,blab])=>{
       const sl=byBand[bid];
       if(!sl)return `<div class="band"><div><div class="bt">${blab}</div><div class="bn" style="color:var(--dim)">— Stock</div></div></div>`;
-      const u=sl.creative.url||'';const isImg=(sl.creative.type==='image'||sl.creative.type==='animation');
-      const thumb=isImg?`<img src="${u}" alt="" loading="lazy">`:`<div style="width:40px;height:40px;border-radius:5px;background:#000;display:flex;align-items:center;justify-content:center;color:var(--teal);flex:none">▶</div>`;
-      return `<div class="band">${thumb}<div><div class="bt">${blab}</div><div class="bn">${(sl.title||'').slice(0,40)}</div></div></div>`;
+      const u=sl.creative.url||'',img=(sl.creative.type==='image'||sl.creative.type==='animation');
+      const th=img?`<img src="${u}" alt="" loading="lazy">`:`<div style="width:40px;height:40px;border-radius:5px;background:#000;display:flex;align-items:center;justify-content:center;color:var(--teal);flex:none">▶</div>`;
+      return `<div class="band">${th}<div><div class="bt">${blab}</div><div class="bn">${(sl.title||'').slice(0,40)}</div></div></div>`;
     }).join('');
     return `<div class="scr"><div class="sh">${s.label}</div><div class="bands">${bands}</div></div>`;
   }));
   mb.innerHTML=parts.join('');
 }
+
 document.getElementById('mx').onclick=()=>document.getElementById('ov').classList.remove('show');
 document.getElementById('ov').onclick=e=>{if(e.target.id==='ov')document.getElementById('ov').classList.remove('show');};
-document.getElementById('prev').onclick=()=>{view.setMonth(view.getMonth()-1);render();};
-document.getElementById('next').onclick=()=>{view.setMonth(view.getMonth()+1);render();};
-document.getElementById('today').onclick=()=>{view=new Date(today.getFullYear(),today.getMonth(),1);render();};
+document.getElementById('prev').onclick=()=>{if(view==='year')cursor.setFullYear(cursor.getFullYear()-1);else cursor.setMonth(cursor.getMonth()-1);render();};
+document.getElementById('next').onclick=()=>{if(view==='year')cursor.setFullYear(cursor.getFullYear()+1);else cursor.setMonth(cursor.getMonth()+1);render();};
+document.getElementById('today').onclick=()=>{cursor=new Date(today.getFullYear(),today.getMonth(),1);render();};
+document.getElementById('vMonth').onclick=()=>{view='month';render();};
+document.getElementById('vYear').onclick=()=>{view='year';render();};
 document.getElementById('loc').onchange=e=>{locId=e.target.value;scrId='';render();};
 document.getElementById('scr').onchange=e=>{scrId=e.target.value;render();};
 render();
