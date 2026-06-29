@@ -133,7 +133,7 @@ function fillSelectors(){
 
 async function range(fromY,toY){ // suma own por fecha (todas las pantallas activas) en 1 petición
   const ids=activeScreens().map(s=>s.id).join(',');
-  const url=`${API}/grid/range?screens=${encodeURIComponent(ids)}&from=${ymd(fromY)}&to=${ymd(toY)}`;
+  const url=`${API}/grid/range?screens=${encodeURIComponent(ids)}&from=${ymd(fromY)}&to=${ymd(toY)}&_=${Date.now()}`;
   const map={};
   try{
     const d=await (await fetch(url,{cache:'no-store'})).json();
@@ -226,7 +226,7 @@ async function openDay(key){
   mb.innerHTML='<div class="loading">Cargando creativos…</div>';ov.classList.add('show');
   const screens=activeScreens();
   const parts=await Promise.all(screens.map(async s=>{
-    let j=null;try{j=await (await fetch(`${API}/grid/day?screen=${s.id}&date=${key}`,{cache:'no-store'})).json();}catch(e){}
+    let j=null;try{j=await (await fetch(`${API}/grid/day?screen=${s.id}&date=${key}&_=${Date.now()}`,{cache:'no-store'})).json();}catch(e){}
     const byBand={},seen=new Set();
     ((j&&j.bands)||[]).forEach(b=>(b.slots||[]).forEach(sl=>{if(sl.kind==='own'&&sl.creative&&!seen.has(sl.bookingId)){seen.add(sl.bookingId);byBand[b.id]=sl;}}));
     const bands=BANDS.map(([bid,blab])=>{
