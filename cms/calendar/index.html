@@ -76,6 +76,20 @@
   .band img{width:40px;height:40px;object-fit:cover;border-radius:5px;flex:none;background:#000}
   .band .bt{font-size:11px;color:var(--dim)} .band .bn{font-size:12px}
   .x{float:right;cursor:pointer;color:var(--dim);font-size:18px;line-height:1}
+  .editbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:12px;color:var(--dim);flex-wrap:wrap}
+  .editbar select{padding:5px 8px}
+  .editbar .kstate{margin-left:auto}
+  .band .thwrap{flex:none}
+  .band .ph{width:40px;height:40px;border-radius:5px;background:#000;display:flex;align-items:center;justify-content:center;color:var(--teal)}
+  .band .bgrow{flex:1;min-width:0}
+  .band .bact{display:flex;gap:6px;flex:none}
+  .band .bact button{padding:4px 9px;font-size:12px}
+  .pickgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px;max-height:62vh;overflow:auto}
+  .pk{cursor:pointer;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel2)}
+  .pk:hover{border-color:var(--teal)}
+  .pk img{width:100%;height:78px;object-fit:cover;display:block}
+  .pk .pkv{height:78px;display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:20px}
+  .pk .pkt{font-size:10px;padding:4px 6px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
@@ -96,6 +110,7 @@
     <div class="mtitle" id="mtitle">—</div>
     <button id="next">›</button>
     <button id="today">Hoy</button>
+    <button id="keybtn" title="Clave de edición (GRID_KEY)">🔑</button>
   </div>
   <div class="stats" id="stats"></div>
   <div id="view"><div class="loading">Cargando parrilla…</div></div>
@@ -116,6 +131,7 @@
 </div>
 
 <div class="ov" id="ov"><div class="modal"><span class="x" id="mx">✕</span><h3 id="mh">Día</h3><div id="mb"></div></div></div>
+<div class="ov" id="pickov"><div class="modal"><span class="x" id="pickx">✕</span><h3>Elegir creativo del Stock</h3><input id="pickq" placeholder="Filtrar por título o categoría…" style="width:100%;margin-bottom:10px"><div id="pickgrid" class="pickgrid"></div></div></div>
 
 <script>
 const API='https://api.admira.store';
@@ -188,6 +204,39 @@ function heat(occ){
   if(occ<50)  return ['#13885f','#eafff6','#20ad7b'];
   if(occ<75)  return ['#17b87d','#04140d','#36e6a4'];
   return        ['#1ee8a1','#04140d','#62ffc2'];
+}
+// ── edición (escritura: GRID_KEY compartida con cms.html) ──
+const gkGet=()=>{try{return localStorage.getItem('grid_key')||''}catch(_){return''}};
+const gkSet=v=>{try{localStorage.setItem('grid_key',v||'')}catch(_){}};
+function ensureKey(){let k=gkGet();if(!k){k=(prompt('Clave de edición (GRID_KEY):')||'').trim();if(k)gkSet(k);}return k;}
+let STOCK=null, pickCtx=null, curDay=null;
+async function loadStock(){if(STOCK)return STOCK;try{const d=await (await fetch(`${API}/stock/list?limit=300&_=${Date.now()}`,{cache:'no-store'})).json();const items=(d.items||d||[]);STOCK=items.filter(x=>x&&x.url&&['image','video','animation'].includes(x.type));}catch(e){STOCK=[];}return STOCK;}
+async function gpost(path,body){try{const r=await fetch(API+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});return await r.json();}catch(e){return{};}}
+function scopeDates(key){
+  const sc=(document.getElementById('scope')||{}).value||'day';const d=new Date(key+'T00:00:00');const out=[];
+  if(sc==='day')out.push(key);
+  else if(sc==='week'){const ws=weekStart(d);for(let i=0;i<7;i++){const x=new Date(ws);x.setDate(ws.getDate()+i);if(x.getFullYear()>=MIN_YEAR&&x.getFullYear()<=MAX_YEAR)out.push(ymd(x));}}
+  else{const y=d.getFullYear(),m=d.getMonth(),dim=new Date(y,m+1,0).getDate();for(let i=1;i<=dim;i++)out.push(ymd(new Date(y,m,i)));}
+  return out;
+}
+async function bandOwnIds(screen,date,bandId){
+  try{const j=await (await fetch(`${API}/grid/day?screen=${screen}&date=${date}&_=${Date.now()}`,{cache:'no-store'})).json();
+    const ids=[],seen=new Set();(j.bands||[]).forEach(b=>{if(b.id===bandId)(b.slots||[]).forEach(sl=>{if(sl.kind==='own'&&sl.bookingId&&!seen.has(sl.bookingId)){seen.add(sl.bookingId);ids.push(sl.bookingId);}});});
+    return ids;
+  }catch(e){return[];}
+}
+async function setBand(screen,bandId,item,key){ // reemplaza el own de la franja por `item` en las fechas del scope
+  const k=ensureKey();if(!k)return false;
+  await Promise.all(scopeDates(key).map(async date=>{
+    for(const id of await bandOwnIds(screen,date,bandId)) await gpost('/grid/unbook',{key:k,screen,date,id});
+    await gpost('/grid/book',{key:k,screen,date,bandId,status:'own',advertiser:LOCATIONS[locId].name,title:item.title||item.id,category:item.category||null,creative:{type:item.type,url:item.url,name:item.title||item.id}});
+  }));
+  return true;
+}
+async function clearBand(screen,bandId,key){
+  const k=ensureKey();if(!k)return false;
+  await Promise.all(scopeDates(key).map(async date=>{for(const id of await bandOwnIds(screen,date,bandId)) await gpost('/grid/unbook',{key:k,screen,date,id});}));
+  return true;
 }
 
 function monthCells(base){
@@ -295,34 +344,73 @@ const setStats=arr=>{document.getElementById('stats').innerHTML=arr.map(([k,v])=
 const setNote=()=>{document.getElementById('note').innerHTML=
   'La intensidad del color de cada día indica su <b>ocupación</b> (contenido propio + vendido sobre la capacidad de las pantallas): a más lleno, más intenso. '+
   'Una ventana rodante de un año se mantiene programada automáticamente cada madrugada; el calendario abarca 2026–2035. '+
-  'Los días al 0% emiten el loop de Stock genérico. Clic en un día para ver los creativos por pantalla y franja.';};
+  'Los días al 0% emiten el loop de Stock genérico. Clic en un día para ver o <b>editar</b> los creativos por pantalla y franja (con la clave 🔑).';};
 
 function render(){fillSelectors();updateNav();(view==='year'?renderYear:view==='week'?renderWeek:renderMonth)();}
 
 async function openDay(key){
+  curDay=key;
   const ov=document.getElementById('ov'),mb=document.getElementById('mb');
   const d=new Date(key+'T00:00:00');
   document.getElementById('mh').textContent=d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   mb.innerHTML='<div class="loading">Cargando creativos…</div>';ov.classList.add('show');
   const screens=activeScreens();
-  const parts=await Promise.all(screens.map(async s=>{
+  const byScreen=await Promise.all(screens.map(async s=>{
     let j=null;try{j=await (await fetch(`${API}/grid/day?screen=${s.id}&date=${key}&_=${Date.now()}`,{cache:'no-store'})).json();}catch(e){}
     const byBand={},seen=new Set();
     ((j&&j.bands)||[]).forEach(b=>(b.slots||[]).forEach(sl=>{if(sl.kind==='own'&&sl.creative&&!seen.has(sl.bookingId)){seen.add(sl.bookingId);byBand[b.id]=sl;}}));
+    return {s,byBand};
+  }));
+  let html=`<div class="editbar">Aplicar a <select id="scope"><option value="day">solo este día</option><option value="week">esta semana</option><option value="month">este mes</option></select>`+
+    `<span class="kstate">${gkGet()?'🔓 edición activa':'🔒 pon la clave para editar'}</span></div>`;
+  byScreen.forEach(({s,byBand})=>{
     const bands=BANDS.map(([bid,blab])=>{
       const sl=byBand[bid];
-      if(!sl)return `<div class="band"><div><div class="bt">${blab}</div><div class="bn" style="color:var(--dim)">— Stock</div></div></div>`;
-      const u=sl.creative.url||'',img=(sl.creative.type==='image'||sl.creative.type==='animation');
-      const th=img?`<img src="${u}" alt="" loading="lazy">`:`<div style="width:40px;height:40px;border-radius:5px;background:#000;display:flex;align-items:center;justify-content:center;color:var(--teal);flex:none">▶</div>`;
-      return `<div class="band">${th}<div><div class="bt">${blab}</div><div class="bn">${(sl.title||'').slice(0,40)}</div></div></div>`;
+      const has=!!sl;
+      const u=has?(sl.creative.url||''):'';const img=has&&(sl.creative.type==='image'||sl.creative.type==='animation');
+      const th=has?(img?`<img src="${u}" alt="" loading="lazy">`:`<div class="ph">▶</div>`):`<div class="ph" style="color:var(--dim)">∅</div>`;
+      const name=has?(sl.title||'').slice(0,38):'— Stock (vacío)';
+      return `<div class="band"><div class="thwrap">${th}</div><div class="bgrow"><div class="bt">${blab}</div><div class="bn"${has?'':' style="color:var(--dim)"'}>${name}</div></div>`+
+        `<div class="bact"><button data-act="set" data-s="${s.id}" data-b="${bid}" title="${has?'cambiar':'programar'}">${has?'✎':'+'}</button>`+
+        `${has?`<button data-act="clr" data-s="${s.id}" data-b="${bid}" title="quitar">✕</button>`:''}</div></div>`;
     }).join('');
-    return `<div class="scr"><div class="sh">${s.label}</div><div class="bands">${bands}</div></div>`;
-  }));
-  mb.innerHTML=parts.join('');
+    html+=`<div class="scr"><div class="sh">${s.label}</div><div class="bands">${bands}</div></div>`;
+  });
+  mb.innerHTML=html;
+  mb.querySelectorAll('[data-act]').forEach(el=>el.onclick=async()=>{
+    const act=el.dataset.act,sc=el.dataset.s,bd=el.dataset.b;
+    if(act==='set'){openPicker(sc,bd);return;}
+    if(!ensureKey())return;el.disabled=true;el.textContent='…';
+    await clearBand(sc,bd,curDay);await openDay(curDay);render();
+  });
+}
+async function openPicker(screen,bandId){
+  if(!ensureKey())return;
+  pickCtx={screen,bandId};
+  document.getElementById('pickov').classList.add('show');
+  document.getElementById('pickgrid').innerHTML='<div class="loading">Cargando Stock…</div>';
+  renderPick(await loadStock());
+}
+function renderPick(items){
+  const q=(document.getElementById('pickq').value||'').toLowerCase().trim();
+  const f=items.filter(it=>!q||((it.title||it.id||'')+' '+(it.category||'')).toLowerCase().includes(q));
+  const grid=document.getElementById('pickgrid');
+  grid.innerHTML=f.slice(0,150).map(it=>{const img=it.type==='image'||it.type==='animation';return `<div class="pk" data-id="${it.id}" title="${(it.title||it.id)}">${img?`<img src="${it.url}" loading="lazy">`:'<div class="pkv">▶</div>'}<div class="pkt">${(it.title||it.id).slice(0,26)}</div></div>`;}).join('')||'<div class="loading">Sin resultados</div>';
+  grid.querySelectorAll('.pk').forEach(el=>el.onclick=async()=>{
+    const it=items.find(x=>x.id===el.dataset.id);if(!it)return;
+    el.style.opacity=.4;
+    await setBand(pickCtx.screen,pickCtx.bandId,it,curDay);
+    document.getElementById('pickov').classList.remove('show');
+    await openDay(curDay);render();
+  });
 }
 
 document.getElementById('mx').onclick=()=>document.getElementById('ov').classList.remove('show');
 document.getElementById('ov').onclick=e=>{if(e.target.id==='ov')document.getElementById('ov').classList.remove('show');};
+document.getElementById('pickx').onclick=()=>document.getElementById('pickov').classList.remove('show');
+document.getElementById('pickov').onclick=e=>{if(e.target.id==='pickov')document.getElementById('pickov').classList.remove('show');};
+document.getElementById('pickq').oninput=()=>renderPick(STOCK||[]);
+document.getElementById('keybtn').onclick=()=>{const k=(prompt('Clave de edición (GRID_KEY):',gkGet())||'').trim();gkSet(k);if(curDay&&document.getElementById('ov').classList.contains('show'))openDay(curDay);};
 function step(dir){
   if(view==='year')cursor.setFullYear(cursor.getFullYear()+dir);
   else if(view==='week')cursor.setDate(cursor.getDate()+7*dir);
