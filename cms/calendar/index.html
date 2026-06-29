@@ -35,6 +35,11 @@
   .cell.full{background:#0c241a;border-color:var(--teal2)}
   .cell.part{background:#241f0c;border-color:var(--amber2)}
   .cell.today{outline:2px solid var(--teal);outline-offset:-1px}
+  .cell,.yd,.wc{position:relative}
+  .mks{position:absolute;top:3px;right:3px;display:flex;gap:2px}
+  .mk{width:6px;height:6px;border-radius:50%}
+  .mk.sold{background:#f5b431;box-shadow:0 0 4px #f5b431}
+  .mk.pend{background:#e87ba4}
   .cnum{font-size:14px;font-weight:600}
   .cfoot{font-size:11px;color:var(--dim);display:flex;align-items:center;gap:4px}
   .cfoot.ok{color:var(--teal)} .cfoot.warn{color:var(--amber)}
@@ -90,6 +95,15 @@
   .pk img{width:100%;height:78px;object-fit:cover;display:block}
   .pk .pkv{height:78px;display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:20px}
   .pk .pkt{font-size:10px;padding:4px 6px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .offers{border:1px solid var(--amber2);background:#1c1607;border-radius:10px;padding:10px 12px;margin-bottom:14px}
+  .offers .oh{font-size:13px;font-weight:600;color:var(--amber);margin-bottom:8px}
+  .offer{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:6px 0;border-top:1px solid #2a230c}
+  .offer:first-of-type{border-top:0}
+  .offer .oinfo{font-size:12px;min-width:0}
+  .offer .oact{display:flex;gap:6px;flex:none}
+  .offer .oact button{padding:4px 10px;font-size:12px}
+  .offer .oact .ok{border-color:var(--teal2);color:var(--teal)}
+  .offer .oact .no{border-color:#7a2b3a;color:#e87ba4}
 </style>
 </head>
 <body>
@@ -189,13 +203,16 @@ async function range(fromY,toY){ // own/paid/total por fecha (suma de pantallas 
   try{
     const d=await (await fetch(url,{cache:'no-store'})).json();
     Object.values(d.screens||{}).forEach(sc=>(sc.days||[]).forEach(x=>{
-      const m=map[x.date]||(map[x.date]={own:0,paid:0,total:0});
-      m.own+=x.own||0; m.paid+=x.paid||0; m.total+=x.total||0;
+      const m=map[x.date]||(map[x.date]={own:0,paid:0,total:0,rev:0,pend:0});
+      m.own+=x.own||0; m.paid+=x.paid||0; m.total+=x.total||0; m.rev+=x.revenue||0; m.pend+=x.pending||0;
     }));
   }catch(e){}
   return map;
 }
 const occOf=m=>(m&&m.total)?Math.round((m.own+m.paid)/m.total*100):0;
+const eur=n=>'€'+Math.round(n||0).toLocaleString('es-ES');
+// marcadores de venta (oro) y ofertas pendientes (ámbar) por celda
+function marks(m){let s='';if(m&&m.paid)s+='<span class="mk sold" title="'+m.paid+' vendido(s) · '+eur(m.rev)+'"></span>';if(m&&m.pend)s+='<span class="mk pend" title="'+m.pend+' oferta(s) pendiente(s)"></span>';return s?`<span class="mks">${s}</span>`:'';}
 // Heatmap: intensidad de teal según ocupación (own+vendidos / capacidad). Devuelve [bg,fg,borde].
 function heat(occ){
   if(occ<=0)  return ['#13211c','var(--dim)','transparent'];
@@ -253,24 +270,24 @@ async function renderMonth(){
   const first=new Date(cursor.getFullYear(),cursor.getMonth(),1),last=new Date(cursor.getFullYear(),cursor.getMonth()+1,0);
   const data=await range(first,last);
   const cells=monthCells(cursor);
-  let inMonth=0,occSum=0,emit=0,ownTot=0,paidTot=0;
+  let inMonth=0,occSum=0,emit=0,paidTot=0,revTot=0;
   let html='<div class="dow">'+DOW.map(d=>`<div>${d}</div>`).join('')+'</div><div class="cal">';
   cells.forEach(d=>{
-    const out=d.getMonth()!==cursor.getMonth();const key=ymd(d);const m=data[key]||{own:0,paid:0,total:0};const occ=occOf(m);
+    const out=d.getMonth()!==cursor.getMonth();const key=ymd(d);const m=data[key]||{own:0,paid:0,total:0,rev:0,pend:0};const occ=occOf(m);
     let cls='cell',style='';
     if(out)cls+=' out';
-    else{inMonth++;occSum+=occ;ownTot+=m.own;paidTot+=m.paid;if(occ>0)emit++;
+    else{inMonth++;occSum+=occ;paidTot+=m.paid;revTot+=m.rev;if(occ>0)emit++;
       const[bg,fg,bd]=heat(occ);style=`background:${bg};border-color:${bd};`;
     }
     if(isToday(d))cls+=' today';
     const foot=out?'':(occ>0?`<span style="color:${heat(occ)[1]}">${occ}%</span>`:'Stock');
-    const title=out?'':`${key} · ocupación ${occ}% · ${m.own} own${m.paid?' · '+m.paid+' vendidos':''}`;
-    html+=`<div class="${cls}" style="${style}" ${out?'':`data-d="${key}" title="${title}"`}><div class="cnum">${d.getDate()}</div><div class="cfoot">${foot}</div></div>`;
+    const title=out?'':`${key} · ocupación ${occ}% · ${m.own} own${m.paid?' · '+m.paid+' vendidos · '+eur(m.rev):''}${m.pend?' · '+m.pend+' pendientes':''}`;
+    html+=`<div class="${cls}" style="${style}" ${out?'':`data-d="${key}" title="${title}"`}>${out?'':marks(m)}<div class="cnum">${d.getDate()}</div><div class="cfoot">${foot}</div></div>`;
   });
   html+='</div>';host.innerHTML=html;
   host.querySelectorAll('[data-d]').forEach(el=>el.onclick=()=>openDay(el.dataset.d));
   const avg=inMonth?Math.round(occSum/inMonth):0;
-  setStats([['Xpacio',LOCATIONS[locId].name],['Ocupación media',avg+'%'],['Días con emisión',emit+' / '+inMonth],['own · vendidos',ownTot+' · '+paidTot]]);
+  setStats([['Ocupación media',avg+'%'],['Días con emisión',emit+' / '+inMonth],['Vendidos',paidTot],['Ingresos',eur(revTot)]]);
   setNote();
 }
 
@@ -279,7 +296,7 @@ async function renderYear(){
   document.getElementById('mtitle').textContent=Y;
   const host=document.getElementById('view');host.innerHTML='<div class="loading">Cargando el año…</div>';
   const data=await range(new Date(Y,0,1),new Date(Y,11,31));
-  let yOccSum=0,yEmit=0,yDays=0;
+  let yOccSum=0,yEmit=0,yDays=0,yPaid=0,yRev=0;
   let html='<div class="year">';
   for(let m=0;m<12;m++){
     const first=new Date(Y,m,1),off=(first.getDay()+6)%7,dim=new Date(Y,m+1,0).getDate();
@@ -287,12 +304,12 @@ async function renderYear(){
     let g='';
     for(let i=0;i<off;i++)g+='<div class="yd blank"></div>';
     for(let day=1;day<=dim;day++){
-      const d=new Date(Y,m,day),key=ymd(d),mm=data[key]||{own:0,paid:0,total:0},occ=occOf(mm);
-      mOccSum+=occ;yOccSum+=occ;yDays++;if(occ>0)yEmit++;
+      const d=new Date(Y,m,day),key=ymd(d),mm=data[key]||{own:0,paid:0,total:0,rev:0,pend:0},occ=occOf(mm);
+      mOccSum+=occ;yOccSum+=occ;yDays++;if(occ>0)yEmit++;yPaid+=mm.paid;yRev+=mm.rev;
       const[bg,fg,bd]=heat(occ);
       let cls='yd'+(isToday(d)?' today':'');
-      const title=`${key} · ocupación ${occ}% · ${mm.own} own${mm.paid?' · '+mm.paid+' vendidos':''}`;
-      g+=`<div class="${cls}" data-d="${key}" title="${title}" style="background:${bg};color:${fg};border-color:${bd}">${day}</div>`;
+      const title=`${key} · ocupación ${occ}% · ${mm.own} own${mm.paid?' · '+mm.paid+' vendidos · '+eur(mm.rev):''}${mm.pend?' · '+mm.pend+' pendientes':''}`;
+      g+=`<div class="${cls}" data-d="${key}" title="${title}" style="background:${bg};color:${fg};border-color:${bd}">${marks(mm)}${day}</div>`;
     }
     const mAvg=Math.round(mOccSum/dim);
     html+=`<div class="ym"><h4 data-m="${m}"><span>${MONTHS[m]}</span><span class="pct">${mAvg}%</span></h4>`+
@@ -302,7 +319,7 @@ async function renderYear(){
   html+='</div>';host.innerHTML=html;
   host.querySelectorAll('.yd[data-d]').forEach(el=>el.onclick=()=>openDay(el.dataset.d));
   host.querySelectorAll('h4[data-m]').forEach(el=>el.onclick=()=>{cursor=new Date(Y,+el.dataset.m,1);view='month';render();});
-  setStats([['Xpacio',LOCATIONS[locId].name],['Ocupación media',Math.round(yOccSum/yDays)+'%'],['Días con emisión',yEmit+' / '+yDays],['Año',Y]]);
+  setStats([['Ocupación media',Math.round(yOccSum/yDays)+'%'],['Días con emisión',yEmit+' / '+yDays],['Vendidos',yPaid],['Ingresos '+Y,eur(yRev)]]);
   setNote();
 }
 
@@ -324,20 +341,20 @@ async function renderWeek(){
   screens.forEach(s=>{
     html+=`<div class="wrow"><div class="wlabel">${s.label}</div>`;
     dates.forEach(d=>{
-      const key=ymd(d),x=idx[s.id][key]||{own:0,paid:0,total:0,occ:0},occ=x.occ||0;
-      const a=agg[key]||(agg[key]={own:0,paid:0,total:0});a.own+=x.own||0;a.paid+=x.paid||0;a.total+=x.total||0;
+      const key=ymd(d),x=idx[s.id][key]||{own:0,paid:0,total:0,occ:0,pending:0,revenue:0},occ=x.occ||0;
+      const a=agg[key]||(agg[key]={own:0,paid:0,total:0,rev:0,pend:0});a.own+=x.own||0;a.paid+=x.paid||0;a.total+=x.total||0;a.rev+=x.revenue||0;a.pend+=x.pending||0;
       const[bg,fg,bd]=heat(occ);
-      html+=`<div class="wc${isToday(d)?' today':''}" data-d="${key}" title="${s.label} · ${key} · ${occ}% · ${x.own||0} own${x.paid?' · '+x.paid+' vendidos':''}" style="background:${bg};color:${fg};border-color:${bd}"><span class="pc">${occ?occ+'%':'·'}</span></div>`;
+      html+=`<div class="wc${isToday(d)?' today':''}" data-d="${key}" title="${s.label} · ${key} · ${occ}% · ${x.own||0} own${x.paid?' · '+x.paid+' vendidos · '+eur(x.revenue):''}${x.pending?' · '+x.pending+' pendientes':''}" style="background:${bg};color:${fg};border-color:${bd}">${marks({paid:x.paid,pend:x.pending,rev:x.revenue})}<span class="pc">${occ?occ+'%':'·'}</span></div>`;
     });
     html+='</div>';
   });
-  let wo=0,we_=0,wOwn=0,wPaid=0;
+  let wo=0,we_=0,wPaid=0,wRev=0;
   html+='<div class="wrow"><div class="wlabel" style="color:var(--teal)">Todas</div>';
-  dates.forEach(d=>{const key=ymd(d),a=agg[key]||{own:0,paid:0,total:0},occ=occOf(a);wo+=occ;if(occ>0)we_++;wOwn+=a.own;wPaid+=a.paid;const[bg,fg,bd]=heat(occ);
-    html+=`<div class="wc${isToday(d)?' today':''}" data-d="${key}" title="Todas · ${key} · ${occ}%" style="background:${bg};color:${fg};border-color:${bd}"><span class="pc">${occ?occ+'%':'·'}</span></div>`;});
+  dates.forEach(d=>{const key=ymd(d),a=agg[key]||{own:0,paid:0,total:0,rev:0,pend:0},occ=occOf(a);wo+=occ;if(occ>0)we_++;wPaid+=a.paid;wRev+=a.rev;const[bg,fg,bd]=heat(occ);
+    html+=`<div class="wc${isToday(d)?' today':''}" data-d="${key}" title="Todas · ${key} · ${occ}% · ${eur(a.rev)}" style="background:${bg};color:${fg};border-color:${bd}">${marks(a)}<span class="pc">${occ?occ+'%':'·'}</span></div>`;});
   html+='</div></div>';host.innerHTML=html;
   host.querySelectorAll('[data-d]').forEach(el=>el.onclick=()=>openDay(el.dataset.d));
-  setStats([['Xpacio',LOCATIONS[locId].name],['Ocupación media',Math.round(wo/7)+'%'],['Días con emisión',we_+' / 7'],['own · vendidos',wOwn+' · '+wPaid]]);
+  setStats([['Ocupación media',Math.round(wo/7)+'%'],['Días con emisión',we_+' / 7'],['Vendidos',wPaid],['Ingresos',eur(wRev)]]);
   setNote();
 }
 const setStats=arr=>{document.getElementById('stats').innerHTML=arr.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');};
@@ -359,10 +376,17 @@ async function openDay(key){
     let j=null;try{j=await (await fetch(`${API}/grid/day?screen=${s.id}&date=${key}&_=${Date.now()}`,{cache:'no-store'})).json();}catch(e){}
     const byBand={},seen=new Set();
     ((j&&j.bands)||[]).forEach(b=>(b.slots||[]).forEach(sl=>{if(sl.kind==='own'&&sl.creative&&!seen.has(sl.bookingId)){seen.add(sl.bookingId);byBand[b.id]=sl;}}));
-    return {s,byBand};
+    return {s,byBand,pending:(j&&j.pendingOffers)||[]};
   }));
   let html=`<div class="editbar">Aplicar a <select id="scope"><option value="day">solo este día</option><option value="week">esta semana</option><option value="month">este mes</option></select>`+
     `<span class="kstate">${gkGet()?'🔓 edición activa':'🔒 pon la clave para editar'}</span></div>`;
+  const pend=byScreen.flatMap(({s,pending})=>pending.map(o=>({s,o})));
+  if(pend.length){
+    html+=`<div class="offers"><div class="oh">📨 Ofertas pendientes (${pend.length})</div>`+
+      pend.map(({s,o})=>`<div class="offer"><div class="oinfo"><b>${(o.advertiser||'—')}</b> · ${(o.title||'').slice(0,32)} <span style="color:var(--dim)">· ${s.label} · ${o.bandId}${o.cpm?' · CPM '+eur(o.cpm):''}</span></div>`+
+        `<div class="oact"><button class="ok" data-dec="accept" data-s="${s.id}" data-id="${o.id}">Aceptar</button><button class="no" data-dec="reject" data-s="${s.id}" data-id="${o.id}">Rechazar</button></div></div>`).join('')+
+      `</div>`;
+  }
   byScreen.forEach(({s,byBand})=>{
     const bands=BANDS.map(([bid,blab])=>{
       const sl=byBand[bid];
@@ -382,6 +406,11 @@ async function openDay(key){
     if(act==='set'){openPicker(sc,bd);return;}
     if(!ensureKey())return;el.disabled=true;el.textContent='…';
     await clearBand(sc,bd,curDay);await openDay(curDay);render();
+  });
+  mb.querySelectorAll('[data-dec]').forEach(el=>el.onclick=async()=>{
+    const k=ensureKey();if(!k)return;el.disabled=true;
+    await gpost('/grid/decide',{key:k,screen:el.dataset.s,date:curDay,id:el.dataset.id,decision:el.dataset.dec});
+    await openDay(curDay);render();
   });
 }
 async function openPicker(screen,bandId){
