@@ -104,6 +104,16 @@
   .offer .oact button{padding:4px 10px;font-size:12px}
   .offer .oact .ok{border-color:var(--teal2);color:var(--teal)}
   .offer .oact .no{border-color:#7a2b3a;color:#e87ba4}
+  .hrslabel{font-size:11px;color:var(--dim);margin:10px 0 4px}
+  .hours{display:grid;grid-template-columns:repeat(24,1fr);gap:2px}
+  .hr{height:24px;border-radius:3px;background:var(--panel2);border:1px solid transparent;font-size:9px;display:flex;align-items:center;justify-content:center;color:var(--dim);cursor:pointer}
+  .hr:hover{border-color:var(--teal)} .hr.off{opacity:.3;cursor:default} .hr.now{outline:1.5px solid var(--teal);outline-offset:-1px}
+  .hsum{font-size:12px;color:var(--dim);margin-bottom:8px} .hsub{font-size:11px;color:var(--dim);margin:12px 0 4px}
+  .loopbar{display:flex;height:58px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+  .lslot{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:9px;color:var(--dim);background:var(--panel2);border-right:1px solid #000a}
+  .lslot:last-child{border-right:0} .lslot img{width:28px;height:28px;object-fit:cover;border-radius:3px} .lslot.now{outline:2px solid var(--teal);outline-offset:-2px}
+  .lrow{display:flex;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--line);font-size:12px} .lrow.now{color:var(--teal)}
+  .lrow .lt{color:var(--dim);font-size:11px;min-width:96px;flex:none}
 </style>
 </head>
 <body>
@@ -146,6 +156,7 @@
 
 <div class="ov" id="ov"><div class="modal"><span class="x" id="mx">✕</span><h3 id="mh">Día</h3><div id="mb"></div></div></div>
 <div class="ov" id="pickov"><div class="modal"><span class="x" id="pickx">✕</span><h3>Elegir creativo del Stock</h3><input id="pickq" placeholder="Filtrar por título o categoría…" style="width:100%;margin-bottom:10px"><div id="pickgrid" class="pickgrid"></div></div></div>
+<div class="ov" id="hourov"><div class="modal"><span class="x" id="hourx">✕</span><h3 id="hourh">Hora</h3><div id="hourb"></div></div></div>
 
 <script>
 const API='https://api.admira.store';
@@ -213,6 +224,41 @@ const occOf=m=>(m&&m.total)?Math.round((m.own+m.paid)/m.total*100):0;
 const eur=n=>'€'+Math.round(n||0).toLocaleString('es-ES');
 // marcadores de venta (oro) y ofertas pendientes (ámbar) por celda
 function marks(m){let s='';if(m&&m.paid)s+='<span class="mk sold" title="'+m.paid+' vendido(s) · '+eur(m.rev)+'"></span>';if(m&&m.pend)s+='<span class="mk pend" title="'+m.pend+' oferta(s) pendiente(s)"></span>';return s?`<span class="mks">${s}</span>`:'';}
+// ── desglose por horas y zoom a minutos ──
+let DAY={}; // screenId -> {bands, cfg} de la última apertura de día
+const kindLabel=k=>k==='own'?'Propio':k==='paid'?'Vendido':k==='pending'?'Pendiente':'Stock';
+function bandAt(bands,h){return (bands||[]).find(b=>{const f=parseInt(b.from)||0;const t=(b.to==='23:59'||b.to==='24:00')?24:(parseInt(b.to)||0);return h>=f&&h<t;});}
+function hoursBar(bands,screenId,key){
+  let out='';const nh=(key===ymd(today))?new Date().getHours():-1;
+  for(let hr=0;hr<24;hr++){
+    const b=bandAt(bands,hr);let cls='hr',style='';
+    if(!b)cls+=' off';
+    else{const occ=b.capacity?Math.round((b.own+b.paid)/b.capacity*100):0;const[bg,fg]=heat(occ);style=`background:${bg};color:${fg};`;}
+    if(hr===nh)cls+=' now';
+    out+=`<span class="${cls}" style="${style}" ${b?`data-s="${screenId}" data-h="${hr}"`:''} title="${String(hr).padStart(2,'0')}:00${b?' · '+b.label:' · sin franja'}">${hr}</span>`;
+  }
+  return out;
+}
+const t2=n=>String(Math.floor(n)).padStart(2,'0');
+const mmss=s=>t2(s/60)+':'+t2(s%60);
+function openHour(screenId,hr){
+  const dd=DAY[screenId]||{bands:[],cfg:{}};const b=bandAt(dd.bands,hr);const ss=dd.cfg.slotSeconds||10;
+  const sLabel=(LOCATIONS[locId].screens.find(x=>x.id===screenId)||{}).label||screenId;
+  document.getElementById('hourh').textContent=`${sLabel} · ${t2(hr)}:00–${t2(hr)}:59`;
+  const hb=document.getElementById('hourb');document.getElementById('hourov').classList.add('show');
+  if(!b){hb.innerHTML='<div class="loading">Sin franja de emisión a esta hora · loop de Stock base.</div>';return;}
+  const slots=b.slots||[];const cap=b.capacity||slots.length||1;const looplen=cap*ss;const reps=Math.round(3600/looplen)||1;
+  let nowIdx=-1;const nd=new Date();
+  if(curDay===ymd(nd)&&nd.getHours()===hr){const sec=nd.getMinutes()*60+nd.getSeconds();nowIdx=Math.floor(sec/ss)%cap;}
+  const seg=slots.map((sl,i)=>{const img=sl.creative&&(sl.creative.type==='image'||sl.creative.type==='animation');
+    return `<div class="lslot${i===nowIdx?' now':''}" title="${kindLabel(sl.kind)}${sl.title?' · '+sl.title:''}">${img?`<img src="${sl.creative.url}">`:`<span>${kindLabel(sl.kind)[0]}</span>`}<span>${i*ss}s</span></div>`;}).join('');
+  const list=slots.map((sl,i)=>{const img=sl.creative&&(sl.creative.type==='image'||sl.creative.type==='animation');
+    const th=img?`<img src="${sl.creative.url}" style="width:30px;height:30px;object-fit:cover;border-radius:4px;flex:none">`:`<div class="ph" style="width:30px;height:30px;flex:none">·</div>`;
+    return `<div class="lrow${i===nowIdx?' now':''}"><span class="lt">${mmss(i*ss)}–${mmss(i*ss+ss)}</span>${th}<span style="min-width:62px">${kindLabel(sl.kind)}</span><span style="color:var(--dim)">${(sl.title||(sl.kind==='free'?'loop de Stock':'')).slice(0,34)}</span></div>`;}).join('');
+  hb.innerHTML=`<div class="hsum">Franja <b style="color:var(--teal)">${b.label}</b> · bucle de ${cap} slots × ${ss}s = ${looplen}s · se repite ${reps}× durante la hora${nowIdx>=0?' · <b style="color:var(--teal)">▶ ahora</b>':''}</div>`+
+    `<div class="loopbar">${seg}</div>`+
+    `<div class="hsub">Minuto tipo — qué suena segundo a segundo (se repite toda la hora):</div>${list}`;
+}
 // Heatmap: intensidad de teal según ocupación (own+vendidos / capacidad). Devuelve [bg,fg,borde].
 function heat(occ){
   if(occ<=0)  return ['#13211c','var(--dim)','transparent'];
@@ -376,8 +422,9 @@ async function openDay(key){
     let j=null;try{j=await (await fetch(`${API}/grid/day?screen=${s.id}&date=${key}&_=${Date.now()}`,{cache:'no-store'})).json();}catch(e){}
     const byBand={},seen=new Set();
     ((j&&j.bands)||[]).forEach(b=>(b.slots||[]).forEach(sl=>{if(sl.kind==='own'&&sl.creative&&!seen.has(sl.bookingId)){seen.add(sl.bookingId);byBand[b.id]=sl;}}));
-    return {s,byBand,pending:(j&&j.pendingOffers)||[]};
+    return {s,byBand,pending:(j&&j.pendingOffers)||[],bands:(j&&j.bands)||[],cfg:(j&&j.config)||{}};
   }));
+  DAY={};byScreen.forEach(x=>{DAY[x.s.id]={bands:x.bands,cfg:x.cfg};});
   let html=`<div class="editbar">Aplicar a <select id="scope"><option value="day">solo este día</option><option value="week">esta semana</option><option value="month">este mes</option></select>`+
     `<span class="kstate">${gkGet()?'🔓 edición activa':'🔒 pon la clave para editar'}</span></div>`;
   const pend=byScreen.flatMap(({s,pending})=>pending.map(o=>({s,o})));
@@ -387,7 +434,7 @@ async function openDay(key){
         `<div class="oact"><button class="ok" data-dec="accept" data-s="${s.id}" data-id="${o.id}">Aceptar</button><button class="no" data-dec="reject" data-s="${s.id}" data-id="${o.id}">Rechazar</button></div></div>`).join('')+
       `</div>`;
   }
-  byScreen.forEach(({s,byBand})=>{
+  byScreen.forEach(({s,byBand,bands:dayBands})=>{
     const bands=BANDS.map(([bid,blab])=>{
       const sl=byBand[bid];
       const has=!!sl;
@@ -398,9 +445,11 @@ async function openDay(key){
         `<div class="bact"><button data-act="set" data-s="${s.id}" data-b="${bid}" title="${has?'cambiar':'programar'}">${has?'✎':'+'}</button>`+
         `${has?`<button data-act="clr" data-s="${s.id}" data-b="${bid}" title="quitar">✕</button>`:''}</div></div>`;
     }).join('');
-    html+=`<div class="scr"><div class="sh">${s.label}</div><div class="bands">${bands}</div></div>`;
+    html+=`<div class="scr"><div class="sh">${s.label}</div><div class="bands">${bands}</div>`+
+      `<div class="hrslabel">Desglose por horas · clic para ver los minutos</div><div class="hours">${hoursBar(dayBands,s.id,key)}</div></div>`;
   });
   mb.innerHTML=html;
+  mb.querySelectorAll('.hr[data-h]').forEach(el=>el.onclick=()=>openHour(el.dataset.s,+el.dataset.h));
   mb.querySelectorAll('[data-act]').forEach(el=>el.onclick=async()=>{
     const act=el.dataset.act,sc=el.dataset.s,bd=el.dataset.b;
     if(act==='set'){openPicker(sc,bd);return;}
@@ -439,6 +488,8 @@ document.getElementById('ov').onclick=e=>{if(e.target.id==='ov')document.getElem
 document.getElementById('pickx').onclick=()=>document.getElementById('pickov').classList.remove('show');
 document.getElementById('pickov').onclick=e=>{if(e.target.id==='pickov')document.getElementById('pickov').classList.remove('show');};
 document.getElementById('pickq').oninput=()=>renderPick(STOCK||[]);
+document.getElementById('hourx').onclick=()=>document.getElementById('hourov').classList.remove('show');
+document.getElementById('hourov').onclick=e=>{if(e.target.id==='hourov')document.getElementById('hourov').classList.remove('show');};
 document.getElementById('keybtn').onclick=()=>{const k=(prompt('Clave de edición (GRID_KEY):',gkGet())||'').trim();gkSet(k);if(curDay&&document.getElementById('ov').classList.contains('show'))openDay(curDay);};
 function step(dir){
   if(view==='year')cursor.setFullYear(cursor.getFullYear()+dir);
