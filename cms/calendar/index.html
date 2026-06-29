@@ -139,6 +139,7 @@
     <button id="next">›</button>
     <button id="today">Hoy</button>
     <button id="salesBtn" title="Informe de ventas del periodo">📊 Ventas</button>
+    <button id="realBtn" title="Planificado vs emitido real (proof-of-play)">📡 Real</button>
     <button id="keybtn" title="Clave de edición (GRID_KEY)">🔑</button>
   </div>
   <div class="stats" id="stats"></div>
@@ -173,6 +174,7 @@
   <div id="pickgrid" class="pickgrid"></div></div></div>
 <div class="ov" id="hourov"><div class="modal"><span class="x" id="hourx">✕</span><h3 id="hourh">Hora</h3><div id="hourb"></div></div></div>
 <div class="ov" id="salesov"><div class="modal"><span class="x" id="salesx">✕</span><h3 id="salesh">Ventas</h3><div id="salesb"></div></div></div>
+<div class="ov" id="realov"><div class="modal"><span class="x" id="realx">✕</span><h3 id="realh">Emisión real</h3><div id="realb"></div></div></div>
 
 <script>
 const API='https://api.admira.store';
@@ -533,6 +535,33 @@ async function openSales(){
   html+=`<div class="hsub">Detalle</div>`+sales.slice().sort((x,y)=>x.date<y.date?-1:1).map(s=>`<div class="lrow"><span class="lt">${s.date}</span><span style="flex:1">${s.advertiser} · ${(s.title||'').slice(0,28)} <span style="color:var(--dim)">· ${s.screenName} · ${s.bandId}${s.offer?' · oferta':''}</span></span><span style="color:var(--teal)">${eur(s.revenue)}</span></div>`).join('');
   body.innerHTML=html;
 }
+async function openReal(){
+  const [a,b]=currentRange();const screens=activeScreens();const ids=screens.map(s=>s.id).join(',');
+  const fy=ymd(a),ty=ymd(b),f8=fy.replace(/-/g,''),t8=ty.replace(/-/g,'');
+  const body=document.getElementById('realb');
+  document.getElementById('realh').textContent='📡 Planificado vs emitido · '+fy+(fy!==ty?' → '+ty:'');
+  body.innerHTML='<div class="loading">Cargando emisión real…</div>';document.getElementById('realov').classList.add('show');
+  let plan={screens:{}},emit={screens:{}};
+  try{[plan,emit]=await Promise.all([
+    fetch(`${API}/grid/range?screens=${encodeURIComponent(ids)}&from=${fy}&to=${ty}&_=${Date.now()}`,{cache:'no-store'}).then(r=>r.json()),
+    fetch(`${API}/emit/range?loc=${encodeURIComponent(locId)}&from=${f8}&to=${t8}&_=${Date.now()}`,{cache:'no-store'}).then(r=>r.json())
+  ]);}catch(e){}
+  const days=[];for(let d=new Date(a);d<=b;d.setDate(d.getDate()+1))days.push(ymd(d).replace(/-/g,''));
+  let totPlays=0,totSecs=0;const assetAgg={};
+  const rows=screens.map(s=>{
+    const pd=((plan.screens||{})[s.id]||{}).days||[];
+    const planned=pd.reduce((n,x)=>n+(x.own||0)+(x.paid||0),0);
+    const es=(emit.screens||{})[s.id]||{};let plays=0,secs=0;
+    days.forEach(d=>{const e=es[d];if(e){plays+=e.totalPlays||0;secs+=e.totalSecs||0;Object.entries(e.assets||{}).forEach(([k,v])=>{const g=assetAgg[k]||(assetAgg[k]={title:v.title,n:0});g.n+=v.n||0;});}});
+    totPlays+=plays;totSecs+=secs;return {label:s.label,planned,plays,secs};
+  });
+  let html=`<div class="stats" style="margin-bottom:14px"><div class="stat"><div class="k">Reproducciones</div><div class="v">${totPlays}</div></div><div class="stat"><div class="k">Segundos emitidos</div><div class="v">${totSecs}</div></div><div class="stat"><div class="k">Dispositivos activos</div><div class="v">${rows.filter(r=>r.plays>0).length}/${rows.length}</div></div></div>`;
+  html+=`<table class="saletbl"><thead><tr><th>Dispositivo</th><th>Programado</th><th>Emitido</th><th>Segundos</th><th class="r">Estado</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td>${r.label}</td><td>${r.planned} slots</td><td>${r.plays}</td><td>${r.secs}s</td><td class="r">${r.plays>0?'<span style="color:var(--teal)">● emitiendo</span>':'<span style="color:var(--dim)">○ sin emisión</span>'}</td></tr>`).join('')+`</tbody></table>`;
+  const top=Object.values(assetAgg).sort((x,y)=>y.n-x.n).slice(0,8);
+  if(top.length)html+=`<div class="hsub">Más emitido</div>`+top.map(t=>`<div class="lrow"><span style="flex:1">${(t.title||'—').slice(0,42)}</span><span style="color:var(--teal)">${t.n}×</span></div>`).join('');
+  body.innerHTML=html;
+}
 const isModal=()=>document.getElementById('ov').classList.contains('show');
 async function refreshEdit(){ if(isModal())await buildDay(curDay,document.getElementById('mb')); render(); }
 async function openDay(key){
@@ -605,6 +634,9 @@ document.getElementById('keybtn').onclick=()=>{const k=(prompt('Clave de edició
 document.getElementById('salesBtn').onclick=openSales;
 document.getElementById('salesx').onclick=()=>document.getElementById('salesov').classList.remove('show');
 document.getElementById('salesov').onclick=e=>{if(e.target.id==='salesov')document.getElementById('salesov').classList.remove('show');};
+document.getElementById('realBtn').onclick=openReal;
+document.getElementById('realx').onclick=()=>document.getElementById('realov').classList.remove('show');
+document.getElementById('realov').onclick=e=>{if(e.target.id==='realov')document.getElementById('realov').classList.remove('show');};
 function step(dir){
   if(view==='year')cursor.setFullYear(cursor.getFullYear()+dir);
   else if(view==='week')cursor.setDate(cursor.getDate()+7*dir);
