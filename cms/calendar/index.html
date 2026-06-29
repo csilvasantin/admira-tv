@@ -95,6 +95,8 @@
   .pk img{width:100%;height:78px;object-fit:cover;display:block}
   .pk .pkv{height:78px;display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:20px}
   .pk .pkt{font-size:10px;padding:4px 6px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .upbtn{display:inline-flex;align-items:center;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--txt);font-size:13px;cursor:pointer;white-space:nowrap}
+  .upbtn:hover{border-color:var(--teal2)}
   .offers{border:1px solid var(--amber2);background:#1c1607;border-radius:10px;padding:10px 12px;margin-bottom:14px}
   .offers .oh{font-size:13px;font-weight:600;color:var(--amber);margin-bottom:8px}
   .offer{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:6px 0;border-top:1px solid #2a230c}
@@ -162,7 +164,11 @@
     <input id="sellCpm" type="number" min="0" step="1" placeholder="CPM €" style="width:120px">
     <span style="align-self:center;font-size:11px;color:var(--dim)">→ elige la cuña</span>
   </div>
-  <input id="pickq" placeholder="Filtrar por título o categoría…" style="width:100%;margin-bottom:10px"><div id="pickgrid" class="pickgrid"></div></div></div>
+  <div style="display:flex;gap:8px;margin-bottom:10px">
+    <input id="pickq" placeholder="Filtrar por título o categoría…" style="flex:1">
+    <label class="upbtn" title="Subir un creativo nuevo al Stock y usarlo">⬆ Subir<input type="file" id="upfile" hidden></label>
+  </div>
+  <div id="pickgrid" class="pickgrid"></div></div></div>
 <div class="ov" id="hourov"><div class="modal"><span class="x" id="hourx">✕</span><h3 id="hourh">Hora</h3><div id="hourb"></div></div></div>
 
 <script>
@@ -323,6 +329,16 @@ async function clearBand(screen,bandId,key){
   const k=ensureKey();if(!k)return false;
   await Promise.all(scopeDates(key).map(async date=>{for(const id of await bandOwnIds(screen,date,bandId)) await gpost('/grid/unbook',{key:k,screen,date,id});}));
   return true;
+}
+async function uploadCreative(file){ // sube un creativo nuevo al Stock (/stock/publish) y lo devuelve como item
+  const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]||'');r.onerror=rej;r.readAsDataURL(file);});
+  const type=file.type.startsWith('audio')?'audio':file.type.startsWith('video')?'video':'image';
+  const title=file.name.replace(/\.[^.]+$/,'').slice(0,80);
+  const d=await gpost('/stock/publish',{type,motor:'upload-cms',mime:file.type||'application/octet-stream',base64:b64,title});
+  if(!d||!d.url)throw new Error((d&&d.error)||'sin url');
+  const it={id:d.id,type,url:d.url,title,category:null};
+  if(STOCK)STOCK.unshift(it);
+  return it;
 }
 async function sellSpot(screen,bandId,item,advertiser,cpm,key){ // vende una cuña/spot: slot 'sold' (additivo, no toca el own)
   const k=ensureKey();if(!k)return false;
@@ -513,6 +529,7 @@ async function openPicker(screen,bandId,sell){
   pickCtx={screen,bandId,audio:!!surf.audio,sell:!!sell};
   document.querySelector('#pickov h3').textContent=sell?('💶 Vender '+(surf.audio?'cuña de audio':'spot')+' · '+surf.label):(surf.audio?'Elegir audio del Stock (Hilo Musical)':'Elegir creativo del Stock');
   document.getElementById('sellbar').style.display=sell?'flex':'none';
+  document.getElementById('upfile').accept=surf.audio?'audio/*':'image/*,video/*';
   document.getElementById('pickov').classList.add('show');
   document.getElementById('pickgrid').innerHTML='<div class="loading">Cargando Stock…</div>';
   renderPick(await loadStock());
@@ -544,6 +561,17 @@ document.getElementById('ov').onclick=e=>{if(e.target.id==='ov')document.getElem
 document.getElementById('pickx').onclick=()=>document.getElementById('pickov').classList.remove('show');
 document.getElementById('pickov').onclick=e=>{if(e.target.id==='pickov')document.getElementById('pickov').classList.remove('show');};
 document.getElementById('pickq').oninput=()=>renderPick(STOCK||[]);
+document.getElementById('upfile').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  const grid=document.getElementById('pickgrid');grid.innerHTML='<div class="loading">Subiendo «'+f.name+'»…</div>';
+  try{
+    const it=await uploadCreative(f);
+    if(pickCtx&&pickCtx.sell){const adv=(document.getElementById('sellAdv').value||'Anunciante').trim();const cpm=+document.getElementById('sellCpm').value||0;await sellSpot(pickCtx.screen,pickCtx.bandId,it,adv,cpm,curDay);}
+    else await setBand(pickCtx.screen,pickCtx.bandId,it,curDay);
+    document.getElementById('pickov').classList.remove('show');document.getElementById('hourov').classList.remove('show');await refreshEdit();
+  }catch(err){grid.innerHTML='<div class="loading">Error al subir: '+err.message+'</div>';}
+  e.target.value='';
+};
 const closeHour=()=>{clearInterval(hourTimer);hourTimer=null;document.getElementById('hourov').classList.remove('show');};
 document.getElementById('hourx').onclick=closeHour;
 document.getElementById('hourov').onclick=e=>{if(e.target.id==='hourov')closeHour();};
