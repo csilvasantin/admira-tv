@@ -110,6 +110,10 @@
   .hours{display:grid;grid-template-columns:repeat(24,1fr);gap:2px}
   .hr{height:24px;border-radius:3px;background:var(--panel2);border:1px solid transparent;font-size:9px;display:flex;align-items:center;justify-content:center;color:var(--dim);cursor:pointer}
   .hr:hover{border-color:var(--teal)} .hr.off{opacity:.3;cursor:default} .hr.now{outline:1.5px solid var(--teal);outline-offset:-1px}
+  .hmatrix{display:flex;flex-direction:column;gap:5px;margin-bottom:18px}
+  .hmrow{display:grid;grid-template-columns:160px 1fr;gap:8px;align-items:center}
+  .hmlabel{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hh{display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--dim)}
   .hsum{font-size:12px;color:var(--dim);margin-bottom:8px} .hsub{font-size:11px;color:var(--dim);margin:12px 0 4px}
   .loopbar{display:flex;height:58px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
   .lslot{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:9px;color:var(--dim);background:var(--panel2);border-right:1px solid #000a}
@@ -489,7 +493,15 @@ const setNote=()=>{document.getElementById('note').innerHTML=
 
 function render(){fillSelectors();updateNav();(view==='year'?renderYear:view==='week'?renderWeek:view==='day'?renderDay:renderMonth)();}
 
-async function buildDay(key,host){
+function hoursMatrix(byScreen,key){
+  let h='<div class="hmatrix"><div class="hmrow"><div class="hmlabel" style="color:var(--dim);font-weight:400">Hora →</div><div class="hours">';
+  for(let i=0;i<24;i++)h+=`<span class="hh">${i}</span>`;
+  h+='</div></div>';
+  byScreen.forEach(({s,bands})=>{ h+=`<div class="hmrow"><div class="hmlabel">${s.label}</div><div class="hours">${hoursBar(bands,s.id,key)}</div></div>`; });
+  return h+'</div>';
+}
+async function buildDay(key,host,opts){
+  opts=opts||{};
   curDay=key;
   host.innerHTML='<div class="loading">Cargando creativos…</div>';
   const screens=activeScreens();
@@ -510,6 +522,7 @@ async function buildDay(key,host){
         `<div class="oact"><button class="ok" data-dec="accept" data-s="${s.id}" data-id="${o.id}">Aceptar</button><button class="no" data-dec="reject" data-s="${s.id}" data-id="${o.id}">Rechazar</button></div></div>`).join('')+
       `</div>`;
   }
+  if(opts.matrix)html+=`<div class="hrslabel">El día por horas · clic en una hora para ver los minutos</div>`+hoursMatrix(byScreen,key);
   byScreen.forEach(({s,byBand,bands:dayBands})=>{
     const bands=BANDS.map(([bid,blab])=>{
       const sl=byBand[bid];
@@ -524,7 +537,7 @@ async function buildDay(key,host){
         `${has?`<button data-act="clr" data-s="${s.id}" data-b="${bid}" title="quitar">✕</button>`:''}</div></div>`;
     }).join('');
     html+=`<div class="scr"><div class="sh">${s.label}</div><div class="bands">${bands}</div>`+
-      `<div class="hrslabel">Desglose por horas · clic para ver los minutos</div><div class="hours">${hoursBar(dayBands,s.id,key)}</div></div>`;
+      (opts.matrix?'':`<div class="hrslabel">Desglose por horas · clic para ver los minutos</div><div class="hours">${hoursBar(dayBands,s.id,key)}</div>`)+`</div>`;
   });
   host.innerHTML=html;
   host.querySelectorAll('.hr[data-h]').forEach(el=>el.onclick=()=>openHour(el.dataset.s,+el.dataset.h));
@@ -612,7 +625,7 @@ async function openDay(key){
 async function renderDay(){
   const key=ymd(cursor);
   document.getElementById('mtitle').textContent=new Date(key+'T00:00:00').toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
-  await buildDay(key,document.getElementById('view'));
+  await buildDay(key,document.getElementById('view'),{matrix:true});
   const mm=(await range(cursor,cursor))[key]||{own:0,paid:0,total:0,rev:0,pend:0};
   setStats([['Ocupación',occOf(mm)+'%'],['Propio · vendido',mm.own+' · '+mm.paid],['Ingresos',eur(mm.rev)],['Pendientes',mm.pend]]);
   setNote();
