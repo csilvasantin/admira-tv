@@ -126,8 +126,8 @@
   <div class="controls">
     <label style="font-size:12px;color:var(--dim)">Xpacio</label>
     <select id="loc"></select>
-    <label style="font-size:12px;color:var(--dim)">Pantalla</label>
-    <select id="scr"><option value="">Todas</option></select>
+    <label style="font-size:12px;color:var(--dim)">Dispositivo</label>
+    <select id="scr"><option value="">Todos</option></select>
     <span class="seg"><button id="vDay">Día</button><button id="vWeek">Semana</button><button id="vMonth" class="on">Mes</button><button id="vYear">Año</button></span>
     <span style="flex:1"></span>
     <select id="yr" title="Ir al año"></select>
@@ -197,7 +197,7 @@ const expectedPerDay=()=>activeScreens().length*4;
 
 function fillSelectors(){
   document.getElementById('loc').innerHTML=Object.entries(LOCATIONS).map(([k,v])=>`<option value="${k}" ${k===locId?'selected':''}>${v.name}</option>`).join('');
-  document.getElementById('scr').innerHTML='<option value="">Todas</option>'+LOCATIONS[locId].screens.map(s=>`<option value="${s.id}" ${s.id===scrId?'selected':''}>${s.label}</option>`).join('');
+  document.getElementById('scr').innerHTML='<option value="">Todos</option>'+LOCATIONS[locId].screens.map(s=>`<option value="${s.id}" ${s.id===scrId?'selected':''}>${s.label}</option>`).join('');
   document.getElementById('vDay').classList.toggle('on',view==='day');
   document.getElementById('vWeek').classList.toggle('on',view==='week');
   document.getElementById('vMonth').classList.toggle('on',view==='month');
@@ -425,7 +425,7 @@ async function renderWeek(){
     html+='</div>';
   });
   let wo=0,we_=0,wPaid=0,wRev=0;
-  html+='<div class="wrow"><div class="wlabel" style="color:var(--teal)">Todas</div>';
+  html+='<div class="wrow"><div class="wlabel" style="color:var(--teal)">Todos</div>';
   dates.forEach(d=>{const key=ymd(d),a=agg[key]||{own:0,paid:0,total:0,rev:0,pend:0},occ=occOf(a);wo+=occ;if(occ>0)we_++;wPaid+=a.paid;wRev+=a.rev;const[bg,fg,bd]=heat(occ);
     html+=`<div class="wc${isToday(d)?' today':''}" data-d="${key}" title="Todas · ${key} · ${occ}% · ${eur(a.rev)}" style="background:${bg};color:${fg};border-color:${bd}">${marks(a)}<span class="pc">${occ?occ+'%':'·'}</span></div>`;});
   html+='</div></div>';host.innerHTML=html;
@@ -435,9 +435,9 @@ async function renderWeek(){
 }
 const setStats=arr=>{document.getElementById('stats').innerHTML=arr.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');};
 const setNote=()=>{document.getElementById('note').innerHTML=
-  'La intensidad del color de cada día indica su <b>ocupación</b> (contenido propio + vendido sobre la capacidad de las pantallas): a más lleno, más intenso. '+
+  'La intensidad del color de cada día indica su <b>ocupación</b> (contenido propio + vendido sobre la capacidad de los dispositivos): a más lleno, más intenso. '+
   'Una ventana rodante de un año se mantiene programada automáticamente cada madrugada; el calendario abarca 2026–2035. '+
-  'Los días al 0% emiten el loop de Stock genérico. Clic en un día para ver o <b>editar</b> los creativos por pantalla y franja (con la clave 🔑).';};
+  'Los días al 0% emiten el loop de Stock genérico. Clic en un día para ver o <b>editar</b> los creativos por dispositivo y franja (con la clave 🔑).';};
 
 function render(){fillSelectors();updateNav();(view==='year'?renderYear:view==='week'?renderWeek:view==='day'?renderDay:renderMonth)();}
 
