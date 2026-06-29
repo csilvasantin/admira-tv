@@ -18,6 +18,7 @@
   .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}
   select,button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:13px;cursor:pointer}
   button:hover{border-color:var(--teal2)}
+  button:disabled{opacity:.3;cursor:default;border-color:var(--line)}
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
   .seg button{border:0;border-radius:0;background:var(--panel)}
   .seg button.on{background:var(--teal2);color:#fff}
@@ -80,6 +81,7 @@
     <select id="scr"><option value="">Todas</option></select>
     <span class="seg"><button id="vMonth" class="on">Mes</button><button id="vYear">Año</button></span>
     <span style="flex:1"></span>
+    <select id="yr" title="Ir al año"></select>
     <button id="prev">‹</button>
     <div class="mtitle" id="mtitle">—</div>
     <button id="next">›</button>
@@ -115,8 +117,10 @@ const qs=new URLSearchParams(location.search);
 let locId=qs.get('loc')&&LOCATIONS[qs.get('loc')]?qs.get('loc'):'xtanco-valencia';
 let scrId=qs.get('screen')||'';
 let view=qs.get('view')==='year'?'year':'month';
+const MIN_YEAR=2026, MAX_YEAR=2035; // el calendario empieza en 2026 y dura 10 años
 const today=new Date();
-let cursor=new Date(today.getFullYear(),today.getMonth(),1);
+function clampCursor(){const y=cursor.getFullYear();if(y<MIN_YEAR)cursor=new Date(MIN_YEAR,0,1);else if(y>MAX_YEAR)cursor=new Date(MAX_YEAR,11,1);}
+let cursor=new Date(today.getFullYear(),today.getMonth(),1);clampCursor();
 
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
@@ -129,6 +133,16 @@ function fillSelectors(){
   document.getElementById('scr').innerHTML='<option value="">Todas</option>'+LOCATIONS[locId].screens.map(s=>`<option value="${s.id}" ${s.id===scrId?'selected':''}>${s.label}</option>`).join('');
   document.getElementById('vMonth').classList.toggle('on',view==='month');
   document.getElementById('vYear').classList.toggle('on',view==='year');
+  const yr=document.getElementById('yr');
+  if(!yr.dataset.filled){let o='';for(let y=MIN_YEAR;y<=MAX_YEAR;y++)o+=`<option value="${y}">${y}</option>`;yr.innerHTML=o;yr.dataset.filled='1';}
+}
+function updateNav(){
+  const y=cursor.getFullYear(),m=cursor.getMonth();
+  const atMin=view==='year'?y<=MIN_YEAR:(y<MIN_YEAR||(y===MIN_YEAR&&m===0));
+  const atMax=view==='year'?y>=MAX_YEAR:(y>MAX_YEAR||(y===MAX_YEAR&&m===11));
+  document.getElementById('prev').disabled=atMin;
+  document.getElementById('next').disabled=atMax;
+  document.getElementById('yr').value=String(y);
 }
 
 async function range(fromY,toY){ // suma own por fecha (todas las pantallas activas) en 1 petición
@@ -217,7 +231,7 @@ const setNote=()=>{const exp=expectedPerDay();document.getElementById('note').in
   'Una ventana rodante de un año se mantiene programada automáticamente cada madrugada. '+
   'Los días vacíos emiten el loop de Stock genérico. Clic en un día para ver los creativos.';};
 
-function render(){fillSelectors();(view==='year'?renderYear:renderMonth)();}
+function render(){fillSelectors();updateNav();(view==='year'?renderYear:renderMonth)();}
 
 async function openDay(key){
   const ov=document.getElementById('ov'),mb=document.getElementById('mb');
@@ -243,9 +257,10 @@ async function openDay(key){
 
 document.getElementById('mx').onclick=()=>document.getElementById('ov').classList.remove('show');
 document.getElementById('ov').onclick=e=>{if(e.target.id==='ov')document.getElementById('ov').classList.remove('show');};
-document.getElementById('prev').onclick=()=>{if(view==='year')cursor.setFullYear(cursor.getFullYear()-1);else cursor.setMonth(cursor.getMonth()-1);render();};
-document.getElementById('next').onclick=()=>{if(view==='year')cursor.setFullYear(cursor.getFullYear()+1);else cursor.setMonth(cursor.getMonth()+1);render();};
-document.getElementById('today').onclick=()=>{cursor=new Date(today.getFullYear(),today.getMonth(),1);render();};
+document.getElementById('prev').onclick=()=>{if(view==='year')cursor.setFullYear(cursor.getFullYear()-1);else cursor.setMonth(cursor.getMonth()-1);clampCursor();render();};
+document.getElementById('next').onclick=()=>{if(view==='year')cursor.setFullYear(cursor.getFullYear()+1);else cursor.setMonth(cursor.getMonth()+1);clampCursor();render();};
+document.getElementById('today').onclick=()=>{cursor=new Date(today.getFullYear(),today.getMonth(),1);clampCursor();render();};
+document.getElementById('yr').onchange=e=>{cursor.setFullYear(+e.target.value);clampCursor();render();};
 document.getElementById('vMonth').onclick=()=>{view='month';render();};
 document.getElementById('vYear').onclick=()=>{view='year';render();};
 document.getElementById('loc').onchange=e=>{locId=e.target.value;scrId='';render();};
