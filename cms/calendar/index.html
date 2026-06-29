@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendario de emisión · Admira.tv CMS</title>
+<meta name="description" content="Calendario de emisión en vivo de las pantallas DOOH del Xpacio — qué emite cada pantalla cada día, por franjas. Admira.tv CMS.">
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root{--bg:#070b0a;--panel:#0e1714;--panel2:#13211c;--line:#1d3329;--txt:#dff5ec;--dim:#7fa595;--teal:#19e89a;--teal2:#0f7e5a;--amber:#f5b431;--gray:#33433d}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;-webkit-font-smoothing:antialiased}
+  a{color:var(--teal);text-decoration:none}
+  header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.04em}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px var(--teal)}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 20px 60px}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}
+  select,button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:13px;cursor:pointer}
+  button:hover{border-color:var(--teal2)}
+  .mtitle{font-size:18px;font-weight:600;min-width:170px;text-align:center;text-transform:capitalize}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px}
+  .stat .k{font-size:11px;color:var(--dim)}
+  .stat .v{font-size:22px;font-weight:600}
+  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;font-size:11px;color:var(--dim);text-align:center;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cell{min-height:66px;border-radius:9px;border:1px solid var(--line);background:var(--panel);padding:7px 8px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;transition:transform .08s,border-color .12s}
+  .cell:hover{border-color:var(--teal);transform:translateY(-1px)}
+  .cell.out{opacity:.35;cursor:default}
+  .cell.out:hover{transform:none;border-color:var(--line)}
+  .cell.full{background:#0c241a;border-color:var(--teal2)}
+  .cell.part{background:#241f0c;border-color:#7a5a12}
+  .cell.today{outline:2px solid var(--teal);outline-offset:-1px}
+  .cnum{font-size:14px;font-weight:600}
+  .cfoot{font-size:11px;color:var(--dim);display:flex;align-items:center;gap:4px}
+  .cfoot.ok{color:var(--teal)} .cfoot.warn{color:var(--amber)}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:var(--dim);align-items:center}
+  .sw{width:13px;height:13px;border-radius:3px;display:inline-block;vertical-align:-2px;margin-right:5px}
+  .note{margin-top:14px;font-size:12px;color:var(--dim);line-height:1.6}
+  /* modal */
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .ov.show{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:760px;width:100%;max-height:85vh;overflow:auto;padding:18px 20px}
+  .modal h3{margin:0 0 14px;font-size:16px;text-transform:lowercase}
+  .modal h3::first-letter{text-transform:uppercase}
+  .scr{margin-bottom:16px}
+  .scr .sh{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--teal)}
+  .bands{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .band{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;gap:8px;align-items:center}
+  .band img{width:40px;height:40px;object-fit:cover;border-radius:5px;flex:none;background:#000}
+  .band .bt{font-size:11px;color:var(--dim)} .band .bn{font-size:12px}
+  .x{float:right;cursor:pointer;color:var(--dim);font-size:18px;line-height:1}
+  .loading{color:var(--dim);font-size:13px;padding:20px 0;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span> ADMIRA.TV · CMS · CALENDARIO DE EMISIÓN</div>
+  <div><a href="/cms.html">← CMS</a> &nbsp;·&nbsp; <a href="/canal.html">Canal</a></div>
+</header>
+<div class="wrap">
+  <div class="controls">
+    <label style="font-size:12px;color:var(--dim)">Xpacio</label>
+    <select id="loc"></select>
+    <label style="font-size:12px;color:var(--dim)">Pantalla</label>
+    <select id="scr"><option value="">Todas</option></select>
+    <span style="flex:1"></span>
+    <button id="prev">‹</button>
+    <div class="mtitle" id="mtitle">—</div>
+    <button id="next">›</button>
+    <button id="today">Hoy</button>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="dow"><div>lun</div><div>mar</div><div>mié</div><div>jue</div><div>vie</div><div>sáb</div><div>dom</div></div>
+  <div class="cal" id="cal"><div class="loading">Cargando parrilla…</div></div>
+  <div class="legend">
+    <span><span class="sw" style="background:#0c241a;border:1px solid var(--teal2)"></span>completo (todas las pantallas)</span>
+    <span><span class="sw" style="background:#241f0c;border:1px solid #7a5a12"></span>parcial</span>
+    <span><span class="sw" style="background:var(--panel);border:1px solid var(--line)"></span>vacío · loop de Stock</span>
+    <span><span class="sw" style="background:transparent;border:2px solid var(--teal)"></span>hoy</span>
+  </div>
+  <div class="note" id="note"></div>
+</div>
+
+<div class="ov" id="ov"><div class="modal"><span class="x" id="mx">✕</span><h3 id="mh">Día</h3><div id="mb"></div></div></div>
+
+<script>
+const API='https://api.admira.store';
+const LOCATIONS={
+  'xtanco-valencia':{name:'Xtanco Valencia',circuit:'xtanco',screens:[
+    {id:'xtanco-valencia-a',label:'A · Lotería'},
+    {id:'xtanco-valencia-b',label:'B · Vapeo/Tabaco'},
+    {id:'xtanco-valencia-c',label:'C · Bebidas'},
+    {id:'xtanco-valencia-d',label:'D · Ofertas'},
+  ]},
+};
+const BANDS=[['manana','Mañana'],['mediodia','Mediodía'],['tarde','Tarde'],['noche','Noche']];
+const MONTHS=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const qs=new URLSearchParams(location.search);
+let locId=qs.get('loc')&&LOCATIONS[qs.get('loc')]?qs.get('loc'):'xtanco-valencia';
+let scrId=qs.get('screen')||'';
+const today=new Date();
+let view=new Date(today.getFullYear(),today.getMonth(),1);
+
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const isToday=d=>ymd(d)===ymd(today);
+function activeScreens(){const L=LOCATIONS[locId];return scrId?L.screens.filter(s=>s.id===scrId):L.screens;}
+
+function fillSelectors(){
+  const locSel=document.getElementById('loc');
+  locSel.innerHTML=Object.entries(LOCATIONS).map(([k,v])=>`<option value="${k}" ${k===locId?'selected':''}>${v.name}</option>`).join('');
+  const scrSel=document.getElementById('scr');
+  scrSel.innerHTML='<option value="">Todas</option>'+LOCATIONS[locId].screens.map(s=>`<option value="${s.id}" ${s.id===scrId?'selected':''}>${s.label}</option>`).join('');
+}
+
+async function gridDay(screen,date){
+  try{const r=await fetch(`${API}/grid/day?screen=${encodeURIComponent(screen)}&date=${date}`,{cache:'no-store'});return await r.json();}
+  catch(e){return null;}
+}
+
+function monthDays(){ // celdas del calendario (lunes a domingo) que cubren el mes de `view`
+  const first=new Date(view.getFullYear(),view.getMonth(),1);
+  const startOffset=(first.getDay()+6)%7; // 0=lunes
+  const start=new Date(first);start.setDate(first.getDate()-startOffset);
+  const cells=[];for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);cells.push(d);}
+  // recortar última semana si está entera fuera del mes
+  while(cells.length>35 && cells[cells.length-1].getMonth()!==view.getMonth() && cells[cells.length-7].getMonth()!==view.getMonth()) cells.splice(-7);
+  return cells;
+}
+
+async function render(){
+  fillSelectors();
+  document.getElementById('mtitle').textContent=MONTHS[view.getMonth()]+' '+view.getFullYear();
+  const cal=document.getElementById('cal');
+  cal.innerHTML='<div class="loading">Cargando parrilla…</div>';
+  const cells=monthDays();
+  const screens=activeScreens();
+  const expected=screens.length; // 1 pieza own/franja → ownSlots esperado por pantalla = 4; "completo" = todas las pantallas con own>0 en las 4 franjas
+  // pedir ownSlots por (día,pantalla) en paralelo
+  const inMonth=cells.filter(d=>d.getMonth()===view.getMonth());
+  const data={}; // ymd -> own total
+  await Promise.all(inMonth.flatMap(d=>screens.map(async s=>{
+    const j=await gridDay(s.id,ymd(d));
+    const own=(j&&j.totals&&j.totals.ownSlots)||0;
+    data[ymd(d)]=(data[ymd(d)]||0)+own;
+  })));
+  const maxOwn=expected*4; // 4 franjas
+  let progDays=0,totalOwn=0;
+  cal.innerHTML='';
+  cells.forEach(d=>{
+    const out=d.getMonth()!==view.getMonth();
+    const key=ymd(d);const own=data[key]||0;
+    const div=document.createElement('div');
+    div.className='cell'+(out?' out':'')+(isToday(d)?' today':'');
+    let foot='—',fc='';
+    if(!out){
+      if(own>=maxOwn){div.classList.add('full');foot='<i>✓</i> '+own;fc='ok';progDays++;}
+      else if(own>0){div.classList.add('part');foot='◑ '+own;fc='warn';}
+      else{foot='Stock';}
+      totalOwn+=own;
+      div.onclick=()=>openDay(d);
+    }
+    div.innerHTML=`<div class="cnum">${d.getDate()}</div><div class="cfoot ${fc}">${foot}</div>`;
+    cal.appendChild(div);
+  });
+  document.getElementById('stats').innerHTML=
+    stat('Xpacio',LOCATIONS[locId].name)+
+    stat('Pantallas',screens.length)+
+    stat('Días completos',progDays+' / '+inMonth.length)+
+    stat('Piezas own (mes)',totalOwn);
+  document.getElementById('note').innerHTML=
+    'Cada día completo lleva '+(expected*4)+' piezas propias ('+expected+' pantalla'+(expected>1?'s':'')+' × 4 franjas). '+
+    'Una ventana rodante de 30 días se mantiene programada automáticamente cada madrugada. '+
+    'Los días vacíos emiten el loop de Stock genérico. Clic en un día para ver los creativos.';
+}
+const stat=(k,v)=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+
+async function openDay(d){
+  const ov=document.getElementById('ov');const mb=document.getElementById('mb');
+  document.getElementById('mh').textContent=d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  mb.innerHTML='<div class="loading">Cargando creativos…</div>';ov.classList.add('show');
+  const screens=activeScreens();
+  const parts=await Promise.all(screens.map(async s=>{
+    const j=await gridDay(s.id,ymd(d));
+    const byBand={};const seen=new Set();
+    ((j&&j.bands)||[]).forEach(b=>{(b.slots||[]).forEach(sl=>{
+      if(sl.kind==='own'&&sl.creative&&!seen.has(sl.bookingId)){seen.add(sl.bookingId);byBand[b.id]=sl;}
+    });});
+    const bands=BANDS.map(([bid,blab])=>{
+      const sl=byBand[bid];
+      if(!sl)return `<div class="band"><div><div class="bt">${blab}</div><div class="bn" style="color:var(--dim)">— Stock</div></div></div>`;
+      const u=sl.creative.url||'';const isImg=(sl.creative.type==='image'||sl.creative.type==='animation');
+      const thumb=isImg?`<img src="${u}" alt="" loading="lazy">`:`<div style="width:40px;height:40px;border-radius:5px;background:#000;display:flex;align-items:center;justify-content:center;color:var(--teal);flex:none">▶</div>`;
+      return `<div class="band">${thumb}<div><div class="bt">${blab}</div><div class="bn">${(sl.title||'').slice(0,40)}</div></div></div>`;
+    }).join('');
+    return `<div class="scr"><div class="sh">${s.label}</div><div class="bands">${bands}</div></div>`;
+  }));
+  mb.innerHTML=parts.join('');
+}
+document.getElementById('mx').onclick=()=>document.getElementById('ov').classList.remove('show');
+document.getElementById('ov').onclick=e=>{if(e.target.id==='ov')document.getElementById('ov').classList.remove('show');};
+document.getElementById('prev').onclick=()=>{view.setMonth(view.getMonth()-1);render();};
+document.getElementById('next').onclick=()=>{view.setMonth(view.getMonth()+1);render();};
+document.getElementById('today').onclick=()=>{view=new Date(today.getFullYear(),today.getMonth(),1);render();};
+document.getElementById('loc').onchange=e=>{locId=e.target.value;scrId='';render();};
+document.getElementById('scr').onchange=e=>{scrId=e.target.value;render();};
+render();
+</script>
+</body>
+</html>
