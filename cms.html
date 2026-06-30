@@ -317,6 +317,13 @@
     <button class="fchip" data-f="off">○ Sin señal</button>
     <button class="fchip" data-f="cz">✅ Cazado</button>
   </span>
+  <select id="cmsSort" class="fchip" title="Ordenar la flota" style="cursor:pointer">
+    <option value="def">Orden: por defecto</option>
+    <option value="estado">Emitiendo primero</option>
+    <option value="sinsenal">Sin señal primero</option>
+    <option value="nombre">Nombre (A–Z)</option>
+    <option value="audiencia">Más audiencia</option>
+  </select>
   <span class="meta" id="filterCount"></span>
 </div>
 
@@ -478,7 +485,16 @@ async function load(){
   const dlStates = await Promise.all(devs.map(d=>fetchCache(d.screen)));   // descargas por player
   const now = Date.now();
   let online=0, withAud=0, robots=0;
-  const cards = devs.map((d,i)=>{
+  // orden elegido (sobre los índices, para no romper nows[i]/dlStates[i])
+  const onOf=i=>{const it=nows[i];return it&&it.ts&&(now-it.ts)<ONLINE_MS?1:0;};
+  const audOf=i=>{const it=nows[i];return (it&&it.aud&&it.aud.faces)||0;};
+  const order=devs.map((_,i)=>i);
+  if(CMS_SORT==='estado') order.sort((a,b)=>onOf(b)-onOf(a)||String(devs[a].name||'').localeCompare(String(devs[b].name||'')));
+  else if(CMS_SORT==='sinsenal') order.sort((a,b)=>onOf(a)-onOf(b)||String(devs[a].name||'').localeCompare(String(devs[b].name||'')));
+  else if(CMS_SORT==='nombre') order.sort((a,b)=>String(devs[a].name||devs[a].id).localeCompare(String(devs[b].name||devs[b].id)));
+  else if(CMS_SORT==='audiencia') order.sort((a,b)=>audOf(b)-audOf(a));
+  const cards = order.map((i)=>{
+    const d = devs[i];
     const it = nows[i];
     const isOn = it && it.ts && (now - it.ts) < ONLINE_MS;
     if(isOn) online++;
@@ -641,8 +657,10 @@ function applyCmsFilter(){
   });
   $('filterCount').textContent=shown+' visibles';
 }
-const APP_VERSION='v.30.06.2026.r2'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+const APP_VERSION='v.30.06.2026.r3'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
 document.getElementById('exportCsv').onclick=exportCSV;
+let CMS_SORT='def';
+document.getElementById('cmsSort').addEventListener('change',e=>{ CMS_SORT=e.target.value; load(); });
 let CMS_TIMER=null, CMS_PAUSED=false;
 function startAuto(){ if(CMS_TIMER)clearInterval(CMS_TIMER); CMS_TIMER=setInterval(()=>{if(!CMS_PAUSED)load();},10000); }
 loadProjects().then(load); startAuto();
