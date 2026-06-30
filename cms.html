@@ -840,7 +840,7 @@ document.addEventListener('keydown',e=>{
     case '?': toast('Atajos: / buscar · r recargar · p pausa · e CSV · m menú · d detalle','ok'); break;
   }
 });
-const APP_VERSION='v.30.06.2026.r12'; try{['appVerNav','brandVer','brandVerNav'].forEach(function(id){var el=document.getElementById(id); if(el)el.textContent=APP_VERSION;});}catch(_){} try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+const APP_VERSION='v.30.06.2026.r13'; try{['appVerNav','brandVer','brandVerNav'].forEach(function(id){var el=document.getElementById(id); if(el)el.textContent=APP_VERSION;});}catch(_){} try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
 let PREV_ON={}, PREV_INIT=false;
 function toast(msg,kind){ const t=document.createElement('div'); t.className='toast'+(kind?(' '+kind):''); t.textContent=msg; document.getElementById('toasts').appendChild(t); setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},6000); }
 document.getElementById('exportCsv').onclick=exportCSV;
