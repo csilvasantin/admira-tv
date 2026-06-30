@@ -2,7 +2,7 @@
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r18 */
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r19 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -10,7 +10,7 @@
   var active=(s&&s.dataset.active)||cfg.active||'';
   var title=(s&&s.dataset.title)||cfg.title||'';
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r18';
+  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r19';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
@@ -25,6 +25,22 @@
     {k:'help',       h:'/help/',                            ic:'❓',       t:'Ayuda'}
   ];
   if(!active){ var _here=_norm(location.pathname); for(var _i=0;_i<ITEMS.length;_i++){ if(_norm(ITEMS[_i].h)===_here){active=ITEMS[_i].k;break;} } }
+
+  // Iconos monolínea estilo Matrix (verde fósforo + glow, vía CSS). Heredan currentColor.
+  var _S='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">';
+  var ICONS={
+    flota:       _S+'<circle cx="12" cy="9" r="1.5"/><path d="M12 10.5V20M8.5 20h7"/><path d="M8.3 6.4a4.8 4.8 0 0 0 0 7.2M15.7 6.4a4.8 4.8 0 0 1 0 7.2"/><path d="M6 4.2a8 8 0 0 0 0 11.6M18 4.2a8 8 0 0 1 0 11.6"/></svg>',
+    calendar:    _S+'<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.2h17M8 3.5v3M16 3.5v3"/><circle cx="8.5" cy="13.5" r=".9" fill="currentColor" stroke="none"/><circle cx="12" cy="13.5" r=".9" fill="currentColor" stroke="none"/><circle cx="15.5" cy="13.5" r=".9" fill="currentColor" stroke="none"/></svg>',
+    condicional: _S+'<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3"/><path d="M12 1.6v3M12 19.4v3M1.6 12h3M19.4 12h3"/></svg>',
+    canal:       _S+'<rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8 20h8M12 16.5V20"/><path d="M10.4 8.1l4.2 2.9-4.2 2.9z" fill="currentColor" stroke="none"/></svg>',
+    mural:       _S+'<rect x="3.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.3"/></svg>',
+    comprar:     _S+'<circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M2.5 3.6h2.3l2.2 11.1a1.5 1.5 0 0 0 1.5 1.2h7.7a1.5 1.5 0 0 0 1.5-1.2l1.3-6.9H6.1"/></svg>',
+    alta:        _S+'<rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="M12 8v8M8 12h8"/></svg>',
+    help:        _S+'<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2-2.4 3.5"/><circle cx="12" cy="16.6" r=".5" fill="currentColor" stroke="none"/></svg>',
+    control:     _S+'<path d="M5 4v16M12 4v16M19 4v16"/><circle cx="5" cy="9" r="2"/><circle cx="12" cy="14.5" r="2"/><circle cx="19" cy="7" r="2"/></svg>'
+  };
+  function IC(k){ return ICONS[k]||''; }
+  try{ window.AdmiraIcon=IC; window.AdmiraIconSet=ICONS; }catch(_){}
 
   var CSS = [
    ":root{--admtb:52px}",
@@ -58,7 +74,14 @@
    ".admni:hover{background:#13203a;border-color:#26385e;color:#fff}",
    ".admni.on{background:rgba(122,162,255,.13);border-color:#2a3a66;color:#fff}",
    ".admni.on::before{content:'';position:absolute;left:1px;top:8px;bottom:8px;width:3px;border-radius:3px;background:#7aa2ff}",
-   ".admni .ic{flex:none;width:24px;text-align:center;font-size:17px}",
+   ".admni .ic{flex:none;width:24px;height:24px;display:grid;place-items:center}",
+   /* iconos Matrix: verde fósforo + glow, heredan currentColor */
+   ".admni .ic svg{width:20px;height:20px;display:block;color:#3df08a;filter:drop-shadow(0 0 2.5px rgba(61,240,138,.5));transition:color .15s,filter .15s}",
+   ".admni:hover .ic svg{color:#8effc4;filter:drop-shadow(0 0 5px rgba(61,240,138,.85))}",
+   ".admni.on .ic svg{color:#9dffce;filter:drop-shadow(0 0 6px rgba(61,240,138,.95))}",
+   ".admlinks a .dic{display:inline-grid;place-items:center;width:18px;height:18px;vertical-align:-4px;margin-right:8px}",
+   ".admlinks a .dic svg{width:15px;height:15px;color:#3df08a;filter:drop-shadow(0 0 2px rgba(61,240,138,.45))}",
+   ".admlinks a:hover .dic svg{color:#8effc4}",
    ".admni .t{transition:opacity .12s}",
    "@media(min-width:681px){html.admnav:not(.admnav-open) .admni:hover::after{content:attr(title);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:#0e1420;border:1px solid #26385e;color:#cdd8e8;padding:5px 9px;border-radius:7px;font:600 12px -apple-system,Segoe UI,sans-serif;white-space:nowrap;z-index:60;box-shadow:0 6px 18px #0008;pointer-events:none}}",
    ".admsep{height:1px;background:#1e2940;margin:7px 6px}",
@@ -94,18 +117,18 @@
 
   function navHTML(){
     var lis=ITEMS.map(function(i){
-      return '<a class="admni'+(i.k===active?' on':'')+'" href="'+i.h+'"'+(i.blank?' target="_blank" rel="noopener"':'')+(i.k===active?' aria-current="page"':'')+' title="'+i.t+'"><span class="ic">'+i.ic+'</span><span class="t">'+i.t+'</span></a>';
+      return '<a class="admni'+(i.k===active?' on':'')+'" href="'+i.h+'"'+(i.blank?' target="_blank" rel="noopener"':'')+(i.k===active?' aria-current="page"':'')+' title="'+i.t+'"><span class="ic">'+IC(i.k)+'</span><span class="t">'+i.t+'</span></a>';
     }).join("");
     return '<aside class="admside" id="admSide" aria-label="Navegación">'+lis+
       (cfg.extraNav||'')+
       '<div class="admspace"></div>'+
       '<div class="admsep"></div>'+
-      '<a class="admni" href="https://www.xpaceos.com/control/" target="_blank" rel="noopener" title="Control de propietario (XpaceOS)"><span class="ic">🏬</span><span class="t">Control ↗</span></a>'+
+      '<a class="admni" href="https://www.xpaceos.com/control/" target="_blank" rel="noopener" title="Control de propietario (XpaceOS)"><span class="ic">'+IC('control')+'</span><span class="t">Control ↗</span></a>'+
       '<div class="admfoot" id="admFoot">'+VER+'</div>'+
     '</aside>';
   }
   function detHTML(){
-    var links=ITEMS.map(function(i){return '<a href="'+i.h+'"'+(i.blank?' target="_blank" rel="noopener"':'')+'>'+i.ic+' '+i.t+'</a>';}).join("");
+    var links=ITEMS.map(function(i){return '<a href="'+i.h+'"'+(i.blank?' target="_blank" rel="noopener"':'')+'><span class="dic">'+IC(i.k)+'</span>'+i.t+'</a>';}).join("");
     return '<aside class="admdet" id="admDet" aria-label="Detalle">'+
       '<div class="hd">Detalle <span class="pro">PRO</span></div>'+
       (cfg.detailTop||'')+
