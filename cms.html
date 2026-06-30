@@ -11,17 +11,7 @@
   *{box-sizing:border-box}
   body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#11203a33,transparent),var(--bg);
        color:var(--ink);font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
-  /* barra superior horizontal estilo Codex: slim, ancho completo, fija */
-  header{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);z-index:50;display:flex;align-items:center;gap:11px;
-         padding:0 12px;background:#0a0e16ee;backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-  .topToggle{flex:none;width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:#0e1420;color:var(--ink);
-             font-size:16px;cursor:pointer;display:grid;place-items:center}
-  .topToggle:hover{border-color:var(--accent);color:#fff}
-  .topsub{color:var(--dim);font-size:12px;white-space:nowrap}
-  @media(max-width:760px){ .topsub{display:none} }
-  .brand{font-weight:800;letter-spacing:.5px;font-size:16px;white-space:nowrap}
-  .brand b{color:var(--accent)}
-  .brandVer{font:600 10.5px ui-monospace,monospace;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:1px 7px;margin-left:8px;vertical-align:2px;letter-spacing:.3px;white-space:nowrap}
+  /* el chrome (barra superior + sidebar + detalle) lo aporta /admira-nav.js */
   .sub{color:var(--dim);font-size:12px}
   .spacer{flex:1}
   .live{display:flex;align-items:center;gap:7px;font:600 12px ui-monospace,monospace;color:var(--dim)}
@@ -285,135 +275,42 @@
   .hitRow .hpiece{color:var(--air);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
   .hitRow .hslot{font:600 10px ui-monospace,monospace;color:var(--dim);border:1px solid var(--line);border-radius:5px;padding:1px 6px;flex:none}
   .hitsEmpty{padding:22px 14px;text-align:center;color:var(--dim);font-size:12.5px}
-  /* ── Menú lateral plegable estilo claude.ai (r8) ── */
-  :root{ --nav-w:64px; --topbar-h:52px; }
-  body{ padding-left:var(--nav-w); padding-top:var(--topbar-h); transition:padding-left .18s ease; }
-  body.nav-open{ --nav-w:238px; }
-  .sidenav{position:fixed;left:0;top:var(--topbar-h);bottom:0;width:var(--nav-w);background:#080b12;border-right:1px solid var(--line);
-           z-index:40;display:flex;flex-direction:column;gap:3px;padding:10px 9px;overflow-x:hidden;overflow-y:auto;
-           transition:width .18s ease;scrollbar-width:thin}
-  .sidenav::-webkit-scrollbar{width:6px} .sidenav::-webkit-scrollbar-thumb{background:#1e2940;border-radius:3px}
-  .navtoggle{flex:none;width:42px;height:42px;border-radius:11px;border:1px solid var(--line);background:#0e1420;color:var(--ink);
-             font-size:17px;cursor:pointer;display:grid;place-items:center;margin-bottom:4px}
-  .navtoggle:hover{border-color:var(--accent);color:#fff}
-  .navbrand{display:flex;align-items:center;gap:11px;padding:4px 8px 8px;white-space:nowrap;overflow:hidden}
-  .navbrand .logo{flex:none;font-size:19px;color:var(--accent)}
-  .navbrand .t{font-weight:800;letter-spacing:.5px;font-size:15px}
-  .navbrand .t b{color:var(--accent)}
-  .navlist{display:flex;flex-direction:column;gap:3px}
-  .navitem{display:flex;align-items:center;gap:13px;width:100%;padding:9px 10px;border-radius:11px;border:1px solid transparent;
-           background:transparent;color:var(--ink);font:600 13px -apple-system,Segoe UI,sans-serif;cursor:pointer;
-           text-decoration:none;white-space:nowrap;overflow:hidden;text-align:left}
-  .navitem:hover{background:#13203a;border-color:#26385e;color:#fff}
-  .navitem.active{background:rgba(122,162,255,.13);border-color:#2a3a66;color:#fff}
-  .navitem .ic{flex:none;width:24px;text-align:center;font-size:17px}
-  .navitem .t{transition:opacity .12s}
-  .navsep{height:1px;background:var(--line);margin:7px 6px}
-  .navspace{flex:1;min-height:6px}
-  .navfoot{padding:6px 10px;color:var(--dim);font:600 11px ui-monospace,monospace;white-space:nowrap;overflow:hidden}
-  /* plegado: ocultar etiquetas, dejar solo iconos */
-  body:not(.nav-open) .navitem .t,
-  body:not(.nav-open) .navbrand .t,
-  body:not(.nav-open) .navfoot{opacity:0;pointer-events:none}
-  /* r11: el repliegue es SOLO al pulsar el toggle (sin hover-expand) */
-  /* ── Panel de Detalle (pro) a la derecha — r12 ── */
-  body{ padding-right:0; transition:padding-left .18s ease, padding-right .18s ease; }
-  body.det-open{ padding-right:320px; }
-  .detpanel{position:fixed;top:var(--topbar-h);right:0;bottom:0;width:320px;background:#080b12;border-left:1px solid var(--line);
-            z-index:45;transform:translateX(100%);transition:transform .18s ease;overflow-y:auto;padding:14px 14px 30px;
-            display:flex;flex-direction:column;gap:12px;scrollbar-width:thin}
-  .detpanel::-webkit-scrollbar{width:6px} .detpanel::-webkit-scrollbar-thumb{background:#1e2940;border-radius:3px}
-  body.det-open .detpanel{transform:none}
-  .detHd{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800}
-  .detPro{font:700 9.5px ui-monospace,monospace;color:var(--accent);border:1px solid #2a3a66;border-radius:999px;padding:1px 6px;letter-spacing:.5px}
-  .detSec{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
-  .detSec h4{margin:0 0 6px;font:700 11px ui-monospace,monospace;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
-  .detRow{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:12.5px;color:var(--dim)}
-  .detRow b{color:var(--ink);font-weight:700;font-family:ui-monospace,monospace}
-  .detKeys{font:11.5px ui-monospace,monospace;color:var(--dim);line-height:1.9}
-  .detLinks{display:flex;flex-direction:column;gap:6px}
-  .detLinks a{color:var(--ink);text-decoration:none;font-size:13px;font-weight:600;padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:#0e1420}
-  .detLinks a:hover{border-color:var(--accent);color:#fff}
-  .topToggle.on{background:var(--accent);border-color:var(--accent);color:#04110b}
-  @media(max-width:680px){
-    body.det-open{padding-right:0}
-    .detpanel{width:min(320px,86vw)}
-    body{padding-left:0}
-    .sidenav{width:238px;transform:translateX(-100%);transition:transform .2s ease;box-shadow:12px 0 40px #000c}
-    body.nav-open .sidenav{transform:none}
-    body:not(.nav-open) .navitem .t,body:not(.nav-open) .navbrand .t,body:not(.nav-open) .navfoot{opacity:1;pointer-events:auto}
-    .navscrim{position:fixed;inset:0;background:#000a;z-index:39;display:none}
-    body.nav-open .navscrim{display:block}
-  }
+  /* el chrome (barra + sidebar + detalle) lo aporta /admira-nav.js — ver config al final del body */
 </style>
 </head>
 <body>
-<div class="navscrim" id="navScrim"></div>
-<aside class="sidenav" id="sidenav" aria-label="Navegación">
-  <nav class="navlist">
-    <a class="navitem active" href="/cms.html" title="Control de flota"><span class="ic">🛰</span><span class="t">Flota</span></a>
-    <a class="navitem" href="/cms/calendar/" title="Calendario de emisión"><span class="ic">🗓</span><span class="t">Calendario</span></a>
-    <button class="navitem" id="openProg" type="button" title="Programar la parrilla con contenido propio del Stock"><span class="ic">📅</span><span class="t">Programar</span></button>
-    <a class="navitem" href="/condicional.html" title="Segmentación condicional (cámara→contenido)"><span class="ic">🎯</span><span class="t">Condicional</span></a>
-    <a class="navitem" href="/canal.html" target="_blank" rel="noopener" title="Ver el canal en antena"><span class="ic">📺</span><span class="t">Canal</span></a>
-    <a class="navitem" href="/wall/" title="Mural: qué emite cada dispositivo ahora"><span class="ic">🖥</span><span class="t">Mural</span></a>
-    <a class="navitem" href="/comprar/" title="Compra self-serve para anunciantes"><span class="ic">🛒</span><span class="t">Comprar</span></a>
-    <a class="navitem" href="/alta.html" title="Dar de alta un dispositivo"><span class="ic">➕</span><span class="t">Alta</span></a>
-    <div class="navsep"></div>
-    <button class="navitem" id="collapseAll" type="button" title="Contraer / expandir todas las fichas"><span class="ic">▾</span><span class="t">Contraer fichas</span></button>
-    <button class="navitem" id="exportCsv" type="button" title="Exportar la flota visible a CSV"><span class="ic">⬇</span><span class="t">Exportar CSV</span></button>
-    <a class="navitem" href="/help/" title="Ayuda del CMS"><span class="ic">❓</span><span class="t">Ayuda</span></a>
-  </nav>
-  <div class="navspace"></div>
-  <nav class="navlist">
-    <div class="navsep"></div>
-    <a class="navitem" href="https://www.xpaceos.com/control/" target="_blank" rel="noopener" title="Control de propietario (XpaceOS)"><span class="ic">🏬</span><span class="t">Control ↗</span></a>
-  </nav>
-  <div class="navfoot" id="appVerNav">—</div>
-</aside>
-<header>
-  <button class="topToggle" id="navToggleTop" title="Plegar / desplegar menú (m)" aria-label="Plegar o desplegar el menú">☰</button>
-  <div class="brand">Admira · <b>CMS</b><span class="brandVer" id="brandVer"></span></div>
-  <span class="topsub">Control de flota</span>
-  <div class="spacer"></div>
-  <label class="canalSel" title="Canal / proyecto — filtra la flota y la programación"><span>📡</span><select id="canalSel"></select></label>
-  <button id="canalEdit" class="navbtn" title="Editar canales (crear/renombrar/asignar circuitos)">✎</button>
-  <div class="live"><span class="dot" id="liveDot"></span><span id="liveTxt">en vivo</span><button id="pauseBtn" class="navbtn" title="Pausar/reanudar el auto-refresco">⏸</button></div>
-  <button class="topToggle" id="detToggle" title="Panel de detalle (d) — para pros" aria-label="Abrir panel de detalle"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/></svg></button>
-</header>
-<aside class="detpanel" id="detPanel" aria-label="Detalle">
-  <div class="detHd">Detalle <span class="detPro">PRO</span></div>
-  <div class="detSec">
-    <h4>Diagnóstico</h4>
-    <div class="detRow"><span>Dispositivos</span><b id="d-total">—</b></div>
-    <div class="detRow"><span>Emitiendo</span><b id="d-online">—</b></div>
-    <div class="detRow"><span>Sin señal</span><b id="d-off">—</b></div>
-    <div class="detRow"><span>Con audiencia</span><b id="d-aud">—</b></div>
-    <div class="detRow"><span>Móviles / robot</span><b id="d-robot">—</b></div>
-    <div class="detRow"><span>Ingresos</span><b id="d-rev">—</b></div>
-  </div>
-  <div class="detSec">
-    <h4>Sistema</h4>
-    <div class="detRow"><span>Canal</span><b id="d-canal">—</b></div>
-    <div class="detRow"><span>Fuente</span><b>api.admira.store</b></div>
-    <div class="detRow"><span>Estado</span><b id="d-live">—</b></div>
-    <div class="detRow"><span>Hora</span><b id="d-time">—</b></div>
-    <div class="detRow"><span>Versión</span><b id="d-ver">—</b></div>
-  </div>
-  <div class="detSec">
-    <h4>Atajos</h4>
-    <div class="detKeys">/ buscar · r recargar · p pausa · e CSV · m menú · d detalle</div>
-  </div>
-  <div class="detSec">
-    <h4>Accesos</h4>
-    <div class="detLinks">
-      <a href="/cms/calendar/">🗓 Calendario</a>
-      <a href="/wall/">🖥 Mural</a>
-      <a href="/comprar/">🛒 Comprar</a>
-      <a href="/help/">❓ Ayuda</a>
-    </div>
-  </div>
-</aside>
+<script>
+/* Config del chrome unificado (lo monta /admira-nav.js). Extras propios del CMS de flota. */
+window.ADMIRA_VERSION='v.30.06.2026.r14';
+window.ADMIRA_NAV={
+  active:'flota', title:'Control de flota',
+  topRight:
+    '<label class="canalSel" title="Canal / proyecto — filtra la flota y la programación"><span>📡</span><select id="canalSel"></select></label>'+
+    '<button id="canalEdit" class="navbtn" title="Editar canales (crear/renombrar/asignar circuitos)">✎</button>'+
+    '<div class="live"><span class="dot" id="liveDot"></span><span id="liveTxt">en vivo</span><button id="pauseBtn" class="navbtn" title="Pausar/reanudar el auto-refresco">⏸</button></div>',
+  extraNav:
+    '<div class="admsep"></div>'+
+    '<button class="admni" id="openProg" type="button" title="Programar la parrilla con contenido propio del Stock"><span class="ic">📅</span><span class="t">Programar</span></button>'+
+    '<button class="admni" id="collapseAll" type="button" title="Contraer / expandir todas las fichas"><span class="ic">▾</span><span class="t">Contraer fichas</span></button>'+
+    '<button class="admni" id="exportCsv" type="button" title="Exportar la flota visible a CSV"><span class="ic">⬇</span><span class="t">Exportar CSV</span></button>',
+  detailTop:
+    '<div class="admsec"><h4>Diagnóstico</h4>'+
+    '<div class="admrow"><span>Dispositivos</span><b id="d-total">—</b></div>'+
+    '<div class="admrow"><span>Emitiendo</span><b id="d-online">—</b></div>'+
+    '<div class="admrow"><span>Sin señal</span><b id="d-off">—</b></div>'+
+    '<div class="admrow"><span>Con audiencia</span><b id="d-aud">—</b></div>'+
+    '<div class="admrow"><span>Móviles / robot</span><b id="d-robot">—</b></div>'+
+    '<div class="admrow"><span>Ingresos</span><b id="d-rev">—</b></div></div>',
+  onDetail:function(){
+    var g=function(id){var e=document.getElementById(id);return e?e.textContent:'—';};
+    var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+    var total=parseInt(g('k-total'))||0, online=parseInt(g('k-online'))||0;
+    set('d-total',g('k-total')); set('d-online',g('k-online')+(total?' ('+Math.round(online/total*100)+'%)':''));
+    set('d-off',g('k-off')); set('d-aud',g('k-aud')); set('d-robot',g('k-robot')); set('d-rev',g('k-rev'));
+  }
+};
+</script>
+<script src="/admira-nav.js"></script>
 
 <div class="kpis">
   <div class="kpi accent"><div class="n" id="k-total">—</div><div class="l">dispositivos</div></div>
@@ -780,52 +677,8 @@ function applyCmsFilter(){
   });
   $('filterCount').textContent=shown+' visibles';
 }
-// ── Menú lateral plegable — SOLO al pulsar (r11) ──
-(function(){
-  const NAV_KEY='cms_nav_open';
-  const tog=document.getElementById('navToggleTop');
-  function setNav(open){
-    document.body.classList.toggle('nav-open',open);
-    try{localStorage.setItem(NAV_KEY,open?'1':'0')}catch(_){}
-    if(tog){ tog.textContent=open?'«':'☰'; tog.title=open?'Contraer menú (m)':'Desplegar menú (m)'; }
-  }
-  window.cmsToggleNav=()=>setNav(!document.body.classList.contains('nav-open'));
-  if(tog) tog.onclick=window.cmsToggleNav;
-  const sc=document.getElementById('navScrim'); if(sc) sc.onclick=()=>setNav(false);
-  let saved=null; try{saved=localStorage.getItem(NAV_KEY)}catch(_){}
-  setNav(saved==null ? window.innerWidth>980 : saved==='1');
-})();
-// ── Panel de Detalle (pro) a la derecha — r12 ──
-(function(){
-  const DET_KEY='cms_det_open';
-  const btn=document.getElementById('detToggle');
-  const txt=id=>{const e=document.getElementById(id);return e?e.textContent:'—';};
-  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
-  window.updateDetail=function(){
-    if(!document.body.classList.contains('det-open'))return;
-    const total=parseInt(txt('k-total'))||0, online=parseInt(txt('k-online'))||0;
-    set('d-total',txt('k-total'));
-    set('d-online', txt('k-online')+(total?' ('+Math.round(online/total*100)+'%)':''));
-    set('d-off',txt('k-off')); set('d-aud',txt('k-aud')); set('d-robot',txt('k-robot')); set('d-rev',txt('k-rev'));
-    const cs=document.getElementById('canalSel');
-    set('d-canal', cs&&cs.selectedOptions&&cs.selectedOptions[0]?cs.selectedOptions[0].textContent:'—');
-    set('d-live', txt('liveTxt'));
-    set('d-time', new Date().toLocaleTimeString('es-ES'));
-    set('d-ver', txt('appVer'));
-  };
-  function setDet(open){
-    document.body.classList.toggle('det-open',open);
-    if(btn) btn.classList.toggle('on',open);
-    try{localStorage.setItem(DET_KEY,open?'1':'0')}catch(_){}
-    if(open) window.updateDetail();
-  }
-  window.cmsToggleDet=()=>setDet(!document.body.classList.contains('det-open'));
-  if(btn) btn.onclick=window.cmsToggleDet;
-  let saved=null; try{saved=localStorage.getItem(DET_KEY)}catch(_){}
-  setDet(saved==='1');
-  setInterval(()=>{ if(document.body.classList.contains('det-open')) window.updateDetail(); },1000);
-})();
-// ── Atajos de teclado (r7) ──
+// El chrome (menú lateral + panel detalle + sus atajos m/d) lo gestiona /admira-nav.js.
+// ── Atajos de teclado propios del CMS (r7) ──
 document.addEventListener('keydown',e=>{
   const t=e.target, tag=(t&&t.tagName||'').toLowerCase();
   if(tag==='input'||tag==='textarea'||tag==='select'||(t&&t.isContentEditable)){ if(e.key==='Escape')t.blur(); return; }
@@ -835,12 +688,10 @@ document.addEventListener('keydown',e=>{
     case 'r': case 'R': load(); toast('Actualizado','ok'); break;
     case 'p': case 'P': togglePause(); break;
     case 'e': case 'E': exportCSV(); break;
-    case 'm': case 'M': if(window.cmsToggleNav)window.cmsToggleNav(); break;
-    case 'd': case 'D': if(window.cmsToggleDet)window.cmsToggleDet(); break;
     case '?': toast('Atajos: / buscar · r recargar · p pausa · e CSV · m menú · d detalle','ok'); break;
   }
 });
-const APP_VERSION='v.30.06.2026.r13'; try{['appVerNav','brandVer','brandVerNav'].forEach(function(id){var el=document.getElementById(id); if(el)el.textContent=APP_VERSION;});}catch(_){} try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+const APP_VERSION=window.ADMIRA_VERSION||'v.30.06.2026.r14'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
 let PREV_ON={}, PREV_INIT=false;
 function toast(msg,kind){ const t=document.createElement('div'); t.className='toast'+(kind?(' '+kind):''); t.textContent=msg; document.getElementById('toasts').appendChild(t); setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},6000); }
 document.getElementById('exportCsv').onclick=exportCSV;

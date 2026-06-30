@@ -2,13 +2,16 @@
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r13 */
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r14 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
-  var active=(s&&s.dataset.active)||'';
-  var title=(s&&s.dataset.title)||'';
-  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r13';
+  var cfg=window.ADMIRA_NAV||{};
+  var active=(s&&s.dataset.active)||cfg.active||'';
+  var title=(s&&s.dataset.title)||cfg.title||'';
+  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r14';
+  // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
+  // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
   var ITEMS=[
     {k:'flota',      h:'/cms.html',                         ic:'🛰', t:'Flota'},
@@ -90,6 +93,7 @@
       return '<a class="admni'+(i.k===active?' on':'')+'" href="'+i.h+'"'+(i.blank?' target="_blank" rel="noopener"':'')+' title="'+i.t+'"><span class="ic">'+i.ic+'</span><span class="t">'+i.t+'</span></a>';
     }).join("");
     return '<aside class="admside" id="admSide" aria-label="Navegación">'+lis+
+      (cfg.extraNav||'')+
       '<div class="admspace"></div>'+
       '<div class="admsep"></div>'+
       '<a class="admni" href="https://www.xpaceos.com/control/" target="_blank" rel="noopener" title="Control de propietario (XpaceOS)"><span class="ic">🏬</span><span class="t">Control ↗</span></a>'+
@@ -100,6 +104,7 @@
     var links=ITEMS.map(function(i){return '<a href="'+i.h+'"'+(i.blank?' target="_blank" rel="noopener"':'')+'>'+i.ic+' '+i.t+'</a>';}).join("");
     return '<aside class="admdet" id="admDet" aria-label="Detalle">'+
       '<div class="hd">Detalle <span class="pro">PRO</span></div>'+
+      (cfg.detailTop||'')+
       '<div class="admsec"><h4>Sistema</h4>'+
         '<div class="admrow"><span>Página</span><b id="adm-d-page">'+(title||active||'—')+'</b></div>'+
         '<div class="admrow"><span>Fuente</span><b>api.admira.store</b></div>'+
@@ -116,6 +121,7 @@
       '<span class="admbrand">Admira · <b>CMS</b><span class="admver">'+VER+'</span></span>'+
       (title?'<span class="admsub">'+title+'</span>':'')+
       '<span class="admsp"></span>'+
+      (cfg.topRight||'')+
       '<button class="admtog" id="admDetTog" title="Panel de detalle (d)" aria-label="Panel de detalle"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/></svg></button>'+
     '</header>';
   }
@@ -132,7 +138,7 @@
     var detTog=document.getElementById('admDetTog');
     function setNav(open){ html.classList.toggle('admnav-open',open); try{localStorage.setItem('cms_nav_open',open?'1':'0')}catch(_){} if(navTog){navTog.textContent=open?'«':'☰'; navTog.title=open?'Contraer menú (m)':'Desplegar menú (m)';} }
     function setDet(open){ html.classList.toggle('admnav-det',open); if(detTog)detTog.classList.toggle('on',open); try{localStorage.setItem('cms_det_open',open?'1':'0')}catch(_){} if(open)tick(); }
-    function tick(){ var e=document.getElementById('adm-d-time'); if(e)e.textContent=new Date().toLocaleTimeString('es-ES'); }
+    function tick(){ var e=document.getElementById('adm-d-time'); if(e)e.textContent=new Date().toLocaleTimeString('es-ES'); if(typeof cfg.onDetail==='function'){try{cfg.onDetail();}catch(_){}} }
     window.admToggleNav=function(){setNav(!html.classList.contains('admnav-open'));};
     window.admToggleDet=function(){setDet(!html.classList.contains('admnav-det'));};
     if(navTog)navTog.onclick=window.admToggleNav;
