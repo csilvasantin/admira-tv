@@ -15,6 +15,7 @@
          padding:14px 20px;background:#070a10e6;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
   .brand{font-weight:800;letter-spacing:.5px;font-size:18px}
   .brand b{color:var(--accent)}
+  .brandVer{font:600 10.5px ui-monospace,monospace;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:1px 7px;margin-left:8px;vertical-align:2px;letter-spacing:.3px;white-space:nowrap}
   .sub{color:var(--dim);font-size:12px}
   .spacer{flex:1}
   .live{display:flex;align-items:center;gap:7px;font:600 12px ui-monospace,monospace;color:var(--dim)}
@@ -332,7 +333,7 @@
 <div class="navscrim" id="navScrim"></div>
 <aside class="sidenav" id="sidenav" aria-label="Navegación">
   <button class="navtoggle" id="navToggle" title="Plegar / desplegar menú" aria-label="Plegar o desplegar el menú">☰</button>
-  <div class="navbrand"><span class="logo">▣</span><span class="t">Admira·<b>CMS</b></span></div>
+  <div class="navbrand"><span class="logo">▣</span><span class="t">Admira·<b>CMS</b><span class="brandVer" id="brandVerNav"></span></span></div>
   <nav class="navlist">
     <a class="navitem active" href="/cms.html" title="Control de flota"><span class="ic">🛰</span><span class="t">Flota</span></a>
     <a class="navitem" href="/cms/calendar/" title="Calendario de emisión"><span class="ic">🗓</span><span class="t">Calendario</span></a>
@@ -356,7 +357,7 @@
 </aside>
 <header>
   <div>
-    <div class="brand">Admira · <b>CMS</b></div>
+    <div class="brand">Admira · <b>CMS</b><span class="brandVer" id="brandVer"></span></div>
     <div class="sub">Control de flota — dispositivos conectados y qué emiten</div>
   </div>
   <div class="spacer"></div>
@@ -765,7 +766,7 @@ document.addEventListener('keydown',e=>{
     case '?': toast('Atajos: / buscar · r recargar · p pausa · e CSV · m menú','ok'); break;
   }
 });
-const APP_VERSION='v.30.06.2026.r9'; try{var _nv=document.getElementById('appVerNav'); if(_nv)_nv.textContent=APP_VERSION;}catch(_){} try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+const APP_VERSION='v.30.06.2026.r10'; try{['appVerNav','brandVer','brandVerNav'].forEach(function(id){var el=document.getElementById(id); if(el)el.textContent=APP_VERSION;});}catch(_){} try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
 let PREV_ON={}, PREV_INIT=false;
 function toast(msg,kind){ const t=document.createElement('div'); t.className='toast'+(kind?(' '+kind):''); t.textContent=msg; document.getElementById('toasts').appendChild(t); setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},6000); }
 document.getElementById('exportCsv').onclick=exportCSV;
