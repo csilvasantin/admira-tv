@@ -669,7 +669,20 @@ function applyCmsFilter(){
   });
   $('filterCount').textContent=shown+' visibles';
 }
-const APP_VERSION='v.30.06.2026.r6'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+// ── Atajos de teclado (r7) ──
+document.addEventListener('keydown',e=>{
+  const t=e.target, tag=(t&&t.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select'||(t&&t.isContentEditable)){ if(e.key==='Escape')t.blur(); return; }
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  switch(e.key){
+    case '/': e.preventDefault(); { const s=$('cmsSearch'); if(s){s.focus(); s.select();} } break;
+    case 'r': case 'R': load(); toast('Actualizado','ok'); break;
+    case 'p': case 'P': togglePause(); break;
+    case 'e': case 'E': exportCSV(); break;
+    case '?': toast('Atajos: / buscar · r recargar · p pausa · e CSV','ok'); break;
+  }
+});
+const APP_VERSION='v.30.06.2026.r7'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
 let PREV_ON={}, PREV_INIT=false;
 function toast(msg,kind){ const t=document.createElement('div'); t.className='toast'+(kind?(' '+kind):''); t.textContent=msg; document.getElementById('toasts').appendChild(t); setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},6000); }
 document.getElementById('exportCsv').onclick=exportCSV;
@@ -678,13 +691,14 @@ document.getElementById('cmsSort').addEventListener('change',e=>{ CMS_SORT=e.tar
 let CMS_TIMER=null, CMS_PAUSED=false;
 function startAuto(){ if(CMS_TIMER)clearInterval(CMS_TIMER); CMS_TIMER=setInterval(()=>{if(!CMS_PAUSED)load();},10000); }
 loadProjects().then(load); startAuto();
-document.getElementById('pauseBtn').onclick=()=>{ CMS_PAUSED=!CMS_PAUSED;
+function togglePause(){ CMS_PAUSED=!CMS_PAUSED;
   document.getElementById('pauseBtn').textContent=CMS_PAUSED?'▶':'⏸';
   document.getElementById('liveTxt').textContent=CMS_PAUSED?'en pausa':'en vivo';
   document.getElementById('liveDot').style.animationPlayState=CMS_PAUSED?'paused':'running';
   document.getElementById('liveDot').style.background=CMS_PAUSED?'var(--amber)':'var(--air)';
   if(!CMS_PAUSED)load();
-};
+}
+document.getElementById('pauseBtn').onclick=togglePause;
 $('canalSel').addEventListener('change',()=>{ CANAL_SEL=$('canalSel').value; try{localStorage.setItem('cms_canal',CANAL_SEL)}catch(_){} load(); });
 const lsGet=(k,d)=>{try{return localStorage.getItem(k)??d}catch(_){return d}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(_){}};
