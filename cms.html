@@ -667,12 +667,12 @@ function applyCmsFilter(){
   });
   $('filterCount').textContent=shown+' visibles';
 }
-const APP_VERSION='v.30.06.2026.r4'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+const APP_VERSION='v.30.06.2026.r5'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
 let PREV_ON={}, PREV_INIT=false;
 function toast(msg,kind){ const t=document.createElement('div'); t.className='toast'+(kind?(' '+kind):''); t.textContent=msg; document.getElementById('toasts').appendChild(t); setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},6000); }
 document.getElementById('exportCsv').onclick=exportCSV;
 let CMS_SORT='def';
-document.getElementById('cmsSort').addEventListener('change',e=>{ CMS_SORT=e.target.value; load(); });
+document.getElementById('cmsSort').addEventListener('change',e=>{ CMS_SORT=e.target.value; try{localStorage.setItem('cms_sort',CMS_SORT)}catch(_){}; load(); });
 let CMS_TIMER=null, CMS_PAUSED=false;
 function startAuto(){ if(CMS_TIMER)clearInterval(CMS_TIMER); CMS_TIMER=setInterval(()=>{if(!CMS_PAUSED)load();},10000); }
 loadProjects().then(load); startAuto();
@@ -684,8 +684,17 @@ document.getElementById('pauseBtn').onclick=()=>{ CMS_PAUSED=!CMS_PAUSED;
   if(!CMS_PAUSED)load();
 };
 $('canalSel').addEventListener('change',()=>{ CANAL_SEL=$('canalSel').value; try{localStorage.setItem('cms_canal',CANAL_SEL)}catch(_){} load(); });
-$('cmsSearch').addEventListener('input',applyCmsFilter);
-document.querySelectorAll('.fchip').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.fchip').forEach(x=>x.classList.remove('on')); b.classList.add('on'); CMS_FILTER=b.dataset.f; applyCmsFilter(); });
+const lsGet=(k,d)=>{try{return localStorage.getItem(k)??d}catch(_){return d}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(_){}};
+$('cmsSearch').addEventListener('input',()=>{lsSet('cms_q',$('cmsSearch').value);applyCmsFilter();});
+document.querySelectorAll('.fchip').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.fchip').forEach(x=>x.classList.remove('on')); b.classList.add('on'); CMS_FILTER=b.dataset.f; lsSet('cms_filter',CMS_FILTER); applyCmsFilter(); });
+// restaurar preferencias guardadas (r5)
+(function restorePrefs(){
+  const q=lsGet('cms_q','');if(q)$('cmsSearch').value=q;
+  const f=lsGet('cms_filter','all');CMS_FILTER=f;
+  document.querySelectorAll('.fchip').forEach(x=>x.classList.toggle('on',x.dataset.f===f));
+  const s=lsGet('cms_sort','def');CMS_SORT=s;const ss=document.getElementById('cmsSort');if(ss)ss.value=s;
+})();
 // ── Editor de canales (POST /grid/projects) ──
 let CANAL_EDIT=[];
 function renderCanalRows(list){
