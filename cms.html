@@ -313,6 +313,11 @@
   body:not(.nav-open) .sidenav:hover .navitem .t,
   body:not(.nav-open) .sidenav:hover .navbrand .t,
   body:not(.nav-open) .sidenav:hover .navfoot{opacity:1;pointer-events:auto}
+  /* tras contraer con el cursor encima, NO reabrir por hover hasta que el ratón salga (r9) */
+  body:not(.nav-open) .sidenav.no-hover:hover{width:var(--nav-w);box-shadow:none}
+  body:not(.nav-open) .sidenav.no-hover:hover .navitem .t,
+  body:not(.nav-open) .sidenav.no-hover:hover .navbrand .t,
+  body:not(.nav-open) .sidenav.no-hover:hover .navfoot{opacity:0;pointer-events:none}
   @media(max-width:680px){
     body{padding-left:0}
     .sidenav{width:238px;transform:translateX(-100%);transition:transform .2s ease;box-shadow:12px 0 40px #000c}
@@ -728,9 +733,20 @@ function applyCmsFilter(){
 // ── Menú lateral plegable (r8) ──
 (function(){
   const NAV_KEY='cms_nav_open';
-  function setNav(open){ document.body.classList.toggle('nav-open',open); try{localStorage.setItem(NAV_KEY,open?'1':'0')}catch(_){} }
+  const sn=document.getElementById('sidenav');
   const tog=document.getElementById('navToggle');
-  if(tog) tog.onclick=()=>setNav(!document.body.classList.contains('nav-open'));
+  function setNav(open){
+    document.body.classList.toggle('nav-open',open);
+    try{localStorage.setItem(NAV_KEY,open?'1':'0')}catch(_){}
+    if(tog){ tog.textContent=open?'«':'☰'; tog.title=open?'Contraer menú':'Desplegar menú'; }
+  }
+  if(tog) tog.onclick=()=>{
+    const willOpen=!document.body.classList.contains('nav-open');
+    setNav(willOpen);
+    // si contraemos con el cursor encima, evitar que el hover lo reabra hasta salir
+    if(!willOpen && sn) sn.classList.add('no-hover');
+  };
+  if(sn) sn.addEventListener('mouseleave',()=>sn.classList.remove('no-hover'));
   const sc=document.getElementById('navScrim'); if(sc) sc.onclick=()=>setNav(false);
   let saved=null; try{saved=localStorage.getItem(NAV_KEY)}catch(_){}
   setNav(saved==null ? window.innerWidth>980 : saved==='1');
@@ -749,7 +765,7 @@ document.addEventListener('keydown',e=>{
     case '?': toast('Atajos: / buscar · r recargar · p pausa · e CSV · m menú','ok'); break;
   }
 });
-const APP_VERSION='v.30.06.2026.r8'; try{var _nv=document.getElementById('appVerNav'); if(_nv)_nv.textContent=APP_VERSION;}catch(_){} try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+const APP_VERSION='v.30.06.2026.r9'; try{var _nv=document.getElementById('appVerNav'); if(_nv)_nv.textContent=APP_VERSION;}catch(_){} try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
 let PREV_ON={}, PREV_INIT=false;
 function toast(msg,kind){ const t=document.createElement('div'); t.className='toast'+(kind?(' '+kind):''); t.textContent=msg; document.getElementById('toasts').appendChild(t); setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},6000); }
 document.getElementById('exportCsv').onclick=exportCSV;
