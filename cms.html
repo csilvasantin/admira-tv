@@ -296,7 +296,7 @@
     <a href="/comprar/" title="Compra self-serve para anunciantes">🛒 Comprar</a>
     <a href="https://www.xpaceos.com/control/" target="_blank" rel="noopener" title="Control de propietario (XpaceOS)">Control ↗</a>
   </nav>
-  <div class="live"><span class="dot"></span><span id="liveTxt">en vivo</span></div>
+  <div class="live"><span class="dot" id="liveDot"></span><span id="liveTxt">en vivo</span><button id="pauseBtn" class="navbtn" title="Pausar/reanudar el auto-refresco">⏸</button></div>
 </header>
 
 <div class="kpis">
@@ -360,7 +360,7 @@
   <div id="canalRows"></div>
 </div>
 
-<footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span></footer>
+<footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 
 <script src="xpl-runtime.js?v=1"></script>
 <script>
@@ -628,7 +628,17 @@ function applyCmsFilter(){
   });
   $('filterCount').textContent=shown+' visibles';
 }
-loadProjects().then(load); setInterval(load, 10000);
+const APP_VERSION='v.30.06.2026.r1'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+let CMS_TIMER=null, CMS_PAUSED=false;
+function startAuto(){ if(CMS_TIMER)clearInterval(CMS_TIMER); CMS_TIMER=setInterval(()=>{if(!CMS_PAUSED)load();},10000); }
+loadProjects().then(load); startAuto();
+document.getElementById('pauseBtn').onclick=()=>{ CMS_PAUSED=!CMS_PAUSED;
+  document.getElementById('pauseBtn').textContent=CMS_PAUSED?'▶':'⏸';
+  document.getElementById('liveTxt').textContent=CMS_PAUSED?'en pausa':'en vivo';
+  document.getElementById('liveDot').style.animationPlayState=CMS_PAUSED?'paused':'running';
+  document.getElementById('liveDot').style.background=CMS_PAUSED?'var(--amber)':'var(--air)';
+  if(!CMS_PAUSED)load();
+};
 $('canalSel').addEventListener('change',()=>{ CANAL_SEL=$('canalSel').value; try{localStorage.setItem('cms_canal',CANAL_SEL)}catch(_){} load(); });
 $('cmsSearch').addEventListener('input',applyCmsFilter);
 document.querySelectorAll('.fchip').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.fchip').forEach(x=>x.classList.remove('on')); b.classList.add('on'); CMS_FILTER=b.dataset.f; applyCmsFilter(); });
