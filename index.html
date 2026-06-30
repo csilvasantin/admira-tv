@@ -130,17 +130,17 @@
         <a class="btn ghost" href="https://www.xpaceos.com/control/" target="_blank" rel="noopener">Planificar emisión ↗</a>
       </div>
 
-      <!-- EN ANTENA AHORA (demo · se conectará al backbone /grid) -->
+      <!-- EN ANTENA AHORA — emisión real, leída del backbone /grid (api.admira.store) -->
       <div class="air-panel" id="antena">
         <div class="air-head">
           <span class="onair" style="font-size:11px"><span class="dot"></span>En antena ahora</span>
-          <span class="net">Red Admira · <b id="screenCount">6</b> pantallas activas · <span id="clock" class="mono"></span></span>
+          <span class="net">Red Admira · <b id="screenCount">…</b> pantallas activas · <span id="clock" class="mono"></span></span>
         </div>
         <div class="air-now">
           <div class="air-spot">
             <span class="label">Emitiendo</span>
-            <h3 id="spotTitle">Campaña primavera · Aena Mallorca</h3>
-            <p id="spotMeta">Vídeo 16:9 · 12 s · creado en Pixeria · operado por XpaceOS</p>
+            <h3 id="spotTitle">Conectando con la red…</h3>
+            <p id="spotMeta">Leyendo la parrilla de emisión en vivo</p>
             <div class="bar"><i></i></div>
           </div>
           <div class="air-screens" id="airScreens"></div>
@@ -186,13 +186,14 @@
       <a href="https://www.admira.live" target="_blank" rel="noopener">Live</a>
       <a href="#contact" data-admira-contact>Contacto</a>
     </div>
-    <div class="mono">Admira.tv · Canal de emisión · trilogía Admira Xperience</div>
+    <div class="mono">Admira.tv · Canal de emisión · trilogía Admira Xperience · <span style="opacity:.7">v.30.06.2026.r16</span></div>
   </footer>
 
   <script>
   (function(){
-    // EN ANTENA — emisión REAL de la flota (omnipublicity-api + signage/now).
-    const FLEET='https://omnipublicity-api.csilvasantin.workers.dev/locations?selfreg=1';
+    // EN ANTENA — emisión REAL leída del backbone /grid (dominio propio api.admira.store,
+    // no el workers.dev que los ISP de ES bloquean) + signage/now por pantalla.
+    const FLEET='https://api.admira.store/grid/screens';
     const NOW='https://api.admira.store/signage/now?screen=';
     const ONLINE_MS=180000;
     const elScreens=document.getElementById('airScreens');
@@ -211,7 +212,9 @@
       rotI++;
     }
     async function loadAir(){
-      let devs=[]; try{ const r=await fetch(FLEET,{cache:'no-store'}); const d=await r.json(); devs=(d.locations||[]).filter(x=>x&&x.id); }catch(_){ return; }
+      let devs=[]; try{ const r=await fetch(FLEET,{cache:'no-store'}); const d=await r.json();
+        devs=(d.screens||[]).filter(x=>x&&x.screen).map(x=>({id:x.screen,name:x.name||x.screen,screen:x.screen,circuit:x.circuit}));
+      }catch(_){ if(!airing.length){ elScreens.innerHTML='<div class="air-screen"><span class="live" style="background:#ff5a5a"></span><b>Red no accesible</b> <span class="pix">reintentando…</span></div>'; } return; }
       const nows=await Promise.all(devs.map(d=>nowOf(d.screen)));
       const ts=Date.now(); airing=[];
       elScreens.innerHTML=devs.map((d,i)=>{ const it=nows[i]; const on=it&&it.ts&&(ts-it.ts)<ONLINE_MS;

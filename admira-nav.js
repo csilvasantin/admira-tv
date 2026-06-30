@@ -2,7 +2,7 @@
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r15 */
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r16 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -10,7 +10,7 @@
   var active=(s&&s.dataset.active)||cfg.active||'';
   var title=(s&&s.dataset.title)||cfg.title||'';
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r15';
+  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r16';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
