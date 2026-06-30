@@ -316,7 +316,28 @@
   body:not(.nav-open) .navbrand .t,
   body:not(.nav-open) .navfoot{opacity:0;pointer-events:none}
   /* r11: el repliegue es SOLO al pulsar el toggle (sin hover-expand) */
+  /* ── Panel de Detalle (pro) a la derecha — r12 ── */
+  body{ padding-right:0; transition:padding-left .18s ease, padding-right .18s ease; }
+  body.det-open{ padding-right:320px; }
+  .detpanel{position:fixed;top:var(--topbar-h);right:0;bottom:0;width:320px;background:#080b12;border-left:1px solid var(--line);
+            z-index:45;transform:translateX(100%);transition:transform .18s ease;overflow-y:auto;padding:14px 14px 30px;
+            display:flex;flex-direction:column;gap:12px;scrollbar-width:thin}
+  .detpanel::-webkit-scrollbar{width:6px} .detpanel::-webkit-scrollbar-thumb{background:#1e2940;border-radius:3px}
+  body.det-open .detpanel{transform:none}
+  .detHd{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800}
+  .detPro{font:700 9.5px ui-monospace,monospace;color:var(--accent);border:1px solid #2a3a66;border-radius:999px;padding:1px 6px;letter-spacing:.5px}
+  .detSec{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .detSec h4{margin:0 0 6px;font:700 11px ui-monospace,monospace;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+  .detRow{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:12.5px;color:var(--dim)}
+  .detRow b{color:var(--ink);font-weight:700;font-family:ui-monospace,monospace}
+  .detKeys{font:11.5px ui-monospace,monospace;color:var(--dim);line-height:1.9}
+  .detLinks{display:flex;flex-direction:column;gap:6px}
+  .detLinks a{color:var(--ink);text-decoration:none;font-size:13px;font-weight:600;padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:#0e1420}
+  .detLinks a:hover{border-color:var(--accent);color:#fff}
+  .topToggle.on{background:var(--accent);border-color:var(--accent);color:#04110b}
   @media(max-width:680px){
+    body.det-open{padding-right:0}
+    .detpanel{width:min(320px,86vw)}
     body{padding-left:0}
     .sidenav{width:238px;transform:translateX(-100%);transition:transform .2s ease;box-shadow:12px 0 40px #000c}
     body.nav-open .sidenav{transform:none}
@@ -358,7 +379,41 @@
   <label class="canalSel" title="Canal / proyecto — filtra la flota y la programación"><span>📡</span><select id="canalSel"></select></label>
   <button id="canalEdit" class="navbtn" title="Editar canales (crear/renombrar/asignar circuitos)">✎</button>
   <div class="live"><span class="dot" id="liveDot"></span><span id="liveTxt">en vivo</span><button id="pauseBtn" class="navbtn" title="Pausar/reanudar el auto-refresco">⏸</button></div>
+  <button class="topToggle" id="detToggle" title="Panel de detalle (d) — para pros" aria-label="Abrir panel de detalle"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/></svg></button>
 </header>
+<aside class="detpanel" id="detPanel" aria-label="Detalle">
+  <div class="detHd">Detalle <span class="detPro">PRO</span></div>
+  <div class="detSec">
+    <h4>Diagnóstico</h4>
+    <div class="detRow"><span>Dispositivos</span><b id="d-total">—</b></div>
+    <div class="detRow"><span>Emitiendo</span><b id="d-online">—</b></div>
+    <div class="detRow"><span>Sin señal</span><b id="d-off">—</b></div>
+    <div class="detRow"><span>Con audiencia</span><b id="d-aud">—</b></div>
+    <div class="detRow"><span>Móviles / robot</span><b id="d-robot">—</b></div>
+    <div class="detRow"><span>Ingresos</span><b id="d-rev">—</b></div>
+  </div>
+  <div class="detSec">
+    <h4>Sistema</h4>
+    <div class="detRow"><span>Canal</span><b id="d-canal">—</b></div>
+    <div class="detRow"><span>Fuente</span><b>api.admira.store</b></div>
+    <div class="detRow"><span>Estado</span><b id="d-live">—</b></div>
+    <div class="detRow"><span>Hora</span><b id="d-time">—</b></div>
+    <div class="detRow"><span>Versión</span><b id="d-ver">—</b></div>
+  </div>
+  <div class="detSec">
+    <h4>Atajos</h4>
+    <div class="detKeys">/ buscar · r recargar · p pausa · e CSV · m menú · d detalle</div>
+  </div>
+  <div class="detSec">
+    <h4>Accesos</h4>
+    <div class="detLinks">
+      <a href="/cms/calendar/">🗓 Calendario</a>
+      <a href="/wall/">🖥 Mural</a>
+      <a href="/comprar/">🛒 Comprar</a>
+      <a href="/help/">❓ Ayuda</a>
+    </div>
+  </div>
+</aside>
 
 <div class="kpis">
   <div class="kpi accent"><div class="n" id="k-total">—</div><div class="l">dispositivos</div></div>
@@ -740,6 +795,36 @@ function applyCmsFilter(){
   let saved=null; try{saved=localStorage.getItem(NAV_KEY)}catch(_){}
   setNav(saved==null ? window.innerWidth>980 : saved==='1');
 })();
+// ── Panel de Detalle (pro) a la derecha — r12 ──
+(function(){
+  const DET_KEY='cms_det_open';
+  const btn=document.getElementById('detToggle');
+  const txt=id=>{const e=document.getElementById(id);return e?e.textContent:'—';};
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  window.updateDetail=function(){
+    if(!document.body.classList.contains('det-open'))return;
+    const total=parseInt(txt('k-total'))||0, online=parseInt(txt('k-online'))||0;
+    set('d-total',txt('k-total'));
+    set('d-online', txt('k-online')+(total?' ('+Math.round(online/total*100)+'%)':''));
+    set('d-off',txt('k-off')); set('d-aud',txt('k-aud')); set('d-robot',txt('k-robot')); set('d-rev',txt('k-rev'));
+    const cs=document.getElementById('canalSel');
+    set('d-canal', cs&&cs.selectedOptions&&cs.selectedOptions[0]?cs.selectedOptions[0].textContent:'—');
+    set('d-live', txt('liveTxt'));
+    set('d-time', new Date().toLocaleTimeString('es-ES'));
+    set('d-ver', txt('appVer'));
+  };
+  function setDet(open){
+    document.body.classList.toggle('det-open',open);
+    if(btn) btn.classList.toggle('on',open);
+    try{localStorage.setItem(DET_KEY,open?'1':'0')}catch(_){}
+    if(open) window.updateDetail();
+  }
+  window.cmsToggleDet=()=>setDet(!document.body.classList.contains('det-open'));
+  if(btn) btn.onclick=window.cmsToggleDet;
+  let saved=null; try{saved=localStorage.getItem(DET_KEY)}catch(_){}
+  setDet(saved==='1');
+  setInterval(()=>{ if(document.body.classList.contains('det-open')) window.updateDetail(); },1000);
+})();
 // ── Atajos de teclado (r7) ──
 document.addEventListener('keydown',e=>{
   const t=e.target, tag=(t&&t.tagName||'').toLowerCase();
@@ -751,10 +836,11 @@ document.addEventListener('keydown',e=>{
     case 'p': case 'P': togglePause(); break;
     case 'e': case 'E': exportCSV(); break;
     case 'm': case 'M': if(window.cmsToggleNav)window.cmsToggleNav(); break;
-    case '?': toast('Atajos: / buscar · r recargar · p pausa · e CSV · m menú','ok'); break;
+    case 'd': case 'D': if(window.cmsToggleDet)window.cmsToggleDet(); break;
+    case '?': toast('Atajos: / buscar · r recargar · p pausa · e CSV · m menú · d detalle','ok'); break;
   }
 });
-const APP_VERSION='v.30.06.2026.r11'; try{['appVerNav','brandVer','brandVerNav'].forEach(function(id){var el=document.getElementById(id); if(el)el.textContent=APP_VERSION;});}catch(_){} try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+const APP_VERSION='v.30.06.2026.r12'; try{['appVerNav','brandVer','brandVerNav'].forEach(function(id){var el=document.getElementById(id); if(el)el.textContent=APP_VERSION;});}catch(_){} try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
 let PREV_ON={}, PREV_INIT=false;
 function toast(msg,kind){ const t=document.createElement('div'); t.className='toast'+(kind?(' '+kind):''); t.textContent=msg; document.getElementById('toasts').appendChild(t); setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},6000); }
 document.getElementById('exportCsv').onclick=exportCSV;
