@@ -2,7 +2,7 @@
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r19 */
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r20 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -10,7 +10,7 @@
   var active=(s&&s.dataset.active)||cfg.active||'';
   var title=(s&&s.dataset.title)||cfg.title||'';
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r19';
+  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r20';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
@@ -59,6 +59,8 @@
    ".admtop .admtog.on{background:#7aa2ff;border-color:#7aa2ff;color:#04110b}",
    ".admtop .admbrand{font-weight:800;letter-spacing:.5px;font-size:16px;white-space:nowrap;color:#cdd8e8}",
    ".admtop .admbrand b{color:#7aa2ff}",
+   ".admtop .admhome{color:inherit;text-decoration:none;border-radius:6px;padding:1px 5px;margin:0 -3px;transition:color .15s,background .15s}",
+   ".admtop .admhome:hover{color:#fff;background:#13203a}",
    ".admtop .admver{font:600 10.5px ui-monospace,monospace;color:#8595ad;border:1px solid #1e2940;border-radius:999px;padding:1px 7px;margin-left:8px;vertical-align:2px}",
    ".admtop .admsub{color:#8595ad;font-size:12px;white-space:nowrap}",
    ".admtop .admsp{flex:1}",
@@ -146,7 +148,7 @@
   function topHTML(){
     return '<header class="admtop">'+
       '<button class="admtog" id="admNavTog" title="Plegar / desplegar menú (m)">☰</button>'+
-      '<span class="admbrand">Admira · <b>CMS</b><span class="admver">'+VER+'</span></span>'+
+      '<span class="admbrand"><a href="/" class="admhome" title="Volver a la home · Admira.tv">Admira</a> · <b>CMS</b><span class="admver">'+VER+'</span></span>'+
       (title?'<span class="admsub">'+title+'</span>':'')+
       '<span class="admsp"></span>'+
       (cfg.topRight||'')+
