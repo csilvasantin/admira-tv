@@ -282,7 +282,7 @@
 <body>
 <script>
 /* Config del chrome unificado (lo monta /admira-nav.js). Extras propios del CMS de flota. */
-window.ADMIRA_VERSION='v.30.06.2026.r17';
+window.ADMIRA_VERSION='v.30.06.2026.r18';
 window.ADMIRA_NAV={
   active:'flota', title:'Control de flota',
   topRight:
@@ -692,7 +692,7 @@ document.addEventListener('keydown',e=>{
     case '?': toast('Atajos: / buscar · r recargar · p pausa · e CSV · m menú · d detalle','ok'); break;
   }
 });
-const APP_VERSION=window.ADMIRA_VERSION||'v.30.06.2026.r17'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+const APP_VERSION=window.ADMIRA_VERSION||'v.30.06.2026.r18'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
 let PREV_ON={}, PREV_INIT=false;
 function toast(msg,kind){ const t=document.createElement('div'); t.className='toast'+(kind?(' '+kind):''); t.textContent=msg; document.getElementById('toasts').appendChild(t); setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},6000); }
 document.getElementById('exportCsv').onclick=exportCSV;
