@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comprar emisión · Admira.tv</title>
+<meta name="description" content="Compra espacios de emisión DOOH en la red Admira: elige Xpacio, dispositivo, franjas y fechas, sube tu creativo y paga con tarjeta.">
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root{--bg:#070b0a;--panel:#0e1714;--panel2:#13211c;--line:#1d3329;--txt:#dff5ec;--dim:#7fa595;--teal:#19e89a;--amber:#f5b431;--red:#e87ba4}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;-webkit-font-smoothing:antialiased;line-height:1.6}
+  a{color:var(--teal);text-decoration:none}
+  header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.04em}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px var(--teal)}
+  .wrap{max-width:680px;margin:0 auto;padding:22px 20px 80px}
+  h1{font-size:22px;font-weight:600;margin:0 0 4px} .lead{color:var(--dim);margin:0 0 22px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .card h2{font-size:14px;font-weight:600;margin:0 0 12px;color:var(--teal)}
+  label{display:block;font-size:12px;color:var(--dim);margin:10px 0 4px}
+  input,select{width:100%;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-family:inherit;font-size:14px}
+  input:focus,select:focus{outline:none;border-color:var(--teal)}
+  .row{display:flex;gap:10px} .row>div{flex:1}
+  .bands{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  .band{flex:1;min-width:120px;text-align:center;padding:9px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:13px;user-select:none}
+  .band.on{background:#0c241a;border-color:var(--teal);color:var(--teal)}
+  .total{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px}
+  .total .v{font-size:26px;font-weight:600}
+  button{width:100%;background:var(--teal);color:#04140d;border:0;border-radius:8px;padding:13px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;margin-top:14px}
+  button:disabled{opacity:.5;cursor:default}
+  .hint{font-size:11px;color:var(--dim);margin-top:6px}
+  .err{color:var(--red);font-size:13px;margin-top:8px;min-height:16px}
+  .ok{background:#0c241a;border:1px solid var(--teal);border-radius:10px;padding:14px;margin-top:10px}
+  .ok h3{margin:0 0 8px;color:var(--teal)} .kv{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
+  .testcards{font-size:11px;color:var(--dim);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px}
+  .prev{width:54px;height:54px;object-fit:cover;border-radius:6px;background:#000;vertical-align:middle;margin-left:8px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span> ADMIRA.TV · COMPRAR EMISIÓN</div>
+  <div><a href="/cms/calendar/">Calendario</a> · <a href="/help/">Ayuda</a></div>
+</header>
+<div class="wrap">
+  <h1>Compra tu campaña</h1>
+  <p class="lead">Elige dónde y cuándo emitir, sube tu creativo y paga con tarjeta. Tus pases quedan reservados al instante.</p>
+
+  <div class="card"><h2>1 · Dónde</h2>
+    <label>Xpacio (tienda)</label><select id="loc"></select>
+    <label>Dispositivo</label><select id="dev"></select>
+    <label>Franjas</label>
+    <div class="bands" id="bands">
+      <div class="band" data-b="manana">Mañana</div><div class="band" data-b="mediodia">Mediodía</div>
+      <div class="band" data-b="tarde">Tarde</div><div class="band" data-b="noche">Noche</div>
+    </div>
+  </div>
+
+  <div class="card"><h2>2 · Cuándo</h2>
+    <div class="row"><div><label>Desde</label><input id="from" type="date"></div><div><label>Hasta</label><input id="to" type="date"></div></div>
+  </div>
+
+  <div class="card"><h2>3 · Tu anuncio</h2>
+    <label>Anunciante</label><input id="adv" placeholder="Nombre de tu marca">
+    <label>Creativo (imagen/vídeo)</label>
+    <div style="display:flex;align-items:center;gap:8px"><input id="cfile" type="file" accept="image/*,video/*" style="flex:1"><img id="cprev" class="prev" style="display:none"></div>
+    <div class="hint">Se sube a tu biblioteca y se emite en los pases comprados.</div>
+  </div>
+
+  <div class="card"><h2>4 · Pago</h2>
+    <div class="total"><span class="hint" id="breakdown">—</span><span class="v" id="total">€0</span></div>
+    <label>Número de tarjeta</label><input id="ccnum" inputmode="numeric" placeholder="4242 4242 4242 4242" maxlength="23" autocomplete="cc-number">
+    <div class="row">
+      <div><label>Caducidad</label><input id="ccexp" placeholder="MM/AA" maxlength="5" autocomplete="cc-exp"></div>
+      <div><label>CVC</label><input id="cccvc" inputmode="numeric" placeholder="123" maxlength="4" autocomplete="cc-csc"></div>
+    </div>
+    <label>Titular</label><input id="ccname" placeholder="Nombre en la tarjeta" autocomplete="cc-name">
+    <button id="pay">Pagar y reservar</button>
+    <div class="err" id="err"></div>
+    <div class="testcards">🔒 Modo prueba · usa <b>4242 4242 4242 4242</b> (aprobada) o <b>4000 0000 0000 0002</b> (rechazada), cualquier caducidad futura y CVC. No se cobra dinero real.</div>
+    <div id="receipt"></div>
+  </div>
+</div>
+
+<script src="https://www.clearchannel.tv/locations.js"></script>
+<script>
+const API='https://api.admira.store', TARIFA=12; // € por franja y día
+const SLUG=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+const PROG=['pantalla','escaparate','vending','mostrador'];
+let LOCS={};
+function buildLocs(){
+  const cat=(window.OMNIP_LOCATIONS_DEFAULT||[]).concat(window.OMNIP_LOCATIONS_EXTRA||[]);
+  const ents=cat.map(L=>{const surfs=(L.surfaces||[]).filter(s=>PROG.includes(s.surface));if(!surfs.length&&!L.twin)return null;
+    const devs=surfs.map(s=>({id:s.screen||(SLUG(L.id)+'-'+SLUG(s.name)),label:s.name||s.surface}));
+    devs.push({id:SLUG(L.id)+'-musica',label:'🎵 Hilo Musical'});
+    return {id:L.id,name:L.name||L.id,devs,twin:!!L.twin};}).filter(Boolean);
+  ents.sort((a,b)=>{if(a.id==='xtanco-valencia')return -1;if(b.id==='xtanco-valencia')return 1;if(a.twin!==b.twin)return a.twin?-1:1;return (a.name||'').localeCompare(b.name||'');});
+  const o={};ents.forEach(e=>o[e.id]=e);return o;
+}
+const $=id=>document.getElementById(id);
+function fillDevs(){const L=LOCS[$('loc').value];$('dev').innerHTML=(L?L.devs:[]).map(d=>`<option value="${d.id}">${d.label}</option>`).join('');}
+function selBands(){return [...document.querySelectorAll('.band.on')].map(b=>b.dataset.b);}
+function datesInRange(){const a=$('from').value,b=$('to').value;if(!a||!b)return [];const out=[];let d=new Date(a+'T00:00:00'),e=new Date(b+'T00:00:00');let g=0;while(d<=e&&g<62){out.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1);g++;}return out;}
+function recalc(){const nd=datesInRange().length,nb=selBands().length;const p=nd*nb*TARIFA;$('total').textContent='€'+p;$('breakdown').textContent=nd&&nb?`${nd} día(s) × ${nb} franja(s) × €${TARIFA}`:'elige franjas y fechas';return p;}
+// validación de tarjeta (cliente; al server solo van brand+last4)
+function luhn(n){n=n.replace(/\D/g,'');let s=0,a=false;for(let i=n.length-1;i>=0;i--){let d=+n[i];if(a){d*=2;if(d>9)d-=9;}s+=d;a=!a;}return n.length>=13&&s%10===0;}
+function brandOf(n){n=n.replace(/\D/g,'');if(/^4/.test(n))return 'visa';if(/^5[1-5]/.test(n)||/^2[2-7]/.test(n))return 'mastercard';if(/^3[47]/.test(n))return 'amex';return 'card';}
+$('ccnum').oninput=e=>{let v=e.target.value.replace(/\D/g,'').slice(0,19);e.target.value=v.replace(/(.{4})/g,'$1 ').trim();};
+$('ccexp').oninput=e=>{let v=e.target.value.replace(/\D/g,'').slice(0,4);e.target.value=v.length>2?v.slice(0,2)+'/'+v.slice(2):v;};
+let creative=null;
+$('cfile').onchange=async e=>{const f=e.target.files[0];if(!f)return;$('err').textContent='Subiendo creativo…';
+  try{const b64=await new Promise((r,j)=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.onerror=j;fr.readAsDataURL(f);});
+    const type=f.type.startsWith('video')?'video':'image';
+    const d=await (await fetch(API+'/stock/publish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,motor:'compra-web',mime:f.type,base64:b64,title:(f.name||'Creativo').replace(/\.[^.]+$/,'')})})).json();
+    if(!d.url)throw new Error('subida');creative={type,url:d.url,name:(f.name||'Creativo').replace(/\.[^.]+$/,'')};
+    $('cprev').src=d.url;$('cprev').style.display=type==='image'?'inline-block':'none';$('err').textContent='';
+  }catch(err){$('err').textContent='No se pudo subir el creativo.';}
+};
+$('pay').onclick=async()=>{
+  $('err').textContent='';$('receipt').innerHTML='';
+  const loc=LOCS[$('loc').value],dev=$('dev').value,bands=selBands(),dates=datesInRange();
+  const amount=recalc();
+  if(!dev||!bands.length||!dates.length)return $('err').textContent='Elige dispositivo, franjas y fechas.';
+  if(!creative)return $('err').textContent='Sube tu creativo.';
+  if(!$('adv').value.trim())return $('err').textContent='Indica el anunciante.';
+  const num=$('ccnum').value.replace(/\D/g,'');
+  if(!luhn(num))return $('err').textContent='Número de tarjeta no válido.';
+  const em=/^(\d{2})\/(\d{2})$/.exec($('ccexp').value);if(!em||+em[1]<1||+em[1]>12)return $('err').textContent='Caducidad no válida.';
+  const exp=new Date(2000+ +em[2],+em[1],0);if(exp<new Date())return $('err').textContent='Tarjeta caducada.';
+  if(!/^\d{3,4}$/.test($('cccvc').value))return $('err').textContent='CVC no válido.';
+  const btn=$('pay');btn.disabled=true;btn.textContent='Procesando pago…';
+  try{
+    const r=await fetch(API+'/pay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      amount,last4:num.slice(-4),brand:brandOf(num),advertiser:$('adv').value.trim(),
+      order:{xpacio:loc.id,screens:[dev],bands,dates,cpm:TARIFA,price:amount,creative}})});
+    const d=await r.json();
+    if(!d.ok){$('err').textContent=d.error==='card-declined'?'Pago rechazado por el banco.':'No se pudo procesar el pago.';btn.disabled=false;btn.textContent='Pagar y reservar';return;}
+    btn.style.display='none';
+    $('receipt').innerHTML=`<div class="ok"><h3>✅ Pago aprobado · ${d.booked} pase(s) reservados</h3>`+
+      `<div class="kv"><span>Recibo</span><span>${d.id}</span></div>`+
+      `<div class="kv"><span>Importe</span><span>€${d.amount}</span></div>`+
+      `<div class="kv"><span>Tarjeta</span><span>${d.brand} ••${d.last4}</span></div>`+
+      `<div class="kv"><span>Campaña</span><span>${loc.name} · ${dates.length}d × ${bands.length}f</span></div>`+
+      `<div class="hint" style="margin-top:8px">Ya está en la parrilla. <a href="/cms/calendar/?loc=${loc.id}">Ver en el calendario →</a></div></div>`;
+  }catch(e){$('err').textContent='Error de red al pagar.';btn.disabled=false;btn.textContent='Pagar y reservar';}
+};
+// init
+LOCS=buildLocs();
+$('loc').innerHTML=Object.values(LOCS).map(l=>`<option value="${l.id}">${l.name}</option>`).join('');
+fillDevs();$('loc').onchange=fillDevs;
+document.querySelectorAll('.band').forEach(b=>b.onclick=()=>{b.classList.toggle('on');recalc();});
+['from','to'].forEach(id=>$(id).onchange=recalc);
+const t=new Date();$('from').value=t.toISOString().slice(0,10);
+document.querySelector('.band[data-b="tarde"]').classList.add('on');recalc();
+</script>
+</body>
+</html>
