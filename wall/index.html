@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>En antena ahora · Admira.tv</title>
+<meta name="description" content="Mural en vivo: qué emite cada dispositivo de cada Xpacio en este momento, con estado de los players y reproducciones del día.">
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root{--bg:#070b0a;--panel:#0e1714;--panel2:#13211c;--line:#1d3329;--txt:#dff5ec;--dim:#7fa595;--teal:#19e89a;--amber:#f5b431;--red:#e87ba4}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;-webkit-font-smoothing:antialiased}
+  a{color:var(--teal);text-decoration:none}
+  header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.04em}
+  .live{width:9px;height:9px;border-radius:50%;background:var(--red);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 20px 60px}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+  select{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:13px}
+  .clock{margin-left:auto;color:var(--dim);font-size:13px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+  .dev{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+  .dev .top{display:flex;align-items:center;gap:8px}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none} .dot.on{background:var(--teal);box-shadow:0 0 8px var(--teal)} .dot.off{background:var(--red)}
+  .dev .name{font-weight:600;font-size:13px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dev .stat{font-size:10px;color:var(--dim)}
+  .now{display:flex;gap:10px;align-items:center;background:var(--panel2);border-radius:8px;padding:8px}
+  .now img{width:46px;height:46px;object-fit:cover;border-radius:6px;flex:none;background:#000}
+  .now .ph{width:46px;height:46px;border-radius:6px;background:#000;display:flex;align-items:center;justify-content:center;color:var(--teal);flex:none}
+  .now .t{font-size:12px;min-width:0} .now .k{font-size:10px;color:var(--dim)}
+  .foot{display:flex;justify-content:space-between;font-size:11px;color:var(--dim)}
+  .kindown{color:var(--teal)} .kindpaid{color:var(--amber)} .kindfree{color:var(--dim)}
+  .loading{color:var(--dim);font-size:13px;padding:30px 0;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="live"></span> ADMIRA.TV · EN ANTENA AHORA</div>
+  <div><a href="/cms/calendar/">Calendario</a> · <a href="/help/">Ayuda</a></div>
+</header>
+<div class="wrap">
+  <div class="bar">
+    <label style="font-size:12px;color:var(--dim)">Xpacio</label><select id="loc"></select>
+    <span class="clock" id="clock"></span>
+  </div>
+  <div class="grid" id="grid"><div class="loading">Cargando emisión en vivo…</div></div>
+</div>
+
+<script src="https://www.clearchannel.tv/locations.js"></script>
+<script>
+const API='https://api.admira.store', XPL='https://xpl.admira.store';
+const SLUG=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+const PROG=['pantalla','escaparate','vending','mostrador'];
+function buildLocs(){const cat=(window.OMNIP_LOCATIONS_DEFAULT||[]).concat(window.OMNIP_LOCATIONS_EXTRA||[]);
+  const ents=cat.map(L=>{const surfs=(L.surfaces||[]).filter(s=>PROG.includes(s.surface));if(!surfs.length&&!L.twin)return null;
+    const devs=surfs.map(s=>({id:s.screen||(SLUG(L.id)+'-'+SLUG(s.name)),label:s.name||s.surface}));devs.push({id:SLUG(L.id)+'-musica',label:'🎵 Hilo Musical',audio:true});
+    return {id:L.id,name:L.name||L.id,devs,twin:!!L.twin};}).filter(Boolean);
+  ents.sort((a,b)=>{if(a.id==='xtanco-valencia')return -1;if(b.id==='xtanco-valencia')return 1;if(a.twin!==b.twin)return a.twin?-1:1;return (a.name||'').localeCompare(b.name||'');});
+  const o={};ents.forEach(e=>o[e.id]=e);return o;}
+const $=id=>document.getElementById(id);const ymd8=()=>{const d=new Date();return ''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');};
+let LOCS={},locId='xtanco-valencia';
+const fget=u=>fetch(u,{cache:'no-store'}).then(r=>r.json()).catch(()=>null);
+async function refresh(){
+  const L=LOCS[locId];if(!L)return;
+  $('clock').textContent='actualizado '+new Date().toLocaleTimeString('es-ES');
+  const ids=L.devs.map(d=>d.id);
+  const [emit,live]=await Promise.all([fget(`${API}/emit/range?loc=${encodeURIComponent(locId)}&from=${ymd8()}&to=${ymd8()}&_=${Date.now()}`),fget(`${XPL}/xpl/live?_=${Date.now()}`)]);
+  const liveSet=new Set(((live&&live.screens)||[]).filter(s=>{const ls=s.lastSeen>1e12?s.lastSeen/1000:s.lastSeen;return (Date.now()/1000-ls)<200;}).map(s=>s.screen));
+  const days=await Promise.all(ids.map(id=>fget(`${API}/grid/day?screen=${id}&_=${Date.now()}`)));
+  let html='';
+  L.devs.forEach((d,i)=>{
+    const j=days[i]||{};const np=j.nowPlaying;
+    const es=((emit&&emit.screens)||{})[d.id]||{};const e=es[ymd8()]||{};const plays=e.totalPlays||0;
+    const online=liveSet.has(d.id)||plays>0;
+    let now;
+    if(np&&!np.free){const cr=np.creative||{};const img=cr.url&&(cr.type==='image'||cr.type==='animation');
+      const kc=np.kind==='own'?'kindown':np.kind==='paid'?'kindpaid':'kindfree';
+      now=`<div class="now">${img?`<img src="${cr.url}">`:`<div class="ph">${d.audio?'🎵':'▶'}</div>`}<div class="t"><div class="k ${kc}">${np.kind==='own'?'propio':np.kind==='paid'?'vendido':'—'} · ${(j.nowPlaying.bandId||'')}</div><div>${(np.title||'').slice(0,34)}</div></div></div>`;
+    }else{now=`<div class="now"><div class="ph">${d.audio?'🎵':'▶'}</div><div class="t"><div class="k kindfree">loop de Stock</div><div style="color:var(--dim)">— sin programar ahora</div></div></div>`;}
+    html+=`<div class="dev"><div class="top"><span class="dot ${online?'on':'off'}"></span><span class="name">${d.label}</span></div>${now}<div class="foot"><span>${online?'● en vivo':'○ sin presencia'}</span><span>${plays} pases hoy</span></div></div>`;
+  });
+  $('grid').innerHTML=html||'<div class="loading">Sin dispositivos.</div>';
+}
+LOCS=buildLocs();const qs=new URLSearchParams(location.search);if(qs.get('loc')&&LOCS[qs.get('loc')])locId=qs.get('loc');else if(!LOCS[locId])locId=Object.keys(LOCS)[0];
+$('loc').innerHTML=Object.values(LOCS).map(l=>`<option value="${l.id}" ${l.id===locId?'selected':''}>${l.name}</option>`).join('');
+$('loc').onchange=e=>{locId=e.target.value;$('grid').innerHTML='<div class="loading">Cargando…</div>';refresh();};
+refresh();setInterval(refresh,15000);
+</script>
+</body>
+</html>
