@@ -23,6 +23,8 @@
   <title>Admira.tv · El canal de emisión DOOH</title>
   <meta name="description" content="Admira.tv: el canal de emisión DOOH en vivo del ecosistema Admira. Donde el contenido creado en Pixeria y operado en XpaceOS sale a antena en la red de pantallas.">
   <meta name="theme-color" content="#070a10">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="canonical" href="https://admira.tv/">
   <meta property="og:title" content="Admira.tv · El canal de emisión DOOH">
   <meta property="og:description" content="Donde el contenido sale a antena. La capa de emisión de la trilogía Admira: Pixeria · XpaceOS · Admira.tv.">
   <meta property="og:type" content="website">
@@ -134,7 +136,7 @@
       <div class="air-panel" id="antena">
         <div class="air-head">
           <span class="onair" style="font-size:11px"><span class="dot"></span>En antena ahora</span>
-          <span class="net">Red Admira · <b id="screenCount">…</b> pantallas activas · <span id="clock" class="mono"></span></span>
+          <span class="net">Red Admira · <b id="screenCount">…</b> · <span id="clock" class="mono"></span></span>
         </div>
         <div class="air-now">
           <div class="air-spot">
@@ -186,7 +188,7 @@
       <a href="https://www.admira.live" target="_blank" rel="noopener">Live</a>
       <a href="#contact" data-admira-contact>Contacto</a>
     </div>
-    <div class="mono">Admira.tv · Canal de emisión · trilogía Admira Xperience · <span style="opacity:.7">v.30.06.2026.r16</span></div>
+    <div class="mono">Admira.tv · Canal de emisión · trilogía Admira Xperience · <span style="opacity:.7">v.30.06.2026.r17</span></div>
   </footer>
 
   <script>
@@ -221,7 +223,8 @@
         if(on) airing.push({d,it});
         return '<div class="air-screen"><span class="live" style="background:'+(on?'#39d353':'#ff5a5a')+'"></span><b>'+esc(d.name||d.id)+'</b> <span class="pix">'+(on?esc(String(it.title||it.id||'').slice(0,42)):'sin señal')+'</span></div>';
       }).join('')||'<div class="air-screen"><span class="live"></span><b>Sin equipos</b></div>';
-      elCount.textContent=airing.length;
+      const total=devs.length, live=airing.length;
+      elCount.textContent = total + (total===1?' pantalla':' pantallas') + ' · ' + live + ' en antena';
       rotI=0; showSpot();
     }
     loadAir(); setInterval(loadAir, 12000); setInterval(showSpot, 6000);

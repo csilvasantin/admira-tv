@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Admira.tv">
+  <rect width="32" height="32" rx="7" fill="#070a10"/>
+  <circle cx="9.5" cy="10.5" r="3.4" fill="#ff4444"/>
+  <text x="17" y="25" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-weight="800" font-size="16" letter-spacing="-0.5" fill="#ff4444" text-anchor="middle">tv</text>
+</svg>
