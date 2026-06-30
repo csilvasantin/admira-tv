@@ -291,6 +291,7 @@
     <a href="/canal.html" target="_blank" rel="noopener">📺 Canal</a>
     <a href="/alta.html">➕ Alta</a>
     <button id="openProg" type="button" class="navbtn" title="Programar la parrilla de las pantallas con contenido propio del Stock">📅 Programar</button>
+    <button id="exportCsv" type="button" class="navbtn" title="Exportar la flota visible a CSV">⬇ CSV</button>
     <a href="/cms/calendar/" title="Calendario de emisión: vista de mes de la parrilla de todas las pantallas">🗓 Calendario</a>
     <a href="/wall/" title="Mural: qué emite cada dispositivo ahora mismo">📺 Mural</a>
     <a href="/comprar/" title="Compra self-serve para anunciantes">🛒 Comprar</a>
@@ -604,8 +605,20 @@ async function load(){
   $('stamp').textContent='actualizado '+new Date().toLocaleTimeString('es-ES');
   // reproduce los thumbs de vídeo (preview en bucle)
   document.querySelectorAll('.thumb video, .fp video').forEach(v=>{ v.loop=true; v.muted=true; v.play&&v.play().catch(()=>{}); });
+  LAST_FLEET = devs.map((d,i)=>{ const it=nows[i]; const isOn=it&&it.ts&&(now-it.ts)<ONLINE_MS;
+    return {id:d.id,nombre:d.name||d.id,estado:isOn?'emitiendo':'sin señal',audiencia:(it&&it.aud&&it.aud.faces)||0,modo:d.mode||'conditional',direccion:String(d.addr||''),emitiendo:isOn?String(it.title||it.id||''):''}; });
   applyCmsFilter();
   updateRevenue();
+}
+let LAST_FLEET=[];
+function exportCSV(){
+  if(!LAST_FLEET.length)return;
+  const cols=['id','nombre','estado','audiencia','modo','emitiendo','direccion'];
+  const esc2=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const rows=[cols.join(',')].concat(LAST_FLEET.map(r=>cols.map(c=>esc2(r[c])).join(',')));
+  const blob=new Blob(['﻿'+rows.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='admira-flota-'+new Date().toISOString().slice(0,10)+'.csv';a.click();
 }
 // Ingresos de hoy (pasarela de pago) — KPI
 async function updateRevenue(){
@@ -628,7 +641,8 @@ function applyCmsFilter(){
   });
   $('filterCount').textContent=shown+' visibles';
 }
-const APP_VERSION='v.30.06.2026.r1'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+const APP_VERSION='v.30.06.2026.r2'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+document.getElementById('exportCsv').onclick=exportCSV;
 let CMS_TIMER=null, CMS_PAUSED=false;
 function startAuto(){ if(CMS_TIMER)clearInterval(CMS_TIMER); CMS_TIMER=setInterval(()=>{if(!CMS_PAUSED)load();},10000); }
 loadProjects().then(load); startAuto();
