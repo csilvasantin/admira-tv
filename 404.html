@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>404 · fuera de antena · Admira.tv</title>
+  <meta name="description" content="Esta señal no está en antena. Vuelve a la home de Admira.tv o salta al canal.">
+  <meta name="theme-color" content="#070a10">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta name="robots" content="noindex">
+  <!-- Chrome unificado "portería", mismo metaestilo que todo el site. -->
+  <script>window.ADMIRA_NAV={title:'404 · fuera de antena'};</script>
+  <script src="/admira-nav.js?v=30.06.2026.r24" defer></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#070a10;color:#e8eef6;font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+    body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px);opacity:.6}
+    .e404{position:relative;z-index:1;min-height:calc(100vh - 52px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 22px;gap:6px}
+    .e404 .glitch{font-family:ui-monospace,monospace;font-weight:800;font-size:clamp(72px,18vw,180px);line-height:.9;letter-spacing:-.03em;color:#ff4444;text-shadow:0 0 28px rgba(255,68,68,.35)}
+    .e404 .nosig{display:inline-flex;align-items:center;gap:9px;border:1px solid #ff4444;color:#ff4444;border-radius:999px;padding:6px 14px;font-family:ui-monospace,monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
+    .e404 .nosig .dot{width:9px;height:9px;border-radius:50%;background:#ff4444;animation:bl 1.2s steps(2) infinite}
+    @keyframes bl{50%{opacity:.25}}
+    .e404 h1{font-size:clamp(22px,4vw,34px);margin:8px 0 2px;font-weight:800;letter-spacing:-.01em}
+    .e404 p{margin:0 0 22px;color:#aab6c6;max-width:520px}
+    .e404 .acts{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+    .e404 a{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:11px 20px;font-weight:700;font-size:14px;text-decoration:none;border:1px solid #2a3850;color:#e8eef6;transition:transform .12s,background .2s,border-color .2s}
+    .e404 a:hover{transform:translateY(-1px)}
+    .e404 a.primary{background:#ff4444;border-color:#ff4444;color:#190406}
+    .e404 a svg{width:17px;height:17px}
+    @media(prefers-reduced-motion:reduce){.e404 .nosig .dot{animation:none}}
+  </style>
+</head>
+<body>
+  <div class="e404">
+    <span class="nosig"><span class="dot"></span>Sin señal</span>
+    <div class="glitch">404</div>
+    <h1>Esta señal no está en antena</h1>
+    <p>La página que buscas no existe o se ha movido. Vuelve a la home o salta directo al canal en emisión.</p>
+    <div class="acts">
+      <a class="primary" href="/">⌂ Volver a la home</a>
+      <a href="/canal.html">▶ Ver el canal</a>
+      <a href="/cms/calendar/">🗓 Calendario de emisión</a>
+    </div>
+  </div>
+</body>
+</html>
