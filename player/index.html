@@ -6,6 +6,7 @@
   <title>Admira.tv · Player — Descargas</title>
   <meta name="description" content="Descarga el player de Admira.tv para cada plataforma: macOS, Windows, iOS, Android y Linux. Pantallas que emiten el canal DOOH de Admira.">
   <meta name="theme-color" content="#070a10">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <meta property="og:title" content="Admira.tv · Player">
   <meta property="og:description" content="El player de Admira.tv en cada pantalla. Descargas por plataforma.">
   <meta property="og:type" content="website">
@@ -65,19 +66,18 @@
   </style>
 </head>
 <body>
-  <nav class="admira-nav admira-nav-static" aria-label="Admira · Xperience">
-    <a class="admira-nav-brand" href="https://www.admira.app">
-      <span class="admira-nav-brand-name">Admira</span>
-      <span class="admira-nav-brand-tag">Xperience</span>
-    </a>
-    <div class="admira-nav-items">
-      <a class="admira-nav-link admira-nav-link-external" href="https://www.pixeria.com">Pixeria</a>
-      <a class="admira-nav-link admira-nav-link-external" href="https://www.xpaceos.com">XpaceOS</a>
-      <a class="admira-nav-link admira-nav-link-active" href="https://admira.tv">Admira.tv</a>
-      <a class="admira-nav-link admira-nav-link-external" href="https://www.admira.live">Live</a>
-      <a class="admira-nav-link admira-nav-link-cta" href="#contact" data-admira-contact>Contacto</a>
-    </div>
-  </nav>
+  <!-- Chrome unificado "portería", mismo metaestilo que todo el site. -->
+  <script>
+  window.ADMIRA_NAV={
+    title:'Descargas del player',
+    topRight:
+      '<a class="admtR" href="https://www.pixeria.com" target="_blank" rel="noopener">Pixeria</a>'+
+      '<a class="admtR" href="https://www.xpaceos.com" target="_blank" rel="noopener">XpaceOS</a>'+
+      '<a class="admtR" href="https://www.admira.live" target="_blank" rel="noopener">Live</a>'+
+      '<a class="admtR admtR-cta" href="#contact" data-admira-contact>Contacto</a>'
+  };
+  </script>
+  <script src="/admira-nav.js?v=30.06.2026.r22" defer></script>
 
   <div class="wrap">
     <header class="hero">

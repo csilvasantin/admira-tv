@@ -2,15 +2,16 @@
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r21 */
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r22 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
   var cfg=window.ADMIRA_NAV||{};
   var active=(s&&s.dataset.active)||cfg.active||'';
   var title=(s&&s.dataset.title)||cfg.title||'';
+  var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r21';
+  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r22';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
@@ -64,7 +65,12 @@
    ".admtop .admver{font:600 10.5px ui-monospace,monospace;color:#8595ad;border:1px solid #1e2940;border-radius:999px;padding:1px 7px;margin-left:8px;vertical-align:2px}",
    ".admtop .admsub{color:#8595ad;font-size:12px;white-space:nowrap}",
    ".admtop .admsp{flex:1}",
-   "@media(max-width:760px){.admtop .admsub{display:none}}",
+   /* enlaces de ecosistema en la barra superior (cfg.topRight) */
+   ".admtop .admtR{color:#9fb0c6;text-decoration:none;font:600 13px -apple-system,Segoe UI,sans-serif;padding:5px 9px;border-radius:8px;transition:color .15s,background .15s}",
+   ".admtop .admtR:hover{color:#fff;background:#13203a}",
+   ".admtop .admtR-cta{color:#04110b;background:#7aa2ff}",
+   ".admtop .admtR-cta:hover{background:#9bb8ff}",
+   "@media(max-width:760px){.admtop .admsub{display:none}.admtop .admtR:not(.admtR-cta){display:none}}",
    /* sidebar */
    ".admside{position:fixed;left:0;top:var(--admtb);bottom:0;width:var(--admnw);background:#080b12;border-right:1px solid #1e2940;",
      "z-index:40;display:flex;flex-direction:column;gap:3px;padding:10px 9px;overflow-x:hidden;overflow-y:auto;",
@@ -148,7 +154,7 @@
   function topHTML(){
     return '<header class="admtop">'+
       '<button class="admtog" id="admNavTog" title="Plegar / desplegar menú (m)">☰</button>'+
-      '<span class="admbrand"><a href="/" class="admhome" title="Volver a la home · Admira.tv">Admira</a> · <b>CMS</b><span class="admver">'+VER+'</span></span>'+
+      '<span class="admbrand"><a href="/" class="admhome" title="Volver a la home · Admira.tv">Admira</a> · <b>'+brandTag+'</b><span class="admver">'+VER+'</span></span>'+
       (title?'<span class="admsub">'+title+'</span>':'')+
       '<span class="admsp"></span>'+
       (cfg.topRight||'')+
