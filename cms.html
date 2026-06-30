@@ -26,6 +26,13 @@
   .kpi .n{font:800 28px ui-monospace,monospace;line-height:1}
   .kpi .l{color:var(--dim);font-size:12px;margin-top:4px;text-transform:uppercase;letter-spacing:.6px}
   .kpi.air .n{color:var(--air)} .kpi.amber .n{color:var(--amber)} .kpi.accent .n{color:var(--accent)}
+  .kpi.off .n{color:var(--off)} .kpi.rev .n{color:var(--air)}
+  .cmsfilter{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 20px 0}
+  .cmsfilter input{flex:1;min-width:220px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:13px ui-monospace,monospace}
+  .cmsfilter input:focus{outline:none;border-color:var(--accent)}
+  .fchips{display:flex;gap:6px;flex-wrap:wrap}
+  .fchip{background:var(--panel2);color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font:600 12px ui-monospace,monospace;cursor:pointer}
+  .fchip:hover{border-color:var(--accent)} .fchip.on{background:var(--accent);color:#091020;border-color:var(--accent)}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;padding:14px 20px 40px}
   .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;
         overflow:hidden;display:flex;flex-direction:column}
@@ -285,6 +292,8 @@
     <a href="/alta.html">➕ Alta</a>
     <button id="openProg" type="button" class="navbtn" title="Programar la parrilla de las pantallas con contenido propio del Stock">📅 Programar</button>
     <a href="/cms/calendar/" title="Calendario de emisión: vista de mes de la parrilla de todas las pantallas">🗓 Calendario</a>
+    <a href="/wall/" title="Mural: qué emite cada dispositivo ahora mismo">📺 Mural</a>
+    <a href="/comprar/" title="Compra self-serve para anunciantes">🛒 Comprar</a>
     <a href="https://www.xpaceos.com/control/" target="_blank" rel="noopener" title="Control de propietario (XpaceOS)">Control ↗</a>
   </nav>
   <div class="live"><span class="dot"></span><span id="liveTxt">en vivo</span></div>
@@ -294,7 +303,20 @@
   <div class="kpi accent"><div class="n" id="k-total">—</div><div class="l">dispositivos</div></div>
   <div class="kpi air"><div class="n" id="k-online">—</div><div class="l">emitiendo ahora</div></div>
   <div class="kpi amber"><div class="n" id="k-aud">—</div><div class="l">con audiencia</div></div>
+  <div class="kpi off"><div class="n" id="k-off">—</div><div class="l">sin señal</div></div>
   <div class="kpi"><div class="n" id="k-robot">—</div><div class="l">móviles / robot</div></div>
+  <div class="kpi rev"><div class="n" id="k-rev">—</div><div class="l">ingresos hoy</div></div>
+</div>
+
+<div class="cmsfilter">
+  <input id="cmsSearch" placeholder="🔎 Buscar dispositivo, Xpacio o dirección…" autocomplete="off">
+  <span class="fchips">
+    <button class="fchip on" data-f="all">Todos</button>
+    <button class="fchip" data-f="on">● Emitiendo</button>
+    <button class="fchip" data-f="off">○ Sin señal</button>
+    <button class="fchip" data-f="cz">✅ Cazado</button>
+  </span>
+  <span class="meta" id="filterCount"></span>
 </div>
 
 <div class="grid" id="grid"><div class="empty">Cargando flota…</div></div>
@@ -481,7 +503,7 @@ async function load(){
     }
     const cardCls = matched?'matched':(hasCond?'assigned':'');
     const cmode = d.mode||'conditional', CMICON={conditional:'🎯',local:'📍',sync:'🛰'};
-    return `<div class="card ${cardCls}${COLLAPSED.has(d.id)?' collapsed':''}" data-id="${esc(d.id)}">
+    return `<div class="card ${cardCls}${COLLAPSED.has(d.id)?' collapsed':''}" data-id="${esc(d.id)}" data-q="${esc(((d.name||'')+' '+d.id+' '+(d.addr||'')).toLowerCase())}" data-on="${isOn?1:0}" data-cz="${matched?1:0}">
       <div class="top" title="Clic para contraer / expandir">
         <div class="ava ${isRobot?'robot':''}">${isRobot?'🤖':(d.orientation==='landscape'?'🖥️':'📱')}</div>
         <div style="min-width:0;flex:1">
@@ -547,6 +569,8 @@ async function load(){
         })()}
         <div class="acts">
           <a class="btn" href="${esc(canalUrl(d))}" target="_blank" rel="noopener">▶ Abrir canal</a>
+          <a class="btn ghost" href="/cms/calendar/?screen=${encodeURIComponent(d.screen||d.id)}" title="parrilla de este dispositivo">🗓 Parrilla</a>
+          <a class="btn ghost" href="/condicional.html?target=${encodeURIComponent(d.id)}" title="segmentar por audiencia">🎯 Segmentar</a>
           <a class="btn ghost" href="${(d.coords&&d.coords.length===2)?('https://www.clearchannel.tv/?lng='+d.coords[0]+'&lat='+d.coords[1]+'&label='+encodeURIComponent(d.name||d.id)):('https://www.clearchannel.tv/?screen='+encodeURIComponent(d.screen||''))}" target="_blank" rel="noopener" title="ver este punto en el mapa">🗺 Mapa</a>
         </div>
         <div class="remote" data-id="${esc(d.id)}" title="control remoto del player">
@@ -576,12 +600,38 @@ async function load(){
   $('grid').innerHTML = cards.length?cards.join(''):'<div class="empty">No hay dispositivos auto-registrados todavía. Da de alta uno en <code>admira.tv/alta.html</code>.</div>';
   $('k-total').textContent=devs.length; $('k-online').textContent=online;
   $('k-aud').textContent=withAud; $('k-robot').textContent=robots;
+  $('k-off').textContent=Math.max(0,devs.length-online);
   $('stamp').textContent='actualizado '+new Date().toLocaleTimeString('es-ES');
   // reproduce los thumbs de vídeo (preview en bucle)
   document.querySelectorAll('.thumb video, .fp video').forEach(v=>{ v.loop=true; v.muted=true; v.play&&v.play().catch(()=>{}); });
+  applyCmsFilter();
+  updateRevenue();
+}
+// Ingresos de hoy (pasarela de pago) — KPI
+async function updateRevenue(){
+  try{
+    const d=await fetch('https://api.admira.store/pay/list?t='+Date.now(),{cache:'no-store'}).then(r=>r.json());
+    const today=new Date().toISOString().slice(0,10);
+    let t=0; (d.payments||[]).forEach(p=>{ if(p.status==='paid' && String(p.createdAt||'').slice(0,10)===today) t+=p.amount||0; });
+    $('k-rev').textContent='€'+Math.round(t);
+  }catch(_){ $('k-rev').textContent='€0'; }
+}
+// Buscador + filtros de la flota (cliente)
+let CMS_FILTER='all';
+function applyCmsFilter(){
+  const q=($('cmsSearch').value||'').toLowerCase().trim();
+  let shown=0;
+  document.querySelectorAll('#grid .card').forEach(c=>{
+    const okQ=!q||(c.dataset.q||'').includes(q);
+    const okF=CMS_FILTER==='all'||(CMS_FILTER==='on'&&c.dataset.on==='1')||(CMS_FILTER==='off'&&c.dataset.on==='0')||(CMS_FILTER==='cz'&&c.dataset.cz==='1');
+    const vis=okQ&&okF; c.style.display=vis?'':'none'; if(vis)shown++;
+  });
+  $('filterCount').textContent=shown+' visibles';
 }
 loadProjects().then(load); setInterval(load, 10000);
 $('canalSel').addEventListener('change',()=>{ CANAL_SEL=$('canalSel').value; try{localStorage.setItem('cms_canal',CANAL_SEL)}catch(_){} load(); });
+$('cmsSearch').addEventListener('input',applyCmsFilter);
+document.querySelectorAll('.fchip').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.fchip').forEach(x=>x.classList.remove('on')); b.classList.add('on'); CMS_FILTER=b.dataset.f; applyCmsFilter(); });
 // ── Editor de canales (POST /grid/projects) ──
 let CANAL_EDIT=[];
 function renderCanalRows(list){
