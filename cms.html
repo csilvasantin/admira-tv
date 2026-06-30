@@ -310,7 +310,7 @@
   <div class="kpi amber"><div class="n" id="k-aud">—</div><div class="l">con audiencia</div></div>
   <div class="kpi off"><div class="n" id="k-off">—</div><div class="l">sin señal</div></div>
   <div class="kpi"><div class="n" id="k-robot">—</div><div class="l">móviles / robot</div></div>
-  <div class="kpi rev"><div class="n" id="k-rev">—</div><div class="l">ingresos hoy</div></div>
+  <div class="kpi rev"><div class="n" id="k-rev">—</div><div class="l" id="k-rev-l">ingresos hoy</div></div>
 </div>
 
 <div class="cmsfilter">
@@ -651,9 +651,11 @@ async function updateRevenue(){
   try{
     const d=await fetch('https://api.admira.store/pay/list?t='+Date.now(),{cache:'no-store'}).then(r=>r.json());
     const today=new Date().toISOString().slice(0,10);
-    let t=0; (d.payments||[]).forEach(p=>{ if(p.status==='paid' && String(p.createdAt||'').slice(0,10)===today) t+=p.amount||0; });
+    const wk=new Date(Date.now()-6*864e5).toISOString().slice(0,10); // hace 7 días (incl. hoy)
+    let t=0, w=0; (d.payments||[]).forEach(p=>{ if(p.status!=='paid')return; const day=String(p.createdAt||'').slice(0,10); if(day===today)t+=p.amount||0; if(day>=wk)w+=p.amount||0; });
     $('k-rev').textContent='€'+Math.round(t);
-  }catch(_){ $('k-rev').textContent='€0'; }
+    const lbl=$('k-rev-l'); if(lbl) lbl.textContent='ingresos hoy · 7d €'+Math.round(w);
+  }catch(_){ $('k-rev').textContent='€0'; const lbl=$('k-rev-l'); if(lbl) lbl.textContent='ingresos hoy'; }
 }
 // Buscador + filtros de la flota (cliente)
 let CMS_FILTER='all';
@@ -667,7 +669,7 @@ function applyCmsFilter(){
   });
   $('filterCount').textContent=shown+' visibles';
 }
-const APP_VERSION='v.30.06.2026.r5'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+const APP_VERSION='v.30.06.2026.r6'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
 let PREV_ON={}, PREV_INIT=false;
 function toast(msg,kind){ const t=document.createElement('div'); t.className='toast'+(kind?(' '+kind):''); t.textContent=msg; document.getElementById('toasts').appendChild(t); setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},6000); }
 document.getElementById('exportCsv').onclick=exportCSV;
