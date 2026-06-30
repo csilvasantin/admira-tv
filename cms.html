@@ -282,14 +282,10 @@
 <body>
 <script>
 /* Config del chrome unificado (lo monta /admira-nav.js). Extras propios del CMS de flota. */
-window.ADMIRA_VERSION='v.30.06.2026.r24';
+window.ADMIRA_VERSION='v.30.06.2026.r25';
 window.ADMIRA_NAV={
   active:'flota', title:'Control de flota',
   topRight:
-    '<span class="admseg">'+
-      '<a class="on" href="/cms.html?prog=1" title="Planificar emisión — programar la parrilla"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.2h17M8 3.5v3M16 3.5v3M12 12v5M9.5 14.5h5"/></svg><span class="lbl">Planificar</span></a>'+
-      '<a href="/cms/calendar/" title="Calendario de emisión"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.2h17M8 3.5v3M16 3.5v3"/><circle cx="8.5" cy="13.5" r=".9" fill="currentColor" stroke="none"/><circle cx="12" cy="13.5" r=".9" fill="currentColor" stroke="none"/><circle cx="15.5" cy="13.5" r=".9" fill="currentColor" stroke="none"/></svg><span class="lbl">Calendario</span></a>'+
-    '</span>'+
     '<label class="canalSel" title="Canal / proyecto — filtra la flota y la programación"><span>📡</span><select id="canalSel"></select></label>'+
     '<button id="canalEdit" class="navbtn" title="Editar canales (crear/renombrar/asignar circuitos)">✎</button>'+
     '<div class="live"><span class="dot" id="liveDot"></span><span id="liveTxt">en vivo</span><button id="pauseBtn" class="navbtn" title="Pausar/reanudar el auto-refresco">⏸</button></div>',
@@ -315,7 +311,7 @@ window.ADMIRA_NAV={
   }
 };
 </script>
-<script src="/admira-nav.js?v=30.06.2026.r24"></script>
+<script src="/admira-nav.js?v=30.06.2026.r25"></script>
 
 <div class="kpis">
   <div class="kpi accent"><div class="n" id="k-total">—</div><div class="l">dispositivos</div></div>
@@ -696,7 +692,7 @@ document.addEventListener('keydown',e=>{
     case '?': toast('Atajos: / buscar · r recargar · p pausa · e CSV · m menú · d detalle','ok'); break;
   }
 });
-const APP_VERSION=window.ADMIRA_VERSION||'v.30.06.2026.r24'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+const APP_VERSION=window.ADMIRA_VERSION||'v.30.06.2026.r25'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
 let PREV_ON={}, PREV_INIT=false;
 function toast(msg,kind){ const t=document.createElement('div'); t.className='toast'+(kind?(' '+kind):''); t.textContent=msg; document.getElementById('toasts').appendChild(t); setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},6000); }
 document.getElementById('exportCsv').onclick=exportCSV;

@@ -2,7 +2,7 @@
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r24 */
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r25 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -11,7 +11,7 @@
   var title=(s&&s.dataset.title)||cfg.title||'';
   var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r24';
+  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r25';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
@@ -38,7 +38,8 @@
     comprar:     _S+'<circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M2.5 3.6h2.3l2.2 11.1a1.5 1.5 0 0 0 1.5 1.2h7.7a1.5 1.5 0 0 0 1.5-1.2l1.3-6.9H6.1"/></svg>',
     alta:        _S+'<rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="M12 8v8M8 12h8"/></svg>',
     help:        _S+'<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2-2.4 3.5"/><circle cx="12" cy="16.6" r=".5" fill="currentColor" stroke="none"/></svg>',
-    control:     _S+'<path d="M5 4v16M12 4v16M19 4v16"/><circle cx="5" cy="9" r="2"/><circle cx="12" cy="14.5" r="2"/><circle cx="19" cy="7" r="2"/></svg>'
+    control:     _S+'<path d="M5 4v16M12 4v16M19 4v16"/><circle cx="5" cy="9" r="2"/><circle cx="12" cy="14.5" r="2"/><circle cx="19" cy="7" r="2"/></svg>',
+    programar:   _S+'<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.2h17M8 3.5v3M16 3.5v3M12 12v5M9.5 14.5h5"/></svg>'
   };
   function IC(k){ return ICONS[k]||''; }
   try{ window.AdmiraIcon=IC; window.AdmiraIconSet=ICONS; }catch(_){}
@@ -158,12 +159,20 @@
       '<div class="admsec"><h4>Navegación</h4><div class="admlinks">'+links+'</div></div>'+
     '</aside>';
   }
+  function emiSwitchHTML(){
+    // Conmutador de emisión Planificar ↔ Calendario, disponible en TODA página del chrome.
+    return '<span class="admseg" aria-label="Emisión">'+
+      '<a class="'+(active==='flota'?'on':'')+'" href="/cms.html?prog=1" title="Planificar emisión — programar la parrilla">'+IC('programar')+'<span class="lbl">Planificar</span></a>'+
+      '<a class="'+(active==='calendar'?'on':'')+'" href="/cms/calendar/" title="Calendario de emisión">'+IC('calendar')+'<span class="lbl">Calendario</span></a>'+
+    '</span>';
+  }
   function topHTML(){
     return '<header class="admtop">'+
       '<button class="admtog" id="admNavTog" title="Plegar / desplegar menú (m)">☰</button>'+
       '<span class="admbrand"><a href="/" class="admhome" title="Volver a la home · Admira.tv">Admira</a> · <b>'+brandTag+'</b><span class="admver">'+VER+'</span></span>'+
       (title?'<span class="admsub">'+title+'</span>':'')+
       '<span class="admsp"></span>'+
+      emiSwitchHTML()+
       (cfg.topRight||'')+
       '<button class="admtog" id="admDetTog" title="Panel de detalle (d)" aria-label="Panel de detalle"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/></svg></button>'+
     '</header>';
