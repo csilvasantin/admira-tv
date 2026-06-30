@@ -1,0 +1,12 @@
+# Cloudflare Pages — control de caché
+# HTML siempre revalidado (los cambios se ven al instante); assets con caché normal.
+/*
+  Cache-Control: no-cache
+/assets/*
+  Cache-Control: public, max-age=86400
+*.png
+  Cache-Control: public, max-age=86400
+*.jpg
+  Cache-Control: public, max-age=86400
+*.svg
+  Cache-Control: public, max-age=86400
