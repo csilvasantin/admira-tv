@@ -355,7 +355,7 @@ async function loadTargets(){
 loadTargets(); setInterval(loadTargets, 30000);
 
 /* ── EDITOR DE SEGMENTACIÓN cámara → contenido ─────────────────────────────── */
-const SEG_API = 'https://omnipublicity-api.csilvasantin.workers.dev/segmentation';
+const SEG_API = 'https://api.admira.store/segmentation';
 const GENDERS=[['any','cualquiera'],['m','hombre'],['f','mujer']];
 const AGES=[['any','cualquiera'],['nino','niño'],['joven','joven'],['adulto','adulto'],['senior','senior']];
 const CATS=[['any','cualquiera'],['atraer','atraer'],['producto','producto'],['marca','marca'],['promo','promo']];
@@ -627,7 +627,7 @@ document.querySelectorAll('#simWrap .simToggle').forEach(t=>t.addEventListener('
 runSim();
 
 /* ── HISTORIAL DE "CAZADOS": feed del worker (/segmentation/hits) ───────────── */
-const HITS_API='https://omnipublicity-api.csilvasantin.workers.dev/segmentation/hits';
+const HITS_API='https://api.admira.store/segmentation/hits';
 let DEV_NAMES={};
 const GICON={m:'♂',f:'♀'};
 function audChip(a){ a=a||{}; const g=GICON[a.gender]||'•'; return '<span class="pill aud">👥 '+(a.faces||1)+' · '+g+(a.age?(' '+esc(a.age)):'')+'</span>'; }
