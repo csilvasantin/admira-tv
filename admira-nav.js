@@ -2,7 +2,7 @@
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r22 */
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r23 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -11,7 +11,7 @@
   var title=(s&&s.dataset.title)||cfg.title||'';
   var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r22';
+  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r23';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
@@ -71,6 +71,13 @@
    ".admtop .admtR-cta{color:#04110b;background:#7aa2ff}",
    ".admtop .admtR-cta:hover{background:#9bb8ff}",
    "@media(max-width:760px){.admtop .admsub{display:none}.admtop .admtR:not(.admtR-cta){display:none}}",
+   /* conmutador de pestañas en la barra superior (p.ej. Planificar ↔ Calendario) */
+   ".admtop .admseg{display:inline-flex;align-items:center;gap:2px;background:#0e1420;border:1px solid #1e2940;border-radius:10px;padding:2px}",
+   ".admtop .admseg a{display:inline-flex;align-items:center;gap:6px;color:#9fb0c6;text-decoration:none;font:600 12.5px -apple-system,Segoe UI,sans-serif;padding:5px 11px;border-radius:8px;transition:color .15s,background .15s;white-space:nowrap}",
+   ".admtop .admseg a:hover{color:#fff;background:#13203a}",
+   ".admtop .admseg a.on{color:#04110b;background:#3df08a}",
+   ".admtop .admseg a svg{width:15px;height:15px;flex:none}",
+   "@media(max-width:760px){.admtop .admseg a .lbl{display:none}}",
    /* sidebar */
    ".admside{position:fixed;left:0;top:var(--admtb);bottom:0;width:var(--admnw);background:#080b12;border-right:1px solid #1e2940;",
      "z-index:40;display:flex;flex-direction:column;gap:3px;padding:10px 9px;overflow-x:hidden;overflow-y:auto;",

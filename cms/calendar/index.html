@@ -126,7 +126,17 @@
 </style>
 </head>
 <body>
-<script src="/admira-nav.js?v=30.06.2026.r22" data-active="calendar" data-title="Calendario de emisión" defer></script>
+<script>
+// Conmutador Planificar ↔ Calendario en la barra superior (Calendario activo aquí).
+window.ADMIRA_NAV={
+  topRight:
+    '<span class="admseg">'+
+      '<a href="/cms.html?prog=1" title="Planificar emisión — programar la parrilla"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.2h17M8 3.5v3M16 3.5v3M12 12v5M9.5 14.5h5"/></svg><span class="lbl">Planificar</span></a>'+
+      '<a class="on" href="/cms/calendar/" title="Calendario de emisión"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.2h17M8 3.5v3M16 3.5v3"/><circle cx="8.5" cy="13.5" r=".9" fill="currentColor" stroke="none"/><circle cx="12" cy="13.5" r=".9" fill="currentColor" stroke="none"/><circle cx="15.5" cy="13.5" r=".9" fill="currentColor" stroke="none"/></svg><span class="lbl">Calendario</span></a>'+
+    '</span>'
+};
+</script>
+<script src="/admira-nav.js?v=30.06.2026.r23" data-active="calendar" data-title="Calendario de emisión" defer></script>
 <div class="wrap">
   <div class="controls">
     <label style="font-size:12px;color:var(--dim)">Xpacio</label>
