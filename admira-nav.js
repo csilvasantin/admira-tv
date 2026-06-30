@@ -2,7 +2,7 @@
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r25 */
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r26 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -11,7 +11,7 @@
   var title=(s&&s.dataset.title)||cfg.title||'';
   var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r25';
+  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r26';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
@@ -148,6 +148,11 @@
     return '<aside class="admdet" id="admDet" aria-label="Detalle">'+
       '<div class="hd">Detalle <span class="pro">PRO</span></div>'+
       (cfg.detailTop||'')+
+      '<div class="admsec"><h4>Red en antena</h4>'+
+        '<div class="admrow"><span>Pantallas</span><b id="adm-d-scr">—</b></div>'+
+        '<div class="admrow"><span>En antena</span><b id="adm-d-air">—</b></div>'+
+        '<div class="admrow"><span>Circuitos</span><b id="adm-d-cir">—</b></div>'+
+      '</div>'+
       '<div class="admsec"><h4>Sistema</h4>'+
         '<div class="admrow"><span>Página</span><b id="adm-d-page">'+(title||active||'—')+'</b></div>'+
         '<div class="admrow"><span>Fuente</span><b>api.admira.store</b></div>'+
@@ -191,7 +196,20 @@
     function setNav(open){ html.classList.toggle('admnav-open',open); try{localStorage.setItem('cms_nav_open',open?'1':'0')}catch(_){} if(navTog){navTog.textContent=open?'«':'☰'; navTog.title=open?'Contraer menú (m)':'Desplegar menú (m)';} }
     function pingApi(){ var e=document.getElementById('adm-d-api'); if(!e)return; e.textContent='…'; var t0=(new Date()).getTime();
       fetch('https://api.admira.store/pay/list?_h='+t0,{cache:'no-store'}).then(function(r){ e.textContent=(r.ok?'ok':('HTTP '+r.status))+' · '+((new Date()).getTime()-t0)+'ms'; }).catch(function(){ e.textContent='sin conexión'; }); }
-    function setDet(open){ html.classList.toggle('admnav-det',open); if(detTog)detTog.classList.toggle('on',open); try{localStorage.setItem('cms_det_open',open?'1':'0')}catch(_){} if(open){tick();pingApi();} }
+    function loadNet(){ var scrEl=document.getElementById('adm-d-scr'); if(!scrEl) return;
+      var airEl=document.getElementById('adm-d-air'), cirEl=document.getElementById('adm-d-cir');
+      fetch('https://api.admira.store/grid/screens',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+        var scr=(d.screens||[]).filter(function(x){return x&&x.screen;});
+        scrEl.textContent=scr.length;
+        var cirs={}; scr.forEach(function(s){ if(s.circuit) cirs[s.circuit]=1; }); if(cirEl) cirEl.textContent=Object.keys(cirs).length||'—';
+        if(airEl){ airEl.textContent='…';
+          Promise.all(scr.map(function(s){ return fetch('https://api.admira.store/signage/now?screen='+encodeURIComponent(s.screen),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}); })).then(function(arr){
+            var now=(new Date()).getTime(), live=0; arr.forEach(function(o){ var it=o&&(o.item||o); if(it&&it.ts&&(now-it.ts)<180000) live++; }); airEl.textContent=live;
+          });
+        }
+      }).catch(function(){ scrEl.textContent='sin conexión'; if(airEl)airEl.textContent='—'; if(cirEl)cirEl.textContent='—'; });
+    }
+    function setDet(open){ html.classList.toggle('admnav-det',open); if(detTog)detTog.classList.toggle('on',open); try{localStorage.setItem('cms_det_open',open?'1':'0')}catch(_){} if(open){tick();pingApi();loadNet();} }
     function tick(){ var e=document.getElementById('adm-d-time'); if(e)e.textContent=new Date().toLocaleTimeString('es-ES'); if(typeof cfg.onDetail==='function'){try{cfg.onDetail();}catch(_){}} }
     window.admToggleNav=function(){setNav(!html.classList.contains('admnav-open'));};
     window.admToggleDet=function(){setDet(!html.classList.contains('admnav-det'));};
@@ -202,7 +220,8 @@
     var sn=null,sd=null; try{sn=localStorage.getItem('cms_nav_open');sd=localStorage.getItem('cms_det_open');}catch(_){}
     setNav(sn==null ? window.innerWidth>980 : sn==='1');
     setDet(sd==='1');
-    setInterval(function(){ if(html.classList.contains('admnav-det')) tick(); },1000);
+    var _netTk=0;
+    setInterval(function(){ if(html.classList.contains('admnav-det')){ tick(); if(_netTk++ % 15 === 0) loadNet(); } },1000);
 
     document.addEventListener('keydown',function(e){
       var t=e.target, tag=(t&&t.tagName||'').toLowerCase();
