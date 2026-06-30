@@ -2,14 +2,15 @@
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r14 */
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r15 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
   var cfg=window.ADMIRA_NAV||{};
   var active=(s&&s.dataset.active)||cfg.active||'';
   var title=(s&&s.dataset.title)||cfg.title||'';
-  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r14';
+  function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
+  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r15';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
@@ -23,6 +24,7 @@
     {k:'alta',       h:'/alta.html',                        ic:'➕',       t:'Alta'},
     {k:'help',       h:'/help/',                            ic:'❓',       t:'Ayuda'}
   ];
+  if(!active){ var _here=_norm(location.pathname); for(var _i=0;_i<ITEMS.length;_i++){ if(_norm(ITEMS[_i].h)===_here){active=ITEMS[_i].k;break;} } }
 
   var CSS = [
    ":root{--admtb:52px}",
@@ -52,11 +54,13 @@
    ".admside::-webkit-scrollbar{width:6px}.admside::-webkit-scrollbar-thumb{background:#1e2940;border-radius:3px}",
    ".admni{display:flex;align-items:center;gap:13px;width:100%;padding:9px 10px;border-radius:11px;border:1px solid transparent;",
      "background:transparent;color:#cdd8e8;font:600 13px -apple-system,Segoe UI,sans-serif;cursor:pointer;",
-     "text-decoration:none;white-space:nowrap;overflow:hidden;text-align:left}",
+     "text-decoration:none;white-space:nowrap;overflow:hidden;text-align:left;position:relative}",
    ".admni:hover{background:#13203a;border-color:#26385e;color:#fff}",
    ".admni.on{background:rgba(122,162,255,.13);border-color:#2a3a66;color:#fff}",
+   ".admni.on::before{content:'';position:absolute;left:1px;top:8px;bottom:8px;width:3px;border-radius:3px;background:#7aa2ff}",
    ".admni .ic{flex:none;width:24px;text-align:center;font-size:17px}",
    ".admni .t{transition:opacity .12s}",
+   "@media(min-width:681px){html.admnav:not(.admnav-open) .admni:hover::after{content:attr(title);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:#0e1420;border:1px solid #26385e;color:#cdd8e8;padding:5px 9px;border-radius:7px;font:600 12px -apple-system,Segoe UI,sans-serif;white-space:nowrap;z-index:60;box-shadow:0 6px 18px #0008;pointer-events:none}}",
    ".admsep{height:1px;background:#1e2940;margin:7px 6px}",
    ".admspace{flex:1;min-height:6px}",
    ".admfoot{padding:6px 10px;color:#8595ad;font:600 11px ui-monospace,monospace;white-space:nowrap;overflow:hidden}",
@@ -90,7 +94,7 @@
 
   function navHTML(){
     var lis=ITEMS.map(function(i){
-      return '<a class="admni'+(i.k===active?' on':'')+'" href="'+i.h+'"'+(i.blank?' target="_blank" rel="noopener"':'')+' title="'+i.t+'"><span class="ic">'+i.ic+'</span><span class="t">'+i.t+'</span></a>';
+      return '<a class="admni'+(i.k===active?' on':'')+'" href="'+i.h+'"'+(i.blank?' target="_blank" rel="noopener"':'')+(i.k===active?' aria-current="page"':'')+' title="'+i.t+'"><span class="ic">'+i.ic+'</span><span class="t">'+i.t+'</span></a>';
     }).join("");
     return '<aside class="admside" id="admSide" aria-label="Navegación">'+lis+
       (cfg.extraNav||'')+
@@ -108,6 +112,7 @@
       '<div class="admsec"><h4>Sistema</h4>'+
         '<div class="admrow"><span>Página</span><b id="adm-d-page">'+(title||active||'—')+'</b></div>'+
         '<div class="admrow"><span>Fuente</span><b>api.admira.store</b></div>'+
+        '<div class="admrow"><span>API</span><b id="adm-d-api">—</b></div>'+
         '<div class="admrow"><span>Hora</span><b id="adm-d-time">—</b></div>'+
         '<div class="admrow"><span>Versión</span><b id="adm-d-ver">'+VER+'</b></div>'+
       '</div>'+
@@ -117,7 +122,7 @@
   }
   function topHTML(){
     return '<header class="admtop">'+
-      '<button class="admtog" id="admNavTog" title="Plegar / desplegar menú (m)">☜</button>'+
+      '<button class="admtog" id="admNavTog" title="Plegar / desplegar menú (m)">☰</button>'+
       '<span class="admbrand">Admira · <b>CMS</b><span class="admver">'+VER+'</span></span>'+
       (title?'<span class="admsub">'+title+'</span>':'')+
       '<span class="admsp"></span>'+
@@ -137,7 +142,9 @@
     var navTog=document.getElementById('admNavTog');
     var detTog=document.getElementById('admDetTog');
     function setNav(open){ html.classList.toggle('admnav-open',open); try{localStorage.setItem('cms_nav_open',open?'1':'0')}catch(_){} if(navTog){navTog.textContent=open?'«':'☰'; navTog.title=open?'Contraer menú (m)':'Desplegar menú (m)';} }
-    function setDet(open){ html.classList.toggle('admnav-det',open); if(detTog)detTog.classList.toggle('on',open); try{localStorage.setItem('cms_det_open',open?'1':'0')}catch(_){} if(open)tick(); }
+    function pingApi(){ var e=document.getElementById('adm-d-api'); if(!e)return; e.textContent='…'; var t0=(new Date()).getTime();
+      fetch('https://api.admira.store/pay/list?_h='+t0,{cache:'no-store'}).then(function(r){ e.textContent=(r.ok?'ok':('HTTP '+r.status))+' · '+((new Date()).getTime()-t0)+'ms'; }).catch(function(){ e.textContent='sin conexión'; }); }
+    function setDet(open){ html.classList.toggle('admnav-det',open); if(detTog)detTog.classList.toggle('on',open); try{localStorage.setItem('cms_det_open',open?'1':'0')}catch(_){} if(open){tick();pingApi();} }
     function tick(){ var e=document.getElementById('adm-d-time'); if(e)e.textContent=new Date().toLocaleTimeString('es-ES'); if(typeof cfg.onDetail==='function'){try{cfg.onDetail();}catch(_){}} }
     window.admToggleNav=function(){setNav(!html.classList.contains('admnav-open'));};
     window.admToggleDet=function(){setDet(!html.classList.contains('admnav-det'));};
