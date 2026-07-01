@@ -1,12 +1,21 @@
-# Cloudflare Pages — control de caché
-# HTML siempre revalidado (los cambios se ven al instante); assets con caché normal.
+# Cloudflare Pages — caché + seguridad
+# HTML siempre revalidado (los cambios se ven al instante); assets con caché.
+# NOTA: sin X-Frame-Options — canal.html se EMBEBE a propósito (MUPI en clearchannel.tv,
+# players de flota). Permissions-Policy no bloquea cámara (condicional la usa).
 /*
   Cache-Control: no-cache
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# El chrome se pide siempre con ?v=<versión> → inmutable, cero revalidaciones.
+/admira-nav.js
+  Cache-Control: public, max-age=31536000, immutable
+
 /assets/*
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=604800
 *.png
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=604800
 *.jpg
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=604800
 *.svg
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=604800
