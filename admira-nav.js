@@ -2,7 +2,7 @@
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r27 */
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r28 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -11,7 +11,7 @@
   var title=(s&&s.dataset.title)||cfg.title||'';
   var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r27';
+  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r28';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
@@ -28,7 +28,7 @@
   if(!active){ var _here=_norm(location.pathname); for(var _i=0;_i<ITEMS.length;_i++){ if(_norm(ITEMS[_i].h)===_here){active=ITEMS[_i].k;break;} } }
 
   // Iconos monolínea estilo Matrix (verde fósforo + glow, vía CSS). Heredan currentColor.
-  var _S='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">';
+  var _S='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">';
   var ICONS={
     flota:       _S+'<circle cx="12" cy="9" r="1.5"/><path d="M12 10.5V20M8.5 20h7"/><path d="M8.3 6.4a4.8 4.8 0 0 0 0 7.2M15.7 6.4a4.8 4.8 0 0 1 0 7.2"/><path d="M6 4.2a8 8 0 0 0 0 11.6M18 4.2a8 8 0 0 1 0 11.6"/></svg>',
     calendar:    _S+'<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.2h17M8 3.5v3M16 3.5v3"/><circle cx="8.5" cy="13.5" r=".9" fill="currentColor" stroke="none"/><circle cx="12" cy="13.5" r=".9" fill="currentColor" stroke="none"/><circle cx="15.5" cy="13.5" r=".9" fill="currentColor" stroke="none"/></svg>',
@@ -121,6 +121,11 @@
    ".admlinks a{color:#cdd8e8;text-decoration:none;font-size:13px;font-weight:600;padding:6px 9px;border-radius:8px;border:1px solid #1e2940;background:#0e1420}",
    ".admlinks a:hover{border-color:#7aa2ff;color:#fff}",
    ".admscrim{position:fixed;inset:0;background:#000a;z-index:39;display:none}",
+   /* accesibilidad: skip-link, focus visible por teclado, reduced-motion */
+   ".admskip{position:fixed;left:8px;top:-60px;z-index:70;background:#3df08a;color:#04110b;font:700 13px -apple-system,Segoe UI,sans-serif;padding:9px 14px;border-radius:9px;text-decoration:none;transition:top .15s}",
+   ".admskip:focus{top:8px;outline:2px solid #04110b;outline-offset:2px}",
+   ".admtop a:focus-visible,.admtop button:focus-visible,.admni:focus-visible,.admlinks a:focus-visible,.admseg a:focus-visible,.admhome:focus-visible{outline:2px solid #3df08a;outline-offset:2px;border-radius:8px}",
+   "@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}",
    "@media(max-width:680px){",
      "html.admnav{padding-left:0;padding-right:0}",
      ".admside{width:238px;transform:translateX(-100%);transition:transform .2s ease;box-shadow:12px 0 40px #000c}",
@@ -166,20 +171,20 @@
   }
   function emiSwitchHTML(){
     // Conmutador de emisión Planificar ↔ Calendario, disponible en TODA página del chrome.
-    return '<span class="admseg" aria-label="Emisión">'+
-      '<a class="'+(active==='flota'?'on':'')+'" href="/cms.html?prog=1" title="Planificar emisión — programar la parrilla">'+IC('programar')+'<span class="lbl">Planificar</span></a>'+
-      '<a class="'+(active==='calendar'?'on':'')+'" href="/cms/calendar/" title="Calendario de emisión">'+IC('calendar')+'<span class="lbl">Calendario</span></a>'+
+    return '<span class="admseg" role="group" aria-label="Emisión">'+
+      '<a class="'+(active==='flota'?'on':'')+'" href="/cms.html?prog=1" aria-label="Planificar emisión" title="Planificar emisión — programar la parrilla">'+IC('programar')+'<span class="lbl">Planificar</span></a>'+
+      '<a class="'+(active==='calendar'?'on':'')+'" href="/cms/calendar/" aria-label="Calendario de emisión" title="Calendario de emisión">'+IC('calendar')+'<span class="lbl">Calendario</span></a>'+
     '</span>';
   }
   function topHTML(){
     return '<header class="admtop">'+
-      '<button class="admtog" id="admNavTog" title="Plegar / desplegar menú (m)">☰</button>'+
+      '<button class="admtog" id="admNavTog" aria-label="Plegar o desplegar el menú" aria-expanded="false" title="Plegar / desplegar menú (m)">☰</button>'+
       '<span class="admbrand"><a href="/" class="admhome" title="Volver a la home · Admira.tv">Admira</a> · <b>'+brandTag+'</b><span class="admver">'+VER+'</span></span>'+
       (title?'<span class="admsub">'+title+'</span>':'')+
       '<span class="admsp"></span>'+
       emiSwitchHTML()+
       (cfg.topRight||'')+
-      '<button class="admtog" id="admDetTog" title="Panel de detalle (d)" aria-label="Panel de detalle"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/></svg></button>'+
+      '<button class="admtog" id="admDetTog" title="Panel de detalle (d)" aria-label="Panel de detalle" aria-expanded="false"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/></svg></button>'+
     '</header>';
   }
 
@@ -187,13 +192,15 @@
     var st=document.createElement('style'); st.id='admnav-css'; st.textContent=CSS; document.head.appendChild(st);
     document.documentElement.classList.add('admnav');
     var holder=document.createElement('div');
-    holder.innerHTML = topHTML()+navHTML()+detHTML()+'<div class="admscrim" id="admScrim"></div>';
+    holder.innerHTML = '<a class="admskip" href="#admskip-target">Saltar al contenido</a>'+topHTML()+navHTML()+detHTML()+'<div class="admscrim" id="admScrim"></div>';
     document.body.prepend.apply(document.body, Array.prototype.slice.call(holder.childNodes));
+    var _skip=document.querySelector('.admskip');
+    if(_skip) _skip.addEventListener('click',function(e){ e.preventDefault(); var m=document.querySelector('main,[role=main],.wrap,#view,#mupi,#stage')||document.querySelector('h1'); if(m){ m.setAttribute('tabindex','-1'); try{m.focus();}catch(_){} m.scrollIntoView(); } });
 
     var html=document.documentElement;
     var navTog=document.getElementById('admNavTog');
     var detTog=document.getElementById('admDetTog');
-    function setNav(open){ html.classList.toggle('admnav-open',open); try{localStorage.setItem('cms_nav_open',open?'1':'0')}catch(_){} if(navTog){navTog.textContent=open?'«':'☰'; navTog.title=open?'Contraer menú (m)':'Desplegar menú (m)';} }
+    function setNav(open){ html.classList.toggle('admnav-open',open); try{localStorage.setItem('cms_nav_open',open?'1':'0')}catch(_){} if(navTog){navTog.textContent=open?'«':'☰'; navTog.title=open?'Contraer menú (m)':'Desplegar menú (m)'; navTog.setAttribute('aria-expanded',open?'true':'false');} }
     function pingApi(){ var e=document.getElementById('adm-d-api'); if(!e)return; e.textContent='…'; var t0=(new Date()).getTime();
       fetch('https://api.admira.store/pay/list?_h='+t0,{cache:'no-store'}).then(function(r){ e.textContent=(r.ok?'ok':('HTTP '+r.status))+' · '+((new Date()).getTime()-t0)+'ms'; }).catch(function(){ e.textContent='sin conexión'; }); }
     function loadNet(){ var scrEl=document.getElementById('adm-d-scr'); if(!scrEl) return;
@@ -209,7 +216,7 @@
         }
       }).catch(function(){ scrEl.textContent='sin conexión'; if(airEl)airEl.textContent='—'; if(cirEl)cirEl.textContent='—'; });
     }
-    function setDet(open){ html.classList.toggle('admnav-det',open); if(detTog)detTog.classList.toggle('on',open); try{localStorage.setItem('cms_det_open',open?'1':'0')}catch(_){} if(open){tick();pingApi();loadNet();} }
+    function setDet(open){ html.classList.toggle('admnav-det',open); if(detTog){detTog.classList.toggle('on',open); detTog.setAttribute('aria-expanded',open?'true':'false');} try{localStorage.setItem('cms_det_open',open?'1':'0')}catch(_){} if(open){tick();pingApi();loadNet();} }
     function tick(){ var e=document.getElementById('adm-d-time'); if(e)e.textContent=new Date().toLocaleTimeString('es-ES'); if(typeof cfg.onDetail==='function'){try{cfg.onDetail();}catch(_){}} }
     window.admToggleNav=function(){setNav(!html.classList.contains('admnav-open'));};
     window.admToggleDet=function(){setDet(!html.classList.contains('admnav-det'));};
