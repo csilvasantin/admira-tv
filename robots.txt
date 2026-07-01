@@ -1,0 +1,10 @@
+# admira.tv — el canal de emisión DOOH del ecosistema Admira
+User-agent: *
+Allow: /
+
+# El display a pantalla completa del player no aporta valor a buscadores
+Disallow: /*?embed=mupi
+Disallow: /*?clean=1
+Disallow: /*?chrome=0
+
+Sitemap: https://admira.tv/sitemap.xml
