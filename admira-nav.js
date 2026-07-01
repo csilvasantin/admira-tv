@@ -2,7 +2,7 @@
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r29 */
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.30.06.2026.r30 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -11,7 +11,7 @@
   var title=(s&&s.dataset.title)||cfg.title||'';
   var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r29';
+  var VER=window.ADMIRA_VERSION||'v.30.06.2026.r30';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
@@ -223,6 +223,14 @@
     if(navTog)navTog.onclick=window.admToggleNav;
     if(detTog)detTog.onclick=window.admToggleDet;
     var scrim=document.getElementById('admScrim'); if(scrim)scrim.onclick=function(){setNav(false);};
+
+    // PWA: manifest + service worker. Solo en páginas navegadas (aquí carga el chrome);
+    // NO en la emisión empotrada (canal/signage con embed=mupi no cargan admira-nav.js).
+    try{
+      if(!document.querySelector('link[rel="manifest"]')){ var _ml=document.createElement('link'); _ml.rel='manifest'; _ml.href='/manifest.webmanifest'; document.head.appendChild(_ml); }
+      if(!document.querySelector('link[rel="apple-touch-icon"]')){ var _at=document.createElement('link'); _at.rel='apple-touch-icon'; _at.href='/icon-192.png'; document.head.appendChild(_at); }
+      if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); }); }
+    }catch(_){}
 
     var sn=null,sd=null; try{sn=localStorage.getItem('cms_nav_open');sd=localStorage.getItem('cms_det_open');}catch(_){}
     setNav(sn==null ? window.innerWidth>980 : sn==='1');
