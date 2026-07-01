@@ -2,13 +2,18 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
+<link rel="preconnect" href="https://api.admira.store" crossorigin>
+<link rel="preconnect" href="https://www.carlossilva.info">
+<link rel="dns-prefetch" href="https://api.admira.store">
+<link rel="dns-prefetch" href="https://www.carlossilva.info">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pixer Signage · Admira XP Display</title>
 <!-- Chrome "portería" SOLO al navegar; NO en el display a pantalla completa (clean=1/chrome=0/embed=mupi). -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
   if(p.get('chrome')==='0'||p.get('clean')==='1'||p.get('embed')==='mupi')return;
-  var s=document.createElement('script');s.src='/admira-nav.js?v=01.07.2026.r31';
+  var s=document.createElement('script');s.src='/admira-nav.js?v=01.07.2026.r32';
   s.setAttribute('data-active','');s.setAttribute('data-title','Pixer Signage');document.head.appendChild(s);
 }catch(e){}})();</script>
 <style>

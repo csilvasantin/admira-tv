@@ -2,6 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
+<link rel="preconnect" href="https://api.admira.store" crossorigin>
+<link rel="preconnect" href="https://www.carlossilva.info">
+<link rel="dns-prefetch" href="https://api.admira.store">
+<link rel="dns-prefetch" href="https://www.carlossilva.info">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>En antena ahora · Admira.tv</title>
 <meta name="description" content="Mural en vivo: qué emite cada dispositivo de cada Xpacio en este momento, con estado de los players y reproducciones del día.">
@@ -35,7 +40,7 @@
 </style>
 </head>
 <body>
-<script src="/admira-nav.js?v=01.07.2026.r31" data-active="mural" data-title="En antena ahora" defer></script>
+<script src="/admira-nav.js?v=01.07.2026.r32" data-active="mural" data-title="En antena ahora" defer></script>
 <div class="wrap">
   <div class="bar">
     <label style="font-size:12px;color:var(--dim)">Xpacio</label><select id="loc"></select>
