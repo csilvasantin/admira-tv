@@ -8,7 +8,7 @@
 <!-- Chrome "portería" SOLO al navegar; NO en el display a pantalla completa (clean=1/chrome=0/embed=mupi). -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
   if(p.get('chrome')==='0'||p.get('clean')==='1'||p.get('embed')==='mupi')return;
-  var s=document.createElement('script');s.src='/admira-nav.js?v=30.06.2026.r28';
+  var s=document.createElement('script');s.src='/admira-nav.js?v=30.06.2026.r29';
   s.setAttribute('data-active','');s.setAttribute('data-title','Pixer Signage');document.head.appendChild(s);
 }catch(e){}})();</script>
 <style>
@@ -72,12 +72,12 @@
 
 <div id="hud">
   <div class="title" id="title">// inicializando</div>
-  <div class="meta" id="meta">poll cada 5s · feed: pixer-eleven</div>
+  <div class="meta" id="meta">poll cada 5s · feed: api.admira.store</div>
   <div class="live" id="live">conectando</div>
 </div>
 
 <script>
-const WORKER = 'https://pixer-eleven.csilvasantin.workers.dev';
+const WORKER = 'https://api.admira.store'; // dominio propio (mismo worker pixer-eleven) — esquiva el bloqueo de workers.dev en ES
 const POLL_MS = 5000;
 let lastShownId = null;
 let totalCount = 0;
