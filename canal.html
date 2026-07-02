@@ -820,6 +820,32 @@ function rebuild(restart){ playlist=syncOn ? syncMasterOrder() : all.filter(matc
   if(directOn){ renderRail(); return; }   // en directo no tocamos el escenario
   if(restart||cur<0||!stage.querySelector('video,img,audio')){ play(0); } else { renderRail(); } }
 
+// ── Catálogo persistente para ARRANQUE OFFLINE ───────────────────────────────
+// Si el player reinicia (o el watchdog recarga la web) SIN red, el índice del Stock
+// no responde y la pantalla quedaría en blanco. Guardamos el último catálogo bueno en
+// localStorage; al arrancar sin red se reconstruye el loop desde él + el media ya
+// precacheado en 'admira-canal-v1'. Así la pantalla NUNCA se apaga por un corte.
+const CATALOG_KEY='adtv_catalog';
+function saveCatalog(){
+  try{
+    const slim=all.slice(0,300).map(it=>({id:it.id,url:it.url,type:it.type,audience:it.audience,
+      category:it.category,ageBucket:it.ageBucket,timeSlot:it.timeSlot,tags:it.tags,
+      num:it.num,createdAt:it.createdAt,title:it.title,thumbnail:it.thumbnail,motor:it.motor}));
+    localStorage.setItem(CATALOG_KEY, JSON.stringify({t:Date.now(),items:slim}));
+  }catch(_){ /* quota u otro → sin persistencia; no es crítico */ }
+}
+function restoreCatalog(){
+  if(all.length) return false;               // ya hay catálogo en memoria → no pisar
+  try{
+    const raw=localStorage.getItem(CATALOG_KEY); if(!raw) return false;
+    const d=JSON.parse(raw); const items=(d&&d.items)||[];
+    const good=items.filter(i=>i&&MEDIA.includes(i.type)&&i.url);
+    if(!good.length) return false;
+    good.forEach(it=>{ it._num=it.num; it._offline=true; });
+    all=good; return true;
+  }catch(_){ return false; }
+}
+
 // showStatus=true → semáforo en la CLI (ciclo de 30s); false → refresco silencioso (avances).
 async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   if(showStatus) setStockStatus('checking');                  // 🟡 revisando stock
@@ -839,6 +865,7 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   all=items.filter(i=>i&&MEDIA.includes(i.type)&&i.url).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   // número PERSISTENTE de cada asset (lo asigna el worker y va en el meta/stock). Para /play<N>.
   all.forEach(it=>{ it._num=it.num; });
+  saveCatalog();   // persiste el último catálogo bueno para arranque offline
   // etiquetas de formato/aspecto/resolución desde la caché de dimensiones (instantáneo).
   for(const it of all){ const dd=dimCache[it.id]; if(dd){ applyFmt(it,dd); it._fmtDone=true; } }
   // la firma incluye tags+categoría: si editas el metadato de un vídeo, se detecta y reordena.
@@ -851,7 +878,13 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   measurePass(); // mide en segundo plano lo que no esté en caché y añade los tags de formato
   if(showStatus){ const hold=Math.max(0,5000-(Date.now()-_t0)); clearTimeout(_statusT); // amarillo mínimo 5s
     _statusT=setTimeout(()=>{ if(isNew){ setStockStatus('new'); clearTimeout(_statusT2); _statusT2=setTimeout(()=>setStockStatus('ok'),4500); } else setStockStatus('ok'); }, hold); }
-}catch(e){ setLive('offline',false); if(showStatus){ clearTimeout(_statusT); setStockStatus('off'); } } }
+}catch(e){
+  // Sin red: si es arranque en frío (catálogo vacío en memoria), rescata el último
+  // catálogo bueno de localStorage y sigue emitiendo el loop ya precacheado.
+  if(!all.length && restoreCatalog()){ rebuild(false); setLive('OFFLINE · loop en caché · '+playlist.length, playlist.length>0); }
+  else setLive('offline', playlist.length>0);
+  if(showStatus){ clearTimeout(_statusT); setStockStatus('off'); }
+} }
 function restartFeed(){ if(feedTimer) clearInterval(feedTimer); feedTimer=setInterval(()=>loadFeed(true),Math.max(10,cfg.refreshSec)*1000); if(playoutMode==='conditional') restartXpl(); }
 
 // ── controles ──
@@ -1441,7 +1474,13 @@ const XPLCanal = (function(){
 })();
 window.XPLCanal = XPLCanal;
 
-loadStores(); screenLbl(); applyAudio(); renderChan(); fitMupi(); loadFeed(true); restartFeed();
+loadStores(); screenLbl(); applyAudio(); renderChan(); fitMupi();
+// Arranque offline-safe: sin red, pinta ya el loop desde el catálogo cacheado
+// (el fetch normal lo refresca en cuanto vuelva la conexión).
+if(!navigator.onLine && restoreCatalog()){ rebuild(false); setLive('OFFLINE · loop en caché · '+playlist.length, playlist.length>0); }
+loadFeed(true); restartFeed();
+// Al recuperar la red, refresca el catálogo de inmediato (no espera al ciclo de 30s).
+try{ window.addEventListener('online', ()=>{ try{ loadFeed(true); }catch(_){} }); }catch(_){}
 wireCam(); loadGrid(); setInterval(loadGrid, 60000);
 startPositionBeat();   // equipos móviles (robot/taxi/bus): latido de posición
 // pseudo-streaming: pre-descarga la playlist a disco y reporta el estado al worker
