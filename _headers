@@ -13,6 +13,12 @@
 
 /assets/*
   Cache-Control: public, max-age=604800
+
+# APK del player Android (distribución de flota): tipo MIME correcto + cache corto
+# (la APK cambia poco pero queremos que una nueva versión llegue rápido a las tablets).
+*.apk
+  Content-Type: application/vnd.android.package-archive
+  Cache-Control: public, max-age=300
 *.png
   Cache-Control: public, max-age=604800
 *.jpg
