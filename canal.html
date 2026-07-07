@@ -21,12 +21,12 @@
 <meta property="og:image:alt" content="Admira.tv · Canal — en antena, en bucle">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://admira.tv/og-canal.png">
-<!-- BUILD canal v.07.07.2026.r34 · tarea#2 "emisión visible": /signage/now envía loc/locName + badge sin-circuito -->
+<!-- BUILD canal v.07.07.2026.r35 · geo-independencia: getCurrentPosition/watchPosition tolerantes (tablets AOSP sin Network Location Provider) — geo opcional, nunca bloqueante, sin error visible -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
   if(p.get('chrome')==='0'||p.get('clean')==='1'||p.get('embed')==='mupi')return;
-  var s=document.createElement('script');s.src='/admira-nav.js?v=07.07.2026.r34';
+  var s=document.createElement('script');s.src='/admira-nav.js?v=07.07.2026.r35';
   s.setAttribute('data-active','canal');s.setAttribute('data-title','Canal en antena');document.head.appendChild(s);
 }catch(e){}})();</script>
 <script src="https://admira.app/locations.js"></script>
@@ -1320,7 +1320,10 @@ function startPositionBeat(){
   if(!isMobileScreen || !navigator.geolocation) return;
   save('adtv_mobile','1');
   const opt={ enableHighAccuracy:true, maximumAge:30000, timeout:20000 };
-  navigator.geolocation.getCurrentPosition(onGeo, ()=>{}, opt);
+  // Geo OPCIONAL y NUNCA bloqueante: en tablets AOSP sin Network Location Provider
+  // la ubicación falla. La posición del ALTA (/locations) ya sitúa la pantalla, así
+  // que un fallo aquí se ignora en silencio — sin error visible en el player.
+  try{ navigator.geolocation.getCurrentPosition(onGeo, ()=>{}, opt); }catch(_){ return; }
   try{ navigator.geolocation.watchPosition(onGeo, ()=>{}, { enableHighAccuracy:true, maximumAge:30000, timeout:60000 }); }catch(_){}
 }
 
