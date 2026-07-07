@@ -281,13 +281,58 @@
   .hitRow .hpiece{color:var(--air);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
   .hitRow .hslot{font:600 10px ui-monospace,monospace;color:var(--dim);border:1px solid var(--line);border-radius:5px;padding:1px 6px;flex:none}
   .hitsEmpty{padding:22px 14px;text-align:center;color:var(--dim);font-size:12.5px}
+  /* ── tarea3: EN EMISIÓN — AHORA (vista de emisión unificada, cruce de las 4 fuentes) ── */
+  .emitBoard{margin:14px 20px 4px;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;overflow:hidden;position:relative}
+  .emitBoard::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.55}
+  .ebHead{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .ebHead h2{margin:0;font:800 14px ui-monospace,monospace;letter-spacing:.14em;color:var(--ink);text-transform:uppercase;display:flex;align-items:center;gap:8px}
+  .ebHead h2 .ebDot{width:9px;height:9px;border-radius:50%;background:var(--air);box-shadow:0 0 9px var(--air);animation:pulse 1.6s infinite}
+  .ebMeta{font:11.5px ui-monospace,monospace;color:var(--dim)}
+  .ebToggles{margin-left:auto;display:flex;gap:8px}
+  .ebTog{background:var(--panel2);color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font:600 11.5px ui-monospace,monospace;cursor:pointer}
+  .ebTog:hover{border-color:var(--accent)} .ebTog.on{background:var(--accent);color:#091020;border-color:var(--accent)}
+  .ebStats{display:flex;gap:10px;flex-wrap:wrap;padding:11px 16px 4px}
+  .ebStat{flex:1;min-width:104px;background:#0c1320;border:1px solid var(--line);border-radius:11px;padding:9px 11px}
+  .ebStat b{display:block;font:800 20px ui-monospace,monospace;line-height:1.1}
+  .ebStat span{font:11px ui-monospace,monospace;color:var(--dim)}
+  .ebStat.air b{color:var(--air)} .ebStat.off b{color:var(--off)} .ebStat.amber b{color:var(--amber)} .ebStat.accent b{color:var(--accent)}
+  .ebWrap{overflow-x:auto;padding:8px 8px 12px}
+  table.ebTable{width:100%;border-collapse:collapse;min-width:720px;font:12.5px ui-monospace,monospace}
+  table.ebTable th{text-align:left;color:var(--dim);font-weight:600;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:6px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  table.ebTable td{padding:9px 10px;border-bottom:1px solid #141c2b;vertical-align:middle}
+  table.ebTable tr:hover td{background:#0b121d}
+  .ebSt{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);font-size:11px;white-space:nowrap}
+  .ebSt .d{width:7px;height:7px;border-radius:50%;flex:none}
+  .ebSt.on{color:var(--air);border-color:#1f5e44} .ebSt.on .d{background:var(--air);box-shadow:0 0 7px var(--air)}
+  .ebSt.off{color:var(--off);border-color:#5e2630} .ebSt.off .d{background:var(--off)}
+  .ebRole{display:inline-block;padding:2px 8px;border-radius:6px;border:1px solid var(--line);font-size:10.5px;color:var(--dim)}
+  .ebRole.canal{color:var(--accent);border-color:#2a3a66} .ebRole.game{color:var(--robot);border-color:#42306a}
+  .ebScreen{font-weight:700;color:var(--ink)}
+  .ebPiece{color:var(--air);font-size:11.5px}
+  .ebHole{color:var(--dim);font-style:italic;opacity:.75}
+  .ebPanel{padding:4px 16px 16px}
+  .ebPanel h3{margin:14px 0 7px;font:700 11.5px ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--amber)}
+  .ebPanel h3.dim{color:var(--dim)}
+  .ebGapList{display:flex;flex-direction:column;gap:5px}
+  .ebGap{display:flex;align-items:center;gap:9px;padding:6px 10px;background:#0c1320;border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:8px;font-size:12px}
+  .ebGap.crit{border-left-color:var(--off)}
+  .ebGap .gk{font-weight:700;color:var(--ink);white-space:nowrap}
+  .ebGap .gd{color:var(--dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ebGapEmpty{color:var(--air);font-size:12px;padding:6px 2px}
+  .ebFleetGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+  .ebMach{background:#0c1320;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:12px}
+  .ebMach .mn{font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px}
+  .ebMach .mm{color:var(--dim);font-size:10.5px;margin-top:3px}
+  .ebMach .mtag{display:inline-block;margin-top:5px;padding:1px 7px;border-radius:5px;border:1px solid var(--line);color:var(--dim);font-size:10px}
+  .ebSrcErr{color:var(--off);font-size:11px;padding:4px 16px 10px}
+  @media(max-width:640px){ .emitBoard{margin:12px 10px} }
   /* el chrome (barra + sidebar + detalle) lo aporta /admira-nav.js — ver config al final del body */
 </style>
 </head>
 <body>
 <script>
 /* Config del chrome unificado (lo monta /admira-nav.js). Extras propios del CMS de flota. */
-window.ADMIRA_VERSION='v.01.07.2026.r33';
+window.ADMIRA_VERSION='v.07.07.2026.r34';
 window.ADMIRA_NAV={
   active:'flota', title:'Control de flota',
   topRight:
@@ -316,7 +361,30 @@ window.ADMIRA_NAV={
   }
 };
 </script>
-<script src="/admira-nav.js?v=01.07.2026.r33"></script>
+<script src="/admira-nav.js?v=07.07.2026.r34"></script>
+
+<!-- tarea3-emision-r34 · EN EMISIÓN — AHORA (cruza signage/screens · grid/screens · locations · fleet) -->
+<section class="emitBoard" id="emitBoard">
+  <div class="ebHead">
+    <h2><span class="ebDot"></span>📡 EN EMISIÓN — AHORA</h2>
+    <span class="ebMeta" id="ebStamp">cargando…</span>
+    <span class="ebToggles">
+      <button class="ebTog on" id="ebTogGaps" title="Mostrar/ocultar los descuadres por cablear">⚠ Descuadres</button>
+      <button class="ebTog" id="ebTogFleet" title="Mostrar/ocultar los equipos de flota sin vincular">🖥 Flota</button>
+    </span>
+  </div>
+  <div class="ebStats" id="ebStats"></div>
+  <div class="ebWrap">
+    <table class="ebTable" id="ebTable">
+      <thead><tr>
+        <th>Estado</th><th>Player / pantalla</th><th>Rol</th><th>Circuito · sitio</th><th>Canal · parrilla</th><th>En emisión</th><th>Visto</th>
+      </tr></thead>
+      <tbody id="ebBody"><tr><td colspan="7" class="ebHole">Cargando emisión en vivo…</td></tr></tbody>
+    </table>
+  </div>
+  <div class="ebPanel" id="ebGaps"></div>
+  <div class="ebPanel" id="ebFleet" hidden></div>
+</section>
 
 <div class="kpis">
   <div class="kpi accent"><div class="n" id="k-total">—</div><div class="l">dispositivos</div></div>
@@ -697,7 +765,7 @@ document.addEventListener('keydown',e=>{
     case '?': toast('Atajos: / buscar · r recargar · p pausa · e CSV · m menú · d detalle','ok'); break;
   }
 });
-const APP_VERSION=window.ADMIRA_VERSION||'v.01.07.2026.r33'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+const APP_VERSION=window.ADMIRA_VERSION||'v.07.07.2026.r34'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
 let PREV_ON={}, PREV_INIT=false;
 function toast(msg,kind){ const t=document.createElement('div'); t.className='toast'+(kind?(' '+kind):''); t.textContent=msg; document.getElementById('toasts').appendChild(t); setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},6000); }
 document.getElementById('exportCsv').onclick=exportCSV;
@@ -1007,6 +1075,181 @@ $('progBands').addEventListener('click',e=>{
   const add=e.target.closest('.pgAdd'); if(add){ openProgPicker(add.dataset.band); return; }
   const x=e.target.closest('[data-unbook]'); if(x){ progUnbook(x.dataset.unbook); }
 });
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   tarea3 · EN EMISIÓN — AHORA — vista de emisión unificada
+   Cruza 4 registros, cada uno con su fetch tolerante a fallo (timeout propio):
+     1) api.admira.store/signage/screens  → players VIVOS (la vista viva, la estrella)
+     2) api.admira.store/grid/screens     → superficies de parrilla + pixerScreens[] (puente lógico→físico)
+     3) api.admira.store/grid/projects    → canal (project) ← circuits[]
+     4) omnipublicity locations           → mapa de sitios (bloqueable en ES → n/d con gracia)
+     5) admira-fleet /machines            → flota (sin vínculo pantalla; sección aparte)
+   Claves de join: player.screen ∈ gridSurface.pixerScreens ; player.loc ↔ location.id (prefijo circuit)
+   Los huecos del join se muestran HONESTOS ("— sin alta en mapa", nunca inventados).
+   ═══════════════════════════════════════════════════════════════════════════ */
+(function(){
+  const EB = {
+    SCREENS : 'https://api.admira.store/signage/screens',
+    GRID    : 'https://api.admira.store/grid/screens',
+    PROJ    : 'https://api.admira.store/grid/projects',
+    LOCS    : 'https://omnipublicity-api.csilvasantin.workers.dev/locations?selfreg=1',
+    FLEET   : 'https://admira-fleet.csilvasantin.workers.dev/machines',
+    REFRESH : 40000,      // 40 s
+    ONLINE_MS: 600000     // frescura ~10 min (TTL de signage/screens)
+  };
+  let EB_GAPS=true, EB_FLEET=false, EB_TIMER=null;
+  const el=id=>document.getElementById(id);
+  const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const hole=t=>'<span class="ebHole">'+esc(t)+'</span>';
+  function agoTxt(sec){ if(sec==null||isNaN(sec))return '—'; sec=Math.max(0,Math.round(sec));
+    if(sec<60)return sec+'s'; if(sec<3600)return Math.round(sec/60)+'m'; if(sec<86400)return Math.round(sec/3600)+'h'; return Math.round(sec/86400)+'d'; }
+  // fetch con timeout individual → si una fuente cae, devuelve {err} y el resto sigue
+  async function grab(url,ms){
+    const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(), ms||8000);
+    try{ const r=await fetch(url,{cache:'no-store',signal:ctl.signal}); clearTimeout(to);
+      if(!r.ok) return {err:'HTTP '+r.status}; return {data:await r.json()}; }
+    catch(e){ clearTimeout(to); return {err:(e&&e.name==='AbortError')?'timeout':(e&&e.message)||'error'}; }
+  }
+
+  async function ebLoad(){
+    // 4 fuentes en paralelo, cada una aislada
+    const [sc, gr, pj, lc, fl] = await Promise.all([
+      grab(EB.SCREENS,8000), grab(EB.GRID,8000), grab(EB.PROJ,8000),
+      grab(EB.LOCS,12000), grab(EB.FLEET,8000)
+    ]);
+    const errs=[];
+    const players = (sc.data&&Array.isArray(sc.data.screens))?sc.data.screens:[];
+    if(sc.err){ errs.push('signage/screens: '+sc.err); }
+    const gridScreens = (gr.data&&Array.isArray(gr.data.screens))?gr.data.screens:[];
+    if(gr.err) errs.push('grid/screens: '+gr.err);
+    const projects = (pj.data&&Array.isArray(pj.data.projects))?pj.data.projects:[];
+    if(pj.err) errs.push('grid/projects: '+pj.err);
+    const locations = lc.data? (lc.data.locations||(Array.isArray(lc.data)?lc.data:[])) : [];
+    const locsDown = !!lc.err; if(lc.err) errs.push('locations: '+lc.err+' (mapa: n/d)');
+    const machines = (fl.data&&Array.isArray(fl.data.machines))?fl.data.machines:[];
+    if(fl.err) errs.push('fleet/machines: '+fl.err);
+
+    // ── índices de cruce ──
+    // circuit → project(name)
+    const circ2proj={}; projects.forEach(p=>(p.circuits||[]).forEach(c=>{circ2proj[c]=p;}));
+    // physical playerId → grid surface (pixerScreens[])
+    const phys2grid={};
+    gridScreens.forEach(g=>(g.pixerScreens||[]).forEach(ps=>{ phys2grid[ps]=g; }));
+    // location por circuito/loc: match por id === loc, o id empieza por loc, o loc empieza por circuito de la loc
+    function findLoc(loc){
+      if(!loc||locsDown) return null;
+      let m=locations.find(x=>x.id===loc); if(m)return m;
+      m=locations.find(x=>String(x.id||'').indexOf(loc+'-')===0 || String(x.id||'')===loc); if(m)return m;
+      m=locations.find(x=>loc.indexOf(String(x.id||'').split('-')[0])===0 && x.id); return m||null;
+    }
+    // circuito de un player: prefiere el circuito de su grid-surface, si no el loc
+    function playerCircuit(p){ const g=phys2grid[p.screen]; return (g&&g.circuit)|| (p.loc? p.loc.split('-')[0] : ''); }
+
+    // ── STATS ──
+    const online = players.filter(p=>p.online).length;
+    const noLoc  = players.filter(p=>!p.loc).length;
+    const emptySurf = gridScreens.filter(g=>!(g.pixerScreens&&g.pixerScreens.length)).length;
+    const liveCircuits = new Set(players.filter(p=>p.loc).map(p=>playerCircuit(p)).filter(Boolean));
+    const locsNoPlayer = locsDown? null : locations.filter(L=>{
+      const c=String(L.id||'').split('-')[0]; return !liveCircuits.has(c) && !players.some(p=>findLoc(p.loc)&&findLoc(p.loc).id===L.id);
+    }).length;
+    el('ebStats').innerHTML =
+      '<div class="ebStat air"><b>'+online+'</b><span>players emitiendo</span></div>'+
+      '<div class="ebStat accent"><b>'+players.length+'</b><span>players vivos</span></div>'+
+      '<div class="ebStat amber"><b>'+noLoc+'</b><span>sin circuito (loc)</span></div>'+
+      '<div class="ebStat amber"><b>'+emptySurf+'</b><span>superficies sin player</span></div>'+
+      '<div class="ebStat off"><b>'+(locsDown?'n/d':locsNoPlayer)+'</b><span>sitios sin player</span></div>';
+
+    // ── TABLA: fila por player vivo ──
+    if(!players.length){
+      el('ebBody').innerHTML='<tr><td colspan="7" class="ebHole">'+(sc.err? ('signage/screens caído: '+esc(sc.err)) : 'ningún player vivo ahora mismo')+'</td></tr>';
+    } else {
+      const rows = players.slice().sort((a,b)=>(b.online?1:0)-(a.online?1:0)||String(a.screen).localeCompare(String(b.screen))).map(p=>{
+        const on = !!p.online;
+        const stCls = on?'on':'off', stTxt = on? '🟢 en antena':'🔴 sin señal';
+        const role = p.role||''; const rCls = /canal/.test(role)?'canal':(/game|juego/.test(role)?'game':'');
+        // circuito · sitio
+        const circ = playerCircuit(p);
+        const L = findLoc(p.loc);
+        let siteCell;
+        if(!p.loc) siteCell = hole('— huérfano (sin loc)');
+        else { const nm=p.locName||circ||p.loc;
+          siteCell = '<div><b>'+esc(nm)+'</b></div>'+
+            (L? '<div class="ebMeta">'+esc(L.addr||L.name||'')+'</div>'
+              : '<div class="'+(locsDown?'ebMeta':'ebHole')+'">'+(locsDown?'mapa: n/d':'— sin alta en mapa')+'</div>'); }
+        // canal · parrilla
+        const g = phys2grid[p.screen];
+        let chanCell;
+        if(g){ const pr=circ2proj[g.circuit];
+          chanCell = '<div><b>'+esc(pr?pr.name:g.circuit)+'</b></div><div class="ebMeta">'+esc(g.name||g.screen)+' · '+ (g.pixerScreens&&g.pixerScreens.length? 'mapeado':'—') +'</div>'; }
+        else { const pr=circ?circ2proj[circ]:null;
+          chanCell = pr? '<div><b>'+esc(pr.name)+'</b></div><div class="ebHole">— sin superficie en parrilla</div>'
+                       : hole('— sin parrilla'); }
+        const piece = p.showing_id? '<span class="ebPiece" title="pieza en emisión (showing_id)">'+esc(String(p.showing_id).slice(0,22))+'</span>' : hole('— nada');
+        return '<tr>'+
+          '<td><span class="ebSt '+stCls+'"><span class="d"></span>'+stTxt+'</span></td>'+
+          '<td><span class="ebScreen">'+esc(p.screen)+'</span></td>'+
+          '<td>'+(role? '<span class="ebRole '+rCls+'">'+esc(role)+'</span>':hole('—'))+'</td>'+
+          '<td>'+siteCell+'</td>'+
+          '<td>'+chanCell+'</td>'+
+          '<td>'+piece+'</td>'+
+          '<td class="ebMeta">'+agoTxt(p.age_seconds)+'</td>'+
+        '</tr>';
+      }).join('');
+      el('ebBody').innerHTML=rows;
+    }
+
+    // ── DESCUADRES accionables (alimenta tarea #4) ──
+    const gapHtml=[];
+    const orphans=players.filter(p=>!p.loc);
+    gapHtml.push('<h3>Players vivos sin circuito (huérfanos) · '+orphans.length+'</h3>');
+    gapHtml.push('<div class="ebGapList">'+ (orphans.length? orphans.map(p=>
+      '<div class="ebGap"><span class="gk">'+esc(p.screen)+'</span><span class="gd">rol '+esc(p.role||'—')+' · emite '+esc(String(p.showing_id||'—').slice(0,18))+' → falta asignar loc/circuito</span></div>').join('')
+      : '<div class="ebGapEmpty">✓ ningún player huérfano</div>') +'</div>');
+    const emptySurfaces=gridScreens.filter(g=>!(g.pixerScreens&&g.pixerScreens.length));
+    gapHtml.push('<h3>Superficies de parrilla sin player (pixerScreens:[]) · '+emptySurfaces.length+'</h3>');
+    gapHtml.push('<div class="ebGapList">'+ (emptySurfaces.length? emptySurfaces.map(g=>{
+      const pr=circ2proj[g.circuit];
+      return '<div class="ebGap"><span class="gk">'+esc(g.screen)+'</span><span class="gd">'+esc(g.name||'')+' · canal '+esc(pr?pr.name:g.circuit)+' → falta cablear player físico</span></div>';
+    }).join('') : '<div class="ebGapEmpty">✓ todas las superficies tienen player</div>') +'</div>');
+    gapHtml.push('<h3>Sitios (mapa) sin player vivo · '+(locsDown?'n/d':(()=>{
+      const arr=locations.filter(L=>{const c=String(L.id||'').split('-')[0];return !liveCircuits.has(c)&&!players.some(p=>{const l=findLoc(p.loc);return l&&l.id===L.id;});});
+      return arr.length; })())+'</h3>');
+    if(locsDown){ gapHtml.push('<div class="ebGapList"><div class="ebGap crit"><span class="gk">mapa n/d</span><span class="gd">locations no accesible: '+esc(lc.err)+' (bloqueado en ES / timeout)</span></div></div>'); }
+    else { const noP=locations.filter(L=>{const c=String(L.id||'').split('-')[0];return !liveCircuits.has(c)&&!players.some(p=>{const l=findLoc(p.loc);return l&&l.id===L.id;});});
+      gapHtml.push('<div class="ebGapList">'+ (noP.length? noP.map(L=>
+        '<div class="ebGap"><span class="gk">'+esc(L.id)+'</span><span class="gd">'+esc(L.name||'')+' → sin ningún player emitiendo ahí</span></div>').join('')
+        : '<div class="ebGapEmpty">✓ todos los sitios tienen player vivo</div>') +'</div>'); }
+    el('ebGaps').innerHTML = gapHtml.join('');
+    el('ebGaps').hidden = !EB_GAPS;
+
+    // ── FLOTA (equipos) — sin vínculo a pantalla (deviceId = trabajo futuro, tarea #4) ──
+    const nowS=Math.floor(Date.now()/1000);
+    let fleetHtml='<h3 class="dim">Flota (equipos) · '+machines.length+' — sin vincular a pantalla</h3>';
+    if(fl.err){ fleetHtml+='<div class="ebSrcErr">admira-fleet caído: '+esc(fl.err)+'</div>'; }
+    fleetHtml+='<div class="ebFleetGrid">'+ machines.map(m=>{
+      const seen = m.lastSeen? (nowS-m.lastSeen):null;
+      const fresh = seen!=null && seen<900; // <15 min
+      // matching obvio por nombre (host contiene circuito conocido) — solo pista, NO vínculo real
+      const hint = players.find(p=>p.loc && String(m.id||'').toLowerCase().indexOf(String(p.loc).toLowerCase())>=0);
+      return '<div class="ebMach"><div class="mn">'+(fresh?'🟢':'⚪')+' '+esc(m.name||m.id)+'</div>'+
+        '<div class="mm">'+esc(m.platform||'—')+' · visto '+ (seen!=null?agoTxt(seen):'—') +'</div>'+
+        '<span class="mtag">'+(hint?('posible → '+esc(hint.loc)):'sin vincular')+'</span></div>';
+    }).join('') +'</div>';
+    el('ebFleet').innerHTML=fleetHtml;
+    el('ebFleet').hidden = !EB_FLEET;
+
+    // sello + errores de fuente
+    const stamp = new Date().toLocaleTimeString('es-ES');
+    el('ebStamp').innerHTML = 'act. '+stamp+' · '+players.length+' vivos / '+online+' en antena'+
+      (errs.length? ' · <span style="color:var(--off)">⚠ '+esc(errs.join(' · '))+'</span>' : '');
+  }
+
+  el('ebTogGaps').addEventListener('click',function(){ EB_GAPS=!EB_GAPS; this.classList.toggle('on',EB_GAPS); el('ebGaps').hidden=!EB_GAPS; });
+  el('ebTogFleet').addEventListener('click',function(){ EB_FLEET=!EB_FLEET; this.classList.toggle('on',EB_FLEET); el('ebFleet').hidden=!EB_FLEET; });
+  ebLoad();
+  EB_TIMER=setInterval(ebLoad, EB.REFRESH);
+})();
 </script>
 </body>
 </html>

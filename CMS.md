@@ -95,4 +95,27 @@ Estado actual de **Canal Xtanco** (5 superficies, `GET /grid/screens`):
   público chico/chica (matriz de segmentación), estado de descarga (pseudo-streaming).
 - Enlaces: 🎯 Condicional · 📺 Canal · ➕ Alta · Control ↗ (XpaceOS, owner completo).
 
-_Documentado: 2026-06-26 (Morfeo · MacBookProNegro14)._
+---
+
+## 6. EN EMISIÓN — AHORA (vista de emisión unificada) · r34
+
+Sección estrella al principio de `cms.html`: qué equipo emite qué canal **AHORA**, cruzando
+en vivo **4 registros** (cada `fetch` aislado con su timeout; si una fuente cae, el resto sigue).
+Auto-refresco cada **40 s** (independiente del grid de flota de 10 s).
+
+- **Fuentes:** `api.admira.store/signage/screens` (players vivos, la vista viva) · `…/grid/screens`
+  (superficies + `pixerScreens[]`) · `…/grid/projects` (canal ← circuitos) · `omnipublicity /locations`
+  (mapa; bloqueable en ES → degrada a «mapa: n/d») · `admira-fleet /machines` (flota).
+- **Claves de join:** `player.screen ∈ gridSurface.pixerScreens` (físico↔lógico) · `player.loc` ↔
+  `location.id` (por prefijo de circuito). Los huecos se pintan HONESTOS: «— sin alta en mapa»,
+  «— sin parrilla», «— huérfano (sin loc)»; nunca se inventa el vínculo.
+- **Tabla:** estado 🟢/🔴 (campo `online`/`age_seconds`, TTL ~10 min), player, rol (canal/juego),
+  circuito·sitio, canal·parrilla (+ si la superficie está mapeada), pieza (`showing_id`), visto.
+- **Descuadres** (alimenta la tarea siguiente): players vivos sin `loc`, superficies con
+  `pixerScreens:[]`, sitios del mapa sin player vivo. Toggle «⚠ Descuadres» (izq).
+- **Flota (equipos):** los `/machines` de admira-fleet, marcados «sin vincular» (el pegamento
+  real `deviceId` es trabajo futuro; sólo se sugiere un match por nombre). Toggle «🖥 Flota».
+- **Límites conocidos:** `signage/screens` sólo lista players que hayan hecho beat (<~10 min);
+  `/locations` puede caer en España (se maneja con gracia); el vínculo host↔pantalla es heurístico.
+
+_Documentado: 2026-06-26 · §6 añadido 2026-07-07 (subMorfeo · MacBookProNegro14)._
