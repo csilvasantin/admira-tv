@@ -21,12 +21,12 @@
 <meta property="og:image:alt" content="Admira.tv · Canal — en antena, en bucle">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://admira.tv/og-canal.png">
-<!-- BUILD canal v.07.07.2026.r36 · controles OCULTOS de testing: Shift+flechas navegan el loop (→ sig · ← ant · ↑ primera · ↓ última), protegidos con Mayúscula para no dispararse por error; HUD efímero CRT; reutilizan la ruta normal de avance (beats/proof-of-play intactos) -->
+<!-- BUILD canal v.08.07.2026.r37 · HUD de testing ENRIQUECIDO: Shift+flechas muestran nombre de la pieza + peso (índice o HEAD cacheado) + posición x/y + metatags (#tags + segmentación); 2 líneas CRT/cian efímeras ~2,5s; sin Shift sigue inocuo -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
   if(p.get('chrome')==='0'||p.get('clean')==='1'||p.get('embed')==='mupi')return;
-  var s=document.createElement('script');s.src='/admira-nav.js?v=07.07.2026.r36';
+  var s=document.createElement('script');s.src='/admira-nav.js?v=08.07.2026.r37';
   s.setAttribute('data-active','canal');s.setAttribute('data-title','Canal en antena');document.head.appendChild(s);
 }catch(e){}})();</script>
 <script src="https://admira.app/locations.js"></script>
@@ -835,7 +835,8 @@ function saveCatalog(){
   try{
     const slim=all.slice(0,300).map(it=>({id:it.id,url:it.url,type:it.type,audience:it.audience,
       category:it.category,ageBucket:it.ageBucket,timeSlot:it.timeSlot,tags:it.tags,
-      num:it.num,createdAt:it.createdAt,title:it.title,thumbnail:it.thumbnail,motor:it.motor}));
+      num:it.num,createdAt:it.createdAt,title:it.title,thumbnail:it.thumbnail,motor:it.motor,
+      size:it.size}));   // r37: peso para el HUD de testing también en arranque offline
     localStorage.setItem(CATALOG_KEY, JSON.stringify({t:Date.now(),items:slim}));
   }catch(_){ /* quota u otro → sin persistencia; no es crítico */ }
 }
@@ -1088,21 +1089,106 @@ window.addEventListener('message',event=>{
 // dispararse por error. Sin teclado o sin Shift NO hacen nada (inocuo para los
 // players sin teclado: tablet / WebView). Reutilizan la MISMA ruta de avance
 // natural (next/prev/play) → el beat /signage/now y el proof-of-play /emit
-// reflejan la pieza real mostrada, gratis. HUD efímero ~1.2s, no ensucia la emisión.
-let _testHudT=null;
-function testHud(txt){
+// reflejan la pieza real mostrada, gratis. HUD efímero ~2.5s, no ensucia la emisión.
+// r37: HUD ENRIQUECIDO — línea 1: TEST ⏭ nombre-pieza · 4,2 MB · 5/27
+//                        línea 2: #tag1 #tag2 … (+N)   [solo si la pieza tiene]
+// El peso sale del índice del Stock (campo size); si falta (parrilla, catálogo
+// offline), se resuelve con un fetch HEAD asíncrono CACHEADO por url: el HUD
+// aparece al instante con "…" y se actualiza en cuanto llega el content-length.
+let _testHudT=null, _testHudItem=null;
+function testHud(l1,l2){
   let h=$('testHud');
   if(!h){
     h=document.createElement('div'); h.id='testHud';
     h.style.cssText='position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:60;'
       +'background:rgba(4,14,22,.85);border:1px solid rgba(125,255,208,.55);color:#7dffd0;'
-      +'border-radius:999px;padding:5px 14px;font:13px ui-monospace,Menlo,monospace;letter-spacing:.06em;'
+      +'border-radius:14px;padding:6px 16px;font:13px ui-monospace,Menlo,monospace;letter-spacing:.06em;'
       +'text-shadow:0 0 6px rgba(125,255,208,.6);backdrop-filter:blur(4px);opacity:0;'
-      +'transition:opacity .25s;pointer-events:none;white-space:nowrap';
+      +'transition:opacity .25s;pointer-events:none;text-align:center;max-width:min(92vw,640px)';
     ($('mupi')||document.body).appendChild(h);
   }
-  h.textContent=txt; h.style.opacity='1';
-  clearTimeout(_testHudT); _testHudT=setTimeout(()=>{ try{ h.style.opacity='0'; }catch(_){} },1200);
+  h.textContent='';
+  // línea 1: si viene estructurada {pre,name,post}, la elipsis recorta SOLO el
+  // nombre (flex) — el peso y el x/y quedan SIEMPRE visibles en el MUPI estrecho.
+  const a=document.createElement('div');
+  if(l1&&typeof l1==='object'){
+    a.style.cssText='display:flex;align-items:baseline;justify-content:center;white-space:nowrap;min-width:0';
+    const p=document.createElement('span'); p.textContent=l1.pre; p.style.flex='0 0 auto';
+    const n=document.createElement('span'); n.textContent=l1.name;
+    n.style.cssText='flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    const q=document.createElement('span'); q.textContent=l1.post; q.style.flex='0 0 auto';
+    a.appendChild(p); a.appendChild(n); a.appendChild(q);
+  } else {
+    a.textContent=l1;
+    a.style.cssText='white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+  }
+  h.appendChild(a);
+  if(l2){ const b=document.createElement('div'); b.textContent=l2;
+    b.style.cssText='margin-top:2px;font-size:11px;letter-spacing:.05em;color:#9fe8ff;'
+      +'text-shadow:0 0 5px rgba(159,232,255,.5);white-space:normal;opacity:.9'; h.appendChild(b); }
+  h.style.opacity='1';
+  clearTimeout(_testHudT); _testHudT=setTimeout(()=>{ try{ h.style.opacity='0'; }catch(_){} },2500);
+}
+// nombre humano de la pieza: title/name del Stock; si no, basename del url
+// (decodificado, sin query). Truncado a ~40 chars para el MUPI vertical.
+function testName(it){
+  let n=(it&&(it.title||it.name))||'';
+  if(!n&&it&&it.url){ const base=String(it.url).split('?')[0].split('/').pop()||'';
+    try{ n=decodeURIComponent(base); }catch(_){ n=base; } }
+  n=String(n).replace(/\s+/g,' ').trim()||'sin título';
+  return n.length>40 ? n.slice(0,39)+'…' : n;
+}
+// bytes → "412,5 KB" / "4,2 MB" (coma decimal es-ES)
+function testFmtBytes(b){
+  if(!(b>0)) return '?';
+  const kb=b/1024, s=v=>v.toFixed(1).replace('.',',');
+  return kb<1024 ? s(kb)+' KB' : s(kb/1024)+' MB';
+}
+// peso de la pieza: size del índice si viene; si no, HEAD asíncrono cacheado
+// por url en un Map ('pending' → en vuelo · número → bytes · '?' → sin header).
+const _testSize=new Map();
+function testSize(it,onUpdate){
+  if(it&&it.size>0) return testFmtBytes(it.size);
+  const u=it&&it.url; if(!u) return '?';
+  const c=_testSize.get(u);
+  if(typeof c==='number') return testFmtBytes(c);
+  if(c==='?') return '?';
+  if(c!=='pending'){
+    _testSize.set(u,'pending');
+    // HEAD primero (R2 pub lo da directo); si no hay content-length (p.ej.
+    // api.admira.store devuelve 404 a HEAD), GET Range 0-0 leyendo content-range.
+    fetch(u,{method:'HEAD'}).then(r=>{
+      const n=parseInt(r.headers.get('content-length')||'',10);
+      if(r.ok&&Number.isFinite(n)&&n>0){ _testSize.set(u,n); return; }
+      throw 0;
+    }).catch(()=>fetch(u,{headers:{'Range':'bytes=0-0'}}).then(r=>{
+      const m=(r.headers.get('content-range')||'').match(/\/(\d+)\s*$/);
+      _testSize.set(u, m?parseInt(m[1],10):'?');
+    })).catch(()=>{ _testSize.set(u,'?'); })
+      .finally(()=>{ try{ if(onUpdate) onUpdate(); }catch(_){} });
+  }
+  return '…';
+}
+// metatags: #tags del Stock + campos de segmentación de la pieza (audiencia,
+// categoría, edad, franja y objeto segmentation), máx 5 con "+N". '' si no hay.
+function testTags(it){
+  if(!it) return '';
+  const out=[], AUD={f:'mujeres',m:'hombres'};
+  const push=v=>{ if(v==null) return; v=String(v).trim(); if(!v||v.toLowerCase()==='all') return;
+    const t='#'+v.replace(/\s+/g,'-'); if(out.indexOf(t)<0) out.push(t); };
+  (it.tags||[]).forEach(push);
+  push(AUD[it.audience]||it.audience); push(it.category); push(it.ageBucket); push(it.timeSlot);
+  try{ const s=it.segmentation; if(s){ (s.genders||[]).forEach(g=>push(AUD[g]||g)); (s.ageBuckets||s.ages||[]).forEach(push); } }catch(_){}
+  if(!out.length) return '';
+  return out.length>5 ? out.slice(0,5).join(' ')+' +'+(out.length-5) : out.join(' ');
+}
+function testHudInfo(ico){
+  const it=playlist[cur]||null, pos=(cur+1)+'/'+playlist.length;
+  _testHudItem=it;
+  const render=()=>{ if(_testHudItem!==it) return;   // el HUD ya es de otra pieza
+    testHud({pre:'TEST '+ico+' ', name:testName(it),
+             post:' · '+testSize(it,render)+' · '+pos}, testTags(it)); };
+  render();
 }
 function testNav(action){
   const ico=action==='next'?'⏭':action==='prev'?'⏮':action==='first'?'⇤':'⇥';
@@ -1112,7 +1198,7 @@ function testNav(action){
   else if(action==='first') play(0);
   else if(action==='last') play(playlist.length-1);
   // cur ya está actualizado (play() fija cur de forma síncrona antes del await)
-  testHud('TEST '+ico+' '+(cur+1)+'/'+playlist.length);
+  testHudInfo(ico);
 }
 window.addEventListener('keydown',e=>{
   const tn=e.target&&e.target.tagName;

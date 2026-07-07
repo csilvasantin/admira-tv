@@ -71,12 +71,12 @@ Para **navegar el loop a mano durante pruebas** hay atajos ocultos, **protegidos
 con Mayúscula** para que no se disparen por error (una flecha suelta NO mueve la
 emisión). Sin teclado (tablet / WebView) son totalmente inocuos.
 
-| Acción | Tecla | HUD |
+| Acción | Tecla | HUD (línea 1) |
 |---|---|---|
-| Siguiente contenido | **Shift + →** | `TEST ⏭ 7/53` |
-| Contenido anterior | **Shift + ←** | `TEST ⏮ 6/53` |
-| Primero del loop | **Shift + ↑** | `TEST ⇤ 1/53` |
-| Último del loop | **Shift + ↓** | `TEST ⇥ 53/53` |
+| Siguiente contenido | **Shift + →** | `TEST ⏭ nombre-pieza.mp4 · 4,2 MB · 7/53` |
+| Contenido anterior | **Shift + ←** | `TEST ⏮ nombre-pieza.mp4 · 4,2 MB · 6/53` |
+| Primero del loop | **Shift + ↑** | `TEST ⇤ nombre-pieza.mp4 · 4,2 MB · 1/53` |
+| Último del loop | **Shift + ↓** | `TEST ⇥ nombre-pieza.mp4 · 4,2 MB · 53/53` |
 
 - Solo reaccionan a `Shift` + una de las 4 flechas; se ignoran si el foco está en
   un `input`/`textarea`/`select` o campo editable. Sin Shift, cero efecto.
@@ -84,8 +84,18 @@ emisión). Sin teclado (tablet / WebView) son totalmente inocuos.
   render: cortan el timer/vídeo/audio en curso y arrancan la pieza destino igual
   que el flujo normal. Por eso el **beat `/signage/now`** y el **proof-of-play
   `/emit`** siguen reflejando la pieza real mostrada (no se corrompen).
-- Feedback discreto: un mini-HUD CRT/cian efímero (~1,2 s) en la esquina inferior;
-  nada persistente, no ensucia la emisión.
+- **HUD enriquecido (r37), hasta 2 líneas** CRT/cian efímeras (~2,5 s), esquina inferior:
+  - **Línea 1**: `TEST ⏭ nombre · peso · x/y` — nombre = `title` del Stock (o
+    basename del url), truncado a ~40 chars; peso = `size` del índice formateado
+    KB/MB con coma es-ES. Si la pieza no trae `size` (parrilla, catálogo offline),
+    se resuelve con un `fetch HEAD` **asíncrono y cacheado por url**: el HUD sale
+    al instante con `…` y se actualiza al llegar el `content-length` (o `?` si el
+    origen no lo expone).
+  - **Línea 2**: metatags de la pieza — `#tags` del Stock + segmentación
+    (audiencia/categoría/edad/franja), máx 5 con `+N` si hay más. Si la pieza no
+    tiene tags ni segmentación, la línea 2 **se omite**.
+  - Ejemplo: `TEST ⏭ Generated video ｜ Ø-Obsolete [74778881… · 311,5 KB · 5/27`
+    ‖ `#video #genérico #visual #good #atraer`. Nada persistente, no ensucia la emisión.
 - En modo **DIRECTO** (`/direct`) o sin loop, muestran `TEST ⏭ · sin loop` y no tocan nada.
 
 ## Playlist (cola)
