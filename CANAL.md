@@ -61,9 +61,39 @@ Barra inferior (auto-oculta a los 3,5 s de inactividad) y atajos de teclado:
 | Pausa / reanudar | ⏸ / ▶ | espacio |
 | Silencio | 🔇 / 🔊 | M |
 | Volumen | slider | + / − |
+| Always on top ON/OFF | — | **⇧ + Q** |
 
 Arranca **en mudo** (para que el autoplay funcione); al desmutear, en algunos
 navegadores hace falta un gesto (hay overlay «toca para arrancar» de respaldo).
+
+### Always on top (⇧Q) — la emisión nunca se tapa
+
+Doctrina DOOH: **nada se pone encima del contenido**. El canal arranca con el modo
+**ON TOP activo por defecto** (`?ontop=0` lo arranca apagado). Con ON TOP encendido:
+
+- `window.alert` / `confirm` / `prompt` → **no-ops** (devuelven `undefined`/`false`/`null`
+  y solo loguean a `console.debug`). Ningún diálogo modal tapa la emisión.
+- `window.onerror` + `unhandledrejection` → **capturados y silenciados** (solo consola).
+  Ningún error pinta nada en pantalla.
+- Diálogos de salida (`onbeforeunload` ajeno) → **anulados**.
+- **Vigilante de overlays**: un `MutationObserver` mira los **hijos directos de `<body>`**
+  y **oculta** (`display:none`) cualquiera que no sea nuestro. La *whitelist* son:
+  `#wrap` (toda la emisión), `<script>`/`<style>`/`<link>`, el chrome de navegación
+  `admira-nav` (ids/clases con prefijo `adm`) y cualquier nodo marcado `data-adm-ok="1"`.
+  Los overlays legítimos del player (HUD de testing, badges, cámara, `#seg`, `#tap`)
+  viven **dentro de `#mupi`/`#wrap`**, así que el vigilante nunca los toca. El stack de
+  la emisión (`#wrap`) sube a `z-index` máximo.
+
+**⇧ + Q** alterna el modo (HUD efímero `🛡 ON TOP: ON` / `🛡 ON TOP: OFF (test)`).
+Es un **toggle de test que NO persiste**: cada recarga vuelve al default (ON, salvo
+`?ontop=0`). Al apagarlo se restauran `alert/confirm/prompt`, se para el observer y se
+**re-muestran** los overlays que había ocultado. Se ignora si el foco está en un
+`input`/`select`/`textarea`.
+
+En la app Android el blindaje es **doble**: además de este modo web, el `WebChromeClient`
+suprime los diálogos JS nativos y el `WebViewClient` no muestra la página de error del
+WebView (reintento silencioso con backoff). El checkbox «Contenido siempre encima» de la
+pantalla de configuración (marcado por defecto) propaga `&ontop=1|0` a la URL del canal.
 
 ### Controles ocultos de testing (Shift+flechas)
 

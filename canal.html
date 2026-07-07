@@ -21,12 +21,12 @@
 <meta property="og:image:alt" content="Admira.tv · Canal — en antena, en bucle">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://admira.tv/og-canal.png">
-<!-- BUILD canal v.08.07.2026.r37 · HUD de testing ENRIQUECIDO: Shift+flechas muestran nombre de la pieza + peso (índice o HEAD cacheado) + posición x/y + metatags (#tags + segmentación); 2 líneas CRT/cian efímeras ~2,5s; sin Shift sigue inocuo -->
+<!-- BUILD canal v.08.07.2026.r38 · ALWAYS ON TOP (doctrina DOOH): la emisión nunca se tapa. Por defecto ON (?ontop=0 la arranca OFF): alert/confirm/prompt neutralizados, window.onerror + unhandledrejection silenciados, diálogos de salida anulados, y un MutationObserver vigila <body> y OCULTA cualquier overlay ajeno (whitelist: #wrap, scripts, chrome "adm*", data-adm-ok="1"). ⇧Q alterna (modo test, no persiste). Hereda r37: HUD de testing ENRIQUECIDO con Shift+flechas. -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
   if(p.get('chrome')==='0'||p.get('clean')==='1'||p.get('embed')==='mupi')return;
-  var s=document.createElement('script');s.src='/admira-nav.js?v=08.07.2026.r37';
+  var s=document.createElement('script');s.src='/admira-nav.js?v=08.07.2026.r38';
   s.setAttribute('data-active','canal');s.setAttribute('data-title','Canal en antena');document.head.appendChild(s);
 }catch(e){}})();</script>
 <script src="https://admira.app/locations.js"></script>
@@ -1217,6 +1217,84 @@ window.addEventListener('keydown',e=>{
   else if(e.key.toLowerCase()==='m') $('mute').click();
   else if(e.key==='+'||e.key==='='){ volume=Math.min(1,volume+0.1); muted=false; applyAudio(); e.preventDefault(); }   // volumen a +/−
   else if(e.key==='-'){ volume=Math.max(0,volume-0.1); muted=(volume===0); applyAudio(); e.preventDefault(); }
+});
+// ── ALWAYS ON TOP (r38): la EMISIÓN nunca se tapa ────────────────────────────
+// Doctrina DOOH: nada se pone encima del contenido — ni alert/confirm/prompt, ni
+// errores, ni pop-ups, ni overlays ajenos. Por defecto ON (?ontop=0 arranca OFF).
+// ⇧Q alterna (modo test); NO persiste: cada arranque vuelve al default. El
+// vigilante es un MutationObserver sobre <body> que OCULTA cualquier hijo directo
+// que no sea nuestro (whitelist: #wrap, scripts/estilos, chrome admira-nav por
+// prefijo "adm", y todo lo marcado data-adm-ok="1"). Los overlays legítimos del
+// player (testHud, badges, camHud, #seg, #tap…) viven dentro de #mupi/#wrap, así
+// que el vigilante —que solo mira hijos DIRECTOS de body— nunca los toca.
+const ONTOP = (function(){
+  const nAlert=window.alert, nConfirm=window.confirm, nPrompt=window.prompt, nBeforeUnload=window.onbeforeunload;
+  let on = qs.get('ontop')!=='0';   // default ON
+  let observer=null, guardsOn=false;
+  function isOwn(node){
+    if(!node||node.nodeType!==1) return true;                       // texto/comentario: intocable
+    const tag=node.tagName;
+    if(tag==='SCRIPT'||tag==='STYLE'||tag==='LINK'||tag==='TEMPLATE'||tag==='NOSCRIPT') return true;
+    if(node.id==='wrap') return true;
+    if(node.getAttribute&&node.getAttribute('data-adm-ok')==='1') return true;
+    const id=node.id||'', cls=(typeof node.className==='string'?node.className:'');
+    if(/^adm/i.test(id)) return true;                               // chrome admira-nav (#admSide/#admDet/#admScrim…)
+    if(/(^|\s)adm/i.test(cls)) return true;                         // .admtop .admskip .admside .admscrim …
+    return false;
+  }
+  function killOverlays(){
+    if(!on||!document.body) return;
+    const kids=document.body.children;
+    for(let i=0;i<kids.length;i++){ const n=kids[i];
+      if(!isOwn(n)){ try{ if(n.style.display!=='none'){ n.setAttribute('data-adm-hidden','1'); n.style.display='none'; console.debug('[ontop] overlay ajeno oculto:', n); } }catch(_){} }
+    }
+  }
+  function restoreHidden(){
+    try{ const hid=document.querySelectorAll('[data-adm-hidden="1"]'); for(let i=0;i<hid.length;i++){ hid[i].style.display=''; hid[i].removeAttribute('data-adm-hidden'); } }catch(_){}
+  }
+  const _noAlert=function(){ try{ console.debug('[ontop] alert suprimido:', arguments[0]); }catch(_){}; return undefined; };
+  const _noConfirm=function(){ try{ console.debug('[ontop] confirm suprimido:', arguments[0]); }catch(_){}; return false; };
+  const _noPrompt=function(){ try{ console.debug('[ontop] prompt suprimido:', arguments[0]); }catch(_){}; return null; };
+  const _onErr=function(){ try{ console.debug('[ontop] error silenciado:', arguments); }catch(_){}; return true; };   // return true = no lo pinta nadie
+  const _onRej=function(ev){ try{ if(ev&&ev.preventDefault) ev.preventDefault(); console.debug('[ontop] rejection silenciada:', ev&&ev.reason); }catch(_){}; };
+  function installGuards(){
+    if(guardsOn) return; guardsOn=true;
+    window.alert=_noAlert; window.confirm=_noConfirm; window.prompt=_noPrompt;
+    window.onerror=_onErr; window.onbeforeunload=null;                       // anula diálogos de salida ajenos (asignados por propiedad)
+    window.addEventListener('unhandledrejection', _onRej);
+  }
+  function removeGuards(){
+    if(!guardsOn) return; guardsOn=false;
+    window.alert=nAlert; window.confirm=nConfirm; window.prompt=nPrompt;
+    window.onerror=null; window.onbeforeunload=nBeforeUnload;
+    window.removeEventListener('unhandledrejection', _onRej);
+  }
+  function apply(){
+    if(on){
+      try{ const w=$('wrap'); if(w) w.style.zIndex='2147483646'; }catch(_){}   // el stack de la emisión, por encima de todo
+      installGuards();
+      killOverlays();
+      if(!observer&&document.body){ observer=new MutationObserver(killOverlays); observer.observe(document.body,{childList:true}); }
+    } else {
+      removeGuards();
+      if(observer){ try{ observer.disconnect(); }catch(_){}; observer=null; }
+      restoreHidden();
+    }
+  }
+  function toggle(){
+    on=!on; apply();
+    try{ testHud('🛡 ON TOP: '+(on?'ON':'OFF (test)')); }catch(_){}
+    return on;
+  }
+  apply();
+  return { toggle, get on(){ return on; }, killOverlays };
+})();
+window.ADM_ONTOP = ONTOP;
+// ⇧Q — mata/enciende el modo ON TOP (test). Guardado del foco en inputs, igual que las flechas.
+window.addEventListener('keydown', function(e){
+  const tn=e.target&&e.target.tagName;
+  if(tn==='INPUT'||tn==='SELECT'||tn==='TEXTAREA'||(e.target&&e.target.isContentEditable)) return;
+  if(e.shiftKey && (e.key==='Q'||e.key==='q'||e.code==='KeyQ')){ e.preventDefault(); ONTOP.toggle(); }
 });
 // ── KIOSKO DOOH: pantalla completa + PORTRAIT forzado ────────────────────────
 // Las pantallas de señalética son verticales. Al primer gesto del usuario pedimos
