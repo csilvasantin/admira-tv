@@ -2,7 +2,7 @@
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.08.07.2026.r2 */
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.08.07.2026.r3 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -11,7 +11,7 @@
   var title=(s&&s.dataset.title)||cfg.title||'';
   var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.08.07.2026.r2';
+  var VER=window.ADMIRA_VERSION||'v.08.07.2026.r3';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
@@ -70,7 +70,9 @@
   var CSS = [
    ":root{--admtb:52px}",
    "html.admnav{--admnw:64px;--admrw:0px;padding-top:var(--admtb);padding-left:var(--admnw);padding-right:var(--admrw);",
-     "transition:padding .18s ease;box-sizing:border-box}",
+     "transition:padding .18s ease;box-sizing:border-box;overflow-x:hidden}",
+   /* los paneles off-canvas (drawer izq · detalle der) no deben generar scroll horizontal a ningún ancho */
+   "html.admnav body{overflow-x:hidden}",
    "html.admnav.admnav-open{--admnw:238px}",
    "html.admnav.admnav-det{--admrw:320px}",
    "html.admnav body>header:not(.admtop){top:var(--admtb)!important}",
