@@ -58,14 +58,35 @@ Barra inferior (auto-oculta a los 3,5 s de inactividad) y atajos de teclado:
 
 | Control | Botón | Tecla |
 |---|---|---|
-| Anterior | ⏮ | ← |
 | Pausa / reanudar | ⏸ / ▶ | espacio |
-| Siguiente | ⏭ | → |
 | Silencio | 🔇 / 🔊 | M |
-| Volumen | slider | ↑ / ↓ |
+| Volumen | slider | + / − |
 
 Arranca **en mudo** (para que el autoplay funcione); al desmutear, en algunos
 navegadores hace falta un gesto (hay overlay «toca para arrancar» de respaldo).
+
+### Controles ocultos de testing (Shift+flechas)
+
+Para **navegar el loop a mano durante pruebas** hay atajos ocultos, **protegidos
+con Mayúscula** para que no se disparen por error (una flecha suelta NO mueve la
+emisión). Sin teclado (tablet / WebView) son totalmente inocuos.
+
+| Acción | Tecla | HUD |
+|---|---|---|
+| Siguiente contenido | **Shift + →** | `TEST ⏭ 7/53` |
+| Contenido anterior | **Shift + ←** | `TEST ⏮ 6/53` |
+| Primero del loop | **Shift + ↑** | `TEST ⇤ 1/53` |
+| Último del loop | **Shift + ↓** | `TEST ⇥ 53/53` |
+
+- Solo reaccionan a `Shift` + una de las 4 flechas; se ignoran si el foco está en
+  un `input`/`textarea`/`select` o campo editable. Sin Shift, cero efecto.
+- Reutilizan la **ruta de avance natural** (`next`/`prev`/`play`) — no duplican
+  render: cortan el timer/vídeo/audio en curso y arrancan la pieza destino igual
+  que el flujo normal. Por eso el **beat `/signage/now`** y el **proof-of-play
+  `/emit`** siguen reflejando la pieza real mostrada (no se corrompen).
+- Feedback discreto: un mini-HUD CRT/cian efímero (~1,2 s) en la esquina inferior;
+  nada persistente, no ensucia la emisión.
+- En modo **DIRECTO** (`/direct`) o sin loop, muestran `TEST ⏭ · sin loop` y no tocan nada.
 
 ## Playlist (cola)
 
