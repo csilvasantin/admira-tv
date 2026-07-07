@@ -1,0 +1,17 @@
+# admira.tv — Cloudflare Pages (proyecto admira-tv).
+# El site estático vive en la raíz del repo; las Pages Functions en ./functions.
+name = "admira-tv"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "."
+
+# KV de captura de leads del formulario de ADcelerate (/lead → LEADS).
+# COMPARTIDO con admira-adstack (mismo namespace): un solo pool de leads.
+[[kv_namespaces]]
+binding = "LEADS"
+id = "d92799da39b343f6aebd8aff2be66b21"
+
+# Secretos (se fijan con `wrangler pages secret put <NOMBRE> --project-name admira-tv`):
+#   TG_TOKEN     — token del bot de Telegram (Neo) para notificar leads
+#   TG_CHAT      — chat_id del grupo AgoraMatrix
+#   LEADS_ADMIN  — token para leer/borrar /leads
+# Los VALORES viven en la bóveda admira-vault (secret get ...), nunca aquí.

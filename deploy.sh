@@ -15,6 +15,8 @@ if [ "$MODE" = "both" ]; then
 fi
 
 echo "→ Cloudflare Pages (deploy, ORIGEN de producción)…"
-npx wrangler pages deploy . --project-name=admira-tv --branch=main --commit-dirty=true
+# Desde 07-jul-2026 hay wrangler.toml (proyecto + output dir + binding KV LEADS de /lead):
+# el proyecto y el directorio salen de la config; no repetir por CLI.
+npx wrangler pages deploy --branch=main --commit-dirty=true
 
 echo "✓ Producción: https://admira.tv (Cloudflare Pages) · mirror https://admira-tv.pages.dev"

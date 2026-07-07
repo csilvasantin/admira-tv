@@ -22,6 +22,7 @@
     {k:'canal',      h:'/canal.html', blank:true,           ic:'📺', t:'Canal'},
     {k:'mural',      h:'/wall/',                            ic:'🖥', t:'Mural'},
     {k:'comprar',    h:'/comprar/',                         ic:'🛒', t:'Comprar'},
+    {k:'adcelerate', h:'/adcelerate/',                      ic:'📣',       t:'ADcelerate'},
     {k:'alta',       h:'/alta.html',                        ic:'➕',       t:'Alta'},
     {k:'help',       h:'/help/',                            ic:'❓',       t:'Ayuda'}
   ];
@@ -36,6 +37,7 @@
     canal:       _S+'<rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8 20h8M12 16.5V20"/><path d="M10.4 8.1l4.2 2.9-4.2 2.9z" fill="currentColor" stroke="none"/></svg>',
     mural:       _S+'<rect x="3.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.3"/></svg>',
     comprar:     _S+'<circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M2.5 3.6h2.3l2.2 11.1a1.5 1.5 0 0 0 1.5 1.2h7.7a1.5 1.5 0 0 0 1.5-1.2l1.3-6.9H6.1"/></svg>',
+    adcelerate:  _S+'<path d="M3.5 10v4a1.5 1.5 0 0 0 1.5 1.5h2l7 4.5V4L7 8.5H5A1.5 1.5 0 0 0 3.5 10z"/><path d="M17.5 8.5a5 5 0 0 1 0 7M20 6a8.5 8.5 0 0 1 0 12"/></svg>',
     alta:        _S+'<rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="M12 8v8M8 12h8"/></svg>',
     help:        _S+'<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2-2.4 3.5"/><circle cx="12" cy="16.6" r=".5" fill="currentColor" stroke="none"/></svg>',
     control:     _S+'<path d="M5 4v16M12 4v16M19 4v16"/><circle cx="5" cy="9" r="2"/><circle cx="12" cy="14.5" r="2"/><circle cx="19" cy="7" r="2"/></svg>',
