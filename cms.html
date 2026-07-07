@@ -319,6 +319,16 @@
   .ebGap .gk{font-weight:700;color:var(--ink);white-space:nowrap}
   .ebGap .gd{color:var(--dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ebGapEmpty{color:var(--air);font-size:12px;padding:6px 2px}
+  /* tarea4: acciones de un clic en los descuadres (vincular / asignar) */
+  .ebAct{margin-left:auto;display:flex;align-items:center;gap:6px;flex:none}
+  .ebSel{background:#0a1120;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 7px;font:600 11px ui-monospace,monospace;max-width:180px;cursor:pointer}
+  .ebSel:focus{outline:none;border-color:var(--accent)}
+  .ebBtn{background:var(--accent);color:#091020;border:1px solid var(--accent);border-radius:7px;padding:4px 10px;font:700 11px ui-monospace,monospace;cursor:pointer;white-space:nowrap}
+  .ebBtn:hover{filter:brightness(1.08)} .ebBtn:disabled{opacity:.5;cursor:default}
+  .ebActMsg{margin:6px 16px 0;padding:7px 11px;border-radius:8px;font:600 11.5px ui-monospace,monospace;border:1px solid var(--line)}
+  .ebActMsg.ok{color:var(--air);border-color:#1f5e44;background:#0b1a14}
+  .ebActMsg.err{color:var(--off);border-color:#5e2630;background:#1a0d10}
+  @media(max-width:640px){ .ebAct{margin-left:0;width:100%} .ebGap{flex-wrap:wrap} }
   .ebFleetGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
   .ebMach{background:#0c1320;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:12px}
   .ebMach .mn{font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px}
@@ -332,7 +342,7 @@
 <body>
 <script>
 /* Config del chrome unificado (lo monta /admira-nav.js). Extras propios del CMS de flota. */
-window.ADMIRA_VERSION='v.07.07.2026.r34';
+window.ADMIRA_VERSION='v.07.07.2026.r35';
 window.ADMIRA_NAV={
   active:'flota', title:'Control de flota',
   topRight:
@@ -361,9 +371,9 @@ window.ADMIRA_NAV={
   }
 };
 </script>
-<script src="/admira-nav.js?v=07.07.2026.r34"></script>
+<script src="/admira-nav.js?v=07.07.2026.r35"></script>
 
-<!-- tarea3-emision-r34 · EN EMISIÓN — AHORA (cruza signage/screens · grid/screens · locations · fleet) -->
+<!-- tarea4-emision-r35 · EN EMISIÓN + descuadres accionables — AHORA (cruza signage/screens · grid/screens · locations · fleet) -->
 <section class="emitBoard" id="emitBoard">
   <div class="ebHead">
     <h2><span class="ebDot"></span>📡 EN EMISIÓN — AHORA</h2>
@@ -382,6 +392,7 @@ window.ADMIRA_NAV={
       <tbody id="ebBody"><tr><td colspan="7" class="ebHole">Cargando emisión en vivo…</td></tr></tbody>
     </table>
   </div>
+  <div class="ebActMsg ok" id="ebActMsg" hidden></div>
   <div class="ebPanel" id="ebGaps"></div>
   <div class="ebPanel" id="ebFleet" hidden></div>
 </section>
@@ -765,7 +776,7 @@ document.addEventListener('keydown',e=>{
     case '?': toast('Atajos: / buscar · r recargar · p pausa · e CSV · m menú · d detalle','ok'); break;
   }
 });
-const APP_VERSION=window.ADMIRA_VERSION||'v.07.07.2026.r34'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
+const APP_VERSION=window.ADMIRA_VERSION||'v.07.07.2026.r35'; try{document.getElementById('appVer').textContent=APP_VERSION;}catch(_){}
 let PREV_ON={}, PREV_INIT=false;
 function toast(msg,kind){ const t=document.createElement('div'); t.className='toast'+(kind?(' '+kind):''); t.textContent=msg; document.getElementById('toasts').appendChild(t); setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},6000); }
 document.getElementById('exportCsv').onclick=exportCSV;
@@ -1199,18 +1210,36 @@ $('progBands').addEventListener('click',e=>{
       el('ebBody').innerHTML=rows;
     }
 
-    // ── DESCUADRES accionables (alimenta tarea #4) ──
+    // ── DESCUADRES accionables (tarea #4: botones de un clic, no datos a ciegas) ──
+    // opciones para los selectores: circuitos/sitios conocidos (grid + locations) y players vivos
+    const knownCircs=Array.from(new Set([].concat(
+      gridScreens.map(g=>g.circuit).filter(Boolean),
+      projects.reduce((a,p)=>a.concat(p.circuits||[]),[])
+    ))).sort();
+    let circOpts='<option value="">— elegir circuito/sitio —</option>';
+    if(!locsDown && locations.length){ circOpts+='<optgroup label="Sitios (mapa)">'+ locations.map(L=>
+      '<option value="'+esc(L.id)+'" data-name="'+esc(L.name||L.id)+'">'+esc(L.name||L.id)+' ('+esc(L.id)+')</option>').join('') +'</optgroup>'; }
+    if(knownCircs.length){ circOpts+='<optgroup label="Circuitos (parrilla)">'+ knownCircs.map(c=>
+      '<option value="'+esc(c)+'" data-name="'+esc(c)+'">'+esc(c)+'</option>').join('') +'</optgroup>'; }
+    circOpts+='<option value="__manual__">＋ otro circuito…</option>';
+    const playerOpts='<option value="">— elegir player vivo —</option>'+ players.map(p=>
+      '<option value="'+esc(p.screen)+'">'+esc(p.screen)+(p.role?(' ('+esc(p.role)+')'):'')+'</option>').join('');
+
     const gapHtml=[];
     const orphans=players.filter(p=>!p.loc);
     gapHtml.push('<h3>Players vivos sin circuito (huérfanos) · '+orphans.length+'</h3>');
     gapHtml.push('<div class="ebGapList">'+ (orphans.length? orphans.map(p=>
-      '<div class="ebGap"><span class="gk">'+esc(p.screen)+'</span><span class="gd">rol '+esc(p.role||'—')+' · emite '+esc(String(p.showing_id||'—').slice(0,18))+' → falta asignar loc/circuito</span></div>').join('')
+      '<div class="ebGap"><span class="gk">'+esc(p.screen)+'</span><span class="gd">rol '+esc(p.role||'—')+' · emite '+esc(String(p.showing_id||'—').slice(0,18))+' → falta asignar loc/circuito</span>'+
+      '<span class="ebAct"><select class="ebSel" data-role="circ" title="Circuito o sitio conocido">'+circOpts+'</select>'+
+      '<button class="ebBtn" data-act="link" data-screen="'+esc(p.screen)+'">vincular a circuito</button></span></div>').join('')
       : '<div class="ebGapEmpty">✓ ningún player huérfano</div>') +'</div>');
     const emptySurfaces=gridScreens.filter(g=>!(g.pixerScreens&&g.pixerScreens.length));
     gapHtml.push('<h3>Superficies de parrilla sin player (pixerScreens:[]) · '+emptySurfaces.length+'</h3>');
     gapHtml.push('<div class="ebGapList">'+ (emptySurfaces.length? emptySurfaces.map(g=>{
       const pr=circ2proj[g.circuit];
-      return '<div class="ebGap"><span class="gk">'+esc(g.screen)+'</span><span class="gd">'+esc(g.name||'')+' · canal '+esc(pr?pr.name:g.circuit)+' → falta cablear player físico</span></div>';
+      return '<div class="ebGap"><span class="gk">'+esc(g.screen)+'</span><span class="gd">'+esc(g.name||'')+' · canal '+esc(pr?pr.name:g.circuit)+' → falta cablear player físico</span>'+
+        '<span class="ebAct"><select class="ebSel" data-role="player" title="Player físico vivo">'+playerOpts+'</select>'+
+        '<button class="ebBtn" data-act="wire" data-screen="'+esc(g.screen)+'">asignar player</button></span></div>';
     }).join('') : '<div class="ebGapEmpty">✓ todas las superficies tienen player</div>') +'</div>');
     gapHtml.push('<h3>Sitios (mapa) sin player vivo · '+(locsDown?'n/d':(()=>{
       const arr=locations.filter(L=>{const c=String(L.id||'').split('-')[0];return !liveCircuits.has(c)&&!players.some(p=>{const l=findLoc(p.loc);return l&&l.id===L.id;});});
@@ -1247,6 +1276,49 @@ $('progBands').addEventListener('click',e=>{
 
   el('ebTogGaps').addEventListener('click',function(){ EB_GAPS=!EB_GAPS; this.classList.toggle('on',EB_GAPS); el('ebGaps').hidden=!EB_GAPS; });
   el('ebTogFleet').addEventListener('click',function(){ EB_FLEET=!EB_FLEET; this.classList.toggle('on',EB_FLEET); el('ebFleet').hidden=!EB_FLEET; });
+
+  // ── ACCIONES de un clic sobre los descuadres (tarea #4) ──
+  // Escrituras con el MISMO patrón que /grid/book: GRID_KEY (grid_key en localStorage,
+  // se teclea en «Programar»). Errores visibles en #ebActMsg, sin alerts crudos.
+  function ebMsg(txt, ok){ const m=el('ebActMsg'); if(!m)return; m.textContent=txt; m.className='ebActMsg '+(ok?'ok':'err'); m.hidden=false; }
+  async function ebPost(url, body){
+    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    let j={}; try{ j=await r.json(); }catch(_){}
+    return { ok:(r.ok && j.ok!==false), status:r.status, j };
+  }
+  el('ebGaps').addEventListener('click', async function(e){
+    const btn=e.target.closest('button[data-act]'); if(!btn) return;
+    const key=(typeof gkGet==='function'?gkGet():'');
+    if(!key){ ebMsg('Falta la clave GRID_KEY — escríbela arriba en «Programar» y reintenta.', false); return; }
+    const wrap=btn.closest('.ebGap'); const sel=wrap&&wrap.querySelector('select.ebSel');
+    const act=btn.getAttribute('data-act'), screen=btn.getAttribute('data-screen');
+    const orig=btn.textContent; btn.disabled=true; btn.textContent='…';
+    try{
+      if(act==='link'){
+        let loc=sel?sel.value:'', locName='';
+        if(loc==='__manual__'){ loc=(prompt('Circuito / id de sitio para '+screen+':','')||'').trim().toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,60); locName=loc; }
+        else if(sel&&sel.selectedOptions[0]) locName=sel.selectedOptions[0].getAttribute('data-name')||loc;
+        if(!loc){ ebMsg('Elige un circuito o sitio primero.', false); return; }
+        const {ok,status,j}=await ebPost(GRID_BASE+'/signage/assign',{key,screen,loc,locName});
+        if(!ok){ ebMsg('No se pudo vincular '+screen+': '+((j&&j.error)||('HTTP '+status))+(status===403?' (clave GRID_KEY incorrecta)':''), false); return; }
+        ebMsg('✓ '+screen+' vinculado a «'+(locName||loc)+'». Ya aparece en EN EMISIÓN con su circuito.', true);
+        ebLoad();
+      } else if(act==='wire'){
+        const pid=sel?sel.value:'';
+        if(!pid){ ebMsg('Elige un player vivo primero.', false); return; }
+        // lee-modifica-escribe: no pisar el resto de pixerScreens de la superficie
+        let cur=[];
+        try{ const c=await fetch(GRID_BASE+'/grid/config?screen='+encodeURIComponent(screen),{cache:'no-store'}).then(r=>r.json()); cur=(c&&c.config&&c.config.pixerScreens)||[]; }catch(_){}
+        const next=Array.from(new Set(cur.concat([pid])));
+        const {ok,status,j}=await ebPost(GRID_BASE+'/grid/config',{key,screen,pixerScreens:next});
+        if(!ok){ ebMsg('No se pudo asignar player a '+screen+': '+((j&&j.error)||('HTTP '+status))+(status===403?' (clave GRID_KEY incorrecta)':''), false); return; }
+        ebMsg('✓ player '+pid+' cableado a la superficie '+screen+' (pixerScreens: '+next.join(', ')+').', true);
+        ebLoad();
+      }
+    }catch(err){ ebMsg('Error de red: '+((err&&err.message)||err), false); }
+    finally{ btn.disabled=false; btn.textContent=orig; }
+  });
+
   ebLoad();
   EB_TIMER=setInterval(ebLoad, EB.REFRESH);
 })();

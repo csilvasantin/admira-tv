@@ -122,6 +122,28 @@ Pixeria**, y se reserva como `own` (`POST /grid/book`). Las escrituras piden la
 `GRID_KEY` (se teclea una vez, se guarda en el navegador como `grid_key`). El control
 de propietario completo (ofertas/política/lista negra) sigue en `xpaceos.com/control/`.
 
+## Multi-canal: cómo lanzar el canal de un equipo
+
+Cada **equipo/pantalla** emite el canal de **su circuito**. La clave que une todo es
+el `circuit`; con él, `canal.html?circuit=<slug>&screen=<slug>-mupi` identifica la
+pantalla y `/grid/day?screen=` le sirve **su** parrilla. La arquitectura multi-canal ya
+existe: `/grid/projects` agrupa circuitos en canales (Canal AdmiraNeXT, Canal Xtanco…);
+si el prefijo del circuit **casa** con un canal, emite ese canal; si **no casa** ninguno,
+cae al **loop universal del Stock** (+ segmento). No hay que tocar nada más por pantalla.
+
+**Lanzar el canal de un equipo nuevo (2 clics, sin datos a ciegas):**
+
+1. **Alta** (`alta.html`): pon nombre + circuito y detecta ubicación. El alta:
+   - registra el sitio vía `api.admira.store/locations/*` (proxy del worker, **no
+     bloqueado en España**; cae a `omnipublicity-api` directo sólo si el proxy falla);
+   - entrega la URL de canal **ya cableada** — siempre `?circuit=<slug>&screen=<slug>-mupi`;
+   - te dice **qué canal emitirá** ese equipo ("Este equipo emitirá: Canal Xtanco") o,
+     si el circuit no casa ningún canal, que "emitirá el loop universal del Stock".
+2. **Abrir canal en esa pantalla** con el botón del alta (o el player en `embed=mupi`).
+
+Para **cablear un player huérfano** (vivo pero sin circuito) o **conectar una superficie
+de parrilla a su player físico**, ver `CMS.md` §6 (botones de un clic en «Descuadres»).
+
 ## Pendiente / siguiente paso
 
 - Soportar en `canal.html` `gridWeave` los creativos de tipo audio/música (hoy solo

@@ -45,7 +45,8 @@
 </style>
 </head>
 <body>
-<script src="/admira-nav.js?v=01.07.2026.r33" data-active="alta" data-title="Alta de dispositivo" defer></script>
+<!-- tarea4-alta-r35 · alta entrega el canal ya cableado (proxy /locations + circuit garantizado + canal que emitirá) -->
+<script src="/admira-nav.js?v=07.07.2026.r35" data-active="alta" data-title="Alta de dispositivo" defer></script>
 <div class="wrap">
   <div class="brand">Admira · circuito DOOH</div>
   <nav style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:4px 0 14px">
@@ -63,6 +64,7 @@
     <label>Circuito / id</label>
     <input id="circuit" placeholder="admira-granvia" maxlength="48">
     <p class="hint">id: <span id="idPrev" class="id-prev">—</span> · pantalla: <span id="scrPrev" class="id-prev">—</span></p>
+    <p id="chanPrev" class="hint" style="margin:-8px 0 16px;color:var(--txt)"></p>
 
     <label>Dispositivo (opcional)</label>
     <input id="device" placeholder="MacBook Pro 14" maxlength="60">
@@ -83,7 +85,8 @@
   </form>
 
   <div id="done" class="done card">
-    <p class="msg ok" style="margin-bottom:14px">✅ Equipo dado de alta. Abre el canal en ESTA pantalla:</p>
+    <p class="msg ok" style="margin-bottom:8px">✅ Equipo dado de alta. Abre el canal en ESTA pantalla:</p>
+    <p id="doneChan" class="hint" style="margin:0 0 14px;color:var(--txt)"></p>
     <a id="openCanal" class="btn" href="#">▶ Abrir canal en esta pantalla</a>
     <a id="viewMap" class="alt" href="#" target="_blank">Ver en el mapa de Clear Channel ↗</a>
     <p class="hint" style="margin-top:14px">Canal: <code id="canalUrl"></code></p>
@@ -91,16 +94,43 @@
 </div>
 
 <script>
-const API='https://omnipublicity-api.csilvasantin.workers.dev';
+// tarea4: el alta habla con /locations por api.admira.store (mismo backbone /grid,
+// NO bloqueado en España) y cae a omnipublicity-api directo sólo si el proxy falla.
+const API_PRIMARY='https://api.admira.store';
+const API_FALLBACK='https://omnipublicity-api.csilvasantin.workers.dev';
+const CANAL_BASE='https://www.admira.tv/canal.html';
 const $=id=>document.getElementById(id);
 let coords=null;
+let PROJECTS=[];   // /grid/projects → para decir QUÉ canal emitirá el equipo
 
 function slug(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,48); }
 function effId(){ return slug($('circuit').value || $('name').value); }
+// URL de canal SIEMPRE cableada: circuit + screen (=<slug>-mupi). Determinista,
+// no depende de lo que devuelva el backend (cierra el hueco de tarea #4).
+function buildCanal(id){ return CANAL_BASE+'?circuit='+encodeURIComponent(id)+'&screen='+encodeURIComponent(id+'-mupi'); }
+// Casa el circuito con un canal de /grid/projects (mismo criterio de prefijo que
+// el sistema: token exacto o token- como prefijo del slug).
+function matchChannel(id){
+  if(!id) return null;
+  for(const p of PROJECTS){ for(const c of (p.circuits||[])){ if(id===c || id.startsWith(c+'-')) return p; } }
+  return null;
+}
+function channelLine(id){
+  if(!id) return '';
+  const p=matchChannel(id);
+  return p ? ('📡 Este equipo emitirá: <b style="color:var(--acc)">'+p.name+'</b>')
+           : '📡 Emitirá el <b>loop universal del Stock</b> (sin canal propio aún)';
+}
+async function loadProjects(){
+  try{ const r=await fetch(API_PRIMARY+'/grid/projects',{cache:'no-store'}); const j=await r.json();
+    if(Array.isArray(j.projects)) PROJECTS=j.projects; }catch(_){}
+  refreshPrev();
+}
 function refreshPrev(){
   const id=effId();
   $('idPrev').textContent=id||'—';
   $('scrPrev').textContent=id?id+'-mupi':'—';
+  $('chanPrev').innerHTML=channelLine(id);
   $('go').disabled=!(id && coords);
 }
 $('name').addEventListener('input',()=>{ if(!$('circuit').dataset.touched) $('circuit').value=slug($('name').value); refreshPrev(); });
@@ -134,25 +164,43 @@ $('form').addEventListener('submit',async e=>{
   if(!name){ setMsg('Pon un nombre.','err'); return; }
   if(!coords){ setMsg('Detecta la ubicación primero.','err'); return; }
   $('go').disabled=true; $('go').innerHTML='<span class="spin"></span>Registrando…';
+  const id=effId();
+  const payload={ name, circuit:id, addr:$('addr').value.trim(), device:$('device').value.trim(), orientation:$('orient').value, coords };
+  // Intenta primero el proxy api.admira.store; si el proxy falla (red / 5xx) cae
+  // al worker omnipublicity directo (que en ES puede estar bloqueado — por eso el proxy va primero).
+  async function register(){
+    for(const base of [API_PRIMARY, API_FALLBACK]){
+      try{
+        const r=await fetch(base+'/locations/register',{
+          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+        });
+        const j=await r.json().catch(()=>({}));
+        if(r.ok && j.ok) return {j};
+        // respuesta del backend con error de negocio → no reintenta en el fallback
+        return {err:(j.hint||j.error||('HTTP '+r.status))};
+      }catch(_){ /* red caída → prueba el siguiente base */ }
+    }
+    return {err:'no se pudo contactar el registro (proxy y fallback caídos)'};
+  }
   try{
-    const r=await fetch(API+'/locations/register',{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ name, circuit:effId(), addr:$('addr').value.trim(), device:$('device').value.trim(), orientation:$('orient').value, coords })
-    });
-    const j=await r.json();
-    if(!r.ok || !j.ok){ setMsg('Error: '+(j.hint||j.error||r.status),'err'); $('go').disabled=false; $('go').textContent='Dar de alta'; return; }
-    // OK → mostrar accesos
+    const {j,err}=await register();
+    if(err){ setMsg('Error: '+err,'err'); $('go').disabled=false; $('go').textContent='Dar de alta'; return; }
+    // OK → mostrar accesos. La URL de canal la construimos nosotros para GARANTIZAR
+    // circuit + screen (no dependemos de lo que devuelva el backend).
+    const canal=buildCanal(id);
     $('form').style.display='none';
     $('done').classList.add('show');
-    $('openCanal').href=j.canal;
-    $('canalUrl').textContent=j.canal;
-    $('viewMap').href='https://clearchannel.tv/?loc='+encodeURIComponent(j.id);
+    $('openCanal').href=canal;
+    $('canalUrl').textContent=canal;
+    $('doneChan').innerHTML=channelLine(id);
+    $('viewMap').href='https://clearchannel.tv/?loc='+encodeURIComponent(j.id||id);
   }catch(err){
     setMsg('Fallo de red: '+(err&&err.message||err),'err');
     $('go').disabled=false; $('go').textContent='Dar de alta';
   }
 });
 refreshPrev();
+loadProjects();
 </script>
 </body>
 </html>

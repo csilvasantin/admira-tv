@@ -85,6 +85,11 @@ Estado actual de **Canal Xtanco** (5 superficies, `GET /grid/screens`):
 > metahuman / mostrador) o que se registren al arrancar. NO mapear a ciegas (mandaría
 > contenido a la pantalla equivocada). Cuando estén los IDs:
 > `POST /grid/config {key, screen:'xtanco-led-vertical', pixerScreens:['<id>']}`.
+>
+> **Atajo (tarea #4):** ya no hace falta teclear el POST — en §6 «Descuadres», cada
+> superficie con `pixerScreens:[]` trae un botón **«asignar player»** (selector de players
+> vivos) que hace ese `lee-modifica-escribe` por ti. Sigue decidiéndolo un humano/el nodo
+> responsable: sólo se ofrecen players **vivos**, nunca se mapea a ciegas.
 
 ---
 
@@ -111,11 +116,24 @@ Auto-refresco cada **40 s** (independiente del grid de flota de 10 s).
   «— sin parrilla», «— huérfano (sin loc)»; nunca se inventa el vínculo.
 - **Tabla:** estado 🟢/🔴 (campo `online`/`age_seconds`, TTL ~10 min), player, rol (canal/juego),
   circuito·sitio, canal·parrilla (+ si la superficie está mapeada), pieza (`showing_id`), visto.
-- **Descuadres** (alimenta la tarea siguiente): players vivos sin `loc`, superficies con
-  `pixerScreens:[]`, sitios del mapa sin player vivo. Toggle «⚠ Descuadres» (izq).
+- **Descuadres accionables** (tarea #4): botones de **un clic**, nunca datos a ciegas.
+  - **Player vivo sin `loc` (huérfano)** → selector de **circuitos/sitios conocidos**
+    (de `/grid/screens` + `/locations`, con opción «＋ otro circuito…») + botón **«vincular
+    a circuito»** → `POST /signage/assign {key, screen, loc, locName}`. Fija `loc/locName`
+    en el registro `screen:<id>` (reutiliza `nowUpsertScreenLoc`) **sin falsear una emisión**;
+    el player pasa al acto a la tabla EN EMISIÓN con su circuito. Idempotente.
+  - **Superficie con `pixerScreens:[]`** → selector de **players vivos** + botón **«asignar
+    player»** → **lee-modifica-escribe** de `pixerScreens` (`GET /grid/config?screen=` →
+    merge → `POST /grid/config {key, screen, pixerScreens:[…]}`), sin pisar el resto de la
+    config del screen.
+  - **Sitios del mapa sin player vivo**: informativo (no accionable — el player debe
+    arrancar y latir para poder vincularse).
+  - Todas las escrituras usan la **misma `GRID_KEY`** que `/grid/book` (campo de «Programar»).
+    Los errores salen visibles en la barra de estado del panel (`#ebActMsg`), sin `alert`.
 - **Flota (equipos):** los `/machines` de admira-fleet, marcados «sin vincular» (el pegamento
   real `deviceId` es trabajo futuro; sólo se sugiere un match por nombre). Toggle «🖥 Flota».
 - **Límites conocidos:** `signage/screens` sólo lista players que hayan hecho beat (<~10 min);
   `/locations` puede caer en España (se maneja con gracia); el vínculo host↔pantalla es heurístico.
 
-_Documentado: 2026-06-26 · §6 añadido 2026-07-07 (subMorfeo · MacBookProNegro14)._
+_Documentado: 2026-06-26 · §6 añadido 2026-07-07 · descuadres accionables (tarea #4, r35)
+2026-07-07 (subMorfeo · MacBookProNegro14)._
