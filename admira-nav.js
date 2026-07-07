@@ -2,7 +2,7 @@
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.08.07.2026.r1 */
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.08.07.2026.r2 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -11,7 +11,7 @@
   var title=(s&&s.dataset.title)||cfg.title||'';
   var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.08.07.2026.r1';
+  var VER=window.ADMIRA_VERSION||'v.08.07.2026.r2';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
@@ -82,7 +82,10 @@
      "font-size:16px;cursor:pointer;display:grid;place-items:center}",
    ".admtop .admtog:hover{border-color:#7aa2ff;color:#fff}",
    ".admtop .admtog.on{background:#7aa2ff;border-color:#7aa2ff;color:#04110b}",
-   ".admtop .admbrand{font-weight:800;letter-spacing:.5px;font-size:16px;white-space:nowrap;color:#cdd8e8}",
+   ".admtop .admbrand{font-weight:800;letter-spacing:.5px;font-size:16px;white-space:nowrap;color:#cdd8e8;min-width:0;flex-shrink:1;overflow:hidden;text-overflow:ellipsis}",
+   /* la barra nunca desborda a lo ancho (cero scroll horizontal 320-1440): la marca trunca, los controles fijos no encogen */
+   ".admtop .admseg{flex:none}",
+   "@media(max-width:600px){.admtop .admver{display:none}}",
    ".admtop .admbrand b{color:#7aa2ff}",
    ".admtop .admhome{color:inherit;text-decoration:none;border-radius:6px;padding:1px 5px;margin:0 -3px;transition:color .15s,background .15s}",
    ".admtop .admhome:hover{color:#fff;background:#13203a}",
