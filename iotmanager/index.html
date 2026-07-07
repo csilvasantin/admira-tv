@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://api.admira.store" crossorigin>
+<link rel="preconnect" href="https://www.carlossilva.info">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IoT · Admira.tv</title>
+<meta name="description" content="Gestionará los sensores y dispositivos conectados de tu espacio desde un solo panel.">
+<meta name="theme-color" content="#070a10">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://admira.tv/iotmanager/">
+<meta property="og:title" content="IoT · Admira.tv">
+<meta property="og:description" content="Gestionará los sensores y dispositivos conectados de tu espacio desde un solo panel.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://admira.tv/iotmanager/">
+<meta property="og:image" content="https://admira.tv/og-admira.png">
+<style>
+  :root{--bg:#070a10;--panel:#0b1119;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--amber:#f5b431}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px);opacity:.5}
+  a{color:inherit;text-decoration:none}
+  .wrap{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:min(12vh,90px) 20px 60px;text-align:center}
+  .ic{width:84px;height:84px;margin:0 auto 22px;display:grid;place-items:center;border-radius:20px;background:rgba(61,240,138,.07);border:1px solid rgba(61,240,138,.18)}
+  .ic svg{width:46px;height:46px;color:var(--green);filter:drop-shadow(0 0 6px rgba(61,240,138,.55))}
+  h1{font-size:clamp(28px,6vw,42px);margin:0 0 4px;letter-spacing:-.01em;font-weight:800}
+  .en{font:600 12px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:0 0 18px}
+  .ds{color:var(--dim);font-size:16px;max-width:460px;margin:0 auto 26px}
+  .badge{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--amber);color:var(--amber);border-radius:999px;padding:8px 16px;font:700 12px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase}
+  .badge .d{width:9px;height:9px;border-radius:50%;border:2px solid var(--amber);position:relative}
+  .badge .d::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid var(--amber);opacity:.5;animation:p 1.8s ease-out infinite}
+  @keyframes p{0%{transform:scale(.7);opacity:.6}100%{transform:scale(1.5);opacity:0}}
+  @media(prefers-reduced-motion:reduce){.badge .d::after{animation:none}}
+  .back{display:inline-flex;align-items:center;gap:8px;margin-top:30px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 18px;font-weight:600;font-size:14px;transition:border-color .2s,color .2s}
+  .back:hover{border-color:var(--green);color:#fff}
+  .back:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .foot{margin-top:44px;color:var(--dim);font:600 11px ui-monospace,monospace}
+</style>
+</head>
+<body>
+<script>window.ADMIRA_VERSION='v.08.07.2026.r1';</script>
+<script src="/admira-nav.js?v=08.07.2026.r1" data-active="apps" data-title="IoT" defer></script>
+
+<main class="wrap" id="admskip-target">
+  <div class="ic" id="ic" aria-hidden="true"></div>
+  <h1>IoT</h1>
+  <p class="en">IoT Manager</p>
+  <p class="ds">Gestionará los sensores y dispositivos conectados de tu espacio desde un solo panel.</p>
+  <span class="badge"><span class="d"></span>En construcción · esta noche</span>
+  <div><a class="back" href="/apps/">&larr; Volver a la lanzadera</a></div>
+  <p class="foot">Admira · tv · v.08.07.2026.r1</p>
+</main>
+
+<script>
+  (function(){ function set(){ try{ var s=window.AdmiraIcon&&window.AdmiraIcon('iotmanager'); if(s) document.getElementById('ic').innerHTML=s; }catch(_){}}
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',set); else set(); })();
+</script>
+</body>
+</html>

@@ -2,7 +2,7 @@
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.01.07.2026.r33 */
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.08.07.2026.r1 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -11,12 +11,13 @@
   var title=(s&&s.dataset.title)||cfg.title||'';
   var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.01.07.2026.r33';
+  var VER=window.ADMIRA_VERSION||'v.08.07.2026.r1';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
   var ITEMS=[
     {k:'flota',      h:'/cms.html',                         ic:'🛰', t:'Flota'},
+    {k:'apps',       h:'/apps/',                            ic:'▦', t:'Apps'},
     {k:'calendar',   h:'/cms/calendar/',                    ic:'🗓', t:'Calendario'},
     {k:'condicional',h:'/condicional.html',                 ic:'🎯', t:'Condicional'},
     {k:'canal',      h:'/canal.html', blank:true,           ic:'📺', t:'Canal'},
@@ -41,7 +42,27 @@
     alta:        _S+'<rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="M12 8v8M8 12h8"/></svg>',
     help:        _S+'<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2-2.4 3.5"/><circle cx="12" cy="16.6" r=".5" fill="currentColor" stroke="none"/></svg>',
     control:     _S+'<path d="M5 4v16M12 4v16M19 4v16"/><circle cx="5" cy="9" r="2"/><circle cx="12" cy="14.5" r="2"/><circle cx="19" cy="7" r="2"/></svg>',
-    programar:   _S+'<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.2h17M8 3.5v3M16 3.5v3M12 12v5M9.5 14.5h5"/></svg>'
+    programar:   _S+'<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.2h17M8 3.5v3M16 3.5v3M12 12v5M9.5 14.5h5"/></svg>',
+    /* Lanzadera de aplicaciones (18 apps del stack Admira, réplica mejorada de new.admira.mobi) */
+    apps:               _S+'<rect x="3.5" y="3.5" width="5" height="5" rx="1.4"/><rect x="9.5" y="3.5" width="5" height="5" rx="1.4"/><rect x="15.5" y="3.5" width="5" height="5" rx="1.4"/><rect x="3.5" y="9.5" width="5" height="5" rx="1.4"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.4"/><rect x="15.5" y="9.5" width="5" height="5" rx="1.4"/><rect x="3.5" y="15.5" width="5" height="5" rx="1.4"/><rect x="9.5" y="15.5" width="5" height="5" rx="1.4"/><rect x="15.5" y="15.5" width="5" height="5" rx="1.4"/></svg>',
+    dashboard:          _S+'<path d="M3.6 16.5a8.4 8.4 0 0 1 16.8 0"/><path d="M12 16.5l4.2-4.6"/><circle cx="12" cy="16.5" r="1.3" fill="currentColor" stroke="none"/><path d="M5.7 12.6l.8.8M12 7.2v1.4M18.3 12.6l-.8.8"/></svg>',
+    digitalsignage:     _S+'<rect x="4" y="3.5" width="16" height="11" rx="1.8"/><path d="M12 14.5V20M8.5 20h7M7.5 7h6M7.5 10h9"/></svg>',
+    contentcatalogue:   _S+'<path d="M12 3.2 3.5 7.3 12 11.4 20.5 7.3 12 3.2Z"/><path d="M3.5 12 12 16.1 20.5 12M3.5 16.6 12 20.7 20.5 16.6"/></svg>',
+    support:            _S+'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.3"/><path d="M6 6l3.6 3.6M18 6l-3.6 3.6M6 18l3.6-3.6M18 18l-3.6-3.6"/></svg>',
+    pushnotifications:  _S+'<path d="M6.5 10a5.5 5.5 0 0 1 11 0c0 4 1.5 5.5 1.5 5.5H5s1.5-1.5 1.5-5.5Z"/><path d="M10 18.5a2 2 0 0 0 4 0"/></svg>',
+    virtualassistant:   _S+'<path d="M4 4.5h16a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-9l-4.5 3.5V16.5H4A1.5 1.5 0 0 1 2.5 15V6A1.5 1.5 0 0 1 4 4.5Z"/><path d="M12 7.6l.85 1.75 1.75.85-1.75.85L12 13.6l-.85-1.75-1.75-.85 1.75-.85Z" fill="currentColor" stroke="none"/></svg>',
+    accesscontrol:      _S+'<path d="M12 2.6 5 5.3v5.2c0 4.4 3 8.2 7 9.4 4-1.2 7-5 7-9.4V5.3Z"/><circle cx="12" cy="10.3" r="1.7"/><path d="M12 12v2.6"/></svg>',
+    gamification:       _S+'<path d="M7 4.5h10v3a5 5 0 0 1-10 0Z"/><path d="M7 5.5H4.5V7a2.5 2.5 0 0 0 2.5 2.5M17 5.5h2.5V7a2.5 2.5 0 0 1-2.5 2.5"/><path d="M12 12.5V16M9.5 20l.5-4h4l.5 4Z"/></svg>',
+    iotmanager:         _S+'<circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="4.2" r="1.6"/><circle cx="12" cy="19.8" r="1.6"/><circle cx="4.6" cy="8" r="1.6"/><circle cx="19.4" cy="8" r="1.6"/><path d="M12 5.8v4M12 14.2v4M10.1 11l-4-2.2M13.9 11l4-2.2"/></svg>',
+    videoanalytics:     _S+'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg>',
+    radioanalytics:     _S+'<circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/><path d="M8.6 8.6a4.8 4.8 0 0 0 0 6.8M15.4 8.6a4.8 4.8 0 0 1 0 6.8M6.2 6.2a8.2 8.2 0 0 0 0 11.6M17.8 6.2a8.2 8.2 0 0 1 0 11.6"/></svg>',
+    socialwifi:         _S+'<path d="M2.6 8.6a13 13 0 0 1 18.8 0M5.7 11.9a8.4 8.4 0 0 1 12.6 0M8.7 15.1a4 4 0 0 1 6.6 0"/><circle cx="12" cy="18.4" r="1.1" fill="currentColor" stroke="none"/></svg>',
+    queuemanager:       _S+'<path d="M3.5 8A1.5 1.5 0 0 1 5 6.5h14A1.5 1.5 0 0 1 20.5 8v1.6a1.9 1.9 0 0 0 0 4.8V16A1.5 1.5 0 0 1 19 17.5H5A1.5 1.5 0 0 1 3.5 16v-1.6a1.9 1.9 0 0 0 0-4.8Z"/><path d="M13.5 7v10"/></svg>',
+    roombooking:        _S+'<rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M4 8.2h16M8.5 2v3M15.5 2v3"/><circle cx="12" cy="14" r="3.1"/><path d="M12 12.4V14l1.2 1.2"/></svg>',
+    audiobranding:      _S+'<path d="M9 17V5.2l9-2V15"/><circle cx="6.5" cy="17" r="2.4"/><circle cx="15.5" cy="15" r="2.4"/></svg>',
+    olfactorymarketing: _S+'<path d="M9 9.5h6l.8 8.2a1.9 1.9 0 0 1-1.9 2.1H10.1a1.9 1.9 0 0 1-1.9-2.1Z"/><path d="M10 9.5V7h4v2.5"/><path d="M12 2.4c-1 1 1 1.5 0 2.7M15.2 3.1c-.8.7.7 1.1 0 2.1"/></svg>',
+    virtualreality:     _S+'<path d="M3.5 8.5A1.5 1.5 0 0 1 5 7h14a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 19 15h-2.9a1.5 1.5 0 0 1-1.2-.6l-1.1-1.5a2 2 0 0 0-3.6 0l-1.1 1.5a1.5 1.5 0 0 1-1.2.6H5a1.5 1.5 0 0 1-1.5-1.5Z"/></svg>',
+    augmentedreality:   _S+'<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><path d="M12 8.3 15.4 10v4L12 15.7 8.6 14v-4Z"/><path d="M12 8.3V12l3.4-2M12 12v3.7M12 12 8.6 10"/></svg>'
   };
   function IC(k){ return ICONS[k]||''; }
   try{ window.AdmiraIcon=IC; window.AdmiraIconSet=ICONS; }catch(_){}

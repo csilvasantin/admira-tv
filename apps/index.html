@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<!-- preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
+<link rel="preconnect" href="https://api.admira.store" crossorigin>
+<link rel="preconnect" href="https://www.carlossilva.info">
+<link rel="dns-prefetch" href="https://api.admira.store">
+<link rel="dns-prefetch" href="https://www.carlossilva.info">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lanzadera de apps · Admira.tv</title>
+<meta name="description" content="La lanzadera del stack Admira: las 18 aplicaciones del ecosistema —señalización, catálogo, analítica, IoT, gamificación y más— en un solo grid.">
+<meta name="theme-color" content="#070a10">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://admira.tv/apps/">
+<meta property="og:title" content="Lanzadera de apps · Admira.tv">
+<meta property="og:description" content="Las 18 aplicaciones del stack Admira en un solo grid.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://admira.tv/apps/">
+<meta property="og:image" content="https://admira.tv/og-admira.png">
+<style>
+  :root{--bg:#070a10;--panel:#0b1119;--panel2:#0e1622;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--amber:#f5b431}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px);opacity:.5}
+  a{color:inherit;text-decoration:none}
+  .wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:26px 20px 64px}
+  .lhead h1{font-size:clamp(24px,4vw,34px);margin:0 0 6px;letter-spacing:-.01em;font-weight:800}
+  .lhead .lead{color:var(--dim);margin:0 0 20px;max-width:640px;font-size:15px}
+  /* barra de herramientas: búsqueda + contadores (mejora sobre el grid plano del mobi) */
+  .tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  .search{position:relative;flex:1;min-width:200px;max-width:380px}
+  .search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--dim);pointer-events:none}
+  .search input{width:100%;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 36px;font:inherit;font-size:14px}
+  .search input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(61,240,138,.12)}
+  .search input::placeholder{color:var(--dim)}
+  .counts{display:flex;gap:14px;font:600 12px ui-monospace,monospace;color:var(--dim);white-space:nowrap}
+  .counts b{color:var(--txt)}
+  .counts .live::before{content:"\25CF";color:var(--green);margin-right:5px;font-size:10px;vertical-align:1px}
+  .counts .wip::before{content:"\25CB";color:var(--amber);margin-right:5px;font-size:10px;vertical-align:1px}
+  /* grid de apps */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(186px,1fr));gap:14px}
+  .app{position:relative;display:flex;flex-direction:column;gap:9px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 15px 15px;transition:transform .13s,border-color .2s,background .2s}
+  .app:hover{transform:translateY(-3px);border-color:#2a3a66;background:var(--panel2)}
+  .app:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .app .ic{width:44px;height:44px;display:grid;place-items:center;border-radius:11px;background:rgba(61,240,138,.07);border:1px solid rgba(61,240,138,.16)}
+  .app .ic svg{width:26px;height:26px;color:var(--green);filter:drop-shadow(0 0 3px rgba(61,240,138,.5))}
+  .app:hover .ic svg{filter:drop-shadow(0 0 6px rgba(61,240,138,.85))}
+  .app .nm{font-weight:700;font-size:15px;line-height:1.2}
+  .app .en{font:600 10.5px ui-monospace,monospace;color:var(--dim);letter-spacing:.02em;margin-top:-4px}
+  .app .ds{color:var(--dim);font-size:12.5px;line-height:1.45;flex:1}
+  .app .st{display:inline-flex;align-items:center;gap:5px;font:600 10.5px ui-monospace,monospace;letter-spacing:.02em;margin-top:2px}
+  .app .st .d{width:7px;height:7px;border-radius:50%;flex:none}
+  .app .st.live{color:var(--green)} .app .st.live .d{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .app .st.wip{color:var(--amber)} .app .st.wip .d{background:transparent;border:1.5px solid var(--amber)}
+  .empty{color:var(--dim);font-size:14px;padding:30px 4px;text-align:center;display:none}
+  .foot{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);color:var(--dim);font:600 11.5px ui-monospace,monospace;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .foot a{color:var(--dim)} .foot a:hover{color:var(--green)}
+</style>
+</head>
+<body>
+<script>window.ADMIRA_VERSION='v.08.07.2026.r1';</script>
+<script src="/admira-nav.js?v=08.07.2026.r1" data-active="apps" data-title="Lanzadera de apps" defer></script>
+
+<main class="wrap" id="admskip-target">
+  <div class="lhead">
+    <h1>Lanzadera</h1>
+    <p class="lead">Las 18 aplicaciones del stack Admira, en un solo sitio. Abre la que necesites; se van encendiendo esta noche.</p>
+  </div>
+
+  <div class="tools">
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+      <input id="q" type="search" placeholder="Buscar app…" aria-label="Buscar aplicación" autocomplete="off">
+    </div>
+    <div class="counts">
+      <span><b id="cTotal">18</b> apps</span>
+      <span class="live"><b id="cLive">0</b> en antena</span>
+      <span class="wip"><b id="cWip">18</b> en construcción</span>
+    </div>
+  </div>
+
+  <div class="grid" id="grid" role="list"></div>
+  <p class="empty" id="empty">Sin resultados para tu búsqueda.</p>
+
+  <div class="foot">
+    <span>Réplica mejorada de la lanzadera legacy · new.admira.mobi → admira.tv</span>
+    <span>Admira · tv · <span style="opacity:.75">v.08.07.2026.r1</span></span>
+  </div>
+</main>
+
+<script>
+(function(){
+  // Las 18 apps, en el ORDEN exacto de la lanzadera legacy (new.admira.mobi).
+  // status: 'live' = ● en antena · 'wip' = ○ en construcción. Esta noche todas arrancan wip;
+  // el loop 1-app/hora las va encendiendo (se cambia aquí al completar cada subsite).
+  var APPS=[
+    {s:'dashboard',          nm:'Dashboard',            en:'Dashboard',           ds:'Los KPIs de tu red en una pantalla.',            st:'wip'},
+    {s:'digitalsignage',     nm:'Señalización',         en:'Digital Signage',     ds:'Programa y emite tu cartelería en la red.',      st:'wip'},
+    {s:'contentcatalogue',   nm:'Catálogo',             en:'Content Catalogue',   ds:'Tu biblioteca de creativos, lista para antena.', st:'wip'},
+    {s:'support',            nm:'Soporte',              en:'Support',             ds:'Incidencias, tickets y ayuda del ecosistema.',   st:'wip'},
+    {s:'pushnotifications',  nm:'Notificaciones',       en:'Push Notifications',  ds:'Avisos push a pantallas y dispositivos.',        st:'wip'},
+    {s:'virtualassistant',   nm:'Asistente',            en:'Virtual Assistant',   ds:'El asistente IA que responde y opera por ti.',   st:'wip'},
+    {s:'accesscontrol',      nm:'Acceso',               en:'Access Control',      ds:'Quién entra: aforo, puertas y permisos.',        st:'wip'},
+    {s:'gamification',       nm:'Gamificación',         en:'Gamification',        ds:'Retos, puntos y recompensas para tu audiencia.',  st:'wip'},
+    {s:'iotmanager',         nm:'IoT',                  en:'IoT Manager',         ds:'Gestiona sensores y dispositivos conectados.',    st:'wip'},
+    {s:'videoanalytics',     nm:'Analítica de vídeo',   en:'Video Analytics',     ds:'Audiencia y atención medidas por cámara.',        st:'wip'},
+    {s:'radioanalytics',     nm:'Analítica de radio',   en:'Radio Analytics',     ds:'Escucha y mide tu audio ambiente.',               st:'wip'},
+    {s:'socialwifi',         nm:'Social WiFi',          en:'Social Wifi',         ds:'WiFi de invitados que convierte visitas en datos.',st:'wip'},
+    {s:'queuemanager',       nm:'Colas',                en:'Queue Manager',       ds:'Gestiona turnos y reduce la espera.',             st:'wip'},
+    {s:'roombooking',        nm:'Salas',                en:'Room Booking',        ds:'Reserva espacios y salas al instante.',           st:'wip'},
+    {s:'audiobranding',      nm:'Audiobranding',        en:'Audiobranding',       ds:'La identidad sonora de tu espacio, con IA.',      st:'wip'},
+    {s:'olfactorymarketing', nm:'Marketing olfativo',   en:'Olfactory Marketing', ds:'El aroma como canal de marca.',                   st:'wip'},
+    {s:'virtualreality',     nm:'Realidad virtual',     en:'Virtual Reality',     ds:'Experiencias inmersivas para tu marca.',          st:'wip'},
+    {s:'augmentedreality',   nm:'Realidad aumentada',   en:'Augmented Reality',   ds:'Capas digitales sobre el mundo real.',            st:'wip'}
+  ];
+  var esc=function(x){return String(x==null?'':x).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});};
+  function icon(slug){ try{ return (window.AdmiraIcon&&window.AdmiraIcon(slug))||''; }catch(_){ return ''; } }
+  function stTxt(st){ return st==='live'?'En antena':'En construcción'; }
+  function render(){
+    var grid=document.getElementById('grid');
+    grid.innerHTML=APPS.map(function(a){
+      var key=(a.nm+' '+a.en+' '+a.ds).toLowerCase();
+      return '<a class="app" role="listitem" href="/'+a.s+'/" data-key="'+esc(key)+'" '+
+        'aria-label="'+esc(a.nm)+' — '+esc(stTxt(a.st))+'">'+
+        '<span class="ic">'+icon(a.s)+'</span>'+
+        '<span class="nm">'+esc(a.nm)+'</span>'+
+        '<span class="en">'+esc(a.en)+'</span>'+
+        '<span class="ds">'+esc(a.ds)+'</span>'+
+        '<span class="st '+a.st+'"><span class="d"></span>'+esc(stTxt(a.st))+'</span>'+
+      '</a>';
+    }).join('');
+    var live=APPS.filter(function(a){return a.st==='live';}).length;
+    document.getElementById('cTotal').textContent=APPS.length;
+    document.getElementById('cLive').textContent=live;
+    document.getElementById('cWip').textContent=APPS.length-live;
+  }
+  function filter(){
+    var q=(document.getElementById('q').value||'').trim().toLowerCase();
+    var n=0, cards=document.querySelectorAll('.app');
+    cards.forEach(function(c){ var hit=!q||c.getAttribute('data-key').indexOf(q)>=0; c.style.display=hit?'':'none'; if(hit)n++; });
+    document.getElementById('empty').style.display=n?'none':'block';
+  }
+  function boot(){
+    render();
+    var q=document.getElementById('q');
+    q.addEventListener('input',filter);
+    // atajo "/" enfoca la búsqueda (sin romper los atajos m/d del chrome)
+    document.addEventListener('keydown',function(e){
+      if(e.key==='/'&&document.activeElement!==q){ var t=e.target,tag=(t&&t.tagName||'').toLowerCase();
+        if(tag!=='input'&&tag!=='textarea'&&!(t&&t.isContentEditable)){ e.preventDefault(); q.focus(); } }
+    });
+  }
+  // los iconos los sirve admira-nav.js (window.AdmiraIcon), que es defer → ya está listo en DOMContentLoaded
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+})();
+</script>
+</body>
+</html>
