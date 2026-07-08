@@ -50,5 +50,33 @@
   "queuemanager": {
     "src": "/apps/video/queuemanager.mp4",
     "title": "Colas, en 5 minutos"
+  },
+  "roombooking": {
+    "src": "/apps/video/roombooking.mp4",
+    "title": "Salas, en 4 minutos"
+  },
+  "audiobranding": {
+    "src": "/apps/video/audiobranding.mp4",
+    "title": "Audiobranding, en 5 minutos"
+  },
+  "olfactorymarketing": {
+    "src": "/apps/video/olfactorymarketing.mp4",
+    "title": "Marketing olfativo, en 3 minutos"
+  },
+  "virtualreality": {
+    "src": "/apps/video/virtualreality.mp4",
+    "title": "Realidad virtual, en 4 minutos"
+  },
+  "augmentedreality": {
+    "src": "/apps/video/augmentedreality.mp4",
+    "title": "Realidad aumentada, en 5 minutos"
+  },
+  "xpaceos": {
+    "src": "/apps/video/xpaceos.mp4",
+    "title": "XpaceOS, en 5 minutos"
+  },
+  "yarig": {
+    "src": "/apps/video/yarig.mp4",
+    "title": "Yarig.ai, en 5 minutos"
   }
 }
