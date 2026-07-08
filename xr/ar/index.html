@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AR Spatial · PoC WebXR · Admira.tv</title>
+<meta name="description" content="PoC WebXR AR del Admira Spatial Player: apunta con el móvil al suelo, la pared o la mesa y ancla pantallas Admira 16:9 con campañas en vivo. Ábrelo en Android Chrome o en el Meta Quest Browser y pulsa Iniciar AR.">
+<meta name="theme-color" content="#05080d">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://admira.tv/xr/ar/">
+<meta property="og:title" content="AR Spatial · PoC WebXR · Admira.tv">
+<meta property="og:description" content="Ancla pantallas Admira 16:9 sobre tu espacio real con hit-test WebXR. Demo web del Admira Spatial Player.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://admira.tv/xr/ar/">
+<meta property="og:image" content="https://admira.tv/og-admira.png">
+<style>
+  :root{--bg:#05080d;--panel:#0b1119;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--cyan:#38d6ff;--amber:#f5b431}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  #scene{position:fixed;inset:0;z-index:0}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+
+  /* barra superior */
+  .topbar{position:fixed;top:0;left:0;right:0;z-index:8;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:linear-gradient(180deg,rgba(5,8,13,.92),rgba(5,8,13,0));pointer-events:none}
+  .topbar .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:14.5px;pointer-events:auto}
+  .topbar .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+  .topbar .brand .en{font:600 10.5px ui-monospace,monospace;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+  .topbar .tools{display:flex;gap:8px;pointer-events:auto}
+  .lnk{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:rgba(11,17,25,.8);border-radius:10px;padding:8px 13px;font-weight:700;font-size:13px;color:var(--txt);text-decoration:none;transition:border-color .2s,color .2s}
+  .lnk:hover{border-color:var(--cyan);color:#fff}
+  .lnk:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+  /* botón AR / panel de estado */
+  #dock{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:8;width:min(440px,calc(100vw - 32px));display:flex;flex-direction:column;gap:12px;align-items:center}
+  .arbtn{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--cyan);background:var(--cyan);color:#03141a;border-radius:12px;padding:14px 26px;font-weight:800;font-size:16px;cursor:pointer;transition:transform .12s,background .2s;box-shadow:0 0 26px rgba(56,214,255,.25)}
+  .arbtn:hover{transform:translateY(-1px);background:#63e2ff}
+  .arbtn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  .arbtn svg{width:20px;height:20px}
+
+  .note{width:100%;background:rgba(9,13,20,.9);border:1px solid var(--line);border-radius:14px;padding:14px 15px;backdrop-filter:blur(6px)}
+  .note.warn{border-color:rgba(245,180,49,.45)}
+  .note h4{margin:0 0 7px;font:800 13.5px -apple-system,Segoe UI,Roboto,sans-serif;display:flex;align-items:center;gap:8px}
+  .note h4 .d{width:9px;height:9px;border-radius:50%;flex:none}
+  .note.ok h4 .d{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .note.warn h4 .d{border:2px solid var(--amber)}
+  .note p{margin:0;font-size:12.5px;line-height:1.5;color:var(--dim)}
+  .note p b{color:var(--txt);font-weight:700}
+  .note p + p{margin-top:6px}
+
+  /* HUD de eventos (log en vivo) */
+  #hud{position:fixed;left:16px;bottom:16px;z-index:7;width:min(340px,calc(100vw - 32px));background:rgba(9,13,20,.86);border:1px solid var(--line);border-radius:13px;padding:12px 13px;backdrop-filter:blur(6px)}
+  #hud h4{margin:0 0 8px;font:700 11px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);display:flex;align-items:center;gap:8px}
+  #hud h4 .d{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 7px var(--cyan);animation:blink 1.9s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  @media(prefers-reduced-motion:reduce){#hud h4 .d{animation:none}}
+  #hudlog{list-style:none;margin:0;padding:0;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+  #hudlog li{display:flex;gap:8px;padding:2px 0;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #hudlog li .t{color:var(--green)}
+  #hudlog li.empty{color:var(--dim);opacity:.7}
+  /* en modo AR, el HUD queda arriba para no chocar con el dock del sistema */
+  body.in-ar #hud{bottom:auto;top:64px}
+
+  /* pista de interacción */
+  #hint{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:6;background:rgba(9,13,20,.82);border:1px solid var(--line);border-radius:999px;padding:7px 15px;font:600 12px ui-monospace,monospace;color:var(--dim);max-width:calc(100vw - 32px);text-align:center;transition:opacity .6s ease}
+  #hint.gone{opacity:0;pointer-events:none}
+
+  /* overlay DOM que viaja dentro de la sesión AR */
+  #ar-overlay{position:fixed;inset:0;z-index:20;display:none;pointer-events:none}
+  body.in-ar #ar-overlay{display:block}
+  #ar-overlay .bar{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;pointer-events:none}
+  #ar-overlay .status{pointer-events:auto;background:rgba(9,13,20,.82);border:1px solid var(--line);border-radius:999px;padding:8px 15px;font:700 12.5px ui-monospace,monospace;color:var(--txt);backdrop-filter:blur(6px)}
+  #ar-overlay .status b{color:var(--cyan)}
+  #ar-exit{pointer-events:auto;border:1px solid var(--line);background:rgba(9,13,20,.82);color:var(--txt);border-radius:999px;padding:8px 15px;font-weight:800;font-size:13px;cursor:pointer;backdrop-filter:blur(6px)}
+  #ar-exit:hover{border-color:var(--cyan)}
+  #ar-tip{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);pointer-events:none;background:rgba(9,13,20,.82);border:1px solid var(--line);border-radius:999px;padding:9px 17px;font:600 13px ui-monospace,monospace;color:var(--txt);max-width:calc(100vw - 32px);text-align:center;backdrop-filter:blur(6px)}
+
+  /* overlay de carga / error */
+  #boot{position:fixed;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(120% 90% at 50% 25%,rgba(56,214,255,.08),transparent 60%),var(--bg);transition:opacity .5s ease;text-align:center;padding:24px}
+  #boot.gone{opacity:0;pointer-events:none}
+  #boot .spin{width:44px;height:44px;border-radius:50%;border:3px solid rgba(56,214,255,.18);border-top-color:var(--cyan);animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media(prefers-reduced-motion:reduce){#boot .spin{animation:none}}
+  #boot .lt{font:600 13px ui-monospace,monospace;color:var(--dim);letter-spacing:.04em}
+
+  @media(max-width:560px){
+    .topbar .brand .en{display:none}
+    #hud{width:calc(100vw - 32px)}
+  }
+</style>
+</head>
+<body>
+
+<div id="scene"></div>
+
+<div class="topbar">
+  <span class="brand"><span class="dot"></span>Admira Spatial Player <span class="en">AR · PoC WebXR</span></span>
+  <span class="tools">
+    <a class="lnk" href="/xr/">&larr; Hub XR</a>
+  </span>
+</div>
+
+<div id="hint">Vista previa 3D · arrastra para orbitar · toca la pantalla para cambiar de campaña</div>
+
+<!-- dock: botón Iniciar AR (si hay soporte) o panel de fallback (si no) -->
+<div id="dock"></div>
+
+<aside id="hud">
+  <h4><span class="d"></span>Eventos en vivo</h4>
+  <ul id="hudlog"><li class="empty">esperando sesión…</li></ul>
+</aside>
+
+<!-- este overlay se pasa como domOverlay a la sesión immersive-ar -->
+<div id="ar-overlay" aria-hidden="true">
+  <div class="bar">
+    <span class="status">Pantallas ancladas · <b><span id="ar-count">0</span>/3</b></span>
+    <button id="ar-exit" type="button">Salir AR</button>
+  </div>
+  <div id="ar-tip">Apunta al suelo o a una mesa · toca para anclar una pantalla</div>
+</div>
+
+<div id="boot">
+  <div class="spin"></div>
+  <div class="lt">Cargando la escena AR…</div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "/xr/quest/vendor/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from '/xr/quest/vendor/OrbitControls.js';
+import { AdmiraXR } from '/xr/core/admira-xr-core.js';
+
+'use strict';
+
+const $ = function (id) { return document.getElementById(id); };
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MAX_SCREENS = 3;
+
+/* ============ Sesión + HUD ============ */
+AdmiraXR.session();               // emite xr.session.started (1ª vez en la pestaña)
+
+function refreshHUD() {
+  const ul = $('hudlog');
+  const evs = AdmiraXR.events().slice(-5).reverse();
+  if (!evs.length) { ul.innerHTML = '<li class="empty">esperando sesión…</li>'; return; }
+  ul.innerHTML = evs.map(function (e) {
+    const t = new Date(e.ts).toLocaleTimeString();
+    return '<li><span class="t">' + t + '</span><span>' + e.type + '</span></li>';
+  }).join('');
+}
+setInterval(refreshHUD, 400);
+refreshHUD();
+
+/* ============ Three.js: escena base ============ */
+const container = $('scene');
+const scene = new THREE.Scene();
+// fondo del "vacío estético" de la vista previa (transparente cuando entramos en AR)
+scene.background = new THREE.Color(0x05080d);
+scene.fog = new THREE.Fog(0x05080d, 5, 24);
+
+const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.05, 100);
+camera.position.set(0, 1.55, 2.4);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.xr.enabled = true;
+container.appendChild(renderer.domElement);
+
+// Controles de la vista previa (desktop / móvil sin AR).
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1.2, 0);
+controls.enableDamping = !REDUCED;
+controls.dampingFactor = 0.08;
+controls.minDistance = 1.1;
+controls.maxDistance = 7;
+controls.maxPolarAngle = Math.PI * 0.92;
+controls.update();
+
+/* ============ Luces + suelo de la vista previa ============ */
+scene.add(new THREE.HemisphereLight(0x2a3a55, 0x05070c, 1.0));
+const key = new THREE.DirectionalLight(0xbfe6ff, 0.55);
+key.position.set(2, 6, 4);
+scene.add(key);
+
+// El suelo/grid pertenecen SOLO a la vista previa; se ocultan en AR.
+const previewEnv = new THREE.Group();
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(60, 60),
+  new THREE.MeshStandardMaterial({ color: 0x0a0f18, roughness: 0.95, metalness: 0.0 })
+);
+floor.rotation.x = -Math.PI / 2;
+previewEnv.add(floor);
+const grid = new THREE.GridHelper(60, 60, 0x16506a, 0x0d1a26);
+grid.position.y = 0.002;
+previewEnv.add(grid);
+scene.add(previewEnv);
+
+/* ============ Núcleo: catálogo + texturas ============ */
+const catalog = AdmiraXR.catalog();          // 3 campañas mock
+const texLoader = new THREE.TextureLoader();
+texLoader.setCrossOrigin('anonymous');
+const textures = {};                          // campaignId -> THREE.Texture | null
+let assetsPending = catalog.length;
+let assetsReady = false;
+
+function onAssetsReady() {
+  assetsReady = true;
+  hideBoot();
+  buildPreviewScreen();     // la vista previa siempre existe (fallback navegable)
+}
+
+catalog.forEach(function (c) {
+  texLoader.load(
+    c.media,
+    function (tex) {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      textures[c.id] = tex;
+      AdmiraXR.emit('xr.asset.loaded', { device: 'web-ar', campaign: c.id, media: c.media });
+      if (--assetsPending === 0) onAssetsReady();
+    },
+    undefined,
+    function () {
+      textures[c.id] = null;   // sin textura → color plano, no rompemos el PoC
+      AdmiraXR.emit('xr.asset.loaded', { device: 'web-ar', campaign: c.id, media: c.media, fallback: true });
+      if (--assetsPending === 0) onAssetsReady();
+    }
+  );
+});
+
+/* ============ Fábrica de pantallas Admira 16:9 ============ */
+const SCREEN_W = 1.0, SCREEN_H = SCREEN_W * 9 / 16;   // metros (escala real en AR)
+
+function screenMaterial(campaign) {
+  const tex = textures[campaign.id];
+  if (tex) return new THREE.MeshBasicMaterial({ map: tex });
+  return new THREE.MeshBasicMaterial({ color: 0x122033 });
+}
+
+function makeLabelTexture(title, tagline, accent) {
+  const w = 512, h = 128;
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = 'rgba(9,13,20,0.92)'; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = accent || '#3df08a'; ctx.fillRect(0, 0, 8, h);
+  ctx.fillStyle = '#dfe8f4';
+  ctx.font = '700 40px -apple-system, Segoe UI, Roboto, sans-serif';
+  ctx.textBaseline = 'middle'; ctx.fillText(title, 28, 46);
+  ctx.fillStyle = '#8595ad';
+  ctx.font = '400 24px ui-monospace, Menlo, monospace';
+  ctx.fillText(tagline, 28, 90);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+// Crea el grupo de una pantalla (marco verde fósforo + plano 16:9 + rótulo).
+// Devuelve estado con handles para rotar campaña. NO la añade a la escena.
+function createScreen(campaignIdx) {
+  const c = catalog[campaignIdx];
+  const group = new THREE.Group();
+
+  const frameMat = new THREE.MeshBasicMaterial({ color: 0x1c8f56 });
+  const frame = new THREE.Mesh(new THREE.PlaneGeometry(SCREEN_W + 0.06, SCREEN_H + 0.06), frameMat);
+  frame.position.z = -0.008;
+  group.add(frame);
+
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(SCREEN_W, SCREEN_H), screenMaterial(c));
+  group.add(screen);
+
+  const label = new THREE.Mesh(
+    new THREE.PlaneGeometry(SCREEN_W, SCREEN_W * 128 / 512),
+    new THREE.MeshBasicMaterial({ map: makeLabelTexture(c.title, c.tagline, c.accent), transparent: true })
+  );
+  label.position.set(0, SCREEN_H / 2 + 0.14, 0.005);
+  group.add(label);
+
+  const st = { group: group, frame: frame, frameMat: frameMat, screen: screen, label: label, campaignIdx: campaignIdx };
+  group.userData.state = st;
+  screen.userData.kind = 'screen';
+  screen.userData.state = st;
+  return st;
+}
+
+function advanceCampaign(st, screenId) {
+  st.campaignIdx = (st.campaignIdx + 1) % catalog.length;
+  const c = catalog[st.campaignIdx];
+  st.screen.material.dispose();
+  st.screen.material = screenMaterial(c);
+  st.label.material.map = makeLabelTexture(c.title, c.tagline, c.accent);
+  st.label.material.needsUpdate = true;
+  AdmiraXR.emit('xr.hotspot.clicked', { device: 'web-ar', screenId: screenId });
+  AdmiraXR.emit('xr.campaign.selected', { device: 'web-ar', screenId: screenId, campaign: c.id });
+}
+
+/* ============ Vista previa (fallback navegable, sin WebXR) ============ */
+let previewState = null;
+
+function buildPreviewScreen() {
+  if (previewState) return;
+  previewState = createScreen(0);
+  previewState.group.position.set(0, 1.2, -0.4);
+  scene.add(previewState.group);
+  AdmiraXR.emit('xr.screen.placed', { device: 'web-ar', screenId: 'preview', mode: 'preview' });
+
+  // idle sutil de la pantalla en el vacío
+  previewState.baseY = 1.2;
+}
+
+// clic/tap en la vista previa → rota la campaña
+const rayP = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+renderer.domElement.addEventListener('pointerdown', function (e) {
+  if (renderer.xr.isPresenting || !previewState) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  rayP.setFromCamera(ndc, camera);
+  const hit = rayP.intersectObject(previewState.screen, false);
+  if (hit.length) advanceCampaign(previewState, 'preview');
+});
+
+/* ============ WebXR AR: sesión immersive-ar + hit-test ============ */
+const placed = [];                 // estados de pantallas ancladas
+const placedMeshes = [];           // meshes raycastables (para tocar/rotar)
+let xrSession = null;
+let xrRefSpace = null;
+let hitTestSource = null;
+let reticle = null;                // retícula 3D sobre la superficie
+let currentFrame = null;
+
+function buildReticle() {
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(0.07, 0.09, 32).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: 0x3df08a, transparent: true, opacity: 0.9 })
+  );
+  const dot = new THREE.Mesh(
+    new THREE.CircleGeometry(0.012, 16).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: 0x3df08a })
+  );
+  reticle = new THREE.Group();
+  reticle.add(ring); reticle.add(dot);
+  reticle.matrixAutoUpdate = false;
+  reticle.visible = false;
+  scene.add(reticle);
+}
+
+async function startAR() {
+  if (!navigator.xr) return;
+  try {
+    const overlayRoot = $('ar-overlay');
+    xrSession = await navigator.xr.requestSession('immersive-ar', {
+      requiredFeatures: ['hit-test'],
+      optionalFeatures: ['dom-overlay', 'local-floor'],
+      domOverlay: { root: overlayRoot }
+    });
+  } catch (err) {
+    // el usuario canceló o el visor rechazó → seguimos en la vista previa
+    console.warn('[AR] requestSession falló:', err);
+    return;
+  }
+
+  document.body.classList.add('in-ar');
+  previewEnv.visible = false;                 // fuera suelo/grid sintéticos
+  if (previewState) previewState.group.visible = false;
+  scene.background = null;                     // dejamos ver el mundo real
+  scene.fog = null;
+  if (!reticle) buildReticle();
+  reticle.visible = false;
+  updateArCount();
+
+  await renderer.xr.setSession(xrSession);
+  xrRefSpace = await xrSession.requestReferenceSpace('local');
+  const viewerSpace = await xrSession.requestReferenceSpace('viewer');
+  hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
+
+  xrSession.addEventListener('select', onXRSelect);
+  xrSession.addEventListener('end', onXREnd);
+}
+
+// Toque en AR: si apunta a una pantalla ya anclada → rota campaña;
+// si no y la retícula está sobre una superficie → ancla una pantalla nueva.
+const rayXR = new THREE.Raycaster();
+const tmpMat = new THREE.Matrix4();
+
+function onXRSelect(e) {
+  // 1) ¿ha tocado una pantalla ya colocada? (rayo desde el input source)
+  if (placedMeshes.length && currentFrame && e.inputSource && e.inputSource.targetRaySpace) {
+    const pose = currentFrame.getPose(e.inputSource.targetRaySpace, xrRefSpace);
+    if (pose) {
+      tmpMat.fromArray(pose.transform.matrix);
+      rayXR.ray.origin.setFromMatrixPosition(tmpMat);
+      rayXR.ray.direction.set(0, 0, -1).transformDirection(tmpMat).normalize();
+      const hits = rayXR.intersectObjects(placedMeshes, false);
+      if (hits.length) {
+        const st = hits[0].object.userData.state;
+        advanceCampaign(st, st.screenId);
+        return;
+      }
+    }
+  }
+  // 2) colocar una pantalla nueva sobre la retícula
+  if (reticle && reticle.visible && placed.length < MAX_SCREENS) placeAtReticle();
+}
+
+function placeAtReticle() {
+  const st = createScreen(placed.length % catalog.length);
+  const pos = new THREE.Vector3().setFromMatrixPosition(reticle.matrix);
+
+  // orientación: la pantalla mira al usuario (giro sólo en Y) y se apoya de pie
+  const camPos = new THREE.Vector3();
+  renderer.xr.getCamera().getWorldPosition(camPos);
+  const yaw = Math.atan2(camPos.x - pos.x, camPos.z - pos.z);
+  st.group.position.set(pos.x, pos.y + SCREEN_H / 2 + 0.02, pos.z);
+  st.group.rotation.y = yaw;
+
+  st.screenId = 'ar-' + (placed.length + 1);
+  scene.add(st.group);
+  placed.push(st);
+  placedMeshes.push(st.screen);
+  updateArCount();
+  AdmiraXR.emit('xr.screen.placed', { device: 'web-ar', screenId: st.screenId, mode: 'ar-hittest' });
+  AdmiraXR.emit('xr.campaign.selected', { device: 'web-ar', screenId: st.screenId, campaign: catalog[st.campaignIdx].id });
+
+  const tip = $('ar-tip');
+  if (tip) tip.textContent = placed.length >= MAX_SCREENS
+    ? 'Límite de 3 pantallas · toca una pantalla para cambiar su campaña'
+    : 'Toca una pantalla para cambiar de campaña · o ancla otra (' + placed.length + '/3)';
+}
+
+function updateArCount() {
+  const c = $('ar-count'); if (c) c.textContent = String(placed.length);
+}
+
+function onXREnd() {
+  document.body.classList.remove('in-ar');
+  if (hitTestSource) { try { hitTestSource.cancel(); } catch (_) {} hitTestSource = null; }
+  // limpiamos las pantallas ancladas y restauramos la vista previa
+  placed.forEach(function (st) { scene.remove(st.group); });
+  placed.length = 0; placedMeshes.length = 0;
+  if (reticle) reticle.visible = false;
+  previewEnv.visible = true;
+  if (previewState) previewState.group.visible = true;
+  scene.background = new THREE.Color(0x05080d);
+  scene.fog = new THREE.Fog(0x05080d, 5, 24);
+  xrSession = null; xrRefSpace = null; currentFrame = null;
+  updateArCount();
+}
+
+$('ar-exit').addEventListener('click', function () { if (xrSession) xrSession.end(); });
+
+/* ============ Bucle de render ============ */
+const clock = new THREE.Clock();
+
+function tick(timestamp, frame) {
+  if (frame && hitTestSource && xrRefSpace) {
+    currentFrame = frame;
+    const results = frame.getHitTestResults(hitTestSource);
+    if (results.length) {
+      const pose = results[0].getPose(xrRefSpace);
+      if (pose) {
+        reticle.visible = (placed.length < MAX_SCREENS);
+        reticle.matrix.fromArray(pose.transform.matrix);
+      }
+    } else {
+      reticle.visible = false;
+    }
+  }
+
+  // idle sutil en la vista previa
+  if (!renderer.xr.isPresenting && previewState && !REDUCED) {
+    const t = clock.getElapsedTime();
+    previewState.group.position.y = previewState.baseY + Math.sin(t * 0.6) * 0.02;
+    previewState.group.rotation.y = Math.sin(t * 0.25) * 0.12;
+  }
+
+  if (!renderer.xr.isPresenting) controls.update();
+  renderer.render(scene, camera);
+}
+renderer.setAnimationLoop(tick);
+
+/* ============ Detección honesta de soporte ============ */
+function bigArButton() {
+  const b = document.createElement('button');
+  b.className = 'arbtn';
+  b.type = 'button';
+  b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l8 4.2v10.6L12 21.5l-8-4.2V6.7z"/><path d="M4 6.7l8 4.3 8-4.3M12 11v10.5"/></svg>Iniciar AR';
+  b.addEventListener('click', startAR);
+  return b;
+}
+
+function supportNote() {
+  const n = document.createElement('div');
+  n.className = 'note warn';
+  n.innerHTML =
+    '<h4><span class="d"></span>AR web no disponible en este dispositivo</h4>' +
+    '<p>Abajo tienes la <b>vista previa 3D</b> navegable de la pantalla Admira. La sesión AR con anclaje real necesita <b>WebXR immersive-ar</b>.</p>' +
+    '<p><b>Android Chrome</b> o <b>Meta Quest (passthrough)</b> → verás el botón «Iniciar AR».<br>' +
+    '<b>iPhone / Vision Pro</b> → la app nativa <b>Admira Spatial Player</b> (SwiftUI + RealityKit): en el taller, ya compila.</p>';
+  return n;
+}
+
+function readyNote() {
+  const n = document.createElement('div');
+  n.className = 'note ok';
+  n.innerHTML =
+    '<h4><span class="d"></span>AR listo en este dispositivo</h4>' +
+    '<p>Pulsa <b>Iniciar AR</b>, apunta al suelo, la mesa o la pared y <b>toca para anclar</b> una pantalla Admira 16:9. Puedes colocar hasta 3 y tocarlas para rotar la campaña.</p>';
+  return n;
+}
+
+async function detectSupport() {
+  const dock = $('dock');
+  dock.innerHTML = '';
+  let supported = false;
+  try {
+    if (navigator.xr && navigator.xr.isSessionSupported) {
+      supported = await navigator.xr.isSessionSupported('immersive-ar');
+    }
+  } catch (_) { supported = false; }
+
+  if (supported) {
+    dock.appendChild(bigArButton());
+    dock.appendChild(readyNote());
+  } else {
+    dock.appendChild(supportNote());
+  }
+}
+detectSupport();
+
+/* ============ Salida de sesión ============ */
+window.addEventListener('pagehide', function () { AdmiraXR.emit('xr.session.ended', { device: 'web-ar' }); }, { once: true });
+
+/* ============ Resize + boot ============ */
+window.addEventListener('resize', function () {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+let bootHidden = false;
+function hideBoot() { if (bootHidden) return; bootHidden = true; $('boot').classList.add('gone'); }
+function hideHint() { const h = $('hint'); if (h) h.classList.add('gone'); }
+setTimeout(hideBoot, 8000);   // salvaguarda si la carga se atasca
+setTimeout(hideHint, 9000);
+</script>
+</body>
+</html>

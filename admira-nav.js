@@ -91,8 +91,8 @@
     {s:'roombooking',        nm:'Salas',                en:'Room Booking',        ds:'Reserva espacios y salas al instante.',           st:'live'},
     {s:'audiobranding',      nm:'Audiobranding',        en:'Audiobranding',       ds:'La identidad sonora de tu espacio, con IA.',      st:'live'},
     {s:'olfactorymarketing', nm:'Marketing olfativo',   en:'Olfactory Marketing', ds:'El aroma como canal de marca.',                   st:'wip'},
-    {s:'virtualreality',     nm:'Realidad virtual',     en:'Virtual Reality',     ds:'Experiencias inmersivas para tu marca.',          st:'wip'},
-    {s:'augmentedreality',   nm:'Realidad aumentada',   en:'Augmented Reality',   ds:'Capas digitales sobre el mundo real.',            st:'wip'},
+    {s:'virtualreality',     nm:'Realidad virtual',     en:'Virtual Reality',     ds:'Experiencias inmersivas para tu marca.',          st:'live'},
+    {s:'augmentedreality',   nm:'Realidad aumentada',   en:'Augmented Reality',   ds:'Capas digitales sobre el mundo real.',            st:'live'},
     {s:'xpaceos',            nm:'XpaceOS',              en:'Digital Twins',       ds:'El gemelo digital de tu espacio, vivo.',          st:'live'},
     {s:'yarig',              nm:'Yarig.ai',             en:'Team Building',       ds:'El teambuilding de tu equipo, jugado con IA.',    st:'live'}
   ];
