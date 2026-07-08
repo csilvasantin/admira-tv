@@ -2,5 +2,53 @@
   "dashboard": {
     "src": "/apps/video/dashboard.mp4",
     "title": "Dashboard, en 4 minutos"
+  },
+  "digitalsignage": {
+    "src": "/apps/video/digitalsignage.mp4",
+    "title": "Señalización, en 5 minutos"
+  },
+  "contentcatalogue": {
+    "src": "/apps/video/contentcatalogue.mp4",
+    "title": "Catálogo, en 4 minutos"
+  },
+  "support": {
+    "src": "/apps/video/support.mp4",
+    "title": "Soporte, en 5 minutos"
+  },
+  "pushnotifications": {
+    "src": "/apps/video/pushnotifications.mp4",
+    "title": "Notificaciones, en 4 minutos"
+  },
+  "virtualassistant": {
+    "src": "/apps/video/virtualassistant.mp4",
+    "title": "Asistente, en 5 minutos"
+  },
+  "accesscontrol": {
+    "src": "/apps/video/accesscontrol.mp4",
+    "title": "Acceso, en 5 minutos"
+  },
+  "gamification": {
+    "src": "/apps/video/gamification.mp4",
+    "title": "Gamificación, en 4 minutos"
+  },
+  "iotmanager": {
+    "src": "/apps/video/iotmanager.mp4",
+    "title": "IoT, en 5 minutos"
+  },
+  "videoanalytics": {
+    "src": "/apps/video/videoanalytics.mp4",
+    "title": "Analítica de vídeo, en 4 minutos"
+  },
+  "radioanalytics": {
+    "src": "/apps/video/radioanalytics.mp4",
+    "title": "Analítica de radio, en 5 minutos"
+  },
+  "socialwifi": {
+    "src": "/apps/video/socialwifi.mp4",
+    "title": "Social WiFi, en 4 minutos"
+  },
+  "queuemanager": {
+    "src": "/apps/video/queuemanager.mp4",
+    "title": "Colas, en 5 minutos"
   }
 }
