@@ -4,7 +4,7 @@
  * data-active: flota|apps|calendar|condicional|canal|mural|comprar|adcelerate|alta|help   ·   data-title: subtítulo de la barra.
  * Estado (plegado/detalle) compartido entre páginas vía localStorage.
  * El ítem "Apps" despliega un submenú (flyout en desktop · acordeón en móvil) con las 18 apps del stack,
- * cuyo estado ●/○ vive en window.AdmiraApps (fuente única que también consume /apps/). v.08.07.2026.r15 */
+ * cuyo estado ●/○ vive en window.AdmiraApps (fuente única que también consume /apps/). v.08.07.2026.r17 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -18,8 +18,8 @@
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
   var ITEMS=[
-    {k:'flota',      h:'/cms.html',                         ic:'🛰', t:'Flota'},
     {k:'apps',       h:'/apps/',                            ic:'▦', t:'Apps'},
+    {k:'flota',      h:'/cms.html',                         ic:'🛰', t:'Flota'},
     {k:'calendar',   h:'/cms/calendar/',                    ic:'🗓', t:'Calendario'},
     {k:'condicional',h:'/condicional.html',                 ic:'🎯', t:'Condicional'},
     {k:'canal',      h:'/canal.html', blank:true,           ic:'📺', t:'Canal'},
@@ -119,14 +119,14 @@
    ".admtop .admhome{color:inherit;text-decoration:none;border-radius:6px;padding:1px 5px;margin:0 -3px;transition:color .15s,background .15s}",
    ".admtop .admhome:hover{color:#fff;background:#13203a}",
    ".admtop .admver{font:600 10.5px ui-monospace,monospace;color:#8595ad;border:1px solid #1e2940;border-radius:999px;padding:1px 7px;margin-left:8px;vertical-align:2px}",
-   ".admtop .admsub{color:#8595ad;font-size:12px;white-space:nowrap}",
+   ".admtop .admpgsub{color:#8595ad;font-size:12px;white-space:nowrap}",
    ".admtop .admsp{flex:1}",
    /* enlaces de ecosistema en la barra superior (cfg.topRight) */
    ".admtop .admtR{color:#9fb0c6;text-decoration:none;font:600 13px -apple-system,Segoe UI,sans-serif;padding:5px 9px;border-radius:8px;transition:color .15s,background .15s}",
    ".admtop .admtR:hover{color:#fff;background:#13203a}",
    ".admtop .admtR-cta{color:#04110b;background:#7aa2ff}",
    ".admtop .admtR-cta:hover{background:#9bb8ff}",
-   "@media(max-width:760px){.admtop .admsub{display:none}.admtop .admtR:not(.admtR-cta){display:none}}",
+   "@media(max-width:760px){.admtop .admpgsub{display:none}.admtop .admtR:not(.admtR-cta){display:none}}",
    /* conmutador de pestañas en la barra superior (p.ej. Planificar ↔ Calendario) */
    ".admtop .admseg{display:inline-flex;align-items:center;gap:2px;background:#0e1420;border:1px solid #1e2940;border-radius:10px;padding:2px}",
    ".admtop .admseg a{display:inline-flex;align-items:center;gap:6px;color:#9fb0c6;text-decoration:none;font:600 12.5px -apple-system,Segoe UI,sans-serif;padding:5px 11px;border-radius:8px;transition:color .15s,background .15s;white-space:nowrap}",
@@ -294,7 +294,7 @@
     return '<header class="admtop">'+
       '<button class="admtog" id="admNavTog" aria-label="Plegar o desplegar el menú" aria-expanded="false" title="Plegar / desplegar menú (m)">☰</button>'+
       '<span class="admbrand"><a href="/" class="admhome" title="Volver a la home · Admira.tv">Admira</a> · <b>'+brandTag+'</b><span class="admver">'+VER+'</span></span>'+
-      (title?'<span class="admsub">'+title+'</span>':'')+
+      (title?'<span class="admpgsub">'+title+'</span>':'')+
       '<span class="admsp"></span>'+
       emiSwitchHTML()+
       (cfg.topRight||'')+
