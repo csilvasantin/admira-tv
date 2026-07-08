@@ -2,59 +2,636 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<!-- preconnect: chrome + backbone real + laboratorio de colas (gemelo) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
+<link rel="preconnect" href="https://www.xpaceos.com">
 <link rel="preconnect" href="https://www.carlossilva.info">
+<link rel="dns-prefetch" href="https://api.admira.store">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Colas · Admira.tv</title>
-<meta name="description" content="Gestionará turnos y reducirá la espera con avisos en pantalla y en el móvil.">
+<meta name="description" content="La cola, gestionada y simulada: mide la espera real con la cámara del punto, muestra el turno en el MUPI y ensaya el futuro en el gemelo Admira XP, que simula colas de verdad (abandono, reacciones, conversión por perfil).">
 <meta name="theme-color" content="#070a10">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="canonical" href="https://admira.tv/queuemanager/">
 <meta property="og:title" content="Colas · Admira.tv">
-<meta property="og:description" content="Gestionará turnos y reducirá la espera con avisos en pantalla y en el móvil.">
+<meta property="og:description" content="La cola, gestionada y simulada: mide la espera real, muestra el turno en el MUPI y ensaya el futuro en el gemelo Admira XP, que simula colas de verdad.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://admira.tv/queuemanager/">
 <meta property="og:image" content="https://admira.tv/og-admira.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Colas · Admira.tv">
+<meta name="twitter:description" content="La cola, gestionada y simulada: mide la espera real y ensaya el futuro en el gemelo Admira XP.">
+<meta name="twitter:image" content="https://admira.tv/og-admira.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": "https://admira.tv/queuemanager/",
+  "url": "https://admira.tv/queuemanager/",
+  "name": "Colas · Admira.tv",
+  "inLanguage": "es",
+  "isPartOf": { "@id": "https://admira.tv/#site" },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Admira Gestor de Colas",
+    "applicationCategory": "Queue Management",
+    "operatingSystem": "Web, Edge device",
+    "description": "Gestión de turnos y colas del punto de venta con pantalla de turno en el canal (MUPI), medición de la espera por videoanalítica y un laboratorio de simulación de colas en el gemelo Admira XP: abandono (reneging/balking), reacciones y conversión por perfil."
+  }
+}
+</script>
 <style>
-  :root{--bg:#070a10;--panel:#0b1119;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--amber:#f5b431}
+  :root{--bg:#070a10;--panel:#0b1119;--panel2:#0e1622;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--cyan:#38d6ff;--amber:#f5b431;--pink:#ff6ec7;--red:#ff5a5a}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
   body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px);opacity:.5}
   a{color:inherit;text-decoration:none}
-  .wrap{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:min(12vh,90px) 20px 60px;text-align:center}
-  .ic{width:84px;height:84px;margin:0 auto 22px;display:grid;place-items:center;border-radius:20px;background:rgba(61,240,138,.07);border:1px solid rgba(61,240,138,.18)}
-  .ic svg{width:46px;height:46px;color:var(--green);filter:drop-shadow(0 0 6px rgba(61,240,138,.55))}
-  h1{font-size:clamp(28px,6vw,42px);margin:0 0 4px;letter-spacing:-.01em;font-weight:800}
-  .en{font:600 12px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:0 0 18px}
-  .ds{color:var(--dim);font-size:16px;max-width:460px;margin:0 auto 26px}
-  .badge{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--amber);color:var(--amber);border-radius:999px;padding:8px 16px;font:700 12px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase}
-  .badge .d{width:9px;height:9px;border-radius:50%;border:2px solid var(--amber);position:relative}
-  .badge .d::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid var(--amber);opacity:.5;animation:p 1.8s ease-out infinite}
-  @keyframes p{0%{transform:scale(.7);opacity:.6}100%{transform:scale(1.5);opacity:0}}
-  @media(prefers-reduced-motion:reduce){.badge .d::after{animation:none}}
-  .back{display:inline-flex;align-items:center;gap:8px;margin-top:30px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 18px;font-weight:600;font-size:14px;transition:border-color .2s,color .2s}
+  img,iframe,video{max-width:100%}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 20px}
+  .eyebrow{font:600 12px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--green)}
+  section{padding:48px 0}
+  .sec-head{max-width:740px;margin:0 auto 28px;text-align:center}
+  .sec-head h2{font-size:clamp(24px,4vw,34px);margin:8px 0 8px;letter-spacing:-.01em;font-weight:800}
+  .sec-head p{color:var(--dim);margin:0;font-size:15.5px}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:11px 20px;font-weight:700;font-size:14px;border:1px solid #2a3a66;background:transparent;color:var(--txt);cursor:pointer;transition:transform .12s,border-color .2s,background .2s}
+  .btn:hover{transform:translateY(-1px);border-color:#3a4f8a}
+  .btn.primary{background:var(--green);border-color:var(--green);color:#03140a}
+  .btn.primary:hover{background:#5cf6a1}
+  a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
+  /* hero */
+  .hero{padding:74px 0 20px;text-align:center}
+  .kicker{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 13px;font:600 11.5px ui-monospace,monospace;color:var(--dim);letter-spacing:.04em}
+  .kicker .d{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green)}
+  .hero h1{font-size:clamp(34px,7vw,62px);line-height:1.02;margin:18px auto 12px;letter-spacing:-.02em;font-weight:800;max-width:900px}
+  .hero h1 .g{color:var(--green);text-shadow:0 0 22px rgba(61,240,138,.32)}
+  .hero .en{font:600 12px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:0 0 14px}
+  .hero .lead{font-size:clamp(16px,2.2vw,19px);color:var(--dim);max-width:760px;margin:0 auto}
+  .hero-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+  .lang{display:inline-flex;gap:2px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px;margin-left:10px;vertical-align:middle}
+  .lang button{border:0;background:transparent;color:var(--dim);font:700 11px/1 ui-monospace,monospace;padding:5px 10px;border-radius:999px;cursor:pointer}
+  .lang button.on{background:var(--green);color:#03140a}
+
+  /* fila llega→espera→se atiende */
+  .flow{display:flex;align-items:stretch;justify-content:center;gap:10px;flex-wrap:wrap;margin:34px auto 0;max-width:820px}
+  .fstep{flex:1;min-width:190px;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:15px 16px;text-align:left;position:relative}
+  .fstep .fk{font:600 10.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+  .fstep .fw{font-size:clamp(19px,3.4vw,24px);font-weight:800;margin:4px 0 2px}
+  .fstep.a .fw{color:var(--cyan)} .fstep.b .fw{color:var(--amber)} .fstep.c .fw{color:var(--green)}
+  .fstep .fd{font-size:12.5px;color:var(--dim)}
+
+  /* arquitectura 3 columnas */
+  .arch{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:820px){.arch{grid-template-columns:1fr}}
+  .col{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:20px;min-width:0}
+  .col .role{font:600 11px ui-monospace,monospace;letter-spacing:.13em;text-transform:uppercase;color:var(--green)}
+  .col .stt{float:right;font:700 9.5px ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 8px}
+  .col .stt.real{color:var(--green);border:1px solid rgba(61,240,138,.4)}
+  .col .stt.mix{color:var(--cyan);border:1px solid rgba(56,214,255,.4)}
+  .col .stt.concept{color:var(--amber);border:1px solid rgba(245,180,49,.45)}
+  .col h3{margin:8px 0 4px;font-size:19px;clear:both}
+  .col .leg{font-size:12.5px;color:var(--dim);margin:0 0 14px}
+  .col .leg b{color:var(--txt);font-weight:600}
+  .col ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .col li{font-size:13.5px;line-height:1.4;color:var(--dim);display:flex;gap:9px;align-items:flex-start;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:rgba(61,240,138,.03)}
+  .col li .t{color:var(--green);flex:none;margin-top:1px;font-size:13px}
+  .col li b{color:var(--txt);font-weight:600}
+  .col li a{color:var(--cyan);border-bottom:1px solid rgba(56,214,255,.35)}
+  .col li a:hover{color:#7ce3ff}
+
+  /* demos */
+  .demo{border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:hidden;margin-bottom:16px}
+  .demo.star{border-color:rgba(245,180,49,.4);box-shadow:0 0 34px rgba(245,180,49,.07)}
+  .demo-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .demo-h .ttl{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+  .demo-h .ttl .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex:none;animation:blink 1.9s infinite}
+  .demo-h .ttl .dot.amb{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  @media(prefers-reduced-motion:reduce){.demo-h .ttl .dot{animation:none}}
+  .tag-real{font:700 10px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--green);border:1px solid rgba(61,240,138,.4);border-radius:999px;padding:4px 9px}
+  .tag-ill{font:700 10px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);border:1px solid rgba(245,180,49,.45);border-radius:999px;padding:4px 9px}
+  .tag-cpt{font:700 10px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--cyan);border:1px solid rgba(56,214,255,.4);border-radius:999px;padding:4px 9px}
+  .demo-b{padding:16px}
+  .demo-note{font-size:12.5px;color:var(--dim);margin:14px 0 0;line-height:1.5}
+  .demo-note a{color:var(--cyan);border-bottom:1px solid rgba(56,214,255,.35)}
+  .grid-meta{font:600 12px ui-monospace,monospace;color:var(--dim);margin-left:auto}
+  .empty{color:var(--dim);font-size:13.5px;text-align:center;padding:18px 8px;border:1px dashed var(--line);border-radius:10px;line-height:1.5}
+
+  /* SIMULADOR de cola (la estrella) */
+  .sim-controls{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+  @media(max-width:640px){.sim-controls{grid-template-columns:1fr}}
+  .ctl{border:1px solid var(--line);border-radius:11px;background:var(--panel2);padding:12px 14px}
+  .ctl label{display:flex;justify-content:space-between;align-items:baseline;font:600 12px ui-monospace,monospace;color:var(--dim);margin-bottom:8px}
+  .ctl label b{color:var(--amber);font-size:15px;font-variant-numeric:tabular-nums}
+  .ctl input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:5px;border-radius:999px;background:var(--line);outline:none}
+  .ctl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:17px;height:17px;border-radius:50%;background:var(--amber);cursor:pointer;border:2px solid #1a1206;box-shadow:0 0 6px rgba(245,180,49,.5)}
+  .ctl input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--amber);cursor:pointer;border:2px solid #1a1206}
+  .sim-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .sim-clock{margin-left:auto;font:600 12px ui-monospace,monospace;color:var(--dim)}
+  .sim-clock b{color:var(--txt)}
+  /* escena de la cola */
+  .scene{border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,#0c1420,#0a1018);padding:16px;overflow:hidden}
+  .lane-lbl{display:flex;justify-content:space-between;font:600 10.5px ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+  .lane-lbl .in{color:var(--cyan)} .lane-lbl .out{color:var(--green)}
+  .lane{display:flex;align-items:center;gap:12px;min-height:64px}
+  .queue{flex:1;min-width:0;display:flex;flex-direction:row-reverse;justify-content:flex-end;gap:5px;flex-wrap:wrap-reverse;align-content:flex-end;min-height:44px;padding:4px 6px;border-right:2px dashed var(--line)}
+  .p{width:24px;height:24px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:14px;line-height:1;background:rgba(56,214,255,.12);border:1px solid rgba(56,214,255,.4);transition:transform .3s,opacity .3s,background .3s,border-color .3s;animation:pin .35s ease}
+  .p.wait1{background:rgba(245,180,49,.14);border-color:rgba(245,180,49,.5)}
+  .p.wait2{background:rgba(255,90,90,.16);border-color:rgba(255,90,90,.55)}
+  @keyframes pin{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+  .counters{flex:none;display:flex;flex-direction:column;gap:6px}
+  .cw{display:flex;align-items:center;gap:7px;font:600 11px ui-monospace,monospace;color:var(--dim)}
+  .cw .box{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:15px;border:1px solid var(--line);background:var(--panel);transition:background .3s,border-color .3s}
+  .cw.busy .box{background:rgba(61,240,138,.12);border-color:rgba(61,240,138,.5)}
+  .cw.busy{color:var(--green)}
+  /* KPIs del simulador */
+  .skpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px;margin-top:16px}
+  .sk{border:1px solid var(--line);border-radius:11px;background:var(--panel2);padding:12px;text-align:center}
+  .sk .kk{font:600 10px ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
+  .sk .kv{font-size:26px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+  .sk.q .kv{color:var(--cyan)} .sk.w .kv{color:var(--amber)} .sk.d .kv{color:var(--green)} .sk.a .kv{color:var(--red)} .sk.c .kv{color:var(--pink)}
+  .sk .ku{font:600 10px ui-monospace,monospace;color:var(--dim)}
+
+  /* embed del gemelo (facade click-to-load) */
+  .twin{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#05080d;aspect-ratio:16/10}
+  .twin iframe{display:block;width:100%;height:100%;border:0}
+  .twin .facade{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px;cursor:pointer;background:radial-gradient(120% 90% at 50% 15%,rgba(61,240,138,.09),transparent 60%),linear-gradient(180deg,#0b1420,#070b12)}
+  .twin .facade .pl{width:64px;height:64px;border-radius:50%;background:var(--green);color:#03140a;display:grid;place-items:center;font-size:26px;box-shadow:0 0 26px rgba(61,240,138,.45);transition:transform .15s}
+  .twin .facade:hover .pl{transform:scale(1.08)}
+  .twin .facade .ft{font-weight:800;font-size:17px}
+  .twin .facade .fs{color:var(--dim);font-size:13px;max-width:420px}
+  .twin .facade .fw{font:600 10.5px ui-monospace,monospace;color:var(--amber);border:1px solid rgba(245,180,49,.4);border-radius:999px;padding:4px 10px}
+
+  /* MUPI player embed */
+  .mupi-wrap{display:flex;gap:22px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .mupi{flex:none;width:min(240px,72vw);aspect-ratio:9/16;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#000;box-shadow:0 10px 40px rgba(0,0,0,.5);position:relative}
+  .mupi iframe{display:block;width:100%;height:100%;border:0}
+  /* superposición conceptual del turno sobre el MUPI */
+  .turn-ov{position:absolute;left:0;right:0;bottom:0;padding:10px 12px;background:linear-gradient(0deg,rgba(3,8,14,.94),rgba(3,8,14,.0));pointer-events:none;text-align:center}
+  .turn-ov .tk{font:600 9px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+  .turn-ov .tn{font-size:30px;font-weight:800;color:#fff;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 0 12px rgba(245,180,49,.6)}
+  .turn-ov .tc{font:600 10px ui-monospace,monospace;color:var(--dim);margin-top:2px}
+  .mupi-copy{flex:1;min-width:220px;max-width:440px}
+  .mupi-copy p{color:var(--dim);font-size:14px;margin:0 0 14px}
+  .mupi-copy .btn{margin-right:8px;margin-bottom:8px}
+
+  /* medición de espera (real /segmentation/hits) */
+  .hits{display:flex;flex-direction:column;gap:8px}
+  .hit{display:flex;align-items:center;gap:11px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);font-size:13px}
+  .hit .hd{width:8px;height:8px;border-radius:50%;background:var(--cyan);flex:none}
+  .hit .ht{color:var(--dim);font:600 11px ui-monospace,monospace;margin-left:auto}
+
+  /* enlaces */
+  .links{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:820px){.links{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:460px){.links{grid-template-columns:1fr}}
+  .lk{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:13px;background:var(--panel);padding:16px;transition:transform .12s,border-color .2s,background .2s}
+  .lk:hover{transform:translateY(-3px);border-color:#2a3a66;background:var(--panel2)}
+  .lk .nm{font-weight:700;font-size:15px}
+  .lk .ds{color:var(--dim);font-size:12.5px;line-height:1.4}
+  .lk .go{font:600 11.5px ui-monospace,monospace;color:var(--green);margin-top:auto}
+
+  .foot{margin-top:20px;padding:26px 20px 46px;border-top:1px solid var(--line);color:var(--dim);font:600 11.5px ui-monospace,monospace;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;max-width:1080px;margin-left:auto;margin-right:auto}
+  .foot a{color:var(--dim)} .foot a:hover{color:var(--green)}
+  .back{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 15px;font-weight:600;font-size:13.5px;transition:border-color .2s,color .2s}
   .back:hover{border-color:var(--green);color:#fff}
-  .back:focus-visible{outline:2px solid var(--green);outline-offset:2px}
-  .foot{margin-top:44px;color:var(--dim);font:600 11px ui-monospace,monospace}
 </style>
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.08.07.2026.r3';</script>
-<script src="/admira-nav.js?v=08.07.2026.r3" data-active="apps" data-title="Colas" defer></script>
+<script>window.ADMIRA_VERSION='v.08.07.2026.r10';</script>
+<script src="/admira-nav.js?v=08.07.2026.r10" data-active="apps" data-title="Colas" defer></script>
 
-<main class="wrap" id="admskip-target">
-  <div class="ic" id="ic" aria-hidden="true"></div>
-  <h1>Colas</h1>
-  <p class="en">Queue Manager</p>
-  <p class="ds">Gestionará turnos y reducirá la espera con avisos en pantalla y en el móvil.</p>
-  <span class="badge"><span class="d"></span>En construcción · esta noche</span>
-  <div><a class="back" href="/apps/">&larr; Volver a la lanzadera</a></div>
-  <p class="foot">Admira · tv · v.08.07.2026.r3</p>
+<main id="admskip-target">
+
+  <!-- HERO -->
+  <header class="hero wrap">
+    <span class="kicker"><span class="d"></span><span data-es="Turno en pantalla · Espera medida · Cola simulada" data-en="Turn on screen · Wait measured · Queue simulated">Turno en pantalla · Espera medida · Cola simulada</span></span>
+    <h1><span data-es="La cola gestionada " data-en="The queue, managed ">La cola gestionada </span><span class="g" data-es="Y simulada" data-en="AND simulated">Y simulada</span></h1>
+    <p class="en">Queue Manager
+      <span class="lang" role="group" aria-label="Idioma / Language">
+        <button type="button" data-lang="es" class="on">ES</button><button type="button" data-lang="en">EN</button>
+      </span>
+    </p>
+    <p class="lead" data-es="El legacy daba turno y punto. Nosotros medimos la espera real con la cámara del punto, mostramos el turno en el mismo canal que emite tus pantallas… y ensayamos el futuro en el gemelo Admira XP, que simula colas de verdad: clientes que se hartan y se van, reacciones y conversión por perfil. Mides el hoy y pruebas el mañana."
+       data-en="Legacy handed out a number, full stop. We measure the real wait with the store camera, show the turn on the same channel your screens broadcast… and rehearse the future in the Admira XP twin, which simulates queues for real: customers who give up and leave, reactions and conversion by profile. Measure today, test tomorrow.">El legacy daba turno y punto. Nosotros medimos la espera real con la cámara del punto, mostramos el turno en el mismo canal que emite tus pantallas… y ensayamos el futuro en el gemelo Admira XP, que simula colas de verdad: clientes que se hartan y se van, reacciones y conversión por perfil. Mides el hoy y pruebas el mañana.</p>
+    <div class="hero-actions">
+      <a class="btn primary" href="#simulador"><span data-es="▶ Simular una cola" data-en="▶ Simulate a queue">▶ Simular una cola</span></a>
+      <a class="btn" href="#gemelo"><span data-es="🧪 El laboratorio de colas" data-en="🧪 The queue lab">🧪 El laboratorio de colas</span></a>
+      <a class="btn" href="#turno"><span data-es="🔢 Turno en el MUPI" data-en="🔢 Turn on the MUPI">🔢 Turno en el MUPI</span></a>
+    </div>
+    <div class="flow">
+      <div class="fstep a"><div class="fk" data-es="Llega" data-en="Arrives">Llega</div><div class="fw">&#128694;</div><div class="fd" data-es="la cámara ve formarse la cola —sin identificar a nadie" data-en="the camera sees the queue form —without identifying anyone">la cámara ve formarse la cola —sin identificar a nadie</div></div>
+      <div class="fstep b"><div class="fk" data-es="Espera" data-en="Waits">Espera</div><div class="fw">&#8987;</div><div class="fd" data-es="mides el tiempo; si aprieta, el cliente se harta y se va" data-en="you measure the time; if it drags, the customer gives up">mides el tiempo; si aprieta, el cliente se harta y se va</div></div>
+      <div class="fstep c"><div class="fk" data-es="Se atiende" data-en="Served">Se atiende</div><div class="fw">&#128290;</div><div class="fd" data-es="el turno salta en el MUPI y avanza la cola" data-en="the turn pops on the MUPI and the queue advances">el turno salta en el MUPI y avanza la cola</div></div>
+    </div>
+  </header>
+
+  <!-- CÓMO FUNCIONA -->
+  <section class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" data-es="Cómo funciona" data-en="How it works">Cómo funciona</p>
+      <h2 data-es="Simular · Mostrar · Medir" data-en="Simulate · Show · Measure">Simular · Mostrar · Medir</h2>
+      <p data-es="Tres capas honestas. La simulación de colas ya es real en nuestro gemelo. El turno en pantalla es un uso más del canal que ya emite. Y la medición de la espera se apoya en la cámara de videoanalítica que ya cuenta afluencia. Cada bloque dice qué es real y qué es concepto."
+         data-en="Three honest layers. Queue simulation is already real in our twin. The on-screen turn is just one more use of the channel that already broadcasts. And wait measurement leans on the video-analytics camera that already counts footfall. Each block states what's real and what's a concept.">Tres capas honestas. La simulación de colas ya es real en nuestro gemelo. El turno en pantalla es un uso más del canal que ya emite. Y la medición de la espera se apoya en la cámara de videoanalítica que ya cuenta afluencia. Cada bloque dice qué es real y qué es concepto.</p>
+    </div>
+    <div class="arch">
+      <div class="col">
+        <span class="stt real" data-es="Real · gemelo" data-en="Real · twin">Real · gemelo</span>
+        <div class="role" data-es="01 · Simulación" data-en="01 · Simulation">01 · Simulación</div>
+        <h3 data-es="El laboratorio de colas" data-en="The queue lab">El laboratorio de colas</h3>
+        <p class="leg">Legacy: <b>Turno · Ticket · Nada más</b></p>
+        <ul>
+          <li><span class="t">▸</span><span><b data-es="Abandono real" data-en="Real abandonment">Abandono real</b> <span data-es="— el gemelo modela " data-en="— the twin models ">— el gemelo modela </span><b>reneging</b><span data-es=" (el que espera y se harta) y " data-en=" (waits then gives up) and ">&nbsp;(el que espera y se harta) y </span><b>balking</b><span data-es=" (el que ve la cola larga y ni entra). El legacy jamás lo soñó." data-en=" (sees a long line and never joins). Legacy never dreamed of this."> (el que ve la cola larga y ni entra). El legacy jamás lo soñó.</span></span></li>
+          <li><span class="t">▸</span><span><b data-es="Reacciones y perfil" data-en="Reactions and profile">Reacciones y perfil</b> <span data-es="— los NPC muestran emotes según la espera y convierten distinto por perfil; el cierre de día da KPIs de cola." data-en="— NPCs show emotes by wait time and convert differently by profile; the end-of-day gives queue KPIs.">— los NPC muestran emotes según la espera y convierten distinto por perfil; el cierre de día da KPIs de cola.</span></span></li>
+          <li><span class="t">▸</span><span><span data-es="Todo LIVE en el " data-en="All LIVE in the ">Todo LIVE en el </span><a href="https://www.xpaceos.com/admira-xp/" target="_blank" rel="noopener" data-es="gemelo Admira XP" data-en="Admira XP twin">gemelo Admira XP</a><span data-es=", empotrado y enlazado abajo." data-en=", embedded and linked below.">, empotrado y enlazado abajo.</span></span></li>
+        </ul>
+      </div>
+      <div class="col">
+        <span class="stt concept" data-es="Concepto · canal real" data-en="Concept · real channel">Concepto · canal real</span>
+        <div class="role" data-es="02 · Turno en pantalla" data-en="02 · Turn on screen">02 · Turno en pantalla</div>
+        <h3 data-es="El MUPI, display de turno" data-en="The MUPI, a turn display">El MUPI, display de turno</h3>
+        <p class="leg">Legacy: <b>Pantalla de turno dedicada</b></p>
+        <ul>
+          <li><span class="t">▸</span><span><b data-es="Una cuña más del canal" data-en="Just another channel spot">Una cuña más del canal</b> <span data-es="— el turno es contenido que se cuela en la parrilla: entre creativo y creativo, el " data-en="— the turn is content that slips into the grid: between creatives, the ">— el turno es contenido que se cuela en la parrilla: entre creativo y creativo, el </span><a href="/canal.html" target="_blank" rel="noopener">MUPI</a><span data-es=" canta el número." data-en=" calls the number."> canta el número.</span></span></li>
+          <li><span class="t">▸</span><span><b data-es="Sin pantalla dedicada" data-en="No dedicated screen">Sin pantalla dedicada</b> <span data-es="— reutilizas el cristal que ya tienes emitiendo señalización; el " data-en="— you reuse the glass already broadcasting signage; the ">— reutilizas el cristal que ya tienes emitiendo señalización; el </span><a href="/pushnotifications/" data-es="aviso operativo" data-en="operational alert">aviso operativo</a><span data-es=" interrumpe la parrilla en segundos." data-en=" interrupts the grid in seconds."> interrumpe la parrilla en segundos.</span></span></li>
+          <li><span class="t">▸</span><span><span data-es="La superposición de turno de abajo es una " data-en="The turn overlay below is a ">La superposición de turno de abajo es una </span><b data-es="maqueta conceptual" data-en="conceptual mockup">maqueta conceptual</b><span data-es=" sobre el MUPI real; el disparo de turno se firma con la clave del backbone." data-en=" over the real MUPI; the turn trigger is signed with the backbone key."> sobre el MUPI real; el disparo de turno se firma con la clave del backbone.</span></span></li>
+        </ul>
+      </div>
+      <div class="col">
+        <span class="stt mix" data-es="Real · cámara" data-en="Real · camera">Real · cámara</span>
+        <div class="role" data-es="03 · Medición" data-en="03 · Measurement">03 · Medición</div>
+        <h3 data-es="La cámara, sensor de cola" data-en="The camera, a queue sensor">La cámara, sensor de cola</h3>
+        <p class="leg">Legacy: <b>Cola a ojo · sin dato</b></p>
+        <ul>
+          <li><span class="t">▸</span><span><b data-es="Afluencia anónima" data-en="Anonymous footfall">Afluencia anónima</b> <span data-es="— la misma cámara de " data-en="— the same ">— la misma cámara de </span><a href="/videoanalytics/" data-es="videoanalítica" data-en="video analytics">videoanalítica</a><span data-es=" que segmenta audiencia ve cuántos hacen cola —cookieless, sin guardar rostros." data-en=" that segments audience sees how many are queuing —cookieless, no faces stored."> que segmenta audiencia ve cuántos hacen cola —cookieless, sin guardar rostros.</span></span></li>
+          <li><span class="t">▸</span><span><b data-es="Señal real, leída abajo" data-en="Real signal, read below">Señal real, leída abajo</b> <span data-es="— el feed de detecciones (" data-en="— the detections feed (">— el feed de detecciones (</span><span class="mono">/segmentation/hits</span><span data-es=") es el mismo backbone; hoy vacío = honesto, no lo fingimos." data-en=") is the same backbone; empty today = honest, we don't fake it.">) es el mismo backbone; hoy vacío = honesto, no lo fingimos.</span></span></li>
+          <li><span class="t">▸</span><span><span data-es="De la cuenta de cola sale la métrica que el simulador convierte en decisión: ¿abro otro puesto?" data-en="From the queue count comes the metric the simulator turns into a decision: do I open another counter?">De la cuenta de cola sale la métrica que el simulador convierte en decisión: ¿abro otro puesto?</span></span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEMOS -->
+  <section class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" data-es="Demos vivas" data-en="Live demos">Demos vivas</p>
+      <h2 data-es="Aquí la simulación ES el producto" data-en="Here the simulation IS the product">Aquí la simulación ES el producto</h2>
+      <p data-es="En casi todo el ecosistema simular es hacer trampa. En colas no: dimensionar puestos, prever el abandono y ensayar una promoción es, literalmente, para lo que sirve un simulador. Así que lo ponemos el primero —y lo decimos con gracia."
+         data-en="Across most of the ecosystem, simulating is cheating. Not with queues: sizing counters, forecasting abandonment and rehearsing a promo is literally what a simulator is for. So we put it first —and say so with a grin.">En casi todo el ecosistema simular es hacer trampa. En colas no: dimensionar puestos, prever el abandono y ensayar una promoción es, literalmente, para lo que sirve un simulador. Así que lo ponemos el primero —y lo decimos con gracia.</p>
+    </div>
+
+    <!-- DEMO 1 (ESTRELLA): SIMULADOR DE COLA client-side -->
+    <div class="demo star" id="simulador">
+      <div class="demo-h">
+        <span class="ttl"><span class="dot amb"></span><span data-es="Simulador de cola" data-en="Queue simulator">Simulador de cola</span></span>
+        <span class="tag-ill" data-es="Ilustrativo · en tu navegador" data-en="Illustrative · in your browser">Ilustrativo · en tu navegador</span>
+      </div>
+      <div class="demo-b">
+        <div class="sim-controls">
+          <div class="ctl">
+            <label><span data-es="Llegadas / min" data-en="Arrivals / min">Llegadas / min</span> <b id="vArr">3.0</b></label>
+            <input id="sArr" type="range" min="0.5" max="9" step="0.5" value="3" aria-label="Llegadas por minuto">
+          </div>
+          <div class="ctl">
+            <label><span data-es="Puestos abiertos" data-en="Open counters">Puestos abiertos</span> <b id="vSrv">2</b></label>
+            <input id="sSrv" type="range" min="1" max="5" step="1" value="2" aria-label="Puestos abiertos">
+          </div>
+          <div class="ctl">
+            <label><span data-es="Paciencia máx (min)" data-en="Max patience (min)">Paciencia máx (min)</span> <b id="vPat">4</b></label>
+            <input id="sPat" type="range" min="1" max="12" step="1" value="4" aria-label="Paciencia máxima en minutos">
+          </div>
+        </div>
+        <div class="sim-actions">
+          <button class="btn primary" id="btnPlay" type="button"><span data-es="⏸ Pausar" data-en="⏸ Pause">⏸ Pausar</span></button>
+          <button class="btn" id="btnReset" type="button"><span data-es="↺ Reiniciar" data-en="↺ Reset">↺ Reiniciar</span></button>
+          <span class="sim-clock"><span data-es="Reloj" data-en="Clock">Reloj</span> <b id="simClock">00:00</b></span>
+        </div>
+        <div class="scene">
+          <div class="lane-lbl"><span class="in" data-es="→ Entran" data-en="→ In">→ Entran</span><span class="out" data-es="Se atienden →" data-en="Served →">Se atienden →</span></div>
+          <div class="lane">
+            <div class="queue" id="queueBox" aria-label="Cola en espera"></div>
+            <div class="counters" id="countersBox"></div>
+          </div>
+        </div>
+        <div class="skpi">
+          <div class="sk q"><div class="kk" data-es="En cola" data-en="In queue">En cola</div><div class="kv" id="kQ">0</div><div class="ku" data-es="ahora" data-en="now">ahora</div></div>
+          <div class="sk w"><div class="kk" data-es="Espera media" data-en="Avg wait">Espera media</div><div class="kv" id="kW">0.0</div><div class="ku">min</div></div>
+          <div class="sk d"><div class="kk" data-es="Atendidos" data-en="Served">Atendidos</div><div class="kv" id="kD">0</div><div class="ku" data-es="total" data-en="total">total</div></div>
+          <div class="sk a"><div class="kk" data-es="Abandonan" data-en="Abandon">Abandonan</div><div class="kv" id="kA">0</div><div class="ku" data-es="se van" data-en="leave">se van</div></div>
+          <div class="sk c"><div class="kk" data-es="% Abandono" data-en="% Abandon">% Abandono</div><div class="kv" id="kR">0</div><div class="ku">%</div></div>
+        </div>
+        <p class="demo-note"><b data-es="Modelo orientativo" data-en="Orientative model">Modelo orientativo</b><span data-es=", corriendo entero en tu navegador (nada sale de aquí). Cada bolita es una persona: entra por la derecha 😐, y si la espera pasa de su paciencia se pone 😠 y se marcha (reneging). Sube «Llegadas» o baja «Puestos» y verás dispararse el % de abandono —esa es la decisión que el gestor toma en real. La versión de verdad de este motor —con perfiles, familias y conversión— vive en el " data-en=", running entirely in your browser (nothing leaves here). Each dot is a person: enters from the right 😐, and if the wait exceeds their patience they turn 😠 and leave (reneging). Raise «Arrivals» or drop «Counters» and watch the abandon % spike —that's the decision the manager makes for real. The real version of this engine —with profiles, families and conversion— lives in the ">, corriendo entero en tu navegador (nada sale de aquí). Cada bolita es una persona: entra por la derecha 😐, y si la espera pasa de su paciencia se pone 😠 y se marcha (reneging). Sube «Llegadas» o baja «Puestos» y verás dispararse el % de abandono —esa es la decisión que el gestor toma en real. La versión de verdad de este motor —con perfiles, familias y conversión— vive en el </span><a href="#gemelo" data-es="gemelo, aquí debajo" data-en="twin, just below">gemelo, aquí debajo</a>.</p>
+      </div>
+    </div>
+
+    <!-- DEMO 2: EL GEMELO — laboratorio de colas real (facade click-to-load) -->
+    <div class="demo" id="gemelo">
+      <div class="demo-h">
+        <span class="ttl"><span class="dot"></span><span data-es="El gemelo Admira XP, laboratorio de colas" data-en="The Admira XP twin, queue lab">El gemelo Admira XP, laboratorio de colas</span></span>
+        <span class="tag-real" data-es="Real · gemelo vivo" data-en="Real · live twin">Real · gemelo vivo</span>
+      </div>
+      <div class="demo-b">
+        <div class="twin" id="twinBox">
+          <div class="facade" id="twinFacade" role="button" tabindex="0" aria-label="Cargar el gemelo Admira XP en vivo">
+            <span class="fw" data-es="Carga bajo demanda · ~1,6 MB" data-en="Loads on demand · ~1.6 MB">Carga bajo demanda · ~1,6 MB</span>
+            <span class="pl" aria-hidden="true">▶</span>
+            <span class="ft" data-es="Abrir el gemelo aquí mismo" data-en="Open the twin right here">Abrir el gemelo aquí mismo</span>
+            <span class="fs" data-es="El simulador de tienda real de Admira: NPC que hacen cola, se hartan y se van, reaccionan y convierten por perfil. Pesa —por eso lo cargamos solo cuando lo pides." data-en="Admira's real store simulator: NPCs that queue, give up and leave, react and convert by profile. It's heavy —so we load it only when you ask.">El simulador de tienda real de Admira: NPC que hacen cola, se hartan y se van, reaccionan y convierten por perfil. Pesa —por eso lo cargamos solo cuando lo pides.</span>
+          </div>
+        </div>
+        <p class="demo-note"><span data-es="Fuente: " data-en="Source: ">Fuente: </span><a href="https://www.xpaceos.com/admira-xp/" target="_blank" rel="noopener">xpaceos.com/admira-xp</a><span data-es=" — el gemelo real, empotrado en vivo (mismo build que ve toda la flota). Es el laboratorio donde ensayas una promo o un puesto extra antes de tocar la tienda física. Reneging, balking, emotes y conversión por perfil son de este motor, no del simulador de arriba (ese es su hermano pequeño, ilustrativo). A pantalla completa se ve mejor." data-en=" — the real twin, embedded live (the same build the whole fleet sees). It's the lab where you rehearse a promo or an extra counter before touching the physical store. Reneging, balking, emotes and profile conversion come from this engine, not the simulator above (that's its little illustrative sibling). Fullscreen looks better."> — el gemelo real, empotrado en vivo (mismo build que ve toda la flota). Es el laboratorio donde ensayas una promo o un puesto extra antes de tocar la tienda física. Reneging, balking, emotes y conversión por perfil son de este motor, no del simulador de arriba (ese es su hermano pequeño, ilustrativo). A pantalla completa se ve mejor.</span></p>
+        <p style="margin:12px 0 0"><a class="btn" href="https://www.xpaceos.com/admira-xp/" target="_blank" rel="noopener"><span data-es="Abrir el gemelo a pantalla completa ↗" data-en="Open the twin fullscreen ↗">Abrir el gemelo a pantalla completa ↗</span></a></p>
+      </div>
+    </div>
+
+    <!-- DEMO 3: TURNO EN EL MUPI (concepto sobre canal real, mismo origen) -->
+    <div class="demo" id="turno">
+      <div class="demo-h">
+        <span class="ttl"><span class="dot"></span><span data-es="El turno, en el MUPI" data-en="The turn, on the MUPI">El turno, en el MUPI</span></span>
+        <span class="tag-cpt" data-es="Concepto · sobre canal real" data-en="Concept · over real channel">Concepto · sobre canal real</span>
+      </div>
+      <div class="demo-b">
+        <div class="mupi-wrap">
+          <div class="mupi">
+            <iframe id="mupiFrame" title="Canal Admira · MUPI 9:16 en vivo" loading="lazy" allow="autoplay" referrerpolicy="no-referrer"></iframe>
+            <div class="turn-ov" aria-hidden="true">
+              <div class="tk" data-es="Turno" data-en="Now serving">Turno</div>
+              <div class="tn" id="turnNum">A-042</div>
+              <div class="tc" data-es="Puesto 2 · gracias por esperar" data-en="Counter 2 · thanks for waiting">Puesto 2 · gracias por esperar</div>
+            </div>
+          </div>
+          <div class="mupi-copy">
+            <p data-es="Debajo, el MUPI real reproduciendo canal.html en 9:16 (mismo origen). Sobre él, una maqueta conceptual de la cuña de turno: el número salta entre creativo y creativo. Ni una pantalla nueva ni un cartel de LEDs de los noventa —el cristal que ya tienes emitiendo publicidad canta también el turno."
+               data-en="Below, the real MUPI running canal.html in 9:16 (same origin). Over it, a conceptual mockup of the turn spot: the number pops between creatives. No new screen, no nineties LED sign —the glass already broadcasting ads also calls the turn.">Debajo, el MUPI real reproduciendo <span class="mono">canal.html</span> en 9:16 (mismo origen). Sobre él, una <b>maqueta conceptual</b> de la cuña de turno: el número salta entre creativo y creativo. Ni una pantalla nueva ni un cartel de LEDs de los noventa —el cristal que ya tienes emitiendo publicidad canta también el turno.</p>
+            <a class="btn primary" href="/canal.html" target="_blank" rel="noopener"><span data-es="Canal a pantalla completa" data-en="Channel fullscreen">Canal a pantalla completa</span></a>
+            <a class="btn" href="/digitalsignage/"><span data-es="Señalización" data-en="Signage">Señalización</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEMO 4: MEDICIÓN DE ESPERA (real /segmentation/hits) -->
+    <div class="demo" id="medicion">
+      <div class="demo-h">
+        <span class="ttl"><span class="dot"></span><span data-es="Medición de espera" data-en="Wait measurement">Medición de espera</span></span>
+        <span class="tag-real" data-es="Datos reales" data-en="Real data">Datos reales</span>
+      </div>
+      <div class="demo-b">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <span class="grid-meta" id="hitMeta" style="margin-left:0"></span>
+        </div>
+        <div class="hits" id="hitBody"></div>
+        <p class="demo-note"><span data-es="Fuente: " data-en="Source: ">Fuente: </span><span class="mono">/segmentation/hits</span> <span data-es="del backbone real — el mismo sensor cookieless de " data-en="from the real backbone — the same cookieless sensor as ">del backbone real — el mismo sensor cookieless de </span><a href="/videoanalytics/" data-es="videoanalítica" data-en="video analytics">videoanalítica</a><span data-es=". Cada detección de un grupo frente a la pantalla es una lectura de cola. Hoy el feed viene vacío —ningún player de calle está reportando ahora mismo— y lo mostramos tal cual: preferimos «sin señal» honesto a una cifra inventada." data-en=". Each detection of a group in front of the screen is a queue reading. Today the feed is empty —no street player is reporting right now— and we show it as-is: we prefer an honest «no signal» to a made-up number.">. Cada detección de un grupo frente a la pantalla es una lectura de cola. Hoy el feed viene vacío —ningún player de calle está reportando ahora mismo— y lo mostramos tal cual: preferimos «sin señal» honesto a una cifra inventada.</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENLACES PROFUNDOS -->
+  <section class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" data-es="Todo el subsistema" data-en="The whole subsystem">Todo el subsistema</p>
+      <h2 data-es="Entra donde trabajas" data-en="Jump where you work">Entra donde trabajas</h2>
+    </div>
+    <div class="links">
+      <a class="lk" href="https://www.xpaceos.com/admira-xp/" target="_blank" rel="noopener">
+        <span class="nm" data-es="Gemelo Admira XP" data-en="Admira XP twin">Gemelo Admira XP</span>
+        <span class="ds" data-es="El laboratorio: colas simuladas de verdad, con abandono y conversión." data-en="The lab: queues truly simulated, with abandonment and conversion.">El laboratorio: colas simuladas de verdad, con abandono y conversión.</span>
+        <span class="go">xpaceos →</span>
+      </a>
+      <a class="lk" href="/videoanalytics/">
+        <span class="nm" data-es="Analítica de vídeo" data-en="Video Analytics">Analítica de vídeo</span>
+        <span class="ds" data-es="La cámara que cuenta la cola sin identificar a nadie." data-en="The camera that counts the queue without identifying anyone.">La cámara que cuenta la cola sin identificar a nadie.</span>
+        <span class="go">videoanalytics →</span>
+      </a>
+      <a class="lk" href="/canal.html" target="_blank" rel="noopener">
+        <span class="nm" data-es="El canal / MUPI" data-en="The channel / MUPI">El canal / MUPI</span>
+        <span class="ds" data-es="El cristal que emite señalización y, entre spot y spot, el turno." data-en="The glass broadcasting signage and, between spots, the turn.">El cristal que emite señalización y, entre spot y spot, el turno.</span>
+        <span class="go">canal →</span>
+      </a>
+      <a class="lk" href="/pushnotifications/">
+        <span class="nm" data-es="Notificaciones" data-en="Push">Notificaciones</span>
+        <span class="ds" data-es="El aviso que interrumpe la parrilla para cantar el turno en segundos." data-en="The alert that interrupts the grid to call the turn in seconds.">El aviso que interrumpe la parrilla para cantar el turno en segundos.</span>
+        <span class="go">pushnotifications →</span>
+      </a>
+    </div>
+    <p style="text-align:center;margin:26px 0 0"><a class="back" href="/apps/">&larr; <span data-es="Volver a la lanzadera" data-en="Back to the launcher">Volver a la lanzadera</span></a></p>
+  </section>
+
+  <footer class="foot">
+    <span data-es="Gestor de colas · réplica mejorada del legacy new.admira.mobi → admira.tv" data-en="Queue Manager · improved replica of legacy new.admira.mobi → admira.tv">Gestor de colas · réplica mejorada del legacy new.admira.mobi → admira.tv</span>
+    <span>Admira · tv · <span style="opacity:.75">v.08.07.2026.r10</span></span>
+  </footer>
+
 </main>
 
 <script>
-  (function(){ function set(){ try{ var s=window.AdmiraIcon&&window.AdmiraIcon('queuemanager'); if(s) document.getElementById('ic').innerHTML=s; }catch(_){}}
-    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',set); else set(); })();
+(function(){
+  'use strict';
+  /* ---------- i18n ES/EN (data-es / data-en) ---------- */
+  var LS='admtv-lang';
+  var redrawI18n=function(){};
+  function applyLang(l){
+    document.documentElement.lang=l;
+    document.querySelectorAll('[data-es]').forEach(function(el){
+      var v=el.getAttribute('data-'+l); if(v!=null) el.textContent=v;
+    });
+    document.querySelectorAll('.lang button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang')===l); });
+    try{ localStorage.setItem(LS,l); }catch(_){}
+  }
+  var lang='es'; try{ var s=localStorage.getItem(LS); if(s==='en'||s==='es') lang=s; }catch(_){}
+  document.querySelectorAll('.lang button').forEach(function(b){
+    b.addEventListener('click',function(){ lang=b.getAttribute('data-lang'); applyLang(lang); try{ redrawI18n(); }catch(_){}} );
+  });
+  applyLang(lang);
+  function T(es,en){ return lang==='en'?en:es; }
+
+  var API='https://api.admira.store';
+  var esc=function(x){ return String(x==null?'':x).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];}); };
+  var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- DEMO 1: SIMULADOR DE COLA (client-side, la estrella) ---------- */
+  (function(){
+    var queueBox=document.getElementById('queueBox'), countersBox=document.getElementById('countersBox');
+    var kQ=document.getElementById('kQ'), kW=document.getElementById('kW'), kD=document.getElementById('kD'), kA=document.getElementById('kA'), kR=document.getElementById('kR');
+    var simClock=document.getElementById('simClock');
+    var sArr=document.getElementById('sArr'), sSrv=document.getElementById('sSrv'), sPat=document.getElementById('sPat');
+    var vArr=document.getElementById('vArr'), vSrv=document.getElementById('vSrv'), vPat=document.getElementById('vPat');
+    var btnPlay=document.getElementById('btnPlay'), btnReset=document.getElementById('btnReset');
+
+    var MAXQ=40;                 // tope de bolitas dibujadas (balking duro por encima)
+    var SERVICE_MIN=2.0;         // duración media de atención (min)
+    var minute=0, running=true, uid=1;
+    var queue=[];                // {id, wait, patience}
+    var counters=[];             // {busy:0|remaining}
+    var served=0, abandoned=0, totalWait=0, totalDone=0;
+    var arrAcc=0;
+
+    function rebuildCounters(){
+      var n=+sSrv.value;
+      while(counters.length<n) counters.push(0);
+      while(counters.length>n) counters.pop();
+    }
+    function paintCounters(){
+      countersBox.innerHTML=counters.map(function(c,i){
+        var busy=c>0;
+        return '<div class="cw'+(busy?' busy':'')+'"><span class="box">'+(busy?'🧑‍💼':'·')+'</span>'+T('Puesto ','Counter ')+(i+1)+'</div>';
+      }).join('');
+    }
+    function faceFor(p){
+      var r=p.wait/p.patience;
+      if(r<0.5) return {e:'😐',c:''};
+      if(r<0.85) return {e:'😕',c:'wait1'};
+      return {e:'😠',c:'wait2'};
+    }
+    function paintQueue(){
+      var vis=queue.slice(0,MAXQ);
+      queueBox.innerHTML=vis.map(function(p){
+        var f=faceFor(p);
+        return '<span class="p '+f.c+'" title="'+T('espera ','waited ')+p.wait.toFixed(1)+' min">'+f.e+'</span>';
+      }).join('');
+    }
+    function paintKPI(){
+      kQ.textContent=queue.length;
+      kW.textContent=(totalDone? (totalWait/totalDone):0).toFixed(1);
+      kD.textContent=served;
+      kA.textContent=abandoned;
+      var seen=served+abandoned;
+      kR.textContent=seen? Math.round(abandoned/seen*100):0;
+      var mm=Math.floor(minute/60), ss=Math.round(minute%60);
+      simClock.textContent=(mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss;
+    }
+    // un "minuto" de simulación
+    function tick(){
+      minute++;
+      rebuildCounters();
+      // 1) llegadas (fraccional → entero); balking si la cola está saturada
+      arrAcc += (+sArr.value);
+      while(arrAcc>=1){
+        arrAcc-=1;
+        var balk = queue.length>=MAXQ || (queue.length>25 && Math.random()<0.5);
+        if(!balk){
+          var pat=+sPat.value; var patience=Math.max(0.6, pat*(0.55+Math.random()*0.9));
+          queue.push({id:uid++, wait:0, patience:patience});
+        }
+      }
+      // 2) los puestos ocupados avanzan; al terminar, quedan libres
+      for(var i=0;i<counters.length;i++){
+        if(counters[i]>0){ counters[i]-=1; if(counters[i]<0) counters[i]=0; }
+      }
+      // 3) puestos libres toman al primero de la cola
+      for(var j=0;j<counters.length;j++){
+        if(counters[j]<=0 && queue.length){
+          var person=queue.shift();
+          served++; totalWait+=person.wait; totalDone++;
+          counters[j]=Math.max(1, Math.round(SERVICE_MIN*(0.6+Math.random()*0.9)));
+        }
+      }
+      // 4) los que siguen en cola esperan un minuto; reneging si superan su paciencia
+      var kept=[];
+      for(var k=0;k<queue.length;k++){
+        queue[k].wait+=1;
+        if(queue[k].wait>queue[k].patience){ abandoned++; }
+        else kept.push(queue[k]);
+      }
+      queue=kept;
+      paintCounters(); paintQueue(); paintKPI();
+    }
+
+    var timer=null;
+    function loop(){ if(running) tick(); }
+    function start(){ if(timer) return; timer=setInterval(loop, prefersReduced?900:650); }
+    function stop(){ if(timer){ clearInterval(timer); timer=null; } }
+
+    function reset(){
+      minute=0; queue=[]; counters=[]; served=0; abandoned=0; totalWait=0; totalDone=0; arrAcc=0; uid=1;
+      rebuildCounters(); paintCounters(); paintQueue(); paintKPI();
+    }
+
+    function syncLabels(){ vArr.textContent=(+sArr.value).toFixed(1); vSrv.textContent=sSrv.value; vPat.textContent=sPat.value; }
+    [sArr,sSrv,sPat].forEach(function(s){ s.addEventListener('input',function(){ syncLabels(); if(s===sSrv){ rebuildCounters(); paintCounters(); } }); });
+    btnPlay.addEventListener('click',function(){
+      running=!running;
+      btnPlay.querySelector('span').textContent = running? T('⏸ Pausar','⏸ Pause') : T('▶ Reanudar','▶ Resume');
+    });
+    btnReset.addEventListener('click', reset);
+
+    redrawI18n=(function(prev){ return function(){ prev&&prev();
+      btnPlay.querySelector('span').textContent = running? T('⏸ Pausar','⏸ Pause') : T('▶ Reanudar','▶ Resume');
+      paintCounters(); paintKPI();
+    }; })(redrawI18n);
+
+    syncLabels(); reset();
+    // arranca solo cuando entra en viewport (no gastar CPU antes)
+    if('IntersectionObserver' in window){
+      var io=new IntersectionObserver(function(es){ es.forEach(function(e){
+        if(e.isIntersecting){ start(); } else { stop(); }
+      }); },{threshold:.15});
+      io.observe(document.getElementById('simulador'));
+    } else start();
+  })();
+
+  /* ---------- DEMO 2: GEMELO (facade click-to-load) ---------- */
+  (function(){
+    var box=document.getElementById('twinBox'), fac=document.getElementById('twinFacade');
+    if(!box||!fac) return;
+    function load(){
+      var fr=document.createElement('iframe');
+      fr.title='Gemelo Admira XP en vivo';
+      fr.setAttribute('loading','lazy');
+      fr.setAttribute('allow','autoplay; fullscreen');
+      fr.setAttribute('referrerpolicy','no-referrer-when-downgrade');
+      fr.src='https://www.xpaceos.com/admira-xp/';
+      box.innerHTML=''; box.appendChild(fr);
+    }
+    fac.addEventListener('click', load);
+    fac.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); load(); } });
+  })();
+
+  /* ---------- DEMO 3: MUPI iframe (mismo origen) + turno conceptual rotando ---------- */
+  (function(){
+    var fr=document.getElementById('mupiFrame');
+    if(fr && !fr.getAttribute('src')) fr.setAttribute('src','/canal.html?embed=mupi');
+    // turno conceptual: número que sube despacio (maqueta, no dato)
+    var el=document.getElementById('turnNum');
+    if(el && !prefersReduced){
+      var n=42;
+      setInterval(function(){ n+=1; if(n>99) n=1; el.textContent='A-0'+(n<10?'0'+n:n); }, 5200);
+    }
+  })();
+
+  /* ---------- DEMO 4: MEDICIÓN DE ESPERA (real /segmentation/hits) ---------- */
+  (function(){
+    var body=document.getElementById('hitBody'), meta=document.getElementById('hitMeta');
+    var SCREEN='xtanco-led-vertical';
+    function ago(ts){ if(!ts) return ''; var s=Math.max(0,Math.round((Date.now()-ts)/1000));
+      if(s<60) return s+'s'; var m=Math.round(s/60); if(m<60) return m+'m'; var h=Math.round(m/60); if(h<48) return h+'h'; return Math.round(h/24)+'d'; }
+    function renderEmpty(){
+      body.innerHTML='<div class="empty">'+T('Sin lecturas de cola ahora mismo. El sensor es real (backbone /segmentation/hits); hoy ningún player de calle reporta, así que no hay señal fresca —y no la inventamos.','No queue readings right now. The sensor is real (backbone /segmentation/hits); today no street player reports, so there is no fresh signal —and we do not invent it.')+'</div>';
+    }
+    redrawI18n=(function(prev){ return function(){ prev&&prev();
+      if(!body.querySelector('.hit')) renderEmpty();
+    }; })(redrawI18n);
+    meta.textContent=T('consultando el backbone…','querying the backbone…');
+    fetch(API+'/segmentation/hits?screen='+encodeURIComponent(SCREEN)+'&t='+Date.now(),{cache:'no-store'})
+      .then(function(r){return r.json();}).then(function(d){
+        var hits=(d&&d.hits)||[];
+        if(!hits.length){ meta.textContent=T('sin lecturas ahora','no readings now'); renderEmpty(); return; }
+        meta.textContent=T(hits.length+' lecturas',hits.length+' readings');
+        body.innerHTML=hits.slice(0,8).map(function(h){
+          var seg=esc(h.target||h.segment||h.gender||T('grupo','group'));
+          return '<div class="hit"><span class="hd"></span><span>'+T('Grupo detectado · ','Group detected · ')+seg+'</span><span class="ht">'+(h.ts?T('hace '+ago(h.ts),ago(h.ts)+' ago'):'')+'</span></div>';
+        }).join('');
+      }).catch(function(){
+        meta.textContent=T('no accesible','unreachable');
+        body.innerHTML='<div class="empty">'+T('No se pudo leer el backbone (api.admira.store) desde aquí.','Could not read the backbone (api.admira.store) from here.')+'</div>';
+      });
+  })();
+})();
 </script>
 </body>
 </html>
