@@ -4,7 +4,7 @@
  * data-active: flota|apps|calendar|condicional|canal|mural|comprar|adcelerate|alta|help   ·   data-title: subtítulo de la barra.
  * Estado (plegado/detalle) compartido entre páginas vía localStorage.
  * El ítem "Apps" despliega un submenú (flyout en desktop · acordeón en móvil) con las 18 apps del stack,
- * cuyo estado ●/○ vive en window.AdmiraApps (fuente única que también consume /apps/). v.08.07.2026.r13 */
+ * cuyo estado ●/○ vive en window.AdmiraApps (fuente única que también consume /apps/). v.08.07.2026.r14 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -75,8 +75,8 @@
   var APPS=[
     {s:'dashboard',          nm:'Dashboard',            en:'Dashboard',           ds:'Los KPIs de tu red en una pantalla.',            st:'live'},
     {s:'digitalsignage',     nm:'Señalización',         en:'Digital Signage',     ds:'Programa y emite tu cartelería en la red.',      st:'live'},
-    {s:'contentcatalogue',   nm:'Catálogo',             en:'Content Catalogue',   ds:'Tu biblioteca de creativos, lista para antena.', st:'wip'},
-    {s:'support',            nm:'Soporte',              en:'Support',             ds:'Incidencias, tickets y ayuda del ecosistema.',   st:'wip'},
+    {s:'contentcatalogue',   nm:'Catálogo',             en:'Content Catalogue',   ds:'Tu biblioteca de creativos, lista para antena.', st:'live'},
+    {s:'support',            nm:'Soporte',              en:'Support',             ds:'Incidencias, tickets y ayuda del ecosistema.',   st:'live'},
     {s:'pushnotifications',  nm:'Notificaciones',       en:'Push Notifications',  ds:'La flota se avisa sola: aviso operativo y de contenido.', st:'live'},
     {s:'virtualassistant',   nm:'Asistente',            en:'Virtual Assistant',   ds:'El asistente IA que responde y opera por ti.',   st:'live'},
     {s:'accesscontrol',      nm:'Acceso',               en:'Access Control',      ds:'Quién entra: aforo, puertas y permisos.',        st:'wip'},
