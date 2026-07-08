@@ -2,59 +2,825 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<!-- preconnect: chrome + backbone + gemelo (plano de salas) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
-<link rel="preconnect" href="https://www.carlossilva.info">
+<link rel="preconnect" href="https://www.xpaceos.com">
+<link rel="dns-prefetch" href="https://api.admira.store">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Salas · Admira.tv</title>
-<meta name="description" content="Reserva de espacios y salas al instante, integrada con el calendario de emisión.">
+<meta name="description" content="Reserva salas sobre el plano, no en una lista. Estado en vivo verde/rojo, panel de puerta que es una pantalla más de tu red, check-in por QR, liberación por no-show y ocupación real medida por la cámara.">
 <meta name="theme-color" content="#070a10">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="canonical" href="https://admira.tv/roombooking/">
 <meta property="og:title" content="Salas · Admira.tv">
-<meta property="og:description" content="Reserva de espacios y salas al instante, integrada con el calendario de emisión.">
+<meta property="og:description" content="Reserva salas sobre el plano. Estado en vivo, panel de puerta que ya es una pantalla de tu red, check-in por QR y liberación por no-show.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://admira.tv/roombooking/">
 <meta property="og:image" content="https://admira.tv/og-admira.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Salas · Admira.tv">
+<meta name="twitter:description" content="Reserva salas sobre el plano. Panel de puerta que ya es una pantalla de tu red, check-in por QR y liberación por no-show.">
+<meta name="twitter:image" content="https://admira.tv/og-admira.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": "https://admira.tv/roombooking/",
+  "url": "https://admira.tv/roombooking/",
+  "name": "Salas · Admira.tv",
+  "inLanguage": "es",
+  "isPartOf": { "@id": "https://admira.tv/#site" },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Admira Salas",
+    "applicationCategory": "Room Booking",
+    "operatingSystem": "Web, Edge device",
+    "description": "Reserva de salas sobre el plano del espacio, con panel de puerta servido por la propia red de señalización, sincronización de calendario, check-in por QR con liberación automática por no-show y analítica de ocupación real medida por videoanalítica."
+  }
+}
+</script>
 <style>
-  :root{--bg:#070a10;--panel:#0b1119;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--amber:#f5b431}
+  :root{--bg:#070a10;--panel:#0b1119;--panel2:#0e1622;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--cyan:#38d6ff;--amber:#f5b431;--red:#ff5a5a}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
   body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px);opacity:.5}
   a{color:inherit;text-decoration:none}
-  .wrap{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:min(12vh,90px) 20px 60px;text-align:center}
-  .ic{width:84px;height:84px;margin:0 auto 22px;display:grid;place-items:center;border-radius:20px;background:rgba(61,240,138,.07);border:1px solid rgba(61,240,138,.18)}
-  .ic svg{width:46px;height:46px;color:var(--green);filter:drop-shadow(0 0 6px rgba(61,240,138,.55))}
-  h1{font-size:clamp(28px,6vw,42px);margin:0 0 4px;letter-spacing:-.01em;font-weight:800}
-  .en{font:600 12px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:0 0 18px}
-  .ds{color:var(--dim);font-size:16px;max-width:460px;margin:0 auto 26px}
-  .badge{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--amber);color:var(--amber);border-radius:999px;padding:8px 16px;font:700 12px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase}
-  .badge .d{width:9px;height:9px;border-radius:50%;border:2px solid var(--amber);position:relative}
-  .badge .d::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid var(--amber);opacity:.5;animation:p 1.8s ease-out infinite}
-  @keyframes p{0%{transform:scale(.7);opacity:.6}100%{transform:scale(1.5);opacity:0}}
-  @media(prefers-reduced-motion:reduce){.badge .d::after{animation:none}}
-  .back{display:inline-flex;align-items:center;gap:8px;margin-top:30px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 18px;font-weight:600;font-size:14px;transition:border-color .2s,color .2s}
+  img,iframe,video{max-width:100%}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 20px}
+  .eyebrow{font:600 12px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--green)}
+  section{padding:48px 0}
+  .sec-head{max-width:760px;margin:0 auto 28px;text-align:center}
+  .sec-head h2{font-size:clamp(24px,4vw,34px);margin:8px 0 8px;letter-spacing:-.01em;font-weight:800}
+  .sec-head p{color:var(--dim);margin:0;font-size:15.5px}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:11px 20px;font-weight:700;font-size:14px;border:1px solid #2a3a66;background:transparent;color:var(--txt);cursor:pointer;transition:transform .12s,border-color .2s,background .2s}
+  .btn:hover{transform:translateY(-1px);border-color:#3a4f8a}
+  .btn.primary{background:var(--green);border-color:var(--green);color:#03140a}
+  .btn.primary:hover{background:#5cf6a1}
+  .btn.sm{padding:8px 14px;font-size:13px}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,[tabindex]:focus-visible,.room:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
+  /* hero */
+  .hero{padding:74px 0 20px;text-align:center}
+  .kicker{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 13px;font:600 11.5px ui-monospace,monospace;color:var(--dim);letter-spacing:.04em}
+  .kicker .d{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green)}
+  .hero h1{font-size:clamp(34px,7vw,62px);line-height:1.02;margin:18px auto 12px;letter-spacing:-.02em;font-weight:800;max-width:900px}
+  .hero h1 .g{color:var(--green);text-shadow:0 0 22px rgba(61,240,138,.32)}
+  .hero .en{font:600 12px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:0 0 14px}
+  .hero .lead{font-size:clamp(16px,2.2vw,19px);color:var(--dim);max-width:780px;margin:0 auto}
+  .hero-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+  .lang{display:inline-flex;gap:2px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px;margin-left:10px;vertical-align:middle}
+  .lang button{border:0;background:transparent;color:var(--dim);font:700 11px/1 ui-monospace,monospace;padding:5px 10px;border-radius:999px;cursor:pointer}
+  .lang button.on{background:var(--green);color:#03140a}
+
+  /* fila reservas → estado → check-in */
+  .flow{display:flex;align-items:stretch;justify-content:center;gap:10px;flex-wrap:wrap;margin:34px auto 0;max-width:820px}
+  .fstep{flex:1;min-width:190px;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:15px 16px;text-align:left;position:relative}
+  .fstep .fk{font:600 10.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+  .fstep .fw{font-size:clamp(19px,3.4vw,24px);font-weight:800;margin:4px 0 2px}
+  .fstep.a .fw{color:var(--cyan)} .fstep.b .fw{color:var(--amber)} .fstep.c .fw{color:var(--green)}
+  .fstep .fd{font-size:12.5px;color:var(--dim)}
+
+  /* demo estrella */
+  .demo{border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:hidden;margin-bottom:16px}
+  .demo.star{border-color:rgba(61,240,138,.4);box-shadow:0 0 34px rgba(61,240,138,.07)}
+  .demo-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .demo-h .ttl{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+  .demo-h .ttl .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex:none;animation:blink 1.9s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  @media(prefers-reduced-motion:reduce){.demo-h .ttl .dot{animation:none}}
+  .tag-ill{font:700 10px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--green);border:1px solid rgba(61,240,138,.4);border-radius:999px;padding:4px 9px}
+  .demo-b{padding:16px}
+  .demo-note{font-size:12.5px;color:var(--dim);margin:14px 0 0;line-height:1.5}
+  .demo-note a{color:var(--cyan);border-bottom:1px solid rgba(56,214,255,.35)}
+
+  /* layout de la demo: plano + panel de puerta */
+  .stage{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;align-items:start}
+  @media(max-width:820px){.stage{grid-template-columns:1fr}}
+
+  /* plano */
+  .plan{border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,#0c1420,#0a1018);padding:12px}
+  .plan-lbl{display:flex;justify-content:space-between;align-items:center;font:600 10.5px ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);margin-bottom:8px;flex-wrap:wrap;gap:8px}
+  .plan svg{display:block;width:100%;height:auto}
+  .room{cursor:pointer;transition:opacity .2s}
+  .room rect.body{transition:fill .3s,stroke .3s,stroke-width .15s}
+  .room:hover rect.body{filter:brightness(1.12)}
+  .room .rn{font:700 12px -apple-system,system-ui,sans-serif;fill:var(--txt)}
+  .room .rc{font:600 10px ui-monospace,monospace;fill:var(--dim)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font:600 11px ui-monospace,monospace;color:var(--dim)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .lg-free{background:var(--green)} .lg-soon{background:var(--amber)} .lg-busy{background:var(--red)}
+
+  /* panel de puerta (mock tarjeta) */
+  .door{border:1px solid var(--line);border-radius:14px;background:#05080d;overflow:hidden;position:relative;isolation:isolate}
+  .door-scr{padding:16px 16px 18px;transition:background .35s}
+  .door-scr.s-free{background:radial-gradient(120% 90% at 50% 0,rgba(61,240,138,.16),transparent 60%)}
+  .door-scr.s-soon{background:radial-gradient(120% 90% at 50% 0,rgba(245,180,49,.16),transparent 60%)}
+  .door-scr.s-busy{background:radial-gradient(120% 90% at 50% 0,rgba(255,90,90,.16),transparent 60%)}
+  .door-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .door-top .dr-nm{font-weight:800;font-size:17px}
+  .door-top .dr-cap{font:600 11px ui-monospace,monospace;color:var(--dim)}
+  .door-state{display:flex;align-items:center;gap:10px;margin:12px 0 4px}
+  .door-state .sd{width:15px;height:15px;border-radius:50%;flex:none}
+  .door-state .st{font-size:clamp(24px,6vw,30px);font-weight:800;letter-spacing:-.01em;line-height:1}
+  .s-free .sd{background:var(--green);box-shadow:0 0 14px var(--green)} .s-free .st{color:var(--green)}
+  .s-soon .sd{background:var(--amber);box-shadow:0 0 14px var(--amber)} .s-soon .st{color:var(--amber)}
+  .s-busy .sd{background:var(--red);box-shadow:0 0 14px var(--red)} .s-busy .st{color:var(--red)}
+  .door-next{font-size:12.5px;color:var(--dim);min-height:18px;margin-top:2px}
+  .door-next b{color:var(--txt);font-weight:600}
+  .door-foot{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--line);background:rgba(255,255,255,.015)}
+  .door-qr{flex:none;width:64px;height:64px;border-radius:8px;background:#fff;padding:5px}
+  .door-qr svg{display:block;width:100%;height:100%}
+  .door-qr-cap{font:600 10.5px ui-monospace,monospace;color:var(--dim);line-height:1.4}
+  .door-qr-cap b{color:var(--txt)}
+  .door-badge{position:absolute;top:10px;right:12px;font:700 8.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--green);border:1px solid rgba(61,240,138,.35);border-radius:999px;padding:3px 8px;background:rgba(3,8,14,.6)}
+
+  /* acciones de la sala seleccionada */
+  .rb-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .checkin-bar{margin-top:12px;border:1px solid rgba(245,180,49,.4);background:rgba(245,180,49,.06);border-radius:11px;padding:10px 12px;font-size:12.5px;color:var(--amber);display:none;align-items:center;gap:10px;flex-wrap:wrap}
+  .checkin-bar.on{display:flex}
+  .checkin-bar .cd{font:700 13px ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+  /* formulario de reserva */
+  .book{margin-top:12px;border:1px solid var(--line);border-radius:11px;background:var(--panel2);padding:12px 14px}
+  .book .bh{font:600 11px ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
+  .book-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .book input[type=text]{flex:1;min-width:140px;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--txt);font:600 13px -apple-system,system-ui,sans-serif;padding:9px 12px}
+  .book .slot-tag{font:700 12px ui-monospace,monospace;color:var(--green);border:1px solid rgba(61,240,138,.35);border-radius:8px;padding:7px 10px;background:rgba(61,240,138,.05)}
+  .book .hint{font-size:12px;color:var(--dim);margin-top:8px}
+
+  /* línea de tiempo del día (ancha → scroll propio) */
+  .tl-wrap{margin-top:16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+  .tl-h{padding:11px 14px;border-bottom:1px solid var(--line);font:600 11px ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .tl-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+  .tl-grid{min-width:760px;padding:10px 12px 14px}
+  .tl-times{display:grid;grid-template-columns:112px repeat(24,minmax(28px,1fr));align-items:end;margin-bottom:6px}
+  .tl-times .sp{grid-column:1}
+  .tl-times .tm{font:600 9px ui-monospace,monospace;color:var(--dim);text-align:left;white-space:nowrap;transform:translateX(-1px)}
+  .tl-row{display:grid;grid-template-columns:112px repeat(24,minmax(28px,1fr));align-items:center;gap:0;margin-bottom:5px}
+  .tl-name{font:600 12px -apple-system,system-ui,sans-serif;color:var(--txt);padding-right:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+  .tl-name .tld{width:8px;height:8px;border-radius:50%;flex:none}
+  .tl-cell{height:26px;border-radius:4px;margin:0 1px;border:1px solid var(--line);background:rgba(255,255,255,.02);cursor:pointer;padding:0;transition:background .2s,border-color .2s,transform .1s}
+  .tl-cell:hover:not(:disabled){transform:translateY(-1px);border-color:var(--green)}
+  .tl-cell.past{background:rgba(255,255,255,.015);border-color:transparent;cursor:default;opacity:.4}
+  .tl-cell.booked{background:rgba(56,214,255,.16);border-color:rgba(56,214,255,.5);cursor:default}
+  .tl-cell.booked.pending{background:rgba(245,180,49,.18);border-color:rgba(245,180,49,.55)}
+  .tl-cell.now{box-shadow:inset 0 0 0 2px var(--green)}
+  .tl-cell.sel{outline:2px solid var(--green);outline-offset:1px}
+  .tl-legend{padding:0 14px 12px;font:600 11px ui-monospace,monospace;color:var(--dim);display:flex;gap:14px;flex-wrap:wrap}
+  .tl-legend i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+
+  /* toast */
+  .toasts{position:fixed;left:0;right:0;bottom:18px;z-index:50;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;padding:0 14px}
+  .toast{pointer-events:auto;max-width:420px;width:100%;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--green);border-radius:11px;padding:11px 14px;font-size:13px;box-shadow:0 12px 40px rgba(0,0,0,.5);animation:tin .25s ease}
+  .toast.warn{border-left-color:var(--amber)} .toast.info{border-left-color:var(--cyan)}
+  .toast b{font-weight:700}
+  @keyframes tin{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+  @media(prefers-reduced-motion:reduce){.toast{animation:none}}
+
+  /* capacidades (6 tarjetas) */
+  .caps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:820px){.caps{grid-template-columns:1fr 1fr}}
+  @media(max-width:520px){.caps{grid-template-columns:1fr}}
+  .cap{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:20px;min-width:0}
+  .cap .ci{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:rgba(61,240,138,.07);border:1px solid rgba(61,240,138,.2);margin-bottom:12px}
+  .cap .ci svg{width:22px;height:22px;stroke:var(--green);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .cap h3{margin:0 0 6px;font-size:17px}
+  .cap p{margin:0;color:var(--dim);font-size:13.5px;line-height:1.5}
+  .cap .num{float:right;font:700 11px ui-monospace,monospace;color:var(--dim)}
+
+  /* integración stack */
+  .arch{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:820px){.arch{grid-template-columns:1fr}}
+  .col{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:20px;min-width:0}
+  .col .role{font:600 11px ui-monospace,monospace;letter-spacing:.13em;text-transform:uppercase;color:var(--green)}
+  .col h3{margin:8px 0 6px;font-size:19px}
+  .col p{font-size:13.5px;color:var(--dim);margin:0 0 12px;line-height:1.5}
+  .col p b{color:var(--txt);font-weight:600}
+  .col a.go{font:600 12px ui-monospace,monospace;color:var(--cyan);border-bottom:1px solid rgba(56,214,255,.35)}
+  .col a.go:hover{color:#7ce3ff}
+
+  /* enlaces */
+  .links{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:820px){.links{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:460px){.links{grid-template-columns:1fr}}
+  .lk{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:13px;background:var(--panel);padding:16px;transition:transform .12s,border-color .2s,background .2s}
+  .lk:hover{transform:translateY(-3px);border-color:#2a3a66;background:var(--panel2)}
+  .lk .nm{font-weight:700;font-size:15px}
+  .lk .ds{color:var(--dim);font-size:12.5px;line-height:1.4}
+  .lk .go{font:600 11.5px ui-monospace,monospace;color:var(--green);margin-top:auto}
+
+  /* CTA final */
+  .cta{border:1px solid var(--line);border-radius:20px;background:radial-gradient(120% 140% at 50% 0,rgba(61,240,138,.08),transparent 60%),var(--panel);padding:44px 24px;text-align:center}
+  .cta h2{font-size:clamp(24px,4vw,32px);margin:0 0 10px;font-weight:800;letter-spacing:-.01em}
+  .cta p{color:var(--dim);margin:0 auto 22px;max-width:560px;font-size:15px}
+  .cta-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+  .foot{margin-top:20px;padding:26px 20px 46px;border-top:1px solid var(--line);color:var(--dim);font:600 11.5px ui-monospace,monospace;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;max-width:1080px;margin-left:auto;margin-right:auto}
+  .foot a{color:var(--dim)} .foot a:hover{color:var(--green)}
+  .back{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 15px;font-weight:600;font-size:13.5px;transition:border-color .2s,color .2s}
   .back:hover{border-color:var(--green);color:#fff}
-  .back:focus-visible{outline:2px solid var(--green);outline-offset:2px}
-  .foot{margin-top:44px;color:var(--dim);font:600 11px ui-monospace,monospace}
 </style>
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.08.07.2026.r3';</script>
-<script src="/admira-nav.js?v=08.07.2026.r11" data-active="apps" data-title="Salas" defer></script>
+<script>window.ADMIRA_VERSION='v.08.07.2026.r13';</script>
+<script src="/admira-nav.js?v=08.07.2026.r13" data-active="apps" data-title="Salas" defer></script>
 
-<main class="wrap" id="admskip-target">
-  <div class="ic" id="ic" aria-hidden="true"></div>
-  <h1>Salas</h1>
-  <p class="en">Room Booking</p>
-  <p class="ds">Reserva de espacios y salas al instante, integrada con el calendario de emisión.</p>
-  <span class="badge"><span class="d"></span>En construcción · esta noche</span>
-  <div><a class="back" href="/apps/">&larr; Volver a la lanzadera</a></div>
-  <p class="foot">Admira · tv · v.08.07.2026.r3</p>
+<main id="admskip-target">
+
+  <!-- HERO -->
+  <header class="hero wrap">
+    <span class="kicker"><span class="d"></span><span data-es="Reserva sobre el plano · Panel de puerta · Ocupación real" data-en="Book on the map · Door panel · Real occupancy">Reserva sobre el plano · Panel de puerta · Ocupación real</span></span>
+    <h1><span data-es="Reserva espacios y salas " data-en="Book spaces and rooms ">Reserva espacios y salas </span><span class="g" data-es="al instante" data-en="in one tap">al instante</span></h1>
+    <p class="en">Room Booking
+      <span class="lang" role="group" aria-label="Idioma / Language">
+        <button type="button" data-lang="es" class="on">ES</button><button type="button" data-lang="en">EN</button>
+      </span>
+    </p>
+    <p class="lead" data-es="Eliges la sala en el mapa del espacio, no en una lista. Cada puerta lleva su propia pantalla —una más de tu red de señalización— con el estado en verde o rojo. Reservas ahora mismo, haces check-in con el QR y la sala fantasma se libera sola. Y la ocupación de verdad la mide la cámara, no la agenda."
+       data-en="You pick the room on the map of the space, not from a list. Each door carries its own screen —one more in your signage network— showing status in green or red. Book right now, check in with the QR, and the ghost booking releases itself. And true occupancy is measured by the camera, not the calendar.">Eliges la sala en el mapa del espacio, no en una lista. Cada puerta lleva su propia pantalla —una más de tu red de señalización— con el estado en verde o rojo. Reservas ahora mismo, haces check-in con el QR y la sala fantasma se libera sola. Y la ocupación de verdad la mide la cámara, no la agenda.</p>
+    <div class="hero-actions">
+      <a class="btn primary" href="#plano"><span data-es="◫ Reservar sobre el plano" data-en="◫ Book on the map">◫ Reservar sobre el plano</span></a>
+      <a class="btn" href="#capacidades"><span data-es="Ver capacidades" data-en="See capabilities">Ver capacidades</span></a>
+      <a class="btn" href="#stack"><span data-es="Cómo encaja en Admira" data-en="How it fits Admira">Cómo encaja en Admira</span></a>
+    </div>
+    <div class="flow">
+      <div class="fstep a"><div class="fk" data-es="Reservas" data-en="You book">Reservas</div><div class="fw">&#9707;</div><div class="fd" data-es="tocas la sala en el plano y eliges franja —30 min y listo" data-en="tap the room on the map and pick a slot —30 min, done">tocas la sala en el plano y eliges franja —30 min y listo</div></div>
+      <div class="fstep b"><div class="fk" data-es="Estado" data-en="Status">Estado</div><div class="fw">&#128994;</div><div class="fd" data-es="el panel de la puerta pasa a verde, ámbar o rojo en vivo" data-en="the door panel turns green, amber or red live">el panel de la puerta pasa a verde, ámbar o rojo en vivo</div></div>
+      <div class="fstep c"><div class="fk" data-es="Check-in" data-en="Check-in">Check-in</div><div class="fw">&#9636;</div><div class="fd" data-es="confirmas con el QR; si nadie aparece, la sala se libera sola" data-en="confirm with the QR; if nobody shows, the room frees itself">confirmas con el QR; si nadie aparece, la sala se libera sola</div></div>
+    </div>
+  </header>
+
+  <!-- DEMO ESTRELLA: RESERVA SOBRE EL PLANO -->
+  <section class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" data-es="Demo viva" data-en="Live demo">Demo viva</p>
+      <h2 data-es="Reserva sobre el plano, no en una lista" data-en="Book on the map, not from a list">Reserva sobre el plano, no en una lista</h2>
+      <p data-es="Toca una sala libre en el plano y resérvala. El panel de puerta cambia en vivo, la línea de tiempo del día se pinta, y si reservas «ahora» sin hacer check-in, la sala se libera sola. Todo corre en tu navegador —es una maqueta para que lo toques."
+         data-en="Tap a free room on the map and book it. The door panel changes live, the day timeline fills in, and if you book «now» without checking in, the room frees itself. It all runs in your browser —a mockup for you to play with.">Toca una sala libre en el plano y resérvala. El panel de puerta cambia en vivo, la línea de tiempo del día se pinta, y si reservas «ahora» sin hacer check-in, la sala se libera sola. Todo corre en tu navegador —es una maqueta para que lo toques.</p>
+    </div>
+
+    <div class="demo star" id="plano">
+      <div class="demo-h">
+        <span class="ttl"><span class="dot"></span><span data-es="Plano de la planta · reserva en vivo" data-en="Floor plan · live booking">Plano de la planta · reserva en vivo</span></span>
+        <span class="tag-ill" data-es="Ilustrativo · en tu navegador" data-en="Illustrative · in your browser">Ilustrativo · en tu navegador</span>
+      </div>
+      <div class="demo-b">
+        <div class="stage">
+          <!-- PLANO -->
+          <div>
+            <div class="plan">
+              <div class="plan-lbl">
+                <span data-es="Planta 3 · Admira HQ" data-en="Floor 3 · Admira HQ">Planta 3 · Admira HQ</span>
+                <span class="mono" id="planClock">11:00</span>
+              </div>
+              <svg viewBox="0 0 680 380" role="group" aria-label="Plano de la planta con salas reservables" preserveAspectRatio="xMidYMid meet">
+                <!-- muro exterior + pasillo -->
+                <rect x="8" y="8" width="664" height="364" rx="10" fill="none" stroke="#22314f" stroke-width="2"/>
+                <rect x="150" y="150" width="380" height="60" rx="6" fill="rgba(56,214,255,.04)" stroke="#16233c" stroke-width="1"/>
+                <text x="340" y="185" text-anchor="middle" class="rc" style="fill:#4d5f80" font-size="10">— pasillo —</text>
+                <!-- núcleo de servicios -->
+                <rect x="300" y="150" width="80" height="60" rx="5" fill="#0d1626" stroke="#1a2740" stroke-width="1"/>
+                <text x="340" y="176" text-anchor="middle" class="rc" font-size="9">Café</text>
+                <text x="340" y="192" text-anchor="middle" class="rc" font-size="9">Aseos</text>
+                <g id="rooms"></g>
+              </svg>
+              <div class="legend" aria-hidden="true">
+                <span><i class="lg-free"></i><span data-es="Libre" data-en="Free">Libre</span></span>
+                <span><i class="lg-soon"></i><span data-es="Reservada pronto" data-en="Booked soon">Reservada pronto</span></span>
+                <span><i class="lg-busy"></i><span data-es="Ocupada" data-en="Busy">Ocupada</span></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- PANEL DE PUERTA + ACCIONES -->
+          <div>
+            <div class="door" id="door">
+              <span class="door-badge" data-es="Panel de puerta" data-en="Door panel">Panel de puerta</span>
+              <div class="door-scr s-free" id="doorScr">
+                <div class="door-top">
+                  <span class="dr-nm" id="drName">Aurora</span>
+                  <span class="dr-cap" id="drCap">8 pers.</span>
+                </div>
+                <div class="door-state">
+                  <span class="sd"></span>
+                  <span class="st" id="drState">LIBRE</span>
+                </div>
+                <div class="door-next" id="drNext"></div>
+              </div>
+              <div class="door-foot">
+                <div class="door-qr" aria-hidden="true"><svg id="qr" viewBox="0 0 29 29"></svg></div>
+                <div class="door-qr-cap">
+                  <b data-es="Check-in por QR" data-en="QR check-in">Check-in por QR</b><br>
+                  <span data-es="escanea al entrar para confirmar la reserva" data-en="scan on arrival to confirm the booking">escanea al entrar para confirmar la reserva</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="rb-actions">
+              <button class="btn primary sm" id="btnNow" type="button"><span data-es="Reservar ahora · 30 min" data-en="Book now · 30 min">Reservar ahora · 30 min</span></button>
+              <button class="btn sm" id="btnFree" type="button"><span data-es="Liberar sala" data-en="Release room">Liberar sala</span></button>
+            </div>
+
+            <div class="checkin-bar" id="checkinBar" role="status" aria-live="polite">
+              <span id="checkinTxt" data-es="Reserva sin check-in. Libera en" data-en="Booking without check-in. Releases in">Reserva sin check-in. Libera en</span>
+              <span class="cd" id="checkinCd">15s</span>
+              <button class="btn primary sm" id="btnCheckin" type="button"><span data-es="✓ Hacer check-in" data-en="✓ Check in">✓ Hacer check-in</span></button>
+            </div>
+
+            <div class="book" id="bookForm" hidden>
+              <div class="bh" data-es="Reservar franja" data-en="Book slot">Reservar franja</div>
+              <div class="book-row">
+                <span class="slot-tag" id="bkSlot">11:00</span>
+                <input type="text" id="bkName" maxlength="28" placeholder="Tu nombre" aria-label="Nombre de la reserva">
+                <button class="btn primary sm" id="bkConfirm" type="button"><span data-es="Reservar" data-en="Book">Reservar</span></button>
+                <button class="btn sm" id="bkCancel" type="button"><span data-es="Cancelar" data-en="Cancel">Cancelar</span></button>
+              </div>
+              <p class="hint" id="bkHint" data-es="Elige una franja libre en la línea de tiempo, o toca otra sala en el plano." data-en="Pick a free slot in the timeline, or tap another room on the map.">Elige una franja libre en la línea de tiempo, o toca otra sala en el plano.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- LÍNEA DE TIEMPO DEL DÍA -->
+        <div class="tl-wrap">
+          <div class="tl-h">
+            <span data-es="Línea de tiempo del día · toca una franja libre" data-en="Day timeline · tap a free slot">Línea de tiempo del día · toca una franja libre</span>
+            <span class="mono" style="color:var(--green)" data-es="08:00 – 20:00" data-en="08:00 – 20:00">08:00 – 20:00</span>
+          </div>
+          <div class="tl-scroll">
+            <div class="tl-grid" id="tlGrid"></div>
+          </div>
+          <div class="tl-legend" aria-hidden="true">
+            <span><i style="background:rgba(56,214,255,.5)"></i><span data-es="Reservada" data-en="Booked">Reservada</span></span>
+            <span><i style="background:rgba(245,180,49,.55)"></i><span data-es="Sin check-in" data-en="No check-in">Sin check-in</span></span>
+            <span><i style="background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 2px var(--green)"></i><span data-es="Ahora" data-en="Now">Ahora</span></span>
+            <span><i style="background:rgba(255,255,255,.02);border:1px solid var(--line)"></i><span data-es="Libre" data-en="Free">Libre</span></span>
+          </div>
+        </div>
+
+        <p class="demo-note"><b data-es="Maqueta orientativa" data-en="Orientative mockup">Maqueta orientativa</b><span data-es=", entera en tu navegador (nada sale de aquí). En producción, el plano es el del " data-en=", entirely in your browser (nothing leaves here). In production, the map is the one from the ">, entera en tu navegador (nada sale de aquí). En producción, el plano es el del </span><a href="https://www.xpaceos.com/admira-xp/" target="_blank" rel="noopener" data-es="gemelo Admira XP" data-en="Admira XP twin">gemelo Admira XP</a><span data-es=", el estado de cada sala lo emite su " data-en=", each room's status is broadcast by its ">, el estado de cada sala lo emite su </span><a href="/digitalsignage/" data-es="panel de puerta" data-en="door panel">panel de puerta</a><span data-es=" y la ocupación real la mide la " data-en=" and real occupancy is measured by ">&nbsp;y la ocupación real la mide la </span><a href="/videoanalytics/" data-es="cámara" data-en="camera">cámara</a>.</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CAPACIDADES (6 del brief) -->
+  <section class="wrap" id="capacidades">
+    <div class="sec-head">
+      <p class="eyebrow" data-es="Producto" data-en="Product">Producto</p>
+      <h2 data-es="Seis cosas que hace bien" data-en="Six things it does well">Seis cosas que hace bien</h2>
+      <p data-es="Lo que gana en el mercado de 2026 —Robin, Skedda, Joan, Archie, YAROOMS— hecho a la manera de Admira: la pantalla de la puerta ya es tuya, y la ocupación la miden tus cámaras."
+         data-en="What wins the 2026 market —Robin, Skedda, Joan, Archie, YAROOMS— done the Admira way: the door screen is already yours, and occupancy is measured by your cameras.">Lo que gana en el mercado de 2026 —Robin, Skedda, Joan, Archie, YAROOMS— hecho a la manera de Admira: la pantalla de la puerta ya es tuya, y la ocupación la miden tus cámaras.</p>
+    </div>
+    <div class="caps">
+      <div class="cap">
+        <span class="num">01</span>
+        <div class="ci"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h4"/><circle cx="15" cy="15" r="1.4" fill="currentColor" stroke="none"/></svg></div>
+        <h3 data-es="Reserva sobre el plano" data-en="Book on the map">Reserva sobre el plano</h3>
+        <p data-es="Eliges la sala en el mapa del espacio, no en un desplegable. Ves qué hay libre a tu lado de un vistazo." data-en="Pick the room on the map of the space, not in a dropdown. See what's free next to you at a glance.">Eliges la sala en el mapa del espacio, no en un desplegable. Ves qué hay libre a tu lado de un vistazo.</p>
+      </div>
+      <div class="cap">
+        <span class="num">02</span>
+        <div class="ci"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6"/><circle cx="12" cy="16.5" r="1.6"/></svg></div>
+        <h3 data-es="Panel de puerta" data-en="Door panel">Panel de puerta</h3>
+        <p data-es="Una pantalla junto a cada sala con estado verde/rojo y reserva in-situ. En Admira es una pantalla más de tu red —no un cacharro aparte." data-en="A screen beside each room with green/red status and on-the-spot booking. In Admira it's one more screen in your network —not a separate gadget.">Una pantalla junto a cada sala con estado verde/rojo y reserva in-situ. En Admira es una pantalla más de tu red —no un cacharro aparte.</p>
+      </div>
+      <div class="cap">
+        <span class="num">03</span>
+        <div class="ci"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8.5 13l2.2 2.2L15.5 12"/></svg></div>
+        <h3 data-es="Sincroniza tu calendario" data-en="Sync your calendar">Sincroniza tu calendario</h3>
+        <p data-es="Google, Outlook y Teams en dos direcciones. La reserva vive donde ya trabajas; nada de doble agenda." data-en="Google, Outlook and Teams both ways. The booking lives where you already work; no double agenda.">Google, Outlook y Teams en dos direcciones. La reserva vive donde ya trabajas; nada de doble agenda.</p>
+      </div>
+      <div class="cap">
+        <span class="num">04</span>
+        <div class="ci"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h3v3M20 14v.01M17 20h3M20 17v3"/></svg></div>
+        <h3 data-es="Check-in por QR" data-en="QR check-in">Check-in por QR</h3>
+        <p data-es="Escaneas al entrar y confirmas. ¿Nadie aparece? La sala se libera sola por no-show. Se acabaron las reservas fantasma." data-en="Scan on arrival to confirm. Nobody shows? The room frees itself on no-show. No more ghost bookings.">Escaneas al entrar y confirmas. ¿Nadie aparece? La sala se libera sola por no-show. Se acabaron las reservas fantasma.</p>
+      </div>
+      <div class="cap">
+        <span class="num">05</span>
+        <div class="ci"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div>
+        <h3 data-es="Ocupación real" data-en="Real occupancy">Ocupación real</h3>
+        <p data-es="La cámara mide cuánta gente usa de verdad cada sala —no cuántas se reservaron. Con eso decides cuántas salas hacen falta." data-en="The camera measures how many people actually use each room —not how many were booked. That tells you how many rooms you really need.">La cámara mide cuánta gente usa de verdad cada sala —no cuántas se reservaron. Con eso decides cuántas salas hacen falta.</p>
+      </div>
+      <div class="cap">
+        <span class="num">06</span>
+        <div class="ci"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/><path d="M12 3.5v1M12 19.5v1"/></svg></div>
+        <h3 data-es="Reserva instantánea" data-en="Instant booking">Reserva instantánea</h3>
+        <p data-es="«Ahora mismo, 30 minutos» en un toque. Para la reunión que surge de pasillo, sin abrir la agenda." data-en="«Right now, 30 minutes» in one tap. For the meeting that pops up in the hallway, without opening the calendar.">«Ahora mismo, 30 minutos» en un toque. Para la reunión que surge de pasillo, sin abrir la agenda.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- INTEGRACIÓN CON EL STACK -->
+  <section class="wrap" id="stack">
+    <div class="sec-head">
+      <p class="eyebrow" data-es="Encaja en Admira" data-en="Fits in Admira">Encaja en Admira</p>
+      <h2 data-es="Salas no es una app suelta" data-en="Rooms isn't a standalone app">Salas no es una app suelta</h2>
+      <p data-es="La ventaja natural: el panel de puerta ya es señalización, la ocupación ya la miden tus cámaras y las salas ya viven en el plano del gemelo. Nada nuevo que instalar." data-en="The natural edge: the door panel is already signage, occupancy is already measured by your cameras, and rooms already live in the twin's map. Nothing new to install.">La ventaja natural: el panel de puerta ya es señalización, la ocupación ya la miden tus cámaras y las salas ya viven en el plano del gemelo. Nada nuevo que instalar.</p>
+    </div>
+    <div class="arch">
+      <div class="col">
+        <div class="role" data-es="01 · Panel de puerta" data-en="01 · Door panel">01 · Panel de puerta</div>
+        <h3 data-es="Es señalización" data-en="It's signage">Es señalización</h3>
+        <p data-es="Joan lo hace con e-ink dedicado. Nosotros no: cada panel de puerta es una pantalla de tu red de señalización mostrando una plantilla de sala. Mismo player, misma consola, cero hardware nuevo." data-en="Joan does it with dedicated e-ink. We don't: each door panel is a screen in your signage network showing a room template. Same player, same console, zero new hardware.">Joan lo hace con e-ink dedicado. Nosotros no: cada panel de puerta es una pantalla de tu red de señalización mostrando una plantilla de sala. Mismo player, misma consola, cero hardware nuevo.</p>
+        <a class="go" href="/digitalsignage/" data-es="Señalización →" data-en="Signage →">Señalización →</a>
+      </div>
+      <div class="col">
+        <div class="role" data-es="02 · Ocupación" data-en="02 · Occupancy">02 · Ocupación</div>
+        <h3 data-es="La miden tus cámaras" data-en="Your cameras measure it">La miden tus cámaras</h3>
+        <p data-es="La analítica de vídeo cuenta cuánta gente hay de verdad en la sala —cookieless, sin guardar rostros. La de radio detecta presencia por señal. Reservas vs. uso real: ahí está la métrica que dimensiona el espacio." data-en="Video analytics counts how many people are really in the room —cookieless, no faces stored. Radio analytics detects presence by signal. Booked vs. actually used: that's the metric that sizes the space.">La analítica de vídeo cuenta cuánta gente hay de verdad en la sala —cookieless, sin guardar rostros. La de radio detecta presencia por señal. Reservas vs. uso real: ahí está la métrica que dimensiona el espacio.</p>
+        <a class="go" href="/videoanalytics/" data-es="Analítica de vídeo →" data-en="Video analytics →">Analítica de vídeo →</a><br>
+        <a class="go" href="/radioanalytics/" style="margin-top:6px;display:inline-block" data-es="Analítica de radio →" data-en="Radio analytics →">Analítica de radio →</a>
+      </div>
+      <div class="col">
+        <div class="role" data-es="03 · El plano" data-en="03 · The map">03 · El plano</div>
+        <h3 data-es="Vive en el gemelo" data-en="Lives in the twin">Vive en el gemelo</h3>
+        <p data-es="Las salas están sobre el mismo plano del gemelo Admira XP donde ensayas aforo, flujos y promociones. Reservar sobre el mapa y simular el espacio comparten la misma planta." data-en="Rooms sit on the same Admira XP twin map where you rehearse capacity, flows and promotions. Booking on the map and simulating the space share one floor plan.">Las salas están sobre el mismo plano del gemelo Admira XP donde ensayas aforo, flujos y promociones. Reservar sobre el mapa y simular el espacio comparten la misma planta.</p>
+        <a class="go" href="https://www.xpaceos.com/admira-xp/" target="_blank" rel="noopener" data-es="Gemelo Admira XP →" data-en="Admira XP twin →">Gemelo Admira XP →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENLACES -->
+  <section class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" data-es="Todo el subsistema" data-en="The whole subsystem">Todo el subsistema</p>
+      <h2 data-es="Entra donde trabajas" data-en="Jump where you work">Entra donde trabajas</h2>
+    </div>
+    <div class="links">
+      <a class="lk" href="/digitalsignage/">
+        <span class="nm" data-es="Señalización" data-en="Signage">Señalización</span>
+        <span class="ds" data-es="La red de pantallas que también sirve el panel de cada puerta." data-en="The screen network that also serves each door panel.">La red de pantallas que también sirve el panel de cada puerta.</span>
+        <span class="go">digitalsignage →</span>
+      </a>
+      <a class="lk" href="/videoanalytics/">
+        <span class="nm" data-es="Analítica de vídeo" data-en="Video Analytics">Analítica de vídeo</span>
+        <span class="ds" data-es="La cámara que mide la ocupación real sin identificar a nadie." data-en="The camera measuring real occupancy without identifying anyone.">La cámara que mide la ocupación real sin identificar a nadie.</span>
+        <span class="go">videoanalytics →</span>
+      </a>
+      <a class="lk" href="/radioanalytics/">
+        <span class="nm" data-es="Analítica de radio" data-en="Radio Analytics">Analítica de radio</span>
+        <span class="ds" data-es="Presencia por señal: confirma si la sala se usó de verdad." data-en="Presence by signal: confirms whether the room was truly used.">Presencia por señal: confirma si la sala se usó de verdad.</span>
+        <span class="go">radioanalytics →</span>
+      </a>
+      <a class="lk" href="https://www.xpaceos.com/admira-xp/" target="_blank" rel="noopener">
+        <span class="nm" data-es="Gemelo Admira XP" data-en="Admira XP twin">Gemelo Admira XP</span>
+        <span class="ds" data-es="El plano vivo donde las salas y el espacio son uno." data-en="The live map where rooms and space are one.">El plano vivo donde las salas y el espacio son uno.</span>
+        <span class="go">xpaceos →</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- CTA FINAL -->
+  <section class="wrap">
+    <div class="cta">
+      <h2 data-es="Las salas, sin reservas fantasma" data-en="Rooms, without ghost bookings">Las salas, sin reservas fantasma</h2>
+      <p data-es="Reserva sobre el plano, panel en cada puerta con la pantalla que ya tienes, check-in por QR y ocupación real medida por la cámara. Menos salas vacías reservadas, más espacio de verdad disponible." data-en="Book on the map, a panel on every door using the screen you already own, QR check-in and real occupancy measured by the camera. Fewer empty booked rooms, more space actually available.">Reserva sobre el plano, panel en cada puerta con la pantalla que ya tienes, check-in por QR y ocupación real medida por la cámara. Menos salas vacías reservadas, más espacio de verdad disponible.</p>
+      <div class="cta-actions">
+        <a class="btn primary" href="#plano"><span data-es="◫ Probar el plano" data-en="◫ Try the map">◫ Probar el plano</span></a>
+        <a class="btn" href="/apps/"><span data-es="Ver todas las apps" data-en="See all apps">Ver todas las apps</span></a>
+      </div>
+    </div>
+    <p style="text-align:center;margin:26px 0 0"><a class="back" href="/apps/">&larr; <span data-es="Volver a la lanzadera" data-en="Back to the launcher">Volver a la lanzadera</span></a></p>
+  </section>
+
+  <footer class="foot">
+    <span data-es="Salas · reserva de espacios sobre el plano · admira.tv" data-en="Rooms · book spaces on the map · admira.tv">Salas · reserva de espacios sobre el plano · admira.tv</span>
+    <span>Admira · tv · <span style="opacity:.75">v.08.07.2026.r13</span></span>
+  </footer>
+
 </main>
 
+<div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
 <script>
-  (function(){ function set(){ try{ var s=window.AdmiraIcon&&window.AdmiraIcon('roombooking'); if(s) document.getElementById('ic').innerHTML=s; }catch(_){}}
-    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',set); else set(); })();
+(function(){
+  'use strict';
+  /* ---------- i18n ES/EN (data-es / data-en) ---------- */
+  var LS='admtv-lang';
+  var redrawI18n=function(){};
+  function applyLang(l){
+    document.documentElement.lang=l;
+    document.querySelectorAll('[data-es]').forEach(function(el){
+      var v=el.getAttribute('data-'+l); if(v!=null) el.textContent=v;
+    });
+    document.querySelectorAll('.lang button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang')===l); });
+    try{ localStorage.setItem(LS,l); }catch(_){}
+  }
+  var lang='es'; try{ var s=localStorage.getItem(LS); if(s==='en'||s==='es') lang=s; }catch(_){}
+  document.querySelectorAll('.lang button').forEach(function(b){
+    b.addEventListener('click',function(){ lang=b.getAttribute('data-lang'); applyLang(lang); try{ redrawI18n(); }catch(_){}} );
+  });
+  applyLang(lang);
+  function T(es,en){ return lang==='en'?en:es; }
+
+  var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- toasts ---------- */
+  var toastBox=document.getElementById('toasts');
+  function toast(msg,kind){
+    if(!toastBox) return;
+    var t=document.createElement('div');
+    t.className='toast'+(kind?' '+kind:'');
+    t.innerHTML=msg;
+    toastBox.appendChild(t);
+    setTimeout(function(){ t.style.transition='opacity .3s,transform .3s'; t.style.opacity='0'; t.style.transform='translateY(8px)';
+      setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); },320); }, 3600);
+  }
+
+  /* ---------- modelo de datos ---------- */
+  // franjas: 08:00 → 20:00, 24 franjas de 30 min
+  var SLOTS=24, START_H=8, NOW=6;        // NOW = índice de "ahora" (11:00)
+  function slotLabel(i){ var m=START_H*60 + i*30; var h=Math.floor(m/60), mm=m%60; return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm; }
+
+  // salas: coordenadas sobre el plano (SVG 680×380)
+  var rooms=[
+    {id:'aurora',   name:'Aurora',   cap:8,  x:22,  y:22,  w:190, h:120},
+    {id:'cosmos',   name:'Cosmos',   cap:12, x:232, y:22,  w:216, h:120},
+    {id:'eclipse',  name:'Eclipse',  cap:6,  x:468, y:22,  w:190, h:120},
+    {id:'nebulosa', name:'Nebulosa', cap:4,  x:22,  y:220, w:190, h:138},
+    {id:'orbita',   name:'Órbita',   cap:2,  x:232, y:220, w:216, h:138},
+    {id:'satelite', name:'Satélite', cap:2,  x:468, y:220, w:190, h:138}
+  ];
+  // reservas por sala: mapa id → { slotIndex: {who, pending} }
+  var bookings={};
+  rooms.forEach(function(r){ bookings[r.id]={}; });
+  function seed(id,i,who,pending){ bookings[id][i]={who:who,pending:!!pending}; }
+  // sembrado inicial → colores variados
+  seed('cosmos',   NOW,   'Comité',   false);          // ocupada ahora
+  seed('cosmos',   NOW+1, 'Comité',   false);
+  seed('aurora',   NOW+1, 'Diseño',   false);          // reservada pronto
+  seed('eclipse',  NOW+3, '1:1',      false);
+  seed('nebulosa', NOW-2, 'Standup',  false);          // pasada
+  seed('orbita',   NOW+2, 'Ventas',   false);
+  // aurora, satelite → libres
+
+  var selected='aurora';
+  var pending=null;                 // {room, slot} franja elegida en la línea de tiempo
+  var noshow=null;                  // {room, slot, secs, timer}
+
+  /* estado de una sala en "ahora": free / soon / busy */
+  function roomState(id){
+    var bk=bookings[id];
+    if(bk[NOW]!=null) return 'busy';
+    if(bk[NOW+1]!=null || bk[NOW+2]!=null) return 'soon';
+    return 'free';
+  }
+  function nextBooking(id){
+    var bk=bookings[id];
+    for(var i=NOW;i<SLOTS;i++){ if(bk[i]!=null) return {slot:i, who:bk[i].who, pending:bk[i].pending}; }
+    return null;
+  }
+  var stateWord={ free:function(){return T('LIBRE','FREE');}, soon:function(){return T('PRONTO','SOON');}, busy:function(){return T('OCUPADA','BUSY');} };
+
+  /* ---------- render del plano ---------- */
+  var roomsG=document.getElementById('rooms');
+  var fillFor={ free:'rgba(61,240,138,.14)', soon:'rgba(245,180,49,.16)', busy:'rgba(255,90,90,.16)' };
+  var strokeFor={ free:'rgba(61,240,138,.55)', soon:'rgba(245,180,49,.6)', busy:'rgba(255,90,90,.6)' };
+  var dotFor={ free:'#3df08a', soon:'#f5b431', busy:'#ff5a5a' };
+
+  function renderPlan(){
+    var svgns='http://www.w3.org/2000/svg';
+    roomsG.textContent='';
+    rooms.forEach(function(r){
+      var st=roomState(r.id), sel=(r.id===selected);
+      var g=document.createElementNS(svgns,'g');
+      g.setAttribute('class','room');
+      g.setAttribute('tabindex','0');
+      g.setAttribute('role','button');
+      g.setAttribute('aria-label', r.name+' · '+r.cap+' '+T('personas','people')+' · '+
+        (st==='free'?T('libre','free'):st==='soon'?T('reservada pronto','booked soon'):T('ocupada','busy')) );
+      g.dataset.id=r.id;
+      var rect=document.createElementNS(svgns,'rect');
+      rect.setAttribute('class','body');
+      rect.setAttribute('x',r.x); rect.setAttribute('y',r.y);
+      rect.setAttribute('width',r.w); rect.setAttribute('height',r.h);
+      rect.setAttribute('rx','8');
+      rect.setAttribute('fill',fillFor[st]);
+      rect.setAttribute('stroke', sel?'#ffffff':strokeFor[st]);
+      rect.setAttribute('stroke-width', sel?'2.4':'1.4');
+      g.appendChild(rect);
+      // punto de estado
+      var dot=document.createElementNS(svgns,'circle');
+      dot.setAttribute('cx', r.x+16); dot.setAttribute('cy', r.y+18); dot.setAttribute('r','5');
+      dot.setAttribute('fill',dotFor[st]);
+      g.appendChild(dot);
+      // nombre
+      var nm=document.createElementNS(svgns,'text');
+      nm.setAttribute('class','rn'); nm.setAttribute('x',r.x+30); nm.setAttribute('y',r.y+22);
+      nm.textContent=r.name;
+      g.appendChild(nm);
+      // capacidad
+      var cap=document.createElementNS(svgns,'text');
+      cap.setAttribute('class','rc'); cap.setAttribute('x',r.x+16); cap.setAttribute('y',r.y+r.h-14);
+      cap.textContent='◦ '+r.cap+' '+T('pers.','ppl');
+      g.appendChild(cap);
+      // etiqueta de próxima reserva
+      var nb=nextBooking(r.id);
+      if(nb){
+        var lb=document.createElementNS(svgns,'text');
+        lb.setAttribute('class','rc'); lb.setAttribute('x',r.x+16); lb.setAttribute('y',r.y+r.h-30);
+        lb.setAttribute('style','fill:'+dotFor[st]);
+        lb.textContent=slotLabel(nb.slot)+' · '+nb.who;
+        g.appendChild(lb);
+      }
+      g.addEventListener('click',function(){ selectRoom(r.id); });
+      g.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); selectRoom(r.id); } });
+      roomsG.appendChild(g);
+    });
+  }
+
+  /* ---------- render del panel de puerta ---------- */
+  var doorScr=document.getElementById('doorScr'), drName=document.getElementById('drName'),
+      drCap=document.getElementById('drCap'), drState=document.getElementById('drState'), drNext=document.getElementById('drNext');
+  function renderDoor(){
+    var r=rooms.filter(function(x){return x.id===selected;})[0];
+    var st=roomState(r.id);
+    doorScr.className='door-scr s-'+st;
+    drName.textContent=r.name;
+    drCap.textContent=r.cap+' '+T('pers.','ppl');
+    drState.textContent=stateWord[st]();
+    var nb=nextBooking(r.id);
+    if(st==='busy'){
+      var end=slotLabel((bookings[r.id][NOW+1]!=null?NOW+2:NOW+1));
+      drNext.innerHTML=T('Reunión en curso · <b>'+esc(bookings[r.id][NOW].who)+'</b> · hasta '+end,
+                        'Meeting in progress · <b>'+esc(bookings[r.id][NOW].who)+'</b> · until '+end);
+    } else if(nb){
+      drNext.innerHTML=T('Próxima: <b>'+slotLabel(nb.slot)+'</b> · '+esc(nb.who),
+                        'Next: <b>'+slotLabel(nb.slot)+'</b> · '+esc(nb.who));
+    } else {
+      drNext.innerHTML=T('Sin reservas el resto del día. <b>Libre para ti.</b>','No bookings for the rest of the day. <b>Free for you.</b>');
+    }
+  }
+  function esc(x){ return String(x==null?'':x).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];}); }
+
+  /* ---------- render de la línea de tiempo ---------- */
+  var tlGrid=document.getElementById('tlGrid');
+  function renderTimeline(){
+    var html='<div class="tl-times"><span class="sp"></span>';
+    for(var i=0;i<SLOTS;i++){ html += '<span class="tm">'+((i%2===0)?slotLabel(i):'')+'</span>'; }
+    html += '</div>';
+    rooms.forEach(function(r){
+      var st=roomState(r.id);
+      html += '<div class="tl-row"><span class="tl-name"><span class="tld" style="background:'+dotFor[st]+'"></span>'+esc(r.name)+'</span>';
+      for(var j=0;j<SLOTS;j++){
+        var cls='tl-cell', dis='', lab='';
+        var bk=bookings[r.id][j];
+        var isPast=j<NOW;
+        if(bk!=null){ cls+=' booked'+(bk.pending?' pending':''); dis='disabled';
+          lab=r.name+' '+slotLabel(j)+' · '+bk.who; }
+        else if(isPast){ cls+=' past'; dis='disabled'; lab=r.name+' '+slotLabel(j)+' '+T('(pasada)','(past)'); }
+        else { lab=r.name+' '+slotLabel(j)+' · '+T('libre, reservar','free, book'); }
+        if(j===NOW) cls+=' now';
+        if(pending && pending.room===r.id && pending.slot===j) cls+=' sel';
+        html += '<button class="'+cls+'" '+dis+' data-r="'+r.id+'" data-s="'+j+'" title="'+esc(lab)+'" aria-label="'+esc(lab)+'"></button>';
+      }
+      html += '</div>';
+    });
+    tlGrid.innerHTML=html;
+    // handlers de celdas libres
+    tlGrid.querySelectorAll('.tl-cell:not([disabled])').forEach(function(c){
+      c.addEventListener('click',function(){
+        var rid=c.getAttribute('data-r'), sj=+c.getAttribute('data-s');
+        selected=rid; pending={room:rid,slot:sj};
+        openBookForm();
+        renderAll();
+      });
+    });
+  }
+
+  /* ---------- QR decorativo (patrón determinista, dibujado en SVG) ---------- */
+  (function(){
+    var svg=document.getElementById('qr'); if(!svg) return;
+    var N=29, cell=1;
+    var svgns='http://www.w3.org/2000/svg';
+    // patrón pseudoaleatorio determinista (no es un QR válido; es decorativo)
+    function on(x,y){
+      // ojos de posición (finder patterns)
+      function finder(fx,fy){ return (x>=fx&&x<fx+7&&y>=fy&&y<fy+7) &&
+        !((x>fx&&x<fx+6&&y>fy&&y<fy+6) && !(x>=fx+2&&x<fx+5&&y>=fy+2&&y<fy+5)); }
+      if(finder(0,0)||finder(N-7,0)||finder(0,N-7)) return true;
+      if((x<8&&y<8)||(x>N-9&&y<8)||(x<8&&y>N-9)) return false; // zona reservada de ojos
+      var v=(x*73856093 ^ y*19349663 ^ (x+y)*83492791) >>> 0;
+      return (v%100)<46;
+    }
+    var frag=document.createDocumentFragment();
+    for(var y=0;y<N;y++) for(var x=0;x<N;x++){
+      if(on(x,y)){
+        var rc=document.createElementNS(svgns,'rect');
+        rc.setAttribute('x',x*cell); rc.setAttribute('y',y*cell);
+        rc.setAttribute('width',cell); rc.setAttribute('height',cell);
+        rc.setAttribute('fill','#05080d');
+        frag.appendChild(rc);
+      }
+    }
+    svg.appendChild(frag);
+  })();
+
+  /* ---------- selección de sala ---------- */
+  function selectRoom(id){ selected=id; if(pending && pending.room!==id) pending=null; closeBookForm(); renderAll(); }
+
+  /* ---------- formulario de reserva ---------- */
+  var bookForm=document.getElementById('bookForm'), bkSlot=document.getElementById('bkSlot'),
+      bkName=document.getElementById('bkName'), bkConfirm=document.getElementById('bkConfirm'), bkCancel=document.getElementById('bkCancel');
+  function openBookForm(){
+    if(!pending) return;
+    bookForm.hidden=false;
+    bkSlot.textContent=slotLabel(pending.slot);
+    try{ bkName.focus(); }catch(_){}
+  }
+  function closeBookForm(){ bookForm.hidden=true; }
+  bkConfirm.addEventListener('click',function(){
+    if(!pending) return;
+    var who=(bkName.value||'').trim() || T('Reserva','Booking');
+    bookings[pending.room][pending.slot]={who:who, pending:false};
+    var isNow=(pending.slot===NOW);
+    var lbl=slotLabel(pending.slot), rn=rooms.filter(function(x){return x.id===pending.room;})[0].name;
+    bkName.value=''; pending=null; closeBookForm();
+    toast('<b>'+esc(rn)+'</b> '+T('reservada a las ','booked at ')+lbl+' ✓', 'info');
+    renderAll();
+  });
+  bkCancel.addEventListener('click',function(){ pending=null; closeBookForm(); renderAll(); });
+
+  /* ---------- reservar ahora (con no-show) ---------- */
+  var btnNow=document.getElementById('btnNow'), btnFree=document.getElementById('btnFree');
+  var checkinBar=document.getElementById('checkinBar'), checkinCd=document.getElementById('checkinCd'),
+      btnCheckin=document.getElementById('btnCheckin');
+  var NOSHOW_SECS=15;
+
+  function clearNoshow(){ if(noshow&&noshow.timer){ clearInterval(noshow.timer); } noshow=null; checkinBar.classList.remove('on'); }
+
+  btnNow.addEventListener('click',function(){
+    var r=rooms.filter(function(x){return x.id===selected;})[0];
+    if(bookings[r.id][NOW]!=null){ toast('<b>'+esc(r.name)+'</b> '+T('ya está ocupada ahora.','is already busy now.'),'warn'); return; }
+    clearNoshow();
+    bookings[r.id][NOW]={who:T('Reserva exprés','Instant hold'), pending:true};
+    noshow={room:r.id, slot:NOW, secs:NOSHOW_SECS};
+    checkinBar.classList.add('on');
+    checkinCd.textContent=NOSHOW_SECS+'s';
+    renderAll();
+    if(prefersReduced){
+      // sin cuenta atrás visible molesta; aún libera pero más lento
+    }
+    noshow.timer=setInterval(function(){
+      noshow.secs--;
+      checkinCd.textContent=Math.max(0,noshow.secs)+'s';
+      if(noshow.secs<=0){
+        var rid=noshow.room; clearNoshow();
+        if(bookings[rid][NOW]!=null && bookings[rid][NOW].pending){
+          delete bookings[rid][NOW];
+          var rn=rooms.filter(function(x){return x.id===rid;})[0].name;
+          toast('<b>'+esc(rn)+'</b> '+T('liberada por no-show —nadie hizo check-in.','released on no-show —nobody checked in.'),'warn');
+        }
+        renderAll();
+      }
+    },1000);
+    toast('<b>'+esc(r.name)+'</b> '+T('reservada ahora · haz check-in en '+NOSHOW_SECS+'s','held now · check in within '+NOSHOW_SECS+'s'),'info');
+  });
+
+  btnCheckin.addEventListener('click',function(){
+    if(!noshow){ checkinBar.classList.remove('on'); return; }
+    var rid=noshow.room;
+    if(bookings[rid][NOW]!=null){ bookings[rid][NOW].pending=false; bookings[rid][NOW].who=T('En sala','Checked in'); }
+    var rn=rooms.filter(function(x){return x.id===rid;})[0].name;
+    clearNoshow();
+    toast('<b>'+esc(rn)+'</b> '+T('check-in confirmado ✓','check-in confirmed ✓'),'info');
+    renderAll();
+  });
+
+  btnFree.addEventListener('click',function(){
+    var r=rooms.filter(function(x){return x.id===selected;})[0];
+    var had=false;
+    for(var i=NOW;i<SLOTS;i++){ if(bookings[r.id][i]!=null){ delete bookings[r.id][i]; had=true; } }
+    if(noshow && noshow.room===r.id) clearNoshow();
+    if(had) toast('<b>'+esc(r.name)+'</b> '+T('liberada (reservas de hoy en adelante).','released (from now on).'),'warn');
+    else toast('<b>'+esc(r.name)+'</b> '+T('ya estaba libre.','was already free.'),'info');
+    renderAll();
+  });
+
+  /* ---------- reloj de demo (avanza el minutero visual, NOW es fijo) ---------- */
+  (function(){
+    var el=document.getElementById('planClock');
+    var base=START_H*60 + NOW*30; // 11:00 en minutos
+    var min=0;
+    function paint(){ var m=base+min; var h=Math.floor(m/60)%24, mm=m%60; el.textContent=(h<10?'0':'')+h+':'+(mm<10?'0':'')+mm; }
+    paint();
+    if(!prefersReduced){ setInterval(function(){ min=(min+1)%30; paint(); }, 2000); }
+  })();
+
+  /* ---------- render maestro ---------- */
+  function renderAll(){ renderPlan(); renderDoor(); renderTimeline(); }
+
+  redrawI18n=(function(prev){ return function(){ prev&&prev(); renderAll(); }; })(redrawI18n);
+
+  renderAll();
+})();
 </script>
 </body>
 </html>

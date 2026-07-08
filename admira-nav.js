@@ -4,7 +4,7 @@
  * data-active: flota|apps|calendar|condicional|canal|mural|comprar|adcelerate|alta|help   ·   data-title: subtítulo de la barra.
  * Estado (plegado/detalle) compartido entre páginas vía localStorage.
  * El ítem "Apps" despliega un submenú (flyout en desktop · acordeón en móvil) con las 18 apps del stack,
- * cuyo estado ●/○ vive en window.AdmiraApps (fuente única que también consume /apps/). v.08.07.2026.r11 */
+ * cuyo estado ●/○ vive en window.AdmiraApps (fuente única que también consume /apps/). v.08.07.2026.r13 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -73,7 +73,7 @@
    * FUENTE ÚNICA de estado ●/○: la lanzadera /apps/ y el submenú del sidebar beben de aquí (window.AdmiraApps).
    * st: 'live' = ● en antena · 'wip' = ○ en construcción. Al encender una app, se cambia SOLO aquí. */
   var APPS=[
-    {s:'dashboard',          nm:'Dashboard',            en:'Dashboard',           ds:'Los KPIs de tu red en una pantalla.',            st:'wip'},
+    {s:'dashboard',          nm:'Dashboard',            en:'Dashboard',           ds:'Los KPIs de tu red en una pantalla.',            st:'live'},
     {s:'digitalsignage',     nm:'Señalización',         en:'Digital Signage',     ds:'Programa y emite tu cartelería en la red.',      st:'live'},
     {s:'contentcatalogue',   nm:'Catálogo',             en:'Content Catalogue',   ds:'Tu biblioteca de creativos, lista para antena.', st:'wip'},
     {s:'support',            nm:'Soporte',              en:'Support',             ds:'Incidencias, tickets y ayuda del ecosistema.',   st:'wip'},
@@ -86,8 +86,8 @@
     {s:'radioanalytics',     nm:'Analítica de radio',   en:'Radio Analytics',     ds:'Cuenta la afluencia anónima, sin identificar a nadie.', st:'live'},
     {s:'socialwifi',         nm:'Social WiFi',          en:'Social Wifi',         ds:'WiFi de invitados que convierte visitas en datos.',st:'wip'},
     {s:'queuemanager',       nm:'Colas',                en:'Queue Manager',       ds:'Mide la espera real y simula la cola en el gemelo.', st:'live'},
-    {s:'roombooking',        nm:'Salas',                en:'Room Booking',        ds:'Reserva espacios y salas al instante.',           st:'wip'},
-    {s:'audiobranding',      nm:'Audiobranding',        en:'Audiobranding',       ds:'La identidad sonora de tu espacio, con IA.',      st:'wip'},
+    {s:'roombooking',        nm:'Salas',                en:'Room Booking',        ds:'Reserva espacios y salas al instante.',           st:'live'},
+    {s:'audiobranding',      nm:'Audiobranding',        en:'Audiobranding',       ds:'La identidad sonora de tu espacio, con IA.',      st:'live'},
     {s:'olfactorymarketing', nm:'Marketing olfativo',   en:'Olfactory Marketing', ds:'El aroma como canal de marca.',                   st:'wip'},
     {s:'virtualreality',     nm:'Realidad virtual',     en:'Virtual Reality',     ds:'Experiencias inmersivas para tu marca.',          st:'wip'},
     {s:'augmentedreality',   nm:'Realidad aumentada',   en:'Augmented Reality',   ds:'Capas digitales sobre el mundo real.',            st:'wip'}
