@@ -2,59 +2,596 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<link rel="preconnect" href="https://api.admira.store" crossorigin>
+<!-- preconnect: chrome de la lanzadera (mismo origen sirve el motor vía proxy) -->
 <link rel="preconnect" href="https://www.carlossilva.info">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gamificación · Admira.tv</title>
-<meta name="description" content="Retos, puntos y recompensas para convertir a tu audiencia en clientes fieles.">
+<meta name="description" content="Retos, puntos y recompensas para tu audiencia. Panel propio sobre un motor de fidelización headless: Admira emite los hechos, el motor decide los premios.">
 <meta name="theme-color" content="#070a10">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="canonical" href="https://admira.tv/gamification/">
 <meta property="og:title" content="Gamificación · Admira.tv">
-<meta property="og:description" content="Retos, puntos y recompensas para convertir a tu audiencia en clientes fieles.">
+<meta property="og:description" content="Retos, puntos y recompensas para tu audiencia. Panel propio sobre motor de fidelización headless en producción.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://admira.tv/gamification/">
 <meta property="og:image" content="https://admira.tv/og-admira.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Gamificación · Admira.tv">
+<meta name="twitter:description" content="Retos, puntos y recompensas para tu audiencia. Panel propio sobre motor headless en producción.">
+<meta name="twitter:image" content="https://admira.tv/og-admira.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": "https://admira.tv/gamification/",
+  "url": "https://admira.tv/gamification/",
+  "name": "Gamificación · Admira.tv",
+  "inLanguage": "es",
+  "isPartOf": { "@id": "https://admira.tv/#site" },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Admira Gamificación",
+    "applicationCategory": "Loyalty & Gamification",
+    "operatingSystem": "Web, Edge device",
+    "description": "Panel de gamificación de la lanzadera Admira XP: puntos, badges, tiers y ranking por ubicación sobre un motor de fidelización headless (Open Loyalty). Admira solo emite hechos normalizados; el motor decide los premios. Circuito de eventos idempotente con outbox y webhooks firmados, en producción."
+  }
+}
+</script>
 <style>
-  :root{--bg:#070a10;--panel:#0b1119;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--amber:#f5b431}
+  :root{--bg:#070a10;--panel:#0b1119;--panel2:#0e1622;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--cyan:#38d6ff;--amber:#f5b431;--pink:#ff6ec7;--red:#ff5a5a}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
   body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px);opacity:.5}
   a{color:inherit;text-decoration:none}
-  .wrap{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:min(12vh,90px) 20px 60px;text-align:center}
-  .ic{width:84px;height:84px;margin:0 auto 22px;display:grid;place-items:center;border-radius:20px;background:rgba(61,240,138,.07);border:1px solid rgba(61,240,138,.18)}
-  .ic svg{width:46px;height:46px;color:var(--green);filter:drop-shadow(0 0 6px rgba(61,240,138,.55))}
-  h1{font-size:clamp(28px,6vw,42px);margin:0 0 4px;letter-spacing:-.01em;font-weight:800}
-  .en{font:600 12px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:0 0 18px}
-  .ds{color:var(--dim);font-size:16px;max-width:460px;margin:0 auto 26px}
-  .badge{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--amber);color:var(--amber);border-radius:999px;padding:8px 16px;font:700 12px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase}
-  .badge .d{width:9px;height:9px;border-radius:50%;border:2px solid var(--amber);position:relative}
-  .badge .d::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid var(--amber);opacity:.5;animation:p 1.8s ease-out infinite}
-  @keyframes p{0%{transform:scale(.7);opacity:.6}100%{transform:scale(1.5);opacity:0}}
-  @media(prefers-reduced-motion:reduce){.badge .d::after{animation:none}}
-  .back{display:inline-flex;align-items:center;gap:8px;margin-top:30px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 18px;font-weight:600;font-size:14px;transition:border-color .2s,color .2s}
+  img,svg,iframe,video{max-width:100%}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 20px}
+  .eyebrow{font:600 12px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--green)}
+  section{padding:48px 0}
+  .sec-head{max-width:740px;margin:0 auto 28px;text-align:center}
+  .sec-head h2{font-size:clamp(24px,4vw,34px);margin:8px 0 8px;letter-spacing:-.01em;font-weight:800}
+  .sec-head p{color:var(--dim);margin:0;font-size:15.5px}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:11px 20px;font-weight:700;font-size:14px;border:1px solid #2a3a66;background:transparent;color:var(--txt);cursor:pointer;transition:transform .12s,border-color .2s,background .2s}
+  .btn:hover{transform:translateY(-1px);border-color:#3a4f8a}
+  .btn.primary{background:var(--green);border-color:var(--green);color:#03140a}
+  .btn.primary:hover{background:#5cf6a1}
+  .btn.sm{padding:8px 14px;font-size:13px}
+  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  .btn svg{width:15px;height:15px;flex:none}
+  a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
+  /* hero */
+  .hero{padding:74px 0 22px;text-align:center}
+  .kicker{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 13px;font:600 11.5px ui-monospace,monospace;color:var(--dim);letter-spacing:.04em}
+  .kicker .d{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green)}
+  .hero h1{font-size:clamp(30px,6.4vw,54px);line-height:1.05;margin:18px auto 12px;letter-spacing:-.02em;font-weight:800;max-width:880px}
+  .hero h1 .g{color:var(--green);text-shadow:0 0 22px rgba(61,240,138,.32)}
+  .hero .en{font:600 12px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:0 0 14px}
+  .hero .lead{font-size:clamp(16px,2.2vw,19px);color:var(--dim);max-width:720px;margin:0 auto}
+  .hero-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+
+  /* PANEL VIVO (la estrella) */
+  .stage{border:1px solid rgba(61,240,138,.28);border-radius:18px;background:var(--panel);overflow:hidden;box-shadow:0 0 40px rgba(61,240,138,.06)}
+  .stage-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .stage-h .ttl{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15.5px}
+  .stage-h .ttl .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex:none;animation:blink 1.9s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  @media(prefers-reduced-motion:reduce){.stage-h .ttl .dot{animation:none}}
+  .stage-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .tag-live{font:700 10px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--green);border:1px solid rgba(61,240,138,.4);border-radius:999px;padding:4px 9px}
+  .panel-body{padding:16px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .pcard{border:1px solid var(--line);border-radius:15px;background:var(--panel2);padding:18px;min-width:0}
+  .pcard .ph{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
+  .pcard .ph h3{margin:0;font-size:15.5px;font-weight:800}
+  .pcard .ph .en{font:600 10px ui-monospace,monospace;color:var(--dim);letter-spacing:.05em;text-transform:uppercase}
+
+  /* wallet */
+  .wallet-top{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+  .pts{font-size:clamp(34px,7vw,46px);font-weight:800;line-height:1;letter-spacing:-.02em;color:var(--green);text-shadow:0 0 18px rgba(61,240,138,.28)}
+  .pts small{display:block;font:600 10px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin-top:6px;text-shadow:none}
+  .tier{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 13px;font-weight:700;font-size:13px;border:1px solid var(--line);background:var(--panel)}
+  .tier .medal{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;background:radial-gradient(circle at 35% 30%,#fff6,transparent 60%),var(--tc,#cd7f32);box-shadow:0 0 10px var(--tc,#cd7f32)}
+  .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .badge-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(245,180,49,.4);background:rgba(245,180,49,.08);color:var(--amber);border-radius:999px;padding:6px 12px;font-weight:700;font-size:12.5px}
+  .badge-chip .m{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;background:radial-gradient(circle at 35% 30%,#fff8,transparent 60%),var(--amber);color:#3a2a00}
+  .muted-badge{color:var(--dim);font-size:12.5px;border:1px dashed var(--line);border-radius:999px;padding:6px 12px}
+  .sync{margin:14px 0 0;font:600 11px ui-monospace,monospace;color:var(--dim);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .sync .pend{color:var(--amber)}
+
+  /* misiones */
+  .missions{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:760px){.missions{grid-template-columns:1fr}}
+  .mission{border:1px solid var(--line);border-radius:13px;background:var(--panel);padding:15px;min-width:0}
+  .mission .mi{width:38px;height:38px;display:grid;place-items:center;border-radius:10px;background:rgba(61,240,138,.07);border:1px solid rgba(61,240,138,.16);margin-bottom:10px}
+  .mission .mi svg{width:21px;height:21px;color:var(--green)}
+  .mission h4{margin:0 0 3px;font-size:14.5px;font-weight:700}
+  .mission .rw{font:600 11px ui-monospace,monospace;color:var(--green);margin:0 0 8px}
+  .mission p{margin:0 0 10px;color:var(--dim);font-size:12.5px;line-height:1.45}
+  .state{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:12px;border-radius:999px;padding:5px 11px;border:1px solid var(--line)}
+  .state.done{color:var(--green);border-color:rgba(61,240,138,.4);background:rgba(61,240,138,.08)}
+  .state.pending{color:var(--dim)}
+  .state.ext{color:var(--cyan);border-color:rgba(56,214,255,.35)}
+  .state .tick{width:8px;height:8px;border-radius:50%;background:currentColor}
+
+  /* demo jugable */
+  .demo-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .demo-actions .btn{flex:1 1 auto}
+  .feedback{min-height:22px;font-size:13.5px;line-height:1.5;border-radius:10px;padding:10px 13px;border:1px solid var(--line);background:var(--panel);color:var(--dim);transition:border-color .2s,color .2s}
+  .feedback.ok{border-color:rgba(61,240,138,.4);color:var(--txt)}
+  .feedback.warn{border-color:rgba(245,180,49,.5);color:var(--amber)}
+  .feedback.err{border-color:rgba(255,90,90,.5);color:#ff9a9a}
+  .mint{font:600 11.5px ui-monospace,monospace;color:var(--dim);margin:12px 0 0;line-height:1.5}
+  .mint b{color:var(--amber);font-weight:700}
+
+  /* ranking */
+  .rank-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  select.loc{appearance:none;-webkit-appearance:none;background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:9px;padding:8px 30px 8px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238595ad' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+  .lb{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .lb li{display:flex;align-items:center;gap:12px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);min-width:0}
+  .lb li.me{border-color:rgba(61,240,138,.5);background:rgba(61,240,138,.06)}
+  .lb .rk{font:700 12px ui-monospace,monospace;color:var(--dim);min-width:28px}
+  .lb .who{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600}
+  .lb .who .tagme{color:var(--green);font:700 10px ui-monospace,monospace;margin-left:6px}
+  .lb .pv{font-weight:800;font-size:14px;color:var(--green)}
+  .lb-empty{color:var(--dim);font-size:13px;padding:10px 2px}
+
+  /* skeleton + aviso de degradación */
+  .sk{color:var(--dim)}
+  .apinote{display:none;align-items:center;gap:10px;margin:0 0 16px;border:1px solid rgba(245,180,49,.45);background:rgba(245,180,49,.06);color:var(--amber);border-radius:12px;padding:11px 14px;font-size:13px}
+  .apinote.show{display:flex}
+  .idchip{font:600 10.5px ui-monospace,monospace;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+
+  /* capacidades (6 tarjetas) */
+  .caps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:820px){.caps{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:520px){.caps{grid-template-columns:1fr}}
+  .cap{border:1px solid var(--line);border-radius:15px;background:var(--panel);padding:20px;min-width:0;transition:transform .13s,border-color .2s,background .2s}
+  .cap:hover{transform:translateY(-3px);border-color:#2a3a66;background:var(--panel2)}
+  .cap .ci{width:42px;height:42px;display:grid;place-items:center;border-radius:11px;background:rgba(61,240,138,.07);border:1px solid rgba(61,240,138,.16);margin-bottom:12px}
+  .cap .ci svg{width:23px;height:23px;color:var(--green);filter:drop-shadow(0 0 3px rgba(61,240,138,.5))}
+  .cap .en{font:600 10px ui-monospace,monospace;color:var(--dim);letter-spacing:.03em;text-transform:uppercase;margin:0 0 8px}
+  .cap h3{margin:0 0 5px;font-size:17px;font-weight:700}
+  .cap p{margin:0;color:var(--dim);font-size:13.5px;line-height:1.5}
+  .cap p a{color:var(--cyan);border-bottom:1px solid rgba(56,214,255,.35)}
+
+  /* integración con el stack (enlaces) */
+  .links{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:820px){.links{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:460px){.links{grid-template-columns:1fr}}
+  .lk{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:13px;background:var(--panel);padding:16px;transition:transform .12s,border-color .2s,background .2s}
+  .lk:hover{transform:translateY(-3px);border-color:#2a3a66;background:var(--panel2)}
+  .lk .ci{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:rgba(61,240,138,.07);border:1px solid rgba(61,240,138,.16);margin-bottom:2px}
+  .lk .ci svg{width:19px;height:19px;color:var(--green)}
+  .lk .nm{font-weight:700;font-size:15px}
+  .lk .ds{color:var(--dim);font-size:12.5px;line-height:1.4}
+  .lk .go{font:600 11.5px ui-monospace,monospace;color:var(--green);margin-top:auto}
+  .lk .soon{color:var(--dim)}
+  .adr{text-align:center;margin:20px 0 0;font-size:13px;color:var(--dim)}
+  .adr a{color:var(--cyan);border-bottom:1px solid rgba(56,214,255,.35)}
+
+  /* CTA final */
+  .cta{border:1px solid var(--line);border-radius:18px;background:radial-gradient(120% 130% at 50% 0%,rgba(61,240,138,.08),transparent 60%),var(--panel);padding:40px 24px;text-align:center}
+  .cta h2{font-size:clamp(22px,3.6vw,30px);margin:0 0 8px;font-weight:800;letter-spacing:-.01em}
+  .cta p{color:var(--dim);margin:0 auto 22px;max-width:520px;font-size:15px}
+  .cta-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+  .foot{margin-top:20px;padding:26px 20px 46px;border-top:1px solid var(--line);color:var(--dim);font:600 11.5px ui-monospace,monospace;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;max-width:1080px;margin-left:auto;margin-right:auto}
+  .foot a{color:var(--dim)} .foot a:hover{color:var(--green)}
+  .foot .eng{color:var(--dim)} .foot .eng b{color:var(--green);font-weight:700}
+  .back{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 15px;font-weight:600;font-size:13.5px;transition:border-color .2s,color .2s}
   .back:hover{border-color:var(--green);color:#fff}
-  .back:focus-visible{outline:2px solid var(--green);outline-offset:2px}
-  .foot{margin-top:44px;color:var(--dim);font:600 11px ui-monospace,monospace}
 </style>
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.08.07.2026.r3';</script>
-<script src="/admira-nav.js?v=08.07.2026.r23" data-active="apps" data-title="Gamificación" defer></script>
+<script>window.ADMIRA_VERSION='v.08.07.2026.r25';</script>
+<script src="/admira-nav.js?v=08.07.2026.r25" data-active="apps" data-title="Gamificación" defer></script>
 
-<main class="wrap" id="admskip-target">
-  <div class="ic" id="ic" aria-hidden="true"></div>
-  <h1>Gamificación</h1>
-  <p class="en">Gamification</p>
-  <p class="ds">Retos, puntos y recompensas para convertir a tu audiencia en clientes fieles.</p>
-  <span class="badge"><span class="d"></span>En construcción · esta noche</span>
-  <div><a class="back" href="/apps/">&larr; Volver a la lanzadera</a></div>
-  <p class="foot">Admira · tv · v.08.07.2026.r3</p>
+<main id="admskip-target">
+
+  <!-- HERO -->
+  <header class="hero wrap">
+    <span class="kicker"><span class="d"></span>Puntos · Badges · Tiers · Ranking</span>
+    <h1>Retos, puntos y recompensas <span class="g">para tu audiencia</span></h1>
+    <p class="en">Gamification · powered by open loyalty engine</p>
+    <p class="lead">Convierte cada visita en un juego. Admira registra lo que pasa de verdad —un check-in, un QR, una misión— y un motor de fidelización decide los premios. Aquí lo ves latir, en vivo.</p>
+    <div class="hero-actions">
+      <a class="btn primary" href="#panel">▶ Abrir mi panel</a>
+      <a class="btn" href="#capacidades">Qué hace</a>
+    </div>
+  </header>
+
+  <!-- PANEL VIVO -->
+  <section class="wrap" id="panel" style="padding-top:20px">
+    <div class="stage">
+      <div class="stage-h">
+        <span class="ttl"><span class="dot"></span>Tu panel, en vivo</span>
+        <div class="stage-tools">
+          <span class="tag-live">En vivo</span>
+          <span class="idchip" id="idchip" title="Tu identificador anónimo de visitante">visitor·—</span>
+        </div>
+      </div>
+      <div class="panel-body">
+
+        <div class="apinote" id="apiNote" role="status">
+          <span>El motor no responde ahora mismo — te enseñamos el panel en reposo. Reintentando…</span>
+        </div>
+
+        <div class="grid2">
+          <!-- WALLET -->
+          <div class="pcard" id="wallet" aria-live="polite">
+            <div class="ph"><h3>Tu cartera</h3><span class="en">Wallet</span></div>
+            <div class="wallet-top">
+              <div class="pts"><span id="wPts" class="sk">—</span><small>puntos</small></div>
+              <span class="tier" id="wTier" style="--tc:#cd7f32"><span class="medal">🥉</span><span id="wTierName" class="sk">—</span></span>
+            </div>
+            <div class="badges" id="wBadges"><span class="muted-badge">Aún sin badges — completa una misión</span></div>
+            <p class="sync" id="wSync"><span class="sk">Cargando estado…</span></p>
+          </div>
+
+          <!-- DEMO JUGABLE -->
+          <div class="pcard" id="demo">
+            <div class="ph"><h3>Prueba el circuito</h3><span class="en">Live demo</span></div>
+            <div class="demo-actions">
+              <button class="btn primary sm" id="btnWifi" type="button">📶 Check-in WiFi <span class="mono" style="opacity:.8">+10</span></button>
+              <button class="btn sm" id="btnQr" type="button">📷 Escanear QR <span class="mono" style="opacity:.8">+5</span></button>
+            </div>
+            <div class="feedback" id="fb" role="status" aria-live="polite">Pulsa un botón: emite un hecho REAL al motor de producción.</div>
+            <p class="mint">Los hechos son reales e idempotentes. <b>Tus puntos se acuñan en minutos</b> (el motor los procesa por lotes cada pocos minutos) — por eso el saldo puede tardar en subir.</p>
+            <div style="margin-top:12px"><button class="btn sm" id="btnRefresh" type="button">↻ Refrescar cartera</button></div>
+          </div>
+        </div>
+
+        <!-- MISIONES -->
+        <div class="pcard" style="margin-top:16px">
+          <div class="ph"><h3>Misiones del piloto</h3><span class="en">Missions</span></div>
+          <div class="missions" id="missions">
+            <div class="mission" data-m="wifi.checkin">
+              <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5C7.5 4 16.5 4 22 8.5M5 11.8c4-3 10-3 14 0M8.5 15c2.1-1.6 4.9-1.6 7 0"/><circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none"/></svg></div>
+              <h4>Check-in WiFi</h4>
+              <p class="rw">+10 puntos</p>
+              <p>Conéctate al WiFi del local y suma. Uno al día por sitio.</p>
+              <span class="state pending" id="s-wifi"><span class="tick"></span>Pendiente</span>
+            </div>
+            <div class="mission" data-m="qr.scan">
+              <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="6" height="6" rx="1"/><rect x="14.5" y="3.5" width="6" height="6" rx="1"/><rect x="3.5" y="14.5" width="6" height="6" rx="1"/><path d="M14.5 14.5h3v3M20.5 14.5v6M14.5 20.5h3"/></svg></div>
+              <h4>Escanear QR</h4>
+              <p class="rw">+5 puntos</p>
+              <p>Escanea el QR del MUPI o la pantalla. Uno cada 5 minutos.</p>
+              <span class="state pending" id="s-qr"><span class="tick"></span>Pendiente</span>
+            </div>
+            <div class="mission" data-m="queue.complete">
+              <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11.5l2 2 4.5-4.5"/><circle cx="12" cy="12" r="9"/></svg></div>
+              <h4>Misión completada</h4>
+              <p class="rw">Badge “Primera misión”</p>
+              <p>Reúne check-in + QR + una cola atendida y desbloquea el badge.</p>
+              <span class="state ext" id="s-queue"><span class="tick"></span>Desde Colas</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RANKING -->
+        <div class="pcard" style="margin-top:16px" aria-live="polite">
+          <div class="rank-head">
+            <div class="ph" style="margin:0"><h3>Ranking semanal</h3></div>
+            <label class="mono" style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:8px">Ubicación
+              <select class="loc" id="locSel" aria-label="Elegir ubicación del ranking">
+                <option value="xtore-inicial">xtore-inicial</option>
+                <option value="demo-web">demo-web</option>
+              </select>
+            </label>
+          </div>
+          <ol class="lb" id="lb"><li class="lb-empty sk">Cargando ranking…</li></ol>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- CAPACIDADES -->
+  <section class="wrap" id="capacidades">
+    <div class="sec-head">
+      <p class="eyebrow">Qué hace</p>
+      <h2>Del hecho al premio</h2>
+      <p>Todo lo que espera una plataforma de fidelización moderna, con una diferencia: Admira solo cuenta lo que pasa de verdad; el motor decide.</p>
+    </div>
+    <div class="caps">
+      <div class="cap">
+        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.9 7.2 18.7l.9-5.4L4.2 8.7l5.4-.8z"/></svg></div>
+        <p class="en">Real points</p>
+        <h3>Puntos por hechos</h3>
+        <p>Cada check-in, QR o interacción real suma. Nada de humo: solo hechos verificados.</p>
+      </div>
+      <div class="cap">
+        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5L7 21l5-2.5L17 21l-1.5-7.5"/></svg></div>
+        <p class="en">Badges</p>
+        <h3>Badges y logros</h3>
+        <p>Misiones que desbloquean insignias. Objetivos claros que enganchan a volver.</p>
+      </div>
+      <div class="cap">
+        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V9M12 20V4M20 20v-7"/></svg></div>
+        <p class="en">Tiers</p>
+        <h3>Niveles</h3>
+        <p>Bronce, plata, oro. Cuanto más participa tu audiencia, más sube y más gana.</p>
+      </div>
+      <div class="cap">
+        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.4-7-9.5A3.5 3.5 0 0 1 12 8a3.5 3.5 0 0 1 7 3.5C19 16.6 12 21 12 21z"/></svg></div>
+        <p class="en">Location ranking</p>
+        <h3>Ranking por ubicación</h3>
+        <p>Clasificación semanal por local. Competición sana que llena tus puntos de venta.</p>
+      </div>
+      <div class="cap">
+        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2M3 8h18v3a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3zM9 14v6M15 14v6M7 20h10"/></svg></div>
+        <p class="en">Rewards</p>
+        <h3>Recompensas</h3>
+        <p>Canjea puntos por premios. En el piloto hay una recompensa de prueba —la validación de redención está en curso.</p>
+      </div>
+      <div class="cap">
+        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
+        <p class="en">Headless engine</p>
+        <h3>Motor headless</h3>
+        <p>El motor decide los premios; Admira solo emite los hechos y muestra el resultado. Cambiar de motor no toca tu marca.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- INTEGRACIÓN CON EL STACK -->
+  <section class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Encaja en el stack</p>
+      <h2>Los hechos llegan de tus apps</h2>
+      <p>La gamificación no vive sola: se alimenta de lo que ocurre en las apps hermanas de la lanzadera. Cada una emite su hecho y el motor lo premia.</p>
+    </div>
+    <div class="links">
+      <a class="lk" href="/socialwifi/">
+        <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5C7.5 4 16.5 4 22 8.5M5 11.8c4-3 10-3 14 0M8.5 15c2.1-1.6 4.9-1.6 7 0"/><circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none"/></svg></span>
+        <span class="nm">WiFi Social</span>
+        <span class="ds">Emite <code class="mono">wifi.checkin</code> al conectarse un visitante.</span>
+        <span class="go">socialwifi →</span>
+      </a>
+      <a class="lk" href="/queuemanager/">
+        <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="2.4"/><circle cx="7" cy="15.5" r="2.4"/><path d="M12 7h9M12 15.5h9"/></svg></span>
+        <span class="nm">Colas</span>
+        <span class="ds">Emite <code class="mono">queue.complete</code> al atender un turno.</span>
+        <span class="go">queuemanager →</span>
+      </a>
+      <a class="lk" href="/roombooking/">
+        <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="16" rx="2"/><path d="M3.5 9h17M8 3v3M16 3v3M8.5 13h3"/></svg></span>
+        <span class="nm">Reservas</span>
+        <span class="ds"><code class="mono">room.booking</code> — <span class="soon">en preparación</span>.</span>
+        <span class="go">roombooking →</span>
+      </a>
+      <a class="lk" href="/xr/">
+        <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5a2 2 0 0 1 2-2h15a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-4l-3 3-3-3h-5a2 2 0 0 1-2-2z"/><circle cx="8.5" cy="11" r="1.3"/><circle cx="15.5" cy="11" r="1.3"/></svg></span>
+        <span class="nm">Experiencias XR</span>
+        <span class="ds"><code class="mono">xr.reward.triggered</code> — <span class="soon">en preparación</span>.</span>
+        <span class="go">xr →</span>
+      </a>
+    </div>
+    <p class="adr">Motor de fidelización <b style="color:var(--green);font-weight:700">en producción desde hoy</b> — puente de hechos con outbox idempotente y webhooks firmados. <a href="/apps/">Ver toda la lanzadera →</a></p>
+  </section>
+
+  <!-- CTA -->
+  <section class="wrap">
+    <div class="cta">
+      <h2>Convierte visitas en fidelidad</h2>
+      <p>Enciende retos, puntos y recompensas sobre lo que ya ocurre en tus pantallas y tus locales. La marca es tuya; el motor, invisible.</p>
+      <div class="cta-actions">
+        <a class="btn primary" href="#panel">▶ Ver mi panel en vivo</a>
+        <a class="btn" href="/apps/">Ver todas las apps</a>
+      </div>
+    </div>
+    <p style="text-align:center;margin:26px 0 0"><a class="back" href="/apps/">&larr; Volver a la lanzadera</a></p>
+  </section>
+
+  <footer class="foot">
+    <span>Gamificación · panel propio sobre motor en producción → admira.tv</span>
+    <span class="eng">Motor: <b>Open Loyalty (headless)</b> · Puente Admira</span>
+    <span>Admira · tv · <span style="opacity:.75">v.08.07.2026.r25</span></span>
+  </footer>
+
 </main>
 
 <script>
-  (function(){ function set(){ try{ var s=window.AdmiraIcon&&window.AdmiraIcon('gamification'); if(s) document.getElementById('ic').innerHTML=s; }catch(_){}}
-    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',set); else set(); })();
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  var API='/gamification/api';
+  var SOURCE_APP='gamification-web';
+  var DEMO_LOC='demo-web';
+  var QR_SCREEN='demo-web-qr';
+
+  /* ---- identidad anónima estable ---- */
+  function visitorId(){
+    var k='admira_gam_visitor', v=null;
+    try{ v=localStorage.getItem(k); }catch(_){}
+    if(!v){
+      var r='';
+      try{
+        var a=new Uint8Array(8); (crypto||{}).getRandomValues&&crypto.getRandomValues(a);
+        r=[].map.call(a,function(b){return b.toString(16).padStart(2,'0');}).join('');
+      }catch(_){}
+      if(!r) r=(Date.now().toString(36)+Math.random().toString(36).slice(2,8));
+      v='visitor-web-'+r;
+      try{ localStorage.setItem(k,v); }catch(_){}
+    }
+    return v;
+  }
+  var VISITOR=visitorId();
+  (function(){ var c=$('idchip'); if(c){ c.textContent=VISITOR.length>22?VISITOR.slice(0,20)+'…':VISITOR; c.title='Tu identificador anónimo: '+VISITOR; } })();
+
+  /* ---- eco local de hechos disparados (para el estado de misión inmediato) ---- */
+  function firedKey(){ return 'admira_gam_fired:'+VISITOR; }
+  function getFired(){ try{ return JSON.parse(localStorage.getItem(firedKey())||'{}')||{}; }catch(_){ return {}; } }
+  function setFired(type){ var f=getFired(); f[type]=Date.now(); try{ localStorage.setItem(firedKey(),JSON.stringify(f)); }catch(_){} }
+
+  /* ---- utilidades ---- */
+  function sha256Hex(str){
+    if(!(crypto&&crypto.subtle&&crypto.subtle.digest)){
+      // Fallback (no seguro, solo si crypto.subtle no está): hash simple determinista.
+      var h=5381; for(var i=0;i<str.length;i++){ h=((h<<5)+h)^str.charCodeAt(i); }
+      return Promise.resolve('fb'+(h>>>0).toString(16)+str.length.toString(16));
+    }
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)).then(function(buf){
+      return [].map.call(new Uint8Array(buf),function(b){return b.toString(16).padStart(2,'0');}).join('');
+    });
+  }
+  function utcDay(){ var d=new Date(); return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0'); }
+
+  // eventId determinista respetando las ventanas de EVENTS.md.
+  function eventIdFor(type){
+    if(type==='wifi.checkin') return sha256Hex([SOURCE_APP,'wifi.checkin',VISITOR,DEMO_LOC,utcDay()].join('|'));
+    if(type==='qr.scan')      return sha256Hex([SOURCE_APP,'qr.scan',VISITOR,QR_SCREEN,Math.floor(Date.now()/1000/300)].join('|'));
+    return sha256Hex([SOURCE_APP,type,VISITOR,Date.now()].join('|'));
+  }
+
+  var TIERS={ bronze:{n:'Bronce',c:'#cd7f32',e:'🥉'}, silver:{n:'Plata',c:'#c0c8d0',e:'🥈'}, gold:{n:'Oro',c:'#ffd866',e:'🥇'} };
+  var BADGE_LABELS={ 'primera-mision':'Primera misión' };
+
+  function api(path, opts){
+    return fetch(API+path, Object.assign({ headers:{'Content-Type':'application/json','Accept':'application/json'}, cache:'no-store' }, opts||{}))
+      .then(function(r){ return r.json().then(function(j){ return {status:r.status, body:j}; }).catch(function(){ return {status:r.status, body:{}}; }); });
+  }
+
+  function showApiNote(show){ var n=$('apiNote'); if(n) n.classList.toggle('show',!!show); }
+
+  /* ---- render wallet + misiones ---- */
+  function renderMe(me){
+    var pts=Number(me.points||0), tier=(me.tier||'bronze'), td=TIERS[tier]||TIERS.bronze;
+    $('wPts').textContent=pts; $('wPts').classList.remove('sk');
+    var tEl=$('wTier'); tEl.style.setProperty('--tc',td.c); tEl.querySelector('.medal').textContent=td.e;
+    var tn=$('wTierName'); tn.textContent=td.n; tn.classList.remove('sk');
+
+    var badges=Array.isArray(me.badges)?me.badges:[];
+    var bw=$('wBadges');
+    if(badges.length){
+      bw.innerHTML=badges.map(function(b){ var lbl=BADGE_LABELS[b.badge]||b.badge; return '<span class="badge-chip"><span class="m">🎖</span>'+esc(lbl)+'</span>'; }).join('');
+    }else{
+      bw.innerHTML='<span class="muted-badge">Aún sin badges — completa una misión</span>';
+    }
+
+    var pend=Number(me.pendingEvents||0);
+    var last=me.lastSync?new Date(me.lastSync*1000):null;
+    var sync=$('wSync'); sync.classList.remove('sk');
+    var bits=[];
+    if(pend>0) bits.push('<span class="pend">'+pend+' hecho'+(pend===1?'':'s')+' acuñándose…</span>');
+    bits.push(last?('Última sincronía '+last.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})):'Sin sincronía todavía');
+    sync.innerHTML=bits.join(' · ');
+
+    // Estado de misiones: badge (server) + eco local de lo que has disparado.
+    var fired=getFired();
+    var hasBadge=badges.some(function(b){return b.badge==='primera-mision';});
+    setMission('s-wifi',  !!fired['wifi.checkin']||hasBadge||pts>=10, 'Hecho', 'Pendiente', false);
+    setMission('s-qr',    !!fired['qr.scan']||hasBadge, 'Hecho', 'Pendiente', false);
+    setMission('s-queue', hasBadge, 'Completada', 'Desde Colas', true);
+  }
+  function setMission(id, done, doneTxt, pendTxt, ext){
+    var el=$(id); if(!el) return;
+    el.className='state '+(done?'done':(ext?'ext':'pending'));
+    el.innerHTML='<span class="tick"></span>'+(done?doneTxt:pendTxt);
+  }
+  function walletSkeleton(){
+    $('wPts').textContent='—'; $('wPts').classList.add('sk');
+    $('wTierName').textContent='—'; $('wTierName').classList.add('sk');
+    $('wSync').innerHTML='<span class="sk">Estado no disponible</span>';
+  }
+
+  function loadMe(){
+    return api('/gamification/me?subjectId='+encodeURIComponent(VISITOR)).then(function(r){
+      if(r.status>=200&&r.status<300&&r.body&&typeof r.body.points!=='undefined'){ showApiNote(false); renderMe(r.body); return true; }
+      showApiNote(true); walletSkeleton(); return false;
+    }).catch(function(){ showApiNote(true); walletSkeleton(); return false; });
+  }
+
+  /* ---- render ranking ---- */
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function renderLb(data){
+    var lb=$('lb'); var top=(data&&Array.isArray(data.top))?data.top:[];
+    var me=data&&data.me?data.me:null;
+    if(!top.length){
+      lb.innerHTML='<li class="lb-empty">Aún sin puntos esta semana en esta ubicación. ¡Sé el primero!</li>';
+      if(me&&me.rank==null&&me.points>0){ lb.innerHTML+=''; }
+      return;
+    }
+    var inTop=me&&me.rank&&me.rank<=top.length;
+    var html=top.map(function(r){
+      var mine=me&&r.subjectId===me.subjectId;
+      return '<li'+(mine?' class="me"':'')+'><span class="rk">#'+r.rank+'</span><span class="who">'+esc(short(r.subjectId))+(mine?'<span class="tagme">TÚ</span>':'')+'</span><span class="pv">'+Number(r.points||0)+'</span></li>';
+    }).join('');
+    if(me&&!inTop){
+      html+='<li class="me"><span class="rk">'+(me.rank?('#'+me.rank):'—')+'</span><span class="who">'+esc(short(me.subjectId))+'<span class="tagme">TÚ</span></span><span class="pv">'+Number(me.points||0)+'</span></li>';
+    }
+    lb.innerHTML=html;
+  }
+  function short(id){ id=String(id||''); return id.length>18?id.slice(0,16)+'…':id; }
+  function loadLb(){
+    var loc=$('locSel').value;
+    $('lb').innerHTML='<li class="lb-empty sk">Cargando ranking…</li>';
+    return api('/gamification/leaderboard?locationId='+encodeURIComponent(loc)+'&subjectId='+encodeURIComponent(VISITOR)).then(function(r){
+      if(r.status>=200&&r.status<300&&r.body&&Array.isArray(r.body.top)){ renderLb(r.body); return true; }
+      $('lb').innerHTML='<li class="lb-empty">Ranking no disponible ahora mismo.</li>'; return false;
+    }).catch(function(){ $('lb').innerHTML='<li class="lb-empty">Ranking no disponible ahora mismo.</li>'; return false; });
+  }
+
+  /* ---- emitir hecho real ---- */
+  function fb(txt,kind){ var e=$('fb'); e.className='feedback'+(kind?(' '+kind):''); e.textContent=txt; }
+  var LOCKED=false;
+  function emit(type, label){
+    if(LOCKED) return;
+    LOCKED=true; $('btnWifi').disabled=true; $('btnQr').disabled=true;
+    fb('Enviando '+label+'…','');
+    eventIdFor(type).then(function(eventId){
+      return api('/events',{ method:'POST', body:JSON.stringify({
+        eventId:eventId, type:type, subjectId:VISITOR, subjectKind:'visitor', sourceApp:SOURCE_APP,
+        occurredAt:new Date().toISOString(), metadata:{ locationId:DEMO_LOC, screenId:(type==='qr.scan'?QR_SCREEN:undefined), demo:true }
+      }) });
+    }).then(function(r){
+      var b=r.body||{};
+      if(r.status===429){
+        fb('Vas como una moto 🏍️ — el motor pide una pausa (máx. 30 acciones/min). Prueba en unos segundos.','warn');
+      }else if(r.status>=200&&r.status<300&&b.duplicate){
+        if(type==='wifi.checkin') fb('Ya fichaste hoy en este local ✅ — vuelve mañana para otro check-in.','warn');
+        else fb('Ese QR ya cuenta 📷 — espera unos minutos para volver a escanear.','warn');
+        setFired(type); refreshMissionsSoft();
+      }else if(r.status>=200&&r.status<300&&b.ok){
+        setFired(type);
+        fb('¡Hecho! '+label+' registrado ✅ — '+(type==='wifi.checkin'?'+10':'+5')+' puntos en camino, se acuñan en minutos.','ok');
+        refreshMissionsSoft();
+      }else{
+        fb('No se pudo registrar ('+(b.error||('HTTP '+r.status))+'). Reintenta en un momento.','err');
+        showApiNote(true);
+      }
+    }).catch(function(){
+      fb('El motor no responde ahora mismo. Reintenta en un momento.','err'); showApiNote(true);
+    }).then(function(){
+      LOCKED=false; $('btnWifi').disabled=false; $('btnQr').disabled=false;
+      // Recarga estado real (puntos tardan, pero pending/badges/ranking se refrescan).
+      setTimeout(function(){ loadMe(); loadLb(); }, 400);
+    });
+  }
+  // Refresco inmediato de misiones a partir del eco local, sin esperar al motor.
+  function refreshMissionsSoft(){
+    var fired=getFired();
+    setMission('s-wifi', !!fired['wifi.checkin'], 'Hecho','Pendiente',false);
+    setMission('s-qr',   !!fired['qr.scan'], 'Hecho','Pendiente',false);
+  }
+
+  /* ---- wiring ---- */
+  $('btnWifi').addEventListener('click', function(){ emit('wifi.checkin','check-in WiFi'); });
+  $('btnQr').addEventListener('click', function(){ emit('qr.scan','escaneo QR'); });
+  $('btnRefresh').addEventListener('click', function(){ fb('Refrescando…',''); loadMe().then(function(ok){ if(ok) fb('Cartera al día ✅','ok'); }); loadLb(); });
+  $('locSel').addEventListener('change', loadLb);
+
+  // Arranque: pinta el panel contra el motor real.
+  refreshMissionsSoft();
+  loadMe();
+  loadLb();
+})();
 </script>
 </body>
 </html>
