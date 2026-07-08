@@ -1,8 +1,10 @@
 /* admira-nav.js — chrome unificado de admira.tv (barra superior Codex + sidebar plegable + panel detalle).
  * Uso en cualquier página:
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
- * data-active: flota|calendar|condicional|canal|mural|comprar|alta|help   ·   data-title: subtítulo de la barra.
- * Estado (plegado/detalle) compartido entre páginas vía localStorage. v.08.07.2026.r3 */
+ * data-active: flota|apps|calendar|condicional|canal|mural|comprar|adcelerate|alta|help   ·   data-title: subtítulo de la barra.
+ * Estado (plegado/detalle) compartido entre páginas vía localStorage.
+ * El ítem "Apps" despliega un submenú (flyout en desktop · acordeón en móvil) con las 18 apps del stack,
+ * cuyo estado ●/○ vive en window.AdmiraApps (fuente única que también consume /apps/). v.08.07.2026.r11 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -11,7 +13,7 @@
   var title=(s&&s.dataset.title)||cfg.title||'';
   var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.08.07.2026.r3';
+  var VER=window.ADMIRA_VERSION||'v.08.07.2026.r11';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
@@ -66,6 +68,31 @@
   };
   function IC(k){ return ICONS[k]||''; }
   try{ window.AdmiraIcon=IC; window.AdmiraIconSet=ICONS; }catch(_){}
+
+  /* Las 18 apps del stack Admira, en el ORDEN exacto de la lanzadera legacy (new.admira.mobi).
+   * FUENTE ÚNICA de estado ●/○: la lanzadera /apps/ y el submenú del sidebar beben de aquí (window.AdmiraApps).
+   * st: 'live' = ● en antena · 'wip' = ○ en construcción. Al encender una app, se cambia SOLO aquí. */
+  var APPS=[
+    {s:'dashboard',          nm:'Dashboard',            en:'Dashboard',           ds:'Los KPIs de tu red en una pantalla.',            st:'wip'},
+    {s:'digitalsignage',     nm:'Señalización',         en:'Digital Signage',     ds:'Programa y emite tu cartelería en la red.',      st:'live'},
+    {s:'contentcatalogue',   nm:'Catálogo',             en:'Content Catalogue',   ds:'Tu biblioteca de creativos, lista para antena.', st:'wip'},
+    {s:'support',            nm:'Soporte',              en:'Support',             ds:'Incidencias, tickets y ayuda del ecosistema.',   st:'wip'},
+    {s:'pushnotifications',  nm:'Notificaciones',       en:'Push Notifications',  ds:'La flota se avisa sola: aviso operativo y de contenido.', st:'live'},
+    {s:'virtualassistant',   nm:'Asistente',            en:'Virtual Assistant',   ds:'El asistente IA que responde y opera por ti.',   st:'live'},
+    {s:'accesscontrol',      nm:'Acceso',               en:'Access Control',      ds:'Quién entra: aforo, puertas y permisos.',        st:'wip'},
+    {s:'gamification',       nm:'Gamificación',         en:'Gamification',        ds:'Retos, puntos y recompensas para tu audiencia.',  st:'wip'},
+    {s:'iotmanager',         nm:'IoT',                  en:'IoT Manager',         ds:'Cada pantalla, player y sensor, en un mapa vivo.', st:'live'},
+    {s:'videoanalytics',     nm:'Analítica de vídeo',   en:'Video Analytics',     ds:'Audiencia y atención medidas por cámara.',        st:'live'},
+    {s:'radioanalytics',     nm:'Analítica de radio',   en:'Radio Analytics',     ds:'Cuenta la afluencia anónima, sin identificar a nadie.', st:'live'},
+    {s:'socialwifi',         nm:'Social WiFi',          en:'Social Wifi',         ds:'WiFi de invitados que convierte visitas en datos.',st:'wip'},
+    {s:'queuemanager',       nm:'Colas',                en:'Queue Manager',       ds:'Mide la espera real y simula la cola en el gemelo.', st:'live'},
+    {s:'roombooking',        nm:'Salas',                en:'Room Booking',        ds:'Reserva espacios y salas al instante.',           st:'wip'},
+    {s:'audiobranding',      nm:'Audiobranding',        en:'Audiobranding',       ds:'La identidad sonora de tu espacio, con IA.',      st:'wip'},
+    {s:'olfactorymarketing', nm:'Marketing olfativo',   en:'Olfactory Marketing', ds:'El aroma como canal de marca.',                   st:'wip'},
+    {s:'virtualreality',     nm:'Realidad virtual',     en:'Virtual Reality',     ds:'Experiencias inmersivas para tu marca.',          st:'wip'},
+    {s:'augmentedreality',   nm:'Realidad aumentada',   en:'Augmented Reality',   ds:'Capas digitales sobre el mundo real.',            st:'wip'}
+  ];
+  try{ window.AdmiraApps=APPS; }catch(_){}
 
   var CSS = [
    ":root{--admtb:52px}",
@@ -128,6 +155,39 @@
    ".admlinks a:hover .dic svg{color:#8effc4}",
    ".admni .t{transition:opacity .12s}",
    "@media(min-width:681px){html.admnav:not(.admnav-open) .admni:hover::after{content:attr(title);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:#0e1420;border:1px solid #26385e;color:#cdd8e8;padding:5px 9px;border-radius:7px;font:600 12px -apple-system,Segoe UI,sans-serif;white-space:nowrap;z-index:60;box-shadow:0 6px 18px #0008;pointer-events:none}}",
+   /* submenú de Apps: acceso directo a las 18 apps desde el sidebar (flyout desktop · acordeón móvil) */
+   ".admni-grp{position:relative}",
+   ".admni-caret{position:absolute;top:8px;right:7px;width:22px;height:22px;border:0;background:transparent;color:#8595ad;cursor:pointer;display:grid;place-items:center;border-radius:6px;padding:0;z-index:2}",
+   ".admni-caret:hover{color:#8effc4;background:#13203a}",
+   ".admni-caret svg{width:13px;height:13px;transition:transform .18s ease}",
+   ".admni-grp.admsub-open .admni-caret svg{transform:rotate(90deg)}",
+   ".admni-caret:focus-visible{outline:2px solid #3df08a;outline-offset:1px}",
+   /* colapsado en desktop: sin caret (el flyout abre por hover/foco sobre el icono) */
+   "@media(min-width:681px){html.admnav:not(.admnav-open) .admni-caret{display:none}}",
+   ".admsub{margin:0;padding:0;list-style:none}",
+   ".admsub[hidden]{display:none}",
+   ".admsi{display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:9px;color:#cdd8e8;text-decoration:none;",
+     "font:600 12.5px -apple-system,Segoe UI,sans-serif;white-space:nowrap;border:1px solid transparent}",
+   ".admsi:hover{background:#13203a;border-color:#26385e;color:#fff}",
+   ".admsi:focus-visible{outline:2px solid #3df08a;outline-offset:1px}",
+   ".admsi.on{background:rgba(122,162,255,.13);border-color:#2a3a66;color:#fff}",
+   ".admsi .mic{flex:none;width:18px;height:18px;display:grid;place-items:center}",
+   ".admsi .mic svg{width:16px;height:16px;color:#3df08a;filter:drop-shadow(0 0 2px rgba(61,240,138,.45));transition:color .15s,filter .15s}",
+   ".admsi:hover .mic svg{color:#8effc4;filter:drop-shadow(0 0 4px rgba(61,240,138,.8))}",
+   ".admsi .mnm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}",
+   ".admsi .mdot{flex:none;width:7px;height:7px;border-radius:50%}",
+   ".admsi .mdot.live{background:#3df08a;box-shadow:0 0 6px #3df08a}",
+   ".admsi .mdot.wip{background:transparent;border:1.5px solid #f5b431}",
+   /* desktop: flyout fijo — position:fixed escapa del overflow del sidebar (sin scroll horizontal) */
+   "@media(min-width:681px){",
+     ".admsub{position:fixed;top:0;left:0;width:250px;max-height:74vh;overflow-y:auto;background:#0b1119;border:1px solid #26385e;",
+       "border-radius:12px;padding:6px;z-index:60;box-shadow:0 14px 40px #000b;scrollbar-width:thin}",
+     ".admsub::-webkit-scrollbar{width:6px}.admsub::-webkit-scrollbar-thumb{background:#1e2940;border-radius:3px}",
+   "}",
+   /* móvil (drawer): acordeón embebido bajo el ítem Apps */
+   "@media(max-width:680px){",
+     ".admsub{display:flex;flex-direction:column;gap:1px;margin:2px 0 4px 10px;padding:2px 0 2px 8px;border-left:1px solid #1e2940}",
+   "}",
    ".admsep{height:1px;background:#1e2940;margin:7px 6px}",
    ".admspace{flex:1;min-height:6px}",
    ".admfoot{padding:6px 10px;color:#8595ad;font:600 11px ui-monospace,monospace;white-space:nowrap;overflow:hidden}",
@@ -164,8 +224,34 @@
    "}"
   ].join("");
 
+  var _esc=function(x){return String(x==null?'':x).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});};
+  function appsSubHTML(){
+    var cur=_norm(location.pathname);
+    var items=APPS.map(function(a){
+      var on=(_norm('/'+a.s)===cur);
+      var stTxt=a.st==='live'?'En antena':'En construcción';
+      return '<a class="admsi'+(on?' on':'')+'" role="menuitem" href="/'+a.s+'/" tabindex="-1"'+(on?' aria-current="page"':'')+
+        ' aria-label="'+_esc(a.nm)+' — '+stTxt+'">'+
+        '<span class="mic" aria-hidden="true">'+IC(a.s)+'</span>'+
+        '<span class="mnm">'+_esc(a.nm)+'</span>'+
+        '<span class="mdot '+a.st+'" aria-hidden="true"></span>'+
+      '</a>';
+    }).join("");
+    return '<div class="admsub" id="admAppsSub" role="menu" aria-label="Aplicaciones" hidden>'+items+'</div>';
+  }
+  function appsGroupHTML(i){
+    var on=(i.k===active);
+    return '<div class="admni-grp" id="admAppsGrp">'+
+      '<a class="admni'+(on?' on':'')+'" id="admAppsLink" href="'+i.h+'"'+(on?' aria-current="page"':'')+' title="'+i.t+' — atajo a las 18 apps"><span class="ic">'+IC(i.k)+'</span><span class="t">'+i.t+'</span></a>'+
+      '<button class="admni-caret" id="admAppsCaret" type="button" aria-expanded="false" aria-controls="admAppsSub" aria-label="Desplegar las 18 apps">'+
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>'+
+      '</button>'+
+      appsSubHTML()+
+    '</div>';
+  }
   function navHTML(){
     var lis=ITEMS.map(function(i){
+      if(i.k==='apps') return appsGroupHTML(i);
       return '<a class="admni'+(i.k===active?' on':'')+'" href="'+i.h+'"'+(i.blank?' target="_blank" rel="noopener"':'')+(i.k===active?' aria-current="page"':'')+' title="'+i.t+'"><span class="ic">'+IC(i.k)+'</span><span class="t">'+i.t+'</span></a>';
     }).join("");
     return '<aside class="admside" id="admSide" aria-label="Navegación">'+lis+
@@ -251,6 +337,49 @@
     if(navTog)navTog.onclick=window.admToggleNav;
     if(detTog)detTog.onclick=window.admToggleDet;
     var scrim=document.getElementById('admScrim'); if(scrim)scrim.onclick=function(){setNav(false);};
+
+    // Submenú de Apps: acceso directo a las 18 apps (flyout en desktop · acordeón en móvil)
+    (function(){
+      var grp=document.getElementById('admAppsGrp'), caret=document.getElementById('admAppsCaret'),
+          sub=document.getElementById('admAppsSub'), link=document.getElementById('admAppsLink');
+      if(!grp||!caret||!sub) return;
+      var ct=0;
+      function isMobile(){ return window.innerWidth<=680; }
+      function collapsedDesktop(){ return !isMobile() && !html.classList.contains('admnav-open'); }
+      function positionSub(){
+        if(isMobile()){ sub.style.top=''; sub.style.left=''; sub.style.maxHeight=''; return; }
+        var a=document.getElementById('admSide'); if(!a) return;
+        var ar=a.getBoundingClientRect(), r=grp.getBoundingClientRect();
+        sub.style.left=(ar.right+4)+'px';
+        var h=sub.offsetHeight, maxTop=window.innerHeight-h-10, top=r.top;
+        if(top>maxTop) top=Math.max(8,maxTop);
+        sub.style.top=top+'px';
+      }
+      function setSub(open){
+        grp.classList.toggle('admsub-open',open);
+        caret.setAttribute('aria-expanded',open?'true':'false');
+        if(open){ sub.hidden=false; positionSub(); } else { sub.hidden=true; sub.style.top=''; sub.style.left=''; }
+      }
+      caret.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); setSub(sub.hidden); });
+      caret.addEventListener('keydown',function(e){ if(e.key==='ArrowDown'){ e.preventDefault(); setSub(true); var f=sub.querySelector('.admsi'); if(f)f.focus(); } });
+      // hover / foco abre el flyout SOLO cuando el sidebar está colapsado en desktop (el icono no lleva caret)
+      grp.addEventListener('mouseenter',function(){ if(collapsedDesktop()){ clearTimeout(ct); setSub(true); } });
+      grp.addEventListener('mouseleave',function(){ if(collapsedDesktop()){ ct=setTimeout(function(){ setSub(false); },180); } });
+      if(link) link.addEventListener('focus',function(){ if(collapsedDesktop()) setSub(true); });
+      grp.addEventListener('focusout',function(e){ if(!grp.contains(e.relatedTarget)) setSub(false); });
+      // navegación por teclado dentro del submenú
+      sub.addEventListener('keydown',function(e){
+        var items=Array.prototype.slice.call(sub.querySelectorAll('.admsi')), i=items.indexOf(document.activeElement);
+        if(e.key==='ArrowDown'){ e.preventDefault(); (items[i+1]||items[0]).focus(); }
+        else if(e.key==='ArrowUp'){ e.preventDefault(); (items[i-1]||items[items.length-1]).focus(); }
+        else if(e.key==='Home'){ e.preventDefault(); items[0].focus(); }
+        else if(e.key==='End'){ e.preventDefault(); items[items.length-1].focus(); }
+      });
+      document.addEventListener('keydown',function(e){ if(e.key==='Escape' && !sub.hidden){ setSub(false); try{caret.focus();}catch(_){} } });
+      document.addEventListener('click',function(e){ if(!sub.hidden && !grp.contains(e.target)) setSub(false); });
+      window.addEventListener('resize',function(){ if(!sub.hidden) positionSub(); });
+      window.addEventListener('scroll',function(){ if(!sub.hidden && !isMobile()) positionSub(); },true);
+    })();
 
     // PWA: manifest + service worker. Solo en páginas navegadas (aquí carga el chrome);
     // NO en la emisión empotrada (canal/signage con embed=mupi no cargan admira-nav.js).

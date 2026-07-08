@@ -59,8 +59,8 @@
 </style>
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.08.07.2026.r10';</script>
-<script src="/admira-nav.js?v=08.07.2026.r10" data-active="apps" data-title="Lanzadera de apps" defer></script>
+<script>window.ADMIRA_VERSION='v.08.07.2026.r11';</script>
+<script src="/admira-nav.js?v=08.07.2026.r11" data-active="apps" data-title="Lanzadera de apps" defer></script>
 
 <main class="wrap" id="admskip-target">
   <div class="lhead">
@@ -85,35 +85,15 @@
 
   <div class="foot">
     <span>Réplica mejorada de la lanzadera legacy · new.admira.mobi → admira.tv</span>
-    <span>Admira · tv · <span style="opacity:.75">v.08.07.2026.r10</span></span>
+    <span>Admira · tv · <span style="opacity:.75">v.08.07.2026.r11</span></span>
   </div>
 </main>
 
 <script>
 (function(){
-  // Las 18 apps, en el ORDEN exacto de la lanzadera legacy (new.admira.mobi).
-  // status: 'live' = ● en antena · 'wip' = ○ en construcción. Esta noche todas arrancan wip;
-  // el loop 1-app/hora las va encendiendo (se cambia aquí al completar cada subsite).
-  var APPS=[
-    {s:'dashboard',          nm:'Dashboard',            en:'Dashboard',           ds:'Los KPIs de tu red en una pantalla.',            st:'wip'},
-    {s:'digitalsignage',     nm:'Señalización',         en:'Digital Signage',     ds:'Programa y emite tu cartelería en la red.',      st:'live'},
-    {s:'contentcatalogue',   nm:'Catálogo',             en:'Content Catalogue',   ds:'Tu biblioteca de creativos, lista para antena.', st:'wip'},
-    {s:'support',            nm:'Soporte',              en:'Support',             ds:'Incidencias, tickets y ayuda del ecosistema.',   st:'wip'},
-    {s:'pushnotifications',  nm:'Notificaciones',       en:'Push Notifications',  ds:'La flota se avisa sola: aviso operativo y de contenido.', st:'live'},
-    {s:'virtualassistant',   nm:'Asistente',            en:'Virtual Assistant',   ds:'El asistente IA que responde y opera por ti.',   st:'live'},
-    {s:'accesscontrol',      nm:'Acceso',               en:'Access Control',      ds:'Quién entra: aforo, puertas y permisos.',        st:'wip'},
-    {s:'gamification',       nm:'Gamificación',         en:'Gamification',        ds:'Retos, puntos y recompensas para tu audiencia.',  st:'wip'},
-    {s:'iotmanager',         nm:'IoT',                  en:'IoT Manager',         ds:'Cada pantalla, player y sensor, en un mapa vivo.', st:'live'},
-    {s:'videoanalytics',     nm:'Analítica de vídeo',   en:'Video Analytics',     ds:'Audiencia y atención medidas por cámara.',        st:'live'},
-    {s:'radioanalytics',     nm:'Analítica de radio',   en:'Radio Analytics',     ds:'Cuenta la afluencia anónima, sin identificar a nadie.', st:'live'},
-    {s:'socialwifi',         nm:'Social WiFi',          en:'Social Wifi',         ds:'WiFi de invitados que convierte visitas en datos.',st:'wip'},
-    {s:'queuemanager',       nm:'Colas',                en:'Queue Manager',       ds:'Mide la espera real y simula la cola en el gemelo.', st:'live'},
-    {s:'roombooking',        nm:'Salas',                en:'Room Booking',        ds:'Reserva espacios y salas al instante.',           st:'wip'},
-    {s:'audiobranding',      nm:'Audiobranding',        en:'Audiobranding',       ds:'La identidad sonora de tu espacio, con IA.',      st:'wip'},
-    {s:'olfactorymarketing', nm:'Marketing olfativo',   en:'Olfactory Marketing', ds:'El aroma como canal de marca.',                   st:'wip'},
-    {s:'virtualreality',     nm:'Realidad virtual',     en:'Virtual Reality',     ds:'Experiencias inmersivas para tu marca.',          st:'wip'},
-    {s:'augmentedreality',   nm:'Realidad aumentada',   en:'Augmented Reality',   ds:'Capas digitales sobre el mundo real.',            st:'wip'}
-  ];
+  // Las 18 apps y su estado ●/○ viven en window.AdmiraApps (admira-nav.js) — FUENTE ÚNICA que
+  // comparten esta lanzadera y el submenú del sidebar. Al encender una app se cambia allí, no aquí.
+  var APPS=[];
   var esc=function(x){return String(x==null?'':x).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});};
   function icon(slug){ try{ return (window.AdmiraIcon&&window.AdmiraIcon(slug))||''; }catch(_){ return ''; } }
   function stTxt(st){ return st==='live'?'En antena':'En construcción'; }
@@ -142,6 +122,8 @@
     document.getElementById('empty').style.display=n?'none':'block';
   }
   function boot(){
+    // admira-nav.js (defer) ya corrió → window.AdmiraApps disponible antes de este DOMContentLoaded
+    APPS=(window.AdmiraApps||[]).slice();
     render();
     var q=document.getElementById('q');
     q.addEventListener('input',filter);
