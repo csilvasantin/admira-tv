@@ -1,1 +1,6 @@
-{}
+{
+  "dashboard": {
+    "src": "/apps/video/dashboard.mp4",
+    "title": "Dashboard, en 4 minutos"
+  }
+}
