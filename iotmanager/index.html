@@ -2,59 +2,530 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<!-- preconnect a orígenes críticos (chrome + backbone real + registro de flota) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
+<link rel="preconnect" href="https://admira-fleet.csilvasantin.workers.dev" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
+<link rel="dns-prefetch" href="https://api.admira.store">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IoT · Admira.tv</title>
-<meta name="description" content="Gestionará los sensores y dispositivos conectados de tu espacio desde un solo panel.">
+<title>Gestor IoT · Admira.tv</title>
+<meta name="description" content="Cada pantalla, player y sensor del circuito, visible y gobernado desde un solo sitio: inventario vivo del backbone real, salud de la flota de dispositivos y mantenimiento físico con Yokup.">
 <meta name="theme-color" content="#070a10">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="canonical" href="https://admira.tv/iotmanager/">
-<meta property="og:title" content="IoT · Admira.tv">
-<meta property="og:description" content="Gestionará los sensores y dispositivos conectados de tu espacio desde un solo panel.">
+<meta property="og:title" content="Gestor IoT · Admira.tv">
+<meta property="og:description" content="Cada pantalla, player y sensor del circuito, gobernado desde un solo sitio: inventario vivo, salud de flota y mantenimiento físico con Yokup.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://admira.tv/iotmanager/">
 <meta property="og:image" content="https://admira.tv/og-admira.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Gestor IoT · Admira.tv">
+<meta name="twitter:description" content="Cada pantalla, player y sensor del circuito, gobernado desde un solo sitio.">
+<meta name="twitter:image" content="https://admira.tv/og-admira.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": "https://admira.tv/iotmanager/",
+  "url": "https://admira.tv/iotmanager/",
+  "name": "Gestor IoT · Admira.tv",
+  "inLanguage": "es",
+  "isPartOf": { "@id": "https://admira.tv/#site" },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Admira Gestor IoT",
+    "applicationCategory": "IoT Device Management",
+    "operatingSystem": "Web, Edge device",
+    "description": "Gestión unificada de los dispositivos conectados del punto de venta: inventario vivo de pantallas y players desde el backbone real (api.admira.store/grid/screens), salud de la flota de máquinas registradas (registro con beat y lastSeen) y mantenimiento físico con Yokup."
+  }
+}
+</script>
 <style>
-  :root{--bg:#070a10;--panel:#0b1119;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--amber:#f5b431}
+  :root{--bg:#070a10;--panel:#0b1119;--panel2:#0e1622;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--cyan:#38d6ff;--amber:#f5b431;--pink:#ff6ec7;--red:#ff5a5a}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
   body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px);opacity:.5}
   a{color:inherit;text-decoration:none}
-  .wrap{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:min(12vh,90px) 20px 60px;text-align:center}
-  .ic{width:84px;height:84px;margin:0 auto 22px;display:grid;place-items:center;border-radius:20px;background:rgba(61,240,138,.07);border:1px solid rgba(61,240,138,.18)}
-  .ic svg{width:46px;height:46px;color:var(--green);filter:drop-shadow(0 0 6px rgba(61,240,138,.55))}
-  h1{font-size:clamp(28px,6vw,42px);margin:0 0 4px;letter-spacing:-.01em;font-weight:800}
-  .en{font:600 12px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:0 0 18px}
-  .ds{color:var(--dim);font-size:16px;max-width:460px;margin:0 auto 26px}
-  .badge{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--amber);color:var(--amber);border-radius:999px;padding:8px 16px;font:700 12px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase}
-  .badge .d{width:9px;height:9px;border-radius:50%;border:2px solid var(--amber);position:relative}
-  .badge .d::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid var(--amber);opacity:.5;animation:p 1.8s ease-out infinite}
-  @keyframes p{0%{transform:scale(.7);opacity:.6}100%{transform:scale(1.5);opacity:0}}
-  @media(prefers-reduced-motion:reduce){.badge .d::after{animation:none}}
-  .back{display:inline-flex;align-items:center;gap:8px;margin-top:30px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 18px;font-weight:600;font-size:14px;transition:border-color .2s,color .2s}
+  img,iframe,video{max-width:100%}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 20px}
+  .eyebrow{font:600 12px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--green)}
+  section{padding:48px 0}
+  .sec-head{max-width:740px;margin:0 auto 28px;text-align:center}
+  .sec-head h2{font-size:clamp(24px,4vw,34px);margin:8px 0 8px;letter-spacing:-.01em;font-weight:800}
+  .sec-head p{color:var(--dim);margin:0;font-size:15.5px}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:11px 20px;font-weight:700;font-size:14px;border:1px solid #2a3a66;background:transparent;color:var(--txt);cursor:pointer;transition:transform .12s,border-color .2s,background .2s}
+  .btn:hover{transform:translateY(-1px);border-color:#3a4f8a}
+  .btn.primary{background:var(--green);border-color:var(--green);color:#03140a}
+  .btn.primary:hover{background:#5cf6a1}
+  a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
+  /* hero */
+  .hero{padding:74px 0 20px;text-align:center}
+  .kicker{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 13px;font:600 11.5px ui-monospace,monospace;color:var(--dim);letter-spacing:.04em}
+  .kicker .d{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green)}
+  .hero h1{font-size:clamp(34px,7vw,62px);line-height:1.02;margin:18px auto 12px;letter-spacing:-.02em;font-weight:800;max-width:880px}
+  .hero h1 .g{color:var(--green);text-shadow:0 0 22px rgba(61,240,138,.32)}
+  .hero .en{font:600 12px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:0 0 14px}
+  .hero .lead{font-size:clamp(16px,2.2vw,19px);color:var(--dim);max-width:740px;margin:0 auto}
+  .hero-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+  .lang{display:inline-flex;gap:2px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px;margin-left:10px;vertical-align:middle}
+  .lang button{border:0;background:transparent;color:var(--dim);font:700 11px/1 ui-monospace,monospace;padding:5px 10px;border-radius:999px;cursor:pointer}
+  .lang button.on{background:var(--green);color:#03140a}
+
+  /* fila pantalla→player→sensor */
+  .flow{display:flex;align-items:stretch;justify-content:center;gap:10px;flex-wrap:wrap;margin:34px auto 0;max-width:820px}
+  .fstep{flex:1;min-width:190px;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:15px 16px;text-align:left;position:relative}
+  .fstep .fk{font:600 10.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+  .fstep .fw{font-size:clamp(19px,3.4vw,24px);font-weight:800;margin:4px 0 2px}
+  .fstep.a .fw{color:var(--cyan)} .fstep.b .fw{color:var(--green)} .fstep.c .fw{color:var(--amber)}
+  .fstep .fd{font-size:12.5px;color:var(--dim)}
+
+  /* arquitectura 3 columnas */
+  .arch{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:820px){.arch{grid-template-columns:1fr}}
+  .col{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:20px;min-width:0}
+  .col .role{font:600 11px ui-monospace,monospace;letter-spacing:.13em;text-transform:uppercase;color:var(--green)}
+  .col .stt{float:right;font:700 9.5px ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 8px}
+  .col .stt.real{color:var(--green);border:1px solid rgba(61,240,138,.4)}
+  .col .stt.mix{color:var(--cyan);border:1px solid rgba(56,214,255,.4)}
+  .col .stt.concept{color:var(--amber);border:1px solid rgba(245,180,49,.45)}
+  .col h3{margin:8px 0 4px;font-size:19px;clear:both}
+  .col .leg{font-size:12.5px;color:var(--dim);margin:0 0 14px}
+  .col .leg b{color:var(--txt);font-weight:600}
+  .col ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .col li{font-size:13.5px;line-height:1.4;color:var(--dim);display:flex;gap:9px;align-items:flex-start;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:rgba(61,240,138,.03)}
+  .col li .t{color:var(--green);flex:none;margin-top:1px;font-size:13px}
+  .col li b{color:var(--txt);font-weight:600}
+  .col li a{color:var(--cyan);border-bottom:1px solid rgba(56,214,255,.35)}
+  .col li a:hover{color:#7ce3ff}
+
+  /* demos */
+  .demo{border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:hidden;margin-bottom:16px}
+  .demo-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .demo-h .ttl{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+  .demo-h .ttl .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex:none;animation:blink 1.9s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  @media(prefers-reduced-motion:reduce){.demo-h .ttl .dot{animation:none}}
+  .tag-real{font:700 10px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--green);border:1px solid rgba(61,240,138,.4);border-radius:999px;padding:4px 9px}
+  .tag-ill{font:700 10px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);border:1px solid rgba(245,180,49,.45);border-radius:999px;padding:4px 9px}
+  .demo-b{padding:16px}
+  .demo-note{font-size:12.5px;color:var(--dim);margin:14px 0 0;line-height:1.5}
+  .demo-note a{color:var(--cyan);border-bottom:1px solid rgba(56,214,255,.35)}
+  .grid-meta{font:600 12px ui-monospace,monospace;color:var(--dim);margin-left:auto}
+  .empty{color:var(--dim);font-size:13.5px;text-align:center;padding:18px 8px;border:1px dashed var(--line);border-radius:10px;line-height:1.5}
+
+  /* inventario vivo — tarjetas de dispositivo */
+  .devs{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+  .dev{border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:14px;min-width:0}
+  .dev .dh{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+  .dev .dico{width:34px;height:34px;flex:none;display:grid;place-items:center;border-radius:9px;background:rgba(56,214,255,.08);border:1px solid rgba(56,214,255,.18)}
+  .dev .dico svg{width:19px;height:19px;color:var(--cyan)}
+  .dev .dn{font-weight:700;font-size:14px;line-height:1.15;min-width:0}
+  .dev .dc{font:600 10.5px ui-monospace,monospace;color:var(--dim);margin-top:1px}
+  .dev .drow{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:5px 0;border-top:1px solid var(--line)}
+  .dev .drow .k{color:var(--dim)} .dev .drow .v{font-weight:600;text-align:right}
+  .dev .drow .v.on{color:var(--green)} .dev .drow .v.off{color:var(--dim)} .dev .drow .v.cy{color:var(--cyan)}
+  .dev .state{display:inline-flex;align-items:center;gap:6px;font:600 11px ui-monospace,monospace;margin-top:9px}
+  .dev .state .d{width:8px;height:8px;border-radius:50%;flex:none}
+  .dev .state.online{color:var(--green)} .dev .state.online .d{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .dev .state.idle{color:var(--amber)} .dev .state.idle .d{background:transparent;border:1.5px solid var(--amber)}
+  .dev .state.offline{color:var(--dim)} .dev .state.offline .d{background:transparent;border:1.5px solid var(--dim)}
+
+  /* salud de flota */
+  .fbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .fkpi{display:flex;gap:16px;flex-wrap:wrap}
+  .fkpi .k{font:600 11px ui-monospace,monospace;color:var(--dim)}
+  .fkpi .k b{display:block;font-size:22px;font-weight:800;color:var(--txt);margin-top:2px}
+  .fkpi .k b.g{color:var(--green)} .fkpi .k b.a{color:var(--amber)}
+  .mach{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+  .m{border:1px solid var(--line);border-radius:11px;background:var(--panel2);padding:11px 13px;min-width:0}
+  .m .mt{display:flex;align-items:center;gap:8px}
+  .m .md{width:8px;height:8px;border-radius:50%;flex:none}
+  .m .md.on{background:var(--green);box-shadow:0 0 6px var(--green)} .m .md.idle{background:transparent;border:1.5px solid var(--amber)} .m .md.off{background:transparent;border:1.5px solid var(--dim)}
+  .m .mn{font-weight:700;font-size:13.5px;line-height:1.15;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .m .mm{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font:600 11px ui-monospace,monospace;color:var(--dim)}
+  .m .mm .pl{color:var(--cyan)}
+
+  /* simulador de sensores (ilustrativo) */
+  .sens{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .sen{border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:15px;text-align:center}
+  .sen .sk{font:600 10.5px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+  .sen .sv{font-size:30px;font-weight:800;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+  .sen .su{font:600 11px ui-monospace,monospace;color:var(--dim)}
+  .sen .bar{height:6px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:10px}
+  .sen .bar i{display:block;height:100%;border-radius:999px;background:var(--cyan);width:0;transition:width .8s ease}
+  .sen.aforo .sv{color:var(--green)} .sen.aforo .bar i{background:var(--green)}
+  .sen.temp .sv{color:var(--amber)} .sen.temp .bar i{background:var(--amber)}
+  .sen.energy .sv{color:var(--cyan)} .sen.energy .bar i{background:var(--cyan)}
+  .sen.door .sv{color:var(--pink)} .sen.door .bar i{background:var(--pink)}
+
+  /* MUPI player embed */
+  .mupi-wrap{display:flex;gap:22px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .mupi{flex:none;width:min(240px,72vw);aspect-ratio:9/16;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#000;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+  .mupi iframe{display:block;width:100%;height:100%;border:0}
+  .mupi-copy{flex:1;min-width:220px;max-width:440px}
+  .mupi-copy p{color:var(--dim);font-size:14px;margin:0 0 14px}
+  .mupi-copy .btn{margin-right:8px;margin-bottom:8px}
+
+  /* enlaces */
+  .links{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:820px){.links{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:460px){.links{grid-template-columns:1fr}}
+  .lk{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:13px;background:var(--panel);padding:16px;transition:transform .12s,border-color .2s,background .2s}
+  .lk:hover{transform:translateY(-3px);border-color:#2a3a66;background:var(--panel2)}
+  .lk .nm{font-weight:700;font-size:15px}
+  .lk .ds{color:var(--dim);font-size:12.5px;line-height:1.4}
+  .lk .go{font:600 11.5px ui-monospace,monospace;color:var(--green);margin-top:auto}
+
+  .foot{margin-top:20px;padding:26px 20px 46px;border-top:1px solid var(--line);color:var(--dim);font:600 11.5px ui-monospace,monospace;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;max-width:1080px;margin-left:auto;margin-right:auto}
+  .foot a{color:var(--dim)} .foot a:hover{color:var(--green)}
+  .back{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 15px;font-weight:600;font-size:13.5px;transition:border-color .2s,color .2s}
   .back:hover{border-color:var(--green);color:#fff}
-  .back:focus-visible{outline:2px solid var(--green);outline-offset:2px}
-  .foot{margin-top:44px;color:var(--dim);font:600 11px ui-monospace,monospace}
 </style>
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.08.07.2026.r3';</script>
-<script src="/admira-nav.js?v=08.07.2026.r3" data-active="apps" data-title="IoT" defer></script>
+<script>window.ADMIRA_VERSION='v.08.07.2026.r9';</script>
+<script src="/admira-nav.js?v=08.07.2026.r9" data-active="apps" data-title="Gestor IoT" defer></script>
 
-<main class="wrap" id="admskip-target">
-  <div class="ic" id="ic" aria-hidden="true"></div>
-  <h1>IoT</h1>
-  <p class="en">IoT Manager</p>
-  <p class="ds">Gestionará los sensores y dispositivos conectados de tu espacio desde un solo panel.</p>
-  <span class="badge"><span class="d"></span>En construcción · esta noche</span>
-  <div><a class="back" href="/apps/">&larr; Volver a la lanzadera</a></div>
-  <p class="foot">Admira · tv · v.08.07.2026.r3</p>
+<main id="admskip-target">
+
+  <!-- HERO -->
+  <header class="hero wrap">
+    <span class="kicker"><span class="d"></span><span data-es="Inventario vivo · Salud de flota · Mantenimiento" data-en="Live inventory · Fleet health · Maintenance">Inventario vivo · Salud de flota · Mantenimiento</span></span>
+    <h1><span data-es="Cada pantalla, player y sensor · " data-en="Every screen, player and sensor · ">Cada pantalla, player y sensor · </span><span class="g" data-es="gobernado desde un sitio" data-en="governed from one place">gobernado desde un sitio</span></h1>
+    <p class="en">IoT Manager
+      <span class="lang" role="group" aria-label="Idioma / Language">
+        <button type="button" data-lang="es" class="on">ES</button><button type="button" data-lang="en">EN</button>
+      </span>
+    </p>
+    <p class="lead" data-es="Un punto de venta es hoy una red de dispositivos: pantallas, players nativos, cámaras y sensores. El Gestor IoT los pone a todos en un mapa vivo —qué hay, qué emite, cuándo dio su última señal— y avisa al técnico cuando algo cae. Del backbone al taller."
+       data-en="A store is now a network of devices: screens, native players, cameras and sensors. The IoT Manager puts them all on a live map —what's there, what it plays, when it last reported— and calls the technician when something drops. From the backbone to the workshop.">Un punto de venta es hoy una red de dispositivos: pantallas, players nativos, cámaras y sensores. El Gestor IoT los pone a todos en un mapa vivo —qué hay, qué emite, cuándo dio su última señal— y avisa al técnico cuando algo cae. Del backbone al taller.</p>
+    <div class="hero-actions">
+      <a class="btn primary" href="#inventario"><span data-es="📺 Inventario vivo" data-en="📺 Live inventory">📺 Inventario vivo</span></a>
+      <a class="btn" href="#flota"><span data-es="🖥 Salud de flota" data-en="🖥 Fleet health">🖥 Salud de flota</span></a>
+      <a class="btn" href="#mantenimiento"><span data-es="🔧 Mantenimiento" data-en="🔧 Maintenance">🔧 Mantenimiento</span></a>
+    </div>
+    <div class="flow">
+      <div class="fstep a"><div class="fk" data-es="Pantalla" data-en="Screen">Pantalla</div><div class="fw">&#9635;</div><div class="fd" data-es="cada cristal del circuito, con su franja y su parrilla" data-en="each glass in the circuit, with its slot and grid">cada cristal del circuito, con su franja y su parrilla</div></div>
+      <div class="fstep b"><div class="fk" data-es="Player" data-en="Player">Player</div><div class="fw">&#9636;</div><div class="fd" data-es="el reproductor nativo que la enciende, con watchdog" data-en="the native player that drives it, with a watchdog">el reproductor nativo que la enciende, con watchdog</div></div>
+      <div class="fstep c"><div class="fk" data-es="Sensor" data-en="Sensor">Sensor</div><div class="fw">&#9678;</div><div class="fd" data-es="cámara y sonda: aforo, temperatura, energía" data-en="camera and probe: crowd, temperature, energy">cámara y sonda: aforo, temperatura, energía</div></div>
+    </div>
+  </header>
+
+  <!-- CÓMO FUNCIONA -->
+  <section class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" data-es="Cómo funciona" data-en="How it works">Cómo funciona</p>
+      <h2 data-es="Inventario · Flota · Mantenimiento" data-en="Inventory · Fleet · Maintenance">Inventario · Flota · Mantenimiento</h2>
+      <p data-es="El legacy gestionaba «dispositivos conectados» en abstracto. Aquí es concreto: el circuito ya está registrado en el backbone y la flota ya reporta su latido. Cada bloque dice qué es real hoy y qué es concepto."
+         data-en="Legacy managed «connected devices» in the abstract. Here it's concrete: the circuit is already registered in the backbone and the fleet already reports its heartbeat. Each block states what's real today and what's a concept.">El legacy gestionaba «dispositivos conectados» en abstracto. Aquí es concreto: el circuito ya está registrado en el backbone y la flota ya reporta su latido. Cada bloque dice qué es real hoy y qué es concepto.</p>
+    </div>
+    <div class="arch">
+      <div class="col">
+        <span class="stt real" data-es="Real · hoy" data-en="Real · today">Real · hoy</span>
+        <div class="role" data-es="01 · Inventario" data-en="01 · Inventory">01 · Inventario</div>
+        <h3 data-es="Todo lo que hay, vivo" data-en="Everything there, live">Todo lo que hay, vivo</h3>
+        <p class="leg">Legacy: <b>Devices · Register · Monitor</b></p>
+        <ul>
+          <li><span class="t">▸</span><span><b data-es="Pantallas del backbone" data-en="Backbone screens">Pantallas del backbone</b> <span data-es="— cada cristal del circuito está registrado (" data-en="— every glass of the circuit is registered (">— cada cristal del circuito está registrado (</span><span class="mono">/grid/screens</span><span data-es="): nombre, circuito, players enlazados. Leído en vivo abajo." data-en="): name, circuit, linked players. Read live below.">): nombre, circuito, players enlazados. Leído en vivo abajo.</span></span></li>
+          <li><span class="t">▸</span><span><b data-es="Última señal y caché" data-en="Last signal and cache">Última señal y caché</b> <span data-es="— por pantalla, " data-en="— per screen, ">— por pantalla, </span><span class="mono">/signage/now</span><span data-es=" da qué emite y cuándo reportó; " data-en=" gives what it plays and when it reported; ">&nbsp;da qué emite y cuándo reportó; </span><span class="mono">/screen/cache</span><span data-es=" da la playlist pre-descargada al disco del player." data-en=" gives the playlist pre-fetched to the player's disk."> da la playlist pre-descargada al disco del player.</span></span></li>
+          <li><span class="t">▸</span><span><span data-es="El " data-en="The ">El </span><a href="/cms.html" target="_blank" rel="noopener" data-es="CMS de flota" data-en="fleet CMS">CMS de flota</a><span data-es=" es la consola completa: cada player marca 📥 N/M de su caché." data-en=" is the full console: each player marks 📥 N/M of its cache."> es la consola completa: cada player marca 📥 N/M de su caché.</span></span></li>
+        </ul>
+      </div>
+      <div class="col">
+        <span class="stt mix" data-es="Real · registro" data-en="Real · registry">Real · registro</span>
+        <div class="role" data-es="02 · Flota" data-en="02 · Fleet">02 · Flota</div>
+        <h3 data-es="El latido de cada máquina" data-en="Each machine's heartbeat">El latido de cada máquina</h3>
+        <p class="leg">Legacy: <b>Health · Beat · Alert</b></p>
+        <ul>
+          <li><span class="t">▸</span><span><b data-es="Registro con beat" data-en="Registry with beat">Registro con beat</b> <span data-es="— la flota de AdmiraNeXT se da de alta y late (" data-en="— the AdmiraNeXT fleet registers and beats (">— la flota de AdmiraNeXT se da de alta y late (</span><span class="mono">registro/beat/lastSeen</span><span data-es="); leemos ese registro real en «Salud de flota» abajo." data-en="); we read that real registry in «Fleet health» below.">); leemos ese registro real en «Salud de flota» abajo.</span></span></li>
+          <li><span class="t">▸</span><span><b data-es="Online / en reposo / sin señal" data-en="Online / idle / no signal">Online / en reposo / sin señal</b> <span data-es="— el estado sale del " data-en="— the state comes from ">— el estado sale del </span><span class="mono">lastSeen</span><span data-es=": si una máquina deja de latir, se ve al instante." data-en=": if a machine stops beating, it shows at once.">: si una máquina deja de latir, se ve al instante.</span></span></li>
+          <li><span class="t">▸</span><span><span data-es="El registro vive en un worker propio (workers.dev); desde algunas redes ES puede no cargar — si pasa, lo decimos en la propia demo, no lo fingimos." data-en="The registry lives on its own worker (workers.dev); from some ES networks it may not load — if so, we say it in the demo itself, we don't fake it.">El registro vive en un worker propio (workers.dev); desde algunas redes ES puede no cargar — si pasa, lo decimos en la propia demo, no lo fingimos.</span></span></li>
+        </ul>
+      </div>
+      <div class="col">
+        <span class="stt concept" data-es="Producto" data-en="Product">Producto</span>
+        <div class="role" data-es="03 · Mantenimiento" data-en="03 · Maintenance">03 · Mantenimiento</div>
+        <h3 data-es="Del aviso al taller" data-en="From alert to workshop">Del aviso al taller</h3>
+        <p class="leg">Legacy: <b>Ticket · Dispatch · Fix</b></p>
+        <ul>
+          <li><span class="t">▸</span><span><b data-es="Yokup — FSM del ecosistema" data-en="Yokup — the ecosystem FSM">Yokup — FSM del ecosistema</b> <span data-es="— cuando el IoT avisa (una pantalla cae, una sonda se dispara), el técnico que va físicamente lo gestiona con " data-en="— when IoT alerts (a screen drops, a probe trips), the technician who goes on-site manages it with ">— cuando el IoT avisa (una pantalla cae, una sonda se dispara), el técnico que va físicamente lo gestiona con </span><a href="https://yokup.com" target="_blank" rel="noopener">yokup.com</a><span data-es=" (Field Service Management)." data-en=" (Field Service Management)."> (Field Service Management).</span></span></li>
+          <li><span class="t">▸</span><span><b data-es="El aviso ya existe" data-en="The alert already exists">El aviso ya existe</b> <span data-es="— el watchdog de los " data-en="— the ">— el watchdog de los </span><a href="/player/" data-es="players nativos" data-en="native players">players nativos</a><span data-es=" detecta el cuelgue; " data-en=" watchdog detects the freeze; ">&nbsp;detecta el cuelgue; </span><a href="/pushnotifications/" data-es="Notificaciones" data-en="Push">Notificaciones</a><span data-es=" enruta el aviso al técnico con ACK y escalado." data-en=" routes the alert to the technician with ACK and escalation."> enruta el aviso al técnico con ACK y escalado.</span></span></li>
+          <li><span class="t">▸</span><span><span data-es="La capa física cierra el círculo: el bit avisa, la persona repara. " data-en="The physical layer closes the loop: the bit alerts, the person repairs. ">La capa física cierra el círculo: el bit avisa, la persona repara. </span><b data-es="Yokup es producto Admira, aún en activación." data-en="Yokup is an Admira product, still activating.">Yokup es producto Admira, aún en activación.</b></span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEMOS -->
+  <section class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" data-es="Demos vivas" data-en="Live demos">Demos vivas</p>
+      <h2 data-es="Lo real, conectado; lo modelado, rotulado" data-en="What's real, connected; what's modelled, labelled">Lo real, conectado; lo modelado, rotulado</h2>
+      <p data-es="El inventario y la salud de flota leen sistemas reales (backbone api.admira.store y el registro de la flota). El panel de sensores ambientales es un simulador —lo decimos claro— porque esas sondas aún no están en el punto."
+         data-en="Inventory and fleet health read real systems (backbone api.admira.store and the fleet registry). The ambient sensor panel is a simulator —we say it plainly— because those probes aren't in the store yet.">El inventario y la salud de flota leen sistemas reales (backbone api.admira.store y el registro de la flota). El panel de sensores ambientales es un simulador —lo decimos claro— porque esas sondas aún no están en el punto.</p>
+    </div>
+
+    <!-- DEMO 1: INVENTARIO VIVO (real /grid/screens + /signage/now + /screen/cache) -->
+    <div class="demo" id="inventario">
+      <div class="demo-h">
+        <span class="ttl"><span class="dot"></span><span data-es="Inventario vivo de pantallas" data-en="Live screen inventory">Inventario vivo de pantallas</span></span>
+        <span class="tag-real" data-es="Datos reales" data-en="Real data">Datos reales</span>
+      </div>
+      <div class="demo-b">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+          <span class="grid-meta" id="invMeta" style="margin-left:0"></span>
+        </div>
+        <div class="devs" id="invBody"></div>
+        <p class="demo-note"><span data-es="Fuente: " data-en="Source: ">Fuente: </span><span class="mono">/grid/screens</span> + <span class="mono">/signage/now</span> + <span class="mono">/screen/cache</span> · <span data-es="cada tarjeta es una pantalla real del circuito, con sus players enlazados, qué emite ahora y cuándo reportó por última vez. «En espera» es honesto: hoy los players de la calle no están emitiendo, así que el backbone no tiene señal fresca —y lo mostramos tal cual." data-en="each card is a real screen of the circuit, with its linked players, what it plays now and when it last reported. «Waiting» is honest: today the street players aren't broadcasting, so the backbone has no fresh signal —and we show it as-is.">cada tarjeta es una pantalla real del circuito, con sus players enlazados, qué emite ahora y cuándo reportó por última vez. «En espera» es honesto: hoy los players de la calle no están emitiendo, así que el backbone no tiene señal fresca —y lo mostramos tal cual.</span></p>
+      </div>
+    </div>
+
+    <!-- DEMO 2: SALUD DE FLOTA (real /machines de admira-fleet) -->
+    <div class="demo" id="flota">
+      <div class="demo-h">
+        <span class="ttl"><span class="dot"></span><span data-es="Salud de flota" data-en="Fleet health">Salud de flota</span></span>
+        <span class="tag-real" data-es="Registro real" data-en="Real registry">Registro real</span>
+      </div>
+      <div class="demo-b">
+        <div class="fbar">
+          <div class="fkpi" id="fkpi"></div>
+          <span class="grid-meta" id="fMeta"></span>
+        </div>
+        <div class="mach" id="machBody"></div>
+        <p class="demo-note"><span data-es="Fuente: registro de la flota AdmiraNeXT (" data-en="Source: AdmiraNeXT fleet registry (">Fuente: registro de la flota AdmiraNeXT (</span><span class="mono">admira-fleet /machines</span><span data-es="), leído en vivo con su " data-en="), read live with its ">), leído en vivo con su </span><span class="mono">lastSeen</span><span data-es=". «Activo» = latió hace menos de 6 h; «en reposo» = menos de 48 h; «sin señal» = más. Son las máquinas reales que orquestan el ecosistema —Mac Mini, MacBooks, PCs, un DGX Spark. Si el worker no carga (bloqueo workers.dev en algunas redes ES), lo verás dicho aquí." data-en=". «Active» = beat under 6 h ago; «idle» = under 48 h; «no signal» = older. These are the real machines orchestrating the ecosystem —Mac Mini, MacBooks, PCs, a DGX Spark. If the worker doesn't load (workers.dev block on some ES networks), you'll see it stated here.">. «Activo» = latió hace menos de 6 h; «en reposo» = menos de 48 h; «sin señal» = más. Son las máquinas reales que orquestan el ecosistema —Mac Mini, MacBooks, PCs, un DGX Spark. Si el worker no carga (bloqueo workers.dev en algunas redes ES), lo verás dicho aquí.</span></p>
+      </div>
+    </div>
+
+    <!-- DEMO 3: SENSORES DEL PUNTO (ilustrativo) -->
+    <div class="demo" id="sensores">
+      <div class="demo-h">
+        <span class="ttl"><span class="dot" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></span><span data-es="Sensores del punto" data-en="Store sensors">Sensores del punto</span></span>
+        <span class="tag-ill" data-es="Ilustrativo" data-en="Illustrative">Ilustrativo</span>
+      </div>
+      <div class="demo-b">
+        <div class="sens" id="sensBody"></div>
+        <p class="demo-note"><span data-es="Modelo orientativo de las sondas ambientales que colgarían del Gestor IoT —aforo (que ya llega por cámara al modo condicional), temperatura, energía y estado de puerta. " data-en="Orientative model of the ambient probes that would hang off the IoT Manager —crowd (already arriving by camera into conditional mode), temperature, energy and door state. ">Modelo orientativo de las sondas ambientales que colgarían del Gestor IoT —aforo (que ya llega por cámara al modo condicional), temperatura, energía y estado de puerta. </span><b data-es="Cifras generadas en el navegador" data-en="Figures generated in the browser">Cifras generadas en el navegador</b><span data-es=", con semilla estable por día; no hay sondas físicas en el punto todavía. El aforo por visión sí es real y alimenta la " data-en=", with a day-stable seed; there are no physical probes in the store yet. Crowd-by-vision is real and feeds ">, con semilla estable por día; no hay sondas físicas en el punto todavía. El aforo por visión sí es real y alimenta la </span><a href="/videoanalytics/" data-es="analítica de vídeo" data-en="video analytics">analítica de vídeo</a>.</span></p>
+      </div>
+    </div>
+
+    <!-- DEMO 4: EL PLAYER, EN VIVO — MUPI embed (mismo origen) -->
+    <div class="demo" id="player">
+      <div class="demo-h">
+        <span class="ttl"><span class="dot"></span><span data-es="El player, gobernado" data-en="The player, governed">El player, gobernado</span></span>
+        <span class="tag-real" data-es="Mismo origen" data-en="Same origin">Mismo origen</span>
+      </div>
+      <div class="demo-b">
+        <div class="mupi-wrap">
+          <div class="mupi">
+            <iframe id="mupiFrame" title="Canal Admira · MUPI 9:16 en vivo" loading="lazy" allow="autoplay" referrerpolicy="no-referrer"></iframe>
+          </div>
+          <div class="mupi-copy">
+            <p data-es="Esto es un dispositivo real del inventario, encendido: el player reproduciendo canal.html en 9:16. El Gestor IoT lo ve como un nodo más —con su caché, su última señal y su kill-switch. Desde aquí se enciende, se apaga y se diagnostica cada cristal de la red."
+               data-en="This is a real device from the inventory, switched on: the player running canal.html in 9:16. The IoT Manager sees it as one more node —with its cache, last signal and kill-switch. From here every glass in the network is powered on, off and diagnosed.">Esto es un dispositivo real del inventario, encendido: el player reproduciendo <span class="mono">canal.html</span> en 9:16. El Gestor IoT lo ve como un nodo más —con su caché, su última señal y su kill-switch. Desde aquí se enciende, se apaga y se diagnostica cada cristal de la red.</p>
+            <a class="btn primary" href="/player/" target="_blank" rel="noopener"><span data-es="Players nativos" data-en="Native players">Players nativos</span></a>
+            <a class="btn" href="/canal.html" target="_blank" rel="noopener"><span data-es="Canal a pantalla completa" data-en="Channel fullscreen">Canal a pantalla completa</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENLACES PROFUNDOS -->
+  <section class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" data-es="Todo el subsistema" data-en="The whole subsystem">Todo el subsistema</p>
+      <h2 data-es="Entra donde trabajas" data-en="Jump where you work">Entra donde trabajas</h2>
+    </div>
+    <div class="links">
+      <a class="lk" href="/cms.html" target="_blank" rel="noopener">
+        <span class="nm" data-es="CMS de flota" data-en="Fleet CMS">CMS de flota</span>
+        <span class="ds" data-es="La consola: pantallas, caché por player y segmentación." data-en="The console: screens, per-player cache and segmentation.">La consola: pantallas, caché por player y segmentación.</span>
+        <span class="go">cms →</span>
+      </a>
+      <a class="lk" href="/player/">
+        <span class="nm" data-es="Players nativos" data-en="Native players">Players nativos</span>
+        <span class="ds" data-es="Kiosko macOS/Win/Linux/Android/iOS/tvOS, watchdog + kill-switch." data-en="Kiosk macOS/Win/Linux/Android/iOS/tvOS, watchdog + kill-switch.">Kiosko macOS/Win/Linux/Android/iOS/tvOS, watchdog + kill-switch.</span>
+        <span class="go">player →</span>
+      </a>
+      <a class="lk" href="https://yokup.com" target="_blank" rel="noopener">
+        <span class="nm">Yokup</span>
+        <span class="ds" data-es="Mantenimiento físico (FSM): el técnico que va cuando el IoT avisa." data-en="Physical maintenance (FSM): the technician who goes when IoT alerts.">Mantenimiento físico (FSM): el técnico que va cuando el IoT avisa.</span>
+        <span class="go">yokup.com →</span>
+      </a>
+      <a class="lk" href="/digitalsignage/">
+        <span class="nm" data-es="Señalización" data-en="Signage">Señalización</span>
+        <span class="ds" data-es="La parrilla que emiten los dispositivos de este inventario." data-en="The grid the devices in this inventory broadcast.">La parrilla que emiten los dispositivos de este inventario.</span>
+        <span class="go">digitalsignage →</span>
+      </a>
+    </div>
+    <p style="text-align:center;margin:26px 0 0"><a class="back" href="/apps/">&larr; <span data-es="Volver a la lanzadera" data-en="Back to the launcher">Volver a la lanzadera</span></a></p>
+  </section>
+
+  <footer class="foot">
+    <span data-es="Gestor IoT · réplica mejorada del legacy new.admira.mobi → admira.tv" data-en="IoT Manager · improved replica of legacy new.admira.mobi → admira.tv">Gestor IoT · réplica mejorada del legacy new.admira.mobi → admira.tv</span>
+    <span>Admira · tv · <span style="opacity:.75">v.08.07.2026.r9</span></span>
+  </footer>
+
 </main>
 
 <script>
-  (function(){ function set(){ try{ var s=window.AdmiraIcon&&window.AdmiraIcon('iotmanager'); if(s) document.getElementById('ic').innerHTML=s; }catch(_){}}
-    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',set); else set(); })();
+(function(){
+  'use strict';
+  /* ---------- i18n ES/EN (data-es / data-en) ---------- */
+  var LS='admtv-lang';
+  var redrawI18n=function(){};
+  function applyLang(l){
+    document.documentElement.lang=l;
+    document.querySelectorAll('[data-es]').forEach(function(el){
+      var v=el.getAttribute('data-'+l); if(v!=null) el.textContent=v;
+    });
+    document.querySelectorAll('.lang button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang')===l); });
+    try{ localStorage.setItem(LS,l); }catch(_){}
+  }
+  var lang='es'; try{ var s=localStorage.getItem(LS); if(s==='en'||s==='es') lang=s; }catch(_){}
+  document.querySelectorAll('.lang button').forEach(function(b){
+    b.addEventListener('click',function(){ lang=b.getAttribute('data-lang'); applyLang(lang); try{ redrawI18n(); }catch(_){}} );
+  });
+  applyLang(lang);
+  function T(es,en){ return lang==='en'?en:es; }
+
+  var API='https://api.admira.store';
+  var FLEET='https://admira-fleet.csilvasantin.workers.dev';
+  var esc=function(x){ return String(x==null?'':x).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];}); };
+  function ago(ts){ if(!ts) return ''; var s=Math.max(0,Math.round((Date.now()-ts)/1000));
+    if(s<60) return s+'s'; var m=Math.round(s/60); if(m<60) return m+'m'; var h=Math.round(m/60); if(h<48) return h+'h'; return Math.round(h/24)+'d'; }
+
+  var SCREEN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg>';
+
+  /* ---------- DEMO 1: INVENTARIO VIVO ---------- */
+  (function(){
+    var body=document.getElementById('invBody'), meta=document.getElementById('invMeta');
+    var screens=[];
+    function stateOf(sig){
+      if(sig && sig.lastSeen){ var age=Date.now()-sig.lastSeen; return age<6*3600e3?'online':(age<48*3600e3?'idle':'offline'); }
+      return 'offline';
+    }
+    function stateLbl(st){ return st==='online'?T('emitiendo','on air'):(st==='idle'?T('en reposo','idle'):T('en espera','waiting')); }
+    function render(){
+      if(!screens.length){ body.innerHTML='<div class="empty">'+T('El backbone no devolvió pantallas ahora mismo.','The backbone returned no screens right now.')+'</div>'; return; }
+      body.innerHTML=screens.map(function(s){
+        var st=stateOf(s.sig);
+        var players=(s.pixerScreens&&s.pixerScreens.length)||0;
+        var nowItem=(s.sig&&s.sig.item)? (s.sig.item.name||s.sig.item.title||T('creativo','creative')) : T('sin emisión','no playout');
+        var cacheTxt;
+        if(s.cache && (s.cache.have!=null||s.cache.total!=null)){ cacheTxt='📥 '+(s.cache.have!=null?s.cache.have:'?')+'/'+(s.cache.total!=null?s.cache.total:'?'); }
+        else { cacheTxt=T('sin caché','no cache'); }
+        return '<div class="dev">'+
+          '<div class="dh"><span class="dico">'+SCREEN_SVG+'</span><div style="min-width:0"><div class="dn">'+esc(s.name||s.screen)+'</div><div class="dc">'+esc(s.circuit||'')+' · '+s.bands+' '+T('franjas','bands')+'</div></div></div>'+
+          '<div class="drow"><span class="k">'+T('Players','Players')+'</span><span class="v '+(players?'cy':'off')+'">'+(players?players+' '+T('enlazados','linked'):T('ninguno','none'))+'</span></div>'+
+          '<div class="drow"><span class="k">'+T('Emite ahora','Now playing')+'</span><span class="v '+(s.sig&&s.sig.item?'on':'off')+'">'+esc(nowItem)+'</span></div>'+
+          '<div class="drow"><span class="k">'+T('Caché','Cache')+'</span><span class="v '+(s.cache&&s.cache.total?'cy':'off')+'">'+esc(cacheTxt)+'</span></div>'+
+          '<div class="drow"><span class="k">'+T('Última señal','Last signal')+'</span><span class="v off">'+((s.sig&&s.sig.lastSeen)?T('hace '+ago(s.sig.lastSeen),ago(s.sig.lastSeen)+' ago'):T('nunca','never'))+'</span></div>'+
+          '<span class="state '+st+'"><span class="d"></span>'+stateLbl(st)+'</span>'+
+        '</div>';
+      }).join('');
+      var live=screens.filter(function(s){return stateOf(s.sig)==='online';}).length;
+      meta.textContent=T(screens.length+' pantallas · '+live+' emitiendo', screens.length+' screens · '+live+' on air');
+    }
+    redrawI18n=(function(prev){ return function(){ prev&&prev(); render(); }; })(redrawI18n);
+    meta.textContent=T('consultando el backbone…','querying the backbone…');
+    fetch(API+'/grid/screens?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+      screens=(d.screens||[]).map(function(x){ return {screen:x.screen,name:x.name,circuit:x.circuit,bands:x.bands,pixerScreens:x.pixerScreens||[],sig:null,cache:null}; });
+      render();
+      // por pantalla: señal + caché reales (en paralelo, sin bloquear el primer render)
+      screens.forEach(function(s){
+        fetch(API+'/signage/now?screen='+encodeURIComponent(s.screen)+'&t='+Date.now(),{cache:'no-store'})
+          .then(function(r){return r.json();}).then(function(sd){ s.sig=sd||null; render(); }).catch(function(){});
+        fetch(API+'/screen/cache?screen='+encodeURIComponent(s.screen)+'&t='+Date.now(),{cache:'no-store'})
+          .then(function(r){return r.json();}).then(function(cd){ s.cache=(cd&&cd.cache)||null; render(); }).catch(function(){});
+      });
+    }).catch(function(){
+      body.innerHTML='<div class="empty">'+T('No se pudo leer el backbone (api.admira.store) desde aquí.','Could not read the backbone (api.admira.store) from here.')+'</div>';
+      meta.textContent=T('no accesible','unreachable');
+    });
+  })();
+
+  /* ---------- DEMO 2: SALUD DE FLOTA (registro real /machines) ---------- */
+  (function(){
+    var body=document.getElementById('machBody'), kpi=document.getElementById('fkpi'), meta=document.getElementById('fMeta');
+    var machines=[];
+    function stateOf(m){ var ls=m.lastSeen? m.lastSeen*1000:0; if(!ls) return 'off'; var age=Date.now()-ls; return age<6*3600e3?'on':(age<48*3600e3?'idle':'off'); }
+    function render(){
+      if(!machines.length){ body.innerHTML='<div class="empty">'+T('El registro no devolvió máquinas.','The registry returned no machines.')+'</div>'; kpi.innerHTML=''; return; }
+      var on=0,idle=0,off=0;
+      machines.forEach(function(m){ var st=stateOf(m); if(st==='on')on++; else if(st==='idle')idle++; else off++; });
+      kpi.innerHTML=
+        '<span class="k">'+T('Máquinas','Machines')+'<b>'+machines.length+'</b></span>'+
+        '<span class="k">'+T('Activas','Active')+'<b class="g">'+on+'</b></span>'+
+        '<span class="k">'+T('En reposo','Idle')+'<b class="a">'+idle+'</b></span>'+
+        '<span class="k">'+T('Sin señal','No signal')+'<b>'+off+'</b></span>';
+      // orden: activas primero, luego reposo, luego sin señal; dentro, más reciente arriba
+      var rank={on:0,idle:1,off:2};
+      var sorted=machines.slice().sort(function(a,b){ var d=rank[stateOf(a)]-rank[stateOf(b)]; return d||((b.lastSeen||0)-(a.lastSeen||0)); });
+      body.innerHTML=sorted.map(function(m){
+        var st=stateOf(m), lbl=st==='on'?T('activo','active'):(st==='idle'?T('en reposo','idle'):T('sin señal','no signal'));
+        return '<div class="m"><div class="mt"><span class="md '+st+'"></span><span class="mn">'+esc(m.name||m.id)+'</span></div>'+
+          '<div class="mm"><span class="pl">'+esc(m.platform||'—')+'</span><span>'+esc(lbl)+' · '+(m.lastSeen?ago(m.lastSeen*1000):'—')+'</span></div></div>';
+      }).join('');
+    }
+    redrawI18n=(function(prev){ return function(){ prev&&prev(); render(); }; })(redrawI18n);
+    meta.textContent=T('leyendo el registro…','reading the registry…');
+    fetch(FLEET+'/machines',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+      machines=d.machines||[]; render();
+      meta.textContent='';
+    }).catch(function(){
+      machines=[];
+      body.innerHTML='<div class="empty">'+T('El registro de flota no carga desde esta red. Vive en un worker propio (workers.dev), que algunas operadoras ES bloquean. El sistema es real y responde desde otras redes; no lo simulamos aquí.','The fleet registry does not load from this network. It lives on its own worker (workers.dev), blocked by some ES carriers. The system is real and responds from other networks; we do not simulate it here.')+'</div>';
+      kpi.innerHTML=''; meta.textContent=T('worker no accesible','worker unreachable');
+    });
+  })();
+
+  /* ---------- DEMO 3: SENSORES DEL PUNTO (ilustrativo, semilla por día) ---------- */
+  (function(){
+    var box=document.getElementById('sensBody');
+    // PRNG determinista por día (mismas cifras toda la jornada).
+    function seedRand(seed){ var x=Math.sin(seed)*10000; return x-Math.floor(x); }
+    var day=new Date(); var base=day.getFullYear()*1000+ (Math.floor((day-new Date(day.getFullYear(),0,0))/864e5));
+    var aforo=Math.round(6+seedRand(base+1)*22);           // personas
+    var temp=(20.5+seedRand(base+2)*3.4);                   // ºC
+    var kwh=(1.2+seedRand(base+3)*2.6);                     // kWh ahora
+    var doorOpen=seedRand(base+4)>0.5;
+    var SENS=[
+      {cls:'aforo', k:{es:'Aforo',en:'Crowd'}, v:aforo, u:{es:'personas',en:'people'}, pct:Math.min(100,Math.round(aforo/30*100))},
+      {cls:'temp', k:{es:'Temperatura',en:'Temperature'}, v:temp.toFixed(1), u:'ºC', pct:Math.round((temp-18)/8*100)},
+      {cls:'energy', k:{es:'Energía',en:'Energy'}, v:kwh.toFixed(1), u:'kWh', pct:Math.round(kwh/4*100)},
+      {cls:'door', k:{es:'Puerta',en:'Door'}, v:{es:doorOpen?'Abierta':'Cerrada',en:doorOpen?'Open':'Closed'}, u:{es:'acceso',en:'access'}, pct:doorOpen?100:12}
+    ];
+    function render(){
+      box.innerHTML=SENS.map(function(s){
+        var val=(typeof s.v==='object')?s.v[lang]:s.v;
+        var unit=(typeof s.u==='object')?s.u[lang]:s.u;
+        return '<div class="sen '+s.cls+'"><div class="sk">'+esc(s.k[lang])+'</div>'+
+          '<div class="sv">'+esc(val)+'</div><div class="su">'+esc(unit)+'</div>'+
+          '<div class="bar"><i data-pct="'+Math.max(4,Math.min(100,s.pct))+'"></i></div></div>';
+      }).join('');
+    }
+    function animate(){ box.querySelectorAll('.bar i').forEach(function(i){ setTimeout(function(){ i.style.width=i.getAttribute('data-pct')+'%'; },60); }); }
+    redrawI18n=(function(prev){ return function(){ prev&&prev(); render(); animate(); }; })(redrawI18n);
+    render();
+    if('IntersectionObserver' in window){
+      var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ animate(); io.disconnect(); } }); },{threshold:.3});
+      io.observe(document.getElementById('sensores'));
+    } else animate();
+  })();
+
+  /* ---------- DEMO 4: MUPI — iframe diferido (mismo origen) ---------- */
+  (function(){
+    var fr=document.getElementById('mupiFrame');
+    if(fr && !fr.getAttribute('src')) fr.setAttribute('src','/canal.html?embed=mupi');
+  })();
+})();
 </script>
 </body>
 </html>
