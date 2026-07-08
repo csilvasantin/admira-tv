@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quest VR · PoC WebXR · Admira.tv</title>
+<meta name="description" content="PoC WebXR del Admira VR Player para Meta Quest: escena inmersiva con un muro de 3 pantallas y campañas en vivo. Abre esta URL en el Meta Quest Browser y pulsa Entrar en VR.">
+<meta name="theme-color" content="#05080d">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://admira.tv/xr/quest/">
+<meta property="og:title" content="Quest VR · PoC WebXR · Admira.tv">
+<meta property="og:description" content="Muro de 3 pantallas con campañas, en realidad virtual sobre Meta Quest. PoC WebXR con Three.js.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://admira.tv/xr/quest/">
+<meta property="og:image" content="https://admira.tv/og-admira.png">
+<style>
+  :root{--bg:#05080d;--panel:#0b1119;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--cyan:#38d6ff;--amber:#f5b431}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  #scene{position:fixed;inset:0;z-index:0}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+
+  /* crosshair de mirada (desktop) */
+  #reticle{position:fixed;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;border:2px solid rgba(61,240,138,.85);box-shadow:0 0 8px rgba(61,240,138,.6);z-index:5;pointer-events:none;opacity:.9}
+
+  /* barra superior */
+  .topbar{position:fixed;top:0;left:0;right:0;z-index:8;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:linear-gradient(180deg,rgba(5,8,13,.92),rgba(5,8,13,0));pointer-events:none}
+  .topbar .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:14.5px;pointer-events:auto}
+  .topbar .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .topbar .brand .en{font:600 10.5px ui-monospace,monospace;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+  .topbar .tools{display:flex;gap:8px;pointer-events:auto}
+  .lnk{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:rgba(11,17,25,.8);border-radius:10px;padding:8px 13px;font-weight:700;font-size:13px;color:var(--txt);text-decoration:none;transition:border-color .2s,color .2s}
+  .lnk:hover{border-color:var(--green);color:#fff}
+
+  /* botón Entrar en VR (three lo inyecta; le damos sitio y estilo base) */
+  #vrbtn-wrap{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:8}
+
+  /* HUD de eventos (log en vivo) */
+  #hud{position:fixed;left:16px;bottom:16px;z-index:7;width:min(340px,calc(100vw - 32px));background:rgba(9,13,20,.86);border:1px solid var(--line);border-radius:13px;padding:12px 13px;backdrop-filter:blur(6px)}
+  #hud h4{margin:0 0 8px;font:700 11px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--green);display:flex;align-items:center;gap:8px}
+  #hud h4 .d{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);animation:blink 1.9s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  @media(prefers-reduced-motion:reduce){#hud h4 .d{animation:none}}
+  #hudlog{list-style:none;margin:0;padding:0;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+  #hudlog li{display:flex;gap:8px;padding:2px 0;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #hudlog li .t{color:var(--cyan)}
+  #hudlog li.empty{color:var(--dim);opacity:.7}
+
+  /* overlay de carga / ayuda */
+  #boot{position:fixed;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(120% 90% at 50% 25%,rgba(61,240,138,.08),transparent 60%),var(--bg);transition:opacity .5s ease;text-align:center;padding:24px}
+  #boot.gone{opacity:0;pointer-events:none}
+  #boot .spin{width:44px;height:44px;border-radius:50%;border:3px solid rgba(61,240,138,.18);border-top-color:var(--green);animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media(prefers-reduced-motion:reduce){#boot .spin{animation:none}}
+  #boot .lt{font:600 13px ui-monospace,monospace;color:var(--dim);letter-spacing:.04em}
+  #boot .err{max-width:460px;color:var(--txt)}
+  #boot .err h2{color:var(--amber);font-size:18px;margin:0 0 8px}
+  #boot .err p{color:var(--dim);font-size:14px;margin:0}
+
+  /* pista de interacción */
+  #hint{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:6;background:rgba(9,13,20,.82);border:1px solid var(--line);border-radius:999px;padding:7px 15px;font:600 12px ui-monospace,monospace;color:var(--dim);max-width:calc(100vw - 32px);text-align:center;transition:opacity .6s ease}
+  #hint.gone{opacity:0}
+
+  @media(max-width:560px){
+    .topbar .brand .en{display:none}
+    #hud{width:calc(100vw - 32px)}
+  }
+</style>
+</head>
+<body>
+
+<div id="scene"></div>
+<div id="reticle" aria-hidden="true"></div>
+
+<div class="topbar">
+  <span class="brand"><span class="dot"></span>Admira VR Player <span class="en">Quest · PoC WebXR</span></span>
+  <span class="tools">
+    <a class="lnk" href="/xr/">&larr; Hub XR</a>
+  </span>
+</div>
+
+<div id="hint">Mira una pantalla 2&nbsp;s (o haz clic) para reproducir · clic en “Ver campaña” para cambiarla</div>
+
+<div id="vrbtn-wrap"></div>
+
+<aside id="hud">
+  <h4><span class="d"></span>Eventos en vivo</h4>
+  <ul id="hudlog"><li class="empty">esperando sesión…</li></ul>
+</aside>
+
+<div id="boot">
+  <div class="spin"></div>
+  <div class="lt">Cargando la escena XR…</div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { VRButton } from './vendor/VRButton.js';
+import { OrbitControls } from './vendor/OrbitControls.js';
+import { AdmiraXR } from '/xr/core/admira-xr-core.js';
+
+'use strict';
+
+const $ = function (id) { return document.getElementById(id); };
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ============ Sesión + HUD ============ */
+AdmiraXR.session();               // emite xr.session.started (1ª vez en la pestaña)
+
+function refreshHUD() {
+  const ul = $('hudlog');
+  const evs = AdmiraXR.events().slice(-5).reverse();
+  if (!evs.length) { ul.innerHTML = '<li class="empty">esperando sesión…</li>'; return; }
+  ul.innerHTML = evs.map(function (e) {
+    const t = new Date(e.ts).toLocaleTimeString();
+    return '<li><span class="t">' + t + '</span><span>' + e.type + '</span></li>';
+  }).join('');
+}
+setInterval(refreshHUD, 400);
+refreshHUD();
+
+/* ============ Three.js: escena base ============ */
+const container = $('scene');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x05080d);
+scene.fog = new THREE.Fog(0x05080d, 6, 22);
+
+const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 1.6, 4.2);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.xr.enabled = true;
+container.appendChild(renderer.domElement);
+
+// Botón "Entrar en VR" (three) — lo reubicamos en nuestro wrap y lo re-etiquetamos.
+const vrButton = VRButton.createButton(renderer);
+vrButton.textContent = 'Entrar en VR';
+vrButton.style.position = 'static';
+vrButton.style.transform = 'none';
+vrButton.style.margin = '0';
+$('vrbtn-wrap').appendChild(vrButton);
+
+// Controles desktop (fallback completo sin visor).
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1.5, -3);
+controls.enableDamping = !REDUCED;
+controls.dampingFactor = 0.08;
+controls.minDistance = 1.5;
+controls.maxDistance = 8;
+controls.maxPolarAngle = Math.PI * 0.9;
+controls.update();
+
+/* ============ Ambiente oscuro Admira ============ */
+scene.add(new THREE.HemisphereLight(0x223047, 0x05070c, 0.9));
+const key = new THREE.DirectionalLight(0x9fd8ff, 0.5);
+key.position.set(2, 6, 4);
+scene.add(key);
+
+// Suelo
+const floorMat = new THREE.MeshStandardMaterial({ color: 0x0a0f18, roughness: 0.95, metalness: 0.0 });
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), floorMat);
+floor.rotation.x = -Math.PI / 2;
+scene.add(floor);
+const grid = new THREE.GridHelper(60, 60, 0x14324a, 0x0d1a26);
+grid.position.y = 0.001;
+scene.add(grid);
+
+/* ============ Núcleo: catálogo + carga de texturas ============ */
+const catalog = AdmiraXR.catalog();          // 3 campañas mock
+const texLoader = new THREE.TextureLoader();
+texLoader.setCrossOrigin('anonymous');
+const textures = {};                          // campaignId -> THREE.Texture
+let assetsPending = catalog.length;
+
+function onAssetsReady() { hideBoot(); buildScreens(); }
+
+catalog.forEach(function (c) {
+  texLoader.load(
+    c.media,
+    function (tex) {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      textures[c.id] = tex;
+      AdmiraXR.emit('xr.asset.loaded', { campaign: c.id, media: c.media });
+      if (--assetsPending === 0) onAssetsReady();
+    },
+    undefined,
+    function () {
+      // Falla de textura: seguimos con un color plano para no romper el PoC.
+      textures[c.id] = null;
+      AdmiraXR.emit('xr.asset.loaded', { campaign: c.id, media: c.media, fallback: true });
+      if (--assetsPending === 0) onAssetsReady();
+    }
+  );
+});
+
+/* ============ Rótulos (canvas → textura) ============ */
+function makeLabelTexture(title, tagline, accent) {
+  const w = 512, h = 128;
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = 'rgba(9,13,20,0.92)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 0, 8, h);
+  ctx.fillStyle = '#dfe8f4';
+  ctx.font = '700 40px -apple-system, Segoe UI, Roboto, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(title, 28, 46);
+  ctx.fillStyle = '#8595ad';
+  ctx.font = '400 24px ui-monospace, Menlo, monospace';
+  ctx.fillText(tagline, 28, 90);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/* ============ Muro de 3 pantallas ============ */
+const SCREEN_W = 2.4, SCREEN_H = SCREEN_W * 9 / 16;
+const WALL_Z = -3.2, WALL_Y = 1.6, GAP = 3.0;
+const interactive = [];        // meshes raycastables (pantallas + hotspots)
+const screens = [];            // estado por pantalla
+
+function screenTexture(campaign) {
+  const tex = textures[campaign.id];
+  if (tex) return new THREE.MeshBasicMaterial({ map: tex });
+  return new THREE.MeshBasicMaterial({ color: 0x122033 });
+}
+
+function buildScreens() {
+  catalog.forEach(function (initialCampaign, i) {
+    const group = new THREE.Group();
+    group.position.set((i - 1) * GAP, WALL_Y, WALL_Z);
+    scene.add(group);
+
+    // Marco verde fósforo (plano ligeramente mayor, por detrás)
+    const frameMat = new THREE.MeshBasicMaterial({ color: 0x1c8f56 });
+    const frame = new THREE.Mesh(new THREE.PlaneGeometry(SCREEN_W + 0.14, SCREEN_H + 0.14), frameMat);
+    frame.position.z = -0.02;
+    group.add(frame);
+
+    // Pantalla (plano 16:9 con textura de campaña)
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(SCREEN_W, SCREEN_H), screenTexture(initialCampaign));
+    screen.userData = { kind: 'screen', index: i };
+    group.add(screen);
+    interactive.push(screen);
+
+    // Rótulo (encima)
+    const labelTex = makeLabelTexture(initialCampaign.title, initialCampaign.tagline, initialCampaign.accent);
+    const label = new THREE.Mesh(
+      new THREE.PlaneGeometry(SCREEN_W, SCREEN_W * 128 / 512),
+      new THREE.MeshBasicMaterial({ map: labelTex, transparent: true })
+    );
+    label.position.set(0, SCREEN_H / 2 + 0.28, 0.01);
+    group.add(label);
+
+    // Hotspot "Ver campaña" (debajo)
+    const hsTex = makeHotspotTexture();
+    const hotspot = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.1, 0.34),
+      new THREE.MeshBasicMaterial({ map: hsTex, transparent: true })
+    );
+    hotspot.position.set(0, -SCREEN_H / 2 - 0.32, 0.02);
+    hotspot.userData = { kind: 'hotspot', index: i };
+    group.add(hotspot);
+    interactive.push(hotspot);
+
+    screens.push({
+      group: group, frame: frame, frameMat: frameMat, screen: screen, label: label,
+      index: i, campaignIdx: i,
+      gazeStart: 0, viewing: false, completed: false, highlighted: false
+    });
+
+    AdmiraXR.emit('xr.screen.placed', { screenIndex: i, campaign: initialCampaign.id });
+  });
+}
+
+function makeHotspotTexture() {
+  const w = 320, h = 96;
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d');
+  const r = 22;
+  ctx.fillStyle = 'rgba(61,240,138,0.14)';
+  roundRect(ctx, 2, 2, w - 4, h - 4, r); ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = '#3df08a';
+  roundRect(ctx, 2, 2, w - 4, h - 4, r); ctx.stroke();
+  ctx.fillStyle = '#3df08a';
+  ctx.font = '700 34px -apple-system, Segoe UI, Roboto, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('▶  Ver campaña', w / 2, h / 2 + 2);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/* ============ Interacción: mirada + selección ============ */
+const raycaster = new THREE.Raycaster();
+const pointerNDC = new THREE.Vector2(0, 0);   // centro por defecto (gaze desktop/VR)
+let pointerActive = false;                    // el ratón manda en desktop
+const tmpMatrix = new THREE.Matrix4();
+const dir = new THREE.Vector3();
+
+renderer.domElement.addEventListener('pointermove', function (e) {
+  pointerActive = true;
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointerNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointerNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+});
+renderer.domElement.addEventListener('pointerdown', function () {
+  const hit = currentHit();
+  if (hit) select(hit);
+});
+
+// Controladores VR (mando): trigger = select sobre lo que apunta el rayo.
+function makeController(idx) {
+  const c = renderer.xr.getController(idx);
+  c.addEventListener('selectstart', function () {
+    const hit = controllerHit(c);
+    if (hit) select(hit);
+  });
+  // rayo visible del mando
+  const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -6)]);
+  const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x3df08a, transparent: true, opacity: 0.55 }));
+  c.add(line);
+  scene.add(c);
+  return c;
+}
+const controller0 = makeController(0);
+const controller1 = makeController(1);
+
+function controllerHit(controller) {
+  tmpMatrix.identity().extractRotation(controller.matrixWorld);
+  raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+  raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tmpMatrix);
+  const hits = raycaster.intersectObjects(interactive, false);
+  return hits.length ? hits[0].object : null;
+}
+
+function gazeCamera() {
+  return renderer.xr.isPresenting ? renderer.xr.getCamera() : camera;
+}
+
+// Objeto actualmente apuntado (gaze centro, o ratón en desktop, o mando en VR).
+function currentHit() {
+  if (renderer.xr.isPresenting) {
+    // Prioridad al mando si apunta a algo; si no, mirada central.
+    const byCtrl = controllerHit(controller0) || controllerHit(controller1);
+    if (byCtrl) return byCtrl;
+    const cam = gazeCamera();
+    raycaster.ray.origin.setFromMatrixPosition(cam.matrixWorld);
+    cam.getWorldDirection(dir); raycaster.ray.direction.copy(dir);
+    const hits = raycaster.intersectObjects(interactive, false);
+    return hits.length ? hits[0].object : null;
+  }
+  // Desktop: ratón si se ha movido, si no el centro de la vista.
+  raycaster.setFromCamera(pointerActive ? pointerNDC : new THREE.Vector2(0, 0), camera);
+  const hits = raycaster.intersectObjects(interactive, false);
+  return hits.length ? hits[0].object : null;
+}
+
+/* ---- Resalte de pantalla ---- */
+function setHighlight(s, on) {
+  if (s.highlighted === on) return;
+  s.highlighted = on;
+  s.frameMat.color.setHex(on ? 0x3df08a : 0x1c8f56);
+  if (!REDUCED) s.group.scale.setScalar(on ? 1.05 : 1.0);
+}
+
+/* ---- Empezar / completar vista por mirada ---- */
+function beginView(s) {
+  if (s.viewing) return;
+  s.viewing = true;
+  s.completed = false;
+  s.gazeStart = performance.now();
+  AdmiraXR.emit('xr.view.started', { screenIndex: s.index, campaign: catalog[s.campaignIdx].id });
+}
+function completeView(s) {
+  if (s.completed) return;
+  s.completed = true;
+  AdmiraXR.emit('xr.view.completed', { screenIndex: s.index, campaign: catalog[s.campaignIdx].id, dwellMs: 2000 });
+}
+function endView(s) {
+  s.viewing = false; s.gazeStart = 0;
+}
+
+/* ---- Selección (clic / trigger): hotspot cambia campaña; pantalla completa vista ---- */
+function select(obj) {
+  const idx = obj.userData.index;
+  const s = screens[idx];
+  if (!s) return;
+  if (obj.userData.kind === 'hotspot') {
+    AdmiraXR.emit('xr.hotspot.clicked', { screenIndex: idx });
+    advanceCampaign(s);
+  } else if (obj.userData.kind === 'screen') {
+    // clic directo = vista inmediata (start + complete)
+    beginView(s);
+    completeView(s);
+  }
+}
+
+function advanceCampaign(s) {
+  s.campaignIdx = (s.campaignIdx + 1) % catalog.length;
+  const c = catalog[s.campaignIdx];
+  // swap textura + rótulo
+  s.screen.material.dispose();
+  s.screen.material = screenTexture(c);
+  s.label.material.map = makeLabelTexture(c.title, c.tagline, c.accent);
+  s.label.material.needsUpdate = true;
+  // resetear ciclo de vista para la nueva campaña
+  s.viewing = false; s.completed = false; s.gazeStart = 0;
+  AdmiraXR.emit('xr.campaign.selected', { screenIndex: s.index, campaign: c.id });
+}
+
+/* ============ Bucle de render ============ */
+let lastHitScreenIdx = -1;
+const clock = new THREE.Clock();
+
+function tick() {
+  const hit = currentHit();
+  const hitScreenIdx = (hit && hit.userData.kind === 'screen') ? hit.userData.index : -1;
+
+  // gestión de resalte + gaze por pantalla
+  screens.forEach(function (s) {
+    const looking = (hitScreenIdx === s.index);
+    setHighlight(s, looking || (hit && hit.userData.index === s.index));
+    if (looking) {
+      if (!s.viewing) beginView(s);
+      else if (!s.completed && (performance.now() - s.gazeStart) >= 2000) completeView(s);
+    } else if (s.viewing) {
+      endView(s);
+    }
+  });
+  lastHitScreenIdx = hitScreenIdx;
+
+  // idle sutil (desactivado con reduced-motion)
+  if (!REDUCED) {
+    const t = clock.getElapsedTime();
+    screens.forEach(function (s, i) {
+      s.group.position.y = WALL_Y + Math.sin(t * 0.6 + i) * 0.015;
+    });
+  }
+
+  if (!renderer.xr.isPresenting) controls.update();
+  renderer.render(scene, camera);
+}
+renderer.setAnimationLoop(tick);
+
+/* ============ VR session lifecycle ============ */
+renderer.xr.addEventListener('sessionstart', function () {
+  $('reticle').style.display = 'none';   // en VR el crosshair DOM no aplica
+  hideHint();
+});
+renderer.xr.addEventListener('sessionend', function () {
+  $('reticle').style.display = '';
+});
+
+/* ============ Salida: fin de sesión ============ */
+window.addEventListener('pagehide', function () { AdmiraXR.emit('xr.session.ended'); }, { once: true });
+
+/* ============ Resize + boot ============ */
+window.addEventListener('resize', function () {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+let bootHidden = false;
+function hideBoot() { if (bootHidden) return; bootHidden = true; $('boot').classList.add('gone'); }
+function hideHint() { const h = $('hint'); if (h) h.classList.add('gone'); }
+setTimeout(hideBoot, 8000);   // salvaguarda si la carga se atasca
+setTimeout(hideHint, 9000);
+</script>
+</body>
+</html>
