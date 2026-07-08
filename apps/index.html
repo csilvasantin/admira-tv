@@ -9,12 +9,12 @@
 <link rel="dns-prefetch" href="https://www.carlossilva.info">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lanzadera de apps · Admira.tv</title>
-<meta name="description" content="La lanzadera del stack Admira: las 18 aplicaciones del ecosistema —señalización, catálogo, analítica, IoT, gamificación y más— en un solo grid.">
+<meta name="description" content="La lanzadera del stack Admira: las 20 aplicaciones del ecosistema —señalización, catálogo, analítica, IoT, gemelos digitales, teambuilding y más— en un solo grid.">
 <meta name="theme-color" content="#070a10">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="canonical" href="https://admira.tv/apps/">
 <meta property="og:title" content="Lanzadera de apps · Admira.tv">
-<meta property="og:description" content="Las 18 aplicaciones del stack Admira en un solo grid.">
+<meta property="og:description" content="Las 20 aplicaciones del stack Admira en un solo grid.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://admira.tv/apps/">
 <meta property="og:image" content="https://admira.tv/og-admira.png">
@@ -27,13 +27,17 @@
   .wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:26px 20px 64px}
   .lhead h1{font-size:clamp(24px,4vw,34px);margin:0 0 6px;letter-spacing:-.01em;font-weight:800}
   .lhead .lead{color:var(--dim);margin:0 0 20px;max-width:640px;font-size:15px}
-  /* barra de herramientas: búsqueda + contadores (mejora sobre el grid plano del mobi) */
+  /* buscador reubicado en la barra superior del chrome (cfg.topRight) — compacto, coherente con la topbar */
+  .admtop .admsearch{position:relative;display:flex;align-items:center;flex:0 1 260px;min-width:150px;margin:0 2px}
+  /* móvil: el buscador cede ancho (se estrecha) para que TODOS los controles del chrome quepan en una fila, sin scroll horizontal */
+  @media(max-width:760px){.admtop .admsearch{flex:1 1 auto;min-width:72px;margin-left:0}}
+  .admtop .admsearch svg{position:absolute;left:9px;width:15px;height:15px;color:#8595ad;pointer-events:none}
+  .admtop .admsearch input{width:100%;background:#0e1420;color:#cdd8e8;border:1px solid #1e2940;border-radius:9px;padding:6px 10px 6px 30px;font:13px -apple-system,Segoe UI,Roboto,sans-serif;height:32px}
+  .admtop .admsearch input:focus{outline:none;border-color:#3df08a;box-shadow:0 0 0 3px rgba(61,240,138,.14)}
+  .admtop .admsearch input::placeholder{color:#8595ad}
+  .admtop .admsearch input::-webkit-search-cancel-button{filter:invert(.6)}
+  /* barra de herramientas de la página: solo contadores */
   .tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
-  .search{position:relative;flex:1;min-width:200px;max-width:380px}
-  .search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--dim);pointer-events:none}
-  .search input{width:100%;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 36px;font:inherit;font-size:14px}
-  .search input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(61,240,138,.12)}
-  .search input::placeholder{color:var(--dim)}
   .counts{display:flex;gap:14px;font:600 12px ui-monospace,monospace;color:var(--dim);white-space:nowrap}
   .counts b{color:var(--txt)}
   .counts .live::before{content:"\25CF";color:var(--green);margin-right:5px;font-size:10px;vertical-align:1px}
@@ -59,23 +63,29 @@
 </style>
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.08.07.2026.r15';</script>
-<script src="/admira-nav.js?v=08.07.2026.r18" data-active="apps" data-title="Lanzadera de apps" defer></script>
+<script>
+window.ADMIRA_VERSION='v.08.07.2026.r19';
+/* El buscador de la lanzadera vive en la barra superior del chrome (cfg.topRight).
+   No lleva clase .admtR, así que NO lo esconde el breakpoint móvil de la topbar. */
+window.ADMIRA_NAV={
+  topRight:
+    '<span class="admsearch">'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>'+
+      '<input id="q" type="search" placeholder="Buscar app…" aria-label="Buscar aplicación" autocomplete="off">'+
+    '</span>'
+};
+</script>
+<script src="/admira-nav.js?v=08.07.2026.r19" data-active="apps" data-title="Lanzadera de apps" defer></script>
 
 <main class="wrap" id="admskip-target">
   <div class="lhead">
     <h1>Lanzadera</h1>
-    <p class="lead">Las 18 aplicaciones del stack Admira, en un solo sitio. Abre la que necesites; se van encendiendo esta noche.</p>
   </div>
 
   <div class="tools">
-    <div class="search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
-      <input id="q" type="search" placeholder="Buscar app…" aria-label="Buscar aplicación" autocomplete="off">
-    </div>
     <div class="counts">
-      <span><b id="cTotal">18</b> apps</span>
-      <span class="live"><b id="cLive">13</b> en antena</span>
+      <span><b id="cTotal">20</b> apps</span>
+      <span class="live"><b id="cLive">15</b> en antena</span>
       <span class="wip"><b id="cWip">5</b> en construcción</span>
     </div>
   </div>
@@ -85,7 +95,7 @@
 
   <div class="foot">
     <span>Réplica mejorada de la lanzadera legacy · new.admira.mobi → admira.tv</span>
-    <span>Admira · tv · <span style="opacity:.75">v.08.07.2026.r15</span></span>
+    <span>Admira · tv · <span style="opacity:.75">v.08.07.2026.r19</span></span>
   </div>
 </main>
 

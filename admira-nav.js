@@ -3,8 +3,8 @@
  *   <script src="/admira-nav.js" data-active="calendar" data-title="Calendario de emisión" defer></script>
  * data-active: flota|apps|calendar|condicional|canal|mural|comprar|adcelerate|alta|help   ·   data-title: subtítulo de la barra.
  * Estado (plegado/detalle) compartido entre páginas vía localStorage.
- * El ítem "Apps" despliega un submenú (flyout en desktop · acordeón en móvil) con las 18 apps del stack,
- * cuyo estado ●/○ vive en window.AdmiraApps (fuente única que también consume /apps/). v.08.07.2026.r18 */
+ * El ítem "Apps" despliega un submenú (flyout en desktop · acordeón en móvil) con las 20 apps del stack,
+ * cuyo estado ●/○ vive en window.AdmiraApps (fuente única que también consume /apps/). v.08.07.2026.r19 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -45,7 +45,7 @@
     help:        _S+'<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2-2.4 3.5"/><circle cx="12" cy="16.6" r=".5" fill="currentColor" stroke="none"/></svg>',
     control:     _S+'<path d="M5 4v16M12 4v16M19 4v16"/><circle cx="5" cy="9" r="2"/><circle cx="12" cy="14.5" r="2"/><circle cx="19" cy="7" r="2"/></svg>',
     programar:   _S+'<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.2h17M8 3.5v3M16 3.5v3M12 12v5M9.5 14.5h5"/></svg>',
-    /* Lanzadera de aplicaciones (18 apps del stack Admira, réplica mejorada de new.admira.mobi) */
+    /* Lanzadera de aplicaciones (20 apps del stack Admira, réplica mejorada de new.admira.mobi) */
     apps:               _S+'<rect x="3.5" y="3.5" width="5" height="5" rx="1.4"/><rect x="9.5" y="3.5" width="5" height="5" rx="1.4"/><rect x="15.5" y="3.5" width="5" height="5" rx="1.4"/><rect x="3.5" y="9.5" width="5" height="5" rx="1.4"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.4"/><rect x="15.5" y="9.5" width="5" height="5" rx="1.4"/><rect x="3.5" y="15.5" width="5" height="5" rx="1.4"/><rect x="9.5" y="15.5" width="5" height="5" rx="1.4"/><rect x="15.5" y="15.5" width="5" height="5" rx="1.4"/></svg>',
     dashboard:          _S+'<path d="M3.6 16.5a8.4 8.4 0 0 1 16.8 0"/><path d="M12 16.5l4.2-4.6"/><circle cx="12" cy="16.5" r="1.3" fill="currentColor" stroke="none"/><path d="M5.7 12.6l.8.8M12 7.2v1.4M18.3 12.6l-.8.8"/></svg>',
     digitalsignage:     _S+'<rect x="4" y="3.5" width="16" height="11" rx="1.8"/><path d="M12 14.5V20M8.5 20h7M7.5 7h6M7.5 10h9"/></svg>',
@@ -64,12 +64,14 @@
     audiobranding:      _S+'<path d="M9 17V5.2l9-2V15"/><circle cx="6.5" cy="17" r="2.4"/><circle cx="15.5" cy="15" r="2.4"/></svg>',
     olfactorymarketing: _S+'<path d="M9 9.5h6l.8 8.2a1.9 1.9 0 0 1-1.9 2.1H10.1a1.9 1.9 0 0 1-1.9-2.1Z"/><path d="M10 9.5V7h4v2.5"/><path d="M12 2.4c-1 1 1 1.5 0 2.7M15.2 3.1c-.8.7.7 1.1 0 2.1"/></svg>',
     virtualreality:     _S+'<path d="M3.5 8.5A1.5 1.5 0 0 1 5 7h14a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 19 15h-2.9a1.5 1.5 0 0 1-1.2-.6l-1.1-1.5a2 2 0 0 0-3.6 0l-1.1 1.5a1.5 1.5 0 0 1-1.2.6H5a1.5 1.5 0 0 1-1.5-1.5Z"/></svg>',
-    augmentedreality:   _S+'<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><path d="M12 8.3 15.4 10v4L12 15.7 8.6 14v-4Z"/><path d="M12 8.3V12l3.4-2M12 12v3.7M12 12 8.6 10"/></svg>'
+    augmentedreality:   _S+'<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><path d="M12 8.3 15.4 10v4L12 15.7 8.6 14v-4Z"/><path d="M12 8.3V12l3.4-2M12 12v3.7M12 12 8.6 10"/></svg>',
+    xpaceos:            _S+'<path d="M12 2.6 3.8 7.1v9.8L12 21.4l8.2-4.5V7.1Z"/><path d="M3.8 7.1 12 11.7l8.2-4.6M12 11.7v9.7"/></svg>',
+    yarig:              _S+'<circle cx="12" cy="7.2" r="2.6"/><circle cx="5.8" cy="10.4" r="2.2"/><circle cx="18.2" cy="10.4" r="2.2"/><path d="M8.3 18.5a3.8 3.8 0 0 1 7.4 0M2.4 17.2a3.3 3.3 0 0 1 4.4-2.4M21.6 17.2a3.3 3.3 0 0 0-4.4-2.4"/></svg>'
   };
   function IC(k){ return ICONS[k]||''; }
   try{ window.AdmiraIcon=IC; window.AdmiraIconSet=ICONS; }catch(_){}
 
-  /* Las 18 apps del stack Admira, en el ORDEN exacto de la lanzadera legacy (new.admira.mobi).
+  /* Las 20 apps del stack Admira, en el ORDEN exacto de la lanzadera legacy (new.admira.mobi) + XpaceOS y Yarig.ai al final.
    * FUENTE ÚNICA de estado ●/○: la lanzadera /apps/ y el submenú del sidebar beben de aquí (window.AdmiraApps).
    * st: 'live' = ● en antena · 'wip' = ○ en construcción. Al encender una app, se cambia SOLO aquí. */
   var APPS=[
@@ -90,7 +92,9 @@
     {s:'audiobranding',      nm:'Audiobranding',        en:'Audiobranding',       ds:'La identidad sonora de tu espacio, con IA.',      st:'live'},
     {s:'olfactorymarketing', nm:'Marketing olfativo',   en:'Olfactory Marketing', ds:'El aroma como canal de marca.',                   st:'wip'},
     {s:'virtualreality',     nm:'Realidad virtual',     en:'Virtual Reality',     ds:'Experiencias inmersivas para tu marca.',          st:'wip'},
-    {s:'augmentedreality',   nm:'Realidad aumentada',   en:'Augmented Reality',   ds:'Capas digitales sobre el mundo real.',            st:'wip'}
+    {s:'augmentedreality',   nm:'Realidad aumentada',   en:'Augmented Reality',   ds:'Capas digitales sobre el mundo real.',            st:'wip'},
+    {s:'xpaceos',            nm:'XpaceOS',              en:'Digital Twins',       ds:'El gemelo digital de tu espacio, vivo.',          st:'live'},
+    {s:'yarig',              nm:'Yarig.ai',             en:'Team Building',       ds:'El teambuilding de tu equipo, jugado con IA.',    st:'live'}
   ];
   try{ window.AdmiraApps=APPS; }catch(_){}
 
@@ -156,7 +160,7 @@
    ".admlinks a:hover .dic svg{color:#8effc4}",
    ".admni .t{transition:opacity .12s}",
    "@media(min-width:681px){html.admnav:not(.admnav-open) .admni:hover::after{content:attr(title);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:#0e1420;border:1px solid #26385e;color:#cdd8e8;padding:5px 9px;border-radius:7px;font:600 12px -apple-system,Segoe UI,sans-serif;white-space:nowrap;z-index:60;box-shadow:0 6px 18px #0008;pointer-events:none}}",
-   /* submenú de Apps: acceso directo a las 18 apps desde el sidebar (flyout desktop · acordeón móvil) */
+   /* submenú de Apps: acceso directo a las 20 apps desde el sidebar (flyout desktop · acordeón móvil) */
    ".admni-grp{position:relative}",
    ".admni-caret{position:absolute;top:8px;right:7px;width:22px;height:22px;border:0;background:transparent;color:#8595ad;cursor:pointer;display:grid;place-items:center;border-radius:6px;padding:0;z-index:2}",
    ".admni-caret:hover{color:#8effc4;background:#13203a}",
@@ -261,8 +265,8 @@
   function appsGroupHTML(i){
     var on=(i.k===active);
     return '<div class="admni-grp" id="admAppsGrp">'+
-      '<a class="admni'+(on?' on':'')+'" id="admAppsLink" href="'+i.h+'"'+(on?' aria-current="page"':'')+' title="'+i.t+' — atajo a las 18 apps"><span class="ic">'+IC(i.k)+'</span><span class="t">'+i.t+'</span></a>'+
-      '<button class="admni-caret" id="admAppsCaret" type="button" aria-expanded="false" aria-controls="admAppsSub" aria-label="Desplegar las 18 apps">'+
+      '<a class="admni'+(on?' on':'')+'" id="admAppsLink" href="'+i.h+'"'+(on?' aria-current="page"':'')+' title="'+i.t+' — atajo a las 20 apps"><span class="ic">'+IC(i.k)+'</span><span class="t">'+i.t+'</span></a>'+
+      '<button class="admni-caret" id="admAppsCaret" type="button" aria-expanded="false" aria-controls="admAppsSub" aria-label="Desplegar las 20 apps">'+
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>'+
       '</button>'+
       appsSubHTML()+
@@ -421,7 +425,7 @@
       window.addEventListener('resize',function(){ if(rzSide)rzSide.set(sideW,false); if(rzDet)rzDet.set(detW,false); if(rzExp)rzExp.set(expH,false); });
     })();
 
-    // Submenú de Apps: acceso directo a las 18 apps (flyout en desktop · acordeón en móvil)
+    // Submenú de Apps: acceso directo a las 20 apps (flyout en desktop · acordeón en móvil)
     (function(){
       var grp=document.getElementById('admAppsGrp'), caret=document.getElementById('admAppsCaret'),
           sub=document.getElementById('admAppsSub'), link=document.getElementById('admAppsLink');

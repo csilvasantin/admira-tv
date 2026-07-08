@@ -2,42 +2,41 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<!-- preconnect: chrome + motor del catálogo (PixerIA, servido en vivo) -->
-<link rel="preconnect" href="https://www.pixeria.com" crossorigin>
-<link rel="preconnect" href="https://www.carlossilva.info">
-<link rel="dns-prefetch" href="https://www.pixeria.com">
+<!-- preconnect: chrome + motor del gemelo (XpaceOS, servido en vivo) -->
+<link rel="preconnect" href="https://www.xpaceos.com" crossorigin>
+<link rel="dns-prefetch" href="https://www.xpaceos.com">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Catálogo · Admira.tv</title>
-<meta name="description" content="Tu biblioteca de creativos, lista para antena: imagen, vídeo, audio y NPCs creados con IA y criterio humano. Del catálogo a la pantalla en un clic.">
+<title>XpaceOS · Admira.tv</title>
+<meta name="description" content="El gemelo digital de tu espacio: recrea tu tienda, oficina o venue con aforo, colas, pantallas y campañas. Ensayas en el gemelo lo que luego pasa en el mundo real.">
 <meta name="theme-color" content="#070a10">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="canonical" href="https://admira.tv/contentcatalogue/">
-<meta property="og:title" content="Catálogo · Admira.tv">
-<meta property="og:description" content="Tu biblioteca de creativos, lista para antena: imagen, vídeo, audio y NPCs con IA y criterio humano. Del catálogo a la pantalla en un clic.">
+<link rel="canonical" href="https://admira.tv/xpaceos/">
+<meta property="og:title" content="XpaceOS · Admira.tv">
+<meta property="og:description" content="El gemelo digital de tu espacio: aforo, colas, pantallas y campañas. Ensayas en el gemelo lo que luego pasa en el mundo real.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://admira.tv/contentcatalogue/">
+<meta property="og:url" content="https://admira.tv/xpaceos/">
 <meta property="og:image" content="https://admira.tv/og-admira.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Catálogo · Admira.tv">
-<meta name="twitter:description" content="Tu biblioteca de creativos, lista para antena. Del catálogo a la pantalla en un clic.">
+<meta name="twitter:title" content="XpaceOS · Admira.tv">
+<meta name="twitter:description" content="El gemelo digital de tu espacio. Ensayas en el gemelo lo que luego pasa en el mundo real.">
 <meta name="twitter:image" content="https://admira.tv/og-admira.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebPage",
-  "@id": "https://admira.tv/contentcatalogue/",
-  "url": "https://admira.tv/contentcatalogue/",
-  "name": "Catálogo · Admira.tv",
+  "@id": "https://admira.tv/xpaceos/",
+  "url": "https://admira.tv/xpaceos/",
+  "name": "XpaceOS · Admira.tv",
   "inLanguage": "es",
   "isPartOf": { "@id": "https://admira.tv/#site" },
   "about": {
     "@type": "SoftwareApplication",
-    "name": "Admira Catálogo",
-    "applicationCategory": "Digital Asset Management",
+    "name": "XpaceOS",
+    "applicationCategory": "Digital Twin / Retail Operations",
     "operatingSystem": "Web, Edge device",
-    "description": "Biblioteca central de creativos para digital signage: imagen, vídeo, audio y NPCs generados con IA (método PixerIA) y filtrados por criterio editorial humano, con derechos limpios y salida directa a la antena. Producción en vivo del laboratorio Pixeria."
+    "description": "Gemelo digital del espacio físico: recrea tienda, oficina o venue con NPCs, aforo simulado, colas, pantallas y campañas. La capa OPERAR de la trilogía Admira (Crear → Operar → Emitir). Ensayas en el gemelo lo que luego ocurre en el mundo real, config-driven y siempre fresco. Producción en vivo de xpaceos.com."
   }
 }
 </script>
@@ -74,6 +73,14 @@
   .hero .en{font:600 12px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:0 0 14px}
   .hero .lead{font-size:clamp(16px,2.2vw,19px);color:var(--dim);max-width:720px;margin:0 auto}
   .hero-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+  /* la trilogía: Crear → Operar → Emitir */
+  .flow{display:flex;align-items:stretch;justify-content:center;gap:10px;flex-wrap:wrap;margin:34px auto 0;max-width:820px}
+  .fstep{flex:1;min-width:190px;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:15px 16px;text-align:left}
+  .fstep .fk{font:600 10.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+  .fstep .fw{font-size:clamp(19px,3.4vw,24px);font-weight:800;margin:4px 0 2px}
+  .fstep.a .fw{color:var(--cyan)} .fstep.b .fw{color:var(--green)} .fstep.c .fw{color:var(--amber)}
+  .fstep .fd{font-size:12.5px;color:var(--dim)}
+  .fstep.b{border-color:rgba(61,240,138,.4);box-shadow:0 0 24px rgba(61,240,138,.07)}
 
   /* PRODUCTO EN VIVO (la estrella) */
   .stage{border:1px solid rgba(61,240,138,.28);border-radius:18px;background:var(--panel);overflow:hidden;box-shadow:0 0 40px rgba(61,240,138,.06)}
@@ -88,7 +95,7 @@
   .frame{position:relative;width:100%;height:75vh;min-height:460px;background:#05080d}
   .frame iframe{display:block;width:100%;height:100%;border:0}
   /* estado de carga elegante */
-  .load{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(120% 90% at 50% 20%,rgba(61,240,138,.07),transparent 60%),#070b12;transition:opacity .5s ease}
+  .load{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:20px;background:radial-gradient(120% 90% at 50% 20%,rgba(61,240,138,.07),transparent 60%),#070b12;transition:opacity .5s ease}
   .loaded .load{opacity:0;pointer-events:none}
   .spin{width:40px;height:40px;border-radius:50%;border:3px solid rgba(61,240,138,.18);border-top-color:var(--green);animation:sp .8s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
@@ -153,18 +160,18 @@
 </style>
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.08.07.2026.r14';</script>
-<script src="/admira-nav.js?v=08.07.2026.r19" data-active="apps" data-title="Catálogo" defer></script>
+<script>window.ADMIRA_VERSION='v.08.07.2026.r19';</script>
+<script src="/admira-nav.js?v=08.07.2026.r19" data-active="apps" data-title="XpaceOS" defer></script>
 
 <!-- barra de modo app (se muestra sólo con ?app=1) -->
 <div class="app-bar" id="appBar">
-  <span class="ab-ttl"><span class="dot"></span>Catálogo <span class="en">Content Catalogue</span></span>
+  <span class="ab-ttl"><span class="dot"></span>XpaceOS <span class="en">Digital Twin</span></span>
   <div class="stage-tools">
     <button class="btn sm" id="abFull" type="button" aria-label="Pantalla completa">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
       Pantalla completa
     </button>
-    <a class="btn sm" href="/contentcatalogue/">✕ Salir</a>
+    <a class="btn sm" href="/xpaceos/">✕ Salir</a>
   </div>
 </div>
 
@@ -172,13 +179,19 @@
 
   <!-- HERO -->
   <header class="hero wrap marketing">
-    <span class="kicker"><span class="d"></span>Imagen · Vídeo · Audio · NPCs</span>
-    <h1>Tu biblioteca de creativos, <span class="g">lista para antena</span></h1>
-    <p class="en">Content Catalogue</p>
-    <p class="lead">Todo lo que has creado, en un sitio. Buscable, etiquetado y con derechos limpios. Creado con IA, filtrado por criterio humano, a un clic de tus pantallas.</p>
+    <span class="kicker"><span class="d"></span>Gemelo digital · Aforo · Colas · Pantallas</span>
+    <h1>Ensaya tu espacio <span class="g">antes de que pase</span></h1>
+    <p class="en">XpaceOS · Digital Twin</p>
+    <p class="lead">El gemelo digital de tu tienda, oficina o venue. Recrea el espacio con aforo, colas, pantallas y campañas —y ensayas en el gemelo lo que luego ocurre en el mundo real.</p>
     <div class="hero-actions">
-      <a class="btn primary" href="#producto">▶ Abrir el catálogo</a>
+      <a class="btn primary" href="#producto">▶ Abrir el gemelo</a>
       <a class="btn" href="#capacidades">Qué hace</a>
+      <a class="btn" href="#stack">La trilogía</a>
+    </div>
+    <div class="flow">
+      <div class="fstep a"><div class="fk">Crear</div><div class="fw">Pixeria</div><div class="fd">la pieza nace con IA y criterio humano, lista para la pantalla</div></div>
+      <div class="fstep b"><div class="fk">Operar · aquí</div><div class="fw">XpaceOS</div><div class="fd">el gemelo del espacio ensaya aforo, colas y campañas antes de la calle</div></div>
+      <div class="fstep c"><div class="fk">Emitir</div><div class="fw">admira.tv</div><div class="fd">lo ensayado sale a antena en el MUPI, sin rehacer nada</div></div>
     </div>
   </header>
 
@@ -186,14 +199,14 @@
   <section class="wrap" id="producto" style="padding-top:20px">
     <div class="stage" id="stage">
       <div class="stage-h">
-        <span class="ttl"><span class="dot"></span>El catálogo, en vivo</span>
+        <span class="ttl"><span class="dot"></span>El gemelo, en vivo</span>
         <div class="stage-tools">
           <span class="tag-live">En vivo</span>
-          <button class="btn sm" id="btnFull" type="button" aria-label="Ver el catálogo a pantalla completa">
+          <button class="btn sm" id="btnFull" type="button" aria-label="Ver el gemelo a pantalla completa">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
             Pantalla completa
           </button>
-          <a class="btn sm primary" href="/contentcatalogue/?app=1" aria-label="Abrir el catálogo en grande">
+          <a class="btn sm primary" href="/xpaceos/?app=1" aria-label="Abrir el gemelo en grande">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-8 8M10 20H4v-6M4 20l8-8"/></svg>
             Abrir en grande
           </a>
@@ -202,14 +215,14 @@
       <div class="frame">
         <div class="load" id="load" aria-hidden="true">
           <div class="spin"></div>
-          <div class="lt">Abriendo el catálogo…</div>
+          <div class="lt">Levantando el gemelo…</div>
         </div>
-        <iframe id="cat" title="Catálogo" loading="lazy" src="https://www.pixeria.com/"
+        <iframe id="twin" title="XpaceOS · gemelo digital en vivo" loading="lazy"
           referrerpolicy="no-referrer-when-downgrade" allow="fullscreen; clipboard-write"></iframe>
       </div>
       <p class="stage-note">
-        <span>La biblioteca completa, empotrada aquí mismo. Cada mejora del catálogo aparece sola —sin versiones que instalar.</span>
-        <a href="/contentcatalogue/?app=1">Abrir en grande →</a>
+        <span>El gemelo digital del espacio, empotrado aquí mismo. Cada mejora aparece sola —sin versiones que instalar.</span>
+        <a href="/xpaceos/?app=1">Abrir en grande →</a>
       </p>
     </div>
   </section>
@@ -218,80 +231,80 @@
   <section class="wrap marketing" id="capacidades">
     <div class="sec-head">
       <p class="eyebrow">Qué hace</p>
-      <h2>Del prompt a la pantalla</h2>
-      <p>Lo que pide una biblioteca de creativos en 2026 —a la altura de los DAM líderes— con una diferencia: aquí la máquina crea y la persona decide.</p>
+      <h2>Del ensayo a la operación</h2>
+      <p>La capa OPERAR de Admira: recreas tu espacio, lo simulas vivo y conectas sus pantallas a la emisión real. Lo que afinas en el gemelo, ocurre luego en la calle.</p>
     </div>
     <div class="caps">
       <div class="cap">
-        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="4.5" width="17" height="13" rx="2"/><path d="M3.5 13l4-3.5 4 3 4-4 5 4.5M8 8.5a1.3 1.3 0 1 0 0 .01M7.5 21h9"/></svg></div>
-        <p class="en">Central library</p>
-        <h3>Biblioteca central</h3>
-        <p>Todos tus creativos en un sitio: imagen, vídeo, audio y NPCs. Buscables, etiquetados, listos.</p>
+        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5l9-5.5 9 5.5v9.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 20v-6h6v6"/></svg></div>
+        <p class="en">Digital twin</p>
+        <h3>Gemelo de tu espacio</h3>
+        <p>Recrea tu tienda, oficina o venue: plano, equipo y alzado. El espacio real, en digital, listo para ensayar.</p>
       </div>
       <div class="cap">
-        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.2L18 9l-4.4 1.8L12 15l-1.6-4.2L6 9l4.4-1.8z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></div>
-        <p class="en">AI creation</p>
-        <h3>Creación con IA</h3>
-        <p>Imagen, vídeo y música generadas con el método PixerIA. Del prompt a la pieza terminada.</p>
+        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="7" r="2.4"/><circle cx="16" cy="7" r="2.4"/><path d="M3.5 19v-1.5a3.5 3.5 0 0 1 3.5-3.5h2a3.5 3.5 0 0 1 3.5 3.5V19M13.5 14.2a3.5 3.5 0 0 1 3-.7 3.5 3.5 0 0 1 4 3.5V19"/></svg></div>
+        <p class="en">Live simulation</p>
+        <h3>Simulación viva</h3>
+        <p>Aforo, colas y comportamiento por perfil. Los NPCs se mueven como tu público —ves el espacio latir antes de abrir.</p>
       </div>
       <div class="cap">
-        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg></div>
-        <p class="en">Human criterion</p>
-        <h3>Criterio humano</h3>
-        <p>La máquina propone; la persona decide. Cada pieza pasa por ojo experto antes de salir.</p>
+        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="11" rx="1.8"/><path d="M12 15.5V20M8 20h8"/><path d="M7 8.5h6M7 11.5h4"/></svg></div>
+        <p class="en">Screens on air</p>
+        <h3>Pantallas conectadas</h3>
+        <p>Las pantallas del gemelo enlazan con la emisión real. Lo que programas aquí sale a la <a href="/digitalsignage/">señalización</a> de verdad.</p>
       </div>
       <div class="cap">
-        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="11" rx="1.8"/><path d="M12 15v5M8 20h8"/><path d="M9.5 9.5l2 2 3.5-3.5"/></svg></div>
-        <p class="en">Catalogue to broadcast</p>
-        <h3>A la antena en un clic</h3>
-        <p>De la biblioteca a la pantalla sin fricción: pásalo a <a href="/digitalsignage/">señalización</a> o al <a href="/cms.html">CMS</a> y a emitir.</p>
+        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div>
+        <p class="en">Space KPIs</p>
+        <h3>Medición y KPIs</h3>
+        <p>El espacio, en cifras: aforo, colas y rendimiento. Míralo en el <a href="/dashboard/">dashboard</a> y en <a href="/videoanalytics/">videoanalytics</a>.</p>
       </div>
       <div class="cap">
-        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path d="M12 14.5v2.5"/></svg></div>
-        <p class="en">Clean rights</p>
-        <h3>Derechos limpios</h3>
-        <p>Cada creativo, con su licencia clara. Lo que sale a antena sale sin sustos legales.</p>
+        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11M4 7l3-3M4 7l3 3M20 17H9M20 17l-3-3M20 17l-3 3"/></svg></div>
+        <p class="en">Config-driven</p>
+        <h3>Sin rehacer nada</h3>
+        <p>Del ensayo a la operación con la misma configuración. Lo que validas en el gemelo pasa a producción tal cual.</p>
       </div>
       <div class="cap">
         <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg></div>
         <p class="en">Always fresh</p>
         <h3>Siempre fresco</h3>
-        <p>Mejora continua sin instalar nada: el catálogo se actualiza solo. Lo que ves es siempre lo último.</p>
+        <p>El gemelo vive en producción y mejora solo. Lo que ves es siempre lo último —sin instalar, sin actualizar.</p>
       </div>
     </div>
   </section>
 
-  <!-- INTEGRACIÓN CON EL STACK -->
-  <section class="wrap marketing">
+  <!-- INTEGRACIÓN CON EL STACK: la trilogía -->
+  <section class="wrap marketing" id="stack">
     <div class="sec-head">
       <p class="eyebrow">Encaja en el stack</p>
-      <h2>Del catálogo, a todo lo demás</h2>
-      <p>El Catálogo no vive solo: alimenta el Stock, la señalización y la emisión. Elige una pieza aquí y sigue el flujo donde trabajas.</p>
+      <h2>La trilogía: Crear · Operar · Emitir</h2>
+      <p>XpaceOS es la pieza del medio. Pixeria crea la pieza, XpaceOS ensaya el espacio y admira.tv la emite —un solo flujo, sin saltos.</p>
     </div>
     <div class="links">
-      <a class="lk" href="https://www.admira.studio" target="_blank" rel="noopener">
-        <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.3"/></svg></span>
-        <span class="nm">Stock de Admira Studio</span>
-        <span class="ds">El fondo de piezas del hub PixerIA × Admira.xp, con su galería.</span>
-        <span class="go">admira.studio ↗</span>
+      <a class="lk" href="/contentcatalogue/">
+        <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.2L18 9l-4.4 1.8L12 15l-1.6-4.2L6 9l4.4-1.8z"/></svg></span>
+        <span class="nm">Crear · Pixeria</span>
+        <span class="ds">El catálogo de creativos con IA y criterio humano, listo para el gemelo.</span>
+        <span class="go">contentcatalogue →</span>
       </a>
       <a class="lk" href="/digitalsignage/">
         <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3.5" width="16" height="11" rx="1.8"/><path d="M12 14.5V20M8.5 20h7M7.5 7h6M7.5 10h9"/></svg></span>
-        <span class="nm">Señalización</span>
-        <span class="ds">Programa la pieza en cada pantalla y sácala a antena.</span>
+        <span class="nm">Emitir · Señalización</span>
+        <span class="ds">Las pantallas del gemelo, conectadas a la antena de verdad.</span>
         <span class="go">digitalsignage →</span>
-      </a>
-      <a class="lk" href="/cms.html">
-        <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16M4 12h16M4 18.5h10"/></svg></span>
-        <span class="nm">CMS</span>
-        <span class="ds">Organiza, versiona y publica el contenido del canal.</span>
-        <span class="go">cms →</span>
       </a>
       <a class="lk" href="/canal.html" target="_blank" rel="noopener">
         <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8 20h8M12 16.5V20"/><path d="M10.4 8.1l4.2 2.9-4.2 2.9z" fill="currentColor" stroke="none"/></svg></span>
-        <span class="nm">El canal / emisión</span>
-        <span class="ds">El cristal que emite tu creativo, en vivo en el MUPI.</span>
+        <span class="nm">Emitir · El canal</span>
+        <span class="ds">El cristal que emite en vivo en el MUPI lo que el gemelo ensayó.</span>
         <span class="go">canal →</span>
+      </a>
+      <a class="lk" href="https://www.xpaceos.com/admira-xp/" target="_blank" rel="noopener">
+        <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5l9-5.5 9 5.5v9.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 20v-6h6v6"/></svg></span>
+        <span class="nm">El gemelo en directo</span>
+        <span class="ds">Admira XP funcionando en abierto, el corazón que late aquí dentro.</span>
+        <span class="go">xpaceos.com/admira-xp ↗</span>
       </a>
     </div>
   </section>
@@ -299,10 +312,10 @@
   <!-- CTA -->
   <section class="wrap marketing">
     <div class="cta">
-      <h2>Todo tu contenido, a un clic de antena</h2>
-      <p>Abre el catálogo a lo grande, elige la pieza y mándala a la pantalla. Sin fricción, sin versiones.</p>
+      <h2>Ensaya tu espacio a lo grande</h2>
+      <p>Abre el gemelo a pantalla completa, mueve el aforo, prueba una campaña y mira cómo responde tu espacio antes de la calle.</p>
       <div class="cta-actions">
-        <a class="btn primary" href="/contentcatalogue/?app=1">▶ Abrir el catálogo en grande</a>
+        <a class="btn primary" href="/xpaceos/?app=1">▶ Abrir el gemelo en grande</a>
         <a class="btn" href="/apps/">Ver todas las apps</a>
       </div>
     </div>
@@ -310,9 +323,9 @@
   </section>
 
   <footer class="foot marketing">
-    <span>Catálogo · producción en vivo del laboratorio Pixeria → admira.tv</span>
-    <span class="eng">Motor: <b>PixerIA</b></span>
-    <span>Admira · tv · <span style="opacity:.75">v.08.07.2026.r14</span></span>
+    <span>XpaceOS · la capa Operar · producción en vivo de xpaceos.com → admira.tv</span>
+    <span class="eng">Motor: <b>XpaceOS</b></span>
+    <span>Admira · tv · <span style="opacity:.75">v.08.07.2026.r19</span></span>
   </footer>
 
 </main>
@@ -321,35 +334,45 @@
 (function(){
   'use strict';
   var $=function(id){return document.getElementById(id);};
+  var SRC='https://www.xpaceos.com/';
 
-  /* ---- estado de carga: quita el overlay cuando el catálogo termina de cargar ---- */
-  (function(){
-    var fr=$('cat'), frame=fr&&fr.closest('.frame');
-    if(!fr||!frame) return;
-    function done(){ frame.classList.add('loaded'); }
+  /* ---- modo app (?app=1): el gemelo a viewport completo, sin cromo de marketing ---- */
+  var isApp=false;
+  try{ isApp=new URLSearchParams(location.search).get('app')==='1'; }catch(_){ isApp=/[?&]app=1\b/.test(location.search); }
+  if(isApp){
+    document.body.classList.add('app');
+    document.title='XpaceOS (pantalla) · Admira.tv';
+  }
+
+  /* ---- carga del iframe (lazy manual: solo cuando el bloque se acerca al viewport) ---- */
+  var fr=$('twin'), frame=fr&&fr.closest('.frame'), stage=$('stage');
+  var mounted=false;
+  function done(){ if(frame) frame.classList.add('loaded'); }
+  function mount(){
+    if(mounted||!fr) return; mounted=true;
     fr.addEventListener('load', done);
-    if(fr.complete) done();                 // ya cargado (cache)
-    setTimeout(done, 6000);                 // red por si el evento no llega
-  })();
+    setTimeout(done, 6000);          // red por si el evento no llega
+    fr.setAttribute('src', SRC);
+  }
+  if(isApp){
+    mount();
+  } else if('IntersectionObserver' in window && stage){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ mount(); io.disconnect(); } });
+    },{rootMargin:'400px'});
+    io.observe(stage);
+  } else {
+    mount();
+  }
 
   /* ---- pantalla completa del marco (requestFullscreen sobre el contenedor) ---- */
   (function(){
-    var stage=$('stage');
     function go(){
+      mount();
       if(!stage) return;
       try{ if(document.fullscreenElement){ document.exitFullscreen(); } else if(stage.requestFullscreen){ stage.requestFullscreen(); } }catch(_){}
     }
     [ 'btnFull','abFull' ].forEach(function(id){ var b=$(id); if(b) b.addEventListener('click', go); });
-  })();
-
-  /* ---- modo app (?app=1): el catálogo a viewport completo, sin cromo de marketing ---- */
-  (function(){
-    var app=false;
-    try{ app=new URLSearchParams(location.search).get('app')==='1'; }catch(_){ app=/[?&]app=1\b/.test(location.search); }
-    if(app){
-      document.body.classList.add('app');
-      document.title='Catálogo (pantalla) · Admira.tv';
-    }
   })();
 })();
 </script>
