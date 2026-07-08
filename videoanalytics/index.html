@@ -2,59 +2,641 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<!-- preconnect a orígenes críticos (CSS del chrome + backbone de segmentación, dominio propio) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
+<link rel="dns-prefetch" href="https://api.admira.store">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Analítica de vídeo · Admira.tv</title>
-<meta name="description" content="Audiencia y atención medidas por cámara, con segmentación que alimenta el contenido condicional.">
+<meta name="description" content="La cámara como sensor de audiencia: detecta quién mira y adapta el contenido en tiempo real. Cookieless y con privacidad por diseño —se procesa en el edge, no se almacenan rostros. Con la matriz de segmentación real conectada a la red.">
 <meta name="theme-color" content="#070a10">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="canonical" href="https://admira.tv/videoanalytics/">
 <meta property="og:title" content="Analítica de vídeo · Admira.tv">
-<meta property="og:description" content="Audiencia y atención medidas por cámara, con segmentación que alimenta el contenido condicional.">
+<meta property="og:description" content="La cámara como sensor de audiencia: detecta quién mira y adapta el contenido en tiempo real. Privacidad por diseño, en el edge. Con la matriz de segmentación real conectada a la red.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://admira.tv/videoanalytics/">
 <meta property="og:image" content="https://admira.tv/og-admira.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Analítica de vídeo · Admira.tv">
+<meta name="twitter:description" content="La cámara como sensor de audiencia. Detecta y adapta el contenido en tiempo real, con privacidad por diseño.">
+<meta name="twitter:image" content="https://admira.tv/og-admira.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": "https://admira.tv/videoanalytics/",
+  "url": "https://admira.tv/videoanalytics/",
+  "name": "Analítica de vídeo · Admira.tv",
+  "inLanguage": "es",
+  "isPartOf": { "@id": "https://admira.tv/#site" },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Admira Analítica de vídeo",
+    "applicationCategory": "Audience Analytics",
+    "operatingSystem": "Web, Edge device",
+    "description": "Medición de audiencia por visión: la cámara detecta público y contexto y alimenta la matriz de segmentación que adapta el contenido en tiempo real. Cookieless, procesado en el edge, sin almacenar rostros."
+  }
+}
+</script>
 <style>
-  :root{--bg:#070a10;--panel:#0b1119;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--amber:#f5b431}
+  :root{--bg:#070a10;--panel:#0b1119;--panel2:#0e1622;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--cyan:#38d6ff;--amber:#f5b431;--pink:#ff6ec7;--air:#ff4444}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
   body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px);opacity:.5}
   a{color:inherit;text-decoration:none}
-  .wrap{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:min(12vh,90px) 20px 60px;text-align:center}
-  .ic{width:84px;height:84px;margin:0 auto 22px;display:grid;place-items:center;border-radius:20px;background:rgba(61,240,138,.07);border:1px solid rgba(61,240,138,.18)}
-  .ic svg{width:46px;height:46px;color:var(--green);filter:drop-shadow(0 0 6px rgba(61,240,138,.55))}
-  h1{font-size:clamp(28px,6vw,42px);margin:0 0 4px;letter-spacing:-.01em;font-weight:800}
-  .en{font:600 12px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:0 0 18px}
-  .ds{color:var(--dim);font-size:16px;max-width:460px;margin:0 auto 26px}
-  .badge{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--amber);color:var(--amber);border-radius:999px;padding:8px 16px;font:700 12px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase}
-  .badge .d{width:9px;height:9px;border-radius:50%;border:2px solid var(--amber);position:relative}
-  .badge .d::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid var(--amber);opacity:.5;animation:p 1.8s ease-out infinite}
-  @keyframes p{0%{transform:scale(.7);opacity:.6}100%{transform:scale(1.5);opacity:0}}
-  @media(prefers-reduced-motion:reduce){.badge .d::after{animation:none}}
-  .back{display:inline-flex;align-items:center;gap:8px;margin-top:30px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 18px;font-weight:600;font-size:14px;transition:border-color .2s,color .2s}
+  img,iframe,video{max-width:100%}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 20px}
+  .eyebrow{font:600 12px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--green)}
+  section{padding:48px 0}
+  .sec-head{max-width:720px;margin:0 auto 28px;text-align:center}
+  .sec-head h2{font-size:clamp(24px,4vw,34px);margin:8px 0 8px;letter-spacing:-.01em;font-weight:800}
+  .sec-head p{color:var(--dim);margin:0;font-size:15.5px}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:11px 20px;font-weight:700;font-size:14px;border:1px solid #2a3a66;background:transparent;color:var(--txt);cursor:pointer;transition:transform .12s,border-color .2s,background .2s}
+  .btn:hover{transform:translateY(-1px);border-color:#3a4f8a}
+  .btn.primary{background:var(--green);border-color:var(--green);color:#03140a}
+  .btn.primary:hover{background:#5cf6a1}
+  a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
+  /* hero */
+  .hero{padding:74px 0 20px;text-align:center}
+  .kicker{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 13px;font:600 11.5px ui-monospace,monospace;color:var(--dim);letter-spacing:.04em}
+  .kicker .d{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green)}
+  .hero h1{font-size:clamp(34px,7vw,64px);line-height:1.02;margin:18px auto 12px;letter-spacing:-.02em;font-weight:800;max-width:840px}
+  .hero h1 .g{color:var(--green);text-shadow:0 0 22px rgba(61,240,138,.32)}
+  .hero .en{font:600 12px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:0 0 14px}
+  .hero .lead{font-size:clamp(16px,2.2vw,19px);color:var(--dim);max-width:680px;margin:0 auto}
+  .hero-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+  .lang{display:inline-flex;gap:2px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px;margin-left:10px;vertical-align:middle}
+  .lang button{border:0;background:transparent;color:var(--dim);font:700 11px/1 ui-monospace,monospace;padding:5px 10px;border-radius:999px;cursor:pointer}
+  .lang button.on{background:var(--green);color:#03140a}
+
+  /* flujo */
+  .flow{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:30px auto 0;font:600 13px ui-monospace,monospace;color:var(--dim)}
+  .flow b{color:var(--txt)}
+  .flow .a{color:var(--green)}
+
+  /* arquitectura 3 columnas */
+  .arch{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:820px){.arch{grid-template-columns:1fr}}
+  .col{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:20px;min-width:0}
+  .col .role{font:600 11px ui-monospace,monospace;letter-spacing:.13em;text-transform:uppercase;color:var(--green)}
+  .col h3{margin:8px 0 4px;font-size:19px}
+  .col .leg{font-size:12.5px;color:var(--dim);margin:0 0 14px}
+  .col .leg b{color:var(--txt);font-weight:600}
+  .col ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .col li{font-size:13.5px;line-height:1.4;color:var(--dim);display:flex;gap:9px;align-items:flex-start;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:rgba(61,240,138,.03)}
+  .col li .t{color:var(--green);flex:none;margin-top:1px;font-size:13px}
+  .col li b{color:var(--txt);font-weight:600}
+  .col li a{color:var(--cyan);border-bottom:1px solid rgba(56,214,255,.35)}
+  .col li a:hover{color:#7ce3ff}
+
+  /* demos */
+  .demo{border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:hidden;margin-bottom:16px}
+  .demo-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .demo-h .ttl{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+  .demo-h .ttl .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex:none;animation:blink 1.9s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  @media(prefers-reduced-motion:reduce){.demo-h .ttl .dot{animation:none}}
+  .tag-real{font:700 10px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--green);border:1px solid rgba(61,240,138,.4);border-radius:999px;padding:4px 9px}
+  .tag-ill{font:700 10px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);border:1px solid rgba(245,180,49,.45);border-radius:999px;padding:4px 9px}
+  .demo-b{padding:16px}
+  .demo-note{font-size:12.5px;color:var(--dim);margin:14px 0 0;line-height:1.5}
+  .demo-note a{color:var(--cyan);border-bottom:1px solid rgba(56,214,255,.35)}
+
+  /* MATRIZ (real) */
+  .grid-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .grid-tools label{font:600 12px ui-monospace,monospace;color:var(--dim)}
+  select{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:9px;padding:8px 11px;font:inherit;font-size:13.5px;min-width:0;max-width:100%}
+  .grid-meta{font:600 12px ui-monospace,monospace;color:var(--dim);margin-left:auto}
+  .rules{display:flex;flex-direction:column;gap:9px}
+  .rule{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--line);border-radius:11px;background:var(--panel2);padding:11px 13px;min-width:0}
+  .rule.carousel{background:rgba(56,214,255,.04)}
+  .cond{display:inline-flex;align-items:center;gap:7px;font:600 13px ui-monospace,monospace;color:var(--txt);flex-wrap:wrap}
+  .cond .ico{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:rgba(61,240,138,.09);border:1px solid rgba(61,240,138,.22);color:var(--green);font-size:12px;flex:none}
+  .arrow{color:var(--green);font:700 14px ui-monospace,monospace}
+  .serves{font-size:13px;color:var(--dim);min-width:0}
+  .serves b{color:var(--txt);font-weight:600}
+  .pill{display:inline-flex;align-items:center;gap:5px;font:600 11px ui-monospace,monospace;border:1px solid var(--line);border-radius:999px;padding:3px 9px;color:var(--dim)}
+  .pill.g{color:var(--green);border-color:rgba(61,240,138,.35)}
+  .pill.c{color:var(--cyan);border-color:rgba(56,214,255,.35)}
+  .pill.p{color:var(--pink);border-color:rgba(255,110,199,.35)}
+
+  /* HITS (real feed) */
+  .hits{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto}
+  .hit{display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:9px 12px;min-width:0}
+  .hit .face{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none;font-size:16px;background:rgba(56,214,255,.07);border:1px solid rgba(56,214,255,.2)}
+  .hit .who{font-weight:600;font-size:13.5px;min-width:0}
+  .hit .who small{display:block;color:var(--dim);font:600 11px ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hit .when{margin-left:auto;font:600 11px ui-monospace,monospace;color:var(--dim);white-space:nowrap}
+  .empty{color:var(--dim);font-size:13.5px;text-align:center;padding:18px 8px;border:1px dashed var(--line);border-radius:10px;line-height:1.5}
+
+  /* SIMULADOR (ilustrativo) */
+  .sim{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:680px){.sim{grid-template-columns:1fr}}
+  .sim-controls{display:flex;flex-direction:column;gap:13px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font:600 11px ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button{flex:1;min-width:64px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);border-radius:9px;padding:9px 6px;font:700 12px ui-monospace,monospace;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+  .seg button.on{border-color:var(--green);color:var(--green);background:rgba(61,240,138,.07)}
+  input[type=range]{width:100%;accent-color:var(--green)}
+  .rangeval{font:700 13px ui-monospace,monospace;color:var(--txt)}
+  .sim-out{border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:15px;display:flex;flex-direction:column;gap:11px;min-width:0}
+  .sim-out .decides{font:600 11px ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;color:var(--green)}
+  .sim-served{display:flex;gap:12px;align-items:center;min-width:0}
+  .sim-thumb{width:66px;height:88px;border-radius:9px;flex:none;background:#05080d;border:1px solid var(--line);overflow:hidden;display:grid;place-items:center;color:var(--dim);font-size:22px}
+  .sim-thumb img,.sim-thumb video{width:100%;height:100%;object-fit:cover}
+  .sim-served .meta{min-width:0}
+  .sim-served .meta h4{margin:0 0 4px;font-size:15px;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .sim-served .meta .sub{font:600 11.5px ui-monospace,monospace;color:var(--dim)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+
+  /* KPI dashboard (ilustrativo) */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media(max-width:680px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:14px}
+  .kpi .k{font:600 10.5px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+  .kpi .v{font-size:clamp(22px,4vw,30px);font-weight:800;letter-spacing:-.01em;margin:5px 0 2px}
+  .kpi .v.green{color:var(--green)} .kpi .v.cyan{color:var(--cyan)} .kpi .v.pink{color:var(--pink)} .kpi .v.amber{color:var(--amber)}
+  .kpi .d{font:600 11px ui-monospace,monospace;color:var(--dim)}
+  .split{margin-top:14px;border:1px solid var(--line);border-radius:11px;background:var(--panel2);padding:13px 15px}
+  .split .sh{display:flex;justify-content:space-between;font:600 11.5px ui-monospace,monospace;color:var(--dim);margin-bottom:8px}
+  .splitbar{height:14px;border-radius:99px;overflow:hidden;display:flex;background:#05080d;border:1px solid var(--line)}
+  .splitbar i{height:100%;transition:width .8s ease}
+  .splitbar .m{background:var(--cyan)} .splitbar .f{background:var(--pink)}
+  .split .lg{display:flex;gap:16px;margin-top:9px;font:600 11.5px ui-monospace,monospace;color:var(--dim)}
+  .split .lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .split .lg i.m{background:var(--cyan)} .split .lg i.f{background:var(--pink)}
+
+  /* MUPI condicional embed */
+  .mupi-wrap{display:flex;gap:22px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .mupi{flex:none;width:min(240px,72vw);aspect-ratio:9/16;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#000;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+  .mupi iframe{display:block;width:100%;height:100%;border:0}
+  .mupi-copy{flex:1;min-width:220px;max-width:420px}
+  .mupi-copy p{color:var(--dim);font-size:14px;margin:0 0 14px}
+  .mupi-copy .btn{margin-right:8px;margin-bottom:8px}
+
+  /* enlaces */
+  .links{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:820px){.links{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:460px){.links{grid-template-columns:1fr}}
+  .lk{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:13px;background:var(--panel);padding:16px;transition:transform .12s,border-color .2s,background .2s}
+  .lk:hover{transform:translateY(-3px);border-color:#2a3a66;background:var(--panel2)}
+  .lk .nm{font-weight:700;font-size:15px}
+  .lk .ds{color:var(--dim);font-size:12.5px;line-height:1.4}
+  .lk .go{font:600 11.5px ui-monospace,monospace;color:var(--green);margin-top:auto}
+
+  .foot{margin-top:20px;padding:26px 20px 46px;border-top:1px solid var(--line);color:var(--dim);font:600 11.5px ui-monospace,monospace;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;max-width:1080px;margin-left:auto;margin-right:auto}
+  .foot a{color:var(--dim)} .foot a:hover{color:var(--green)}
+  .back{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 15px;font-weight:600;font-size:13.5px;transition:border-color .2s,color .2s}
   .back:hover{border-color:var(--green);color:#fff}
-  .back:focus-visible{outline:2px solid var(--green);outline-offset:2px}
-  .foot{margin-top:44px;color:var(--dim);font:600 11px ui-monospace,monospace}
 </style>
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.08.07.2026.r3';</script>
-<script src="/admira-nav.js?v=08.07.2026.r3" data-active="apps" data-title="Analítica de vídeo" defer></script>
+<script>window.ADMIRA_VERSION='v.08.07.2026.r5';</script>
+<script src="/admira-nav.js?v=08.07.2026.r5" data-active="apps" data-title="Analítica de vídeo" defer></script>
 
-<main class="wrap" id="admskip-target">
-  <div class="ic" id="ic" aria-hidden="true"></div>
-  <h1>Analítica de vídeo</h1>
-  <p class="en">Video Analytics</p>
-  <p class="ds">Audiencia y atención medidas por cámara, con segmentación que alimenta el contenido condicional.</p>
-  <span class="badge"><span class="d"></span>En construcción · esta noche</span>
-  <div><a class="back" href="/apps/">&larr; Volver a la lanzadera</a></div>
-  <p class="foot">Admira · tv · v.08.07.2026.r3</p>
+<main id="admskip-target">
+
+  <!-- HERO -->
+  <header class="hero wrap">
+    <span class="kicker"><span class="d"></span><span data-es="Privacidad por diseño · en el edge" data-en="Privacy by design · on the edge">Privacidad por diseño · en el edge</span></span>
+    <h1><span data-es="La cámara, " data-en="The camera, ">La cámara, </span><span class="g" data-es="sensor de audiencia" data-en="audience sensor">sensor de audiencia</span></h1>
+    <p class="en">Video Analytics
+      <span class="lang" role="group" aria-label="Idioma / Language">
+        <button type="button" data-lang="es" class="on">ES</button><button type="button" data-lang="en">EN</button>
+      </span>
+    </p>
+    <p class="lead" data-es="La cámara detecta quién mira —público, contexto y momento— y adapta el contenido en tiempo real. Sin cookies y con privacidad por diseño: el análisis ocurre en el edge, sobre la marcha, sin almacenar rostros. Lo que se guarda es la señal, no la cara."
+       data-en="The camera detects who's watching —audience, context and moment— and adapts the content in real time. Cookieless and private by design: the analysis runs on the edge, on the fly, without storing faces. What's kept is the signal, not the face.">La cámara detecta quién mira —público, contexto y momento— y adapta el contenido en tiempo real. Sin cookies y con privacidad por diseño: el análisis ocurre en el edge, sobre la marcha, sin almacenar rostros. Lo que se guarda es la señal, no la cara.</p>
+    <div class="hero-actions">
+      <a class="btn primary" href="/condicional.html"><span data-es="🎛 Abrir la segmentación" data-en="🎛 Open the targeting">🎛 Abrir la segmentación</span></a>
+      <a class="btn" href="#sim"><span data-es="▶ Probar el sensor" data-en="▶ Try the sensor">▶ Probar el sensor</span></a>
+      <a class="btn" href="/cms.html"><span data-es="🗂 CMS de flota" data-en="🗂 Fleet CMS">🗂 CMS de flota</span></a>
+    </div>
+    <div class="flow">
+      <b class="a" data-es="Cámara" data-en="Camera">Cámara</b> <span data-es="detecta público" data-en="detects audience">detecta público</span>
+      <span>→</span> <b class="a" data-es="Matriz" data-en="Matrix">Matriz</b> <span data-es="público/edad/hora → assets" data-en="audience/age/slot → assets">público/edad/hora → assets</span>
+      <span>→</span> <b class="a" data-es="Pantalla" data-en="Screen">Pantalla</b> <span data-es="cambia en el acto" data-en="changes instantly">cambia en el acto</span>
+    </div>
+  </header>
+
+  <!-- CÓMO FUNCIONA -->
+  <section class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" data-es="Cómo funciona" data-en="How it works">Cómo funciona</p>
+      <h2 data-es="Detecta · Segmenta · Adapta" data-en="Detect · Segment · Adapt">Detecta · Segmenta · Adapta</h2>
+      <p data-es="Análisis de vídeo del legacy, reconstruido sobre nuestra tecnología viva: el modo condicional que ya emite en la calle. La cámara es la condición; la matriz de segmentación, la decisión."
+         data-en="Legacy video analytics, rebuilt on our live technology: the conditional mode already airing on the street. The camera is the condition; the segmentation matrix, the decision.">Análisis de vídeo del legacy, reconstruido sobre nuestra tecnología viva: el modo condicional que ya emite en la calle. La cámara es la condición; la matriz de segmentación, la decisión.</p>
+    </div>
+    <div class="arch">
+      <div class="col">
+        <div class="role" data-es="01 · Detecta" data-en="01 · Detect">01 · Detecta</div>
+        <h3 data-es="La cámara como sensor" data-en="The camera as a sensor">La cámara como sensor</h3>
+        <p class="leg">Legacy: <b>Face detection · Audience · Attention</b></p>
+        <ul>
+          <li><span class="t">▸</span><span><b data-es="Presencia y aforo" data-en="Presence and count">Presencia y aforo</b> <span data-es="— cuánta gente mira y durante cuánto." data-en="— how many watch, and for how long.">— cuánta gente mira y durante cuánto.</span></span></li>
+          <li><span class="t">▸</span><span><b data-es="Público estimado" data-en="Estimated audience">Público estimado</b> <span data-es="— género y franja de edad como señal, nunca identidad." data-en="— gender and age band as a signal, never identity.">— género y franja de edad como señal, nunca identidad.</span></span></li>
+          <li><span class="t">▸</span><span><span data-es="Se procesa en el " data-en="Processed on the ">Se procesa en el </span><b data-es="dispositivo (edge)" data-en="device (edge)">dispositivo (edge)</b><span data-es="; ninguna imagen sube a la nube." data-en="; no image leaves for the cloud.">; ninguna imagen sube a la nube.</span></span></li>
+        </ul>
+      </div>
+      <div class="col">
+        <div class="role" data-es="02 · Segmenta" data-en="02 · Segment">02 · Segmenta</div>
+        <h3 data-es="La matriz decide" data-en="The matrix decides">La matriz decide</h3>
+        <p class="leg">Legacy: <b>Rules · Triggers · Criteria</b></p>
+        <ul>
+          <li><span class="t">▸</span><span><b><a href="/condicional.html">Segmentación</a></b> <span data-es="— reglas público/edad/hora → assets del Stock." data-en="— audience/age/slot → Stock assets rules.">— reglas público/edad/hora → assets del Stock.</span></span></li>
+          <li><span class="t">▸</span><span><b data-es="Catch-all carrusel" data-en="Catch-all carousel">Catch-all carrusel</b> <span data-es="— sin cámara o sin coincidencia, gira el Stock completo." data-en="— no camera or no match, the full Stock rotates.">— sin cámara o sin coincidencia, gira el Stock completo.</span></span></li>
+          <li><span class="t">▸</span><span><span data-es="La misma matriz que edita el " data-en="The same matrix edited in the ">La misma matriz que edita el </span><b><a href="/cms.html">CMS</a></b><span data-es=" por pantalla." data-en=" per screen."> por pantalla.</span></span></li>
+        </ul>
+      </div>
+      <div class="col">
+        <div class="role" data-es="03 · Adapta" data-en="03 · Adapt">03 · Adapta</div>
+        <h3 data-es="Contenido en tiempo real" data-en="Content in real time">Contenido en tiempo real</h3>
+        <p class="leg">Legacy: <b>Playout · Stats · Reporting</b></p>
+        <ul>
+          <li><span class="t">▸</span><span><b><a href="/canal.html?mode=conditional" target="_blank" rel="noopener">Canal condicional</a></b> <span data-es="— el player cambia la pieza en el acto." data-en="— the player swaps the piece instantly.">— el player cambia la pieza en el acto.</span></span></li>
+          <li><span class="t">▸</span><span><b data-es="Anonimizador" data-en="Anonymizer">Anonimizador</b> <span data-es="— privacidad de Pixeria: el rostro nunca se guarda tal cual." data-en="— Pixeria privacy: the face is never stored as-is.">— privacidad de Pixeria: el rostro nunca se guarda tal cual.</span></span></li>
+          <li><span class="t">▸</span><span><span data-es="Cada detección alimenta el reporting de audiencia por superficie." data-en="Every detection feeds per-surface audience reporting.">Cada detección alimenta el reporting de audiencia por superficie.</span></span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEMOS -->
+  <section class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" data-es="Demos vivas" data-en="Live demos">Demos vivas</p>
+      <h2 data-es="La segmentación real, conectada" data-en="The real targeting, connected">La segmentación real, conectada</h2>
+      <p data-es="La matriz y el feed de detecciones leen el backbone real (api.admira.store). Lo que no tiene medición real —el simulador y el informe— va rotulado como ilustrativo."
+         data-en="The matrix and the detections feed read the real backbone (api.admira.store). What has no real measurement —the simulator and the report— is labelled as illustrative.">La matriz y el feed de detecciones leen el backbone real (api.admira.store). Lo que no tiene medición real —el simulador y el informe— va rotulado como ilustrativo.</p>
+    </div>
+
+    <!-- DEMO 1: MATRIZ DE SEGMENTACIÓN (real) -->
+    <div class="demo">
+      <div class="demo-h">
+        <span class="ttl"><span class="dot"></span><span data-es="Matriz de segmentación" data-en="Segmentation matrix">Matriz de segmentación</span></span>
+        <span class="tag-real" data-es="Datos reales" data-en="Real data">Datos reales</span>
+      </div>
+      <div class="demo-b">
+        <div class="grid-tools">
+          <label for="tgt" data-es="Pantalla / cámara" data-en="Screen / camera">Pantalla / cámara</label>
+          <select id="tgt" aria-label="Pantalla / Screen"></select>
+          <span class="grid-meta" id="segMeta"></span>
+        </div>
+        <div class="rules" id="rules" aria-live="polite"></div>
+        <p class="demo-note"><span data-es="Fuente: " data-en="Source: ">Fuente: </span><span class="mono">/segmentation?target=…</span> · <span data-es="las reglas que la cámara dispara en esta pantalla, tal cual las lee el player. Edítalas en " data-en="the rules the camera triggers on this screen, exactly as the player reads them. Edit them in ">las reglas que la cámara dispara en esta pantalla, tal cual las lee el player. Edítalas en </span><a href="/condicional.html">condicional</a>.</p>
+      </div>
+    </div>
+
+    <!-- DEMO 2: DETECCIONES EN VIVO (real feed) -->
+    <div class="demo">
+      <div class="demo-h">
+        <span class="ttl"><span class="dot"></span><span data-es="Detecciones en vivo" data-en="Live detections">Detecciones en vivo</span></span>
+        <span class="tag-real" data-es="Feed real" data-en="Real feed">Feed real</span>
+      </div>
+      <div class="demo-b">
+        <div class="hits" id="hits" aria-live="polite"></div>
+        <p class="demo-note"><span data-es="Fuente: " data-en="Source: ">Fuente: </span><span class="mono">/segmentation/hits</span> · <span data-es="el registro de público que las cámaras han disparado. Solo la señal (público estimado + hora), nunca la imagen." data-en="the log of audience the cameras triggered. Only the signal (estimated audience + time), never the image.">el registro de público que las cámaras han disparado. Solo la señal (público estimado + hora), nunca la imagen.</span></p>
+      </div>
+    </div>
+
+    <!-- DEMO 3: SIMULADOR DE SENSOR (ilustrativo, creativos reales) -->
+    <div class="demo" id="sim">
+      <div class="demo-h">
+        <span class="ttl"><span class="dot" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></span><span data-es="Simulador del sensor" data-en="Sensor simulator">Simulador del sensor</span></span>
+        <span class="tag-ill" data-es="Ilustrativo · creativos reales" data-en="Illustrative · real creatives">Ilustrativo · creativos reales</span>
+      </div>
+      <div class="demo-b">
+        <div class="sim">
+          <div class="sim-controls">
+            <div class="field">
+              <label data-es="Público que ve la cámara" data-en="Audience the camera sees">Público que ve la cámara</label>
+              <div class="seg" id="simGender" role="group" aria-label="Público / Audience">
+                <button type="button" data-g="none" data-es="Nadie" data-en="Nobody">Nadie</button>
+                <button type="button" data-g="m" class="on" data-es="Hombre" data-en="Male">Hombre</button>
+                <button type="button" data-g="f" data-es="Mujer" data-en="Female">Mujer</button>
+                <button type="button" data-g="mixed" data-es="Mixto" data-en="Mixed">Mixto</button>
+              </div>
+            </div>
+            <div class="field">
+              <label><span data-es="Personas frente a la pantalla" data-en="People in front of the screen">Personas frente a la pantalla</span> · <span class="rangeval" id="simCountVal">2</span></label>
+              <input type="range" id="simCount" min="0" max="6" value="2" aria-label="Personas / People">
+            </div>
+            <div class="field">
+              <label><span data-es="Franja horaria" data-en="Time slot">Franja horaria</span> · <span class="rangeval" id="simHourVal">13:00</span></label>
+              <input type="range" id="simHour" min="0" max="23" value="13" aria-label="Hora / Hour">
+            </div>
+          </div>
+          <div class="sim-out">
+            <span class="decides" id="simDecides" data-es="La matriz serviría" data-en="The matrix would serve">La matriz serviría</span>
+            <div class="sim-served">
+              <div class="sim-thumb" id="simThumb">🎞</div>
+              <div class="meta">
+                <h4 id="simTitle" data-es="Cargando Stock…" data-en="Loading Stock…">Cargando Stock…</h4>
+                <div class="sub" id="simSub">—</div>
+                <div class="chips" id="simChips"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="demo-note"><span data-es="La lógica de decisión es ilustrativa (nadie o público mixto → carrusel; hombre/mujer → pieza segmentada), pero " data-en="The decision logic is illustrative (nobody or mixed audience → carousel; male/female → targeted piece), but ">La lógica de decisión es ilustrativa (nadie o público mixto → carrusel; hombre/mujer → pieza segmentada), pero </span><b data-es="los creativos son del Stock real" data-en="the creatives are from the real Stock">los creativos son del Stock real</b> (<span class="mono">/stock/list</span>). <span data-es="En producción, quien mapea público→pieza es la matriz de " data-en="In production, the audience→piece mapping is set by the ">En producción, quien mapea público→pieza es la matriz de </span><a href="/condicional.html">condicional</a>.</p>
+      </div>
+    </div>
+
+    <!-- DEMO 4: INFORME DE AUDIENCIA (ilustrativo) -->
+    <div class="demo">
+      <div class="demo-h">
+        <span class="ttl"><span class="dot" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></span><span data-es="Informe de audiencia" data-en="Audience report">Informe de audiencia</span></span>
+        <span class="tag-ill" data-es="Simulación" data-en="Simulation">Simulación</span>
+      </div>
+      <div class="demo-b">
+        <div class="kpis">
+          <div class="kpi"><div class="k" data-es="Impactos hoy" data-en="Impressions today">Impactos hoy</div><div class="v green" id="kImp">—</div><div class="d" data-es="miradas contadas" data-en="counted glances">miradas contadas</div></div>
+          <div class="kpi"><div class="k" data-es="Tasa de atención" data-en="Attention rate">Tasa de atención</div><div class="v cyan" id="kAtt">—</div><div class="d" data-es="miran / pasan" data-en="watch / pass by">miran / pasan</div></div>
+          <div class="kpi"><div class="k" data-es="Tiempo medio" data-en="Avg. dwell">Tiempo medio</div><div class="v amber" id="kDwell">—</div><div class="d" data-es="de atención" data-en="of attention">de atención</div></div>
+          <div class="kpi"><div class="k" data-es="Alcance único" data-en="Unique reach">Alcance único</div><div class="v pink" id="kReach">—</div><div class="d" data-es="personas distintas" data-en="distinct people">personas distintas</div></div>
+        </div>
+        <div class="split">
+          <div class="sh"><span data-es="Reparto por público estimado" data-en="Estimated audience split">Reparto por público estimado</span><span id="splitTxt">—</span></div>
+          <div class="splitbar"><i class="m" id="barM" style="width:50%"></i><i class="f" id="barF" style="width:50%"></i></div>
+          <div class="lg"><span><i class="m"></i><span data-es="Hombre" data-en="Male">Hombre</span></span><span><i class="f"></i><span data-es="Mujer" data-en="Female">Mujer</span></span></div>
+        </div>
+        <p class="demo-note"><span data-es="Cifras generadas en el navegador para ilustrar el formato del informe —" data-en="Figures generated in the browser to illustrate the report format —">Cifras generadas en el navegador para ilustrar el formato del informe —</span><b data-es="no son una medición real" data-en="not a real measurement">no son una medición real</b>. <span data-es="Con cámaras dadas de alta, este panel se rellena desde " data-en="With cameras onboarded, this panel fills from ">Con cámaras dadas de alta, este panel se rellena desde </span><span class="mono">/segmentation/hits</span>.</p>
+      </div>
+    </div>
+
+    <!-- DEMO 5: MUPI CONDICIONAL (mismo origen) -->
+    <div class="demo">
+      <div class="demo-h">
+        <span class="ttl"><span class="dot"></span><span data-es="MUPI condicional en vivo" data-en="Live conditional MUPI">MUPI condicional en vivo</span></span>
+        <span class="tag-real" data-es="Mismo origen" data-en="Same origin">Mismo origen</span>
+      </div>
+      <div class="demo-b">
+        <div class="mupi-wrap">
+          <div class="mupi">
+            <iframe id="mupiFrame" title="Canal Admira · MUPI condicional 9:16 en vivo" loading="lazy" allow="autoplay" referrerpolicy="no-referrer"></iframe>
+          </div>
+          <div class="mupi-copy">
+            <p data-es="El mismo reproductor que corre en la calle, en modo condicional: la matriz de segmentación manda sobre el loop y la pieza cambia con el público. Es canal.html en mode=conditional —el player real, empotrado."
+               data-en="The same player running on the street, in conditional mode: the segmentation matrix rules the loop and the piece changes with the audience. It's canal.html in mode=conditional —the real player, embedded.">El mismo reproductor que corre en la calle, en modo condicional: la matriz de segmentación manda sobre el loop y la pieza cambia con el público. Es <span class="mono">canal.html</span> en <span class="mono">mode=conditional</span> —el player real, empotrado.</p>
+            <a class="btn primary" href="/canal.html?mode=conditional" target="_blank" rel="noopener"><span data-es="Abrir a pantalla completa" data-en="Open fullscreen">Abrir a pantalla completa</span></a>
+            <a class="btn" href="/condicional.html"><span data-es="Editar la matriz" data-en="Edit the matrix">Editar la matriz</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENLACES PROFUNDOS -->
+  <section class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" data-es="Todo el subsistema" data-en="The whole subsystem">Todo el subsistema</p>
+      <h2 data-es="Entra donde trabajas" data-en="Jump where you work">Entra donde trabajas</h2>
+    </div>
+    <div class="links">
+      <a class="lk" href="/condicional.html">
+        <span class="nm" data-es="Segmentación" data-en="Targeting">Segmentación</span>
+        <span class="ds" data-es="La matriz cámara→contenido + simulador con Stock real." data-en="The camera→content matrix + simulator with real Stock.">La matriz cámara→contenido + simulador con Stock real.</span>
+        <span class="go">condicional.html →</span>
+      </a>
+      <a class="lk" href="/cms.html">
+        <span class="nm" data-es="CMS de flota" data-en="Fleet CMS">CMS de flota</span>
+        <span class="ds" data-es="Segmentación por pantalla y estado de cada cámara." data-en="Per-screen targeting and each camera's status.">Segmentación por pantalla y estado de cada cámara.</span>
+        <span class="go">cms.html →</span>
+      </a>
+      <a class="lk" href="/canal.html?mode=conditional" target="_blank" rel="noopener">
+        <span class="nm" data-es="Canal condicional" data-en="Conditional channel">Canal condicional</span>
+        <span class="ds" data-es="La emisión que reacciona al público, tal cual sale a la calle." data-en="The emission that reacts to the audience, as it hits the street.">La emisión que reacciona al público, tal cual sale a la calle.</span>
+        <span class="go">canal.html →</span>
+      </a>
+      <a class="lk" href="/digitalsignage/">
+        <span class="nm" data-es="Señalización" data-en="Signage">Señalización</span>
+        <span class="ds" data-es="La app reina: parrilla, players y proof-of-play." data-en="The flagship app: grid, players and proof-of-play.">La app reina: parrilla, players y proof-of-play.</span>
+        <span class="go">digitalsignage →</span>
+      </a>
+    </div>
+    <p style="text-align:center;margin:26px 0 0"><a class="back" href="/apps/">&larr; <span data-es="Volver a la lanzadera" data-en="Back to the launcher">Volver a la lanzadera</span></a></p>
+  </section>
+
+  <footer class="foot">
+    <span data-es="Analítica de vídeo · réplica mejorada del legacy new.admira.mobi → admira.tv" data-en="Video Analytics · improved replica of legacy new.admira.mobi → admira.tv">Analítica de vídeo · réplica mejorada del legacy new.admira.mobi → admira.tv</span>
+    <span>Admira · tv · <span style="opacity:.75">v.08.07.2026.r5</span></span>
+  </footer>
+
 </main>
 
 <script>
-  (function(){ function set(){ try{ var s=window.AdmiraIcon&&window.AdmiraIcon('videoanalytics'); if(s) document.getElementById('ic').innerHTML=s; }catch(_){}}
-    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',set); else set(); })();
+(function(){
+  'use strict';
+  /* ---------- i18n ES/EN (data-es / data-en) ---------- */
+  var LS='admtv-lang';
+  var redrawI18n=function(){};
+  function applyLang(l){
+    document.documentElement.lang=l;
+    document.querySelectorAll('[data-es]').forEach(function(el){
+      var v=el.getAttribute('data-'+l); if(v!=null) el.textContent=v;
+    });
+    document.querySelectorAll('.lang button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang')===l); });
+    try{ localStorage.setItem(LS,l); }catch(_){}
+  }
+  var lang='es'; try{ var s=localStorage.getItem(LS); if(s==='en'||s==='es') lang=s; }catch(_){}
+  document.querySelectorAll('.lang button').forEach(function(b){
+    b.addEventListener('click',function(){ lang=b.getAttribute('data-lang'); applyLang(lang); try{ redrawI18n(); }catch(_){}} );
+  });
+  applyLang(lang);
+  function T(es,en){ return lang==='en'?en:es; }
+
+  var API='https://api.admira.store';
+  var esc=function(x){ return String(x==null?'':x).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];}); };
+
+  var GLABEL={m:{es:'Hombre',en:'Male'},f:{es:'Mujer',en:'Female'},any:{es:'Cualquiera',en:'Anyone'},mixed:{es:'Mixto',en:'Mixed'},none:{es:'Sin público',en:'No audience'}};
+  var GICON={m:'♂',f:'♀',mixed:'⚥',any:'•',none:'∅'};
+  var AGE={any:{es:'todas',en:'all'},child:{es:'niño',en:'child'},young:{es:'joven',en:'young'},adult:{es:'adulto',en:'adult'},senior:{es:'senior',en:'senior'}};
+  var SLOT={any:{es:'todo el día',en:'all day'},morning:{es:'mañana',en:'morning'},midday:{es:'mediodía',en:'midday'},afternoon:{es:'tarde',en:'afternoon'},evening:{es:'noche',en:'evening'},night:{es:'noche',en:'night'}};
+  function L(map,k){ var e=map[k]||map.any||{es:k,en:k}; return e[lang]||e.es; }
+
+  /* ---------- DEMO 1: MATRIZ DE SEGMENTACIÓN (/segmentation?target=) ---------- */
+  (function(){
+    var sel=document.getElementById('tgt'), box=document.getElementById('rules'), meta=document.getElementById('segMeta');
+    var cur=null;
+    function isCarousel(r){
+      var anyG=(!r.gender||r.gender==='any'), anyA=(!r.age||r.age==='any'), anyS=(!r.slot||r.slot==='any');
+      return r.id==='atemporal' || (anyG&&anyA&&anyS && (r.minCount===0) && !(r.assets&&r.assets.length));
+    }
+    function ruleRow(r){
+      if(isCarousel(r)){
+        return '<div class="rule carousel"><span class="cond"><span class="ico">🔁</span>'+T('sin coincidencia','no match')+'</span>'+
+          '<span class="arrow">→</span><span class="serves"><b>'+T('carrusel atemporal','timeless carousel')+'</b> · '+T('gira el Stock completo','the full Stock rotates')+'</span></div>';
+      }
+      var conds=[];
+      if(r.minCount===0) conds.push('<span class="pill">'+T('sin cámara','no camera')+'</span>');
+      if(r.gender&&r.gender!=='any') conds.push('<span class="pill g">'+GICON[r.gender]+' '+esc(L(GLABEL,r.gender))+'</span>');
+      if(r.age&&r.age!=='any') conds.push('<span class="pill c">'+esc(L(AGE,r.age))+'</span>');
+      if(r.slot&&r.slot!=='any') conds.push('<span class="pill p">'+esc(L(SLOT,r.slot))+'</span>');
+      if(r.minCount>1) conds.push('<span class="pill">≥'+r.minCount+' '+T('pers.','ppl')+'</span>');
+      if(!conds.length) conds.push('<span class="pill">'+T('cualquiera','anyone')+'</span>');
+      var n=(r.assets&&r.assets.length)||0;
+      var serves=n?('<b>'+n+'</b> '+(n===1?T('pieza segmentada','targeted piece'):T('piezas segmentadas','targeted pieces'))):
+        (r.category&&r.category!=='any'?('<b>'+esc(r.category)+'</b> '+T('del Stock','from Stock')):T('Stock por criterio','Stock by criteria'));
+      return '<div class="rule"><span class="cond">'+conds.join(' ')+'</span><span class="arrow">→</span><span class="serves">'+serves+'</span></div>';
+    }
+    function render(d){
+      var rules=(d&&d.rules)||[];
+      if(!rules.length){
+        box.innerHTML='<div class="rule carousel"><span class="cond"><span class="ico">🔁</span>'+T('sin reglas','no rules')+'</span><span class="arrow">→</span>'+
+          '<span class="serves"><b>'+T('carrusel atemporal','timeless carousel')+'</b> · '+T('esta pantalla emite el Stock completo; añade una regla en condicional.','this screen airs the full Stock; add a rule in conditional.')+'</span></div>';
+        meta.textContent=T('0 reglas','0 rules'); return;
+      }
+      box.innerHTML=rules.map(ruleRow).join('');
+      meta.textContent=rules.length+' '+(rules.length===1?T('regla','rule'):T('reglas','rules'));
+    }
+    redrawI18n=(function(prev){ return function(){ prev&&prev(); if(cur) render(cur); }; })(redrawI18n);
+    function load(target){
+      box.innerHTML='<div class="rule" style="border-style:dashed"><span class="serves">'+T('Cargando matriz…','Loading matrix…')+'</span></div>';
+      fetch(API+'/segmentation?target='+encodeURIComponent(target)+'&t='+Date.now(),{cache:'no-store'})
+        .then(function(r){ return r.json(); }).then(function(d){ cur=d; render(d); })
+        .catch(function(){ box.innerHTML='<div class="rule"><span class="serves">'+T('Matriz no accesible.','Matrix unreachable.')+'</span></div>'; meta.textContent=''; });
+    }
+    fetch(API+'/grid/screens',{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(d){
+      var opts=[], scr=(d.screens||[]).filter(function(x){return x&&x.screen;});
+      scr.forEach(function(x){
+        if(x.pixerScreens&&x.pixerScreens.length){
+          x.pixerScreens.forEach(function(ps){ opts.push({t:ps,label:(x.name||x.screen)}); });
+        }
+      });
+      opts.unshift({t:'all',label:T('Toda la red (global)','Whole network (global)')});
+      sel.innerHTML=opts.map(function(o){ return '<option value="'+esc(o.t)+'">'+esc(o.label)+'</option>'; }).join('');
+      var def = opts.length>1 ? opts[1].t : 'all';
+      sel.value=def; load(def);
+      sel.addEventListener('change',function(){ load(sel.value); });
+    }).catch(function(){
+      sel.innerHTML='<option value="all">'+T('Toda la red','Whole network')+'</option>'; load('all');
+    });
+  })();
+
+  /* ---------- DEMO 2: DETECCIONES EN VIVO (/segmentation/hits) ---------- */
+  (function(){
+    var box=document.getElementById('hits'), hits=[];
+    function ago(ts){ if(!ts) return ''; var s=Math.max(0,Math.round((Date.now()-ts)/1000));
+      if(s<60) return s+'s'; var m=Math.round(s/60); if(m<60) return m+'m'; return Math.round(m/60)+'h'; }
+    function row(h){
+      var a=h.aud||h||{}, g=a.gender||h.gender||'any', n=a.faces||h.faces||h.count||1;
+      var ico=GICON[g]||'👥';
+      var who=n+' '+(n===1?T('persona','person'):T('personas','people'));
+      var sub=[esc(L(GLABEL,g))]; if(a.age||h.age) sub.push(esc(L(AGE,a.age||h.age)));
+      var scr=h.target||h.screen||h.t; if(scr) sub.push(esc(String(scr)));
+      var ts=h.ts||h.time||h.at;
+      return '<div class="hit"><span class="face">'+ico+'</span><span class="who">'+esc(who)+'<small>'+sub.join(' · ')+'</small></span>'+
+        (ts?'<span class="when">'+ago(ts)+'</span>':'')+'</div>';
+    }
+    function render(){
+      if(!hits.length){
+        box.innerHTML='<div class="empty">'+T('Sin detecciones en los últimos minutos. Cuando una cámara está dada de alta y ve público, cada evento aparece aquí en vivo —solo la señal, nunca la imagen.',
+          'No detections in the last few minutes. Once a camera is onboarded and sees an audience, each event shows here live —only the signal, never the image.')+'</div>';
+        return;
+      }
+      box.innerHTML=hits.slice(0,40).map(row).join('');
+    }
+    redrawI18n=(function(prev){ return function(){ prev&&prev(); render(); }; })(redrawI18n);
+    function load(){
+      fetch(API+'/segmentation/hits?limit=40&t='+Date.now(),{cache:'no-store'})
+        .then(function(r){ return r.json(); }).then(function(d){ hits=(d&&d.hits)||[]; render(); })
+        .catch(function(){ if(!hits.length) box.innerHTML='<div class="empty">'+T('Feed no accesible; reintentando…','Feed unreachable; retrying…')+'</div>'; });
+    }
+    render(); load(); setInterval(load,12000);
+  })();
+
+  /* ---------- DEMO 3: SIMULADOR DE SENSOR (ilustrativo, Stock real) ---------- */
+  (function(){
+    var gWrap=document.getElementById('simGender'), cnt=document.getElementById('simCount'), cntV=document.getElementById('simCountVal'),
+        hr=document.getElementById('simHour'), hrV=document.getElementById('simHourVal'),
+        thumb=document.getElementById('simThumb'), title=document.getElementById('simTitle'), sub=document.getElementById('simSub'), chips=document.getElementById('simChips'),
+        decides=document.getElementById('simDecides');
+    var STOCK=[], gender='m';
+    function slotOf(h){ return h<6?'night':h<12?'morning':h<16?'midday':h<21?'afternoon':'evening'; }
+    function pick(bucket){
+      if(!STOCK.length) return null;
+      var pool=STOCK.filter(function(it,i){ return (i%3)===bucket; });
+      if(!pool.length) pool=STOCK;
+      return pool[0];
+    }
+    function thumbHTML(it){
+      if(!it) return '🎞';
+      if(it.thumbnail) return '<img src="'+esc(it.thumbnail)+'" alt="" loading="lazy">';
+      if(it.type==='image'&&it.url) return '<img src="'+esc(it.url)+'" alt="" loading="lazy">';
+      return it.type==='video'?'🎬':(it.type==='image'?'🖼':'🎞');
+    }
+    function render(){
+      var n=+cnt.value, h=+hr.value; cntV.textContent=n; hrV.textContent=(h<10?'0'+h:h)+':00';
+      var it, note;
+      if(n===0){
+        decides.textContent=T('Nadie mira → carrusel','Nobody watching → carousel');
+        it=pick(2); note=[T('carrusel atemporal','timeless carousel'), L(SLOT,slotOf(h))];
+      } else if(gender==='mixed'){
+        decides.textContent=T('Público mixto → carrusel','Mixed audience → carousel');
+        it=pick(2); note=[T('sin segmento dominante','no dominant segment'), L(SLOT,slotOf(h))];
+      } else {
+        decides.textContent=T('Segmenta por ','Targets by ')+L(GLABEL,gender).toLowerCase();
+        it=pick(gender==='m'?0:1);
+        note=[GICON[gender]+' '+L(GLABEL,gender), n+' '+(n===1?T('persona','person'):T('personas','people')), L(SLOT,slotOf(h))];
+      }
+      thumb.innerHTML=thumbHTML(it);
+      title.textContent=it?(it.title||it.id||T('Pieza del Stock','Stock piece')):T('Sin Stock disponible','No Stock available');
+      sub.textContent=it?((it.type||'media')+(it.category?' · '+it.category:'')):'—';
+      chips.innerHTML=note.map(function(x){ return '<span class="pill">'+esc(x)+'</span>'; }).join('');
+    }
+    redrawI18n=(function(prev){ return function(){ prev&&prev(); render(); }; })(redrawI18n);
+    gWrap.querySelectorAll('button').forEach(function(b){
+      b.addEventListener('click',function(){ gender=b.getAttribute('data-g'); gWrap.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on',x===b); }); render(); });
+    });
+    cnt.addEventListener('input',render); hr.addEventListener('input',render);
+    fetch(API+'/stock/list?limit=60&t='+Date.now(),{cache:'no-store'}).then(function(r){ return r.json(); })
+      .then(function(d){ STOCK=(d&&d.items)||[]; render(); }).catch(function(){ render(); });
+  })();
+
+  /* ---------- DEMO 4: INFORME DE AUDIENCIA (ilustrativo, client-side) ---------- */
+  (function(){
+    var seed=(function(){ var d=new Date(); return (d.getFullYear()*372+d.getMonth()*31+d.getDate()); })();
+    function rnd(){ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; }
+    var imp=1800+Math.round(rnd()*2600), att=42+Math.round(rnd()*33), dwell=(2.4+rnd()*4.1),
+        reach=Math.round(imp*(0.30+rnd()*0.22)), male=44+Math.round(rnd()*16);
+    var kImp=document.getElementById('kImp'), kAtt=document.getElementById('kAtt'), kDwell=document.getElementById('kDwell'), kReach=document.getElementById('kReach'),
+        barM=document.getElementById('barM'), barF=document.getElementById('barF'), splitTxt=document.getElementById('splitTxt');
+    function fmt(n){ return n.toLocaleString(lang==='en'?'en-US':'es-ES'); }
+    function paint(){
+      kImp.textContent=fmt(imp); kAtt.textContent=att+'%'; kDwell.textContent=dwell.toFixed(1)+'s'; kReach.textContent=fmt(reach);
+      barM.style.width=male+'%'; barF.style.width=(100-male)+'%'; splitTxt.textContent=male+'% / '+(100-male)+'%';
+    }
+    redrawI18n=(function(prev){ return function(){ prev&&prev(); paint(); }; })(redrawI18n);
+    var animated=false;
+    function animate(){
+      if(animated) return; animated=true; var steps=26, i=0;
+      var t=setInterval(function(){ i++; var k=i/steps;
+        kImp.textContent=fmt(Math.round(imp*k)); kAtt.textContent=Math.round(att*k)+'%';
+        kDwell.textContent=(dwell*k).toFixed(1)+'s'; kReach.textContent=fmt(Math.round(reach*k));
+        if(i>=steps){ clearInterval(t); paint(); } },26);
+      barM.style.width=male+'%'; barF.style.width=(100-male)+'%'; splitTxt.textContent=male+'% / '+(100-male)+'%';
+    }
+    paint();
+    if('IntersectionObserver' in window){
+      var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ animate(); io.disconnect(); } }); },{threshold:.4});
+      io.observe(kImp.closest('.demo'));
+    } else { animate(); }
+  })();
+
+  /* ---------- DEMO 5: MUPI condicional — iframe diferido (loading=lazy) ---------- */
+  (function(){
+    var fr=document.getElementById('mupiFrame');
+    if(fr && !fr.getAttribute('src')) fr.setAttribute('src','/canal.html?embed=mupi&mode=conditional');
+  })();
+})();
 </script>
 </body>
 </html>
