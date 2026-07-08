@@ -16,6 +16,14 @@ id = "d92799da39b343f6aebd8aff2be66b21"
 binding = "ACCESS"
 id = "e909a0bea0b34997bdef34bcd012c16f"
 
+# R2 de los vídeos explicativos de la lanzadera (/apps → hover ≥3s sobre el icono).
+# La Pages Function functions/apps/video/[file].js sirve GET /apps/video/<slug>.mp4
+# desde aquí, con soporte de Range. Sube cada vídeo con:
+#   wrangler r2 object put admira-app-videos/<slug>.mp4 --file <slug>.mp4 --remote
+[[r2_buckets]]
+binding = "VIDEOS"
+bucket_name = "admira-app-videos"
+
 # Secretos (se fijan con `wrangler pages secret put <NOMBRE> --project-name admira-tv`):
 #   TG_TOKEN     — token del bot de Telegram (Neo) para notificar leads
 #   TG_CHAT      — chat_id del grupo AgoraMatrix
