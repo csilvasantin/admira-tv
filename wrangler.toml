@@ -10,6 +10,12 @@ pages_build_output_dir = "."
 binding = "LEADS"
 id = "d92799da39b343f6aebd8aff2be66b21"
 
+# KV de Acceso (Access Control v2 → /accesscontrol/api/* → ACCESS).
+# Gestión de permisos v2 de todo el grupo; doc "acl:v2" + "audit:v2".
+[[kv_namespaces]]
+binding = "ACCESS"
+id = "e909a0bea0b34997bdef34bcd012c16f"
+
 # Secretos (se fijan con `wrangler pages secret put <NOMBRE> --project-name admira-tv`):
 #   TG_TOKEN     — token del bot de Telegram (Neo) para notificar leads
 #   TG_CHAT      — chat_id del grupo AgoraMatrix

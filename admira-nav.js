@@ -4,7 +4,7 @@
  * data-active: flota|apps|calendar|condicional|canal|mural|comprar|adcelerate|alta|help   ·   data-title: subtítulo de la barra.
  * Estado (plegado/detalle) compartido entre páginas vía localStorage.
  * El ítem "Apps" despliega un submenú (flyout en desktop · acordeón en móvil) con las 18 apps del stack,
- * cuyo estado ●/○ vive en window.AdmiraApps (fuente única que también consume /apps/). v.08.07.2026.r14 */
+ * cuyo estado ●/○ vive en window.AdmiraApps (fuente única que también consume /apps/). v.08.07.2026.r15 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -79,7 +79,7 @@
     {s:'support',            nm:'Soporte',              en:'Support',             ds:'Incidencias, tickets y ayuda del ecosistema.',   st:'live'},
     {s:'pushnotifications',  nm:'Notificaciones',       en:'Push Notifications',  ds:'La flota se avisa sola: aviso operativo y de contenido.', st:'live'},
     {s:'virtualassistant',   nm:'Asistente',            en:'Virtual Assistant',   ds:'El asistente IA que responde y opera por ti.',   st:'live'},
-    {s:'accesscontrol',      nm:'Acceso',               en:'Access Control',      ds:'Quién entra: aforo, puertas y permisos.',        st:'wip'},
+    {s:'accesscontrol',      nm:'Acceso',               en:'Access Control',      ds:'Quién entra: aforo, puertas y permisos.',        st:'live'},
     {s:'gamification',       nm:'Gamificación',         en:'Gamification',        ds:'Retos, puntos y recompensas para tu audiencia.',  st:'wip'},
     {s:'iotmanager',         nm:'IoT',                  en:'IoT Manager',         ds:'Cada pantalla, player y sensor, en un mapa vivo.', st:'live'},
     {s:'videoanalytics',     nm:'Analítica de vídeo',   en:'Video Analytics',     ds:'Audiencia y atención medidas por cámara.',        st:'live'},

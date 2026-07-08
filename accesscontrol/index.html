@@ -2,59 +2,728 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<link rel="preconnect" href="https://api.admira.store" crossorigin>
+<!-- preconnect: chrome + SSO oficial de Google (única dependencia externa) -->
+<link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Acceso · Admira.tv</title>
-<meta name="description" content="Controlará quién entra: aforo en tiempo real, puertas y permisos por Xpacio.">
+<meta name="description" content="Quién entra y qué puede, en todo el grupo Admira. Roles por solución, SSO de Google y auditoría de cada cambio, en un solo lugar.">
 <meta name="theme-color" content="#070a10">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="canonical" href="https://admira.tv/accesscontrol/">
 <meta property="og:title" content="Acceso · Admira.tv">
-<meta property="og:description" content="Controlará quién entra: aforo en tiempo real, puertas y permisos por Xpacio.">
+<meta property="og:description" content="Quién entra y qué puede, en todo el grupo Admira. Roles por solución, SSO de Google y auditoría de cada cambio.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://admira.tv/accesscontrol/">
 <meta property="og:image" content="https://admira.tv/og-admira.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Acceso · Admira.tv">
+<meta name="twitter:description" content="Quién entra y qué puede, en todo el grupo Admira.">
+<meta name="twitter:image" content="https://admira.tv/og-admira.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": "https://admira.tv/accesscontrol/",
+  "url": "https://admira.tv/accesscontrol/",
+  "name": "Acceso · Admira.tv",
+  "inLanguage": "es",
+  "isPartOf": { "@id": "https://admira.tv/#site" },
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "Admira Acceso",
+    "applicationCategory": "Identity and Access Management",
+    "operatingSystem": "Web",
+    "description": "Consola de control de accesos del grupo Admira: matriz de usuarios por solución, roles por mínimo privilegio (owner, admin, editor, viewer), SSO de Google y auditoría de cada cambio. Un solo lugar para gestionar quién entra y qué puede en todas las soluciones."
+  }
+}
+</script>
 <style>
-  :root{--bg:#070a10;--panel:#0b1119;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--amber:#f5b431}
+  :root{--bg:#070a10;--panel:#0b1119;--panel2:#0e1622;--line:#1e2940;--txt:#dfe8f4;--dim:#8595ad;--green:#3df08a;--cyan:#38d6ff;--amber:#f5b431;--pink:#ff6ec7;--red:#ff5a5a}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
   body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px);opacity:.5}
   a{color:inherit;text-decoration:none}
-  .wrap{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:min(12vh,90px) 20px 60px;text-align:center}
-  .ic{width:84px;height:84px;margin:0 auto 22px;display:grid;place-items:center;border-radius:20px;background:rgba(61,240,138,.07);border:1px solid rgba(61,240,138,.18)}
-  .ic svg{width:46px;height:46px;color:var(--green);filter:drop-shadow(0 0 6px rgba(61,240,138,.55))}
-  h1{font-size:clamp(28px,6vw,42px);margin:0 0 4px;letter-spacing:-.01em;font-weight:800}
-  .en{font:600 12px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:0 0 18px}
-  .ds{color:var(--dim);font-size:16px;max-width:460px;margin:0 auto 26px}
-  .badge{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--amber);color:var(--amber);border-radius:999px;padding:8px 16px;font:700 12px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase}
-  .badge .d{width:9px;height:9px;border-radius:50%;border:2px solid var(--amber);position:relative}
-  .badge .d::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid var(--amber);opacity:.5;animation:p 1.8s ease-out infinite}
-  @keyframes p{0%{transform:scale(.7);opacity:.6}100%{transform:scale(1.5);opacity:0}}
-  @media(prefers-reduced-motion:reduce){.badge .d::after{animation:none}}
-  .back{display:inline-flex;align-items:center;gap:8px;margin-top:30px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 18px;font-weight:600;font-size:14px;transition:border-color .2s,color .2s}
+  img,svg,iframe,video{max-width:100%}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 20px}
+  .eyebrow{font:600 12px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--green)}
+  section{padding:40px 0}
+  .sec-head{max-width:760px;margin:0 auto 24px}
+  .sec-head.mid{text-align:center;margin-left:auto;margin-right:auto}
+  .sec-head h2{font-size:clamp(22px,4vw,30px);margin:6px 0 6px;letter-spacing:-.01em;font-weight:800}
+  .sec-head p{color:var(--dim);margin:0;font-size:15px}
+
+  a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:6px}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:10px 18px;font-weight:700;font-size:14px;border:1px solid #2a3a66;background:transparent;color:var(--txt);cursor:pointer;transition:transform .12s,border-color .2s,background .2s}
+  .btn:hover{transform:translateY(-1px);border-color:#3a4f8a}
+  .btn.primary{background:var(--green);border-color:var(--green);color:#03140a}
+  .btn.primary:hover{background:#5cf6a1}
+  .btn.sm{padding:6px 12px;font-size:12px}
+  .btn.ghost{border-color:var(--line);background:var(--panel)}
+  .btn.danger{border-color:rgba(255,90,90,.4);color:#ffb0b0}
+  .btn.danger:hover{border-color:var(--red);background:rgba(255,90,90,.08)}
+  .btn[disabled]{opacity:.4;cursor:not-allowed;transform:none}
+
+  /* HERO compacto */
+  .hero{padding:64px 0 8px}
+  .hero .ic{width:60px;height:60px;display:grid;place-items:center;border-radius:16px;background:rgba(61,240,138,.07);border:1px solid rgba(61,240,138,.18);margin-bottom:16px}
+  .hero .ic svg{width:32px;height:32px;color:var(--green);filter:drop-shadow(0 0 6px rgba(61,240,138,.55))}
+  .hero h1{font-size:clamp(30px,6vw,50px);line-height:1.03;margin:0 0 8px;letter-spacing:-.02em;font-weight:800;max-width:820px}
+  .hero h1 .g{color:var(--green);text-shadow:0 0 22px rgba(61,240,138,.32)}
+  .hero .en{font:600 12px ui-monospace,monospace;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:0}
+  .hero .lead{font-size:clamp(15px,2vw,17px);color:var(--dim);max-width:640px;margin:12px 0 0}
+
+  /* PANEL / consola */
+  .panel{border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:hidden}
+  .panel + .panel{margin-top:16px}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .panel-h .ttl{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+  .panel-h .ttl .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex:none}
+  .panel-b{padding:16px}
+
+  /* barra de estado */
+  .statusbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .statusbar .me{display:flex;align-items:center;gap:9px;min-width:0}
+  .statusbar .me .em{font:600 13px ui-monospace,monospace;color:var(--txt);word-break:break-all}
+  .statusbar .me .em.anon{color:var(--dim)}
+  .statusbar .spacer{flex:1 1 auto}
+  .statusbar .upd{font:600 11px ui-monospace,monospace;color:var(--dim)}
+  .rolebadge{font:700 10px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:4px 10px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+  .rolebadge.owner{color:var(--green);border-color:rgba(61,240,138,.45)}
+  .rolebadge.admin{color:var(--cyan);border-color:rgba(56,214,255,.45)}
+  .rolebadge.editor{color:var(--amber);border-color:rgba(245,180,49,.45)}
+  .rolebadge.viewer{color:var(--dim)}
+
+  /* mensajes ✔ / ✖ */
+  .msg{min-height:20px;font:600 13px ui-monospace,monospace;letter-spacing:.02em;padding:0 16px 14px}
+  .msg.ok{color:var(--green)} .msg.err{color:var(--red)} .msg.mut{color:var(--dim)}
+
+  /* MATRIZ usuario × solución */
+  .matrix-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
+  table.matrix{border-collapse:separate;border-spacing:0;min-width:max-content;width:100%;font-size:13px}
+  table.matrix th,table.matrix td{padding:0;border-bottom:1px solid var(--line);border-right:1px solid var(--line)}
+  table.matrix th:last-child,table.matrix td:last-child{border-right:0}
+  table.matrix tr:last-child td{border-bottom:0}
+  table.matrix thead th{position:sticky;top:0;z-index:3;background:#0d1524;color:var(--dim);font:600 10.5px ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;vertical-align:bottom;padding:10px 10px}
+  table.matrix th.solh{min-width:98px;max-width:150px}
+  table.matrix th.solh .sn{color:var(--txt);text-transform:none;font-size:12px;font-weight:700;display:block;letter-spacing:0}
+  table.matrix th.solh .sl{color:var(--cyan);font-size:9px}
+  table.matrix th.solh.glob .sn{color:var(--amber)}
+  /* columna usuario congelada */
+  table.matrix .userc{position:sticky;left:0;z-index:2;background:var(--panel2);text-align:left;min-width:190px;max-width:280px}
+  table.matrix thead .userc{z-index:4;background:#0d1524}
+  table.matrix tbody .userc{padding:10px 12px}
+  table.matrix tbody tr:nth-child(even) .userc{background:#0c131f}
+  table.matrix tbody tr:nth-child(even) td{background:rgba(255,255,255,.008)}
+  .urow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .urow .uem{word-break:break-all;font-weight:600}
+  .urow .utag{font:700 8.5px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--green);border:1px solid rgba(61,240,138,.4);border-radius:999px;padding:3px 6px}
+  .urow.owner .uem{color:var(--green)}
+  .urow .rmu{margin-left:auto;border:1px solid rgba(255,90,90,.35);color:#ffb0b0;background:transparent;border-radius:8px;font:700 9px ui-monospace,monospace;padding:4px 7px;cursor:pointer;letter-spacing:.05em}
+  .urow .rmu:hover{border-color:var(--red);background:rgba(255,90,90,.08)}
+  /* celda de rol */
+  td.cell{text-align:center;vertical-align:middle;padding:6px}
+  .chip{width:30px;height:30px;border-radius:9px;display:inline-grid;place-items:center;font:800 13px ui-monospace,monospace;border:1px solid var(--line);background:transparent;color:var(--dim);cursor:default}
+  button.chip{cursor:pointer;transition:transform .1s,border-color .15s,background .15s}
+  button.chip:hover{transform:translateY(-1px);border-color:#3a4f8a}
+  .chip.owner{color:var(--green);border-color:rgba(61,240,138,.5);background:rgba(61,240,138,.1)}
+  .chip.admin{color:var(--cyan);border-color:rgba(56,214,255,.5);background:rgba(56,214,255,.1)}
+  .chip.editor{color:var(--amber);border-color:rgba(245,180,49,.5);background:rgba(245,180,49,.1)}
+  .chip.viewer{color:var(--txt);border-color:#2a3a66;background:rgba(255,255,255,.02)}
+  .chip.empty{color:#3a4a63;border-style:dashed}
+  .chip.locked{opacity:.85}
+
+  /* leyenda de roles */
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font:600 11px ui-monospace,monospace;color:var(--dim)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:16px;height:16px;border-radius:5px;display:inline-block;font-style:normal}
+  .legend i.owner{background:rgba(61,240,138,.12);border:1px solid rgba(61,240,138,.5)}
+  .legend i.admin{background:rgba(56,214,255,.12);border:1px solid rgba(56,214,255,.5)}
+  .legend i.editor{background:rgba(245,180,49,.12);border:1px solid rgba(245,180,49,.5)}
+  .legend i.viewer{background:rgba(255,255,255,.02);border:1px solid #2a3a66}
+
+  /* fila de alta */
+  .addrow{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+  .addrow input{flex:1;min-width:200px;background:#0d0f16;border:1px solid var(--line);border-radius:10px;color:var(--txt);padding:11px 13px;font:600 14px ui-monospace,monospace;outline:none}
+  .addrow input:focus{border-color:var(--green)}
+
+  /* popover de rol */
+  .pop{position:absolute;z-index:60;background:#0e1726;border:1px solid #2a3a66;border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.6);padding:8px;min-width:168px}
+  .pop .ph{font:600 10px ui-monospace,monospace;color:var(--dim);letter-spacing:.04em;text-transform:uppercase;padding:4px 8px 8px;border-bottom:1px solid var(--line);margin-bottom:6px;word-break:break-word}
+  .pop button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:transparent;border:0;color:var(--txt);border-radius:8px;padding:8px 8px;font:600 13px ui-monospace,monospace;cursor:pointer}
+  .pop button:hover{background:rgba(255,255,255,.05)}
+  .pop button .k{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font:800 11px ui-monospace,monospace;flex:none}
+  .pop button .k.owner{color:var(--green);border:1px solid rgba(61,240,138,.5)}
+  .pop button .k.admin{color:var(--cyan);border:1px solid rgba(56,214,255,.5)}
+  .pop button .k.editor{color:var(--amber);border:1px solid rgba(245,180,49,.5)}
+  .pop button .k.viewer{color:var(--txt);border:1px solid #2a3a66}
+  .pop button.clear{color:#ffb0b0;margin-top:2px;border-top:1px solid var(--line);border-radius:0 0 8px 8px}
+  .pop-back{position:fixed;inset:0;z-index:55;background:transparent}
+
+  /* ¿quién puede qué? */
+  .qq-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .qq-controls select{background:#0d0f16;border:1px solid var(--line);border-radius:10px;color:var(--txt);padding:9px 12px;font:600 13px ui-monospace,monospace;outline:none;min-width:220px}
+  .qq-controls select:focus{border-color:var(--green)}
+  .qq-list{display:flex;flex-direction:column;gap:8px}
+  .qq-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);flex-wrap:wrap}
+  .qq-item .em{word-break:break-all;flex:1;min-width:160px;font:600 13px ui-monospace,monospace}
+
+  /* auditoría */
+  .aud-toggle{display:flex;align-items:center;gap:9px;width:100%;background:transparent;border:0;color:var(--txt);cursor:pointer;font-weight:700;font-size:15px}
+  .aud-toggle .caret{transition:transform .2s;color:var(--dim)}
+  .aud-toggle[aria-expanded="true"] .caret{transform:rotate(90deg)}
+  .aud-body{margin-top:14px;display:flex;flex-direction:column;gap:7px}
+  .aud-ev{display:flex;gap:10px;align-items:baseline;padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);font-size:12.5px;flex-wrap:wrap}
+  .aud-ev .ts{font:600 11px ui-monospace,monospace;color:var(--dim);flex:none}
+  .aud-ev .ac{color:var(--cyan);font:600 12px ui-monospace,monospace}
+  .aud-ev .actn{color:var(--amber);font:600 12px ui-monospace,monospace}
+  .aud-ev .tg{color:var(--txt);word-break:break-all}
+  .aud-ev .dt{color:var(--dim)}
+
+  /* soluciones (owners) */
+  .sol-line{display:flex;align-items:center;gap:11px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);margin-bottom:8px;flex-wrap:wrap}
+  .sol-line .sid{font:700 12px ui-monospace,monospace;color:var(--green)}
+  .sol-line .snm{font-weight:600}
+  .sol-line .sds{color:var(--dim);font-size:12.5px;flex:1;min-width:140px}
+  .sol-add{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+  @media(max-width:560px){.sol-add{grid-template-columns:1fr}}
+  .sol-add input{background:#0d0f16;border:1px solid var(--line);border-radius:10px;color:var(--txt);padding:10px 12px;font:600 13px ui-monospace,monospace;outline:none}
+  .sol-add input:focus{border-color:var(--green)}
+  .sol-add .full{grid-column:1/-1}
+
+  .empty{color:var(--dim);font-size:13.5px;text-align:center;padding:20px 10px;border:1px dashed var(--line);border-radius:11px;line-height:1.55}
+  .skel{color:var(--amber)}
+
+  /* renovación GIS / login */
+  .authbox{margin-top:14px}
+  .authbox .gwrap{display:inline-block}
+
+  /* capacidades */
+  .caps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:820px){.caps{grid-template-columns:1fr 1fr}}
+  @media(max-width:520px){.caps{grid-template-columns:1fr}}
+  .cap{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:16px}
+  .cap .ct{font-weight:700;font-size:14.5px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+  .cap .ct .b{color:var(--green)}
+  .cap p{color:var(--dim);font-size:13px;margin:0;line-height:1.5}
+
+  /* enlaces de integración */
+  .links{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:820px){.links{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:460px){.links{grid-template-columns:1fr}}
+  .lk{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:13px;background:var(--panel);padding:15px;transition:transform .12s,border-color .2s,background .2s}
+  .lk:hover{transform:translateY(-3px);border-color:#2a3a66;background:var(--panel2)}
+  .lk .nm{font-weight:700;font-size:14.5px}
+  .lk .ds{color:var(--dim);font-size:12px;line-height:1.4}
+  .lk .go{font:600 11px ui-monospace,monospace;color:var(--green);margin-top:auto}
+
+  .foot{margin-top:12px;padding:26px 20px 46px;border-top:1px solid var(--line);color:var(--dim);font:600 11.5px ui-monospace,monospace;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;max-width:1080px;margin-left:auto;margin-right:auto}
+  .foot a{color:var(--dim)} .foot a:hover{color:var(--green)}
+  .foot .soft{max-width:520px;line-height:1.5}
+  .back{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 15px;font-weight:600;font-size:13.5px;transition:border-color .2s,color .2s}
   .back:hover{border-color:var(--green);color:#fff}
-  .back:focus-visible{outline:2px solid var(--green);outline-offset:2px}
-  .foot{margin-top:44px;color:var(--dim);font:600 11px ui-monospace,monospace}
+
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.08.07.2026.r3';</script>
-<script src="/admira-nav.js?v=08.07.2026.r14" data-active="apps" data-title="Acceso" defer></script>
+<script>window.ADMIRA_VERSION='v.08.07.2026.r15';</script>
+<script src="/admira-nav.js?v=08.07.2026.r15" data-active="apps" data-title="Acceso" defer></script>
+<!-- SSO oficial de Google (única dependencia externa permitida) -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 
-<main class="wrap" id="admskip-target">
-  <div class="ic" id="ic" aria-hidden="true"></div>
-  <h1>Acceso</h1>
-  <p class="en">Access Control</p>
-  <p class="ds">Controlará quién entra: aforo en tiempo real, puertas y permisos por Xpacio.</p>
-  <span class="badge"><span class="d"></span>En construcción · esta noche</span>
-  <div><a class="back" href="/apps/">&larr; Volver a la lanzadera</a></div>
-  <p class="foot">Admira · tv · v.08.07.2026.r3</p>
+<main id="admskip-target">
+
+  <!-- HERO -->
+  <header class="hero wrap">
+    <div class="ic" id="heroIc" aria-hidden="true"></div>
+    <h1>Acceso — <span class="g">quién entra y qué puede</span>, en todo el grupo</h1>
+    <p class="en">Access Control</p>
+    <p class="lead">La gestión de permisos v2 del ecosistema Admira. Roles por solución, mínimo privilegio y un registro de cada cambio. Hereda la lista de <span class="mono">admira.live/usuarios</span> y la lleva más lejos.</p>
+  </header>
+
+  <!-- CONSOLA -->
+  <section class="wrap" style="padding-top:20px">
+    <div class="panel">
+      <!-- barra de estado -->
+      <div class="statusbar">
+        <span class="me">
+          <span class="em anon" id="sbEmail">Sin sesión</span>
+          <span class="rolebadge viewer" id="sbRole">Solo lectura</span>
+        </span>
+        <span class="spacer"></span>
+        <span class="upd" id="sbUpd"></span>
+        <button class="btn ghost sm" id="btnRefresh" type="button" title="Recargar estado">↻ Actualizar</button>
+        <button class="btn primary sm" id="btnLogin" type="button">Entrar con Google</button>
+        <button class="btn ghost sm" id="btnLogout" type="button" style="display:none">Cerrar sesión</button>
+      </div>
+      <div class="msg mut" id="msg" role="status" aria-live="polite">Cargando estado…</div>
+      <div class="panel-b" style="padding-top:0">
+        <div class="authbox" id="authBox" style="display:none"></div>
+
+        <!-- MATRIZ -->
+        <div class="matrix-scroll" id="matrixScroll">
+          <table class="matrix" id="matrix" aria-label="Matriz de usuarios por solución">
+            <thead id="matHead"></thead>
+            <tbody id="matBody"><tr><td class="userc" style="padding:20px">Cargando…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span><i class="owner"></i> O · Owner</span>
+          <span><i class="admin"></i> A · Admin</span>
+          <span><i class="editor"></i> E · Editor</span>
+          <span><i class="viewer"></i> V · Viewer</span>
+          <span style="color:#3a4a63">· vacío = sin acceso</span>
+        </div>
+
+        <!-- alta de usuario -->
+        <div class="addrow" id="addRow" style="display:none">
+          <input id="newEmail" type="email" inputmode="email" autocomplete="off" placeholder="nombre@admira.com — añadir usuario" aria-label="Email del nuevo usuario">
+          <button class="btn primary" id="btnAdd" type="button">Añadir</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ¿QUIÉN PUEDE QUÉ? -->
+    <div class="panel">
+      <div class="panel-h"><span class="ttl"><span class="dot"></span>¿Quién puede qué?</span></div>
+      <div class="panel-b">
+        <div class="qq-controls">
+          <label class="mono" for="qqSel" style="color:var(--dim);font-size:12px">Solución</label>
+          <select id="qqSel" aria-label="Elige una solución"></select>
+        </div>
+        <div class="qq-list" id="qqList"></div>
+      </div>
+    </div>
+
+    <!-- AUDITORÍA -->
+    <div class="panel">
+      <div class="panel-b">
+        <button class="aud-toggle" id="audToggle" type="button" aria-expanded="false" aria-controls="audBody">
+          <span class="caret" aria-hidden="true">▸</span> Auditoría
+          <span class="mono" style="color:var(--dim);font-size:12px;font-weight:600;margin-left:6px">últimos cambios</span>
+          <span style="flex:1"></span>
+          <span class="btn ghost sm" id="audRefresh" role="button" tabindex="0">↻ Refrescar</span>
+        </button>
+        <div class="aud-body" id="audBody" hidden></div>
+      </div>
+    </div>
+
+    <!-- SOLUCIONES (solo owners) -->
+    <div class="panel" id="solPanel" style="display:none">
+      <div class="panel-h"><span class="ttl"><span class="dot" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></span>Soluciones del registro</span><span class="mono" style="color:var(--dim);font-size:11px">solo owners</span></div>
+      <div class="panel-b">
+        <div id="solList"></div>
+        <div class="sol-add">
+          <input id="solId" placeholder="id (p.ej. dashboard)" aria-label="ID de la solución">
+          <input id="solNm" placeholder="Nombre visible" aria-label="Nombre de la solución">
+          <input id="solUrl" class="full" placeholder="URL (https://admira.tv/…)" aria-label="URL de la solución">
+          <input id="solDs" class="full" placeholder="Descripción corta" aria-label="Descripción de la solución">
+          <button class="btn primary full" id="btnSolAdd" type="button">Añadir solución</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CAPACIDADES -->
+  <section class="wrap">
+    <div class="sec-head mid">
+      <p class="eyebrow">Lo que hace Acceso</p>
+      <h2>Un solo lugar para todo el grupo</h2>
+      <p>El estándar de identidad, con la sobriedad de Admira: das lo justo, lo ves todo y queda registrado.</p>
+    </div>
+    <div class="caps">
+      <div class="cap"><p class="ct"><span class="b">▸</span> Mínimo privilegio</p><p>Cada quien recibe el rol justo. Owner, admin, editor o viewer — nada de más, nada de menos.</p></div>
+      <div class="cap"><p class="ct"><span class="b">▸</span> Roles por solución</p><p>El permiso no es global por defecto: se fija solución a solución. El comodín ★ Global es la excepción, no la regla.</p></div>
+      <div class="cap"><p class="ct"><span class="b">▸</span> Auditoría de todo</p><p>Cada alta, cada rol, cada baja queda firmada: quién, qué y cuándo. La trazabilidad no se pide, ya está.</p></div>
+      <div class="cap"><p class="ct"><span class="b">▸</span> SSO de Google</p><p>Entras con tu cuenta del grupo. Sin contraseñas nuevas, sin verjas frágiles — el mismo SSO oficial que ya usas.</p></div>
+      <div class="cap"><p class="ct"><span class="b">▸</span> Todo el grupo, una consola</p><p>Todas las soluciones de Admira/AdmiraNeXT, en una matriz. Se acabó ir sitio por sitio.</p></div>
+      <div class="cap"><p class="ct"><span class="b">▸</span> Hereda v1</p><p>La lista de <span class="mono">admira.live/usuarios</span> sigue mandando en su verja. Acceso nace sembrado de ella y la lleva a v2.</p></div>
+    </div>
+  </section>
+
+  <!-- INTEGRACIÓN -->
+  <section class="wrap">
+    <div class="sec-head mid">
+      <p class="eyebrow">Integración</p>
+      <h2>Entra donde trabajas</h2>
+      <p>Las soluciones del registro, enlazadas. La lista se pinta del propio estado.</p>
+    </div>
+    <div class="links" id="linksBox"></div>
+    <p style="text-align:center;margin:26px 0 0"><a class="back" href="/apps/">&larr; Volver a la lanzadera</a></p>
+  </section>
+
+  <footer class="foot">
+    <span class="soft">Acceso · verja blanda: sin sesión ves la consola en solo lectura. Entra con Google para gestionar. La seguridad fuerte la impone el backend.</span>
+    <span>Admira · tv · <span style="opacity:.75" id="footVer">v.08.07.2026.r15</span></span>
+  </footer>
+
 </main>
 
 <script>
-  (function(){ function set(){ try{ var s=window.AdmiraIcon&&window.AdmiraIcon('accesscontrol'); if(s) document.getElementById('ic').innerHTML=s; }catch(_){}}
+(function(){
+  'use strict';
+
+  /* ───────── constantes ───────── */
+  var API='';                         // mismo origen: /accesscontrol/api/*
+  var CLIENT_ID='861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com';
+  var OWNERS=['csilva@admira.com','csilvasantin@gmail.com']; // UI-only; el backend es quien protege
+  var SESSION_KEY='admira_access';    // clave propia — NO pisar "admira_gate"
+  var GLOBAL='*';
+  var ROLES=['owner','admin','editor','viewer'];
+  var RMETA={owner:{k:'O',nm:'Owner'},admin:{k:'A',nm:'Admin'},editor:{k:'E',nm:'Editor'},viewer:{k:'V',nm:'Viewer'}};
+  var RANK={owner:4,admin:3,editor:2,viewer:1};
+
+  /* ───────── helpers ───────── */
+  function $(id){return document.getElementById(id);}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  var prefersReduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function setMsg(t,kind){var m=$('msg');m.textContent=t||'';m.className='msg '+(kind||'mut');}
+
+  /* ───────── estado ───────── */
+  var state=null;         // el /state real
+  var lastLoadAt=0;
+  var myEmail='';
+  var amOwner=false;
+  var canWrite=false;
+  var myRoles={};
+
+  /* ───────── sesión / GIS ───────── */
+  function sess(){try{return JSON.parse(localStorage.getItem(SESSION_KEY)||'null');}catch(_){return null;}}
+  function myCred(){var s=sess();return s&&s.cred?s.cred:'';}
+  function credFresh(){var s=sess();return !!(s&&s.cred&&s.credAt&&(Date.now()-s.credAt<55*60*1000));}
+  function parseJwt(t){try{var p=t.split('.')[1];return JSON.parse(decodeURIComponent(escape(atob(p.replace(/-/g,'+').replace(/_/g,'/')))));}catch(_){return{};}}
+  function saveSess(cred){
+    try{
+      var claims=parseJwt(cred);
+      var em=(claims.email||myEmail||'').toLowerCase();
+      localStorage.setItem(SESSION_KEY,JSON.stringify({email:em,cred:cred,credAt:Date.now(),exp:Date.now()+12*3600*1000}));
+      myEmail=em;
+    }catch(_){}
+  }
+  function clearSess(){try{localStorage.removeItem(SESSION_KEY);}catch(_){}}
+
+  var GIS_READY=false, pendingWrite=null;
+  function initGIS(){
+    if(GIS_READY) return true;
+    if(!(window.google&&google.accounts&&google.accounts.id)) return false;
+    google.accounts.id.initialize({client_id:CLIENT_ID,callback:onFreshCred,auto_select:true});
+    GIS_READY=true; return true;
+  }
+  function waitGIS(cb){
+    if(initGIS()){cb();return;}
+    var n=0,t=setInterval(function(){ if(initGIS()||++n>60){clearInterval(t);cb();} },150);
+  }
+  function showAuth(msg,isRenew){
+    var box=$('authBox'); box.style.display='block';
+    box.innerHTML='<div class="gwrap" id="gbtn"></div>';
+    if(msg) setMsg(msg, isRenew?'err':'mut');
+    waitGIS(function(){
+      try{ google.accounts.id.renderButton($('gbtn'),{theme:'filled_black',size:'large',text:'continue_with',shape:'pill'}); }catch(_){}
+      try{ google.accounts.id.prompt(); }catch(_){}
+    });
+  }
+  function hideAuth(){var box=$('authBox');if(box){box.style.display='none';box.innerHTML='';}}
+  function onFreshCred(resp){
+    if(!resp||!resp.credential) return;
+    saveSess(resp.credential);
+    hideAuth();
+    setMsg('✔ Sesión de Google lista · '+myEmail,'ok');
+    recomputePerms(); paintAll();
+    if(pendingWrite){var p=pendingWrite;pendingWrite=null;doWrite(p.body);}
+  }
+
+  /* ───────── permisos ───────── */
+  function recomputePerms(){
+    myEmail=(sess()&&sess().email)||'';
+    var u=state&&state.users?state.users.filter(function(x){return (x.email||'').toLowerCase()===myEmail;})[0]:null;
+    myRoles=(u&&u.roles)||{};
+    var owners=(state&&state.owners)||OWNERS;
+    amOwner=!!myEmail && (owners.indexOf(myEmail)>=0 || OWNERS.indexOf(myEmail)>=0);
+    var globalRole=myRoles[GLOBAL];
+    canWrite = amOwner || globalRole==='owner' || globalRole==='admin';
+  }
+  function myBadge(){
+    if(!myEmail) return {t:'Solo lectura',c:'viewer'};
+    if(amOwner) return {t:'Owner',c:'owner'};
+    var best=myRoles[GLOBAL];
+    if(!best){ // toma el mayor rol que tenga en cualquier solución
+      Object.keys(myRoles).forEach(function(k){ if(!best||RANK[myRoles[k]]>RANK[best]) best=myRoles[k]; });
+    }
+    if(best) return {t:RMETA[best].nm,c:best};
+    return {t:'Invitado',c:'viewer'};
+  }
+  function isOwnerEmail(email){var owners=(state&&state.owners)||OWNERS;return owners.indexOf(email)>=0||OWNERS.indexOf(email)>=0;}
+  function solutions(){return (state&&state.solutions)||[];}
+  function cols(){ // ★ Global primero, luego las soluciones del registro
+    return [{id:GLOBAL,nm:'★ Global',glob:true}].concat(solutions().map(function(s){return {id:s.id,nm:s.nm||s.id,url:s.url,glob:false};}));
+  }
+
+  /* ───────── red ───────── */
+  function loadState(){
+    setMsg('Cargando estado…','mut');
+    return fetch(API+'/accesscontrol/api/state',{cache:'no-store'})
+      .then(function(r){ if(!r.ok) throw new Error('http '+r.status); return r.json(); })
+      .then(function(d){
+        if(!d||!d.users) throw new Error('shape');
+        state=d; lastLoadAt=Date.now();
+        recomputePerms(); paintAll();
+        setMsg(myEmail?('Conectado como '+myEmail):'Modo lectura — entra con Google para gestionar.', 'mut');
+        return d;
+      })
+      .catch(function(){ paintSkeleton(); });
+  }
+  function loadAudit(){
+    var body=$('audBody');
+    body.innerHTML='<div class="empty">Consultando…</div>';
+    fetch(API+'/accesscontrol/api/audit',{cache:'no-store'})
+      .then(function(r){ if(!r.ok) throw new Error('http'); return r.json(); })
+      .then(function(d){
+        var evs=(d&&d.events)||[];
+        if(!evs.length){ body.innerHTML='<div class="empty">Sin eventos registrados todavía.</div>'; return; }
+        body.innerHTML=evs.map(function(e){
+          return '<div class="aud-ev"><span class="ts">'+esc(fmtTs(e.ts))+'</span>'+
+            '<span><span class="ac">'+esc(e.actor||'—')+'</span> <span class="actn">'+esc(e.action||'')+'</span> '+
+            '<span class="tg">'+esc(e.target||'')+'</span>'+(e.detail?' <span class="dt">· '+esc(e.detail)+'</span>':'')+'</span></div>';
+        }).join('');
+      })
+      .catch(function(){ body.innerHTML='<div class="empty skel">Auditoría no disponible aún — el backend se está construyendo en paralelo.</div>'; });
+  }
+  function write(body){ // body = {action, ...params}; añade credential y gestiona sesión
+    if(!myEmail){ pendingWrite={body:body}; showAuth('Entra con Google para gestionar.', false); return; }
+    if(!credFresh()){ pendingWrite={body:body}; showAuth('Tu sesión de Google caducó (~1h). Renueva para continuar.', true); return; }
+    doWrite(body);
+  }
+  function doWrite(body){
+    setMsg('…','mut');
+    var payload=Object.assign({credential:myCred()}, body);
+    return fetch(API+'/accesscontrol/api/write',{
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+    }).then(function(r){ return r.json().then(function(d){return {ok:r.ok,status:r.status,d:d};},function(){return {ok:r.ok,status:r.status,d:{}};}); })
+      .then(function(res){
+        if(res.status===401){ pendingWrite={body:body}; showAuth('Tu sesión de Google caducó. Renueva para continuar.', true); return; }
+        if(!res.ok){ setMsg('✖ '+((res.d&&res.d.error)||('error '+res.status)),'err'); return; }
+        if(res.d&&res.d.users){ state=res.d; lastLoadAt=Date.now(); recomputePerms(); paintAll(); }
+        setMsg('✔ '+verbOf(body),'ok');
+      })
+      .catch(function(){ setMsg('✖ Sin conexión con el backend. Reintenta con ↻ Actualizar.','err'); });
+  }
+  function verbOf(b){
+    switch(b.action){
+      case 'user.add': return 'Usuario añadido · '+b.email;
+      case 'user.remove': return 'Usuario quitado · '+b.email;
+      case 'role.set': return 'Rol fijado · '+b.email+' → '+solName(b.solution)+' = '+RMETA[b.role].nm;
+      case 'role.clear': return 'Rol retirado · '+b.email+' en '+solName(b.solution);
+      case 'solution.add': return 'Solución añadida · '+b.nm;
+      case 'solution.remove': return 'Solución quitada · '+b.id;
+      default: return 'Hecho';
+    }
+  }
+  function solName(id){ if(id===GLOBAL) return 'Global'; var s=solutions().filter(function(x){return x.id===id;})[0]; return s?(s.nm||s.id):id; }
+
+  /* ───────── formato ───────── */
+  function fmtTs(ts){ if(!ts) return '—'; try{ var d=new Date(ts); return d.toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(_){return '';} }
+  function agoStr(ms){ var s=Math.max(0,Math.round((Date.now()-ms)/1000)); if(s<60) return 'hace '+s+'s'; var m=Math.round(s/60); if(m<60) return 'hace '+m+' min'; var h=Math.round(m/60); return 'hace '+h+' h'; }
+
+  /* ───────── pintado ───────── */
+  function paintAll(){ paintStatusbar(); paintMatrix(); paintQQ(); paintSolutions(); paintLinks(); }
+
+  function paintStatusbar(){
+    var em=$('sbEmail'), rb=$('sbRole');
+    if(myEmail){ em.textContent=myEmail; em.className='em'; $('btnLogin').style.display='none'; $('btnLogout').style.display=''; }
+    else { em.textContent='Sin sesión'; em.className='em anon'; $('btnLogin').style.display=''; $('btnLogout').style.display='none'; }
+    var b=myBadge(); rb.textContent=b.t; rb.className='rolebadge '+b.c;
+    $('addRow').style.display = canWrite ? 'flex' : 'none';
+    $('solPanel').style.display = amOwner ? '' : 'none';
+    paintUpd();
+  }
+  function paintUpd(){ $('sbUpd').textContent = lastLoadAt ? ('actualizado '+agoStr(lastLoadAt)) : ''; }
+
+  function paintSkeleton(){
+    var head=$('matHead'), body=$('matBody');
+    head.innerHTML='<tr><th class="userc">Usuario</th><th class="solh">Soluciones</th></tr>';
+    body.innerHTML='<tr><td class="userc" style="padding:0"><div style="padding:18px"><span class="skel mono" style="font-size:13px">API no disponible aún</span></div></td>'+
+      '<td class="cell"><div class="empty skel" style="margin:12px">La consola está lista; el backend <span class="mono">/accesscontrol/api/*</span> se construye en paralelo. Cuando responda, la matriz se poblará sola. Nada roto — modo esqueleto.</div></td></tr>';
+    lastLoadAt=Date.now(); recomputePerms(); paintStatusbar();
+    $('qqList').innerHTML='<div class="empty skel">Sin datos: el backend no responde todavía.</div>';
+    $('qqSel').innerHTML='<option>★ Global</option>';
+    $('linksBox').innerHTML='<div class="empty" style="grid-column:1/-1">Las soluciones aparecerán aquí en cuanto el registro responda.</div>';
+    $('solList').innerHTML='';
+    setMsg('API no disponible aún — modo esqueleto. La consola no se rompe; reintenta con ↻ Actualizar.','mut');
+  }
+
+  function paintMatrix(){
+    if(!state) return;
+    var C=cols(), users=(state.users||[]).slice();
+    // owners primero, luego alfabético
+    users.sort(function(a,b){ var ao=isOwnerEmail((a.email||'').toLowerCase()), bo=isOwnerEmail((b.email||'').toLowerCase()); if(ao!==bo) return ao?-1:1; return (a.email||'').localeCompare(b.email||''); });
+
+    var head='<tr><th class="userc">Usuario · '+users.length+'</th>';
+    head+=C.map(function(c){
+      var link=c.url?'<span class="sl">↗</span>':'';
+      return '<th class="solh'+(c.glob?' glob':'')+'" scope="col"><span class="sn">'+esc(c.nm)+'</span>'+link+'</th>';
+    }).join('');
+    head+='</tr>';
+    $('matHead').innerHTML=head;
+
+    if(!users.length){ $('matBody').innerHTML='<tr><td class="userc">—</td><td class="cell"><div class="empty" style="margin:12px">Sin usuarios. Añade el primero abajo.</div></td></tr>'; return; }
+
+    $('matBody').innerHTML=users.map(function(u){
+      var em=(u.email||'').toLowerCase(), owner=isOwnerEmail(em), roles=u.roles||{};
+      var rmBtn=(canWrite&&!owner)?'<button class="rmu" data-rm="'+esc(em)+'" aria-label="Quitar usuario '+esc(em)+'">Quitar</button>':'';
+      var tag=owner?'<span class="utag">Owner</span>':'';
+      var row='<td class="userc"><div class="urow'+(owner?' owner':'')+'"><span class="uem">'+esc(em)+'</span>'+tag+rmBtn+'</div></td>';
+      row+=C.map(function(c){
+        var role = owner ? 'owner' : roles[c.id];
+        var editable = canWrite && !owner;   // owners no se tocan
+        var cls, txt, extra='';
+        if(role){ cls='chip '+role; txt=RMETA[role].k; }
+        else { cls='chip empty'; txt='·'; }
+        var aria='Usuario '+em+' × '+c.nm+' = '+(role?RMETA[role].nm:'sin acceso');
+        if(editable){
+          return '<td class="cell"><button class="'+cls+'" data-cell="1" data-email="'+esc(em)+'" data-sol="'+esc(c.id)+'" data-solnm="'+esc(c.nm)+'" data-role="'+esc(role||'')+'" aria-label="'+esc(aria)+' — pulsa para cambiar">'+txt+'</button></td>';
+        }
+        return '<td class="cell"><span class="'+cls+' locked" role="img" aria-label="'+esc(aria)+'">'+txt+'</span></td>';
+      }).join('');
+      return '<tr>'+row+'</tr>';
+    }).join('');
+
+    // enlaces
+    bindAll('[data-rm]', function(el){ var e=el.getAttribute('data-rm'); if(confirm('¿Quitar TODO el acceso a '+e+'?')) write({action:'user.remove',email:e}); });
+    bindAll('[data-cell]', function(el){ openPop(el); });
+  }
+
+  function bindAll(sel, fn){ Array.prototype.forEach.call(document.querySelectorAll(sel), function(el){ el.addEventListener('click', function(){ fn(el); }); }); }
+
+  /* popover de rol */
+  var popEl=null, popBack=null;
+  function closePop(){ if(popEl){popEl.remove();popEl=null;} if(popBack){popBack.remove();popBack=null;} }
+  function openPop(cell){
+    closePop();
+    var email=cell.getAttribute('data-email'), sol=cell.getAttribute('data-sol'), solnm=cell.getAttribute('data-solnm'), cur=cell.getAttribute('data-role');
+    popBack=document.createElement('div'); popBack.className='pop-back'; popBack.addEventListener('click',closePop); document.body.appendChild(popBack);
+    var opts=['admin','editor','viewer']; // owner es fijo (las 2 cuentas) — no se asigna desde la UI
+    var html='<div class="ph">'+esc(email)+' · '+esc(solnm)+'</div>';
+    html+=opts.map(function(r){
+      return '<button data-set="'+r+'"><span class="k '+r+'">'+RMETA[r].k+'</span>'+RMETA[r].nm+(cur===r?' ✓':'')+'</button>';
+    }).join('');
+    if(cur) html+='<button class="clear" data-clear="1">Limpiar rol</button>';
+    popEl=document.createElement('div'); popEl.className='pop'; popEl.innerHTML=html; document.body.appendChild(popEl);
+    // posición
+    var r=cell.getBoundingClientRect(), pw=popEl.offsetWidth, ph=popEl.offsetHeight;
+    var left=r.left+window.scrollX; if(left+pw>window.scrollX+document.documentElement.clientWidth-8) left=window.scrollX+document.documentElement.clientWidth-pw-8;
+    var top=r.bottom+window.scrollY+6; if(top+ph>window.scrollY+document.documentElement.clientHeight-8) top=r.top+window.scrollY-ph-6;
+    popEl.style.left=Math.max(8,left)+'px'; popEl.style.top=Math.max(8,top)+'px';
+    Array.prototype.forEach.call(popEl.querySelectorAll('[data-set]'),function(b){ b.addEventListener('click',function(){ var role=b.getAttribute('data-set'); closePop(); write({action:'role.set',email:email,solution:sol,role:role}); }); });
+    var cl=popEl.querySelector('[data-clear]'); if(cl) cl.addEventListener('click',function(){ closePop(); write({action:'role.clear',email:email,solution:sol}); });
+    var first=popEl.querySelector('button'); if(first) first.focus();
+  }
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closePop(); });
+
+  /* ¿quién puede qué? */
+  function paintQQ(){
+    if(!state) return;
+    var sel=$('qqSel'), C=cols();
+    var prev=sel.value;
+    sel.innerHTML=C.map(function(c){ return '<option value="'+esc(c.id)+'">'+esc(c.nm)+'</option>'; }).join('');
+    if(prev) sel.value=prev;
+    renderQQ();
+  }
+  function renderQQ(){
+    var sel=$('qqSel'), sol=sel.value, list=$('qqList');
+    if(!state){ list.innerHTML=''; return; }
+    var rows=[];
+    (state.users||[]).forEach(function(u){
+      var em=(u.email||'').toLowerCase(), roles=u.roles||{};
+      var role = isOwnerEmail(em) ? 'owner' : roles[sol];
+      if(role) rows.push({em:em,role:role});
+    });
+    rows.sort(function(a,b){ return RANK[b.role]-RANK[a.role] || a.em.localeCompare(b.em); });
+    if(!rows.length){ list.innerHTML='<div class="empty">Nadie tiene rol en «'+esc(solName(sol))+'» todavía.</div>'; return; }
+    list.innerHTML=rows.map(function(r){
+      return '<div class="qq-item"><span class="em">'+esc(r.em)+'</span><span class="rolebadge '+r.role+'">'+RMETA[r.role].nm+'</span></div>';
+    }).join('');
+  }
+  $('qqSel').addEventListener('change', renderQQ);
+
+  /* soluciones (owners) */
+  function paintSolutions(){
+    if(!amOwner) return;
+    var box=$('solList'), sols=solutions();
+    if(!sols.length){ box.innerHTML='<div class="empty">Sin soluciones en el registro.</div>'; return; }
+    box.innerHTML=sols.map(function(s){
+      return '<div class="sol-line"><span class="sid">'+esc(s.id)+'</span><span class="snm">'+esc(s.nm||'')+'</span>'+
+        '<span class="sds">'+esc(s.ds||'')+'</span>'+
+        '<button class="btn danger sm" data-solrm="'+esc(s.id)+'" type="button">Quitar</button></div>';
+    }).join('');
+    bindAll('[data-solrm]', function(el){ var id=el.getAttribute('data-solrm'); if(confirm('¿Quitar la solución "'+id+'"? Los roles asociados quedan huérfanos.')) write({action:'solution.remove',id:id}); });
+  }
+
+  /* enlaces de integración */
+  function paintLinks(){
+    var box=$('linksBox'), sols=solutions();
+    if(!sols.length){ box.innerHTML='<div class="empty" style="grid-column:1/-1">Aún no hay soluciones en el registro.</div>'; return; }
+    box.innerHTML=sols.map(function(s){
+      var href=s.url||'#';
+      var ext=/^https?:\/\//.test(href)?' target="_blank" rel="noopener"':'';
+      return '<a class="lk" href="'+esc(href)+'"'+ext+'><span class="nm">'+esc(s.nm||s.id)+'</span>'+
+        '<span class="ds">'+esc(s.ds||'')+'</span><span class="go">'+esc(s.id)+' →</span></a>';
+    }).join('');
+  }
+
+  /* ───────── controles ───────── */
+  $('btnRefresh').addEventListener('click', function(){ loadState(); if(!$('audBody').hidden) loadAudit(); });
+  $('btnLogin').addEventListener('click', function(){ showAuth('Elige tu cuenta del grupo Admira.', false); });
+  $('btnLogout').addEventListener('click', function(){ clearSess(); myEmail=''; hideAuth(); recomputePerms(); paintAll(); setMsg('Sesión cerrada — modo lectura.','mut'); });
+
+  function doAdd(){
+    var v=($('newEmail').value||'').toLowerCase().trim();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){ setMsg('✖ Email no válido','err'); return; }
+    write({action:'user.add',email:v}); $('newEmail').value='';
+  }
+  $('btnAdd').addEventListener('click', doAdd);
+  $('newEmail').addEventListener('keydown', function(e){ if(e.key==='Enter') doAdd(); });
+
+  $('btnSolAdd').addEventListener('click', function(){
+    var id=($('solId').value||'').trim(), nm=($('solNm').value||'').trim(), url=($('solUrl').value||'').trim(), ds=($('solDs').value||'').trim();
+    if(!id||!nm){ setMsg('✖ La solución necesita id y nombre','err'); return; }
+    write({action:'solution.add',id:id,nm:nm,url:url,ds:ds});
+    $('solId').value=$('solNm').value=$('solUrl').value=$('solDs').value='';
+  });
+
+  // auditoría plegable
+  var audOpen=false;
+  $('audToggle').addEventListener('click', function(e){
+    if(e.target.id==='audRefresh') return; // el refrescar no pliega
+    audOpen=!audOpen; this.setAttribute('aria-expanded', audOpen?'true':'false');
+    $('audBody').hidden=!audOpen; if(audOpen) loadAudit();
+  });
+  $('audRefresh').addEventListener('click', function(e){ e.stopPropagation(); $('audBody').hidden=false; audOpen=true; $('audToggle').setAttribute('aria-expanded','true'); loadAudit(); });
+  $('audRefresh').addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); this.click(); } });
+
+  /* icono del hero desde admira-nav.js */
+  (function(){ function set(){ try{ var s=window.AdmiraIcon&&window.AdmiraIcon('accesscontrol'); if(s) $('heroIc').innerHTML=s; }catch(_){}}
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',set); else set(); })();
+
+  /* versión en footer */
+  try{ if(window.ADMIRA_VERSION) $('footVer').textContent=window.ADMIRA_VERSION; }catch(_){}
+
+  /* ticker "actualizado hace Ns" */
+  setInterval(paintUpd, 5000);
+
+  /* arranque: precarga sesión si existe, carga estado */
+  (function boot(){
+    var s=sess(); if(s&&s.email) myEmail=s.email;
+    recomputePerms(); paintStatusbar();
+    loadState();
+  })();
+
+})();
 </script>
 </body>
 </html>
