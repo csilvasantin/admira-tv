@@ -566,13 +566,10 @@
     }; })(redrawI18n);
 
     syncLabels(); reset();
-    // arranca solo cuando entra en viewport (no gastar CPU antes)
-    if('IntersectionObserver' in window){
-      var io=new IntersectionObserver(function(es){ es.forEach(function(e){
-        if(e.isIntersecting){ start(); } else { stop(); }
-      }); },{threshold:.15});
-      io.observe(document.getElementById('simulador'));
-    } else start();
+    // el simulador es la demo estrella: arranca siempre (el tick es muy ligero).
+    // Se pausa/reanuda con el botón; no lo bloqueamos tras un IntersectionObserver
+    // para que funcione aunque la pestaña abra directamente en el ancla o esté oculta.
+    start();
   })();
 
   /* ---------- DEMO 2: GEMELO (facade click-to-load) ---------- */
