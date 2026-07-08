@@ -4,7 +4,7 @@
  * data-active: flota|apps|calendar|condicional|canal|mural|comprar|adcelerate|alta|help   ·   data-title: subtítulo de la barra.
  * Estado (plegado/detalle) compartido entre páginas vía localStorage.
  * El ítem "Apps" despliega un submenú (flyout en desktop · acordeón en móvil) con las 18 apps del stack,
- * cuyo estado ●/○ vive en window.AdmiraApps (fuente única que también consume /apps/). v.08.07.2026.r17 */
+ * cuyo estado ●/○ vive en window.AdmiraApps (fuente única que también consume /apps/). v.08.07.2026.r18 */
 (function(){
   if(window.__admnav) return; window.__admnav=true;
   var s=document.currentScript;
@@ -100,8 +100,11 @@
      "transition:padding .18s ease;box-sizing:border-box;overflow-x:hidden}",
    /* los paneles off-canvas (drawer izq · detalle der) no deben generar scroll horizontal a ningún ancho */
    "html.admnav body{overflow-x:hidden}",
-   "html.admnav.admnav-open{--admnw:238px}",
-   "html.admnav.admnav-det{--admrw:320px}",
+   "html.admnav.admnav-open{--admnw:var(--admow,238px)}",
+   "html.admnav.admnav-det{--admrw:var(--admdw,320px)}",
+   /* modo experto: reserva de scroll al fondo para que el contenido no quede tapado por la consola.
+      Va en el body (Chrome ignora padding-bottom en el elemento raíz html, sí lo respeta en body) */
+   "html.admnav.admnav-exp body{padding-bottom:var(--admexph,200px)}",
    "html.admnav body>header:not(.admtop){top:var(--admtb)!important}",
    /* barra superior Codex */
    ".admtop{position:fixed;top:0;left:0;right:0;height:var(--admtb);z-index:45;display:flex;align-items:center;gap:11px;",
@@ -114,11 +117,9 @@
    ".admtop .admbrand{font-weight:800;letter-spacing:.5px;font-size:16px;white-space:nowrap;color:#cdd8e8;min-width:0;flex-shrink:1;overflow:hidden;text-overflow:ellipsis}",
    /* la barra nunca desborda a lo ancho (cero scroll horizontal 320-1440): la marca trunca, los controles fijos no encogen */
    ".admtop .admseg{flex:none}",
-   "@media(max-width:600px){.admtop .admver{display:none}}",
    ".admtop .admbrand b{color:#7aa2ff}",
    ".admtop .admhome{color:inherit;text-decoration:none;border-radius:6px;padding:1px 5px;margin:0 -3px;transition:color .15s,background .15s}",
    ".admtop .admhome:hover{color:#fff;background:#13203a}",
-   ".admtop .admver{font:600 10.5px ui-monospace,monospace;color:#8595ad;border:1px solid #1e2940;border-radius:999px;padding:1px 7px;margin-left:8px;vertical-align:2px}",
    ".admtop .admpgsub{color:#8595ad;font-size:12px;white-space:nowrap}",
    ".admtop .admsp{flex:1}",
    /* enlaces de ecosistema en la barra superior (cfg.topRight) */
@@ -193,7 +194,7 @@
    ".admfoot{padding:6px 10px;color:#8595ad;font:600 11px ui-monospace,monospace;white-space:nowrap;overflow:hidden}",
    "html.admnav:not(.admnav-open) .admni .t,html.admnav:not(.admnav-open) .admfoot{opacity:0;pointer-events:none}",
    /* panel detalle */
-   ".admdet{position:fixed;top:var(--admtb);right:0;bottom:0;width:320px;background:#080b12;border-left:1px solid #1e2940;",
+   ".admdet{position:fixed;top:var(--admtb);right:0;bottom:0;width:var(--admdw,320px);background:#080b12;border-left:1px solid #1e2940;",
      "z-index:40;transform:translateX(100%);transition:transform .18s ease;overflow-y:auto;padding:14px 14px 30px;",
      "display:flex;flex-direction:column;gap:12px;color:#cdd8e8;font:14px -apple-system,Segoe UI,sans-serif;scrollbar-width:thin}",
    ".admdet::-webkit-scrollbar{width:6px}.admdet::-webkit-scrollbar-thumb{background:#1e2940;border-radius:3px}",
@@ -209,6 +210,23 @@
    ".admlinks a{color:#cdd8e8;text-decoration:none;font-size:13px;font-weight:600;padding:6px 9px;border-radius:8px;border:1px solid #1e2940;background:#0e1420}",
    ".admlinks a:hover{border-color:#7aa2ff;color:#fff}",
    ".admscrim{position:fixed;inset:0;background:#000a;z-index:39;display:none}",
+   /* panel EXPERTO inferior (consola) — respeta sidebar/detalle vía --admnw/--admrw (edge-to-edge en móvil) */
+   ".admexp{position:fixed;left:var(--admnw);right:var(--admrw);bottom:0;height:var(--admexph,200px);z-index:44;",
+     "background:#080b12;border-top:1px solid #1e2940;display:none;flex-direction:column;overflow:hidden;",
+     "color:#cdd8e8;font:14px -apple-system,Segoe UI,sans-serif}",
+   "html.admnav.admnav-exp .admexp{display:flex}",
+   ".admexp .admexp-hd{display:flex;align-items:center;gap:8px;padding:10px 14px 6px;font-size:14px;font-weight:800;color:#cdd8e8}",
+   ".admexp .admexp-bd{padding:2px 14px 14px;font:12.5px ui-monospace,monospace;color:#8595ad}",
+   /* asas de arrastre (raíles redimensionables) — role=separator */
+   ".admrz{position:fixed;z-index:46;background:transparent;touch-action:none}",
+   ".admrz:hover,.admrz.drag{background:rgba(61,240,138,.28)}",
+   ".admrz:focus-visible{outline:2px solid #3df08a;outline-offset:-2px}",
+   ".admrz-side{top:var(--admtb);bottom:0;left:var(--admnw);width:8px;margin-left:-4px;cursor:col-resize;display:none}",
+   ".admrz-det{top:var(--admtb);bottom:0;right:var(--admrw);width:8px;margin-right:-4px;cursor:col-resize;display:none}",
+   ".admrz-exp{position:absolute;top:0;left:0;right:0;height:8px;margin-top:-4px;cursor:row-resize}",
+   /* drag SOLO en desktop (>820px): en móvil el sidebar es drawer y el detalle es min(320px,86vw) */
+   "@media(min-width:821px){html.admnav.admnav-open .admrz-side{display:block}html.admnav.admnav-det .admrz-det{display:block}}",
+   "@media(max-width:820px){.admrz-exp{display:none}}",
    /* accesibilidad: skip-link, focus visible por teclado, reduced-motion */
    ".admskip{position:fixed;left:8px;top:-60px;z-index:70;background:#3df08a;color:#04110b;font:700 13px -apple-system,Segoe UI,sans-serif;padding:9px 14px;border-radius:9px;text-decoration:none;transition:top .15s}",
    ".admskip:focus{top:8px;outline:2px solid #04110b;outline-offset:2px}",
@@ -221,6 +239,7 @@
      "html.admnav:not(.admnav-open) .admni .t,html.admnav:not(.admnav-open) .admfoot{opacity:1;pointer-events:auto}",
      "html.admnav.admnav-open .admscrim{display:block}",
      ".admdet{width:min(320px,86vw)}",
+     ".admexp{left:0;right:0}",
    "}"
   ].join("");
 
@@ -283,6 +302,14 @@
       '<div class="admsec"><h4>Navegación</h4><div class="admlinks">'+links+'</div></div>'+
     '</aside>';
   }
+  function expHTML(){
+    // Panel EXPERTO inferior (placeholder). El asa .admrz-exp redimensiona el alto (borde superior).
+    return '<aside class="admexp" id="admExp" aria-label="Modo experto" aria-hidden="true">'+
+      '<div class="admrz admrz-exp" id="admRzExp" aria-label="Redimensionar consola experto"></div>'+
+      '<div class="admexp-hd">Experto</div>'+
+      '<div class="admexp-bd">Consola de modo experto — próximamente</div>'+
+    '</aside>';
+  }
   function emiSwitchHTML(){
     // Conmutador de emisión Planificar ↔ Calendario, disponible en TODA página del chrome.
     return '<span class="admseg" role="group" aria-label="Emisión">'+
@@ -293,12 +320,13 @@
   function topHTML(){
     return '<header class="admtop">'+
       '<button class="admtog" id="admNavTog" aria-label="Plegar o desplegar el menú" aria-expanded="false" title="Plegar / desplegar menú (m)">☰</button>'+
-      '<span class="admbrand"><a href="/" class="admhome" title="Volver a la home · Admira.tv">Admira</a> · <b>'+brandTag+'</b><span class="admver">'+VER+'</span></span>'+
+      '<span class="admbrand"><a href="/" class="admhome" title="Volver a la home · Admira.tv">Admira</a> · <b>'+brandTag+'</b></span>'+
       (title?'<span class="admpgsub">'+title+'</span>':'')+
       '<span class="admsp"></span>'+
       emiSwitchHTML()+
       (cfg.topRight||'')+
       '<button class="admtog" id="admDetTog" title="Panel de detalle (d)" aria-label="Panel de detalle" aria-expanded="false"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/></svg></button>'+
+      '<button class="admtog" id="admExpTog" title="Modo experto (e)" aria-label="Modo experto" aria-expanded="false"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></button>'+
     '</header>';
   }
 
@@ -306,7 +334,10 @@
     var st=document.createElement('style'); st.id='admnav-css'; st.textContent=CSS; document.head.appendChild(st);
     document.documentElement.classList.add('admnav');
     var holder=document.createElement('div');
-    holder.innerHTML = '<a class="admskip" href="#admskip-target">Saltar al contenido</a>'+topHTML()+navHTML()+detHTML()+'<div class="admscrim" id="admScrim"></div>';
+    holder.innerHTML = '<a class="admskip" href="#admskip-target">Saltar al contenido</a>'+topHTML()+navHTML()+detHTML()+expHTML()+
+      '<div class="admrz admrz-side" id="admRzSide" aria-label="Redimensionar menú lateral"></div>'+
+      '<div class="admrz admrz-det" id="admRzDet" aria-label="Redimensionar panel de detalle"></div>'+
+      '<div class="admscrim" id="admScrim"></div>';
     document.body.prepend.apply(document.body, Array.prototype.slice.call(holder.childNodes));
     var _skip=document.querySelector('.admskip');
     if(_skip) _skip.addEventListener('click',function(e){ e.preventDefault(); var m=document.querySelector('main,[role=main],.wrap,#view,#mupi,#stage')||document.querySelector('h1'); if(m){ m.setAttribute('tabindex','-1'); try{m.focus();}catch(_){} m.scrollIntoView(); } });
@@ -337,6 +368,58 @@
     if(navTog)navTog.onclick=window.admToggleNav;
     if(detTog)detTog.onclick=window.admToggleDet;
     var scrim=document.getElementById('admScrim'); if(scrim)scrim.onclick=function(){setNav(false);};
+
+    // Modo experto: toggle NUEVO a la derecha del detalle. El estado abierto NO se persiste (arranca cerrado).
+    var expTog=document.getElementById('admExpTog'), expEl=document.getElementById('admExp');
+    function setExp(open){ html.classList.toggle('admnav-exp',open); if(expTog){expTog.classList.toggle('on',open); expTog.setAttribute('aria-expanded',open?'true':'false');} if(expEl)expEl.setAttribute('aria-hidden',open?'false':'true'); }
+    window.admToggleExp=function(){setExp(!html.classList.contains('admnav-exp'));};
+    if(expTog)expTog.onclick=window.admToggleExp;
+
+    // Raíles REDIMENSIONABLES (Pointer Events): sidebar (ancho), detalle (ancho), experto (alto).
+    (function(){
+      function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); }
+      function num(k,def){ var v; try{v=parseFloat(localStorage.getItem(k));}catch(_){} return (v&&isFinite(v))?v:def; }
+      var sideW=num('admnav_w_side',238), detW=num('admnav_w_det',320), expH=num('admnav_h_exp',200);
+      function hiSide(){ return Math.min(420, window.innerWidth-120); }
+      function hiDet(){ return Math.min(560, window.innerWidth-120); }
+      function hiExp(){ return Math.round(window.innerHeight*0.6); }
+      function applySide(v){ sideW=v; html.style.setProperty('--admow', v+'px'); }
+      function applyDet(v){ detW=v; html.style.setProperty('--admdw', v+'px'); }
+      function applyExp(v){ expH=v; html.style.setProperty('--admexph', v+'px'); }
+
+      function mk(el, cfg){
+        if(!el) return null;
+        el.setAttribute('role','separator');
+        el.setAttribute('aria-orientation', cfg.orient);
+        el.setAttribute('tabindex','0');
+        el.setAttribute('aria-valuemin', cfg.min);
+        var dragging=false;
+        function set(v, save){ v=Math.round(clamp(v, cfg.min, cfg.hi())); cfg.apply(v); el.setAttribute('aria-valuenow', v); el.setAttribute('aria-valuemax', Math.round(cfg.hi())); if(save!==false){ try{localStorage.setItem(cfg.key, v);}catch(_){} } }
+        cfg.set=set;
+        el.addEventListener('pointerdown',function(e){ e.preventDefault(); dragging=true; el.classList.add('drag'); document.body.style.userSelect='none'; try{el.setPointerCapture(e.pointerId);}catch(_){} });
+        el.addEventListener('pointermove',function(e){ if(!dragging)return; set(cfg.from(e), false); });
+        function end(e){ if(!dragging)return; dragging=false; el.classList.remove('drag'); document.body.style.userSelect=''; try{el.releasePointerCapture(e.pointerId);}catch(_){} set(cfg.get(), true); }
+        el.addEventListener('pointerup',end);
+        el.addEventListener('pointercancel',end);
+        el.addEventListener('keydown',function(e){ var d=cfg.dir(e.key); if(!d)return; e.preventDefault(); set(cfg.get()+d*16, true); });
+        el.addEventListener('dblclick',function(){ set(cfg.def, true); });
+        set(cfg.get(), false); // aplica y clampa al viewport en el arranque (sin re-guardar)
+        return cfg;
+      }
+
+      var rzSide=mk(document.getElementById('admRzSide'),{ orient:'vertical', min:180, def:238, key:'admnav_w_side',
+        hi:hiSide, get:function(){return sideW;}, apply:applySide, from:function(e){return e.clientX;},
+        dir:function(k){return k==='ArrowRight'?1:k==='ArrowLeft'?-1:0;} });
+      var rzDet=mk(document.getElementById('admRzDet'),{ orient:'vertical', min:240, def:320, key:'admnav_w_det',
+        hi:hiDet, get:function(){return detW;}, apply:applyDet, from:function(e){return window.innerWidth-e.clientX;},
+        dir:function(k){return k==='ArrowLeft'?1:k==='ArrowRight'?-1:0;} });
+      var rzExp=mk(document.getElementById('admRzExp'),{ orient:'horizontal', min:120, def:200, key:'admnav_h_exp',
+        hi:hiExp, get:function(){return expH;}, apply:applyExp, from:function(e){return window.innerHeight-e.clientY;},
+        dir:function(k){return k==='ArrowUp'?1:k==='ArrowDown'?-1:0;} });
+
+      // Responsive: si el viewport encoge por debajo del tamaño guardado, re-clampa al vuelo (sin re-guardar).
+      window.addEventListener('resize',function(){ if(rzSide)rzSide.set(sideW,false); if(rzDet)rzDet.set(detW,false); if(rzExp)rzExp.set(expH,false); });
+    })();
 
     // Submenú de Apps: acceso directo a las 18 apps (flyout en desktop · acordeón en móvil)
     (function(){
@@ -401,6 +484,7 @@
       if(e.metaKey||e.ctrlKey||e.altKey)return;
       if(e.key==='m'||e.key==='M')window.admToggleNav();
       else if(e.key==='d'||e.key==='D')window.admToggleDet();
+      else if(e.key==='e'||e.key==='E')window.admToggleExp();
     });
   }
   if(document.body) init(); else document.addEventListener('DOMContentLoaded',init);
