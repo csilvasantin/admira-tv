@@ -57,6 +57,12 @@
   .app .st .d{width:7px;height:7px;border-radius:50%;flex:none}
   .app .st.live{color:var(--green)} .app .st.live .d{background:var(--green);box-shadow:0 0 6px var(--green)}
   .app .st.wip{color:var(--amber)} .app .st.wip .d{background:transparent;border:1.5px solid var(--amber)}
+  /* botones de material por tarjeta (vídeo + PDF) — solo aparecen si el manifest los trae */
+  .app .acts{display:flex;gap:7px;margin-top:8px}
+  .app .act{appearance:none;display:inline-flex;align-items:center;gap:5px;background:#0e1420;color:var(--dim);border:1px solid var(--line);border-radius:8px;padding:4px 9px;font:600 10.5px ui-monospace,monospace;letter-spacing:.02em;cursor:pointer;transition:color .15s,border-color .15s}
+  .app .act:hover{color:var(--green);border-color:#2a3a66}
+  .app .act:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .app .act svg{width:12px;height:12px;flex:none}
   .empty{color:var(--dim);font-size:14px;padding:30px 4px;text-align:center;display:none}
   .foot{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);color:var(--dim);font:600 11.5px ui-monospace,monospace;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
   .foot a{color:var(--dim)} .foot a:hover{color:var(--green)}
@@ -79,6 +85,10 @@
   .vov .vclose{appearance:none;background:#0e1420;color:var(--dim);border:1px solid var(--line);border-radius:8px;width:30px;height:30px;font-size:14px;cursor:pointer;line-height:1;display:grid;place-items:center;flex:none}
   .vov .vclose:hover{color:var(--green);border-color:#2a3a66}
   .vov .vclose:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .vov .vdl{display:inline-flex;align-items:center;gap:6px;background:#0e1420;color:var(--dim);border:1px solid var(--line);border-radius:8px;padding:0 10px;height:30px;font:600 11px ui-monospace,monospace;flex:none;margin-left:auto}
+  .vov .vdl:hover{color:var(--green);border-color:#2a3a66}
+  .vov .vdl:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .vov .vdl svg{width:12px;height:12px}
   .vov .vvid{display:block;width:100%;max-height:78vh;background:#000}
   @keyframes vfade{from{opacity:0}to{opacity:1}}
   @keyframes vpop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
@@ -91,7 +101,7 @@
 </head>
 <body>
 <script>
-window.ADMIRA_VERSION='v.08.07.2026.r26';
+window.ADMIRA_VERSION='v.09.07.2026.r27';
 /* El buscador de la lanzadera vive en la barra superior del chrome (cfg.topRight).
    No lleva clase .admtR, así que NO lo esconde el breakpoint móvil de la topbar. */
 window.ADMIRA_NAV={
@@ -122,7 +132,7 @@ window.ADMIRA_NAV={
 
   <div class="foot">
     <span>Réplica mejorada de la lanzadera legacy · new.admira.mobi → admira.tv</span>
-    <span>Admira · tv · <span style="opacity:.75">v.08.07.2026.r26</span></span>
+    <span>Admira · tv · <span style="opacity:.75">v.09.07.2026.r27</span></span>
   </div>
 </main>
 
@@ -167,6 +177,8 @@ window.ADMIRA_NAV={
   var RING_SVG='<svg class="armring" viewBox="0 0 44 44" aria-hidden="true" focusable="false">'+
     '<circle class="track" cx="22" cy="22" r="21"></circle>'+
     '<circle class="prog" cx="22" cy="22" r="21"></circle></svg>';
+  var PLAY_SVG='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 5.5v13l11-6.5z"/></svg>';
+  var DL_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>';
   var armTimer=null, armIc=null;
   var overlayEl=null, keyHandler=null, lastFocus=null;
 
@@ -202,6 +214,7 @@ window.ADMIRA_NAV={
       '<div class="vbox">'+
         '<div class="vbar">'+
           '<span class="vtitle">'+esc(title)+'</span>'+
+          '<a class="vdl" href="'+esc(v.src)+'" download>'+DL_SVG+'Descargar</a>'+
           '<button type="button" class="vclose" aria-label="Cerrar vídeo">✕</button>'+
         '</div>'+
         '<video class="vvid" controls playsinline preload="metadata"'+(reduce?'':' autoplay')+'></video>'+
@@ -209,6 +222,7 @@ window.ADMIRA_NAV={
     document.body.appendChild(overlayEl);
     var vid=overlayEl.querySelector('.vvid');
     var closeBtn=overlayEl.querySelector('.vclose');
+    var dlBtn=overlayEl.querySelector('.vdl');
     vid.src=v.src;
     closeBtn.addEventListener('click', closeVideo);
     // click en el fondo oscuro (fuera de la caja) cierra
@@ -217,7 +231,7 @@ window.ADMIRA_NAV={
     keyHandler=function(e){
       if(e.key==='Escape'){ e.preventDefault(); closeVideo(); return; }
       if(e.key==='Tab'){
-        var f=[closeBtn, vid], i=f.indexOf(document.activeElement);
+        var f=[dlBtn, closeBtn, vid], i=f.indexOf(document.activeElement);
         if(e.shiftKey){ if(i<=0){ e.preventDefault(); f[f.length-1].focus(); } }
         else if(i===f.length-1 || i===-1){ e.preventDefault(); f[0].focus(); }
       }
@@ -240,34 +254,59 @@ window.ADMIRA_NAV={
     if(!hasManifest()) return;   // manifest vacío/caído → no tocar nada
     document.querySelectorAll('.app').forEach(function(card){
       var slug=card.getAttribute('data-slug');
-      if(!slug || !VIDEOS[slug]) return;
+      var m=slug && VIDEOS[slug];
+      if(!m) return;
       var ic=card.querySelector('.ic');
       if(!ic) return;
-      ic.classList.add('has-video');
-      if(!ic.querySelector('.armring')) ic.insertAdjacentHTML('beforeend', RING_SVG);
-      // ratón: hover continuado sobre el ICONO
-      ic.addEventListener('mouseenter', function(){ startArm(ic, slug, HOVER_MS); });
-      ic.addEventListener('mouseleave', clearArm);
-      // teclado: foco sostenido en la tarjeta arma igual
-      card.addEventListener('focus', function(){ startArm(ic, slug, HOVER_MS); });
-      card.addEventListener('blur', clearArm);
-      // táctil: long-press ≥600ms sobre el icono, sin romper el tap que navega
-      var tTimer=null, lpFired=false;
-      ic.addEventListener('touchstart', function(){
-        lpFired=false;
-        tTimer=setTimeout(function(){ tTimer=null; lpFired=true; openVideo(slug); }, TOUCH_MS);
-      }, {passive:true});
-      var cancelTouch=function(){ if(tTimer){ clearTimeout(tTimer); tTimer=null; } };
-      ic.addEventListener('touchmove', cancelTouch, {passive:true});
-      ic.addEventListener('touchcancel', cancelTouch, {passive:true});
-      ic.addEventListener('touchend', function(e){
-        cancelTouch();
-        if(lpFired){ e.preventDefault(); }   // suprime el click→navegación sintético
-      }, {passive:false});
-      // red de seguridad: si armó el long-press, bloquea la navegación de la tarjeta
-      card.addEventListener('click', function(e){
-        if(lpFired){ e.preventDefault(); e.stopPropagation(); lpFired=false; }
-      }, true);
+      if(m.src){
+        ic.classList.add('has-video');
+        if(!ic.querySelector('.armring')) ic.insertAdjacentHTML('beforeend', RING_SVG);
+        // ratón: hover continuado sobre el ICONO
+        ic.addEventListener('mouseenter', function(){ startArm(ic, slug, HOVER_MS); });
+        ic.addEventListener('mouseleave', clearArm);
+        // teclado: foco sostenido en la tarjeta arma igual
+        card.addEventListener('focus', function(){ startArm(ic, slug, HOVER_MS); });
+        card.addEventListener('blur', clearArm);
+        // táctil: long-press ≥600ms sobre el icono, sin romper el tap que navega
+        var tTimer=null, lpFired=false;
+        ic.addEventListener('touchstart', function(){
+          lpFired=false;
+          tTimer=setTimeout(function(){ tTimer=null; lpFired=true; openVideo(slug); }, TOUCH_MS);
+        }, {passive:true});
+        var cancelTouch=function(){ if(tTimer){ clearTimeout(tTimer); tTimer=null; } };
+        ic.addEventListener('touchmove', cancelTouch, {passive:true});
+        ic.addEventListener('touchcancel', cancelTouch, {passive:true});
+        ic.addEventListener('touchend', function(e){
+          cancelTouch();
+          if(lpFired){ e.preventDefault(); }   // suprime el click→navegación sintético
+        }, {passive:false});
+        // red de seguridad: si armó el long-press, bloquea la navegación de la tarjeta
+        card.addEventListener('click', function(e){
+          if(lpFired){ e.preventDefault(); e.stopPropagation(); lpFired=false; }
+        }, true);
+      }
+      // ── Botones de material (vídeo + PDF) al pie de la tarjeta ──
+      // La tarjeta es un <a>, así que van como <button> y cortan la navegación.
+      var acts=document.createElement('span');
+      acts.className='acts';
+      if(m.src){
+        var vb=document.createElement('button');
+        vb.type='button'; vb.className='act';
+        vb.setAttribute('aria-label','Ver vídeo: '+(m.title||slug));
+        vb.innerHTML=PLAY_SVG+'Vídeo';
+        vb.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); openVideo(slug); });
+        acts.appendChild(vb);
+      }
+      if(m.pdf){
+        var pb=document.createElement('button');
+        pb.type='button'; pb.className='act';
+        pb.setAttribute('aria-label','Descargar PDF: '+(m.title||slug));
+        pb.innerHTML=DL_SVG+'PDF';
+        // /apps/pdf/ responde attachment → descarga sin salir de la lanzadera
+        pb.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); location.href=m.pdf; });
+        acts.appendChild(pb);
+      }
+      if(acts.childNodes.length) card.appendChild(acts);
     });
   }
 
