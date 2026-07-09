@@ -1,5 +1,5 @@
 /*
- * auth-gate.js — verja de acceso (soft gate) para admira.tv
+ * auth-gate.js — perímetro de seguridad (soft gate) para admira.tv
  *
  * Prehome CRT / fósforo (estética sci-fi 80s/90s, coherente con el canal:
  * cian #7db8ff + verde fósforo #39d353 sobre #05080c, scanlines).
@@ -201,7 +201,7 @@
     g.innerHTML =
       '<div class="frame">' +
         '<div class="content">' +
-          '<div class="kicker">ADMIRA.TV &middot; Verja de acceso</div>' +
+          '<div class="kicker">ADMIRA.TV &middot; Per&iacute;metro de seguridad</div>' +
           '<h1 class="title">ADMIRA<span class="dot">.</span><span class="tv">TV</span></h1>' +
           '<div class="sub">Canal de emisi&oacute;n DOOH</div>' +
           '<div class="rule"></div>' +
