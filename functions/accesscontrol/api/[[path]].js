@@ -1,12 +1,12 @@
 // Acceso (Access Control) v2 — backend same-origin de admira.tv (Pages Functions).
 // Gestión de permisos v2 para TODAS las soluciones del grupo Admira/AdmiraNeXT.
-// Evolución del worker v1 admira-whitelist (que sigue siendo la verja de admira.live).
+// Evolución del worker v1 admira-whitelist (que sigue siendo el perímetro de seguridad de admira.live).
 //
 // Va same-origin en admira.tv (y NO en *.workers.dev) porque los ISP españoles
 // bloquean 188.114.96.0/22 → workers.dev inaccesible (lección del equipo).
 //
 // Rutas (catch-all [[path]] bajo /accesscontrol/api/):
-//   GET  /accesscontrol/api/state  → doc ACL completo (lectura pública, verja blanda)
+//   GET  /accesscontrol/api/state  → doc ACL completo (lectura pública, perímetro blando)
 //   GET  /accesscontrol/api/audit  → últimos 200 eventos (más reciente primero, pública)
 //   POST /accesscontrol/api/write  → mutaciones autenticadas con Google ID token
 //
