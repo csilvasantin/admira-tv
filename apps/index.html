@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<script src="/auth-gate.js"></script>
 <!-- preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -115,18 +116,6 @@ window.ADMIRA_NAV={
 <script src="/admira-nav.js?v=08.07.2026.r25" data-active="apps" data-title="Lanzadera de apps" defer></script>
 
 <main class="wrap" id="admskip-target">
-  <div class="lhead">
-    <h1>Lanzadera</h1>
-  </div>
-
-  <div class="tools">
-    <div class="counts">
-      <span><b id="cTotal">20</b> apps</span>
-      <span class="live"><b id="cLive">20</b> en antena</span>
-      <span class="wip"><b id="cWip">0</b> en construcción</span>
-    </div>
-  </div>
-
   <div class="grid" id="grid" role="list"></div>
   <p class="empty" id="empty">Sin resultados para tu búsqueda.</p>
 
@@ -157,10 +146,6 @@ window.ADMIRA_NAV={
         '<span class="st '+a.st+'"><span class="d"></span>'+esc(stTxt(a.st))+'</span>'+
       '</a>';
     }).join('');
-    var live=APPS.filter(function(a){return a.st==='live';}).length;
-    document.getElementById('cTotal').textContent=APPS.length;
-    document.getElementById('cLive').textContent=live;
-    document.getElementById('cWip').textContent=APPS.length-live;
   }
   function filter(){
     var q=(document.getElementById('q').value||'').trim().toLowerCase();
