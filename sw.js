@@ -3,7 +3,7 @@
  * - HTML/navegación: network-first (siempre fresco cuando hay red; cae a caché y luego a /offline.html sin conexión).
  * - Estáticos (svg/png/js/css): stale-while-revalidate (ya van versionados con ?v=).
  * Bump CACHE para invalidar en cada release. */
-const CACHE = 'admira-tv-r31';
+const CACHE = 'admira-tv-r32';
 const SHELL = ['/', '/favicon.svg', '/offline.html', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (e) => {

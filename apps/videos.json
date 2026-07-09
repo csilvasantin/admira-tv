@@ -1,82 +1,102 @@
 {
   "dashboard": {
     "src": "/apps/video/dashboard.mp4",
-    "title": "Dashboard, en 4 minutos"
+    "title": "Dashboard, en 4 minutos",
+    "pdf": "/apps/pdf/dashboard.pdf"
   },
   "digitalsignage": {
     "src": "/apps/video/digitalsignage.mp4",
-    "title": "Señalización, en 5 minutos"
+    "title": "Señalización, en 5 minutos",
+    "pdf": "/apps/pdf/digitalsignage.pdf"
   },
   "contentcatalogue": {
     "src": "/apps/video/contentcatalogue.mp4",
-    "title": "Catálogo, en 4 minutos"
+    "title": "Catálogo, en 4 minutos",
+    "pdf": "/apps/pdf/contentcatalogue.pdf"
   },
   "support": {
     "src": "/apps/video/support.mp4",
-    "title": "Soporte, en 5 minutos"
+    "title": "Soporte, en 5 minutos",
+    "pdf": "/apps/pdf/support.pdf"
   },
   "pushnotifications": {
     "src": "/apps/video/pushnotifications.mp4",
-    "title": "Notificaciones, en 4 minutos"
+    "title": "Notificaciones, en 4 minutos",
+    "pdf": "/apps/pdf/pushnotifications.pdf"
   },
   "virtualassistant": {
     "src": "/apps/video/virtualassistant.mp4",
-    "title": "Asistente, en 5 minutos"
+    "title": "Asistente, en 5 minutos",
+    "pdf": "/apps/pdf/virtualassistant.pdf"
   },
   "accesscontrol": {
     "src": "/apps/video/accesscontrol.mp4",
-    "title": "Acceso, en 5 minutos"
+    "title": "Acceso, en 5 minutos",
+    "pdf": "/apps/pdf/accesscontrol.pdf"
   },
   "gamification": {
     "src": "/apps/video/gamification.mp4",
-    "title": "Gamificación, en 4 minutos"
+    "title": "Gamificación, en 4 minutos",
+    "pdf": "/apps/pdf/gamification.pdf"
   },
   "iotmanager": {
     "src": "/apps/video/iotmanager.mp4",
-    "title": "IoT, en 5 minutos"
+    "title": "IoT, en 5 minutos",
+    "pdf": "/apps/pdf/iotmanager.pdf"
   },
   "videoanalytics": {
     "src": "/apps/video/videoanalytics.mp4",
-    "title": "Analítica de vídeo, en 4 minutos"
+    "title": "Analítica de vídeo, en 4 minutos",
+    "pdf": "/apps/pdf/videoanalytics.pdf"
   },
   "radioanalytics": {
     "src": "/apps/video/radioanalytics.mp4",
-    "title": "Analítica de radio, en 5 minutos"
+    "title": "Analítica de radio, en 5 minutos",
+    "pdf": "/apps/pdf/radioanalytics.pdf"
   },
   "socialwifi": {
     "src": "/apps/video/socialwifi.mp4",
-    "title": "Social WiFi, en 4 minutos"
+    "title": "Social WiFi, en 4 minutos",
+    "pdf": "/apps/pdf/socialwifi.pdf"
   },
   "queuemanager": {
     "src": "/apps/video/queuemanager.mp4",
-    "title": "Colas, en 5 minutos"
+    "title": "Colas, en 5 minutos",
+    "pdf": "/apps/pdf/queuemanager.pdf"
   },
   "roombooking": {
     "src": "/apps/video/roombooking.mp4",
-    "title": "Salas, en 4 minutos"
+    "title": "Salas, en 4 minutos",
+    "pdf": "/apps/pdf/roombooking.pdf"
   },
   "audiobranding": {
     "src": "/apps/video/audiobranding.mp4",
-    "title": "Audiobranding, en 5 minutos"
+    "title": "Audiobranding, en 5 minutos",
+    "pdf": "/apps/pdf/audiobranding.pdf"
   },
   "olfactorymarketing": {
     "src": "/apps/video/olfactorymarketing.mp4",
-    "title": "Marketing olfativo, en 3 minutos"
+    "title": "Marketing olfativo, en 3 minutos",
+    "pdf": "/apps/pdf/olfactorymarketing.pdf"
   },
   "virtualreality": {
     "src": "/apps/video/virtualreality.mp4",
-    "title": "Realidad virtual, en 4 minutos"
+    "title": "Realidad virtual, en 4 minutos",
+    "pdf": "/apps/pdf/virtualreality.pdf"
   },
   "augmentedreality": {
     "src": "/apps/video/augmentedreality.mp4",
-    "title": "Realidad aumentada, en 5 minutos"
+    "title": "Realidad aumentada, en 5 minutos",
+    "pdf": "/apps/pdf/augmentedreality.pdf"
   },
   "xpaceos": {
     "src": "/apps/video/xpaceos.mp4",
-    "title": "XpaceOS, en 5 minutos"
+    "title": "XpaceOS, en 5 minutos",
+    "pdf": "/apps/pdf/xpaceos.pdf"
   },
   "yarig": {
     "src": "/apps/video/yarig.mp4",
-    "title": "Yarig.ai, en 5 minutos"
+    "title": "Yarig.ai, en 5 minutos",
+    "pdf": "/apps/pdf/yarig.pdf"
   }
 }
