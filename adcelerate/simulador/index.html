@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
 <script src="/auth-gate.js"></script>
+  <script>window.ADMIRA_VERSION='v.10.07.2026.r6';</script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ADCELERATE · SIMULADOR — Kiosko Plaça de la Vila de Gràcia</title>
   <meta name="description" content="Simulador en vivo del kiosko de prensa de la Plaça de la Vila de Gràcia (Barcelona): gente simulada, datos de terceros (clima, calendario, eventos) y decisión programática real en la pantalla lateral del kiosko.">
@@ -69,11 +70,14 @@
       display:none;animation:pin .16s ease}
     .panel.open{display:block}
     @keyframes pin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-    /* opciones a la izquierda, altura acotada para no tapar el kiosko ampliado (abajo-izq) */
+    /* opciones a la IZQUIERDA (vertical), altura acotada para no tapar el kiosko ampliado (abajo-izq) */
     #panel-opciones{top:54px;left:12px;max-height:calc(100vh - 200px)}
-    /* experto arriba-dcha y avanzado abajo-dcha: alturas acotadas para que AMBOS convivan sin solaparse */
-    #panel-experto{top:54px;right:12px;max-height:42vh}
-    #panel-avanzado{bottom:12px;right:12px;width:326px;max-height:44vh}
+    /* avanzado a la DERECHA (vertical) */
+    #panel-avanzado{top:54px;right:12px;width:326px;max-height:calc(100vh - 68px)}
+    /* experto ABAJO (horizontal, ancho completo) — hechos XPL en franja inferior */
+    #panel-experto{left:12px;right:12px;bottom:12px;width:auto;max-height:40vh}
+    /* hechos XPL en rejilla horizontal cuando el panel es la franja inferior */
+    #panel-experto .facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1px}
     .panel::-webkit-scrollbar{width:8px}
     .panel::-webkit-scrollbar-thumb{background:#1a2434;border-radius:8px}
     .phead{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;padding:10px 13px;
@@ -316,7 +320,7 @@
     </div>
   </div>
 
-  <!-- ============ PANEL AVANZADO (derecha-abajo) ============ -->
+  <!-- ============ PANEL AVANZADO (derecha, vertical) ============ -->
   <div class="panel" id="panel-avanzado">
     <div class="phead">Opciones avanzadas <button class="x" data-close="ic-avanzado" aria-label="Cerrar">✕</button></div>
     <div class="grp">
@@ -330,7 +334,7 @@
     </div>
   </div>
 
-  <!-- ============ PANEL EXPERTO (derecha-arriba) ============ -->
+  <!-- ============ PANEL EXPERTO (inferior, horizontal) ============ -->
   <div class="panel" id="panel-experto">
     <div class="phead">Modo experto · hechos XPL <button class="x" data-close="ic-experto" aria-label="Cerrar">✕</button></div>
     <div class="grp">

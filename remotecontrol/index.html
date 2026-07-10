@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/auth-gate.js"></script>
+<script>window.ADMIRA_VERSION='v.10.07.2026.r6';</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
 <meta name="robots" content="noindex">
@@ -11,52 +12,82 @@
 <style>
   :root{
     --acc:#3df08a; --acc2:#38d6ff; --warn:#ffb454; --air:#ff4444;
-    --bg:#060a0f; --panel:#0a121b; --panel2:#0c1620; --line:#183042;
-    --txt:#dff6ea; --dim:#6f8faa;
+    --bg:#060a0f; --panel:#0a121b; --panel2:#0c1620; --line:#183042; --border2:#2a3850;
+    --txt:#dff6ea; --dim:#6f8faa; --muted:#8a97a8;
     --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--mono);
-    -webkit-font-smoothing:antialiased;min-height:100%;overflow-x:hidden}
-  body{padding:max(16px,env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
-    background:
-      radial-gradient(120% 70% at 50% -8%,rgba(56,214,255,.08),transparent 60%),
-      repeating-linear-gradient(0deg,rgba(0,0,0,.20) 0 2px,transparent 2px 4px),
-      var(--bg);
-    max-width:1240px;margin:0 auto}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);
+    -webkit-font-smoothing:antialiased}
+  body{overflow:hidden}
+  /* scanlines CRT sutiles */
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:9998;
+    background:repeating-linear-gradient(0deg,rgba(255,255,255,.013) 0 1px,transparent 1px 3px);opacity:.55}
   a{color:var(--acc2)}
-  /* CABECERA */
-  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
-  .kick{font-size:11px;letter-spacing:.4em;color:var(--acc2);text-transform:uppercase;opacity:.85}
-  h1{margin:.2em 0 .05em;font-size:clamp(22px,5vw,34px);font-weight:800;letter-spacing:.01em;line-height:1.04}
-  h1 .d{color:var(--acc)} h1 .air{color:var(--air);text-shadow:0 0 12px rgba(255,68,68,.5)}
-  .sub{font-size:12px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
-  .count{font-family:var(--mono);text-align:right;min-width:180px}
-  .count .big{font-size:26px;font-weight:800;color:var(--acc)}
+
+  /* ============ TOPBAR con iconos cuadráticos ============ */
+  .topbar{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;gap:12px;
+    padding:9px 12px;background:linear-gradient(180deg,rgba(6,10,15,.92),rgba(6,10,15,.55) 82%,transparent);
+    -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+  .topbar .brand{font-weight:800;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--txt);white-space:nowrap}
+  .topbar .brand b{color:var(--acc);text-shadow:0 0 12px rgba(61,240,138,.4)}
+  .topbar .sub{font-size:10.5px;color:var(--muted);letter-spacing:.05em;white-space:nowrap}
+  .topbar .center-ttl{flex:1;min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cluster{display:flex;align-items:center;gap:7px}
+  .cluster.left{margin-right:auto}
+  .cluster.right{margin-left:auto}
+  .count{font-family:var(--mono);text-align:right;white-space:nowrap}
+  .count .big{font-size:17px;font-weight:800;color:var(--acc);line-height:1}
   .count .big .off{color:var(--dim)}
-  .count .lab{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
-  .count .stamp{font-size:10px;color:var(--dim);letter-spacing:.06em;margin-top:3px;min-height:1.2em}
+  .count .lab{font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+  .count .stamp{font-size:8.5px;color:var(--dim);letter-spacing:.04em}
+
+  /* icono cuadrático estilo portería/admira-bar */
+  .iconbtn{position:relative;width:40px;height:40px;border-radius:10px;border:1px solid var(--border2);
+    background:linear-gradient(180deg,#0d131d,#080b12);color:var(--dim);cursor:pointer;display:flex;
+    flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:.15s;padding:0}
+  .iconbtn:hover{border-color:var(--acc2);color:var(--txt)}
+  .iconbtn.on{border-color:var(--acc);color:var(--acc);box-shadow:0 0 0 1px var(--acc),0 0 16px -2px rgba(61,240,138,.5);background:linear-gradient(180deg,#0e1a16,#081210)}
+  .iconbtn .gl{font-size:16px;line-height:1}
+  .iconbtn .lbl{font-family:var(--mono);font-size:7.5px;letter-spacing:.08em;text-transform:uppercase}
+  /* motivo 3-ventanas (patrón AdmiraNeXT) */
+  .winmark{display:flex;gap:2px}
+  .winmark i{width:6px;height:8px;border:1px solid currentColor;border-radius:1.5px;display:block;position:relative}
+  .winmark i::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:currentColor;opacity:.6}
+
+  /* ============ STAGE central scrollable (rejilla a pantalla completa) ============ */
+  .stage{position:fixed;inset:58px 0 0 0;overflow:auto;padding:8px 16px calc(28px + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(120% 60% at 50% -8%,rgba(56,214,255,.06),transparent 60%),
+      var(--bg)}
+  .stage-inner{max-width:1240px;margin:0 auto}
+  .sub{font-size:12px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin:2px 0 8px}
+
   /* MANUAL */
   .manual{background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);
-    border-radius:14px;padding:12px 14px;margin:14px 0 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    border-radius:14px;padding:12px 14px;margin:6px 0 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .manual label{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--acc2);white-space:nowrap}
   .manual input{flex:1;min-width:180px;background:#050b11;color:var(--txt);border:1px solid var(--line);border-radius:10px;
     padding:11px 12px;font-family:var(--mono);font-size:14px;-webkit-appearance:none}
   .manual input:focus{outline:2px solid var(--acc);outline-offset:1px;border-color:var(--acc)}
   .mini{flex:0 0 auto;padding:0 16px;height:42px;background:var(--acc2);color:#02131a;border:none;border-radius:10px;
     font-weight:800;font-family:var(--mono);font-size:13px;letter-spacing:.08em;cursor:pointer}
+
   /* REJILLA */
   #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
-  .status-line{font-size:12px;color:var(--dim);letter-spacing:.06em;padding:6px 2px 2px}
+  .status-line{font-size:12px;color:var(--dim);letter-spacing:.06em;padding:2px 2px 8px}
   .status-line .err{color:var(--air);font-weight:700}
   .card{background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);
     border-radius:16px;padding:14px;box-shadow:0 18px 44px -32px rgba(61,240,138,.5);display:flex;flex-direction:column}
   .card.offline{opacity:.72}
+  .card.hide{display:none}
   .chead{display:flex;align-items:center;gap:10px;margin-bottom:4px}
   .plat{font-size:22px;line-height:1;filter:drop-shadow(0 0 6px rgba(56,214,255,.3))}
   .cname{flex:1;min-width:0}
   .cname .scr{font-size:15px;font-weight:800;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .cname .meta{font-size:10.5px;letter-spacing:.06em;color:var(--dim);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cname .tech{font-size:9.5px;letter-spacing:.02em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;display:none}
+  body.show-tech .cname .tech{display:block}
   .dot{width:9px;height:9px;border-radius:50%;background:var(--air);box-shadow:0 0 8px var(--air);flex:0 0 auto}
   .dot.on{background:var(--acc);box-shadow:0 0 9px var(--acc)}
   .age{font-size:10px;color:var(--dim);letter-spacing:.06em}
@@ -90,35 +121,264 @@
   .empty b{color:var(--warn)}
   .foot{margin-top:24px;font-size:11px;color:var(--dim);letter-spacing:.05em;text-align:center;line-height:1.6;opacity:.8}
   .foot a{color:var(--acc2);text-decoration:none}
+  .foot .ver{opacity:.6}
+
+  /* ============ PANELES PLEGABLES (plegados por defecto) ============ */
+  .panel{position:fixed;z-index:55;
+    background:rgba(8,11,18,.92);-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);
+    border:1px solid var(--border2);border-radius:14px;
+    box-shadow:0 20px 60px -20px #000,0 0 0 1px rgba(56,214,255,.06);
+    display:none;animation:pin .16s ease}
+  .panel.open{display:block}
+  @keyframes pin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  /* opciones a la IZQUIERDA (vertical) */
+  #panel-opciones{top:54px;left:12px;width:290px;max-height:calc(100vh - 68px);overflow:hidden auto}
+  /* avanzados a la DERECHA (vertical) */
+  #panel-avanzado{top:54px;right:12px;width:310px;max-height:calc(100vh - 68px);overflow:hidden auto}
+  /* experto ABAJO (horizontal) */
+  #panel-experto{left:12px;right:12px;bottom:12px;max-height:46vh;overflow:hidden auto}
+  .panel::-webkit-scrollbar{width:8px;height:8px}
+  .panel::-webkit-scrollbar-thumb{background:#1a2434;border-radius:8px}
+  .phead{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;padding:10px 13px;
+    background:linear-gradient(180deg,#0b1119,#0a0e15);border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc)}
+  .phead .x{margin-left:auto;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:2px 4px}
+  .phead .x:hover{color:var(--air)}
+  .grp{padding:13px 14px;border-bottom:1px solid var(--line)}
+  .grp:last-child{border-bottom:0}
+  .grp h3{margin:0 0 11px;font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--acc2);display:flex;align-items:center;gap:7px}
+  .grp h3::before{content:"▸";color:var(--acc);font-size:9px}
+  .fld{margin-bottom:12px}
+  .fld:last-child{margin-bottom:0}
+  .fld label{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--dim);font-weight:600;margin-bottom:6px}
+  .fld label b{color:var(--acc);font-family:var(--mono);font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;appearance:none;-webkit-appearance:none;height:5px;border-radius:99px;background:linear-gradient(90deg,var(--acc) var(--p,50%),#182236 var(--p,50%));outline-offset:3px;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--acc);border:3px solid #0a0e15;box-shadow:0 0 8px rgba(61,240,138,.5);cursor:pointer}
+  select,.txin{width:100%;background:#050b11;border:1px solid var(--border2);border-radius:8px;color:var(--txt);padding:8px 10px;font-family:var(--mono);font-size:12px;cursor:pointer}
+  .txin{cursor:text}
+  .txin:focus,select:focus{outline:2px solid var(--acc);outline-offset:1px;border-color:var(--acc)}
+  .seg{display:flex;gap:4px;background:#050b11;border:1px solid var(--line);border-radius:9px;padding:3px;flex-wrap:wrap}
+  .seg button{flex:1;min-width:44px;border:0;background:transparent;color:var(--dim);font-family:var(--mono);font-size:11px;font-weight:700;padding:7px 4px;border-radius:6px;cursor:pointer;transition:.15s}
+  .seg button.on{background:var(--acc);color:#03140a;box-shadow:0 0 10px rgba(61,240,138,.3)}
+  .tog{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--dim);font-weight:600;cursor:pointer;user-select:none}
+  .sw{position:relative;width:38px;height:21px;border-radius:99px;background:#141c29;border:1px solid var(--border2);flex:0 0 auto;transition:.15s}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:var(--dim);transition:.15s}
+  .tog.on .sw{background:rgba(61,240,138,.25);border-color:var(--acc)}
+  .tog.on .sw::after{left:19px;background:var(--acc)}
+  .btn{width:100%;border:1px solid var(--border2);background:transparent;color:var(--txt);font-family:var(--mono);font-size:12px;font-weight:700;padding:10px 6px;border-radius:8px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .btn:hover{border-color:var(--acc)}
+  .btn.go{background:var(--acc2);color:#02131a;border-color:var(--acc2)}
+  .note{font-size:10.5px;color:var(--muted);line-height:1.5;margin-top:9px}
+  .note b{color:var(--dim)}
+
+  /* experto: layout horizontal en columnas */
+  .exp-cols{display:grid;grid-template-columns:minmax(240px,1fr) minmax(240px,1.1fr) minmax(220px,1fr);gap:0}
+  .exp-cols .grp{border-right:1px solid var(--line);border-bottom:0}
+  .exp-cols .grp:last-child{border-right:0}
+  .console-row{display:flex;gap:7px;flex-wrap:wrap;align-items:stretch}
+  .console-row .txin{flex:1;min-width:120px}
+  .console-row select{flex:0 0 auto;width:auto;min-width:130px}
+  .console-row .btn{width:auto;flex:0 0 auto;padding:8px 14px}
+  .clog{margin-top:10px;background:#050b11;border:1px solid var(--line);border-radius:8px;padding:8px 10px;max-height:150px;overflow:auto;font-size:11px;line-height:1.5}
+  .clog .ln{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--dim)}
+  .clog .ln .rx{color:var(--acc);font-weight:800}
+  .clog .ln .tx{color:var(--warn);font-weight:800}
+  .clog .ln .warn{color:var(--air);font-weight:800}
+  .clog .ln .id{color:var(--acc2)}
+  pre.json{margin:0;background:#050b11;border:1px solid var(--line);border-radius:8px;padding:8px 10px;max-height:210px;overflow:auto;font-size:10.5px;line-height:1.45;color:var(--dim);white-space:pre-wrap;word-break:break-word}
+
+  /* ============ responsive: paneles apilan como hojas ============ */
+  @media(max-width:820px){
+    #panel-opciones,#panel-avanzado,#panel-experto{left:8px!important;right:8px!important;width:auto!important;top:auto;bottom:8px;max-height:74vh}
+    #panel-opciones{top:52px;bottom:auto}
+    .exp-cols{grid-template-columns:1fr}
+    .exp-cols .grp{border-right:0;border-bottom:1px solid var(--line)}
+    .exp-cols .grp:last-child{border-bottom:0}
+    .topbar .sub,.topbar .center-ttl{display:none}
+    .iconbtn{width:38px;height:38px}
+  }
 </style>
 </head>
 <body>
-  <div class="top">
-    <div>
-      <div class="kick">ADMIRA.TV · REMOTE CONTROL</div>
-      <h1>Equipos <span class="d">conectados</span><span class="air">.</span></h1>
-      <div class="sub">Flota que emite el canal · mando remoto con doble acuse</div>
+  <!-- ============ TOPBAR · iconos cuadráticos ============ -->
+  <div class="topbar">
+    <div class="cluster left">
+      <button class="iconbtn" id="ic-opciones" aria-pressed="false" title="Opciones — filtros, orden, refresco">
+        <span class="winmark"><i></i><i></i><i></i></span>
+        <span class="lbl">Opciones</span>
+      </button>
     </div>
-    <div class="count">
-      <div class="big"><span id="cOn">·</span><span class="off"> / <span id="cTot">·</span></span></div>
-      <div class="lab">online / total</div>
-      <div class="stamp" id="stamp"></div>
+    <span class="brand center-ttl">ADMIRA.TV · <b>REMOTE CONTROL</b> <span class="sub">— Flota que emite el canal · mando con doble acuse</span></span>
+    <div class="cluster right">
+      <div class="count">
+        <div class="big"><span id="cOn">·</span><span class="off"> / <span id="cTot">·</span></span> <span class="lab">online/total</span></div>
+        <div class="stamp" id="stamp"></div>
+      </div>
+      <button class="iconbtn" id="ic-avanzado" aria-pressed="false" title="Avanzados — comando en lote, umbral online, campos técnicos">
+        <span class="gl">◫</span><span class="lbl">Avanzado</span>
+      </button>
+      <button class="iconbtn" id="ic-experto" aria-pressed="false" title="Experto — consola, JSON crudo, colas">
+        <span class="gl">⚙</span><span class="lbl">Experto</span>
+      </button>
     </div>
   </div>
 
-  <div class="manual">
-    <label for="manual">Screen manual</label>
-    <input id="manual" placeholder="…escribe un screen (p.ej. ipad-totem) y añade una tarjeta de mando" autocomplete="off" spellcheck="false">
-    <button class="mini" id="useManual">AÑADIR</button>
+  <!-- ============ STAGE central scrollable ============ -->
+  <div class="stage">
+    <div class="stage-inner">
+      <div class="sub">Equipos conectados · pulsa un control en cada tarjeta</div>
+
+      <div class="manual">
+        <label for="manual">Screen manual</label>
+        <input id="manual" placeholder="…escribe un screen (p.ej. ipad-totem) y añade una tarjeta de mando" autocomplete="off" spellcheck="false">
+        <button class="mini" id="useManual">AÑADIR</button>
+      </div>
+
+      <div class="status-line" id="statusLine">Cargando pantallas vivas…</div>
+      <div id="grid"></div>
+
+      <div class="foot">
+        Los comandos se encolan por pantalla (whitelist en el perímetro) y el player los consume cada ~2,5&nbsp;s.<br>
+        <span style="color:var(--warn)">✓ enviado</span> = aceptado por la cola · <span style="color:var(--acc)">✓✓ recibido</span> = la pantalla lo confirmó (poll <span class="mono">/control/seen</span>).<br>
+        <a href="/adcelerate/">‹ ADCELERATE</a> · <a href="/canal.html">Canal</a> · <a href="/">Admira.tv</a> · <span class="ver" id="footVer"></span>
+      </div>
+    </div>
   </div>
 
-  <div class="status-line" id="statusLine">Cargando pantallas vivas…</div>
-  <div id="grid"></div>
+  <!-- ============ PANEL OPCIONES (izquierda) ============ -->
+  <div class="panel" id="panel-opciones">
+    <div class="phead">Opciones <button class="x" data-close="ic-opciones" aria-label="Cerrar">✕</button></div>
+    <div class="grp">
+      <h3>Filtros</h3>
+      <div class="fld">
+        <div class="tog" id="f-online"><span>Solo online</span><span class="sw"></span></div>
+      </div>
+      <div class="fld">
+        <label><span>Plataforma</span></label>
+        <div class="seg" id="f-plat">
+          <button data-p="all" class="on">Todas</button>
+          <button data-p="iPad">iPad</button>
+          <button data-p="Mac">Mac</button>
+          <button data-p="Windows">Win</button>
+          <button data-p="Android">Android</button>
+        </div>
+      </div>
+      <div class="fld">
+        <label><span>Loc / circuito</span></label>
+        <input class="txin" id="f-loc" placeholder="filtra por loc o circuito…" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+    <div class="grp">
+      <h3>Orden</h3>
+      <div class="fld">
+        <select id="f-sort">
+          <option value="online">Online primero (por actividad)</option>
+          <option value="name">Nombre (A→Z)</option>
+          <option value="recent">Vistos más recientemente</option>
+        </select>
+      </div>
+    </div>
+    <div class="grp">
+      <h3>Refresco</h3>
+      <div class="fld">
+        <label><span>Intervalo</span></label>
+        <div class="seg" id="f-refresh">
+          <button data-ms="5000">5s</button>
+          <button data-ms="10000" class="on">10s</button>
+          <button data-ms="30000">30s</button>
+          <button data-ms="60000">60s</button>
+        </div>
+      </div>
+      <p class="note">El refresco recarga <b>/signage/screens</b> y «emitiendo ahora». Los mandos van siempre a red inmediata.</p>
+    </div>
+  </div>
 
-  <div class="foot">
-    Los comandos se encolan por pantalla (whitelist en el perímetro) y el player los consume cada ~2,5&nbsp;s.<br>
-    <span class="tx">✓ enviado</span> = aceptado por la cola · <span class="rx">✓✓ recibido</span> = la pantalla lo confirmó (poll <span class="mono">/control/seen</span>).<br>
-    <a href="/adcelerate/">‹ ADCELERATE</a> · <a href="/canal.html">Canal</a> · <a href="/">Admira.tv</a>
+  <!-- ============ PANEL AVANZADO (derecha) ============ -->
+  <div class="panel" id="panel-avanzado">
+    <div class="phead">Avanzados <button class="x" data-close="ic-avanzado" aria-label="Cerrar">✕</button></div>
+    <div class="grp">
+      <h3>Comando en lote</h3>
+      <div class="fld">
+        <label><span>Comando</span></label>
+        <select id="b-cmd">
+          <option value="first">⇤ Primera</option>
+          <option value="prev">⏮ Anterior</option>
+          <option value="toggle-pause">⏯ Pausa/Play</option>
+          <option value="next">⏭ Siguiente</option>
+          <option value="last">⇥ Última</option>
+          <option value="toggle-mute">🔇 Mute</option>
+          <option value="vol-up">🔊 Vol +</option>
+          <option value="vol-down">🔉 Vol −</option>
+          <option value="play">▶ Play</option>
+          <option value="hud">🅗 HUD</option>
+        </select>
+      </div>
+      <div class="fld">
+        <label><span>Destino</span></label>
+        <div class="seg" id="b-scope">
+          <button data-s="visible" class="on">Visibles</button>
+          <button data-s="online">Solo online</button>
+          <button data-s="circuit">Circuito</button>
+        </div>
+      </div>
+      <div class="fld" id="b-circuit-wrap" style="display:none">
+        <input class="txin" id="b-circuit" placeholder="loc/circuito (subcadena)…" autocomplete="off" spellcheck="false">
+      </div>
+      <button class="btn go" id="b-send">Enviar en lote ▸</button>
+      <p class="note" id="b-note">Encola el mismo comando a cada pantalla del conjunto. Cada envío mantiene su doble acuse en la consola experto.</p>
+    </div>
+    <div class="grp">
+      <h3>Umbral online</h3>
+      <div class="fld">
+        <label><span>Antigüedad máx.</span><b id="ui-thr">sin límite</b></label>
+        <input type="range" id="f-thr" min="0" max="600" step="15" value="0" aria-label="Umbral online en segundos">
+      </div>
+      <p class="note">Marca como offline las pantallas cuyo último beat supere el umbral, aunque la API las dé por vivas. 0 = confía en la API.</p>
+    </div>
+    <div class="grp">
+      <h3>Presentación</h3>
+      <div class="fld">
+        <div class="tog" id="f-tech"><span>Campos técnicos</span><span class="sw"></span></div>
+      </div>
+      <p class="note">Muestra el <b>screen id</b> y el <b>user-agent</b> crudos bajo cada meta.</p>
+    </div>
+  </div>
+
+  <!-- ============ PANEL EXPERTO (inferior, horizontal) ============ -->
+  <div class="panel" id="panel-experto">
+    <div class="phead">Modo experto · consola · JSON · colas <button class="x" data-close="ic-experto" aria-label="Cerrar">✕</button></div>
+    <div class="exp-cols">
+      <div class="grp">
+        <h3>Consola de comandos</h3>
+        <div class="console-row">
+          <input class="txin" id="c-screen" placeholder="screen id (p.ej. ipad-totem)" autocomplete="off" spellcheck="false">
+          <select id="c-cmd">
+            <option value="first">first</option>
+            <option value="prev">prev</option>
+            <option value="toggle-pause">toggle-pause</option>
+            <option value="next">next</option>
+            <option value="last">last</option>
+            <option value="toggle-mute">toggle-mute</option>
+            <option value="vol-up">vol-up</option>
+            <option value="vol-down">vol-down</option>
+            <option value="ontop-toggle">ontop-toggle</option>
+            <option value="hud">hud</option>
+            <option value="play">play</option>
+          </select>
+          <button class="btn go" id="c-send">Enviar</button>
+        </div>
+        <div class="clog" id="c-log"><div class="ln">Sin comandos aún. Cada envío registra id + acuse + latencia.</div></div>
+      </div>
+      <div class="grp">
+        <h3>JSON crudo · /signage/screens</h3>
+        <pre class="json" id="raw-json">—</pre>
+      </div>
+      <div class="grp">
+        <h3>Estado de colas · /control/seen</h3>
+        <pre class="json" id="queue-json">Selecciona pantallas o envía un comando para ver acuses.</pre>
+        <p class="note">Muestra los últimos <b>seen</b> confirmados por cada pantalla observada (los que cierran el doble tick).</p>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -127,6 +387,8 @@
   const NOW='https://api.admira.store/signage/now?screen=';
   const $=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+
+  try{ if(window.ADMIRA_VERSION) $('footVer').textContent=window.ADMIRA_VERSION; }catch(_){}
 
   const CMDS=[
     {cmd:'first', ico:'⇤', lab:'Primera', cls:'up'},
@@ -170,48 +432,101 @@
     return Math.round(s/3600)+'h';
   }
 
-  // ─── DOBLE FEEDBACK (reutiliza la lógica del mando de adcelerate) ───
-  function waitReceipt(scr,id,t0,lastEl){
+  // ═══ ESTADO DE FILTROS / AJUSTES ═══
+  const F={ online:false, plat:'all', loc:'', sort:'online', refresh:10000, threshold:0, tech:false };
+
+  // efectivo online = API online AND (umbral 0 o edad<=umbral)
+  function effOnline(info){
+    if(!info.online) return false;
+    if(F.threshold>0 && info.age_seconds!=null && info.age_seconds>F.threshold) return false;
+    return true;
+  }
+  function matchFilters(scr,info){
+    if(F.online && !effOnline(info)) return false;
+    if(F.plat!=='all'){
+      const pn=platName(info.user_agent);
+      if(F.plat==='iPad' && !/iPad|iOS/i.test(pn)) return false;
+      if(F.plat==='Mac' && pn!=='Mac') return false;
+      if(F.plat==='Windows' && pn!=='Windows') return false;
+      if(F.plat==='Android' && pn!=='Android') return false;
+    }
+    if(F.loc){
+      const hay=(scr+' '+(info.loc||'')+' '+(info.locName||'')+' '+(info.role||'')).toLowerCase();
+      if(!hay.includes(F.loc.toLowerCase())) return false;
+    }
+    return true;
+  }
+
+  // ─── DOBLE FEEDBACK (mismo mando de siempre; añade log experto) ───
+  function logConsole(html){
+    const box=$('c-log'); if(!box) return;
+    if(box.firstElementChild && box.firstElementChild.textContent.startsWith('Sin comandos')) box.innerHTML='';
+    const ln=document.createElement('div'); ln.className='ln'; ln.innerHTML=html;
+    box.insertBefore(ln, box.firstChild);
+    while(box.children.length>40) box.removeChild(box.lastChild);
+  }
+  function stamp(){ return new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+
+  const lastSeen={}; // screen → array de seen (para panel de colas)
+  function refreshQueueView(){
+    const el=$('queue-json'); if(!el) return;
+    const keys=Object.keys(lastSeen);
+    if(!keys.length){ el.textContent='Sin acuses observados todavía.'; return; }
+    el.textContent=JSON.stringify(lastSeen,null,1);
+  }
+
+  function waitReceipt(scr,id,t0,lastEl,logLn){
     const timeout=8000, every=600, deadline=Date.now()+timeout;
     const tick=()=>{
       fetch(API+'/control/seen?screen='+encodeURIComponent(scr),{cache:'no-store'})
         .then(r=>r.ok?r.json():null)
         .then(j=>{
           const seen=(j&&Array.isArray(j.seen))?j.seen:[];
+          lastSeen[scr]=seen.slice(-6); refreshQueueView();
           if(seen.some(s=>s&&s.id===id)){
-            lastEl.innerHTML='<span class="rx">✓✓ recibido</span> · '+(Date.now()-t0)+'ms';
+            const ms=(Date.now()-t0);
+            if(lastEl) lastEl.innerHTML='<span class="rx">✓✓ recibido</span> · '+ms+'ms';
+            if(logLn) logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="rx">✓✓ recibido</span> · '+ms+'ms';
             return;
           }
           if(Date.now()>=deadline){
-            lastEl.innerHTML='<span class="warn">⚠ enviado · sin confirmación</span> — ¿offline?';
+            if(lastEl) lastEl.innerHTML='<span class="warn">⚠ enviado · sin confirmación</span> — ¿offline?';
+            if(logLn) logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">⚠ sin confirmación</span>';
             return;
           }
           setTimeout(tick,every);
         })
-        .catch(()=>{ if(Date.now()>=deadline){ lastEl.innerHTML='<span class="warn">⚠ enviado · sin confirmación</span>'; } else { setTimeout(tick,every); } });
+        .catch(()=>{ if(Date.now()>=deadline){ if(lastEl) lastEl.innerHTML='<span class="warn">⚠ enviado · sin confirmación</span>'; } else { setTimeout(tick,every); } });
     };
     setTimeout(tick,every);
   }
   function send(scr,cmd,btn,lastEl){
     if(btn){ btn.classList.add('flash'); setTimeout(()=>btn.classList.remove('flash'),260); }
     const t0=Date.now();
-    lastEl.innerHTML='→ enviando <b>'+esc(cmd)+'</b>…';
+    if(lastEl) lastEl.innerHTML='→ enviando <b>'+esc(cmd)+'</b>…';
+    const logLn=document.createElement('div'); logLn.className='ln';
+    logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · → '+esc(cmd)+'…';
+    const box=$('c-log');
+    if(box){ if(box.firstElementChild && box.firstElementChild.textContent.startsWith('Sin comandos')) box.innerHTML=''; box.insertBefore(logLn,box.firstChild); while(box.children.length>40) box.removeChild(box.lastChild); }
     fetch(API+'/control/cmd',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({screen:scr,cmd})})
       .then(r=>r.json().then(j=>({ok:r.ok,j})))
       .then(({ok,j})=>{
         if(ok&&j&&j.ok){
-          lastEl.innerHTML='<span class="tx">✓ enviado</span> · esperando pantalla…';
-          waitReceipt(scr,j.id,t0,lastEl);
+          if(lastEl) lastEl.innerHTML='<span class="tx">✓ enviado</span> · esperando pantalla…';
+          logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="tx">✓ enviado</span> · '+esc(cmd);
+          waitReceipt(scr,j.id,t0,lastEl,logLn);
         } else {
-          lastEl.innerHTML='✗ rechazado: '+esc((j&&j.error)||'error');
+          if(lastEl) lastEl.innerHTML='✗ rechazado: '+esc((j&&j.error)||'error');
+          logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">✗ rechazado</span> '+esc((j&&j.error)||'error');
         }
       })
-      .catch(()=>lastEl.innerHTML='✗ sin red — reintenta');
+      .catch(()=>{ if(lastEl) lastEl.innerHTML='✗ sin red — reintenta'; logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">✗ sin red</span>'; });
   }
 
   // ─── Render / actualización de tarjetas (idempotente por screen) ───
-  const cards={};       // screen → {el, lastEl, nowEl, dotEl, ageEl, metaEl}
+  const cards={};       // screen → rec
+  const infoByScreen={};// screen → info (para filtros/lote)
   const manualScreens=new Set();
   let firstLoad=true;
 
@@ -224,7 +539,7 @@
     card.innerHTML=
       '<div class="chead">'+
         '<span class="plat" data-plat></span>'+
-        '<div class="cname"><div class="scr">'+esc(scr)+'</div><div class="meta" data-meta>—</div></div>'+
+        '<div class="cname"><div class="scr">'+esc(scr)+'</div><div class="meta" data-meta>—</div><div class="tech" data-tech></div></div>'+
         '<div style="text-align:right"><span class="dot" data-dot></span><div class="age" data-age></div></div>'+
       '</div>'+
       '<div class="now" data-now><div class="lab">Emitiendo ahora</div><div class="ttl">—</div></div>'+
@@ -238,6 +553,7 @@
     const rec={el:card,lastEl:lEl,
       platEl:card.querySelector('[data-plat]'),
       metaEl:card.querySelector('[data-meta]'),
+      techEl:card.querySelector('[data-tech]'),
       dotEl:card.querySelector('[data-dot]'),
       ageEl:card.querySelector('[data-age]'),
       nowEl:card.querySelector('[data-now]')};
@@ -248,8 +564,9 @@
   }
 
   function updateCard(scr,info){
+    infoByScreen[scr]=info;
     const rec=cards[scr]||buildCard(scr);
-    const online=!!info.online;
+    const online=effOnline(info);
     rec.el.classList.toggle('offline',!online);
     rec.dotEl.classList.toggle('on',online);
     rec.platEl.textContent=platIcon(info.user_agent);
@@ -258,7 +575,15 @@
     if(info.loc||info.locName) bits.push('📍 '+esc(info.locName||info.loc));
     if(info.role) bits.push(esc(info.role));
     rec.metaEl.innerHTML=bits.join(' · ');
+    rec.techEl.textContent='id:'+scr+(info.user_agent?(' · '+String(info.user_agent).slice(0,60)):'');
     rec.ageEl.textContent=online?ageTxt(info.age_seconds):(info.age_seconds!=null?ageTxt(info.age_seconds):'offline');
+  }
+
+  function applyFilters(){
+    Object.keys(cards).forEach(scr=>{
+      const info=infoByScreen[scr]||{online:false};
+      cards[scr].el.classList.toggle('hide', !matchFilters(scr,info));
+    });
   }
 
   function refreshNow(scr){
@@ -278,39 +603,47 @@
       .catch(()=>{});
   }
 
+  function sortArr(arr){
+    if(F.sort==='name') return arr.slice().sort((a,b)=>String(a.screen).localeCompare(String(b.screen)));
+    if(F.sort==='recent') return arr.slice().sort((a,b)=>(b.last_seen||0)-(a.last_seen||0));
+    return arr.slice().sort((a,b)=>(b.online-a.online)||((b.last_seen||0)-(a.last_seen||0)));
+  }
+
   function load(){
     fetch(SCREENS,{cache:'no-store'})
       .then(r=>r.ok?r.json():Promise.reject())
       .then(d=>{
         const arr=(d&&Array.isArray(d.screens))?d.screens:[];
         const live=new Set(arr.map(s=>s.screen));
-        // añade/actualiza
-        arr.sort((a,b)=>(b.online-a.online)||((b.last_seen||0)-(a.last_seen||0)));
-        arr.forEach(s=>{ if(s&&s.screen) updateCard(s.screen,s); });
-        // reordena en el DOM según orden de la API (online primero)
-        arr.forEach(s=>{ const rec=cards[s.screen]; if(rec) $('grid').appendChild(rec.el); });
-        // manuales que ya no están en la lista viva → márcalos offline pero consérvalos
+        const ordered=sortArr(arr);
+        ordered.forEach(s=>{ if(s&&s.screen) updateCard(s.screen,s); });
+        // reordena en el DOM según orden elegido
+        ordered.forEach(s=>{ const rec=cards[s.screen]; if(rec) $('grid').appendChild(rec.el); });
+        // manuales que ya no están vivos → offline conservados
         manualScreens.forEach(scr=>{
           if(!live.has(scr)&&cards[scr]){ cards[scr].el.classList.add('offline'); cards[scr].dotEl.classList.remove('on'); cards[scr].ageEl.textContent='sin datos'; }
         });
-        // refresca "emitiendo ahora"
         Object.keys(cards).forEach(refreshNow);
-        // contadores
-        const on=(typeof d.online_count==='number')?d.online_count:arr.filter(s=>s.online).length;
+        applyFilters();
+        // contadores (según umbral efectivo)
+        const on=arr.filter(s=>effOnline(s)).length;
         const tot=(typeof d.total_count==='number')?d.total_count:arr.length;
         $('cOn').textContent=on; $('cTot').textContent=tot;
         $('statusLine').innerHTML=arr.length?'':'<span class="err">Sin pantallas vivas.</span> Usa el campo «screen manual» para dirigir un equipo por nombre.';
         if(!arr.length && !Object.keys(cards).length){
           $('grid').innerHTML='<div class="empty">Ninguna pantalla viva reportada por <b>/signage/screens</b>.<br>Ningún equipo emitiendo el canal ahora mismo — o el backbone no responde.</div>';
         }
+        // JSON crudo para experto
+        try{ $('raw-json').textContent=JSON.stringify(d,null,1); }catch(_){ }
         $('stamp').textContent='act. '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
         firstLoad=false;
       })
       .catch(()=>{
-        $('statusLine').innerHTML='<span class="err">⚠ /signage/screens no responde.</span> No se inventan equipos — reintentando cada 10 s.';
+        $('statusLine').innerHTML='<span class="err">⚠ /signage/screens no responde.</span> No se inventan equipos — reintentando.';
         if(firstLoad && !Object.keys(cards).length){
           $('grid').innerHTML='<div class="empty"><b>Backbone no accesible.</b><br>No hay datos de pantallas vivas. El mando manual sigue disponible arriba.</div>';
         }
+        $('raw-json').textContent='(sin respuesta de /signage/screens)';
         $('stamp').textContent='sin conexión · '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
       });
   }
@@ -322,7 +655,6 @@
     manualScreens.add(v);
     if(!cards[v]){ const empty=$('grid').querySelector('.empty'); if(empty) empty.remove();
       updateCard(v,{online:false,user_agent:'',loc:'',role:'manual',age_seconds:null}); }
-    // trae la tarjeta al principio y resáltala
     if(cards[v]){ $('grid').prepend(cards[v].el); cards[v].el.querySelector('.last').innerHTML='destino manual añadido'; }
     $('manual').value='';
     load();
@@ -330,8 +662,78 @@
   $('useManual').onclick=addManual;
   $('manual').addEventListener('keydown',e=>{ if(e.key==='Enter') addManual(); });
 
+  // ═══ COMANDO EN LOTE ═══
+  function batchTargets(){
+    const scope=F.batchScope||'visible';
+    const out=[];
+    Object.keys(cards).forEach(scr=>{
+      const info=infoByScreen[scr]||{online:false};
+      if(scope==='visible'){ if(!cards[scr].el.classList.contains('hide')) out.push(scr); }
+      else if(scope==='online'){ if(effOnline(info)) out.push(scr); }
+      else if(scope==='circuit'){
+        const c=($('b-circuit').value||'').trim().toLowerCase();
+        if(!c) return;
+        const hay=(scr+' '+(info.loc||'')+' '+(info.locName||'')+' '+(info.role||'')).toLowerCase();
+        if(hay.includes(c)) out.push(scr);
+      }
+    });
+    return out;
+  }
+  $('b-send').addEventListener('click',()=>{
+    const cmd=$('b-cmd').value;
+    const targets=batchTargets();
+    if(!targets.length){ $('b-note').innerHTML='<b style="color:var(--warn)">Sin destinos</b> para ese conjunto. Ajusta filtros o el circuito.'; return; }
+    $('b-note').innerHTML='Enviando <b>'+esc(cmd)+'</b> a <b>'+targets.length+'</b> pantalla(s)…';
+    targets.forEach(scr=>{ const rec=cards[scr]; send(scr,cmd,null,rec?rec.lastEl:null); });
+    if(!$('ic-experto').classList.contains('on')) setPanel('ic-experto',true);
+  });
+
+  // ═══ CONSOLA EXPERTO ═══
+  $('c-send').addEventListener('click',()=>{
+    const scr=($('c-screen').value||'').trim(); if(!scr) return;
+    const cmd=$('c-cmd').value;
+    const rec=cards[scr];
+    send(scr,cmd,null,rec?rec.lastEl:null);
+  });
+  $('c-screen').addEventListener('keydown',e=>{ if(e.key==='Enter') $('c-send').click(); });
+
+  // ═══ CONTROLES DE PANEL ═══
+  function paintRange(el){ const p=(el.value-el.min)/(el.max-el.min)*100; el.style.setProperty('--p',p+'%'); }
+
+  // toggles solo online / campos técnicos
+  function bindTog(id,key,onChange){
+    const el=$(id);
+    el.addEventListener('click',()=>{ F[key]=!F[key]; el.classList.toggle('on',F[key]); onChange&&onChange(); });
+  }
+  bindTog('f-online','online',()=>{ applyFilters(); });
+  $('f-tech').addEventListener('click',()=>{ F.tech=!F.tech; $('f-tech').classList.toggle('on',F.tech); document.body.classList.toggle('show-tech',F.tech); });
+
+  $('f-plat').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [].forEach.call($('f-plat').children,x=>x.classList.remove('on')); b.classList.add('on'); F.plat=b.dataset.p; applyFilters(); });
+  $('f-loc').addEventListener('input',function(){ F.loc=this.value; applyFilters(); });
+  $('f-sort').addEventListener('change',function(){ F.sort=this.value; load(); });
+  $('f-refresh').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [].forEach.call($('f-refresh').children,x=>x.classList.remove('on')); b.classList.add('on'); F.refresh=+b.dataset.ms; restartTimer(); });
+  $('f-thr').addEventListener('input',function(){ F.threshold=+this.value; paintRange(this); $('ui-thr').textContent=F.threshold===0?'sin límite':(F.threshold<60?F.threshold+'s':Math.round(F.threshold/60)+'min'); load(); });
+
+  // scope del lote
+  F.batchScope='visible';
+  $('b-scope').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [].forEach.call($('b-scope').children,x=>x.classList.remove('on')); b.classList.add('on'); F.batchScope=b.dataset.s; $('b-circuit-wrap').style.display=(F.batchScope==='circuit')?'block':'none'; });
+
+  // ═══ PANELES PLEGABLES · toggles + localStorage (TODO PLEGADO por defecto) ═══
+  const PANELS={ 'ic-opciones':'panel-opciones', 'ic-avanzado':'panel-avanzado', 'ic-experto':'panel-experto' };
+  const LS_KEY='rc_panels_v1';
+  function savePanels(){ const st={}; for(const ic in PANELS){ st[ic]=$(ic).classList.contains('on'); } try{ localStorage.setItem(LS_KEY,JSON.stringify(st)); }catch(e){} }
+  function setPanel(ic,open){ const btn=$(ic),pan=$(PANELS[ic]); btn.classList.toggle('on',open); btn.setAttribute('aria-pressed',open?'true':'false'); pan.classList.toggle('open',open); savePanels(); }
+  for(const ic in PANELS){ (function(id){ $(id).addEventListener('click',()=>setPanel(id,!$(id).classList.contains('on'))); })(ic); }
+  [].forEach.call(document.querySelectorAll('.phead .x'),x=>x.addEventListener('click',()=>setPanel(x.dataset.close,false)));
+  (function restorePanels(){ let st={}; try{ st=JSON.parse(localStorage.getItem(LS_KEY)||'{}')||{}; }catch(e){} for(const ic in PANELS){ if(st[ic]) setPanel(ic,true); } })();
+
+  // ═══ TIMER de refresco ═══
+  let timer=null;
+  function restartTimer(){ if(timer) clearInterval(timer); timer=setInterval(load,F.refresh); }
+
+  paintRange($('f-thr'));
   load();
-  setInterval(load,10000);
+  restartTimer();
 </script>
 </body>
 </html>
