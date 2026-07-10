@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/auth-gate.js"></script>
-<script>window.ADMIRA_VERSION='v.10.07.2026.r6';</script>
+<script>window.ADMIRA_VERSION='v.10.07.2026.r7';</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
 <meta name="robots" content="noindex">
@@ -96,6 +96,20 @@
   .now .ttl{font-size:12.5px;color:var(--txt);margin-top:2px;line-height:1.35;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .now .ty{font-size:10px;color:var(--dim);letter-spacing:.06em;margin-top:2px}
+  /* PREVIO del contenido en antena (asset de /signage/now) */
+  .prev{position:relative;margin:8px 0 2px;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+    background:#03080d;aspect-ratio:16/9;display:none;
+    box-shadow:inset 0 0 0 1px rgba(56,214,255,.05),0 0 22px -14px rgba(56,214,255,.5)}
+  .prev.on{display:block}
+  .prev img,.prev video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;background:#03080d}
+  .prev .tag{position:absolute;top:6px;left:6px;z-index:2;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--air);background:rgba(6,10,15,.74);border:1px solid rgba(255,68,68,.42);border-radius:6px;padding:2px 7px;
+    display:inline-flex;align-items:center;gap:5px;font-weight:800;text-shadow:0 0 8px rgba(255,68,68,.4)}
+  .prev .tag .live{width:6px;height:6px;border-radius:50%;background:var(--air);box-shadow:0 0 6px var(--air);animation:blink 1.4s infinite}
+  @keyframes blink{50%{opacity:.3}}
+  .prev .ph{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;text-align:center;
+    color:var(--dim);font-size:10.5px;letter-spacing:.07em;padding:10px;line-height:1.5;
+    background:radial-gradient(120% 90% at 50% 40%,rgba(56,214,255,.05),transparent 70%)}
   /* MANDO por tarjeta */
   .pad{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:7px;
     aspect-ratio:3/2;max-width:100%;margin:6px 0 2px}
@@ -291,6 +305,22 @@
       </div>
       <p class="note">El refresco recarga <b>/signage/screens</b> y «emitiendo ahora». Los mandos van siempre a red inmediata.</p>
     </div>
+    <div class="grp">
+      <h3>Previo en antena</h3>
+      <div class="fld">
+        <label><span>Miniatura del contenido</span></label>
+        <div class="seg" id="f-previo">
+          <button data-ms="0">Off</button>
+          <button data-ms="5000">5s</button>
+          <button data-ms="10000" class="on">10s</button>
+          <button data-ms="30000">30s</button>
+        </div>
+      </div>
+      <div class="fld">
+        <div class="tog" id="f-previo-video"><span>Reproducir vídeo</span><span class="sw"></span></div>
+      </div>
+      <p class="note">Muestra el <b>contenido emitido</b> (de <b>/signage/now</b>) en cada tarjeta — no es captura del cristal. Los vídeos se ven como <b>fotograma fijo</b> salvo que actives reproducir (consume más datos). <b>Off = solo texto</b>, no descarga assets.</p>
+    </div>
   </div>
 
   <!-- ============ PANEL AVANZADO (derecha) ============ -->
@@ -433,7 +463,8 @@
   }
 
   // ═══ ESTADO DE FILTROS / AJUSTES ═══
-  const F={ online:false, plat:'all', loc:'', sort:'online', refresh:10000, threshold:0, tech:false };
+  const F={ online:false, plat:'all', loc:'', sort:'online', refresh:10000, threshold:0, tech:false,
+            previo:10000, previoVideo:false };  // previo ON a 10s, vídeo off (default)
 
   // efectivo online = API online AND (umbral 0 o edad<=umbral)
   function effOnline(info){
@@ -543,6 +574,7 @@
         '<div style="text-align:right"><span class="dot" data-dot></span><div class="age" data-age></div></div>'+
       '</div>'+
       '<div class="now" data-now><div class="lab">Emitiendo ahora</div><div class="ttl">—</div></div>'+
+      '<div class="prev" data-prev></div>'+
       '<div class="pad">'+padHtml+'</div>'+
       '<div class="grid6">'+btnHtml+'</div>'+
       '<div class="last">Pulsa un control.</div>';
@@ -556,7 +588,9 @@
       techEl:card.querySelector('[data-tech]'),
       dotEl:card.querySelector('[data-dot]'),
       ageEl:card.querySelector('[data-age]'),
-      nowEl:card.querySelector('[data-now]')};
+      nowEl:card.querySelector('[data-now]'),
+      prevEl:card.querySelector('[data-prev]'),
+      lastItem:null, prevKey:''};
     cards[scr]=rec;
     $('grid').appendChild(card);
     refreshNow(scr);
@@ -586,12 +620,66 @@
     });
   }
 
+  // ─── PREVIO del contenido en antena (asset real de /signage/now) ───
+  function aspectFromFormat(fmt){
+    fmt=String(fmt||'').trim().toLowerCase();
+    const m=fmt.match(/^(\d+)\s*[:x\/]\s*(\d+)$/);
+    if(m){ const w=+m[1],h=+m[2]; if(w>0&&h>0) return w+'/'+h; }
+    if(/vert|portrait|9:16|1080x1920|1080\s*x\s*1920/.test(fmt)) return '9/16';
+    if(/square|1:1/.test(fmt)) return '1/1';
+    return '16/9';
+  }
+  function isVideoItem(it){
+    const t=String((it&&it.type)||'').toLowerCase();
+    if(/vid|mp4|mov|webm|m4v/.test(t)) return true;
+    if(/img|image|jpg|jpeg|png|gif|webp|photo/.test(t)) return false;
+    const u=String((it&&it.url)||'').toLowerCase().split('?')[0].split('#')[0];
+    return /\.(mp4|mov|webm|m4v|mkv|ogv)$/.test(u);
+  }
+  function renderPreview(rec,it){
+    const box=rec&&rec.prevEl; if(!box) return;
+    if(!F.previo){ box.classList.remove('on'); box.innerHTML=''; rec.prevKey=''; return; }  // Off = solo texto, no assets
+    box.classList.add('on');
+    const url=it&&it.url;
+    const mode=!url?'none':(isVideoItem(it)?(F.previoVideo?'video-play':'video-still'):'image');
+    const key=mode+'|'+(url||'')+'|'+((it&&it.format)||'');
+    if(key===rec.prevKey) return;   // sin cambios → no recargar el asset
+    rec.prevKey=key;
+    box.style.aspectRatio=aspectFromFormat(it&&it.format);
+    const tag='<div class="tag"><span class="live"></span>▶ en antena</div>';
+    if(mode==='none'){ box.innerHTML='<div class="ph">Sin contenido en antena</div>'; return; }
+    const ph='<div class="ph" data-ph>cargando previo…</div>';
+    if(mode==='image'){
+      box.innerHTML=tag+ph+'<img loading="lazy" decoding="async" alt="">';
+      const img=box.querySelector('img');
+      img.onload=()=>{ const p=box.querySelector('[data-ph]'); if(p) p.remove(); };
+      img.onerror=()=>{ box.innerHTML=tag+'<div class="ph">Previo no disponible</div>'; rec.prevKey=''; };
+      img.src=url;
+    } else {
+      const auto=(mode==='video-play');
+      box.innerHTML=tag+ph+'<video muted playsinline preload="metadata"'+(auto?' loop autoplay':'')+'></video>';
+      const v=box.querySelector('video');
+      v.onloadeddata=()=>{ const p=box.querySelector('[data-ph]'); if(p) p.remove(); };
+      v.onerror=()=>{ box.innerHTML=tag+'<div class="ph">Previo no disponible</div>'; rec.prevKey=''; };
+      // fotograma fijo: fragmento #t para pintar un frame sin reproducir ni consumir datos
+      v.src=auto?url:(url+(url.indexOf('#')>=0?'':'#t=0.5'));
+      if(auto && v.play) v.play().catch(()=>{});
+    }
+  }
+  // re-render de todos los previos desde el último item conocido (al cambiar Off/interval/vídeo)
+  function applyPrevio(){
+    Object.keys(cards).forEach(scr=>{ const rec=cards[scr]; if(rec) renderPreview(rec,rec.lastItem); });
+    restartPrevioTimer();
+    if(F.previo){ Object.keys(cards).forEach(scr=>{ const rec=cards[scr]; if(rec && !rec.el.classList.contains('hide')) refreshNow(scr); }); }
+  }
+
   function refreshNow(scr){
     fetch(NOW+encodeURIComponent(scr),{cache:'no-store'})
       .then(r=>r.ok?r.json():null)
       .then(d=>{
         const rec=cards[scr]; if(!rec) return;
         const it=d&&d.item?d.item:(d&&d.ok===false?null:(d&&d.id?d:null));
+        rec.lastItem=it||null;
         if(it&&(it.title||it.id)){
           rec.nowEl.innerHTML='<div class="lab">Emitiendo ahora</div>'+
             '<div class="ttl">'+esc(it.title||it.id)+'</div>'+
@@ -599,6 +687,7 @@
         } else {
           rec.nowEl.innerHTML='<div class="lab">Emitiendo ahora</div><div class="ty">sin señal de emisión</div>';
         }
+        renderPreview(rec,rec.lastItem);
       })
       .catch(()=>{});
   }
@@ -714,6 +803,19 @@
   $('f-refresh').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [].forEach.call($('f-refresh').children,x=>x.classList.remove('on')); b.classList.add('on'); F.refresh=+b.dataset.ms; restartTimer(); });
   $('f-thr').addEventListener('input',function(){ F.threshold=+this.value; paintRange(this); $('ui-thr').textContent=F.threshold===0?'sin límite':(F.threshold<60?F.threshold+'s':Math.round(F.threshold/60)+'min'); load(); });
 
+  // previo del contenido en antena + localStorage
+  const LS_PREVIO='rc_previo_v1';
+  function savePrevio(){ try{ localStorage.setItem(LS_PREVIO,JSON.stringify({previo:F.previo,video:F.previoVideo})); }catch(e){} }
+  function restorePrevio(){
+    let st={}; try{ st=JSON.parse(localStorage.getItem(LS_PREVIO)||'{}')||{}; }catch(e){}
+    if(typeof st.previo==='number') F.previo=st.previo;
+    if(typeof st.video==='boolean') F.previoVideo=st.video;
+    [].forEach.call($('f-previo').children,x=>x.classList.toggle('on', +x.dataset.ms===F.previo));
+    $('f-previo-video').classList.toggle('on',F.previoVideo);
+  }
+  $('f-previo').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [].forEach.call($('f-previo').children,x=>x.classList.remove('on')); b.classList.add('on'); F.previo=+b.dataset.ms; savePrevio(); applyPrevio(); });
+  $('f-previo-video').addEventListener('click',()=>{ F.previoVideo=!F.previoVideo; $('f-previo-video').classList.toggle('on',F.previoVideo); savePrevio(); applyPrevio(); });
+
   // scope del lote
   F.batchScope='visible';
   $('b-scope').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [].forEach.call($('b-scope').children,x=>x.classList.remove('on')); b.classList.add('on'); F.batchScope=b.dataset.s; $('b-circuit-wrap').style.display=(F.batchScope==='circuit')?'block':'none'; });
@@ -730,10 +832,21 @@
   // ═══ TIMER de refresco ═══
   let timer=null;
   function restartTimer(){ if(timer) clearInterval(timer); timer=setInterval(load,F.refresh); }
+  // ═══ TIMER del previo (solo tarjetas visibles; re-consulta /signage/now) ═══
+  let previoTimer=null;
+  function restartPrevioTimer(){
+    if(previoTimer) clearInterval(previoTimer);
+    if(!F.previo) return;   // Off = sin timer, sin descargas
+    previoTimer=setInterval(()=>{
+      Object.keys(cards).forEach(scr=>{ const rec=cards[scr]; if(rec && !rec.el.classList.contains('hide')) refreshNow(scr); });
+    }, F.previo);
+  }
 
   paintRange($('f-thr'));
+  restorePrevio();
   load();
   restartTimer();
+  restartPrevioTimer();
 </script>
 </body>
 </html>
