@@ -21,7 +21,7 @@
 <meta property="og:image:alt" content="Admira.tv · Canal — en antena, en bucle">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://admira.tv/og-canal.png">
-<!-- BUILD canal v.10.07.2026.r1 · COSTURA XPL: acción showAd → motor programático /rtb/decide (creativo temporal + fallback catálogo ADS, ?rtb=0 lo desactiva; jamás bloquea la emisión) + DATOS DE TERCEROS como hechos XPL: clima real open-meteo (rain/temperature/wind, cada 15 min, geo de pantalla/fallback Madrid) y festivos ES 2026 reales (tabla nacional + date.nager.at) sustituyen holiday:false. Hereda v.08.07.2026.r38 · ALWAYS ON TOP (doctrina DOOH): la emisión nunca se tapa. Por defecto ON (?ontop=0 la arranca OFF): alert/confirm/prompt neutralizados, window.onerror + unhandledrejection silenciados, diálogos de salida anulados, y un MutationObserver vigila <body> y OCULTA cualquier overlay ajeno (whitelist: #wrap, scripts, chrome "adm*", data-adm-ok="1"). ⇧Q alterna (modo test, no persiste). Hereda r37: HUD de testing ENRIQUECIDO con Shift+flechas. -->
+<!-- BUILD canal v.10.07.2026.r3 · MANDO REMOTO POR PANTALLA: pollCtrl() consume GET /control/cmds?screen= cada 2,5s (once-delivery) y mapea la whitelist (next/prev/first/last/pause/play/toggle-pause/mute/unmute/toggle-mute/vol-up/vol-down/ontop-*/hud) a las funciones EXISTENTES del canal (testNav/setPaused/applyAudio/ADM_ONTOP/testHudInfo) — replica los ⇧+flechas desde adcelerate/mando; fallo siempre silencioso, nunca corta la emisión. Hereda r1 · COSTURA XPL: acción showAd → motor programático /rtb/decide (creativo temporal + fallback catálogo ADS, ?rtb=0 lo desactiva; jamás bloquea la emisión) + DATOS DE TERCEROS como hechos XPL: clima real open-meteo (rain/temperature/wind, cada 15 min, geo de pantalla/fallback Madrid) y festivos ES 2026 reales (tabla nacional + date.nager.at) sustituyen holiday:false. Hereda v.08.07.2026.r38 · ALWAYS ON TOP (doctrina DOOH): la emisión nunca se tapa. Por defecto ON (?ontop=0 la arranca OFF): alert/confirm/prompt neutralizados, window.onerror + unhandledrejection silenciados, diálogos de salida anulados, y un MutationObserver vigila <body> y OCULTA cualquier overlay ajeno (whitelist: #wrap, scripts, chrome "adm*", data-adm-ok="1"). ⇧Q alterna (modo test, no persiste). Hereda r37: HUD de testing ENRIQUECIDO con Shift+flechas. -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
@@ -1861,6 +1861,42 @@ function pollCmd(){
     }).catch(()=>{});
 }
 pollCmd(); setInterval(pollCmd, 3000);
+
+// ── MANDO REMOTO POR PANTALLA (adcelerate/mando): cola de control por SCREEN.
+//   El mando web encola comandos de reproducción (whitelist) y este canal los
+//   consume (GET /control/cmds?screen=, once-delivery) mapeándolos a sus PROPIAS
+//   funciones. Nunca bloquea la emisión: cualquier fallo es silencioso.
+const CTRL_API='https://omnipublicity-api.csilvasantin.workers.dev/control/cmds';
+function applyCtrlCmd(cmd){
+  switch(cmd){
+    case 'next':  testNav('next'); break;
+    case 'prev':  testNav('prev'); break;
+    case 'first': testNav('first'); break;
+    case 'last':  testNav('last'); break;
+    case 'pause': setPaused(true); break;
+    case 'play':  setPaused(false); break;
+    case 'toggle-pause': setPaused(!paused); break;
+    case 'mute':   muted=true; applyAudio(); flashCli('🔇 mute'); break;
+    case 'unmute': muted=false; if(volume===0) volume=0.6; if(mediaEl&&mediaEl.play&&!paused) mediaEl.play().catch(()=>{}); applyAudio(); flashCli('🔊 unmute'); break;
+    case 'toggle-mute': { const b=$('mute'); if(b) b.click(); break; }
+    case 'vol-up':   volume=Math.min(1,volume+0.1); muted=false; if(mediaEl&&mediaEl.play&&!paused) mediaEl.play().catch(()=>{}); applyAudio(); flashCli('🔊 '+Math.round(volume*100)+'%'); break;
+    case 'vol-down': volume=Math.max(0,volume-0.1); muted=(volume===0); applyAudio(); flashCli('🔉 '+Math.round(volume*100)+'%'); break;
+    case 'ontop-on':     if(window.ADM_ONTOP&&!window.ADM_ONTOP.on) window.ADM_ONTOP.toggle(); break;
+    case 'ontop-off':    if(window.ADM_ONTOP&&window.ADM_ONTOP.on) window.ADM_ONTOP.toggle(); break;
+    case 'ontop-toggle': if(window.ADM_ONTOP) window.ADM_ONTOP.toggle(); break;
+    case 'hud': try{ testHudInfo('🎮'); }catch(_){ try{ testHud('🎮 MANDO'); }catch(__){} } break;
+    default: /* comando desconocido: ignorar */ break;
+  }
+}
+function pollCtrl(){
+  if(!scr.screen) return;                    // sin screen no hay a quién dirigir
+  fetch(CTRL_API+'?screen='+encodeURIComponent(scr.screen)+'&t='+Date.now(),{cache:'no-store'})
+    .then(r=>r.ok?r.json():null).then(d=>{
+      if(!d||!Array.isArray(d.cmds)) return;
+      for(const c of d.cmds){ try{ applyCtrlCmd(String(c.cmd)); }catch(_){} }   // fallo silencioso: nunca corta la emisión
+    }).catch(()=>{});
+}
+try{ pollCtrl(); setInterval(pollCtrl, 2500); }catch(_){}
 
 // si arrancamos ya en sincro (persistido/URL), engancha el máster central
 if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); syncStateTimer=setInterval(fetchSyncState,30000); }
