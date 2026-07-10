@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<script src="/auth-gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg">
+<meta name="theme-color" content="#060a0f">
+<style>
+  :root{
+    --acc:#3df08a; --acc2:#38d6ff; --warn:#ffb454; --air:#ff4444;
+    --bg:#060a0f; --panel:#0a121b; --panel2:#0c1620; --line:#183042;
+    --txt:#dff6ea; --dim:#6f8faa;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--mono);
+    -webkit-font-smoothing:antialiased;min-height:100%;overflow-x:hidden}
+  body{padding:max(16px,env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(120% 70% at 50% -8%,rgba(56,214,255,.08),transparent 60%),
+      repeating-linear-gradient(0deg,rgba(0,0,0,.20) 0 2px,transparent 2px 4px),
+      var(--bg);
+    max-width:1240px;margin:0 auto}
+  a{color:var(--acc2)}
+  /* CABECERA */
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+  .kick{font-size:11px;letter-spacing:.4em;color:var(--acc2);text-transform:uppercase;opacity:.85}
+  h1{margin:.2em 0 .05em;font-size:clamp(22px,5vw,34px);font-weight:800;letter-spacing:.01em;line-height:1.04}
+  h1 .d{color:var(--acc)} h1 .air{color:var(--air);text-shadow:0 0 12px rgba(255,68,68,.5)}
+  .sub{font-size:12px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+  .count{font-family:var(--mono);text-align:right;min-width:180px}
+  .count .big{font-size:26px;font-weight:800;color:var(--acc)}
+  .count .big .off{color:var(--dim)}
+  .count .lab{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+  .count .stamp{font-size:10px;color:var(--dim);letter-spacing:.06em;margin-top:3px;min-height:1.2em}
+  /* MANUAL */
+  .manual{background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);
+    border-radius:14px;padding:12px 14px;margin:14px 0 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .manual label{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--acc2);white-space:nowrap}
+  .manual input{flex:1;min-width:180px;background:#050b11;color:var(--txt);border:1px solid var(--line);border-radius:10px;
+    padding:11px 12px;font-family:var(--mono);font-size:14px;-webkit-appearance:none}
+  .manual input:focus{outline:2px solid var(--acc);outline-offset:1px;border-color:var(--acc)}
+  .mini{flex:0 0 auto;padding:0 16px;height:42px;background:var(--acc2);color:#02131a;border:none;border-radius:10px;
+    font-weight:800;font-family:var(--mono);font-size:13px;letter-spacing:.08em;cursor:pointer}
+  /* REJILLA */
+  #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+  .status-line{font-size:12px;color:var(--dim);letter-spacing:.06em;padding:6px 2px 2px}
+  .status-line .err{color:var(--air);font-weight:700}
+  .card{background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);
+    border-radius:16px;padding:14px;box-shadow:0 18px 44px -32px rgba(61,240,138,.5);display:flex;flex-direction:column}
+  .card.offline{opacity:.72}
+  .chead{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .plat{font-size:22px;line-height:1;filter:drop-shadow(0 0 6px rgba(56,214,255,.3))}
+  .cname{flex:1;min-width:0}
+  .cname .scr{font-size:15px;font-weight:800;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cname .meta{font-size:10.5px;letter-spacing:.06em;color:var(--dim);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--air);box-shadow:0 0 8px var(--air);flex:0 0 auto}
+  .dot.on{background:var(--acc);box-shadow:0 0 9px var(--acc)}
+  .age{font-size:10px;color:var(--dim);letter-spacing:.06em}
+  .now{background:#050b11;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:8px 0 4px;min-height:44px}
+  .now .lab{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--air)}
+  .now .ttl{font-size:12.5px;color:var(--txt);margin-top:2px;line-height:1.35;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .now .ty{font-size:10px;color:var(--dim);letter-spacing:.06em;margin-top:2px}
+  /* MANDO por tarjeta */
+  .pad{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:7px;
+    aspect-ratio:3/2;max-width:100%;margin:6px 0 2px}
+  .pad .up{grid-row:1;grid-column:2} .pad .left{grid-row:2;grid-column:1} .pad .mid{grid-row:2;grid-column:2}
+  .pad .right{grid-row:2;grid-column:3} .pad .down{grid-row:3;grid-column:2}
+  button.b{position:relative;border:1px solid var(--line);background:linear-gradient(160deg,#0c1824,#081019);
+    color:var(--txt);border-radius:12px;font-family:var(--mono);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    padding:8px 4px;transition:transform .08s,background .15s,border-color .15s;user-select:none;-webkit-tap-highlight-color:transparent}
+  button.b .ico{font-size:clamp(18px,4.6vw,24px);line-height:1}
+  button.b .lab{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+  button.b:active{transform:scale(.93)}
+  button.b.flash{background:linear-gradient(160deg,rgba(61,240,138,.28),rgba(56,214,255,.14));
+    border-color:var(--acc);box-shadow:0 0 0 1px var(--acc),0 0 20px -4px var(--acc)}
+  .pad .mid{background:linear-gradient(160deg,#0e1c2a,#0a141e);border-color:#20415a}
+  .grid6{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:7px}
+  .grid6 button.b{min-height:58px}
+  .last{margin-top:9px;font-size:11px;letter-spacing:.05em;color:var(--dim);text-align:center;min-height:1.5em;line-height:1.35}
+  .last .tx{color:var(--warn);font-weight:800;text-shadow:0 0 10px rgba(255,180,84,.35)}
+  .last .rx{color:var(--acc);font-weight:800;text-shadow:0 0 12px rgba(61,240,138,.5)}
+  .last .warn{color:var(--air);font-weight:800}
+  .empty{grid-column:1/-1;text-align:center;color:var(--dim);padding:40px 20px;font-size:14px;letter-spacing:.06em;line-height:1.6}
+  .empty b{color:var(--warn)}
+  .foot{margin-top:24px;font-size:11px;color:var(--dim);letter-spacing:.05em;text-align:center;line-height:1.6;opacity:.8}
+  .foot a{color:var(--acc2);text-decoration:none}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div>
+      <div class="kick">ADMIRA.TV · REMOTE CONTROL</div>
+      <h1>Equipos <span class="d">conectados</span><span class="air">.</span></h1>
+      <div class="sub">Flota que emite el canal · mando remoto con doble acuse</div>
+    </div>
+    <div class="count">
+      <div class="big"><span id="cOn">·</span><span class="off"> / <span id="cTot">·</span></span></div>
+      <div class="lab">online / total</div>
+      <div class="stamp" id="stamp"></div>
+    </div>
+  </div>
+
+  <div class="manual">
+    <label for="manual">Screen manual</label>
+    <input id="manual" placeholder="…escribe un screen (p.ej. ipad-totem) y añade una tarjeta de mando" autocomplete="off" spellcheck="false">
+    <button class="mini" id="useManual">AÑADIR</button>
+  </div>
+
+  <div class="status-line" id="statusLine">Cargando pantallas vivas…</div>
+  <div id="grid"></div>
+
+  <div class="foot">
+    Los comandos se encolan por pantalla (whitelist en el perímetro) y el player los consume cada ~2,5&nbsp;s.<br>
+    <span class="tx">✓ enviado</span> = aceptado por la cola · <span class="rx">✓✓ recibido</span> = la pantalla lo confirmó (poll <span class="mono">/control/seen</span>).<br>
+    <a href="/adcelerate/">‹ ADCELERATE</a> · <a href="/canal.html">Canal</a> · <a href="/">Admira.tv</a>
+  </div>
+
+<script>
+  const API='https://omnipublicity-api.csilvasantin.workers.dev';
+  const SCREENS='https://api.admira.store/signage/screens';
+  const NOW='https://api.admira.store/signage/now?screen=';
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+
+  const CMDS=[
+    {cmd:'first', ico:'⇤', lab:'Primera', cls:'up'},
+    {cmd:'prev',  ico:'⏮', lab:'Anterior', cls:'left'},
+    {cmd:'toggle-pause', ico:'⏯', lab:'Pausa/Play', cls:'mid'},
+    {cmd:'next',  ico:'⏭', lab:'Siguiente', cls:'right'},
+    {cmd:'last',  ico:'⇥', lab:'Última', cls:'down'}
+  ];
+  const BTNS=[
+    {cmd:'toggle-mute', ico:'🔇', lab:'Mute'},
+    {cmd:'vol-down',    ico:'🔉', lab:'Vol −'},
+    {cmd:'vol-up',      ico:'🔊', lab:'Vol +'},
+    {cmd:'ontop-toggle',ico:'📌', lab:'On-top'},
+    {cmd:'hud',         ico:'🅗', lab:'HUD'},
+    {cmd:'play',        ico:'▶', lab:'Play'}
+  ];
+
+  function platIcon(ua){
+    ua=String(ua||'');
+    if(/iPad|iPhone|iOS|AdmiraIOS/i.test(ua)) return '📱';
+    if(/Android|AdmiraAndroid/i.test(ua))     return '🤖';
+    if(/Macintosh|Mac OS X|AdmiraMacOS/i.test(ua)) return '🖥️';
+    if(/Windows|Win64|AdmiraWindows/i.test(ua))    return '🪟';
+    if(/Linux|AdmiraLinux/i.test(ua))         return '🐧';
+    return '📺';
+  }
+  function platName(ua){
+    ua=String(ua||'');
+    if(/iPad/i.test(ua)) return 'iPad';
+    if(/iPhone|iOS|AdmiraIOS/i.test(ua)) return 'iOS';
+    if(/Android|AdmiraAndroid/i.test(ua)) return 'Android';
+    if(/Macintosh|Mac OS X|AdmiraMacOS/i.test(ua)) return 'Mac';
+    if(/Windows|Win64|AdmiraWindows/i.test(ua)) return 'Windows';
+    if(/Linux|AdmiraLinux/i.test(ua)) return 'Linux';
+    return 'equipo';
+  }
+  function ageTxt(s){
+    if(s==null) return '';
+    if(s<90) return 'ahora';
+    if(s<3600) return Math.round(s/60)+'m';
+    return Math.round(s/3600)+'h';
+  }
+
+  // ─── DOBLE FEEDBACK (reutiliza la lógica del mando de adcelerate) ───
+  function waitReceipt(scr,id,t0,lastEl){
+    const timeout=8000, every=600, deadline=Date.now()+timeout;
+    const tick=()=>{
+      fetch(API+'/control/seen?screen='+encodeURIComponent(scr),{cache:'no-store'})
+        .then(r=>r.ok?r.json():null)
+        .then(j=>{
+          const seen=(j&&Array.isArray(j.seen))?j.seen:[];
+          if(seen.some(s=>s&&s.id===id)){
+            lastEl.innerHTML='<span class="rx">✓✓ recibido</span> · '+(Date.now()-t0)+'ms';
+            return;
+          }
+          if(Date.now()>=deadline){
+            lastEl.innerHTML='<span class="warn">⚠ enviado · sin confirmación</span> — ¿offline?';
+            return;
+          }
+          setTimeout(tick,every);
+        })
+        .catch(()=>{ if(Date.now()>=deadline){ lastEl.innerHTML='<span class="warn">⚠ enviado · sin confirmación</span>'; } else { setTimeout(tick,every); } });
+    };
+    setTimeout(tick,every);
+  }
+  function send(scr,cmd,btn,lastEl){
+    if(btn){ btn.classList.add('flash'); setTimeout(()=>btn.classList.remove('flash'),260); }
+    const t0=Date.now();
+    lastEl.innerHTML='→ enviando <b>'+esc(cmd)+'</b>…';
+    fetch(API+'/control/cmd',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({screen:scr,cmd})})
+      .then(r=>r.json().then(j=>({ok:r.ok,j})))
+      .then(({ok,j})=>{
+        if(ok&&j&&j.ok){
+          lastEl.innerHTML='<span class="tx">✓ enviado</span> · esperando pantalla…';
+          waitReceipt(scr,j.id,t0,lastEl);
+        } else {
+          lastEl.innerHTML='✗ rechazado: '+esc((j&&j.error)||'error');
+        }
+      })
+      .catch(()=>lastEl.innerHTML='✗ sin red — reintenta');
+  }
+
+  // ─── Render / actualización de tarjetas (idempotente por screen) ───
+  const cards={};       // screen → {el, lastEl, nowEl, dotEl, ageEl, metaEl}
+  const manualScreens=new Set();
+  let firstLoad=true;
+
+  function buildCard(scr){
+    const card=document.createElement('div');
+    card.className='card';
+    card.dataset.screen=scr;
+    const padHtml=CMDS.map(c=>'<button class="b '+c.cls+'" data-cmd="'+c.cmd+'"><span class="ico">'+c.ico+'</span><span class="lab">'+c.lab+'</span></button>').join('');
+    const btnHtml=BTNS.map(c=>'<button class="b" data-cmd="'+c.cmd+'"><span class="ico">'+c.ico+'</span><span class="lab">'+c.lab+'</span></button>').join('');
+    card.innerHTML=
+      '<div class="chead">'+
+        '<span class="plat" data-plat></span>'+
+        '<div class="cname"><div class="scr">'+esc(scr)+'</div><div class="meta" data-meta>—</div></div>'+
+        '<div style="text-align:right"><span class="dot" data-dot></span><div class="age" data-age></div></div>'+
+      '</div>'+
+      '<div class="now" data-now><div class="lab">Emitiendo ahora</div><div class="ttl">—</div></div>'+
+      '<div class="pad">'+padHtml+'</div>'+
+      '<div class="grid6">'+btnHtml+'</div>'+
+      '<div class="last">Pulsa un control.</div>';
+    const lEl=card.querySelector('.last');
+    card.querySelectorAll('button.b').forEach(b=>{
+      b.addEventListener('click',()=>send(scr,b.dataset.cmd,b,lEl));
+    });
+    const rec={el:card,lastEl:lEl,
+      platEl:card.querySelector('[data-plat]'),
+      metaEl:card.querySelector('[data-meta]'),
+      dotEl:card.querySelector('[data-dot]'),
+      ageEl:card.querySelector('[data-age]'),
+      nowEl:card.querySelector('[data-now]')};
+    cards[scr]=rec;
+    $('grid').appendChild(card);
+    refreshNow(scr);
+    return rec;
+  }
+
+  function updateCard(scr,info){
+    const rec=cards[scr]||buildCard(scr);
+    const online=!!info.online;
+    rec.el.classList.toggle('offline',!online);
+    rec.dotEl.classList.toggle('on',online);
+    rec.platEl.textContent=platIcon(info.user_agent);
+    rec.platEl.title=platName(info.user_agent);
+    const bits=[platName(info.user_agent)];
+    if(info.loc||info.locName) bits.push('📍 '+esc(info.locName||info.loc));
+    if(info.role) bits.push(esc(info.role));
+    rec.metaEl.innerHTML=bits.join(' · ');
+    rec.ageEl.textContent=online?ageTxt(info.age_seconds):(info.age_seconds!=null?ageTxt(info.age_seconds):'offline');
+  }
+
+  function refreshNow(scr){
+    fetch(NOW+encodeURIComponent(scr),{cache:'no-store'})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{
+        const rec=cards[scr]; if(!rec) return;
+        const it=d&&d.item?d.item:(d&&d.ok===false?null:(d&&d.id?d:null));
+        if(it&&(it.title||it.id)){
+          rec.nowEl.innerHTML='<div class="lab">Emitiendo ahora</div>'+
+            '<div class="ttl">'+esc(it.title||it.id)+'</div>'+
+            '<div class="ty">'+esc(it.type||'media')+(it.id?(' · '+esc(String(it.id).slice(0,20))):'')+'</div>';
+        } else {
+          rec.nowEl.innerHTML='<div class="lab">Emitiendo ahora</div><div class="ty">sin señal de emisión</div>';
+        }
+      })
+      .catch(()=>{});
+  }
+
+  function load(){
+    fetch(SCREENS,{cache:'no-store'})
+      .then(r=>r.ok?r.json():Promise.reject())
+      .then(d=>{
+        const arr=(d&&Array.isArray(d.screens))?d.screens:[];
+        const live=new Set(arr.map(s=>s.screen));
+        // añade/actualiza
+        arr.sort((a,b)=>(b.online-a.online)||((b.last_seen||0)-(a.last_seen||0)));
+        arr.forEach(s=>{ if(s&&s.screen) updateCard(s.screen,s); });
+        // reordena en el DOM según orden de la API (online primero)
+        arr.forEach(s=>{ const rec=cards[s.screen]; if(rec) $('grid').appendChild(rec.el); });
+        // manuales que ya no están en la lista viva → márcalos offline pero consérvalos
+        manualScreens.forEach(scr=>{
+          if(!live.has(scr)&&cards[scr]){ cards[scr].el.classList.add('offline'); cards[scr].dotEl.classList.remove('on'); cards[scr].ageEl.textContent='sin datos'; }
+        });
+        // refresca "emitiendo ahora"
+        Object.keys(cards).forEach(refreshNow);
+        // contadores
+        const on=(typeof d.online_count==='number')?d.online_count:arr.filter(s=>s.online).length;
+        const tot=(typeof d.total_count==='number')?d.total_count:arr.length;
+        $('cOn').textContent=on; $('cTot').textContent=tot;
+        $('statusLine').innerHTML=arr.length?'':'<span class="err">Sin pantallas vivas.</span> Usa el campo «screen manual» para dirigir un equipo por nombre.';
+        if(!arr.length && !Object.keys(cards).length){
+          $('grid').innerHTML='<div class="empty">Ninguna pantalla viva reportada por <b>/signage/screens</b>.<br>Ningún equipo emitiendo el canal ahora mismo — o el backbone no responde.</div>';
+        }
+        $('stamp').textContent='act. '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        firstLoad=false;
+      })
+      .catch(()=>{
+        $('statusLine').innerHTML='<span class="err">⚠ /signage/screens no responde.</span> No se inventan equipos — reintentando cada 10 s.';
+        if(firstLoad && !Object.keys(cards).length){
+          $('grid').innerHTML='<div class="empty"><b>Backbone no accesible.</b><br>No hay datos de pantallas vivas. El mando manual sigue disponible arriba.</div>';
+        }
+        $('stamp').textContent='sin conexión · '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+      });
+  }
+
+  // Screen manual → añade una tarjeta bajo demanda
+  function addManual(){
+    const v=$('manual').value.trim();
+    if(!v) return;
+    manualScreens.add(v);
+    if(!cards[v]){ const empty=$('grid').querySelector('.empty'); if(empty) empty.remove();
+      updateCard(v,{online:false,user_agent:'',loc:'',role:'manual',age_seconds:null}); }
+    // trae la tarjeta al principio y resáltala
+    if(cards[v]){ $('grid').prepend(cards[v].el); cards[v].el.querySelector('.last').innerHTML='destino manual añadido'; }
+    $('manual').value='';
+    load();
+  }
+  $('useManual').onclick=addManual;
+  $('manual').addEventListener('keydown',e=>{ if(e.key==='Enter') addManual(); });
+
+  load();
+  setInterval(load,10000);
+</script>
+</body>
+</html>
