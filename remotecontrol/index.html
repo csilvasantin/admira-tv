@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/auth-gate.js"></script>
-<script>window.ADMIRA_VERSION='v.10.07.2026.r7';</script>
+<script>window.ADMIRA_VERSION='v.10.07.2026.r8';</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
 <meta name="robots" content="noindex">
@@ -110,6 +110,11 @@
   .prev .ph{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;text-align:center;
     color:var(--dim);font-size:10.5px;letter-spacing:.07em;padding:10px;line-height:1.5;
     background:radial-gradient(120% 90% at 50% 40%,rgba(56,214,255,.05),transparent 70%)}
+  /* variante CAPTURA REAL (cian, se distingue del rojo «en antena») */
+  .prev .tag.cap{border-color:rgba(56,214,255,.5);color:var(--acc2);text-shadow:0 0 8px rgba(56,214,255,.4)}
+  .prev .tag.cap .live{background:var(--acc2);box-shadow:0 0 6px var(--acc2)}
+  .prev .capage{position:absolute;bottom:6px;right:6px;z-index:2;font-size:9px;letter-spacing:.08em;
+    color:var(--txt);background:rgba(6,10,15,.74);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
   /* MANDO por tarjeta */
   .pad{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:7px;
     aspect-ratio:3/2;max-width:100%;margin:6px 0 2px}
@@ -308,7 +313,15 @@
     <div class="grp">
       <h3>Previo en antena</h3>
       <div class="fld">
-        <label><span>Miniatura del contenido</span></label>
+        <label><span>Modo</span></label>
+        <div class="seg" id="f-previo-mode">
+          <button data-mode="content" class="on">Contenido en antena</button>
+          <button data-mode="shot">📷 Captura real</button>
+          <button data-mode="off">Off</button>
+        </div>
+      </div>
+      <div class="fld">
+        <label><span>Refresco</span></label>
         <div class="seg" id="f-previo">
           <button data-ms="0">Off</button>
           <button data-ms="5000">5s</button>
@@ -317,9 +330,9 @@
         </div>
       </div>
       <div class="fld">
-        <div class="tog" id="f-previo-video"><span>Reproducir vídeo</span><span class="sw"></span></div>
+        <div class="tog" id="f-previo-video"><span>Reproducir vídeo (solo Contenido)</span><span class="sw"></span></div>
       </div>
-      <p class="note">Muestra el <b>contenido emitido</b> (de <b>/signage/now</b>) en cada tarjeta — no es captura del cristal. Los vídeos se ven como <b>fotograma fijo</b> salvo que actives reproducir (consume más datos). <b>Off = solo texto</b>, no descarga assets.</p>
+      <p class="note"><b>Contenido en antena</b> = el asset emitido (de <b>/signage/now</b>), <i>no</i> captura del cristal — los vídeos se ven como fotograma fijo salvo que actives reproducir. <b>📷 Captura real</b> = el fotograma que el propio player sube (de <b>/signage/shot</b>) con su antigüedad; los players antiguos aún no la suben (placeholder honesto). El <b>Refresco</b> (Off/5/10/30s) aplica a ambos modos.</p>
     </div>
   </div>
 
@@ -415,6 +428,7 @@
   const API='https://omnipublicity-api.csilvasantin.workers.dev';
   const SCREENS='https://api.admira.store/signage/screens';
   const NOW='https://api.admira.store/signage/now?screen=';
+  const SHOT='https://api.admira.store/signage/shot?screen=';   // captura real que sube el player (fase 2)
   const $=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 
@@ -464,7 +478,9 @@
 
   // ═══ ESTADO DE FILTROS / AJUSTES ═══
   const F={ online:false, plat:'all', loc:'', sort:'online', refresh:10000, threshold:0, tech:false,
-            previo:10000, previoVideo:false };  // previo ON a 10s, vídeo off (default)
+            previo:10000, previoVideo:false, previoMode:'content' };  // previo: modo Contenido, refresco 10s, vídeo off
+  function previoOn(){ return F.previoMode==='content'||F.previoMode==='shot'; }
+  function shotAgeTxt(s){ if(s==null) return ''; s=Math.max(0,Math.round(s)); if(s<60) return s+'s'; if(s<3600) return Math.round(s/60)+'m'; return Math.round(s/3600)+'h'; }
 
   // efectivo online = API online AND (umbral 0 o edad<=umbral)
   function effOnline(info){
@@ -590,7 +606,7 @@
       ageEl:card.querySelector('[data-age]'),
       nowEl:card.querySelector('[data-now]'),
       prevEl:card.querySelector('[data-prev]'),
-      lastItem:null, prevKey:''};
+      lastItem:null, prevKey:'', shotKey:''};
     cards[scr]=rec;
     $('grid').appendChild(card);
     refreshNow(scr);
@@ -638,7 +654,8 @@
   }
   function renderPreview(rec,it){
     const box=rec&&rec.prevEl; if(!box) return;
-    if(!F.previo){ box.classList.remove('on'); box.innerHTML=''; rec.prevKey=''; return; }  // Off = solo texto, no assets
+    if(F.previoMode==='off'){ box.classList.remove('on'); box.innerHTML=''; rec.prevKey=''; rec.shotKey=''; return; }  // Off = solo texto
+    if(F.previoMode==='shot'){ renderShot(rec); return; }   // CAPTURA REAL (de /signage/shot)
     box.classList.add('on');
     const url=it&&it.url;
     const mode=!url?'none':(isVideoItem(it)?(F.previoVideo?'video-play':'video-still'):'image');
@@ -666,11 +683,42 @@
       if(auto && v.play) v.play().catch(()=>{});
     }
   }
-  // re-render de todos los previos desde el último item conocido (al cambiar Off/interval/vídeo)
+  // ─── CAPTURA REAL: el fotograma que el propio player sube (GET /signage/shot) ───
+  function shotPh(txt){ return '<div class="tag cap"><span class="live"></span>📷 captura real</div>'+
+    '<div class="ph">'+txt+'</div>'; }
+  function renderShot(rec){
+    const box=rec&&rec.prevEl; if(!box) return;
+    if(rec.el&&rec.el.classList.contains('hide')) return;   // tarjeta filtrada → no descargar captura
+    const scr=rec.el&&rec.el.dataset.screen; if(!scr) return;
+    box.classList.add('on');
+    box.style.aspectRatio='16/9';   // la captura no reporta formato → 16/9 por defecto
+    fetch(SHOT+encodeURIComponent(scr)+'&meta=1&t='+Date.now(),{cache:'no-store'})
+      .then(r=>r.ok?r.json():null)
+      .then(m=>{
+        if(!m||m.ok===false||m.ts==null){   // 404 / sin captura → placeholder honesto
+          if(rec.shotKey!=='none'){ rec.shotKey='none'; box.innerHTML=shotPh('sin captura<br><span style="opacity:.72">player sin fase 2</span>'); }
+          return;
+        }
+        const ageTx='captura hace '+shotAgeTxt(m.ageSeconds);
+        const key='shot|'+m.ts;
+        if(key===rec.shotKey){ const a=box.querySelector('[data-shotage]'); if(a) a.textContent=ageTx; return; }  // mismo frame → solo edad
+        rec.shotKey=key;
+        box.innerHTML='<div class="tag cap"><span class="live"></span>📷 captura real</div>'+
+          '<div class="ph" data-ph>cargando captura…</div>'+
+          '<img decoding="async" alt="captura del player">'+
+          '<div class="capage" data-shotage>'+ageTx+'</div>';
+        const img=box.querySelector('img');
+        img.onload=()=>{ const p=box.querySelector('[data-ph]'); if(p) p.remove(); };
+        img.onerror=()=>{ rec.shotKey='none'; box.innerHTML=shotPh('sin captura<br><span style="opacity:.72">player sin fase 2</span>'); };
+        img.src=SHOT+encodeURIComponent(scr)+'&t='+m.ts;   // cache-bust por timestamp del shot
+      })
+      .catch(()=>{ if(rec.shotKey!=='none'){ rec.shotKey='none'; box.innerHTML=shotPh('sin captura<br><span style="opacity:.72">sin red</span>'); } });
+  }
+  // re-render de todos los previos desde el último item conocido (al cambiar modo/interval/vídeo)
   function applyPrevio(){
-    Object.keys(cards).forEach(scr=>{ const rec=cards[scr]; if(rec) renderPreview(rec,rec.lastItem); });
+    Object.keys(cards).forEach(scr=>{ const rec=cards[scr]; if(rec){ rec.prevKey=''; rec.shotKey=''; renderPreview(rec,rec.lastItem); } });
     restartPrevioTimer();
-    if(F.previo){ Object.keys(cards).forEach(scr=>{ const rec=cards[scr]; if(rec && !rec.el.classList.contains('hide')) refreshNow(scr); }); }
+    if(previoOn()){ Object.keys(cards).forEach(scr=>{ const rec=cards[scr]; if(rec && !rec.el.classList.contains('hide')) refreshNow(scr); }); }
   }
 
   function refreshNow(scr){
@@ -805,14 +853,17 @@
 
   // previo del contenido en antena + localStorage
   const LS_PREVIO='rc_previo_v1';
-  function savePrevio(){ try{ localStorage.setItem(LS_PREVIO,JSON.stringify({previo:F.previo,video:F.previoVideo})); }catch(e){} }
+  function savePrevio(){ try{ localStorage.setItem(LS_PREVIO,JSON.stringify({previo:F.previo,video:F.previoVideo,mode:F.previoMode})); }catch(e){} }
   function restorePrevio(){
     let st={}; try{ st=JSON.parse(localStorage.getItem(LS_PREVIO)||'{}')||{}; }catch(e){}
     if(typeof st.previo==='number') F.previo=st.previo;
     if(typeof st.video==='boolean') F.previoVideo=st.video;
+    if(st.mode==='content'||st.mode==='shot'||st.mode==='off') F.previoMode=st.mode;
     [].forEach.call($('f-previo').children,x=>x.classList.toggle('on', +x.dataset.ms===F.previo));
+    [].forEach.call($('f-previo-mode').children,x=>x.classList.toggle('on', x.dataset.mode===F.previoMode));
     $('f-previo-video').classList.toggle('on',F.previoVideo);
   }
+  $('f-previo-mode').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [].forEach.call($('f-previo-mode').children,x=>x.classList.remove('on')); b.classList.add('on'); F.previoMode=b.dataset.mode; savePrevio(); applyPrevio(); });
   $('f-previo').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; [].forEach.call($('f-previo').children,x=>x.classList.remove('on')); b.classList.add('on'); F.previo=+b.dataset.ms; savePrevio(); applyPrevio(); });
   $('f-previo-video').addEventListener('click',()=>{ F.previoVideo=!F.previoVideo; $('f-previo-video').classList.toggle('on',F.previoVideo); savePrevio(); applyPrevio(); });
 
@@ -836,7 +887,7 @@
   let previoTimer=null;
   function restartPrevioTimer(){
     if(previoTimer) clearInterval(previoTimer);
-    if(!F.previo) return;   // Off = sin timer, sin descargas
+    if(!previoOn() || !F.previo) return;   // modo Off o refresco Off = sin timer, sin descargas
     previoTimer=setInterval(()=>{
       Object.keys(cards).forEach(scr=>{ const rec=cards[scr]; if(rec && !rec.el.classList.contains('hide')) refreshNow(scr); });
     }, F.previo);
