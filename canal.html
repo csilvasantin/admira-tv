@@ -21,7 +21,7 @@
 <meta property="og:image:alt" content="Admira.tv · Canal — en antena, en bucle">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://admira.tv/og-canal.png">
-<!-- BUILD canal v.08.07.2026.r38 · ALWAYS ON TOP (doctrina DOOH): la emisión nunca se tapa. Por defecto ON (?ontop=0 la arranca OFF): alert/confirm/prompt neutralizados, window.onerror + unhandledrejection silenciados, diálogos de salida anulados, y un MutationObserver vigila <body> y OCULTA cualquier overlay ajeno (whitelist: #wrap, scripts, chrome "adm*", data-adm-ok="1"). ⇧Q alterna (modo test, no persiste). Hereda r37: HUD de testing ENRIQUECIDO con Shift+flechas. -->
+<!-- BUILD canal v.10.07.2026.r1 · COSTURA XPL: acción showAd → motor programático /rtb/decide (creativo temporal + fallback catálogo ADS, ?rtb=0 lo desactiva; jamás bloquea la emisión) + DATOS DE TERCEROS como hechos XPL: clima real open-meteo (rain/temperature/wind, cada 15 min, geo de pantalla/fallback Madrid) y festivos ES 2026 reales (tabla nacional + date.nager.at) sustituyen holiday:false. Hereda v.08.07.2026.r38 · ALWAYS ON TOP (doctrina DOOH): la emisión nunca se tapa. Por defecto ON (?ontop=0 la arranca OFF): alert/confirm/prompt neutralizados, window.onerror + unhandledrejection silenciados, diálogos de salida anulados, y un MutationObserver vigila <body> y OCULTA cualquier overlay ajeno (whitelist: #wrap, scripts, chrome "adm*", data-adm-ok="1"). ⇧Q alterna (modo test, no persiste). Hereda r37: HUD de testing ENRIQUECIDO con Shift+flechas. -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
@@ -631,15 +631,59 @@ async function loadGrid(){ if(!scr.screen) return;
 // de verdad en su franja, en vez de aparecer 1 vez en un loop de 50. Cicla la lista
 // de la franja cada EVERY piezas de Stock.
 function gridWeave(pl){
-  if(!gridInjected.length) return pl;
-  const gids=new Set(gridInjected.map(g=>g.id));
-  const base=pl.filter(p=>!gids.has(p.id)), grid=gridInjected;
+  // La parrilla vendida (own/paid) + los creativos PROGRAMÁTICOS vivos (RTB / fallback
+  // ADS de la acción XPL showAd) se entrelazan igual: assets universales a cadencia fija.
+  const rtb=(typeof rtbActive==='function')?rtbActive():[];
+  const inj=gridInjected.concat(rtb);
+  if(!inj.length) return pl;
+  const gids=new Set(inj.map(g=>g.id));
+  const base=pl.filter(p=>!gids.has(p.id)), grid=inj;
   if(!base.length) return grid.slice();
   const EVERY=4, out=[]; let gi=0;
   for(let i=0;i<base.length;i++){ out.push(base[i]); if((i+1)%EVERY===0){ out.push(grid[gi%grid.length]); gi++; } }
   if(gi===0) for(const g of grid) out.push(g);
   return out;
 }
+
+// ── RTB PROGRAMÁTICO (costura de la acción XPL showAd → /rtb/decide) ──────────
+// La acción XPL `showAd` pide una decisión al motor programático (SSP/DSP). Si hay
+// demanda, INYECTA el creativo ganador como asset temporal (entrelazado por gridWeave,
+// igual que la parrilla) respetando su ttlSec. Si no hay demanda / ok:false / timeout
+// (1500 ms) / red caída / ?rtb=0, cae al creativo de catálogo (ADS) como tarjeta
+// autocontenida (SVG data-URI). La emisión JAMÁS se bloquea por el RTB.
+const RTB_API='https://api.admira.store/rtb/decide';
+const RTB_ON=(function(){ try{ return new URLSearchParams(location.search).get('rtb')!=='0'; }catch(_){ return true; } })();
+const RTB_FLOOR=(function(){ try{ const f=parseFloat(new URLSearchParams(location.search).get('floor')); return isFinite(f)?f:0; }catch(_){ return 0; } })();
+let rtbInjected=[];   // assets temporales vivos (RTB ganador o fallback ADS)
+function rtbActive(){ const now=Date.now(); return rtbInjected.filter(it=>it._exp>now); }
+function rtbPrune(){ const now=Date.now(); const before=rtbInjected.length;
+  rtbInjected=rtbInjected.filter(it=>it._exp>now);
+  if(rtbInjected.length!==before){ seenSig=''; rebuild(false); } }   // caducó ttlSec → sale del loop
+setInterval(rtbPrune, 5000);
+function rtbType(dec){ const t=String((dec&&(dec.type||dec.medio))||'').toLowerCase();
+  if(t==='video'||t==='animation') return 'video';
+  if(t==='audio'||t==='music'||t==='locucion') return 'audio';
+  if(t==='image'||t==='dooh'||t==='display'||t==='banner') return 'image';
+  const u=String((dec&&dec.creativeUrl)||'').toLowerCase();
+  if(/\.(mp4|webm|mov|m4v)(\?|$)/.test(u)) return 'video';
+  if(/\.(mp3|wav|ogg|m4a|aac)(\?|$)/.test(u)) return 'audio';
+  return 'image'; }
+function rtbInject(item, ttlSec){ item._rtb=true; item._exp=Date.now()+Math.max(3,ttlSec||20)*1000;
+  item.createdAt='9'+Date.now();
+  rtbInjected=rtbInjected.filter(x=>x.id!==item.id); rtbInjected.push(item);
+  seenSig=''; rebuild(false); }
+// Tarjeta autocontenida para el creativo de catálogo ADS (fallback sin demanda/red).
+function adsCard(adValue){ const A=(window.XPL&&XPL.byId(XPL.ADS,adValue))||null;
+  const icon=A?(A.icon||'🏷️'):'🏷️', bg=A?(A.bg||'#222'):'#222', label=A?(A.es||A.en||adValue):adValue;
+  const esc=s=>String(s).replace(/[<>&]/g,'');
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">'
+    +'<rect width="1080" height="1920" fill="'+esc(bg)+'"/>'
+    +'<text x="540" y="880" font-size="460" text-anchor="middle" dominant-baseline="central">'+icon+'</text>'
+    +'<text x="540" y="1280" font-size="88" fill="#ffffff" font-family="ui-monospace,Menlo,monospace" text-anchor="middle">'+esc(label)+'</text></svg>';
+  return 'data:image/svg+xml;utf8,'+encodeURIComponent(svg); }
+function rtbFallback(adValue){ if(!adValue||adValue==='auto') return;
+  rtbInject({ id:'rtb:ads:'+adValue, url:adsCard(adValue), type:'image',
+    title:'Anuncio · '+adValue, motor:'ads', category:'rtb', _adv:'catálogo' }, 20); }
 
 // ── PSEUDO-STREAMING: pre-descarga a la Cache API y reproduce DESDE DISCO ────────
 // El servidor manda la playlist (parrilla + segmento). Aquí cada pieza se DESCARGA
@@ -1528,6 +1572,53 @@ function startPositionBeat(){
   try{ navigator.geolocation.watchPosition(onGeo, ()=>{}, { enableHighAccuracy:true, maximumAge:30000, timeout:60000 }); }catch(_){}
 }
 
+/* ── DATOS DE TERCEROS COMO HECHOS XPL ───────────────────────────────────────
+ * Clima real (open-meteo, sin API key) y festivos (tabla ES 2026 + date.nager.at)
+ * alimentan los hechos rain/temperature/wind y holiday del motor XPL. Todo falla en
+ * SILENCIO: si un fetch cae, el motor sigue con sus valores por defecto y la emisión
+ * nunca se rompe. */
+// — CLIMA — cada 15 min con la geo de la pantalla (la que capta navigator.geolocation
+//   en _lastPos [lng,lat]; fallback Madrid). Setea window.__xplWeather {rain,temperature,wind}.
+function xplWeatherLoc(){ try{ if(Array.isArray(_lastPos)&&_lastPos.length===2&&isFinite(_lastPos[0])&&isFinite(_lastPos[1])) return { lat:_lastPos[1], lon:_lastPos[0] }; }catch(_){}
+  return { lat:40.4168, lon:-3.7038 }; }   // fallback: Madrid centro
+function fetchWeather(){
+  const L=xplWeatherLoc();
+  const u='https://api.open-meteo.com/v1/forecast?latitude='+L.lat+'&longitude='+L.lon+'&current=temperature_2m,precipitation,rain,wind_speed_10m';
+  fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{ if(!d||!d.current) return; const c=d.current;
+    const rainMm=(typeof c.rain==='number')?c.rain:0, precMm=(typeof c.precipitation==='number')?c.precipitation:0;
+    const kmh=(typeof c.wind_speed_10m==='number')?c.wind_speed_10m:0;
+    // El hecho `wind` es booleano (ver FACTS): "hace viento" = ráfaga apreciable (≥20 km/h).
+    // Se conserva windKmh por si alguna capa quiere el valor crudo.
+    window.__xplWeather={ rain:(rainMm>0||precMm>0), temperature:(typeof c.temperature_2m==='number'?c.temperature_2m:20), wind:(kmh>=20), windKmh:kmh };
+    try{ if(window.XPLCanal&&XPLCanal.tick) XPLCanal.tick(); }catch(_){}   // re-evalúa con el clima fresco
+  }).catch(()=>{});   // sin red / bloqueo → silencio; los hechos usan sus defaults
+}
+setTimeout(fetchWeather, 4000); setInterval(fetchWeather, 15*60*1000);
+// — FESTIVOS — hecho `holiday` real. Tabla embebida (fallback offline) de los 10 festivos
+//   NACIONALES ES 2026 (verificados contra date.nager.at, global:true) + fetch anual
+//   cacheado en localStorage. Nota: Jueves Santo/Lunes de Pascua NO son nacionales (regionales).
+const ES_HOLIDAYS_2026=['2026-01-01','2026-01-06','2026-04-03','2026-05-01','2026-08-15','2026-10-12','2026-11-01','2026-12-06','2026-12-08','2026-12-25'];
+let _holidaySet=null;
+function todayMadridISO(){ try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); }
+  catch(_){ return new Date().toISOString().slice(0,10); } }
+function holidaySet(){ if(_holidaySet) return _holidaySet;
+  let s=new Set(ES_HOLIDAYS_2026);
+  try{ const c=JSON.parse(localStorage.getItem('adtv_holidays')||'null');
+    if(c&&Array.isArray(c.dates)&&c.dates.length&&c.year===new Date().getFullYear()) s=new Set(c.dates); }catch(_){}
+  _holidaySet=s; return s; }
+function isHolidayToday(){ try{ return holidaySet().has(todayMadridISO()); }catch(_){ return false; } }
+function fetchHolidays(){ const y=new Date().getFullYear();
+  fetch('https://date.nager.at/api/v3/PublicHolidays/'+y+'/ES',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+    if(!Array.isArray(d)||!d.length) return;
+    const dates=d.filter(h=>h&&h.global===true&&h.date).map(h=>h.date);   // solo festivos NACIONALES
+    if(!dates.length) return;
+    try{ localStorage.setItem('adtv_holidays', JSON.stringify({ year:y, dates })); }catch(_){}
+    _holidaySet=new Set(dates);
+    try{ if(window.XPLCanal&&XPLCanal.tick) XPLCanal.tick(); }catch(_){}
+  }).catch(()=>{});   // sin red → se queda la tabla embebida
+}
+setTimeout(fetchHolidays, 6000);
+
 /* ── MOTOR CONDICIONAL XPL EN EL CANAL ───────────────────────────────────────
  * El motor (xpl-runtime.js) corre LOCAL: lee HECHOS (reloj real + cámara + clima
  * opcional), evalúa las reglas y, vía la acción showContent, fija la INTENCIÓN de
@@ -1561,16 +1652,57 @@ const XPLCanal = (function(){
         case 'viewers':     { const c=camFresh(); return c?c.faces:0; }
         case 'audGender':   { const c=camFresh(); return c?(c.gender==='m'?'male':c.gender==='f'?'female':'mixed'):'none'; }
         case 'audAge':      { const c=camFresh(); return c?(c.age||'adulto'):'none'; }
-        case 'holiday':     return false;
+        case 'holiday':     return (typeof isHolidayToday==='function') ? isHolidayToday() : false;
       }
       return 0;
     },
     npcs(){ return []; },
     act(id, value){
-      // En el canal solo importa showContent: fija la categoría/intención del Stock.
-      if(id==='showContent'){ want.category = (value && value!=='auto') ? value : 'all'; }
+      // showContent → fija la categoría/intención del Stock (contenido real).
+      if(id==='showContent'){ want.category = (value && value!=='auto') ? value : 'all'; return; }
+      // showAd → costura al motor programático (RTB); creativo temporal + fallback ADS.
+      if(id==='showAd'){ requestRtbAd(value); return; }
     }
   };
+
+  // — Segmento vivo para el RTB: cámara (si hay) manda sobre el segmento fijado —
+  function segForRtb(){
+    const cs=camSeg();
+    const aud = cs.gender==='m' ? 'male' : cs.gender==='f' ? 'female'
+              : (seg && seg.audience && seg.audience!=='all') ? seg.audience : 'all';
+    const age = cs.age || ((seg && seg.age && seg.age!=='all') ? seg.age : 'all');
+    const cat = (want && want.category && want.category!=='all') ? want.category
+              : ((seg && seg.category && seg.category!=='all') ? seg.category : 'all');
+    const slot = cs.slot || (typeof madridSlot==='function' ? madridSlot() : '');
+    return { audience:aud, age:age, category:cat, slot:slot };
+  }
+  let _rtbSig='', _rtbBusy=false;
+  function requestRtbAd(adValue){
+    if(!adValue || adValue==='auto') return;
+    const segd=segForRtb();
+    const sig=adValue+'|'+segd.audience+'|'+segd.age+'|'+segd.category+'|'+segd.slot;
+    const haveLive=(typeof rtbActive==='function') && rtbActive().length>0;
+    if(_rtbBusy) return;
+    if(sig===_rtbSig && haveLive) return;   // ese anuncio ya está servido para ese segmento
+    _rtbSig=sig; _rtbBusy=true;
+    if(!RTB_ON){ _rtbBusy=false; rtbFallback(adValue); return; }   // ?rtb=0 → directo al fallback
+    let ctrl=null; try{ ctrl=new AbortController(); }catch(_){}
+    const to=setTimeout(()=>{ try{ ctrl&&ctrl.abort(); }catch(_){} }, 1500);   // 1500 ms tope
+    fetch(RTB_API,{ method:'POST', headers:{'Content-Type':'application/json'}, cache:'no-store',
+      signal: ctrl?ctrl.signal:undefined,
+      body: JSON.stringify({ screen:(scr&&scr.screen)||'', circuit:(scr&&scr.circuit)||'', segment:segd, floor:RTB_FLOOR }) })
+     .then(r=>r.ok?r.json():null)
+     .then(d=>{ clearTimeout(to); _rtbBusy=false;
+       if(d && d.ok && d.decision && d.decision.creativeUrl){
+         const dec=d.decision;
+         rtbInject({ id:'rtb:'+(dec.id||Date.now()), url:dec.creativeUrl, type:rtbType(dec),
+           title:dec.title||dec.advertiser||'Programático', motor:'rtb', category:'rtb',
+           _adv:dec.advertiser||'', _cpm:dec.cpm, _price:dec.price, _cur:dec.currency }, dec.ttlSec);
+         try{ flashCli('◆ RTB · '+(dec.advertiser||dec.title||'creativo')); }catch(_){}
+       } else { rtbFallback(adValue); }              // no_demand / ok:false / shape inválido
+     })
+     .catch(()=>{ clearTimeout(to); _rtbBusy=false; rtbFallback(adValue); });   // timeout / red caída
+  }
 
   function seeds(){
     return [
