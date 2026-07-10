@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+<script src="/auth-gate.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ADCELERATE · SIMULADOR — Kiosko Plaça de la Vila de Gràcia</title>
+  <meta name="description" content="Simulador en vivo del kiosko de prensa de la Plaça de la Vila de Gràcia (Barcelona): gente simulada, datos de terceros (clima, calendario, eventos) y decisión programática real en la pantalla lateral del kiosko.">
+  <meta name="theme-color" content="#070a10">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="canonical" href="https://admira.tv/adcelerate/simulador/">
+  <meta name="robots" content="noindex">
+  <style>
+    :root{
+      --bg:#070a10; --bg2:#0a0e15; --elev:#0c1018;
+      --border:#1c2738; --border2:#2a3850;
+      --text:#e8eef6; --dim:#aab6c6; --muted:#8a97a8;
+      --acc:#3df08a; --acc2:#38d6ff; --warn:#ffb454; --air:#ff4444; --vio:#c792ea;
+      --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+      --sans:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+      /* buckets demográficos */
+      --b-nino:#ffd166; --b-joven:#38d6ff; --b-adulto:#3df08a; --b-senior:#ffb454; --b-vejez:#c792ea;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%}
+    body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.45;-webkit-font-smoothing:antialiased;overflow:hidden}
+    /* scanlines CRT sutiles sobre TODO */
+    body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:9998;background:repeating-linear-gradient(0deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px);opacity:.55}
+    .mono{font-family:var(--mono)}
+    a{color:var(--acc2);text-decoration:none}
+
+    /* ============ ESCENA A PANTALLA COMPLETA ============ */
+    #scene{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;background:radial-gradient(120% 90% at 50% 0%,#0b1220,#060810)}
+
+    /* ============ TOPBAR OVERLAY con iconos cuadráticos ============ */
+    .topbar{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;gap:12px;
+      padding:9px 12px;background:linear-gradient(180deg,rgba(7,10,16,.86),rgba(7,10,16,.30) 78%,transparent);
+      -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+    .topbar .brand{font-family:var(--mono);font-weight:800;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--text);white-space:nowrap}
+    .topbar .brand b{color:var(--acc);text-shadow:0 0 12px rgba(61,240,138,.4)}
+    .topbar .sub{font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.05em;white-space:nowrap}
+    .topbar .center-ttl{flex:1;min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .topbar .live{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--air);border:1px solid var(--air);border-radius:999px;padding:3px 9px}
+    .topbar .live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--air);animation:blink 1.6s infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+    .cluster{display:flex;align-items:center;gap:7px}
+    .cluster.left{margin-right:auto}
+    .cluster.right{margin-left:auto}
+
+    /* icono cuadrático estilo portería/admira-bar */
+    .iconbtn{position:relative;width:40px;height:40px;border-radius:10px;border:1px solid var(--border2);
+      background:linear-gradient(180deg,#0d131d,#080b12);color:var(--dim);cursor:pointer;display:flex;
+      flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:.15s;padding:0}
+    .iconbtn:hover{border-color:var(--acc2);color:var(--text)}
+    .iconbtn.on{border-color:var(--acc);color:var(--acc);box-shadow:0 0 0 1px var(--acc),0 0 16px -2px rgba(61,240,138,.5);background:linear-gradient(180deg,#0e1a16,#081210)}
+    .iconbtn .gl{font-size:16px;line-height:1}
+    .iconbtn .lbl{font-family:var(--mono);font-size:7.5px;letter-spacing:.08em;text-transform:uppercase}
+    /* motivo 3-ventanas (patrón AdmiraNeXT) */
+    .winmark{display:flex;gap:2px}
+    .winmark i{width:6px;height:8px;border:1px solid currentColor;border-radius:1.5px;display:block;position:relative}
+    .winmark i::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:currentColor;opacity:.6}
+
+    /* ============ PANELES FLOTANTES (plegados por defecto) ============ */
+    .panel{position:fixed;z-index:55;width:300px;max-height:calc(100vh - 66px);overflow:hidden auto;
+      background:rgba(8,11,18,.90);-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);
+      border:1px solid var(--border2);border-radius:14px;
+      box-shadow:0 20px 60px -20px #000,0 0 0 1px rgba(56,214,255,.06);
+      display:none;animation:pin .16s ease}
+    .panel.open{display:block}
+    @keyframes pin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+    /* opciones a la izquierda, altura acotada para no tapar el kiosko ampliado (abajo-izq) */
+    #panel-opciones{top:54px;left:12px;max-height:calc(100vh - 200px)}
+    /* experto arriba-dcha y avanzado abajo-dcha: alturas acotadas para que AMBOS convivan sin solaparse */
+    #panel-experto{top:54px;right:12px;max-height:42vh}
+    #panel-avanzado{bottom:12px;right:12px;width:326px;max-height:44vh}
+    .panel::-webkit-scrollbar{width:8px}
+    .panel::-webkit-scrollbar-thumb{background:#1a2434;border-radius:8px}
+    .phead{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;padding:10px 13px;
+      background:linear-gradient(180deg,#0b1119,#0a0e15);border-bottom:1px solid var(--border);
+      font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc)}
+    .phead .x{margin-left:auto;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:2px 4px}
+    .phead .x:hover{color:var(--air)}
+
+    .grp{padding:13px 14px;border-bottom:1px solid var(--border)}
+    .grp:last-child{border-bottom:0}
+    .grp h3{margin:0 0 11px;font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--acc2);display:flex;align-items:center;gap:7px}
+    .grp h3::before{content:"▸";color:var(--acc);font-size:9px}
+
+    .fld{margin-bottom:12px}
+    .fld:last-child{margin-bottom:0}
+    .fld label{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--dim);font-weight:600;margin-bottom:6px}
+    .fld label b{color:var(--acc);font-family:var(--mono);font-variant-numeric:tabular-nums}
+    input[type=range]{width:100%;appearance:none;-webkit-appearance:none;height:5px;border-radius:99px;background:linear-gradient(90deg,var(--acc) var(--p,50%),#182236 var(--p,50%));outline-offset:3px;cursor:pointer}
+    input[type=range]::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--acc);border:3px solid #0a0e15;box-shadow:0 0 8px rgba(61,240,138,.5);cursor:pointer}
+    input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--acc);border:3px solid #0a0e15;cursor:pointer}
+    input[type=date]{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px 10px;font-family:var(--mono);font-size:12px}
+    select{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px 10px;font-family:var(--mono);font-size:12px;cursor:pointer}
+
+    .seg{display:flex;gap:4px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:3px}
+    .seg button{flex:1;border:0;background:transparent;color:var(--dim);font-family:var(--mono);font-size:11px;font-weight:700;padding:7px 4px;border-radius:6px;cursor:pointer;transition:.15s}
+    .seg button.on{background:var(--acc);color:#03140a;box-shadow:0 0 10px rgba(61,240,138,.3)}
+
+    .btnrow{display:flex;gap:7px}
+    .btn{flex:1;border:1px solid var(--border2);background:transparent;color:var(--text);font-family:var(--mono);font-size:12px;font-weight:700;padding:9px 6px;border-radius:8px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+    .btn:hover{border-color:var(--acc)}
+    .btn.on{background:var(--acc);color:#03140a;border-color:var(--acc)}
+
+    .simclock{font-family:var(--mono);font-size:30px;font-weight:800;text-align:center;color:var(--acc);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 16px rgba(61,240,138,.35);margin:2px 0 4px}
+    .simdate{font-family:var(--mono);font-size:11px;text-align:center;color:var(--muted);margin-bottom:12px}
+
+    /* ============ scene overlays (siempre visibles) ============ */
+    .scene-tag{position:fixed;top:56px;left:50%;transform:translateX(-50%);z-index:40;font-family:var(--mono);font-size:10.5px;color:var(--muted);background:rgba(7,10,16,.72);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);border:1px solid var(--border);border-radius:9px;padding:6px 12px;text-align:center;display:flex;gap:16px}
+    .scene-tag b{color:var(--acc);font-variant-numeric:tabular-nums}
+    .scene-tag .st-stat{display:inline-flex;flex-direction:column;line-height:1.25}
+    .scene-tag .st-k{font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+    .legend{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:40;display:flex;flex-wrap:wrap;justify-content:center;gap:9px 14px;background:rgba(7,10,16,.78);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);border:1px solid var(--border);border-radius:10px;padding:8px 13px;font-size:11px;color:var(--dim);max-width:min(92vw,560px)}
+    .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+    #ui-status{position:fixed;right:14px;top:56px;z-index:40;font-family:var(--mono);font-size:10px;color:var(--muted);background:rgba(7,10,16,.7);border:1px solid var(--border);border-radius:8px;padding:5px 9px}
+    /* cuando experto está abierto, empuja el status para no solaparse (lo maneja JS con clase) */
+    body.exp-open #ui-status{display:none}
+
+    /* ============ pantalla del kiosko ampliada (payoff, siempre visible) ============ */
+    .kiosk-float{position:fixed;left:12px;bottom:12px;z-index:45;display:flex;gap:12px;
+      background:rgba(8,11,18,.90);-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);
+      border:1px solid var(--border2);border-radius:13px;padding:11px;align-items:stretch;
+      box-shadow:0 18px 50px -20px #000;max-width:min(92vw,430px)}
+    .kscreen{flex:0 0 168px;aspect-ratio:16/9;border-radius:9px;border:1px solid var(--border2);background:#000;position:relative;overflow:hidden;box-shadow:0 0 0 4px #0d121b,0 10px 24px -12px #000,0 0 26px -8px rgba(61,240,138,.25)}
+    .kscreen .sig{position:absolute;top:6px;left:6px;z-index:3;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--air);color:var(--air);border-radius:999px;padding:2px 7px;font:700 8.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;background:rgba(7,10,16,.7)}
+    .kscreen .sig.stock{border-color:var(--warn);color:var(--warn)}
+    .kscreen .sig::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;animation:blink 1.6s infinite}
+    .kscreen video,.kscreen img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .kscreen .creative{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-start;padding:9px 9px 24px;background:radial-gradient(120% 80% at 30% 20%,rgba(61,240,138,.14),transparent 60%),linear-gradient(180deg,#0b1622,#060a10)}
+    .kscreen .creative.stock{background:radial-gradient(120% 80% at 30% 20%,rgba(255,180,84,.14),transparent 60%),linear-gradient(180deg,#1a140a,#0a0805)}
+    .kscreen .cr-adv{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--acc)}
+    .kscreen .creative.stock .cr-adv{color:var(--warn)}
+    .kscreen .cr-title{font-weight:800;font-size:12px;line-height:1.15;margin-top:3px;color:#fff;text-shadow:0 1px 6px #000}
+    .kscreen .cr-cap{position:absolute;left:0;right:0;bottom:0;z-index:2;background:linear-gradient(180deg,transparent,rgba(4,7,11,.92));padding:15px 8px 7px;font-family:var(--mono);font-size:8.5px;color:var(--dim)}
+    .kscreen .cr-cap b{color:var(--acc)}
+    .kside{flex:1;min-width:130px;display:flex;flex-direction:column;justify-content:center;gap:5px}
+    .kside .knm{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--acc2)}
+    .kside .kdesc{font-size:11px;color:var(--dim);line-height:1.4}
+    .kside .kdec{font-family:var(--mono);font-size:10.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:2px}
+    .kside .kdec b{color:var(--text);font-variant-numeric:tabular-nums}
+
+    /* ============ panel experto (hechos XPL) ============ */
+    .facts{display:flex;flex-direction:column;gap:1px;background:var(--border);border-radius:9px;overflow:hidden}
+    .fact{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--bg2);padding:7px 10px;font-family:var(--mono);font-size:11.5px}
+    .fact .k{color:var(--muted);letter-spacing:.03em}
+    .fact .v{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+    .fact .v.on{color:var(--acc)}
+    .fact .v.warn{color:var(--warn)}
+    .fact .v.hot{color:var(--air)}
+
+    /* ============ panel avanzado (segmentos + feed) ============ */
+    .bars{display:flex;flex-direction:column;gap:6px}
+    .bar{display:grid;grid-template-columns:60px 1fr 34px;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px}
+    .bar .bl{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .bar .bt{height:8px;border-radius:99px;background:#141c29;overflow:hidden}
+    .bar .bf{height:100%;border-radius:99px;transition:width .4s}
+    .bar .bn{text-align:right;color:var(--text);font-variant-numeric:tabular-nums}
+
+    .feed{display:flex;flex-direction:column;gap:6px;max-height:230px;overflow-y:auto}
+    .fitem{border:1px solid var(--border);border-left:3px solid var(--acc);border-radius:8px;padding:7px 9px;background:var(--bg2);animation:fin .3s ease}
+    .fitem.nod{border-left-color:var(--warn)}
+    .fitem.err{border-left-color:var(--air)}
+    @keyframes fin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+    .fitem .fh{display:flex;justify-content:space-between;gap:6px;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.04em}
+    .fitem .fadv{font-weight:800;font-size:12px;margin-top:2px;color:var(--text)}
+    .fitem .fmeta{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:2px;display:flex;flex-wrap:wrap;gap:3px 10px}
+    .fitem .fmeta b{color:var(--acc)}
+    .fitem.nod .fmeta b{color:var(--warn)}
+    .fitem .seg{background:none;border:0;padding:0;margin-top:3px}
+    .fseg{font-family:var(--mono);font-size:9.5px;color:var(--muted)}
+
+    .note{font-size:10.5px;color:var(--muted);line-height:1.5;margin-top:10px}
+    .note b{color:var(--dim)}
+
+    /* ============ responsive: paneles como hojas full-width ============ */
+    @media(max-width:640px){
+      .panel{left:8px!important;right:8px!important;width:auto!important;max-height:70vh}
+      #panel-experto,#panel-avanzado{top:auto;bottom:8px}
+      #panel-opciones{top:52px}
+      .kiosk-float{left:8px;right:8px;max-width:none}
+      .topbar .sub,.topbar .center-ttl{display:none}
+      .iconbtn{width:38px;height:38px}
+    }
+  </style>
+</head>
+<body>
+  <!-- ============ ESCENA A PANTALLA COMPLETA ============ -->
+  <canvas id="scene" aria-label="Simulación cenital de la plaza con peatones y el kiosko"></canvas>
+
+  <!-- ============ TOPBAR · fila de iconos cuadráticos ============ -->
+  <div class="topbar">
+    <div class="cluster left">
+      <button class="iconbtn" id="ic-opciones" aria-pressed="false" title="Modo opciones — reloj, velocidad, día, clima, densidad, evento">
+        <span class="winmark"><i></i><i></i><i></i></span>
+        <span class="lbl">Opciones</span>
+      </button>
+    </div>
+    <span class="brand center-ttl">ADCELERATE · <b>SIMULADOR</b> <span class="sub">— Kiosko Plaça de la Vila de Gràcia · 08012 Barcelona</span></span>
+    <div class="cluster right">
+      <span class="live">RTB live</span>
+      <button class="iconbtn" id="ic-avanzado" aria-pressed="false" title="Opciones avanzadas — audiencia por segmento y feed RTB con precios">
+        <span class="gl">◫</span><span class="lbl">Avanzado</span>
+      </button>
+      <button class="iconbtn" id="ic-experto" aria-pressed="false" title="Modo experto — hechos en vivo estilo XPL">
+        <span class="gl">⚙</span><span class="lbl">Experto</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- overlays siempre visibles sobre la escena -->
+  <div class="scene-tag">
+    <span class="st-stat"><span class="st-k">audiencia</span><b id="ui-viewers">0</b></span>
+    <span class="st-stat"><span class="st-k">en la plaza</span><b id="ui-pop">0</b></span>
+  </div>
+  <div id="ui-status">iniciando…</div>
+  <div class="legend">
+    <span><i style="background:var(--b-nino)"></i>0–14</span>
+    <span><i style="background:var(--b-joven)"></i>15–24</span>
+    <span><i style="background:var(--b-adulto)"></i>25–64</span>
+    <span><i style="background:var(--b-senior)"></i>65–74</span>
+    <span><i style="background:var(--b-vejez)"></i>75+</span>
+    <span style="color:var(--acc2)">▲ kiosko News &amp; Coffee</span>
+    <span style="color:var(--acc)">▮ cono de influencia = audiencia</span>
+  </div>
+
+  <!-- pantalla del kiosko ampliada (payoff) -->
+  <div class="kiosk-float">
+    <div class="kscreen" id="kscreen">
+      <span class="sig" id="ksig">On air</span>
+      <div class="creative" id="kcreative">
+        <div class="cr-adv" id="cr-adv">esperando decisión…</div>
+        <div class="cr-title" id="cr-title">Pantalla lateral del kiosko</div>
+      </div>
+    </div>
+    <div class="kside">
+      <div class="knm">News &amp; Coffee · pantalla lateral</div>
+      <div class="kdesc" id="ui-kdesc">El segmento dominante dispara una decisión programática real contra <span class="mono">api.admira.store</span>.</div>
+      <div class="kdec" id="ui-kdec">
+        <span>segmento <b id="ui-segd">—</b></span>
+        <span>slot <b id="ui-slotd">—</b></span>
+        <span>CPM <b id="ui-cpmd">—</b></span>
+        <span>precio <b id="ui-priced">—</b></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PANEL OPCIONES (izquierda) ============ -->
+  <div class="panel" id="panel-opciones">
+    <div class="phead">Modo opciones <button class="x" data-close="ic-opciones" aria-label="Cerrar">✕</button></div>
+    <div class="grp">
+      <h3>Reloj de simulación</h3>
+      <div class="simclock" id="ui-clock">--:--</div>
+      <div class="simdate" id="ui-date">—</div>
+      <div class="fld">
+        <label><span>Hora del día</span><b id="ui-hourv">—</b></label>
+        <input type="range" id="ctl-hour" min="0" max="1439" step="1" value="720" aria-label="Hora del día">
+      </div>
+      <div class="btnrow" style="margin-bottom:10px">
+        <button class="btn" id="ctl-play">⏸ Pausa</button>
+        <button class="btn" id="ctl-now" title="Volver a la hora real de Madrid">⌖ Ahora</button>
+      </div>
+      <label style="font-size:12px;color:var(--dim);font-weight:600;margin-bottom:6px;display:block">Velocidad</label>
+      <div class="seg" id="ctl-speed">
+        <button data-s="1">×1</button>
+        <button data-s="60" class="on">×60</button>
+        <button data-s="600">×600</button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <h3>Fecha y contexto</h3>
+      <div class="fld">
+        <label><span>Día simulado</span></label>
+        <input type="date" id="ctl-date" value="2026-07-10" min="2026-01-01" max="2026-12-31">
+      </div>
+      <div class="fld">
+        <label><span>Evento (override)</span></label>
+        <select id="ctl-event">
+          <option value="auto">Automático (según fecha)</option>
+          <option value="none">Sin evento</option>
+          <option value="festaMajor">Festa Major de Gràcia (×3)</option>
+          <option value="sanJordi">Sant Jordi (×2,5)</option>
+          <option value="holiday">Festivo genérico (×1,3)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grp">
+      <h3>Clima (dato de tercero)</h3>
+      <div class="fld">
+        <label><span>Fuente</span></label>
+        <select id="ctl-weather">
+          <option value="live">En vivo · open-meteo</option>
+          <option value="rain">Forzar lluvia</option>
+          <option value="dry">Forzar seco</option>
+        </select>
+      </div>
+      <div class="fld" id="ctl-tempwrap" style="display:none">
+        <label><span>Temperatura</span><b id="ui-tempv">22°C</b></label>
+        <input type="range" id="ctl-temp" min="-2" max="42" step="1" value="22" aria-label="Temperatura">
+      </div>
+    </div>
+
+    <div class="grp">
+      <h3>Afluencia</h3>
+      <div class="fld">
+        <label><span>Densidad</span><b id="ui-densv">1,0×</b></label>
+        <input type="range" id="ctl-dens" min="0.3" max="2" step="0.1" value="1" aria-label="Densidad">
+      </div>
+      <p class="note" style="margin:0">Base = <b>footfallModel</b> por hora y tipo de día × multiplicadores (lluvia 0,4 · festivo 1,3 · Festa Major 3 · Sant Jordi 2,5 · temp. extrema 0,7). Modelo razonado sobre patrón de plaza de barrio de Gràcia, no aforo medido.</p>
+    </div>
+  </div>
+
+  <!-- ============ PANEL AVANZADO (derecha-abajo) ============ -->
+  <div class="panel" id="panel-avanzado">
+    <div class="phead">Opciones avanzadas <button class="x" data-close="ic-avanzado" aria-label="Cerrar">✕</button></div>
+    <div class="grp">
+      <h3>Audiencia por segmento</h3>
+      <div class="bars" id="bars"></div>
+    </div>
+    <div class="grp">
+      <h3>Feed de decisiones RTB</h3>
+      <div class="feed" id="feed"></div>
+      <p class="note"><b>Decisión real</b> contra <span class="mono">api.admira.store/rtb/decide</span> (subasta second-price). Sin demanda para el segmento → <b style="color:var(--warn)">fallback del Stock</b>. Throttle 10 s reales por cambio de segmento.</p>
+    </div>
+  </div>
+
+  <!-- ============ PANEL EXPERTO (derecha-arriba) ============ -->
+  <div class="panel" id="panel-experto">
+    <div class="phead">Modo experto · hechos XPL <button class="x" data-close="ic-experto" aria-label="Cerrar">✕</button></div>
+    <div class="grp">
+      <h3>Hechos en vivo · estilo XPL</h3>
+      <div class="facts">
+        <div class="fact"><span class="k">hour</span><span class="v" id="f-hour">—</span></div>
+        <div class="fact"><span class="k">dayPart</span><span class="v" id="f-daypart">—</span></div>
+        <div class="fact"><span class="k">weekend</span><span class="v" id="f-weekend">—</span></div>
+        <div class="fact"><span class="k">holiday</span><span class="v" id="f-holiday">—</span></div>
+        <div class="fact"><span class="k">event</span><span class="v" id="f-event">—</span></div>
+        <div class="fact"><span class="k">rain</span><span class="v" id="f-rain">—</span></div>
+        <div class="fact"><span class="k">temperature</span><span class="v" id="f-temp">—</span></div>
+        <div class="fact"><span class="k">wind</span><span class="v" id="f-wind">—</span></div>
+        <div class="fact"><span class="k">footfallIdx</span><span class="v" id="f-idx">—</span></div>
+        <div class="fact"><span class="k">viewers</span><span class="v" id="f-viewers">—</span></div>
+        <div class="fact"><span class="k">audGender</span><span class="v" id="f-gender">—</span></div>
+        <div class="fact"><span class="k">audAge</span><span class="v" id="f-age">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  "use strict";
+  /* ============================================================
+     DATAPACK EMBEBIDO — Plaça de la Vila de Gràcia (verificado por infraNeo)
+     Fuentes: gencat/ajuntament (festivos), irbarcelona (Festa Major),
+     open-meteo (clima vivo), Observatori Districtes Gràcia 2024 (demografía),
+     corner.inc (kiosko News & Coffee). Modelos de afluencia/demografía razonados.
+     ============================================================ */
+  var DATA = {
+    geo:{ place:"Plaça de la Vila de Gràcia, 08012 Barcelona", lat:41.4004, lon:2.1576, tz:"Europe/Madrid" },
+    weatherUrl:"https://api.open-meteo.com/v1/forecast?latitude=41.4004&longitude=2.1576&current=temperature_2m,precipitation,rain,wind_speed_10m&timezone=Europe%2FMadrid",
+    kiosk:{ name:"News & Coffee", address:"Plaça de la Vila de Gràcia, 14" },
+    holidays2026:{
+      "2026-01-01":"Cap d'Any","2026-01-06":"Reis","2026-04-03":"Divendres Sant",
+      "2026-04-06":"Dilluns de Pasqua","2026-05-01":"Festa del Treball","2026-05-25":"Pasqua Granada",
+      "2026-06-24":"Sant Joan","2026-08-15":"L'Assumpció","2026-09-11":"Diada de Catalunya",
+      "2026-09-24":"La Mercè","2026-10-12":"Festa Nacional","2026-12-08":"La Immaculada",
+      "2026-12-25":"Nadal","2026-12-26":"Sant Esteve"
+    },
+    events:{
+      festaMajor:{ start:"2026-08-15", end:"2026-08-21", mult:3.0, label:"Festa Major de Gràcia" },
+      sanJordi:{ date:"2026-04-23", mult:2.5, label:"Sant Jordi" }
+    },
+    footfall:{
+      weekday:[5,3,2,2,2,3,8,20,35,40,45,55,70,85,80,55,50,55,70,85,90,75,45,20],
+      saturday:[15,10,8,5,3,3,5,10,20,35,50,65,80,85,75,60,55,60,75,88,95,90,70,45],
+      sunday:[10,5,3,2,2,2,3,5,10,20,40,65,85,95,80,55,45,40,45,50,45,35,25,12],
+      mult:{ rain:0.4, holiday:1.3, festaMajor:3.0, sanJordi:2.5, extremeTemp:0.7 }
+    },
+    /* buckets [0-14,15-24,25-64,65-74,75+] % por franja */
+    daypart:{
+      manana:{ h:[7,11], mix:[12,7,48,18,15] },
+      mediodia:{ h:[12,15], mix:[11,9,55,14,11] },
+      tarde:{ h:[16,19], mix:[14,12,52,12,10] },
+      noche:{ h:[20,23], mix:[4,14,68,9,5] },
+      madrugada:{ h:[0,6], mix:[2,10,70,10,8] }
+    },
+    sexByBucket:[ {f:49,m:51},{f:50,m:50},{f:51,m:49},{f:55,m:45},{f:60,m:40} ]
+  };
+  var BUCKETS=["nino_0_14","joven_15_24","adulto_25_64","senior_65_74","vejez_75_mas"];
+  var BUCKET_LABEL=["0–14","15–24","25–64","65–74","75+"];
+  var BUCKET_COLOR=["#ffd166","#38d6ff","#3df08a","#ffb454","#c792ea"];
+
+  /* ============================================================
+     ESTADO
+     ============================================================ */
+  var S={
+    playing:true, speed:60, simMin:720, // minutos desde 00:00
+    date:"2026-07-10",
+    eventOverride:"auto", weatherMode:"live", tempOverride:22, density:1,
+    weather:{ temp:22, rain:0, precip:0, wind:6, loaded:false },
+    reduce: window.matchMedia && matchMedia("(prefers-reduced-motion:reduce)").matches
+  };
+
+  /* ============================================================
+     CANVAS · ESCENA CENITAL LIGERAMENTE ISOMÉTRICA
+     ============================================================ */
+  var cv=document.getElementById("scene"), ctx=cv.getContext("2d");
+  var W=0,H=0,DPR=Math.min(window.devicePixelRatio||1,2);
+  var PZ={}; // geometría de la plaza en px (se recalcula en resize)
+
+  function layout(){
+    W=cv.clientWidth; H=cv.clientHeight;
+    cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+    var cx=W*0.5, cy=H*0.5;
+    var pw=Math.min(W*0.78,760), ph=Math.min(H*0.72,470);
+    PZ={
+      cx:cx, cy:cy, w:pw, h:ph,
+      x0:cx-pw/2, y0:cy-ph/2, x1:cx+pw/2, y1:cy+ph/2,
+      // torre del reloj (centro-ligeramente arriba)
+      tower:{x:cx-pw*0.06, y:cy-ph*0.10},
+      // kiosko en lateral derecho
+      kiosk:{x:cx+pw*0.30, y:cy+ph*0.16, w:44, h:30},
+    };
+    // pantalla lateral del kiosko + cono de influencia (mira hacia el centro-izq)
+    var k=PZ.kiosk;
+    PZ.screen={ x:k.x-k.w*0.5-6, y:k.y-4, w:7, h:20, dir:-1 };
+    // bocacalles (salidas de la plaza)
+    PZ.exits=[
+      {x:PZ.x0, y:cy-ph*0.20}, {x:PZ.x0, y:cy+ph*0.25},
+      {x:PZ.x1, y:cy-ph*0.30}, {x:cx-pw*0.25, y:PZ.y0}, {x:cx+pw*0.15, y:PZ.y0},
+      {x:cx-pw*0.30, y:PZ.y1}, {x:cx+pw*0.28, y:PZ.y1}
+    ];
+    // terrazas (zonas donde la gente se sienta) — puntos con capacidad
+    PZ.terraces=[
+      {x:cx-pw*0.30, y:cy+ph*0.05}, {x:cx-pw*0.05, y:cy+ph*0.30},
+      {x:cx+pw*0.10, y:cy-ph*0.28}, {x:cx-pw*0.34, y:cy-ph*0.20}
+    ];
+  }
+
+  /* cono de influencia de la pantalla (polígono) */
+  function conePoly(){
+    var sc=PZ.screen, k=PZ.kiosk;
+    var ox=sc.x, oy=sc.y+sc.h/2; // origen: centro de la pantalla
+    var reach=Math.min(PZ.w,PZ.h)*0.42;
+    var spread=reach*0.55;
+    // apunta hacia -x (izquierda) y ligeramente hacia el centro
+    var dirx=-1, diry=-0.15;
+    var nl=Math.hypot(dirx,diry); dirx/=nl; diry/=nl;
+    var px=-diry, py=dirx; // perpendicular
+    var fx=ox+dirx*reach, fy=oy+diry*reach;
+    return {
+      ox:ox, oy:oy,
+      p1:[fx+px*spread, fy+py*spread],
+      p2:[fx-px*spread, fy-py*spread],
+      dirx:dirx, diry:diry, reach:reach, spread:spread, fx:fx, fy:fy
+    };
+  }
+  function inCone(x,y,c){
+    // test punto en triángulo (ox,oy)-(p1)-(p2)
+    function sign(ax,ay,bx,by,cx,cy){return (ax-cx)*(by-cy)-(bx-cx)*(ay-cy);}
+    var d1=sign(x,y,c.ox,c.oy,c.p1[0],c.p1[1]);
+    var d2=sign(x,y,c.p1[0],c.p1[1],c.p2[0],c.p2[1]);
+    var d3=sign(x,y,c.p2[0],c.p2[1],c.ox,c.oy);
+    var neg=(d1<0)||(d2<0)||(d3<0), pos=(d1>0)||(d2>0)||(d3>0);
+    return !(neg&&pos);
+  }
+
+  /* ============================================================
+     AGENTES (peatones)
+     ============================================================ */
+  var agents=[];
+  var idSeq=0;
+  function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
+  function sampleBucket(mix){
+    var r=Math.random()*100, acc=0;
+    for(var i=0;i<mix.length;i++){ acc+=mix[i]; if(r<=acc) return i; }
+    return mix.length-1;
+  }
+  function currentDaypart(){
+    var h=Math.floor(S.simMin/60);
+    for(var k in DATA.daypart){ var d=DATA.daypart[k]; if(h>=d.h[0]&&h<=d.h[1]) return k; }
+    return "madrugada";
+  }
+  function spawnAgent(){
+    var dp=DATA.daypart[currentDaypart()];
+    var b=sampleBucket(dp.mix);
+    var sx=DATA.sexByBucket[b];
+    var gender=Math.random()*100<sx.f?"f":"m";
+    var entry=pick(PZ.exits);
+    var a={
+      id:++idSeq, bucket:b, gender:gender,
+      x:entry.x, y:entry.y,
+      tx:0, ty:0, sp:0.35+Math.random()*0.55,
+      state:"walk", sit:0, leaving:false, life:0,
+      inCone:false
+    };
+    // decide plan: pasear a terraza y sentarse, o cruzar y salir
+    a.plan = Math.random()<0.5 ? "sit":"cross";
+    retarget(a);
+    agents.push(a);
+  }
+  function retarget(a){
+    if(a.leaving){ var e=pick(PZ.exits); a.tx=e.x; a.ty=e.y; return; }
+    if(a.plan==="sit" && a.state!=="sitting"){
+      var t=pick(PZ.terraces); a.tx=t.x+(Math.random()-0.5)*30; a.ty=t.y+(Math.random()-0.5)*30;
+    } else {
+      // deambular por la plaza (con sesgo a pasar cerca del kiosko/cono a veces)
+      if(Math.random()<0.45){
+        var c=conePoly(); a.tx=(c.ox+c.fx)/2+(Math.random()-0.5)*c.spread; a.ty=(c.oy+c.fy)/2+(Math.random()-0.5)*c.spread;
+      } else {
+        a.tx=PZ.x0+20+Math.random()*(PZ.w-40); a.ty=PZ.y0+20+Math.random()*(PZ.h-40);
+      }
+    }
+  }
+
+  /* densidad objetivo de población según footfall × multiplicadores */
+  function dayType(){
+    var d=new Date(S.date+"T00:00:00");
+    var g=d.getDay(); // 0=dom
+    if(g===0) return "sunday"; if(g===6) return "saturday"; return "weekday";
+  }
+  function activeEvent(){
+    if(S.eventOverride!=="auto") return S.eventOverride==="none"?null:S.eventOverride;
+    var d=S.date;
+    var fm=DATA.events.festaMajor;
+    if(d>=fm.start && d<=fm.end) return "festaMajor";
+    if(d===DATA.events.sanJordi.date) return "sanJordi";
+    if(DATA.holidays2026[d]) return "holiday";
+    return null;
+  }
+  function effTemp(){
+    if(S.weatherMode==="live") return S.weather.temp;
+    return S.tempOverride;
+  }
+  function isRain(){
+    if(S.weatherMode==="rain") return true;
+    if(S.weatherMode==="dry") return false;
+    return S.weather.precip>0.1 || S.weather.rain>0.1;
+  }
+  function footfallIndex(){
+    var h=Math.floor(S.simMin/60);
+    var arr=DATA.footfall[dayType()];
+    // interpolación lineal entre horas
+    var h2=(h+1)%24, frac=(S.simMin%60)/60;
+    return arr[h]*(1-frac)+arr[h2]*frac;
+  }
+  function multProduct(){
+    var m=1, mm=DATA.footfall.mult;
+    if(isRain()) m*=mm.rain;
+    var ev=activeEvent();
+    if(ev==="festaMajor") m*=mm.festaMajor;
+    else if(ev==="sanJordi") m*=mm.sanJordi;
+    else if(ev==="holiday") m*=mm.holiday;
+    var t=effTemp();
+    if(t<8||t>32) m*=mm.extremeTemp;
+    return m;
+  }
+  function desiredPop(){
+    var base=60; // población a índice 100, mult 1, densidad 1
+    var p=base*(footfallIndex()/100)*multProduct()*S.density;
+    return Math.max(0, Math.min(160, Math.round(p)));
+  }
+
+  /* ============================================================
+     AUDIENCIA · segmento dominante (ventana ~30s sim con decaimiento)
+     ============================================================ */
+  var segScore={}; // clave "gender|bucketIdx" -> score
+  var viewersNow=0;
+  function segKey(g,b){ return g+"|"+b; }
+  function decayScores(dtSimSec){
+    var k=Math.pow(0.5, dtSimSec/15); // vida media 15s sim
+    for(var key in segScore){ segScore[key]*=k; if(segScore[key]<0.01) delete segScore[key]; }
+  }
+  function dominantSegment(){
+    var best=null, bv=0, totF=0, totM=0, byBucket=[0,0,0,0,0];
+    for(var key in segScore){
+      var v=segScore[key]; var parts=key.split("|"); var g=parts[0], b=+parts[1];
+      byBucket[b]+=v; if(g==="f")totF+=v; else totM+=v;
+      if(v>bv){ bv=v; best=key; }
+    }
+    if(!best) return null;
+    var bp=best.split("|");
+    // género dominante global, edad dominante global
+    var domB=0,dbv=0; for(var i=0;i<5;i++){ if(byBucket[i]>dbv){dbv=byBucket[i];domB=i;} }
+    var domG=totF>=totM?"f":"m";
+    return { gender:domG, bucketIdx:domB, byBucket:byBucket, totF:totF, totM:totM };
+  }
+
+  /* ============================================================
+     RTB · decisión real (throttle 10s reales por cambio de segmento)
+     ============================================================ */
+  var lastSegSig=null, lastDecideAt=0, deciding=false, currentDecision=null, currentIsStock=false;
+  var stockCache=null, stockIdx=0;
+  function slotFromHour(){
+    var h=Math.floor(S.simMin/60);
+    if(h>=7&&h<=11) return "manana";
+    if(h>=12&&h<=15) return "mediodia";
+    if(h>=16&&h<=19) return "tarde";
+    return "noche";
+  }
+  function maybeDecide(){
+    var dom=dominantSegment();
+    if(!dom){ return; }
+    var slot=slotFromHour();
+    var sig=dom.gender+"|"+BUCKETS[dom.bucketIdx]+"|"+slot;
+    var now=Date.now();
+    if(sig===lastSegSig && (now-lastDecideAt)<10000) return; // sin cambio → respeta ttl visual
+    if(deciding) return;
+    if(sig!==lastSegSig || (now-lastDecideAt)>=10000){
+      lastSegSig=sig; lastDecideAt=now; deciding=true;
+      decide(dom.gender, BUCKETS[dom.bucketIdx], slot);
+    }
+  }
+  function decide(aud,age,slot){
+    var body={ screen:"sim-gracia-kiosko", circuit:"sim-gracia", segment:{audience:aud,age:age,slot:slot}, floor:0 };
+    fetch("https://api.admira.store/rtb/decide",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        deciding=false;
+        if(j&&j.ok&&j.decision){ applyDecision(j.decision, {aud:aud,age:age,slot:slot}); }
+        else { applyNoDemand({aud:aud,age:age,slot:slot}, j&&j.reason||"no_demand"); }
+      })
+      .catch(function(err){ deciding=false; applyError({aud:aud,age:age,slot:slot}); });
+  }
+  function segHuman(aud,age){
+    var idx=BUCKETS.indexOf(age); var lab=idx>=0?BUCKET_LABEL[idx]:age;
+    return (aud==="f"?"♀":aud==="m"?"♂":"◎")+" "+lab;
+  }
+  function applyDecision(d, seg){
+    currentDecision=d; currentIsStock=false;
+    renderCreative(d,false,seg);
+    updateKdec(seg, d.cpm, d.price, d.currency);
+    pushFeed("ok", d, seg);
+  }
+  function applyNoDemand(seg, reason){
+    currentIsStock=true;
+    var it=nextStock();
+    renderStock(it, seg, false);
+    updateKdec(seg, null, null, null);
+    pushFeed("nod", {reason:reason, stock:it}, seg);
+  }
+  function applyError(seg){
+    currentIsStock=true;
+    var it=nextStock();
+    renderStock(it, seg, true);
+    updateKdec(seg, null, null, null);
+    pushFeed("err", {stock:it}, seg);
+  }
+  function ensureStock(){
+    if(stockCache) return Promise.resolve(stockCache);
+    return fetch("https://api.admira.store/stock/list").then(function(r){return r.json();})
+      .then(function(j){ stockCache=(j&&j.items)||[]; return stockCache; }).catch(function(){ stockCache=[]; return []; });
+  }
+  function nextStock(){
+    if(!stockCache||!stockCache.length) return null;
+    var it=stockCache[stockIdx%stockCache.length]; stockIdx++; return it;
+  }
+
+  /* ---- render pantalla del kiosko ---- */
+  var kcreative=document.getElementById("kcreative"), ksig=document.getElementById("ksig");
+  function decodeEnt(s){ var t=document.createElement("textarea"); t.innerHTML=s||""; return t.value; }
+  function renderCreative(d,isStock,seg){
+    ksig.textContent="On air"; ksig.classList.remove("stock");
+    var title=decodeEnt(d.title||"Creativo");
+    var priceTxt=(d.price!=null?d.price.toFixed(2).replace(".",","):"—")+" "+(d.currency||"EUR");
+    kcreative.className="creative";
+    kcreative.innerHTML=
+      '<div class="cr-adv" id="cr-adv">'+esc(d.advertiser||"Anunciante")+'</div>'+
+      '<div class="cr-title" id="cr-title">'+esc(title)+'</div>'+
+      '<div class="cr-cap">PROGRAMÁTICA · second-price · <b>'+priceTxt+'</b> · CPM '+(d.cpm!=null?String(d.cpm).replace(".",","):"—")+' · '+segHuman(seg.aud,seg.age)+'</div>';
+    // intenta cargar el creativo real (video) por encima; si falla se queda la card
+    tryMedia(d.creativeUrl);
+  }
+  function renderStock(it,seg,isErr){
+    ksig.textContent=isErr?"fallback":"sin demanda"; ksig.classList.add("stock");
+    var title=it?decodeEnt(it.title):"Contenido de continuidad";
+    kcreative.className="creative stock";
+    kcreative.innerHTML=
+      '<div class="cr-adv">STOCK · '+(isErr?"error RTB":"sin demanda programática")+'</div>'+
+      '<div class="cr-title">'+esc(title)+'</div>'+
+      '<div class="cr-cap">CONTINUIDAD · sin puja para '+segHuman(seg.aud,seg.age)+' · slot '+seg.slot+'</div>';
+    if(it&&it.url) tryMedia(it.url);
+  }
+  function tryMedia(url){
+    if(!url||url==="x") return;
+    var v=document.createElement("video");
+    v.muted=true; v.autoplay=true; v.loop=true; v.playsInline=true; v.setAttribute("playsinline","");
+    v.style.zIndex="1";
+    v.onerror=function(){ try{v.remove();}catch(e){} };
+    v.oncanplay=function(){ v.play().catch(function(){}); };
+    v.src=url;
+    // insertar detrás de los textos (que tienen z-index 2 vía cr-cap; subo adv/title)
+    kcreative.insertBefore(v, kcreative.firstChild);
+    // asegurar que textos queden legibles
+    var adv=kcreative.querySelector(".cr-adv"), tit=kcreative.querySelector(".cr-title");
+    if(adv){adv.style.position="relative";adv.style.zIndex="2";}
+    if(tit){tit.style.position="relative";tit.style.zIndex="2";tit.style.textShadow="0 1px 8px #000";}
+  }
+  function esc(s){ return String(s==null?"":s).replace(/[<>&]/g,function(c){return{"<":"&lt;",">":"&gt;","&":"&amp;"}[c];}); }
+
+  function updateKdec(seg,cpm,price,cur){
+    document.getElementById("ui-segd").textContent=segHuman(seg.aud,seg.age);
+    document.getElementById("ui-slotd").textContent=seg.slot;
+    document.getElementById("ui-cpmd").textContent=cpm!=null?(String(cpm).replace(".",",")+" €"):"—";
+    document.getElementById("ui-priced").textContent=price!=null?(price.toFixed(2).replace(".",",")+" "+(cur||"EUR")):"—";
+  }
+
+  /* ---- feed RTB ---- */
+  var feedEl=document.getElementById("feed");
+  function pushFeed(kind, payload, seg){
+    var t=new Date().toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+    var el=document.createElement("div");
+    el.className="fitem"+(kind==="nod"?" nod":kind==="err"?" err":"");
+    var segTxt=segHuman(seg.aud,seg.age)+" · "+seg.slot;
+    if(kind==="ok"){
+      var d=payload;
+      var priceTxt=(d.price!=null?d.price.toFixed(2).replace(".",","):"—")+" "+(d.currency||"EUR");
+      el.innerHTML='<div class="fh"><span>'+t+' · WIN</span><span>'+(d.medio||"")+'</span></div>'+
+        '<div class="fadv">'+esc(d.advertiser||"—")+'</div>'+
+        '<div class="fmeta"><span>CPM <b>'+String(d.cpm).replace(".",",")+'€</b></span><span>precio <b>'+priceTxt+'</b></span><span>second-price</span></div>'+
+        '<div class="fseg">'+segTxt+'</div>';
+    } else if(kind==="nod"){
+      el.innerHTML='<div class="fh"><span>'+t+' · NO DEMAND</span><span>stock</span></div>'+
+        '<div class="fadv" style="color:var(--warn)">Sin puja</div>'+
+        '<div class="fmeta"><span><b>fallback continuidad</b></span></div>'+
+        '<div class="fseg">'+segTxt+'</div>';
+    } else {
+      el.innerHTML='<div class="fh"><span>'+t+' · ERROR</span><span>stock</span></div>'+
+        '<div class="fadv" style="color:var(--air)">Error de red RTB</div>'+
+        '<div class="fmeta"><span><b>fallback continuidad</b></span></div>'+
+        '<div class="fseg">'+segTxt+'</div>';
+    }
+    feedEl.insertBefore(el, feedEl.firstChild);
+    while(feedEl.children.length>16) feedEl.removeChild(feedEl.lastChild);
+  }
+
+  /* ============================================================
+     RENDER ESCENA
+     ============================================================ */
+  function drawPlaza(){
+    ctx.clearRect(0,0,W,H);
+    // suelo de la plaza
+    ctx.fillStyle="#0c1420";
+    roundRect(PZ.x0,PZ.y0,PZ.w,PZ.h,14); ctx.fill();
+    ctx.strokeStyle="rgba(56,214,255,.16)"; ctx.lineWidth=1.5;
+    roundRect(PZ.x0,PZ.y0,PZ.w,PZ.h,14); ctx.stroke();
+    // pavimento (rejilla sutil)
+    ctx.save(); ctx.beginPath(); roundRect(PZ.x0,PZ.y0,PZ.w,PZ.h,14); ctx.clip();
+    ctx.strokeStyle="rgba(255,255,255,.028)"; ctx.lineWidth=1;
+    for(var gx=PZ.x0;gx<PZ.x1;gx+=34){ ctx.beginPath(); ctx.moveTo(gx,PZ.y0); ctx.lineTo(gx,PZ.y1); ctx.stroke(); }
+    for(var gy=PZ.y0;gy<PZ.y1;gy+=34){ ctx.beginPath(); ctx.moveTo(PZ.x0,gy); ctx.lineTo(PZ.x1,gy); ctx.stroke(); }
+    ctx.restore();
+
+    // bocacalles
+    ctx.fillStyle="#060a10";
+    PZ.exits.forEach(function(e){
+      ctx.save();
+      ctx.fillStyle="rgba(120,150,190,.10)";
+      ctx.beginPath(); ctx.arc(e.x,e.y,15,0,7); ctx.fill();
+      ctx.restore();
+    });
+
+    // terrazas
+    PZ.terraces.forEach(function(t){
+      ctx.fillStyle="rgba(61,240,138,.05)";
+      ctx.strokeStyle="rgba(61,240,138,.18)"; ctx.lineWidth=1;
+      roundRect(t.x-22,t.y-16,44,32,7); ctx.fill(); ctx.stroke();
+      // sombrillas (puntos)
+      ctx.fillStyle="rgba(56,214,255,.25)";
+      for(var i=0;i<3;i++){ ctx.beginPath(); ctx.arc(t.x-12+i*12,t.y,2.2,0,7); ctx.fill(); }
+    });
+
+    // torre del reloj (centro)
+    var tw=PZ.tower;
+    ctx.save();
+    ctx.fillStyle="#14203040";
+    ctx.beginPath(); ctx.arc(tw.x,tw.y,26,0,7); ctx.fill();
+    // base isométrica
+    ctx.fillStyle="#1a2942";
+    ctx.beginPath();
+    ctx.moveTo(tw.x-10,tw.y+18); ctx.lineTo(tw.x+10,tw.y+18);
+    ctx.lineTo(tw.x+7,tw.y-26); ctx.lineTo(tw.x-7,tw.y-26); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="#24405f"; ctx.fillRect(tw.x-7,tw.y-34,14,10);
+    // esfera del reloj
+    ctx.fillStyle="#e8eef6"; ctx.beginPath(); ctx.arc(tw.x,tw.y-29,4.2,0,7); ctx.fill();
+    ctx.strokeStyle="#0c1018"; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(tw.x,tw.y-29); ctx.lineTo(tw.x,tw.y-32); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tw.x,tw.y-29); ctx.lineTo(tw.x+2.5,tw.y-29); ctx.stroke();
+    ctx.restore();
+    label(tw.x,tw.y+30,"Torre del rellotge");
+
+    // cono de influencia
+    var c=conePoly();
+    var grad=ctx.createLinearGradient(c.ox,c.oy,c.fx,c.fy);
+    grad.addColorStop(0,"rgba(61,240,138,.26)");
+    grad.addColorStop(1,"rgba(61,240,138,0)");
+    ctx.fillStyle=grad;
+    ctx.beginPath(); ctx.moveTo(c.ox,c.oy); ctx.lineTo(c.p1[0],c.p1[1]); ctx.lineTo(c.p2[0],c.p2[1]); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle="rgba(61,240,138,.35)"; ctx.lineWidth=1;
+    ctx.stroke();
+
+    // kiosko
+    var k=PZ.kiosk;
+    ctx.save();
+    // cuerpo
+    ctx.fillStyle="#12202f";
+    roundRect(k.x-k.w/2,k.y-k.h/2,k.w,k.h,5); ctx.fill();
+    ctx.strokeStyle="rgba(56,214,255,.55)"; ctx.lineWidth=1.5; ctx.stroke();
+    // toldo
+    ctx.fillStyle="#1c3a2e"; ctx.fillRect(k.x-k.w/2-2,k.y-k.h/2-5,k.w+4,6);
+    // pantalla lateral (parpadeo con color de decisión)
+    var sc=PZ.screen;
+    ctx.fillStyle=currentIsStock?"#ffb454":"#3df08a";
+    ctx.shadowColor=currentIsStock?"#ffb454":"#3df08a"; ctx.shadowBlur=8;
+    ctx.fillRect(sc.x-2, sc.y-2, sc.w, sc.h);
+    ctx.shadowBlur=0;
+    ctx.restore();
+    label(k.x, k.y+k.h/2+11, "News & Coffee");
+  }
+
+  function drawAgents(){
+    for(var i=0;i<agents.length;i++){
+      var a=agents[i];
+      var col=BUCKET_COLOR[a.bucket];
+      if(a.inCone){
+        ctx.fillStyle="rgba(61,240,138,.18)";
+        ctx.beginPath(); ctx.arc(a.x,a.y,6.5,0,7); ctx.fill();
+      }
+      ctx.globalAlpha=a.state==="sitting"?0.7:0.95;
+      ctx.fillStyle=col;
+      ctx.beginPath(); ctx.arc(a.x,a.y, a.state==="sitting"?2.0:2.4, 0,7); ctx.fill();
+      // género: anillo fino para 'f'
+      if(a.gender==="f"){ ctx.globalAlpha=0.5; ctx.strokeStyle=col; ctx.lineWidth=0.8; ctx.beginPath(); ctx.arc(a.x,a.y,4,0,7); ctx.stroke(); }
+      ctx.globalAlpha=1;
+    }
+  }
+
+  function label(x,y,txt){
+    ctx.save();
+    ctx.font="9px ui-monospace,monospace"; ctx.textAlign="center";
+    ctx.fillStyle="rgba(170,182,198,.6)"; ctx.fillText(txt,x,y);
+    ctx.restore();
+  }
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  }
+
+  /* ============================================================
+     BUCLE
+     ============================================================ */
+  var lastTs=0;
+  function tick(ts){
+    var dtReal=lastTs?Math.min(0.1,(ts-lastTs)/1000):0.016; lastTs=ts;
+    if(S.playing){
+      var dtSimSec=dtReal*S.speed;
+      S.simMin=(S.simMin + dtSimSec/60) % 1440;
+      if(S.simMin<0) S.simMin+=1440;
+      updateClockUI();
+      // decaimiento de scores de audiencia
+      decayScores(dtSimSec);
+    }
+    // gestionar población
+    manage();
+    // mover agentes
+    var c=conePoly(); viewersNow=0;
+    for(var i=agents.length-1;i>=0;i--){
+      var a=agents[i]; a.life+=dtReal;
+      moveAgent(a, Math.max(0.4,Math.min(6,dtReal*60)) );
+      a.inCone=(a.state!=="gone") && inCone(a.x,a.y,c);
+      if(a.inCone){
+        viewersNow++;
+        if(S.playing){
+          var key=segKey(a.gender,a.bucket);
+          segScore[key]=(segScore[key]||0)+ (dtReal*S.speed/8);
+        }
+      }
+      if(a.state==="gone"){ agents.splice(i,1); }
+    }
+    // render
+    drawPlaza(); drawAgents();
+    // decisión programática
+    if(S.playing) maybeDecide();
+    // panel experto
+    updateExpert();
+    requestAnimationFrame(tick);
+  }
+
+  function manage(){
+    var want=desiredPop();
+    var live=agents.filter(function(a){return !a.leaving;}).length;
+    if(live<want){
+      var n=Math.min(3, want-live);
+      for(var i=0;i<n;i++) if(Math.random()<0.5||S.speed>1) spawnAgent();
+    } else if(live>want){
+      // marcar a los que se van (prefiere no-sentados)
+      var over=live-want;
+      for(var j=0;j<agents.length && over>0;j++){
+        var a=agents[j];
+        if(!a.leaving && a.state!=="sitting"){ a.leaving=true; a.state="walk"; retarget(a); over--; }
+      }
+    }
+  }
+
+  function moveAgent(a, step){
+    if(a.state==="sitting"){
+      a.sit-=1;
+      if(a.sit<=0){ a.state="walk"; a.leaving=Math.random()<0.6; retarget(a); }
+      return;
+    }
+    var dx=a.tx-a.x, dy=a.ty-a.y, d=Math.hypot(dx,dy);
+    if(d<4){
+      if(a.leaving){
+        // ha llegado a una bocacalle
+        var atExit=PZ.exits.some(function(e){return Math.hypot(e.x-a.x,e.y-a.y)<18;});
+        if(atExit){ a.state="gone"; return; } else { retarget(a); return; }
+      }
+      if(a.plan==="sit" && a.state!=="sitting"){
+        a.state="sitting"; a.sit=120+Math.random()*300; return;
+      }
+      retarget(a);
+    } else {
+      var sp=a.sp*step;
+      a.x+=dx/d*sp; a.y+=dy/d*sp;
+    }
+  }
+
+  /* ============================================================
+     UI · reloj, panel experto, controles
+     ============================================================ */
+  function pad(n){ return (n<10?"0":"")+n; }
+  function updateClockUI(){
+    var h=Math.floor(S.simMin/60), m=Math.floor(S.simMin%60);
+    document.getElementById("ui-clock").textContent=pad(h)+":"+pad(m);
+    document.getElementById("ui-hourv").textContent=pad(h)+":"+pad(m);
+    var slider=document.getElementById("ctl-hour");
+    if(document.activeElement!==slider){ slider.value=Math.round(S.simMin); paintRange(slider); }
+    // fecha legible
+    var d=new Date(S.date+"T00:00:00");
+    var dn=["Diumenge","Dilluns","Dimarts","Dimecres","Dijous","Divendres","Dissabte"][d.getDay()];
+    var mn=["gen","feb","març","abr","maig","juny","jul","ag","set","oct","nov","des"][d.getMonth()];
+    document.getElementById("ui-date").textContent=dn+" "+d.getDate()+" "+mn+" 2026";
+  }
+
+  var barsEl=document.getElementById("bars");
+  function buildBars(){
+    barsEl.innerHTML="";
+    for(var i=0;i<5;i++){
+      var row=document.createElement("div"); row.className="bar";
+      row.innerHTML='<span class="bl">'+BUCKET_LABEL[i]+'</span><span class="bt"><span class="bf" id="bf'+i+'" style="background:'+BUCKET_COLOR[i]+'"></span></span><span class="bn" id="bn'+i+'">0</span>';
+      barsEl.appendChild(row);
+    }
+  }
+
+  function updateExpert(){
+    var h=Math.floor(S.simMin/60);
+    document.getElementById("f-hour").textContent=pad(h)+":"+pad(Math.floor(S.simMin%60));
+    var dp=currentDaypart();
+    document.getElementById("f-daypart").textContent=dp;
+    var wknd=dayType()!=="weekday";
+    setV("f-weekend", wknd?"true":"false", wknd?"on":"");
+    var hol=DATA.holidays2026[S.date];
+    setV("f-holiday", hol||"—", hol?"warn":"");
+    var ev=activeEvent();
+    var evLabel = ev==="festaMajor"?"Festa Major":ev==="sanJordi"?"Sant Jordi":ev==="holiday"?"festivo":"—";
+    setV("f-event", evLabel, ev&&ev!=="holiday"?"hot":ev?"warn":"");
+    var rain=isRain();
+    setV("f-rain", rain?"true ("+(S.weatherMode==="live"?(S.weather.precip.toFixed(1)+"mm"):"forzada")+")":"false", rain?"warn":"on");
+    var t=effTemp();
+    setV("f-temp", t.toFixed(0)+"°C", (t<8||t>32)?"warn":"");
+    document.getElementById("f-wind").textContent=(S.weatherMode==="live"?S.weather.wind.toFixed(0):"~6")+" km/h";
+    document.getElementById("f-idx").textContent=footfallIndex().toFixed(0)+" ×"+multProduct().toFixed(2).replace(".",",");
+    setV("f-viewers", String(viewersNow), viewersNow>0?"on":"");
+
+    var dom=dominantSegment();
+    if(dom){
+      var gTxt=dom.totF>=dom.totM?"♀ mujer":"♂ hombre";
+      var gPct=Math.round(100*Math.max(dom.totF,dom.totM)/Math.max(0.01,dom.totF+dom.totM));
+      setV("f-gender", gTxt+" "+gPct+"%", "on");
+      setV("f-age", BUCKET_LABEL[dom.bucketIdx], "on");
+      // barras
+      var max=Math.max.apply(null,dom.byBucket.concat([0.01]));
+      for(var i=0;i<5;i++){
+        var v=dom.byBucket[i];
+        document.getElementById("bf"+i).style.width=(100*v/max).toFixed(0)+"%";
+        document.getElementById("bn"+i).textContent=v.toFixed(1);
+      }
+    } else {
+      setV("f-gender","—",""); setV("f-age","—","");
+      for(var j=0;j<5;j++){ document.getElementById("bf"+j).style.width="0%"; document.getElementById("bn"+j).textContent="0"; }
+    }
+    document.getElementById("ui-viewers").textContent=viewersNow;
+    document.getElementById("ui-pop").textContent=agents.filter(function(a){return a.state!=="gone";}).length;
+  }
+  function setV(id,txt,cls){ var el=document.getElementById(id); el.textContent=txt; el.className="v"+(cls?" "+cls:""); }
+
+  /* ---- clima en vivo ---- */
+  function loadWeather(){
+    document.getElementById("ui-status").textContent="cargando clima…";
+    fetch(DATA.weatherUrl).then(function(r){return r.json();}).then(function(j){
+      if(j&&j.current){
+        S.weather.temp=j.current.temperature_2m;
+        S.weather.precip=j.current.precipitation||0;
+        S.weather.rain=j.current.rain||0;
+        S.weather.wind=j.current.wind_speed_10m||0;
+        S.weather.loaded=true;
+        document.getElementById("ui-status").textContent="clima en vivo · "+S.weather.temp.toFixed(0)+"°C";
+      }
+    }).catch(function(){ document.getElementById("ui-status").textContent="clima: sin conexión (usa override)"; });
+  }
+
+  /* ============================================================
+     CONTROLES
+     ============================================================ */
+  function paintRange(el){ var p=(el.value-el.min)/(el.max-el.min)*100; el.style.setProperty("--p",p+"%"); }
+
+  document.getElementById("ctl-hour").addEventListener("input",function(){
+    S.simMin=+this.value; paintRange(this); updateClockUI();
+  });
+  document.getElementById("ctl-play").addEventListener("click",function(){
+    S.playing=!S.playing; this.textContent=S.playing?"⏸ Pausa":"▶ Play"; this.classList.toggle("on",!S.playing);
+  });
+  document.getElementById("ctl-now").addEventListener("click",function(){
+    var n=new Date(new Date().toLocaleString("en-US",{timeZone:"Europe/Madrid"}));
+    S.simMin=n.getHours()*60+n.getMinutes(); updateClockUI();
+  });
+  document.getElementById("ctl-speed").addEventListener("click",function(e){
+    var b=e.target.closest("button"); if(!b)return;
+    [].forEach.call(this.children,function(x){x.classList.remove("on");});
+    b.classList.add("on"); S.speed=+b.dataset.s;
+  });
+  document.getElementById("ctl-date").addEventListener("change",function(){ S.date=this.value; updateClockUI(); });
+  document.getElementById("ctl-event").addEventListener("change",function(){ S.eventOverride=this.value; });
+  document.getElementById("ctl-weather").addEventListener("change",function(){
+    S.weatherMode=this.value;
+    document.getElementById("ctl-tempwrap").style.display=(this.value==="live")?"none":"block";
+  });
+  document.getElementById("ctl-temp").addEventListener("input",function(){
+    S.tempOverride=+this.value; paintRange(this);
+    document.getElementById("ui-tempv").textContent=this.value+"°C";
+  });
+  document.getElementById("ctl-dens").addEventListener("input",function(){
+    S.density=+this.value; paintRange(this);
+    document.getElementById("ui-densv").textContent=(+this.value).toFixed(1).replace(".",",")+"×";
+  });
+
+  /* ============================================================
+     PANELES PLEGABLES · toggles + persistencia localStorage
+     ============================================================ */
+  var PANELS={
+    "ic-opciones":{panel:"panel-opciones", body:null},
+    "ic-avanzado":{panel:"panel-avanzado", body:null},
+    "ic-experto":{panel:"panel-experto", body:"exp-open"}
+  };
+  var LS_KEY="adcel_sim_panels_v1";
+  function savePanels(){
+    var st={};
+    for(var ic in PANELS){ st[ic]=document.getElementById(ic).classList.contains("on"); }
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(st)); }catch(e){}
+  }
+  function setPanel(ic, open){
+    var cfg=PANELS[ic]; if(!cfg) return;
+    var btn=document.getElementById(ic), pan=document.getElementById(cfg.panel);
+    btn.classList.toggle("on", open); btn.setAttribute("aria-pressed", open?"true":"false");
+    pan.classList.toggle("open", open);
+    if(cfg.body) document.body.classList.toggle(cfg.body, open);
+    savePanels();
+  }
+  function setupPanels(){
+    for(var ic in PANELS){
+      (function(id){
+        document.getElementById(id).addEventListener("click",function(){
+          setPanel(id, !document.getElementById(id).classList.contains("on"));
+        });
+      })(ic);
+    }
+    // botones cerrar (✕) de cada panel
+    [].forEach.call(document.querySelectorAll(".phead .x"),function(x){
+      x.addEventListener("click",function(){ setPanel(x.dataset.close, false); });
+    });
+    // restaurar estado (por defecto: TODO PLEGADO)
+    var st={}; try{ st=JSON.parse(localStorage.getItem(LS_KEY)||"{}")||{}; }catch(e){}
+    for(var ic in PANELS){ if(st[ic]) setPanel(ic, true); }
+  }
+
+  /* ============================================================
+     ARRANQUE
+     ============================================================ */
+  function init(){
+    layout(); buildBars(); setupPanels();
+    // hora real Madrid al arrancar
+    var n=new Date(new Date().toLocaleString("en-US",{timeZone:"Europe/Madrid"}));
+    S.simMin=n.getHours()*60+n.getMinutes();
+    // fecha por defecto = hoy si estamos en 2026, si no 2026-07-10
+    var today=new Date(); if(today.getFullYear()===2026){ S.date=today.toISOString().slice(0,10); document.getElementById("ctl-date").value=S.date; }
+    paintRange(document.getElementById("ctl-hour"));
+    paintRange(document.getElementById("ctl-dens"));
+    updateClockUI();
+    loadWeather();
+    ensureStock();
+    // población inicial
+    for(var i=0;i<Math.min(40,desiredPop());i++) spawnAgent();
+    document.getElementById("ui-status").textContent="simulando";
+    requestAnimationFrame(tick);
+  }
+  window.addEventListener("resize",function(){ layout(); });
+  if(document.readyState!=="loading") init(); else document.addEventListener("DOMContentLoaded",init);
+  </script>
+</body>
+</html>
