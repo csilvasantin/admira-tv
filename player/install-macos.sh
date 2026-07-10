@@ -4,7 +4,7 @@
 #   curl -fsSL https://admira.tv/player/install-macos.sh | bash
 set -euo pipefail
 
-VERSION="v.26.06.26.r2"
+VERSION="v.26.07.10.r1"
 URL="https://pub-9a6a58b67f2c4ed990b1ff036631ff33.r2.dev/AdmiraSignageMac-${VERSION}.zip"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
