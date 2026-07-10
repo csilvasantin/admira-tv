@@ -63,6 +63,9 @@
   .grid button.b{min-height:74px}
   .laststatus{margin-top:12px;font-size:12px;letter-spacing:.06em;color:var(--dim);text-align:center;min-height:1.4em}
   .laststatus b{color:var(--acc)}
+  .laststatus .tx{color:var(--warn);font-weight:800;text-shadow:0 0 10px rgba(255,180,84,.35)}   /* 1 tick: enviado */
+  .laststatus .rx{color:var(--acc);font-weight:800;text-shadow:0 0 12px rgba(61,240,138,.5)}      /* 2 ticks: recibido */
+  .laststatus .warn{color:var(--air);font-weight:800}                                              /* enviado sin confirmar */
   .hint{font-size:11px;color:var(--dim);letter-spacing:.05em;line-height:1.5;margin-top:14px;text-align:center;opacity:.75}
   a.back{color:var(--acc2);text-decoration:none;font-size:12px;letter-spacing:.14em}
 </style>
@@ -146,18 +149,46 @@
 
   function flashLast(html){ $('last').innerHTML=html; }
 
+  // Espera el ACUSE de la pantalla: poll /control/seen hasta ver el id (2º tick).
+  function waitReceipt(scr,id,t0){
+    const timeout=8000, every=600, deadline=Date.now()+timeout;
+    const tick=()=>{
+      fetch(API+'/control/seen?screen='+encodeURIComponent(scr),{cache:'no-store'})
+        .then(r=>r.ok?r.json():null)
+        .then(j=>{
+          const seen=(j&&Array.isArray(j.seen))?j.seen:[];
+          if(seen.some(s=>s&&s.id===id)){
+            flashLast('<span class="rx">✓✓ recibido</span> · <b>'+scr+'</b> · '+(Date.now()-t0)+'ms');
+            return;
+          }
+          if(Date.now()>=deadline){
+            flashLast('<span class="warn">⚠ enviado · sin confirmación</span> — ¿pantalla offline? · <b>'+scr+'</b>');
+            return;
+          }
+          setTimeout(tick,every);
+        })
+        .catch(()=>{ if(Date.now()>=deadline){ flashLast('<span class="warn">⚠ enviado · sin confirmación</span> · <b>'+scr+'</b>'); } else { setTimeout(tick,every); } });
+    };
+    setTimeout(tick,every);
+  }
+
   function send(cmd,btn){
     if(!target){ flashLast('⚠ elige primero una <b>pantalla objetivo</b>'); return; }
     if(btn){ btn.classList.add('flash'); setTimeout(()=>btn.classList.remove('flash'),260); }
-    const t0=Date.now();
+    const scr=target, t0=Date.now();
+    flashLast('→ enviando <b>'+cmd+'</b> a <b>'+scr+'</b>…');
     fetch(API+'/control/cmd',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({screen:target,cmd})})
+      body:JSON.stringify({screen:scr,cmd})})
       .then(r=>r.json().then(j=>({ok:r.ok,j})))
       .then(({ok,j})=>{
-        if(ok&&j&&j.ok){ flashLast('→ <b>'+cmd+'</b> enviado a <b>'+target+'</b> · id '+ (j.id||'') +' · '+(Date.now()-t0)+'ms'); }
-        else{ flashLast('✗ rechazado: '+((j&&j.error)||'error')+(j&&j.cmd?(' ('+j.cmd+')'):'')); }
+        if(ok&&j&&j.ok){
+          flashLast('<span class="tx">✓ enviado</span> · <b>'+cmd+'</b> → <b>'+scr+'</b> · id '+(j.id||'')+' · esperando pantalla…');
+          waitReceipt(scr,j.id,t0);
+        } else {
+          flashLast('✗ rechazado: '+((j&&j.error)||'error')+(j&&j.cmd?(' ('+j.cmd+')'):''));
+        }
       })
-      .catch(()=>flashLast('✗ sin red — reintenta'));
+      .catch(()=>flashLast('✗ sin red — reintenta'));   // sólo error REAL: el POST falló
   }
 
   document.querySelectorAll('button.b').forEach(b=>{
