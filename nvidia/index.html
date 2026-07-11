@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="/auth-gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admira × NVIDIA · An open agent system for physical retail</title>
+<meta name="description" content="Admira is the open agent system that brings agentic AI to physical retail and DOOH — running on NVIDIA's edge. Four layers, one loop: Create · Operate · Manage · Measure.">
+<link rel="canonical" href="https://admira.tv/nvidia/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="theme-color" content="#05070d">
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AdmiraNeXT">
+<meta property="og:title" content="Admira × NVIDIA — an open agent system for physical retail">
+<meta property="og:description" content="Physical AI needs an application layer. Admira runs the agentic loop for retail and DOOH — on NVIDIA's edge. Create · Operate · Manage · Measure.">
+<meta property="og:url" content="https://admira.tv/nvidia/">
+<meta property="og:image" content="https://admira.tv/og-admira.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="en_US">
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Admira × NVIDIA — an open agent system for physical retail">
+<meta name="twitter:description" content="Four layers, one loop, running on NVIDIA's edge: Create · Operate · Manage · Measure. Not a mockup — live product.">
+<meta name="twitter:image" content="https://admira.tv/og-admira.png">
+<style>
+:root{
+  --bg:#05070d; --bg-soft:#0a0e18; --panel:#0c1120;
+  --ink:#f4f0ff; --ink-soft:#d7d0ee; --mut:#8b86a8; --dim:#524d6c;
+  --line:rgba(150,140,200,.12); --line-2:rgba(150,140,200,.22);
+  --create:#aa88ff; --operate:#ffd866; --manage:#50c8ff; --measure:#ff4488;
+  --nv:#76b900; --nv-soft:#9fe23f;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,system-ui,sans-serif;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative}
+a{color:inherit;text-decoration:none}
+img{max-width:100%}
+::selection{background:rgba(118,185,0,.34);color:#fff}
+
+/* ── Ambient background (aurora + edge grid + grain) ── */
+.bg-fx{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none}
+.bg-fx::before{content:"";position:absolute;width:120vmax;height:120vmax;left:-30vmax;top:-45vmax;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(118,185,0,.14),transparent 70%);
+  animation:drift1 34s var(--ease) infinite alternate}
+.bg-fx::after{content:"";position:absolute;width:110vmax;height:110vmax;right:-35vmax;bottom:-40vmax;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(80,200,255,.12),transparent 70%);
+  animation:drift2 40s var(--ease) infinite alternate}
+.grid-fx{position:fixed;inset:0;z-index:-2;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(rgba(118,185,0,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(118,185,0,.05) 1px,transparent 1px);
+  background-size:64px 64px;-webkit-mask-image:radial-gradient(circle at 50% 40%,#000,transparent 78%);mask-image:radial-gradient(circle at 50% 40%,#000,transparent 78%)}
+.grain{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;mix-blend-mode:overlay;
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px)}
+@keyframes drift1{to{transform:translate(14vmax,10vmax) scale(1.15)}}
+@keyframes drift2{to{transform:translate(-12vmax,-8vmax) scale(1.2)}}
+
+/* ── Scroll progress ── */
+.progress{position:fixed;top:0;left:0;height:2px;width:0;z-index:120;
+  background:linear-gradient(90deg,var(--create),var(--operate) 34%,var(--manage) 66%,var(--measure));
+  box-shadow:0 0 14px rgba(170,136,255,.5)}
+
+/* ── Top bar ── */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;
+  padding:18px clamp(20px,4vw,44px);transition:background .4s,backdrop-filter .4s,border-color .4s;border-bottom:1px solid transparent}
+.topbar.solid{background:linear-gradient(to bottom,rgba(5,7,13,.86),rgba(5,7,13,.5));backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.brand{font-family:var(--mono);font-weight:700;letter-spacing:.2em;font-size:13px;color:var(--ink);display:flex;align-items:center;gap:10px}
+.brand b{color:var(--create)}
+.brand .x{color:var(--dim);font-weight:400}
+.brand .nv{color:var(--nv);font-weight:700}
+.topbar nav{display:flex;gap:22px}
+.topbar nav a{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);transition:color .2s}
+.topbar nav a:hover{color:var(--ink)}
+@media(max-width:900px){.topbar nav{display:none}}
+
+/* ── Side dot nav ── */
+.dots{position:fixed;right:22px;top:50%;transform:translateY(-50%);z-index:100;display:flex;flex-direction:column;gap:14px}
+.dots a{width:9px;height:9px;border-radius:50%;border:1px solid var(--line-2);background:transparent;transition:transform .25s,background .25s,border-color .25s;position:relative}
+.dots a::after{content:attr(data-l);position:absolute;right:20px;top:50%;transform:translateY(-50%);white-space:nowrap;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);opacity:0;transition:opacity .2s;pointer-events:none}
+.dots a:hover::after{opacity:1}
+.dots a.on{background:var(--ac,#fff);border-color:var(--ac,#fff);transform:scale(1.35);box-shadow:0 0 12px var(--ac,#fff)}
+.dots a.d1{--ac:var(--create)} .dots a.d2{--ac:var(--operate)} .dots a.d3{--ac:var(--manage)} .dots a.d4{--ac:var(--measure)} .dots a.d0{--ac:var(--nv)} .dots a.d5{--ac:var(--nv)} .dots a.d6{--ac:var(--ink)}
+@media(max-width:900px){.dots{display:none}}
+
+.wrap{width:100%;max-width:1180px;margin:0 auto;padding:0 clamp(20px,4vw,44px)}
+.mono{font-family:var(--mono);letter-spacing:.16em;text-transform:uppercase;font-size:12px}
+
+/* NVIDIA "runs on" chip — color as accent, not asset */
+.nvchip{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--nv-soft);border:1px solid color-mix(in srgb,var(--nv) 42%,transparent);border-radius:100px;padding:6px 12px;
+  background:color-mix(in srgb,var(--nv) 8%,transparent)}
+.nvchip .dot{width:6px;height:6px;border-radius:50%;background:var(--nv);box-shadow:0 0 10px var(--nv)}
+
+/* ═══════════ HERO ═══════════ */
+.hero{min-height:100svh;display:flex;flex-direction:column;justify-content:center;position:relative;padding:120px 0 80px}
+.hero .eyebrow{color:var(--mut);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hero .eyebrow .tick{width:26px;height:1px;background:linear-gradient(90deg,var(--nv),transparent)}
+.hero .eyebrow .nv{color:var(--nv-soft)}
+.hero h1{font-weight:850;letter-spacing:-.035em;line-height:.96;margin:26px 0 0;
+  font-size:clamp(42px,9vw,124px)}
+.hero h1 span{display:block;will-change:transform,opacity}
+.hero h1 .l3{background:linear-gradient(96deg,var(--nv-soft),var(--manage) 55%,var(--create));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .support{font-size:clamp(16px,2.2vw,22px);color:var(--ink-soft);max-width:680px;margin:32px 0 0;line-height:1.5}
+.hero .support b{color:#fff;font-weight:600}
+.hero .support .g{color:var(--nv-soft);font-weight:600}
+.hero .thesis-tag{margin-top:24px;display:inline-flex;flex-wrap:wrap;gap:10px}
+.hero .thesis-tag span{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);
+  border:1px solid var(--line);border-radius:100px;padding:7px 14px}
+.scrollcue{position:absolute;left:clamp(20px,4vw,44px);bottom:34px;display:flex;align-items:center;gap:12px;color:var(--mut);
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase}
+.scrollcue .rail{width:1px;height:44px;background:linear-gradient(180deg,transparent,var(--mut));position:relative;overflow:hidden}
+.scrollcue .rail::after{content:"";position:absolute;left:0;top:-40%;width:1px;height:40%;background:var(--nv);animation:cue 2.2s var(--ease) infinite}
+@keyframes cue{0%{top:-40%}60%,100%{top:100%}}
+
+/* ═══════════ BRIDGE ═══════════ */
+.bridge{padding:clamp(90px,16vh,180px) 0}
+.bridge .big{font-size:clamp(23px,3.4vw,40px);font-weight:750;letter-spacing:-.02em;line-height:1.24;max-width:940px}
+.bridge .big .q{color:var(--mut);font-weight:600}
+.bridge .big .hi{color:#fff}
+.bridge .big .g{color:var(--nv-soft)}
+.bridge .cols{margin-top:44px;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+@media(max-width:720px){.bridge .cols{grid-template-columns:1fr}}
+.bridge .col{background:var(--bg);padding:26px 24px}
+.bridge .col .k{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ac)}
+.bridge .col .v{font-size:15.5px;color:var(--ink-soft);margin-top:10px;line-height:1.5}
+.bridge .col.a{--ac:var(--nv-soft)} .bridge .col.b{--ac:var(--manage)} .bridge .col.c{--ac:var(--create)}
+.bridge .attrib{margin-top:26px;font-size:13px;color:var(--mut);max-width:820px;line-height:1.6}
+.bridge .attrib a{color:var(--nv-soft);border-bottom:1px solid color-mix(in srgb,var(--nv) 40%,transparent)}
+.bridge .attrib a:hover{color:var(--ink)}
+
+/* ═══════════ ACTS ═══════════ */
+.act{min-height:100svh;display:flex;align-items:center;position:relative;padding:110px 0;border-top:1px solid var(--line);overflow:hidden}
+.act .ghost{position:absolute;font-family:var(--mono);font-weight:800;line-height:.7;
+  font-size:clamp(200px,44vw,560px);color:transparent;-webkit-text-stroke:1.4px color-mix(in srgb,var(--ac) 34%,transparent);
+  top:50%;transform:translateY(-50%);z-index:0;opacity:.5;pointer-events:none;user-select:none;will-change:transform}
+.act.left .ghost{right:-4%} .act.right .ghost{left:-4%}
+.act .glow{position:absolute;z-index:0;width:60vmax;height:60vmax;border-radius:50%;pointer-events:none;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--ac) 16%,transparent),transparent 70%);top:50%;transform:translateY(-50%)}
+.act.left .glow{right:-20vmax} .act.right .glow{left:-20vmax}
+.act .inner{position:relative;z-index:1;max-width:620px}
+.act.right .inner{margin-left:auto}
+.act .eye{font-family:var(--mono);font-size:13px;letter-spacing:.24em;text-transform:uppercase;display:flex;align-items:center;gap:14px;color:var(--ac)}
+.act .eye .bar{width:40px;height:2px;background:var(--ac);box-shadow:0 0 12px var(--ac)}
+.act h2{font-size:clamp(29px,4.4vw,50px);margin:20px 0 0;font-weight:820;letter-spacing:-.025em;line-height:1.05}
+.act .prod{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--mut);margin-top:14px}
+.act .pitch{font-size:clamp(16px,1.9vw,19px);color:var(--ink-soft);margin:20px 0 0;max-width:560px;line-height:1.55}
+.act .pitch b{color:#fff;font-weight:600}
+.act .stackrow{margin-top:22px}
+.act .why{margin-top:24px;display:grid;grid-template-columns:1fr;gap:10px}
+.act .why .row{display:flex;align-items:baseline;gap:12px}
+.act .why .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ac);
+  flex:0 0 104px;border-right:1px solid color-mix(in srgb,var(--ac) 30%,transparent);padding-right:12px;text-align:right;line-height:1.5}
+.act .why .txt{font-size:14.5px;color:var(--ink-soft);line-height:1.5}
+.act .demos{margin-top:30px;display:flex;flex-wrap:wrap;gap:12px}
+.demo{display:inline-flex;align-items:center;gap:9px;padding:12px 18px;border-radius:12px;border:1px solid var(--ac);color:var(--ink);
+  font-family:var(--mono);font-size:12px;letter-spacing:.06em;font-weight:600;
+  background:color-mix(in srgb,var(--ac) 9%,transparent);transition:background .2s,transform .18s,box-shadow .25s}
+.demo:hover{background:color-mix(in srgb,var(--ac) 22%,transparent);transform:translateY(-2px);box-shadow:0 12px 36px -16px var(--ac)}
+.demo.sec{border-color:var(--line-2);background:transparent;color:var(--mut)}
+.demo.sec:hover{color:var(--ink);border-color:var(--ac)}
+.demo .ar{opacity:.7}
+.a1{--ac:var(--create)} .a2{--ac:var(--operate)} .a3{--ac:var(--manage)} .a4{--ac:var(--measure)}
+
+/* ═══════════ SIGNATURE — edge ↔ cloud ═══════════ */
+.sig{padding:clamp(90px,14vh,160px) 0;border-top:1px solid var(--line);text-align:center;position:relative}
+.sig .kick{color:var(--mut);justify-content:center;display:flex}
+.sig h2{font-size:clamp(27px,4.2vw,46px);font-weight:820;letter-spacing:-.02em;margin:16px auto 0;max-width:760px;line-height:1.1}
+.sig h2 .grad{background:linear-gradient(100deg,var(--nv-soft),var(--manage));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sig .lead{color:var(--ink-soft);max-width:640px;margin:18px auto 0;font-size:17px}
+.sig .lead b{color:#fff;font-weight:600}
+.stage{margin:44px auto 0;max-width:660px}
+.stage svg{width:100%;height:auto;display:block;overflow:visible}
+.plane{fill:none;stroke:var(--line-2);stroke-width:1.4;stroke-dasharray:5 7}
+.plane-lbl{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;fill:var(--mut)}
+.link{fill:none;stroke-width:2;stroke-linecap:round;
+  stroke-dasharray:var(--len,300);stroke-dashoffset:var(--len,300);transition:stroke-dashoffset 1.6s var(--ease)}
+.stage.in .link{stroke-dashoffset:0}
+.flow{fill:none;stroke:var(--nv);stroke-width:2.4;stroke-linecap:round;stroke-dasharray:6 14;opacity:0;transition:opacity .6s ease .8s}
+.stage.in .flow{opacity:.9;animation:march 1.1s linear infinite .8s}
+@keyframes march{to{stroke-dashoffset:-40}}
+.snode{opacity:0;transform-box:fill-box;transform-origin:center;transition:opacity .5s var(--ease),transform .5s var(--ease);transform:translateY(8px)}
+.stage.in .snode{opacity:1;transform:none}
+.snode .lbl{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
+.snode .sub{font-family:var(--mono);font-size:9px;letter-spacing:.06em;fill:var(--mut);text-transform:uppercase}
+.edgechip{font-family:var(--mono);font-size:10px;letter-spacing:.1em;fill:var(--nv-soft);text-transform:uppercase}
+.leg{margin:30px auto 0;display:flex;gap:26px;justify-content:center;flex-wrap:wrap;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.leg span{display:inline-flex;align-items:center;gap:8px}
+.leg i{width:16px;height:2px;display:inline-block;border-radius:2px}
+
+/* ═══════════ THREAD (Gràcia / physical AI scene) ═══════════ */
+.thread{padding:clamp(90px,14vh,160px) 0;border-top:1px solid var(--line);background:linear-gradient(180deg,rgba(12,17,32,.5),transparent 60%)}
+.thread .kick{color:var(--mut)}
+.thread h2{font-size:clamp(26px,4vw,42px);margin:14px 0 0;font-weight:820;letter-spacing:-.02em;line-height:1.08}
+.thread .lead{font-size:17px;color:var(--ink-soft);max-width:720px;margin:16px 0 0}
+.thread .lead b{color:#fff;font-weight:600}
+.thread .lead .g{color:var(--nv-soft)}
+.steps{margin-top:48px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:820px){.steps{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.steps{grid-template-columns:1fr}}
+.step{border:1px solid var(--line);border-radius:16px;padding:24px 22px;background:var(--panel);position:relative;overflow:hidden;transition:transform .3s var(--ease),border-color .3s}
+.step:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--ac) 45%,transparent)}
+.step::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ac)}
+.step .st{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ac)}
+.step .stv{font-weight:800;font-size:17px;margin-top:8px;color:#fff;letter-spacing:-.01em}
+.step p{font-size:13.5px;color:var(--ink-soft);margin:12px 0 0;line-height:1.5}
+.step .on{margin-top:14px;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--nv-soft)}
+.step.s1{--ac:var(--create)} .step.s2{--ac:var(--operate)} .step.s3{--ac:var(--manage)} .step.s4{--ac:var(--measure)}
+.livebadge{display:inline-flex;align-items:center;gap:8px;margin-top:36px;font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+.livebadge .pulse{width:9px;height:9px;border-radius:50%;background:var(--nv);box-shadow:0 0 0 0 rgba(118,185,0,.7);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(118,185,0,.6)}70%{box-shadow:0 0 0 12px rgba(118,185,0,0)}100%{box-shadow:0 0 0 0 rgba(118,185,0,0)}}
+
+/* ═══════════ CLOSE ═══════════ */
+.close{padding:clamp(100px,18vh,200px) 0 60px;border-top:1px solid var(--line);text-align:center;position:relative}
+.close .loop{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut)}
+.close h2{font-size:clamp(30px,5.2vw,64px);margin:22px auto 0;max-width:940px;font-weight:850;letter-spacing:-.03em;line-height:1.03}
+.close h2 .grad{background:linear-gradient(100deg,var(--nv-soft),var(--manage) 50%,var(--create));-webkit-background-clip:text;background-clip:text;color:transparent}
+.close p{color:var(--ink-soft);max-width:640px;margin:26px auto 0;font-size:18px;line-height:1.55}
+.close p b{color:#fff;font-weight:600}
+.cta{margin-top:40px;display:inline-flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.btn{padding:16px 30px;border-radius:12px;font-family:var(--mono);font-size:13px;letter-spacing:.08em;font-weight:700;text-transform:uppercase;transition:filter .2s,box-shadow .25s,transform .18s,border-color .2s}
+.btn.primary{background:linear-gradient(100deg,var(--nv),var(--nv-soft));color:#05110d}
+.btn.primary:hover{filter:brightness(1.08);box-shadow:0 14px 44px -16px var(--nv);transform:translateY(-2px)}
+.btn.ghost{border:1px solid var(--line-2);color:var(--ink)}
+.btn.ghost:hover{border-color:var(--manage);transform:translateY(-2px)}
+
+footer{padding:44px 0 60px;border-top:1px solid var(--line);color:var(--mut);font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;align-items:center}
+footer b{color:var(--create)}
+footer .nv{color:var(--nv)}
+footer a:hover{color:var(--ink)}
+
+/* ── Reveal ── */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.reveal.in{opacity:1;transform:none}
+.reveal.d1{transition-delay:.08s}.reveal.d2{transition-delay:.16s}.reveal.d3{transition-delay:.24s}.reveal.d4{transition-delay:.32s}.reveal.d5{transition-delay:.4s}
+@media(prefers-reduced-motion:reduce){
+  .reveal{opacity:1;transform:none;transition:none}
+  html{scroll-behavior:auto}
+  .bg-fx::before,.bg-fx::after,.scrollcue .rail::after,.livebadge .pulse{animation:none}
+  .stage.in .link{transition:none;stroke-dashoffset:0}
+  .stage.in .flow{animation:none;opacity:.9}
+  .stage.in .snode{transition:none;transform:none}
+  .hero h1 span{opacity:1 !important;transform:none !important}
+}
+</style>
+</head>
+<body>
+<div class="bg-fx"></div>
+<div class="grid-fx"></div>
+<div class="grain"></div>
+<div class="progress" id="progress"></div>
+
+<div class="topbar" id="topbar">
+  <div class="brand">ADMIRA<b>NeXT</b> <span class="x">×</span> <span class="nv">NVIDIA</span></div>
+  <nav>
+    <a href="#create">01 Create</a>
+    <a href="#operate">02 Operate</a>
+    <a href="#manage">03 Manage</a>
+    <a href="#measure">04 Measure</a>
+    <a href="#edge">Edge ↔ Cloud</a>
+    <a href="#contact">Contact</a>
+  </nav>
+</div>
+
+<div class="dots" id="dots">
+  <a class="d0 on" href="#top" data-l="Top"></a>
+  <a class="d1" href="#create" data-l="01 Create"></a>
+  <a class="d2" href="#operate" data-l="02 Operate"></a>
+  <a class="d3" href="#manage" data-l="03 Manage"></a>
+  <a class="d4" href="#measure" data-l="04 Measure"></a>
+  <a class="d5" href="#edge" data-l="Edge ↔ Cloud"></a>
+</div>
+
+<!-- ═══ HERO ═══ -->
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="eyebrow mono"><span class="tick"></span> AdmiraNeXT · An open agent system, running on <span class="nv">NVIDIA</span>'s edge</div>
+    <h1>
+      <span class="l1">An open agent</span>
+      <span class="l2">system for</span>
+      <span class="l3">physical retail.</span>
+    </h1>
+    <p class="support">NVIDIA is bringing agentic AI to the physical world. <b>Admira is the application layer that runs it</b> in retail and DOOH — a four-layer agentic loop deployed on <span class="g">NVIDIA edge</span>, from GPU inference in the cloud to a local model on the screen itself.</p>
+    <div class="thesis-tag">
+      <span>Physical AI</span>
+      <span>Agentic loop</span>
+      <span>Edge ↔ Cloud</span>
+      <span>Not a mockup — live product</span>
+    </div>
+  </div>
+  <div class="scrollcue"><span class="rail"></span> Scroll to walk the stack</div>
+</header>
+
+<!-- ═══ BRIDGE — the thesis ═══ -->
+<section class="bridge">
+  <div class="wrap">
+    <p class="big reveal"><span class="q">The hard part of physical AI isn't the model — it's the application layer.</span> <span class="hi">Admira is that layer for physical retail:</span> an <span class="g">open agent system</span> that turns a street of screens into a live, self-improving product. <span class="hi">Four layers — Create, Operate, Manage, Measure — running on NVIDIA</span>, from cloud GPUs down to a Jetson at the edge.</p>
+    <div class="cols">
+      <div class="col a reveal d1"><div class="k">Agentic at the edge</div><div class="v">Every screen is a node: a local model decides what to show, when, and for whom — without a round-trip to the cloud. Physical AI where the audience actually is.</div></div>
+      <div class="col b reveal d2"><div class="k">Vision that measures</div><div class="v">Multi-camera occupancy, audience by computer vision and heatmaps — the store senses itself and feeds that signal straight back into what gets created next.</div></div>
+      <div class="col c reveal d3"><div class="k">Open, not walled</div><div class="v">Admira is an open agent system: it composes the best models and runs them on standard NVIDIA edge hardware in the field — no lock-in, deployed today.</div></div>
+    </div>
+    <p class="attrib reveal d3">NVIDIA has argued that the future belongs to open agent systems for the physical world — Admira is one, purpose-built for retail and DOOH. <a href="https://www.youtube.com/watch?v=Yy3JH6dDugc" target="_blank" rel="noopener nofollow">See NVIDIA's case for open agent systems ↗</a></p>
+  </div>
+</section>
+
+<!-- ═══ 01 CREATE ═══ -->
+<section class="act a1 left" id="create">
+  <div class="glow"></div>
+  <div class="ghost" data-parallax="0.12">01</div>
+  <div class="wrap">
+    <div class="inner">
+      <div class="eye reveal"><span class="bar"></span> 01 · Create</div>
+      <h2 class="reveal d1">Content that generates itself,<br>ready for the screen.</h2>
+      <div class="prod reveal d1">Product · Pixeria</div>
+      <p class="pitch reveal d2">A model radar, a production method and <b>Pixer Feed</b>: AI-generated creatives pushed to screens and live events. The creative layer that never runs out of material — powered by <b>GPU inference</b> at scale.</p>
+      <div class="stackrow reveal d2"><span class="nvchip"><span class="dot"></span> Runs on · NVIDIA GPU inference</span></div>
+      <div class="why reveal d3">
+        <div class="row"><div class="lbl">Physical AI</div><div class="txt">Generative models produce every creative, tuned to the place and the moment it will play.</div></div>
+        <div class="row"><div class="lbl">On NVIDIA</div><div class="txt">Diffusion and language models run on NVIDIA GPUs — the same accelerated stack, from prompt to pixel.</div></div>
+        <div class="row"><div class="lbl">The loop</div><div class="txt">What Measure learns downstream comes straight back here as the next brief.</div></div>
+      </div>
+      <div class="demos reveal d4">
+        <a class="demo" href="https://www.pixeria.com" target="_blank" rel="noopener">pixeria.com <span class="ar">↗</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 02 OPERATE ═══ -->
+<section class="act a2 right" id="operate">
+  <div class="glow"></div>
+  <div class="ghost" data-parallax="0.12">02</div>
+  <div class="wrap">
+    <div class="inner">
+      <div class="eye reveal"><span class="bar"></span> 02 · Operate</div>
+      <h2 class="reveal d1">The DOOH channel,<br>running on the edge.</h2>
+      <div class="prod reveal d1">Product · admira.tv</div>
+      <p class="pitch reveal d2">The live DOOH broadcast layer: a signal that carries each creative to the physical screen, in the right slot at the right time. On <b>Jetson Thor / Orin</b> edge players, a <b>local model</b> decides on-device — no cloud dependency, no black screen when the network drops.</p>
+      <div class="stackrow reveal d2"><span class="nvchip"><span class="dot"></span> Runs on · Jetson Thor / Orin · local LLM</span></div>
+      <div class="why reveal d3">
+        <div class="row"><div class="lbl">Physical AI</div><div class="txt">The player is an agent: it reads its context and picks the creative on the spot.</div></div>
+        <div class="row"><div class="lbl">On NVIDIA</div><div class="txt">Jetson-class edge compute runs the model at the screen — low latency, offline-resilient.</div></div>
+        <div class="row"><div class="lbl">The loop</div><div class="txt">Broadcast, remote control and player already in the field, feeding proof-of-play back.</div></div>
+      </div>
+      <div class="demos reveal d4">
+        <a class="demo" href="https://admira.tv/canal.html" target="_blank" rel="noopener">The channel <span class="ar">↗</span></a>
+        <a class="demo sec" href="https://admira.tv/remotecontrol/" target="_blank" rel="noopener">Remote control <span class="ar">↗</span></a>
+        <a class="demo sec" href="https://admira.tv/player/" target="_blank" rel="noopener">Player <span class="ar">↗</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 03 MANAGE ═══ -->
+<section class="act a3 left" id="manage">
+  <div class="glow"></div>
+  <div class="ghost" data-parallax="0.12">03</div>
+  <div class="wrap">
+    <div class="inner">
+      <div class="eye reveal"><span class="bar"></span> 03 · Manage</div>
+      <h2 class="reveal d1">A digital twin of the space,<br>watched by vision agents.</h2>
+      <div class="prod reveal d1">Product · XpaceOS</div>
+      <p class="pitch reveal d2">A digital twin and operating layer for every Xpacio and every screen — a live map of the real space where you govern what shows, where and when. Paired with <b>Visual AI Agents</b> for multi-camera occupancy and flow, sensing the physical store in real time.</p>
+      <div class="stackrow reveal d2"><span class="nvchip"><span class="dot"></span> Runs on · NVIDIA Metropolis · Visual AI Agents</span></div>
+      <div class="why reveal d3">
+        <div class="row"><div class="lbl">Physical AI</div><div class="txt">Multi-camera vision turns the space into structured signal: occupancy, dwell, flow.</div></div>
+        <div class="row"><div class="lbl">On NVIDIA</div><div class="txt">Metropolis Visual AI Agents run on NVIDIA edge, next to the cameras — not in a distant cloud.</div></div>
+        <div class="row"><div class="lbl">The loop</div><div class="txt">The twin governs the network from one point; the Gràcia kiosk shows it at a glance.</div></div>
+      </div>
+      <div class="demos reveal d4">
+        <a class="demo" href="https://www.xpaceos.com" target="_blank" rel="noopener">xpaceos.com <span class="ar">↗</span></a>
+        <a class="demo sec" href="https://admira.tv/adcelerate/simulador/" target="_blank" rel="noopener">Gràcia kiosk <span class="ar">↗</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 04 MEASURE ═══ -->
+<section class="act a4 right" id="measure">
+  <div class="glow"></div>
+  <div class="ghost" data-parallax="0.12">04</div>
+  <div class="wrap">
+    <div class="inner">
+      <div class="eye reveal"><span class="bar"></span> 04 · Measure</div>
+      <h2 class="reveal d1">Every slot, measured<br>and audited by vision.</h2>
+      <div class="prod reveal d1">Product · clearchannel.tv</div>
+      <p class="pitch reveal d2">Proof-of-play, audience and revenue per screen and per circuit. With <b>vision microservices</b> for tracking, heatmaps and audience-by-computer-vision, physical retail becomes measurable inventory — every impression counted, every slot accountable. And this data feeds back into Create.</p>
+      <div class="stackrow reveal d2"><span class="nvchip"><span class="dot"></span> Runs on · NVIDIA Metropolis Microservices</span></div>
+      <div class="why reveal d3">
+        <div class="row"><div class="lbl">Physical AI</div><div class="txt">Vision counts real audience at the screen — not estimates, not panels.</div></div>
+        <div class="row"><div class="lbl">On NVIDIA</div><div class="txt">Metropolis Microservices handle tracking and heatmaps as reusable, accelerated building blocks.</div></div>
+        <div class="row"><div class="lbl">The loop</div><div class="txt">The signal returns to Create and sharpens the next piece. The loop closes.</div></div>
+      </div>
+      <div class="demos reveal d4">
+        <a class="demo" href="https://www.clearchannel.tv" target="_blank" rel="noopener">clearchannel.tv <span class="ar">↗</span></a>
+        <a class="demo sec" href="https://admira.tv/dashboard" target="_blank" rel="noopener">Dashboard <span class="ar">↗</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SIGNATURE — edge ↔ cloud ═══ -->
+<section class="sig" id="edge">
+  <div class="wrap">
+    <div class="kick mono reveal">The signature · where it runs</div>
+    <h2 class="reveal d1">The agentic loop, <span class="grad">split across edge and cloud.</span></h2>
+    <p class="lead reveal d2">Heavy generation runs on <b>cloud GPUs</b>. Decision and perception run on <b>NVIDIA edge</b> at the screen. One loop — Create · Operate · Manage · Measure — physically distributed, so intelligence sits exactly where it's needed.</p>
+    <div class="stage" id="stage">
+      <svg viewBox="0 0 680 460" role="img" aria-label="Edge-to-cloud diagram: Create runs on cloud GPU inference; Operate, Manage and Measure run on NVIDIA edge at the store, in a closed agentic loop">
+        <defs>
+          <linearGradient id="lg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#aa88ff"/>
+            <stop offset="50%" stop-color="#76b900"/>
+            <stop offset="100%" stop-color="#ff4488"/>
+          </linearGradient>
+          <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- planes -->
+        <rect class="plane" x="30" y="34" width="620" height="120" rx="14"/>
+        <rect class="plane" x="30" y="292" width="620" height="134" rx="14"/>
+        <text class="plane-lbl" x="46" y="24">Cloud · GPU inference</text>
+        <text class="plane-lbl" x="46" y="452">NVIDIA edge · at the store</text>
+
+        <!-- links: cloud CREATE down to edge, and the edge loop -->
+        <!-- CREATE (cloud) -> OPERATE (edge) -->
+        <path class="link" style="--len:230" d="M170 118 C170 200 170 200 170 360" stroke="var(--create)"/>
+        <!-- OPERATE -> MANAGE -->
+        <path class="link" style="--len:200" d="M228 386 L392 386" stroke="url(#lg)"/>
+        <!-- MANAGE -> MEASURE -->
+        <path class="link" style="--len:120" d="M448 386 L516 386" stroke="var(--manage)"/>
+        <!-- MEASURE (edge) -> CREATE (cloud): the closing loop -->
+        <path class="flow" d="M582 360 C582 200 582 118 226 92"/>
+
+        <!-- CLOUD node: CREATE -->
+        <g class="snode">
+          <rect x="118" y="70" width="104" height="48" rx="12" fill="#0c1120" stroke="#aa88ff" stroke-width="2" filter="url(#soft)"/>
+          <text class="lbl" x="170" y="92" text-anchor="middle" fill="#aa88ff">01 Create</text>
+          <text class="sub" x="170" y="107" text-anchor="middle">GPU inference</text>
+        </g>
+
+        <!-- EDGE nodes -->
+        <g class="snode">
+          <rect x="118" y="360" width="110" height="52" rx="12" fill="#0c1120" stroke="#ffd866" stroke-width="2" filter="url(#soft)"/>
+          <text class="lbl" x="173" y="382" text-anchor="middle" fill="#ffd866">02 Operate</text>
+          <text class="sub" x="173" y="397" text-anchor="middle">Jetson · local LLM</text>
+        </g>
+        <g class="snode">
+          <rect x="338" y="360" width="110" height="52" rx="12" fill="#0c1120" stroke="#50c8ff" stroke-width="2" filter="url(#soft)"/>
+          <text class="lbl" x="393" y="382" text-anchor="middle" fill="#50c8ff">03 Manage</text>
+          <text class="sub" x="393" y="397" text-anchor="middle">Visual AI Agents</text>
+        </g>
+        <g class="snode">
+          <rect x="516" y="360" width="132" height="52" rx="12" fill="#0c1120" stroke="#ff4488" stroke-width="2" filter="url(#soft)"/>
+          <text class="lbl" x="582" y="382" text-anchor="middle" fill="#ff4488">04 Measure</text>
+          <text class="sub" x="582" y="397" text-anchor="middle">Vision microservices</text>
+        </g>
+
+        <!-- edge marker -->
+        <text class="edgechip" x="600" y="250" text-anchor="middle">◂ loop closes</text>
+      </svg>
+    </div>
+    <div class="leg reveal d3">
+      <span><i style="background:var(--create)"></i> Cloud GPU</span>
+      <span><i style="background:var(--nv)"></i> NVIDIA edge</span>
+      <span><i style="background:var(--nv);opacity:.7"></i> Agentic loop</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ THREAD — a scene of physical AI ═══ -->
+<section class="thread" id="scene">
+  <div class="wrap">
+    <div class="kick mono reveal">Physical AI · a scene</div>
+    <h2 class="reveal d1">A Friday at the Gràcia kiosk.</h2>
+    <p class="lead reveal d2">One screen walks all four layers in a single day — the same impression traveling the whole loop, most of it decided <b>on a Jetson at the edge</b>, right where the audience is. <span class="g">Not a mockup — live product you can open right now.</span></p>
+    <div class="steps">
+      <div class="step s1 reveal d1"><div class="st">01 · Create</div><div class="stv">The creative is born</div><p>Pixeria generates the piece for the neighbourhood shop and pushes it to Pixer Feed, ready to air.</p><div class="on">▸ cloud GPU</div></div>
+      <div class="step s2 reveal d2"><div class="st">02 · Operate</div><div class="stv">It goes on air</div><p>admira.tv places it on the kiosk in the right slot — the on-device model picks it locally.</p><div class="on">▸ Jetson · local LLM</div></div>
+      <div class="step s3 reveal d3"><div class="st">03 · Manage</div><div class="stv">Vision watches</div><p>XpaceOS governs the screen from its digital twin while Visual AI Agents read occupancy and flow.</p><div class="on">▸ Metropolis edge</div></div>
+      <div class="step s4 reveal d4"><div class="st">04 · Measure</div><div class="stv">The impression counts</div><p>clearchannel.tv logs proof-of-play, audience and revenue by vision — and the data returns to Create.</p><div class="on">▸ Metropolis Microservices</div></div>
+    </div>
+    <div class="livebadge reveal d4"><span class="pulse"></span> Live demos — open the kiosk simulator, the channel or the player.</div>
+  </div>
+</section>
+
+<!-- ═══ CLOSE / CTA ═══ -->
+<section class="close" id="contact">
+  <div class="wrap">
+    <div class="loop reveal">◜ The loop closes · Measure → Create ◝</div>
+    <h2 class="reveal d1">An open agent system<br>for the physical world.<br><span class="grad">Running on NVIDIA.</span></h2>
+    <p class="reveal d2">Physical AI needs an application layer. <b>Admira is it for retail and DOOH</b> — four layers, one loop, deployed from cloud GPUs to a Jetson at the screen. Let's talk about running it on your edge.</p>
+    <div class="cta reveal d3">
+      <a class="btn primary" href="mailto:hola@admiranext.com?subject=Admira%20%C3%97%20NVIDIA%20%C2%B7%20open%20agent%20system%20for%20physical%20retail">Talk to AdmiraNeXT</a>
+      <a class="btn ghost" href="https://admira.tv/adcelerate/simulador/" target="_blank" rel="noopener">Open a live demo</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>ADMIRA<b>NeXT</b> · An open agent system for physical retail · on <span class="nv">NVIDIA</span> edge</span>
+    <span><a href="mailto:hola@admiranext.com">hola@admiranext.com</a></span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  /* ── Reveal on scroll ── */
+  var reveals = [].slice.call(document.querySelectorAll('.reveal'));
+  if(!('IntersectionObserver' in window) || reduce){
+    reveals.forEach(function(e){e.classList.add('in');});
+    var sg = document.getElementById('stage'); if(sg) sg.classList.add('in');
+  } else {
+    var ro = new IntersectionObserver(function(en){
+      en.forEach(function(x){ if(x.isIntersecting){ x.target.classList.add('in'); ro.unobserve(x.target); } });
+    },{threshold:.16,rootMargin:'0px 0px -8% 0px'});
+    reveals.forEach(function(e){ ro.observe(e); });
+
+    var stage = document.getElementById('stage');
+    if(stage){
+      var so = new IntersectionObserver(function(en){
+        en.forEach(function(x){ if(x.isIntersecting){ stage.classList.add('in'); so.unobserve(x.target); } });
+      },{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      so.observe(stage);
+    }
+  }
+
+  /* ── Hero entrance (staggered) ── */
+  if(!reduce){
+    var lines = [].slice.call(document.querySelectorAll('.hero h1 span'));
+    lines.forEach(function(el,i){
+      el.style.opacity = 0; el.style.transform = 'translateY(40px)';
+      el.style.transition = 'opacity .9s cubic-bezier(.16,1,.3,1) '+(0.15+i*0.12)+'s, transform .9s cubic-bezier(.16,1,.3,1) '+(0.15+i*0.12)+'s';
+    });
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      lines.forEach(function(el){ el.style.opacity=1; el.style.transform='none'; });
+    });});
+  }
+
+  /* ── Scroll-driven: progress, topbar, parallax, dot nav ── */
+  var progress = document.getElementById('progress');
+  var topbar = document.getElementById('topbar');
+  var parallaxEls = reduce ? [] : [].slice.call(document.querySelectorAll('[data-parallax]'));
+  var dotLinks = [].slice.call(document.querySelectorAll('#dots a'));
+  var sections = ['top','create','operate','manage','measure','edge'].map(function(id){return document.getElementById(id);});
+  var ticking = false;
+
+  function onScroll(){
+    var st = window.pageYOffset || document.documentElement.scrollTop;
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    if(progress) progress.style.width = (h>0 ? (st/h*100) : 0) + '%';
+    if(topbar) topbar.classList.toggle('solid', st > 40);
+
+    if(parallaxEls.length){
+      var vh = window.innerHeight;
+      parallaxEls.forEach(function(el){
+        var r = el.getBoundingClientRect();
+        var center = r.top + r.height/2;
+        var off = (center - vh/2) * (parseFloat(el.getAttribute('data-parallax'))||0.1);
+        el.style.transform = 'translateY(calc(-50% + '+ (-off) +'px))';
+      });
+    }
+
+    var mid = st + window.innerHeight*0.4, active = 0;
+    sections.forEach(function(s,i){ if(s && s.offsetTop <= mid) active = i; });
+    dotLinks.forEach(function(a,i){ a.classList.toggle('on', i===active); });
+
+    ticking = false;
+  }
+  function req(){ if(!ticking){ ticking = true; requestAnimationFrame(onScroll); } }
+  window.addEventListener('scroll', req, {passive:true});
+  window.addEventListener('resize', req);
+  onScroll();
+})();
+</script>
+</body>
+</html>
