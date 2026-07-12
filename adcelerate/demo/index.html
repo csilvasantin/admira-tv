@@ -7,8 +7,8 @@
 <title>ADcelerate · Gemelo Plaça de la Vila de Gràcia — demo</title>
 <meta name="description" content="Demo ADcelerate: gemelo 3D de la Plaça de la Vila de Gràcia con kiosko reactivo a audiencias telco.">
 <link rel="icon" href="../../favicon.svg">
-<link rel="stylesheet" href="css/admira-tokens.css?v=20260712d">
-<link rel="stylesheet" href="css/style.css?v=20260712d">
+<link rel="stylesheet" href="css/admira-tokens.css?v=20260712e">
+<link rel="stylesheet" href="css/style.css?v=20260712e">
 <script type="importmap">
 {
   "imports": {
@@ -57,10 +57,13 @@
     <section class="panel" id="panel-franjas">
       <h2>Franja horaria</h2>
       <p class="note">Datos telco de zona (simulados sobre patrón MITMA)</p>
+      <div class="hora-big"><span id="hora-lbl">18:00</span><small>hora del gemelo</small></div>
+      <input type="range" id="hora-slider" min="0" max="23.75" step="0.25" value="18"
+             aria-label="Hora del día (00:00–24:00)">
       <div class="franjas" id="franjas"></div>
       <label class="auto-row">
         <input type="checkbox" id="auto-toggle" checked>
-        <span>AUTO · rota cada 12 s</span>
+        <span>AUTO · día completo en 90 s</span>
       </label>
     </section>
 
@@ -78,7 +81,7 @@
       <label class="capa-row"><input type="checkbox" id="capa-multitud" checked><span>Multitud (presencias)</span></label>
       <label class="capa-row"><input type="checkbox" id="capa-edificios" checked><span>Edificios</span></label>
       <label class="capa-row"><input type="checkbox" id="capa-viales" checked><span>Viales</span></label>
-      <label class="capa-row"><input type="checkbox" id="escena-noche"><span>🌙 Escena nocturna</span></label>
+      <label class="capa-row"><input type="checkbox" id="escena-noche"><span>🌙 Forzar noche (ignora el reloj)</span></label>
     </section>
   </aside>
 
@@ -142,6 +145,6 @@
   <div id="loading"><div class="spin"></div><p>Cargando gemelo…</p></div>
 </div>
 
-<script type="module" src="js/main.js?v=20260712d"></script>
+<script type="module" src="js/main.js?v=20260712e"></script>
 </body>
 </html>

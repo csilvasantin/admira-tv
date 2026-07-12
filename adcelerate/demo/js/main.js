@@ -26,7 +26,48 @@ const REGLAS = {
   turistas: { cre: 'C', titulo: 'GRÀCIA WALKS',     sub: 'Guided tour EN/FR · every hour',    bg: '#ff4488', fg: '#33020f' },
   seniors:  { cre: 'D', titulo: 'MATINS TRANQUILS', sub: 'Farmàcia & salut · Vila de Gràcia', bg: '#76b900', fg: '#152600' },
 };
-const AUTO_MS = 12000;
+const DAY_SECONDS = 90;               // AUTO: el día completo del gemelo en 90 s
+const FRANJA_H = [8, 13, 18, 22];     // los botones de franja son atajos del reloj
+
+// CURVA 24h construida sobre la tabla de franjas: valle nocturno 2–6h casi vacío,
+// pico de mediodía y pico de tarde 18–20h (patrón MITMA simulado, continuo)
+const CURVA24 = [
+  { h: 0,    aforo: 90,  mix: { familias: 4,  jovenes: 42, turistas: 42, seniors: 12 } },
+  { h: 2,    aforo: 22,  mix: { familias: 2,  jovenes: 56, turistas: 36, seniors: 6 } },
+  { h: 4,    aforo: 8,   mix: { familias: 2,  jovenes: 48, turistas: 30, seniors: 20 } },
+  { h: 6,    aforo: 30,  mix: { familias: 8,  jovenes: 14, turistas: 14, seniors: 64 } },
+  { h: 8,    aforo: 140, mix: { familias: 30, jovenes: 25, turistas: 10, seniors: 35 } },
+  { h: 10.5, aforo: 235, mix: { familias: 36, jovenes: 20, turistas: 18, seniors: 26 } },
+  { h: 13,   aforo: 320, mix: { familias: 40, jovenes: 20, turistas: 25, seniors: 15 } },
+  { h: 15.5, aforo: 265, mix: { familias: 32, jovenes: 24, turistas: 28, seniors: 16 } },
+  { h: 18,   aforo: 460, mix: { familias: 25, jovenes: 40, turistas: 20, seniors: 15 } },
+  { h: 20,   aforo: 430, mix: { familias: 18, jovenes: 42, turistas: 28, seniors: 12 } },
+  { h: 22,   aforo: 300, mix: { familias: 5,  jovenes: 38, turistas: 45, seniors: 12 } },
+  { h: 24,   aforo: 90,  mix: { familias: 4,  jovenes: 42, turistas: 42, seniors: 12 } },
+];
+function audienciaAt(h) {
+  h = ((h % 24) + 24) % 24;
+  let a = CURVA24[0], b = CURVA24[CURVA24.length - 1];
+  for (let i = 0; i < CURVA24.length - 1; i++) {
+    if (h >= CURVA24[i].h && h <= CURVA24[i + 1].h) { a = CURVA24[i]; b = CURVA24[i + 1]; break; }
+  }
+  const t = b.h === a.h ? 0 : (h - a.h) / (b.h - a.h);
+  const mix = {};
+  for (const p of PERFILES) mix[p] = lerp(a.mix[p], b.mix[p], t);
+  return { aforo: lerp(a.aforo, b.aforo, t), mix };
+}
+function nearestFranjaIdx(h) {
+  let best = 0, bd = 99;
+  FRANJA_H.forEach((fh, i) => {
+    const d = Math.min(Math.abs(h - fh), 24 - Math.abs(h - fh));
+    if (d < bd) { bd = d; best = i; }
+  });
+  return best;
+}
+function fmtHora(h) {
+  const q = Math.round((((h % 24) + 24) % 24) * 4) % 96;   // pasos de 15 min
+  return String(Math.floor(q / 4)).padStart(2, '0') + ':' + String((q % 4) * 15).padStart(2, '0');
+}
 const SIGNAGE_URL = 'https://api.admira.store/signage/now?screen=oohmedia';
 const SIGNAGE_POLL_MS = 30000;
 const MAX_CROWD = 600;
@@ -100,27 +141,61 @@ ground.receiveShadow = true;
 ground.position.y = -0.05;
 scene.add(ground);
 
-/* ---- escena día/noche (metaestilo: noche = fondo admira-bg con neones) ---- */
-let sceneNight = false;
-function setSceneNight(on) {
-  sceneNight = on;
-  if (on) {
-    scene.background.set(0x0a0c12);        // --admira-bg
-    scene.fog.color.set(0x0a0c12);
-    ambLight.color.set(0xbcc8ff); ambLight.intensity = 0.5;   // legibilidad de la multitud
-    hemiLight.color.set(0x33415e); hemiLight.groundColor.set(0x141826); hemiLight.intensity = 0.35;
-    sun.color.set(0x9db8ff); sun.intensity = 0.5;             // luna fría
-    if (kioskHalo) { kioskHalo.material.opacity = 0.7; }      // neones arriba
-    plazaEdge.material.opacity = 1.0;
-  } else {
-    scene.background.set(0xe9e2d2);
-    scene.fog.color.set(0xe9e2d2);
-    ambLight.color.set(0xfff2df); ambLight.intensity = 0.62;
-    hemiLight.color.set(0xd8e6f2); hemiLight.groundColor.set(0xead9bd); hemiLight.intensity = 0.6;
-    sun.color.set(0xffd9a6); sun.intensity = 1.8;
-    if (kioskHalo) { kioskHalo.material.opacity = 0.35; }
-    plazaEdge.material.opacity = 0.85;
+/* ============ CICLO SOLAR CONTINUO (hora 0–24 → luz/cielo/neones) ============ */
+// El reloj del gemelo manda: amanecer ~7h, ocaso ~20:30 (verano BCN aprox.)
+const SKY24 = [   // keyframes de cielo/niebla por hora
+  [0, 0x07090f], [4.6, 0x07090f], [6.0, 0x1c2138], [7.2, 0xd9906b], [9, 0xe9e2d2],
+  [13, 0xedf0ec], [17.5, 0xe9e2d2], [19.6, 0xf0a868], [20.8, 0x3a2c48],
+  [21.8, 0x10131f], [23, 0x07090f], [24, 0x07090f],
+];
+const _skyA = new THREE.Color(), _mixC = new THREE.Color();
+const _sunNoon = new THREE.Color(0xfff2dd);
+const _ambDay = new THREE.Color(0xfff2df);
+const smooth01 = (a, b, x) => {
+  let t = (x - a) / (b - a);
+  t = Math.max(0, Math.min(1, t));
+  return t * t * (3 - 2 * t);
+};
+function skyAt(h, out) {
+  for (let i = 0; i < SKY24.length - 1; i++) {
+    const [ha, ca] = SKY24[i], [hb, cb] = SKY24[i + 1];
+    if (h >= ha && h <= hb) {
+      const t = hb === ha ? 0 : (h - ha) / (hb - ha);
+      return out.setHex(ca).lerp(_mixC.setHex(cb), t);
+    }
   }
+  return out.setHex(SKY24[0][1]);
+}
+let forceNight = false;
+function applyEnvironment(h) {
+  const sr = 7, ss = 20.5;
+  const dayT = (h - sr) / (ss - sr);
+  const dl = (dayT > 0 && dayT < 1) ? Math.sin(Math.PI * dayT) : 0;   // luz diurna 0..1
+  // farolas/ventanas/neón: encendido en crepúsculo, pleno de noche
+  const lampF = Math.min(1, smooth01(19.8, 20.9, h) + smooth01(7.6, 6.4, h));
+  skyAt(h, _skyA);
+  scene.background.copy(_skyA);
+  scene.fog.color.copy(_skyA);
+  if (dl > 0.02) {                       // sol: recorre este→oeste, cálido cuando rasante
+    sun.position.set(Math.cos(Math.PI * dayT) * 240, 40 + Math.sin(Math.PI * dayT) * 220, -80);
+    sun.color.copy(_mixC.setHex(0xffa860).lerp(_sunNoon, Math.min(1, dl * 1.4)));
+    sun.intensity = 0.25 + 1.65 * dl;
+    sun.castShadow = true;
+  } else {                               // luna fría, sin sombras (ahorro nocturno de FPS)
+    sun.position.set(-120, 210, 80);
+    sun.color.setHex(0x8fa8e0);
+    sun.intensity = 0.3;
+    sun.castShadow = false;
+  }
+  ambLight.intensity = 0.24 + 0.40 * dl;   // mínimo nocturno: multitud legible
+  ambLight.color.copy(_mixC.setHex(0x9aa8d8).lerp(_ambDay, dl));
+  hemiLight.intensity = 0.10 + 0.50 * dl;
+  if (buildingsMesh) buildingsMesh.material.emissive.setScalar(lampF * 0.9); // ventanas
+  for (const L of lampLights) L.intensity = lampF * 95;                      // farolas
+  lampGlowMat.opacity = lampF;
+  if (kioskLight) kioskLight.intensity = lampF * 85;                         // kiosko-neón
+  if (kioskHalo) kioskHalo.material.opacity = 0.3 + 0.4 * lampF;
+  plazaEdge.material.opacity = 0.7 + 0.3 * lampF;
 }
 
 /* ---- texturas procedurales (canvas, coste 0) ---- */
@@ -146,6 +221,24 @@ const winTx = canvasTexture(96, 96, (c, w, h) => {
   c.fillRect(26, 70, 44, 4);
 });
 winTx.repeat.set(1 / 3, 1 / 3);
+// ventanas ENCENDIDAS de noche: mosaico 4×4 de celdas (unas iluminadas, otras no)
+// → emissiveMap con repeat/4: patrón pseudoaleatorio sin materiales extra
+const winNightTx = canvasTexture(384, 384, (c, w, h) => {
+  c.fillStyle = '#000000'; c.fillRect(0, 0, w, h);
+  const rr = mulberry32(99);
+  const warm = ['#ffd27a', '#ffc063', '#f2e3b2', '#e8a94e'];
+  for (let cy = 0; cy < 4; cy++) {
+    for (let cx = 0; cx < 4; cx++) {
+      if (rr() < 0.42) {                      // ~42% de ventanas con luz
+        c.fillStyle = warm[Math.floor(rr() * warm.length)];
+        c.globalAlpha = 0.55 + rr() * 0.45;
+        c.fillRect(cx * 96 + 30, cy * 96 + 26, 36, 46);
+        c.globalAlpha = 1;
+      }
+    }
+  }
+});
+winNightTx.repeat.set(1 / 12, 1 / 12);
 // pavimento de la plaza (baldosa 2×2 m)
 const plazaTx = canvasTexture(128, 128, (c, w, h) => {
   c.fillStyle = '#e9dcbb'; c.fillRect(0, 0, w, h);
@@ -197,10 +290,29 @@ const plazaEdge = new THREE.LineLoop(
 );
 scene.add(plazaEdge);
 
+// farolas de la plaza (4 puntos de luz cálidos, solo de noche; sin sombras = baratas)
+const lampLights = [];
+const lampGlowMat = new THREE.MeshBasicMaterial({ color: 0xffc880, transparent: true, opacity: 0 });
+{
+  const poleGeo = new THREE.CylinderGeometry(0.06, 0.10, 4.6, 6);
+  const poleMat = new THREE.MeshLambertMaterial({ color: 0x2a333c });
+  const bulbGeo = new THREE.SphereGeometry(0.17, 8, 6);
+  for (const [lx, lz] of [[-5, -17], [29, -17], [29, 23], [-5, 23]]) {
+    const g = new THREE.Group();
+    const pole = new THREE.Mesh(poleGeo, poleMat); pole.position.y = 2.3;
+    const bulb = new THREE.Mesh(bulbGeo, lampGlowMat); bulb.position.y = 4.55;
+    const light = new THREE.PointLight(0xffc880, 0, 26, 1.8); light.position.y = 4.4;
+    g.add(pole, bulb, light);
+    g.position.set(lx, 0, lz);
+    scene.add(g);
+    lampLights.push(light);
+  }
+}
+
 /* ============================== kiosko héroe ============================== */
 const kiosk = new THREE.Group();
 kiosk.name = 'kiosk';
-let kioskHalo = null;
+let kioskHalo = null, kioskLight = null;
 const screenCanvas = document.createElement('canvas');
 screenCanvas.width = 640; screenCanvas.height = 360;
 const screenCtx = screenCanvas.getContext('2d');
@@ -253,18 +365,29 @@ let screenMat;
   halo.position.y = 0.06;
   kioskHalo = halo;
 
-  kiosk.add(base, trim, roof, screen, frame, sign, halo);
+  // de noche la pantalla brilla como neón e ilumina su entorno
+  kioskLight = new THREE.PointLight(0x9fdcff, 0, 32, 1.6);
+  kioskLight.position.set(5, 3.2, 0);
+
+  kiosk.add(base, trim, roof, screen, frame, sign, halo, kioskLight);
 }
 scene.add(kiosk);
 
 /* ============================== estado ============================== */
 const state = {
-  franjaIdx: 2,                      // arranca en 18h (hora punta)
+  franjaIdx: 2,                      // franja más cercana al reloj (para fichas/experto)
+  hour: 18, targetHour: 18,          // reloj de 24 h del gemelo (arranca en hora punta)
   auto: true,
   cur: { aforo: 0, mix: { familias: 25, jovenes: 25, turistas: 25, seniors: 25 } },
   dominante: null,
   realItem: null,
 };
+let hourDirty = true;
+function setHour(h, animar = true) {
+  state.targetHour = ((h % 24) + 24) % 24;
+  if (!animar) state.hour = state.targetHour;
+  hourDirty = true;
+}
 const franja = () => FRANJAS[state.franjaIdx];
 
 function dominanteDe(mix) {
@@ -501,7 +624,10 @@ function buildCity(data) {
     return geo;
   };
   buildingsMesh = new THREE.Mesh(mkGeo(walls),
-    new THREE.MeshLambertMaterial({ vertexColors: true, map: winTx }));
+    new THREE.MeshLambertMaterial({
+      vertexColors: true, map: winTx,
+      emissiveMap: winNightTx, emissive: 0x000000,   // ventanas encendidas de noche
+    }));
   buildingsMesh.castShadow = true;
   buildingsMesh.receiveShadow = true;
   buildingsMesh.name = 'buildings';
@@ -698,10 +824,15 @@ function buildHUD() {
   FRANJAS.forEach((f, i) => {
     const b = document.createElement('button');
     b.textContent = f.id;
-    b.onclick = () => { $('auto-toggle').checked = false; state.auto = false; applyFranja(i); };
+    b.onclick = () => { $('auto-toggle').checked = false; state.auto = false; setHour(FRANJA_H[i]); };
     fr.appendChild(b);
   });
   $('auto-toggle').onchange = e => { state.auto = e.target.checked; };
+  // slider de 24 h: arrastrar la hora mueve sol, luces y audiencia
+  $('hora-slider').oninput = e => {
+    $('auto-toggle').checked = false; state.auto = false;
+    setHour(parseFloat(e.target.value), false);
+  };
   const rl = $('rules');
   PERFILES.forEach(p => {
     const li = document.createElement('li');
@@ -730,7 +861,7 @@ function buildHUD() {
     if (roofsMesh) roofsMesh.visible = e.target.checked;
   };
   $('capa-viales').onchange = e => { if (roadsMesh) roadsMesh.visible = e.target.checked; };
-  $('escena-noche').onchange = e => setSceneNight(e.target.checked);
+  $('escena-noche').onchange = e => { forceNight = e.target.checked; };
 
   // escalera Good · Better · Best
   document.querySelectorAll('#quality button').forEach(b => {
@@ -778,8 +909,13 @@ function updateExpert(force = false) {
   $('ex-calls').textContent = renderer.info.render.calls;
   $('ex-tris').textContent = renderer.info.render.triangles.toLocaleString('es');
   const f = franja();
+  const obj24 = audienciaAt(state.hour);
   $('ex-audience').textContent = JSON.stringify({
-    franja: f.id, objetivo: { aforo: f.aforo, mix: f.mix },
+    hora: fmtHora(state.hour), franja_cercana: f.id,
+    objetivo_curva24: {
+      aforo: Math.round(obj24.aforo),
+      mix: Object.fromEntries(PERFILES.map(p => [p, +obj24.mix[p].toFixed(1)])),
+    },
     interpolado: {
       aforo: Math.round(state.cur.aforo),
       mix: Object.fromEntries(PERFILES.map(p => [p, +state.cur.mix[p].toFixed(1)])),
@@ -810,8 +946,13 @@ function refreshHUD() {
       li.classList.toggle('active', li.dataset.perfil === dom));
     updateOnscreenHUD();
   }
+}
+function updateHoraUI() {
+  $('hora-lbl').textContent = fmtHora(state.hour);
+  const sl = $('hora-slider');
+  if (document.activeElement !== sl) sl.value = String(Math.round(state.hour * 4) / 4);
   document.querySelectorAll('#franjas button').forEach((b, i) =>
-    b.classList.toggle('active', i === state.franjaIdx));
+    b.classList.toggle('active', Math.abs(state.hour - FRANJA_H[i]) < 1));
 }
 function updateOnscreenHUD() {
   const el = $('onscreen');
@@ -830,12 +971,15 @@ function updateOnscreenHUD() {
 
 function applyFranja(i, snap = false) {
   state.franjaIdx = i;
+  setHour(FRANJA_H[i], !snap ? true : false);
   if (snap) {
-    state.cur.aforo = FRANJAS[i].aforo;
-    state.cur.mix = { ...FRANJAS[i].mix };
+    const a = audienciaAt(state.hour);
+    state.cur.aforo = a.aforo;
+    state.cur.mix = { ...a.mix };
     updateCrowd();
   }
   refreshHUD();
+  updateHoraUI();
 }
 
 /* ============================== fichas (raycast) ============================== */
@@ -1084,7 +1228,6 @@ function tickFlight(now) {
 }
 
 /* ============================== bucle ============================== */
-let lastAuto = performance.now();
 let lastHUD = 0;
 let lastT = performance.now();
 let lastScreen = 0;
@@ -1094,26 +1237,37 @@ function animate(now) {
   const dt = Math.min(0.1, (now - lastT) / 1000);
   lastT = now;
 
-  // AUTO: rotar franja
-  if (state.auto && now - lastAuto > AUTO_MS) {
-    lastAuto = now;
-    applyFranja((state.franjaIdx + 1) % FRANJAS.length);
+  // RELOJ 24h: AUTO recorre el día completo en DAY_SECONDS; manual tiende suave al objetivo
+  if (state.auto) {
+    state.targetHour = (state.targetHour + dt * 24 / DAY_SECONDS) % 24;
+    state.hour = state.targetHour;
+    hourDirty = true;
+  } else if (Math.abs(state.targetHour - state.hour) > 0.003) {
+    const d = ((state.targetHour - state.hour + 36) % 24) - 12;  // camino más corto
+    const paso = Math.sign(d) * Math.min(Math.abs(d), dt * 9);   // lerp, no salto
+    state.hour = ((state.hour + paso) % 24 + 24) % 24;
+    hourDirty = true;
   }
-  if (!state.auto) lastAuto = now;
+  state.franjaIdx = nearestFranjaIdx(state.hour);
 
-  // interpolación aforo/mix hacia la franja objetivo
-  const f = franja();
+  // entorno continuo: sol/cielo/farolas/ventanas/kiosko-neón según la hora
+  applyEnvironment(forceNight ? 1.5 : state.hour);
+
+  // interpolación aforo/mix hacia la CURVA 24h en la hora actual
+  const objetivo = audienciaAt(state.hour);
   const k = 1 - Math.exp(-dt * 1.6);
-  let moving = Math.abs(state.cur.aforo - f.aforo) > 0.6;
-  state.cur.aforo = lerp(state.cur.aforo, f.aforo, k);
+  let moving = Math.abs(state.cur.aforo - objetivo.aforo) > 0.6;
+  state.cur.aforo = lerp(state.cur.aforo, objetivo.aforo, k);
   for (const p of PERFILES) {
-    if (Math.abs(state.cur.mix[p] - f.mix[p]) > 0.25) moving = true;
-    state.cur.mix[p] = lerp(state.cur.mix[p], f.mix[p], k);
+    if (Math.abs(state.cur.mix[p] - objetivo.mix[p]) > 0.25) moving = true;
+    state.cur.mix[p] = lerp(state.cur.mix[p], objetivo.mix[p], k);
   }
-  if (moving && now - lastHUD > 150) {
+  if ((moving || hourDirty) && now - lastHUD > 150) {
     lastHUD = now;
+    hourDirty = false;
     updateCrowd();
     refreshHUD();
+    updateHoraUI();
   }
 
   // pantalla del kiosko a ~25 fps (vídeo del canal + banda ADcelerate)
@@ -1164,6 +1318,6 @@ window.__dbg = {
   get figures() { return figures; },
   get tickFreeCalls() { return _tickFreeCalls; },
   get fps() { return fpsEMA; },
-  setSceneNight,
+  setHour, applyEnvironment, audienciaAt, fmtHora,
 };
 window.__dbgEvalCount = (window.__dbgEvalCount || 0) + 1;
