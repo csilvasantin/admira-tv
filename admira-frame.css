@@ -1,0 +1,177 @@
+/*
+ * admira-frame.css — UX CUADRÁTICA canónica de AdmiraNeXT para admira.tv.
+ *
+ * Marco de 4 menús: la BARRA SUPERIOR (existente) manda; desde ella, tres
+ * ICONOS-VENTANA cuadrados despliegan tres PANELES OVERLAY:
+ *   · OPCIONES → panel lateral IZQUIERDO   (icono arriba-izquierda, solo)
+ *   · AVANZADO → panel lateral DERECHO     (icono arriba-derecha, interior)
+ *   · EXPERTO  → panel INFERIOR            (icono arriba-derecha, extremo)
+ *
+ * Los paneles son OVERLAY (position:fixed, translate ±103%): NO empujan el
+ * contenido. Plegados por defecto, estado en localStorage, cierre por toggle,
+ * botón ✕, clic en el velo o Escape. Breakpoint móvil sólo ≤520px.
+ *
+ * Piel propia de admira.tv: negro + rojo «ON AIR» + verde fósforo del raíl.
+ * NO hereda la estética dorada de FleetControl; sólo el PATRÓN de iconos-ventana.
+ * Reutilizable: sirve la misma hoja en cualquier página de admira.tv.
+ */
+
+:root{ --af-top:52px; }
+
+/* ── ICONOS-VENTANA en la barra superior ─────────────────────────────────── */
+/* Se integran en la propia barra (misma altura/línea que los controles admira-nav). */
+.af-ico{
+  flex:none; width:34px; height:34px; display:grid; place-items:center; cursor:pointer;
+  border:1px solid #1e2940; border-radius:9px; background:#0e1420; color:#cdd8e8;
+  padding:0; transition:border-color .15s, box-shadow .15s, background .15s;
+}
+.af-ico:hover{ border-color:#3df08a; color:#fff }
+.af-ico:focus-visible{ outline:2px solid #3df08a; outline-offset:2px }
+.af-ico svg{ width:17px; height:15px; display:block }
+.af-ico .af-fr{ fill:none; stroke:#7f8ea6; stroke-width:1.4 }
+.af-ico .af-pn{ fill:#2a3a5c }
+.af-ico:hover .af-fr{ stroke:#9dffce }
+/* activo (panel abierto): fósforo verde con glow */
+.af-ico.on{ background:rgba(61,240,138,.14); border-color:#3df08a; box-shadow:0 0 0 1px rgba(61,240,138,.35) }
+.af-ico.on .af-fr{ stroke:#9dffce; filter:drop-shadow(0 0 3px rgba(61,240,138,.8)) }
+.af-ico.on .af-pn{ fill:#3df08a }
+/* el icono OPCIONES manda en la esquina izquierda → primer elemento de la barra */
+.af-ico-left{ margin-right:2px }
+.af-ico-right{ margin-left:2px }
+
+/* ── PANELES OVERLAY ─────────────────────────────────────────────────────── */
+.af-panel{
+  position:fixed; z-index:60; display:flex; flex-direction:column;
+  background:#080b12; border:1px solid #1e2940; color:#cdd8e8;
+  font:14px -apple-system,Segoe UI,Roboto,sans-serif;
+  box-shadow:0 14px 44px #000b; transition:transform .2s ease;
+}
+.af-left{
+  top:var(--af-top); left:0; bottom:0; width:min(300px,86vw);
+  border-left:0; border-top:0; border-bottom:0; border-right:1px solid #1e2940;
+  transform:translateX(-103%);
+}
+.af-right{
+  top:var(--af-top); right:0; bottom:0; width:min(320px,88vw);
+  border-right:0; border-top:0; border-bottom:0; border-left:1px solid #1e2940;
+  transform:translateX(103%);
+}
+.af-bottom{
+  left:0; right:0; bottom:0; height:min(320px,58vh);
+  border-left:0; border-right:0; border-bottom:0; border-top:1px solid #1e2940;
+  transform:translateY(103%);
+}
+body.af-left-open   .af-left  { transform:none }
+body.af-right-open  .af-right { transform:none }
+body.af-bottom-open .af-bottom{ transform:none }
+
+/* cabecera del panel */
+.af-hd{
+  display:flex; align-items:center; gap:10px; padding:12px 14px;
+  border-bottom:1px solid #1e2940; flex:none;
+}
+.af-hd .af-ttl{
+  font:700 11px ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.14em;
+  text-transform:uppercase; color:#8595ad;
+}
+.af-hd .af-ttl b{ color:#3df08a; font-weight:700 }
+.af-hd .af-x{
+  margin-left:auto; width:28px; height:28px; display:grid; place-items:center; cursor:pointer;
+  border:1px solid #1e2940; border-radius:8px; background:#0e1420; color:#9fb0c6;
+  font-size:16px; line-height:1; padding:0; transition:border-color .15s,color .15s;
+}
+.af-hd .af-x:hover{ border-color:#ff5a5a; color:#fff }
+.af-hd .af-x:focus-visible{ outline:2px solid #3df08a; outline-offset:2px }
+
+/* cuerpo scrollable */
+.af-bd{
+  flex:1; min-height:0; overflow-y:auto; padding:12px 12px 20px;
+  display:flex; flex-direction:column; gap:8px; scrollbar-width:thin;
+}
+.af-bd::-webkit-scrollbar{ width:7px }
+.af-bd::-webkit-scrollbar-thumb{ background:#1e2940; border-radius:4px }
+.af-empty{ color:#8595ad; font-size:13px; padding:8px 6px; font-style:italic }
+
+/* velo: aparece cuando hay algún panel abierto; clic = cerrar todo */
+.af-scrim{
+  position:fixed; inset:var(--af-top) 0 0 0; z-index:55; background:#000a;
+  opacity:0; visibility:hidden; transition:opacity .2s ease, visibility .2s ease;
+}
+body.af-any-open .af-scrim{ opacity:1; visibility:visible }
+
+/* ── Contenido: OPCIONES (raíl de navegación, vertical con rótulos) ───────── */
+.af-nav{ display:flex; flex-direction:column; gap:3px; margin:0; padding:0 }
+.af-nav a{
+  display:flex; align-items:center; gap:13px; padding:9px 11px; border-radius:11px;
+  border:1px solid transparent; color:#cdd8e8; text-decoration:none;
+  font:600 13px -apple-system,Segoe UI,sans-serif; white-space:nowrap;
+}
+.af-nav a:hover{ background:#13203a; border-color:#26385e; color:#fff }
+.af-nav a.on{ background:rgba(122,162,255,.13); border-color:#2a3a66; color:#fff }
+.af-nav a .af-ic{ flex:none; width:22px; height:22px; display:grid; place-items:center }
+.af-nav a .af-ic svg{
+  width:20px; height:20px; display:block; color:#3df08a;
+  filter:drop-shadow(0 0 2.5px rgba(61,240,138,.5)); transition:color .15s,filter .15s;
+}
+.af-nav a:hover .af-ic svg{ color:#8effc4; filter:drop-shadow(0 0 5px rgba(61,240,138,.85)) }
+.af-nav .af-sep{ height:1px; background:#1e2940; margin:7px 6px }
+
+/* ── Contenido: AVANZADO (CTAs cross-marca en tarjetas) ──────────────────── */
+.af-cards{ display:flex; flex-direction:column; gap:8px }
+.af-cards a{
+  display:block; text-decoration:none; padding:12px 13px; border-radius:12px;
+  border:1px solid #1e2940; background:#0e131c; color:#cdd8e8; transition:border-color .15s,transform .1s;
+}
+.af-cards a:hover{ border-color:#3df08a; transform:translateY(-1px) }
+.af-cards a .af-t{ display:block; font:700 14px -apple-system,Segoe UI,sans-serif; color:#e8eef6 }
+.af-cards a .af-d{ display:block; margin-top:3px; font-size:12.5px; color:#8595ad }
+.af-cards a .af-t .af-em{ margin-right:8px }
+
+/* ── Contenido: EXPERTO (datos crudos del canal) ─────────────────────────── */
+.af-expert{ display:flex; flex-direction:column; gap:10px; min-height:0; flex:1 }
+.af-expert .af-tools{ display:flex; align-items:center; gap:10px; flex-wrap:wrap }
+.af-expert .af-btn{
+  display:inline-flex; align-items:center; gap:7px; cursor:pointer;
+  border:1px solid #3df08a; border-radius:9px; background:rgba(61,240,138,.1);
+  color:#9dffce; font:700 12.5px ui-monospace,monospace; padding:8px 13px;
+  transition:background .15s;
+}
+.af-expert .af-btn:hover{ background:rgba(61,240,138,.2); color:#fff }
+.af-expert .af-btn:focus-visible{ outline:2px solid #3df08a; outline-offset:2px }
+.af-expert .af-meta{
+  font:11.5px ui-monospace,monospace; color:#8595ad; display:flex; gap:14px; flex-wrap:wrap;
+}
+.af-expert .af-meta b{ color:#cdd8e8 }
+.af-expert pre{
+  margin:0; flex:1; min-height:80px; overflow:auto; white-space:pre; tab-size:2;
+  background:#05080c; border:1px solid #1e2940; border-radius:10px; padding:11px 12px;
+  font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; color:#8effc4;
+  scrollbar-width:thin;
+}
+.af-expert pre::-webkit-scrollbar{ width:8px; height:8px }
+.af-expert pre::-webkit-scrollbar-thumb{ background:#1e2940; border-radius:4px }
+
+/* ── Convivencia con el chrome admira-nav en la home (af-on) ──────────────── */
+/* El raíl izquierdo, el detalle y el experto de admira-nav se retiran: su función
+ * la asumen los paneles overlay. Sin padding lateral → el contenido va a todo ancho. */
+html.af-on.admnav{ padding-left:0 !important; padding-right:0 !important }
+html.af-on.admnav.admnav-exp body{ padding-bottom:0 !important }
+html.af-on .admside,
+html.af-on .admdet,
+html.af-on .admexp,
+html.af-on .admscrim,
+html.af-on .admrz,
+html.af-on #admNavTog,
+html.af-on #admDetTog,
+html.af-on #admExpTog{ display:none !important }
+
+/* ── Móvil (≤520px): los paneles ocupan el borde completo ─────────────────── */
+@media (max-width:520px){
+  .af-left, .af-right{ width:100vw }
+  .af-bottom{ height:min(70vh,420px) }
+}
+
+/* Respeta prefers-reduced-motion */
+@media (prefers-reduced-motion:reduce){
+  .af-panel, .af-scrim{ transition:none !important }
+}
