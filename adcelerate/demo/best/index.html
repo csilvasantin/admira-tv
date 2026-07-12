@@ -7,234 +7,340 @@
 <title>ADcelerate · BEST — Plaça de la Vila de Gràcia fotorrealista</title>
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
+<!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
+<link rel="stylesheet" href="../css/admira-tokens.css?v=20260712g">
+<link rel="stylesheet" href="../css/style.css?v=20260712g">
 <style>
-  /* ---- Tokens vendorizados del gemelo (coherencia con demo/) ---- */
-  :root{
-    --admira-bg:      #0a0c12;
-    --admira-bg-elev: #141826;
-    --admira-cyan:    #50c8ff;
-    --spine:          var(--admira-cyan);
-    --panel-bg:       rgba(20, 24, 38, .90);
-    --panel-bg-2:     rgba(10, 12, 18, .92);
-    --ink:            #eaf0ff;
-    --ink-dim:        #9fb0d0;
-    --glow-cyan:      0 0 24px rgba(80, 200, 255, .40);
-    --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* ---- Solo lo específico del nivel BEST (globo Google en el hueco central) ---- */
+  /* El globo gmp-map-3d ocupa el HUECO del marco: entre columnas y barras.
+     Así la atribución obligatoria de Google (logo + data providers, esquina
+     inferior derecha del componente) queda SIEMPRE visible, sin taparla con
+     la columna derecha ni con la banda experto. */
+  #stage{
+    position: absolute; z-index: 1; overflow: hidden;
+    top: var(--top-h); left: var(--col-w); right: var(--col-w); bottom: var(--bottom-h);
+    background: radial-gradient(1200px 600px at 50% 40%, rgba(80,200,255,.06), var(--admira-bg) 70%);
+    transition: left var(--admira-tx-normal), right var(--admira-tx-normal), bottom var(--admira-tx-normal);
   }
-  *{ box-sizing:border-box; }
-  html,body{ margin:0; height:100%; background:var(--admira-bg); color:var(--ink); font-family:var(--font-sans); overflow:hidden; }
-  #stage{ position:fixed; inset:0; }
-  gmp-map-3d, #map3d{ width:100%; height:100%; display:block; }
+  gmp-map-3d, #map3d{ width: 100%; height: 100%; display: block; }
+  /* Al abrir el modo experto, el globo sube para NO tapar la atribución Google */
+  body.expert-open #stage{ bottom: 236px; }
 
-  /* ---- Marca / cabecera flotante ---- */
-  #brand{
-    position:fixed; top:16px; left:16px; z-index:20;
-    display:flex; align-items:center; gap:10px;
-    padding:10px 14px; border-radius:14px;
-    background:var(--panel-bg); backdrop-filter:blur(10px);
-    border:1px solid rgba(80,200,255,.25); box-shadow:var(--glow-cyan);
+  /* Vista: HYBRID / SATELLITE (mismo lenguaje que #cammodes) */
+  #viewmodes{ display: flex; flex-direction: column; gap: 6px; }
+  #viewmodes button{
+    text-align: left; font-size: 12.5px; font-weight: 600; padding: 9px 12px; cursor: pointer;
+    border: 1px solid var(--admira-border); border-radius: var(--admira-radius-md);
+    background: rgba(255,255,255,.04); color: var(--admira-text);
+    transition: all var(--admira-tx-fast);
   }
-  #brand .dot{ width:10px; height:10px; border-radius:50%; background:var(--spine); box-shadow:var(--glow-cyan); }
-  #brand b{ font-size:15px; letter-spacing:.2px; }
-  #brand b em{ font-style:normal; color:var(--ink-dim); font-weight:400; margin-left:6px; }
-  #brand .sub{ display:block; font-size:11px; color:var(--ink-dim); margin-top:1px; }
-  #brand .tier{ margin-left:8px; font-size:10px; font-weight:700; letter-spacing:1px;
-    color:#0a0c12; background:linear-gradient(120deg,#50c8ff,#a688ff); padding:3px 8px; border-radius:999px; }
-  #brand .back{ margin-left:6px; font-size:11px; font-weight:600; text-decoration:none;
-    color:var(--ink-dim); border:1px solid rgba(80,200,255,.25); padding:3px 9px; border-radius:999px;
-    transition:.15s; white-space:nowrap; }
-  #brand .back:hover{ color:var(--ink); border-color:var(--spine); box-shadow:var(--glow-cyan); }
+  #viewmodes button:hover{ border-color: var(--spine-line); transform: translateY(-1px); }
+  #viewmodes button.active{
+    background: var(--spine-soft); border-color: var(--spine); color: var(--spine);
+    box-shadow: var(--admira-shadow-glow-cyan);
+  }
 
-  /* ---- Controles de cámara ---- */
-  #cam{
-    position:fixed; bottom:20px; left:16px; z-index:20;
-    display:flex; gap:8px; padding:8px; border-radius:14px;
-    background:var(--panel-bg); backdrop-filter:blur(10px);
-    border:1px solid rgba(80,200,255,.20);
+  /* Miniatura de la creatividad recomendada (no hay pantalla 3D nuestra en el fotorreal) */
+  .cre-thumb-wrap{ margin-top: 10px; position: relative; }
+  #cre-thumb{
+    display: block; width: 100%; aspect-ratio: 16/9; object-fit: cover;
+    border-radius: var(--admira-radius-md); border: 1px solid var(--spine-line);
+    box-shadow: 0 0 18px -6px var(--spine); background: var(--admira-bg-elev);
   }
-  #cam button{
-    font-family:inherit; font-size:12px; color:var(--ink);
-    background:var(--admira-bg-elev); border:1px solid rgba(80,200,255,.25);
-    padding:8px 12px; border-radius:10px; cursor:pointer; transition:.15s;
+  .cre-cap{
+    position: absolute; left: 8px; bottom: 8px;
+    font-family: var(--admira-font-mono); font-size: 8.5px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--admira-text);
+    background: rgba(6,20,26,.72); padding: 3px 8px; border-radius: var(--admira-radius-pill);
+    border: 1px solid var(--spine-line);
   }
-  #cam button:hover{ border-color:var(--spine); box-shadow:var(--glow-cyan); }
-  #cam button:disabled{ opacity:.4; cursor:default; box-shadow:none; }
 
-  /* ---- Aviso de clave faltante ---- */
+  /* Nuestro crédito de escena: al lado IZQUIERDO del hueco, para dejar libre la
+     esquina inferior derecha donde Google pinta su atribución obligatoria. */
+  #attrib{ right: auto; left: calc(var(--col-w) + 12px); }
+
+  /* Aviso de clave faltante / error (reusa el lenguaje de tarjeta del gemelo) */
   #need-key{
-    position:fixed; inset:0; z-index:40;
-    display:none; align-items:center; justify-content:center;
-    background:radial-gradient(1200px 600px at 50% 40%, rgba(80,200,255,.08), var(--admira-bg) 70%);
+    position: absolute; inset: 0; z-index: 40;
+    display: none; align-items: center; justify-content: center;
+    background: radial-gradient(1200px 600px at 50% 40%, rgba(80,200,255,.08), var(--admira-bg) 70%);
   }
-  #need-key.show{ display:flex; }
+  #need-key.show{ display: flex; }
   #need-key .card{
-    max-width:520px; margin:20px; padding:28px 30px; border-radius:20px;
-    background:var(--panel-bg-2); backdrop-filter:blur(14px);
-    border:1px solid rgba(80,200,255,.30); box-shadow:var(--glow-cyan);
-    text-align:center;
+    max-width: 520px; margin: 20px; padding: 28px 30px; border-radius: var(--admira-radius-lg);
+    background: var(--panel-bg-2); backdrop-filter: blur(14px);
+    border: 1px solid var(--admira-border-strong); border-left: 2px solid var(--spine);
+    box-shadow: var(--admira-shadow-card), 0 0 30px -12px var(--spine); text-align: center;
   }
-  #need-key .lock{ font-size:40px; }
-  #need-key h1{ font-size:20px; margin:10px 0 6px; }
-  #need-key .tier{ display:inline-block; font-size:10px; font-weight:700; letter-spacing:1px;
-    color:#0a0c12; background:linear-gradient(120deg,#50c8ff,#a688ff); padding:3px 10px; border-radius:999px; margin-bottom:12px; }
-  #need-key p{ color:var(--ink-dim); font-size:13px; line-height:1.6; margin:8px 0; }
-  #need-key code{ background:var(--admira-bg-elev); padding:2px 7px; border-radius:6px; color:var(--admira-cyan); font-size:12px; }
-  #need-key .hint{ margin-top:16px; font-size:11px; color:var(--ink-dim); }
-
-  /* ---- Cartel de carga ---- */
-  #loading{
-    position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center;
-    background:var(--admira-bg); transition:opacity .6s; pointer-events:none;
+  #need-key .lock{ font-size: 40px; }
+  #need-key h1{ font-size: 20px; margin: 10px 0 6px; }
+  #need-key .tier{
+    display: inline-block; font-family: var(--admira-font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: .18em; color: #0a0c12;
+    background: linear-gradient(120deg, var(--admira-cyan), var(--admira-violet));
+    padding: 3px 10px; border-radius: var(--admira-radius-pill); margin-bottom: 12px;
   }
-  #loading.hidden{ opacity:0; }
-  #loading .spin{ width:34px; height:34px; border-radius:50%;
-    border:3px solid rgba(80,200,255,.2); border-top-color:var(--spine); animation:sp 1s linear infinite; }
-  @keyframes sp{ to{ transform:rotate(360deg); } }
+  #need-key p{ color: var(--admira-text-muted); font-size: 13px; line-height: 1.6; margin: 8px 0; }
+  #need-key code{ background: var(--admira-bg-elev); padding: 2px 7px; border-radius: var(--admira-radius-sm);
+    color: var(--admira-cyan); font-size: 12px; }
+  #need-key .hint{ margin-top: 16px; font-size: 11px; color: var(--admira-text-dim); }
 
-  /* ---- Atribución Google (obligatoria por licencia Map Tiles) ---- */
-  /* El componente gmp-map-3d renderiza el logo de Google + los data providers
-     internamente en la esquina inferior derecha. Esta caja añade el crédito de
-     la escena; NO la usamos para tapar la atribución nativa de Google. */
-  #attrib{
-    position:fixed; bottom:8px; right:10px; z-index:20;
-    font-size:10px; color:var(--ink-dim);
-    background:rgba(10,12,18,.55); padding:3px 8px; border-radius:8px;
-    pointer-events:none;
+  @media (max-width: 900px){
+    /* columnas off-canvas → el globo ocupa todo el ancho y su atribución se ve */
+    #stage{ left: 0; right: 0; }
+    body.expert-open #stage{ bottom: 52vh; }
+    #attrib{ display: none; }
   }
 </style>
 </head>
 <body>
 
-<div id="stage"></div>
+<div id="app">
+  <!-- Globo fotorrealista de Google en el hueco del marco -->
+  <div id="stage"></div>
 
-<div id="brand">
-  <span class="dot"></span>
-  <div>
-    <b>ADcelerate<em>by Admira</em></b>
-    <span class="sub">Plaça de la Vila de Gràcia · fotorrealista</span>
-  </div>
-  <span class="tier">BEST</span>
-  <a class="back" href="../" title="Volver al gemelo 3D">← Gemelo</a>
-</div>
+  <!-- ============ MENÚ SUPERIOR (mismo que el gemelo) ============ -->
+  <header id="topbar">
+    <button id="tg-left" class="side-toggle" aria-label="Cámara">☰</button>
+    <div class="brand">
+      <div class="logo-dot" aria-hidden="true"></div>
+      <div class="brand-txt">
+        <b>ADcelerate<em>by Admira</em></b><span class="sub">Gemelo · Vila de Gràcia</span>
+      </div>
+    </div>
+    <nav id="mainnav">
+      <a href="#" class="active">Fotorreal</a>
+      <a href="#" data-open="left">Cámara</a>
+      <a href="#" data-open="right">Circuito</a>
+      <a href="https://admira.tv/canal.html" target="_blank" rel="noopener">admira.tv ↗</a>
+    </nav>
+    <div id="quality" title="Escalera del gemelo">
+      <button data-q="good">2D<small>Good</small></button>
+      <button data-q="better">3D<small>Better</small></button>
+      <button data-q="best" class="active">BEST<small>fotorreal</small></button>
+    </div>
+    <button id="tg-right" class="side-toggle" aria-label="Circuito">⚙</button>
+  </header>
 
-<div id="cam">
-  <button id="btn-replay" title="Repetir vuelo de entrada">↻ Vuelo</button>
-  <button id="btn-orbit"  title="Orbitar el kiosko">◎ Órbita</button>
-  <button id="btn-stop"   title="Parar cámara">■ Parar</button>
-</div>
+  <!-- ============ MENÚ IZQUIERDO (opciones) ============ -->
+  <aside id="sidebar">
+    <section class="panel" id="cammodes-panel">
+      <h2>Cámara</h2>
+      <div id="cammodes">
+        <button data-cam="fly" class="active">✈ Vuelo de entrada</button>
+        <button data-cam="orbit">◎ Órbita</button>
+        <button data-cam="human">🧍 A pie ante el kiosko</button>
+        <button data-cam="stop">■ Parar</button>
+      </div>
+      <p class="note">vuelo cinematográfico · descenso orbital al kiosko News &amp; Coffee</p>
+    </section>
 
-<div id="attrib">Escena · ADcelerate by Admira · imágenes © Google</div>
+    <section class="panel" id="view-panel">
+      <h2>Vista</h2>
+      <div id="viewmodes">
+        <button data-view="HYBRID" class="active">🛰 Híbrida · con etiquetas</button>
+        <button data-view="SATELLITE">🌐 Satélite · limpio</button>
+      </div>
+      <p class="note">Map3DElement · Photorealistic 3D Tiles en vivo</p>
+    </section>
+  </aside>
 
-<div id="loading"><div class="spin"></div></div>
+  <!-- ============ MENÚ DERECHO (avanzadas · capa ADcelerate) ============ -->
+  <aside id="rightbar">
+    <section class="panel" id="panel-live">
+      <h2>Dato telco de la franja</h2>
+      <div class="franjas" id="franjas"></div>
+      <div class="big-metric" style="margin-top:12px"><span id="aforo">—</span><span class="unit">personas</span></div>
+      <div id="mixbars"></div>
+      <div class="kv"><span>Perfil dominante</span><b id="dominante">—</b></div>
+    </section>
 
-<div id="need-key">
-  <div class="card">
-    <div class="lock">🔒</div>
-    <div class="tier">BEST</div>
-    <h1>El nivel BEST requiere clave de Google Maps</h1>
-    <p>Este nivel carga el globo <b>fotorrealista</b> de Google (Photorealistic 3D Tiles)
-       en vivo. Necesita una clave de la <b>Maps JavaScript API</b> con la
-       <b>Map Tiles API</b> habilitada.</p>
-    <p>Añade la clave a la URL:<br><code>?key=TU_CLAVE_DE_GOOGLE_MAPS</code></p>
-    <p class="hint">Alta de la clave: ver <code>best/README.md</code> · pendiente de alta por Carlos / Trinity.</p>
+    <section class="panel" id="panel-rules">
+      <h2>ADcelerate interpreta</h2>
+      <ul class="rules" id="rules"></ul>
+      <div class="kv"><span>Recomendación</span><b id="recomendacion">—</b></div>
+      <div class="cre-thumb-wrap">
+        <img id="cre-thumb" alt="creatividad recomendada por ADcelerate">
+        <span class="cre-cap">recomendación ADcelerate</span>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-feed">
+      <h2>Feed real</h2>
+      <div class="kv"><span>Player circuito</span><b id="signagestate">—</b></div>
+      <p class="note">signage/now?screen=oohmedia · poll 30 s</p>
+    </section>
+  </aside>
+
+  <!-- ============ BARRA INFERIOR (modo experto, plegada) ============ -->
+  <footer id="expertbar" class="collapsed">
+    <button id="expert-toggle">⌥ Modo experto</button>
+    <div id="expert-content">
+      <div class="ex-col">
+        <h3>Cámara en vivo (map3d)</h3>
+        <pre id="ex-cam" class="mono">—</pre>
+      </div>
+      <div class="ex-col">
+        <h3>Endpoints usados</h3>
+        <div class="ex-kv mono" id="ex-endpoints"></div>
+        <h3>Estado de la sesión</h3>
+        <div class="ex-kv mono" id="ex-session">—</div>
+      </div>
+      <div class="ex-col">
+        <h3>signage/now (crudo) · pieza del circuito</h3>
+        <pre id="ex-signage" class="mono">—</pre>
+      </div>
+    </div>
+  </footer>
+
+  <div id="attrib">Escena · ADcelerate by Admira · imágenes © Google</div>
+
+  <div id="loading"><div class="spin"></div>Cargando globo fotorrealista…</div>
+
+  <div id="need-key">
+    <div class="card">
+      <div class="lock">🔒</div>
+      <div class="tier">BEST</div>
+      <h1>El nivel BEST requiere clave de Google Maps</h1>
+      <p>Este nivel carga el globo <b>fotorrealista</b> de Google (Photorealistic 3D Tiles)
+         en vivo. Necesita una clave de la <b>Maps JavaScript API</b> con la
+         <b>Map Tiles API</b> habilitada.</p>
+      <p>Añade la clave a la URL:<br><code>?key=TU_CLAVE_DE_GOOGLE_MAPS</code></p>
+      <p class="hint">Alta de la clave: ver <code>best/README.md</code>.</p>
+    </div>
   </div>
 </div>
 
 <script>
 /* ============================================================
-   ADcelerate — Nivel BEST
-   Vía LICENCIADA: Photorealistic 3D Tiles en vivo vía el
-   componente gmp-map-3d (Map3DElement) de Maps JavaScript API.
-   NO se cachea ni pre-renderiza nada: todo se sirve en vivo desde
-   Google, cumpliendo la Map Tiles API Policy.
+   ADcelerate — Nivel BEST (fotorrealista)
+   Marco cuadrático COMPARTIDO con el gemelo (demo/css/*). El globo
+   se sirve en vivo vía gmp-map-3d (Map3DElement) de Maps JavaScript
+   API, cumpliendo la Map Tiles API Policy (nada se cachea).
    ============================================================ */
+
+const $ = (id) => document.getElementById(id);
 
 // Plaça de la Vila de Gràcia (kiosko News & Coffee · OOH Media)
 const PLAZA = { lat: 41.4002243, lng: 2.1575761 };
 
-// Clave desde la URL (?key=...). Nunca hardcodeada ni en la cúpula.
-const GOOGLE_MAPS_KEY = new URLSearchParams(location.search).get('key') || 'AIzaSyDOQTBlJYugpPBPuSMlRg74tu8Gvmq7mKA'; // clave publicable restringida por referrer a admira.tv (autorizado por Carlos)
+// Clave desde la URL (?key=...). Nunca hardcodeada en la cúpula.
+const GOOGLE_MAPS_KEY = new URLSearchParams(location.search).get('key') || 'AIzaSyDOQTBlJYugpPBPuSMlRg74tu8Gvmq7mKA'; // publicable, restringida por referrer a admira.tv (autorizado por Carlos)
 
-const $ = (id) => document.getElementById(id);
-
-// --- Cámaras de la coreografía cinematográfica (estilo Earth Studio) ---
-// Entrada: lejos y muy inclinada -> descenso orbital hasta el kiosko.
-const CAM_START = {
-  center: { ...PLAZA, altitude: 40 },
-  range: 2200,   // lejos
-  tilt: 47,      // vista aérea alta
-  heading: 25,
+/* ---------- dataset ADcelerate (ORIGEN: demo/js/main.js — duplicado aquí
+   porque main.js es un módulo THREE no importable limpio en esta vista) ---------- */
+const FRANJAS = [
+  { id: '08h', h: 8,  aforo: 140, mix: { familias: 30, jovenes: 25, turistas: 10, seniors: 35 } },
+  { id: '13h', h: 13, aforo: 320, mix: { familias: 40, jovenes: 20, turistas: 25, seniors: 15 } },
+  { id: '18h', h: 18, aforo: 460, mix: { familias: 25, jovenes: 40, turistas: 20, seniors: 15 } },
+  { id: '22h', h: 22, aforo: 300, mix: { familias: 5,  jovenes: 38, turistas: 45, seniors: 12 } },
+];
+const PERFILES = ['familias', 'jovenes', 'turistas', 'seniors'];
+const PERFIL_LABEL = { familias: 'Familias', jovenes: 'Jóvenes', turistas: 'Turistas', seniors: 'Seniors' };
+const PERFIL_CSS   = { familias: '#ffd866', jovenes: '#aa88ff', turistas: '#ff4488', seniors: '#76b900' };
+// Motor de reglas ADcelerate: perfil dominante → creatividad (idéntico a main.js REGLAS)
+const REGLAS = {
+  familias: { cre: 'A', titulo: 'PLAN FAMILIAR',    sub: '2×1 xocolata · Granja de la Plaça' },
+  jovenes:  { cre: 'B', titulo: 'NIT DE GRÀCIA',    sub: 'Session 18–22h · craft & vinils' },
+  turistas: { cre: 'C', titulo: 'GRÀCIA WALKS',     sub: 'Guided tour EN/FR · every hour' },
+  seniors:  { cre: 'D', titulo: 'MATINS TRANQUILS', sub: 'Farmàcia & salut · Vila de Gràcia' },
 };
-const CAM_KIOSK = {
-  center: { ...PLAZA, altitude: 20 },
-  range: 220,    // pegado al kiosko
-  tilt: 67,      // casi a pie de calle
-  heading: 25,
-};
+const dominanteDe = (mix) => PERFILES.reduce((a, b) => (mix[a] >= mix[b] ? a : b));
 
-let map3d = null;
+/* ---------- feed real del circuito (mismo endpoint que el gemelo) ---------- */
+const SIGNAGE_URL = 'https://api.admira.store/signage/now?screen=oohmedia';
+const SIGNAGE_POLL_MS = 30000;
 
+/* ---------- cámaras de la coreografía cinematográfica ---------- */
+const CAM_START = { center: { ...PLAZA, altitude: 40 }, range: 2200, tilt: 47, heading: 25 };
+const CAM_KIOSK = { center: { ...PLAZA, altitude: 20 }, range: 220,  tilt: 67, heading: 25 };
+// «A pie»: casi a pie de calle frente al kiosko (lo más cercano al modo Humano que da el API)
+const CAM_HUMAN = { center: { ...PLAZA, altitude: 2 },  range: 75,   tilt: 85, heading: 25 };
+
+let map3d = null, MapMode = null, viewMode = 'HYBRID';
+let selFranjaIdx = 2;          // 18h por defecto (hora punta), como el gemelo
+let creManifest = null;
+let lastSignageRaw = null, signageItem = null;
+
+/* ============================ arranque ============================ */
 async function boot(){
+  buildFranjas();
+  buildRules(FRANJAS[selFranjaIdx]);
+  loadCreatividades();
+  wireUI();
+  pollSignage(); setInterval(pollSignage, SIGNAGE_POLL_MS);
+
   if (!GOOGLE_MAPS_KEY){
-    $('loading').classList.add('hidden');
+    $('loading').classList.add('done');
     $('need-key').classList.add('show');
     return;
   }
   loadBootstrap(GOOGLE_MAPS_KEY);
   try{
-    const { Map3DElement, MapMode } = await google.maps.importLibrary('maps3d'); // carga y define gmp-map-3d
+    const lib = await google.maps.importLibrary('maps3d');
+    const { Map3DElement } = lib; MapMode = lib.MapMode || null;
 
     map3d = new Map3DElement({
       mode: MapMode ? MapMode.HYBRID : 'HYBRID',   // obligatorio desde feb-2025
-      center: CAM_START.center,
-      range: CAM_START.range,
-      tilt: CAM_START.tilt,
-      heading: CAM_START.heading,
+      center: CAM_START.center, range: CAM_START.range, tilt: CAM_START.tilt, heading: CAM_START.heading,
     });
     map3d.id = 'map3d';
     $('stage').appendChild(map3d);
 
     await addKiosk();
-    // Deja respirar al primer frame de tiles antes de arrancar el vuelo.
-    map3d.addEventListener('gmp-steadychange', onSteady, { once:true });
-    // Fallback por si el evento no llega:
-    setTimeout(() => { $('loading').classList.add('hidden'); flyIn(); }, 3500);
+    map3d.addEventListener('gmp-steadychange', onSteady, { once: true });
+    setTimeout(() => { $('loading').classList.add('done'); flyIn(); }, 3500);  // fallback
 
-    wireControls();
+    startTelemetry();
   }catch(err){
     console.error('[BEST] fallo cargando el globo 3D:', err);
-    $('loading').classList.add('hidden');
+    $('loading').classList.add('done');
     $('need-key').querySelector('h1').textContent = 'No se pudo cargar el globo 3D';
     $('need-key').querySelector('.card p').innerHTML =
       'Revisa que la clave tenga <b>Map Tiles API</b> + <b>Maps JavaScript API</b> habilitadas y el referrer autorizado. Detalle en consola.';
     $('need-key').classList.add('show');
   }
 }
+function onSteady(){ $('loading').classList.add('done'); flyIn(); }
 
-function onSteady(){
-  $('loading').classList.add('hidden');
-  flyIn();
+/* ============================ cámara ============================ */
+function setCamActive(cam){
+  document.querySelectorAll('#cammodes button').forEach(b => b.classList.toggle('active', b.dataset.cam === cam));
 }
-
-// --- Vuelo cinematográfico de entrada: descenso orbital al kiosko ---
 function flyIn(){
   if (!map3d) return;
+  setCamActive('fly');
   map3d.stopCameraAnimation();
   map3d.flyCameraTo({ endCamera: CAM_KIOSK, durationMillis: 9000 });
-  // Al aterrizar, orbita suavemente el kiosko una vuelta lenta.
-  map3d.addEventListener('gmp-animationend', () => orbit(), { once:true });
+  map3d.addEventListener('gmp-animationend', () => orbit(), { once: true });
 }
-
 function orbit(){
   if (!map3d) return;
+  setCamActive('orbit');
   map3d.stopCameraAnimation();
   map3d.flyCameraAround({ camera: CAM_KIOSK, durationMillis: 40000, rounds: 1 });
 }
+function human(){
+  if (!map3d) return;
+  setCamActive('human');
+  map3d.stopCameraAnimation();
+  map3d.flyCameraTo({ endCamera: CAM_HUMAN, durationMillis: 4500 });
+}
+function stopCam(){
+  if (!map3d) return;
+  setCamActive('stop');
+  map3d.stopCameraAnimation();
+}
+function replayFrom(){
+  if (!map3d) return;
+  map3d.stopCameraAnimation();
+  Object.assign(map3d, { center: CAM_START.center, range: CAM_START.range, tilt: CAM_START.tilt, heading: CAM_START.heading });
+  flyIn();
+}
 
-// --- Kiosko News & Coffee · OOH Media (marcador 3D interactivo con etiqueta) ---
+/* ---- Kiosko News & Coffee · OOH Media (marcador 3D interactivo) ---- */
 async function addKiosk(){
-  const { Marker3DInteractiveElement, AltitudeMode } =
-    await google.maps.importLibrary('maps3d');
+  const { Marker3DInteractiveElement, AltitudeMode } = await google.maps.importLibrary('maps3d');
   const kiosk = new Marker3DInteractiveElement({
     position: { ...PLAZA, altitude: 6 },
     altitudeMode: AltitudeMode ? AltitudeMode.RELATIVE_TO_GROUND : 'RELATIVE_TO_GROUND',
@@ -242,17 +348,163 @@ async function addKiosk(){
   });
   kiosk.addEventListener('gmp-click', () => orbit());
   map3d.appendChild(kiosk);
-  // Nota: si más adelante hay un GLB del kiosko, se sustituye por
-  // Model3DElement({ src, position, altitudeMode }) en esta misma posición.
 }
 
-function wireControls(){
-  $('btn-replay').onclick = () => { map3d.center = CAM_START.center; map3d.range = CAM_START.range; map3d.tilt = CAM_START.tilt; map3d.heading = CAM_START.heading; flyIn(); };
-  $('btn-orbit').onclick  = orbit;
-  $('btn-stop').onclick   = () => map3d && map3d.stopCameraAnimation();
+/* ============================ vista HYBRID/SATELLITE ============================ */
+function setView(v){
+  viewMode = v;
+  document.querySelectorAll('#viewmodes button').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  if (map3d) map3d.mode = MapMode ? (MapMode[v] || v) : v;
 }
 
-// --- Bootstrap loader oficial de Google Maps (inline, sin cachear tiles) ---
+/* ============================ capa ADcelerate (columna derecha) ============================ */
+function buildFranjas(){
+  const wrap = $('franjas'); wrap.innerHTML = '';
+  FRANJAS.forEach((f, i) => {
+    const b = document.createElement('button');
+    b.textContent = f.id.replace('h', '');
+    b.classList.toggle('active', i === selFranjaIdx);
+    b.onclick = () => { selFranjaIdx = i; refreshFranja(); };
+    wrap.appendChild(b);
+  });
+}
+function refreshFranja(){
+  document.querySelectorAll('#franjas button').forEach((b, i) => b.classList.toggle('active', i === selFranjaIdx));
+  const f = FRANJAS[selFranjaIdx];
+  $('aforo').textContent = f.aforo;
+  buildMix(f.mix);
+  const dom = dominanteDe(f.mix);
+  $('dominante').textContent = PERFIL_LABEL[dom];
+  $('dominante').style.color = PERFIL_CSS[dom];
+  buildRules(f);
+  const r = REGLAS[dom];
+  $('recomendacion').textContent = 'Creatividad ' + r.cre + ' · ' + r.titulo;
+  setThumb(dom);
+}
+function buildMix(mix){
+  const box = $('mixbars'); box.innerHTML = '';
+  for (const p of PERFILES){
+    const row = document.createElement('div'); row.className = 'bar-row';
+    row.innerHTML =
+      '<div class="lbl"><span>' + PERFIL_LABEL[p] + '</span><span>' + Math.round(mix[p]) + '%</span></div>' +
+      '<div class="track"><div class="fill" style="width:' + mix[p] + '%;background:' + PERFIL_CSS[p] + '"></div></div>';
+    box.appendChild(row);
+  }
+}
+function buildRules(f){
+  const dom = dominanteDe(f.mix);
+  const ul = $('rules'); ul.innerHTML = '';
+  for (const p of PERFILES){
+    const r = REGLAS[p];
+    const li = document.createElement('li');
+    li.classList.toggle('active', p === dom);
+    li.innerHTML = '<span>' + PERFIL_LABEL[p] + '</span><span>Creatividad ' + r.cre + ' · ' + r.titulo + '</span>';
+    ul.appendChild(li);
+  }
+}
+function loadCreatividades(){
+  fetch('../creatividades/creatividades.json', { cache: 'no-store' })
+    .then(r => r.json())
+    .then(j => { creManifest = j.creatividades || null; refreshFranja(); })
+    .catch(() => { refreshFranja(); });   // sin manifiesto: la miniatura queda con su fallback
+}
+function setThumb(dom){
+  const img = $('cre-thumb');
+  // same-origin con la deploy (misma que el gemelo): ../creatividades/{perfil}.png
+  img.src = '../creatividades/' + dom + '.png';
+  img.onerror = () => { img.style.display = 'none'; };
+  img.onload  = () => { img.style.display = 'block'; };
+}
+
+/* ============================ feed real del circuito ============================ */
+async function pollSignage(){
+  try{
+    const r = await fetch(SIGNAGE_URL, { cache: 'no-store' });
+    const j = await r.json();
+    lastSignageRaw = j;
+    signageItem = (j && j.ok && j.item) ? j.item : null;
+    const sig = $('signagestate');
+    if (signageItem){
+      const name = String(signageItem.name || signageItem.title || signageItem.file || signageItem.id || 'contenido').slice(0, 22);
+      sig.textContent = 'EMITIENDO · ' + name; sig.classList.add('real');
+    } else {
+      sig.textContent = 'sin emisión (item:null)'; sig.classList.remove('real');
+    }
+    $('ex-signage').textContent = JSON.stringify(j, null, 1).slice(0, 900);
+  }catch(e){
+    $('signagestate').textContent = 'red no disponible';
+    $('ex-signage').textContent = 'fetch signage/now falló: ' + e;
+  }
+}
+
+/* ============================ modo experto: telemetría ============================ */
+function startTelemetry(){
+  $('ex-endpoints').innerHTML =
+    'globo: maps.googleapis.com · Map Tiles API (Photorealistic 3D Tiles)<br>' +
+    'signage: api.admira.store/signage/now?screen=oohmedia · poll 30 s<br>' +
+    'creatividades: ../creatividades/creatividades.json (same-origin)';
+  const t0 = Date.now();
+  setInterval(() => {
+    if (map3d){
+      const c = map3d.center || {};
+      const lat = (typeof c.lat === 'function' ? c.lat() : c.lat);
+      const lng = (typeof c.lng === 'function' ? c.lng() : c.lng);
+      const alt = (typeof c.altitude === 'function' ? c.altitude() : c.altitude);
+      $('ex-cam').textContent =
+        'lat     ' + fmt(lat, 6) + '\n' +
+        'lng     ' + fmt(lng, 6) + '\n' +
+        'alt     ' + fmt(alt, 1) + ' m\n' +
+        'range   ' + fmt(map3d.range, 1) + ' m\n' +
+        'tilt    ' + fmt(map3d.tilt, 1) + '°\n' +
+        'heading ' + fmt(map3d.heading, 1) + '°\n' +
+        'mode    ' + viewMode;
+    }
+    const s = Math.floor((Date.now() - t0) / 1000);
+    $('ex-session').innerHTML =
+      'sesión activa <b>' + Math.floor(s / 60) + 'm ' + (s % 60) + 's</b><br>' +
+      'globo: <b>' + (map3d ? 'en vivo' : '—') + '</b> · vista <b>' + viewMode + '</b><br>' +
+      'franja <b>' + FRANJAS[selFranjaIdx].id + '</b> · circuito <b>' + (signageItem ? 'emitiendo' : 'sin emisión') + '</b><br>' +
+      'atribución: © Google (Map Tiles) · © OpenStreetMap · escena ADcelerate by Admira';
+  }, 700);
+}
+const fmt = (n, d) => (n == null || isNaN(n)) ? '—' : Number(n).toFixed(d);
+
+/* ============================ UI (marco compartido) ============================ */
+function wireUI(){
+  // cámara
+  const camFns = { fly: replayFrom, orbit, human, stop: stopCam };
+  document.querySelectorAll('#cammodes button').forEach(b => { b.onclick = () => camFns[b.dataset.cam](); });
+  // vista
+  document.querySelectorAll('#viewmodes button').forEach(b => { b.onclick = () => setView(b.dataset.view); });
+  // escalera Good · Better · Best — GOOD/BETTER vuelven al gemelo (nivel por ?q=)
+  document.querySelectorAll('#quality button').forEach(b => {
+    if (b.dataset.q === 'best') return;   // BEST es esta página
+    b.onclick = () => { location.href = '../?q=' + b.dataset.q; };
+  });
+  // modo experto (plegable) — mismo comportamiento que el gemelo
+  $('expert-toggle').onclick = () => {
+    const bar = $('expertbar');
+    bar.classList.toggle('collapsed');
+    document.body.classList.toggle('expert-open', !bar.classList.contains('collapsed'));
+  };
+  // móvil: laterales off-canvas con los MISMOS iconos ☰ / ⚙
+  const toggleSide = which => {
+    const el = which === 'left' ? $('sidebar') : $('rightbar');
+    const other = which === 'left' ? $('rightbar') : $('sidebar');
+    el.classList.toggle('open'); other.classList.remove('open');
+  };
+  $('tg-left').onclick  = () => toggleSide('left');
+  $('tg-right').onclick = () => toggleSide('right');
+  document.querySelectorAll('#mainnav a[data-open]').forEach(a => {
+    a.onclick = e => { e.preventDefault(); toggleSide(a.dataset.open); };
+  });
+  // tocar el globo cierra los laterales en móvil
+  $('stage').addEventListener('pointerdown', () => {
+    $('sidebar').classList.remove('open'); $('rightbar').classList.remove('open');
+  });
+}
+
+/* ---- Bootstrap loader oficial de Google Maps (inline, sin cachear tiles) ---- */
 function loadBootstrap(key){
   (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
     key: key,

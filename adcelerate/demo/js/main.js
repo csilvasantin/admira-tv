@@ -1099,6 +1099,9 @@ function buildHUD() {
   document.querySelectorAll('#quality button').forEach(b => {
     b.onclick = () => setQuality(b.dataset.q);
   });
+  // nivel inicial por parámetro (?q=good|better) — coherencia con la vuelta desde best/
+  const q0 = new URLSearchParams(location.search).get('q');
+  if (q0 === 'good' || q0 === 'better') setQuality(q0);
 
   // barra inferior: modo experto
   $('expert-toggle').onclick = () => {
