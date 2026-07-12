@@ -38,6 +38,12 @@
   .search input{flex:1;background:transparent;border:0;outline:0;color:var(--ink);font:13px inherit}
   .search svg{width:15px;height:15px;color:var(--dim);flex:none}
   .count{color:var(--dim);font:12px ui-monospace,monospace}
+  /* indicador de sincronización de plantillas en flota (☁ / ⚠) */
+  .fleetflag{font:600 11.5px ui-monospace,monospace;padding:3px 10px;border-radius:999px;border:1px solid var(--line);
+             color:var(--dim);white-space:nowrap;transition:.2s}
+  .fleetflag.ok{color:#bfffe0;border-color:#2a5a44;background:rgba(61,240,138,.10)}
+  .fleetflag.warn{color:var(--amber);border-color:#5a4a2a;background:rgba(255,180,76,.09)}
+  .fleetflag.err{color:var(--off);border-color:#5a2a2a;background:rgba(255,90,90,.09)}
 
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:14px 20px 46px}
   .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;
@@ -159,7 +165,7 @@
 <body>
 <script>
 /* Config del chrome cuadrático unificado (lo monta /admira-nav.js). */
-window.ADMIRA_VERSION='v.12.07.2026.r1';
+window.ADMIRA_VERSION='v.13.07.2026.r1';
 window.ADMIRA_NAV={
   active:'playlists', title:'Playlists · conjuntos de contenidos',
   topRight:
@@ -167,9 +173,9 @@ window.ADMIRA_NAV={
     '<div class="live"><span class="dot"></span><span id="liveTxt">en vivo</span></div>'
 };
 </script>
-<script src="/admira-nav.js?v=12.07.2026.r3"></script>
-<script src="/admira-frame.js?v=12.07.2026.r3" defer></script>
-<link rel="stylesheet" href="/admira-frame.css?v=12.07.2026.r3">
+<script src="/admira-nav.js?v=13.07.2026.r1"></script>
+<script src="/admira-frame.js?v=13.07.2026.r1" defer></script>
+<link rel="stylesheet" href="/admira-frame.css?v=13.07.2026.r1">
 
 <!-- AVANZADO (panel derecho): acciones peligrosas -->
 <div class="afSlotHidden" data-af-slot="right" aria-label="Acciones avanzadas de playlists">
@@ -191,13 +197,14 @@ window.ADMIRA_NAV={
     <button class="af-btn" id="expImport" type="button">Importar JSON…</button>
   </div>
   <pre id="expJson">{}</pre>
-  <div class="af-meta">Las <b>playlists</b> viven en <code>localStorage.adtv_playlists</code> (este navegador). La <b>reproducción</b> se persiste de verdad en la parrilla del worker (<code>/grid/book</code>, clave <code>GRID_KEY</code>) — es lo que el canal honra.</div>
+  <div class="af-meta">Las <b>plantillas</b> se comparten en toda la flota vía el worker <code>xpl-store</code> (<code>/playlists</code>, clave <code>XPL_TOKEN</code>); <code>localStorage.adtv_playlists</code> es solo la caché offline. La <b>reproducción</b> se persiste de verdad en la parrilla del worker (<code>/grid/book</code>, clave <code>GRID_KEY</code>) — es lo que el canal honra.</div>
 </div>
 
 <header class="phead">
   <span class="brand">Admira · <b>Playlists</b></span>
   <span class="sub">conjuntos de contenidos → parrilla real del player</span>
   <span class="spacer"></span>
+  <span class="fleetflag" id="fleetFlag" title="Estado de sincronización de las plantillas">· · ·</span>
   <span class="count" id="hCount">—</span>
 </header>
 
@@ -279,8 +286,66 @@ window.ADMIRA_NAV={
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 const GRID='https://api.admira.store';
+/* Worker de plantillas COMPARTIDAS en flota (xpl-store). Antes las plantillas vivían solo
+   en localStorage.adtv_playlists (por navegador); ahora se guardan aquí y las ve toda la flota.
+   localStorage sigue como CACHÉ offline / fallback si el worker no responde. */
+const PLSTORE='https://xpl.admira.store';
 const gkGet=()=>{try{return localStorage.getItem('grid_key')||''}catch(_){return''}};
 const gkSet=v=>{try{localStorage.setItem('grid_key',v||'')}catch(_){}};
+/* Clave de escritura de plantillas (secret XPL_TOKEN del worker). Campo propio, distinto de GRID_KEY. */
+const plkGet=()=>{try{return localStorage.getItem('adtv_pl_key')||''}catch(_){return''}};
+const plkSet=v=>{try{localStorage.setItem('adtv_pl_key',v||'')}catch(_){}};
+let PL_SHARED=false; // ¿las plantillas están sincronizadas con la flota ahora mismo?
+function setFleet(state,msg){
+  const el=$('fleetFlag'); if(!el) return;
+  if(state==='shared'){ el.textContent='☁ compartidas en flota'; el.className='fleetflag ok';
+    el.title='Las plantillas se guardan en el worker (xpl-store) y las ve toda la flota.'; }
+  else if(state==='saving'){ el.textContent='☁ guardando…'; el.className='fleetflag ok'; el.title='Publicando plantillas en la flota…'; }
+  else if(state==='error'){ el.textContent='⚠ '+(msg||'error al compartir'); el.className='fleetflag err';
+    el.title='No pude guardar en la flota: '+(msg||'')+'. Se conserva la caché local.'; }
+  else { el.textContent='⚠ solo locales'; el.className='fleetflag warn';
+    el.title='El worker de plantillas no responde; se usa solo este navegador (caché local).'; }
+}
+/* Carga las plantillas desde la flota (autoridad) y cachea. Fallback: caché local.
+   Migración segura: si la flota está VACÍA pero este navegador tiene plantillas locales,
+   NO las pisa — las conserva y (si hay clave) las sube para compartirlas. */
+async function loadRemotePlaylists(){
+  try{
+    const d=await fetch(PLSTORE+'/playlists',{cache:'no-store'}).then(r=>r.json());
+    if(d&&d.ok&&Array.isArray(d.playlists)){
+      if(d.playlists.length){                       // la flota manda cuando tiene contenido
+        PLAYLISTS=d.playlists;
+        try{localStorage.setItem('adtv_playlists',JSON.stringify(PLAYLISTS))}catch(_){}
+        PL_SHARED=true; setFleet('shared'); return true;
+      }
+      if((PLAYLISTS||[]).length){                   // flota vacía + hay locales -> migrar, sin pisar
+        if(plkGet()){ await pushRemotePlaylists(); return PL_SHARED; }
+        PL_SHARED=false; setFleet('local'); return false;
+      }
+      PL_SHARED=true; setFleet('shared'); return true; // ambas vacías: conectado y en sync
+    }
+  }catch(_){}
+  PL_SHARED=false; setFleet('local'); return false;
+}
+/* Publica TODO el conjunto de plantillas en la flota (POST protegido por la clave). */
+async function pushRemotePlaylists(){
+  let key=plkGet();
+  if(!key){
+    key=(prompt('Clave de escritura de plantillas (XPL_TOKEN) para compartirlas en la flota.\n'+
+                'Se pide una vez y se guarda en este navegador. Cancela para trabajar solo en local:')||'').trim();
+    if(key) plkSet(key);
+  }
+  if(!key){ PL_SHARED=false; setFleet('local'); return false; }
+  setFleet('saving');
+  try{
+    const r=await fetch(PLSTORE+'/playlists',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({key,playlists:PLAYLISTS})}).then(r=>r.json());
+    if(r&&r.ok){ PL_SHARED=true; setFleet('shared'); return true; }
+    if(r&&/clave|requerida|401|403|auth/i.test(JSON.stringify(r.error||''))){ plkSet(''); PL_SHARED=false; setFleet('error','clave incorrecta'); }
+    else { PL_SHARED=false; setFleet('error','rechazado'); }
+  }catch(_){ PL_SHARED=false; setFleet('local'); }
+  return false;
+}
 const todayMadrid=()=>{try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch(_){return new Date().toISOString().slice(0,10)}};
 const uid=()=>'pl_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const ONLINE_S=600; // /signage/screens TTL ~10 min
@@ -290,7 +355,8 @@ let PLAYLISTS=(()=>{try{return JSON.parse(localStorage.getItem('adtv_playlists')
 /* Asignaciones registradas localmente {plId:[{screen,name,scope,ts,booked}]}. La reproducción REAL
    la lleva la parrilla del worker; esto es el espejo para pintar estado en las tarjetas. */
 let ASSIGN=(()=>{try{return JSON.parse(localStorage.getItem('adtv_pl_assign')||'{}')}catch(_){return{}}})();
-function savePl(){ try{localStorage.setItem('adtv_playlists',JSON.stringify(PLAYLISTS))}catch(_){} refreshExpert(); }
+/* Guarda: 1) caché local (offline)  2) publica en la flota (compartido). */
+function savePl(){ try{localStorage.setItem('adtv_playlists',JSON.stringify(PLAYLISTS))}catch(_){} refreshExpert(); pushRemotePlaylists(); }
 function saveAsg(){ try{localStorage.setItem('adtv_pl_assign',JSON.stringify(ASSIGN))}catch(_){} refreshExpert(); }
 
 /* ── Catálogo (Stock) y destinos (players vivos + superficies de grid) ── */
@@ -567,17 +633,24 @@ $('advClearAssigns').onclick=async()=>{
   const key=gkGet(); if(!key){ alert('Falta la clave GRID_KEY (ábrela en «Asignar»).'); return; }
   for(const plId of Object.keys(ASSIGN)){ for(const a of [...ASSIGN[plId]]){ await unassign(plId,a.screen); } }
 };
-$('advReload').onclick=async()=>{ await Promise.all([loadStock(),loadTargets()]); render(); };
+$('advReload').onclick=async()=>{ await Promise.all([loadRemotePlaylists(),loadStock(),loadTargets()]); render(); };
 
 /* ════════════════ ARRANQUE ════════════════ */
 (async function init(){
+  setFleet('local');           // provisional hasta confirmar el worker
+  refreshExpert();
+  render();                    // pinta ya desde la caché local (arranque instantáneo)
+  await loadRemotePlaylists(); // sincroniza con la flota (fallback: caché local ya pintada)
   refreshExpert();
   render();
   await Promise.all([loadStock(),loadTargets()]);
   render();
   $('stamp').textContent='actualizado '+new Date().toLocaleTimeString('es-ES');
-  // refresco periódico del estado de players (para 🟢/🔴 de las asignaciones)
-  setInterval(async()=>{ await loadTargets(); render(); },45000);
+  // refresco periódico: plantillas de la flota (si no hay modal abierto) + estado de players
+  setInterval(async()=>{
+    if(!document.querySelector('.modal.open')) await loadRemotePlaylists();
+    await loadTargets(); render();
+  },45000);
 })();
 </script>
 </body>
