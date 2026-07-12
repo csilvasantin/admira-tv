@@ -182,8 +182,7 @@ async function boot(){
   }
   loadBootstrap(GOOGLE_MAPS_KEY);
   try{
-    await customElements.whenDefined('gmp-map-3d'); // asegura el componente listo
-    const { Map3DElement, MapMode } = await google.maps.importLibrary('maps3d');
+    const { Map3DElement, MapMode } = await google.maps.importLibrary('maps3d'); // carga y define gmp-map-3d
 
     map3d = new Map3DElement({
       mode: MapMode ? MapMode.HYBRID : 'HYBRID',   // obligatorio desde feb-2025
