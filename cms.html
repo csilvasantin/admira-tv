@@ -326,6 +326,10 @@
   .ebSel:focus{outline:none;border-color:var(--accent)}
   .ebBtn{background:var(--accent);color:#091020;border:1px solid var(--accent);border-radius:7px;padding:4px 10px;font:700 11px ui-monospace,monospace;cursor:pointer;white-space:nowrap}
   .ebBtn:hover{filter:brightness(1.08)} .ebBtn:disabled{opacity:.5;cursor:default}
+  /* tarea5: botón 🎥 Asistencia por pantalla (reciprocidad Yokup) + ocupación de sala por sonda WS */
+  .ebAssistCell{white-space:nowrap}
+  .ebAssistSt{font-size:10px;margin-top:3px;color:var(--dim, #7b8794)}
+  .ebAssistSt.live{color:#ff5d5d;text-shadow:0 0 8px #ff5d5d66;font-weight:700}
   .ebActMsg{margin:6px 16px 0;padding:7px 11px;border-radius:8px;font:600 11.5px ui-monospace,monospace;border:1px solid var(--line)}
   .ebActMsg.ok{color:var(--air);border-color:#1f5e44;background:#0b1a14}
   .ebActMsg.err{color:var(--off);border-color:#5e2630;background:#1a0d10}
@@ -343,7 +347,7 @@
 <body>
 <script>
 /* Config del chrome unificado (lo monta /admira-nav.js). Extras propios del CMS de flota. */
-window.ADMIRA_VERSION='v.07.07.2026.r35';
+window.ADMIRA_VERSION='v.12.07.2026.r36';
 window.ADMIRA_NAV={
   active:'flota', title:'Control de flota',
   topRight:
@@ -374,7 +378,7 @@ window.ADMIRA_NAV={
 </script>
 <script src="/admira-nav.js?v=08.07.2026.r25"></script>
 
-<!-- tarea4-emision-r35 · EN EMISIÓN + descuadres accionables — AHORA (cruza signage/screens · grid/screens · locations · fleet) -->
+<!-- tarea5-asistencia-r36 · EN EMISIÓN + botón 🎥 Asistencia recíproco con Yokup (sala = id de pantalla, ocupación por sonda WS) -->
 <section class="emitBoard" id="emitBoard">
   <div class="ebHead">
     <h2><span class="ebDot"></span>📡 EN EMISIÓN — AHORA</h2>
@@ -388,9 +392,9 @@ window.ADMIRA_NAV={
   <div class="ebWrap">
     <table class="ebTable" id="ebTable">
       <thead><tr>
-        <th>Estado</th><th>Player / pantalla</th><th>Rol</th><th>Circuito · sitio</th><th>Canal · parrilla</th><th>En emisión</th><th>Visto</th>
+        <th>Estado</th><th>Player / pantalla</th><th>Rol</th><th>Circuito · sitio</th><th>Canal · parrilla</th><th>En emisión</th><th>Visto</th><th>🎥 Asistencia</th>
       </tr></thead>
-      <tbody id="ebBody"><tr><td colspan="7" class="ebHole">Cargando emisión en vivo…</td></tr></tbody>
+      <tbody id="ebBody"><tr><td colspan="8" class="ebHole">Cargando emisión en vivo…</td></tr></tbody>
     </table>
   </div>
   <div class="ebActMsg ok" id="ebActMsg" hidden></div>
@@ -1174,7 +1178,7 @@ $('progBands').addEventListener('click',e=>{
 
     // ── TABLA: fila por player vivo ──
     if(!players.length){
-      el('ebBody').innerHTML='<tr><td colspan="7" class="ebHole">'+(sc.err? ('signage/screens caído: '+esc(sc.err)) : 'ningún player vivo ahora mismo')+'</td></tr>';
+      el('ebBody').innerHTML='<tr><td colspan="8" class="ebHole">'+(sc.err? ('signage/screens caído: '+esc(sc.err)) : 'ningún player vivo ahora mismo')+'</td></tr>';
     } else {
       const rows = players.slice().sort((a,b)=>(b.online?1:0)-(a.online?1:0)||String(a.screen).localeCompare(String(b.screen))).map(p=>{
         const on = !!p.online;
@@ -1206,6 +1210,7 @@ $('progBands').addEventListener('click',e=>{
           '<td>'+chanCell+'</td>'+
           '<td>'+piece+'</td>'+
           '<td class="ebMeta">'+agoTxt(p.age_seconds)+'</td>'+
+          '<td class="ebAssistCell"><button class="ebBtn ebAssist" data-room="'+esc(p.screen)+'">🎥 Asistencia</button><div class="ebAssistSt" data-room="'+esc(p.screen)+'">·</div></td>'+
         '</tr>';
       }).join('');
       el('ebBody').innerHTML=rows;
@@ -1320,8 +1325,50 @@ $('progBands').addEventListener('click',e=>{
     finally{ btn.disabled=false; btn.textContent=orig; }
   });
 
-  ebLoad();
-  EB_TIMER=setInterval(ebLoad, EB.REFRESH);
+  // ── ASISTENCIA (tarea #5): reciprocidad admira.tv ↔ Yokup ──
+  // La sala = id de pantalla (determinista): el técnico entra a la misma sala desde cualquier sitio.
+  const YOKUP_ASSIST='https://www.yokup.com/asistencia?room=';
+  const RTC_WS='wss://yokup-rtc.csilvasantin.workers.dev/room/';
+  // Abrir/unirse a la videollamada de asistencia de esa pantalla en Yokup
+  el('ebBody').addEventListener('click', function(e){
+    const btn=e.target.closest('.ebAssist'); if(!btn) return;
+    const room=btn.getAttribute('data-room')||'';
+    window.open(YOKUP_ASSIST+encodeURIComponent(room),'_blank','noopener');
+  });
+  // Sonda de ocupación: entra a la sala WS, lee el welcome (peers) y sale sin enviar nada (inofensivo).
+  function probeRoom(room){
+    return new Promise(resolve=>{
+      let done=false, ws=null;
+      const finish=n=>{ if(done)return; done=true; try{ws&&ws.close();}catch(_){} resolve(n); };
+      const to=setTimeout(()=>finish(null), 4000);
+      try{
+        ws=new WebSocket(RTC_WS+encodeURIComponent(room));
+        ws.onmessage=ev=>{ let m={}; try{ m=JSON.parse(ev.data); }catch(_){}
+          if(m&&m.type==='welcome'){ clearTimeout(to); finish(Array.isArray(m.peers)?m.peers.length:0); } };
+        ws.onerror=()=>{ clearTimeout(to); finish(null); };
+        ws.onclose=()=>{ clearTimeout(to); finish(null); };
+      }catch(_){ clearTimeout(to); finish(null); }
+    });
+  }
+  // Recorre los estados visibles y sondea en lotes de 5 en serie (no 40 sockets a la vez).
+  async function probeRooms(){
+    if(document.visibilityState!=='visible') return;
+    const cells=Array.from(document.querySelectorAll('#ebBody .ebAssistSt'));
+    for(let i=0;i<cells.length;i+=5){
+      const lote=cells.slice(i,i+5);
+      await Promise.all(lote.map(async cell=>{
+        const room=cell.getAttribute('data-room')||'';
+        const n=await probeRoom(room);
+        const btn=cell.parentNode&&cell.parentNode.querySelector('.ebAssist');
+        if(n==null){ cell.className='ebAssistSt'; cell.textContent='n/d'; }
+        else if(n>=1){ cell.className='ebAssistSt live'; cell.textContent='🔴 EN CURSO · '+n; if(btn) btn.textContent='🎥 Unirse'; }
+        else { cell.className='ebAssistSt'; cell.textContent='— sala vacía'; if(btn) btn.textContent='🎥 Asistencia'; }
+      }));
+    }
+  }
+
+  ebLoad().then(probeRooms);
+  EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
 <script src="/admira-avatar.js"></script>
