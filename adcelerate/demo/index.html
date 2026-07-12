@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>ADcelerate · Gemelo Plaça de la Vila de Gràcia — demo</title>
+<meta name="description" content="Demo ADcelerate: gemelo 3D de la Plaça de la Vila de Gràcia con kiosko reactivo a audiencias telco.">
+<link rel="icon" href="../../favicon.svg">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<div id="app">
+  <canvas id="scene"></canvas>
+
+  <!-- Sidebar izquierda -->
+  <aside id="sidebar">
+    <header class="brand">
+      <div class="logo-dot"></div>
+      <div>
+        <h1>ADcelerate</h1>
+        <p class="sub">Gemelo · Plaça de la Vila de Gràcia</p>
+      </div>
+    </header>
+
+    <section class="panel" id="panel-franjas">
+      <h2>Audiencia por franja</h2>
+      <p class="note">Datos telco de zona (simulados sobre patrón MITMA)</p>
+      <div class="franjas" id="franjas"></div>
+      <label class="auto-row">
+        <input type="checkbox" id="auto-toggle" checked>
+        <span>AUTO · rota cada 12 s</span>
+      </label>
+    </section>
+
+    <section class="panel" id="panel-live">
+      <h2>Ahora en la plaza</h2>
+      <div class="big-metric"><span id="aforo">—</span><span class="unit">personas</span></div>
+      <div id="mixbars"></div>
+      <div class="kv"><span>Perfil dominante</span><b id="dominante">—</b></div>
+    </section>
+
+    <section class="panel" id="panel-rules">
+      <h2>ADcelerate interpreta</h2>
+      <ul class="rules" id="rules"></ul>
+      <div class="kv onscreen"><span>EN PANTALLA</span><b id="onscreen">—</b></div>
+      <div class="kv feed"><span>Feed circuito</span><b id="feedstate">simulado</b></div>
+    </section>
+
+    <button id="btn-flight" class="cta">✈ Vuelo guiado al kiosko</button>
+  </aside>
+
+  <!-- Ficha flotante -->
+  <div id="ficha" class="hidden">
+    <button id="ficha-close" aria-label="Cerrar">×</button>
+    <div id="ficha-body"></div>
+  </div>
+
+  <div id="badge-real" class="hidden">● Emisión real admira.tv</div>
+
+  <footer id="attrib">© OpenStreetMap contributors (ODbL) · Demo ADcelerate by Admira</footer>
+
+  <div id="loading"><div class="spin"></div><p>Cargando gemelo…</p></div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
