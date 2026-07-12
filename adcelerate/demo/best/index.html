@@ -148,7 +148,7 @@
 const PLAZA = { lat: 41.4002243, lng: 2.1575761 };
 
 // Clave desde la URL (?key=...). Nunca hardcodeada ni en la cúpula.
-const GOOGLE_MAPS_KEY = new URLSearchParams(location.search).get('key') || '';
+const GOOGLE_MAPS_KEY = new URLSearchParams(location.search).get('key') || 'AIzaSyDOQTBlJYugpPBPuSMlRg74tu8Gvmq7mKA'; // clave publicable restringida por referrer a admira.tv (autorizado por Carlos)
 
 const $ = (id) => document.getElementById(id);
 
