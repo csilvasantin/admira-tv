@@ -1369,11 +1369,10 @@ function fitOrtho() {
 fitOrtho();
 function activeCamera() { return quality === 'good' ? camera2D : camera; }
 function setQuality(q) {
-  if (q === 'best') {                       // pestaña bloqueada: nota "en el horno"
-    $('best-note').classList.toggle('hidden');
+  if (q === 'best') {                       // nivel fotorrealista: vive en la subcarpeta best/
+    location.href = 'best/';
     return;
   }
-  $('best-note').classList.add('hidden');
   quality = q;
   document.querySelectorAll('#quality button').forEach(b =>
     b.classList.toggle('active', b.dataset.q === q));

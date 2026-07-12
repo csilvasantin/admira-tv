@@ -100,19 +100,6 @@ body { font-family: var(--admira-font-sans); color: var(--admira-text); backgrou
 #quality button:hover { color: var(--admira-text); }
 #quality button.active { background: var(--spine-soft); color: var(--spine);
   box-shadow: inset 0 0 0 1px var(--spine-line), 0 0 14px -4px var(--spine); }
-#quality button.locked { opacity: .5; cursor: help; }
-
-#best-note {
-  position: absolute; top: calc(var(--top-h) + 10px); right: 60px; width: 310px; z-index: 22;
-  background: var(--admira-bg-elev); color: var(--admira-text);
-  border: 1px solid var(--admira-border-strong);
-  border-radius: var(--admira-radius-lg); padding: var(--admira-space-3);
-  font-size: 12.5px; line-height: 1.55; box-shadow: var(--admira-shadow-card);
-}
-#best-note .horno { font-family: var(--admira-font-mono); font-size: 9px; color: var(--admira-amber);
-  border: 1px solid var(--admira-border-amber); padding: 1px 8px;
-  border-radius: var(--admira-radius-pill); letter-spacing: .18em; margin-left: 4px; }
-#best-note small { color: var(--admira-text-muted); }
 
 /* ============ MARCO CUADRÁTICO: columnas laterales a toda altura ============ */
 #sidebar, #rightbar {
@@ -378,7 +365,6 @@ body { font-family: var(--admira-font-sans); color: var(--admira-text); backgrou
   #rightbar { transform: translateX(102%); }
   #sidebar.open, #rightbar.open { transform: translateX(0); box-shadow: var(--admira-shadow-card); }
   #ficha { right: 8px; left: 8px; width: auto; top: calc(var(--top-h) + 8px); }
-  #best-note { right: 8px; left: 8px; width: auto; }
   #expert-content { grid-template-columns: 1fr; max-height: 46vh; }
   #hint { font-size: 10px; }
   #attrib { display: none; }
