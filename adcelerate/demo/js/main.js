@@ -1427,17 +1427,40 @@ function setCamMode(m) {
 
 // --- teclado del volado libre (↑↓ avance · ←→ giro · Av/Re Pág o Shift+↑↓ altura)
 const FLY_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown'];
+// vista GOOD (2D): las flechas hacen PAN del plano cenital (la rueda ya hace zoom)
+const pan2D = { keys: {}, vx: 0, vz: 0 };
 addEventListener('keydown', e => {
   if (!FLY_KEYS.includes(e.key)) return;
-  if (quality === 'good') return;            // en 2D no hay volado
+  const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  if (quality === 'good') {                  // 2D: flechas = pan del plano
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      pan2D.keys[e.key] = true; e.preventDefault();
+    }
+    return;
+  }
   if (camMode !== 'free' && camMode !== 'human') setCamMode('free');
   fly.keys[e.key] = true; fly.shift = e.shiftKey;
   e.preventDefault();
 });
 addEventListener('keyup', e => {
   if (!FLY_KEYS.includes(e.key)) return;
+  pan2D.keys[e.key] = false;
   fly.keys[e.key] = false; fly.shift = e.shiftKey;
 });
+// PAN del plano cenital: ← → mueven este/oeste, ↑ ↓ norte/sur (norte = −z). Paso escalado
+// por el zoom (más zoom → paso en pantalla constante), con inercia y límites de la maqueta.
+function tickPan2D(dt) {
+  const k = pan2D.keys, ACC = 520, MAXV = 340;
+  if (k.ArrowLeft)  pan2D.vx = Math.max(-MAXV, pan2D.vx - ACC * dt);
+  if (k.ArrowRight) pan2D.vx = Math.min(MAXV, pan2D.vx + ACC * dt);
+  if (k.ArrowUp)    pan2D.vz = Math.max(-MAXV, pan2D.vz - ACC * dt);   // norte = −z
+  if (k.ArrowDown)  pan2D.vz = Math.min(MAXV, pan2D.vz + ACC * dt);
+  const damp = Math.exp(-3 * dt);
+  pan2D.vx *= damp; pan2D.vz *= damp;
+  const s = dt / camera2D.zoom;                                        // escala por zoom
+  camera2D.position.x = Math.max(-330, Math.min(330, camera2D.position.x + pan2D.vx * s));
+  camera2D.position.z = Math.max(-330, Math.min(330, camera2D.position.z + pan2D.vz * s));
+}
 
 let _tickFreeCalls = 0;
 function tickFree(dt) {
@@ -1635,7 +1658,7 @@ function animate(now) {
   updateFigureMotion(dt, now / 1000);   // la multitud camina
 
   if (quality === 'good') {
-    // vista 2D cenital: cámara ortográfica fija (rueda = zoom)
+    tickPan2D(dt);                 // vista 2D cenital: flechas = pan · rueda = zoom
   } else if (camMode === 'free') {
     tickFree(dt);
   } else if (camMode === 'human') {
@@ -1669,7 +1692,7 @@ requestAnimationFrame(animate);
 
 // gancho de inspección (demo/debug)
 window.__dbg = {
-  camera, camera2D, controls, state, startFlight, applyFranja, setCamMode, setQuality, nextStock, fly,
+  camera, camera2D, controls, state, startFlight, applyFranja, setCamMode, setQuality, nextStock, fly, pan2D, tickPan2D,
   get camMode() { return camMode; },
   get quality() { return quality; },
   get flight() { return flight; },

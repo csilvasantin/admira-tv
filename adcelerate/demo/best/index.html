@@ -127,12 +127,13 @@
     <section class="panel" id="cammodes-panel">
       <h2>Cámara</h2>
       <div id="cammodes">
-        <button data-cam="fly" class="active">✈ Vuelo de entrada</button>
+        <button data-cam="free" class="active">🕹 Volado libre</button>
+        <button data-cam="fly">✈ Vuelo de entrada</button>
         <button data-cam="orbit">◎ Órbita</button>
         <button data-cam="human">🧍 A pie ante el kiosko</button>
         <button data-cam="stop">■ Parar</button>
       </div>
-      <p class="note">vuelo cinematográfico · descenso orbital al kiosko News &amp; Coffee</p>
+      <p class="note">volado libre con las flechas · vuelo cinematográfico · descenso al kiosko con pantalla</p>
     </section>
 
     <section class="panel" id="view-panel">
@@ -142,6 +143,7 @@
         <button data-view="SATELLITE">🌐 Satélite · limpio</button>
       </div>
       <p class="note">Map3DElement · Photorealistic 3D Tiles en vivo</p>
+      <p class="note" style="margin-top:8px">A pie de calle los tiles de Google se ven «derretidos» (limitación conocida). Nuestro kiosko 3D con su pantalla va NÍTIDO encima: el activo de la casa brilla sobre el fondo real.</p>
     </section>
   </aside>
 
@@ -194,6 +196,8 @@
   </footer>
 
   <div id="attrib">Escena · ADcelerate by Admira · imágenes © Google</div>
+
+  <div id="hint">🕹 muévete con las flechas · ↑↓ avanzar · ←→ girar · Av/Re Pág (o Shift+↑↓) altura</div>
 
   <div id="loading"><div class="spin"></div>Cargando globo fotorrealista…</div>
 
@@ -254,10 +258,20 @@ const SIGNAGE_POLL_MS = 30000;
 /* ---------- cámaras de la coreografía cinematográfica ---------- */
 const CAM_START = { center: { ...PLAZA, altitude: 40 }, range: 2200, tilt: 47, heading: 25 };
 const CAM_KIOSK = { center: { ...PLAZA, altitude: 20 }, range: 220,  tilt: 67, heading: 25 };
-// «A pie»: casi a pie de calle frente al kiosko (lo más cercano al modo Humano que da el API)
-const CAM_HUMAN = { center: { ...PLAZA, altitude: 2 },  range: 75,   tilt: 85, heading: 25 };
+// «A pie»: encuadre del kiosko NUESTRO delante de los tiles. Antes (range 75/tilt 85/alt 2)
+// la cámara se metía DENTRO de la malla derretida de Google → borrón. Ahora retrocede y sube:
+// se planta a ~110 m con la cámara elevada mirando ligeramente hacia abajo, así el kiosko 3D
+// nítido con su pantalla queda encuadrado y legible sobre el fondo fotorreal.
+const CAM_HUMAN = { center: { ...PLAZA, altitude: 9 }, range: 110, tilt: 76, heading: 205 };
+
+// Kiosko 3D NUESTRO (Model3DElement con la pantalla-creatividad como textura embebida).
+// La pantalla está en la cara +Z del GLB; heading orienta esa cara hacia la plaza/aproximación.
+const KIOSK_MODEL_ALT   = 0;     // relativo al suelo (base sobre el pavimento)
+const KIOSK_MODEL_SCALE = 1.1;   // GLB construido en metros (~3.3 m) → ~3.6 m
+const KIOSK_MODEL_HEADING = 205; // orientación de la cara-pantalla (se afina con captura)
 
 let map3d = null, MapMode = null, viewMode = 'HYBRID';
+let kioskModel = null, kioskPerfil = null;   // Model3DElement + perfil de la creatividad puesta
 let selFranjaIdx = 2;          // 18h por defecto (hora punta), como el gemelo
 let creManifest = null;
 let lastSignageRaw = null, signageItem = null;
@@ -309,6 +323,7 @@ function setCamActive(cam){
 }
 function flyIn(){
   if (!map3d) return;
+  exitFree();
   setCamActive('fly');
   map3d.stopCameraAnimation();
   map3d.flyCameraTo({ endCamera: CAM_KIOSK, durationMillis: 9000 });
@@ -316,38 +331,152 @@ function flyIn(){
 }
 function orbit(){
   if (!map3d) return;
+  exitFree();
   setCamActive('orbit');
   map3d.stopCameraAnimation();
   map3d.flyCameraAround({ camera: CAM_KIOSK, durationMillis: 40000, rounds: 1 });
+  // al terminar la órbita, el modo en reposo es el VOLADO LIBRE (norma de la casa)
+  map3d.addEventListener('gmp-animationend', () => { if (!freeFly.active) enterFree(false); }, { once: true });
 }
 function human(){
   if (!map3d) return;
+  exitFree();
   setCamActive('human');
   map3d.stopCameraAnimation();
   map3d.flyCameraTo({ endCamera: CAM_HUMAN, durationMillis: 4500 });
 }
 function stopCam(){
   if (!map3d) return;
+  exitFree();
   setCamActive('stop');
   map3d.stopCameraAnimation();
 }
 function replayFrom(){
   if (!map3d) return;
+  exitFree();
   map3d.stopCameraAnimation();
   Object.assign(map3d, { center: CAM_START.center, range: CAM_START.range, tilt: CAM_START.tilt, heading: CAM_START.heading });
   flyIn();
 }
 
-/* ---- Kiosko News & Coffee · OOH Media (marcador 3D interactivo) ---- */
+/* ============ VOLADO LIBRE con las flechas (norma de la casa · igual que BETTER) ============
+   Mueve la cámara del Map3DElement directamente (sin flyCameraTo por paso, que es lento):
+   ↑↓ avanzan/retroceden el center a lo largo del heading (paso proporcional al range),
+   ←→ giran el heading, Av/Re Pág (o Shift+↑↓) suben/bajan la altitude del center. Con
+   inercia suave. Al tocar flechas se cancela cualquier animación en curso. */
+const FLY_KEYS = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown'];
+const camState = { lat: PLAZA.lat, lng: PLAZA.lng, alt: CAM_KIOSK.center.altitude,
+                   heading: CAM_KIOSK.heading, range: CAM_KIOSK.range, tilt: CAM_KIOSK.tilt };
+const freeFly = { active: false, keys: {}, shift: false, vF: 0, vYaw: 0, vAlt: 0, raf: 0, last: 0 };
+let hintTimer = 0;
+
+function readCamState(){
+  if (!map3d) return;
+  const c = map3d.center || {};
+  const g = (v) => (typeof v === 'function' ? v.call(c) : v);
+  const lat = g(c.lat), lng = g(c.lng), alt = g(c.altitude);
+  if (isFinite(lat)) camState.lat = lat;
+  if (isFinite(lng)) camState.lng = lng;
+  if (isFinite(alt)) camState.alt = alt;
+  if (isFinite(map3d.heading)) camState.heading = map3d.heading;
+  if (isFinite(map3d.range))   camState.range = map3d.range;
+  if (isFinite(map3d.tilt))    camState.tilt = map3d.tilt;
+}
+function showHint(){
+  const h = $('hint'); if (!h) return;
+  h.classList.remove('gone');
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => h.classList.add('gone'), 6000);
+}
+function enterFree(fromKey){
+  if (!map3d) return;
+  setCamActive('free');
+  map3d.stopCameraAnimation();
+  readCamState();
+  freeFly.active = true; freeFly.last = performance.now();
+  showHint();
+  if (!freeFly.raf) freeFly.raf = requestAnimationFrame(flyTick);
+}
+function exitFree(){
+  freeFly.active = false;
+  if (freeFly.raf){ cancelAnimationFrame(freeFly.raf); freeFly.raf = 0; }
+  freeFly.keys = {}; freeFly.vF = freeFly.vYaw = freeFly.vAlt = 0;
+}
+function flyTick(now){
+  if (!freeFly.active){ freeFly.raf = 0; return; }
+  const dt = Math.min(0.05, (now - freeFly.last) / 1000) || 0.016; freeFly.last = now;
+  const k = freeFly.keys;
+  const stepScale = Math.max(8, camState.range);          // paso ∝ range
+  const ACC = stepScale * 1.6, MAXV = stepScale * 1.1;    // avance (m/s)
+  const YAWA = 90, MAXYAW = 65;                            // giro (°/s)
+  const VACC = Math.max(20, camState.alt * 0.8 + 30);     // altura (m/s)
+  const MAXVY = Math.max(30, camState.range * 0.6);
+  const shiftAlt = freeFly.shift;
+  if (k.ArrowUp && !shiftAlt)   freeFly.vF = Math.min(MAXV, freeFly.vF + ACC * dt);
+  if (k.ArrowDown && !shiftAlt) freeFly.vF = Math.max(-MAXV, freeFly.vF - ACC * dt);
+  if (k.ArrowLeft)  freeFly.vYaw = Math.max(-MAXYAW, freeFly.vYaw - YAWA * dt);
+  if (k.ArrowRight) freeFly.vYaw = Math.min(MAXYAW, freeFly.vYaw + YAWA * dt);
+  if (k.PageUp   || (shiftAlt && k.ArrowUp))   freeFly.vAlt = Math.min(MAXVY, freeFly.vAlt + VACC * dt);
+  if (k.PageDown || (shiftAlt && k.ArrowDown)) freeFly.vAlt = Math.max(-MAXVY, freeFly.vAlt - VACC * dt);
+  // inercia suave
+  freeFly.vF *= Math.exp(-2.6 * dt); freeFly.vYaw *= Math.exp(-5 * dt); freeFly.vAlt *= Math.exp(-2.6 * dt);
+  camState.heading = (camState.heading + freeFly.vYaw * dt + 360) % 360;
+  const d = freeFly.vF * dt;                               // metros este frame
+  if (Math.abs(d) > 1e-4){
+    const th = camState.heading * Math.PI / 180;           // bearing (0=N, 90=E)
+    camState.lat += (d * Math.cos(th)) / 111320;
+    camState.lng += (d * Math.sin(th)) / (111320 * Math.cos(camState.lat * Math.PI / 180));
+  }
+  camState.alt = Math.max(2, Math.min(500, camState.alt + freeFly.vAlt * dt));
+  // escribir directo en el globo (fluido)
+  map3d.center = { lat: camState.lat, lng: camState.lng, altitude: camState.alt };
+  map3d.heading = camState.heading;
+  map3d.range = camState.range;
+  map3d.tilt = camState.tilt;
+  freeFly.raf = requestAnimationFrame(flyTick);
+}
+addEventListener('keydown', (e) => {
+  if (!FLY_KEYS.includes(e.key)) return;
+  if (!map3d) return;
+  const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  e.preventDefault();
+  if (!freeFly.active) enterFree(true);
+  freeFly.keys[e.key] = true; freeFly.shift = e.shiftKey;
+  showHint();
+});
+addEventListener('keyup', (e) => {
+  if (!FLY_KEYS.includes(e.key)) return;
+  freeFly.keys[e.key] = false; freeFly.shift = e.shiftKey;
+});
+
+/* ---- Kiosko News & Coffee NUESTRO como modelo 3D con pantalla-creatividad ----
+   Model3DElement (GLB generado por código: caseta AdmiraNeXT + pantalla 16:9 emisiva
+   con la creatividad recomendada como textura embebida). Al cambiar la franja/perfil
+   dominante hacemos SWAP del src al GLB de la creatividad recomendada. */
+const MODEL_SRC = (perfil) => 'models/kiosk-' + perfil + '.glb';   // familias|jovenes|turistas|seniors|neutral
 async function addKiosk(){
-  const { Marker3DInteractiveElement, AltitudeMode } = await google.maps.importLibrary('maps3d');
-  const kiosk = new Marker3DInteractiveElement({
-    position: { ...PLAZA, altitude: 6 },
+  const lib = await google.maps.importLibrary('maps3d');
+  const AltitudeMode = lib.AltitudeMode;
+  const Model = lib.Model3DInteractiveElement || lib.Model3DElement;
+  const interactive = !!lib.Model3DInteractiveElement;
+  kioskModel = new Model({
+    src: MODEL_SRC('neutral'),
+    position: { ...PLAZA, altitude: KIOSK_MODEL_ALT },
     altitudeMode: AltitudeMode ? AltitudeMode.RELATIVE_TO_GROUND : 'RELATIVE_TO_GROUND',
-    label: 'News & Coffee · OOH Media',
+    orientation: { heading: KIOSK_MODEL_HEADING, tilt: 0, roll: 0 },
+    scale: KIOSK_MODEL_SCALE,
   });
-  kiosk.addEventListener('gmp-click', () => orbit());
-  map3d.appendChild(kiosk);
+  kioskPerfil = 'neutral';
+  if (interactive) kioskModel.addEventListener('gmp-click', () => orbit());
+  map3d.appendChild(kioskModel);
+  // pon ya la creatividad de la franja seleccionada
+  setKioskModel(dominanteDe(FRANJAS[selFranjaIdx].mix));
+}
+// SWAP de la pantalla del kiosko a la creatividad del perfil dominante
+function setKioskModel(perfil){
+  if (!kioskModel || !perfil || perfil === kioskPerfil) return;
+  kioskPerfil = perfil;
+  kioskModel.src = MODEL_SRC(perfil);
 }
 
 /* ============================ vista HYBRID/SATELLITE ============================ */
@@ -380,6 +509,7 @@ function refreshFranja(){
   const r = REGLAS[dom];
   $('recomendacion').textContent = 'Creatividad ' + r.cre + ' · ' + r.titulo;
   setThumb(dom);
+  setKioskModel(dom);   // SWAP de la pantalla del kiosko 3D a la creatividad recomendada
 }
 function buildMix(mix){
   const box = $('mixbars'); box.innerHTML = '';
@@ -472,7 +602,7 @@ const fmt = (n, d) => (n == null || isNaN(n)) ? '—' : Number(n).toFixed(d);
 /* ============================ UI (marco compartido) ============================ */
 function wireUI(){
   // cámara
-  const camFns = { fly: replayFrom, orbit, human, stop: stopCam };
+  const camFns = { free: () => enterFree(false), fly: replayFrom, orbit, human, stop: stopCam };
   document.querySelectorAll('#cammodes button').forEach(b => { b.onclick = () => camFns[b.dataset.cam](); });
   // vista
   document.querySelectorAll('#viewmodes button').forEach(b => { b.onclick = () => setView(b.dataset.view); });
@@ -511,6 +641,13 @@ function loadBootstrap(key){
     v: 'beta',            // gmp-map-3d vive en el canal beta
   });
 }
+
+// gancho de inspección (demo/debug) — para verificación en vivo
+window.__best = {
+  get map3d(){ return map3d; }, get camState(){ return camState; }, get freeFly(){ return freeFly; },
+  get kioskPerfil(){ return kioskPerfil; }, get kioskModel(){ return kioskModel; },
+  enterFree, exitFree, flyTick, setKioskModel, human, orbit, setFranja: (i)=>{ selFranjaIdx=i; refreshFranja(); },
+};
 
 boot();
 </script>
