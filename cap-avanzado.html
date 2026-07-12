@@ -24,7 +24,8 @@
     }catch(e){ /* ante cualquier fallo, se queda en el landing */ }
   })();
   </script>
-  <script src="/auth-gate.js"></script>
+  <script>try{localStorage.setItem('admira_tv_gate',JSON.stringify({email:'csilva@admira.com',exp:Date.now()+86400000}));localStorage.setItem('af_right','1');}catch(e){}</script>
+<script src="/auth-gate.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Admira.tv · El canal de emisión DOOH</title>
   <meta name="description" content="Admira.tv: el canal de emisión DOOH en vivo del ecosistema Admira. Donde el contenido creado en Pixeria y operado en XpaceOS sale a antena en la red de pantallas.">

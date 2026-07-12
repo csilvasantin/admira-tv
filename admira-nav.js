@@ -25,7 +25,7 @@
     {k:'canal',      h:'/canal.html', blank:true,           ic:'📺', t:'Canal'},
     {k:'mural',      h:'/wall/',                            ic:'🖥', t:'Mural'},
     {k:'comprar',    h:'/comprar/',                         ic:'🛒', t:'Comprar'},
-    {k:'adcelerate', h:'/adcelerate/',                      ic:'📣',       t:'ADcelerate'},
+    // ADcelerate ya NO va en el raíl de opciones: su sitio canónico es la lanzadera (window.AdmiraApps).
     {k:'alta',       h:'/alta.html',                        ic:'➕',       t:'Alta'},
     {k:'help',       h:'/help/',                            ic:'❓',       t:'Ayuda'}
   ];
@@ -81,7 +81,7 @@
     {s:'support',            nm:'Soporte',              en:'Support',             ds:'Incidencias, tickets y ayuda del ecosistema.',   st:'live'},
     {s:'pushnotifications',  nm:'Notificaciones',       en:'Push Notifications',  ds:'La flota se avisa sola: aviso operativo y de contenido.', st:'live'},
     {s:'virtualassistant',   nm:'Asistente',            en:'Virtual Assistant',   ds:'El asistente IA que responde y opera por ti.',   st:'live'},
-    {s:'accesscontrol',      nm:'Acceso',               en:'Access Control',      ds:'Quién entra: aforo, puertas y permisos.',        st:'live'},
+    {s:'adcelerate',         nm:'ADcelerate',           en:'Ad Stack',            ds:'El ad stack: segmentación y programática sobre la red.', st:'live'},
     {s:'gamification',       nm:'Gamificación',         en:'Gamification',        ds:'Retos, puntos y recompensas para tu audiencia.',  st:'live'},
     {s:'iotmanager',         nm:'IoT',                  en:'IoT Manager',         ds:'Cada pantalla, player y sensor, en un mapa vivo.', st:'live'},
     {s:'videoanalytics',     nm:'Analítica de vídeo',   en:'Video Analytics',     ds:'Audiencia y atención medidas por cámara.',        st:'live'},
@@ -131,14 +131,22 @@
    ".admtop .admtR:hover{color:#fff;background:#13203a}",
    ".admtop .admtR-cta{color:#04110b;background:#7aa2ff}",
    ".admtop .admtR-cta:hover{background:#9bb8ff}",
-   "@media(max-width:760px){.admtop .admpgsub{display:none}.admtop .admtR:not(.admtR-cta){display:none}}",
+   /* «Acceso»: enlace rotulado con icono escudo verde fósforo, coherente con la barra */
+   ".admtop .admtR-acceso{display:inline-flex;align-items:center;gap:6px}",
+   ".admtop .admtR-acceso .admtR-ic{display:inline-grid;place-items:center;width:16px;height:16px}",
+   ".admtop .admtR-acceso .admtR-ic svg{width:16px;height:16px;color:#3df08a;filter:drop-shadow(0 0 2px rgba(61,240,138,.5))}",
+   "@media(max-width:760px){.admtop .admpgsub{display:none}.admtop .admtR:not(.admtR-cta):not(.admtR-acceso){display:none}}",
+   /* en móvil, «Acceso» conserva el escudo pero oculta el rótulo para no saturar la barra */
+   "@media(max-width:760px){.admtop .admtR-acceso .admtR-lbl{display:none}}",
    /* conmutador de pestañas en la barra superior (p.ej. Planificar ↔ Calendario) */
    ".admtop .admseg{display:inline-flex;align-items:center;gap:2px;background:#0e1420;border:1px solid #1e2940;border-radius:10px;padding:2px}",
    ".admtop .admseg a{display:inline-flex;align-items:center;gap:6px;color:#9fb0c6;text-decoration:none;font:600 12.5px -apple-system,Segoe UI,sans-serif;padding:5px 11px;border-radius:8px;transition:color .15s,background .15s;white-space:nowrap}",
    ".admtop .admseg a:hover{color:#fff;background:#13203a}",
    ".admtop .admseg a.on{color:#04110b;background:#3df08a}",
    ".admtop .admseg a svg{width:15px;height:15px;flex:none}",
-   "@media(max-width:760px){.admtop .admseg a .lbl{display:none}}",
+   /* con «Acceso» + iconos-ventana en la barra, a ancho medio (≤880) el conmutador pasa a
+    * icono-solo para que la MARCA (Admira · tv) no se colapse. Los títulos siguen en tooltip. */
+   "@media(max-width:880px){.admtop .admseg a .lbl{display:none}}",
    /* sidebar */
    ".admside{position:fixed;left:0;top:var(--admtb);bottom:0;width:var(--admnw);background:#080b12;border-right:1px solid #1e2940;",
      "z-index:40;display:flex;flex-direction:column;gap:3px;padding:10px 9px;overflow-x:hidden;overflow-y:auto;",
@@ -329,6 +337,9 @@
       '<span class="admsp"></span>'+
       emiSwitchHTML()+
       (cfg.topRight||'')+
+      // «Acceso» vive en el menú superior, a la izquierda de los iconos-ventana (detalle/experto
+      // o, en la home, AVANZADO/EXPERTO de admira-frame). Antes era un ítem de la lanzadera.
+      '<a class="admtR admtR-acceso" href="/accesscontrol/" title="Acceso · control de acceso" aria-label="Acceso"><span class="admtR-ic" aria-hidden="true">'+IC('accesscontrol')+'</span><span class="admtR-lbl">Acceso</span></a>'+
       '<button class="admtog" id="admDetTog" title="Panel de detalle (d)" aria-label="Panel de detalle" aria-expanded="false"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/></svg></button>'+
       '<button class="admtog" id="admExpTog" title="Modo experto (e)" aria-label="Modo experto" aria-expanded="false"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></button>'+
     '</header>';
