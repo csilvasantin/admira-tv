@@ -79,10 +79,20 @@ body { font-family: var(--admira-font-sans); color: var(--admira-text); backgrou
   border-color: rgba(255, 255, 255, .20); transform: translateY(-1px); }
 #mainnav a.active { color: var(--spine); background: var(--spine-soft); border-color: var(--spine-line); }
 #mainnav a[href^="https"]::before { content: "↗ "; opacity: .85; font-weight: 400; }
+/* iconos-ventana canónicos (UX cuadrática): solo glifo + tooltip, no se mueven.
+   OPCIONES a la izquierda del logo · AVANZADO y EXPERTO a la derecha (EXPERTO al extremo). */
 .side-toggle {
-  display: none; border: 1px solid var(--admira-border); background: var(--panel-bg);
-  color: var(--admira-text); font-size: 15px; width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--admira-border); background: var(--panel-bg);
+  color: var(--admira-text); font-size: 15px; width: 36px; height: 36px; line-height: 1;
   border-radius: var(--admira-radius-md); cursor: pointer; flex: none;
+  transition: all var(--admira-tx-fast);
+}
+.side-toggle:hover { border-color: var(--spine-line); color: var(--spine); }
+#tg-expert { margin-left: -2px; }        /* EXPERTO pegado al extremo derecho */
+.side-toggle.on {                          /* encendido (relleno) cuando su panel está abierto */
+  background: var(--spine-soft); border-color: var(--spine); color: var(--spine);
+  box-shadow: inset 0 0 0 1px var(--spine-line), 0 0 14px -4px var(--spine);
 }
 
 /* escalera Good · Better · Best */
@@ -101,17 +111,20 @@ body { font-family: var(--admira-font-sans); color: var(--admira-text); backgrou
 #quality button.active { background: var(--spine-soft); color: var(--spine);
   box-shadow: inset 0 0 0 1px var(--spine-line), 0 0 14px -4px var(--spine); }
 
-/* ============ MARCO CUADRÁTICO: columnas laterales a toda altura ============ */
+/* ============ MARCO CUADRÁTICO: OPCIONES / AVANZADO como overlays plegables ============
+   Nacen BAJO la barra (top = alto de barra), plegados por defecto → el gemelo gana
+   pantalla completa. El canvas usa el 100% del ancho SIEMPRE; los paneles flotan encima. */
 #sidebar, #rightbar {
-  position: absolute; top: var(--top-h); bottom: var(--bottom-h);
-  width: var(--col-w); display: flex; flex-direction: column; z-index: 10;
-  background: var(--panel-bg-2);
+  position: fixed; top: var(--top-h); bottom: var(--bottom-h);
+  width: min(86vw, var(--col-w)); display: flex; flex-direction: column; z-index: 16;
+  background: rgba(10, 12, 18, .96);
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   overflow-y: auto; scrollbar-width: none; transition: transform var(--admira-tx-normal);
 }
 #sidebar::-webkit-scrollbar, #rightbar::-webkit-scrollbar { display: none; }
-#sidebar  { left: 0;  border-right: 1px solid var(--admira-border); box-shadow: inset -2px 0 0 rgba(80, 200, 255, .14); }
-#rightbar { right: 0; border-left:  1px solid var(--admira-border); box-shadow: inset  2px 0 0 rgba(80, 200, 255, .14); }
+#sidebar  { left: 0;  border-right: 1px solid var(--admira-border); box-shadow: inset -2px 0 0 rgba(80, 200, 255, .14); transform: translateX(-103%); }
+#rightbar { right: 0; border-left:  1px solid var(--admira-border); box-shadow: inset  2px 0 0 rgba(80, 200, 255, .14); transform: translateX(103%); }
+#sidebar.open, #rightbar.open { transform: translateX(0); box-shadow: var(--admira-shadow-card); }
 
 .panel {   /* sección dentro de la columna del marco, no tarjeta flotante */
   background: transparent; border: 0; border-radius: 0;
@@ -349,7 +362,7 @@ body { font-family: var(--admira-font-sans); color: var(--admira-text); backgrou
 
 /* ============ ficha flotante ============ */
 #ficha {
-  position: absolute; top: calc(var(--top-h) + 14px); right: calc(var(--col-w) + 14px); width: 282px; z-index: 12;
+  position: absolute; top: calc(var(--top-h) + 14px); right: 14px; width: 282px; z-index: 12;
   background: var(--admira-bg-elev); backdrop-filter: blur(12px);
   border: 1px solid var(--admira-border-strong); border-left: 2px solid var(--spine);
   border-radius: var(--admira-radius-lg); padding: var(--admira-space-3) 16px;
@@ -387,7 +400,7 @@ body { font-family: var(--admira-font-sans); color: var(--admira-text); backgrou
 #hint.gone { opacity: 0; pointer-events: none; }
 
 #attrib {
-  position: absolute; bottom: calc(var(--bottom-h) + 6px); right: calc(var(--col-w) + 12px); z-index: 10;
+  position: absolute; bottom: calc(var(--bottom-h) + 6px); right: 12px; z-index: 10;
   font-size: 9.5px; font-family: var(--admira-font-mono); color: var(--admira-text-dim);
   background: rgba(10, 12, 18, .72); padding: 3px 10px;
   border-radius: var(--admira-radius-pill); border: 1px solid var(--admira-border);
@@ -408,7 +421,6 @@ body { font-family: var(--admira-font-sans); color: var(--admira-text); backgrou
 
 /* ============ RESPONSIVE ============ */
 @media (max-width: 900px) {
-  .side-toggle { display: block; }
   #mainnav a[data-open] { display: none; }
   #mainnav a[href^="https"] { display: none; }
   #mainnav { margin-left: 2px; gap: 2px; }
@@ -419,13 +431,7 @@ body { font-family: var(--admira-font-sans); color: var(--admira-text); backgrou
   #quality { padding: 2px; }
   #quality button { padding: 3px 6px; font-size: 10.5px; }
   #quality button small { font-size: 7px; letter-spacing: .06em; }
-  #sidebar, #rightbar {
-    top: var(--top-h); bottom: var(--bottom-h); width: min(80vw, 320px);
-    background: rgba(10, 12, 18, .97); z-index: 25;
-  }
-  #sidebar { transform: translateX(-102%); }
-  #rightbar { transform: translateX(102%); }
-  #sidebar.open, #rightbar.open { transform: translateX(0); box-shadow: var(--admira-shadow-card); }
+  .side-toggle { width: 34px; height: 34px; font-size: 14px; }
   #ficha { right: 8px; left: 8px; width: auto; top: calc(var(--top-h) + 8px); }
   #expert-content { grid-template-columns: 1fr; max-height: 46vh; }
   #hint { font-size: 10px; }

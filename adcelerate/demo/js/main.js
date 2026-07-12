@@ -1250,11 +1250,15 @@ function buildHUD() {
   const q0 = new URLSearchParams(location.search).get('q');
   if (q0 === 'good' || q0 === 'better') setQuality(q0);
 
-  // barra inferior: modo experto
-  $('expert-toggle').onclick = () => {
-    $('expertbar').classList.toggle('collapsed');
+  // barra inferior = panel EXPERTO. El icono EXPERTO de la barra reutiliza este mismo toggle.
+  const toggleExpert = () => {
+    const collapsed = $('expertbar').classList.toggle('collapsed');
+    $('tg-expert').classList.toggle('on', !collapsed);   // encendido sincronizado
     updateExpert(true);
+    try { localStorage.setItem('adc.expert', collapsed ? '0' : '1'); } catch (e) {}
   };
+  $('expert-toggle').onclick = toggleExpert;
+  $('tg-expert').onclick = toggleExpert;
   $('ex-endpoints').innerHTML =
     `stock: ${STOCK_URL.replace('https://', '')}<br>` +
     `signage: ${SIGNAGE_URL.replace('https://', '')}<br>` +
@@ -1263,22 +1267,62 @@ function buildHUD() {
     `atajos player: ⇧+→ siguiente · ⇧+← anterior · ⇧+↑ primera · ⇧+↓ última<br>` +
     `vuelo: flechas avance/giro · Av/Re Pág altura (⇧+↑↓ ya no es altura)`;
 
-  // móvil: abrir/cerrar laterales
+  // OPCIONES (izquierda) y AVANZADO (derecha): overlays plegables, uno abierto a la vez.
+  const syncSideIcons = () => {
+    $('tg-left').classList.toggle('on', $('sidebar').classList.contains('open'));
+    $('tg-right').classList.toggle('on', $('rightbar').classList.contains('open'));
+  };
+  const persistSides = () => {
+    try {
+      localStorage.setItem('adc.opts', $('sidebar').classList.contains('open') ? '1' : '0');
+      localStorage.setItem('adc.adv',  $('rightbar').classList.contains('open') ? '1' : '0');
+    } catch (e) {}
+  };
+  const closeSides = () => {
+    if (!$('sidebar').classList.contains('open') && !$('rightbar').classList.contains('open')) return;
+    $('sidebar').classList.remove('open');
+    $('rightbar').classList.remove('open');
+    syncSideIcons(); persistSides();
+  };
   const toggleSide = which => {
     const el = which === 'left' ? $('sidebar') : $('rightbar');
     const other = which === 'left' ? $('rightbar') : $('sidebar');
     el.classList.toggle('open');
     other.classList.remove('open');
+    syncSideIcons(); persistSides();
   };
   $('tg-left').onclick = () => toggleSide('left');
   $('tg-right').onclick = () => toggleSide('right');
   document.querySelectorAll('#mainnav a[data-open]').forEach(a => {
     a.onclick = e => { e.preventDefault(); toggleSide(a.dataset.open); };
   });
-  // tocar la escena cierra los laterales en móvil
-  renderer.domElement.addEventListener('pointerdown', () => {
+  // tocar la escena cierra los overlays laterales (no roba el foco al canvas para las flechas)
+  renderer.domElement.addEventListener('pointerdown', closeSides);
+
+  // restaurar estado (plegado por defecto: solo abre lo que estuviera guardado como '1')
+  try {
+    if (localStorage.getItem('adc.opts') === '1') $('sidebar').classList.add('open');
+    if (localStorage.getItem('adc.adv')  === '1') $('rightbar').classList.add('open');
+    if (localStorage.getItem('adc.expert') === '1') $('expertbar').classList.remove('collapsed');
+  } catch (e) {}
+  syncSideIcons();
+  $('tg-expert').classList.toggle('on', !$('expertbar').classList.contains('collapsed'));
+
+  // Escape cierra cualquier panel abierto — SOLO Escape y SOLO si hay algo abierto,
+  // para no interferir con las flechas / Av-Re Pág que maneja la cámara del gemelo.
+  addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const open = $('sidebar').classList.contains('open')
+              || $('rightbar').classList.contains('open')
+              || !$('expertbar').classList.contains('collapsed');
+    if (!open) return;
+    e.preventDefault();
     $('sidebar').classList.remove('open');
     $('rightbar').classList.remove('open');
+    $('expertbar').classList.add('collapsed');
+    syncSideIcons(); persistSides();
+    $('tg-expert').classList.remove('on');
+    try { localStorage.setItem('adc.expert', '0'); } catch (err) {}
   });
 }
 
