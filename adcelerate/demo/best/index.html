@@ -40,6 +40,21 @@
     box-shadow: var(--admira-shadow-glow-cyan);
   }
 
+  /* Fila franja + píldora RT (la píldora #rt-btn hereda estilo de ../css/style.css) */
+  .rt-row{ display: flex; gap: 8px; align-items: stretch; }
+  .rt-row .franjas{ flex: 1; }
+  #rt-btn{ align-self: stretch; }
+  /* chip equivalente al #wx-chip del gemelo: hora + icono + temperatura reales */
+  .rt-chip{
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 18px;
+    padding: 3px 12px 3px 10px; border-radius: var(--admira-radius-pill);
+    background: rgba(255, 60, 80, .10); border: 1px solid rgba(255, 92, 106, .5);
+  }
+  .rt-chip.hidden{ display: none; }
+  #rt-time{ font-family: var(--admira-font-mono); font-size: 14px; font-weight: 700; color: var(--admira-text); }
+  #rt-temp{ font-size: 15px; font-weight: 700; color: #ff8a94; letter-spacing: -.01em; }
+  #rt-ico{ line-height: 1; }
+
   /* Miniatura de la creatividad recomendada (no hay pantalla 3D nuestra en el fotorreal) */
   .cre-thumb-wrap{ margin-top: 10px; position: relative; }
   #cre-thumb{
@@ -151,7 +166,13 @@
   <aside id="rightbar">
     <section class="panel" id="panel-live">
       <h2>Dato telco de la franja</h2>
-      <div class="franjas" id="franjas"></div>
+      <div class="rt-row">
+        <div class="franjas" id="franjas"></div>
+        <button id="rt-btn" type="button" aria-pressed="false" title="Tiempo real · franja, hora y meteo de ahora (Europe/Madrid)"><span class="rt-dot" aria-hidden="true"></span>RT</button>
+      </div>
+      <div id="rt-chip" class="rt-chip hidden" title="Hora y meteo reales de ahora">
+        <span id="rt-ico">·</span><span id="rt-time">—</span><span id="rt-temp">—</span>
+      </div>
       <div class="big-metric" style="margin-top:12px"><span id="aforo">—</span><span class="unit">personas</span></div>
       <div id="mixbars"></div>
       <div class="kv"><span>Perfil dominante</span><b id="dominante">—</b></div>
@@ -250,6 +271,88 @@ const REGLAS = {
   seniors:  { cre: 'D', titulo: 'MATINS TRANQUILS', sub: 'Farmàcia & salut · Vila de Gràcia' },
 };
 const dominanteDe = (mix) => PERFILES.reduce((a, b) => (mix[a] >= mix[b] ? a : b));
+
+/* ---------- RT · tiempo real (hora + meteo de ahora) — consistente con el gemelo ---------- */
+const WX_FORECAST = 'https://api.open-meteo.com/v1/forecast';
+const rt = { active: false, timer: 0 };
+let wxCurrent = null;   // {temp, code, precip, time} de AHORA
+// WMO → icono (misma tabla nocturna que demo/js/main.js: nada de sol ni nube pelada de noche)
+function wxIcon(code, h) {
+  if (code == null) return '·';
+  const night = (h < 7 || h > 20.6);
+  if (code === 0) return night ? '🌙' : '☀️';
+  if (code <= 2) return night ? '🌙☁️' : '🌤';
+  if (code === 3) return night ? '☁️🌙' : '☁️';
+  if (code >= 45 && code <= 48) return night ? '🌫🌙' : '🌫';
+  if (code >= 51 && code <= 67) return night ? '🌧🌙' : '🌧';
+  if (code >= 71 && code <= 77) return night ? '🌨🌙' : '🌨';
+  if (code >= 80 && code <= 82) return night ? '🌧🌙' : '🌦';
+  if (code === 85 || code === 86) return night ? '🌨🌙' : '🌨';
+  if (code >= 95) return night ? '⛈🌙' : '⛈';
+  return night ? '☁️🌙' : '☁️';
+}
+// hora decimal actual en Europe/Madrid + su etiqueta HH:MM
+function madridHour() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(new Date());
+  const g = (t) => +(parts.find(p => p.type === t)?.value || 0);
+  let hh = g('hour'); if (hh === 24) hh = 0;
+  return (hh + g('minute') / 60 + g('second') / 3600) % 24;
+}
+function fmtHm(h) {
+  h = ((h % 24) + 24) % 24;
+  let hh = Math.floor(h), m = Math.round((h - hh) * 60);
+  if (m === 60) { m = 0; hh = (hh + 1) % 24; }
+  return String(hh).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+function nearestFranjaByHour(h) {
+  let best = 0, bd = 99;
+  FRANJAS.forEach((f, i) => {
+    const d = Math.min(Math.abs(h - f.h), 24 - Math.abs(h - f.h));
+    if (d < bd) { bd = d; best = i; }
+  });
+  return best;
+}
+async function fetchCurrentWx() {
+  try {
+    const url = `${WX_FORECAST}?latitude=${PLAZA.lat}&longitude=${PLAZA.lng}&current=temperature_2m,weather_code,precipitation&timezone=Europe%2FMadrid`;
+    const r = await fetch(url, { cache: 'no-store' });
+    const j = await r.json();
+    if (j && j.current && j.current.temperature_2m != null) {
+      wxCurrent = { temp: j.current.temperature_2m, code: j.current.weather_code, precip: j.current.precipitation ?? 0, time: j.current.time };
+      updateRtChip();
+    }
+  } catch (e) { /* mantenemos el último current */ }
+}
+function updateRtChip() {
+  const chip = $('rt-chip'); if (!chip) return;
+  if (!rt.active) { chip.classList.add('hidden'); return; }
+  chip.classList.remove('hidden');
+  const h = madridHour();
+  $('rt-time').textContent = fmtHm(h);
+  if (wxCurrent) {
+    $('rt-ico').textContent = wxIcon(wxCurrent.code, h);
+    $('rt-temp').textContent = Math.round(wxCurrent.temp) + '°';
+  } else {
+    $('rt-ico').textContent = '…'; $('rt-temp').textContent = '';
+  }
+}
+function rtSync() {
+  if (!rt.active) return;
+  const i = nearestFranjaByHour(madridHour());   // franja más cercana a la hora actual
+  if (i !== selFranjaIdx) { selFranjaIdx = i; refreshFranja(); }
+  updateRtChip();
+  fetchCurrentWx();
+}
+function setRT(on) {
+  if (rt.active === on) { if (on) rtSync(); return; }
+  rt.active = on;
+  const btn = $('rt-btn');
+  if (btn) { btn.classList.toggle('rt-on', on); btn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+  if (on) { rtSync(); if (!rt.timer) rt.timer = setInterval(rtSync, 30000); }
+  else { clearInterval(rt.timer); rt.timer = 0; updateRtChip(); }
+}
 
 /* ---------- feed real del circuito (mismo endpoint que el gemelo) ---------- */
 const SIGNAGE_URL = 'https://api.admira.store/signage/now?screen=oohmedia';
@@ -493,7 +596,7 @@ function buildFranjas(){
     const b = document.createElement('button');
     b.textContent = f.id.replace('h', '');
     b.classList.toggle('active', i === selFranjaIdx);
-    b.onclick = () => { selFranjaIdx = i; refreshFranja(); };
+    b.onclick = () => { setRT(false); selFranjaIdx = i; refreshFranja(); };   // manual → RT off
     wrap.appendChild(b);
   });
 }
@@ -590,10 +693,14 @@ function startTelemetry(){
         'mode    ' + viewMode;
     }
     const s = Math.floor((Date.now() - t0) / 1000);
+    const rtTxt = rt.active
+      ? ('<b style="color:#ff5c6a">RT ● ' + fmtHm(madridHour()) + '</b>' + (wxCurrent ? ' · ' + wxIcon(wxCurrent.code, madridHour()) + ' ' + Math.round(wxCurrent.temp) + '° · code ' + wxCurrent.code : ' · meteo…'))
+      : '<b>RT off</b>';
     $('ex-session').innerHTML =
       'sesión activa <b>' + Math.floor(s / 60) + 'm ' + (s % 60) + 's</b><br>' +
       'globo: <b>' + (map3d ? 'en vivo' : '—') + '</b> · vista <b>' + viewMode + '</b><br>' +
       'franja <b>' + FRANJAS[selFranjaIdx].id + '</b> · circuito <b>' + (signageItem ? 'emitiendo' : 'sin emisión') + '</b><br>' +
+      'tiempo real: ' + rtTxt + '<br>' +
       'atribución: © Google (Map Tiles) · © OpenStreetMap · escena ADcelerate by Admira';
   }, 700);
 }
@@ -606,6 +713,9 @@ function wireUI(){
   document.querySelectorAll('#cammodes button').forEach(b => { b.onclick = () => camFns[b.dataset.cam](); });
   // vista
   document.querySelectorAll('#viewmodes button').forEach(b => { b.onclick = () => setView(b.dataset.view); });
+  // botón RT (tiempo real)
+  const rtBtn = $('rt-btn');
+  if (rtBtn) rtBtn.onclick = () => setRT(!rt.active);
   // escalera Good · Better · Best — GOOD/BETTER vuelven al gemelo (nivel por ?q=)
   document.querySelectorAll('#quality button').forEach(b => {
     if (b.dataset.q === 'best') return;   // BEST es esta página
@@ -647,6 +757,7 @@ window.__best = {
   get map3d(){ return map3d; }, get camState(){ return camState; }, get freeFly(){ return freeFly; },
   get kioskPerfil(){ return kioskPerfil; }, get kioskModel(){ return kioskModel; },
   enterFree, exitFree, flyTick, setKioskModel, human, orbit, setFranja: (i)=>{ selFranjaIdx=i; refreshFranja(); },
+  setRT, rtSync, madridHour, wxIcon, get rt(){ return rt; }, get wxCurrent(){ return wxCurrent; },
 };
 
 boot();

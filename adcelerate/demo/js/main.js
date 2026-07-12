@@ -208,6 +208,7 @@ const WX_QS = 'hourly=temperature_2m,weather_code,precipitation&timezone=Europe%
 const weather = {
   date: null, temp: null, code: null, precip: null,   // arrays horarios (24)
   endpoint: '', raw: null, ok: false, loading: false,
+  current: null,                                       // RT: {temp, code, precip, time} de AHORA
   msg: 'meteo real · Open-Meteo · Vila de Gràcia',
 };
 // factores aplicados a la escena (lerp suave hacia el objetivo de la hora)
@@ -260,8 +261,65 @@ async function loadWeather(iso) {
   onWeatherLoaded();
 }
 
+/* ============ RT · TIEMPO REAL (hora + meteo de ahora, Europe/Madrid) ============ */
+// Al activar: calendario→HOY, reloj→hora real avanzando, chip/escena→current de Open-Meteo.
+// Se desactiva solo al tocar slider/fecha/franja o reactivar el AUTO.
+const rt = { active: false, timer: 0 };
+let calSetDate = null;                                 // ref al setter del calendario (buildHUD)
+// hora decimal actual en Europe/Madrid (independiente del huso del navegador)
+function madridNow() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(new Date());
+  const g = t => +(parts.find(p => p.type === t)?.value || 0);
+  let hh = g('hour'); if (hh === 24) hh = 0;
+  return (hh + g('minute') / 60 + g('second') / 3600) % 24;
+}
+async function fetchCurrentWx() {
+  try {
+    const url = `${WX_FORECAST}?latitude=${WX_LAT}&longitude=${WX_LON}&current=temperature_2m,weather_code,precipitation&timezone=Europe%2FMadrid`;
+    const r = await fetch(url, { cache: 'no-store' });
+    const j = await r.json();
+    if (j && j.current && j.current.temperature_2m != null) {
+      weather.current = {
+        temp: j.current.temperature_2m, code: j.current.weather_code,
+        precip: j.current.precipitation ?? 0, time: j.current.time,
+      };
+      updateWxChip(); updateExpert(true);
+    }
+  } catch (e) { /* mantenemos el último current */ }
+}
+// sincroniza reloj/calendario/meteo con AHORA (se repite cada 30 s mientras RT esté activo)
+function rtSync() {
+  if (!rt.active) return;
+  const cal = $('cal-date');
+  if (cal && calSetDate && cal.value !== isoToday()) calSetDate(isoToday());   // (a) calendario→HOY
+  setHour(madridNow(), false);                                                  // (b) reloj→hora real
+  updateHoraUI();
+  fetchCurrentWx();                                                             // (c) meteo de ahora
+}
+function setRT(on) {
+  if (rt.active === on) { if (on) rtSync(); return; }
+  rt.active = on;
+  const btn = $('rt-btn');
+  if (btn) { btn.classList.toggle('rt-on', on); btn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+  if (on) {
+    $('auto-toggle').checked = false; state.auto = false;   // el AUTO de 90 s se desactiva
+    rtSync();
+    if (!rt.timer) rt.timer = setInterval(rtSync, 30000);   // avanza en vivo (≤30 s)
+  } else {
+    clearInterval(rt.timer); rt.timer = 0;
+    weather.current = null;
+    updateWxChip(); updateExpert(true);
+  }
+}
+
 // muestreo horario interpolado (temp/precip continuos; code por hora más cercana)
 function wxSample(h) {
+  // RT activo: la escena y el chip reflejan el dato REAL de ahora mismo (current=…)
+  if (rt.active && weather.current) {
+    return { temp: weather.current.temp, precip: weather.current.precip ?? 0, code: weather.current.code };
+  }
   if (!weather.ok || !weather.temp) return null;
   h = ((h % 24) + 24) % 24;
   const i0 = Math.floor(h) % 24, i1 = (i0 + 1) % 24, t = h - Math.floor(h);
@@ -271,20 +329,21 @@ function wxSample(h) {
     code: weather.code[t < 0.5 ? i0 : i1] ?? 0,
   };
 }
-// WMO → icono (variantes nocturnas donde tiene sentido)
+// WMO → icono. De NOCHE (mismo criterio que el ciclo solar: sr=7, ss≈20.5) ningún
+// icono lleva sol ni «nube de mediodía» pelada: se le añade matiz nocturno 🌙.
 function wxIcon(code, h) {
   if (code == null) return '·';
   const night = (h < 7 || h > 20.6);
-  if (code === 0) return night ? '🌙' : '☀️';
-  if (code <= 2) return night ? '🌙' : '🌤';
-  if (code === 3) return '☁️';
-  if (code >= 45 && code <= 48) return '🌫';
-  if (code >= 51 && code <= 67) return '🌧';
-  if (code >= 71 && code <= 77) return '🌨';
-  if (code >= 80 && code <= 82) return night ? '🌧' : '🌦';
-  if (code === 85 || code === 86) return '🌨';
-  if (code >= 95) return '⛈';
-  return '☁️';
+  if (code === 0) return night ? '🌙' : '☀️';                        // despejado
+  if (code <= 2) return night ? '🌙☁️' : '🌤';                       // poco nuboso → luna + nube
+  if (code === 3) return night ? '☁️🌙' : '☁️';                      // nublado → nube con matiz nocturno
+  if (code >= 45 && code <= 48) return night ? '🌫🌙' : '🌫';        // niebla
+  if (code >= 51 && code <= 67) return night ? '🌧🌙' : '🌧';        // llovizna/lluvia
+  if (code >= 71 && code <= 77) return night ? '🌨🌙' : '🌨';        // nieve
+  if (code >= 80 && code <= 82) return night ? '🌧🌙' : '🌦';        // chubascos (🌦 lleva sol de día)
+  if (code === 85 || code === 86) return night ? '🌨🌙' : '🌨';      // chubascos de nieve
+  if (code >= 95) return night ? '⛈🌙' : '⛈';                       // tormenta
+  return night ? '☁️🌙' : '☁️';
 }
 // sample → factores objetivo de escena
 function wxTargets(s) {
@@ -1036,10 +1095,13 @@ function buildHUD() {
   FRANJAS.forEach((f, i) => {
     const b = document.createElement('button');
     b.textContent = f.id;
-    b.onclick = () => { $('auto-toggle').checked = false; state.auto = false; setHour(FRANJA_H[i]); };
+    b.onclick = () => { setRT(false); $('auto-toggle').checked = false; state.auto = false; setHour(FRANJA_H[i]); };
     fr.appendChild(b);
   });
-  $('auto-toggle').onchange = e => { state.auto = e.target.checked; };
+  $('auto-toggle').onchange = e => { if (e.target.checked) setRT(false); state.auto = e.target.checked; };
+  // botón RT: activa/desactiva el tiempo real
+  const rtBtn = $('rt-btn');
+  if (rtBtn) rtBtn.onclick = () => setRT(!rt.active);
 
   // calendario: fecha del gemelo → meteo real de esa fecha (Open-Meteo)
   const cal = $('cal-date');
@@ -1054,14 +1116,16 @@ function buildHUD() {
     $('cal-next').disabled = (iso >= cal.max);
     loadWeather(iso);
   };
-  cal.onchange = () => setDate(cal.value || isoToday());
-  $('cal-prev').onclick = () => setDate(addDays(cal.value, -1));
-  $('cal-next').onclick = () => setDate(addDays(cal.value, 1));
-  $('cal-today').onclick = () => setDate(isoToday());
+  cal.onchange = () => { setRT(false); setDate(cal.value || isoToday()); };
+  $('cal-prev').onclick = () => { setRT(false); setDate(addDays(cal.value, -1)); };
+  $('cal-next').onclick = () => { setRT(false); setDate(addDays(cal.value, 1)); };
+  $('cal-today').onclick = () => { setRT(false); setDate(isoToday()); };
+  calSetDate = setDate;                              // RT usa este setter sin desactivarse
   setDate(isoToday());                               // por defecto HOY
 
   // slider de 24 h: arrastrar la hora mueve sol, luces y audiencia
   $('hora-slider').oninput = e => {
+    setRT(false);
     $('auto-toggle').checked = false; state.auto = false;
     setHour(parseFloat(e.target.value), false);
   };
@@ -1168,6 +1232,8 @@ function updateExpert(force = false) {
     fecha: weather.date,
     endpoint: weather.ok ? weather.endpoint.replace('https://', '') : weather.msg,
     hora: fmtHora(state.hour),
+    rt: rt.active,
+    current: weather.current ? { icono: wxIcon(weather.current.code, state.hour), code_wmo: weather.current.code, temp: +(+weather.current.temp).toFixed(1), precip_mm: +(+weather.current.precip).toFixed(2), time: weather.current.time } : null,
     ahora: s ? { icono: wxIcon(s.code, state.hour), code_wmo: s.code, temp: +s.temp.toFixed(1), precip_mm: +s.precip.toFixed(2) } : null,
     factores: { cloud: +wxApplied.cloud.toFixed(2), rain: +wxApplied.rain.toFixed(2), snow: +wxApplied.snow.toFixed(2), storm: +wxApplied.storm.toFixed(2) },
     aforo_factor: +wxCrowdFactor.toFixed(2), drops: precipPoints && precipPoints.visible ? Math.round(MAX_DROPS * Math.max(wxApplied.rain, wxApplied.snow)) : 0,
@@ -1701,6 +1767,7 @@ window.__dbg = {
   get fps() { return fpsEMA; },
   setHour, applyEnvironment, audienciaAt, fmtHora,
   weather, wxApplied, loadWeather, wxSample, wxIcon, enterHuman, HUMAN,
+  setRT, rtSync, madridNow, get rt() { return rt; },
   get wxCrowdFactor() { return wxCrowdFactor; },
 };
 window.__dbgEvalCount = (window.__dbgEvalCount || 0) + 1;

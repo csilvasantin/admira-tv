@@ -162,6 +162,29 @@ body { font-family: var(--admira-font-sans); color: var(--admira-text); backgrou
 #wx-chip.wx-off { opacity: .45; }
 #wx-chip.wx-off #wx-temp { color: var(--admira-text-dim); font-size: 11px; }
 .wx-adjust b { color: var(--admira-amber); }
+/* ---- píldora RT (tiempo real) · COMPARTIDA por Good/Better/Best ---- */
+#rt-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--admira-font-mono); font-size: 12px; font-weight: 700; letter-spacing: .08em;
+  padding: 4px 11px; cursor: pointer; color: var(--admira-text-muted); text-shadow: none;
+  border: 1px solid var(--admira-border); border-radius: var(--admira-radius-pill);
+  background: rgba(255, 255, 255, .05); transition: all var(--admira-tx-fast); line-height: 1;
+}
+#rt-btn:hover { border-color: var(--spine-line); color: var(--admira-text); }
+#rt-btn .rt-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex: none;
+  background: #5a2430; border: 1px solid #7a2a3a; transition: all var(--admira-tx-fast);
+}
+#rt-btn.rt-on {
+  color: #ff5c6a; border-color: #ff5c6a;
+  background: rgba(255, 60, 80, .12); box-shadow: 0 0 14px -4px #ff4458;
+}
+#rt-btn.rt-on .rt-dot {
+  background: #ff3b47; border-color: #ff7280;
+  box-shadow: 0 0 8px #ff3b47; animation: rt-pulse 1.4s ease-in-out infinite;
+}
+@keyframes rt-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { #rt-btn.rt-on .rt-dot { animation: none; } }
 #hora-slider {
   -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
   border-radius: var(--admira-radius-pill); outline: none; margin: 4px 0 12px;
