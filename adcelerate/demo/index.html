@@ -7,7 +7,7 @@
 <title>ADcelerate · Gemelo Plaça de la Vila de Gràcia — demo</title>
 <meta name="description" content="Demo ADcelerate: gemelo 3D de la Plaça de la Vila de Gràcia con kiosko reactivo a audiencias telco.">
 <link rel="icon" href="../../favicon.svg">
-<link rel="stylesheet" href="css/style.css?v=20260712b">
+<link rel="stylesheet" href="css/style.css?v=20260712c">
 <script type="importmap">
 {
   "imports": {
@@ -37,8 +37,19 @@
       <a href="#" data-open="right">Circuito</a>
       <a href="https://admira.tv/canal.html" target="_blank" rel="noopener">admira.tv ↗</a>
     </nav>
+    <div id="quality" title="Escalera del gemelo">
+      <button data-q="good">2D<small>Good</small></button>
+      <button data-q="better" class="active">3D<small>Better</small></button>
+      <button data-q="best" class="locked">🔒<small>Best</small></button>
+    </div>
     <button id="tg-right" class="side-toggle" aria-label="Avanzado">⚙</button>
   </header>
+
+  <div id="best-note" class="hidden">
+    <b>Best · Fotorrealista + MetaHumans</b> <span class="horno">EN EL HORNO</span><br>
+    <small>Fotogrametría RealityScan de la plaza + multitudes MetaHuman (UE 5.8).
+    Llegará como vídeo / pixel streaming sobre este mismo gemelo.</small>
+  </div>
 
   <!-- ============ MENÚ IZQUIERDO (opciones normales) ============ -->
   <aside id="sidebar">
@@ -129,6 +140,6 @@
   <div id="loading"><div class="spin"></div><p>Cargando gemelo…</p></div>
 </div>
 
-<script type="module" src="js/main.js?v=20260712b"></script>
+<script type="module" src="js/main.js?v=20260712c"></script>
 </body>
 </html>

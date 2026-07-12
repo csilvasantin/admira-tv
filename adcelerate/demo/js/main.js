@@ -57,8 +57,8 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xdfe9ee);
-scene.fog = new THREE.Fog(0xdfe9ee, 420, 780);
+scene.background = new THREE.Color(0xe9e2d2);      // tarde cálida
+scene.fog = new THREE.Fog(0xe9e2d2, 420, 780);
 
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.5, 1500);
 camera.position.set(95, 34, 95);           // arranque en volado libre mirando al kiosko
@@ -75,10 +75,10 @@ controls.autoRotate = false;
 controls.autoRotateSpeed = 0.35;
 controls.enabled = false;                  // el modo por defecto es volado libre
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-scene.add(new THREE.HemisphereLight(0xcfe8ff, 0xe8dcc8, 0.55));
-const sun = new THREE.DirectionalLight(0xfff4e0, 1.5);
-sun.position.set(-180, 260, -120);
+scene.add(new THREE.AmbientLight(0xfff2df, 0.62));
+scene.add(new THREE.HemisphereLight(0xd8e6f2, 0xead9bd, 0.6));
+const sun = new THREE.DirectionalLight(0xffd9a6, 1.8);   // sol de tarde, bajo y cálido
+sun.position.set(-240, 170, -60);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.camera.left = -320; sun.shadow.camera.right = 320;
@@ -91,19 +91,72 @@ scene.add(sun);
 // suelo — disco tipo maqueta
 const ground = new THREE.Mesh(
   new THREE.CircleGeometry(340, 64).rotateX(-Math.PI / 2),
-  new THREE.MeshLambertMaterial({ color: 0xe6e0d4 })
+  new THREE.MeshLambertMaterial({ color: 0xe4dcc9 })
 );
 ground.receiveShadow = true;
 ground.position.y = -0.05;
 scene.add(ground);
 
+/* ---- texturas procedurales (canvas, coste 0) ---- */
+function canvasTexture(w, h, draw) {
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  draw(cv.getContext('2d'), w, h);
+  const tx = new THREE.CanvasTexture(cv);
+  tx.wrapS = tx.wrapT = THREE.RepeatWrapping;
+  tx.colorSpace = THREE.SRGBColorSpace;
+  return tx;
+}
+// celda de fachada 3×3 m: una ventana por planta (v = altura en m)
+const winTx = canvasTexture(96, 96, (c, w, h) => {
+  c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h);
+  c.fillStyle = 'rgba(70,92,106,.85)';                 // hueco
+  c.fillRect(30, 26, 36, 46);
+  c.fillStyle = 'rgba(255,255,255,.55)';               // cristal con brillo
+  c.fillRect(33, 29, 30, 18);
+  c.strokeStyle = 'rgba(46,62,72,.9)'; c.lineWidth = 3; // marco
+  c.strokeRect(30, 26, 36, 46);
+  c.fillStyle = 'rgba(46,62,72,.35)';                  // alfeizar
+  c.fillRect(26, 70, 44, 4);
+});
+winTx.repeat.set(1 / 3, 1 / 3);
+// pavimento de la plaza (baldosa 2×2 m)
+const plazaTx = canvasTexture(128, 128, (c, w, h) => {
+  c.fillStyle = '#e9dcbb'; c.fillRect(0, 0, w, h);
+  c.strokeStyle = 'rgba(120,104,72,.35)'; c.lineWidth = 3;
+  c.strokeRect(0, 0, w, h);
+  c.strokeStyle = 'rgba(120,104,72,.16)'; c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(w / 2, 0); c.lineTo(w / 2, h); c.moveTo(0, h / 2); c.lineTo(w, h / 2); c.stroke();
+});
+// asfalto con grano
+const asfaltoTx = canvasTexture(128, 128, (c, w, h) => {
+  c.fillStyle = '#b9b4a8'; c.fillRect(0, 0, w, h);
+  const rr = mulberry32(7);
+  for (let i = 0; i < 420; i++) {
+    c.fillStyle = rr() > 0.5 ? 'rgba(90,88,80,.20)' : 'rgba(240,238,230,.18)';
+    c.fillRect(rr() * w, rr() * h, 1.6, 1.6);
+  }
+});
+// adoquín peatonal
+const adoquinTx = canvasTexture(128, 128, (c, w, h) => {
+  c.fillStyle = '#d8cdb4'; c.fillRect(0, 0, w, h);
+  c.strokeStyle = 'rgba(110,96,70,.3)'; c.lineWidth = 2;
+  for (let y = 0; y < h; y += 32) {
+    for (let x = 0; x < w; x += 32) {
+      const off = (y / 32) % 2 ? 16 : 0;
+      c.strokeRect(x + off, y, 32, 32);
+    }
+  }
+});
+
 /* ============================== plaza ============================== */
 // Explanada sintética (OSM no trae polígono de plaza): rectángulo local aprox.
 const PLAZA = { x0: -8, x1: 32, z0: -20, z1: 26 };
 const TORRE = { x: 22.7, z: 7.1, r: 6.5 };   // Campanar de Gràcia, en medio de la plaza
+plazaTx.repeat.set((PLAZA.x1 - PLAZA.x0) / 2, (PLAZA.z1 - PLAZA.z0) / 2);
 const plazaMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(PLAZA.x1 - PLAZA.x0, PLAZA.z1 - PLAZA.z0).rotateX(-Math.PI / 2),
-  new THREE.MeshLambertMaterial({ color: 0xf2ead9 })
+  new THREE.MeshLambertMaterial({ map: plazaTx })
 );
 plazaMesh.position.set((PLAZA.x0 + PLAZA.x1) / 2, 0.02, (PLAZA.z0 + PLAZA.z1) / 2);
 plazaMesh.receiveShadow = true;
@@ -202,6 +255,23 @@ vid.addEventListener('ended', () => nextStock());
 vid.addEventListener('error', () => stockSkipError());
 vid.addEventListener('loadeddata', () => { stockErrors = 0; });
 
+// Creatividades por perfil (subTrinity-pixeria) — same-origin, viajan con la deploy.
+// Prioridad de pantalla: canal real admira.tv > creatividad demo por perfil > canvas.
+let creManifest = null;
+const creImgs = {};
+fetch('creatividades/creatividades.json', { cache: 'no-store' })
+  .then(r => r.json())
+  .then(j => {
+    creManifest = j.creatividades || null;
+    for (const p of PERFILES) {
+      if (!creManifest || !creManifest[p]) continue;
+      const im = new Image();
+      im.onload = () => { creImgs[p] = im; };
+      im.src = 'creatividades/' + p + '.png';   // same-origin (mismo deploy)
+    }
+  })
+  .catch(() => { /* sin manifiesto: canvas fallback */ });
+
 async function loadStock() {
   try {
     const r = await fetch(STOCK_URL, { cache: 'no-store' });
@@ -282,15 +352,23 @@ function renderScreen() {
     c.fillStyle = '#eaf6fb'; c.fillText(('EN ANTENA admira.tv · ' + stockTitle()).slice(0, 56), 30, 18);
   }
   if (media) {
-    // banda inferior: recomendación ADcelerate sobre la emisión real
+    // banda inferior: recomendación ADcelerate sobre la emisión real (+miniatura pixeria)
     c.fillStyle = 'rgba(6,20,26,.84)'; c.fillRect(0, H - 54, W, 54);
     c.fillStyle = r.bg; c.fillRect(0, H - 54, 8, 54);
     c.textAlign = 'left'; c.textBaseline = 'middle'; c.font = 'bold 16px Menlo, monospace';
     c.fillStyle = '#9fdcf5'; c.fillText('ADcelerate recomienda:', 20, H - 37);
     c.fillStyle = '#ffffff';
     c.fillText(`Creatividad ${r.cre} · ${r.titulo} (${PERFIL_LABEL[dom].toLowerCase()})`, 20, H - 15);
+    if (creImgs[dom]) c.drawImage(creImgs[dom], W - 94, H - 50, 82, 46);
+  } else if (creImgs[dom]) {
+    // creatividad demo por perfil (pixeria): imagen real 16:9
+    c.drawImage(creImgs[dom], 0, 0, W, H);
+    c.fillStyle = 'rgba(6,20,26,.78)'; c.fillRect(0, 0, W, 30);
+    c.textAlign = 'left'; c.textBaseline = 'middle'; c.font = 'bold 14px Menlo, monospace';
+    c.fillStyle = '#9fdcf5';
+    c.fillText(`CREATIVIDAD DEMO · ADcelerate → ${PERFIL_LABEL[dom]} (regla ${r.cre})`, 12, 16);
   } else {
-    // fallback: creatividad canvas de la regla
+    // último fallback: creatividad canvas de la regla
     c.fillStyle = r.bg; c.fillRect(0, 0, W, H);
     c.fillStyle = 'rgba(255,255,255,.16)'; c.fillRect(0, 0, W, 64);
     c.fillStyle = r.fg;
@@ -321,7 +399,8 @@ async function pollSignage() {
 function updateFeedHUD() {
   const badge = $('badge-real'), feed = $('feedstate'), sig = $('signagestate');
   // qué alimenta la pantalla del kiosko del gemelo
-  feed.textContent = stockLive ? 'CANAL admira.tv (stock R2)' : 'simulado (regla)';
+  feed.textContent = stockLive ? 'CANAL admira.tv (stock R2)' :
+    (creManifest ? 'creatividad demo (pixeria)' : 'simulado (regla)');
   feed.classList.toggle('live', stockLive);
   // qué reporta el player físico del circuito
   if (state.realItem) {
@@ -336,7 +415,8 @@ function updateFeedHUD() {
 }
 
 /* ============================== carga de la ciudad ============================== */
-let buildingsMesh = null, roadsMesh = null, buildingPick = [];   // [{tri0, tri1, meta}]
+let buildingsMesh = null, roofsMesh = null, roadsMesh = null;
+let buildingPick = [], roofsPick = [];   // [{tri0, tri1, meta}] por malla
 const rng = mulberry32(20260712);
 
 fetch('data/gracia-local.json').then(r => r.json()).then(data => {
@@ -348,11 +428,13 @@ fetch('data/gracia-local.json').then(r => r.json()).then(data => {
 });
 
 function buildCity(data) {
-  // ---- edificios extruidos, fusionados en 1 draw call, con mapa de picking
-  const palette = [0xf7f3ea, 0xefe8dc, 0xe9e2d3, 0xf2ece0, 0xece4d4];
-  const geos = [];
-  let triCursor = 0;
+  // ---- edificios extruidos: FACHADAS (con ventanas procedurales) y CUBIERTAS separadas,
+  //      fusionadas en 2 draw calls, con mapa de picking por triángulo en cada una
+  const palette = [0xf2e3c9, 0xe9d5b8, 0xdfc9a8, 0xecdcc4, 0xe4cfae, 0xd9c3a5];
+  const walls = { pos: [], col: [], uv: [], pick: [], tri: 0 };
+  const roofs = { pos: [], col: [], uv: [], pick: [], tri: 0 };
   const tmpColor = new THREE.Color();
+  const roofColor = new THREE.Color();
   for (const b of data.buildings) {
     if (b.pts.length < 3) continue;
     const shape = new THREE.Shape();
@@ -363,101 +445,174 @@ function buildCity(data) {
       g = new THREE.ExtrudeGeometry(shape, { depth: b.h, bevelEnabled: false });
     } catch (e) { continue; }
     g.rotateX(-Math.PI / 2);
-    // color por edificio (determinista por id)
     const ci = (b.id || 0) % palette.length;
-    tmpColor.setHex(b.name ? 0xf9edd8 : palette[ci]);
-    const n = g.attributes.position.count;
-    const cols = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) { cols[i * 3] = tmpColor.r; cols[i * 3 + 1] = tmpColor.g; cols[i * 3 + 2] = tmpColor.b; }
-    g.setAttribute('color', new THREE.BufferAttribute(cols, 3));
-    const tris = n / 3;
-    buildingPick.push({ tri0: triCursor, tri1: triCursor + tris, meta: b });
-    triCursor += tris;
-    geos.push(g);
+    tmpColor.setHex(b.name ? 0xf0dbb5 : palette[ci]);
+    roofColor.copy(tmpColor).multiplyScalar(0.82);      // cubierta más apagada
+    const posA = g.attributes.position.array;
+    const uvA = g.attributes.uv.array;
+    // groups: materialIndex 0 = tapas (cubierta), 1 = laterales (fachada)
+    for (const grp of g.groups) {
+      const dst = grp.materialIndex === 1 ? walls : roofs;
+      const col = grp.materialIndex === 1 ? tmpColor : roofColor;
+      const nTri = grp.count / 3;
+      for (let vi = grp.start; vi < grp.start + grp.count; vi++) {
+        dst.pos.push(posA[vi * 3], posA[vi * 3 + 1], posA[vi * 3 + 2]);
+        dst.uv.push(uvA[vi * 2], uvA[vi * 2 + 1]);
+        dst.col.push(col.r, col.g, col.b);
+      }
+      dst.pick.push({ tri0: dst.tri, tri1: dst.tri + nTri, meta: b });
+      dst.tri += nTri;
+    }
   }
-  const merged = BGU.mergeGeometries(geos, false);
-  buildingsMesh = new THREE.Mesh(merged,
-    new THREE.MeshLambertMaterial({ vertexColors: true }));
+  const mkGeo = acc => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(acc.pos), 3));
+    geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(acc.uv), 2));
+    geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(acc.col), 3));
+    geo.computeVertexNormals();
+    return geo;
+  };
+  buildingsMesh = new THREE.Mesh(mkGeo(walls),
+    new THREE.MeshLambertMaterial({ vertexColors: true, map: winTx }));
   buildingsMesh.castShadow = true;
   buildingsMesh.receiveShadow = true;
   buildingsMesh.name = 'buildings';
-  scene.add(buildingsMesh);
+  buildingPick = walls.pick;
+  roofsMesh = new THREE.Mesh(mkGeo(roofs),
+    new THREE.MeshLambertMaterial({ vertexColors: true }));
+  roofsMesh.castShadow = true;
+  roofsMesh.receiveShadow = true;
+  roofsMesh.name = 'roofs';
+  roofsPick = roofs.pick;
+  scene.add(buildingsMesh, roofsMesh);
 
-  // ---- viales como cintas planas
+  // ---- viales como cintas planas con textura (asfalto vs peatonal/adoquín)
   const W_BY_HW = { footway: 2.5, path: 2.5, steps: 2.5, pedestrian: 4, cycleway: 2.5, service: 3.5, living_street: 5, residential: 5.5, unclassified: 5.5, tertiary: 7, secondary: 9, primary: 10 };
-  const pos = [];
+  const PEATONAL = new Set(['footway', 'path', 'steps', 'pedestrian', 'living_street', 'cycleway']);
+  const acc = { asf: { pos: [], uv: [] }, ado: { pos: [], uv: [] } };
   const v = new THREE.Vector2();
   for (const rd of data.roads) {
     const w = (W_BY_HW[rd.hw] || 4.5) / 2;
+    const dst = PEATONAL.has(rd.hw) ? acc.ado : acc.asf;
+    let u = 0;
     for (let i = 0; i < rd.pts.length - 1; i++) {
       const [x1, z1] = rd.pts[i], [x2, z2] = rd.pts[i + 1];
+      const len = Math.hypot(x2 - x1, z2 - z1);
       v.set(z2 - z1, -(x2 - x1)).normalize().multiplyScalar(w); // perpendicular
+      const u0 = u / 4, u1 = (u + len) / 4; u += len;
       const ax = x1 + v.x, az = z1 + v.y, bx = x1 - v.x, bz = z1 - v.y;
       const cx = x2 + v.x, cz = z2 + v.y, dx = x2 - v.x, dz = z2 - v.y;
-      pos.push(ax, 0.01, az, cx, 0.01, cz, bx, 0.01, bz,
-               bx, 0.01, bz, cx, 0.01, cz, dx, 0.01, dz);
+      dst.pos.push(ax, 0.01, az, cx, 0.01, cz, bx, 0.01, bz,
+                   bx, 0.01, bz, cx, 0.01, cz, dx, 0.01, dz);
+      dst.uv.push(u0, 1, u1, 1, u0, 0, u0, 0, u1, 1, u1, 0);
     }
   }
-  const roadGeo = new THREE.BufferGeometry();
-  roadGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
-  roadGeo.computeVertexNormals();
-  roadsMesh = new THREE.Mesh(roadGeo, new THREE.MeshLambertMaterial({ color: 0xd8d2c4 }));
-  roadsMesh.receiveShadow = true;
+  const mkRoad = (a, tx) => {
+    if (!a.pos.length) return null;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(a.pos), 3));
+    geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(a.uv), 2));
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tx }));
+    m.receiveShadow = true;
+    return m;
+  };
+  roadsMesh = new THREE.Group();
+  const asf = mkRoad(acc.asf, asfaltoTx), ado = mkRoad(acc.ado, adoquinTx);
+  if (asf) roadsMesh.add(asf);
+  if (ado) roadsMesh.add(ado);
   scene.add(roadsMesh);
 }
 
-/* ============================== multitud (presencias) ============================== */
-let crowd = null;
-const crowdProfileU = new Float32Array(MAX_CROWD); // aleatorio estable por instancia
+/* ============== multitud: figuras humanas low-poly que CAMINAN ============== */
+// ~110 triángulos/figura (torso+brazos, piernas, cabeza en 3 InstancedMesh sincronizados).
+// 600 figuras ≈ 66k triángulos → LOD innecesario (medir FPS en modo experto).
+const ROPA = {   // paleta de ropa por perfil
+  familias: [0xf2a65a, 0xe98548, 0xd97b29, 0xf4c17a],   // cálidos
+  jovenes:  [0x8b7bff, 0xe84f9b, 0x2fd6c3, 0xb0e04a],   // vivos
+  turistas: [0x2fbbd6, 0xff5f5f, 0xffd23f, 0x7bd4ff],   // color + mochila
+  seniors:  [0x6b8f71, 0x7c8894, 0x8d7b66, 0x5e7180],   // sobrios
+};
+let figures = null;                 // {group, body, legs, head}
+let figCount = 0;
+const crowdProfileU = new Float32Array(MAX_CROWD);
+const figState = [];                // {x,z,tx,tz,speed,phase,s,kind,road,idx,dir}
+const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _sv = new THREE.Vector3(), _pv = new THREE.Vector3();
+const UP = new THREE.Vector3(0, 1, 0);
+
+function plazaPointValido() {
+  for (let k = 0; k < 40; k++) {
+    const x = lerp(PLAZA.x0 + 2, PLAZA.x1 - 2, rng());
+    const z = lerp(PLAZA.z0 + 2, PLAZA.z1 - 2, rng());
+    if (Math.hypot(x, z) < 5) continue;
+    if (Math.hypot(x - TORRE.x, z - TORRE.z) < TORRE.r) continue;
+    return [x, z];
+  }
+  return [PLAZA.x0 + 4, PLAZA.z1 - 4];
+}
+
 function buildCrowd(data) {
-  // puntos de spawn deterministas: 65% plaza, 35% calles cercanas
-  const streetPts = [];
-  for (const rd of data.roads) {
-    for (const [x, z] of rd.pts) {
-      if (Math.hypot(x, z) < 170) streetPts.push([x, z]);
-    }
-  }
-  const spawns = [];
-  while (spawns.length < MAX_CROWD) {
-    if (rng() < 0.65 || streetPts.length === 0) {
-      const x = lerp(PLAZA.x0 + 2, PLAZA.x1 - 2, rng());
-      const z = lerp(PLAZA.z0 + 2, PLAZA.z1 - 2, rng());
-      if (Math.hypot(x, z) < 5) continue;                              // no dentro del kiosko
-      if (Math.hypot(x - TORRE.x, z - TORRE.z) < TORRE.r) continue;    // ni dentro del Campanar
-      spawns.push([x, z]);
-    } else {
-      const [sx, sz] = streetPts[Math.floor(rng() * streetPts.length)];
-      spawns.push([sx + (rng() - 0.5) * 5, sz + (rng() - 0.5) * 5]);
-    }
-  }
-  const geo = new THREE.CapsuleGeometry(0.32, 1.05, 3, 8);
-  geo.translate(0, 0.85, 0);
-  crowd = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial(), MAX_CROWD);
-  crowd.castShadow = true;
-  crowd.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
-  const up = new THREE.Vector3(0, 1, 0);
+  const roadsNear = data.roads.filter(rd =>
+    rd.pts.length > 1 && rd.pts.some(([x, z]) => Math.hypot(x, z) < 170));
   for (let i = 0; i < MAX_CROWD; i++) {
     crowdProfileU[i] = rng();
-    p.set(spawns[i][0], 0, spawns[i][1]);
-    q.setFromAxisAngle(up, rng() * Math.PI * 2);
-    const k = 0.85 + rng() * 0.3;
-    s.set(k, k * (0.9 + rng() * 0.25), k);
-    m.compose(p, q, s);
-    crowd.setMatrixAt(i, m);
-    crowd.setColorAt(i, new THREE.Color(0xaaaaaa));
+    const enPlaza = rng() < 0.65 || !roadsNear.length;
+    const st = {
+      speed: 0.7 + rng() * 0.8,
+      phase: rng() * Math.PI * 2,
+      s: rng() < 0.12 ? 0.55 + rng() * 0.1 : 0.88 + rng() * 0.24,  // 12% niños
+      yaw: rng() * Math.PI * 2,
+      kind: enPlaza ? 'plaza' : 'street',
+      road: null, idx: 0, dir: 1,
+    };
+    if (enPlaza) {
+      [st.x, st.z] = plazaPointValido();
+      [st.tx, st.tz] = plazaPointValido();
+    } else {
+      st.road = roadsNear[Math.floor(rng() * roadsNear.length)];
+      st.idx = Math.floor(rng() * st.road.pts.length);
+      st.dir = rng() < 0.5 ? 1 : -1;
+      const [px, pz] = st.road.pts[st.idx];
+      st.x = px + (rng() - 0.5) * 3; st.z = pz + (rng() - 0.5) * 3;
+      const j = Math.min(st.road.pts.length - 1, Math.max(0, st.idx + st.dir));
+      [st.tx, st.tz] = st.road.pts[j];
+    }
+    figState.push(st);
   }
-  crowd.count = 0;
-  scene.add(crowd);
+  // geometrías (low-poly): torso+brazos · piernas · cabeza
+  const box = (w, h, d, x, y, z) => new THREE.BoxGeometry(w, h, d).translate(x, y, z);
+  const bodyGeo = BGU.mergeGeometries([
+    box(0.34, 0.56, 0.20, 0, 1.13, 0),
+    box(0.09, 0.52, 0.11, -0.235, 1.10, 0),
+    box(0.09, 0.52, 0.11, 0.235, 1.10, 0),
+  ]);
+  const legsGeo = BGU.mergeGeometries([
+    box(0.13, 0.85, 0.15, -0.095, 0.425, 0),
+    box(0.13, 0.85, 0.15, 0.095, 0.425, 0),
+  ]);
+  const headGeo = new THREE.SphereGeometry(0.115, 6, 5).translate(0, 1.56, 0);
+  const body = new THREE.InstancedMesh(bodyGeo, new THREE.MeshLambertMaterial({ color: 0xffffff }), MAX_CROWD);
+  const legs = new THREE.InstancedMesh(legsGeo, new THREE.MeshLambertMaterial({ color: 0x3b4148 }), MAX_CROWD);
+  const head = new THREE.InstancedMesh(headGeo, new THREE.MeshLambertMaterial({ color: 0xe8b48c }), MAX_CROWD);
+  for (const im of [body, legs, head]) {
+    im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    im.count = 0;
+    im.castShadow = true;
+  }
+  const group = new THREE.Group();
+  group.add(body, legs, head);
+  scene.add(group);
+  figures = { group, body, legs, head };
   applyFranja(state.franjaIdx, true);
 }
 
 const _c = new THREE.Color();
 function updateCrowd() {
-  if (!crowd) return;
+  if (!figures) return;
   const n = Math.min(MAX_CROWD, Math.round(state.cur.aforo));
-  crowd.count = n;
-  // umbrales acumulados del mix interpolado
+  figCount = n;
+  figures.body.count = n; figures.legs.count = n; figures.head.count = n;
+  // umbrales acumulados del mix interpolado → perfil por figura → ropa de su paleta
   const mx = state.cur.mix;
   const tot = PERFILES.reduce((a, p2) => a + mx[p2], 0) || 1;
   const cum = []; let acc = 0;
@@ -465,10 +620,48 @@ function updateCrowd() {
   for (let i = 0; i < n; i++) {
     const u = crowdProfileU[i];
     let pi = 0; while (pi < 3 && u > cum[pi]) pi++;
-    _c.setHex(PERFIL_COLOR[PERFILES[pi]]);
-    crowd.setColorAt(i, _c);
+    const pal = ROPA[PERFILES[pi]];
+    _c.setHex(pal[(i * 7 + pi) % pal.length]);
+    figures.body.setColorAt(i, _c);
   }
-  if (crowd.instanceColor) crowd.instanceColor.needsUpdate = true;
+  if (figures.body.instanceColor) figures.body.instanceColor.needsUpdate = true;
+}
+
+// paseo por waypoints: plaza = deambular; calle = seguir el vial y volver
+function updateFigureMotion(dt, t) {
+  if (!figures || !figCount) return;
+  for (let i = 0; i < figCount; i++) {
+    const st = figState[i];
+    const dx = st.tx - st.x, dz = st.tz - st.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.5) {
+      if (st.kind === 'plaza') {
+        [st.tx, st.tz] = plazaPointValido();
+      } else {
+        st.idx += st.dir;
+        if (st.idx <= 0 || st.idx >= st.road.pts.length - 1) st.dir *= -1;
+        st.idx = Math.min(st.road.pts.length - 1, Math.max(0, st.idx));
+        const [px, pz] = st.road.pts[st.idx];
+        st.tx = px + (rng() - 0.5) * 2; st.tz = pz + (rng() - 0.5) * 2;
+      }
+    } else {
+      const vv = st.speed * dt / d;
+      st.x += dx * vv; st.z += dz * vv;
+      st.yaw = Math.atan2(dx, dz);
+    }
+    const paso = t * st.speed * 5 + st.phase;
+    const bob = Math.abs(Math.sin(paso)) * 0.055;         // andar: bob
+    _pv.set(st.x, bob, st.z);
+    _q.setFromAxisAngle(UP, st.yaw + Math.sin(paso) * 0.06);  // leve balanceo
+    _sv.set(st.s, st.s, st.s);
+    _m.compose(_pv, _q, _sv);
+    figures.body.setMatrixAt(i, _m);
+    figures.legs.setMatrixAt(i, _m);
+    figures.head.setMatrixAt(i, _m);
+  }
+  figures.body.instanceMatrix.needsUpdate = true;
+  figures.legs.instanceMatrix.needsUpdate = true;
+  figures.head.instanceMatrix.needsUpdate = true;
 }
 
 /* ============================== HUD ============================== */
@@ -503,9 +696,17 @@ function buildHUD() {
   setTimeout(() => $('hint') && $('hint').classList.add('gone'), 8000);
 
   // capas visibles
-  $('capa-multitud').onchange = e => { if (crowd) crowd.visible = e.target.checked; };
-  $('capa-edificios').onchange = e => { if (buildingsMesh) buildingsMesh.visible = e.target.checked; };
+  $('capa-multitud').onchange = e => { if (figures) figures.group.visible = e.target.checked; };
+  $('capa-edificios').onchange = e => {
+    if (buildingsMesh) buildingsMesh.visible = e.target.checked;
+    if (roofsMesh) roofsMesh.visible = e.target.checked;
+  };
   $('capa-viales').onchange = e => { if (roadsMesh) roadsMesh.visible = e.target.checked; };
+
+  // escalera Good · Better · Best
+  document.querySelectorAll('#quality button').forEach(b => {
+    b.onclick = () => setQuality(b.dataset.q);
+  });
 
   // barra inferior: modo experto
   $('expert-toggle').onclick = () => {
@@ -544,7 +745,7 @@ function updateExpert(force = false) {
   if (!force && now - lastExpert < 500) return;
   lastExpert = now;
   $('ex-fps').textContent = Math.round(fpsEMA);
-  $('ex-crowd').textContent = crowd ? crowd.count : 0;
+  $('ex-crowd').textContent = figCount;
   $('ex-calls').textContent = renderer.info.render.calls;
   $('ex-tris').textContent = renderer.info.render.triangles.toLocaleString('es');
   const f = franja();
@@ -590,6 +791,8 @@ function updateOnscreenHUD() {
     el.textContent = '▶ ' + realItemName() + ' (player circuito)';
   } else if (stockLive && stockItem) {
     el.textContent = '▶ ' + stockTitle().slice(0, 34) + ' · canal admira.tv';
+  } else if (creImgs[state.dominante || dominanteDe(franja().mix)]) {
+    el.textContent = `Creatividad ${r.cre} · ${r.titulo} (demo pixeria)`;
   } else {
     el.textContent = `Creatividad ${r.cre} · ${r.titulo}`;
   }
@@ -629,17 +832,19 @@ renderer.domElement.addEventListener('pointerup', e => {
   downXY = null;
   if (moved > 6) return; // era drag
   pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
-  raycaster.setFromCamera(pointer, camera);
+  raycaster.setFromCamera(pointer, activeCamera());
   const targets = [kiosk, plazaMesh];
   if (buildingsMesh) targets.push(buildingsMesh);
+  if (roofsMesh) targets.push(roofsMesh);
   const hits = raycaster.intersectObjects(targets, true);
   if (!hits.length) { $('ficha').classList.add('hidden'); return; }
   const h = hits[0];
   let o = h.object;
-  while (o && o !== kiosk && o.name !== 'plaza' && o.name !== 'buildings') o = o.parent;
+  while (o && o !== kiosk && o.name !== 'plaza' && o.name !== 'buildings' && o.name !== 'roofs') o = o.parent;
   if (o === kiosk) return showFichaKiosk();
   if (o && o.name === 'plaza') return showFichaPlaza();
-  if (o && o.name === 'buildings') return showFichaBuilding(h.faceIndex);
+  if (o && o.name === 'buildings') return showFichaBuilding(buildingPick, h.faceIndex);
+  if (o && o.name === 'roofs') return showFichaBuilding(roofsPick, h.faceIndex);
 });
 
 function ficha(html) {
@@ -678,11 +883,11 @@ function showFichaPlaza() {
       <dt>Fuente</dt><dd>Datos telco de zona (simulados sobre patrón MITMA)</dd>
     </dl>`);
 }
-function showFichaBuilding(faceIndex) {
+function showFichaBuilding(pickArr, faceIndex) {
   // búsqueda binaria del edificio por triángulo
-  let lo = 0, hi = buildingPick.length - 1, found = null;
+  let lo = 0, hi = pickArr.length - 1, found = null;
   while (lo <= hi) {
-    const mid = (lo + hi) >> 1, e = buildingPick[mid];
+    const mid = (lo + hi) >> 1, e = pickArr[mid];
     if (faceIndex < e.tri0) hi = mid - 1;
     else if (faceIndex >= e.tri1) lo = mid + 1;
     else { found = e; break; }
@@ -698,6 +903,46 @@ function showFichaBuilding(faceIndex) {
       <dt>Datos</dt><dd>© OpenStreetMap contributors (ODbL)</dd>
     </dl>`);
 }
+
+/* ============== escalera GOOD (2D) · BETTER (3D) · BEST (en el horno) ============== */
+let quality = 'better';
+const camera2D = new THREE.OrthographicCamera(-240, 240, 240, -240, 1, 900);
+camera2D.position.set(0, 420, 0);
+camera2D.up.set(0, 0, -1);          // norte arriba
+camera2D.lookAt(0, 0, 0);
+function fitOrtho() {
+  const a = innerWidth / innerHeight, half = 250;
+  camera2D.left = -half * a; camera2D.right = half * a;
+  camera2D.top = half; camera2D.bottom = -half;
+  camera2D.updateProjectionMatrix();
+}
+fitOrtho();
+function activeCamera() { return quality === 'good' ? camera2D : camera; }
+function setQuality(q) {
+  if (q === 'best') {                       // pestaña bloqueada: nota "en el horno"
+    $('best-note').classList.toggle('hidden');
+    return;
+  }
+  $('best-note').classList.add('hidden');
+  quality = q;
+  document.querySelectorAll('#quality button').forEach(b =>
+    b.classList.toggle('active', b.dataset.q === q));
+  if (q === 'good') {
+    controls.enabled = false;
+    $('hint').classList.add('gone');
+  } else if (camMode === 'free') {
+    controls.enabled = false;
+  } else {
+    controls.enabled = true;
+  }
+}
+// zoom con rueda en la vista 2D
+renderer.domElement.addEventListener('wheel', e => {
+  if (quality !== 'good') return;
+  e.preventDefault();
+  camera2D.zoom = Math.min(6, Math.max(0.6, camera2D.zoom * (e.deltaY < 0 ? 1.12 : 0.89)));
+  camera2D.updateProjectionMatrix();
+}, { passive: false });
 
 /* ============== cámara: volado libre (defecto) · órbita · vuelo guiado ============== */
 let camMode = 'free';
@@ -731,6 +976,7 @@ function setCamMode(m) {
 const FLY_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown'];
 addEventListener('keydown', e => {
   if (!FLY_KEYS.includes(e.key)) return;
+  if (quality === 'good') return;            // en 2D no hay volado
   if (camMode !== 'free') setCamMode('free');
   fly.keys[e.key] = true; fly.shift = e.shiftKey;
   e.preventDefault();
@@ -848,18 +1094,23 @@ function animate(now) {
   fpsEMA = fpsEMA * 0.95 + (dt > 0 ? 1 / dt : 60) * 0.05;
   updateExpert();
 
-  if (camMode === 'free') {
+  updateFigureMotion(dt, now / 1000);   // la multitud camina
+
+  if (quality === 'good') {
+    // vista 2D cenital: cámara ortográfica fija (rueda = zoom)
+  } else if (camMode === 'free') {
     tickFree(dt);
   } else {
     controls.update();
     tickFlight(now);               // si hay vuelo guiado, manda sobre la cámara
   }
-  renderer.render(scene, camera);
+  renderer.render(scene, activeCamera());
 }
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
+  fitOrtho();
   renderer.setSize(innerWidth, innerHeight);
 });
 
@@ -877,9 +1128,12 @@ requestAnimationFrame(animate);
 
 // gancho de inspección (demo/debug)
 window.__dbg = {
-  camera, controls, state, startFlight, applyFranja, setCamMode, nextStock, fly,
+  camera, camera2D, controls, state, startFlight, applyFranja, setCamMode, setQuality, nextStock, fly,
   get camMode() { return camMode; },
+  get quality() { return quality; },
   get flight() { return flight; },
+  get figures() { return figures; },
   get tickFreeCalls() { return _tickFreeCalls; },
+  get fps() { return fpsEMA; },
 };
 window.__dbgEvalCount = (window.__dbgEvalCount || 0) + 1;

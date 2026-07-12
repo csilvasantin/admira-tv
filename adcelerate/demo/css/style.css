@@ -47,6 +47,32 @@ body { font-family: var(--sans); color: var(--ink); background: #e8eef1; }
   font-size: 16px; width: 36px; height: 36px; border-radius: 9px; cursor: pointer; flex: none;
 }
 
+/* escalera Good · Better · Best */
+#quality { display: flex; gap: 2px; background: rgba(29, 43, 51, .07); border-radius: 10px;
+  padding: 3px; flex: none; }
+#quality button {
+  display: flex; flex-direction: column; align-items: center; line-height: 1.05;
+  border: none; background: transparent; color: var(--ink-soft); cursor: pointer;
+  font-size: 12px; font-weight: 700; padding: 4px 11px; border-radius: 8px; transition: all .15s;
+}
+#quality button small { font-size: 8.5px; font-weight: 600; letter-spacing: .8px;
+  text-transform: uppercase; opacity: .75; }
+#quality button:hover { color: var(--ink); }
+#quality button.active { background: #fff; color: var(--cian-dark);
+  box-shadow: 0 1px 6px rgba(29, 43, 51, .18); }
+#quality button.locked { opacity: .55; cursor: help; }
+
+#best-note {
+  position: absolute; top: calc(var(--top-h) + 8px); right: 60px; width: 300px; z-index: 22;
+  background: rgba(20, 38, 46, .96); color: #d9f1fb; border: 1px solid rgba(95, 208, 255, .45);
+  border-radius: 12px; padding: 12px 14px; font-size: 12px; line-height: 1.5;
+  box-shadow: 0 10px 34px rgba(6, 20, 26, .4);
+}
+#best-note .horno { font-family: var(--mono); font-size: 9px; color: #ffce56;
+  border: 1px solid rgba(255, 206, 86, .5); padding: 1px 7px; border-radius: 9px;
+  letter-spacing: 1px; margin-left: 4px; }
+#best-note small { color: #9fc4d4; }
+
 /* ============ paneles laterales ============ */
 #sidebar, #rightbar {
   position: absolute; top: calc(var(--top-h) + 12px); bottom: 52px; width: 272px;
@@ -204,6 +230,9 @@ body { font-family: var(--sans); color: var(--ink); background: #e8eef1; }
   #mainnav { margin-left: 4px; }
   #mainnav a { font-size: 12px; padding: 6px 9px; }
   .brand-txt .sub { display: none; }
+  #mainnav a[href^="https"] { display: none; }
+  #quality button { padding: 3px 7px; font-size: 11px; }
+  #best-note { right: 8px; left: 8px; width: auto; }
   #sidebar, #rightbar {
     top: var(--top-h); bottom: 40px; width: min(78vw, 300px); padding: 10px;
     background: rgba(238, 244, 247, .97); z-index: 25;
