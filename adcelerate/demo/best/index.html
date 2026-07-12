@@ -12,15 +12,15 @@
 <link rel="stylesheet" href="../css/style.css?v=20260712h">
 <style>
   /* ---- Solo lo específico del nivel BEST (globo Google en el hueco central) ---- */
-  /* El globo gmp-map-3d ocupa el HUECO del marco: entre columnas y barras.
-     Así la atribución obligatoria de Google (logo + data providers, esquina
-     inferior derecha del componente) queda SIEMPRE visible, sin taparla con
-     la columna derecha ni con la banda experto. */
+  /* Iconos-ventana canónicos: los paneles laterales son overlays plegados (marco
+     compartido ../css/style.css), así que el globo usa TODO el ancho. La atribución
+     obligatoria de Google (esquina inferior derecha) queda visible con los paneles
+     plegados (su estado por defecto) y al abrir el modo experto el globo sube. */
   #stage{
     position: absolute; z-index: 1; overflow: hidden;
-    top: var(--top-h); left: var(--col-w); right: var(--col-w); bottom: var(--bottom-h);
+    top: var(--top-h); left: 0; right: 0; bottom: var(--bottom-h);
     background: radial-gradient(1200px 600px at 50% 40%, rgba(80,200,255,.06), var(--admira-bg) 70%);
-    transition: left var(--admira-tx-normal), right var(--admira-tx-normal), bottom var(--admira-tx-normal);
+    transition: bottom var(--admira-tx-normal);
   }
   gmp-map-3d, #map3d{ width: 100%; height: 100%; display: block; }
   /* Al abrir el modo experto, el globo sube para NO tapar la atribución Google */
@@ -72,7 +72,7 @@
 
   /* Nuestro crédito de escena: al lado IZQUIERDO del hueco, para dejar libre la
      esquina inferior derecha donde Google pinta su atribución obligatoria. */
-  #attrib{ right: auto; left: calc(var(--col-w) + 12px); }
+  #attrib{ right: auto; left: 12px; }
 
   /* Aviso de clave faltante / error (reusa el lenguaje de tarjeta del gemelo) */
   #need-key{
@@ -101,8 +101,6 @@
   #need-key .hint{ margin-top: 16px; font-size: 11px; color: var(--admira-text-dim); }
 
   @media (max-width: 900px){
-    /* columnas off-canvas → el globo ocupa todo el ancho y su atribución se ve */
-    #stage{ left: 0; right: 0; }
     body.expert-open #stage{ bottom: 52vh; }
     #attrib{ display: none; }
   }
@@ -116,7 +114,7 @@
 
   <!-- ============ MENÚ SUPERIOR (mismo que el gemelo) ============ -->
   <header id="topbar">
-    <button id="tg-left" class="side-toggle" aria-label="Cámara">☰</button>
+    <button id="tg-left" class="side-toggle" aria-label="Opciones" title="Opciones">☰</button>
     <div class="brand">
       <div class="logo-dot" aria-hidden="true"></div>
       <div class="brand-txt">
@@ -134,7 +132,8 @@
       <button data-q="better">3D<small>Better</small></button>
       <button data-q="best" class="active">BEST<small>fotorreal</small></button>
     </div>
-    <button id="tg-right" class="side-toggle" aria-label="Circuito">⚙</button>
+    <button id="tg-right" class="side-toggle" aria-label="Avanzado" title="Avanzado">⚙</button>
+    <button id="tg-expert" class="side-toggle" aria-label="Experto" title="Experto">⌥</button>
   </header>
 
   <!-- ============ MENÚ IZQUIERDO (opciones) ============ -->
@@ -721,26 +720,65 @@ function wireUI(){
     if (b.dataset.q === 'best') return;   // BEST es esta página
     b.onclick = () => { location.href = '../?q=' + b.dataset.q; };
   });
-  // modo experto (plegable) — mismo comportamiento que el gemelo
-  $('expert-toggle').onclick = () => {
-    const bar = $('expertbar');
-    bar.classList.toggle('collapsed');
-    document.body.classList.toggle('expert-open', !bar.classList.contains('collapsed'));
+  // franja inferior = panel EXPERTO. El icono ⌥ de la barra reutiliza este mismo toggle.
+  const applyExpert = (open) => {
+    $('expertbar').classList.toggle('collapsed', !open);
+    document.body.classList.toggle('expert-open', open);       // el globo sube (atribución Google)
+    $('tg-expert').classList.toggle('on', open);                // encendido sincronizado
+    try { localStorage.setItem('adc.best.expert', open ? '1' : '0'); } catch (e) {}
   };
-  // móvil: laterales off-canvas con los MISMOS iconos ☰ / ⚙
+  const toggleExpert = () => applyExpert($('expertbar').classList.contains('collapsed'));
+  $('expert-toggle').onclick = toggleExpert;
+  $('tg-expert').onclick = toggleExpert;
+  // OPCIONES (☰ · panel Cámara) y AVANZADO (⚙ · panel Circuito): overlays plegables,
+  // uno abierto a la vez, con los iconos-ventana canónicos encendidos al abrir.
+  const syncSideIcons = () => {
+    $('tg-left').classList.toggle('on', $('sidebar').classList.contains('open'));
+    $('tg-right').classList.toggle('on', $('rightbar').classList.contains('open'));
+  };
+  const persistSides = () => {
+    try {
+      localStorage.setItem('adc.best.opts', $('sidebar').classList.contains('open') ? '1' : '0');
+      localStorage.setItem('adc.best.adv',  $('rightbar').classList.contains('open') ? '1' : '0');
+    } catch (e) {}
+  };
+  const closeSides = () => {
+    if (!$('sidebar').classList.contains('open') && !$('rightbar').classList.contains('open')) return;
+    $('sidebar').classList.remove('open'); $('rightbar').classList.remove('open');
+    syncSideIcons(); persistSides();
+  };
   const toggleSide = which => {
     const el = which === 'left' ? $('sidebar') : $('rightbar');
     const other = which === 'left' ? $('rightbar') : $('sidebar');
     el.classList.toggle('open'); other.classList.remove('open');
+    syncSideIcons(); persistSides();
   };
   $('tg-left').onclick  = () => toggleSide('left');
   $('tg-right').onclick = () => toggleSide('right');
   document.querySelectorAll('#mainnav a[data-open]').forEach(a => {
     a.onclick = e => { e.preventDefault(); toggleSide(a.dataset.open); };
   });
-  // tocar el globo cierra los laterales en móvil
-  $('stage').addEventListener('pointerdown', () => {
+  // tocar el globo cierra los overlays laterales (no roba el foco para las flechas)
+  $('stage').addEventListener('pointerdown', closeSides);
+  // restaurar estado (plegado por defecto: solo abre lo guardado como '1')
+  try {
+    if (localStorage.getItem('adc.best.opts') === '1') $('sidebar').classList.add('open');
+    if (localStorage.getItem('adc.best.adv')  === '1') $('rightbar').classList.add('open');
+    if (localStorage.getItem('adc.best.expert') === '1') applyExpert(true);
+  } catch (e) {}
+  syncSideIcons();
+  // Escape cierra cualquier panel abierto — SOLO Escape y SOLO si hay algo abierto,
+  // para no interferir con el volado libre (flechas / Av-Re Pág).
+  addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const open = $('sidebar').classList.contains('open')
+              || $('rightbar').classList.contains('open')
+              || !$('expertbar').classList.contains('collapsed');
+    if (!open) return;
+    e.preventDefault();
     $('sidebar').classList.remove('open'); $('rightbar').classList.remove('open');
+    syncSideIcons(); persistSides();
+    applyExpert(false);
   });
 }
 
