@@ -198,6 +198,217 @@ function applyEnvironment(h) {
   plazaEdge.material.opacity = 0.7 + 0.3 * lampF;
 }
 
+/* ============ METEO REAL (Open-Meteo) aplicada al gemelo ============ */
+// Barcelona · Plaça de la Vila de Gràcia. Sin clave, CORS abierto.
+const WX_LAT = 41.4002, WX_LON = 2.1576;
+const WX_FORECAST = 'https://api.open-meteo.com/v1/forecast';
+const WX_ARCHIVE  = 'https://archive-api.open-meteo.com/v1/archive';
+const WX_QS = 'hourly=temperature_2m,weather_code,precipitation&timezone=Europe%2FMadrid';
+
+const weather = {
+  date: null, temp: null, code: null, precip: null,   // arrays horarios (24)
+  endpoint: '', raw: null, ok: false, loading: false,
+  msg: 'meteo real · Open-Meteo · Vila de Gràcia',
+};
+// factores aplicados a la escena (lerp suave hacia el objetivo de la hora)
+const wxApplied = { cloud: 0, rain: 0, snow: 0, storm: 0, cold: 0, warm: 0 };
+let wxCrowdFactor = 1, wxFlash = 0, wxFlashNext = 3;
+
+const isoOf = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const isoToday = () => isoOf(new Date());
+const addDays = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); return isoOf(new Date(y, m - 1, d + n)); };
+function daysFromToday(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const a = new Date(y, m - 1, d), b = new Date(); b.setHours(0, 0, 0, 0);
+  return Math.round((a - b) / 86400000);
+}
+// override de test para capturas: ?wx=rain|snow|storm|clouds|clear|fog → 24h sintéticas
+function wxTestOverride() {
+  const p = new URLSearchParams(location.search).get('wx');
+  if (!p) return null;
+  const map = { clear: { c: 0, t: 26, pr: 0 }, clouds: { c: 3, t: 17, pr: 0 }, rain: { c: 63, t: 12, pr: 2.4 },
+                storm: { c: 95, t: 14, pr: 3.2 }, snow: { c: 73, t: -1, pr: 1.1 }, fog: { c: 45, t: 6, pr: 0 } };
+  const w = map[p]; if (!w) return null;
+  return { temp: Array(24).fill(w.t), code: Array(24).fill(w.c), precip: Array(24).fill(w.pr), test: p };
+}
+
+async function loadWeather(iso) {
+  weather.date = iso; weather.loading = true;
+  onWeatherLoaded();                                   // pinta «cargando…»
+  const test = wxTestOverride();
+  if (test) {
+    weather.temp = test.temp; weather.code = test.code; weather.precip = test.precip;
+    weather.endpoint = 'test?wx=' + test.test; weather.raw = { test: test.test };
+    weather.ok = true; weather.loading = false; weather.msg = 'meteo TEST (' + test.test + ')';
+    return onWeatherLoaded();
+  }
+  const base = daysFromToday(iso) < -90 ? WX_ARCHIVE : WX_FORECAST;
+  const url = `${base}?latitude=${WX_LAT}&longitude=${WX_LON}&${WX_QS}&start_date=${iso}&end_date=${iso}`;
+  weather.endpoint = url;
+  try {
+    const r = await fetch(url, { cache: 'no-store' });
+    const j = await r.json();
+    const h = j.hourly;
+    if (!h || !h.temperature_2m || h.temperature_2m.length < 24 || h.temperature_2m[0] == null) throw new Error('sin datos');
+    weather.temp = h.temperature_2m; weather.code = h.weather_code; weather.precip = h.precipitation || Array(24).fill(0);
+    weather.raw = j; weather.ok = true; weather.msg = 'meteo real · Open-Meteo · Vila de Gràcia';
+  } catch (e) {
+    weather.ok = false; weather.temp = weather.code = weather.precip = null; weather.raw = null;
+    weather.msg = 'meteo no disponible (la escena sigue)';
+  }
+  weather.loading = false;
+  onWeatherLoaded();
+}
+
+// muestreo horario interpolado (temp/precip continuos; code por hora más cercana)
+function wxSample(h) {
+  if (!weather.ok || !weather.temp) return null;
+  h = ((h % 24) + 24) % 24;
+  const i0 = Math.floor(h) % 24, i1 = (i0 + 1) % 24, t = h - Math.floor(h);
+  return {
+    temp: lerp(weather.temp[i0] ?? 0, weather.temp[i1] ?? 0, t),
+    precip: lerp(weather.precip?.[i0] ?? 0, weather.precip?.[i1] ?? 0, t),
+    code: weather.code[t < 0.5 ? i0 : i1] ?? 0,
+  };
+}
+// WMO → icono (variantes nocturnas donde tiene sentido)
+function wxIcon(code, h) {
+  if (code == null) return '·';
+  const night = (h < 7 || h > 20.6);
+  if (code === 0) return night ? '🌙' : '☀️';
+  if (code <= 2) return night ? '🌙' : '🌤';
+  if (code === 3) return '☁️';
+  if (code >= 45 && code <= 48) return '🌫';
+  if (code >= 51 && code <= 67) return '🌧';
+  if (code >= 71 && code <= 77) return '🌨';
+  if (code >= 80 && code <= 82) return night ? '🌧' : '🌦';
+  if (code === 85 || code === 86) return '🌨';
+  if (code >= 95) return '⛈';
+  return '☁️';
+}
+// sample → factores objetivo de escena
+function wxTargets(s) {
+  const T = { cloud: 0, rain: 0, snow: 0, storm: 0, cold: 0, warm: 0 };
+  if (!s) return T;
+  const c = s.code;
+  if (c === 1) T.cloud = 0.2;
+  else if (c === 2) T.cloud = 0.5;
+  else if (c === 3) T.cloud = 0.85;
+  if (c >= 45 && c <= 48) T.cloud = Math.max(T.cloud, 0.75);         // niebla = cielo cerrado
+  const rainy = (c >= 51 && c <= 67) || (c >= 80 && c <= 82) || c >= 95;
+  if (rainy) {
+    T.cloud = Math.max(T.cloud, 0.9);
+    const byCode = c >= 63 ? 0.9 : (c >= 55 ? 0.65 : 0.4);
+    T.rain = Math.max(0.35, Math.min(1, Math.max(byCode, s.precip / 3)));
+  }
+  if ((c >= 71 && c <= 77) || c === 85 || c === 86) {                // nieve
+    T.cloud = Math.max(T.cloud, 0.85);
+    T.snow = c >= 75 ? 0.9 : 0.55; T.rain = 0;
+  }
+  if (c >= 95) T.storm = 1;
+  T.cold = Math.max(0, Math.min(1, (10 - s.temp) / 12));             // frío <10º → azulado
+  T.warm = Math.max(0, Math.min(1, (s.temp - 28) / 8));             // calor >28º → cálido/bruma
+  return T;
+}
+
+/* ---- sistema de partículas de precipitación (Points reciclados, barato) ---- */
+const MAX_DROPS = 1400;
+let dropCap = MAX_DROPS;                 // se recorta si el FPS baja de 50
+let precipPoints = null, precipPos = null, dropData = null, precipMode = 'none';
+let dropTex = null, snowTex = null, groundBase = null, plazaBase = null;
+const _grey = new THREE.Color(0x9aa0a6), _coldTint = new THREE.Color(0xbcd0ff),
+      _warmTint = new THREE.Color(0xffcf9e), _wetGround = new THREE.Color(0x8f8a7c),
+      _wetPlaza = new THREE.Color(0x8a8168), _flashCol = new THREE.Color(0xdfe8ff), _wxTmp = new THREE.Color();
+function buildPrecip() {
+  const geo = new THREE.BufferGeometry();
+  precipPos = new Float32Array(MAX_DROPS * 3);
+  dropData = new Float32Array(MAX_DROPS);          // fase de deriva por copo
+  for (let i = 0; i < MAX_DROPS; i++) {
+    precipPos[i * 3] = (Math.random() - .5) * 160;
+    precipPos[i * 3 + 1] = Math.random() * 70;
+    precipPos[i * 3 + 2] = (Math.random() - .5) * 160;
+    dropData[i] = Math.random() * Math.PI * 2;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(precipPos, 3));
+  geo.setDrawRange(0, 0);
+  dropTex = canvasTexture(16, 40, (c, w, hh) => {                   // gota: estría vertical
+    c.clearRect(0, 0, w, hh);
+    const g = c.createLinearGradient(0, 0, 0, hh);
+    g.addColorStop(0, 'rgba(198,222,255,0)'); g.addColorStop(.5, 'rgba(200,226,255,.9)'); g.addColorStop(1, 'rgba(198,222,255,0)');
+    c.fillStyle = g; c.fillRect(w / 2 - 1.6, 2, 3.2, hh - 4);
+  });
+  snowTex = canvasTexture(32, 32, (c, w, hh) => {                   // copo: disco suave
+    c.clearRect(0, 0, w, hh);
+    const g = c.createRadialGradient(w / 2, hh / 2, 0, w / 2, hh / 2, w / 2);
+    g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(.5, 'rgba(240,246,255,.6)'); g.addColorStop(1, 'rgba(240,246,255,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(w / 2, hh / 2, w / 2, 0, 7); c.fill();
+  });
+  const mat = new THREE.PointsMaterial({ map: dropTex, size: 2.6, transparent: true,
+    depthWrite: false, opacity: 0, sizeAttenuation: true });
+  precipPoints = new THREE.Points(geo, mat);
+  precipPoints.frustumCulled = false; precipPoints.renderOrder = 6; precipPoints.visible = false;
+  scene.add(precipPoints);
+  groundBase = ground.material.color.clone();
+  plazaBase = plazaMesh.material.color.clone();
+}
+function updatePrecip(dt) {
+  if (!precipPoints) return;
+  const rain = wxApplied.rain, snow = wxApplied.snow, inten = Math.max(rain, snow);
+  if (inten < 0.01) { precipPoints.visible = false; return; }
+  precipPoints.visible = true;
+  const mode = snow > rain ? 'snow' : 'rain', mat = precipPoints.material;
+  if (mode !== precipMode) {
+    precipMode = mode;
+    mat.map = mode === 'snow' ? snowTex : dropTex;
+    mat.size = mode === 'snow' ? 1.7 : 2.7;
+    mat.needsUpdate = true;
+  }
+  mat.opacity = mode === 'snow' ? snow * 0.92 : rain * 0.85;
+  const n = Math.min(dropCap, Math.round(MAX_DROPS * inten));
+  precipPoints.geometry.setDrawRange(0, n);
+  const cx = camera.position.x, cz = camera.position.z;
+  const fall = mode === 'snow' ? 6.5 : 58, t = performance.now() / 1000;
+  for (let i = 0; i < n; i++) {
+    const b = i * 3;
+    precipPos[b + 1] -= fall * dt * (mode === 'snow' ? 1 : (0.8 + (i % 5) * 0.08));
+    if (mode === 'snow') {
+      precipPos[b] += Math.sin(t * 0.6 + dropData[i]) * dt * 1.3;
+      precipPos[b + 2] += Math.cos(t * 0.5 + dropData[i]) * dt * 1.1;
+    }
+    if (precipPos[b + 1] < 0.3) {
+      precipPos[b + 1] = 52 + Math.random() * 22;
+      precipPos[b] = cx + (Math.random() - .5) * 150;
+      precipPos[b + 2] = cz + (Math.random() - .5) * 150;
+    }
+    if (Math.abs(precipPos[b] - cx) > 92) precipPos[b] = cx + (Math.random() - .5) * 150;      // seguir a la cámara
+    if (Math.abs(precipPos[b + 2] - cz) > 92) precipPos[b + 2] = cz + (Math.random() - .5) * 150;
+  }
+  precipPoints.geometry.attributes.position.needsUpdate = true;
+}
+// overlay meteo sobre el ciclo solar (se llama tras applyEnvironment; no acumula)
+function applyWeatherToScene() {
+  const w = wxApplied, overcast = Math.max(w.cloud, w.rain, w.snow);
+  sun.intensity *= (1 - overcast * 0.60);                          // sol plano y difuso
+  if (overcast > 0.01) {
+    scene.background.lerp(_grey, overcast * ((w.rain > 0.2 || w.snow > 0.2) ? 0.55 : 0.38));
+    scene.fog.color.copy(scene.background);
+  }
+  const fogPull = Math.max(w.rain, w.snow, w.storm) * 0.6 + w.cloud * 0.15;
+  scene.fog.near = lerp(420, 120, fogPull);
+  scene.fog.far = lerp(780, 430, fogPull);
+  ambLight.intensity += overcast * 0.10;                           // difusa: legibilidad
+  hemiLight.intensity += overcast * 0.08;
+  if (w.cold > 0.01) { sun.color.lerp(_coldTint, w.cold * 0.5); ambLight.color.lerp(_coldTint, w.cold * 0.4); }
+  if (w.warm > 0.01) { sun.color.lerp(_warmTint, w.warm * 0.5); scene.fog.near = lerp(scene.fog.near, 260, w.warm * 0.5); }
+  const wet = Math.min(1, w.rain * 0.9 + w.snow * 0.2);            // suelo mojado
+  if (groundBase) ground.material.color.copy(groundBase).lerp(_wetGround, wet * 0.5);
+  if (plazaBase) plazaMesh.material.color.copy(plazaBase).lerp(_wetPlaza, wet * 0.6);
+  if (w.storm > 0.3 && wxFlash > 0) {                              // relámpago
+    ambLight.intensity += wxFlash * 1.6; hemiLight.intensity += wxFlash * 0.8;
+    scene.background.lerp(_flashCol, wxFlash * 0.5); scene.fog.color.copy(scene.background);
+  }
+}
+
 /* ---- texturas procedurales (canvas, coste 0) ---- */
 function canvasTexture(w, h, draw) {
   const cv = document.createElement('canvas');
@@ -700,6 +911,7 @@ function plazaPointValido() {
     const z = lerp(PLAZA.z0 + 2, PLAZA.z1 - 2, rng());
     if (Math.hypot(x, z) < 5) continue;
     if (Math.hypot(x - TORRE.x, z - TORRE.z) < TORRE.r) continue;
+    if (Math.hypot(x - 7.6, z) < 1.8) continue;    // no meterse dentro de la cámara Humano
     return [x, z];
   }
   return [PLAZA.x0 + 4, PLAZA.z1 - 4];
@@ -763,7 +975,7 @@ function buildCrowd(data) {
 const _c = new THREE.Color();
 function updateCrowd() {
   if (!figures) return;
-  const n = Math.min(MAX_CROWD, Math.round(state.cur.aforo));
+  const n = Math.min(MAX_CROWD, Math.round(state.cur.aforo * wxCrowdFactor));   // aforo ajustado por meteo
   figCount = n;
   figures.body.count = n; figures.legs.count = n; figures.head.count = n;
   // umbrales acumulados del mix interpolado → perfil por figura → ropa de su paleta
@@ -828,6 +1040,26 @@ function buildHUD() {
     fr.appendChild(b);
   });
   $('auto-toggle').onchange = e => { state.auto = e.target.checked; };
+
+  // calendario: fecha del gemelo → meteo real de esa fecha (Open-Meteo)
+  const cal = $('cal-date');
+  cal.min = '2020-01-01';
+  cal.max = addDays(isoToday(), 15);                 // +15 d = límite de previsión
+  const setDate = iso => {
+    if (iso < cal.min) iso = cal.min;
+    if (iso > cal.max) iso = cal.max;
+    cal.value = iso;
+    $('cal-today').disabled = (iso === isoToday());
+    $('cal-prev').disabled = (iso <= cal.min);
+    $('cal-next').disabled = (iso >= cal.max);
+    loadWeather(iso);
+  };
+  cal.onchange = () => setDate(cal.value || isoToday());
+  $('cal-prev').onclick = () => setDate(addDays(cal.value, -1));
+  $('cal-next').onclick = () => setDate(addDays(cal.value, 1));
+  $('cal-today').onclick = () => setDate(isoToday());
+  setDate(isoToday());                               // por defecto HOY
+
   // slider de 24 h: arrastrar la hora mueve sol, luces y audiencia
   $('hora-slider').oninput = e => {
     $('auto-toggle').checked = false; state.auto = false;
@@ -876,6 +1108,7 @@ function buildHUD() {
   $('ex-endpoints').innerHTML =
     `stock: ${STOCK_URL.replace('https://', '')}<br>` +
     `signage: ${SIGNAGE_URL.replace('https://', '')}<br>` +
+    `meteo: api.open-meteo.com/v1/forecast (+archive) · sin clave<br>` +
     `geodatos: data/gracia-local.json (OSM/ODbL)`;
 
   // móvil: abrir/cerrar laterales
@@ -927,6 +1160,16 @@ function updateExpert(force = false) {
     signage_now: lastSignageRaw,
     canal_stock: stockItem ? { idx: stockIdx + 1, de: stockQueue.length, type: stockItem.type, title: stockTitle(), url: stockItem.url } : null,
   }, null, 1);
+  const s = wxSample(state.hour);
+  $('ex-weather').textContent = JSON.stringify({
+    fecha: weather.date,
+    endpoint: weather.ok ? weather.endpoint.replace('https://', '') : weather.msg,
+    hora: fmtHora(state.hour),
+    ahora: s ? { icono: wxIcon(s.code, state.hour), code_wmo: s.code, temp: +s.temp.toFixed(1), precip_mm: +s.precip.toFixed(2) } : null,
+    factores: { cloud: +wxApplied.cloud.toFixed(2), rain: +wxApplied.rain.toFixed(2), snow: +wxApplied.snow.toFixed(2), storm: +wxApplied.storm.toFixed(2) },
+    aforo_factor: +wxCrowdFactor.toFixed(2), drops: precipPoints && precipPoints.visible ? Math.round(MAX_DROPS * Math.max(wxApplied.rain, wxApplied.snow)) : 0,
+    codes_24h: weather.ok ? weather.code : null,
+  }, null, 1);
 }
 function refreshHUD() {
   $('aforo').textContent = Math.round(state.cur.aforo);
@@ -953,6 +1196,40 @@ function updateHoraUI() {
   if (document.activeElement !== sl) sl.value = String(Math.round(state.hour * 4) / 4);
   document.querySelectorAll('#franjas button').forEach((b, i) =>
     b.classList.toggle('active', Math.abs(state.hour - FRANJA_H[i]) < 1));
+  updateWxChip();
+}
+// chip de meteo junto al reloj: icono + temperatura de la hora del slider
+function updateWxChip() {
+  const chip = $('wx-chip'), ico = $('wx-ico'), tmp = $('wx-temp');
+  if (!chip) return;
+  const s = wxSample(state.hour);
+  if (!s) {
+    chip.classList.add('wx-off');
+    ico.textContent = weather.loading ? '…' : '⚠';
+    tmp.textContent = weather.loading ? 'cargando' : 'sin meteo';
+    return;
+  }
+  chip.classList.remove('wx-off');
+  ico.textContent = wxIcon(s.code, state.hour);
+  tmp.textContent = Math.round(s.temp) + '°';
+}
+function onWeatherLoaded() {
+  const note = $('wx-note');
+  if (note) {
+    note.textContent = weather.loading ? 'cargando meteo…' : weather.msg;
+    note.classList.toggle('wx-warn', !weather.ok && !weather.loading);
+    note.classList.toggle('wx-live', weather.ok && !weather.loading);
+  }
+  updateWxChip();
+  updateExpert(true);
+}
+function updateWxAdjustHUD() {
+  const row = $('wx-adjust-row'), b = $('wx-adjust');
+  if (!row) return;
+  if (weather.ok && wxCrowdFactor < 0.985) {
+    row.classList.remove('hidden');
+    b.textContent = Math.round(state.cur.aforo * wxCrowdFactor) + ' · −' + Math.round((1 - wxCrowdFactor) * 100) + '% por meteo';
+  } else row.classList.add('hidden');
 }
 function updateOnscreenHUD() {
   const el = $('onscreen');
@@ -993,7 +1270,7 @@ renderer.domElement.addEventListener('pointerdown', e => {
   looking = true; lookPX = e.clientX; lookPY = e.clientY;
 });
 renderer.domElement.addEventListener('pointermove', e => {
-  if (!looking || camMode !== 'free') return;
+  if (!looking || (camMode !== 'free' && camMode !== 'human')) return;
   fly.yaw -= (e.clientX - lookPX) * 0.0032;
   fly.pitch = Math.max(-1.25, Math.min(0.9, fly.pitch - (e.clientY - lookPY) * 0.0032));
   lookPX = e.clientX; lookPY = e.clientY;
@@ -1128,6 +1405,7 @@ function updateModeButtons() {
 }
 function setCamMode(m) {
   if (m === 'guided') { startFlight(); return; }
+  if (m === 'human') { enterHuman(); return; }
   stopFlight();                    // corta un vuelo guiado si lo hubiera
   camMode = m;
   if (m === 'free') {
@@ -1150,7 +1428,7 @@ const FLY_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', '
 addEventListener('keydown', e => {
   if (!FLY_KEYS.includes(e.key)) return;
   if (quality === 'good') return;            // en 2D no hay volado
-  if (camMode !== 'free') setCamMode('free');
+  if (camMode !== 'free' && camMode !== 'human') setCamMode('free');
   fly.keys[e.key] = true; fly.shift = e.shiftKey;
   e.preventDefault();
 });
@@ -1188,6 +1466,64 @@ function tickFree(dt) {
 
 // --- mirar con el ratón (arrastrar) en volado libre
 let lookPX = 0, lookPY = 0, looking = false;
+
+/* ============ MODO HUMANO: primera persona a pie, enfrente del kiosko ============ */
+// La pantalla del kiosko está en x≈2.34 mirando a +x (hacia la plaza).
+// El peatón se planta a ~5.3 m, ojos a 1.65 m, mirando de vuelta a la pantalla.
+const HUMAN = {
+  base: new THREE.Vector3(7.6, 1.65, 0),
+  pos: new THREE.Vector3(7.6, 1.65, 0),
+  yaw: Math.PI / 2, pitch: 0.02,             // yaw=π/2 → mirar hacia −x (a la pantalla)
+};
+const _reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let humanTween = null;
+function enterHuman() {
+  stopFlight();
+  camMode = 'human';
+  controls.enabled = false; controls.autoRotate = false;
+  $('ficha').classList.add('hidden');
+  HUMAN.pos.copy(HUMAN.base);
+  fly.yaw = HUMAN.yaw; fly.pitch = HUMAN.pitch;
+  fly.vF = fly.vY = fly.vYaw = 0;
+  humanTween = { t0: performance.now(), dur: 1100, p0: camera.position.clone(), q0: camera.quaternion.clone() };
+  $('hint').textContent = '🧍 Humano · arrastra para mirar la pantalla · flechas = pasito (te quedas plantado)';
+  $('hint').classList.remove('gone');
+  setTimeout(() => camMode === 'human' && $('hint').classList.add('gone'), 6000);
+  updateModeButtons();
+}
+const _humFwd = new THREE.Vector3(), _humRight = new THREE.Vector3(), _humMv = new THREE.Vector3(), _humQ = new THREE.Quaternion(), _humE = new THREE.Euler();
+function tickHuman(dt, now) {
+  if (humanTween) {                          // transición suave a la posición humana
+    const p = Math.min(1, (now - humanTween.t0) / humanTween.dur), e = easeInOut(p);
+    camera.position.lerpVectors(humanTween.p0, HUMAN.pos, e);
+    _humE.set(fly.pitch, fly.yaw, 0, 'YXZ');
+    _humQ.setFromEuler(_humE);
+    camera.quaternion.slerpQuaternions(humanTween.q0, _humQ, e);
+    if (p >= 1) humanTween = null;
+    return;
+  }
+  // pasito limitado con las flechas (radio máx 10 m del punto, sin atravesar el kiosko ni salir de la plaza)
+  const k = fly.keys, step = 6 * dt;
+  _humFwd.set(-Math.sin(fly.yaw), 0, -Math.cos(fly.yaw));
+  _humRight.set(Math.cos(fly.yaw), 0, -Math.sin(fly.yaw));
+  _humMv.set(0, 0, 0);
+  if (k.ArrowUp) _humMv.add(_humFwd);
+  if (k.ArrowDown) _humMv.sub(_humFwd);
+  if (k.ArrowRight) _humMv.add(_humRight);
+  if (k.ArrowLeft) _humMv.sub(_humRight);
+  if (_humMv.lengthSq() > 0) {
+    _humMv.normalize().multiplyScalar(step);
+    const nx = HUMAN.pos.x + _humMv.x, nz = HUMAN.pos.z + _humMv.z;
+    const okRadio = Math.hypot(nx - HUMAN.base.x, nz - HUMAN.base.z) <= 10;
+    const noKiosko = nx > 3.2 || Math.abs(nz) > 2.2;             // no clavarse en el kiosko/pantalla
+    const enPlaza = nx > PLAZA.x0 + 1 && nx < PLAZA.x1 - 1 && nz > PLAZA.z0 + 1 && nz < PLAZA.z1 - 1;
+    if (okRadio && noKiosko && enPlaza) { HUMAN.pos.x = nx; HUMAN.pos.z = nz; }
+  }
+  // respiración sutilísima (±~1.8 cm, muy lenta) — se anula con prefers-reduced-motion
+  const breath = _reduceMotion ? 0 : Math.sin(now * 0.0009) * 0.012 + Math.sin(now * 0.0013) * 0.006;
+  camera.position.set(HUMAN.pos.x, HUMAN.pos.y + breath, HUMAN.pos.z);
+  camera.rotation.set(fly.pitch, fly.yaw, 0);
+}
 
 /* ============================== vuelo guiado ============================== */
 let flight = null;
@@ -1250,8 +1586,24 @@ function animate(now) {
   }
   state.franjaIdx = nearestFranjaIdx(state.hour);
 
+  // METEO: objetivo de la hora → lerp suave de factores → aforo ajustado + relámpago
+  const wxT = wxTargets(wxSample(state.hour));
+  const wk = 1 - Math.exp(-dt * 1.6);
+  for (const key in wxApplied) wxApplied[key] = lerp(wxApplied[key], wxT[key], wk);
+  const heavy = Math.min(1, Math.max(0, wxApplied.rain - 0.4) / 0.6);
+  wxCrowdFactor = lerp(1, 0.6, heavy);
+  if (wxApplied.storm > 0.3) { wxFlashNext -= dt; if (wxFlashNext <= 0) { wxFlash = 1; wxFlashNext = 4 + Math.random() * 7; } }
+  if (wxFlash > 0) wxFlash = Math.max(0, wxFlash - dt * 6);
+  // recorte de densidad de partículas si el FPS cae (mantener > 50 con lluvia activa)
+  if (wxApplied.rain > 0.1 || wxApplied.snow > 0.1) {
+    if (fpsEMA < 50 && dropCap > 300) dropCap = Math.max(300, dropCap - 40);
+    else if (fpsEMA > 58 && dropCap < MAX_DROPS) dropCap = Math.min(MAX_DROPS, dropCap + 20);
+  }
+
   // entorno continuo: sol/cielo/farolas/ventanas/kiosko-neón según la hora
   applyEnvironment(forceNight ? 1.5 : state.hour);
+  applyWeatherToScene();                 // overlay meteo sobre el ciclo solar
+  updatePrecip(dt);                      // partículas de lluvia/nieve
 
   // interpolación aforo/mix hacia la CURVA 24h en la hora actual
   const objetivo = audienciaAt(state.hour);
@@ -1268,6 +1620,7 @@ function animate(now) {
     updateCrowd();
     refreshHUD();
     updateHoraUI();
+    updateWxAdjustHUD();
   }
 
   // pantalla del kiosko a ~25 fps (vídeo del canal + banda ADcelerate)
@@ -1283,6 +1636,8 @@ function animate(now) {
     // vista 2D cenital: cámara ortográfica fija (rueda = zoom)
   } else if (camMode === 'free') {
     tickFree(dt);
+  } else if (camMode === 'human') {
+    tickHuman(dt, now);            // primera persona plantada ante el kiosko
   } else {
     controls.update();
     tickFlight(now);               // si hay vuelo guiado, manda sobre la cámara
@@ -1298,7 +1653,8 @@ addEventListener('resize', () => {
 });
 
 /* ============================== arranque ============================== */
-buildHUD();
+buildPrecip();                                // sistema de partículas de precipitación
+buildHUD();                                   // (incluye init del calendario → loadWeather HOY)
 updateModeButtons();
 applyFranja(state.franjaIdx, true);
 renderScreen();
@@ -1319,5 +1675,7 @@ window.__dbg = {
   get tickFreeCalls() { return _tickFreeCalls; },
   get fps() { return fpsEMA; },
   setHour, applyEnvironment, audienciaAt, fmtHora,
+  weather, wxApplied, loadWeather, wxSample, wxIcon, enterHuman, HUMAN,
+  get wxCrowdFactor() { return wxCrowdFactor; },
 };
 window.__dbgEvalCount = (window.__dbgEvalCount || 0) + 1;

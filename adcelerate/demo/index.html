@@ -7,8 +7,8 @@
 <title>ADcelerate · Gemelo Plaça de la Vila de Gràcia — demo</title>
 <meta name="description" content="Demo ADcelerate: gemelo 3D de la Plaça de la Vila de Gràcia con kiosko reactivo a audiencias telco.">
 <link rel="icon" href="../../favicon.svg">
-<link rel="stylesheet" href="css/admira-tokens.css?v=20260712e">
-<link rel="stylesheet" href="css/style.css?v=20260712e">
+<link rel="stylesheet" href="css/admira-tokens.css?v=20260712f">
+<link rel="stylesheet" href="css/style.css?v=20260712f">
 <script type="importmap">
 {
   "imports": {
@@ -55,9 +55,22 @@
   <!-- ============ MENÚ IZQUIERDO (opciones normales) ============ -->
   <aside id="sidebar">
     <section class="panel" id="panel-franjas">
-      <h2>Franja horaria</h2>
+      <h2>Calendario</h2>
+      <div class="cal-row">
+        <button id="cal-prev" aria-label="Día anterior">‹</button>
+        <input type="date" id="cal-date" aria-label="Fecha del gemelo">
+        <button id="cal-today" title="Volver a hoy">hoy</button>
+        <button id="cal-next" aria-label="Día siguiente">›</button>
+      </div>
+      <p class="note" id="wx-note">meteo real · Open-Meteo · Vila de Gràcia</p>
+
+      <h2 style="margin-top:16px">Franja horaria</h2>
       <p class="note">Datos telco de zona (simulados sobre patrón MITMA)</p>
-      <div class="hora-big"><span id="hora-lbl">18:00</span><small>hora del gemelo</small></div>
+      <div class="hora-big">
+        <span id="hora-lbl">18:00</span>
+        <span id="wx-chip" title="Meteo de la hora"><span id="wx-ico">·</span><span id="wx-temp">—</span></span>
+        <small>hora del gemelo</small>
+      </div>
       <input type="range" id="hora-slider" min="0" max="23.75" step="0.25" value="18"
              aria-label="Hora del día (00:00–24:00)">
       <div class="franjas" id="franjas"></div>
@@ -73,6 +86,7 @@
         <button data-mode="free" class="active">🕹 Volado libre</button>
         <button data-mode="orbit">🌀 Órbita</button>
         <button data-mode="guided">✈ Vuelo guiado</button>
+        <button data-mode="human">🧍 Humano · a pie ante el kiosko</button>
       </div>
     </section>
 
@@ -92,6 +106,7 @@
       <div class="big-metric"><span id="aforo">—</span><span class="unit">personas</span></div>
       <div id="mixbars"></div>
       <div class="kv"><span>Perfil dominante</span><b id="dominante">—</b></div>
+      <div class="kv wx-adjust hidden" id="wx-adjust-row"><span>Aforo ajustado</span><b id="wx-adjust">—</b></div>
     </section>
 
     <section class="panel" id="panel-rules">
@@ -118,6 +133,8 @@
         <div class="ex-kv mono">FPS <b id="ex-fps">—</b> · presencias <b id="ex-crowd">—</b> · draw calls <b id="ex-calls">—</b> · triángulos <b id="ex-tris">—</b></div>
         <h3>Endpoints</h3>
         <div class="ex-kv mono" id="ex-endpoints"></div>
+        <h3>Meteo (Open-Meteo)</h3>
+        <pre id="ex-weather" class="mono">—</pre>
       </div>
       <div class="ex-col">
         <h3>Audiencia (franja actual + interpolada)</h3>
@@ -145,6 +162,6 @@
   <div id="loading"><div class="spin"></div><p>Cargando gemelo…</p></div>
 </div>
 
-<script type="module" src="js/main.js?v=20260712e"></script>
+<script type="module" src="js/main.js?v=20260712f"></script>
 </body>
 </html>

@@ -132,14 +132,49 @@ body { font-family: var(--admira-font-sans); color: var(--admira-text); backgrou
   padding: var(--admira-space-3); flex: none; box-shadow: none;
 }
 
+/* ── calendario (date-picker metaestilo) ── */
+.cal-row { display: flex; align-items: stretch; gap: 6px; }
+.cal-row button {
+  font-family: var(--admira-font-mono); font-size: 15px; line-height: 1; cursor: pointer;
+  border: 1px solid var(--admira-border); border-radius: var(--admira-radius-sm);
+  background: rgba(255, 255, 255, .04); color: var(--admira-text);
+  width: 30px; flex: none; transition: all var(--admira-tx-fast);
+}
+#cal-today { width: auto; padding: 0 10px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.cal-row button:hover:not(:disabled) { border-color: var(--spine); color: var(--spine); box-shadow: 0 0 12px -4px var(--spine); }
+.cal-row button:disabled { opacity: .3; cursor: default; }
+#cal-date {
+  flex: 1; min-width: 0; font-family: var(--admira-font-mono); font-size: 13px; font-weight: 600;
+  letter-spacing: .02em; color: var(--spine); text-align: center;
+  background: var(--spine-soft); border: 1px solid var(--spine-line);
+  border-radius: var(--admira-radius-sm); padding: 7px 4px;
+  color-scheme: dark; cursor: pointer;
+}
+#cal-date::-webkit-calendar-picker-indicator { filter: invert(.7) sepia(1) saturate(4) hue-rotate(160deg); cursor: pointer; }
+#cal-date:focus { outline: none; border-color: var(--spine); box-shadow: 0 0 14px -4px var(--spine); }
+#wx-note.wx-warn { color: var(--admira-amber); }
+#wx-note.wx-live::before { content: "● "; color: var(--spine); }
+
 /* reloj de 24 h */
 .hora-big {
   font-family: var(--admira-font-mono); font-size: 30px; font-weight: 700;
   color: var(--spine); text-shadow: 0 0 18px rgba(80, 200, 255, .45);
-  line-height: 1; margin-bottom: 6px;
+  line-height: 1; margin-bottom: 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
 }
 .hora-big small { font-size: 10px; color: var(--admira-text-dim); font-weight: 400;
-  letter-spacing: .14em; text-transform: uppercase; margin-left: 8px; }
+  letter-spacing: .14em; text-transform: uppercase; flex-basis: 100%; margin-top: 4px; }
+/* chip de meteo junto al reloj: icono + temperatura de la hora del slider */
+#wx-chip {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 22px;
+  padding: 2px 10px 2px 8px; border-radius: var(--admira-radius-pill);
+  background: rgba(255, 255, 255, .05); border: 1px solid var(--admira-border);
+  transition: opacity var(--admira-tx-normal);
+}
+#wx-chip #wx-ico { line-height: 1; }
+#wx-chip #wx-temp { font-size: 17px; font-weight: 700; color: var(--admira-text); text-shadow: none; letter-spacing: -.01em; }
+#wx-chip.wx-off { opacity: .45; }
+#wx-chip.wx-off #wx-temp { color: var(--admira-text-dim); font-size: 11px; }
+.wx-adjust b { color: var(--admira-amber); }
 #hora-slider {
   -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
   border-radius: var(--admira-radius-pill); outline: none; margin: 4px 0 12px;
