@@ -7,7 +7,8 @@
 <title>ADcelerate · Gemelo Plaça de la Vila de Gràcia — demo</title>
 <meta name="description" content="Demo ADcelerate: gemelo 3D de la Plaça de la Vila de Gràcia con kiosko reactivo a audiencias telco.">
 <link rel="icon" href="../../favicon.svg">
-<link rel="stylesheet" href="css/style.css?v=20260712c">
+<link rel="stylesheet" href="css/admira-tokens.css?v=20260712d">
+<link rel="stylesheet" href="css/style.css?v=20260712d">
 <script type="importmap">
 {
   "imports": {
@@ -26,9 +27,9 @@
   <header id="topbar">
     <button id="tg-left" class="side-toggle" aria-label="Opciones">☰</button>
     <div class="brand">
-      <div class="logo-dot"></div>
+      <div class="logo-dot" aria-hidden="true"></div>
       <div class="brand-txt">
-        <b>ADcelerate</b><span class="sub">Gemelo · Vila de Gràcia</span>
+        <b>ADcelerate<em>by Admira</em></b><span class="sub">Gemelo · Vila de Gràcia</span>
       </div>
     </div>
     <nav id="mainnav">
@@ -77,6 +78,7 @@
       <label class="capa-row"><input type="checkbox" id="capa-multitud" checked><span>Multitud (presencias)</span></label>
       <label class="capa-row"><input type="checkbox" id="capa-edificios" checked><span>Edificios</span></label>
       <label class="capa-row"><input type="checkbox" id="capa-viales" checked><span>Viales</span></label>
+      <label class="capa-row"><input type="checkbox" id="escena-noche"><span>🌙 Escena nocturna</span></label>
     </section>
   </aside>
 
@@ -140,6 +142,6 @@
   <div id="loading"><div class="spin"></div><p>Cargando gemelo…</p></div>
 </div>
 
-<script type="module" src="js/main.js?v=20260712c"></script>
+<script type="module" src="js/main.js?v=20260712d"></script>
 </body>
 </html>

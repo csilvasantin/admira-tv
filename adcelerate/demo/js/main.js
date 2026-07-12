@@ -14,15 +14,17 @@ const FRANJAS = [
 ];
 const PERFILES = ['familias', 'jovenes', 'turistas', 'seniors'];
 const PERFIL_LABEL = { familias: 'Familias', jovenes: 'Jóvenes', turistas: 'Turistas', seniors: 'Seniors' };
-const PERFIL_COLOR = { familias: 0xf5a623, jovenes: 0x8b7bff, turistas: 0x2fbbd6, seniors: 0x58b368 };
-const PERFIL_CSS   = { familias: '#f5a623', jovenes: '#8b7bff', turistas: '#2fbbd6', seniors: '#58b368' };
+// Paleta de marcas AdmiraNeXT (tokens.css): amber · violet · magenta · green; el CIAN es la espina
+const PERFIL_COLOR = { familias: 0xffd866, jovenes: 0xaa88ff, turistas: 0xff4488, seniors: 0x76b900 };
+const PERFIL_CSS   = { familias: '#ffd866', jovenes: '#aa88ff', turistas: '#ff4488', seniors: '#76b900' };
+const SPINE = 0x50c8ff;                    // --admira-cyan
 
 // Motor de reglas ADcelerate: perfil dominante → creatividad
 const REGLAS = {
-  familias: { cre: 'A', titulo: 'PLAN FAMILIAR',    sub: '2×1 xocolata · Granja de la Plaça', bg: '#f5a623', fg: '#3a2400' },
-  jovenes:  { cre: 'B', titulo: 'NIT DE GRÀCIA',    sub: 'Session 18–22h · craft & vinils',   bg: '#8b7bff', fg: '#14103f' },
-  turistas: { cre: 'C', titulo: 'GRÀCIA WALKS',     sub: 'Guided tour EN/FR · every hour',    bg: '#2fbbd6', fg: '#062e38' },
-  seniors:  { cre: 'D', titulo: 'MATINS TRANQUILS', sub: 'Farmàcia & salut · Vila de Gràcia', bg: '#58b368', fg: '#0d2a14' },
+  familias: { cre: 'A', titulo: 'PLAN FAMILIAR',    sub: '2×1 xocolata · Granja de la Plaça', bg: '#ffd866', fg: '#3a2a00' },
+  jovenes:  { cre: 'B', titulo: 'NIT DE GRÀCIA',    sub: 'Session 18–22h · craft & vinils',   bg: '#aa88ff', fg: '#180f3a' },
+  turistas: { cre: 'C', titulo: 'GRÀCIA WALKS',     sub: 'Guided tour EN/FR · every hour',    bg: '#ff4488', fg: '#33020f' },
+  seniors:  { cre: 'D', titulo: 'MATINS TRANQUILS', sub: 'Farmàcia & salut · Vila de Gràcia', bg: '#76b900', fg: '#152600' },
 };
 const AUTO_MS = 12000;
 const SIGNAGE_URL = 'https://api.admira.store/signage/now?screen=oohmedia';
@@ -75,8 +77,9 @@ controls.autoRotate = false;
 controls.autoRotateSpeed = 0.35;
 controls.enabled = false;                  // el modo por defecto es volado libre
 
-scene.add(new THREE.AmbientLight(0xfff2df, 0.62));
-scene.add(new THREE.HemisphereLight(0xd8e6f2, 0xead9bd, 0.6));
+const ambLight = new THREE.AmbientLight(0xfff2df, 0.62);
+const hemiLight = new THREE.HemisphereLight(0xd8e6f2, 0xead9bd, 0.6);
+scene.add(ambLight, hemiLight);
 const sun = new THREE.DirectionalLight(0xffd9a6, 1.8);   // sol de tarde, bajo y cálido
 sun.position.set(-240, 170, -60);
 sun.castShadow = true;
@@ -96,6 +99,29 @@ const ground = new THREE.Mesh(
 ground.receiveShadow = true;
 ground.position.y = -0.05;
 scene.add(ground);
+
+/* ---- escena día/noche (metaestilo: noche = fondo admira-bg con neones) ---- */
+let sceneNight = false;
+function setSceneNight(on) {
+  sceneNight = on;
+  if (on) {
+    scene.background.set(0x0a0c12);        // --admira-bg
+    scene.fog.color.set(0x0a0c12);
+    ambLight.color.set(0xbcc8ff); ambLight.intensity = 0.5;   // legibilidad de la multitud
+    hemiLight.color.set(0x33415e); hemiLight.groundColor.set(0x141826); hemiLight.intensity = 0.35;
+    sun.color.set(0x9db8ff); sun.intensity = 0.5;             // luna fría
+    if (kioskHalo) { kioskHalo.material.opacity = 0.7; }      // neones arriba
+    plazaEdge.material.opacity = 1.0;
+  } else {
+    scene.background.set(0xe9e2d2);
+    scene.fog.color.set(0xe9e2d2);
+    ambLight.color.set(0xfff2df); ambLight.intensity = 0.62;
+    hemiLight.color.set(0xd8e6f2); hemiLight.groundColor.set(0xead9bd); hemiLight.intensity = 0.6;
+    sun.color.set(0xffd9a6); sun.intensity = 1.8;
+    if (kioskHalo) { kioskHalo.material.opacity = 0.35; }
+    plazaEdge.material.opacity = 0.85;
+  }
+}
 
 /* ---- texturas procedurales (canvas, coste 0) ---- */
 function canvasTexture(w, h, draw) {
@@ -167,13 +193,14 @@ const plazaEdge = new THREE.LineLoop(
     new THREE.Vector3(PLAZA.x0, 0.08, PLAZA.z0), new THREE.Vector3(PLAZA.x1, 0.08, PLAZA.z0),
     new THREE.Vector3(PLAZA.x1, 0.08, PLAZA.z1), new THREE.Vector3(PLAZA.x0, 0.08, PLAZA.z1),
   ]),
-  new THREE.LineBasicMaterial({ color: 0x5fd0ff, transparent: true, opacity: 0.85 })
+  new THREE.LineBasicMaterial({ color: 0x50c8ff, transparent: true, opacity: 0.85 })
 );
 scene.add(plazaEdge);
 
 /* ============================== kiosko héroe ============================== */
 const kiosk = new THREE.Group();
 kiosk.name = 'kiosk';
+let kioskHalo = null;
 const screenCanvas = document.createElement('canvas');
 screenCanvas.width = 640; screenCanvas.height = 360;
 const screenCtx = screenCanvas.getContext('2d');
@@ -186,7 +213,7 @@ let screenMat;
   base.position.y = 1.5; base.castShadow = true;
 
   const trim = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.25, 3.6),
-    new THREE.MeshLambertMaterial({ color: 0x5fd0ff }));
+    new THREE.MeshLambertMaterial({ color: 0x50c8ff }));
   trim.position.y = 3.1;
 
   // techo abovedado (media caña a lo largo de x)
@@ -210,7 +237,7 @@ let screenMat;
   signCv.width = 512; signCv.height = 80;
   const sc = signCv.getContext('2d');
   sc.fillStyle = '#14262e'; sc.fillRect(0, 0, 512, 80);
-  sc.fillStyle = '#5fd0ff'; sc.font = 'bold 44px Menlo, monospace';
+  sc.fillStyle = '#50c8ff'; sc.font = 'bold 44px Menlo, monospace';
   sc.textAlign = 'center'; sc.textBaseline = 'middle';
   sc.fillText('NEWS & COFFEE', 256, 42);
   const signTx = new THREE.CanvasTexture(signCv);
@@ -220,10 +247,11 @@ let screenMat;
   sign.rotation.y = Math.PI / 2;
   sign.position.set(2.42, 3.15, 0);
 
-  // halo cian en el suelo
+  // halo cian en el suelo (espina)
   const halo = new THREE.Mesh(new THREE.RingGeometry(3.6, 4.5, 48).rotateX(-Math.PI / 2),
-    new THREE.MeshBasicMaterial({ color: 0x5fd0ff, transparent: true, opacity: 0.35, side: THREE.DoubleSide }));
+    new THREE.MeshBasicMaterial({ color: 0x50c8ff, transparent: true, opacity: 0.35, side: THREE.DoubleSide }));
   halo.position.y = 0.06;
+  kioskHalo = halo;
 
   kiosk.add(base, trim, roof, screen, frame, sign, halo);
 }
@@ -340,7 +368,7 @@ function renderScreen() {
       const s = Math.max(W / sw, H / sh);
       c.drawImage(src, (W - sw * s) / 2, (H - sh * s) / 2, sw * s, sh * s);
     } else {
-      c.fillStyle = '#5fd0ff'; c.font = '20px Menlo, monospace';
+      c.fillStyle = '#50c8ff'; c.font = '20px Menlo, monospace';
       c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillText('· cargando canal admira.tv ·', W / 2, H / 2);
     }
@@ -527,11 +555,11 @@ function buildCity(data) {
 /* ============== multitud: figuras humanas low-poly que CAMINAN ============== */
 // ~110 triángulos/figura (torso+brazos, piernas, cabeza en 3 InstancedMesh sincronizados).
 // 600 figuras ≈ 66k triángulos → LOD innecesario (medir FPS en modo experto).
-const ROPA = {   // paleta de ropa por perfil
-  familias: [0xf2a65a, 0xe98548, 0xd97b29, 0xf4c17a],   // cálidos
-  jovenes:  [0x8b7bff, 0xe84f9b, 0x2fd6c3, 0xb0e04a],   // vivos
-  turistas: [0x2fbbd6, 0xff5f5f, 0xffd23f, 0x7bd4ff],   // color + mochila
-  seniors:  [0x6b8f71, 0x7c8894, 0x8d7b66, 0x5e7180],   // sobrios
+const ROPA = {   // ropa por perfil — variaciones de la paleta de marcas admira
+  familias: [0xffd866, 0xf0b84a, 0xd99b2b, 0xffe9a8],   // ámbar
+  jovenes:  [0xaa88ff, 0x8f66f0, 0xc9b3ff, 0x7d5ce0],   // violeta
+  turistas: [0xff4488, 0xe03070, 0xff7aa8, 0xc72a60],   // magenta
+  seniors:  [0x76b900, 0x5c8f0a, 0x8fce33, 0x4a7300],   // verde
 };
 let figures = null;                 // {group, body, legs, head}
 let figCount = 0;
@@ -702,6 +730,7 @@ function buildHUD() {
     if (roofsMesh) roofsMesh.visible = e.target.checked;
   };
   $('capa-viales').onchange = e => { if (roadsMesh) roadsMesh.visible = e.target.checked; };
+  $('escena-noche').onchange = e => setSceneNight(e.target.checked);
 
   // escalera Good · Better · Best
   document.querySelectorAll('#quality button').forEach(b => {
@@ -1135,5 +1164,6 @@ window.__dbg = {
   get figures() { return figures; },
   get tickFreeCalls() { return _tickFreeCalls; },
   get fps() { return fpsEMA; },
+  setSceneNight,
 };
 window.__dbgEvalCount = (window.__dbgEvalCount || 0) + 1;
