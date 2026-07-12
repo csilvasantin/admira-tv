@@ -1,0 +1,57 @@
+{
+  "schema": "adcelerate-creatividades/1",
+  "updated": "2026-07-12",
+  "note": "Perfil de audiencia dominante -> creatividad. Servido same-origin desde admira.tv (misma deploy que la demo). CORS N/A same-origin; los PNG tambien son consumibles cross-origin desde cualquier build de admira.tv.",
+  "base": "https://admira.tv/adcelerate/demo/creatividades/",
+  "perfiles": ["familias", "jovenes", "turistas", "seniors"],
+  "creatividades": {
+    "familias": {
+      "perfil": "familias",
+      "cre": "A",
+      "title": "PLAN FAMILIAR",
+      "sub": "2x1 xocolata . Granja de la Placa",
+      "type": "image",
+      "mime": "image/png",
+      "media_url": "https://admira.tv/adcelerate/demo/creatividades/familias.png",
+      "w": 1280,
+      "h": 720,
+      "source": "demo"
+    },
+    "jovenes": {
+      "perfil": "jovenes",
+      "cre": "B",
+      "title": "NIT DE GRACIA",
+      "sub": "Session 18-22h . craft & vinils",
+      "type": "image",
+      "mime": "image/png",
+      "media_url": "https://admira.tv/adcelerate/demo/creatividades/jovenes.png",
+      "w": 1280,
+      "h": 720,
+      "source": "demo"
+    },
+    "turistas": {
+      "perfil": "turistas",
+      "cre": "C",
+      "title": "GRACIA WALKS",
+      "sub": "Guided tour EN/FR . every hour",
+      "type": "image",
+      "mime": "image/png",
+      "media_url": "https://admira.tv/adcelerate/demo/creatividades/turistas.png",
+      "w": 1280,
+      "h": 720,
+      "source": "demo"
+    },
+    "seniors": {
+      "perfil": "seniors",
+      "cre": "D",
+      "title": "MATINS TRANQUILS",
+      "sub": "Farmacia & salut . Vila de Gracia",
+      "type": "image",
+      "mime": "image/png",
+      "media_url": "https://admira.tv/adcelerate/demo/creatividades/seniors.png",
+      "w": 1280,
+      "h": 720,
+      "source": "demo"
+    }
+  }
+}
