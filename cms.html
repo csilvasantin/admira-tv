@@ -343,6 +343,7 @@
   @media(max-width:640px){ .emitBoard{margin:12px 10px} }
   /* el chrome (barra + sidebar + detalle) lo aporta /admira-nav.js — ver config al final del body */
 </style>
+  <link rel="stylesheet" href="/admira-frame.css?v=12.07.2026.r3">
 </head>
 <body>
 <script>
@@ -353,30 +354,57 @@ window.ADMIRA_NAV={
   topRight:
     '<label class="canalSel" title="Canal / proyecto — filtra la flota y la programación"><span>📡</span><select id="canalSel"></select></label>'+
     '<button id="canalEdit" class="navbtn" title="Editar canales (crear/renombrar/asignar circuitos)">✎</button>'+
-    '<div class="live"><span class="dot" id="liveDot"></span><span id="liveTxt">en vivo</span><button id="pauseBtn" class="navbtn" title="Pausar/reanudar el auto-refresco">⏸</button></div>',
-  extraNav:
-    '<div class="admsep"></div>'+
-    '<button class="admni" id="openProg" type="button" title="Programar la parrilla con contenido propio del Stock"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.2h17M8 3.5v3M16 3.5v3M12 12v5M9.5 14.5h5"/></svg></span><span class="t">Programar</span></button>'+
-    '<button class="admni" id="collapseAll" type="button" title="Contraer / expandir todas las fichas"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l7-7 7 7"/><path d="M5 19l7-7 7 7"/></svg></span><span class="t">Contraer fichas</span></button>'+
-    '<button class="admni" id="exportCsv" type="button" title="Exportar la flota visible a CSV"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11M8 11l4 4 4-4"/><path d="M4.5 19.5h15"/></svg></span><span class="t">Exportar CSV</span></button>',
-  detailTop:
-    '<div class="admsec"><h4>Diagnóstico</h4>'+
-    '<div class="admrow"><span>Dispositivos</span><b id="d-total">—</b></div>'+
-    '<div class="admrow"><span>Emitiendo</span><b id="d-online">—</b></div>'+
-    '<div class="admrow"><span>Sin señal</span><b id="d-off">—</b></div>'+
-    '<div class="admrow"><span>Con audiencia</span><b id="d-aud">—</b></div>'+
-    '<div class="admrow"><span>Móviles / robot</span><b id="d-robot">—</b></div>'+
-    '<div class="admrow"><span>Ingresos</span><b id="d-rev">—</b></div></div>',
-  onDetail:function(){
+    '<div class="live"><span class="dot" id="liveDot"></span><span id="liveTxt">en vivo</span><button id="pauseBtn" class="navbtn" title="Pausar/reanudar el auto-refresco">⏸</button></div>'
+  /* Los controles propios del CMS (Programar/Contraer/Exportar) y el diagnóstico ya NO
+     viajan por el raíl/detalle de admira-nav (el marco cuadrático los oculta): viven en
+     los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
+};
+</script>
+<script src="/admira-nav.js?v=12.07.2026.r3"></script>
+<script src="/admira-frame.js?v=12.07.2026.r3" defer></script>
+
+<!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
+     El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
+     por getElementById más abajo. Deben existir en el DOM antes de esa lógica: por eso van aquí. -->
+<div class="afSlotHidden" data-af-slot="right" aria-label="Acciones de flota">
+  <button class="admni afAct" id="openProg" type="button" title="Programar la parrilla con contenido propio del Stock"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.2h17M8 3.5v3M16 3.5v3M12 12v5M9.5 14.5h5"/></svg></span><span class="t">Programar</span></button>
+  <button class="admni afAct" id="collapseAll" type="button" title="Contraer / expandir todas las fichas"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l7-7 7 7"/><path d="M5 19l7-7 7 7"/></svg></span><span class="t">Contraer fichas</span></button>
+  <button class="admni afAct" id="exportCsv" type="button" title="Exportar la flota visible a CSV"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11M8 11l4 4 4-4"/><path d="M4.5 19.5h15"/></svg></span><span class="t">Exportar CSV</span></button>
+</div>
+<div class="afSlotHidden af-expert" data-af-slot="bottom" aria-label="Diagnóstico de flota">
+  <div class="admsec"><h4>Diagnóstico</h4>
+    <div class="admrow"><span>Dispositivos</span><b id="d-total">—</b></div>
+    <div class="admrow"><span>Emitiendo</span><b id="d-online">—</b></div>
+    <div class="admrow"><span>Sin señal</span><b id="d-off">—</b></div>
+    <div class="admrow"><span>Con audiencia</span><b id="d-aud">—</b></div>
+    <div class="admrow"><span>Móviles / robot</span><b id="d-robot">—</b></div>
+    <div class="admrow"><span>Ingresos</span><b id="d-rev">—</b></div>
+  </div>
+</div>
+<script>
+/* Espeja los KPIs de flota (k-*) al panel EXPERTO (d-*). Antes lo hacía onDetail de
+   admira-nav al abrir el detalle; ahora, panel independiente → refresco por intervalo. */
+(function(){
+  function mirror(){
     var g=function(id){var e=document.getElementById(id);return e?e.textContent:'—';};
     var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
     var total=parseInt(g('k-total'))||0, online=parseInt(g('k-online'))||0;
     set('d-total',g('k-total')); set('d-online',g('k-online')+(total?' ('+Math.round(online/total*100)+'%)':''));
     set('d-off',g('k-off')); set('d-aud',g('k-aud')); set('d-robot',g('k-robot')); set('d-rev',g('k-rev'));
   }
-};
+  try{ mirror(); setInterval(mirror,2000); }catch(_){}
+})();
 </script>
-<script src="/admira-nav.js?v=12.07.2026.r2"></script>
+<style>
+/* Los contenedores-slot no deben verse en el flujo del body antes de que admira-frame
+   los recoloque en sus paneles (evita un parpadeo). Dentro del panel se muestran normal. */
+.afSlotHidden{ display:none }
+.af-panel .afSlotHidden{ display:block }
+.af-right .afAct{ width:100%; justify-content:flex-start; margin-bottom:6px }
+/* Dentro del panel el raíl NO está «colapsado»: recupera el rótulo que admira-nav
+   atenúa (opacity:0) cuando la barra lateral va plegada. */
+.af-panel .afAct .t{ opacity:1 !important; pointer-events:auto !important }
+</style>
 
 <!-- tarea5-asistencia-r36 · EN EMISIÓN + botón 🎥 Asistencia recíproco con Yokup (sala = id de pantalla, ocupación por sonda WS) -->
 <section class="emitBoard" id="emitBoard">

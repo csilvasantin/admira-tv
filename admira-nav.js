@@ -13,7 +13,7 @@
   var title=(s&&s.dataset.title)||cfg.title||'';
   var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.08.07.2026.r11';
+  var VER=window.ADMIRA_VERSION||'v.12.07.2026.r3';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
@@ -70,6 +70,11 @@
   };
   function IC(k){ return ICONS[k]||''; }
   try{ window.AdmiraIcon=IC; window.AdmiraIconSet=ICONS; }catch(_){}
+  // Fuente única del RAÍL de navegación para admira-frame: cuando una página no aporta
+  // su propio [data-af-slot="left"], admira-frame construye el panel OPCIONES a partir de
+  // aquí (mismos ítems + Control ↗ que el raíl heredado .admside, y la página activa).
+  try{ window.AdmiraNav={ items:ITEMS, active:active,
+    control:{ h:'https://www.xpaceos.com/control/', t:'Control ↗', blank:true, ic:'control' } }; }catch(_){}
 
   /* Las 20 apps del stack Admira, en el ORDEN exacto de la lanzadera legacy (new.admira.mobi) + XpaceOS y Yarig.ai al final.
    * FUENTE ÚNICA de estado ●/○: la lanzadera /apps/ y el submenú del sidebar beben de aquí (window.AdmiraApps).
@@ -323,9 +328,14 @@
     '</aside>';
   }
   function emiSwitchHTML(){
-    // Conmutador de emisión Planificar ↔ Calendario, disponible en TODA página del chrome.
+    // Conmutador de emisión Flota · Planificar ↔ Calendario, disponible en TODA página del chrome.
+    // «Flota» (antena) va PRIMERO, delante de «Planificar»; ambas viven en /cms.html (Flota = la red
+    // en antena, Planificar = ?prog=1 la parrilla). Se distinguen por el parámetro prog.
+    var isProg=/(?:^|[?&])prog=1(?:&|$)/.test(location.search);
+    var onFlota=(active==='flota');
     return '<span class="admseg" role="group" aria-label="Emisión">'+
-      '<a class="'+(active==='flota'?'on':'')+'" href="/cms.html?prog=1" aria-label="Planificar emisión" title="Planificar emisión — programar la parrilla">'+IC('programar')+'<span class="lbl">Planificar</span></a>'+
+      '<a class="'+(onFlota&&!isProg?'on':'')+'" href="/cms.html" aria-label="Flota" title="Flota — la red en antena">'+IC('flota')+'<span class="lbl">Flota</span></a>'+
+      '<a class="'+(onFlota&&isProg?'on':'')+'" href="/cms.html?prog=1" aria-label="Planificar emisión" title="Planificar emisión — programar la parrilla">'+IC('programar')+'<span class="lbl">Planificar</span></a>'+
       '<a class="'+(active==='calendar'?'on':'')+'" href="/cms/calendar/" aria-label="Calendario de emisión" title="Calendario de emisión">'+IC('calendar')+'<span class="lbl">Calendario</span></a>'+
     '</span>';
   }

@@ -55,6 +55,39 @@
     })();
   }
 
+  // Construye el raíl de OPCIONES (navegación) desde window.AdmiraNav (fuente única de
+  // admira-nav). Se usa cuando la página no trae su propio [data-af-slot="left"].
+  function defaultNav() {
+    var nav = document.createElement("nav");
+    nav.className = "af-nav";
+    nav.setAttribute("aria-label", "Opciones de navegación");
+    var N = window.AdmiraNav;
+    var icon = (typeof window.AdmiraIcon === "function") ? window.AdmiraIcon : function () { return ""; };
+    if (!N || !N.items || !N.items.length) {
+      var e = document.createElement("div");
+      e.className = "af-empty";
+      e.textContent = "— sin opciones en esta vista";
+      nav.appendChild(e);
+      return nav;
+    }
+    function link(it) {
+      var a = document.createElement("a");
+      a.href = it.h;
+      if (it.blank) { a.target = "_blank"; a.rel = "noopener"; }
+      if (it.k && it.k === N.active) { a.className = "on"; a.setAttribute("aria-current", "page"); }
+      a.innerHTML = '<span class="af-ic">' + (icon(it.k || it.ic) || "") + "</span><span>" + esc(it.t) + "</span>";
+      return a;
+    }
+    N.items.forEach(function (it) { nav.appendChild(link(it)); });
+    if (N.control) {
+      var sep = document.createElement("div");
+      sep.className = "af-sep";
+      nav.appendChild(sep);
+      nav.appendChild(link(N.control));
+    }
+    return nav;
+  }
+
   function build(bar) {
     var body = document.body;
     document.documentElement.classList.add("af-on");
@@ -97,6 +130,11 @@
       var slots = document.querySelectorAll('[data-af-slot="' + side.key + '"]');
       if (slots.length) {
         Array.prototype.forEach.call(slots, function (n) { bd.appendChild(n); });
+      } else if (side.key === "left") {
+        // Sin slot propio → OPCIONES recupera el RAÍL de navegación (que af-on oculta de
+        // admira-nav) a partir de window.AdmiraNav. Así toda página del perímetro conserva su
+        // navegación en el canon cuadrático sin duplicar el bloque en cada HTML.
+        bd.appendChild(defaultNav());
       } else {
         var empty = document.createElement("div");
         empty.className = "af-empty";
