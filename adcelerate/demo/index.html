@@ -22,18 +22,28 @@
 <div id="app">
   <canvas id="scene"></canvas>
 
-  <!-- Sidebar izquierda -->
-  <aside id="sidebar">
-    <header class="brand">
+  <!-- ============ MENÚ SUPERIOR (principal) ============ -->
+  <header id="topbar">
+    <button id="tg-left" class="side-toggle" aria-label="Opciones">☰</button>
+    <div class="brand">
       <div class="logo-dot"></div>
-      <div>
-        <h1>ADcelerate</h1>
-        <p class="sub">Gemelo · Plaça de la Vila de Gràcia</p>
+      <div class="brand-txt">
+        <b>ADcelerate</b><span class="sub">Gemelo · Vila de Gràcia</span>
       </div>
-    </header>
+    </div>
+    <nav id="mainnav">
+      <a href="#" class="active">Gemelo</a>
+      <a href="#" data-open="left">Audiencias</a>
+      <a href="#" data-open="right">Circuito</a>
+      <a href="https://admira.tv/canal.html" target="_blank" rel="noopener">admira.tv ↗</a>
+    </nav>
+    <button id="tg-right" class="side-toggle" aria-label="Avanzado">⚙</button>
+  </header>
 
+  <!-- ============ MENÚ IZQUIERDO (opciones normales) ============ -->
+  <aside id="sidebar">
     <section class="panel" id="panel-franjas">
-      <h2>Audiencia por franja</h2>
+      <h2>Franja horaria</h2>
       <p class="note">Datos telco de zona (simulados sobre patrón MITMA)</p>
       <div class="franjas" id="franjas"></div>
       <label class="auto-row">
@@ -42,8 +52,27 @@
       </label>
     </section>
 
+    <section class="panel" id="cammodes-panel">
+      <h2>Cámara</h2>
+      <div id="cammodes">
+        <button data-mode="free" class="active">🕹 Volado libre</button>
+        <button data-mode="orbit">🌀 Órbita</button>
+        <button data-mode="guided">✈ Vuelo guiado</button>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-capas">
+      <h2>Capas</h2>
+      <label class="capa-row"><input type="checkbox" id="capa-multitud" checked><span>Multitud (presencias)</span></label>
+      <label class="capa-row"><input type="checkbox" id="capa-edificios" checked><span>Edificios</span></label>
+      <label class="capa-row"><input type="checkbox" id="capa-viales" checked><span>Viales</span></label>
+    </section>
+  </aside>
+
+  <!-- ============ MENÚ DERECHO (opciones avanzadas) ============ -->
+  <aside id="rightbar">
     <section class="panel" id="panel-live">
-      <h2>Ahora en la plaza</h2>
+      <h2>Dato telco de la franja</h2>
       <div class="big-metric"><span id="aforo">—</span><span class="unit">personas</span></div>
       <div id="mixbars"></div>
       <div class="kv"><span>Perfil dominante</span><b id="dominante">—</b></div>
@@ -52,12 +81,38 @@
     <section class="panel" id="panel-rules">
       <h2>ADcelerate interpreta</h2>
       <ul class="rules" id="rules"></ul>
+      <div class="kv"><span>Recomendación</span><b id="recomendacion">—</b></div>
       <div class="kv onscreen"><span>EN PANTALLA</span><b id="onscreen">—</b></div>
-      <div class="kv feed"><span>Feed circuito</span><b id="feedstate">simulado</b></div>
     </section>
 
-    <button id="btn-flight" class="cta">✈ Vuelo guiado al kiosko</button>
+    <section class="panel" id="panel-feed">
+      <h2>Feed real</h2>
+      <div class="kv"><span>Pantalla kiosko</span><b id="feedstate">—</b></div>
+      <div class="kv"><span>Player circuito</span><b id="signagestate">—</b></div>
+      <p class="note">signage/now?screen=oohmedia · poll 30 s</p>
+    </section>
   </aside>
+
+  <!-- ============ BARRA INFERIOR (modo experto, plegada) ============ -->
+  <footer id="expertbar" class="collapsed">
+    <button id="expert-toggle">⌥ Modo experto</button>
+    <div id="expert-content">
+      <div class="ex-col">
+        <h3>Telemetría</h3>
+        <div class="ex-kv mono">FPS <b id="ex-fps">—</b> · presencias <b id="ex-crowd">—</b> · draw calls <b id="ex-calls">—</b> · triángulos <b id="ex-tris">—</b></div>
+        <h3>Endpoints</h3>
+        <div class="ex-kv mono" id="ex-endpoints"></div>
+      </div>
+      <div class="ex-col">
+        <h3>Audiencia (franja actual + interpolada)</h3>
+        <pre id="ex-audience" class="mono">—</pre>
+      </div>
+      <div class="ex-col">
+        <h3>signage/now (crudo) · pieza del canal</h3>
+        <pre id="ex-signage" class="mono">—</pre>
+      </div>
+    </div>
+  </footer>
 
   <!-- Ficha flotante -->
   <div id="ficha" class="hidden">
@@ -66,6 +121,8 @@
   </div>
 
   <div id="badge-real" class="hidden">● Emisión real admira.tv</div>
+
+  <div id="hint">🕹 muévete con las flechas · ← → giran · Av/Re Pág (o Shift+↑↓) altura · arrastra para mirar</div>
 
   <footer id="attrib">© OpenStreetMap contributors (ODbL) · Demo ADcelerate by Admira</footer>
 

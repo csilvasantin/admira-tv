@@ -28,6 +28,12 @@ const AUTO_MS = 12000;
 const SIGNAGE_URL = 'https://api.admira.store/signage/now?screen=oohmedia';
 const SIGNAGE_POLL_MS = 30000;
 const MAX_CROWD = 600;
+// Stock público del canal admira.tv (R2, CORS abierto) — el contenido REAL en antena
+const STOCK_URL = 'https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json';
+const STOCK_MAX_ITEMS = 14;
+const STOCK_MAX_VIDEO_BYTES = 15e6;   // ?v= es Content-Length: fuera mp4 gigantes
+const IMG_SECONDS = 9;                // como canal.html
+const VIDEO_CAP_MS = 30000;           // tope por pieza en la demo
 
 /* ============================== utilidades ============================== */
 function mulberry32(seed) {
@@ -55,7 +61,8 @@ scene.background = new THREE.Color(0xdfe9ee);
 scene.fog = new THREE.Fog(0xdfe9ee, 420, 780);
 
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.5, 1500);
-camera.position.set(150, 170, 190);
+camera.position.set(95, 34, 95);           // arranque en volado libre mirando al kiosko
+camera.rotation.order = 'YXZ';
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(15, 0, 0);
@@ -64,8 +71,9 @@ controls.dampingFactor = 0.08;
 controls.maxPolarAngle = Math.PI / 2.05;
 controls.minDistance = 12;
 controls.maxDistance = 520;
-controls.autoRotate = true;
+controls.autoRotate = false;
 controls.autoRotateSpeed = 0.35;
+controls.enabled = false;                  // el modo por defecto es volado libre
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.7));
 scene.add(new THREE.HemisphereLight(0xcfe8ff, 0xe8dcc8, 0.55));
@@ -175,7 +183,6 @@ const state = {
   cur: { aforo: 0, mix: { familias: 25, jovenes: 25, turistas: 25, seniors: 25 } },
   dominante: null,
   realItem: null,
-  realTexture: null,
 };
 const franja = () => FRANJAS[state.franjaIdx];
 
@@ -183,31 +190,65 @@ function dominanteDe(mix) {
   return PERFILES.reduce((a, b) => (mix[a] >= mix[b] ? a : b));
 }
 
-/* ============================== pantalla del kiosko ============================== */
-function drawCreative() {
-  const c = screenCtx, W = 640, H = 360;
-  const dom = state.dominante || dominanteDe(franja().mix);
-  const r = REGLAS[dom];
-  if (state.realItem && state.realTexture) return; // textura real montada
-  c.fillStyle = r.bg; c.fillRect(0, 0, W, H);
-  c.fillStyle = 'rgba(255,255,255,.16)';
-  c.fillRect(0, 0, W, 64);
-  c.fillStyle = r.fg;
-  c.font = 'bold 26px Menlo, monospace'; c.textAlign = 'left'; c.textBaseline = 'middle';
-  c.fillText(`CREATIVIDAD ${r.cre}`, 24, 32);
-  c.textAlign = 'center';
-  c.font = 'bold 58px -apple-system, sans-serif';
-  c.fillText(r.titulo, W / 2, 168);
-  c.font = '26px -apple-system, sans-serif';
-  c.fillText(r.sub, W / 2, 222);
-  c.font = '17px Menlo, monospace';
-  c.fillStyle = 'rgba(0,0,0,.55)';
-  if (state.realItem) {
-    c.fillText('● EMISIÓN REAL admira.tv · ' + realItemName(), W / 2, 322);
-  } else {
-    c.fillText('ADcelerate → OOH Media · Plaça Vila de Gràcia', W / 2, 322);
+/* ============== pantalla del kiosko: canal admira.tv REAL + banda ADcelerate ============== */
+// Estado normal: emite el Stock real del canal (vídeo/imagen desde R2, CORS abierto).
+// La regla ADcelerate pasa a ser una RECOMENDACIÓN en banda inferior (no sustituye la emisión).
+// Fallback (sin red / sin piezas): creatividades canvas A–D.
+let stockQueue = [], stockIdx = -1, stockItem = null, stockImg = null;
+let stockLive = false, stockErrors = 0, stockTimer = 0;
+const vid = document.createElement('video');
+vid.muted = true; vid.playsInline = true; vid.preload = 'auto'; vid.crossOrigin = 'anonymous';
+vid.addEventListener('ended', () => nextStock());
+vid.addEventListener('error', () => stockSkipError());
+vid.addEventListener('loadeddata', () => { stockErrors = 0; });
+
+async function loadStock() {
+  try {
+    const r = await fetch(STOCK_URL, { cache: 'no-store' });
+    const j = await r.json();
+    const size = u => { const m = /[?&]v=(\d+)/.exec(u || ''); return m ? +m[1] : 0; };
+    stockQueue = (j.items || []).filter(it => it.url && (
+      (it.type === 'video' && size(it.url) > 0 && size(it.url) <= STOCK_MAX_VIDEO_BYTES) ||
+      it.type === 'image'
+    )).slice(0, STOCK_MAX_ITEMS);
+    if (stockQueue.length) { stockLive = true; stockErrors = 0; nextStock(); }
+    else stockLive = false;
+  } catch (e) { stockLive = false; }
+  updateFeedHUD(); updateOnscreenHUD();
+}
+function stockSkipError() {
+  stockErrors++;
+  if (stockErrors > stockQueue.length) {   // todo falla → fallback honesto
+    stockLive = false; stockItem = null;
+    updateFeedHUD(); updateOnscreenHUD();
+    return;
   }
-  screenTexture.needsUpdate = true;
+  nextStock();
+}
+function nextStock() {
+  clearTimeout(stockTimer);
+  if (!stockQueue.length) return;
+  stockIdx = (stockIdx + 1) % stockQueue.length;
+  stockItem = stockQueue[stockIdx];
+  stockImg = null;
+  if (stockItem.type === 'video') {
+    vid.src = stockItem.url;
+    vid.play().catch(() => stockSkipError());
+    stockTimer = setTimeout(nextStock, VIDEO_CAP_MS);
+  } else {
+    vid.pause(); vid.removeAttribute('src');
+    const im = new Image();
+    im.crossOrigin = 'anonymous';
+    im.onload = () => { stockImg = im; stockErrors = 0; };
+    im.onerror = () => stockSkipError();
+    im.src = stockItem.url;
+    stockTimer = setTimeout(nextStock, IMG_SECONDS * 1000);
+  }
+  updateOnscreenHUD();
+}
+function stockTitle() {
+  if (!stockItem) return '';
+  return String(stockItem.title || stockItem.id).replace(/&#39;/g, "'").slice(0, 60);
 }
 function realItemName() {
   const it = state.realItem;
@@ -215,47 +256,87 @@ function realItemName() {
   return String(it.name || it.title || it.file || it.id || 'contenido').slice(0, 40);
 }
 
-/* ============================== feed real admira.tv ============================== */
+function renderScreen() {
+  const c = screenCtx, W = 640, H = 360;
+  const dom = state.dominante || dominanteDe(franja().mix);
+  const r = REGLAS[dom];
+  let media = false;
+  if (stockLive && stockItem) {
+    let src = null, sw = 0, sh = 0;
+    if (stockItem.type === 'video' && vid.readyState >= 2) { src = vid; sw = vid.videoWidth; sh = vid.videoHeight; }
+    else if (stockImg) { src = stockImg; sw = stockImg.naturalWidth; sh = stockImg.naturalHeight; }
+    c.fillStyle = '#06141a'; c.fillRect(0, 0, W, H);
+    if (src && sw && sh) {
+      const s = Math.max(W / sw, H / sh);
+      c.drawImage(src, (W - sw * s) / 2, (H - sh * s) / 2, sw * s, sh * s);
+    } else {
+      c.fillStyle = '#5fd0ff'; c.font = '20px Menlo, monospace';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('· cargando canal admira.tv ·', W / 2, H / 2);
+    }
+    media = true;
+    // barra superior: qué emite el canal
+    c.fillStyle = 'rgba(6,20,26,.78)'; c.fillRect(0, 0, W, 34);
+    c.textAlign = 'left'; c.textBaseline = 'middle'; c.font = 'bold 15px Menlo, monospace';
+    c.fillStyle = '#ff5252'; c.fillText('●', 12, 18);
+    c.fillStyle = '#eaf6fb'; c.fillText(('EN ANTENA admira.tv · ' + stockTitle()).slice(0, 56), 30, 18);
+  }
+  if (media) {
+    // banda inferior: recomendación ADcelerate sobre la emisión real
+    c.fillStyle = 'rgba(6,20,26,.84)'; c.fillRect(0, H - 54, W, 54);
+    c.fillStyle = r.bg; c.fillRect(0, H - 54, 8, 54);
+    c.textAlign = 'left'; c.textBaseline = 'middle'; c.font = 'bold 16px Menlo, monospace';
+    c.fillStyle = '#9fdcf5'; c.fillText('ADcelerate recomienda:', 20, H - 37);
+    c.fillStyle = '#ffffff';
+    c.fillText(`Creatividad ${r.cre} · ${r.titulo} (${PERFIL_LABEL[dom].toLowerCase()})`, 20, H - 15);
+  } else {
+    // fallback: creatividad canvas de la regla
+    c.fillStyle = r.bg; c.fillRect(0, 0, W, H);
+    c.fillStyle = 'rgba(255,255,255,.16)'; c.fillRect(0, 0, W, 64);
+    c.fillStyle = r.fg;
+    c.font = 'bold 26px Menlo, monospace'; c.textAlign = 'left'; c.textBaseline = 'middle';
+    c.fillText(`CREATIVIDAD ${r.cre}`, 24, 32);
+    c.textAlign = 'center';
+    c.font = 'bold 58px -apple-system, sans-serif';
+    c.fillText(r.titulo, W / 2, 168);
+    c.font = '26px -apple-system, sans-serif';
+    c.fillText(r.sub, W / 2, 222);
+    c.font = '17px Menlo, monospace';
+    c.fillStyle = 'rgba(0,0,0,.55)';
+    c.fillText('ADcelerate → OOH Media · Plaça Vila de Gràcia', W / 2, 322);
+  }
+  screenTexture.needsUpdate = true;
+}
+
+/* ============================== feed del circuito (signage/now) ============================== */
 async function pollSignage() {
   try {
     const r = await fetch(SIGNAGE_URL, { cache: 'no-store' });
     const j = await r.json();
-    const item = (j && j.ok && j.item) ? j.item : null;
-    const changed = JSON.stringify(item) !== JSON.stringify(state.realItem);
-    state.realItem = item;
-    const badge = $('badge-real'), feed = $('feedstate');
-    if (item) {
-      badge.classList.remove('hidden');
-      feed.textContent = 'REAL · admira.tv';
-      feed.classList.add('real');
-      if (changed) tryRealTexture(item);
-    } else {
-      badge.classList.add('hidden');
-      feed.textContent = 'simulado (regla)';
-      feed.classList.remove('real');
-      state.realTexture = null;
-      screenMat.map = screenTexture;
-      screenMat.needsUpdate = true;
-      drawCreative();
-    }
-    updateOnscreenHUD();
-  } catch (e) { /* red caída: seguimos en simulado, sin romper */ }
+    lastSignageRaw = j;
+    state.realItem = (j && j.ok && j.item) ? j.item : null;
+    updateFeedHUD(); updateOnscreenHUD();
+  } catch (e) { /* red caída: sin romper */ }
 }
-function tryRealTexture(item) {
-  const url = item && (item.url || item.src || item.file);
-  state.realTexture = null;
-  drawCreative(); // rótulo de emisión real como mínimo
-  if (!url || !/\.(png|jpe?g|webp|gif)(\?|$)/i.test(String(url))) return;
-  new THREE.TextureLoader().setCrossOrigin('anonymous').load(url, tx => {
-    tx.colorSpace = THREE.SRGBColorSpace;
-    state.realTexture = tx;
-    screenMat.map = tx;
-    screenMat.needsUpdate = true;
-  }, undefined, () => { /* CORS u otro fallo: solo rótulo */ });
+function updateFeedHUD() {
+  const badge = $('badge-real'), feed = $('feedstate'), sig = $('signagestate');
+  // qué alimenta la pantalla del kiosko del gemelo
+  feed.textContent = stockLive ? 'CANAL admira.tv (stock R2)' : 'simulado (regla)';
+  feed.classList.toggle('live', stockLive);
+  // qué reporta el player físico del circuito
+  if (state.realItem) {
+    badge.classList.remove('hidden');
+    sig.textContent = 'EMITIENDO · ' + realItemName().slice(0, 22);
+    sig.classList.add('real');
+  } else {
+    badge.classList.add('hidden');
+    sig.classList.remove('real');
+    sig.textContent = 'sin emisión (item:null)';
+  }
 }
 
 /* ============================== carga de la ciudad ============================== */
-let buildingsMesh = null, buildingPick = [];   // [{tri0, tri1, meta}]
+let buildingsMesh = null, roadsMesh = null, buildingPick = [];   // [{tri0, tri1, meta}]
 const rng = mulberry32(20260712);
 
 fetch('data/gracia-local.json').then(r => r.json()).then(data => {
@@ -320,9 +401,9 @@ function buildCity(data) {
   const roadGeo = new THREE.BufferGeometry();
   roadGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
   roadGeo.computeVertexNormals();
-  const roads = new THREE.Mesh(roadGeo, new THREE.MeshLambertMaterial({ color: 0xd8d2c4 }));
-  roads.receiveShadow = true;
-  scene.add(roads);
+  roadsMesh = new THREE.Mesh(roadGeo, new THREE.MeshLambertMaterial({ color: 0xd8d2c4 }));
+  roadsMesh.receiveShadow = true;
+  scene.add(roadsMesh);
 }
 
 /* ============================== multitud (presencias) ============================== */
@@ -416,7 +497,70 @@ function buildHUD() {
     mb.appendChild(row);
   });
   $('ficha-close').onclick = () => $('ficha').classList.add('hidden');
-  $('btn-flight').onclick = startFlight;
+  document.querySelectorAll('#cammodes button').forEach(b => {
+    b.onclick = () => setCamMode(b.dataset.mode);
+  });
+  setTimeout(() => $('hint') && $('hint').classList.add('gone'), 8000);
+
+  // capas visibles
+  $('capa-multitud').onchange = e => { if (crowd) crowd.visible = e.target.checked; };
+  $('capa-edificios').onchange = e => { if (buildingsMesh) buildingsMesh.visible = e.target.checked; };
+  $('capa-viales').onchange = e => { if (roadsMesh) roadsMesh.visible = e.target.checked; };
+
+  // barra inferior: modo experto
+  $('expert-toggle').onclick = () => {
+    $('expertbar').classList.toggle('collapsed');
+    updateExpert(true);
+  };
+  $('ex-endpoints').innerHTML =
+    `stock: ${STOCK_URL.replace('https://', '')}<br>` +
+    `signage: ${SIGNAGE_URL.replace('https://', '')}<br>` +
+    `geodatos: data/gracia-local.json (OSM/ODbL)`;
+
+  // móvil: abrir/cerrar laterales
+  const toggleSide = which => {
+    const el = which === 'left' ? $('sidebar') : $('rightbar');
+    const other = which === 'left' ? $('rightbar') : $('sidebar');
+    el.classList.toggle('open');
+    other.classList.remove('open');
+  };
+  $('tg-left').onclick = () => toggleSide('left');
+  $('tg-right').onclick = () => toggleSide('right');
+  document.querySelectorAll('#mainnav a[data-open]').forEach(a => {
+    a.onclick = e => { e.preventDefault(); toggleSide(a.dataset.open); };
+  });
+  // tocar la escena cierra los laterales en móvil
+  renderer.domElement.addEventListener('pointerdown', () => {
+    $('sidebar').classList.remove('open');
+    $('rightbar').classList.remove('open');
+  });
+}
+
+/* ---- modo experto: telemetría + JSON crudos ---- */
+let fpsEMA = 60, lastExpert = 0, lastSignageRaw = null;
+function updateExpert(force = false) {
+  if ($('expertbar').classList.contains('collapsed')) return;
+  const now = performance.now();
+  if (!force && now - lastExpert < 500) return;
+  lastExpert = now;
+  $('ex-fps').textContent = Math.round(fpsEMA);
+  $('ex-crowd').textContent = crowd ? crowd.count : 0;
+  $('ex-calls').textContent = renderer.info.render.calls;
+  $('ex-tris').textContent = renderer.info.render.triangles.toLocaleString('es');
+  const f = franja();
+  $('ex-audience').textContent = JSON.stringify({
+    franja: f.id, objetivo: { aforo: f.aforo, mix: f.mix },
+    interpolado: {
+      aforo: Math.round(state.cur.aforo),
+      mix: Object.fromEntries(PERFILES.map(p => [p, +state.cur.mix[p].toFixed(1)])),
+      dominante: state.dominante,
+    },
+    fuente: 'simulado (patrón MITMA)',
+  }, null, 1);
+  $('ex-signage').textContent = JSON.stringify({
+    signage_now: lastSignageRaw,
+    canal_stock: stockItem ? { idx: stockIdx + 1, de: stockQueue.length, type: stockItem.type, title: stockTitle(), url: stockItem.url } : null,
+  }, null, 1);
 }
 function refreshHUD() {
   $('aforo').textContent = Math.round(state.cur.aforo);
@@ -434,7 +578,6 @@ function refreshHUD() {
     $('dominante').style.color = PERFIL_CSS[dom];
     document.querySelectorAll('#rules li').forEach(li =>
       li.classList.toggle('active', li.dataset.perfil === dom));
-    drawCreative();
     updateOnscreenHUD();
   }
   document.querySelectorAll('#franjas button').forEach((b, i) =>
@@ -442,12 +585,15 @@ function refreshHUD() {
 }
 function updateOnscreenHUD() {
   const el = $('onscreen');
+  const r = REGLAS[state.dominante || dominanteDe(franja().mix)];
   if (state.realItem) {
-    el.textContent = '▶ ' + realItemName() + ' (real)';
+    el.textContent = '▶ ' + realItemName() + ' (player circuito)';
+  } else if (stockLive && stockItem) {
+    el.textContent = '▶ ' + stockTitle().slice(0, 34) + ' · canal admira.tv';
   } else {
-    const r = REGLAS[state.dominante || dominanteDe(franja().mix)];
     el.textContent = `Creatividad ${r.cre} · ${r.titulo}`;
   }
+  $('recomendacion').textContent = `Creatividad ${r.cre} · ${r.titulo}`;
 }
 
 function applyFranja(i, snap = false) {
@@ -468,7 +614,15 @@ renderer.domElement.addEventListener('pointerdown', e => {
   downXY = [e.clientX, e.clientY];
   controls.autoRotate = false;
   stopFlight();
+  looking = true; lookPX = e.clientX; lookPY = e.clientY;
 });
+renderer.domElement.addEventListener('pointermove', e => {
+  if (!looking || camMode !== 'free') return;
+  fly.yaw -= (e.clientX - lookPX) * 0.0032;
+  fly.pitch = Math.max(-1.25, Math.min(0.9, fly.pitch - (e.clientY - lookPY) * 0.0032));
+  lookPX = e.clientX; lookPY = e.clientY;
+});
+addEventListener('pointerup', () => { looking = false; });
 renderer.domElement.addEventListener('pointerup', e => {
   if (!downXY) return;
   const moved = Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]);
@@ -493,9 +647,11 @@ function ficha(html) {
   $('ficha').classList.remove('hidden');
 }
 function showFichaKiosk() {
-  const feed = state.realItem ? 'REAL · emitiendo desde admira.tv' : 'Simulado · regla ADcelerate';
+  const feed = state.realItem ? 'REAL · player del circuito' :
+    (stockLive ? 'REAL · Stock del canal admira.tv' : 'Simulado · regla ADcelerate');
   const r = REGLAS[state.dominante || dominanteDe(franja().mix)];
-  const enPantalla = state.realItem ? realItemName() : `Creatividad ${r.cre} — ${r.titulo}`;
+  const enPantalla = state.realItem ? realItemName() :
+    (stockLive && stockItem ? stockTitle() : `Creatividad ${r.cre} — ${r.titulo}`);
   ficha(`
     <p class="tag">Pantalla reactiva · OOH</p>
     <h3>News &amp; Coffee — Kiosko de la Plaça</h3>
@@ -543,12 +699,85 @@ function showFichaBuilding(faceIndex) {
     </dl>`);
 }
 
+/* ============== cámara: volado libre (defecto) · órbita · vuelo guiado ============== */
+let camMode = 'free';
+// yaw inicial mirando de (95,·,95) hacia el kiosko en el origen
+const fly = { yaw: Math.PI / 4, pitch: -0.24, vF: 0, vY: 0, vYaw: 0, keys: {}, shift: false };
+
+function updateModeButtons() {
+  document.querySelectorAll('#cammodes button').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === camMode));
+}
+function setCamMode(m) {
+  if (m === 'guided') { startFlight(); return; }
+  stopFlight();                    // corta un vuelo guiado si lo hubiera
+  camMode = m;
+  if (m === 'free') {
+    controls.enabled = false; controls.autoRotate = false;
+    const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+    fly.yaw = e.y; fly.pitch = e.x;
+    fly.vF = fly.vY = fly.vYaw = 0;
+  } else {                         // orbit
+    controls.enabled = true; controls.autoRotate = false;
+    const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+    const t = camera.position.clone().add(dir.multiplyScalar(60));
+    t.y = Math.min(10, Math.max(0, t.y));
+    controls.target.copy(t);
+  }
+  updateModeButtons();
+}
+
+// --- teclado del volado libre (↑↓ avance · ←→ giro · Av/Re Pág o Shift+↑↓ altura)
+const FLY_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown'];
+addEventListener('keydown', e => {
+  if (!FLY_KEYS.includes(e.key)) return;
+  if (camMode !== 'free') setCamMode('free');
+  fly.keys[e.key] = true; fly.shift = e.shiftKey;
+  e.preventDefault();
+});
+addEventListener('keyup', e => {
+  if (!FLY_KEYS.includes(e.key)) return;
+  fly.keys[e.key] = false; fly.shift = e.shiftKey;
+});
+
+let _tickFreeCalls = 0;
+function tickFree(dt) {
+  _tickFreeCalls++;
+  const k = fly.keys;
+  const ACC = 55, MAXV = 36, YAWA = 3.4, MAXYAW = 1.5, VACC = 38, MAXVY = 20;
+  const alturaConShift = fly.shift;
+  if (k.ArrowUp && !alturaConShift)   fly.vF = Math.min(MAXV, fly.vF + ACC * dt);
+  if (k.ArrowDown && !alturaConShift) fly.vF = Math.max(-MAXV, fly.vF - ACC * dt);
+  if (k.ArrowLeft)  fly.vYaw = Math.min(MAXYAW, fly.vYaw + YAWA * dt);
+  if (k.ArrowRight) fly.vYaw = Math.max(-MAXYAW, fly.vYaw - YAWA * dt);
+  if (k.PageUp   || (alturaConShift && k.ArrowUp))   fly.vY = Math.min(MAXVY, fly.vY + VACC * dt);
+  if (k.PageDown || (alturaConShift && k.ArrowDown)) fly.vY = Math.max(-MAXVY, fly.vY - VACC * dt);
+  // inercia ligera
+  fly.vF *= Math.exp(-2.4 * dt);
+  fly.vY *= Math.exp(-2.4 * dt);
+  fly.vYaw *= Math.exp(-4.2 * dt);
+  fly.yaw += fly.vYaw * dt;
+  camera.position.x += -Math.sin(fly.yaw) * fly.vF * dt;
+  camera.position.z += -Math.cos(fly.yaw) * fly.vF * dt;
+  camera.position.y += fly.vY * dt;
+  // límites: ni bajo el suelo, ni por encima de 150 m, ni fuera de la maqueta
+  camera.position.y = Math.max(2, Math.min(150, camera.position.y));
+  const rad = Math.hypot(camera.position.x, camera.position.z);
+  if (rad > 330) { camera.position.x *= 330 / rad; camera.position.z *= 330 / rad; }
+  camera.rotation.set(fly.pitch, fly.yaw, 0);
+}
+
+// --- mirar con el ratón (arrastrar) en volado libre
+let lookPX = 0, lookPY = 0, looking = false;
+
 /* ============================== vuelo guiado ============================== */
 let flight = null;
 function startFlight() {
   $('ficha').classList.add('hidden');
   controls.autoRotate = false;
   controls.enabled = false;
+  camMode = 'guided';
+  updateModeButtons();
   flight = {
     t0: performance.now(), dur: 8500,
     r0: Math.hypot(camera.position.x, camera.position.z) || 260,
@@ -560,7 +789,9 @@ function startFlight() {
 function stopFlight() {
   if (!flight) return;
   flight = null;
+  camMode = 'orbit';               // al acabar (o interrumpir) queda en órbita
   controls.enabled = true;
+  updateModeButtons();
 }
 function tickFlight(now) {
   if (!flight) return;
@@ -581,6 +812,7 @@ function tickFlight(now) {
 let lastAuto = performance.now();
 let lastHUD = 0;
 let lastT = performance.now();
+let lastScreen = 0;
 
 function animate(now) {
   requestAnimationFrame(animate);
@@ -609,8 +841,19 @@ function animate(now) {
     refreshHUD();
   }
 
-  tickFlight(now);
-  controls.update();
+  // pantalla del kiosko a ~25 fps (vídeo del canal + banda ADcelerate)
+  if (now - lastScreen > 40) { lastScreen = now; renderScreen(); }
+
+  // telemetría modo experto
+  fpsEMA = fpsEMA * 0.95 + (dt > 0 ? 1 / dt : 60) * 0.05;
+  updateExpert();
+
+  if (camMode === 'free') {
+    tickFree(dt);
+  } else {
+    controls.update();
+    tickFlight(now);               // si hay vuelo guiado, manda sobre la cámara
+  }
   renderer.render(scene, camera);
 }
 
@@ -622,12 +865,21 @@ addEventListener('resize', () => {
 
 /* ============================== arranque ============================== */
 buildHUD();
+updateModeButtons();
 applyFranja(state.franjaIdx, true);
-drawCreative();
+renderScreen();
 updateOnscreenHUD();
+loadStock();                                  // canal admira.tv REAL en la pantalla
+setInterval(loadStock, 10 * 60 * 1000);       // refresco del stock cada 10 min
 pollSignage();
 setInterval(pollSignage, SIGNAGE_POLL_MS);
 requestAnimationFrame(animate);
 
 // gancho de inspección (demo/debug)
-window.__dbg = { camera, controls, state, startFlight, applyFranja };
+window.__dbg = {
+  camera, controls, state, startFlight, applyFranja, setCamMode, nextStock, fly,
+  get camMode() { return camMode; },
+  get flight() { return flight; },
+  get tickFreeCalls() { return _tickFreeCalls; },
+};
+window.__dbgEvalCount = (window.__dbgEvalCount || 0) + 1;
