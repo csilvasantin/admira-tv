@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<script src="/auth-gate.js"></script>
+<link rel="preconnect" href="https://api.admira.store" crossorigin>
+<link rel="preconnect" href="https://www.carlossilva.info">
+<link rel="dns-prefetch" href="https://api.admira.store">
+<link rel="dns-prefetch" href="https://www.carlossilva.info">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admira · Playlists — conjuntos de contenidos</title>
+<meta name="description" content="Playlists de Admira.tv: crea conjuntos ordenados de contenido del Stock de Pixeria y asígnalos a un player para que los reproduzca de verdad (parrilla /grid).">
+<style>
+  :root{ --bg:#070a10; --panel:#0e131c; --panel2:#121a27; --line:#1e2940; --ink:#cdd8e8; --dim:#8595ad;
+         --air:#39d98a; --off:#ff5a5a; --amber:#ffb44c; --accent:#7aa2ff; --robot:#c08bff; --phos:#3df08a; }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#11203a33,transparent),var(--bg);
+       color:var(--ink);font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+  /* la barra superior (admira-nav) ya desplaza el contenido 52px; el sub-encabezado va en flujo normal
+     (position:static — con sticky, el offset de admira-nav se duplicaría y solaparía la barra de tools) */
+  header.phead{position:static;z-index:6;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+         padding:14px 20px;background:#070a10e6;border-bottom:1px solid var(--line)}
+  .brand{font-weight:800;letter-spacing:.5px;font-size:18px}
+  .brand b{color:var(--phos)}
+  .sub{color:var(--dim);font-size:12px}
+  .spacer{flex:1}
+  .live{display:flex;align-items:center;gap:7px;font:600 12px ui-monospace,monospace;color:var(--dim)}
+  .live .dot{width:8px;height:8px;border-radius:50%;background:var(--air);box-shadow:0 0 8px var(--air);animation:pulse 1.6s infinite}
+  @keyframes pulse{50%{opacity:.4}}
+  /* barra de herramientas primaria (Nueva playlist + buscar) */
+  .tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:16px 20px 4px}
+  .btnp{display:inline-flex;align-items:center;gap:8px;border:1px solid #2a4a3a;background:rgba(61,240,138,.12);
+        color:#bfffe0;border-radius:10px;padding:9px 14px;font-weight:700;font-size:13px;cursor:pointer;transition:.15s}
+  .btnp:hover{background:rgba(61,240,138,.22);border-color:var(--phos);color:#fff}
+  .search{flex:1;min-width:180px;max-width:340px;display:flex;align-items:center;gap:8px;background:#0c1320;
+          border:1px solid var(--line);border-radius:10px;padding:8px 11px}
+  .search input{flex:1;background:transparent;border:0;outline:0;color:var(--ink);font:13px inherit}
+  .search svg{width:15px;height:15px;color:var(--dim);flex:none}
+  .count{color:var(--dim);font:12px ui-monospace,monospace}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:14px 20px 46px}
+  .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;
+        overflow:hidden;display:flex;flex-direction:column}
+  .card .top{display:flex;align-items:center;gap:11px;padding:13px 15px;border-bottom:1px solid var(--line)}
+  .plav{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-size:19px;flex:none;
+        background:#0c1320;border:1px solid var(--line);color:var(--phos)}
+  .plav svg{width:22px;height:22px;color:var(--phos);filter:drop-shadow(0 0 3px rgba(61,240,138,.5))}
+  .card .nm{font-weight:700;font-size:15px;line-height:1.15;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .card .meta{color:var(--dim);font-size:11.5px;margin-top:1px}
+  .card .body{padding:12px 15px;display:flex;flex-direction:column;gap:11px;flex:1}
+  .strip{display:flex;gap:5px;overflow:hidden}
+  .strip .th{width:46px;height:46px;border-radius:8px;background:#000;border:1px solid var(--line);overflow:hidden;flex:none;
+             display:grid;place-items:center;color:var(--dim);font-size:16px}
+  .strip .th img{width:100%;height:100%;object-fit:cover}
+  .strip .more{align-self:center;color:var(--dim);font:12px ui-monospace,monospace;padding-left:2px}
+  .assigns{display:flex;flex-direction:column;gap:6px}
+  .aTag{display:flex;align-items:center;gap:8px;font-size:12px;background:#0c1320;border:1px solid var(--line);
+        border-radius:8px;padding:6px 9px}
+  .aTag .d{width:8px;height:8px;border-radius:50%;flex:none}
+  .aTag.on .d{background:var(--air);box-shadow:0 0 7px var(--air)} .aTag.on{color:var(--ink)}
+  .aTag.off .d{background:var(--off)} .aTag.off{color:var(--dim)}
+  .aTag .nm2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+  .aTag .cx{cursor:pointer;color:var(--dim);border:0;background:transparent;font-size:13px;padding:0 2px}
+  .aTag .cx:hover{color:var(--off)}
+  .aNone{color:var(--dim);font-size:12px;font-style:italic}
+  .acts{display:flex;gap:8px;margin-top:auto}
+  .abtn{flex:1;text-align:center;cursor:pointer;color:var(--ink);background:#13203a;border:1px solid #26385e;
+        border-radius:9px;padding:8px 10px;font-weight:600;font-size:12.5px}
+  .abtn:hover{background:#1a2c4e}
+  .abtn.go{background:rgba(61,240,138,.13);border-color:#2a5a44;color:#bfffe0}
+  .abtn.go:hover{background:rgba(61,240,138,.22)}
+  .empty{padding:64px 20px;text-align:center;color:var(--dim);grid-column:1/-1}
+  .empty b{color:var(--ink)}
+  footer{padding:10px 20px 34px;color:var(--dim);font-size:11.5px;text-align:center}
+  code{color:var(--accent)}
+
+  /* ── MODALES ─────────────────────────────────────────────────────────── */
+  .modal{position:fixed;inset:0;z-index:60;background:#060912f2;backdrop-filter:blur(5px);display:none;
+         align-items:center;justify-content:center;padding:18px}
+  .modal.open{display:flex}
+  .sheet{width:min(760px,100%);max-height:88vh;display:flex;flex-direction:column;
+         background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .sh-hd{display:flex;align-items:center;gap:10px;padding:14px 17px;border-bottom:1px solid var(--line)}
+  .sh-hd h3{margin:0;font-size:15px;font-weight:700}
+  .sh-hd h3 b{color:var(--phos)}
+  .sh-hd .x{margin-left:auto;cursor:pointer;border:1px solid var(--line);background:#0e1420;color:var(--dim);
+            border-radius:8px;width:30px;height:30px;font-size:15px}
+  .sh-hd .x:hover{border-color:var(--off);color:#fff}
+  .sh-bd{padding:15px 17px;overflow:auto}
+  .sh-ft{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:13px 17px;border-top:1px solid var(--line)}
+  .fld{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+  .fld label{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+  .fld input,.fld select{background:#0c1320;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:9px 11px;font:13px inherit;outline:0}
+  .fld input:focus,.fld select:focus{border-color:var(--accent)}
+  .hint{font-size:12px;color:var(--dim)}
+  .hint.ok{color:var(--air)} .hint.err{color:var(--off)}
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);font-size:11.5px;color:var(--dim)}
+
+  /* editor: lista ordenable */
+  .plItems{display:flex;flex-direction:column;gap:7px;margin-bottom:8px}
+  .plRow{display:flex;align-items:center;gap:10px;background:#0c1320;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .plRow .idx{font:700 12px ui-monospace,monospace;color:var(--dim);width:22px;text-align:center;flex:none}
+  .plRow .th{width:44px;height:44px;border-radius:7px;background:#000;border:1px solid var(--line);overflow:hidden;flex:none;display:grid;place-items:center;color:var(--dim)}
+  .plRow .th img{width:100%;height:100%;object-fit:cover}
+  .plRow .tx{min-width:0;flex:1}
+  .plRow .tt{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .plRow .ty{color:var(--dim);font-size:11px;margin-top:2px}
+  .plRow .mv{display:flex;flex-direction:column;gap:2px}
+  .plRow .mv button,.plRow .rm{cursor:pointer;border:1px solid var(--line);background:#0e1420;color:var(--dim);border-radius:6px;width:26px;height:20px;font-size:11px;padding:0;line-height:1}
+  .plRow .mv button:hover{border-color:var(--phos);color:#fff}
+  .plRow .rm{height:44px;width:30px;font-size:14px}
+  .plRow .rm:hover{border-color:var(--off);color:#fff}
+  .emptyRow{color:var(--dim);font-style:italic;padding:14px;text-align:center;border:1px dashed var(--line);border-radius:10px}
+
+  /* picker de Stock */
+  .pkTools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .pkTools input,.pkTools select{background:#0c1320;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:8px 10px;font:12.5px inherit;outline:0}
+  .pkTools input{flex:1;min-width:150px}
+  .pkGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+  .pkItem{position:relative;cursor:pointer;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0c1320}
+  .pkItem .th{aspect-ratio:1/1;background:#000;display:grid;place-items:center;color:var(--dim);font-size:22px}
+  .pkItem .th img{width:100%;height:100%;object-fit:cover}
+  .pkItem .cap{padding:6px 8px;font-size:11px;line-height:1.25;color:var(--ink);height:44px;overflow:hidden}
+  .pkItem .tg{position:absolute;top:5px;left:5px;font:10px ui-monospace,monospace;background:#000a;border-radius:5px;padding:1px 5px;color:var(--phos)}
+  .pkItem.sel{border-color:var(--phos);box-shadow:0 0 0 1px var(--phos)}
+  .pkItem.sel::after{content:'✓';position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:50%;background:var(--phos);color:#04110b;font:800 12px sans-serif;display:grid;place-items:center}
+
+  /* asignador de targets */
+  .tgOpts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+  .segbtn{cursor:pointer;border:1px solid var(--line);background:#0c1320;color:var(--dim);border-radius:8px;padding:7px 12px;font:600 12.5px inherit}
+  .segbtn.on{border-color:var(--phos);color:#bfffe0;background:rgba(61,240,138,.12)}
+  .tgList{display:flex;flex-direction:column;gap:7px}
+  .tgRow{display:flex;align-items:center;gap:11px;background:#0c1320;border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer}
+  .tgRow:hover{border-color:#2a3a66}
+  .tgRow.sel{border-color:var(--phos);box-shadow:0 0 0 1px rgba(61,240,138,.4)}
+  .tgRow .d{width:9px;height:9px;border-radius:50%;flex:none}
+  .tgRow.on .d{background:var(--air);box-shadow:0 0 7px var(--air)} .tgRow.off .d{background:var(--off)}
+  .tgRow .tx{flex:1;min-width:0}
+  .tgRow .tt{font-weight:600;font-size:13px}
+  .tgRow .ty{color:var(--dim);font-size:11px;margin-top:2px}
+  .tgRow .chk{width:20px;height:20px;border:1px solid var(--line);border-radius:6px;display:grid;place-items:center;flex:none;color:var(--phos);font-size:13px}
+  .tgRow.sel .chk{border-color:var(--phos);background:rgba(61,240,138,.15)}
+  .grp-h{font:700 11px ui-monospace,monospace;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;margin:12px 0 4px}
+
+  .afSlotHidden{ display:none }
+  .af-panel .afSlotHidden{ display:block }
+  .af-right .admni{ width:100%; justify-content:flex-start; margin-bottom:6px }
+  .admsec h4{margin:0 0 8px;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
+  .admrow{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid #131c2c;font-size:13px}
+  .admrow b{color:var(--ink)}
+  .dngr{display:flex;align-items:center;gap:9px;width:100%;justify-content:flex-start;margin-bottom:6px;cursor:pointer;
+        border:1px solid #3a1e26;background:#160c10;color:#ffb0b0;border-radius:10px;padding:9px 11px;font-weight:600;font-size:13px}
+  .dngr:hover{border-color:var(--off);color:#fff;background:#22141a}
+  .af-expert pre{white-space:pre-wrap;word-break:break-word}
+  @media(max-width:520px){ header{top:52px} }
+</style>
+</head>
+<body>
+<script>
+/* Config del chrome cuadrático unificado (lo monta /admira-nav.js). */
+window.ADMIRA_VERSION='v.12.07.2026.r1';
+window.ADMIRA_NAV={
+  active:'playlists', title:'Playlists · conjuntos de contenidos',
+  topRight:
+    '<button id="trNew" class="navbtn" title="Nueva playlist">＋ Playlist</button>'+
+    '<div class="live"><span class="dot"></span><span id="liveTxt">en vivo</span></div>'
+};
+</script>
+<script src="/admira-nav.js?v=12.07.2026.r3"></script>
+<script src="/admira-frame.js?v=12.07.2026.r3" defer></script>
+<link rel="stylesheet" href="/admira-frame.css?v=12.07.2026.r3">
+
+<!-- AVANZADO (panel derecho): acciones peligrosas -->
+<div class="afSlotHidden" data-af-slot="right" aria-label="Acciones avanzadas de playlists">
+  <button class="dngr" id="advClearAssigns" type="button" title="Retira TODAS las asignaciones (unbook) de todas las playlists">🧹 Limpiar todas las asignaciones</button>
+  <button class="dngr" id="advDeleteAll" type="button" title="Borra todas las playlists guardadas en este navegador">🗑 Borrar todas las playlists</button>
+  <button class="admni" id="advReload" type="button" style="cursor:pointer;border:1px solid var(--line);background:#0e1420;color:var(--ink);border-radius:10px;padding:9px 11px"><span class="ic">↻</span><span class="t">Recargar catálogo y players</span></button>
+</div>
+
+<!-- EXPERTO (panel inferior): JSON crudo -->
+<div class="afSlotHidden af-expert" data-af-slot="bottom" aria-label="JSON crudo de playlists y asignaciones">
+  <div class="admsec"><h4>Almacén</h4>
+    <div class="admrow"><span>Playlists</span><b id="d-pl">—</b></div>
+    <div class="admrow"><span>Piezas totales</span><b id="d-pcs">—</b></div>
+    <div class="admrow"><span>Asignaciones</span><b id="d-asg">—</b></div>
+    <div class="admrow"><span>Clave GRID_KEY</span><b id="d-key">—</b></div>
+  </div>
+  <div class="af-tools">
+    <button class="af-btn" id="expCopy" type="button">Copiar JSON</button>
+    <button class="af-btn" id="expImport" type="button">Importar JSON…</button>
+  </div>
+  <pre id="expJson">{}</pre>
+  <div class="af-meta">Las <b>playlists</b> viven en <code>localStorage.adtv_playlists</code> (este navegador). La <b>reproducción</b> se persiste de verdad en la parrilla del worker (<code>/grid/book</code>, clave <code>GRID_KEY</code>) — es lo que el canal honra.</div>
+</div>
+
+<header class="phead">
+  <span class="brand">Admira · <b>Playlists</b></span>
+  <span class="sub">conjuntos de contenidos → parrilla real del player</span>
+  <span class="spacer"></span>
+  <span class="count" id="hCount">—</span>
+</header>
+
+<div class="tools">
+  <button class="btnp" id="btnNew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Nueva playlist</button>
+  <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input id="q" type="search" placeholder="Buscar playlist por nombre…" autocomplete="off"></div>
+</div>
+
+<div class="grid" id="grid"><div class="empty">Cargando…</div></div>
+
+<footer>Contenido: <code>Stock de Pixeria</code> (/stock/list) · Reproducción: <code>parrilla /grid</code> que <code>canal.html</code> honra (gridWeave) · Players vivos: <code>/signage/screens</code> · <span id="stamp"></span></footer>
+
+<!-- ── MODAL EDITOR ─────────────────────────────────────────────────── -->
+<div class="modal" id="mEdit">
+  <div class="sheet">
+    <div class="sh-hd"><h3>Editar <b>playlist</b></h3><button class="x" data-close="mEdit">✕</button></div>
+    <div class="sh-bd">
+      <div class="fld"><label>Nombre</label><input id="edName" type="text" placeholder="p.ej. Escaparate mañana · promo verano" maxlength="80"></div>
+      <label style="font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px">Secuencia de contenidos (se reproduce en este orden)</label>
+      <div class="plItems" id="edItems"></div>
+      <button class="btnp" id="edAdd" style="margin-top:4px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Añadir contenido del Stock</button>
+    </div>
+    <div class="sh-ft">
+      <span class="hint" id="edHint"></span>
+      <span class="spacer" style="flex:1"></span>
+      <button class="abtn" data-close="mEdit">Cancelar</button>
+      <button class="btnp" id="edSave">Guardar playlist</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL PICKER DE STOCK ────────────────────────────────────────── -->
+<div class="modal" id="mPick">
+  <div class="sheet">
+    <div class="sh-hd"><h3>Contenido del <b>Stock de Pixeria</b></h3><button class="x" data-close="mPick">✕</button></div>
+    <div class="sh-bd">
+      <div class="pkTools">
+        <input id="pkQ" type="search" placeholder="Buscar por título o etiqueta…" autocomplete="off">
+        <select id="pkType"><option value="">Todo tipo</option><option value="image">Imagen</option><option value="video">Vídeo</option><option value="animation">Animación</option><option value="audio">Audio/música</option></select>
+        <select id="pkAud"><option value="">Toda audiencia</option><option value="m">Hombres</option><option value="f">Mujeres</option></select>
+        <select id="pkCat"><option value="">Toda categoría</option><option value="atraer">Atraer</option><option value="producto">Producto</option><option value="promo">Promo</option><option value="marca">Marca</option></select>
+      </div>
+      <div class="pkGrid" id="pkGrid"><div class="empty">Cargando Stock…</div></div>
+    </div>
+    <div class="sh-ft">
+      <span class="hint" id="pkHint">0 seleccionadas</span>
+      <span class="spacer" style="flex:1"></span>
+      <button class="abtn" data-close="mPick">Cancelar</button>
+      <button class="btnp" id="pkAddSel">Añadir a la playlist</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL ASIGNADOR ──────────────────────────────────────────────── -->
+<div class="modal" id="mAssign">
+  <div class="sheet">
+    <div class="sh-hd"><h3>Asignar <b id="asName">playlist</b> a un player</h3><button class="x" data-close="mAssign">✕</button></div>
+    <div class="sh-bd">
+      <p class="hint" style="margin:0 0 12px">La playlist se <b>programa como contenido propio</b> en la parrilla de la pantalla elegida (<code>/grid/book</code>). El canal (<code>canal.html</code>) inyecta esos creativos en el loop de emisión de esa pantalla en la franja activa. Elige a qué reproducir:</p>
+      <div class="tgOpts">
+        <span class="hint">Franja:</span>
+        <button class="segbtn on" id="segNow" data-scope="now">Emitir ahora (franja actual)</button>
+        <button class="segbtn" id="segAll" data-scope="all">Todo el día (todas las franjas)</button>
+      </div>
+      <div class="fld" id="keyFld" style="display:none"><label>Clave GRID_KEY (para escribir en la parrilla)</label><input id="asKey" type="password" placeholder="clave de escritura del grid" autocomplete="off"></div>
+      <div class="tgList" id="tgList"><div class="empty">Cargando players y pantallas…</div></div>
+    </div>
+    <div class="sh-ft">
+      <span class="hint" id="asHint"></span>
+      <span class="spacer" style="flex:1"></span>
+      <button class="abtn" data-close="mAssign">Cerrar</button>
+      <button class="btnp" id="asDo">Asignar y emitir</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+const GRID='https://api.admira.store';
+const gkGet=()=>{try{return localStorage.getItem('grid_key')||''}catch(_){return''}};
+const gkSet=v=>{try{localStorage.setItem('grid_key',v||'')}catch(_){}};
+const todayMadrid=()=>{try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch(_){return new Date().toISOString().slice(0,10)}};
+const uid=()=>'pl_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const ONLINE_S=600; // /signage/screens TTL ~10 min
+
+/* ── Almacén de playlists (localStorage, fuente de verdad de las plantillas) ── */
+let PLAYLISTS=(()=>{try{return JSON.parse(localStorage.getItem('adtv_playlists')||'[]')}catch(_){return[]}})();
+/* Asignaciones registradas localmente {plId:[{screen,name,scope,ts,booked}]}. La reproducción REAL
+   la lleva la parrilla del worker; esto es el espejo para pintar estado en las tarjetas. */
+let ASSIGN=(()=>{try{return JSON.parse(localStorage.getItem('adtv_pl_assign')||'{}')}catch(_){return{}}})();
+function savePl(){ try{localStorage.setItem('adtv_playlists',JSON.stringify(PLAYLISTS))}catch(_){} refreshExpert(); }
+function saveAsg(){ try{localStorage.setItem('adtv_pl_assign',JSON.stringify(ASSIGN))}catch(_){} refreshExpert(); }
+
+/* ── Catálogo (Stock) y destinos (players vivos + superficies de grid) ── */
+let STOCK=[], LIVE=[], SURF=[], LIVEMAP={};
+async function loadStock(){
+  try{ const d=await fetch(GRID+'/stock/list?limit=300',{cache:'no-store'}).then(r=>r.json());
+    STOCK=(d.items||[]).filter(x=>x&&x.url&&x.type!=='link'&&x.type!=='furni'); }catch(_){ STOCK=[]; }
+}
+async function loadTargets(){
+  try{ const d=await fetch(GRID+'/signage/screens',{cache:'no-store'}).then(r=>r.json()); LIVE=(d.screens||[]); }catch(_){ LIVE=[]; }
+  try{ const d=await fetch(GRID+'/grid/screens',{cache:'no-store'}).then(r=>r.json()); SURF=(d.screens||[]); }catch(_){ SURF=[]; }
+  LIVEMAP={}; LIVE.forEach(s=>{ LIVEMAP[s.screen]=s; });
+}
+function isLiveOnline(s){ return !!(s && (s.online || (s.age_seconds!=null && s.age_seconds<ONLINE_S))); }
+/* estado 🟢/🔴 de un target por su screen-id (player directo o superficie con pixerScreens vivos) */
+function screenState(screen){
+  if(LIVEMAP[screen]) return isLiveOnline(LIVEMAP[screen]);
+  const surf=SURF.find(x=>x.screen===screen);
+  if(surf && surf.pixerScreens) return surf.pixerScreens.some(p=>LIVEMAP[p]&&isLiveOnline(LIVEMAP[p]));
+  return false;
+}
+
+/* ── Tipo de creativo para la parrilla (idéntico a cms.html progPick) ── */
+function creativeType(t){ return (t==='image'||t==='animation'||t==='digital-twin')?'image':(t==='audio'||t==='music'||t==='locucion')?'audio':'video'; }
+function thumbHtml(it){
+  if(!it) return '🎬';
+  if(it.thumbnail) return '<img src="'+esc(it.thumbnail)+'" loading="lazy" alt="">';
+  const t=it.type;
+  if(t==='image'||t==='animation'||t==='digital-twin') return '<img src="'+esc(it.url)+'" loading="lazy" alt="">';
+  return t==='video'?'▶':(t==='audio'||t==='music'||t==='locucion')?'♪':'🖼';
+}
+
+/* ════════════════ RENDER TARJETAS ════════════════ */
+function render(){
+  const q=($('q').value||'').toLowerCase().trim();
+  const list=PLAYLISTS.filter(p=>!q||(p.name||'').toLowerCase().includes(q));
+  $('hCount').textContent=PLAYLISTS.length+' playlist'+(PLAYLISTS.length===1?'':'s');
+  const g=$('grid');
+  if(!PLAYLISTS.length){ g.innerHTML='<div class="empty"><b>Aún no hay playlists.</b><br>Crea un conjunto de contenidos y asígnalo a un player para que lo reproduzca.</div>'; return; }
+  if(!list.length){ g.innerHTML='<div class="empty">Ninguna playlist coincide con «'+esc(q)+'».</div>'; return; }
+  g.innerHTML=list.map(p=>{
+    const items=p.items||[];
+    const strip=items.slice(0,5).map(it=>'<div class="th">'+thumbHtml(it)+'</div>').join('')+(items.length>5?'<span class="more">+'+(items.length-5)+'</span>':'');
+    const asg=(ASSIGN[p.id]||[]);
+    const aHtml=asg.length? asg.map(a=>{ const on=screenState(a.screen);
+        return '<div class="aTag '+(on?'on':'off')+'"><span class="d"></span><span class="nm2" title="'+esc(a.screen)+'">'+esc(a.name||a.screen)+'</span><span class="pill">'+(a.scope==='all'?'todo el día':'ahora')+'</span><button class="cx" data-unasg="'+esc(p.id)+'|'+esc(a.screen)+'" title="Retirar de la parrilla">✕</button></div>';
+      }).join('')
+      : '<div class="aNone">— sin asignar a ningún player</div>';
+    return '<div class="card"><div class="top">'+
+      '<div class="plav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h10M4 11h10M4 15.5h6"/><path d="M16.5 12.4 21 15l-4.5 2.6z" fill="currentColor" stroke="none"/></svg></div>'+
+      '<div style="min-width:0"><div class="nm" title="'+esc(p.name)+'">'+esc(p.name||'(sin nombre)')+'</div><div class="meta">'+items.length+' pieza'+(items.length===1?'':'s')+' · '+asg.length+' asignación'+(asg.length===1?'':'es')+'</div></div>'+
+      '</div><div class="body">'+
+        '<div class="strip">'+(strip||'<span class="aNone">vacía</span>')+'</div>'+
+        '<div class="assigns">'+aHtml+'</div>'+
+        '<div class="acts"><button class="abtn" data-edit="'+esc(p.id)+'">✎ Editar</button><button class="abtn go" data-assign="'+esc(p.id)+'">📡 Asignar</button></div>'+
+      '</div></div>';
+  }).join('');
+}
+
+/* ════════════════ EDITOR ════════════════ */
+let editId=null, editDraft=null;
+function openEdit(id){
+  const p=id?PLAYLISTS.find(x=>x.id===id):null;
+  editId=id||null;
+  editDraft=p?JSON.parse(JSON.stringify(p)):{id:uid(),name:'',items:[]};
+  $('edName').value=editDraft.name||'';
+  $('edHint').textContent=''; $('edHint').className='hint';
+  renderEditItems();
+  openModal('mEdit'); setTimeout(()=>$('edName').focus(),60);
+}
+function renderEditItems(){
+  const host=$('edItems'), its=editDraft.items||[];
+  if(!its.length){ host.innerHTML='<div class="emptyRow">Sin piezas todavía · pulsa «Añadir contenido del Stock»</div>'; return; }
+  host.innerHTML=its.map((it,i)=>'<div class="plRow" data-i="'+i+'">'+
+    '<span class="idx">'+(i+1)+'</span>'+
+    '<div class="th">'+thumbHtml(it)+'</div>'+
+    '<div class="tx"><div class="tt" title="'+esc(it.title)+'">'+esc(it.title||it.id)+'</div><div class="ty">'+esc(it.type||'')+(it.motor?' · '+esc(it.motor):'')+'</div></div>'+
+    '<div class="mv"><button data-mv="'+i+'|-1" title="Subir">▲</button><button data-mv="'+i+'|1" title="Bajar">▼</button></div>'+
+    '<button class="rm" data-rm="'+i+'" title="Quitar">✕</button>'+
+  '</div>').join('');
+}
+$('edItems').addEventListener('click',e=>{
+  const mv=e.target.closest('[data-mv]'), rm=e.target.closest('[data-rm]');
+  if(mv){ const [i,dir]=mv.dataset.mv.split('|').map(Number); const j=i+dir; const a=editDraft.items;
+    if(j<0||j>=a.length) return; const t=a[i];a[i]=a[j];a[j]=t; renderEditItems(); }
+  else if(rm){ editDraft.items.splice(+rm.dataset.rm,1); renderEditItems(); }
+});
+$('edAdd').onclick=()=>openPicker();
+$('edSave').onclick=()=>{
+  const name=($('edName').value||'').trim();
+  if(!name){ $('edHint').textContent='Ponle un nombre a la playlist.'; $('edHint').className='hint err'; return; }
+  if(!(editDraft.items||[]).length){ $('edHint').textContent='Añade al menos una pieza.'; $('edHint').className='hint err'; return; }
+  editDraft.name=name; editDraft.updatedAt=Date.now();
+  const ix=PLAYLISTS.findIndex(x=>x.id===editDraft.id);
+  if(ix>=0) PLAYLISTS[ix]=editDraft; else PLAYLISTS.unshift(editDraft);
+  savePl(); closeModal('mEdit'); render();
+};
+
+/* ════════════════ PICKER DE STOCK ════════════════ */
+let pickSel=new Set();
+function openPicker(){ pickSel=new Set(); $('pkQ').value=''; $('pkType').value=''; $('pkAud').value=''; $('pkCat').value=''; renderPicker(); openModal('mPick'); setTimeout(()=>$('pkQ').focus(),60); }
+function renderPicker(){
+  const q=($('pkQ').value||'').toLowerCase().trim(), ty=$('pkType').value, au=$('pkAud').value, ca=$('pkCat').value;
+  const list=STOCK.filter(it=>{
+    if(ty){ if(ty==='audio'){ if(!['audio','music','locucion'].includes(it.type)) return false; } else if(it.type!==ty) return false; }
+    if(au && it.audience!==au) return false;
+    if(ca && it.category!==ca) return false;
+    if(q){ const hay=((it.title||'')+' '+((it.tags||[]).join(' '))).toLowerCase(); if(!hay.includes(q)) return false; }
+    return true;
+  }).slice(0,240);
+  const g=$('pkGrid');
+  if(!STOCK.length){ g.innerHTML='<div class="empty">No pude leer el Stock (/stock/list).</div>'; return; }
+  if(!list.length){ g.innerHTML='<div class="empty">Sin piezas para ese filtro.</div>'; return; }
+  g.innerHTML=list.map(it=>'<div class="pkItem'+(pickSel.has(it.id)?' sel':'')+'" data-pk="'+esc(it.id)+'">'+
+    '<span class="tg">'+esc(it.type==='music'||it.type==='locucion'?'audio':it.type)+'</span>'+
+    '<div class="th">'+thumbHtml(it)+'</div>'+
+    '<div class="cap" title="'+esc(it.title)+'">'+esc(it.title||it.id)+'</div>'+
+  '</div>').join('');
+  $('pkHint').textContent=pickSel.size+' seleccionada'+(pickSel.size===1?'':'s');
+}
+$('pkGrid').addEventListener('click',e=>{ const el=e.target.closest('[data-pk]'); if(!el) return; const id=el.dataset.pk;
+  if(pickSel.has(id)) pickSel.delete(id); else pickSel.add(id); renderPicker(); });
+['pkQ','pkType','pkAud','pkCat'].forEach(id=>$(id).addEventListener('input',renderPicker));
+$('pkAddSel').onclick=()=>{
+  const add=[...pickSel].map(id=>STOCK.find(x=>x.id===id)).filter(Boolean)
+    .map(it=>({id:it.id,title:it.title||it.id,type:it.type,url:it.url,thumbnail:it.thumbnail||null,category:it.category||null,audience:it.audience||null,motor:it.motor||null}));
+  editDraft.items=(editDraft.items||[]).concat(add);
+  closeModal('mPick'); renderEditItems();
+};
+
+/* ════════════════ ASIGNADOR ════════════════ */
+let asgId=null, asgScope='now', asgSel=new Set();
+function openAssign(id){
+  const p=PLAYLISTS.find(x=>x.id===id); if(!p) return;
+  asgId=id; asgScope='now'; asgSel=new Set();
+  $('asName').textContent=p.name||'playlist';
+  $('segNow').classList.add('on'); $('segAll').classList.remove('on');
+  $('asHint').textContent=''; $('asHint').className='hint';
+  $('keyFld').style.display=gkGet()?'none':'flex'; $('asKey').value='';
+  renderTargets();
+  openModal('mAssign');
+}
+function renderTargets(){
+  const host=$('tgList');
+  const already=new Set((ASSIGN[asgId]||[]).map(a=>a.screen));
+  let html='';
+  // Players VIVOS (la estrella): reproducen de verdad su canal
+  html+='<div class="grp-h">Players vivos (/signage/screens)</div>';
+  if(!LIVE.length){ html+='<div class="aNone" style="padding:4px 2px">— ningún player latiendo ahora mismo</div>'; }
+  else html+=LIVE.map(s=>{ const on=isLiveOnline(s); const already2=already.has(s.screen);
+      return '<div class="tgRow '+(on?'on':'off')+(asgSel.has(s.screen)?' sel':'')+'" data-tg="'+esc(s.screen)+'">'+
+        '<span class="d"></span><div class="tx"><div class="tt">'+esc(s.screen)+(already2?' · <span class="pill">ya asignada</span>':'')+'</div>'+
+        '<div class="ty">'+esc(s.role||'player')+(s.locName?' · '+esc(s.locName):'')+' · '+(on?('vivo · '+(s.age_seconds!=null?s.age_seconds+'s':'')):'sin señal')+'</div></div>'+
+        '<div class="chk">'+(asgSel.has(s.screen)?'✓':'')+'</div></div>';
+    }).join('');
+  // Superficies de parrilla (grid): pantallas lógicas con su franja
+  html+='<div class="grp-h">Superficies de parrilla (/grid/screens)</div>';
+  html+=SURF.map(s=>{ const on=screenState(s.screen); const px=(s.pixerScreens||[]);
+      return '<div class="tgRow '+(on?'on':'off')+(asgSel.has(s.screen)?' sel':'')+'" data-tg="'+esc(s.screen)+'">'+
+        '<span class="d"></span><div class="tx"><div class="tt">'+esc(s.name||s.screen)+(already.has(s.screen)?' · <span class="pill">ya asignada</span>':'')+'</div>'+
+        '<div class="ty">'+esc(s.screen)+' · circuito '+esc(s.circuit||'—')+' · '+(px.length?('player: '+esc(px.join(', '))):'sin player físico')+'</div></div>'+
+        '<div class="chk">'+(asgSel.has(s.screen)?'✓':'')+'</div></div>';
+    }).join('');
+  host.innerHTML=html;
+}
+$('tgList').addEventListener('click',e=>{ const el=e.target.closest('[data-tg]'); if(!el) return; const id=el.dataset.tg;
+  if(asgSel.has(id)) asgSel.delete(id); else asgSel.add(id); renderTargets(); });
+$('segNow').onclick=()=>{ asgScope='now'; $('segNow').classList.add('on'); $('segAll').classList.remove('on'); };
+$('segAll').onclick=()=>{ asgScope='all'; $('segAll').classList.add('on'); $('segNow').classList.remove('on'); };
+
+/* Programa la playlist en la parrilla de una pantalla (lo que canal.html honra). */
+async function bookToScreen(screen, playlist, scope, key){
+  const date=todayMadrid();
+  let day; try{ day=await fetch(GRID+'/grid/day?screen='+encodeURIComponent(screen)+'&date='+encodeURIComponent(date),{cache:'no-store'}).then(r=>r.json()); }
+  catch(_){ return {ok:0,fail:playlist.items.length,err:'no pude leer la parrilla'}; }
+  let bands=(day&&day.bands)||[];
+  if(!bands.length) return {ok:0,fail:playlist.items.length,err:'la pantalla no tiene franjas'};
+  const target = scope==='all' ? bands : (bands.filter(b=>b.isNow).length?bands.filter(b=>b.isNow):bands.slice(0,1));
+  let ok=0, fail=0;
+  for(const b of target){
+    let free=(b.free!=null?b.free:99);
+    for(const it of playlist.items){
+      if(free<=0) break;
+      const creative={ type:creativeType(it.type), url:it.url, name:it.title||it.id };
+      try{
+        const r=await fetch(GRID+'/grid/book',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+          key, screen, date, bandId:b.id, status:'own',
+          advertiser:'Playlist · '+playlist.name, title:it.title||it.id, category:it.category||null, creative })}).then(r=>r.json());
+        if(r&&r.ok){ ok++; free--; } else { fail++; if(r&&/key|clave|403|auth/i.test(JSON.stringify(r.error||''))) return {ok,fail,err:'GRID_KEY incorrecta'}; }
+      }catch(_){ fail++; }
+    }
+  }
+  return {ok,fail};
+}
+$('asDo').onclick=async()=>{
+  const p=PLAYLISTS.find(x=>x.id===asgId); if(!p) return;
+  if(!asgSel.size){ $('asHint').textContent='Elige al menos un destino.'; $('asHint').className='hint err'; return; }
+  let key=gkGet(); if(!key){ key=($('asKey').value||'').trim(); if(key) gkSet(key); }
+  if(!key){ $('asHint').textContent='Falta la clave GRID_KEY para escribir en la parrilla.'; $('asHint').className='hint err'; $('keyFld').style.display='flex'; return; }
+  $('asDo').disabled=true; $('asHint').className='hint'; $('asHint').textContent='Programando en la parrilla…';
+  let done=0, totOk=0, totFail=0;
+  for(const screen of asgSel){
+    const r=await bookToScreen(screen,p,asgScope,key);
+    totOk+=r.ok||0; totFail+=r.fail||0;
+    if(r.err==='GRID_KEY incorrecta'){ $('asHint').textContent='✗ '+r.err; $('asHint').className='hint err'; $('asDo').disabled=false; $('keyFld').style.display='flex'; return; }
+    if((r.ok||0)>0){
+      const nm=(LIVEMAP[screen]&&screen)||((SURF.find(s=>s.screen===screen)||{}).name)||screen;
+      const arr=ASSIGN[p.id]||(ASSIGN[p.id]=[]);
+      if(!arr.some(a=>a.screen===screen)) arr.push({screen,name:nm,scope:asgScope,ts:Date.now(),booked:r.ok});
+      else { const a=arr.find(a=>a.screen===screen); a.scope=asgScope; a.ts=Date.now(); a.booked=r.ok; }
+    }
+    done++;
+  }
+  saveAsg();
+  $('asHint').className='hint '+(totOk?'ok':'err');
+  $('asHint').textContent=(totOk?'✓ ':'✗ ')+totOk+' pieza(s) programada(s)'+(totFail?(' · '+totFail+' fallo(s)'):'')+' en '+done+' destino(s). El player las emite en su franja.';
+  $('asDo').disabled=false;
+  render();
+  await loadTargets();
+};
+
+/* Retira de la parrilla lo programado por esta playlist en una pantalla (unbook). */
+async function unassign(plId, screen){
+  const p=PLAYLISTS.find(x=>x.id===plId); const key=gkGet();
+  if(!key){ alert('Falta la clave GRID_KEY para retirar de la parrilla. Ábrela en «Asignar».'); return; }
+  const date=todayMadrid();
+  try{
+    const day=await fetch(GRID+'/grid/day?screen='+encodeURIComponent(screen)+'&date='+encodeURIComponent(date),{cache:'no-store'}).then(r=>r.json());
+    const adv='Playlist · '+((p&&p.name)||'');
+    const ids=[]; ((day&&day.bands)||[]).forEach(b=>{ (b.slots||[]).forEach(s=>{ if(s.kind==='own'&&s.bookingId&&(s.advertiser===adv||(p&&(p.items||[]).some(it=>it.title===s.title)))) ids.push(s.bookingId); }); });
+    for(const id of ids){ try{ await fetch(GRID+'/grid/unbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,screen,date,id})}); }catch(_){} }
+  }catch(_){}
+  if(ASSIGN[plId]) ASSIGN[plId]=ASSIGN[plId].filter(a=>a.screen!==screen);
+  if(ASSIGN[plId]&&!ASSIGN[plId].length) delete ASSIGN[plId];
+  saveAsg(); render(); loadTargets();
+}
+
+/* ════════════════ EVENTOS TARJETAS + GLOBAL ════════════════ */
+$('grid').addEventListener('click',e=>{
+  const ed=e.target.closest('[data-edit]'), as=e.target.closest('[data-assign]'), un=e.target.closest('[data-unasg]');
+  if(ed) openEdit(ed.dataset.edit);
+  else if(as) openAssign(as.dataset.assign);
+  else if(un){ const [pl,sc]=un.dataset.unasg.split('|'); if(confirm('¿Retirar la playlist de la parrilla de '+sc+'?')) unassign(pl,sc); }
+});
+$('btnNew').onclick=()=>openEdit(null);
+$('q').addEventListener('input',render);
+document.addEventListener('click',e=>{ const c=e.target.closest('[data-close]'); if(c) closeModal(c.dataset.close); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open')); });
+function openModal(id){ $(id).classList.add('open'); }
+function closeModal(id){ $(id).classList.remove('open'); }
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
+
+/* topRight «＋ Playlist» de la barra */
+function wireTopNew(){ const b=$('trNew'); if(b&&!b.__w){ b.__w=1; b.onclick=()=>openEdit(null); } }
+setTimeout(wireTopNew,300); setTimeout(wireTopNew,1200);
+
+/* ════════════════ PANEL EXPERTO + AVANZADO ════════════════ */
+function refreshExpert(){
+  try{
+    $('d-pl').textContent=PLAYLISTS.length;
+    $('d-pcs').textContent=PLAYLISTS.reduce((n,p)=>n+((p.items||[]).length),0);
+    $('d-asg').textContent=Object.values(ASSIGN).reduce((n,a)=>n+a.length,0);
+    $('d-key').textContent=gkGet()?'✓ guardada':'— no';
+    $('expJson').textContent=JSON.stringify({playlists:PLAYLISTS,assignments:ASSIGN},null,2);
+  }catch(_){}
+}
+$('expCopy').onclick=()=>{ try{ navigator.clipboard.writeText(JSON.stringify({playlists:PLAYLISTS,assignments:ASSIGN},null,2)); $('expCopy').textContent='✓ copiado'; setTimeout(()=>$('expCopy').textContent='Copiar JSON',1200);}catch(_){}};
+$('expImport').onclick=()=>{ const s=prompt('Pega el JSON {playlists:[...], assignments:{...}}'); if(!s) return;
+  try{ const o=JSON.parse(s); if(Array.isArray(o.playlists)) PLAYLISTS=o.playlists; if(o.assignments&&typeof o.assignments==='object') ASSIGN=o.assignments; savePl(); saveAsg(); render(); }
+  catch(_){ alert('JSON no válido'); } };
+$('advDeleteAll').onclick=()=>{ if(confirm('¿Borrar TODAS las playlists de este navegador? (no retira lo ya programado en la parrilla)')){ PLAYLISTS=[]; savePl(); render(); } };
+$('advClearAssigns').onclick=async()=>{
+  if(!confirm('¿Retirar de la parrilla TODAS las asignaciones de todas las playlists?')) return;
+  const key=gkGet(); if(!key){ alert('Falta la clave GRID_KEY (ábrela en «Asignar»).'); return; }
+  for(const plId of Object.keys(ASSIGN)){ for(const a of [...ASSIGN[plId]]){ await unassign(plId,a.screen); } }
+};
+$('advReload').onclick=async()=>{ await Promise.all([loadStock(),loadTargets()]); render(); };
+
+/* ════════════════ ARRANQUE ════════════════ */
+(async function init(){
+  refreshExpert();
+  render();
+  await Promise.all([loadStock(),loadTargets()]);
+  render();
+  $('stamp').textContent='actualizado '+new Date().toLocaleTimeString('es-ES');
+  // refresco periódico del estado de players (para 🟢/🔴 de las asignaciones)
+  setInterval(async()=>{ await loadTargets(); render(); },45000);
+})();
+</script>
+</body>
+</html>
