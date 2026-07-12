@@ -8,8 +8,8 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=20260712g">
-<link rel="stylesheet" href="../css/style.css?v=20260712g">
+<link rel="stylesheet" href="../css/admira-tokens.css?v=20260712h">
+<link rel="stylesheet" href="../css/style.css?v=20260712h">
 <style>
   /* ---- Solo lo específico del nivel BEST (globo Google en el hueco central) ---- */
   /* El globo gmp-map-3d ocupa el HUECO del marco: entre columnas y barras.
@@ -218,7 +218,7 @@
 
   <div id="attrib">Escena · ADcelerate by Admira · imágenes © Google</div>
 
-  <div id="hint">🕹 muévete con las flechas · ↑↓ avanzar · ←→ girar · Av/Re Pág (o Shift+↑↓) altura</div>
+  <div id="hint">🕹 muévete con las flechas · ↑↓ avanzar · ←→ girar · Av/Re Pág altura</div>
 
   <div id="loading"><div class="spin"></div>Cargando globo fotorrealista…</div>
 
@@ -470,7 +470,7 @@ function replayFrom(){
 const FLY_KEYS = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown'];
 const camState = { lat: PLAZA.lat, lng: PLAZA.lng, alt: CAM_KIOSK.center.altitude,
                    heading: CAM_KIOSK.heading, range: CAM_KIOSK.range, tilt: CAM_KIOSK.tilt };
-const freeFly = { active: false, keys: {}, shift: false, vF: 0, vYaw: 0, vAlt: 0, raf: 0, last: 0 };
+const freeFly = { active: false, keys: {}, vF: 0, vYaw: 0, vAlt: 0, raf: 0, last: 0 };
 let hintTimer = 0;
 
 function readCamState(){
@@ -514,13 +514,13 @@ function flyTick(now){
   const YAWA = 90, MAXYAW = 65;                            // giro (°/s)
   const VACC = Math.max(20, camState.alt * 0.8 + 30);     // altura (m/s)
   const MAXVY = Math.max(30, camState.range * 0.6);
-  const shiftAlt = freeFly.shift;
-  if (k.ArrowUp && !shiftAlt)   freeFly.vF = Math.min(MAXV, freeFly.vF + ACC * dt);
-  if (k.ArrowDown && !shiftAlt) freeFly.vF = Math.max(-MAXV, freeFly.vF - ACC * dt);
+  // altura SOLO con Av/Re Pág (⇧+↑↓ dejó de ser altura: en BETTER es el player del kiosko)
+  if (k.ArrowUp)   freeFly.vF = Math.min(MAXV, freeFly.vF + ACC * dt);
+  if (k.ArrowDown) freeFly.vF = Math.max(-MAXV, freeFly.vF - ACC * dt);
   if (k.ArrowLeft)  freeFly.vYaw = Math.max(-MAXYAW, freeFly.vYaw - YAWA * dt);
   if (k.ArrowRight) freeFly.vYaw = Math.min(MAXYAW, freeFly.vYaw + YAWA * dt);
-  if (k.PageUp   || (shiftAlt && k.ArrowUp))   freeFly.vAlt = Math.min(MAXVY, freeFly.vAlt + VACC * dt);
-  if (k.PageDown || (shiftAlt && k.ArrowDown)) freeFly.vAlt = Math.max(-MAXVY, freeFly.vAlt - VACC * dt);
+  if (k.PageUp)   freeFly.vAlt = Math.min(MAXVY, freeFly.vAlt + VACC * dt);
+  if (k.PageDown) freeFly.vAlt = Math.max(-MAXVY, freeFly.vAlt - VACC * dt);
   // inercia suave
   freeFly.vF *= Math.exp(-2.6 * dt); freeFly.vYaw *= Math.exp(-5 * dt); freeFly.vAlt *= Math.exp(-2.6 * dt);
   camState.heading = (camState.heading + freeFly.vYaw * dt + 360) % 360;
@@ -544,12 +544,12 @@ addEventListener('keydown', (e) => {
   const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
   e.preventDefault();
   if (!freeFly.active) enterFree(true);
-  freeFly.keys[e.key] = true; freeFly.shift = e.shiftKey;
+  freeFly.keys[e.key] = true;
   showHint();
 });
 addEventListener('keyup', (e) => {
   if (!FLY_KEYS.includes(e.key)) return;
-  freeFly.keys[e.key] = false; freeFly.shift = e.shiftKey;
+  freeFly.keys[e.key] = false;
 });
 
 /* ---- Kiosko News & Coffee NUESTRO como modelo 3D con pantalla-creatividad ----

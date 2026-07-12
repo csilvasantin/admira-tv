@@ -185,6 +185,45 @@ body { font-family: var(--admira-font-sans); color: var(--admira-text); backgrou
 }
 @keyframes rt-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
 @media (prefers-reduced-motion: reduce) { #rt-btn.rt-on .rt-dot { animation: none; } }
+/* ---- slider de PERSONAS (aforo de la multitud) · panel Dato telco ---- */
+.aforo-ctl { margin: 4px 0 10px; }
+#aforo-slider {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
+  border-radius: var(--admira-radius-pill); outline: none; margin: 2px 0 4px;
+  background: linear-gradient(90deg, rgba(80,200,255,.12), var(--spine-soft) 60%, rgba(80,200,255,.5));
+}
+#aforo-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #c8f2ff, var(--spine) 60%, #156a92 100%);
+  border: 1px solid var(--spine); box-shadow: 0 0 10px rgba(80, 200, 255, .6); cursor: pointer;
+}
+#aforo-slider::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--spine); border: 1px solid #c8f2ff;
+  box-shadow: 0 0 10px rgba(80, 200, 255, .6); cursor: pointer;
+}
+.aforo-mode { display: flex; align-items: center; gap: 6px;
+  font-family: var(--admira-font-mono); font-size: 10px; color: var(--admira-text-dim); }
+#aforo-src.manual { color: var(--admira-amber); font-weight: 700; }
+#aforo-reset {
+  font-size: 12px; line-height: 1; padding: 2px 8px; cursor: pointer;
+  border: 1px solid var(--admira-border); border-radius: var(--admira-radius-pill);
+  background: rgba(255, 255, 255, .05); color: var(--admira-text);
+  transition: all var(--admira-tx-fast);
+}
+#aforo-reset:hover { border-color: var(--spine); color: var(--spine); }
+#aforo-reset.hidden { display: none; }
+/* ---- toast del player del kiosko (⇧+flechas) ---- */
+#toast {
+  position: fixed; left: 50%; bottom: 64px; transform: translateX(-50%) translateY(8px);
+  z-index: 60; max-width: min(86vw, 560px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-family: var(--admira-font-mono); font-size: 12px; padding: 9px 18px;
+  border-radius: var(--admira-radius-pill); background: rgba(6, 20, 26, .9);
+  border: 1px solid var(--spine-line); color: var(--admira-text);
+  box-shadow: 0 0 24px -8px var(--spine);
+  opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 #hora-slider {
   -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
   border-radius: var(--admira-radius-pill); outline: none; margin: 4px 0 12px;

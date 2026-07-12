@@ -7,8 +7,8 @@
 <title>ADcelerate · Gemelo Plaça de la Vila de Gràcia — demo</title>
 <meta name="description" content="Demo ADcelerate: gemelo 3D de la Plaça de la Vila de Gràcia con kiosko reactivo a audiencias telco.">
 <link rel="icon" href="../../favicon.svg">
-<link rel="stylesheet" href="css/admira-tokens.css?v=20260712g">
-<link rel="stylesheet" href="css/style.css?v=20260712g">
+<link rel="stylesheet" href="css/admira-tokens.css?v=20260712h">
+<link rel="stylesheet" href="css/style.css?v=20260712h">
 <script type="importmap">
 {
   "imports": {
@@ -99,6 +99,10 @@
     <section class="panel" id="panel-live">
       <h2>Dato telco de la franja</h2>
       <div class="big-metric"><span id="aforo">—</span><span class="unit">personas</span></div>
+      <div class="aforo-ctl">
+        <input type="range" id="aforo-slider" min="0" max="800" step="5" value="0" aria-label="Aforo de la multitud (0–800 personas)">
+        <div class="aforo-mode"><span id="aforo-src">dato telco</span><button id="aforo-reset" class="hidden" title="Volver al dato telco">↺</button></div>
+      </div>
       <div id="mixbars"></div>
       <div class="kv"><span>Perfil dominante</span><b id="dominante">—</b></div>
       <div class="kv wx-adjust hidden" id="wx-adjust-row"><span>Aforo ajustado</span><b id="wx-adjust">—</b></div>
@@ -150,13 +154,15 @@
 
   <div id="badge-real" class="hidden">● Emisión real admira.tv</div>
 
-  <div id="hint">🕹 muévete con las flechas · ← → giran · Av/Re Pág (o Shift+↑↓) altura · arrastra para mirar</div>
+  <div id="hint">🕹 muévete con las flechas · ← → giran · Av/Re Pág altura · ⇧+flechas manejan el canal del kiosko · arrastra para mirar</div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
 
   <footer id="attrib">© OpenStreetMap contributors (ODbL) · Demo ADcelerate by Admira</footer>
 
   <div id="loading"><div class="spin"></div><p>Cargando gemelo…</p></div>
 </div>
 
-<script type="module" src="js/main.js?v=20260712g"></script>
+<script type="module" src="js/main.js?v=20260712h"></script>
 </body>
 </html>

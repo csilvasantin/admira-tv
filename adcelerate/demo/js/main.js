@@ -68,9 +68,14 @@ function fmtHora(h) {
   const q = Math.round((((h % 24) + 24) % 24) * 4) % 96;   // pasos de 15 min
   return String(Math.floor(q / 4)).padStart(2, '0') + ':' + String((q % 4) * 15).padStart(2, '0');
 }
+function fmtHoraSec(h) {                                   // HH:MM:SS (RT · 1:1)
+  const s = Math.floor((((h % 24) + 24) % 24) * 3600);
+  return String(Math.floor(s / 3600)).padStart(2, '0') + ':' +
+         String(Math.floor(s / 60) % 60).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+}
 const SIGNAGE_URL = 'https://api.admira.store/signage/now?screen=oohmedia';
 const SIGNAGE_POLL_MS = 30000;
-const MAX_CROWD = 600;
+const MAX_CROWD = 800;                // techo del slider de personas (y de las instancias)
 // Stock público del canal admira.tv (R2, CORS abierto) — el contenido REAL en antena
 const STOCK_URL = 'https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json';
 const STOCK_MAX_ITEMS = 14;
@@ -142,8 +147,11 @@ ground.position.y = -0.05;
 scene.add(ground);
 
 /* ============ CICLO SOLAR CONTINUO (hora 0–24 → luz/cielo/neones) ============ */
-// El reloj del gemelo manda: amanecer ~7h, ocaso ~20:30 (verano BCN aprox.)
-const SKY24 = [   // keyframes de cielo/niebla por hora
+// El reloj del gemelo manda. SUN.sr/ss = amanecer/ocaso REALES de la fecha cargada
+// (daily=sunrise,sunset de Open-Meteo); si no hay dato, defaults verano BCN aprox.
+const SUN_DEFAULT = { sr: 7, ss: 20.5 };
+const SUN = { ...SUN_DEFAULT };
+const SKY24 = [   // keyframes de cielo/niebla por hora (día nominal 7→20.5, ver skyRemap)
   [0, 0x07090f], [4.6, 0x07090f], [6.0, 0x1c2138], [7.2, 0xd9906b], [9, 0xe9e2d2],
   [13, 0xedf0ec], [17.5, 0xe9e2d2], [19.6, 0xf0a868], [20.8, 0x3a2c48],
   [21.8, 0x10131f], [23, 0x07090f], [24, 0x07090f],
@@ -167,13 +175,21 @@ function skyAt(h, out) {
   return out.setHex(SKY24[0][1]);
 }
 let forceNight = false;
+// Los keyframes SKY24 están en el «día nominal» (7→20.5). Con sunrise/sunset REALES
+// de la fecha, remapea la hora para que alba/ocaso del cielo caigan en su hora real.
+function skyRemap(h) {
+  const NR = 7, NS = 20.5;
+  if (h <= SUN.sr) return h * (NR / Math.max(0.1, SUN.sr));
+  if (h >= SUN.ss) return NS + (h - SUN.ss) * ((24 - NS) / Math.max(0.1, 24 - SUN.ss));
+  return NR + (h - SUN.sr) * ((NS - NR) / Math.max(0.1, SUN.ss - SUN.sr));
+}
 function applyEnvironment(h) {
-  const sr = 7, ss = 20.5;
+  const sr = SUN.sr, ss = SUN.ss;          // ciclo solar en la hora REAL de la fecha
   const dayT = (h - sr) / (ss - sr);
   const dl = (dayT > 0 && dayT < 1) ? Math.sin(Math.PI * dayT) : 0;   // luz diurna 0..1
-  // farolas/ventanas/neón: encendido en crepúsculo, pleno de noche
-  const lampF = Math.min(1, smooth01(19.8, 20.9, h) + smooth01(7.6, 6.4, h));
-  skyAt(h, _skyA);
+  // farolas/ventanas/neón: encendido en crepúsculo, pleno de noche (relativo al ocaso/alba)
+  const lampF = Math.min(1, smooth01(ss - 0.7, ss + 0.4, h) + smooth01(sr + 0.6, sr - 0.6, h));
+  skyAt(skyRemap(h), _skyA);
   scene.background.copy(_skyA);
   scene.fog.color.copy(_skyA);
   if (dl > 0.02) {                       // sol: recorre este→oeste, cálido cuando rasante
@@ -203,14 +219,17 @@ function applyEnvironment(h) {
 const WX_LAT = 41.4002, WX_LON = 2.1576;
 const WX_FORECAST = 'https://api.open-meteo.com/v1/forecast';
 const WX_ARCHIVE  = 'https://archive-api.open-meteo.com/v1/archive';
-const WX_QS = 'hourly=temperature_2m,weather_code,precipitation&timezone=Europe%2FMadrid';
+const WX_QS = 'hourly=temperature_2m,weather_code,precipitation&daily=sunrise,sunset&timezone=Europe%2FMadrid';
 
 const weather = {
   date: null, temp: null, code: null, precip: null,   // arrays horarios (24)
   endpoint: '', raw: null, ok: false, loading: false,
   current: null,                                       // RT: {temp, code, precip, time} de AHORA
+  sunrise: null, sunset: null,                         // horas decimales reales de la fecha
   msg: 'meteo real · Open-Meteo · Vila de Gràcia',
 };
+// "2026-07-12T06:24" → 6.4 (hora decimal)
+const isoHourOf = s => { const m = /T(\d\d):(\d\d)/.exec(s || ''); return m ? +m[1] + +m[2] / 60 : null; };
 // factores aplicados a la escena (lerp suave hacia el objetivo de la hora)
 const wxApplied = { cloud: 0, rain: 0, snow: 0, storm: 0, cold: 0, warm: 0 };
 let wxCrowdFactor = 1, wxFlash = 0, wxFlashNext = 3;
@@ -233,15 +252,18 @@ function wxTestOverride() {
   return { temp: Array(24).fill(w.t), code: Array(24).fill(w.c), precip: Array(24).fill(w.pr), test: p };
 }
 
-async function loadWeather(iso) {
+async function loadWeather(iso, jumpToSunrise = false) {
   weather.date = iso; weather.loading = true;
   onWeatherLoaded();                                   // pinta «cargando…»
   const test = wxTestOverride();
   if (test) {
     weather.temp = test.temp; weather.code = test.code; weather.precip = test.precip;
     weather.endpoint = 'test?wx=' + test.test; weather.raw = { test: test.test };
+    weather.sunrise = weather.sunset = null; Object.assign(SUN, SUN_DEFAULT);
     weather.ok = true; weather.loading = false; weather.msg = 'meteo TEST (' + test.test + ')';
-    return onWeatherLoaded();
+    onWeatherLoaded();
+    if (jumpToSunrise) jumpHourToSunrise();
+    return;
   }
   const base = daysFromToday(iso) < -90 ? WX_ARCHIVE : WX_FORECAST;
   const url = `${base}?latitude=${WX_LAT}&longitude=${WX_LON}&${WX_QS}&start_date=${iso}&end_date=${iso}`;
@@ -252,20 +274,38 @@ async function loadWeather(iso) {
     const h = j.hourly;
     if (!h || !h.temperature_2m || h.temperature_2m.length < 24 || h.temperature_2m[0] == null) throw new Error('sin datos');
     weather.temp = h.temperature_2m; weather.code = h.weather_code; weather.precip = h.precipitation || Array(24).fill(0);
+    // sunrise/sunset REALES de la fecha → ciclo solar del gemelo en su hora real
+    weather.sunrise = isoHourOf(j.daily?.sunrise?.[0]); weather.sunset = isoHourOf(j.daily?.sunset?.[0]);
+    SUN.sr = weather.sunrise ?? SUN_DEFAULT.sr; SUN.ss = weather.sunset ?? SUN_DEFAULT.ss;
     weather.raw = j; weather.ok = true; weather.msg = 'meteo real · Open-Meteo · Vila de Gràcia';
   } catch (e) {
     weather.ok = false; weather.temp = weather.code = weather.precip = null; weather.raw = null;
+    weather.sunrise = weather.sunset = null; Object.assign(SUN, SUN_DEFAULT);
     weather.msg = 'meteo no disponible (la escena sigue)';
   }
   weather.loading = false;
   onWeatherLoaded();
+  if (jumpToSunrise) jumpHourToSunrise();
+}
+// al cambiar de día a mano: el reloj arranca en el AMANECER real de esa fecha
+function jumpHourToSunrise() {
+  if (rt.active) return;                               // con RT activo manda RT
+  $('auto-toggle').checked = false; state.auto = false;
+  setHour(weather.sunrise ?? SUN.sr, false);
+  updateHoraUI();
 }
 
 /* ============ RT · TIEMPO REAL (hora + meteo de ahora, Europe/Madrid) ============ */
-// Al activar: calendario→HOY, reloj→hora real avanzando, chip/escena→current de Open-Meteo.
-// Se desactiva solo al tocar slider/fecha/franja o reactivar el AUTO.
-const rt = { active: false, timer: 0 };
+// Al activar: calendario→HOY, reloj→hora real ESTRICTA 1:1 (un segundo aquí = un
+// segundo en la plaza; el bucle animate copia rtHourNow() cada frame, sin lerp ni
+// aceleración), chip/escena→current de Open-Meteo. AUTO queda INCOMPATIBLE con RT.
+// Se desactiva solo al tocar slider/fecha/franja.
+const rt = { active: false, timer: 0, baseHour: 0, baseMs: 0 };
 let calSetDate = null;                                 // ref al setter del calendario (buildHUD)
+// reloj 1:1 anclado: baseHour (Madrid) + tiempo transcurrido real; re-ancla cada 30 s
+function rtHourNow() {
+  return rt.baseMs ? (rt.baseHour + (Date.now() - rt.baseMs) / 3600000) % 24 : madridNow();
+}
 // hora decimal actual en Europe/Madrid (independiente del huso del navegador)
 function madridNow() {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -289,12 +329,13 @@ async function fetchCurrentWx() {
     }
   } catch (e) { /* mantenemos el último current */ }
 }
-// sincroniza reloj/calendario/meteo con AHORA (se repite cada 30 s mientras RT esté activo)
+// sincroniza calendario/ancla/meteo con AHORA (se repite cada 30 s mientras RT esté activo)
 function rtSync() {
   if (!rt.active) return;
   const cal = $('cal-date');
   if (cal && calSetDate && cal.value !== isoToday()) calSetDate(isoToday());   // (a) calendario→HOY
-  setHour(madridNow(), false);                                                  // (b) reloj→hora real
+  rt.baseHour = madridNow(); rt.baseMs = Date.now();                            // (b) re-ancla el 1:1
+  state.hour = state.targetHour = rt.baseHour; hourDirty = true;
   updateHoraUI();
   fetchCurrentWx();                                                             // (c) meteo de ahora
 }
@@ -308,9 +349,9 @@ function setRT(on) {
     rtSync();
     if (!rt.timer) rt.timer = setInterval(rtSync, 30000);   // avanza en vivo (≤30 s)
   } else {
-    clearInterval(rt.timer); rt.timer = 0;
+    clearInterval(rt.timer); rt.timer = 0; rt.baseMs = 0;
     weather.current = null;
-    updateWxChip(); updateExpert(true);
+    updateHoraUI(); updateWxChip(); updateExpert(true);
   }
 }
 
@@ -329,11 +370,11 @@ function wxSample(h) {
     code: weather.code[t < 0.5 ? i0 : i1] ?? 0,
   };
 }
-// WMO → icono. De NOCHE (mismo criterio que el ciclo solar: sr=7, ss≈20.5) ningún
-// icono lleva sol ni «nube de mediodía» pelada: se le añade matiz nocturno 🌙.
+// WMO → icono. De NOCHE (mismo criterio que el ciclo solar: SUN.sr/ss reales de la
+// fecha) ningún icono lleva sol ni «nube de mediodía» pelada: matiz nocturno 🌙.
 function wxIcon(code, h) {
   if (code == null) return '·';
-  const night = (h < 7 || h > 20.6);
+  const night = (h < SUN.sr || h > SUN.ss + 0.1);
   if (code === 0) return night ? '🌙' : '☀️';                        // despejado
   if (code <= 2) return night ? '🌙☁️' : '🌤';                       // poco nuboso → luna + nube
   if (code === 3) return night ? '☁️🌙' : '☁️';                      // nublado → nube con matiz nocturno
@@ -653,6 +694,8 @@ const state = {
   realItem: null,
 };
 let hourDirty = true;
+// aforo manual (slider de personas): manual=false → sigue el dato telco de la curva
+const aforoCtl = { manual: false, value: 0 };
 function setHour(h, animar = true) {
   state.targetHour = ((h % 24) + 24) % 24;
   if (!animar) state.hour = state.targetHour;
@@ -716,15 +759,19 @@ function stockSkipError() {
   }
   nextStock();
 }
-function nextStock() {
+function nextStock() { playStock(stockIdx + 1); }
+let playSeq = 0;                          // token: descarta rechazos de play() obsoletos
+function playStock(i) {
   clearTimeout(stockTimer);
   if (!stockQueue.length) return;
-  stockIdx = (stockIdx + 1) % stockQueue.length;
+  const seq = ++playSeq;
+  stockIdx = ((i % stockQueue.length) + stockQueue.length) % stockQueue.length;
   stockItem = stockQueue[stockIdx];
   stockImg = null;
   if (stockItem.type === 'video') {
     vid.src = stockItem.url;
-    vid.play().catch(() => stockSkipError());
+    // un salto rápido del player ABORTA el play() anterior: eso no es un fallo de pieza
+    vid.play().catch(() => { if (seq === playSeq && vid.error) stockSkipError(); });
     stockTimer = setTimeout(nextStock, VIDEO_CAP_MS);
   } else {
     vid.pause(); vid.removeAttribute('src');
@@ -740,6 +787,29 @@ function nextStock() {
 function stockTitle() {
   if (!stockItem) return '';
   return String(stockItem.title || stockItem.id).replace(/&#39;/g, "'").slice(0, 60);
+}
+/* ---- mando del player del kiosko (⇧+flechas, como un player de admira.tv) ----
+   ⇧→ siguiente pieza · ⇧← anterior · ⇧↑ primera · ⇧↓ última. La altura del vuelo
+   pasó a Av/Re Pág en exclusiva para liberar ⇧+↑↓ (antes también era altura). */
+let toastTimer = 0;
+function showToast(msg) {
+  const t = $('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+function playerCmd(key) {
+  if (!stockQueue.length) { showToast('▶ canal sin loop activo (fallback)'); return; }
+  stockErrors = 0;                        // mando manual: borrón y cuenta nueva
+  if (!stockLive) { stockLive = true; updateFeedHUD(); }   // revive el loop si había caído
+  if (key === 'ArrowRight') playStock(stockIdx + 1);
+  else if (key === 'ArrowLeft') playStock(stockIdx - 1);
+  else if (key === 'ArrowUp') playStock(0);
+  else if (key === 'ArrowDown') playStock(stockQueue.length - 1);
+  else return;
+  showToast('▶ pieza ' + (stockIdx + 1) + '/' + stockQueue.length + ' · ' + stockTitle().slice(0, 44));
 }
 function realItemName() {
   const it = state.realItem;
@@ -1098,7 +1168,11 @@ function buildHUD() {
     b.onclick = () => { setRT(false); $('auto-toggle').checked = false; state.auto = false; setHour(FRANJA_H[i]); };
     fr.appendChild(b);
   });
-  $('auto-toggle').onchange = e => { if (e.target.checked) setRT(false); state.auto = e.target.checked; };
+  // AUTO es INCOMPATIBLE con RT: con RT activo no se puede armar (hay que apagar RT antes)
+  $('auto-toggle').onchange = e => {
+    if (e.target.checked && rt.active) { e.target.checked = false; showToast('RT activo · apaga RT para usar AUTO'); return; }
+    state.auto = e.target.checked;
+  };
   // botón RT: activa/desactiva el tiempo real
   const rtBtn = $('rt-btn');
   if (rtBtn) rtBtn.onclick = () => setRT(!rt.active);
@@ -1107,21 +1181,22 @@ function buildHUD() {
   const cal = $('cal-date');
   cal.min = '2020-01-01';
   cal.max = addDays(isoToday(), 15);                 // +15 d = límite de previsión
-  const setDate = iso => {
+  const setDate = (iso, jumpToSunrise = false) => {
     if (iso < cal.min) iso = cal.min;
     if (iso > cal.max) iso = cal.max;
     cal.value = iso;
     $('cal-today').disabled = (iso === isoToday());
     $('cal-prev').disabled = (iso <= cal.min);
     $('cal-next').disabled = (iso >= cal.max);
-    loadWeather(iso);
+    loadWeather(iso, jumpToSunrise);
   };
-  cal.onchange = () => { setRT(false); setDate(cal.value || isoToday()); };
-  $('cal-prev').onclick = () => { setRT(false); setDate(addDays(cal.value, -1)); };
-  $('cal-next').onclick = () => { setRT(false); setDate(addDays(cal.value, 1)); };
-  $('cal-today').onclick = () => { setRT(false); setDate(isoToday()); };
+  // cambio de día A MANO → el reloj arranca en el AMANECER real de esa fecha
+  cal.onchange = () => { setRT(false); setDate(cal.value || isoToday(), true); };
+  $('cal-prev').onclick = () => { setRT(false); setDate(addDays(cal.value, -1), true); };
+  $('cal-next').onclick = () => { setRT(false); setDate(addDays(cal.value, 1), true); };
+  $('cal-today').onclick = () => { setRT(false); setDate(isoToday(), true); };
   calSetDate = setDate;                              // RT usa este setter sin desactivarse
-  setDate(isoToday());                               // por defecto HOY
+  setDate(isoToday());                               // por defecto HOY (sin salto: arranca 18h)
 
   // slider de 24 h: arrastrar la hora mueve sol, luces y audiencia
   $('hora-slider').oninput = e => {
@@ -1144,6 +1219,14 @@ function buildHUD() {
       <div class="track"><div class="fill" id="bar-${p}" style="background:${PERFIL_CSS[p]}"></div></div>`;
     mb.appendChild(row);
   });
+  // slider de PERSONAS: por defecto sigue el dato telco; al moverlo entra en manual
+  const asl = $('aforo-slider');
+  if (asl) {
+    asl.max = String(MAX_CROWD);
+    asl.oninput = () => { aforoCtl.manual = true; aforoCtl.value = +asl.value; updateAforoUI(); };
+    $('aforo-reset').onclick = () => { aforoCtl.manual = false; updateAforoUI(); };
+    updateAforoUI();
+  }
   $('ficha-close').onclick = () => $('ficha').classList.add('hidden');
   document.querySelectorAll('#cammodes button').forEach(b => {
     b.onclick = () => setCamMode(b.dataset.mode);
@@ -1175,8 +1258,10 @@ function buildHUD() {
   $('ex-endpoints').innerHTML =
     `stock: ${STOCK_URL.replace('https://', '')}<br>` +
     `signage: ${SIGNAGE_URL.replace('https://', '')}<br>` +
-    `meteo: api.open-meteo.com/v1/forecast (+archive) · sin clave<br>` +
-    `geodatos: data/gracia-local.json (OSM/ODbL)`;
+    `meteo: api.open-meteo.com/v1/forecast (+archive, daily=sunrise,sunset) · sin clave<br>` +
+    `geodatos: data/gracia-local.json (OSM/ODbL)<br>` +
+    `atajos player: ⇧+→ siguiente · ⇧+← anterior · ⇧+↑ primera · ⇧+↓ última<br>` +
+    `vuelo: flechas avance/giro · Av/Re Pág altura (⇧+↑↓ ya no es altura)`;
 
   // móvil: abrir/cerrar laterales
   const toggleSide = which => {
@@ -1221,6 +1306,8 @@ function updateExpert(force = false) {
       mix: Object.fromEntries(PERFILES.map(p => [p, +state.cur.mix[p].toFixed(1)])),
       dominante: state.dominante,
     },
+    aforo_fuente: aforoCtl.manual ? 'MANUAL (slider ' + aforoCtl.value + ')' : 'dato telco (curva 24h)',
+    reloj: rt.active ? 'RT 1:1 (Europe/Madrid)' : (state.auto ? 'AUTO 90s' : 'manual'),
     fuente: 'simulado (patrón MITMA)',
   }, null, 1);
   $('ex-signage').textContent = JSON.stringify({
@@ -1233,6 +1320,7 @@ function updateExpert(force = false) {
     endpoint: weather.ok ? weather.endpoint.replace('https://', '') : weather.msg,
     hora: fmtHora(state.hour),
     rt: rt.active,
+    sol: weather.sunrise != null ? { amanecer: fmtHora(weather.sunrise), ocaso: fmtHora(weather.sunset) } : 'aprox (7:00/20:30)',
     current: weather.current ? { icono: wxIcon(weather.current.code, state.hour), code_wmo: weather.current.code, temp: +(+weather.current.temp).toFixed(1), precip_mm: +(+weather.current.precip).toFixed(2), time: weather.current.time } : null,
     ahora: s ? { icono: wxIcon(s.code, state.hour), code_wmo: s.code, temp: +s.temp.toFixed(1), precip_mm: +s.precip.toFixed(2) } : null,
     factores: { cloud: +wxApplied.cloud.toFixed(2), rain: +wxApplied.rain.toFixed(2), snow: +wxApplied.snow.toFixed(2), storm: +wxApplied.storm.toFixed(2) },
@@ -1240,8 +1328,18 @@ function updateExpert(force = false) {
     codes_24h: weather.ok ? weather.code : null,
   }, null, 1);
 }
+function updateAforoUI() {
+  const src = $('aforo-src'), rst = $('aforo-reset');
+  if (!src) return;
+  src.textContent = aforoCtl.manual ? 'aforo manual' : 'dato telco';
+  src.classList.toggle('manual', aforoCtl.manual);
+  rst.classList.toggle('hidden', !aforoCtl.manual);
+}
 function refreshHUD() {
   $('aforo').textContent = Math.round(state.cur.aforo);
+  // en automático el slider SIGUE al dato telco (posición viva)
+  const asl = $('aforo-slider');
+  if (asl && !aforoCtl.manual && document.activeElement !== asl) asl.value = String(Math.round(state.cur.aforo));
   const mx = state.cur.mix;
   const tot = PERFILES.reduce((a, p) => a + mx[p], 0) || 1;
   PERFILES.forEach(p => {
@@ -1260,7 +1358,7 @@ function refreshHUD() {
   }
 }
 function updateHoraUI() {
-  $('hora-lbl').textContent = fmtHora(state.hour);
+  $('hora-lbl').textContent = rt.active ? fmtHoraSec(state.hour) : fmtHora(state.hour);
   const sl = $('hora-slider');
   if (document.activeElement !== sl) sl.value = String(Math.round(state.hour * 4) / 4);
   document.querySelectorAll('#franjas button').forEach((b, i) =>
@@ -1465,7 +1563,7 @@ renderer.domElement.addEventListener('wheel', e => {
 /* ============== cámara: volado libre (defecto) · órbita · vuelo guiado ============== */
 let camMode = 'free';
 // yaw inicial mirando de (95,·,95) hacia el kiosko en el origen
-const fly = { yaw: Math.PI / 4, pitch: -0.24, vF: 0, vY: 0, vYaw: 0, keys: {}, shift: false };
+const fly = { yaw: Math.PI / 4, pitch: -0.24, vF: 0, vY: 0, vYaw: 0, keys: {} };
 
 function updateModeButtons() {
   document.querySelectorAll('#cammodes button').forEach(b =>
@@ -1491,13 +1589,15 @@ function setCamMode(m) {
   updateModeButtons();
 }
 
-// --- teclado del volado libre (↑↓ avance · ←→ giro · Av/Re Pág o Shift+↑↓ altura)
+// --- teclado del volado libre (↑↓ avance · ←→ giro · Av/Re Pág altura · ⇧+flechas = player)
 const FLY_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown'];
 // vista GOOD (2D): las flechas hacen PAN del plano cenital (la rueda ya hace zoom)
 const pan2D = { keys: {}, vx: 0, vz: 0 };
 addEventListener('keydown', e => {
   if (!FLY_KEYS.includes(e.key)) return;
   const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  // ⇧+flechas = mando del PLAYER del kiosko (exclusivo; la altura de vuelo es Av/Re Pág)
+  if (e.shiftKey && e.key.startsWith('Arrow')) { e.preventDefault(); playerCmd(e.key); return; }
   if (quality === 'good') {                  // 2D: flechas = pan del plano
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       pan2D.keys[e.key] = true; e.preventDefault();
@@ -1505,13 +1605,13 @@ addEventListener('keydown', e => {
     return;
   }
   if (camMode !== 'free' && camMode !== 'human') setCamMode('free');
-  fly.keys[e.key] = true; fly.shift = e.shiftKey;
+  fly.keys[e.key] = true;
   e.preventDefault();
 });
 addEventListener('keyup', e => {
   if (!FLY_KEYS.includes(e.key)) return;
   pan2D.keys[e.key] = false;
-  fly.keys[e.key] = false; fly.shift = e.shiftKey;
+  fly.keys[e.key] = false;
 });
 // PAN del plano cenital: ← → mueven este/oeste, ↑ ↓ norte/sur (norte = −z). Paso escalado
 // por el zoom (más zoom → paso en pantalla constante), con inercia y límites de la maqueta.
@@ -1533,13 +1633,13 @@ function tickFree(dt) {
   _tickFreeCalls++;
   const k = fly.keys;
   const ACC = 55, MAXV = 36, YAWA = 3.4, MAXYAW = 1.5, VACC = 38, MAXVY = 20;
-  const alturaConShift = fly.shift;
-  if (k.ArrowUp && !alturaConShift)   fly.vF = Math.min(MAXV, fly.vF + ACC * dt);
-  if (k.ArrowDown && !alturaConShift) fly.vF = Math.max(-MAXV, fly.vF - ACC * dt);
+  // altura SOLO con Av/Re Pág: ⇧+↑↓ quedó reservado al player del kiosko
+  if (k.ArrowUp)   fly.vF = Math.min(MAXV, fly.vF + ACC * dt);
+  if (k.ArrowDown) fly.vF = Math.max(-MAXV, fly.vF - ACC * dt);
   if (k.ArrowLeft)  fly.vYaw = Math.min(MAXYAW, fly.vYaw + YAWA * dt);
   if (k.ArrowRight) fly.vYaw = Math.max(-MAXYAW, fly.vYaw - YAWA * dt);
-  if (k.PageUp   || (alturaConShift && k.ArrowUp))   fly.vY = Math.min(MAXVY, fly.vY + VACC * dt);
-  if (k.PageDown || (alturaConShift && k.ArrowDown)) fly.vY = Math.max(-MAXVY, fly.vY - VACC * dt);
+  if (k.PageUp)   fly.vY = Math.min(MAXVY, fly.vY + VACC * dt);
+  if (k.PageDown) fly.vY = Math.max(-MAXVY, fly.vY - VACC * dt);
   // inercia ligera
   fly.vF *= Math.exp(-2.4 * dt);
   fly.vY *= Math.exp(-2.4 * dt);
@@ -1664,8 +1764,12 @@ function animate(now) {
   const dt = Math.min(0.1, (now - lastT) / 1000);
   lastT = now;
 
-  // RELOJ 24h: AUTO recorre el día completo en DAY_SECONDS; manual tiende suave al objetivo
-  if (state.auto) {
+  // RELOJ 24h: RT = 1:1 estricto (segundo a segundo, sin lerp ni aceleración);
+  // AUTO recorre el día completo en DAY_SECONDS; manual tiende suave al objetivo
+  if (rt.active) {
+    state.hour = state.targetHour = rtHourNow();
+    hourDirty = true;
+  } else if (state.auto) {
     state.targetHour = (state.targetHour + dt * 24 / DAY_SECONDS) % 24;
     state.hour = state.targetHour;
     hourDirty = true;
@@ -1696,11 +1800,13 @@ function animate(now) {
   applyWeatherToScene();                 // overlay meteo sobre el ciclo solar
   updatePrecip(dt);                      // partículas de lluvia/nieve
 
-  // interpolación aforo/mix hacia la CURVA 24h en la hora actual
+  // interpolación aforo/mix hacia la CURVA 24h (o el aforo MANUAL del slider);
+  // el lerp se mantiene → spawns/despawns suaves de la multitud
   const objetivo = audienciaAt(state.hour);
+  const aforoObjetivo = aforoCtl.manual ? aforoCtl.value : objetivo.aforo;
   const k = 1 - Math.exp(-dt * 1.6);
-  let moving = Math.abs(state.cur.aforo - objetivo.aforo) > 0.6;
-  state.cur.aforo = lerp(state.cur.aforo, objetivo.aforo, k);
+  let moving = Math.abs(state.cur.aforo - aforoObjetivo) > 0.6;
+  state.cur.aforo = lerp(state.cur.aforo, aforoObjetivo, k);
   for (const p of PERFILES) {
     if (Math.abs(state.cur.mix[p] - objetivo.mix[p]) > 0.25) moving = true;
     state.cur.mix[p] = lerp(state.cur.mix[p], objetivo.mix[p], k);
@@ -1767,7 +1873,9 @@ window.__dbg = {
   get fps() { return fpsEMA; },
   setHour, applyEnvironment, audienciaAt, fmtHora,
   weather, wxApplied, loadWeather, wxSample, wxIcon, enterHuman, HUMAN,
-  setRT, rtSync, madridNow, get rt() { return rt; },
+  setRT, rtSync, madridNow, rtHourNow, fmtHoraSec, get rt() { return rt; },
+  playStock, playerCmd, showToast, jumpHourToSunrise, SUN, aforoCtl,
+  get stockIdx() { return stockIdx; }, get stockQueue() { return stockQueue; }, get stockLive() { return stockLive; },
   get wxCrowdFactor() { return wxCrowdFactor; },
 };
 window.__dbgEvalCount = (window.__dbgEvalCount || 0) + 1;
