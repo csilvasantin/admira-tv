@@ -868,6 +868,7 @@ function chPlay(i){
   const seq = ++chSeq;
   chIdx = ((i % chQueue.length) + chQueue.length) % chQueue.length;
   chItem = chQueue[chIdx]; chImg = null;
+  if (chItem.source === 'grid') chTag('parrilla 50/50 · ' + (chIdx + 1) + '/' + chQueue.length + ' · ' + chTitle());
   if (chItem.type === 'video'){
     chVid.src = chItem.url;
     chVid.play().catch(() => { if (seq === chSeq && chVid.error) chSkip(); });
