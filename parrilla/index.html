@@ -26,10 +26,10 @@
 </head>
 <body>
   <script>
-    window.ADMIRA_VERSION='v.13.07.2026.r10';
+    window.ADMIRA_VERSION='v.13.07.2026.r11';
     window.ADMIRA_NAV={active:'parrilla',title:'Parrilla municipal 50/50',topRight:'<a class="admtR" href="/playlists/">Playlists</a><a class="admtR admtR-cta" href="/canal.html" target="_blank" rel="noopener">Ver canal ↗</a>'};
   </script>
-  <script src="/admira-nav.js?v=13.07.2026.r10"></script>
+  <script src="/admira-nav.js?v=13.07.2026.r11"></script>
 
   <main class="page">
     <section class="hero">
@@ -83,7 +83,7 @@
   <script>
   (function(){
     'use strict';
-    const API='https://api.admira.store', PLAYLIST_ID='municipal-50-50', STORE='adtv_parrilla_municipal_v1';
+    const API='https://api.admira.store',PLAYLIST_ID='municipal-50-50',STORE='adtv_parrilla_municipal_v1',TITLE_STORE='adtv_parrilla_titles_v1';
     const defaults=[
       {id:'logo',title:'Ajuntament · Sempre amb tu',sub:'Identidad atemporal',lane:'municipal',seconds:10,asset:'/parrilla/assets/logo.svg'},
       {id:'ad-a',title:'Publicidad local A',sub:'Campaña activa · comercio de proximidad',lane:'publicidad',seconds:10,asset:'/parrilla/assets/publicidad.svg'},
@@ -94,11 +94,15 @@
       {id:'deportes',title:'Deportes',sub:'Agenda y resultados locales',lane:'municipal',seconds:10,asset:'/parrilla/assets/deportes.svg'},
       {id:'ad-d',title:'Publicidad local D',sub:'Campaña activa · restauración y ocio',lane:'publicidad',seconds:10,asset:'/parrilla/assets/publicidad.svg'}
     ];
-    let items=load(),dragId=null,current=0,editingTitle=-1,playing=false,progressFrame=0,itemStartedAt=0,pausedMs=0,previewedIndex=-1,liveByPosition={};
+    let items=load(),titleOverrides=loadTitleOverrides(),dragId=null,current=0,editingTitle=-1,playing=false,progressFrame=0,itemStartedAt=0,pausedMs=0,previewedIndex=-1,liveByPosition={};
     const $=id=>document.getElementById(id), esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     function load(){try{const x=JSON.parse(localStorage.getItem(STORE)||'null');if(Array.isArray(x)&&x.length===8)return x;}catch(_){}return JSON.parse(JSON.stringify(defaults));}
+    function loadTitleOverrides(){try{const x=JSON.parse(localStorage.getItem(TITLE_STORE)||'{}');return x&&typeof x==='object'&&!Array.isArray(x)?x:{}}catch(_){return{}}}
+    function saveTitleOverrides(){try{localStorage.setItem(TITLE_STORE,JSON.stringify(titleOverrides));return true}catch(_){return false}}
     function save(){try{localStorage.setItem(STORE,JSON.stringify(items));return true}catch(_){return false}}
-    function resolvedTitle(i){const it=items[i],live=liveByPosition[i];return String(it.titleOverride||(live&&live.title)||it.title||'Contenido')}
+    function contentKey(i){const it=items[i],live=liveByPosition[i];return live&&live.stockId?'stock:'+live.stockId:'item:'+it.id}
+    function activeTitleOverride(i){return String(titleOverrides[contentKey(i)]||'').trim()}
+    function resolvedTitle(i){const it=items[i],live=liveByPosition[i];return String(activeTitleOverride(i)||(live&&live.title)||it.title||'Contenido')}
     function render(){
       $('rundown').innerHTML=items.map((it,i)=>{const live=liveByPosition[i],title=resolvedTitle(i),sub=live&&live.stockId?('Pixeria #'+(live.num||live.stockId)+' · #'+live.sourceTag):it.sub,asset=live&&live.asset||it.asset,type=live&&live.assetType||'image',thumb=type==='video'?'<video data-slot-video data-src="'+esc(asset)+'" muted playsinline preload="metadata"></video><span class="slot-thumb-play">▶</span>':'<img data-slot-image src="'+esc(asset)+'" alt="">',titleControl=editingTitle===i?'<input class="slot-title-input" data-title-index="'+i+'" value="'+esc(title)+'" maxlength="120" aria-label="Editar título del contenido '+(i+1)+'">':'<span class="slot-title-row"><strong>'+esc(title)+'</strong><button class="slot-title-edit" type="button" data-edit-title="'+i+'" title="Editar título" aria-label="Editar título de '+esc(title)+'">✎</button></span>';return '<div class="slot'+(live&&live.stockId?' live-pixeria':'')+(i===current?' selected':'')+'" draggable="true" data-id="'+esc(it.id)+'" data-index="'+i+'" data-lane="'+it.lane+'"><svg class="slot-progress" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect class="slot-progress-track" x="1.5" y="1.5" width="97" height="97" rx="3" pathLength="100"></rect><rect class="slot-progress-value" x="1.5" y="1.5" width="97" height="97" rx="3" pathLength="100"></rect></svg><span class="grip" aria-hidden="true">⠿</span><span class="num">'+(i+1)+'</span><button class="slot-thumb" type="button" data-preview-index="'+i+'" aria-label="Abrir previo de '+esc(title)+'">'+thumb+'</button><span class="slot-copy">'+titleControl+'<small>'+esc(sub)+'</small></span><span class="lane">'+(it.lane==='municipal'?'Ayuntamiento':'Publicidad')+'</span><label class="duration"><input type="number" min="5" max="60" step="5" value="'+it.seconds+'" data-duration="'+esc(it.id)+'" aria-label="Duración de '+esc(title)+'"> s</label><span class="moves"><button type="button" data-move="'+esc(it.id)+'|-1" aria-label="Subir">▲</button><button type="button" data-move="'+esc(it.id)+'|1" aria-label="Bajar">▼</button></span></div>'}).join('');
       hydrateSlotThumbs();bindDrag();updateBalance();current=Math.min(current,items.length-1);preview();syncSlotProgress();if(editingTitle>=0)requestAnimationFrame(()=>{const input=document.querySelector('[data-title-index="'+editingTitle+'"]');if(input){input.focus();input.select()}});
@@ -144,7 +148,7 @@
       $('assignBtn').disabled=true;feedback('Preparando '+targets.length+' destino(s)…');let booked=0;
       try{
         for(const target of targets){
-          const rundown=items.map((it,i)=>{const title=resolvedTitle(i);return{title,titleOverride:it.titleOverride||null,lane:it.lane,advertiser:it.lane==='municipal'?'Ajuntament':'Publicidad local',creative:{type:'image',url:new URL(it.asset,location.origin).href,name:title}}});
+          const rundown=items.map((it,i)=>{const title=resolvedTitle(i),titleOverride=activeTitleOverride(i),titleOverrideFor=titleOverride?contentKey(i):null;return{title,titleOverride:titleOverride||null,titleOverrideFor,lane:it.lane,advertiser:it.lane==='municipal'?'Ajuntament':'Publicidad local',creative:{type:'image',url:new URL(it.asset,location.origin).href,name:title}}});
           const result=await post('/grid/rundown',{key,screen:target.screen,date:madridDate(),name:target.name,circuit:target.circuit,pixerScreens:target.pixerScreens||[],playlistId:PLAYLIST_ID,items:rundown});booked+=result.passes||0;
         }
         const sync=await post('/grid/tag-sync',{key});
@@ -152,7 +156,7 @@
       }catch(e){feedback('✗ No se pudo completar: '+String(e.message||e),false)}finally{updateBalance()}
     }
     function feedback(msg,ok){$('feedback').textContent=msg;$('feedback').className='feedback'+(ok===true?' ok':ok===false?' err':'')}
-    function commitTitleInput(input){if(!input||input.dataset.done==='1')return;input.dataset.done='1';const i=+input.dataset.titleIndex,it=items[i];if(!it)return;const title=input.value.trim();if(title)it.titleOverride=title;else delete it.titleOverride;editingTitle=-1;save();current=i;render();feedback(title?'✓ Título actualizado. Pulsa «Asignar» para enviarlo a los destinos.':'✓ Título original restaurado. Pulsa «Asignar» para enviarlo a los destinos.',true)}
+    function commitTitleInput(input){if(!input||input.dataset.done==='1')return;input.dataset.done='1';const i=+input.dataset.titleIndex,it=items[i];if(!it)return;const title=input.value.trim(),key=contentKey(i);if(title)titleOverrides[key]=title;else delete titleOverrides[key];delete it.titleOverride;delete it.titleOverrideFor;editingTitle=-1;save();saveTitleOverrides();current=i;render();feedback(title?'✓ Título actualizado para este contenido. Pulsa «Asignar» para enviarlo a los destinos.':'✓ Título original restaurado. Pulsa «Asignar» para enviarlo a los destinos.',true)}
     function showImports(d){for(const x of (d&&d.targets)||[]){const lane=x.lane||(String(x.tag||'').toLowerCase().includes('ayuntamiento')?'municipal':'publicidad'),el=x.screen==='xtore-escaparate-pn1w'?$('imports-valencia'):x.screen==='sim-gracia-kiosko'?$('imports-gracia-'+lane):null;if(el)el.textContent=x.matched?(x.matched+' contenido'+(x.matched===1?'':'s')+' de Pixeria'):'ningún contenido etiquetado'}}
     function applyLiveRundown(day){const band=(day&&day.bands||[]).find(x=>x.isNow)||(day&&day.bands||[])[0],tagged=((band&&band.slots)||[]).filter(slot=>slot.playlistId===PLAYLIST_ID&&slot.stockId&&slot.sourceTag).sort((a,b)=>(+a.position||0)-(+b.position||0)),next={};for(const lane of ['municipal','publicidad']){const positions=items.map((it,i)=>it.lane===lane?i:-1).filter(i=>i>=0),matches=tagged.filter(slot=>slot.lane===lane);matches.forEach((slot,i)=>{if(positions[i]==null)return;next[positions[i]]={title:slot.title,asset:slot.creative&&slot.creative.url,assetType:slot.creative&&slot.creative.type||'image',stockId:slot.stockId,sourceTag:slot.sourceTag,lane,num:null}})}liveByPosition=next}
     async function liveStatus(){try{const [d,sync,day]=await Promise.all([fetch(API+'/signage/screens',{cache:'no-store'}).then(r=>r.json()),fetch(API+'/grid/tag-sync?_='+Date.now(),{cache:'no-store'}).then(r=>r.json()),fetch(API+'/grid/day?screen=sim-gracia-kiosko&_='+Date.now(),{cache:'no-store'}).then(r=>r.json())]),s=(d.screens||[]).find(x=>x.screen==='xtore-escaparate-pn1w'),el=$('status-valencia');el.textContent=s&&s.online?'● online':'○ sin señal';el.className='status'+(s&&s.online?' on':'');showImports(sync);applyLiveRundown(day);for(const t of sync.targets||[])for(const x of t.items||[]){for(const p of Object.values(liveByPosition))if(p.stockId===x.id)p.num=x.num}if(editingTitle<0)render()}catch(_){$('status-valencia').textContent='sin datos'}}
