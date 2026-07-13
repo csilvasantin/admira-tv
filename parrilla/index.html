@@ -26,21 +26,21 @@
 </head>
 <body>
   <script>
-    window.ADMIRA_VERSION='v.13.07.2026.r11';
+    window.ADMIRA_VERSION='v.13.07.2026.r12';
     window.ADMIRA_NAV={active:'parrilla',title:'Parrilla municipal 50/50',topRight:'<a class="admtR" href="/playlists/">Playlists</a><a class="admtR admtR-cta" href="/canal.html" target="_blank" rel="noopener">Ver canal ↗</a>'};
   </script>
-  <script src="/admira-nav.js?v=13.07.2026.r11"></script>
+  <script src="/admira-nav.js?v=13.07.2026.r12"></script>
 
   <main class="page">
     <section class="hero">
       <div class="intro">
         <p class="eyebrow">Admira.tv · programación de proximidad</p>
         <h1>Parrilla municipal 50/50</h1>
-        <p>Ordena el bucle arrastrando. La mitad del tiempo pertenece al Ayuntamiento y la otra mitad a publicidad local. El orden guardado es el orden que reciben los players.</p>
+        <p>Canal Kiosk Plaça Vila</p>
       </div>
       <div class="balance" id="balance">
         <div class="balance-top"><strong id="ratio">50 / 50</strong><span id="loopTime">80 s por vuelta</span></div>
-        <div class="ratio-slider"><button class="ratio-adjust" id="ratioLess" type="button" title="Más publicidad" aria-label="Reducir contenidos del Ayuntamiento">−</button><div class="ratio-track"><div class="bar"><span class="mun" id="munBar"></span><span class="ad" id="adBar"></span></div><input id="ratioSlider" type="range" min="1" max="7" step="1" value="4" aria-label="Reparto: cantidad de contenidos del Ayuntamiento frente a anuncios"></div><button class="ratio-adjust" id="ratioMore" type="button" title="Más Ayuntamiento" aria-label="Aumentar contenidos del Ayuntamiento">+</button></div>
+        <div class="ratio-slider"><button class="ratio-adjust" id="ratioLess" type="button" title="Más publicidad" aria-label="Reducir contenidos del Ayuntamiento">−</button><div class="ratio-track"><div class="bar"><span class="mun" id="munBar"></span><span class="ad" id="adBar"></span></div><input id="ratioSlider" type="range" min="1" max="9" step="1" value="5" aria-label="Reparto: cantidad de contenidos del Ayuntamiento frente a anuncios"></div><button class="ratio-adjust" id="ratioMore" type="button" title="Más Ayuntamiento" aria-label="Aumentar contenidos del Ayuntamiento">+</button></div>
         <div class="legend"><b id="munLabel">Ayuntamiento 40 s</b><b id="adLabel">Publicidad 40 s</b></div>
         <div class="balance-msg" id="balanceMsg">Arrastra para cambiar la cantidad de contenidos y anuncios.</div>
       </div>
@@ -53,7 +53,7 @@
       </div>
       <aside class="preview">
         <div class="section-head"><h2>Vista previa</h2><span id="previewState">detenida</span></div>
-        <div class="preview-screen"><img id="previewImage" src="/parrilla/assets/logo.svg" alt="Vista previa del contenido"><video id="previewVideo" muted playsinline controls loop hidden></video><span class="counter" id="previewCounter">1 / 8</span></div>
+        <div class="preview-screen"><img id="previewImage" src="/parrilla/assets/logo.svg" alt="Vista previa del contenido"><video id="previewVideo" muted playsinline controls loop hidden></video><span class="counter" id="previewCounter">1 / 10</span></div>
         <div class="preview-caption"><strong id="previewTitle">Ajuntament · Sempre amb tu</strong><span id="previewLane">Ayuntamiento · atemporal</span></div>
         <div class="preview-controls"><button class="btn" id="prevBtn" type="button">←</button><button class="btn" id="playBtn" type="button">▶ Reproducir</button><button class="btn" id="openPreviewBtn" type="button">⛶ Ampliar</button><button class="btn" id="nextBtn" type="button">→</button></div>
       </aside>
@@ -83,7 +83,7 @@
   <script>
   (function(){
     'use strict';
-    const API='https://api.admira.store',PLAYLIST_ID='municipal-50-50',STORE='adtv_parrilla_municipal_v1',TITLE_STORE='adtv_parrilla_titles_v1';
+    const API='https://api.admira.store',PLAYLIST_ID='municipal-50-50',STORE='adtv_parrilla_municipal_v1',TITLE_STORE='adtv_parrilla_titles_v1',SLOT_COUNT=10;
     const defaults=[
       {id:'logo',title:'Ajuntament · Sempre amb tu',sub:'Identidad atemporal',lane:'municipal',seconds:10,asset:'/parrilla/assets/logo.svg'},
       {id:'ad-a',title:'Publicidad local A',sub:'Campaña activa · comercio de proximidad',lane:'publicidad',seconds:10,asset:'/parrilla/assets/publicidad.svg'},
@@ -92,11 +92,13 @@
       {id:'tiempo',title:'El tiempo',sub:'Previsión local actualizada',lane:'municipal',seconds:10,asset:'/parrilla/assets/tiempo.svg'},
       {id:'ad-c',title:'Publicidad local C',sub:'Campaña activa · servicios',lane:'publicidad',seconds:10,asset:'/parrilla/assets/publicidad.svg'},
       {id:'deportes',title:'Deportes',sub:'Agenda y resultados locales',lane:'municipal',seconds:10,asset:'/parrilla/assets/deportes.svg'},
-      {id:'ad-d',title:'Publicidad local D',sub:'Campaña activa · restauración y ocio',lane:'publicidad',seconds:10,asset:'/parrilla/assets/publicidad.svg'}
+      {id:'ad-d',title:'Publicidad local D',sub:'Campaña activa · restauración y ocio',lane:'publicidad',seconds:10,asset:'/parrilla/assets/publicidad.svg'},
+      {id:'agenda',title:'Agenda municipal',sub:'Actividades y servicios de proximidad',lane:'municipal',seconds:10,asset:'/parrilla/assets/sabias.svg'},
+      {id:'ad-e',title:'Publicidad local E',sub:'Campaña activa · comercio local',lane:'publicidad',seconds:10,asset:'/parrilla/assets/publicidad.svg'}
     ];
     let items=load(),titleOverrides=loadTitleOverrides(),dragId=null,current=0,editingTitle=-1,playing=false,progressFrame=0,itemStartedAt=0,pausedMs=0,previewedIndex=-1,liveByPosition={};
     const $=id=>document.getElementById(id), esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    function load(){try{const x=JSON.parse(localStorage.getItem(STORE)||'null');if(Array.isArray(x)&&x.length===8)return x;}catch(_){}return JSON.parse(JSON.stringify(defaults));}
+    function load(){try{const x=JSON.parse(localStorage.getItem(STORE)||'null');if(Array.isArray(x)&&x.length===SLOT_COUNT)return x;if(Array.isArray(x)&&x.length===8){const migrated=x.concat(JSON.parse(JSON.stringify(defaults.slice(8))));localStorage.setItem(STORE,JSON.stringify(migrated));return migrated}}catch(_){}return JSON.parse(JSON.stringify(defaults));}
     function loadTitleOverrides(){try{const x=JSON.parse(localStorage.getItem(TITLE_STORE)||'{}');return x&&typeof x==='object'&&!Array.isArray(x)?x:{}}catch(_){return{}}}
     function saveTitleOverrides(){try{localStorage.setItem(TITLE_STORE,JSON.stringify(titleOverrides));return true}catch(_){return false}}
     function save(){try{localStorage.setItem(STORE,JSON.stringify(items));return true}catch(_){return false}}
@@ -121,7 +123,7 @@
       const munItems=items.filter(x=>x.lane==='municipal'),adItems=items.filter(x=>x.lane==='publicidad'),mun=munItems.reduce((n,x)=>n+(+x.seconds||0),0),ad=adItems.reduce((n,x)=>n+(+x.seconds||0),0),total=mun+ad||1,mp=Math.round(mun/total*100),ap=100-mp;
       $('ratio').textContent=mp+' / '+ap;$('loopTime').textContent=total+' s por vuelta';$('munBar').style.width=mp+'%';$('adBar').style.width=ap+'%';$('munLabel').textContent='Ayuntamiento '+mun+' s · '+munItems.length+' contenidos';$('adLabel').textContent='Publicidad '+ad+' s · '+adItems.length+' anuncios';$('ratioSlider').value=munItems.length;$('balance').classList.add('ok');$('balance').classList.remove('bad');$('balanceMsg').textContent='Arrastra para cambiar el reparto · '+munItems.length+' contenidos / '+adItems.length+' anuncios';$('assignBtn').disabled=false;
     }
-    function rebuildMix(munCount){munCount=Math.max(1,Math.min(7,+munCount||4));const tagged={municipal:Object.values(liveByPosition).filter(x=>x&&x.stockId&&x.lane==='municipal'),publicidad:Object.values(liveByPosition).filter(x=>x&&x.stockId&&x.lane==='publicidad')},munPool=defaults.filter(x=>x.lane==='municipal'),adPool=defaults.filter(x=>x.lane==='publicidad'),next=[],uses={};let mi=0,ai=0;for(let i=0;i<8;i++){const prev=Math.round(i*munCount/8),now=Math.round((i+1)*munCount/8),isMun=now>prev,pool=isMun?munPool:adPool,base=pool[(isMun?mi++:ai++)%pool.length],n=(uses[base.id]=(uses[base.id]||0)+1),copy=JSON.parse(JSON.stringify(base));copy.id=base.id+(n>1?'-'+n:'');next.push(copy)}items=next;const mapped={},used={municipal:0,publicidad:0};items.forEach((it,i)=>{const x=tagged[it.lane][used[it.lane]++];if(x)mapped[i]=x});liveByPosition=mapped;current=Math.min(current,items.length-1);render();feedback('Reparto preparado. Pulsa «Asignar» para enviarlo a los destinos.')}
+    function rebuildMix(munCount){munCount=Math.max(1,Math.min(SLOT_COUNT-1,+munCount||SLOT_COUNT/2));const tagged={municipal:Object.values(liveByPosition).filter(x=>x&&x.stockId&&x.lane==='municipal'),publicidad:Object.values(liveByPosition).filter(x=>x&&x.stockId&&x.lane==='publicidad')},munPool=defaults.filter(x=>x.lane==='municipal'),adPool=defaults.filter(x=>x.lane==='publicidad'),next=[],uses={};let mi=0,ai=0;for(let i=0;i<SLOT_COUNT;i++){const prev=Math.round(i*munCount/SLOT_COUNT),now=Math.round((i+1)*munCount/SLOT_COUNT),isMun=now>prev,pool=isMun?munPool:adPool,base=pool[(isMun?mi++:ai++)%pool.length],n=(uses[base.id]=(uses[base.id]||0)+1),copy=JSON.parse(JSON.stringify(base));copy.id=base.id+(n>1?'-'+n:'');next.push(copy)}items=next;const mapped={},used={municipal:0,publicidad:0};items.forEach((it,i)=>{const x=tagged[it.lane][used[it.lane]++];if(x)mapped[i]=x});liveByPosition=mapped;current=Math.min(current,items.length-1);render();feedback('Reparto preparado. Pulsa «Asignar» para enviarlo a los destinos.')}
     function preview(){const it=items[current],live=liveByPosition[current],asset=live&&live.asset||it.asset,type=live&&live.assetType||'image',img=$('previewImage'),vid=$('previewVideo'),changed=previewedIndex!==current;if(type==='video'){img.hidden=true;vid.hidden=false;if(vid.src!==new URL(asset,location.origin).href){vid.src=asset;previewedIndex=-1}if(changed||previewedIndex<0)try{vid.currentTime=0}catch(_){}if(playing)vid.play().catch(()=>{});else vid.pause()}else{vid.pause();vid.hidden=true;img.hidden=false;img.src=asset}previewedIndex=current;$('previewTitle').textContent=resolvedTitle(current);$('previewLane').textContent=(it.lane==='municipal'?'Ayuntamiento':'Publicidad')+' · '+it.seconds+' segundos'+(live&&live.sourceTag?' · #'+live.sourceTag:'');$('previewCounter').textContent=(current+1)+' / '+items.length;}
     function previewData(){const it=items[current],live=liveByPosition[current];return{it,live,title:resolvedTitle(current),asset:live&&live.asset||it.asset,type:live&&live.assetType||'image'}}
     function renderStockPreview(){const d=previewData(),url=new URL(d.asset,location.origin).href;$('stockPreviewMedia').innerHTML=d.type==='video'?'<video src="'+esc(url)+'" controls autoplay playsinline></video>':'<img src="'+esc(url)+'" alt="'+esc(d.title)+'">';$('stockPreviewMeta').innerHTML='<strong>'+esc(d.title)+'</strong><span>'+(d.it.lane==='municipal'?'Ayuntamiento':'Publicidad')+' · '+d.it.seconds+' segundos · '+(current+1)+' / '+items.length+(d.live&&d.live.stockId?' · Pixeria #'+esc(d.live.num||d.live.stockId):'')+(d.live&&d.live.sourceTag?' · #'+esc(d.live.sourceTag):'')+'</span><span><a href="'+esc(url)+'" target="_blank" rel="noopener" style="color:var(--blue)">Abrir archivo original ↗</a></span>'}
