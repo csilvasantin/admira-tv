@@ -614,14 +614,16 @@ function wireCam(){ const cb=$('f-cam'); if(cb) cb.onchange=()=>{ cb.checked?cam
 // inyectan como assets prioritarios (universales) y el HUD muestra qué manda la
 // parrilla. Si no hay grid o no responde, el canal sigue con el Stock normal.
 const GRID_API='https://api.admira.store';
-let gridInjected=[];
+let gridInjected=[], gridExactMode=false;
 function gridBadge(txt){ let b=$('gridBadge'); if(!b){ b=document.createElement('div'); b.id='gridBadge'; b.style.cssText='position:absolute;top:8px;right:8px;z-index:40;background:rgba(22,16,4,.82);border:1px solid rgba(255,200,90,.45);color:#ffd866;border-radius:999px;padding:4px 11px;font:12px ui-monospace,Menlo,monospace;backdrop-filter:blur(4px)'; ($('mupi')||document.body).appendChild(b); } b.style.display=txt?'block':'none'; b.textContent=txt; }
 async function loadGrid(){ if(!scr.screen) return;
   try{ const d=await fetch(GRID_API+'/grid/day?screen='+encodeURIComponent(scr.screen),{cache:'no-store'}).then(r=>r.json());
     if(!d||!d.ok){ return; }
     const cur=(d.bands||[]).find(b=>b.isNow); const out=[]; const seen=new Set();
     if(cur) for(const s of cur.slots){ if((s.kind==='own'||s.kind==='paid') && s.creative && s.creative.url && !seen.has(s.bookingId)){ seen.add(s.bookingId);
-      out.push({ id:'grid:'+s.bookingId, url:s.creative.url, type:(s.creative.type==='audio'?'audio':s.creative.type==='video'?'video':'image'), title:s.title||s.advertiser||'Parrilla', motor:'parrilla', category:'parrilla', _grid:true, createdAt:'9'+Date.now() }); } }
+      out.push({ id:'grid:'+s.bookingId, url:s.creative.url, type:(s.creative.type==='audio'?'audio':s.creative.type==='video'?'video':'image'), title:s.title||s.advertiser||'Parrilla', motor:'parrilla', category:'parrilla', _grid:true, _gridKind:s.kind, _playlistId:s.playlistId||'', _position:Number.isFinite(s.position)?s.position:null, _lane:s.lane||'', createdAt:'9'+Date.now() }); } }
+    gridExactMode=out.length>0 && out.every(x=>x._playlistId==='municipal-50-50');
+    if(gridExactMode) out.sort((a,b)=>(a._position??9999)-(b._position??9999));
     gridInjected=out;
     const np=d.nowPlaying; gridBadge(np&&!np.free?('📅 '+((np.advertiser)||'Parrilla')+(np.title?(' · '+np.title):'')):'');
     all=all.filter(a=>!a._grid).concat(gridInjected); rebuild(false);
@@ -638,6 +640,9 @@ function gridWeave(pl){
   if(!inj.length) return pl;
   const gids=new Set(inj.map(g=>g.id));
   const base=pl.filter(p=>!gids.has(p.id)), grid=inj;
+  // Una parrilla editorial 50/50 ya llega compilada y ordenada desde /grid.
+  // En ese modo no se mezcla con Stock: el orden municipal/publicidad es contrato.
+  if(gridExactMode && grid.length) return grid.slice().sort((a,b)=>(a._position??9999)-(b._position??9999));
   if(!base.length) return grid.slice();
   const EVERY=4, out=[]; let gi=0;
   for(let i=0;i<base.length;i++){ out.push(base[i]); if((i+1)%EVERY===0){ out.push(grid[gi%grid.length]); gi++; } }

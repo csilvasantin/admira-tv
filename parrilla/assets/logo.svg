@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920">
+  <defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#071221"/><stop offset="1" stop-color="#143c34"/></linearGradient></defs>
+  <rect width="1080" height="1920" fill="url(#g)"/><circle cx="540" cy="760" r="230" fill="none" stroke="#3df08a" stroke-width="18"/><path d="M430 820V650h120c110 0 160 62 160 145s-50 145-160 145H430" fill="none" stroke="#e8fff2" stroke-width="30" stroke-linecap="round"/><text x="540" y="1160" text-anchor="middle" fill="#e8fff2" font-family="Arial,sans-serif" font-size="92" font-weight="700">AJUNTAMENT</text><text x="540" y="1245" text-anchor="middle" fill="#3df08a" font-family="Arial,sans-serif" font-size="42" letter-spacing="8">SEMPRE AMB TU</text>
+</svg>
