@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cockpit del presentador · Clear Channel × Admira</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+  :root{
+    --bg:#05080d; --bg2:#0a0f18; --card:#0d1420; --card2:#111a29;
+    --line:rgba(125,184,255,.14); --line2:rgba(125,184,255,.30);
+    --tx:#e7f0ff; --dim:#8aa0c4; --dim2:#5f7597;
+    --air:#7dffd0; --blue:#7db8ff; --gold:#ffcf6b; --hot:#ff8e3c; --bad:#ff6b7d;
+    --shadow:0 18px 50px rgba(0,0,0,.55);
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; background:
+      radial-gradient(1200px 700px at 80% -10%, rgba(125,184,255,.10), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(125,255,208,.08), transparent 60%),
+      var(--bg);
+    color:var(--tx); font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+    min-height:100%; }
+  a{ color:inherit; text-decoration:none; }
+  .wrap{ max-width:1120px; margin:0 auto; padding:18px 18px 80px; }
+
+  /* ── Top bar ── */
+  header{ position:sticky; top:0; z-index:40; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding:12px 14px; margin:-6px -6px 16px; border-radius:16px;
+    background:linear-gradient(180deg,rgba(10,16,26,.94),rgba(10,16,26,.82)); backdrop-filter:blur(10px);
+    border:1px solid var(--line); box-shadow:var(--shadow); }
+  .brand{ font-weight:800; letter-spacing:.02em; font-size:16px; }
+  .brand b{ color:var(--air); }
+  .brand .sub{ display:block; font-weight:600; font-size:9.5px; letter-spacing:.28em; color:var(--dim2); text-transform:uppercase; margin-top:2px; }
+  .spacer{ flex:1; }
+  .clock{ font-variant-numeric:tabular-nums; font-size:13px; color:var(--dim); }
+  .tmr{ display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:11px; border:1px solid var(--line); background:var(--card); }
+  .tmr .t{ font-variant-numeric:tabular-nums; font-weight:800; font-size:19px; letter-spacing:.02em; }
+  .tmr .t.warn{ color:var(--gold); } .tmr .t.over{ color:var(--hot); }
+  .tmr .step{ font-size:10px; color:var(--dim2); }
+  .btn{ cursor:pointer; border:1px solid var(--line2); background:var(--card2); color:var(--tx);
+    border-radius:10px; padding:7px 12px; font-size:12.5px; font-weight:700; transition:.14s; white-space:nowrap; }
+  .btn:hover{ border-color:var(--air); transform:translateY(-1px); }
+  .btn.ghost{ background:transparent; border-color:var(--line); color:var(--dim); font-weight:600; }
+
+  /* ── Hero / dolor+promesa ── */
+  .hero{ border:1px solid var(--line); border-radius:16px; padding:16px 18px; margin-bottom:16px;
+    background:linear-gradient(135deg,rgba(17,26,41,.9),rgba(13,20,32,.6)); box-shadow:var(--shadow); }
+  .hero h1{ margin:0 0 4px; font-size:19px; letter-spacing:.01em; }
+  .hero p{ margin:0; color:var(--dim); font-size:13px; max-width:70ch; }
+  .hero .loop{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .loop .node{ display:flex; align-items:center; gap:8px; padding:6px 11px; border-radius:999px;
+    border:1px solid var(--line); background:var(--card); font-weight:700; font-size:12px; }
+  .loop .node b{ color:var(--air); } .loop .arw{ color:var(--dim2); align-self:center; }
+
+  /* ── Steps ── */
+  .steps{ display:flex; flex-direction:column; gap:12px; }
+  .card{ position:relative; border:1px solid var(--line); border-radius:15px; overflow:hidden;
+    background:linear-gradient(180deg,var(--card),rgba(10,16,24,.85)); box-shadow:var(--shadow);
+    transition:border-color .18s, transform .1s; }
+  .card.active{ border-color:var(--air); box-shadow:0 0 0 1px rgba(125,255,208,.35),var(--shadow); }
+  .card.done .cnum{ background:var(--air); color:#04140e; border-color:var(--air); }
+  .chead{ display:flex; align-items:center; gap:13px; padding:13px 15px; cursor:pointer; }
+  .cnum{ flex:0 0 auto; width:34px; height:34px; border-radius:10px; display:grid; place-items:center;
+    font-weight:800; font-size:15px; border:1px solid var(--line2); background:var(--card2); color:var(--blue); }
+  .cttl{ flex:1; min-width:0; }
+  .cttl .k{ font-size:15px; font-weight:800; letter-spacing:.01em; }
+  .cttl .d{ font-size:12px; color:var(--dim); margin-top:1px; }
+  .ctime{ font-variant-numeric:tabular-nums; font-size:11px; font-weight:800; color:var(--gold);
+    border:1px solid var(--line); border-radius:8px; padding:3px 8px; background:var(--bg2); }
+  .cbody{ display:none; padding:2px 15px 16px 62px; }
+  .card.open .cbody{ display:block; }
+  .card.open .chead{ padding-bottom:6px; }
+  .actions{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .lnk{ display:inline-flex; align-items:center; gap:7px; cursor:pointer; border:1px solid var(--line2);
+    background:var(--card2); color:var(--tx); border-radius:10px; padding:9px 13px; font-size:13px; font-weight:700; transition:.14s; }
+  .lnk:hover{ border-color:var(--air); transform:translateY(-1px); background:var(--card); }
+  .lnk .ico{ font-size:15px; } .lnk small{ color:var(--dim2); font-weight:600; font-size:10.5px; }
+  .note{ font-size:12px; color:var(--dim); margin:10px 0 0; }
+  .note code{ background:var(--bg2); border:1px solid var(--line); border-radius:5px; padding:1px 6px; color:var(--blue); font-size:11px; }
+
+  /* ── Magic block ── */
+  .magic{ margin-top:6px; border:1px solid rgba(255,207,107,.35); border-radius:14px; padding:14px;
+    background:linear-gradient(135deg,rgba(40,30,10,.55),rgba(20,26,18,.4)); }
+  .magic h4{ margin:0 0 10px; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold); }
+  .metarow{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .metarow label{ font-size:11px; color:var(--dim2); }
+  .metarow input{ background:var(--bg2); border:1px solid var(--line2); color:var(--tx); border-radius:9px;
+    padding:9px 12px; font-size:14px; font-weight:700; min-width:160px; }
+  .metarow input:focus{ outline:none; border-color:var(--air); }
+  .chip{ cursor:pointer; border:1px solid var(--line); background:var(--card); border-radius:999px;
+    padding:6px 12px; font-size:12px; font-weight:700; transition:.12s; }
+  .chip:hover{ border-color:var(--air); } .chip.sel{ border-color:var(--gold); color:var(--gold); box-shadow:0 0 0 1px rgba(255,207,107,.3); }
+  .bigmagic{ width:100%; cursor:pointer; border:none; border-radius:13px; padding:17px; font-size:18px; font-weight:900;
+    letter-spacing:.01em; color:#04140e; background:linear-gradient(135deg,#7dffd0,#ffcf6b);
+    box-shadow:0 10px 30px rgba(125,255,208,.28); transition:.14s; }
+  .bigmagic:hover{ transform:translateY(-2px); box-shadow:0 16px 40px rgba(125,255,208,.4); }
+  .bigmagic:active{ transform:translateY(0); }
+  .bigmagic.busy{ opacity:.7; pointer-events:none; }
+  .magsub{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .magsub .btn{ flex:1; min-width:130px; text-align:center; }
+  .status{ margin-top:11px; display:flex; gap:8px; flex-wrap:wrap; }
+  .stpill{ display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:10px;
+    padding:8px 11px; background:var(--bg2); font-size:12px; font-weight:700; flex:1; min-width:200px; }
+  .stpill .dot{ width:9px; height:9px; border-radius:50%; background:var(--dim2); flex:0 0 auto; }
+  .stpill.ok .dot{ background:var(--air); box-shadow:0 0 8px var(--air); }
+  .stpill.err .dot{ background:var(--bad); box-shadow:0 0 8px var(--bad); }
+  .stpill .m{ color:var(--dim); font-weight:600; font-size:11px; margin-left:auto; }
+
+  /* ── Seed brands ── */
+  .brands{ display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+  .brand-chip{ cursor:pointer; border:1px solid var(--line); background:var(--card); border-radius:11px;
+    padding:9px 13px; font-weight:800; font-size:13px; transition:.12s; }
+  .brand-chip:hover{ border-color:var(--air); transform:translateY(-1px); }
+  .brand-chip small{ display:block; font-weight:600; font-size:10px; color:var(--dim2); }
+
+  footer{ margin-top:22px; text-align:center; color:var(--dim2); font-size:11px; }
+  footer a{ color:var(--blue); }
+  .toast{ position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(30px);
+    background:var(--card2); border:1px solid var(--line2); border-radius:12px; padding:12px 18px;
+    font-weight:700; font-size:13px; box-shadow:var(--shadow); opacity:0; transition:.25s; z-index:60; pointer-events:none; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  @media (max-width:640px){ .cbody{ padding-left:15px; } .wrap{ padding:12px 12px 70px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">CLEAR CHANNEL <b>×</b> ADMIRA<span class="sub">Cockpit del presentador</span></div>
+    <div class="spacer"></div>
+    <div class="clock" id="clock">--:--:--</div>
+    <div class="tmr">
+      <div><div class="t" id="timer">0:00</div><div class="step" id="stepLbl">— pulsa ▶ para arrancar</div></div>
+      <button class="btn" id="timerBtn">▶</button>
+    </div>
+    <a class="btn ghost" id="showBtn" href="./show.html" target="_blank" title="Relato a pantalla completa (para proyectar)">🖥 Relato</a>
+  </header>
+
+  <div class="hero">
+    <h1>El bucle vivo: crear → emitir → percibir → monetizar</h1>
+    <p>15 minutos. Se crea un anuncio con IA, se emite <b>en vivo</b> a dos circuitos reales a la vez, la pantalla percibe a quien tiene delante y todo se traduce en proof-of-play y CPM. Sin tocar código: solo este panel.</p>
+    <div class="loop">
+      <span class="node">🎨 <b>Crear</b> · pixeria</span><span class="arw">→</span>
+      <span class="node">⚡ <b>Emitir</b> · 2 tótems</span><span class="arw">→</span>
+      <span class="node">👁 <b>Percibir</b> · el gemelo</span><span class="arw">→</span>
+      <span class="node">💶 <b>Monetizar</b> · clearchannel.tv</span>
+    </div>
+  </div>
+
+  <div class="steps" id="steps"></div>
+
+  <footer>
+    Cockpit operado por Morfeo · circuitos: <b>A</b> Instore Media <code>xtanco-valencia</code> · <b>B</b> OOH Media <code>bcn-kiosk-001</code><br>
+    Motor de emisión = admira.tv/canal.html · canal remoto = worker <code>/locations/cmd</code>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ─────────────────────────────────────────────────────────────────────────
+   CONFIG — endpoints y circuitos reales.
+   El BOTÓN MÁGICO usa el MISMO canal que el CMS (cms.html) y el mando:
+   POST https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd
+        body {id:<circuito>, cmd:<comando CLI>}
+   El player (canal.html) hace polling GET /locations/cmd?id=<circuito>&since=
+   cada 3 s y ejecuta runCli(cmd). `tag <metatag>` conmuta el loop de esa
+   pantalla al metatag → los dos tótems cambian a la vez.
+   ───────────────────────────────────────────────────────────────────────── */
+const CMD_API = 'https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd';
+const CIRCUITS = [
+  { id:'xtanco-valencia', label:'A · Instore Media (Xtanco, Valencia)' },
+  { id:'bcn-kiosk-001',   label:'B · OOH Media (kiosko, Barcelona)' }
+];
+const P = (c)=>`https://admira.tv/canal.html?circuit=${c}&screen=${c}-mupi&clean=1&kiosk=1`;
+const LINKS = {
+  crear:   'https://www.pixeria.com/crear',
+  stock:   'https://www.pixeria.com/stock',
+  totemA:  P('xtanco-valencia'),
+  totemB:  P('bcn-kiosk-001'),
+  mando:   'https://admira.tv/adcelerate/mando/',
+  cms:     'https://admira.tv/cms.html',
+  demo:    'https://admira.tv/adcelerate/demo/',
+  cpm:     'https://clearchannel.tv/',
+  galaxia: 'https://admiranext.com/status',
+  gemelo:  'https://www.xpaceos.com/admira-xp/',
+  parrilla:'https://admira.tv/parrilla/'
+};
+const SEED_BRANDS = [
+  { n:'Estrella Damm', t:'estrella-damm', s:'cerveza · Barcelona' },
+  { n:'SEAT',          t:'seat',          s:'automoción' },
+  { n:'CaixaBank',     t:'caixabank',     s:'banca' },
+  { n:'Mango',         t:'mango',         s:'moda' }
+];
+/* metatags de reserva que YA tienen contenido en el Stock (para que el wow
+   funcione aunque la creación en vivo fallase). */
+const META_CHIPS = [
+  ['robots','🦾'],['ia','🧠'],['música','🎵'],['tecnología','🤖'],['negocio','💼']
+];
+
+/* ── util: POST robusto con timeout, jamás lanza ── */
+async function post(url, body, ms=6000){
+  const ctl = new AbortController();
+  const to = setTimeout(()=>ctl.abort(), ms);
+  try{
+    const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body), signal:ctl.signal });
+    let d=null; try{ d=await r.json(); }catch(_){}
+    return { ok: r.ok && (!d || d.ok!==false), status:r.status, data:d };
+  }catch(e){ return { ok:false, status:0, error:(e&&e.name==='AbortError')?'timeout':'sin red' }; }
+  finally{ clearTimeout(to); }
+}
+const $ = s=>document.querySelector(s);
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2600); }
+
+/* ── reloj ── */
+function tick(){ const d=new Date(); $('#clock').textContent=[d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':'); }
+tick(); setInterval(tick,1000);
+
+/* ── run-of-show timer ── */
+const RUN=[[0,'Dolor + promesa'],[90,'Crear con IA'],[210,'⚡ Emitir a los 2 tótems'],[270,'«Dime una marca»'],[360,'La pantalla te ve'],[450,'Flota · proof-of-play · CPM'],[540,'El Consejo lo opera solo'],[630,'Cierre'],[660,'Q&A']];
+let t0=null, tHandle=null;
+function fmt(s){ return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function curStep(s){ let c=RUN[0]; for(const r of RUN){ if(s>=r[0]) c=r; } return c; }
+function runTick(){
+  if(t0==null) return;
+  const s=Math.floor((Date.now()-t0)/1000);
+  const el=$('#timer'); el.textContent=fmt(s);
+  el.className='t'+(s>660?' over':s>630?' warn':'');
+  $('#stepLbl').textContent='▸ '+curStep(s)[1];
+}
+$('#timerBtn').addEventListener('click',()=>{
+  if(t0==null){ t0=Date.now(); tHandle=setInterval(runTick,500); $('#timerBtn').textContent='⏸'; runTick(); }
+  else { clearInterval(tHandle); t0=null; $('#timerBtn').textContent='▶'; $('#stepLbl').textContent='— en pausa'; }
+});
+
+/* ─────────────── STEPS ─────────────── */
+const STEPS = [
+  { n:1, time:'0:00', k:'Dolor + promesa', d:'Abrir con la incomodidad del DOOH tradicional y prometer el bucle vivo.',
+    body:(el)=>{ el.innerHTML=`
+      <div class="actions">
+        <a class="lnk" href="${LINKS.demo}" target="_blank"><span class="ico">🎬</span> Demo ADcelerate <small>gemelo Vila de Gràcia · good/better/best</small></a>
+        <a class="lnk" href="./show.html" target="_blank"><span class="ico">🖥</span> Relato a pantalla <small>para proyectar</small></a>
+      </div>
+      <p class="note">Gancho: «Hoy un anuncio en la calle tarda semanas y no sabe quién lo mira. Miradlo cambiar en 15 minutos.»</p>`; } },
+
+  { n:2, time:'1:30', k:'Crear con IA', d:'Generar una creatividad en pixeria y ETIQUETARLA con el metatag del día.',
+    body:(el)=>{ el.innerHTML=`
+      <div class="actions">
+        <a class="lnk" href="${LINKS.crear}" target="_blank"><span class="ico">🎨</span> pixeria/crear <small>generar el anuncio</small></a>
+        <a class="lnk" href="${LINKS.stock}" target="_blank"><span class="ico">📦</span> Stock <small>ver lo publicado</small></a>
+      </div>
+      <p class="note">Al publicar, ponle el <b>metatag</b> que usarás en el paso 3 (p.ej. <code>#robots</code>). El feed entra solo en los players en ~30&nbsp;s.</p>`; } },
+
+  { n:3, time:'3:30', k:'⚡ Emitir a los 2 tótems', d:'El pico: un clic conmuta los dos circuitos al metatag — cambian a la vez.', magic:true },
+
+  { n:4, time:'4:30', k:'«Dime una marca»', d:'El público propone una marca; se crea su anuncio y se lanza igual.',
+    body:(el)=>{ el.innerHTML=`
+      <p class="note" style="margin-top:0">Marcas semilla de reserva (por si nadie propone) — un clic pone su metatag arriba en el botón mágico:</p>
+      <div class="brands" id="brands"></div>
+      <div class="actions" style="margin-top:12px">
+        <a class="lnk" href="${LINKS.crear}" target="_blank"><span class="ico">🎨</span> Crear su anuncio <small>pixeria/crear</small></a>
+      </div>`;
+      const b=el.querySelector('#brands');
+      SEED_BRANDS.forEach(x=>{ const c=document.createElement('div'); c.className='brand-chip';
+        c.innerHTML=`${x.n}<small>${x.s} · #${x.t}</small>`;
+        c.onclick=()=>{ setMeta(x.t); toast('Metatag → #'+x.t+' (paso 3 listo)'); document.querySelector('#card3').scrollIntoView({behavior:'smooth',block:'center'}); };
+        b.appendChild(c); }); } },
+
+  { n:5, time:'6:00', k:'La pantalla te ve', d:'El gemelo XpaceOS percibe género/edad y adapta — lo pilota subMorfeo-percibe.',
+    body:(el)=>{ el.innerHTML=`
+      <div class="actions">
+        <a class="lnk" href="${LINKS.gemelo}" target="_blank"><span class="ico">👁</span> Gemelo XpaceOS <small>la pantalla que ve</small></a>
+        <a class="lnk" href="${LINKS.mando}" target="_blank"><span class="ico">🎮</span> Mando <small>forzar público m/f</small></a>
+      </div>
+      <p class="note">Anónimo y en local: la cámara estima segmento y el loop se adapta. Nada de imágenes sube a ningún sitio.</p>`; } },
+
+  { n:6, time:'7:30', k:'Flota · proof-of-play · CPM', d:'De la emisión al dinero: pases contabilizados y CPM en clearchannel.tv.',
+    body:(el)=>{ el.innerHTML=`
+      <div class="actions">
+        <a class="lnk" href="${LINKS.cpm}" target="_blank"><span class="ico">💶</span> clearchannel.tv <small>informe de emisión · CPM</small></a>
+        <a class="lnk" href="${LINKS.parrilla}" target="_blank"><span class="ico">🗓</span> Parrilla <small>lo vendido por pantalla</small></a>
+        <a class="lnk" href="${LINKS.cms}" target="_blank"><span class="ico">🛠</span> CMS <small>modo/volumen por equipo</small></a>
+      </div>`; } },
+
+  { n:7, time:'9:00', k:'El Consejo lo opera solo', d:'La galaxia de agentes se autogestiona; avisos por Telegram.',
+    body:(el)=>{ el.innerHTML=`
+      <div class="actions">
+        <a class="lnk" href="${LINKS.galaxia}" target="_blank"><span class="ico">🌌</span> admiranext.com/status <small>la galaxia viva</small></a>
+      </div>
+      <p class="note">«Nada de esto lo he tocado a mano: el sistema se opera solo y me avisa.»</p>`; } },
+
+  { n:8, time:'10:30', k:'Cierre + Q&A', d:'Recap del bucle y vuelta de los tótems al loop general.',
+    body:(el)=>{ el.innerHTML=`
+      <div class="actions">
+        <button class="btn" id="restoreBtn2">↺ Devolver los 2 tótems al loop</button>
+        <a class="lnk" href="./show.html" target="_blank"><span class="ico">🖥</span> Relato de cierre</a>
+      </div>
+      <p class="note">Recap: creamos, emitimos a dos circuitos, la pantalla percibió y todo quedó medido en CPM. En 15 minutos.</p>`;
+      el.querySelector('#restoreBtn2').onclick=restoreLoop; } }
+];
+
+let META = 'robots';
+function setMeta(v){ META=String(v||'').trim().toLowerCase().replace(/^#/,''); const inp=$('#metaInput'); if(inp) inp.value=META;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('sel', c.dataset.tag===META)); }
+
+/* render steps */
+const host=$('#steps');
+STEPS.forEach(st=>{
+  const card=document.createElement('section');
+  card.className='card'; card.id='card'+st.n;
+  card.innerHTML=`
+    <div class="chead">
+      <div class="cnum">${st.n===3?'⚡':st.n}</div>
+      <div class="cttl"><div class="k">${st.k}</div><div class="d">${st.d}</div></div>
+      <div class="ctime">${st.time}</div>
+    </div>
+    <div class="cbody"></div>`;
+  const body=card.querySelector('.cbody');
+  if(st.magic){ body.appendChild(magicBlock()); }
+  else if(st.body){ st.body(body); }
+  // toggle open + mark active/done
+  card.querySelector('.chead').addEventListener('click',()=>{
+    const wasOpen=card.classList.contains('open');
+    document.querySelectorAll('.card').forEach(c=>{ c.classList.remove('open','active'); });
+    if(!wasOpen){ card.classList.add('open','active'); }
+    card.classList.add('done');
+  });
+  host.appendChild(card);
+});
+// open step 1 by default
+$('#card1').classList.add('open','active');
+
+/* ── MAGIC BLOCK ── */
+function magicBlock(){
+  const w=document.createElement('div'); w.className='magic';
+  w.innerHTML=`
+    <h4>⚡ Botón mágico · emitir a los 2 circuitos a la vez</h4>
+    <div class="metarow">
+      <label>Metatag:</label>
+      <input id="metaInput" value="robots" spellcheck="false" autocomplete="off">
+      ${META_CHIPS.map(([t,i])=>`<span class="chip" data-tag="${t}">${i} ${t}</span>`).join('')}
+    </div>
+    <button class="bigmagic" id="fireBtn">⚡ Emitir «<span id="fireTag">robots</span>» a los 2 tótems</button>
+    <div class="magsub">
+      <button class="btn" id="syncBtn">🔗 Sincronizar los 2 (red admira.tv)</button>
+      <button class="btn" id="restoreBtn">↺ Volver al loop</button>
+    </div>
+    <div class="status" id="status">
+      ${CIRCUITS.map(c=>`<div class="stpill" id="st-${c.id}"><span class="dot"></span><span>${c.label}</span><span class="m">en espera</span></div>`).join('')}
+    </div>
+    <p class="note">Dispara el comando <code>tag &lt;metatag&gt;</code> a cada circuito por el worker <code>/locations/cmd</code>; cada player lo ejecuta en su próximo poll (≤3&nbsp;s). Idempotente: puedes repetirlo sin romper nada.</p>
+    <div class="actions" style="margin-top:12px">
+      <a class="lnk" href="${LINKS.totemA}" target="_blank"><span class="ico">📺</span> Abrir tótem A <small>por si hay que forzarlo</small></a>
+      <a class="lnk" href="${LINKS.totemB}" target="_blank"><span class="ico">📺</span> Abrir tótem B</a>
+    </div>`;
+  // wire after insert
+  setTimeout(()=>{
+    const inp=w.querySelector('#metaInput');
+    inp.addEventListener('input',()=>{ META=inp.value.trim().toLowerCase().replace(/^#/,''); $('#fireTag').textContent=META||'—'; w.querySelectorAll('.chip').forEach(c=>c.classList.toggle('sel',c.dataset.tag===META)); });
+    w.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{ setMeta(c.dataset.tag); $('#fireTag').textContent=META; }));
+    w.querySelector('#fireBtn').addEventListener('click',()=>fire('tag '+(META||'all')));
+    w.querySelector('#syncBtn').addEventListener('click',()=>fire('admiraTVsincro'));
+    w.querySelector('#restoreBtn').addEventListener('click',restoreLoop);
+    setMeta('robots');
+  },0);
+  return w;
+}
+
+function stSet(id, state, msg){ const p=$('#st-'+id); if(!p) return; p.className='stpill'+(state?(' '+state):''); const m=p.querySelector('.m'); if(m) m.textContent=msg; }
+
+/* dispara un comando CLI a los 2 circuitos en paralelo; nunca rompe */
+async function fire(cmd){
+  const btn=$('#fireBtn'); if(btn) btn.classList.add('busy');
+  CIRCUITS.forEach(c=>stSet(c.id,'','enviando…'));
+  const results = await Promise.all(CIRCUITS.map(async c=>{
+    const r = await post(CMD_API, { id:c.id, cmd });
+    stSet(c.id, r.ok?'ok':'err', r.ok?('✅ '+cmd):('⚠️ '+(r.error||('HTTP '+r.status))));
+    return r.ok;
+  }));
+  if(btn) btn.classList.remove('busy');
+  const okN = results.filter(Boolean).length;
+  toast(okN===CIRCUITS.length ? ('✅ enviado a '+okN+' circuitos') : (okN?('⚠️ enviado a '+okN+' de '+CIRCUITS.length):'⚠️ ningún circuito respondió'));
+}
+function restoreLoop(){ fire('reset'); setTimeout(()=>{ CIRCUITS.forEach(c=>post(CMD_API,{id:c.id,cmd:'admiraTVlocal'})); },400); toast('↺ tótems de vuelta al loop'); }
+
+/* atajos de teclado: barra = disparar mágico, R = restore */
+window.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT') return;
+  if(e.code==='Space'){ e.preventDefault(); const b=$('#fireBtn'); if(b) b.click(); }
+  if(e.key==='r'||e.key==='R'){ restoreLoop(); }
+});
+</script>
+</body>
+</html>
