@@ -100,9 +100,66 @@
     color: var(--admira-cyan); font-size: 12px; }
   #need-key .hint{ margin-top: 16px; font-size: 11px; color: var(--admira-text-dim); }
 
+  /* ===== Pantalla admira.tv EN VIVO (capa DOM: Map3D no textura vídeo en un modelo) =====
+     El canal real (Stock R2) va PEGADO a la cara del kiosko proyectando desde el estado
+     de cámara cada frame (#kiosk-live, billboard nítido sobre los tiles), y cuando el
+     kiosko no está bien encuadrado se repliega a un PiP siempre legible (#pip-live). */
+  #kiosk-live{
+    position: fixed; left: 0; top: 0; z-index: 6; pointer-events: none;
+    transform: translate(-9999px,-9999px);
+    border-radius: 6px; overflow: hidden;
+    box-shadow: 0 0 0 2px rgba(4,12,16,.92), 0 0 0 3px var(--spine),
+                0 12px 36px -8px rgba(0,0,0,.78), 0 0 28px -6px var(--spine);
+    opacity: 0; transition: opacity .22s ease;
+  }
+  #kiosk-live.show{ opacity: 1; }
+  #kiosk-live canvas{ display: block; width: 100%; height: 100%; }
+
+  #pip-live{
+    position: fixed; left: 12px; top: calc(var(--top-h) + 12px); z-index: 14;
+    width: 248px; pointer-events: none;
+    border-radius: var(--admira-radius-md); overflow: hidden;
+    background: #06141a; border: 1px solid var(--spine-line);
+    box-shadow: var(--admira-shadow-card), 0 0 22px -8px var(--spine);
+    opacity: 0; transform: translateY(-6px); transition: opacity .22s ease, transform .22s ease;
+  }
+  #pip-live.show{ opacity: 1; transform: none; }
+  #pip-live canvas{ display: block; width: 100%; aspect-ratio: 16/9; }
+  #pip-live .pip-tag{
+    display: block; font-family: var(--admira-font-mono); font-size: 8.5px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--admira-text-dim, #9fb4bd);
+    padding: 4px 8px 5px; border-top: 1px solid var(--admira-border); background: rgba(6,20,26,.9);
+  }
+
+  /* ===== «A pie ante el kiosko» = Street View REAL del kiosko + señalización admira.tv =====
+     Los tiles fotorrealistas se derriten a ras de calle: para VER el kiosko real usamos el
+     panorama de Street View (foto real, nítida) y mapeamos dos pantallas admira.tv EN VIVO
+     sobre los dos paneles traseros del MUPI (warp de perspectiva de 4 esquinas). */
+  #streetview{
+    position: absolute; z-index: 2; overflow: hidden; display: none; background: #000;
+    top: var(--top-h); left: 0; right: 0; bottom: var(--bottom-h);
+  }
+  body.expert-open #streetview{ bottom: 236px; }
+  #sv-signage{
+    position: absolute; z-index: 3; overflow: hidden; display: none; pointer-events: none;
+    top: var(--top-h); left: 0; right: 0; bottom: var(--bottom-h);
+  }
+  /* funde suave al entrar/salir del Street View (aterrizaje del vuelo al kiosko) */
+  #streetview, #sv-signage{ opacity: 0; transition: opacity .5s ease; }
+  #streetview.sv-vis, #sv-signage.sv-vis{ opacity: 1; }
+
+  /* BEST: fuera la franja «MODO EXPERTO» de abajo (el modo experto se abre con el icono
+     ⌥ de la barra superior). Se recupera ese alto para la escena (--bottom-h a 0). */
+  :root{ --bottom-h: 0px; }
+  #expertbar.collapsed{ display: none; }
+  #sv-signage.show{ display: block; }
+  .sv-panel{ position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  .sv-panel canvas{ display: block; }
+
   @media (max-width: 900px){
     body.expert-open #stage{ bottom: 52vh; }
     #attrib{ display: none; }
+    #pip-live{ width: 172px; }
   }
 </style>
 </head>
@@ -111,6 +168,14 @@
 <div id="app">
   <!-- Globo fotorrealista de Google en el hueco del marco -->
   <div id="stage"></div>
+
+  <!-- «A pie ante el kiosko»: Street View real del kiosko (oculto hasta pulsar 🧍) -->
+  <div id="streetview"></div>
+  <div id="sv-signage">
+    <div class="sv-panel" id="sv-p1"><canvas width="512" height="384"></canvas></div>
+    <div class="sv-panel" id="sv-p2"><canvas width="512" height="384"></canvas></div>
+    <canvas id="sv-grid" style="position:absolute;inset:0;pointer-events:none"></canvas>
+  </div>
 
   <!-- ============ MENÚ SUPERIOR (mismo que el gemelo) ============ -->
   <header id="topbar">
@@ -153,8 +218,8 @@
     <section class="panel" id="view-panel">
       <h2>Vista</h2>
       <div id="viewmodes">
-        <button data-view="HYBRID" class="active">🛰 Híbrida · con etiquetas</button>
-        <button data-view="SATELLITE">🌐 Satélite · limpio</button>
+        <button data-view="SATELLITE" class="active">🌐 Satélite · limpio</button>
+        <button data-view="HYBRID">🛰 Híbrida · con etiquetas</button>
       </div>
       <p class="note">Map3DElement · Photorealistic 3D Tiles en vivo</p>
       <p class="note" style="margin-top:8px">A pie de calle los tiles de Google se ven «derretidos» (limitación conocida). Nuestro kiosko 3D con su pantalla va NÍTIDO encima: el activo de la casa brilla sobre el fondo real.</p>
@@ -218,6 +283,11 @@
   <div id="attrib">Escena · ADcelerate by Admira · imágenes © Google</div>
 
   <div id="hint">🕹 muévete con las flechas · ↑↓ avanzar · ←→ girar · Av/Re Pág altura</div>
+
+  <!-- Pantalla admira.tv EN VIVO pegada al kiosko (capa DOM sobre el globo) -->
+  <div id="kiosk-live" aria-hidden="true"><canvas width="768" height="432"></canvas></div>
+  <!-- PiP de respaldo: el canal del kiosko en vivo, siempre legible -->
+  <div id="pip-live" aria-hidden="true"><canvas width="384" height="216"></canvas><span class="pip-tag">canal del kiosko · en vivo</span></div>
 
   <div id="loading"><div class="spin"></div>Cargando globo fotorrealista…</div>
 
@@ -360,11 +430,16 @@ const SIGNAGE_POLL_MS = 30000;
 /* ---------- cámaras de la coreografía cinematográfica ---------- */
 const CAM_START = { center: { ...PLAZA, altitude: 40 }, range: 2200, tilt: 47, heading: 25 };
 const CAM_KIOSK = { center: { ...PLAZA, altitude: 20 }, range: 220,  tilt: 67, heading: 25 };
-// «A pie»: encuadre del kiosko NUESTRO delante de los tiles. Antes (range 75/tilt 85/alt 2)
-// la cámara se metía DENTRO de la malla derretida de Google → borrón. Ahora retrocede y sube:
-// se planta a ~110 m con la cámara elevada mirando ligeramente hacia abajo, así el kiosko 3D
-// nítido con su pantalla queda encuadrado y legible sobre el fondo fotorreal.
-const CAM_HUMAN = { center: { ...PLAZA, altitude: 9 }, range: 110, tilt: 76, heading: 205 };
+// «A pie ante el kiosko»: encuadre CERCANO para que la pantalla admira.tv EN VIVO sea la
+// protagonista (decisión de Carlos). A ~16 m, en FRENTE de la cara-pantalla (heading 25 →
+// la cámara se planta al SSO, el lado hacia el que mira la pantalla del GLB, heading 205),
+// la pantalla viva sale grande y nítida (~130 px) sobre el fondo fotorreal; los tiles a pie
+// de calle se ven algo derretidos pero la pantalla y el kiosko mandan. La altura del center
+// (~4 m) apunta la mirada a la altura de la pantalla. (range/tilt/heading afinables en preview.)
+// «A pie ante el kiosko»: momento SECUNDARIO de acercamiento (la pantalla viva se pega al
+// kiosko). Los tiles de Google se derriten a ras de calle (limitación conocida): el héroe es
+// el vuelo/órbita nítido con el PiP, esto es solo el plano corto opcional del botón 🧍.
+const CAM_HUMAN = { center: { ...PLAZA, altitude: 4 }, range: 40, tilt: 64, heading: 25 };
 
 // Kiosko 3D NUESTRO (Model3DElement con la pantalla-creatividad como textura embebida).
 // La pantalla está en la cara +Z del GLB; heading orienta esa cara hacia la plaza/aproximación.
@@ -372,7 +447,7 @@ const KIOSK_MODEL_ALT   = 0;     // relativo al suelo (base sobre el pavimento)
 const KIOSK_MODEL_SCALE = 1.1;   // GLB construido en metros (~3.3 m) → ~3.6 m
 const KIOSK_MODEL_HEADING = 205; // orientación de la cara-pantalla (se afina con captura)
 
-let map3d = null, MapMode = null, viewMode = 'HYBRID';
+let map3d = null, MapMode = null, viewMode = 'SATELLITE';
 let kioskModel = null, kioskPerfil = null;   // Model3DElement + perfil de la creatividad puesta
 let selFranjaIdx = 2;          // 18h por defecto (hora punta), como el gemelo
 let creManifest = null;
@@ -385,6 +460,9 @@ async function boot(){
   loadCreatividades();
   wireUI();
   pollSignage(); setInterval(pollSignage, SIGNAGE_POLL_MS);
+  // pantalla admira.tv EN VIVO (canal real R2) sobre el kiosko + PiP de respaldo
+  loadCreLive(); chLoad(); setInterval(chLoad, 300000);
+  requestAnimationFrame(liveTick);
 
   if (!GOOGLE_MAPS_KEY){
     $('loading').classList.add('done');
@@ -397,15 +475,16 @@ async function boot(){
     const { Map3DElement } = lib; MapMode = lib.MapMode || null;
 
     map3d = new Map3DElement({
-      mode: MapMode ? MapMode.HYBRID : 'HYBRID',   // obligatorio desde feb-2025
+      mode: MapMode ? MapMode.SATELLITE : 'SATELLITE',   // arranque en satélite LIMPIO (sin etiquetas)
       center: CAM_START.center, range: CAM_START.range, tilt: CAM_START.tilt, heading: CAM_START.heading,
     });
     map3d.id = 'map3d';
+    map3d.fov = SCREEN_FOV_DEG;   // FOV vertical explícito → la pantalla pegada se alinea por construcción
     $('stage').appendChild(map3d);
 
     await addKiosk();
     map3d.addEventListener('gmp-steadychange', onSteady, { once: true });
-    setTimeout(() => { $('loading').classList.add('done'); flyIn(); }, 3500);  // fallback
+    setTimeout(() => { $('loading').classList.add('done'); startShot(); }, 3500);  // fallback
 
     startTelemetry();
   }catch(err){
@@ -417,7 +496,11 @@ async function boot(){
     $('need-key').classList.add('show');
   }
 }
-function onSteady(){ $('loading').classList.add('done'); flyIn(); }
+function onSteady(){ $('loading').classList.add('done'); startShot(); }
+// arranque de escena: normal = vuelo cinematográfico; ?cal=1 = directo «a pie ante el kiosko»
+// (encuadre de calibración/demo de la pantalla viva, sin esperar la coreografía).
+let _shotDone = false;
+function startShot(){ if (_shotDone) return; _shotDone = true; const q = new URLSearchParams(location.search); if (q.has('cal') || q.has('kiosk')) human(); else flyIn(); }
 
 /* ============================ cámara ============================ */
 function setCamActive(cam){
@@ -440,12 +523,20 @@ function orbit(){
   // al terminar la órbita, el modo en reposo es el VOLADO LIBRE (norma de la casa)
   map3d.addEventListener('gmp-animationend', () => { if (!freeFly.active) enterFree(false); }, { once: true });
 }
+// «A pie ante el kiosko»: VUELA desde donde esté el globo hasta un descenso sobre la plaza
+// y luego FUNDE al Street View real del kiosko con la señalización admira.tv (módulo SV).
+const CAM_DESCENT = { center: { ...PLAZA, altitude: 22 }, range: 85, tilt: 62, heading: 49.5 };
+let _humanTimer = 0;
 function human(){
-  if (!map3d) return;
-  exitFree();
   setCamActive('human');
+  if (!map3d){ showStreetView(); return; }
+  hideStreetView();                 // durante el vuelo se ve el globo
+  exitFree();
   map3d.stopCameraAnimation();
-  map3d.flyCameraTo({ endCamera: CAM_HUMAN, durationMillis: 4500 });
+  map3d.flyCameraTo({ endCamera: CAM_DESCENT, durationMillis: 3200 });
+  const land = () => { clearTimeout(_humanTimer); showStreetView(); };   // aterriza en el Street View
+  map3d.addEventListener('gmp-animationend', land, { once: true });
+  _humanTimer = setTimeout(land, 3600);   // fallback si no dispara animationend
 }
 function stopCam(){
   if (!map3d) return;
@@ -492,6 +583,7 @@ function showHint(){
 }
 function enterFree(fromKey){
   if (!map3d) return;
+  hideStreetView();   // volado libre trabaja sobre el globo, no sobre el Street View
   setCamActive('free');
   map3d.stopCameraAnimation();
   readCamState();
@@ -500,6 +592,7 @@ function enterFree(fromKey){
   if (!freeFly.raf) freeFly.raf = requestAnimationFrame(flyTick);
 }
 function exitFree(){
+  hideStreetView();   // volver al globo (vuelo/órbita/parar) cierra el Street View del kiosko
   freeFly.active = false;
   if (freeFly.raf){ cancelAnimationFrame(freeFly.raf); freeFly.raf = 0; }
   freeFly.keys = {}; freeFly.vF = freeFly.vYaw = freeFly.vAlt = 0;
@@ -539,7 +632,7 @@ function flyTick(now){
 }
 addEventListener('keydown', (e) => {
   if (!FLY_KEYS.includes(e.key)) return;
-  if (!map3d) return;
+  if (!map3d || SV_ON) return;   // en Street View las flechas no manejan el globo
   const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
   e.preventDefault();
   if (!freeFly.active) enterFree(true);
@@ -705,6 +798,435 @@ function startTelemetry(){
 }
 const fmt = (n, d) => (n == null || isNaN(n)) ? '—' : Number(n).toFixed(d);
 
+/* ============================================================
+   PANTALLA admira.tv EN VIVO sobre el kiosko
+   ------------------------------------------------------------
+   Map3D no admite vídeo/canvas vivo en un Model3DElement (las texturas del GLB van
+   horneadas). Así que el canal REAL de admira.tv (el Stock de R2, CORS abierto — mismo
+   motor que el gemelo BETTER) se pinta en un <canvas> DOM y se posa sobre la cara del
+   kiosko proyectando su posición mundo→pantalla desde el estado de cámara cada frame
+   (billboard nítido). Cuando el kiosko no está bien encuadrado, el canal se repliega a
+   un PiP siempre legible. El GLB conserva su creatividad horneada como pantalla de
+   respaldo cuando la capa viva no está pegada.
+   ============================================================ */
+const LIVE_SANS = 'Inter, system-ui, -apple-system, Segoe UI, sans-serif';
+const LIVE_MONO = 'ui-monospace, Menlo, Consolas, monospace';
+
+// ---- motor de canal (Stock público del canal admira.tv en R2, igual que main.js) ----
+const STOCK_URL = 'https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json';
+const STOCK_MAX_ITEMS = 14, STOCK_MAX_VIDEO_BYTES = 15e6, IMG_SECONDS = 9, VIDEO_CAP_MS = 30000;
+let chQueue = [], chIdx = -1, chItem = null, chImg = null, chLive = false, chErr = 0, chTimer = 0, chSeq = 0;
+const chVid = document.createElement('video');
+chVid.muted = true; chVid.playsInline = true; chVid.preload = 'auto'; chVid.crossOrigin = 'anonymous';
+chVid.addEventListener('ended', () => chNext());
+chVid.addEventListener('error', () => chSkip());
+chVid.addEventListener('loadeddata', () => { chErr = 0; });
+const creLive = {};   // creatividades por perfil (fallback de pantalla, same-origin)
+function loadCreLive(){
+  for (const p of PERFILES){ const im = new Image(); im.crossOrigin = 'anonymous'; im.src = '../creatividades/' + p + '.png'; creLive[p] = im; }
+}
+async function chLoad(){
+  try{
+    const r = await fetch(STOCK_URL, { cache: 'no-store' });
+    const j = await r.json();
+    const size = u => { const m = /[?&]v=(\d+)/.exec(u || ''); return m ? +m[1] : 0; };
+    chQueue = (j.items || []).filter(it => it.url && (
+      (it.type === 'video' && size(it.url) > 0 && size(it.url) <= STOCK_MAX_VIDEO_BYTES) ||
+      it.type === 'image'
+    )).slice(0, STOCK_MAX_ITEMS);
+    if (chQueue.length){ chLive = true; chErr = 0; chNext(); } else chLive = false;
+  }catch(e){ chLive = false; }
+}
+function chSkip(){ chErr++; if (chErr > chQueue.length){ chLive = false; chItem = null; return; } chNext(); }
+function chNext(){ chPlay(chIdx + 1); }
+function chPlay(i){
+  clearTimeout(chTimer); if (!chQueue.length) return;
+  const seq = ++chSeq;
+  chIdx = ((i % chQueue.length) + chQueue.length) % chQueue.length;
+  chItem = chQueue[chIdx]; chImg = null;
+  if (chItem.type === 'video'){
+    chVid.src = chItem.url;
+    chVid.play().catch(() => { if (seq === chSeq && chVid.error) chSkip(); });
+    chTimer = setTimeout(chNext, VIDEO_CAP_MS);
+  } else {
+    chVid.pause(); chVid.removeAttribute('src');
+    const im = new Image(); im.crossOrigin = 'anonymous';
+    im.onload = () => { chImg = im; chErr = 0; };
+    im.onerror = () => chSkip();
+    im.src = chItem.url;
+    chTimer = setTimeout(chNext, IMG_SECONDS * 1000);
+  }
+}
+function chTitle(){ return chItem ? String(chItem.title || chItem.id || '').replace(/&#39;/g, "'").slice(0, 52) : ''; }
+
+// ---- pintado de la pantalla: media a cover + banda ADcelerate + chip EN VIVO ----
+function roundRect(c, x, y, w, h, r){
+  c.beginPath();
+  c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+function drawChannel(ctx, W, H){
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#06141a'; ctx.fillRect(0, 0, W, H);
+  // media actual (vídeo/imagen del canal real) a cover
+  let src = null, sw = 0, sh = 0, live = false;
+  if (chLive && chItem){
+    if (chItem.type === 'video' && chVid.readyState >= 2){ src = chVid; sw = chVid.videoWidth; sh = chVid.videoHeight; }
+    else if (chImg){ src = chImg; sw = chImg.naturalWidth; sh = chImg.naturalHeight; }
+  }
+  if (src && sw > 0 && sh > 0){
+    const sc = Math.max(W / sw, H / sh), dw = sw * sc, dh = sh * sc;
+    try{ ctx.drawImage(src, (W - dw) / 2, (H - dh) / 2, dw, dh); live = true; }catch(e){}
+  }
+  if (!live){   // fallback honesto: la creatividad recomendada por perfil
+    const dom = dominanteDe(FRANJAS[selFranjaIdx].mix), im = creLive[dom];
+    if (im && im.complete && im.naturalWidth){
+      const sc = Math.max(W / im.naturalWidth, H / im.naturalHeight), dw = im.naturalWidth * sc, dh = im.naturalHeight * sc;
+      try{ ctx.drawImage(im, (W - dw) / 2, (H - dh) / 2, dw, dh); }catch(e){}
+    }
+  }
+  const pad = Math.round(W * 0.035);
+  // chip EN VIVO / FALLBACK (arriba-izquierda)
+  const f1 = Math.max(10, Math.round(H * 0.062));
+  ctx.font = '700 ' + f1 + 'px ' + LIVE_SANS;
+  const label = live ? 'EN VIVO' : 'FALLBACK';
+  const dotW = live ? f1 * 1.5 : f1 * 0.6;
+  const chipW = ctx.measureText(label).width + dotW + f1 * 0.7, chipH = f1 * 1.72;
+  ctx.fillStyle = live ? 'rgba(226,38,58,.92)' : 'rgba(120,140,150,.85)';
+  roundRect(ctx, pad, pad, chipW, chipH, chipH / 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  if (live){ ctx.beginPath(); ctx.arc(pad + f1 * 0.9, pad + chipH / 2, f1 * 0.3, 0, 7); ctx.fill(); }
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, pad + dotW + f1 * 0.35, pad + chipH / 2 + 1);
+  // banda ADcelerate (recomendación por perfil dominante) abajo
+  const dom = dominanteDe(FRANJAS[selFranjaIdx].mix), rg = REGLAS[dom];
+  const bh = Math.max(34, Math.round(H * 0.2));
+  const grad = ctx.createLinearGradient(0, H - bh, 0, H);
+  grad.addColorStop(0, 'rgba(3,10,14,0)'); grad.addColorStop(.4, 'rgba(3,10,14,.8)'); grad.addColorStop(1, 'rgba(3,10,14,.95)');
+  ctx.fillStyle = grad; ctx.fillRect(0, H - bh, W, bh);
+  const f2 = Math.max(9, Math.round(H * 0.05)), f3 = Math.max(11, Math.round(H * 0.072));
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = '700 ' + f2 + 'px ' + LIVE_MONO; ctx.fillStyle = '#50c8ff';
+  ctx.fillText('ADcelerate recomienda', pad, H - bh + f2 * 1.5);
+  ctx.font = '800 ' + f3 + 'px ' + LIVE_SANS; ctx.fillStyle = '#eaf7ff';
+  ctx.fillText('Creatividad ' + rg.cre + ' · ' + rg.titulo, pad, H - Math.round(bh * 0.28));
+}
+
+// ---- proyección mundo→pantalla desde el estado de cámara del Map3D ----
+// Ancla = centro de la pantalla del kiosko (~2 m sobre el pavimento en la plaza).
+const KIOSK_SCREEN = { lat: PLAZA.lat, lng: PLAZA.lng, alt: 2.5 };
+// FOV vertical que FIJAMOS explícitamente en el Map3D (map3d.fov, grados) y reusamos EN LA
+// PROYECCIÓN → la pantalla se alinea con el kiosko por construcción (sin adivinar el FOV).
+let SCREEN_FOV_DEG = 35;
+let SCREEN_FOV_Y = SCREEN_FOV_DEG * Math.PI / 180;
+let SCREEN_W_M = 3.1, SCREEN_H_M = 1.75;   // tamaño físico de la pantalla del kiosko (glue de cerca)
+let SCREEN_OFF_E = 0, SCREEN_OFF_N = 0;    // ajuste fino del ancla (metros E/N) — calibrar
+let LIVE_GLUE = true;         // pegar al kiosko (si off, siempre PiP)
+let _pdbg = {};               // internos de la última proyección (diagnóstico ?cal)
+function getCam(){
+  if (!map3d) return null;
+  const c = map3d.center || {}, g = v => (typeof v === 'function' ? v.call(c) : v);
+  const lat = g(c.lat), lng = g(c.lng), alt = g(c.altitude);
+  return {
+    lat: isFinite(lat) ? lat : camState.lat, lng: isFinite(lng) ? lng : camState.lng, alt: isFinite(alt) ? alt : camState.alt,
+    heading: isFinite(map3d.heading) ? map3d.heading : camState.heading,
+    range: isFinite(map3d.range) ? map3d.range : camState.range,
+    tilt: isFinite(map3d.tilt) ? map3d.tilt : camState.tilt,
+  };
+}
+function projectKiosk(){
+  if (!map3d) return null;
+  const st = $('stage').getBoundingClientRect(); const W = st.width, H = st.height;
+  if (W < 10 || H < 10) return null;
+  const c = map3d.center || {}, gc = v => (typeof v === 'function' ? v.call(c) : v);
+  const clat = gc(c.lat), clng = gc(c.lng), calt = gc(c.altitude);
+  if (!isFinite(clat) || !isFinite(clng)) return null;
+  const latR = clat * Math.PI / 180, MPD = 111320;
+  // world(lat,lng,alt) → ENU (metros) centrado en el CENTER de la cámara
+  const enu = (lat, lng, alt) => ({ e: (lng - clng) * MPD * Math.cos(latR), n: (lat - clat) * MPD, u: (alt || 0) - (calt || 0) });
+  // OJO: real (cameraPosition, cuando el globo renderiza) o derivado de range/tilt/heading
+  let eye = null, eyeSrc = 'none';
+  const cp = map3d.cameraPosition;
+  let cpLat = null, cpLng = null, cpAlt = null;
+  if (cp){
+    const gp = k => { const v = cp[k]; return typeof v === 'function' ? v.call(cp) : v; };
+    cpLat = gp('lat'); cpLng = gp('lng'); cpAlt = gp('altitude');
+    if (cpAlt == null) cpAlt = gp('alt');
+    if (isFinite(cpLat) && isFinite(cpLng)){ eye = enu(cpLat, cpLng, cpAlt); eyeSrc = 'camPos'; }
+  }
+  if (!eye){
+    const t = (isFinite(map3d.tilt) ? map3d.tilt : camState.tilt) * Math.PI / 180;
+    const hd = (isFinite(map3d.heading) ? map3d.heading : camState.heading) * Math.PI / 180;
+    const R = isFinite(map3d.range) ? map3d.range : camState.range;
+    eye = { e: -R * Math.sin(t) * Math.sin(hd), n: -R * Math.sin(t) * Math.cos(hd), u: R * Math.cos(t) };
+    eyeSrc = 'derived(R=' + fmt(R,1) + ')';
+  }
+  _pdbg = { eyeSrc, cpLat, cpLng, cpAlt, clat, clng, calt, eyeE: eye.e, eyeN: eye.n, eyeU: eye.u };
+  // base de cámara (roll=0): forward = center−eye, right = forward×worldUp, up = right×forward
+  let fe = -eye.e, fn = -eye.n, fu = -eye.u; const fl = Math.hypot(fe, fn, fu) || 1; fe /= fl; fn /= fl; fu /= fl;
+  let re = fn, rn = -fe, ru = 0; const rl = Math.hypot(re, rn, ru) || 1; re /= rl; rn /= rl; ru /= rl;
+  const ue = rn * fu - ru * fn, un = ru * fe - re * fu, uu = re * fn - rn * fe;
+  // ancla del kiosko (con ajuste fino en metros)
+  const tg = enu(KIOSK_SCREEN.lat, KIOSK_SCREEN.lng, KIOSK_SCREEN.alt); tg.e += SCREEN_OFF_E; tg.n += SCREEN_OFF_N;
+  const ve = tg.e - eye.e, vn = tg.n - eye.n, vu = tg.u - eye.u;
+  const depth = ve * fe + vn * fn + vu * fu; _pdbg.depth = depth; if (depth <= 1) return null;   // detrás/encima del ojo
+  const vr = ve * re + vn * rn + vu * ru, vup = ve * ue + vn * un + vu * uu;
+  const tanH = Math.tan(SCREEN_FOV_Y / 2), aspect = W / H;
+  const x = ((vr / depth) / (tanH * aspect) * 0.5 + 0.5) * W;
+  const y = (0.5 - (vup / depth) / tanH * 0.5) * H;
+  const pxPerM = (H / 2) / (depth * tanH);
+  return { x: st.left + x, y: st.top + y, cx: x, cy: y, depth, pxPerM, W, H };
+}
+
+/* ============================================================
+   «A pie ante el kiosko» — Street View REAL + señalización admira.tv
+   Los tiles fotorrealistas se derriten a ras de calle y el kiosko se pierde. Para VERLO
+   usamos el panorama de Street View (foto real, nítida) de la trasera del MUPI de la Plaça
+   de la Vila de Gràcia, y mapeamos DOS pantallas admira.tv EN VIVO sobre los dos paneles
+   con warp de perspectiva de 4 esquinas (homografía → matrix3d). Es el caso DOOH exacto:
+   sustituir el anuncio estático del MUPI por admira.tv en directo sobre el kiosko real.
+   ============================================================ */
+const KIOSK_PANO = '2NoSvJbqMCZ0RXhR8pTSLA';   // panorama de la trasera del kiosko (del enlace de Carlos)
+const KIOSK_POS  = { lat: 41.4002271, lng: 2.1572578 };
+let KIOSK_POV = { heading: 49.5, pitch: 2, zoom: 0.9 };   // encuadre (calibrar en preview)
+// esquinas de cada panel en FRACCIÓN del lienzo (0..1), orden TL,TR,BR,BL — CALIBRAR sobre el pano real
+let SV_PANELS = [
+  { tl:[.418,.470], tr:[.548,.478], br:[.548,.808], bl:[.418,.812] },   // panel izquierdo (SAUVAGE)
+  { tl:[.557,.478], tr:[.690,.470], br:[.692,.808], bl:[.557,.812] },   // panel derecho (SAUVAGE)
+];
+let sv = null, SV_ON = false;
+
+async function showStreetView(){
+  hideGlobeInteractions();
+  $('streetview').style.display = 'block';
+  $('sv-signage').classList.add('show');
+  SV_ON = true;
+  if (!sv){
+    try{
+      const { StreetViewPanorama } = await google.maps.importLibrary('streetView');
+      sv = new StreetViewPanorama($('streetview'), {
+        pano: KIOSK_PANO,
+        pov: { heading: KIOSK_POV.heading, pitch: KIOSK_POV.pitch }, zoom: KIOSK_POV.zoom,
+        disableDefaultUI: true, clickToGo: false, scrollwheel: false, panControl: false,
+        linksControl: false, addressControl: false, showRoadLabels: false, zoomControl: false,
+        motionTracking: false, motionTrackingControl: false, fullscreenControl: false,
+      });
+      // Reproyectar las pantallas al girar/moverse (además del bucle por frame).
+      sv.addListener('pov_changed', layoutSvPanels);
+      sv.addListener('zoom_changed', layoutSvPanels);
+      sv.addListener('position_changed', layoutSvPanels);
+    }catch(e){ console.error('[SV] no se pudo cargar Street View:', e); }
+  } else {
+    sv.setPano(KIOSK_PANO); sv.setPov({ heading: KIOSK_POV.heading, pitch: KIOSK_POV.pitch }); sv.setZoom(KIOSK_POV.zoom);
+  }
+  // ancla las esquinas de los paneles a puntos del MUNDO (una vez) para que las pantallas
+  // se REPOSICIONEN al girar/moverse (tracking), no que floten fijas en el lienzo.
+  calibrateSvWorld();
+  // prueba de tracking: ?pov=<heading> mira desde otro ángulo sin recalibrar (debe seguir clavado)
+  const povTest = new URLSearchParams(location.search).get('pov');
+  if (povTest && sv) setTimeout(() => sv.setPov({ heading: +povTest, pitch: KIOSK_POV.pitch }), 300);
+  // robustez: el pov del constructor no siempre se respeta → forzar el encuadre del kiosko
+  // al cargar (varias veces por si el panorama tarda). Tras eso, el usuario ya puede girar.
+  else [150, 400, 800, 1400].forEach(ms => setTimeout(() => {
+    if (SV_ON && sv){
+      const p = sv.getPov();
+      if (Math.abs(((p.heading - KIOSK_POV.heading + 540) % 360) - 180) > 1.5 || Math.abs(p.pitch - KIOSK_POV.pitch) > 1.5)
+        sv.setPov({ heading: KIOSK_POV.heading, pitch: KIOSK_POV.pitch });
+    }
+  }, ms));
+  requestAnimationFrame(() => { $('streetview').classList.add('sv-vis'); $('sv-signage').classList.add('sv-vis'); });
+  layoutSvPanels();
+}
+function hideStreetView(){
+  if (!SV_ON) return;
+  SV_ON = false;
+  $('streetview').style.display = 'none';
+  $('streetview').classList.remove('sv-vis');
+  $('sv-signage').classList.remove('show'); $('sv-signage').classList.remove('sv-vis');
+}
+function hideGlobeInteractions(){ if (map3d) map3d.stopCameraAnimation(); }
+
+/* ---- tracking: anclar los paneles a puntos del MUNDO y reproyectarlos cada frame ---- */
+const SV_EYE = 2.5;      // altura del ojo del panorama (m)
+const SV_DEPTH = 7.5;    // distancia estimada cámara→paneles (m) — parallax al caminar
+let SV_PANEL_WORLD = null;   // [[{lat,lng,alt} x4] por panel]
+function svFovH(zoom){ return (180 / Math.pow(2, zoom)) * Math.PI / 180; }   // FOV horizontal (rad)
+function svPos(){
+  try{ const l = sv && sv.getPosition && sv.getPosition();
+    if (l) return { lat: (typeof l.lat==='function'?l.lat():l.lat), lng: (typeof l.lng==='function'?l.lng():l.lng) }; }catch(e){}
+  return KIOSK_POS;
+}
+function hpToVec(h, p){ const hr=h*Math.PI/180, pr=p*Math.PI/180, cp=Math.cos(pr); return { e:Math.sin(hr)*cp, n:Math.cos(hr)*cp, u:Math.sin(pr) }; }
+// dirección (heading,pitch grados) desde una cámara (a SV_EYE) hasta un punto del mundo
+function dirTo(camLat, camLng, t){
+  const latR=camLat*Math.PI/180, MPD=111320;
+  const dE=(t.lng-camLng)*MPD*Math.cos(latR), dN=(t.lat-camLat)*MPD, dU=t.alt-SV_EYE;
+  return { heading:(Math.atan2(dE,dN)*180/Math.PI+360)%360, pitch:Math.atan2(dU,Math.hypot(dE,dN))*180/Math.PI };
+}
+// proyecta una dirección (heading,pitch) al lienzo con el POV/zoom actuales
+function projHP(h, p, pov, zoom, W, H){
+  const f=hpToVec(pov.heading, pov.pitch);
+  let re=f.n, rn=-f.e, ru=0; const rl=Math.hypot(re,rn,ru)||1; re/=rl;rn/=rl;ru/=rl;
+  const ue=rn*f.u-ru*f.n, un=ru*f.e-re*f.u, uu=re*f.n-rn*f.e;
+  const d=hpToVec(h, p);
+  const cz=d.e*f.e+d.n*f.n+d.u*f.u; if (cz<=0.02) return null;   // detrás
+  const cx=d.e*re+d.n*rn+d.u*ru, cy=d.e*ue+d.n*un+d.u*uu;
+  const th=Math.tan(svFovH(zoom)/2), tv=th*(H/W);
+  return [ ((cx/cz)/th*0.5+0.5)*W, (0.5-(cy/cz)/tv*0.5)*H ];
+}
+// calibra los puntos del mundo desde las fracciones de referencia (POV del kiosko)
+function calibrateSvWorld(){
+  const st=$('sv-signage').getBoundingClientRect(); const W=st.width, H=st.height; if (W<10) return;
+  const cam=KIOSK_POS, pov={ heading:KIOSK_POV.heading, pitch:KIOSK_POV.pitch }, zoom=KIOSK_POV.zoom;
+  const f=hpToVec(pov.heading, pov.pitch);
+  let re=f.n, rn=-f.e, ru=0; const rl=Math.hypot(re,rn,ru)||1; re/=rl;rn/=rl;ru/=rl;
+  const ue=rn*f.u-ru*f.n, un=ru*f.e-re*f.u, uu=re*f.n-rn*f.e;
+  const th=Math.tan(svFovH(zoom)/2), tv=th*(H/W);
+  const latR=cam.lat*Math.PI/180, MPD=111320;
+  SV_PANEL_WORLD = SV_PANELS.map(p => ['tl','tr','br','bl'].map(k=>{
+    const cx=(p[k][0]*2-1)*th, cy=(1-p[k][1]*2)*tv;
+    let e=f.e+re*cx+ue*cy, n=f.n+rn*cx+un*cy, u=f.u+ru*cx+uu*cy;
+    const l=Math.hypot(e,n,u)||1; e/=l;n/=l;u/=l;
+    return { lat: cam.lat + (n*SV_DEPTH)/MPD, lng: cam.lng + (e*SV_DEPTH)/(MPD*Math.cos(latR)), alt: SV_EYE + u*SV_DEPTH };
+  }));
+}
+
+// rejilla de fracciones (0..1) sobre el lienzo Street View — solo ?cal, para leer esquinas
+function drawSvGrid(){
+  const g = $('sv-grid'); if (!g) return;
+  const st = $('sv-signage').getBoundingClientRect(); const W = Math.round(st.width), H = Math.round(st.height);
+  if (W < 10) return;
+  if (g.width !== W) g.width = W; if (g.height !== H) g.height = H;
+  const c = g.getContext('2d'); c.clearRect(0, 0, W, H);
+  c.lineWidth = 1; c.font = '11px ui-monospace,monospace';
+  for (let i = 1; i < 20; i++){
+    const f = i / 20, x = W * f, y = H * f, major = (i % 2 === 0);
+    c.strokeStyle = major ? 'rgba(0,255,180,.55)' : 'rgba(0,255,180,.22)';
+    c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H); c.stroke();
+    c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
+    if (major){ c.fillStyle = 'rgba(120,255,210,.95)'; c.fillText(f.toFixed(2), x + 2, 12); c.fillText(f.toFixed(2), 2, y - 2); }
+  }
+}
+// coloca cada pantalla admira.tv sobre su panel con warp de perspectiva de 4 esquinas.
+// Si hay anclaje al mundo (SV_PANEL_WORLD), reproyecta según la cámara actual (TRACKING:
+// las pantallas siguen a los paneles al girar/moverse). Si no, usa las fracciones fijas.
+function layoutSvPanels(){
+  const st = $('sv-signage').getBoundingClientRect(); const W = st.width, H = st.height;
+  if (W < 10) return;
+  if (SV_PANEL_WORLD && sv){
+    const cam = svPos(), pov = sv.getPov(), zoom = sv.getZoom();
+    SV_PANEL_WORLD.forEach((corners, i) => {
+      const el = $('sv-p' + (i + 1)); if (!el) return; const cv = el.firstElementChild;
+      const w = cv.width, h = cv.height;
+      const pts = corners.map(c => projHP(dirTo(cam.lat, cam.lng, c).heading, dirTo(cam.lat, cam.lng, c).pitch, pov, zoom, W, H));
+      if (pts.some(p => !p)){ el.style.display = 'none'; return; }   // algún vértice detrás → ocultar
+      el.style.display = 'block'; el.style.width = w + 'px'; el.style.height = h + 'px';
+      el.style.transform = quadWarp(w, h, pts);
+    });
+    return;
+  }
+  SV_PANELS.forEach((p, i) => {   // fallback: fracciones fijas
+    const el = $('sv-p' + (i + 1)); if (!el) return; const cv = el.firstElementChild;
+    const w = cv.width, h = cv.height;
+    const d = ['tl','tr','br','bl'].map(k => [p[k][0] * W, p[k][1] * H]);
+    el.style.display = 'block'; el.style.width = w + 'px'; el.style.height = h + 'px';
+    el.style.transform = quadWarp(w, h, d);
+  });
+}
+/* homografía (4 esquinas → matrix3d CSS): mapea el rectángulo del <canvas> al cuadrilátero del panel */
+function _adj(m){ return [ m[4]*m[8]-m[5]*m[7], m[2]*m[7]-m[1]*m[8], m[1]*m[5]-m[2]*m[4],
+  m[5]*m[6]-m[3]*m[8], m[0]*m[8]-m[2]*m[6], m[2]*m[3]-m[0]*m[5],
+  m[3]*m[7]-m[4]*m[6], m[1]*m[6]-m[0]*m[7], m[0]*m[4]-m[1]*m[3] ]; }
+function _mm(a,b){ const c=[]; for(let i=0;i<3;i++)for(let j=0;j<3;j++){ let s=0; for(let k=0;k<3;k++) s+=a[3*i+k]*b[3*k+j]; c[3*i+j]=s; } return c; }
+function _mv(m,v){ return [ m[0]*v[0]+m[1]*v[1]+m[2]*v[2], m[3]*v[0]+m[4]*v[1]+m[5]*v[2], m[6]*v[0]+m[7]*v[1]+m[8]*v[2] ]; }
+function _basis(x1,y1,x2,y2,x3,y3,x4,y4){ const m=[x1,x2,x3, y1,y2,y3, 1,1,1]; const v=_mv(_adj(m),[x4,y4,1]); return _mm(m,[v[0],0,0, 0,v[1],0, 0,0,v[2]]); }
+function quadWarp(w, h, d){
+  const s = _basis(0,0, w,0, w,h, 0,h);
+  const t = _basis(d[0][0],d[0][1], d[1][0],d[1][1], d[2][0],d[2][1], d[3][0],d[3][1]);
+  const Hm = _mm(t, _adj(s));
+  for (let i = 0; i < 9; i++) Hm[i] = Hm[i] / Hm[8];
+  const m = [Hm[0],Hm[3],0,Hm[6], Hm[1],Hm[4],0,Hm[7], 0,0,1,0, Hm[2],Hm[5],0,Hm[8]];
+  return 'matrix3d(' + m.join(',') + ')';
+}
+
+// ---- bucle de render de la capa viva (glue vs PiP / Street View) ----
+function liveTick(){
+  requestAnimationFrame(liveTick);
+  const glued = $('kiosk-live'), pip = $('pip-live');
+  if (!glued || !pip) return;
+  if (SV_ON){   // «a pie ante el kiosko»: pintar las dos pantallas del MUPI, ocultar glue/PiP del globo
+    glued.classList.remove('show'); pip.classList.remove('show');
+    layoutSvPanels();   // TRACKING: reproyecta cada frame según la cámara (giro/movimiento)
+    const c1 = $('sv-p1').firstElementChild, c2 = $('sv-p2').firstElementChild;
+    drawChannel(c1.getContext('2d'), c1.width, c1.height);
+    drawChannel(c2.getContext('2d'), c2.width, c2.height);
+    if (CAL_HUD){ updateCalHud(true, false); drawSvGrid(); }
+    return;
+  }
+  const ready = map3d && $('loading').classList.contains('done');
+  let showGlue = false;
+  if (ready && LIVE_GLUE){
+    const p = projectKiosk();
+    if (p){
+      const h = SCREEN_H_M * p.pxPerM, w = SCREEN_W_M * p.pxPerM;
+      const onX = p.cx > -0.25 * p.W && p.cx < 1.25 * p.W;
+      const onY = p.cy > -0.25 * p.H && p.cy < 1.25 * p.H;
+      // umbral bajo: a media distancia la pantalla es pequeña pero aún legible pegada;
+      // por debajo de ~30 px se repliega al PiP (más legible que un sello diminuto).
+      if (h >= 30 && h <= 2.4 * p.H && onX && onY){
+        showGlue = true;
+        glued.style.transform = 'translate(' + p.x + 'px,' + p.y + 'px) translate(-50%,-50%)';
+        glued.style.width = w + 'px'; glued.style.height = h + 'px';
+        const cv = glued.firstElementChild;
+        drawChannel(cv.getContext('2d'), cv.width, cv.height);
+      }
+    }
+  }
+  glued.classList.toggle('show', showGlue);
+  const showPip = ready && !showGlue;
+  pip.classList.toggle('show', showPip);
+  if (showPip){ const cv = pip.firstElementChild; drawChannel(cv.getContext('2d'), cv.width, cv.height); }
+  if (CAL_HUD) updateCalHud(ready, showGlue);
+}
+
+// HUD de diagnóstico (solo ?cal=1): pinta cámara/proyección/estado en pantalla para
+// poder leerlo por captura cuando no hay acceso JS al navegador (Safari solo-lectura).
+const CAL_HUD = new URLSearchParams(location.search).has('cal');
+let calHudEl = null;
+function updateCalHud(ready, showGlue){
+  if (!calHudEl){
+    calHudEl = document.createElement('div'); calHudEl.id = 'cal-hud';
+    calHudEl.style.cssText = 'position:fixed;right:10px;top:calc(var(--top-h) + 12px);z-index:70;'
+      + 'font:11px/1.5 ui-monospace,Menlo,monospace;color:#9fe0ff;background:rgba(4,12,16,.82);'
+      + 'border:1px solid rgba(80,200,255,.4);border-radius:8px;padding:8px 10px;white-space:pre;pointer-events:none;';
+    document.body.appendChild(calHudEl);
+  }
+  if (SV_ON){
+    const pov = sv ? sv.getPov() : null, z = sv ? sv.getZoom() : null;
+    calHudEl.textContent =
+      'CAL HUD · STREET VIEW\n' +
+      'pano ' + (sv ? 'sí' : 'no') + '\n' +
+      (pov ? ('heading ' + fmt(pov.heading,2) + '\npitch ' + fmt(pov.pitch,2) + '\nzoom ' + fmt(z,2)) : 'pov —') + '\n' +
+      'panel1 ' + JSON.stringify(SV_PANELS[0].tl) + '…\n' +
+      'panel2 ' + JSON.stringify(SV_PANELS[1].tl) + '…';
+    return;
+  }
+  const cam = getCam(), p = projectKiosk();
+  calHudEl.textContent =
+    'CAL HUD (?cal)\n' +
+    'ready ' + ready + '  glue ' + showGlue + '\n' +
+    'fov ' + SCREEN_FOV_DEG + '  map.fov ' + (map3d ? map3d.fov : '—') + '\n' +
+    (cam ? ('cam range ' + fmt(cam.range,1) + ' tilt ' + fmt(cam.tilt,1) + ' hd ' + fmt(cam.heading,1) + '\n') : 'cam —\n') +
+    'camPos ' + (map3d && map3d.cameraPosition ? 'sí' : 'no') + '\n' +
+    (p ? ('proj x ' + Math.round(p.cx) + ' y ' + Math.round(p.cy) + ' / ' + Math.round(p.W) + 'x' + Math.round(p.H) + '\n'
+        + 'depth ' + fmt(p.depth,1) + '  scrH ' + Math.round(SCREEN_H_M*p.pxPerM) + 'px') : 'proj NULL (detrás/off)') + '\n' +
+    'eye ' + (_pdbg.eyeSrc||'?') + '\n' +
+    'cp ' + fmt(_pdbg.cpLat,5) + ',' + fmt(_pdbg.cpLng,5) + ' a' + fmt(_pdbg.cpAlt,1) + '\n' +
+    'ctr ' + fmt(_pdbg.clat,5) + ',' + fmt(_pdbg.clng,5) + ' a' + fmt(_pdbg.calt,1) + '\n' +
+    'eyeENU ' + fmt(_pdbg.eyeE,1) + ',' + fmt(_pdbg.eyeN,1) + ',' + fmt(_pdbg.eyeU,1) + '  d ' + fmt(_pdbg.depth,1) + '\n' +
+    'kiosk ' + (kioskModel ? ('sí · ' + kioskPerfil) : 'NO');
+}
+
 /* ============================ UI (marco compartido) ============================ */
 function wireUI(){
   // cámara
@@ -796,6 +1318,23 @@ window.__best = {
   get kioskPerfil(){ return kioskPerfil; }, get kioskModel(){ return kioskModel; },
   enterFree, exitFree, flyTick, setKioskModel, human, orbit, setFranja: (i)=>{ selFranjaIdx=i; refreshFranja(); },
   setRT, rtSync, madridHour, wxIcon, get rt(){ return rt; }, get wxCurrent(){ return wxCurrent; },
+  // --- calibración de la pantalla viva pegada al kiosko (usar en el preview de pages.dev) ---
+  live: {
+    project: projectKiosk, getCam, drawChannel,
+    get chLive(){ return chLive; }, get chItem(){ return chItem; }, get chQueue(){ return chQueue; }, chLoad,
+    get glue(){ return LIVE_GLUE; }, set glue(v){ LIVE_GLUE = !!v; },
+    get fovDeg(){ return SCREEN_FOV_DEG; }, set fovDeg(d){ SCREEN_FOV_DEG = d; SCREEN_FOV_Y = d * Math.PI / 180; if (map3d) map3d.fov = d; },
+    get anchor(){ return { alt: KIOSK_SCREEN.alt, offE: SCREEN_OFF_E, offN: SCREEN_OFF_N, wM: SCREEN_W_M, hM: SCREEN_H_M }; },
+    set anchor(o){ if (o.alt!=null) KIOSK_SCREEN.alt=o.alt; if (o.offE!=null) SCREEN_OFF_E=o.offE; if (o.offN!=null) SCREEN_OFF_N=o.offN; if (o.wM!=null) SCREEN_W_M=o.wM; if (o.hM!=null) SCREEN_H_M=o.hM; },
+    // --- Street View «a pie ante el kiosko»: calibración del pano y de los dos paneles ---
+    sv: {
+      show: showStreetView, hide: hideStreetView, get on(){ return SV_ON; }, get obj(){ return sv; },
+      get pov(){ return sv ? { ...sv.getPov(), zoom: sv.getZoom() } : null; },
+      setPov(o){ if (o.heading!=null) KIOSK_POV.heading=o.heading; if (o.pitch!=null) KIOSK_POV.pitch=o.pitch; if (o.zoom!=null) KIOSK_POV.zoom=o.zoom;
+        if (sv){ sv.setPov({ heading: KIOSK_POV.heading, pitch: KIOSK_POV.pitch }); if (o.zoom!=null) sv.setZoom(o.zoom); } layoutSvPanels(); },
+      get panels(){ return SV_PANELS; }, setPanels(a){ SV_PANELS = a; layoutSvPanels(); }, layout: layoutSvPanels,
+    },
+  },
 };
 
 boot();
