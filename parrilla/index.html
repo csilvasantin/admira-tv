@@ -111,14 +111,6 @@
     function play(){if(timer){stop();return}$('playBtn').textContent='⏸ Pausar';$('previewState').textContent='en reproducción';const tick=()=>{preview();timer=setTimeout(()=>{current=(current+1)%items.length;tick()},Math.max(1,+items[current].seconds)*1000)};tick()}
     function madridDate(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()).replace(/-/g,'')}
     async function post(path,body){const r=await fetch(API+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),d=await r.json().catch(()=>({}));if(!r.ok||d.error)throw new Error(d.error||('HTTP '+r.status));return d}
-    async function prepareTarget(target,key){
-      const day=await fetch(API+'/grid/day?screen='+encodeURIComponent(target.screen)+'&date='+madridDate(),{cache:'no-store'}).then(r=>r.json());
-      const cfg=day.config||{}, bands=(cfg.bands||[]).map(b=>({...b,capacity:Math.max(8,+b.capacity||8)}));
-      await post('/grid/config',{key,screen:target.screen,name:target.name,circuit:target.circuit,policy:'manual',slotSeconds:10,pixerScreens:target.pixerScreens||[],bands});
-      const old=[];(day.bands||[]).forEach(b=>(b.slots||[]).forEach(s=>{if(s.playlistId===PLAYLIST_ID&&s.bookingId&&!old.includes(s.bookingId))old.push(s.bookingId)}));
-      for(const id of old)await post('/grid/unbook',{key,screen:target.screen,date:madridDate(),id});
-      return bands;
-    }
     async function assign(){
       const chosen=[...document.querySelectorAll('[data-target]:checked')].map(x=>x.dataset.target);if(!chosen.length){feedback('Elige al menos un destino.',false);return}
       let key='';try{key=localStorage.getItem('grid_key')||''}catch(_){}if(!key){key=(prompt('Introduce GRID_KEY para escribir en la parrilla real:')||'').trim();if(key)try{localStorage.setItem('grid_key',key)}catch(_){}}
@@ -130,13 +122,8 @@
       $('assignBtn').disabled=true;feedback('Preparando '+targets.length+' destino(s)…');let booked=0;
       try{
         for(const target of targets){
-          const bands=await prepareTarget(target,key);
-          for(const band of bands){
-            for(let i=0;i<items.length;i++){
-              const it=items[i],url=new URL(it.asset,location.origin).href;
-              await post('/grid/book',{key,screen:target.screen,date:madridDate(),bandId:band.id,slots:1,status:it.lane==='municipal'?'own':'sold',advertiser:it.lane==='municipal'?'Ajuntament':'Publicidad local',title:it.title,category:it.lane,creative:{type:'image',url,name:it.title},playlistId:PLAYLIST_ID,position:i,lane:it.lane});booked++;
-            }
-          }
+          const rundown=items.map(it=>({title:it.title,lane:it.lane,advertiser:it.lane==='municipal'?'Ajuntament':'Publicidad local',creative:{type:'image',url:new URL(it.asset,location.origin).href,name:it.title}}));
+          const result=await post('/grid/rundown',{key,screen:target.screen,date:madridDate(),name:target.name,circuit:target.circuit,pixerScreens:target.pixerScreens||[],playlistId:PLAYLIST_ID,items:rundown});booked+=result.passes||0;
         }
         save();feedback('✓ Parrilla asignada: '+booked+' pases · '+targets.map(t=>t.name).join(' + '),true);
       }catch(e){feedback('✗ No se pudo completar: '+String(e.message||e),false)}finally{updateBalance()}
