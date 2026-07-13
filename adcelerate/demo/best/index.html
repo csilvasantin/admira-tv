@@ -824,6 +824,7 @@ chVid.addEventListener('ended', () => chNext());
 chVid.addEventListener('error', () => chSkip());
 chVid.addEventListener('loadeddata', () => { chErr = 0; });
 const creLive = {};   // creatividades por perfil (fallback de pantalla, same-origin)
+function chTag(text){ const el = document.querySelector('.pip-tag'); if (el) el.textContent = text; }
 function loadCreLive(){
   for (const p of PERFILES){ const im = new Image(); im.crossOrigin = 'anonymous'; im.src = '../creatividades/' + p + '.png'; creLive[p] = im; }
 }
@@ -838,15 +839,17 @@ async function chLoad(){
       (s.kind === 'own' || s.kind === 'paid') && s.creative && s.creative.url &&
       (!s.bookingId || !seen.has(s.bookingId)) && (!s.bookingId || seen.add(s.bookingId))
     ).map(s => ({
-      id: s.bookingId || ('grid-' + s.position), url: s.creative.url,
+      id: s.bookingId || ('grid-' + s.position),
+      // Evita el 301 www→apex: el salto no incluye CORS y ensucia el canvas.
+      url: s.creative.url.replace(/^https:\/\/www\.admira\.tv\//, 'https://admira.tv/'),
       type: s.creative.type || 'image', title: s.title || s.creative.name || 'Parrilla',
       source: 'grid', lane: s.lane || (s.kind === 'own' ? 'municipal' : 'publicidad'),
       position: Number.isFinite(s.position) ? s.position : 9999, seconds: 10,
     })).sort((a, b) => a.position - b.position);
     if (grid.length){
-      chQueue = grid; chLive = true; chErr = 0; chIdx = -1; chNext(); return;
+      chQueue = grid; chLive = true; chErr = 0; chIdx = -1; chTag('parrilla 50/50 · ' + grid.length + ' piezas · en vivo'); chNext(); return;
     }
-  }catch(e){ console.warn('[parrilla] no se pudo cargar /grid/day', e); }
+  }catch(e){ console.warn('[parrilla] no se pudo cargar /grid/day', e); chTag('parrilla no disponible · continuidad'); }
   try{
     const r = await fetch(STOCK_URL, { cache: 'no-store' });
     const j = await r.json();
@@ -855,7 +858,7 @@ async function chLoad(){
       (it.type === 'video' && size(it.url) > 0 && size(it.url) <= STOCK_MAX_VIDEO_BYTES) ||
       it.type === 'image'
     )).slice(0, STOCK_MAX_ITEMS);
-    if (chQueue.length){ chLive = true; chErr = 0; chNext(); } else chLive = false;
+    if (chQueue.length){ chLive = true; chErr = 0; chTag('continuidad Stock · en vivo'); chNext(); } else chLive = false;
   }catch(e){ console.warn('[canal] no se pudo cargar Stock', e); chLive = false; }
 }
 function chSkip(){ chErr++; if (chErr > chQueue.length){ chLive = false; chItem = null; return; } chNext(); }
