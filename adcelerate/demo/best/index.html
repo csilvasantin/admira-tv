@@ -460,7 +460,7 @@ async function boot(){
   loadCreatividades();
   wireUI();
   pollSignage(); setInterval(pollSignage, SIGNAGE_POLL_MS);
-  // pantalla admira.tv EN VIVO (canal real R2) sobre el kiosko + PiP de respaldo
+  // pantalla admira.tv EN VIVO (parrilla del kiosko; Stock solo como respaldo)
   loadCreLive(); chLoad(); setInterval(chLoad, 300000);
   requestAnimationFrame(liveTick);
 
@@ -812,7 +812,9 @@ const fmt = (n, d) => (n == null || isNaN(n)) ? '—' : Number(n).toFixed(d);
 const LIVE_SANS = 'Inter, system-ui, -apple-system, Segoe UI, sans-serif';
 const LIVE_MONO = 'ui-monospace, Menlo, Consolas, monospace';
 
-// ---- motor de canal (Stock público del canal admira.tv en R2, igual que main.js) ----
+// ---- motor de canal (parrilla asignada al kiosko; Stock como continuidad) ----
+const GRID_SCREEN = 'sim-gracia-kiosko';
+const GRID_DAY_URL = 'https://api.admira.store/grid/day?screen=' + GRID_SCREEN;
 const STOCK_URL = 'https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json';
 const STOCK_MAX_ITEMS = 14, STOCK_MAX_VIDEO_BYTES = 15e6, IMG_SECONDS = 9, VIDEO_CAP_MS = 30000;
 let chQueue = [], chIdx = -1, chItem = null, chImg = null, chLive = false, chErr = 0, chTimer = 0, chSeq = 0;
@@ -827,6 +829,25 @@ function loadCreLive(){
 }
 async function chLoad(){
   try{
+    // La parrilla es la fuente prioritaria: conserva exactamente el orden que Carlos
+    // define en admira.tv/parrilla. Solo caemos a Stock cuando no hay programación.
+    const gd = await fetch(GRID_DAY_URL, { cache: 'no-store' }).then(r => r.json());
+    const band = (gd.bands || []).find(b => b.isNow) || (gd.bands || [])[0];
+    const seen = new Set();
+    const grid = ((band && band.slots) || []).filter(s =>
+      (s.kind === 'own' || s.kind === 'paid') && s.creative && s.creative.url &&
+      (!s.bookingId || !seen.has(s.bookingId)) && (!s.bookingId || seen.add(s.bookingId))
+    ).map(s => ({
+      id: s.bookingId || ('grid-' + s.position), url: s.creative.url,
+      type: s.creative.type || 'image', title: s.title || s.creative.name || 'Parrilla',
+      source: 'grid', lane: s.lane || (s.kind === 'own' ? 'municipal' : 'publicidad'),
+      position: Number.isFinite(s.position) ? s.position : 9999, seconds: 10,
+    })).sort((a, b) => a.position - b.position);
+    if (grid.length){
+      chQueue = grid; chLive = true; chErr = 0; chIdx = -1; chNext(); return;
+    }
+  }catch(e){ console.warn('[parrilla] no se pudo cargar /grid/day', e); }
+  try{
     const r = await fetch(STOCK_URL, { cache: 'no-store' });
     const j = await r.json();
     const size = u => { const m = /[?&]v=(\d+)/.exec(u || ''); return m ? +m[1] : 0; };
@@ -835,7 +856,7 @@ async function chLoad(){
       it.type === 'image'
     )).slice(0, STOCK_MAX_ITEMS);
     if (chQueue.length){ chLive = true; chErr = 0; chNext(); } else chLive = false;
-  }catch(e){ chLive = false; }
+  }catch(e){ console.warn('[canal] no se pudo cargar Stock', e); chLive = false; }
 }
 function chSkip(){ chErr++; if (chErr > chQueue.length){ chLive = false; chItem = null; return; } chNext(); }
 function chNext(){ chPlay(chIdx + 1); }
@@ -854,7 +875,7 @@ function chPlay(i){
     im.onload = () => { chImg = im; chErr = 0; };
     im.onerror = () => chSkip();
     im.src = chItem.url;
-    chTimer = setTimeout(chNext, IMG_SECONDS * 1000);
+    chTimer = setTimeout(chNext, (chItem.seconds || IMG_SECONDS) * 1000);
   }
 }
 function chTitle(){ return chItem ? String(chItem.title || chItem.id || '').replace(/&#39;/g, "'").slice(0, 52) : ''; }
@@ -898,7 +919,7 @@ function drawChannel(ctx, W, H){
   if (live){ ctx.beginPath(); ctx.arc(pad + f1 * 0.9, pad + chipH / 2, f1 * 0.3, 0, 7); ctx.fill(); }
   ctx.textBaseline = 'middle';
   ctx.fillText(label, pad + dotW + f1 * 0.35, pad + chipH / 2 + 1);
-  // banda ADcelerate (recomendación por perfil dominante) abajo
+  // banda editorial abajo: identifica la parrilla real cuando procede.
   const dom = dominanteDe(FRANJAS[selFranjaIdx].mix), rg = REGLAS[dom];
   const bh = Math.max(34, Math.round(H * 0.2));
   const grad = ctx.createLinearGradient(0, H - bh, 0, H);
@@ -907,9 +928,10 @@ function drawChannel(ctx, W, H){
   const f2 = Math.max(9, Math.round(H * 0.05)), f3 = Math.max(11, Math.round(H * 0.072));
   ctx.textBaseline = 'alphabetic';
   ctx.font = '700 ' + f2 + 'px ' + LIVE_MONO; ctx.fillStyle = '#50c8ff';
-  ctx.fillText('ADcelerate recomienda', pad, H - bh + f2 * 1.5);
+  const isGrid = chItem && chItem.source === 'grid';
+  ctx.fillText(isGrid ? ('PARRILLA 50/50 · ' + (chItem.lane === 'publicidad' ? 'PUBLICIDAD' : 'AYUNTAMIENTO')) : 'ADcelerate recomienda', pad, H - bh + f2 * 1.5);
   ctx.font = '800 ' + f3 + 'px ' + LIVE_SANS; ctx.fillStyle = '#eaf7ff';
-  ctx.fillText('Creatividad ' + rg.cre + ' · ' + rg.titulo, pad, H - Math.round(bh * 0.28));
+  ctx.fillText(isGrid ? chTitle() : ('Creatividad ' + rg.cre + ' · ' + rg.titulo), pad, H - Math.round(bh * 0.28));
 }
 
 // ---- proyección mundo→pantalla desde el estado de cámara del Map3D ----
