@@ -153,7 +153,10 @@
   :root{ --bottom-h: 0px; }
   #expertbar.collapsed{ display: none; }
   #sv-signage.show{ display: block; }
-  .sv-panel{ position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  .sv-panel{ position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; }
+  /* bisel integrado: sombra interior tipo cristal para que la pantalla lea como parte del MUPI */
+  .sv-panel::after{ content:''; position:absolute; inset:0; pointer-events:none;
+    box-shadow: inset 0 0 26px rgba(0,0,0,.45), inset 0 0 3px rgba(0,0,0,.85); }
   .sv-panel canvas{ display: block; }
 
   @media (max-width: 900px){
@@ -172,8 +175,8 @@
   <!-- «A pie ante el kiosko»: Street View real del kiosko (oculto hasta pulsar 🧍) -->
   <div id="streetview"></div>
   <div id="sv-signage">
-    <div class="sv-panel" id="sv-p1"><canvas width="512" height="384"></canvas></div>
-    <div class="sv-panel" id="sv-p2"><canvas width="512" height="384"></canvas></div>
+    <div class="sv-panel" id="sv-p1"><canvas width="512" height="760"></canvas></div>
+    <div class="sv-panel" id="sv-p2"><canvas width="512" height="760"></canvas></div>
     <canvas id="sv-grid" style="position:absolute;inset:0;pointer-events:none"></canvas>
   </div>
 
@@ -1016,6 +1019,14 @@ const KIOSK_PANO = '2NoSvJbqMCZ0RXhR8pTSLA';   // panorama de la trasera del kio
 const KIOSK_POS  = { lat: 41.4002271, lng: 2.1572578 };
 let KIOSK_POV = { heading: 49.5, pitch: 2, zoom: 0.9 };   // encuadre (calibrar en preview)
 // esquinas de cada panel en FRACCIÓN del lienzo (0..1), orden TL,TR,BR,BL — CALIBRAR sobre el pano real
+// Esquinas MEDIDAS sobre el panorama real (heading,pitch en grados, absolutos) — orden TL,TR,BR,BL.
+// Calibradas con renders rectilineos del pano a yaw/pitch/fov conocidos (13-jul-2026): las pantallas
+// quedan CLAVADAS a los dos posters SAUVAGE del MUPI a CUALQUIER pov/zoom (la camara del pano es fija,
+// asi que la proyeccion angular es exacta: gira, escala o reduce y el warp se recalcula por frame).
+let SV_PANELS_HP = [
+  { tl:[39.38,1.14], tr:[51.35,1.28], br:[51.31,-14.90], bl:[38.59,-14.74] },   // poster izquierdo (SAUVAGE)
+  { tl:[61.24,1.25], tr:[72.05,1.51], br:[73.41,-13.16], bl:[61.99,-14.39] },   // poster derecho (SAUVAGE)
+];
 let SV_PANELS = [
   { tl:[.418,.470], tr:[.548,.478], br:[.548,.808], bl:[.418,.812] },   // panel izquierdo (SAUVAGE)
   { tl:[.557,.478], tr:[.690,.470], br:[.692,.808], bl:[.557,.812] },   // panel derecho (SAUVAGE)
@@ -1033,7 +1044,7 @@ async function showStreetView(){
       sv = new StreetViewPanorama($('streetview'), {
         pano: KIOSK_PANO,
         pov: { heading: KIOSK_POV.heading, pitch: KIOSK_POV.pitch }, zoom: KIOSK_POV.zoom,
-        disableDefaultUI: true, clickToGo: false, scrollwheel: false, panControl: false,
+        disableDefaultUI: true, clickToGo: false, scrollwheel: true, panControl: false,
         linksControl: false, addressControl: false, showRoadLabels: false, zoomControl: false,
         motionTracking: false, motionTrackingControl: false, fullscreenControl: false,
       });
@@ -1139,6 +1150,18 @@ function drawSvGrid(){
 function layoutSvPanels(){
   const st = $('sv-signage').getBoundingClientRect(); const W = st.width, H = st.height;
   if (W < 10) return;
+  if (SV_PANELS_HP && sv){
+    const pov = sv.getPov(), zoom = sv.getZoom();
+    SV_PANELS_HP.forEach((q, i) => {
+      const el = $('sv-p' + (i + 1)); if (!el) return; const cv = el.firstElementChild;
+      const w = cv.width, h = cv.height;
+      const pts = ['tl','tr','br','bl'].map(k => projHP(q[k][0], q[k][1], pov, zoom, W, H));
+      if (pts.some(pt => !pt)){ el.style.display = 'none'; return; }
+      el.style.display = 'block'; el.style.width = w + 'px'; el.style.height = h + 'px';
+      el.style.transform = quadWarp(w, h, pts);
+    });
+    return;
+  }
   if (SV_PANEL_WORLD && sv){
     const cam = svPos(), pov = sv.getPov(), zoom = sv.getZoom();
     SV_PANEL_WORLD.forEach((corners, i) => {
