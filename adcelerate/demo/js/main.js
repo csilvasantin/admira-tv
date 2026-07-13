@@ -625,10 +625,13 @@ const kiosk = new THREE.Group();
 kiosk.name = 'kiosk';
 let kioskHalo = null, kioskLight = null;
 const screenCanvas = document.createElement('canvas');
-screenCanvas.width = 640; screenCanvas.height = 360;
+const SCREEN_SS = 2;                       // supersampling ×2: nitidez al volar de cerca
+screenCanvas.width = 640 * SCREEN_SS; screenCanvas.height = 360 * SCREEN_SS;
 const screenCtx = screenCanvas.getContext('2d');
+screenCtx.scale(SCREEN_SS, SCREEN_SS);     // dibujo en coords lógicas 640×360, backing ×2
 const screenTexture = new THREE.CanvasTexture(screenCanvas);
 screenTexture.colorSpace = THREE.SRGBColorSpace;
+screenTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();  // nítida en oblicuo
 let screenMat;
 {
   const base = new THREE.Mesh(new THREE.BoxGeometry(4.6, 3.0, 3.4),
@@ -817,6 +820,18 @@ function realItemName() {
   return String(it.name || it.title || it.file || it.id || 'contenido').slice(0, 40);
 }
 
+// Encaje aspect-correct de un creativo en un rect destino, para cualquier resolución del
+// contenido de la plataforma de DS. 'cover' rellena sin deformar (recorta sobrante);
+// 'contain' hace letterbox. Recorta al rect para no desbordar al vecino.
+function drawFit(c, src, sw, sh, dx, dy, dw, dh, mode) {
+  if (!src || !sw || !sh) return;
+  const s = (mode === 'contain') ? Math.min(dw / sw, dh / sh) : Math.max(dw / sw, dh / sh);
+  const w = sw * s, h = sh * s;
+  c.save();
+  c.beginPath(); c.rect(dx, dy, dw, dh); c.clip();
+  c.drawImage(src, dx + (dw - w) / 2, dy + (dh - h) / 2, w, h);
+  c.restore();
+}
 function renderScreen() {
   const c = screenCtx, W = 640, H = 360;
   const dom = state.dominante || dominanteDe(franja().mix);
@@ -828,8 +843,7 @@ function renderScreen() {
     else if (stockImg) { src = stockImg; sw = stockImg.naturalWidth; sh = stockImg.naturalHeight; }
     c.fillStyle = '#06141a'; c.fillRect(0, 0, W, H);
     if (src && sw && sh) {
-      const s = Math.max(W / sw, H / sh);
-      c.drawImage(src, (W - sw * s) / 2, (H - sh * s) / 2, sw * s, sh * s);
+      drawFit(c, src, sw, sh, 0, 0, W, H, 'cover');
     } else {
       c.fillStyle = '#50c8ff'; c.font = '20px Menlo, monospace';
       c.textAlign = 'center'; c.textBaseline = 'middle';
@@ -850,10 +864,10 @@ function renderScreen() {
     c.fillStyle = '#9fdcf5'; c.fillText('ADcelerate recomienda:', 20, H - 37);
     c.fillStyle = '#ffffff';
     c.fillText(`Creatividad ${r.cre} · ${r.titulo} (${PERFIL_LABEL[dom].toLowerCase()})`, 20, H - 15);
-    if (creImgs[dom]) c.drawImage(creImgs[dom], W - 94, H - 50, 82, 46);
+    if (creImgs[dom]) drawFit(c, creImgs[dom], creImgs[dom].naturalWidth, creImgs[dom].naturalHeight, W - 94, H - 50, 82, 46, 'cover');
   } else if (creImgs[dom]) {
     // creatividad demo por perfil (pixeria): imagen real 16:9
-    c.drawImage(creImgs[dom], 0, 0, W, H);
+    drawFit(c, creImgs[dom], creImgs[dom].naturalWidth, creImgs[dom].naturalHeight, 0, 0, W, H, 'cover');
     c.fillStyle = 'rgba(6,20,26,.78)'; c.fillRect(0, 0, W, 30);
     c.textAlign = 'left'; c.textBaseline = 'middle'; c.font = 'bold 14px Menlo, monospace';
     c.fillStyle = '#9fdcf5';
