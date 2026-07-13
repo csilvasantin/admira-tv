@@ -635,7 +635,11 @@ function flyTick(now){
 }
 addEventListener('keydown', (e) => {
   if (!FLY_KEYS.includes(e.key)) return;
-  if (!map3d || SV_ON) return;   // en Street View las flechas no manejan el globo
+  if (SV_ON){                    // Street View: las flechas GIRAN la vista
+    const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    e.preventDefault(); svKeys[e.key] = true; return;
+  }
+  if (!map3d) return;
   const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
   e.preventDefault();
   if (!freeFly.active) enterFree(true);
@@ -645,6 +649,7 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => {
   if (!FLY_KEYS.includes(e.key)) return;
   freeFly.keys[e.key] = false;
+  svKeys[e.key] = false;
 });
 
 /* ---- Kiosko News & Coffee NUESTRO como modelo 3D con pantalla-creatividad ----
@@ -1032,12 +1037,16 @@ let SV_PANELS = [
   { tl:[.557,.478], tr:[.690,.470], br:[.692,.808], bl:[.557,.812] },   // panel derecho (SAUVAGE)
 ];
 let sv = null, SV_ON = false;
+const svKeys = {};            // flechas en Street View: giro suave integrado por frame
+let _svT = 0;                 // timestamp del ultimo frame SV (para dt)
 
 async function showStreetView(){
   hideGlobeInteractions();
   $('streetview').style.display = 'block';
   $('sv-signage').classList.add('show');
   SV_ON = true;
+  { const he = $('hint'); if (he){ if (!he.dataset.prev) he.dataset.prev = he.textContent;
+      he.textContent = '\ud83e\uddcd \u2190 \u2192 girar \u00b7 \u2191 \u2193 mirar \u00b7 Av/Re P\u00e1g zoom \u00b7 arrastra para mirar'; } }
   if (!sv){
     try{
       const { StreetViewPanorama } = await google.maps.importLibrary('streetView');
@@ -1077,6 +1086,8 @@ async function showStreetView(){
 function hideStreetView(){
   if (!SV_ON) return;
   SV_ON = false;
+  for (const k in svKeys) svKeys[k] = false;   // no arrastrar teclas al volver al globo
+  { const he = $('hint'); if (he && he.dataset.prev) he.textContent = he.dataset.prev; }
   $('streetview').style.display = 'none';
   $('streetview').classList.remove('sv-vis');
   $('sv-signage').classList.remove('show'); $('sv-signage').classList.remove('sv-vis');
@@ -1205,6 +1216,18 @@ function liveTick(){
   if (!glued || !pip) return;
   if (SV_ON){   // «a pie ante el kiosko»: pintar las dos pantallas del MUPI, ocultar glue/PiP del globo
     glued.classList.remove('show'); pip.classList.remove('show');
+    // flechas: <- -> giran · arriba/abajo miran · Av/Re Pag zoom — suave, velocidad en º/s
+    const _now = performance.now(); const _dt = _svT ? Math.min(0.05, (_now - _svT) / 1000) : 0; _svT = _now;
+    if (sv && _dt && (svKeys.ArrowLeft || svKeys.ArrowRight || svKeys.ArrowUp || svKeys.ArrowDown || svKeys.PageUp || svKeys.PageDown)){
+      const pov = sv.getPov(); const z = (typeof sv.getZoom() === 'number') ? sv.getZoom() : 0.9;
+      const ROT = 70 / Math.pow(2, z - 0.9);   // mas fino cuanto mas zoom
+      const h = pov.heading + ((svKeys.ArrowRight?1:0) - (svKeys.ArrowLeft?1:0)) * ROT * _dt;
+      let pp = pov.pitch   + ((svKeys.ArrowUp?1:0)   - (svKeys.ArrowDown?1:0)) * ROT * 0.6 * _dt;
+      pp = Math.max(-30, Math.min(30, pp));
+      sv.setPov({ heading: (h + 360) % 360, pitch: pp });
+      const dz = ((svKeys.PageUp?1:0) - (svKeys.PageDown?1:0)) * 0.8 * _dt;
+      if (dz) sv.setZoom(Math.max(0.4, Math.min(3, z + dz)));
+    }
     layoutSvPanels();   // TRACKING: reproyecta cada frame según la cámara (giro/movimiento)
     const c1 = $('sv-p1').firstElementChild, c2 = $('sv-p2').firstElementChild;
     drawChannel(c1.getContext('2d'), c1.width, c1.height);
