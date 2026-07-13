@@ -637,7 +637,9 @@ addEventListener('keydown', (e) => {
   if (!FLY_KEYS.includes(e.key)) return;
   if (SV_ON){                    // Street View: las flechas GIRAN la vista
     const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
-    e.preventDefault(); svKeys[e.key] = true; return;
+    e.preventDefault(); svKeys[e.key] = true;
+    if (!e.repeat) svNudge(e.key);   // toque suelto: paso corto (el auto-repeat ya lo lleva el frame)
+    return;
   }
   if (!map3d) return;
   const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
@@ -1039,6 +1041,18 @@ let SV_PANELS = [
 let sv = null, SV_ON = false;
 const svKeys = {};            // flechas en Street View: giro suave integrado por frame
 let _svT = 0;                 // timestamp del ultimo frame SV (para dt)
+// toque suelto de flecha = paso corto inmediato (mantener = giro continuo por frame)
+function svNudge(k){
+  if (!sv) return;
+  const pov = sv.getPov(); const z = (typeof sv.getZoom() === 'number') ? sv.getZoom() : 0.9;
+  const STEP = 2.6 / Math.pow(2, z - 0.9);
+  if (k === 'ArrowLeft' || k === 'ArrowRight')
+    sv.setPov({ heading: (pov.heading + (k === 'ArrowRight' ? STEP : -STEP) + 360) % 360, pitch: pov.pitch });
+  else if (k === 'ArrowUp' || k === 'ArrowDown')
+    sv.setPov({ heading: pov.heading, pitch: Math.max(-30, Math.min(30, pov.pitch + (k === 'ArrowUp' ? STEP*0.6 : -STEP*0.6))) });
+  else if (k === 'PageUp' || k === 'PageDown')
+    sv.setZoom(Math.max(0.4, Math.min(3, z + (k === 'PageUp' ? 0.08 : -0.08))));
+}
 
 async function showStreetView(){
   hideGlobeInteractions();
