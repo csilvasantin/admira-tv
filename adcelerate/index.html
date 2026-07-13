@@ -83,6 +83,7 @@
     .tesis-col.out li{color:var(--admira-text-muted,#8a97a8);border:1px dashed var(--admira-border,#1c2738)}
     .tesis-col.in li{color:var(--admira-text-dim,#aab6c6);border:1px solid var(--admira-border,#1c2738);background:rgba(61,240,138,.04)}
     .tesis-col.in li b{color:var(--acc)}
+    .gi-kpi{font-size:12px;padding:7px 11px;border:1px solid color-mix(in srgb,var(--acc) 40%,transparent);border-radius:999px;color:var(--admira-text-dim,#aab6c6)}
 
     /* demo layout */
     .demo-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:34px;align-items:center}
@@ -164,7 +165,7 @@
 </head>
 <body>
   <script>
-  window.ADMIRA_VERSION='v.07.07.2026.r36';
+  window.ADMIRA_VERSION='v.13.07.2026.r37';
   window.ADMIRA_NAV={
     title:'ADcelerate · el ad stack',
     topRight:
@@ -235,6 +236,48 @@
             <li data-i18n="ts_i4">Mide drive-to-store en el PROPIO punto de venta, no en paneles externos.</li>
             <li data-i18n="ts_i5">La marca controla dato, soporte y medición de punta a punta.</li>
           </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- GEOINDOOR: COMPLEMENTARIO -->
+    <section id="geoindoor">
+      <div class="sec-head">
+        <span class="eyebrow" data-i18n="gi_eye">Compatible · GeoIndoor</span>
+        <h2 data-i18n="gi_h">Del centro a la pantalla.</h2>
+        <p data-i18n="gi_p"><b>GeoIndoor</b> (CUENDE × Clear Channel) mide la audiencia del centro comercial con la red móvil: cobertura, GRPs, visitantes únicos y permanencia. ADcelerate no lo sustituye — lo <b>completa</b>: coge esa audiencia y la <b>activa y la mide en la propia pantalla</b>, en tiempo real y first-party. Mismos KPIs, cerrados a nivel de soporte.</p>
+      </div>
+      <div class="tesis">
+        <div class="tesis-col out">
+          <div class="tag" data-i18n="gi_g_tag">GeoIndoor · planificación de audiencia</div>
+          <h3 data-i18n="gi_g_h">La audiencia del centro</h3>
+          <ul>
+            <li data-i18n="gi_g1">Red móvil MÁS-ORANGE + fuentes complementarias, anonimizadas.</li>
+            <li data-i18n="gi_g2">Nivel centro comercial · 1.600 soportes · 147 centros · 7M personas.</li>
+            <li data-i18n="gi_g3">Cobertura, impactos, GRPs, visitantes únicos y tiempo de permanencia.</li>
+            <li data-i18n="gi_g4">Planifica sobre audiencias reales, no sobre soportes.</li>
+          </ul>
+        </div>
+        <div class="tesis-col in">
+          <div class="tag" data-i18n="gi_a_tag">ADcelerate · activación + cierre</div>
+          <h3 data-i18n="gi_a_h">El cierre en la pantalla</h3>
+          <ul>
+            <li data-i18n="gi_a1"><b>Recoge</b> la audiencia GeoIndoor y la activa en la parrilla, en tiempo real.</li>
+            <li data-i18n="gi_a2">Nivel soporte: atención, dwell y proof-of-play por pantalla, first-party.</li>
+            <li data-i18n="gi_a3">Cierra el bucle: del visitante del centro a la visita a la tienda.</li>
+            <li data-i18n="gi_a4">Los mismos KPIs de GeoIndoor, medidos en el propio punto.</li>
+          </ul>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <div class="mono" style="font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--admira-text-muted,#8a97a8);margin-bottom:9px" data-i18n="gi_kpi_lbl">Vocabulario común de KPIs</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <span class="mono gi-kpi" data-i18n="gi_k1">Cobertura</span>
+          <span class="mono gi-kpi" data-i18n="gi_k2">Impactos</span>
+          <span class="mono gi-kpi" data-i18n="gi_k3">GRPs</span>
+          <span class="mono gi-kpi" data-i18n="gi_k4">Visitantes únicos</span>
+          <span class="mono gi-kpi" data-i18n="gi_k5">Tiempo de permanencia</span>
+          <span class="mono gi-kpi" data-i18n="gi_k6">Volumen de visitas</span>
         </div>
       </div>
     </section>
@@ -391,7 +434,7 @@
         <a href="/remotecontrol/" title="Equipos conectados · mando de flota" style="opacity:.7">Remote Control</a>
         <a href="#contacto" data-i18n="ft_contact">Contacto</a>
       </div>
-      <div class="mono">ADcelerate · Admira.tv · <span style="opacity:.7">v.07.07.2026.r36</span></div>
+      <div class="mono">ADcelerate · Admira.tv · <span style="opacity:.7">v.13.07.2026.r37</span></div>
     </footer>
   </main>
 
@@ -558,6 +601,20 @@
       ts_i3:"Activates the campaign on its OWN circuit, with its own player and playlist.",
       ts_i4:"Measures drive-to-store at the point of sale ITSELF, not on external panels.",
       ts_i5:"The brand controls data, medium and measurement end to end.",
+      gi_eye:"Compatible · GeoIndoor", gi_h:"From the mall to the screen.",
+      gi_p:"<b>GeoIndoor</b> (CUENDE × Clear Channel) measures shopping-centre audiences via the mobile network: coverage, GRPs, unique visitors and dwell. ADcelerate doesn't replace it — it <b>completes</b> it: it takes that audience and <b>activates and measures it on the screen itself</b>, in real time and first-party. Same KPIs, closed at the medium level.",
+      gi_g_tag:"GeoIndoor · audience planning", gi_g_h:"The mall's audience",
+      gi_g1:"MÁS-ORANGE mobile network + complementary sources, anonymised.",
+      gi_g2:"Shopping-centre level · 1,600 media · 147 centres · 7M people.",
+      gi_g3:"Coverage, impacts, GRPs, unique visitors and dwell time.",
+      gi_g4:"Plans on real audiences, not on media.",
+      gi_a_tag:"ADcelerate · activation + close", gi_a_h:"The close on the screen",
+      gi_a1:"<b>Picks up</b> the GeoIndoor audience and activates it on the playlist, in real time.",
+      gi_a2:"Medium level: attention, dwell and proof-of-play per screen, first-party.",
+      gi_a3:"Closes the loop: from mall visitor to store visit.",
+      gi_a4:"The same GeoIndoor KPIs, measured at the point itself.",
+      gi_kpi_lbl:"Shared KPI vocabulary",
+      gi_k1:"Coverage", gi_k2:"Impacts", gi_k3:"GRPs", gi_k4:"Unique visitors", gi_k5:"Dwell time", gi_k6:"Visit volume",
       roi_eye:"Live demo · 01", roi_h:"ROI you can touch.",
       roi_p:"Move the budget, sector and radius. The model recalculates reach, incremental visits and ROAS live, with the stack's drive-to-store logic. It's an indicative estimate: in a real campaign it's calibrated with your history and the circuit's signal.",
       roi_panel:"ROI CALCULATOR · INDICATIVE MODEL",
