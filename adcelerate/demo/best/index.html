@@ -921,18 +921,7 @@ function drawChannel(ctx, W, H){
     }
   }
   const pad = Math.round(W * 0.035);
-  // chip EN VIVO / FALLBACK (arriba-izquierda)
-  const f1 = Math.max(10, Math.round(H * 0.062));
-  ctx.font = '700 ' + f1 + 'px ' + LIVE_SANS;
-  const label = live ? 'EN VIVO' : 'FALLBACK';
-  const dotW = live ? f1 * 1.5 : f1 * 0.6;
-  const chipW = ctx.measureText(label).width + dotW + f1 * 0.7, chipH = f1 * 1.72;
-  ctx.fillStyle = live ? 'rgba(226,38,58,.92)' : 'rgba(120,140,150,.85)';
-  roundRect(ctx, pad, pad, chipW, chipH, chipH / 2); ctx.fill();
-  ctx.fillStyle = '#fff';
-  if (live){ ctx.beginPath(); ctx.arc(pad + f1 * 0.9, pad + chipH / 2, f1 * 0.3, 0, 7); ctx.fill(); }
-  ctx.textBaseline = 'middle';
-  ctx.fillText(label, pad + dotW + f1 * 0.35, pad + chipH / 2 + 1);
+  // (sin chip EN VIVO/FALLBACK: el creativo va limpio, como una pantalla real — 13-jul-2026)
   // banda editorial abajo: identifica la parrilla real cuando procede.
   const dom = dominanteDe(FRANJAS[selFranjaIdx].mix), rg = REGLAS[dom];
   const bh = Math.max(34, Math.round(H * 0.2));
