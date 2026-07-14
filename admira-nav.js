@@ -13,15 +13,14 @@
   var title=(s&&s.dataset.title)||cfg.title||'';
   var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.14.07.2026.r38';
+  var VER=window.ADMIRA_VERSION||'v.14.07.2026.r46';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
   var ITEMS=[
     {k:'apps',       h:'/apps/',                            ic:'▦', t:'Apps'},
-    // Flota (/cms.html) y Calendario (/cms/calendar/) NO van en el raíl: ya viven en el
-    // conmutador de emisión de la barra superior (emiSwitchHTML). Aquí sobraban → quitados.
-    {k:'parrilla',   h:'/parrilla/',                        ic:'parrilla', t:'Parrilla'},
+    // Flota (/cms.html), Calendario (/cms/calendar/) y Parrilla (/parrilla/) NO van en el raíl:
+    // ya viven en el conmutador de emisión de la barra superior (emiSwitchHTML). Aquí sobraban → quitados.
     {k:'playlists',  h:'/playlists/',                       ic:'≣', t:'Playlists'},
     {k:'condicional',h:'/condicional.html',                 ic:'🎯', t:'Condicional'},
     {k:'canal',      h:'/canal.html', blank:true,           ic:'📺', t:'Canal'},
@@ -33,9 +32,9 @@
   ];
   if(!active){ var _here=_norm(location.pathname);
     for(var _i=0;_i<ITEMS.length;_i++){ if(_norm(ITEMS[_i].h)===_here){active=ITEMS[_i].k;break;} }
-    // Flota y Calendario salieron de ITEMS (viven en el conmutador de emisión de la barra superior);
+    // Flota, Calendario y Parrilla salieron de ITEMS (viven en el conmutador de emisión de la barra superior);
     // mapa de rutas para que ese conmutador siga marcando la pestaña activa aunque la página no pase data-active.
-    if(!active){ active=({'/cms.html':'flota','/cms/calendar':'calendar'})[_here]||''; }
+    if(!active){ active=({'/cms.html':'flota','/cms/calendar':'calendar','/parrilla':'parrilla'})[_here]||''; }
   }
 
   // Atajos de teclado site-wide: "g" seguido de la tecla salta de sección (mnemónico).
@@ -179,6 +178,16 @@
    /* con «Acceso» + iconos-ventana en la barra, a ancho medio (≤880) el conmutador pasa a
     * icono-solo para que la MARCA (Admira · tv) no se colapse. Los títulos siguen en tooltip. */
    "@media(max-width:880px){.admtop .admseg a .lbl{display:none}}",
+   /* el subtítulo de página (p.ej. «Parrilla por Xpacio», ~245px) es lo más ancho de la barra:
+    * con 4 pestañas + extras (Playlists/Acceso/CTA) solo cabe todo a partir de ~1013px, así que
+    * se oculta hasta ≤1100 para garantizar cero scroll horizontal y que la marca no se colapse
+    * (la marca «Admira · tv» y el <title> ya dan contexto de la página). */
+   "@media(max-width:1100px){.admtop .admpgsub{display:none}}",
+   /* móvil estrecho: con 4 pestañas (Parrilla·Flota·Planificar·Calendario) + CTA de página
+    * (p.ej. «Ver canal» en /parrilla) + Acceso + toggles, la barra se comprime para NO desbordar
+    * (cero scroll horizontal a 375px): se reducen los gaps y el padding del conmutador. */
+   "@media(max-width:560px){.admtop{gap:7px;padding:0 8px}.admtop .admseg{gap:1px}.admtop .admseg a{padding:5px 8px}}",
+   "@media(max-width:400px){.admtop{gap:5px}.admtop .admseg a{padding:5px 6px}}",
    /* sidebar */
    ".admside{position:fixed;left:0;top:var(--admtb);bottom:0;width:var(--admnw);background:#080b12;border-right:1px solid #1e2940;",
      "z-index:40;display:flex;flex-direction:column;gap:3px;padding:10px 9px;overflow-x:hidden;overflow-y:auto;",
@@ -368,12 +377,13 @@
     '</aside>';
   }
   function emiSwitchHTML(){
-    // Conmutador de emisión Flota · Planificar ↔ Calendario, disponible en TODA página del chrome.
-    // «Flota» (antena) va PRIMERO, delante de «Planificar»; ambas viven en /cms.html (Flota = la red
-    // en antena, Planificar = ?prog=1 la parrilla). Se distinguen por el parámetro prog.
+    // Conmutador de emisión Parrilla · Flota · Planificar ↔ Calendario, disponible en TODA página del chrome.
+    // «Parrilla» (/parrilla/) va PRIMERO, delante de «Flota». «Flota» (antena) precede a «Planificar»;
+    // ambas viven en /cms.html (Flota = la red en antena, Planificar = ?prog=1 la parrilla). Se distinguen por prog.
     var isProg=/(?:^|[?&])prog=1(?:&|$)/.test(location.search);
     var onFlota=(active==='flota');
     return '<span class="admseg" role="group" aria-label="Emisión">'+
+      '<a class="'+(active==='parrilla'?'on':'')+'" href="/parrilla/" aria-label="Parrilla" title="Parrilla — la parrilla de emisión">'+IC('parrilla')+'<span class="lbl">Parrilla</span></a>'+
       '<a class="'+(onFlota&&!isProg?'on':'')+'" href="/cms.html" aria-label="Flota" title="Flota — la red en antena">'+IC('flota')+'<span class="lbl">Flota</span></a>'+
       '<a class="'+(onFlota&&isProg?'on':'')+'" href="/cms.html?prog=1" aria-label="Planificar emisión" title="Planificar emisión — programar la parrilla">'+IC('programar')+'<span class="lbl">Planificar</span></a>'+
       '<a class="'+(active==='calendar'?'on':'')+'" href="/cms/calendar/" aria-label="Calendario de emisión" title="Calendario de emisión">'+IC('calendar')+'<span class="lbl">Calendario</span></a>'+
