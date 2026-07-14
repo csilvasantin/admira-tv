@@ -21,12 +21,12 @@
 <meta property="og:image:alt" content="Admira.tv · Canal — en antena, en bucle">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://admira.tv/og-canal.png">
-<!-- BUILD canal v.10.07.2026.r4 · CAPTURA REAL (fase 2): shotTick() cada 25s (config ?shot=<seg>, ?shot=0 off) pinta el <video>/<img> EN ANTENA en un canvas offscreen de 640px y sube el JPEG (≤150KB) a POST /signage/shot {screen,img} para que remotecontrol muestre el fotograma real. Los media se marcan crossorigin='anonymous' (con fallback a recarga SIN crossorigin en onerror → la emisión JAMÁS se corta aunque el asset no tenga CORS); los cacheados (blob:) capturan sin tintar. Si el canvas se tiñe (asset sin CORS) captura el SecurityError, no sube y marca el src para no reintentar. Fallo SIEMPRE en silencio, no captura en background. Hereda r3 · MANDO REMOTO POR PANTALLA: pollCtrl() consume GET /control/cmds?screen= cada 2,5s (once-delivery) y mapea la whitelist (next/prev/first/last/pause/play/toggle-pause/mute/unmute/toggle-mute/vol-up/vol-down/ontop-*/hud) a las funciones EXISTENTES del canal (testNav/setPaused/applyAudio/ADM_ONTOP/testHudInfo) — replica los ⇧+flechas desde adcelerate/mando; fallo siempre silencioso, nunca corta la emisión. Hereda r1 · COSTURA XPL: acción showAd → motor programático /rtb/decide (creativo temporal + fallback catálogo ADS, ?rtb=0 lo desactiva; jamás bloquea la emisión) + DATOS DE TERCEROS como hechos XPL: clima real open-meteo (rain/temperature/wind, cada 15 min, geo de pantalla/fallback Madrid) y festivos ES 2026 reales (tabla nacional + date.nager.at) sustituyen holiday:false. Hereda v.08.07.2026.r38 · ALWAYS ON TOP (doctrina DOOH): la emisión nunca se tapa. Por defecto ON (?ontop=0 la arranca OFF): alert/confirm/prompt neutralizados, window.onerror + unhandledrejection silenciados, diálogos de salida anulados, y un MutationObserver vigila <body> y OCULTA cualquier overlay ajeno (whitelist: #wrap, scripts, chrome "adm*", data-adm-ok="1"). ⇧Q alterna (modo test, no persiste). Hereda r37: HUD de testing ENRIQUECIDO con Shift+flechas. -->
+<!-- BUILD canal v.14.07.2026.r42 · PREVIO DE PARRILLA: ?rundown=<screen>&playlist=<id>&draft=1 reproduce el BORRADOR remoto (GET /grid/draft, público) en bucle, en orden y con los `seconds` de cada slot (vídeo avanza en ended), con rótulo permanente "PREVIO · borrador"; NO reporta a /emit ni /signage/now (no contamina la antena), fuerza modo local (ni sync ni condicional) y, si no hay borrador remoto, avisa y cae a la emisión normal. Compatible con el modo limpio (embed=mupi/chrome=0). Hereda v.10.07.2026.r4 · CAPTURA REAL (fase 2): shotTick() cada 25s (config ?shot=<seg>, ?shot=0 off) pinta el <video>/<img> EN ANTENA en un canvas offscreen de 640px y sube el JPEG (≤150KB) a POST /signage/shot {screen,img} para que remotecontrol muestre el fotograma real. Los media se marcan crossorigin='anonymous' (con fallback a recarga SIN crossorigin en onerror → la emisión JAMÁS se corta aunque el asset no tenga CORS); los cacheados (blob:) capturan sin tintar. Si el canvas se tiñe (asset sin CORS) captura el SecurityError, no sube y marca el src para no reintentar. Fallo SIEMPRE en silencio, no captura en background. Hereda r3 · MANDO REMOTO POR PANTALLA: pollCtrl() consume GET /control/cmds?screen= cada 2,5s (once-delivery) y mapea la whitelist (next/prev/first/last/pause/play/toggle-pause/mute/unmute/toggle-mute/vol-up/vol-down/ontop-*/hud) a las funciones EXISTENTES del canal (testNav/setPaused/applyAudio/ADM_ONTOP/testHudInfo) — replica los ⇧+flechas desde adcelerate/mando; fallo siempre silencioso, nunca corta la emisión. Hereda r1 · COSTURA XPL: acción showAd → motor programático /rtb/decide (creativo temporal + fallback catálogo ADS, ?rtb=0 lo desactiva; jamás bloquea la emisión) + DATOS DE TERCEROS como hechos XPL: clima real open-meteo (rain/temperature/wind, cada 15 min, geo de pantalla/fallback Madrid) y festivos ES 2026 reales (tabla nacional + date.nager.at) sustituyen holiday:false. Hereda v.08.07.2026.r38 · ALWAYS ON TOP (doctrina DOOH): la emisión nunca se tapa. Por defecto ON (?ontop=0 la arranca OFF): alert/confirm/prompt neutralizados, window.onerror + unhandledrejection silenciados, diálogos de salida anulados, y un MutationObserver vigila <body> y OCULTA cualquier overlay ajeno (whitelist: #wrap, scripts, chrome "adm*", data-adm-ok="1"). ⇧Q alterna (modo test, no persiste). Hereda r37: HUD de testing ENRIQUECIDO con Shift+flechas. -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
   if(p.get('chrome')==='0'||p.get('clean')==='1'||p.get('embed')==='mupi')return;
-  var s=document.createElement('script');s.src='/admira-nav.js?v=14.07.2026.r38';
+  var s=document.createElement('script');s.src='/admira-nav.js?v=14.07.2026.r42';
   s.setAttribute('data-active','canal');s.setAttribute('data-title','Canal en antena');document.head.appendChild(s);
 }catch(e){}})();</script>
 <script src="https://admira.app/locations.js"></script>
@@ -255,6 +255,12 @@ const INDEX = 'https://api.admira.store/stock/list?limit=300';
 const MEDIA = ['video','animation','image','digital-twin','audio','music','locucion'];
 const KIND = { video:'video', animation:'video', image:'image', 'digital-twin':'image', 'twin-npc':'image', audio:'audio', music:'audio', locucion:'audio' };
 const qs = new URLSearchParams(location.search);
+// ── PREVIO DE PARRILLA (borrador) ─────────────────────────────────────────────
+// La parrilla abre el canal con ?rundown=<screen>&playlist=<id>&draft=1 para ver
+// el BORRADOR actual de esa pantalla en bucle, en orden y con las duraciones de
+// cada slot — SIN tocar la antena real (no reporta a /emit ni /signage/now) y con
+// un rótulo "PREVIO · borrador" que impide confundirlo con la emisión en vivo.
+const PREVIEW = { on:!!qs.get('rundown'), screen:qs.get('rundown')||'', playlist:qs.get('playlist')||'municipal-50-50', draft: qs.get('draft')!=='0', items:[] };
 const LS = (k,d)=>{ try{ const v=localStorage.getItem(k); return v==null?d:v; }catch(_){ return d; } };
 const save = (k,v)=>{ try{ localStorage.setItem(k,v); }catch(_){} };
 
@@ -286,6 +292,8 @@ let syncOn = syncParam==null ? (playoutMode==='sync'||LS('adtv_sincro','0')==='1
 if(isCanonicalSyncMaster) syncOn=true;
 if(syncOn) playoutMode='sync';
 if(playoutMode==='conditional') syncOn=false;
+// El previo de borrador manda: nunca sincro ni condicional, es un bucle local fiel.
+if(PREVIEW.on){ syncOn=false; playoutMode='local'; }
 save('adtv_sync_slot',String(syncSlotSec));
 save('adtv_mode',playoutMode);
 
@@ -635,6 +643,35 @@ async function loadGrid(){ if(!scr.screen) return;
     all=all.filter(a=>!a._grid).concat(gridInjected); rebuild(false);
   }catch(_){}
 }
+// ── PREVIO DE PARRILLA: reproduce el BORRADOR remoto de una pantalla ───────────
+// Lee GET /grid/draft?screen=&playlist= (público, sin GRID_KEY), mapea cada slot al
+// formato del reproductor y lo emite en bucle, en orden, con la duración de cada
+// slot (vídeo avanza en `ended`; imagen según `seconds`). Rótulo permanente "PREVIO
+// · borrador". Si no hay borrador remoto, avisa y cae a la emisión normal del Stock.
+function previewBadge(txt, warn){ let b=$('previewBadge'); if(!b){ b=document.createElement('div'); b.id='previewBadge'; b.style.cssText='position:absolute;top:8px;left:8px;z-index:41;background:rgba(20,14,2,.86);border:1px solid rgba(255,189,89,.6);color:#ffbd59;border-radius:999px;padding:4px 11px;font:700 12px ui-monospace,Menlo,monospace;letter-spacing:.04em;backdrop-filter:blur(4px);box-shadow:0 2px 10px #0006'; ($('mupi')||document.body).appendChild(b); } b.style.borderColor=warn?'rgba(255,120,120,.6)':'rgba(255,189,89,.6)'; b.style.color=warn?'#ff8e8e':'#ffbd59'; b.style.display=txt?'block':'none'; b.textContent=txt||''; }
+async function loadRundownPreview(){
+  const scrId=PREVIEW.screen, pl=PREVIEW.playlist;
+  previewBadge('PREVIO · cargando borrador…');
+  setLive('PREVIO · cargando borrador de '+scrId, false);
+  try{
+    const d=await fetch(GRID_API+'/grid/draft?screen='+encodeURIComponent(scrId)+'&playlist='+encodeURIComponent(pl)+'&_='+Date.now(),{cache:'no-store'}).then(r=>r.json());
+    const draft=d&&d.draft, raw=(draft&&Array.isArray(draft.items))?draft.items:[];
+    const mapped=raw.map((it,ix)=>{ const t=String(it.assetType||it.type||'').toLowerCase(); const type=(t==='video'||t==='animation')?'video':(t==='audio'||t==='music'||t==='locucion')?'audio':'image'; return { id:'preview:'+ix+':'+(it.id||''), url:it.asset||it.url||'', type, title:it.title||('Slot '+(ix+1)), motor:'borrador', category:'borrador', _lane:it.lane||'', _position:ix, _num:ix+1, _preview:true, _previewSec:Math.max(2,+it.seconds||10), createdAt:'9'+String(1000+ix) }; }).filter(x=>x.url);
+    if(!mapped.length){ previewFallback(raw.length?'borrador sin assets reproducibles':'sin borrador remoto para esta pantalla'); return; }
+    PREVIEW.items=mapped; all=mapped.slice();
+    const t=draft&&+draft.updatedAt?new Date(+draft.updatedAt):null;
+    previewBadge('PREVIO · borrador'+(t?(' · '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')):''));
+    rebuild(true);
+  }catch(_){ previewFallback('borrador no disponible (sin conexión)'); }
+}
+function previewFallback(msg){
+  PREVIEW.on=false; PREVIEW.items=[];
+  previewBadge('PREVIO no disponible · '+msg+' — emisión normal', true);
+  setTimeout(()=>previewBadge('',true), 9000);
+  setLive('PREVIO no disponible · '+msg, false);
+  try{ loadFeed(true); restartFeed(); }catch(_){}
+  try{ loadGrid(); setInterval(loadGrid, 60000); }catch(_){}
+}
 // Entrelaza los creativos de la parrilla (own/paid) a cadencia fija para que AIREN
 // de verdad en su franja, en vez de aparecer 1 vez en un loop de 50. Cicla la lista
 // de la franja cada EVERY piezas de Stock.
@@ -837,7 +874,7 @@ async function play(i, forced){
     im.alt=title; if(it.type==='twin-npc') im.className='pixel';
     im.onerror=()=>{ if(!_coRetryI && im.crossOrigin){ _coRetryI=true; try{ im.removeAttribute('crossorigin'); im.src=SRC; }catch(_){} return; }   // asset sin CORS: recarga sin crossorigin (la emisión SIEMPRE se ve)
       setTimeout(next,600); };
-    im.src=SRC; stage.appendChild(im); startAdv(syncOn?syncRemainingMs():Math.max(2,cfg.imgSec)*1000);
+    im.src=SRC; stage.appendChild(im); startAdv(syncOn?syncRemainingMs():Math.max(2,(it._previewSec||cfg.imgSec))*1000);
   } else {
     stage.innerHTML='<div class="audio-card"><div class="ico">♫</div><div class="wave">'
       +Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div><strong>'+title+'</strong></div>';
@@ -846,12 +883,12 @@ async function play(i, forced){
     a.play().then(()=>tap.classList.remove('show')).catch(()=>{ if(!muted) tap.classList.add('show'); });
     startAdv(syncOn?syncRemainingMs():Math.max(3,cfg.audioSec)*1000);
   }
-  try{ emitRecord(it); }catch(_){}
-  try{ signageNowPush(it); }catch(_){}
+  // El previo NUNCA reporta a la antena real (ni proof-of-play ni espejo en vivo).
+  if(!PREVIEW.on){ try{ emitRecord(it); }catch(_){} try{ signageNowPush(it); }catch(_){} }
 }
 // antes de cada nuevo contenido, revisa si hay novedades en stock (nuevas
 // importaciones o tags/categorías editados) — con throttle para no saturar.
-function next(){ if(directOn) return; if(Date.now()-_lastFeed>5000){ try{ loadFeed(false); }catch(_){} } if(syncOn){ play(syncIndex()); return; } play(cur+1); }
+function next(){ if(directOn) return; if(PREVIEW.on){ play(cur+1); return; } if(Date.now()-_lastFeed>5000){ try{ loadFeed(false); }catch(_){} } if(syncOn){ play(syncIndex()); return; } play(cur+1); }
 function prev(){ if(directOn) return; if(syncOn){ play(syncIndex()); return; } play(cur-1); }
 
 function setPaused(p){
@@ -872,7 +909,17 @@ function defaultOrder(arr){
     return String(b.createdAt||'').localeCompare(String(a.createdAt||''));
   });
 }
-function rebuild(restart){ playlist=syncOn ? syncMasterOrder() : all.filter(matches).slice(0,Math.max(1,cfg.max));
+function rebuild(restart){
+  // PREVIO de borrador: bucle exacto del rundown, sin filtros de segmentación ni weave.
+  if(PREVIEW.on && PREVIEW.items.length){
+    playlist=PREVIEW.items.slice();
+    if($('segCount')) $('segCount').textContent=playlist.length+' · previo borrador';
+    setLive('PREVIO · borrador · '+playlist.length+' slots en bucle', playlist.length>0);
+    try{ renderChan(); }catch(_){} renderRail();
+    if(restart||cur<0){ cur=-1; play(0); }
+    return;
+  }
+  playlist=syncOn ? syncMasterOrder() : all.filter(matches).slice(0,Math.max(1,cfg.max));
   if(syncOn){
     $('segCount').textContent=playlist.length+' desde '+SYNC_MASTER;
     setLive('SINCRO CANAL · '+playlist.length+' en loop', playlist.length>0);
@@ -1836,20 +1883,27 @@ const XPLCanal = (function(){
 window.XPLCanal = XPLCanal;
 
 loadStores(); screenLbl(); applyAudio(); renderChan(); fitMupi();
-// Arranque offline-safe: sin red, pinta ya el loop desde el catálogo cacheado
-// (el fetch normal lo refresca en cuanto vuelva la conexión).
-if(!navigator.onLine && restoreCatalog()){ rebuild(false); setLive('OFFLINE · loop en caché · '+playlist.length, playlist.length>0); }
-loadFeed(true); restartFeed();
-// Al recuperar la red, refresca el catálogo de inmediato (no espera al ciclo de 30s).
-try{ window.addEventListener('online', ()=>{ try{ loadFeed(true); }catch(_){} }); }catch(_){}
-wireCam(); loadGrid(); setInterval(loadGrid, 60000);
-startPositionBeat();   // equipos móviles (robot/taxi/bus): latido de posición
-// pseudo-streaming: pre-descarga la playlist a disco y reporta el estado al worker
-setTimeout(()=>{ try{ schedulePrecache(); }catch(_){} }, 3000);
-setInterval(()=>{ try{ schedulePrecache(); }catch(_){} }, 12000);
-setInterval(()=>{ try{ cacheReport(); }catch(_){} }, 30000);
-// si arrancamos ya en modo conditional (persistido/URL), enciende el motor XPL
-if(playoutMode==='conditional' && window.XPLCanal) XPLCanal.start();
+if(PREVIEW.on){
+  // MODO PREVIO DE BORRADOR: no toca el Stock, la segmentación, la caché ni la
+  // programática; solo emite el rundown del borrador en bucle. El chrome/limpio y
+  // los controles del canal siguen funcionando igual.
+  loadRundownPreview();
+} else {
+  // Arranque offline-safe: sin red, pinta ya el loop desde el catálogo cacheado
+  // (el fetch normal lo refresca en cuanto vuelva la conexión).
+  if(!navigator.onLine && restoreCatalog()){ rebuild(false); setLive('OFFLINE · loop en caché · '+playlist.length, playlist.length>0); }
+  loadFeed(true); restartFeed();
+  // Al recuperar la red, refresca el catálogo de inmediato (no espera al ciclo de 30s).
+  try{ window.addEventListener('online', ()=>{ try{ loadFeed(true); }catch(_){} }); }catch(_){}
+  wireCam(); loadGrid(); setInterval(loadGrid, 60000);
+  startPositionBeat();   // equipos móviles (robot/taxi/bus): latido de posición
+  // pseudo-streaming: pre-descarga la playlist a disco y reporta el estado al worker
+  setTimeout(()=>{ try{ schedulePrecache(); }catch(_){} }, 3000);
+  setInterval(()=>{ try{ schedulePrecache(); }catch(_){} }, 12000);
+  setInterval(()=>{ try{ cacheReport(); }catch(_){} }, 30000);
+  // si arrancamos ya en modo conditional (persistido/URL), enciende el motor XPL
+  if(playoutMode==='conditional' && window.XPLCanal) XPLCanal.start();
+}
 
 // ── MODO REMOTO: el CMS fija el modo de emisión de ESTE equipo y el player reacciona.
 //   sync = lo que manda admira.tv (red sincronizada) · local = su programación ·
