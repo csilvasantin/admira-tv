@@ -21,12 +21,12 @@
 <meta property="og:image:alt" content="Admira.tv · Canal — en antena, en bucle">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://admira.tv/og-canal.png">
-<!-- BUILD canal v.14.07.2026.r42 · PREVIO DE PARRILLA: ?rundown=<screen>&playlist=<id>&draft=1 reproduce el BORRADOR remoto (GET /grid/draft, público) en bucle, en orden y con los `seconds` de cada slot (vídeo avanza en ended), con rótulo permanente "PREVIO · borrador"; NO reporta a /emit ni /signage/now (no contamina la antena), fuerza modo local (ni sync ni condicional) y, si no hay borrador remoto, avisa y cae a la emisión normal. Compatible con el modo limpio (embed=mupi/chrome=0). Hereda v.10.07.2026.r4 · CAPTURA REAL (fase 2): shotTick() cada 25s (config ?shot=<seg>, ?shot=0 off) pinta el <video>/<img> EN ANTENA en un canvas offscreen de 640px y sube el JPEG (≤150KB) a POST /signage/shot {screen,img} para que remotecontrol muestre el fotograma real. Los media se marcan crossorigin='anonymous' (con fallback a recarga SIN crossorigin en onerror → la emisión JAMÁS se corta aunque el asset no tenga CORS); los cacheados (blob:) capturan sin tintar. Si el canvas se tiñe (asset sin CORS) captura el SecurityError, no sube y marca el src para no reintentar. Fallo SIEMPRE en silencio, no captura en background. Hereda r3 · MANDO REMOTO POR PANTALLA: pollCtrl() consume GET /control/cmds?screen= cada 2,5s (once-delivery) y mapea la whitelist (next/prev/first/last/pause/play/toggle-pause/mute/unmute/toggle-mute/vol-up/vol-down/ontop-*/hud) a las funciones EXISTENTES del canal (testNav/setPaused/applyAudio/ADM_ONTOP/testHudInfo) — replica los ⇧+flechas desde adcelerate/mando; fallo siempre silencioso, nunca corta la emisión. Hereda r1 · COSTURA XPL: acción showAd → motor programático /rtb/decide (creativo temporal + fallback catálogo ADS, ?rtb=0 lo desactiva; jamás bloquea la emisión) + DATOS DE TERCEROS como hechos XPL: clima real open-meteo (rain/temperature/wind, cada 15 min, geo de pantalla/fallback Madrid) y festivos ES 2026 reales (tabla nacional + date.nager.at) sustituyen holiday:false. Hereda v.08.07.2026.r38 · ALWAYS ON TOP (doctrina DOOH): la emisión nunca se tapa. Por defecto ON (?ontop=0 la arranca OFF): alert/confirm/prompt neutralizados, window.onerror + unhandledrejection silenciados, diálogos de salida anulados, y un MutationObserver vigila <body> y OCULTA cualquier overlay ajeno (whitelist: #wrap, scripts, chrome "adm*", data-adm-ok="1"). ⇧Q alterna (modo test, no persiste). Hereda r37: HUD de testing ENRIQUECIDO con Shift+flechas. -->
+<!-- BUILD canal v.14.07.2026.r43 · PSEUDO-STREAMING ESTRICTO (disco-primero por defecto): la doctrina de digital signage manda emitir lo que está DESCARGADO EN DISCO, no online. En play(), si la pieza es cacheable pero AÚN no está bajada, se SALTA a la siguiente que sí lo esté (firstCachedFrom escanea una vuelta del bucle → sin recursión). Si NINGUNA está lista, ARRANQUE EN FRÍO: placeholder a pantalla completa «DESCARGANDO CONTENIDOS · x/y · z%» con el progreso real de _dl/_ready (coherente con la estética del canal, visible también en modo limpio) y la emisión arranca SOLA en cuanto baja la primera pieza (hook maybeResumeCold en precacheLoop, sin polling agresivo). Escape ?stream=1 restaura el fallback online de r42. EXCEPCIONES documentadas: sync de canal (saltar rompería el índice sincronizado → mantiene fallback online), /play<N> forzado (orden manual del operador) y los items NO cacheables (embeds/iframe/link → online como siempre); los assets CONDICIONALES ya se precachean al cargar la matriz — si uno se dispara sin estar listo, la política estricta lo deja esperando en el carrusel (sin hueco de play ni stream) hasta que su precache termine. El PREVIO de parrilla (?rundown=) TAMBIÉN precachea y aplica disco-primero. Badge de disco (solo ?cachehud=1, nunca en modo limpio): «💾 en disco X/Y» + «⏳ esperando disco» en frío. Hereda r42 · PREVIO DE PARRILLA: ?rundown=<screen>&playlist=<id>&draft=1 reproduce el BORRADOR remoto (GET /grid/draft, público) en bucle, en orden y con los `seconds` de cada slot (vídeo avanza en ended), con rótulo permanente "PREVIO · borrador"; NO reporta a /emit ni /signage/now (no contamina la antena), fuerza modo local (ni sync ni condicional) y, si no hay borrador remoto, avisa y cae a la emisión normal. Compatible con el modo limpio (embed=mupi/chrome=0). Hereda v.10.07.2026.r4 · CAPTURA REAL (fase 2): shotTick() cada 25s (config ?shot=<seg>, ?shot=0 off) pinta el <video>/<img> EN ANTENA en un canvas offscreen de 640px y sube el JPEG (≤150KB) a POST /signage/shot {screen,img} para que remotecontrol muestre el fotograma real. Los media se marcan crossorigin='anonymous' (con fallback a recarga SIN crossorigin en onerror → la emisión JAMÁS se corta aunque el asset no tenga CORS); los cacheados (blob:) capturan sin tintar. Si el canvas se tiñe (asset sin CORS) captura el SecurityError, no sube y marca el src para no reintentar. Fallo SIEMPRE en silencio, no captura en background. Hereda r3 · MANDO REMOTO POR PANTALLA: pollCtrl() consume GET /control/cmds?screen= cada 2,5s (once-delivery) y mapea la whitelist (next/prev/first/last/pause/play/toggle-pause/mute/unmute/toggle-mute/vol-up/vol-down/ontop-*/hud) a las funciones EXISTENTES del canal (testNav/setPaused/applyAudio/ADM_ONTOP/testHudInfo) — replica los ⇧+flechas desde adcelerate/mando; fallo siempre silencioso, nunca corta la emisión. Hereda r1 · COSTURA XPL: acción showAd → motor programático /rtb/decide (creativo temporal + fallback catálogo ADS, ?rtb=0 lo desactiva; jamás bloquea la emisión) + DATOS DE TERCEROS como hechos XPL: clima real open-meteo (rain/temperature/wind, cada 15 min, geo de pantalla/fallback Madrid) y festivos ES 2026 reales (tabla nacional + date.nager.at) sustituyen holiday:false. Hereda v.08.07.2026.r38 · ALWAYS ON TOP (doctrina DOOH): la emisión nunca se tapa. Por defecto ON (?ontop=0 la arranca OFF): alert/confirm/prompt neutralizados, window.onerror + unhandledrejection silenciados, diálogos de salida anulados, y un MutationObserver vigila <body> y OCULTA cualquier overlay ajeno (whitelist: #wrap, scripts, chrome "adm*", data-adm-ok="1"). ⇧Q alterna (modo test, no persiste). Hereda r37: HUD de testing ENRIQUECIDO con Shift+flechas. -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
   if(p.get('chrome')==='0'||p.get('clean')==='1'||p.get('embed')==='mupi')return;
-  var s=document.createElement('script');s.src='/admira-nav.js?v=14.07.2026.r42';
+  var s=document.createElement('script');s.src='/admira-nav.js?v=14.07.2026.r43';
   s.setAttribute('data-active','canal');s.setAttribute('data-title','Canal en antena');document.head.appendChild(s);
 }catch(e){}})();</script>
 <script src="https://admira.app/locations.js"></script>
@@ -186,6 +186,15 @@
   .clean #camHud,
   .clean #seg{ display:none!important; }
   .clean #mupi::after{ background:repeating-linear-gradient(180deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px); }
+  /* Placeholder de ARRANQUE EN FRÍO (r43): mientras no hay ninguna pieza en disco,
+     la pantalla nunca queda negra muda — muestra el progreso real de descarga. */
+  .coldload{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; background:radial-gradient(120% 120% at 50% 40%,#08202c 0%,#040d12 70%); color:var(--grn,#7dffd0); font:14px ui-monospace,Menlo,monospace; text-align:center; padding:24px; box-sizing:border-box; }
+  .coldload .cl-ico{ font-size:40px; line-height:1; animation:clpulse 1.4s ease-in-out infinite; }
+  .coldload .cl-t1{ font-weight:700; letter-spacing:.18em; font-size:15px; }
+  .coldload .cl-t2{ color:#bfeaff; letter-spacing:.06em; font-size:13px; opacity:.9; }
+  .coldload .cl-track{ width:min(62%,340px); height:6px; border-radius:999px; background:rgba(125,255,208,.16); overflow:hidden; }
+  .coldload .cl-bar{ height:100%; width:0; border-radius:999px; background:var(--grn,#7dffd0); box-shadow:0 0 10px rgba(125,255,208,.6); transition:width .35s ease; }
+  @keyframes clpulse{ 0%,100%{ opacity:.35; transform:translateY(0) } 50%{ opacity:1; transform:translateY(-3px) } }
 </style>
 </head>
 <body>
@@ -740,6 +749,9 @@ function rtbFallback(adValue){ if(!adValue||adValue==='auto') return;
 const CACHE_NAME='admira-canal-v1';
 const CACHE_API='https://api.admira.store/screen/cache';
 const PRECACHE_MAX=Math.max(8, cfg.max||40);   // piezas del loop a mantener bajadas
+// DISCO-PRIMERO por defecto (r43): sólo se emite lo DESCARGADO. ?stream=1 restaura el
+// fallback online de r42 (emitir la pieza aunque no esté bajada). Escape documentado.
+const STREAM_OK=(function(){ try{ return new URLSearchParams(location.search).get('stream')==='1'; }catch(_){ return false; } })();
 let _playTok=0;
 let _cache=null, _ready=new Set(), _dl=new Map(), _cBytes=0, _precaching=false, _precQ=[], _objURLs=new Map(), _lastCacheRep=0;
 async function cacheOpen(){ if(_cache!==null) return _cache; try{ _cache=await caches.open(CACHE_NAME); }catch(_){ _cache=false; } return _cache; }
@@ -756,7 +768,7 @@ async function fetchToCache(it){
     const reader=resp.body.getReader(); const chunks=[]; let recv=0; _dl.set(it.id,0);
     for(;;){ const {done,value}=await reader.read(); if(done) break;
       chunks.push(value); recv+=value.length; _cBytes+=value.length;
-      if(total){ _dl.set(it.id, Math.min(99, Math.round(recv/total*100))); cacheReportThrottled(); } }
+      if(total){ _dl.set(it.id, Math.min(99, Math.round(recv/total*100))); cacheReportThrottled(); if(_coldWaiting && Date.now()-_coldTickT>250) coldTick(); } }
     const blob=new Blob(chunks,{type:resp.headers.get('content-type')||''});
     await c.put(it.url, new Response(blob,{headers:{'content-type':blob.type||'application/octet-stream'}}));
     _dl.delete(it.id); _ready.add(it.id); return true;
@@ -772,9 +784,55 @@ async function cachedSrc(it){
     return u;
   }catch(_){ return null; }
 }
+// Primer índice, a partir de `from` y en una vuelta del bucle, cuya pieza es REPRODUCIBLE
+// ya (en disco) o NO cacheable (embeds/iframe/link → se emiten online como siempre).
+// Devuelve {idx,src} o null si NINGUNA está lista (→ arranque en frío).
+async function firstCachedFrom(from){
+  const n=playlist.length; if(!n) return null;
+  for(let s=0;s<n;s++){ const idx=((from+s)%n+n)%n, it=playlist[idx]; if(!it) continue;
+    if(!cacheable(it)) return { idx, src:null };        // no cacheable: online como siempre
+    const src=await cachedSrc(it); if(src) return { idx, src };
+  }
+  return null;
+}
+// Resumen de descargas para el placeholder de arranque en frío: piezas listas / total
+// cacheable de la playlist y % de la descarga en curso (real, de _dl/_ready).
+function dlSummary(){
+  const seen=new Set(); let total=0, ready=0;
+  for(const it of playlist){ if(!it||seen.has(it.id)) continue; seen.add(it.id); if(!cacheable(it)) continue; total++; if(_ready.has(it.id)) ready++; }
+  let pct=0; const vals=[..._dl.values()]; if(vals.length) pct=Math.max.apply(null,vals);
+  return { ready, total, pct };
+}
+// ARRANQUE EN FRÍO (r43): ninguna pieza en disco todavía → en vez de pantalla negra muda,
+// un placeholder a pantalla completa con el progreso real. Al bajar la 1ª pieza, la emisión
+// arranca sola (hook maybeResumeCold en precacheLoop; sin polling agresivo).
+let _coldWaiting=false, _coldTickT=0;
+function coldStartPlaceholder(){
+  _coldWaiting=true;
+  stage.innerHTML='<div class="coldload"><div class="cl-ico">▼</div>'
+    +'<div class="cl-t1">DESCARGANDO CONTENIDOS</div>'
+    +'<div class="cl-t2" id="coldStat">…</div>'
+    +'<div class="cl-track"><div class="cl-bar" id="coldBar"></div></div></div>';
+  nowEl.textContent='// descargando contenidos'; try{ renderRail(); }catch(_){}
+  coldTick();
+  try{ schedulePrecache(); }catch(_){}   // asegura que la cola de descarga esté corriendo ya
+}
+function coldTick(){
+  if(!_coldWaiting) return; _coldTickT=Date.now();
+  const s=dlSummary(), stat=$('coldStat'), b2=$('coldBar');
+  if(stat) stat.textContent=s.ready+'/'+Math.max(s.total,1)+(s.pct?(' · '+s.pct+'%'):' · …');
+  if(b2){ const frac=s.total?Math.min(100,Math.round((s.ready+s.pct/100)/s.total*100)):s.pct; b2.style.width=frac+'%'; }
+  cacheBadge();
+}
+function maybeResumeCold(){
+  if(!_coldWaiting) return;
+  if(cacheReadyInPlaylist()>0 || _dl.size===0){   // ya hay algo en disco (o no queda nada bajando)
+    if(cacheReadyInPlaylist()>0){ _coldWaiting=false; try{ play(0); }catch(_){} }
+  }
+}
 async function precacheLoop(){ if(_precaching) return; _precaching=true;
-  try{ while(_precQ.length){ const it=_precQ.shift(); if(!it||_ready.has(it.id)||!cacheable(it)) continue; await fetchToCache(it); cacheReport(); } }
-  finally{ _precaching=false; try{ await pruneCache(); }catch(_){} cacheReport(); }
+  try{ while(_precQ.length){ const it=_precQ.shift(); if(!it||_ready.has(it.id)||!cacheable(it)) continue; await fetchToCache(it); cacheReport(); maybeResumeCold(); if(_coldWaiting) coldTick(); } }
+  finally{ _precaching=false; try{ await pruneCache(); }catch(_){} cacheReport(); if(_coldWaiting) coldTick(); }
 }
 function schedulePrecache(){
   const head=playlist.slice(0,PRECACHE_MAX), qids=new Set(_precQ.map(x=>x.id));
@@ -819,11 +877,14 @@ function cacheReport(){ if(!scr.screen) return; _lastCacheRep=Date.now();
   cacheBadge();
 }
 function cacheReportThrottled(){ if(Date.now()-_lastCacheRep>4000) cacheReport(); }
-// Badge opcional de descarga (solo con ?cachehud=1; el MUPI público queda limpio).
+// Badge opcional de estado de disco (solo con ?cachehud=1; el MUPI público/limpio queda
+// sin ruido — el placeholder de descarga sí se ve en limpio, el badge no).
 function cacheBadge(){ if(qs.get('cachehud')!=='1') return;
+  if(document.documentElement.classList.contains('clean')) return;   // modo limpio: sin badge
   let b=$('cacheBadge'); if(!b){ b=document.createElement('div'); b.id='cacheBadge'; b.style.cssText='position:absolute;bottom:8px;left:8px;z-index:40;background:rgba(4,14,22,.82);border:1px solid rgba(125,255,208,.4);color:#bfeaff;border-radius:999px;padding:4px 11px;font:12px ui-monospace,Menlo,monospace;backdrop-filter:blur(4px)'; ($('mupi')||document.body).appendChild(b); }
   const n=cacheReadyInPlaylist(), m=playlist.length, dl=_dl.size;
-  b.textContent='📥 '+n+'/'+m+(dl?(' · ⏳ '+dl):'')+(_cBytes?(' · '+(_cBytes/1048576).toFixed(1)+'MB'):'');
+  const estado = _coldWaiting?' · ⏳ esperando disco' : (STREAM_OK?' · ⚡ stream' : (dl?(' · ⇩ '+dl):''));
+  b.textContent='💾 '+n+'/'+m+estado+(_cBytes?(' · '+(_cBytes/1048576).toFixed(1)+'MB'):'');
 }
 
 async function play(i, forced){
@@ -838,6 +899,21 @@ async function play(i, forced){
     cur=((i%playlist.length)+playlist.length)%playlist.length;
     it=playlist[cur];
   }
+  // ── PSEUDO-STREAMING ESTRICTO (r43): se emite lo que está EN DISCO, no online ──────
+  // Si la pieza del índice es cacheable pero AÚN no está bajada, se salta a la siguiente
+  // que SÍ lo esté (respeta orden/bucle; escaneo acotado a una vuelta → sin recursión).
+  // Si NINGUNA está lista → placeholder de descarga a pantalla completa y arranque
+  // automático al bajar la primera pieza (hook en precacheLoop). Escape ?stream=1 → r42.
+  // Excepciones (documentadas): sync de canal (saltar rompe el índice sincronizado → se
+  // mantiene el fallback online), /play<N> forzado (orden manual del operador) y los items
+  // NO cacheables (embeds/iframe/link → se emiten online como siempre).
+  let _csrc=await cachedSrc(it); if(_tok!==_playTok) return;
+  if(!STREAM_OK && !syncOn && !forced && cacheable(it) && !_csrc){
+    const found=await firstCachedFrom(cur); if(_tok!==_playTok) return;
+    if(found){ if(found.idx!==cur){ cur=found.idx; it=playlist[cur]; } _csrc=found.src; }
+    else { coldStartPlaceholder(); return; }
+  }
+  _coldWaiting=false;   // llegamos aquí = hay algo que emitir
   const k=KIND[it.type]||'image';
   mupiAR=itemAR(it); fitMupi();   // marco 9:16 / 16:9 según el formato del contenido
   emitFrameState(it);
@@ -845,8 +921,9 @@ async function play(i, forced){
   stage.innerHTML=''; nowEl.textContent='▶ '+title;
   metaEl.textContent=(syncOn?'sincro canal · ':'')+it.type+(it._num?' · #'+it._num:'')+' · '+(cur+1)+'/'+playlist.length+' · '+(it.motor||'stock')+(it._dim?(' · '+it._dim.w+'×'+it._dim.h):'');
   renderRail();
-  // pseudo-streaming: reproduce DESDE DISCO si la pieza está descargada; si no, stream directo
-  const _csrc=await cachedSrc(it); if(_tok!==_playTok) return; const SRC=_csrc||it.url; it._fromCache=!!_csrc;
+  // pseudo-streaming: _csrc ya resuelto arriba (disco-primero). SRC = blob de disco o, en
+  // las excepciones (stream/sync/forzado/no-cacheable), la url online.
+  const SRC=_csrc||it.url; it._fromCache=!!_csrc;
   if(k==='video'){
     const v=document.createElement('video');
     try{ v.crossOrigin='anonymous'; }catch(_){}   // permite capturar el frame en canvas SI el asset trae CORS; si no, se reintenta sin él (onerror) → la emisión SIEMPRE se ve
@@ -916,6 +993,7 @@ function rebuild(restart){
     if($('segCount')) $('segCount').textContent=playlist.length+' · previo borrador';
     setLive('PREVIO · borrador · '+playlist.length+' slots en bucle', playlist.length>0);
     try{ renderChan(); }catch(_){} renderRail();
+    try{ schedulePrecache(); }catch(_){}   // r43: el PREVIO también precachea y aplica disco-primero
     if(restart||cur<0){ cur=-1; play(0); }
     return;
   }
@@ -1884,10 +1962,14 @@ window.XPLCanal = XPLCanal;
 
 loadStores(); screenLbl(); applyAudio(); renderChan(); fitMupi();
 if(PREVIEW.on){
-  // MODO PREVIO DE BORRADOR: no toca el Stock, la segmentación, la caché ni la
-  // programática; solo emite el rundown del borrador en bucle. El chrome/limpio y
-  // los controles del canal siguen funcionando igual.
+  // MODO PREVIO DE BORRADOR: no toca el Stock, la segmentación ni la programática;
+  // solo emite el rundown del borrador en bucle. El chrome/limpio y los controles del
+  // canal siguen igual. r43: SÍ pasa por el precache (disco-primero) — el rundown se
+  // descarga a disco y respeta la política estricta como la emisión normal.
   loadRundownPreview();
+  setTimeout(()=>{ try{ schedulePrecache(); }catch(_){} }, 1500);
+  setInterval(()=>{ try{ schedulePrecache(); }catch(_){} }, 12000);
+  setInterval(()=>{ try{ cacheReport(); }catch(_){} }, 30000);
 } else {
   // Arranque offline-safe: sin red, pinta ya el loop desde el catálogo cacheado
   // (el fetch normal lo refresca en cuanto vuelva la conexión).
