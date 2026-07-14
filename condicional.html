@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://www.carlossilva.info">
 <link rel="dns-prefetch" href="https://api.admira.store">
 <link rel="dns-prefetch" href="https://www.carlossilva.info">
+<script src="https://www.clearchannel.tv/locations.js?v=14.07.2026.r17"></script>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Admira · Condicional — segmentación + simulador</title>
@@ -68,6 +69,11 @@
   .empty{padding:60px 20px;text-align:center;color:var(--dim)}
   footer{padding:10px 20px 30px;color:var(--dim);font-size:11.5px;text-align:center}
   code{color:var(--accent)}
+  /* Selector de contexto compartido con Parrilla */
+  .context-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 20px 0;padding:14px 16px;border:1px solid #315071;border-radius:16px;background:linear-gradient(135deg,#132238,#0d151f);box-shadow:0 10px 35px #0003}
+  .context-field{display:grid;gap:6px}.context-field label{display:block;color:#8fa3bb;font:700 10px ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.context-count{color:#dbe8f8;font-weight:800;letter-spacing:0;white-space:nowrap}
+  .context-field select{width:100%;min-width:0;padding:11px 38px 11px 12px;border:1px solid #334966;border-radius:10px;background:#09111c;color:var(--ink);font-weight:750;cursor:pointer}.context-field select:hover,.context-field select:focus{border-color:var(--air);outline:none}
+  .context-meta{grid-column:1/-1;display:flex;align-items:center;gap:8px;color:var(--dim);font-size:12px}.context-dot{width:8px;height:8px;border-radius:50%;color:var(--air);background:var(--air);box-shadow:0 0 10px currentColor}
   /* editor de segmentación */
   #segWrap{padding:14px 20px 0}
   #segTable{width:100%;border-collapse:collapse;font-size:13px}
@@ -79,6 +85,8 @@
   .miniBtn:hover{background:#1a2c4e}
   .modeSel{background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:12.5px -apple-system,Segoe UI,sans-serif;transition:border-color .3s}
   #segTarget{background:#1a1604;color:#ffd866;border:1px solid #5e4a26;border-radius:8px;padding:7px 10px;font:600 13px -apple-system,Segoe UI,sans-serif}
+  @media(max-width:850px){.context-picker{grid-template-columns:1fr 1fr}.context-field:last-of-type{grid-column:1/-1}}
+  @media(max-width:600px){.context-picker{grid-template-columns:1fr;margin:12px 12px 0}.context-field:last-of-type,.context-meta{grid-column:1}#segWrap{padding-left:12px;padding-right:12px}}
   /* caja AMARILLA = el player tiene condiciones (segmentación propia) asignadas */
   .card.assigned{border-color:#caa23a;box-shadow:0 0 0 1px #caa23a66, 0 0 22px #caa23a22}
   .card.assigned .ava{border-color:#caa23a;color:#ffd866}
@@ -206,6 +214,13 @@
 <script src="/admira-nav.js?v=12.07.2026.r3" data-active="condicional" data-title="Segmentación" defer></script>
 <script src="/admira-frame.js?v=12.07.2026.r3" defer></script>
 
+<section class="context-picker" aria-label="Selector de proyecto, Xpacio y dispositivo IoT">
+  <div class="context-field"><label for="projectSelect">1.- Proyecto <span class="context-count" id="projectCount">// …</span></label><select id="projectSelect" aria-label="Cambiar proyecto"><option>Cargando proyectos…</option></select></div>
+  <div class="context-field"><label for="xpaceSelect">2.- Xpacio <span class="context-count" id="xpaceCount">// …</span></label><select id="xpaceSelect" aria-label="Cambiar Xpacio"><option>Cargando Xpacios…</option></select></div>
+  <div class="context-field"><label for="deviceSelect">3.- Dispositivo IoT <span class="context-count" id="deviceCount">// …</span></label><select id="deviceSelect" aria-label="Cambiar dispositivo IoT"><option>Cargando dispositivos…</option></select></div>
+  <div class="context-meta"><span class="context-dot"></span><span id="contextMeta">Cargando contexto…</span></div>
+</section>
+
 <section id="segWrap">
   <div class="card" style="display:block">
     <div class="top">
@@ -319,6 +334,7 @@
 
 <footer>Reglas + cazados desde <code>omnipublicity-api</code> · motor <code>Condicional</code> · <a href="https://www.xpaceos.com/admira-xp/xpl.html" target="_blank" rel="noopener" style="color:inherit">editor de reglas del gemelo ↗</a> · <span id="stamp"></span></footer>
 
+<script src="/admira-context-picker.js?v=14.07.2026.r18"></script>
 <script src="xpl-runtime.js?v=1"></script>
 <script>
 const FLEET = 'https://omnipublicity-api.csilvasantin.workers.dev/locations?selfreg=1';
@@ -346,6 +362,7 @@ async function loadTargets(){
   try{ const a=await fetch(SEG_API+'/assigned?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()); ASSIGNED=new Set(a.assigned||[]); }catch(_){}
   if($('segTarget')) $('segTarget').innerHTML='<option value="all">🌐 Todos (toda la red)</option>'+
     devs.map(d=>'<option value="'+esc(d.id)+'"'+(segTargetSel===d.id?' selected':'')+'>'+(ASSIGNED.has(d.id)?'🟡 ':'')+esc(d.name||d.id)+'</option>').join('');
+  if(window.admiraSyncContextTarget) window.admiraSyncContextTarget();
   if($('stamp')) $('stamp').textContent='actualizado '+new Date().toLocaleTimeString('es-ES');
 }
 loadTargets(); setInterval(loadTargets, 30000);
