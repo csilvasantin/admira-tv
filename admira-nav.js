@@ -21,7 +21,7 @@
     {k:'apps',       h:'/apps/',                            ic:'▦', t:'Apps'},
     {k:'flota',      h:'/cms.html',                         ic:'🛰', t:'Flota'},
     {k:'calendar',   h:'/cms/calendar/',                    ic:'🗓', t:'Calendario'},
-    {k:'parrilla',   h:'/parrilla/',                        ic:'parrilla', t:'Parrilla 50/50'},
+    {k:'parrilla',   h:'/parrilla/',                        ic:'parrilla', t:'Parrilla'},
     {k:'playlists',  h:'/playlists/',                       ic:'≣', t:'Playlists'},
     {k:'condicional',h:'/condicional.html',                 ic:'🎯', t:'Condicional'},
     {k:'canal',      h:'/canal.html', blank:true,           ic:'📺', t:'Canal'},
