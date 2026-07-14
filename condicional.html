@@ -249,7 +249,7 @@
     <div class="top">
       <div class="ava">🧪</div>
       <div style="min-width:0">
-        <div class="nm">Simulador de condiciones <span style="font:600 11px ui-monospace,monospace;color:var(--dim)">· motor XPL</span></div>
+        <div class="nm">Simulador de condiciones <span style="font:600 11px ui-monospace,monospace;color:var(--dim)">· motor Condicional</span></div>
         <div class="meta">Mueve el público, la hora y el clima y comprueba en seco qué regla "caza" y qué pieza se emitiría. No afecta a la emisión real.</div>
       </div>
       <div style="margin-left:auto"><span class="meta" id="simTgtLbl"></span></div>
@@ -317,7 +317,7 @@
   <div id="mediaGrid"></div>
 </div>
 
-<footer>Reglas + cazados desde <code>omnipublicity-api</code> · motor <code>XPL</code> · <span id="stamp"></span></footer>
+<footer>Reglas + cazados desde <code>omnipublicity-api</code> · motor <code>Condicional</code> · <a href="https://www.xpaceos.com/admira-xp/xpl.html" target="_blank" rel="noopener" style="color:inherit">editor de reglas del gemelo ↗</a> · <span id="stamp"></span></footer>
 
 <script src="xpl-runtime.js?v=1"></script>
 <script>
@@ -402,7 +402,7 @@ function renderSeg(){
       '<td><select data-k="age">'+opt(AGES,r.age)+'</select></td>'+
       '<td><input data-k="minCount" type="number" min="0" max="9" title="0 = sin cámara (patrón por tiempo)" value="'+(r.minCount!=null?r.minCount:1)+'"></td>'+
       '<td><select data-k="slot">'+opt(SLOTS,r.slot||'any')+'</select></td>'+
-      '<td><button class="miniBtn pickCond'+((r.conds&&r.conds.length)?' has':'')+'" data-i="'+i+'" title="condiciones de clima/día (motor XPL)">'+condBtnLbl(r)+'</button></td>'+
+      '<td><button class="miniBtn pickCond'+((r.conds&&r.conds.length)?' has':'')+'" data-i="'+i+'" title="condiciones de clima/día (motor Condicional)">'+condBtnLbl(r)+'</button></td>'+
       '<td><select data-k="category">'+opt(CATS,r.category)+'</select></td>'+
       '<td><input data-k="tag" list="segTags" value="'+esc(r.tag||'')+'" style="width:120px"></td>'+
       '<td><select data-k="medio">'+opt(MEDIOS,r.medio)+'</select></td>'+
