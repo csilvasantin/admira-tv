@@ -116,14 +116,17 @@
   #kiosk-live canvas{ display: block; width: 100%; height: 100%; }
 
   #pip-live{
-    position: fixed; left: 12px; top: calc(var(--top-h) + 12px); z-index: 14;
-    width: 248px; pointer-events: none;
+    position: fixed; right: 12px; bottom: 12px; z-index: 14;
+    width: 248px; pointer-events: auto; cursor: grab; touch-action: none;
     border-radius: var(--admira-radius-md); overflow: hidden;
     background: #06141a; border: 1px solid var(--spine-line);
     box-shadow: var(--admira-shadow-card), 0 0 22px -8px var(--spine);
-    opacity: 0; transform: translateY(-6px); transition: opacity .22s ease, transform .22s ease;
+    opacity: 0; transform: translateY(6px); transition: opacity .22s ease, transform .22s ease;
   }
   #pip-live.show{ opacity: 1; transform: none; }
+  #pip-live:active{ cursor: grabbing; }
+  /* con el panel experto abierto (236px), el PiP sube para no taparlo (si no se ha arrastrado) */
+  body.expert-open #pip-live{ bottom: 248px; }
   #pip-live canvas{ display: block; width: 100%; aspect-ratio: 16/9; }
   #pip-live .pip-tag{
     display: block; font-family: var(--admira-font-mono); font-size: 8.5px; letter-spacing: .12em;
@@ -1263,6 +1266,31 @@ function liveTick(){
   if (showPip){ const cv = pip.firstElementChild; drawChannel(cv.getContext('2d'), cv.width, cv.height); }
   if (CAL_HUD) updateCalHud(ready, showGlue);
 }
+
+// ---- PiP arrastrable: cogerlo con el ratón (o el dedo) y dejarlo donde no moleste ----
+// Al arrastrar pasa a left/top inline (gana a right/bottom del CSS, incluida la regla
+// de expert-open), acotado al viewport para que nunca quede fuera de alcance.
+(function(){
+  const pip = document.getElementById('pip-live');
+  if (!pip) return;
+  let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+  pip.addEventListener('pointerdown', e => {
+    const r = pip.getBoundingClientRect();
+    dragging = true; sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
+    try{ pip.setPointerCapture(e.pointerId); }catch(_){}
+    e.preventDefault();
+  });
+  pip.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const x = Math.max(4, Math.min(innerWidth  - pip.offsetWidth  - 4, ox + e.clientX - sx));
+    const y = Math.max(4, Math.min(innerHeight - pip.offsetHeight - 4, oy + e.clientY - sy));
+    pip.style.left = x + 'px'; pip.style.top = y + 'px';
+    pip.style.right = 'auto'; pip.style.bottom = 'auto';
+  });
+  const endDrag = () => { dragging = false; };
+  pip.addEventListener('pointerup', endDrag);
+  pip.addEventListener('pointercancel', endDrag);
+})();
 
 // HUD de diagnóstico (solo ?cal=1): pinta cámara/proyección/estado en pantalla para
 // poder leerlo por captura cuando no hay acceso JS al navegador (Safari solo-lectura).
