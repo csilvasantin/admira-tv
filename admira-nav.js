@@ -13,14 +13,14 @@
   var title=(s&&s.dataset.title)||cfg.title||'';
   var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.14.07.2026.r3';
+  var VER=window.ADMIRA_VERSION||'v.14.07.2026.r38';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
   var ITEMS=[
     {k:'apps',       h:'/apps/',                            ic:'▦', t:'Apps'},
-    {k:'flota',      h:'/cms.html',                         ic:'🛰', t:'Flota'},
-    {k:'calendar',   h:'/cms/calendar/',                    ic:'🗓', t:'Calendario'},
+    // Flota (/cms.html) y Calendario (/cms/calendar/) NO van en el raíl: ya viven en el
+    // conmutador de emisión de la barra superior (emiSwitchHTML). Aquí sobraban → quitados.
     {k:'parrilla',   h:'/parrilla/',                        ic:'parrilla', t:'Parrilla'},
     {k:'playlists',  h:'/playlists/',                       ic:'≣', t:'Playlists'},
     {k:'condicional',h:'/condicional.html',                 ic:'🎯', t:'Condicional'},
@@ -31,7 +31,12 @@
     {k:'alta',       h:'/alta.html',                        ic:'➕',       t:'Alta'},
     {k:'help',       h:'/help/',                            ic:'❓',       t:'Ayuda'}
   ];
-  if(!active){ var _here=_norm(location.pathname); for(var _i=0;_i<ITEMS.length;_i++){ if(_norm(ITEMS[_i].h)===_here){active=ITEMS[_i].k;break;} } }
+  if(!active){ var _here=_norm(location.pathname);
+    for(var _i=0;_i<ITEMS.length;_i++){ if(_norm(ITEMS[_i].h)===_here){active=ITEMS[_i].k;break;} }
+    // Flota y Calendario salieron de ITEMS (viven en el conmutador de emisión de la barra superior);
+    // mapa de rutas para que ese conmutador siga marcando la pestaña activa aunque la página no pase data-active.
+    if(!active){ active=({'/cms.html':'flota','/cms/calendar':'calendar'})[_here]||''; }
+  }
 
   // Atajos de teclado site-wide: "g" seguido de la tecla salta de sección (mnemónico).
   var SHORTCUTS=[
@@ -95,7 +100,7 @@
   // Fuente única del RAÍL de navegación para admira-frame: cuando una página no aporta
   // su propio [data-af-slot="left"], admira-frame construye el panel OPCIONES a partir de
   // aquí (mismos ítems + Control ↗ que el raíl heredado .admside, y la página activa).
-  try{ window.AdmiraNav={ items:ITEMS, active:active,
+  try{ window.AdmiraNav={ items:ITEMS, active:active, ver:VER,
     control:{ h:'https://www.xpaceos.com/control/', t:'Control ↗', blank:true, ic:'control' } }; }catch(_){}
 
   /* Las 20 apps del stack Admira, en el ORDEN exacto de la lanzadera legacy (new.admira.mobi) + XpaceOS y Yarig.ai al final.

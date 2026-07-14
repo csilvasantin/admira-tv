@@ -115,6 +115,7 @@ body.af-any-open .af-scrim{ opacity:1; visibility:visible }
 }
 .af-nav a:hover .af-ic svg{ color:#8effc4; filter:drop-shadow(0 0 5px rgba(61,240,138,.85)) }
 .af-nav .af-sep{ height:1px; background:#1e2940; margin:7px 6px }
+.af-nav .af-foot{ padding:8px 8px 2px; color:#8595ad; font:600 11px ui-monospace,SFMono-Regular,Menlo,monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 
 /* ── Contenido: AVANZADO (CTAs cross-marca en tarjetas) ──────────────────── */
 .af-cards{ display:flex; flex-direction:column; gap:8px }

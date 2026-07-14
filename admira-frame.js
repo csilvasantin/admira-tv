@@ -85,6 +85,14 @@
       nav.appendChild(sep);
       nav.appendChild(link(N.control));
     }
+    // Versión abajo del todo, justo debajo de «Control ↗» — misma jerarquía que el raíl
+    // heredado .admside (Control ↗ + admfoot con VER). Discreta, sin romper el layout.
+    if (N.ver) {
+      var foot = document.createElement("div");
+      foot.className = "af-foot";
+      foot.textContent = N.ver;
+      nav.appendChild(foot);
+    }
     return nav;
   }
 
