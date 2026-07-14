@@ -13,7 +13,7 @@
   var title=(s&&s.dataset.title)||cfg.title||'';
   var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.12.07.2026.r3';
+  var VER=window.ADMIRA_VERSION||'v.14.07.2026.r1';
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
@@ -32,6 +32,24 @@
     {k:'help',       h:'/help/',                            ic:'❓',       t:'Ayuda'}
   ];
   if(!active){ var _here=_norm(location.pathname); for(var _i=0;_i<ITEMS.length;_i++){ if(_norm(ITEMS[_i].h)===_here){active=ITEMS[_i].k;break;} } }
+
+  // Atajos de teclado site-wide: "g" seguido de la tecla salta de sección (mnemónico).
+  var SHORTCUTS=[
+    {k:'h', h:'/',                 t:'Inicio'},
+    {k:'a', h:'/apps/',            t:'Apps'},
+    {k:'f', h:'/cms.html',         t:'Flota'},
+    {k:'l', h:'/cms/calendar/',    t:'Calendario'},
+    {k:'p', h:'/parrilla/',        t:'Parrilla'},
+    {k:'i', h:'/playlists/',       t:'Playlists'},
+    {k:'d', h:'/condicional.html', t:'Condicional'},
+    {k:'c', h:'/canal.html',       t:'Canal', blank:true},
+    {k:'m', h:'/wall/',            t:'Mural'},
+    {k:'o', h:'/comprar/',         t:'Comprar'},
+    {k:'e', h:'/adcelerate/',      t:'ADcelerate'},
+    {k:'y', h:'/player/',          t:'Player'},
+    {k:'s', h:'/support/',         t:'Soporte'},
+    {k:'x', h:'/help/',            t:'Ayuda'}
+  ];
 
   // Iconos monolínea estilo Matrix (verde fósforo + glow, vía CSS). Heredan currentColor.
   var _S='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">';
@@ -252,6 +270,19 @@
    ".admskip{position:fixed;left:8px;top:-60px;z-index:70;background:#3df08a;color:#04110b;font:700 13px -apple-system,Segoe UI,sans-serif;padding:9px 14px;border-radius:9px;text-decoration:none;transition:top .15s}",
    ".admskip:focus{top:8px;outline:2px solid #04110b;outline-offset:2px}",
    ".admtop a:focus-visible,.admtop button:focus-visible,.admni:focus-visible,.admlinks a:focus-visible,.admseg a:focus-visible,.admhome:focus-visible{outline:2px solid #3df08a;outline-offset:2px;border-radius:8px}",
+   /* ── Overlay de atajos de teclado (g+tecla · ?) — estilo Matrix ── */
+   ".admhelp{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(2,10,6,.82);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);box-sizing:border-box}",
+   ".admhelp.open{display:flex}",
+   ".admhelp-card{width:min(560px,92vw);max-height:84vh;overflow:auto;box-sizing:border-box;background:#0a1410;border:1px solid #1c3b2a;border-radius:14px;box-shadow:0 0 0 1px rgba(61,240,138,.12),0 24px 70px #000c,0 0 40px rgba(61,240,138,.08);padding:20px 22px;color:#cdd8e8}",
+   ".admhelp-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px}",
+   ".admhelp-hd h2{margin:0;font:700 14px ui-monospace,monospace;color:#3df08a;letter-spacing:.5px;text-transform:uppercase;text-shadow:0 0 8px rgba(61,240,138,.4)}",
+   ".admhelp-x{background:none;border:1px solid #234;border-radius:8px;color:#8595ad;font:700 14px ui-monospace,monospace;width:30px;height:30px;cursor:pointer;line-height:1;flex:0 0 auto}",
+   ".admhelp-x:hover,.admhelp-x:focus-visible{color:#3df08a;border-color:#3df08a;outline:none}",
+   ".admhelp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px 16px}",
+   ".admhelp-row{display:flex;align-items:center;gap:9px;font:12.5px ui-monospace,monospace;color:#9fb0c4;min-width:0}",
+   ".admhelp-row .lb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+   ".admhelp kbd{display:inline-block;min-width:16px;text-align:center;padding:2px 6px;background:#04110b;border:1px solid #235c3e;border-bottom-width:2px;border-radius:6px;color:#3df08a;font:700 11px ui-monospace,monospace;box-shadow:0 0 6px rgba(61,240,138,.15);flex:0 0 auto}",
+   ".admhelp-ft{margin:14px 0 0;padding-top:12px;border-top:1px solid #16281e;font:11px ui-monospace,monospace;color:#5f7085;line-height:1.9}",
    "@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}",
    "@media(max-width:680px){",
      "html.admnav{padding-left:0;padding-right:0}",
@@ -507,10 +538,65 @@
     var _netTk=0;
     setInterval(function(){ if(html.classList.contains('admnav-det')){ tick(); if(_netTk++ % 15 === 0) loadNet(); } },1000);
 
+    // ── Overlay de ayuda de atajos (se construye al primer "?") ──
+    var admHelpEl=null,_helpPrevFocus=null;
+    function buildHelp(){
+      var rows=SHORTCUTS.map(function(s){
+        return '<div class="admhelp-row"><kbd>g</kbd><kbd>'+_esc(s.k)+'</kbd><span class="lb">'+_esc(s.t)+'</span></div>';
+      }).join("");
+      var el=document.createElement('div');
+      el.className='admhelp'; el.id='admHelp';
+      el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true');
+      el.setAttribute('aria-label','Atajos de teclado de admira.tv');
+      el.innerHTML='<div class="admhelp-card" role="document">'
+        +'<div class="admhelp-hd"><h2>Atajos de teclado</h2>'
+        +'<button type="button" class="admhelp-x" id="admHelpX" aria-label="Cerrar ayuda">✕</button></div>'
+        +'<div class="admhelp-grid">'+rows+'</div>'
+        +'<p class="admhelp-ft">Pulsa <kbd>g</kbd> y luego la tecla para saltar de sección · <kbd>?</kbd> abre esta ayuda · <kbd>Esc</kbd> cierra</p>'
+        +'</div>';
+      document.body.appendChild(el);
+      el.addEventListener('click',function(e){ if(e.target===el) closeHelp(); });
+      el.querySelector('#admHelpX').addEventListener('click',closeHelp);
+      el.addEventListener('keydown',function(e){ // focus trap ligero
+        if(e.key!=='Tab')return;
+        var f=el.querySelectorAll('button,[href],[tabindex]:not([tabindex="-1"])'); if(!f.length)return;
+        var first=f[0],last=f[f.length-1];
+        if(e.shiftKey){ if(document.activeElement===first){ e.preventDefault(); last.focus(); } }
+        else { if(document.activeElement===last){ e.preventDefault(); first.focus(); } }
+      });
+      return el;
+    }
+    function openHelp(){
+      if(!admHelpEl) admHelpEl=buildHelp();
+      _helpPrevFocus=document.activeElement;
+      admHelpEl.classList.add('open');
+      var x=admHelpEl.querySelector('#admHelpX'); if(x)try{x.focus();}catch(_){}
+    }
+    function closeHelp(){
+      if(!admHelpEl)return; admHelpEl.classList.remove('open');
+      if(_helpPrevFocus&&_helpPrevFocus.focus)try{_helpPrevFocus.focus();}catch(_){}
+    }
+
+    // ── Teclas: g+tecla salta de sección · ? abre ayuda · m/d/e toggles del chrome ──
+    var _gTimer=null,_gPending=false;
+    function _clearG(){ _gPending=false; if(_gTimer){clearTimeout(_gTimer);_gTimer=null;} }
     document.addEventListener('keydown',function(e){
       var t=e.target, tag=(t&&t.tagName||'').toLowerCase();
-      if(tag==='input'||tag==='textarea'||tag==='select'||(t&&t.isContentEditable))return;
-      if(e.metaKey||e.ctrlKey||e.altKey)return;
+      var typing=(tag==='input'||tag==='textarea'||tag==='select'||(t&&t.isContentEditable));
+      if(admHelpEl && admHelpEl.classList.contains('open')){ // overlay abierto: Esc cierra
+        if(e.key==='Escape'){ e.preventDefault(); closeHelp(); }
+        return;
+      }
+      if(typing) return;
+      if(e.metaKey||e.ctrlKey||e.altKey) return;
+      if(e.key==='?'){ e.preventDefault(); _clearG(); openHelp(); return; }
+      if(_gPending){
+        var k=(e.key||'').toLowerCase(); _clearG();
+        var sc=null; for(var i=0;i<SHORTCUTS.length;i++){ if(SHORTCUTS[i].k===k){ sc=SHORTCUTS[i]; break; } }
+        if(sc){ e.preventDefault(); if(sc.blank){ window.open(sc.h,'_blank','noopener'); } else { location.href=sc.h; } }
+        return;
+      }
+      if(e.key==='g'||e.key==='G'){ _gPending=true; if(_gTimer)clearTimeout(_gTimer); _gTimer=setTimeout(_clearG,1500); return; }
       if(e.key==='m'||e.key==='M')window.admToggleNav();
       else if(e.key==='d'||e.key==='D')window.admToggleDet();
       else if(e.key==='e'||e.key==='E')window.admToggleExp();
