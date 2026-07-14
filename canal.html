@@ -26,7 +26,7 @@
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
   if(p.get('chrome')==='0'||p.get('clean')==='1'||p.get('embed')==='mupi')return;
-  var s=document.createElement('script');s.src='/admira-nav.js?v=14.07.2026.r1';
+  var s=document.createElement('script');s.src='/admira-nav.js?v=14.07.2026.r2';
   s.setAttribute('data-active','canal');s.setAttribute('data-title','Canal en antena');document.head.appendChild(s);
 }catch(e){}})();</script>
 <script src="https://admira.app/locations.js"></script>
@@ -121,6 +121,12 @@
   #stage img.pixel{ object-fit:contain; image-rendering:pixelated; background:#0a140a; }
   .empty{ opacity:.5; letter-spacing:.22em; text-align:center; padding:24px; animation:blink 1.5s steps(2) infinite; }
   @keyframes blink{ 50%{ opacity:.15 } }
+  /* skeletons de carga (shimmer) */
+  @keyframes admSkel{ 0%{ background-position:200% 0 } 100%{ background-position:-200% 0 } }
+  .skel{ background:linear-gradient(90deg,#0a1018 25%,#14202e 50%,#0a1018 75%); background-size:200% 100%; animation:admSkel 1.4s ease-in-out infinite; border-radius:8px; }
+  .skel-stage{ width:min(46vh,86%); aspect-ratio:9/16; max-height:88%; border-radius:14px; border:1px solid rgba(125,184,255,.12); }
+  .skel-rail{ height:44px; border-radius:8px; border:1px solid rgba(125,184,255,.12); }
+  @media(prefers-reduced-motion:reduce){ .skel{ animation:none; opacity:.5 } }
   .audio-card{ display:grid; gap:20px; place-items:center; align-content:center; text-align:center; padding:24px; height:100%; }
   .audio-card .ico{ font-size:78px; line-height:1; color:var(--blue); text-shadow:0 0 34px var(--blue),0 0 10px var(--blue); animation:notePulse 2.2s ease-in-out infinite; }
   .audio-card strong{ font-size:13px; font-weight:600; letter-spacing:.05em; color:#cfe8ff; opacity:.78; max-width:86%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -185,7 +191,7 @@
 <body>
 <div id="wrap">
   <aside id="rail">
-    <div id="railItems"></div>
+    <div id="railItems"><div class="skel skel-rail"></div><div class="skel skel-rail"></div><div class="skel skel-rail"></div><div class="skel skel-rail"></div></div>
     <div id="impBar"></div>
     <form id="railCli" autocomplete="off"><span id="stockDot" class="sd ok" title="al día"></span><span class="rc-pre">›</span><input id="railCliIn" type="text" placeholder="/import <url>  ·  /studio /store…" spellcheck="false"></form>
   </aside>
@@ -194,7 +200,7 @@
     <div><div class="brand">ADMIRA<b>.TV</b></div><div class="sub">DIGITAL SIGNAGE LOOP</div><div class="screen" id="screenLbl"></div><div class="nocirc" id="nocirc" title="Asigna un circuito en ⚙ configurar para que esta emisión se impute">⚠ sin circuito · emisión no imputada</div></div>
     <div class="r"><div class="clock" id="clock">--:--</div><span class="seg" id="segBtn">⚙ configurar</span></div>
   </div>
-  <div id="stage"><div class="empty">// cargando feed de pixeria…</div></div>
+  <div id="stage"><div class="skel skel-stage"></div></div>
   <div id="bar"></div>
   <div id="tap">▶ Toca para arrancar el canal</div>
   <div id="hud">
