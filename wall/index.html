@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="/admira-frame.css?v=12.07.2026.r3">
 </head>
 <body>
-<script src="/admira-nav.js?v=14.07.2026.r2" data-active="mural" data-title="En antena ahora" defer></script>
+<script src="/admira-nav.js?v=14.07.2026.r3" data-active="mural" data-title="En antena ahora" defer></script>
 <script src="/admira-frame.js?v=12.07.2026.r3" defer></script>
 <div class="wrap">
   <div class="bar">
@@ -81,7 +81,7 @@ async function refresh(){
     let now;
     if(np&&!np.free){const cr=np.creative||{};const img=cr.url&&(cr.type==='image'||cr.type==='animation');
       const kc=np.kind==='own'?'kindown':np.kind==='paid'?'kindpaid':'kindfree';
-      now=`<div class="now">${img?`<img src="${cr.url}">`:`<div class="ph">${d.audio?'🎵':'▶'}</div>`}<div class="t"><div class="k ${kc}">${np.kind==='own'?'propio':np.kind==='paid'?'vendido':'—'} · ${(j.nowPlaying.bandId||'')}</div><div>${(np.title||'').slice(0,34)}</div></div></div>`;
+      now=`<div class="now">${img?`<img loading="lazy" decoding="async" src="${cr.url}">`:`<div class="ph">${d.audio?'🎵':'▶'}</div>`}<div class="t"><div class="k ${kc}">${np.kind==='own'?'propio':np.kind==='paid'?'vendido':'—'} · ${(j.nowPlaying.bandId||'')}</div><div>${(np.title||'').slice(0,34)}</div></div></div>`;
     }else{now=`<div class="now"><div class="ph">${d.audio?'🎵':'▶'}</div><div class="t"><div class="k kindfree">loop de Stock</div><div style="color:var(--dim)">— sin programar ahora</div></div></div>`;}
     html+=`<div class="dev"><div class="top"><span class="dot ${online?'on':'off'}"></span><span class="name">${d.label}</span></div>${now}<div class="foot"><span>${online?'● en vivo':'○ sin presencia'}</span><span>${plays} pases hoy</span></div></div>`;
   });

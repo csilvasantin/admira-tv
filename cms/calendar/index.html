@@ -5,6 +5,9 @@
 <script src="/auth-gate.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calendario de emisión · Admira.tv CMS</title>
+<!-- r3: preconnect al backbone de datos (mejora TTFB del primer fetch) -->
+<link rel="preconnect" href="https://api.admira.store" crossorigin>
+<link rel="dns-prefetch" href="https://api.admira.store">
 <meta name="description" content="Calendario de emisión en vivo de las pantallas DOOH del Xpacio — vista de año y de mes, qué emite cada pantalla por franjas. Admira.tv CMS.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:title" content="Admira.tv · Calendario de emisión">
@@ -146,7 +149,7 @@
   <link rel="stylesheet" href="/admira-frame.css?v=12.07.2026.r3">
 </head>
 <body>
-<script src="/admira-nav.js?v=14.07.2026.r2" data-active="calendar" data-title="Calendario de emisión" defer></script>
+<script src="/admira-nav.js?v=14.07.2026.r3" data-active="calendar" data-title="Calendario de emisión" defer></script>
 <script src="/admira-frame.js?v=12.07.2026.r3" defer></script>
 <div class="wrap">
   <div class="controls">
@@ -341,9 +344,9 @@ function openHour(screenId,hr){
   let nowIdx=-1;const nd=new Date();
   if(curDay===ymd(nd)&&nd.getHours()===hr){const sec=nd.getMinutes()*60+nd.getSeconds();nowIdx=Math.floor(sec/ss)%cap;}
   const seg=slots.map((sl,i)=>{const img=sl.creative&&(sl.creative.type==='image'||sl.creative.type==='animation');
-    return `<div class="lslot${i===nowIdx?' now':''}" title="${kindLabel(sl.kind)}${sl.title?' · '+sl.title:''}">${img?`<img src="${sl.creative.url}">`:`<span>${kindLabel(sl.kind)[0]}</span>`}<span>${i*ss}s</span></div>`;}).join('');
+    return `<div class="lslot${i===nowIdx?' now':''}" title="${kindLabel(sl.kind)}${sl.title?' · '+sl.title:''}">${img?`<img loading="lazy" decoding="async" src="${sl.creative.url}">`:`<span>${kindLabel(sl.kind)[0]}</span>`}<span>${i*ss}s</span></div>`;}).join('');
   const list=slots.map((sl,i)=>{const img=sl.creative&&(sl.creative.type==='image'||sl.creative.type==='animation');
-    const th=img?`<img src="${sl.creative.url}" style="width:30px;height:30px;object-fit:cover;border-radius:4px;flex:none">`:`<div class="ph" style="width:30px;height:30px;flex:none">·</div>`;
+    const th=img?`<img loading="lazy" decoding="async" src="${sl.creative.url}" style="width:30px;height:30px;object-fit:cover;border-radius:4px;flex:none">`:`<div class="ph" style="width:30px;height:30px;flex:none">·</div>`;
     return `<div class="lrow${i===nowIdx?' now':''}"><span class="lt">${mmss(i*ss)}–${mmss(i*ss+ss)}</span>${th}<span style="min-width:62px">${kindLabel(sl.kind)}</span><span style="color:var(--dim)">${(sl.title||(sl.kind==='free'?'loop de Stock':'')).slice(0,34)}</span></div>`;}).join('');
   hb.innerHTML=`<div class="hsum">Franja <b style="color:var(--teal)">${b.label}</b> · bucle de ${cap} slots × ${ss}s = ${looplen}s · se repite ${reps}× durante la hora${nowIdx>=0?' · <b style="color:var(--teal)">▶ ahora</b>':''}</div>`+
     `<div class="loopbar">${seg}</div>`+

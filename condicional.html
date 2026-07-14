@@ -211,7 +211,7 @@
   <link rel="stylesheet" href="/admira-frame.css?v=12.07.2026.r3">
 </head>
 <body>
-<script src="/admira-nav.js?v=14.07.2026.r2" data-active="condicional" data-title="Segmentación" defer></script>
+<script src="/admira-nav.js?v=14.07.2026.r3" data-active="condicional" data-title="Segmentación" defer></script>
 <script src="/admira-frame.js?v=12.07.2026.r3" defer></script>
 
 <section class="context-picker" aria-label="Selector de proyecto, Xpacio y dispositivo IoT">
@@ -343,7 +343,7 @@ const esc = s => String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt
 const ageTxt = ms => { const s=Math.max(0,Math.round(ms/1000)); return s<60?s+'s':s<3600?Math.round(s/60)+'min':Math.round(s/3600)+'h'; };
 
 function assetById(id){ return STOCK_ITEMS.find(x=>x.id===id)||null; }
-function mediaThumb(a){ if(!a) return '🎬'; if(a.type==='image'||a.type==='animation') return '<img src="'+esc(a.url)+'" alt="">'; if(a.thumbnail) return '<img src="'+esc(a.thumbnail)+'" alt="">'; return a.type==='video'?'▶':'♪'; }
+function mediaThumb(a){ if(!a) return '🎬'; if(a.type==='image'||a.type==='animation') return '<img loading="lazy" decoding="async" src="'+esc(a.url)+'" alt="">'; if(a.thumbnail) return '<img loading="lazy" decoding="async" src="'+esc(a.thumbnail)+'" alt="">'; return a.type==='video'?'▶':'♪'; }
 function condText(r){
   // Regla "atemporal": catch-all sin filtros (carrusel completo, no atada a público ni hora).
   const allAny=(!r.gender||r.gender==='any')&&(!r.age||r.age==='any')&&(!r.slot||r.slot==='any');

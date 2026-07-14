@@ -26,7 +26,7 @@
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
   if(p.get('chrome')==='0'||p.get('clean')==='1'||p.get('embed')==='mupi')return;
-  var s=document.createElement('script');s.src='/admira-nav.js?v=14.07.2026.r2';
+  var s=document.createElement('script');s.src='/admira-nav.js?v=14.07.2026.r3';
   s.setAttribute('data-active','canal');s.setAttribute('data-title','Canal en antena');document.head.appendChild(s);
 }catch(e){}})();</script>
 <script src="https://admira.app/locations.js"></script>
@@ -437,8 +437,8 @@ async function fetchXplDirective(){
 }
 
 function thumbHtml(it){ const k=KIND[it.type]||'image';
-  if(k==='image') return '<img class="'+(it.type==='twin-npc'?'pixel':'')+'" src="'+it.url+'" alt="">';
-  if(it.thumbnail) return '<img src="'+it.thumbnail+'" alt="">';
+  if(k==='image') return '<img loading="lazy" decoding="async" class="'+(it.type==='twin-npc'?'pixel':'')+'" src="'+it.url+'" alt="">';
+  if(it.thumbnail) return '<img loading="lazy" decoding="async" src="'+it.thumbnail+'" alt="">';
   return k==='video'?'▶':'♪'; }
 function renderRail(){
   const host=$('railItems'); if(!host) return;

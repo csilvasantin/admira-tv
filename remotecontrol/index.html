@@ -6,6 +6,9 @@
 <script>window.ADMIRA_VERSION='v.10.07.2026.r8';</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
+<!-- r3: preconnect al backbone de datos (mejora TTFB del primer fetch) -->
+<link rel="preconnect" href="https://api.admira.store" crossorigin>
+<link rel="dns-prefetch" href="https://api.admira.store">
 <meta name="robots" content="noindex">
 <link rel="icon" href="/favicon.svg">
 <meta name="theme-color" content="#060a0f">
@@ -705,7 +708,7 @@
         rec.shotKey=key;
         box.innerHTML='<div class="tag cap"><span class="live"></span>📷 captura real</div>'+
           '<div class="ph" data-ph>cargando captura…</div>'+
-          '<img decoding="async" alt="captura del player">'+
+          '<img loading="lazy" decoding="async" alt="captura del player">'+
           '<div class="capage" data-shotage>'+ageTx+'</div>';
         const img=box.querySelector('img');
         img.onload=()=>{ const p=box.querySelector('[data-ph]'); if(p) p.remove(); };

@@ -369,7 +369,7 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=14.07.2026.r2"></script>
+<script src="/admira-nav.js?v=14.07.2026.r3"></script>
 <script src="/admira-frame.js?v=12.07.2026.r3" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
@@ -560,8 +560,8 @@ function canalUrl(d){
 }
 function thumbHtml(it){
   if(!it) return '<span>—</span>';
-  if(it.type==='image'||it.type==='animation') return '<img src="'+esc(it.url||'')+'" alt="">';
-  if(it.type==='video') return it.url?'<video src="'+esc(it.url)+'" muted></video>':'▶';
+  if(it.type==='image'||it.type==='animation') return '<img loading="lazy" decoding="async" src="'+esc(it.url||'')+'" alt="">';
+  if(it.type==='video') return it.url?'<video src="'+esc(it.url)+'" muted preload="none"></video>':'▶';
   return it.type==='audio'?'♪':'▦';
 }
 function audPill(aud){
@@ -607,7 +607,7 @@ function pieceFor(r){
     return true;
   })||null;
 }
-function mediaThumb(a){ if(!a) return '🎬'; if(a.type==='image'||a.type==='animation') return '<img src="'+esc(a.url)+'" alt="">'; if(a.thumbnail) return '<img src="'+esc(a.thumbnail)+'" alt="">'; return a.type==='video'?'▶':'♪'; }
+function mediaThumb(a){ if(!a) return '🎬'; if(a.type==='image'||a.type==='animation') return '<img loading="lazy" decoding="async" src="'+esc(a.url)+'" alt="">'; if(a.thumbnail) return '<img loading="lazy" decoding="async" src="'+esc(a.thumbnail)+'" alt="">'; return a.type==='video'?'▶':'♪'; }
 function condText(r){
   // Regla "atemporal": catch-all sin filtros (carrusel completo, no atada a público ni hora).
   const allAny=(!r.gender||r.gender==='any')&&(!r.age||r.age==='any')&&(!r.slot||r.slot==='any');
