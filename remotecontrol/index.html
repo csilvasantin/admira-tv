@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/auth-gate.js"></script>
-<script>window.ADMIRA_VERSION='v.15.07.2026.r10';</script>
+<script>window.ADMIRA_VERSION='v.15.07.2026.r11';</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
 <!-- r3: preconnect al backbone de datos (mejora TTFB del primer fetch) -->
@@ -84,6 +84,19 @@
     border-radius:16px;padding:14px;box-shadow:0 18px 44px -32px rgba(61,240,138,.5);display:flex;flex-direction:column}
   /* tarjeta ENGANCHADA por deep-link (?machine=/?screen= desde admira.live/control) */
   .card.pinned{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc),0 0 26px -8px rgba(61,240,138,.7),0 18px 44px -32px rgba(61,240,138,.5)}
+  /* MODO SOLO (?solo=1): mando de UN único equipo — admira.live/control/remote */
+  body.solo .manual,body.solo .status-line,body.solo .foot,body.solo .card:not(.pinned){display:none}
+  body.solo #grid{grid-template-columns:minmax(300px,460px);justify-content:center}
+  body.solo .card.pinned{box-shadow:0 0 0 1px var(--acc),0 0 40px -6px rgba(61,240,138,.65),0 26px 60px -30px #000}
+  /* SEGMENTACIÓN EN VIVO por tarjeta: tag(s) → el player reconstruye su loop */
+  .tagrow{display:flex;gap:6px;margin-top:9px}
+  .tagrow input{flex:1;min-width:0;background:#050b11;color:var(--txt);border:1px solid var(--line);border-radius:9px;
+    padding:8px 10px;font-family:var(--mono);font-size:11.5px;-webkit-appearance:none}
+  .tagrow input:focus{outline:2px solid var(--acc2);outline-offset:1px;border-color:var(--acc2)}
+  .tagrow button{flex:0 0 auto;padding:0 12px;background:transparent;color:var(--acc2);border:1px solid var(--border2);
+    border-radius:9px;font-family:var(--mono);font-size:10.5px;font-weight:800;letter-spacing:.06em;cursor:pointer;transition:.15s}
+  .tagrow button:hover{border-color:var(--acc2)}
+  .tagrow button:active{transform:scale(.95)}
   .card.offline{opacity:.72}
   .card.hide{display:none}
   .chead{display:flex;align-items:center;gap:10px;margin-bottom:4px}
@@ -462,7 +475,8 @@
   // Deep-link desde admira.live/control: ?machine=<id de flota> (se resuelve al
   // screen cuyo beat de /signage/now trae ese machine — canal r49+) o ?screen=<id>.
   const DLQS=new URLSearchParams(location.search);
-  const DL={ machine:(DLQS.get('machine')||'').trim(), screen:(DLQS.get('screen')||'').trim(), done:false };
+  const DL={ machine:(DLQS.get('machine')||'').trim(), screen:(DLQS.get('screen')||'').trim(),
+             solo:DLQS.get('solo')==='1', done:false };   // solo=1 → mando de UN equipo (control/remote)
   const NOW='https://api.admira.store/signage/now?screen=';
   const SHOT='https://api.admira.store/signage/shot?screen=';   // captura real que sube el player (fase 2)
   const $=id=>document.getElementById(id);
@@ -629,6 +643,8 @@
       '<div class="prev" data-prev></div>'+
       '<div class="pad">'+padHtml+'</div>'+
       '<div class="grid6">'+btnHtml+'</div>'+
+      '<div class="tagrow"><input data-tagin placeholder="tag(s): musica,vertical — vacío = todo" autocomplete="off" spellcheck="false">'+
+      '<button data-tagbtn title="Re-segmenta el loop EN VIVO: el player solo emitirá lo que tenga TODAS las etiquetas (acentos válidos). Vacío = quitar el filtro.">🏷 SEGMENTAR</button></div>'+
       '<div class="plbar" data-plbar>📋 Playlist <span class="n" data-plcount></span><span class="chev">▾</span></div>'+
       '<div class="plist" data-plist></div>'+
       '<div class="last">Pulsa un control.</div>';
@@ -660,6 +676,13 @@
       const b=e.target.closest('.row'); if(!b) return;
       send(scr,'goto-'+b.dataset.i,b,rec.lastEl);
     });
+    // segmentación EN VIVO: tag(s) → cmd tag-<lista> por la cola (doble acuse).
+    // La playlist re-publicada por el player llega sola en el siguiente refresco.
+    const tagIn=card.querySelector('[data-tagin]'), tagBtn=card.querySelector('[data-tagbtn]');
+    const sendTag=()=>{ const v=cleanTagRC(tagIn.value); tagIn.value=v.replace(/,/g,', ');
+      send(scr,'tag-'+v,tagBtn,rec.lastEl); };
+    tagBtn.addEventListener('click',sendTag);
+    tagIn.addEventListener('keydown',e=>{ if(e.key==='Enter') sendTag(); });
     cards[scr]=rec;
     $('grid').appendChild(card);
     refreshNow(scr);
@@ -669,6 +692,9 @@
   // ─── PLAYLIST del equipo (mando gráfico): GET /control/playlist, publicada por
   //     el propio player (canal r45+) al reconstruir su loop. Click = goto-<n>. ───
   const PLAYLIST=API+'/control/playlist?screen=';
+  // mismo saneado que el perímetro: sin acentos (música→musica), minúsculas,
+  // anidable con comas/+ — así lo que se ve en el campo es lo que viaja.
+  function cleanTagRC(v){ return String(v||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'').replace(/[^a-z0-9_,+-]/g,''); }
   function typeIco(t){ t=String(t||'').toLowerCase();
     if(/vid|mp4|mov|webm|m4v/.test(t)) return '🎞';
     if(/aud|mp3|music|song|voice/.test(t)) return '🎵';
@@ -904,6 +930,7 @@
     }
     if(!scr) return;
     DL.done=true;
+    if(DL.solo) document.body.classList.add('solo');   // mando de UN equipo (control/remote)
     manualScreens.add(scr);
     if(!cards[scr]){ const empty=$('grid').querySelector('.empty'); if(empty) empty.remove();
       updateCard(scr, infoByScreen[scr]||{online:false,user_agent:'',loc:'',role:'panel de control',age_seconds:null}); }
