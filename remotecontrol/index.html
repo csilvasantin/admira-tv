@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/auth-gate.js"></script>
-<script>window.ADMIRA_VERSION='v.15.07.2026.r13';</script>
+<script>window.ADMIRA_VERSION='v.15.07.2026.r14';</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
 <!-- r3: preconnect al backbone de datos (mejora TTFB del primer fetch) -->
@@ -499,7 +499,10 @@
   // screen cuyo beat de /signage/now trae ese machine — canal r49+) o ?screen=<id>.
   const DLQS=new URLSearchParams(location.search);
   const DL={ machine:(DLQS.get('machine')||'').trim(), screen:(DLQS.get('screen')||'').trim(),
-             solo:DLQS.get('solo')==='1', done:false };   // solo=1 → mando de UN equipo (control/remote)
+             solo:DLQS.get('solo')==='1', done:false, target:'', fallback:false };
+  // solo=1 → mando de UN equipo (control/remote): la clase se aplica YA, antes de
+  // pintar nada — el resto de la flota ni se construye (ver load), no solo se oculta.
+  if(DL.solo&&(DL.machine||DL.screen)) document.body.classList.add('solo');
   const NOW='https://api.admira.store/signage/now?screen=';
   const SHOT='https://api.admira.store/signage/shot?screen=';   // captura real que sube el player (fase 2)
   const $=id=>document.getElementById(id);
@@ -954,11 +957,14 @@
         const arr=(d&&Array.isArray(d.screens))?d.screens:[];
         const live=new Set(arr.map(s=>s.screen));
         const ordered=sortArr(arr);
-        ordered.forEach(s=>{ if(s&&s.screen) updateCard(s.screen,s); });
-        // reordena en el DOM según orden elegido
-        ordered.forEach(s=>{ const rec=cards[s.screen]; if(rec) $('grid').appendChild(rec.el); });
-        // deep-link (?machine=/?screen=): engancha la tarjeta pedida; las fijadas van SIEMPRE primero
+        // deep-link (?machine=/?screen=) PRIMERO: fija el objetivo. En modo SOLO el
+        // resto de la flota NI SE CONSTRUYE — no es un ocultar por CSS, las demás
+        // tarjetas no existen en la página (y no se piden sus previos/playlists).
         resolveDeepLink(arr);
+        const soloScr=document.body.classList.contains('solo')?DL.target:null;
+        ordered.forEach(s=>{ if(s&&s.screen&&(!soloScr||s.screen===soloScr)) updateCard(s.screen,s); });
+        // reordena en el DOM según orden elegido; las fijadas van SIEMPRE primero
+        ordered.forEach(s=>{ const rec=cards[s.screen]; if(rec) $('grid').appendChild(rec.el); });
         Object.keys(cards).forEach(scr=>{ const rec=cards[scr]; if(rec&&rec.el.classList.contains('pinned')) $('grid').prepend(rec.el); });
         // manuales que ya no están vivos → offline conservados
         manualScreens.forEach(scr=>{
@@ -969,9 +975,10 @@
         Object.keys(cards).forEach(scr=>{ const rec=cards[scr];
           if(rec&&(rec.plOpen||rec.plKey==='')&&!rec.el.classList.contains('hide')){ loadPlaylist(scr,rec); loadCacheState(scr,rec); } });
         applyFilters();
-        // contadores (según umbral efectivo)
-        const on=arr.filter(s=>effOnline(s)).length;
-        const tot=(typeof d.total_count==='number')?d.total_count:arr.length;
+        // contadores (según umbral efectivo); en SOLO cuentan únicamente el objetivo
+        const carr=soloScr?arr.filter(s=>s&&s.screen===soloScr):arr;
+        const on=carr.filter(s=>effOnline(s)).length;
+        const tot=soloScr?Math.max(1,carr.length):((typeof d.total_count==='number')?d.total_count:arr.length);
         $('cOn').textContent=on; $('cTot').textContent=tot;
         $('statusLine').innerHTML=arr.length?'':'<span class="err">Sin pantallas vivas.</span> Usa el campo «screen manual» para dirigir un equipo por nombre.';
         if(!arr.length && !Object.keys(cards).length){
@@ -997,14 +1004,27 @@
   //     resuelve contra el campo machine de /signage/screens (canal r49+); si aún
   //     no reporta, cae a usar el id como screen (en la flota suelen coincidir). ───
   function resolveDeepLink(arr){
-    if(DL.done||(!DL.machine&&!DL.screen)) return;
+    if(!DL.machine&&!DL.screen) return;
+    if(DL.done){
+      // re-enganche: si se resolvió por fallback (machine usado como screen) y ahora
+      // aparece el screen REAL que reporta ese machine, se cambia el objetivo.
+      if(DL.fallback&&DL.machine){
+        const hit=(arr||[]).find(s=>s&&String(s.machine||'')===DL.machine);
+        if(hit&&hit.screen&&hit.screen!==DL.target){
+          const old=cards[DL.target];
+          if(old){ try{ old.el.remove(); }catch(_){} delete cards[DL.target]; manualScreens.delete(DL.target); }
+          DL.done=false; DL.fallback=false;
+        } else return;
+      } else return;
+    }
     let scr=DL.screen;
     if(!scr&&DL.machine){
       const hit=(arr||[]).find(s=>s&&String(s.machine||'')===DL.machine);
       scr=hit?hit.screen:DL.machine;
+      DL.fallback=!hit;
     }
     if(!scr) return;
-    DL.done=true;
+    DL.done=true; DL.target=scr;
     if(DL.solo) document.body.classList.add('solo');   // mando de UN equipo (control/remote)
     manualScreens.add(scr);
     if(!cards[scr]){ const empty=$('grid').querySelector('.empty'); if(empty) empty.remove();
