@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/auth-gate.js"></script>
-<script>window.ADMIRA_VERSION='v.15.07.2026.r11';</script>
+<script>window.ADMIRA_VERSION='v.15.07.2026.r12';</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
 <!-- r3: preconnect al backbone de datos (mejora TTFB del primer fetch) -->
@@ -84,10 +84,24 @@
     border-radius:16px;padding:14px;box-shadow:0 18px 44px -32px rgba(61,240,138,.5);display:flex;flex-direction:column}
   /* tarjeta ENGANCHADA por deep-link (?machine=/?screen= desde admira.live/control) */
   .card.pinned{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc),0 0 26px -8px rgba(61,240,138,.7),0 18px 44px -32px rgba(61,240,138,.5)}
-  /* MODO SOLO (?solo=1): mando de UN único equipo — admira.live/control/remote */
+  /* MODO SOLO (?solo=1): mando de UN único equipo — admira.live/control/remote.
+     Layout 2 columnas: PLAYLIST a la izquierda (parrilla siempre abierta, con
+     posición n/total) y el mando a la derecha. */
   body.solo .manual,body.solo .status-line,body.solo .foot,body.solo .card:not(.pinned){display:none}
-  body.solo #grid{grid-template-columns:minmax(300px,460px);justify-content:center}
-  body.solo .card.pinned{box-shadow:0 0 0 1px var(--acc),0 0 40px -6px rgba(61,240,138,.65),0 26px 60px -30px #000}
+  body.solo #grid{grid-template-columns:minmax(320px,980px);justify-content:center}
+  body.solo .card.pinned{box-shadow:0 0 0 1px var(--acc),0 0 40px -6px rgba(61,240,138,.65),0 26px 60px -30px #000;
+    display:grid;grid-template-columns:minmax(280px,360px) minmax(300px,1fr);gap:0 18px;align-content:start}
+  body.solo .card.pinned>.chead,body.solo .card.pinned>.now,body.solo .card.pinned>.prev,
+  body.solo .card.pinned>.pad,body.solo .card.pinned>.grid6,body.solo .card.pinned>.tagrow,
+  body.solo .card.pinned>.last{grid-column:2}
+  body.solo .card.pinned>.plbar{grid-column:1;grid-row:1;margin-top:0;cursor:default}
+  body.solo .card.pinned>.plbar .chev{display:none}
+  body.solo .card.pinned>.plist{grid-column:1;grid-row:2/span 8;display:block;margin-top:6px;
+    max-height:none;min-height:320px;align-self:stretch}
+  @media(max-width:760px){
+    body.solo .card.pinned{display:flex;flex-direction:column}
+    body.solo .card.pinned>.plist{max-height:236px;min-height:0}
+  }
   /* SEGMENTACIÓN EN VIVO por tarjeta: tag(s) → el player reconstruye su loop */
   .tagrow{display:flex;gap:6px;margin-top:9px}
   .tagrow input{flex:1;min-width:0;background:#050b11;color:var(--txt);border:1px solid var(--line);border-radius:9px;
@@ -663,10 +677,12 @@
       plBarEl:card.querySelector('[data-plbar]'),
       plCountEl:card.querySelector('[data-plcount]'),
       plListEl:card.querySelector('[data-plist]'),
-      plOpen:false, plItems:[], plKey:'',
+      plOpen:false, plItems:[], plKey:'', plOnAir:-1,
       lastItem:null, prevKey:'', shotKey:''};
     // playlist plegable: al abrir carga; los clicks en filas saltan con goto-<n>
     rec.plBarEl.addEventListener('click',()=>{
+      // en modo SOLO la parrilla izquierda es fija: no se pliega
+      if(document.body.classList.contains('solo')&&rec.plOpen) return;
       rec.plOpen=!rec.plOpen;
       rec.plBarEl.classList.toggle('open',rec.plOpen);
       rec.plListEl.classList.toggle('open',rec.plOpen);
@@ -718,12 +734,22 @@
     }).join('');
   }
   function updatePlHighlight(rec){
-    if(!rec||!rec.plOpen||!rec.plListEl) return;
-    const nowId=rec.lastItem&&rec.lastItem.id;
+    if(!rec||!rec.plListEl) return;
+    const items=rec.plItems||[], nowId=rec.lastItem&&rec.lastItem.id;
+    let on=-1;
     [].forEach.call(rec.plListEl.querySelectorAll('.row'),b=>{
-      const it=(rec.plItems||[])[+b.dataset.i];
-      b.classList.toggle('onair',!!(nowId&&it&&it.id===nowId));
+      const i=+b.dataset.i, it=items[i], hit=!!(nowId&&it&&it.id===nowId);
+      b.classList.toggle('onair',hit);
+      if(hit&&on<0) on=i;
     });
+    // contador con POSICIÓN: "· 7/21 en antena" (se ve qué viene después y cuántos hay)
+    if(rec.plCountEl) rec.plCountEl.textContent=items.length?(on>=0?('· '+(on+1)+'/'+items.length+' en antena'):('· '+items.length)):'';
+    // auto-scroll de la parrilla al item en antena (solo si cambió, sin mover la página)
+    if(on>=0&&rec.plOnAir!==on){
+      rec.plOnAir=on;
+      const r=rec.plListEl.querySelector('.row.onair');
+      if(r) rec.plListEl.scrollTop=Math.max(0,r.offsetTop-rec.plListEl.clientHeight/2+r.offsetHeight/2);
+    }
   }
   function loadPlaylist(scr,rec,force){
     fetch(PLAYLIST+encodeURIComponent(scr),{cache:'no-store'})
@@ -731,9 +757,9 @@
       .then(d=>{
         const items=(d&&Array.isArray(d.items))?d.items:[];
         const key=items.map(i=>i&&i.id).join('|');
-        if(rec.plCountEl) rec.plCountEl.textContent=items.length?('· '+items.length):'';
         if(!force&&key===rec.plKey){ updatePlHighlight(rec); return; }   // sin cambios → no repintar (ni recargar thumbs)
-        rec.plKey=key; rec.plItems=items; renderPlaylist(rec);
+        rec.plKey=key; rec.plItems=items; rec.plOnAir=-1; renderPlaylist(rec);
+        updatePlHighlight(rec);   // contador n/total + scroll al item en antena
       })
       .catch(()=>{});
   }
