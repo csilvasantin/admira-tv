@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/auth-gate.js"></script>
-<script>window.ADMIRA_VERSION='v.10.07.2026.r8';</script>
+<script>window.ADMIRA_VERSION='v.15.07.2026.r9';</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
 <!-- r3: preconnect al backbone de datos (mejora TTFB del primer fetch) -->
@@ -135,6 +135,33 @@
   .pad .mid{background:linear-gradient(160deg,#0e1c2a,#0a141e);border-color:#20415a}
   .grid6{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:7px}
   .grid6 button.b{min-height:58px}
+  /* PLAYLIST por tarjeta (mando gráfico): plegable, item en antena resaltado */
+  .plbar{display:flex;align-items:center;gap:7px;margin-top:9px;padding:8px 10px;background:#050b11;border:1px solid var(--line);
+    border-radius:10px;cursor:pointer;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc2);
+    user-select:none;-webkit-tap-highlight-color:transparent;transition:.15s}
+  .plbar:hover{border-color:var(--acc2)}
+  .plbar .n{color:var(--txt);font-weight:800}
+  .plbar .chev{margin-left:auto;color:var(--dim);transition:transform .15s}
+  .plbar.open{border-color:var(--acc2);box-shadow:0 0 14px -8px rgba(56,214,255,.6)}
+  .plbar.open .chev{transform:rotate(180deg)}
+  .plist{display:none;margin-top:6px;background:#050b11;border:1px solid var(--line);border-radius:10px;max-height:236px;overflow:auto}
+  .plist.open{display:block}
+  .plist::-webkit-scrollbar{width:7px}
+  .plist::-webkit-scrollbar-thumb{background:#1a2434;border-radius:8px}
+  .plist .row{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:transparent;border:0;
+    border-bottom:1px solid rgba(24,48,66,.55);padding:7px 9px;cursor:pointer;font-family:var(--mono);color:var(--txt);transition:background .12s}
+  .plist .row:last-child{border-bottom:0}
+  .plist .row:hover{background:rgba(56,214,255,.07)}
+  .plist .row:active{background:rgba(61,240,138,.12)}
+  .plist .row .idx{flex:0 0 26px;font-size:10px;color:var(--dim);text-align:right}
+  .plist .row .thumb,.plist .row .tico{flex:0 0 36px;width:36px;height:21px;border-radius:4px;background:#0a141e;border:1px solid var(--line)}
+  .plist .row .thumb{object-fit:cover}
+  .plist .row .tico{display:flex;align-items:center;justify-content:center;font-size:11px}
+  .plist .row .ttl{flex:1;min-width:0;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .plist .row .dur{flex:0 0 auto;font-size:9.5px;color:var(--dim)}
+  .plist .row.onair{background:linear-gradient(90deg,rgba(61,240,138,.15),transparent);box-shadow:inset 2px 0 0 var(--acc)}
+  .plist .row.onair .idx{color:var(--acc);font-weight:800}
+  .plist .empty-pl{padding:13px;text-align:center;color:var(--dim);font-size:10.5px;letter-spacing:.05em;line-height:1.6}
   .last{margin-top:9px;font-size:11px;letter-spacing:.05em;color:var(--dim);text-align:center;min-height:1.5em;line-height:1.35}
   .last .tx{color:var(--warn);font-weight:800;text-shadow:0 0 10px rgba(255,180,84,.35)}
   .last .rx{color:var(--acc);font-weight:800;text-shadow:0 0 12px rgba(61,240,138,.5)}
@@ -596,6 +623,8 @@
       '<div class="prev" data-prev></div>'+
       '<div class="pad">'+padHtml+'</div>'+
       '<div class="grid6">'+btnHtml+'</div>'+
+      '<div class="plbar" data-plbar>📋 Playlist <span class="n" data-plcount></span><span class="chev">▾</span></div>'+
+      '<div class="plist" data-plist></div>'+
       '<div class="last">Pulsa un control.</div>';
     const lEl=card.querySelector('.last');
     card.querySelectorAll('button.b').forEach(b=>{
@@ -609,11 +638,72 @@
       ageEl:card.querySelector('[data-age]'),
       nowEl:card.querySelector('[data-now]'),
       prevEl:card.querySelector('[data-prev]'),
+      plBarEl:card.querySelector('[data-plbar]'),
+      plCountEl:card.querySelector('[data-plcount]'),
+      plListEl:card.querySelector('[data-plist]'),
+      plOpen:false, plItems:[], plKey:'',
       lastItem:null, prevKey:'', shotKey:''};
+    // playlist plegable: al abrir carga; los clicks en filas saltan con goto-<n>
+    rec.plBarEl.addEventListener('click',()=>{
+      rec.plOpen=!rec.plOpen;
+      rec.plBarEl.classList.toggle('open',rec.plOpen);
+      rec.plListEl.classList.toggle('open',rec.plOpen);
+      if(rec.plOpen) loadPlaylist(scr,rec,true);
+    });
+    rec.plListEl.addEventListener('click',e=>{
+      const b=e.target.closest('.row'); if(!b) return;
+      send(scr,'goto-'+b.dataset.i,b,rec.lastEl);
+    });
     cards[scr]=rec;
     $('grid').appendChild(card);
     refreshNow(scr);
     return rec;
+  }
+
+  // ─── PLAYLIST del equipo (mando gráfico): GET /control/playlist, publicada por
+  //     el propio player (canal r45+) al reconstruir su loop. Click = goto-<n>. ───
+  const PLAYLIST=API+'/control/playlist?screen=';
+  function typeIco(t){ t=String(t||'').toLowerCase();
+    if(/vid|mp4|mov|webm|m4v/.test(t)) return '🎞';
+    if(/aud|mp3|music|song|voice/.test(t)) return '🎵';
+    if(/embed|iframe|link|web|html/.test(t)) return '🌐';
+    return '🖼'; }
+  function isImgItem(it){ return /img|image|jpg|jpeg|png|gif|webp|photo|twin/i.test(String(it.type||'')) ||
+    (!it.type && /\.(jpe?g|png|gif|webp)(\?|#|$)/i.test(String(it.url||''))); }
+  function durTxt(d){ d=Math.round(+d||0); if(!d) return ''; return d<60?(d+'s'):(Math.round(d/60)+'m'); }
+  function renderPlaylist(rec){
+    const box=rec.plListEl; if(!box) return;
+    const items=rec.plItems||[];
+    if(!items.length){ box.innerHTML='<div class="empty-pl">Sin playlist publicada.<br><span style="opacity:.7">El player la publica al montar su loop (canal r45+).</span></div>'; return; }
+    const nowId=rec.lastItem&&rec.lastItem.id;
+    box.innerHTML=items.map((it,i)=>{
+      const media=(isImgItem(it)&&it.url)?('<img class="thumb" loading="lazy" decoding="async" src="'+esc(it.url)+'" alt="" onerror="this.outerHTML=\'<span class=&quot;tico&quot;>🖼</span>\'">')
+        :('<span class="tico">'+typeIco(it.type)+'</span>');
+      return '<button class="row'+(nowId&&it.id===nowId?' onair':'')+'" data-i="'+i+'" title="Emitir #'+(i+1)+' ahora">'+
+        '<span class="idx">#'+(i+1)+'</span>'+media+
+        '<span class="ttl">'+esc(it.title||it.id||'sin título')+'</span>'+
+        '<span class="dur">'+durTxt(it.dur)+'</span></button>';
+    }).join('');
+  }
+  function updatePlHighlight(rec){
+    if(!rec||!rec.plOpen||!rec.plListEl) return;
+    const nowId=rec.lastItem&&rec.lastItem.id;
+    [].forEach.call(rec.plListEl.querySelectorAll('.row'),b=>{
+      const it=(rec.plItems||[])[+b.dataset.i];
+      b.classList.toggle('onair',!!(nowId&&it&&it.id===nowId));
+    });
+  }
+  function loadPlaylist(scr,rec,force){
+    fetch(PLAYLIST+encodeURIComponent(scr),{cache:'no-store'})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{
+        const items=(d&&Array.isArray(d.items))?d.items:[];
+        const key=items.map(i=>i&&i.id).join('|');
+        if(rec.plCountEl) rec.plCountEl.textContent=items.length?('· '+items.length):'';
+        if(!force&&key===rec.plKey){ updatePlHighlight(rec); return; }   // sin cambios → no repintar (ni recargar thumbs)
+        rec.plKey=key; rec.plItems=items; renderPlaylist(rec);
+      })
+      .catch(()=>{});
   }
 
   function updateCard(scr,info){
@@ -739,6 +829,7 @@
           rec.nowEl.innerHTML='<div class="lab">Emitiendo ahora</div><div class="ty">sin señal de emisión</div>';
         }
         renderPreview(rec,rec.lastItem);
+        updatePlHighlight(rec);   // re-marca el item en antena dentro de la playlist abierta
       })
       .catch(()=>{});
   }
@@ -764,6 +855,9 @@
           if(!live.has(scr)&&cards[scr]){ cards[scr].el.classList.add('offline'); cards[scr].dotEl.classList.remove('on'); cards[scr].ageEl.textContent='sin datos'; }
         });
         Object.keys(cards).forEach(refreshNow);
+        // playlists: refresca las abiertas (y estrena el contador en tarjetas nuevas)
+        Object.keys(cards).forEach(scr=>{ const rec=cards[scr];
+          if(rec&&(rec.plOpen||rec.plKey==='')&&!rec.el.classList.contains('hide')) loadPlaylist(scr,rec); });
         applyFilters();
         // contadores (según umbral efectivo)
         const on=arr.filter(s=>effOnline(s)).length;
