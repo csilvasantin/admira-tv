@@ -10,8 +10,23 @@ cd "$(dirname "$0")"
 MODE="${1:-both}"
 
 if [ "$MODE" = "both" ]; then
-  echo "→ GitHub (push de código + tags, backup)…"
-  git push origin main --follow-tags || echo "  (nada que pushear o ya al día)"
+  echo "→ GitHub (sincronía + push de código + tags)…"
+  # GUARDA ANTI-PISADA: si otra máquina pusheó mientras trabajabas, desplegar tu estado local
+  # PISA producción con una versión vieja (pasó el 15-jul-2026: se perdió /usuarios). Comparamos
+  # local vs origin/main y ABORTAMOS si hay que rebasar — nunca desplegamos un árbol desactualizado.
+  git fetch -q origin main
+  LOCAL="$(git rev-parse @)"; REMOTE="$(git rev-parse origin/main)"; BASE="$(git merge-base @ origin/main)"
+  if [ "$LOCAL" = "$REMOTE" ]; then
+    echo "  ✓ al día con origin/main"
+  elif [ "$REMOTE" = "$BASE" ]; then
+    echo "  → subiendo commits locales…"
+    git push origin main --follow-tags || { echo "  ✖ push RECHAZADO (otra máquina se adelantó). Haz: git pull --rebase && ./deploy.sh"; exit 1; }
+  elif [ "$LOCAL" = "$BASE" ]; then
+    echo "  ✖ origin/main va POR DELANTE (otra máquina ya desplegó). NO piso producción."
+    echo "    Haz:  git pull --rebase && ./deploy.sh"; exit 1
+  else
+    echo "  ✖ local y origin/main DIVERGEN. Haz:  git pull --rebase && ./deploy.sh"; exit 1
+  fi
 fi
 
 echo "→ Cloudflare Pages (deploy, ORIGEN de producción)…"
