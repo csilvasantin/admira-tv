@@ -457,13 +457,20 @@
   function myBadge(){
     if(!myEmail) return {t:'Solo lectura',c:'viewer'};
     if(amOwner) return {t:'Owner',c:'owner'};
-    var best=myRoles[GLOBAL];
+    var g=myRoles[GLOBAL];
+    // ★ Global + viewer = SUPERVISOR: ve todo (las 20 apps + la consola) pero el backend
+    // le bloquea toda escritura (canWrite exige owner/admin). No es un viewer normal.
+    if(g==='viewer') return {t:'Supervisor',c:'viewer'};
+    if(g==='admin') return {t:'Superuser',c:'admin'};
+    var best=g;
     if(!best){ // toma el mayor rol que tenga en cualquier solución
       Object.keys(myRoles).forEach(function(k){ if(!best||RANK[myRoles[k]]>RANK[best]) best=myRoles[k]; });
     }
     if(best) return {t:RMETA[best].nm,c:best};
     return {t:'Invitado',c:'viewer'};
   }
+  // Etiqueta legible del rol de un usuario en la columna ★ Global (para la matriz/lista).
+  function globalLabel(role){ return role==='viewer'?'Supervisor':role==='admin'?'Superuser':(RMETA[role]?RMETA[role].nm:''); }
   function isOwnerEmail(email){var owners=(state&&state.owners)||OWNERS;return owners.indexOf(email)>=0||OWNERS.indexOf(email)>=0;}
   function solutions(){return (state&&state.solutions)||[];}
   function cols(){ // ★ Global primero, luego las soluciones del registro

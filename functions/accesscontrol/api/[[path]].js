@@ -35,15 +35,30 @@ const GET_CORS = {
   "Vary": "Origin",
 };
 
-// Registro inicial de soluciones (se siembra si el KV está vacío).
+// Registro de soluciones = las 20 apps de la lanzadera de admira.tv (window.AdmiraApps
+// en admira-nav.js). Se siembra si el KV está vacío; para migrar un doc ya sembrado con
+// el registro viejo (7 sitios) hay la acción owner-only "solutions.reseed".
 const SEED_SOLUTIONS = [
-  { id: "admira-live", nm: "Consejo y control de flota", url: "https://www.admira.live", ds: "Consejo y control de flota" },
-  { id: "admira-tv", nm: "Emisión y CMS", url: "https://admira.tv", ds: "Emisión y CMS" },
-  { id: "xpaceos", nm: "Gemelo XP y backoffice", url: "https://www.xpaceos.com", ds: "Gemelo XP y backoffice" },
-  { id: "pixeria", nm: "Estudio de creación / Catálogo", url: "https://www.pixeria.com", ds: "Estudio de creación / Catálogo" },
-  { id: "yokup", nm: "Soporte y campo", url: "https://yokup.com/tool/", ds: "Soporte y campo" },
-  { id: "admira-studio", nm: "Stock y galería", url: "https://www.admira.studio", ds: "Stock y galería" },
-  { id: "adcelerate", nm: "Ad stack", url: "https://admira.tv/adcelerate/", ds: "Ad stack" },
+  { id: "dashboard",         nm: "Dashboard",           url: "https://admira.tv/dashboard/",         ds: "Los KPIs de tu red en una pantalla." },
+  { id: "digitalsignage",    nm: "Señalización",        url: "https://admira.tv/digitalsignage/",    ds: "Programa y emite tu cartelería en la red." },
+  { id: "contentcatalogue",  nm: "Catálogo",            url: "https://admira.tv/contentcatalogue/",  ds: "Tu biblioteca de creativos, lista para antena." },
+  { id: "support",           nm: "Soporte",             url: "https://admira.tv/support/",           ds: "Incidencias, tickets y ayuda del ecosistema." },
+  { id: "pushnotifications", nm: "Notificaciones",      url: "https://admira.tv/pushnotifications/",  ds: "La flota se avisa sola: aviso operativo y de contenido." },
+  { id: "virtualassistant",  nm: "Asistente",           url: "https://admira.tv/virtualassistant/",  ds: "El asistente IA que responde y opera por ti." },
+  { id: "adcelerate",        nm: "ADcelerate",          url: "https://admira.tv/adcelerate/",        ds: "El ad stack: segmentación y programática sobre la red." },
+  { id: "gamification",      nm: "Gamificación",        url: "https://admira.tv/gamification/",       ds: "Retos, puntos y recompensas para tu audiencia." },
+  { id: "iotmanager",        nm: "IoT",                 url: "https://admira.tv/iotmanager/",        ds: "Cada pantalla, player y sensor, en un mapa vivo." },
+  { id: "videoanalytics",    nm: "Analítica de vídeo",  url: "https://admira.tv/videoanalytics/",    ds: "Audiencia y atención medidas por cámara." },
+  { id: "radioanalytics",    nm: "Analítica de radio",  url: "https://admira.tv/radioanalytics/",     ds: "Cuenta la afluencia anónima, sin identificar a nadie." },
+  { id: "socialwifi",        nm: "Social WiFi",         url: "https://admira.tv/socialwifi/",        ds: "WiFi de invitados que convierte visitas en datos." },
+  { id: "queuemanager",      nm: "Colas",               url: "https://admira.tv/queuemanager/",      ds: "Mide la espera real y simula la cola en el gemelo." },
+  { id: "roombooking",       nm: "Salas",               url: "https://admira.tv/roombooking/",       ds: "Reserva espacios y salas al instante." },
+  { id: "audiobranding",     nm: "Audiobranding",       url: "https://admira.tv/audiobranding/",     ds: "La identidad sonora de tu espacio, con IA." },
+  { id: "olfactorymarketing",nm: "Marketing olfativo",  url: "https://admira.tv/olfactorymarketing/", ds: "El aroma como canal de marca." },
+  { id: "virtualreality",    nm: "Realidad virtual",    url: "https://admira.tv/virtualreality/",    ds: "Experiencias inmersivas para tu marca." },
+  { id: "augmentedreality",  nm: "Realidad aumentada",  url: "https://admira.tv/augmentedreality/",   ds: "Capas digitales sobre el mundo real." },
+  { id: "xpaceos",           nm: "XpaceOS",             url: "https://www.xpaceos.com",              ds: "El gemelo digital de tu espacio, vivo." },
+  { id: "yarig",             nm: "Yarig.ai",            url: "https://www.yarig.ai",                 ds: "El teambuilding de tu equipo, jugado con IA." },
 ];
 
 function json(obj, status, extra) {
@@ -93,18 +108,37 @@ async function buildSeedDoc() {
   };
 }
 
-// Lee el doc fresco; si no existe, lo siembra y persiste.
+// Marca de versión del REGISTRO de soluciones. Al bumpearla, readDoc re-siembra las
+// soluciones al set canónico (SEED_SOLUTIONS) UNA vez, automáticamente y sin auth —
+// así migra el doc viejo (7 sitios) a las 20 apps sin que nadie tenga que llamar a nada.
+const SOLUTIONS_REV = "apps20-2026-07-15";
+
+// Lee el doc fresco; si no existe, lo siembra. Si existe pero su registro de soluciones
+// es de una versión anterior, lo re-siembra a las 20 apps (limpiando roles huérfanos).
 async function readDoc(env) {
   const raw = await env.ACCESS.get(KEY_DOC);
+  let d = null;
   if (raw) {
-    try {
-      const d = JSON.parse(raw);
-      if (d && d.v === 2) return d;
-    } catch (e) { /* corrupto → re-siembra abajo */ }
+    try { const p = JSON.parse(raw); if (p && p.v === 2) d = p; } catch (e) { /* corrupto */ }
   }
-  const seeded = await buildSeedDoc();
-  await env.ACCESS.put(KEY_DOC, JSON.stringify(seeded));
-  return seeded;
+  if (!d) {
+    d = await buildSeedDoc();
+    d.solRev = SOLUTIONS_REV;
+    await env.ACCESS.put(KEY_DOC, JSON.stringify(d));
+    return d;
+  }
+  if (d.solRev !== SOLUTIONS_REV) {
+    d.solutions = SEED_SOLUTIONS.map((x) => ({ ...x }));
+    const valid = new Set(d.solutions.map((x) => x.id));
+    (d.users || []).forEach((u) => {
+      if (!u.roles) return;
+      Object.keys(u.roles).forEach((k) => { if (k !== "*" && !valid.has(k)) delete u.roles[k]; });
+    });
+    d.solRev = SOLUTIONS_REV;
+    d.updatedAt = Date.now();
+    await env.ACCESS.put(KEY_DOC, JSON.stringify(d));
+  }
+  return d;
 }
 
 // Vista pública del doc (contrato de /state).
@@ -294,6 +328,20 @@ export async function onRequestPost(ctx) {
       // Limpiar roles colgados sobre esa solución.
       doc.users.forEach((u) => { if (u.roles) delete u.roles[id]; });
       auditTarget = id;
+      break;
+    }
+    case "solutions.reseed": {
+      // Migración owner-only: fija el registro a las 20 apps canónicas (SEED_SOLUTIONS)
+      // y limpia los roles colgados sobre soluciones que ya no existen (conserva "*").
+      if (!isOwner(actor)) return json({ error: "owner_only" }, 403, GET_CORS);
+      doc.solutions = SEED_SOLUTIONS.map((x) => ({ ...x }));
+      const valid = new Set(doc.solutions.map((x) => x.id));
+      doc.users.forEach((u) => {
+        if (!u.roles) return;
+        Object.keys(u.roles).forEach((k) => { if (k !== "*" && !valid.has(k)) delete u.roles[k]; });
+      });
+      auditTarget = "solutions";
+      auditDetail = "reseed→" + doc.solutions.length + " apps";
       break;
     }
     default:
