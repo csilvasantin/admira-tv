@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/auth-gate.js"></script>
-<script>window.ADMIRA_VERSION='v.15.07.2026.r12';</script>
+<script>window.ADMIRA_VERSION='v.15.07.2026.r13';</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
 <!-- r3: preconnect al backbone de datos (mejora TTFB del primer fetch) -->
@@ -190,6 +190,15 @@
   .plist .row .dur{flex:0 0 auto;font-size:9.5px;color:var(--dim)}
   .plist .row.onair{background:linear-gradient(90deg,rgba(61,240,138,.15),transparent);box-shadow:inset 2px 0 0 var(--acc)}
   .plist .row.onair .idx{color:var(--acc);font-weight:800}
+  /* item aún NO descargado en el player (pseudo-streaming): atenuado + ⏳ */
+  .plist .row.pending{opacity:.5}
+  .plist .row.pending .dur::after{content:' ⏳'}
+  /* DESCARGA EN BACKGROUND: línea verde sutil bajo el previo + nota de progreso */
+  .dlwrap{display:none;margin:6px 0 0}
+  .dlwrap.on{display:block}
+  .dlwrap .tr{height:3px;border-radius:99px;background:#0a141e;border:1px solid rgba(24,48,66,.6);overflow:hidden}
+  .dlwrap .br{height:100%;width:0;background:linear-gradient(90deg,#39d353,var(--acc));box-shadow:0 0 8px rgba(61,240,138,.5);transition:width .5s}
+  .dlwrap .tx{margin-top:4px;font-size:9.5px;letter-spacing:.1em;color:var(--acc);text-transform:uppercase}
   .plist .empty-pl{padding:13px;text-align:center;color:var(--dim);font-size:10.5px;letter-spacing:.05em;line-height:1.6}
   .last{margin-top:9px;font-size:11px;letter-spacing:.05em;color:var(--dim);text-align:center;min-height:1.5em;line-height:1.35}
   .last .tx{color:var(--warn);font-weight:800;text-shadow:0 0 10px rgba(255,180,84,.35)}
@@ -655,6 +664,7 @@
       '</div>'+
       '<div class="now" data-now><div class="lab">Emitiendo ahora</div><div class="ttl">—</div></div>'+
       '<div class="prev" data-prev></div>'+
+      '<div class="dlwrap" data-dl><div class="tr"><div class="br" data-dlbar></div></div><div class="tx" data-dltx></div></div>'+
       '<div class="pad">'+padHtml+'</div>'+
       '<div class="grid6">'+btnHtml+'</div>'+
       '<div class="tagrow"><input data-tagin placeholder="tag(s): musica,vertical — vacío = todo" autocomplete="off" spellcheck="false">'+
@@ -674,6 +684,10 @@
       ageEl:card.querySelector('[data-age]'),
       nowEl:card.querySelector('[data-now]'),
       prevEl:card.querySelector('[data-prev]'),
+      dlEl:card.querySelector('[data-dl]'),
+      dlBarEl:card.querySelector('[data-dlbar]'),
+      dlTxEl:card.querySelector('[data-dltx]'),
+      dlReady:null,
       plBarEl:card.querySelector('[data-plbar]'),
       plCountEl:card.querySelector('[data-plcount]'),
       plListEl:card.querySelector('[data-plist]'),
@@ -727,7 +741,8 @@
     box.innerHTML=items.map((it,i)=>{
       const media=(isImgItem(it)&&it.url)?('<img class="thumb" loading="lazy" decoding="async" src="'+esc(it.url)+'" alt="" onerror="this.outerHTML=\'<span class=&quot;tico&quot;>🖼</span>\'">')
         :('<span class="tico">'+typeIco(it.type)+'</span>');
-      return '<button class="row'+(nowId&&it.id===nowId?' onair':'')+'" data-i="'+i+'" title="Emitir #'+(i+1)+' ahora">'+
+      const pending=rec.dlReady&&it.url&&/^https?:/i.test(it.url)&&!rec.dlReady.has(String(it.id));
+      return '<button class="row'+(nowId&&it.id===nowId?' onair':'')+(pending?' pending':'')+'" data-i="'+i+'" title="Emitir #'+(i+1)+' ahora'+(pending?' (aún descargándose en el player)':'')+'">'+
         '<span class="idx">#'+(i+1)+'</span>'+media+
         '<span class="ttl">'+esc(it.title||it.id||'sin título')+'</span>'+
         '<span class="dur">'+durTxt(it.dur)+'</span></button>';
@@ -751,6 +766,40 @@
       if(r) rec.plListEl.scrollTop=Math.max(0,r.offsetTop-rec.plListEl.clientHeight/2+r.offsetHeight/2);
     }
   }
+  // ─── DESCARGA EN BACKGROUND: estado real del disco del player (GET /screen/cache,
+  //     lo reporta el propio canal cada ≤4s mientras baja). Pinta la línea verde de
+  //     progreso bajo el previo, la nota "⬇ n/total · %" y atenúa (⏳) los items de
+  //     la playlist que aún no están en el disco del equipo. ───
+  const CACHE_STATE='https://api.admira.store/screen/cache?screen=';
+  function loadCacheState(scr,rec){
+    fetch(CACHE_STATE+encodeURIComponent(scr)+'&t='+Date.now(),{cache:'no-store'})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{
+        const c=d&&d.cache; if(!c||!Array.isArray(c.ready)){ return; }
+        rec.dlReady=new Set(c.ready.map(String));
+        const items=(rec.plItems||[]).filter(it=>it&&it.url&&/^https?:/i.test(it.url));
+        const total=items.length, ready=items.filter(it=>rec.dlReady.has(String(it.id))).length;
+        const dls=Array.isArray(c.downloading)?c.downloading:[];
+        const pct=dls.length?Math.max.apply(null,dls.map(x=>+x.pct||0)):0;
+        const active=total>0&&ready<total;
+        if(rec.dlEl){
+          rec.dlEl.classList.toggle('on',active);
+          if(active){
+            const frac=Math.min(100,Math.round((ready+pct/100)/total*100));
+            if(rec.dlBarEl) rec.dlBarEl.style.width=frac+'%';
+            if(rec.dlTxEl) rec.dlTxEl.textContent='⬇ descargando en el equipo · '+ready+'/'+total+(pct?(' · '+pct+'%'):'');
+          }
+        }
+        // refresca el atenuado ⏳ de las filas sin repintar la lista entera
+        [].forEach.call(rec.plListEl?rec.plListEl.querySelectorAll('.row'):[],b=>{
+          const it=(rec.plItems||[])[+b.dataset.i]; if(!it) return;
+          const pending=it.url&&/^https?:/i.test(it.url)&&!rec.dlReady.has(String(it.id));
+          b.classList.toggle('pending',!!pending);
+        });
+      })
+      .catch(()=>{});
+  }
+
   function loadPlaylist(scr,rec,force){
     fetch(PLAYLIST+encodeURIComponent(scr),{cache:'no-store'})
       .then(r=>r.ok?r.json():null)
@@ -918,7 +967,7 @@
         Object.keys(cards).forEach(refreshNow);
         // playlists: refresca las abiertas (y estrena el contador en tarjetas nuevas)
         Object.keys(cards).forEach(scr=>{ const rec=cards[scr];
-          if(rec&&(rec.plOpen||rec.plKey==='')&&!rec.el.classList.contains('hide')) loadPlaylist(scr,rec); });
+          if(rec&&(rec.plOpen||rec.plKey==='')&&!rec.el.classList.contains('hide')){ loadPlaylist(scr,rec); loadCacheState(scr,rec); } });
         applyFilters();
         // contadores (según umbral efectivo)
         const on=arr.filter(s=>effOnline(s)).length;
