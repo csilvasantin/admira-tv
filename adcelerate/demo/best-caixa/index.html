@@ -14,9 +14,12 @@
 :root{--bg:#03080f;--panel:rgba(6,14,26,.92);--ink:#eaf4ff;--mut:#8296b4;--ice:#8fd6ff;--gold:#ffce3a;--green:#4dff9e;--line:rgba(143,214,255,.2)}
 *{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:var(--bg)}
 body{color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-#stage{position:fixed;inset:0}
+/* gmp-map-3d crea su propio contexto de apilado: sin z-index explícito el globo
+   se pinta ENCIMA del Street View aunque vaya antes en el DOM. */
+#stage{position:fixed;inset:0;z-index:1}
+#stage.oculto{display:none}
 gmp-map-3d,#map3d{width:100%;height:100%;display:block}
-#streetview{position:fixed;inset:0;display:none;background:#000}
+#streetview{position:fixed;inset:0;display:none;background:#000;z-index:2}
 #streetview.on{display:block}
 /* Capa de señalización sobre el panorama: los canvas se warpean con matrix3d */
 #sv-signage{position:fixed;inset:0;pointer-events:none;display:none}
@@ -363,6 +366,7 @@ function setModo(m){
   modo = m;
   const calle = (m === 'street');
   $('streetview').classList.toggle('on', calle);
+  $('stage').classList.toggle('oculto', calle);   // el globo fuera: ni se ve ni consume GPU
   $('sv-signage').classList.toggle('on', calle);
   $('bStreet').classList.toggle('on', calle);
   $('bOrbit').classList.toggle('on', !calle);
