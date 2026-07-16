@@ -371,9 +371,13 @@ async function irACalle(){
   $('stage').classList.add('oculto');     // el globo fuera: ni se ve ni consume GPU
   $('sv-signage').classList.add('on');
   $('bStreet').classList.add('on'); $('bOrbit').classList.remove('on');
-  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));  // deja pintar el layout
+  // Deja aplicar el layout con un timeout, NO con requestAnimationFrame: en una
+  // pestaña de fondo rAF no dispara y el await se quedaría colgado para siempre.
+  await new Promise(r => setTimeout(r, 60));
   if (!sv) await iniStreetView();
-  else google.maps.event.trigger(sv, 'resize');
+  google.maps.event.trigger(sv, 'resize');
+  if (sv.getVisible && !sv.getVisible()) sv.setVisible(true);
+  setTimeout(() => { google.maps.event.trigger(sv, 'resize'); colocarPaneles(); }, 400);
   colocarPaneles();
   return true;
 }
