@@ -159,7 +159,11 @@ const CALIBRADAS = {
     pano: 'm7wh4Ud9ksmUAFCpTh1FhA',        // Diagonal 390, ago-2024
     pov:  { heading: 20, pitch: -6, zoom: 1.1 },
     grid: 'sim-caixa-diagonal390',
-    paneles: []                            // ← medir con ?grid / ?cal
+    // La lona entera del escaparate, de la banda negra al alféizar. Es SU soporte:
+    // hoy lo imprimen y lo cambian a mano; aquí se programa por franja y audiencia.
+    paneles: [
+      { tl:[5.6,-2.0], tr:[26.2,-1.5], br:[26.2,-14.8], bl:[5.6,-16.1] }
+    ]
   },
   'caixabank-0012-carrer-de-pau-claris': {
     pano: 'xppoSU95rOrdY07l_eCZEQ',        // Pau Claris 134, mirando al 135 (ago-2024)
@@ -173,7 +177,10 @@ const CALIBRADAS = {
   }
 };
 
-const LOC_ID = QS.get('loc') || 'caixabank-0012-carrer-de-pau-claris';
+// Por defecto Diagonal 390: es la única con un soporte publicitario REAL (lona plana
+// y frontal). En Pau Claris la pantalla cae sobre un cristal y se lee como un cartel
+// pegado, no como una pantalla — se conserva, pero no es la que se enseña.
+const LOC_ID = QS.get('loc') || 'caixabank-0019-avinguda-diagonal-lateral-muntanya';
 let sucursal = null, cfg = null;
 let map3d = null, MapMode = null, sv = null, modo = 'orbit';
 
