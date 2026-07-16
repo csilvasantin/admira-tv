@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>XpaceScan · fachadas CaixaBank</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#03080f;--ink:#eaf4ff;--mut:#8296b4;--gold:#ffce3a;--green:#4dff9e;--line:rgba(143,214,255,.2)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:12px/1.4 ui-monospace,Menlo,monospace}
+header{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+header b{color:var(--gold)}
+header a{color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 8px;text-decoration:none}
+header a:hover{border-color:var(--green);color:var(--green)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px}
+.cel{position:relative;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#000}
+/* Alto EXPLÍCITO: la API de Maps pone el contenedor en position:relative al crear el
+   panorama, así que no se puede depender de inset/absolute para dimensionarlo. */
+.pano{width:100%;height:230px}
+.cap{position:absolute;left:0;right:0;bottom:0;background:rgba(3,8,15,.86);padding:5px 7px;font-size:10px;pointer-events:none}
+.cap b{color:var(--gold)}
+.cap i{font-style:normal;color:var(--mut)}
+.idx{position:absolute;left:6px;top:6px;background:rgba(3,8,15,.86);border:1px solid var(--line);border-radius:6px;padding:2px 6px;font-size:10px;color:var(--green);z-index:3}
+</style>
+</head>
+<body>
+<header>
+  <b>XpaceScan · fachadas CaixaBank</b>
+  <span id="rango" style="color:var(--mut)">cargando…</span>
+  <a id="prev" href="#">← anteriores</a>
+  <a id="next" href="#">siguientes →</a>
+  <span style="color:var(--mut)">Busca las que tengan PANTALLA EXTERIOR real. El nº es el índice; abre con ?loc=…</span>
+</header>
+<div class="grid" id="grid"></div>
+
+<script>
+/* Hoja de contactos de las fachadas de la red: cada celda es un StreetViewPanorama real
+   apuntando a la sucursal desde su panorama más cercano. Sirve para ELEGIR ubicación sin
+   ir una a una: se busca a ojo cuál tiene un rótulo digital exterior de verdad.
+   La Street View Static API NO está activada en el proyecto, así que no hay miniaturas:
+   se usan panoramas vivos, de ahí que se pagine (cada uno gasta contexto de GPU). */
+const QS = new URLSearchParams(location.search);
+const KEY = QS.get('key') || 'AIzaSyDOQTBlJYugpPBPuSMlRg74tu8Gvmq7mKA';
+const DESDE = parseInt(QS.get('from') || '0', 10);
+const N = parseInt(QS.get('n') || '9', 10);
+const ZOOM = parseFloat(QS.get('zoom') || '1.1');
+
+function loadBootstrap(key){
+  (g => { let h, a, k, p = "The Google Maps JavaScript API", c = "google", l = "importLibrary", q = "__ib__",
+    m = document, b = window; b = b[c] || (b[c] = {}); const d = b.maps || (b.maps = {}), r = new Set(), e = new URLSearchParams(),
+    u = () => h || (h = new Promise(async (f, n) => { await (a = m.createElement("script"));
+      e.set("libraries", [...r] + ""); for (k in g) e.set(k.replace(/[A-Z]/g, t => "_" + t[0].toLowerCase()), g[k]);
+      e.set("callback", c + ".maps." + q); a.src = `https://maps.${c}apis.com/maps/api/js?` + e; d[q] = f;
+      a.onerror = () => h = n(Error(p + " could not load.")); a.nonce = m.querySelector("script[nonce]")?.nonce || "";
+      m.head.append(a); }));
+    d[l] ? console.warn(p + " only loads once. Ignoring:", g) : d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n));
+  })({ key, v: 'beta' });
+}
+const bearing = (a, b) => { const R = Math.PI/180;
+  const la1=a.lat*R, lo1=a.lng*R, la2=b.lat*R, lo2=b.lng*R, d=lo2-lo1;
+  const y=Math.sin(d)*Math.cos(la2), x=Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(d);
+  return (Math.atan2(y,x)/R + 360) % 360; };
+
+(async function(){
+  loadBootstrap(KEY);
+  const d = await (await fetch('https://www.xpaceos.com/Xcaixa/sucursales.json')).json();
+  const todas = d.sucursales || [];
+  const lote = todas.slice(DESDE, DESDE + N);
+  document.getElementById('rango').textContent = `${DESDE + 1}–${Math.min(DESDE + N, todas.length)} de ${todas.length}`;
+  document.getElementById('prev').href = '?from=' + Math.max(0, DESDE - N) + '&n=' + N;
+  document.getElementById('next').href = '?from=' + Math.min(todas.length - 1, DESDE + N) + '&n=' + N;
+
+  const { StreetViewService, StreetViewPanorama } = await google.maps.importLibrary('streetView');
+  const svc = new StreetViewService();
+  const grid = document.getElementById('grid');
+
+  for (let i = 0; i < lote.length; i++){
+    const s = lote[i];
+    const loc = { lat: s.coords[1], lng: s.coords[0] };
+    const cel = document.createElement('div'); cel.className = 'cel';
+    const pd  = document.createElement('div'); pd.className = 'pano';
+    const idx = document.createElement('div'); idx.className = 'idx'; idx.textContent = '#' + (DESDE + i + 1);
+    const cap = document.createElement('div'); cap.className = 'cap';
+    cel.append(idx, pd, cap); grid.appendChild(cel);
+    try{
+      const r = await svc.getPanorama({ location: loc, radius: 45, source: 'outdoor', preference: 'nearest' });
+      const p = r.data.location.latLng, pp = { lat: p.lat(), lng: p.lng() };
+      const h = bearing(pp, loc);
+      new StreetViewPanorama(pd, { pano: r.data.location.pano, pov: { heading: h, pitch: 0 }, zoom: ZOOM,
+        disableDefaultUI: true, clickToGo: false, scrollwheel: false, motionTracking: false, showRoadLabels: false });
+      cap.innerHTML = `<b>${s.name.replace(/^CaixaBank\s*/,'')}</b> · <i>${r.data.imageDate} · h${h.toFixed(0)}°</i><br><i>${s.id}</i>`;
+    }catch(e){ cap.innerHTML = `<b>${s.name}</b><br><i>sin panorama</i>`; }
+  }
+})();
+</script>
+</body>
+</html>
