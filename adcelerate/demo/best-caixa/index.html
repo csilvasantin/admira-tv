@@ -151,6 +151,16 @@ const GRID_DAY  = 'https://api.admira.store/grid/day?screen=';
    `paneles`: esquinas [heading, pitch] en grados ABSOLUTOS del panorama,
    orden TL, TR, BR, BL. Medidas con ?cal sobre el propio panorama. */
 const CALIBRADAS = {
+  // Diagonal 390 · CaixaBank Empresas. LA BUENA: tiene una lona publicitaria real,
+  // plana y frontal, con su propia campaña («La xarxa més gran per a empreses»). No es
+  // un cristal: es un soporte que YA usan y que hoy cambian a mano. Es el equivalente
+  // exacto de los pósters del MUPI de Gràcia — y el argumento se cuenta solo.
+  'caixabank-0019-avinguda-diagonal-lateral-muntanya': {
+    pano: 'm7wh4Ud9ksmUAFCpTh1FhA',        // Diagonal 390, ago-2024
+    pov:  { heading: 20, pitch: -6, zoom: 1.1 },
+    grid: 'sim-caixa-diagonal390',
+    paneles: []                            // ← medir con ?grid / ?cal
+  },
   'caixabank-0012-carrer-de-pau-claris': {
     pano: 'xppoSU95rOrdY07l_eCZEQ',        // Pau Claris 134, mirando al 135 (ago-2024)
     pov:  { heading: 266, pitch: -3, zoom: 1.3 },
