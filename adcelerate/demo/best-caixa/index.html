@@ -153,9 +153,13 @@ const GRID_DAY  = 'https://api.admira.store/grid/day?screen=';
 const CALIBRADAS = {
   'caixabank-0012-carrer-de-pau-claris': {
     pano: 'xppoSU95rOrdY07l_eCZEQ',        // Pau Claris 134, mirando al 135 (ago-2024)
-    pov:  { heading: 252, pitch: 4, zoom: 0.9 },
+    pov:  { heading: 266, pitch: -3, zoom: 1.3 },
     grid: 'sim-caixa-pauclaris',
-    paneles: []                            // ← lo rellena el calibrador
+    // Escaparate: el cristal a la derecha de los cajeros, BAJO el rótulo. Deliberadamente
+    // no se tapa el logotipo de CaixaBank: es su marca, no un hueco publicitario nuestro.
+    paneles: [
+      { tl:[268.5,-1.4], tr:[274.5,-1.4], br:[274.5,-7.2], bl:[268.5,-7.2] }
+    ]
   }
 };
 
@@ -324,8 +328,11 @@ async function cargarContenido(){
   if (!piezas.length) {
     try {
       const d = await (await fetch(STOCK_URL, { cache: 'no-store' })).json();
-      const items = (Array.isArray(d) ? d : (d.items || [])).filter(x => /\.(png|jpe?g|webp)$/i.test(x.url || x));
-      piezas = items.slice(0, 12).map(x => (x.url || x));
+      // Filtrar por `mime`, NO por la extensión de la URL: los assets del bucket llevan
+      // cache-buster (…/asset.png?v=1168) y un test de fin de cadena no casa nunca.
+      const items = (Array.isArray(d) ? d : (d.items || []))
+        .filter(x => String(x.mime || '').startsWith('image/') && x.url);
+      piezas = items.slice(0, 12).map(x => x.url);
       if (piezas.length) origenContenido = 'stock R2 · ' + piezas.length + ' piezas';
     } catch (e) { console.warn('sin stock:', e.message); }
   }
