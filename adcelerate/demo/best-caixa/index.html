@@ -491,6 +491,16 @@ function dibujarRejilla(){
       setTimeout(volarAlEdificio, 900);
     }
     if (cfg) cargarContenido();
+    // ?panels=h,p;h,p;h,p;h,p | ... → prueba esquinas SIN desplegar (TL;TR;BR;BL por panel,
+    // paneles separados por '|'). Es el bucle de ajuste fino de la calibración.
+    const pQS = QS.get('panels');
+    if (pQS && cfg) {
+      cfg.paneles = pQS.split('|').map(p => {
+        const c = p.split(';').map(x => x.split(',').map(Number));
+        return { tl:c[0], tr:c[1], br:c[2], bl:c[3] };
+      }).filter(q => q.tl && q.bl);
+      pintarPiezas(); colocarPaneles();
+    }
     // ?pov=h,p,zoom → encuadre exacto, para poder medir desde una captura
     const povQS = QS.get('pov');
     if (povQS && sv) { const [h,p,z] = povQS.split(',').map(Number);
