@@ -67,6 +67,22 @@
   .empty{color:var(--dim);font-size:14px;padding:30px 4px;text-align:center;display:none}
   .foot{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);color:var(--dim);font:600 11.5px ui-monospace,monospace;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
   .foot a{color:var(--dim)} .foot a:hover{color:var(--green)}
+  /* ── Yokup: card de producto EXTERNO (FSM · Field Service), acento ámbar para distinguirla
+        de las 20 apps internas; y sello "Motor: Yokup ↗" en las apps que ya mueve (Soporte/IoT) ── */
+  .app--ext .ic{background:rgba(245,180,49,.08);border-color:rgba(245,180,49,.22)}
+  .app--ext .ic svg{color:var(--amber);filter:drop-shadow(0 0 3px rgba(245,180,49,.5))}
+  .app--ext:hover .ic svg{filter:drop-shadow(0 0 6px rgba(245,180,49,.85))}
+  .app--ext:hover{border-color:#4a3a1c}
+  .app--ext:focus-visible{outline-color:var(--amber)}
+  .app .ext{margin-left:5px;color:var(--amber);font-size:12px;vertical-align:1px}
+  .app--pres .ext{color:var(--green)}
+  /* sello "Motor: Yokup ↗": la card es un <a>, así que va como <button> y corta la navegación */
+  .app .engine{appearance:none;align-self:flex-start;display:inline-flex;align-items:center;gap:5px;margin-top:6px;background:transparent;border:0;padding:2px 0 0;color:var(--dim);font:600 10.5px ui-monospace,monospace;letter-spacing:.02em;cursor:pointer;transition:color .15s}
+  .app .engine b{color:var(--amber);font-weight:700}
+  .app .engine svg{width:11px;height:11px;flex:none}
+  .app .engine:hover{color:var(--txt)}
+  .app .engine:hover b{text-decoration:underline}
+  .app .engine:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:4px}
   /* ── Vídeo explicativo (hover ≥3s / focus ≥3s / long-press ≥600ms sobre el icono) ── */
   /* Anillo de progreso que se rellena en 3s; se activa solo en iconos con vídeo en el manifest. */
   .app .ic.has-video{cursor:pointer}
@@ -103,7 +119,7 @@
 </head>
 <body>
 <script>
-window.ADMIRA_VERSION='v.09.07.2026.r28';
+window.ADMIRA_VERSION='v.16.07.2026.r30';
 /* El buscador de la lanzadera vive en la barra superior del chrome (cfg.topRight).
    No lleva clase .admtR, así que NO lo esconde el breakpoint móvil de la topbar. */
 window.ADMIRA_NAV={
@@ -123,7 +139,7 @@ window.ADMIRA_NAV={
 
   <div class="foot">
     <span>Réplica mejorada de la lanzadera legacy · new.admira.mobi → admira.tv</span>
-    <span>Admira · tv · <span style="opacity:.75">v.09.07.2026.r28</span></span>
+    <span>Admira · tv · <span style="opacity:.75">v.16.07.2026.r30</span></span>
   </div>
 </main>
 
@@ -304,10 +320,88 @@ window.ADMIRA_NAV={
       .catch(function(){ VIDEOS={}; });
   }
 
+  /* ── Yokup (FSM · Field Service) ─────────────────────────────────────────────
+     Producto Admira EXTERNO (yokup.com), aún en activación. NO va en window.AdmiraApps
+     (esas son las 20 apps internas con auth propia): se añade aquí, localizado en la
+     lanzadera, como (a) card propia externa y (b) sello "Motor: Yokup ↗" en las apps
+     cuyo trabajo de campo cierra Yokup. */
+  var YOKUP={
+    url:'https://yokup.com',
+    nm:'Yokup', en:'Field Service · FSM',
+    ds:'El bit avisa, la persona repara: el técnico en calle cierra el círculo.',
+    engineOf:['support','iotmanager'],
+    ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+
+       '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>'
+  };
+  var EXT_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-8.5 8.5M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg>';
+
+  // (a) sello "Motor: Yokup ↗" en las cards que Yokup mueve
+  function engineBadge(){
+    YOKUP.engineOf.forEach(function(slug){
+      var card=document.querySelector('.app[data-slug="'+slug+'"]');
+      if(!card || card.querySelector('.engine')) return;
+      var b=document.createElement('button');
+      b.type='button'; b.className='engine';
+      b.setAttribute('aria-label','Motor de campo: Yokup — abre yokup.com en otra pestaña');
+      b.innerHTML='Motor: <b>Yokup</b>'+EXT_SVG;
+      b.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); window.open(YOKUP.url,'_blank','noopener'); });
+      card.appendChild(b);
+    });
+  }
+  // (b) card propia de Yokup al final del grid (externa, ○ en activación)
+  function yokupCard(){
+    var grid=document.getElementById('grid');
+    if(!grid || grid.querySelector('.app--ext')) return;
+    var key=(YOKUP.nm+' '+YOKUP.en+' '+YOKUP.ds+' fsm field service motor campo mantenimiento').toLowerCase();
+    var a=document.createElement('a');
+    a.className='app app--ext'; a.setAttribute('role','listitem');
+    a.href=YOKUP.url; a.target='_blank'; a.rel='noopener';
+    a.setAttribute('data-key',key); a.setAttribute('data-slug','yokup');
+    a.setAttribute('aria-label','Yokup — Field Service Management, en activación (abre yokup.com)');
+    a.innerHTML=
+      '<span class="ic">'+YOKUP.ic+'</span>'+
+      '<span class="nm">'+esc(YOKUP.nm)+'<span class="ext">↗</span></span>'+
+      '<span class="en">'+esc(YOKUP.en)+'</span>'+
+      '<span class="ds">'+esc(YOKUP.ds)+'</span>'+
+      '<span class="st wip"><span class="d"></span>En activación</span>';
+    grid.appendChild(a);
+  }
+
+  /* ── Presentaciones (decks de cliente del ecosistema) ────────────────────────
+     Recurso EXTERNO (admiranext.com/presentations), protegido por contraseña por
+     cliente. Card en la lanzadera + solución gobernable en Acceso (ACL v2). */
+  var PRES={
+    url:'https://www.admiranext.com/presentations/',
+    nm:'Presentaciones', en:'Client Decks',
+    ds:'Los decks de cliente del ecosistema, protegidos por contraseña.',
+    ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+
+       '<rect x="3" y="4" width="18" height="12" rx="1.6"/><path d="M12 16v4M8.5 20h7M7 11l2.6-2.6L12.2 11 16 6.8"/></svg>'
+  };
+  function presCard(){
+    var grid=document.getElementById('grid');
+    if(!grid || grid.querySelector('.app--pres')) return;
+    var key=(PRES.nm+' '+PRES.en+' '+PRES.ds+' presentations decks cliente lenovo caixa admiranext').toLowerCase();
+    var a=document.createElement('a');
+    a.className='app app--pres'; a.setAttribute('role','listitem');
+    a.href=PRES.url; a.target='_blank'; a.rel='noopener';
+    a.setAttribute('data-key',key); a.setAttribute('data-slug','presentations');
+    a.setAttribute('aria-label','Presentaciones — decks de cliente (abre admiranext.com/presentations)');
+    a.innerHTML=
+      '<span class="ic">'+PRES.ic+'</span>'+
+      '<span class="nm">'+esc(PRES.nm)+'<span class="ext">↗</span></span>'+
+      '<span class="en">'+esc(PRES.en)+'</span>'+
+      '<span class="ds">'+esc(PRES.ds)+'</span>'+
+      '<span class="st live"><span class="d"></span>En antena</span>';
+    grid.appendChild(a);
+  }
+
   function boot(){
     // admira-nav.js (defer) ya corrió → window.AdmiraApps disponible antes de este DOMContentLoaded
     APPS=(window.AdmiraApps||[]).slice();
     render();
+    engineBadge();   // sello Yokup en Soporte + IoT
+    presCard();      // card de Presentaciones (recurso externo, gobernado en Acceso)
+    yokupCard();     // card propia de Yokup (producto externo)
     var q=document.getElementById('q');
     q.addEventListener('input',filter);
     // atajo "/" enfoca la búsqueda (sin romper los atajos m/d del chrome)

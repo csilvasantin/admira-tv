@@ -59,6 +59,7 @@ const SEED_SOLUTIONS = [
   { id: "augmentedreality",  nm: "Realidad aumentada",  url: "https://admira.tv/augmentedreality/",   ds: "Capas digitales sobre el mundo real." },
   { id: "xpaceos",           nm: "XpaceOS",             url: "https://www.xpaceos.com",              ds: "El gemelo digital de tu espacio, vivo." },
   { id: "yarig",             nm: "Yarig.ai",            url: "https://www.yarig.ai",                 ds: "El teambuilding de tu equipo, jugado con IA." },
+  { id: "presentations",     nm: "Presentaciones",      url: "https://www.admiranext.com/presentations/", ds: "Decks de cliente del ecosistema, protegidos por contraseña por cliente." },
 ];
 
 function json(obj, status, extra) {
@@ -111,7 +112,7 @@ async function buildSeedDoc() {
 // Marca de versión del REGISTRO de soluciones. Al bumpearla, readDoc re-siembra las
 // soluciones al set canónico (SEED_SOLUTIONS) UNA vez, automáticamente y sin auth —
 // así migra el doc viejo (7 sitios) a las 20 apps sin que nadie tenga que llamar a nada.
-const SOLUTIONS_REV = "apps20-2026-07-15";
+const SOLUTIONS_REV = "apps21-pres-2026-07-16";
 
 // Lee el doc fresco; si no existe, lo siembra. Si existe pero su registro de soluciones
 // es de una versión anterior, lo re-siembra a las 20 apps (limpiando roles huérfanos).
