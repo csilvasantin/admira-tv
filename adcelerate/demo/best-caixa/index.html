@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ADcelerate · BEST — Sucursal CaixaBank fotorrealista</title>
+<meta name="description" content="Nivel BEST del gemelo de una sucursal bancaria: globo fotorrealista de Google (Photorealistic 3D Tiles) sobre el edificio real y Street View a pie de calle con las pantallas de admira.tv integradas en la fachada.">
+<link rel="canonical" href="https://admira.tv/adcelerate/demo/best-caixa/">
+<meta name="theme-color" content="#03080f">
+<link rel="preconnect" href="https://api.admira.store">
+<link rel="dns-prefetch" href="https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev">
+<link rel="preconnect" href="https://www.xpaceos.com">
+<style>
+:root{--bg:#03080f;--panel:rgba(6,14,26,.92);--ink:#eaf4ff;--mut:#8296b4;--ice:#8fd6ff;--gold:#ffce3a;--green:#4dff9e;--line:rgba(143,214,255,.2)}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:var(--bg)}
+body{color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+#stage{position:fixed;inset:0}
+gmp-map-3d,#map3d{width:100%;height:100%;display:block}
+#streetview{position:fixed;inset:0;display:none;background:#000}
+#streetview.on{display:block}
+/* Capa de señalización sobre el panorama: los canvas se warpean con matrix3d */
+#sv-signage{position:fixed;inset:0;pointer-events:none;display:none}
+#sv-signage.on{display:block}
+.sv-p{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;display:none}
+.sv-p canvas{display:block;box-shadow:0 0 26px rgba(120,200,255,.28)}
+.hud{position:fixed;z-index:6}
+.top{top:0;left:0;right:0;display:flex;align-items:center;gap:12px;padding:14px 18px;background:linear-gradient(180deg,rgba(3,8,15,.96),transparent);pointer-events:none}
+.top>*{pointer-events:auto}
+.back{color:var(--mut);text-decoration:none;border:1px solid var(--line);padding:6px 10px;border-radius:8px}
+.back:hover{border-color:var(--ice);color:var(--ice)}
+.brand b{font-size:16px}.brand em{font-style:normal;color:var(--mut);font-size:10px;margin-left:5px}
+.brand .sub{display:block;color:var(--ice);font-size:10px}
+.spacer{flex:1}
+.badge{border:1px solid rgba(255,206,58,.35);color:var(--gold);background:rgba(255,206,58,.07);border-radius:999px;padding:5px 10px;font-size:10px;white-space:nowrap}
+.badge::before{content:"●";margin-right:6px;animation:pulse 1.6s infinite}@keyframes pulse{50%{opacity:.3}}
+.card{left:18px;top:76px;max-width:340px;padding:16px 18px;background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:14px}
+.card h1{font:800 21px/1.06 system-ui,sans-serif;margin:0 0 6px}
+.card h1 span{color:var(--ice)}
+.card p{font:11px/1.5 system-ui,sans-serif;color:var(--mut);margin:0}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:3px 7px;font-size:9px;color:var(--mut)}
+.chip.cat{color:var(--green);border-color:rgba(77,255,158,.4)}
+.chip.sim{color:var(--gold);border-color:rgba(255,206,58,.35)}
+.cams{right:18px;bottom:18px;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.cams button{color:var(--ink);background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:11px;cursor:pointer}
+.cams button:hover,.cams button.on{border-color:var(--ice);color:var(--ice);background:rgba(143,214,255,.09)}
+.src{left:18px;bottom:18px;max-width:340px;padding:10px 12px;background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:12px;font:9px/1.5 system-ui,sans-serif;color:var(--mut)}
+.src b{color:var(--ink)}
+.loading{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:var(--bg);color:var(--ice);font-size:11px;letter-spacing:.12em}
+.loading.hide{display:none}
+/* Calibrador (?cal): clicar TL,TR,BR,BL sobre el panorama */
+#cal{position:fixed;right:18px;top:76px;z-index:9;width:310px;padding:14px;background:rgba(4,11,21,.97);border:1px solid var(--gold);border-radius:12px;display:none;font-size:10px}
+#cal.on{display:block}
+#cal h2{margin:0 0 8px;font-size:11px;color:var(--gold);letter-spacing:.1em}
+#cal p{margin:0 0 8px;color:var(--mut);line-height:1.5}
+#cal textarea{width:100%;height:104px;background:#02060d;color:var(--green);border:1px solid var(--line);border-radius:8px;padding:8px;font:9px/1.4 ui-monospace,monospace;resize:vertical}
+#cal button{margin:6px 6px 0 0;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:10px;cursor:pointer}
+#cal button:hover{border-color:var(--gold);color:var(--gold)}
+#cal .step{color:var(--gold);font-weight:700}
+#cal-dots{position:fixed;inset:0;z-index:8;pointer-events:none;display:none}
+#cal-dots.on{display:block}
+.cd{position:absolute;width:11px;height:11px;margin:-6px 0 0 -6px;border:2px solid var(--gold);border-radius:50%;background:rgba(255,206,58,.35)}
+.cd b{position:absolute;left:13px;top:-3px;font-size:9px;color:var(--gold)}
+@media(max-width:760px){.card{display:none}.cams{right:10px;bottom:14px}#cal{display:none!important}}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="streetview"></div>
+
+<!-- Señalización integrada en la fachada real (canvas warpeados por homografía) -->
+<div id="sv-signage">
+  <div class="sv-p" id="sv-p1"><canvas width="512" height="288"></canvas></div>
+  <div class="sv-p" id="sv-p2"><canvas width="512" height="288"></canvas></div>
+</div>
+
+<div class="loading" id="loading">CARGANDO GEMELO FOTORREALISTA…</div>
+
+<header class="hud top">
+  <a class="back" id="back" href="https://www.xpaceos.com/Xcaixa/" aria-label="Volver al Xpacio">←</a>
+  <div class="brand"><b>ADcelerate<em>by Admira</em></b><span class="sub" id="brandSub">Gemelo fotorreal · sucursal</span></div>
+  <span class="spacer"></span>
+  <span class="badge" id="badge">MAQUETA · GEMELO FOTORREAL</span>
+</header>
+
+<section class="hud card">
+  <h1 id="bName">Sucursal<br><span>en su calle real.</span></h1>
+  <p id="bAddr">Cargando del catálogo…</p>
+  <div class="chips" id="chips"></div>
+</section>
+
+<div class="hud cams">
+  <button data-cam="orbit" id="bOrbit">🛰️ Órbita sobre el edificio</button>
+  <button data-cam="street" id="bStreet">🧍 A pie ante la fachada</button>
+  <button data-cam="reset" id="bReset">⌂ Vista inicial</button>
+</div>
+
+<div class="hud src" id="srcNote">Cargando origen de datos…</div>
+
+<!-- Calibrador -->
+<div id="cal-dots"></div>
+<div id="cal">
+  <h2>CALIBRADOR DE FACHADA</h2>
+  <p>Clica las <b>4 esquinas</b> de la superficie sobre el panorama, en orden:
+     <span class="step" id="calStep">1 · arriba-izquierda</span></p>
+  <p>El panel se fija a la fachada por ángulos absolutos, así que aguanta cualquier giro o zoom.</p>
+  <textarea id="calOut" readonly placeholder="Las esquinas medidas saldrán aquí…"></textarea>
+  <button id="calCopy">Copiar</button>
+  <button id="calNext">Siguiente panel</button>
+  <button id="calReset">Reiniciar</button>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   BEST · Sucursal bancaria — gemelo fotorrealista.
+
+   Mismo patrón que /adcelerate/demo/best/ (kiosko de Gràcia), adaptado a una
+   fachada de banco. Dos motores, como allí:
+     · Globo  → Map3DElement (Photorealistic 3D Tiles) = el edificio REAL en 3D.
+     · Calle  → StreetViewPanorama + canvas warpeados sobre superficies planas
+                de la fachada. A ras de calle los tiles se derriten; la foto no.
+
+   La diferencia con el kiosko: un banco no tiene un MUPI con pósters planos
+   puestos por nosotros. Las superficies son SU fachada y SUS cajeros, así que
+   las esquinas se miden por sucursal. Para no repetir los 16 números a ojo de
+   Gràcia, aquí va el CALIBRADOR (?cal): se clican las esquinas y escupe el
+   bloque listo para pegar en PANELES.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const $ = id => document.getElementById(id);
+const QS = new URLSearchParams(location.search);
+
+// Clave publicable, restringida por referrer a admira.tv (la misma que /best/).
+const GOOGLE_MAPS_KEY = QS.get('key') || 'AIzaSyDOQTBlJYugpPBPuSMlRg74tu8Gvmq7mKA';
+
+const CATALOGO = 'https://www.xpaceos.com/Xcaixa/sucursales.json';
+const XPACIO   = 'https://www.xpaceos.com/Xcaixa/';
+const STOCK_URL = 'https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json';
+const GRID_DAY  = 'https://api.admira.store/grid/day?screen=';
+
+/* Sucursales CALIBRADAS. Sin entrada aquí, el globo funciona igual (sale del
+   lat/lng del catálogo) pero NO hay pantallas: no se inventan superficies que
+   no se han medido — se dice «sin calibrar» y se ve la fachada limpia.
+   `paneles`: esquinas [heading, pitch] en grados ABSOLUTOS del panorama,
+   orden TL, TR, BR, BL. Medidas con ?cal sobre el propio panorama. */
+const CALIBRADAS = {
+  'caixabank-0012-carrer-de-pau-claris': {
+    pano: 'xppoSU95rOrdY07l_eCZEQ',        // Pau Claris 134, mirando al 135 (ago-2024)
+    pov:  { heading: 252, pitch: 4, zoom: 0.9 },
+    grid: 'sim-caixa-pauclaris',
+    paneles: []                            // ← lo rellena el calibrador
+  }
+};
+
+const LOC_ID = QS.get('loc') || 'caixabank-0012-carrer-de-pau-claris';
+let sucursal = null, cfg = null;
+let map3d = null, MapMode = null, sv = null, modo = 'orbit';
+
+/* ── Cámara del globo ─────────────────────────────────────────────────────── */
+let CAM_START = null, CAM_ORBIT = null;
+function camsPara(lat, lng, heading){
+  CAM_START = { center: { lat, lng, altitude: 40 }, range: 1400, tilt: 45, heading: (heading + 180) % 360 };
+  CAM_ORBIT = { center: { lat, lng, altitude: 18 }, range: 130,  tilt: 66, heading };
+}
+
+/* ── Catálogo ─────────────────────────────────────────────────────────────── */
+async function cargarSucursal(){
+  const d = await (await fetch(CATALOGO, { cache: 'no-cache' })).json();
+  sucursal = (d.sucursales || []).find(s => s.id === LOC_ID) || (d.sucursales || [])[0];
+  if (!sucursal) throw new Error('sucursal no encontrada en el catálogo');
+  cfg = CALIBRADAS[sucursal.id] || null;
+
+  const corto = sucursal.name.replace(/^CaixaBank\s*/, '');
+  $('bName').innerHTML = corto + '<br><span>en su calle real.</span>';
+  $('bAddr').textContent = sucursal.addr;
+  $('brandSub').textContent = 'Gemelo fotorreal · ' + corto;
+  $('back').href = XPACIO + '?loc=' + encodeURIComponent(sucursal.id);
+
+  const nPan = cfg && cfg.paneles ? cfg.paneles.length : 0;
+  $('chips').innerHTML =
+    '<span class="chip cat">CATÁLOGO · ' + (sucursal.surfaces || []).length + ' superficies</span>' +
+    (nPan ? '<span class="chip cat">FACHADA CALIBRADA · ' + nPan + '</span>'
+          : '<span class="chip sim">FACHADA SIN CALIBRAR</span>') +
+    '<span class="chip">Street View ' + (cfg ? 'real' : '—') + '</span>';
+
+  $('srcNote').innerHTML =
+    'Edificio: <b>Photorealistic 3D Tiles</b> de Google, en vivo. Calle: <b>Street View real</b>' +
+    (nPan ? ' con ' + nPan + ' pantalla' + (nPan > 1 ? 's' : '') + ' integrada' + (nPan > 1 ? 's' : '') + ' en la fachada'
+          : ' · fachada sin calibrar, sin pantallas') +
+    '. Impactos y CPM: catálogo omnipublicity. ' +
+    '<b>Maqueta</b>: no se ha instalado ninguna pantalla real en esta oficina.';
+
+  camsPara(sucursal.coords[1], sucursal.coords[0], (cfg && cfg.pov.heading) || 0);
+}
+
+/* ── Bootstrap de Maps (canal beta: gmp-map-3d vive ahí) ───────────────────── */
+function loadBootstrap(key){
+  (g => { let h, a, k, p = "The Google Maps JavaScript API", c = "google", l = "importLibrary", q = "__ib__",
+    m = document, b = window; b = b[c] || (b[c] = {}); const d = b.maps || (b.maps = {}), r = new Set(), e = new URLSearchParams(),
+    u = () => h || (h = new Promise(async (f, n) => { await (a = m.createElement("script"));
+      e.set("libraries", [...r] + ""); for (k in g) e.set(k.replace(/[A-Z]/g, t => "_" + t[0].toLowerCase()), g[k]);
+      e.set("callback", c + ".maps." + q); a.src = `https://maps.${c}apis.com/maps/api/js?` + e; d[q] = f;
+      a.onerror = () => h = n(Error(p + " could not load.")); a.nonce = m.querySelector("script[nonce]")?.nonce || "";
+      m.head.append(a); }));
+    d[l] ? console.warn(p + " only loads once. Ignoring:", g) : d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n));
+  })({ key, v: 'beta' });
+}
+
+async function iniGlobo(){
+  const lib = await google.maps.importLibrary('maps3d');
+  const { Map3DElement } = lib; MapMode = lib.MapMode || null;
+  map3d = new Map3DElement({
+    mode: MapMode ? MapMode.HYBRID : 'HYBRID',
+    center: CAM_START.center, range: CAM_START.range, tilt: CAM_START.tilt, heading: CAM_START.heading,
+  });
+  map3d.id = 'map3d';
+  $('stage').appendChild(map3d);
+}
+
+async function volarAlEdificio(){
+  if (!map3d) return;
+  await map3d.flyCameraTo({ endCamera: CAM_ORBIT, durationMillis: 3500 });
+  map3d.flyCameraAround({ camera: CAM_ORBIT, durationMillis: 60000, rounds: 1 });
+}
+
+/* ── Street View ──────────────────────────────────────────────────────────── */
+async function iniStreetView(){
+  if (!cfg) return false;
+  const { StreetViewPanorama } = await google.maps.importLibrary('streetView');
+  sv = new StreetViewPanorama($('streetview'), {
+    pano: cfg.pano,
+    pov: { heading: cfg.pov.heading, pitch: cfg.pov.pitch },
+    zoom: cfg.pov.zoom,
+    disableDefaultUI: true, clickToGo: false, scrollwheel: true,
+    motionTracking: false, motionTrackingControl: false, showRoadLabels: false,
+  });
+  ['pov_changed', 'zoom_changed', 'position_changed'].forEach(ev => sv.addListener(ev, colocarPaneles));
+  return true;
+}
+
+/* ── Matemática de proyección — copiada de /best/, ya probada en producción ── */
+function svFovH(zoom){ return (180 / Math.pow(2, zoom)) * Math.PI / 180; }
+function hpToVec(h, p){ const hr=h*Math.PI/180, pr=p*Math.PI/180, cp=Math.cos(pr); return { e:Math.sin(hr)*cp, n:Math.cos(hr)*cp, u:Math.sin(pr) }; }
+function baseCam(pov){
+  const f = hpToVec(pov.heading, pov.pitch);
+  let re=f.n, rn=-f.e, ru=0; const rl=Math.hypot(re,rn,ru)||1; re/=rl; rn/=rl; ru/=rl;
+  const ue=rn*f.u-ru*f.n, un=ru*f.e-re*f.u, uu=re*f.n-rn*f.e;
+  return { f, r:{e:re,n:rn,u:ru}, u:{e:ue,n:un,u:uu} };
+}
+// (heading,pitch) → píxel del lienzo
+function projHP(h, p, pov, zoom, W, H){
+  const b = baseCam(pov), d = hpToVec(h, p);
+  const cz = d.e*b.f.e + d.n*b.f.n + d.u*b.f.u; if (cz <= 0.02) return null;
+  const cx = d.e*b.r.e + d.n*b.r.n + d.u*b.r.u, cy = d.e*b.u.e + d.n*b.u.n + d.u*b.u.u;
+  const th = Math.tan(svFovH(zoom)/2), tv = th*(H/W);
+  return [ ((cx/cz)/th*0.5+0.5)*W, (0.5-(cy/cz)/tv*0.5)*H ];
+}
+// INVERSO: píxel del lienzo → (heading,pitch). Es lo que hace posible el calibrador.
+// El 0.5-… de projHP invierte la Y (pitch arriba = píxel arriba), así que aquí se deshace.
+function unprojXY(x, y, pov, zoom, W, H){
+  const b = baseCam(pov);
+  const th = Math.tan(svFovH(zoom)/2), tv = th*(H/W);
+  const a = ((x/W) - 0.5) * 2 * th;
+  const c = (0.5 - (y/H)) * 2 * tv;
+  const e = b.f.e + a*b.r.e + c*b.u.e, n = b.f.n + a*b.r.n + c*b.u.n, u = b.f.u + a*b.r.u + c*b.u.u;
+  const L = Math.hypot(e, n, u) || 1;
+  return [ (Math.atan2(e/L, n/L)*180/Math.PI + 360) % 360, Math.asin(u/L)*180/Math.PI ];
+}
+/* homografía 4-esquinas → matrix3d (idéntica a /best/) */
+function _adj(m){ return [ m[4]*m[8]-m[5]*m[7], m[2]*m[7]-m[1]*m[8], m[1]*m[5]-m[2]*m[4],
+  m[5]*m[6]-m[3]*m[8], m[0]*m[8]-m[2]*m[6], m[2]*m[3]-m[0]*m[5],
+  m[3]*m[7]-m[4]*m[6], m[1]*m[6]-m[0]*m[7], m[0]*m[4]-m[1]*m[3] ]; }
+function _mm(a,b){ const c=[]; for(let i=0;i<3;i++)for(let j=0;j<3;j++){ let s=0; for(let k=0;k<3;k++) s+=a[3*i+k]*b[3*k+j]; c[3*i+j]=s; } return c; }
+function _mv(m,v){ return [ m[0]*v[0]+m[1]*v[1]+m[2]*v[2], m[3]*v[0]+m[4]*v[1]+m[5]*v[2], m[6]*v[0]+m[7]*v[1]+m[8]*v[2] ]; }
+function _basis(x1,y1,x2,y2,x3,y3,x4,y4){ const m=[x1,x2,x3, y1,y2,y3, 1,1,1]; const v=_mv(_adj(m),[x4,y4,1]); return _mm(m,[v[0],0,0, 0,v[1],0, 0,0,v[2]]); }
+function quadWarp(w, h, d){
+  const s = _basis(0,0, w,0, w,h, 0,h);
+  const t = _basis(d[0][0],d[0][1], d[1][0],d[1][1], d[2][0],d[2][1], d[3][0],d[3][1]);
+  const Hm = _mm(t, _adj(s));
+  for (let i = 0; i < 9; i++) Hm[i] = Hm[i] / Hm[8];
+  const m = [Hm[0],Hm[3],0,Hm[6], Hm[1],Hm[4],0,Hm[7], 0,0,1,0, Hm[2],Hm[5],0,Hm[8]];
+  return 'matrix3d(' + m.join(',') + ')';
+}
+
+/* ── Coloca los canvas sobre la fachada, cada frame ───────────────────────── */
+function colocarPaneles(){
+  if (!sv || !cfg || !cfg.paneles.length) return;
+  const st = $('sv-signage').getBoundingClientRect(); const W = st.width, H = st.height;
+  if (W < 10) return;
+  const pov = sv.getPov(), zoom = sv.getZoom();
+  cfg.paneles.forEach((q, i) => {
+    const el = $('sv-p' + (i + 1)); if (!el) return;
+    const cv = el.firstElementChild;
+    const pts = ['tl','tr','br','bl'].map(k => projHP(q[k][0], q[k][1], pov, zoom, W, H));
+    if (pts.some(p => !p)) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    el.style.width = cv.width + 'px'; el.style.height = cv.height + 'px';
+    el.style.transform = quadWarp(cv.width, cv.height, pts);
+  });
+}
+
+/* ── Contenido: parrilla → stock → respaldo. Nunca inventa una emisión. ───── */
+let piezas = [], iPieza = 0, origenContenido = 'sin datos';
+async function cargarContenido(){
+  const screen = (cfg && cfg.grid) || null;
+  if (screen) {
+    try {
+      const d = await (await fetch(GRID_DAY + screen, { cache: 'no-store' })).json();
+      const banda = (d.bands || []).find(b => b.isNow);
+      const slots = ((banda && banda.slots) || []).filter(s => s.kind === 'own' || s.kind === 'paid');
+      if (slots.length) {
+        piezas = slots.map(s => s.assetUrl || s.url).filter(Boolean);
+        origenContenido = 'parrilla · ' + piezas.length + ' piezas · en vivo';
+      }
+    } catch (e) { console.warn('sin parrilla:', e.message); }
+  }
+  if (!piezas.length) {
+    try {
+      const d = await (await fetch(STOCK_URL, { cache: 'no-store' })).json();
+      const items = (Array.isArray(d) ? d : (d.items || [])).filter(x => /\.(png|jpe?g|webp)$/i.test(x.url || x));
+      piezas = items.slice(0, 12).map(x => (x.url || x));
+      if (piezas.length) origenContenido = 'stock R2 · ' + piezas.length + ' piezas';
+    } catch (e) { console.warn('sin stock:', e.message); }
+  }
+  if (!piezas.length) origenContenido = 'sin datos';
+  pintarPiezas();
+  setInterval(() => { iPieza++; pintarPiezas(); }, 9000);
+}
+function pintarPiezas(){
+  if (!cfg || !cfg.paneles.length) return;
+  cfg.paneles.forEach((_, i) => {
+    const cv = $('sv-p' + (i + 1)).firstElementChild;
+    const ctx = cv.getContext('2d');
+    if (!piezas.length) { placa(ctx, cv, 'SIN DATOS', 'sin señal de contenido'); return; }
+    // Evita el 301 www→apex: el salto no lleva CORS y ensucia el canvas.
+    const url = String(piezas[(iPieza + i) % piezas.length]).replace(/^https:\/\/www\.admira\.tv\//, 'https://admira.tv/');
+    const img = new Image(); img.crossOrigin = 'anonymous';
+    img.onload = () => { ctx.clearRect(0,0,cv.width,cv.height);
+      const r = Math.max(cv.width/img.width, cv.height/img.height);
+      const w = img.width*r, h = img.height*r;
+      ctx.drawImage(img, (cv.width-w)/2, (cv.height-h)/2, w, h);
+      sello(ctx, cv); };
+    img.onerror = () => placa(ctx, cv, 'SIN DATOS', 'creatividad no accesible');
+    img.src = url;
+  });
+}
+function placa(ctx, cv, t, s){
+  const g = ctx.createLinearGradient(0,0,cv.width,cv.height); g.addColorStop(0,'#062038'); g.addColorStop(1,'#0089d0');
+  ctx.fillStyle = g; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.fillStyle = '#eaf4ff'; ctx.font = '800 44px system-ui'; ctx.fillText(t, 30, 120);
+  ctx.fillStyle = '#bfe4ff'; ctx.font = '500 20px system-ui'; ctx.fillText(s, 30, 156);
+  sello(ctx, cv);
+}
+function sello(ctx, cv){
+  ctx.fillStyle = 'rgba(3,8,15,.72)'; ctx.fillRect(0, cv.height-26, cv.width, 26);
+  ctx.fillStyle = '#ffce3a'; ctx.fillRect(10, cv.height-18, 9, 9);
+  ctx.fillStyle = '#9ab4d8'; ctx.font = '13px ui-monospace';
+  ctx.fillText('MAQUETA · ' + origenContenido, 26, cv.height-9);
+}
+
+/* ── Modos ────────────────────────────────────────────────────────────────── */
+function setModo(m){
+  modo = m;
+  const calle = (m === 'street');
+  $('streetview').classList.toggle('on', calle);
+  $('sv-signage').classList.toggle('on', calle);
+  $('bStreet').classList.toggle('on', calle);
+  $('bOrbit').classList.toggle('on', !calle);
+  if (calle) { requestAnimationFrame(colocarPaneles); }
+}
+$('bOrbit').onclick = () => { setModo('orbit'); volarAlEdificio(); };
+$('bStreet').onclick = async () => {
+  if (!cfg) { alert('Esta sucursal aún no está calibrada: no hay vista de calle con pantallas.'); return; }
+  if (!sv) await iniStreetView();
+  setModo('street');
+};
+$('bReset').onclick = () => { setModo('orbit'); if (map3d) map3d.flyCameraTo({ endCamera: CAM_START, durationMillis: 2000 }); };
+
+/* ── Calibrador (?cal) ────────────────────────────────────────────────────── */
+const NOMBRES = ['1 · arriba-izquierda', '2 · arriba-derecha', '3 · abajo-derecha', '4 · abajo-izquierda'];
+let calPanel = 0, calPts = [], calAcc = [];
+function calIni(){
+  $('cal').classList.add('on'); $('cal-dots').classList.add('on');
+  $('streetview').style.cursor = 'crosshair';
+  $('streetview').addEventListener('click', calClick, true);
+  $('calNext').onclick = () => { if (calPts.length === 4) { calAcc.push(calQuad()); calPanel++; calPts = []; calPinta(); } };
+  $('calReset').onclick = () => { calPts = []; calAcc = []; calPanel = 0; calPinta(); };
+  $('calCopy').onclick = () => { navigator.clipboard.writeText($('calOut').value); };
+  calPinta();
+}
+function calClick(e){
+  if (calPts.length >= 4) return;
+  const st = $('sv-signage').getBoundingClientRect();
+  const hp = unprojXY(e.clientX - st.left, e.clientY - st.top, sv.getPov(), sv.getZoom(), st.width, st.height);
+  calPts.push({ hp, x: e.clientX, y: e.clientY });
+  calPinta();
+  e.stopPropagation(); e.preventDefault();
+}
+function calQuad(){
+  const r = v => Math.round(v * 100) / 100;
+  const k = ['tl','tr','br','bl'], o = {};
+  calPts.forEach((p, i) => o[k[i]] = [r(p.hp[0]), r(p.hp[1])]);
+  return o;
+}
+function calPinta(){
+  $('calStep').textContent = calPts.length < 4 ? NOMBRES[calPts.length] : '✓ panel completo — «Siguiente panel» o copia';
+  const dots = $('cal-dots'); dots.innerHTML = '';
+  calPts.forEach((p, i) => { const d = document.createElement('div'); d.className = 'cd';
+    d.style.left = p.x + 'px'; d.style.top = p.y + 'px'; d.innerHTML = '<b>' + (i+1) + '</b>'; dots.appendChild(d); });
+  const todos = calAcc.concat(calPts.length === 4 ? [calQuad()] : []);
+  $('calOut').value = todos.length
+    ? 'paneles: [\n' + todos.map(q => '  { tl:[' + q.tl + '], tr:[' + q.tr + '], br:[' + q.br + '], bl:[' + q.bl + '] },').join('\n') + '\n]'
+    : '';
+}
+
+/* ── Arranque ─────────────────────────────────────────────────────────────── */
+(async function init(){
+  try {
+    await cargarSucursal();
+    loadBootstrap(GOOGLE_MAPS_KEY);
+    await iniGlobo();
+    $('loading').classList.add('hide');
+    setModo('orbit');
+    setTimeout(volarAlEdificio, 900);
+    if (cfg) { await iniStreetView(); await cargarContenido(); }
+    if (QS.has('cal') && cfg) { setModo('street'); calIni(); }
+    addEventListener('resize', colocarPaneles);
+    (function tick(){ if (modo === 'street') colocarPaneles(); requestAnimationFrame(tick); })();
+  } catch (e) {
+    $('loading').textContent = 'ERROR: ' + e.message;
+    console.error(e);
+  }
+})();
+</script>
+</body>
+</html>
