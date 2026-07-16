@@ -362,22 +362,31 @@ function sello(ctx, cv){
 }
 
 /* ── Modos ────────────────────────────────────────────────────────────────── */
-function setModo(m){
-  modo = m;
-  const calle = (m === 'street');
-  $('streetview').classList.toggle('on', calle);
-  $('stage').classList.toggle('oculto', calle);   // el globo fuera: ni se ve ni consume GPU
-  $('sv-signage').classList.toggle('on', calle);
-  $('bStreet').classList.toggle('on', calle);
-  $('bOrbit').classList.toggle('on', !calle);
-  if (calle) { requestAnimationFrame(colocarPaneles); }
-}
-$('bOrbit').onclick = () => { setModo('orbit'); volarAlEdificio(); };
-$('bStreet').onclick = async () => {
-  if (!cfg) { alert('Esta sucursal aún no está calibrada: no hay vista de calle con pantallas.'); return; }
+/* El panorama se crea SOLO cuando su contenedor ya es visible: construido dentro
+   de un div display:none nace con tamaño 0 y se queda en negro para siempre. */
+async function irACalle(){
+  if (!cfg) { alert('Esta sucursal aún no está calibrada: no hay vista de calle con pantallas.'); return false; }
+  modo = 'street';
+  $('streetview').classList.add('on');
+  $('stage').classList.add('oculto');     // el globo fuera: ni se ve ni consume GPU
+  $('sv-signage').classList.add('on');
+  $('bStreet').classList.add('on'); $('bOrbit').classList.remove('on');
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));  // deja pintar el layout
   if (!sv) await iniStreetView();
-  setModo('street');
-};
+  else google.maps.event.trigger(sv, 'resize');
+  colocarPaneles();
+  return true;
+}
+function irAGlobo(){
+  modo = 'orbit';
+  $('streetview').classList.remove('on');
+  $('stage').classList.remove('oculto');
+  $('sv-signage').classList.remove('on');
+  $('bStreet').classList.remove('on'); $('bOrbit').classList.add('on');
+}
+function setModo(m){ return m === 'street' ? irACalle() : irAGlobo(); }
+$('bOrbit').onclick = () => { irAGlobo(); volarAlEdificio(); };
+$('bStreet').onclick = () => irACalle();
 $('bReset').onclick = () => { setModo('orbit'); if (map3d) map3d.flyCameraTo({ endCamera: CAM_START, durationMillis: 2000 }); };
 
 /* ── Calibrador (?cal) ────────────────────────────────────────────────────── */
@@ -465,11 +474,15 @@ function dibujarRejilla(){
     loadBootstrap(GOOGLE_MAPS_KEY);
     await iniGlobo();
     $('loading').classList.add('hide');
-    setModo('orbit');
-    setTimeout(volarAlEdificio, 900);
-    if (cfg) { await iniStreetView(); await cargarContenido(); }
-    if (QS.has('cal') && cfg) { setModo('street'); calIni(); }
-    if (QS.has('grid') && cfg) { setModo('street'); }
+    const aCalle = QS.has('cal') || QS.has('grid') || QS.get('modo') === 'calle';
+    if (aCalle && cfg) {
+      await irACalle();
+      if (QS.has('cal')) calIni();
+    } else {
+      irAGlobo();
+      setTimeout(volarAlEdificio, 900);
+    }
+    if (cfg) cargarContenido();
     // ?pov=h,p,zoom → encuadre exacto, para poder medir desde una captura
     const povQS = QS.get('pov');
     if (povQS && sv) { const [h,p,z] = povQS.split(',').map(Number);
