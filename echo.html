@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AdmiraNeXT Player · Echo Show</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#02080d">
+<!--
+  ============================================================================
+  echo.html — ALTA DEL PLAYER EN AMAZON ECHO SHOW (15 / 21)
+
+  POR QUÉ EXISTE UNA PÁGINA APARTE Y NO SE REUSA alta.html:
+  en el Echo Show NO se puede instalar nuestra APK. Amazon bloqueó el sideload
+  y el ADB en los Show 15/21, y solo deja instalar apps del Amazon Appstore. La
+  única superficie que tenemos hoy en el aparato es su NAVEGADOR — así que el
+  player es la propia web: esta página hace de `setup.html` (el mismo alta que
+  la app Android, mismo payload y mismo endpoint) y luego salta a canal.html,
+  que ya trae TODO el DOOH (loop, parrilla, latido, proof-of-play, mando).
+  O sea: no hay player nuevo que mantener, hay una carcasa menos.
+
+  LO QUE ESTE APARATO HACE DISTINTO Y HAY QUE COMPENSAR AQUÍ:
+  · El navegador del Echo Show se cierra solo tras un rato de inactividad y
+    vuelve a la pantalla de inicio. Se combate con keepAlive() (abajo).
+  · No hay pantalla completa real: la barra del navegador se oculta con el
+    botón de menú del mando. Eso NO se puede hacer por software; va en la guía.
+  · No hay GPS: se registra con coordenadas provisionales, igual que la app.
+  ============================================================================
+-->
+<style>
+:root{--bg:#02080d;--card:#0a1620;--ink:#dff8ff;--mut:#75aab9;--dim:#4d7a88;--brand:#78f3ff;--accent:#ffd866;--good:#88ffaa;--warn:#ff8866;--line:rgba(120,243,255,.18);--line2:rgba(120,243,255,.34);--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;padding:3vh 3vw;overflow-x:hidden}
+.wrap{width:100%;max-width:900px}
+.logo{font-family:var(--mono);font-weight:700;letter-spacing:.16em;font-size:clamp(13px,1.5vw,17px);text-transform:uppercase;display:flex;align-items:center;gap:10px;margin-bottom:2vh}
+.logo b{color:var(--brand)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--brand);box-shadow:0 0 20px var(--brand);animation:bl 2s infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}
+h1{font-size:clamp(22px,3.4vw,38px);letter-spacing:-.02em;margin-bottom:6px}
+.sub{color:var(--mut);font-size:clamp(13px,1.6vw,17px);margin-bottom:3vh;line-height:1.5}
+.f{margin-bottom:2vh}
+label{font-family:var(--mono);font-size:clamp(10px,1.1vw,12px);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:7px}
+input,select{width:100%;font-size:clamp(16px,2vw,21px);color:var(--ink);background:#061019;border:1px solid var(--line);border-radius:12px;padding:clamp(12px,1.6vh,18px) 16px;outline:none}
+input:focus,select:focus{border-color:var(--brand)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.go{width:100%;margin-top:1vh;font-family:var(--mono);font-size:clamp(15px,2vw,20px);font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:clamp(15px,2.2vh,22px);border-radius:14px;border:none;background:var(--brand);color:#02181d;cursor:pointer}
+.go:disabled{opacity:.5}
+.st{margin-top:2vh;font-family:var(--mono);font-size:clamp(12px,1.4vw,15px);color:var(--mut);min-height:1.5em;line-height:1.5}
+.st.ok{color:var(--good)}.st.err{color:var(--warn)}
+.diag{margin-top:3vh;border-top:1px solid var(--line);padding-top:2vh;font-family:var(--mono);font-size:clamp(10px,1.1vw,12px);color:var(--dim);line-height:1.8;word-break:break-all}
+.diag b{color:var(--mut)}
+.hint{margin-top:2vh;background:rgba(255,216,102,.07);border:1px solid rgba(255,216,102,.28);border-radius:12px;padding:14px 16px;font-size:clamp(12px,1.4vw,15px);color:var(--accent);line-height:1.55}
+/* Reanudación: si ya está configurado, no se pregunta nada — se emite. */
+.resume{text-align:center}
+.resume .big{font-family:var(--mono);font-size:clamp(30px,7vw,74px);font-weight:700;color:var(--brand);letter-spacing:.04em;margin:2vh 0}
+.resume .cd{font-family:var(--mono);font-size:clamp(13px,1.7vw,18px);color:var(--mut)}
+.resume .alt{margin-top:3vh;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.resume .alt button{font-family:var(--mono);font-size:clamp(11px,1.3vw,14px);letter-spacing:.06em;text-transform:uppercase;padding:13px 20px;border-radius:11px;border:1px solid var(--line2);background:transparent;color:var(--ink);cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap" id="root"></div>
+
+<script>
+(function(){
+  "use strict";
+  // El worker .workers.dev está BLOQUEADO en España (ver alta.html y CANAL.md):
+  // se va SIEMPRE primero por el proxy api.admira.store y solo se cae al
+  // directo si el proxy falla. La app Android no hace este failover — por eso
+  // un alta desde España con la APK puede fallar; aquí no lo repetimos.
+  var API_PRIMARY  = "https://api.admira.store";
+  var API_FALLBACK = "https://omnipublicity-api.csilvasantin.workers.dev";
+  var LS = "admira_echo_cfg";
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s==null?"":s).replace(/[<>&"]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c];}); };
+  function slug(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,48); }
+
+  function cfg(){ try{ return JSON.parse(localStorage.getItem(LS)||"null"); }catch(e){ return null; } }
+  function saveCfg(c){ try{ localStorage.setItem(LS, JSON.stringify(c)); }catch(e){} }
+
+  // ── Diagnóstico del aparato ────────────────────────────────────────────────
+  // El User-Agent nos dice si el Show corre Fire OS (Android) o Vega OS (Linux),
+  // que es lo que decide si nuestra APK sirve o hay que ir al SDK de Vega. Se
+  // pinta en pantalla Y viaja a canal.html, que ya publica el `ua` en
+  // /signage/screens — así se lee en remoto sin tener el aparato delante.
+  function diag(){
+    var ua = navigator.userAgent || "";
+    var so = /Vega/i.test(ua) ? "Vega OS (Linux · NO ejecuta APK)"
+           : /Android/i.test(ua) ? "Fire OS / Android (la APK podría servir)"
+           : "desconocido";
+    return { ua: ua, so: so, w: screen.width, h: screen.height, dpr: window.devicePixelRatio||1,
+             touch: ("ontouchstart" in window) };
+  }
+
+  // ── Anti-cierre del navegador ──────────────────────────────────────────────
+  // El navegador del Echo Show vuelve solo a la pantalla de inicio tras un rato
+  // sin interacción. Tres defensas, de más a menos fiable, todas inofensivas si
+  // el aparato no las soporta:
+  //   1) Wake Lock: mantiene la pantalla despierta (si el navegador lo expone).
+  //   2) Audio mudo en bucle: el aparato considera que hay reproducción activa.
+  //      Es el truco que usa la comunidad; requiere un gesto previo del usuario,
+  //      y por eso se arranca al pulsar el botón (ya hay gesto).
+  //   3) Latido de actividad: micro-scroll periódico.
+  // NOTA HONESTA: esto MITIGA, no garantiza. Si Amazon cierra igual, la solución
+  // definitiva es la app del Appstore.
+  var keepStarted = false;
+  function keepAlive(){
+    if (keepStarted) return; keepStarted = true;
+    try{ if (navigator.wakeLock && navigator.wakeLock.request){
+      navigator.wakeLock.request("screen").catch(function(){});
+      document.addEventListener("visibilitychange", function(){
+        if (document.visibilityState === "visible" && navigator.wakeLock)
+          navigator.wakeLock.request("screen").catch(function(){});
+      });
+    } }catch(e){}
+    try{
+      var ac = new (window.AudioContext||window.webkitAudioContext)();
+      var osc = ac.createOscillator(), g = ac.createGain();
+      g.gain.value = 0.0001;                 // inaudible, pero es reproducción real
+      osc.connect(g); g.connect(ac.destination); osc.start();
+    }catch(e){}
+    setInterval(function(){ window.scrollBy(0,1); window.scrollBy(0,-1); }, 30000);
+  }
+
+  // ── Alta en el CMS ─────────────────────────────────────────────────────────
+  // Mismo endpoint y MISMO payload que setup.html de la APK, para que el Echo
+  // Show entre en la flota como un player más y no como un caso especial.
+  function registrar(body){
+    function intento(base){
+      return fetch(base + "/locations/register", {
+        method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body)
+      }).then(function(r){ return r.json(); });
+    }
+    return intento(API_PRIMARY).catch(function(){ return intento(API_FALLBACK); });
+  }
+
+  function urlCanal(c){
+    // clean=1 quita el cromo; format 16:9 porque el Show 21 es apaisado.
+    // cam=0: el Echo Show tiene cámara, pero NO la pedimos — un aviso de permiso
+    // encima de la emisión es peor que perder la estimación de audiencia.
+    return "https://admira.tv/canal.html?screen=" + encodeURIComponent(c.screen)
+      + "&circuit=" + encodeURIComponent(c.circuit)
+      + "&clean=1&mode=" + encodeURIComponent(c.mode || "local")
+      + "&format=" + encodeURIComponent(c.format || "16:9")
+      + "&cam=0&max=24&cb=" + Date.now();
+  }
+
+  // ── Pantalla 1: ya configurado → a emitir ──────────────────────────────────
+  function pintaReanudar(c){
+    var d = diag();
+    $("root").innerHTML =
+      '<div class="resume">'
+      + '<div class="logo" style="justify-content:center"><span class="dot"></span>ADMIRA<b>NEXT</b> PLAYER</div>'
+      + '<h1>Listo para emitir</h1>'
+      + '<div class="big">' + esc(c.screen) + '</div>'
+      + '<div class="cd">Arrancando el canal en <b id="cd">5</b> s…</div>'
+      + '<div class="alt"><button id="ya">▶ Emitir ahora</button><button id="re">Reconfigurar</button></div>'
+      + '<div class="diag"><b>Aparato:</b> ' + esc(d.so) + ' · ' + d.w + '×' + d.h + '<br>' + esc(d.ua) + '</div>'
+      + '</div>';
+    var n = 5, t = setInterval(function(){
+      n--; var e = $("cd"); if (e) e.textContent = n;
+      if (n <= 0){ clearInterval(t); location.href = urlCanal(c); }
+    }, 1000);
+    $("ya").onclick = function(){ clearInterval(t); keepAlive(); location.href = urlCanal(c); };
+    $("re").onclick = function(){ clearInterval(t); try{ localStorage.removeItem(LS); }catch(e){} pintaAlta(); };
+  }
+
+  // ── Pantalla 2: alta ───────────────────────────────────────────────────────
+  function pintaAlta(){
+    var d = diag();
+    $("root").innerHTML =
+      '<div class="logo"><span class="dot"></span>ADMIRA<b>NEXT</b> PLAYER · ECHO SHOW</div>'
+      + '<h1>Da de alta esta pantalla</h1>'
+      + '<p class="sub">Se registrará en el CMS de admira.tv y empezará a emitir el canal. '
+      + 'Aparecerá en la flota como cualquier otro player, con su latido y su proof-of-play.</p>'
+      + '<div class="f"><label>Nombre del sitio</label><input id="name" placeholder="Oficina Sitges" autocomplete="off"></div>'
+      + '<div class="two">'
+        + '<div class="f"><label>Circuito (se genera solo)</label><input id="circuit" placeholder="oficina-sitges" autocomplete="off"></div>'
+        + '<div class="f"><label>Orientación</label><select id="orientation"><option value="landscape">Apaisada (16:9)</option><option value="portrait">Vertical (9:16)</option></select></div>'
+      + '</div>'
+      + '<button class="go" id="go">📡 Dar de alta y emitir</button>'
+      + '<div class="st" id="st"></div>'
+      + '<div class="hint">Para quitar la barra del navegador y dejarlo a pantalla completa, pulsa el botón de menú del mando del Echo Show. Eso no se puede hacer desde la web.</div>'
+      + '<div class="diag"><b>Aparato detectado:</b> ' + esc(d.so) + ' · pantalla ' + d.w + '×' + d.h + ' · dpr ' + d.dpr + ' · táctil ' + (d.touch?"sí":"no") + '<br><b>UA:</b> ' + esc(d.ua) + '</div>';
+
+    var tocado = false;
+    $("circuit").addEventListener("input", function(){ tocado = true; });
+    $("name").addEventListener("input", function(){ if(!tocado) $("circuit").value = slug($("name").value); });
+
+    $("go").onclick = function(){
+      var name = $("name").value.trim();
+      var circuit = slug($("circuit").value || name);
+      var st = $("st");
+      if (!circuit){ $("name").focus(); st.className = "st err"; st.textContent = "Pon un nombre del sitio."; return; }
+      if (!name) name = circuit;
+      var orientation = $("orientation").value;
+      var c = { circuit: circuit, screen: circuit + "-mupi", orientation: orientation,
+                mode: "local", format: orientation === "portrait" ? "9:16" : "16:9" };
+
+      keepAlive();                       // hay gesto del usuario: es AHORA o nunca
+      $("go").disabled = true;
+      st.className = "st"; st.textContent = "📡 Dando de alta en el CMS…";
+
+      registrar({ name: name, circuit: circuit, screen: c.screen, type: "pantalla",
+                  orientation: orientation,
+                  coords: [2.1734, 41.3851],          // provisional; el Show no da GPS
+                  addr: "(provisional · Echo Show sin GPS)",
+                  device: "AdmiraNeXT Player (Echo Show)" })
+      .then(function(r){
+        if (r && r.ok){ st.className = "st ok"; st.textContent = "✓ Dado de alta · arrancando el canal…"; }
+        else { st.className = "st err"; st.textContent = "Aviso del alta: " + JSON.stringify(r) + " · arranco igual"; }
+        saveCfg(c); setTimeout(function(){ location.href = urlCanal(c); }, 1200);
+      })
+      .catch(function(e){
+        // Sin red no se puede registrar, pero sí emitir: el canal reintenta solo.
+        st.className = "st err"; st.textContent = "Alta sin red (" + e + ") · arranco igual";
+        saveCfg(c); setTimeout(function(){ location.href = urlCanal(c); }, 1500);
+      });
+    };
+  }
+
+  var c = cfg();
+  if (c && c.circuit) pintaReanudar(c); else pintaAlta();
+})();
+</script>
+</body>
+</html>
