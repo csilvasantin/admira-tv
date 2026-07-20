@@ -629,20 +629,37 @@
     logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · → '+esc(cmd)+'…';
     const box=$('c-log');
     if(box){ if(box.firstElementChild && box.firstElementChild.textContent.startsWith('Sin comandos')) box.innerHTML=''; box.insertBefore(logLn,box.firstChild); while(box.children.length>40) box.removeChild(box.lastChild); }
-    fetch(API+'/control/cmd',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({screen:scr,cmd})})
-      .then(r=>r.json().then(j=>({ok:r.ok,j})))
-      .then(({ok,j})=>{
-        if(ok&&j&&j.ok){
-          if(lastEl) lastEl.innerHTML='<span class="tx">✓ enviado</span> · esperando pantalla…';
-          logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="tx">✓ enviado</span> · '+esc(cmd);
-          waitReceipt(scr,j.id,t0,lastEl,logLn);
-        } else {
-          if(lastEl) lastEl.innerHTML='✗ rechazado: '+esc((j&&j.error)||'error');
-          logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">✗ rechazado</span> '+esc((j&&j.error)||'error');
-        }
-      })
-      .catch(()=>{ if(lastEl) lastEl.innerHTML='✗ sin red — reintenta'; logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">✗ sin red</span>'; });
+    // POST del comando con UN reintento automático: un fallo puntual del fetch NO
+    // significa que la máquina esté offline (las tarjetas siguen trayendo captura
+    // y «emitiendo ahora» por esta misma API). Por eso, si el 1er intento revienta,
+    // reintentamos una vez a los 700ms antes de dar el envío por fallido; y el
+    // mensaje final NUNCA dice «sin red» (era engañoso, Carlos 2026-07-20): el
+    // comando no llegó a salir, no es que el equipo no tenga red.
+    const intento=(reintento)=>{
+      fetch(API+'/control/cmd',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({screen:scr,cmd})})
+        .then(r=>r.json().then(j=>({ok:r.ok,j})))
+        .then(({ok,j})=>{
+          if(ok&&j&&j.ok){
+            if(lastEl) lastEl.innerHTML='<span class="tx">✓ enviado</span> · esperando pantalla…';
+            logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="tx">✓ enviado</span> · '+esc(cmd);
+            waitReceipt(scr,j.id,t0,lastEl,logLn);
+          } else {
+            if(lastEl) lastEl.innerHTML='✗ rechazado: '+esc((j&&j.error)||'error');
+            logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">✗ rechazado</span> '+esc((j&&j.error)||'error');
+          }
+        })
+        .catch(()=>{
+          if(!reintento){   // 1er fallo → un reintento silencioso
+            if(lastEl) lastEl.innerHTML='→ reintentando <b>'+esc(cmd)+'</b>…';
+            setTimeout(()=>intento(true),700);
+            return;
+          }
+          if(lastEl) lastEl.innerHTML='<span class="warn">✗ el comando no salió — pulsa otra vez</span>';
+          logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">✗ comando no enviado</span>';
+        });
+    };
+    intento(false);
   }
 
   // ─── Render / actualización de tarjetas (idempotente por screen) ───
@@ -912,7 +929,7 @@
         img.onerror=()=>{ rec.shotKey='none'; box.innerHTML=shotPh('sin captura<br><span style="opacity:.72">player sin fase 2</span>'); };
         img.src=SHOT+encodeURIComponent(scr)+'&t='+m.ts;   // cache-bust por timestamp del shot
       })
-      .catch(()=>{ if(rec.shotKey!=='none'){ rec.shotKey='none'; box.innerHTML=shotPh('sin captura<br><span style="opacity:.72">sin red</span>'); } });
+      .catch(()=>{ if(rec.shotKey!=='none'){ rec.shotKey='none'; box.innerHTML=shotPh('sin captura<br><span style="opacity:.72">reintentando…</span>'); } });
   }
   // re-render de todos los previos desde el último item conocido (al cambiar modo/interval/vídeo)
   function applyPrevio(){
