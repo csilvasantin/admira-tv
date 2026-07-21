@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/auth-gate.js"></script>
-<script>window.ADMIRA_VERSION='v.20.07.2026.r16';</script>
+<script>window.ADMIRA_VERSION='v.21.07.2026.r17';</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
 <!-- r3: preconnect al backbone de datos (mejora TTFB del primer fetch) -->
@@ -658,14 +658,23 @@
     // mensaje final NUNCA dice «sin red» (era engañoso, Carlos 2026-07-20): el
     // comando no llegó a salir, no es que el equipo no tenga red.
     const intento=(reintento)=>{
-      fetch(API+'/control/cmd',{method:'POST',headers:{'Content-Type':'application/json'},
+      const headers={'Content-Type':'application/json'};
+      const authorization=window.AdmiraTvAuth&&window.AdmiraTvAuth.authorization
+        ? window.AdmiraTvAuth.authorization() : '';
+      if(authorization) headers.Authorization=authorization;
+      fetch(API+'/control/cmd',{method:'POST',headers,
         body:JSON.stringify({screen:scr,cmd})})
-        .then(r=>r.json().then(j=>({ok:r.ok,j})))
-        .then(({ok,j})=>{
+        .then(r=>r.json().then(j=>({ok:r.ok,status:r.status,j})))
+        .then(({ok,status,j})=>{
           if(ok&&j&&j.ok){
             if(lastEl) lastEl.innerHTML='<span class="tx">✓ enviado</span> · esperando pantalla…';
             logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="tx">✓ enviado</span> · '+esc(cmd);
             waitReceipt(scr,j.id,t0,lastEl,logLn);
+          } else if(status===401) {
+            if(window.AdmiraTvAuth&&window.AdmiraTvAuth.clear) window.AdmiraTvAuth.clear();
+            if(lastEl) lastEl.innerHTML='<span class="warn">🔒 sesión caducada · reconectando…</span>';
+            logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">🔒 sesión caducada</span>';
+            setTimeout(()=>location.reload(),900);
           } else {
             if(lastEl) lastEl.innerHTML='✗ rechazado: '+esc((j&&j.error)||'error');
             logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">✗ rechazado</span> '+esc((j&&j.error)||'error');

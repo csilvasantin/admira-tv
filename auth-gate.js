@@ -49,6 +49,28 @@
 
   function norm(e) { return String(e).toLowerCase().trim(); }
 
+  // Contrato mínimo para páginas que necesitan autenticar escrituras reales en
+  // un backend. El gate sigue siendo visual, pero nunca obliga a cada pantalla a
+  // conocer la forma interna de localStorage ni a duplicar el manejo de sesión.
+  function storedCredential() {
+    try {
+      var session = JSON.parse(localStorage.getItem("admira_tv_gate") || "null");
+      if (!session || !session.cred) return "";
+      return String(session.cred);
+    } catch (e) { return ""; }
+  }
+  function clearStoredSession() {
+    try { localStorage.removeItem("admira_tv_gate"); } catch (e) {}
+  }
+  window.AdmiraTvAuth = {
+    credential: storedCredential,
+    authorization: function () {
+      var cred = storedCredential();
+      return cred ? "Bearer " + cred : "";
+    },
+    clear: clearStoredSession
+  };
+
   // ¿este email está autorizado según un payload de estado del ACL?
   function allowedBy(state, email) {
     email = norm(email);
