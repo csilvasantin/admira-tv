@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/auth-gate.js"></script>
-<script>window.ADMIRA_VERSION='v.21.07.2026.r17';</script>
+<script>window.ADMIRA_VERSION='v.21.07.2026.r18';</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
 <!-- r3: preconnect al backbone de datos (mejora TTFB del primer fetch) -->
@@ -279,7 +279,7 @@
   .note b{color:var(--dim)}
 
   /* experto: layout horizontal en columnas */
-  .exp-cols{display:grid;grid-template-columns:minmax(240px,1fr) minmax(240px,1.1fr) minmax(220px,1fr);gap:0}
+  .exp-cols{display:grid;grid-template-columns:repeat(2,minmax(300px,1fr));gap:0}
   .exp-cols .grp{border-right:1px solid var(--line);border-bottom:0}
   .exp-cols .grp:last-child{border-right:0}
   .console-row{display:flex;gap:7px;flex-wrap:wrap;align-items:stretch}
@@ -293,6 +293,10 @@
   .clog .ln .warn{color:var(--air);font-weight:800}
   .clog .ln .id{color:var(--acc2)}
   pre.json{margin:0;background:#050b11;border:1px solid var(--line);border-radius:8px;padding:8px 10px;max-height:210px;overflow:auto;font-size:10.5px;line-height:1.45;color:var(--dim);white-space:pre-wrap;word-break:break-word}
+  .rolebadge{display:inline-flex;margin-left:8px;padding:2px 7px;border:1px solid var(--border2);border-radius:999px;color:var(--dim);font-size:8px;letter-spacing:.12em;vertical-align:middle}
+  .rolebadge.admin{color:var(--acc);border-color:var(--acc)} .rolebadge.operator{color:var(--acc2);border-color:var(--acc2)} .rolebadge.observer{color:var(--warn);border-color:var(--warn)}
+  .audit-filters{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}.audit-actions{display:flex;gap:6px;margin-top:8px}.audit-actions .btn{padding:7px}.audit-log{max-height:230px;overflow:auto;background:#050b11;border:1px solid var(--line);border-radius:8px}.audit-row{display:grid;grid-template-columns:76px 70px 1fr 70px;gap:7px;padding:6px 8px;border-bottom:1px solid var(--line);font-size:9.5px;color:var(--dim)}.audit-row:last-child{border:0}.audit-row b{color:var(--txt)}.audit-row .ok{color:var(--acc)}.audit-row .bad{color:var(--air)}
+  body.role-observer button[data-cmd],body.role-observer [data-tagbtn],body.role-observer #c-send,body.role-observer #b-send{opacity:.35;pointer-events:none}
 
   /* ============ responsive: paneles apilan como hojas ============ */
   @media(max-width:820px){
@@ -315,7 +319,7 @@
         <span class="lbl">Opciones</span>
       </button>
     </div>
-    <span class="brand center-ttl">ADMIRA.TV · <b>REMOTE CONTROL</b> <span class="sub">— Flota que emite el canal · mando con doble acuse</span></span>
+    <span class="brand center-ttl">ADMIRA.TV · <b>REMOTE CONTROL</b><span class="rolebadge" id="roleBadge">comprobando rol…</span> <span class="sub">— Flota que emite el canal · mando con doble acuse</span></span>
     <div class="cluster right">
       <div class="count">
         <div class="big"><span id="cOn">·</span><span class="off"> / <span id="cTot">·</span></span> <span class="lab">online/total</span></div>
@@ -509,6 +513,18 @@
         <pre class="json" id="queue-json">Selecciona pantallas o envía un comando para ver acuses.</pre>
         <p class="note">Muestra los últimos <b>seen</b> confirmados por cada pantalla observada (los que cierran el doble tick).</p>
       </div>
+      <div class="grp">
+        <h3>Auditoría server-side · append-only</h3>
+        <div class="audit-filters">
+          <input class="txin" id="a-screen" placeholder="screen" autocomplete="off">
+          <input class="txin" id="a-actor" placeholder="actor" autocomplete="off">
+          <select id="a-type"><option value="">todos los eventos</option><option value="enqueue">encoladas</option><option value="player_ack">acuse player</option><option value="rejected">rechazadas</option></select>
+          <select id="a-limit"><option>50</option><option>100</option><option>250</option></select>
+        </div>
+        <div class="audit-log" id="audit-log"><div class="audit-row">Cargando historial…</div></div>
+        <div class="audit-actions"><button class="btn" id="a-refresh">Actualizar</button><button class="btn" id="a-export">Exportar CSV</button></div>
+        <p class="note">Actor verificado, alcance, resultado, acuse y latencia. Nunca guarda el ID token.</p>
+      </div>
     </div>
   </div>
 
@@ -527,6 +543,21 @@
   const SHOT='https://api.admira.store/signage/shot?screen=';   // captura real que sube el player (fase 2)
   const $=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+  function authHeaders(extra){ const h=Object.assign({},extra||{}); const a=window.AdmiraTvAuth&&window.AdmiraTvAuth.authorization?window.AdmiraTvAuth.authorization():''; if(a)h.Authorization=a; return h; }
+  let CONTROL_ACCESS={role:'observer',screens:[],circuits:[]};
+
+  function circuitOf(scr){ const i=infoByScreen[scr]||{}; return String(i.circuit||i.loc||'').trim().toLowerCase(); }
+  function canControlScreen(scr){
+    if(CONTROL_ACCESS.role==='admin') return true;
+    if(CONTROL_ACCESS.role!=='operator') return false;
+    return (CONTROL_ACCESS.screens||[]).includes(String(scr).toLowerCase()) || (CONTROL_ACCESS.circuits||[]).includes(circuitOf(scr));
+  }
+  function applyRoleUi(){
+    document.body.classList.toggle('role-observer',CONTROL_ACCESS.role==='observer');
+    const rb=$('roleBadge'); if(rb){ rb.className='rolebadge '+CONTROL_ACCESS.role; rb.textContent=CONTROL_ACCESS.role; }
+    Object.keys(cards||{}).forEach(scr=>{ const allowed=canControlScreen(scr); cards[scr].el.querySelectorAll('button[data-cmd],[data-tagbtn]').forEach(b=>{ b.disabled=!allowed; b.title=!allowed?'Fuera de tu alcance ACL':(b.title||''); }); });
+    const bn=$('b-note'); if(bn) bn.innerHTML=CONTROL_ACCESS.role==='admin'?'Administrador: lote de flota permitido con confirmación reforzada.':CONTROL_ACCESS.role==='operator'?'Operador: solo pantallas/circuitos asignados.':'Observador: solo lectura; los comandos están deshabilitados.';
+  }
 
   try{ if(window.ADMIRA_VERSION) $('footVer').textContent=window.ADMIRA_VERSION; }catch(_){}
 
@@ -618,6 +649,32 @@
     el.textContent=JSON.stringify(lastSeen,null,1);
   }
 
+  function auditQuery(format){
+    const q=new URLSearchParams({limit:$('a-limit').value||'50'});
+    if($('a-screen').value.trim()) q.set('screen',$('a-screen').value.trim());
+    if($('a-actor').value.trim()) q.set('actor',$('a-actor').value.trim());
+    if($('a-type').value) q.set('type',$('a-type').value);
+    if(format) q.set('format',format);
+    return q.toString();
+  }
+  async function loadAudit(){
+    const box=$('audit-log'); if(box) box.innerHTML='<div class="audit-row">Actualizando…</div>';
+    try{
+      const r=await fetch(API+'/control/audit?'+auditQuery(''),{headers:authHeaders(),cache:'no-store'});
+      const d=await r.json();
+      if(r.status===401){ if(window.AdmiraTvAuth&&window.AdmiraTvAuth.clear)window.AdmiraTvAuth.clear(); location.reload(); return; }
+      if(!r.ok) throw new Error(d.error||('http '+r.status));
+      CONTROL_ACCESS=d.access||{role:d.role||'observer',screens:[],circuits:[]}; applyRoleUi();
+      if(!box)return;
+      box.innerHTML=(d.events||[]).length?(d.events||[]).map(e=>'<div class="audit-row"><span>'+new Date(e.ts).toLocaleTimeString('es-ES')+'</span><span class="'+(e.result==='rejected'||e.result==='failed'?'bad':'ok')+'">'+esc(e.type)+'</span><span><b>'+esc(e.screen||e.machine||'—')+'</b> · '+esc(e.cmd||e.reason||'—')+'<br>'+esc(e.actor||'anonymous')+'</span><span>'+esc(e.latencyMs==null?e.result:(e.latencyMs+'ms'))+'</span></div>').join(''):'<div class="audit-row">Sin eventos para esos filtros.</div>';
+    }catch(e){ if(box)box.innerHTML='<div class="audit-row"><span class="bad">⚠ '+esc(e.message||e)+'</span></div>'; }
+  }
+  async function exportAudit(){
+    const r=await fetch(API+'/control/audit?'+auditQuery('csv'),{headers:authHeaders(),cache:'no-store'});
+    if(!r.ok){ alert('No se pudo exportar la auditoría (HTTP '+r.status+').'); return; }
+    const blob=await r.blob(), a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='admira-control-audit.csv'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  }
+
   function waitReceipt(scr,id,t0,lastEl,logLn){
     const timeout=8000, every=600, deadline=Date.now()+timeout;
     const tick=()=>{
@@ -644,6 +701,10 @@
     setTimeout(tick,every);
   }
   function send(scr,cmd,btn,lastEl){
+    if(!canControlScreen(scr)){
+      if(lastEl) lastEl.innerHTML='<span class="warn">🔒 fuera de tu alcance ACL</span>';
+      return;
+    }
     if(btn){ btn.classList.add('flash'); setTimeout(()=>btn.classList.remove('flash'),260); }
     const t0=Date.now();
     if(lastEl) lastEl.innerHTML='→ enviando <b>'+esc(cmd)+'</b>…';
@@ -658,12 +719,9 @@
     // mensaje final NUNCA dice «sin red» (era engañoso, Carlos 2026-07-20): el
     // comando no llegó a salir, no es que el equipo no tenga red.
     const intento=(reintento)=>{
-      const headers={'Content-Type':'application/json'};
-      const authorization=window.AdmiraTvAuth&&window.AdmiraTvAuth.authorization
-        ? window.AdmiraTvAuth.authorization() : '';
-      if(authorization) headers.Authorization=authorization;
-      fetch(API+'/control/cmd',{method:'POST',headers,
-        body:JSON.stringify({screen:scr,cmd})})
+      const info=infoByScreen[scr]||{};
+      fetch(API+'/control/cmd',{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),
+        body:JSON.stringify({screen:scr,machine:info.machine||scr,circuit:circuitOf(scr),cmd})})
         .then(r=>r.json().then(j=>({ok:r.ok,status:r.status,j})))
         .then(({ok,status,j})=>{
           if(ok&&j&&j.ok){
@@ -675,6 +733,9 @@
             if(lastEl) lastEl.innerHTML='<span class="warn">🔒 sesión caducada · reconectando…</span>';
             logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">🔒 sesión caducada</span>';
             setTimeout(()=>location.reload(),900);
+          } else if(status===403) {
+            if(lastEl) lastEl.innerHTML='<span class="warn">🔒 fuera de alcance · '+esc((j&&j.role)||CONTROL_ACCESS.role)+'</span>';
+            logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">🔒 '+esc((j&&j.error)||'forbidden')+'</span>';
           } else {
             if(lastEl) lastEl.innerHTML='✗ rechazado: '+esc((j&&j.error)||'error');
             logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">✗ rechazado</span> '+esc((j&&j.error)||'error');
@@ -765,6 +826,7 @@
     tagIn.addEventListener('keydown',e=>{ if(e.key==='Enter') sendTag(); });
     cards[scr]=rec;
     $('grid').appendChild(card);
+    if(!canControlScreen(scr)) card.querySelectorAll('button[data-cmd],[data-tagbtn]').forEach(b=>{ b.disabled=true; b.title='Fuera de tu alcance ACL'; });
     refreshNow(scr);
     return rec;
   }
@@ -1171,13 +1233,26 @@
     });
     return out;
   }
-  $('b-send').addEventListener('click',()=>{
+  $('b-send').addEventListener('click',async()=>{
     const cmd=$('b-cmd').value;
     const targets=batchTargets();
     if(!targets.length){ $('b-note').innerHTML='<b style="color:var(--warn)">Sin destinos</b> para ese conjunto. Ajusta filtros o el circuito.'; return; }
-    $('b-note').innerHTML='Enviando <b>'+esc(cmd)+'</b> a <b>'+targets.length+'</b> pantalla(s)…';
-    targets.forEach(scr=>{ const rec=cards[scr]; send(scr,cmd,null,rec?rec.lastEl:null); });
-    if(!$('ic-experto').classList.contains('on')) setPanel('ic-experto',true);
+    const circuit=F.batchScope==='circuit'?($('b-circuit').value||'').trim().toLowerCase():'';
+    const summary='Comando: '+cmd+'\nAlcance: '+targets.length+' pantalla(s)'+(circuit?'\nCircuito: '+circuit:'')+'\nRol: '+CONTROL_ACCESS.role+'\n\n'+targets.map(s=>'• '+s).join('\n');
+    if(!confirm('⚠ ORDEN EN LOTE\n\n'+summary+'\n\nRevisa el alcance antes de continuar.')) return;
+    const phrase='CONTROLAR '+targets.length+' PANTALLAS';
+    if(prompt('Confirmación reforzada. Escribe exactamente:\n\n'+phrase,'')!==phrase){ $('b-note').innerHTML='<b style="color:var(--warn)">Lote cancelado:</b> confirmación incorrecta.'; return; }
+    $('b-send').disabled=true; $('b-note').innerHTML='Encolando <b>'+esc(cmd)+'</b> con alcance validado…';
+    try{
+      const r=await fetch(API+'/control/cmd/batch',{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify({screens:targets,circuit,cmd,confirm:{count:targets.length,phrase}})});
+      const d=await r.json();
+      if(!r.ok&&r.status!==207) throw new Error(d.error||('http '+r.status));
+      $('b-note').innerHTML='<b>'+Number(d.enqueued||0)+'</b>/'+targets.length+' encoladas · rol '+esc(d.role||CONTROL_ACCESS.role)+'. Verificando acuses…';
+      (d.results||[]).forEach(x=>{ const rec=cards[x.screen]; if(x.ok){ const t0=Date.now(); const ln=document.createElement('div'); ln.className='ln'; ln.innerHTML=stamp()+' <span class="id">'+esc(x.screen)+'</span> · <span class="tx">✓ lote enviado</span>'; const box=$('c-log'); if(box)box.insertBefore(ln,box.firstChild); waitReceipt(x.screen,x.id,t0,rec&&rec.lastEl,ln); } });
+      loadAudit();
+      if(!$('ic-experto').classList.contains('on')) setPanel('ic-experto',true);
+    }catch(e){ $('b-note').innerHTML='<b style="color:var(--air)">✗ lote rechazado:</b> '+esc(e.message||e); }
+    $('b-send').disabled=false;
   });
 
   // ═══ CONSOLA EXPERTO ═══
@@ -1250,9 +1325,16 @@
 
   paintRange($('f-thr'));
   restorePrevio();
+  $('a-refresh').addEventListener('click',loadAudit);
+  $('a-export').addEventListener('click',exportAudit);
+  $('a-type').addEventListener('change',loadAudit);
+  $('a-limit').addEventListener('change',loadAudit);
+  ['a-screen','a-actor'].forEach(id=>$(id).addEventListener('keydown',e=>{ if(e.key==='Enter')loadAudit(); }));
   load();
+  loadAudit();
   restartTimer();
   restartPrevioTimer();
+  setInterval(loadAudit,30000);
 </script>
 </body>
 </html>
