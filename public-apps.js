@@ -7,7 +7,29 @@
   var video = document.getElementById("appVideo");
   var title = document.getElementById("appVideoTitle");
   var close = document.getElementById("appVideoClose");
+  var videoStatus = document.getElementById("appVideoStatus");
   var previousFocus = null;
+  var videoTimer = null;
+
+  async function probePublicMedia(url, fetcher, timeoutMs) {
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, timeoutMs || 8000);
+    try {
+      var response = await fetcher(url, { method: "HEAD", cache: "no-store", credentials: "omit", signal: controller.signal });
+      var type = response.headers && response.headers.get ? response.headers.get("content-type") || "" : "";
+      return !!(response.ok && (!type || /application\/pdf/i.test(type)));
+    } catch (_) { return false; }
+    finally { clearTimeout(timer); }
+  }
+
+  function cleanFailedVideo(player, announcer, reason) {
+    var message = reason === "timeout" ? "El vídeo está tardando demasiado y se ha detenido." : "El vídeo no está disponible temporalmente.";
+    try { player.pause(); player.removeAttribute("src"); player.load(); } catch (_) {}
+    player.hidden = true;
+    player.setAttribute("aria-hidden", "true");
+    announcer.textContent = message + " Puedes cerrar esta ventana y seguir explorando.";
+    return message;
+  }
 
   function safeMediaUrl(value, slug, kind) {
     var ext = kind === "video" ? "mp4" : "pdf";
@@ -55,6 +77,10 @@
 
     var actions = document.createElement("div");
     actions.className = "app-actions";
+    var feedback = document.createElement("span");
+    feedback.className = "app-media-status";
+    feedback.setAttribute("role", "status");
+    feedback.setAttribute("aria-live", "polite");
     var videoUrl = safeMediaUrl(app.video, app.slug, "video");
     var pdfUrl = safeMediaUrl(app.pdf, app.slug, "pdf");
     if (videoUrl) {
@@ -64,12 +90,29 @@
       actions.appendChild(play);
     }
     if (pdfUrl) {
-      var pdf = document.createElement("a");
-      pdf.className = "app-action app-pdf";
-      pdf.href = pdfUrl;
-      pdf.download = "";
-      pdf.textContent = "↓ PDF";
+      var pdf = mediaButton("↓ PDF", "app-pdf");
       pdf.setAttribute("aria-label", "Descargar PDF de " + app.name_es);
+      pdf.addEventListener("click", async function () {
+        pdf.disabled = true;
+        pdf.textContent = "Comprobando…";
+        feedback.textContent = "Comprobando disponibilidad del PDF.";
+        var available = await probePublicMedia(pdfUrl, fetch, 8000);
+        if (!available) {
+          pdf.disabled = false;
+          pdf.textContent = "Reintentar PDF";
+          feedback.textContent = "El PDF no está disponible temporalmente. La página permanece abierta.";
+          return;
+        }
+        feedback.textContent = "PDF disponible. Iniciando descarga.";
+        var download = document.createElement("a");
+        download.href = pdfUrl;
+        download.download = "";
+        document.body.appendChild(download);
+        download.click();
+        download.remove();
+        pdf.disabled = false;
+        pdf.textContent = "↓ PDF";
+      });
       actions.appendChild(pdf);
     }
     if (!videoUrl && !pdfUrl) {
@@ -78,6 +121,7 @@
       noMedia.textContent = "Ficha pública disponible próximamente";
       actions.appendChild(noMedia);
     }
+    actions.appendChild(feedback);
     article.append(head, heading, englishName, spanish, english, actions);
     return article;
   }
@@ -85,7 +129,13 @@
   function openVideo(app, src, trigger) {
     previousFocus = trigger || document.activeElement;
     title.textContent = app.name_es + " · " + app.name_en;
+    video.hidden = false;
+    video.removeAttribute("aria-hidden");
+    videoStatus.textContent = "Cargando vídeo…";
     video.src = src;
+    video.load();
+    clearTimeout(videoTimer);
+    videoTimer = setTimeout(function () { videoTimer = null; cleanFailedVideo(video, videoStatus, "timeout"); }, 12000);
     dialog.hidden = false;
     document.body.classList.add("dialog-open");
     close.focus();
@@ -93,9 +143,14 @@
 
   function closeVideo() {
     if (dialog.hidden) return;
+    clearTimeout(videoTimer);
+    videoTimer = null;
     try { video.pause(); } catch (_) {}
     video.removeAttribute("src");
     video.load();
+    video.hidden = false;
+    video.removeAttribute("aria-hidden");
+    videoStatus.textContent = "";
     dialog.hidden = true;
     document.body.classList.remove("dialog-open");
     if (previousFocus && previousFocus.focus) previousFocus.focus();
@@ -113,6 +168,8 @@
   }
 
   close.addEventListener("click", closeVideo);
+  video.addEventListener("canplay", function () { if (video.hidden) return; clearTimeout(videoTimer); videoTimer = null; videoStatus.textContent = "Vídeo listo para reproducir."; });
+  video.addEventListener("error", function () { if (video.hidden) return; clearTimeout(videoTimer); videoTimer = null; cleanFailedVideo(video, videoStatus, "error"); });
   dialog.addEventListener("click", function (event) { if (event.target === dialog) closeVideo(); });
   document.addEventListener("keydown", onDialogKey, true);
 

@@ -14,6 +14,10 @@ const videoFunction = await read('./functions/apps/video/[file].js');
 const pdfFunction = await read('./functions/apps/pdf/[file].js');
 const mediaContext = vm.createContext({});
 vm.runInContext(`${mediaAllowlist.replace(/export /g, '')}\nglobalThis.publicMediaFileTest=publicMediaFile;`, mediaContext);
+const runtimeContext = vm.createContext({AbortController,setTimeout,clearTimeout});
+const probeSource = client.match(/async function probePublicMedia\([^]*?\n  \}/)?.[0] || '';
+const failedVideoSource = client.match(/function cleanFailedVideo\([^]*?\n  \}/)?.[0] || '';
+vm.runInContext(`${probeSource}\n${failedVideoSource}\nglobalThis.runtimeTest={probePublicMedia,cleanFailedVideo};`, runtimeContext);
 
 const expected = [
   'dashboard','digitalsignage','contentcatalogue','support','pushnotifications',
@@ -82,6 +86,36 @@ test('el modal de vídeo es accesible, carga bajo demanda y restaura el foco', (
   assert.match(client, /event\.key !== "Tab"/);
   assert.match(client, /previousFocus\.focus\(\)/);
   assert.match(client, /video\.src = src/);
+  assert.match(home, /id="appVideoStatus" role="status" aria-live="assertive"/);
+});
+
+test('un error de vídeo limpia el player y anuncia un fallback accesible', () => {
+  const calls = [];
+  const player = {hidden:false,pause(){calls.push('pause');},removeAttribute(name){calls.push(`remove:${name}`);},load(){calls.push('load');},setAttribute(name,value){calls.push(`${name}:${value}`);}};
+  const announcer = {textContent:''};
+  const message = runtimeContext.runtimeTest.cleanFailedVideo(player, announcer, 'error');
+  assert.match(message, /no está disponible/);
+  assert.deepEqual(calls, ['pause','remove:src','load','aria-hidden:true']);
+  assert.equal(player.hidden, true);
+  assert.match(announcer.textContent, /seguir explorando/);
+  assert.match(client, /video\.addEventListener\("error"/);
+  assert.match(client, /setTimeout\(function \(\) \{ videoTimer = null; cleanFailedVideo\(video, videoStatus, "timeout"\); \}, 12000\)/);
+});
+
+test('PDF 404 o fallo de red se detectan con HEAD lazy y no abandonan la home', async () => {
+  const seen = [];
+  const notFound = await runtimeContext.runtimeTest.probePublicMedia('/apps/pdf/missing.pdf', async (url, options) => { seen.push([url,options]); return {ok:false,headers:{get(){return 'text/plain';}}}; }, 50);
+  const failed = await runtimeContext.runtimeTest.probePublicMedia('/apps/pdf/error.pdf', async () => { throw new Error('offline'); }, 50);
+  const valid = await runtimeContext.runtimeTest.probePublicMedia('/apps/pdf/dashboard.pdf', async () => ({ok:true,headers:{get(){return 'application/pdf';}}}), 50);
+  assert.equal(notFound, false);
+  assert.equal(failed, false);
+  assert.equal(valid, true);
+  assert.equal(seen[0][1].method, 'HEAD');
+  assert.equal(seen[0][1].credentials, 'omit');
+  assert.match(client, /pdf\.addEventListener\("click", async function/);
+  assert.match(client, /La página permanece abierta/);
+  assert.match(client, /pdf\.textContent = "Reintentar PDF"/);
+  assert.ok(client.indexOf('pdf.addEventListener("click"') < client.indexOf('probePublicMedia(pdfUrl'));
 });
 
 test('el contrato responsive evita overflow entre móvil y escritorio', () => {
