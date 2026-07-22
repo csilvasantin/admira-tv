@@ -1,351 +1,121 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
-<!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
-<link rel="preconnect" href="https://api.admira.store" crossorigin>
-<link rel="preconnect" href="https://www.carlossilva.info">
-<link rel="dns-prefetch" href="https://api.admira.store">
-<link rel="dns-prefetch" href="https://www.carlossilva.info">
-  <!-- Kiosko Admira: si abre el player de cartelería (Electron macOS / fleet),
-       el landing no aplica → salta directo al canal en modo emisión limpia.
-       El player se identifica con UA "AdmiraMacOSPlayer/x.y". Escape manual: ?nokiosk=1 -->
-  <script>
-  (function(){
-    try{
-      var p = new URLSearchParams(location.search);
-      if (p.get('nokiosk') === '1') return;                 // ver el landing aun desde el kiosko
-      var ua = navigator.userAgent || '';
-      var isKiosk = /AdmiraMacOSPlayer|AdmiraWindowsPlayer|AdmiraLinuxPlayer|AdmiraAndroidPlayer|AdmiraIOSPlayer|AdmiraPlayer|AdmiraKiosk/i.test(ua);
-      if (isKiosk) {
-        var qs = location.search ? location.search.replace(/^\?/, '&') : '';
-        location.replace('canal.html?embed=mupi' + qs);     // emisión a pantalla completa, sin chrome
-      }
-    }catch(e){ /* ante cualquier fallo, se queda en el landing */ }
-  })();
-  </script>
-  <script src="/auth-gate.js"></script>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Admira.tv · El canal de emisión DOOH</title>
-  <meta name="description" content="Admira.tv: el canal de emisión DOOH en vivo del ecosistema Admira. Donde el contenido creado en Pixeria y operado en XpaceOS sale a antena en la red de pantallas.">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admira.tv · Experiencias digitales para espacios vivos</title>
+  <meta name="description" content="Descubre las 20 soluciones de Admira para crear, operar y medir experiencias digitales en espacios físicos.">
   <meta name="theme-color" content="#070a10">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="canonical" href="https://admira.tv/">
-  <meta property="og:title" content="Admira.tv · El canal de emisión DOOH">
-  <meta property="og:description" content="Donde el contenido sale a antena. La capa de emisión de la trilogía Admira: Pixeria · XpaceOS · Admira.tv.">
+  <meta property="og:title" content="Admira.tv · 20 soluciones para espacios vivos">
+  <meta property="og:description" content="Contenido, señalización, analítica, IoT e interacción: descubre el ecosistema Admira.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://admira.tv/">
   <meta property="og:image" content="https://admira.tv/og-admira.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Admira.tv · El canal de emisión DOOH en vivo">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Admira.tv · El canal de emisión DOOH">
-  <meta name="twitter:description" content="Donde el contenido sale a antena. La capa de emisión de la trilogía Admira.">
-  <meta name="twitter:image" content="https://admira.tv/og-admira.png">
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "Organization",
-        "@id": "https://admira.tv/#org",
-        "name": "Admira",
-        "url": "https://admira.tv/",
-        "logo": "https://admira.tv/icon-512.png",
-        "description": "Admira.tv es la capa de emisión DOOH del ecosistema Admira: donde el contenido creado en Pixeria y operado en XpaceOS sale a antena en la red de pantallas.",
-        "sameAs": [
-          "https://www.pixeria.com/",
-          "https://www.xpaceos.com/"
-        ]
-      },
-      {
-        "@type": "WebSite",
-        "@id": "https://admira.tv/#site",
-        "url": "https://admira.tv/",
-        "name": "Admira.tv · El canal de emisión DOOH",
-        "inLanguage": "es",
-        "publisher": { "@id": "https://admira.tv/#org" }
-      },
-      {
-        "@type": "BroadcastService",
-        "name": "Admira.tv",
-        "broadcastDisplayName": "Admira.tv · Canal DOOH en vivo",
-        "url": "https://admira.tv/canal.html",
-        "inLanguage": "es",
-        "provider": { "@id": "https://admira.tv/#org" }
-      }
-    ]
-  }
-  </script>
-  <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
-  <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/nav.css">
-  <link rel="preload" as="style" href="https://www.carlossilva.info/admira-design/contact-panel.css" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://www.carlossilva.info/admira-design/contact-panel.css"></noscript>
-  <script defer src="https://www.carlossilva.info/admira-design/contact-panel.js"></script>
-  <!-- UX CUADRÁTICA canónica (iconos-ventana sobre la barra + paneles overlay OPCIONES/AVANZADO/EXPERTO) -->
-  <link rel="stylesheet" href="/admira-frame.css?v=14.07.2026.r45">
   <style>
-    :root{ --air:var(--admira-red,#ff4444); }
+    :root{--bg:#070a10;--panel:#0c121c;--panel2:#101927;--line:#223047;--text:#e8eef6;--dim:#9eacc0;--green:#3df08a;--red:#ff4b55;--max:1180px}
     *{box-sizing:border-box}
-    body{margin:0;background:var(--admira-bg,#070a10);color:var(--admira-text,#e8eef6);font-family:var(--admira-font-sans,system-ui,sans-serif);line-height:1.5;-webkit-font-smoothing:antialiased}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+    body::before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 75% 0,rgba(61,240,138,.08),transparent 32%),repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px)}
+    body.dialog-open{overflow:hidden}
     a{color:inherit}
-    /* textura broadcast: scanlines muy sutiles */
-    body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px);opacity:.6}
-    .wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:0 22px}
-    .mono{font-family:var(--admira-font-mono,ui-monospace,monospace)}
-    .eyebrow{font-family:var(--admira-font-mono,monospace);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--admira-text-muted,#8a97a8)}
-
-    /* ON AIR badge */
-    .onair{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--air);color:var(--air);border-radius:999px;padding:5px 12px;font-family:var(--admira-font-mono,monospace);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
-    .onair .dot{width:9px;height:9px;border-radius:50%;background:var(--air);box-shadow:0 0 0 0 rgba(255,68,68,.6);animation:pulse 1.6s infinite}
-    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,68,68,.55)}70%{box-shadow:0 0 0 9px rgba(255,68,68,0)}100%{box-shadow:0 0 0 0 rgba(255,68,68,0)}}
-
-    /* hero */
-    .hero{padding:96px 0 40px;text-align:center}
-    .hero h1{font-size:clamp(48px,9vw,108px);line-height:.96;margin:18px 0 10px;letter-spacing:-.02em;font-weight:800}
-    .hero h1 .tv{color:var(--air)}
-    .hero .lead{font-size:clamp(17px,2.4vw,22px);color:var(--admira-text-dim,#aab6c6);max-width:680px;margin:0 auto}
-    .hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:26px}
-    .btn{display:inline-flex;align-items:center;gap:8px;border-radius:var(--admira-radius-pill,999px);padding:12px 22px;font-weight:700;font-size:14px;text-decoration:none;border:1px solid var(--admira-border-strong,#2a3850);transition:transform .12s,background .2s,border-color .2s}
-    .btn:hover{transform:translateY(-1px)}
-    .btn.primary{background:var(--air);border-color:var(--air);color:#190406}
-    .btn.ghost{background:transparent;color:var(--admira-text,#e8eef6)}
-
-    /* EN ANTENA — strip en vivo */
-    .air-panel{margin:34px 0 12px;border:1px solid var(--admira-border,#1c2738);border-radius:var(--admira-radius-lg,16px);background:linear-gradient(180deg,rgba(255,68,68,.06),rgba(7,10,16,.4));overflow:hidden}
-    .air-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--admira-border,#1c2738);flex-wrap:wrap}
-    .air-head .net{font-family:var(--admira-font-mono,monospace);font-size:12px;color:var(--admira-text-muted,#8a97a8)}
-    .air-now{display:grid;grid-template-columns:1.4fr 1fr;gap:0}
-    @media(max-width:720px){.air-now{grid-template-columns:1fr}}
-    .air-spot{padding:22px;border-right:1px solid var(--admira-border,#1c2738)}
-    @media(max-width:720px){.air-spot{border-right:0;border-bottom:1px solid var(--admira-border,#1c2738)}}
-    .air-spot .label{font-family:var(--admira-font-mono,monospace);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--air)}
-    .air-spot h3{margin:6px 0 4px;font-size:24px}
-    .air-spot p{margin:0;color:var(--admira-text-dim,#aab6c6);font-size:14px}
-    .air-spot .bar{height:5px;background:rgba(255,255,255,.08);border-radius:99px;margin-top:16px;overflow:hidden}
-    .air-spot .bar i{display:block;height:100%;width:38%;background:var(--air);border-radius:99px;animation:prog 9s linear infinite}
-    @keyframes prog{from{width:4%}to{width:100%}}
-    .air-screens{padding:18px 22px;display:flex;flex-direction:column;gap:10px;justify-content:center}
-    .air-screen{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--admira-text-dim,#aab6c6)}
-    .air-screen .live{width:7px;height:7px;border-radius:50%;background:var(--admira-green,#39d353);box-shadow:0 0 8px var(--admira-green,#39d353)}
-    .air-screen b{color:var(--admira-text,#e8eef6);font-weight:600}
-    .air-screen .pix{margin-left:auto;font-family:var(--admira-font-mono,monospace);font-size:11px;color:var(--admira-text-muted,#8a97a8)}
-
-    /* trilogía */
-    section{padding:54px 0}
-    .sec-head{text-align:center;margin-bottom:30px}
-    .sec-head h2{font-size:clamp(28px,4vw,40px);margin:8px 0 0;letter-spacing:-.01em}
-    .flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:26px;font-family:var(--admira-font-mono,monospace);font-size:13px;color:var(--admira-text-muted,#8a97a8)}
-    .flow b{color:var(--admira-text,#e8eef6)}
-    .tri{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-    @media(max-width:760px){.tri{grid-template-columns:1fr}}
-    .pillar{display:block;text-decoration:none;border:1px solid var(--admira-border,#1c2738);border-radius:var(--admira-radius-lg,16px);background:var(--admira-bg-elev,#0c1018);padding:22px;transition:transform .14s,border-color .2s,box-shadow .2s}
-    .pillar:hover{transform:translateY(-3px)}
-    .pillar .role{font-family:var(--admira-font-mono,monospace);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
-    .pillar h3{margin:8px 0 6px;font-size:22px}
-    .pillar p{margin:0 0 14px;color:var(--admira-text-dim,#aab6c6);font-size:14px;min-height:40px}
-    .pillar .go{font-family:var(--admira-font-mono,monospace);font-size:12px;opacity:.85}
-    .pillar.p-create{--c:var(--admira-green,#39d353)}
-    .pillar.p-operate{--c:var(--admira-cyan,#50c8ff)}
-    .pillar.p-emit{--c:var(--air)}
-    .pillar.p-emit{border-color:color-mix(in srgb,var(--air) 55%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--air) 30%,transparent)}
-    .pillar .role,.pillar .go{color:var(--c)}
-    .pillar:hover{border-color:var(--c)}
-
-    .footer{border-top:1px solid var(--admira-border,#1c2738);padding:26px 0;margin-top:30px;color:var(--admira-text-muted,#8a97a8);font-size:13px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
-    .footer a{color:var(--admira-text-dim,#aab6c6);text-decoration:none;margin-right:14px}
-    .footer a:hover{color:var(--air)}
+    button,a{font:inherit}
+    :focus-visible{outline:3px solid var(--green);outline-offset:3px}
+    .skip{position:fixed;z-index:100;left:12px;top:10px;transform:translateY(-150%);background:var(--green);color:#04110b;padding:8px 12px;border-radius:8px;font-weight:800}
+    .skip:focus{transform:none}
+    .shell{position:relative;z-index:1;width:min(var(--max),calc(100% - 36px));margin:auto}
+    .site-head{position:sticky;top:0;z-index:30;background:rgba(7,10,16,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+    .site-head .shell{min-height:64px;display:flex;align-items:center;gap:28px}
+    .brand{font-size:21px;font-weight:900;text-decoration:none;letter-spacing:-.03em}.brand b{color:var(--red)}
+    .site-nav{margin-left:auto;display:flex;align-items:center;gap:18px}.site-nav a{color:var(--dim);text-decoration:none;font-size:14px;font-weight:700}.site-nav a:hover{color:var(--text)}
+    .site-nav .nav-cta{color:#04110b;background:var(--green);padding:8px 13px;border-radius:999px}
+    .hero{padding:clamp(72px,11vw,140px) 0 70px;text-align:center}
+    .eyebrow{margin:0;color:var(--green);font:800 12px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}
+    .hero h1{font-size:clamp(48px,9vw,106px);line-height:.95;letter-spacing:-.055em;margin:20px auto;max-width:1020px}.hero h1 em{font-style:normal;color:var(--red)}
+    .hero-lead{max-width:760px;margin:0 auto;color:var(--dim);font-size:clamp(17px,2.2vw,22px)}
+    .hero-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:30px}
+    .button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 18px;border:1px solid var(--line);border-radius:999px;text-decoration:none;font-weight:800}.button.primary{background:var(--green);border-color:var(--green);color:#04110b}.button:hover{transform:translateY(-1px);border-color:var(--green)}
+    section{padding:72px 0}
+    .section-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:24px;margin-bottom:28px}.section-head h2{margin:8px 0 0;font-size:clamp(32px,5vw,56px);letter-spacing:-.04em;line-height:1}.section-head p{margin:0;color:var(--dim);max-width:690px}.catalog-count{font:800 12px ui-monospace,monospace;color:var(--green);white-space:nowrap}
+    .apps-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+    .app-card{display:flex;min-width:0;flex-direction:column;background:linear-gradient(155deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;padding:17px;box-shadow:0 18px 48px rgba(0,0,0,.14)}
+    .app-card:hover{border-color:#365175;transform:translateY(-2px)}
+    .app-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.app-icon{display:grid;place-items:center;width:44px;height:44px;border:1px solid rgba(61,240,138,.32);border-radius:12px;background:rgba(61,240,138,.08);color:var(--green);font-size:23px}.app-state{font:750 9px ui-monospace,monospace;text-transform:uppercase;color:var(--green);text-align:right}
+    .app-card h3{margin:17px 0 0;font-size:20px;line-height:1.15}.app-name-en{margin:3px 0 12px;color:var(--green);font:700 11px ui-monospace,monospace}.app-description{margin:0;color:#c2cddd;font-size:13px}.app-description-en{margin-top:8px;color:var(--dim);font-size:12px}.app-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:18px}.app-action{appearance:none;border:1px solid var(--line);border-radius:8px;background:#0a1019;color:var(--text);padding:7px 10px;text-decoration:none;font:750 11px ui-monospace,monospace;cursor:pointer}.app-action:hover{border-color:var(--green);color:var(--green)}.app-no-media{color:var(--dim);font:650 10px ui-monospace,monospace}
+    .apps-error{grid-column:1/-1;color:var(--dim);padding:30px;text-align:center}
+    .ecosystem{border-top:1px solid var(--line)}.eco-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.eco-card{border:1px solid var(--line);border-radius:16px;padding:22px;text-decoration:none;background:var(--panel)}.eco-card small{color:var(--green);font:800 11px ui-monospace,monospace;text-transform:uppercase}.eco-card h3{margin:9px 0 5px;font-size:23px}.eco-card p{margin:0;color:var(--dim);font-size:14px}
+    footer{border-top:1px solid var(--line);padding:28px 0 38px;color:var(--dim);font-size:13px}.footer-row{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}.footer-row a{text-decoration:none}.footer-row a:hover{color:var(--green)}
+    .video-dialog[hidden]{display:none}.video-dialog{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:20px;background:rgba(2,5,9,.82);backdrop-filter:blur(5px)}.video-box{width:min(920px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 24px 90px #000}.video-bar{display:flex;align-items:center;gap:16px;padding:12px 15px;border-bottom:1px solid var(--line)}.video-bar h2{margin:0;font-size:16px}.video-close{margin-left:auto;width:38px;height:38px;border:1px solid var(--line);border-radius:9px;background:#0a1019;color:var(--text);cursor:pointer}.video-box video{display:block;width:100%;max-height:72vh;background:#000}
+    @media(max-width:980px){.apps-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:720px){.apps-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.eco-grid{grid-template-columns:1fr}.section-head{grid-template-columns:1fr}.catalog-count{white-space:normal}.site-nav a:not(.nav-cta){display:none}}
+    @media(max-width:480px){.shell{width:min(100% - 24px,var(--max))}.apps-grid{grid-template-columns:1fr}.hero{padding-top:64px}.app-card{padding:16px}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
   </style>
 </head>
 <body>
-  <!-- Chrome unificado "portería" (barra superior + sidebar izq + panel der), mismo metaestilo que todo el site.
-       Los enlaces de ecosistema viven en la barra superior (cfg.topRight). -->
-  <script>
-  window.ADMIRA_VERSION='v.20.07.2026.r1';
-  window.ADMIRA_NAV={
-    title:'',
-    topRight:
-      '<a class="admtR admtR-cta" href="#contact" data-admira-contact>Contacto</a>'
-  };
-  </script>
-  <script src="/admira-nav.js?v=14.07.2026.r46" defer></script>
-  <!-- admira-frame: DESPUÉS de admira-nav (la barra .admtop ya existe cuando arranca) -->
-  <script src="/admira-frame.js?v=14.07.2026.r45" defer></script>
-
-  <header class="hero">
-    <div class="wrap">
-      <span class="onair"><span class="dot"></span>On air</span>
-      <h1>Admira<span class="tv">.tv</span></h1>
-      <p class="lead">El canal de emisión DOOH en vivo. Donde el contenido <strong>sale a antena</strong> en la red de pantallas: la capa de <em>emitir</em> de la trilogía Admira.</p>
-      <!-- CTAs principales (contenido): se quedan en el centro. Los avanzados viven en el panel AVANZADO. -->
-      <div class="hero-actions">
-        <a class="btn primary" href="canal.html">▶ Ver el canal en antena</a>
-        <a class="btn ghost" href="player/">⤓ Descargar el player</a>
-        <a class="btn ghost" href="cms/calendar/">🗓 Calendario de emisión</a>
-        <a class="btn ghost" href="cms.html?prog=1">🛰 Planificar emisión</a>
-        <a class="btn ghost" href="videoanalytics/">🎥 Video Analytics</a>
-      </div>
-
-      <!-- EN ANTENA AHORA — emisión real, leída del backbone /grid (api.admira.store) -->
-      <div class="air-panel" id="antena">
-        <div class="air-head">
-          <span class="onair" style="font-size:11px"><span class="dot"></span>En antena ahora</span>
-          <span class="net">Red Admira · <b id="screenCount">…</b> · <span id="clock" class="mono"></span></span>
-        </div>
-        <div class="air-now">
-          <div class="air-spot">
-            <span class="label">Emitiendo</span>
-            <h3 id="spotTitle">Conectando con la red…</h3>
-            <p id="spotMeta">Leyendo la parrilla de emisión en vivo</p>
-            <div class="bar"><i></i></div>
-          </div>
-          <div class="air-screens" id="airScreens"></div>
-        </div>
-      </div>
+  <a class="skip" href="#main">Saltar al contenido</a>
+  <header class="site-head">
+    <div class="shell">
+      <a class="brand" href="/" aria-label="Admira punto TV">Admira<b>.</b>tv</a>
+      <nav class="site-nav" aria-label="Navegación pública">
+        <a href="#soluciones">20 soluciones</a>
+        <a href="#ecosistema">Ecosistema</a>
+        <a href="/player/">Player</a>
+        <a class="nav-cta" href="/canal.html">Ver canal</a>
+      </nav>
     </div>
   </header>
 
-  <section>
-    <div class="wrap">
-      <div class="sec-head">
-        <p class="eyebrow">La trilogía Admira</p>
-        <h2>Una experiencia, tres capas.</h2>
+  <main id="main">
+    <section class="hero">
+      <div class="shell">
+        <p class="eyebrow">Admira Xperience · espacio, contenido y contexto</p>
+        <h1>Espacios que <em>responden</em>.</h1>
+        <p class="hero-lead">Veinte soluciones conectadas para crear, operar y medir experiencias digitales útiles en tiendas, oficinas, eventos y espacios públicos.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#soluciones">Descubrir las 20 soluciones</a>
+          <a class="button" href="/canal.html">▶ Ver Admira.tv</a>
+        </div>
       </div>
-      <div class="flow"><b>Crear</b> <span>→</span> <b>Operar</b> <span>→</span> <b>Emitir</b></div>
-      <div class="tri">
-        <a class="pillar p-create" href="https://www.pixeria.com" target="_blank" rel="noopener">
-          <div class="role">01 · Crear</div>
-          <h3>Pixeria</h3>
-          <p>Crear contenido con IA y criterio humano: imagen, vídeo, música, NPCs y campañas listas para publicar.</p>
-          <div class="go">pixeria.com ↗</div>
-        </a>
-        <a class="pillar p-operate" href="https://www.xpaceos.com" target="_blank" rel="noopener">
-          <div class="role">02 · Operar</div>
-          <h3>XpaceOS</h3>
-          <p>El sistema operativo del espacio: el gemelo digital de la tienda, audiencias, programática y control en vivo.</p>
-          <div class="go">xpaceos.com ↗</div>
-        </a>
-        <a class="pillar p-emit" href="https://admira.tv">
-          <div class="role">03 · Emitir</div>
-          <h3>Admira.tv</h3>
-          <p>El canal: la emisión sale a antena en la red de pantallas, con parrilla compartida y medición por superficie.</p>
-          <div class="go">admira.tv ↗</div>
-        </a>
+    </section>
+
+    <section id="soluciones" aria-labelledby="solutionsTitle">
+      <div class="shell">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Catálogo público · Public catalogue</p>
+            <h2 id="solutionsTitle">Una plataforma, 20 formas de activar el espacio.</h2>
+            <p>Nombres y explicaciones en español e inglés. Los vídeos y dosieres aparecen sólo cuando existe un recurso público verificado; las herramientas de operación permanecen dentro de la DMZ.</p>
+          </div>
+          <div class="catalog-count" id="appsStatus" role="status" aria-live="polite">Cargando 20 soluciones…</div>
+        </div>
+        <div class="apps-grid" id="publicApps" aria-live="polite" aria-busy="true"></div>
+        <noscript><p class="apps-error">Activa JavaScript para consultar el catálogo público.</p></noscript>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <footer class="footer wrap">
-    <div>
-      <a href="https://www.pixeria.com" target="_blank" rel="noopener">Pixeria</a>
-      <a href="https://www.xpaceos.com" target="_blank" rel="noopener">XpaceOS</a>
-      <a href="https://www.admira.live" target="_blank" rel="noopener">Live</a>
-      <a href="#contact" data-admira-contact>Contacto</a>
-    </div>
-    <div class="mono">Admira.tv · Canal de emisión · trilogía Admira Xperience · <span style="opacity:.7">v.12.07.2026.r2</span></div>
-  </footer>
-
-  <!-- ══ Fuente de los paneles cuadráticos ═══════════════════════════════════════
-       admira-frame.js MUEVE (no clona) estos nodos [data-af-slot] al cuerpo de cada
-       panel. El envoltorio queda vacío y oculto ([hidden]) → sin parpadeo. -->
-  <div id="af-src" hidden>
-    <!-- OPCIONES (panel izquierdo): el raíl de navegación, ahora vertical con rótulos.
-         Los iconos verde fósforo se rellenan con window.AdmiraIcon (set de admira-nav). -->
-    <nav class="af-nav" data-af-slot="left" aria-label="Opciones de navegación">
-      <a href="/apps/"><span class="af-ic" data-af-icon="apps"></span><span>Apps</span></a>
-      <a href="/condicional.html"><span class="af-ic" data-af-icon="condicional"></span><span>Condicional</span></a>
-      <a href="/canal.html" target="_blank" rel="noopener"><span class="af-ic" data-af-icon="canal"></span><span>Canal</span></a>
-      <a href="/wall/"><span class="af-ic" data-af-icon="mural"></span><span>Mural</span></a>
-      <a href="/comprar/"><span class="af-ic" data-af-icon="comprar"></span><span>Comprar</span></a>
-      <a href="/alta.html"><span class="af-ic" data-af-icon="alta"></span><span>Alta</span></a>
-      <a href="/help/"><span class="af-ic" data-af-icon="help"></span><span>Ayuda</span></a>
-      <div class="af-sep"></div>
-      <a href="https://www.xpaceos.com/control/" target="_blank" rel="noopener"><span class="af-ic" data-af-icon="control"></span><span>Control ↗</span></a>
-    </nav>
-
-    <!-- AVANZADO (panel derecho): CTAs avanzados / cross-marca. -->
-    <div class="af-cards" data-af-slot="right">
-      <a href="/adcelerate/"><span class="af-t"><span class="af-em">📣</span>ADcelerate</span><span class="af-d">El ad stack — segmentación y programática sobre la red.</span></a>
-      <a href="/remotecontrol/"><span class="af-t"><span class="af-em">🎛</span>Remote Control</span><span class="af-d">La flota — pilotar los players en vivo, en remoto.</span></a>
-      <a href="/apps/"><span class="af-t"><span class="af-em">▦</span>Apps</span><span class="af-d">La lanzadera — las 20 apps del stack Admira.</span></a>
-      <a href="https://www.xpaceos.com" target="_blank" rel="noopener"><span class="af-t"><span class="af-em">🛰</span>XpaceOS</span><span class="af-d">El sistema operativo del espacio: gemelo digital y operación.</span></a>
-      <a href="https://www.pixeria.com" target="_blank" rel="noopener"><span class="af-t"><span class="af-em">🎨</span>Pixeria</span><span class="af-d">La creación de contenido con IA y criterio humano.</span></a>
-    </div>
-
-    <!-- EXPERTO (panel inferior): datos crudos del canal (misma fuente que EN ANTENA). -->
-    <div class="af-expert" data-af-slot="bottom">
-      <div class="af-tools">
-        <button type="button" id="af-dump-btn" class="af-btn">⬇ Volcar datos del canal</button>
-        <span class="af-meta">
-          <span>versión <b id="af-ver">—</b></span>
-          <span>fuente <b>api.admira.store/grid/screens</b></span>
-          <span>actualizado <b id="af-updated">—</b></span>
-        </span>
+    <section class="ecosystem" id="ecosistema" aria-labelledby="ecosystemTitle">
+      <div class="shell">
+        <div class="section-head"><div><p class="eyebrow">Ecosistema</p><h2 id="ecosystemTitle">Crear. Operar. Emitir.</h2></div></div>
+        <div class="eco-grid">
+          <a class="eco-card" href="https://www.pixeria.com" target="_blank" rel="noopener"><small>01 · Crear</small><h3>Pixeria</h3><p>Contenido y narrativa para cada experiencia.</p></a>
+          <a class="eco-card" href="https://www.xpaceos.com" target="_blank" rel="noopener"><small>02 · Operar</small><h3>XpaceOS</h3><p>El gemelo digital que coordina el espacio.</p></a>
+          <a class="eco-card" href="/canal.html"><small>03 · Emitir</small><h3>Admira.tv</h3><p>El canal que lleva el contenido a cada pantalla.</p></a>
+        </div>
       </div>
-      <pre id="af-dump">Pulsa «Volcar datos del canal» para leer la parrilla de emisión en vivo (JSON crudo).</pre>
+    </section>
+  </main>
+
+  <footer><div class="shell footer-row"><span>Admira.tv · Experiencias digitales para espacios vivos</span><span><a href="/player/">Descargar player</a> · <a href="/canal.html">Ver canal</a></span></div></footer>
+
+  <div class="video-dialog" id="appVideoDialog" role="dialog" aria-modal="true" aria-labelledby="appVideoTitle" hidden>
+    <div class="video-box">
+      <div class="video-bar"><h2 id="appVideoTitle">Vídeo</h2><button class="video-close" id="appVideoClose" type="button" aria-label="Cerrar vídeo">✕</button></div>
+      <video id="appVideo" controls playsinline preload="metadata" tabindex="0"></video>
     </div>
   </div>
-
-  <script>
-  // EXPERTO — vuelca el JSON crudo de la MISMA fuente que consume «EN ANTENA AHORA».
-  (function(){
-    var btn=document.getElementById('af-dump-btn'), pre=document.getElementById('af-dump');
-    var upd=document.getElementById('af-updated'), ver=document.getElementById('af-ver');
-    if(ver) ver.textContent = window.ADMIRA_VERSION || '—';
-    function stamp(){ try{ return new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'Europe/Madrid'}); }catch(_){ return new Date().toLocaleTimeString(); } }
-    function dump(){ if(!pre) return;
-      pre.textContent='Leyendo api.admira.store/grid/screens …';
-      fetch('https://api.admira.store/grid/screens',{cache:'no-store'})
-        .then(function(r){ return r.json(); })
-        .then(function(d){ pre.textContent=JSON.stringify(d,null,2); if(upd) upd.textContent=stamp(); })
-        .catch(function(e){ pre.textContent='// Red no accesible: '+((e&&e.message)||e); if(upd) upd.textContent=stamp(); });
-    }
-    if(btn) btn.addEventListener('click', dump);
-  })();
-  </script>
-
-  <script>
-  (function(){
-    // EN ANTENA — emisión REAL leída del backbone /grid (dominio propio api.admira.store,
-    // no el workers.dev que los ISP de ES bloquean) + signage/now por pantalla.
-    const FLEET='https://api.admira.store/grid/screens';
-    const NOW='https://api.admira.store/signage/now?screen=';
-    const ONLINE_MS=180000;
-    const elScreens=document.getElementById('airScreens');
-    const elCount=document.getElementById('screenCount');
-    const t=document.getElementById('spotTitle'), m=document.getElementById('spotMeta');
-    const esc=s=>String(s==null?'':s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-    let rotI=0, airing=[];
-    async function nowOf(screen){ if(!screen) return null;
-      try{ const r=await fetch(NOW+encodeURIComponent(screen),{cache:'no-store'}); if(!r.ok) return null; const d=await r.json(); return d.item||d||null; }catch(_){ return null; } }
-    function showSpot(){
-      if(!airing.length){ t.textContent='Sin emisión activa'; m.textContent='Ningún equipo en antena ahora mismo'; return; }
-      rotI=rotI%airing.length; const a=airing[rotI]; const it=a.it, d=a.d;
-      t.textContent=it.title||it.id||'Emitiendo';
-      const seg=(it.aud&&it.aud.faces)?(' · audiencia '+it.aud.faces+(it.aud.gender?(' '+(it.aud.gender==='f'?'♀':'♂')):'')+(it.aud.age?(' '+esc(it.aud.age)):'')):'';
-      m.textContent=(it.type||'media')+' · '+esc(d.name||d.id)+(d.deviceType==='robot'?' · robot móvil':'')+seg;
-      rotI++;
-    }
-    async function loadAir(){
-      let devs=[]; try{ const r=await fetch(FLEET,{cache:'no-store'}); const d=await r.json();
-        devs=(d.screens||[]).filter(x=>x&&x.screen).map(x=>({id:x.screen,name:x.name||x.screen,screen:x.screen,circuit:x.circuit}));
-      }catch(_){ if(!airing.length){ elScreens.innerHTML='<div class="air-screen"><span class="live" style="background:#ff5a5a"></span><b>Red no accesible</b> <span class="pix">reintentando…</span></div>'; } return; }
-      const nows=await Promise.all(devs.map(d=>nowOf(d.screen)));
-      const ts=Date.now(); airing=[];
-      elScreens.innerHTML=devs.map((d,i)=>{ const it=nows[i]; const on=it&&it.ts&&(ts-it.ts)<ONLINE_MS;
-        if(on) airing.push({d,it});
-        return '<div class="air-screen"><span class="live" style="background:'+(on?'#39d353':'#ff5a5a')+'"></span><b>'+esc(d.name||d.id)+'</b> <span class="pix">'+(on?esc(String(it.title||it.id||'').slice(0,42)):'sin señal')+'</span></div>';
-      }).join('')||'<div class="air-screen"><span class="live"></span><b>Sin equipos</b></div>';
-      const total=devs.length, live=airing.length;
-      elCount.textContent = total + (total===1?' pantalla':' pantallas') + ' · ' + live + ' en antena';
-      rotI=0; showSpot();
-    }
-    loadAir(); setInterval(loadAir, 12000); setInterval(showSpot, 6000);
-    // reloj Madrid
-    const clk = document.getElementById('clock');
-    const tick = () => { try { clk.textContent = new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'Europe/Madrid'}); } catch(_){} };
-    tick(); setInterval(tick, 1000);
-  })();
-  </script>
+  <script src="/public-apps.js?v=20260722a" defer></script>
 </body>
 </html>

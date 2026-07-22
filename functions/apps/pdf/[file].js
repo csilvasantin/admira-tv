@@ -1,4 +1,6 @@
-// GET /apps/pdf/<slug>.pdf — sirve los dosieres PDF de las apps de la lanzadera
+import { publicMediaFile } from "../_public-media.js";
+
+// GET /apps/pdf/<slug>.pdf — sirve dosieres de la allowlist pública
 // (admira.tv/apps) desde el MISMO bucket R2 "admira-app-videos" (binding VIDEOS):
 // las claves <slug>.pdf conviven con las <slug>.mp4 sin colisión.
 //
@@ -26,8 +28,9 @@ export async function onRequestGet({ params, env }) {
   let file = params.file;
   if (Array.isArray(file)) file = file[0];
   file = decodeURIComponent(String(file || ""));
-  // Solo "<slug>.pdf"; sin travesía de rutas ni otros tipos.
-  if (!/^[a-z0-9_-]+\.pdf$/i.test(file)) return notFound();
+  // La existencia en R2 no concede acceso: el slug debe estar publicado.
+  file = publicMediaFile(file, "pdf");
+  if (!file) return notFound();
 
   const obj = await bucket.get(file);
   if (!obj) return notFound();
