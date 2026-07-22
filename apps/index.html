@@ -145,8 +145,8 @@ window.ADMIRA_NAV={
 
 <script>
 (function(){
-  // Las 18 apps y su estado ●/○ viven en window.AdmiraApps (admira-nav.js) — FUENTE ÚNICA que
-  // comparten esta lanzadera y el submenú del sidebar. Al encender una app se cambia allí, no aquí.
+  // La lanzadera protegida comparte nombres, textos y estado con el catálogo
+  // público. Sus enlaces internos siguen viviendo únicamente dentro de la DMZ.
   var APPS=[];
   var esc=function(x){return String(x==null?'':x).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});};
   function icon(slug){ try{ return (window.AdmiraIcon&&window.AdmiraIcon(slug))||''; }catch(_){ return ''; } }
@@ -320,6 +320,15 @@ window.ADMIRA_NAV={
       .catch(function(){ VIDEOS={}; });
   }
 
+  function loadPublicCatalog(){
+    return fetch('/apps/public-catalog.json',{cache:'no-store',credentials:'same-origin'})
+      .then(function(r){ if(!r.ok) throw new Error('catalog'); return r.json(); })
+      .then(function(items){
+        APPS=(items||[]).map(function(a){ return {s:a.slug,nm:a.name_es,en:a.name_en,ds:a.description_es,st:a.status==='available'?'live':'wip'}; });
+        if(APPS.length!==20) throw new Error('public catalog contract');
+      });
+  }
+
   /* ── Yokup (FSM · Field Service) ─────────────────────────────────────────────
      Producto Admira EXTERNO (yokup.com), aún en activación. NO va en window.AdmiraApps
      (esas son las 20 apps internas con auth propia): se añade aquí, localizado en la
@@ -396,12 +405,6 @@ window.ADMIRA_NAV={
   }
 
   function boot(){
-    // admira-nav.js (defer) ya corrió → window.AdmiraApps disponible antes de este DOMContentLoaded
-    APPS=(window.AdmiraApps||[]).slice();
-    render();
-    engineBadge();   // sello Yokup en Soporte + IoT
-    presCard();      // card de Presentaciones (recurso externo, gobernado en Acceso)
-    yokupCard();     // card propia de Yokup (producto externo)
     var q=document.getElementById('q');
     q.addEventListener('input',filter);
     // atajo "/" enfoca la búsqueda (sin romper los atajos m/d del chrome)
@@ -409,8 +412,13 @@ window.ADMIRA_NAV={
       if(e.key==='/'&&document.activeElement!==q){ var t=e.target,tag=(t&&t.tagName||'').toLowerCase();
         if(tag!=='input'&&tag!=='textarea'&&!(t&&t.isContentEditable)){ e.preventDefault(); q.focus(); } }
     });
-    // vídeo explicativo: cargar manifest y, si trae algo, cablear los iconos
-    loadManifest().then(function(){ if(hasManifest()) wireVideos(); });
+    Promise.all([loadPublicCatalog(),loadManifest()]).then(function(){
+      render();
+      engineBadge();   // sello Yokup en Soporte + IoT
+      presCard();      // recurso gobernado dentro de la DMZ
+      yokupCard();     // producto externo de operación
+      if(hasManifest()) wireVideos();
+    }).catch(function(){ document.getElementById('empty').textContent='No se pudo cargar el catálogo.'; document.getElementById('empty').style.display='block'; });
   }
   // los iconos los sirve admira-nav.js (window.AdmiraIcon), que es defer → ya está listo en DOMContentLoaded
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();

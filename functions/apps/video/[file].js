@@ -1,4 +1,6 @@
-// GET /apps/video/<slug>.mp4 — sirve los vídeos explicativos de las apps de la
+import { publicMediaFile } from "../_public-media.js";
+
+// GET /apps/video/<slug>.mp4 — sirve los vídeos explicativos de la allowlist pública
 // lanzadera (admira.tv/apps) desde el bucket R2 "admira-app-videos" (binding VIDEOS).
 //
 // Same-origin (Pages Function, NO *.workers.dev) porque los ISP españoles bloquean
@@ -36,9 +38,9 @@ export async function onRequestGet({ params, env, request }) {
   let file = params.file;
   if (Array.isArray(file)) file = file[0];
   file = decodeURIComponent(String(file || ""));
-  // Solo "<slug>.mp4"; sin travesía de rutas ni otros tipos.
-  if (!/^[a-z0-9_-]+\.mp4$/i.test(file)) return notFound();
-  const key = file;
+  // La existencia en R2 no concede acceso: el slug debe estar publicado.
+  const key = publicMediaFile(file, "mp4");
+  if (!key) return notFound();
 
   const rangeHeader = request.headers.get("Range");
 
