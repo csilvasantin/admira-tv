@@ -332,6 +332,10 @@ let muted  = qs.has('muted') ? qs.get('muted') !== '0' : (LS('adtv_muted','1'))=
 let volume = Math.max(0,Math.min(1,parseFloat(qs.get('volume')||LS('adtv_vol','1'))));
 const modeParam = qs.get('mode') ?? qs.get('admiraMode') ?? qs.get('playout');
 const syncParam = qs.get('sincro') ?? qs.get('sync') ?? qs.get('syncro');
+// Integraciones embebidas (p. ej. el selector del robot XpaceOS) pueden fijar
+// temporalmente el modo elegido por el operador. Sin este bloqueo, pollMode()
+// podía cambiar el iframe mientras la UI padre seguía mostrando Sincro.
+const MODE_LOCK = /^(1|on|true|yes)$/i.test(qs.get('modeLock')||'');
 const syncSlotSec = Math.max(5,Math.min(120,parseInt(qs.get('syncSlot')||LS('adtv_sync_slot','20'),10)||20));
 const SYNC_MASTER = 'www.admira.tv/canal';
 const SYNC_MASTER_MAX = 50;
@@ -2153,9 +2157,9 @@ if(PREVIEW.on){
 const MODE_API='https://omnipublicity-api.csilvasantin.workers.dev/locations/mode';
 function pollMode(){
   if(!scr.circuit) return;   // sólo equipos registrados (con circuito/id)
-  // URL_TAG o tag EN VIVO activos = loop filtrado fijado por el operador: esta
-  // pantalla no obedece cambios de modo remotos (sync/conditional lo pisarían).
-  if(URL_TAG||_liveTag) return;
+  // Un modo bloqueado por la integración, URL_TAG o tag EN VIVO = decisión
+  // explícita del operador: esta pantalla no obedece cambios de modo remotos.
+  if(MODE_LOCK||URL_TAG||_liveTag) return;
   fetch(MODE_API+'?id='+encodeURIComponent(scr.circuit)+'&t='+Date.now(),{cache:'no-store'})
     .then(r=>r.ok?r.json():null).then(d=>{
       if(!d||!d.mode) return;

@@ -192,6 +192,10 @@ existe: `/grid/projects` agrupa circuitos en canales (Canal AdmiraNeXT, Canal Xt
 si el prefijo del circuit **casa** con un canal, emite ese canal; si **no casa** ninguno,
 cae al **loop universal del Stock** (+ segmento). No hay que tocar nada más por pantalla.
 
+Las integraciones con un selector de modo propio pueden añadir `modeLock=1`. Mientras
+ese parámetro esté presente, `mode=local|sync|conditional` no será sustituido por el
+modo remoto del circuito; los comandos remotos de reproducción siguen funcionando.
+
 **Lanzar el canal de un equipo nuevo (2 clics, sin datos a ciegas):**
 
 1. **Alta** (`alta.html`): pon nombre + circuito y detecta ubicación. El alta:
