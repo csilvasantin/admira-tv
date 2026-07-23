@@ -66,6 +66,22 @@ Barra inferior (auto-oculta a los 3,5 s de inactividad) y atajos de teclado:
 Arranca **en mudo** (para que el autoplay funcione); al desmutear, en algunos
 navegadores hace falta un gesto (hay overlay «toca para arrancar» de respaldo).
 
+### Contrato de autonomía Digital Signage (DS)
+
+Al iniciar el player nativo en modo **Digital Signage**, la máquina queda autónoma:
+mantiene la emisión desde disco, se reconecta y el watchdog recupera un cuelgue sin
+depender de una sesión abierta en el CMS o el mando.
+
+Los comandos de contenido (`/ds off`, pausa, mute, cambio de pieza o de modo) **no
+terminan el proceso DS**. El proceso continúa hasta una acción terminal explícita:
+
+- **remota:** kill-switch autorizado del player;
+- **local:** salir del player con **Escape** en macOS, Windows y Linux;
+- **Android:** cinco toques en la esquina superior izquierda;
+- o terminación explícita del proceso desde el sistema operativo.
+
+`Shift + Q` no mata DS: solo alterna el blindaje visual Always on top para pruebas.
+
 ### Always on top (⇧Q) — la emisión nunca se tapa
 
 Doctrina DOOH: **nada se pone encima del contenido**. El canal arranca con el modo

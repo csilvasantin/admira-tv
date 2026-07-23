@@ -35,6 +35,16 @@
     .hero h1{font-size:clamp(40px,7vw,82px);line-height:.98;margin:16px 0 12px;letter-spacing:-.02em;font-weight:800}
     .hero h1 .tv{color:var(--admira-red,#ff4444)}
     .hero .lead{font-size:clamp(16px,2.2vw,20px);color:var(--admira-text-dim,#aab6c6);max-width:640px;margin:0 auto}
+    .autonomy{margin:4px 0 30px;border:1px solid rgba(57,211,83,.36);border-radius:16px;background:linear-gradient(135deg,rgba(57,211,83,.09),rgba(7,10,16,.72));padding:20px 22px;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);gap:20px;align-items:center}
+    .autonomy .state{display:flex;align-items:center;gap:9px;font:700 12px var(--admira-font-mono,monospace);letter-spacing:.12em;text-transform:uppercase;color:var(--admira-green,#39d353)}
+    .autonomy .dot{width:9px;height:9px;border-radius:50%;background:var(--admira-green,#39d353);box-shadow:0 0 14px rgba(57,211,83,.8)}
+    .autonomy h2{margin:8px 0 6px;font-size:clamp(20px,3vw,30px);line-height:1.15}
+    .autonomy p{margin:0;color:var(--admira-text-dim,#aab6c6)}
+    .autonomy .stops{border-left:1px solid rgba(57,211,83,.24);padding-left:20px;font:12.5px var(--admira-font-mono,monospace);color:var(--admira-text-dim,#aab6c6)}
+    .autonomy .stops strong{display:block;margin-bottom:6px;color:var(--admira-text,#e8eef6);text-transform:uppercase;letter-spacing:.08em}
+    .autonomy .stops span{display:block;margin:4px 0}
+    .autonomy .warning{margin-top:8px!important;color:#ffbf69}
+    @media(max-width:720px){.autonomy{grid-template-columns:1fr}.autonomy .stops{border-left:0;border-top:1px solid rgba(57,211,83,.24);padding:14px 0 0}}
 
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px;margin:30px 0 10px}
     .card{position:relative;border:1px solid var(--admira-border,#1c2738);border-radius:var(--admira-radius-lg,16px);background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(7,10,16,.3));padding:22px;display:flex;flex-direction:column;gap:12px}
@@ -92,6 +102,21 @@
       <h1>El player en cada <span class="tv">pantalla</span></h1>
       <p class="lead">La app que pone una pantalla a emitir el canal de Admira.tv. Kiosko desatendido, a pantalla completa, que se recupera solo. Descárgala para tu plataforma.</p>
     </header>
+
+    <section class="autonomy" aria-labelledby="ds-autonomy-title">
+      <div>
+        <div class="state"><span class="dot"></span>DS · máquina autónoma</div>
+        <h2 id="ds-autonomy-title">Una vez iniciado, Digital Signage sigue funcionando solo.</h2>
+        <p>El player mantiene la emisión, usa su caché y se recupera con el watchdog aunque se pierda la red o el plano de control.</p>
+      </div>
+      <div class="stops">
+        <strong>El proceso DS solo termina por</strong>
+        <span>⌁ kill-switch remoto autorizado</span>
+        <span>⌨ salida local: <b>Escape</b></span>
+        <span>☝ Android: cinco toques en la esquina superior izquierda</span>
+        <span class="warning">`/ds off` solo pausa el contenido. `Shift+Q` solo prueba “always on top”: ninguno mata el proceso.</span>
+      </div>
+    </section>
 
     <main id="grid" class="grid" aria-label="Descargas por plataforma"></main>
 
