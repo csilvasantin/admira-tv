@@ -167,12 +167,13 @@ despliegas N pantallas con un enlace:
 | `muted` (0/1), `volume` (0–1) | audio inicial |
 | `embed=mupi` · `clean=1` · `chrome=0` | **modo limpio**: MUPI a pantalla completa, sin chrome/rail (para casting/empotrar) |
 | `fresh=<seg>` | **novedad al aire** (opt-in, r53): una pieza NUEVA del segmento toma la antena en exclusiva, en bucle, esos segundos; luego entra al loop y el loop sigue por la SIGUIENTE. Acompañantes: `freshMaxAge=<seg>` (900 por defecto: qué se considera «reciente») y `freshbadge=0` (quita el chip «✦ RECIÉN CREADO»). Sin `fresh` nada cambia. |
+| `freshtail=1` | la novedad se coloca **literalmente al final** del loop (por defecto queda a la cabeza, porque el orden de casa es lo más nuevo primero). Por pantalla y por sesión: al recargar vuelve el orden canónico. |
 
 **Ejemplos**
 - Quiosc, solo imágenes, 8 máx: `?circuit=bcn-kiosk-005&screen=bcn-kiosk-005-led&medio=image&max=8`
 - Mujeres · tarde · imagen 6s: `?audience=f&slot=tarde&img=6`
 - Empotrado a pantalla completa: `?embed=mupi`
-- Mupi del Xtanco (lo recién creado manda 3 min): `?clean=1&screen=xtanco-totem&tag=tiktok&fresh=180&refresh=20`
+- Mupi del Xtanco (lo recién creado manda 3 min y luego entra por la cola): `?clean=1&screen=xtanco-totem&tag=tiktok&fresh=180&refresh=20&freshtail=1`
 
 ---
 
