@@ -16,7 +16,15 @@
  *     viejas del shell (admira-shell-* / admira-tv-*) — JAMÁS 'admira-canal-v1' (media en disco).
  *     skipWaiting + clients.claim → los players cogen el SW nuevo al primer reinicio con red.
  */
-const CACHE = 'admira-shell-r44';
+// La caché lleva el SELLO DEL RELEASE, no un número escrito a mano. Estuvo
+// congelada en 'admira-shell-r44' desde julio, y como en `activate` solo se
+// borran las cachés con OTRO nombre, en la práctica no se purgaba nunca: sus
+// entradas solo se pisaban cuando una petición de red salía bien, así que un
+// equipo sin red podía quedarse con el shell de julio para siempre.
+// Ahora cada publicación cambia este literal → el navegador ve que sw.js ha
+// cambiado → install + activate → la despensa vieja se tira entera.
+// Lo mantiene al día ./deploy.sh, que ABORTA si no coincide con el sello.
+const CACHE = 'admira-shell-v.04.08.2026.r7.20:09';
 
 // Shell del canal: la HTML canónica + sus assets críticos same-origin.
 const SHELL = [

@@ -61,6 +61,16 @@ jq -n --arg version "$release" --arg deployedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
       > version.json
 echo "  ✓ $release · $ADMIRA_RELEASE_AGENT · $ADMIRA_RELEASE_MACHINE"
 
+# El service worker guarda el shell del canal en una cache cuyo nombre lleva el
+# sello. Si no se bumpea, el navegador no ve cambiar sw.js, no reactiva y no
+# purga: equipos sin red pueden quedarse con un shell de hace semanas. Se para
+# la publicacion antes que dejar esa trampa puesta.
+sw_cache="$(sed -n "s/^const CACHE = 'admira-shell-\(.*\)';$/\1/p" sw.js)"
+[ "$sw_cache" = "$release" ] || {
+  echo "  ✖ sw.js cachea como '$sw_cache' y el sello es '$release'"
+  echo "    Ajusta la constante CACHE de sw.js al sello y repite."; exit 1; }
+echo "  ✓ sw.js purga con el release ($sw_cache)"
+
 echo "→ Cloudflare Pages (deploy, ORIGEN de producción)…"
 # Desde 07-jul-2026 hay wrangler.toml (proyecto + output dir + binding KV LEADS de /lead):
 # el proyecto y el directorio salen de la config; no repetir por CLI.
