@@ -340,7 +340,7 @@
       // «Online» = la app está disponible. OJO: el «En antena» de la sección
       // «Red en antena» (más abajo) NO es esto — ahí significa pantallas
       // EMITIENDO, que es el término correcto de un canal DOOH y se queda.
-      var stTxt=a.st==='live'?'Online':'En construcción';
+      var stTxt=a.st==='live'?'Online':'Coming soon';
       return '<a class="admsi'+(on?' on':'')+'" role="menuitem" href="/'+a.s+'/" tabindex="-1"'+(on?' aria-current="page"':'')+
         ' aria-label="'+_esc(a.nm)+' — '+stTxt+'">'+
         '<span class="mic" aria-hidden="true">'+IC(a.s)+'</span>'+

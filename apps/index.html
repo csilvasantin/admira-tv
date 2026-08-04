@@ -152,7 +152,7 @@
 </head>
 <body>
 <script>
-window.ADMIRA_VERSION='v.04.08.2026.r7.20:09';
+window.ADMIRA_VERSION='v.04.08.2026.r8.20:52';
 /* El buscador de la lanzadera vive en la barra superior del chrome (cfg.topRight).
    No lleva clase .admtR, así que NO lo esconde el breakpoint móvil de la topbar. */
 window.ADMIRA_NAV={
@@ -183,7 +183,9 @@ window.ADMIRA_NAV={
   var APPS=[];
   var esc=function(x){return String(x==null?'':x).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});};
   function icon(slug){ try{ return (window.AdmiraIcon&&window.AdmiraIcon(slug))||''; }catch(_){ return ''; } }
-  function stTxt(st){ return st==='live'?'Online':'En construcción'; }
+  // Los tres estados en inglés (Carlos, 4-ago-2026). «Coming soon» no es
+  // invención: es lo que ya dice la portada para lo que aún no está.
+  function stTxt(st){ return st==='live'?'Online':'Coming soon'; }
   function render(){
     var grid=document.getElementById('grid');
     grid.innerHTML=APPS.map(function(a){
@@ -427,7 +429,7 @@ window.ADMIRA_NAV={
     { slug:'yokup', url:'https://yokup.com',
       nm:'Yokup', en:'Field Service · FSM',
       ds:'El bit avisa, la persona repara: el técnico en calle cierra el círculo.',
-      st:'wip', stTxt:'En activación', cls:'app--ext',
+      st:'wip', stTxt:'Activating', cls:'app--ext',
       busca:'fsm field service motor campo mantenimiento',
       aria:'Yokup — Field Service Management, en activación (abre yokup.com)',
       engineOf:['support','iotmanager'],
