@@ -76,6 +76,9 @@
   .app--ext:focus-visible{outline-color:var(--amber)}
   .app .ext{margin-left:5px;color:var(--amber);font-size:12px;vertical-align:1px}
   .app--pres .ext{color:var(--green)}
+  /* herramientas que genera AdmiraNeXT y pasan a ser solución de Admira.tv:
+     en antena como las 20, así que verde — el ámbar queda para lo externo. */
+  .app--gen .ext{color:var(--green)}
   /* sello "Motor: Yokup ↗": la card es un <a>, así que va como <button> y corta la navegación */
   .app .engine{appearance:none;align-self:flex-start;display:inline-flex;align-items:center;gap:5px;margin-top:6px;background:transparent;border:0;padding:2px 0 0;color:var(--dim);font:600 10.5px ui-monospace,monospace;letter-spacing:.02em;cursor:pointer;transition:color .15s}
   .app .engine b{color:var(--amber);font-weight:700}
@@ -119,7 +122,7 @@
 </head>
 <body>
 <script>
-window.ADMIRA_VERSION='v.16.07.2026.r30';
+window.ADMIRA_VERSION='v.04.08.2026.r3.19:20';
 /* El buscador de la lanzadera vive en la barra superior del chrome (cfg.topRight).
    No lleva clase .admtR, así que NO lo esconde el breakpoint móvil de la topbar. */
 window.ADMIRA_NAV={
@@ -139,7 +142,7 @@ window.ADMIRA_NAV={
 
   <div class="foot">
     <span>Réplica mejorada de la lanzadera legacy · new.admira.mobi → admira.tv</span>
-    <span>Admira · tv · <span style="opacity:.75">v.16.07.2026.r30</span></span>
+    <span>Admira · tv · <span style="opacity:.75">v.04.08.2026.r3.19:20</span></span>
   </div>
 </main>
 
@@ -325,83 +328,104 @@ window.ADMIRA_NAV={
       .then(function(r){ if(!r.ok) throw new Error('catalog'); return r.json(); })
       .then(function(items){
         APPS=(items||[]).map(function(a){ return {s:a.slug,nm:a.name_es,en:a.name_en,ds:a.description_es,st:a.status==='available'?'live':'wip'}; });
-        if(APPS.length!==20) throw new Error('public catalog contract');
+        // Nada de exigir un número exacto: el día que el catálogo tenga 21 no se
+        // puede quedar la lanzadera vacía (era el fallo de la home, 4-ago-2026).
+        if(!APPS.length) throw new Error('public catalog vacio');
       });
   }
 
-  /* ── Yokup (FSM · Field Service) ─────────────────────────────────────────────
-     Producto Admira EXTERNO (yokup.com), aún en activación. NO va en window.AdmiraApps
-     (esas son las 20 apps internas con auth propia): se añade aquí, localizado en la
-     lanzadera, como (a) card propia externa y (b) sello "Motor: Yokup ↗" en las apps
-     cuyo trabajo de campo cierra Yokup. */
-  var YOKUP={
-    url:'https://yokup.com',
-    nm:'Yokup', en:'Field Service · FSM',
-    ds:'El bit avisa, la persona repara: el técnico en calle cierra el círculo.',
-    engineOf:['support','iotmanager'],
-    ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+
-       '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>'
-  };
+  /* ── Soluciones ADYACENTES ───────────────────────────────────────────────────
+     Las 20 de window.AdmiraApps son las apps internas, con su auth propia y su
+     ficha en public-catalog.json. Aquí van las que NO son de ese grupo pero sí
+     se ofrecen desde la lanzadera: productos externos (Yokup) y las herramientas
+     que AdmiraNeXT genera y pasan a ser solución de Admira.tv (Presentaciones,
+     TikToks, Presupuestos — Carlos, 2026-08-04).
+
+     Antes cada una era su propio bloque de ~25 líneas copiado del anterior, con
+     su variable y su función; añadir la cuarta y la quinta habría sido copiarlo
+     dos veces más. Ahora es una lista de datos y UN renderizador: dar de alta la
+     siguiente es añadir un objeto aquí.
+
+     Campos: slug · url · nm/en/ds (lo que se ve) · st 'live'|'wip' + stTxt ·
+     cls (clase propia para el estilo) · busca (términos extra de búsqueda) ·
+     ic (SVG 24×24, mismo trazo que el resto) · engineOf (opcional: apps a las
+     que se les pone el sello "Motor: <nombre> ↗"). */
+  var EXTRAS=[
+    { slug:'presentations', url:'https://www.admiranext.com/presentations/',
+      nm:'Presentaciones', en:'Client Decks',
+      ds:'Los decks de cliente del ecosistema, protegidos por contraseña.',
+      st:'live', stTxt:'En antena', cls:'app--pres',
+      busca:'presentations decks cliente lenovo caixa admiranext generador',
+      aria:'Presentaciones — decks de cliente (abre admiranext.com/presentations)',
+      ic:'<rect x="3" y="4" width="18" height="12" rx="1.6"/><path d="M12 16v4M8.5 20h7M7 11l2.6-2.6L12.2 11 16 6.8"/>' },
+
+    { slug:'tiktoks', url:'https://www.admiranext.com/tiktok/',
+      nm:'TikToks', en:'TikTok Ads',
+      ds:'Convierte una idea en un anuncio vertical de 25 segundos y lo publica en Pixeria.',
+      st:'live', stTxt:'En antena', cls:'app--gen',
+      busca:'tiktok tiktoks anuncio vertical 25s preroll postroll pixeria video social generador creador admiranext',
+      aria:'TikToks — anuncios verticales de 25 segundos (abre admiranext.com/tiktok)',
+      ic:'<rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 9.6l4.2 2.4-4.2 2.4z"/>' },
+
+    { slug:'presupuestos', url:'https://www.admiranext.com/presupuestos/',
+      nm:'Presupuestos', en:'Quotes',
+      ds:'Arma el presupuesto por partidas con coste, margen e IVA, y lo saca en CSV o PDF.',
+      st:'live', stTxt:'En antena', cls:'app--gen',
+      busca:'presupuesto presupuestos quotes oferta partidas margen iva csv pdf comercial generador creador admiranext',
+      aria:'Presupuestos — generador de presupuestos por partidas (abre admiranext.com/presupuestos)',
+      ic:'<rect x="4" y="2.5" width="16" height="19" rx="1.8"/><path d="M8 7.5h8M8 11.5h5M8 15.5h8M15.5 11.5h.5"/>' },
+
+    { slug:'yokup', url:'https://yokup.com',
+      nm:'Yokup', en:'Field Service · FSM',
+      ds:'El bit avisa, la persona repara: el técnico en calle cierra el círculo.',
+      st:'wip', stTxt:'En activación', cls:'app--ext',
+      busca:'fsm field service motor campo mantenimiento',
+      aria:'Yokup — Field Service Management, en activación (abre yokup.com)',
+      engineOf:['support','iotmanager'],
+      ic:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>' }
+  ];
   var EXT_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-8.5 8.5M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg>';
 
-  // (a) sello "Motor: Yokup ↗" en las cards que Yokup mueve
-  function engineBadge(){
-    YOKUP.engineOf.forEach(function(slug){
-      var card=document.querySelector('.app[data-slug="'+slug+'"]');
-      if(!card || card.querySelector('.engine')) return;
-      var b=document.createElement('button');
-      b.type='button'; b.className='engine';
-      b.setAttribute('aria-label','Motor de campo: Yokup — abre yokup.com en otra pestaña');
-      b.innerHTML='Motor: <b>Yokup</b>'+EXT_SVG;
-      b.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); window.open(YOKUP.url,'_blank','noopener'); });
-      card.appendChild(b);
-    });
-  }
-  // (b) card propia de Yokup al final del grid (externa, ○ en activación)
-  function yokupCard(){
-    var grid=document.getElementById('grid');
-    if(!grid || grid.querySelector('.app--ext')) return;
-    var key=(YOKUP.nm+' '+YOKUP.en+' '+YOKUP.ds+' fsm field service motor campo mantenimiento').toLowerCase();
-    var a=document.createElement('a');
-    a.className='app app--ext'; a.setAttribute('role','listitem');
-    a.href=YOKUP.url; a.target='_blank'; a.rel='noopener';
-    a.setAttribute('data-key',key); a.setAttribute('data-slug','yokup');
-    a.setAttribute('aria-label','Yokup — Field Service Management, en activación (abre yokup.com)');
-    a.innerHTML=
-      '<span class="ic">'+YOKUP.ic+'</span>'+
-      '<span class="nm">'+esc(YOKUP.nm)+'<span class="ext">↗</span></span>'+
-      '<span class="en">'+esc(YOKUP.en)+'</span>'+
-      '<span class="ds">'+esc(YOKUP.ds)+'</span>'+
-      '<span class="st wip"><span class="d"></span>En activación</span>';
-    grid.appendChild(a);
+  function extraSvg(d){
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+d+'</svg>';
   }
 
-  /* ── Presentaciones (decks de cliente del ecosistema) ────────────────────────
-     Recurso EXTERNO (admiranext.com/presentations), protegido por contraseña por
-     cliente. Card en la lanzadera + solución gobernable en Acceso (ACL v2). */
-  var PRES={
-    url:'https://www.admiranext.com/presentations/',
-    nm:'Presentaciones', en:'Client Decks',
-    ds:'Los decks de cliente del ecosistema, protegidos por contraseña.',
-    ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+
-       '<rect x="3" y="4" width="18" height="12" rx="1.6"/><path d="M12 16v4M8.5 20h7M7 11l2.6-2.6L12.2 11 16 6.8"/></svg>'
-  };
-  function presCard(){
+  // Sello "Motor: <nombre> ↗" en las apps cuyo trabajo cierra otro producto.
+  function engineBadge(){
+    EXTRAS.forEach(function(x){
+      (x.engineOf||[]).forEach(function(slug){
+        var card=document.querySelector('.app[data-slug="'+slug+'"]');
+        if(!card || card.querySelector('.engine')) return;
+        var b=document.createElement('button');
+        b.type='button'; b.className='engine';
+        b.setAttribute('aria-label','Motor de campo: '+x.nm+' — abre '+x.url+' en otra pestaña');
+        b.innerHTML='Motor: <b>'+esc(x.nm)+'</b>'+EXT_SVG;
+        b.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); window.open(x.url,'_blank','noopener'); });
+        card.appendChild(b);
+      });
+    });
+  }
+
+  // Cards propias al final del grid, en el orden de EXTRAS.
+  function extraCards(){
     var grid=document.getElementById('grid');
-    if(!grid || grid.querySelector('.app--pres')) return;
-    var key=(PRES.nm+' '+PRES.en+' '+PRES.ds+' presentations decks cliente lenovo caixa admiranext').toLowerCase();
-    var a=document.createElement('a');
-    a.className='app app--pres'; a.setAttribute('role','listitem');
-    a.href=PRES.url; a.target='_blank'; a.rel='noopener';
-    a.setAttribute('data-key',key); a.setAttribute('data-slug','presentations');
-    a.setAttribute('aria-label','Presentaciones — decks de cliente (abre admiranext.com/presentations)');
-    a.innerHTML=
-      '<span class="ic">'+PRES.ic+'</span>'+
-      '<span class="nm">'+esc(PRES.nm)+'<span class="ext">↗</span></span>'+
-      '<span class="en">'+esc(PRES.en)+'</span>'+
-      '<span class="ds">'+esc(PRES.ds)+'</span>'+
-      '<span class="st live"><span class="d"></span>En antena</span>';
-    grid.appendChild(a);
+    if(!grid) return;
+    EXTRAS.forEach(function(x){
+      if(grid.querySelector('.app[data-slug="'+x.slug+'"]')) return;
+      var a=document.createElement('a');
+      a.className='app '+x.cls; a.setAttribute('role','listitem');
+      a.href=x.url; a.target='_blank'; a.rel='noopener';
+      a.setAttribute('data-key',(x.nm+' '+x.en+' '+x.ds+' '+x.busca).toLowerCase());
+      a.setAttribute('data-slug',x.slug);
+      a.setAttribute('aria-label',x.aria);
+      a.innerHTML=
+        '<span class="ic">'+extraSvg(x.ic)+'</span>'+
+        '<span class="nm">'+esc(x.nm)+'<span class="ext">↗</span></span>'+
+        '<span class="en">'+esc(x.en)+'</span>'+
+        '<span class="ds">'+esc(x.ds)+'</span>'+
+        '<span class="st '+x.st+'"><span class="d"></span>'+esc(x.stTxt)+'</span>';
+      grid.appendChild(a);
+    });
   }
 
   function boot(){
@@ -414,9 +438,8 @@ window.ADMIRA_NAV={
     });
     Promise.all([loadPublicCatalog(),loadManifest()]).then(function(){
       render();
-      engineBadge();   // sello Yokup en Soporte + IoT
-      presCard();      // recurso gobernado dentro de la DMZ
-      yokupCard();     // producto externo de operación
+      engineBadge();   // sellos "Motor: <producto> ↗" en las apps que mueve otro
+      extraCards();    // soluciones adyacentes: AdmiraNeXT + productos externos
       if(hasManifest()) wireVideos();
     }).catch(function(){ document.getElementById('empty').textContent='No se pudo cargar el catálogo.'; document.getElementById('empty').style.display='block'; });
   }
