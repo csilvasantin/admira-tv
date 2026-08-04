@@ -13,7 +13,7 @@ MODE="${1:-both}"
 # Toda publicación lleva la firma del responsable REAL y del equipo físico desde
 # el que se cerró. Se exige por entorno para que nadie publique en nombre de otro
 # sin darse cuenta, y se contrasta con release-signature.json, que va commiteado.
-: "${ADMIRA_RELEASE_AGENT:?Define ADMIRA_RELEASE_AGENT con el agente responsable (ej. NeoMini)}"
+: "${ADMIRA_RELEASE_AGENT:?Define ADMIRA_RELEASE_AGENT con el agente responsable (ej. MorfeoMacMini)}"
 : "${ADMIRA_RELEASE_MACHINE:?Define ADMIRA_RELEASE_MACHINE con el equipo fisico (ej. MacMini)}"
 
 if [ "$MODE" = "both" ]; then

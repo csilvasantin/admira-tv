@@ -12,9 +12,10 @@
  * cuerpo del panel correspondiente. Panel sin contenido → «— sin opciones en esta vista».
  * Iconos vía data-af-icon="<clave>" se rellenan con window.AdmiraIcon si está disponible.
  *
- * Overlay (position:fixed, translate ±103%): NO empujan el contenido. Plegados por
- * defecto; estado en localStorage (af_left/af_right/af_bottom); cierre por toggle,
- * botón ✕, clic en el velo o Escape. Breakpoint móvil sólo ≤520px (en la hoja CSS).
+ * Overlay (position:fixed, translate ±103%): NO empujan el contenido. Plegados
+ * SIEMPRE al cargar — el estado NO se persiste (antes iba en localStorage
+ * af_left/af_right/af_bottom y reabría los paneles en cada página). Cierre por
+ * toggle, botón ✕, clic en el velo o Escape. Móvil sólo ≤520px (en la hoja CSS).
  *
  * Reutilizable: script clásico, autónomo. Se puede llevar a más páginas de admira.tv.
  * La barra objetivo se localiza por [data-af-bar] o, por defecto, .admtop (admira-nav).
@@ -186,7 +187,6 @@
       body.classList.toggle(side.cls, open);
       side.icon.classList.toggle("on", open);
       side.icon.setAttribute("aria-expanded", open ? "true" : "false");
-      try { localStorage.setItem(side.ls, open ? "1" : "0"); } catch (e) {}
       body.classList.toggle("af-any-open", anyOpen());
     }
     function closeAll() { SIDES.forEach(function (s) { if (isOpen(s)) setOpen(s, false); }); }
@@ -196,11 +196,14 @@
       if (e.key === "Escape" && anyOpen()) { e.preventDefault(); closeAll(); }
     });
 
-    // Restaura estado persistido (plegado por defecto: sólo abre si guardado === "1").
+    // SIEMPRE plegados al cargar (Carlos, 2026-08-04). Antes se restauraba el
+    // estado guardado, así que un panel abierto una vez reaparecía abierto en
+    // CADA página: se entraba con el contenido tapado y el velo puesto sin
+    // haber pedido nada. Son overlays de consulta, no una barra fija — se
+    // despliegan al pulsar y se olvidan. Se limpian las claves ya guardadas
+    // para no dejar datos muertos en los navegadores que las tengan.
     SIDES.forEach(function (side) {
-      var v = null;
-      try { v = localStorage.getItem(side.ls); } catch (e) {}
-      if (v === "1") setOpen(side, true);
+      try { localStorage.removeItem(side.ls); } catch (e) {}
     });
 
     // API mínima por si alguna página quiere abrir/cerrar por programa.
