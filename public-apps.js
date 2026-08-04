@@ -1,8 +1,18 @@
+/* Comportamiento de las fichas públicas: vídeo y PDF.
+ *
+ * Las 20 tarjetas YA vienen en el HTML — las genera tools/gen-apps-grid.py desde
+ * apps/public-catalog.json al preparar la publicación. Este script no pinta
+ * contenido: sólo engancha lo que necesita al usuario delante.
+ *
+ * Antes sí lo pintaba: pedía el catálogo por fetch y exigía EXACTAMENTE 20
+ * entradas o tiraba la sección entera. Eso hacía que un fallo de red —o añadir
+ * la solución 21— dejara vacío el corazón de la home, y que ningún buscador
+ * viera el producto porque sin JS sólo quedaba el <noscript>. Ahora, si este
+ * script no llega a ejecutarse, se pierden los botones de vídeo y PDF; las 20
+ * soluciones se siguen leyendo enteras.
+ */
 (function () {
   "use strict";
-  var CATALOG = "/apps/public-catalog.json";
-  var grid = document.getElementById("publicApps");
-  var status = document.getElementById("appsStatus");
   var dialog = document.getElementById("appVideoDialog");
   var video = document.getElementById("appVideo");
   var title = document.getElementById("appVideoTitle");
@@ -31,104 +41,48 @@
     return message;
   }
 
-  function safeMediaUrl(value, slug, kind) {
-    var ext = kind === "video" ? "mp4" : "pdf";
-    var expected = "/apps/" + kind + "/" + slug + "." + ext;
-    return value === expected ? value : "";
+  // El hueco de aviso de cada tarjeta; lo pone el generador junto a los botones.
+  function mediaStatusOf(card) {
+    return card ? card.querySelector(".app-media-status") : null;
   }
 
-  function mediaButton(label, className) {
-    var button = document.createElement("button");
-    button.type = "button";
-    button.className = "app-action " + className;
-    button.textContent = label;
-    return button;
+  function bindVideo(button) {
+    var card = button.closest(".app-card");
+    var src = button.getAttribute("data-app-video");
+    var name = (card && card.getAttribute("data-app-title")) || "Vídeo";
+    button.addEventListener("click", function () { openVideo(name, src, button); });
   }
 
-  function renderCard(app) {
-    var article = document.createElement("article");
-    article.className = "app-card";
-    article.dataset.publicAppCard = app.slug;
-
-    var head = document.createElement("div");
-    head.className = "app-card-head";
-    var icon = document.createElement("span");
-    icon.className = "app-icon";
-    icon.setAttribute("aria-hidden", "true");
-    icon.textContent = app.icon;
-    var state = document.createElement("span");
-    state.className = "app-state";
-    state.textContent = app.status === "available" ? "Disponible · Available" : "Próximamente · Coming soon";
-    head.append(icon, state);
-
-    var heading = document.createElement("h3");
-    heading.textContent = app.name_es;
-    var englishName = document.createElement("p");
-    englishName.className = "app-name-en";
-    englishName.lang = "en";
-    englishName.textContent = app.name_en;
-    var spanish = document.createElement("p");
-    spanish.className = "app-description";
-    spanish.textContent = app.description_es;
-    var english = document.createElement("p");
-    english.className = "app-description app-description-en";
-    english.lang = "en";
-    english.textContent = app.description_en;
-
-    var actions = document.createElement("div");
-    actions.className = "app-actions";
-    var feedback = document.createElement("span");
-    feedback.className = "app-media-status";
-    feedback.setAttribute("role", "status");
-    feedback.setAttribute("aria-live", "polite");
-    var videoUrl = safeMediaUrl(app.video, app.slug, "video");
-    var pdfUrl = safeMediaUrl(app.pdf, app.slug, "pdf");
-    if (videoUrl) {
-      var play = mediaButton("▶ Vídeo", "app-video");
-      play.setAttribute("aria-label", "Ver vídeo de " + app.name_es);
-      play.addEventListener("click", function () { openVideo(app, videoUrl, play); });
-      actions.appendChild(play);
-    }
-    if (pdfUrl) {
-      var pdf = mediaButton("↓ PDF", "app-pdf");
-      pdf.setAttribute("aria-label", "Descargar PDF de " + app.name_es);
-      pdf.addEventListener("click", async function () {
-        pdf.disabled = true;
-        pdf.textContent = "Comprobando…";
-        feedback.textContent = "Comprobando disponibilidad del PDF.";
-        var available = await probePublicMedia(pdfUrl, fetch, 8000);
-        if (!available) {
-          pdf.disabled = false;
-          pdf.textContent = "Reintentar PDF";
-          feedback.textContent = "El PDF no está disponible temporalmente. La página permanece abierta.";
-          return;
-        }
-        feedback.textContent = "PDF disponible. Iniciando descarga.";
-        var download = document.createElement("a");
-        download.href = pdfUrl;
-        download.download = "";
-        document.body.appendChild(download);
-        download.click();
-        download.remove();
-        pdf.disabled = false;
-        pdf.textContent = "↓ PDF";
-      });
-      actions.appendChild(pdf);
-    }
-    if (!videoUrl && !pdfUrl) {
-      var noMedia = document.createElement("span");
-      noMedia.className = "app-no-media";
-      noMedia.textContent = "Ficha pública disponible próximamente";
-      actions.appendChild(noMedia);
-    }
-    actions.appendChild(feedback);
-    article.append(head, heading, englishName, spanish, english, actions);
-    return article;
+  function bindPdf(button) {
+    var card = button.closest(".app-card");
+    var src = button.getAttribute("data-app-pdf");
+    var feedback = mediaStatusOf(card);
+    button.addEventListener("click", async function () {
+      button.disabled = true;
+      button.textContent = "Comprobando…";
+      if (feedback) feedback.textContent = "Comprobando disponibilidad del PDF.";
+      var available = await probePublicMedia(src, fetch, 8000);
+      if (!available) {
+        button.disabled = false;
+        button.textContent = "Reintentar PDF";
+        if (feedback) feedback.textContent = "El PDF no está disponible temporalmente. La página permanece abierta.";
+        return;
+      }
+      if (feedback) feedback.textContent = "PDF disponible. Iniciando descarga.";
+      var download = document.createElement("a");
+      download.href = src;
+      download.download = "";
+      document.body.appendChild(download);
+      download.click();
+      download.remove();
+      button.disabled = false;
+      button.textContent = "↓ PDF";
+    });
   }
 
-  function openVideo(app, src, trigger) {
+  function openVideo(name, src, trigger) {
     previousFocus = trigger || document.activeElement;
-    title.textContent = app.name_es + " · " + app.name_en;
+    title.textContent = name;
     video.hidden = false;
     video.removeAttribute("aria-hidden");
     videoStatus.textContent = "Cargando vídeo…";
@@ -173,19 +127,6 @@
   dialog.addEventListener("click", function (event) { if (event.target === dialog) closeVideo(); });
   document.addEventListener("keydown", onDialogKey, true);
 
-  fetch(CATALOG, { cache: "force-cache", credentials: "omit" })
-    .then(function (response) { if (!response.ok) throw new Error("catalog"); return response.json(); })
-    .then(function (apps) {
-      if (!Array.isArray(apps) || apps.length !== 20) throw new Error("catalog-contract");
-      var fragment = document.createDocumentFragment();
-      apps.forEach(function (app) { fragment.appendChild(renderCard(app)); });
-      grid.replaceChildren(fragment);
-      grid.setAttribute("aria-busy", "false");
-      status.textContent = "20 soluciones · 20 solutions";
-    })
-    .catch(function () {
-      status.textContent = "El catálogo no está disponible temporalmente.";
-      grid.setAttribute("aria-busy", "false");
-      grid.innerHTML = '<p class="apps-error" role="status">Vuelve a intentarlo en unos minutos.</p>';
-    });
+  document.querySelectorAll("[data-app-video]").forEach(bindVideo);
+  document.querySelectorAll("[data-app-pdf]").forEach(bindPdf);
 })();

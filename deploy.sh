@@ -36,6 +36,12 @@ if [ "$MODE" = "both" ]; then
   fi
 fi
 
+echo "→ Rejilla de soluciones…"
+# Las tarjetas de la home se GENERAN desde apps/public-catalog.json. Si alguien
+# toca el catálogo y no regenera, la home diría algo distinto del catálogo: se
+# para la publicación en vez de servir la contradicción.
+python3 tools/gen-apps-grid.py --check
+
 echo "→ Firma del release…"
 # El sello canónico es el del index.html: la firma se deriva de él, nunca al revés.
 release="$(sed -n 's/.*admiranext-version.*content="\(v\.[^"]*\)".*/\1/p' index.html | head -1)"
