@@ -66,8 +66,16 @@
   .js-plegable .app.abierta .ds{display:block}
   .js-plegable .app.abierta .acts{display:flex}
   .app{gap:7px}
-  .app .nm{margin-top:1px}
-  .more{position:absolute;top:13px;right:12px;appearance:none;width:28px;height:28px;display:none;
+  /* Cabecera: el icono manda a la izquierda y el nombre va A SU DERECHA, no
+     debajo — así la ficha se lee de un golpe y gana altura (Carlos, 4-ago). */
+  .app .cab{display:flex;align-items:center;gap:11px}
+  .app .tit{display:flex;flex-direction:column;min-width:0}
+  .app .nm{margin:0}
+  .app .en{margin-top:0}
+  /* Pie: el estado a la izquierda y el desplegable A SU ALTURA, a la derecha. */
+  .app .pie{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px}
+  .app .st{margin-top:0}
+  .more{appearance:none;flex:none;width:28px;height:28px;display:none;
         place-items:center;border:1px solid var(--line);border-radius:9px;background:#0e1420;
         color:var(--dim);cursor:pointer;transition:color .15s,border-color .15s,transform .18s}
   .js-plegable .more{display:grid}
@@ -144,7 +152,7 @@
 </head>
 <body>
 <script>
-window.ADMIRA_VERSION='v.04.08.2026.r5.19:51';
+window.ADMIRA_VERSION='v.04.08.2026.r6.20:00';
 /* El buscador de la lanzadera vive en la barra superior del chrome (cfg.topRight).
    No lleva clase .admtR, así que NO lo esconde el breakpoint móvil de la topbar. */
 window.ADMIRA_NAV={
@@ -175,19 +183,19 @@ window.ADMIRA_NAV={
   var APPS=[];
   var esc=function(x){return String(x==null?'':x).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});};
   function icon(slug){ try{ return (window.AdmiraIcon&&window.AdmiraIcon(slug))||''; }catch(_){ return ''; } }
-  function stTxt(st){ return st==='live'?'En antena':'En construcción'; }
+  function stTxt(st){ return st==='live'?'Online':'En construcción'; }
   function render(){
     var grid=document.getElementById('grid');
     grid.innerHTML=APPS.map(function(a){
       var key=(a.nm+' '+a.en+' '+a.ds).toLowerCase();
       return '<a class="app" role="listitem" href="/'+a.s+'/" data-key="'+esc(key)+'" data-slug="'+esc(a.s)+'" '+
         'aria-label="'+esc(a.nm)+' — '+esc(stTxt(a.st))+'">'+
-        '<span class="ic">'+icon(a.s)+'</span>'+
-        '<span class="nm">'+esc(a.nm)+'</span>'+
-        '<span class="en">'+esc(a.en)+'</span>'+
+        '<span class="cab"><span class="ic">'+icon(a.s)+'</span>'+
+          '<span class="tit"><span class="nm">'+esc(a.nm)+'</span>'+
+          '<span class="en">'+esc(a.en)+'</span></span></span>'+
         '<span class="ds" id="ds-'+esc(a.s)+'">'+esc(a.ds)+'</span>'+
-        '<span class="st '+a.st+'"><span class="d"></span>'+esc(stTxt(a.st))+'</span>'+
-        botonMas(a.s,a.nm)+
+        '<span class="pie"><span class="st '+a.st+'"><span class="d"></span>'+esc(stTxt(a.st))+'</span>'+
+          botonMas(a.s,a.nm)+'</span>'+
       '</a>';
     }).join('');
   }
@@ -395,7 +403,7 @@ window.ADMIRA_NAV={
     { slug:'presentations', url:'https://www.admiranext.com/presentations/',
       nm:'Presentaciones', en:'Client Decks',
       ds:'Los decks de cliente del ecosistema, protegidos por contraseña.',
-      st:'live', stTxt:'En antena', cls:'app--pres',
+      st:'live', stTxt:'Online', cls:'app--pres',
       busca:'presentations decks cliente lenovo caixa admiranext generador',
       aria:'Presentaciones — decks de cliente (abre admiranext.com/presentations)',
       ic:'<rect x="3" y="4" width="18" height="12" rx="1.6"/><path d="M12 16v4M8.5 20h7M7 11l2.6-2.6L12.2 11 16 6.8"/>' },
@@ -403,7 +411,7 @@ window.ADMIRA_NAV={
     { slug:'tiktoks', url:'https://www.admiranext.com/tiktok/',
       nm:'TikToks', en:'TikTok Ads',
       ds:'Convierte una idea en un anuncio vertical de 25 segundos y lo publica en Pixeria.',
-      st:'live', stTxt:'En antena', cls:'app--gen',
+      st:'live', stTxt:'Online', cls:'app--gen',
       busca:'tiktok tiktoks anuncio vertical 25s preroll postroll pixeria video social generador creador admiranext',
       aria:'TikToks — anuncios verticales de 25 segundos (abre admiranext.com/tiktok)',
       ic:'<rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 9.6l4.2 2.4-4.2 2.4z"/>' },
@@ -411,7 +419,7 @@ window.ADMIRA_NAV={
     { slug:'presupuestos', url:'https://www.admiranext.com/presupuestos/',
       nm:'Presupuestos', en:'Quotes',
       ds:'Arma el presupuesto por partidas con coste, margen e IVA, y lo saca en CSV o PDF.',
-      st:'live', stTxt:'En antena', cls:'app--gen',
+      st:'live', stTxt:'Online', cls:'app--gen',
       busca:'presupuesto presupuestos quotes oferta partidas margen iva csv pdf comercial generador creador admiranext',
       aria:'Presupuestos — generador de presupuestos por partidas (abre admiranext.com/presupuestos)',
       ic:'<rect x="4" y="2.5" width="16" height="19" rx="1.8"/><path d="M8 7.5h8M8 11.5h5M8 15.5h8M15.5 11.5h.5"/>' },
@@ -460,12 +468,12 @@ window.ADMIRA_NAV={
       a.setAttribute('data-slug',x.slug);
       a.setAttribute('aria-label',x.aria);
       a.innerHTML=
-        '<span class="ic">'+extraSvg(x.ic)+'</span>'+
-        '<span class="nm">'+esc(x.nm)+'<span class="ext">↗</span></span>'+
-        '<span class="en">'+esc(x.en)+'</span>'+
+        '<span class="cab"><span class="ic">'+extraSvg(x.ic)+'</span>'+
+          '<span class="tit"><span class="nm">'+esc(x.nm)+'<span class="ext">↗</span></span>'+
+          '<span class="en">'+esc(x.en)+'</span></span></span>'+
         '<span class="ds" id="ds-'+esc(x.slug)+'">'+esc(x.ds)+'</span>'+
-        '<span class="st '+x.st+'"><span class="d"></span>'+esc(x.stTxt)+'</span>'+
-        botonMas(x.slug,x.nm);
+        '<span class="pie"><span class="st '+x.st+'"><span class="d"></span>'+esc(x.stTxt)+'</span>'+
+          botonMas(x.slug,x.nm)+'</span>';
       grid.appendChild(a);
     });
   }
