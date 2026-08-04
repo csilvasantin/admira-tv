@@ -13,7 +13,30 @@
   var title=(s&&s.dataset.title)||cfg.title||'';
   var brandTag=(cfg&&cfg.brandTag)||(s&&s.dataset.brand)||'tv';  // sufijo de marca "Admira · tv" (configurable por página)
   function _norm(u){return String(u).replace(/^https?:\/\/[^/]+/,'').replace(/index\.html$/,'').replace(/\/+$/,'')||'/';}
-  var VER=window.ADMIRA_VERSION||'v.14.07.2026.r46';
+  // SELLO. Se pinta en UN solo sitio: la barra vertical de Opciones (pie del raíl
+  // y ficha de detalle). Nada de repetirlo en el pie de cada página — dos sellos
+  // que se desincronizan son peor que ninguno (Carlos, 2026-08-04).
+  //
+  // El valor bueno es el del despliegue: /version.json lo REGENERA deploy.sh en
+  // cada publicación, así que siempre está en canon y al día. Antes había aquí un
+  // literal escrito a mano que se quedaba viejo solo, y lo veían las 14 páginas
+  // que no declaran ADMIRA_VERSION. La página puede seguir declarando el suyo
+  // (window.ADMIRA_VERSION) y se usa mientras llega el real.
+  var VER=window.ADMIRA_VERSION||'';
+  function pintaVersion(v){
+    if(!v) return;
+    VER=v;
+    try{ if(window.AdmiraNav) window.AdmiraNav.ver=v; }catch(e){}
+    ['admFoot','adm-d-ver'].forEach(function(id){
+      var n=document.getElementById(id); if(n) n.textContent=v;
+    });
+  }
+  try{
+    fetch('/version.json',{cache:'no-store'})
+      .then(function(r){ return r.ok?r.json():null; })
+      .then(function(d){ if(d&&d.version) pintaVersion(d.version); })
+      .catch(function(){});
+  }catch(e){}
   // Extensiones opcionales (las usa cms.html): cfg.topRight (HTML controles barra), cfg.extraNav (HTML items sidebar),
   // cfg.detailTop (HTML secciones detalle), cfg.onDetail (fn al abrir/refrescar el detalle).
 
