@@ -54,11 +54,43 @@
     f.addEventListener('load', function(){ setTimeout(function(){ document.getElementById('splash').classList.add('hide'); }, 900); });
 
     // ── Screen Wake Lock: la pantalla no se duerme; se reengancha al volver ──
-    var wl = null;
+    // El candado se PIERDE cada vez que la página deja de estar visible (iOS lo suelta al
+    // bloquear o al pasar a segundo plano) y no vuelve solo. Antes esto se tragaba en
+    // silencio: un tótem que había perdido el candado se veía IGUAL que uno que lo tenía,
+    // y solo te enterabas al encontrarte la pantalla apagada horas después. Ahora se
+    // reintenta en bucle, se deja el estado a la vista de quien lo instala y se puede
+    // auditar desde fuera con window.__wake.
+    var wl = null, wakeFail = '';
+    window.__wake = function(){ return { activo: !!wl, motivo: wakeFail }; };
     async function lock(){
-      try{ if('wakeLock' in navigator){ wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', function(){ wl=null; }); } }catch(e){}
+      if(wl) return;
+      if(!('wakeLock' in navigator)){ wakeFail='este navegador no tiene Screen Wake Lock'; badge(); return; }
+      try{
+        wl = await navigator.wakeLock.request('screen');
+        wakeFail=''; badge();
+        wl.addEventListener('release', function(){ wl=null; });   // se re-pide en el próximo ciclo
+      }catch(e){ wl=null; wakeFail=String(e&&e.message||e); badge(); }   // p.ej. modo de bajo consumo
     }
-    document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ lock(); } });
+    // Aviso DISCRETO y solo cuando el candado NO está: la doctrina DOOH dice que nada tapa
+    // la emisión, así que es una línea pequeña abajo, se va sola y ?wakebadge=0 la quita.
+    var bEl=null;
+    function badge(){
+      if(qs.get('wakebadge')==='0') return;
+      if(!wakeFail){ if(bEl){ bEl.remove(); bEl=null; } return; }
+      if(!bEl){
+        bEl=document.createElement('div');
+        bEl.style.cssText='position:fixed;left:10px;bottom:10px;z-index:3;padding:5px 9px;border-radius:7px;'+
+          'background:rgba(0,0,0,.62);color:#ffb37c;font:600 11px ui-monospace,Menlo,monospace;letter-spacing:.06em;'+
+          'pointer-events:none;transition:opacity .8s';
+        document.body.appendChild(bEl);
+      }
+      bEl.textContent='⚠ pantalla puede apagarse: '+wakeFail;
+      bEl.style.opacity='1';
+      clearTimeout(badge._t); badge._t=setTimeout(function(){ if(bEl) bEl.style.opacity='0'; }, 9000);
+    }
+    document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ wl=null; lock(); } });
+    window.addEventListener('pageshow', function(){ wl=null; lock(); });   // vuelta desde la caché de iOS
+    setInterval(lock, 20000);        // red de seguridad: si se soltó, se vuelve a pedir
     lock();
     // primer gesto → asegura wake lock + (si sound) desmutea el iframe recargando con sound
     document.body.addEventListener('click', function(){ lock(); }, {once:false});
