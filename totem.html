@@ -40,6 +40,15 @@
             + '&screen='  + encodeURIComponent(screen)
             + '&embed=mupi&clean=1&chrome=0&kiosk=1'
             + (sound ? '' : '&muted=1');
+    // El tótem es un envoltorio, no una jaula: lo que no es suyo se lo pasa al canal tal cual
+    // (sincro de canal, tag, medio, fresh, machine…). Sin esto no se podía pedir por URL que
+    // este tótem emitiera EN SINCRONÍA con otra pantalla — había que mandarle un comando después.
+    var PROPIOS = ['n','circuit','screen','sound'];
+    qs.forEach(function(v,k){
+      if(PROPIOS.indexOf(k)>=0) return;
+      if(!/^[a-zA-Z0-9_.-]{1,24}$/.test(k)) return;   // nada de claves raras en la URL del player
+      src += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(v);
+    });
     var f = document.getElementById('p');
     f.src = src;
     f.addEventListener('load', function(){ setTimeout(function(){ document.getElementById('splash').classList.add('hide'); }, 900); });
