@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Mando · Admira.tv</title>
+  <meta name="description" content="Mando a distancia de los players DOOH de Admira.tv: agrupa por circuito, enruta contenido por metatag y controla cada pantalla en vivo.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Mando">
+  <meta name="theme-color" content="#0a0c12">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/favicon.svg">
+  <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+  <style>
+    :root{
+      --bg:var(--admira-bg,#0a0c12); --elev:var(--admira-bg-elev,#141826);
+      --text:var(--admira-text,#f0e6ff); --muted:var(--admira-text-muted,rgba(216,200,255,.65));
+      --dim:var(--admira-text-dim,rgba(216,200,255,.4));
+      --violet:var(--admira-violet,#aa88ff); --amber:var(--admira-amber,#ffd866);
+      --cyan:var(--admira-cyan,#50c8ff); --green:var(--admira-green,#76b900); --red:var(--admira-red,#e2231a);
+      --border:var(--admira-border,rgba(170,136,255,.25));
+      --mono:var(--admira-font-mono,ui-monospace,Menlo,monospace);
+      --sans:var(--admira-font-sans,-apple-system,system-ui,sans-serif);
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);max-width:520px;margin:0 auto;padding:16px 14px 44px;min-height:100dvh}
+    .kick{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--violet)}
+    h1{font-size:22px;margin:.1em 0 .5em}
+    label.fld{display:block;font-family:var(--mono);font-size:11px;color:var(--muted);margin:12px 0 4px;letter-spacing:.06em}
+    select,input,.b,.chip{font-family:var(--mono)}
+    select{width:100%;font-size:14px;padding:11px 12px;border-radius:10px;background:#0d1018;color:var(--text);border:1px solid var(--border)}
+    .cinfo{display:flex;gap:8px;align-items:center;margin-top:6px;font-size:11px;color:var(--dim);font-family:var(--mono)}
+    .cinfo b{color:var(--muted)}
+    .stage{margin:12px 0;display:flex;gap:12px;align-items:stretch}
+    .frame{position:relative;width:104px;flex:0 0 104px;aspect-ratio:9/16;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#000}
+    .frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+    .live{position:absolute;top:6px;left:6px;font:600 8px var(--mono);background:rgba(0,0,0,.6);color:#fff;padding:2px 5px;border-radius:99px;display:flex;gap:4px;align-items:center}
+    .live b{width:5px;height:5px;border-radius:50%;background:#ff4455;box-shadow:0 0 6px #ff4455;animation:p 1.4s infinite}
+    @keyframes p{50%{opacity:.3}}
+    .nowbox{flex:1;background:var(--elev);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;justify-content:center;min-width:0}
+    .nowbox .lbl{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+    .nowbox .ttl{font-size:14px;margin-top:4px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+    .nowbox .tagline{margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--cyan)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+    .b{font-size:14px;padding:15px 10px;border-radius:12px;border:1px solid var(--border);background:var(--elev);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.12s;user-select:none}
+    .b:active{transform:scale(.97)} .b:hover{border-color:var(--violet)}
+    .b.wide{grid-column:1/-1}
+    .b.on{border-color:var(--red);color:#ffb3ad;background:color-mix(in srgb,var(--red) 14%,transparent)}
+    .b.cyan{border-color:var(--cyan);color:var(--cyan)}
+    .vol{display:flex;align-items:center;gap:10px;margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+    .vol input{flex:1;accent-color:var(--cyan)}
+    .sec{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:20px 0 6px;border-top:1px solid var(--border);padding-top:14px;display:flex;align-items:center;gap:8px}
+    .sec .hint{color:var(--dim);text-transform:none;letter-spacing:0;font-size:10px}
+    .tagrow{display:flex;gap:8px}
+    .tagrow input{flex:1;font-size:14px;padding:11px 12px;border-radius:10px;background:#0d1018;color:var(--text);border:1px solid var(--amber)}
+    .tagrow button{font-size:13px;padding:0 14px;border-radius:10px;border:1px solid var(--amber);background:color-mix(in srgb,var(--amber) 12%,transparent);color:var(--amber);cursor:pointer;white-space:nowrap}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .chip{font-size:12px;padding:8px 12px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer}
+    .chip:active{transform:scale(.96)} .chip.sel{border-color:var(--amber);color:var(--amber);background:color-mix(in srgb,var(--amber) 10%,transparent)}
+    .cli{display:flex;gap:8px;margin-top:10px}
+    .cli input{flex:1;font-size:13px;padding:11px 12px;border-radius:10px;background:#0d1018;color:var(--text);border:1px solid var(--border)}
+    .cli button{font-size:13px;padding:0 16px;border-radius:10px;border:1px solid var(--violet);background:transparent;color:var(--violet);cursor:pointer}
+    .note{font-family:var(--mono);font-size:10px;color:var(--dim);line-height:1.6;margin-top:8px}
+    a.plain{color:var(--violet);text-decoration:none}
+    #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);opacity:0;background:#0d1018;border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:13px;padding:10px 16px;border-radius:99px;transition:.25s;pointer-events:none;z-index:9;max-width:90vw}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    /* barra superior de navegación (volver atrás) */
+    .topnav{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:6px;margin:-16px -14px 10px;padding:calc(env(safe-area-inset-top,0px) + 9px) 12px 9px;
+      background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .topnav::-webkit-scrollbar{display:none}
+    .topnav a{font-family:var(--mono);font-size:12px;color:var(--muted);text-decoration:none;padding:6px 9px;border-radius:8px;white-space:nowrap;border:1px solid transparent}
+    .topnav a:hover{color:var(--text);border-color:var(--border)}
+    .topnav a.back{color:var(--violet);border-color:var(--border);font-weight:700}
+    .topnav .sep{flex:0 0 1px;height:16px;background:var(--border);margin:0 2px}
+    .equipo{font-family:var(--mono);font-size:11px;color:var(--amber);margin:-2px 0 8px;display:none}
+    .equipo b{color:var(--text)}
+  </style>
+</head>
+<body>
+  <nav class="topnav" aria-label="Navegación AdmiraNeXT">
+    <a class="back" href="https://www.admira.live/control" title="Volver al panel de control de la flota">← Control</a>
+    <span class="sep"></span>
+    <a href="https://www.admira.live/">Dashboard</a>
+    <a href="https://www.admira.tv/players">Players</a>
+    <a href="https://www.admira.tv/">Admira.tv</a>
+    <a href="https://www.admira.live/status">Status</a>
+  </nav>
+  <div class="kick">Emitir · Mando a distancia</div>
+  <h1>Mando · Admira.tv</h1>
+  <div class="equipo" id="equipo">🖥️ Conectado al player de <b id="equipoName">—</b></div>
+
+  <label class="fld">Pantalla / tótem a controlar</label>
+  <select id="target"></select>
+  <div class="cinfo">circuito: <b id="cir">—</b> · pantalla: <b id="scr">—</b></div>
+
+  <div class="stage">
+    <div class="frame"><span class="live"><b></b>EN VIVO</span><iframe id="prev" title="preview"></iframe></div>
+    <div class="nowbox">
+      <div class="lbl">Ahora emitiendo</div>
+      <div class="ttl" id="now">…</div>
+      <div class="tagline" id="tagline"></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <button class="b wide" id="power">⏻ Standby (apagar pantalla)</button>
+    <button class="b" data-cmd="prev">⏮ Anterior</button>
+    <button class="b" data-cmd="next">⏭ Siguiente</button>
+    <button class="b cyan" id="mute">🔇 Silenciar</button>
+    <button class="b" data-cmd="reload">🔄 Recargar</button>
+  </div>
+  <div class="vol">🔊 <input type="range" id="vol" min="0" max="100" value="100"><span id="volv">100%</span></div>
+
+  <!-- ── METATAG DEL CIRCUITO: enruta el contenido etiquetado en pixeria.com ── -->
+  <div class="sec">🏷️ Metatag del circuito <span class="hint">— el circuito emite SOLO lo etiquetado con esto en pixeria.com</span></div>
+  <div class="tagrow">
+    <input id="tagInput" placeholder="p.ej. navidad · oferta-2x1 · xtanco-valencia" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button id="tagApply">Aplicar</button>
+    <button id="tagClear" style="border-color:var(--border);background:transparent;color:var(--muted)">Quitar</button>
+  </div>
+  <div class="chips" id="tagChips"></div>
+  <div class="note">1) Aplica aquí un metatag → el circuito filtra su emisión a ese tag. &nbsp; 2) En
+    <a class="plain" href="https://www.pixeria.com/stock" target="_blank">pixeria.com/stock</a> pon ese mismo metatag a un asset con «+ más». &nbsp;
+    3) Aparece solo en este circuito en ~30s. Para volver a emitir todo, pulsa «Quitar».</div>
+
+  <div class="sec">Contenido rápido</div>
+  <div class="chips" id="seg">
+    <button class="chip" data-cmd="reset">Todo</button>
+    <button class="chip" data-cmd="medio image">🖼️ Imágenes</button>
+    <button class="chip" data-cmd="medio video">🎬 Vídeos</button>
+    <button class="chip" data-cmd="vertical">↕ Vertical</button>
+  </div>
+
+  <div class="sec">Avanzado · CLI del player</div>
+  <div class="cli">
+    <input id="cliInput" placeholder="play12 · volume 40 · slot noche · category promo" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button id="cliSend">Enviar</button>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    // Dominio propio primero: varios ISP españoles bloquean *.workers.dev y este mando
+    // se usa desde el móvil, en España. api.admira.store proxea al MISMO worker; el
+    // workers.dev queda de reserva por si cayera el proxy.
+    var CMD_HOSTS = ['https://api.admira.store/locations/cmd','https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd'];
+    var NOW_API = 'https://api.admira.store/signage/now';
+    var qs = new URLSearchParams(location.search);
+
+    // ── Circuitos y pantallas (AGRUPADO POR CIRCUITO) ──
+    var CIRCUITS = [
+      { group:'🏪 Xtanco Valencia · interior', circuit:'xtanco-valencia',
+        screens:['a','b','c','d'].map(function(s){ return {label:'Pantalla '+s.toUpperCase(), screen:'xtanco-valencia-'+s}; }) },
+      { group:'🌆 Kioskos de prensa · Barcelona · exterior', circuit:null /* por-kiosko */,
+        screens:(function(){ var a=[]; for(var i=1;i<=100;i++){ var n=('000'+i).slice(-3); a.push({label:'Kiosko '+n, screen:'bcn-kiosk-'+n+'-led', circuit:'bcn-kiosk-'+n}); } return a; })() }
+    ];
+    var FLAT = []; // aplanado para el <select>
+    var selEl = document.getElementById('target');
+    CIRCUITS.forEach(function(g){
+      var og=document.createElement('optgroup'); og.label=g.group;
+      g.screens.forEach(function(s){
+        var circuit = s.circuit || g.circuit;
+        var idx=FLAT.length; FLAT.push({label:g.group+' · '+s.label, circuit:circuit, screen:s.screen});
+        var o=document.createElement('option'); o.value=idx; o.textContent=s.label; og.appendChild(o);
+      });
+      selEl.appendChild(og);
+    });
+    // objetivo inicial
+    var startIdx = 4; // primer kiosko (bcn-kiosk-001)
+    var wantC=qs.get('circuit'), wantS=qs.get('screen'), wantN=qs.get('n'), wantEq=qs.get('equipo')||'';
+    if(wantN){ var nn=('000'+wantN).slice(-3); startIdx=FLAT.findIndex(function(t){return t.circuit==='bcn-kiosk-'+nn;}); }
+    else if(wantC||wantS){ startIdx=FLAT.findIndex(function(t){return t.circuit===wantC||t.screen===wantS;}); }
+    // Circuito/pantalla NO predefinido (p.ej. el equipo concreto que abre el panel de control):
+    // lo inyectamos como objetivo propio arriba del selector.
+    if(startIdx<0 && (wantC||wantS)){
+      var cCir=wantC||String(wantS||'').replace(/-mupi$/,''); var cScr=wantS||cCir;
+      var lab=wantEq?('⭐ '+wantEq):('⭐ '+cScr);
+      var i2=FLAT.length; FLAT.push({label:lab, circuit:cCir, screen:cScr});
+      var og2=document.createElement('optgroup'); og2.label='⭐ Este equipo';
+      var o2=document.createElement('option'); o2.value=i2; o2.textContent=wantEq||cScr; og2.appendChild(o2);
+      selEl.insertBefore(og2, selEl.firstChild); startIdx=i2;
+    }
+    // Banner "conectado al player de <equipo>" cuando el mando se abre desde una ficha del panel.
+    if(wantEq){
+      var eqB=document.getElementById('equipo'), eqN=document.getElementById('equipoName');
+      if(eqB&&eqN){ eqN.textContent=wantEq; eqB.style.display='block'; }
+    }
+    if(startIdx<0) startIdx=4; selEl.value=startIdx;
+
+    var T;
+    function setTarget(){
+      T = FLAT[+selEl.value];
+      document.getElementById('cir').textContent = T.circuit;
+      document.getElementById('scr').textContent = T.screen;
+      document.getElementById('prev').src = '/canal.html?circuit='+encodeURIComponent(T.circuit)+'&screen='+encodeURIComponent(T.screen)+'&embed=mupi&clean=1&muted=1';
+      renderTagChips(); pollNow();
+    }
+    selEl.onchange = setTarget;
+
+    async function send(cmd){
+      var body = JSON.stringify({id:T.circuit, cmd:cmd});
+      for(var i=0;i<CMD_HOSTS.length;i++){
+        try{
+          var r = await fetch(CMD_HOSTS[i], {method:'POST', headers:{'Content-Type':'application/json'}, body:body});
+          if(!r.ok) throw new Error('http '+r.status);
+          var d = await r.json().catch(function(){return null;});
+          toast((d&&d.ok?'✓ ':'✗ ')+cmd+' → '+T.circuit);
+          if(i>0) CMD_HOSTS.unshift(CMD_HOSTS.splice(i,1)[0]);   // el que respondió pasa a primero
+          return;
+        }catch(e){ /* host caído o bloqueado por el ISP → prueba el siguiente */ }
+      }
+      toast('✗ sin red');
+    }
+    function toast(t){ var el=document.getElementById('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(window.__tt); window.__tt=setTimeout(function(){el.classList.remove('show');},1700); }
+
+    document.querySelectorAll('[data-cmd]').forEach(function(b){ b.onclick=function(){ send(b.dataset.cmd); }; });
+
+    var standby=false, pwr=document.getElementById('power');
+    pwr.onclick=function(){ standby=!standby; send(standby?'standby':'resume'); pwr.textContent=standby?'▶ Reanudar (encender)':'⏻ Standby (apagar pantalla)'; pwr.classList.toggle('on',standby); };
+    var muted=false, mb=document.getElementById('mute');
+    mb.onclick=function(){ muted=!muted; send(muted?'audiooff':'audioon'); mb.textContent=muted?'🔊 Activar sonido':'🔇 Silenciar'; };
+    var vol=document.getElementById('vol');
+    vol.oninput=function(){ document.getElementById('volv').textContent=vol.value+'%'; };
+    vol.onchange=function(){ send('volume '+vol.value); };
+
+    // ── Metatag del circuito ──
+    var TAG_KEY='mando_tag_by_circuit';
+    function tagStore(){ try{ return JSON.parse(localStorage.getItem(TAG_KEY)||'{}'); }catch(_){ return {}; } }
+    function setStoredTag(c,t){ var s=tagStore(); if(t) s[c]=t; else delete s[c]; localStorage.setItem(TAG_KEY, JSON.stringify(s)); }
+    function curTag(){ return tagStore()[T.circuit]||''; }
+    function applyTag(t){
+      t=(t||'').trim().toLowerCase();
+      send(t? ('tag '+t) : 'tag');   // 'tag' sin arg = quitar filtro (emite todo)
+      setStoredTag(T.circuit, t);
+      document.getElementById('tagInput').value=t;
+      renderTagChips(); refreshTagline();
+    }
+    document.getElementById('tagApply').onclick=function(){ applyTag(document.getElementById('tagInput').value); };
+    document.getElementById('tagClear').onclick=function(){ applyTag(''); };
+    document.getElementById('tagInput').addEventListener('keydown',function(e){ if(e.key==='Enter') applyTag(this.value); });
+    // chips sugeridos: tags frecuentes del Stock (para reutilizar metatags reales)
+    var SUGGEST=['navidad','oferta','promo','producto','xtanco-valencia','bcn-prensa'];
+    function renderTagChips(){
+      var box=document.getElementById('tagChips'); box.innerHTML='';
+      var cur=curTag();
+      document.getElementById('tagInput').value=cur;
+      SUGGEST.forEach(function(t){ var c=document.createElement('button'); c.className='chip'+(t===cur?' sel':''); c.textContent='#'+t; c.onclick=function(){ applyTag(t); }; box.appendChild(c); });
+    }
+    function refreshTagline(){
+      var cur=curTag();
+      document.getElementById('tagline').textContent = cur ? ('🏷️ filtrando #'+cur) : '';
+    }
+
+    // ── Ahora emitiendo ──
+    async function pollNow(){
+      try{
+        var r = await fetch(NOW_API+'?screen='+encodeURIComponent(T.screen), {cache:'no-store'});
+        var d = await r.json().catch(function(){return null;});
+        var it = d && d.item;
+        document.getElementById('now').textContent = d && d.standby ? '⏻ STANDBY (apagada)' : (it ? (it.title||it.type||'—') : '— sin señal —');
+        refreshTagline();
+      }catch(e){ document.getElementById('now').textContent='—'; }
+    }
+
+    // ── CLI libre ──
+    function cliGo(){ var v=document.getElementById('cliInput').value.trim(); if(v){ send(v); document.getElementById('cliInput').value=''; } }
+    document.getElementById('cliSend').onclick=cliGo;
+    document.getElementById('cliInput').addEventListener('keydown',function(e){ if(e.key==='Enter') cliGo(); });
+
+    setTarget();
+    setInterval(pollNow, 5000);
+  </script>
+</body>
+</html>

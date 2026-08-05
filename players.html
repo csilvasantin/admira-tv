@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Players · Clear Channel · Admira.tv</title>
+  <meta name="description" content="Dos players DOOH de la plataforma Clear Channel emitiendo vía Admira.tv: Instore Media (Xtanco Valencia, interior) y OOH Media (kioskos de prensa de Barcelona, exterior).">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+  <style>
+    :root{
+      --bg:var(--admira-bg,#0a0c12); --elev:var(--admira-bg-elev,#141826);
+      --text:var(--admira-text,#f0e6ff); --muted:var(--admira-text-muted,rgba(216,200,255,.65));
+      --dim:var(--admira-text-dim,rgba(216,200,255,.4));
+      --violet:var(--admira-violet,#aa88ff); --amber:var(--admira-amber,#ffd866);
+      --cyan:var(--admira-cyan,#50c8ff); --green:var(--admira-green,#76b900);
+      --magenta:var(--admira-magenta,#ff4488);
+      --border:var(--admira-border,rgba(170,136,255,.25));
+      --mono:var(--admira-font-mono,ui-monospace,Menlo,monospace);
+      --sans:var(--admira-font-sans,-apple-system,system-ui,sans-serif);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+      background-image:radial-gradient(1200px 600px at 50% -10%,rgba(170,136,255,.10),transparent 60%);
+      min-height:100vh;padding:28px 20px 60px}
+    header.pg{max-width:1180px;margin:0 auto 26px}
+    .kick{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--violet)}
+    h1{font-size:clamp(26px,4vw,40px);margin:.15em 0 .1em;letter-spacing:-.01em}
+    .sub{color:var(--muted);max-width:70ch;line-height:1.5;margin:0}
+    .grid{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:22px}
+    @media(max-width:820px){.grid{grid-template-columns:1fr}}
+    .card{background:var(--elev);border:1px solid var(--border);border-radius:16px;overflow:hidden;
+      display:flex;flex-direction:column}
+    .card.indoor{--ac:var(--cyan)} .card.outdoor{--ac:var(--amber)}
+    .card-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px}
+    .badge{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+      padding:4px 9px;border-radius:999px;border:1px solid var(--ac);color:var(--ac);white-space:nowrap;background:color-mix(in srgb,var(--ac) 12%,transparent)}
+    .card-head h2{margin:0;font-size:19px;line-height:1.2}
+    .card-head .loc{color:var(--muted);font-size:13px;margin-top:2px}
+    .stage{position:relative;background:#000;display:flex;justify-content:center;padding:18px}
+    .frame{position:relative;width:min(300px,72%);aspect-ratio:9/16;border-radius:12px;overflow:hidden;
+      border:1px solid var(--border);box-shadow:0 0 0 1px rgba(0,0,0,.5),0 18px 50px rgba(0,0,0,.5)}
+    .frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+    .live{position:absolute;top:10px;left:10px;z-index:2;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+      background:rgba(0,0,0,.55);padding:3px 8px;border-radius:999px;display:flex;align-items:center;gap:6px;color:#fff}
+    .live b{width:7px;height:7px;border-radius:50%;background:#ff4455;box-shadow:0 0 8px #ff4455;animation:pulse 1.4s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+    .card-body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:12px}
+    .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .screens{display:flex;gap:6px;flex-wrap:wrap}
+    .btn{font-family:var(--mono);font-size:12px;letter-spacing:.04em;padding:8px 12px;border-radius:9px;cursor:pointer;
+      border:1px solid var(--border);background:transparent;color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:7px;transition:.15s}
+    .btn:hover{border-color:var(--ac);color:var(--ac)}
+    .btn.primary{background:color-mix(in srgb,var(--ac) 16%,transparent);border-color:var(--ac);color:var(--ac)}
+    .btn.primary:hover{background:color-mix(in srgb,var(--ac) 26%,transparent)}
+    select{font-family:var(--mono);font-size:12px;padding:8px 10px;border-radius:9px;background:#0d1018;color:var(--text);border:1px solid var(--border)}
+    .meta{color:var(--dim);font-size:12px;font-family:var(--mono);line-height:1.6}
+    .foot{max-width:1180px;margin:26px auto 0;color:var(--dim);font-size:12px;font-family:var(--mono);text-align:center}
+    a.plain{color:var(--violet);text-decoration:none} a.plain:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <header class="pg">
+    <div class="kick">Emitir · Clear Channel × Admira.tv</div>
+    <h1>Dos players en marcha</h1>
+    <p class="sub">Dos pantallas DOOH de la plataforma <b>Clear Channel</b> emitiendo en vivo vía el canal de Admira.tv:
+      un player de <b>publicidad interior</b> (Instore Media) en el Xtanco de Valencia, y otro de <b>publicidad exterior</b>
+      (OOH Media) en los kioskos de prensa de Barcelona. Mismo motor de emisión, distinto circuito.</p>
+  </header>
+
+  <div class="grid">
+    <!-- INDOOR · INSTORE MEDIA -->
+    <section class="card indoor">
+      <div class="card-head">
+        <span class="badge">Publicidad interior</span>
+        <div>
+          <h2>Instore Media</h2>
+          <div class="loc">📍 Xtanco Valencia · estanco · 4 pantallas A·B·C·D</div>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="frame">
+          <span class="live"><b></b>EN VIVO</span>
+          <iframe id="fIn" title="Player Xtanco Valencia" allow="autoplay; fullscreen"></iframe>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row"><span class="meta">Pantalla:</span>
+          <div class="screens" id="scrIn"></div>
+        </div>
+        <div class="row">
+          <a class="btn primary" id="fsIn" target="_blank" rel="noopener">⛶ Abrir a pantalla completa (kiosk)</a>
+        </div>
+        <div class="meta">circuit=<b>xtanco-valencia</b> · proof-of-play → api.admira.store/emit · parrilla por pantalla → /grid</div>
+      </div>
+    </section>
+
+    <!-- OUTDOOR · OOH MEDIA -->
+    <section class="card outdoor">
+      <div class="card-head">
+        <span class="badge">Publicidad exterior · DOOH</span>
+        <div>
+          <h2>OOH Media</h2>
+          <div class="loc">📍 Kioskos de prensa · Barcelona · 100 puntos · 1080×1920</div>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="frame">
+          <span class="live"><b></b>EN VIVO</span>
+          <iframe id="fOut" title="Player Kioskos Barcelona" allow="autoplay; fullscreen"></iframe>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row"><span class="meta">Kiosko:</span>
+          <select id="selOut" aria-label="Elegir kiosko"></select>
+        </div>
+        <div class="row">
+          <a class="btn primary" id="fsOut" target="_blank" rel="noopener">⛶ Abrir a pantalla completa (kiosk)</a>
+        </div>
+        <div class="meta">circuit=<b>bcn-kiosk-NNN</b> · publicidad exterior · horario 08:00–22:00 · prensa + programática</div>
+      </div>
+    </section>
+  </div>
+
+  <p class="foot">Motor de emisión: <a class="plain" href="/canal.html" target="_blank">canal.html</a> · inventario y venta en
+    <a class="plain" href="https://www.clearchannel.tv" target="_blank">clearchannel.tv</a> · gemelos 3D en
+    <a class="plain" href="https://www.pixeria.com/xpacios/" target="_blank">pixeria.com/xpacios</a></p>
+
+  <script>
+    var CANAL = '/canal.html';
+    function url(circuit, screen, extra){
+      var p = 'circuit='+encodeURIComponent(circuit)+'&screen='+encodeURIComponent(screen);
+      return CANAL+'?'+p+(extra||'');
+    }
+    // ── INDOOR: Xtanco Valencia, pantallas A/B/C/D ──
+    var vScreens = ['a','b','c','d'];
+    var vSel = 'a';
+    function renderIn(){
+      document.getElementById('fIn').src = url('xtanco-valencia','xtanco-valencia-'+vSel,'&embed=mupi&clean=1&muted=1');
+      document.getElementById('fsIn').href = url('xtanco-valencia','xtanco-valencia-'+vSel,'&embed=mupi&kiosk=1');
+      var box = document.getElementById('scrIn'); box.innerHTML='';
+      vScreens.forEach(function(s){
+        var b=document.createElement('button'); b.className='btn'+(s===vSel?' primary':'');
+        b.textContent=s.toUpperCase();
+        b.onclick=function(){ vSel=s; renderIn(); };
+        box.appendChild(b);
+      });
+    }
+    // ── OUTDOOR: kioskos Barcelona 001–100 ──
+    var sel = document.getElementById('selOut');
+    for(var i=1;i<=100;i++){
+      var n=('000'+i).slice(-3); var o=document.createElement('option');
+      o.value=n; o.textContent='bcn-kiosk-'+n+' · Barcelona'; sel.appendChild(o);
+    }
+    function renderOut(){
+      var n=sel.value;
+      document.getElementById('fOut').src = url('bcn-kiosk-'+n,'bcn-kiosk-'+n+'-led','&embed=mupi&clean=1&muted=1');
+      document.getElementById('fsOut').href = url('bcn-kiosk-'+n,'bcn-kiosk-'+n+'-led','&embed=mupi&kiosk=1');
+    }
+    sel.onchange=renderOut;
+    renderIn(); renderOut();
+  </script>
+</body>
+</html>

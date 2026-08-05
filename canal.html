@@ -419,7 +419,10 @@ const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=
 
 function clock(){ const d=new Date(); $('clock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 clock(); setInterval(clock,1000);
-function setLive(t,ok){ liveEl.textContent=t; liveEl.style.color=ok?'var(--air)':'#ff8e3c'; }
+// En STANDBY el rótulo NO se deja pisar por el feed («CONDICIONAL · 62 en loop» sobre una
+// pantalla apagada engaña al operador). _standby es `var` a propósito: se declara más abajo
+// y aquí se lee antes → con let daría TDZ.
+function setLive(t,ok){ if(_standby && !/STANDBY/.test(t)){ t='STANDBY · pantalla apagada'; ok=false; } liveEl.textContent=t; liveEl.style.color=ok?'var(--air)':'#ff8e3c'; }
 function madridSlot(){ let h=12; try{ h=+new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ h=new Date().getHours(); } return h<12?'manana':h<16?'mediodia':h<21?'tarde':'noche'; }
 function screenLbl(){ $('screenLbl').textContent = scr.name ? ('📍 '+scr.name+(scr.screen?(' · '+scr.screen):'')) : (scr.screen?('📍 '+scr.screen):''); const nc=$('nocirc'); if(nc) nc.classList.toggle('show', !scr.circuit); }
 function normTag(v){ return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
@@ -739,6 +742,30 @@ function signageNowPush(it){
     title:(it.title||it.prompt||'').slice(0,80), dur:(it._dur||0), startedAt:now, ts:now, aud:_lastAud };
   _nowItem=item; _postNow(item);
   if(!_nowKeep) _nowKeep=setInterval(()=>{ if(!_nowItem) return; _nowItem.ts=Date.now(); _postNow(_nowItem); }, 60000);
+}
+// ── STANDBY / BLACKOUT remoto: apaga la pantalla (negro + pausa) SIN cerrar la app.
+// Persistente: si la pantalla reinicia estando en standby, arranca apagada hasta que
+// reciba 'resume'. Se controla desde admira.live/control y desde el mando (vía
+// /locations/cmd, que ya sondean todos los players: mac/win/linux/ios/android).
+// El heartbeat sigue latiendo con standby:true → la pantalla NO se cuenta como caída.
+var _standby=false, _sbKeep=null;   // var (no let): setLive lo consulta antes de esta línea
+function _postStandby(){ try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
+  body:JSON.stringify({ screen:scr.screen, standby:true, loc:scr.circuit||'', locName:scr.name||scr.circuit||'', machine:scr.machine||'', ts:Date.now() })}).catch(()=>{}); }catch(_){} }
+function standbyOn(on){
+  on=!!on; _standby=on; save('adtv_standby', on?'1':'0');
+  let ov=document.getElementById('standby-ov');
+  if(on){
+    if(!ov){ ov=document.createElement('div'); ov.id='standby-ov';
+      ov.style.cssText='position:fixed;inset:0;z-index:2147483646;background:#000;'; document.body.appendChild(ov); }
+    setPaused(true); _nowItem=null;               // deja de espejar el asset
+    _postStandby(); if(!_sbKeep) _sbKeep=setInterval(_postStandby, 60000);
+    setLive('STANDBY · pantalla apagada', false);
+  } else {
+    if(ov) ov.remove();
+    if(_sbKeep){ clearInterval(_sbKeep); _sbKeep=null; }
+    setPaused(false); seenSig='';
+    try{ loadFeed(true); }catch(_){} rebuild(true);   // reanuda emisión
+  }
 }
 // ── /control/playlist → MANDO GRÁFICO: publica la playlist efectiva para que
 // remotecontrol la pinte por equipo y permita saltar a un item con goto-<n>.
@@ -1108,6 +1135,7 @@ function cacheBadge(){ if(qs.get('cachehud')!=='1') return;
 }
 
 async function play(i, forced){
+  if(_standby) return;              // en standby no se reproduce nada (ni audio detrás del negro)
   const _tok=++_playTok;
   clearTimeout(timer); stopBar(); bar.style.width='0'; mediaEl=null; usesAdv=false;
   paused=false; document.body.classList.remove('paused'); $('pause').textContent='⏸';
@@ -1172,6 +1200,24 @@ async function play(i, forced){
       try{ v.muted=true; v.play().then(()=>tap.classList.remove('show')).catch(()=>tap.classList.add('show')); }catch(_){ tap.classList.add('show'); }
     });
     if(syncOn) timer=setTimeout(next,syncRemainingMs());
+    // Watchdog de DECODIFICACIÓN (MediaTek/Android de gama baja): esos decoders no tragan
+    // H.264 Main/High ni B-frames → liberan el codec en bucle y la pantalla queda NEGRA
+    // (el audio sí suena, por eso no salta ningún onerror). Si tras 3,5 s no se ha
+    // decodificado NINGÚN frame, caemos a la miniatura y avanzamos como imagen: nunca negro.
+    // Impacto cero en players sanos (frames>0 → no hace nada). Ver memoria stock-codec-mediatek.
+    setTimeout(()=>{
+      if(_tok!==_playTok || !mediaEl || mediaEl!==v) return;
+      let frames=0; try{ frames=(v.getVideoPlaybackQuality?v.getVideoPlaybackQuality().totalVideoFrames:(v.webkitDecodedFrameCount||0))||0; }catch(_){}
+      if(frames>0) return;                 // decodifica bien → nada que hacer
+      try{ console.warn('[canal] watchdog decode: 0 frames en 3,5s →', it&&it.id, '· caigo a miniatura'); }catch(_){}
+      try{ v.pause(); v.removeAttribute('src'); v.load(); v.remove(); }catch(_){}
+      mediaEl=null;
+      const poster=it.thumbnail||it.thumb||it.poster||((it.type==='image'||it.type==='animation')?it.url:'');
+      stage.innerHTML='';
+      if(poster){ const im=document.createElement('img'); im.src=poster; im.alt=title; stage.appendChild(im); }
+      else { const dv=document.createElement('div'); dv.className='empty'; dv.textContent='▣ '+title; stage.appendChild(dv); }
+      startAdv(syncOn?syncRemainingMs():Math.max(4,(it._previewSec||cfg.imgSec))*1000);   // avanza como imagen
+    }, 3500);
   } else if(k==='image'){
     const im=document.createElement('img'); try{ im.crossOrigin='anonymous'; }catch(_){}   // capturable si trae CORS; si no, onerror recarga sin crossorigin
     let _coRetryI=false;
@@ -1411,6 +1457,8 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   const playTag=parsePlayTag(v,cmd);
   if(playTag){ const n=applyPlayTag(playTag); flashCli('▶ tag '+canonicalPlayTag(playTag)+' · '+n+' assets'); return; }
   if(cmd==='reload'){ seenSig=''; loadFeed(true); rebuild(true); flashCli('↻ feed recargado'); return; }
+  if(cmd==='standby'||cmd==='blackout'||cmd==='apagar'||cmd==='stop'||cmd==='parar'||cmd==='off'){ standbyOn(true); flashCli('⏻ standby (apagada)'); return; }
+  if(cmd==='resume'||cmd==='wake'||cmd==='wakeup'||cmd==='reanudar'||cmd==='encender'||cmd==='standbyoff'){ standbyOn(false); flashCli('▶ reanudada'); return; }
   if(cmd==='vertical'||cmd==='portrait'){ seg.tag='vertical'; seg.format='9:16'; applyCliSegment('✓ vertical 9:16'); return; }
   if(cmd==='tag'){ seg.tag=canonicalPlayTag(rest||''); applyCliSegment('✓ tag '+(seg.tag||'all')); return; }
   if(cmd==='medio'||cmd==='media'){
@@ -2268,6 +2316,9 @@ if(PREVIEW.on){
   loadFeed(true); restartFeed();
   // Al recuperar la red, refresca el catálogo de inmediato (no espera al ciclo de 30s).
   try{ window.addEventListener('online', ()=>{ try{ loadFeed(true); }catch(_){} }); }catch(_){}
+  // Si la pantalla quedó en STANDBY antes de reiniciar, arranca apagada hasta recibir 'resume'
+  // (un corte de luz en un kiosko no debe reencender la pantalla que el operador apagó).
+  try{ if(LS('adtv_standby','0')==='1') standbyOn(true); }catch(_){}
   wireCam(); loadGrid(); setInterval(loadGrid, 60000);
   startPositionBeat();   // equipos móviles (robot/taxi/bus): latido de posición
   // pseudo-streaming: pre-descarga la playlist a disco y reporta el estado al worker
@@ -2298,17 +2349,22 @@ pollMode(); setInterval(pollMode, 12000);
 
 // ── CONTROL REMOTO POR COMANDOS: el CMS encola (next/prev/audio/volume…) y este
 //   player los ejecuta con su propio runCli. Ignora el backlog al arrancar.
-const CMD_API='https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd';
+// El host PRIMARIO es el dominio propio (api.admira.store proxea al mismo worker):
+// varios ISP españoles bloquean *.workers.dev (188.114.96.0/22) y los players DOOH
+// están precisamente en España → con el workers.dev directo se quedaban sordos al mando.
+// Si el proxy fallara, rota al workers.dev en el siguiente sondeo (nunca sin control).
+const CMD_HOSTS=['https://api.admira.store/locations/cmd','https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd'];
+let __cmdHost=0;
 let __cmdSince=0, __cmdInit=false;
 function pollCmd(){
   if(!scr.circuit) return;
-  fetch(CMD_API+'?id='+encodeURIComponent(scr.circuit)+'&since='+__cmdSince+'&t='+Date.now(),{cache:'no-store'})
-    .then(r=>r.ok?r.json():null).then(d=>{
+  fetch(CMD_HOSTS[__cmdHost]+'?id='+encodeURIComponent(scr.circuit)+'&since='+__cmdSince+'&t='+Date.now(),{cache:'no-store'})
+    .then(r=>r.ok?r.json():Promise.reject(new Error('http '+r.status))).then(d=>{
       if(!d) return;
       if(!__cmdInit){ __cmdSince=d.seq||0; __cmdInit=true; return; }   // no re-ejecutar comandos viejos al recargar
       if(!Array.isArray(d.commands)) return;
       for(const c of d.commands){ if(c.cid>__cmdSince) __cmdSince=c.cid; try{ runCli(String(c.cmd)); }catch(_){} }
-    }).catch(()=>{});
+    }).catch(()=>{ __cmdHost=(__cmdHost+1)%CMD_HOSTS.length; });   // host caído/bloqueado → prueba el otro
 }
 pollCmd(); setInterval(pollCmd, 3000);
 

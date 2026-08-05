@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Kiosko Prensa · Clear Channel</title>
+  <!-- Tótem DOOH a pantalla completa para iPhone/iPad: envuelve el player canal.html
+       en modo kiosko, con metas de PWA standalone (Añadir a inicio → sin barras de
+       Safari) y Screen Wake Lock (la pantalla no se apaga). -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kiosko BCN">
+  <meta name="theme-color" content="#000000">
+  <link rel="manifest" href="/totem.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/favicon.svg">
+  <style>
+    html,body{margin:0;height:100%;width:100%;background:#000;overflow:hidden;
+      -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+    #p{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;border:0;background:#000}
+    /* cortina inicial hasta que el player carga */
+    #splash{position:fixed;inset:0;background:#000;color:#8ab;display:flex;align-items:center;
+      justify-content:center;font:600 14px ui-monospace,Menlo,monospace;letter-spacing:.12em;
+      z-index:2;transition:opacity .6s;text-transform:uppercase}
+    #splash.hide{opacity:0;pointer-events:none}
+  </style>
+</head>
+<body>
+  <div id="splash">◐ Kiosko Clear Channel…</div>
+  <iframe id="p" allow="autoplay; fullscreen" allowfullscreen></iframe>
+  <script>
+    // ── Kiosko destino: ?n=NNN (default 001) o ?screen=/?circuit= explícitos ──
+    var qs = new URLSearchParams(location.search);
+    var n  = (qs.get('n') || '001').replace(/[^0-9]/g,''); n = ('000'+n).slice(-3);
+    var circuit = qs.get('circuit') || ('bcn-kiosk-' + n);
+    var screen  = qs.get('screen')  || ('bcn-kiosk-' + n + '-led');
+    var sound   = qs.get('sound') === '1';           // por defecto silenciado (autoplay iOS)
+    var src = '/canal.html?circuit=' + encodeURIComponent(circuit)
+            + '&screen='  + encodeURIComponent(screen)
+            + '&embed=mupi&clean=1&chrome=0&kiosk=1'
+            + (sound ? '' : '&muted=1');
+    var f = document.getElementById('p');
+    f.src = src;
+    f.addEventListener('load', function(){ setTimeout(function(){ document.getElementById('splash').classList.add('hide'); }, 900); });
+
+    // ── Screen Wake Lock: la pantalla no se duerme; se reengancha al volver ──
+    var wl = null;
+    async function lock(){
+      try{ if('wakeLock' in navigator){ wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', function(){ wl=null; }); } }catch(e){}
+    }
+    document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ lock(); } });
+    lock();
+    // primer gesto → asegura wake lock + (si sound) desmutea el iframe recargando con sound
+    document.body.addEventListener('click', function(){ lock(); }, {once:false});
+  </script>
+</body>
+</html>

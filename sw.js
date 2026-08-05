@@ -24,12 +24,16 @@
 // Ahora cada publicación cambia este literal → el navegador ve que sw.js ha
 // cambiado → install + activate → la despensa vieja se tira entera.
 // Lo mantiene al día ./deploy.sh, que ABORTA si no coincide con el sello.
-const CACHE = 'admira-shell-v.04.08.2026.r8.20:52';
+const CACHE = 'admira-shell-v.05.08.2026.r1.17:34';
 
 // Shell del canal: la HTML canónica + sus assets críticos same-origin.
 const SHELL = [
   '/',
   '/canal',
+  // El tótem (kiosko iPhone/iPad de los kioskos de prensa) es la OTRA página que tiene
+  // que arrancar sin red tras un reinicio: es solo un envoltorio de /canal, pero si su
+  // HTML no está en caché el kiosko se queda en blanco aunque el canal sí esté en disco.
+  '/totem',
   '/favicon.svg',
   '/admira-nav.js',
   '/xpl-runtime.js',

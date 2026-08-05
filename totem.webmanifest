@@ -1,0 +1,14 @@
+{
+  "name": "Kiosko Prensa · Clear Channel",
+  "short_name": "Kiosko BCN",
+  "description": "Tótem DOOH exterior — kiosko de prensa de Barcelona emitiendo vía Admira.tv.",
+  "start_url": "/totem.html?n=001",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
