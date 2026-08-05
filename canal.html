@@ -1468,6 +1468,15 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   const playTag=parsePlayTag(v,cmd);
   if(playTag){ const n=applyPlayTag(playTag); flashCli('▶ tag '+canonicalPlayTag(playTag)+' · '+n+' assets'); return; }
   if(cmd==='reload'){ seenSig=''; loadFeed(true); rebuild(true); flashCli('↻ feed recargado'); return; }
+  // RECARGA DE LA PÁGINA (no del feed): sin esto, una pantalla en un escaparate se quedaba
+  // con la versión del canal que cargó al encenderse y NO había forma de darle una nueva sin
+  // ir físicamente. El SW es network-first, así que al recargar coge el release publicado.
+  // Se deja fuera de 'reload' a propósito: cortar la emisión es más caro que refrescar el feed.
+  if(cmd==='hardreload'||cmd==='recargar'||cmd==='reiniciar'||cmd==='actualizar'){
+    flashCli('↻ recargando la página…');
+    setTimeout(()=>{ try{ location.reload(); }catch(_){} }, 400);   // da tiempo al ack del comando
+    return;
+  }
   if(cmd==='standby'||cmd==='blackout'||cmd==='apagar'||cmd==='stop'||cmd==='parar'||cmd==='off'){ standbyOn(true); flashCli('⏻ standby (apagada)'); return; }
   if(cmd==='resume'||cmd==='wake'||cmd==='wakeup'||cmd==='reanudar'||cmd==='encender'||cmd==='standbyoff'){ standbyOn(false); flashCli('▶ reanudada'); return; }
   if(cmd==='vertical'||cmd==='portrait'){ seg.tag='vertical'; seg.format='9:16'; applyCliSegment('✓ vertical 9:16'); return; }
