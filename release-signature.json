@@ -1,6 +1,6 @@
 {
-  "version": "v.05.08.2026.r4.18:24",
+  "version": "v.05.08.2026.r5.18:35",
   "deployer": "NeoMBP16",
-  "machine": "MBP16",
-  "signature": "NeoMBP16 · MBP16"
+  "machine": "MacBookPro16",
+  "signature": "NeoMBP16 · MacBookPro16"
 }
