@@ -408,12 +408,18 @@ let syncTimeOffset=0;
 const SYNC_API='https://omnipublicity-api.csilvasantin.workers.dev/sync/state';
 let SYNC_REMOTE=null, syncStateTimer=null;
 function fetchSyncState(){
-  fetch(SYNC_API+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+  fetch(SYNC_API+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('http '+r.status))).then(d=>{
     if(d&&Array.isArray(d.items)&&d.items.length){
       SYNC_REMOTE={ items:d.items, slotMs:d.slotMs||20000, offset:(d.serverNow||Date.now())-Date.now() };
       if(syncOn) rebuild(true);
     }
-  }).catch(()=>{});
+  }).catch(e=>{
+    // Nunca corta la emisión, pero deja rastro: sin máster la pantalla ordena por su cuenta
+    // y la "sincro" es falsa. OJO: SYNC_API cuelga de un *.workers.dev sin proxy en el dominio
+    // propio (api.admira.store da 404 en /sync/state), y ese host lo bloquean algunos ISP.
+    try{ console.warn('[canal] sincro sin máster:', SYNC_API, String(e&&e.message||e)); }catch(_){}
+    if(syncOn) try{ setLive('SINCRO SIN MÁSTER · '+playlist.length+' en loop · orden propio', false); }catch(_){}
+  });
 }
 const $ = id => document.getElementById(id);
 const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=$('bar'), tap=$('tap');
@@ -1283,7 +1289,12 @@ function rebuild(restart){
   playlist=syncOn ? syncMasterOrder() : all.filter(matches).slice(0,Math.max(1,cfg.max));
   if(syncOn){
     $('segCount').textContent=playlist.length+' desde '+SYNC_MASTER;
-    setLive('SINCRO CANAL · '+playlist.length+' en loop', playlist.length>0);
+    // Decir SINCRO CANAL sin el máster es mentir: sin SYNC_REMOTE la pantalla ordena por su
+    // cuenta (defaultOrder) y dos pantallas "en sincro" emiten cosas distintas — pasó hoy entre
+    // el Fold y el iPhone y no había forma de verlo, porque fetchSyncState falla en silencio.
+    setLive(SYNC_REMOTE ? ('SINCRO CANAL · '+playlist.length+' en loop')
+                        : ('SINCRO SIN MÁSTER · '+playlist.length+' en loop · orden propio'),
+            playlist.length>0 && !!SYNC_REMOTE);
     renderChan();
     play(syncIndex());
     return;
