@@ -684,6 +684,79 @@ function fitMupi(){ const mupi=$('mupi'); if(!mupi) return;
   mupi.style.height=Math.round(h)+'px'; mupi.style.width=Math.round(w)+'px'; mupi.style.aspectRatio='auto';
 }
 window.addEventListener('resize',fitMupi);
+
+// ── CONTENIDO EXPANDIDO (pantallas plegables) ───────────────────────────────────────
+// Un plegable tiene dos pantallas de relación de aspecto muy distinta: cerrado es ultra
+// vertical y abierto casi cuadrado. Al desplegarlo, una pieza pensada para 9:16 se ve
+// ridícula — y es justo el instante en que el espectador está mirando. Cuando la pantalla
+// CRECE de verdad, el canal cambia de segmento y emite lo etiquetado para el formato
+// grande; al plegarlo vuelve exactamente a lo que estaba emitiendo, sincro incluida.
+//
+// AUTOLIMITADO A PROPÓSITO: si no hay NI UNA pieza con la etiqueta, no toca nada. Una
+// pantalla fija jamás cambia de tamaño, así que esto no existe para ella aunque venga
+// activado por defecto.
+// ?expand=0 lo apaga · ?expandTag= la etiqueta (por defecto «expandido») · ?expandAR= el
+// umbral de relación de aspecto que se considera abierto (0,7 por defecto).
+const EXPAND_ON  = !/^(0|off|false|no)$/i.test(String(qs.get('expand')??'1'));
+const EXPAND_TAG = canonicalPlayTag(qs.get('expandTag')||'expandido');
+const EXPAND_AR  = (()=>{ const n=parseFloat(qs.get('expandAR')||''); return isFinite(n)&&n>0?n:0.7; })();
+let _expOpen=null, _expPrev=null, _expWarned=false;
+function expandDisponibles(){
+  try{ return all.filter(it=>matchesSeg(it,Object.assign({},seg,{tag:EXPAND_TAG}))).length; }catch(_){ return 0; }
+}
+// Devuelve la pantalla a lo que emitía antes de desplegarse (segmento y sincro incluidas).
+function expandRestaurar(){
+  if(!_expPrev) return;
+  const previo=_expPrev; _expPrev=null;
+  seg.tag=previo.tag; syncSegPanel(); seenSig='';
+  if(previo.sync) setAdmiraSync(true); else rebuild(true);
+}
+// Defensa por si una versión anterior dejó la etiqueta expandida PERSISTIDA en el segmento
+// guardado: al arrancar se limpia, para que ninguna pantalla despierte con un loop vacío.
+if(EXPAND_ON && canonicalPlayTag(seg.tag)===EXPAND_TAG){ seg.tag=''; save('adtv_seg',JSON.stringify(seg)); }
+function expandCheck(){
+  if(!EXPAND_ON || (typeof PREVIEW!=='undefined' && PREVIEW.on)) return;
+  const abierto = (window.innerWidth/Math.max(1,window.innerHeight)) >= EXPAND_AR;
+  if(abierto===_expOpen) return;
+  if(abierto){
+    const n=expandDisponibles();
+    _expOpen=true;
+    if(!n){   // desplegada pero no hay nada etiquetado: mejor seguir emitiendo que quedarse en blanco
+      if(!_expWarned){ _expWarned=true; try{ console.warn('[canal] pantalla desplegada sin contenido «'+EXPAND_TAG+'»: sigo con el segmento normal'); }catch(_){} }
+      return;
+    }
+    _expPrev={ tag:seg.tag, sync:syncOn };
+    // EFÍMERO A PROPÓSITO: el segmento expandido NO se guarda en disco. Si se persistiera,
+    // una pantalla que se reinicia estando abierta volvería con el segmento expandido — y si
+    // ese segmento está vacío, arranca NEGRA. Por eso aquí no hay save() y no se usa
+    // applyPlayTag (que sí persiste). La sincro se apaga porque ignora la segmentación.
+    disableAdmiraSync();
+    seg.tag=EXPAND_TAG; syncSegPanel(); seenSig=''; rebuild(true);
+    // RED DE SEGURIDAD: si el segmento expandido se queda VACÍO (el catálogo se refrescó
+    // entre la comprobación y el cambio, o alguien quitó la etiqueta), deshacer al instante.
+    // Abrir un plegable jamás puede apagar el escaparate: prefiero el contenido normal.
+    if(!playlist.length){
+      try{ console.warn('[canal] segmento «'+EXPAND_TAG+'» vacío al desplegar: vuelvo al normal'); }catch(_){}
+      expandRestaurar();
+      return;
+    }
+    setLive('EXPANDIDO · '+playlist.length+' en loop', true);
+  } else {
+    _expOpen=false;
+    expandRestaurar();
+  }
+}
+// No basta con escuchar 'resize': al desplegar, Android puede recrear la actividad (y el
+// evento no llega nunca) y algunos WebView lo emiten a destiempo. En una pantalla que vive
+// días, un sondeo de la relación de aspecto cada 2 s cuesta nada y no se pierde el momento.
+const _expRearm=()=>{ clearTimeout(expandCheck._t); expandCheck._t=setTimeout(expandCheck,400); };
+window.addEventListener('resize',_expRearm);
+window.addEventListener('orientationchange',_expRearm);
+try{ if(window.visualViewport) visualViewport.addEventListener('resize',_expRearm); }catch(_){}
+try{ if(navigator.devicePosture) navigator.devicePosture.addEventListener('change',_expRearm); }catch(_){}
+setInterval(expandCheck,2000);
+setTimeout(expandCheck,3000);   // primer chequeo cuando ya hay catálogo
+
 // ── PROOF-OF-PLAY → "Informe de emisión" en clearchannel.tv (worker pixer-eleven) ──
 // Cada pase suma al acumulado del día de ESTA pantalla (localStorage) y, con debounce,
 // lo manda entero a /emit (cumulativo, sin carreras). Solo se imputa si la pantalla
