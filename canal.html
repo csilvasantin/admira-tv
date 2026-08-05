@@ -385,6 +385,7 @@ if(playoutMode==='conditional') syncOn=false;
 // el boot y pollMode no obedece cambios de modo remotos (ver pollMode). El
 // gobierno remoto vuelve al relanzar la pantalla sin ?tag=.
 const URL_TAG=(qs.get('tag')||'').toLowerCase().trim();
+let _liveMode=false;  // modo pedido EN VIVO por el operador (cmd sincro/local/condicional/modo) — manda sobre pollMode
 let _liveTag=false;   // tag puesto EN VIVO desde el mando (cmd tag-<lista>) — misma doctrina
 if(URL_TAG && modeParam==null && syncParam==null){ syncOn=false; playoutMode='local'; }
 // El previo de borrador manda: nunca sincro ni condicional, es un bucle local fiel.
@@ -1427,18 +1428,28 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='audiooff'||cmd==='soundoff'||cmd==='muteoff'||(cmd==='audio'&&rest.toLowerCase()==='off')){ setAudio(false); flashCli('🔇 audio off'); return; }
   if(cmd==='mute'||cmd==='muted'){ setAudio(rest==='0'); flashCli(rest==='0'?'🔊 audio on':'🔇 audio off'); return; }
   if(cmd==='volume'||cmd==='vol'){ let v=parseFloat(rest); if(v>1) v=v/100; v=Math.max(0,Math.min(1, isNaN(v)?volume:v)); volume=v; muted=(v<=0); applyAudio(); if(!muted&&mediaEl&&mediaEl.play&&!paused) mediaEl.play().catch(()=>{}); flashCli('🔊 '+Math.round(v*100)+'%'); return; }
+  // MODO PEDIDO POR EL OPERADOR: manda más que el gobierno remoto. Sin esto, poner una
+  // pantalla en sincro desde el mando duraba 12 s — pollMode leía el modo del circuito
+  // (p.ej. 'conditional') y lo deshacía. Misma doctrina que _liveTag/URL_TAG: la orden
+  // manual bloquea pollMode hasta que se devuelve la pantalla al gobierno remoto con
+  // /modo auto. Se libera solo al recargar (nada persistente que se quede olvidado).
+  if(cmd==='modo'||cmd==='mode'){
+    const m=rest.toLowerCase().trim();
+    if(!m||/^(auto|remoto|remote)$/.test(m)){ _liveMode=false; flashCli('◆ modo: gobierno remoto'); pollMode(); return; }
+    _liveMode=true; setAdmiraMode(m); flashCli('◆ modo fijado: '+playoutMode+' (manda el operador)'); return;
+  }
   if(cmd==='admiratv'){
     const mode=rest.toLowerCase();
-    if(['sincro','sync','sincronizado'].includes(mode)){ setAdmiraMode('sync'); return; }
-    if(['cond','condicional','conditional','xpl'].includes(mode)){ setAdmiraMode('conditional'); return; }
-    if(['local','off'].includes(mode)){ setAdmiraMode('local'); return; }
+    if(['sincro','sync','sincronizado'].includes(mode)){ _liveMode=true; setAdmiraMode('sync'); return; }
+    if(['cond','condicional','conditional','xpl'].includes(mode)){ _liveMode=true; setAdmiraMode('conditional'); return; }
+    if(['local','off'].includes(mode)){ _liveMode=true; setAdmiraMode('local'); return; }
     flashCli('uso: /admiraTV sincro|condicional|local');
     return;
   }
-  if(cmd==='admiratvsincro'||cmd==='admiratvsync'||cmd==='sincro'||cmd==='sync'){ setAdmiraMode(/^(off|0|false|no|local)$/i.test(rest)?'local':'sync'); return; }
-  if(cmd==='admiratvcondicional'||cmd==='admiratvconditional'||cmd==='condicional'||cmd==='conditional'||cmd==='xpl'){ setAdmiraMode('conditional'); return; }
-  if(cmd==='admiratvlocal'||cmd==='local'){ setAdmiraMode('local'); return; }
-  if(cmd==='admiratvsincrooff'||cmd==='sincrooff'||cmd==='syncoff'){ setAdmiraMode('local'); return; }
+  if(cmd==='admiratvsincro'||cmd==='admiratvsync'||cmd==='sincro'||cmd==='sync'){ _liveMode=true; setAdmiraMode(/^(off|0|false|no|local)$/i.test(rest)?'local':'sync'); return; }
+  if(cmd==='admiratvcondicional'||cmd==='admiratvconditional'||cmd==='condicional'||cmd==='conditional'||cmd==='xpl'){ _liveMode=true; setAdmiraMode('conditional'); return; }
+  if(cmd==='admiratvlocal'||cmd==='local'){ _liveMode=true; setAdmiraMode('local'); return; }
+  if(cmd==='admiratvsincrooff'||cmd==='sincrooff'||cmd==='syncoff'){ _liveMode=true; setAdmiraMode('local'); return; }
   if(cmd==='playcamera'||cmd==='camera'){ camStart(); flashCli('📷 camera on'); return; }
   if(cmd==='stopcamera'||cmd==='camerastop'){ camStop(); flashCli('📷 camera off'); return; }
   // recarga la matriz de segmentación YA (no espera al poll de 15s) y precachea lo nuevo
@@ -1543,18 +1554,20 @@ window.addEventListener('message',event=>{
     else if(cmd==='audiooff'||cmd==='soundoff'||cmd==='mute'){ setAudio(false); msg='🔇 audio off'; }
     else if(cmd==='admiratv'){
       const rest=raw.replace(/^\s*\/?\S+\s*/,'').trim().toLowerCase();
-      if(['sincro','sync','sincronizado'].includes(rest)){ setAdmiraMode('sync'); msg='🔗 admiraTVsincro'; }
-      else if(['cond','condicional','conditional','xpl'].includes(rest)){ setAdmiraMode('conditional'); msg='◆ admiraTVcondicional'; }
-      else if(['local','off'].includes(rest)){ setAdmiraMode('local'); msg='● admiraTVlocal'; }
+      // el modo pedido por el mando también bloquea pollMode (_liveMode): si no, el
+      // gobierno remoto del circuito lo deshacía a los 12 s.
+      if(['sincro','sync','sincronizado'].includes(rest)){ _liveMode=true; setAdmiraMode('sync'); msg='🔗 admiraTVsincro'; }
+      else if(['cond','condicional','conditional','xpl'].includes(rest)){ _liveMode=true; setAdmiraMode('conditional'); msg='◆ admiraTVcondicional'; }
+      else if(['local','off'].includes(rest)){ _liveMode=true; setAdmiraMode('local'); msg='● admiraTVlocal'; }
       else { ok=false; msg='usage: /admiraTV sincro|condicional|local'; }
     }
     else if(cmd==='admiratvsincro'||cmd==='admiratvsync'||cmd==='sincro'||cmd==='sync'){
       const rest=raw.replace(/^\s*\/?\S+\s*/,'').trim();
-      setAdmiraMode(/^(off|0|false|no|local)$/i.test(rest)?'local':'sync');
+      _liveMode=true; setAdmiraMode(/^(off|0|false|no|local)$/i.test(rest)?'local':'sync');
       msg=syncOn?'🔗 admiraTVsincro':'● admiraTVlocal';
     }
-    else if(cmd==='admiratvcondicional'||cmd==='admiratvconditional'||cmd==='condicional'||cmd==='conditional'||cmd==='xpl'){ setAdmiraMode('conditional'); msg='◆ admiraTVcondicional'; }
-    else if(cmd==='admiratvlocal'||cmd==='local'||cmd==='admiratvsincrooff'||cmd==='sincrooff'||cmd==='syncoff'){ setAdmiraMode('local'); msg='● admiraTVlocal'; }
+    else if(cmd==='admiratvcondicional'||cmd==='admiratvconditional'||cmd==='condicional'||cmd==='conditional'||cmd==='xpl'){ _liveMode=true; setAdmiraMode('conditional'); msg='◆ admiraTVcondicional'; }
+    else if(cmd==='admiratvlocal'||cmd==='local'||cmd==='admiratvsincrooff'||cmd==='sincrooff'||cmd==='syncoff'){ _liveMode=true; setAdmiraMode('local'); msg='● admiraTVlocal'; }
     else if(parsePlayTag(raw,cmd)){ const tag=parsePlayTag(raw,cmd); const n=applyPlayTag(tag); msg='▶ tag '+canonicalPlayTag(tag)+' · '+n+' assets'; }
     else if(cmd==='play'||/^play\d+$/.test(cmd)){ runCli(raw); msg='▶ '+raw.replace(/^\//,''); }
     else { ok=false; msg='unsupported command'; }
@@ -2332,12 +2345,14 @@ if(PREVIEW.on){
 // ── MODO REMOTO: el CMS fija el modo de emisión de ESTE equipo y el player reacciona.
 //   sync = lo que manda admira.tv (red sincronizada) · local = su programación ·
 //   conditional = lo que dicta su cámara/contexto. Poleteo del modo asignado.
-const MODE_API='https://omnipublicity-api.csilvasantin.workers.dev/locations/mode';
+// Dominio propio primero, como en el canal de comandos: los ISP españoles bloquean
+// *.workers.dev y estos players están en España (api.admira.store proxea al mismo worker).
+const MODE_API='https://api.admira.store/locations/mode';
 function pollMode(){
   if(!scr.circuit) return;   // sólo equipos registrados (con circuito/id)
   // Un modo bloqueado por la integración, URL_TAG o tag EN VIVO = decisión
   // explícita del operador: esta pantalla no obedece cambios de modo remotos.
-  if(MODE_LOCK||URL_TAG||_liveTag) return;
+  if(MODE_LOCK||URL_TAG||_liveTag||_liveMode) return;
   fetch(MODE_API+'?id='+encodeURIComponent(scr.circuit)+'&t='+Date.now(),{cache:'no-store'})
     .then(r=>r.ok?r.json():null).then(d=>{
       if(!d||!d.mode) return;
