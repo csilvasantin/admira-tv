@@ -76,7 +76,7 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
   <h2>Conectar</h2>
   <pre>{ "mcpServers": { "admiratv": { "url": "https://mcp-tv.admira.store/mcp" } } }</pre>
 
-  <footer>Admira.tv · capa Emitir de Admira · Hermanos: <a href="https://www.pixeria.com/mcp/">pixeria</a> (Crear) · <a href="https://www.xpaceos.com/mcp/">xpaceos</a> (Operar).</footer>
+  <footer>Admira.tv · capa Emitir de Admira · En crudo: <a href="/mcp/manifest.json">manifest.json</a>. Hermanos: <a href="https://www.pixeria.com/mcp/">pixeria</a> (Crear) · <a href="https://www.xpaceos.com/mcp/">xpaceos</a> (Operar).</footer>
 </div>
 <script>
   fetch('https://mcp-tv.admira.store/',{cache:'no-store'}).then(r=>r.json()).then(j=>{
@@ -84,5 +84,6 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
     document.getElementById('status').textContent= ok?('servidor en línea · '+(j.tools?j.tools.length:0)+' herramientas'):'servidor no responde';
   }).catch(()=>{ document.getElementById('dot').className='dot down'; document.getElementById('status').textContent='servidor no alcanzable (¿desplegando?)'; });
 </script>
+<script>/* enlace al manifiesto añadido con el manifiesto mismo (regla 24) */</script>
 </body>
 </html>

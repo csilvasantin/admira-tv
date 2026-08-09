@@ -1,0 +1,83 @@
+{
+  "name": "admira-tv",
+  "title": "Admira TV · admira.tv — la capa Emitir de la suite AdmiraNeXT",
+  "description": "Hub MCP de admira.tv: qué se emite, dónde y con qué audiencia. Servidor MCP vivo en mcp-tv.admira.store con tres herramientas (on_air, airtime_report, channel_url) y el CMS de emisión con su guía para personas.",
+  "version": "v.09.08.2026.r1",
+  "site": "https://admira.tv",
+  "hub": "https://admira.tv/mcp/",
+  "help_humans": "https://admira.tv/help/",
+  "repo": "https://github.com/csilvasantin/admira-tv",
+  "contact": {
+    "telegram_group": "AgoraMatrix",
+    "signature": "MorfeoMBP14 · responsable del proyecto"
+  },
+  "mcp_server": {
+    "endpoint": "https://mcp-tv.admira.store/mcp",
+    "transport": "streamable-http",
+    "auth": "none",
+    "tools": [
+      {
+        "name": "on_air",
+        "desc": "Qué emite una pantalla ahora, su audiencia por cámara y si está conectada."
+      },
+      {
+        "name": "airtime_report",
+        "desc": "Proof-of-play de un circuito: pases, segundos, por tipo y por segmento."
+      },
+      {
+        "name": "channel_url",
+        "desc": "Construye la URL del canal para poner una pantalla a emitir."
+      }
+    ],
+    "connect": {
+      "mcpServers": {
+        "admiratv": {
+          "url": "https://mcp-tv.admira.store/mcp"
+        }
+      }
+    }
+  },
+  "http_api": {
+    "base_url": "https://mcp-tv.admira.store",
+    "notes": "El servidor MCP responde también por HTTP en su raíz con su propio descriptor. La emisión y la audiencia crudas viven en api.admira.store, que es lo que consume clearchannel.tv.",
+    "read": [
+      {
+        "method": "GET",
+        "path": "/",
+        "auth": "no",
+        "desc": "Descriptor del servidor MCP: herramientas disponibles y estado."
+      }
+    ],
+    "interact": [],
+    "auth": {
+      "how": "Las herramientas MCP no piden credencial. El CMS de emisión de la web sí va detrás de la verja de acceso.",
+      "protected": []
+    }
+  },
+  "trampas": [
+    "El canal se pone a emitir con la URL que devuelve channel_url: no la construyas a mano, que la detección de kiosko depende del user-agent.",
+    "Proof-of-play y audiencia son dos cosas distintas: admira.tv dice QUÉ se emitió, y la cámara de XpaceOS QUIÉN lo vio. Cruzarlas es lo que hace clearchannel.tv."
+  ],
+  "federation": [
+    {
+      "name": "pixeria.com",
+      "hub": "https://www.pixeria.com/mcp/",
+      "rol": "Crear"
+    },
+    {
+      "name": "xpaceos.com",
+      "hub": "https://www.xpaceos.com/mcp/",
+      "rol": "Operar"
+    },
+    {
+      "name": "clearchannel.tv",
+      "hub": "https://www.clearchannel.tv/mcp/",
+      "rol": "Audiencia × Emisión"
+    },
+    {
+      "name": "yokup.com",
+      "hub": "https://www.yokup.com/mcp/",
+      "rol": "Donde se declara y se puntúa el trabajo"
+    }
+  ]
+}
