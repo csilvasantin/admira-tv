@@ -19,6 +19,13 @@
 //   node orden.mjs --orden a,b,c,…       → reordena por lista de slugs
 //   node orden.mjs --comprobar           → numeración sana (para el deploy)
 //
+// DÓNDE SE MIRA ESTO PUBLICADO. El censo se EDITA aquí y se PUBLICA en el
+// edificio: www.admira.live/13rue/implementacion, una vivienda por subapp, con
+// la ventana encendida sólo donde de verdad se emite. Esa página es la FUENTE
+// ÚNICA para consultar el estado de los productos — no un documento aparte, no
+// una copia en otro sitio. Al reordenar aquí hay que regenerar allí
+// 13rue/implementacion.json, o el edificio seguirá enseñando el orden de ayer.
+//
 // Todo lo que no se nombra conserva su orden relativo y se recoloca detrás: así
 // mover una subapp no obliga a reescribir las treinta y tres restantes.
 
