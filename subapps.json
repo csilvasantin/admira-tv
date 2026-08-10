@@ -7,7 +7,10 @@
     "familia": "Emisión",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/digitalsignage/"
+    "ruta": "/digitalsignage/",
+    "peso_kb": 36,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 2,
@@ -17,7 +20,10 @@
     "familia": "Medición",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/videoanalytics/"
+    "ruta": "/videoanalytics/",
+    "peso_kb": 50,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 3,
@@ -25,9 +31,17 @@
     "slug": "adcelerate",
     "name_es": "ADcelerate",
     "familia": "Programática",
-    "estado": "parcial",
+    "estado": "emite",
     "en_vitrina": true,
-    "ruta": "/adcelerate/"
+    "ruta": "/adcelerate/",
+    "peso_kb": 2455,
+    "ficheros": 24,
+    "apis": [
+      "../creatividades/creatividades.json",
+      "/lead",
+      "creatividades/creatividades.json",
+      "data/gracia-local.json"
+    ]
   },
   {
     "n": 4,
@@ -37,7 +51,10 @@
     "familia": "Emisión",
     "estado": "escaparate",
     "en_vitrina": false,
-    "ruta": "/player/"
+    "ruta": "/player/",
+    "peso_kb": 39,
+    "ficheros": 3,
+    "apis": []
   },
   {
     "n": 5,
@@ -47,7 +64,10 @@
     "familia": "Emisión",
     "estado": "escaparate",
     "en_vitrina": false,
-    "ruta": "/parrilla/"
+    "ruta": "/parrilla/",
+    "peso_kb": 60,
+    "ficheros": 6,
+    "apis": []
   },
   {
     "n": 6,
@@ -57,7 +77,10 @@
     "familia": "Emisión",
     "estado": "escaparate",
     "en_vitrina": false,
-    "ruta": "/playlists/"
+    "ruta": "/playlists/",
+    "peso_kb": 44,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 7,
@@ -65,9 +88,12 @@
     "slug": "remotecontrol",
     "name_es": "Mando a distancia",
     "familia": "Emisión",
-    "estado": "parcial",
+    "estado": "escaparate",
     "en_vitrina": false,
-    "ruta": "/remotecontrol/"
+    "ruta": "/remotecontrol/",
+    "peso_kb": 84,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 8,
@@ -77,7 +103,10 @@
     "familia": "Contenido",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/contentcatalogue/"
+    "ruta": "/contentcatalogue/",
+    "peso_kb": 22,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 9,
@@ -87,7 +116,10 @@
     "familia": "Emisión",
     "estado": "escaparate",
     "en_vitrina": false,
-    "ruta": "/wall/"
+    "ruta": "/wall/",
+    "peso_kb": 7,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 10,
@@ -97,7 +129,10 @@
     "familia": "Medición",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/dashboard/"
+    "ruta": "/dashboard/",
+    "peso_kb": 41,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 11,
@@ -107,7 +142,10 @@
     "familia": "Medición",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/radioanalytics/"
+    "ruta": "/radioanalytics/",
+    "peso_kb": 47,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 12,
@@ -117,7 +155,13 @@
     "familia": "Plataforma",
     "estado": "emite",
     "en_vitrina": false,
-    "ruta": "/apps/"
+    "ruta": "/apps/",
+    "peso_kb": 62,
+    "ficheros": 4,
+    "apis": [
+      "/apps/public-catalog.json",
+      "/apps/videos.json"
+    ]
   },
   {
     "n": 13,
@@ -127,7 +171,12 @@
     "familia": "Plataforma",
     "estado": "parcial",
     "en_vitrina": false,
-    "ruta": "/mcp/"
+    "ruta": "/mcp/",
+    "peso_kb": 9,
+    "ficheros": 2,
+    "apis": [
+      "https://mcp-tv.admira.store/"
+    ]
   },
   {
     "n": 14,
@@ -137,7 +186,12 @@
     "familia": "Tienda",
     "estado": "parcial",
     "en_vitrina": true,
-    "ruta": "/socialwifi/"
+    "ruta": "/socialwifi/",
+    "peso_kb": 38,
+    "ficheros": 1,
+    "apis": [
+      "/gamification/api/events"
+    ]
   },
   {
     "n": 15,
@@ -147,7 +201,10 @@
     "familia": "Tienda",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/gamification/"
+    "ruta": "/gamification/",
+    "peso_kb": 38,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 16,
@@ -157,7 +214,10 @@
     "familia": "Tienda",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/queuemanager/"
+    "ruta": "/queuemanager/",
+    "peso_kb": 53,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 17,
@@ -167,7 +227,10 @@
     "familia": "Tienda",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/roombooking/"
+    "ruta": "/roombooking/",
+    "peso_kb": 58,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 18,
@@ -177,7 +240,10 @@
     "familia": "Tienda",
     "estado": "escaparate",
     "en_vitrina": false,
-    "ruta": "/accesscontrol/"
+    "ruta": "/accesscontrol/",
+    "peso_kb": 45,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 19,
@@ -187,7 +253,10 @@
     "familia": "Tienda",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/pushnotifications/"
+    "ruta": "/pushnotifications/",
+    "peso_kb": 44,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 20,
@@ -197,7 +266,10 @@
     "familia": "Contenido",
     "estado": "escaparate",
     "en_vitrina": false,
-    "ruta": "/presenta/"
+    "ruta": "/presenta/",
+    "peso_kb": 33,
+    "ficheros": 2,
+    "apis": []
   },
   {
     "n": 21,
@@ -207,7 +279,10 @@
     "familia": "Sensorial",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/audiobranding/"
+    "ruta": "/audiobranding/",
+    "peso_kb": 37,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 22,
@@ -217,7 +292,10 @@
     "familia": "Sensorial",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/olfactorymarketing/"
+    "ruta": "/olfactorymarketing/",
+    "peso_kb": 65,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 23,
@@ -227,7 +305,10 @@
     "familia": "Inmersivo",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/augmentedreality/"
+    "ruta": "/augmentedreality/",
+    "peso_kb": 29,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 24,
@@ -237,7 +318,10 @@
     "familia": "Inmersivo",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/virtualreality/"
+    "ruta": "/virtualreality/",
+    "peso_kb": 26,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 25,
@@ -247,7 +331,10 @@
     "familia": "Inmersivo",
     "estado": "escaparate",
     "en_vitrina": false,
-    "ruta": "/xr/"
+    "ruta": "/xr/",
+    "peso_kb": 1342,
+    "ficheros": 7,
+    "apis": []
   },
   {
     "n": 26,
@@ -257,7 +344,10 @@
     "familia": "Inmersivo",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/virtualassistant/"
+    "ruta": "/virtualassistant/",
+    "peso_kb": 38,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 27,
@@ -267,7 +357,10 @@
     "familia": "Plataforma",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/iotmanager/"
+    "ruta": "/iotmanager/",
+    "peso_kb": 47,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 28,
@@ -277,7 +370,10 @@
     "familia": "Plataforma",
     "estado": "escaparate",
     "en_vitrina": false,
-    "ruta": "/nvidia/"
+    "ruta": "/nvidia/",
+    "peso_kb": 40,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 29,
@@ -287,7 +383,10 @@
     "familia": "Plataforma",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/xpaceos/"
+    "ruta": "/xpaceos/",
+    "peso_kb": 24,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 30,
@@ -297,7 +396,10 @@
     "familia": "Plataforma",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/yarig/"
+    "ruta": "/yarig/",
+    "peso_kb": 21,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 31,
@@ -307,7 +409,10 @@
     "familia": "Plataforma",
     "estado": "escaparate",
     "en_vitrina": false,
-    "ruta": "/usuarios/"
+    "ruta": "/usuarios/",
+    "peso_kb": 15,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 32,
@@ -317,7 +422,10 @@
     "familia": "Comercial",
     "estado": "escaparate",
     "en_vitrina": false,
-    "ruta": "/comprar/"
+    "ruta": "/comprar/",
+    "peso_kb": 12,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 33,
@@ -327,7 +435,10 @@
     "familia": "Comercial",
     "estado": "escaparate",
     "en_vitrina": true,
-    "ruta": "/support/"
+    "ruta": "/support/",
+    "peso_kb": 19,
+    "ficheros": 1,
+    "apis": []
   },
   {
     "n": 34,
@@ -337,6 +448,9 @@
     "familia": "Comercial",
     "estado": "escaparate",
     "en_vitrina": false,
-    "ruta": "/help/"
+    "ruta": "/help/",
+    "peso_kb": 13,
+    "ficheros": 1,
+    "apis": []
   }
 ]
