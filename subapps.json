@@ -37,7 +37,9 @@
     "peso_kb": 2455,
     "ficheros": 24,
     "apis": [
-      "../creatividades/creatividades.json",
+      "https://api.admira.store/rtb/decide",
+      "https://api.admira.store/stock/list",
+      "https://www.xpaceos.com/Xcaixa/sucursales.json",
       "/lead",
       "creatividades/creatividades.json",
       "data/gracia-local.json"
