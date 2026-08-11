@@ -10,6 +10,10 @@ const remoteStartSource = canal.slice(
   canal.indexOf("async function remoteStartPlayback()"),
   canal.indexOf("\n\n// Orden POR DEFECTO", canal.indexOf("async function remoteStartPlayback()"))
 );
+const remoteAckSource = cms.slice(
+  cms.indexOf("async function waitRemoteApplied(action)"),
+  cms.indexOf("\nfunction finishRemoteAction", cms.indexOf("async function waitRemoteApplied(action)"))
+);
 
 function playbackHarness({ standby = false, playResults = [undefined] } = {}) {
   const calls = [];
@@ -79,6 +83,8 @@ test("si también falla el intento mudo, restaura audio y propaga el fallo", asy
 
 test("la cola no solapa polls y se rearma al volver iOS a primer plano", () => {
   assert.match(canal, /if\(!scr\.screen\|\|_ctrlPolling\) return/);
+  assert.match(canal, /if\(!scr\.circuit\|\|__cmdPolling\) return/);
+  assert.match(canal, /finally\{ __cmdPolling=false; \}/);
   assert.match(canal, /const result=await applyCtrlCmd/);
   assert.match(canal, /document\.addEventListener\('visibilitychange',rearmCtrlOnForeground\)/);
   assert.match(canal, /window\.addEventListener\('pageshow',rearmCtrlOnForeground\)/);
@@ -92,7 +98,42 @@ test("el mando llama Arrancar a play y distingue acuse fallido de ejecutado", ()
   assert.match(remote, /✓✓ ejecutado/);
 });
 
-test("el mini-mando existente del CMS también puede arrancar el iPhone", () => {
+test("el mini-mando del CMS puede arrancar y parar el iPhone", () => {
   assert.match(cms, /data-cmd="resume" title="arrancar o reanudar el player \(iPhone\/iOS incluido\)"/);
-  assert.match(canal, /if\(cmd==='resume'\|\|cmd==='wake'[^]*?remoteStartPlayback\(\)\.catch/);
+  assert.match(cms, /data-cmd="standby" title="parar el player y dejar la pantalla en standby"/);
+  assert.match(canal, /const status=await executeQueuedCommand\(c\)/);
+  assert.match(canal, /await ackQueuedCommand\(c,status\)/);
+  assert.match(canal, /CMD_ACK_OUTBOX_KEY='adtv_cmd_ack_outbox:'/);
+  assert.match(canal, /persistCmdAckOutbox\(\);   \/\/ primero a disco/);
+  assert.match(canal, /await flushCmdAckOutbox\(\);   \/\/ reintento idempotente/);
+  assert.match(cms, /CMD_ACK_API=CMD_API\+'\/ack'/);
+  assert.match(cms, /ack\.action===action\.token&&typeof ack\.cid==='number'&&ack\.cid===action\.cid&&ack\.cmd===action\.cmd/);
+  assert.match(cms, /typeof queued\.cid!=='number'\|\|!Number\.isSafeInteger\(queued\.cid\)\|\|queued\.cid<=0/);
+  assert.match(cms, /conic-gradient\(from -90deg,var\(--cmd-ring\) var\(--cmd-progress\)/);
+  assert.match(cms, /action\.progress=Math\.min\(\.94/);
+  assert.match(cms, /action\.progress=terminal\?1:Math\.min\(\.94,action\.progress\)/);
+  assert.match(cms, /ack\.screen===action\.screen/);
+});
+
+test("el contorno solo se cierra con el ACK exacto devuelto por el player", async () => {
+  const replies=[
+    { seen:true, ack:{ action:'66f6e863-771f-4418-b465-59b83d689ca3', cid:null, cmd:'standby', status:'executed' } },
+    { seen:true, ack:{ action:'66f6e863-771f-4418-b465-59b83d689ca3', cid:92, cmd:'standby', screen:'ios-test', status:'executed' } },
+  ];
+  let reads=0;
+  const context=vm.createContext({
+    Date,
+    REMOTE_TIMEOUT_MS:20000,
+    CMD_ACK_API:'https://api.test/locations/cmd/ack',
+    encodeURIComponent,
+    AbortController:class{ constructor(){ this.signal={}; } abort(){} },
+    setTimeout,
+    clearTimeout,
+    remoteDelay:async()=>{},
+    fetch:async()=>({ ok:true, json:async()=>replies[reads++] }),
+  });
+  vm.runInContext(`${remoteAckSource}\nglobalThis.waitApplied=waitRemoteApplied;`,context);
+  const action={id:'ios-test',screen:'ios-test',token:'66f6e863-771f-4418-b465-59b83d689ca3',cid:92,cmd:'standby',startedAt:Date.now()};
+  assert.equal(await context.waitApplied(action),'executed');
+  assert.equal(reads,2);
 });

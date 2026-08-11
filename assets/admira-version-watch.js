@@ -15,21 +15,32 @@
  * que salta siempre es peor que no tenerlo: el día que de verdad haya versión
  * nueva, nadie le hará caso.
  *
- * Así que cada fuente se compara CONSIGO MISMA a lo largo de la vida de la pestaña:
- *   · el sello de /version.json, contra el que se leyó al cargar;
- *   · la huella (ETag) de este mismo fichero, contra la de su carga.
- * Recargar limpia el aviso siempre —la referencia se toma de nuevo— y basta con
- * que UNA se mueva para avisar: el ETag detecta un despliegue aunque el sello esté
- * congelado, y el sello lo detecta aunque un intermediario sirva el mismo ETag.
- * Si no hay ninguna de las dos, no se dice nada: sin nada que comparar, callar.
+ * Así que /version.json se compara CONSIGO MISMO a lo largo de la vida de la
+ * pestaña. No basta con mirar sólo `version`: cada deploy regenera también
+ * `deployedAt` y declara el commit. Eso permite avisar aunque alguien publique
+ * por error sin subir la r. El ETag de este script NO sirve para detectar ese
+ * caso: si el script no cambió, su ETag tampoco cambia.
+ *
+ * Recargar limpia el aviso siempre —la referencia se toma de nuevo—. Si el
+ * release no responde o no declara ninguna identidad, no se dice nada: sin nada
+ * que comparar, callar.
  *
  * Se instala con una línea y sin dependencias:
  *   <script src="/assets/admira-version-watch.js" defer></script>
  */
 (function () {
   "use strict";
-  var SRC = (document.currentScript && document.currentScript.src) || "";
-  var selloRef = null, huellaRef = null, avisado = false;
+  var releaseRef = null, avisado = false, comprobando = false, repetir = false;
+
+  function identidad(d) {
+    if (!d) return null;
+    var version = String(d.version || d.sello || "").trim();
+    var commit = String(d.gitFull || d.git || d.gitShort || "").trim();
+    var deployedAt = String(d.deployedAt || "").trim();
+    var signature = String(d.signature || "").trim();
+    var fingerprint = [version, commit, deployedAt, signature].filter(Boolean).join("|");
+    return fingerprint ? { fingerprint: fingerprint, version: version } : null;
+  }
 
   function avisa(sello) {
     if (avisado) return;
@@ -62,40 +73,54 @@
     document.body.appendChild(b);
   }
 
-  function miraSello() {
+  function miraRelease() {
     // El query evita intermediarios que ignoren cache:no-store.
-    fetch("/version.json?vw=" + Date.now(), { cache: "no-store" })
+    var vigente = true;
+    var controller = typeof AbortController === "function" ? new AbortController() : null;
+    var opciones = { cache: "no-store" };
+    if (controller) opciones.signal = controller.signal;
+    var limite;
+    var red = fetch("/version.json?vw=" + Date.now(), opciones)
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        var v = d && (d.version || d.sello);
-        if (!v) return;
-        v = String(v).trim();
-        if (selloRef === null) { selloRef = v; return; }
-        if (v !== selloRef) avisa(v);
+        if (!vigente) return;
+        var actual = identidad(d);
+        if (!actual) return;
+        if (releaseRef === null) { releaseRef = actual; return; }
+        if (actual.fingerprint !== releaseRef.fingerprint) avisa(actual.version);
       })
       .catch(function () {});
+    var tiempo = new Promise(function (resolve) {
+      limite = setTimeout(function () {
+        vigente = false;
+        if (controller) controller.abort();
+        resolve();
+      }, 8000);
+    });
+    return Promise.race([red, tiempo]).then(function () { clearTimeout(limite); });
   }
 
-  function miraHuella() {
-    if (!SRC) return;
-    fetch(SRC, { method: "HEAD", cache: "no-store" })
-      .then(function (r) {
-        if (!r.ok) return;
-        var h = r.headers.get("etag") || r.headers.get("last-modified");
-        if (!h) return;
-        if (huellaRef === null) { huellaRef = h; return; }
-        if (h !== huellaRef) avisa(selloRef);
-      })
-      .catch(function () {});
+  function ronda() {
+    // visibilitychange, focus y el intervalo pueden coincidir. Una sola lectura
+    // activa y, si llegó otra señal, una repetición al terminar: sin carreras
+    // que conviertan una respuesta vieja en la nueva referencia.
+    if (comprobando) { repetir = true; return; }
+    comprobando = true;
+    miraRelease().then(function () {
+      comprobando = false;
+      if (repetir) { repetir = false; ronda(); }
+    });
   }
-
-  function ronda() { miraSello(); miraHuella(); }
 
   // La primera ronda va nada más cargar y sólo TOMA LA REFERENCIA: es lo que hace
   // que recargar limpie el aviso.
   ronda();
-  // Cada 2 min basta: es una cortesía, no un latido. Y al volver a la pestaña,
-  // que es justo cuando se mira una que llevaba horas abierta.
-  setInterval(ronda, 120000);
+  // En operación, dos minutos dejan demasiado tiempo una consola con código
+  // viejo. 30 s sigue siendo una petición minúscula y focus/online/pageshow
+  // cubren el regreso inmediato a una pestaña que llevaba horas abierta.
+  setInterval(ronda, 30000);
   document.addEventListener("visibilitychange", function () { if (!document.hidden) ronda(); });
+  window.addEventListener("focus", ronda);
+  window.addEventListener("online", ronda);
+  window.addEventListener("pageshow", ronda);
 })();

@@ -111,9 +111,23 @@
   .firePrev .ft img,.firePrev .ft video{width:100%;height:100%;object-fit:cover}
   /* control remoto por player (audio/transporte/CLI) */
   .remote{display:flex;align-items:center;gap:6px;margin-top:8px}
-  .rbtn{flex:none;width:34px;height:32px;display:grid;place-items:center;background:#13203a;border:1px solid #26385e;border-radius:8px;color:var(--ink);cursor:pointer;font-size:14px}
+  .rbtn{--cmd-progress:0deg;--cmd-ring:var(--air);position:relative;flex:none;width:34px;height:32px;display:grid;place-items:center;background:#13203a;border:1px solid #26385e;border-radius:8px;color:var(--ink);cursor:pointer;font-size:14px}
   .rbtn:hover{background:#1a2c4e}
   .rbtn.flash{background:var(--accent);color:#04110b}
+  .rbtn[data-cmd="standby"]{--cmd-ring:#ff8e3c}
+  .rbtn.remote-pending,.rbtn.remote-applied,.rbtn.remote-failed,.rbtn.remote-timeout{isolation:isolate}
+  .rbtn.remote-pending::before,.rbtn.remote-applied::before,.rbtn.remote-failed::before,.rbtn.remote-timeout::before{
+    content:"";position:absolute;inset:-4px;border-radius:11px;padding:2px;pointer-events:none;
+    background:conic-gradient(from -90deg,var(--cmd-ring) var(--cmd-progress),rgba(38,56,94,.28) 0);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+  }
+  .rbtn.remote-pending{cursor:progress;box-shadow:0 0 10px color-mix(in srgb,var(--cmd-ring) 30%,transparent)}
+  .rbtn.remote-applied{--cmd-ring:var(--air);color:var(--air);border-color:#1f5e44;box-shadow:0 0 14px #39d98a55}
+  .rbtn.remote-failed{--cmd-ring:#ff667a;color:#ff9aaa;border-color:#6d2635;box-shadow:0 0 12px #ff667a44}
+  .rbtn.remote-timeout{--cmd-ring:#ff667a;color:#ff9aaa;border-color:#6d2635;box-shadow:0 0 12px #ff667a44}
+  .rbtn:disabled{cursor:not-allowed;opacity:.58}
+  .rbtn.remote-pending:disabled,.rbtn.remote-applied:disabled,.rbtn.remote-failed:disabled,.rbtn.remote-timeout:disabled{opacity:1}
   .rvol{flex:1;min-width:50px;accent-color:var(--air);cursor:pointer}
   .rcli{margin-top:7px;width:100%;background:#0c1320;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:12.5px ui-monospace,Menlo,monospace}
   .rcli::placeholder{color:var(--dim)}
@@ -740,9 +754,10 @@ async function load(){
           <a class="btn ghost" href="/condicional.html?target=${encodeURIComponent(d.id)}" title="segmentar por audiencia">🎯 Segmentar</a>
           <a class="btn ghost" href="${(d.coords&&d.coords.length===2)?('https://www.clearchannel.tv/?lng='+d.coords[0]+'&lat='+d.coords[1]+'&label='+encodeURIComponent(d.name||d.id)):('https://www.clearchannel.tv/?screen='+encodeURIComponent(d.screen||''))}" target="_blank" rel="noopener" title="ver este punto en el mapa">🗺 Mapa</a>
         </div>
-        <div class="remote" data-id="${esc(d.id)}" title="control remoto del player">
+        <div class="remote" data-id="${esc(d.id)}" data-screen="${esc(d.screen||d.id)}" title="control remoto del player">
           <button class="rbtn" data-cmd="prev" title="anterior">⏮</button>
           <button class="rbtn" data-cmd="resume" title="arrancar o reanudar el player (iPhone/iOS incluido)">▶</button>
+          <button class="rbtn" data-cmd="standby" title="parar el player y dejar la pantalla en standby">⏹</button>
           <button class="rbtn" data-cmd="audiooff" title="silenciar (audio off)">🔇</button>
           <input class="rvol" type="range" min="0" max="100" value="60" title="volumen remoto">
           <button class="rbtn" data-cmd="audioon" title="sonido (audio on)">🔊</button>
@@ -942,11 +957,84 @@ $('grid').addEventListener('change', async e=>{
 });
 
 /* ── CONTROL REMOTO: el CMS encola comandos al player (worker /locations/cmd) ── */
-const CMD_API='https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd';
-async function sendCmd(id,cmd){
-  if(!id||!cmd) return false;
-  try{ const r=await fetch(CMD_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,cmd})}); const d=await r.json(); return !!(d&&d.ok); }
-  catch(_){ return false; }
+// Dominio propio primero: varios ISP españoles bloquean *.workers.dev y el
+// player ya usa este mismo proxy para no quedarse sordo al mando.
+const CMD_API='https://api.admira.store/locations/cmd';
+const CMD_ACK_API=CMD_API+'/ack';
+async function sendCmd(id,cmd,screen=''){
+  if(!id||!cmd) return null;
+  try{ const r=await fetch(CMD_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,cmd,screen})}); const d=await r.json(); return d&&d.ok?d:null; }
+  catch(_){ return null; }
+}
+const REMOTE_ACTIONS=new Map(), REMOTE_TIMEOUT_MS=20000;
+const LEGACY_ACTION_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const remoteDelay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+function remoteWrap(id){ return [...document.querySelectorAll('.remote')].find(el=>el.dataset.id===String(id))||null; }
+function paintRemoteAction(action){
+  const wrap=remoteWrap(action.id); if(!wrap) return;
+  const power=[...wrap.querySelectorAll('.rbtn[data-cmd="resume"],.rbtn[data-cmd="standby"]')];
+  const active=power.find(b=>b.dataset.cmd===action.cmd);
+  power.forEach(b=>{ b.disabled=true; });
+  if(!active) return;
+  if(!active.dataset.baseTitle) active.dataset.baseTitle=active.title||'';
+  active.classList.toggle('remote-pending',action.state==='pending');
+  active.classList.toggle('remote-applied',action.state==='applied');
+  active.classList.toggle('remote-failed',action.state==='failed');
+  active.classList.toggle('remote-timeout',action.state==='timeout');
+  active.style.setProperty('--cmd-progress',Math.round(action.progress*360)+'deg');
+  active.setAttribute('aria-busy',action.state==='pending'?'true':'false');
+  active.title=action.state==='pending'?'Enviando · esperando confirmación del dispositivo…':
+    action.state==='applied'?'Aplicado por el dispositivo ✓':
+    action.state==='failed'?'El dispositivo respondió, pero no pudo aplicar la orden':'Sin confirmación del dispositivo · el aro queda abierto';
+}
+function resetRemoteActionUI(id){
+  const wrap=remoteWrap(id); if(!wrap) return;
+  wrap.querySelectorAll('.rbtn[data-cmd="resume"],.rbtn[data-cmd="standby"]').forEach(b=>{
+    b.disabled=false; b.classList.remove('remote-pending','remote-applied','remote-failed','remote-timeout');
+    b.style.removeProperty('--cmd-progress'); b.removeAttribute('aria-busy');
+    if(b.dataset.baseTitle){ b.title=b.dataset.baseTitle; delete b.dataset.baseTitle; }
+  });
+}
+function animateRemoteAction(action){
+  if(REMOTE_ACTIONS.get(action.id)!==action) return;
+  if(action.state==='pending') action.progress=Math.min(.94,.03+((Date.now()-action.startedAt)/REMOTE_TIMEOUT_MS)*.91);
+  paintRemoteAction(action);
+  action.raf=requestAnimationFrame(()=>animateRemoteAction(action));
+}
+async function waitRemoteApplied(action){
+  while(Date.now()-action.startedAt<REMOTE_TIMEOUT_MS){
+    const controller=new AbortController();
+    const abortTimer=setTimeout(()=>controller.abort(),Math.min(1500,Math.max(250,REMOTE_TIMEOUT_MS-(Date.now()-action.startedAt))));
+    try{
+      const r=await fetch(CMD_ACK_API+'?id='+encodeURIComponent(action.id)+'&action='+encodeURIComponent(action.token)+'&_='+Date.now(),{cache:'no-store',signal:controller.signal});
+      const d=r.ok?await r.json():null;
+      const ack=d&&d.seen&&d.ack;
+      if(ack&&ack.action===action.token&&typeof ack.cid==='number'&&ack.cid===action.cid&&ack.cmd===action.cmd&&ack.screen===action.screen&&
+        (ack.status==='executed'||ack.status==='failed')) return ack.status;
+    }catch(_){} finally{ clearTimeout(abortTimer); }
+    await remoteDelay(500);
+  }
+  return 'timeout';
+}
+function finishRemoteAction(action,result){
+  if(REMOTE_ACTIONS.get(action.id)!==action) return;
+  const terminal=result==='executed'||result==='failed';
+  action.state=result==='executed'?'applied':result==='failed'?'failed':'timeout';
+  action.progress=terminal?1:Math.min(.94,action.progress); paintRemoteAction(action);
+  setTimeout(()=>{ if(REMOTE_ACTIONS.get(action.id)===action){
+    if(action.raf) cancelAnimationFrame(action.raf);
+    REMOTE_ACTIONS.delete(action.id); resetRemoteActionUI(action.id);
+  } },result==='executed'?1400:2600);
+}
+async function sendPlaybackCmd(id,screen,cmd){
+  if(REMOTE_ACTIONS.has(id)) return;
+  const action={id:String(id),screen:String(screen||id),cmd,cid:0,
+    token:'',state:'pending',progress:.03,startedAt:Date.now(),raf:0};
+  REMOTE_ACTIONS.set(action.id,action); animateRemoteAction(action);
+  const queued=await sendCmd(action.id,cmd,action.screen);
+  if(!queued||typeof queued.cid!=='number'||!Number.isSafeInteger(queued.cid)||queued.cid<=0||!LEGACY_ACTION_RE.test(String(queued.action||''))){ finishRemoteAction(action,'timeout'); return; }
+  action.cid=queued.cid; action.token=queued.action;
+  finishRemoteAction(action,await waitRemoteApplied(action));
 }
 $('grid').addEventListener('click', e=>{
   // clic en el PREVIEW de chico/chica → abre el Stock para elegir otro contenido
@@ -962,8 +1050,9 @@ $('grid').addEventListener('click', e=>{
     wrap.querySelectorAll('.fbtn').forEach(x=>{ const a=x.dataset.aud; x.classList.toggle('on', a!=='x' && a===FORCED[id]); });
     f.classList.add('flash'); setTimeout(()=>f.classList.remove('flash'),450); return; }
   const b=e.target.closest('.rbtn'); if(!b) return;
-  const id=b.closest('.remote').dataset.id;
-  sendCmd(id, b.dataset.cmd);
+  const remote=b.closest('.remote'), id=remote.dataset.id, cmd=b.dataset.cmd;
+  if(cmd==='resume'||cmd==='standby'){ sendPlaybackCmd(id,remote.dataset.screen,cmd); return; }
+  sendCmd(id,cmd);
   b.classList.add('flash'); setTimeout(()=>b.classList.remove('flash'),400);
 });
 $('grid').addEventListener('keydown', e=>{

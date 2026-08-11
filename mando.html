@@ -34,16 +34,34 @@
     .cinfo{display:flex;gap:8px;align-items:center;margin-top:6px;font-size:11px;color:var(--dim);font-family:var(--mono)}
     .cinfo b{color:var(--muted)}
     .stage{margin:12px 0;display:flex;gap:12px;align-items:stretch}
-    .frame{position:relative;width:104px;flex:0 0 104px;aspect-ratio:9/16;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#000}
-    .frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+    .frame{position:relative;width:104px;flex:0 0 104px;aspect-ratio:9/16;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#000;cursor:zoom-in}
+    .preview-media,.preview-media>*{position:absolute;inset:0;width:100%;height:100%}
+    .preview-media img,.preview-media video{display:block;object-fit:contain;background:#000}
+    .preview-media iframe{display:block;border:0;background:#000}
+    .preview-empty{display:grid!important;place-items:center;padding:10px;text-align:center;color:var(--dim);font:10px/1.45 var(--mono);background:#05070b}
+    .preview-paused{position:absolute;inset:0;z-index:3;display:none;place-items:center;background:rgba(3,5,9,.72);backdrop-filter:blur(3px);color:#fff;font:700 11px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+    .frame.paused .preview-paused{display:grid}
+    .preview-open-hit{position:absolute;inset:0;z-index:4;border:0;background:transparent;cursor:zoom-in}
+    .preview-open-hit:focus-visible{outline:2px solid var(--violet);outline-offset:-3px;border-radius:12px}
+    .preview-tools{position:absolute;z-index:5;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;display:none;align-items:center;justify-content:space-between;gap:10px}
+    .preview-tools button{border:1px solid rgba(255,255,255,.28);background:rgba(5,7,11,.78);backdrop-filter:blur(8px);color:#fff;border-radius:10px;padding:9px 12px;font:700 12px var(--mono);cursor:pointer}
+    body.preview-open{overflow:hidden}
+    body.preview-open .frame{position:fixed;z-index:40;inset:0;width:auto;aspect-ratio:auto;border:0;border-radius:0;cursor:default;background:#000}
+    body.preview-open .preview-open-hit{display:none}
+    body.preview-open .preview-tools{display:flex}
     .live{position:absolute;top:6px;left:6px;font:600 8px var(--mono);background:rgba(0,0,0,.6);color:#fff;padding:2px 5px;border-radius:99px;display:flex;gap:4px;align-items:center}
     .live b{width:5px;height:5px;border-radius:50%;background:#ff4455;box-shadow:0 0 6px #ff4455;animation:p 1.4s infinite}
     @keyframes p{50%{opacity:.3}}
-    .nowbox{flex:1;background:var(--elev);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;justify-content:center;min-width:0}
+    .nowbox{appearance:none;text-align:left;color:var(--text);font:inherit;flex:1;background:var(--elev);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;justify-content:center;min-width:0;cursor:pointer}
+    .nowbox:hover{border-color:var(--violet)}
+    .nowbox:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
+    .nowbox[aria-pressed="true"]{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 8%,var(--elev))}
     .nowbox .lbl{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
     .nowbox .ttl{font-size:14px;margin-top:4px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
     .nowbox .tagline{margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--cyan)}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+    .remote-title{margin-top:16px;color:var(--cyan);font:700 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+    .remote-title::after{content:"";height:1px;flex:1;background:var(--border)}
     .b{font-size:14px;padding:15px 10px;border-radius:12px;border:1px solid var(--border);background:var(--elev);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.12s;user-select:none}
     .b:active{transform:scale(.97)} .b:hover{border-color:var(--violet)}
     .b.wide{grid-column:1/-1}
@@ -96,14 +114,24 @@
   <div class="cinfo">circuito: <b id="cir">—</b> · pantalla: <b id="scr">—</b></div>
 
   <div class="stage">
-    <div class="frame"><span class="live"><b></b>EN VIVO</span><iframe id="prev" title="preview"></iframe></div>
-    <div class="nowbox">
-      <div class="lbl">Ahora emitiendo</div>
+    <div class="frame" id="previewFrame">
+      <div class="preview-media" id="previewMedia"><div class="preview-empty">Esperando señal del player remoto</div></div>
+      <div class="preview-paused">⏸ Previo detenido</div>
+      <span class="live"><b></b>PREVIO</span>
+      <button type="button" class="preview-open-hit" id="previewOpen" aria-label="Abrir el previo local a pantalla completa"></button>
+      <div class="preview-tools">
+        <button type="button" id="previewBack">← Volver</button>
+        <button type="button" id="previewPause" aria-pressed="false">⏸ Pausar previo</button>
+      </div>
+    </div>
+    <button class="nowbox" id="previewToggle" type="button" aria-pressed="false" title="Pausar solo este previo; no envía órdenes al player remoto">
+      <div class="lbl" id="nowLabel">Ahora emitiendo · toca para detener el previo</div>
       <div class="ttl" id="now">…</div>
       <div class="tagline" id="tagline"></div>
-    </div>
+    </button>
   </div>
 
+  <div class="remote-title">Player remoto · todos los controles inferiores actúan en la pantalla</div>
   <div class="grid">
     <button class="b wide" id="power">⏻ Standby (apagar pantalla)</button>
     <button class="b" data-cmd="prev">⏮ Anterior</button>
@@ -111,7 +139,7 @@
     <button class="b cyan" id="mute">🔇 Silenciar</button>
     <button class="b" data-cmd="reload">🔄 Recargar</button>
   </div>
-  <div class="vol">🔊 <input type="range" id="vol" min="0" max="100" value="100"><span id="volv">100%</span></div>
+  <div class="vol" title="Volumen del player remoto">🔊 Remoto <input type="range" id="vol" min="0" max="100" value="100" aria-label="Volumen del player remoto"><span id="volv">100%</span></div>
 
   <!-- ── METATAG DEL CIRCUITO: enruta el contenido etiquetado en pixeria.com ── -->
   <div class="sec">🏷️ Metatag del circuito <span class="hint">— el circuito emite SOLO lo etiquetado con esto en pixeria.com</span></div>
@@ -189,41 +217,156 @@
     }
     if(startIdx<0) startIdx=4; selEl.value=startIdx;
 
-    var T;
+    var T, previewItem=null, previewSignature='', previewPaused=false, previewRenderSeq=0;
+    var targetGeneration=0, nowRequestSeq=0, nowController=null;
+    var previewReturnFocus=null, previewInertNodes=[];
+    var previewFrame=document.getElementById('previewFrame');
+    var previewMedia=document.getElementById('previewMedia');
+    var previewToggle=document.getElementById('previewToggle');
+    var previewPause=document.getElementById('previewPause');
+    function previewIsInteractive(){ return !!(previewItem&&['interactive','xperiencia'].includes(String(previewItem.type||'').toLowerCase())); }
+    function paintPreviewPause(){
+      var interactive=previewIsInteractive();
+      previewPause.textContent=previewPaused?(interactive?'↻ Reiniciar previo':'▶ Reanudar previo'):(interactive?'■ Detener previo':'⏸ Pausar previo');
+      previewPause.setAttribute('aria-pressed',previewPaused?'true':'false');
+    }
+    function clearPreviewMedia(){
+      previewRenderSeq++;
+      var oldVideo=previewMedia.querySelector('video'), oldFrame=previewMedia.querySelector('iframe');
+      if(oldVideo){ try{ oldVideo.pause(); oldVideo.removeAttribute('src'); oldVideo.load(); }catch(_){} }
+      if(oldFrame) try{ oldFrame.src='about:blank'; }catch(_){}
+      previewMedia.replaceChildren();
+    }
+    function previewEmpty(message){
+      clearPreviewMedia();
+      var empty=document.createElement('div'); empty.className='preview-empty';
+      empty.textContent=message||'Esperando señal del player remoto'; previewMedia.appendChild(empty);
+    }
+    function renderPreview(it,force){
+      previewItem=it||null; paintPreviewPause();
+      var signature=it&&it.url?[it.id||'',it.url,it.startedAt||''].join('|'):'';
+      if(previewPaused&&!force) return;   // conserva el último fotograma hasta reanudar
+      if(!force&&signature===previewSignature) return;
+      previewSignature=signature;
+      if(!it||!it.url){ previewEmpty('Sin contenido reportado por el player remoto'); return; }
+      clearPreviewMedia(); var renderToken=previewRenderSeq;
+      var type=String(it.type||'').toLowerCase(), media;
+      if(type==='video'||type==='animation'){
+        media=document.createElement('video'); media.muted=true; media.playsInline=true; media.autoplay=true; media.preload='metadata'; media.src=it.url;
+        media.addEventListener('loadedmetadata',function(){
+          if(renderToken!==previewRenderSeq||!media.isConnected) return;
+          var elapsed=Math.max(0,(Date.now()-(Number(it.startedAt)||Date.now()))/1000);
+          if(Number.isFinite(media.duration)&&media.duration>0) try{ media.currentTime=elapsed%media.duration; }catch(_){}
+          media.play().catch(function(){});
+        },{once:true});
+      }else if(type==='interactive'||type==='xperiencia'){
+        media=document.createElement('iframe'); media.title='Previo local del contenido interactivo';
+        // Origen opaco: incluso un asset same-origin no puede alcanzar parent.sendRemote.
+        media.setAttribute('sandbox','allow-scripts'); media.src=it.url;
+      }else if(type==='audio'||type==='music'||type==='locucion'){
+        media=document.createElement('div'); media.className='preview-empty'; media.textContent='🎧 '+(it.title||'Contenido de audio');
+      }else{
+        media=document.createElement('img'); media.alt=it.title||'Contenido en emisión'; media.src=it.url;
+      }
+      previewMedia.appendChild(media);
+    }
+    function setPreviewPaused(on){
+      previewPaused=!!on; previewFrame.classList.toggle('paused',previewPaused);
+      previewToggle.setAttribute('aria-pressed',previewPaused?'true':'false');
+      document.getElementById('nowLabel').textContent=previewPaused?'Preview detenido · el player remoto sigue emitiendo':'Ahora emitiendo · toca para detener el previo';
+      paintPreviewPause();
+      var video=previewMedia.querySelector('video'), iframe=previewMedia.querySelector('iframe');
+      if(previewPaused){ if(video) video.pause(); if(iframe) iframe.src='about:blank'; }
+      else renderPreview(previewItem,true);   // retoma en la posición viva, nunca gobierna el player
+    }
+    function setPreviewIsolation(on){
+      if(on){
+        var stage=previewFrame.parentElement;
+        previewInertNodes=[].slice.call(document.body.children).filter(function(n){return n!==stage&&n.tagName!=='SCRIPT';})
+          .concat([].slice.call(stage.children).filter(function(n){return n!==previewFrame;}));
+      }
+      previewInertNodes.forEach(function(n){ n.inert=!!on; });
+      if(!on) previewInertNodes=[];
+    }
+    function openPreview(){
+      if(document.body.classList.contains('preview-open')) return;
+      previewReturnFocus=document.activeElement; document.body.classList.add('preview-open');
+      previewFrame.setAttribute('role','dialog'); previewFrame.setAttribute('aria-modal','true'); previewFrame.setAttribute('aria-label','Previo local a pantalla completa');
+      setPreviewIsolation(true); document.getElementById('previewBack').focus();
+    }
+    function closePreview(){
+      if(!document.body.classList.contains('preview-open')) return;
+      document.body.classList.remove('preview-open'); setPreviewIsolation(false);
+      previewFrame.removeAttribute('role'); previewFrame.removeAttribute('aria-modal'); previewFrame.removeAttribute('aria-label');
+      if(previewReturnFocus&&previewReturnFocus.focus) previewReturnFocus.focus(); previewReturnFocus=null;
+    }
+    document.getElementById('previewOpen').onclick=openPreview;
+    document.getElementById('previewBack').onclick=function(e){ e.stopPropagation(); closePreview(); };
+    previewPause.onclick=function(e){ e.stopPropagation(); setPreviewPaused(!previewPaused); };
+    previewToggle.onclick=function(){ setPreviewPaused(!previewPaused); };
+    previewFrame.addEventListener('keydown',function(e){
+      if(e.key==='Escape'){ e.preventDefault(); closePreview(); return; }
+      if(e.key!=='Tab'||!document.body.classList.contains('preview-open')) return;
+      var focusable=[document.getElementById('previewBack'),previewPause], pos=focusable.indexOf(document.activeElement);
+      e.preventDefault(); if(pos<0) pos=0;
+      focusable[(pos+(e.shiftKey?-1:1)+focusable.length)%focusable.length].focus();
+    });
+
     function setTarget(){
+      targetGeneration++; if(nowController){ nowController.abort(); nowController=null; }
       T = FLAT[+selEl.value];
       document.getElementById('cir').textContent = T.circuit;
       document.getElementById('scr').textContent = T.screen;
-      document.getElementById('prev').src = '/canal.html?circuit='+encodeURIComponent(T.circuit)+'&screen='+encodeURIComponent(T.screen)+'&embed=mupi&clean=1&muted=1';
+      closePreview(); previewSignature=''; previewItem=null; setPreviewPaused(false); previewEmpty('Esperando señal del player remoto');
+      resetRemoteControls();
       renderTagChips(); pollNow();
     }
     selEl.onchange = setTarget;
 
-    async function send(cmd){
-      var body = JSON.stringify({id:T.circuit, cmd:cmd});
+    // ÚNICA salida de control: estos comandos van al player remoto. El preview
+    // local no conoce esta función, no poletea la cola y no publica heartbeat.
+    async function sendRemote(cmd){
+      var target=T;
+      var body = JSON.stringify({id:target.circuit, screen:target.screen, cmd:cmd});
       for(var i=0;i<CMD_HOSTS.length;i++){
+        var controller=new AbortController(), timer=setTimeout(function(){controller.abort();},2500);
         try{
-          var r = await fetch(CMD_HOSTS[i], {method:'POST', headers:{'Content-Type':'application/json'}, body:body});
+          var r = await fetch(CMD_HOSTS[i], {method:'POST', headers:{'Content-Type':'application/json'}, body:body, signal:controller.signal});
           if(!r.ok) throw new Error('http '+r.status);
           var d = await r.json().catch(function(){return null;});
-          toast((d&&d.ok?'✓ ':'✗ ')+cmd+' → '+T.circuit);
+          toast((d&&d.ok?'✓ ':'✗ ')+cmd+' → '+target.circuit);
           if(i>0) CMD_HOSTS.unshift(CMD_HOSTS.splice(i,1)[0]);   // el que respondió pasa a primero
-          return;
+          return !!(d&&d.ok);
         }catch(e){ /* host caído o bloqueado por el ISP → prueba el siguiente */ }
+        finally{ clearTimeout(timer); }
       }
       toast('✗ sin red');
+      return false;
     }
     function toast(t){ var el=document.getElementById('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(window.__tt); window.__tt=setTimeout(function(){el.classList.remove('show');},1700); }
 
-    document.querySelectorAll('[data-cmd]').forEach(function(b){ b.onclick=function(){ send(b.dataset.cmd); }; });
+    document.querySelectorAll('[data-cmd]').forEach(function(b){ b.onclick=function(){ sendRemote(b.dataset.cmd); }; });
 
-    var standby=false, pwr=document.getElementById('power');
-    pwr.onclick=function(){ standby=!standby; send(standby?'standby':'resume'); pwr.textContent=standby?'▶ Reanudar (encender)':'⏻ Standby (apagar pantalla)'; pwr.classList.toggle('on',standby); };
-    var muted=false, mb=document.getElementById('mute');
-    mb.onclick=function(){ muted=!muted; send(muted?'audiooff':'audioon'); mb.textContent=muted?'🔊 Activar sonido':'🔇 Silenciar'; };
+    var standby=false, pwr=document.getElementById('power'), powerOp=0;
+    var muted=false, mb=document.getElementById('mute'), muteOp=0;
+    function paintRemoteControls(){
+      pwr.textContent=standby?'▶ Reanudar (encender)':'⏻ Standby (apagar pantalla)'; pwr.classList.toggle('on',standby);
+      mb.textContent=muted?'🔊 Activar sonido':'🔇 Silenciar'; mb.classList.toggle('on',muted);
+    }
+    function resetRemoteControls(){
+      powerOp++; muteOp++; standby=false; muted=false; pwr.disabled=false; mb.disabled=false; paintRemoteControls();
+    }
+    pwr.onclick=async function(){
+      var target=T, op=++powerOp, desired=!standby; pwr.disabled=true; var ok=await sendRemote(desired?'standby':'resume');
+      if(op!==powerOp||T!==target) return; if(ok){ standby=desired; paintRemoteControls(); } pwr.disabled=false;
+    };
+    mb.onclick=async function(){
+      var target=T, op=++muteOp, desired=!muted; mb.disabled=true; var ok=await sendRemote(desired?'audiooff':'audioon');
+      if(op!==muteOp||T!==target) return; if(ok){ muted=desired; paintRemoteControls(); } mb.disabled=false;
+    };
     var vol=document.getElementById('vol');
     vol.oninput=function(){ document.getElementById('volv').textContent=vol.value+'%'; };
-    vol.onchange=function(){ send('volume '+vol.value); };
+    vol.onchange=function(){ sendRemote('volume '+vol.value); };
 
     // ── Metatag del circuito ──
     var TAG_KEY='mando_tag_by_circuit';
@@ -232,7 +375,7 @@
     function curTag(){ return tagStore()[T.circuit]||''; }
     function applyTag(t){
       t=(t||'').trim().toLowerCase();
-      send(t? ('tag '+t) : 'tag');   // 'tag' sin arg = quitar filtro (emite todo)
+      sendRemote(t? ('tag '+t) : 'tag');   // 'tag' sin arg = quitar filtro (emite todo)
       setStoredTag(T.circuit, t);
       document.getElementById('tagInput').value=t;
       renderTagChips(); refreshTagline();
@@ -255,17 +398,23 @@
 
     // ── Ahora emitiendo ──
     async function pollNow(){
+      var target=T, generation=targetGeneration, requestSeq=++nowRequestSeq;
+      if(nowController) nowController.abort(); var controller=new AbortController(); nowController=controller;
       try{
-        var r = await fetch(NOW_API+'?screen='+encodeURIComponent(T.screen), {cache:'no-store'});
+        var r = await fetch(NOW_API+'?screen='+encodeURIComponent(target.screen), {cache:'no-store',signal:controller.signal});
         var d = await r.json().catch(function(){return null;});
+        if(generation!==targetGeneration||requestSeq!==nowRequestSeq) return;
         var it = d && d.item;
         document.getElementById('now').textContent = d && d.standby ? '⏻ STANDBY (apagada)' : (it ? (it.title||it.type||'—') : '— sin señal —');
+        if(d&&typeof d.standby==='boolean'){ standby=d.standby; paintRemoteControls(); }
+        renderPreview(it);
         refreshTagline();
-      }catch(e){ document.getElementById('now').textContent='—'; }
+      }catch(e){ if(e.name!=='AbortError'&&generation===targetGeneration&&requestSeq===nowRequestSeq) document.getElementById('now').textContent='—'; }
+      finally{ if(nowController===controller) nowController=null; }
     }
 
     // ── CLI libre ──
-    function cliGo(){ var v=document.getElementById('cliInput').value.trim(); if(v){ send(v); document.getElementById('cliInput').value=''; } }
+    function cliGo(){ var v=document.getElementById('cliInput').value.trim(); if(v){ sendRemote(v); document.getElementById('cliInput').value=''; } }
     document.getElementById('cliSend').onclick=cliGo;
     document.getElementById('cliInput').addEventListener('keydown',function(e){ if(e.key==='Enter') cliGo(); });
 

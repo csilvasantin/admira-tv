@@ -52,9 +52,22 @@
   :root{ --air:#ff4444; --grn:#39d353; --blue:#7db8ff; --bg:#05080c; }
   *{ box-sizing:border-box; margin:0; padding:0; }
   html,body{ height:100%; background:var(--bg); color:var(--grn); font-family:ui-monospace,"JetBrains Mono",monospace; overflow:hidden; }
-  #wrap{ position:fixed; inset:0; display:flex; gap:16px; align-items:center; justify-content:center; padding:12px; }
+  #wrap{ position:fixed; inset:0; display:flex; gap:16px; align-items:center; justify-content:center; padding:12px; min-width:0; min-height:0; overflow:hidden; }
+  /* En navegación normal, el player vive DENTRO del rectángulo que deja libre el
+     chrome. `#wrap` es fixed y por eso el padding de <html> no lo desplazaba: la
+     cola quedaba bajo el menú, el marco pisaba la cabecera y el selector derecho
+     podía entrar debajo de Detalle. Las variables son el contrato de admira-nav. */
+  html.admnav:not(.clean) #wrap{
+    top:var(--admtb,52px); left:var(--admnw,64px); right:var(--admrw,0px); bottom:0;
+    transition:top .18s ease,left .18s ease,right .18s ease,bottom .18s ease;
+  }
+  html.admnav.admnav-exp:not(.clean) #wrap{ bottom:var(--admexph,200px); }
+  /* En móvil menú y detalle son drawers superpuestos con scrim: admira-nav no
+     reserva laterales, así que el canal tampoco. La cabecera sí sigue ocupando
+     sus 52px y el modo experto conserva su reserva inferior. */
+  @media(max-width:680px){ html.admnav:not(.clean) #wrap{ left:0; right:0; } }
   /* playlist (cola) a la izquierda de la emisión */
-  #rail{ width:166px; height:96vh; display:flex; flex-direction:column; gap:8px; transition:opacity .3s; }
+  #rail{ width:166px; height:100%; min-height:0; flex:0 0 166px; display:flex; flex-direction:column; gap:8px; transition:opacity .3s; }
   #railItems{ flex:1; min-height:0; display:flex; flex-direction:column; gap:6px; justify-content:center; overflow:hidden; }
   .rail-hd{ font-size:8px; letter-spacing:.16em; color:#7db8ff; opacity:.55; text-transform:uppercase; text-align:center; padding:2px 0; }
   /* reordenar la cola arrastrando */
@@ -96,7 +109,7 @@
   body.idle #rail{ opacity:.3; }
   @media (max-width:900px){ #rail{ display:none; } }
   /* selector de canal (playlists + metatags) a la derecha */
-  #chan{ width:174px; height:96vh; display:flex; flex-direction:column; gap:6px; justify-content:center; transition:opacity .3s; overflow:hidden; }
+  #chan{ width:174px; height:100%; min-height:0; flex:0 0 174px; display:flex; flex-direction:column; gap:6px; justify-content:center; transition:opacity .3s; overflow:hidden; }
   #chan .ch-hd{ font-size:8px; letter-spacing:.16em; color:#7db8ff; opacity:.55; text-transform:uppercase; text-align:center; padding:4px 0 1px; }
   #chan .ch-hd .ch-total{ color:#7dff9e; opacity:.9; }
   #chan .ch-sec{ display:flex; flex-direction:column; gap:5px; }
@@ -114,11 +127,11 @@
   #chan .ch-tag b{ font-weight:600; opacity:.55; }
   body.idle #chan{ opacity:.32; }
   @media (max-width:1100px){ #chan{ display:none; } }
-  #mupi{ position:relative; height:96vh; aspect-ratio:9/16; max-width:100%; background:#000; border-radius:16px; overflow:hidden; touch-action:manipulation;
+  #mupi{ position:relative; flex:0 1 auto; height:96vh; aspect-ratio:9/16; max-width:100%; max-height:100%; background:#000; border-radius:16px; overflow:hidden; touch-action:manipulation;
     transition:width .35s ease, height .35s ease;
     box-shadow:0 0 0 8px #11161d, 0 0 0 10px #060a0f, 0 30px 90px rgba(0,0,0,.65), 0 0 80px rgba(125,184,255,.07); }
   #stage{ position:absolute; inset:0; display:grid; place-items:center; background:#000; }
-  #stage video, #stage img{ width:100%; height:100%; object-fit:cover; display:block; }
+  #stage video, #stage img{ width:100%; height:100%; object-fit:contain; display:block; }
   /* Oculta el botón de play NATIVO del navegador (Samsung Internet/WebView/iOS) que
      asomaba entre contenidos: en señalética el vídeo SIEMPRE autoarranca y NUNCA se
      ofrece un control de reproducción al público. */
@@ -687,17 +700,21 @@ function itemAR(it){
   if(KIND[it&&it.type]==='interactive') return 16/9;
   return 9/16;
 }
-function fitMupi(){ const mupi=$('mupi'); if(!mupi) return;
-  const clean=document.documentElement.classList.contains('clean');
+function fitMupi(){ const mupi=$('mupi'), wrap=$('wrap'); if(!mupi||!wrap) return;
   const railEl=$('rail'), chanEl=$('chan');
   const rW=(railEl&&getComputedStyle(railEl).display!=='none')?railEl.offsetWidth:0;
   const cW=(chanEl&&getComputedStyle(chanEl).display!=='none')?chanEl.offsetWidth:0;
-  const aH=(clean?1:0.96)*window.innerHeight;
-  const aW=window.innerWidth-rW-cW-(clean?4:(rW||cW?56:24));
+  const ws=getComputedStyle(wrap), padX=parseFloat(ws.paddingLeft||0)+parseFloat(ws.paddingRight||0);
+  const padY=parseFloat(ws.paddingTop||0)+parseFloat(ws.paddingBottom||0);
+  const gap=parseFloat(ws.columnGap||ws.gap||0), visibleSides=(rW?1:0)+(cW?1:0);
+  const aH=Math.max(1,wrap.clientHeight-padY);
+  const aW=Math.max(1,wrap.clientWidth-padX-rW-cW-gap*visibleSides);
   let h=aH, w=h*mupiAR; if(w>aW){ w=aW; h=w/mupiAR; }
   mupi.style.height=Math.round(h)+'px'; mupi.style.width=Math.round(w)+'px'; mupi.style.aspectRatio='auto';
 }
 window.addEventListener('resize',fitMupi);
+let _mupiResizeObserver=null;
+try{ if(window.ResizeObserver){ _mupiResizeObserver=new ResizeObserver(fitMupi); _mupiResizeObserver.observe($('wrap')); } }catch(_){}
 
 // ── CONTENIDO EXPANDIDO (pantallas plegables) ───────────────────────────────────────
 // Un plegable tiene dos pantallas de relación de aspecto muy distinta: cerrado es ultra
@@ -1320,6 +1337,9 @@ async function play(i, forced){
     const im=document.createElement('img'); try{ im.crossOrigin='anonymous'; }catch(_){}   // capturable si trae CORS; si no, onerror recarga sin crossorigin
     let _coRetryI=false;
     im.alt=title; if(it.type==='twin-npc') im.className='pixel';
+    im.onload=()=>{ if(_tok!==_playTok||!im.isConnected||!im.naturalWidth||!im.naturalHeight) return;
+      it._dim={w:im.naturalWidth,h:im.naturalHeight}; mupiAR=im.naturalWidth/im.naturalHeight;
+      fitMupi(); emitFrameState(it); localInfoRender(); };
     im.onerror=()=>{ if(!_coRetryI && im.crossOrigin){ _coRetryI=true; try{ im.removeAttribute('crossorigin'); im.src=SRC; }catch(_){} return; }   // asset sin CORS: recarga sin crossorigin (la emisión SIEMPRE se ve)
       setTimeout(next,600); };
     im.src=SRC; stage.appendChild(im); startAdv(syncOn?syncRemainingMs():Math.max(2,(it._previewSec||cfg.imgSec))*1000);
@@ -2602,16 +2622,68 @@ pollMode(); setInterval(pollMode, 12000);
 // Si el proxy fallara, rota al workers.dev en el siguiente sondeo (nunca sin control).
 const CMD_HOSTS=['https://api.admira.store/locations/cmd','https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd'];
 let __cmdHost=0;
-let __cmdSince=0, __cmdInit=false;
-function pollCmd(){
-  if(!scr.circuit) return;
-  fetch(CMD_HOSTS[__cmdHost]+'?id='+encodeURIComponent(scr.circuit)+'&since='+__cmdSince+'&t='+Date.now(),{cache:'no-store'})
-    .then(r=>r.ok?r.json():Promise.reject(new Error('http '+r.status))).then(d=>{
-      if(!d) return;
-      if(!__cmdInit){ __cmdSince=d.seq||0; __cmdInit=true; return; }   // no re-ejecutar comandos viejos al recargar
-      if(!Array.isArray(d.commands)) return;
-      for(const c of d.commands){ if(c.cid>__cmdSince) __cmdSince=c.cid; try{ runCli(String(c.cmd)); }catch(_){} }
-    }).catch(()=>{ __cmdHost=(__cmdHost+1)%CMD_HOSTS.length; });   // host caído/bloqueado → prueba el otro
+let __cmdSince=0, __cmdInit=false, __cmdPolling=false;
+const LEGACY_ACTION_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const CMD_ACK_OUTBOX_KEY='adtv_cmd_ack_outbox:'+(scr.circuit||'unbound');
+let __cmdAckOutbox=(()=>{ try{
+  const rows=JSON.parse(LS(CMD_ACK_OUTBOX_KEY,'[]')||'[]'), cutoff=Date.now()-3600000;
+  return Array.isArray(rows)?rows.filter(x=>x&&x.queuedAt>=cutoff&&LEGACY_ACTION_RE.test(String(x.action||''))).slice(-50):[];
+}catch(_){ return []; } })();
+function persistCmdAckOutbox(){ save(CMD_ACK_OUTBOX_KEY,JSON.stringify(__cmdAckOutbox.slice(-50))); }
+async function postQueuedAck(receipt){
+  const body=JSON.stringify(receipt);
+  for(let offset=0;offset<CMD_HOSTS.length;offset++){
+    const idx=(__cmdHost+offset)%CMD_HOSTS.length, controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),1500);
+    try{ const r=await fetch(CMD_HOSTS[idx]+'/ack',{method:'POST',headers:{'Content-Type':'application/json'},body,signal:controller.signal});
+      if(r.ok){ __cmdHost=idx; return true; } }catch(_){} finally{ clearTimeout(timer); }
+  }
+  return false;
+}
+async function flushCmdAckOutbox(){
+  for(const receipt of [...__cmdAckOutbox]){
+    if(!await postQueuedAck(receipt)) continue;
+    __cmdAckOutbox=__cmdAckOutbox.filter(x=>x.action!==receipt.action); persistCmdAckOutbox();
+  }
+}
+async function executeQueuedCommand(c){
+  const raw=String(c&&c.cmd||''), cmd=raw.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
+  if(['standby','blackout','apagar','stop','parar','off'].includes(cmd)){
+    standbyOn(true); flashCli('⏻ standby (apagada)'); return 'executed';
+  }
+  if(['resume','wake','wakeup','reanudar','encender','standbyoff'].includes(cmd)){
+    try{ await remoteStartPlayback(); flashCli('▶ reanudada'); return 'executed'; }
+    catch(_){ try{ tap.classList.add('show'); }catch(__){} return 'failed'; }
+  }
+  try{ runCli(raw); return 'executed'; }catch(_){ return 'failed'; }
+}
+async function ackQueuedCommand(c,status){
+  if(!c||typeof c.cid!=='number'||!Number.isSafeInteger(c.cid)||c.cid<=0||!LEGACY_ACTION_RE.test(String(c.action||''))) return false;
+  if(!__cmdAckOutbox.some(x=>x.action===c.action)){
+    __cmdAckOutbox.push({id:scr.circuit,screen:scr.screen||'',cid:c.cid,action:c.action,status,queuedAt:Date.now()});
+    persistCmdAckOutbox();   // primero a disco: un background/reload no pierde el acuse
+  }
+  await flushCmdAckOutbox();
+  return !__cmdAckOutbox.some(x=>x.action===c.action);
+}
+async function pollCmd(){
+  if(!scr.circuit||__cmdPolling) return;
+  __cmdPolling=true;
+  try{
+    await flushCmdAckOutbox();   // reintento idempotente de acuses pendientes
+    const r=await fetch(CMD_HOSTS[__cmdHost]+'?id='+encodeURIComponent(scr.circuit)+'&since='+__cmdSince+'&t='+Date.now(),{cache:'no-store'});
+    if(!r.ok) throw new Error('http '+r.status);
+    const d=await r.json(); if(!d) return;
+    if(!__cmdInit){ __cmdSince=d.seq||0; __cmdInit=true; return; }   // no re-ejecutar comandos viejos al recargar
+    if(!Array.isArray(d.commands)) return;
+    for(const c of d.commands){
+      if(typeof c.cid!=='number'||!Number.isSafeInteger(c.cid)||c.cid<=__cmdSince) continue;
+      const status=await executeQueuedCommand(c);   // orden estricto: una acción termina antes de empezar la siguiente
+      await ackQueuedCommand(c,status);
+      __cmdSince=c.cid;
+    }
+  }catch(_){ __cmdHost=(__cmdHost+1)%CMD_HOSTS.length; }
+  finally{ __cmdPolling=false; }
 }
 pollCmd(); setInterval(pollCmd, 3000);
 
