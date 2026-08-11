@@ -429,9 +429,9 @@ window.ADMIRA_NAV={
   <div class="ebWrap">
     <table class="ebTable" id="ebTable">
       <thead><tr>
-        <th>Estado</th><th>Player / pantalla</th><th>Rol</th><th>Circuito · sitio</th><th>Canal · parrilla</th><th>En emisión</th><th>Visto</th><th>🎥 Asistencia</th>
+        <th>Estado</th><th>Player / pantalla</th><th>Remote</th><th>Rol</th><th>Circuito · sitio</th><th>Canal · parrilla</th><th>En emisión</th><th>Visto</th><th>🎥 Asistencia</th>
       </tr></thead>
-      <tbody id="ebBody"><tr><td colspan="8" class="ebHole">Cargando emisión en vivo…</td></tr></tbody>
+      <tbody id="ebBody"><tr><td colspan="9" class="ebHole">Cargando emisión en vivo…</td></tr></tbody>
     </table>
   </div>
   <div class="ebActMsg ok" id="ebActMsg" hidden></div>
@@ -898,6 +898,15 @@ $('canalRows').addEventListener('click',e=>{ const d=e.target.closest('[data-del
 $('canalModal').addEventListener('click',e=>{ if(e.target===$('canalModal')) closeCanalEditor(); });
 
 // ── Fichas contraíbles: clic en el header (.top) contrae/expande; estado persistido ──
+// La columna Remote abre el mando QUE YA EXISTE (mando.html, que lee ?screen=), enganchado
+// al screen de esa fila. Se engancha el que hay en vez de reescribir botones: si manana el
+// mando gana comandos, esta columna los hereda sola. Ventana aparte y no modal, porque se
+// opera mirando la tabla al lado — subes volumen y ves ahi mismo si la pantalla reacciona.
+document.addEventListener('click', e=>{
+  const b=e.target.closest('.ebRemote'); if(!b||b.disabled) return;
+  const s=b.dataset.screen; if(!s) return;
+  window.open('/mando.html?screen='+encodeURIComponent(s),'mando-'+s,'width=420,height=680,menubar=no,toolbar=no');
+});
 $('grid').addEventListener('click', e=>{
   if(e.target.closest('.modeSel,.remote,.acts,a,button,select,input')) return; // no en controles
   const top=e.target.closest('.card>.top'); if(!top) return;
@@ -1225,7 +1234,7 @@ $('progBands').addEventListener('click',e=>{
 
     // ── TABLA: fila por player vivo ──
     if(!players.length){
-      el('ebBody').innerHTML='<tr><td colspan="8" class="ebHole">'+(sc.err? ('signage/screens caído: '+esc(sc.err)) : 'ningún player vivo ahora mismo')+'</td></tr>';
+      el('ebBody').innerHTML='<tr><td colspan="9" class="ebHole">'+(sc.err? ('signage/screens caído: '+esc(sc.err)) : 'ningún player vivo ahora mismo')+'</td></tr>';
     } else {
       const rows = players.slice().sort((a,b)=>(b.online?1:0)-(a.online?1:0)||String(a.screen).localeCompare(String(b.screen))).map(p=>{
         const on = !!p.online;
@@ -1252,6 +1261,17 @@ $('progBands').addEventListener('click',e=>{
         return '<tr>'+
           '<td><span class="ebSt '+stCls+'"><span class="d"></span>'+stTxt+'</span></td>'+
           '<td><span class="ebScreen">'+esc(p.screen)+'</span></td>'+
+          // MANDO A DISTANCIA DESDE LA PROPIA FILA (Carlos, 11-08-2026). Para subir el
+          // volumen de una pantalla habia que salirse del CMS: el mando existe y funciona
+          // (mando.html, el mismo que abre admira.live/control), pero desde aqui no se
+          // llegaba. Se engancha el que ya hay en vez de reescribir botones: si manana
+          // el mando gana comandos, esta columna los hereda sola.
+          // Va deshabilitado y DICE POR QUE cuando el player no esta en antena: un mando
+          // que encola comandos a una pantalla apagada no falla, es peor — no pasa nada
+          // y no sabes si es el mando o la pantalla.
+          '<td class="ebRemoteCell">'+(on
+            ? '<button class="ebBtn ebRemote" data-screen="'+esc(p.screen)+'" title="Mando a distancia de '+esc(p.screen)+' — volumen, silencio, saltar pieza y playlist en vivo">\uD83C\uDF9B mando</button>'
+            : '<button class="ebBtn ebRemote" disabled title="Sin player en antena: no hay a quien mandarle el comando">\uD83C\uDF9B mando</button>')+'</td>'+
           '<td>'+(role? '<span class="ebRole '+rCls+'">'+esc(role)+'</span>':hole('—'))+'</td>'+
           '<td>'+siteCell+'</td>'+
           '<td>'+chanCell+'</td>'+
