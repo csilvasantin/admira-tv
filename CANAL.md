@@ -111,6 +111,20 @@ suprime los diálogos JS nativos y el `WebViewClient` no muestra la página de e
 WebView (reintento silencioso con backoff). El checkbox «Contenido siempre encima» de la
 pantalla de configuración (marcado por defecto) propaga `&ontop=1|0` a la URL del canal.
 
+### Ficha interactiva del contenido
+
+En un teléfono, tableta o pantalla táctil, un **doble toque** sobre el contenido abre
+una ficha viva de la pieza en antena. Con ratón se usa **doble clic** y con teclado
+permanece disponible **Ctrl+I**. El mismo gesto vuelve a cerrarla.
+
+La ficha muestra datos reales del player: título, tipo, posición en el loop, progreso,
+resolución, tamaño, identificador, origen, pantalla y etiquetas. Se actualiza cada
+segundo mientras está abierta, no pausa el contenido y no altera `/emit`, el beat de
+pantalla ni el proof-of-play. Botones, enlaces y controles quedan fuera del gesto para
+evitar aperturas accidentales; `touch-action: manipulation` impide el zoom de doble toque.
+El shell Android detecta el gesto a nivel nativo para que también funcione cuando la pieza
+en antena es una Xperiencia `interactive` dentro de un iframe.
+
 ### Controles ocultos de testing (Shift+flechas)
 
 Para **navegar el loop a mano durante pruebas** hay atajos ocultos, **protegidos
