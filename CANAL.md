@@ -82,6 +82,22 @@ terminan el proceso DS**. El proceso continúa hasta una acción terminal explí
 
 `Shift + Q` no mata DS: solo alterna el blindaje visual Always on top para pruebas.
 
+### Arranque remoto en iPhone/iOS
+
+El botón **Arrancar** del mando (`/remotecontrol/`) y el botón **▶** del mini-mando del
+CMS (`/cms`) expresan una intención completa: sale de `standby`, quita la pausa y verifica
+el `play()` real. La cola por pantalla de `/remotecontrol/` espera esa verificación antes de
+acusar el comando; el mini-mando del CMS conserva su canal por circuito, que solo confirma
+el encolado. Si WebKit bloquea la reproducción con audio porque la orden no nació
+de un gesto local, el player reintenta en mudo: la imagen arranca remotamente y el sonido se
+puede habilitar después. Si también falla el intento silencioso, el acuse es `failed` y el
+mando no presenta un falso doble tick de éxito.
+
+iOS suspende JavaScript y red cuando la app pasa a segundo plano. Al volver a primer plano,
+el player consume la cola de control inmediatamente (`visibilitychange`, `pageshow`, `online`).
+Una app terminada por iOS no puede despertarse desde una página web, SSE, WebSocket ni Service
+Worker: ese caso requiere una siguiente fase nativa con APNs; el mando web no lo simula.
+
 ### Always on top (⇧Q) — la emisión nunca se tapa
 
 Doctrina DOOH: **nada se pone encima del contenido**. El canal arranca con el modo

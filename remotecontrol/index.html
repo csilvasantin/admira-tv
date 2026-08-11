@@ -574,7 +574,7 @@
     {cmd:'vol-up',      ico:'🔊', lab:'Vol +'},
     {cmd:'ontop-toggle',ico:'📌', lab:'On-top'},
     {cmd:'hud',         ico:'🅗', lab:'HUD'},
-    {cmd:'play',        ico:'▶', lab:'Play'}
+    {cmd:'play',        ico:'▶', lab:'Arrancar'}
   ];
 
   function platIcon(ua){
@@ -683,10 +683,20 @@
         .then(j=>{
           const seen=(j&&Array.isArray(j.seen))?j.seen:[];
           lastSeen[scr]=seen.slice(-6); refreshQueueView();
-          if(seen.some(s=>s&&s.id===id)){
+          const receipt=seen.find(s=>s&&s.id===id);
+          if(receipt){
             const ms=(Date.now()-t0);
-            if(lastEl) lastEl.innerHTML='<span class="rx">✓✓ recibido</span> · '+ms+'ms';
-            if(logLn) logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="rx">✓✓ recibido</span> · '+ms+'ms';
+            const failed=receipt.result==='failed', ignored=receipt.result==='ignored';
+            if(lastEl) lastEl.innerHTML=failed
+              ? '<span class="warn">✗ recibido · no arrancó</span> · '+ms+'ms'
+              : ignored
+                ? '<span class="warn">⚠ recibido · ignorado</span> · '+ms+'ms'
+                : '<span class="rx">✓✓ ejecutado</span> · '+ms+'ms';
+            if(logLn) logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · '+(failed
+              ? '<span class="warn">✗ fallo en player</span>'
+              : ignored
+                ? '<span class="warn">⚠ ignorado</span>'
+                : '<span class="rx">✓✓ ejecutado</span>')+' · '+ms+'ms';
             return;
           }
           if(Date.now()>=deadline){
