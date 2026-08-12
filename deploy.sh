@@ -42,6 +42,17 @@ echo "→ Rejilla de soluciones…"
 # para la publicación en vez de servir la contradicción.
 python3 tools/gen-apps-grid.py --check
 
+echo "→ Literales de version…"
+# El sello canonico esta en el <meta> de index.html, pero 34 paginas declaraban
+# ademas su propia version a mano. admira-nav.js las corrige leyendo /version.json,
+# asi que casi siempre el literal es invisible… hasta que una pagina pinta el suyo
+# en un elemento que el nav NO corrige. Paso el 12-ago-2026: el CMS de flota
+# enseñaba una version de JULIO mientras servia la del dia.
+# Arreglar aquel caso no bastaba: el siguiente literal volveria a mentir. Aqui se
+# PARA la publicacion, que es donde se puede garantizar.
+python3 tools/sella-versiones.py --check || {
+  echo "  ✖ hay versiones escritas a mano que no son la del release."; exit 1; }
+
 echo "→ Firma del release…"
 # El sello canónico es el del index.html: la firma se deriva de él, nunca al revés.
 release="$(sed -n 's/.*admiranext-version.*content="\(v\.[^"]*\)".*/\1/p' index.html | head -1)"

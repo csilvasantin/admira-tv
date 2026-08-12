@@ -970,6 +970,14 @@ function wireCam(){ const cb=$('f-cam'); if(cb) cb.onchange=()=>{ cb.checked?cam
 // inyectan como assets prioritarios (universales) y el HUD muestra qué manda la
 // parrilla. Si no hay grid o no responde, el canal sigue con el Stock normal.
 const GRID_API='https://api.admira.store';
+// Motores que NO son contenido de emisión: material de referencia que entra al
+// Stock por los pipelines de conocimiento (importaciones de YouTube/TikTok con
+// yt-dlp, cápsulas de Grok, enlaces pendientes de Telegram). Sirven para trabajar,
+// no para que los mire la calle. Es un cortafuegos de PROCEDENCIA porque hoy no hay
+// una marca positiva de «esto es emitible»: en cuanto la haya, esto se cae.
+const MOTOR_REFERENCIA=/^(yt-dlp|telegram import|smith\s*·\s*grok|site capsule)/i;
+const CORTAFUEGOS_MIN=6;   // por debajo de esto la pantalla se quedaría casi muda
+let _cortafuegos=0;        // >0 piezas apartadas · -1 no se pudo aplicar · 0 no aplica
 let gridInjected=[], gridExactMode=false;
 function gridBadge(txt){ let b=$('gridBadge'); if(!b){ b=document.createElement('div'); b.id='gridBadge'; b.style.cssText='position:absolute;top:8px;right:8px;z-index:40;background:rgba(22,16,4,.82);border:1px solid rgba(255,200,90,.45);color:#ffd866;border-radius:999px;padding:4px 11px;font:12px ui-monospace,Menlo,monospace;backdrop-filter:blur(4px)'; ($('mupi')||document.body).appendChild(b); } b.style.display=txt?'block':'none'; b.textContent=txt; }
 async function loadGrid(){ if(!scr.screen) return;
@@ -1461,7 +1469,26 @@ function rebuild(restart){
     if(restart||cur<0){ cur=-1; play(0); }
     return;
   }
-  playlist=syncOn ? syncMasterOrder() : all.filter(matches).slice(0,Math.max(1,cfg.max));
+  // ── CORTAFUEGOS: una pantalla sin parrilla no emite «todo» ──────────────────
+  // Sin parrilla el canal se quedaba con el Stock ENTERO y segmento `all`, o sea
+  // «lo último que alguien subió a Pixeria». Hoy eso son importaciones de
+  // referencia del pipeline del Consejo (yt-dlp, cápsulas de Grok, enlaces de
+  // Telegram) saliendo por pantallas de tienda. Nadie lo decidió.
+  // Solo actúa cuando NO hay nada decidido: sin parrilla (ni propia ni heredada),
+  // sin sincro, sin tag del operador y con el segmento de casa. En cuanto alguien
+  // decide algo, manda quien decidió.
+  // Y la doctrina DOOH manda sobre esto: si el filtro dejara la pantalla casi
+  // vacía se descarta y vuelve el catálogo entero — una pantalla en negro es peor
+  // que una pantalla con algo inesperado.
+  const sinDecidir = !gridInjected.length && !syncOn && !URL_TAG && !seg.tag
+    && seg.medio==='all' && seg.category==='all' && !PREVIEW.on && !directOn;
+  let base = all;
+  if(sinDecidir){
+    const emitibles = all.filter(it=>!MOTOR_REFERENCIA.test(String(it.motor||'')));
+    if(emitibles.length >= CORTAFUEGOS_MIN){ base = emitibles; _cortafuegos = all.length - emitibles.length; }
+    else { _cortafuegos = -1; }   // no alcanza: se emite todo y se dice por qué
+  } else { _cortafuegos = 0; }
+  playlist=syncOn ? syncMasterOrder() : base.filter(matches).slice(0,Math.max(1,cfg.max));
   if(syncOn){
     $('segCount').textContent=playlist.length+' desde '+SYNC_MASTER;
     // Decir SINCRO CANAL sin el máster es mentir: sin SYNC_REMOTE la pantalla ordena por su
@@ -1478,7 +1505,9 @@ function rebuild(restart){
   else { playlist=defaultOrder(playlist); }   // categoría + fecha (último import primero)
   playlist=freshTailOrder(playlist);   // ?freshtail=1: las novedades, al final del loop
   playlist=gridWeave(playlist);   // la parrilla vendida/propia entra a cadencia fija
-  $('segCount').textContent=playlist.length+(playoutMode==='conditional'?' en condicional XPL':' en este segmento');
+  const _cf = _cortafuegos>0 ? (' · '+_cortafuegos+' de referencia fuera')
+            : _cortafuegos<0 ? ' · sin material propio: emitiendo todo' : '';
+  $('segCount').textContent=playlist.length+(playoutMode==='conditional'?' en condicional XPL':' en este segmento')+_cf;
   setLive(directOn?'● DIRECTO':((playoutMode==='conditional'?'CONDICIONAL · ':'LIVE · ')+playlist.length+' en loop'), directOn||playlist.length>0);
   renderChan();
   try{ signagePlaylistPush(); }catch(_){}   // mando gráfico: publica la playlist efectiva (solo si cambió)

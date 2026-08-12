@@ -27,7 +27,10 @@
     if(!v) return;
     VER=v;
     try{ if(window.AdmiraNav) window.AdmiraNav.ver=v; }catch(e){}
-    ['admFoot','adm-d-ver'].forEach(function(id){
+    // `appVer` es el rótulo del CMS de flota. Faltaba aquí, así que el CMS pintaba
+    // su literal y NADIE se lo corregía: el 12-ago enseñaba una versión de JULIO
+    // mientras servía la del día. El sitio de la versión es uno solo.
+    ['admFoot','adm-d-ver','appVer'].forEach(function(id){
       var n=document.getElementById(id); if(n) n.textContent=v;
     });
   }
