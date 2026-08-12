@@ -329,6 +329,31 @@
   .ebSt .d{width:7px;height:7px;border-radius:50%;flex:none}
   .ebSt.on{color:var(--air);border-color:#1f5e44} .ebSt.on .d{background:var(--air);box-shadow:0 0 7px var(--air)}
   .ebSt.off{color:var(--off);border-color:#5e2630} .ebSt.off .d{background:var(--off)}
+  /* PREVIO — miniatura del fotograma en antena. Tamaño fijo para que la tabla no
+     baile mientras cargan, y 16:9 porque es lo que emite el canal. */
+  .ebShot{position:relative;display:block;width:104px;height:59px;border-radius:6px;overflow:hidden;
+    border:1px solid var(--line);background:#05070c;text-decoration:none}
+  .ebShot img{width:100%;height:100%;object-fit:cover;display:block}
+  .ebShot:hover{border-color:var(--accent)}
+  .ebShotHole{display:none;position:absolute;inset:0;align-items:center;justify-content:center;
+    font-size:10px;letter-spacing:.06em;color:var(--dim);text-align:center;padding:0 6px}
+  /* Sin captura todavía: se DICE, no se enseña una imagen rota. */
+  .ebShot.sinPrevio img{display:none}
+  .ebShot.sinPrevio .ebShotHole{display:flex}
+  .ebShot.sinPrevio{border-style:dashed}
+  .ebShotCell{width:112px}
+  /* CABECERAS QUE SE MANEJAN. Una tabla de flota se mira de formas distintas según
+     lo que busques: quién lleva más tiempo sin refrescar, qué circuito está mudo,
+     qué rol falla. Ordenar y reordenar deja de exigir un cambio de código. */
+  .ebTable th[data-sort]{cursor:pointer;user-select:none}
+  .ebTable th[data-sort]:hover{color:var(--accent)}
+  .ebTable th[draggable=true]{cursor:grab}
+  .ebTable th.ebDrag{opacity:.4}
+  .ebTable th.ebDropAntes{box-shadow:inset 2px 0 0 var(--accent)}
+  .ebTable th.ebDropDespues{box-shadow:inset -2px 0 0 var(--accent)}
+  .ebSortMark{font-size:9px;margin-left:5px;opacity:.85}
+  .ebHeadReset{margin-left:8px;font-size:10px;color:var(--dim);background:none;border:0;cursor:pointer;text-decoration:underline}
+  .ebHeadReset:hover{color:var(--accent)}
   .ebRole{display:inline-block;padding:2px 8px;border-radius:6px;border:1px solid var(--line);font-size:10.5px;color:var(--dim)}
   .ebRole.canal{color:var(--accent);border-color:#2a3a66} .ebRole.game{color:var(--robot);border-color:#42306a}
   .ebScreen{font-weight:700;color:var(--ink)}
@@ -437,15 +462,25 @@ window.ADMIRA_NAV={
     <span class="ebToggles">
       <button class="ebTog on" id="ebTogGaps" title="Mostrar/ocultar los descuadres por cablear">⚠ Descuadres</button>
       <button class="ebTog" id="ebTogFleet" title="Mostrar/ocultar los equipos de flota sin vincular">🖥 Flota</button>
+      <button class="ebHeadReset" id="ebResetCols" title="Devuelve las columnas a su sitio y el orden a «primero lo que está en antena»">↺ tabla</button>
     </span>
   </div>
   <div class="ebStats" id="ebStats"></div>
   <div class="ebWrap">
     <table class="ebTable" id="ebTable">
-      <thead><tr>
-        <th>Estado</th><th>Player / pantalla</th><th>Remote</th><th>Rol</th><th>Circuito · sitio</th><th>Canal · parrilla</th><th>En emisión</th><th>Visto</th><th>🎥 Asistencia</th>
+      <thead><tr id="ebHeadRow">
+        <th data-col="estado" data-sort="text">Estado</th>
+        <th data-col="player" data-sort="text">Player / pantalla</th>
+        <th data-col="remote">Remote</th>
+        <th data-col="rol" data-sort="text">Rol</th>
+        <th data-col="previo">Previo</th>
+        <th data-col="circuito" data-sort="text">Circuito · sitio</th>
+        <th data-col="canal" data-sort="text">Canal · parrilla</th>
+        <th data-col="emision" data-sort="text">En emisión</th>
+        <th data-col="visto" data-sort="num">Visto</th>
+        <th data-col="asistencia">🎥 Asistencia</th>
       </tr></thead>
-      <tbody id="ebBody"><tr><td colspan="9" class="ebHole">Cargando emisión en vivo…</td></tr></tbody>
+      <tbody id="ebBody"><tr><td colspan="10" class="ebHole">Cargando emisión en vivo…</td></tr></tbody>
     </table>
   </div>
   <div class="ebActMsg ok" id="ebActMsg" hidden></div>
@@ -547,6 +582,137 @@ const filterByCanal = arr => { const c=canalCircuits(); return c? arr.filter(d=>
 async function loadProjects(){ try{ const d=await fetch(PROJECTS_API,{cache:'no-store'}).then(r=>r.json()); PROJECTS=d.projects||[]; }catch(_){ PROJECTS=[]; }
   const s=$('canalSel'); if(s){ s.innerHTML='<option value="all">Todos los canales</option>'+PROJECTS.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join(''); s.value=CANAL_SEL; } }
 const SIGNAGE = 'https://api.admira.store/signage/now?screen=';
+// Fotograma real de lo que hay en antena, el que sube el propio canal cada 25 s.
+// Se pide la IMAGEN, no su meta: shotmeta: en KV se desincroniza del R2 y llega a
+// decir «no_shot» de pantallas que tienen captura (comprobado con xtanco-totem).
+const SHOT_BASE = 'https://api.admira.store/signage/shot';
+
+/* ═══ LA TABLA DE FLOTA SE MANEJA COMO UNA TABLA ═══════════════════════════════
+ * Pulsar una cabecera ordena; arrastrarla la cambia de sitio. Las dos cosas se
+ * recuerdan, porque quien vigila la flota mira SIEMPRE por lo mismo y no tiene
+ * por qué recolocarlo cada mañana.
+ *
+ * El cuerpo se repinta entero con innerHTML en cada refresco (cada pocos
+ * segundos), así que el orden de columnas NO puede vivir en el DOM: se guarda
+ * como lista de nombres y se vuelve a aplicar después de cada pintado. Por eso
+ * cada <th> y cada <td> llevan su `data-col` — sin eso, permutar celdas sería
+ * contar posiciones y bastaría una columna nueva para descuadrarlo todo.
+ * ═════════════════════════════════════════════════════════════════════════════ */
+const EBTabla = (function(){
+  const K_ORDEN='adtv_cms_orden', K_COLS='adtv_cms_cols';
+  const leer=(k,d)=>{ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(_){ return d; } };
+  const guardar=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(_){} };
+  const cabeceras=()=>Array.from(document.querySelectorAll('#ebHeadRow th'));
+  // El orden de casa se congela UNA vez, leyendo el HTML tal y como viene del
+  // servidor. Leerlo del DOM cada vez parecía lo natural y estaba mal: en cuanto
+  // se arrastraba una columna, el DOM YA estaba permutado y «lo de casa» pasaba a
+  // ser lo último que hubieras hecho — el botón de reinicio no devolvía a ninguna
+  // parte porque el sitio al que devolver se movía con él.
+  let ORIGEN = null;
+  const porDefecto=()=>{ if(!ORIGEN) ORIGEN = cabeceras().map(th=>th.dataset.col); return ORIGEN.slice(); };
+
+  let orden = leer(K_ORDEN, null);          // {col, desc} o null = orden de casa
+
+  function colsGuardadas(){
+    const guardadas = leer(K_COLS, null), reales = porDefecto();
+    if(!Array.isArray(guardadas)) return reales;
+    // Una columna NUEVA (como Previo) no puede desaparecer porque el navegador
+    // recuerde un orden viejo: se conserva lo guardado y se añade lo que falte
+    // en su sitio de origen. Y lo que ya no existe se cae solo.
+    const vivas = guardadas.filter(c=>reales.includes(c));
+    reales.forEach((c,i)=>{ if(!vivas.includes(c)) vivas.splice(Math.min(i,vivas.length),0,c); });
+    return vivas;
+  }
+
+  function ordenaFila(fila, cols){
+    const celdas={}; Array.from(fila.children).forEach(td=>{ if(td.dataset.col) celdas[td.dataset.col]=td; });
+    // Una fila de aviso (colspan) no tiene columnas: se deja en paz.
+    if(Object.keys(celdas).length!==cols.length) return;
+    cols.forEach(c=>fila.appendChild(celdas[c]));
+  }
+
+  // Ordenar es reordenar FILAS YA PINTADAS con los valores que cada una trae
+  // encima. Ni se re-parsea el texto de las celdas ni se vuelve a la red: el
+  // pintado es ebLoad(), que refetchea las cuatro fuentes, y pulsar una cabecera
+  // no puede costar eso.
+  function ordenaFilas(){
+    const cuerpo=document.getElementById('ebBody'); if(!cuerpo) return;
+    const filas=Array.from(cuerpo.querySelectorAll('tr')).filter(tr=>tr.dataset.orden);
+    if(filas.length<2) return;
+    if(!orden){   // sin ordenación elegida: cada fila a su puesto de origen
+      filas.slice().sort((a,b)=>(+a.dataset.casa||0)-(+b.dataset.casa||0)).forEach(tr=>cuerpo.appendChild(tr));
+      return;
+    }
+    const signo=orden.desc?-1:1;
+    filas.map(tr=>{ let v={}; try{ v=JSON.parse(tr.dataset.orden); }catch(_){}
+                    return {tr, v:v[orden.col]}; })
+      .sort((a,b)=> (typeof a.v==='number' && typeof b.v==='number'
+        ? a.v-b.v : String(a.v==null?'':a.v).localeCompare(String(b.v==null?'':b.v),'es')) * signo)
+      .forEach(x=>cuerpo.appendChild(x.tr));
+  }
+
+  function aplica(){
+    const cols=colsGuardadas(), cab=document.getElementById('ebHeadRow');
+    if(!cab) return;
+    ordenaFila(cab, cols);
+    Array.from(document.querySelectorAll('#ebBody tr')).forEach(tr=>ordenaFila(tr, cols));
+    ordenaFilas();
+    cabeceras().forEach(th=>{
+      const marca=th.querySelector('.ebSortMark'); if(marca) marca.remove();
+      if(orden && th.dataset.col===orden.col){
+        const m=document.createElement('span'); m.className='ebSortMark'; m.textContent=orden.desc?'▼':'▲';
+        th.appendChild(m);
+      }
+    });
+  }
+
+  function pulsa(th){
+    const col=th.dataset.col; if(!th.dataset.sort) return;
+    // Tercer clic = volver al orden de casa. Sin esta salida, una vez tocas una
+    // cabecera ya no hay forma de recuperar «primero lo que está en antena».
+    if(orden && orden.col===col && orden.desc) orden=null;
+    else if(orden && orden.col===col) orden={col,desc:true};
+    else orden={col,desc:false};
+    guardar(K_ORDEN, orden);
+    aplica();
+  }
+
+  function arrastrable(){
+    let origen=null;
+    cabeceras().forEach(th=>{
+      th.draggable=true;
+      th.addEventListener('dragstart',e=>{ origen=th; th.classList.add('ebDrag');
+        try{ e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',th.dataset.col); }catch(_){} });
+      th.addEventListener('dragend',()=>{ th.classList.remove('ebDrag');
+        cabeceras().forEach(x=>x.classList.remove('ebDropAntes','ebDropDespues')); origen=null; });
+      th.addEventListener('dragover',e=>{ if(!origen||origen===th) return; e.preventDefault();
+        const r=th.getBoundingClientRect(), despues=(e.clientX-r.left)>r.width/2;
+        th.classList.toggle('ebDropAntes',!despues); th.classList.toggle('ebDropDespues',despues); });
+      th.addEventListener('dragleave',()=>th.classList.remove('ebDropAntes','ebDropDespues'));
+      th.addEventListener('drop',e=>{
+        e.preventDefault(); if(!origen||origen===th) return;
+        const cols=colsGuardadas(), de=origen.dataset.col, a=th.dataset.col;
+        const r=th.getBoundingClientRect(), despues=(e.clientX-r.left)>r.width/2;
+        cols.splice(cols.indexOf(de),1);
+        cols.splice(cols.indexOf(a)+(despues?1:0),0,de);
+        guardar(K_COLS, cols);
+        th.classList.remove('ebDropAntes','ebDropDespues');
+        aplica();
+      });
+      if(th.dataset.sort) th.addEventListener('click',()=>pulsa(th));
+    });
+  }
+
+  function reinicia(){
+    orden=null;
+    try{ localStorage.removeItem(K_ORDEN); localStorage.removeItem(K_COLS); }catch(_){}
+    aplica();
+  }
+  // Se fija el origen en cuanto se carga el módulo, antes de que nadie permute nada.
+  try{ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',porDefecto); else porDefecto(); }catch(_){}
+
+  return { orden:()=>orden, aplica, arrastrable, reinicia };
+})();
 const CACHEAPI= 'https://api.admira.store/screen/cache?screen=';   // estado de descarga (pseudo-streaming)
 const CANAL   = 'https://admira.tv/canal.html';
 const ONLINE_MS = 180000;            // signage/now fresco < 180 s = en antena
@@ -1324,9 +1490,40 @@ $('progBands').addEventListener('click',e=>{
 
     // ── TABLA: fila por player vivo ──
     if(!players.length){
-      el('ebBody').innerHTML='<tr><td colspan="9" class="ebHole">'+(sc.err? ('signage/screens caído: '+esc(sc.err)) : 'ningún player vivo ahora mismo')+'</td></tr>';
+      el('ebBody').innerHTML='<tr><td colspan="10" class="ebHole">'+(sc.err? ('signage/screens caído: '+esc(sc.err)) : 'ningún player vivo ahora mismo')+'</td></tr>';
     } else {
-      const rows = players.slice().sort((a,b)=>(b.online?1:0)-(a.online?1:0)||String(a.screen).localeCompare(String(b.screen))).map(p=>{
+      // El previo se refresca con la tabla (cada refresco trae ts nuevo), pero SOLO
+      // cambia de verdad cada 25 s, que es lo que tarda el canal en subir el
+      // siguiente fotograma. Se redondea a esa ventana para no pedirle a R2 una
+      // imagen nueva en cada repintado.
+      const shotTs = Math.floor(Date.now()/25000);
+      // Valor por el que ordena cada columna. Se saca del MISMO player que pinta la
+      // fila, no del DOM: ordenar leyendo celdas obliga a re-parsear texto ya
+      // formateado («2m», «— nada») y se rompe en cuanto alguien cambia un rótulo.
+      const ordenables = {
+        estado:   p => p.online ? 0 : 1,
+        player:   p => String(p.screen||'').toLowerCase(),
+        rol:      p => String(p.role||'').toLowerCase(),
+        circuito: p => String(p.locName||playerCircuit(p)||p.loc||'').toLowerCase(),
+        canal:    p => { const g=phys2grid[p.screen]; const c=g?g.circuit:playerCircuit(p);
+                         const pr=c?circ2proj[c]:null; return String(pr?pr.name:(c||'')).toLowerCase(); },
+        emision:  p => String(p.showing_id||'').toLowerCase(),
+        // «Visto» es una antigüedad: ordenar por el texto pondría «10m» antes que «2m».
+        visto:    p => Number(p.age_seconds)||0
+      };
+      function shotCell(p){
+        const url = SHOT_BASE+'?screen='+encodeURIComponent(p.screen)+'&t='+shotTs;
+        return '<a class="ebShot" href="'+url+'" target="_blank" rel="noopener" title="Lo que hay ahora mismo en '+esc(p.screen)+' — clic para verlo grande">'+
+          '<img src="'+url+'" alt="Previo de '+esc(p.screen)+'" loading="lazy" decoding="async" '+
+          'onerror="this.closest(\'.ebShot\').classList.add(\'sinPrevio\')">'+
+          '<span class="ebShotHole">sin previo</span></a>';
+      }
+      // Orden por defecto: primero lo que está en antena, luego por nombre. Es el que
+      // vale para la mirada de guardia, así que sigue siendo el de partida — la
+      // ordenación elegida a mano solo lo sustituye mientras dure.
+      const lista = players.slice().sort((a,b)=>(b.online?1:0)-(a.online?1:0)||String(a.screen).localeCompare(String(b.screen)));
+      let _casa = 0;
+      const rows = lista.map(p=>{
         const on = !!p.online;
         const stCls = on?'on':'off', stTxt = on? '🟢 en antena':'🔴 sin señal';
         const role = p.role||''; const rCls = /canal/.test(role)?'canal':(/game|juego/.test(role)?'game':'');
@@ -1348,9 +1545,14 @@ $('progBands').addEventListener('click',e=>{
           chanCell = pr? '<div><b>'+esc(pr.name)+'</b></div><div class="ebHole">— sin superficie en parrilla</div>'
                        : hole('— sin parrilla'); }
         const piece = p.showing_id? '<span class="ebPiece" title="pieza en emisión (showing_id)">'+esc(String(p.showing_id).slice(0,22))+'</span>' : hole('— nada');
-        return '<tr>'+
-          '<td><span class="ebSt '+stCls+'"><span class="d"></span>'+stTxt+'</span></td>'+
-          '<td><span class="ebScreen">'+esc(p.screen)+'</span></td>'+
+        const valores = {};
+        Object.keys(ordenables).forEach(k=>{ valores[k]=ordenables[k](p); });
+        // El puesto de ORIGEN viaja con la fila para poder deshacer una ordenación
+        // sin volver a la red: sin esto, quitar el orden dejaba las filas donde las
+        // hubiera puesto el último clic y «volver a casa» no volvía a ninguna parte.
+        return '<tr data-casa="'+(_casa++)+'" data-orden=\''+esc(JSON.stringify(valores)).replace(/'/g,'&#39;')+'\'>'+
+          '<td data-col="estado"><span class="ebSt '+stCls+'"><span class="d"></span>'+stTxt+'</span></td>'+
+          '<td data-col="player"><span class="ebScreen">'+esc(p.screen)+'</span></td>'+
           // MANDO A DISTANCIA DESDE LA PROPIA FILA (Carlos, 11-08-2026). Para subir el
           // volumen de una pantalla habia que salirse del CMS: el mando existe y funciona
           // (mando.html, el mismo que abre admira.live/control), pero desde aqui no se
@@ -1359,18 +1561,27 @@ $('progBands').addEventListener('click',e=>{
           // Va deshabilitado y DICE POR QUE cuando el player no esta en antena: un mando
           // que encola comandos a una pantalla apagada no falla, es peor — no pasa nada
           // y no sabes si es el mando o la pantalla.
-          '<td class="ebRemoteCell">'+(on
+          '<td class="ebRemoteCell" data-col="remote">'+(on
             ? '<button class="ebBtn ebRemote" data-screen="'+esc(p.screen)+'" title="Mando a distancia de '+esc(p.screen)+' — volumen, silencio, saltar pieza y playlist en vivo">\uD83C\uDF9B mando</button>'
             : '<button class="ebBtn ebRemote" disabled title="Sin player en antena: no hay a quien mandarle el comando">\uD83C\uDF9B mando</button>')+'</td>'+
-          '<td>'+(role? '<span class="ebRole '+rCls+'">'+esc(role)+'</span>':hole('—'))+'</td>'+
-          '<td>'+siteCell+'</td>'+
-          '<td>'+chanCell+'</td>'+
-          '<td>'+piece+'</td>'+
-          '<td class="ebMeta">'+agoTxt(p.age_seconds)+'</td>'+
-          '<td class="ebAssistCell"><button class="ebBtn ebAssist" data-room="'+esc(p.screen)+'">🎥 Asistencia</button><div class="ebAssistSt" data-room="'+esc(p.screen)+'">·</div></td>'+
+          '<td data-col="rol">'+(role? '<span class="ebRole '+rCls+'">'+esc(role)+'</span>':hole('—'))+'</td>'+
+          // PREVIO: el fotograma REAL de lo que esta viendo la calle. No es un dato
+          // nuevo — el canal lo sube cada 25 s (shotTick -> POST /signage/shot) y hasta
+          // hoy solo lo miraba el mando. Una tabla de flota que dice «en antena» sin
+          // enseñar QUE hay en antena obliga a ir pantalla por pantalla.
+          // El 404 se trata con honestidad: hay players vivos que aun no han subido
+          // ninguno (los que no son del canal, o los recien arrancados). «Sin previo»
+          // es informacion; una imagen rota, no.
+          '<td class="ebShotCell" data-col="previo">'+shotCell(p)+'</td>'+
+          '<td data-col="circuito">'+siteCell+'</td>'+
+          '<td data-col="canal">'+chanCell+'</td>'+
+          '<td data-col="emision">'+piece+'</td>'+
+          '<td class="ebMeta" data-col="visto">'+agoTxt(p.age_seconds)+'</td>'+
+          '<td class="ebAssistCell" data-col="asistencia"><button class="ebBtn ebAssist" data-room="'+esc(p.screen)+'">🎥 Asistencia</button><div class="ebAssistSt" data-room="'+esc(p.screen)+'">·</div></td>'+
         '</tr>';
       }).join('');
       el('ebBody').innerHTML=rows;
+      EBTabla.aplica();   // el orden de columnas elegido, sobre la tabla recién pintada
     }
 
     // ── DESCUADRES accionables (tarea #4: botones de un clic, no datos a ciegas) ──
@@ -1439,6 +1650,11 @@ $('progBands').addEventListener('click',e=>{
 
   el('ebTogGaps').addEventListener('click',function(){ EB_GAPS=!EB_GAPS; this.classList.toggle('on',EB_GAPS); el('ebGaps').hidden=!EB_GAPS; });
   el('ebTogFleet').addEventListener('click',function(){ EB_FLEET=!EB_FLEET; this.classList.toggle('on',EB_FLEET); el('ebFleet').hidden=!EB_FLEET; });
+  // Las cabeceras se enganchan UNA vez: viven en el <thead>, que no se repinta.
+  // Lo que sí hay que rehacer en cada refresco es aplicar el orden de columnas al
+  // cuerpo nuevo, y de eso se encarga renderEmision al terminar.
+  try{ EBTabla.arrastrable(); EBTabla.aplica(); }catch(_){}
+  var _reset=el('ebResetCols'); if(_reset) _reset.addEventListener('click',function(){ EBTabla.reinicia(); });
 
   // ── ACCIONES de un clic sobre los descuadres (tarea #4) ──
   // Escrituras con el MISMO patrón que /grid/book: GRID_KEY (grid_key en localStorage,
