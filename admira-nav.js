@@ -34,9 +34,22 @@
     // HTML de la pagina (como el #appVer del pie del CMS) todavia no: se pintaban
     // «al vacio» y se quedaban en blanco para siempre. Se repite al terminar de
     // cargar, que es cuando existen todos.
-    if(document.readyState==='loading'){
-      try{ document.addEventListener('DOMContentLoaded', function(){ pintaVersion(v); }, {once:true}); }catch(e){}
-    }
+    // Y NO basta con repetirlo al cargar: admira-frame recoloca el pie del CMS
+    // dentro del panel de opciones despues, y el rotulo vuelve a aparecer vacio.
+    // Modelar ese ciclo de vida desde aqui es adivinar; vigilar unos segundos es
+    // barato y no falla. Se corta solo: no queda ningun temporizador vivo.
+    try{
+      var _t0=Date.now();
+      var _vig=setInterval(function(){
+        var pendiente=false;
+        ['admFoot','adm-d-ver','appVer'].forEach(function(id){
+          var n=document.getElementById(id);
+          if(n && n.textContent!==VER){ n.textContent=VER; }
+          if(!n) pendiente=true;
+        });
+        if(!pendiente || Date.now()-_t0>8000) clearInterval(_vig);
+      }, 400);
+    }catch(e){}
     try{ if(window.AdmiraNav) window.AdmiraNav.ver=v; }catch(e){}
     // `appVer` es el rótulo del CMS de flota. Faltaba aquí, así que el CMS pintaba
     // su literal y NADIE se lo corregía: el 12-ago enseñaba una versión de JULIO
