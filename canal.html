@@ -37,12 +37,12 @@
 <!-- SW disco-primero (r44): el canal en modo player (embed=mupi) NO carga admira-nav.js,
      así que registramos el service worker AQUÍ, incondicionalmente. Sin él, un reinicio del
      player sin red no podría servir el shell del canal desde disco. Idempotente y silencioso. -->
-<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});try{if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().catch(function(){});}}catch(_){}});}</script>
 <script src="https://admira.app/locations.js"></script>
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=12.08.2026.r26.2328"></script>
+<script src="xpl-runtime.js?v=12.08.2026.r27.2336"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -153,10 +153,10 @@
   .audio-card .ico{ font-size:78px; line-height:1; color:var(--blue); text-shadow:0 0 34px var(--blue),0 0 10px var(--blue); animation:notePulse 2.2s ease-in-out infinite; }
   .audio-card strong{ font-size:13px; font-weight:600; letter-spacing:.05em; color:#cfe8ff; opacity:.78; max-width:86%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .audio-card .wave{ display:flex; gap:5px; height:42px; align-items:flex-end; }
-  .audio-card .wave i{ width:6px; background:var(--grn); border-radius:3px; box-shadow:0 0 10px var(--grn); animation:wv 1s ease-in-out infinite; }
+  .audio-card .wave i{ width:6px; height:46px; background:var(--grn); border-radius:3px; box-shadow:0 0 10px var(--grn); transform-origin:bottom; will-change:transform; animation:wv 1s ease-in-out infinite; }
   body.paused .audio-card .wave i{ animation-play-state:paused; }
   @keyframes notePulse{ 0%,100%{ transform:translateY(0) scale(1); opacity:.92 } 50%{ transform:translateY(-4px) scale(1.07); opacity:1 } }
-  @keyframes wv{ 0%,100%{ height:10px } 50%{ height:46px } }
+  @keyframes wv{ 0%,100%{ transform:scaleY(.22) } 50%{ transform:scaleY(1) } }   /* scaleY compone en el compositor: animar height forzaba relayout a 60fps toda la pieza de audio */
   #top{ position:absolute; left:0; right:0; top:0; z-index:3; padding:18px 18px 30px; display:flex; justify-content:space-between; align-items:flex-start;
     background:linear-gradient(180deg,rgba(0,0,0,.8),transparent); }
   #top .brand{ font-weight:800; letter-spacing:.02em; font-size:19px; color:#e7f0ff; text-shadow:0 0 12px rgba(125,184,255,.55); }
@@ -874,7 +874,7 @@ window.addEventListener('beforeunload',()=>{ try{ emitFlush(); }catch(_){} });
 // que clearchannel.tv lo muestre como preview real de la pantalla. Funciona en
 // cualquier modo (local/sync/cámara) porque refleja el asset real, no un reloj.
 const NOW_API='https://api.admira.store/signage/now';
-let _nowItem=null, _nowKeep=null, _lastAud=null;
+let _nowItem=null, _nowKeep=null, _lastAud=null, _audSig='';
 // loc/locName → el worker refleja esta pantalla en /signage/screens (vista viva
 // unificada "qué equipo emite qué ahora"). loc = circuito; locName = nombre legible.
 function _postNow(item){ try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
@@ -938,6 +938,12 @@ function signagePlaylistPush(){
 // Audiencia por cámara → /signage/now (clearchannel la muestra bajo impr/day y CPM).
 // Se actualiza cuando cambia (no solo en cada pase) re-publicando el item actual.
 function setNowAudience(a){
+  // El POST viaja SOLO si la lectura cambió — que es lo que el comentario de la
+  // cámara siempre prometió. La detección sigue a 1 s (deliberada); el keepalive
+  // de 60 s de _nowKeep y el push por pieza siguen llevando aud igual.
+  const sig=a?[a.faces||0,a.gender||'',a.age||''].join('|'):'null';
+  if(sig===_audSig) return;
+  _audSig=sig;
   _lastAud=a;
   if(_nowItem){ _nowItem.aud=a; _nowItem.ts=Date.now(); _postNow(_nowItem); }
 }
@@ -955,7 +961,7 @@ function camAgeBucket(a){ return a<13?'nino':a<30?'joven':a<60?'adulto':a<75?'se
 // Suavizado temporal: exige 2 lecturas seguidas iguales (~7s) antes de cambiar el
 // segmento, para que el contenido no parpadee con cada microvariación de la cámara.
 function camStable(key){ if(CAM.cand===key){ CAM.candN=(CAM.candN||0)+1; } else { CAM.cand=key; CAM.candN=1; } return CAM.candN>=2; }
-function camHud(html,on){ let h=$('camHud'); if(!h){ h=document.createElement('div'); h.id='camHud'; h.style.cssText='position:absolute;top:8px;left:8px;z-index:40;background:rgba(4,14,22,.8);border:1px solid rgba(125,255,208,.4);color:#bfeaff;border-radius:999px;padding:4px 11px;font:12px ui-monospace,Menlo,monospace;letter-spacing:.04em;backdrop-filter:blur(4px)'; ($('mupi')||document.body).appendChild(h); } h.style.display=on?'block':'none'; h.innerHTML=html; }
+function camHud(html,on){ let h=$('camHud'); if(!h){ h=document.createElement('div'); h.id='camHud'; h.style.cssText='position:absolute;top:8px;left:8px;z-index:40;background:rgba(4,14,22,.8);border:1px solid rgba(125,255,208,.4);color:#bfeaff;border-radius:999px;padding:4px 11px;font:12px ui-monospace,Menlo,monospace;letter-spacing:.04em;backdrop-filter:blur(4px)'; ($('mupi')||document.body).appendChild(h); } h.style.display=on?'block':'none'; if(html!==camHud._last){ camHud._last=html; h.innerHTML=html; } }
 async function camLoadFaceApi(){ if(window.faceapi){ CAM.fa=window.faceapi; }
   else { await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=FACEAPI_SRC; s.onload=res; s.onerror=()=>rej(new Error('no se pudo cargar face-api')); document.head.appendChild(s); }); CAM.fa=window.faceapi; }
   await CAM.fa.nets.tinyFaceDetector.loadFromUri(FACEAPI_MODELS);
@@ -1316,7 +1322,14 @@ async function pruneCache(){
   const c=await cacheOpen(); if(!c) return;
   try{ const keys=await c.keys(); if(keys.length<=PRECACHE_MAX+12) return;
     const keep=new Set([...playlist.map(it=>it&&it.url).filter(Boolean), ..._condUrls]);
-    for(const req of keys){ if(!keep.has(req.url)){ try{ await c.delete(req); }catch(_){} } }
+    // Lo podado deja de estar «ready»: si vuelve a la playlist se re-descarga (disco-primero
+    // r43). Sin esto, una pieza podada que volvía al segmento quedaba VETADA para siempre:
+    // _ready decía que estaba en disco, cachedSrc devolvía null y la política estricta la
+    // saltaba en antena eternamente — y el inventario del CMS la pintaba en verde.
+    const _prIds=new Map();
+    for(const it of [...playlist, ..._condItems.values(), ...all]){ if(!it||!it.url||it.id==null) continue; if(!_prIds.has(it.url)) _prIds.set(it.url,[]); _prIds.get(it.url).push(it.id); }
+    for(const req of keys){ if(!keep.has(req.url)){ try{ await c.delete(req); }catch(_){}
+      const dead=_prIds.get(req.url); if(dead) for(const id of dead){ _ready.delete(id); _dl.delete(id); } } }
   }catch(_){}
 }
 function cacheReadyInPlaylist(){ let n=0; const seen=new Set(); for(const it of playlist){ if(it&&_ready.has(it.id)&&!seen.has(it.id)){ seen.add(it.id); n++; } } return n; }
@@ -2544,7 +2557,7 @@ const XPLCanal = (function(){
   const XPL = window.XPL;
   const STORE = 'https://xpl.admira.store';
   const SEG_URL = 'https://omnipublicity-api.csilvasantin.workers.dev/segmentation';
-  let engine=null, timer=null, mtimer=null, REMOTE=null, want={category:'all'}, MATRIX=null, lastSig='';
+  let engine=null, timer=null, mtimer=null, REMOTE=null, want={category:'all'}, MATRIX=null, lastSig='', lastMTxt='';
 
   function camFresh(){ if(window.__xplForce){ const F=window.__xplForce; return {faces:1, gender:F.gender, age:F.age||'adulto', ts:Date.now()}; } const c=window.__xplCam; return (c && c.faces>0 && (Date.now()-c.ts)<6000) ? c : null; }
   function nowH(){ try{ return +new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ return new Date().getHours(); } }
@@ -2637,13 +2650,19 @@ const XPLCanal = (function(){
   // matriz propia si la tiene asignada, o la global ('all') en su defecto.
   function fetchMatrix(){
     var tgt = (typeof scr==='object' && scr.circuit) ? scr.circuit : 'all';
-    fetch(SEG_URL+'?target='+encodeURIComponent(tgt)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+    fetch(SEG_URL+'?target='+encodeURIComponent(tgt)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null).then(t=>{
+      if(!t) return;
+      if(t===lastMTxt) return;                     // matriz sin cambios en el CMS → nada que reprocesar (la cadencia de 15 s se mantiene)
+      let d=null; try{ d=JSON.parse(t); }catch(_){ return; }
       if(d && Array.isArray(d.rules)){ MATRIX=d;
         // pre-descarga a disco los assets de la matriz (condicionales) para que el
         // disparo carrusel→condicional sea INSTANTÁNEO y sin botón de play de carga.
         try{ const ids=[]; for(const r of (d.rules||[])) for(const a of (r.assets||[])) ids.push(a);
           for(const a of ((d.default&&d.default.assets)||[])) ids.push(a);
           if(ids.length && typeof precacheIds==='function') precacheIds(ids); }catch(_){}
+        // sellar SOLO si `all` ya permitía resolver ids→url: si la matriz llegó antes que la
+        // sincro del catálogo, el siguiente ciclo de 15 s reintenta el precache (auto-curación).
+        try{ if(typeof all!=='undefined' && all.length) lastMTxt=t; }catch(_){}
       }
     }).catch(()=>{});
   }
@@ -2985,7 +3004,7 @@ window.addEventListener('online',rearmCtrlOnForeground);
 // y ?shot=0 la desactiva. Los assets que tiñen el canvas se marcan para no
 // reintentar en bucle; los servidos por caché (blob:) capturan sin tintar.
 const SHOT_API='https://api.admira.store/signage/shot';
-let _shotSec=25, _shotTimer=null, _shotBusy=false;
+let _shotSec=25, _shotTimer=null, _shotBusy=false, _shotCv=null;
 let _lastShotSrc='', _lastShotTs=0;   // dedupe de imágenes fijas: el éxito se marca al confirmar la subida, no al disparar
 const _shotTainted=new Set();      // srcs que tiñeron el canvas → no reintentar
 try{ const _sq=qs.get('shot'); if(_sq!=null){ const n=parseFloat(_sq); if(!isNaN(n)) _shotSec=n; } }catch(_){}
@@ -3006,7 +3025,8 @@ async function shotTick(){
   _shotBusy=true;
   try{
     const W=640, H=Math.max(1,Math.round(W*ih/iw));
-    const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+    const cv=_shotCv||(_shotCv=document.createElement('canvas'));
+    cv.width=W; cv.height=H;   // asignar SIEMPRE: resetea bitmap y origin-clean (des-tinta el canvas si un asset sin CORS lo tiñó el tick anterior)
     const cx=cv.getContext('2d'); if(!cx){ _shotBusy=false; return; }
     cx.drawImage(el,0,0,W,H);
     let data;

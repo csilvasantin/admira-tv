@@ -24,7 +24,7 @@
 // Ahora cada publicación cambia este literal → el navegador ve que sw.js ha
 // cambiado → install + activate → la despensa vieja se tira entera.
 // Lo mantiene al día ./deploy.sh, que ABORTA si no coincide con el sello.
-const CACHE = 'admira-shell-v.12.08.2026.r26.23:28';
+const CACHE = 'admira-shell-v.12.08.2026.r27.23:36';
 
 // Shell del canal: la HTML canónica + sus assets críticos same-origin.
 const SHELL = [
@@ -84,7 +84,11 @@ function networkFirst(req, fallbacks) {
       // Solo cacheamos respuestas OK y básicas (no opaque/redirect) para no envenenar el shell.
       if (r && r.ok && (r.type === 'basic' || r.type === 'default')) {
         const cp = r.clone();
-        caches.open(CACHE).then((c) => c.put(req, cp)).catch(() => {});
+        // Clave normalizada al PATHNAME: una sola copia por ruta, no una por
+        // variante de query (?screen/&tag/&fresh/?v=…). Servir offline no cambia:
+        // el fallback del .catch ya matchea con ignoreSearch.
+        const key = new URL(req.url).pathname;
+        caches.open(CACHE).then((c) => c.put(key, cp)).catch(() => {});
       }
       return r;
     })
