@@ -79,9 +79,13 @@
     return fetch(ACL_API + "?project=" + encodeURIComponent(SOLUTION) + (MANAGEMENT_PAGE ? "&manage=1" : ""), {
       cache: "no-store", credentials: "same-origin",
       headers: { "Authorization": "Bearer " + credential }
-    }).then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) { return Boolean(d && d.allowed); })
-      .catch(function () { return false; });
+    }).then(function (r) {
+      if (r.status === 401 || r.status === 403) return { estado: "denegado" };
+      if (!r.ok) return { estado: "indisponible", detalle: "HTTP " + r.status };
+      return r.json().then(function (d) {
+        return { estado: (d && d.allowed) ? "permitido" : "denegado", role: d && d.role };
+      }).catch(function () { return { estado: "indisponible", detalle: "respuesta ilegible" }; });
+    }).catch(function () { return { estado: "indisponible", detalle: "sin conexión" }; });
   }
 
   // Si ya hay una validación reciente y vigente, no molestar — pero revalida en
@@ -92,9 +96,14 @@
     if (saved && saved.email && saved.cred && Date.now() < saved.exp) {
       // La sesión recordada nunca basta por sí sola: el servidor vuelve a resolver
       // el permiso exacto de esta app antes de quitar el bloqueo visual.
-      serverAccess(saved.cred).then(function (allowed) {
-        if (allowed) unlock();
-        else { try { localStorage.removeItem("admira_tv_gate"); } catch (e) {} }
+      serverAccess(saved.cred).then(function (res) {
+        if (res.estado === "permitido") return unlock();
+        // Denegado de verdad: la sesión guardada ya no vale y se tira.
+        if (res.estado === "denegado") { try { localStorage.removeItem("admira_tv_gate"); } catch (e) {} return; }
+        // Indisponible NO es denegado: no se tira la sesión —el usuario no ha
+        // hecho nada mal— pero tampoco se abre la puerta sin haber comprobado.
+        // Se dirá al entrar al login, con su motivo.
+        pendienteRevalidar = res.detalle || "no se pudo comprobar";
       });
     }
   } catch (e) {}
@@ -102,6 +111,7 @@
   // ===== estado =====
   var phase = "connecting"; // connecting | ready | auth | welcome | error
   var gisReady = false;
+  var pendienteRevalidar = ""; // motivo cuando NO se pudo comprobar el permiso
   var startTime = 0;
 
   // Ocultar la página de inmediato (antes de que se pinte el contenido).
@@ -208,10 +218,45 @@
     startTime = Date.now();
     renderFoot();
     tickProgress();
+    programaEntrada();
   }
 
   // ===== fases =====
   function foot() { return document.getElementById("atv-foot"); }
+
+
+  // El avance de fase va por RELOJ, no por fotogramas: requestAnimationFrame se
+  // pausa en pestañas de fondo y con él se quedaba bloqueada la única vía hacia
+  // el login. Y hay TOPE: si Google no ha cargado en GIS_TIMEOUT_MS, la verja lo
+  // dice y ofrece reintentar en lugar de mostrar un porcentaje para siempre.
+  var GIS_TIMEOUT_MS = 8000;
+  var entradaHecha = false;
+  function entraEnLogin() {
+    if (entradaHecha || phase !== "connecting") return;
+    entradaHecha = true;
+    phase = "ready";
+    renderFoot();
+    var el = document.getElementById("atv-err");
+    if (el) {
+      var motivo = !gisReady ? "Google tarda en responder."
+        : pendienteRevalidar ? "No se ha podido comprobar tu permiso (" + pendienteRevalidar + ")." : "";
+      if (motivo) {
+        el.textContent = "✖ " + motivo;
+        var r = document.getElementById("atv-retry"); if (r) r.hidden = false;
+      }
+    }
+  }
+  function programaEntrada() {
+    var minimo = CONNECT_SECONDS * 1000;
+    // En cuanto Google esté listo se entra; si no, se entra igual al llegar al tope.
+    var t0 = Date.now();
+    (function espera() {
+      var t = Date.now() - t0;
+      if (gisReady && t >= minimo) return entraEnLogin();
+      if (t >= GIS_TIMEOUT_MS) return entraEnLogin();
+      setTimeout(espera, 120);
+    })();
+  }
 
   function tickProgress() {
     if (phase !== "connecting") return;
@@ -225,7 +270,7 @@
       if (f) f.style.width = p + "%";
       if (pc) pc.textContent = ("00" + Math.floor(p)).slice(-3) + "%";
     }
-    if (p >= 100 && gisReady) { phase = "ready"; renderFoot(); return; }
+    if (phase !== "connecting") return;
     requestAnimationFrame(tickProgress);
   }
 
@@ -245,10 +290,13 @@
           '</div>' +
           '<div class="prompt">&#9654; Identif&iacute;cate para continuar</div>' +
           '<div class="err" id="atv-err"></div>' +
+          '<button class="gbtn" type="button" id="atv-retry" hidden><span>Reintentar</span></button>' +
         '</div>';
       renderGoogleButton();
       var gold = document.getElementById("atv-gold");
       if (gold) gold.addEventListener("click", function () { try { google.accounts.id.prompt(); } catch (e) {} });
+      var retry = document.getElementById("atv-retry");
+      if (retry) retry.addEventListener("click", function () { location.reload(); });
     } else if (phase === "auth") {
       f.innerHTML = '<div class="ready"><div class="spinner"></div><div class="status" id="atv-status">Verificando credenciales</div></div>';
     } else if (phase === "welcome") {
@@ -292,7 +340,14 @@
       try { google.accounts.id.disableAutoSelect(); } catch (e) {}
       failBack("Cuenta no autorizada: " + email);
     }
-    serverAccess(resp.credential).then(function (allowed) { if (allowed) accept(); else reject(); });
+    serverAccess(resp.credential).then(function (res) {
+      if (res.estado === "permitido") return accept();
+      if (res.estado === "denegado") return reject();
+      // Ni sí ni no: no se ha podido preguntar. Decirlo tal cual, porque tratar
+      // esto como «no autorizado» manda a la gente a pedir permisos que ya tiene.
+      clearInterval(anim);
+      failBack("No se ha podido comprobar tu permiso (" + (res.detalle || "error") + "). Reintenta.");
+    });
   }
 
   function animateDots() {
