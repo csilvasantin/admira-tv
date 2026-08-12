@@ -373,11 +373,24 @@
     function tagStore(){ try{ return JSON.parse(localStorage.getItem(TAG_KEY)||'{}'); }catch(_){ return {}; } }
     function setStoredTag(c,t){ var s=tagStore(); if(t) s[c]=t; else delete s[c]; localStorage.setItem(TAG_KEY, JSON.stringify(s)); }
     function curTag(){ return tagStore()[T.circuit]||''; }
+    // El canal SOLO entiende `tag-<lista>` (applyCtrlCmd, regex /^tag-([a-z0-9_,+-]*)$/).
+    // Hasta el 12-ago-2026 el mando enviaba `tag <x>` con ESPACIO: no casaba nunca,
+    // así que aplicar un metatag aquí no cambiaba nada en pantalla — el mando no
+    // mandaba. Se canoniza con las MISMAS reglas del canal (canonicalPlayTag) antes
+    // de enviar: fuera la almohadilla que el operador escribe (#666), fuera tildes
+    // (el tag real del Stock es «música»), espacios a guion y nada que el regex
+    // rechace, porque un comando que el canal ignora no da ningún error visible.
+    function canonTag(v){
+      return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/#/g,'').trim().replace(/[\s.]+/g,'-')
+        .replace(/[^a-z0-9_,+-]/g,'').replace(/-{2,}/g,'-').replace(/^[-,+]+|[-,+]+$/g,'');
+    }
     function applyTag(t){
-      t=(t||'').trim().toLowerCase();
-      sendRemote(t? ('tag '+t) : 'tag');   // 'tag' sin arg = quitar filtro (emite todo)
-      setStoredTag(T.circuit, t);
-      document.getElementById('tagInput').value=t;
+      var limpio=canonTag(t);
+      // `tag-` a secas (con guion) = quitar el filtro. Sin el guion el canal lo ignora.
+      sendRemote('tag-'+limpio);
+      setStoredTag(T.circuit, limpio);
+      document.getElementById('tagInput').value=limpio;
       renderTagChips(); refreshTagline();
     }
     document.getElementById('tagApply').onclick=function(){ applyTag(document.getElementById('tagInput').value); };

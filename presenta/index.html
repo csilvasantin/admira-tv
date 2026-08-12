@@ -359,7 +359,7 @@ function magicBlock(){
     const inp=w.querySelector('#metaInput');
     inp.addEventListener('input',()=>{ META=inp.value.trim().toLowerCase().replace(/^#/,''); $('#fireTag').textContent=META||'—'; w.querySelectorAll('.chip').forEach(c=>c.classList.toggle('sel',c.dataset.tag===META)); });
     w.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{ setMeta(c.dataset.tag); $('#fireTag').textContent=META; }));
-    w.querySelector('#fireBtn').addEventListener('click',()=>fire('tag '+(META||'all')));
+    w.querySelector('#fireBtn').addEventListener('click',()=>fire('tag-'+String(META||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/#/g,'').trim().replace(/\s+/g,'-').replace(/[^a-z0-9_,+-]/g,'')));
     w.querySelector('#syncBtn').addEventListener('click',()=>fire('admiraTVsincro'));
     w.querySelector('#restoreBtn').addEventListener('click',restoreLoop);
     setMeta('robots');
