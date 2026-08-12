@@ -72,3 +72,16 @@ test("el desplegable ofrece equipos del proyecto y gobierna al elegirlos", () =>
   // Y cambiar de equipo recarga el mando, no la página.
   assert.match(cms, /if\(fr\.dataset\.screen!==s\)\{ fr\.src=url; fr\.dataset\.screen=s; \}/);
 });
+
+test("el panel experto va sin franja de título y el mando lo llena entero", async () => {
+  const frame = await readFile(new URL("./admira-frame.js", import.meta.url), "utf8");
+  const cmsSrc = await readFile(new URL("./cms.html", import.meta.url), "utf8");
+  // La franja EXPERTO no se monta en el panel inferior; los laterales la conservan.
+  assert.match(frame, /if \(side\.key !== "bottom"\) panel\.appendChild\(hd\);/);
+  // El iframe crece con el panel (flex), sin el tope de 560px.
+  assert.match(cmsSrc, /\.admando\{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; \}/);
+  assert.doesNotMatch(cmsSrc, /height:min\(560px,52vh\)/);
+  // Y al abrir el mando, el panel abre a toda altura (el asa sigue mandando después).
+  assert.match(cmsSrc, /pn\.style\.height='min\(88vh,1000px\)'/);
+});
+

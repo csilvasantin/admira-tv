@@ -127,7 +127,11 @@
       var bd = document.createElement("div");
       bd.className = "af-bd";
 
-      panel.appendChild(hd);
+      // El panel INFERIOR va sin franja de título (Carlos, 12-ago-2026): su contenido
+      // ya se rotula solo («Experto · Mando · <equipo>») y la franja solo robaba un
+      // renglón al mando. El aria-label del panel se conserva; Escape y el icono
+      // toggle siguen cerrando. Los laterales conservan su cabecera.
+      if (side.key !== "bottom") panel.appendChild(hd);
       panel.appendChild(bd);
       body.appendChild(panel);
       side.panel = panel;

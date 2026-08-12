@@ -349,7 +349,11 @@
     background:#0e1420; color:#9fb0c6; border:1px solid var(--line); border-radius:6px; cursor:pointer; font-size:12px }
   .admando h4 button+button{ margin-left:4px }
   .admando h4 button:hover{ border-color:var(--accent); color:var(--accent) }
-  #mandoFrame{ width:100%; height:min(560px,52vh); min-height:260px; border:1px solid var(--line);
+  /* El mando LLENA el panel: la caja crece con el alto que el usuario dé al panel
+     (asa de redimensionado del chrome) y el iframe toma todo su interior, así se ven
+     el máximo de funciones sin scroll interno. Antes había tope de 560px. */
+  .admando{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+  #mandoFrame{ width:100%; flex:1 1 auto; height:auto; min-height:260px; border:1px solid var(--line);
     border-radius:10px; background:#05070c; display:block }
   .ebShotCell{width:112px}
   /* CABECERAS QUE SE MANEJAN. Una tabla de flota se mira de formas distintas según
@@ -427,7 +431,7 @@ body.eb-experto .ebTable [data-col="remote"]{display:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=12.08.2026.r25.2312">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.08.2026.r26.2328">
 </head>
 <body>
 <script>
@@ -446,8 +450,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=12.08.2026.r25.2312"></script>
-<script src="/admira-frame.js?v=12.08.2026.r25.2312" defer></script>
+<script src="/admira-nav.js?v=12.08.2026.r26.2328"></script>
+<script src="/admira-frame.js?v=12.08.2026.r26.2328" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -595,7 +599,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=12.08.2026.r25.2312"></script>
+<script src="xpl-runtime.js?v=12.08.2026.r26.2328"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -1141,6 +1145,9 @@ function abreMando(s){
   // botón que ya tienes abierto debajo. Vuelve sola al soltar el mando.
   document.body.classList.add('eb-experto');
   window.AdmiraFrame.open('bottom');
+  // Con el mando dentro, el panel abre A TODA ALTURA (el default del chrome son 320px y
+  // ahí no cabe casi nada). El asa de redimensionar sigue mandando después.
+  try{ const pn=document.getElementById('af-panel-bottom'); if(pn&&!pn.dataset.mandoAlto){ pn.style.height='min(88vh,1000px)'; pn.dataset.mandoAlto='1'; } }catch(_){}
 }
 // Equipos IoT del MISMO proyecto: se toman de la tabla de emisión que ya está en
 // pantalla —es la que el CMS filtra por proyecto—, así no hay una segunda fuente
@@ -1834,7 +1841,7 @@ $('progBands').addEventListener('click',e=>{
 })();
 </script>
 <script src="/admira-avatar.js"></script>
-<script src="/cms-pacman.js?v=12.08.2026.r25.2312"></script>
+<script src="/cms-pacman.js?v=12.08.2026.r26.2328"></script>
   <script src="/assets/admira-version-watch.js" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
