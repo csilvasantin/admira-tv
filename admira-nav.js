@@ -29,6 +29,14 @@
   function pintaVersion(v){
     if(!v) return;
     VER=v;
+    // /version.json puede contestar ANTES de que el documento este parseado del
+    // todo. Los rotulos que crea el propio nav ya existen, pero los que van en el
+    // HTML de la pagina (como el #appVer del pie del CMS) todavia no: se pintaban
+    // «al vacio» y se quedaban en blanco para siempre. Se repite al terminar de
+    // cargar, que es cuando existen todos.
+    if(document.readyState==='loading'){
+      try{ document.addEventListener('DOMContentLoaded', function(){ pintaVersion(v); }, {once:true}); }catch(e){}
+    }
     try{ if(window.AdmiraNav) window.AdmiraNav.ver=v; }catch(e){}
     // `appVer` es el rótulo del CMS de flota. Faltaba aquí, así que el CMS pintaba
     // su literal y NADIE se lo corregía: el 12-ago enseñaba una versión de JULIO
