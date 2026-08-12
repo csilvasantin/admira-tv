@@ -40,7 +40,7 @@ function fitHarness({ width, height, ar, rail = 166, chan = 174, gap = 16, paddi
 test("el canal reserva cabecera, navegación, detalle y consola experta", () => {
   assert.match(canal, /html\.admnav:not\(\.clean\) #wrap\{[\s\S]*top:var\(--admtb,52px\); left:var\(--admnw,64px\); right:var\(--admrw,0px\); bottom:0/);
   assert.match(canal, /html\.admnav\.admnav-exp:not\(\.clean\) #wrap\{ bottom:var\(--admexph,200px\); \}/);
-  assert.match(canal, /new ResizeObserver\(fitMupi\)/);
+  assert.match(canal, /_mupiResizeObserver=new ResizeObserver\(\(\)=>\{ fitMupi\._retry=0; fitMupi\(\); \}\)/);
 });
 
 test("en móvil los drawers no descuentan ancho al player", () => {

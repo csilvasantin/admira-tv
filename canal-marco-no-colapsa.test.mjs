@@ -101,8 +101,9 @@ test("el reintento no se vuelve infinito", () => {
 
 test("el canal se autocura ante cualquier cambio de tamaño", () => {
   // Sin esto, una medida mala que llegara a colarse duraría hasta la siguiente pieza.
-  assert.match(canal, /new ResizeObserver\(\(\)=>\{ fitMupi\._retry=0; fitMupi\(\); \}\)/);
-  assert.match(canal, /_ro\.observe\(_w\)/);
+  // Desde r24 hay UN solo observer (hubo dos entre r23 y r24) y hereda el reset.
+  assert.match(canal, /_mupiResizeObserver=new ResizeObserver\(\(\)=>\{ fitMupi\._retry=0; fitMupi\(\); \}\)/);
+  assert.equal((canal.match(/new ResizeObserver/g) || []).length, 1);
   // Y el Math.max(1,…) que lo causaba no puede volver.
   assert.doesNotMatch(canal, /const aH=Math\.max\(1,wrap\.clientHeight-padY\)/);
 });

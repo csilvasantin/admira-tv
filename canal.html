@@ -42,7 +42,7 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=12.08.2026.r23.2148"></script>
+<script src="xpl-runtime.js?v=12.08.2026.r24.2235"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -431,11 +431,19 @@ let syncTimeOffset=0;
 // local → todas las pantallas en sync emiten EXACTAMENTE lo mismo (mismo orden+reloj).
 const SYNC_API='https://omnipublicity-api.csilvasantin.workers.dev/sync/state';
 let SYNC_REMOTE=null, syncStateTimer=null;
+let _syncSig='';   // firma del máster: solo se re-monta la antena si CAMBIÓ (eficiencia FLT-1409)
 function fetchSyncState(){
   fetch(SYNC_API+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('http '+r.status))).then(d=>{
     if(d&&Array.isArray(d.items)&&d.items.length){
-      SYNC_REMOTE={ items:d.items, slotMs:d.slotMs||20000, offset:(d.serverNow||Date.now())-Date.now() };
-      if(syncOn) rebuild(true);
+      // Antes: rebuild(true) en CADA respuesta → play() tiraba y re-montaba el <video>
+      // en antena cada 30 s aunque el máster fuera idéntico (re-decode + parpadeo + un
+      // pase falso de proof-of-play por sondeo). Ahora solo si el máster CAMBIÓ o si
+      // veníamos sin máster (boot, re-encendido de sincro, o el toggle lo anuló).
+      const sig=d.items.map(i=>i.id).join(',')+'|'+(d.slotMs||20000);
+      const hadRemote=!!SYNC_REMOTE;
+      SYNC_REMOTE={ items:d.items, slotMs:d.slotMs||20000, offset:(d.serverNow||Date.now())-Date.now() };   // el reloj del máster SIEMPRE fresco: no necesita rebuild
+      if(syncOn && (sig!==_syncSig || !hadRemote)){ _syncSig=sig; rebuild(true); }
+      else if(syncOn){ try{ setLive('SINCRO CANAL · '+playlist.length+' en loop', playlist.length>0); }catch(_){} }   // tras un fallo con firma igual, el rótulo no puede seguir diciendo SIN MÁSTER
     }
   }).catch(e=>{
     // Nunca corta la emisión, pero deja rastro: sin máster la pantalla ordena por su cuenta
@@ -449,7 +457,7 @@ const $ = id => document.getElementById(id);
 const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=$('bar'), tap=$('tap');
 
 function clock(){ const d=new Date(); $('clock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
-clock(); setInterval(clock,1000);
+clock(); if(!__adtvClean) setInterval(clock,1000);   // el reloj vive en #top, oculto en kiosko
 // En STANDBY el rótulo NO se deja pisar por el feed («CONDICIONAL · 62 en loop» sobre una
 // pantalla apagada engaña al operador). _standby es `var` a propósito: se declara más abajo
 // y aquí se lee antes → con let daría TDZ.
@@ -570,7 +578,11 @@ function setAudio(on, level){
 // barra/avance temporizado (imagen y audio) — pausable
 function stopBar(){ if(barTimer){ clearInterval(barTimer); barTimer=null; } }
 function barFromAdv(){ const el=advElapsed+(paused?0:Date.now()-advStart); bar.style.width=Math.min(100,el/advTotal*100)+'%'; }
-function startAdv(ms){ usesAdv=true; advTotal=ms; advElapsed=0; advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,ms); stopBar(); barTimer=setInterval(barFromAdv,120); }
+// startBar centraliza el guard del modo limpio: la barra vive bajo display:none!important
+// en kiosko (el modo del player 24/7) y era el timer más frecuente del canal (8,3/s)
+// pintando lo invisible. El avance real del bucle (timer=setTimeout(next,ms)) NO se toca.
+function startBar(){ stopBar(); if(__adtvClean) return; barTimer=setInterval(barFromAdv,120); }
+function startAdv(ms){ usesAdv=true; advTotal=ms; advElapsed=0; advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,ms); startBar(); }
 function syncNow(){ return Date.now()+(SYNC_REMOTE?SYNC_REMOTE.offset:syncTimeOffset); }   // reloj del máster central si está
 function syncSlotMs(){ return (SYNC_REMOTE&&SYNC_REMOTE.slotMs)?SYNC_REMOTE.slotMs:syncSlotSec*1000; }
 function syncElapsedMs(){ return syncNow()%syncSlotMs(); }
@@ -666,6 +678,7 @@ function thumbHtml(it){ const k=KIND[it.type]||'image';
   if(it.thumbnail) return '<img loading="lazy" decoding="async" src="'+it.thumbnail+'" alt="">';
   return k==='video'?'▶':k==='interactive'?'☝':'♪'; }
 function renderRail(){
+  if(__adtvClean) return;   // el rail está display:none!important en kiosko: regenerar su innerHTML era trabajo invisible (guard aquí: tiene 9 llamadores)
   const host=$('railItems'); if(!host) return;
   if(!playlist.length){ host.innerHTML=''; return; }
   const len=playlist.length, idxs=[];
@@ -733,18 +746,11 @@ function fitMupi(){ const mupi=$('mupi'), wrap=$('wrap'); if(!mupi||!wrap) retur
   mupi.style.height=Math.round(h)+'px'; mupi.style.width=Math.round(w)+'px'; mupi.style.aspectRatio='auto';
 }
 window.addEventListener('resize',fitMupi);
-// Autocuración: cualquier cambio de tamaño del contenedor rehace el marco. Si una
-// medida mala llegara a colarse, el siguiente relayout la corrige sin esperar a
-// que cambie la pieza. Va DESPUÉS del listener de resize a propósito: las pruebas
-// recortan el fuente hasta esa línea.
-try{
-  if(typeof ResizeObserver!=='undefined'){
-    const _ro=new ResizeObserver(()=>{ fitMupi._retry=0; fitMupi(); });
-    const _w=$('wrap'); if(_w) _ro.observe(_w);
-  }
-}catch(_){}
 let _mupiResizeObserver=null;
-try{ if(window.ResizeObserver){ _mupiResizeObserver=new ResizeObserver(fitMupi); _mupiResizeObserver.observe($('wrap')); } }catch(_){}
+// Único observer del wrap (hubo DOS llamando a fitMupi entre r23 y r24 — el segundo
+// entró sin ver éste). Resetea el contador de reintentos: un relayout real es la señal
+// de que ya se puede medir.
+try{ if(window.ResizeObserver){ _mupiResizeObserver=new ResizeObserver(()=>{ fitMupi._retry=0; fitMupi(); }); _mupiResizeObserver.observe($('wrap')); } }catch(_){}
 
 // ── CONTENIDO EXPANDIDO (pantallas plegables) ───────────────────────────────────────
 // Un plegable tiene dos pantallas de relación de aspecto muy distinta: cerrado es ultra
@@ -853,7 +859,7 @@ function emitRecord(it){
   const a=t.assets[it.id]||(t.assets[it.id]={n:0,type:type,seg:seg,title:(it.title||it.prompt||'').slice(0,80),num:it._num||null,secs:0});
   a.n++; a.secs+=Math.round(secs); a.last=Date.now(); a.type=type; if(seg) a.seg=seg;
   try{ localStorage.setItem('adtv_emit:'+scr.screen+':'+_emitDate, JSON.stringify(t)); }catch(_){}
-  _emitDirty=true; if(!_emitTimer) _emitTimer=setTimeout(emitFlush,12000);
+  _emitDirty=true; if(!_emitTimer) _emitTimer=setTimeout(emitFlush,60000);   // 60 s: el tally vive en localStorage (L855) y beforeunload flushea — 12 s eran ~4.300 POST/día de más
 }
 function emitFlush(){ _emitTimer=null; if(!_emitDirty) return;
   const t=_emitTally; if(!t||!scr.circuit) return;   // sin circuito no hay a quién imputar
@@ -1020,6 +1026,7 @@ let _cortafuegos=0;        // >0 piezas apartadas · -1 no se pudo aplicar · 0 
 let _porDefecto='';        // qué mandó: 'tag' · 'motor' · '' (nada, hay parrilla o filtro)
 const tieneTagDefault=it=>(it&&Array.isArray(it.tags)?it.tags:[]).some(t=>String(t).toLowerCase().trim()===TAG_DEFAULT);
 let gridInjected=[], gridExactMode=false;
+let _gridSig='·';   // firma de la última parrilla aplicada ('·' = imposible → el primer loadGrid siempre aplica)
 function gridBadge(txt){ let b=$('gridBadge'); if(!b){ b=document.createElement('div'); b.id='gridBadge'; b.style.cssText='position:absolute;top:8px;right:8px;z-index:40;background:rgba(22,16,4,.82);border:1px solid rgba(255,200,90,.45);color:#ffd866;border-radius:999px;padding:4px 11px;font:12px ui-monospace,Menlo,monospace;backdrop-filter:blur(4px)'; ($('mupi')||document.body).appendChild(b); } b.style.display=txt?'block':'none'; b.textContent=txt; }
 async function loadGrid(){ if(!scr.screen) return;
   try{ const d=await fetch(GRID_API+'/grid/day?screen='+encodeURIComponent(scr.screen),{cache:'no-store'}).then(r=>r.json());
@@ -1031,6 +1038,13 @@ async function loadGrid(){ if(!scr.screen) return;
     if(gridExactMode) out.sort((a,b)=>(a._position??9999)-(b._position??9999));
     gridInjected=out;
     const np=d.nowPlaying; gridBadge(np&&!np.free?('📅 '+((np.advertiser)||'Parrilla')+(np.title?(' · '+np.title):'')):'');
+    // Sin cambios en la parrilla NO hay rebuild: era un filter+sort+weave+render completo
+    // cada 60 s aunque /grid/day devolviera lo mismo todo el día. La franja resuelta entra
+    // en la firma solo con slot 'auto' (los cruces de las 12/16/21h de Madrid deben seguir
+    // re-segmentando); el push del camino de skip es no-op salvo reintento r45 pendiente.
+    const _gsig=out.map(x=>x.id+'~'+x.url+'~'+(x._position??'')).join('|')+'|'+(seg.slot==='auto'?madridSlot():'');
+    if(_gsig===_gridSig){ try{ signagePlaylistPush(); }catch(_){} return; }
+    _gridSig=_gsig;
     all=all.filter(a=>!a._grid).concat(gridInjected); rebuild(false);
   }catch(_){}
 }
@@ -1151,12 +1165,41 @@ async function fetchToCache(it){
     if(!resp||!resp.ok) return false;
     if(!resp.body){ await c.put(it.url, resp.clone()); _ready.add(it.id); return true; }
     const total=+(resp.headers.get('content-length')||0);
-    const reader=resp.body.getReader(); const chunks=[]; let recv=0; _dl.set(it.id,0);
-    for(;;){ const {done,value}=await reader.read(); if(done) break;
-      chunks.push(value); recv+=value.length; _cBytes+=value.length;
-      if(total){ _dl.set(it.id, Math.min(99, Math.round(recv/total*100))); cacheReportThrottled(); if(_coldWaiting && Date.now()-_coldTickT>250) coldTick(); } }
-    const blob=new Blob(chunks,{type:resp.headers.get('content-type')||''});
-    await c.put(it.url, new Response(blob,{headers:{'content-type':blob.type||'application/octet-stream'}}));
+    _dl.set(it.id,0);
+    const ct=resp.headers.get('content-type')||'application/octet-stream';
+    // STREAMING al disco (FLT-1409): antes se bufferizaba el asset ENTERO en chunks[] y
+    // encima se construía un Blob — pico de ~2× el tamaño del fichero en RAM por pieza.
+    // En un arranque en frío de 40 piezas, picos repetidos que pueden matar el proceso
+    // WebContent del WKWebView (→ recarga → corte en antena). Ahora el cuerpo va con
+    // tee(): una rama directa a cache.put (el disco tira de ella) y otra solo para el
+    // progreso (_dl/_cBytes + placeholder de frío + línea verde r52, INTACTOS).
+    // _ready SOLO tras completar el put → disco-primero (r43) intacto. Fallback
+    // bufferizado si este WebKit no admite Response(stream): ninguna pieza queda vetada.
+    let streamed=false;
+    try{
+      const tees=resp.body.tee(); const toCache=tees[0], toCount=tees[1];
+      let putResp;
+      try{ putResp=new Response(toCache,{headers:{'content-type':ct}}); }
+      catch(err){ try{ toCache.cancel(); toCount.cancel(); }catch(__){} throw err; }
+      streamed=true;
+      const reader=toCount.getReader(); let recv=0;
+      const progressP=(async()=>{ for(;;){ const {done,value}=await reader.read(); if(done) break;
+        recv+=value.length; _cBytes+=value.length;
+        if(total){ _dl.set(it.id, Math.min(99, Math.round(recv/total*100))); cacheReportThrottled(); if(_coldWaiting && Date.now()-_coldTickT>250) coldTick(); } } })();
+      const putP=c.put(it.url, putResp);
+      try{ await Promise.all([putP, progressP]); }
+      catch(err){ try{ reader.cancel(); }catch(__){} throw err; }
+    }catch(err){
+      if(streamed) throw err;   // fallo real de red/disco: al catch exterior, como siempre
+      // WebKit sin Response(stream): camino bufferizado de siempre (re-fetch: el body original quedó locked por el tee)
+      const r2=await fetch(it.url,{mode:'cors',cache:'force-cache'}); if(!r2||!r2.ok) throw err;
+      const reader=r2.body.getReader(); const chunks=[]; let recv=0;
+      for(;;){ const {done,value}=await reader.read(); if(done) break;
+        chunks.push(value); recv+=value.length; _cBytes+=value.length;
+        if(total){ _dl.set(it.id, Math.min(99, Math.round(recv/total*100))); cacheReportThrottled(); if(_coldWaiting && Date.now()-_coldTickT>250) coldTick(); } }
+      const blob=new Blob(chunks,{type:ct});
+      await c.put(it.url, new Response(blob,{headers:{'content-type':blob.type||'application/octet-stream'}}));
+    }
     _dl.delete(it.id); _ready.add(it.id); return true;
   }catch(_){ _dl.delete(it.id); return false; }
 }
@@ -1166,7 +1209,12 @@ async function cachedSrc(it){
   try{ if(_objURLs.has(it.url)) return _objURLs.get(it.url);
     const hit=await c.match(it.url); if(!hit) return null;
     const u=URL.createObjectURL(await hit.blob()); _objURLs.set(it.url,u);
-    if(_objURLs.size>6){ const k=_objURLs.keys().next().value; if(k!==it.url){ try{URL.revokeObjectURL(_objURLs.get(k));}catch(_){} _objURLs.delete(k); } }
+    // Tope DINÁMICO: si el loop entero cabe (≤6 piezas cacheables) el LRU da reuso total,
+    // como siempre. Con loops mayores el reuso era CERO y el tope solo pagaba retención:
+    // 6 vídeos de señalética anclados = 120-360 MB permanentes. Con >6 piezas caen a 2
+    // (antena + saliente); el while drena también el exceso tras agrandar el segmento.
+    const cap=(function(){ const u2=new Set(); for(const pz of playlist){ if(pz&&cacheable(pz)) u2.add(pz.url); } return u2.size<=6?6:2; })();
+    while(_objURLs.size>cap){ const k=_objURLs.keys().next().value; if(k===it.url) break; try{URL.revokeObjectURL(_objURLs.get(k));}catch(_){} _objURLs.delete(k); }
     return u;
   }catch(_){ return null; }
 }
@@ -1283,8 +1331,17 @@ function cacheReportPayload(){
   const downloading=[..._dl.entries()].slice(0,20).map(([id,pct])=>({id,pct}));
   return { screen:scr.screen, ready, total:inv.length, downloading, bytes:_cBytes };
 }
+let _cacheSig='', _cacheSentAt=0;   // dedupe del inventario: el mando exige at<120 s → latido ≤60 s, nunca más lento
 function cacheReport(){ if(!scr.screen) return; _lastCacheRep=Date.now();
-  try{ fetch(CACHE_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify(cacheReportPayload())}).catch(()=>{}); }catch(_){}
+  // El payload solo viaja si CAMBIÓ, hay descargas en curso, o toca latido (55 s desde el
+  // último ACEPTADO). Antes eran 2.880 POST/día con el mismo inventario durante horas.
+  // La firma se resetea en el catch para que el arranque offline reintente (patrón r45).
+  const pl=cacheReportPayload();
+  const sig=(pl.ready||[]).join(',')+'|'+(pl.total??'')+'|'+_dl.size+'|'+_cBytes;
+  if(sig===_cacheSig && _dl.size===0 && Date.now()-_cacheSentAt<55000){ cacheBadge(); return; }
+  try{ fetch(CACHE_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify(pl)})
+    .then(r=>{ if(r&&r.ok){ _cacheSig=sig; _cacheSentAt=Date.now(); } else { _cacheSig=''; } })
+    .catch(()=>{ _cacheSig=''; }); }catch(_){ _cacheSig=''; }
   cacheBadge();
 }
 function cacheReportThrottled(){ if(Date.now()-_lastCacheRep>4000) cacheReport(); }
@@ -1435,13 +1492,18 @@ function next(){ if(directOn) return; if(PREVIEW.on){ play(cur+1); return; }
   // (o arranca otra novedad que hubiera entrado mientras).
   if(freshActive() && freshRepeat()) return;
   if(FRESH.item && freshEnd()) return;
-  if(Date.now()-_lastFeed>5000){ try{ loadFeed(false); }catch(_){} } if(syncOn){ play(syncIndex()); return; } play(cur+1); }
+  // El refresco del catálogo ya lo cubre feedTimer (cada refreshSec). Re-bajarlo además
+  // en cada transición (throttle de 5 s con piezas de 9 s) era ~7.000 fetches/día y del
+  // orden de 1 GB/día de descarga POR PLAYER en reposo. Los 5 s se conservan SOLO donde
+  // la baja latencia es doctrina: import pendiente (✓ de Telegram) y novedad al aire (r53).
+  { const _ivl=(pendingImport||freshOn())?5000:Math.max(10,+cfg.refreshSec||30)*1000;
+    if(Date.now()-_lastFeed>_ivl){ try{ loadFeed(false); }catch(_){} } } if(syncOn){ play(syncIndex()); return; } play(cur+1); }
 function prev(){ if(directOn) return; if(syncOn){ play(syncIndex()); return; } play(cur-1); }
 
 function setPaused(p){
   paused=p; document.body.classList.toggle('paused',p); $('pause').textContent=p?'▶':'⏸';
   if(p){ if(mediaEl&&mediaEl.pause) mediaEl.pause(); if(usesAdv){ advElapsed+=Date.now()-advStart; clearTimeout(timer); timer=null; } stopBar(); }
-  else { if(syncOn){ play(syncIndex()); return; } if(mediaEl&&mediaEl.play) mediaEl.play().catch(()=>{}); if(usesAdv){ advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,Math.max(0,advTotal-advElapsed)); stopBar(); barTimer=setInterval(barFromAdv,120); } }
+  else { if(syncOn){ play(syncIndex()); return; } if(mediaEl&&mediaEl.play) mediaEl.play().catch(()=>{}); if(usesAdv){ advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,Math.max(0,advTotal-advElapsed)); startBar(); } }
 }
 
 // PLAY REMOTO = intención de ARRANCAR, no solo de quitar una pausa. En iPhone el
@@ -2351,6 +2413,7 @@ function formatCounts(){ const c={}; const s=Object.assign({},seg,{format:''});
   for(const it of all){ if(!matchesSeg(it,s)) continue; for(const t of (it.tags||[])){ const k=String(t).toLowerCase().trim(); if(k&&FMT_ALL.has(k)) c[k]=(c[k]||0)+1; } } return c; }
 function renderChan(){
   const el=$('chan'); if(!el) return;
+  if(__adtvClean) return;   // #chan está display:none!important en kiosko
   const counts=tagCounts();
   let html='<div class="ch-hd">▦ playlists <span class="ch-total">/ '+all.length+' assets</span></div><div class="ch-sec">';
   html+=CH_PLAYLISTS.map(pl=>{
@@ -2775,7 +2838,8 @@ async function pollCmd(){
     if(!r.ok) throw new Error('http '+r.status);
     const d=await r.json(); if(!d) return;
     if(!__cmdInit){ __cmdSince=d.seq||0; __cmdInit=true; return; }   // no re-ejecutar comandos viejos al recargar
-    if(!Array.isArray(d.commands)) return;
+    if(!Array.isArray(d.commands)||!d.commands.length){ __cmdIdleN++; return; }
+    __cmdIdleN=0;   // hay actividad: ritmo rápido
     for(const c of d.commands){
       if(typeof c.cid!=='number'||!Number.isSafeInteger(c.cid)||c.cid<=__cmdSince) continue;
       const status=await executeQueuedCommand(c);   // orden estricto: una acción termina antes de empezar la siguiente
@@ -2785,7 +2849,15 @@ async function pollCmd(){
   }catch(_){ __cmdHost=(__cmdHost+1)%CMD_HOSTS.length; }
   finally{ __cmdPolling=false; }
 }
-pollCmd(); setInterval(pollCmd, 3000);
+// Backoff por INACTIVIDAD (no por conteo corto): a ritmo rápido (3 s) hasta ~120 s
+// seguidos sin comandos; después 10 s. CUALQUIER comando —o volver a primer plano—
+// devuelve el ritmo rápido al instante. Con setTimeout re-armado para poder variar.
+// Antes: setInterval fijo = 20 req/min que volvían vacías casi el 100% del tiempo.
+let __cmdIdleN=0, __cmdTimer=null;
+function __cmdDelay(){ return __cmdIdleN>=40?10000:3000; }
+function armPollCmd(){ clearTimeout(__cmdTimer); __cmdTimer=setTimeout(async()=>{ try{ await pollCmd(); }catch(_){} armPollCmd(); }, __cmdDelay()); }
+function cmdWake(){ __cmdIdleN=0; clearTimeout(__cmdTimer); Promise.resolve(pollCmd()).catch(()=>{}).then(armPollCmd); }
+pollCmd(); armPollCmd();
 
 // ── MANDO REMOTO POR PANTALLA (adcelerate/mando): cola de control por SCREEN.
 //   Una pantalla enrolada usa SU credencial (no ADMIN_TOKEN), ligada server-side
@@ -2874,7 +2946,8 @@ async function pollCtrl(){
   try{
     const r=await fetch(CTRL_API+'?screen='+encodeURIComponent(scr.screen)+'&t='+Date.now(),{cache:'no-store',headers:ctrlDeviceHeaders(false)});
     const d=r.ok?await r.json():null;
-    if(!d||!Array.isArray(d.cmds)) return;
+    if(!d||!Array.isArray(d.cmds)||!d.cmds.length){ __ctrlIdleN++; return; }
+    __ctrlIdleN=0;   // cualquier respuesta con comandos (aunque acaben 'ignored') = actividad
     // La cola es once-delivery: se ejecuta en orden y se acusa DESPUÉS de conocer el
     // resultado real. Antes `play()` se acusaba al lanzarlo, aunque iOS lo rechazara.
     for(const c of d.cmds){
@@ -2884,13 +2957,20 @@ async function pollCtrl(){
   }catch(_){ /* fallo silencioso: nunca corta la emisión */ }
   finally{ _ctrlPolling=false; }
 }
-try{ ensureCtrlDeviceIdentity().finally(()=>{ pollCtrl(); setInterval(pollCtrl,2500); }); }catch(_){}
+// Mismo backoff que pollCmd: 2,5 s hasta ~120 s sin comandos, después 10 s. La nota
+// BUILD r3 documenta «cada 2,5s»: sigue siendo verdad siempre que el mando se usa.
+let __ctrlIdleN=0, __ctrlTimer=null;
+function __ctrlDelay(){ return __ctrlIdleN>=48?10000:2500; }
+function armPollCtrl(){ clearTimeout(__ctrlTimer); __ctrlTimer=setTimeout(async()=>{ try{ await pollCtrl(); }catch(_){} armPollCtrl(); }, __ctrlDelay()); }
+try{ ensureCtrlDeviceIdentity().finally(()=>{ pollCtrl(); armPollCtrl(); }); }catch(_){}
 // iOS suspende timers/fetch al mandar la app a segundo plano. No es posible despertar
 // una app terminada sin push nativo, pero al volver a primer plano no esperamos al
 // siguiente intervalo: consumimos la cola inmediatamente (también desde bfcache/PWA).
 function rearmCtrlOnForeground(){
   try{ if(document.visibilityState==='hidden') return; }catch(_){}
+  __ctrlIdleN=0; try{ armPollCtrl(); }catch(_){}
   pollCtrl();
+  try{ cmdWake(); }catch(_){}
 }
 document.addEventListener('visibilitychange',rearmCtrlOnForeground);
 window.addEventListener('pageshow',rearmCtrlOnForeground);
@@ -2906,15 +2986,21 @@ window.addEventListener('online',rearmCtrlOnForeground);
 // reintentar en bucle; los servidos por caché (blob:) capturan sin tintar.
 const SHOT_API='https://api.admira.store/signage/shot';
 let _shotSec=25, _shotTimer=null, _shotBusy=false;
+let _lastShotSrc='', _lastShotTs=0;   // dedupe de imágenes fijas: el éxito se marca al confirmar la subida, no al disparar
 const _shotTainted=new Set();      // srcs que tiñeron el canvas → no reintentar
 try{ const _sq=qs.get('shot'); if(_sq!=null){ const n=parseFloat(_sq); if(!isNaN(n)) _shotSec=n; } }catch(_){}
 function _shotSrc(el){ try{ return el.currentSrc||el.src||''; }catch(_){ return ''; } }
 async function shotTick(){
   if(_shotSec<=0 || _shotBusy) return;
   try{ if(document.hidden) return; }catch(_){}          // no capturar en background
+  if(_standby||paused) return;                           // pantalla apagada o en pausa: el frame no puede cambiar y la preview mentiría
   if(!scr.screen) return;                                // sin screen no hay a quién imputar
   const el = stage.querySelector('video, img'); if(!el) return;
   const src=_shotSrc(el); if(_shotTainted.has(src)) return;   // ya sabemos que tiñe
+  // Una imagen fija no cambia entre capturas: re-codificar y re-subir el MISMO JPEG cada
+  // 25 s era ~92% de las subidas. Se re-sube como mucho cada 5 min para que el mando no
+  // vea el shot envejecer; los <video> capturan siempre. El éxito se marca en la RESPUESTA.
+  if(el.tagName==='IMG' && src===_lastShotSrc && (Date.now()-_lastShotTs)<300000) return;
   const iw=el.videoWidth||el.naturalWidth||0, ih=el.videoHeight||el.naturalHeight||0;
   if(!iw||!ih) return;                                   // aún sin frame pintado
   _shotBusy=true;
@@ -2929,7 +3015,8 @@ async function shotTick(){
     if(data && data.length>150*1024){ try{ data=cv.toDataURL('image/jpeg',0.32); }catch(_){ _shotBusy=false; return; } }
     if(!data || data.length>150*1024){ _shotBusy=false; return; }   // sigue muy grande: no fuerzo
     fetch(SHOT_API,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({screen:scr.screen,img:data})}).catch(()=>{});   // fallo en silencio
+      body:JSON.stringify({screen:scr.screen,img:data})})
+      .then(r=>{ if(r&&r.ok){ _lastShotSrc=src; _lastShotTs=Date.now(); } }).catch(()=>{});   // fallo en silencio; el dedupe solo cuenta subidas ACEPTADAS
   }catch(_){ /* jamás propaga a la emisión */ }
   _shotBusy=false;
 }
