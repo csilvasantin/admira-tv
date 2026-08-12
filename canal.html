@@ -42,7 +42,7 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=12.08.2026.r15.1742"></script>
+<script src="xpl-runtime.js?v=12.08.2026.r16.1755"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -1378,7 +1378,9 @@ async function play(i, forced){
     // La Xperiencia es contenido propio del stock, pero sigue siendo un documento
     // ajeno dentro de la antena: puede correr y sonar, jamás navegar la pantalla
     // ni abrir ventanas encima de la emisión.
-    f.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms');
+    const interTags=Array.isArray(it.tags)?it.tags:String(it.tags||'').split(/[,+\s]+/);
+    const isPayment=interTags.some(t=>normTag(t)==='payment');
+    f.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms'+(isPayment?' allow-popups allow-popups-to-escape-sandbox':''));
     f.onerror=()=>setTimeout(next,600);
     stage.appendChild(f);
     // Reloj provisional: en cuanto la pieza anuncie su duración, applyXperienciaDuration
@@ -1816,9 +1818,22 @@ function applyXperienciaDuration(event){
   if(!syncOn && !PREVIEW.on) startAdv(seg*1000);       // rearma el reloj con lo que dice la pieza
   flashCli('☝ '+(it.title||'interactivo')+' pide '+seg+' s');
 }
+function applyXperienciaPayment(event){
+  const f=stage.querySelector('iframe'); if(!f||event.source!==f.contentWindow) return;
+  const it=playlist[cur]; if(!it||KIND[it.type]!=='interactive') return;
+  const tags=Array.isArray(it.tags)?it.tags:String(it.tags||'').split(/[,+\s]+/);
+  if(!tags.some(t=>normTag(t)==='payment')) return;
+  let u; try{ u=new URL(String((event.data||{}).checkoutUrl||'')); }catch(_){ return; }
+  if(u.protocol!=='https:') return;
+  // La pieza intenta abrirlo directamente dentro del gesto. El mensaje es la
+  // prueba/telemetría; si el WebView lo bloquea no forzamos una navegación de la
+  // antena ni simulamos que el pago se abrió.
+  flashCli((event.data||{}).opened?'💳 checkout seguro':'💳 checkout bloqueado por el dispositivo');
+}
 window.addEventListener('message',event=>{
   const d0=event.data||{};
   if(d0.source==='ainimation-xperiencia'&&d0.event==='duration'){ applyXperienciaDuration(event); return; }
+  if(d0.source==='ainimation-xperiencia'&&d0.event==='payment'){ applyXperienciaPayment(event); return; }
   if(!bridgeOriginAllowed(event.origin)) return;
   const data=event.data||{};
   if(data.source!=='xpaceos-robot-cli') return;
