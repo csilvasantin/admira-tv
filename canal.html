@@ -42,7 +42,7 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=12.08.2026.r22.2146"></script>
+<script src="xpl-runtime.js?v=12.08.2026.r23.2148"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -709,9 +709,11 @@ function itemAR(it){
 // medir 0 justo en ese instante. Ahora, si no se puede medir, NO se toca el marco
 // y se reintenta; ademas un ResizeObserver lo re-ajusta ante cualquier cambio, asi
 // que aunque alguna vez se colase una medida mala, se cura sola.
-const FIT_MIN_PX=40;
-let _fitRetry=0, _fitPend=0;
 function fitMupi(){ const mupi=$('mupi'), wrap=$('wrap'); if(!mupi||!wrap) return;
+  // Estado y umbral DENTRO de la función a propósito: hay pruebas que recortan
+  // este bloque del fuente y lo ejecutan solo; con las constantes fuera, el
+  // recorte se quedaba sin ellas.
+  const FIT_MIN_PX=40;
   const railEl=$('rail'), chanEl=$('chan');
   const rW=(railEl&&getComputedStyle(railEl).display!=='none')?railEl.offsetWidth:0;
   const cW=(chanEl&&getComputedStyle(chanEl).display!=='none')?chanEl.offsetWidth:0;
@@ -722,24 +724,25 @@ function fitMupi(){ const mupi=$('mupi'), wrap=$('wrap'); if(!mupi||!wrap) retur
   const aW=wrap.clientWidth-padX-rW-cW-gap*visibleSides;
   if(!(aH>FIT_MIN_PX&&aW>FIT_MIN_PX)){
     // Sin medida fiable se conserva el ultimo tamaño bueno y se vuelve a intentar.
-    if(_fitRetry<60&&!_fitPend){ _fitPend=1; _fitRetry++;
-      requestAnimationFrame(()=>{ _fitPend=0; fitMupi(); }); }
+    if((fitMupi._retry|0)<60&&!fitMupi._pend){ fitMupi._pend=1; fitMupi._retry=(fitMupi._retry|0)+1;
+      requestAnimationFrame(()=>{ fitMupi._pend=0; fitMupi(); }); }
     return;
   }
-  _fitRetry=0;
+  fitMupi._retry=0;
   let h=aH, w=h*mupiAR; if(w>aW){ w=aW; h=w/mupiAR; }
   mupi.style.height=Math.round(h)+'px'; mupi.style.width=Math.round(w)+'px'; mupi.style.aspectRatio='auto';
 }
-// Autocuracion: cualquier cambio de tamaño del contenedor rehace el marco. Si una
+window.addEventListener('resize',fitMupi);
+// Autocuración: cualquier cambio de tamaño del contenedor rehace el marco. Si una
 // medida mala llegara a colarse, el siguiente relayout la corrige sin esperar a
-// que cambie la pieza.
+// que cambie la pieza. Va DESPUÉS del listener de resize a propósito: las pruebas
+// recortan el fuente hasta esa línea.
 try{
   if(typeof ResizeObserver!=='undefined'){
-    const _ro=new ResizeObserver(()=>{ _fitRetry=0; fitMupi(); });
+    const _ro=new ResizeObserver(()=>{ fitMupi._retry=0; fitMupi(); });
     const _w=$('wrap'); if(_w) _ro.observe(_w);
   }
 }catch(_){}
-window.addEventListener('resize',fitMupi);
 let _mupiResizeObserver=null;
 try{ if(window.ResizeObserver){ _mupiResizeObserver=new ResizeObserver(fitMupi); _mupiResizeObserver.observe($('wrap')); } }catch(_){}
 

@@ -47,7 +47,6 @@ function escenario({ alto, ancho }) {
     Math, parseFloat, requestAnimationFrame: (fn) => { marcos.push(fn); },
     ResizeObserver: undefined,
   });
-  vm.runInContext("var FIT_MIN_PX=40, _fitRetry=0, _fitPend=0;", ctx);
   vm.runInContext(extrae("fitMupi"), ctx);
   return { ctx, mupi, wrap, marcos, fit: () => vm.runInContext("fitMupi()", ctx) };
 }
@@ -102,7 +101,7 @@ test("el reintento no se vuelve infinito", () => {
 
 test("el canal se autocura ante cualquier cambio de tamaño", () => {
   // Sin esto, una medida mala que llegara a colarse duraría hasta la siguiente pieza.
-  assert.match(canal, /new ResizeObserver\(\(\)=>\{ _fitRetry=0; fitMupi\(\); \}\)/);
+  assert.match(canal, /new ResizeObserver\(\(\)=>\{ fitMupi\._retry=0; fitMupi\(\); \}\)/);
   assert.match(canal, /_ro\.observe\(_w\)/);
   // Y el Math.max(1,…) que lo causaba no puede volver.
   assert.doesNotMatch(canal, /const aH=Math\.max\(1,wrap\.clientHeight-padY\)/);
