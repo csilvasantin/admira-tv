@@ -1012,9 +1012,11 @@ document.addEventListener('keydown',e=>{
     case '?': toast('Atajos: / buscar · r recargar · p pausa · e CSV · m menú · d detalle','ok'); break;
   }
 });
-// Hasta que llegue /version.json no se inventa nada: «…» es honesto, una versión
-// vieja no. admira-nav.js rellena #appVer en cuanto responde el despliegue.
-const APP_VERSION=window.ADMIRA_VERSION||''; try{document.getElementById('appVer').textContent=APP_VERSION||'…';}catch(_){}
+// #appVer lo gobierna admira-nav.js y NADIE MAS. Esta linea lo pintaba tambien y
+// se ejecuta DESPUES del nav: cuando /version.json llegaba rapido, el nav ponia la
+// version buena y el CMS la borraba acto seguido. Dos dueños para un rotulo es
+// siempre el mismo cuento.
+const APP_VERSION=window.ADMIRA_VERSION||'';
 let PREV_ON={}, PREV_INIT=false;
 function toast(msg,kind){ const t=document.createElement('div'); t.className='toast'+(kind?(' '+kind):''); t.textContent=msg; document.getElementById('toasts').appendChild(t); setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},6000); }
 document.getElementById('exportCsv').onclick=exportCSV;

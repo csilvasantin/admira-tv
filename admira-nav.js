@@ -23,6 +23,9 @@
   // que no declaran ADMIRA_VERSION. La página puede seguir declarando el suyo
   // (window.ADMIRA_VERSION) y se usa mientras llega el real.
   var VER=window.ADMIRA_VERSION||'';
+  // Marcador honesto mientras viaja /version.json: mejor «…» que un hueco o que
+  // una version que nadie ha comprobado.
+  try{ var _ap=document.getElementById('appVer'); if(_ap && !_ap.textContent.trim()) _ap.textContent='…'; }catch(e){}
   function pintaVersion(v){
     if(!v) return;
     VER=v;
