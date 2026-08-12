@@ -46,16 +46,37 @@
   font:14px -apple-system,Segoe UI,Roboto,sans-serif;
   box-shadow:0 14px 44px #000b; transition:transform .2s ease;
 }
+/* ANCHO AL CONTENIDO (Carlos, 12-ago-2026): «lo más estrecho posible que quepa el
+   texto». Antes eran 300 y 320 px fijos, elegidos a ojo, y sobraba medio panel de
+   aire a la derecha de «Condicional». max-content mide lo que de verdad ocupa el
+   item más ancho; los topes evitan los dos extremos: que un rótulo largo se coma
+   la pantalla, y que un panel casi vacío quede impracticable de agarrar.
+   El JS puede sobrescribir width con el ancho que el usuario arrastre. */
 .af-left{
-  top:var(--af-top); left:0; bottom:0; width:min(300px,86vw);
+  top:var(--af-top); left:0; bottom:0;
+  width:max-content; min-width:150px; max-width:min(420px,86vw);
   border-left:0; border-top:0; border-bottom:0; border-right:1px solid #1e2940;
   transform:translateX(-103%);
 }
 .af-right{
-  top:var(--af-top); right:0; bottom:0; width:min(320px,88vw);
+  top:var(--af-top); right:0; bottom:0;
+  width:max-content; min-width:150px; max-width:min(440px,88vw);
   border-right:0; border-top:0; border-bottom:0; border-left:1px solid #1e2940;
   transform:translateX(103%);
 }
+
+/* Tirador para ajustar el ancho: vive en el borde INTERIOR de cada panel, que es
+   el único que da a la página. Ancho generoso para el ratón (8px) pero invisible
+   hasta que se pasa por encima — un panel de consulta no debe parecer una obra. */
+.af-grip{
+  position:absolute; top:0; bottom:0; width:8px; cursor:col-resize;
+  touch-action:none; z-index:2; background:transparent;
+}
+.af-grip-left{ right:-1px }
+.af-grip-right{ left:-1px }
+.af-grip:hover, body.af-ajustando .af-grip{ background:linear-gradient(90deg,transparent,#2b6cff55,transparent) }
+/* Mientras se arrastra, que no se seleccione medio panel por el camino. */
+body.af-ajustando{ user-select:none; cursor:col-resize }
 .af-bottom{
   left:0; right:0; bottom:0; height:min(320px,58vh);
   border-left:0; border-right:0; border-bottom:0; border-top:1px solid #1e2940;

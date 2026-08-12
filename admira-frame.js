@@ -119,12 +119,10 @@
       var hd = document.createElement("div");
       hd.className = "af-hd";
       hd.innerHTML = '<span class="af-ttl"><b>' + esc(side.title) + "</b></span>";
-      var x = document.createElement("button");
-      x.type = "button";
-      x.className = "af-x";
-      x.setAttribute("aria-label", "Cerrar " + side.title);
-      x.innerHTML = "&#10005;"; // ✕
-      hd.appendChild(x);
+      // Sin cruz (Carlos, 12-ago-2026): el MISMO icono que abre el panel lo cierra
+      // — ya lo hacía, era un toggle. Dos formas de cerrar lo mismo es una de más,
+      // y la cruz robaba ancho en la cabecera justo donde el panel tiene que ser
+      // estrecho. Siguen quedando el velo y Escape.
 
       var bd = document.createElement("div");
       bd.className = "af-bd";
@@ -169,7 +167,6 @@
       else bar.appendChild(ico);
 
       ico.addEventListener("click", function () { setOpen(side, !isOpen(side)); });
-      x.addEventListener("click", function () { setOpen(side, false); });
     });
 
     // Rellena iconos declarativos (data-af-icon) con el set de admira-nav si existe.
@@ -204,6 +201,61 @@
     // para no dejar datos muertos en los navegadores que las tengan.
     SIDES.forEach(function (side) {
       try { localStorage.removeItem(side.ls); } catch (e) {}
+    });
+
+    /* ── ANCHO AJUSTABLE, CON MEMORIA ──────────────────────────────────────────
+     * El panel mide por defecto lo que mide su contenido (width:max-content en la
+     * hoja): lo más estrecho que quepa el texto, que es lo que pidió Carlos. Pero
+     * «lo que mide el texto» cambia con el idioma, con un item nuevo o con la
+     * pantalla de cada uno, así que además se puede arrastrar el borde interior.
+     * Lo elegido se recuerda por panel; un doble clic en el tirador devuelve al
+     * ancho del contenido, para que ajustarlo no sea un billete de ida.
+     * ------------------------------------------------------------------------ */
+    SIDES.forEach(function (side) {
+      if (side.key === "bottom") return;            // el de abajo se mide en alto, no en ancho
+      var izq = side.key === "left";
+      var tirador = document.createElement("div");
+      tirador.className = "af-grip af-grip-" + side.key;
+      tirador.setAttribute("role", "separator");
+      tirador.setAttribute("aria-orientation", "vertical");
+      tirador.title = "Arrastra para ajustar el ancho · doble clic para volver al del contenido";
+      side.panel.appendChild(tirador);
+
+      var CLAVE = "af-ancho-" + side.key;
+      function aplica(px) {
+        if (px) side.panel.style.width = px + "px";
+        else side.panel.style.removeProperty("width");
+      }
+      try { var g = parseInt(localStorage.getItem(CLAVE) || "", 10); if (g > 0) aplica(g); } catch (e) {}
+
+      var arrastrando = false;
+      tirador.addEventListener("pointerdown", function (ev) {
+        arrastrando = true;
+        try { tirador.setPointerCapture(ev.pointerId); } catch (e) {}
+        document.body.classList.add("af-ajustando");
+        ev.preventDefault();
+      });
+      tirador.addEventListener("pointermove", function (ev) {
+        if (!arrastrando) return;
+        var r = side.panel.getBoundingClientRect();
+        // El ancho se mide desde el borde EXTERNO: el izquierdo crece hacia la
+        // derecha y el derecho hacia la izquierda.
+        var ancho = izq ? (ev.clientX - r.left) : (r.right - ev.clientX);
+        ancho = Math.max(150, Math.min(ancho, Math.round(window.innerWidth * 0.9)));
+        aplica(Math.round(ancho));
+      });
+      function suelta() {
+        if (!arrastrando) return;
+        arrastrando = false;
+        document.body.classList.remove("af-ajustando");
+        try { localStorage.setItem(CLAVE, String(Math.round(side.panel.getBoundingClientRect().width))); } catch (e) {}
+      }
+      tirador.addEventListener("pointerup", suelta);
+      tirador.addEventListener("pointercancel", suelta);
+      tirador.addEventListener("dblclick", function () {
+        aplica(0);
+        try { localStorage.removeItem(CLAVE); } catch (e) {}
+      });
     });
 
     // API mínima por si alguna página quiere abrir/cerrar por programa.
