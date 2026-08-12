@@ -1,0 +1,74 @@
+/* Tabla de flota y modo experto del CMS (Carlos, 12-ago-2026):
+   «las columnas de la tabla tienen que ser resizeables y estar más marcadas, y
+   Remote, si ya lo hemos pasado a modo experto, no tiene que aparecer» (FLT-1405)
+   «Experto del mismo color y tamaño que está ahora pero delante de Mando, y en
+   MacBookPro16 podemos escoger entre otros equipos IoT del proyecto con un
+   desplegable para controlarlos» (FLT-1406). */
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const cms = await readFile(new URL("./cms.html", import.meta.url), "utf8");
+const nav = await readFile(new URL("./admira-nav.js", import.meta.url), "utf8");
+
+test("cada columna declara su mínimo: sin eso el tirador la deja en nada", () => {
+  const colgroup = /<colgroup>([\s\S]*?)<\/colgroup>/.exec(cms);
+  assert.ok(colgroup, "la tabla necesita colgroup para poder reajustarse");
+  const mins = [...colgroup[1].matchAll(/data-min="(\d+)"/g)].map((m) => Number(m[1]));
+  const ths = [...cms.matchAll(/<th data-col="[a-z]+"/g)].length;
+  assert.equal(mins.length, ths, "un <col> por columna, o los anchos se descolocan");
+  assert.ok(mins.every((m) => m >= 60), "ningún mínimo puede dejar una columna ilegible");
+});
+
+test("el tirador se maneja con ratón Y con teclado, y recuerda los anchos", () => {
+  assert.match(cms, /tirador\.className='col-resizer'; tirador\.tabIndex=0/);
+  assert.match(cms, /setAttribute\('role','separator'\)/);
+  assert.match(cms, /aria-label','Reajustar columna '\+nombre/);
+  assert.match(cms, /addEventListener\('pointerdown'/);
+  assert.match(cms, /ev\.key!=='ArrowLeft'&&ev\.key!=='ArrowRight'/);
+  assert.match(cms, /addEventListener\('dblclick'/);      // autoajuste al contenido
+  assert.match(cms, /localStorage\.setItem\(CLAVE/);      // persistencia
+  // Y nunca por debajo del mínimo, ni arrastrando ni con las flechas.
+  assert.equal((cms.match(/Math\.max\(minimoDe\(cols\(\)\[indice\]\)/g) || []).length, 2);
+});
+
+test("las columnas se ven: línea entre ellas y cabecera destacada", () => {
+  assert.match(cms, /\.ebTable th,\.ebTable td\{border-right:1px solid var\(--line\)/);
+  assert.match(cms, /\.ebTable th:last-child,\.ebTable td:last-child\{border-right:0\}/);
+  assert.match(cms, /\.ebTable thead th\{border-bottom:2px solid #2c405e;font-weight:800/);
+  assert.match(cms, /table-layout:fixed/);
+  // El tirador se marca al tocarlo, para saber que se puede arrastrar.
+  assert.match(cms, /\.col-resizer:hover::after,\.col-resizer\.dragging::after/);
+});
+
+test("con el mando empotrado, la columna Remote desaparece — y vuelve al soltarlo", () => {
+  assert.match(cms, /body\.eb-experto \.ebTable \[data-col="remote"\]\{display:none\}/);
+  assert.match(cms, /document\.body\.classList\.add\('eb-experto'\)/);
+  assert.match(cms, /document\.body\.classList\.remove\('eb-experto'\)/);
+  // La celda ya venía marcada: se oculta por columna, no por posición.
+  assert.match(cms, /<td class="ebRemoteCell" data-col="remote">/);
+});
+
+test("EXPERTO va delante de Mando, con el color y tamaño que ya tenía", () => {
+  const h4 = /<h4><span class="mandoExp">Experto<\/span> · Mando ·/.exec(cms);
+  assert.ok(h4, "el rótulo Experto tiene que ir DELANTE de Mando, en la misma línea");
+  // Mismo color y tamaño que el EXPERTO del chrome (.admexp-hd de admira-nav.js).
+  const chrome = /\.admexp-hd\{[^}]*font-size:(\d+)px;font-weight:(\d+);color:(#[0-9a-f]+)/.exec(nav);
+  assert.ok(chrome, "no encuentro el estilo del EXPERTO del chrome");
+  const propio = /\.mandoExp\{font-size:(\d+)px;font-weight:(\d+);color:(#[0-9a-f]+)/.exec(cms);
+  assert.ok(propio, "falta el estilo del rótulo del panel");
+  assert.deepEqual(propio.slice(1, 4), chrome.slice(1, 4), "no puede inventarse un estilo nuevo");
+});
+
+test("el desplegable ofrece equipos del proyecto y gobierna al elegirlos", () => {
+  assert.match(cms, /<select id="mandoPick"/);
+  assert.match(cms, /function equiposDelProyecto\(\)/);
+  // Se leen de la tabla que ya está filtrada por proyecto: una sola fuente.
+  assert.match(cms, /querySelectorAll\('#ebBody tr \[data-screen\]'\)/);
+  assert.match(cms, /e\.target\.id==='mandoPick' && e\.target\.value\) abreMando\(e\.target\.value\)/);
+  // El que gobierna aparece marcado, aunque no esté en la tabla.
+  assert.match(cms, /if\(!lista\.some\(x=>x\.id===actual\)\) lista\.unshift/);
+  assert.match(cms, /sel\.value=actual/);
+  // Y cambiar de equipo recarga el mando, no la página.
+  assert.match(cms, /if\(fr\.dataset\.screen!==s\)\{ fr\.src=url; fr\.dataset\.screen=s; \}/);
+});

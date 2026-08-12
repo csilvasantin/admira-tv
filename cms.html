@@ -400,8 +400,34 @@
   .ebSrcErr{color:var(--off);font-size:11px;padding:4px 16px 10px}
   @media(max-width:640px){ .emitBoard{margin:12px 10px} }
   /* el chrome (barra + sidebar + detalle) lo aporta /admira-nav.js — ver config al final del body */
+
+/* ── TABLA DE FLOTA: columnas marcadas y reajustables (Carlos, 12-ago-2026) ──
+   Con diez columnas y separaciones casi invisibles había que seguir la fila con
+   el dedo. Ahora hay línea vertical entre columnas, cabecera destacada y un
+   tirador por columna; los anchos se guardan entre sesiones. */
+.ebTable{table-layout:fixed;border-collapse:separate;border-spacing:0}
+.ebTable th,.ebTable td{border-right:1px solid var(--line);overflow:hidden;text-overflow:ellipsis}
+.ebTable th:last-child,.ebTable td:last-child{border-right:0}
+.ebTable thead th{position:relative;background:var(--panel2,#0e1724)}
+.ebTable thead th{border-bottom:2px solid #2c405e;font-weight:800;letter-spacing:.04em}
+.ebTable tbody tr:hover td{background:rgba(61,240,138,.035)}
+.col-resizer{position:absolute;top:0;right:-4px;width:9px;height:100%;cursor:col-resize;z-index:3;
+  background:transparent;border:0;padding:0;display:block}
+.col-resizer::after{content:"";position:absolute;top:18%;bottom:18%;left:4px;width:1px}
+.col-resizer::after{background:#3f577a;transition:background .12s,box-shadow .12s}
+.col-resizer:hover::after,.col-resizer.dragging::after,.col-resizer:focus-visible::after{
+  background:var(--green,#3df08a);box-shadow:0 0 8px rgba(61,240,138,.6);width:2px}
+.col-resizer:focus-visible{outline:none}
+body.resizing-columns{cursor:col-resize;user-select:none}
+/* Con el mando empotrado en el panel EXPERTO, la columna Remote sobra. */
+body.eb-experto .ebTable [data-col="remote"]{display:none}
+/* El rótulo del panel: mismo color y tamaño que el EXPERTO del chrome. */
+.mandoExp{font-size:14px;font-weight:800;color:#cdd8e8;letter-spacing:.01em}
+#mandoPick{background:#09111c;color:var(--ink,#e7edf7);border:1px solid var(--line);border-radius:8px;
+  padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
+#mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=12.08.2026.r20.1901">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.08.2026.r21.2128">
 </head>
 <body>
 <script>
@@ -420,8 +446,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=12.08.2026.r20.1901"></script>
-<script src="/admira-frame.js?v=12.08.2026.r20.1901" defer></script>
+<script src="/admira-nav.js?v=12.08.2026.r21.2128"></script>
+<script src="/admira-frame.js?v=12.08.2026.r21.2128" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -438,7 +464,9 @@ window.ADMIRA_NAV={
        Vivía en un window.open de 420x680 — lo caza el bloqueador de emergentes, se
        pierde detrás de otras ventanas y no es donde se trabaja. -->
   <div class="admsec admando" id="mandoBox" hidden>
-    <h4>Mando · <span id="mandoScreen">—</span>
+    <h4><span class="mandoExp">Experto</span> · Mando ·
+      <select id="mandoPick" title="Equipo IoT del proyecto que estás gobernando" aria-label="Elegir equipo a controlar"></select>
+      <span id="mandoScreen" hidden>—</span>
       <button type="button" id="mandoOut" title="Abrirlo en una ventana aparte">⇱</button>
       <button type="button" id="mandoOff" title="Soltar el mando">✕</button>
     </h4>
@@ -493,6 +521,10 @@ window.ADMIRA_NAV={
   <div class="ebStats" id="ebStats"></div>
   <div class="ebWrap">
     <table class="ebTable" id="ebTable">
+      <colgroup>
+        <col data-min="96"><col data-min="150"><col data-min="86"><col data-min="64"><col data-min="96">
+        <col data-min="150"><col data-min="140"><col data-min="130"><col data-min="60"><col data-min="120">
+      </colgroup>
       <thead><tr id="ebHeadRow">
         <th data-col="estado" data-sort="text">Estado</th>
         <th data-col="player" data-sort="text">Player / pantalla</th>
@@ -584,7 +616,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=12.08.2026.r20.1901"></script>
+<script src="xpl-runtime.js?v=12.08.2026.r21.2128"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -1124,16 +1156,45 @@ function abreMando(s){
   // le cortaría el estado (volumen, playlist) a quien lo esté usando.
   if(fr.dataset.screen!==s){ fr.src=url; fr.dataset.screen=s; }
   document.getElementById('mandoScreen').textContent=s;
+  pintaMandoPick(s);
   box.hidden=false;
+  // Con el mando empotrado, la columna Remote de la tabla sobra: repetiría el
+  // botón que ya tienes abierto debajo. Vuelve sola al soltar el mando.
+  document.body.classList.add('eb-experto');
   window.AdmiraFrame.open('bottom');
 }
+// Equipos IoT del MISMO proyecto: se toman de la tabla de emisión que ya está en
+// pantalla —es la que el CMS filtra por proyecto—, así no hay una segunda fuente
+// que pueda discrepar. Sin tabla todavía, al menos se ofrece el que gobierna.
+function equiposDelProyecto(){
+  const vistos=new Set(), out=[];
+  document.querySelectorAll('#ebBody tr [data-screen]').forEach(b=>{
+    const id=b.getAttribute('data-screen'); if(!id||vistos.has(id))return;
+    vistos.add(id);
+    const fila=b.closest('tr'), cel=fila&&fila.querySelector('[data-col="player"]');
+    out.push({id:id, nombre:(cel?cel.textContent:'').trim()||id, vivo:!b.disabled});
+  });
+  return out;
+}
+function pintaMandoPick(actual){
+  const sel=document.getElementById('mandoPick'); if(!sel) return;
+  const lista=equiposDelProyecto();
+  if(!lista.some(x=>x.id===actual)) lista.unshift({id:actual,nombre:actual,vivo:true});
+  sel.innerHTML=lista.map(x=>'<option value="'+x.id.replace(/"/g,'&quot;')+'"'+(x.id===actual?' selected':'')+'>'
+    +(x.vivo?'':'○ ')+x.nombre.replace(/[<>&]/g,'')+'</option>').join('');
+  sel.value=actual;
+}
+document.addEventListener('change', e=>{
+  if(e.target && e.target.id==='mandoPick' && e.target.value) abreMando(e.target.value);
+});
 document.addEventListener('click', e=>{
   const b=e.target.closest('.ebRemote'); if(!b||b.disabled) return;
   const s=b.dataset.screen; if(!s) return;
   abreMando(s);
 });
 document.addEventListener('click', e=>{
-  if(e.target.closest('#mandoOff')){ const b=document.getElementById('mandoBox'), f=document.getElementById('mandoFrame');
+  if(e.target.closest('#mandoOff')){ document.body.classList.remove('eb-experto');
+    const b=document.getElementById('mandoBox'), f=document.getElementById('mandoFrame');
     b.hidden=true; f.src='about:blank'; f.dataset.screen=''; return; }
   if(e.target.closest('#mandoOut')){ const s=document.getElementById('mandoFrame').dataset.screen;
     if(s) window.open('/mando.html?screen='+encodeURIComponent(s),'mando-'+s,'width=420,height=680,menubar=no,toolbar=no'); }
@@ -1794,7 +1855,82 @@ $('progBands').addEventListener('click',e=>{
 })();
 </script>
 <script src="/admira-avatar.js"></script>
-<script src="/cms-pacman.js?v=12.08.2026.r20.1901"></script>
+<script src="/cms-pacman.js?v=12.08.2026.r21.2128"></script>
   <script src="/assets/admira-version-watch.js" defer></script>
+<script>
+/* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
+   Mismo patrón que el highscore de yokup: tirador por columna, mínimo por
+   columna en el colgroup (data-min), doble clic para autoajustar, flechas para
+   el teclado y anchos persistidos. Se hace igual a propósito: dos formas
+   distintas de reajustar una tabla en la misma casa es una de más. */
+(function(){
+  var CLAVE='adtv_cms_cols_v1';
+  function tabla(){ return document.getElementById('ebTable'); }
+  function cols(){ var t=tabla(); return t? t.querySelectorAll('colgroup col') : []; }
+  function minimoDe(c){ return Number(c.getAttribute('data-min'))||60; }
+  function anchosActuales(){
+    var t=tabla(); if(!t) return [];
+    var ths=t.querySelectorAll('thead th');
+    return Array.prototype.map.call(ths,function(th){ return Math.round(th.getBoundingClientRect().width); });
+  }
+  function aplica(anchos){
+    var cs=cols(); if(!anchos||anchos.length!==cs.length) return;
+    Array.prototype.forEach.call(cs,function(c,i){
+      c.style.width=Math.max(minimoDe(c),Math.round(Number(anchos[i])||minimoDe(c)))+'px';
+    });
+  }
+  function guarda(anchos){ try{ localStorage.setItem(CLAVE,JSON.stringify(anchos)); }catch(_){} }
+  function anchoContenido(i){
+    var t=tabla(), max=minimoDe(cols()[i]);
+    Array.prototype.forEach.call(t.querySelectorAll('tbody tr'),function(tr){
+      var td=tr.children[i]; if(td) max=Math.max(max,td.scrollWidth+18);
+    });
+    return Math.min(max,520);
+  }
+  function inicia(){
+    var t=tabla(); if(!t||t.dataset.resizable) return; t.dataset.resizable='1';
+    try{ aplica(JSON.parse(localStorage.getItem(CLAVE)||'null')); }catch(_){}
+    Array.prototype.forEach.call(t.querySelectorAll('thead th'),function(th,indice){
+      if(th.querySelector('.col-resizer')) return;
+      var nombre=(th.textContent||'').trim()||'columna', tirador=document.createElement('span');
+      tirador.className='col-resizer'; tirador.tabIndex=0;
+      tirador.setAttribute('role','separator'); tirador.setAttribute('aria-orientation','vertical');
+      tirador.setAttribute('aria-label','Reajustar columna '+nombre);
+      tirador.title='Arrastra para reajustar · doble clic para autoajustar';
+      tirador.addEventListener('pointerdown',function(ev){
+        ev.preventDefault(); ev.stopPropagation();
+        var base=anchosActuales(), x0=ev.clientX, a0=base[indice];
+        aplica(base); tirador.classList.add('dragging'); document.body.classList.add('resizing-columns');
+        try{ tirador.setPointerCapture(ev.pointerId); }catch(_){}
+        function mueve(e){
+          var n=base.slice();
+          n[indice]=Math.max(minimoDe(cols()[indice]), a0+e.clientX-x0);
+          aplica(n);
+        }
+        function fin(){
+          tirador.classList.remove('dragging'); document.body.classList.remove('resizing-columns');
+          guarda(anchosActuales());
+          tirador.removeEventListener('pointermove',mueve); tirador.removeEventListener('pointerup',fin);
+          tirador.removeEventListener('pointercancel',fin);
+        }
+        tirador.addEventListener('pointermove',mueve); tirador.addEventListener('pointerup',fin);
+        tirador.addEventListener('pointercancel',fin);
+      });
+      tirador.addEventListener('dblclick',function(ev){
+        ev.preventDefault(); ev.stopPropagation();
+        var a=anchosActuales(); a[indice]=anchoContenido(indice); aplica(a); guarda(a);
+      });
+      tirador.addEventListener('keydown',function(ev){
+        if(ev.key!=='ArrowLeft'&&ev.key!=='ArrowRight') return;
+        ev.preventDefault();
+        var a=anchosActuales(); a[indice]=Math.max(minimoDe(cols()[indice]), a[indice]+(ev.key==='ArrowRight'?12:-12));
+        aplica(a); guarda(a);
+      });
+      th.appendChild(tirador);
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',inicia); else inicia();
+})();
+</script>
 </body>
 </html>
