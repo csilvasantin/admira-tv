@@ -212,19 +212,24 @@
      * ancho del contenido, para que ajustarlo no sea un billete de ida.
      * ------------------------------------------------------------------------ */
     SIDES.forEach(function (side) {
-      if (side.key === "bottom") return;            // el de abajo se mide en alto, no en ancho
+      // El de abajo se ajusta en ALTO, no en ancho, pero se ajusta igual: desde que
+      // vive ahí el mando, 320 px se quedan cortos y quien lo use querrá subirlo.
+      var vertical = side.key === "bottom";
       var izq = side.key === "left";
       var tirador = document.createElement("div");
       tirador.className = "af-grip af-grip-" + side.key;
       tirador.setAttribute("role", "separator");
-      tirador.setAttribute("aria-orientation", "vertical");
-      tirador.title = "Arrastra para ajustar el ancho · doble clic para volver al del contenido";
+      tirador.setAttribute("aria-orientation", vertical ? "horizontal" : "vertical");
+      tirador.title = vertical
+        ? "Arrastra para ajustar el alto · doble clic para volver al de casa"
+        : "Arrastra para ajustar el ancho · doble clic para volver al del contenido";
       side.panel.appendChild(tirador);
 
       var CLAVE = "af-ancho-" + side.key;
       function aplica(px) {
-        if (px) side.panel.style.width = px + "px";
-        else side.panel.style.removeProperty("width");
+        var prop = vertical ? "height" : "width";
+        if (px) side.panel.style[prop] = px + "px";
+        else side.panel.style.removeProperty(prop);
       }
       try { var g = parseInt(localStorage.getItem(CLAVE) || "", 10); if (g > 0) aplica(g); } catch (e) {}
 
@@ -238,17 +243,20 @@
       tirador.addEventListener("pointermove", function (ev) {
         if (!arrastrando) return;
         var r = side.panel.getBoundingClientRect();
-        // El ancho se mide desde el borde EXTERNO: el izquierdo crece hacia la
-        // derecha y el derecho hacia la izquierda.
-        var ancho = izq ? (ev.clientX - r.left) : (r.right - ev.clientX);
-        ancho = Math.max(150, Math.min(ancho, Math.round(window.innerWidth * 0.9)));
-        aplica(Math.round(ancho));
+        // Se mide desde el borde EXTERNO de cada panel: el izquierdo crece hacia la
+        // derecha, el derecho hacia la izquierda y el de abajo hacia arriba.
+        var medida = vertical ? (r.bottom - ev.clientY)
+                   : izq ? (ev.clientX - r.left) : (r.right - ev.clientX);
+        var tope = vertical ? Math.round(window.innerHeight * 0.9) : Math.round(window.innerWidth * 0.9);
+        medida = Math.max(vertical ? 160 : 150, Math.min(medida, tope));
+        aplica(Math.round(medida));
       });
       function suelta() {
         if (!arrastrando) return;
         arrastrando = false;
         document.body.classList.remove("af-ajustando");
-        try { localStorage.setItem(CLAVE, String(Math.round(side.panel.getBoundingClientRect().width))); } catch (e) {}
+        try { var rr = side.panel.getBoundingClientRect();
+              localStorage.setItem(CLAVE, String(Math.round(vertical ? rr.height : rr.width))); } catch (e) {}
       }
       tirador.addEventListener("pointerup", suelta);
       tirador.addEventListener("pointercancel", suelta);

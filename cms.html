@@ -341,6 +341,16 @@
   .ebShot.sinPrevio img{display:none}
   .ebShot.sinPrevio .ebShotHole{display:flex}
   .ebShot.sinPrevio{border-style:dashed}
+  /* MANDO EMPOTRADO. Alto generoso porque el mando trae sus propios controles y
+     su playlist; si el panel se queda corto, se arrastra (el borde superior). */
+  .admando h4{ display:flex; align-items:center; gap:8px }
+  .admando h4 span{ color:var(--accent); font-family:ui-monospace,Menlo,monospace }
+  .admando h4 button{ margin-left:auto; width:24px; height:24px; display:grid; place-items:center;
+    background:#0e1420; color:#9fb0c6; border:1px solid var(--line); border-radius:6px; cursor:pointer; font-size:12px }
+  .admando h4 button+button{ margin-left:4px }
+  .admando h4 button:hover{ border-color:var(--accent); color:var(--accent) }
+  #mandoFrame{ width:100%; height:min(560px,52vh); min-height:260px; border:1px solid var(--line);
+    border-radius:10px; background:#05070c; display:block }
   .ebShotCell{width:112px}
   /* CABECERAS QUE SE MANEJAN. Una tabla de flota se mira de formas distintas según
      lo que busques: quién lleva más tiempo sin refrescar, qué circuito está mudo,
@@ -391,7 +401,7 @@
   @media(max-width:640px){ .emitBoard{margin:12px 10px} }
   /* el chrome (barra + sidebar + detalle) lo aporta /admira-nav.js — ver config al final del body */
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=12.08.2026.r8.1201">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.08.2026.r9.1206">
 </head>
 <body>
 <script>
@@ -410,8 +420,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=12.08.2026.r8.1201"></script>
-<script src="/admira-frame.js?v=12.08.2026.r8.1201" defer></script>
+<script src="/admira-nav.js?v=12.08.2026.r9.1206"></script>
+<script src="/admira-frame.js?v=12.08.2026.r9.1206" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -422,6 +432,19 @@ window.ADMIRA_NAV={
   <button class="admni afAct" id="exportCsv" type="button" title="Exportar la flota visible a CSV"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11M8 11l4 4 4-4"/><path d="M4.5 19.5h15"/></svg></span><span class="t">Exportar CSV</span></button>
 </div>
 <div class="afSlotHidden af-expert" data-af-slot="bottom" aria-label="Diagnóstico de flota">
+  <!-- MANDO EN EL PANEL, no en una ventana aparte (Carlos, 12-ago-2026). El mando
+       es el mismo de siempre (mando.html, que lee ?screen=): se empotra, no se
+       reescribe, así que si mañana gana comandos esta superficie los hereda sola.
+       Vivía en un window.open de 420x680 — lo caza el bloqueador de emergentes, se
+       pierde detrás de otras ventanas y no es donde se trabaja. -->
+  <div class="admsec admando" id="mandoBox" hidden>
+    <h4>Mando · <span id="mandoScreen">—</span>
+      <button type="button" id="mandoOut" title="Abrirlo en una ventana aparte">⇱</button>
+      <button type="button" id="mandoOff" title="Soltar el mando">✕</button>
+    </h4>
+    <iframe id="mandoFrame" title="Mando a distancia de la pantalla" src="about:blank"
+            allow="autoplay" referrerpolicy="same-origin"></iframe>
+  </div>
   <div class="admsec"><h4>Diagnóstico</h4>
     <div class="admrow"><span>Dispositivos</span><b id="d-total">—</b></div>
     <div class="admrow"><span>Emitiendo</span><b id="d-online">—</b></div>
@@ -561,7 +584,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=12.08.2026.r8.1201"></script>
+<script src="xpl-runtime.js?v=12.08.2026.r9.1206"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -1090,10 +1113,30 @@ $('canalModal').addEventListener('click',e=>{ if(e.target===$('canalModal')) clo
 // al screen de esa fila. Se engancha el que hay en vez de reescribir botones: si manana el
 // mando gana comandos, esta columna los hereda sola. Ventana aparte y no modal, porque se
 // opera mirando la tabla al lado — subes volumen y ves ahi mismo si la pantalla reacciona.
+function abreMando(s){
+  const box=document.getElementById('mandoBox'), fr=document.getElementById('mandoFrame');
+  if(!box||!fr||!window.AdmiraFrame){   // sin panel (página suelta) → como siempre
+    window.open('/mando.html?screen='+encodeURIComponent(s),'mando-'+s,'width=420,height=680,menubar=no,toolbar=no');
+    return;
+  }
+  const url='/mando.html?screen='+encodeURIComponent(s);
+  // Solo se recarga si cambia de pantalla: repintar el mando de la MISMA pantalla
+  // le cortaría el estado (volumen, playlist) a quien lo esté usando.
+  if(fr.dataset.screen!==s){ fr.src=url; fr.dataset.screen=s; }
+  document.getElementById('mandoScreen').textContent=s;
+  box.hidden=false;
+  window.AdmiraFrame.open('bottom');
+}
 document.addEventListener('click', e=>{
   const b=e.target.closest('.ebRemote'); if(!b||b.disabled) return;
   const s=b.dataset.screen; if(!s) return;
-  window.open('/mando.html?screen='+encodeURIComponent(s),'mando-'+s,'width=420,height=680,menubar=no,toolbar=no');
+  abreMando(s);
+});
+document.addEventListener('click', e=>{
+  if(e.target.closest('#mandoOff')){ const b=document.getElementById('mandoBox'), f=document.getElementById('mandoFrame');
+    b.hidden=true; f.src='about:blank'; f.dataset.screen=''; return; }
+  if(e.target.closest('#mandoOut')){ const s=document.getElementById('mandoFrame').dataset.screen;
+    if(s) window.open('/mando.html?screen='+encodeURIComponent(s),'mando-'+s,'width=420,height=680,menubar=no,toolbar=no'); }
 });
 $('grid').addEventListener('click', e=>{
   if(e.target.closest('.modeSel,.remote,.acts,a,button,select,input')) return; // no en controles
@@ -1751,7 +1794,7 @@ $('progBands').addEventListener('click',e=>{
 })();
 </script>
 <script src="/admira-avatar.js"></script>
-<script src="/cms-pacman.js?v=12.08.2026.r8.1201"></script>
+<script src="/cms-pacman.js?v=12.08.2026.r9.1206"></script>
   <script src="/assets/admira-version-watch.js" defer></script>
 </body>
 </html>

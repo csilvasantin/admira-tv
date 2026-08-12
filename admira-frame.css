@@ -74,6 +74,9 @@
 }
 .af-grip-left{ right:-1px }
 .af-grip-right{ left:-1px }
+/* El de abajo se agarra por su borde SUPERIOR, que es el que da a la pagina. */
+.af-grip-bottom{ top:-1px; left:0; right:0; bottom:auto; width:auto; height:8px; cursor:row-resize }
+.af-grip-bottom:hover, body.af-ajustando .af-grip-bottom{ background:linear-gradient(180deg,transparent,#2b6cff55,transparent) }
 .af-grip:hover, body.af-ajustando .af-grip{ background:linear-gradient(90deg,transparent,#2b6cff55,transparent) }
 /* Mientras se arrastra, que no se seleccione medio panel por el camino. */
 body.af-ajustando{ user-select:none; cursor:col-resize }
