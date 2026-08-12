@@ -427,7 +427,7 @@ body.eb-experto .ebTable [data-col="remote"]{display:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=12.08.2026.r21.2128">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.08.2026.r22.2146">
 </head>
 <body>
 <script>
@@ -446,8 +446,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=12.08.2026.r21.2128"></script>
-<script src="/admira-frame.js?v=12.08.2026.r21.2128" defer></script>
+<script src="/admira-nav.js?v=12.08.2026.r22.2146"></script>
+<script src="/admira-frame.js?v=12.08.2026.r22.2146" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -473,29 +473,8 @@ window.ADMIRA_NAV={
     <iframe id="mandoFrame" title="Mando a distancia de la pantalla" src="about:blank"
             allow="autoplay" referrerpolicy="same-origin"></iframe>
   </div>
-  <div class="admsec"><h4>Diagnóstico</h4>
-    <div class="admrow"><span>Dispositivos</span><b id="d-total">—</b></div>
-    <div class="admrow"><span>Emitiendo</span><b id="d-online">—</b></div>
-    <div class="admrow"><span>Sin señal</span><b id="d-off">—</b></div>
-    <div class="admrow"><span>Con audiencia</span><b id="d-aud">—</b></div>
-    <div class="admrow"><span>Móviles / robot</span><b id="d-robot">—</b></div>
-    <div class="admrow"><span>Ingresos</span><b id="d-rev">—</b></div>
-  </div>
 </div>
-<script>
-/* Espeja los KPIs de flota (k-*) al panel EXPERTO (d-*). Antes lo hacía onDetail de
-   admira-nav al abrir el detalle; ahora, panel independiente → refresco por intervalo. */
-(function(){
-  function mirror(){
-    var g=function(id){var e=document.getElementById(id);return e?e.textContent:'—';};
-    var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
-    var total=parseInt(g('k-total'))||0, online=parseInt(g('k-online'))||0;
-    set('d-total',g('k-total')); set('d-online',g('k-online')+(total?' ('+Math.round(online/total*100)+'%)':''));
-    set('d-off',g('k-off')); set('d-aud',g('k-aud')); set('d-robot',g('k-robot')); set('d-rev',g('k-rev'));
-  }
-  try{ mirror(); setInterval(mirror,2000); }catch(_){}
-})();
-</script>
+
 <style>
 /* Los contenedores-slot no deben verse en el flujo del body antes de que admira-frame
    los recoloque en sus paneles (evita un parpadeo). Dentro del panel se muestran normal. */
@@ -616,7 +595,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=12.08.2026.r21.2128"></script>
+<script src="xpl-runtime.js?v=12.08.2026.r22.2146"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -1855,7 +1834,7 @@ $('progBands').addEventListener('click',e=>{
 })();
 </script>
 <script src="/admira-avatar.js"></script>
-<script src="/cms-pacman.js?v=12.08.2026.r21.2128"></script>
+<script src="/cms-pacman.js?v=12.08.2026.r22.2146"></script>
   <script src="/assets/admira-version-watch.js" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────

@@ -42,7 +42,7 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=12.08.2026.r21.2128"></script>
+<script src="xpl-runtime.js?v=12.08.2026.r22.2146"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -700,6 +700,17 @@ function itemAR(it){
   if(KIND[it&&it.type]==='interactive') return 16/9;
   return 9/16;
 }
+// Una medida de CERO no significa «el marco mide un pixel»: significa «todavia no
+// se puede medir». El Math.max(1,...) de antes convertia lo segundo en lo primero
+// y lo escribia en px, asi que el MUPI se quedaba clavado en 1px de alto —la
+// franja inferior de la foto del MacBookProNegro14, 12-ago-2026— y NO se
+// recuperaba solo, porque nadie vuelve a llamar a fitMupi. Pasaba al encadenar la
+// segunda pieza: play() llama a fitMupi y en un WKWebView en kiosko el wrap puede
+// medir 0 justo en ese instante. Ahora, si no se puede medir, NO se toca el marco
+// y se reintenta; ademas un ResizeObserver lo re-ajusta ante cualquier cambio, asi
+// que aunque alguna vez se colase una medida mala, se cura sola.
+const FIT_MIN_PX=40;
+let _fitRetry=0, _fitPend=0;
 function fitMupi(){ const mupi=$('mupi'), wrap=$('wrap'); if(!mupi||!wrap) return;
   const railEl=$('rail'), chanEl=$('chan');
   const rW=(railEl&&getComputedStyle(railEl).display!=='none')?railEl.offsetWidth:0;
@@ -707,11 +718,27 @@ function fitMupi(){ const mupi=$('mupi'), wrap=$('wrap'); if(!mupi||!wrap) retur
   const ws=getComputedStyle(wrap), padX=parseFloat(ws.paddingLeft||0)+parseFloat(ws.paddingRight||0);
   const padY=parseFloat(ws.paddingTop||0)+parseFloat(ws.paddingBottom||0);
   const gap=parseFloat(ws.columnGap||ws.gap||0), visibleSides=(rW?1:0)+(cW?1:0);
-  const aH=Math.max(1,wrap.clientHeight-padY);
-  const aW=Math.max(1,wrap.clientWidth-padX-rW-cW-gap*visibleSides);
+  const aH=wrap.clientHeight-padY;
+  const aW=wrap.clientWidth-padX-rW-cW-gap*visibleSides;
+  if(!(aH>FIT_MIN_PX&&aW>FIT_MIN_PX)){
+    // Sin medida fiable se conserva el ultimo tamaño bueno y se vuelve a intentar.
+    if(_fitRetry<60&&!_fitPend){ _fitPend=1; _fitRetry++;
+      requestAnimationFrame(()=>{ _fitPend=0; fitMupi(); }); }
+    return;
+  }
+  _fitRetry=0;
   let h=aH, w=h*mupiAR; if(w>aW){ w=aW; h=w/mupiAR; }
   mupi.style.height=Math.round(h)+'px'; mupi.style.width=Math.round(w)+'px'; mupi.style.aspectRatio='auto';
 }
+// Autocuracion: cualquier cambio de tamaño del contenedor rehace el marco. Si una
+// medida mala llegara a colarse, el siguiente relayout la corrige sin esperar a
+// que cambie la pieza.
+try{
+  if(typeof ResizeObserver!=='undefined'){
+    const _ro=new ResizeObserver(()=>{ _fitRetry=0; fitMupi(); });
+    const _w=$('wrap'); if(_w) _ro.observe(_w);
+  }
+}catch(_){}
 window.addEventListener('resize',fitMupi);
 let _mupiResizeObserver=null;
 try{ if(window.ResizeObserver){ _mupiResizeObserver=new ResizeObserver(fitMupi); _mupiResizeObserver.observe($('wrap')); } }catch(_){}
