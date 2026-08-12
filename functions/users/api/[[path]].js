@@ -381,6 +381,28 @@ export async function onRequestPost(ctx) {
       target = id; detail = `${kind}→${parent}`;
       break;
     }
+    case "project.remove": {
+      // Sin esto el árbol sólo crecía: un proyecto creado con el slug mal escrito
+      // se quedaba para siempre. Se acota a lo que no puede romper el perímetro:
+      // nunca la raíz, nunca los proyectos de fábrica, y nunca uno que sostenga
+      // subaplicaciones (primero se vacía, así el borrado nunca es en cascada).
+      if (!ownerActor) return json({ error: "owner_only" }, 403);
+      const id = text(body.id, 60);
+      const project = projectFor(doc, id);
+      if (!project) return json({ error: "not_found" }, 404);
+      if (project.id === "admira-tv") return json({ error: "root_protected" }, 400);
+      if (project.system) return json({ error: "system_protected" }, 400);
+      if ((doc.projects || []).some((p) => p.parent === id)) return json({ error: "has_children" }, 409);
+      doc.projects = doc.projects.filter((p) => p.id !== id);
+      // Los permisos que apuntaban aquí dejan de existir con él: un rol huérfano
+      // no se ve en la matriz pero seguiría viajando en el documento.
+      let cleared = 0;
+      for (const user of doc.users || []) {
+        if (user.roles && user.roles[id]) { delete user.roles[id]; user.updatedAt = now(); cleared++; }
+      }
+      target = id; detail = cleared ? `eliminado · ${cleared} permiso(s) liberados` : "eliminado";
+      break;
+    }
     case "project.update": {
       if (!ownerActor) return json({ error: "owner_only" }, 403);
       const id = text(body.id, 60);

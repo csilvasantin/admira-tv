@@ -104,6 +104,53 @@ test("crear un subproyecto exige owner, padre válido y URL admira.tv", async ()
   assert.equal(p.parent, "digitalsignage");
 });
 
+test("un proyecto creado se puede eliminar, pero nunca la raíz ni lo de fábrica", async () => {
+  const kv = new MemoryKV();
+  const post = async (email, body) => {
+    const state = await (await onRequestGet(ctx(kv, "state", { email }))).json();
+    return data(await onRequestPost(ctx(kv, "write", { email, method: "POST", body: { ...body, rev: state.rev } })));
+  };
+  const owner = "csilva@admira.com";
+
+  // La raíz y los proyectos sembrados quedan fuera del alcance del borrado.
+  assert.equal((await post(owner, { action: "project.remove", id: "admira-tv" })).body.error, "root_protected");
+  assert.equal((await post(owner, { action: "project.remove", id: "digitalsignage" })).body.error, "system_protected");
+
+  // Un proyecto propio con hijos exige vaciarse antes: nunca borra en cascada.
+  await post(owner, { action: "project.add", id: "padre-prueba", name: "Padre", parent: "admira-tv", url: "https://admira.tv/padre/" });
+  await post(owner, { action: "project.add", id: "hijo-prueba", name: "Hijo", parent: "padre-prueba", url: "https://admira.tv/padre/hijo/" });
+  const conHijos = await post(owner, { action: "project.remove", id: "padre-prueba" });
+  assert.equal(conHijos.status, 409);
+  assert.equal(conHijos.body.error, "has_children");
+
+  // Al eliminarlo se liberan los permisos que apuntaban a él: sin roles huérfanos.
+  await post(owner, { action: "user.add", email: "temp@example.com", project: "hijo-prueba", role: "editor" });
+  const borrado = await post(owner, { action: "project.remove", id: "hijo-prueba" });
+  assert.equal(borrado.status, 200);
+  assert.ok(!borrado.body.projects.some((p) => p.id === "hijo-prueba"));
+  const temp = borrado.body.users.find((u) => u.email === "temp@example.com");
+  assert.deepEqual(temp.roles, {});
+
+  // Y sigue siendo cosa del owner.
+  await post(owner, { action: "user.add", email: "admin@example.com", project: "admira-tv", role: "admin" });
+  const ajeno = await post("admin@example.com", { action: "project.remove", id: "padre-prueba" });
+  assert.equal(ajeno.status, 403);
+  assert.equal(ajeno.body.error, "owner_only");
+});
+
+test("la consola de usuarios se firma y traduce los errores del API", async () => {
+  const html = await readFile(new URL("./users/index.html", import.meta.url), "utf8");
+  // El sello canónico vive en index.html; aquí basta el literal que sella-versiones
+  // mantiene al día. Un segundo <meta> sería otra fuente de verdad que acabaría mintiendo.
+  assert.match(html, /window\.ADMIRA_VERSION='v\.\d{2}\.\d{2}\.\d{4}\.r\d+\.\d{2}:\d{2}'/);
+  assert.doesNotMatch(html, /name="admiranext-version"/);
+  // Ningún código del servidor debe llegar crudo al usuario.
+  for (const code of ["owner_only", "external_url_forbidden", "has_children", "bad_email", "exists"]) {
+    assert.match(html, new RegExp(code + ":'"), `falta traducir ${code}`);
+  }
+  assert.match(html, /action:'project\.remove'/);
+});
+
 test("la revisión evita que dos administradores se pisen", async () => {
   const kv = new MemoryKV();
   const state = await (await onRequestGet(ctx(kv, "state", { email: "csilva@admira.com" }))).json();

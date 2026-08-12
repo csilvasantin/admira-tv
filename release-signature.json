@@ -1,9 +1,9 @@
 {
-  "version": "v.12.08.2026.r12.13:06",
-  "signature": "TrinityMBP14 · MacBookProNegro14",
-  "agent": "TrinityMBP14",
-  "machine": "MacBookProNegro14",
+  "version": "v.12.08.2026.r13.16:42",
+  "signature": "MorfeoMacMini · MacMini",
+  "agent": "MorfeoMacMini",
+  "machine": "MacMini",
   "day": "12.08.2026",
-  "time": "13:06",
-  "evidence": "Cobertura completa de rutas humanas bajo el árbol de permisos Admira.tv"
+  "time": "16:42",
+  "evidence": "Ciclo de vida completo en /users: creacion de usuarios con validacion y aviso de reactivacion, creacion de proyectos solo para owner, y eliminacion de proyecto liberando permisos huerfanos"
 }
