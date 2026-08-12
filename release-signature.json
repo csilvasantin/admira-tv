@@ -1,9 +1,9 @@
 {
-  "version": "v.12.08.2026.r14.17:26",
+  "version": "v.12.08.2026.r15.17:42",
   "signature": "MorfeoMacMini · MacMini",
   "agent": "MorfeoMacMini",
   "machine": "MacMini",
   "day": "12.08.2026",
-  "time": "17:26",
-  "evidence": "Playlists desde la pastilla de programacion: nombre, composicion por tag o manual, y asignacion a los dispositivos IoT del mismo proyecto"
+  "time": "17:42",
+  "evidence": "Tageando: los tags de la playlist salen del catalogo real de pixeria.com y se pueden escribir a mano normalizando tildes"
 }

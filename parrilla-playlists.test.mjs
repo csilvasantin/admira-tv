@@ -47,11 +47,23 @@ const CONTENIDOS = [
   { id: "ad-b", title: "Publicidad local B", lane: "publicidad", seconds: 10 },
 ];
 
-function sandbox(projectId = "xtanco", items = CONTENIDOS, screens = PANTALLAS) {
+/* El Stock real de pixeria, tal como lo devuelve el índice público: los tags
+   llevan tilde y hay variantes que también son música. */
+const STOCK = [
+  { id: "a1", title: "Berlin · Take My Breath Away", type: "video", tags: ["música", "videoclip", "cine", "good"] },
+  { id: "a2", title: "Huey Lewis · The Power Of Love", type: "video", tags: ["música", "videoclip", "pop 80s"] },
+  { id: "a3", title: "Billboard Top 30 · 1985", type: "video", tags: ["listas música", "años 80"] },
+  { id: "a4", title: "Robot de sala", type: "image", tags: ["tecnología", "ia"] },
+  { id: "a5", title: "Curso de atención", type: "capsula", tags: ["formacion"] },
+  { id: "a6", title: "Sin etiquetar", type: "image", tags: [] },
+];
+
+function sandbox(projectId = "xtanco", items = CONTENIDOS, screens = PANTALLAS, stock = STOCK) {
   const ctx = { projects: PROYECTOS, screens, items, activeProjectId: projectId, plMode: "tag",
-    plTagSel: new Set(), plItemSel: new Set() };
+    plTagSel: new Set(), plItemSel: new Set(), stockPiezas: stock, stockEstado: "ok" };
   vm.createContext(ctx);
-  for (const fn of ["projectFor", "plTagsPresentes", "plTagLabel", "plDevicesProyecto", "plSeleccion"]) {
+  for (const fn of ["projectFor", "plNorm", "plPiezaTags", "plTagCatalogo", "plTagsQueCasan",
+                    "plPiezaAItem", "plPool", "plTagLabel", "plDevicesProyecto", "plSeleccion"]) {
     vm.runInContext(extrae(fn), ctx);
   }
   return ctx;
@@ -72,33 +84,66 @@ test("cambiar de proyecto cambia por completo la lista de destinos", () => {
   assert.deepEqual(ids, ["sim-gracia-kiosko"]);
 });
 
-test("los tags salen de los contenidos, con su recuento, no de una lista fija", () => {
+test("el catálogo de tags sale del Stock de pixeria, ordenado por uso", () => {
   const ctx = sandbox();
-  // Los objetos nacidos dentro del vm son de otro realm y deepEqual los rechaza
-  // por referencia aunque coincidan: se comparan serializados.
-  assert.deepEqual(JSON.parse(vm.runInContext("JSON.stringify(plTagsPresentes())", ctx)),
-    [{ tag: "municipal", count: 2 }, { tag: "publicidad", count: 2 }]);
-  // Un tag nuevo aparece solo, sin tocar código.
-  const conNuevo = sandbox("xtanco", CONTENIDOS.concat([{ id: "x", title: "Aviso", lane: "emergencias", seconds: 8 }]));
-  assert.deepEqual(JSON.parse(vm.runInContext("JSON.stringify(plTagsPresentes().map(t=>t.tag))", conNuevo)),
-    ["emergencias", "municipal", "publicidad"]);
+  const cat = JSON.parse(vm.runInContext("JSON.stringify(plTagCatalogo())", ctx));
+  assert.equal(cat[0].tag, "música");
+  assert.equal(cat[0].count, 2);
+  // Una pieza sin tags no inventa ninguno.
+  assert.ok(!cat.some((t) => !t.tag));
 });
 
-test("por tag entra todo lo del tag; a mano, exactamente lo marcado", () => {
+// AQUÍ estaba la trampa: el tag real se escribe «música» con tilde y quien teclea
+// «#musica» no encontraría NADA, sin ninguna pista de por qué.
+test("#musica encuentra música: se normaliza tilde, mayúscula y almohadilla", () => {
   const ctx = sandbox();
-  vm.runInContext("plTagSel.add('municipal')", ctx);
-  assert.deepEqual(JSON.parse(vm.runInContext("JSON.stringify(plSeleccion().map(i=>i.id))", ctx)), ["logo", "sabias"]);
-  vm.runInContext("plTagSel.add('publicidad')", ctx);
-  assert.equal(vm.runInContext("plSeleccion().length", ctx), 4);
-
-  vm.runInContext("plMode='manual'; plItemSel.add('ad-a'); plItemSel.add('sabias')", ctx);
-  assert.deepEqual(JSON.parse(vm.runInContext("JSON.stringify(plSeleccion().map(i=>i.id))", ctx)), ["ad-a", "sabias"],
-    "a mano se respeta el ORDEN de la parrilla, no el orden en que se marcó");
+  for (const escrito of ["#musica", "musica", "MÚSICA", " Música ", "#MUSICA"]) {
+    const casan = JSON.parse(vm.runInContext(`JSON.stringify(plTagsQueCasan(${JSON.stringify(escrito)}))`, ctx));
+    assert.ok(casan.some((c) => c.tag === "música"), `«${escrito}» debe encontrar el tag música`);
+  }
 });
 
-test("sin tags ni contenidos marcados no se compone nada", () => {
+test("un tag casa también con los que lo contienen como palabra entera", () => {
   const ctx = sandbox();
+  const casan = JSON.parse(vm.runInContext('JSON.stringify(plTagsQueCasan("musica").map(c=>c.tag))', ctx));
+  assert.deepEqual(casan.sort(), ["listas música", "música"], "«listas música» es música igualmente");
+  // Pero no casa a trozos: «ia» no puede arrastrar «formacion» ni «música».
+  const ia = JSON.parse(vm.runInContext('JSON.stringify(plTagsQueCasan("ia").map(c=>c.tag))', ctx));
+  assert.deepEqual(ia, ["ia"]);
+});
+
+test("un tag inexistente no casa con nada, no devuelve el catálogo entero", () => {
+  const ctx = sandbox();
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(plTagsQueCasan("cocina"))', ctx)), []);
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(plTagsQueCasan("#"))', ctx)), []);
+});
+
+test("por tag entran TODAS las piezas del tag; a mano, sólo las marcadas", () => {
+  const ctx = sandbox();
+  vm.runInContext("plTagSel.add('musica')", ctx);
+  const porTag = JSON.parse(vm.runInContext("JSON.stringify(plSeleccion().map(i=>i.id))", ctx));
+  assert.deepEqual(porTag, ["stock-a1", "stock-a2", "stock-a3"], "las tres, incluida la de «listas música»");
+
+  vm.runInContext("plMode='manual'; plItemSel.add('stock-a2')", ctx);
+  assert.deepEqual(JSON.parse(vm.runInContext("JSON.stringify(plSeleccion().map(i=>i.id))", ctx)), ["stock-a2"]);
+});
+
+test("sin tag, el conjunto es todo el Stock: a mano se puede elegir igual", () => {
+  const ctx = sandbox();
+  // En modo tag sin filtro entra todo — es lo que dice el resumen antes de crear.
+  assert.equal(vm.runInContext("plSeleccion().length", ctx), STOCK.length);
+  vm.runInContext("plMode='manual'", ctx);
   assert.deepEqual(JSON.parse(vm.runInContext("JSON.stringify(plSeleccion())", ctx)), []);
+});
+
+test("la pieza del Stock entra como pieza de parrilla, con su duración por defecto", () => {
+  const ctx = sandbox();
+  const it = JSON.parse(vm.runInContext('JSON.stringify(plPiezaAItem(stockPiezas[0]))', ctx));
+  assert.equal(it.id, "stock-a1");
+  assert.equal(it.title, "Berlin · Take My Breath Away");
+  assert.equal(it.seconds, 10, "el Stock no guarda duración: entra con la de la parrilla");
+  assert.equal(it.stockId, "a1");
+  assert.match(it.sub, /^pixeria · video/);
 });
 
 test("la pastilla ofrece la creación y los dos modos", () => {

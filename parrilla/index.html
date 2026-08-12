@@ -46,6 +46,14 @@
   background:#09111c;color:var(--dim);font:750 12px ui-monospace,monospace;cursor:pointer}
 .pl-chip.is-on{border-color:var(--green);color:var(--green);background:#0c2119}
 .pl-chip i{font-style:normal;opacity:.7;font-size:11px}
+.pl-more{align-self:center;color:var(--dim);font-size:11.5px}
+.pl-tagadd{display:flex;gap:8px;margin-top:9px}
+.pl-tagadd input{flex:1;min-width:0;padding:9px 12px;border:1px solid #334966;border-radius:10px;background:#09111c;
+  color:var(--ink);font-weight:700}
+.pl-tagadd input:focus{border-color:var(--green);outline:none}
+.pl-tagadd button{padding:9px 15px;border:1px solid #334966;border-radius:10px;background:#0d1a2a;color:var(--ink);
+  font:800 12px ui-monospace,monospace;cursor:pointer;flex:none}
+.pl-tagadd button:hover{border-color:var(--green);color:var(--green)}
 .pl-list{max-height:210px;overflow:auto;display:grid;gap:5px;padding:9px;border:1px solid #263a54;
   border-radius:11px;background:#08101a}
 .pl-row{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:8px;cursor:pointer;min-width:0}
@@ -85,10 +93,10 @@
 </head>
 <body>
   <script>
-    window.ADMIRA_VERSION='v.12.08.2026.r14.17:26';
+    window.ADMIRA_VERSION='v.12.08.2026.r15.17:42';
     window.ADMIRA_NAV={active:'parrilla',title:'Parrilla por Xpacio',topRight:'<a class="admtR" href="/playlists/">Playlists</a><a class="admtR admtR-cta" href="/canal.html" target="_blank" rel="noopener">Ver canal ↗</a>'};
   </script>
-  <script src="/admira-nav.js?v=12.08.2026.r14.1726"></script>
+  <script src="/admira-nav.js?v=12.08.2026.r15.1742"></script>
 
   <main class="page">
     <section class="context-picker" aria-label="Selector de proyecto, Xpacio y dispositivo IoT">
@@ -127,8 +135,12 @@
             </div>
           </div>
           <div class="pl-field pl-wide" id="plTagWrap">
-            <span>Tags que la forman</span>
+            <span>Tags que la forman <b id="plTagFuente">pixeria.com</b></span>
             <div class="pl-chips" id="plTags"></div>
+            <div class="pl-tagadd">
+              <input id="plTagInput" type="text" maxlength="40" autocomplete="off" placeholder="…o escríbelo: #musica">
+              <button id="plTagAdd" type="button">Buscar</button>
+            </div>
           </div>
           <div class="pl-field pl-wide" id="plManualWrap" hidden>
             <span>Contenidos</span>
@@ -339,13 +351,48 @@
     const PL_STORE='adtv_playlists_v1';
     let plMode='tag',plTagSel=new Set(),plItemSel=new Set(),plDevSel=new Set();
 
-    // Los tags salen de los CONTENIDOS, no de una lista fija: hoy sólo existe
-    // `lane` (municipal/publicidad) y así el día que un contenido traiga otro tag
-    // aparece solo, sin tocar esto.
-    function plTagsPresentes(){
+    // ── TAGS DEL STOCK DE PIXERIA ─────────────────────────────────────────────
+    // Los tags ya no salen del campo `lane` de esta parrilla —que son dos etiquetas
+    // locales— sino del catálogo REAL de pixeria.com: 643 piezas con 361 tags. Se
+    // lee del índice público de R2 y no del worker porque admira.tv no está en sus
+    // ALLOWED_ORIGINS; ese índice tiene CORS abierto y es el que ya usa canal.html.
+    const STOCK_INDEX='https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json';
+    let stockPiezas=null,stockEstado='idle',stockPromesa=null;
+
+    // Comparar tags a pelo no sirve: el tag real está escrito «música» con tilde y
+    // quien escribe «#musica» no encontraría NADA sin saber por qué. Se normaliza
+    // acento, mayúscula, almohadilla y separadores antes de comparar.
+    function plNorm(t){
+      return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .toLowerCase().replace(/^#+/,'').replace(/[_\-\s]+/g,' ').trim();
+    }
+    function plPiezaTags(p){return Array.isArray(p&&p.tags)?p.tags.filter(t=>String(t||'').trim()):[]}
+    async function plCargaStock(){
+      if(stockPiezas)return stockPiezas;
+      if(stockPromesa)return stockPromesa;
+      stockEstado='cargando';
+      stockPromesa=fetch(STOCK_INDEX,{cache:'no-store'}).then(r=>r.json()).then(d=>{
+        const list=Array.isArray(d)?d:(d&&(d.items||d.assets))||[];
+        stockPiezas=list.filter(p=>p&&p.id);stockEstado='ok';return stockPiezas;
+      }).catch(()=>{stockEstado='error';stockPiezas=[];return stockPiezas});
+      return stockPromesa;
+    }
+    // Catálogo ordenado por uso: lo que más se usa primero, que es lo que se busca.
+    function plTagCatalogo(){
       const found=new Map();
-      items.forEach(it=>{const t=String(it.lane||'').trim();if(!t)return;found.set(t,(found.get(t)||0)+1)});
-      return [...found.entries()].map(([tag,count])=>({tag,count})).sort((a,b)=>a.tag.localeCompare(b.tag,'es'));
+      (stockPiezas||[]).forEach(p=>plPiezaTags(p).forEach(t=>{
+        const k=plNorm(t);if(!k)return;
+        const prev=found.get(k)||{tag:t,count:0};prev.count++;found.set(k,prev);
+      }));
+      return [...found.entries()].map(([key,v])=>({key,tag:v.tag,count:v.count}))
+        .sort((a,b)=>b.count-a.count||a.tag.localeCompare(b.tag,'es'));
+    }
+    // Un tag escrito casa con el idéntico Y con los que lo contienen como palabra
+    // entera: «musica» trae también «listas música», que es música igualmente. Se
+    // devuelven los tags casados para poder ENSEÑAR por qué salen esas piezas.
+    function plTagsQueCasan(consulta){
+      const q=plNorm(consulta);if(!q)return[];
+      return plTagCatalogo().filter(t=>t.key===q||new RegExp('(^| )'+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'( |$)').test(t.key));
     }
     function plTagLabel(tag){return tag==='municipal'?'Ayuntamiento':tag==='publicidad'?'Publicidad':tag}
     // El proyecto manda: nunca se ofrece una pantalla de otro proyecto, aunque esté
@@ -353,10 +400,27 @@
     function plDevicesProyecto(){
       return screens.filter(s=>projectFor(s)===activeProjectId&&s.programmable!==false);
     }
+    // Una pieza del Stock se convierte en pieza de parrilla. El Stock no guarda
+    // duración, así que entra con los 10 s que usa el resto de la parrilla y se
+    // puede ajustar después en el orden de emisión, como cualquier otra.
+    function plPiezaAItem(p){
+      const tags=plPiezaTags(p);
+      return {id:'stock-'+p.id,title:String(p.title||'Pieza del Stock'),
+        sub:'pixeria · '+(p.type||'contenido')+(tags.length?' · '+tags.slice(0,3).join(', '):''),
+        lane:'publicidad',seconds:10,asset:p.url||p.thumbnail||'',stockId:p.id,tags};
+    }
+    // El conjunto sobre el que se trabaja: el Stock filtrado por los tags elegidos.
+    // Sin tags, todo el Stock — así el modo «a mano» sirve aunque no filtres.
+    function plPool(){
+      const piezas=stockPiezas||[];
+      if(!plTagSel.size)return piezas;
+      const claves=new Set();
+      plTagSel.forEach(t=>plTagsQueCasan(t).forEach(m=>claves.add(m.key)));
+      return piezas.filter(p=>plPiezaTags(p).some(t=>claves.has(plNorm(t))));
+    }
     function plSeleccion(){
-      return plMode==='tag'
-        ? items.filter(it=>plTagSel.has(String(it.lane||'')))
-        : items.filter(it=>plItemSel.has(it.id));
+      const pool=plPool().map(plPiezaAItem);
+      return plMode==='tag'?pool:pool.filter(it=>plItemSel.has(it.id));
     }
     function plLeer(){try{const all=JSON.parse(localStorage.getItem(PL_STORE)||'{}');return Array.isArray(all[activeProjectId])?all[activeProjectId]:[]}catch(_){return[]}}
     function plGuardar(list){try{const all=JSON.parse(localStorage.getItem(PL_STORE)||'{}');all[activeProjectId]=list;localStorage.setItem(PL_STORE,JSON.stringify(all))}catch(_){}}
@@ -366,20 +430,61 @@
       const usados=new Set(plLeer().map(p=>p.id));let id=base,n=2;while(usados.has(id))id=base+'-'+(n++);
       return id;
     }
+    const PL_TAGS_VISIBLES=24;
     function plPintaTags(){
-      const tags=plTagsPresentes();
-      $('plTags').innerHTML=tags.length?tags.map(t=>'<button type="button" class="pl-chip'+(plTagSel.has(t.tag)?' is-on':'')+
-        '" data-pl-tag="'+esc(t.tag)+'" aria-pressed="'+(plTagSel.has(t.tag)?'true':'false')+'">'+esc(plTagLabel(t.tag))+
-        ' <i>'+t.count+'</i></button>').join(''):'<p class="pl-empty">Esta parrilla no tiene contenidos con tag.</p>';
+      if(stockEstado==='cargando'){$('plTags').innerHTML='<p class="pl-empty">Cargando el catálogo de pixeria.com…</p>';return}
+      if(stockEstado==='error'){$('plTags').innerHTML='<p class="pl-empty">No se ha podido leer el catálogo de pixeria.com. Puedes escribir el tag a mano igualmente, pero no habrá piezas hasta que responda.</p>';return}
+      const cat=plTagCatalogo();
+      // Se enseñan los más usados; los otros 337 se alcanzan escribiéndolos, y se
+      // dice cuántos quedan fuera en vez de recortar en silencio.
+      const top=cat.slice(0,PL_TAGS_VISIBLES),resto=cat.length-top.length;
+      const elegidosFuera=[...plTagSel].filter(t=>!top.some(x=>x.key===plNorm(t)));
+      const chip=(clave,etiqueta,cuenta)=>'<button type="button" class="pl-chip'+([...plTagSel].some(t=>plNorm(t)===clave)?' is-on':'')+
+        '" data-pl-tag="'+esc(clave)+'" aria-pressed="'+([...plTagSel].some(t=>plNorm(t)===clave)?'true':'false')+'">'+
+        esc(etiqueta)+(cuenta!=null?' <i>'+cuenta+'</i>':'')+'</button>';
+      $('plTags').innerHTML=(cat.length?top.map(t=>chip(t.key,t.tag,t.count)).join(''):'')+
+        elegidosFuera.map(t=>{const m=plTagsQueCasan(t);return chip(plNorm(t),'#'+t,m.reduce((n,x)=>n+x.count,0))}).join('')+
+        (resto>0?'<span class="pl-more">y '+resto+' tags más · escríbelo abajo</span>':'');
       $('plTags').querySelectorAll('[data-pl-tag]').forEach(b=>b.onclick=()=>{
-        const t=b.dataset.plTag;plTagSel.has(t)?plTagSel.delete(t):plTagSel.add(t);plPintaTags();plResumen()});
+        const k=b.dataset.plTag,ya=[...plTagSel].find(t=>plNorm(t)===k);
+        ya!==undefined?plTagSel.delete(ya):plTagSel.add(k);
+        plPintaTags();plPintaItems();plResumen()});
     }
+    // Tag escrito a mano: se admite con o sin almohadilla, con o sin tilde. Si no
+    // existe en el catálogo se dice —y se ofrece lo más parecido— en vez de dejar
+    // la lista vacía sin explicar nada, que es como se pierde media hora.
+    function plAnadeTagEscrito(){
+      const bruto=$('plTagInput').value.trim();if(!bruto)return;
+      const q=plNorm(bruto);
+      if(!q){$('plTagInput').value='';return}
+      const casan=plTagsQueCasan(q);
+      if(!casan.length){
+        const cerca=plTagCatalogo().filter(t=>t.key.includes(q)||q.includes(t.key)).slice(0,4);
+        feedback('«'+bruto+'» no existe en el catálogo de pixeria'+(cerca.length?'. ¿Querías: '+cerca.map(c=>c.tag+' ('+c.count+')').join(', ')+'?':' y no encuentro nada parecido.'),false);
+        return;
+      }
+      if(![...plTagSel].some(t=>plNorm(t)===q))plTagSel.add(q);
+      $('plTagInput').value='';
+      feedback('#'+q+' → '+casan.length+' tag'+(casan.length===1?'':'s')+' del catálogo: '+
+        casan.slice(0,5).map(c=>c.tag+' ('+c.count+')').join(', ')+(casan.length>5?'…':''),true);
+      plPintaTags();plPintaItems();plResumen();
+    }
+    const PL_FILAS_VISIBLES=200;
     function plPintaItems(){
-      // resolvedTitle va por ÍNDICE, no por item: respeta el título que el editor
-      // haya reescrito a mano y lo que esté emitiendo en vivo.
-      $('plItems').innerHTML=items.length?items.map((it,i)=>'<label class="pl-row"><input type="checkbox" data-pl-item="'+esc(it.id)+'"'+
-        (plItemSel.has(it.id)?' checked':'')+'><b>'+esc(resolvedTitle(i))+'</b><small>'+esc(plTagLabel(it.lane||'—'))+' · '+(+it.seconds||10)+' s</small></label>').join('')
-        :'<p class="pl-empty">Sin contenidos en esta parrilla.</p>';
+      if(stockEstado==='cargando'){$('plItems').innerHTML='<p class="pl-empty">Cargando piezas de pixeria.com…</p>';return}
+      const pool=plPool().map(plPiezaAItem);
+      if(!pool.length){
+        $('plItems').innerHTML='<p class="pl-empty">'+(stockEstado==='error'
+          ?'Sin catálogo de pixeria no hay piezas que ofrecer.'
+          :plTagSel.size?'Ningún contenido del Stock lleva esos tags.':'El catálogo de pixeria está vacío.')+'</p>';
+        return;
+      }
+      // Se pinta un tope de filas para no ahogar el navegador con 643, pero se
+      // DICE cuántas quedan fuera: recortar en silencio se lee como «no hay más».
+      const vistas=pool.slice(0,PL_FILAS_VISIBLES),ocultas=pool.length-vistas.length;
+      $('plItems').innerHTML=vistas.map(it=>'<label class="pl-row" title="'+esc(it.tags.join(', '))+'"><input type="checkbox" data-pl-item="'+esc(it.id)+'"'+
+        (plItemSel.has(it.id)?' checked':'')+'><b>'+esc(it.title)+'</b><small>'+esc(it.tags.slice(0,3).join(' · ')||'sin tags')+'</small></label>').join('')+
+        (ocultas?'<p class="pl-empty">y '+ocultas+' piezas más que también entran · afina con otro tag para verlas</p>':'');
       $('plItems').querySelectorAll('[data-pl-item]').forEach(c=>c.onchange=()=>{
         c.checked?plItemSel.add(c.dataset.plItem):plItemSel.delete(c.dataset.plItem);plResumen()});
     }
@@ -419,7 +524,11 @@
       $('plScope').textContent=proj?proj.name:'';
       $('plDevScope').textContent=proj?proj.name:'';
       plDevSel=new Set([...plDevSel].filter(id=>plDevicesProyecto().some(s=>s.screen===id)));
-      plItemSel=new Set([...plItemSel].filter(id=>items.some(it=>it.id===id)));
+      // Lo marcado a mano se conserva mientras siga existiendo en el conjunto.
+      const vivos=new Set(plPool().map(p=>'stock-'+p.id));
+      plItemSel=new Set([...plItemSel].filter(id=>vivos.has(id)));
+      $('plTagFuente').textContent=stockEstado==='ok'?'pixeria.com · '+(stockPiezas||[]).length+' piezas':
+        stockEstado==='error'?'pixeria.com no responde':'pixeria.com';
       plPintaTags();plPintaItems();plPintaDevices();plPintaGuardadas();plResumen();
     }
     // Aplicar SOBRESCRIBE el borrador de cada pantalla elegida, que es trabajo de
@@ -448,7 +557,12 @@
       }
       feedback(ok+' de '+devs.length+' dispositivos con «'+pl.name+'»'+(fallos.length?' · falló en: '+fallos.join(', '):'.'),!fallos.length);
     }
-    $('plOpen').onclick=()=>{const p=$('plPanel'),abrir=p.hidden;p.hidden=!abrir;$('plOpen').setAttribute('aria-expanded',String(abrir));if(abrir){plRefresca();$('plName').focus()}};
+    // El catálogo se pide al ABRIR, no al cargar la página: son 500 KB que sólo
+    // hacen falta si vas a montar una playlist.
+    $('plOpen').onclick=()=>{const p=$('plPanel'),abrir=p.hidden;p.hidden=!abrir;$('plOpen').setAttribute('aria-expanded',String(abrir));
+      if(abrir){plRefresca();$('plName').focus();plCargaStock().then(plRefresca)}};
+    $('plTagAdd').onclick=plAnadeTagEscrito;
+    $('plTagInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();plAnadeTagEscrito()}});
     $('plClose').onclick=()=>{$('plPanel').hidden=true;$('plOpen').setAttribute('aria-expanded','false')};
     $('plModeTag').onclick=()=>{plMode='tag';$('plModeTag').classList.add('is-on');$('plModeManual').classList.remove('is-on');
       $('plModeTag').setAttribute('aria-checked','true');$('plModeManual').setAttribute('aria-checked','false');
