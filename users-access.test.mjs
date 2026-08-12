@@ -154,17 +154,35 @@ test("la consola de usuarios se firma y traduce los errores del API", async () =
   assert.match(html, /action:'project\.remove'/);
 });
 
-test("el árbol nace compactado y recuerda lo que abras", async () => {
+test("el árbol nace compactado ENTERO, raíz incluida, y recuerda lo que abras", async () => {
   const html = await readFile(new URL("./users/index.html", import.meta.url), "utf8");
   // Nace vacío de ramas abiertas: sin esto los 38 proyectos salen desplegados.
   assert.match(html, /var abiertos=\(function\(\)\{try\{var v=JSON\.parse\(localStorage\.getItem\(OPEN_STORE\)\|\|'\[\]'\)/);
-  // La raíz no se puede plegar: dejaría la pantalla en blanco.
-  assert.match(html, /function estaAbierto\(id\)\{return id==='admira-tv'\|\|abiertos\.has\(id\)\}/);
-  assert.match(html, /function alterna\(id\)\{if\(id==='admira-tv'\)return;/);
+  // La raíz TAMBIÉN se pliega (Carlos, 12-ago-2026). Antes estaba exceptuada por
+  // suponer que dejaría la pantalla en blanco: no la deja, queda su contador.
+  assert.match(html, /function estaAbierto\(id\)\{return abiertos\.has\(id\)\}/);
+  assert.doesNotMatch(html, /function alterna\(id\)\{if\(id==='admira-tv'\)return;/);
   // Sólo se pinta lo que cuelga de ramas abiertas, y se dice cuántos hay dentro.
   assert.match(html, /list\.filter\(visibleEnArbol\)/);
   assert.match(html, /hijos\+' dentro'/);
   assert.match(html, /localStorage\.setItem\(OPEN_STORE/);
+});
+
+test("desde permisos se puede nombrar Superusuario y Administrador", async () => {
+  const html = await readFile(new URL("./users/index.html", import.meta.url), "utf8");
+  // Las dos opciones existen y se explican solas.
+  assert.match(html, /<option value="admin">Administrador · gestiona ese proyecto y lo que cuelga<\/option>/);
+  assert.match(html, /<option value="superuser">Superusuario · gestiona TODO Admira\.tv<\/option>/);
+  // Superusuario no es un rol del modelo: se traduce a admin EN LA RAÍZ.
+  assert.match(html, /project:superu\?'admira-tv':\$\('newProject'\)\.value,role:superu\?'admin':elegido/);
+  // Y se avisa de lo que entrega antes de hacerlo.
+  assert.match(html, /Vas a hacer SUPERUSUARIO a/);
+  // Sólo lo ofrece a quien puede darlo: el servidor responde owner_only al resto.
+  assert.match(html, /if\(op&&!isOwnerActor\(\)\)\{[\s\S]{0,90}op\.remove\(\)\}/);
+  // Con rol global el selector de proyecto deja de aplicar y se apaga.
+  assert.match(html, /\$\('newProject'\)\.disabled=superu/);
+  // En la matriz, el Admin de la raíz se llama por su nombre.
+  assert.match(html, /\(p\.id==='admira-tv'\?'Superusuario':'Admin'\)/);
 });
 
 test("la pantalla ofrece sólo lo que el servidor va a aceptar", async () => {

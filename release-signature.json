@@ -1,9 +1,9 @@
 {
-  "version": "v.12.08.2026.r17.18:01",
+  "version": "v.12.08.2026.r18.18:15",
   "signature": "MorfeoMacMini · MacMini",
   "agent": "MorfeoMacMini",
   "machine": "MacMini",
   "day": "12.08.2026",
-  "time": "18:01",
-  "evidence": "Arbol plegable y administracion delegada por subarbol: superusuario y admin de un proyecto concreto"
+  "time": "18:15",
+  "evidence": "Raiz compactada por defecto y alta de Superusuario o Administrador desde la zona de permisos"
 }
