@@ -40,14 +40,16 @@
     // barato y no falla. Se corta solo: no queda ningun temporizador vivo.
     try{
       var _t0=Date.now();
+      // La ventana se agota SIEMPRE. La version anterior paraba en cuanto los tres
+      // rotulos existian, y ahi estaba el fallo: el problema no es que falten, es
+      // que algo los vacia DESPUES de pintarlos. Parar al verlos era parar justo
+      // antes de que hiciera falta.
       var _vig=setInterval(function(){
-        var pendiente=false;
         ['admFoot','adm-d-ver','appVer'].forEach(function(id){
           var n=document.getElementById(id);
-          if(n && n.textContent!==VER){ n.textContent=VER; }
-          if(!n) pendiente=true;
+          if(n && n.textContent!==VER) n.textContent=VER;
         });
-        if(!pendiente || Date.now()-_t0>8000) clearInterval(_vig);
+        if(Date.now()-_t0>8000) clearInterval(_vig);
       }, 400);
     }catch(e){}
     try{ if(window.AdmiraNav) window.AdmiraNav.ver=v; }catch(e){}
