@@ -127,6 +127,9 @@ test("la superficie /users y el gate declaran el contrato fuerte", async () => {
   assert.match(html, /Cartelería Digital/);
   assert.match(gate, /\/users\/api\/access/);
   assert.match(gate, /Authorization.*Bearer/);
+  for (const route of ["cms.html", "cms", "parrilla", "playlists", "player", "remotecontrol", "wall", "alta.html", "condicional.html", "signage.html"]) {
+    assert.match(gate, new RegExp('"' + route.replace('.', '\\.') + '"'), `falta mapear ${route}`);
+  }
   assert.match(nav, /href="\/users\/"/);
   assert.match(headers, /\/users\/\*[\s\S]*X-Frame-Options: DENY/);
   assert.match(redirects, /\/accesscontrol\/ \/users\/ 301/);

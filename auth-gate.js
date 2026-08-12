@@ -13,7 +13,6 @@
  * FUENTE DE VERDAD: GET /users/api/access?project=<id> con Google ID token.
  * El servidor resuelve el permiso directo o heredado dentro del árbol Admira.tv;
  * el navegador nunca descarga el directorio de usuarios para decidir un acceso.
- * FALLBACK si la API no responde: SOLO los 2 owners embebidos abajo.
  *
  * Se conserva el ID token (resp.credential) en localStorage.admira_tv_gate.cred por
  * si alguna página lo intercambia por sesión de backend. Claves propias
@@ -33,11 +32,13 @@
 
   var ACL_API = "/users/api/access";
   var PATH_PROJECTS = {
-    "cms.html":"digitalsignage-cms", "parrilla":"digitalsignage-parrilla",
+    "cms.html":"digitalsignage-cms", "cms":"digitalsignage-cms", "parrilla":"digitalsignage-parrilla",
     "playlists":"digitalsignage-playlists", "player":"digitalsignage-player",
     "remotecontrol":"digitalsignage-remotecontrol", "mando.html":"digitalsignage-remotecontrol",
     "wall":"digitalsignage-wall", "alta.html":"digitalsignage-alta",
     "condicional.html":"digitalsignage-conditional", "signage.html":"digitalsignage-signage",
+    "cap-avanzado.html":"digitalsignage-cms", "cap-experto.html":"digitalsignage-cms",
+    "cap-folded.html":"digitalsignage-cms",
     "users":"admira-tv", "usuarios":"admira-tv",
     "accesscontrol":"admira-tv"
   };
@@ -45,11 +46,6 @@
   var SOLUTION = PATH_PROJECTS[pathKey] || pathKey;
   var MANAGEMENT_PAGE = ["users", "usuarios", "accesscontrol"].indexOf(pathKey) >= 0;
 
-  // Red de seguridad si el ACL no responde: SOLO los owners.
-  var FALLBACK_OWNERS = [
-    "csilva@admira.com",
-    "csilvasantin@gmail.com"
-  ];
   var REMEMBER_HOURS = 12;       // recordar una sesión validada
   var CONNECT_SECONDS = 1.4;     // duración de la "conexión" antes de mostrar el login
   var SCANLINES = true;          // overlay CRT
