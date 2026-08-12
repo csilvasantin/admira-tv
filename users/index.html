@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<script src="/auth-gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>Usuarios · Admira.tv</title>
+<meta name="description" content="Gestión protegida de usuarios, aplicaciones y subaplicaciones de Admira.tv.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://admira.tv/users/">
+<script>window.ADMIRA_VERSION='v.12.08.2026.r11.13:01';</script>
+<style>
+:root{--bg:#05080d;--panel:#0b111b;--panel2:#0e1724;--line:#22314a;--text:#e7edf7;--dim:#8797ae;--green:#3df08a;--cyan:#3fd9ff;--amber:#ffcc55;--red:#ff646c}
+*{box-sizing:border-box}html{color-scheme:dark}body{margin:0;background:radial-gradient(circle at 80% -10%,#0c2825 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;min-height:100vh}button,input,select,textarea{font:inherit}button{cursor:pointer}.wrap{width:min(1500px,calc(100% - 32px));margin:auto}.top{position:sticky;top:0;z-index:10;background:rgba(5,8,13,.92);border-bottom:1px solid var(--line);backdrop-filter:blur(14px)}.topin{height:68px;display:flex;align-items:center;gap:16px}.brand{font-weight:900;font-size:20px;letter-spacing:.02em}.brand i{font-style:normal;color:var(--cyan)}.pill{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(61,240,138,.36);border-radius:999px;padding:6px 10px;color:var(--green);font-size:11px;text-transform:uppercase;letter-spacing:.08em}.spacer{flex:1}.btn{border:1px solid var(--line);border-radius:10px;background:#111a29;color:var(--text);padding:9px 13px;font-weight:700}.btn:hover{border-color:var(--cyan)}.btn.primary{color:#04110a;background:var(--green);border-color:var(--green)}.btn.danger{color:#ffb2b7;border-color:#63333b}.btn.small{padding:6px 9px;font-size:12px}.hero{padding:48px 0 25px}.eyebrow{color:var(--cyan);text-transform:uppercase;letter-spacing:.18em;font-size:12px}.hero h1{font:900 clamp(34px,6vw,66px)/.98 system-ui;margin:12px 0}.hero h1 em{font-style:normal;color:var(--green)}.hero p{color:var(--dim);max-width:850px;font-family:system-ui;font-size:17px}.security{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:24px}.security div{border:1px solid var(--line);background:rgba(11,17,27,.7);padding:12px;border-radius:12px;font-size:12px;color:var(--dim)}.security b{display:block;color:var(--text);margin-bottom:3px}.layout{display:grid;grid-template-columns:minmax(290px,.7fr) minmax(520px,1.5fr);gap:16px;padding-bottom:50px}.panel{background:rgba(11,17,27,.95);border:1px solid var(--line);border-radius:16px;overflow:hidden}.panelh{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--panel2)}.panelh h2{margin:0;font-size:15px}.panelh .count{color:var(--cyan);font-size:12px}.panelb{padding:15px}.tree{display:flex;flex-direction:column;gap:5px}.node{display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:8px;border:1px solid transparent;border-radius:10px;padding:8px;background:transparent;color:var(--text);text-align:left;width:100%}.node:hover,.node.active{border-color:#314663;background:#101a29}.node.root{color:var(--green);font-weight:900}.node.app{margin-left:12px}.node.subapp{margin-left:28px;width:calc(100% - 28px);color:#b8c6d8}.kind{font-size:9px;color:var(--dim);border:1px solid var(--line);padding:2px 5px;border-radius:999px;text-transform:uppercase}.treehint{border-top:1px solid var(--line);margin-top:12px;padding-top:12px;color:var(--dim);font-size:11px}.directory{display:grid;grid-template-columns:minmax(220px,.65fr) minmax(320px,1fr);min-height:560px}.users{border-right:1px solid var(--line);padding:12px}.user{display:block;width:100%;text-align:left;padding:11px;border:1px solid transparent;background:transparent;color:var(--text);border-radius:11px;margin-bottom:6px}.user:hover,.user.active{background:#111b2a;border-color:#2a3d5a}.user strong,.user span{display:block}.user span{font-size:11px;color:var(--dim);word-break:break-all}.user .state{display:inline-block;margin-top:6px;color:var(--green)}.user .state.suspended{color:var(--red)}.detail{padding:18px}.detail h3{margin:0 0 3px;font-size:20px}.muted{color:var(--dim)}.roles{margin-top:18px;display:flex;flex-direction:column;gap:7px}.roleline{display:grid;grid-template-columns:minmax(170px,1fr) 126px;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#0c1420}.roleline.child{margin-left:18px}.roleline.grandchild{margin-left:36px}.roleline small{display:block;color:var(--dim)}select,input,textarea{width:100%;background:#080e17;border:1px solid var(--line);border-radius:9px;color:var(--text);padding:9px 10px;outline:none}select:focus,input:focus,textarea:focus{border-color:var(--cyan)}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.forms{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.form{padding:16px}.form h2{margin:0 0 5px;font-size:17px}.form p{margin:0 0 14px;color:var(--dim);font-family:system-ui;font-size:13px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.full{grid-column:1/-1}.msg{position:fixed;right:18px;bottom:18px;z-index:30;max-width:min(460px,calc(100% - 36px));padding:12px 15px;border:1px solid var(--line);border-radius:11px;background:#101a28;box-shadow:0 16px 50px #000;color:var(--text);opacity:0;transform:translateY(8px);pointer-events:none;transition:.2s}.msg.show{opacity:1;transform:none}.msg.ok{border-color:#296c49;color:var(--green)}.msg.err{border-color:#71353b;color:#ff9ca3}.audit{margin:16px 0 50px}.auditlist{max-height:300px;overflow:auto}.event{display:grid;grid-template-columns:130px 190px 130px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:11px}.event b{color:var(--cyan)}.empty{padding:35px;text-align:center;color:var(--dim)}.loading{opacity:.55;pointer-events:none}.noscript{padding:30px;color:var(--red)}
+@media(max-width:940px){.security{grid-template-columns:1fr 1fr}.layout{grid-template-columns:1fr}.directory{grid-template-columns:1fr}.users{border-right:0;border-bottom:1px solid var(--line);max-height:280px;overflow:auto}.forms{grid-template-columns:1fr}.event{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.wrap{width:min(100% - 20px,1500px)}.topin{height:auto;min-height:62px;flex-wrap:wrap;padding:9px 0}.pill{display:none}.hero{padding-top:30px}.security{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.full{grid-column:auto}.roleline{grid-template-columns:1fr}.roleline.child,.roleline.grandchild{margin-left:0}.event{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<noscript><div class="noscript">Esta consola requiere JavaScript.</div></noscript>
+<header class="top"><div class="wrap topin">
+  <a class="brand" href="/">ADMIRA<i>.TV</i></a>
+  <span class="pill">● zona superprotegida</span>
+  <span class="spacer"></span>
+  <span id="actor" class="muted">verificando sesión…</span>
+  <button id="refresh" class="btn small" type="button">↻ Actualizar</button>
+  <button id="logout" class="btn small" type="button">Cerrar sesión</button>
+</div></header>
+<main class="wrap">
+  <section class="hero">
+    <div class="eyebrow">Identidad · proyecto raíz Admira.tv</div>
+    <h1>Usuarios y <em>proyectos</em></h1>
+    <p>Un perímetro propio para decidir quién entra en cada aplicación de Admira.tv. Ningún proyecto externo aparece ni puede darse de alta aquí.</p>
+    <div class="security">
+      <div><b>Autenticación real</b>Google ID token verificado en servidor</div>
+      <div><b>Lecturas privadas</b>Usuarios, permisos y auditoría requieren admin</div>
+      <div><b>Árbol cerrado</b>Raíz inmutable y URLs sólo de admira.tv</div>
+      <div><b>Mínimo privilegio</b>Permiso por aplicación o subaplicación</div>
+    </div>
+  </section>
+
+  <section class="layout">
+    <aside class="panel">
+      <div class="panelh"><h2>Árbol Admira.tv</h2><span id="projectCount" class="count">—</span></div>
+      <div class="panelb"><div id="tree" class="tree"><div class="empty">Cargando…</div></div><div class="treehint">Los permisos sobre un proyecto padre cubren su árbol. Los permisos más específicos permiten acotar el acceso.</div></div>
+    </aside>
+    <section class="panel">
+      <div class="panelh"><h2>Directorio y permisos</h2><span id="userCount" class="count">—</span></div>
+      <div class="directory"><div id="users" class="users"><div class="empty">Cargando…</div></div><div id="detail" class="detail"><div class="empty">Selecciona una persona</div></div></div>
+    </section>
+  </section>
+
+  <section class="forms">
+    <form id="addUser" class="panel form">
+      <h2>Dar acceso</h2><p>Alta con un primer permiso. Después puedes afinar toda su matriz en el directorio.</p>
+      <div class="grid">
+        <input id="newEmail" type="email" autocomplete="off" placeholder="persona@dominio.com" required>
+        <input id="newName" autocomplete="off" placeholder="Nombre visible">
+        <select id="newProject" required></select>
+        <select id="newRole"><option value="viewer">Viewer · consultar</option><option value="editor">Editor · operar</option><option value="admin">Admin · gestionar</option></select>
+        <button class="btn primary full" type="submit">Dar acceso</button>
+      </div>
+    </form>
+    <form id="addProject" class="panel form">
+      <h2>Nueva aplicación o subaplicación</h2><p>Empezamos por Cartelería Digital. El padre decide el tipo: bajo Admira.tv será aplicación; bajo otra aplicación será subaplicación.</p>
+      <div class="grid">
+        <input id="projectId" pattern="[a-z0-9][a-z0-9-]{1,59}" autocomplete="off" placeholder="identificador-slug" required>
+        <input id="projectName" autocomplete="off" placeholder="Nombre del proyecto" required>
+        <select id="projectParent" required></select>
+        <input id="projectUrl" type="url" value="https://admira.tv/" required>
+        <textarea id="projectDescription" class="full" rows="2" placeholder="Descripción"></textarea>
+        <button class="btn primary full" type="submit">Crear dentro de Admira.tv</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel audit">
+    <div class="panelh"><h2>Auditoría protegida</h2><span class="spacer"></span><button id="auditRefresh" class="btn small" type="button">Cargar eventos</button></div>
+    <div id="audit" class="panelb auditlist"><div class="empty">Se carga bajo demanda y nunca es pública.</div></div>
+  </section>
+</main>
+<div id="msg" class="msg" role="status" aria-live="polite"></div>
+<script>
+(function(){
+  'use strict';
+  var API='/users/api';
+  var state=null, selected='', busy=false, timer=0;
+  var $=function(id){return document.getElementById(id)};
+  var esc=function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+  var auth=function(){return window.AdmiraTvAuth&&window.AdmiraTvAuth.authorization?window.AdmiraTvAuth.authorization():''};
+  function toast(text,type){var m=$('msg');m.textContent=text;m.className='msg show '+(type||'');clearTimeout(timer);timer=setTimeout(function(){m.className='msg'},4200)}
+  function setBusy(on){busy=on;document.body.classList.toggle('loading',on)}
+  function api(path,opts){
+    opts=opts||{};opts.headers=Object.assign({'Authorization':auth()},opts.headers||{});opts.cache='no-store';opts.credentials='same-origin';
+    return fetch(API+path,opts).then(function(r){return r.json().catch(function(){return {}}).then(function(d){if(r.status===401){window.AdmiraTvAuth&&window.AdmiraTvAuth.clear();location.reload();throw new Error('Sesión caducada')}if(!r.ok){var e=new Error(d.error||('HTTP '+r.status));e.status=r.status;e.data=d;throw e}return d})});
+  }
+  function projects(){return state&&state.projects||[]}
+  function users(){return state&&state.users||[]}
+  function project(id){return projects().filter(function(p){return p.id===id})[0]}
+  function children(id){return projects().filter(function(p){return p.parent===id})}
+  function depth(p){var d=0,x=p,seen={};while(x&&x.parent&&!seen[x.id]){seen[x.id]=1;d++;x=project(x.parent)}return d}
+  function ordered(){var out=[];function walk(id){var p=project(id);if(p)out.push(p);children(id).sort(function(a,b){return a.name.localeCompare(b.name,'es')}).forEach(function(c){walk(c.id)})}walk('admira-tv');return out}
+  function roleLabel(r){return {owner:'Owner',admin:'Admin',editor:'Editor',viewer:'Viewer'}[r]||'Sin acceso'}
+  function effectiveRole(user,p){if(!user)return '';if((user.roles||{})[p.id])return user.roles[p.id];var x=project(p.parent);while(x){if((user.roles||{})[x.id])return user.roles[x.id];x=project(x.parent)}return ''}
+  function directRole(user,p){return user&&user.roles&&user.roles[p.id]||''}
+  function renderTree(){
+    var list=ordered();$('projectCount').textContent=(list.length-1)+' proyectos';
+    $('tree').innerHTML=list.map(function(p){var d=depth(p),icon=d===0?'◆':d===1?'▣':'└';return '<button type="button" class="node '+(p.kind||'')+'" data-project="'+esc(p.id)+'"><span>'+icon+'</span><span>'+esc(p.name)+'</span><span class="kind">'+esc(p.kind==='root'?'raíz':p.kind)+'</span></button>'}).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-project]'),function(b){b.onclick=function(){var id=b.getAttribute('data-project');var first=users().filter(function(u){return effectiveRole(u,project(id))})[0];if(first){selected=first.email;renderDirectory();toast('Personas con acceso a '+project(id).name,'ok')}else toast('Nadie tiene acceso explícito o heredado a '+project(id).name,'') }});
+  }
+  function renderUsers(){
+    var list=users().slice().sort(function(a,b){var ao=(a.roles||{})['admira-tv']==='owner',bo=(b.roles||{})['admira-tv']==='owner';return ao!==bo?(ao?-1:1):(a.email||'').localeCompare(b.email||'')});
+    $('userCount').textContent=list.length+' personas';
+    if(!selected&&list[0])selected=list[0].email;if(selected&&!list.some(function(u){return u.email===selected}))selected=list[0]?list[0].email:'';
+    $('users').innerHTML=list.map(function(u){var root=(u.roles||{})['admira-tv'];return '<button type="button" class="user '+(u.email===selected?'active':'')+'" data-user="'+esc(u.email)+'"><strong>'+esc(u.name||u.email.split('@')[0])+'</strong><span>'+esc(u.email)+'</span><span class="state '+(u.status==='suspended'?'suspended':'')+'">'+esc(u.status||'active')+(root?' · '+roleLabel(root):'')+'</span></button>'}).join('')||'<div class="empty">Sin usuarios</div>';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-user]'),function(b){b.onclick=function(){selected=b.getAttribute('data-user');renderDirectory()}});
+  }
+  function renderDetail(){
+    var u=users().filter(function(x){return x.email===selected})[0];if(!u){$('detail').innerHTML='<div class="empty">Selecciona una persona</div>';return}
+    var owner=(u.roles||{})['admira-tv']==='owner';
+    var rows=ordered().map(function(p){var direct=directRole(u,p),effective=effectiveRole(u,p),d=depth(p);var inherited=!direct&&effective;var disabled=owner?' disabled':'';return '<div class="roleline '+(d===1?'child':d>1?'grandchild':'')+'"><div><strong>'+esc(p.name)+'</strong><small>'+esc(p.id)+(inherited?' · heredado: '+roleLabel(effective):'')+'</small></div><select data-role-project="'+esc(p.id)+'"'+disabled+'><option value="">Sin acceso</option><option value="viewer"'+(direct==='viewer'?' selected':'')+'>Viewer</option><option value="editor"'+(direct==='editor'?' selected':'')+'>Editor</option><option value="admin"'+(direct==='admin'?' selected':'')+'>Admin</option>'+(owner?'<option value="owner" selected>Owner</option>':'')+'</select></div>'}).join('');
+    $('detail').innerHTML='<h3>'+esc(u.name||u.email)+'</h3><div class="muted">'+esc(u.email)+'</div><div class="roles">'+rows+'</div>'+(owner?'':'<div class="actions"><button id="toggleStatus" class="btn small" type="button">'+(u.status==='suspended'?'Reactivar':'Suspender')+'</button><button id="removeUser" class="btn danger small" type="button">Eliminar acceso</button></div>');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-role-project]'),function(s){s.onchange=function(){var pid=s.getAttribute('data-role-project');if(s.value)write({action:'role.set',email:u.email,project:pid,role:s.value});else write({action:'role.clear',email:u.email,project:pid})}});
+    if(!owner){$('toggleStatus').onclick=function(){write({action:'user.update',email:u.email,status:u.status==='suspended'?'active':'suspended'})};$('removeUser').onclick=function(){if(confirm('¿Eliminar todo el acceso de '+u.email+'?'))write({action:'user.remove',email:u.email})}}
+  }
+  function renderDirectory(){renderUsers();renderDetail()}
+  function renderSelects(){var list=ordered();var opts=list.map(function(p){var pad=new Array(depth(p)+1).join('— ');return '<option value="'+esc(p.id)+'">'+pad+esc(p.name)+'</option>'}).join('');$('newProject').innerHTML=opts;$('projectParent').innerHTML=opts;$('newProject').value='digitalsignage';$('projectParent').value='digitalsignage'}
+  function render(){ $('actor').textContent=state.actor+' · '+roleLabel(state.actorRole);renderTree();renderDirectory();renderSelects() }
+  function load(){setBusy(true);return api('/state').then(function(d){state=d;render();toast('Perímetro actualizado','ok')}).catch(function(e){toast('No se puede abrir la zona: '+e.message,'err')}).finally(function(){setBusy(false)})}
+  function write(body){if(busy)return;setBusy(true);body.rev=state.rev;return api('/write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(d){state=d;render();toast('Cambio aplicado y auditado','ok')}).catch(function(e){if(e.status===409){toast('Otro administrador cambió el registro. Recargando…','err');return load()}toast('No aplicado: '+e.message,'err');render()}).finally(function(){setBusy(false)})}
+  $('addUser').onsubmit=function(e){e.preventDefault();write({action:'user.add',email:$('newEmail').value,name:$('newName').value,project:$('newProject').value,role:$('newRole').value}).then(function(){if(!busy){$('newEmail').value='';$('newName').value=''}})};
+  $('addProject').onsubmit=function(e){e.preventDefault();write({action:'project.add',id:$('projectId').value,name:$('projectName').value,parent:$('projectParent').value,url:$('projectUrl').value,description:$('projectDescription').value}).then(function(){if(!busy){$('projectId').value='';$('projectName').value='';$('projectDescription').value=''}})};
+  $('refresh').onclick=load;$('logout').onclick=function(){window.AdmiraTvAuth&&window.AdmiraTvAuth.clear();location.reload()};
+  $('auditRefresh').onclick=function(){api('/audit').then(function(d){$('audit').innerHTML=(d.events||[]).map(function(e){return '<div class="event"><span>'+new Date(e.ts).toLocaleString('es-ES')+'</span><b>'+esc(e.actor)+'</b><span>'+esc(e.action)+'</span><span>'+esc(e.target)+' · '+esc(e.detail||'')+'</span></div>'}).join('')||'<div class="empty">Sin eventos</div>'}).catch(function(e){toast('Auditoría no disponible: '+e.message,'err')})};
+  if(!auth()){toast('Esperando una sesión Google válida…','err');setTimeout(load,600)}else load();
+})();
+</script>
+</body>
+</html>

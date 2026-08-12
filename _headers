@@ -16,12 +16,18 @@
 
 # APK del player Android (distribución de flota): tipo MIME correcto + cache corto
 # (la APK cambia poco pero queremos que una nueva versión llegue rápido a las tablets).
-*.apk
+/*.apk
   Content-Type: application/vnd.android.package-archive
   Cache-Control: public, max-age=300
-*.png
+/*.png
   Cache-Control: public, max-age=604800
-*.jpg
+/*.jpg
   Cache-Control: public, max-age=604800
-*.svg
+/*.svg
   Cache-Control: public, max-age=604800
+
+# El directorio y sus APIs nunca se pueden embeber ni cachear.
+/users/*
+  Cache-Control: no-store, private
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'

@@ -454,7 +454,7 @@
       (cfg.topRight||'')+
       // «Acceso» vive en el menú superior, a la izquierda de los iconos-ventana (detalle/experto
       // o, en la home, AVANZADO/EXPERTO de admira-frame). Antes era un ítem de la lanzadera.
-      '<a class="admtR admtR-acceso" href="/accesscontrol/" title="Acceso · control de acceso" aria-label="Acceso"><span class="admtR-ic" aria-hidden="true">'+IC('accesscontrol')+'</span><span class="admtR-lbl">Acceso</span></a>'+
+      '<a class="admtR admtR-acceso" href="/users/" title="Usuarios y proyectos · zona protegida" aria-label="Usuarios y proyectos"><span class="admtR-ic" aria-hidden="true">'+IC('accesscontrol')+'</span><span class="admtR-lbl">Acceso</span></a>'+
       '<button class="admtog" id="admDetTog" title="Panel de detalle (d)" aria-label="Panel de detalle" aria-expanded="false"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/></svg></button>'+
       '<button class="admtog" id="admExpTog" title="Modo experto (e)" aria-label="Modo experto" aria-expanded="false"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></button>'+
     '</header>';

@@ -6,7 +6,7 @@
 // bloquean 188.114.96.0/22 → workers.dev inaccesible (lección del equipo).
 //
 // Rutas (catch-all [[path]] bajo /accesscontrol/api/):
-//   GET  /accesscontrol/api/state  → doc ACL completo (lectura pública, perímetro blando)
+//   GET  /accesscontrol/api/state  → doc ACL completo (lectura pública, compatibilidad operativa)
 //   GET  /accesscontrol/api/audit  → últimos 200 eventos (más reciente primero, pública)
 //   POST /accesscontrol/api/write  → mutaciones autenticadas con Google ID token
 //

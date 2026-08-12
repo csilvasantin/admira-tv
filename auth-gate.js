@@ -10,11 +10,9 @@
  *    código fuente (sitio estático público). Disuade, no es seguridad fuerte. La
  *    seguridad fuerte vive server-side (functions/, que ya tienen su auth).
  *
- * FUENTE DE VERDAD: GET /accesscontrol/api/state  (SAME-ORIGIN — nunca workers.dev:
- *   los ISP españoles bloquean *.workers.dev). Autorizado = email ∈ owners  Ó
- *   usuario con cualquier rol en la solución "admira-tv" o en el comodín "*".
- *   Hoy eso = solo los 2 owners; mañana se invita gente desde admira.tv/accesscontrol/
- *   sin tocar este archivo.
+ * FUENTE DE VERDAD: GET /users/api/access?project=<id> con Google ID token.
+ * El servidor resuelve el permiso directo o heredado dentro del árbol Admira.tv;
+ * el navegador nunca descarga el directorio de usuarios para decidir un acceso.
  * FALLBACK si la API no responde: SOLO los 2 owners embebidos abajo.
  *
  * Se conserva el ID token (resp.credential) en localStorage.admira_tv_gate.cred por
@@ -27,16 +25,25 @@
  *
  * Instalación: en el <head> de cada página humana a proteger, lo más arriba posible:
  *   <script src="/auth-gate.js"></script>
- * Gestión de acceso: en caliente desde admira.tv/accesscontrol/ (app Acceso · ACL v2).
+ * Gestión de acceso: en caliente desde admira.tv/users/.
  */
 (function () {
   // ===== CONFIG =====
   var CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
 
-  var ACL_API = "/accesscontrol/api/state"; // SAME-ORIGIN (fuente de verdad ACL v2)
-  var SOLUTION = "admira-tv";                // id de la solución en el ACL
-  var ACL_CACHE_KEY = "admira_tv_acl";
-  var ACL_CACHE_MS = 10 * 60 * 1000;         // 10 min de caché local de la lista
+  var ACL_API = "/users/api/access";
+  var PATH_PROJECTS = {
+    "cms.html":"digitalsignage-cms", "parrilla":"digitalsignage-parrilla",
+    "playlists":"digitalsignage-playlists", "player":"digitalsignage-player",
+    "remotecontrol":"digitalsignage-remotecontrol", "mando.html":"digitalsignage-remotecontrol",
+    "wall":"digitalsignage-wall", "alta.html":"digitalsignage-alta",
+    "condicional.html":"digitalsignage-conditional", "signage.html":"digitalsignage-signage",
+    "users":"admira-tv", "usuarios":"admira-tv",
+    "accesscontrol":"admira-tv"
+  };
+  var pathKey = (location.pathname.split('/').filter(Boolean)[0] || 'admira-tv').toLowerCase();
+  var SOLUTION = PATH_PROJECTS[pathKey] || pathKey;
+  var MANAGEMENT_PAGE = ["users", "usuarios", "accesscontrol"].indexOf(pathKey) >= 0;
 
   // Red de seguridad si el ACL no responde: SOLO los owners.
   var FALLBACK_OWNERS = [
@@ -71,44 +78,14 @@
     clear: clearStoredSession
   };
 
-  // ¿este email está autorizado según un payload de estado del ACL?
-  function allowedBy(state, email) {
-    email = norm(email);
-    if (!state) return false;
-    var owners = Array.isArray(state.owners) ? state.owners.map(norm) : [];
-    if (owners.indexOf(email) >= 0) return true;
-    var users = Array.isArray(state.users) ? state.users : [];
-    for (var i = 0; i < users.length; i++) {
-      if (norm(users[i].email) !== email) continue;
-      var roles = users[i].roles || {};
-      // cualquier rol en la solución admira-tv o en el comodín "*"
-      if (roles[SOLUTION] || roles["*"]) return true;
-      return false;
-    }
-    return false;
-  }
-
-  // Estado del ACL en memoria: caché reciente si la hay, si no un estado-fallback.
-  var ACL_STATE = (function () {
-    try {
-      var c = JSON.parse(localStorage.getItem(ACL_CACHE_KEY) || "null");
-      if (c && c.state && (Date.now() - (c.at || 0) < ACL_CACHE_MS)) return c.state;
-    } catch (e) {}
-    return { owners: FALLBACK_OWNERS, users: [] };
-  })();
-
-  // Trae el estado fresco del ACL same-origin; actualiza ACL_STATE + caché. Promise<state>.
-  function loadAcl() {
-    return fetch(ACL_API, { cache: "no-store", credentials: "same-origin" })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) {
-        if (d && (Array.isArray(d.owners) || Array.isArray(d.users))) {
-          ACL_STATE = d;
-          try { localStorage.setItem(ACL_CACHE_KEY, JSON.stringify({ state: d, at: Date.now() })); } catch (e) {}
-        }
-        return ACL_STATE;
-      })
-      .catch(function () { return ACL_STATE; });
+  function serverAccess(credential) {
+    if (!credential) return Promise.resolve(false);
+    return fetch(ACL_API + "?project=" + encodeURIComponent(SOLUTION) + (MANAGEMENT_PAGE ? "&manage=1" : ""), {
+      cache: "no-store", credentials: "same-origin",
+      headers: { "Authorization": "Bearer " + credential }
+    }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { return Boolean(d && d.allowed); })
+      .catch(function () { return false; });
   }
 
   // Si ya hay una validación reciente y vigente, no molestar — pero revalida en
@@ -116,16 +93,15 @@
   // sesión local y el siguiente acceso le pedirá login (y será rechazado).
   try {
     var saved = JSON.parse(localStorage.getItem("admira_tv_gate") || "null");
-    if (saved && saved.email && Date.now() < saved.exp && allowedBy(ACL_STATE, saved.email)) {
-      loadAcl().then(function (state) {
-        if (!allowedBy(state, saved.email)) { try { localStorage.removeItem("admira_tv_gate"); } catch (e) {} }
+    if (saved && saved.email && saved.cred && Date.now() < saved.exp) {
+      // La sesión recordada nunca basta por sí sola: el servidor vuelve a resolver
+      // el permiso exacto de esta app antes de quitar el bloqueo visual.
+      serverAccess(saved.cred).then(function (allowed) {
+        if (allowed) unlock();
+        else { try { localStorage.removeItem("admira_tv_gate"); } catch (e) {} }
       });
-      return;
     }
   } catch (e) {}
-
-  // Aún no validado: empieza a cargar el ACL fresco ya, para el login que viene.
-  loadAcl();
 
   // ===== estado =====
   var phase = "connecting"; // connecting | ready | auth | welcome | error
@@ -320,8 +296,7 @@
       try { google.accounts.id.disableAutoSelect(); } catch (e) {}
       failBack("Cuenta no autorizada: " + email);
     }
-    if (allowedBy(ACL_STATE, email)) { accept(); }
-    else { loadAcl().then(function (state) { if (allowedBy(state, email)) accept(); else reject(); }); }
+    serverAccess(resp.credential).then(function (allowed) { if (allowed) accept(); else reject(); });
   }
 
   function animateDots() {

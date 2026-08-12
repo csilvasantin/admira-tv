@@ -418,7 +418,24 @@
   },
   {
     "n": 32,
-    "alias": "32.- Contratación",
+    "alias": "32.- Usuarios Admira.tv",
+    "slug": "users",
+    "name_es": "Usuarios Admira.tv",
+    "familia": "Plataforma",
+    "estado": "emite",
+    "en_vitrina": false,
+    "ruta": "/users/",
+    "peso_kb": 35,
+    "ficheros": 2,
+    "apis": [
+      "/users/api/state",
+      "/users/api/audit",
+      "/users/api/write"
+    ]
+  },
+  {
+    "n": 33,
+    "alias": "33.- Contratación",
     "slug": "comprar",
     "name_es": "Contratación",
     "familia": "Comercial",
@@ -430,8 +447,8 @@
     "apis": []
   },
   {
-    "n": 33,
-    "alias": "33.- Soporte",
+    "n": 34,
+    "alias": "34.- Soporte",
     "slug": "support",
     "name_es": "Soporte",
     "familia": "Comercial",
@@ -443,8 +460,8 @@
     "apis": []
   },
   {
-    "n": 34,
-    "alias": "34.- Ayuda",
+    "n": 35,
+    "alias": "35.- Ayuda",
     "slug": "help",
     "name_es": "Ayuda",
     "familia": "Comercial",
