@@ -35,6 +35,10 @@ test("[3] el plano de control tiene backoff por inactividad y despertar instant�
   assert.match(canal, /rearmCtrlOnForeground\(\)\{[\s\S]{0,220}cmdWake\(\)/);
   // pollMode NO se toca: su guard es doctrina r46/r47/r51.
   assert.match(canal, /setInterval\(pollMode, 12000\)/);
+  // Un fallo de red también es inactividad: sin esto, un ISP que bloquee el host
+  // (workers.dev en España) nos tendría sondeando a toda velocidad contra un muro.
+  assert.match(canal, /__cmdHost=\(__cmdHost\+1\)%CMD_HOSTS\.length; __cmdIdleN\+\+;/);
+  assert.match(canal, /catch\(_\)\{ __ctrlIdleN\+\+;/);
 });
 
 test("[4] el LRU de blobs es dinámico: reuso total si el loop cabe, 2 si no", () => {

@@ -42,7 +42,7 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=12.08.2026.r24.2235"></script>
+<script src="xpl-runtime.js?v=12.08.2026.r25.2312"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -2846,7 +2846,7 @@ async function pollCmd(){
       await ackQueuedCommand(c,status);
       __cmdSince=c.cid;
     }
-  }catch(_){ __cmdHost=(__cmdHost+1)%CMD_HOSTS.length; }
+  }catch(_){ __cmdHost=(__cmdHost+1)%CMD_HOSTS.length; __cmdIdleN++; }   // un fallo de red también es inactividad: sin esto, un ISP que bloquee el host nos tendría sondeando a toda velocidad contra un muro para siempre
   finally{ __cmdPolling=false; }
 }
 // Backoff por INACTIVIDAD (no por conteo corto): a ritmo rápido (3 s) hasta ~120 s
@@ -2954,7 +2954,7 @@ async function pollCtrl(){
       try{ const result=await applyCtrlCmd(String(c.cmd)); ackCtrl(c,result||'executed'); }
       catch(_){ ackCtrl(c,'failed'); }
     }
-  }catch(_){ /* fallo silencioso: nunca corta la emisión */ }
+  }catch(_){ __ctrlIdleN++; /* fallo silencioso: nunca corta la emisión — pero sí espacia el sondeo */ }
   finally{ _ctrlPolling=false; }
 }
 // Mismo backoff que pollCmd: 2,5 s hasta ~120 s sin comandos, después 10 s. La nota
