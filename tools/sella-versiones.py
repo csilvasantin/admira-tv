@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pone TODOS los literales de versión del sitio al sello del release.
+"""Pone al sello del release TODOS los literales de versión Y los tokens de caché.
 
 POR QUÉ: el sello canónico vive en el <meta> de index.html y en /version.json, que
 deploy.sh regenera en cada publicación. Pero una docena de páginas declaran además
@@ -22,6 +22,13 @@ import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 LITERAL = re.compile(r"(window\.ADMIRA_VERSION\s*=\s*')(v\.[0-9.]+r[0-9]+(?:\.[0-9:]+)?)(')")
+# El token de caché de los assets PROPIOS (?v=…). Es lo mismo que el literal de
+# versión pero peor: mientras el rótulo solo miente, un token congelado hace que el
+# navegador siga sirviendo el JS y el CSS VIEJOS. El 12-ago se publicaron seis
+# releases seguidas de admira-nav.js y ninguna llegó a un navegador abierto, porque
+# el CMS pedía admira-nav.js?v=04.08.2026.r4 y esa URL ya estaba en su caché.
+# Solo assets propios (rutas relativas o /): los externos no se tocan.
+TOKEN = re.compile(r'((?:href|src)="/?(?!//|https?:)[A-Za-z0-9._/-]+\.(?:js|css)\?v=)([^"]*)(")')
 SELLO_META = re.compile(r'<meta name="admiranext-version" content="([^"]+)"')
 
 
@@ -41,13 +48,19 @@ def main():
         if any(p in f.parts for p in ("node_modules", ".git", ".wrangler")):
             continue
         texto = f.read_text(encoding="utf-8")
-        if "ADMIRA_VERSION" not in texto:
+        if "ADMIRA_VERSION" not in texto and "?v=" not in texto:
             continue
         nuevo = LITERAL.sub(lambda m: m.group(1) + sello + m.group(3), texto)
+        # El token va sin la «v.» y sin los dos puntos de la hora: es una clave de
+        # caché, no un sello que nadie vaya a leer.
+        clave = sello.lstrip("v.").replace(":", "")
+        nuevo = TOKEN.sub(lambda m: m.group(1) + clave + m.group(3), nuevo)
         if nuevo == texto:
             continue
         rel = f.relative_to(RAIZ)
-        viejos = {m.group(2) for m in LITERAL.finditer(texto)} - {sello}
+        clave = sello.lstrip("v.").replace(":", "")
+        viejos = ({m.group(2) for m in LITERAL.finditer(texto)} - {sello}) | \
+                 ({m.group(2) for m in TOKEN.finditer(texto)} - {clave})
         desfasados.append(f"{rel} → {', '.join(sorted(viejos))}")
         if not solo_mirar:
             f.write_text(nuevo, encoding="utf-8")
