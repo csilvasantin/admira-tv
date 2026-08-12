@@ -163,6 +163,37 @@ function managementRole(doc, email) {
 function canManage(doc, email) {
   return ["owner", "admin"].includes(managementRole(doc, email));
 }
+// ── ADMINISTRACIÓN DELEGADA POR SUBÁRBOL ───────────────────────────────────
+// Antes había dos escalones y nada en medio: el superusuario, que lo podía todo,
+// y el resto, que no podía nada sobre proyectos aunque fuese admin del suyo. Así
+// no se puede dar un proyecto a alguien —«crea Android y mete dentro los Samsung
+// Galaxy Fold»— sin convertirlo en superusuario de toda la casa.
+// El alcance de un admin es SU rama: el proyecto donde tiene admin y todo lo que
+// cuelgue de él. Se resuelve subiendo por los padres, así una subaplicación nueva
+// hereda la delegación sin tener que repetir el permiso.
+function adminReaches(doc, email, projectId) {
+  if (isOwner(email)) return true;
+  const user = userFor(doc, email);
+  if (!user || user.status !== "active") return false;
+  let node = projectFor(doc, projectId);
+  const seen = new Set();
+  while (node && !seen.has(node.id)) {
+    if ((user.roles || {})[node.id] === "admin") return true;
+    seen.add(node.id);
+    node = projectFor(doc, node.parent);
+  }
+  return false;
+}
+// Proyectos que un actor administra de raíz (sin contar los heredados de otro).
+function adminRoots(doc, email) {
+  if (isOwner(email) || managementRole(doc, email) === "admin") return ["admira-tv"];
+  const user = userFor(doc, email);
+  if (!user || user.status !== "active") return [];
+  return Object.keys(user.roles || {}).filter((id) => user.roles[id] === "admin" && projectFor(doc, id));
+}
+function isSuperuser(doc, email) {
+  return isOwner(email) || managementRole(doc, email) === "admin";
+}
 function projectFor(doc, id) {
   return (doc.projects || []).find((p) => p.id === id);
 }
@@ -186,11 +217,36 @@ function safeProjectUrl(raw) {
     return u.href;
   } catch (_) { return ""; }
 }
+// Un admin delegado ve SU rama, no la casa entera: los proyectos de fuera no
+// aparecen, y de los ancestros sólo lo justo para poder dibujar el árbol —marcados
+// `readOnly` para que ni la pantalla ni él se confundan sobre lo que puede tocar—.
+// De personas ve únicamente a las que tienen algo dentro de su rama. Mantener
+// «lecturas privadas» significa esto, no sólo pedir sesión.
+function visibleFor(doc, actor) {
+  const projects = doc.projects || [], users = doc.users || [];
+  if (isSuperuser(doc, actor)) return { projects, users, scoped: false, roots: ["admira-tv"] };
+  const roots = adminRoots(doc, actor);
+  if (!roots.length) return { projects: [], users: [], scoped: true, roots: [] };
+  const dentro = new Set();
+  for (const p of projects) if (roots.some((r) => p.id === r || isDescendant(doc, r, p.id))) dentro.add(p.id);
+  const ancestros = new Set();
+  for (const r of roots) {
+    let node = projectFor(doc, r);
+    while (node && node.parent && !ancestros.has(node.parent)) { ancestros.add(node.parent); node = projectFor(doc, node.parent); }
+  }
+  const visibles = projects
+    .filter((p) => dentro.has(p.id) || ancestros.has(p.id))
+    .map((p) => (dentro.has(p.id) ? p : { ...p, readOnly: true }));
+  const propios = users.filter((u) => Object.keys(u.roles || {}).some((id) => dentro.has(id)));
+  return { projects: visibles, users: propios, scoped: true, roots };
+}
 function publicState(doc, actor) {
+  const vista = visibleFor(doc, actor);
   return {
     v: 3, rev: doc.rev || 1, scope: "admira-tv", actor,
     actorRole: managementRole(doc, actor), owners: OWNERS.slice(),
-    projects: doc.projects || [], users: doc.users || [], updatedAt: doc.updatedAt || 0,
+    superuser: isSuperuser(doc, actor), scoped: vista.scoped, adminRoots: vista.roots,
+    projects: vista.projects, users: vista.users, updatedAt: doc.updatedAt || 0,
   };
 }
 
@@ -212,7 +268,9 @@ async function authorize(ctx) {
   const actor = await verifyActor(ctx.request);
   if (!actor) return { response: json({ error: "unauthorized" }, 401) };
   const doc = await readDoc(ctx.env);
-  if (!canManage(doc, actor)) return { response: json({ error: "forbidden" }, 403) };
+  // Entra quien administre ALGO: el superusuario o el admin de una rama. Lo que
+  // pueda hacer dentro lo deciden las comprobaciones por acción, no esta puerta.
+  if (!canManage(doc, actor) && !adminRoots(doc, actor).length) return { response: json({ error: "forbidden" }, 403) };
   return { actor, doc };
 }
 async function authenticate(ctx) {
@@ -302,6 +360,8 @@ export async function onRequestPost(ctx) {
       if (!projectFor(doc, project)) return json({ error: "bad_project" }, 400);
       if (!ROLES.includes(role)) return json({ error: "bad_role" }, 400);
       if (isOwner(email)) return json({ error: "owner_protected" }, 400);
+      // Un admin delegado da acceso a SU gente, dentro de SU rama, y a nadie más.
+      if (!adminReaches(doc, auth.actor, project)) return json({ error: "out_of_scope" }, 403);
       let user = findUser(email);
       if (!user) {
         user = { email, name, status: "active", roles: {}, updatedAt: now() };
@@ -347,6 +407,7 @@ export async function onRequestPost(ctx) {
       if (!projectFor(doc, project)) return json({ error: "bad_project" }, 400);
       if (!ROLES.includes(role)) return json({ error: "bad_role" }, 400);
       if (project === "admira-tv" && role === "admin" && !ownerActor) return json({ error: "owner_only" }, 403);
+      if (!adminReaches(doc, auth.actor, project)) return json({ error: "out_of_scope" }, 403);
       user.roles = user.roles || {};
       user.roles[project] = role; user.updatedAt = now();
       target = email; detail = `${project}=${role}`;
@@ -360,15 +421,19 @@ export async function onRequestPost(ctx) {
       if (isOwner(email)) return json({ error: "owner_protected" }, 400);
       if (email === auth.actor && project === "admira-tv") return json({ error: "self_lockout" }, 400);
       if (!projectFor(doc, project)) return json({ error: "bad_project" }, 400);
+      if (!adminReaches(doc, auth.actor, project)) return json({ error: "out_of_scope" }, 403);
       delete user.roles[project]; user.updatedAt = now();
       target = email; detail = project;
       break;
     }
     case "project.add": {
-      if (!ownerActor) return json({ error: "owner_only" }, 403);
+      // Se crea DENTRO de lo que administras: colgar de la raíz sigue siendo del
+      // superusuario, y el admin de Android puede crear bajo Android, no fuera.
+      // El padre se valida más abajo; aquí sólo se mira el alcance.
       const id = norm(body.id);
       const name = text(body.name, 120);
       const parent = text(body.parent, 60) || "admira-tv";
+      if (!adminReaches(doc, auth.actor, parent)) return json({ error: "out_of_scope" }, 403);
       const url = safeProjectUrl(body.url);
       if (!validId(id) || id === "admira-tv") return json({ error: "bad_id" }, 400);
       if (!name) return json({ error: "bad_name" }, 400);
@@ -386,10 +451,10 @@ export async function onRequestPost(ctx) {
       // se quedaba para siempre. Se acota a lo que no puede romper el perímetro:
       // nunca la raíz, nunca los proyectos de fábrica, y nunca uno que sostenga
       // subaplicaciones (primero se vacía, así el borrado nunca es en cascada).
-      if (!ownerActor) return json({ error: "owner_only" }, 403);
       const id = text(body.id, 60);
       const project = projectFor(doc, id);
       if (!project) return json({ error: "not_found" }, 404);
+      if (!adminReaches(doc, auth.actor, id)) return json({ error: "out_of_scope" }, 403);
       if (project.id === "admira-tv") return json({ error: "root_protected" }, 400);
       if (project.system) return json({ error: "system_protected" }, 400);
       if ((doc.projects || []).some((p) => p.parent === id)) return json({ error: "has_children" }, 409);
@@ -404,10 +469,10 @@ export async function onRequestPost(ctx) {
       break;
     }
     case "project.update": {
-      if (!ownerActor) return json({ error: "owner_only" }, 403);
       const id = text(body.id, 60);
       const project = projectFor(doc, id);
       if (!project) return json({ error: "not_found" }, 404);
+      if (!adminReaches(doc, auth.actor, id)) return json({ error: "out_of_scope" }, 403);
       if (project.id === "admira-tv") return json({ error: "root_protected" }, 400);
       if (body.parent) {
         const parent = text(body.parent, 60);
