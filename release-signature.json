@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r8.12:00",
-  "signature": "TrinityMBP14 · MacBookPro14",
-  "agent": "TrinityMBP14",
+  "version": "v.13.08.2026.r9.12:01",
+  "signature": "SmithMBP14 \u00b7 MacBookPro14",
+  "agent": "SmithMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "12:00",
-  "evidence": "El CMS muestra el título humano de la pieza en emisión desde signage/now, usa Stock como respaldo y reserva showing_id para soporte técnico."
+  "time": "12:01",
+  "evidence": "El copiloto valida el payload de la sesi\u00f3n (JWT de 3 partes o token Yokup de 2), no la cabecera."
 }

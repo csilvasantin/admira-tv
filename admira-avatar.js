@@ -10,7 +10,9 @@
   var rawFetch = window.fetch.bind(window);
 
   function sessionValid() {
-    try { var t = localStorage.getItem(SKEY); if (!t) return false; var p = JSON.parse(atob(t.split(".")[0].replace(/-/g, "+").replace(/_/g, "/"))); return p.exp && Date.now() < p.exp - 30000; } catch (e) { return false; }
+    try {
+      return !!(typeof AdmiraSession !== "undefined" && AdmiraSession.valid(localStorage.getItem(SKEY)));
+    } catch (e) { return false; }
   }
 
   // El fetch a api.yokup.com espera a que haya sesión y añade el Bearer (solo a ese host).
