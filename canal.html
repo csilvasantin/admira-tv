@@ -42,7 +42,7 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=13.08.2026.r23.1750"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r24.1759"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -2898,7 +2898,13 @@ pollMode(); setInterval(pollMode, 12000);
 // Si el proxy fallara, rota al workers.dev en el siguiente sondeo (nunca sin control).
 const CMD_HOSTS=['https://api.admira.store/locations/cmd','https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd'];
 let __cmdHost=0;
-let __cmdSince=0, __cmdInit=false, __cmdPolling=false;
+// El CMS abre el mando por `screen`, mientras instalaciones históricas enviaban
+// por `circuit`. Un equipo como macbookpro16 pertenece al circuito `osx`: si se
+// sondea una sola identidad el mando confirma el envío pero el player nunca lo ve.
+// Cada cola conserva su cursor propio para escuchar ambas sin duplicar acciones.
+const __cmdIds=Array.from(new Set([scr.circuit,scr.screen].map(x=>String(x||'').trim()).filter(Boolean)));
+const __cmdState=Object.fromEntries(__cmdIds.map(id=>[id,{since:0,init:false}]));
+let __cmdPolling=false;
 const LEGACY_ACTION_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CMD_ACK_OUTBOX_KEY='adtv_cmd_ack_outbox:'+(scr.circuit||'unbound');
 let __cmdAckOutbox=(()=>{ try{
@@ -2939,29 +2945,35 @@ async function executeQueuedCommand(c){
 async function ackQueuedCommand(c,status){
   if(!c||typeof c.cid!=='number'||!Number.isSafeInteger(c.cid)||c.cid<=0||!LEGACY_ACTION_RE.test(String(c.action||''))) return false;
   if(!__cmdAckOutbox.some(x=>x.action===c.action)){
-    __cmdAckOutbox.push({id:scr.circuit,screen:scr.screen||'',cid:c.cid,action:c.action,status,queuedAt:Date.now()});
+    __cmdAckOutbox.push({id:c._queueId||scr.circuit||scr.screen,screen:scr.screen||'',cid:c.cid,action:c.action,status,queuedAt:Date.now()});
     persistCmdAckOutbox();   // primero a disco: un background/reload no pierde el acuse
   }
   await flushCmdAckOutbox();
   return !__cmdAckOutbox.some(x=>x.action===c.action);
 }
 async function pollCmd(){
-  if(!scr.circuit||__cmdPolling) return;
+  if(!__cmdIds.length||__cmdPolling) return;
   __cmdPolling=true;
   try{
     await flushCmdAckOutbox();   // reintento idempotente de acuses pendientes
-    const r=await fetch(CMD_HOSTS[__cmdHost]+'?id='+encodeURIComponent(scr.circuit)+'&since='+__cmdSince+'&t='+Date.now(),{cache:'no-store'});
-    if(!r.ok) throw new Error('http '+r.status);
-    const d=await r.json(); if(!d) return;
-    if(!__cmdInit){ __cmdSince=d.seq||0; __cmdInit=true; return; }   // no re-ejecutar comandos viejos al recargar
-    if(!Array.isArray(d.commands)||!d.commands.length){ __cmdIdleN++; return; }
-    __cmdIdleN=0;   // hay actividad: ritmo rápido
-    for(const c of d.commands){
-      if(typeof c.cid!=='number'||!Number.isSafeInteger(c.cid)||c.cid<=__cmdSince) continue;
-      const status=await executeQueuedCommand(c);   // orden estricto: una acción termina antes de empezar la siguiente
-      await ackQueuedCommand(c,status);
-      __cmdSince=c.cid;
+    let active=false;
+    for(const id of __cmdIds){
+      const state=__cmdState[id];
+      const r=await fetch(CMD_HOSTS[__cmdHost]+'?id='+encodeURIComponent(id)+'&since='+state.since+'&t='+Date.now(),{cache:'no-store'});
+      if(!r.ok) throw new Error('http '+r.status);
+      const d=await r.json(); if(!d) continue;
+      if(!state.init){ state.since=d.seq||0; state.init=true; continue; }   // backlog anterior al arranque no se re-ejecuta
+      if(!Array.isArray(d.commands)||!d.commands.length) continue;
+      active=true;
+      for(const c of d.commands){
+        if(typeof c.cid!=='number'||!Number.isSafeInteger(c.cid)||c.cid<=state.since) continue;
+        c._queueId=id;
+        const status=await executeQueuedCommand(c); // orden estricto dentro de cada identidad
+        await ackQueuedCommand(c,status);
+        state.since=c.cid;
+      }
     }
+    if(active) __cmdIdleN=0; else __cmdIdleN++;
   }catch(_){ __cmdHost=(__cmdHost+1)%CMD_HOSTS.length; __cmdIdleN++; }   // un fallo de red también es inactividad: sin esto, un ISP que bloquee el host nos tendría sondeando a toda velocidad contra un muro para siempre
   finally{ __cmdPolling=false; }
 }
@@ -3168,6 +3180,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r23.1750" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r24.1759" defer></script>
 </body>
 </html>

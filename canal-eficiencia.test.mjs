@@ -30,7 +30,7 @@ test("[3] el plano de control tiene backoff por inactividad y despertar instantÃ
   assert.match(canal, /function __cmdDelay\(\)\{ return __cmdIdleN>=40\?10000:3000; \}/);
   assert.match(canal, /function __ctrlDelay\(\)\{ return __ctrlIdleN>=48\?10000:2500; \}/);
   // Actividad = reset; y volver al frente despierta LOS DOS planos.
-  assert.match(canal, /__cmdIdleN=0;\s+\/\/ hay actividad/);
+  assert.match(canal, /if\(active\) __cmdIdleN=0; else __cmdIdleN\+\+;/);
   assert.match(canal, /__ctrlIdleN=0;\s+\/\/ cualquier respuesta con comandos/);
   assert.match(canal, /rearmCtrlOnForeground\(\)\{[\s\S]{0,220}cmdWake\(\)/);
   // pollMode NO se toca: su guard es doctrina r46/r47/r51.

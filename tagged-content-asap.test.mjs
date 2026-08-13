@@ -59,3 +59,11 @@ test('Quitar limpia tanto contenidos añadidos como el filtro histórico', () =>
   assert.match(mando, /Promise\.all\(\[sendRemote\('content-clear'\),sendRemote\('tag-'\)\]\)/);
   assert.match(canal, /function clearTaggedContent\(\)/);
 });
+
+test('el player escucha la cola de pantalla y la de circuito con cursores independientes', () => {
+  assert.match(canal, /const __cmdIds=Array\.from\(new Set\(\[scr\.circuit,scr\.screen\]/);
+  assert.match(canal, /const __cmdState=Object\.fromEntries/);
+  assert.match(canal, /for\(const id of __cmdIds\)/);
+  assert.match(canal, /c\._queueId=id/);
+  assert.match(canal, /id:c\._queueId\|\|scr\.circuit\|\|scr\.screen/);
+});

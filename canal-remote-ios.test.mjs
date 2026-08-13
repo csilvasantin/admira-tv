@@ -83,7 +83,7 @@ test("si también falla el intento mudo, restaura audio y propaga el fallo", asy
 
 test("la cola no solapa polls y se rearma al volver iOS a primer plano", () => {
   assert.match(canal, /if\(!scr\.screen\|\|_ctrlPolling\) return/);
-  assert.match(canal, /if\(!scr\.circuit\|\|__cmdPolling\) return/);
+  assert.match(canal, /if\(!__cmdIds\.length\|\|__cmdPolling\) return/);
   assert.match(canal, /finally\{ __cmdPolling=false; \}/);
   assert.match(canal, /const result=await applyCtrlCmd/);
   assert.match(canal, /document\.addEventListener\('visibilitychange',rearmCtrlOnForeground\)/);
