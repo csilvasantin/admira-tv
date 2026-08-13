@@ -14,6 +14,10 @@ const remoteAckSource = cms.slice(
   cms.indexOf("async function waitRemoteApplied(action)"),
   cms.indexOf("\nfunction finishRemoteAction", cms.indexOf("async function waitRemoteApplied(action)"))
 );
+const queuedAckSource = canal.slice(
+  canal.indexOf("const LEGACY_ACTION_RE="),
+  canal.indexOf("async function executeQueuedCommand", canal.indexOf("const LEGACY_ACTION_RE="))
+);
 
 function playbackHarness({ standby = false, playResults = [undefined] } = {}) {
   const calls = [];
@@ -113,6 +117,51 @@ test("el mini-mando del CMS puede arrancar y parar el iPhone", () => {
   assert.match(cms, /action\.progress=Math\.min\(\.94/);
   assert.match(cms, /action\.progress=terminal\?1:Math\.min\(\.94,action\.progress\)/);
   assert.match(cms, /ack\.screen===action\.screen/);
+});
+
+function queuedAckHarness(stored, replies=[]){
+  const writes=[],calls=[];
+  const context=vm.createContext({
+    Date,Number,JSON,String,Array,Set,Promise,
+    scr:{circuit:'osx',screen:'macbookpro16'},
+    CMD_HOSTS:['https://primary.test/locations/cmd','https://fallback.test/locations/cmd'],
+    __cmdHost:0,
+    LS:()=>JSON.stringify(stored),save:(key,value)=>writes.push({key,value}),
+    AbortController:class{constructor(){this.signal={};}abort(){}},setTimeout,clearTimeout,
+    fetch:async(url,init)=>{calls.push({url,body:JSON.parse(init.body)});return replies.shift()||new Response(null,{status:503});},
+    Response,
+  });
+  vm.runInContext(`${queuedAckSource}\nglobalThis.flush=flushCmdAckOutbox;globalThis.outbox=()=>__cmdAckOutbox;`,context);
+  return {context,calls,writes};
+}
+
+test("el arranque descarta receipts legacy que el handler rechaza como invalid_ack_reference",()=>{
+  const now=Date.now(),action='66f6e863-771f-4418-b465-59b83d689ca3';
+  const h=queuedAckHarness([
+    {action,queuedAt:now},
+    {id:'osx',cid:92,action,status:'executed',queuedAt:now}
+  ]);
+  assert.deepEqual(JSON.parse(JSON.stringify(h.context.outbox())),[
+    {id:'osx',cid:92,action,status:'executed',queuedAt:now}
+  ]);
+});
+
+test("un 400 contractual es terminal: no prueba el alias ni repite el receipt",async()=>{
+  const receipt={id:'osx',screen:'macbookpro16',cid:92,action:'66f6e863-771f-4418-b465-59b83d689ca3',status:'executed',queuedAt:Date.now()};
+  const h=queuedAckHarness([receipt],[Response.json({error:'invalid_ack_reference'},{status:400})]);
+  await h.context.flush();
+  assert.equal(h.calls.length,1,"los dos hosts apuntan al mismo coordinator");
+  assert.equal(h.calls[0].url,'https://primary.test/locations/cmd/ack');
+  assert.deepEqual(JSON.parse(JSON.stringify(h.context.outbox())),[]);
+  assert.deepEqual(JSON.parse(h.writes.at(-1).value),[]);
+});
+
+test("un 503 sí conserva el receipt y prueba el fallback de red",async()=>{
+  const receipt={id:'osx',screen:'macbookpro16',cid:92,action:'66f6e863-771f-4418-b465-59b83d689ca3',status:'executed',queuedAt:Date.now()};
+  const h=queuedAckHarness([receipt],[new Response(null,{status:503}),new Response(null,{status:503})]);
+  await h.context.flush();
+  assert.equal(h.calls.length,2);
+  assert.equal(h.context.outbox().length,1);
 });
 
 test("el contorno solo se cierra con el ACK exacto devuelto por el player", async () => {

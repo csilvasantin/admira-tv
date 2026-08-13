@@ -3122,24 +3122,38 @@ const __cmdState=Object.fromEntries(__cmdIds.map(id=>[id,{since:0,init:false}]))
 let __cmdPolling=false;
 const LEGACY_ACTION_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CMD_ACK_OUTBOX_KEY='adtv_cmd_ack_outbox:'+(scr.circuit||'unbound');
+function validCmdAckReceipt(x){
+  return !!x&&typeof x.id==='string'&&x.id.trim().length>0&&x.id.length<=160&&
+    typeof x.cid==='number'&&Number.isSafeInteger(x.cid)&&x.cid>0&&
+    LEGACY_ACTION_RE.test(String(x.action||''))&&['executed','failed'].includes(x.status)&&
+    typeof x.queuedAt==='number'&&Number.isFinite(x.queuedAt)&&x.queuedAt>0;
+}
 let __cmdAckOutbox=(()=>{ try{
   const rows=JSON.parse(LS(CMD_ACK_OUTBOX_KEY,'[]')||'[]'), cutoff=Date.now()-3600000;
-  return Array.isArray(rows)?rows.filter(x=>x&&x.queuedAt>=cutoff&&LEGACY_ACTION_RE.test(String(x.action||''))).slice(-50):[];
+  // El coordinator exige id+cid+action+status. Las versiones antiguas dejaron
+  // receipts parciales en localStorage: reenviarlos daba invalid_ack_reference
+  // cada 3 s, contra los dos hosts que en realidad son el mismo servicio.
+  return Array.isArray(rows)?rows.filter(x=>validCmdAckReceipt(x)&&x.queuedAt>=cutoff).slice(-50):[];
 }catch(_){ return []; } })();
 function persistCmdAckOutbox(){ save(CMD_ACK_OUTBOX_KEY,JSON.stringify(__cmdAckOutbox.slice(-50))); }
 async function postQueuedAck(receipt){
+  if(!validCmdAckReceipt(receipt)) return 'terminal';
   const body=JSON.stringify(receipt);
   for(let offset=0;offset<CMD_HOSTS.length;offset++){
     const idx=(__cmdHost+offset)%CMD_HOSTS.length, controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),1500);
     try{ const r=await fetch(CMD_HOSTS[idx]+'/ack',{method:'POST',headers:{'Content-Type':'application/json'},body,signal:controller.signal});
-      if(r.ok){ __cmdHost=idx; return true; } }catch(_){} finally{ clearTimeout(timer); }
+      if(r.ok){ __cmdHost=idx; return 'acked'; }
+      // 400 invalid_ack_reference/status y 404 command_not_found son definitivos:
+      // otro hostname no puede reparar el receipt y repetirlo genera tormenta.
+      if(r.status>=400&&r.status<500&&![408,425,429].includes(r.status)) return 'terminal';
+    }catch(_){} finally{ clearTimeout(timer); }
   }
-  return false;
+  return 'retry';
 }
 async function flushCmdAckOutbox(){
   for(const receipt of [...__cmdAckOutbox]){
-    if(!await postQueuedAck(receipt)) continue;
+    if(await postQueuedAck(receipt)==='retry') continue;
     __cmdAckOutbox=__cmdAckOutbox.filter(x=>x.action!==receipt.action); persistCmdAckOutbox();
   }
 }
