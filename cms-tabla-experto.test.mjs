@@ -101,3 +101,11 @@ test("el panel experto va sin franja de título y el mando lo llena entero", asy
   // Y al abrir el mando, el panel abre a toda altura (el asa sigue mandando después).
   assert.match(cmsSrc, /pn\.style\.height='min\(88vh,1000px\)'/);
 });
+
+test("doble clic en Player / pantalla abre el mando con esa pantalla seleccionada", () => {
+  assert.match(cms, /\$\('ebBody'\)\.addEventListener\('dblclick'/);
+  assert.match(cms, /e\.target\.closest\('td\[data-col="player"\]'\)/);
+  assert.match(cms, /const row=cell\.closest\('tr\[data-screen\]'\)/);
+  assert.match(cms, /abreMando\(row\.dataset\.screen\)/);
+  assert.match(cms, /title="Doble clic para abrir el mando de /);
+});

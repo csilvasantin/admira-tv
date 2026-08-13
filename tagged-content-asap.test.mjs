@@ -108,3 +108,21 @@ test('el player escucha la cola de pantalla y la de circuito con cursores indepe
   assert.match(canal, /c\._queueId=id/);
   assert.match(canal, /id:c\._queueId\|\|scr\.circuit\|\|scr\.screen/);
 });
+
+test('la playlist del Remote enseña el inventario real y sólo deja pulsar lo descargado', () => {
+  assert.match(mando, /href="#playerPlaylist">Playlist<\/a>/);
+  assert.doesNotMatch(mando, />Dashboard<\/a>/);
+  assert.match(mando, /id="playlistList"/);
+  assert.match(mando, /Promise\.all\(\[remotePlaylistData\(target\.screen\),remoteCacheData\(target\.screen\)\]\)/);
+  assert.match(mando, /var ready=new Set\(\(cache&&cache\.ready\|\|\[\]\)\.map\(String\)\)/);
+  assert.match(mando, /b\.disabled=!isReady/);
+  assert.match(mando, /state\.textContent=isReady\?'✓ en disco':pct!=null\?\('⇩ '\+pct\+'%'\):'pendiente'/);
+  assert.match(mando, /sendRemote\('goto-'\+index,b\)/);
+  assert.match(mando, /loadRemotePlaylist\(it&&it\.id\)/);
+});
+
+test('goto-N atraviesa la cola confirmada y sólo acusa después de ejecutarlo', () => {
+  assert.match(canal, /if\(\/\^goto-\\d\{1,3\}\$\/\.test\(cmd\)\) return applyCtrlCmd\(cmd\)/);
+  assert.match(canal, /const m=\/\^goto-\(\\d\{1,3\}\)\$\/\.exec\(cmd\)/);
+  assert.match(canal, /await play\(n,playlist\[n\]\)/);
+});

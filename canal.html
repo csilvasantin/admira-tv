@@ -42,7 +42,7 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=13.08.2026.r28.1854"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r29.1916"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -2965,6 +2965,10 @@ async function executeQueuedCommand(c){
   const tagged=/^content-(\d{1,6})$/.exec(cmd);
   if(tagged) return queueTaggedContent(tagged[1]);
   if(cmd==='content-clear') return clearTaggedContent();
+  // La playlist gráfica del Remote usa la misma cola confirmada que el resto
+  // del mando. Sin esta junta, goto-N caía en runCli(), se ignoraba y aun así
+  // devolvía un ACK optimista de executed.
+  if(/^goto-\d{1,3}$/.test(cmd)) return applyCtrlCmd(cmd);
   // El Remote experto comparte la sintaxis tag-* con applyCtrlCmd. Antes esta
   // cola la entregaba a runCli(), que sólo entiende `tag valor` con espacio y la
   // ignoraba mientras respondíamos executed. Una única ruta evita esa mentira.
@@ -3209,6 +3213,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r28.1854" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r29.1916" defer></script>
 </body>
 </html>

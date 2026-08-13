@@ -59,6 +59,19 @@
     .nowbox .lbl{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
     .nowbox .ttl{font-size:14px;margin-top:4px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
     .nowbox .tagline{margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--cyan)}
+    .player-playlist{display:grid;gap:8px;max-height:320px;overflow:auto;padding:3px 4px 3px 1px;scrollbar-color:var(--border) transparent}
+    .pl-item{--cmd-progress:0deg;--cmd-ring:var(--cyan);position:relative;width:100%;display:grid;grid-template-columns:70px minmax(0,1fr) auto;align-items:center;gap:10px;
+      padding:7px;text-align:left;border:1px solid var(--border);border-radius:12px;background:#0d1018;color:var(--text);cursor:pointer;font:inherit;transition:.15s}
+    .pl-item:hover:not(:disabled){border-color:var(--violet);transform:translateY(-1px)}
+    .pl-item:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
+    .pl-item:disabled{cursor:not-allowed;opacity:.62}
+    .pl-item.pl-current{border-color:#ff4455;box-shadow:inset 3px 0 0 #ff4455}
+    .pl-thumb{width:70px;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:#05070b;display:grid;place-items:center;color:var(--dim);font:18px var(--mono)}
+    .pl-thumb img{width:100%;height:100%;display:block;object-fit:cover}
+    .pl-copy{min-width:0}.pl-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:700}
+    .pl-meta{margin-top:4px;color:var(--muted);font:10px var(--mono)}
+    .pl-state{font:700 10px var(--mono);color:var(--dim);white-space:nowrap}.pl-state.ready{color:#76f2a8}.pl-state.loading{color:var(--cyan)}
+    .pl-empty{padding:18px 12px;border:1px dashed var(--border);border-radius:12px;text-align:center;color:var(--dim);font:11px/1.5 var(--mono)}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
     .remote-title{margin-top:16px;color:var(--cyan);font:700 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
     .remote-title::after{content:"";height:1px;flex:1;background:var(--border)}
@@ -115,7 +128,7 @@
   <nav class="topnav" aria-label="Navegación AdmiraNeXT">
     <a class="back" href="https://www.admira.live/control" title="Volver al panel de control de la flota">← Control</a>
     <span class="sep"></span>
-    <a href="https://www.admira.live/">Dashboard</a>
+    <a href="#playerPlaylist">Playlist</a>
     <a href="https://www.admira.tv/players">Players</a>
     <a href="https://www.admira.tv/">Admira.tv</a>
     <a href="https://www.admira.live/status">Status</a>
@@ -144,6 +157,11 @@
       <div class="ttl" id="now">…</div>
       <div class="tagline" id="tagline"></div>
     </button>
+  </div>
+
+  <div class="sec" id="playerPlaylist">Playlist del player <span class="hint" id="playlistSummary">— cargando inventario</span></div>
+  <div class="player-playlist" id="playlistList" aria-live="polite">
+    <div class="pl-empty">Esperando la playlist efectiva del player seleccionado</div>
   </div>
 
   <div class="remote-title">Player remoto · todos los controles inferiores actúan en la pantalla</div>
@@ -241,6 +259,7 @@
 
     var T, previewItem=null, previewSignature='', previewPaused=false, previewRenderSeq=0;
     var targetGeneration=0, nowRequestSeq=0, nowController=null;
+    var playlistRequestSeq=0, remotePlaylistItems=[];
     var previewReturnFocus=null, previewInertNodes=[];
     var previewFrame=document.getElementById('previewFrame');
     var previewMedia=document.getElementById('previewMedia');
@@ -340,6 +359,8 @@
       document.getElementById('cir').textContent = T.circuit;
       document.getElementById('scr').textContent = T.screen;
       closePreview(); previewSignature=''; previewItem=null; setPreviewPaused(false); previewEmpty('Esperando señal del player remoto');
+      remotePlaylistItems=[]; document.getElementById('playlistSummary').textContent='— cargando inventario';
+      document.getElementById('playlistList').innerHTML='<div class="pl-empty">Esperando la playlist efectiva del player seleccionado</div>';
       resetRemoteControls();
       renderTagChips(); pollNow();
     }
@@ -564,6 +585,64 @@
         : (cur ? ('🏷️ filtrando #'+cur) : '');
     }
 
+    // ── Playlist efectiva del player ──────────────────────────────────────
+    // /control/playlist conserva el orden que realmente usa la pantalla; el
+    // inventario de /screen/cache decide qué piezas se pueden lanzar ya, sin
+    // fingir disponibilidad de una descarga pendiente.
+    async function remotePlaylistData(screen){
+      for(var api of PLAYLIST_APIS) try{
+        var r=await fetch(api+'?screen='+encodeURIComponent(screen)+'&_='+Date.now(),{cache:'no-store'});
+        var d=r.ok?await r.json():null; if(d&&Array.isArray(d.items)) return d;
+      }catch(_){ }
+      return null;
+    }
+    async function remoteCacheData(screen){
+      try{ var r=await fetch(CACHE_API+'?screen='+encodeURIComponent(screen)+'&_='+Date.now(),{cache:'no-store'});
+        var d=r.ok?await r.json():null; return d&&d.cache||null; }catch(_){ return null; }
+    }
+    function remotePlaylistThumb(it){
+      var src=String(it.thumb||''); if(!src&&String(it.type||'').toLowerCase()==='image') src=String(it.url||'');
+      var wrap=document.createElement('span'); wrap.className='pl-thumb';
+      if(src){ var img=document.createElement('img'); img.src=src; img.alt=''; img.loading='lazy'; img.decoding='async';
+        img.onerror=function(){ wrap.textContent=/video|animation/.test(String(it.type||''))?'▶':'▧'; }; wrap.appendChild(img); }
+      else wrap.textContent=/video|animation/.test(String(it.type||''))?'▶':/audio|music/.test(String(it.type||''))?'♪':'▧';
+      return wrap;
+    }
+    function renderRemotePlaylist(items,cache,currentId){
+      var box=document.getElementById('playlistList'), summary=document.getElementById('playlistSummary'); box.replaceChildren();
+      var ready=new Set((cache&&cache.ready||[]).map(String));
+      var downloading=new Map((cache&&cache.downloading||[]).map(function(x){ return [String(x.id),Math.max(0,Math.min(100,Number(x.pct)||0))]; }));
+      var available=items.filter(function(it){ return ready.has(String(it&&it.id||'')); }).length;
+      summary.textContent='— '+available+' de '+items.length+' descargados';
+      if(!items.length){ var empty=document.createElement('div'); empty.className='pl-empty'; empty.textContent='El player no ha publicado ninguna pieza'; box.appendChild(empty); return; }
+      items.forEach(function(it,index){
+        var id=String(it&&it.id||''), isReady=ready.has(id), pct=downloading.get(id), current=id&&id===String(currentId||'');
+        var b=document.createElement('button'); b.type='button'; b.className='pl-item'+(current?' pl-current':''); b.disabled=!isReady;
+        b.dataset.index=String(index); b.dataset.id=id;
+        b.title=isReady?'Emitir ahora en '+T.screen:(pct!=null?'Descargando '+pct+' % en '+T.screen:'Todavía no está descargado en '+T.screen);
+        b.appendChild(remotePlaylistThumb(it));
+        var copy=document.createElement('span'); copy.className='pl-copy';
+        var title=document.createElement('span'); title.className='pl-title'; title.textContent=it.title||'Contenido sin título';
+        var meta=document.createElement('span'); meta.className='pl-meta'; meta.textContent=(current?'● ahora · ':'')+'posición '+(index+1)+'/'+items.length;
+        copy.append(title,meta); b.appendChild(copy);
+        var state=document.createElement('span'); state.className='pl-state '+(isReady?'ready':pct!=null?'loading':'');
+        state.textContent=isReady?'✓ en disco':pct!=null?('⇩ '+pct+'%'):'pendiente'; b.appendChild(state);
+        b.onclick=async function(){
+          if(!isReady) return;
+          var ok=await sendRemote('goto-'+index,b); if(!ok) return;
+          toast('▶ '+(it.title||('pieza '+(index+1)))+' → '+T.screen); await pollNow();
+        };
+        box.appendChild(b);
+      });
+    }
+    async function loadRemotePlaylist(currentId){
+      var target=T, generation=targetGeneration, seq=++playlistRequestSeq;
+      var rows=await Promise.all([remotePlaylistData(target.screen),remoteCacheData(target.screen)]);
+      if(target!==T||generation!==targetGeneration||seq!==playlistRequestSeq) return;
+      var data=rows[0], cache=rows[1]; remotePlaylistItems=data&&data.items||[];
+      renderRemotePlaylist(remotePlaylistItems,cache,currentId||(previewItem&&previewItem.id));
+    }
+
     // ── Ahora emitiendo ──
     async function pollNow(){
       var target=T, generation=targetGeneration, requestSeq=++nowRequestSeq;
@@ -576,6 +655,7 @@
         document.getElementById('now').textContent = d && d.standby ? '⏻ STANDBY (apagada)' : (it ? (it.title||it.type||'—') : '— sin señal —');
         if(d&&typeof d.standby==='boolean'){ standby=d.standby; setStoredStandby(standby); paintRemoteControls(); }
         renderPreview(it);
+        loadRemotePlaylist(it&&it.id);
         refreshTagline();
       }catch(e){ if(e.name!=='AbortError'&&generation===targetGeneration&&requestSeq===nowRequestSeq) document.getElementById('now').textContent='—'; }
       finally{ if(nowController===controller) nowController=null; }
@@ -589,6 +669,6 @@
     setTarget();
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r28.1854" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r29.1916" defer></script>
 </body>
 </html>
