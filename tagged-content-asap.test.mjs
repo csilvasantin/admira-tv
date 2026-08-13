@@ -55,9 +55,30 @@ test('content-712 refresca Stock, prioriza descarga y sólo salta cuando esa pie
   assert.match(canal, /if\(cmd==='content'\)\{ Promise\.resolve\(queueTaggedContent\(rest\)\)/);
 });
 
-test('Quitar limpia tanto contenidos añadidos como el filtro histórico', () => {
-  assert.match(mando, /Promise\.all\(\[sendRemote\('content-clear'\),sendRemote\('tag-'\)\]\)/);
+test('Limpiar tag espera confirmación secuencial antes de borrar el estado local', () => {
+  assert.match(mando, /if\(!await sendRemote\('content-clear',b\)\) return/);
+  assert.match(mando, /if\(!await sendRemote\('tag-',b\)\) return/);
   assert.match(canal, /function clearTaggedContent\(\)/);
+});
+
+test('tag-terminator de la cola legacy usa el dispatcher correcto y refresca Stock primero', () => {
+  assert.match(canal, /if\(\/\^tag-\[a-z0-9_,\+\-\]\*\$\/\.test\(cmd\)\) return applyCtrlCmd\(cmd\)/);
+  const ctrl = functionSource(canal, 'applyCtrlCmd');
+  assert.match(ctrl, /if\(t\[1\]\)\{ await loadFeed\(false\)/);
+  assert.match(ctrl, /return n>0\?'executed':'failed'/);
+});
+
+test('el Remote confirma por ACK exacto y dirige cada orden a una sola pantalla', () => {
+  assert.match(mando, /body = JSON\.stringify\(\{id:target\.screen, screen:target\.screen, cmd:cmd\}\)/);
+  assert.match(mando, /ack\.action===receipt\.action&&ack\.cid===receipt\.cid&&ack\.cmd===cmd&&ack\.screen===target\.screen/);
+  assert.match(mando, /remote-pending::after/);
+  assert.match(mando, /remote-applied/);
+});
+
+test('el antiguo Quitar es ahora un apagado confirmado que se convierte en Arrancar', () => {
+  assert.match(mando, /id="power"[^>]*>⏻ Apagar player<\/button>/);
+  assert.match(mando, /pwr\.textContent=standby\?'▶ Arrancar':'⏻ Apagar player'/);
+  assert.match(mando, /sendRemote\(desired\?'standby':'resume',pwr\)/);
 });
 
 test('el player escucha la cola de pantalla y la de circuito con cursores independientes', () => {

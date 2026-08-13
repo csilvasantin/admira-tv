@@ -42,7 +42,7 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=13.08.2026.r25.1813"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r26.1839"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -2962,6 +2962,10 @@ async function executeQueuedCommand(c){
   const tagged=/^content-(\d{1,6})$/.exec(cmd);
   if(tagged) return queueTaggedContent(tagged[1]);
   if(cmd==='content-clear') return clearTaggedContent();
+  // El Remote experto comparte la sintaxis tag-* con applyCtrlCmd. Antes esta
+  // cola la entregaba a runCli(), que sólo entiende `tag valor` con espacio y la
+  // ignoraba mientras respondíamos executed. Una única ruta evita esa mentira.
+  if(/^tag-[a-z0-9_,+-]*$/.test(cmd)) return applyCtrlCmd(cmd);
   try{ runCli(raw); return 'executed'; }catch(_){ return 'failed'; }
 }
 async function ackQueuedCommand(c,status){
@@ -3084,8 +3088,8 @@ async function applyCtrlCmd(cmd){
       // tag- vacío → quita el filtro y devuelve la pantalla al gobierno remoto.
       const t=/^tag-([a-z0-9_,+-]*)$/.exec(cmd);
       if(t){
-        if(t[1]){ _liveTag=true; try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}
-          const n=applyPlayTag(t[1]); flashCli('🎛 tag '+t[1]+' · '+n+' assets'); }
+        if(t[1]){ await loadFeed(false); _liveTag=true; try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}
+          const n=applyPlayTag(t[1]); flashCli('🎛 tag '+t[1]+' · '+n+' assets'); return n>0?'executed':'failed'; }
         else { _liveTag=false; seg.tag=''; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); flashCli('🎛 tag quitado'); }
         return 'executed'; }
       return 'ignored';   /* resto de comandos desconocidos: ignorar y decirlo */
@@ -3202,6 +3206,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r25.1813" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r26.1839" defer></script>
 </body>
 </html>

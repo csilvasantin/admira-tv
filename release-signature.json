@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r25.18:13",
+  "version": "v.13.08.2026.r26.18:39",
   "signature": "TrinityMBP14 · MacBookPro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "18:13",
-  "evidence": "La ficha local prioriza el título humano, recupera metadatos canónicos de Stock y usa #número como identificador único; el player macOS incorpora un modo de testing half-size aislado."
+  "time": "18:39",
+  "evidence": "El Remote confirma órdenes con ACK exacto del player, enruta tag-* por el dispatcher correcto, refresca Stock para #terminator y convierte el control de apagado en Arrancar."
 }

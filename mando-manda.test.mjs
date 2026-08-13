@@ -81,7 +81,7 @@ test("el mando ya no envía la forma con espacio", () => {
   // El contrato ahora distingue #ID persistente (content-712) de metatag de
   // texto (tag-navidad), pero ambos salen por un comando con guion canónico.
   assert.match(mando, /cmd:contenido\?\('content-'\+limpio\):\('tag-'\+limpio\)/);
-  assert.match(mando, /sendRemote\(action\.cmd\)/);
+  assert.match(mando, /sendRemote\(action\.cmd,button\|\|document\.getElementById\('tagApply'\)\)/);
 });
 
 test("el canal enciende la línea verde solo, sin tocar nada", () => {
