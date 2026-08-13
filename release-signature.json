@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r1.10:04",
+  "version": "v.13.08.2026.r2.10:13",
   "signature": "NeoMBP14 · MacBookPro14",
   "agent": "NeoMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "10:04",
-  "evidence": "Android: primera release firmada con clave propia (com.admira.signage v1.3/code 4, v2+v3). La pagina de descargas deja de servir el APK de depuracion."
+  "time": "10:13",
+  "evidence": "Los tres players sellados con el formato de los sites (tools/sella-players.sh); APK republicado con el sello como versionName."
 }
