@@ -14,6 +14,8 @@ import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 
 const html = await readFile(new URL("./parrilla/index.html", import.meta.url), "utf8");
+const cms = await readFile(new URL("./cms.html", import.meta.url), "utf8");
+const canal = await readFile(new URL("./canal.html", import.meta.url), "utf8");
 
 /* Se extraen las funciones puras del propio HTML y se ejecutan de verdad: un
    assert.match sobre el texto pasa aunque la lógica esté al revés. */
@@ -168,4 +170,30 @@ test("asignar avisa de que sobrescribe, nombra las pantallas y no finge sin GRID
   // Un 409 es un fallo, no un éxito silencioso.
   assert.match(aplicar, /r\.status===409\?'otro editor se adelantó'/);
   assert.match(aplicar, /ok\+' de '\+devs\.length\+' dispositivos/);
+});
+
+test("Flota llama Por defecto a la playlist base y abre el editor exacto del player", () => {
+  assert.match(cms, /<b>Por defecto<\/b>/);
+  assert.match(cms, /\/parrilla\/\?project=/);
+  assert.match(cms, /&playlist=default/);
+  assert.doesNotMatch(cms, /— sin parrilla/);
+});
+
+test("Por defecto admite empezar vacía, añadir, eliminar y arrastrar contenidos", () => {
+  assert.match(html, /PLAYLIST_ID=BOOT_QUERY\.get\('playlist'\)/);
+  assert.match(html, /DEFAULT_MODE=PLAYLIST_ID==='default'/);
+  assert.match(html, /Por defecto está vacía/);
+  assert.match(html, /id="removeCurrent"/);
+  assert.match(html, /addEventListener\('dragstart'/);
+  assert.match(html, /plTagSel/);
+  assert.match(html, /plItemSel/);
+  assert.match(html, /name:'Por defecto'/);
+});
+
+test("el player carga su borrador default y lo trata como playlist base cacheable", () => {
+  assert.match(canal, /grid\/draft\?screen=.*playlist=default/);
+  assert.match(canal, /DEFAULT_DRAFT\.items\.length&&!syncOn&&!gridInjected\.length/);
+  assert.match(canal, /motor:'parrilla-default'/);
+  assert.match(canal, /signagePlaylistPush\(\)/);
+  assert.match(canal, /schedulePrecache\(\)/);
 });

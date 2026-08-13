@@ -312,6 +312,8 @@
   .ebHead h2{margin:0;font:800 14px ui-monospace,monospace;letter-spacing:.14em;color:var(--ink);text-transform:uppercase;display:flex;align-items:center;gap:8px}
   .ebHead h2 .ebDot{width:9px;height:9px;border-radius:50%;background:var(--air);box-shadow:0 0 9px var(--air);animation:pulse 1.6s infinite}
   .ebMeta{font:11.5px ui-monospace,monospace;color:var(--dim)}
+  .ebPlaylistLink{display:inline-flex;align-items:center;gap:6px;color:var(--ink);text-decoration:none;border:1px solid transparent;border-radius:8px;padding:4px 7px;margin:-4px -7px}
+  .ebPlaylistLink:hover,.ebPlaylistLink:focus-visible{color:var(--air);border-color:var(--air);outline:none;background:rgba(57,211,83,.08)}
   .ebToggles{margin-left:auto;display:flex;gap:8px}
   .ebTog{background:var(--panel2);color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font:600 11.5px ui-monospace,monospace;cursor:pointer}
   .ebTog:hover{border-color:var(--accent)} .ebTog.on{background:var(--accent);color:#091020;border-color:var(--accent)}
@@ -1701,11 +1703,16 @@ $('progBands').addEventListener('click',e=>{
         // canal · parrilla
         const g = phys2grid[p.screen];
         let chanCell;
-        if(g){ const pr=circ2proj[g.circuit];
-          chanCell = '<div><b>'+esc(pr?pr.name:g.circuit)+'</b></div><div class="ebMeta">'+esc(g.name||g.screen)+' · '+ (g.pixerScreens&&g.pixerScreens.length? 'mapeado':'—') +'</div>'; }
-        else { const pr=circ?circ2proj[circ]:null;
-          chanCell = pr? '<div><b>'+esc(pr.name)+'</b></div><div class="ebHole">— sin superficie en parrilla</div>'
-                       : hole('— sin parrilla'); }
+        const pr=g?circ2proj[g.circuit]:(circ?circ2proj[circ]:null);
+        const parrillaProject=(pr&&pr.id)||'admiranext';
+        const parrillaXpace=(g&&g.circuit)||circ||p.loc||p.screen;
+        const parrillaDevice=(g&&g.screen)||p.screen;
+        const parrillaUrl='/parrilla/?project='+encodeURIComponent(parrillaProject)+'&xpace='+encodeURIComponent(parrillaXpace)+'&device='+encodeURIComponent(parrillaDevice)+'&playlist=default';
+        const parrillaLink='<a class="ebPlaylistLink" href="'+parrillaUrl+'" title="Abrir y editar la playlist Por defecto de '+esc(p.screen)+'"><b>Por defecto</b><span aria-hidden="true">↗</span></a>';
+        if(g){
+          chanCell = '<div>'+parrillaLink+'</div><div class="ebMeta">'+esc(pr?pr.name:g.circuit)+' · '+esc(g.name||g.screen)+'</div>'; }
+        else {
+          chanCell = '<div>'+parrillaLink+'</div><div class="ebMeta">playlist base · '+esc(p.screen)+'</div>'; }
         const info=pieceInfo(p);
         const piece = info.id
           ? '<span class="ebPiece" title="ID técnico: '+esc(info.id)+'">'+esc(info.title)+'</span>'

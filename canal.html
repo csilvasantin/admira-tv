@@ -1196,6 +1196,23 @@ function previewFallback(msg){
   try{ loadFeed(true); restartFeed(); }catch(_){}
   try{ loadGrid(); setInterval(loadGrid, 60000); }catch(_){}
 }
+// ── PLAYLIST «POR DEFECTO» DE CADA PLAYER ──────────────────────────────────
+// La parrilla guarda un borrador `default` por screen. Si contiene piezas, pasa
+// a ser la programación base del player: orden exacto, duración editorial y
+// caché disco-primero. Sincro, extendido, parrilla horaria y un tag remoto siguen
+// teniendo precedencia explícita; una lista vacía conserva el fallback seguro.
+const DEFAULT_DRAFT={items:[],signature:''};
+async function loadDefaultDraft(){
+  const screen=String(scr.screen||scr.circuit||'').trim();if(!screen||PREVIEW.on)return;
+  try{
+    const d=await fetch(GRID_API+'/grid/draft?screen='+encodeURIComponent(screen)+'&playlist=default&_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
+    const raw=d&&d.draft&&Array.isArray(d.draft.items)?d.draft.items:[];
+    const mapped=raw.map((it,ix)=>{const t=String(it.assetType||it.type||'').toLowerCase(),type=(t==='video'||t==='animation')?'video':(t==='audio'||t==='music'||t==='locucion')?'audio':'image';return{id:'default:'+String(it.stockId||it.id||ix),url:it.asset||it.url||'',type,title:it.title||('Contenido '+(ix+1)),motor:'parrilla-default',category:'por-defecto',_default:true,_position:ix,_previewSec:Math.max(2,+it.seconds||10),createdAt:'8'+String(1000+ix)}}).filter(x=>x.url);
+    const signature=mapped.map(x=>x.id+'|'+x.url+'|'+x._previewSec).join('~');
+    if(signature===DEFAULT_DRAFT.signature)return;
+    DEFAULT_DRAFT.items=mapped;DEFAULT_DRAFT.signature=signature;rebuild(false);
+  }catch(_){}
+}
 // Entrelaza los creativos de la parrilla (own/paid) a cadencia fija para que AIREN
 // de verdad en su franja, en vez de aparecer 1 vez en un loop de 50. Cicla la lista
 // de la franja cada EVERY piezas de Stock.
@@ -1803,6 +1820,15 @@ function rebuild(restart){
     renderChan(); renderRail(); try{ signagePlaylistPush(); }catch(_){} try{ schedulePrecache(); }catch(_){}
     if(!playlist.length){ stage.innerHTML='<div class="empty">// ningún contenido con #'+canonicalPlayTag(seg.tag)+'</div>'; nowEl.textContent='// playlist alternativa vacía'; }
     else if(restart||cur<0||!stage.querySelector('video,img,audio')) play(cur>=0?cur:0);
+    return;
+  }
+  if(DEFAULT_DRAFT.items.length&&!syncOn&&!gridInjected.length){
+    const previous=playlist[cur]&&String(playlist[cur].id||'');
+    playlist=DEFAULT_DRAFT.items.slice();cur=previous?playlist.findIndex(it=>String(it.id||'')===previous):-1;
+    $('segCount').textContent=playlist.length+' en Por defecto';
+    setLive('POR DEFECTO · '+playlist.length+' en loop',true);renderChan();renderRail();
+    try{signagePlaylistPush()}catch(_){}try{schedulePrecache()}catch(_){}
+    if(restart||cur<0||!stage.querySelector('video,img,audio'))play(cur>=0?cur:0);
     return;
   }
   // ── CORTAFUEGOS: una pantalla sin parrilla no emite «todo» ──────────────────
@@ -3037,6 +3063,7 @@ if(PREVIEW.on){
   // (un corte de luz en un kiosko no debe reencender la pantalla que el operador apagó).
   try{ if(LS('adtv_standby','0')==='1') standbyOn(true); }catch(_){}
   wireCam(); loadGrid(); setInterval(loadGrid, 60000);
+  loadDefaultDraft(); setInterval(loadDefaultDraft, 30000);
   startPositionBeat();   // equipos móviles (robot/taxi/bus): latido de posición
   // pseudo-streaming: pre-descarga la playlist a disco y reporta el estado al worker
   setTimeout(()=>{ try{ schedulePrecache(); }catch(_){} }, 3000);
