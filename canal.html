@@ -42,7 +42,7 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=13.08.2026.r26.1839"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r27.1852"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -1422,7 +1422,10 @@ function cacheReport(){ if(!scr.screen) return; _lastCacheRep=Date.now();
     .catch(()=>{ _cacheSig=''; }); }catch(_){ _cacheSig=''; }
   cacheBadge();
 }
-function cacheReportThrottled(){ if(Date.now()-_lastCacheRep>4000) cacheReport(); }
+// Durante una descarga el Mando dibuja el porcentaje REAL de este reporte. Un
+// latido cada 750 ms es fluido y sólo existe mientras entran bytes; en reposo el
+// dedupe/latido de 55 s sigue intacto.
+function cacheReportThrottled(){ if(Date.now()-_lastCacheRep>750) cacheReport(); }
 // Badge opcional de estado de disco (solo con ?cachehud=1; el MUPI público/limpio queda
 // sin ruido — el placeholder de descarga sí se ve en limpio, el badge no).
 function cacheBadge(){ if(qs.get('cachehud')!=='1') return;
@@ -3206,6 +3209,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r26.1839" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r27.1852" defer></script>
 </body>
 </html>

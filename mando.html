@@ -72,7 +72,8 @@
     .sec{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:20px 0 6px;border-top:1px solid var(--border);padding-top:14px;display:flex;align-items:center;gap:8px}
     .sec .hint{color:var(--dim);text-transform:none;letter-spacing:0;font-size:10px}
     .tagrow{display:flex;gap:8px}
-    .tagrow input{flex:1;font-size:14px;padding:11px 12px;border-radius:10px;background:#0d1018;color:var(--text);border:1px solid var(--amber)}
+    .tag-entry{--cmd-progress:0deg;--cmd-ring:var(--cyan);position:relative;display:flex;flex:1;gap:8px;border-radius:10px;min-width:0}
+    .tagrow input{flex:1;min-width:0;font-size:14px;padding:11px 12px;border-radius:10px;background:#0d1018;color:var(--text);border:1px solid var(--amber)}
     .tagrow button{font-size:13px;padding:0 14px;border-radius:10px;border:1px solid var(--amber);background:color-mix(in srgb,var(--amber) 12%,transparent);color:var(--amber);cursor:pointer;white-space:nowrap}
     .b,.tagrow button,.chip,.cli button{--cmd-progress:0deg;--cmd-ring:var(--cyan);position:relative}
     .remote-pending,.remote-applied,.remote-failed,.remote-timeout{isolation:isolate}
@@ -85,6 +86,9 @@
     .remote-applied{--cmd-ring:#39d98a!important;color:#8fffc2!important;border-color:#39d98a!important;background:color-mix(in srgb,#39d98a 12%,transparent)!important;box-shadow:0 0 14px #39d98a55}
     .remote-failed,.remote-timeout{--cmd-ring:#ff667a!important;color:#ff9aaa!important;border-color:#ff667a!important;box-shadow:0 0 12px #ff667a44}
     .remote-pending:disabled,.remote-applied:disabled,.remote-failed:disabled,.remote-timeout:disabled{opacity:1}
+    .tag-entry.remote-pending input{border-color:var(--cyan);box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--cyan) 70%,transparent)}
+    .tag-entry.remote-applied input{border-color:#39d98a;color:#8fffc2;box-shadow:inset 0 -2px 0 #39d98a}
+    .tag-entry.remote-failed input,.tag-entry.remote-timeout input{border-color:#ff667a;color:#ff9aaa}
     .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
     .chip{font-size:12px;padding:8px 12px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer}
     .chip:active{transform:scale(.96)} .chip.sel{border-color:var(--amber);color:var(--amber);background:color-mix(in srgb,var(--amber) 10%,transparent)}
@@ -154,8 +158,10 @@
   <!-- ── CONTENIDO ETIQUETADO: #ID añade una pieza; texto filtra por metatag ── -->
   <div class="sec">🏷️ Contenido etiquetado <span class="hint">— #ID añade una pieza a la playlist; texto filtra por metatag</span></div>
   <div class="tagrow">
-    <input id="tagInput" placeholder="p.ej. 712 · navidad · oferta-2x1" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false">
-    <button id="tagApply">Aplicar</button>
+    <div class="tag-entry" id="tagEntry">
+      <input id="tagInput" placeholder="p.ej. 712 · navidad · oferta-2x1" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button id="tagApply">Aplicar</button>
+    </div>
     <button id="power" style="border-color:var(--border);background:transparent;color:var(--muted)">⏻ Apagar player</button>
   </div>
   <div class="chips" id="tagChips"></div>
@@ -185,7 +191,10 @@
     // workers.dev queda de reserva por si cayera el proxy.
     var CMD_HOSTS = ['https://api.admira.store/locations/cmd','https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd'];
     var NOW_API = 'https://api.admira.store/signage/now';
+    var CACHE_API = 'https://api.admira.store/screen/cache';
+    var PLAYLIST_APIS = ['/api/control/playlist','https://omnipublicity-api.csilvasantin.workers.dev/control/playlist'];
     var REMOTE_TIMEOUT_MS = 20000;
+    var DOWNLOAD_TIMEOUT_MS = 5*60*1000;
     var ACTION_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     var BUTTON_ACTIONS = new WeakMap();
     var qs = new URLSearchParams(location.search);
@@ -338,11 +347,16 @@
 
     // ÚNICA salida de control: estos comandos van al player remoto. El preview
     // local no conoce esta función, no poletea la cola y no publica heartbeat.
+    function remoteVisuals(action){ return [action&&action.button,action&&action.mirror].filter(Boolean); }
     function paintRemoteButton(action){
-      var b=action&&action.button; if(!b) return;
-      ['pending','applied','failed','timeout'].forEach(function(s){ b.classList.toggle('remote-'+s,action.state===s); });
-      b.style.setProperty('--cmd-progress',Math.round(action.progress*360)+'deg');
-      b.disabled=action.state==='pending'; b.setAttribute('aria-busy',action.state==='pending'?'true':'false');
+      if(!action) return;
+      remoteVisuals(action).forEach(function(b){
+        ['pending','applied','failed','timeout'].forEach(function(s){ b.classList.toggle('remote-'+s,action.state===s); });
+        b.style.setProperty('--cmd-progress',Math.round(action.progress*360)+'deg');
+        if('disabled' in b) b.disabled=action.state==='pending';
+        b.setAttribute('aria-busy',action.state==='pending'?'true':'false');
+      });
+      if(action.input) action.input.readOnly=action.state==='pending';
     }
     function animateRemoteButton(action){
       if(!action.button||BUTTON_ACTIONS.get(action.button)!==action||action.state!=='pending') return;
@@ -354,10 +368,15 @@
       action.progress=result==='timeout'?Math.min(.94,action.progress):1; paintRemoteButton(action);
       if(action.raf) cancelAnimationFrame(action.raf);
       if(action.button) BUTTON_ACTIONS.delete(action.button);
+      if(action.label&&action.doneLabel) action.label.textContent=action.doneLabel;
       setTimeout(function(){
-        var b=action.button; if(!b||BUTTON_ACTIONS.has(b)) return;
-        b.classList.remove('remote-pending','remote-applied','remote-failed','remote-timeout');
-        b.style.removeProperty('--cmd-progress'); b.disabled=false; b.removeAttribute('aria-busy');
+        var b=action.button; if(b&&BUTTON_ACTIONS.has(b)) return;
+        remoteVisuals(action).forEach(function(el){
+          el.classList.remove('remote-pending','remote-applied','remote-failed','remote-timeout');
+          el.style.removeProperty('--cmd-progress'); if('disabled' in el) el.disabled=false; el.removeAttribute('aria-busy');
+        });
+        if(action.input) action.input.readOnly=false;
+        if(action.label&&action.originalLabel) action.label.textContent=action.originalLabel;
       },result==='executed'?1400:2600);
     }
     async function waitRemoteAck(host,receipt,target,cmd){
@@ -374,10 +393,13 @@
       }
       return 'timeout';
     }
-    async function sendRemote(cmd,button){
+    async function sendRemote(cmd,button,options){
       var target={screen:T.screen,circuit:T.circuit};
       if(button&&BUTTON_ACTIONS.has(button)) return false;
-      var action={button:button||null,state:'pending',progress:.04,startedAt:Date.now(),raf:0};
+      options=options||{};
+      var action={button:button||null,mirror:options.mirror||null,input:options.input||null,
+        label:options.label||null,originalLabel:options.label?options.label.textContent:'',doneLabel:'',
+        state:'pending',progress:.04,startedAt:Date.now(),raf:0};
       if(button){ BUTTON_ACTIONS.set(button,action); paintRemoteButton(action); animateRemoteButton(action); }
       // Una orden individual siempre viaja por screen. Usar el circuito aquí podía
       // apagar todos sus players aunque el selector enseñase uno solo.
@@ -390,16 +412,18 @@
           var d = await r.json().catch(function(){return null;});
           if(!d||!d.ok||!Number.isSafeInteger(d.cid)||d.cid<=0||!ACTION_RE.test(String(d.action||''))) throw new Error('sin capacidad de acuse');
           var host=CMD_HOSTS[i], result=await waitRemoteAck(host,d,target,cmd);
-          finishRemoteButton(action,result);
-          toast((result==='executed'?'✓ confirmado':result==='failed'?'✗ rechazado':'⌛ sin confirmación')+' · '+cmd+' → '+target.screen);
+          if(result==='executed'&&options.holdAfterAck){
+            if(action.raf) cancelAnimationFrame(action.raf); action.raf=0; action.progress=.02; paintRemoteButton(action);
+          }else finishRemoteButton(action,result);
+          toast((result==='executed'?(options.holdAfterAck?'✓ orden recibida · comprobando descarga':'✓ confirmado'):result==='failed'?'✗ rechazado':'⌛ sin confirmación')+' · '+cmd+' → '+target.screen);
           if(i>0) CMD_HOSTS.unshift(CMD_HOSTS.splice(i,1)[0]);
-          return result==='executed';
+          return options.returnAction ? {ok:result==='executed',result:result,action:action,receipt:d,target:target} : result==='executed';
         }catch(e){ /* host caído o bloqueado por el ISP → prueba el siguiente */ }
         finally{ clearTimeout(timer); }
       }
       finishRemoteButton(action,'timeout');
       toast('✗ sin red');
-      return false;
+      return options.returnAction ? {ok:false,result:'timeout',action:action,target:target} : false;
     }
     function toast(t){ var el=document.getElementById('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(window.__tt); window.__tt=setTimeout(function(){el.classList.remove('show');},1700); }
 
@@ -451,14 +475,67 @@
       var limpio=canonTag(v), contenido=/^\d{1,6}$/.test(limpio);
       return {clean:limpio, kind:contenido?'content':'tag', cmd:contenido?('content-'+limpio):('tag-'+limpio)};
     }
+    async function taggedExpectedIds(action,receipt,target){
+      // #ID pide una pieza concreta; para un metatag la playlist efectiva del
+      // player es la verdad (respeta el segmento y los filtros que tenga activos).
+      if(action.kind==='content'){
+        try{
+          var rs=await fetch('https://api.admira.store/stock/list?limit=300&t='+Date.now(),{cache:'no-store'});
+          var ds=rs.ok?await rs.json():null, items=ds&&(ds.items||ds);
+          var hit=Array.isArray(items)&&items.find(function(it){ return String(it&&it.num)===action.clean; });
+          return hit&&hit.id?[String(hit.id)]:[];
+        }catch(_){ return []; }
+      }
+      for(var api of PLAYLIST_APIS) try{
+        var rp=await fetch(api+'?screen='+encodeURIComponent(target.screen)+'&_='+Date.now(),{cache:'no-store'});
+        var dp=rp.ok?await rp.json():null;
+        var queuedAt=Number(receipt&&receipt.ts||0); if(queuedAt&&queuedAt<1e12) queuedAt*=1000;
+        // Si aplicar el mismo tag no cambia la firma, el player no republica la
+        // playlist (dedupe correcto). Damos 2,5 s a una playlist nueva y después
+        // aceptamos la vigente: es la única forma de reconocer un «ya descargado».
+        if(!dp||!Array.isArray(dp.items)||(queuedAt&&Number(dp.ts||0)<queuedAt&&Date.now()-queuedAt<2500)) continue;
+        return dp.items.map(function(it){ return String(it&&it.id||''); }).filter(Boolean);
+      }catch(_){ }
+      return [];
+    }
+    async function taggedCacheState(screen,ids){
+      try{
+        var r=await fetch(CACHE_API+'?screen='+encodeURIComponent(screen)+'&_='+Date.now(),{cache:'no-store'});
+        var d=r.ok?await r.json():null, c=d&&d.cache; if(!c) return null;
+        var ready=new Set((c.ready||[]).map(String)), dl=new Map((c.downloading||[]).map(function(x){ return [String(x.id),Number(x.pct)||0]; }));
+        var sum=0; ids.forEach(function(id){ sum+=ready.has(id)?100:(dl.get(id)||0); });
+        return {ready:ids.length>0&&ids.every(function(id){ return ready.has(id); }),pct:ids.length?Math.round(sum/ids.length):0,
+          readyCount:ids.filter(function(id){ return ready.has(id); }).length,total:ids.length,at:Number(c.at||0)};
+      }catch(_){ return null; }
+    }
+    async function waitTaggedAvailability(sent,tagAction){
+      var visual=sent.action, started=Date.now(), ids=[];
+      while(Date.now()-started<DOWNLOAD_TIMEOUT_MS){
+        if(!ids.length){ var fresh=await taggedExpectedIds(tagAction,sent.receipt,sent.target); if(fresh.length) ids=fresh; }
+        var state=ids.length?await taggedCacheState(sent.target.screen,ids):null;
+        if(state){
+          visual.progress=Math.max(.02,Math.min(1,state.pct/100));
+          if(visual.label) visual.label.textContent=state.ready?'✓ Disponible':('⇩ '+state.pct+'%');
+          paintRemoteButton(visual);
+          if(state.ready){ visual.doneLabel='✓ Disponible'; finishRemoteButton(visual,'executed');
+            toast('✓ '+tagAction.clean+' disponible en '+sent.target.screen); return true; }
+        }else if(visual.label){ visual.label.textContent='Preparando…'; }
+        await new Promise(function(resolve){ setTimeout(resolve,650); });
+      }
+      visual.doneLabel='Sin confirmar'; finishRemoteButton(visual,'timeout');
+      toast('⌛ descarga sin confirmar · '+tagAction.clean); return false;
+    }
     async function applyTag(t,button){
       var action=taggedCommand(t);
       if(!action.clean){ toast('✗ tag vacío'); return; }
       // Un número es el # persistente del Stock: se AÑADE a la playlist y se
       // precarga ASAP. El texto conserva el contrato histórico de filtro por tag.
-      if(!await sendRemote(action.cmd,button||document.getElementById('tagApply'))) return;
+      var b=button||document.getElementById('tagApply'), entry=document.getElementById('tagEntry'), input=document.getElementById('tagInput');
+      var sent=await sendRemote(action.cmd,b,{holdAfterAck:true,returnAction:true,mirror:entry,input:input,label:b});
+      if(!sent||!sent.ok) return;
+      if(!await waitTaggedAvailability(sent,action)) return;
       setStoredTag(T.circuit, action.kind==='content'?('@'+action.clean):action.clean);
-      document.getElementById('tagInput').value=action.clean;
+      input.value=action.clean;
       renderTagChips(); refreshTagline();
     }
     async function clearTagged(button){
@@ -512,6 +589,6 @@
     setTarget();
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r26.1839" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r27.1852" defer></script>
 </body>
 </html>

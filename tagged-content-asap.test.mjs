@@ -75,6 +75,26 @@ test('el Remote confirma por ACK exacto y dirige cada orden a una sola pantalla'
   assert.match(mando, /remote-applied/);
 });
 
+test('el campo de tags mantiene el feedback hasta que la descarga remota está lista', () => {
+  assert.match(mando, /id="tagEntry"/);
+  assert.match(mando, /CACHE_API = 'https:\/\/api\.admira\.store\/screen\/cache'/);
+  assert.match(mando, /PLAYLIST_APIS = \['\/api\/control\/playlist','https:\/\/omnipublicity-api\.csilvasantin\.workers\.dev\/control\/playlist'\]/);
+  assert.match(mando, /state\.ready\?'✓ Disponible':\('⇩ '\+state\.pct\+'%'\)/);
+  assert.match(mando, /visual\.progress=Math\.max\(\.02,Math\.min\(1,state\.pct\/100\)\)/);
+  assert.match(mando, /holdAfterAck:true,returnAction:true,mirror:entry,input:input,label:b/);
+  assert.match(mando, /if\(!await waitTaggedAvailability\(sent,action\)\) return/);
+});
+
+test('una pieza ya descargada finaliza directamente en verde', () => {
+  assert.match(mando, /ids\.length>0&&ids\.every\(function\(id\)\{ return ready\.has\(id\); \}\)/);
+  assert.match(mando, /if\(state\.ready\)\{ visual\.doneLabel='✓ Disponible'; finishRemoteButton\(visual,'executed'\)/);
+  assert.match(mando, /\.tag-entry\.remote-applied input\{border-color:#39d98a/);
+});
+
+test('el player publica progreso con cadencia visible mientras descarga', () => {
+  assert.match(canal, /function cacheReportThrottled\(\)\{ if\(Date\.now\(\)-_lastCacheRep>750\) cacheReport\(\); \}/);
+});
+
 test('el antiguo Quitar es ahora un apagado confirmado que se convierte en Arrancar', () => {
   assert.match(mando, /id="power"[^>]*>⏻ Apagar player<\/button>/);
   assert.match(mando, /pwr\.textContent=standby\?'▶ Arrancar':'⏻ Apagar player'/);

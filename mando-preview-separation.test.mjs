@@ -27,7 +27,7 @@ test('la pastilla y los controles de fullscreen gobiernan solo el preview local'
 
 test('los controles inferiores tienen una única salida hacia el player remoto',()=>{
   assert.match(mando,/Player remoto · todos los controles inferiores actúan en la pantalla/);
-  assert.match(mando,/async function sendRemote\(cmd,button\)/);
+  assert.match(mando,/async function sendRemote\(cmd,button,options\)/);
   assert.match(mando,/vol\.onchange=function\(\)\{ sendRemote\('volume '\+vol\.value\); \}/);
   assert.match(mando,/pwr\.onclick=async function\(\)\{[\s\S]*?sendRemote\(desired\?'standby':'resume',pwr\)/);
   assert.match(mando,/mb\.onclick=async function\(\)\{[\s\S]*?sendRemote\(desired\?'audiooff':'audioon',mb\)/);
