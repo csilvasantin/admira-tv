@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=13.08.2026.r41.2158"></script>
+<script src="/auth-gate.js?v=13.08.2026.r42.2229"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="admiranext-version" content="v.13.08.2026.r38.21:21">
@@ -35,7 +35,7 @@
   <div class="actionbar"><button id="save" class="save" type="button">Aplicar modo autónomo</button><span id="status" class="status">Sin cambios pendientes.</span></div>
 </main>
 <script>
-window.ADMIRA_VERSION='v.13.08.2026.r41.21:58';
+window.ADMIRA_VERSION='v.13.08.2026.r42.22:29';
 const API='https://api.admira.store', PLAYOUT='/api/playout';
 const $=id=>document.getElementById(id), state={mode:'autonomous',screens:[],items:[],selected:[],item:null,saved:null};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -54,6 +54,6 @@ function paintCurrent(){const s=state.saved||{mode:'autonomous',screens:[]};cons
 async function load(){try{const [ps,stock,plan]=await Promise.all([fetch(API+'/signage/screens',{cache:'no-store'}).then(r=>r.json()),fetch(API+'/stock/list?limit=300',{cache:'no-store'}).then(r=>r.json()),fetch(PLAYOUT,{cache:'no-store'}).then(r=>r.json())]);state.screens=(ps.screens||[]).filter(x=>x&&x.screen).sort((a,b)=>(Number(b.online)-Number(a.online))||String(a.screen).localeCompare(String(b.screen)));state.items=(stock.items||[]).filter(it=>it&&it.url&&['image','video','animation'].includes(it.type));state.saved=plan.state||{mode:'autonomous',screens:[]};state.selected=(state.saved.screens||[]).filter(s=>state.screens.some(p=>p.screen===s));state.item=state.saved.item&&state.items.find(it=>it.id===state.saved.item.id)||state.saved.item||null;renderContents();paintCurrent();setMode(state.saved.mode||'autonomous');}catch(e){$('status').className='status err';$('status').textContent='No se pudo cargar la flota: '+e.message;}}
 document.querySelectorAll('.mode').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));$('screens').addEventListener('click',e=>{const b=e.target.closest('[data-screen]');if(b)toggleScreen(b.dataset.screen);});$('contents').addEventListener('click',e=>{const b=e.target.closest('[data-item]');if(!b)return;state.item=state.items.find(it=>it.id===b.dataset.item)||null;renderContents();renderWall();validate();});$('search').addEventListener('input',renderContents);$('save').addEventListener('click',save);load();
 </script>
-<script src="/assets/admira-version-watch.js?v=13.08.2026.r41.2158" defer></script>
+<script src="/assets/admira-version-watch.js?v=13.08.2026.r42.2229" defer></script>
 </body>
 </html>

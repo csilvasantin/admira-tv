@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r41.21:58",
-  "signature": "TrinityMBP14 · MacBookPro14",
-  "agent": "TrinityMBP14",
-  "machine": "MacBookPro14",
+  "version": "v.13.08.2026.r42.22:29",
+  "signature": "InfraOraculoMini · MacMini",
+  "agent": "InfraOraculoMini",
+  "machine": "MacMini",
   "day": "13.08.2026",
-  "time": "21:58",
-  "evidence": "Players escribe desde la sesión first-party mediante enlace backend directo a Omnipublicity, evitando el bucle 502 entre Workers y sin exponer secretos."
+  "time": "22:29",
+  "evidence": "ACK remoto contractual: receipts inválidos dejan de reintentarse y la tormenta Telegram queda limitada por incidente."
 }
