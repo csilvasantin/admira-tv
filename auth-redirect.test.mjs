@@ -52,13 +52,17 @@ test("el gate usa redirect top-level sin popup ni FedCM", async () => {
 test("todas las páginas protegidas versionan el gate para no resucitar el popup antiguo", async () => {
   const { execFile } = await import("node:child_process");
   const { promisify } = await import("node:util");
+  const index = await readFile(new URL("./index.html", import.meta.url), "utf8");
+  const version = index.match(/admiranext-version" content="([^"]+)/)?.[1];
+  assert.ok(version, "index.html debe declarar la versión canónica");
+  const cacheKey = version.replace(/^v\./, "").replaceAll(":", "");
   const { stdout } = await promisify(execFile)("rg", ["-l", "/auth-gate\\.js", "--glob", "*.html", "."]);
   const pages = stdout.trim().split("\n").filter(Boolean);
   assert.ok(pages.length >= 40);
   for (const page of pages) {
     const html = await readFile(new URL(page, import.meta.url), "utf8");
     assert.doesNotMatch(html, /\/auth-gate\.js(?=["'])/, page);
-    assert.match(html, /\/auth-gate\.js\?v=13\.08\.2026\.r16\.1329/, page);
+    assert.ok(html.includes(`/auth-gate.js?v=${cacheKey}`), page);
   }
 });
 
