@@ -26,10 +26,17 @@ async function proxy(upstream) {
   });
 }
 
+function playoutFetch(env, init) {
+  const request = new Request(UPSTREAM, init);
+  return env.PLAYOUT_API && typeof env.PLAYOUT_API.fetch === "function"
+    ? env.PLAYOUT_API.fetch(request)
+    : fetch(UPSTREAM, init);
+}
+
 export async function onRequestGet({ request, env }) {
   if (!await actorWithAccess(request, env)) return json({ ok: false, error: "unauthorized" }, 401);
   try {
-    return proxy(await fetch(UPSTREAM, { headers: { Accept: "application/json" }, cache: "no-store" }));
+    return proxy(await playoutFetch(env, { headers: { Accept: "application/json" }, cache: "no-store" }));
   } catch (error) {
     return json({ ok: false, error: "upstream_unreachable", detail: String(error && error.message || error).slice(0, 160) }, 502);
   }
@@ -43,7 +50,7 @@ export async function onRequestPost({ request, env }) {
   if (!body || body.length > 65536) return json({ ok: false, error: "bad_body" }, 400);
   try { JSON.parse(body); } catch (_) { return json({ ok: false, error: "bad_json" }, 400); }
   try {
-    return proxy(await fetch(UPSTREAM, {
+    return proxy(await playoutFetch(env, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + adminToken },
       body,
