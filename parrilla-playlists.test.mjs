@@ -188,6 +188,8 @@ test("Por defecto admite empezar vacía, añadir, eliminar y arrastrar contenido
   assert.match(html, /plTagSel/);
   assert.match(html, /plItemSel/);
   assert.match(html, /name:'Por defecto'/);
+  assert.match(html, /routeScreen=query\.get\('device'\)\|\|query\.get\('screen'\)/);
+  assert.match(html, /offlineContext:true/);
 });
 
 test("el player carga su borrador default y lo trata como playlist base cacheable", () => {

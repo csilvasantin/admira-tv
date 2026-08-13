@@ -252,6 +252,15 @@
     }
     async function loadContext(){
       try{const [pd,sd,live]=await Promise.all([fetch(API+'/grid/projects',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()),fetch(API+'/grid/screens',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()),fetch(API+'/signage/screens',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject())]);projects=(pd.projects||FALLBACK_PROJECTS).filter(p=>p.id==='kiosk'||p.id==='xtanco'||p.id==='admiranext');if(!projects.some(p=>p.id==='admiranext'))projects.unshift({id:'admiranext',name:'Canal AdmiraNeXT',circuits:['admiranext']});for(const p of projects)if(p.id==='kiosk'&&!p.circuits.includes('gracia'))p.circuits.push('gracia');const base=sourceXtancos().length?mergeSourceDevices(sd.screens||[]):sd.screens||FALLBACK_SCREENS,used=new Set(base.flatMap(s=>[s.screen].concat(s.pixerScreens||[]))),players=(live.screens||[]).filter(p=>p&&p.screen&&!used.has(p.screen)).map(p=>({screen:p.screen,name:String(p.name||p.screen).replace(/-/g,' '),circuit:p.loc||p.screen,locationId:p.loc||p.screen,bands:4,pixerScreens:[p.screen],projectId:'admiranext',programmable:true,playerVersion:p.version||''}));screens=base.concat(players)}catch(_){projects=FALLBACK_PROJECTS.slice();screens=sourceXtancos().length?mergeSourceDevices(FALLBACK_SCREENS):FALLBACK_SCREENS.slice();feedback('No se pudo actualizar la flota; se muestra la última configuración conocida.',false)}
+      // Un acceso directo desde Flota debe seguir siendo editable aunque el player
+      // esté offline o el censo vivo esté temporalmente vacío: la URL ya identifica
+      // el destino de forma inequívoca. Se crea sólo como contexto de edición; no
+      // inventa que esté online ni altera la topología guardada.
+      const routeScreen=query.get('device')||query.get('screen'),routeProject=query.get('project')||'admiranext',routeLocation=query.get('xpace')||routeScreen;
+      if(routeScreen&&!screens.some(s=>s.screen===routeScreen)){
+        if(!projects.some(p=>p.id===routeProject))projects.push({id:routeProject,name:routeProject==='admiranext'?'Canal AdmiraNeXT':String(routeProject).replace(/-/g,' '),circuits:[routeLocation]});
+        screens.push({screen:routeScreen,name:String(routeScreen).replace(/-/g,' '),circuit:routeLocation,locationId:routeLocation,bands:4,pixerScreens:[routeScreen],projectId:routeProject,programmable:true,offlineContext:true});
+      }
       renderContext();items=load();current=0;liveByPosition={};render();await liveStatus();
     }
     function switchProject(projectId){save();stop(true);activeProjectId=projectId;activeLocationId=(locationsFor(projectId)[0]||{}).id||'';activeScreenId=(devicesFor(activeLocationId)[0]||{}).screen||activeScreenId;items=load();current=0;liveByPosition={};renderContext();render();liveStatus()}
