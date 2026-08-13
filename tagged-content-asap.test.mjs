@@ -110,7 +110,14 @@ test('el player escucha la cola de pantalla y la de circuito con cursores indepe
 });
 
 test('la playlist del Remote enseña el inventario real y sólo deja pulsar lo descargado', () => {
-  assert.match(mando, /href="#playerPlaylist">Playlist<\/a>/);
+  assert.match(mando, /href="#remote" data-mando-view-link="remote"[^>]*>Remote<\/a>/);
+  assert.match(mando, /href="#playlist" data-mando-view-link="playlist">Playlist<\/a>/);
+  assert.match(mando, /id="playlistView" data-mando-pane="playlist" hidden/);
+  assert.match(mando, /id="remoteTools" data-mando-pane="remote"/);
+  assert.match(mando, /function setMandoView\(view\)/);
+  assert.match(mando, /p\.hidden=p\.dataset\.mandoPane!==view/);
+  assert.match(mando, /body\[data-mando-view="playlist"\] \.player-playlist\{max-height:none;overflow:visible\}/);
+  assert.doesNotMatch(mando, /href="#playerPlaylist"/);
   assert.doesNotMatch(mando, />Dashboard<\/a>/);
   assert.match(mando, /id="playlistList"/);
   assert.match(mando, /Promise\.all\(\[remotePlaylistData\(target\.screen\),remoteCacheData\(target\.screen\)\]\)/);

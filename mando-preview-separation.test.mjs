@@ -25,8 +25,18 @@ test('la pastilla y los controles de fullscreen gobiernan solo el preview local'
   assert.doesNotMatch(previewSource,/sendRemote\(/);
 });
 
-test('los controles inferiores tienen una única salida hacia el player remoto',()=>{
-  assert.match(mando,/Player remoto · todos los controles inferiores actúan en la pantalla/);
+test('los controles básicos viven dentro de Ahora emitiendo y tienen una única salida hacia el player remoto',()=>{
+  const pillStart=mando.indexOf('<div class="nowbox">');
+  const pillEnd=mando.indexOf('\n  </div>\n\n  <section id="playlistView"',pillStart);
+  assert.notEqual(pillStart,-1);
+  assert.notEqual(pillEnd,-1);
+  const pill=mando.slice(pillStart,pillEnd);
+  assert.match(pill,/data-cmd="prev"/);
+  assert.match(pill,/data-cmd="next"/);
+  assert.match(pill,/id="mute"/);
+  assert.match(pill,/data-cmd="reload"/);
+  assert.match(pill,/id="vol"/);
+  assert.doesNotMatch(mando,/Player remoto · todos los controles inferiores/);
   assert.match(mando,/async function sendRemote\(cmd,button,options\)/);
   assert.match(mando,/vol\.onchange=function\(\)\{ sendRemote\('volume '\+vol\.value\); \}/);
   assert.match(mando,/pwr\.onclick=async function\(\)\{[\s\S]*?sendRemote\(desired\?'standby':'resume',pwr\)/);

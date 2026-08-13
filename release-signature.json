@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r31.19:32",
+  "version": "v.13.08.2026.r32.19:41",
   "signature": "TrinityMBP14 · MacBookPro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "19:32",
-  "evidence": "Player/pantalla es un atajo visible y accesible que abre Experto con su control remoto ya seleccionado."
+  "time": "19:41",
+  "evidence": "Remote concentra el control básico en Ahora emitiendo y Playlist muestra de forma independiente la lista completa del player seleccionado."
 }

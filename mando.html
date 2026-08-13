@@ -52,14 +52,19 @@
     .live{position:absolute;top:6px;left:6px;font:600 8px var(--mono);background:rgba(0,0,0,.6);color:#fff;padding:2px 5px;border-radius:99px;display:flex;gap:4px;align-items:center}
     .live b{width:5px;height:5px;border-radius:50%;background:#ff4455;box-shadow:0 0 6px #ff4455;animation:p 1.4s infinite}
     @keyframes p{50%{opacity:.3}}
-    .nowbox{appearance:none;text-align:left;color:var(--text);font:inherit;flex:1;background:var(--elev);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;justify-content:center;min-width:0;cursor:pointer}
-    .nowbox:hover{border-color:var(--violet)}
-    .nowbox:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
-    .nowbox[aria-pressed="true"]{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 8%,var(--elev))}
-    .nowbox .lbl{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+    .nowbox{text-align:left;color:var(--text);font:inherit;flex:1;background:var(--elev);border:1px solid var(--border);border-radius:12px;padding:10px;display:flex;flex-direction:column;justify-content:center;min-width:0}
+    .now-summary{appearance:none;width:100%;padding:2px 2px 8px;border:0;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer;border-radius:8px}
+    .now-summary:hover{background:color-mix(in srgb,var(--violet) 6%,transparent)}
+    .now-summary:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
+    .now-summary[aria-pressed="true"]{background:color-mix(in srgb,var(--amber) 8%,transparent)}
+    .nowbox .lbl{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
     .nowbox .ttl{font-size:14px;margin-top:4px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-    .nowbox .tagline{margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--cyan)}
+    .nowbox .tagline{display:block;margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--cyan)}
+    .now-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding-top:8px;border-top:1px solid var(--border)}
+    .nowbox .now-controls .b{min-width:0;padding:8px 5px;border-radius:8px;font-size:10px;line-height:1.15;gap:4px}
+    .nowbox .vol{margin-top:7px;padding:0 2px;font-size:10px;gap:7px}
     .player-playlist{display:grid;gap:8px;max-height:320px;overflow:auto;padding:3px 4px 3px 1px;scrollbar-color:var(--border) transparent}
+    body[data-mando-view="playlist"] .player-playlist{max-height:none;overflow:visible}
     .pl-item{--cmd-progress:0deg;--cmd-ring:var(--cyan);position:relative;width:100%;display:grid;grid-template-columns:70px minmax(0,1fr) auto;align-items:center;gap:10px;
       padding:7px;text-align:left;border:1px solid var(--border);border-radius:12px;background:#0d1018;color:var(--text);cursor:pointer;font:inherit;transition:.15s}
     .pl-item:hover:not(:disabled){border-color:var(--violet);transform:translateY(-1px)}
@@ -119,16 +124,18 @@
     .topnav a{font-family:var(--mono);font-size:12px;color:var(--muted);text-decoration:none;padding:6px 9px;border-radius:8px;white-space:nowrap;border:1px solid transparent}
     .topnav a:hover{color:var(--text);border-color:var(--border)}
     .topnav a.back{color:var(--violet);border-color:var(--border);font-weight:700}
+    .topnav a.viewtab[aria-current="page"]{color:var(--text);border-color:var(--violet);background:color-mix(in srgb,var(--violet) 10%,transparent);font-weight:700}
     .topnav .sep{flex:0 0 1px;height:16px;background:var(--border);margin:0 2px}
     .equipo{font-family:var(--mono);font-size:11px;color:var(--amber);margin:-2px 0 8px;display:none}
     .equipo b{color:var(--text)}
+    [data-mando-pane][hidden]{display:none!important}
   </style>
 </head>
 <body>
   <nav class="topnav" aria-label="Navegación AdmiraNeXT">
-    <a class="back" href="https://www.admira.live/control" title="Volver al panel de control de la flota">← Control</a>
+    <a class="back viewtab" href="#remote" data-mando-view-link="remote" aria-current="page">Remote</a>
     <span class="sep"></span>
-    <a href="#playerPlaylist">Playlist</a>
+    <a class="viewtab" href="#playlist" data-mando-view-link="playlist">Playlist</a>
     <a href="https://www.admira.tv/players">Players</a>
     <a href="https://www.admira.tv/">Admira.tv</a>
     <a href="https://www.admira.live/status">Status</a>
@@ -141,7 +148,7 @@
   <select id="target"></select>
   <div class="cinfo">circuito: <b id="cir">—</b> · pantalla: <b id="scr">—</b></div>
 
-  <div class="stage">
+  <div class="stage" data-mando-pane="remote">
     <div class="frame" id="previewFrame">
       <div class="preview-media" id="previewMedia"><div class="preview-empty">Esperando señal del player remoto</div></div>
       <div class="preview-paused">⏸ Previo detenido</div>
@@ -152,27 +159,30 @@
         <button type="button" id="previewPause" aria-pressed="false">⏸ Pausar previo</button>
       </div>
     </div>
-    <button class="nowbox" id="previewToggle" type="button" aria-pressed="false" title="Pausar solo este previo; no envía órdenes al player remoto">
-      <div class="lbl" id="nowLabel">Ahora emitiendo · toca para detener el previo</div>
-      <div class="ttl" id="now">…</div>
-      <div class="tagline" id="tagline"></div>
-    </button>
+    <div class="nowbox">
+      <button class="now-summary" id="previewToggle" type="button" aria-pressed="false" title="Pausar solo este previo; no envía órdenes al player remoto">
+        <span class="lbl" id="nowLabel">Ahora emitiendo · toca para detener el previo</span>
+        <span class="ttl" id="now">…</span>
+        <span class="tagline" id="tagline"></span>
+      </button>
+      <div class="now-controls" aria-label="Control básico de la emisión remota">
+        <button class="b" data-cmd="prev" aria-label="Contenido anterior">⏮ Anterior</button>
+        <button class="b" data-cmd="next" aria-label="Contenido siguiente">⏭ Siguiente</button>
+        <button class="b cyan" id="mute">🔇 Silenciar</button>
+        <button class="b" data-cmd="reload">🔄 Recargar</button>
+      </div>
+      <div class="vol" title="Volumen del player remoto">🔊 <input type="range" id="vol" min="0" max="100" value="100" aria-label="Volumen del player remoto"><span id="volv">100%</span></div>
+    </div>
   </div>
 
-  <div class="sec" id="playerPlaylist">Playlist del player <span class="hint" id="playlistSummary">— cargando inventario</span></div>
-  <div class="player-playlist" id="playlistList" aria-live="polite">
-    <div class="pl-empty">Esperando la playlist efectiva del player seleccionado</div>
-  </div>
+  <section id="playlistView" data-mando-pane="playlist" hidden>
+    <div class="sec" id="playerPlaylist">Playlist completa del player <span class="hint" id="playlistSummary">— cargando inventario</span></div>
+    <div class="player-playlist" id="playlistList" aria-live="polite">
+      <div class="pl-empty">Esperando la playlist efectiva del player seleccionado</div>
+    </div>
+  </section>
 
-  <div class="remote-title">Player remoto · todos los controles inferiores actúan en la pantalla</div>
-  <div class="grid">
-    <button class="b" data-cmd="prev">⏮ Anterior</button>
-    <button class="b" data-cmd="next">⏭ Siguiente</button>
-    <button class="b cyan" id="mute">🔇 Silenciar</button>
-    <button class="b" data-cmd="reload">🔄 Recargar</button>
-  </div>
-  <div class="vol" title="Volumen del player remoto">🔊 Remoto <input type="range" id="vol" min="0" max="100" value="100" aria-label="Volumen del player remoto"><span id="volv">100%</span></div>
-
+  <div id="remoteTools" data-mando-pane="remote">
   <!-- ── CONTENIDO ETIQUETADO: #ID añade una pieza; texto filtra por metatag ── -->
   <div class="sec">🏷️ Contenido etiquetado <span class="hint">— #ID añade una pieza a la playlist; texto filtra por metatag</span></div>
   <div class="tagrow">
@@ -199,6 +209,7 @@
   <div class="cli">
     <input id="cliInput" placeholder="play12 · volume 40 · slot noche · category promo" autocapitalize="off" autocorrect="off" spellcheck="false">
     <button id="cliSend">Enviar</button>
+  </div>
   </div>
 
   <div id="toast"></div>
@@ -265,6 +276,16 @@
     var previewMedia=document.getElementById('previewMedia');
     var previewToggle=document.getElementById('previewToggle');
     var previewPause=document.getElementById('previewPause');
+    function mandoViewFromHash(){ return location.hash==='#playlist'?'playlist':'remote'; }
+    function setMandoView(view){
+      view=view==='playlist'?'playlist':'remote'; document.body.dataset.mandoView=view;
+      document.querySelectorAll('[data-mando-pane]').forEach(function(p){ p.hidden=p.dataset.mandoPane!==view; });
+      document.querySelectorAll('[data-mando-view-link]').forEach(function(a){
+        var active=a.dataset.mandoViewLink===view; if(active) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
+      });
+      if(view==='playlist'&&T) loadRemotePlaylist(previewItem&&previewItem.id);
+    }
+    window.addEventListener('hashchange',function(){ setMandoView(mandoViewFromHash()); });
     function previewIsInteractive(){ return !!(previewItem&&['interactive','xperiencia'].includes(String(previewItem.type||'').toLowerCase())); }
     function paintPreviewPause(){
       var interactive=previewIsInteractive();
@@ -666,9 +687,9 @@
     document.getElementById('cliSend').onclick=function(){ cliGo(this); };
     document.getElementById('cliInput').addEventListener('keydown',function(e){ if(e.key==='Enter') cliGo(document.getElementById('cliSend')); });
 
-    setTarget();
+    setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r31.1932" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r32.1941" defer></script>
 </body>
 </html>
