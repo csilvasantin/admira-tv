@@ -151,6 +151,10 @@ test("el avisador está montado en las superficies operativas de admira.tv", () 
   ];
   for (const page of pages) {
     const html = fs.readFileSync(new URL(page, import.meta.url), "utf8");
-    assert.match(html, /<script src="\/assets\/admira-version-watch\.js" defer><\/script>/, page);
+    // El ?v=<sello> es OPCIONAL pero deseable: la URL sin versionar se quedó
+    // cacheada una semana con el tipo MIME equivocado (13-ago-2026) y el aviso
+    // no llegó a nadie. Lo que este test protege es que el vigilante ESTÉ; que
+    // además viaje versionado lo mantiene al día tools/sella-versiones.py.
+    assert.match(html, /<script src="\/assets\/admira-version-watch\.js(\?v=[^"]*)?" defer><\/script>/, page);
   }
 });

@@ -11,12 +11,24 @@
 /admira-nav.js
   Cache-Control: public, max-age=31536000, immutable
 
+# EL TIPO SE DECLARA, NO SE HEREDA (13-ago-2026). /assets/admira-version-watch.js se
+# estaba sirviendo como application/vnd.android.package-archive —el tipo de la APK— y
+# con nosniff puesto arriba el navegador se NIEGA a ejecutarlo:
+#   Refused to execute script … MIME type is not executable
+# Resultado: el aviso de «versión nueva» de admira.tv no ha funcionado NUNCA. No es que
+# avisara tarde: el vigilante jamás llegó a correr, y como es la única cosa en /assets,
+# no rompió nada más y nadie lo notó. Declararlo aquí cierra la puerta a que una regla
+# de otro tipo vuelva a envenenar la carpeta.
 /assets/*
+  Content-Type: application/javascript; charset=utf-8
   Cache-Control: public, max-age=604800
 
 # APK del player Android (distribución de flota): tipo MIME correcto + cache corto
 # (la APK cambia poco pero queremos que una nueva versión llegue rápido a las tablets).
-/*.apk
+# RUTA EXACTA, no `/*.apk`: Cloudflare Pages solo entiende el comodín al FINAL del
+# patrón, así que un `*` a mitad no acota por extensión — acaba pegando este tipo MIME
+# a ficheros que no son la APK. Fue justo lo que le pasó al vigilante de versión.
+/player/admira-player.apk
   Content-Type: application/vnd.android.package-archive
   Cache-Control: public, max-age=300
 /*.png

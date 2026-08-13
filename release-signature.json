@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r18.13:42",
+  "version": "v.13.08.2026.r19.13:48",
   "signature": "NeoMBP14 · MacBookPro14",
   "agent": "NeoMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "13:42",
-  "evidence": "Publicacion de prueba para comprobar de punta a punta el aviso de version nueva."
+  "time": "13:48",
+  "evidence": "El aviso de version nueva no habia funcionado nunca: el vigilante se servia con el tipo MIME de una APK y el navegador se negaba a ejecutarlo."
 }
