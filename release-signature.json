@@ -1,9 +1,9 @@
 {
-  "version": "v.12.08.2026.r27.23:36",
-  "signature": "MorfeoMacMini · MacMini",
-  "agent": "MorfeoMacMini",
-  "machine": "MacMini",
-  "day": "12.08.2026",
-  "time": "23:36",
-  "evidence": "Segunda ronda de eficiencia: 7 objetivos verificados adversarialmente e implementados — SW, audio, camara, canvas, matriz, persistencia y prune"
+  "version": "v.13.08.2026.r1.10:04",
+  "signature": "NeoMBP14 · MacBookPro14",
+  "agent": "NeoMBP14",
+  "machine": "MacBookPro14",
+  "day": "13.08.2026",
+  "time": "10:04",
+  "evidence": "Android: primera release firmada con clave propia (com.admira.signage v1.3/code 4, v2+v3). La pagina de descargas deja de servir el APK de depuracion."
 }
