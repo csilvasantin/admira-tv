@@ -187,15 +187,21 @@ test("Por defecto admite empezar vacía, añadir, eliminar y arrastrar contenido
   assert.match(html, /addEventListener\('dragstart'/);
   assert.match(html, /plTagSel/);
   assert.match(html, /plItemSel/);
-  assert.match(html, /name:'Por defecto'/);
+  assert.match(html, /PLAYLIST_NAME=DEFAULT_MODE\?'Por defecto'/);
   assert.match(html, /routeScreen=query\.get\('device'\)\|\|query\.get\('screen'\)/);
   assert.match(html, /offlineContext:true/);
 });
 
 test("el player carga su borrador default y lo trata como playlist base cacheable", () => {
-  assert.match(canal, /grid\/draft\?screen=.*playlist=default/);
+  assert.match(canal, /\/api\/playlist\?screen=/);
   assert.match(canal, /DEFAULT_DRAFT\.items\.length&&!syncOn&&!gridInjected\.length/);
   assert.match(canal, /motor:'parrilla-default'/);
   assert.match(canal, /signagePlaylistPush\(\)/);
   assert.match(canal, /schedulePrecache\(\)/);
+});
+
+test("Por defecto guarda con la sesión first-party y no pide GRID_KEY", () => {
+  assert.match(html, /DEFAULT_MODE\?'\/api\/playlist':API\+'\/grid\/draft'/);
+  assert.match(html, /if\(!DEFAULT_MODE&&!gridKey\(\)\)return/);
+  assert.match(html, /DEFAULT_MODE\?'session':gridKey\(\)/);
 });

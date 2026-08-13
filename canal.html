@@ -1205,7 +1205,7 @@ const DEFAULT_DRAFT={items:[],signature:''};
 async function loadDefaultDraft(){
   const screen=String(scr.screen||scr.circuit||'').trim();if(!screen||PREVIEW.on)return;
   try{
-    const d=await fetch(GRID_API+'/grid/draft?screen='+encodeURIComponent(screen)+'&playlist=default&_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
+    const d=await fetch('/api/playlist?screen='+encodeURIComponent(screen)+'&_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
     const raw=d&&d.draft&&Array.isArray(d.draft.items)?d.draft.items:[];
     const mapped=raw.map((it,ix)=>{const t=String(it.assetType||it.type||'').toLowerCase(),type=(t==='video'||t==='animation')?'video':(t==='audio'||t==='music'||t==='locucion')?'audio':'image';return{id:'default:'+String(it.stockId||it.id||ix),url:it.asset||it.url||'',type,title:it.title||('Contenido '+(ix+1)),motor:'parrilla-default',category:'por-defecto',_default:true,_position:ix,_previewSec:Math.max(2,+it.seconds||10),createdAt:'8'+String(1000+ix)}}).filter(x=>x.url);
     const signature=mapped.map(x=>x.id+'|'+x.url+'|'+x._previewSec).join('~');
