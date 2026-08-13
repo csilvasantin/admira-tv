@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r32.19:41",
+  "version": "v.13.08.2026.r33.19:53",
   "signature": "TrinityMBP14 · MacBookPro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "19:41",
-  "evidence": "Remote concentra el control básico en Ahora emitiendo y Playlist muestra de forma independiente la lista completa del player seleccionado."
+  "time": "19:53",
+  "evidence": "Status reúne telemetría real del player: pantalla, sistema, hardware expuesto, software, almacenamiento, red, caché y emisión."
 }

@@ -42,8 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=13.08.2026.r32.1941"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r33.1953"></script>
 <script>
+  window.ADMIRA_VERSION='v.13.08.2026.r33.19:53';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -904,10 +905,47 @@ const TELEMETRY_PRODUCER=(()=>{ try{
   if(!id){ id='p-'+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)); localStorage.setItem('adtv_telemetry_producer',id); }
   return id;
 }catch(_){ return 'p-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2); } })();
+function deviceTelemetryBase(){
+  const ua=navigator.userAgent||'', platform=(navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||'';
+  let os=/AdmiraMacOSPlayer|Macintosh|MacIntel/i.test(ua+' '+platform)?'macOS':/Android/i.test(ua)?'Android':/iPhone|iPad|iPod/i.test(ua)?'iOS/iPadOS':/Windows/i.test(ua)?'Windows':/Linux/i.test(ua)?'Linux':'Desconocido';
+  let osVersion=''; const mac=/Mac OS X\s*([0-9_\.]+)/i.exec(ua), android=/Android\s+([0-9.]+)/i.exec(ua), ios=/OS\s+([0-9_]+)/i.exec(ua), win=/Windows NT\s+([0-9.]+)/i.exec(ua);
+  if(mac) osVersion=mac[1].replace(/_/g,'.'); else if(android) osVersion=android[1]; else if(ios) osVersion=ios[1].replace(/_/g,'.'); else if(win) osVersion=win[1];
+  let player='Web Player', playerVersion=''; const nativeMac=/AdmiraMacOSPlayer\/([^\s(]+)/i.exec(ua), nativeIOS=/Admira(?:TV|Player)\/([^\s(]+)/i.exec(ua);
+  if(nativeMac){ player='Admira macOS Player'; playerVersion=nativeMac[1]; }
+  else if(nativeIOS){ player='Admira Player'; playerVersion=nativeIOS[1]; }
+  const wk=/AppleWebKit\/([0-9.]+)/i.exec(ua), chrome=/(?:Chrome|CriOS)\/([0-9.]+)/i.exec(ua), firefox=/Firefox\/([0-9.]+)/i.exec(ua);
+  const engine=chrome?'Chromium '+chrome[1]:firefox?'Firefox '+firefox[1]:wk?'WebKit '+wk[1]:'WebView';
+  const dpr=Number(window.devicePixelRatio)||1, conn=navigator.connection||navigator.mozConnection||navigator.webkitConnection||{};
+  return {
+    display:{ width:Math.round((screen.width||innerWidth)*dpr), height:Math.round((screen.height||innerHeight)*dpr),
+      cssWidth:screen.width||innerWidth, cssHeight:screen.height||innerHeight, viewportWidth:innerWidth, viewportHeight:innerHeight,
+      devicePixelRatio:dpr, colorDepth:screen.colorDepth||0, orientation:(screen.orientation&&screen.orientation.type)||'' },
+    system:{ os, osVersion, platform, language:navigator.language||'', timezone:(Intl.DateTimeFormat().resolvedOptions().timeZone||'') },
+    hardware:{ cores:navigator.hardwareConcurrency||0, memoryGB:navigator.deviceMemory||0, touchPoints:navigator.maxTouchPoints||0,
+      architecture:(navigator.userAgentData&&navigator.userAgentData.architecture)||'' },
+    software:{ player, playerVersion, webRelease:window.ADMIRA_VERSION||'', engine, userAgent:ua },
+    storage:{ usage:0, quota:0, persisted:false },
+    network:{ online:navigator.onLine!==false, effectiveType:conn.effectiveType||'', saveData:!!conn.saveData }
+  };
+}
+let DEVICE_TELEMETRY=deviceTelemetryBase(), _deviceTelemetryTimer=null;
+async function refreshDeviceTelemetry(push){
+  const next=deviceTelemetryBase();
+  try{ if(navigator.storage&&navigator.storage.estimate){ const est=await navigator.storage.estimate(); next.storage.usage=Number(est.usage)||0; next.storage.quota=Number(est.quota)||0; } }catch(_){}
+  try{ if(navigator.storage&&navigator.storage.persisted) next.storage.persisted=!!(await navigator.storage.persisted()); }catch(_){}
+  DEVICE_TELEMETRY=next;
+  if(push&&_nowItem) _postNow(_nowItem);
+}
+refreshDeviceTelemetry(false);
+setInterval(()=>refreshDeviceTelemetry(true),60000);
+window.addEventListener('resize',()=>{ clearTimeout(_deviceTelemetryTimer); _deviceTelemetryTimer=setTimeout(()=>refreshDeviceTelemetry(true),400); });
+window.addEventListener('online',()=>refreshDeviceTelemetry(true));
+window.addEventListener('offline',()=>refreshDeviceTelemetry(true));
 // loc/locName → el worker refleja esta pantalla en /signage/screens (vista viva
 // unificada "qué equipo emite qué ahora"). loc = circuito; locName = nombre legible.
 function _postNow(item){ try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
-  body:JSON.stringify({ screen:scr.screen, producer:TELEMETRY_PRODUCER, item, loc:scr.circuit||'', locName:scr.name||scr.circuit||'', machine:scr.machine||'' })}).catch(()=>{}); }catch(_){} }
+  body:JSON.stringify({ screen:scr.screen, producer:TELEMETRY_PRODUCER, item, standby:false, role:'canal', version:window.ADMIRA_VERSION||'', device:DEVICE_TELEMETRY,
+    loc:scr.circuit||'', locName:scr.name||scr.circuit||'', machine:scr.machine||'' })}).catch(()=>{}); }catch(_){} }
 function signageNowPush(it){
   if(!it||!it.id||!scr.screen||!it.url) return;
   const now=Date.now();
@@ -941,7 +979,8 @@ function signageNowPush(it){
 // El heartbeat sigue latiendo con standby:true → la pantalla NO se cuenta como caída.
 var _standby=false, _sbKeep=null;   // var (no let): setLive lo consulta antes de esta línea
 function _postStandby(){ try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
-  body:JSON.stringify({ screen:scr.screen, producer:TELEMETRY_PRODUCER, standby:true, loc:scr.circuit||'', locName:scr.name||scr.circuit||'', machine:scr.machine||'', ts:Date.now() })}).catch(()=>{}); }catch(_){} }
+  body:JSON.stringify({ screen:scr.screen, producer:TELEMETRY_PRODUCER, standby:true, role:'canal', version:window.ADMIRA_VERSION||'', device:DEVICE_TELEMETRY,
+    loc:scr.circuit||'', locName:scr.name||scr.circuit||'', machine:scr.machine||'', ts:Date.now() })}).catch(()=>{}); }catch(_){} }
 function standbyOn(on){
   on=!!on; _standby=on; save('adtv_standby', on?'1':'0');
   let ov=document.getElementById('standby-ov');
@@ -3214,6 +3253,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r32.1941" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r33.1953" defer></script>
 </body>
 </html>
