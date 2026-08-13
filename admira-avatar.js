@@ -1,10 +1,11 @@
 /* admira.tv/cms · Avatar copiloto Admira — MISMO componente que Yokup (fuente única
- * digitalavatar.ai/embed.js), cerebro de incidencias de la flota (worker yokup-rtc /copilot).
- * El cms ya está tras auth-gate.js (Google + whitelist de la flota): reutilizamos esa
- * credencial (localStorage.admira_gate.cred), la canjeamos por una sesión Yokup (12h) y
- * el avatar habla con la API autenticado. NO añade ningún login extra. */
+ * digitalavatar.ai/embed.js), cerebro de incidencias de la flota (api.yokup.com /copilot).
+ * Mismo host que yokup-site/avatar-widget.js: nunca *.workers.dev (los ISP españoles
+ * lo bloquean y la burbuja se queda muda). El cms ya está tras auth-gate.js
+ * (Google + whitelist): reutilizamos esa credencial (localStorage.admira_gate.cred),
+ * la canjeamos por una sesión Yokup (12h) y el avatar habla autenticado. */
 (function () {
-  var WORKER = "https://yokup-rtc.csilvasantin.workers.dev";
+  var WORKER = "https://api.yokup.com";
   var SKEY = "yk_session";
   var rawFetch = window.fetch.bind(window);
 
@@ -12,7 +13,7 @@
     try { var t = localStorage.getItem(SKEY); if (!t) return false; var p = JSON.parse(atob(t.split(".")[0].replace(/-/g, "+").replace(/_/g, "/"))); return p.exp && Date.now() < p.exp - 30000; } catch (e) { return false; }
   }
 
-  // El fetch a yokup-rtc espera a que haya sesión y añade el Bearer (solo a ese worker).
+  // El fetch a api.yokup.com espera a que haya sesión y añade el Bearer (solo a ese host).
   var resolveReady; var sessionReady = new Promise(function (r) { resolveReady = r; });
   window.fetch = function (input, init) {
     var u = typeof input === "string" ? input : (input && input.url) || "";

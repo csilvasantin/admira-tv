@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r5.11:44",
-  "signature": "NeoMBP14 · MacBookPro14",
-  "agent": "NeoMBP14",
+  "version": "v.13.08.2026.r6.11:51",
+  "signature": "SmithMBP14 · MacBookPro14",
+  "agent": "SmithMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "11:44",
-  "evidence": "El player de macOS ya se VE: el WKWebView no seguia a la ventana y el canal quedaba en una franja al fondo. Verificado en MacBookAirPlata."
+  "time": "11:51",
+  "evidence": "El copiloto del CMS deja de pegarle a yokup-rtc.workers.dev y usa api.yokup.com/copilot, el mismo host que Yokup."
 }
