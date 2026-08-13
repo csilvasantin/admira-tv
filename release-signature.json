@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r13.13:18",
+  "version": "v.13.08.2026.r14.13:25",
   "signature": "TrinityMBP14 · MacBookPro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "13:18",
-  "evidence": "El acceso Google usa redirección top-level y sesión first-party segura: funciona en el navegador interno sin retirar compatibilidad a las sesiones web existentes."
+  "time": "13:25",
+  "evidence": "El botón oficial de Google queda visible y acciona directamente la redirección top-level, sin la capa transparente que el navegador interno interpretaba como popup."
 }

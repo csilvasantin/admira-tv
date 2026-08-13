@@ -197,6 +197,8 @@
       "#admira-tv-gate .greal{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;",
       "opacity:.001;z-index:2;overflow:hidden}",
       "#admira-tv-gate .greal>div{transform:scale(3);transform-origin:center}",
+      "#admira-tv-gate .greal.greal-visible{position:static;opacity:1;overflow:visible}",
+      "#admira-tv-gate .greal.greal-visible>div{transform:none}",
       "#admira-tv-gate .prompt{font-size:clamp(11px,1.6vw,13px);letter-spacing:.24em;color:#7db8ff;text-transform:uppercase;",
       "animation:atv-blink 1.2s steps(1) infinite}",
       "#admira-tv-gate .hint{font-size:clamp(9px,1.3vw,11px);letter-spacing:.14em;color:#4d6b57;text-transform:uppercase}",
@@ -303,7 +305,6 @@
       f.innerHTML =
         '<div class="ready">' +
           '<div class="gwrap">' +
-            '<button class="gbtn" type="button" id="atv-gold" tabindex="-1" aria-hidden="true"><span class="gg">G</span><span>Entrar con Google</span></button>' +
             '<div class="greal" id="atv-gbtn"></div>' +
           '</div>' +
           '<div class="prompt">&#9654; Identif&iacute;cate para continuar</div>' +
@@ -323,6 +324,7 @@
   function renderGoogleButton() {
     var el = document.getElementById("atv-gbtn");
     if (!el || !authChallenge || !window.google || !google.accounts || !google.accounts.id) return;
+    el.classList.add("greal-visible");
     try {
       google.accounts.id.renderButton(el, { theme: "filled_black", size: "large", text: "signin_with", shape: "pill", width: 240, state: authChallenge.state });
     } catch (e) {}
