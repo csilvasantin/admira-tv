@@ -26,7 +26,7 @@
 <!-- r54 · INFO LOCAL: Ctrl+I abre/cierra una ficha viva del contenido que está emitiéndose (pieza, progreso, formato y estado en disco). -->
 <!-- r55 · IDENTIDAD DE DISPOSITIVO: alta one-shot ligada a machine↔screen, credencial local propia y acuse autenticado; nunca recibe ADMIN_TOKEN. -->
 <!-- r56 · PLAYER INTERACTIVO: doble clic o doble toque abre la ficha viva del contenido sin pausar ni alterar la emisión. -->
-<!-- BUILD canal v.13.08.2026.r56 · TELEMETRÍA DE UN SOLO DUEÑO: cada instalación genera un productor estable y lo adjunta a /signage/now y /signage/shot. El worker concede una sola fuente por screen y da prioridad al player nativo frente a pestañas/app Chrome antiguas, que antes alternaban títulos y capturas bajo el mismo id. La captura además viaja ligada al itemId que estaba realmente en antena y su subida se espera antes de liberar el candado local. Hereda r55. -->
+<!-- BUILD canal v.13.08.2026.r57 · FICHA HUMANA: doble clic prioriza el título editorial, hidrata el objeto sincro desde Stock y muestra #número como identificador único en lugar del UUID técnico. Hereda r56. -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
@@ -42,7 +42,7 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=13.08.2026.r24.1759"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r25.1813"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -185,8 +185,11 @@
     padding-bottom:9px; margin-bottom:10px; border-bottom:1px solid rgba(125,255,208,.2); }
   #localInfo .li-head strong{ color:#7dffd0; font-size:12px; letter-spacing:.14em; }
   #localInfo .li-close{ color:#91a9b8; font-size:9px; letter-spacing:.08em; white-space:nowrap; }
-  #localInfo .li-title{ color:#fff; font-size:15px; line-height:1.35; font-weight:700;
-    margin-bottom:11px; text-shadow:0 0 8px rgba(125,255,208,.3); overflow-wrap:anywhere; }
+  #localInfo .li-title{ color:#fff; font-size:clamp(20px,3.2vw,28px); line-height:1.14; font-weight:800;
+    margin-bottom:6px; letter-spacing:-.02em; text-shadow:0 0 8px rgba(125,255,208,.3); overflow-wrap:anywhere; }
+  #localInfo .li-primary-tag{ display:inline-block; margin:0 0 13px; padding:4px 9px;
+    border:1px solid rgba(125,255,208,.5); border-radius:999px; color:#7dffd0;
+    background:rgba(57,211,83,.09); font-size:13px; font-weight:800; letter-spacing:.06em; }
   #localInfo .li-grid{ display:grid; grid-template-columns:max-content minmax(0,1fr); gap:6px 13px; }
   #localInfo .li-k{ color:#7994a6; text-transform:uppercase; letter-spacing:.08em; }
   #localInfo .li-v{ color:#cfeaff; min-width:0; overflow-wrap:anywhere; }
@@ -271,6 +274,7 @@
   <aside id="localInfo" hidden aria-live="polite" aria-label="Información del contenido en emisión">
     <div class="li-head"><strong>ⓘ CONTENIDO EN ANTENA</strong><span class="li-close">DOBLE TOQUE / CTRL+I · CERRAR</span></div>
     <div class="li-title" id="li-title">sin contenido</div>
+    <div class="li-primary-tag" id="li-primary-tag" hidden></div>
     <div class="li-grid" id="li-grid"></div>
     <div class="li-tags" id="li-tags"></div>
   </aside>
@@ -2183,10 +2187,29 @@ function localInfoDisk(it){
   if(!cacheable(it)) return {text:'EN LÍNEA · NO CACHEABLE',cls:'warn'};
   return {text:'NO DESCARGADO',cls:'bad'};
 }
+// El máster sincro transporta lo mínimo para reproducir (id/url/título), no toda
+// la ficha editorial. Para informar al humano hidratamos SOLO esta vista con el
+// Stock ya cargado; la playlist y el reloj sincro siguen usando el objeto remoto.
+function localInfoStock(it){
+  if(!it) return null;
+  return all.find(x=>String(x.id)===String(it.id))||it;
+}
+function localInfoHumanTitle(it,meta){
+  const candidates=[meta&&meta.title,meta&&meta.name,meta&&meta.prompt,it&&it.title,it&&it.name,it&&it.prompt];
+  const internal=String(it&&it.id!=null?it.id:'').trim();
+  for(const value of candidates){
+    const title=String(value||'').replace(/\s+/g,' ').trim();
+    if(title&&!/^#?\d+$/.test(title)&&title!==internal&&!/^auto-[a-z0-9]+$/i.test(title)) return title;
+  }
+  const fallback=meta?testName(meta):'';
+  return fallback&&!/^#?\d+$/.test(fallback)?fallback:'Contenido sin título';
+}
 function localInfoRender(){
   const box=$('localInfo'); if(!box||box.hidden) return;
-  const it=_localInfoItem, title=it?String(it.title||it.name||it.prompt||testName(it)).replace(/\s+/g,' ').trim():'sin contenido en antena';
+  const it=_localInfoItem, meta=localInfoStock(it), title=it?localInfoHumanTitle(it,meta):'sin contenido en antena';
   $('li-title').textContent=title;
+  const primaryTag=$('li-primary-tag'), stockTag=meta&&meta.num!=null?'#'+String(meta.num):'';
+  primaryTag.textContent=stockTag; primaryTag.hidden=!stockTag;
   const grid=$('li-grid'); grid.textContent='';
   const row=(k,v,cls)=>{ const a=document.createElement('span'), b=document.createElement('span');
     a.className='li-k'; a.textContent=k; b.className='li-v'+(cls?(' '+cls):''); b.textContent=v||'—';
@@ -2202,11 +2225,10 @@ function localInfoRender(){
   row('posición',pos);
   row('progreso',dur?localInfoClock(elapsed)+' / '+localInfoClock(dur):'—');
   row('resolución',resolution);
-  row('tamaño',it?testSize(it,localInfoRender):'—');
-  row('id',it&&it.id!=null?String(it.id):'—');
-  row('origen',it?(it.motor||it.category||'stock'):'—');
+  row('tamaño',meta?testSize(meta,localInfoRender):'—');
+  row('origen',meta?(meta.motor||meta.category||'stock'):'—');
   row('pantalla',scr.screen||scr.machine||'sin identificar');
-  $('li-tags').textContent=it?(testTags(it)||'sin etiquetas'):'sin etiquetas';
+  $('li-tags').textContent=meta?(testTags(meta)||'sin etiquetas'):'sin etiquetas';
 }
 function localInfoToggle(){
   const box=$('localInfo'), opening=box.hidden; box.hidden=!opening;
@@ -3180,6 +3202,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r24.1759" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r25.1813" defer></script>
 </body>
 </html>

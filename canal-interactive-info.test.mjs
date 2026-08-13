@@ -23,7 +23,13 @@ test("el gesto no secuestra controles y la ficha ofrece metadatos reales", () =>
   assert.match(canal, /closest\('button,input,select,textarea,a,#seg,#tap'\)/);
   for (const label of [
     "estado local", "tipo", "posición", "progreso", "resolución",
-    "tamaño", "id", "origen", "pantalla"
+    "tamaño", "origen", "pantalla"
   ]) assert.match(canal, new RegExp(`row\\('${label}'`));
+  assert.doesNotMatch(canal, /row\('id'/);
+  assert.match(canal, /function localInfoStock\(it\)/);
+  assert.match(canal, /String\(x\.id\)===String\(it\.id\)/);
+  assert.match(canal, /li-primary-tag/);
+  assert.match(canal, /'#'\+String\(meta\.num\)/);
+  assert.match(canal, /testTags\(meta\)/);
   assert.match(canal, /setInterval\(localInfoRender,1000\)/);
 });
