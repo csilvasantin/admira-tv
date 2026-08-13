@@ -97,13 +97,14 @@
     .status-card.wide{grid-column:1/-1}.status-card.wide .status-row{grid-template-columns:120px minmax(0,1fr)}
     .status-updated{margin:10px 2px 0;color:var(--dim);font:9px var(--mono);text-align:right}
     .content-summary{padding:10px 12px;margin:12px 0 10px;border:1px solid var(--border);border-radius:10px;background:var(--elev);color:var(--muted);font:11px/1.5 var(--mono)}
-    .content-inventory{display:grid;gap:9px}.content-card{min-width:0;max-width:100%;overflow:hidden;border:1px solid var(--border);border-radius:12px;background:#0d1018;padding:11px}
+    .content-inventory{display:grid;gap:9px}.content-card{min-width:0;max-width:100%;overflow:hidden;border:1px solid var(--border);border-radius:12px;background:#0d1018;padding:11px;display:grid;grid-template-columns:104px minmax(0,1fr);gap:11px;align-items:start}
+    .content-preview{width:104px;aspect-ratio:16/9;border-radius:9px;overflow:hidden;background:linear-gradient(135deg,#20305f,#613f87);border:1px solid color-mix(in srgb,var(--violet) 45%,var(--border))}.content-preview img{display:block;width:100%;height:100%;object-fit:cover}.content-card-body{min-width:0}
     .content-card-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:8px}.content-card h3{min-width:0;margin:0;color:var(--text);font:700 13px/1.3 var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .content-num{color:var(--cyan);font:700 10px var(--mono);white-space:nowrap}.content-tech{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
     .tech-pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--border);border-radius:999px;padding:5px 8px;color:var(--muted);font:9px var(--mono)}
     .tech-pill.primary{border-color:color-mix(in srgb,var(--cyan) 55%,var(--border));color:var(--cyan)}.tech-pill.missing{border-style:dashed;color:var(--dim)}
     .content-opt{margin-top:8px;color:#76f2a8;font:10px/1.4 var(--mono)}.content-opt.warn{color:var(--amber)}
-    @media(max-width:420px){.status-grid{grid-template-columns:1fr}.status-card.wide{grid-column:auto}.status-card.wide .status-row{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}}
+    @media(max-width:420px){.status-grid{grid-template-columns:1fr}.status-card.wide{grid-column:auto}.status-card.wide .status-row{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}.content-card{grid-template-columns:86px minmax(0,1fr)}.content-preview{width:86px}}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
     .remote-title{margin-top:16px;color:var(--cyan);font:700 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
     .remote-title::after{content:"";height:1px;flex:1;background:var(--border)}
@@ -119,6 +120,8 @@
     .media-control-copy{display:grid;min-width:0;gap:4px;text-shadow:0 1px 3px #000,0 0 8px #000}
     .media-control-action{font:700 13px/1.15 var(--mono);color:#fff}.media-control-title{max-width:100%;overflow:hidden;color:rgba(255,255,255,.82);font:10px/1.25 var(--sans);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
     .media-control.sync-locked{opacity:.72;cursor:not-allowed}.media-control.sync-locked .media-control-title{white-space:normal}
+    .seek-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px}.seek-frame{--cmd-progress:0deg;--cmd-ring:var(--cyan);min-width:0;min-height:54px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background-position:center;background-size:cover;background-color:var(--elev);color:#fff;cursor:pointer;position:relative;isolation:isolate;text-shadow:0 1px 4px #000;font:700 10px var(--mono)}
+    .seek-frame::before{content:"";position:absolute;z-index:-1;inset:0;background:linear-gradient(0deg,rgba(5,7,11,.78),rgba(5,7,11,.18))}.seek-frame:hover{border-color:var(--violet)}.seek-frame span{position:absolute;left:7px;bottom:5px}.seek-frame:disabled{opacity:.68;cursor:not-allowed}
     @media(forced-colors:active){.media-control::before{background:Canvas}.media-control{border:2px solid ButtonText}.media-control-action,.media-control-title{color:ButtonText;text-shadow:none}}
     .vol{display:flex;align-items:center;gap:10px;margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--muted)}
     .vol input{flex:1;accent-color:var(--cyan)}
@@ -136,7 +139,7 @@
       -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
       -webkit-mask-composite:xor;mask-composite:exclude}
     .remote-pending{cursor:progress!important;box-shadow:0 0 10px color-mix(in srgb,var(--cmd-ring) 36%,transparent)}
-    .remote-applied{--cmd-ring:#39d98a!important;color:#8fffc2!important;border-color:#39d98a!important;background:color-mix(in srgb,#39d98a 12%,transparent)!important;box-shadow:0 0 14px #39d98a55}
+    .remote-applied{--cmd-ring:#39d98a!important;color:#8fffc2!important;border-color:#39d98a!important;background-color:color-mix(in srgb,#39d98a 12%,transparent)!important;box-shadow:0 0 14px #39d98a55}
     .remote-failed,.remote-timeout{--cmd-ring:#ff667a!important;color:#ff9aaa!important;border-color:#ff667a!important;box-shadow:0 0 12px #ff667a44}
     .remote-pending:disabled,.remote-applied:disabled,.remote-failed:disabled,.remote-timeout:disabled{opacity:1}
     .tag-entry.remote-pending input{border-color:var(--cyan);box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--cyan) 70%,transparent)}
@@ -204,9 +207,10 @@
         <button class="b media-control" id="previousControl" data-cmd="prev" aria-label="Contenido anterior"><span class="media-control-copy"><span class="media-control-action">⏮ Anterior</span><span class="media-control-title" id="previousTitle">Esperando playlist</span></span></button>
         <button class="b media-control" id="nextControl" data-cmd="next" aria-label="Contenido siguiente"><span class="media-control-copy"><span class="media-control-action">⏭ Siguiente</span><span class="media-control-title" id="nextTitle">Esperando playlist</span></span></button>
         <button class="b cyan media-control" id="mute"><span class="media-control-copy"><span class="media-control-action" id="muteAction">🔇 Silenciar</span><span class="media-control-title" id="muteTitle">Contenido actual</span></span></button>
-        <button class="b" data-cmd="reload">🔄 Recargar</button>
+        <button class="b media-control" id="reloadControl" data-cmd="reload" aria-label="Recargar contenido actual"><span class="media-control-copy"><span class="media-control-action">🔄 Recargar</span><span class="media-control-title" id="reloadTitle">Contenido actual</span></span></button>
       </div>
       <div class="vol" title="Volumen del player remoto">🔊 <input type="range" id="vol" min="0" max="100" value="100" aria-label="Volumen del player remoto"><span id="volv">100%</span></div>
+      <div class="seek-strip" id="seekStrip" aria-label="Saltar a otro momento del contenido actual"></div>
     </div>
   </div>
 
@@ -282,6 +286,7 @@
     var DOWNLOAD_TIMEOUT_MS = 5*60*1000;
     var ACTION_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     var BUTTON_ACTIONS = new WeakMap();
+    var PREVIEW_CHECKS = new Map(), previewPaintToken=0;
     var qs = new URLSearchParams(location.search);
 
     // ── Circuitos y pantallas (AGRUPADO POR CIRCUITO) ──
@@ -442,7 +447,7 @@
       document.getElementById('playlistList').innerHTML='<div class="pl-empty">Esperando la playlist efectiva del player seleccionado</div>';
       statusProfile={fields:{}}; document.getElementById('statusSummary').textContent='Esperando telemetría del player seleccionado…'; document.getElementById('statusGrid').replaceChildren();
       document.getElementById('contentsSummary').textContent='Esperando el inventario técnico del player seleccionado…'; document.getElementById('contentsList').innerHTML='<div class="pl-empty">El player todavía no ha publicado su inventario técnico</div>';
-      resetRemoteControls(); paintRemoteContext([],null);
+      resetRemoteControls(); clearRemoteFeedback(); paintRemoteContext([],null);
       renderTagChips(); pollNow(); if(document.body.dataset.mandoView==='status') loadRemoteStatus(false); if(document.body.dataset.mandoView==='contents') loadRemoteContents(false);
     }
     selEl.onchange = setTarget;
@@ -450,8 +455,14 @@
     // ÚNICA salida de control: estos comandos van al player remoto. El preview
     // local no conoce esta función, no poletea la cola y no publica heartbeat.
     function remoteVisuals(action){ return [action&&action.button,action&&action.mirror].filter(Boolean); }
+    function clearRemoteFeedback(){
+      document.querySelectorAll('.remote-pending,.remote-applied,.remote-failed,.remote-timeout').forEach(function(el){
+        el.classList.remove('remote-pending','remote-applied','remote-failed','remote-timeout'); el.style.removeProperty('--cmd-progress');
+        if('disabled' in el) el.disabled=false; el.removeAttribute('aria-busy');
+      });
+    }
     function paintRemoteButton(action){
-      if(!action) return;
+      if(!action||action.generation!==targetGeneration) return;
       remoteVisuals(action).forEach(function(b){
         ['pending','applied','failed','timeout'].forEach(function(s){ b.classList.toggle('remote-'+s,action.state===s); });
         b.style.setProperty('--cmd-progress',Math.round(action.progress*360)+'deg');
@@ -466,20 +477,29 @@
       paintRemoteButton(action); action.raf=requestAnimationFrame(function(){ animateRemoteButton(action); });
     }
     function finishRemoteButton(action,result){
+      if(!action) return;
       action.state=result==='executed'?'applied':result==='failed'?'failed':'timeout';
-      action.progress=result==='timeout'?Math.min(.94,action.progress):1; paintRemoteButton(action);
       if(action.raf) cancelAnimationFrame(action.raf);
       if(action.button) BUTTON_ACTIONS.delete(action.button);
+      if(action.generation!==targetGeneration) return;
+      action.progress=result==='timeout'?Math.min(.94,action.progress):1; paintRemoteButton(action);
       if(action.label&&action.doneLabel) action.label.textContent=action.doneLabel;
+      if(action.input) action.input.readOnly=false;
+      // El ACK verde y el círculo completo son memoria operativa: permanecen hasta
+      // la próxima pulsación en ese control o hasta cambiar de player. Antes se
+      // borraban a los 1,4 s y Carlos perdía la confirmación nada más apartar la vista.
+      if(result==='executed'){
+        if(action.label&&action.originalLabel) setTimeout(function(){ if(!action.button||!BUTTON_ACTIONS.has(action.button)) action.label.textContent=action.originalLabel; },1400);
+        return;
+      }
       setTimeout(function(){
         var b=action.button; if(b&&BUTTON_ACTIONS.has(b)) return;
         remoteVisuals(action).forEach(function(el){
           el.classList.remove('remote-pending','remote-applied','remote-failed','remote-timeout');
           el.style.removeProperty('--cmd-progress'); if('disabled' in el) el.disabled=false; el.removeAttribute('aria-busy');
         });
-        if(action.input) action.input.readOnly=false;
         if(action.label&&action.originalLabel) action.label.textContent=action.originalLabel;
-      },result==='executed'?1400:2600);
+      },2600);
     }
     async function waitRemoteAck(host,receipt,target,cmd){
       var started=Date.now();
@@ -501,7 +521,7 @@
       options=options||{};
       var action={button:button||null,mirror:options.mirror||null,input:options.input||null,
         label:options.label||null,originalLabel:options.label?options.label.textContent:'',doneLabel:'',
-        state:'pending',progress:.04,startedAt:Date.now(),raf:0};
+        state:'pending',progress:.04,startedAt:Date.now(),raf:0,generation:targetGeneration};
       if(button){ BUTTON_ACTIONS.set(button,action); paintRemoteButton(action); animateRemoteButton(action); }
       // Una orden individual siempre viaja por screen. Usar el circuito aquí podía
       // apagar todos sus players aunque el selector enseñase uno solo.
@@ -537,17 +557,62 @@
     function setStoredStandby(on){ var s=powerStore(); if(on) s[T.screen]=true; else delete s[T.screen]; localStorage.setItem(POWER_KEY,JSON.stringify(s)); }
     var standby=false, pwr=document.getElementById('power'), powerOp=0;
     var muted=false, mb=document.getElementById('mute'), muteOp=0;
-    var previousControl=document.getElementById('previousControl'), nextControl=document.getElementById('nextControl');
+    var previousControl=document.getElementById('previousControl'), nextControl=document.getElementById('nextControl'), reloadControl=document.getElementById('reloadControl');
     function remoteControlImage(it){
       if(!it) return ''; var src=String(it.thumb||it.thumbnail||it.poster||'');
       if(!src&&String(it.type||'').toLowerCase()==='image') src=String(it.url||'');
       return /^https?:\/\//.test(src)?src:'';
     }
-    function paintMediaControl(button,titleNode,it,emptyText,actionText){
-      var title=it&&(it.title||it.prompt)||emptyText,src=remoteControlImage(it);
-      titleNode.textContent=title; button.classList.toggle('has-media',!!src);
-      button.style.backgroundImage=src?'url('+JSON.stringify(src)+')':'';
+    function previewFallbackData(it){
+      var type=String(it&&it.type||'contenido').toUpperCase().slice(0,12), icon=/video|animation/i.test(type)?'▶':/audio|music/i.test(type)?'♪':'▧';
+      var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#20305f"/><stop offset="1" stop-color="#774e96"/></linearGradient></defs><rect width="320" height="180" fill="url(#g)"/><circle cx="160" cy="82" r="34" fill="#ffffff22"/><text x="160" y="95" fill="white" font-size="42" text-anchor="middle">'+icon+'</text><text x="160" y="154" fill="#eee6ff" font-family="monospace" font-size="15" text-anchor="middle">'+type+'</text></svg>';
+      return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+    }
+    function youtubeFrameCandidates(it,slot){
+      var src=remoteControlImage(it), m=/img\.youtube\.com\/vi\/([\w-]{11})\//.exec(src), out=[];
+      if(m&&slot) out.push('https://img.youtube.com/vi/'+m[1]+'/'+Math.max(1,Math.min(3,slot))+'.jpg');
+      if(src) out.push(src); return out;
+    }
+    function checkedPreview(src){
+      if(!src) return Promise.resolve(''); if(PREVIEW_CHECKS.has(src)) return PREVIEW_CHECKS.get(src);
+      var p=new Promise(function(resolve){
+        var img=new Image(),done=false,timer=setTimeout(function(){ finish(''); },4500);
+        function finish(value){ if(done) return; done=true; clearTimeout(timer); resolve(value); }
+        img.crossOrigin='anonymous'; img.onload=function(){
+          try{ var cv=document.createElement('canvas'); cv.width=24; cv.height=14; var cx=cv.getContext('2d',{willReadFrequently:true}); cx.drawImage(img,0,0,24,14);
+            var px=cx.getImageData(0,0,24,14).data, light=0, visible=0, samples=px.length/4;
+            for(var i=0;i<px.length;i+=4){ var y=.2126*px[i]+.7152*px[i+1]+.0722*px[i+2]; light+=y; if(y>18) visible++; }
+            finish(light/samples>16&&visible/samples>.035?src:'');
+          }catch(_){ finish(''); }
+        }; img.onerror=function(){ finish(''); }; img.src=src;
+      }); PREVIEW_CHECKS.set(src,p); return p;
+    }
+    async function setSafePreview(el,candidates,it,background){
+      var token=String(++previewPaintToken); el.dataset.previewToken=token; var fallback=previewFallbackData(it);
+      if(background) el.style.backgroundImage='url('+JSON.stringify(fallback)+')';
+      else el.src=fallback;
+      for(var i=0;i<(candidates||[]).length;i++){
+        var good=await checkedPreview(candidates[i]); if(el.dataset.previewToken!==token) return;
+        if(good){ if(background) el.style.backgroundImage='url('+JSON.stringify(good)+')'; else el.src=good; return; }
+      }
+    }
+    function paintMediaControl(button,titleNode,it,emptyText,actionText,candidates){
+      var title=it&&(it.title||it.prompt)||emptyText;
+      titleNode.textContent=title; button.classList.toggle('has-media',!!it);
+      setSafePreview(button,candidates||youtubeFrameCandidates(it,0),it,true);
       button.title=title; button.setAttribute('aria-label',(actionText||'Control')+': '+title);
+    }
+    function seekLabel(seconds){ var s=Math.max(0,Math.round(seconds)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+    function paintSeekStrip(it,syncLocked){
+      var strip=document.getElementById('seekStrip'), duration=Number(it&&(it.duration||it.dur))||0; strip.replaceChildren();
+      if(!it||!duration||!/video|audio|animation/i.test(String(it.type||''))){ strip.hidden=true; return; }
+      strip.hidden=false; [.25,.5,.75].forEach(function(part,index){
+        var seconds=Math.max(1,Math.round(duration*part)), b=document.createElement('button'); b.type='button'; b.className='seek-frame'; b.disabled=!!syncLocked;
+        b.setAttribute('aria-label',(syncLocked?'Sincro activo; no se puede saltar':'Saltar a ')+seekLabel(seconds));
+        var label=document.createElement('span'); label.textContent=seekLabel(seconds); b.appendChild(label);
+        setSafePreview(b,youtubeFrameCandidates(it,index+1),it,true);
+        b.onclick=function(){ if(!syncLocked) sendRemote('seek-'+seconds,b); }; strip.appendChild(b);
+      });
     }
     function paintRemoteContext(items,current){
       items=Array.isArray(items)?items:[]; var currentId=String(current&&current.id||''),index=items.findIndex(function(it){ return String(it&&it.id||'')===currentId; });
@@ -562,6 +627,8 @@
       previousControl.classList.toggle('sync-locked',!canNavigate); nextControl.classList.toggle('sync-locked',!canNavigate);
       var currentMedia=index>=0?Object.assign({},items[index],current||{}):current;
       paintMediaControl(mb,document.getElementById('muteTitle'),currentMedia,'Contenido actual',muted?'Activar sonido':'Silenciar');
+      paintMediaControl(reloadControl,document.getElementById('reloadTitle'),currentMedia,'Contenido actual','Recargar',youtubeFrameCandidates(currentMedia,3));
+      paintSeekStrip(currentMedia,syncLocked);
     }
     function paintRemoteControls(){
       pwr.textContent=standby?'▶ Arrancar':'⏻ Apagar player'; pwr.classList.toggle('on',standby);
@@ -749,7 +816,8 @@
       var target=T, generation=targetGeneration, seq=++playlistRequestSeq;
       var rows=await Promise.all([remotePlaylistData(target.screen),remoteCacheData(target.screen)]);
       if(target!==T||generation!==targetGeneration||seq!==playlistRequestSeq) return;
-      var data=rows[0], cache=rows[1]; remotePlaylistItems=data&&data.items||[];
+      var data=rows[0], cache=rows[1], tech=new Map((cache&&cache.contents||[]).map(function(it){ return [String(it&&it.id||''),it]; }));
+      remotePlaylistItems=(data&&data.items||[]).map(function(it){ return Object.assign({},it,tech.get(String(it&&it.id||''))||{}); });
       renderRemotePlaylist(remotePlaylistItems,cache,currentId||(previewItem&&previewItem.id));
       paintRemoteContext(remotePlaylistItems,previewItem); refreshTagline();
     }
@@ -904,12 +972,15 @@
       if(!items.length){ var empty=document.createElement('div'); empty.className='pl-empty'; empty.textContent='El player no ha publicado contenidos descargados'; box.appendChild(empty); return; }
       items.forEach(function(it){
         var card=document.createElement('article'); card.className='content-card';
+        var preview=document.createElement('div'); preview.className='content-preview'; var previewImg=document.createElement('img'); previewImg.alt='Previo de '+(it.title||'contenido descargado'); previewImg.loading='lazy'; previewImg.decoding='async'; preview.appendChild(previewImg); card.appendChild(preview);
+        setSafePreview(previewImg,youtubeFrameCandidates(it,2),it,false);
+        var body=document.createElement('div'); body.className='content-card-body'; card.appendChild(body);
         var head=document.createElement('div'); head.className='content-card-head'; var title=document.createElement('h3'); title.textContent=it.title||'Contenido sin título';
-        var num=document.createElement('span'); num.className='content-num'; num.textContent=it.num?'#'+it.num:String(it.type||'').toUpperCase(); head.append(title,num); card.appendChild(head);
+        var num=document.createElement('span'); num.className='content-num'; num.textContent=it.num?'#'+it.num:String(it.type||'').toUpperCase(); head.append(title,num); body.appendChild(head);
         var tech=document.createElement('div'); tech.className='content-tech';
         var resolution=it.width&&it.height?(it.width+' × '+it.height+' px'):'';
         tech.append(contentPill('Resolución',resolution,true),contentPill('Bitrate',statusBitrate(it.bitrate),true),contentPill('Codec',it.codec,true),contentPill('Peso',statusFormatBytes(it.bytes)),contentPill('Duración',statusDuration(it.duration)),contentPill('Formato',it.mime||it.type));
-        card.appendChild(tech); var opt=contentOptimization(it,target), note=document.createElement('div'); note.className='content-opt'+(opt.warn?' warn':''); note.textContent=opt.text; card.appendChild(note); box.appendChild(card);
+        body.appendChild(tech); var opt=contentOptimization(it,target), note=document.createElement('div'); note.className='content-opt'+(opt.warn?' warn':''); note.textContent=opt.text; body.appendChild(note); box.appendChild(card);
       });
     }
     async function loadRemoteContents(manual){
@@ -949,6 +1020,6 @@
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r37.2104" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r38.2121" defer></script>
 </body>
 </html>

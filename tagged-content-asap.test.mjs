@@ -169,7 +169,7 @@ test('Anterior, Siguiente y audio muestran el contenido contextual como fondo', 
   assert.match(mando, /items\[\(index-1\+items\.length\)%items\.length\]/);
   assert.match(mando, /items\[\(index\+1\)%items\.length\]/);
   assert.match(mando, /paintMediaControl\(mb,document\.getElementById\('muteTitle'\),current/);
-  assert.match(mando, /button\.style\.backgroundImage=src\?'url\('/);
+  assert.match(mando, /setSafePreview\(button,candidates\|\|youtubeFrameCandidates\(it,0\),it,true\)/);
   assert.match(mando, /Playlist alternativa #'\+cur/);
   assert.match(mando, /currentMedia=index>=0\?Object\.assign\(\{\},items\[index\],current\|\|\{\}\):current/);
   assert.match(mando, /filter\(function\(it\)\{ return String\(it&&it\.id\|\|''\)===currentId; \}\)\.length===1/);
