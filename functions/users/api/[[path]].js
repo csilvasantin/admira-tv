@@ -1,3 +1,5 @@
+import { sessionEmail } from "../../_auth-session.js";
+
 // /users/api — administración fuerte y acotada al árbol de proyectos de admira.tv.
 // A diferencia del ACL histórico, ninguna lectura es pública y no se aceptan
 // credenciales en el cuerpo: toda operación exige Authorization: Bearer <Google ID token>.
@@ -135,10 +137,11 @@ async function readDoc(env) {
   return doc;
 }
 
-async function verifyActor(request) {
+async function verifyActor(request, env) {
   const auth = request.headers.get("Authorization") || "";
   const match = /^Bearer\s+(.+)$/i.exec(auth);
-  if (!match || match[1].length > 4096) return null;
+  if (!match) return sessionEmail(request, env);
+  if (match[1].length > 4096) return null;
   let info;
   try {
     const r = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(match[1]));
@@ -265,7 +268,7 @@ async function audit(env, event) {
 
 async function authorize(ctx) {
   if (!ctx.env.ACCESS) return { response: json({ error: "no_kv" }, 500) };
-  const actor = await verifyActor(ctx.request);
+  const actor = await verifyActor(ctx.request, ctx.env);
   if (!actor) return { response: json({ error: "unauthorized" }, 401) };
   const doc = await readDoc(ctx.env);
   // Entra quien administre ALGO: el superusuario o el admin de una rama. Lo que
@@ -275,7 +278,7 @@ async function authorize(ctx) {
 }
 async function authenticate(ctx) {
   if (!ctx.env.ACCESS) return { response: json({ error: "no_kv" }, 500) };
-  const actor = await verifyActor(ctx.request);
+  const actor = await verifyActor(ctx.request, ctx.env);
   if (!actor) return { response: json({ error: "unauthorized" }, 401) };
   const doc = await readDoc(ctx.env);
   return { actor, doc };

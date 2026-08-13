@@ -14,9 +14,9 @@
  * El servidor resuelve el permiso directo o heredado dentro del árbol Admira.tv;
  * el navegador nunca descarga el directorio de usuarios para decidir un acceso.
  *
- * Se conserva el ID token (resp.credential) en localStorage.admira_tv_gate.cred por
- * si alguna página lo intercambia por sesión de backend. Claves propias
- * (admira_tv_gate*), no pisan las de admira.live.
+ * Las entradas nuevas usan redirección top-level y una sesión HttpOnly first-party.
+ * Durante la migración se siguen aceptando las sesiones antiguas guardadas en
+ * localStorage para no expulsar a quien ya está trabajando en la web pública.
  *
  * EXENTOS (no llevan este script): canal.html y el runtime del player (emisión DOOH
  *   siempre libre — si se gatea, la flota se queda en negro), snapshots v.2026.*,
@@ -29,6 +29,7 @@
 (function () {
   // ===== CONFIG =====
   var CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
+  var LOGIN_URI = "https://admira.tv/auth/callback";
 
   var ACL_API = "/users/api/access";
   var PATH_PROJECTS = {
@@ -71,15 +72,22 @@
       var cred = storedCredential();
       return cred ? "Bearer " + cred : "";
     },
-    clear: clearStoredSession
+    clear: function () {
+      clearStoredSession();
+      return fetch("/auth/logout", { method: "POST", credentials: "same-origin" }).catch(function () {});
+    }
   };
 
   function serverAccess(credential) {
-    if (!credential) return Promise.resolve(false);
-    return fetch(ACL_API + "?project=" + encodeURIComponent(SOLUTION) + (MANAGEMENT_PAGE ? "&manage=1" : ""), {
+    var endpoint = credential
+      ? ACL_API + "?project=" + encodeURIComponent(SOLUTION) + (MANAGEMENT_PAGE ? "&manage=1" : "")
+      : "/auth/session?project=" + encodeURIComponent(SOLUTION) + (MANAGEMENT_PAGE ? "&manage=1" : "");
+    var options = {
       cache: "no-store", credentials: "same-origin",
-      headers: { "Authorization": "Bearer " + credential }
-    }).then(function (r) {
+      headers: {}
+    };
+    if (credential) options.headers.Authorization = "Bearer " + credential;
+    return fetch(endpoint, options).then(function (r) {
       if (r.status === 401 || r.status === 403) return { estado: "denegado" };
       if (!r.ok) return { estado: "indisponible", detalle: "HTTP " + r.status };
       return r.json().then(function (d) {
@@ -87,6 +95,14 @@
       }).catch(function () { return { estado: "indisponible", detalle: "respuesta ilegible" }; });
     }).catch(function () { return { estado: "indisponible", detalle: "sin conexión" }; });
   }
+
+  var firstPartySessionAllowed = false;
+  serverAccess("").then(function (res) {
+    if (res && res.estado === "permitido") {
+      firstPartySessionAllowed = true;
+      unlock();
+    }
+  }).catch(function () {});
 
   // Si ya hay una validación reciente y vigente, no molestar — pero revalida en
   // segundo plano: si al usuario lo han dado de baja en el ACL, se le caduca la
@@ -111,6 +127,7 @@
   // ===== estado =====
   var phase = "connecting"; // connecting | ready | auth | welcome | error
   var gisReady = false;
+  var authChallenge = null;
   var pendienteRevalidar = ""; // motivo cuando NO se pudo comprobar el permiso
   var startTime = 0;
 
@@ -200,6 +217,7 @@
 
   // ===== montaje del prehome =====
   function mount() {
+    if (firstPartySessionAllowed) return unlock();
     var g = document.createElement("div");
     g.id = "admira-tv-gate";
     g.innerHTML =
@@ -285,7 +303,7 @@
       f.innerHTML =
         '<div class="ready">' +
           '<div class="gwrap">' +
-            '<button class="gbtn" type="button" id="atv-gold"><span class="gg">G</span><span>Entrar con Google</span></button>' +
+            '<button class="gbtn" type="button" id="atv-gold" tabindex="-1" aria-hidden="true"><span class="gg">G</span><span>Entrar con Google</span></button>' +
             '<div class="greal" id="atv-gbtn"></div>' +
           '</div>' +
           '<div class="prompt">&#9654; Identif&iacute;cate para continuar</div>' +
@@ -293,8 +311,6 @@
           '<button class="gbtn" type="button" id="atv-retry" hidden><span>Reintentar</span></button>' +
         '</div>';
       renderGoogleButton();
-      var gold = document.getElementById("atv-gold");
-      if (gold) gold.addEventListener("click", function () { try { google.accounts.id.prompt(); } catch (e) {} });
       var retry = document.getElementById("atv-retry");
       if (retry) retry.addEventListener("click", function () { location.reload(); });
     } else if (phase === "auth") {
@@ -306,9 +322,9 @@
 
   function renderGoogleButton() {
     var el = document.getElementById("atv-gbtn");
-    if (!el || !window.google || !google.accounts || !google.accounts.id) return;
+    if (!el || !authChallenge || !window.google || !google.accounts || !google.accounts.id) return;
     try {
-      google.accounts.id.renderButton(el, { theme: "filled_black", size: "large", text: "signin_with", shape: "pill", width: 240 });
+      google.accounts.id.renderButton(el, { theme: "filled_black", size: "large", text: "signin_with", shape: "pill", width: 240, state: authChallenge.state });
     } catch (e) {}
   }
 
@@ -376,14 +392,33 @@
   // ===== arranque: GIS + montaje =====
   function initGis() {
     if (!window.google || !google.accounts || !google.accounts.id) return;
-    google.accounts.id.initialize({
-      client_id: CLIENT_ID,
-      callback: onCredential,
-      auto_select: false,
-      cancel_on_tap_outside: false
+    var returnTo = location.pathname + location.search + location.hash;
+    fetch("/auth/challenge", {
+      method: "POST", credentials: "same-origin", cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ flow: "redirect", return_to: returnTo })
+    }).then(function (response) {
+      if (!response.ok) throw new Error("challenge");
+      return response.json();
+    }).then(function (challenge) {
+      authChallenge = challenge;
+      google.accounts.id.initialize({
+        client_id: CLIENT_ID,
+        nonce: challenge.nonce,
+        state_cookie_domain: "admira.tv",
+        ux_mode: "redirect",
+        login_uri: LOGIN_URI,
+        auto_select: false,
+        cancel_on_tap_outside: false,
+        use_fedcm_for_button: false
+      });
+      gisReady = true;
+      if (phase === "ready") renderGoogleButton();
+    }).catch(function () {
+      gisReady = true;
+      pendienteRevalidar = "no se pudo iniciar el acceso seguro";
+      if (phase === "ready") renderFoot();
     });
-    gisReady = true;
-    if (phase === "ready") renderGoogleButton();
   }
 
   ready(mount);
