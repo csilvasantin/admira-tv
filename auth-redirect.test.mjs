@@ -49,6 +49,18 @@ test("el gate usa redirect top-level sin popup ni FedCM", async () => {
   assert.match(source, /\/auth\/session\?project=/);
 });
 
+test("todas las páginas protegidas versionan el gate para no resucitar el popup antiguo", async () => {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const { stdout } = await promisify(execFile)("rg", ["-l", '<script src=\"/auth-gate\\.js', "--glob", "*.html", "."]);
+  const pages = stdout.trim().split("\n").filter(Boolean);
+  assert.ok(pages.length >= 40);
+  for (const page of pages) {
+    const html = await readFile(new URL(page, import.meta.url), "utf8");
+    assert.match(html, /<script src="\/auth-gate\.js\?v=13\.08\.2026\.r16\.1333"><\/script>/, page);
+  }
+});
+
 test("challenge fija nonce, retorno interno y cookie HttpOnly apta para el POST de Google", async () => {
   const kv = new MemoryKV();
   const { response, body } = await issue(kv, "//evil.example/robo");

@@ -42,7 +42,7 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=13.08.2026.r15.1329"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r15.1327"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -409,6 +409,14 @@ if(playoutMode==='conditional') syncOn=false;
 // el boot y pollMode no obedece cambios de modo remotos (ver pollMode). El
 // gobierno remoto vuelve al relanzar la pantalla sin ?tag=.
 const URL_TAG=(qs.get('tag')||'').toLowerCase().trim();
+// SINCRO PEDIDA EN LA URL = ORDEN EXPLÍCITA DEL OPERADOR, misma doctrina que URL_TAG.
+// Sin esto la sincro se encendía en el arranque y pollMode la apagaba doce segundos
+// después: /locations/mode devuelve `conditional` para estas pantallas —el modo por
+// defecto de la flota— y el canal apaga la sincro en condicional. Medido el
+// 13-ago-2026 en los cuatro MacBookAir: ?sincro=1 llegaba a la URL, el reloj central
+// respondía, y aun así cada pantalla iba por su sitio. No era la sincro: era el modo
+// remoto pisándola en bucle.
+const URL_SYNC = syncParam!=null;
 let _liveMode=false;  // modo pedido EN VIVO por el operador (cmd sincro/local/condicional/modo) — manda sobre pollMode
 let _liveTag=false;   // tag puesto EN VIVO desde el mando (cmd tag-<lista>) — misma doctrina
 if(URL_TAG && modeParam==null && syncParam==null){ syncOn=false; playoutMode='local'; }
@@ -885,8 +893,17 @@ function signageNowPush(it){
   // startedAt = instante real en que ESTA pantalla empezó el asset → el preview
   // calcula la posición en vivo (now-startedAt) y hace seek. El keepalive refresca
   // solo `ts` (frescura), NUNCA startedAt, para no romper el sync de posición.
+  // La sincro VIAJA EN EL LATIDO. Hasta hoy, saber si una pantalla iba sincronizada
+  // era imposible sin sentarse delante: el panel enseña qué emite, no bajo qué reloj.
+  // Y el fallo del 13-ago fue justo ese — cuatro pantallas con la sincro pedida y
+  // apagada por detrás, sin manera de verlo. Con esto, /signage/screens lo canta:
+  // `on` si está sincronizada, el `idx` de franja que ha calculado, el tamaño de
+  // franja y de cuántas piezas es su bucle. Dos pantallas sincronizadas de verdad
+  // dicen el MISMO idx; si dicen distinto, o el reloj o el bucle no coinciden.
+  const sinc = { on: syncOn?1:0, modo: playoutMode };
+  if(syncOn){ try{ sinc.idx=syncIndex(); sinc.slot=Math.round(syncSlotMs()/1000); sinc.n=playlist.length; }catch(_){} }
   const item={ id:it.id, url:it.url, type:it.type||'image', ar:(mupiAR||itemAR(it)||(9/16)),
-    title:(it.title||it.prompt||'').slice(0,80), dur:(it._dur||0), startedAt:now, ts:now, aud:_lastAud };
+    title:(it.title||it.prompt||'').slice(0,80), dur:(it._dur||0), startedAt:now, ts:now, aud:_lastAud, sinc };
   const cambiaPieza = !_nowItem || String(_nowItem.id)!==String(item.id);
   _nowItem=item; _postNow(item);
   // Foto y título salen JUNTOS. El título viaja en este beat y cambia al instante; la
@@ -2792,7 +2809,7 @@ function pollMode(){
   if(!scr.circuit) return;   // sólo equipos registrados (con circuito/id)
   // Un modo bloqueado por la integración, URL_TAG o tag EN VIVO = decisión
   // explícita del operador: esta pantalla no obedece cambios de modo remotos.
-  if(MODE_LOCK||URL_TAG||_liveTag||_liveMode) return;
+  if(MODE_LOCK||URL_TAG||URL_SYNC||_liveTag||_liveMode) return;
   fetch(MODE_API+'?id='+encodeURIComponent(scr.circuit)+'&t='+Date.now(),{cache:'no-store'})
     .then(r=>r.ok?r.json():null).then(d=>{
       if(!d||!d.mode) return;

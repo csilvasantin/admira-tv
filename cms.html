@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js"></script>
+<script src="/auth-gate.js?v=13.08.2026.r15.1327"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -355,6 +355,14 @@
   .admando{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
   #mandoFrame{ width:100%; flex:1 1 auto; height:auto; min-height:260px; border:1px solid var(--line);
     border-radius:10px; background:#05070c; display:block }
+  /* EL PANEL EXPERTO LLEGA HASTA ABAJO (Carlos, 13-ago-2026). El marco da al panel
+     inferior 320 px como mucho, que es de sobra para un volcado de diagnóstico pero
+     se queda a media altura del MANDO: quedaba visible el selector de pantalla y el
+     previo, y el resto de botones —lo que de verdad se viene a usar aquí— por debajo
+     del corte, con media pantalla en negro debajo del panel. Solo en el CMS, que es
+     donde el panel lleva el mando dentro; el resto del sitio conserva su panel corto.
+     Sigue arrastrable por el borde superior, así que quien lo quiera bajo lo baja. */
+  body .af-bottom{ height:min(1040px, 88vh) }
   .ebShotCell{width:112px}
   /* CABECERAS QUE SE MANEJAN. Una tabla de flota se mira de formas distintas según
      lo que busques: quién lleva más tiempo sin refrescar, qué circuito está mudo,
@@ -429,7 +437,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=13.08.2026.r15.1329">
+  <link rel="stylesheet" href="/admira-frame.css?v=13.08.2026.r15.1327">
 </head>
 <body>
 <script>
@@ -448,8 +456,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=13.08.2026.r15.1329"></script>
-<script src="/admira-frame.js?v=13.08.2026.r15.1329" defer></script>
+<script src="/admira-nav.js?v=13.08.2026.r15.1327"></script>
+<script src="/admira-frame.js?v=13.08.2026.r15.1327" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -595,7 +603,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=13.08.2026.r15.1329"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r15.1327"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -1861,9 +1869,9 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-session.js?v=13.08.2026.r15.1329"></script>
-<script src="/admira-avatar.js?v=13.08.2026.r15.1329"></script>
-<script src="/cms-pacman.js?v=13.08.2026.r15.1329"></script>
+<script src="/admira-session.js?v=13.08.2026.r15.1327"></script>
+<script src="/admira-avatar.js?v=13.08.2026.r15.1327"></script>
+<script src="/cms-pacman.js?v=13.08.2026.r15.1327"></script>
   <script src="/assets/admira-version-watch.js" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────

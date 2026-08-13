@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r15.13:29",
-  "signature": "TrinityMBP14 · MacBookPro14",
-  "agent": "TrinityMBP14",
+  "version": "v.13.08.2026.r15.13:27",
+  "signature": "NeoMBP14 · MacBookPro14",
+  "agent": "NeoMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "13:29",
-  "evidence": "El botón oficial de Google queda visible mediante su id estable, incluso cuando GIS reconstruye su contenido; acciona la redirección top-level sin popup."
+  "time": "13:27",
+  "evidence": "El modo remoto ya no pisa una sincro pedida en la URL, la sincro viaja en el latido y el panel experto del CMS llega hasta abajo."
 }
