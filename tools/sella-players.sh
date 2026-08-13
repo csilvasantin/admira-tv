@@ -27,7 +27,9 @@ MAC="$REPOS/admira-player"
 IOS="$REPOS/admiranext-player-ios"
 
 SELLO="${1:-v.$(date +%d.%m.%Y).r1.$(date +%H:%M)}"
-if ! printf '%s' "$SELLO" | grep -qE '^v\.[0-9]{2}\.[0-9]{2}\.[0-9]{4}\.r[0-9]+\.[0-9]{2}:[0-9]{2}$'; then
+# La hora se valida de verdad: con [0-9]{2}:[0-9]{2} colaba un «99:99» y el sello
+# quedaba sellado con una hora que no existe.
+if ! printf '%s' "$SELLO" | grep -qE '^v\.(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.[0-9]{4}\.r[0-9]+\.([01][0-9]|2[0-3]):[0-5][0-9]$'; then
   echo "✖ sello inválido: '$SELLO' — se espera v.DD.MM.AAAA.rN.HH:MM" >&2; exit 2
 fi
 echo "→ sello: $SELLO"
@@ -38,7 +40,12 @@ echo "→ sello: $SELLO"
 G="$AND/app/build.gradle"
 if [ -f "$G" ]; then
   CODE="$(sed -nE 's/.*versionCode ([0-9]+).*/\1/p' "$G" | head -1)"
-  NEXT=$(( CODE + 1 ))
+  YA="$(sed -nE 's/.*versionName "([^"]*)".*/\1/p' "$G" | head -1)"
+  # IDEMPOTENTE: re-sellar con el MISMO sello no sube el versionCode. Sin esto,
+  # repetir el comando dejaba el repo en un code que no existe publicado (paso:
+  # el APK en produccion era el 5 y el repo decia 6, que es justo la clase de
+  # descuadre que este script viene a matar).
+  if [ "$YA" = "$SELLO" ]; then NEXT="$CODE"; else NEXT=$(( CODE + 1 )); fi
   python3 - "$G" "$SELLO" "$NEXT" <<'PY'
 import io, re, sys
 ruta, sello, code = sys.argv[1], sys.argv[2], sys.argv[3]
