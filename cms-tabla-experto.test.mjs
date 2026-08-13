@@ -94,6 +94,9 @@ test("el panel experto va sin franja de título y el mando lo llena entero", asy
   assert.match(frame, /if \(side\.key !== "bottom"\) panel\.appendChild\(hd\);/);
   // El iframe crece con el panel (flex), sin el tope de 560px.
   assert.match(cmsSrc, /\.admando\{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; \}/);
+  // El slot también tiene que ser flex. La regla genérica de los slots es más
+  // específica que .af-expert y lo convertía en block, dejando el mando a media altura.
+  assert.match(cmsSrc, /\.af-panel \.afSlotHidden\.af-expert\{ display:flex; flex-direction:column; min-height:0; flex:1 \}/);
   assert.doesNotMatch(cmsSrc, /height:min\(560px,52vh\)/);
   // Y al abrir el mando, el panel abre a toda altura (el asa sigue mandando después).
   assert.match(cmsSrc, /pn\.style\.height='min\(88vh,1000px\)'/);

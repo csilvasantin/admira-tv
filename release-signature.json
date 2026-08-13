@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r20.13:50",
-  "signature": "NeoMBP14 · MacBookPro14",
-  "agent": "NeoMBP14",
+  "version": "v.13.08.2026.r21.13:57",
+  "signature": "TrinityMBP14 · MacBookPro14",
+  "agent": "TrinityMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "13:50",
-  "evidence": "Prueba de campo: con el vigilante ya ejecutable, una pestana abierta antes del deploy debe recibir el aviso."
+  "time": "13:57",
+  "evidence": "El Air Crema recupera su identidad canónica y el mando ocupa todo el alto del panel Experto."
 }
