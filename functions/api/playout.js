@@ -27,7 +27,7 @@ async function proxy(upstream) {
 }
 
 function playoutFetch(env, init) {
-  const request = new Request(UPSTREAM, init);
+  const request = new Request("https://playout.internal/playout/state", init);
   return env.PLAYOUT_API && typeof env.PLAYOUT_API.fetch === "function"
     ? env.PLAYOUT_API.fetch(request)
     : fetch(UPSTREAM, init);
