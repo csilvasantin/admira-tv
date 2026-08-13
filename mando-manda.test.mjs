@@ -78,7 +78,10 @@ test("la canonización es la misma que la del canal", () => {
 
 test("el mando ya no envía la forma con espacio", () => {
   assert.doesNotMatch(mando, /sendRemote\(t\?\s*\('tag '/);
-  assert.match(mando, /sendRemote\('tag-'\+limpio\)/);
+  // El contrato ahora distingue #ID persistente (content-712) de metatag de
+  // texto (tag-navidad), pero ambos salen por un comando con guion canónico.
+  assert.match(mando, /cmd:contenido\?\('content-'\+limpio\):\('tag-'\+limpio\)/);
+  assert.match(mando, /sendRemote\(action\.cmd\)/);
 });
 
 test("el canal enciende la línea verde solo, sin tocar nada", () => {

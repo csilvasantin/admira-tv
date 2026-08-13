@@ -42,7 +42,7 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=13.08.2026.r22.1430"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r23.1750"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -427,6 +427,18 @@ save('adtv_mode',playoutMode);
 
 let all=[], playlist=[], cur=-1, seenSig='', timer=null, barTimer=null, mediaEl=null, feedTimer=null, xplTimer=null;
 let customOrder=[]; try{ const o=JSON.parse(LS('adtv_order','[]')); if(Array.isArray(o)) customOrder=o; }catch(_){}
+// Contenidos añadidos por su número persistente de Stock desde el mando experto.
+// Viven aparte de `seg.tag`: un #ID AÑADE una pieza a la playlist; no la convierte
+// en un filtro inexistente. Persisten por pantalla para sobrevivir a refresh/watchdog.
+const TAGGED_CONTENT_KEY='adtv_tagged_content:'+(scr.screen||scr.circuit||scr.machine||'unbound');
+let taggedContentNums=[]; try{ const q=JSON.parse(LS(TAGGED_CONTENT_KEY,'[]')); if(Array.isArray(q)) taggedContentNums=q.map(String).filter(n=>/^\d{1,6}$/.test(n)).slice(0,20); }catch(_){}
+function saveTaggedContent(){ save(TAGGED_CONTENT_KEY,JSON.stringify(taggedContentNums.slice(0,20))); }
+function injectTaggedContent(base){
+  if(!taggedContentNums.length||!all.length) return base;
+  const byNum=new Map(); for(const it of all){ const n=String(it&&it._num!=null?it._num:(it&&it.num)); if(/^\d{1,6}$/.test(n)) byNum.set(n,it); }
+  const injected=taggedContentNums.map(n=>byNum.get(String(n))).filter(Boolean), ids=new Set(injected.map(it=>String(it.id)));
+  return injected.concat(base.filter(it=>it&&!ids.has(String(it.id))));
+}
 let _lastFeed=0;
 let dimCache={}; try{ const c=JSON.parse(LS('adtv_dims','{}')); if(c&&typeof c==='object') dimCache=c; }catch(_){}
 let pendingImport=null, _measuring=false, _statusT=null, _statusT2=null;
@@ -1184,6 +1196,7 @@ const PRECACHE_MAX=Math.max(8, cfg.max||40);   // piezas del loop a mantener baj
 const STREAM_OK=(function(){ try{ return new URLSearchParams(location.search).get('stream')==='1'; }catch(_){ return false; } })();
 let _playTok=0;
 let _cache=null, _ready=new Set(), _dl=new Map(), _cBytes=0, _precaching=false, _precQ=[], _objURLs=new Map(), _lastCacheRep=0;
+let _asapItemId=null;   // #ID solicitado: no saltar a otra pieza lista mientras ésta baja
 async function cacheOpen(){ if(_cache!==null) return _cache; try{ _cache=await caches.open(CACHE_NAME); }catch(_){ _cache=false; } return _cache; }
 // Un interactivo NO se precachea: no es un asset, es una página que se abre. Bajarla
 // a la Cache API dejaría fuera lo que ella misma pida y, peor, la política estricta
@@ -1319,6 +1332,20 @@ function coldTick(){
 }
 function maybeResumeCold(){
   if(!_coldWaiting) return;
+  if(_asapItemId){
+    const idx=playlist.findIndex(it=>it&&String(it.id)===String(_asapItemId));
+    const target=idx>=0?playlist[idx]:null;
+    if(target&&(!cacheable(target)||_ready.has(target.id))){
+      _asapItemId=null; _coldWaiting=false; _warmWaiting=false; dlLine(null);
+      try{ play(idx,target); }catch(_){} return;
+    }
+    const queued=_precQ.some(it=>it&&String(it.id)===String(_asapItemId));
+    if(!queued&&!_dl.has(_asapItemId)){
+      _asapItemId=null; _coldWaiting=false; _warmWaiting=false; dlLine(null);
+      flashCli('✗ no se pudo descargar el contenido pedido');
+    }
+    return;
+  }
   if(cacheReadyInPlaylist()>0 || _dl.size===0){   // ya hay algo en disco (o no queda nada bajando)
     if(cacheReadyInPlaylist()>0){ _coldWaiting=false; try{ play(0); }catch(_){} }
   }
@@ -1332,6 +1359,12 @@ function schedulePrecache(){
   for(const it of head){ if(cacheable(it)&&!_ready.has(it.id)&&!qids.has(it.id)){ _precQ.push(it); qids.add(it.id); } }
   if(_precQ.length) precacheLoop();
   cacheBadge();
+}
+function precachePriority(it){
+  if(!it||!cacheable(it)||_ready.has(it.id)) return;
+  _precQ=_precQ.filter(x=>!x||String(x.id)!==String(it.id));
+  _precQ.unshift(it);                 // después de la descarga ya en vuelo, éste va primero
+  precacheLoop(); cacheBadge();
 }
 // Pre-descarga los assets CONDICIONALES (los de la matriz de segmentación) ANTES de que
 // la cámara los dispare, para que el cambio carrusel→condicional sea instantáneo (blob de
@@ -1663,6 +1696,7 @@ function rebuild(restart){
   else { playlist=defaultOrder(playlist); }   // categoría + fecha (último import primero)
   playlist=freshTailOrder(playlist);   // ?freshtail=1: las novedades, al final del loop
   playlist=gridWeave(playlist);   // la parrilla vendida/propia entra a cadencia fija
+  playlist=injectTaggedContent(playlist); // #ID del mando: delante, sin borrar la parrilla activa
   // Que la pantalla DIGA por qué emite lo que emite: si alguien mira el rótulo y
   // ve 18 piezas de 120, tiene que poder saber quién las eligió.
   const _cf = _porDefecto==='tag' ? (' · canal por defecto (#'+TAG_DEFAULT+')')
@@ -1783,6 +1817,34 @@ function applyPlayTag(tag){
   seg.tag=clean; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true);
   return playlist.length;
 }
+async function queueTaggedContent(num){
+  const wanted=String(num||'').replace(/^#/,'').trim();
+  if(!/^\d{1,6}$/.test(wanted)) return 'ignored';
+  disableAdmiraSync();
+  if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
+  try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}
+  // El tag/num puede haberse puesto hace segundos en Pixeria: no esperamos al
+  // refresco periódico. Primero traemos el Stock vivo y sólo entonces resolvemos #ID.
+  await loadFeed(false);
+  const it=all.find(x=>String(x&&x._num!=null?x._num:(x&&x.num))===wanted);
+  if(!it){ flashCli('✗ contenido #'+wanted+' no encontrado'); return 'ignored'; }
+  taggedContentNums=[wanted].concat(taggedContentNums.filter(n=>String(n)!==wanted)).slice(0,20);
+  saveTaggedContent(); seenSig=''; rebuild(false); // lo publica en la playlist efectiva del CMS
+  const idx=playlist.findIndex(x=>x&&String(x.id)===String(it.id));
+  if(idx<0){ flashCli('✗ contenido #'+wanted+' fuera de playlist'); return 'ignored'; }
+  const ready=!cacheable(it)||!!(await cachedSrc(it));
+  if(ready){ _asapItemId=null; await play(idx,it); flashCli('▶ contenido #'+wanted+' · listo'); return 'executed'; }
+  _asapItemId=it.id;
+  if(stage.querySelector('video,img,audio')) warmSwitchWait(); else coldStartPlaceholder();
+  precachePriority(it); try{ cacheReport(); }catch(_){}
+  flashCli('⇩ contenido #'+wanted+' · descarga ASAP');
+  return 'executed';
+}
+function clearTaggedContent(){
+  taggedContentNums=[]; saveTaggedContent(); _asapItemId=null;
+  _coldWaiting=false; _warmWaiting=false; dlLine(null); seenSig=''; rebuild(false);
+  flashCli('✓ contenidos añadidos retirados'); return 'executed';
+}
 function applyCliSegment(msg){
   disableAdmiraSync();
   if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
@@ -1795,6 +1857,10 @@ function applyCliSegment(msg){
 function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   const cmd=v.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
   const rest=v.replace(/^\s*\/?\S+\s*/,'').trim();
+  // Misma ruta que el Remote experto, también disponible en la consola local
+  // para diagnóstico: /content 712 añade y precarga; /contentclear lo retira.
+  if(cmd==='content'){ Promise.resolve(queueTaggedContent(rest)).catch(()=>flashCli('✗ content')); return; }
+  if(cmd==='contentclear'||cmd==='clearcontent'){ clearTaggedContent(); return; }
   // navegación de la cola por comando (equivalente a las flechas)
   if(cmd==='playnext'||cmd==='next'){ next(); flashCli('▶ siguiente'); return; }
   if(cmd==='playprevious'||cmd==='playprev'||cmd==='previous'||cmd==='prev'){ prev(); flashCli('◀ anterior'); return; }
@@ -2865,6 +2931,9 @@ async function executeQueuedCommand(c){
     try{ await remoteStartPlayback(); flashCli('▶ reanudada'); return 'executed'; }
     catch(_){ try{ tap.classList.add('show'); }catch(__){} return 'failed'; }
   }
+  const tagged=/^content-(\d{1,6})$/.exec(cmd);
+  if(tagged) return queueTaggedContent(tagged[1]);
+  if(cmd==='content-clear') return clearTaggedContent();
   try{ runCli(raw); return 'executed'; }catch(_){ return 'failed'; }
 }
 async function ackQueuedCommand(c,status){
@@ -2965,6 +3034,9 @@ async function applyCtrlCmd(cmd){
     case 'ontop-toggle': if(window.ADM_ONTOP) window.ADM_ONTOP.toggle(); return window.ADM_ONTOP?'executed':'ignored';
     case 'hud': try{ testHudInfo('🎮'); }catch(_){ try{ testHud('🎮 MANDO'); }catch(__){} } return 'executed';
     default: {
+      const tagged=/^content-(\d{1,6})$/.exec(cmd);
+      if(tagged) return queueTaggedContent(tagged[1]);
+      if(cmd==='content-clear') return clearTaggedContent();
       // goto-<n>: salto directo al item n (0-based) de la playlist desde el mando
       // gráfico. Forzado (orden manual del operador) → por encima del disco-primero,
       // igual que /play<N>. En sincro, play() reancla al índice del canal.
@@ -3096,6 +3168,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r22.1430" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r23.1750" defer></script>
 </body>
 </html>

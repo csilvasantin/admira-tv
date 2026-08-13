@@ -141,17 +141,17 @@
   </div>
   <div class="vol" title="Volumen del player remoto">🔊 Remoto <input type="range" id="vol" min="0" max="100" value="100" aria-label="Volumen del player remoto"><span id="volv">100%</span></div>
 
-  <!-- ── METATAG DEL CIRCUITO: enruta el contenido etiquetado en pixeria.com ── -->
-  <div class="sec">🏷️ Metatag del circuito <span class="hint">— el circuito emite SOLO lo etiquetado con esto en pixeria.com</span></div>
+  <!-- ── CONTENIDO ETIQUETADO: #ID añade una pieza; texto filtra por metatag ── -->
+  <div class="sec">🏷️ Contenido etiquetado <span class="hint">— #ID añade una pieza a la playlist; texto filtra por metatag</span></div>
   <div class="tagrow">
-    <input id="tagInput" placeholder="p.ej. navidad · oferta-2x1 · xtanco-valencia" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <input id="tagInput" placeholder="p.ej. 712 · navidad · oferta-2x1" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false">
     <button id="tagApply">Aplicar</button>
     <button id="tagClear" style="border-color:var(--border);background:transparent;color:var(--muted)">Quitar</button>
   </div>
   <div class="chips" id="tagChips"></div>
-  <div class="note">1) Aplica aquí un metatag → el circuito filtra su emisión a ese tag. &nbsp; 2) En
-    <a class="plain" href="https://www.pixeria.com/stock" target="_blank">pixeria.com/stock</a> pon ese mismo metatag a un asset con «+ más». &nbsp;
-    3) Aparece solo en este circuito en ~30s. Para volver a emitir todo, pulsa «Quitar».</div>
+  <div class="note">Escribe el número visible de Stock (p.ej. <b>#712</b>) para añadir esa pieza a la playlist:
+    el player refresca el catálogo, la pone a descargar primero y la reproduce en cuanto queda en disco. Un texto sigue funcionando como metatag.
+    «Quitar» retira contenidos añadidos y filtros.</div>
 
   <div class="sec">Contenido rápido</div>
   <div class="chips" id="seg">
@@ -385,28 +385,41 @@
         .replace(/#/g,'').trim().replace(/[\s.]+/g,'-')
         .replace(/[^a-z0-9_,+-]/g,'').replace(/-{2,}/g,'-').replace(/^[-,+]+|[-,+]+$/g,'');
     }
+    function taggedCommand(v){
+      var limpio=canonTag(v), contenido=/^\d{1,6}$/.test(limpio);
+      return {clean:limpio, kind:contenido?'content':'tag', cmd:contenido?('content-'+limpio):('tag-'+limpio)};
+    }
     function applyTag(t){
-      var limpio=canonTag(t);
-      // `tag-` a secas (con guion) = quitar el filtro. Sin el guion el canal lo ignora.
-      sendRemote('tag-'+limpio);
-      setStoredTag(T.circuit, limpio);
-      document.getElementById('tagInput').value=limpio;
+      var action=taggedCommand(t);
+      // Un número es el # persistente del Stock: se AÑADE a la playlist y se
+      // precarga ASAP. El texto conserva el contrato histórico de filtro por tag.
+      sendRemote(action.cmd);
+      setStoredTag(T.circuit, action.kind==='content'?('@'+action.clean):action.clean);
+      document.getElementById('tagInput').value=action.clean;
+      renderTagChips(); refreshTagline();
+    }
+    function clearTagged(){
+      // Quitar vuelve al gobierno normal, sea cual fuera el último tipo aplicado.
+      Promise.all([sendRemote('content-clear'),sendRemote('tag-')]);
+      setStoredTag(T.circuit,''); document.getElementById('tagInput').value='';
       renderTagChips(); refreshTagline();
     }
     document.getElementById('tagApply').onclick=function(){ applyTag(document.getElementById('tagInput').value); };
-    document.getElementById('tagClear').onclick=function(){ applyTag(''); };
+    document.getElementById('tagClear').onclick=clearTagged;
     document.getElementById('tagInput').addEventListener('keydown',function(e){ if(e.key==='Enter') applyTag(this.value); });
     // chips sugeridos: tags frecuentes del Stock (para reutilizar metatags reales)
     var SUGGEST=['navidad','oferta','promo','producto','xtanco-valencia','bcn-prensa'];
     function renderTagChips(){
       var box=document.getElementById('tagChips'); box.innerHTML='';
       var cur=curTag();
-      document.getElementById('tagInput').value=cur;
+      document.getElementById('tagInput').value=cur.charAt(0)==='@'?cur.slice(1):cur;
       SUGGEST.forEach(function(t){ var c=document.createElement('button'); c.className='chip'+(t===cur?' sel':''); c.textContent='#'+t; c.onclick=function(){ applyTag(t); }; box.appendChild(c); });
     }
     function refreshTagline(){
       var cur=curTag();
-      document.getElementById('tagline').textContent = cur ? ('🏷️ filtrando #'+cur) : '';
+      document.getElementById('tagline').textContent = cur.charAt(0)==='@'
+        ? ('⇩ #'+cur.slice(1)+' en playlist · ASAP')
+        : (cur ? ('🏷️ filtrando #'+cur) : '');
     }
 
     // ── Ahora emitiendo ──
@@ -434,6 +447,6 @@
     setTarget();
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r22.1430" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r23.1750" defer></script>
 </body>
 </html>
