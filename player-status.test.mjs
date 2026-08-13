@@ -20,7 +20,7 @@ test('Status cruza los tres contratos vivos del player',()=>{
 });
 
 test('Status muestra información de pantalla, sistema, hardware, disco y software sin inventar ausencias',()=>{
-  for(const label of ['Resolución física','Sistema operativo','CPU lógica','Uso del origen','Versión del player','Release web','Caché lista','Último latido']) assert.match(mando,new RegExp(label));
+  for(const label of ['Resolución física','Sistema operativo','CPU lógica','Disco físico','Uso disponible al player','Versión del player','Release web','Caché lista','Último latido']) assert.match(mando,new RegExp(label));
   assert.match(mando,/No expuesto por este player/);
   assert.match(mando,/function statusMaskIp\(value\)/);
 });

@@ -763,7 +763,8 @@
           ['CPU lógica',hardware.cores?(hardware.cores+' núcleos'):'' ],['Memoria expuesta',hardware.memoryGB?(hardware.memoryGB+' GB'):'' ],['Puntos táctiles',hardware.touchPoints!=null?hardware.touchPoints:''],['Pixel ratio',display.devicePixelRatio]
         ]),
         statusCard('Almacenamiento',[
-          ['Uso del origen',storage.usage?statusFormatBytes(storage.usage):''],['Cuota del origen',storage.quota?statusFormatBytes(storage.quota):''],['Persistente',storage.persisted===true?'Sí':storage.persisted===false?'No':''],
+          ['Disco físico',hardware.diskTotal?statusFormatBytes(hardware.diskTotal):''],['Uso disponible al player',storage.usage?statusFormatBytes(storage.usage):''],
+          ['Cuota disponible al player',storage.quota?statusFormatBytes(storage.quota):''],['Persistente',storage.persisted===true?'Sí':storage.persisted===false?'No':''],
           ['Caché lista',cacheTotal?(cacheCount+' / '+cacheTotal+' contenidos'):cacheCount?(cacheCount+' contenidos'):'' ],['Descargando',downloads?downloads+' contenidos':'0'],['Transferido sesión',cache.bytes?statusFormatBytes(cache.bytes):'']
         ]),
         statusCard('Software',[
@@ -813,6 +814,6 @@
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r33.1953" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r34.1955" defer></script>
 </body>
 </html>
