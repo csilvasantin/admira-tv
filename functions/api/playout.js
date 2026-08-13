@@ -1,6 +1,9 @@
 import { accessFor, authHeaders, sessionEmail } from "../_auth-session.js";
 
-const UPSTREAM = "https://api.admira.store/playout/state";
+// La Function de Pages no debe volver a entrar por api.admira.store: Cloudflare
+// lo detecta como salto Worker→custom-domain→Worker y puede responder 502. Los
+// navegadores y players sí usan el dominio propio; este enlace es sólo backend.
+const UPSTREAM = "https://omnipublicity-api.csilvasantin.workers.dev/playout/state";
 
 function json(value, status = 200) {
   return Response.json(value, { status, headers: authHeaders() });
