@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=13.08.2026.r36.2032"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r37.2104"></script>
 <script>
-  window.ADMIRA_VERSION='v.13.08.2026.r36.20:32';
+  window.ADMIRA_VERSION='v.13.08.2026.r37.21:04';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -423,8 +423,12 @@ const URL_TAG=(qs.get('tag')||'').toLowerCase().trim();
 // remoto pisándola en bucle.
 const URL_SYNC = syncParam!=null;
 let _liveMode=false;  // modo pedido EN VIVO por el operador (cmd sincro/local/condicional/modo) — manda sobre pollMode
-let _liveTag=false;   // tag puesto EN VIVO desde el mando (cmd tag-<lista>) — misma doctrina
+const LIVE_TAG_KEY='adtv_live_tag:'+(scr.screen||scr.circuit||scr.machine||'unbound');
+const _storedLiveTag=canonicalPlayTag(LS(LIVE_TAG_KEY,''));
+let _liveTag=!!_storedLiveTag;   // playlist alternativa puesta EN VIVO desde el mando
+if(_liveTag) seg.tag=_storedLiveTag;
 if(URL_TAG && modeParam==null && syncParam==null){ syncOn=false; playoutMode='local'; }
+if(_liveTag){ syncOn=false; playoutMode='local'; }
 // El previo de borrador manda: nunca sincro ni condicional, es un bucle local fiel.
 if(PREVIEW.on){ syncOn=false; playoutMode='local'; }
 save('adtv_sync_slot',String(syncSlotSec));
@@ -503,10 +507,10 @@ function matchesSeg(it,s){
   if(s.slot!=='all'){ const want=s.slot==='auto'?madridSlot():s.slot; const ts=it.timeSlot; if(ts&&ts!==want) return false; }
   // tag admite ANIDADO (AND): "musica,vertical" = solo clips con TODAS las
   // etiquetas. Separadores , o + ; cada componente se normaliza (música≡musica).
-  if(s.tag){ const tg=(it.tags||[]).map(normTag);
+  if(s.tag){ const tg=(it.tags||[]).map(canonicalPlayTag);
     for(const w of String(s.tag).split(/[,+]/).map(x=>x.trim()).filter(Boolean)){
       const needles=tagNeedles(w);
-      if(!tg.some(t=>needles.some(n=>t.includes(n)))) return false;
+      if(!tg.some(t=>needles.includes(t))) return false;
     } }
   if(s.format){ const tg=(it.tags||[]).map(normTag); if(!tg.includes(normTag(s.format))) return false; } return true; }
 function matches(it){ return matchesSeg(it,seg); }
@@ -1745,6 +1749,22 @@ function rebuild(restart){
     try{ renderChan(); }catch(_){} renderRail();
     try{ schedulePrecache(); }catch(_){}   // r43: el PREVIO también precachea y aplica disco-primero
     if(restart||cur<0){ cur=-1; play(0); }
+    return;
+  }
+  // Un hashtag enviado desde el Remote no es un filtro más del segmento anterior:
+  // es una PLAYLIST ALTERNATIVA completa. Neutraliza medio/categoría/audiencia,
+  // excluye parrilla/RTB y contenidos añadidos por #ID, y conserva únicamente las
+  // piezas cuyo tag canónico coincide. Persiste hasta que el operador mande tag-.
+  if(_liveTag&&seg.tag){
+    const liveCurrentId=playlist[cur]&&String(playlist[cur].id||'');
+    const alternativeSeg={medio:'all',audience:'all',category:'all',age:'all',slot:'all',tag:seg.tag,format:'',ids:[]};
+    playlist=defaultOrder(all.filter(it=>it&&!it._grid&&matchesSeg(it,alternativeSeg)));
+    cur=liveCurrentId?playlist.findIndex(it=>String(it&&it.id||'')===liveCurrentId):-1;
+    $('segCount').textContent=playlist.length+' en playlist alternativa #'+canonicalPlayTag(seg.tag);
+    setLive('PLAYLIST ALTERNATIVA #'+canonicalPlayTag(seg.tag)+' · '+playlist.length+' en loop',playlist.length>0);
+    renderChan(); renderRail(); try{ signagePlaylistPush(); }catch(_){} try{ schedulePrecache(); }catch(_){}
+    if(!playlist.length){ stage.innerHTML='<div class="empty">// ningún contenido con #'+canonicalPlayTag(seg.tag)+'</div>'; nowEl.textContent='// playlist alternativa vacía'; }
+    else if(restart||cur<0||!stage.querySelector('video,img,audio')) play(cur>=0?cur:0);
     return;
   }
   // ── CORTAFUEGOS: una pantalla sin parrilla no emite «todo» ──────────────────
@@ -3188,9 +3208,9 @@ async function applyCtrlCmd(cmd){
       // tag- vacío → quita el filtro y devuelve la pantalla al gobierno remoto.
       const t=/^tag-([a-z0-9_,+-]*)$/.exec(cmd);
       if(t){
-        if(t[1]){ await loadFeed(false); _liveTag=true; try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}
+        if(t[1]){ await loadFeed(false); _liveTag=true; save(LIVE_TAG_KEY,canonicalPlayTag(t[1])); try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}
           const n=applyPlayTag(t[1]); flashCli('🎛 tag '+t[1]+' · '+n+' assets'); return n>0?'executed':'failed'; }
-        else { _liveTag=false; seg.tag=''; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); flashCli('🎛 tag quitado'); }
+        else { _liveTag=false; save(LIVE_TAG_KEY,''); seg.tag=''; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); flashCli('🎛 tag quitado'); }
         return 'executed'; }
       return 'ignored';   /* resto de comandos desconocidos: ignorar y decirlo */
     }
@@ -3306,6 +3326,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r36.2032" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r37.2104" defer></script>
 </body>
 </html>

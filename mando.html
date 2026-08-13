@@ -60,7 +60,7 @@
     .nowbox .lbl{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
     .nowbox .ttl{font-size:14px;margin-top:4px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
     .nowbox .tagline{display:block;margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--cyan)}
-    .now-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding-top:8px;border-top:1px solid var(--border)}
+    .now-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding-top:8px;border-top:1px solid var(--border)}
     .nowbox .now-controls .b{min-width:0;padding:8px 5px;border-radius:8px;font-size:10px;line-height:1.15;gap:4px}
     .nowbox .vol{margin-top:7px;padding:0 2px;font-size:10px;gap:7px}
     .player-playlist{display:grid;gap:8px;max-height:320px;overflow:auto;padding:3px 4px 3px 1px;scrollbar-color:var(--border) transparent}
@@ -109,9 +109,17 @@
     .remote-title::after{content:"";height:1px;flex:1;background:var(--border)}
     .b{font-size:14px;padding:15px 10px;border-radius:12px;border:1px solid var(--border);background:var(--elev);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.12s;user-select:none}
     .b:active{transform:scale(.97)} .b:hover{border-color:var(--violet)}
+    .b:focus-visible{outline:2px solid #fff;outline-offset:2px}
     .b.wide{grid-column:1/-1}
-    .b.on{border-color:var(--red);color:#ffb3ad;background:color-mix(in srgb,var(--red) 14%,transparent)}
+    .b.on{border-color:var(--red);color:#ffb3ad;background-color:color-mix(in srgb,var(--red) 14%,transparent)}
     .b.cyan{border-color:var(--cyan);color:var(--cyan)}
+    .media-control{position:relative;isolation:isolate;min-width:0;min-height:78px;overflow:hidden;background-color:var(--elev);background-position:center;background-size:cover;text-align:left;justify-content:flex-start;padding:11px 12px}
+    .media-control::before{content:"";position:absolute;z-index:-1;inset:0;background:linear-gradient(90deg,rgba(5,7,11,.92),rgba(5,7,11,.64) 70%,rgba(5,7,11,.45));pointer-events:none}
+    .media-control.has-media{border-color:color-mix(in srgb,var(--violet) 60%,var(--border))}.media-control.has-media:hover{background-position:center;border-color:var(--violet)}
+    .media-control-copy{display:grid;min-width:0;gap:4px;text-shadow:0 1px 3px #000,0 0 8px #000}
+    .media-control-action{font:700 13px/1.15 var(--mono);color:#fff}.media-control-title{max-width:100%;overflow:hidden;color:rgba(255,255,255,.82);font:10px/1.25 var(--sans);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+    .media-control.sync-locked{opacity:.72;cursor:not-allowed}.media-control.sync-locked .media-control-title{white-space:normal}
+    @media(forced-colors:active){.media-control::before{background:Canvas}.media-control{border:2px solid ButtonText}.media-control-action,.media-control-title{color:ButtonText;text-shadow:none}}
     .vol{display:flex;align-items:center;gap:10px;margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--muted)}
     .vol input{flex:1;accent-color:var(--cyan)}
     .sec{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:20px 0 6px;border-top:1px solid var(--border);padding-top:14px;display:flex;align-items:center;gap:8px}
@@ -193,9 +201,9 @@
         <span class="tagline" id="tagline"></span>
       </button>
       <div class="now-controls" aria-label="Control básico de la emisión remota">
-        <button class="b" data-cmd="prev" aria-label="Contenido anterior">⏮ Anterior</button>
-        <button class="b" data-cmd="next" aria-label="Contenido siguiente">⏭ Siguiente</button>
-        <button class="b cyan" id="mute">🔇 Silenciar</button>
+        <button class="b media-control" id="previousControl" data-cmd="prev" aria-label="Contenido anterior"><span class="media-control-copy"><span class="media-control-action">⏮ Anterior</span><span class="media-control-title" id="previousTitle">Esperando playlist</span></span></button>
+        <button class="b media-control" id="nextControl" data-cmd="next" aria-label="Contenido siguiente"><span class="media-control-copy"><span class="media-control-action">⏭ Siguiente</span><span class="media-control-title" id="nextTitle">Esperando playlist</span></span></button>
+        <button class="b cyan media-control" id="mute"><span class="media-control-copy"><span class="media-control-action" id="muteAction">🔇 Silenciar</span><span class="media-control-title" id="muteTitle">Contenido actual</span></span></button>
         <button class="b" data-cmd="reload">🔄 Recargar</button>
       </div>
       <div class="vol" title="Volumen del player remoto">🔊 <input type="range" id="vol" min="0" max="100" value="100" aria-label="Volumen del player remoto"><span id="volv">100%</span></div>
@@ -230,7 +238,7 @@
 
   <div id="remoteTools" data-mando-pane="remote">
   <!-- ── CONTENIDO ETIQUETADO: #ID añade una pieza; texto filtra por metatag ── -->
-  <div class="sec">🏷️ Contenido etiquetado <span class="hint">— #ID añade una pieza a la playlist; texto filtra por metatag</span></div>
+  <div class="sec">🏷️ Contenido etiquetado <span class="hint">— #ID añade una pieza; #hashtag crea una playlist alternativa completa</span></div>
   <div class="tagrow">
     <div class="tag-entry" id="tagEntry">
       <input id="tagInput" placeholder="p.ej. 712 · navidad · oferta-2x1" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false">
@@ -240,7 +248,7 @@
   </div>
   <div class="chips" id="tagChips"></div>
   <div class="note">Escribe el número visible de Stock (p.ej. <b>#712</b>) para añadir esa pieza a la playlist:
-    el player refresca el catálogo, la pone a descargar primero y la reproduce en cuanto queda en disco. Un texto sigue funcionando como metatag.
+    el player refresca el catálogo, la pone a descargar primero y la reproduce en cuanto queda en disco. Un hashtag (p.ej. <b>#musica</b>) sustituye temporalmente la emisión por una playlist con todos y únicamente los contenidos que tengan esa etiqueta.
     «Apagar player» deja el proceso escuchando y se convierte en «Arrancar». «Limpiar tag» devuelve la playlist a su gobierno normal.</div>
 
   <div class="sec">Contenido rápido</div>
@@ -434,7 +442,7 @@
       document.getElementById('playlistList').innerHTML='<div class="pl-empty">Esperando la playlist efectiva del player seleccionado</div>';
       statusProfile={fields:{}}; document.getElementById('statusSummary').textContent='Esperando telemetría del player seleccionado…'; document.getElementById('statusGrid').replaceChildren();
       document.getElementById('contentsSummary').textContent='Esperando el inventario técnico del player seleccionado…'; document.getElementById('contentsList').innerHTML='<div class="pl-empty">El player todavía no ha publicado su inventario técnico</div>';
-      resetRemoteControls();
+      resetRemoteControls(); paintRemoteContext([],null);
       renderTagChips(); pollNow(); if(document.body.dataset.mandoView==='status') loadRemoteStatus(false); if(document.body.dataset.mandoView==='contents') loadRemoteContents(false);
     }
     selEl.onchange = setTarget;
@@ -529,9 +537,36 @@
     function setStoredStandby(on){ var s=powerStore(); if(on) s[T.screen]=true; else delete s[T.screen]; localStorage.setItem(POWER_KEY,JSON.stringify(s)); }
     var standby=false, pwr=document.getElementById('power'), powerOp=0;
     var muted=false, mb=document.getElementById('mute'), muteOp=0;
+    var previousControl=document.getElementById('previousControl'), nextControl=document.getElementById('nextControl');
+    function remoteControlImage(it){
+      if(!it) return ''; var src=String(it.thumb||it.thumbnail||it.poster||'');
+      if(!src&&String(it.type||'').toLowerCase()==='image') src=String(it.url||'');
+      return /^https?:\/\//.test(src)?src:'';
+    }
+    function paintMediaControl(button,titleNode,it,emptyText,actionText){
+      var title=it&&(it.title||it.prompt)||emptyText,src=remoteControlImage(it);
+      titleNode.textContent=title; button.classList.toggle('has-media',!!src);
+      button.style.backgroundImage=src?'url('+JSON.stringify(src)+')':'';
+      button.title=title; button.setAttribute('aria-label',(actionText||'Control')+': '+title);
+    }
+    function paintRemoteContext(items,current){
+      items=Array.isArray(items)?items:[]; var currentId=String(current&&current.id||''),index=items.findIndex(function(it){ return String(it&&it.id||'')===currentId; });
+      var exact=currentId&&items.filter(function(it){ return String(it&&it.id||'')===currentId; }).length===1;
+      var syncLocked=!!(current&&current.sinc&&current.sinc.on), canNavigate=exact&&!syncLocked;
+      var prev=canNavigate&&items.length?items[(index-1+items.length)%items.length]:null;
+      var next=canNavigate&&items.length?items[(index+1)%items.length]:null;
+      var unavailable=syncLocked?'Gobernado por sincro':exact?'Destino no disponible':'Posición no disponible';
+      paintMediaControl(previousControl,document.getElementById('previousTitle'),prev,unavailable,'Anterior');
+      paintMediaControl(nextControl,document.getElementById('nextTitle'),next,unavailable,'Siguiente');
+      previousControl.disabled=!canNavigate; nextControl.disabled=!canNavigate;
+      previousControl.classList.toggle('sync-locked',!canNavigate); nextControl.classList.toggle('sync-locked',!canNavigate);
+      var currentMedia=index>=0?Object.assign({},items[index],current||{}):current;
+      paintMediaControl(mb,document.getElementById('muteTitle'),currentMedia,'Contenido actual',muted?'Activar sonido':'Silenciar');
+    }
     function paintRemoteControls(){
       pwr.textContent=standby?'▶ Arrancar':'⏻ Apagar player'; pwr.classList.toggle('on',standby);
-      mb.textContent=muted?'🔊 Activar sonido':'🔇 Silenciar'; mb.classList.toggle('on',muted);
+      document.getElementById('muteAction').textContent=muted?'🔊 Activar sonido':'🔇 Silenciar'; mb.classList.toggle('on',muted);
+      var muteTitle=document.getElementById('muteTitle').textContent||'Contenido actual'; mb.setAttribute('aria-label',(muted?'Activar sonido':'Silenciar')+': '+muteTitle);
     }
     function resetRemoteControls(){
       powerOp++; muteOp++; standby=storedStandby(); muted=false; pwr.disabled=false; mb.disabled=false; paintRemoteControls();
@@ -549,10 +584,10 @@
     vol.onchange=function(){ sendRemote('volume '+vol.value); };
 
     // ── Metatag del circuito ──
-    var TAG_KEY='mando_tag_by_circuit';
+    var TAG_KEY='mando_tag_by_screen';
     function tagStore(){ try{ return JSON.parse(localStorage.getItem(TAG_KEY)||'{}'); }catch(_){ return {}; } }
     function setStoredTag(c,t){ var s=tagStore(); if(t) s[c]=t; else delete s[c]; localStorage.setItem(TAG_KEY, JSON.stringify(s)); }
-    function curTag(){ return tagStore()[T.circuit]||''; }
+    function curTag(){ return tagStore()[T.screen]||''; }
     // El canal SOLO entiende `tag-<lista>` (applyCtrlCmd, regex /^tag-([a-z0-9_,+-]*)$/).
     // Hasta el 12-ago-2026 el mando enviaba `tag <x>` con ESPACIO: no casaba nunca,
     // así que aplicar un metatag aquí no cambiaba nada en pantalla — el mando no
@@ -628,16 +663,19 @@
       var sent=await sendRemote(action.cmd,b,{holdAfterAck:true,returnAction:true,mirror:entry,input:input,label:b});
       if(!sent||!sent.ok) return;
       if(!await waitTaggedAvailability(sent,action)) return;
-      setStoredTag(T.circuit, action.kind==='content'?('@'+action.clean):action.clean);
+      setStoredTag(T.screen, action.kind==='content'?('@'+action.clean):action.clean);
       input.value=action.clean;
       renderTagChips(); refreshTagline();
     }
     async function clearTagged(button){
       // Limpieza secuencial y confirmada: nunca ocultamos un fallo parcial.
       var b=button||document.getElementById('tagApply');
-      if(!await sendRemote('content-clear',b)) return;
+      // La salida de una playlist alternativa no debe borrar las piezas que el
+      // operador hubiera añadido antes por #ID. Ese inventario sólo se limpia
+      // cuando la selección activa era precisamente una pieza individual.
+      if(curTag().charAt(0)==='@'&&!await sendRemote('content-clear',b)) return;
       if(!await sendRemote('tag-',b)) return;
-      setStoredTag(T.circuit,''); document.getElementById('tagInput').value='';
+      setStoredTag(T.screen,''); document.getElementById('tagInput').value='';
       renderTagChips(); refreshTagline();
     }
     document.getElementById('tagApply').onclick=function(){ applyTag(document.getElementById('tagInput').value,this); };
@@ -655,7 +693,7 @@
       var cur=curTag();
       document.getElementById('tagline').textContent = cur.charAt(0)==='@'
         ? ('⇩ #'+cur.slice(1)+' en playlist · ASAP')
-        : (cur ? ('🏷️ filtrando #'+cur) : '');
+        : (cur ? ('▶ Playlist alternativa #'+cur+(remotePlaylistItems.length?' · '+remotePlaylistItems.length+' contenidos':'')) : '');
     }
 
     // ── Playlist efectiva del player ──────────────────────────────────────
@@ -713,6 +751,7 @@
       if(target!==T||generation!==targetGeneration||seq!==playlistRequestSeq) return;
       var data=rows[0], cache=rows[1]; remotePlaylistItems=data&&data.items||[];
       renderRemotePlaylist(remotePlaylistItems,cache,currentId||(previewItem&&previewItem.id));
+      paintRemoteContext(remotePlaylistItems,previewItem); refreshTagline();
     }
 
     // ── Status integral del player ───────────────────────────────────────
@@ -893,7 +932,7 @@
         var it = d && d.item;
         document.getElementById('now').textContent = d && d.standby ? '⏻ STANDBY (apagada)' : (it ? (it.title||it.type||'—') : '— sin señal —');
         if(d&&typeof d.standby==='boolean'){ standby=d.standby; setStoredStandby(standby); paintRemoteControls(); }
-        renderPreview(it);
+        renderPreview(it); paintRemoteContext(remotePlaylistItems,it);
         loadRemotePlaylist(it&&it.id);
         if(document.body.dataset.mandoView==='status') loadRemoteStatus(false);
         if(document.body.dataset.mandoView==='contents') loadRemoteContents(false);
@@ -910,6 +949,6 @@
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r36.2032" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r37.2104" defer></script>
 </body>
 </html>

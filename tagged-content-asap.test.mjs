@@ -56,7 +56,7 @@ test('content-712 refresca Stock, prioriza descarga y sólo salta cuando esa pie
 });
 
 test('Limpiar tag espera confirmación secuencial antes de borrar el estado local', () => {
-  assert.match(mando, /if\(!await sendRemote\('content-clear',b\)\) return/);
+  assert.match(mando, /curTag\(\)\.charAt\(0\)===['"]@['"]&&!await sendRemote\('content-clear',b\)/);
   assert.match(mando, /if\(!await sendRemote\('tag-',b\)\) return/);
   assert.match(canal, /function clearTaggedContent\(\)/);
 });
@@ -66,6 +66,27 @@ test('tag-terminator de la cola legacy usa el dispatcher correcto y refresca Sto
   const ctrl = functionSource(canal, 'applyCtrlCmd');
   assert.match(ctrl, /if\(t\[1\]\)\{ await loadFeed\(false\)/);
   assert.match(ctrl, /return n>0\?'executed':'failed'/);
+});
+
+test('un hashtag del Remote crea una playlist alternativa pura con todos sus contenidos', () => {
+  const rebuild = functionSource(canal, 'rebuild');
+  assert.match(canal, /const LIVE_TAG_KEY='adtv_live_tag:'/);
+  assert.match(canal, /if\(_liveTag\) seg\.tag=_storedLiveTag/);
+  assert.match(rebuild, /if\(_liveTag&&seg\.tag\)/);
+  assert.match(rebuild, /medio:'all',audience:'all',category:'all',age:'all',slot:'all',tag:seg\.tag,format:'',ids:\[\]/);
+  assert.match(rebuild, /all\.filter\(it=>it&&!it\._grid&&matchesSeg\(it,alternativeSeg\)\)/);
+  assert.match(rebuild, /PLAYLIST ALTERNATIVA #/);
+  const alternativeBranch = rebuild.slice(rebuild.indexOf('if(_liveTag&&seg.tag)'), rebuild.indexOf('// ── CORTAFUEGOS'));
+  assert.doesNotMatch(alternativeBranch, /gridWeave|injectTaggedContent|cfg\.max/);
+  assert.match(canal, /save\(LIVE_TAG_KEY,canonicalPlayTag\(t\[1\]\)\)/);
+  assert.match(canal, /save\(LIVE_TAG_KEY,''\)/);
+});
+
+test('la coincidencia de hashtag es exacta y conserva aliases música/music', () => {
+  const matches = functionSource(canal, 'matchesSeg');
+  assert.match(matches, /const tg=\(it\.tags\|\|\[\]\)\.map\(canonicalPlayTag\)/);
+  assert.match(matches, /needles\.includes\(t\)/);
+  assert.doesNotMatch(matches, /t\.includes\(n\)/);
 });
 
 test('el Remote confirma por ACK exacto y dirige cada orden a una sola pantalla', () => {
@@ -83,6 +104,18 @@ test('el campo de tags mantiene el feedback hasta que la descarga remota está l
   assert.match(mando, /visual\.progress=Math\.max\(\.02,Math\.min\(1,state\.pct\/100\)\)/);
   assert.match(mando, /holdAfterAck:true,returnAction:true,mirror:entry,input:input,label:b/);
   assert.match(mando, /if\(!await waitTaggedAvailability\(sent,action\)\) return/);
+});
+
+test('la sombra visual del hashtag pertenece a la pantalla exacta, no a todo el circuito', () => {
+  assert.match(mando, /var TAG_KEY='mando_tag_by_screen'/);
+  assert.match(mando, /function curTag\(\)\{ return tagStore\(\)\[T\.screen\]\|\|''; \}/);
+  assert.match(mando, /setStoredTag\(T\.screen, action\.kind/);
+  assert.doesNotMatch(mando, /setStoredTag\(T\.circuit/);
+});
+
+test('salir de una playlist alternativa no borra las piezas añadidas antes por #ID', () => {
+  assert.match(mando, /if\(curTag\(\)\.charAt\(0\)===['"]@['"]&&!await sendRemote\(['"]content-clear['"],b\)\) return;/);
+  assert.match(mando, /if\(!await sendRemote\(['"]tag-['"],b\)\) return;/);
 });
 
 test('una pieza ya descargada finaliza directamente en verde', () => {
@@ -126,6 +159,26 @@ test('la playlist del Remote enseña el inventario real y sólo deja pulsar lo d
   assert.match(mando, /state\.textContent=isReady\?'✓ en disco':pct!=null\?\('⇩ '\+pct\+'%'\):'pendiente'/);
   assert.match(mando, /sendRemote\('goto-'\+index,b\)/);
   assert.match(mando, /loadRemotePlaylist\(it&&it\.id\)/);
+});
+
+test('Anterior, Siguiente y audio muestran el contenido contextual como fondo', () => {
+  assert.match(mando, /id="previousControl"[^>]*data-cmd="prev"/);
+  assert.match(mando, /id="nextControl"[^>]*data-cmd="next"/);
+  assert.match(mando, /id="muteTitle"/);
+  assert.match(mando, /function paintRemoteContext\(items,current\)/);
+  assert.match(mando, /items\[\(index-1\+items\.length\)%items\.length\]/);
+  assert.match(mando, /items\[\(index\+1\)%items\.length\]/);
+  assert.match(mando, /paintMediaControl\(mb,document\.getElementById\('muteTitle'\),current/);
+  assert.match(mando, /button\.style\.backgroundImage=src\?'url\('/);
+  assert.match(mando, /Playlist alternativa #'\+cur/);
+  assert.match(mando, /currentMedia=index>=0\?Object\.assign\(\{\},items\[index\],current\|\|\{\}\):current/);
+  assert.match(mando, /filter\(function\(it\)\{ return String\(it&&it\.id\|\|''\)===currentId; \}\)\.length===1/);
+  assert.match(mando, /syncLocked=!!\(current&&current\.sinc&&current\.sinc\.on\)/);
+  assert.match(mando, /setAttribute\('aria-label',\(actionText\|\|'Control'\)\+': '\+title\)/);
+  assert.match(mando, /\.b:focus-visible/);
+  assert.match(mando, /@media\(forced-colors:active\)/);
+  assert.match(mando, /\.now-controls\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(mando, /\.media-control-title\{[^}]*-webkit-line-clamp:2/);
 });
 
 test('las pastillas eliminan la posición y contienen título y estado dentro del botón', () => {
