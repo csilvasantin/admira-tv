@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=13.08.2026.r30.1920"></script>
+<script src="/auth-gate.js?v=13.08.2026.r31.1932"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -379,6 +379,13 @@
   .ebRole{display:inline-block;padding:2px 8px;border-radius:6px;border:1px solid var(--line);font-size:10.5px;color:var(--dim)}
   .ebRole.canal{color:var(--accent);border-color:#2a3a66} .ebRole.game{color:var(--robot);border-color:#42306a}
   .ebScreen{font-weight:700;color:var(--ink)}
+  .ebPlayerCell{padding:6px 8px!important}
+  .ebScreenShortcut{width:100%;display:flex;align-items:center;justify-content:space-between;gap:9px;
+    padding:8px 10px;border:1px solid rgba(61,240,138,.28);border-radius:8px;background:rgba(61,240,138,.05);
+    color:inherit;font:inherit;text-align:left;cursor:pointer;transition:border-color .16s,background .16s,box-shadow .16s}
+  .ebScreenShortcut:hover,.ebScreenShortcut:focus-visible{border-color:var(--green,#3df08a);background:rgba(61,240,138,.11);
+    box-shadow:0 0 0 2px rgba(61,240,138,.12);outline:none}
+  .ebScreenShortcutHint{flex:none;color:var(--green,#3df08a);font:700 10px ui-monospace,monospace;white-space:nowrap}
   .ebPiece{color:var(--air);font-size:11.5px}
   .ebHole{color:var(--dim);font-style:italic;opacity:.75}
   .ebPanel{padding:4px 16px 16px}
@@ -437,7 +444,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=13.08.2026.r30.1920">
+  <link rel="stylesheet" href="/admira-frame.css?v=13.08.2026.r31.1932">
 </head>
 <body>
 <script>
@@ -456,8 +463,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=13.08.2026.r30.1920"></script>
-<script src="/admira-frame.js?v=13.08.2026.r30.1920" defer></script>
+<script src="/admira-nav.js?v=13.08.2026.r31.1932"></script>
+<script src="/admira-frame.js?v=13.08.2026.r31.1932" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -606,7 +613,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=13.08.2026.r30.1920"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r31.1932"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -1158,8 +1165,8 @@ function equiposDelProyecto(){
   document.querySelectorAll('#ebBody tr[data-screen]').forEach(fila=>{
     const id=fila.getAttribute('data-screen'); if(!id||vistos.has(id))return;
     vistos.add(id);
-    const cel=fila.querySelector('[data-col="player"]');
-    out.push({id:id, nombre:(cel?cel.textContent:'').trim()||id, vivo:fila.dataset.online==='1'});
+    const nombre=fila.querySelector('[data-col="player"] .ebScreen');
+    out.push({id:id, nombre:(nombre?nombre.textContent:'').trim()||id, vivo:fila.dataset.online==='1'});
   });
   return out;
 }
@@ -1187,13 +1194,13 @@ document.addEventListener('click', e=>{
   if(e.target.closest('#mandoOut')){ const s=document.getElementById('mandoFrame').dataset.screen;
     if(s) window.open('/mando.html?screen='+encodeURIComponent(s),'mando-'+s,'width=420,height=680,menubar=no,toolbar=no'); }
 });
-// Doble clic justo sobre PLAYER / PANTALLA abre Experto y deja ese player ya
-// seleccionado. El listener vive en el tbody estable: sus filas se regeneran
-// en cada latido, pero la interacción no se pierde.
-$('ebBody').addEventListener('dblclick', e=>{
-  const cell=e.target.closest('td[data-col="player"]'); if(!cell) return;
-  const row=cell.closest('tr[data-screen]'); if(!row||!row.dataset.screen) return;
-  e.preventDefault(); abreMando(row.dataset.screen);
+// PLAYER / PANTALLA es un atajo visible: un clic (o Enter/Espacio, por ser botón)
+// abre Experto y deja ese player ya seleccionado. El listener vive en el tbody
+// estable: sus filas se regeneran en cada latido, pero la interacción no se pierde.
+$('ebBody').addEventListener('click', e=>{
+  const shortcut=e.target.closest('[data-open-remote]'); if(!shortcut) return;
+  const row=shortcut.closest('tr[data-screen]'); if(!row||!row.dataset.screen) return;
+  e.preventDefault(); e.stopPropagation(); abreMando(row.dataset.screen);
 });
 $('grid').addEventListener('click', e=>{
   if(e.target.closest('.modeSel,.remote,.acts,a,button,select,input')) return; // no en controles
@@ -1710,7 +1717,8 @@ $('progBands').addEventListener('click',e=>{
         // hubiera puesto el último clic y «volver a casa» no volvía a ninguna parte.
         return '<tr data-casa="'+(_casa++)+'" data-screen="'+esc(p.screen)+'" data-online="'+(on?'1':'0')+'" data-orden=\''+esc(JSON.stringify(valores)).replace(/'/g,'&#39;')+'\'>'+
           '<td data-col="estado"><span class="ebSt '+stCls+'"><span class="d"></span>'+stTxt+'</span></td>'+
-          '<td data-col="player" title="Doble clic para abrir el mando de '+esc(p.screen)+'"><span class="ebScreen">'+esc(p.screen)+'</span></td>'+
+          '<td data-col="player" class="ebPlayerCell"><button type="button" class="ebScreenShortcut" data-open-remote aria-label="Abrir control remoto experto de '+esc(p.screen)+'">'+
+            '<span class="ebScreen">'+esc(p.screen)+'</span><span class="ebScreenShortcutHint">🎛 Mando</span></button></td>'+
           '<td data-col="rol">'+(role? '<span class="ebRole '+rCls+'">'+esc(role)+'</span>':hole('—'))+'</td>'+
           // PREVIO: el fotograma REAL de lo que esta viendo la calle. No es un dato
           // nuevo — el canal lo sube cada 25 s (shotTick -> POST /signage/shot) y hasta
@@ -1893,10 +1901,10 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-session.js?v=13.08.2026.r30.1920"></script>
-<script src="/admira-avatar.js?v=13.08.2026.r30.1920"></script>
-<script src="/cms-pacman.js?v=13.08.2026.r30.1920"></script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r30.1920" defer></script>
+<script src="/admira-session.js?v=13.08.2026.r31.1932"></script>
+<script src="/admira-avatar.js?v=13.08.2026.r31.1932"></script>
+<script src="/cms-pacman.js?v=13.08.2026.r31.1932"></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r31.1932" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
    Mismo patrón que el highscore de yokup: tirador por columna, mínimo por

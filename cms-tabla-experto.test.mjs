@@ -102,10 +102,14 @@ test("el panel experto va sin franja de título y el mando lo llena entero", asy
   assert.match(cmsSrc, /pn\.style\.height='min\(88vh,1000px\)'/);
 });
 
-test("doble clic en Player / pantalla abre el mando con esa pantalla seleccionada", () => {
-  assert.match(cms, /\$\('ebBody'\)\.addEventListener\('dblclick'/);
-  assert.match(cms, /e\.target\.closest\('td\[data-col="player"\]'\)/);
-  assert.match(cms, /const row=cell\.closest\('tr\[data-screen\]'\)/);
+test("Player / pantalla es un atajo visible de un clic al mando seleccionado", () => {
+  assert.match(cms, /class="ebScreenShortcut" data-open-remote/);
+  assert.match(cms, /class="ebScreenShortcutHint">🎛 Mando/);
+  assert.match(cms, /aria-label="Abrir control remoto experto de /);
+  assert.match(cms, /\$\('ebBody'\)\.addEventListener\('click'/);
+  assert.match(cms, /e\.target\.closest\('\[data-open-remote\]'\)/);
+  assert.match(cms, /const row=shortcut\.closest\('tr\[data-screen\]'\)/);
   assert.match(cms, /abreMando\(row\.dataset\.screen\)/);
-  assert.match(cms, /title="Doble clic para abrir el mando de /);
+  assert.doesNotMatch(cms, /Doble clic para abrir el mando de /);
+  assert.match(cms, /\.ebScreenShortcut:hover,\.ebScreenShortcut:focus-visible/);
 });

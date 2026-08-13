@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r30.19:20",
+  "version": "v.13.08.2026.r31.19:32",
   "signature": "TrinityMBP14 · MacBookPro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "19:20",
-  "evidence": "El Remote publica la playlist efectiva también en modo sincro y permite elegir contenidos ya descargados por su previo."
+  "time": "19:32",
+  "evidence": "Player/pantalla es un atajo visible y accesible que abre Experto con su control remoto ya seleccionado."
 }
