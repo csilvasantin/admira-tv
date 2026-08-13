@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=13.08.2026.r35.2019"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r36.2032"></script>
 <script>
-  window.ADMIRA_VERSION='v.13.08.2026.r35.20:19';
+  window.ADMIRA_VERSION='v.13.08.2026.r36.20:32';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -1239,6 +1239,47 @@ const PRECACHE_MAX=Math.max(8, cfg.max||40);   // piezas del loop a mantener baj
 const STREAM_OK=(function(){ try{ return new URLSearchParams(location.search).get('stream')==='1'; }catch(_){ return false; } })();
 let _playTok=0;
 let _cache=null, _ready=new Set(), _dl=new Map(), _cBytes=0, _precaching=false, _precQ=[], _objURLs=new Map(), _lastCacheRep=0;
+const CACHE_TECH_KEY='adtv_cache_tech:'+(scr.screen||scr.circuit||scr.machine||'unbound');
+let _cacheTech=new Map(), _techQ=[], _techQueued=new Set(), _techBusy=false;
+try{ const saved=JSON.parse(LS(CACHE_TECH_KEY,'{}')); if(saved&&typeof saved==='object') _cacheTech=new Map(Object.entries(saved)); }catch(_){}
+function saveCacheTech(){ try{ localStorage.setItem(CACHE_TECH_KEY,JSON.stringify(Object.fromEntries([..._cacheTech.entries()].slice(-300)))); }catch(_){} }
+function bytesAscii(bytes){ let out=''; for(let i=0;i<bytes.length;i+=32768) out+=String.fromCharCode.apply(null,bytes.subarray(i,Math.min(bytes.length,i+32768))); return out; }
+async function cachedCodec(blob,mime){
+  try{
+    const size=blob.size||0, probe=Math.min(size,786432), parts=[new Uint8Array(await blob.slice(0,probe).arrayBuffer())];
+    if(size>probe) parts.push(new Uint8Array(await blob.slice(Math.max(probe,size-probe),size).arrayBuffer()));
+    const text=parts.map(bytesAscii).join(''), codecs=[];
+    const add=(re,name)=>{ if(re.test(text)&&!codecs.includes(name)) codecs.push(name); };
+    add(/avc1|avc3|V_MPEG4\/ISO\/AVC/,'H.264'); add(/hvc1|hev1/,'HEVC'); add(/av01|V_AV1/,'AV1'); add(/vp09|V_VP9/,'VP9'); add(/vp08|V_VP8/,'VP8'); add(/mp4v/,'MPEG-4');
+    add(/mp4a/,'AAC'); add(/Opus|A_OPUS/,'Opus'); add(/vorbis|A_VORBIS/i,'Vorbis');
+    if(!codecs.length){ if(/webm/i.test(mime)) codecs.push('WebM'); else if(/mp4/i.test(mime)) codecs.push('MP4'); else if(mime) codecs.push(mime.split('/').pop().toUpperCase()); }
+    return codecs.join(' · ');
+  }catch(_){ return ''; }
+}
+function cachedMediaMetadata(blob,type){
+  return new Promise(resolve=>{
+    const isImage=KIND[type]==='image', el=isImage?new Image():document.createElement(KIND[type]==='audio'?'audio':'video'), src=URL.createObjectURL(blob);
+    let closed=false, timer=setTimeout(()=>finish({}),4500);
+    function finish(meta){ if(closed) return; closed=true; clearTimeout(timer); try{ if(!isImage){ el.removeAttribute('src'); el.load(); } URL.revokeObjectURL(src); }catch(_){} resolve(meta||{}); }
+    if(isImage){ el.onload=()=>finish({width:el.naturalWidth||0,height:el.naturalHeight||0,duration:0}); el.onerror=()=>finish({}); el.src=src; }
+    else { el.preload='metadata'; el.muted=true; el.onloadedmetadata=()=>finish({width:el.videoWidth||0,height:el.videoHeight||0,duration:Number.isFinite(el.duration)?el.duration:0}); el.onerror=()=>finish({}); el.src=src; try{ el.load(); }catch(_){} }
+  });
+}
+async function analyzeCachedContent(it){
+  const c=await cacheOpen(); if(!c||!it||!it.url) return null; const hit=await c.match(it.url); if(!hit) return null;
+  const blob=await hit.blob(), mime=blob.type||it.mime||hit.headers.get('content-type')||'', meta=await cachedMediaMetadata(blob,it.type||''), codec=await cachedCodec(blob,mime);
+  const bytes=Number(blob.size||it.size)||0, duration=Number(meta.duration)||0;
+  return {bytes,mime,width:Number(meta.width)||0,height:Number(meta.height)||0,duration,bitrate:duration&&bytes?Math.round(bytes*8/duration):0,codec,at:Date.now()};
+}
+function queueTechnicalAnalysis(it){
+  const id=String(it&&it.id||''); if(!id||!_ready.has(it.id)||_cacheTech.has(id)||_techQueued.has(id)) return;
+  _techQueued.add(id); _techQ.push(it); if(!_techBusy) setTimeout(runTechnicalAnalysis,180);
+}
+async function runTechnicalAnalysis(){
+  if(_techBusy) return; _techBusy=true;
+  try{ while(_techQ.length){ const it=_techQ.shift(),id=String(it&&it.id||''); _techQueued.delete(id); try{ const tech=await analyzeCachedContent(it); if(tech){ _cacheTech.set(id,tech); saveCacheTech(); _cacheSig=''; cacheReport(); } }catch(_){} await new Promise(r=>setTimeout(r,80)); } }
+  finally{ _techBusy=false; }
+}
 let _asapItemId=null;   // #ID solicitado: no saltar a otra pieza lista mientras ésta baja
 async function cacheOpen(){ if(_cache!==null) return _cache; try{ _cache=await caches.open(CACHE_NAME); }catch(_){ _cache=false; } return _cache; }
 // Un interactivo NO se precachea: no es un asset, es una página que se abre. Bajarla
@@ -1250,10 +1291,10 @@ function cacheable(it){ return !!(it&&it.url&&/^https?:/i.test(it.url)) && KIND[
 async function fetchToCache(it){
   const c=await cacheOpen(); if(!c||!cacheable(it)) return false;
   try{
-    if(await c.match(it.url)){ _ready.add(it.id); return true; }
+    if(await c.match(it.url)){ _ready.add(it.id); queueTechnicalAnalysis(it); return true; }
     const resp=await fetch(it.url,{mode:'cors',cache:'force-cache'});
     if(!resp||!resp.ok) return false;
-    if(!resp.body){ await c.put(it.url, resp.clone()); _ready.add(it.id); return true; }
+    if(!resp.body){ await c.put(it.url, resp.clone()); _ready.add(it.id); queueTechnicalAnalysis(it); return true; }
     const total=+(resp.headers.get('content-length')||0);
     _dl.set(it.id,0);
     const ct=resp.headers.get('content-type')||'application/octet-stream';
@@ -1290,7 +1331,7 @@ async function fetchToCache(it){
       const blob=new Blob(chunks,{type:ct});
       await c.put(it.url, new Response(blob,{headers:{'content-type':blob.type||'application/octet-stream'}}));
     }
-    _dl.delete(it.id); _ready.add(it.id); return true;
+    _dl.delete(it.id); _ready.add(it.id); queueTechnicalAnalysis(it); return true;
   }catch(_){ _dl.delete(it.id); return false; }
 }
 // URL reproducible desde la cache (objectURL) o null si la pieza aún no está bajada.
@@ -1437,16 +1478,28 @@ async function pruneCache(){
   }catch(_){}
 }
 function cacheReadyInPlaylist(){ let n=0; const seen=new Set(); for(const it of playlist){ if(it&&_ready.has(it.id)&&!seen.has(it.id)){ seen.add(it.id); n++; } } return n; }
-function cacheReportPayload(){
+function cacheInventoryItems(){
   // Inventario del player = playlist actual ∪ assets CONDICIONALES (las variantes que la
   // cámara puede disparar). Así el CMS ve, p.ej., 1/3 = loop + condicional chico + chica,
   // y no 1/1 (solo lo que se está emitiendo ahora).
   const seen=new Set(), inv=[];
   for(const it of playlist){ if(it&&it.id!=null&&!seen.has(it.id)){ seen.add(it.id); inv.push(it); } }
   for(const it of _condItems.values()){ if(it&&it.id!=null&&!seen.has(it.id)){ seen.add(it.id); inv.push(it); } }
+  return inv;
+}
+function cacheTechnicalRecord(it){
+  const tech=_cacheTech.get(String(it.id))||{}, dim=it._dim||{};
+  return { id:String(it.id), num:it._num||it.num||null, title:String(it.title||it.prompt||'').slice(0,160), type:String(it.type||'').slice(0,30),
+    mime:String(tech.mime||it.mime||'').slice(0,80), bytes:Number(tech.bytes||it.size)||0, width:Number(tech.width||dim.w)||0,
+    height:Number(tech.height||dim.h)||0, duration:Number(tech.duration||it._dur)||0, bitrate:Number(tech.bitrate)||0,
+    codec:String(tech.codec||'').slice(0,120), at:Number(tech.at)||0 };
+}
+function cacheReportPayload(){
+  const inv=cacheInventoryItems();
   const ready=[]; for(const it of inv){ if(_ready.has(it.id)) ready.push(it.id); }
+  const contents=[]; for(const it of inv){ if(!_ready.has(it.id)) continue; queueTechnicalAnalysis(it); contents.push(cacheTechnicalRecord(it)); }
   const downloading=[..._dl.entries()].slice(0,20).map(([id,pct])=>({id,pct}));
-  return { screen:scr.screen, ready, total:inv.length, downloading, bytes:_cBytes };
+  return { screen:scr.screen, ready, total:inv.length, downloading, bytes:_cBytes, contents };
 }
 let _cacheSig='', _cacheSentAt=0;   // dedupe del inventario: el mando exige at<120 s → latido ≤60 s, nunca más lento
 function cacheReport(){ if(!scr.screen) return; _lastCacheRep=Date.now();
@@ -1454,7 +1507,7 @@ function cacheReport(){ if(!scr.screen) return; _lastCacheRep=Date.now();
   // último ACEPTADO). Antes eran 2.880 POST/día con el mismo inventario durante horas.
   // La firma se resetea en el catch para que el arranque offline reintente (patrón r45).
   const pl=cacheReportPayload();
-  const sig=(pl.ready||[]).join(',')+'|'+(pl.total??'')+'|'+_dl.size+'|'+_cBytes;
+  const sig=(pl.ready||[]).join(',')+'|'+(pl.total??'')+'|'+_dl.size+'|'+_cBytes+'|'+(pl.contents||[]).map(x=>[x.id,x.bytes,x.width,x.height,x.duration,x.bitrate,x.codec].join(':')).join(',');
   if(sig===_cacheSig && _dl.size===0 && Date.now()-_cacheSentAt<55000){ cacheBadge(); return; }
   try{ fetch(CACHE_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify(pl)})
     .then(r=>{ if(r&&r.ok){ _cacheSig=sig; _cacheSentAt=Date.now(); } else { _cacheSig=''; } })
@@ -1767,7 +1820,7 @@ function saveCatalog(){
     const slim=all.slice(0,300).map(it=>({id:it.id,url:it.url,type:it.type,audience:it.audience,
       category:it.category,ageBucket:it.ageBucket,timeSlot:it.timeSlot,tags:it.tags,
       num:it.num,createdAt:it.createdAt,title:it.title,thumbnail:it.thumbnail,motor:it.motor,
-      size:it.size}));   // r37: peso para el HUD de testing también en arranque offline
+      size:it.size,mime:it.mime}));   // peso+MIME para HUD e inventario técnico también en arranque offline
     localStorage.setItem(CATALOG_KEY, JSON.stringify({t:Date.now(),items:slim}));
   }catch(_){ /* quota u otro → sin persistencia; no es crítico */ }
 }
@@ -3253,6 +3306,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r35.2019" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r36.2032" defer></script>
 </body>
 </html>

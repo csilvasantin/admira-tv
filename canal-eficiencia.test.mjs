@@ -61,7 +61,7 @@ test("[6] el precache va en streaming al disco, con fallback y disco-primero int
   // …pero el fallback bufferizado para WebKit viejo sí, con re-fetch (el body quedó locked).
   assert.match(canal, /const r2=await fetch\(it\.url,\{mode:'cors',cache:'force-cache'\}\); if\(!r2\|\|!r2\.ok\) throw err;/);
   // _ready SOLO tras completar el put (r43: disco-primero).
-  assert.match(canal, /\}\n    _dl\.delete\(it\.id\); _ready\.add\(it\.id\); return true;/);
+  assert.match(canal, /\}\n    _dl\.delete\(it\.id\); _ready\.add\(it\.id\); queueTechnicalAnalysis\(it\); return true;/);
 });
 
 test("[7] el proof-of-play se agrupa a 60 s: el tally ya vive en localStorage", () => {

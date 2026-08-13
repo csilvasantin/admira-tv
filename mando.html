@@ -90,8 +90,19 @@
     .status-row:first-of-type{border-top:0}.status-key{color:var(--dim);font:9px/1.35 var(--mono)}
     .status-value{min-width:0;color:var(--text);font:10px/1.35 var(--mono);text-align:right;overflow-wrap:anywhere}
     .status-value.missing{color:var(--dim);font-style:italic}.status-value.good{color:#76f2a8}.status-value.warn{color:var(--amber)}
+    .status-editor{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;align-items:center}
+    .status-editor input{min-width:0;width:100%;box-sizing:border-box;border:1px dashed var(--amber);border-radius:7px;background:#080b12;color:var(--text);padding:6px 7px;font:10px var(--mono)}
+    .status-editor input::placeholder{color:var(--dim)}.status-editor button{border:1px solid var(--amber);border-radius:7px;background:color-mix(in srgb,var(--amber) 10%,transparent);color:var(--amber);padding:6px 7px;font:700 9px var(--mono);cursor:pointer;white-space:nowrap}
+    .status-editor.manual input{border-style:solid;border-color:var(--violet)}.status-editor.manual::after{content:'manual';grid-column:1/-1;color:var(--violet);font:8px var(--mono);text-align:right}
     .status-card.wide{grid-column:1/-1}.status-card.wide .status-row{grid-template-columns:120px minmax(0,1fr)}
     .status-updated{margin:10px 2px 0;color:var(--dim);font:9px var(--mono);text-align:right}
+    .content-summary{padding:10px 12px;margin:12px 0 10px;border:1px solid var(--border);border-radius:10px;background:var(--elev);color:var(--muted);font:11px/1.5 var(--mono)}
+    .content-inventory{display:grid;gap:9px}.content-card{min-width:0;max-width:100%;overflow:hidden;border:1px solid var(--border);border-radius:12px;background:#0d1018;padding:11px}
+    .content-card-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:8px}.content-card h3{min-width:0;margin:0;color:var(--text);font:700 13px/1.3 var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .content-num{color:var(--cyan);font:700 10px var(--mono);white-space:nowrap}.content-tech{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+    .tech-pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--border);border-radius:999px;padding:5px 8px;color:var(--muted);font:9px var(--mono)}
+    .tech-pill.primary{border-color:color-mix(in srgb,var(--cyan) 55%,var(--border));color:var(--cyan)}.tech-pill.missing{border-style:dashed;color:var(--dim)}
+    .content-opt{margin-top:8px;color:#76f2a8;font:10px/1.4 var(--mono)}.content-opt.warn{color:var(--amber)}
     @media(max-width:420px){.status-grid{grid-template-columns:1fr}.status-card.wide{grid-column:auto}.status-card.wide .status-row{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
     .remote-title{margin-top:16px;color:var(--cyan);font:700 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
@@ -154,7 +165,7 @@
     <a class="viewtab" href="#playlist" data-mando-view-link="playlist">Playlist</a>
     <a class="viewtab" href="#status" data-mando-view-link="status">Status</a>
     <a href="https://www.admira.tv/players">Players</a>
-    <a href="https://www.admira.tv/">Admira.tv</a>
+    <a class="viewtab" href="#contents" data-mando-view-link="contents">Contenidos</a>
   </nav>
   <div class="kick">Emitir · Mando a distancia</div>
   <h1>Mando · Admira.tv</h1>
@@ -208,6 +219,15 @@
     <div class="status-updated" id="statusUpdated"></div>
   </section>
 
+  <section id="contentsView" data-mando-pane="contents" hidden aria-live="polite">
+    <div class="status-head">
+      <h2>Contenidos descargados</h2>
+      <button type="button" id="contentsRefresh">↻ Actualizar</button>
+    </div>
+    <div class="content-summary" id="contentsSummary">Esperando el inventario técnico del player seleccionado…</div>
+    <div class="content-inventory" id="contentsList"><div class="pl-empty">El player todavía no ha publicado su inventario técnico</div></div>
+  </section>
+
   <div id="remoteTools" data-mando-pane="remote">
   <!-- ── CONTENIDO ETIQUETADO: #ID añade una pieza; texto filtra por metatag ── -->
   <div class="sec">🏷️ Contenido etiquetado <span class="hint">— #ID añade una pieza a la playlist; texto filtra por metatag</span></div>
@@ -248,6 +268,7 @@
     var NOW_API = 'https://api.admira.store/signage/now';
     var SCREENS_API = 'https://api.admira.store/signage/screens';
     var CACHE_API = 'https://api.admira.store/screen/cache';
+    var PROFILE_API = '/api/player-profile';
     var PLAYLIST_APIS = ['/api/control/playlist/','https://omnipublicity-api.csilvasantin.workers.dev/control/playlist'];
     var REMOTE_TIMEOUT_MS = 20000;
     var DOWNLOAD_TIMEOUT_MS = 5*60*1000;
@@ -297,21 +318,22 @@
 
     var T, previewItem=null, previewSignature='', previewPaused=false, previewRenderSeq=0;
     var targetGeneration=0, nowRequestSeq=0, nowController=null;
-    var playlistRequestSeq=0, remotePlaylistItems=[], statusRequestSeq=0;
+    var playlistRequestSeq=0, remotePlaylistItems=[], statusRequestSeq=0, contentsRequestSeq=0, statusProfile={fields:{}};
     var previewReturnFocus=null, previewInertNodes=[];
     var previewFrame=document.getElementById('previewFrame');
     var previewMedia=document.getElementById('previewMedia');
     var previewToggle=document.getElementById('previewToggle');
     var previewPause=document.getElementById('previewPause');
-    function mandoViewFromHash(){ var view=location.hash.slice(1); return view==='playlist'||view==='status'?view:'remote'; }
+    function mandoViewFromHash(){ var view=location.hash.slice(1); return ['playlist','status','contents'].includes(view)?view:'remote'; }
     function setMandoView(view){
-      view=view==='playlist'||view==='status'?view:'remote'; document.body.dataset.mandoView=view;
+      view=['playlist','status','contents'].includes(view)?view:'remote'; document.body.dataset.mandoView=view;
       document.querySelectorAll('[data-mando-pane]').forEach(function(p){ p.hidden=p.dataset.mandoPane!==view; });
       document.querySelectorAll('[data-mando-view-link]').forEach(function(a){
         var active=a.dataset.mandoViewLink===view; if(active) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
       });
       if(view==='playlist'&&T) loadRemotePlaylist(previewItem&&previewItem.id);
       if(view==='status'&&T) loadRemoteStatus(true);
+      if(view==='contents'&&T) loadRemoteContents(true);
     }
     window.addEventListener('hashchange',function(){ setMandoView(mandoViewFromHash()); });
     function previewIsInteractive(){ return !!(previewItem&&['interactive','xperiencia'].includes(String(previewItem.type||'').toLowerCase())); }
@@ -410,9 +432,10 @@
       closePreview(); previewSignature=''; previewItem=null; setPreviewPaused(false); previewEmpty('Esperando señal del player remoto');
       remotePlaylistItems=[]; document.getElementById('playlistSummary').textContent='— cargando inventario';
       document.getElementById('playlistList').innerHTML='<div class="pl-empty">Esperando la playlist efectiva del player seleccionado</div>';
-      document.getElementById('statusSummary').textContent='Esperando telemetría del player seleccionado…'; document.getElementById('statusGrid').replaceChildren();
+      statusProfile={fields:{}}; document.getElementById('statusSummary').textContent='Esperando telemetría del player seleccionado…'; document.getElementById('statusGrid').replaceChildren();
+      document.getElementById('contentsSummary').textContent='Esperando el inventario técnico del player seleccionado…'; document.getElementById('contentsList').innerHTML='<div class="pl-empty">El player todavía no ha publicado su inventario técnico</div>';
       resetRemoteControls();
-      renderTagChips(); pollNow(); if(document.body.dataset.mandoView==='status') loadRemoteStatus(false);
+      renderTagChips(); pollNow(); if(document.body.dataset.mandoView==='status') loadRemoteStatus(false); if(document.body.dataset.mandoView==='contents') loadRemoteContents(false);
     }
     selEl.onchange = setTarget;
 
@@ -712,15 +735,38 @@
       var ip=String(value||''); if(/^\d+\.\d+\.\d+\.\d+$/.test(ip)) return ip.replace(/\.\d+$/,'.•••');
       if(ip.includes(':')) return ip.split(':').slice(0,3).join(':')+':…'; return ip;
     }
+    async function remoteProfileData(screen){
+      try{ var r=await fetch(PROFILE_API+'?screen='+encodeURIComponent(screen)+'&_='+Date.now(),{cache:'no-store'});
+        var d=r.ok?await r.json():null; return d&&d.profile||{fields:{}}; }catch(_){ return {fields:{}}; }
+    }
+    async function saveStatusManualField(fieldKey,value,button){
+      var target=T, generation=targetGeneration; button.disabled=true; button.textContent='Guardando…';
+      try{
+        var r=await fetch(PROFILE_API,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({screen:target.screen,fields:{[fieldKey]:value}})});
+        var d=await r.json().catch(function(){return null;}); if(!r.ok||!d||!d.ok) throw new Error(d&&d.error||('http '+r.status));
+        if(target===T&&generation===targetGeneration){ statusProfile=d.profile||{fields:{}}; await loadRemoteStatus(false); }
+        toast(value?'✓ Dato manual guardado':'✓ Dato manual eliminado');
+      }catch(e){ button.disabled=false; button.textContent='Guardar'; toast('✗ No se pudo guardar: '+String(e&&e.message||e)); }
+    }
+    function statusManualEditor(fieldKey,label,value){
+      var wrap=document.createElement('span'); wrap.className='status-editor'+(value?' manual':'');
+      var input=document.createElement('input'); input.type='text'; input.value=value||''; input.placeholder='Introducir dato'; input.setAttribute('aria-label','Introducir '+label);
+      var save=document.createElement('button'); save.type='button'; save.textContent=value?'Guardar':'Añadir';
+      save.onclick=function(){ saveStatusManualField(fieldKey,input.value.trim(),save); };
+      input.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); save.click(); } });
+      wrap.append(input,save); return wrap;
+    }
     function statusCard(title,rows,wide){
       var card=document.createElement('article'); card.className='status-card'+(wide?' wide':'');
       var heading=document.createElement('h3'); heading.textContent=title; card.appendChild(heading);
       rows.forEach(function(row){
         var line=document.createElement('div'); line.className='status-row';
         var key=document.createElement('span'); key.className='status-key'; key.textContent=row[0];
-        var value=document.createElement('span'), raw=row[1]; value.className='status-value'+(row[2]?' '+row[2]:'');
-        if(raw===undefined||raw===null||raw===''){ value.textContent='No expuesto por este player'; value.classList.add('missing'); }
-        else value.textContent=String(raw);
+        var raw=row[1], fieldKey=row[3], missing=raw===undefined||raw===null||raw==='';
+        var manual=fieldKey&&statusProfile&&statusProfile.fields&&statusProfile.fields[fieldKey]||'', value;
+        if(missing&&fieldKey) value=statusManualEditor(fieldKey,row[0],manual);
+        else { value=document.createElement('span'); value.className='status-value'+(row[2]?' '+row[2]:'');
+          if(missing){ value.textContent='No expuesto por este player'; value.classList.add('missing'); } else value.textContent=String(raw); }
         line.append(key,value); card.appendChild(line);
       }); return card;
     }
@@ -736,8 +782,9 @@
     async function remoteNowData(screen){
       try{ var r=await fetch(NOW_API+'?screen='+encodeURIComponent(screen)+'&_='+Date.now(),{cache:'no-store'}); return r.ok?await r.json():null; }catch(_){ return null; }
     }
-    function renderRemoteStatus(nowData,cache,record){
+    function renderRemoteStatus(nowData,cache,record,profile){
       nowData=nowData||{}; cache=cache||{}; record=record||{};
+      statusProfile=profile||statusProfile||{fields:{}};
       var device=nowData.device||record.device||{}, display=device.display||{}, system=device.system||{}, hardware=device.hardware||{}, software=device.software||{}, storage=device.storage||{}, network=device.network||{};
       var item=nowData.item||{}, lastSeen=Number(nowData.lastSeen||record.last_seen||0), online=lastSeen>0&&(Date.now()-(lastSeen<1e12?lastSeen*1000:lastSeen)<180000);
       var ua=software.userAgent||record.user_agent||'', nativeVersion=software.playerVersion||((/AdmiraMacOSPlayer\/([^\s(]+)/i.exec(ua)||[])[1]||'');
@@ -747,27 +794,27 @@
       var grid=document.getElementById('statusGrid'); grid.replaceChildren(
         statusCard('Conexión',[
           ['Estado',online?'En línea':'Sin señal',online?'good':'warn'],['Último latido',statusTime(lastSeen)],['Standby',nowData.standby?'Sí · pantalla apagada':'No',nowData.standby?'warn':'good'],
-          ['Red del runtime',network.online===false?'Sin conexión':network.online===true?'Conectada':''],['Tipo de red',network.effectiveType],['IP pública',statusMaskIp(nowData.ip)]
+          ['Red del runtime',network.online===false?'Sin conexión':network.online===true?'Conectada':''],['Tipo de red',network.effectiveType,'','connection.networkType'],['IP pública',statusMaskIp(nowData.ip)]
         ]),
         statusCard('Identidad',[
-          ['Pantalla',nowData.screen||record.screen||T.screen],['Equipo',record.machine||T.screen],['Circuito',record.loc||T.circuit],['Nombre',record.locName],['Rol',record.role||'canal'],['Productor',nowData.producer]
+          ['Pantalla',nowData.screen||record.screen||T.screen],['Equipo',record.machine||'','','identity.machine'],['Circuito',record.loc||T.circuit],['Nombre',record.locName,'','identity.name'],['Rol',record.role||'canal'],['Productor',nowData.producer]
         ]),
         statusCard('Pantalla',[
-          ['Resolución física',physical],['Resolución lógica',css],['Viewport',viewport],['Escala / DPR',display.devicePixelRatio],['Color',display.colorDepth?(display.colorDepth+' bits'):'' ],['Orientación',display.orientation]
+          ['Resolución física',physical,'','display.resolution'],['Resolución lógica',css,'','display.logicalResolution'],['Viewport',viewport,'','display.viewport'],['Escala / DPR',display.devicePixelRatio,'','display.dpr'],['Color',display.colorDepth?(display.colorDepth+' bits'):'','','display.colorDepth'],['Orientación',display.orientation,'','display.orientation']
         ]),
         statusCard('Sistema',[
-          ['Sistema operativo',os],['Versión del sistema',system.osVersion],['Plataforma',system.platform],['Arquitectura',hardware.architecture],['Idioma',system.language],['Zona horaria',system.timezone]
+          ['Sistema operativo',os,'','system.os'],['Versión del sistema',system.osVersion,'','system.osVersion'],['Plataforma',system.platform,'','system.platform'],['Arquitectura',hardware.architecture,'','system.architecture'],['Idioma',system.language,'','system.language'],['Zona horaria',system.timezone,'','system.timezone']
         ]),
         statusCard('Hardware',[
-          ['CPU lógica',hardware.cores?(hardware.cores+' núcleos'):'' ],['Memoria expuesta',hardware.memoryGB?(hardware.memoryGB+' GB'):'' ],['Puntos táctiles',hardware.touchPoints!=null?hardware.touchPoints:''],['Pixel ratio',display.devicePixelRatio]
+          ['CPU lógica',hardware.cores?(hardware.cores+' núcleos'):'','','hardware.cores'],['Memoria expuesta',hardware.memoryGB?(hardware.memoryGB+' GB'):'','','hardware.memory'],['Puntos táctiles',hardware.touchPoints!=null?hardware.touchPoints:'','','hardware.touchPoints'],['Pixel ratio',display.devicePixelRatio,'','display.dpr']
         ]),
         statusCard('Almacenamiento',[
-          ['Disco físico',hardware.diskTotal?statusFormatBytes(hardware.diskTotal):''],['Uso disponible al player',storage.usage?statusFormatBytes(storage.usage):''],
-          ['Cuota disponible al player',storage.quota?statusFormatBytes(storage.quota):''],['Persistente',storage.persisted===true?'Sí':storage.persisted===false?'No':''],
+          ['Disco físico',hardware.diskTotal?statusFormatBytes(hardware.diskTotal):'','','storage.diskTotal'],['Uso disponible al player',storage.usage?statusFormatBytes(storage.usage):'','','storage.usage'],
+          ['Cuota disponible al player',storage.quota?statusFormatBytes(storage.quota):'','','storage.quota'],['Persistente',storage.persisted===true?'Sí':storage.persisted===false?'No':'','','storage.persisted'],
           ['Caché lista',cacheTotal?(cacheCount+' / '+cacheTotal+' contenidos'):cacheCount?(cacheCount+' contenidos'):'' ],['Descargando',downloads?downloads+' contenidos':'0'],['Transferido sesión',cache.bytes?statusFormatBytes(cache.bytes):'']
         ]),
         statusCard('Software',[
-          ['Player',player],['Versión del player',nativeVersion],['Release web',software.webRelease||record.version],['Motor',software.engine],['User-Agent',ua]
+          ['Player',player,'','software.player'],['Versión del player',nativeVersion,'','software.playerVersion'],['Release web',software.webRelease||record.version,'','software.webRelease'],['Motor',software.engine,'','software.engine'],['User-Agent',ua,'','software.userAgent']
         ],true),
         statusCard('Emisión',[
           ['Contenido',item.title],['Tipo',item.type],['ID técnico',item.id],['Sincro',item.sinc?(item.sinc.on?'Sí · '+(item.sinc.modo||'sync'):'No · '+(item.sinc.modo||'local')):'' ],
@@ -780,11 +827,60 @@
     async function loadRemoteStatus(manual){
       var target=T, generation=targetGeneration, seq=++statusRequestSeq, button=document.getElementById('statusRefresh');
       if(manual){ button.disabled=true; button.textContent='Actualizando…'; }
-      var rows=await Promise.all([remoteNowData(target.screen),remoteCacheData(target.screen),remoteScreenRecord(target.screen)]);
-      if(target===T&&generation===targetGeneration&&seq===statusRequestSeq) renderRemoteStatus(rows[0],rows[1],rows[2]);
+      var rows=await Promise.all([remoteNowData(target.screen),remoteCacheData(target.screen),remoteScreenRecord(target.screen),remoteProfileData(target.screen)]);
+      if(target===T&&generation===targetGeneration&&seq===statusRequestSeq) renderRemoteStatus(rows[0],rows[1],rows[2],rows[3]);
       if(manual&&target===T){ button.disabled=false; button.textContent='↻ Actualizar'; }
     }
     document.getElementById('statusRefresh').onclick=function(){ loadRemoteStatus(true); };
+
+    // ── Inventario técnico de contenidos descargados ─────────────────────
+    function statusDuration(value){ var n=Number(value)||0; if(!n) return ''; var m=Math.floor(n/60),s=Math.round(n%60); return m?(m+'m '+String(s).padStart(2,'0')+'s'):(s+'s'); }
+    function statusBitrate(value){ var n=Number(value)||0; if(!n) return ''; return n>=1000000?(n/1000000).toFixed(n>=10000000?1:2)+' Mbps':Math.round(n/1000)+' kbps'; }
+    function manualTargetResolution(profile){
+      var raw=profile&&profile.fields&&profile.fields['display.resolution']||'', m=/(\d{3,5})\D+(\d{3,5})/.exec(raw); return m?{width:+m[1],height:+m[2]}:null;
+    }
+    function contentOptimization(item,target){
+      var width=Number(item.width)||0,height=Number(item.height)||0,bitrate=Number(item.bitrate)||0;
+      if(!width||!height) return {text:'Pendiente de análisis técnico',warn:true};
+      if(!target||!target.width||!target.height) return {text:'Añade la resolución del player en Status para optimizar',warn:true};
+      var contentPixels=width*height,targetPixels=target.width*target.height,ratio=contentPixels/targetPixels;
+      var maxMbps=targetPixels>=7000000?16:targetPixels>=1800000?8:targetPixels>=800000?4:2.5;
+      if(ratio>1.7) return {text:'Reducible: resolución muy superior al player destino',warn:true};
+      if(bitrate>maxMbps*1000000) return {text:'Reducible: bitrate alto para este player ('+maxMbps+' Mbps objetivo)',warn:true};
+      if(ratio<.45) return {text:'Resolución baja para este player; puede perder nitidez',warn:true};
+      return {text:'✓ Peso y resolución adecuados para este player',warn:false};
+    }
+    function contentPill(label,value,primary){
+      var pill=document.createElement('span'); pill.className='tech-pill'+(primary?' primary':'')+(value?'':' missing'); pill.textContent=label+' · '+(value||'sin dato'); return pill;
+    }
+    function renderRemoteContents(cache,playlistData,nowData,profile){
+      cache=cache||{}; playlistData=playlistData||{items:[]}; nowData=nowData||{}; profile=profile||{fields:{}};
+      var byId=new Map((playlistData.items||[]).map(function(it){return [String(it&&it.id||''),it];}));
+      var details=new Map((cache.contents||[]).map(function(it){return [String(it&&it.id||''),it];}));
+      var ready=(cache.ready||[]).map(String), items=ready.map(function(id){ return Object.assign({},byId.get(id)||{id:id},details.get(id)||{}); });
+      var box=document.getElementById('contentsList'), summary=document.getElementById('contentsSummary'); box.replaceChildren();
+      var display=nowData.device&&nowData.device.display||{}, target=display.width&&display.height?{width:Number(display.width),height:Number(display.height)}:manualTargetResolution(profile);
+      var player=nowData.device&&nowData.device.software&&nowData.device.software.player||profile.fields['software.player']||'player remoto';
+      summary.textContent=items.length+' contenidos descargados · destino '+player+(target?' · '+target.width+' × '+target.height+' px':' · resolución pendiente en Status');
+      if(!items.length){ var empty=document.createElement('div'); empty.className='pl-empty'; empty.textContent='El player no ha publicado contenidos descargados'; box.appendChild(empty); return; }
+      items.forEach(function(it){
+        var card=document.createElement('article'); card.className='content-card';
+        var head=document.createElement('div'); head.className='content-card-head'; var title=document.createElement('h3'); title.textContent=it.title||'Contenido sin título';
+        var num=document.createElement('span'); num.className='content-num'; num.textContent=it.num?'#'+it.num:String(it.type||'').toUpperCase(); head.append(title,num); card.appendChild(head);
+        var tech=document.createElement('div'); tech.className='content-tech';
+        var resolution=it.width&&it.height?(it.width+' × '+it.height+' px'):'';
+        tech.append(contentPill('Resolución',resolution,true),contentPill('Bitrate',statusBitrate(it.bitrate),true),contentPill('Codec',it.codec,true),contentPill('Peso',statusFormatBytes(it.bytes)),contentPill('Duración',statusDuration(it.duration)),contentPill('Formato',it.mime||it.type));
+        card.appendChild(tech); var opt=contentOptimization(it,target), note=document.createElement('div'); note.className='content-opt'+(opt.warn?' warn':''); note.textContent=opt.text; card.appendChild(note); box.appendChild(card);
+      });
+    }
+    async function loadRemoteContents(manual){
+      var target=T,generation=targetGeneration,seq=++contentsRequestSeq,button=document.getElementById('contentsRefresh');
+      if(manual){ button.disabled=true; button.textContent='Actualizando…'; }
+      var rows=await Promise.all([remoteCacheData(target.screen),remotePlaylistData(target.screen),remoteNowData(target.screen),remoteProfileData(target.screen)]);
+      if(target===T&&generation===targetGeneration&&seq===contentsRequestSeq) renderRemoteContents(rows[0],rows[1],rows[2],rows[3]);
+      if(manual&&target===T){ button.disabled=false; button.textContent='↻ Actualizar'; }
+    }
+    document.getElementById('contentsRefresh').onclick=function(){ loadRemoteContents(true); };
 
     // ── Ahora emitiendo ──
     async function pollNow(){
@@ -800,6 +896,7 @@
         renderPreview(it);
         loadRemotePlaylist(it&&it.id);
         if(document.body.dataset.mandoView==='status') loadRemoteStatus(false);
+        if(document.body.dataset.mandoView==='contents') loadRemoteContents(false);
         refreshTagline();
       }catch(e){ if(e.name!=='AbortError'&&generation===targetGeneration&&requestSeq===nowRequestSeq) document.getElementById('now').textContent='—'; }
       finally{ if(nowController===controller) nowController=null; }
@@ -813,6 +910,6 @@
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r35.2019" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r36.2032" defer></script>
 </body>
 </html>

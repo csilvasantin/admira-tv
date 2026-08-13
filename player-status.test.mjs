@@ -10,13 +10,21 @@ test('Status es una vista local del mando y no un enlace externo',()=>{
   assert.match(mando,/href="#status" data-mando-view-link="status">Status<\/a>/);
   assert.match(mando,/id="statusView" data-mando-pane="status" hidden/);
   assert.doesNotMatch(mando,/href="https:\/\/www\.admira\.live\/status">Status/);
-  assert.match(mando,/view==='playlist'\|\|view==='status'/);
+  assert.match(mando,/\['playlist','status','contents'\]\.includes\(view\)/);
 });
 
 test('Status cruza los tres contratos vivos del player',()=>{
   assert.match(mando,/var SCREENS_API = 'https:\/\/api\.admira\.store\/signage\/screens'/);
-  assert.match(mando,/Promise\.all\(\[remoteNowData\(target\.screen\),remoteCacheData\(target\.screen\),remoteScreenRecord\(target\.screen\)\]\)/);
-  assert.match(mando,/function renderRemoteStatus\(nowData,cache,record\)/);
+  assert.match(mando,/Promise\.all\(\[remoteNowData\(target\.screen\),remoteCacheData\(target\.screen\),remoteScreenRecord\(target\.screen\),remoteProfileData\(target\.screen\)\]\)/);
+  assert.match(mando,/function renderRemoteStatus\(nowData,cache,record,profile\)/);
+});
+
+test('Contenidos sustituye el enlace Admira.tv y cruza inventario, caché y destino',()=>{
+  assert.match(mando,/href="#contents" data-mando-view-link="contents">Contenidos<\/a>/);
+  assert.doesNotMatch(mando,/>Admira\.tv<\/a>/);
+  assert.match(mando,/function renderRemoteContents\(cache,playlistData,nowData,profile\)/);
+  for(const label of ['Resolución','Bitrate','Codec','Peso','Duración','Formato']) assert.match(mando,new RegExp(label));
+  assert.match(mando,/Reducible: bitrate alto para este player/);
 });
 
 test('Status muestra información de pantalla, sistema, hardware, disco y software sin inventar ausencias',()=>{
@@ -32,6 +40,13 @@ test('el canal publica una telemetría allowlisted y refresca datos variables',(
   assert.match(canal,/device:DEVICE_TELEMETRY/);
   assert.match(canal,/standby:false/);
   assert.match(canal,/version:window\.ADMIRA_VERSION/);
+});
+
+test('el player analiza sólo su caché local y publica inventario técnico',()=>{
+  assert.match(canal,/function cachedCodec\(blob,mime\)/);
+  assert.match(canal,/function cachedMediaMetadata\(blob,type\)/);
+  assert.match(canal,/bitrate:duration&&bytes\?Math\.round\(bytes\*8\/duration\):0/);
+  assert.match(canal,/return \{ screen:scr\.screen, ready, total:inv\.length, downloading, bytes:_cBytes, contents \}/);
 });
 
 test('todos los scripts inline del mando y canal conservan sintaxis válida',()=>{
