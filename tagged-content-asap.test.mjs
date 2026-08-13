@@ -126,3 +126,11 @@ test('goto-N atraviesa la cola confirmada y sólo acusa después de ejecutarlo',
   assert.match(canal, /const m=\/\^goto-\(\\d\{1,3\}\)\$\/\.exec\(cmd\)/);
   assert.match(canal, /await play\(n,playlist\[n\]\)/);
 });
+
+test('el modo sincro publica la playlist efectiva antes de reproducir y retornar', () => {
+  const rebuild = functionSource(canal, 'rebuild');
+  const branch = /if\(syncOn\)\{([\s\S]*?)\n\s*return;/.exec(rebuild);
+  assert.ok(branch, 'no se encontró la rama sincro de rebuild');
+  assert.match(branch[1], /signagePlaylistPush\(\)/);
+  assert.ok(branch[1].indexOf('signagePlaylistPush()') < branch[1].indexOf('play(syncIndex())'));
+});
