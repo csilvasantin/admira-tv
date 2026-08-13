@@ -34,6 +34,7 @@
   var ACL_API = "/users/api/access";
   var PATH_PROJECTS = {
     "cms.html":"digitalsignage-cms", "cms":"digitalsignage-cms", "parrilla":"digitalsignage-parrilla",
+    "players":"digitalsignage-player", "players.html":"digitalsignage-player",
     "playlists":"digitalsignage-playlists", "player":"digitalsignage-player",
     "remotecontrol":"digitalsignage-remotecontrol", "mando.html":"digitalsignage-remotecontrol",
     "wall":"digitalsignage-wall", "alta.html":"digitalsignage-alta",

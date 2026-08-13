@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=13.08.2026.r38.2121"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r39.2147"></script>
 <script>
-  window.ADMIRA_VERSION='v.13.08.2026.r38.21:21';
+  window.ADMIRA_VERSION='v.13.08.2026.r39.21:47';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -133,6 +133,14 @@
     box-shadow:0 0 0 8px #11161d, 0 0 0 10px #060a0f, 0 30px 90px rgba(0,0,0,.65), 0 0 80px rgba(125,184,255,.07); }
   #stage{ position:absolute; inset:0; display:grid; place-items:center; background:#000; }
   #stage video, #stage img{ width:100%; height:100%; object-fit:contain; display:block; }
+  /* MODO EXTENDIDO: cada player enseña una tesela del mismo lienzo. */
+  #stage.extended-tile{overflow:hidden;display:block}
+  #stage.extended-tile>video,#stage.extended-tile>img{
+    position:absolute!important;max-width:none!important;max-height:none!important;
+    width:calc(var(--wall-cols,1)*100%)!important;height:calc(var(--wall-rows,1)*100%)!important;
+    left:calc(var(--wall-col,0)*-100%)!important;top:calc(var(--wall-row,0)*-100%)!important;
+    object-fit:fill!important
+  }
   /* Oculta el botón de play NATIVO del navegador (Samsung Internet/WebView/iOS) que
      asomaba entre contenidos: en señalética el vídeo SIEMPRE autoarranca y NUNCA se
      ofrece un control de reproducción al público. */
@@ -461,6 +469,23 @@ let syncTimeOffset=0;
 const SYNC_API='https://omnipublicity-api.csilvasantin.workers.dev/sync/state';
 let SYNC_REMOTE=null, syncStateTimer=null;
 let _syncSig='';   // firma del máster: solo se re-monta la antena si CAMBIÓ (eficiencia FLT-1409)
+let _extendedAssignment=null, _extendedClockOffset=0;
+function extendedItem(){
+  if(!_extendedAssignment||!_extendedAssignment.item) return null;
+  const raw=_extendedAssignment.item;
+  return Object.assign({},raw,{_num:raw.num,motor:'mural extendido',category:'extendido'});
+}
+function paintExtendedTile(){
+  const tile=_extendedAssignment&&_extendedAssignment.tile;
+  stage.classList.toggle('extended-tile',!!tile);
+  if(!tile) return;
+  stage.style.setProperty('--wall-cols',String(tile.cols||1)); stage.style.setProperty('--wall-rows',String(tile.rows||1));
+  stage.style.setProperty('--wall-col',String(tile.col||0)); stage.style.setProperty('--wall-row',String(tile.row||0));
+}
+function clearExtendedAssignment(){
+  if(!_extendedAssignment) return false;
+  _extendedAssignment=null; _extendedClockOffset=0; paintExtendedTile(); seenSig=''; return true;
+}
 function fetchSyncState(){
   fetch(SYNC_API+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('http '+r.status))).then(d=>{
     if(d&&Array.isArray(d.items)&&d.items.length){
@@ -963,8 +988,9 @@ function signageNowPush(it){
   // `on` si está sincronizada, el `idx` de franja que ha calculado, el tamaño de
   // franja y de cuántas piezas es su bucle. Dos pantallas sincronizadas de verdad
   // dicen el MISMO idx; si dicen distinto, o el reloj o el bucle no coinciden.
-  const sinc = { on: syncOn?1:0, modo: playoutMode };
+  const sinc = { on:(syncOn||!!_extendedAssignment)?1:0, modo:_extendedAssignment?'extended':playoutMode };
   if(syncOn){ try{ sinc.idx=syncIndex(); sinc.slot=Math.round(syncSlotMs()/1000); sinc.n=playlist.length; }catch(_){} }
+  if(_extendedAssignment&&_extendedAssignment.tile){ sinc.tile=_extendedAssignment.tile; sinc.revision=_extendedAssignment.revision||0; }
   const item={ id:it.id, url:it.url, type:it.type||'image', ar:(mupiAR||itemAR(it)||(9/16)),
     title:(it.title||it.prompt||'').slice(0,80), dur:(it._dur||0), startedAt:now, ts:now, aud:_lastAud, sinc };
   const cambiaPieza = !_nowItem || String(_nowItem.id)!==String(item.id);
@@ -1567,7 +1593,7 @@ async function play(i, forced){
   if(_warmWaiting){ _warmWaiting=false; dlLine(null); }   // fin del switch en caliente
   _coldWaiting=false;   // llegamos aquí = hay algo que emitir
   const k=KIND[it.type]||'image';
-  mupiAR=itemAR(it); fitMupi();   // marco 9:16 / 16:9 según el formato del contenido
+  mupiAR=_extendedAssignment?(window.innerWidth/Math.max(1,window.innerHeight)):itemAR(it); fitMupi();   // el mural llena la tesela; el resto conserva el AR editorial
   emitFrameState(it);
   const title=(it.title||it.prompt||'sin título').replace(/\n/g,' ').slice(0,64);
   stage.innerHTML=''; nowEl.textContent='▶ '+title;
@@ -1587,7 +1613,7 @@ async function play(i, forced){
     v.style.opacity='0';
     const _reveal=()=>{ try{ v.style.opacity='1'; }catch(_){} };
     v.addEventListener('playing', _reveal, {once:true}); setTimeout(_reveal, 1200);
-    v.onloadedmetadata=()=>{ if(v.duration&&isFinite(v.duration)){ it._dur=Math.round(v.duration); if(v.videoWidth&&v.videoHeight){ it._dim={w:v.videoWidth,h:v.videoHeight}; mupiAR=v.videoWidth/v.videoHeight; fitMupi(); emitFrameState(it); } if(syncOn&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,(syncElapsedMs()/1000)%v.duration); }catch(_){} } localInfoRender(); } };
+    v.onloadedmetadata=()=>{ if(v.duration&&isFinite(v.duration)){ it._dur=Math.round(v.duration); if(v.videoWidth&&v.videoHeight){ it._dim={w:v.videoWidth,h:v.videoHeight}; mupiAR=_extendedAssignment?(window.innerWidth/Math.max(1,window.innerHeight)):(v.videoWidth/v.videoHeight); fitMupi(); emitFrameState(it); } if(_extendedAssignment&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,((Date.now()+_extendedClockOffset)/1000)%v.duration); }catch(_){} } else if(syncOn&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,(syncElapsedMs()/1000)%v.duration); }catch(_){} } localInfoRender(); } };
     v.onended=()=>syncOn?play(syncIndex()):next();
     v.onerror=()=>{ if(!_coRetry && v.crossOrigin){ _coRetry=true; try{ v.removeAttribute('crossorigin'); v.load(); v.play().catch(()=>{}); }catch(_){} return; }   // asset sin CORS: reintenta sin crossorigin (nunca se corta la emisión)
       setTimeout(next,600); };
@@ -1621,8 +1647,9 @@ async function play(i, forced){
     let _coRetryI=false;
     im.alt=title; if(it.type==='twin-npc') im.className='pixel';
     im.onload=()=>{ if(_tok!==_playTok||!im.isConnected||!im.naturalWidth||!im.naturalHeight) return;
-      it._dim={w:im.naturalWidth,h:im.naturalHeight}; mupiAR=im.naturalWidth/im.naturalHeight;
-      fitMupi(); emitFrameState(it); localInfoRender(); };
+      it._dim={w:im.naturalWidth,h:im.naturalHeight}; mupiAR=im.naturalWidth/im.naturalHeight; fitMupi();
+      if(_extendedAssignment){ mupiAR=window.innerWidth/Math.max(1,window.innerHeight); fitMupi(); }
+      emitFrameState(it); localInfoRender(); };
     im.onerror=()=>{ if(!_coRetryI && im.crossOrigin){ _coRetryI=true; try{ im.removeAttribute('crossorigin'); im.src=SRC; }catch(_){} return; }   // asset sin CORS: recarga sin crossorigin (la emisión SIEMPRE se ve)
       setTimeout(next,600); };
     im.src=SRC; stage.appendChild(im); startAdv(syncOn?syncRemainingMs():Math.max(2,(it._previewSec||cfg.imgSec))*1000);
@@ -1741,6 +1768,17 @@ function rebuild(restart){
   // Un rebuild CON restart es una orden explícita (cambio de segmento, tag del
   // mando, /reload…): manda más que la novedad, así que se le corta el turno.
   if(restart) freshCancel();
+  // Mural extendido: una única pieza compartida, recortada por el player según su
+  // tesela. Vive antes de parrillas y filtros para que nada local contamine el mural.
+  if(_extendedAssignment&&_extendedAssignment.item){
+    const item=extendedItem(), previous=playlist[cur]&&String(playlist[cur].id||'');
+    playlist=item?[item]:[]; paintExtendedTile();
+    if($('segCount')) $('segCount').textContent='tesela '+((_extendedAssignment.tile&&_extendedAssignment.tile.index||0)+1)+'/'+((_extendedAssignment.tile&&_extendedAssignment.tile.total)||1)+' · mural extendido';
+    setLive('EXTENDIDO · '+((_extendedAssignment.tile&&_extendedAssignment.tile.cols)||1)+'×'+((_extendedAssignment.tile&&_extendedAssignment.tile.rows)||1),!!item);
+    try{ renderChan(); }catch(_){} renderRail(); try{ schedulePrecache(); }catch(_){}
+    if(item&&(restart||cur<0||previous!==String(item.id))){ cur=-1; play(0); }
+    return;
+  }
   // PREVIO de borrador: bucle exacto del rundown, sin filtros de segmentación ni weave.
   if(PREVIEW.on && PREVIEW.items.length){
     playlist=PREVIEW.items.slice();
@@ -3014,17 +3052,56 @@ if(PREVIEW.on){
 // Dominio propio primero, como en el canal de comandos: los ISP españoles bloquean
 // *.workers.dev y estos players están en España (api.admira.store proxea al mismo worker).
 const MODE_API='https://api.admira.store/locations/mode';
-function pollMode(){
+const PLAYOUT_ASSIGNMENT_API='https://api.admira.store/playout/assignment';
+let _playoutRevision=-1;
+function applyPlayoutAssignment(d){
+  if(!d||!d.configured) return false;   // contrato nuevo aún sin configurar: conserva el modo histórico
+  const rev=Number(d.revision)||0, mode=String(d.mode||'autonomous');
+  if(mode==='extended'&&d.item&&d.tile){
+    const signature=rev+'|'+d.item.id+'|'+d.tile.index;
+    if(_extendedAssignment&&_extendedAssignment._signature===signature){
+      // Cada sondeo corrige deriva real sin reiniciar el clip. Compara sobre el
+      // círculo de la duración para no saltar falsamente cerca del final.
+      if(mediaEl&&mediaEl.tagName==='VIDEO'&&mediaEl.duration>1){
+        const target=((Date.now()+_extendedClockOffset)/1000)%mediaEl.duration;
+        const raw=Math.abs(mediaEl.currentTime-target), drift=Math.min(raw,mediaEl.duration-raw);
+        if(drift>.7) try{ mediaEl.currentTime=target; }catch(_){}
+      }
+      return true;
+    }
+    // Extended es una orden completa: apaga los motores que podrían reconstruir
+    // otra playlist y usa el reloj del servidor para alinear vídeos entre teselas.
+    syncOn=false; playoutMode='local'; save('adtv_sincro','0'); save('adtv_mode','local');
+    if(syncStateTimer){ clearInterval(syncStateTimer); syncStateTimer=null; } SYNC_REMOTE=null;
+    if(xplTimer){ clearInterval(xplTimer); xplTimer=null; } if(window.XPLCanal) window.XPLCanal.stop();
+    _extendedClockOffset=Number(d.serverNow||Date.now())-Date.now();
+    _extendedAssignment=Object.assign({},d,{_signature:signature}); _playoutRevision=rev; seenSig=''; cur=-1; rebuild(true);
+    flashCli('▦ extendido · tesela '+(d.tile.index+1)+'/'+d.tile.total); return true;
+  }
+  const leftExtended=clearExtendedAssignment();
+  if(mode==='synchronized'){
+    if(!syncOn||playoutMode!=='sync'||leftExtended) setAdmiraSync(true);
+  }else if(syncOn||playoutMode!=='local'||leftExtended){
+    setAdmiraMode('local');
+  }
+  _playoutRevision=rev;
+  return true;
+}
+async function pollMode(){
   if(!scr.circuit) return;   // sólo equipos registrados (con circuito/id)
   // Un modo bloqueado por la integración, URL_TAG o tag EN VIVO = decisión
   // explícita del operador: esta pantalla no obedece cambios de modo remotos.
   if(MODE_LOCK||URL_TAG||URL_SYNC||_liveTag||_liveMode) return;
-  fetch(MODE_API+'?id='+encodeURIComponent(scr.circuit)+'&t='+Date.now(),{cache:'no-store'})
-    .then(r=>r.ok?r.json():null).then(d=>{
-      if(!d||!d.mode) return;
-      const m=canonicalAdmiraMode(d.mode);
-      if(m!==playoutMode){ setAdmiraMode(m); flashCli('◆ modo remoto: '+m); }
-    }).catch(()=>{});
+  try{
+    const plan=await fetch(PLAYOUT_ASSIGNMENT_API+'?screen='+encodeURIComponent(scr.screen||scr.circuit)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
+    if(applyPlayoutAssignment(plan)) return;
+  }catch(_){}
+  try{
+    const d=await fetch(MODE_API+'?id='+encodeURIComponent(scr.circuit)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
+    if(!d||!d.mode) return;
+    const m=canonicalAdmiraMode(d.mode);
+    if(m!==playoutMode){ clearExtendedAssignment(); setAdmiraMode(m); flashCli('◆ modo remoto: '+m); }
+  }catch(_){}
 }
 pollMode(); setInterval(pollMode, 12000);
 
@@ -3342,6 +3419,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r38.2121" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r39.2147" defer></script>
 </body>
 </html>

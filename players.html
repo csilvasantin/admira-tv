@@ -1,165 +1,59 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Players · Clear Channel · Admira.tv</title>
-  <meta name="description" content="Dos players DOOH de la plataforma Clear Channel emitiendo vía Admira.tv: Instore Media (Xtanco Valencia, interior) y OOH Media (kioskos de prensa de Barcelona, exterior).">
-  <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
-  <style>
-    :root{
-      --bg:var(--admira-bg,#0a0c12); --elev:var(--admira-bg-elev,#141826);
-      --text:var(--admira-text,#f0e6ff); --muted:var(--admira-text-muted,rgba(216,200,255,.65));
-      --dim:var(--admira-text-dim,rgba(216,200,255,.4));
-      --violet:var(--admira-violet,#aa88ff); --amber:var(--admira-amber,#ffd866);
-      --cyan:var(--admira-cyan,#50c8ff); --green:var(--admira-green,#76b900);
-      --magenta:var(--admira-magenta,#ff4488);
-      --border:var(--admira-border,rgba(170,136,255,.25));
-      --mono:var(--admira-font-mono,ui-monospace,Menlo,monospace);
-      --sans:var(--admira-font-sans,-apple-system,system-ui,sans-serif);
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
-      background-image:radial-gradient(1200px 600px at 50% -10%,rgba(170,136,255,.10),transparent 60%);
-      min-height:100vh;padding:28px 20px 60px}
-    header.pg{max-width:1180px;margin:0 auto 26px}
-    .kick{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--violet)}
-    h1{font-size:clamp(26px,4vw,40px);margin:.15em 0 .1em;letter-spacing:-.01em}
-    .sub{color:var(--muted);max-width:70ch;line-height:1.5;margin:0}
-    .grid{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:22px}
-    @media(max-width:820px){.grid{grid-template-columns:1fr}}
-    .card{background:var(--elev);border:1px solid var(--border);border-radius:16px;overflow:hidden;
-      display:flex;flex-direction:column}
-    .card.indoor{--ac:var(--cyan)} .card.outdoor{--ac:var(--amber)}
-    .card-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px}
-    .badge{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
-      padding:4px 9px;border-radius:999px;border:1px solid var(--ac);color:var(--ac);white-space:nowrap;background:color-mix(in srgb,var(--ac) 12%,transparent)}
-    .card-head h2{margin:0;font-size:19px;line-height:1.2}
-    .card-head .loc{color:var(--muted);font-size:13px;margin-top:2px}
-    .stage{position:relative;background:#000;display:flex;justify-content:center;padding:18px}
-    .frame{position:relative;width:min(300px,72%);aspect-ratio:9/16;border-radius:12px;overflow:hidden;
-      border:1px solid var(--border);box-shadow:0 0 0 1px rgba(0,0,0,.5),0 18px 50px rgba(0,0,0,.5)}
-    .frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
-    .live{position:absolute;top:10px;left:10px;z-index:2;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
-      background:rgba(0,0,0,.55);padding:3px 8px;border-radius:999px;display:flex;align-items:center;gap:6px;color:#fff}
-    .live b{width:7px;height:7px;border-radius:50%;background:#ff4455;box-shadow:0 0 8px #ff4455;animation:pulse 1.4s infinite}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-    .card-body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:12px}
-    .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-    .screens{display:flex;gap:6px;flex-wrap:wrap}
-    .btn{font-family:var(--mono);font-size:12px;letter-spacing:.04em;padding:8px 12px;border-radius:9px;cursor:pointer;
-      border:1px solid var(--border);background:transparent;color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:7px;transition:.15s}
-    .btn:hover{border-color:var(--ac);color:var(--ac)}
-    .btn.primary{background:color-mix(in srgb,var(--ac) 16%,transparent);border-color:var(--ac);color:var(--ac)}
-    .btn.primary:hover{background:color-mix(in srgb,var(--ac) 26%,transparent)}
-    select{font-family:var(--mono);font-size:12px;padding:8px 10px;border-radius:9px;background:#0d1018;color:var(--text);border:1px solid var(--border)}
-    .meta{color:var(--dim);font-size:12px;font-family:var(--mono);line-height:1.6}
-    .foot{max-width:1180px;margin:26px auto 0;color:var(--dim);font-size:12px;font-family:var(--mono);text-align:center}
-    a.plain{color:var(--violet);text-decoration:none} a.plain:hover{text-decoration:underline}
-  </style>
+<meta charset="utf-8">
+<script src="/auth-gate.js?v=13.08.2026.r39.2147"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="admiranext-version" content="v.13.08.2026.r38.21:21">
+<title>Players · Admira.tv</title>
+<meta name="description" content="Composición de players Admira.tv: emisión autónoma, grupos sincronizados y murales extendidos.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+:root{--bg:#05070b;--panel:#0c111b;--panel2:#111827;--line:#283650;--text:#f2eaff;--dim:#968bab;--violet:#ad86ff;--cyan:#4bc9ff;--green:#43e58c;--amber:#ffd25f;--red:#ff6875;--mono:ui-monospace,SFMono-Regular,Menlo,monospace;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}html{color-scheme:dark}body{margin:0;min-height:100vh;background:radial-gradient(circle at 80% -15%,#1c1538 0,transparent 38%),var(--bg);color:var(--text);font-family:var(--sans)}button,input{font:inherit}.wrap{width:min(1280px,calc(100% - 32px));margin:auto}.top{position:sticky;top:0;z-index:10;background:rgba(5,7,11,.92);border-bottom:1px solid var(--line);backdrop-filter:blur(16px)}.topin{min-height:66px;display:flex;align-items:center;gap:14px}.brand{font-weight:900;font-size:20px;letter-spacing:.02em;text-decoration:none;color:var(--text)}.brand i{font-style:normal;color:var(--green)}.back{margin-left:auto;color:var(--dim);text-decoration:none;font:12px var(--mono)}.back:hover{color:var(--cyan)}
+.hero{padding:46px 0 24px}.eyebrow{color:var(--cyan);font:11px var(--mono);letter-spacing:.18em;text-transform:uppercase}.hero h1{font-size:clamp(34px,6vw,66px);line-height:.98;margin:12px 0}.hero h1 em{font-style:normal;color:var(--green)}.hero p{max-width:850px;color:var(--dim);font-size:17px;line-height:1.55;margin:0}.current{margin-top:18px;display:inline-flex;align-items:center;gap:9px;border:1px solid #31533f;background:#0d1a17;color:var(--green);border-radius:999px;padding:8px 12px;font:12px var(--mono)}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:8px 0 22px}.mode{position:relative;min-width:0;text-align:left;border:1px solid var(--line);background:rgba(12,17,27,.92);color:var(--text);border-radius:16px;padding:18px;cursor:pointer;transition:.16s}.mode:hover{border-color:#536a96;transform:translateY(-1px)}.mode.active{border-color:var(--mode);box-shadow:0 0 0 1px var(--mode),0 16px 45px rgba(0,0,0,.25);background:color-mix(in srgb,var(--mode) 9%,var(--panel))}.mode[data-mode="autonomous"]{--mode:var(--green)}.mode[data-mode="synchronized"]{--mode:var(--cyan)}.mode[data-mode="extended"]{--mode:var(--violet)}.mode .ico{font-size:24px}.mode h2{margin:12px 0 5px;font-size:19px}.mode p{margin:0;color:var(--dim);font-size:13px;line-height:1.45}.mode .default{position:absolute;right:12px;top:12px;border:1px solid #31533f;color:var(--green);border-radius:999px;padding:3px 7px;font:9px var(--mono);text-transform:uppercase}
+.panel{border:1px solid var(--line);background:rgba(12,17,27,.94);border-radius:17px;overflow:hidden;margin-bottom:16px}.ph{display:flex;align-items:center;gap:12px;padding:15px 17px;border-bottom:1px solid var(--line);background:var(--panel2)}.ph h2{margin:0;font-size:16px}.count{color:var(--cyan);font:11px var(--mono)}.hint{margin-left:auto;color:var(--dim);font:11px var(--mono)}.pb{padding:16px}.notice{border:1px solid #31533f;background:#0b1815;color:#b8ebce;border-radius:12px;padding:13px;font:12px/1.5 var(--mono)}
+.screens{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.screen{position:relative;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:11px;align-items:center;border:1px solid var(--line);background:#090e16;border-radius:13px;padding:12px;cursor:pointer;text-align:left;color:var(--text);min-width:0}.screen:hover{border-color:#526789}.screen.selected{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan);background:#0b1720}.screen .num{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:#121d2c;color:var(--dim);font:800 13px var(--mono)}.screen.selected .num{background:var(--cyan);color:#021019}.screen strong,.screen small{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.screen small{color:var(--dim);font:10px var(--mono);margin-top:3px}.dot{width:8px;height:8px;border-radius:50%;background:#566}.dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.extended[hidden]{display:none}.tools{display:flex;gap:10px;margin-bottom:13px}.search{flex:1;min-width:0;border:1px solid var(--line);border-radius:11px;background:#080d15;color:var(--text);padding:11px 13px;outline:none}.search:focus{border-color:var(--violet)}.contents{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;max-height:390px;overflow:auto;padding-right:4px}.content{display:grid;grid-template-columns:76px minmax(0,1fr);gap:10px;align-items:center;border:1px solid var(--line);background:#090e16;color:var(--text);border-radius:12px;padding:8px;cursor:pointer;text-align:left;min-width:0}.content:hover{border-color:#675596}.content.selected{border-color:var(--violet);box-shadow:0 0 0 1px var(--violet)}.thumb{width:76px;height:52px;border-radius:8px;object-fit:cover;background:linear-gradient(135deg,#32255f,#12334b)}.content strong,.content small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.content strong{font-size:12px}.content small{color:var(--dim);font:10px var(--mono);margin-top:5px}.wall{margin-top:15px;display:grid;gap:5px;min-height:150px;border:1px dashed #58467a;border-radius:14px;padding:8px;background:#070a10}.tile{position:relative;min-height:94px;border:1px solid #8367b6;border-radius:8px;overflow:hidden;background:#101420 center/cover}.tile::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.74),transparent 70%)}.tile b{position:absolute;z-index:1;left:8px;bottom:7px;right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:10px var(--mono)}.tile i{position:absolute;z-index:1;right:7px;top:6px;width:24px;height:24px;border-radius:999px;background:var(--violet);color:#100621;display:grid;place-items:center;font:900 11px var(--mono);font-style:normal}
+.actionbar{position:sticky;bottom:0;z-index:8;margin-top:18px;padding:14px 0 24px;background:linear-gradient(0deg,var(--bg) 70%,transparent);display:flex;align-items:center;gap:12px}.save{border:1px solid var(--green);background:var(--green);color:#04110a;border-radius:12px;padding:13px 18px;font-weight:900;cursor:pointer}.save:disabled{opacity:.45;cursor:not-allowed}.status{color:var(--dim);font:12px var(--mono)}.status.ok{color:var(--green)}.status.err{color:var(--red)}
+@media(max-width:900px){.modes,.screens,.contents{grid-template-columns:1fr 1fr}.hint{display:none}}@media(max-width:580px){.wrap{width:min(100% - 20px,1280px)}.hero{padding-top:28px}.modes,.screens,.contents{grid-template-columns:1fr}.mode{padding:15px}.screen{grid-template-columns:40px minmax(0,1fr) auto}.actionbar{align-items:stretch;flex-direction:column}.save{width:100%}}
+</style>
 </head>
 <body>
-  <header class="pg">
-    <div class="kick">Emitir · Clear Channel × Admira.tv</div>
-    <h1>Dos players en marcha</h1>
-    <p class="sub">Dos pantallas DOOH de la plataforma <b>Clear Channel</b> emitiendo en vivo vía el canal de Admira.tv:
-      un player de <b>publicidad interior</b> (Instore Media) en el Xtanco de Valencia, y otro de <b>publicidad exterior</b>
-      (OOH Media) en los kioskos de prensa de Barcelona. Mismo motor de emisión, distinto circuito.</p>
-  </header>
-
-  <div class="grid">
-    <!-- INDOOR · INSTORE MEDIA -->
-    <section class="card indoor">
-      <div class="card-head">
-        <span class="badge">Publicidad interior</span>
-        <div>
-          <h2>Instore Media</h2>
-          <div class="loc">📍 Xtanco Valencia · estanco · 4 pantallas A·B·C·D</div>
-        </div>
-      </div>
-      <div class="stage">
-        <div class="frame">
-          <span class="live"><b></b>EN VIVO</span>
-          <iframe id="fIn" title="Player Xtanco Valencia" allow="autoplay; fullscreen"></iframe>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="row"><span class="meta">Pantalla:</span>
-          <div class="screens" id="scrIn"></div>
-        </div>
-        <div class="row">
-          <a class="btn primary" id="fsIn" target="_blank" rel="noopener">⛶ Abrir a pantalla completa (kiosk)</a>
-        </div>
-        <div class="meta">circuit=<b>xtanco-valencia</b> · proof-of-play → api.admira.store/emit · parrilla por pantalla → /grid</div>
-      </div>
-    </section>
-
-    <!-- OUTDOOR · OOH MEDIA -->
-    <section class="card outdoor">
-      <div class="card-head">
-        <span class="badge">Publicidad exterior · DOOH</span>
-        <div>
-          <h2>OOH Media</h2>
-          <div class="loc">📍 Kioskos de prensa · Barcelona · 100 puntos · 1080×1920</div>
-        </div>
-      </div>
-      <div class="stage">
-        <div class="frame">
-          <span class="live"><b></b>EN VIVO</span>
-          <iframe id="fOut" title="Player Kioskos Barcelona" allow="autoplay; fullscreen"></iframe>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="row"><span class="meta">Kiosko:</span>
-          <select id="selOut" aria-label="Elegir kiosko"></select>
-        </div>
-        <div class="row">
-          <a class="btn primary" id="fsOut" target="_blank" rel="noopener">⛶ Abrir a pantalla completa (kiosk)</a>
-        </div>
-        <div class="meta">circuit=<b>bcn-kiosk-NNN</b> · publicidad exterior · horario 08:00–22:00 · prensa + programática</div>
-      </div>
-    </section>
-  </div>
-
-  <p class="foot">Motor de emisión: <a class="plain" href="/canal.html" target="_blank">canal.html</a> · inventario y venta en
-    <a class="plain" href="https://www.clearchannel.tv" target="_blank">clearchannel.tv</a> · gemelos 3D en
-    <a class="plain" href="https://www.pixeria.com/xpacios/" target="_blank">pixeria.com/xpacios</a></p>
-
-  <script>
-    var CANAL = '/canal.html';
-    function url(circuit, screen, extra){
-      var p = 'circuit='+encodeURIComponent(circuit)+'&screen='+encodeURIComponent(screen);
-      return CANAL+'?'+p+(extra||'');
-    }
-    // ── INDOOR: Xtanco Valencia, pantallas A/B/C/D ──
-    var vScreens = ['a','b','c','d'];
-    var vSel = 'a';
-    function renderIn(){
-      document.getElementById('fIn').src = url('xtanco-valencia','xtanco-valencia-'+vSel,'&embed=mupi&clean=1&muted=1');
-      document.getElementById('fsIn').href = url('xtanco-valencia','xtanco-valencia-'+vSel,'&embed=mupi&kiosk=1');
-      var box = document.getElementById('scrIn'); box.innerHTML='';
-      vScreens.forEach(function(s){
-        var b=document.createElement('button'); b.className='btn'+(s===vSel?' primary':'');
-        b.textContent=s.toUpperCase();
-        b.onclick=function(){ vSel=s; renderIn(); };
-        box.appendChild(b);
-      });
-    }
-    // ── OUTDOOR: kioskos Barcelona 001–100 ──
-    var sel = document.getElementById('selOut');
-    for(var i=1;i<=100;i++){
-      var n=('000'+i).slice(-3); var o=document.createElement('option');
-      o.value=n; o.textContent='bcn-kiosk-'+n+' · Barcelona'; sel.appendChild(o);
-    }
-    function renderOut(){
-      var n=sel.value;
-      document.getElementById('fOut').src = url('bcn-kiosk-'+n,'bcn-kiosk-'+n+'-led','&embed=mupi&clean=1&muted=1');
-      document.getElementById('fsOut').href = url('bcn-kiosk-'+n,'bcn-kiosk-'+n+'-led','&embed=mupi&kiosk=1');
-    }
-    sel.onchange=renderOut;
-    renderIn(); renderOut();
-  </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r38.2121" defer></script>
+<header class="top"><div class="wrap topin"><a class="brand" href="/cms">ADMIRA<i>.TV</i></a><span>Players</span><a class="back" href="/cms">← Control de flota</a></div></header>
+<main class="wrap">
+  <section class="hero"><div class="eyebrow">Composición de emisión</div><h1>¿Cómo trabajan los <em>players</em>?</h1><p>El modo autónomo es la base segura. Cuando una experiencia necesita varias pantallas, escoge exactamente qué equipos comparten la emisión o conviértelos en un único lienzo extendido.</p><div id="current" class="current">● leyendo configuración viva…</div></section>
+  <section class="modes" aria-label="Modo de los players">
+    <button class="mode active" data-mode="autonomous" type="button"><span class="default">por defecto</span><span class="ico">◉</span><h2>Autónomo</h2><p>Cada player usa su programación, caché y ritmo. Ningún equipo depende de otro.</p></button>
+    <button class="mode" data-mode="synchronized" type="button"><span class="ico">◌</span><h2>Sincronizado</h2><p>Los equipos escogidos comparten playlist, índice y reloj; el resto sigue autónomo.</p></button>
+    <button class="mode" data-mode="extended" type="button"><span class="ico">▦</span><h2>Extendido</h2><p>Un contenido se reparte por teselas: cada ordenador dibuja una parte del mural.</p></button>
+  </section>
+  <section class="panel"><div class="ph"><h2>Equipos</h2><span id="screenCount" class="count">—</span><span id="screenHint" class="hint">En autónomo no hace falta seleccionar</span></div><div class="pb"><div id="autonomousNotice" class="notice">Todos los players quedan autónomos. Es el estado por defecto y el punto de retorno seguro.</div><div id="screens" class="screens" hidden></div></div></section>
+  <section id="extended" class="panel extended" hidden><div class="ph"><h2>Contenido del mural</h2><span id="contentCount" class="count">—</span><span class="hint">imagen, vídeo o animación</span></div><div class="pb"><div class="tools"><input id="search" class="search" type="search" placeholder="Buscar por título, número o ID…" aria-label="Buscar contenido"></div><div id="contents" class="contents"></div><div id="wall" class="wall" aria-label="Distribución del mural"></div></div></section>
+  <div class="actionbar"><button id="save" class="save" type="button">Aplicar modo autónomo</button><span id="status" class="status">Sin cambios pendientes.</span></div>
+</main>
+<script>
+window.ADMIRA_VERSION='v.13.08.2026.r39.21:47';
+const API='https://api.admira.store', PLAYOUT=API+'/playout/state';
+const $=id=>document.getElementById(id), state={mode:'autonomous',screens:[],items:[],selected:[],item:null,saved:null};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function nameOf(screen){const map={macbookairazul:'MacBook Air Azul',macbookairplata:'MacBook Air Plata',macbookaircrema:'MacBook Air Crema',macbookairrosa:'MacBook Air Rosa',macbookpro16:'MacBook Pro 16'};return map[screen]||screen.replace(/-/g,' ');}
+function preview(it){return it.thumbnail||it.thumb||it.poster||((it.type==='image'||it.type==='animation')?it.url:'');}
+function fallback(){return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 90"><defs><linearGradient id="g"><stop stop-color="#35245f"/><stop offset="1" stop-color="#123c50"/></linearGradient></defs><rect width="160" height="90" fill="url(#g)"/><text x="80" y="53" fill="#fff" text-anchor="middle" font-size="22">▶</text></svg>');}
+function setMode(mode){state.mode=mode;document.querySelectorAll('.mode').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));const group=mode!=='autonomous';$('screens').hidden=!group;$('autonomousNotice').hidden=group;$('extended').hidden=mode!=='extended';$('screenHint').textContent=group?'Pulsa para escoger y ordenar':'En autónomo no hace falta seleccionar';renderScreens();renderWall();validate();}
+function toggleScreen(screen){if(state.mode==='autonomous')return;const i=state.selected.indexOf(screen);if(i>=0)state.selected.splice(i,1);else state.selected.push(screen);renderScreens();renderWall();validate();}
+function renderScreens(){$('screenCount').textContent=state.screens.length+' disponibles · '+state.selected.length+' elegidos';$('screens').innerHTML=state.screens.map(p=>{const i=state.selected.indexOf(p.screen),sel=i>=0;return '<button class="screen'+(sel?' selected':'')+'" type="button" data-screen="'+esc(p.screen)+'"><span class="num">'+(sel?(i+1):'—')+'</span><span><strong>'+esc(nameOf(p.screen))+'</strong><small>'+esc(p.screen)+' · '+esc(p.version||'sin versión')+'</small></span><i class="dot'+(p.online?' on':'')+'"></i></button>';}).join('');}
+function renderContents(){const q=$('search').value.trim().toLowerCase();const rows=state.items.filter(it=>!q||[it.title,it.num,it.id].some(v=>String(v||'').toLowerCase().includes(q))).slice(0,90);$('contentCount').textContent=state.items.length+' reproducibles';$('contents').innerHTML=rows.map(it=>'<button class="content'+(state.item&&state.item.id===it.id?' selected':'')+'" type="button" data-item="'+esc(it.id)+'"><img class="thumb" src="'+esc(preview(it)||fallback())+'" onerror="this.onerror=null;this.src=\''+fallback()+'\'" alt=""><span><strong>'+esc(it.title||'Contenido sin título')+'</strong><small>'+(it.num?'#'+it.num+' · ':'')+esc(it.type)+'</small></span></button>').join('')||'<div class="notice">No hay contenidos que coincidan.</div>';}
+function layout(n){const cols=Math.max(1,Math.ceil(Math.sqrt(Math.max(1,n))));return{cols,rows:Math.max(1,Math.ceil(n/cols))};}
+function renderWall(){if(state.mode!=='extended')return;const l=layout(state.selected.length),img=state.item?(preview(state.item)||fallback()):fallback();$('wall').style.gridTemplateColumns='repeat('+l.cols+',minmax(0,1fr))';$('wall').innerHTML=(state.selected.length?state.selected:['']).map((screen,i)=>{const col=i%l.cols,row=Math.floor(i/l.cols);return '<div class="tile" style="background-image:url(&quot;'+esc(img)+'&quot;);background-size:'+(l.cols*100)+'% '+(l.rows*100)+'%;background-position:'+(l.cols===1?50:(col/(l.cols-1)*100))+'% '+(l.rows===1?50:(row/(l.rows-1)*100))+'%"><i>'+(i+1)+'</i><b>'+esc(screen?nameOf(screen):'Escoge los players')+'</b></div>';}).join('');}
+function validate(){let ok=true,msg='';if(state.mode!=='autonomous'&&state.selected.length<2){ok=false;msg='Escoge al menos dos equipos.';}if(state.mode==='extended'&&!state.item){ok=false;msg='Escoge el contenido que ocupará el mural.';}$('save').disabled=!ok;$('save').textContent=state.mode==='autonomous'?'Aplicar modo autónomo':state.mode==='synchronized'?'Sincronizar '+state.selected.length+' equipos':'Extender en '+state.selected.length+' equipos';$('status').className='status';$('status').textContent=msg||'Listo para aplicar.';}
+async function save(){validate();if($('save').disabled)return;$('save').disabled=true;$('status').textContent='Aplicando y esperando a los players…';try{const body={mode:state.mode,screens:state.selected,item:state.mode==='extended'?state.item:null},authorization=window.AdmiraTvAuth&&window.AdmiraTvAuth.authorization();if(!authorization)throw new Error('la sesión no contiene una credencial de escritura; vuelve a iniciar sesión');const r=await fetch(PLAYOUT,{method:'POST',headers:{'Content-Type':'application/json','Authorization':authorization},body:JSON.stringify(body)}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||('HTTP '+r.status));state.saved=d.state;paintCurrent();$('status').className='status ok';$('status').textContent='✓ Configuración guardada · los players la adoptan en ≤12 s.';}catch(e){$('status').className='status err';$('status').textContent='No se pudo aplicar: '+e.message;}finally{validate();}}
+function paintCurrent(){const s=state.saved||{mode:'autonomous',screens:[]};const label={autonomous:'Autónomo',synchronized:'Sincronizado',extended:'Extendido'}[s.mode]||s.mode;$('current').textContent='● '+label+(s.screens&&s.screens.length?' · '+s.screens.length+' equipos':' · toda la flota independiente');}
+async function load(){try{const [ps,stock,plan]=await Promise.all([fetch(API+'/signage/screens',{cache:'no-store'}).then(r=>r.json()),fetch(API+'/stock/list?limit=300',{cache:'no-store'}).then(r=>r.json()),fetch(PLAYOUT,{cache:'no-store'}).then(r=>r.json())]);state.screens=(ps.screens||[]).filter(x=>x&&x.screen).sort((a,b)=>(Number(b.online)-Number(a.online))||String(a.screen).localeCompare(String(b.screen)));state.items=(stock.items||[]).filter(it=>it&&it.url&&['image','video','animation'].includes(it.type));state.saved=plan.state||{mode:'autonomous',screens:[]};state.selected=(state.saved.screens||[]).filter(s=>state.screens.some(p=>p.screen===s));state.item=state.saved.item&&state.items.find(it=>it.id===state.saved.item.id)||state.saved.item||null;renderContents();paintCurrent();setMode(state.saved.mode||'autonomous');}catch(e){$('status').className='status err';$('status').textContent='No se pudo cargar la flota: '+e.message;}}
+document.querySelectorAll('.mode').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));$('screens').addEventListener('click',e=>{const b=e.target.closest('[data-screen]');if(b)toggleScreen(b.dataset.screen);});$('contents').addEventListener('click',e=>{const b=e.target.closest('[data-item]');if(!b)return;state.item=state.items.find(it=>it.id===b.dataset.item)||null;renderContents();renderWall();validate();});$('search').addEventListener('input',renderContents);$('save').addEventListener('click',save);load();
+</script>
+<script src="/assets/admira-version-watch.js?v=13.08.2026.r39.2147" defer></script>
 </body>
 </html>
