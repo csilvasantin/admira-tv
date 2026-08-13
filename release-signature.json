@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r39.21:47",
+  "version": "v.13.08.2026.r40.21:55",
   "signature": "TrinityMBP14 · MacBookPro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "21:47",
-  "evidence": "Players gobierna Autónomo por defecto, grupos Sincronizados elegidos y murales Extendidos por teselas; los equipos no seleccionados permanecen autónomos."
+  "time": "21:55",
+  "evidence": "Players gobierna Autónomo, Sincronizado y Extendido desde la sesión first-party segura; conserva feedback final y nunca expone el secreto del backend."
 }

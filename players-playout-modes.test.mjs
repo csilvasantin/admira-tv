@@ -24,8 +24,8 @@ test('Sincro exige selección explícita y los no elegidos siguen autónomos',()
 test('la sección Players hereda ACL del player y firma las escrituras',()=>{
   const gate=fs.readFileSync(new URL('./auth-gate.js',import.meta.url),'utf8');
   assert.match(gate,/"players":"digitalsignage-player"/);
-  assert.match(players,/AdmiraTvAuth\.authorization\(\)/);
-  assert.match(players,/'Authorization':authorization/);
+  assert.match(players,/PLAYOUT='\/api\/playout'/);
+  assert.match(players,/finally\{validate\(true\);\}/);
 });
 
 test('Extendido exige un contenido y representa el mural por teselas ordenadas',()=>{
