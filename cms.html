@@ -423,15 +423,13 @@
   background:var(--green,#3df08a);box-shadow:0 0 8px rgba(61,240,138,.6);width:2px}
 .col-resizer:focus-visible{outline:none}
 body.resizing-columns{cursor:col-resize;user-select:none}
-/* Con el mando empotrado en el panel EXPERTO, la columna Remote sobra. */
-body.eb-experto .ebTable [data-col="remote"]{display:none}
 /* El rótulo del panel: mismo color y tamaño que el EXPERTO del chrome. */
 .mandoExp{font-size:14px;font-weight:800;color:#cdd8e8;letter-spacing:.01em}
 #mandoPick{background:#09111c;color:var(--ink,#e7edf7);border:1px solid var(--line);border-radius:8px;
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=13.08.2026.r10.1215">
+  <link rel="stylesheet" href="/admira-frame.css?v=13.08.2026.r11.1218">
 </head>
 <body>
 <script>
@@ -450,8 +448,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=13.08.2026.r10.1215"></script>
-<script src="/admira-frame.js?v=13.08.2026.r10.1215" defer></script>
+<script src="/admira-nav.js?v=13.08.2026.r11.1218"></script>
+<script src="/admira-frame.js?v=13.08.2026.r11.1218" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -467,12 +465,11 @@ window.ADMIRA_NAV={
        reescribe, así que si mañana gana comandos esta superficie los hereda sola.
        Vivía en un window.open de 420x680 — lo caza el bloqueador de emergentes, se
        pierde detrás de otras ventanas y no es donde se trabaja. -->
-  <div class="admsec admando" id="mandoBox" hidden>
+  <div class="admsec admando" id="mandoBox">
     <h4><span class="mandoExp">Experto</span> · Mando ·
-      <select id="mandoPick" title="Equipo IoT del proyecto que estás gobernando" aria-label="Elegir equipo a controlar"></select>
+      <select id="mandoPick" title="Equipo IoT del proyecto que estás gobernando" aria-label="Elegir equipo a controlar"><option value="">cargando players…</option></select>
       <span id="mandoScreen" hidden>—</span>
       <button type="button" id="mandoOut" title="Abrirlo en una ventana aparte">⇱</button>
-      <button type="button" id="mandoOff" title="Soltar el mando">✕</button>
     </h4>
     <iframe id="mandoFrame" title="Mando a distancia de la pantalla" src="about:blank"
             allow="autoplay" referrerpolicy="same-origin"></iframe>
@@ -505,22 +502,21 @@ window.ADMIRA_NAV={
   <div class="ebWrap">
     <table class="ebTable" id="ebTable">
       <colgroup>
-        <col data-min="96"><col data-min="150"><col data-min="86"><col data-min="64"><col data-min="96">
-        <col data-min="150"><col data-min="140"><col data-min="130"><col data-min="60"><col data-min="120">
+        <col data-min="96"><col data-min="150"><col data-min="64"><col data-min="96">
+        <col data-min="170"><col data-min="140"><col data-min="130"><col data-min="60"><col data-min="120">
       </colgroup>
       <thead><tr id="ebHeadRow">
         <th data-col="estado" data-sort="text">Estado</th>
         <th data-col="player" data-sort="text">Player / pantalla</th>
-        <th data-col="remote">Remote</th>
         <th data-col="rol" data-sort="text">Rol</th>
         <th data-col="previo">Previo</th>
-        <th data-col="circuito" data-sort="text">Circuito · sitio</th>
+        <th data-col="circuito" data-sort="text">Circuito · playlist</th>
         <th data-col="canal" data-sort="text">Canal · parrilla</th>
         <th data-col="emision" data-sort="text">En emisión</th>
         <th data-col="visto" data-sort="num">Visto</th>
         <th data-col="asistencia">🎥 Asistencia</th>
       </tr></thead>
-      <tbody id="ebBody"><tr><td colspan="10" class="ebHole">Cargando emisión en vivo…</td></tr></tbody>
+      <tbody id="ebBody"><tr><td colspan="9" class="ebHole">Cargando emisión en vivo…</td></tr></tbody>
     </table>
   </div>
   <div class="ebActMsg ok" id="ebActMsg" hidden></div>
@@ -599,7 +595,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=13.08.2026.r10.1215"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r11.1218"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -1124,10 +1120,8 @@ $('canalRows').addEventListener('click',e=>{ const d=e.target.closest('[data-del
 $('canalModal').addEventListener('click',e=>{ if(e.target===$('canalModal')) closeCanalEditor(); });
 
 // ── Fichas contraíbles: clic en el header (.top) contrae/expande; estado persistido ──
-// La columna Remote abre el mando QUE YA EXISTE (mando.html, que lee ?screen=), enganchado
-// al screen de esa fila. Se engancha el que hay en vez de reescribir botones: si manana el
-// mando gana comandos, esta columna los hereda sola. Ventana aparte y no modal, porque se
-// opera mirando la tabla al lado — subes volumen y ves ahi mismo si la pantalla reacciona.
+// El mando vive ENTERO en Experto. La tabla sólo aporta el censo de players; no mantiene
+// una segunda columna de botones que compita con el selector del panel inferior.
 function abreMando(s){
   const box=document.getElementById('mandoBox'), fr=document.getElementById('mandoFrame');
   if(!box||!fr||!window.AdmiraFrame){   // sin panel (página suelta) → como siempre
@@ -1139,49 +1133,46 @@ function abreMando(s){
   // le cortaría el estado (volumen, playlist) a quien lo esté usando.
   if(fr.dataset.screen!==s){ fr.src=url; fr.dataset.screen=s; }
   document.getElementById('mandoScreen').textContent=s;
-  pintaMandoPick(s);
-  box.hidden=false;
-  // Con el mando empotrado, la columna Remote de la tabla sobra: repetiría el
-  // botón que ya tienes abierto debajo. Vuelve sola al soltar el mando.
-  document.body.classList.add('eb-experto');
+  refrescaMandoPick(s);
   window.AdmiraFrame.open('bottom');
   // Con el mando dentro, el panel abre A TODA ALTURA (el default del chrome son 320px y
   // ahí no cabe casi nada). El asa de redimensionar sigue mandando después.
   try{ const pn=document.getElementById('af-panel-bottom'); if(pn&&!pn.dataset.mandoAlto){ pn.style.height='min(88vh,1000px)'; pn.dataset.mandoAlto='1'; } }catch(_){}
 }
-// Equipos IoT del MISMO proyecto: se toman de la tabla de emisión que ya está en
-// pantalla —es la que el CMS filtra por proyecto—, así no hay una segunda fuente
-// que pueda discrepar. Sin tabla todavía, al menos se ofrece el que gobierna.
+// Equipos IoT del MISMO proyecto: cada fila lleva ahora su screen. Antes se leía
+// [data-screen] del botón de la columna Remote; al quitar esa columna el selector
+// se quedaba sin fuente. La identidad del player pertenece a la FILA.
 function equiposDelProyecto(){
   const vistos=new Set(), out=[];
-  document.querySelectorAll('#ebBody tr [data-screen]').forEach(b=>{
-    const id=b.getAttribute('data-screen'); if(!id||vistos.has(id))return;
+  document.querySelectorAll('#ebBody tr[data-screen]').forEach(fila=>{
+    const id=fila.getAttribute('data-screen'); if(!id||vistos.has(id))return;
     vistos.add(id);
-    const fila=b.closest('tr'), cel=fila&&fila.querySelector('[data-col="player"]');
-    out.push({id:id, nombre:(cel?cel.textContent:'').trim()||id, vivo:!b.disabled});
+    const cel=fila.querySelector('[data-col="player"]');
+    out.push({id:id, nombre:(cel?cel.textContent:'').trim()||id, vivo:fila.dataset.online==='1'});
   });
   return out;
 }
-function pintaMandoPick(actual){
+function refrescaMandoPick(actual){
   const sel=document.getElementById('mandoPick'); if(!sel) return;
   const lista=equiposDelProyecto();
-  if(!lista.some(x=>x.id===actual)) lista.unshift({id:actual,nombre:actual,vivo:true});
-  sel.innerHTML=lista.map(x=>'<option value="'+x.id.replace(/"/g,'&quot;')+'"'+(x.id===actual?' selected':'')+'>'
+  if(!lista.length){ sel.innerHTML='<option value="">— ningún player vivo</option>'; sel.disabled=true; return ''; }
+  sel.disabled=false;
+  const elegido=lista.some(x=>x.id===actual)?actual:(lista.some(x=>x.id===sel.value)?sel.value:lista[0].id);
+  sel.innerHTML=lista.map(x=>'<option value="'+x.id.replace(/"/g,'&quot;')+'"'+(x.id===elegido?' selected':'')+'>'
     +(x.vivo?'':'○ ')+x.nombre.replace(/[<>&]/g,'')+'</option>').join('');
-  sel.value=actual;
+  sel.value=elegido;
+  return elegido;
 }
 document.addEventListener('change', e=>{
   if(e.target && e.target.id==='mandoPick' && e.target.value) abreMando(e.target.value);
 });
 document.addEventListener('click', e=>{
-  const b=e.target.closest('.ebRemote'); if(!b||b.disabled) return;
-  const s=b.dataset.screen; if(!s) return;
-  abreMando(s);
+  const icon=e.target.closest('#af-ico-bottom');
+  if(!icon||icon.getAttribute('aria-expanded')!=='true') return;
+  const sel=document.getElementById('mandoPick');
+  if(sel&&sel.value) abreMando(sel.value);
 });
 document.addEventListener('click', e=>{
-  if(e.target.closest('#mandoOff')){ document.body.classList.remove('eb-experto');
-    const b=document.getElementById('mandoBox'), f=document.getElementById('mandoFrame');
-    b.hidden=true; f.src='about:blank'; f.dataset.screen=''; return; }
   if(e.target.closest('#mandoOut')){ const s=document.getElementById('mandoFrame').dataset.screen;
     if(s) window.open('/mando.html?screen='+encodeURIComponent(s),'mando-'+s,'width=420,height=680,menubar=no,toolbar=no'); }
 });
@@ -1515,6 +1506,7 @@ $('progBands').addEventListener('click',e=>{
   const EB = {
     SCREENS : 'https://api.admira.store/signage/screens',
     NOW     : 'https://api.admira.store/signage/now?screen=',
+    PLAYLIST: 'https://omnipublicity-api.csilvasantin.workers.dev/control/playlist?screen=',
     STOCK   : 'https://api.admira.store/stock/list?limit=200',
     GRID    : 'https://api.admira.store/grid/screens',
     PROJ    : 'https://api.admira.store/grid/projects',
@@ -1562,9 +1554,14 @@ $('progBands').addEventListener('click',e=>{
 
     // /signage/screens sólo lleva showing_id. El título humano vive en /signage/now;
     // se pide por los players de esta tabla y los fallos se aíslan por pantalla.
-    const nowRows = await Promise.all(players.map(p=>grab(EB.NOW+encodeURIComponent(p.screen),5000)));
+    const [nowRows, playlistRows] = await Promise.all([
+      Promise.all(players.map(p=>grab(EB.NOW+encodeURIComponent(p.screen),5000))),
+      Promise.all(players.map(p=>grab(EB.PLAYLIST+encodeURIComponent(p.screen),5000)))
+    ]);
     const nowByScreen={};
     nowRows.forEach((r,i)=>{ const it=r.data&&r.data.item; if(it&&typeof it==='object') nowByScreen[players[i].screen]=it; });
+    const playlistByScreen={};
+    playlistRows.forEach((r,i)=>{ if(r.data&&typeof r.data==='object') playlistByScreen[players[i].screen]=r.data; });
     const stockById={}; stockItems.forEach(it=>{ if(it&&it.id) stockById[it.id]=it; });
     function pieceInfo(p){
       const id=String(p.showing_id||'');
@@ -1573,6 +1570,17 @@ $('progBands').addEventListener('click',e=>{
       const sameLive=live && String(live.id||'')===id;
       const title=String((sameLive&&live.title)||(stockById[id]&&stockById[id].title)||'').trim();
       return {id, title:title||'Contenido sin título'};
+    }
+    // La misma playlist EFECTIVA que publica el player para el mando gráfico.
+    // No se infiere desde el mapa ni desde una parrilla que quizá no esté vinculada.
+    function playlistInfo(p){
+      const live=playlistByScreen[p.screen];
+      if(!live||live.ok===false||!Array.isArray(live.items)) return {label:'— sin playlist publicada',detail:'',count:0};
+      const items=live.items, id=String(p.showing_id||''), pos=items.findIndex(it=>String(it&&it.id||'')===id);
+      const n=items.length;
+      const label=n?('Playlist activa · '+n+' pieza'+(n===1?'':'s')+(pos>=0?' · '+(pos+1)+'/'+n+' en antena':'')):'Playlist activa · vacía';
+      const detail=items.map(it=>String((it&&it.title)||(it&&it.id)||'')).filter(Boolean).join(' · ');
+      return {label,detail,count:n};
     }
 
     // ── índices de cruce ──
@@ -1608,7 +1616,8 @@ $('progBands').addEventListener('click',e=>{
 
     // ── TABLA: fila por player vivo ──
     if(!players.length){
-      el('ebBody').innerHTML='<tr><td colspan="10" class="ebHole">'+(sc.err? ('signage/screens caído: '+esc(sc.err)) : 'ningún player vivo ahora mismo')+'</td></tr>';
+      el('ebBody').innerHTML='<tr><td colspan="9" class="ebHole">'+(sc.err? ('signage/screens caído: '+esc(sc.err)) : 'ningún player vivo ahora mismo')+'</td></tr>';
+      refrescaMandoPick('');
     } else {
       // El previo se refresca con la tabla (cada refresco trae ts nuevo), pero SOLO
       // cambia de verdad cada 25 s, que es lo que tarda el canal en subir el
@@ -1622,7 +1631,7 @@ $('progBands').addEventListener('click',e=>{
         estado:   p => p.online ? 0 : 1,
         player:   p => String(p.screen||'').toLowerCase(),
         rol:      p => String(p.role||'').toLowerCase(),
-        circuito: p => String(p.locName||playerCircuit(p)||p.loc||'').toLowerCase(),
+        circuito: p => String(playerCircuit(p)||'').toLowerCase(),
         canal:    p => { const g=phys2grid[p.screen]; const c=g?g.circuit:playerCircuit(p);
                          const pr=c?circ2proj[c]:null; return String(pr?pr.name:(c||'')).toLowerCase(); },
         emision:  p => pieceInfo(p).title.toLowerCase(),
@@ -1645,15 +1654,11 @@ $('progBands').addEventListener('click',e=>{
         const on = !!p.online;
         const stCls = on?'on':'off', stTxt = on? '🟢 en antena':'🔴 sin señal';
         const role = p.role||''; const rCls = /canal/.test(role)?'canal':(/game|juego/.test(role)?'game':'');
-        // circuito · sitio
+        // circuito · playlist efectiva publicada por el propio player
         const circ = playerCircuit(p);
-        const L = findLoc(p.loc);
-        let siteCell;
-        if(!p.loc) siteCell = hole('— huérfano (sin loc)');
-        else { const nm=p.locName||circ||p.loc;
-          siteCell = '<div><b>'+esc(nm)+'</b></div>'+
-            (L? '<div class="ebMeta">'+esc(L.addr||L.name||'')+'</div>'
-              : '<div class="'+(locsDown?'ebMeta':'ebHole')+'">'+(locsDown?'mapa: n/d':'— sin alta en mapa')+'</div>'); }
+        const pl=playlistInfo(p);
+        const circuitCell=(circ?'<div><b>'+esc(circ)+'</b></div>':hole('— sin circuito'))+
+          '<div class="'+(pl.count?'ebMeta':'ebHole')+'"'+(pl.detail?' title="'+esc(pl.detail)+'"':'')+'>'+esc(pl.label)+'</div>';
         // canal · parrilla
         const g = phys2grid[p.screen];
         let chanCell;
@@ -1671,20 +1676,9 @@ $('progBands').addEventListener('click',e=>{
         // El puesto de ORIGEN viaja con la fila para poder deshacer una ordenación
         // sin volver a la red: sin esto, quitar el orden dejaba las filas donde las
         // hubiera puesto el último clic y «volver a casa» no volvía a ninguna parte.
-        return '<tr data-casa="'+(_casa++)+'" data-orden=\''+esc(JSON.stringify(valores)).replace(/'/g,'&#39;')+'\'>'+
+        return '<tr data-casa="'+(_casa++)+'" data-screen="'+esc(p.screen)+'" data-online="'+(on?'1':'0')+'" data-orden=\''+esc(JSON.stringify(valores)).replace(/'/g,'&#39;')+'\'>'+
           '<td data-col="estado"><span class="ebSt '+stCls+'"><span class="d"></span>'+stTxt+'</span></td>'+
           '<td data-col="player"><span class="ebScreen">'+esc(p.screen)+'</span></td>'+
-          // MANDO A DISTANCIA DESDE LA PROPIA FILA (Carlos, 11-08-2026). Para subir el
-          // volumen de una pantalla habia que salirse del CMS: el mando existe y funciona
-          // (mando.html, el mismo que abre admira.live/control), pero desde aqui no se
-          // llegaba. Se engancha el que ya hay en vez de reescribir botones: si manana
-          // el mando gana comandos, esta columna los hereda sola.
-          // Va deshabilitado y DICE POR QUE cuando el player no esta en antena: un mando
-          // que encola comandos a una pantalla apagada no falla, es peor — no pasa nada
-          // y no sabes si es el mando o la pantalla.
-          '<td class="ebRemoteCell" data-col="remote">'+(on
-            ? '<button class="ebBtn ebRemote" data-screen="'+esc(p.screen)+'" title="Mando a distancia de '+esc(p.screen)+' — volumen, silencio, saltar pieza y playlist en vivo">\uD83C\uDF9B mando</button>'
-            : '<button class="ebBtn ebRemote" disabled title="Sin player en antena: no hay a quien mandarle el comando">\uD83C\uDF9B mando</button>')+'</td>'+
           '<td data-col="rol">'+(role? '<span class="ebRole '+rCls+'">'+esc(role)+'</span>':hole('—'))+'</td>'+
           // PREVIO: el fotograma REAL de lo que esta viendo la calle. No es un dato
           // nuevo — el canal lo sube cada 25 s (shotTick -> POST /signage/shot) y hasta
@@ -1694,7 +1688,7 @@ $('progBands').addEventListener('click',e=>{
           // ninguno (los que no son del canal, o los recien arrancados). «Sin previo»
           // es informacion; una imagen rota, no.
           '<td class="ebShotCell" data-col="previo">'+shotCell(p)+'</td>'+
-          '<td data-col="circuito">'+siteCell+'</td>'+
+          '<td data-col="circuito">'+circuitCell+'</td>'+
           '<td data-col="canal">'+chanCell+'</td>'+
           '<td data-col="emision">'+piece+'</td>'+
           '<td class="ebMeta" data-col="visto">'+agoTxt(p.age_seconds)+'</td>'+
@@ -1703,6 +1697,8 @@ $('progBands').addEventListener('click',e=>{
       }).join('');
       el('ebBody').innerHTML=rows;
       EBTabla.aplica();   // el orden de columnas elegido, sobre la tabla recién pintada
+      const fr=document.getElementById('mandoFrame');
+      refrescaMandoPick(fr&&fr.dataset.screen);
     }
 
     // ── DESCUADRES accionables (tarea #4: botones de un clic, no datos a ciegas) ──
@@ -1865,9 +1861,9 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-session.js?v=13.08.2026.r10.1215"></script>
-<script src="/admira-avatar.js?v=13.08.2026.r10.1215"></script>
-<script src="/cms-pacman.js?v=13.08.2026.r10.1215"></script>
+<script src="/admira-session.js?v=13.08.2026.r11.1218"></script>
+<script src="/admira-avatar.js?v=13.08.2026.r11.1218"></script>
+<script src="/cms-pacman.js?v=13.08.2026.r11.1218"></script>
   <script src="/assets/admira-version-watch.js" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────

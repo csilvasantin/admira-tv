@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r10.12:15",
-  "signature": "SmithMBP14 \u00b7 MacBookPro14",
-  "agent": "SmithMBP14",
+  "version": "v.13.08.2026.r11.12:18",
+  "signature": "TrinityMBP14 \u00b7 MacBookPro14",
+  "agent": "TrinityMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "12:15",
-  "evidence": "El copiloto dice el error de verdad y responde cu\u00e1ntos equipos est\u00e1n conectados con latidos de flota, same-origin."
+  "time": "12:18",
+  "evidence": "El selector de player del panel Experto vuelve a gobernar la pantalla activa; Remote sale de la tabla y Circuito muestra la playlist efectiva publicada por el player."
 }

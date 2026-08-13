@@ -41,12 +41,11 @@ test("las columnas se ven: línea entre ellas y cabecera destacada", () => {
   assert.match(cms, /\.col-resizer:hover::after,\.col-resizer\.dragging::after/);
 });
 
-test("con el mando empotrado, la columna Remote desaparece — y vuelve al soltarlo", () => {
-  assert.match(cms, /body\.eb-experto \.ebTable \[data-col="remote"\]\{display:none\}/);
-  assert.match(cms, /document\.body\.classList\.add\('eb-experto'\)/);
-  assert.match(cms, /document\.body\.classList\.remove\('eb-experto'\)/);
-  // La celda ya venía marcada: se oculta por columna, no por posición.
-  assert.match(cms, /<td class="ebRemoteCell" data-col="remote">/);
+test("Remote ya no ocupa una tercera columna: vive sólo en Experto", () => {
+  assert.doesNotMatch(cms, /<th data-col="remote">/);
+  assert.doesNotMatch(cms, /data-col="remote"/);
+  assert.doesNotMatch(cms, /class="ebBtn ebRemote"/);
+  assert.match(cms, /<iframe id="mandoFrame"/);
 });
 
 test("EXPERTO va delante de Mando, con el color y tamaño que ya tenía", () => {
@@ -64,13 +63,28 @@ test("el desplegable ofrece equipos del proyecto y gobierna al elegirlos", () =>
   assert.match(cms, /<select id="mandoPick"/);
   assert.match(cms, /function equiposDelProyecto\(\)/);
   // Se leen de la tabla que ya está filtrada por proyecto: una sola fuente.
-  assert.match(cms, /querySelectorAll\('#ebBody tr \[data-screen\]'\)/);
+  assert.match(cms, /querySelectorAll\('#ebBody tr\[data-screen\]'\)/);
+  assert.match(cms, /data-screen="'\+esc\(p\.screen\)\+'" data-online=/);
   assert.match(cms, /e\.target\.id==='mandoPick' && e\.target\.value\) abreMando\(e\.target\.value\)/);
-  // El que gobierna aparece marcado, aunque no esté en la tabla.
-  assert.match(cms, /if\(!lista\.some\(x=>x\.id===actual\)\) lista\.unshift/);
-  assert.match(cms, /sel\.value=actual/);
+  // Se repuebla después de cada refresco y conserva el player activo si sigue vivo.
+  assert.match(cms, /refrescaMandoPick\(fr&&fr\.dataset\.screen\)/);
+  assert.match(cms, /const elegido=lista\.some\(x=>x\.id===actual\)\?actual/);
+  assert.match(cms, /sel\.value=elegido/);
+  // La primera apertura de Experto estrena el player seleccionado; cerrar no reabre.
+  assert.match(cms, /icon\.getAttribute\('aria-expanded'\)!=='true'/);
+  assert.match(cms, /if\(sel&&sel\.value\) abreMando\(sel\.value\)/);
   // Y cambiar de equipo recarga el mando, no la página.
   assert.match(cms, /if\(fr\.dataset\.screen!==s\)\{ fr\.src=url; fr\.dataset\.screen=s; \}/);
+});
+
+test("Circuito muestra debajo la playlist efectiva del player", () => {
+  assert.match(cms, /<th data-col="circuito" data-sort="text">Circuito · playlist<\/th>/);
+  assert.match(cms, /PLAYLIST: 'https:\/\/omnipublicity-api\.csilvasantin\.workers\.dev\/control\/playlist\?screen='/);
+  assert.match(cms, /function playlistInfo\(p\)/);
+  assert.match(cms, /Playlist activa · '\+n\+' pieza/);
+  assert.match(cms, /\(pos\+1\)\+'\/'\+n\+' en antena'/);
+  assert.match(cms, /<td data-col="circuito">'\+circuitCell\+'<\/td>/);
+  assert.doesNotMatch(cms, /Circuito · sitio/);
 });
 
 test("el panel experto va sin franja de título y el mando lo llena entero", async () => {
@@ -84,4 +98,3 @@ test("el panel experto va sin franja de título y el mando lo llena entero", asy
   // Y al abrir el mando, el panel abre a toda altura (el asa sigue mandando después).
   assert.match(cmsSrc, /pn\.style\.height='min\(88vh,1000px\)'/);
 });
-
