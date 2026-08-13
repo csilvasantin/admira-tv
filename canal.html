@@ -42,7 +42,7 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=13.08.2026.r11.1303"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r12.1305"></script>
 <script>
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
@@ -887,7 +887,13 @@ function signageNowPush(it){
   // solo `ts` (frescura), NUNCA startedAt, para no romper el sync de posición.
   const item={ id:it.id, url:it.url, type:it.type||'image', ar:(mupiAR||itemAR(it)||(9/16)),
     title:(it.title||it.prompt||'').slice(0,80), dur:(it._dur||0), startedAt:now, ts:now, aud:_lastAud };
+  const cambiaPieza = !_nowItem || String(_nowItem.id)!==String(item.id);
   _nowItem=item; _postNow(item);
+  // Foto y título salen JUNTOS. El título viaja en este beat y cambia al instante; la
+  // miniatura dependía sólo del reloj de 25 s, así que en cada transición el panel
+  // enseñaba la pieza anterior con el título de la nueva. Aquí es donde se sabe que
+  // la pieza cambió de verdad, así que aquí se pide la captura.
+  if(cambiaPieza){ try{ shotSoon(); }catch(_){} }
   if(!_nowKeep) _nowKeep=setInterval(()=>{ if(!_nowItem) return; _nowItem.ts=Date.now(); _postNow(_nowItem); }, 60000);
 }
 // ── STANDBY / BLACKOUT remoto: apaga la pantalla (negro + pausa) SIN cerrar la app.
@@ -3041,6 +3047,27 @@ async function shotTick(){
   _shotBusy=false;
 }
 if(_shotSec>0){ try{ _shotTimer=setInterval(()=>{ try{ shotTick(); }catch(_){} }, Math.max(5,_shotSec)*1000); }catch(_){} }
+
+// LA MINIATURA MENTÍA EN CADA CAMBIO DE PIEZA (13-ago-2026). El reloj de 25 s era lo
+// ÚNICO que disparaba la captura, mientras el título del panel viaja en el beat y
+// cambia al instante: durante esos segundos /signage/screens enseñaba la foto de la
+// pieza anterior junto al título de la nueva. Carlos lo vio en el panel — miniatura de
+// Woz con título de Billboard, y la pantalla marcando 0 s de reproducción, que es
+// justo el instante de la transición. No era un fallo de emisión: era el panel
+// contándolo mal, que en un puesto de mando es igual de caro.
+// Se dispara también AL ENTRAR la pieza, con un respiro para que haya primer fotograma
+// pintado. Antirrebote: varios avisos seguidos (metadatos + onload + reencuadre) sólo
+// producen una captura. No toca la cadencia de los 25 s ni la emisión.
+// `var` y no `let` a propósito: el arranque del bucle corre ANTES de esta línea, así
+// que con `let` la primera pieza se comería un ReferenceError por zona muerta —
+// silencioso, porque la llamada va en try/catch, pero sin captura.
+var _shotSoonTimer=null;
+function shotSoon(){
+  if(_shotSec<=0) return;
+  try{ clearTimeout(_shotSoonTimer); }catch(_){}
+  _shotSoonTimer=setTimeout(()=>{ try{ shotTick(); }catch(_){} }, 1200);
+}
+window.shotSoon=shotSoon;
 
 // si arrancamos ya en sincro (persistido/URL), engancha el máster central
 if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); syncStateTimer=setInterval(fetchSyncState,30000); }
