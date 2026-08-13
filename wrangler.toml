@@ -24,12 +24,6 @@ id = "e909a0bea0b34997bdef34bcd012c16f"
 binding = "VIDEOS"
 bucket_name = "admira-app-videos"
 
-# Enlace privado al coordinador de playout. Evita saltos Worker→Internet→Worker
-# y mantiene ADMIN_TOKEN exclusivamente en el servidor.
-[[services]]
-binding = "PLAYOUT_API"
-service = "omnipublicity-api"
-
 # Secretos (se fijan con `wrangler pages secret put <NOMBRE> --project-name admira-tv`):
 #   TG_TOKEN     — token del bot de Telegram (Neo) para notificar leads
 #   TG_CHAT      — chat_id del grupo AgoraMatrix

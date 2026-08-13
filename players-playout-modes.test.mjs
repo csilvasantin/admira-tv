@@ -37,7 +37,7 @@ test('Extendido exige un contenido y representa el mural por teselas ordenadas',
 });
 
 test('el player consulta asignación por pantalla antes del modo histórico',()=>{
-  assert.match(canal,/PLAYOUT_ASSIGNMENT_API='https:\/\/api\.admira\.store\/playout\/assignment'/);
+  assert.match(canal,/PLAYOUT_ASSIGNMENT_API='\/api\/playout'/);
   assert.match(canal,/applyPlayoutAssignment\(plan\)/);
   assert.match(canal,/if\(applyPlayoutAssignment\(plan\)\) return/);
 });

@@ -3052,7 +3052,7 @@ if(PREVIEW.on){
 // Dominio propio primero, como en el canal de comandos: los ISP españoles bloquean
 // *.workers.dev y estos players están en España (api.admira.store proxea al mismo worker).
 const MODE_API='https://api.admira.store/locations/mode';
-const PLAYOUT_ASSIGNMENT_API='https://api.admira.store/playout/assignment';
+const PLAYOUT_ASSIGNMENT_API='/api/playout';
 let _playoutRevision=-1;
 function applyPlayoutAssignment(d){
   if(!d||!d.configured) return false;   // contrato nuevo aún sin configurar: conserva el modo histórico
