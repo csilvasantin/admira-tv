@@ -10,7 +10,7 @@ set -euo pipefail
 # equipos con la 1.3, así que el "instalador" DEGRADABA la máquina. R2 sigue
 # siendo el sitio correcto para binarios que crecen; volver allí cuando haya
 # sesión de wrangler, que el token de la bóveda solo alcanza para Pages.
-VERSION="v.13.08.2026.r2"
+VERSION="v.13.08.2026.r4"
 URL="https://admira.tv/player/AdmiraSignageMac-${VERSION}.zip"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 

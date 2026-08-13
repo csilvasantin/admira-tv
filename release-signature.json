@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r3.11:30",
+  "version": "v.13.08.2026.r5.11:44",
   "signature": "NeoMBP14 · MacBookPro14",
   "agent": "NeoMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "11:30",
-  "evidence": "El instalador de macOS deja de repartir la 1.2 de julio: sirve la 1.7 desde el propio sitio."
+  "time": "11:44",
+  "evidence": "El player de macOS ya se VE: el WKWebView no seguia a la ventana y el canal quedaba en una franja al fondo. Verificado en MacBookAirPlata."
 }
