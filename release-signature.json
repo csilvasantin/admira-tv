@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r43.22:36",
+  "version": "v.13.08.2026.r44.22:43",
   "signature": "TrinityMBP14 · MacBookPro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "22:36",
-  "evidence": "Flota abre la playlist Por defecto exacta de cada player; el editor admite tags, selección manual, borrado y arrastre, y el player la consume como programación base cacheable."
+  "time": "22:43",
+  "evidence": "La playlist Por defecto conserva el player exacto incluso offline o con el censo temporalmente vacío, y sigue admitiendo tags, selección manual, borrado y arrastre."
 }
