@@ -5,13 +5,13 @@
 set -euo pipefail
 
 # El sello es el mismo de los sites y el que lleva dentro la app en AdmiraRelease.
-# Se sirve desde el propio sitio (Cloudflare Pages) y no desde R2: el bucket
-# repartía la v.26.07.10.r1 —la app 1.2, de julio— cuando en campo ya había
-# equipos con la 1.3, así que el "instalador" DEGRADABA la máquina. R2 sigue
-# siendo el sitio correcto para binarios que crecen; volver allí cuando haya
-# sesión de wrangler, que el token de la bóveda solo alcanza para Pages.
+# El binario vive en R2, no en el repo: 5,6 MB por release en git se acumulan para
+# siempre. Bucket admira-player de la cuenta de Cloudflare que despliega admira.tv.
+# OJO, el bucket viejo (pub-9a6a58b6…) que repartía la v.26.07.10.r1 —la app 1.2 de
+# julio, que DEGRADABA equipos que ya tenían la 1.3— está en otra cuenta a la que
+# no llegamos desde aquí; sus URLs siguen vivas y sirviendo lo viejo. No apuntes ahí.
 VERSION="v.13.08.2026.r4"
-URL="https://admira.tv/player/AdmiraSignageMac-${VERSION}.zip"
+URL="https://pub-a2bb574b0bf64e7d9a063838eb29ce7c.r2.dev/AdmiraSignageMac-${VERSION}.zip"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
 echo "→ Descargando AdmiraSignageMac ${VERSION}…"

@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r6.11:51",
-  "signature": "SmithMBP14 · MacBookPro14",
-  "agent": "SmithMBP14",
+  "version": "v.13.08.2026.r7.11:55",
+  "signature": "NeoMBP14 · MacBookPro14",
+  "agent": "NeoMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "11:51",
-  "evidence": "El copiloto del CMS deja de pegarle a yokup-rtc.workers.dev y usa api.yokup.com/copilot, el mismo host que Yokup."
+  "time": "11:55",
+  "evidence": "El binario del player vuelve a R2 (bucket propio admira-player); el repo deja de engordar 5,6 MB por release."
 }

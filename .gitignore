@@ -1,2 +1,5 @@
 .wrangler/
 version.json
+# Los binarios del player viven en R2 (bucket admira-player), no en git:
+# 5,6 MB por release se acumulan en el historial para siempre.
+player/AdmiraSignageMac-*.zip
