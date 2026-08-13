@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  looksLikeFleetQuestion, fleetSummary, formatFleetAnswer, honestError, FRESH_MS,
+  looksLikeFleetQuestion, looksLikePlayersQuestion,
+  fleetSummary, formatFleetAnswer, screensSummary, formatPlayersAnswer,
+  honestError, FRESH_MS,
 } from "./copilot-lib.js";
 
 test("reconoce la pregunta de equipos conectados", () => {
@@ -10,6 +12,29 @@ test("reconoce la pregunta de equipos conectados", () => {
   assert.equal(looksLikeFleetQuestion("quién está latiendo en la flota"), true);
   assert.equal(looksLikeFleetQuestion("¿qué horario tenéis?"), false);
   assert.equal(looksLikeFleetQuestion("abre un ticket"), false);
+});
+
+test("players emitiendo no se confunde con Macs de la flota", () => {
+  const q = "cuantos players hay ahora mismo emitiendo";
+  assert.equal(looksLikePlayersQuestion(q), true);
+  assert.equal(looksLikeFleetQuestion(q), false);
+  assert.equal(looksLikePlayersQuestion("cuántas pantallas hay en antena"), true);
+  assert.equal(looksLikePlayersQuestion("cuántos equipos están conectados"), false);
+});
+
+test("la respuesta de players usa el censo de emisión, no el status de un Mac", () => {
+  const s = screensSummary({
+    online_count: 2, total_count: 3,
+    screens: [
+      { screen: "xtanco-totem", online: true, locName: "xtanco-totem" },
+      { screen: "neo-lab", online: true, loc: "macbookairplata" },
+      { screen: "viejo", online: false, loc: "apagado" },
+    ],
+  });
+  assert.equal(s.emitting, 2);
+  assert.equal(s.total, 3);
+  assert.match(formatPlayersAnswer(s), /2 players emitiendo/);
+  assert.match(formatPlayersAnswer(s), /xtanco-totem/);
 });
 
 test("conectado es latido fresco, no el status online viejo", () => {

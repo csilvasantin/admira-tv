@@ -3,10 +3,13 @@
 // El resto va a api.yokup.com/copilot si hay Bearer; si no, se dice la causa.
 
 import {
-  looksLikeFleetQuestion, fleetSummary, formatFleetAnswer, honestError,
+  looksLikeFleetQuestion, looksLikePlayersQuestion,
+  fleetSummary, formatFleetAnswer,
+  screensSummary, formatPlayersAnswer, honestError,
 } from "./copilot-lib.js";
 
 const FLEET = "https://admira-fleet.csilvasantin.workers.dev/machines";
+const SCREENS = "https://api.admira.store/signage/screens";
 const YOKUP = "https://api.yokup.com/copilot";
 const UA = "Mozilla/5.0 (compatible; AdmiraCopilot/1.0; +https://admira.tv)";
 
@@ -41,6 +44,17 @@ export async function onRequestPost({ request }) {
   }
   const question = String((body && (body.question || body.text)) || "").trim();
   if (!question) return json({ ok: false, error: "bad_json", text: honestError("bad_json") }, 400);
+
+  if (looksLikePlayersQuestion(question)) {
+    try {
+      const r = await fetch(SCREENS, { headers: { accept: "application/json", "user-agent": UA } });
+      if (!r.ok) throw new Error("screens " + r.status);
+      const summary = screensSummary(await r.json());
+      return json({ ok: true, text: formatPlayersAnswer(summary), source: "screens" });
+    } catch (_) {
+      return json({ ok: false, error: "screens", text: honestError("screens") }, 502);
+    }
+  }
 
   if (looksLikeFleetQuestion(question)) {
     try {

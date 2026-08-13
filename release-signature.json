@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r10.12:59",
-  "signature": "NeoMBP14 · MacBookPro14",
-  "agent": "NeoMBP14",
+  "version": "v.13.08.2026.r11.13:03",
+  "signature": "SmithMBP14 \u00b7 MacBookPro14",
+  "agent": "SmithMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "12:59",
-  "evidence": "Player macOS: pillarbox siempre, sin deformar. La inyeccion forzaba cover y recortaba las piezas verticales."
+  "time": "13:03",
+  "evidence": "El copiloto distingue players en antena (signage/screens) de Macs de flota y responde cu\u00e1ntos est\u00e1n emitiendo."
 }
