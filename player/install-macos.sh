@@ -10,7 +10,7 @@ set -euo pipefail
 # OJO, el bucket viejo (pub-9a6a58b6…) que repartía la v.26.07.10.r1 —la app 1.2 de
 # julio, que DEGRADABA equipos que ya tenían la 1.3— está en otra cuenta a la que
 # no llegamos desde aquí; sus URLs siguen vivas y sirviendo lo viejo. No apuntes ahí.
-VERSION="v.13.08.2026.r4"
+VERSION="v.13.08.2026.r9"
 URL="https://pub-a2bb574b0bf64e7d9a063838eb29ce7c.r2.dev/AdmiraSignageMac-${VERSION}.zip"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 

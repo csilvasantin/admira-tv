@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r11.12:18",
-  "signature": "TrinityMBP14 \u00b7 MacBookPro14",
-  "agent": "TrinityMBP14",
+  "version": "v.13.08.2026.r10.12:59",
+  "signature": "NeoMBP14 · MacBookPro14",
+  "agent": "NeoMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "12:18",
-  "evidence": "El selector de player del panel Experto vuelve a gobernar la pantalla activa; Remote sale de la tabla y Circuito muestra la playlist efectiva publicada por el player."
+  "time": "12:59",
+  "evidence": "Player macOS: pillarbox siempre, sin deformar. La inyeccion forzaba cover y recortaba las piezas verticales."
 }
