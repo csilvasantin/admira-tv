@@ -193,12 +193,10 @@
       "#admira-tv-gate .gg{font-weight:800;font-size:1.35em;",
       "background:linear-gradient(135deg,#4285F4 0%,#EA4335 38%,#FBBC05 66%,#34A853 100%);",
       "-webkit-background-clip:text;background-clip:text;color:transparent}",
-      // Botón oficial de Google superpuesto e invisible: captura el click real → credential JWT.
-      "#admira-tv-gate .greal{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;",
-      "opacity:.001;z-index:2;overflow:hidden}",
-      "#admira-tv-gate .greal>div{transform:scale(3);transform-origin:center}",
-      "#admira-tv-gate #atv-gbtn{position:static;opacity:1;overflow:visible}",
-      "#admira-tv-gate #atv-gbtn>div{transform:none}",
+      // Botón oficial de Google visible: el click navega en primer nivel y no abre un popup.
+      "#admira-tv-gate .greal{position:static;display:flex;align-items:center;justify-content:center;",
+      "opacity:1;z-index:2;overflow:visible}",
+      "#admira-tv-gate .greal>div{transform:none}",
       "#admira-tv-gate .prompt{font-size:clamp(11px,1.6vw,13px);letter-spacing:.24em;color:#7db8ff;text-transform:uppercase;",
       "animation:atv-blink 1.2s steps(1) infinite}",
       "#admira-tv-gate .hint{font-size:clamp(9px,1.3vw,11px);letter-spacing:.14em;color:#4d6b57;text-transform:uppercase}",
