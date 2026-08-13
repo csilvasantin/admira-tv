@@ -78,7 +78,7 @@ test('el Remote confirma por ACK exacto y dirige cada orden a una sola pantalla'
 test('el campo de tags mantiene el feedback hasta que la descarga remota está lista', () => {
   assert.match(mando, /id="tagEntry"/);
   assert.match(mando, /CACHE_API = 'https:\/\/api\.admira\.store\/screen\/cache'/);
-  assert.match(mando, /PLAYLIST_APIS = \['\/api\/control\/playlist','https:\/\/omnipublicity-api\.csilvasantin\.workers\.dev\/control\/playlist'\]/);
+  assert.match(mando, /PLAYLIST_APIS = \['\/api\/control\/playlist\/','https:\/\/omnipublicity-api\.csilvasantin\.workers\.dev\/control\/playlist'\]/);
   assert.match(mando, /state\.ready\?'✓ Disponible':\('⇩ '\+state\.pct\+'%'\)/);
   assert.match(mando, /visual\.progress=Math\.max\(\.02,Math\.min\(1,state\.pct\/100\)\)/);
   assert.match(mando, /holdAfterAck:true,returnAction:true,mirror:entry,input:input,label:b/);

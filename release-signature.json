@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r27.18:52",
+  "version": "v.13.08.2026.r28.18:54",
   "signature": "TrinityMBP14 · MacBookPro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "18:52",
+  "time": "18:54",
   "evidence": "El campo y botón de tags muestran disponibilidad verde o progreso real de descarga del player destino hasta quedar en caché."
 }
