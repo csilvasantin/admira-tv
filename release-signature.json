@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r16.13:29",
-  "signature": "TrinityMBP14 · MacBookPro14",
-  "agent": "TrinityMBP14",
+  "version": "v.13.08.2026.r17.13:31",
+  "signature": "SmithMBP14 · MacBookPro14",
+  "agent": "SmithMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "13:29",
-  "evidence": "Acceso Google por redirección first-party, sesión HttpOnly y gate versionado para navegador interno y web convencional."
+  "time": "13:31",
+  "evidence": "El chat de la esquina responde cuántos players hay conectados a la plataforma con el censo vivo de signage/screens, sin el 301 de www ni la sesión Yokup."
 }

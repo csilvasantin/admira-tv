@@ -7,7 +7,9 @@ const cms = await readFile(new URL("./cms.html", import.meta.url), "utf8");
 
 test("el copiloto del CMS habla con api.yokup.com, no con workers.dev", () => {
   assert.match(source, /var WORKER = "https:\/\/api\.yokup\.com"/);
-  assert.match(source, /\/api\/copilot/);
+  assert.match(source, /https:\/\/admira\.tv\/api\/copilot/);
+  assert.match(source, /api\.admira\.store\/signage\/screens/);
+  assert.doesNotMatch(source, /www\.admira\.tv\/api\/copilot/);
   assert.doesNotMatch(source, /brainUrl: WORKER \+ "\/copilot"/);
   assert.doesNotMatch(source, /yokup-rtc\.csilvasantin\.workers\.dev/);
   assert.doesNotMatch(source, /workers\.dev\/copilot/);

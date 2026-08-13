@@ -6,8 +6,10 @@ export const FRESH_MS = 10 * 60 * 1000;
 export function looksLikePlayersQuestion(q) {
   const s = String(q || "").toLowerCase();
   if (!s.trim()) return false;
-  const about = /player|reproductor|emitiend|en antena|pantalla|screen|mupi|totem|señal|senal/;
-  const asking = /cu[aá]ntos|cuantas|cuántas|cuantos|n[uú]mero|hay|emitiend|online|antena|ahora/;
+  // «equipos conectados» es flota. «players / plataforma» es signage.
+  if (/equipo|maquina|máquina|flota|ordenador|macbook/.test(s)) return false;
+  const about = /player|reproductor|emitiend|en antena|pantalla|screen|mupi|totem|señal|senal|plataforma/;
+  const asking = /cu[aá]ntos|cuantas|cuántas|cuantos|n[uú]mero|hay|emitiend|online|antena|ahora|conectad/;
   return about.test(s) && asking.test(s);
 }
 
@@ -55,7 +57,7 @@ export function screensSummary(payload) {
   const screens = (payload && payload.screens) || [];
   const live = screens.filter((s) => s && s.online).map((s) => ({
     id: s.screen || s.id || "",
-    name: s.locName || s.loc || s.screen || s.id || "player",
+    name: s.screen || s.id || s.locName || s.loc || "player",
   }));
   return {
     total: Number(payload && payload.total_count) || screens.length,
@@ -66,11 +68,11 @@ export function screensSummary(payload) {
 
 export function formatPlayersAnswer(summary) {
   const n = summary.emitting, tot = summary.total;
-  if (!tot) return "Ahora mismo no veo ningún player en el censo de emisión.";
-  if (!n) return "Ningún player está emitiendo ahora. En el censo hay " + tot + ".";
+  if (!tot) return "Ahora mismo no veo ningún player en el censo de la plataforma.";
+  if (!n) return "Ningún player está conectado a la plataforma ahora. En el censo hay " + tot + ".";
   const names = summary.live.slice(0, 8).map((m) => m.name).join(", ");
   const extra = summary.live.length > 8 ? " y más" : "";
-  return "Ahora mismo hay " + n + " player" + (n === 1 ? "" : "s") + " emitiendo: " + names + extra + ".";
+  return "Hay " + n + " player" + (n === 1 ? "" : "s") + " conectado" + (n === 1 ? "" : "s") + " a la plataforma: " + names + extra + ".";
 }
 
 export function honestError(kind) {
@@ -80,7 +82,7 @@ export function honestError(kind) {
     brain: "El cerebro falló. Inténtalo de nuevo en un momento.",
     bad_json: "No he entendido la pregunta.",
     fleet: "No pude leer la flota ahora mismo.",
-    screens: "No pude leer los players en emisión ahora mismo.",
+    screens: "No pude leer los players conectados a la plataforma ahora mismo.",
   };
   return map[kind] || map.brain;
 }
