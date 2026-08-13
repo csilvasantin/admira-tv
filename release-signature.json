@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r7.11:55",
-  "signature": "NeoMBP14 · MacBookPro14",
-  "agent": "NeoMBP14",
+  "version": "v.13.08.2026.r8.12:00",
+  "signature": "TrinityMBP14 · MacBookPro14",
+  "agent": "TrinityMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "11:55",
-  "evidence": "El binario del player vuelve a R2 (bucket propio admira-player); el repo deja de engordar 5,6 MB por release."
+  "time": "12:00",
+  "evidence": "El CMS muestra el título humano de la pieza en emisión desde signage/now, usa Stock como respaldo y reserva showing_id para soporte técnico."
 }

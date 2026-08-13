@@ -431,7 +431,7 @@ body.eb-experto .ebTable [data-col="remote"]{display:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=13.08.2026.r7.1155">
+  <link rel="stylesheet" href="/admira-frame.css?v=13.08.2026.r8.1200">
 </head>
 <body>
 <script>
@@ -450,8 +450,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=13.08.2026.r7.1155"></script>
-<script src="/admira-frame.js?v=13.08.2026.r7.1155" defer></script>
+<script src="/admira-nav.js?v=13.08.2026.r8.1200"></script>
+<script src="/admira-frame.js?v=13.08.2026.r8.1200" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -599,7 +599,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=13.08.2026.r7.1155"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r8.1200"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -1514,6 +1514,8 @@ $('progBands').addEventListener('click',e=>{
 (function(){
   const EB = {
     SCREENS : 'https://api.admira.store/signage/screens',
+    NOW     : 'https://api.admira.store/signage/now?screen=',
+    STOCK   : 'https://api.admira.store/stock/list?limit=200',
     GRID    : 'https://api.admira.store/grid/screens',
     PROJ    : 'https://api.admira.store/grid/projects',
     LOCS    : 'https://omnipublicity-api.csilvasantin.workers.dev/locations?selfreg=1',
@@ -1521,7 +1523,7 @@ $('progBands').addEventListener('click',e=>{
     REFRESH : 40000,      // 40 s
     ONLINE_MS: 600000     // frescura ~10 min (TTL de signage/screens)
   };
-  let EB_GAPS=true, EB_FLEET=false, EB_TIMER=null;
+  let EB_GAPS=true, EB_FLEET=false, EB_TIMER=null, EB_STOCK=null;
   const el=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const hole=t=>'<span class="ebHole">'+esc(t)+'</span>';
@@ -1536,10 +1538,12 @@ $('progBands').addEventListener('click',e=>{
   }
 
   async function ebLoad(){
-    // 4 fuentes en paralelo, cada una aislada
-    const [sc, gr, pj, lc, fl] = await Promise.all([
+    // Fuentes base en paralelo, cada una aislada. Stock es respaldo: el nombre
+    // vivo manda porque es exactamente el título que el player está emitiendo.
+    const stockReq=EB_STOCK?Promise.resolve({data:{items:EB_STOCK}}):grab(EB.STOCK,8000);
+    const [sc, gr, pj, lc, fl, st] = await Promise.all([
       grab(EB.SCREENS,8000), grab(EB.GRID,8000), grab(EB.PROJ,8000),
-      grab(EB.LOCS,12000), grab(EB.FLEET,8000)
+      grab(EB.LOCS,12000), grab(EB.FLEET,8000), stockReq
     ]);
     const errs=[];
     const players = (sc.data&&Array.isArray(sc.data.screens))?sc.data.screens:[];
@@ -1552,6 +1556,24 @@ $('progBands').addEventListener('click',e=>{
     const locsDown = !!lc.err; if(lc.err) errs.push('locations: '+lc.err+' (mapa: n/d)');
     const machines = (fl.data&&Array.isArray(fl.data.machines))?fl.data.machines:[];
     if(fl.err) errs.push('fleet/machines: '+fl.err);
+    const stockItems = (st.data&&Array.isArray(st.data.items))?st.data.items:[];
+    if(stockItems.length) EB_STOCK=stockItems;
+    if(st.err) errs.push('stock/list: '+st.err+' (nombres: respaldo no disponible)');
+
+    // /signage/screens sólo lleva showing_id. El título humano vive en /signage/now;
+    // se pide por los players de esta tabla y los fallos se aíslan por pantalla.
+    const nowRows = await Promise.all(players.map(p=>grab(EB.NOW+encodeURIComponent(p.screen),5000)));
+    const nowByScreen={};
+    nowRows.forEach((r,i)=>{ const it=r.data&&r.data.item; if(it&&typeof it==='object') nowByScreen[players[i].screen]=it; });
+    const stockById={}; stockItems.forEach(it=>{ if(it&&it.id) stockById[it.id]=it; });
+    function pieceInfo(p){
+      const id=String(p.showing_id||'');
+      if(!id) return {id:'',title:''};
+      const live=nowByScreen[p.screen];
+      const sameLive=live && String(live.id||'')===id;
+      const title=String((sameLive&&live.title)||(stockById[id]&&stockById[id].title)||'').trim();
+      return {id, title:title||'Contenido sin título'};
+    }
 
     // ── índices de cruce ──
     // circuit → project(name)
@@ -1603,7 +1625,7 @@ $('progBands').addEventListener('click',e=>{
         circuito: p => String(p.locName||playerCircuit(p)||p.loc||'').toLowerCase(),
         canal:    p => { const g=phys2grid[p.screen]; const c=g?g.circuit:playerCircuit(p);
                          const pr=c?circ2proj[c]:null; return String(pr?pr.name:(c||'')).toLowerCase(); },
-        emision:  p => String(p.showing_id||'').toLowerCase(),
+        emision:  p => pieceInfo(p).title.toLowerCase(),
         // «Visto» es una antigüedad: ordenar por el texto pondría «10m» antes que «2m».
         visto:    p => Number(p.age_seconds)||0
       };
@@ -1640,7 +1662,10 @@ $('progBands').addEventListener('click',e=>{
         else { const pr=circ?circ2proj[circ]:null;
           chanCell = pr? '<div><b>'+esc(pr.name)+'</b></div><div class="ebHole">— sin superficie en parrilla</div>'
                        : hole('— sin parrilla'); }
-        const piece = p.showing_id? '<span class="ebPiece" title="pieza en emisión (showing_id)">'+esc(String(p.showing_id).slice(0,22))+'</span>' : hole('— nada');
+        const info=pieceInfo(p);
+        const piece = info.id
+          ? '<span class="ebPiece" title="ID técnico: '+esc(info.id)+'">'+esc(info.title)+'</span>'
+          : hole('— nada');
         const valores = {};
         Object.keys(ordenables).forEach(k=>{ valores[k]=ordenables[k](p); });
         // El puesto de ORIGEN viaja con la fila para poder deshacer una ordenación
@@ -1699,7 +1724,7 @@ $('progBands').addEventListener('click',e=>{
     const orphans=players.filter(p=>!p.loc);
     gapHtml.push('<h3>Players vivos sin circuito (huérfanos) · '+orphans.length+'</h3>');
     gapHtml.push('<div class="ebGapList">'+ (orphans.length? orphans.map(p=>
-      '<div class="ebGap"><span class="gk">'+esc(p.screen)+'</span><span class="gd">rol '+esc(p.role||'—')+' · emite '+esc(String(p.showing_id||'—').slice(0,18))+' → falta asignar loc/circuito</span>'+
+      '<div class="ebGap"><span class="gk">'+esc(p.screen)+'</span><span class="gd">rol '+esc(p.role||'—')+' · emite '+esc(pieceInfo(p).title||'—')+' → falta asignar loc/circuito</span>'+
       '<span class="ebAct"><select class="ebSel" data-role="circ" title="Circuito o sitio conocido">'+circOpts+'</select>'+
       '<button class="ebBtn" data-act="link" data-screen="'+esc(p.screen)+'">vincular a circuito</button></span></div>').join('')
       : '<div class="ebGapEmpty">✓ ningún player huérfano</div>') +'</div>');
@@ -1840,8 +1865,8 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-avatar.js?v=13.08.2026.r7.1155"></script>
-<script src="/cms-pacman.js?v=13.08.2026.r7.1155"></script>
+<script src="/admira-avatar.js?v=13.08.2026.r8.1200"></script>
+<script src="/cms-pacman.js?v=13.08.2026.r8.1200"></script>
   <script src="/assets/admira-version-watch.js" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
