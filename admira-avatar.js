@@ -19,7 +19,7 @@
   var resolveReady; var sessionReady = new Promise(function (r) { resolveReady = r; });
   window.fetch = function (input, init) {
     var u = typeof input === "string" ? input : (input && input.url) || "";
-    if (u.indexOf(WORKER) !== 0) return rawFetch(input, init);
+    if (u.indexOf(WORKER) !== 0 && !/\/api\/copilot(?:\?|$)/.test(u)) return rawFetch(input, init);
     return sessionReady.then(function () {
       init = init || {};
       var h = new Headers(init.headers || {});
@@ -48,7 +48,9 @@
     ensureSession();
     import("https://digitalavatar.ai/embed.js").then(function (m) {
       m.mount({
-        brainUrl: WORKER + "/copilot",
+        // Same-origin: no workers.dev, y las preguntas de flota se responden
+        // aunque la sesión Yokup no haya cuajado. El resto exige Bearer.
+        brainUrl: (typeof location !== "undefined" ? location.origin : "") + "/api/copilot",
         title: "Admira · copiloto",
         greeting: "Hola, soy Admira. Pregúntame por las pantallas en emisión o las incidencias de la flota.",
         placeholder: "Escribe o pulsa el micro…",

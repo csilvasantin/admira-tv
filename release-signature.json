@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r9.12:01",
+  "version": "v.13.08.2026.r10.12:15",
   "signature": "SmithMBP14 \u00b7 MacBookPro14",
   "agent": "SmithMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "12:01",
-  "evidence": "El copiloto valida el payload de la sesi\u00f3n (JWT de 3 partes o token Yokup de 2), no la cabecera."
+  "time": "12:15",
+  "evidence": "El copiloto dice el error de verdad y responde cu\u00e1ntos equipos est\u00e1n conectados con latidos de flota, same-origin."
 }
