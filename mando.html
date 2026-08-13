@@ -65,17 +65,17 @@
     .nowbox .vol{margin-top:7px;padding:0 2px;font-size:10px;gap:7px}
     .player-playlist{display:grid;gap:8px;max-height:320px;overflow:auto;padding:3px 4px 3px 1px;scrollbar-color:var(--border) transparent}
     body[data-mando-view="playlist"] .player-playlist{max-height:none;overflow:visible}
-    .pl-item{--cmd-progress:0deg;--cmd-ring:var(--cyan);position:relative;width:100%;display:grid;grid-template-columns:70px minmax(0,1fr) auto;align-items:center;gap:10px;
+    .pl-item{--cmd-progress:0deg;--cmd-ring:var(--cyan);position:relative;width:100%;max-width:100%;display:grid;grid-template-columns:70px minmax(0,1fr) minmax(68px,90px);align-items:center;gap:10px;overflow:hidden;
       padding:7px;text-align:left;border:1px solid var(--border);border-radius:12px;background:#0d1018;color:var(--text);cursor:pointer;font:inherit;transition:.15s}
+    .pl-item>*{min-width:0;max-width:100%}
     .pl-item:hover:not(:disabled){border-color:var(--violet);transform:translateY(-1px)}
     .pl-item:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
     .pl-item:disabled{cursor:not-allowed;opacity:.62}
     .pl-item.pl-current{border-color:#ff4455;box-shadow:inset 3px 0 0 #ff4455}
     .pl-thumb{width:70px;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:#05070b;display:grid;place-items:center;color:var(--dim);font:18px var(--mono)}
     .pl-thumb img{width:100%;height:100%;display:block;object-fit:cover}
-    .pl-copy{min-width:0}.pl-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:700}
-    .pl-meta{margin-top:4px;color:var(--muted);font:10px var(--mono)}
-    .pl-state{font:700 10px var(--mono);color:var(--dim);white-space:nowrap}.pl-state.ready{color:#76f2a8}.pl-state.loading{color:var(--cyan)}
+    .pl-copy{display:block;min-width:0;max-width:100%;overflow:hidden}.pl-title{display:block;width:100%;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:700}
+    .pl-state{display:block;max-width:90px;overflow:hidden;text-overflow:ellipsis;text-align:right;font:700 10px var(--mono);color:var(--dim);white-space:nowrap}.pl-state.ready{color:#76f2a8}.pl-state.loading{color:var(--cyan)}
     .pl-empty{padding:18px 12px;border:1px dashed var(--border);border-radius:12px;text-align:center;color:var(--dim);font:11px/1.5 var(--mono)}
     .status-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 8px}
     .status-head h2{margin:0;font:700 13px var(--mono);color:var(--cyan);letter-spacing:.08em;text-transform:uppercase}
@@ -673,8 +673,7 @@
         b.appendChild(remotePlaylistThumb(it));
         var copy=document.createElement('span'); copy.className='pl-copy';
         var title=document.createElement('span'); title.className='pl-title'; title.textContent=it.title||'Contenido sin título';
-        var meta=document.createElement('span'); meta.className='pl-meta'; meta.textContent=(current?'● ahora · ':'')+'posición '+(index+1)+'/'+items.length;
-        copy.append(title,meta); b.appendChild(copy);
+        copy.appendChild(title); b.appendChild(copy);
         var state=document.createElement('span'); state.className='pl-state '+(isReady?'ready':pct!=null?'loading':'');
         state.textContent=isReady?'✓ en disco':pct!=null?('⇩ '+pct+'%'):'pendiente'; b.appendChild(state);
         b.onclick=async function(){
@@ -814,6 +813,6 @@
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r34.1955" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r35.2019" defer></script>
 </body>
 </html>

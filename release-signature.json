@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r34.19:55",
+  "version": "v.13.08.2026.r35.20:19",
   "signature": "TrinityMBP14 · MacBookPro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "19:55",
-  "evidence": "Status reúne telemetría real del player: pantalla, sistema, hardware expuesto, software, almacenamiento, red, caché y emisión."
+  "time": "20:19",
+  "evidence": "Las pastillas de Playlist eliminan la posición y contienen título y estado con elipsis dentro del borde."
 }

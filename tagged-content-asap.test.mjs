@@ -128,6 +128,14 @@ test('la playlist del Remote enseña el inventario real y sólo deja pulsar lo d
   assert.match(mando, /loadRemotePlaylist\(it&&it\.id\)/);
 });
 
+test('las pastillas eliminan la posición y contienen título y estado dentro del botón', () => {
+  assert.doesNotMatch(mando, /className='pl-meta'/);
+  assert.doesNotMatch(mando, /'posición '\+\(index\+1\)/);
+  assert.match(mando, /\.pl-item\{[^}]*max-width:100%[^}]*overflow:hidden/);
+  assert.match(mando, /\.pl-title\{display:block;width:100%;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap/);
+  assert.match(mando, /\.pl-state\{display:block;max-width:90px;overflow:hidden;text-overflow:ellipsis;text-align:right/);
+});
+
 test('goto-N atraviesa la cola confirmada y sólo acusa después de ejecutarlo', () => {
   assert.match(canal, /if\(\/\^goto-\\d\{1,3\}\$\/\.test\(cmd\)\) return applyCtrlCmd\(cmd\)/);
   assert.match(canal, /const m=\/\^goto-\(\\d\{1,3\}\)\$\/\.exec\(cmd\)/);
