@@ -1,9 +1,9 @@
 {
-  "version": "v.13.08.2026.r44.22:43",
+  "version": "v.13.08.2026.r45.22:47",
   "signature": "TrinityMBP14 · MacBookPro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookPro14",
   "day": "13.08.2026",
-  "time": "22:43",
-  "evidence": "La playlist Por defecto conserva el player exacto incluso offline o con el censo temporalmente vacío, y sigue admitiendo tags, selección manual, borrado y arrastre."
+  "time": "22:47",
+  "evidence": "Por defecto se guarda con la sesión Google first-party, sin GRID_KEY, conserva el player offline y el player la consume como playlist base cacheable."
 }
