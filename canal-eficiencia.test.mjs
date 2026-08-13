@@ -50,7 +50,8 @@ test("[5] shotTick no captura en standby/pausa ni re-sube la misma imagen fija",
   assert.match(canal, /if\(_standby\|\|paused\) return;\s+\/\/ pantalla apagada o en pausa/);
   assert.match(canal, /el\.tagName==='IMG' && src===_lastShotSrc && \(Date\.now\(\)-_lastShotTs\)<300000\) return;/);
   // El éxito se marca en la RESPUESTA aceptada, no al disparar.
-  assert.match(canal, /\.then\(r=>\{ if\(r&&r\.ok\)\{ _lastShotSrc=src; _lastShotTs=Date\.now\(\); \} \}\)/);
+  assert.match(canal, /const r=await fetch\(SHOT_API/);
+  assert.match(canal, /if\(r&&r\.ok\)\{ _lastShotSrc=src; _lastShotTs=Date\.now\(\); \}/);
 });
 
 test("[6] el precache va en streaming al disco, con fallback y disco-primero intacto", () => {

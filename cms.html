@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=13.08.2026.r21.1357"></script>
+<script src="/auth-gate.js?v=13.08.2026.r22.1430"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -437,7 +437,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=13.08.2026.r21.1357">
+  <link rel="stylesheet" href="/admira-frame.css?v=13.08.2026.r22.1430">
 </head>
 <body>
 <script>
@@ -456,8 +456,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=13.08.2026.r21.1357"></script>
-<script src="/admira-frame.js?v=13.08.2026.r21.1357" defer></script>
+<script src="/admira-nav.js?v=13.08.2026.r22.1430"></script>
+<script src="/admira-frame.js?v=13.08.2026.r22.1430" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -606,7 +606,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=13.08.2026.r21.1357"></script>
+<script src="xpl-runtime.js?v=13.08.2026.r22.1430"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -1517,6 +1517,7 @@ $('progBands').addEventListener('click',e=>{
   const EB = {
     SCREENS : 'https://api.admira.store/signage/screens',
     NOW     : 'https://api.admira.store/signage/now?screen=',
+    SHOT    : 'https://api.admira.store/signage/shot?meta=1&screen=',
     PLAYLIST: 'https://omnipublicity-api.csilvasantin.workers.dev/control/playlist?screen=',
     STOCK   : 'https://api.admira.store/stock/list?limit=200',
     GRID    : 'https://api.admira.store/grid/screens',
@@ -1565,21 +1566,25 @@ $('progBands').addEventListener('click',e=>{
 
     // /signage/screens sólo lleva showing_id. El título humano vive en /signage/now;
     // se pide por los players de esta tabla y los fallos se aíslan por pantalla.
-    const [nowRows, playlistRows] = await Promise.all([
+    const [nowRows, playlistRows, shotRows] = await Promise.all([
       Promise.all(players.map(p=>grab(EB.NOW+encodeURIComponent(p.screen),5000))),
-      Promise.all(players.map(p=>grab(EB.PLAYLIST+encodeURIComponent(p.screen),5000)))
+      Promise.all(players.map(p=>grab(EB.PLAYLIST+encodeURIComponent(p.screen),5000))),
+      Promise.all(players.map(p=>grab(EB.SHOT+encodeURIComponent(p.screen),5000)))
     ]);
     const nowByScreen={};
     nowRows.forEach((r,i)=>{ const it=r.data&&r.data.item; if(it&&typeof it==='object') nowByScreen[players[i].screen]=it; });
+    const shotByScreen={};
+    shotRows.forEach((r,i)=>{ if(r.data&&r.data.ok) shotByScreen[players[i].screen]=r.data; });
     const playlistByScreen={};
     playlistRows.forEach((r,i)=>{ if(r.data&&typeof r.data==='object') playlistByScreen[players[i].screen]=r.data; });
     const stockById={}; stockItems.forEach(it=>{ if(it&&it.id) stockById[it.id]=it; });
     function pieceInfo(p){
-      const id=String(p.showing_id||'');
-      if(!id) return {id:'',title:''};
       const live=nowByScreen[p.screen];
-      const sameLive=live && String(live.id||'')===id;
-      const title=String((sameLive&&live.title)||(stockById[id]&&stockById[id].title)||'').trim();
+      // /signage/now es la declaración directa del dueño de la pantalla. El
+      // showing_id del censo es sólo un resumen y puede tardar un latido más.
+      const id=String((live&&live.id)||p.showing_id||'');
+      if(!id) return {id:'',title:''};
+      const title=String((live&&live.title)||(stockById[id]&&stockById[id].title)||'').trim();
       return {id, title:title||'Contenido sin título'};
     }
     // La misma playlist EFECTIVA que publica el player para el mando gráfico.
@@ -1650,6 +1655,14 @@ $('progBands').addEventListener('click',e=>{
         visto:    p => Number(p.age_seconds)||0
       };
       function shotCell(p){
+        const liveId=pieceInfo(p).id;
+        const meta=shotByScreen[p.screen];
+        // Una captura sin identidad, o de la pieza anterior, NO es un previo
+        // válido. Ocultarla hasta que llegue el fotograma ligado al item actual
+        // evita la contradicción visual que originó esta misión.
+        if(!liveId||!meta||!meta.itemId||String(meta.itemId)!==String(liveId)){
+          return '<span class="ebShot sinPrevio"><span class="ebShotHole">actualizando previo</span></span>';
+        }
         const url = SHOT_BASE+'?screen='+encodeURIComponent(p.screen)+'&t='+shotTs;
         return '<a class="ebShot" href="'+url+'" target="_blank" rel="noopener" title="Lo que hay ahora mismo en '+esc(p.screen)+' — clic para verlo grande">'+
           '<img src="'+url+'" alt="Previo de '+esc(p.screen)+'" loading="lazy" decoding="async" '+
@@ -1872,10 +1885,10 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-session.js?v=13.08.2026.r21.1357"></script>
-<script src="/admira-avatar.js?v=13.08.2026.r21.1357"></script>
-<script src="/cms-pacman.js?v=13.08.2026.r21.1357"></script>
-  <script src="/assets/admira-version-watch.js?v=13.08.2026.r21.1357" defer></script>
+<script src="/admira-session.js?v=13.08.2026.r22.1430"></script>
+<script src="/admira-avatar.js?v=13.08.2026.r22.1430"></script>
+<script src="/cms-pacman.js?v=13.08.2026.r22.1430"></script>
+  <script src="/assets/admira-version-watch.js?v=13.08.2026.r22.1430" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
    Mismo patrón que el highscore de yokup: tirador por columna, mínimo por

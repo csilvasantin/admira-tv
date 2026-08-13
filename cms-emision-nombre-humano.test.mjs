@@ -8,7 +8,8 @@ test("EN EMISIÓN resuelve el título vivo y usa Stock como respaldo", () => {
   assert.match(cms, /NOW\s+: 'https:\/\/api\.admira\.store\/signage\/now\?screen='/);
   assert.match(cms, /STOCK\s+: 'https:\/\/api\.admira\.store\/stock\/list\?limit=200'/);
   assert.match(cms, /EB_STOCK\?Promise\.resolve\(\{data:\{items:EB_STOCK\}\}\):grab\(EB\.STOCK,8000\)/);
-  assert.match(cms, /String\(\(sameLive&&live\.title\)\|\|\(stockById\[id\]&&stockById\[id\]\.title\)\|\|''\)\.trim\(\)/);
+  assert.match(cms, /const id=String\(\(live&&live\.id\)\|\|p\.showing_id\|\|''\)/);
+  assert.match(cms, /String\(\(live&&live\.title\)\|\|\(stockById\[id\]&&stockById\[id\]\.title\)\|\|''\)\.trim\(\)/);
 });
 
 test("el identificador técnico no vuelve a ser el rótulo visible", () => {
