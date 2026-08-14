@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=14.08.2026.r7.2311"></script>
+<script src="xpl-runtime.js?v=14.08.2026.r8.2327"></script>
 <script>
-  window.ADMIRA_VERSION='v.14.08.2026.r7.23:11';
+  window.ADMIRA_VERSION='v.14.08.2026.r8.23:27';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -134,7 +134,7 @@
   body.idle #chan{ opacity:.32; }
   @media (max-width:1100px){ #chan{ display:none; } }
   #mupi{ position:relative; flex:0 1 auto; height:96vh; aspect-ratio:9/16; max-width:100%; max-height:100%; background:#000; border-radius:16px; overflow:hidden; touch-action:manipulation;
-    transition:width .35s ease, height .35s ease;
+    transform-origin:center center; transition:width .35s ease, height .35s ease, transform .35s ease;
     box-shadow:0 0 0 8px #11161d, 0 0 0 10px #060a0f, 0 30px 90px rgba(0,0,0,.65), 0 0 80px rgba(125,184,255,.07); }
   #stage{ position:absolute; inset:0; display:grid; place-items:center; background:#000; }
   #stage video, #stage img{ width:100%; height:100%; object-fit:contain; display:block; }
@@ -780,6 +780,14 @@ function moveItem(src,dst){
 // ── El marco del reproductor se adapta al formato del contenido: 9:16 para
 //    vertical, 16:9 para horizontal (así el vídeo se ve bien, sin recortes). ──
 let mupiAR=9/16;
+const DISPLAY_ROTATION_KEY='adtv_display_rotation:'+(scr.screen||scr.circuit||'unbound');
+let displayRotation=(()=>{ const n=parseInt(LS(DISPLAY_ROTATION_KEY,'0'),10)||0; return ((Math.round(n/90)*90)%360+360)%360; })();
+function applyDisplayRotation(delta){
+  if(delta){ displayRotation=(displayRotation+delta+360)%360; save(DISPLAY_ROTATION_KEY,String(displayRotation)); }
+  const mupi=$('mupi'); if(mupi) mupi.style.transform=displayRotation?'rotate('+displayRotation+'deg)':'';
+  fitMupi();
+  return displayRotation;
+}
 function itemAR(it){
   if(it&&it._dim&&it._dim.w&&it._dim.h){ const r=it._dim.w/it._dim.h; return Math.max(9/21,Math.min(21/9,r)); }
   const tg=(it&&it.tags)||[];
@@ -819,14 +827,21 @@ function fitMupi(){ const mupi=$('mupi'), wrap=$('wrap'); if(!mupi||!wrap) retur
     return;
   }
   fitMupi._retry=0;
+  // `typeof` mantiene este bloque autocontenido para diagnósticos que ejecutan
+  // fitMupi aislado; en la página completa displayRotation siempre existe.
+  const rotation=typeof displayRotation==='number'?displayRotation:0;
+  const quarterTurn=rotation%180!==0;
   // `fit=screen` es un contrato explícito del player físico: el marco ocupa la
   // superficie completa y la propia media decide sus barras mediante contain.
+  // Al girar 90/270°, el rectángulo SIN transformar intercambia sus lados para
+  // que su bounding box rotado siga midiendo exactamente el viewport físico.
   if(document.documentElement.classList.contains('screen-fit')){
-    mupi.style.height=Math.round(aH)+'px'; mupi.style.width=Math.round(aW)+'px'; mupi.style.aspectRatio='auto';
+    mupi.style.height=Math.round(quarterTurn?aW:aH)+'px'; mupi.style.width=Math.round(quarterTurn?aH:aW)+'px'; mupi.style.aspectRatio='auto';
     return;
   }
-  let h=aH, w=h*mupiAR; if(w>aW){ w=aW; h=w/mupiAR; }
-  mupi.style.height=Math.round(h)+'px'; mupi.style.width=Math.round(w)+'px'; mupi.style.aspectRatio='auto';
+  const visibleAR=quarterTurn?1/mupiAR:mupiAR;
+  let h=aH, w=h*visibleAR; if(w>aW){ w=aW; h=w/visibleAR; }
+  mupi.style.height=Math.round(quarterTurn?w:h)+'px'; mupi.style.width=Math.round(quarterTurn?h:w)+'px'; mupi.style.aspectRatio='auto';
 }
 window.addEventListener('resize',fitMupi);
 let _mupiResizeObserver=null;
@@ -2139,6 +2154,9 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
     remoteStartPlayback().catch(()=>{ try{ tap.classList.add('show'); }catch(_){} });
     flashCli('▶ reanudada'); return;
   }
+  if(cmd==='rotate-90'||cmd==='rotate90'||cmd==='girar90'||cmd==='rotar90'){
+    const angle=applyDisplayRotation(90); flashCli('↻ pantalla '+angle+'°'); return;
+  }
   if(cmd==='vertical'||cmd==='portrait'){ seg.tag='vertical'; seg.format='9:16'; applyCliSegment('✓ vertical 9:16'); return; }
   if(cmd==='tag'){ seg.tag=canonicalPlayTag(rest||''); applyCliSegment('✓ tag '+(seg.tag||'all')); return; }
   if(cmd==='medio'||cmd==='media'){
@@ -3071,7 +3089,7 @@ const XPLCanal = (function(){
 })();
 window.XPLCanal = XPLCanal;
 
-loadStores(); screenLbl(); applyAudio(); renderChan(); fitMupi();
+loadStores(); screenLbl(); applyAudio(); renderChan(); applyDisplayRotation(0);
 if(PREVIEW.on){
   // MODO PREVIO DE BORRADOR: no toca el Stock, la segmentación ni la programática;
   // solo emite el rundown del borrador en bucle. El chrome/limpio y los controles del
@@ -3339,6 +3357,7 @@ async function applyCtrlCmd(cmd){
     case 'mute':   muted=true; applyAudio(); flashCli('🔇 mute'); return 'executed';
     case 'unmute': muted=false; if(volume===0) volume=0.6; if(mediaEl&&mediaEl.play&&!paused) mediaEl.play().catch(()=>{}); applyAudio(); flashCli('🔊 unmute'); return 'executed';
     case 'toggle-mute': { const b=$('mute'); if(b) b.click(); return b?'executed':'ignored'; }
+    case 'rotate-90': applyDisplayRotation(90); flashCli('↻ pantalla '+displayRotation+'°'); return 'executed';
     case 'vol-up':   volume=Math.min(1,volume+0.1); muted=false; if(mediaEl&&mediaEl.play&&!paused) mediaEl.play().catch(()=>{}); applyAudio(); flashCli('🔊 '+Math.round(volume*100)+'%'); return 'executed';
     case 'vol-down': volume=Math.max(0,volume-0.1); muted=(volume===0); applyAudio(); flashCli('🔉 '+Math.round(volume*100)+'%'); return 'executed';
     case 'ontop-on':     if(window.ADM_ONTOP&&!window.ADM_ONTOP.on) window.ADM_ONTOP.toggle(); return 'executed';
@@ -3492,6 +3511,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=14.08.2026.r7.2311" defer></script>
+  <script src="/assets/admira-version-watch.js?v=14.08.2026.r8.2327" defer></script>
 </body>
 </html>

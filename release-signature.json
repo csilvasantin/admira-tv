@@ -1,9 +1,9 @@
 {
-  "version": "v.14.08.2026.r7.23:11",
+  "version": "v.14.08.2026.r8.23:27",
   "signature": "TrinityMBP16 · MacBookPro16",
   "agent": "TrinityMBP16",
   "machine": "MacBookPro16",
   "day": "14.08.2026",
-  "time": "23:11",
-  "evidence": "El player nativo del iPhone ocupa el viewport físico completo y arranca la playlist #musica sin esperar la descarga integral del primer vídeo."
+  "time": "23:27",
+  "evidence": "El mando compacta el selector y envía un giro acumulativo de 90 grados que el player aplica, confirma y persiste por pantalla."
 }

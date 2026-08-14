@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=14.08.2026.r7.2311"></script>
+<script src="/auth-gate.js?v=14.08.2026.r8.2327"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -208,11 +208,11 @@
   .hitRow .hslot{font:600 10px ui-monospace,monospace;color:var(--dim);border:1px solid var(--line);border-radius:5px;padding:1px 6px;flex:none}
   .hitsEmpty{padding:22px 14px;text-align:center;color:var(--dim);font-size:12.5px}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=14.08.2026.r7.2311">
+  <link rel="stylesheet" href="/admira-frame.css?v=14.08.2026.r8.2327">
 </head>
 <body>
-<script src="/admira-nav.js?v=14.08.2026.r7.2311" data-active="condicional" data-title="Segmentación" defer></script>
-<script src="/admira-frame.js?v=14.08.2026.r7.2311" defer></script>
+<script src="/admira-nav.js?v=14.08.2026.r8.2327" data-active="condicional" data-title="Segmentación" defer></script>
+<script src="/admira-frame.js?v=14.08.2026.r8.2327" defer></script>
 
 <section class="context-picker" aria-label="Selector de proyecto, Xpacio y dispositivo IoT">
   <div class="context-field"><label for="projectSelect">1.- Proyecto <span class="context-count" id="projectCount">// …</span></label><select id="projectSelect" aria-label="Cambiar proyecto"><option>Cargando proyectos…</option></select></div>
@@ -334,8 +334,8 @@
 
 <footer>Reglas + cazados desde <code>omnipublicity-api</code> · motor <code>Condicional</code> · <a href="https://www.xpaceos.com/admira-xp/xpl.html" target="_blank" rel="noopener" style="color:inherit">editor de reglas del gemelo ↗</a> · <span id="stamp"></span></footer>
 
-<script src="/admira-context-picker.js?v=14.08.2026.r7.2311"></script>
-<script src="xpl-runtime.js?v=14.08.2026.r7.2311"></script>
+<script src="/admira-context-picker.js?v=14.08.2026.r8.2327"></script>
+<script src="xpl-runtime.js?v=14.08.2026.r8.2327"></script>
 <script>
 const FLEET = 'https://omnipublicity-api.csilvasantin.workers.dev/locations?selfreg=1';
 const $ = id => document.getElementById(id);
@@ -661,6 +661,6 @@ async function loadHits(){
 }
 loadHits(); setInterval(loadHits, 10000);
 </script>
-  <script src="/assets/admira-version-watch.js?v=14.08.2026.r7.2311" defer></script>
+  <script src="/assets/admira-version-watch.js?v=14.08.2026.r8.2327" defer></script>
 </body>
 </html>

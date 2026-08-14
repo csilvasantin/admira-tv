@@ -9,7 +9,7 @@ const fitSource = canal.slice(
   canal.indexOf("\nwindow.addEventListener('resize',fitMupi)", canal.indexOf("function fitMupi()")),
 );
 
-function fitHarness({ width, height, ar, rail = 166, chan = 174, gap = 16, padding = 12, screenFit = false }) {
+function fitHarness({ width, height, ar, rail = 166, chan = 174, gap = 16, padding = 12, screenFit = false, rotation = 0 }) {
   const mupi = { style: {} };
   const wrap = { clientWidth: width, clientHeight: height };
   const railEl = { offsetWidth: rail };
@@ -17,6 +17,7 @@ function fitHarness({ width, height, ar, rail = 166, chan = 174, gap = 16, paddi
   const nodes = { mupi, wrap, rail: railEl, chan: chanEl };
   const context = vm.createContext({
     mupiAR: ar,
+    displayRotation: rotation,
     document: { documentElement: { classList: { contains: (name) => screenFit && name === "screen-fit" } } },
     $: (id) => nodes[id],
     getComputedStyle: (el) => el === wrap
@@ -60,6 +61,11 @@ test("fit=screen usa toda la superficie física sin alterar el canal editorial",
   assert.match(canal, /\.screen-fit #mupi\{[^}]*width:100vw; height:100vh/);
   const box = fitHarness({ width: 832, height: 420, ar: 9 / 16, rail: 0, chan: 0, gap: 0, padding: 0, screenFit: true });
   assert.deepEqual(box, { width: 832, height: 420 });
+});
+
+test("un giro de 90 grados intercambia el lienzo para conservar todo el viewport físico", () => {
+  const box = fitHarness({ width: 440, height: 860, ar: 9 / 16, rail: 0, chan: 0, gap: 0, padding: 0, screenFit: true, rotation: 90 });
+  assert.deepEqual(box, { width: 860, height: 440 });
 });
 
 test("un contenido horizontal cabe entre los dos paneles sin deformarse", () => {

@@ -31,6 +31,12 @@
     label.fld{display:block;font-family:var(--mono);font-size:11px;color:var(--muted);margin:12px 0 4px;letter-spacing:.06em}
     select,input,.b,.chip{font-family:var(--mono)}
     select{width:100%;font-size:14px;padding:11px 12px;border-radius:10px;background:#0d1018;color:var(--text);border:1px solid var(--border)}
+    .target-row{display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:8px;align-items:stretch}
+    .target-row select{min-width:0}
+    .rotate-screen{--cmd-progress:0deg;--cmd-ring:var(--cyan);position:relative;display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;border:1px solid var(--cyan);border-radius:10px;background:color-mix(in srgb,var(--cyan) 9%,transparent);color:var(--cyan);font:700 13px var(--mono);cursor:pointer;white-space:nowrap}
+    .rotate-screen:hover{border-color:var(--violet);color:var(--text)}
+    .rotate-screen:active{transform:scale(.97)}
+    .rotate-screen:focus-visible{outline:2px solid #fff;outline-offset:2px}
     .cinfo{display:flex;gap:8px;align-items:center;margin-top:6px;font-size:11px;color:var(--dim);font-family:var(--mono)}
     .cinfo b{color:var(--muted)}
     .stage{margin:12px 0;display:flex;gap:12px;align-items:stretch}
@@ -183,7 +189,10 @@
   <div class="equipo" id="equipo">🖥️ Conectado al player de <b id="equipoName">—</b></div>
 
   <label class="fld">Pantalla / tótem a controlar</label>
-  <select id="target"></select>
+  <div class="target-row">
+    <select id="target" aria-label="Pantalla o tótem a controlar"></select>
+    <button type="button" class="rotate-screen" id="rotateScreen" data-cmd="rotate-90" aria-label="Girar 90 grados la pantalla seleccionada" title="Girar 90° la pantalla seleccionada">↻ 90°</button>
+  </div>
   <div class="cinfo">circuito: <b id="cir">—</b> · pantalla: <b id="scr">—</b></div>
 
   <div class="stage" data-mando-pane="remote">
@@ -1020,6 +1029,6 @@
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=14.08.2026.r7.2311" defer></script>
+  <script src="/assets/admira-version-watch.js?v=14.08.2026.r8.2327" defer></script>
 </body>
 </html>
