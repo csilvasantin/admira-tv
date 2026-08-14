@@ -54,6 +54,16 @@ test('una respuesta tardía del preview no cambia el siguiente objetivo',()=>{
   assert.match(mando,/signal:controller\.signal/);
 });
 
+test('el mando usa el fotograma real como fallback cuando iOS aún no publica /now.item',()=>{
+  assert.match(mando,/var SHOT_API = 'https:\/\/api\.admira\.store\/signage\/shot'/);
+  assert.match(mando,/function remoteShotMeta\(screen,signal\)/);
+  assert.match(mando,/age>180/);
+  assert.match(mando,/if\(it&&it\.id&&meta\.itemId&&String\(it\.id\)!==String\(meta\.itemId\)\) return null/);
+  assert.match(mando,/if\(shotPreview\) renderPreview\(it,false,shotPreview\); else renderPreview\(it\)/);
+  assert.match(mando,/previewVisual=visual\|\|null/);
+  assert.match(mando,/Fotograma del player · hace/);
+});
+
 test('el modo ampliado es modal, aísla el fondo y restaura el foco',()=>{
   assert.match(previewSource,/previewFrame\.setAttribute\('role','dialog'\)/);
   assert.match(previewSource,/previewFrame\.setAttribute\('aria-modal','true'\)/);

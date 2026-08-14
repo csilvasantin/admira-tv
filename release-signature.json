@@ -1,9 +1,9 @@
 {
-  "version": "v.14.08.2026.r8.23:27",
+  "version": "v.15.08.2026.r1.00:02",
   "signature": "TrinityMBP16 · MacBookPro16",
   "agent": "TrinityMBP16",
   "machine": "MacBookPro16",
-  "day": "14.08.2026",
-  "time": "23:27",
-  "evidence": "El mando compacta el selector y envía un giro acumulativo de 90 grados que el player aplica, confirma y persiste por pantalla."
+  "day": "15.08.2026",
+  "time": "00:02",
+  "evidence": "El mando recibe y muestra el fotograma real y reciente publicado por el player iOS incluso cuando signage/now todavía no expone el item en emisión."
 }

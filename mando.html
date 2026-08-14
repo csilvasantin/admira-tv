@@ -287,6 +287,7 @@
     // workers.dev queda de reserva por si cayera el proxy.
     var CMD_HOSTS = ['https://api.admira.store/locations/cmd','https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd'];
     var NOW_API = 'https://api.admira.store/signage/now';
+    var SHOT_API = 'https://api.admira.store/signage/shot';
     var SCREENS_API = 'https://api.admira.store/signage/screens';
     var CACHE_API = 'https://api.admira.store/screen/cache';
     var PROFILE_API = '/api/player-profile';
@@ -338,7 +339,7 @@
     }
     if(startIdx<0) startIdx=4; selEl.value=startIdx;
 
-    var T, previewItem=null, previewSignature='', previewPaused=false, previewRenderSeq=0;
+    var T, previewItem=null, previewVisual=null, previewSignature='', previewPaused=false, previewRenderSeq=0;
     var targetGeneration=0, nowRequestSeq=0, nowController=null;
     var playlistRequestSeq=0, remotePlaylistItems=[], statusRequestSeq=0, contentsRequestSeq=0, statusProfile={fields:{}};
     var previewReturnFocus=null, previewInertNodes=[];
@@ -376,31 +377,33 @@
       var empty=document.createElement('div'); empty.className='preview-empty';
       empty.textContent=message||'Esperando señal del player remoto'; previewMedia.appendChild(empty);
     }
-    function renderPreview(it,force){
+    function renderPreview(it,force,visual){
       previewItem=it||null; paintPreviewPause();
-      var signature=it&&it.url?[it.id||'',it.url,it.startedAt||''].join('|'):'';
+      previewVisual=visual||null;
+      var shown=previewVisual||it;
+      var signature=shown&&shown.url?[shown.id||'',shown.url,shown.startedAt||''].join('|'):'';
       if(previewPaused&&!force) return;   // conserva el último fotograma hasta reanudar
       if(!force&&signature===previewSignature) return;
       previewSignature=signature;
-      if(!it||!it.url){ previewEmpty('Sin contenido reportado por el player remoto'); return; }
+      if(!shown||!shown.url){ previewEmpty('Sin contenido reportado por el player remoto'); return; }
       clearPreviewMedia(); var renderToken=previewRenderSeq;
-      var type=String(it.type||'').toLowerCase(), media;
+      var type=String(shown.type||'').toLowerCase(), media;
       if(type==='video'||type==='animation'){
-        media=document.createElement('video'); media.muted=true; media.playsInline=true; media.autoplay=true; media.preload='metadata'; media.src=it.url;
+        media=document.createElement('video'); media.muted=true; media.playsInline=true; media.autoplay=true; media.preload='metadata'; media.src=shown.url;
         media.addEventListener('loadedmetadata',function(){
           if(renderToken!==previewRenderSeq||!media.isConnected) return;
-          var elapsed=Math.max(0,(Date.now()-(Number(it.startedAt)||Date.now()))/1000);
+          var elapsed=Math.max(0,(Date.now()-(Number(shown.startedAt)||Date.now()))/1000);
           if(Number.isFinite(media.duration)&&media.duration>0) try{ media.currentTime=elapsed%media.duration; }catch(_){}
           media.play().catch(function(){});
         },{once:true});
       }else if(type==='interactive'||type==='xperiencia'){
         media=document.createElement('iframe'); media.title='Previo local del contenido interactivo';
         // Origen opaco: incluso un asset same-origin no puede alcanzar parent.sendRemote.
-        media.setAttribute('sandbox','allow-scripts'); media.src=it.url;
+        media.setAttribute('sandbox','allow-scripts'); media.src=shown.url;
       }else if(type==='audio'||type==='music'||type==='locucion'){
-        media=document.createElement('div'); media.className='preview-empty'; media.textContent='🎧 '+(it.title||'Contenido de audio');
+        media=document.createElement('div'); media.className='preview-empty'; media.textContent='🎧 '+((it&&it.title)||shown.title||'Contenido de audio');
       }else{
-        media=document.createElement('img'); media.alt=it.title||'Contenido en emisión'; media.src=it.url;
+        media=document.createElement('img'); media.alt=(it&&it.title)||shown.title||'Contenido en emisión'; media.src=shown.url;
       }
       previewMedia.appendChild(media);
     }
@@ -411,7 +414,7 @@
       paintPreviewPause();
       var video=previewMedia.querySelector('video'), iframe=previewMedia.querySelector('iframe');
       if(previewPaused){ if(video) video.pause(); if(iframe) iframe.src='about:blank'; }
-      else renderPreview(previewItem,true);   // retoma en la posición viva, nunca gobierna el player
+      else renderPreview(previewItem,true,previewVisual);   // retoma en la posición viva, nunca gobierna el player
     }
     function setPreviewIsolation(on){
       if(on){
@@ -451,7 +454,7 @@
       T = FLAT[+selEl.value];
       document.getElementById('cir').textContent = T.circuit;
       document.getElementById('scr').textContent = T.screen;
-      closePreview(); previewSignature=''; previewItem=null; setPreviewPaused(false); previewEmpty('Esperando señal del player remoto');
+      closePreview(); previewSignature=''; previewItem=null; previewVisual=null; setPreviewPaused(false); previewEmpty('Esperando señal del player remoto');
       remotePlaylistItems=[]; document.getElementById('playlistSummary').textContent='— cargando inventario';
       document.getElementById('playlistList').innerHTML='<div class="pl-empty">Esperando la playlist efectiva del player seleccionado</div>';
       statusProfile={fields:{}}; document.getElementById('statusSummary').textContent='Esperando telemetría del player seleccionado…'; document.getElementById('statusGrid').replaceChildren();
@@ -1002,17 +1005,42 @@
     document.getElementById('contentsRefresh').onclick=function(){ loadRemoteContents(true); };
 
     // ── Ahora emitiendo ──
+    async function remoteShotMeta(screen,signal){
+      try{
+        var r=await fetch(SHOT_API+'?meta=1&screen='+encodeURIComponent(screen)+'&_='+Date.now(),{cache:'no-store',signal:signal});
+        return r.ok?await r.json():null;
+      }catch(e){ if(e&&e.name==='AbortError') throw e; return null; }
+    }
+    function remoteShotPreview(meta,target,it){
+      if(!meta||!meta.ok||!meta.ts||Number(meta.bytes||0)<1000) return null;
+      var age=Math.max(0,Number(meta.ageSeconds!=null?meta.ageSeconds:(Date.now()-Number(meta.ts))/1000));
+      if(!Number.isFinite(age)||age>180) return null;
+      // Si /now sí identifica la pieza, una captura anterior no debe contradecirla.
+      // iOS puede publicar el fotograma antes que /now: sin item vivo, la captura
+      // fresca sigue siendo la prueba directa y más fiel de lo que muestra el player.
+      if(it&&it.id&&meta.itemId&&String(it.id)!==String(meta.itemId)) return null;
+      return {id:'shot:'+target.screen+':'+meta.ts,type:'image',title:(it&&it.title)||'Fotograma real de '+target.screen,
+        url:SHOT_API+'?screen='+encodeURIComponent(target.screen)+'&t='+encodeURIComponent(meta.ts),startedAt:Number(meta.ts)};
+    }
+    function remoteShotLabel(meta){
+      var age=Math.max(0,Math.round(Number(meta&&meta.ageSeconds!=null?meta.ageSeconds:(Date.now()-Number(meta&&meta.ts||0))/1000)||0));
+      return 'Fotograma del player · hace '+age+' s';
+    }
     async function pollNow(){
       var target=T, generation=targetGeneration, requestSeq=++nowRequestSeq;
       if(nowController) nowController.abort(); var controller=new AbortController(); nowController=controller;
       try{
-        var r = await fetch(NOW_API+'?screen='+encodeURIComponent(target.screen), {cache:'no-store',signal:controller.signal});
-        var d = await r.json().catch(function(){return null;});
+        var rows=await Promise.all([
+          fetch(NOW_API+'?screen='+encodeURIComponent(target.screen),{cache:'no-store',signal:controller.signal}).then(function(r){return r.json().catch(function(){return null;});}),
+          remoteShotMeta(target.screen,controller.signal)
+        ]);
+        var d=rows[0], shotMeta=rows[1];
         if(generation!==targetGeneration||requestSeq!==nowRequestSeq) return;
-        var it = d && d.item;
-        document.getElementById('now').textContent = d && d.standby ? '⏻ STANDBY (apagada)' : (it ? (it.title||it.type||'—') : '— sin señal —');
+        var it=d&&d.item, shotPreview=remoteShotPreview(shotMeta,target,it);
+        document.getElementById('now').textContent=d&&d.standby?'⏻ STANDBY (apagada)':(it?(it.title||it.type||'—'):(shotPreview?remoteShotLabel(shotMeta):'— sin señal —'));
         if(d&&typeof d.standby==='boolean'){ standby=d.standby; setStoredStandby(standby); paintRemoteControls(); }
-        renderPreview(it); paintRemoteContext(remotePlaylistItems,it);
+        if(shotPreview) renderPreview(it,false,shotPreview); else renderPreview(it);
+        paintRemoteContext(remotePlaylistItems,it);
         loadRemotePlaylist(it&&it.id);
         if(document.body.dataset.mandoView==='status') loadRemoteStatus(false);
         if(document.body.dataset.mandoView==='contents') loadRemoteContents(false);
@@ -1029,6 +1057,6 @@
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=14.08.2026.r8.2327" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r1.0002" defer></script>
 </body>
 </html>
