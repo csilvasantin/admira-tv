@@ -9,7 +9,7 @@ const fitSource = canal.slice(
   canal.indexOf("\nwindow.addEventListener('resize',fitMupi)", canal.indexOf("function fitMupi()")),
 );
 
-function fitHarness({ width, height, ar, rail = 166, chan = 174, gap = 16, padding = 12 }) {
+function fitHarness({ width, height, ar, rail = 166, chan = 174, gap = 16, padding = 12, screenFit = false }) {
   const mupi = { style: {} };
   const wrap = { clientWidth: width, clientHeight: height };
   const railEl = { offsetWidth: rail };
@@ -17,7 +17,7 @@ function fitHarness({ width, height, ar, rail = 166, chan = 174, gap = 16, paddi
   const nodes = { mupi, wrap, rail: railEl, chan: chanEl };
   const context = vm.createContext({
     mupiAR: ar,
-    document: { documentElement: { classList: { contains: () => false } } },
+    document: { documentElement: { classList: { contains: (name) => screenFit && name === "screen-fit" } } },
     $: (id) => nodes[id],
     getComputedStyle: (el) => el === wrap
       ? {
@@ -53,6 +53,13 @@ test("en móvil los drawers no descuentan ancho al player", () => {
 test("el modo clean conserva el kiosco a pantalla completa", () => {
   assert.match(canal, /\.clean #wrap\{ padding:0; gap:0; \}/);
   assert.match(canal, /\.clean #mupi\{ height:100vh; max-width:100vw; border-radius:0; box-shadow:none; \}/);
+});
+
+test("fit=screen usa toda la superficie física sin alterar el canal editorial", () => {
+  assert.match(canal, /__adtvParams\.get\('fit'\) === 'screen'/);
+  assert.match(canal, /\.screen-fit #mupi\{[^}]*width:100vw; height:100vh/);
+  const box = fitHarness({ width: 832, height: 420, ar: 9 / 16, rail: 0, chan: 0, gap: 0, padding: 0, screenFit: true });
+  assert.deepEqual(box, { width: 832, height: 420 });
 });
 
 test("un contenido horizontal cabe entre los dos paneles sin deformarse", () => {

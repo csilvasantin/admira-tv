@@ -41,6 +41,7 @@ function escenario({ alto, ancho }) {
   const marcos = [];
   const ctx = vm.createContext({
     $: (id) => nodos[id] || null,
+    document: { documentElement: { classList: { contains: () => false } } },
     getComputedStyle: () => ({ display: "none", paddingLeft: "0", paddingRight: "0",
       paddingTop: "0", paddingBottom: "0", columnGap: "0", gap: "0" }),
     mupiAR: 9 / 16,

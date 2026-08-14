@@ -42,12 +42,17 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=14.08.2026.r6.2219"></script>
+<script src="xpl-runtime.js?v=14.08.2026.r7.2311"></script>
 <script>
-  window.ADMIRA_VERSION='v.14.08.2026.r6.22:19';
+  window.ADMIRA_VERSION='v.14.08.2026.r7.23:11';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
+  // Los players nativos pueden pedir el lienzo físico completo. El canal web
+  // normal conserva su marco editorial adaptativo; solo ?fit=screen elimina el
+  // 9:16 inicial que, en un iPhone horizontal, parecía un MUPI estrecho centrado.
+  const __adtvScreenFit = __adtvParams.get('fit') === 'screen';
+  if (__adtvScreenFit) document.documentElement.classList.add('screen-fit');
 </script>
 <style>
   :root{ --air:#ff4444; --grn:#39d353; --blue:#7db8ff; --bg:#05080c; }
@@ -133,6 +138,11 @@
     box-shadow:0 0 0 8px #11161d, 0 0 0 10px #060a0f, 0 30px 90px rgba(0,0,0,.65), 0 0 80px rgba(125,184,255,.07); }
   #stage{ position:absolute; inset:0; display:grid; place-items:center; background:#000; }
   #stage video, #stage img{ width:100%; height:100%; object-fit:contain; display:block; }
+  /* Superficie física del player nativo: el escenario ocupa el viewport entero.
+     La media sigue en `contain` para no recortar ni deformar piezas verticales. */
+  .screen-fit #wrap{ padding:0; gap:0; }
+  .screen-fit #mupi{ width:100vw; height:100vh; max-width:none; max-height:none; border-radius:0; box-shadow:none; }
+  .screen-fit .skel-stage{ width:100%; height:100%; max-height:none; aspect-ratio:auto; border:0; border-radius:0; }
   /* MODO EXTENDIDO: cada player enseña una tesela del mismo lienzo. */
   #stage.extended-tile{overflow:hidden;display:block}
   #stage.extended-tile>video,#stage.extended-tile>img{
@@ -809,6 +819,12 @@ function fitMupi(){ const mupi=$('mupi'), wrap=$('wrap'); if(!mupi||!wrap) retur
     return;
   }
   fitMupi._retry=0;
+  // `fit=screen` es un contrato explícito del player físico: el marco ocupa la
+  // superficie completa y la propia media decide sus barras mediante contain.
+  if(document.documentElement.classList.contains('screen-fit')){
+    mupi.style.height=Math.round(aH)+'px'; mupi.style.width=Math.round(aW)+'px'; mupi.style.aspectRatio='auto';
+    return;
+  }
   let h=aH, w=h*mupiAR; if(w>aW){ w=aW; h=w/mupiAR; }
   mupi.style.height=Math.round(h)+'px'; mupi.style.width=Math.round(w)+'px'; mupi.style.aspectRatio='auto';
 }
@@ -3476,6 +3492,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=14.08.2026.r6.2219" defer></script>
+  <script src="/assets/admira-version-watch.js?v=14.08.2026.r7.2311" defer></script>
 </body>
 </html>
