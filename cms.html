@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=14.08.2026.r1.1015"></script>
+<script src="/auth-gate.js?v=14.08.2026.r2.1042"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -329,8 +329,9 @@
   table.ebTable tr:hover td{background:#0b121d}
   .ebSt{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);font-size:11px;white-space:nowrap}
   .ebSt .d{width:7px;height:7px;border-radius:50%;flex:none}
-  .ebSt.on{color:var(--air);border-color:#1f5e44} .ebSt.on .d{background:var(--air);box-shadow:0 0 7px var(--air)}
-  .ebSt.off{color:var(--off);border-color:#5e2630} .ebSt.off .d{background:var(--off)}
+  .ebSt.online{color:var(--air);border-color:#1f5e44} .ebSt.online .d{background:var(--air);box-shadow:0 0 7px var(--air)}
+  .ebSt.connecting{color:var(--amber);border-color:#745626} .ebSt.connecting .d{background:var(--amber);box-shadow:0 0 7px rgba(255,180,76,.55)}
+  .ebSt.offline{color:var(--off);border-color:#5e2630} .ebSt.offline .d{background:var(--off)}
   /* PREVIO — miniatura del fotograma en antena. Tamaño fijo para que la tabla no
      baile mientras cargan, y 16:9 porque es lo que emite el canal. */
   .ebShot{position:relative;display:block;width:104px;height:59px;border-radius:6px;overflow:hidden;
@@ -387,11 +388,6 @@
     color:inherit;font:inherit;text-align:left;cursor:pointer;transition:border-color .16s,background .16s,box-shadow .16s}
   .ebScreenShortcut:hover,.ebScreenShortcut:focus-visible{border-color:var(--green,#3df08a);background:rgba(61,240,138,.11);
     box-shadow:0 0 0 2px rgba(61,240,138,.12);outline:none}
-  .ebConnection{flex:none;display:inline-flex;align-items:center;gap:5px;font:700 9.5px ui-monospace,monospace;white-space:nowrap}
-  .ebConnection .d{width:7px;height:7px;border-radius:50%;flex:none;background:currentColor}
-  .ebConnection.online{color:var(--air);text-shadow:0 0 7px rgba(57,217,138,.28)}
-  .ebConnection.connecting{color:var(--amber);text-shadow:0 0 7px rgba(255,180,76,.25)}
-  .ebConnection.offline{color:var(--off)}
   .ebPiece{color:var(--air);font-size:11.5px}
   .ebHole{color:var(--dim);font-style:italic;opacity:.75}
   .ebPanel{padding:4px 16px 16px}
@@ -450,7 +446,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=14.08.2026.r1.1015">
+  <link rel="stylesheet" href="/admira-frame.css?v=14.08.2026.r2.1042">
 </head>
 <body>
 <script>
@@ -469,8 +465,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=14.08.2026.r1.1015"></script>
-<script src="/admira-frame.js?v=14.08.2026.r1.1015" defer></script>
+<script src="/admira-nav.js?v=14.08.2026.r2.1042"></script>
+<script src="/admira-frame.js?v=14.08.2026.r2.1042" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -619,7 +615,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=14.08.2026.r1.1015"></script>
+<script src="xpl-runtime.js?v=14.08.2026.r2.1042"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -1608,9 +1604,9 @@ $('progBands').addEventListener('click',e=>{
       const title=String((live&&live.title)||(stockById[id]&&stockById[id].title)||'').trim();
       return {id, title:title||'Contenido sin título'};
     }
-    // El semáforo de la pastilla habla de CONEXIÓN, no de emisión. Un heartbeat
-    // vivo sin pieza declarada todavía es «conectando»; cuando llega itemId ya es
-    // online. Sin heartbeat es offline. Así no confundimos «en antena» con red.
+    // ESTADO habla de CONEXIÓN, no de emisión. Un heartbeat vivo sin pieza
+    // declarada todavía es «conectando»; cuando llega itemId ya es online. Sin
+    // heartbeat es offline. Player/Pantalla queda reservado al nombre pulsable.
     function playerConnectionState(p,info){
       if(p&&p.online){
         if((p.connecting===true)||!(info&&info.id)) return {key:'connecting',label:'conectando'};
@@ -1675,7 +1671,7 @@ $('progBands').addEventListener('click',e=>{
       // fila, no del DOM: ordenar leyendo celdas obliga a re-parsear texto ya
       // formateado («2m», «— nada») y se rompe en cuanto alguien cambia un rótulo.
       const ordenables = {
-        estado:   p => p.online ? 0 : 1,
+        estado:   p => { const s=playerConnectionState(p,pieceInfo(p)); return s.key==='online'?0:(s.key==='connecting'?1:2); },
         player:   p => String(p.screen||'').toLowerCase(),
         rol:      p => String(p.role||'').toLowerCase(),
         circuito: p => String(playerCircuit(p)||'').toLowerCase(),
@@ -1707,7 +1703,8 @@ $('progBands').addEventListener('click',e=>{
       let _casa = 0;
       const rows = lista.map(p=>{
         const on = !!p.online;
-        const stCls = on?'on':'off', stTxt = on? '🟢 en antena':'🔴 sin señal';
+        const info=pieceInfo(p);
+        const connection=playerConnectionState(p,info);
         const role = p.role||''; const rCls = /canal/.test(role)?'canal':(/game|juego/.test(role)?'game':'');
         // circuito · playlist efectiva publicada por el propio player
         const circ = playerCircuit(p);
@@ -1727,8 +1724,6 @@ $('progBands').addEventListener('click',e=>{
           chanCell = '<div>'+parrillaLink+'</div><div class="ebMeta">'+esc(pr?pr.name:g.circuit)+' · '+esc(g.name||g.screen)+'</div>'; }
         else {
           chanCell = '<div>'+parrillaLink+'</div><div class="ebMeta">playlist base · '+esc(p.screen)+'</div>'; }
-        const info=pieceInfo(p);
-        const connection=playerConnectionState(p,info);
         const piece = info.id
           ? '<span class="ebPiece" title="ID técnico: '+esc(info.id)+'">'+esc(info.title)+'</span>'
           : hole('— nada');
@@ -1738,9 +1733,9 @@ $('progBands').addEventListener('click',e=>{
         // sin volver a la red: sin esto, quitar el orden dejaba las filas donde las
         // hubiera puesto el último clic y «volver a casa» no volvía a ninguna parte.
         return '<tr data-casa="'+(_casa++)+'" data-screen="'+esc(p.screen)+'" data-online="'+(on?'1':'0')+'" data-orden=\''+esc(JSON.stringify(valores)).replace(/'/g,'&#39;')+'\'>'+
-          '<td data-col="estado"><span class="ebSt '+stCls+'"><span class="d"></span>'+stTxt+'</span></td>'+
-          '<td data-col="player" class="ebPlayerCell"><button type="button" class="ebScreenShortcut" data-open-remote aria-label="Abrir modo experto de '+esc(p.screen)+' · '+connection.label+'">'+
-            '<span class="ebScreen">'+esc(p.screen)+'</span><span class="ebConnection '+connection.key+'"><span class="d" aria-hidden="true"></span>'+connection.label+'</span></button></td>'+
+          '<td data-col="estado"><span class="ebSt '+connection.key+'"><span class="d" aria-hidden="true"></span>'+connection.label+'</span></td>'+
+          '<td data-col="player" class="ebPlayerCell"><button type="button" class="ebScreenShortcut" data-open-remote aria-label="Abrir modo experto de '+esc(p.screen)+'">'+
+            '<span class="ebScreen">'+esc(p.screen)+'</span></button></td>'+
           '<td data-col="rol">'+(role? '<span class="ebRole '+rCls+'">'+esc(role)+'</span>':hole('—'))+'</td>'+
           // PREVIO: el fotograma REAL de lo que esta viendo la calle. No es un dato
           // nuevo — el canal lo sube cada 25 s (shotTick -> POST /signage/shot) y hasta
@@ -1923,10 +1918,10 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-session.js?v=14.08.2026.r1.1015"></script>
-<script src="/admira-avatar.js?v=14.08.2026.r1.1015"></script>
-<script src="/cms-pacman.js?v=14.08.2026.r1.1015"></script>
-  <script src="/assets/admira-version-watch.js?v=14.08.2026.r1.1015" defer></script>
+<script src="/admira-session.js?v=14.08.2026.r2.1042"></script>
+<script src="/admira-avatar.js?v=14.08.2026.r2.1042"></script>
+<script src="/cms-pacman.js?v=14.08.2026.r2.1042"></script>
+  <script src="/assets/admira-version-watch.js?v=14.08.2026.r2.1042" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
    Mismo patrón que el highscore de yokup: tirador por columna, mínimo por

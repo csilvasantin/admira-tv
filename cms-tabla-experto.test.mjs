@@ -102,19 +102,20 @@ test("el panel experto va sin franja de título y el mando lo llena entero", asy
   assert.match(cmsSrc, /pn\.style\.height='min\(88vh,1000px\)'/);
 });
 
-test("Player / pantalla usa el nombre como atajo y sólo añade su semáforo de conexión", () => {
+test("Estado muestra la conexión y Player / pantalla queda sólo como nombre pulsable", () => {
   assert.match(cms, /class="ebScreenShortcut" data-open-remote/);
   assert.doesNotMatch(cms, /class="ebScreenShortcutHint"/);
   assert.doesNotMatch(cms, /🎛 Mando/);
-  assert.match(cms, /aria-label="Abrir modo experto de /);
+  assert.match(cms, /aria-label="Abrir modo experto de '\+esc\(p\.screen\)\+'">/);
   assert.match(cms, /function playerConnectionState\(p,info\)/);
   assert.match(cms, /return \{key:'connecting',label:'conectando'\}/);
   assert.match(cms, /return \{key:'online',label:'online'\}/);
   assert.match(cms, /return \{key:'offline',label:'offline'\}/);
-  assert.match(cms, /class="ebConnection '\+connection\.key\+'"/);
-  assert.match(cms, /\.ebConnection\.online\{color:var\(--air\)/);
-  assert.match(cms, /\.ebConnection\.connecting\{color:var\(--amber\)/);
-  assert.match(cms, /\.ebConnection\.offline\{color:var\(--off\)/);
+  assert.match(cms, /data-col="estado"><span class="ebSt '\+connection\.key\+'"/);
+  assert.doesNotMatch(cms, /class="ebConnection/);
+  assert.match(cms, /\.ebSt\.online\{color:var\(--air\)/);
+  assert.match(cms, /\.ebSt\.connecting\{color:var\(--amber\)/);
+  assert.match(cms, /\.ebSt\.offline\{color:var\(--off\)/);
   assert.match(cms, /\$\('ebBody'\)\.addEventListener\('click'/);
   assert.match(cms, /e\.target\.closest\('\[data-open-remote\]'\)/);
   assert.match(cms, /const row=shortcut\.closest\('tr\[data-screen\]'\)/);
