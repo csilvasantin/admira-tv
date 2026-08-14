@@ -41,7 +41,7 @@ test('los controles básicos viven dentro de Ahora emitiendo y tienen una única
   assert.match(mando,/vol\.onchange=function\(\)\{ sendRemote\('volume '\+vol\.value\); \}/);
   assert.match(mando,/pwr\.onclick=async function\(\)\{[\s\S]*?sendRemote\(desired\?'standby':'resume',pwr\)/);
   assert.match(mando,/mb\.onclick=async function\(\)\{[\s\S]*?sendRemote\(desired\?'audiooff':'audioon',mb\)/);
-  assert.match(mando,/infoControl\.onclick=function\(\)\{ captureInfo\(infoControl\); \}/);
+  assert.match(mando,/infoControl\.onclick=function\(\)\{ toggleInfo\(infoControl\); \}/);
   assert.match(mando,/function resetRemoteControls\(\)\{[\s\S]*?standby=storedStandby\(\); muted=false; pwr\.disabled=false; mb\.disabled=false;/);
   assert.match(mando,/signal:controller\.signal/);
   assert.match(mando,/setTimeout\(function\(\)\{controller\.abort\(\);\},2500\)/);

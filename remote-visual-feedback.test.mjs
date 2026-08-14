@@ -13,27 +13,39 @@ function fn(source,name){
   assert.fail('función incompleta '+name);
 }
 
-test('el ACK completo queda visible hasta la siguiente orden o cambio de player',()=>{
+test('el último ACK o fallo queda visible hasta la siguiente orden o cambio de player',()=>{
   const finish=fn(mando,'finishRemoteButton');
-  assert.match(finish,/if\(result===['"]executed['"]\)\{/);
-  assert.match(finish,/return;[\s\S]*setTimeout\(function\(\)/);
+  assert.match(finish,/action\.state=result===['"]executed['"]\?['"]applied['"]:result===['"]failed['"]\?['"]failed['"]:['"]timeout['"]/);
+  assert.doesNotMatch(finish,/classList\.remove\('remote-pending'/);
   assert.match(mando,/function clearRemoteFeedback\(\)/);
   assert.match(mando,/resetRemoteControls\(\); clearRemoteFeedback\(\); paintRemoteContext/);
   assert.match(mando,/background-color:color-mix\(in srgb,#39d98a 12%,transparent\)!important/);
 });
 
-test('Informar abre la ficha remota y pinta su captura nueva en el propio botón',()=>{
+test('Informar alterna la ficha remota y refleja el estado confirmado en el propio botón',()=>{
   assert.match(mando,/id="infoControl"[^>]*aria-label="Informar sobre el contenido actual"/);
-  assert.match(mando,/sendRemote\('info',button,\{holdAfterAck:true,returnAction:true\}\)/);
+  assert.match(mando,/opening\?'info-show':'info-hide'/);
+  assert.match(mando,/infoControl\.setAttribute\('aria-pressed',infoOpen\?'true':'false'\)/);
+  assert.match(mando,/infoOpenByScreen\.set\(target\.screen,opening\)/);
+  assert.match(mando,/else infoShotByScreen\.delete\(target\.screen\)/);
   assert.match(mando,/waitInfoShot\(target,baselineTs,generation\)/);
   assert.match(mando,/infoShotByScreen\.set\(target\.screen,\{url:shot\.url,ts:Number\(meta\.ts\)/);
   assert.match(mando,/paintMediaControl\(infoControl,[\s\S]*infoShot\?\[infoShot\.url\]/);
-  assert.match(canal,/case 'info': \{[\s\S]*localInfoShow\(\);[\s\S]*await shotTick\(true\)/);
+  assert.match(canal,/case 'info-show':[\s\S]*case 'info-hide': \{[\s\S]*localInfoHide\(\)[\s\S]*localInfoToggle\(\)[\s\S]*await shotTick\(true\)/);
+  assert.match(canal,/function localInfoToggle\(\)\{ const opening=\$\('localInfo'\)\.hidden; localInfoVisible\(opening\); return opening; \}/);
   assert.match(canal,/function _shotDrawLocalInfo\(cx,W,H\)/);
   assert.match(canal,/kind:forceInfo\?'info':'frame'/);
   assert.match(mando,/function checkedPreview\(src\)/);
   assert.match(mando,/light\/samples>16&&visible\/samples>\.035/);
   assert.match(mando,/function previewFallbackData\(it\)/);
+});
+
+test('todos los controles conservan outline verde si operan y rojo si fallan',()=>{
+  assert.match(mando,/\.remote-applied\{[^}]*outline:2px solid #39d98a/);
+  assert.match(mando,/\.remote-failed,\.remote-timeout\{[^}]*outline:2px solid #ff667a/);
+  const finish=fn(mando,'finishRemoteButton');
+  assert.match(finish,/result===['"]executed['"]\?['"]applied['"]:result===['"]failed['"]\?['"]failed['"]:['"]timeout['"]/);
+  assert.doesNotMatch(finish,/remove\('remote-pending'/);
 });
 
 test('los tres fotogramas representan 25, 50 y 75 por ciento y envían seek exacto',()=>{

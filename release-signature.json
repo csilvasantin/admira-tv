@@ -1,9 +1,9 @@
 {
-  "version": "v.15.08.2026.r3.00:22",
+  "version": "v.15.08.2026.r4.01:36",
   "signature": "TrinityMBP16 · MacBookPro16",
   "agent": "TrinityMBP16",
   "machine": "MacBookPro16",
   "day": "15.08.2026",
-  "time": "00:22",
-  "evidence": "El botón Informar muestra la captura real de la ficha del vídeo y converge correctamente aunque dos mandos soliciten la misma captura a la vez."
+  "time": "01:36",
+  "evidence": "Informar alterna de forma confirmada entre mostrar y ocultar la ficha remota; todos los controles conservan outline verde tras éxito y rojo tras fallo o falta de respuesta."
 }

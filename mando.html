@@ -145,8 +145,8 @@
       -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
       -webkit-mask-composite:xor;mask-composite:exclude}
     .remote-pending{cursor:progress!important;box-shadow:0 0 10px color-mix(in srgb,var(--cmd-ring) 36%,transparent)}
-    .remote-applied{--cmd-ring:#39d98a!important;color:#8fffc2!important;border-color:#39d98a!important;background-color:color-mix(in srgb,#39d98a 12%,transparent)!important;box-shadow:0 0 14px #39d98a55}
-    .remote-failed,.remote-timeout{--cmd-ring:#ff667a!important;color:#ff9aaa!important;border-color:#ff667a!important;box-shadow:0 0 12px #ff667a44}
+    .remote-applied{--cmd-ring:#39d98a!important;color:#8fffc2!important;border-color:#39d98a!important;background-color:color-mix(in srgb,#39d98a 12%,transparent)!important;outline:2px solid #39d98a;outline-offset:1px;box-shadow:0 0 14px #39d98a55}
+    .remote-failed,.remote-timeout{--cmd-ring:#ff667a!important;color:#ff9aaa!important;border-color:#ff667a!important;outline:2px solid #ff667a;outline-offset:1px;box-shadow:0 0 12px #ff667a44}
     .remote-pending:disabled,.remote-applied:disabled,.remote-failed:disabled,.remote-timeout:disabled{opacity:1}
     .tag-entry.remote-pending input{border-color:var(--cyan);box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--cyan) 70%,transparent)}
     .tag-entry.remote-applied input{border-color:#39d98a;color:#8fffc2;box-shadow:inset 0 -2px 0 #39d98a}
@@ -216,7 +216,7 @@
         <button class="b media-control" id="previousControl" data-cmd="prev" aria-label="Contenido anterior"><span class="media-control-copy"><span class="media-control-action">⏮ Anterior</span><span class="media-control-title" id="previousTitle">Esperando playlist</span></span></button>
         <button class="b media-control" id="nextControl" data-cmd="next" aria-label="Contenido siguiente"><span class="media-control-copy"><span class="media-control-action">⏭ Siguiente</span><span class="media-control-title" id="nextTitle">Esperando playlist</span></span></button>
         <button class="b cyan media-control" id="mute"><span class="media-control-copy"><span class="media-control-action" id="muteAction">🔇 Silenciar</span><span class="media-control-title" id="muteTitle">Contenido actual</span></span></button>
-        <button class="b media-control" id="infoControl" aria-label="Informar sobre el contenido actual"><span class="media-control-copy"><span class="media-control-action">ⓘ Informar</span><span class="media-control-title" id="infoTitle">Capturar la ficha del vídeo</span></span></button>
+        <button class="b media-control" id="infoControl" aria-label="Informar sobre el contenido actual" aria-pressed="false"><span class="media-control-copy"><span class="media-control-action" id="infoAction">ⓘ Informar</span><span class="media-control-title" id="infoTitle">Mostrar la ficha del vídeo</span></span></button>
       </div>
       <div class="vol" title="Volumen del player remoto">🔊 <input type="range" id="vol" min="0" max="100" value="100" aria-label="Volumen del player remoto"><span id="volv">100%</span></div>
       <div class="seek-strip" id="seekStrip" aria-label="Saltar a otro momento del contenido actual"></div>
@@ -340,7 +340,7 @@
     if(startIdx<0) startIdx=4; selEl.value=startIdx;
 
     var T, previewItem=null, previewVisual=null, previewSignature='', previewPaused=false, previewRenderSeq=0;
-    var infoShotByScreen=new Map();
+    var infoShotByScreen=new Map(), infoOpenByScreen=new Map();
     var targetGeneration=0, nowRequestSeq=0, nowController=null;
     var playlistRequestSeq=0, remotePlaylistItems=[], statusRequestSeq=0, contentsRequestSeq=0, statusProfile={fields:{}};
     var previewReturnFocus=null, previewInertNodes=[];
@@ -498,21 +498,10 @@
       action.progress=result==='timeout'?Math.min(.94,action.progress):1; paintRemoteButton(action);
       if(action.label&&action.doneLabel) action.label.textContent=action.doneLabel;
       if(action.input) action.input.readOnly=false;
-      // El ACK verde y el círculo completo son memoria operativa: permanecen hasta
-      // la próxima pulsación en ese control o hasta cambiar de player. Antes se
-      // borraban a los 1,4 s y Carlos perdía la confirmación nada más apartar la vista.
-      if(result==='executed'){
-        if(action.label&&action.originalLabel) setTimeout(function(){ if(!action.button||!BUTTON_ACTIONS.has(action.button)) action.label.textContent=action.originalLabel; },1400);
-        return;
-      }
-      setTimeout(function(){
-        var b=action.button; if(b&&BUTTON_ACTIONS.has(b)) return;
-        remoteVisuals(action).forEach(function(el){
-          el.classList.remove('remote-pending','remote-applied','remote-failed','remote-timeout');
-          el.style.removeProperty('--cmd-progress'); if('disabled' in el) el.disabled=false; el.removeAttribute('aria-busy');
-        });
-        if(action.label&&action.originalLabel) action.label.textContent=action.originalLabel;
-      },2600);
+      // El último resultado confirmado es memoria operativa de TODOS los controles:
+      // verde si el player ejecutó la orden; rojo si la rechazó o no respondió.
+      // Permanece hasta reintentar ese control o cambiar de player.
+      if(action.label&&action.originalLabel) setTimeout(function(){ if(!action.button||!BUTTON_ACTIONS.has(action.button)) action.label.textContent=action.originalLabel; },1400);
     }
     async function waitRemoteAck(host,receipt,target,cmd){
       var started=Date.now();
@@ -640,12 +629,14 @@
       previousControl.classList.toggle('sync-locked',!canNavigate); nextControl.classList.toggle('sync-locked',!canNavigate);
       var currentMedia=index>=0?Object.assign({},items[index],current||{}):current;
       paintMediaControl(mb,document.getElementById('muteTitle'),currentMedia,'Contenido actual',muted?'Activar sonido':'Silenciar');
-      var infoShot=infoShotByScreen.get(T.screen), infoMedia=currentMedia;
+      var infoShot=infoShotByScreen.get(T.screen), infoOpen=!!infoOpenByScreen.get(T.screen), infoMedia=currentMedia;
       if(infoShot){
         var infoAge=Math.max(0,Math.round((Date.now()-infoShot.ts)/1000));
         infoMedia=Object.assign({},currentMedia||{type:'image'},{title:'Ficha capturada · hace '+infoAge+' s'});
       }
-      paintMediaControl(infoControl,document.getElementById('infoTitle'),infoMedia,'Capturar la ficha del vídeo','Informar',infoShot?[infoShot.url]:youtubeFrameCandidates(currentMedia,3));
+      paintMediaControl(infoControl,document.getElementById('infoTitle'),infoMedia,infoOpen?'Ficha visible · pulsa para cerrar':'Mostrar la ficha del vídeo',infoOpen?'Ocultar información':'Informar',infoShot?[infoShot.url]:youtubeFrameCandidates(currentMedia,3));
+      document.getElementById('infoAction').textContent=infoOpen?'ⓘ Ocultar info':'ⓘ Informar';
+      infoControl.setAttribute('aria-pressed',infoOpen?'true':'false');
       paintSeekStrip(currentMedia,syncLocked);
     }
     function paintRemoteControls(){
@@ -1048,27 +1039,27 @@
       }
       return null;
     }
-    async function captureInfo(button){
+    async function toggleInfo(button){
       var target={screen:T.screen,circuit:T.circuit}, generation=targetGeneration;
+      var opening=!infoOpenByScreen.get(target.screen);
       var before=await infoShotMeta(target.screen), baselineTs=Number(before&&before.ts||0);
-      var sent=await sendRemote('info',button,{holdAfterAck:true,returnAction:true});
-      if(!sent) return false;
-      // Puede haber otro mando pidiendo la misma ficha a la vez. Aunque nuestro
-      // ACK concreto resulte fallido por solape, una captura NUEVA posterior a
-      // esta pulsación sigue siendo exactamente la prueba visual solicitada.
+      var sent=await sendRemote(opening?'info-show':'info-hide',button,{holdAfterAck:true,returnAction:true});
+      if(!sent||!sent.ok) return false;
       var meta=await waitInfoShot(target,baselineTs,generation);
       if(!meta){ if(sent.ok) finishRemoteButton(sent.action,'timeout'); toast('⌛ el player no devolvió la captura informativa'); return false; }
       var shot=remoteShotPreview(meta,target,null);
       if(!shot){ finishRemoteButton(sent.action,'failed'); toast('✗ captura informativa no válida'); return false; }
-      infoShotByScreen.set(target.screen,{url:shot.url,ts:Number(meta.ts),itemId:meta.itemId||''});
+      infoOpenByScreen.set(target.screen,opening);
+      if(opening) infoShotByScreen.set(target.screen,{url:shot.url,ts:Number(meta.ts),itemId:meta.itemId||''});
+      else infoShotByScreen.delete(target.screen);
       if(generation===targetGeneration&&T.screen===target.screen){
         paintRemoteContext(remotePlaylistItems,previewItem);
         finishRemoteButton(sent.action,'executed');
-        toast('✓ ficha capturada en el player');
+        toast(opening?'✓ ficha visible en el player':'✓ ficha cerrada en el player');
       }
       return true;
     }
-    infoControl.onclick=function(){ captureInfo(infoControl); };
+    infoControl.onclick=function(){ toggleInfo(infoControl); };
     async function pollNow(){
       var target=T, generation=targetGeneration, requestSeq=++nowRequestSeq;
       if(nowController) nowController.abort(); var controller=new AbortController(); nowController=controller;
@@ -1100,6 +1091,6 @@
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r3.0022" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r4.0136" defer></script>
 </body>
 </html>

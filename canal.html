@@ -44,7 +44,7 @@
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
 <script src="xpl-runtime.js?v=15.08.2026.r3.0022"></script>
 <script>
-  window.ADMIRA_VERSION='v.15.08.2026.r3.00:22';
+  window.ADMIRA_VERSION='v.15.08.2026.r4.01:36';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -2462,8 +2462,9 @@ function localInfoVisible(opening){
   clearInterval(_localInfoTimer); _localInfoTimer=null;
   if(opening){ localInfoRender(); _localInfoTimer=setInterval(localInfoRender,1000); }
 }
-function localInfoToggle(){ localInfoVisible($('localInfo').hidden); }
-function localInfoShow(){ localInfoVisible(true); }
+function localInfoToggle(){ const opening=$('localInfo').hidden; localInfoVisible(opening); return opening; }
+function localInfoShow(){ localInfoVisible(true); return true; }
+function localInfoHide(){ localInfoVisible(false); return false; }
 // Pointer Events da un doble toque fiable en Android/WebView sin depender del
 // `dblclick` sintetizado por cada navegador. El ratón usa `dblclick`; touch/pen
 // usa dos pointerup cercanos (tiempo + distancia). `touch-action:manipulation`
@@ -3257,9 +3258,10 @@ async function executeQueuedCommand(c){
   // atravesar el mismo dispatcher confirmado: runCli no conoce seek-* y daría un
   // ACK falso sin mover la emisión.
   if(/^seek-\d{1,5}$/.test(cmd)) return applyCtrlCmd(cmd);
-  // «Informar» abre la misma ficha que el doble toque y no confirma la orden
-  // hasta haber publicado una captura nueva con esa ficha compuesta.
-  if(cmd==='info') return applyCtrlCmd(cmd);
+  // «Informar» comparte la misma ficha que el doble toque. show/hide son
+  // idempotentes para que el mando conozca el estado confirmado incluso si se
+  // recarga o si otro operador tocó la pantalla localmente.
+  if(['info','info-show','info-hide'].includes(cmd)) return applyCtrlCmd(cmd);
   // El Remote experto comparte la sintaxis tag-* con applyCtrlCmd. Antes esta
   // cola la entregaba a runCli(), que sólo entiende `tag valor` con espacio y la
   // ignoraba mientras respondíamos executed. Una única ruta evita esa mentira.
@@ -3370,11 +3372,13 @@ async function applyCtrlCmd(cmd){
     case 'ontop-off':    if(window.ADM_ONTOP&&window.ADM_ONTOP.on) window.ADM_ONTOP.toggle(); return 'executed';
     case 'ontop-toggle': if(window.ADM_ONTOP) window.ADM_ONTOP.toggle(); return window.ADM_ONTOP?'executed':'ignored';
     case 'hud': try{ testHudInfo('🎮'); }catch(_){ try{ testHud('🎮 MANDO'); }catch(__){} } return 'executed';
-    case 'info': {
-      localInfoShow();
+    case 'info':
+    case 'info-show':
+    case 'info-hide': {
+      const opening=cmd==='info-show'?localInfoShow():cmd==='info-hide'?localInfoHide():localInfoToggle();
       await new Promise(resolve=>setTimeout(resolve,120));
       const captured=await shotTick(true);
-      flashCli(captured?'ⓘ ficha capturada para el mando':'⚠ ficha visible · captura no disponible');
+      flashCli(captured?(opening?'ⓘ ficha visible para el mando':'ⓘ ficha cerrada desde el mando'):(opening?'⚠ ficha visible · captura no disponible':'⚠ ficha cerrada · captura no disponible'));
       return captured?'executed':'failed';
     }
     default: {
@@ -3576,6 +3580,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r3.0022" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r4.0136" defer></script>
 </body>
 </html>
