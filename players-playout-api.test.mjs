@@ -27,6 +27,13 @@ test('cada player lee sin login sólo su asignación y los no elegidos quedan au
   assert.equal(other.mode,'autonomous');
 });
 
+test('la asignación sincronizada identifica al primer player como máster de playlist',async()=>{
+  const env=envFor();
+  env.records.set('admira-tv:playout:v1',JSON.stringify({configured:true,mode:'synchronized',screens:['a-screen','b-screen'],revision:8,updatedAt:6}));
+  const follower=await (await onRequestGet({request:new Request('https://admira.tv/api/playout?screen=b-screen'),env})).json();
+  assert.deepEqual(follower.group,{id:'synchronized-main',index:1,total:2,leader:'a-screen'});
+});
+
 test('sin sesión first-party no existe escritura ni lectura de la topología completa',async()=>{
   const env=envFor();
   const post=await onRequestPost({request:new Request('https://admira.tv/api/playout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}),env});

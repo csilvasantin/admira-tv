@@ -1,9 +1,9 @@
 {
-  "version": "v.14.08.2026.r5.21:29",
+  "version": "v.14.08.2026.r6.22:19",
   "signature": "TrinityMBP16 · MacBookPro16",
   "agent": "TrinityMBP16",
   "machine": "MacBookPro16",
   "day": "14.08.2026",
-  "time": "21:29",
-  "evidence": "La composición de players incluye equipos registrados offline para preparar sincronías y expansiones antes de encenderlos."
+  "time": "22:19",
+  "evidence": "La sincronía de grupo declara un player máster y todos sus miembros emiten su misma playlist efectiva, conservando el reloj central."
 }

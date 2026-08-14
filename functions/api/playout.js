@@ -50,7 +50,8 @@ function assignmentFor(state, screen) {
   const mode = active ? state.mode : "autonomous";
   const assignment = { ok: true, configured: !!state.configured, screen, mode,
     revision: Number(state.revision) || 0, updatedAt: Number(state.updatedAt) || 0, serverNow: Date.now() };
-  if (mode === "synchronized") assignment.group = { id: "synchronized-main", index: selected, total: state.screens.length };
+  if (mode === "synchronized") assignment.group = { id: "synchronized-main", index: selected, total: state.screens.length,
+    leader: state.screens[0] || "" };
   if (mode === "extended") {
     const layout = state.layout || layoutFor(state.screens.length), cols = Math.max(1, Number(layout.cols) || 1);
     assignment.item = state.item;

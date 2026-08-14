@@ -30,6 +30,9 @@ test('Sincro exige selección explícita y los no elegidos siguen autónomos',()
   assert.match(players,/screens:state\.selected/);
   assert.match(canal,/mode==='synchronized'/);
   assert.match(canal,/else if\(syncOn\|\|playoutMode!=='local'/);
+  assert.match(canal,/SYNC_GROUP_MASTER=leader/);
+  assert.match(canal,/SYNC_PLAYLIST_API/);
+  assert.match(canal,/p\.items\.map/);
 });
 
 test('la sección Players hereda ACL del player y firma las escrituras',()=>{

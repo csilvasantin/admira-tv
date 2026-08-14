@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=14.08.2026.r5.2129"></script>
+<script src="xpl-runtime.js?v=14.08.2026.r6.2219"></script>
 <script>
-  window.ADMIRA_VERSION='v.14.08.2026.r5.21:29';
+  window.ADMIRA_VERSION='v.14.08.2026.r6.22:19';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -467,7 +467,9 @@ let syncTimeOffset=0;
 // SINCRO: máster central (única autoridad). Si está cargado, manda sobre el cálculo
 // local → todas las pantallas en sync emiten EXACTAMENTE lo mismo (mismo orden+reloj).
 const SYNC_API='https://omnipublicity-api.csilvasantin.workers.dev/sync/state';
+const SYNC_PLAYLIST_API='https://omnipublicity-api.csilvasantin.workers.dev/control/playlist';
 let SYNC_REMOTE=null, syncStateTimer=null;
+let SYNC_GROUP_MASTER='';
 let _syncSig='';   // firma del máster: solo se re-monta la antena si CAMBIÓ (eficiencia FLT-1409)
 let _extendedAssignment=null, _extendedClockOffset=0;
 function extendedItem(){
@@ -486,26 +488,37 @@ function clearExtendedAssignment(){
   if(!_extendedAssignment) return false;
   _extendedAssignment=null; _extendedClockOffset=0; paintExtendedTile(); seenSig=''; return true;
 }
-function fetchSyncState(){
-  fetch(SYNC_API+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('http '+r.status))).then(d=>{
+async function fetchSyncState(){
+  try{
+    const d=await fetch(SYNC_API+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('http '+r.status)));
     if(d&&Array.isArray(d.items)&&d.items.length){
+      let items=d.items;
+      const leader=SYNC_GROUP_MASTER;
+      if(leader){
+        try{
+          const p=await fetch(SYNC_PLAYLIST_API+'?screen='+encodeURIComponent(leader)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('playlist http '+r.status)));
+          if(leader===SYNC_GROUP_MASTER&&p&&Array.isArray(p.items)&&p.items.length){
+            items=p.items.map(i=>Object.assign({},i,{thumbnail:i.thumbnail||i.thumb||'',_dur:Number(i._dur||i.dur)||0}));
+          }
+        }catch(e){ try{ console.warn('[canal] sincro sin playlist de grupo:',leader,String(e&&e.message||e)); }catch(_){} }
+      }
       // Antes: rebuild(true) en CADA respuesta → play() tiraba y re-montaba el <video>
       // en antena cada 30 s aunque el máster fuera idéntico (re-decode + parpadeo + un
       // pase falso de proof-of-play por sondeo). Ahora solo si el máster CAMBIÓ o si
       // veníamos sin máster (boot, re-encendido de sincro, o el toggle lo anuló).
-      const sig=d.items.map(i=>i.id).join(',')+'|'+(d.slotMs||20000);
+      const sig=items.map(i=>i.id).join(',')+'|'+(d.slotMs||20000)+'|'+leader;
       const hadRemote=!!SYNC_REMOTE;
-      SYNC_REMOTE={ items:d.items, slotMs:d.slotMs||20000, offset:(d.serverNow||Date.now())-Date.now() };   // el reloj del máster SIEMPRE fresco: no necesita rebuild
+      SYNC_REMOTE={ items, slotMs:d.slotMs||20000, offset:(d.serverNow||Date.now())-Date.now() };   // el reloj del máster SIEMPRE fresco: no necesita rebuild
       if(syncOn && (sig!==_syncSig || !hadRemote)){ _syncSig=sig; rebuild(true); }
       else if(syncOn){ try{ setLive('SINCRO CANAL · '+playlist.length+' en loop', playlist.length>0); }catch(_){} }   // tras un fallo con firma igual, el rótulo no puede seguir diciendo SIN MÁSTER
     }
-  }).catch(e=>{
+  }catch(e){
     // Nunca corta la emisión, pero deja rastro: sin máster la pantalla ordena por su cuenta
     // y la "sincro" es falsa. OJO: SYNC_API cuelga de un *.workers.dev sin proxy en el dominio
     // propio (api.admira.store da 404 en /sync/state), y ese host lo bloquean algunos ISP.
     try{ console.warn('[canal] sincro sin máster:', SYNC_API, String(e&&e.message||e)); }catch(_){}
     if(syncOn) try{ setLive('SINCRO SIN MÁSTER · '+playlist.length+' en loop · orden propio', false); }catch(_){}
-  });
+  }
 }
 const $ = id => document.getElementById(id);
 const stage=$('stage'), nowEl=$('now'), liveEl=$('live'), metaEl=$('meta'), bar=$('bar'), tap=$('tap');
@@ -3107,8 +3120,11 @@ function applyPlayoutAssignment(d){
   }
   const leftExtended=clearExtendedAssignment();
   if(mode==='synchronized'){
+    const leader=String(d.group&&d.group.leader||'');
+    if(leader!==SYNC_GROUP_MASTER){ SYNC_GROUP_MASTER=leader; _syncSig=''; SYNC_REMOTE=null; fetchSyncState(); }
     if(!syncOn||playoutMode!=='sync'||leftExtended) setAdmiraSync(true);
   }else if(syncOn||playoutMode!=='local'||leftExtended){
+    SYNC_GROUP_MASTER='';
     setAdmiraMode('local');
   }
   _playoutRevision=rev;
@@ -3460,6 +3476,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=14.08.2026.r5.2129" defer></script>
+  <script src="/assets/admira-version-watch.js?v=14.08.2026.r6.2219" defer></script>
 </body>
 </html>
