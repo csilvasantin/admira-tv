@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=15.08.2026.r1.0002"></script>
+<script src="xpl-runtime.js?v=15.08.2026.r2.0018"></script>
 <script>
-  window.ADMIRA_VERSION='v.15.08.2026.r1.00:02';
+  window.ADMIRA_VERSION='v.15.08.2026.r2.00:18';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -2457,11 +2457,13 @@ function localInfoRender(){
   row('pantalla',scr.screen||scr.machine||'sin identificar');
   $('li-tags').textContent=meta?(testTags(meta)||'sin etiquetas'):'sin etiquetas';
 }
-function localInfoToggle(){
-  const box=$('localInfo'), opening=box.hidden; box.hidden=!opening;
+function localInfoVisible(opening){
+  const box=$('localInfo'); box.hidden=!opening;
   clearInterval(_localInfoTimer); _localInfoTimer=null;
   if(opening){ localInfoRender(); _localInfoTimer=setInterval(localInfoRender,1000); }
 }
+function localInfoToggle(){ localInfoVisible($('localInfo').hidden); }
+function localInfoShow(){ localInfoVisible(true); }
 // Pointer Events da un doble toque fiable en Android/WebView sin depender del
 // `dblclick` sintetizado por cada navegador. El ratón usa `dblclick`; touch/pen
 // usa dos pointerup cercanos (tiempo + distancia). `touch-action:manipulation`
@@ -2488,6 +2490,7 @@ $('mupi').addEventListener('dblclick',localInfoDoubleClick);
 // Puente mínimo para el shell Android: su GestureDetector ve también los toques
 // que ocurren dentro de una Xperiencia iframe y llama a la misma ficha del canal.
 window.ADMIRA_TOGGLE_LOCAL_INFO=localInfoToggle;
+window.ADMIRA_SHOW_LOCAL_INFO=localInfoShow;
 function testHudInfo(ico){
   const it=playlist[cur]||null, pos=(cur+1)+'/'+playlist.length;
   _testHudItem=it;
@@ -3254,6 +3257,9 @@ async function executeQueuedCommand(c){
   // atravesar el mismo dispatcher confirmado: runCli no conoce seek-* y daría un
   // ACK falso sin mover la emisión.
   if(/^seek-\d{1,5}$/.test(cmd)) return applyCtrlCmd(cmd);
+  // «Informar» abre la misma ficha que el doble toque y no confirma la orden
+  // hasta haber publicado una captura nueva con esa ficha compuesta.
+  if(cmd==='info') return applyCtrlCmd(cmd);
   // El Remote experto comparte la sintaxis tag-* con applyCtrlCmd. Antes esta
   // cola la entregaba a runCli(), que sólo entiende `tag valor` con espacio y la
   // ignoraba mientras respondíamos executed. Una única ruta evita esa mentira.
@@ -3364,6 +3370,13 @@ async function applyCtrlCmd(cmd){
     case 'ontop-off':    if(window.ADM_ONTOP&&window.ADM_ONTOP.on) window.ADM_ONTOP.toggle(); return 'executed';
     case 'ontop-toggle': if(window.ADM_ONTOP) window.ADM_ONTOP.toggle(); return window.ADM_ONTOP?'executed':'ignored';
     case 'hud': try{ testHudInfo('🎮'); }catch(_){ try{ testHud('🎮 MANDO'); }catch(__){} } return 'executed';
+    case 'info': {
+      localInfoShow();
+      await new Promise(resolve=>setTimeout(resolve,120));
+      const captured=await shotTick(true);
+      flashCli(captured?'ⓘ ficha capturada para el mando':'⚠ ficha visible · captura no disponible');
+      return captured?'executed':'failed';
+    }
     default: {
       const tagged=/^content-(\d{1,6})$/.exec(cmd);
       if(tagged) return queueTaggedContent(tagged[1]);
@@ -3452,36 +3465,84 @@ let _lastShotSrc='', _lastShotTs=0;   // dedupe de imágenes fijas: el éxito se
 const _shotTainted=new Set();      // srcs que tiñeron el canvas → no reintentar
 try{ const _sq=qs.get('shot'); if(_sq!=null){ const n=parseFloat(_sq); if(!isNaN(n)) _shotSec=n; } }catch(_){}
 function _shotSrc(el){ try{ return el.currentSrc||el.src||''; }catch(_){ return ''; } }
-async function shotTick(){
-  if(_shotSec<=0 || _shotBusy) return;
-  try{ if(document.hidden) return; }catch(_){}          // no capturar en background
-  if(_standby||paused) return;                           // pantalla apagada o en pausa: el frame no puede cambiar y la preview mentiría
-  if(!scr.screen) return;                                // sin screen no hay a quién imputar
-  const el = stage.querySelector('video, img'); if(!el) return;
-  const src=_shotSrc(el); if(_shotTainted.has(src)) return;   // ya sabemos que tiñe
+function _shotPathCard(cx,x,y,w,h,r){
+  const rr=Math.max(0,Math.min(r,w/2,h/2)); cx.beginPath(); cx.moveTo(x+rr,y);
+  cx.lineTo(x+w-rr,y); cx.quadraticCurveTo(x+w,y,x+w,y+rr); cx.lineTo(x+w,y+h-rr);
+  cx.quadraticCurveTo(x+w,y+h,x+w-rr,y+h); cx.lineTo(x+rr,y+h); cx.quadraticCurveTo(x,y+h,x,y+h-rr);
+  cx.lineTo(x,y+rr); cx.quadraticCurveTo(x,y,x+rr,y); cx.closePath();
+}
+function _shotWrapText(cx,text,x,y,maxWidth,lineHeight,maxLines){
+  const words=String(text||'').replace(/\s+/g,' ').trim().split(' ').filter(Boolean); let line='',lines=0;
+  for(let i=0;i<words.length;i++){
+    const probe=line?line+' '+words[i]:words[i];
+    if(line&&cx.measureText(probe).width>maxWidth){ cx.fillText(line,x,y); y+=lineHeight; lines++; line=words[i]; if(lines>=maxLines-1) break; }
+    else line=probe;
+  }
+  if(line&&lines<maxLines){ if(lines===maxLines-1&&words.join(' ').length>line.length) line=line.replace(/[.…]*$/,'')+'…'; cx.fillText(line,x,y); y+=lineHeight; }
+  return y;
+}
+function _shotDrawLocalInfo(cx,W,H){
+  const box=$('localInfo'), mupi=$('mupi'); if(!box||box.hidden||!mupi) return false;
+  try{ localInfoRender(); }catch(_){}
+  const br=box.getBoundingClientRect(), mr=mupi.getBoundingClientRect(); if(!br.width||!mr.width||!mr.height) return false;
+  const sx=W/mr.width, sy=H/mr.height, x=Math.max(8,(br.left-mr.left)*sx), y=Math.max(8,(br.top-mr.top)*sy);
+  const w=Math.min(W-x-8,br.width*sx), h=Math.min(H-y-8,Math.max(br.height*sy,300*sx)), pad=Math.max(14,16*sx);
+  cx.save(); _shotPathCard(cx,x,y,w,h,15*sx); cx.fillStyle='rgba(3,12,18,.94)'; cx.fill(); cx.strokeStyle='rgba(125,255,208,.82)'; cx.lineWidth=Math.max(1,1.2*sx); cx.stroke();
+  let cy=y+pad; cx.textBaseline='top'; cx.fillStyle='#7dffd0'; cx.font='700 '+Math.max(15,12*sx)+'px ui-monospace,Menlo,monospace'; cx.fillText('ⓘ CONTENIDO EN ANTENA',x+pad,cy);
+  cx.fillStyle='#91a9b8'; cx.font=Math.max(11,9*sx)+'px ui-monospace,Menlo,monospace'; const close='DOBLE TOQUE · CERRAR'; cx.fillText(close,x+w-pad-cx.measureText(close).width,cy+2*sx);
+  cy+=Math.max(24,20*sx); cx.strokeStyle='rgba(125,255,208,.24)'; cx.beginPath(); cx.moveTo(x+pad,cy); cx.lineTo(x+w-pad,cy); cx.stroke(); cy+=Math.max(16,12*sx);
+  cx.fillStyle='#ffffff'; cx.font='800 '+Math.max(25,24*sx)+'px -apple-system,system-ui,sans-serif';
+  cy=_shotWrapText(cx,$('li-title').textContent,x+pad,cy,w-pad*2,Math.max(30,28*sx),3);
+  const primary=$('li-primary-tag'); if(primary&&!primary.hidden&&primary.textContent){
+    const tag=primary.textContent, tw=cx.measureText(tag).width+18*sx, th=25*sx; _shotPathCard(cx,x+pad,cy+4*sx,tw,th,th/2);
+    cx.fillStyle='rgba(57,211,83,.14)'; cx.fill(); cx.strokeStyle='rgba(125,255,208,.65)'; cx.stroke(); cx.fillStyle='#7dffd0'; cx.font='800 '+Math.max(15,13*sx)+'px ui-monospace,Menlo,monospace'; cx.fillText(tag,x+pad+9*sx,cy+9*sx); cy+=th+14*sx;
+  }
+  const cells=[...$('li-grid').children], keyX=x+pad, valueX=x+Math.min(w*.39,190*sx), rowH=Math.max(20,18*sx);
+  for(let i=0;i<cells.length;i+=2){
+    const key=cells[i],value=cells[i+1]; if(!key||!value) continue;
+    cx.fillStyle='#7994a6'; cx.font=Math.max(12,10*sx)+'px ui-monospace,Menlo,monospace'; cx.fillText(String(key.textContent||'').toUpperCase(),keyX,cy);
+    cx.fillStyle=value.classList.contains('ok')?'#78ff9d':value.classList.contains('warn')?'#ffc65c':value.classList.contains('bad')?'#ff6b6b':'#cfeaff';
+    cx.font=Math.max(12,11*sx)+'px ui-monospace,Menlo,monospace'; cx.fillText(String(value.textContent||'—').slice(0,64),valueX,cy); cy+=rowH;
+  }
+  cx.fillStyle='#9fe8ff'; cx.font=Math.max(11,10*sx)+'px ui-monospace,Menlo,monospace'; _shotWrapText(cx,$('li-tags').textContent,x+pad,cy+5*sx,w-pad*2,Math.max(17,14*sx),3);
+  cx.restore(); return true;
+}
+async function shotTick(forceInfo){
+  forceInfo=!!forceInfo;
+  if(_shotSec<=0&&!forceInfo) return false;
+  if(_shotBusy&&forceInfo){ await new Promise(resolve=>setTimeout(resolve,700)); }
+  if(_shotBusy) return false;
+  try{ if(document.hidden) return false; }catch(_){}          // no capturar en background
+  if((_standby||paused)&&!forceInfo) return false;             // el informe sí puede fotografiar una pausa
+  if(!scr.screen) return false;                                // sin screen no hay a quién imputar
+  const el = stage.querySelector('video, img'); if(!el) return false;
+  const src=_shotSrc(el); if(_shotTainted.has(src)) return false;   // ya sabemos que tiñe
   // Una imagen fija no cambia entre capturas: re-codificar y re-subir el MISMO JPEG cada
   // 25 s era ~92% de las subidas. Se re-sube como mucho cada 5 min para que el mando no
   // vea el shot envejecer; los <video> capturan siempre. El éxito se marca en la RESPUESTA.
-  if(el.tagName==='IMG' && src===_lastShotSrc && (Date.now()-_lastShotTs)<300000) return;
+  if(!forceInfo&&el.tagName==='IMG' && src===_lastShotSrc && (Date.now()-_lastShotTs)<300000) return false;
   const iw=el.videoWidth||el.naturalWidth||0, ih=el.videoHeight||el.naturalHeight||0;
-  if(!iw||!ih) return;                                   // aún sin frame pintado
+  if(!iw||!ih) return false;                              // aún sin frame pintado
   _shotBusy=true;
+  let uploaded=false;
   try{
     const W=640, H=Math.max(1,Math.round(W*ih/iw));
     const cv=_shotCv||(_shotCv=document.createElement('canvas'));
     cv.width=W; cv.height=H;   // asignar SIEMPRE: resetea bitmap y origin-clean (des-tinta el canvas si un asset sin CORS lo tiñó el tick anterior)
-    const cx=cv.getContext('2d'); if(!cx){ _shotBusy=false; return; }
+    const cx=cv.getContext('2d'); if(!cx) return false;
     cx.drawImage(el,0,0,W,H);
+    if(forceInfo||!$('localInfo').hidden) _shotDrawLocalInfo(cx,W,H);
     let data;
     try{ data=cv.toDataURL('image/jpeg',0.5); }
-    catch(err){ _shotTainted.add(src); console.debug('[shot] canvas tinted (asset sin CORS), no subo:', src.slice(0,72)); _shotBusy=false; return; }
-    if(data && data.length>150*1024){ try{ data=cv.toDataURL('image/jpeg',0.32); }catch(_){ _shotBusy=false; return; } }
-    if(!data || data.length>150*1024){ _shotBusy=false; return; }   // sigue muy grande: no fuerzo
+    catch(err){ _shotTainted.add(src); console.debug('[shot] canvas tinted (asset sin CORS), no subo:', src.slice(0,72)); return false; }
+    if(data && data.length>150*1024){ try{ data=cv.toDataURL('image/jpeg',0.32); }catch(_){ return false; } }
+    if(!data || data.length>150*1024) return false;                 // sigue muy grande: no fuerzo
     const r=await fetch(SHOT_API,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({screen:scr.screen,producer:TELEMETRY_PRODUCER,itemId:(_nowItem&&_nowItem.id)||'',img:data})});
-    if(r&&r.ok){ _lastShotSrc=src; _lastShotTs=Date.now(); }   // fallo en silencio; el dedupe solo cuenta subidas ACEPTADAS
+      body:JSON.stringify({screen:scr.screen,producer:TELEMETRY_PRODUCER,itemId:(_nowItem&&_nowItem.id)||'',kind:forceInfo?'info':'frame',img:data})});
+    if(r&&r.ok){ _lastShotSrc=src; _lastShotTs=Date.now(); uploaded=true; }   // el dedupe solo cuenta subidas ACEPTADAS
   }catch(_){ /* jamás propaga a la emisión */ }
-  _shotBusy=false;
+  finally{ _shotBusy=false; }
+  return uploaded;
 }
 if(_shotSec>0){ try{ _shotTimer=setInterval(()=>{ try{ shotTick(); }catch(_){} }, Math.max(5,_shotSec)*1000); }catch(_){} }
 
@@ -3511,6 +3572,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r1.0002" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r2.0018" defer></script>
 </body>
 </html>

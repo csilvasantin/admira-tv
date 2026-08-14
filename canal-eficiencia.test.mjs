@@ -46,12 +46,13 @@ test("[4] el LRU de blobs es dinámico: reuso total si el loop cabe, 2 si no", (
   assert.match(canal, /while\(_objURLs\.size>cap\)\{ const k=_objURLs\.keys\(\)\.next\(\)\.value; if\(k===it\.url\) break;/);
 });
 
-test("[5] shotTick no captura en standby/pausa ni re-sube la misma imagen fija", () => {
-  assert.match(canal, /if\(_standby\|\|paused\) return;\s+\/\/ pantalla apagada o en pausa/);
-  assert.match(canal, /el\.tagName==='IMG' && src===_lastShotSrc && \(Date\.now\(\)-_lastShotTs\)<300000\) return;/);
+test("[5] shotTick evita trabajo repetido salvo en la captura informativa pedida", () => {
+  assert.match(canal, /if\(\(_standby\|\|paused\)&&!forceInfo\) return false;/);
+  assert.match(canal, /if\(!forceInfo&&el\.tagName==='IMG' && src===_lastShotSrc && \(Date\.now\(\)-_lastShotTs\)<300000\) return false;/);
+  assert.match(canal, /if\(forceInfo\|\|!\$\('localInfo'\)\.hidden\) _shotDrawLocalInfo\(cx,W,H\)/);
   // El éxito se marca en la RESPUESTA aceptada, no al disparar.
   assert.match(canal, /const r=await fetch\(SHOT_API/);
-  assert.match(canal, /if\(r&&r\.ok\)\{ _lastShotSrc=src; _lastShotTs=Date\.now\(\); \}/);
+  assert.match(canal, /if\(r&&r\.ok\)\{ _lastShotSrc=src; _lastShotTs=Date\.now\(\); uploaded=true; \}/);
 });
 
 test("[6] el precache va en streaming al disco, con fallback y disco-primero intacto", () => {

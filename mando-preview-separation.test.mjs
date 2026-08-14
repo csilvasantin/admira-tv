@@ -34,13 +34,14 @@ test('los controles básicos viven dentro de Ahora emitiendo y tienen una única
   assert.match(pill,/data-cmd="prev"/);
   assert.match(pill,/data-cmd="next"/);
   assert.match(pill,/id="mute"/);
-  assert.match(pill,/data-cmd="reload"/);
+  assert.match(pill,/id="infoControl"/);
   assert.match(pill,/id="vol"/);
   assert.doesNotMatch(mando,/Player remoto · todos los controles inferiores/);
   assert.match(mando,/async function sendRemote\(cmd,button,options\)/);
   assert.match(mando,/vol\.onchange=function\(\)\{ sendRemote\('volume '\+vol\.value\); \}/);
   assert.match(mando,/pwr\.onclick=async function\(\)\{[\s\S]*?sendRemote\(desired\?'standby':'resume',pwr\)/);
   assert.match(mando,/mb\.onclick=async function\(\)\{[\s\S]*?sendRemote\(desired\?'audiooff':'audioon',mb\)/);
+  assert.match(mando,/infoControl\.onclick=function\(\)\{ captureInfo\(infoControl\); \}/);
   assert.match(mando,/function resetRemoteControls\(\)\{[\s\S]*?standby=storedStandby\(\); muted=false; pwr\.disabled=false; mb\.disabled=false;/);
   assert.match(mando,/signal:controller\.signal/);
   assert.match(mando,/setTimeout\(function\(\)\{controller\.abort\(\);\},2500\)/);

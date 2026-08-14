@@ -216,7 +216,7 @@
         <button class="b media-control" id="previousControl" data-cmd="prev" aria-label="Contenido anterior"><span class="media-control-copy"><span class="media-control-action">⏮ Anterior</span><span class="media-control-title" id="previousTitle">Esperando playlist</span></span></button>
         <button class="b media-control" id="nextControl" data-cmd="next" aria-label="Contenido siguiente"><span class="media-control-copy"><span class="media-control-action">⏭ Siguiente</span><span class="media-control-title" id="nextTitle">Esperando playlist</span></span></button>
         <button class="b cyan media-control" id="mute"><span class="media-control-copy"><span class="media-control-action" id="muteAction">🔇 Silenciar</span><span class="media-control-title" id="muteTitle">Contenido actual</span></span></button>
-        <button class="b media-control" id="reloadControl" data-cmd="reload" aria-label="Recargar contenido actual"><span class="media-control-copy"><span class="media-control-action">🔄 Recargar</span><span class="media-control-title" id="reloadTitle">Contenido actual</span></span></button>
+        <button class="b media-control" id="infoControl" aria-label="Informar sobre el contenido actual"><span class="media-control-copy"><span class="media-control-action">ⓘ Informar</span><span class="media-control-title" id="infoTitle">Capturar la ficha del vídeo</span></span></button>
       </div>
       <div class="vol" title="Volumen del player remoto">🔊 <input type="range" id="vol" min="0" max="100" value="100" aria-label="Volumen del player remoto"><span id="volv">100%</span></div>
       <div class="seek-strip" id="seekStrip" aria-label="Saltar a otro momento del contenido actual"></div>
@@ -340,6 +340,7 @@
     if(startIdx<0) startIdx=4; selEl.value=startIdx;
 
     var T, previewItem=null, previewVisual=null, previewSignature='', previewPaused=false, previewRenderSeq=0;
+    var infoShotByScreen=new Map();
     var targetGeneration=0, nowRequestSeq=0, nowController=null;
     var playlistRequestSeq=0, remotePlaylistItems=[], statusRequestSeq=0, contentsRequestSeq=0, statusProfile={fields:{}};
     var previewReturnFocus=null, previewInertNodes=[];
@@ -569,7 +570,7 @@
     function setStoredStandby(on){ var s=powerStore(); if(on) s[T.screen]=true; else delete s[T.screen]; localStorage.setItem(POWER_KEY,JSON.stringify(s)); }
     var standby=false, pwr=document.getElementById('power'), powerOp=0;
     var muted=false, mb=document.getElementById('mute'), muteOp=0;
-    var previousControl=document.getElementById('previousControl'), nextControl=document.getElementById('nextControl'), reloadControl=document.getElementById('reloadControl');
+    var previousControl=document.getElementById('previousControl'), nextControl=document.getElementById('nextControl'), infoControl=document.getElementById('infoControl');
     function remoteControlImage(it){
       if(!it) return ''; var src=String(it.thumb||it.thumbnail||it.poster||'');
       if(!src&&String(it.type||'').toLowerCase()==='image') src=String(it.url||'');
@@ -639,7 +640,12 @@
       previousControl.classList.toggle('sync-locked',!canNavigate); nextControl.classList.toggle('sync-locked',!canNavigate);
       var currentMedia=index>=0?Object.assign({},items[index],current||{}):current;
       paintMediaControl(mb,document.getElementById('muteTitle'),currentMedia,'Contenido actual',muted?'Activar sonido':'Silenciar');
-      paintMediaControl(reloadControl,document.getElementById('reloadTitle'),currentMedia,'Contenido actual','Recargar',youtubeFrameCandidates(currentMedia,3));
+      var infoShot=infoShotByScreen.get(T.screen), infoMedia=currentMedia;
+      if(infoShot){
+        var infoAge=Math.max(0,Math.round((Date.now()-infoShot.ts)/1000));
+        infoMedia=Object.assign({},currentMedia||{type:'image'},{title:'Ficha capturada · hace '+infoAge+' s'});
+      }
+      paintMediaControl(infoControl,document.getElementById('infoTitle'),infoMedia,'Capturar la ficha del vídeo','Informar',infoShot?[infoShot.url]:youtubeFrameCandidates(currentMedia,3));
       paintSeekStrip(currentMedia,syncLocked);
     }
     function paintRemoteControls(){
@@ -1026,6 +1032,40 @@
       var age=Math.max(0,Math.round(Number(meta&&meta.ageSeconds!=null?meta.ageSeconds:(Date.now()-Number(meta&&meta.ts||0))/1000)||0));
       return 'Fotograma del player · hace '+age+' s';
     }
+    async function infoShotMeta(screen){
+      var controller=new AbortController(), timer=setTimeout(function(){ controller.abort(); },1800);
+      try{ return await remoteShotMeta(screen,controller.signal); }
+      catch(_){ return null; }
+      finally{ clearTimeout(timer); }
+    }
+    async function waitInfoShot(target,baselineTs,generation){
+      var started=Date.now();
+      while(Date.now()-started<8000){
+        if(generation!==targetGeneration||T.screen!==target.screen) return null;
+        var meta=await infoShotMeta(target.screen);
+        if(meta&&meta.ok&&Number(meta.ts)>baselineTs&&Number(meta.bytes||0)>1000) return meta;
+        await new Promise(function(resolve){ setTimeout(resolve,450); });
+      }
+      return null;
+    }
+    async function captureInfo(button){
+      var target={screen:T.screen,circuit:T.circuit}, generation=targetGeneration;
+      var before=await infoShotMeta(target.screen), baselineTs=Number(before&&before.ts||0);
+      var sent=await sendRemote('info',button,{holdAfterAck:true,returnAction:true});
+      if(!sent||!sent.ok) return false;
+      var meta=await waitInfoShot(target,baselineTs,generation);
+      if(!meta){ finishRemoteButton(sent.action,'timeout'); toast('⌛ el player no devolvió la captura informativa'); return false; }
+      var shot=remoteShotPreview(meta,target,null);
+      if(!shot){ finishRemoteButton(sent.action,'failed'); toast('✗ captura informativa no válida'); return false; }
+      infoShotByScreen.set(target.screen,{url:shot.url,ts:Number(meta.ts),itemId:meta.itemId||''});
+      if(generation===targetGeneration&&T.screen===target.screen){
+        paintRemoteContext(remotePlaylistItems,previewItem);
+        finishRemoteButton(sent.action,'executed');
+        toast('✓ ficha capturada en el player');
+      }
+      return true;
+    }
+    infoControl.onclick=function(){ captureInfo(infoControl); };
     async function pollNow(){
       var target=T, generation=targetGeneration, requestSeq=++nowRequestSeq;
       if(nowController) nowController.abort(); var controller=new AbortController(); nowController=controller;
@@ -1057,6 +1097,6 @@
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r1.0002" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r2.0018" defer></script>
 </body>
 </html>

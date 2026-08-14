@@ -22,9 +22,15 @@ test('el ACK completo queda visible hasta la siguiente orden o cambio de player'
   assert.match(mando,/background-color:color-mix\(in srgb,#39d98a 12%,transparent\)!important/);
 });
 
-test('Recargar conserva el clip actual pero pide un fotograma alternativo comprobado',()=>{
-  assert.match(mando,/id="reloadControl"[^>]*data-cmd="reload"/);
-  assert.match(mando,/paintMediaControl\(reloadControl,[\s\S]*youtubeFrameCandidates\(currentMedia,3\)\)/);
+test('Informar abre la ficha remota y pinta su captura nueva en el propio botón',()=>{
+  assert.match(mando,/id="infoControl"[^>]*aria-label="Informar sobre el contenido actual"/);
+  assert.match(mando,/sendRemote\('info',button,\{holdAfterAck:true,returnAction:true\}\)/);
+  assert.match(mando,/waitInfoShot\(target,baselineTs,generation\)/);
+  assert.match(mando,/infoShotByScreen\.set\(target\.screen,\{url:shot\.url,ts:Number\(meta\.ts\)/);
+  assert.match(mando,/paintMediaControl\(infoControl,[\s\S]*infoShot\?\[infoShot\.url\]/);
+  assert.match(canal,/case 'info': \{[\s\S]*localInfoShow\(\);[\s\S]*await shotTick\(true\)/);
+  assert.match(canal,/function _shotDrawLocalInfo\(cx,W,H\)/);
+  assert.match(canal,/kind:forceInfo\?'info':'frame'/);
   assert.match(mando,/function checkedPreview\(src\)/);
   assert.match(mando,/light\/samples>16&&visible\/samples>\.035/);
   assert.match(mando,/function previewFallbackData\(it\)/);
