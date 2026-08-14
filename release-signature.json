@@ -1,9 +1,9 @@
 {
-  "version": "v.14.08.2026.r2.10:42",
+  "version": "v.14.08.2026.r3.11:33",
   "signature": "TrinityMBP14 · MacBookPro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookPro14",
-  "day": "13.08.2026",
-  "time": "22:47",
-  "evidence": "Por defecto se guarda con la sesión Google first-party, sin GRID_KEY, conserva el player offline y el player la consume como playlist base cacheable."
+  "day": "14.08.2026",
+  "time": "11:33",
+  "evidence": "El botón de la cabecera cierra Experto y Players comparte navegación, escala y densidad visual con Remote, Playlist, Status y Contenidos."
 }

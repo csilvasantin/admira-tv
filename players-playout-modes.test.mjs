@@ -14,6 +14,17 @@ test('Players ofrece exactamente los tres modos y Autónomo es el predeterminado
   assert.match(players,/por defecto/);
 });
 
+test('Players comparte escala y navegación con el resto del modo Experto',()=>{
+  assert.match(players,/class="topnav" aria-label="Navegación del modo experto"/);
+  assert.match(players,/data-mando-return="remote"/);
+  assert.match(players,/aria-current="page">Players/);
+  assert.match(players,/body\{[^}]*max-width:520px/);
+  assert.match(players,/\.hero h1\{font-size:22px/);
+  assert.doesNotMatch(players,/class="brand"/);
+  assert.doesNotMatch(players,/¿Cómo trabajan los/);
+  assert.match(players,/function wireExpertNavigation\(\)/);
+});
+
 test('Sincro exige selección explícita y los no elegidos siguen autónomos',()=>{
   assert.match(players,/state\.mode!==['"]autonomous['"]&&state\.selected\.length<2/);
   assert.match(players,/screens:state\.selected/);

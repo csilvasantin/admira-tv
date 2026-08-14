@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=14.08.2026.r2.1042"></script>
+<script src="/auth-gate.js?v=14.08.2026.r3.1133"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -352,6 +352,9 @@
     background:#0e1420; color:#9fb0c6; border:1px solid var(--line); border-radius:6px; cursor:pointer; font-size:12px }
   .admando h4 button+button{ margin-left:4px }
   .admando h4 button:hover{ border-color:var(--accent); color:var(--accent) }
+  .admando h4 #mandoClose:hover,.admando h4 #mandoClose:focus-visible{
+    border-color:var(--off);color:#fff;background:rgba(255,90,90,.12);outline:none
+  }
   /* El mando LLENA el panel: la caja crece con el alto que el usuario dé al panel
      (asa de redimensionado del chrome) y el iframe toma todo su interior, así se ven
      el máximo de funciones sin scroll interno. Antes había tope de 560px. */
@@ -446,7 +449,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=14.08.2026.r2.1042">
+  <link rel="stylesheet" href="/admira-frame.css?v=14.08.2026.r3.1133">
 </head>
 <body>
 <script>
@@ -465,8 +468,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=14.08.2026.r2.1042"></script>
-<script src="/admira-frame.js?v=14.08.2026.r2.1042" defer></script>
+<script src="/admira-nav.js?v=14.08.2026.r3.1133"></script>
+<script src="/admira-frame.js?v=14.08.2026.r3.1133" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -486,7 +489,7 @@ window.ADMIRA_NAV={
     <h4><span class="mandoExp">Experto</span> · Mando ·
       <select id="mandoPick" title="Equipo IoT del proyecto que estás gobernando" aria-label="Elegir equipo a controlar"><option value="">cargando players…</option></select>
       <span id="mandoScreen" hidden>—</span>
-      <button type="button" id="mandoOut" title="Abrirlo en una ventana aparte">⇱</button>
+      <button type="button" id="mandoClose" title="Cerrar modo experto" aria-label="Cerrar modo experto">×</button>
     </h4>
     <iframe id="mandoFrame" title="Mando a distancia de la pantalla" src="about:blank"
             allow="autoplay" referrerpolicy="same-origin"></iframe>
@@ -615,7 +618,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=14.08.2026.r2.1042"></script>
+<script src="xpl-runtime.js?v=14.08.2026.r3.1133"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -1193,8 +1196,8 @@ document.addEventListener('click', e=>{
   if(sel&&sel.value) abreMando(sel.value);
 });
 document.addEventListener('click', e=>{
-  if(e.target.closest('#mandoOut')){ const s=document.getElementById('mandoFrame').dataset.screen;
-    if(s) window.open('/mando.html?screen='+encodeURIComponent(s),'mando-'+s,'width=420,height=680,menubar=no,toolbar=no'); }
+  if(!e.target.closest('#mandoClose')) return;
+  if(window.AdmiraFrame) window.AdmiraFrame.close('bottom');
 });
 // PLAYER / PANTALLA es un atajo visible: un clic (o Enter/Espacio, por ser botón)
 // abre Experto y deja ese player ya seleccionado. El listener vive en el tbody
@@ -1918,10 +1921,10 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-session.js?v=14.08.2026.r2.1042"></script>
-<script src="/admira-avatar.js?v=14.08.2026.r2.1042"></script>
-<script src="/cms-pacman.js?v=14.08.2026.r2.1042"></script>
-  <script src="/assets/admira-version-watch.js?v=14.08.2026.r2.1042" defer></script>
+<script src="/admira-session.js?v=14.08.2026.r3.1133"></script>
+<script src="/admira-avatar.js?v=14.08.2026.r3.1133"></script>
+<script src="/cms-pacman.js?v=14.08.2026.r3.1133"></script>
+  <script src="/assets/admira-version-watch.js?v=14.08.2026.r3.1133" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
    Mismo patrón que el highscore de yokup: tirador por columna, mínimo por

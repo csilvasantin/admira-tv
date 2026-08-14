@@ -102,6 +102,13 @@ test("el panel experto va sin franja de título y el mando lo llena entero", asy
   assert.match(cmsSrc, /pn\.style\.height='min\(88vh,1000px\)'/);
 });
 
+test("el botón de la cabecera cierra el modo Experto", () => {
+  assert.match(cms, /id="mandoClose"[^>]*title="Cerrar modo experto"[^>]*>×<\/button>/);
+  assert.match(cms, /window\.AdmiraFrame\.close\('bottom'\)/);
+  assert.doesNotMatch(cms, /id="mandoOut"/);
+  assert.doesNotMatch(cms, /closest\('#mandoOut'\)/);
+});
+
 test("Estado muestra la conexión y Player / pantalla queda sólo como nombre pulsable", () => {
   assert.match(cms, /class="ebScreenShortcut" data-open-remote/);
   assert.doesNotMatch(cms, /class="ebScreenShortcutHint"/);

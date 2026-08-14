@@ -2,13 +2,14 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=14.08.2026.r2.1042"></script>
+<script src="/auth-gate.js?v=14.08.2026.r3.1133"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="admiranext-version" content="v.13.08.2026.r38.21:21">
 <title>Players · Admira.tv</title>
 <meta name="description" content="Composición de players Admira.tv: emisión autónoma, grupos sincronizados y murales extendidos.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
 <style>
 :root{--bg:#05070b;--panel:#0c111b;--panel2:#111827;--line:#283650;--text:#f2eaff;--dim:#968bab;--violet:#ad86ff;--cyan:#4bc9ff;--green:#43e58c;--amber:#ffd25f;--red:#ff6875;--mono:ui-monospace,SFMono-Regular,Menlo,monospace;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 *{box-sizing:border-box}html{color-scheme:dark}body{margin:0;min-height:100vh;background:radial-gradient(circle at 80% -15%,#1c1538 0,transparent 38%),var(--bg);color:var(--text);font-family:var(--sans)}button,input{font:inherit}.wrap{width:min(1280px,calc(100% - 32px));margin:auto}.top{position:sticky;top:0;z-index:10;background:rgba(5,7,11,.92);border-bottom:1px solid var(--line);backdrop-filter:blur(16px)}.topin{min-height:66px;display:flex;align-items:center;gap:14px}.brand{font-weight:900;font-size:20px;letter-spacing:.02em;text-decoration:none;color:var(--text)}.brand i{font-style:normal;color:var(--green)}.back{margin-left:auto;color:var(--dim);text-decoration:none;font:12px var(--mono)}.back:hover{color:var(--cyan)}
@@ -19,12 +20,33 @@
 .extended[hidden]{display:none}.tools{display:flex;gap:10px;margin-bottom:13px}.search{flex:1;min-width:0;border:1px solid var(--line);border-radius:11px;background:#080d15;color:var(--text);padding:11px 13px;outline:none}.search:focus{border-color:var(--violet)}.contents{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;max-height:390px;overflow:auto;padding-right:4px}.content{display:grid;grid-template-columns:76px minmax(0,1fr);gap:10px;align-items:center;border:1px solid var(--line);background:#090e16;color:var(--text);border-radius:12px;padding:8px;cursor:pointer;text-align:left;min-width:0}.content:hover{border-color:#675596}.content.selected{border-color:var(--violet);box-shadow:0 0 0 1px var(--violet)}.thumb{width:76px;height:52px;border-radius:8px;object-fit:cover;background:linear-gradient(135deg,#32255f,#12334b)}.content strong,.content small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.content strong{font-size:12px}.content small{color:var(--dim);font:10px var(--mono);margin-top:5px}.wall{margin-top:15px;display:grid;gap:5px;min-height:150px;border:1px dashed #58467a;border-radius:14px;padding:8px;background:#070a10}.tile{position:relative;min-height:94px;border:1px solid #8367b6;border-radius:8px;overflow:hidden;background:#101420 center/cover}.tile::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.74),transparent 70%)}.tile b{position:absolute;z-index:1;left:8px;bottom:7px;right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:10px var(--mono)}.tile i{position:absolute;z-index:1;right:7px;top:6px;width:24px;height:24px;border-radius:999px;background:var(--violet);color:#100621;display:grid;place-items:center;font:900 11px var(--mono);font-style:normal}
 .actionbar{position:sticky;bottom:0;z-index:8;margin-top:18px;padding:14px 0 24px;background:linear-gradient(0deg,var(--bg) 70%,transparent);display:flex;align-items:center;gap:12px}.save{border:1px solid var(--green);background:var(--green);color:#04110a;border-radius:12px;padding:13px 18px;font-weight:900;cursor:pointer}.save:disabled{opacity:.45;cursor:not-allowed}.status{color:var(--dim);font:12px var(--mono)}.status.ok{color:var(--green)}.status.err{color:var(--red)}
 @media(max-width:900px){.modes,.screens,.contents{grid-template-columns:1fr 1fr}.hint{display:none}}@media(max-width:580px){.wrap{width:min(100% - 20px,1280px)}.hero{padding-top:28px}.modes,.screens,.contents{grid-template-columns:1fr}.mode{padding:15px}.screen{grid-template-columns:40px minmax(0,1fr) auto}.actionbar{align-items:stretch;flex-direction:column}.save{width:100%}}
+
+/* Players vive dentro del mismo iframe que Remote, Playlist, Status y Contenidos.
+   Esta capa comparte su escala y densidad; la lógica de playout permanece intacta. */
+:root{--bg:var(--admira-bg,#0a0c12);--panel:var(--admira-bg-elev,#141826);--line:var(--admira-border,rgba(170,136,255,.25));--text:var(--admira-text,#f0e6ff);--dim:var(--admira-text-muted,rgba(216,200,255,.65));--violet:var(--admira-violet,#aa88ff);--cyan:var(--admira-cyan,#50c8ff);--amber:var(--admira-amber,#ffd866);--red:var(--admira-red,#e2231a);--mono:var(--admira-font-mono,ui-monospace,Menlo,monospace);--sans:var(--admira-font-sans,-apple-system,system-ui,sans-serif)}
+body{margin:0 auto;min-height:100dvh;max-width:520px;padding:16px 14px 44px;background:var(--bg);font-family:var(--sans)}
+.wrap{width:100%;margin:0}
+.topnav{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:6px;margin:-16px -14px 10px;padding:calc(env(safe-area-inset-top,0px) + 9px) 12px 9px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.topnav::-webkit-scrollbar{display:none}.topnav a{font:12px var(--mono);color:var(--dim);text-decoration:none;padding:6px 9px;border:1px solid transparent;border-radius:8px;white-space:nowrap}.topnav a:hover{color:var(--text);border-color:var(--line)}.topnav a.current{color:var(--text);border-color:var(--violet);background:color-mix(in srgb,var(--violet) 10%,transparent);font-weight:700}.topnav .sep{flex:0 0 1px;height:16px;background:var(--line);margin:0 2px}
+.hero{padding:10px 0 14px}.eyebrow{color:var(--violet);font-size:11px}.hero h1{font-size:22px;line-height:1.15;margin:3px 0 6px}.hero h1 em{color:var(--text)}.hero p{font-size:12px;line-height:1.5}.current{margin-top:10px;padding:6px 9px;font-size:10px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modes{gap:8px;margin:6px 0 12px}.mode{border-radius:12px;padding:11px;background:#0d1018}.mode:hover{border-color:var(--violet);transform:none}.mode.active{box-shadow:inset 0 0 0 1px var(--mode);background:color-mix(in srgb,var(--mode) 8%,#0d1018)}.mode .ico{font-size:16px}.mode h2{margin:7px 0 3px;font-size:13px}.mode p{font-size:10px;line-height:1.35}.mode .default{right:7px;top:7px;padding:2px 5px;font-size:7px}
+.panel{border-radius:12px;margin-bottom:10px;background:#0d1018}.ph{gap:8px;padding:10px 11px;background:var(--panel)}.ph h2{font:700 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--cyan)}.count,.hint{font-size:9px}.pb{padding:10px}.notice{border-radius:9px;padding:10px;font-size:10px}
+.screens{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.screen{grid-template-columns:32px minmax(0,1fr) auto;gap:8px;border-radius:10px;padding:8px}.screen:hover{border-color:var(--violet)}.screen .num{width:28px;height:28px;border-radius:8px;font-size:10px}.screen strong{font-size:11px}.screen small{font-size:8px}
+.tools{margin-bottom:9px}.search{border-radius:9px;padding:9px 10px;font:11px var(--mono)}.contents{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-height:320px}.content{grid-template-columns:58px minmax(0,1fr);gap:8px;border-radius:10px;padding:6px}.thumb{width:58px;height:auto;aspect-ratio:16/9;border-radius:7px}.content strong{font-size:10px}.content small{font-size:8px}.wall{margin-top:10px;min-height:110px;border-radius:10px;padding:6px}.tile{min-height:68px}
+.actionbar{margin-top:10px;padding:10px 0 max(14px,env(safe-area-inset-bottom));gap:9px}.save{border-radius:10px;padding:10px 13px;font-size:12px}.status{min-width:0;font-size:9px;line-height:1.35}
+@media(max-width:420px){.modes,.screens,.contents{grid-template-columns:1fr}.mode{padding:10px}.hint{display:none}.actionbar{align-items:stretch;flex-direction:column}.save{width:100%}}
 </style>
 </head>
 <body>
-<header class="top"><div class="wrap topin"><a class="brand" href="/cms">ADMIRA<i>.TV</i></a><span>Players</span><a class="back" href="/cms">← Control de flota</a></div></header>
+<nav class="topnav" aria-label="Navegación del modo experto">
+  <a data-mando-return="remote" href="/mando.html#remote">Remote</a><span class="sep"></span>
+  <a data-mando-return="playlist" href="/mando.html#playlist">Playlist</a>
+  <a data-mando-return="status" href="/mando.html#status">Status</a>
+  <a class="current" href="/players" aria-current="page">Players</a>
+  <a data-mando-return="contents" href="/mando.html#contents">Contenidos</a>
+</nav>
 <main class="wrap">
-  <section class="hero"><div class="eyebrow">Composición de emisión</div><h1>¿Cómo trabajan los <em>players</em>?</h1><p>El modo autónomo es la base segura. Cuando una experiencia necesita varias pantallas, escoge exactamente qué equipos comparten la emisión o conviértelos en un único lienzo extendido.</p><div id="current" class="current">● leyendo configuración viva…</div></section>
+  <section class="hero"><div class="eyebrow">Players · Composición de emisión</div><h1>Modo de reproducción</h1><p>Escoge cómo trabajan juntos los players: independientes, sincronizados o como un único lienzo extendido.</p><div id="current" class="current">● leyendo configuración viva…</div></section>
   <section class="modes" aria-label="Modo de los players">
     <button class="mode active" data-mode="autonomous" type="button"><span class="default">por defecto</span><span class="ico">◉</span><h2>Autónomo</h2><p>Cada player usa su programación, caché y ritmo. Ningún equipo depende de otro.</p></button>
     <button class="mode" data-mode="synchronized" type="button"><span class="ico">◌</span><h2>Sincronizado</h2><p>Los equipos escogidos comparten playlist, índice y reloj; el resto sigue autónomo.</p></button>
@@ -35,9 +57,10 @@
   <div class="actionbar"><button id="save" class="save" type="button">Aplicar modo autónomo</button><span id="status" class="status">Sin cambios pendientes.</span></div>
 </main>
 <script>
-window.ADMIRA_VERSION='v.14.08.2026.r2.10:42';
+window.ADMIRA_VERSION='v.14.08.2026.r3.11:33';
 const API='https://api.admira.store', PLAYOUT='/api/playout';
 const $=id=>document.getElementById(id), state={mode:'autonomous',screens:[],items:[],selected:[],item:null,saved:null};
+function wireExpertNavigation(){let source='';try{const ref=new URL(document.referrer);if(ref.origin===location.origin&&ref.pathname.endsWith('/mando.html'))source=ref.search;}catch(_){}document.querySelectorAll('[data-mando-return]').forEach(a=>{const pane=a.dataset.mandoReturn;a.href='/mando.html'+source+'#'+pane;});}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function nameOf(screen){const map={macbookairazul:'MacBook Air Azul',macbookairplata:'MacBook Air Plata',macbookaircrema:'MacBook Air Crema',macbookairrosa:'MacBook Air Rosa',macbookpro16:'MacBook Pro 16'};return map[screen]||screen.replace(/-/g,' ');}
 function preview(it){return it.thumbnail||it.thumb||it.poster||((it.type==='image'||it.type==='animation')?it.url:'');}
@@ -52,8 +75,8 @@ function validate(keepStatus){let ok=true,msg='';if(state.mode!=='autonomous'&&s
 async function save(){validate();if($('save').disabled)return;$('save').disabled=true;$('status').textContent='Aplicando y esperando a los players…';try{const body={mode:state.mode,screens:state.selected,item:state.mode==='extended'?state.item:null};const r=await fetch(PLAYOUT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||('HTTP '+r.status));state.saved=d.state;paintCurrent();$('status').className='status ok';$('status').textContent='✓ Configuración guardada · los players la adoptan en ≤12 s.';}catch(e){$('status').className='status err';$('status').textContent='No se pudo aplicar: '+e.message;}finally{validate(true);}}
 function paintCurrent(){const s=state.saved||{mode:'autonomous',screens:[]};const label={autonomous:'Autónomo',synchronized:'Sincronizado',extended:'Extendido'}[s.mode]||s.mode;$('current').textContent='● '+label+(s.screens&&s.screens.length?' · '+s.screens.length+' equipos':' · toda la flota independiente');}
 async function load(){try{const [ps,stock,plan]=await Promise.all([fetch(API+'/signage/screens',{cache:'no-store'}).then(r=>r.json()),fetch(API+'/stock/list?limit=300',{cache:'no-store'}).then(r=>r.json()),fetch(PLAYOUT,{cache:'no-store'}).then(r=>r.json())]);state.screens=(ps.screens||[]).filter(x=>x&&x.screen).sort((a,b)=>(Number(b.online)-Number(a.online))||String(a.screen).localeCompare(String(b.screen)));state.items=(stock.items||[]).filter(it=>it&&it.url&&['image','video','animation'].includes(it.type));state.saved=plan.state||{mode:'autonomous',screens:[]};state.selected=(state.saved.screens||[]).filter(s=>state.screens.some(p=>p.screen===s));state.item=state.saved.item&&state.items.find(it=>it.id===state.saved.item.id)||state.saved.item||null;renderContents();paintCurrent();setMode(state.saved.mode||'autonomous');}catch(e){$('status').className='status err';$('status').textContent='No se pudo cargar la flota: '+e.message;}}
-document.querySelectorAll('.mode').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));$('screens').addEventListener('click',e=>{const b=e.target.closest('[data-screen]');if(b)toggleScreen(b.dataset.screen);});$('contents').addEventListener('click',e=>{const b=e.target.closest('[data-item]');if(!b)return;state.item=state.items.find(it=>it.id===b.dataset.item)||null;renderContents();renderWall();validate();});$('search').addEventListener('input',renderContents);$('save').addEventListener('click',save);load();
+document.querySelectorAll('.mode').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));$('screens').addEventListener('click',e=>{const b=e.target.closest('[data-screen]');if(b)toggleScreen(b.dataset.screen);});$('contents').addEventListener('click',e=>{const b=e.target.closest('[data-item]');if(!b)return;state.item=state.items.find(it=>it.id===b.dataset.item)||null;renderContents();renderWall();validate();});$('search').addEventListener('input',renderContents);$('save').addEventListener('click',save);wireExpertNavigation();load();
 </script>
-<script src="/assets/admira-version-watch.js?v=14.08.2026.r2.1042" defer></script>
+<script src="/assets/admira-version-watch.js?v=14.08.2026.r3.1133" defer></script>
 </body>
 </html>
