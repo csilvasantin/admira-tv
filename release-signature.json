@@ -1,9 +1,9 @@
 {
-  "version": "v.15.08.2026.r2.00:18",
+  "version": "v.15.08.2026.r3.00:22",
   "signature": "TrinityMBP16 · MacBookPro16",
   "agent": "TrinityMBP16",
   "machine": "MacBookPro16",
   "day": "15.08.2026",
-  "time": "00:18",
-  "evidence": "El botón Informar abre la misma ficha que el doble toque del player, publica una captura nueva con esa ficha y la muestra como fondo del control remoto."
+  "time": "00:22",
+  "evidence": "El botón Informar muestra la captura real de la ficha del vídeo y converge correctamente aunque dos mandos soliciten la misma captura a la vez."
 }

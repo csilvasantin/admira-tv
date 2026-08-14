@@ -1052,9 +1052,12 @@
       var target={screen:T.screen,circuit:T.circuit}, generation=targetGeneration;
       var before=await infoShotMeta(target.screen), baselineTs=Number(before&&before.ts||0);
       var sent=await sendRemote('info',button,{holdAfterAck:true,returnAction:true});
-      if(!sent||!sent.ok) return false;
+      if(!sent) return false;
+      // Puede haber otro mando pidiendo la misma ficha a la vez. Aunque nuestro
+      // ACK concreto resulte fallido por solape, una captura NUEVA posterior a
+      // esta pulsación sigue siendo exactamente la prueba visual solicitada.
       var meta=await waitInfoShot(target,baselineTs,generation);
-      if(!meta){ finishRemoteButton(sent.action,'timeout'); toast('⌛ el player no devolvió la captura informativa'); return false; }
+      if(!meta){ if(sent.ok) finishRemoteButton(sent.action,'timeout'); toast('⌛ el player no devolvió la captura informativa'); return false; }
       var shot=remoteShotPreview(meta,target,null);
       if(!shot){ finishRemoteButton(sent.action,'failed'); toast('✗ captura informativa no válida'); return false; }
       infoShotByScreen.set(target.screen,{url:shot.url,ts:Number(meta.ts),itemId:meta.itemId||''});
@@ -1097,6 +1100,6 @@
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r2.0018" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r3.0022" defer></script>
 </body>
 </html>

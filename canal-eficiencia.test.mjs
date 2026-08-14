@@ -52,7 +52,7 @@ test("[5] shotTick evita trabajo repetido salvo en la captura informativa pedida
   assert.match(canal, /if\(forceInfo\|\|!\$\('localInfo'\)\.hidden\) _shotDrawLocalInfo\(cx,W,H\)/);
   // El éxito se marca en la RESPUESTA aceptada, no al disparar.
   assert.match(canal, /const r=await fetch\(SHOT_API/);
-  assert.match(canal, /if\(r&&r\.ok\)\{ _lastShotSrc=src; _lastShotTs=Date\.now\(\); uploaded=true; \}/);
+  assert.match(canal, /if\(r&&r\.ok\)\{ _lastShotSrc=src; _lastShotTs=Date\.now\(\); if\(forceInfo\) _lastInfoShotTs=_lastShotTs; uploaded=true; \}/);
 });
 
 test("[6] el precache va en streaming al disco, con fallback y disco-primero intacto", () => {

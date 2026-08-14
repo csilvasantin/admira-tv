@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=15.08.2026.r2.0018"></script>
+<script src="xpl-runtime.js?v=15.08.2026.r3.0022"></script>
 <script>
-  window.ADMIRA_VERSION='v.15.08.2026.r2.00:18';
+  window.ADMIRA_VERSION='v.15.08.2026.r3.00:22';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -3460,7 +3460,7 @@ window.addEventListener('online',rearmCtrlOnForeground);
 // y ?shot=0 la desactiva. Los assets que tiñen el canvas se marcan para no
 // reintentar en bucle; los servidos por caché (blob:) capturan sin tintar.
 const SHOT_API='https://api.admira.store/signage/shot';
-let _shotSec=25, _shotTimer=null, _shotBusy=false, _shotCv=null;
+let _shotSec=25, _shotTimer=null, _shotBusy=false, _shotCv=null, _lastInfoShotTs=0;
 let _lastShotSrc='', _lastShotTs=0;   // dedupe de imágenes fijas: el éxito se marca al confirmar la subida, no al disparar
 const _shotTainted=new Set();      // srcs que tiñeron el canvas → no reintentar
 try{ const _sq=qs.get('shot'); if(_sq!=null){ const n=parseFloat(_sq); if(!isNaN(n)) _shotSec=n; } }catch(_){}
@@ -3510,7 +3510,11 @@ function _shotDrawLocalInfo(cx,W,H){
 async function shotTick(forceInfo){
   forceInfo=!!forceInfo;
   if(_shotSec<=0&&!forceInfo) return false;
-  if(_shotBusy&&forceInfo){ await new Promise(resolve=>setTimeout(resolve,700)); }
+  if(_shotBusy&&forceInfo){
+    const waitingSince=Date.now();
+    while(_shotBusy&&Date.now()-waitingSince<2200) await new Promise(resolve=>setTimeout(resolve,100));
+    if(!_shotBusy&&_lastInfoShotTs>=waitingSince) return true;
+  }
   if(_shotBusy) return false;
   try{ if(document.hidden) return false; }catch(_){}          // no capturar en background
   if((_standby||paused)&&!forceInfo) return false;             // el informe sí puede fotografiar una pausa
@@ -3539,7 +3543,7 @@ async function shotTick(forceInfo){
     if(!data || data.length>150*1024) return false;                 // sigue muy grande: no fuerzo
     const r=await fetch(SHOT_API,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({screen:scr.screen,producer:TELEMETRY_PRODUCER,itemId:(_nowItem&&_nowItem.id)||'',kind:forceInfo?'info':'frame',img:data})});
-    if(r&&r.ok){ _lastShotSrc=src; _lastShotTs=Date.now(); uploaded=true; }   // el dedupe solo cuenta subidas ACEPTADAS
+    if(r&&r.ok){ _lastShotSrc=src; _lastShotTs=Date.now(); if(forceInfo) _lastInfoShotTs=_lastShotTs; uploaded=true; }   // el dedupe solo cuenta subidas ACEPTADAS
   }catch(_){ /* jamás propaga a la emisión */ }
   finally{ _shotBusy=false; }
   return uploaded;
@@ -3572,6 +3576,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r2.0018" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r3.0022" defer></script>
 </body>
 </html>
