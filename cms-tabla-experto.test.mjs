@@ -102,10 +102,19 @@ test("el panel experto va sin franja de título y el mando lo llena entero", asy
   assert.match(cmsSrc, /pn\.style\.height='min\(88vh,1000px\)'/);
 });
 
-test("Player / pantalla es un atajo visible de un clic al mando seleccionado", () => {
+test("Player / pantalla usa el nombre como atajo y sólo añade su semáforo de conexión", () => {
   assert.match(cms, /class="ebScreenShortcut" data-open-remote/);
-  assert.match(cms, /class="ebScreenShortcutHint">🎛 Mando/);
-  assert.match(cms, /aria-label="Abrir control remoto experto de /);
+  assert.doesNotMatch(cms, /class="ebScreenShortcutHint"/);
+  assert.doesNotMatch(cms, /🎛 Mando/);
+  assert.match(cms, /aria-label="Abrir modo experto de /);
+  assert.match(cms, /function playerConnectionState\(p,info\)/);
+  assert.match(cms, /return \{key:'connecting',label:'conectando'\}/);
+  assert.match(cms, /return \{key:'online',label:'online'\}/);
+  assert.match(cms, /return \{key:'offline',label:'offline'\}/);
+  assert.match(cms, /class="ebConnection '\+connection\.key\+'"/);
+  assert.match(cms, /\.ebConnection\.online\{color:var\(--air\)/);
+  assert.match(cms, /\.ebConnection\.connecting\{color:var\(--amber\)/);
+  assert.match(cms, /\.ebConnection\.offline\{color:var\(--off\)/);
   assert.match(cms, /\$\('ebBody'\)\.addEventListener\('click'/);
   assert.match(cms, /e\.target\.closest\('\[data-open-remote\]'\)/);
   assert.match(cms, /const row=shortcut\.closest\('tr\[data-screen\]'\)/);
