@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=14.08.2026.r3.1133"></script>
+<script src="/auth-gate.js?v=14.08.2026.r4.2059"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -449,7 +449,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=14.08.2026.r3.1133">
+  <link rel="stylesheet" href="/admira-frame.css?v=14.08.2026.r4.2059">
 </head>
 <body>
 <script>
@@ -468,8 +468,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=14.08.2026.r3.1133"></script>
-<script src="/admira-frame.js?v=14.08.2026.r3.1133" defer></script>
+<script src="/admira-nav.js?v=14.08.2026.r4.2059"></script>
+<script src="/admira-frame.js?v=14.08.2026.r4.2059" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -618,7 +618,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=14.08.2026.r3.1133"></script>
+<script src="xpl-runtime.js?v=14.08.2026.r4.2059"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -641,6 +641,7 @@ const filterByCanal = arr => { const c=canalCircuits(); return c? arr.filter(d=>
 async function loadProjects(){ try{ const d=await fetch(PROJECTS_API,{cache:'no-store'}).then(r=>r.json()); PROJECTS=d.projects||[]; }catch(_){ PROJECTS=[]; }
   const s=$('canalSel'); if(s){ s.innerHTML='<option value="all">Todos los canales</option>'+PROJECTS.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join(''); s.value=CANAL_SEL; } }
 const SIGNAGE = 'https://api.admira.store/signage/now?screen=';
+const SIGNAGE_SCREENS = 'https://api.admira.store/signage/screens';
 // Fotograma real de lo que hay en antena, el que sube el propio canal cada 25 s.
 // Se pide la IMAGEN, no su meta: shotmeta: en KV se desincroniza del R2 y llega a
 // decir «no_shot» de pantallas que tienen captura (comprobado con xtanco-totem).
@@ -870,12 +871,19 @@ async function load(){
   await Promise.all([...ASSIGNED].map(id=>fetch(SEG_API+'?target='+encodeURIComponent(id)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(d=>{segByPlayer[id]=d;}).catch(()=>{})));
   // matriz GLOBAL (la usan los players condicionales sin reglas propias) → para pintar su playlist
   let GLOBAL_SEG={rules:[],default:{}}; try{ GLOBAL_SEG=await fetch(SEG_API+'?target=all&t='+Date.now(),{cache:'no-store'}).then(r=>r.json()); }catch(_){}
-  const nows = await Promise.all(devs.map(d=>fetchNow(d.screen)));
+  const [nows,screenPresence] = await Promise.all([
+    Promise.all(devs.map(d=>fetchNow(d.screen))),
+    fetch(SIGNAGE_SCREENS+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null)
+  ]);
+  // Presencia y contenido son señales distintas. /signage/screens demuestra que
+  // el player está vivo aunque el puntero best-effort /signage/now no pueda
+  // guardar la pieza actual (p. ej. al agotarse el presupuesto general de KV).
+  const liveScreens=new Set(((screenPresence&&screenPresence.screens)||[]).filter(p=>p&&p.online).map(p=>p.screen));
   const dlStates = await Promise.all(devs.map(d=>fetchCache(d.screen)));   // descargas por player
   const now = Date.now();
   let online=0, withAud=0, robots=0;
   // orden elegido (sobre los índices, para no romper nows[i]/dlStates[i])
-  const onOf=i=>{const it=nows[i];return it&&it.ts&&(now-it.ts)<ONLINE_MS?1:0;};
+  const onOf=i=>{const it=nows[i];return (it&&it.ts&&(now-it.ts)<ONLINE_MS)||liveScreens.has(devs[i].screen)?1:0;};
   const audOf=i=>{const it=nows[i];return (it&&it.aud&&it.aud.faces)||0;};
   const order=devs.map((_,i)=>i);
   if(CMS_SORT==='estado') order.sort((a,b)=>onOf(b)-onOf(a)||String(devs[a].name||'').localeCompare(String(devs[b].name||'')));
@@ -885,7 +893,7 @@ async function load(){
   const cards = order.map((i)=>{
     const d = devs[i];
     const it = nows[i];
-    const isOn = it && it.ts && (now - it.ts) < ONLINE_MS;
+    const isOn = !!onOf(i);
     if(isOn) online++;
     if(it && it.aud && it.aud.faces>0) withAud++;
     const isRobot = d.deviceType==='robot'; if(isRobot) robots++;
@@ -924,8 +932,8 @@ async function load(){
         <div class="now">
           <div class="thumb">${isOn?thumbHtml(it):'—'}</div>
           <div class="tx">
-            <div class="tt">${isOn?esc(it.title||it.id||'emitiendo'):'<span style="color:var(--dim)">no está emitiendo</span>'}</div>
-            <div class="ty">${isOn?(esc(it.type||'')+(startedAgo?(' · '+startedAgo):'')):(it&&it.ts?('última señal hace '+ageTxt(now-it.ts)):'sin registro de emisión')}</div>
+            <div class="tt">${isOn?esc((it&&(it.title||it.id))||'player conectado'):'<span style="color:var(--dim)">no está emitiendo</span>'}</div>
+            <div class="ty">${isOn?((it?esc(it.type||''):'presencia confirmada')+(startedAgo?(' · '+startedAgo):'')):(it&&it.ts?('última señal hace '+ageTxt(now-it.ts)):'sin registro de emisión')}</div>
           </div>
         </div>
         <div class="row">
@@ -1012,10 +1020,10 @@ async function load(){
   $('stamp').textContent='actualizado '+new Date().toLocaleTimeString('es-ES');
   // reproduce los thumbs de vídeo (preview en bucle)
   document.querySelectorAll('.thumb video, .fp video').forEach(v=>{ v.loop=true; v.muted=true; v.play&&v.play().catch(()=>{}); });
-  LAST_FLEET = devs.map((d,i)=>{ const it=nows[i]; const isOn=it&&it.ts&&(now-it.ts)<ONLINE_MS;
-    return {id:d.id,nombre:d.name||d.id,estado:isOn?'emitiendo':'sin señal',audiencia:(it&&it.aud&&it.aud.faces)||0,modo:d.mode||'conditional',direccion:String(d.addr||''),emitiendo:isOn?String(it.title||it.id||''):''}; });
+  LAST_FLEET = devs.map((d,i)=>{ const it=nows[i]; const isOn=!!onOf(i);
+    return {id:d.id,nombre:d.name||d.id,estado:isOn?'emitiendo':'sin señal',audiencia:(it&&it.aud&&it.aud.faces)||0,modo:d.mode||'conditional',direccion:String(d.addr||''),emitiendo:isOn?String((it&&(it.title||it.id))||'player conectado'):''}; });
   // avisos de cambio de estado (solo tras la 1ª carga)
-  devs.forEach((d,i)=>{ const it=nows[i]; const isOn=!!(it&&it.ts&&(now-it.ts)<ONLINE_MS);
+  devs.forEach((d,i)=>{ const isOn=!!onOf(i);
     if(PREV_INIT && PREV_ON[d.id]!==undefined && PREV_ON[d.id]!==isOn) toast((isOn?'🟢 ':'🔴 ')+(d.name||d.id)+(isOn?' volvió a emitir':' se ha caído'), isOn?'ok':'err');
     PREV_ON[d.id]=isOn; });
   PREV_INIT=true;
@@ -1921,10 +1929,10 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-session.js?v=14.08.2026.r3.1133"></script>
-<script src="/admira-avatar.js?v=14.08.2026.r3.1133"></script>
-<script src="/cms-pacman.js?v=14.08.2026.r3.1133"></script>
-  <script src="/assets/admira-version-watch.js?v=14.08.2026.r3.1133" defer></script>
+<script src="/admira-session.js?v=14.08.2026.r4.2059"></script>
+<script src="/admira-avatar.js?v=14.08.2026.r4.2059"></script>
+<script src="/cms-pacman.js?v=14.08.2026.r4.2059"></script>
+  <script src="/assets/admira-version-watch.js?v=14.08.2026.r4.2059" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
    Mismo patrón que el highscore de yokup: tirador por columna, mínimo por

@@ -1,9 +1,9 @@
 {
-  "version": "v.14.08.2026.r3.11:33",
-  "signature": "TrinityMBP14 · MacBookPro14",
-  "agent": "TrinityMBP14",
-  "machine": "MacBookPro14",
+  "version": "v.14.08.2026.r4.20:59",
+  "signature": "TrinityMBP16 · MacBookPro16",
+  "agent": "TrinityMBP16",
+  "machine": "MacBookPro16",
   "day": "14.08.2026",
-  "time": "11:33",
-  "evidence": "El botón de la cabecera cierra Experto y Players comparte navegación, escala y densidad visual con Remote, Playlist, Status y Contenidos."
+  "time": "20:59",
+  "evidence": "El Player MacMini conserva presencia en emisión aunque el puntero de contenido se degrade por presupuesto de telemetría."
 }
