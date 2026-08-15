@@ -66,6 +66,25 @@ test('cada contenido descargado lleva una imagen real o una imagen de respaldo n
   assert.match(mando,/linearGradient id="g"/);
 });
 
+test('Anterior y Siguiente conservan su fotograma aunque sincro bloquee el salto',()=>{
+  const paint=fn(mando,'paintRemoteContext');
+  assert.match(paint,/hasContext=!!\(exact&&items\.length\)/);
+  assert.match(paint,/prev=hasContext\?items\[\(index-1\+items\.length\)%items\.length\]:null/);
+  assert.match(paint,/next=hasContext\?items\[\(index\+1\)%items\.length\]:null/);
+  assert.match(paint,/canNavigate=hasContext&&!syncLocked/);
+  assert.doesNotMatch(paint,/prev=canNavigate|next=canNavigate/);
+});
+
+test('los fotogramas se resuelven también desde enlaces YouTube sin thumbnail',()=>{
+  const context=vm.createContext({String});
+  vm.runInContext([fn(mando,'remoteControlImage'),fn(mando,'youtubeVideoId'),fn(mando,'youtubeFrameCandidates'),'globalThis.frames=youtubeFrameCandidates'].join('\n'),context);
+  const frames=JSON.parse(JSON.stringify(context.frames({type:'video',url:'https://www.youtube.com/watch?v=Bx51eegLTY8'},0)));
+  assert.deepEqual(frames.slice(0,2),[
+    'https://img.youtube.com/vi/Bx51eegLTY8/hqdefault.jpg',
+    'https://img.youtube.com/vi/Bx51eegLTY8/0.jpg',
+  ]);
+});
+
 test('los scripts inline modificados conservan sintaxis JavaScript válida',()=>{
   for(const [name,source] of [['mando',mando],['canal',canal]]){
     const scripts=[...source.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).filter(Boolean);

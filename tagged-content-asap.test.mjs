@@ -55,6 +55,22 @@ test('content-712 refresca Stock, prioriza descarga y sólo salta cuando esa pie
   assert.match(canal, /if\(cmd==='content'\)\{ Promise\.resolve\(queueTaggedContent\(rest\)\)/);
 });
 
+test('la reproducción forzada conserva el gobierno hasta terminar la cápsula', () => {
+  const queue = functionSource(canal, 'queueTaggedContent');
+  const next = functionSource(canal, 'next');
+  const poll = functionSource(canal, 'pollMode');
+  assert.match(queue, /const forcedState=beginForcedTagPlayback\(wanted\)/);
+  assert.ok(queue.indexOf('beginForcedTagPlayback(wanted)') < queue.indexOf('disableAdmiraSync()'));
+  assert.match(queue, /markForcedTagPlaying\(forcedState,it\); await play\(idx,it\)/);
+  assert.match(next, /if\(finishForcedTagPlayback\(\)\) return/);
+  assert.match(poll, /_liveMode\|\|_forcedTagPlayback/);
+  assert.equal((poll.match(/if\(_forcedTagPlayback\) return/g)||[]).length,2,'debe cerrar las dos carreras de red');
+  const finish = functionSource(canal, 'finishForcedTagPlayback');
+  assert.match(finish, /state\.phase!=='playing'/);
+  assert.match(finish, /play\(\(forcedIndex>=0\?forcedIndex:cur\)\+1\)/);
+  assert.match(finish, /Promise\.resolve\(\)\.then\(\(\)=>pollMode\(\)\)/);
+});
+
 test('Limpiar tag espera confirmación secuencial antes de borrar el estado local', () => {
   assert.match(mando, /curTag\(\)\.charAt\(0\)===['"]@['"]&&!await sendRemote\('content-clear',b\)/);
   assert.match(mando, /if\(!await sendRemote\('tag-',b\)\) return/);

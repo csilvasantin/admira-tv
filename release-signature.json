@@ -1,9 +1,9 @@
 {
-  "version": "v.15.08.2026.r16.22:48",
+  "version": "v.15.08.2026.r17.23:58",
   "signature": "TrinityMBP16 · MacBookPro16",
   "agent": "TrinityMBP16",
   "machine": "MacBookPro16",
   "day": "15.08.2026",
-  "time": "22:48",
-  "evidence": "El player Android consulta releases por Internet, descarga el APK, valida tamaño y SHA-256 y se actualiza a sí mismo mediante PackageInstaller; USB queda limitado a la instalación inicial."
+  "time": "23:58",
+  "evidence": "Anterior y Siguiente conservan el fotograma contextual aunque sincro bloquee el salto; una cápsula forzada desde el lanzador de tags mantiene el control hasta finalizar y después devuelve el player a su asignación remota."
 }

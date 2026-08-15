@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=15.08.2026.r16.2248"></script>
+<script src="xpl-runtime.js?v=15.08.2026.r17.2358"></script>
 <script>
-  window.ADMIRA_VERSION='v.15.08.2026.r16.22:48';
+  window.ADMIRA_VERSION='v.15.08.2026.r17.23:58';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -1461,6 +1461,32 @@ async function runTechnicalAnalysis(){
   finally{ _techBusy=false; }
 }
 let _asapItemId=null;   // #ID solicitado: no saltar a otra pieza lista mientras ésta baja
+let _forcedTagPlayback=null, _forcedTagSeq=0;
+function beginForcedTagPlayback(wanted){
+  const state={token:++_forcedTagSeq,wanted:String(wanted||''),id:'',phase:'loading'};
+  _forcedTagPlayback=state; return state;
+}
+function ownsForcedTagPlayback(state){ return !!state&&_forcedTagPlayback===state; }
+function markForcedTagPlaying(state,it){
+  if(!ownsForcedTagPlayback(state)) return false;
+  state.id=String(it&&it.id||''); state.phase='playing'; return true;
+}
+function releaseForcedTagPlayback(state){
+  if(!ownsForcedTagPlayback(state)) return false;
+  _forcedTagPlayback=null; Promise.resolve().then(()=>pollMode()).catch(()=>{}); return true;
+}
+function finishForcedTagPlayback(){
+  const state=_forcedTagPlayback;
+  if(!state||state.phase!=='playing') return false;
+  _forcedTagPlayback=null; _asapItemId=null;
+  // Al acabar la cápsula completa seguimos el loop local sin congelar el último
+  // frame. El sondeo inmediato devuelve después el gobierno a sincro/condicional
+  // si ésa sigue siendo la asignación remota de la pantalla.
+  const forcedIndex=playlist.findIndex(it=>it&&String(it.id||'')===state.id);
+  if(!_standby&&playlist.length) play((forcedIndex>=0?forcedIndex:cur)+1);
+  Promise.resolve().then(()=>pollMode()).catch(()=>{});
+  return true;
+}
 async function cacheOpen(){ if(_cache!==null) return _cache; try{ _cache=await caches.open(CACHE_NAME); }catch(_){ _cache=false; } return _cache; }
 // Un interactivo NO se precachea: no es un asset, es una página que se abre. Bajarla
 // a la Cache API dejaría fuera lo que ella misma pida y, peor, la política estricta
@@ -1601,6 +1627,7 @@ function maybeResumeCold(){
     const target=idx>=0?playlist[idx]:null;
     if(target&&(!cacheable(target)||_ready.has(target.id))){
       _asapItemId=null; _coldWaiting=false; _warmWaiting=false; dlLine(null);
+      if(_forcedTagPlayback&&String(_forcedTagPlayback.id||'')===String(target.id)) _forcedTagPlayback.phase='playing';
       try{ play(idx,target); }catch(_){} return;
     }
     const queued=_precQ.some(it=>it&&String(it.id)===String(_asapItemId));
@@ -1861,7 +1888,7 @@ async function play(i, forced){
 }
 // antes de cada nuevo contenido, revisa si hay novedades en stock (nuevas
 // importaciones o tags/categorías editados) — con throttle para no saturar.
-function next(){ if(directOn) return; if(PREVIEW.on){ play(cur+1); return; }
+function next(){ if(directOn) return; if(finishForcedTagPlayback()) return; if(PREVIEW.on){ play(cur+1); return; }
   // NOVEDAD AL AIRE: mientras dure su turno la pieza nueva se repite sola; al
   // agotarse, freshEnd() deja cur EN ella para que el loop siga por la siguiente
   // (o arranca otra novedad que hubiera entrado mientras).
@@ -2158,6 +2185,9 @@ function applyPlayTag(tag){
 async function queueTaggedContent(num){
   const wanted=String(num||'').replace(/^#/,'').trim();
   if(!/^\d{1,6}$/.test(wanted)) return 'ignored';
+  // Esta orden manual tiene una ventana propia: durante descarga + reproducción
+  // pollMode no puede recuperar el sincro y cortar la cápsula a los 12 segundos.
+  const forcedState=beginForcedTagPlayback(wanted);
   disableAdmiraSync();
   if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
   try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}
@@ -2165,13 +2195,16 @@ async function queueTaggedContent(num){
   // refresco periódico. Primero traemos el Stock vivo y sólo entonces resolvemos #ID.
   await loadFeed(false);
   const it=all.find(x=>String(x&&x._num!=null?x._num:(x&&x.num))===wanted);
-  if(!it){ flashCli('✗ contenido #'+wanted+' no encontrado'); return 'ignored'; }
+  if(!it){ releaseForcedTagPlayback(forcedState); flashCli('✗ contenido #'+wanted+' no encontrado'); return 'ignored'; }
+  if(!ownsForcedTagPlayback(forcedState)) return 'ignored';
+  forcedState.id=String(it.id||'');
   taggedContentNums=[wanted].concat(taggedContentNums.filter(n=>String(n)!==wanted)).slice(0,20);
   saveTaggedContent(); seenSig=''; rebuild(false); // lo publica en la playlist efectiva del CMS
   const idx=playlist.findIndex(x=>x&&String(x.id)===String(it.id));
-  if(idx<0){ flashCli('✗ contenido #'+wanted+' fuera de playlist'); return 'ignored'; }
+  if(idx<0){ releaseForcedTagPlayback(forcedState); flashCli('✗ contenido #'+wanted+' fuera de playlist'); return 'ignored'; }
   const ready=!cacheable(it)||!!(await cachedSrc(it));
-  if(ready){ _asapItemId=null; await play(idx,it); flashCli('▶ contenido #'+wanted+' · listo'); return 'executed'; }
+  if(!ownsForcedTagPlayback(forcedState)) return 'ignored';
+  if(ready){ _asapItemId=null; markForcedTagPlaying(forcedState,it); await play(idx,it); flashCli('▶ contenido #'+wanted+' · listo'); return 'executed'; }
   _asapItemId=it.id;
   if(stage.querySelector('video,img,audio')) warmSwitchWait(); else coldStartPlaceholder();
   precachePriority(it); try{ cacheReport(); }catch(_){}
@@ -2180,6 +2213,7 @@ async function queueTaggedContent(num){
 }
 function clearTaggedContent(){
   taggedContentNums=[]; saveTaggedContent(); _asapItemId=null;
+  if(_forcedTagPlayback) releaseForcedTagPlayback(_forcedTagPlayback);
   _coldWaiting=false; _warmWaiting=false; dlLine(null); seenSig=''; rebuild(false);
   flashCli('✓ contenidos añadidos retirados'); return 'executed';
 }
@@ -3334,13 +3368,15 @@ async function pollMode(){
   if(!scr.circuit) return;   // sólo equipos registrados (con circuito/id)
   // Un modo bloqueado por la integración, URL_TAG o tag EN VIVO = decisión
   // explícita del operador: esta pantalla no obedece cambios de modo remotos.
-  if(MODE_LOCK||URL_TAG||URL_SYNC||_liveTag||_liveMode) return;
+  if(MODE_LOCK||URL_TAG||URL_SYNC||_liveTag||_liveMode||_forcedTagPlayback) return;
   try{
     const plan=await fetch(PLAYOUT_ASSIGNMENT_API+'?screen='+encodeURIComponent(scr.screen||scr.circuit)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
+    if(_forcedTagPlayback) return; // la orden pudo entrar mientras esperaba la red
     if(applyPlayoutAssignment(plan)) return;
   }catch(_){}
   try{
     const d=await fetch(MODE_API+'?id='+encodeURIComponent(scr.circuit)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
+    if(_forcedTagPlayback) return;
     if(!d||!d.mode) return;
     const m=canonicalAdmiraMode(d.mode);
     if(m!==playoutMode){ clearExtendedAssignment(); setAdmiraMode(m); flashCli('◆ modo remoto: '+m); }
@@ -3749,6 +3785,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r16.2248" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r17.2358" defer></script>
 </body>
 </html>

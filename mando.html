@@ -644,15 +644,24 @@
       if(!src&&String(it.type||'').toLowerCase()==='image') src=String(it.url||'');
       return /^https?:\/\//.test(src)?src:'';
     }
+    function youtubeVideoId(it){
+      var sources=[remoteControlImage(it),String(it&&it.url||'')];
+      for(var i=0;i<sources.length;i++){
+        var src=sources[i], match=/(?:img\.youtube\.com\/vi\/|youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:embed\/|shorts\/|live\/)|[?&]v=)([\w-]{11})(?:[/?&#.]|$)/i.exec(src);
+        if(match) return match[1];
+      }
+      return '';
+    }
     function previewFallbackData(it){
       var type=String(it&&it.type||'contenido').toUpperCase().slice(0,12), icon=/video|animation/i.test(type)?'▶':/audio|music/i.test(type)?'♪':'▧';
       var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#20305f"/><stop offset="1" stop-color="#774e96"/></linearGradient></defs><rect width="320" height="180" fill="url(#g)"/><circle cx="160" cy="82" r="34" fill="#ffffff22"/><text x="160" y="95" fill="white" font-size="42" text-anchor="middle">'+icon+'</text><text x="160" y="154" fill="#eee6ff" font-family="monospace" font-size="15" text-anchor="middle">'+type+'</text></svg>';
       return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
     }
     function youtubeFrameCandidates(it,slot){
-      var src=remoteControlImage(it), m=/img\.youtube\.com\/vi\/([\w-]{11})\//.exec(src), out=[];
-      if(m&&slot) out.push('https://img.youtube.com/vi/'+m[1]+'/'+Math.max(1,Math.min(3,slot))+'.jpg');
-      if(src) out.push(src); return out;
+      var src=remoteControlImage(it), id=youtubeVideoId(it), out=[];
+      if(id&&slot) out.push('https://img.youtube.com/vi/'+id+'/'+Math.max(1,Math.min(3,slot))+'.jpg');
+      if(id&&!slot){ out.push('https://img.youtube.com/vi/'+id+'/hqdefault.jpg'); out.push('https://img.youtube.com/vi/'+id+'/0.jpg'); }
+      if(src&&!out.includes(src)) out.push(src); return out;
     }
     function checkedPreview(src){
       if(!src) return Promise.resolve(''); if(PREVIEW_CHECKS.has(src)) return PREVIEW_CHECKS.get(src);
@@ -698,12 +707,15 @@
     function paintRemoteContext(items,current){
       items=Array.isArray(items)?items:[]; var currentId=String(current&&current.id||''),index=items.findIndex(function(it){ return String(it&&it.id||'')===currentId; });
       var exact=currentId&&items.filter(function(it){ return String(it&&it.id||'')===currentId; }).length===1;
-      var syncLocked=!!(current&&current.sinc&&current.sinc.on), canNavigate=exact&&!syncLocked;
-      var prev=canNavigate&&items.length?items[(index-1+items.length)%items.length]:null;
-      var next=canNavigate&&items.length?items[(index+1)%items.length]:null;
-      var unavailable=syncLocked?'Gobernado por sincro':exact?'Destino no disponible':'Posición no disponible';
+      var syncLocked=!!(current&&current.sinc&&current.sinc.on), hasContext=!!(exact&&items.length), canNavigate=hasContext&&!syncLocked;
+      // El sincro bloquea la orden manual, no la referencia visual: conservamos
+      // los vecinos para que Anterior/Siguiente sigan enseñando su fotograma clave.
+      var prev=hasContext?items[(index-1+items.length)%items.length]:null;
+      var next=hasContext?items[(index+1)%items.length]:null;
+      var unavailable=exact?'Destino no disponible':'Posición no disponible';
       paintMediaControl(previousControl,document.getElementById('previousTitle'),prev,unavailable,'Anterior');
       paintMediaControl(nextControl,document.getElementById('nextTitle'),next,unavailable,'Siguiente');
+      if(syncLocked){ previousControl.title+=' · Gobernado por sincro'; nextControl.title+=' · Gobernado por sincro'; }
       previousControl.disabled=!canNavigate; nextControl.disabled=!canNavigate;
       previousControl.classList.toggle('sync-locked',!canNavigate); nextControl.classList.toggle('sync-locked',!canNavigate);
       var currentMedia=index>=0?Object.assign({},items[index],current||{}):current;
@@ -1180,6 +1192,6 @@
     setInterval(pollNow, 5000);
     setInterval(function(){ if(!document.hidden) paintPreviewProgress(Date.now()); },500);
   </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r16.2248" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r17.2358" defer></script>
 </body>
 </html>
