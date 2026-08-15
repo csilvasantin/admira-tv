@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=15.08.2026.r8.2120"></script>
+<script src="/auth-gate.js?v=15.08.2026.r9.2127"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -24,6 +24,15 @@
   .live{display:flex;align-items:center;gap:7px;font:600 12px ui-monospace,monospace;color:var(--dim)}
   .live .dot{width:8px;height:8px;border-radius:50%;background:var(--air);box-shadow:0 0 8px var(--air);animation:pulse 1.6s infinite}
   @keyframes pulse{50%{opacity:.4}}
+  .programatica{margin:14px 20px 4px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,var(--panel2),var(--panel));overflow:hidden}
+  .programatica>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;color:var(--ink);font:800 12px ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;user-select:none}
+  .programatica>summary::-webkit-details-marker{display:none}
+  .programatica>summary::before{content:'›';color:var(--accent);font-size:20px;line-height:.8;transition:transform .16s}
+  .programatica[open]>summary::before{transform:rotate(90deg)}
+  .programatica>summary:hover,.programatica>summary:focus-visible{background:#142039;outline:none}
+  .programaticaHint{margin-left:auto;color:var(--dim);font-size:9px;letter-spacing:.05em;font-weight:600}
+  .programatica[open] .programaticaHint::after{content:'compactar'}.programatica:not([open]) .programaticaHint::after{content:'desplegar'}
+  .programaticaBody{border-top:1px solid var(--line);padding-bottom:14px}
   .kpis{display:flex;gap:12px;flex-wrap:wrap;padding:18px 20px 4px}
   .kpi{flex:1;min-width:130px;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
        border-radius:14px;padding:14px 16px}
@@ -459,6 +468,7 @@
   .ebMach .mtag{display:inline-block;margin-top:5px;padding:1px 7px;border-radius:5px;border:1px solid var(--line);color:var(--dim);font-size:10px}
   .ebSrcErr{color:var(--off);font-size:11px;padding:4px 16px 10px}
   @media(max-width:640px){ .emitBoard{margin:12px 10px} }
+  @media(max-width:640px){ .programatica{margin:12px 10px 4px}.programatica>summary{padding:11px 13px}.programaticaBody .kpis{padding:14px 10px 4px}.programaticaBody .cmsfilter{padding:8px 10px 0} }
   /* el chrome (barra + sidebar + detalle) lo aporta /admira-nav.js — ver config al final del body */
 
 /* ── TABLA DE FLOTA: columnas marcadas y reajustables (Carlos, 12-ago-2026) ──
@@ -485,7 +495,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=15.08.2026.r8.2120">
+  <link rel="stylesheet" href="/admira-frame.css?v=15.08.2026.r9.2127">
 </head>
 <body>
 <script>
@@ -504,8 +514,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=15.08.2026.r8.2120"></script>
-<script src="/admira-frame.js?v=15.08.2026.r8.2120" defer></script>
+<script src="/admira-nav.js?v=15.08.2026.r9.2127"></script>
+<script src="/admira-frame.js?v=15.08.2026.r9.2127" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -546,9 +556,12 @@ window.ADMIRA_NAV={
 .af-panel .afAct .t{ opacity:1 !important; pointer-events:auto !important }
 </style>
 
-<!-- Submenú operativo de flota: resumen, búsqueda y filtros siempre arriba,
-     inmediatamente después del menú principal y antes de EN EMISIÓN. -->
-<div class="kpis">
+<!-- Programática agrupa el resumen y los filtros de flota. Parte compactada para
+     que EN EMISIÓN conserve la prioridad visual; details aporta teclado y estado nativos. -->
+<details class="programatica" id="programatica">
+  <summary>Programática <span class="programaticaHint" aria-hidden="true"></span></summary>
+  <div class="programaticaBody">
+  <div class="kpis">
   <div class="kpi accent"><div class="n" id="k-total">—</div><div class="l">dispositivos</div></div>
   <div class="kpi air"><div class="n" id="k-online">—</div><div class="l">emitiendo ahora</div></div>
   <div class="kpi amber"><div class="n" id="k-aud">—</div><div class="l">con audiencia</div></div>
@@ -574,6 +587,8 @@ window.ADMIRA_NAV={
   </select>
   <span class="meta" id="filterCount"></span>
 </div>
+  </div>
+</details>
 
 <!-- tarea5-asistencia-r36 · EN EMISIÓN + botón 🎥 Asistencia recíproco con Yokup (sala = id de pantalla, ocupación por sonda WS) -->
 <section class="emitBoard" id="emitBoard">
@@ -656,7 +671,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=15.08.2026.r8.2120"></script>
+<script src="xpl-runtime.js?v=15.08.2026.r9.2127"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -2047,10 +2062,10 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-session.js?v=15.08.2026.r8.2120"></script>
-<script src="/admira-avatar.js?v=15.08.2026.r8.2120"></script>
-<script src="/cms-pacman.js?v=15.08.2026.r8.2120"></script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r8.2120" defer></script>
+<script src="/admira-session.js?v=15.08.2026.r9.2127"></script>
+<script src="/admira-avatar.js?v=15.08.2026.r9.2127"></script>
+<script src="/cms-pacman.js?v=15.08.2026.r9.2127"></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r9.2127" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
    Mismo patrón que el highscore de yokup: tirador por columna, mínimo por

@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=15.08.2026.r8.2120"></script>
+<script src="xpl-runtime.js?v=15.08.2026.r9.2127"></script>
 <script>
-  window.ADMIRA_VERSION='v.15.08.2026.r8.21:20';
+  window.ADMIRA_VERSION='v.15.08.2026.r9.21:27';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -806,14 +806,19 @@ function moveItem(src,dst){
 let mupiAR=9/16;
 const DISPLAY_ROTATION_KEY='adtv_display_rotation:'+(scr.screen||scr.circuit||'unbound');
 let displayRotation=(()=>{ const n=parseInt(LS(DISPLAY_ROTATION_KEY,'0'),10)||0; return ((Math.round(n/90)*90)%360+360)%360; })();
-function applyDisplayRotation(delta){
-  if(delta){ displayRotation=(displayRotation+delta+360)%360; save(DISPLAY_ROTATION_KEY,String(displayRotation)); }
+function setDisplayRotation(degrees){
+  const n=Number(degrees);
+  if(Number.isFinite(n)){
+    displayRotation=((Math.round(n/90)*90)%360+360)%360;
+    save(DISPLAY_ROTATION_KEY,String(displayRotation));
+  }
   const mupi=$('mupi'); if(mupi) mupi.style.transform=displayRotation?'rotate('+displayRotation+'deg)':'';
   try{ if(DEVICE_TELEMETRY&&DEVICE_TELEMETRY.display) DEVICE_TELEMETRY.display.rotation=displayRotation; }catch(_){}
   try{ if(_nowItem) setTimeout(()=>_postNow(_nowItem),0); }catch(_){}
   fitMupi();
   return displayRotation;
 }
+function applyDisplayRotation(delta){ return setDisplayRotation(displayRotation+(Number(delta)||0)); }
 function itemAR(it){
   if(it&&it._dim&&it._dim.w&&it._dim.h){ const r=it._dim.w/it._dim.h; return Math.max(9/21,Math.min(21/9,r)); }
   const tg=(it&&it.tags)||[];
@@ -2184,6 +2189,8 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='rotate-90'||cmd==='rotate90'||cmd==='girar90'||cmd==='rotar90'){
     const angle=applyDisplayRotation(90); flashCli('↻ pantalla '+angle+'°'); return;
   }
+  const rotationCmd=/^rotation-(0|90|180|270)$/.exec(cmd);
+  if(rotationCmd){ const angle=setDisplayRotation(Number(rotationCmd[1])); flashCli('↻ pantalla '+angle+'°'); return; }
   if(cmd==='vertical'||cmd==='portrait'){ seg.tag='vertical'; seg.format='9:16'; applyCliSegment('✓ vertical 9:16'); return; }
   if(cmd==='tag'){ seg.tag=canonicalPlayTag(rest||''); applyCliSegment('✓ tag '+(seg.tag||'all')); return; }
   if(cmd==='medio'||cmd==='media'){
@@ -3458,6 +3465,8 @@ async function applyCtrlCmd(cmd){
       return captured?'executed':'failed';
     }
     default: {
+      const rotation=/^rotation-(0|90|180|270)$/.exec(cmd);
+      if(rotation){ setDisplayRotation(Number(rotation[1])); flashCli('↻ pantalla '+displayRotation+'°'); return 'executed'; }
       const tagged=/^content-(\d{1,6})$/.exec(cmd);
       if(tagged) return queueTaggedContent(tagged[1]);
       if(cmd==='content-clear') return clearTaggedContent();
@@ -3661,6 +3670,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r8.2120" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r9.2127" defer></script>
 </body>
 </html>

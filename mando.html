@@ -31,12 +31,15 @@
     label.fld{display:block;font-family:var(--mono);font-size:11px;color:var(--muted);margin:12px 0 4px;letter-spacing:.06em}
     select,input,.b,.chip{font-family:var(--mono)}
     select{width:100%;font-size:14px;padding:11px 12px;border-radius:10px;background:#0d1018;color:var(--text);border:1px solid var(--border)}
-    .target-row{display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:8px;align-items:stretch}
+    .target-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(196px,220px);gap:8px;align-items:stretch}
     .target-row select{min-width:0}
-    .rotate-screen{--cmd-progress:0deg;--cmd-ring:var(--cyan);position:relative;display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;border:1px solid var(--cyan);border-radius:10px;background:color-mix(in srgb,var(--cyan) 9%,transparent);color:var(--cyan);font:700 13px var(--mono);cursor:pointer;white-space:nowrap}
-    .rotate-screen:hover{border-color:var(--violet);color:var(--text)}
-    .rotate-screen:active{transform:scale(.97)}
-    .rotate-screen:focus-visible{outline:2px solid #fff;outline-offset:2px}
+    .rotation-picker{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible;border:1px solid var(--cyan);border-radius:10px;background:color-mix(in srgb,var(--cyan) 7%,transparent)}
+    .rotation-option{--cmd-progress:0deg;--cmd-ring:var(--cyan);position:relative;min-width:0;border:0;border-right:1px solid color-mix(in srgb,var(--cyan) 38%,transparent);background:transparent;color:var(--muted);font:700 11px var(--mono);cursor:pointer;white-space:nowrap}
+    .rotation-option:first-child{border-radius:9px 0 0 9px}.rotation-option:last-child{border-right:0;border-radius:0 9px 9px 0}
+    .rotation-option:hover{background:color-mix(in srgb,var(--violet) 13%,transparent);color:var(--text)}
+    .rotation-option:active{transform:scale(.96)}
+    .rotation-option:focus-visible{z-index:2;outline:2px solid #fff;outline-offset:2px}
+    .rotation-option.on{background:var(--cyan);color:#06130f;box-shadow:inset 0 0 0 1px color-mix(in srgb,#fff 35%,transparent)}
     .cinfo{display:flex;gap:8px;align-items:center;margin-top:6px;font-size:11px;color:var(--dim);font-family:var(--mono)}
     .cinfo b{color:var(--muted)}
     .stage{margin:12px 0;display:flex;gap:12px;align-items:stretch}
@@ -111,6 +114,7 @@
     .tech-pill.primary{border-color:color-mix(in srgb,var(--cyan) 55%,var(--border));color:var(--cyan)}.tech-pill.missing{border-style:dashed;color:var(--dim)}
     .content-opt{margin-top:8px;color:#76f2a8;font:10px/1.4 var(--mono)}.content-opt.warn{color:var(--amber)}
     @media(max-width:420px){.status-grid{grid-template-columns:1fr}.status-card.wide{grid-column:auto}.status-card.wide .status-row{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}.content-card{grid-template-columns:86px minmax(0,1fr)}.content-preview{width:86px}}
+    @media(max-width:460px){.target-row{grid-template-columns:1fr}.rotation-picker{min-height:42px}}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
     .remote-title{margin-top:16px;color:var(--cyan);font:700 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
     .remote-title::after{content:"";height:1px;flex:1;background:var(--border)}
@@ -191,7 +195,12 @@
   <label class="fld">Pantalla / tótem a controlar</label>
   <div class="target-row">
     <select id="target" aria-label="Pantalla o tótem a controlar"></select>
-    <button type="button" class="rotate-screen" id="rotateScreen" data-cmd="rotate-90" aria-label="Girar 90 grados la pantalla seleccionada" title="Girar 90° la pantalla seleccionada">↻ 90°</button>
+    <div class="rotation-picker" id="rotationPicker" role="group" aria-label="Orientación de la pantalla">
+      <button type="button" class="rotation-option" data-rotation="0" aria-label="Girar pantalla a 0 grados" aria-pressed="false">0°</button>
+      <button type="button" class="rotation-option" data-rotation="90" aria-label="Girar pantalla a 90 grados" aria-pressed="false">90°</button>
+      <button type="button" class="rotation-option" data-rotation="180" aria-label="Girar pantalla a 180 grados" aria-pressed="false">180°</button>
+      <button type="button" class="rotation-option" data-rotation="270" aria-label="Girar pantalla a 270 grados" aria-pressed="false">270°</button>
+    </div>
   </div>
   <div class="cinfo">circuito: <b id="cir">—</b> · pantalla: <b id="scr">—</b></div>
 
@@ -260,10 +269,6 @@
     <button id="power" style="border-color:var(--border);background:transparent;color:var(--muted)">⏻ Apagar player</button>
   </div>
   <div class="chips" id="tagChips"></div>
-  <div class="note">Escribe el número visible de Stock (p.ej. <b>#712</b>) para añadir esa pieza a la playlist:
-    el player refresca el catálogo, la pone a descargar primero y la reproduce en cuanto queda en disco. Un hashtag (p.ej. <b>#musica</b>) sustituye temporalmente la emisión por una playlist con todos y únicamente los contenidos que tengan esa etiqueta.
-    «Apagar player» deja el proceso escuchando y se convierte en «Arrancar». «Limpiar tag» devuelve la playlist a su gobierno normal.</div>
-
   <div class="sec">Contenido rápido</div>
   <div class="chips" id="seg">
     <button class="chip" data-cmd="reset">Todo</button>
@@ -455,7 +460,7 @@
       T = FLAT[+selEl.value];
       document.getElementById('cir').textContent = T.circuit;
       document.getElementById('scr').textContent = T.screen;
-      paintRotationButton();
+      paintRotationPicker();
       closePreview(); previewSignature=''; previewItem=null; previewVisual=null; setPreviewPaused(false); previewEmpty('Esperando señal del player remoto');
       remotePlaylistItems=[]; document.getElementById('playlistSummary').textContent='— cargando inventario';
       document.getElementById('playlistList').innerHTML='<div class="pl-empty">Esperando la playlist efectiva del player seleccionado</div>';
@@ -552,20 +557,27 @@
     }
     function toast(t){ var el=document.getElementById('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(window.__tt); window.__tt=setTimeout(function(){el.classList.remove('show');},1700); }
 
-    document.querySelectorAll('[data-cmd]').forEach(function(b){ if(b.id!=='rotateScreen') b.onclick=function(){ sendRemote(b.dataset.cmd,b); }; });
+    document.querySelectorAll('[data-cmd]').forEach(function(b){ b.onclick=function(){ sendRemote(b.dataset.cmd,b); }; });
 
-    var rotateScreen=document.getElementById('rotateScreen');
+    var rotationPicker=document.getElementById('rotationPicker');
+    var rotationOptions=Array.from(rotationPicker.querySelectorAll('[data-rotation]'));
     function currentRotation(){ var n=Number(rotationByScreen.get(T&&T.screen)); return Number.isFinite(n)?((Math.round(n/90)*90)%360+360)%360:0; }
-    function paintRotationButton(){
-      if(!rotateScreen||!T) return; var next=(currentRotation()+90)%360;
-      rotateScreen.textContent='↻ '+next+'°';
-      rotateScreen.setAttribute('aria-label','Girar la pantalla a '+next+' grados');
-      rotateScreen.title='Girar la pantalla a '+next+'°';
+    function paintRotationPicker(){
+      var current=currentRotation();
+      rotationOptions.forEach(function(button){
+        var selected=Number(button.dataset.rotation)===current;
+        button.classList.toggle('on',selected);
+        button.setAttribute('aria-pressed',selected?'true':'false');
+      });
     }
-    rotateScreen.onclick=async function(){
-      var targetScreen=T.screen, before=currentRotation(), ok=await sendRemote('rotate-90',rotateScreen);
-      if(ok&&T.screen===targetScreen){ rotationByScreen.set(targetScreen,(before+90)%360); paintRotationButton(); }
-    };
+    rotationOptions.forEach(function(button){
+      button.onclick=async function(){
+        var targetScreen=T.screen, degrees=Number(button.dataset.rotation);
+        if(degrees===currentRotation()) return;
+        var ok=await sendRemote('rotation-'+degrees,button);
+        if(ok&&T.screen===targetScreen){ rotationByScreen.set(targetScreen,degrees); paintRotationPicker(); }
+      };
+    });
 
     var POWER_KEY='mando_standby_by_screen';
     function powerStore(){ try{ return JSON.parse(localStorage.getItem(POWER_KEY)||'{}'); }catch(_){ return {}; } }
@@ -1085,7 +1097,7 @@
         var d=rows[0], shotMeta=rows[1];
         if(generation!==targetGeneration||requestSeq!==nowRequestSeq) return;
         var reportedRotation=Number(d&&d.device&&d.device.display&&d.device.display.rotation);
-        if(Number.isFinite(reportedRotation)){ rotationByScreen.set(target.screen,reportedRotation); paintRotationButton(); }
+        if(Number.isFinite(reportedRotation)){ rotationByScreen.set(target.screen,reportedRotation); paintRotationPicker(); }
         var it=d&&d.item, shotPreview=remoteShotPreview(shotMeta,target,it);
         var reportedAudio=(it&&it.audio)||(d&&d.device&&d.device.audio);
         if(reportedAudio&&typeof reportedAudio.muted==='boolean'){
@@ -1113,6 +1125,6 @@
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r8.2120" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r9.2127" defer></script>
 </body>
 </html>

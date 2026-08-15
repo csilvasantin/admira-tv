@@ -1,9 +1,9 @@
 {
-  "version": "v.15.08.2026.r8.21:20",
+  "version": "v.15.08.2026.r9.21:27",
   "signature": "TrinityMBP16 · MacBookPro16",
   "agent": "TrinityMBP16",
   "machine": "MacBookPro16",
   "day": "15.08.2026",
-  "time": "21:20",
-  "evidence": "El CMS muestra el último latido junto a la hora real de arranque de la pieza y sitúa KPIs, búsqueda y filtros inmediatamente bajo el menú superior; además corrige el censo de Digital Signage para que emita en /cms."
+  "time": "21:27",
+  "evidence": "El mando permite elegir directamente 0°, 90°, 180° o 270° con confirmación del player y elimina la explicación extensa de contenido etiquetado; el CMS agrupa indicadores, búsqueda y filtros en Programática, compactada por defecto."
 }
