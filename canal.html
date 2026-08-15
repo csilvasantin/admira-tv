@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=15.08.2026.r12.2201"></script>
+<script src="xpl-runtime.js?v=15.08.2026.r13.2211"></script>
 <script>
-  window.ADMIRA_VERSION='v.15.08.2026.r12.22:01';
+  window.ADMIRA_VERSION='v.15.08.2026.r13.22:11';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -534,7 +534,14 @@ async function fetchSyncState(){
       // en antena cada 30 s aunque el máster fuera idéntico (re-decode + parpadeo + un
       // pase falso de proof-of-play por sondeo). Ahora solo si el máster CAMBIÓ o si
       // veníamos sin máster (boot, re-encendido de sincro, o el toggle lo anuló).
-      const sig=items.map(i=>i.id).join(',')+'|'+(d.slotMs||20000)+'|'+leader;
+      // La duración forma parte del contrato de sincro. El worker conserva 20 s como
+      // respaldo, pero cada cápsula con metadatos gobierna su tramo completo. Mezclamos
+      // también el inventario técnico local: ya conoce la duración de los assets en disco
+      // aunque una playlist antigua todavía haya publicado `dur:0`.
+      items=items.map(i=>{ const tech=(typeof _cacheTech!=='undefined'&&_cacheTech.get)?_cacheTech.get(String(i.id)):null;
+        const dur=Number(i._dur||i.dur||(tech&&tech.duration))||0;
+        return Object.assign({},i,{_dur:dur>0?dur:0}); });
+      const sig=items.map(i=>i.id+':'+Math.round(Number(i._dur||i.dur)||0)).join(',')+'|'+(d.slotMs||20000)+'|'+leader;
       const hadRemote=!!SYNC_REMOTE;
       SYNC_REMOTE={ items, slotMs:d.slotMs||20000, offset:(d.serverNow||Date.now())-Date.now() };   // el reloj del máster SIEMPRE fresco: no necesita rebuild
       if(syncOn && (sig!==_syncSig || !hadRemote)){ _syncSig=sig; rebuild(true); }
@@ -685,10 +692,40 @@ function barFromAdv(){ const el=advElapsed+(paused?0:Date.now()-advStart); bar.s
 function startBar(){ stopBar(); if(__adtvClean) return; barTimer=setInterval(barFromAdv,120); }
 function startAdv(ms){ usesAdv=true; advTotal=ms; advElapsed=0; advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,ms); startBar(); }
 function syncNow(){ return Date.now()+(SYNC_REMOTE?SYNC_REMOTE.offset:syncTimeOffset); }   // reloj del máster central si está
-function syncSlotMs(){ return (SYNC_REMOTE&&SYNC_REMOTE.slotMs)?SYNC_REMOTE.slotMs:syncSlotSec*1000; }
-function syncElapsedMs(){ return syncNow()%syncSlotMs(); }
-function syncRemainingMs(){ return Math.max(300,syncSlotMs()-syncElapsedMs()); }
-function syncIndex(){ return playlist.length ? Math.floor(syncNow()/syncSlotMs())%playlist.length : 0; }
+function syncFallbackSlotMs(){ return (SYNC_REMOTE&&SYNC_REMOTE.slotMs)?SYNC_REMOTE.slotMs:syncSlotSec*1000; }
+function syncItemDurationMs(it){
+  if(!it) return syncFallbackSlotMs();
+  const tech=(typeof _cacheTech!=='undefined'&&_cacheTech.get)?_cacheTech.get(String(it.id)):null;
+  let sec=Number(it._dur||it.dur||(tech&&tech.duration)||it._previewSec||it.seconds)||0;
+  const kind=KIND[it.type]||'image';
+  if(sec<=0&&kind==='image') sec=Math.max(2,Number(cfg.imgSec)||0);
+  if(sec<=0&&kind==='audio') sec=Math.max(3,Number(cfg.audioSec)||0);
+  if(sec<=0&&kind==='interactive') sec=Math.max(5,Number(cfg.interSec)||0);
+  // Redondeo hacia arriba: nunca cortar los últimos milisegundos del fichero.
+  return sec>0?Math.max(1000,Math.ceil(sec)*1000):syncFallbackSlotMs();
+}
+// Línea temporal variable pero determinista: todas las pantallas usan el mismo reloj,
+// orden y duración por pieza. Ya no se trocea un videoclip de 3 min en slots de 20 s.
+function syncTimeline(){
+  if(!playlist.length) return {index:0,duration:syncFallbackSlotMs(),elapsed:0,remaining:syncFallbackSlotMs(),total:syncFallbackSlotMs()};
+  const durations=playlist.map(syncItemDurationMs), total=durations.reduce((sum,ms)=>sum+ms,0)||syncFallbackSlotMs();
+  const now=syncNow(), pos=((now%total)+total)%total;
+  let start=0,index=durations.length-1;
+  for(let i=0;i<durations.length;i++){ if(pos<start+durations[i]){ index=i; break; } start+=durations[i]; }
+  const duration=durations[index], elapsed=Math.max(0,pos-start);
+  return {index,duration,elapsed,remaining:Math.max(0,duration-elapsed),total};
+}
+function syncSlotMs(){ return syncTimeline().duration; }
+function syncElapsedMs(){ return syncTimeline().elapsed; }
+function syncRemainingMs(){ return Math.max(300,syncTimeline().remaining); }
+function syncIndex(){ return playlist.length ? syncTimeline().index : 0; }
+function syncFinishCurrent(){
+  const line=syncTimeline();
+  if(line.index!==cur){ play(line.index); return; }
+  // El elemento conserva su último fotograma (o silencio en audio) durante la fracción
+  // de redondeo restante. Reiniciarlo aquí producía un destello al final de la cápsula.
+  clearTimeout(timer); timer=setTimeout(next,Math.max(300,line.remaining));
+}
 // El máster lo dicta el worker (única autoridad) si está cargado; si no, cálculo local determinista.
 function syncMasterOrder(){ return (SYNC_REMOTE&&SYNC_REMOTE.items&&SYNC_REMOTE.items.length)?SYNC_REMOTE.items:defaultOrder(all.filter(it=>!it._grid)).slice(0,SYNC_MASTER_MAX); }
 function xplUrl(){
@@ -1067,8 +1104,10 @@ function signageNowPush(it){
   const sinc = { on:(syncOn||!!_extendedAssignment)?1:0, modo:_extendedAssignment?'extended':playoutMode };
   if(syncOn){ try{ sinc.idx=syncIndex(); sinc.slot=Math.round(syncSlotMs()/1000); sinc.n=playlist.length; }catch(_){} }
   if(_extendedAssignment&&_extendedAssignment.tile){ sinc.tile=_extendedAssignment.tile; sinc.revision=_extendedAssignment.revision||0; }
+  const effectiveDuration=syncOn?Math.round(syncSlotMs()/1000):(it._dur||it._previewSec||0);
+  const effectiveStartedAt=syncOn?(now-Math.round(syncElapsedMs())):now;
   const item={ id:it.id, url:it.url, type:it.type||'image', ar:(mupiAR||itemAR(it)||(9/16)),
-    title:(it.title||it.prompt||'').slice(0,80), dur:(it._dur||it._previewSec||0), startedAt:now, ts:now, aud:_lastAud, audio:playerAudioState(), sinc };
+    title:(it.title||it.prompt||'').slice(0,80), dur:effectiveDuration, startedAt:effectiveStartedAt, ts:now, aud:_lastAud, audio:playerAudioState(), sinc };
   const cambiaPieza = !_nowItem || String(_nowItem.id)!==String(item.id);
   _nowItem=item; _postNow(item);
   // Foto y título salen JUNTOS. El título viaja en este beat y cambia al instante; la
@@ -1116,8 +1155,10 @@ function signagePlaylistPush(){
     title:String(it.title||it.prompt||'sin título').slice(0,120),
     type:String(it.type||'image'), url:String(it.url||'').slice(0,500),
     thumb:String(it.thumbnail||it.thumb||it.poster||'').slice(0,500),
-    dur:Math.round(it._dur||it._previewSec||0)||null }));
-  const sig=items.map(i=>[i.id,i.url,i.thumb].join('~')).join('|');
+    dur:Math.ceil(it._dur||it._previewSec||0)||null }));
+  // La duración también invalida la firma: al descubrir los metadatos del vídeo hay
+  // que republicar la playlist, aunque id/url/miniatura no hayan cambiado.
+  const sig=items.map(i=>[i.id,i.url,i.thumb,i.dur||0].join('~')).join('|');
   if(sig===_plSig) return;
   _plSig=sig;
   try{ fetch(PLAYLIST_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
@@ -1400,7 +1441,14 @@ function queueTechnicalAnalysis(it){
 }
 async function runTechnicalAnalysis(){
   if(_techBusy) return; _techBusy=true;
-  try{ while(_techQ.length){ const it=_techQ.shift(),id=String(it&&it.id||''); _techQueued.delete(id); try{ const tech=await analyzeCachedContent(it); if(tech){ _cacheTech.set(id,tech); saveCacheTech(); _cacheSig=''; cacheReport(); } }catch(_){} await new Promise(r=>setTimeout(r,80)); } }
+  try{ while(_techQ.length){ const it=_techQ.shift(),id=String(it&&it.id||''); _techQueued.delete(id); try{ const tech=await analyzeCachedContent(it); if(tech){
+      _cacheTech.set(id,tech);
+      if(tech.duration>0){ const sec=Math.ceil(tech.duration); it._dur=sec;
+        for(const p of playlist){ if(String(p&&p.id||'')===id) p._dur=sec; }
+        for(const p of all){ if(String(p&&p.id||'')===id) p._dur=sec; }
+      }
+      saveCacheTech(); _cacheSig=''; cacheReport(); signagePlaylistPush();
+    } }catch(_){} await new Promise(r=>setTimeout(r,80)); } }
   finally{ _techBusy=false; }
 }
 let _asapItemId=null;   // #ID solicitado: no saltar a otra pieza lista mientras ésta baja
@@ -1706,8 +1754,29 @@ async function play(i, forced){
     v.style.opacity='0';
     const _reveal=()=>{ try{ v.style.opacity='1'; }catch(_){} };
     v.addEventListener('playing', _reveal, {once:true}); setTimeout(_reveal, 1200);
-    v.onloadedmetadata=()=>{ if(v.duration&&isFinite(v.duration)){ it._dur=Math.round(v.duration); if(_nowItem&&String(_nowItem.id)===String(it.id)){ _nowItem.dur=it._dur; _postNow(_nowItem); } if(v.videoWidth&&v.videoHeight){ it._dim={w:v.videoWidth,h:v.videoHeight}; mupiAR=_extendedAssignment?(window.innerWidth/Math.max(1,window.innerHeight)):(v.videoWidth/v.videoHeight); fitMupi(); emitFrameState(it); } if(_extendedAssignment&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,((Date.now()+_extendedClockOffset)/1000)%v.duration); }catch(_){} } else if(syncOn&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,(syncElapsedMs()/1000)%v.duration); }catch(_){} } localInfoRender(); } };
-    v.onended=()=>syncOn?play(syncIndex()):next();
+    v.onloadedmetadata=()=>{ if(_tok!==_playTok) return; if(v.duration&&isFinite(v.duration)){
+      it._dur=Math.ceil(v.duration);
+      // Devuelve la duración descubierta al máster. Antes sólo se corregía /signage/now:
+      // la playlist seguía en dur:0 y el temporizador sincro mantenía el corte de 20 s.
+      try{ signagePlaylistPush(); }catch(_){}
+      if(_nowItem&&String(_nowItem.id)===String(it.id)){
+        _nowItem.dur=syncOn?Math.round(syncSlotMs()/1000):it._dur;
+        if(syncOn){ _nowItem.startedAt=Date.now()-Math.round(syncElapsedMs()); _nowItem.sinc.idx=syncIndex(); _nowItem.sinc.slot=Math.round(syncSlotMs()/1000); }
+        _nowItem.ts=Date.now(); _postNow(_nowItem);
+      }
+      if(v.videoWidth&&v.videoHeight){ it._dim={w:v.videoWidth,h:v.videoHeight}; mupiAR=_extendedAssignment?(window.innerWidth/Math.max(1,window.innerHeight)):(v.videoWidth/v.videoHeight); fitMupi(); emitFrameState(it); }
+      if(_extendedAssignment&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,((Date.now()+_extendedClockOffset)/1000)%v.duration); }catch(_){} }
+      else if(syncOn&&v.duration>1){
+        const target=syncIndex();
+        // Si una duración nueva cambia el punto de la línea temporal, convergemos al
+        // índice correcto. Si seguimos en la misma pieza, rearmamos con su final real.
+        if(target!==cur){ play(target); return; }
+        try{ v.currentTime=Math.min(v.duration-0.25,(syncElapsedMs()/1000)%v.duration); }catch(_){}
+        clearTimeout(timer); timer=setTimeout(next,syncRemainingMs());
+      }
+      localInfoRender();
+    } };
+    v.onended=()=>syncOn?syncFinishCurrent():next();
     v.onerror=()=>{ if(!_coRetry && v.crossOrigin){ _coRetry=true; try{ v.removeAttribute('crossorigin'); v.load(); v.play().catch(()=>{}); }catch(_){} return; }   // asset sin CORS: reintenta sin crossorigin (nunca se corta la emisión)
       setTimeout(next,600); };
     v.ontimeupdate=()=>{ if(v.duration&&!paused) bar.style.width=(v.currentTime/v.duration*100)+'%'; };
@@ -1773,7 +1842,7 @@ async function play(i, forced){
   } else {
     stage.innerHTML='<div class="audio-card"><div class="ico">♫</div><div class="wave">'
       +Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div><strong>'+title+'</strong></div>';
-    const a=document.createElement('audio'); a.src=SRC; a.autoplay=true; a.onerror=()=>setTimeout(next,600); a.onended=()=>syncOn?play(syncIndex()):next();
+    const a=document.createElement('audio'); a.src=SRC; a.autoplay=true; a.onerror=()=>setTimeout(next,600); a.onended=()=>syncOn?syncFinishCurrent():next();
     mediaEl=a; applyAudio(); stage.querySelector('.audio-card').appendChild(a);
     a.play().then(()=>tap.classList.remove('show')).catch(()=>{ if(!muted) tap.classList.add('show'); });
     startAdv(syncOn?syncRemainingMs():Math.max(3,cfg.audioSec)*1000);
@@ -2017,7 +2086,7 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   all.forEach(it=>{ it._num=it.num; });
   saveCatalog();   // persiste el último catálogo bueno para arranque offline
   // etiquetas de formato/aspecto/resolución desde la caché de dimensiones (instantáneo).
-  for(const it of all){ const dd=dimCache[it.id]; if(dd){ applyFmt(it,dd); it._fmtDone=true; } }
+  for(const it of all){ const dd=dimCache[it.id]; if(dd){ applyFmt(it,dd); if(dd.dur>0) it._dur=Math.ceil(dd.dur); it._fmtDone=true; } }
   // la firma incluye tags+categoría: si editas el metadato de un vídeo, se detecta y reordena.
   const sig=all.map(v=>v.id+'~'+((v.tags||[]).join('.'))+'~'+(v.category||'')).join(',')+'|'+JSON.stringify(seg)+'|'+cfg.max+'|'+playoutMode;
   const isNew=(sig!==seenSig);
@@ -2768,8 +2837,8 @@ function applyFmt(it,dim){ if(!dim||!dim.w||!dim.h) return; it._dim=dim; it.tags
   for(const t of fmtTags(dim.w,dim.h)){ if(t&&it.tags.indexOf(t)<0) it.tags.push(t); } }
 function measureMedia(it){ return new Promise(res=>{ const k=KIND[it.type]||'image'; if(k==='audio'){ res(null); return; }
   if(k==='video'){ const v=document.createElement('video'); v.preload='metadata'; v.muted=true; let dn=false;
-    const fin=(w,h)=>{ if(dn)return; dn=true; try{v.src='';}catch(_){} res(w&&h?{w:w,h:h}:null); };
-    v.onloadedmetadata=()=>fin(v.videoWidth,v.videoHeight); v.onerror=()=>fin(0,0); setTimeout(()=>fin(0,0),9000); v.src=it.url; }
+    const fin=(w,h,dur)=>{ if(dn)return; dn=true; try{v.src='';}catch(_){} res(w&&h?{w:w,h:h,dur:Number(dur)||0}:null); };
+    v.onloadedmetadata=()=>fin(v.videoWidth,v.videoHeight,v.duration); v.onerror=()=>fin(0,0,0); setTimeout(()=>fin(0,0,0),9000); v.src=it.url; }
   else { const im=new Image(); let dn=false; const fin=(w,h)=>{ if(dn)return; dn=true; res(w&&h?{w:w,h:h}:null); };
     im.onload=()=>fin(im.naturalWidth,im.naturalHeight); im.onerror=()=>fin(0,0); setTimeout(()=>fin(0,0),9000); im.src=it.url; }
 }); }
@@ -2777,9 +2846,10 @@ async function measurePass(){ if(_measuring) return;
   const todo=all.filter(it=>{ const k=KIND[it.type]; return (k==='video'||k==='image')&&!it._fmtDone; }); if(!todo.length) return;
   _measuring=true; let i=0, changed=false;
   async function wk(){ while(i<todo.length){ const it=todo[i++]; let dim=dimCache[it.id];
-    if(!dim){ dim=await measureMedia(it); if(dim) dimCache[it.id]=dim; } it._fmtDone=true; if(dim){ applyFmt(it,dim); changed=true; } } }
+    if(!dim){ dim=await measureMedia(it); if(dim) dimCache[it.id]=dim; } it._fmtDone=true; if(dim){ applyFmt(it,dim); if(dim.dur>0) it._dur=Math.ceil(dim.dur); changed=true; } } }
   await Promise.all([wk(),wk(),wk(),wk()]); _measuring=false;
   if(changed){ try{ save('adtv_dims',JSON.stringify(dimCache)); }catch(_){} seenSig=''; renderChan(); renderRail();
+    try{ signagePlaylistPush(); }catch(_){}
     if(!directOn&&playlist[cur]){ mupiAR=itemAR(playlist[cur]); fitMupi(); } }
 }
 // feedback de importación (barra)
@@ -3670,6 +3740,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r12.2201" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r13.2211" defer></script>
 </body>
 </html>

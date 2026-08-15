@@ -10,7 +10,9 @@ import { readFile } from "node:fs/promises";
 const canal = await readFile(new URL("./canal.html", import.meta.url), "utf8");
 
 test("[1] la sincro no re-monta la antena si el máster no cambió", () => {
-  assert.match(canal, /const sig=items\.map\(i=>i\.id\)\.join\(','\)\+'\|'\+\(d\.slotMs\|\|20000\)\+'\|'\+leader/);
+  // La duración forma parte de la firma: descubrirla sí es un cambio de máster
+  // relevante porque transforma un slot provisional en la cápsula completa.
+  assert.match(canal, /const sig=items\.map\(i=>i\.id\+':'\+Math\.round\(Number\(i\._dur\|\|i\.dur\)\|\|0\)\)\.join\(','\)\+'\|'\+\(d\.slotMs\|\|20000\)\+'\|'\+leader/);
   assert.match(canal, /if\(syncOn && \(sig!==_syncSig \|\| !hadRemote\)\)\{ _syncSig=sig; rebuild\(true\); \}/);
   // El reloj del máster se refresca SIEMPRE, gateado no.
   assert.match(canal, /SYNC_REMOTE=\{ items, slotMs:d\.slotMs\|\|20000, offset:\(d\.serverNow\|\|Date\.now\(\)\)-Date\.now\(\) \};\s+\/\/ el reloj/);

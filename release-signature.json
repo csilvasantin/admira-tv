@@ -1,9 +1,9 @@
 {
-  "version": "v.15.08.2026.r12.22:01",
+  "version": "v.15.08.2026.r13.22:11",
   "signature": "TrinityMBP16 · MacBookPro16",
   "agent": "TrinityMBP16",
   "machine": "MacBookPro16",
   "day": "15.08.2026",
-  "time": "22:01",
-  "evidence": "EN EMISIÓN nace desplegado pero puede compactarse desde su cabecera; cada contenido con duración y arranque conocidos muestra una barra de progreso viva, tiempo restante y valor accesible actualizado cada segundo."
+  "time": "22:11",
+  "evidence": "La reproducción sincronizada usa una línea temporal de duración variable por cápsula; publica los metadatos descubiertos y conserva el slot de 20 segundos sólo como respaldo cuando la duración es desconocida."
 }
