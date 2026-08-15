@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=15.08.2026.r10.2139"></script>
+<script src="xpl-runtime.js?v=15.08.2026.r11.2148"></script>
 <script>
-  window.ADMIRA_VERSION='v.15.08.2026.r10.21:39';
+  window.ADMIRA_VERSION='v.15.08.2026.r11.21:48';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -1068,7 +1068,7 @@ function signageNowPush(it){
   if(syncOn){ try{ sinc.idx=syncIndex(); sinc.slot=Math.round(syncSlotMs()/1000); sinc.n=playlist.length; }catch(_){} }
   if(_extendedAssignment&&_extendedAssignment.tile){ sinc.tile=_extendedAssignment.tile; sinc.revision=_extendedAssignment.revision||0; }
   const item={ id:it.id, url:it.url, type:it.type||'image', ar:(mupiAR||itemAR(it)||(9/16)),
-    title:(it.title||it.prompt||'').slice(0,80), dur:(it._dur||0), startedAt:now, ts:now, aud:_lastAud, audio:playerAudioState(), sinc };
+    title:(it.title||it.prompt||'').slice(0,80), dur:(it._dur||it._previewSec||0), startedAt:now, ts:now, aud:_lastAud, audio:playerAudioState(), sinc };
   const cambiaPieza = !_nowItem || String(_nowItem.id)!==String(item.id);
   _nowItem=item; _postNow(item);
   // Foto y título salen JUNTOS. El título viaja en este beat y cambia al instante; la
@@ -1706,7 +1706,7 @@ async function play(i, forced){
     v.style.opacity='0';
     const _reveal=()=>{ try{ v.style.opacity='1'; }catch(_){} };
     v.addEventListener('playing', _reveal, {once:true}); setTimeout(_reveal, 1200);
-    v.onloadedmetadata=()=>{ if(v.duration&&isFinite(v.duration)){ it._dur=Math.round(v.duration); if(v.videoWidth&&v.videoHeight){ it._dim={w:v.videoWidth,h:v.videoHeight}; mupiAR=_extendedAssignment?(window.innerWidth/Math.max(1,window.innerHeight)):(v.videoWidth/v.videoHeight); fitMupi(); emitFrameState(it); } if(_extendedAssignment&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,((Date.now()+_extendedClockOffset)/1000)%v.duration); }catch(_){} } else if(syncOn&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,(syncElapsedMs()/1000)%v.duration); }catch(_){} } localInfoRender(); } };
+    v.onloadedmetadata=()=>{ if(v.duration&&isFinite(v.duration)){ it._dur=Math.round(v.duration); if(_nowItem&&String(_nowItem.id)===String(it.id)){ _nowItem.dur=it._dur; _postNow(_nowItem); } if(v.videoWidth&&v.videoHeight){ it._dim={w:v.videoWidth,h:v.videoHeight}; mupiAR=_extendedAssignment?(window.innerWidth/Math.max(1,window.innerHeight)):(v.videoWidth/v.videoHeight); fitMupi(); emitFrameState(it); } if(_extendedAssignment&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,((Date.now()+_extendedClockOffset)/1000)%v.duration); }catch(_){} } else if(syncOn&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,(syncElapsedMs()/1000)%v.duration); }catch(_){} } localInfoRender(); } };
     v.onended=()=>syncOn?play(syncIndex()):next();
     v.onerror=()=>{ if(!_coRetry && v.crossOrigin){ _coRetry=true; try{ v.removeAttribute('crossorigin'); v.load(); v.play().catch(()=>{}); }catch(_){} return; }   // asset sin CORS: reintenta sin crossorigin (nunca se corta la emisión)
       setTimeout(next,600); };
@@ -3670,6 +3670,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r10.2139" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r11.2148" defer></script>
 </body>
 </html>

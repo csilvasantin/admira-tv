@@ -1,9 +1,9 @@
 {
-  "version": "v.15.08.2026.r10.21:39",
+  "version": "v.15.08.2026.r11.21:48",
   "signature": "TrinityMBP16 · MacBookPro16",
   "agent": "TrinityMBP16",
   "machine": "MacBookPro16",
   "day": "15.08.2026",
-  "time": "21:39",
-  "evidence": "El selector de orientación conserva un único ángulo verde, bloquea órdenes simultáneas y limpia confirmaciones anteriores; el mando elimina la cabecera redundante para empezar directamente en la selección del player."
+  "time": "21:48",
+  "evidence": "El CMS reúne todas las fichas completas de players bajo el grupo Detalle, compactado por defecto, y añade la duración total de la cápsula en la celda En emisión; el player republica el metraje real al cargar los metadatos."
 }
