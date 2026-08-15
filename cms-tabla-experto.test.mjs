@@ -141,3 +141,13 @@ test("Estado muestra conexión y modo; Player / pantalla queda sólo como nombre
   assert.doesNotMatch(cms, /Doble clic para abrir el mando de /);
   assert.match(cms, /\.ebScreenShortcut:hover,\.ebScreenShortcut:focus-visible/);
 });
+
+test("Rol muestra los pases del contenido actual y abre sus estadísticas", () => {
+  assert.match(cms, /EMIT    : 'https:\/\/api\.admira\.store\/emit\/range\?loc='/);
+  assert.match(cms, /function passesInfo\(p,info\)/);
+  assert.match(cms, /day\.assets&&day\.assets\[info\.id\]/);
+  assert.match(cms, /href:'\/estadisticas\/\?screen='/);
+  assert.match(cms, /class="ebRoleStack"/);
+  assert.match(cms, /class="ebPasses"/);
+  assert.match(cms, /pases hoy/);
+});

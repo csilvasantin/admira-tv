@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<script src="/auth-gate.js?v=15.08.2026.r6.1917"></script>
+<link rel="preconnect" href="https://api.admira.store" crossorigin>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#070a10">
+<meta name="description" content="Proof-of-play, estado y ficha técnica histórica de cada player de Admira.tv.">
+<title>Estadísticas del player · Admira.tv</title>
+<style>
+:root{--bg:#070a10;--panel:#0d1420;--panel2:#111b29;--line:#22314a;--text:#dce6f4;--dim:#899ab3;--air:#39d98a;--cyan:#50c8ff;--violet:#b58cff;--amber:#ffb44c;--red:#ff5a5a}
+*{box-sizing:border-box}html{color-scheme:dark}body{margin:0;min-height:100vh;background:radial-gradient(900px 500px at 72% -12%,#18284d55,transparent),var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:inherit}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.wrap{width:min(1220px,calc(100% - 32px));margin:auto;padding:34px 0 60px}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:end;margin-bottom:22px}.eyebrow{color:var(--cyan);font:700 11px ui-monospace,monospace;letter-spacing:.15em;text-transform:uppercase}.hero h1{margin:7px 0 5px;font-size:clamp(28px,5vw,46px);letter-spacing:-.035em;line-height:1.05}.hero p{margin:0;color:var(--dim)}.back{align-self:start;border:1px solid var(--line);border-radius:10px;padding:9px 13px;text-decoration:none;color:var(--dim);font:700 11px ui-monospace,monospace}.back:hover{border-color:var(--cyan);color:var(--cyan)}
+.periods{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}.period{border:1px solid var(--line);border-radius:999px;padding:8px 14px;background:var(--panel);color:var(--dim);cursor:pointer;font:700 11px ui-monospace,monospace}.period:hover{border-color:var(--violet)}.period.on{background:var(--violet);border-color:var(--violet);color:#130d20}
+.statusline{display:flex;gap:9px;align-items:center;min-height:20px;color:var(--dim);font:11px ui-monospace,monospace;margin-bottom:13px}.dot{width:8px;height:8px;border-radius:50%;background:var(--amber)}.dot.on{background:var(--air);box-shadow:0 0 8px var(--air)}.dot.off{background:var(--red)}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.kpi{min-width:0;border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,var(--panel2),var(--panel));padding:14px}.kpi .k{color:var(--dim);font:700 10px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em}.kpi .v{margin-top:6px;font:900 clamp(22px,4vw,32px) ui-monospace,monospace;line-height:1;color:var(--air);overflow:hidden;text-overflow:ellipsis}.kpi.cyan .v{color:var(--cyan)}.kpi.violet .v{color:var(--violet)}.kpi.amber .v{color:var(--amber)}.kpi .s{margin-top:5px;color:var(--dim);font:10px/1.4 ui-monospace,monospace}
+.current{margin-top:12px;border:1px solid #31597a;border-radius:15px;background:linear-gradient(135deg,#0c1b2b,#121729);padding:15px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center}.current .label{color:var(--cyan);font:700 10px ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.current h2{margin:5px 0 4px;font-size:18px;line-height:1.25}.current .meta{color:var(--dim);font:11px ui-monospace,monospace}.current .passes{text-align:right;color:var(--air);font:900 30px ui-monospace,monospace}.current .passes small{display:block;color:var(--dim);font-size:10px;margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}.card{min-width:0;border:1px solid var(--line);border-radius:15px;background:var(--panel);overflow:hidden}.card.wide{grid-column:1/-1}.card-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}.card-h h2{margin:0;font:800 12px ui-monospace,monospace;color:var(--violet);letter-spacing:.08em;text-transform:uppercase}.card-h span{color:var(--dim);font:10px ui-monospace,monospace}.card-b{padding:13px 14px}.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px}.fact{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:10px;padding:7px 0;border-bottom:1px solid #172235;font:11px/1.35 ui-monospace,monospace}.fact .fk{color:var(--dim)}.fact .fv{text-align:right;overflow-wrap:anywhere}.fact .good{color:var(--air)}.fact .warn{color:var(--amber)}
+.bars{height:190px;display:flex;align-items:end;gap:4px;overflow-x:auto;padding:8px 2px 23px}.bar{position:relative;flex:1 0 13px;min-width:13px;max-width:34px;height:var(--h);min-height:2px;border-radius:4px 4px 1px 1px;background:linear-gradient(180deg,var(--cyan),#275d86)}.bar:hover{background:var(--air)}.bar::after{content:attr(data-day);position:absolute;top:calc(100% + 5px);left:50%;transform:translateX(-50%) rotate(-45deg);transform-origin:top center;color:var(--dim);font:8px ui-monospace,monospace;white-space:nowrap}.bar::before{content:attr(data-value);position:absolute;bottom:calc(100% + 3px);left:50%;transform:translateX(-50%);color:var(--text);font:8px ui-monospace,monospace;opacity:0}.bar:hover::before{opacity:1}
+.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;font:11px ui-monospace,monospace}th{text-align:left;color:var(--dim);font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}td{padding:9px 10px;border-bottom:1px solid #172235;vertical-align:top}td.num{text-align:right;color:var(--air);font-weight:800}td.dim{color:var(--dim)}.title{min-width:240px;max-width:520px}.currentrow td{background:#102235}.empty{padding:30px;text-align:center;color:var(--dim);font:12px ui-monospace,monospace}.error{border-color:#67303a;color:#ff9b9b}.loading .v{opacity:.45}
+@media(max-width:850px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid{grid-template-columns:1fr}.card.wide{grid-column:auto}.facts{grid-template-columns:1fr}}
+@media(max-width:560px){.wrap{width:min(100% - 20px,1220px);padding-top:20px}.hero{grid-template-columns:1fr}.back{justify-self:start}.current{grid-template-columns:1fr}.current .passes{text-align:left}.kpis{grid-template-columns:1fr 1fr}.fact{grid-template-columns:1fr}.fact .fv{text-align:left}.title{min-width:180px}}
+</style>
+<link rel="stylesheet" href="/admira-frame.css?v=15.08.2026.r6.1917">
+</head>
+<body>
+<script src="/admira-nav.js?v=15.08.2026.r6.1917" data-active="cms" data-title="Estadísticas" defer></script>
+<script src="/admira-frame.js?v=15.08.2026.r6.1917" defer></script>
+<main class="wrap">
+  <header class="hero">
+    <div><div class="eyebrow">Proof-of-play · Player</div><h1>Estadísticas</h1><p id="subtitle">Cargando la actividad del player…</p></div>
+    <a class="back" href="/cms">← Volver a Flota</a>
+  </header>
+  <nav class="periods" aria-label="Periodo de estadísticas">
+    <button class="period" data-period="day">Último día</button>
+    <button class="period" data-period="week">Última semana</button>
+    <button class="period" data-period="month">Último mes</button>
+    <button class="period" data-period="history">Histórico</button>
+  </nav>
+  <div class="statusline"><span class="dot" id="liveDot"></span><span id="status">Consultando el player y su proof-of-play…</span></div>
+  <section class="kpis loading" id="kpis">
+    <article class="kpi"><div class="k">Pases</div><div class="v" id="plays">—</div><div class="s" id="playsHint">periodo seleccionado</div></article>
+    <article class="kpi cyan"><div class="k">Tiempo emitido</div><div class="v" id="airtime">—</div><div class="s">proof-of-play acumulado</div></article>
+    <article class="kpi violet"><div class="k">Contenidos</div><div class="v" id="contents">—</div><div class="s">piezas distintas emitidas</div></article>
+    <article class="kpi amber"><div class="k">Días activos</div><div class="v" id="activeDays">—</div><div class="s" id="daysHint">con emisiones confirmadas</div></article>
+    <article class="kpi"><div class="k">Media por pase</div><div class="v" id="average">—</div><div class="s">segundos por reproducción</div></article>
+  </section>
+  <section class="current" id="currentCard">
+    <div><div class="label">Contenido actual</div><h2 id="currentTitle">— sin señal —</h2><div class="meta" id="currentMeta">Esperando identidad de la pieza</div></div>
+    <div class="passes" id="currentPasses">—<small>pases en el periodo</small></div>
+  </section>
+  <section class="grid">
+    <article class="card wide"><div class="card-h"><h2>Actividad diaria</h2><span id="chartCaption">—</span></div><div class="card-b"><div class="bars" id="bars"><div class="empty">Cargando actividad…</div></div></div></article>
+    <article class="card"><div class="card-h"><h2>Emisión y playout</h2><span>en vivo</span></div><div class="card-b"><div class="facts" id="playoutFacts"></div></div></article>
+    <article class="card"><div class="card-h"><h2>Player y dispositivo</h2><span>último latido</span></div><div class="card-b"><div class="facts" id="deviceFacts"></div></div></article>
+    <article class="card wide"><div class="card-h"><h2>Contenidos emitidos</h2><span id="contentCaption">ordenados por pases</span></div><div class="tablewrap"><table><thead><tr><th>Contenido</th><th>Tipo</th><th>Último pase</th><th style="text-align:right">Pases</th><th style="text-align:right">Tiempo</th></tr></thead><tbody id="assetRows"><tr><td colspan="5" class="empty">Cargando contenidos…</td></tr></tbody></table></div></article>
+    <article class="card wide"><div class="card-h"><h2>Registro por día</h2><span id="dayCaption">proof-of-play consolidado</span></div><div class="tablewrap"><table><thead><tr><th>Fecha</th><th style="text-align:right">Pases</th><th style="text-align:right">Tiempo emitido</th><th style="text-align:right">Contenidos</th></tr></thead><tbody id="dayRows"><tr><td colspan="4" class="empty">Cargando días…</td></tr></tbody></table></div></article>
+  </section>
+</main>
+<script>
+window.ADMIRA_VERSION='v.15.08.2026.r6.19:17';
+const API='https://api.admira.store', PLAYLIST='https://omnipublicity-api.csilvasantin.workers.dev/control/playlist?screen=';
+const qs=new URLSearchParams(location.search), screenId=qs.get('screen')||'', locId=qs.get('loc')||String(screenId).replace(/-mupi$/,''), requestedItem=qs.get('item')||'';
+const period=['day','week','month','history'].includes(qs.get('period'))?qs.get('period'):'day';
+const $=id=>document.getElementById(id), esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function madridToday(){ const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()), o={}; p.forEach(x=>o[x.type]=x.value); return new Date(Date.UTC(+o.year,+o.month-1,+o.day,12)); }
+function key(d){ return ''+d.getUTCFullYear()+String(d.getUTCMonth()+1).padStart(2,'0')+String(d.getUTCDate()).padStart(2,'0'); }
+function rangeFor(p){ const end=madridToday(), start=new Date(end); if(p==='week')start.setUTCDate(start.getUTCDate()-6); else if(p==='month')start.setUTCDate(start.getUTCDate()-29); else if(p==='history')start.setUTCFullYear(2020,0,1); return {from:key(start),to:key(end),label:p==='day'?'último día':p==='week'?'últimos 7 días':p==='month'?'últimos 30 días':'histórico completo'}; }
+function fmtDate(k){ if(!/^\d{8}$/.test(k))return k; return k.slice(6,8)+'/'+k.slice(4,6)+'/'+k.slice(0,4); }
+function fmtTime(sec){ sec=Math.max(0,Math.round(Number(sec)||0)); const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60; return h?(h+'h '+String(m).padStart(2,'0')+'m'):m?(m+'m '+String(s).padStart(2,'0')+'s'):(s+'s'); }
+function fmtBytes(n){ n=Number(n)||0; if(!n)return '—'; const u=['B','KB','MB','GB','TB']; let i=0; while(n>=1024&&i<u.length-1){n/=1024;i++;} return n.toFixed(i>1?1:0)+' '+u[i]; }
+function ago(sec){ sec=Math.max(0,Math.round(Number(sec)||0)); return sec<60?sec+' s':sec<3600?Math.round(sec/60)+' min':sec<86400?Math.round(sec/3600)+' h':Math.round(sec/86400)+' d'; }
+function modeLabel(m){ return m==='synchronized'?'Sincro':m==='extended'?'Extendido':'Autónomo'; }
+async function json(url){ try{ const c=new AbortController(),t=setTimeout(()=>c.abort(),10000),r=await fetch(url,{cache:'no-store',signal:c.signal}); clearTimeout(t); return r.ok?await r.json():null; }catch(_){ return null; } }
+function facts(host,rows){ host.innerHTML=rows.map(r=>'<div class="fact"><span class="fk">'+esc(r[0])+'</span><span class="fv '+esc(r[2]||'')+'">'+esc(r[1]||'—')+'</span></div>').join(''); }
+function aggregate(days){ const assets={},daily=[]; let plays=0,secs=0; Object.entries(days||{}).forEach(([date,d])=>{ const dp=Number(d.totalPlays)||0,ds=Number(d.totalSecs)||0; plays+=dp;secs+=ds; const da=d.assets||{}; daily.push({date,plays:dp,secs:ds,contents:Object.keys(da).length}); Object.entries(da).forEach(([id,a])=>{ const g=assets[id]||(assets[id]={id,title:a.title||id,type:a.type||'—',num:a.num,n:0,secs:0,last:0}); g.n+=Number(a.n)||0;g.secs+=Number(a.secs)||0;g.last=Math.max(g.last,Number(a.last)||0); }); }); daily.sort((a,b)=>a.date.localeCompare(b.date)); return {plays,secs,assets,daily}; }
+function renderBars(daily){ const host=$('bars'); if(!daily.length){host.innerHTML='<div class="empty">No hay pases confirmados en este periodo.</div>';return;} const rows=daily.slice(-90),max=Math.max(1,...rows.map(x=>x.plays)); host.innerHTML=rows.map(x=>'<span class="bar" style="--h:'+Math.max(2,Math.round(x.plays/max*145))+'px" data-day="'+esc(x.date.slice(4,6)+'/'+x.date.slice(6,8))+'" data-value="'+x.plays+'" title="'+esc(fmtDate(x.date)+': '+x.plays+' pases')+'"></span>').join(''); }
+function renderAssets(assets,currentId){ const rows=Object.values(assets).sort((a,b)=>b.n-a.n||b.last-a.last),host=$('assetRows'); $('contentCaption').textContent=rows.length+' contenidos · ordenados por pases'; if(!rows.length){host.innerHTML='<tr><td colspan="5" class="empty">Sin contenidos emitidos en este periodo.</td></tr>';return;} host.innerHTML=rows.map(a=>'<tr class="'+(String(a.id)===String(currentId)?'currentrow':'')+'"><td class="title"><b>'+esc(a.title||a.id)+'</b><div class="dim">'+(a.num?'#'+esc(a.num)+' · ':'')+esc(a.id)+'</div></td><td>'+esc(a.type)+'</td><td class="dim">'+esc(a.last?new Date(a.last).toLocaleString('es-ES'):'—')+'</td><td class="num">'+a.n+'</td><td class="num">'+esc(fmtTime(a.secs))+'</td></tr>').join(''); }
+function renderDays(daily){ const host=$('dayRows'),rows=daily.slice().reverse(); $('dayCaption').textContent=rows.length+' días con datos'; if(!rows.length){host.innerHTML='<tr><td colspan="4" class="empty">Sin actividad diaria registrada.</td></tr>';return;} host.innerHTML=rows.map(d=>'<tr><td>'+esc(fmtDate(d.date))+'</td><td class="num">'+d.plays+'</td><td class="num">'+esc(fmtTime(d.secs))+'</td><td class="num">'+d.contents+'</td></tr>').join(''); }
+async function load(){
+  document.querySelectorAll('.period').forEach(b=>{ b.classList.toggle('on',b.dataset.period===period); b.onclick=()=>{ const u=new URL(location.href);u.searchParams.set('period',b.dataset.period);location.href=u; }; });
+  if(!screenId){ $('status').textContent='Falta el identificador del player (?screen=…)'; $('liveDot').className='dot off'; return; }
+  const range=rangeFor(period), bust='&_='+Date.now(); $('subtitle').textContent=screenId+' · '+locId+' · '+range.label; $('playsHint').textContent=range.label; $('daysHint').textContent='con emisiones en '+range.label; $('chartCaption').textContent=range.from+' → '+range.to;
+  const [emit,now,census,playout,playlist]=await Promise.all([
+    json(API+'/emit/range?loc='+encodeURIComponent(locId)+'&from='+range.from+'&to='+range.to+bust),
+    json(API+'/signage/now?screen='+encodeURIComponent(screenId)+bust),
+    json(API+'/signage/screens?'+bust.slice(1)),
+    json('/api/playout?screen='+encodeURIComponent(screenId)+bust),
+    json(PLAYLIST+encodeURIComponent(screenId)+bust)
+  ]);
+  const player=(census&&census.screens||[]).find(x=>x.screen===screenId)||{}, days=emit&&emit.screens&&emit.screens[screenId]||{}, agg=aggregate(days), item=now&&now.item||{}, currentId=requestedItem||item.id||'', current=agg.assets[currentId]||null;
+  $('kpis').classList.remove('loading'); $('plays').textContent=agg.plays.toLocaleString('es-ES'); $('airtime').textContent=fmtTime(agg.secs); $('contents').textContent=Object.keys(agg.assets).length; $('activeDays').textContent=agg.daily.filter(d=>d.plays>0).length; $('average').textContent=agg.plays?(agg.secs/agg.plays).toFixed(1)+'s':'0s';
+  $('currentTitle').textContent=item.title||(current&&current.title)||'— sin contenido identificado —'; $('currentMeta').textContent=(currentId||'sin ID')+(item.type?' · '+item.type:'')+(item.sinc&&item.sinc.idx!=null?' · posición '+(Number(item.sinc.idx)+1)+'/'+(item.sinc.n||'—'):''); $('currentPasses').innerHTML=(current?current.n:0).toLocaleString('es-ES')+'<small>pases en '+esc(range.label)+'</small>';
+  const live=!!player.online&&!now?.standby; $('liveDot').className='dot '+(live?'on':'off'); $('status').textContent=(live?'En línea':'Sin señal')+' · '+(player.age_seconds!=null?'visto hace '+ago(player.age_seconds):'sin antigüedad')+' · actualizado '+new Date().toLocaleTimeString('es-ES');
+  const dev=now&&now.device||{},display=dev.display||{},system=dev.system||{},software=dev.software||{},hardware=dev.hardware||{},storage=dev.storage||{},network=dev.network||{},assignment=playout||{},group=assignment.group||{},plItems=playlist&&playlist.items||[];
+  facts($('playoutFacts'),[
+    ['Estado',live?'En línea':now&&now.standby?'Standby':'Sin señal',live?'good':'warn'],['Modo',modeLabel(assignment.mode)],['Contenido actual',item.title||'—'],['ID actual',item.id||'—'],['Pases del actual',String(current?current.n:0)],['Playlist',plItems.length+' contenidos'],['Grupo',group.id||'—'],['Posición en grupo',group.total?((Number(group.index)+1)+' / '+group.total):'—'],['Líder',group.leader||'—'],['Audiencia ahora',item.aud&&item.aud.faces!=null?item.aud.faces+' rostros':'—']
+  ]);
+  facts($('deviceFacts'),[
+    ['Sistema',system.os?system.os+' '+(system.osVersion||''):'—'],['Player',software.player||'—'],['Versión player',software.playerVersion||'—'],['Web release',software.webRelease||player.version||'—'],['Motor',software.engine||'—'],['Pantalla',display.width&&display.height?display.width+' × '+display.height+' px':'—'],['Viewport',display.viewportWidth&&display.viewportHeight?display.viewportWidth+' × '+display.viewportHeight:'—'],['Orientación',display.orientation||'—'],['Giro aplicado',Number.isFinite(Number(display.rotation))?Number(display.rotation)+'°':'—'],['CPU',hardware.cores?hardware.cores+' núcleos':'—'],['Memoria',hardware.memoryGB?hardware.memoryGB+' GB':'—'],['Red',network.online===false?'Sin conexión':network.effectiveType||'Conectada',network.online===false?'warn':'good'],['Caché usada',fmtBytes(storage.usage)],['Cuota caché',fmtBytes(storage.quota)],['Persistencia',storage.persisted===true?'Sí':storage.persisted===false?'No':'—']
+  ]);
+  renderBars(agg.daily);renderAssets(agg.assets,currentId);renderDays(agg.daily);
+}
+load();
+</script>
+<script src="/assets/admira-version-watch.js?v=15.08.2026.r6.1917" defer></script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=15.08.2026.r5.1845"></script>
+<script src="/auth-gate.js?v=15.08.2026.r6.1917"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -336,6 +336,11 @@
   .ebSt.autonomous{color:var(--accent);border-color:#2f4f83} .ebSt.autonomous .d{background:var(--accent);box-shadow:0 0 7px rgba(111,158,255,.5)}
   .ebSt.synchronized{color:#b58cff;border-color:#60488e} .ebSt.synchronized .d{background:#b58cff;box-shadow:0 0 7px rgba(181,140,255,.5)}
   .ebSt.extended{color:var(--amber);border-color:#745626} .ebSt.extended .d{background:var(--amber);box-shadow:0 0 7px rgba(255,180,76,.55)}
+  .ebRoleStack{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+  .ebPasses{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid #2f4f83;
+    color:var(--accent);font-size:10.5px;white-space:nowrap;text-decoration:none}
+  .ebPasses:hover,.ebPasses:focus-visible{border-color:var(--air);color:var(--air);outline:none}
+  .ebPasses b{font-size:12px}
   /* PREVIO — miniatura del fotograma en antena. Tamaño fijo para que la tabla no
      baile mientras cargan, y 16:9 porque es lo que emite el canal. */
   .ebShot{position:relative;display:block;width:104px;height:59px;border-radius:6px;overflow:hidden;
@@ -453,7 +458,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=15.08.2026.r5.1845">
+  <link rel="stylesheet" href="/admira-frame.css?v=15.08.2026.r6.1917">
 </head>
 <body>
 <script>
@@ -472,8 +477,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=15.08.2026.r5.1845"></script>
-<script src="/admira-frame.js?v=15.08.2026.r5.1845" defer></script>
+<script src="/admira-nav.js?v=15.08.2026.r6.1917"></script>
+<script src="/admira-frame.js?v=15.08.2026.r6.1917" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -622,7 +627,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=15.08.2026.r5.1845"></script>
+<script src="xpl-runtime.js?v=15.08.2026.r6.1917"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -1552,6 +1557,7 @@ $('progBands').addEventListener('click',e=>{
     SHOT    : 'https://api.admira.store/signage/shot?meta=1&screen=',
     PLAYLIST: 'https://omnipublicity-api.csilvasantin.workers.dev/control/playlist?screen=',
     PLAYOUT : '/api/playout?screen=',
+    EMIT    : 'https://api.admira.store/emit/range?loc=',
     STOCK   : 'https://api.admira.store/stock/list?limit=200',
     GRID    : 'https://api.admira.store/grid/screens',
     PROJ    : 'https://api.admira.store/grid/projects',
@@ -1599,11 +1605,14 @@ $('progBands').addEventListener('click',e=>{
 
     // /signage/screens sólo lleva showing_id. El título humano vive en /signage/now;
     // se pide por los players de esta tabla y los fallos se aíslan por pantalla.
-    const [nowRows, playlistRows, shotRows, playoutRows] = await Promise.all([
+    const emitDay=todayMadrid().replace(/-/g,'');
+    const [nowRows, playlistRows, shotRows, playoutRows, emitRows] = await Promise.all([
       Promise.all(players.map(p=>grab(EB.NOW+encodeURIComponent(p.screen),5000))),
       Promise.all(players.map(p=>grab(EB.PLAYLIST+encodeURIComponent(p.screen),5000))),
       Promise.all(players.map(p=>grab(EB.SHOT+encodeURIComponent(p.screen),5000))),
-      Promise.all(players.map(p=>grab(EB.PLAYOUT+encodeURIComponent(p.screen),5000)))
+      Promise.all(players.map(p=>grab(EB.PLAYOUT+encodeURIComponent(p.screen),5000))),
+      Promise.all(players.map(p=>{ const loc=String(p.loc||p.screen||'').replace(/-mupi$/,'');
+        return grab(EB.EMIT+encodeURIComponent(loc)+'&from='+emitDay+'&to='+emitDay,6000); }))
     ]);
     const nowByScreen={};
     nowRows.forEach((r,i)=>{ const it=r.data&&r.data.item; if(it&&typeof it==='object') nowByScreen[players[i].screen]=it; });
@@ -1613,6 +1622,9 @@ $('progBands').addEventListener('click',e=>{
     playlistRows.forEach((r,i)=>{ if(r.data&&typeof r.data==='object') playlistByScreen[players[i].screen]=r.data; });
     const playoutByScreen={};
     playoutRows.forEach((r,i)=>{ if(r.data&&r.data.ok) playoutByScreen[players[i].screen]=r.data; });
+    const emitByScreen={};
+    emitRows.forEach((r,i)=>{ const days=r.data&&r.data.screens&&r.data.screens[players[i].screen];
+      if(days&&days[emitDay]) emitByScreen[players[i].screen]=days[emitDay]; });
     const stockById={}; stockItems.forEach(it=>{ if(it&&it.id) stockById[it.id]=it; });
     function pieceInfo(p){
       const live=nowByScreen[p.screen];
@@ -1641,6 +1653,11 @@ $('progBands').addEventListener('click',e=>{
       if(mode==='synchronized') return {key:mode,label:'Sincro'};
       if(mode==='extended') return {key:mode,label:'Extendido'};
       return {key:'autonomous',label:'Autónomo'};
+    }
+    function passesInfo(p,info){
+      const day=emitByScreen[p.screen]||{}, asset=info&&info.id&&day.assets&&day.assets[info.id];
+      const count=Math.max(0,Number(asset&&asset.n)||0), loc=String(p.loc||p.screen||'').replace(/-mupi$/,'');
+      return {count,href:'/estadisticas/?screen='+encodeURIComponent(p.screen)+'&loc='+encodeURIComponent(loc)+(info&&info.id?'&item='+encodeURIComponent(info.id):'')};
     }
     // La misma playlist EFECTIVA que publica el player para el mando gráfico.
     // No se infiere desde el mapa ni desde una parrilla que quizá no esté vinculada.
@@ -1734,6 +1751,7 @@ $('progBands').addEventListener('click',e=>{
         const info=pieceInfo(p);
         const connection=playerConnectionState(p,info);
         const mode=playerMode(p);
+        const passes=passesInfo(p,info);
         const role = p.role||''; const rCls = /canal/.test(role)?'canal':(/game|juego/.test(role)?'game':'');
         // circuito · playlist efectiva publicada por el propio player
         const circ = playerCircuit(p);
@@ -1768,7 +1786,10 @@ $('progBands').addEventListener('click',e=>{
           '</span></td>'+
           '<td data-col="player" class="ebPlayerCell"><button type="button" class="ebScreenShortcut" data-open-remote aria-label="Abrir modo experto de '+esc(p.screen)+'">'+
             '<span class="ebScreen">'+esc(p.screen)+'</span></button></td>'+
-          '<td data-col="rol">'+(role? '<span class="ebRole '+rCls+'">'+esc(role)+'</span>':hole('—'))+'</td>'+
+          '<td data-col="rol"><span class="ebRoleStack">'+
+            (role? '<span class="ebRole '+rCls+'">'+esc(role)+'</span>':hole('—'))+
+            '<a class="ebPasses" href="'+passes.href+'" aria-label="Ver estadísticas de '+esc(p.screen)+': '+passes.count+' pases hoy"><b>'+passes.count+'</b> pases hoy <span aria-hidden="true">↗</span></a>'+
+          '</span></td>'+
           // PREVIO: el fotograma REAL de lo que esta viendo la calle. No es un dato
           // nuevo — el canal lo sube cada 25 s (shotTick -> POST /signage/shot) y hasta
           // hoy solo lo miraba el mando. Una tabla de flota que dice «en antena» sin
@@ -1950,10 +1971,10 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-session.js?v=15.08.2026.r5.1845"></script>
-<script src="/admira-avatar.js?v=15.08.2026.r5.1845"></script>
-<script src="/cms-pacman.js?v=15.08.2026.r5.1845"></script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r5.1845" defer></script>
+<script src="/admira-session.js?v=15.08.2026.r6.1917"></script>
+<script src="/admira-avatar.js?v=15.08.2026.r6.1917"></script>
+<script src="/cms-pacman.js?v=15.08.2026.r6.1917"></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r6.1917" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
    Mismo patrón que el highscore de yokup: tirador por columna, mínimo por

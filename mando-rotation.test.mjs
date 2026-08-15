@@ -12,6 +12,14 @@ test('el selector comparte una fila compacta con el giro remoto de 90 grados', (
   assert.match(mando, /aria-label="Girar 90 grados la pantalla seleccionada"/);
 });
 
+test('el botón anuncia el siguiente ángulo acumulado y vuelve a cero', () => {
+  assert.match(mando, /rotationByScreen=new Map\(\)/);
+  assert.match(mando, /var next=\(currentRotation\(\)\+90\)%360/);
+  assert.match(mando, /rotateScreen\.textContent='↻ '\+next\+'°'/);
+  assert.match(mando, /rotationByScreen\.set\(targetScreen,\(before\+90\)%360\)/);
+  assert.match(mando, /reportedRotation=Number\(d&&d\.device&&d\.device\.display&&d\.device\.display\.rotation\)/);
+});
+
 test('el player aplica, persiste y confirma giros acumulativos de 90 grados', () => {
   assert.match(canal, /DISPLAY_ROTATION_KEY='adtv_display_rotation:'/);
   assert.match(canal, /displayRotation=\(displayRotation\+delta\+360\)%360/);
@@ -19,4 +27,6 @@ test('el player aplica, persiste y confirma giros acumulativos de 90 grados', ()
   assert.match(canal, /quarterTurn\?aW:aH/);
   assert.match(canal, /case 'rotate-90': applyDisplayRotation\(90\)/);
   assert.match(canal, /cmd==='rotate-90'\|\|cmd==='rotate90'/);
+  assert.match(canal, /orientation:\(screen\.orientation&&screen\.orientation\.type\)\|\|'', rotation:displayRotation/);
+  assert.match(canal, /DEVICE_TELEMETRY\.display\.rotation=displayRotation/);
 });

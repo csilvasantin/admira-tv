@@ -340,7 +340,7 @@
     if(startIdx<0) startIdx=4; selEl.value=startIdx;
 
     var T, previewItem=null, previewVisual=null, previewSignature='', previewPaused=false, previewRenderSeq=0;
-    var infoShotByScreen=new Map(), infoOpenByScreen=new Map();
+    var infoShotByScreen=new Map(), infoOpenByScreen=new Map(), rotationByScreen=new Map();
     var targetGeneration=0, nowRequestSeq=0, nowController=null;
     var playlistRequestSeq=0, remotePlaylistItems=[], statusRequestSeq=0, contentsRequestSeq=0, statusProfile={fields:{}};
     var previewReturnFocus=null, previewInertNodes=[];
@@ -455,6 +455,7 @@
       T = FLAT[+selEl.value];
       document.getElementById('cir').textContent = T.circuit;
       document.getElementById('scr').textContent = T.screen;
+      paintRotationButton();
       closePreview(); previewSignature=''; previewItem=null; previewVisual=null; setPreviewPaused(false); previewEmpty('Esperando señal del player remoto');
       remotePlaylistItems=[]; document.getElementById('playlistSummary').textContent='— cargando inventario';
       document.getElementById('playlistList').innerHTML='<div class="pl-empty">Esperando la playlist efectiva del player seleccionado</div>';
@@ -551,7 +552,20 @@
     }
     function toast(t){ var el=document.getElementById('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(window.__tt); window.__tt=setTimeout(function(){el.classList.remove('show');},1700); }
 
-    document.querySelectorAll('[data-cmd]').forEach(function(b){ b.onclick=function(){ sendRemote(b.dataset.cmd,b); }; });
+    document.querySelectorAll('[data-cmd]').forEach(function(b){ if(b.id!=='rotateScreen') b.onclick=function(){ sendRemote(b.dataset.cmd,b); }; });
+
+    var rotateScreen=document.getElementById('rotateScreen');
+    function currentRotation(){ var n=Number(rotationByScreen.get(T&&T.screen)); return Number.isFinite(n)?((Math.round(n/90)*90)%360+360)%360:0; }
+    function paintRotationButton(){
+      if(!rotateScreen||!T) return; var next=(currentRotation()+90)%360;
+      rotateScreen.textContent='↻ '+next+'°';
+      rotateScreen.setAttribute('aria-label','Girar la pantalla a '+next+' grados');
+      rotateScreen.title='Girar la pantalla a '+next+'°';
+    }
+    rotateScreen.onclick=async function(){
+      var targetScreen=T.screen, before=currentRotation(), ok=await sendRemote('rotate-90',rotateScreen);
+      if(ok&&T.screen===targetScreen){ rotationByScreen.set(targetScreen,(before+90)%360); paintRotationButton(); }
+    };
 
     var POWER_KEY='mando_standby_by_screen';
     function powerStore(){ try{ return JSON.parse(localStorage.getItem(POWER_KEY)||'{}'); }catch(_){ return {}; } }
@@ -1070,6 +1084,8 @@
         ]);
         var d=rows[0], shotMeta=rows[1];
         if(generation!==targetGeneration||requestSeq!==nowRequestSeq) return;
+        var reportedRotation=Number(d&&d.device&&d.device.display&&d.device.display.rotation);
+        if(Number.isFinite(reportedRotation)){ rotationByScreen.set(target.screen,reportedRotation); paintRotationButton(); }
         var it=d&&d.item, shotPreview=remoteShotPreview(shotMeta,target,it);
         document.getElementById('now').textContent=d&&d.standby?'⏻ STANDBY (apagada)':(it?(it.title||it.type||'—'):(shotPreview?remoteShotLabel(shotMeta):'— sin señal —'));
         if(d&&typeof d.standby==='boolean'){ standby=d.standby; setStoredStandby(standby); paintRemoteControls(); }
@@ -1091,6 +1107,6 @@
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r5.1845" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r6.1917" defer></script>
 </body>
 </html>

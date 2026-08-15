@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=15.08.2026.r5.1845"></script>
+<script src="xpl-runtime.js?v=15.08.2026.r6.1917"></script>
 <script>
-  window.ADMIRA_VERSION='v.15.08.2026.r5.18:45';
+  window.ADMIRA_VERSION='v.15.08.2026.r6.19:17';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -785,6 +785,8 @@ let displayRotation=(()=>{ const n=parseInt(LS(DISPLAY_ROTATION_KEY,'0'),10)||0;
 function applyDisplayRotation(delta){
   if(delta){ displayRotation=(displayRotation+delta+360)%360; save(DISPLAY_ROTATION_KEY,String(displayRotation)); }
   const mupi=$('mupi'); if(mupi) mupi.style.transform=displayRotation?'rotate('+displayRotation+'deg)':'';
+  try{ if(DEVICE_TELEMETRY&&DEVICE_TELEMETRY.display) DEVICE_TELEMETRY.display.rotation=displayRotation; }catch(_){}
+  try{ if(_nowItem) setTimeout(()=>_postNow(_nowItem),0); }catch(_){}
   fitMupi();
   return displayRotation;
 }
@@ -992,7 +994,7 @@ function deviceTelemetryBase(){
   return {
     display:{ width:Math.round((screen.width||innerWidth)*dpr), height:Math.round((screen.height||innerHeight)*dpr),
       cssWidth:screen.width||innerWidth, cssHeight:screen.height||innerHeight, viewportWidth:innerWidth, viewportHeight:innerHeight,
-      devicePixelRatio:dpr, colorDepth:screen.colorDepth||0, orientation:(screen.orientation&&screen.orientation.type)||'' },
+      devicePixelRatio:dpr, colorDepth:screen.colorDepth||0, orientation:(screen.orientation&&screen.orientation.type)||'', rotation:displayRotation },
     system:{ os, osVersion, platform, language:navigator.language||'', timezone:(Intl.DateTimeFormat().resolvedOptions().timeZone||'') },
     hardware:{ cores:navigator.hardwareConcurrency||0, memoryGB:navigator.deviceMemory||0, touchPoints:navigator.maxTouchPoints||0,
       architecture:(navigator.userAgentData&&navigator.userAgentData.architecture)||'' },
@@ -3580,6 +3582,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r5.1845" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r6.1917" defer></script>
 </body>
 </html>
