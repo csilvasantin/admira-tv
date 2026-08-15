@@ -1,9 +1,9 @@
 {
-  "version": "v.15.08.2026.r4.01:36",
+  "version": "v.15.08.2026.r5.18:45",
   "signature": "TrinityMBP16 · MacBookPro16",
   "agent": "TrinityMBP16",
   "machine": "MacBookPro16",
   "day": "15.08.2026",
-  "time": "01:36",
-  "evidence": "Informar alterna de forma confirmada entre mostrar y ocultar la ficha remota; todos los controles conservan outline verde tras éxito y rojo tras fallo o falta de respuesta."
+  "time": "18:45",
+  "evidence": "La columna Estado del CMS muestra debajo de la conexión el modo efectivo del player: Autónomo, Sincro o Extendido, leído por pantalla desde /api/playout."
 }

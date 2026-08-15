@@ -109,7 +109,7 @@ test("el botón de la cabecera cierra el modo Experto", () => {
   assert.doesNotMatch(cms, /closest\('#mandoOut'\)/);
 });
 
-test("Estado muestra la conexión y Player / pantalla queda sólo como nombre pulsable", () => {
+test("Estado muestra conexión y modo; Player / pantalla queda sólo como nombre pulsable", () => {
   assert.match(cms, /class="ebScreenShortcut" data-open-remote/);
   assert.doesNotMatch(cms, /class="ebScreenShortcutHint"/);
   assert.doesNotMatch(cms, /🎛 Mando/);
@@ -118,7 +118,18 @@ test("Estado muestra la conexión y Player / pantalla queda sólo como nombre pu
   assert.match(cms, /return \{key:'connecting',label:'conectando'\}/);
   assert.match(cms, /return \{key:'online',label:'online'\}/);
   assert.match(cms, /return \{key:'offline',label:'offline'\}/);
-  assert.match(cms, /data-col="estado"><span class="ebSt '\+connection\.key\+'"/);
+  assert.match(cms, /data-col="estado"><span class="ebStateStack">/);
+  assert.match(cms, /class="ebSt '\+connection\.key\+'"/);
+  assert.match(cms, /function playerMode\(p\)/);
+  assert.match(cms, /PLAYOUT : '\/api\/playout\?screen='/);
+  assert.match(cms, /class="ebSt '\+mode\.key\+'"/);
+  assert.match(cms, /label:'Autónomo'/);
+  assert.match(cms, /label:'Sincro'/);
+  assert.match(cms, /label:'Extendido'/);
+  assert.match(cms, /\.ebStateStack\{display:flex;flex-direction:column/);
+  assert.match(cms, /\.ebSt\.autonomous\{color:var\(--accent\)/);
+  assert.match(cms, /\.ebSt\.synchronized\{color:#b58cff/);
+  assert.match(cms, /\.ebSt\.extended\{color:var\(--amber\)/);
   assert.doesNotMatch(cms, /class="ebConnection/);
   assert.match(cms, /\.ebSt\.online\{color:var\(--air\)/);
   assert.match(cms, /\.ebSt\.connecting\{color:var\(--amber\)/);
