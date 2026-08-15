@@ -411,6 +411,11 @@
   .ebScreenShortcut:hover,.ebScreenShortcut:focus-visible{border-color:var(--green,#3df08a);background:rgba(61,240,138,.11);
     box-shadow:0 0 0 2px rgba(61,240,138,.12);outline:none}
   .ebPiece{color:var(--air);font-size:11.5px}
+  .ebSeenCell{white-space:nowrap}
+  .ebSeenAge{display:block;color:var(--ink);font-size:12px;font-weight:800;line-height:1.2}
+  .ebSeenStart{display:flex;align-items:center;gap:5px;margin-top:5px;color:var(--dim);font-size:10.5px;line-height:1.2}
+  .ebSeenStart::before{content:'▶';color:var(--air);font-size:8px}
+  .ebSeenStart.missing::before{color:var(--dim);opacity:.55}
   .ebHole{color:var(--dim);font-style:italic;opacity:.75}
   .ebPanel{padding:4px 16px 16px}
   .ebPanel h3{margin:14px 0 7px;font:700 11.5px ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--amber)}
@@ -557,7 +562,7 @@ window.ADMIRA_NAV={
     <table class="ebTable" id="ebTable">
       <colgroup>
         <col data-min="96"><col data-min="150"><col data-min="64"><col data-min="96">
-        <col data-min="170"><col data-min="140"><col data-min="130"><col data-min="60"><col data-min="120">
+        <col data-min="170"><col data-min="140"><col data-min="130"><col data-min="132"><col data-min="120">
       </colgroup>
       <thead><tr id="ebHeadRow">
         <th data-col="estado" data-sort="text">Estado</th>
@@ -567,7 +572,7 @@ window.ADMIRA_NAV={
         <th data-col="circuito" data-sort="text">Circuito · playlist</th>
         <th data-col="canal" data-sort="text">Canal · parrilla</th>
         <th data-col="emision" data-sort="text">En emisión</th>
-        <th data-col="visto" data-sort="num">Visto</th>
+        <th data-col="visto" data-sort="num" title="Último latido y hora a la que arrancó la pieza en antena">Visto · arranque</th>
         <th data-col="asistencia">🎥 Asistencia</th>
       </tr></thead>
       <tbody id="ebBody"><tr><td colspan="9" class="ebHole">Cargando emisión en vivo…</td></tr></tbody>
@@ -1595,6 +1600,20 @@ $('progBands').addEventListener('click',e=>{
   const hole=t=>'<span class="ebHole">'+esc(t)+'</span>';
   function agoTxt(sec){ if(sec==null||isNaN(sec))return '—'; sec=Math.max(0,Math.round(sec));
     if(sec<60)return sec+'s'; if(sec<3600)return Math.round(sec/60)+'m'; if(sec<86400)return Math.round(sec/3600)+'h'; return Math.round(sec/86400)+'d'; }
+  function stampMs(value){
+    if(value==null||value==='') return null;
+    const numeric=Number(value);
+    const ms=Number.isFinite(numeric) ? (numeric<1e12?numeric*1000:numeric) : Date.parse(value);
+    return Number.isFinite(ms)&&ms>0?ms:null;
+  }
+  function clockTxt(value){
+    const ms=stampMs(value); if(!ms)return '—';
+    return new Date(ms).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }
+  function dateTimeTxt(value){
+    const ms=stampMs(value); if(!ms)return '—';
+    return new Date(ms).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'medium'});
+  }
   // fetch con timeout individual → si una fuente cae, devuelve {err} y el resto sigue
   async function grab(url,ms){
     const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(), ms||8000);
@@ -1781,6 +1800,16 @@ $('progBands').addEventListener('click',e=>{
           'onerror="this.closest(\'.ebShot\').classList.add(\'sinPrevio\')">'+
           '<span class="ebShotHole">sin previo</span>'+audioBadge(p)+'</a>';
       }
+      function seenCell(p){
+        const rawAge=p.age_seconds, age=Number(rawAge);
+        const hasAge=rawAge!=null&&rawAge!==''&&Number.isFinite(age);
+        const live=nowByScreen[p.screen]||{}, started=stampMs(live.startedAt);
+        const seenAt=hasAge?Date.now()-Math.max(0,age)*1000:null;
+        const title='Último latido: '+(seenAt?dateTimeTxt(seenAt):'—')+' · Arranque de la pieza: '+(started?dateTimeTxt(started):'—');
+        return '<div class="ebSeenCell" title="'+esc(title)+'">'+
+          '<span class="ebSeenAge">'+(hasAge?'hace '+agoTxt(age):'—')+'</span>'+
+          '<span class="ebSeenStart'+(started?'':' missing')+'">arranque '+clockTxt(started)+'</span></div>';
+      }
       // Orden por defecto: primero lo que está en antena, luego por nombre. Es el que
       // vale para la mirada de guardia, así que sigue siendo el de partida — la
       // ordenación elegida a mano solo lo sustituye mientras dure.
@@ -1841,7 +1870,7 @@ $('progBands').addEventListener('click',e=>{
           '<td data-col="circuito">'+circuitCell+'</td>'+
           '<td data-col="canal">'+chanCell+'</td>'+
           '<td data-col="emision">'+piece+'</td>'+
-          '<td class="ebMeta" data-col="visto">'+agoTxt(p.age_seconds)+'</td>'+
+          '<td class="ebMeta" data-col="visto">'+seenCell(p)+'</td>'+
           '<td class="ebAssistCell" data-col="asistencia"><button class="ebBtn ebAssist" data-room="'+esc(p.screen)+'">🎥 Asistencia</button><div class="ebAssistSt" data-room="'+esc(p.screen)+'">·</div></td>'+
         '</tr>';
       }).join('');

@@ -115,7 +115,9 @@ Auto-refresco cada **40 s** (independiente del grid de flota de 10 s).
   `location.id` (por prefijo de circuito). Los huecos se pintan HONESTOS: «— sin alta en mapa»,
   «— sin parrilla», «— huérfano (sin loc)»; nunca se inventa el vínculo.
 - **Tabla:** estado 🟢/🔴 (campo `online`/`age_seconds`, TTL ~10 min), player, rol (canal/juego),
-  circuito·sitio, canal·parrilla (+ si la superficie está mapeada), pieza (`showing_id`), visto.
+  circuito·sitio, canal·parrilla (+ si la superficie está mapeada), pieza (`showing_id`),
+  visto (antigüedad del último latido) y hora de arranque de la pieza (`startedAt` de
+  `/signage/now`; se muestra `—` cuando el player no la publica).
 - **Descuadres accionables** (tarea #4): botones de **un clic**, nunca datos a ciegas.
   - **Player vivo sin `loc` (huérfano)** → selector de **circuitos/sitios conocidos**
     (de `/grid/screens` + `/locations`, con opción «＋ otro circuito…») + botón **«vincular
