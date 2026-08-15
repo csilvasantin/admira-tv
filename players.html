@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=15.08.2026.r7.1956"></script>
+<script src="/auth-gate.js?v=15.08.2026.r8.2120"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="admiranext-version" content="v.13.08.2026.r38.21:21">
@@ -57,7 +57,7 @@ body{margin:0 auto;min-height:100dvh;max-width:520px;padding:16px 14px 44px;back
   <div class="actionbar"><button id="save" class="save" type="button">Aplicar modo autónomo</button><span id="status" class="status">Sin cambios pendientes.</span></div>
 </main>
 <script>
-window.ADMIRA_VERSION='v.15.08.2026.r7.19:56';
+window.ADMIRA_VERSION='v.15.08.2026.r8.21:20';
 const API='https://api.admira.store', PLAYOUT='/api/playout';
 const FLEET='https://omnipublicity-api.csilvasantin.workers.dev/locations?selfreg=1';
 const $=id=>document.getElementById(id), state={mode:'autonomous',screens:[],items:[],selected:[],item:null,saved:null};
@@ -78,6 +78,6 @@ function paintCurrent(){const s=state.saved||{mode:'autonomous',screens:[]};cons
 async function load(){try{const [ps,stock,plan,fleet]=await Promise.all([fetch(API+'/signage/screens',{cache:'no-store'}).then(r=>r.json()),fetch(API+'/stock/list?limit=300',{cache:'no-store'}).then(r=>r.json()),fetch(PLAYOUT,{cache:'no-store'}).then(r=>r.json()),fetch(FLEET,{cache:'no-store'}).then(r=>r.json()).catch(()=>({locations:[]}))]);const live=(ps.screens||[]).filter(x=>x&&x.screen),byScreen=new Map(live.map(p=>[p.screen,p]));for(const loc of (fleet.locations||fleet||[])){const screen=String(loc&&loc.screen||'').trim();if(!screen)continue;const current=byScreen.get(screen);if(current){if(!current.name&&loc.name)current.name=loc.name;continue;}byScreen.set(screen,{screen,name:loc.name||screen,version:'',online:false,registered:true});}state.screens=[...byScreen.values()].sort((a,b)=>(Number(b.online)-Number(a.online))||String(a.name||a.screen).localeCompare(String(b.name||b.screen),'es'));state.items=(stock.items||[]).filter(it=>it&&it.url&&['image','video','animation'].includes(it.type));state.saved=plan.state||{mode:'autonomous',screens:[]};state.selected=(state.saved.screens||[]).filter(s=>state.screens.some(p=>p.screen===s));state.item=state.saved.item&&state.items.find(it=>it.id===state.saved.item.id)||state.saved.item||null;renderContents();paintCurrent();setMode(state.saved.mode||'autonomous');}catch(e){$('status').className='status err';$('status').textContent='No se pudo cargar la flota: '+e.message;}}
 document.querySelectorAll('.mode').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));$('screens').addEventListener('click',e=>{const b=e.target.closest('[data-screen]');if(b)toggleScreen(b.dataset.screen);});$('contents').addEventListener('click',e=>{const b=e.target.closest('[data-item]');if(!b)return;state.item=state.items.find(it=>it.id===b.dataset.item)||null;renderContents();renderWall();validate();});$('search').addEventListener('input',renderContents);$('save').addEventListener('click',save);wireExpertNavigation();load();
 </script>
-<script src="/assets/admira-version-watch.js?v=15.08.2026.r7.1956" defer></script>
+<script src="/assets/admira-version-watch.js?v=15.08.2026.r8.2120" defer></script>
 </body>
 </html>
