@@ -81,7 +81,9 @@ test("el censo no pisa la vitrina pública: son listas distintas", async () => {
 test("el estado es medido, no un «available» para todos", () => {
   const estados = new Set(censo.map((x) => x.estado));
   assert.ok(estados.size > 1, "si todas comparten estado, el estado no informa");
-  assert.equal(censo.filter((x) => x.estado === "escaparate").length, 30);
+  assert.equal(censo.filter((x) => x.estado === "escaparate").length, 29);
   assert.equal(censo.find((x) => x.slug === "adcelerate").estado, "emite");
   assert.equal(censo.find((x) => x.slug === "estadisticas").estado, "emite");
+  assert.equal(censo.find((x) => x.slug === "digitalsignage").estado, "emite");
+  assert.equal(censo.find((x) => x.slug === "digitalsignage").ruta, "/cms");
 });

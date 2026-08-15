@@ -5,12 +5,17 @@
     "slug": "digitalsignage",
     "name_es": "Cartelería digital",
     "familia": "Emisión",
-    "estado": "escaparate",
+    "estado": "emite",
     "en_vitrina": true,
-    "ruta": "/digitalsignage/",
-    "peso_kb": 36,
-    "ficheros": 1,
-    "apis": []
+    "ruta": "/cms",
+    "peso_kb": 229,
+    "ficheros": 3,
+    "apis": [
+      "https://api.admira.store/signage/screens",
+      "https://api.admira.store/signage/now",
+      "https://api.admira.store/grid/projects",
+      "https://omnipublicity-api.csilvasantin.workers.dev/locations"
+    ]
   },
   {
     "n": 2,
