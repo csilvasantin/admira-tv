@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-<script src="/auth-gate.js?v=15.08.2026.r15.2235"></script>
+<script src="/auth-gate.js?v=15.08.2026.r16.2248"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Admira.tv · Player — Descargas</title>
   <meta name="description" content="Descarga el player de Admira.tv para cada plataforma: macOS, Windows, iOS, Android, Amazon Echo Show y Linux. Pantallas que emiten el canal DOOH de Admira.">
@@ -82,7 +82,7 @@
     footer{color:var(--admira-text-muted,#8a97a8);font-size:13px;margin:40px 0 64px;border-top:1px solid var(--admira-border,#1c2738);padding-top:18px}
     footer a{color:var(--admira-text-dim,#aab6c6)}
   </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=15.08.2026.r15.2235">
+  <link rel="stylesheet" href="/admira-frame.css?v=15.08.2026.r16.2248">
 </head>
 <body>
   <!-- Chrome unificado "portería", mismo metaestilo que todo el site. -->
@@ -93,8 +93,8 @@
       '<a class="admtR admtR-cta" href="#contact" data-admira-contact>Contacto</a>'
   };
   </script>
-  <script src="/admira-nav.js?v=15.08.2026.r15.2235" defer></script>
-<script src="/admira-frame.js?v=15.08.2026.r15.2235" defer></script>
+  <script src="/admira-nav.js?v=15.08.2026.r16.2248" defer></script>
+<script src="/admira-frame.js?v=15.08.2026.r16.2248" defer></script>
 
   <div class="wrap">
     <header class="hero">
@@ -189,12 +189,13 @@
     },
     {
       os:'Android', icon:'android', status:'available', req:'Android 7+ · ARM/x86',
-      version:'AdmiraNeXTv.2026.15.08.r15 · versionCode 6', size:'2.4 MB',
+      version:'AdmiraNeXTv.2026.15.08.r16 · versionCode 7', size:'2.4 MB',
       download:'/player/admira-player.apk',
       dlLabel:'Descargar APK',
-      gatekeeper:'Instala el APK permitiendo “orígenes desconocidos”. Firmada con la clave propia de Admira (sideload, sin Play Store). Si ya tenías instalada una versión anterior, DESINSTÁLALA antes: cambia la firma y Android rechaza la actualización con “aplicación no instalada”.',
+      gatekeeper:'La primera instalación debe permitir actualizaciones desde AdmiraNeXT. A partir de esta versión, el player descarga, verifica e instala por Internet cada nueva release sin volver a conectarlo por USB.',
       notes:[
         'Kiosko a pantalla completa · pantalla siempre encendida · auto-reconexión',
+        'Actualización OTA firmada y verificada por SHA-256 · sin cable USB',
         'Watchdog de render y autoarranque tras reinicio',
         'Salir del kiosko: 5 toques en la esquina superior izquierda'
       ]
@@ -268,6 +269,6 @@
     });
   });
   </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r15.2235" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r16.2248" defer></script>
 </body>
 </html>
