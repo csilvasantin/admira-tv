@@ -12,9 +12,9 @@
 #     separados por puntos. Un sello ahí hace que App Store Connect rechace la
 #     subida — y el player de iOS se reparte por TestFlight. Así que en iOS y
 #     macOS la versión nativa se queda numérica y el sello va en AdmiraRelease.
-#   · Android deja versionName en texto libre, así que ahí el sello ES la versión
-#     visible. versionCode sigue siendo un entero creciente: es lo que Android
-#     compara para decidir si una instalación es más nueva, y no admite otra cosa.
+#   · Android deja versionName en texto libre. Su versión visible se expresa como
+#     AdmiraNeXTv.AAAA.DD.MM.rN: conserva la release y omite la hora, que no aporta
+#     nada en la ficha del dispositivo. versionCode sigue siendo un entero creciente.
 #   · AdmiraRelease está en las TRES: es la clave comparable entre plataformas.
 #
 # Uso:  tools/sella-players.sh                 → sello nuevo con la hora de ahora
@@ -22,7 +22,7 @@
 set -euo pipefail
 
 REPOS="$HOME/Documents/New project/csilvasantin-repos"
-AND="$REPOS/admira-signage-app"
+AND="${ADMIRA_ANDROID_REPO:-$HOME/Claude/admira-player/android}"
 MAC="$REPOS/admira-player"
 IOS="$REPOS/admiranext-player-ios"
 
@@ -34,27 +34,38 @@ if ! printf '%s' "$SELLO" | grep -qE '^v\.(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-
 fi
 echo "→ sello: $SELLO"
 
+ANDROID_SELLO="$(python3 - "$SELLO" <<'PY'
+import re, sys
+m = re.fullmatch(r'v\.(\d{2})\.(\d{2})\.(\d{4})\.r(\d+)\.\d{2}:\d{2}', sys.argv[1])
+if not m:
+    raise SystemExit(2)
+day, month, year, release = m.groups()
+print(f'AdmiraNeXTv.{year}.{day}.{month}.r{release}')
+PY
+)"
+
 # ── Android ────────────────────────────────────────────────────────────────
 # versionName = el sello. versionCode sube de uno en uno: si no crece, Android
 # considera la nueva instalación «no más nueva» y ni siquiera ofrece actualizar.
-G="$AND/app/build.gradle"
+G="$AND/app/build.gradle.kts"
+[ -f "$G" ] || G="$AND/app/build.gradle"
 if [ -f "$G" ]; then
-  CODE="$(sed -nE 's/.*versionCode ([0-9]+).*/\1/p' "$G" | head -1)"
-  YA="$(sed -nE 's/.*versionName "([^"]*)".*/\1/p' "$G" | head -1)"
+  CODE="$(sed -nE 's/.*versionCode[ =]+([0-9]+).*/\1/p' "$G" | head -1)"
+  YA="$(sed -nE 's/.*versionName[ =]+"([^"]*)".*/\1/p' "$G" | head -1)"
   # IDEMPOTENTE: re-sellar con el MISMO sello no sube el versionCode. Sin esto,
   # repetir el comando dejaba el repo en un code que no existe publicado (paso:
   # el APK en produccion era el 5 y el repo decia 6, que es justo la clase de
   # descuadre que este script viene a matar).
-  if [ "$YA" = "$SELLO" ]; then NEXT="$CODE"; else NEXT=$(( CODE + 1 )); fi
-  python3 - "$G" "$SELLO" "$NEXT" <<'PY'
+  if [ "$YA" = "$ANDROID_SELLO" ]; then NEXT="$CODE"; else NEXT=$(( CODE + 1 )); fi
+  python3 - "$G" "$ANDROID_SELLO" "$NEXT" <<'PY'
 import io, re, sys
 ruta, sello, code = sys.argv[1], sys.argv[2], sys.argv[3]
 t = io.open(ruta, encoding='utf-8').read()
-t = re.sub(r'versionCode \d+', f'versionCode {code}', t, count=1)
-t = re.sub(r'versionName "[^"]*"', f'versionName "{sello}"', t, count=1)
+t = re.sub(r'versionCode\s*(?:=\s*)?\d+', f'versionCode = {code}', t, count=1)
+t = re.sub(r'versionName\s*(?:=\s*)?"[^"]*"', f'versionName = "{sello}"', t, count=1)
 io.open(ruta, 'w', encoding='utf-8').write(t)
 PY
-  echo "  ✓ Android  versionName=$SELLO · versionCode=$NEXT"
+  echo "  ✓ Android  versionName=$ANDROID_SELLO · versionCode=$NEXT"
 fi
 
 # ── macOS e iOS ────────────────────────────────────────────────────────────
@@ -69,11 +80,11 @@ done
 # ── Comprobación: se relee lo escrito, no se da por bueno ──────────────────
 echo "→ verificación"
 FALLO=0
-A="$(sed -nE 's/.*versionName "([^"]*)".*/\1/p' "$G" 2>/dev/null | head -1)"
-[ "$A" = "$SELLO" ] || { echo "  ✖ Android dice '$A'"; FALLO=1; }
+A="$(sed -nE 's/.*versionName[ =]+"([^"]*)".*/\1/p' "$G" 2>/dev/null | head -1)"
+[ "$A" = "$ANDROID_SELLO" ] || { echo "  ✖ Android dice '$A'"; FALLO=1; }
 for PLIST in "$MAC/AdmiraSignageMac/Info.plist" "$IOS/AdmiraNeXTPlayer/Info.plist"; do
   [ -f "$PLIST" ] || continue
   V="$(plutil -extract AdmiraRelease raw "$PLIST" 2>/dev/null || true)"
   [ "$V" = "$SELLO" ] || { echo "  ✖ $PLIST dice '$V'"; FALLO=1; }
 done
-[ "$FALLO" = 0 ] && echo "  ✓ los tres players dicen $SELLO" || exit 1
+[ "$FALLO" = 0 ] && echo "  ✓ players sellados: Android $ANDROID_SELLO · Apple $SELLO" || exit 1

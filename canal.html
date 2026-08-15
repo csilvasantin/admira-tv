@@ -42,16 +42,23 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=15.08.2026.r14.2223"></script>
+<script src="xpl-runtime.js?v=15.08.2026.r15.2235"></script>
 <script>
-  window.ADMIRA_VERSION='v.15.08.2026.r14.22:23';
+  window.ADMIRA_VERSION='v.15.08.2026.r15.22:35';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
   // Los players nativos pueden pedir el lienzo físico completo. El canal web
   // normal conserva su marco editorial adaptativo; solo ?fit=screen elimina el
   // 9:16 inicial que, en un iPhone horizontal, parecía un MUPI estrecho centrado.
-  const __adtvScreenFit = __adtvParams.get('fit') === 'screen';
+  // Los shells Android antiguos solo añadían `embed=mupi`. En 90° eso dejaba
+  // que el marco editorial naciera 9:16 y, al llegar `loadedmetadata`, saltara
+  // al AR real del MP4: el vídeo parecía cambiar de dirección un segundo tarde.
+  // Un WebView Android de señalética es una superficie física y debe llenar el
+  // viewport desde el primer fotograma. `fit=content` queda como escape explícito.
+  const __adtvUA = navigator.userAgent || '';
+  const __adtvAndroidWebView = /Android/i.test(__adtvUA) && (/\bwv\b/i.test(__adtvUA) || /AdmiraAndroidPlayer/i.test(__adtvUA));
+  const __adtvScreenFit = __adtvParams.get('fit') === 'screen' || (__adtvParams.get('fit') !== 'content' && __adtvAndroidWebView);
   if (__adtvScreenFit) document.documentElement.classList.add('screen-fit');
 </script>
 <style>
@@ -1051,8 +1058,10 @@ function deviceTelemetryBase(){
   let os=/AdmiraMacOSPlayer|Macintosh|MacIntel/i.test(ua+' '+platform)?'macOS':/Android/i.test(ua)?'Android':/iPhone|iPad|iPod/i.test(ua)?'iOS/iPadOS':/Windows/i.test(ua)?'Windows':/Linux/i.test(ua)?'Linux':'Desconocido';
   let osVersion=''; const mac=/Mac OS X\s*([0-9_\.]+)/i.exec(ua), android=/Android\s+([0-9.]+)/i.exec(ua), ios=/OS\s+([0-9_]+)/i.exec(ua), win=/Windows NT\s+([0-9.]+)/i.exec(ua);
   if(mac) osVersion=mac[1].replace(/_/g,'.'); else if(android) osVersion=android[1]; else if(ios) osVersion=ios[1].replace(/_/g,'.'); else if(win) osVersion=win[1];
-  let player='Web Player', playerVersion=''; const nativeMac=/AdmiraMacOSPlayer\/([^\s(]+)/i.exec(ua), nativeIOS=/Admira(?:TV|Player)\/([^\s(]+)/i.exec(ua);
+  let player='Web Player', playerVersion=''; const nativeMac=/AdmiraMacOSPlayer\/([^\s(]+)/i.exec(ua), nativeAndroid=/AdmiraAndroidPlayer\/([^\s(]+)/i.exec(ua), nativeIOS=/Admira(?:TV|Player)\/([^\s(]+)/i.exec(ua);
+  const androidRelease=(()=>{ const m=/^v\.(\d{2})\.(\d{2})\.(\d{4})\.r(\d+)/.exec(String(window.ADMIRA_VERSION||'')); return m?'AdmiraNeXTv.'+m[3]+'.'+m[1]+'.'+m[2]+'.r'+m[4]:''; })();
   if(nativeMac){ player='Admira macOS Player'; playerVersion=nativeMac[1]; }
+  else if(nativeAndroid || (/Android/i.test(ua)&&/\bwv\b/i.test(ua))){ player='AdmiraNeXT Android Player'; playerVersion=(nativeAndroid&&nativeAndroid[1])||androidRelease; }
   else if(nativeIOS){ player='Admira Player'; playerVersion=nativeIOS[1]; }
   const wk=/AppleWebKit\/([0-9.]+)/i.exec(ua), chrome=/(?:Chrome|CriOS)\/([0-9.]+)/i.exec(ua), firefox=/Firefox\/([0-9.]+)/i.exec(ua);
   const engine=chrome?'Chromium '+chrome[1]:firefox?'Firefox '+firefox[1]:wk?'WebKit '+wk[1]:'WebView';
@@ -3740,6 +3749,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r14.2223" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r15.2235" defer></script>
 </body>
 </html>

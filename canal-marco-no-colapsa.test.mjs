@@ -34,17 +34,18 @@ function extrae(nombre) {
 }
 
 /* Un wrap que mide lo que le digamos, y un mupi que recuerda lo que le escriben. */
-function escenario({ alto, ancho }) {
+function escenario({ alto, ancho, rotation = 0, screenFit = false }) {
   const mupi = { style: {} };
   const wrap = { clientHeight: alto, clientWidth: ancho };
   const nodos = { mupi, wrap, rail: null, chan: null };
   const marcos = [];
   const ctx = vm.createContext({
     $: (id) => nodos[id] || null,
-    document: { documentElement: { classList: { contains: () => false } } },
+    document: { documentElement: { classList: { contains: (name) => name === "screen-fit" && screenFit } } },
     getComputedStyle: () => ({ display: "none", paddingLeft: "0", paddingRight: "0",
       paddingTop: "0", paddingBottom: "0", columnGap: "0", gap: "0" }),
     mupiAR: 9 / 16,
+    displayRotation: rotation,
     Math, parseFloat, requestAnimationFrame: (fn) => { marcos.push(fn); },
     ResizeObserver: undefined,
   });
@@ -91,6 +92,18 @@ test("una medida ridícula tampoco pasa: el umbral es de píxeles reales", () =>
   const e = escenario({ alto: 12, ancho: 1440 });
   e.fit();
   assert.equal(e.mupi.style.height, undefined, "12px de alto no es una ventana, es ruido de layout");
+});
+
+test("Android a 90° conserva el viewport físico cuando llega el AR real del vídeo", () => {
+  const e = escenario({ alto: 834, ancho: 752, rotation: 90, screenFit: true });
+  e.fit();
+  assert.deepEqual({ h: e.mupi.style.height, w: e.mupi.style.width }, { h: "752px", w: "834px" });
+
+  // loadedmetadata puede descubrir que el MP4 es 16:9. En un player físico no
+  // debe volver a orientar el marco ni animar un segundo giro aparente.
+  e.ctx.mupiAR = 16 / 9;
+  e.fit();
+  assert.deepEqual({ h: e.mupi.style.height, w: e.mupi.style.width }, { h: "752px", w: "834px" });
 });
 
 test("el reintento no se vuelve infinito", () => {

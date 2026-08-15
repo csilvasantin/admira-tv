@@ -47,3 +47,9 @@ test('el player aplica grados absolutos y conserva el giro incremental anterior'
   assert.match(canal, /orientation:\(screen\.orientation&&screen\.orientation\.type\)\|\|'', rotation:displayRotation/);
   assert.match(canal, /DEVICE_TELEMETRY\.display\.rotation=displayRotation/);
 });
+
+test('el WebView Android usa la superficie física desde el primer fotograma', () => {
+  assert.match(canal, /const __adtvAndroidWebView = \/Android\/i\.test\(__adtvUA\)/);
+  assert.match(canal, /__adtvParams\.get\('fit'\) !== 'content' && __adtvAndroidWebView/);
+  assert.match(canal, /if\(document\.documentElement\.classList\.contains\('screen-fit'\)\)/);
+});
