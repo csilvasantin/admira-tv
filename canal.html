@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=15.08.2026.r6.1917"></script>
+<script src="xpl-runtime.js?v=15.08.2026.r7.1956"></script>
 <script>
-  window.ADMIRA_VERSION='v.15.08.2026.r6.19:17';
+  window.ADMIRA_VERSION='v.15.08.2026.r7.19:56';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -196,7 +196,7 @@
      funcionar también en clean/kiosco y solo aparece por una acción física. */
   #localInfo{ position:absolute; z-index:70; top:18px; left:18px; width:min(520px,calc(100% - 36px));
     box-sizing:border-box; border:1px solid rgba(125,255,208,.68); border-radius:15px;
-    padding:14px 16px 13px; color:#dfffee; background:rgba(3,12,18,.91);
+    padding:14px 82px 16px 16px; color:#dfffee; background:rgba(3,12,18,.91);
     box-shadow:0 0 28px rgba(74,255,164,.22),inset 0 0 22px rgba(42,154,112,.06);
     backdrop-filter:blur(9px); font:12px ui-monospace,Menlo,Monaco,monospace; pointer-events:none; }
   #localInfo[hidden]{ display:none!important; }
@@ -216,7 +216,13 @@
   #localInfo .li-v.warn{ color:#ffc65c; text-shadow:0 0 7px rgba(255,176,42,.35); }
   #localInfo .li-v.bad{ color:#ff6b6b; text-shadow:0 0 7px rgba(255,64,64,.35); }
   #localInfo .li-tags{ margin-top:10px; color:#9fe8ff; font-size:10px; line-height:1.45; opacity:.9; overflow-wrap:anywhere; }
-  @media(max-width:560px){ #localInfo{ top:10px; left:10px; width:calc(100% - 20px); padding:12px; }
+  #localInfo .li-audio{position:absolute;right:14px;bottom:13px;width:52px;height:43px;display:flex;align-items:flex-end;
+    justify-content:center;gap:3px;padding:8px 7px 7px;box-sizing:border-box;color:#78ff9d;border:1px solid currentColor;
+    border-radius:12px;background:rgba(2,10,15,.82);box-shadow:0 0 16px rgba(67,255,133,.32)}
+  #localInfo .li-audio i{display:block;width:3px;height:100%;border-radius:3px;background:currentColor;transform:scaleY(.12);transform-origin:bottom;will-change:transform}
+  #localInfo .li-audio.muted{color:#ff6b6b;box-shadow:0 0 15px rgba(255,64,64,.28)}
+  #localInfo .li-audio-label{position:absolute;right:10px;bottom:2px;width:62px;text-align:center;color:currentColor;font-size:7px;letter-spacing:.09em}
+  @media(max-width:560px){ #localInfo{ top:10px; left:10px; width:calc(100% - 20px); padding:12px 72px 14px 12px; }
     #localInfo .li-grid{ gap:5px 9px; } }
   @keyframes pulse{ 50%{ opacity:.25 } }
   #ctrls{ display:flex; align-items:center; gap:10px; margin:0 0 14px; transition:opacity .3s; }
@@ -296,6 +302,7 @@
     <div class="li-primary-tag" id="li-primary-tag" hidden></div>
     <div class="li-grid" id="li-grid"></div>
     <div class="li-tags" id="li-tags"></div>
+    <div class="li-audio muted" id="li-audio" role="img" aria-label="Audio silenciado"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span class="li-audio-label" id="li-audio-label">MUTE</span></div>
   </aside>
   <div id="seg">
     <span class="close" id="segClose">×</span>
@@ -410,6 +417,17 @@ if(qs.get('machine')) save('adtv_machine', scr.machine);
 if(!scr.circuit && scr.screen){ scr.circuit = String(scr.screen).replace(/-mupi$/,''); save('adtv_circuit', scr.circuit); }
 let muted  = qs.has('muted') ? qs.get('muted') !== '0' : (LS('adtv_muted','1'))==='1';
 let volume = Math.max(0,Math.min(1,parseFloat(qs.get('volume')||LS('adtv_vol','1'))));
+var AUDIO_METER=null;
+var _audioStateTimer=0;
+function playerAudioState(){
+  const isMuted=!!muted||volume<=0, meter=AUDIO_METER||{};
+  return {muted:isMuted,volume:Math.round(volume*100),level:isMuted?0:Math.round(Math.max(0,Math.min(1,meter.level||0))*100),analyzed:!!meter.analyser};
+}
+function pushAudioStateSoon(){
+  clearTimeout(_audioStateTimer); _audioStateTimer=setTimeout(()=>{
+    try{ if(_nowItem&&typeof _postNow==='function'){ _nowItem.audio=playerAudioState(); _postNow(_nowItem); } }catch(_){}
+  },180);
+}
 const modeParam = qs.get('mode') ?? qs.get('admiraMode') ?? qs.get('playout');
 const syncParam = qs.get('sincro') ?? qs.get('sync') ?? qs.get('syncro');
 // Integraciones embebidas (p. ej. el selector del robot XpaceOS) pueden fijar
@@ -644,7 +662,13 @@ function freshBadge(txt){
     ($('mupi')||document.body).appendChild(b); }
   b.style.display=txt?'block':'none'; b.textContent=txt||'';
 }
-function applyAudio(){ if(mediaEl&&'muted'in mediaEl){ mediaEl.muted=muted; mediaEl.volume=volume; } $('mute').textContent=(muted||volume===0)?'🔇':(volume<0.5?'🔉':'🔊'); $('vol').value=volume; save('adtv_muted',muted?'1':'0'); save('adtv_vol',String(volume)); }
+function applyAudio(){
+  if(mediaEl&&'muted'in mediaEl){ mediaEl.muted=muted; mediaEl.volume=volume; }
+  $('mute').textContent=(muted||volume===0)?'🔇':(volume<0.5?'🔉':'🔊'); $('vol').value=volume;
+  save('adtv_muted',muted?'1':'0'); save('adtv_vol',String(volume));
+  try{ localInfoAudioPaint(); }catch(_){}
+  pushAudioStateSoon();
+}
 function setAudio(on, level){
   muted=!on;
   if(on) volume=Math.max(0.1,Math.min(1,parseFloat(level)||volume||1));
@@ -999,6 +1023,7 @@ function deviceTelemetryBase(){
     hardware:{ cores:navigator.hardwareConcurrency||0, memoryGB:navigator.deviceMemory||0, touchPoints:navigator.maxTouchPoints||0,
       architecture:(navigator.userAgentData&&navigator.userAgentData.architecture)||'' },
     software:{ player, playerVersion, webRelease:window.ADMIRA_VERSION||'', engine, userAgent:ua },
+    audio:playerAudioState(),
     storage:{ usage:0, quota:0, persisted:false },
     network:{ online:navigator.onLine!==false, effectiveType:conn.effectiveType||'', saveData:!!conn.saveData }
   };
@@ -1018,7 +1043,7 @@ window.addEventListener('online',()=>refreshDeviceTelemetry(true));
 window.addEventListener('offline',()=>refreshDeviceTelemetry(true));
 // loc/locName → el worker refleja esta pantalla en /signage/screens (vista viva
 // unificada "qué equipo emite qué ahora"). loc = circuito; locName = nombre legible.
-function _postNow(item){ try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
+function _postNow(item){ try{ if(item) item.audio=playerAudioState(); DEVICE_TELEMETRY.audio=playerAudioState(); fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
   body:JSON.stringify({ screen:scr.screen, producer:TELEMETRY_PRODUCER, item, standby:false, role:'canal', version:window.ADMIRA_VERSION||'', device:DEVICE_TELEMETRY,
     loc:scr.circuit||'', locName:scr.name||scr.circuit||'', machine:scr.machine||'' })}).catch(()=>{}); }catch(_){} }
 function signageNowPush(it){
@@ -1038,7 +1063,7 @@ function signageNowPush(it){
   if(syncOn){ try{ sinc.idx=syncIndex(); sinc.slot=Math.round(syncSlotMs()/1000); sinc.n=playlist.length; }catch(_){} }
   if(_extendedAssignment&&_extendedAssignment.tile){ sinc.tile=_extendedAssignment.tile; sinc.revision=_extendedAssignment.revision||0; }
   const item={ id:it.id, url:it.url, type:it.type||'image', ar:(mupiAR||itemAR(it)||(9/16)),
-    title:(it.title||it.prompt||'').slice(0,80), dur:(it._dur||0), startedAt:now, ts:now, aud:_lastAud, sinc };
+    title:(it.title||it.prompt||'').slice(0,80), dur:(it._dur||0), startedAt:now, ts:now, aud:_lastAud, audio:playerAudioState(), sinc };
   const cambiaPieza = !_nowItem || String(_nowItem.id)!==String(item.id);
   _nowItem=item; _postNow(item);
   // Foto y título salen JUNTOS. El título viaja en este beat y cambia al instante; la
@@ -2403,6 +2428,51 @@ function testTags(it){
 // Diagnóstico bajo demanda para el operador que está delante del player. No
 // persiste, no se activa remotamente y no altera la reproducción ni el proof.
 let _localInfoItem=null, _localInfoTimer=null;
+function audioMeterDetach(){
+  const m=AUDIO_METER||{};
+  if(m.raf) cancelAnimationFrame(m.raf);
+  try{ m.source&&m.source.disconnect(); }catch(_){}
+  try{ m.ctx&&m.ctx.close(); }catch(_){}
+  AUDIO_METER={ctx:null,source:null,analyser:null,data:null,stream:null,media:null,raf:0,level:0};
+}
+function audioMeterAttach(){
+  if(!AUDIO_METER) audioMeterDetach();
+  if(AUDIO_METER.media===mediaEl&&(AUDIO_METER.analyser||AUDIO_METER.tried)) return;
+  audioMeterDetach(); AUDIO_METER.media=mediaEl; AUDIO_METER.tried=true;
+  const el=mediaEl, capture=el&&(el.captureStream||el.mozCaptureStream), AC=window.AudioContext||window.webkitAudioContext;
+  if(!capture||!AC) return;
+  try{
+    const stream=capture.call(el), tracks=stream&&stream.getAudioTracks?stream.getAudioTracks():[];
+    if(!tracks.length) return;
+    const ctx=new AC(), source=ctx.createMediaStreamSource(stream), analyser=ctx.createAnalyser();
+    analyser.fftSize=64; analyser.smoothingTimeConstant=.72; source.connect(analyser);
+    AUDIO_METER.ctx=ctx; AUDIO_METER.source=source; AUDIO_METER.analyser=analyser;
+    AUDIO_METER.data=new Uint8Array(analyser.fftSize); AUDIO_METER.stream=stream;
+    if(ctx.state==='suspended') ctx.resume().catch(()=>{});
+  }catch(_){}
+}
+function localInfoAudioPaint(level){
+  const meter=$('li-audio'); if(!meter) return;
+  const state=playerAudioState(), off=state.muted;
+  meter.classList.toggle('muted',off); meter.setAttribute('aria-label',off?'Audio silenciado':'Audio activo al '+state.volume+'%');
+  $('li-audio-label').textContent=off?'MUTE':(state.analyzed?'LIVE':'AUDIO');
+  const bars=meter.querySelectorAll('i'), l=off?0.05:Math.max(.08,Number.isFinite(level)?level:(state.level/100));
+  bars.forEach((bar,i)=>{ const harmonic=.38+.62*Math.abs(Math.sin((performance.now()/210)+(i*1.37))); bar.style.transform='scaleY('+Math.min(1,.08+l*(.48+harmonic*.86))+')'; });
+}
+function audioMeterTick(){
+  const box=$('localInfo'); if(!box||box.hidden){ if(AUDIO_METER) AUDIO_METER.raf=0; return; }
+  if(!AUDIO_METER||AUDIO_METER.media!==mediaEl) audioMeterAttach();
+  const m=AUDIO_METER||{}; let level=0;
+  if(!muted&&volume>0&&m.analyser&&m.data){
+    try{ m.analyser.getByteTimeDomainData(m.data); let sum=0; for(const n of m.data){ const v=(n-128)/128; sum+=v*v; } level=Math.min(1,Math.sqrt(sum/m.data.length)*3.2*volume); }catch(_){}
+  }else if(!muted&&volume>0&&mediaEl&&!paused&&!mediaEl.paused){
+    level=(.18+.22*Math.abs(Math.sin(performance.now()/170)))*volume;
+  }
+  m.level=(m.level||0)*.65+level*.35; localInfoAudioPaint(m.level);
+  m.raf=requestAnimationFrame(audioMeterTick);
+}
+function audioMeterStart(){ audioMeterAttach(); if(!AUDIO_METER.raf) AUDIO_METER.raf=requestAnimationFrame(audioMeterTick); }
+function audioMeterStop(){ audioMeterDetach(); localInfoAudioPaint(0); }
 function localInfoSet(it){ _localInfoItem=it||null; if(!$('localInfo').hidden) localInfoRender(); }
 function localInfoClock(sec){
   if(!(sec>=0)||!isFinite(sec)) return '—';
@@ -2453,16 +2523,20 @@ function localInfoRender(){
   row('tipo',it?(it.type||KIND[it.type]||'—'):'—');
   row('posición',pos);
   row('progreso',dur?localInfoClock(elapsed)+' / '+localInfoClock(dur):'—');
+  const audio=playerAudioState();
+  row('audio',audio.muted?'SILENCIADO':'ACTIVO · '+audio.volume+'%'+(audio.analyzed?' · señal '+audio.level+'%':''),audio.muted?'bad':'ok');
   row('resolución',resolution);
   row('tamaño',meta?testSize(meta,localInfoRender):'—');
   row('origen',meta?(meta.motor||meta.category||'stock'):'—');
   row('pantalla',scr.screen||scr.machine||'sin identificar');
   $('li-tags').textContent=meta?(testTags(meta)||'sin etiquetas'):'sin etiquetas';
+  localInfoAudioPaint((AUDIO_METER&&AUDIO_METER.level)||0);
 }
 function localInfoVisible(opening){
   const box=$('localInfo'); box.hidden=!opening;
   clearInterval(_localInfoTimer); _localInfoTimer=null;
-  if(opening){ localInfoRender(); _localInfoTimer=setInterval(localInfoRender,1000); }
+  if(opening){ localInfoRender(); audioMeterStart(); _localInfoTimer=setInterval(localInfoRender,1000); }
+  else audioMeterStop();
 }
 function localInfoToggle(){ const opening=$('localInfo').hidden; localInfoVisible(opening); return opening; }
 function localInfoShow(){ localInfoVisible(true); return true; }
@@ -3511,6 +3585,11 @@ function _shotDrawLocalInfo(cx,W,H){
     cx.font=Math.max(12,11*sx)+'px ui-monospace,Menlo,monospace'; cx.fillText(String(value.textContent||'—').slice(0,64),valueX,cy); cy+=rowH;
   }
   cx.fillStyle='#9fe8ff'; cx.font=Math.max(11,10*sx)+'px ui-monospace,Menlo,monospace'; _shotWrapText(cx,$('li-tags').textContent,x+pad,cy+5*sx,w-pad*2,Math.max(17,14*sx),3);
+  const audio=playerAudioState(), meterW=50*sx, meterH=38*sx, meterX=x+w-pad-meterW, meterY=y+h-pad-meterH;
+  _shotPathCard(cx,meterX,meterY,meterW,meterH,10*sx); cx.fillStyle='rgba(2,10,15,.9)'; cx.fill();
+  cx.strokeStyle=audio.muted?'#ff6b6b':'#78ff9d'; cx.stroke(); cx.fillStyle=cx.strokeStyle;
+  const level=audio.muted?.06:Math.max(.12,audio.level/100), bw=3*sx, gap=3*sx;
+  for(let i=0;i<7;i++){ const bh=meterH*Math.min(.72,.08+level*(.38+.5*Math.abs(Math.sin(i*1.37+Date.now()/220)))); cx.fillRect(meterX+7*sx+i*(bw+gap),meterY+meterH-6*sx-bh,bw,bh); }
   cx.restore(); return true;
 }
 async function shotTick(forceInfo){
@@ -3582,6 +3661,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r6.1917" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r7.1956" defer></script>
 </body>
 </html>

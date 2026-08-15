@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=15.08.2026.r6.1917"></script>
+<script src="/auth-gate.js?v=15.08.2026.r7.1956"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -353,6 +353,16 @@
   .ebShot.sinPrevio img{display:none}
   .ebShot.sinPrevio .ebShotHole{display:flex}
   .ebShot.sinPrevio{border-style:dashed}
+  .ebAudio{position:absolute;right:5px;bottom:5px;z-index:2;width:28px;height:20px;display:flex;align-items:flex-end;
+    justify-content:center;gap:2px;padding:3px 4px;box-sizing:border-box;border:1px solid currentColor;border-radius:7px;
+    background:rgba(3,7,12,.84);backdrop-filter:blur(4px);pointer-events:none}
+  .ebAudio i{display:block;width:2px;height:100%;border-radius:2px;background:currentColor;transform-origin:bottom}
+  .ebAudio.live{color:var(--air);box-shadow:0 0 9px rgba(57,211,83,.48)}
+  .ebAudio.live i{animation:ebWave .72s ease-in-out infinite alternate}
+  .ebAudio.live i:nth-child(2){animation-delay:-.38s}.ebAudio.live i:nth-child(3){animation-delay:-.16s}.ebAudio.live i:nth-child(4){animation-delay:-.53s}.ebAudio.live i:nth-child(5){animation-delay:-.27s}
+  .ebAudio.muted{color:var(--off);box-shadow:0 0 8px rgba(255,90,90,.35)}
+  .ebAudio.muted i{transform:scaleY(.18)}
+  @keyframes ebWave{from{transform:scaleY(.18)}to{transform:scaleY(1)}}
   /* MANDO EMPOTRADO. Alto generoso porque el mando trae sus propios controles y
      su playlist; si el panel se queda corto, se arrastra (el borde superior). */
   .admando h4{ display:flex; align-items:center; gap:8px }
@@ -411,6 +421,18 @@
   .ebGap .gk{font-weight:700;color:var(--ink);white-space:nowrap}
   .ebGap .gd{color:var(--dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ebGapEmpty{color:var(--air);font-size:12px;padding:6px 2px}
+  .ebGapSection{margin:10px 0 0;border:1px solid var(--line);border-radius:10px;background:#0a111d;overflow:hidden}
+  .ebGapSection summary{list-style:none;display:flex;align-items:center;gap:10px;padding:11px 13px;cursor:pointer;
+    color:var(--amber);font:700 11.5px ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase}
+  .ebGapSection summary::-webkit-details-marker{display:none}
+  .ebGapSection summary::before{content:'›';font-size:19px;line-height:.8;transition:transform .16s}
+  .ebGapSection[open] summary::before{transform:rotate(90deg)}
+  .ebGapSection summary:hover,.ebGapSection summary:focus-visible{background:#0e1827;outline:none}
+  .ebGapSection .ebGapCount{margin-left:auto;color:var(--ink);font-size:12px;letter-spacing:0}
+  .ebGapSection .ebGapHint{color:var(--dim);font-size:9px;letter-spacing:.05em}
+  .ebGapSection[open] .ebGapHint::after{content:'compactar'}.ebGapSection:not([open]) .ebGapHint::after{content:'cargar detalle'}
+  .ebGapSectionBody{padding:0 9px 9px}
+  .ebGapLazy{padding:9px;color:var(--dim);font:11px ui-monospace,monospace}
   /* tarea4: acciones de un clic en los descuadres (vincular / asignar) */
   .ebAct{margin-left:auto;display:flex;align-items:center;gap:6px;flex:none}
   .ebSel{background:#0a1120;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 7px;font:600 11px ui-monospace,monospace;max-width:180px;cursor:pointer}
@@ -458,7 +480,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=15.08.2026.r6.1917">
+  <link rel="stylesheet" href="/admira-frame.css?v=15.08.2026.r7.1956">
 </head>
 <body>
 <script>
@@ -477,8 +499,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=15.08.2026.r6.1917"></script>
-<script src="/admira-frame.js?v=15.08.2026.r6.1917" defer></script>
+<script src="/admira-nav.js?v=15.08.2026.r7.1956"></script>
+<script src="/admira-frame.js?v=15.08.2026.r7.1956" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -627,7 +649,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=15.08.2026.r6.1917"></script>
+<script src="xpl-runtime.js?v=15.08.2026.r7.1956"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -1567,6 +1589,7 @@ $('progBands').addEventListener('click',e=>{
     ONLINE_MS: 600000     // frescura ~10 min (TTL de signage/screens)
   };
   let EB_GAPS=true, EB_FLEET=false, EB_TIMER=null, EB_STOCK=null;
+  const EB_DETAIL={surfaces:'',sites:''}, EB_DETAIL_OPEN={surfaces:false,sites:false};
   const el=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const hole=t=>'<span class="ebHole">'+esc(t)+'</span>';
@@ -1578,6 +1601,13 @@ $('progBands').addEventListener('click',e=>{
     try{ const r=await fetch(url,{cache:'no-store',signal:ctl.signal}); clearTimeout(to);
       if(!r.ok) return {err:'HTTP '+r.status}; return {data:await r.json()}; }
     catch(e){ clearTimeout(to); return {err:(e&&e.name==='AbortError')?'timeout':(e&&e.message)||'error'}; }
+  }
+  function gapSection(id,title,count,body){
+    EB_DETAIL[id]=body;
+    const open=!!EB_DETAIL_OPEN[id];
+    return '<details class="ebGapSection" data-gap-section="'+id+'"'+(open?' open':'')+'><summary>'+esc(title)+
+      '<span class="ebGapCount">'+esc(count)+'</span><span class="ebGapHint" aria-hidden="true"></span></summary>'+
+      '<div class="ebGapSectionBody">'+(open?body:'<div class="ebGapLazy">Pulsa para cargar el detalle</div>')+'</div></details>';
   }
 
   async function ebLoad(){
@@ -1659,6 +1689,16 @@ $('progBands').addEventListener('click',e=>{
       const count=Math.max(0,Number(asset&&asset.n)||0), loc=String(p.loc||p.screen||'').replace(/-mupi$/,'');
       return {count,href:'/estadisticas/?screen='+encodeURIComponent(p.screen)+'&loc='+encodeURIComponent(loc)+(info&&info.id?'&item='+encodeURIComponent(info.id):'')};
     }
+    function audioInfo(p){
+      const live=nowByScreen[p.screen]||{}, audio=live.audio||((p.device&&p.device.audio)||{});
+      const muted=audio.muted==null?true:!!audio.muted;
+      return {muted,label:muted?'Audio silenciado':'Audio activo'};
+    }
+    function audioBadge(p){
+      const a=audioInfo(p), cls=a.muted?'muted':'live';
+      return '<span class="ebAudio '+cls+'" role="img" aria-label="'+a.label+'" title="'+a.label+'">'+
+        '<i></i><i></i><i></i><i></i><i></i></span>';
+    }
     // La misma playlist EFECTIVA que publica el player para el mando gráfico.
     // No se infiere desde el mapa ni desde una parrilla que quizá no esté vinculada.
     function playlistInfo(p){
@@ -1733,13 +1773,13 @@ $('progBands').addEventListener('click',e=>{
         // válido. Ocultarla hasta que llegue el fotograma ligado al item actual
         // evita la contradicción visual que originó esta misión.
         if(!liveId||!meta||!meta.itemId||String(meta.itemId)!==String(liveId)){
-          return '<span class="ebShot sinPrevio"><span class="ebShotHole">actualizando previo</span></span>';
+          return '<span class="ebShot sinPrevio"><span class="ebShotHole">actualizando previo</span>'+audioBadge(p)+'</span>';
         }
         const url = SHOT_BASE+'?screen='+encodeURIComponent(p.screen)+'&t='+shotTs;
         return '<a class="ebShot" href="'+url+'" target="_blank" rel="noopener" title="Lo que hay ahora mismo en '+esc(p.screen)+' — clic para verlo grande">'+
           '<img src="'+url+'" alt="Previo de '+esc(p.screen)+'" loading="lazy" decoding="async" '+
           'onerror="this.closest(\'.ebShot\').classList.add(\'sinPrevio\')">'+
-          '<span class="ebShotHole">sin previo</span></a>';
+          '<span class="ebShotHole">sin previo</span>'+audioBadge(p)+'</a>';
       }
       // Orden por defecto: primero lo que está en antena, luego por nombre. Es el que
       // vale para la mirada de guardia, así que sigue siendo el de partida — la
@@ -1835,21 +1875,20 @@ $('progBands').addEventListener('click',e=>{
       '<button class="ebBtn" data-act="link" data-screen="'+esc(p.screen)+'">vincular a circuito</button></span></div>').join('')
       : '<div class="ebGapEmpty">✓ ningún player huérfano</div>') +'</div>');
     const emptySurfaces=gridScreens.filter(g=>!(g.pixerScreens&&g.pixerScreens.length));
-    gapHtml.push('<h3>Superficies de parrilla sin player (pixerScreens:[]) · '+emptySurfaces.length+'</h3>');
-    gapHtml.push('<div class="ebGapList">'+ (emptySurfaces.length? emptySurfaces.map(g=>{
+    const surfaceBody='<div class="ebGapList">'+ (emptySurfaces.length? emptySurfaces.map(g=>{
       const pr=circ2proj[g.circuit];
       return '<div class="ebGap"><span class="gk">'+esc(g.screen)+'</span><span class="gd">'+esc(g.name||'')+' · canal '+esc(pr?pr.name:g.circuit)+' → falta cablear player físico</span>'+
         '<span class="ebAct"><select class="ebSel" data-role="player" title="Player físico vivo">'+playerOpts+'</select>'+
         '<button class="ebBtn" data-act="wire" data-screen="'+esc(g.screen)+'">asignar player</button></span></div>';
-    }).join('') : '<div class="ebGapEmpty">✓ todas las superficies tienen player</div>') +'</div>');
-    gapHtml.push('<h3>Sitios (mapa) sin player vivo · '+(locsDown?'n/d':(()=>{
-      const arr=locations.filter(L=>{const c=String(L.id||'').split('-')[0];return !liveCircuits.has(c)&&!players.some(p=>{const l=findLoc(p.loc);return l&&l.id===L.id;});});
-      return arr.length; })())+'</h3>');
-    if(locsDown){ gapHtml.push('<div class="ebGapList"><div class="ebGap crit"><span class="gk">mapa n/d</span><span class="gd">locations no accesible: '+esc(lc.err)+' (bloqueado en ES / timeout)</span></div></div>'); }
-    else { const noP=locations.filter(L=>{const c=String(L.id||'').split('-')[0];return !liveCircuits.has(c)&&!players.some(p=>{const l=findLoc(p.loc);return l&&l.id===L.id;});});
-      gapHtml.push('<div class="ebGapList">'+ (noP.length? noP.map(L=>
+    }).join('') : '<div class="ebGapEmpty">✓ todas las superficies tienen player</div>') +'</div>';
+    gapHtml.push(gapSection('surfaces','Superficies de parrilla sin player (pixerScreens:[])',emptySurfaces.length,surfaceBody));
+    const noP=locsDown?[]:locations.filter(L=>{const c=String(L.id||'').split('-')[0];return !liveCircuits.has(c)&&!players.some(p=>{const l=findLoc(p.loc);return l&&l.id===L.id;});});
+    const siteBody=locsDown
+      ? '<div class="ebGapList"><div class="ebGap crit"><span class="gk">mapa n/d</span><span class="gd">locations no accesible: '+esc(lc.err)+' (bloqueado en ES / timeout)</span></div></div>'
+      : '<div class="ebGapList">'+ (noP.length? noP.map(L=>
         '<div class="ebGap"><span class="gk">'+esc(L.id)+'</span><span class="gd">'+esc(L.name||'')+' → sin ningún player emitiendo ahí</span></div>').join('')
-        : '<div class="ebGapEmpty">✓ todos los sitios tienen player vivo</div>') +'</div>'); }
+        : '<div class="ebGapEmpty">✓ todos los sitios tienen player vivo</div>') +'</div>';
+    gapHtml.push(gapSection('sites','Sitios (mapa) sin player vivo',locsDown?'n/d':noP.length,siteBody));
     el('ebGaps').innerHTML = gapHtml.join('');
     el('ebGaps').hidden = !EB_GAPS;
 
@@ -1877,6 +1916,12 @@ $('progBands').addEventListener('click',e=>{
 
   el('ebTogGaps').addEventListener('click',function(){ EB_GAPS=!EB_GAPS; this.classList.toggle('on',EB_GAPS); el('ebGaps').hidden=!EB_GAPS; });
   el('ebTogFleet').addEventListener('click',function(){ EB_FLEET=!EB_FLEET; this.classList.toggle('on',EB_FLEET); el('ebFleet').hidden=!EB_FLEET; });
+  el('ebGaps').addEventListener('toggle',function(e){
+    const box=e.target.closest&&e.target.closest('details[data-gap-section]'); if(!box) return;
+    const id=box.getAttribute('data-gap-section'); EB_DETAIL_OPEN[id]=box.open;
+    const body=box.querySelector('.ebGapSectionBody'); if(!body) return;
+    body.innerHTML=box.open?(EB_DETAIL[id]||'<div class="ebGapEmpty">sin detalle</div>'):'<div class="ebGapLazy">Pulsa para cargar el detalle</div>';
+  },true);
   // Las cabeceras se enganchan UNA vez: viven en el <thead>, que no se repinta.
   // Lo que sí hay que rehacer en cada refresco es aplicar el orden de columnas al
   // cuerpo nuevo, y de eso se encarga renderEmision al terminar.
@@ -1971,10 +2016,10 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-session.js?v=15.08.2026.r6.1917"></script>
-<script src="/admira-avatar.js?v=15.08.2026.r6.1917"></script>
-<script src="/cms-pacman.js?v=15.08.2026.r6.1917"></script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r6.1917" defer></script>
+<script src="/admira-session.js?v=15.08.2026.r7.1956"></script>
+<script src="/admira-avatar.js?v=15.08.2026.r7.1956"></script>
+<script src="/cms-pacman.js?v=15.08.2026.r7.1956"></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r7.1956" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
    Mismo patrón que el highscore de yokup: tirador por columna, mínimo por

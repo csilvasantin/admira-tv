@@ -83,4 +83,5 @@ test("el estado es medido, no un «available» para todos", () => {
   assert.ok(estados.size > 1, "si todas comparten estado, el estado no informa");
   assert.equal(censo.filter((x) => x.estado === "escaparate").length, 30);
   assert.equal(censo.find((x) => x.slug === "adcelerate").estado, "emite");
+  assert.equal(censo.find((x) => x.slug === "estadisticas").estado, "emite");
 });

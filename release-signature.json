@@ -1,9 +1,9 @@
 {
-  "version": "v.15.08.2026.r6.19:17",
+  "version": "v.15.08.2026.r7.19:56",
   "signature": "TrinityMBP16 · MacBookPro16",
   "agent": "TrinityMBP16",
   "machine": "MacBookPro16",
   "day": "15.08.2026",
-  "time": "19:17",
-  "evidence": "El CMS muestra los pases diarios del contenido actual, enlaza a Estadísticas con periodos día, semana, mes e histórico, y el mando rota de forma acumulativa 90, 180, 270 y 0 grados."
+  "time": "19:56",
+  "evidence": "El CMS muestra una onda verde o roja según el mute real del player; la ficha local analiza la señal de audio, y los bloques de superficies y sitios sin player cargan su detalle sólo al desplegarse."
 }

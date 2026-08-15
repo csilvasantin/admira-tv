@@ -471,5 +471,22 @@
     "peso_kb": 13,
     "ficheros": 1,
     "apis": []
+  },
+  {
+    "n": 36,
+    "alias": "36.- Estadísticas",
+    "slug": "estadisticas",
+    "name_es": "Estadísticas",
+    "familia": "Medición",
+    "estado": "emite",
+    "en_vitrina": false,
+    "ruta": "/estadisticas/",
+    "peso_kb": 19,
+    "ficheros": 1,
+    "apis": [
+      "https://api.admira.store/emit/range",
+      "https://api.admira.store/signage/now",
+      "/api/playout"
+    ]
   }
 ]

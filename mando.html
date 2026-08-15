@@ -1087,6 +1087,12 @@
         var reportedRotation=Number(d&&d.device&&d.device.display&&d.device.display.rotation);
         if(Number.isFinite(reportedRotation)){ rotationByScreen.set(target.screen,reportedRotation); paintRotationButton(); }
         var it=d&&d.item, shotPreview=remoteShotPreview(shotMeta,target,it);
+        var reportedAudio=(it&&it.audio)||(d&&d.device&&d.device.audio);
+        if(reportedAudio&&typeof reportedAudio.muted==='boolean'){
+          muted=reportedAudio.muted;
+          if(Number.isFinite(Number(reportedAudio.volume))){ vol.value=Math.max(0,Math.min(100,Number(reportedAudio.volume))); document.getElementById('volv').textContent=Math.round(Number(vol.value))+'%'; }
+          paintRemoteControls();
+        }
         document.getElementById('now').textContent=d&&d.standby?'⏻ STANDBY (apagada)':(it?(it.title||it.type||'—'):(shotPreview?remoteShotLabel(shotMeta):'— sin señal —'));
         if(d&&typeof d.standby==='boolean'){ standby=d.standby; setStoredStandby(standby); paintRemoteControls(); }
         if(shotPreview) renderPreview(it,false,shotPreview); else renderPreview(it);
@@ -1107,6 +1113,6 @@
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r6.1917" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r7.1956" defer></script>
 </body>
 </html>

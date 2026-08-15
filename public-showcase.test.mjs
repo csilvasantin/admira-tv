@@ -75,8 +75,9 @@ test('la navegación pública enlaza el hero con el catálogo y renderiza 20 car
   assert.match(home, /href="#soluciones"/);
   assert.match(home, /id="soluciones"/);
   assert.match(home, /id="publicApps"/);
-  assert.match(client, /apps\.length !== 20/);
-  assert.match(client, /dataset\.publicAppCard = app\.slug/);
+  assert.equal((home.match(/data-public-app-card=/g) || []).length, 20);
+  assert.match(client, /querySelectorAll\("\[data-app-video\]"\)\.forEach\(bindVideo\)/);
+  assert.doesNotMatch(client, /apps\.length\s*!==?\s*20/);
 });
 
 test('el modal de vídeo es accesible, carga bajo demanda y restaura el foco', () => {
@@ -112,10 +113,11 @@ test('PDF 404 o fallo de red se detectan con HEAD lazy y no abandonan la home', 
   assert.equal(valid, true);
   assert.equal(seen[0][1].method, 'HEAD');
   assert.equal(seen[0][1].credentials, 'omit');
-  assert.match(client, /pdf\.addEventListener\("click", async function/);
+  assert.match(client, /function bindPdf\(button\)/);
+  assert.match(client, /button\.addEventListener\("click", async function/);
   assert.match(client, /La página permanece abierta/);
-  assert.match(client, /pdf\.textContent = "Reintentar PDF"/);
-  assert.ok(client.indexOf('pdf.addEventListener("click"') < client.indexOf('probePublicMedia(pdfUrl'));
+  assert.match(client, /button\.textContent = "Reintentar PDF"/);
+  assert.ok(client.indexOf('button.addEventListener("click", async function') < client.indexOf('probePublicMedia(src, fetch'));
 });
 
 test('el contrato responsive evita overflow entre móvil y escritorio', () => {
@@ -129,6 +131,7 @@ test('el contrato responsive evita overflow entre móvil y escritorio', () => {
 
 test('la lanzadera protegida reutiliza el catálogo sin publicar sus enlaces en la home', () => {
   assert.match(protectedApps, /fetch\('\/apps\/public-catalog\.json'/);
-  assert.match(protectedApps, /APPS\.length!==20/);
+  assert.match(protectedApps, /if\(!APPS\.length\) throw new Error\('public catalog vacio'\)/);
+  assert.doesNotMatch(protectedApps, /APPS\.length\s*!==?\s*20/);
   assert.doesNotMatch(home, /public-catalog\.json/);
 });
