@@ -1,9 +1,9 @@
 {
-  "version": "v.15.08.2026.r13.22:11",
+  "version": "v.15.08.2026.r14.22:23",
   "signature": "TrinityMBP16 · MacBookPro16",
   "agent": "TrinityMBP16",
   "machine": "MacBookPro16",
   "day": "15.08.2026",
-  "time": "22:11",
-  "evidence": "La reproducción sincronizada usa una línea temporal de duración variable por cápsula; publica los metadatos descubiertos y conserva el slot de 20 segundos sólo como respaldo cuando la duración es desconocida."
+  "time": "22:23",
+  "evidence": "El previo del mando muestra el estado de audio con un ecualizador accesible y representa el progreso vivo de la cápsula mediante un contorno verde, ámbar y rojo con tiempo restante."
 }

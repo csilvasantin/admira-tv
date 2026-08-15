@@ -41,7 +41,9 @@
     .cinfo{display:flex;gap:8px;align-items:center;margin-top:6px;font-size:11px;color:var(--dim);font-family:var(--mono)}
     .cinfo b{color:var(--muted)}
     .stage{margin:12px 0;display:flex;gap:12px;align-items:stretch}
-    .frame{position:relative;width:104px;flex:0 0 104px;aspect-ratio:9/16;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#000;cursor:zoom-in}
+    .frame{--preview-progress:0deg;--preview-ring:#39d98a;position:relative;width:104px;flex:0 0 104px;aspect-ratio:9/16;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#000;cursor:zoom-in;isolation:isolate}
+    .frame.has-progress{border-color:transparent;box-shadow:0 0 12px color-mix(in srgb,var(--preview-ring) 24%,transparent)}
+    .frame.has-progress::after{content:"";position:absolute;z-index:8;inset:0;border-radius:inherit;padding:2px;pointer-events:none;background:conic-gradient(from -90deg,var(--preview-ring) var(--preview-progress),rgba(98,87,129,.34) 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
     .preview-media,.preview-media>*{position:absolute;inset:0;width:100%;height:100%}
     .preview-media img,.preview-media video{display:block;object-fit:contain;background:#000}
     .preview-media iframe{display:block;border:0;background:#000}
@@ -54,10 +56,20 @@
     .preview-tools button{border:1px solid rgba(255,255,255,.28);background:rgba(5,7,11,.78);backdrop-filter:blur(8px);color:#fff;border-radius:10px;padding:9px 12px;font:700 12px var(--mono);cursor:pointer}
     body.preview-open{overflow:hidden}
     body.preview-open .frame{position:fixed;z-index:40;inset:0;width:auto;aspect-ratio:auto;border:0;border-radius:0;cursor:default;background:#000}
+    body.preview-open .frame::after{display:none}
     body.preview-open .preview-open-hit{display:none}
     body.preview-open .preview-tools{display:flex}
     .live{position:absolute;top:6px;left:6px;font:600 8px var(--mono);background:rgba(0,0,0,.6);color:#fff;padding:2px 5px;border-radius:99px;display:flex;gap:4px;align-items:center}
     .live b{width:5px;height:5px;border-radius:50%;background:#ff4455;box-shadow:0 0 6px #ff4455;animation:p 1.4s infinite}
+    .preview-audio{position:absolute;z-index:7;top:6px;right:6px;width:25px;height:18px;display:flex;align-items:flex-end;justify-content:center;gap:2px;padding:4px 5px;border:1px solid rgba(255,255,255,.18);border-radius:99px;background:rgba(0,0,0,.68);color:#8a91a8;box-shadow:0 0 8px transparent;pointer-events:none}
+    .preview-audio i{display:block;width:2px;height:9px;border-radius:99px;background:currentColor;transform-origin:50% 100%;animation:previewEq .72s ease-in-out infinite alternate}
+    .preview-audio i:nth-child(2){animation-delay:-.42s}.preview-audio i:nth-child(3){animation-delay:-.19s}.preview-audio i:nth-child(4){animation-delay:-.57s}
+    .preview-audio.on{color:#55e89b;border-color:#55e89b80;box-shadow:0 0 10px #55e89b55}
+    .preview-audio.silent{color:#ffd866;border-color:#ffd86680;box-shadow:0 0 8px #ffd86644}
+    .preview-audio.muted{color:#ff667a;border-color:#ff667a80;box-shadow:0 0 8px #ff667a44}
+    .preview-audio.silent i,.preview-audio.muted i,.preview-audio.unknown i{animation:none}.preview-audio.silent i:nth-child(odd){transform:scaleY(.3)}.preview-audio.silent i:nth-child(even){transform:scaleY(.55)}.preview-audio.muted i{transform:scaleY(.16)}.preview-audio.unknown i:nth-child(odd){transform:scaleY(.35)}.preview-audio.unknown i:nth-child(even){transform:scaleY(.65)}
+    @keyframes previewEq{0%{transform:scaleY(.2)}45%{transform:scaleY(.95)}100%{transform:scaleY(.42)}}
+    @media(prefers-reduced-motion:reduce){.preview-audio i{animation:none!important}.preview-audio.on i:nth-child(odd){transform:scaleY(.45)}.preview-audio.on i:nth-child(even){transform:scaleY(.8)}}
     @keyframes p{50%{opacity:.3}}
     .nowbox{text-align:left;color:var(--text);font:inherit;flex:1;background:var(--elev);border:1px solid var(--border);border-radius:12px;padding:10px;display:flex;flex-direction:column;justify-content:center;min-width:0}
     .now-summary{appearance:none;width:100%;padding:2px 2px 8px;border:0;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer;border-radius:8px}
@@ -205,6 +217,7 @@
       <div class="preview-media" id="previewMedia"><div class="preview-empty">Esperando señal del player remoto</div></div>
       <div class="preview-paused">⏸ Previo detenido</div>
       <span class="live"><b></b>PREVIO</span>
+      <span class="preview-audio unknown" id="previewAudio" role="img" aria-label="Estado de audio desconocido"><i></i><i></i><i></i><i></i></span>
       <button type="button" class="preview-open-hit" id="previewOpen" aria-label="Abrir el previo local a pantalla completa"></button>
       <div class="preview-tools">
         <button type="button" id="previewBack">← Volver</button>
@@ -340,7 +353,7 @@
     }
     if(startIdx<0) startIdx=4; selEl.value=startIdx;
 
-    var T, previewItem=null, previewVisual=null, previewSignature='', previewPaused=false, previewRenderSeq=0;
+    var T, previewItem=null, previewVisual=null, previewSignature='', previewPaused=false, previewRenderSeq=0, previewAudioState=null;
     var infoShotByScreen=new Map(), infoOpenByScreen=new Map(), rotationByScreen=new Map();
     var targetGeneration=0, nowRequestSeq=0, nowController=null;
     var playlistRequestSeq=0, remotePlaylistItems=[], statusRequestSeq=0, contentsRequestSeq=0, statusProfile={fields:{}};
@@ -349,6 +362,8 @@
     var previewMedia=document.getElementById('previewMedia');
     var previewToggle=document.getElementById('previewToggle');
     var previewPause=document.getElementById('previewPause');
+    var previewAudio=document.getElementById('previewAudio');
+    var previewOpen=document.getElementById('previewOpen');
     function mandoViewFromHash(){ var view=location.hash.slice(1); return ['playlist','status','contents'].includes(view)?view:'remote'; }
     function setMandoView(view){
       view=['playlist','status','contents'].includes(view)?view:'remote'; document.body.dataset.mandoView=view;
@@ -362,6 +377,34 @@
     }
     window.addEventListener('hashchange',function(){ setMandoView(mandoViewFromHash()); });
     function previewIsInteractive(){ return !!(previewItem&&['interactive','xperiencia'].includes(String(previewItem.type||'').toLowerCase())); }
+    function previewClock(sec){ sec=Math.max(0,Math.ceil(Number(sec)||0)); var m=Math.floor(sec/60),s=sec%60; return m+':'+String(s).padStart(2,'0'); }
+    function previewProgressState(item,at){
+      var duration=Number(item&&(item.dur||item.duration||item._dur))||0, started=Number(item&&item.startedAt)||0;
+      if(!(duration>0&&started>0)) return null;
+      var elapsed=Math.max(0,Math.min(duration,((Number(at)||Date.now())-started)/1000));
+      var progress=Math.max(0,Math.min(1,elapsed/duration));
+      return {duration:duration,elapsed:elapsed,remaining:Math.max(0,duration-elapsed),progress:progress,
+        color:progress>=.9?'#ff667a':progress>=.7?'#ffd866':'#39d98a'};
+    }
+    function paintPreviewProgress(at){
+      var state=previewProgressState(previewItem,at);
+      previewFrame.classList.toggle('has-progress',!!state);
+      if(!state){ previewFrame.style.removeProperty('--preview-progress'); previewFrame.style.removeProperty('--preview-ring'); delete previewFrame.dataset.progress; previewOpen.setAttribute('aria-label','Abrir el previo local a pantalla completa'); return; }
+      previewFrame.style.setProperty('--preview-progress',(state.progress*360).toFixed(1)+'deg');
+      previewFrame.style.setProperty('--preview-ring',state.color);
+      previewFrame.dataset.progress=Math.round(state.progress*100);
+      previewOpen.setAttribute('aria-label','Abrir el previo local a pantalla completa · quedan '+previewClock(state.remaining));
+    }
+    function paintPreviewAudio(audio){
+      previewAudioState=audio||null;
+      var volume=Number(audio&&audio.volume), muted=!audio||audio.muted===true||volume===0;
+      var silent=!!audio&&!muted&&audio.analyzed===true&&Number(audio.level)<=1;
+      var state=!audio?'unknown':muted?'muted':silent?'silent':'on';
+      previewAudio.className='preview-audio '+state;
+      var label=state==='unknown'?'Estado de audio desconocido':state==='muted'?'Audio silenciado':state==='silent'?'Audio habilitado sin señal detectada':'Audio activo al '+(Number.isFinite(volume)?Math.round(volume):100)+'%';
+      previewAudio.setAttribute('aria-label',label); previewAudio.title=label;
+    }
+    function paintPreviewTelemetry(at){ paintPreviewProgress(at||Date.now()); paintPreviewAudio(previewAudioState); }
     function paintPreviewPause(){
       var interactive=previewIsInteractive();
       previewPause.textContent=previewPaused?(interactive?'↻ Reiniciar previo':'▶ Reanudar previo'):(interactive?'■ Detener previo':'⏸ Pausar previo');
@@ -381,6 +424,7 @@
     }
     function renderPreview(it,force,visual){
       previewItem=it||null; paintPreviewPause();
+      paintPreviewProgress(Date.now());
       previewVisual=visual||null;
       var shown=previewVisual||it;
       var signature=shown&&shown.url?[shown.id||'',shown.url,shown.startedAt||''].join('|'):'';
@@ -439,7 +483,7 @@
       previewFrame.removeAttribute('role'); previewFrame.removeAttribute('aria-modal'); previewFrame.removeAttribute('aria-label');
       if(previewReturnFocus&&previewReturnFocus.focus) previewReturnFocus.focus(); previewReturnFocus=null;
     }
-    document.getElementById('previewOpen').onclick=openPreview;
+    previewOpen.onclick=openPreview;
     document.getElementById('previewBack').onclick=function(e){ e.stopPropagation(); closePreview(); };
     previewPause.onclick=function(e){ e.stopPropagation(); setPreviewPaused(!previewPaused); };
     previewToggle.onclick=function(){ setPreviewPaused(!previewPaused); };
@@ -457,7 +501,7 @@
       document.getElementById('cir').textContent = T.circuit;
       document.getElementById('scr').textContent = T.screen;
       paintRotationPicker();
-      closePreview(); previewSignature=''; previewItem=null; previewVisual=null; setPreviewPaused(false); previewEmpty('Esperando señal del player remoto');
+      closePreview(); previewSignature=''; previewItem=null; previewVisual=null; previewAudioState=null; setPreviewPaused(false); previewEmpty('Esperando señal del player remoto'); paintPreviewTelemetry(Date.now());
       remotePlaylistItems=[]; document.getElementById('playlistSummary').textContent='— cargando inventario';
       document.getElementById('playlistList').innerHTML='<div class="pl-empty">Esperando la playlist efectiva del player seleccionado</div>';
       statusProfile={fields:{}}; document.getElementById('statusSummary').textContent='Esperando telemetría del player seleccionado…'; document.getElementById('statusGrid').replaceChildren();
@@ -1109,6 +1153,7 @@
         if(Number.isFinite(reportedRotation)){ rotationByScreen.set(target.screen,reportedRotation); paintRotationPicker(); }
         var it=d&&d.item, shotPreview=remoteShotPreview(shotMeta,target,it);
         var reportedAudio=(it&&it.audio)||(d&&d.device&&d.device.audio);
+        paintPreviewAudio(reportedAudio||null);
         if(reportedAudio&&typeof reportedAudio.muted==='boolean'){
           muted=reportedAudio.muted;
           if(Number.isFinite(Number(reportedAudio.volume))){ vol.value=Math.max(0,Math.min(100,Number(reportedAudio.volume))); document.getElementById('volv').textContent=Math.round(Number(vol.value))+'%'; }
@@ -1133,7 +1178,8 @@
 
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
+    setInterval(function(){ if(!document.hidden) paintPreviewProgress(Date.now()); },500);
   </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r13.2211" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r14.2223" defer></script>
 </body>
 </html>
