@@ -1,9 +1,9 @@
 {
-  "version": "v.15.08.2026.r9.21:27",
+  "version": "v.15.08.2026.r10.21:39",
   "signature": "TrinityMBP16 · MacBookPro16",
   "agent": "TrinityMBP16",
   "machine": "MacBookPro16",
   "day": "15.08.2026",
-  "time": "21:27",
-  "evidence": "El mando permite elegir directamente 0°, 90°, 180° o 270° con confirmación del player y elimina la explicación extensa de contenido etiquetado; el CMS agrupa indicadores, búsqueda y filtros en Programática, compactada por defecto."
+  "time": "21:39",
+  "evidence": "El selector de orientación conserva un único ángulo verde, bloquea órdenes simultáneas y limpia confirmaciones anteriores; el mando elimina la cabecera redundante para empezar directamente en la selección del player."
 }

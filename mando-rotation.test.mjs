@@ -21,6 +21,19 @@ test('cada sección envía el ángulo elegido y solo se activa tras confirmació
   assert.match(mando, /reportedRotation=Number\(d&&d\.device&&d\.device\.display&&d\.device\.display\.rotation\)/);
 });
 
+test('un solo ángulo puede conservar el estado verde y no se solapan órdenes', () => {
+  assert.match(mando, /if\(!selected\) button\.classList\.remove\('remote-applied'\)/);
+  assert.match(mando, /clearRotationFeedback\(button\); setRotationBusy\(true\)/);
+  assert.match(mando, /rotationOptions\.some\(function\(candidate\)\{ return BUTTON_ACTIONS\.has\(candidate\); \}\)/);
+  assert.match(mando, /finally\{ setRotationBusy\(false\); \}/);
+});
+
+test('el mando no repite una cabecera redundante bajo la navegación', () => {
+  const body = mando.slice(mando.indexOf('<body>'));
+  assert.doesNotMatch(body, /Emitir · Mando a distancia/);
+  assert.doesNotMatch(body, /<h1>Mando · Admira\.tv<\/h1>/);
+});
+
 test('el player aplica grados absolutos y conserva el giro incremental anterior', () => {
   assert.match(canal, /DISPLAY_ROTATION_KEY='adtv_display_rotation:'/);
   assert.match(canal, /function setDisplayRotation\(degrees\)/);

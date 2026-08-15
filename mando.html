@@ -26,8 +26,6 @@
     }
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);max-width:520px;margin:0 auto;padding:16px 14px 44px;min-height:100dvh}
-    .kick{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--violet)}
-    h1{font-size:22px;margin:.1em 0 .5em}
     label.fld{display:block;font-family:var(--mono);font-size:11px;color:var(--muted);margin:12px 0 4px;letter-spacing:.06em}
     select,input,.b,.chip{font-family:var(--mono)}
     select{width:100%;font-size:14px;padding:11px 12px;border-radius:10px;background:#0d1018;color:var(--text);border:1px solid var(--border)}
@@ -188,8 +186,6 @@
     <a href="/players">Players</a>
     <a class="viewtab" href="#contents" data-mando-view-link="contents">Contenidos</a>
   </nav>
-  <div class="kick">Emitir · Mando a distancia</div>
-  <h1>Mando · Admira.tv</h1>
   <div class="equipo" id="equipo">🖥️ Conectado al player de <b id="equipoName">—</b></div>
 
   <label class="fld">Pantalla / tótem a controlar</label>
@@ -567,14 +563,27 @@
       rotationOptions.forEach(function(button){
         var selected=Number(button.dataset.rotation)===current;
         button.classList.toggle('on',selected);
+        if(!selected) button.classList.remove('remote-applied');
         button.setAttribute('aria-pressed',selected?'true':'false');
       });
     }
+    function clearRotationFeedback(except){
+      rotationOptions.forEach(function(button){
+        if(button===except) return;
+        button.classList.remove('remote-pending','remote-applied','remote-failed','remote-timeout');
+        button.style.removeProperty('--cmd-progress');
+        button.setAttribute('aria-busy','false');
+      });
+    }
+    function setRotationBusy(busy){ rotationOptions.forEach(function(button){ button.disabled=busy; }); }
     rotationOptions.forEach(function(button){
       button.onclick=async function(){
         var targetScreen=T.screen, degrees=Number(button.dataset.rotation);
-        if(degrees===currentRotation()) return;
-        var ok=await sendRemote('rotation-'+degrees,button);
+        if(degrees===currentRotation()||rotationOptions.some(function(candidate){ return BUTTON_ACTIONS.has(candidate); })) return;
+        clearRotationFeedback(button); setRotationBusy(true);
+        var ok=false;
+        try{ ok=await sendRemote('rotation-'+degrees,button); }
+        finally{ setRotationBusy(false); }
         if(ok&&T.screen===targetScreen){ rotationByScreen.set(targetScreen,degrees); paintRotationPicker(); }
       };
     });
@@ -1125,6 +1134,6 @@
     setTarget(); setMandoView(mandoViewFromHash());
     setInterval(pollNow, 5000);
   </script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r9.2127" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r10.2139" defer></script>
 </body>
 </html>
