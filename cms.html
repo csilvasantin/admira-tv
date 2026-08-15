@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=15.08.2026.r11.2148"></script>
+<script src="/auth-gate.js?v=15.08.2026.r12.2201"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -327,9 +327,17 @@
   /* ── tarea3: EN EMISIÓN — AHORA (vista de emisión unificada, cruce de las 4 fuentes) ── */
   .emitBoard{margin:14px 20px 4px;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;overflow:hidden;position:relative}
   .emitBoard::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.55}
-  .ebHead{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .emitDetails>summary::-webkit-details-marker{display:none}
+  .ebHead{list-style:none;display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap;cursor:pointer;user-select:none}
+  .ebHead::before{content:'›';color:var(--accent);font-size:21px;line-height:.8;transition:transform .16s}
+  .emitDetails[open]>.ebHead::before{transform:rotate(90deg)}
+  .emitDetails:not([open])>.ebHead{border-bottom:0}
+  .ebHead:hover,.ebHead:focus-visible{background:#142039;outline:none}
   .ebHead h2{margin:0;font:800 14px ui-monospace,monospace;letter-spacing:.14em;color:var(--ink);text-transform:uppercase;display:flex;align-items:center;gap:8px}
   .ebHead h2 .ebDot{width:9px;height:9px;border-radius:50%;background:var(--air);box-shadow:0 0 9px var(--air);animation:pulse 1.6s infinite}
+  .ebEmitHint{margin-left:auto;color:var(--dim);font:600 9px ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase}
+  .emitDetails[open] .ebEmitHint::after{content:'compactar'}.emitDetails:not([open]) .ebEmitHint::after{content:'desplegar'}
+  .ebToolbar{display:flex;justify-content:flex-end;padding:9px 16px 0}
   .ebMeta{font:11.5px ui-monospace,monospace;color:var(--dim)}
   .ebPlaylistLink{display:inline-flex;align-items:center;gap:6px;color:var(--ink);text-decoration:none;border:1px solid transparent;border-radius:8px;padding:4px 7px;margin:-4px -7px}
   .ebPlaylistLink:hover,.ebPlaylistLink:focus-visible{color:var(--air);border-color:var(--air);outline:none;background:rgba(57,211,83,.08)}
@@ -435,6 +443,11 @@
   .ebPieceDuration{color:var(--ink);font-size:10.5px;font-weight:800;white-space:nowrap}
   .ebPieceDuration::before{content:'◷';margin-right:5px;color:var(--accent)}
   .ebPieceDuration.missing{color:var(--dim);font-weight:600}
+  .ebPieceProgress{display:grid;grid-template-columns:minmax(30px,1fr) auto;align-items:center;gap:6px;width:100%;min-width:110px;color:var(--dim);font-size:9.5px;white-space:nowrap}
+  .ebPieceProgressTrack{height:5px;border-radius:999px;overflow:hidden;background:#233047;box-shadow:inset 0 0 0 1px #34435e}
+  .ebPieceProgressTrack i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--accent),var(--air));transition:width .3s linear}
+  .ebPieceProgressText{font-weight:700;color:var(--dim)}
+  .ebPieceProgress.missing .ebPieceProgressTrack{opacity:.35}.ebPieceProgress.missing .ebPieceProgressText{font-weight:600}
   .ebSeenCell{white-space:nowrap}
   .ebSeenAge{display:block;color:var(--ink);font-size:12px;font-weight:800;line-height:1.2}
   .ebSeenStart{display:flex;align-items:center;gap:5px;margin-top:5px;color:var(--dim);font-size:10.5px;line-height:1.2}
@@ -510,7 +523,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=15.08.2026.r11.2148">
+  <link rel="stylesheet" href="/admira-frame.css?v=15.08.2026.r12.2201">
 </head>
 <body>
 <script>
@@ -529,8 +542,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=15.08.2026.r11.2148"></script>
-<script src="/admira-frame.js?v=15.08.2026.r11.2148" defer></script>
+<script src="/admira-nav.js?v=15.08.2026.r12.2201"></script>
+<script src="/admira-frame.js?v=15.08.2026.r12.2201" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -606,15 +619,20 @@ window.ADMIRA_NAV={
 
 <!-- tarea5-asistencia-r36 · EN EMISIÓN + botón 🎥 Asistencia recíproco con Yokup (sala = id de pantalla, ocupación por sonda WS) -->
 <section class="emitBoard" id="emitBoard">
-  <div class="ebHead">
+  <details class="emitDetails" id="emitDetails" open>
+  <summary class="ebHead">
     <h2><span class="ebDot"></span>📡 EN EMISIÓN — AHORA</h2>
     <span class="ebMeta" id="ebStamp">cargando…</span>
+    <span class="ebEmitHint" aria-hidden="true"></span>
+  </summary>
+  <div class="ebEmitBody">
+    <div class="ebToolbar">
     <span class="ebToggles">
       <button class="ebTog on" id="ebTogGaps" title="Mostrar/ocultar los descuadres por cablear">⚠ Descuadres</button>
       <button class="ebTog" id="ebTogFleet" title="Mostrar/ocultar los equipos de flota sin vincular">🖥 Flota</button>
       <button class="ebHeadReset" id="ebResetCols" title="Devuelve las columnas a su sitio y el orden a «primero lo que está en antena»">↺ tabla</button>
     </span>
-  </div>
+    </div>
   <div class="ebStats" id="ebStats"></div>
   <div class="ebWrap">
     <table class="ebTable" id="ebTable">
@@ -639,6 +657,8 @@ window.ADMIRA_NAV={
   <div class="ebActMsg ok" id="ebActMsg" hidden></div>
   <div class="ebPanel" id="ebGaps"></div>
   <div class="ebPanel" id="ebFleet" hidden></div>
+  </div>
+  </details>
 </section>
 
 <details class="fleetDetail" id="fleetDetail">
@@ -688,7 +708,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=15.08.2026.r11.2148"></script>
+<script src="xpl-runtime.js?v=15.08.2026.r12.2201"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -1616,7 +1636,7 @@ $('progBands').addEventListener('click',e=>{
     REFRESH : 40000,      // 40 s
     ONLINE_MS: 600000     // frescura ~10 min (TTL de signage/screens)
   };
-  let EB_GAPS=true, EB_FLEET=false, EB_TIMER=null, EB_STOCK=null;
+  let EB_GAPS=true, EB_FLEET=false, EB_TIMER=null, EB_PROGRESS_TIMER=null, EB_STOCK=null;
   const EB_DETAIL={surfaces:'',sites:''}, EB_DETAIL_OPEN={surfaces:false,sites:false};
   const el=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -1648,6 +1668,23 @@ $('progBands').addEventListener('click',e=>{
     const sec=durationSeconds(value); if(!sec)return '—';
     const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60), s=sec%60;
     return h?(h+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')):(m+':'+String(s).padStart(2,'0'));
+  }
+  function paintEmissionProgress(at){
+    document.querySelectorAll('.ebPieceProgress[data-duration][data-started-at]').forEach(node=>{
+      const duration=Number(node.dataset.duration)||0, started=Number(node.dataset.startedAt)||0;
+      if(!duration||!started)return;
+      const elapsed=Math.max(0,Math.min(duration,(at-started)/1000)), remaining=Math.max(0,duration-elapsed);
+      const pct=Math.max(0,Math.min(100,elapsed/duration*100));
+      const bar=node.querySelector('.ebPieceProgressTrack i'), label=node.querySelector('.ebPieceProgressText');
+      if(bar)bar.style.width=pct.toFixed(1)+'%';
+      if(label)label.textContent='quedan '+durationTxt(remaining);
+      node.setAttribute('aria-valuenow',String(Math.round(elapsed)));
+      node.setAttribute('aria-valuetext',durationTxt(elapsed)+' de '+durationTxt(duration)+'; quedan '+durationTxt(remaining));
+    });
+  }
+  function ensureEmissionProgress(){
+    paintEmissionProgress(Date.now());
+    if(!EB_PROGRESS_TIMER) EB_PROGRESS_TIMER=setInterval(()=>{ if(!document.hidden)paintEmissionProgress(Date.now()); },1000);
   }
   // fetch con timeout individual → si una fuente cae, devuelve {err} y el resto sigue
   async function grab(url,ms){
@@ -1715,12 +1752,12 @@ $('progBands').addEventListener('click',e=>{
       // /signage/now es la declaración directa del dueño de la pantalla. El
       // showing_id del censo es sólo un resumen y puede tardar un latido más.
       const id=String((live&&live.id)||p.showing_id||'');
-      if(!id) return {id:'',title:'',duration:0};
+      if(!id) return {id:'',title:'',duration:0,startedAt:0};
       const stock=stockById[id]||{};
       const playlist=playlistByScreen[p.screen], listed=playlist&&Array.isArray(playlist.items)?playlist.items.find(it=>String(it&&it.id||'')===id):null;
       const title=String((live&&live.title)||(stockById[id]&&stockById[id].title)||'').trim();
       const duration=durationSeconds(live&&live.dur,live&&live.duration,listed&&listed.dur,listed&&listed.duration,listed&&listed._dur,stock.dur,stock.duration,stock._dur);
-      return {id, title:title||'Contenido sin título', duration};
+      return {id, title:title||'Contenido sin título', duration, startedAt:stampMs(live&&live.startedAt)||0};
     }
     // ESTADO habla de CONEXIÓN, no de emisión. Un heartbeat vivo sin pieza
     // declarada todavía es «conectando»; cuando llega itemId ya es online. Sin
@@ -1878,8 +1915,11 @@ $('progBands').addEventListener('click',e=>{
           chanCell = '<div>'+parrillaLink+'</div><div class="ebMeta">'+esc(pr?pr.name:g.circuit)+' · '+esc(g.name||g.screen)+'</div>'; }
         else {
           chanCell = '<div>'+parrillaLink+'</div><div class="ebMeta">playlist base · '+esc(p.screen)+'</div>'; }
+        const pieceProgress=info.duration&&info.startedAt
+          ? '<span class="ebPieceProgress" role="progressbar" aria-label="Progreso de reproducción" aria-valuemin="0" aria-valuemax="'+info.duration+'" data-duration="'+info.duration+'" data-started-at="'+info.startedAt+'"><span class="ebPieceProgressTrack"><i></i></span><span class="ebPieceProgressText">quedan '+durationTxt(info.duration)+'</span></span>'
+          : '<span class="ebPieceProgress missing"><span class="ebPieceProgressTrack"><i></i></span><span class="ebPieceProgressText">progreso —</span></span>';
         const piece = info.id
-          ? '<span class="ebPiece" title="ID técnico: '+esc(info.id)+'"><span class="ebPieceTitle">'+esc(info.title)+'</span><span class="ebPieceDuration'+(info.duration?'':' missing')+'">duración '+durationTxt(info.duration)+'</span></span>'
+          ? '<span class="ebPiece" title="ID técnico: '+esc(info.id)+'"><span class="ebPieceTitle">'+esc(info.title)+'</span><span class="ebPieceDuration'+(info.duration?'':' missing')+'">duración '+durationTxt(info.duration)+'</span>'+pieceProgress+'</span>'
           : hole('— nada');
         const valores = {};
         Object.keys(ordenables).forEach(k=>{ valores[k]=ordenables[k](p); });
@@ -1913,6 +1953,7 @@ $('progBands').addEventListener('click',e=>{
         '</tr>';
       }).join('');
       el('ebBody').innerHTML=rows;
+      ensureEmissionProgress();
       EBTabla.aplica();   // el orden de columnas elegido, sobre la tabla recién pintada
       const fr=document.getElementById('mandoFrame');
       refrescaMandoPick(fr&&fr.dataset.screen);
@@ -2083,10 +2124,10 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-session.js?v=15.08.2026.r11.2148"></script>
-<script src="/admira-avatar.js?v=15.08.2026.r11.2148"></script>
-<script src="/cms-pacman.js?v=15.08.2026.r11.2148"></script>
-  <script src="/assets/admira-version-watch.js?v=15.08.2026.r11.2148" defer></script>
+<script src="/admira-session.js?v=15.08.2026.r12.2201"></script>
+<script src="/admira-avatar.js?v=15.08.2026.r12.2201"></script>
+<script src="/cms-pacman.js?v=15.08.2026.r12.2201"></script>
+  <script src="/assets/admira-version-watch.js?v=15.08.2026.r12.2201" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
    Mismo patrón que el highscore de yokup: tirador por columna, mínimo por
