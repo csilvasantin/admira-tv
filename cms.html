@@ -546,6 +546,35 @@ window.ADMIRA_NAV={
 .af-panel .afAct .t{ opacity:1 !important; pointer-events:auto !important }
 </style>
 
+<!-- Submenú operativo de flota: resumen, búsqueda y filtros siempre arriba,
+     inmediatamente después del menú principal y antes de EN EMISIÓN. -->
+<div class="kpis">
+  <div class="kpi accent"><div class="n" id="k-total">—</div><div class="l">dispositivos</div></div>
+  <div class="kpi air"><div class="n" id="k-online">—</div><div class="l">emitiendo ahora</div></div>
+  <div class="kpi amber"><div class="n" id="k-aud">—</div><div class="l">con audiencia</div></div>
+  <div class="kpi off"><div class="n" id="k-off">—</div><div class="l">sin señal</div></div>
+  <div class="kpi"><div class="n" id="k-robot">—</div><div class="l">móviles / robot</div></div>
+  <div class="kpi rev"><div class="n" id="k-rev">—</div><div class="l" id="k-rev-l">ingresos hoy</div></div>
+</div>
+
+<div class="cmsfilter">
+  <input id="cmsSearch" placeholder="🔎 Buscar dispositivo, Xpacio o dirección…" autocomplete="off">
+  <span class="fchips">
+    <button class="fchip on" data-f="all">Todos</button>
+    <button class="fchip" data-f="on">● Emitiendo</button>
+    <button class="fchip" data-f="off">○ Sin señal</button>
+    <button class="fchip" data-f="cz">✅ Cazado</button>
+  </span>
+  <select id="cmsSort" class="fchip" title="Ordenar la flota" style="cursor:pointer">
+    <option value="def">Orden: por defecto</option>
+    <option value="estado">Emitiendo primero</option>
+    <option value="sinsenal">Sin señal primero</option>
+    <option value="nombre">Nombre (A–Z)</option>
+    <option value="audiencia">Más audiencia</option>
+  </select>
+  <span class="meta" id="filterCount"></span>
+</div>
+
 <!-- tarea5-asistencia-r36 · EN EMISIÓN + botón 🎥 Asistencia recíproco con Yokup (sala = id de pantalla, ocupación por sonda WS) -->
 <section class="emitBoard" id="emitBoard">
   <div class="ebHead">
@@ -582,33 +611,6 @@ window.ADMIRA_NAV={
   <div class="ebPanel" id="ebGaps"></div>
   <div class="ebPanel" id="ebFleet" hidden></div>
 </section>
-
-<div class="kpis">
-  <div class="kpi accent"><div class="n" id="k-total">—</div><div class="l">dispositivos</div></div>
-  <div class="kpi air"><div class="n" id="k-online">—</div><div class="l">emitiendo ahora</div></div>
-  <div class="kpi amber"><div class="n" id="k-aud">—</div><div class="l">con audiencia</div></div>
-  <div class="kpi off"><div class="n" id="k-off">—</div><div class="l">sin señal</div></div>
-  <div class="kpi"><div class="n" id="k-robot">—</div><div class="l">móviles / robot</div></div>
-  <div class="kpi rev"><div class="n" id="k-rev">—</div><div class="l" id="k-rev-l">ingresos hoy</div></div>
-</div>
-
-<div class="cmsfilter">
-  <input id="cmsSearch" placeholder="🔎 Buscar dispositivo, Xpacio o dirección…" autocomplete="off">
-  <span class="fchips">
-    <button class="fchip on" data-f="all">Todos</button>
-    <button class="fchip" data-f="on">● Emitiendo</button>
-    <button class="fchip" data-f="off">○ Sin señal</button>
-    <button class="fchip" data-f="cz">✅ Cazado</button>
-  </span>
-  <select id="cmsSort" class="fchip" title="Ordenar la flota" style="cursor:pointer">
-    <option value="def">Orden: por defecto</option>
-    <option value="estado">Emitiendo primero</option>
-    <option value="sinsenal">Sin señal primero</option>
-    <option value="nombre">Nombre (A–Z)</option>
-    <option value="audiencia">Más audiencia</option>
-  </select>
-  <span class="meta" id="filterCount"></span>
-</div>
 
 <div class="grid" id="grid"><div class="empty">Cargando flota…</div></div>
 
