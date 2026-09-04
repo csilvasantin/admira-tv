@@ -1,9 +1,9 @@
 {
-  "version": "v.15.08.2026.r17.23:58",
-  "signature": "TrinityMBP16 · MacBookPro16",
-  "agent": "TrinityMBP16",
-  "machine": "MacBookPro16",
-  "day": "15.08.2026",
-  "time": "23:58",
-  "evidence": "Anterior y Siguiente conservan el fotograma contextual aunque sincro bloquee el salto; una cápsula forzada desde el lanzador de tags mantiene el control hasta finalizar y después devuelve el player a su asignación remota."
+  "version": "v.04.09.2026.r1.09:42",
+  "signature": "TrinityMBP14 · MacBookProNegro14",
+  "agent": "TrinityMBP14",
+  "machine": "MacBookProNegro14",
+  "day": "04.09.2026",
+  "time": "09:42",
+  "evidence": "Soporte enlaza el tester visual local de webcam en Admira.live; sin captura ni activación de cámara en la home. Cámara local comprobada; prueba física pendiente de identificar y encuadrar Rosa."
 }

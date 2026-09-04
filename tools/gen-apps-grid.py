@@ -55,6 +55,8 @@ def tarjeta(app):
     pdf = url_segura(app.get("pdf"), slug, "pdf")
 
     acciones = []
+    if slug == "support":
+        acciones.append('<a class="app-action" href="/support/">Abrir Soporte · Tester visual ↗</a>')
     if video:
         acciones.append(
             '<button type="button" class="app-action app-video" data-app-video="{}"'
