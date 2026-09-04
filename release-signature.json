@@ -1,9 +1,9 @@
 {
-  "version": "v.04.09.2026.r1.09:42",
+  "version": "v.04.09.2026.r2.09:56",
   "signature": "TrinityMBP14 · MacBookProNegro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookProNegro14",
   "day": "04.09.2026",
-  "time": "09:42",
-  "evidence": "Soporte enlaza el tester visual local de webcam en Admira.live; sin captura ni activación de cámara en la home. Cámara local comprobada; prueba física pendiente de identificar y encuadrar Rosa."
+  "time": "09:56",
+  "evidence": "Tester servido directamente en admira.tv/tester, con cámara local por portátil y entrada desde Soporte. Sin retransmisión, audio ni subida. Requiere pestaña visible y equipo despierto; prueba física de alarma aún pendiente."
 }

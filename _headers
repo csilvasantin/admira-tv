@@ -42,6 +42,12 @@
   Cache-Control: public, max-age=604800
 
 # El directorio y sus APIs nunca se pueden embeber ni cachear.
+/tester/*
+  Cache-Control: no-store
+  Permissions-Policy: camera=(self), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; media-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Referrer-Policy: no-referrer
+
 /users/*
   Cache-Control: no-store, private
   X-Frame-Options: DENY
