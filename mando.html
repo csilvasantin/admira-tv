@@ -298,14 +298,15 @@
   <script>
     // Dominio propio primero: varios ISP españoles bloquean *.workers.dev y este mando
     // se usa desde el móvil, en España. api.admira.store proxea al MISMO worker; el
-    // workers.dev queda de reserva por si cayera el proxy.
-    var CMD_HOSTS = ['https://api.admira.store/locations/cmd','https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd'];
+    // dominio propio del worker (brain.digitalavatar.ai) queda de reserva por si cayera el proxy (FLT-1633).
+    var CMD_HOSTS = ['https://api.admira.store/locations/cmd','https://brain.digitalavatar.ai/locations/cmd'];
     var NOW_API = 'https://api.admira.store/signage/now';
     var SHOT_API = 'https://api.admira.store/signage/shot';
     var SCREENS_API = 'https://api.admira.store/signage/screens';
     var CACHE_API = 'https://api.admira.store/screen/cache';
     var PROFILE_API = '/api/player-profile';
-    var PLAYLIST_APIS = ['/api/control/playlist/','https://omnipublicity-api.csilvasantin.workers.dev/control/playlist'];
+    // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+    var PLAYLIST_APIS = ['/api/control/playlist/','https://brain.digitalavatar.ai/control/playlist'];
     var REMOTE_TIMEOUT_MS = 20000;
     var DOWNLOAD_TIMEOUT_MS = 5*60*1000;
     var ACTION_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -1192,6 +1193,6 @@
     setInterval(pollNow, 5000);
     setInterval(function(){ if(!document.hidden) paintPreviewProgress(Date.now()); },500);
   </script>
-  <script src="/assets/admira-version-watch.js?v=04.09.2026.r2.0956" defer></script>
+  <script src="/assets/admira-version-watch.js?v=04.09.2026.r3.2230" defer></script>
 </body>
 </html>

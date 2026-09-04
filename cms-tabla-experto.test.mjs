@@ -79,7 +79,7 @@ test("el desplegable ofrece equipos del proyecto y gobierna al elegirlos", () =>
 
 test("Circuito muestra debajo la playlist efectiva del player", () => {
   assert.match(cms, /<th data-col="circuito" data-sort="text">Circuito · playlist<\/th>/);
-  assert.match(cms, /PLAYLIST: 'https:\/\/omnipublicity-api\.csilvasantin\.workers\.dev\/control\/playlist\?screen='/);
+  assert.match(cms, /PLAYLIST: 'https:\/\/brain\.digitalavatar\.ai\/control\/playlist\?screen='/);
   assert.match(cms, /function playlistInfo\(p\)/);
   assert.match(cms, /Playlist activa · '\+n\+' pieza/);
   assert.match(cms, /\(pos\+1\)\+'\/'\+n\+' en antena'/);

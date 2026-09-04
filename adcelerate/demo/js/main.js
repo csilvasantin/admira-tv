@@ -77,7 +77,8 @@ const SIGNAGE_URL = 'https://api.admira.store/signage/now?screen=oohmedia';
 const SIGNAGE_POLL_MS = 30000;
 const MAX_CROWD = 800;                // techo del slider de personas (y de las instancias)
 // Stock público del canal admira.tv (R2, CORS abierto) — el contenido REAL en antena
-const STOCK_URL = 'https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const STOCK_URL = 'https://stock.admira.store/stock/index.json';
 const STOCK_MAX_ITEMS = 14;
 const STOCK_MAX_VIDEO_BYTES = 15e6;   // ?v= es Content-Length: fuera mp4 gigantes
 const IMG_SECONDS = 9;                // como canal.html

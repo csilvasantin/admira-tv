@@ -5,7 +5,7 @@ import test from 'node:test';
 const players = fs.readFileSync(new URL('./players.html', import.meta.url), 'utf8');
 
 test('la composición consulta el censo registrado además de los players vivos', () => {
-  assert.match(players, /const FLEET='https:\/\/omnipublicity-api\.csilvasantin\.workers\.dev\/locations\?selfreg=1'/);
+  assert.match(players, /const FLEET='https:\/\/brain\.digitalavatar\.ai\/locations\?selfreg=1'/);
   assert.match(players, /fetch\(FLEET,\{cache:'no-store'\}\)/);
 });
 

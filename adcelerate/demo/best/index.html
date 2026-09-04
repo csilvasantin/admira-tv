@@ -8,13 +8,13 @@
 <!-- r3: preconnect al backbone de datos y al bucket R2 de media (mejora TTFB) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="dns-prefetch" href="https://api.admira.store">
-<link rel="preconnect" href="https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev" crossorigin>
-<link rel="dns-prefetch" href="https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev">
+<link rel="preconnect" href="https://stock.admira.store" crossorigin>
+<link rel="dns-prefetch" href="https://stock.admira.store">
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=04.09.2026.r2.0956">
-<link rel="stylesheet" href="../css/style.css?v=04.09.2026.r2.0956">
+<link rel="stylesheet" href="../css/admira-tokens.css?v=04.09.2026.r3.2230">
+<link rel="stylesheet" href="../css/style.css?v=04.09.2026.r3.2230">
 <style>
   /* ---- Solo lo específico del nivel BEST (globo Google en el hueco central) ---- */
   /* Iconos-ventana canónicos: los paneles laterales son overlays plegados (marco
@@ -833,7 +833,8 @@ const LIVE_MONO = 'ui-monospace, Menlo, Consolas, monospace';
 // ---- motor de canal (parrilla asignada al kiosko; Stock como continuidad) ----
 const GRID_SCREEN = 'sim-gracia-kiosko';
 const GRID_DAY_URL = 'https://api.admira.store/grid/day?screen=' + GRID_SCREEN;
-const STOCK_URL = 'https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const STOCK_URL = 'https://stock.admira.store/stock/index.json';
 const STOCK_MAX_ITEMS = 14, STOCK_MAX_VIDEO_BYTES = 15e6, IMG_SECONDS = 9, VIDEO_CAP_MS = 30000;
 let chQueue = [], chIdx = -1, chItem = null, chImg = null, chLive = false, chErr = 0, chTimer = 0, chSeq = 0;
 const chVid = document.createElement('video');

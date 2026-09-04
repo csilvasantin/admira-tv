@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=04.09.2026.r2.0956"></script>
+<script src="/auth-gate.js?v=04.09.2026.r3.2230"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADCELERATE · MANDO — Control remoto de pantalla</title>
 <!-- r3: preconnect al backbone de datos (mejora TTFB del primer fetch) -->
@@ -117,7 +117,8 @@
   <div style="text-align:center;margin-top:16px"><a class="back" href="/adcelerate/">‹ ADCELERATE</a></div>
 
 <script>
-  const API='https://omnipublicity-api.csilvasantin.workers.dev';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const API='https://brain.digitalavatar.ai';
   const SCREENS='https://api.admira.store/signage/screens';
   const $=id=>document.getElementById(id);
   let target='';

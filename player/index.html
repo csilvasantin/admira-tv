@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-<script src="/auth-gate.js?v=04.09.2026.r2.0956"></script>
+<script src="/auth-gate.js?v=04.09.2026.r3.2230"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Admira.tv · Player — Descargas</title>
   <meta name="description" content="Descarga el player de Admira.tv para cada plataforma: macOS, Windows, iOS, Android, Amazon Echo Show y Linux. Pantallas que emiten el canal DOOH de Admira.">
@@ -82,7 +82,7 @@
     footer{color:var(--admira-text-muted,#8a97a8);font-size:13px;margin:40px 0 64px;border-top:1px solid var(--admira-border,#1c2738);padding-top:18px}
     footer a{color:var(--admira-text-dim,#aab6c6)}
   </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=04.09.2026.r2.0956">
+  <link rel="stylesheet" href="/admira-frame.css?v=04.09.2026.r3.2230">
 </head>
 <body>
   <!-- Chrome unificado "portería", mismo metaestilo que todo el site. -->
@@ -93,8 +93,8 @@
       '<a class="admtR admtR-cta" href="#contact" data-admira-contact>Contacto</a>'
   };
   </script>
-  <script src="/admira-nav.js?v=04.09.2026.r2.0956" defer></script>
-<script src="/admira-frame.js?v=04.09.2026.r2.0956" defer></script>
+  <script src="/admira-nav.js?v=04.09.2026.r3.2230" defer></script>
+<script src="/admira-frame.js?v=04.09.2026.r3.2230" defer></script>
 
   <div class="wrap">
     <header class="hero">
@@ -150,7 +150,8 @@
     {
       os:'macOS', icon:'apple', status:'available', req:'macOS 14+ · Apple Silicon',
       version:'v.13.08.2026.r9 · app 1.7', size:'5.6 MB',
-      download:'https://pub-a2bb574b0bf64e7d9a063838eb29ce7c.r2.dev/AdmiraSignageMac-v.13.08.2026.r9.zip',
+      // dominio propio: LaLiga bloquea workers.dev/r2.dev en horas de fútbol, FLT-1633
+      download:'https://playerapp.admira.store/AdmiraSignageMac-v.13.08.2026.r9.zip',
       dlLabel:'Descargar .app',
       install:'curl -fsSL https://admira.tv/player/install-macos.sh | bash',
       gatekeeper:'Si la bajas con el navegador y macOS dice que “no se ha podido verificar”: Ajustes del Sistema → Privacidad y seguridad → “Abrir igualmente”. O usa el comando de instalación (no da ese aviso).',
@@ -164,9 +165,9 @@
     {
       os:'Windows', icon:'windows', status:'available', req:'Windows 10 / 11 · x64',
       version:'v.26.06.27.r1', size:'78 MB',
-      download:'https://pub-9a6a58b67f2c4ed990b1ff036631ff33.r2.dev/AdmiraSignagePlayer-win-x64-v.26.06.27.r1.exe',
+      download:'https://player.admira.store/AdmiraSignagePlayer-win-x64-v.26.06.27.r1.exe',
       dlLabel:'Descargar .exe',
-      download2:'https://pub-9a6a58b67f2c4ed990b1ff036631ff33.r2.dev/AdmiraSignagePlayer-win-x64-v.26.06.27.r1.zip',
+      download2:'https://player.admira.store/AdmiraSignagePlayer-win-x64-v.26.06.27.r1.zip',
       dlLabel2:'.zip portable',
       gatekeeper:'App sin firmar todavía: si Windows SmartScreen avisa, pulsa “Más información → Ejecutar de todas formas”.',
       notes:[
@@ -218,7 +219,7 @@
     {
       os:'Linux', icon:'linux', status:'available', req:'x86_64 · AppImage',
       version:'v.26.06.27.r1', size:'103 MB',
-      download:'https://pub-9a6a58b67f2c4ed990b1ff036631ff33.r2.dev/AdmiraSignagePlayer-linux-x86_64-v.26.06.27.r1.AppImage',
+      download:'https://player.admira.store/AdmiraSignagePlayer-linux-x86_64-v.26.06.27.r1.AppImage',
       dlLabel:'Descargar AppImage',
       install:'chmod +x AdmiraSignagePlayer-linux-x86_64-v.26.06.27.r1.AppImage && ./AdmiraSignagePlayer-linux-x86_64-v.26.06.27.r1.AppImage',
       notes:[
@@ -269,6 +270,6 @@
     });
   });
   </script>
-  <script src="/assets/admira-version-watch.js?v=04.09.2026.r2.0956" defer></script>
+  <script src="/assets/admira-version-watch.js?v=04.09.2026.r3.2230" defer></script>
 </body>
 </html>

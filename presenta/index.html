@@ -161,13 +161,14 @@
 /* ─────────────────────────────────────────────────────────────────────────
    CONFIG — endpoints y circuitos reales.
    El BOTÓN MÁGICO usa el MISMO canal que el CMS (cms.html) y el mando:
-   POST https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd
+   POST https://brain.digitalavatar.ai/locations/cmd
         body {id:<circuito>, cmd:<comando CLI>}
    El player (canal.html) hace polling GET /locations/cmd?id=<circuito>&since=
    cada 3 s y ejecuta runCli(cmd). `tag <metatag>` conmuta el loop de esa
    pantalla al metatag → los dos tótems cambian a la vez.
    ───────────────────────────────────────────────────────────────────────── */
-const CMD_API = 'https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const CMD_API = 'https://brain.digitalavatar.ai/locations/cmd';
 const CIRCUITS = [
   { id:'xtanco-valencia', label:'A · Instore Media (Xtanco, Valencia)' },
   { id:'bcn-kiosk-001',   label:'B · OOH Media (kiosko, Barcelona)' }

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=04.09.2026.r2.0956"></script>
+<script src="/auth-gate.js?v=04.09.2026.r3.2230"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -523,7 +523,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=04.09.2026.r2.0956">
+  <link rel="stylesheet" href="/admira-frame.css?v=04.09.2026.r3.2230">
 </head>
 <body>
 <script>
@@ -542,8 +542,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=04.09.2026.r2.0956"></script>
-<script src="/admira-frame.js?v=04.09.2026.r2.0956" defer></script>
+<script src="/admira-nav.js?v=04.09.2026.r3.2230"></script>
+<script src="/admira-frame.js?v=04.09.2026.r3.2230" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -708,7 +708,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=04.09.2026.r2.0956"></script>
+<script src="xpl-runtime.js?v=04.09.2026.r3.2230"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -720,7 +720,8 @@ const SKEL={
 // Pinta skeletons de arranque en cuanto se parsea el script (antes del primer fetch).
 try{ document.getElementById('grid').innerHTML=SKEL.cards(6); }catch(_){}
 try{ document.getElementById('ebBody').innerHTML=SKEL.rows(6,8); }catch(_){}
-const FLEET   = 'https://omnipublicity-api.csilvasantin.workers.dev/locations?selfreg=1';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const FLEET   = 'https://brain.digitalavatar.ai/locations?selfreg=1';
 const PROJECTS_API = 'https://api.admira.store/grid/projects';
 // ── Canal/proyecto: agrupa circuitos; filtra flota + programación ──
 let PROJECTS=[], CANAL_SEL=(()=>{try{return localStorage.getItem('cms_canal')||'admiranext'}catch(_){return'admiranext'}})();   // arranca en Canal AdmiraNeXT, no en "Todos" (8765 equipos = muy pesado)
@@ -1434,8 +1435,9 @@ $('grid').addEventListener('keydown', e=>{
 });
 
 /* ── Stock para el preview de "cazado" en las fichas (amarillo/verde) ── */
-const SEG_API = 'https://omnipublicity-api.csilvasantin.workers.dev/segmentation';
-const MODE_API='https://omnipublicity-api.csilvasantin.workers.dev/locations/mode';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const SEG_API = 'https://brain.digitalavatar.ai/segmentation';
+const MODE_API='https://brain.digitalavatar.ai/locations/mode';
 const MODE_LBL={conditional:'Condicional · cámara/contexto',local:'Local · su programación',sync:'Sincro · lo que manda admira.tv'};
 let STOCK_ITEMS=[], PROG_STOCK=[], DEV_NAMES={};
 async function loadStockVocab(){
@@ -1625,14 +1627,16 @@ $('progBands').addEventListener('click',e=>{
     SCREENS : 'https://api.admira.store/signage/screens',
     NOW     : 'https://api.admira.store/signage/now?screen=',
     SHOT    : 'https://api.admira.store/signage/shot?meta=1&screen=',
-    PLAYLIST: 'https://omnipublicity-api.csilvasantin.workers.dev/control/playlist?screen=',
+    // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+    PLAYLIST: 'https://brain.digitalavatar.ai/control/playlist?screen=',
     PLAYOUT : '/api/playout?screen=',
     EMIT    : 'https://api.admira.store/emit/range?loc=',
     STOCK   : 'https://api.admira.store/stock/list?limit=200',
     GRID    : 'https://api.admira.store/grid/screens',
     PROJ    : 'https://api.admira.store/grid/projects',
-    LOCS    : 'https://omnipublicity-api.csilvasantin.workers.dev/locations?selfreg=1',
-    FLEET   : 'https://admira-fleet.csilvasantin.workers.dev/machines',
+    // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+    LOCS    : 'https://brain.digitalavatar.ai/locations?selfreg=1',
+    FLEET   : 'https://fleet.yokup.com/machines',
     REFRESH : 40000,      // 40 s
     ONLINE_MS: 600000     // frescura ~10 min (TTL de signage/screens)
   };
@@ -2081,7 +2085,8 @@ $('progBands').addEventListener('click',e=>{
   // ── ASISTENCIA (tarea #5): reciprocidad admira.tv ↔ Yokup ──
   // La sala = id de pantalla (determinista): el técnico entra a la misma sala desde cualquier sitio.
   const YOKUP_ASSIST='https://www.yokup.com/asistencia?room=';
-  const RTC_WS='wss://yokup-rtc.csilvasantin.workers.dev/room/';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const RTC_WS='wss://api.yokup.com/room/';
   // Abrir/unirse a la videollamada de asistencia de esa pantalla en Yokup
   el('ebBody').addEventListener('click', function(e){
     const btn=e.target.closest('.ebAssist'); if(!btn) return;
@@ -2124,10 +2129,10 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-session.js?v=04.09.2026.r2.0956"></script>
-<script src="/admira-avatar.js?v=04.09.2026.r2.0956"></script>
-<script src="/cms-pacman.js?v=04.09.2026.r2.0956"></script>
-  <script src="/assets/admira-version-watch.js?v=04.09.2026.r2.0956" defer></script>
+<script src="/admira-session.js?v=04.09.2026.r3.2230"></script>
+<script src="/admira-avatar.js?v=04.09.2026.r3.2230"></script>
+<script src="/cms-pacman.js?v=04.09.2026.r3.2230"></script>
+  <script src="/assets/admira-version-watch.js?v=04.09.2026.r3.2230" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
    Mismo patrón que el highscore de yokup: tirador por columna, mínimo por

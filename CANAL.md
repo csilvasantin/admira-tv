@@ -11,7 +11,7 @@ segmentable y configurable por pantalla. Live en **https://admira.tv/canal.html*
 ## De dónde sale el contenido
 
 - Fuente: el **índice público del Stock** en R2 (CORS abierto, sin worker):
-  `https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json`
+  `https://stock.admira.store/stock/index.json`
 - Se re-consulta cada `refresh` segundos (def. 30): cuando publicas algo nuevo en
   Pixeria, entra solo en la rotación (lo más reciente primero).
 - Tope de piezas en el loop: `max` (def. 50, los más recientes).

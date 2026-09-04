@@ -11,7 +11,8 @@
 //   GET  /gamification/api/gamification/leaderboard  → Worker GET  /gamification/leaderboard
 // Cualquier otra ruta (p.ej. /admin, rutas del Club) → 404. Nunca se reenvía.
 
-const UPSTREAM = 'https://admira-loyalty.csilvasantin.workers.dev';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const UPSTREAM = 'https://loyalty.admira.store';
 
 // path canónico → método HTTP exacto permitido. Todo lo demás se rechaza.
 const ALLOW = {

@@ -8,7 +8,7 @@
 <link rel="canonical" href="https://admira.tv/adcelerate/demo/best-caixa/">
 <meta name="theme-color" content="#03080f">
 <link rel="preconnect" href="https://api.admira.store">
-<link rel="dns-prefetch" href="https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev">
+<link rel="dns-prefetch" href="https://stock.admira.store">
 <link rel="preconnect" href="https://www.xpaceos.com">
 <style>
 :root{--bg:#03080f;--panel:rgba(6,14,26,.92);--ink:#eaf4ff;--mut:#8296b4;--ice:#8fd6ff;--gold:#ffce3a;--green:#4dff9e;--line:rgba(143,214,255,.2)}
@@ -142,7 +142,8 @@ const GOOGLE_MAPS_KEY = QS.get('key') || 'AIzaSyDOQTBlJYugpPBPuSMlRg74tu8Gvmq7mK
 
 const CATALOGO = 'https://www.xpaceos.com/Xcaixa/sucursales.json';
 const XPACIO   = 'https://www.xpaceos.com/Xcaixa/';
-const STOCK_URL = 'https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const STOCK_URL = 'https://stock.admira.store/stock/index.json';
 const GRID_DAY  = 'https://api.admira.store/grid/day?screen=';
 
 /* Sucursales CALIBRADAS. Sin entrada aquí, el globo funciona igual (sale del

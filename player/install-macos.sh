@@ -11,7 +11,8 @@ set -euo pipefail
 # julio, que DEGRADABA equipos que ya tenían la 1.3— está en otra cuenta a la que
 # no llegamos desde aquí; sus URLs siguen vivas y sirviendo lo viejo. No apuntes ahí.
 VERSION="v.13.08.2026.r9"
-URL="https://pub-a2bb574b0bf64e7d9a063838eb29ce7c.r2.dev/AdmiraSignageMac-${VERSION}.zip"
+# dominio propio: LaLiga bloquea workers.dev/r2.dev en horas de fútbol, FLT-1633
+URL="https://playerapp.admira.store/AdmiraSignageMac-${VERSION}.zip"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
 echo "→ Descargando AdmiraSignageMac ${VERSION}…"

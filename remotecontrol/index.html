@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=04.09.2026.r2.0956"></script>
-<script>window.ADMIRA_VERSION='v.04.09.2026.r2.09:56';</script>
+<script src="/auth-gate.js?v=04.09.2026.r3.2230"></script>
+<script>window.ADMIRA_VERSION='v.04.09.2026.r3.22:30';</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
 <!-- r3: preconnect al backbone de datos (mejora TTFB del primer fetch) -->
@@ -529,7 +529,8 @@
   </div>
 
 <script>
-  const API='https://omnipublicity-api.csilvasantin.workers.dev';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const API='https://brain.digitalavatar.ai';
   const SCREENS='https://api.admira.store/signage/screens';
   // Deep-link desde admira.live/control: ?machine=<id de flota> (se resuelve al
   // screen cuyo beat de /signage/now trae ese machine — canal r49+) o ?screen=<id>.
@@ -1346,6 +1347,6 @@
   restartPrevioTimer();
   setInterval(loadAudit,30000);
 </script>
-  <script src="/assets/admira-version-watch.js?v=04.09.2026.r2.0956" defer></script>
+  <script src="/assets/admira-version-watch.js?v=04.09.2026.r3.2230" defer></script>
 </body>
 </html>

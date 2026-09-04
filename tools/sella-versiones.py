@@ -45,7 +45,9 @@ def main():
     desfasados, tocados = [], []
 
     for f in sorted(RAIZ.rglob("*.html")):
-        if any(p in f.parts for p in ("node_modules", ".git", ".wrangler")):
+        # .claude: worktrees de agentes (ignorados por git) con sellos antiguos; no son el
+        # sitio publicado y hacían fallar el --check de deploy.sh en el Mac Mini (FLT-1633).
+        if any(p in f.parts for p in ("node_modules", ".git", ".wrangler", ".claude")):
             continue
         texto = f.read_text(encoding="utf-8")
         if "ADMIRA_VERSION" not in texto and "?v=" not in texto:

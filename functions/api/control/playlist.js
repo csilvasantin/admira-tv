@@ -1,7 +1,8 @@
 // Proxy same-origin del inventario efectivo del player. El mando necesita esta
 // lista para cruzarla con /screen/cache y mostrar progreso real; algunos ISP
 // españoles bloquean *.workers.dev, así que la UI nunca depende sólo de ese host.
-const UPSTREAM = 'https://omnipublicity-api.csilvasantin.workers.dev/control/playlist';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const UPSTREAM = 'https://brain.digitalavatar.ai/control/playlist';
 
 function json(value, status) {
   return new Response(JSON.stringify(value), {

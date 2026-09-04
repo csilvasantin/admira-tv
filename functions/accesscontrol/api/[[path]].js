@@ -17,7 +17,8 @@
 const CLIENT_ID =
   "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
 const OWNERS = ["csilva@admira.com", "csilvasantin@gmail.com"];
-const V1_LIST = "https://admira-whitelist.csilvasantin.workers.dev/list";
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const V1_LIST = "https://whitelist.admira.store/list";
 
 const KEY_DOC = "acl:v2";
 const KEY_AUDIT = "audit:v2";

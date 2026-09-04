@@ -1,9 +1,9 @@
 {
-  "version": "v.04.09.2026.r2.09:56",
-  "signature": "TrinityMBP14 · MacBookProNegro14",
-  "agent": "TrinityMBP14",
-  "machine": "MacBookProNegro14",
+  "version": "v.04.09.2026.r3.22:30",
+  "signature": "MorfeoMacMini · MacMini",
+  "agent": "MorfeoMacMini",
+  "machine": "MacMini",
   "day": "04.09.2026",
-  "time": "09:56",
-  "evidence": "Tester servido directamente en admira.tv/tester, con cámara local por portátil y entrada desde Soporte. Sin retransmisión, audio ni subida. Requiere pestaña visible y equipo despierto; prueba física de alarma aún pendiente."
+  "time": "22:30",
+  "evidence": "FLT-1633: los players (canal, parrilla, mando, CMS, alta, echo) y las Pages Functions hablan con brain.digitalavatar.ai, fleet.yokup.com, api.yokup.com, whitelist/loyalty.admira.store y el Stock/descargas del player por stock.admira.store, player.admira.store y playerapp.admira.store en vez de workers.dev/r2.dev, que LaLiga hace bloquear en horas de fútbol."
 }

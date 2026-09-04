@@ -8,7 +8,8 @@ import {
   screensSummary, formatPlayersAnswer, honestError,
 } from "./copilot-lib.js";
 
-const FLEET = "https://admira-fleet.csilvasantin.workers.dev/machines";
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const FLEET = "https://fleet.yokup.com/machines";
 const SCREENS = "https://api.admira.store/signage/screens";
 const YOKUP = "https://api.yokup.com/copilot";
 const UA = "Mozilla/5.0 (compatible; AdmiraCopilot/1.0; +https://admira.tv)";

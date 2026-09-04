@@ -71,12 +71,12 @@
   .note{color:var(--dim);font-size:13px;line-height:1.6;margin:18px 0 0}
   .actions-foot{text-align:center;margin:28px 0 0;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=04.09.2026.r2.0956">
+  <link rel="stylesheet" href="/admira-frame.css?v=04.09.2026.r3.2230">
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.04.09.2026.r2.09:56';</script>
-<script src="/admira-nav.js?v=04.09.2026.r2.0956" data-active="apps" data-title="Control de Acceso" defer></script>
-<script src="/admira-frame.js?v=04.09.2026.r2.0956" defer></script>
+<script>window.ADMIRA_VERSION='v.04.09.2026.r3.22:30';</script>
+<script src="/admira-nav.js?v=04.09.2026.r3.2230" data-active="apps" data-title="Control de Acceso" defer></script>
+<script src="/admira-frame.js?v=04.09.2026.r3.2230" defer></script>
 <!-- SSO oficial de Google (única dependencia externa permitida) -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
@@ -128,7 +128,8 @@
 </main>
 
 <script>
-  var API = "https://admira-whitelist.csilvasantin.workers.dev";
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  var API = "https://whitelist.admira.store";
   var CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
   var OWNERS = ["csilva@admira.com", "csilvasantin@gmail.com"]; // solo para la UI; el worker es quien protege
 
