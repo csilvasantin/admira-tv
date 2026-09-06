@@ -1,9 +1,9 @@
 {
-  "version": "v.04.09.2026.r3.22:30",
-  "signature": "MorfeoMacMini · MacMini",
-  "agent": "MorfeoMacMini",
+  "version": "v.06.09.2026.r1.11:14",
+  "signature": "OraculoMacMini · MacMini",
+  "agent": "OraculoMacMini",
   "machine": "MacMini",
-  "day": "04.09.2026",
-  "time": "22:30",
-  "evidence": "FLT-1633: los players (canal, parrilla, mando, CMS, alta, echo) y las Pages Functions hablan con brain.digitalavatar.ai, fleet.yokup.com, api.yokup.com, whitelist/loyalty.admira.store y el Stock/descargas del player por stock.admira.store, player.admira.store y playerapp.admira.store en vez de workers.dev/r2.dev, que LaLiga hace bloquear en horas de fútbol."
+  "day": "06.09.2026",
+  "time": "11:14",
+  "evidence": "DCL-21ad407453e07c9c3f341f1d: CanalKiosk Gràcia llega al frontal verificado mediante tres etapas de Google Maps 3D, espera cámara y render estables, muestra fecha real de Street View y conserva la alternativa de paneles. QA visual y 15 pruebas aprobadas."
 }
