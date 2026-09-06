@@ -34,7 +34,7 @@
       el('human-date').textContent='Street View · '+dateLabel(state.date);
       el('human-heading').textContent=Math.round(state.heading)%360+'°';
       el('human-compass-needle').style.transform=`rotate(${-state.heading}deg)`;
-      el('human-steps').textContent=state.steps+' cambios de vista';
+      el('human-steps').textContent=state.steps+(state.steps===1?' cambio de vista':' cambios de vista');
       el('human-link-count').textContent=state.links.length+' rutas';
       el('human-inspect').classList.toggle('nearby',state.supportVisible);
       el('human-inspect').textContent=state.supportVisible?'E · Inspeccionar soporte':'Ficha del quiosco';
