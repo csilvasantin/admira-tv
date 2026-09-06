@@ -1,9 +1,9 @@
 {
-  "version": "v.06.09.2026.r1.11:14",
+  "version": "v.06.09.2026.r2.11:37",
   "signature": "OraculoMacMini · MacMini",
   "agent": "OraculoMacMini",
   "machine": "MacMini",
   "day": "06.09.2026",
-  "time": "11:14",
-  "evidence": "DCL-21ad407453e07c9c3f341f1d: CanalKiosk Gràcia llega al frontal verificado mediante tres etapas de Google Maps 3D, espera cámara y render estables, muestra fecha real de Street View y conserva la alternativa de paneles. QA visual y 15 pruebas aprobadas."
+  "time": "11:37",
+  "evidence": "DCL-9b86f36d5ddace5dd4f8848d (ref. 1561): universo outdoor 3D controlable con vista fotorrealista opcional, contexto de audiencia simulada compartido y retorno que conserva cámara, hora y selección. 28 pruebas, QA responsive y recorrido Google real aprobados."
 }
