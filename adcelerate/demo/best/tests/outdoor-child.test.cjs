@@ -14,7 +14,7 @@ function fixture(embedded=true) {
   const parent={postMessage:(message,origin)=>sent.push({message,origin})};
   const context=vm.createContext({window:{OUTDOOR_EMBED:embedded,parent},location:{origin:'https://admira.tv'},OutdoorContext,
     addEventListener:(name,fn)=>{listeners[name]=fn;},boot:()=>calls.boot++,refreshFranja:()=>calls.refresh++,
-    stopCam:()=>calls.stop++,hideStreetView:()=>calls.hide++,fmtHm:()=> '09:45',FRANJAS:[{aforo:460}],selFranjaIdx:0,_shotDone:false});
+    streetWalk:null,WALK_MODE:false,walkBootTimer:null,walkBootFailed:false,walkBootGeneration:0,clearTimeout,stopCam:()=>calls.stop++,hideStreetView:()=>calls.hide++,fmtHm:()=> '09:45',FRANJAS:[{aforo:460}],selFranjaIdx:0,_shotDone:false});
   vm.runInContext(bridge+';installOutdoorChild();',context);
   const dispatch=(data,overrides={})=>listeners.message?.({data,origin:'https://admira.tv',source:parent,...overrides});
   return {context,listeners,sent,calls,dispatch};

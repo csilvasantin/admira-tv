@@ -14,14 +14,34 @@
       manual:c.manual, selection:c.selection, mix:Object.fromEntries(profiles.map(p => [p,c.mix[p]])),
       layers:Object.fromEntries(['crowd','buildings','roads','night'].map(k => [k,c.layers[k]]))};
   }
+  const actions = ['forward','backward','left','right','look-up','look-down','home','panels','front','zoom-in','zoom-out','link'];
+  const shortString = (s, max, empty = true) => typeof s === 'string' && s.length <= max && (empty || s.length > 0);
+  function validateWalkCommand(p) {
+    if (!p || !actions.includes(p.action) || (p.action === 'link' && !shortString(p.pano,250,false))) return null;
+    return {action:p.action, ...(p.action === 'link' ? {pano:p.pano} : {})};
+  }
+  function validateWalkState(p) {
+    if (!p || !['loading','ready','error','unavailable'].includes(p.status) ||
+        !shortString(p.pano,250) || !finite(p.heading,0,360) || !shortString(p.date,100) ||
+        !Number.isInteger(p.steps) || !finite(p.steps,0,1000000) || typeof p.supportVisible !== 'boolean' ||
+        !(p.position === null || (p.position && finite(p.position.lat,-90,90) && finite(p.position.lng,-180,180))) ||
+        !Array.isArray(p.links) || p.links.length > 32 ||
+        !p.links.every(l => l && shortString(l.pano,250,false) && finite(l.heading,0,360) && shortString(l.description,160))) return null;
+    return {status:p.status,pano:p.pano,heading:p.heading,position:p.position ? {...p.position} : null,
+      date:p.date,steps:p.steps,supportVisible:p.supportVisible,
+      links:p.links.map(l => ({pano:l.pano,heading:l.heading,description:l.description}))};
+  }
   function message(type, context) {
-    return {channel:'admira-outdoor', version:1, type, ...(context ? {context} : {})};
+    const data = type === 'walk-state' || type === 'walk-command' ? {payload:context} : (context ? {context} : {});
+    return {channel:'admira-outdoor', version:1, type, ...data};
   }
   function accepts(event, source, origin) {
     const d = event && event.data;
     return !!(event && event.origin === origin && event.source === source && d &&
-      d.channel === 'admira-outdoor' && d.version === 1 && ['ready','context','close','stop'].includes(d.type) &&
-      (d.type !== 'context' || validate(d.context)));
+      d.channel === 'admira-outdoor' && d.version === 1 && ['ready','context','close','stop','walk-state','walk-command','support-select'].includes(d.type) &&
+      (d.type !== 'context' || validate(d.context)) &&
+      (d.type !== 'walk-state' || validateWalkState(d.payload)) &&
+      (d.type !== 'walk-command' || validateWalkCommand(d.payload)));
   }
   function bestEntry(search, embedded) {
     const params = new URLSearchParams(search);
@@ -31,9 +51,10 @@
     if (['front','panels'].includes(params.get('side'))) next.set('side', params.get('side'));
     // Explicit calibration links retain intent; ordinary external links open the universe.
     if (params.has('cal') || params.has('side')) next.set('view', 'photo');
+    if (params.get('walk') === '1') next.set('view', 'human');
     return '../' + (next.size ? '?' + next.toString() : '');
   }
-  const api = {validate, message, accepts, bestEntry};
+  const api = {validate, validateWalkState, validateWalkCommand, message, accepts, bestEntry};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.OutdoorContext = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

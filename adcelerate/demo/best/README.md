@@ -7,7 +7,40 @@ la llegada guiada y los panoramas fechados. El iframe `?embed=1` espera el conte
 validado del parent antes de cargar Google y se destruye al volver al universo.
 
 Ficheros: `index.html` (renderer hijo), `camera-path.js` (trayectoria y esperas),
+`street-walk.js` (pasos por enlaces reales de Street View),
 `../js/outdoor-context.js` (contrato de contexto), `tests/` (pruebas focales).
+
+## Humano: exploración fotográfica a pie
+
+El iframe `?embed=1&walk=1` abre directamente Street View a altura de ojos,
+sin crear el globo Map3D ni cargar el modelo GLB. Arranca en los paneles de marzo
+2023. La vista guiada del apartado siguiente sigue siendo una opción separada.
+
+- **W/S o ↑/↓:** avanzar/retroceder por un enlace real situado a un máximo de 60°
+  de la dirección elegida. No atravesamos fachadas ni inventamos panoramas; sin
+  salida en esa dirección, hay que girar o elegir una conexión del menú.
+- **A/D o ←/→:** girar. Arrastrar permite mirar; Av/Re Pág inclina la mirada.
+- **E o clic en un panel visible:** inspeccionar el soporte. La ficha del quiosco
+  también está disponible desde el HUD.
+- **Volver al quiosco / Mostrador:** saltos explícitos a puntos conocidos, que no
+  suman pasos. Escape o Mapa 3D destruyen el iframe y conservan el universo.
+
+Verificado el 6 de septiembre de 2026 con `StreetViewService`: el panorama de los
+paneles `2NoSvJbqMCZ0RXhR8pTSLA` devuelve dos conexiones; el del mostrador
+`9xunlB_EXfx7QBkGq7cZfA` (2017-11) no tiene conexiones. Son pasos entre fotografías,
+no movimiento libre 3D ni imágenes de peatones actuales.
+
+Cada cambio borra primero fecha y conexiones anteriores y consulta los metadatos
+del panorama realmente activo. Una fecha ausente se muestra como no facilitada.
+Las homografías publicitarias solo se dibujan en el panorama calibrado de los
+paneles y desaparecen inmediatamente al abandonarlo. La audiencia permanece
+identificada como simulación del ámbito de la plaza, separada de las personas de
+las fotografías. Se conserva la atribución y el control de fecha nativos de Google.
+
+Solo hay un paso pendiente. Nuevas vueltas al quiosco y la salida invalidan
+consultas tardías; un error o timeout cierra la carga y permite reintentar.
+Pruebas: `node --test adcelerate/demo/best/tests/street-walk.test.cjs`.
+Referencia: https://developers.google.com/maps/documentation/javascript/reference/street-view-service
 
 ## Llegada guiada al quiosco (6 de septiembre de 2026)
 

@@ -4,7 +4,9 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
 
-const photo = {frame:null, ready:false, signature:'', returnMode:null};
+const photo = {frame:null, ready:false, signature:'', returnMode:null, mode:'photo'};
+const humanHUD = HumanView.create({element:document.getElementById('human-hud'),
+  send:sendHumanCommand,onExit:closePhoto,onInspect:inspectHumanSupport});
 let selectedSite = 'kiosk';
 
 /* ============================== datos de demo ============================== */
@@ -1319,6 +1321,7 @@ function buildHUD() {
   $('universe-layers').onclick = () => toggleSide('left');
   $('nav-universe').onclick = e => { e.preventDefault(); closePhoto(); setQuality('better'); };
   $('universe-photo').onclick = () => openPhoto();
+  $('universe-human').onclick = () => openPhoto('human');
   $('universe-return').onclick = closePhoto;
   $('select-kiosk').onclick = () => { selectedSite = 'kiosk'; updateUniverseCard(); if (!photo.frame) focusKiosk(); };
   $('select-plaza').onclick = () => { selectedSite = 'plaza'; updateUniverseCard(); if (!photo.frame) focusOverview(); };
@@ -1616,6 +1619,7 @@ function fitOrtho() {
 fitOrtho();
 function activeCamera() { return quality === 'good' ? camera2D : camera; }
 function setQuality(q) {
+  if (q === 'human') { openPhoto('human'); return; }
   if (q === 'best') {                       // nivel fotorrealista: vive en la subcarpeta best/
     openPhoto();
     return;
@@ -1656,7 +1660,7 @@ function updateModeButtons() {
 function setCamMode(m) {
   if (photo.frame) closePhoto();
   if (m === 'guided') { startFlight(); return; }
-  if (m === 'human') { enterHuman(); return; }
+  if (m === 'human') { openPhoto('human'); return; }
   stopFlight();                    // corta un vuelo guiado si lo hubiera
   camMode = m;
   if (m === 'free') {
@@ -1856,6 +1860,8 @@ function updateUniverseCard() {
   $('universe-mix').innerHTML = PERFILES.map(p => `<span>${PERFIL_LABEL[p]} ${Math.round(c.mix[p])}%</span>`).join('');
   $('select-kiosk').classList.toggle('active', selectedSite === 'kiosk');
   $('select-plaza').classList.toggle('active', selectedSite === 'plaza');
+  const recommendation = REGLAS[dominanteDe(c.mix)];
+  humanHUD.updateAudience(c,PERFIL_LABEL,`Creatividad ${recommendation.cre} · ${recommendation.titulo}`);
   sendPhotoContext();
 }
 function sendPhotoContext() {
@@ -1879,8 +1885,12 @@ function cancelUniverseMotion() {
     controls.enableDamping = true;
   }
 }
-function openPhoto() {
-  if (photo.frame) return;
+function openPhoto(mode = 'photo') {
+  const launcher=document.activeElement;
+  if (photo.frame && photo.mode === mode) return;
+  if (photo.frame) closePhoto();
+  photo.mode = mode;
+  photo.launcher = launcher && launcher !== document.body && launcher.tagName !== 'IFRAME' ? launcher : $('universe-human');
   cancelUniverseMotion();
   photo.returnMode = camMode;
   controls.enabled = false;
@@ -1892,23 +1902,38 @@ function openPhoto() {
   const url = new URL('best/', location.href);
   const params = new URLSearchParams(location.search);
   url.searchParams.set('embed', '1');
+  if (mode === 'human') { url.searchParams.set('walk','1'); url.searchParams.set('side','panels'); }
   if (params.has('cal')) url.searchParams.set('cal', params.get('cal'));
   if (['front','panels'].includes(params.get('side'))) url.searchParams.set('side', params.get('side'));
   photo.frame = frame; photo.ready = false; photo.signature = '';
   frame.src = url.href;
   $('photo-view').replaceChildren(frame);
   $('photo-view').classList.remove('hidden');
+  for (const id of ['sidebar','rightbar']) $(id).classList.remove('open');
+  for (const id of ['tg-left','tg-right']) $(id).classList.remove('on');
+  document.body.classList.remove('universe-options-open');
+  document.body.classList.toggle('human-active',mode === 'human');
+  if (mode === 'human') humanHUD.enter();
   document.body.classList.add('photo-active');
   $('universe-photo').classList.add('hidden');
+  $('universe-human').classList.add('hidden');
   $('universe-return').classList.remove('hidden');
   $('universe-photo-note').classList.remove('hidden');
   $('universe-view-label').textContent = 'Vista real · quiosco';
   $('universe-model-note').classList.add('hidden');
-  document.querySelectorAll('#quality button').forEach(b => b.classList.toggle('active', b.dataset.q === 'best'));
+  document.querySelectorAll('#quality button').forEach(b => b.classList.toggle('active', b.dataset.q === (mode === 'human' ? 'human' : 'best')));
   resizePhotoViewport();
 }
+function inspectHumanSupport() {
+  selectedSite = 'kiosk'; updateUniverseCard(); humanHUD.inspect();
+}
+function sendHumanCommand(payload) {
+  if (!photo.frame || !photo.ready || photo.mode !== 'human') return;
+  const command = OutdoorContext.validateWalkCommand(payload); if (!command) return;
+  photo.frame.contentWindow.postMessage(OutdoorContext.message('walk-command',command),location.origin);
+}
 function resizePhotoViewport() {
-  $('photo-view').style.bottom = photo.frame && innerWidth <= 480
+  $('photo-view').style.bottom = photo.frame && photo.mode !== 'human' && innerWidth <= 480
     ? Math.max(30, $('universe-card').getBoundingClientRect().height + 50) + 'px' : '';
 }
 new ResizeObserver(resizePhotoViewport).observe($('universe-card'));
@@ -1920,8 +1945,10 @@ function closePhoto() {
   // Destroy the browsing context: no hidden Google renderer, audio, route or delayed callback survives.
   frame.remove();
   $('photo-view').classList.add('hidden');
-  document.body.classList.remove('photo-active');
+  document.body.classList.remove('photo-active','human-active');
+  humanHUD.leave();
   $('universe-photo').classList.remove('hidden');
+  $('universe-human').classList.remove('hidden');
   $('universe-return').classList.add('hidden');
   $('universe-photo-note').classList.add('hidden');
   $('universe-model-note').classList.remove('hidden');
@@ -1935,12 +1962,15 @@ function closePhoto() {
   updateModeButtons(); updateCrowd();
   if (stockItem && stockItem.type === 'video') { vid.play().catch(() => {}); stockTimer = setTimeout(nextStock, VIDEO_CAP_MS); }
   else if (stockItem) stockTimer = setTimeout(nextStock, IMG_SECONDS * 1000);
-  $('universe-photo').focus();
+  const launcher=photo.launcher;
+  (launcher && document.contains(launcher) ? launcher : $('universe-human')).focus({preventScroll:true});
 }
 addEventListener('message', event => {
   if (!photo.frame || !OutdoorContext.accepts(event, photo.frame.contentWindow, location.origin)) return;
   if (event.data.type === 'ready') { photo.ready = true; photo.signature = ''; sendPhotoContext(); }
   if (event.data.type === 'close') closePhoto();
+  if (event.data.type === 'walk-state' && photo.mode === 'human') humanHUD.setState(OutdoorContext.validateWalkState(event.data.payload));
+  if (event.data.type === 'support-select' && photo.mode === 'human') inspectHumanSupport();
 });
 addEventListener('keydown', event => { if (event.key === 'Escape' && photo.frame) { event.preventDefault(); closePhoto(); } });
 addEventListener('blur', () => { fly.keys = {}; pan2D.keys = {}; });
@@ -2098,10 +2128,11 @@ setInterval(pollSignage, SIGNAGE_POLL_MS);
 requestAnimationFrame(animate);
 const entry = new URLSearchParams(location.search);
 if (entry.get('view') === 'photo') openPhoto();
+if (entry.get('view') === 'human' || entry.get('mode') === 'human') openPhoto('human');
 
 // gancho de inspección (demo/debug)
 window.__dbg = {
-  openPhoto, closePhoto, contextSnapshot, focusOverview, zoomUniverse, photo,
+  openPhoto, closePhoto, sendHumanCommand, humanHUD, contextSnapshot, focusOverview, zoomUniverse, photo,
   camera, camera2D, controls, state, startFlight, applyFranja, setCamMode, setQuality, nextStock, fly, pan2D, tickPan2D,
   get camMode() { return camMode; },
   get quality() { return quality; },
