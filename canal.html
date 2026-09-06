@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=06.09.2026.r9.1456"></script>
+<script src="xpl-runtime.js?v=06.09.2026.r10.1933"></script>
 <script>
-  window.ADMIRA_VERSION='v.06.09.2026.r9.14:56';
+  window.ADMIRA_VERSION='v.06.09.2026.r10.19:33';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -1096,8 +1096,49 @@ window.addEventListener('offline',()=>refreshDeviceTelemetry(true));
 // loc/locName → el worker refleja esta pantalla en /signage/screens (vista viva
 // unificada "qué equipo emite qué ahora"). loc = circuito; locName = nombre legible.
 function _postNow(item){ try{ if(item) item.audio=playerAudioState(); DEVICE_TELEMETRY.audio=playerAudioState(); fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
-  body:JSON.stringify({ screen:scr.screen, producer:TELEMETRY_PRODUCER, item, standby:false, role:'canal', version:window.ADMIRA_VERSION||'', device:DEVICE_TELEMETRY,
+  body:JSON.stringify({ screen:scr.screen, producer:TELEMETRY_PRODUCER, item, standby:false, role:'canal', version:window.ADMIRA_VERSION||'', device:DEVICE_TELEMETRY, health:guardHealth(),
     loc:scr.circuit||'', locName:scr.name||scr.circuit||'', machine:scr.machine||'' })}).catch(()=>{}); }catch(_){} }
+// ── GUARDIA DE EMISIÓN (06-09-2026, DCL-6cfb6dea, foco admira.tv · players Android/iOS) ─────────
+// La pantalla NUNCA se queda quieta ni en negro:
+//  1) Vídeo atascado: si el <video> en emisión no avanza currentTime durante GUARD_STALL_S sin estar
+//     en pausa ni standby (red cortada a mitad, decoder colgado sin onerror) → se cuenta y se avanza.
+//  2) Turno eterno: si desde el último play() pasa GUARD_SLOT_MAX_S sin avanzar (imagen/audio/vacío
+//     con temporizador muerto) → next(); si next() falla, recarga.
+//  3) Latido nativo: cada tick avisa a la app (Android AdmiraNative.beat · iOS messageHandlers.beat).
+//     Si el WebView entero se cuelga y el latido calla 3 min, la app recarga el canal por su cuenta.
+//  4) Salud en /signage/now: {stalls, recoveries, lastRecoveryAt, lastReason, source:'live'|'cache',
+//     online, uptimeSec} para que el CMS vea si un equipo emite en vivo o desde la caché.
+const GUARD_STALL_S=12, GUARD_SLOT_MAX_S=180, GUARD_TICK_MS=2000, __adtvBootAt=Date.now();
+function guardState(){ return window.__adtvGuard||(window.__adtvGuard={stalls:0,recoveries:0,lastRecoveryAt:0,lastReason:'',source:'live',lastPlayAt:Date.now(),lastProgressAt:Date.now(),lastPos:-1}); }
+function guardHealth(){ const g=guardState(); return { stalls:g.stalls, recoveries:g.recoveries, lastRecoveryAt:g.lastRecoveryAt||0, lastReason:g.lastReason||'', source:g.source, online:navigator.onLine!==false, uptimeSec:Math.round((Date.now()-__adtvBootAt)/1000) }; }
+function guardPlayStarted(){ const g=guardState(); g.lastPlayAt=Date.now(); g.lastProgressAt=Date.now(); g.lastPos=-1; }
+function guardBeat(){
+  try{ if(window.AdmiraNative&&typeof AdmiraNative.beat==='function') AdmiraNative.beat(); }catch(_){}
+  try{ if(window.webkit&&webkit.messageHandlers&&webkit.messageHandlers.beat) webkit.messageHandlers.beat.postMessage(Date.now()); }catch(_){}
+}
+function guardRecover(reason){
+  const g=guardState(); g.recoveries++; g.lastRecoveryAt=Date.now(); g.lastReason=String(reason||'').slice(0,80); guardPlayStarted();
+  try{ console.warn('[canal] guardia de emisión →',reason); }catch(_){}
+  try{ if(_nowItem){ _nowItem.ts=Date.now(); _postNow(_nowItem); } }catch(_){}
+  try{ next(); }catch(_){ try{ location.reload(); }catch(__){} }
+}
+function guardTick(){
+  guardBeat();
+  const g=guardState(), now=Date.now();
+  if(_standby||directOn||PREVIEW.on||paused){ g.lastProgressAt=now; g.lastPlayAt=now; return; }   // quieta A PROPÓSITO: no es un atasco
+  const v=(mediaEl&&mediaEl.tagName==='VIDEO')?mediaEl:null;
+  let slotMax=GUARD_SLOT_MAX_S;
+  if(v){
+    const pos=v.currentTime||0;
+    if(pos!==g.lastPos){ g.lastPos=pos; g.lastProgressAt=now; }
+    else if(!v.paused&&!v.ended&&v.readyState>=1&&now-g.lastProgressAt>GUARD_STALL_S*1000){ g.stalls++; guardRecover('video atascado '+Math.round((now-g.lastProgressAt)/1000)+'s'); return; }
+    if(v.duration>0&&isFinite(v.duration)) slotMax=Math.max(slotMax,v.duration*1.5);
+  }
+  slotMax=Math.max(slotMax,((cfg&&cfg.imgSec)||9)*3,((cfg&&cfg.audioSec)||18)*3);
+  if(now-g.lastPlayAt>slotMax*1000){ guardRecover('turno eterno >'+Math.round(slotMax)+'s'); }
+}
+setInterval(guardTick,GUARD_TICK_MS);
+
 function signageNowPush(it){
   if(!it||!it.id||!scr.screen||!it.url) return;
   const now=Date.now();
@@ -1738,7 +1779,8 @@ function cacheBadge(){ if(qs.get('cachehud')!=='1') return;
 }
 
 async function play(i, forced){
-  if(_standby) return;              // en standby no se reproduce nada (ni audio detrás del negro)
+  if(_standby) return;
+  guardPlayStarted();               // guardia de emisión: empieza a contar el turno              // en standby no se reproduce nada (ni audio detrás del negro)
   const _tok=++_playTok;
   clearTimeout(timer); stopBar(); bar.style.width='0'; mediaEl=null; usesAdv=false;
   paused=false; document.body.classList.remove('paused'); $('pause').textContent='⏸';
@@ -2099,7 +2141,7 @@ function restoreCatalog(){
     const good=items.filter(i=>i&&MEDIA.includes(i.type)&&i.url);
     if(!good.length) return false;
     good.forEach(it=>{ it._num=it.num; it._offline=true; });
-    all=good; return true;
+    all=good; guardState().source='cache'; return true;
   }catch(_){ return false; }
 }
 
@@ -2123,6 +2165,7 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   // número PERSISTENTE de cada asset (lo asigna el worker y va en el meta/stock). Para /play<N>.
   all.forEach(it=>{ it._num=it.num; });
   saveCatalog();   // persiste el último catálogo bueno para arranque offline
+  guardState().source='live';
   // etiquetas de formato/aspecto/resolución desde la caché de dimensiones (instantáneo).
   for(const it of all){ const dd=dimCache[it.id]; if(dd){ applyFmt(it,dd); if(dd.dur>0) it._dur=Math.ceil(dd.dur); it._fmtDone=true; } }
   // la firma incluye tags+categoría: si editas el metadato de un vídeo, se detecta y reordena.
@@ -3791,6 +3834,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=06.09.2026.r9.1456" defer></script>
+  <script src="/assets/admira-version-watch.js?v=06.09.2026.r10.1933" defer></script>
 </body>
 </html>
