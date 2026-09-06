@@ -1,9 +1,9 @@
 {
-  "version": "v.06.09.2026.r2.11:37",
+  "version": "v.06.09.2026.r3.11:59",
   "signature": "OraculoMacMini · MacMini",
   "agent": "OraculoMacMini",
   "machine": "MacMini",
   "day": "06.09.2026",
-  "time": "11:37",
-  "evidence": "DCL-9b86f36d5ddace5dd4f8848d (ref. 1561): universo outdoor 3D controlable con vista fotorrealista opcional, contexto de audiencia simulada compartido y retorno que conserva cámara, hora y selección. 28 pruebas, QA responsive y recorrido Google real aprobados."
+  "time": "11:59",
+  "evidence": "DCL-c1260b8a85d8864291438b2e (ref. 1597): modo Humano con pasos por conexiones reales de Street View, HUD de exploración, fechas actuales de cada panorama y soportes publicitarios solo en su imagen calibrada. 50 pruebas, navegación Google real y QA responsive aprobadas."
 }
