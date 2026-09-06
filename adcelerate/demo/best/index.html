@@ -1040,7 +1040,7 @@ function ensureScreenPlayer(id){
   if(!DoohSurfaces.get(id))return null;
   if(screenPlayers.has(id))return screenPlayers.get(id);
   const library=currentPlayerLibrary(),items=library.items;if(!items.length)return null;
-  const player=ScreenPlayer.create({items,playlists:library.playlists,initialIndex:scheduledPlayerIndex(library).index,initialTime:chItem?.type==='video'?chVid.currentTime:0,
+  const player=ScreenPlayer.create({items,playlists:library.playlists,initialIndex:scheduledPlayerIndex(library).index,initialTime:chItem?.type==='video'?chVid.currentTime:Math.max(0,(performance.now()-chAt)/1000),
     createVideo:()=>document.createElement('video'),createImage:()=>new Image(),
     onState:()=>{if(screenPlayers.has(id))emitPlayerState()},
     onMedia:()=>{const current=screenPlayers.get(id);if(current&&current.state().status!=='paused')screenAudio.mediaChanged(id)},

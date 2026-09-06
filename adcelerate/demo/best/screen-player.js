@@ -25,7 +25,7 @@
     const error=()=>fail(token),end=()=>{if(token===generation)ended()};media.addEventListener('loadeddata',loaded);media.addEventListener('error',error);media.addEventListener('ended',end);detach=()=>{media.removeEventListener('loadeddata',loaded);media.removeEventListener('error',error);media.removeEventListener('ended',end)};
     media.src=item.url;media.load?.();
    }else{
-    media.removeAttribute('src');media.load?.();const image=createImage();image.crossOrigin='anonymous';image.onload=()=>{if(token!==generation||disposed)return;img=image;ready(token)};image.onerror=()=>fail(token);detach=()=>{image.onload=image.onerror=null};image.src=item.url;
+    media.removeAttribute('src');media.load?.();const image=createImage();image.crossOrigin='anonymous';image.onload=()=>{if(token!==generation||disposed)return;img=image;imageElapsed=Math.min(Math.max(0,seek),Math.max(.1,item.seconds||9));ready(token)};image.onerror=()=>fail(token);detach=()=>{image.onload=image.onerror=null};image.src=item.url;
    }
    return true;
   }
