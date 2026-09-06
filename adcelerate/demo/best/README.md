@@ -61,9 +61,11 @@ con **Photorealistic 3D Tiles servidos en vivo**. Es la vía **con licencia come
 
 ---
 
-## Alta de la clave (paso a paso, para Carlos / Trinity)
+## Configuración de la clave de navegador
 
-La clave **NO existe en la cúpula** (verificado 2026-07-12). Hay que darla de alta:
+La página ya utiliza una clave de navegador configurada para producción. No necesita
+una nueva alta para este recorrido. Los pasos siguientes describen el mantenimiento
+de una clave autorizada; no se deben ampliar sus restricciones para verificar un cambio:
 
 1. Ir a **https://console.cloud.google.com/** con la cuenta de Google del proyecto.
 2. Seleccionar (o crear) el **proyecto** de facturación de Admira.
@@ -80,13 +82,14 @@ La clave **NO existe en la cúpula** (verificado 2026-07-12). Hay que darla de a
 6. Si la consola pide **habilitar Billing** (lo hará: Photorealistic 3D Tiles exige
    cuenta de facturación activa), hay que **vincular una cuenta de facturación**.
    Sin billing, la clave devuelve error y la página muestra el aviso «pendiente de alta».
-7. Copiar la clave y pasarla a la página por URL:
+7. Para usar otra clave de navegador ya autorizada, puede pasarse por URL:
    `https://admira.tv/adcelerate/demo/best/?key=LA_CLAVE`
 
 > La página lee la clave con
 > `new URLSearchParams(location.search).get('key')`.
-> Si falta, muestra un aviso elegante y **no rompe**.
-> La clave **no se hardcodea** en el repo ni se sube a la cúpula.
+> El parámetro opcional sustituye la clave pública de navegador configurada.
+> Las restricciones de referrer siguen aplicándose: si localhost no está autorizado,
+> verificar mediante un preview permitido del mismo proyecto, sin cambiar la clave.
 
 ---
 
