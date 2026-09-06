@@ -1,9 +1,9 @@
 {
-  "version": "v.06.09.2026.r11.19:50",
+  "version": "v.06.09.2026.r12.19:53",
   "signature": "NeoMBP14 · MacBookProNegro14",
   "agent": "NeoMBP14",
   "machine": "MacBookProNegro14",
   "day": "06.09.2026",
-  "time": "19:50",
-  "evidence": "Guardia de emisión: vídeo atascado y turno eterno avanzan solos, latido nativo a las apps Android/iOS, salud live/cache en /signage/now; «sin media en este segmento» no cuenta como recuperación. 8 tests."
+  "time": "19:53",
+  "evidence": "Guardia de emisión verificada en real (turno eterno → avanzó de pieza, recoveries=1 en health); cubre vídeo atascado, pausa fantasma (reanuda y si no avanza), turno eterno, latido nativo Android/iOS y salud live/cache en /signage/now. 9 tests."
 }

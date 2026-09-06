@@ -26,6 +26,12 @@ test('quieta a propósito no es atasco: standby, directo, rundown y pausa reinic
   assert.match(canal, /if\(_standby\|\|directOn\|\|PREVIEW\.on\|\|paused\)\{ g\.lastProgressAt=now; g\.lastPlayAt=now; return; \}/);
 });
 
+test('pausa fantasma: un vídeo parado sin que nadie pulsara pausa se reanuda y, si no, se avanza', () => {
+  assert.match(canal, /else if\(v\.paused&&!v\.ended&&now-g\.lastProgressAt>GUARD_STALL_S\*1000\)\{/);
+  assert.match(canal, /if\(now-g\.lastProgressAt<=2\*GUARD_STALL_S\*1000\)\{ try\{ v\.play\(\)\.catch\(\(\)=>\{\}\); \}catch\(_\)\{\} \}/);
+  assert.match(canal, /guardRecover\('video pausado sin motivo '/);
+});
+
 test('sin media en el segmento no hay turno que vigilar: cero recuperaciones falsas', () => {
   assert.match(canal, /if\(!v&&!mediaEl&&!\(typeof playlist!=='undefined'&&playlist&&playlist\.length\)\)\{ g\.lastPlayAt=now; return; \}/);
 });
