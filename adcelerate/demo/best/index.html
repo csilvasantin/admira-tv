@@ -31,6 +31,12 @@
   /* Al abrir el modo experto, el globo sube para NO tapar la atribución Google */
   body.expert-open #stage{ bottom: 236px; }
 
+  #route-controls{position:absolute;top:calc(var(--top-h) + 12px);left:50%;transform:translateX(-50%);z-index:18;display:flex;align-items:center;gap:8px;max-width:calc(100% - 32px);padding:8px 12px;border:1px solid var(--spine-line);border-radius:var(--admira-radius-md);background:rgba(6,20,26,.94)}
+  #route-controls button{border:1px solid var(--spine-line);border-radius:var(--admira-radius-sm);background:var(--spine-soft);color:var(--admira-text);padding:8px 12px;cursor:pointer;white-space:nowrap;font:inherit;font-size:12px}
+  #route-controls button[hidden]{display:none}
+  #route-status{font-size:11px;color:var(--admira-text-muted);min-width:0}
+  @media(max-width:600px){#route-controls{flex-wrap:wrap;justify-content:center;width:max-content}#route-status{flex-basis:100%;text-align:center}}
+
   /* Vista: HYBRID / SATELLITE (mismo lenguaje que #cammodes) */
   #viewmodes{ display: flex; flex-direction: column; gap: 6px; }
   #viewmodes button{
@@ -212,18 +218,25 @@
     <button id="tg-expert" class="side-toggle" aria-label="Experto" title="Experto">⌥</button>
   </header>
 
+  <div id="route-controls" aria-label="Recorrido al quiosco">
+    <button id="route-arrive" type="button">➜ Llegar al frente</button>
+    <button id="route-panels" type="button">Paneles publicitarios · marzo 2023</button>
+    <button id="route-stop" type="button" hidden>■ Parar</button>
+    <span id="route-status" role="status" aria-live="polite">Plaça de la Vila de Gràcia</span>
+  </div>
+
   <!-- ============ MENÚ IZQUIERDO (opciones) ============ -->
   <aside id="sidebar">
     <section class="panel" id="cammodes-panel">
       <h2>Cámara</h2>
       <div id="cammodes">
-        <button data-cam="free" class="active">🕹 Volado libre</button>
-        <button data-cam="fly">✈ Vuelo de entrada</button>
+        <button data-cam="free">🕹 Volado libre</button>
+        <button data-cam="fly">✈ Repetir llegada</button>
         <button data-cam="orbit">◎ Órbita</button>
-        <button data-cam="human">🧍 A pie ante el kiosko</button>
+        <button data-cam="human">➜ Llegar al frente</button>
         <button data-cam="stop">■ Parar</button>
       </div>
-      <p class="note">volado libre con las flechas · vuelo cinematográfico · descenso al kiosko con pantalla</p>
+      <p class="note">Llegada guiada hasta el quiosco · flechas o arrastrar para tomar el control</p>
     </section>
 
     <section class="panel" id="view-panel">
@@ -316,6 +329,7 @@
   </div>
 </div>
 
+<script src="camera-path.js?v=20260906-1"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -328,6 +342,9 @@ const $ = (id) => document.getElementById(id);
 
 // Plaça de la Vila de Gràcia (kiosko News & Coffee · OOH Media)
 const PLAZA = { lat: 41.4002243, lng: 2.1575761 };
+// Canonical kiosk node: ../data/gracia-local.json meta.origin, OSM 3350101407.
+// PLAZA is the wider square view; it must not position the kiosk beside the tower.
+const KIOSK_LOCATION = { lat: 41.4002641, lng: 2.1573332 };
 
 // Clave desde la URL (?key=...). Nunca hardcodeada en la cúpula.
 const GOOGLE_MAPS_KEY = new URLSearchParams(location.search).get('key') || 'AIzaSyDOQTBlJYugpPBPuSMlRg74tu8Gvmq7mKA'; // publicable, restringida por referrer a admira.tv (autorizado por Carlos)
@@ -438,19 +455,18 @@ function setRT(on) {
 const SIGNAGE_URL = 'https://api.admira.store/signage/now?screen=oohmedia';
 const SIGNAGE_POLL_MS = 30000;
 
-/* ---------- cámaras de la coreografía cinematográfica ---------- */
-const CAM_START = { center: { ...PLAZA, altitude: 40 }, range: 2200, tilt: 47, heading: 25 };
-const CAM_KIOSK = { center: { ...PLAZA, altitude: 20 }, range: 220,  tilt: 67, heading: 25 };
-// «A pie ante el kiosko»: encuadre CERCANO para que la pantalla admira.tv EN VIVO sea la
-// protagonista (decisión de Carlos). A ~16 m, en FRENTE de la cara-pantalla (heading 25 →
-// la cámara se planta al SSO, el lado hacia el que mira la pantalla del GLB, heading 205),
-// la pantalla viva sale grande y nítida (~130 px) sobre el fondo fotorreal; los tiles a pie
-// de calle se ven algo derretidos pero la pantalla y el kiosko mandan. La altura del center
-// (~4 m) apunta la mirada a la altura de la pantalla. (range/tilt/heading afinables en preview.)
-// «A pie ante el kiosko»: momento SECUNDARIO de acercamiento (la pantalla viva se pega al
-// kiosko). Los tiles de Google se derriten a ras de calle (limitación conocida): el héroe es
-// el vuelo/órbita nítido con el PiP, esto es solo el plano corto opcional del botón 🧍.
-const CAM_HUMAN = { center: { ...PLAZA, altitude: 4 }, range: 40, tilt: 64, heading: 25 };
+/* ---------- llegada guiada a la ubicación real del quiosco ---------- */
+const CAM_START = { center: { ...PLAZA, altitude: 120 }, range: 2200, tilt: 47, heading: 238.13 };
+// CameraOptions defaults to absolute altitude. Relative mode keeps each shot
+// above local terrain without inventing the square's elevation above sea level.
+const CAM_KIOSK = { center: { ...KIOSK_LOCATION, altitude: 20 }, altitudeMode:'RELATIVE_TO_GROUND', range:220, tilt:45, heading:238.13 };
+const CAM_DESCENT = { center: { ...KIOSK_LOCATION, altitude: 6 }, altitudeMode:'RELATIVE_TO_GROUND', range:70, tilt:60, heading:238.13 };
+const CAM_HUMAN = { center: { ...KIOSK_LOCATION, altitude: 2.5 }, altitudeMode:'RELATIVE_TO_GROUND', range:18, tilt:78, heading:238.13 };
+const ARRIVAL_SHOTS = [
+  {name:'La plaza', camera:CAM_KIOSK, durationMillis:4200},
+  {name:'Aproximación al quiosco', camera:CAM_DESCENT, durationMillis:2400},
+  {name:'Llegada al quiosco', camera:CAM_HUMAN, durationMillis:2200},
+];
 
 // Kiosko 3D NUESTRO (Model3DElement con la pantalla-creatividad como textura embebida).
 // La pantalla está en la cara +Z del GLB; heading orienta esa cara hacia la plaza/aproximación.
@@ -458,7 +474,8 @@ const KIOSK_MODEL_ALT   = 0;     // relativo al suelo (base sobre el pavimento)
 const KIOSK_MODEL_SCALE = 1.1;   // GLB construido en metros (~3.3 m) → ~3.6 m
 const KIOSK_MODEL_HEADING = 205; // orientación de la cara-pantalla (se afina con captura)
 
-let map3d = null, MapMode = null, viewMode = 'SATELLITE';
+let map3d = null, MapMode = null, viewMode = 'SATELLITE', cameraPath = null;
+let cameraIntent = 0, routeSide = 'front';
 let kioskModel = null, kioskPerfil = null;   // Model3DElement + perfil de la creatividad puesta
 let selFranjaIdx = 2;          // 18h por defecto (hora punta), como el gemelo
 let creManifest = null;
@@ -492,9 +509,10 @@ async function boot(){
     map3d.id = 'map3d';
     map3d.fov = SCREEN_FOV_DEG;   // FOV vertical explícito → la pantalla pegada se alinea por construcción
     $('stage').appendChild(map3d);
+    cameraPath = KioskCameraPath.create(map3d);
 
     await addKiosk();
-    map3d.addEventListener('gmp-steadychange', onSteady, { once: true });
+    map3d.addEventListener('gmp-steadychange', onSteady);
     setTimeout(() => { $('loading').classList.add('done'); startShot(); }, 3500);  // fallback
 
     startTelemetry();
@@ -507,60 +525,86 @@ async function boot(){
     $('need-key').classList.add('show');
   }
 }
-function onSteady(){ $('loading').classList.add('done'); startShot(); }
+function onSteady(event){ if (!event.isSteady) return; map3d.removeEventListener('gmp-steadychange', onSteady); $('loading').classList.add('done'); startShot(); }
 // arranque de escena: normal = vuelo cinematográfico; ?cal=1 = directo «a pie ante el kiosko»
 // (encuadre de calibración/demo de la pantalla viva, sin esperar la coreografía).
 let _shotDone = false;
-function startShot(){ if (_shotDone) return; _shotDone = true; const q = new URLSearchParams(location.search); if (q.has('cal') || q.has('kiosk')) human(); else flyIn(); }
+function startShot(){ if (_shotDone) return; _shotDone = true; const q = new URLSearchParams(location.search); if (q.has('cal') || q.get('side') === 'panels') human('panels'); else flyIn(); }
 
 /* ============================ cámara ============================ */
 function setCamActive(cam){
   document.querySelectorAll('#cammodes button').forEach(b => b.classList.toggle('active', b.dataset.cam === cam));
 }
-function flyIn(){
-  if (!map3d) return;
-  exitFree();
-  setCamActive('fly');
-  map3d.stopCameraAnimation();
-  map3d.flyCameraTo({ endCamera: CAM_KIOSK, durationMillis: 9000 });
-  map3d.addEventListener('gmp-animationend', () => orbit(), { once: true });
+function routeStatus(message, running = false){
+  $('route-status').textContent = message;
+  $('route-stop').hidden = !running;
 }
-function orbit(){
-  if (!map3d) return;
+function cancelCameraIntent(){
+  cameraIntent++;
+  _shotDone = true; // delayed initial load must not restart after manual input
+  cameraPath?.cancel();
+  hideStreetView();
+  return cameraIntent;
+}
+async function arriveAtKiosk(side = 'front'){
+  if (!map3d || !cameraPath) return;
+  const intent = cancelCameraIntent();
+  exitFree();
+  setCamActive('human');
+  const view = KIOSK_VIEWS[side] || KIOSK_VIEWS.front;
+  routeSide = side === 'panels' ? 'panels' : 'front';
+  // The supplied GLB and billboard represent the advertising face. Do not
+  // invent an advertising screen over the real storefront on the front route.
+  if (routeSide === 'front') kioskModel?.remove();
+  else if (kioskModel && kioskModel.parentElement !== map3d) map3d.appendChild(kioskModel);
+  const shots = ARRIVAL_SHOTS.map(shot => ({...shot, camera:{...shot.camera, heading:view.pov.heading}}));
+  const result = await cameraPath.run(shots, ({index,total,shot,phase}) => {
+    if (phase === 'ready') {
+      const center = map3d.center;
+      const altitude = typeof center.altitude === 'function' ? center.altitude() : center.altitude;
+      if (Number.isFinite(altitude)) KIOSK_SCREEN.alt = altitude - shot.camera.center.altitude + 2.5;
+      return;
+    }
+    routeStatus(`${index + 1}/${total} · ${phase === 'loading' ? 'Cargando detalle' : shot.name}`, true);
+  });
+  if (intent !== cameraIntent || result === 'cancelled') return;
+  if (result !== 'ready') {
+    routeStatus('La imagen aún no está lista. Pulsa «Llegar al frente» para reintentar.');
+    setCamActive('stop');
+    return;
+  }
+  // The physical storefront and advertising panels are different viewpoints.
+  // Only the calibrated panel panorama receives the live advertising overlays.
+  routeStatus('Abriendo vista a pie del quiosco…', true);
+  const visible = await showStreetView(side);
+  if (intent !== cameraIntent) return;
+  routeStatus(visible ? view.label : 'Street View no disponible. Puedes explorar la vista 3D.');
+}
+function flyIn(){ return arriveAtKiosk(); }
+function human(side = 'front'){ return arriveAtKiosk(typeof side === 'string' ? side : 'front'); }
+async function orbit(){
+  if (!map3d || !cameraPath) return;
+  const intent = cancelCameraIntent();
   exitFree();
   setCamActive('orbit');
-  map3d.stopCameraAnimation();
-  map3d.flyCameraAround({ camera: CAM_KIOSK, durationMillis: 40000, rounds: 1 });
-  // al terminar la órbita, el modo en reposo es el VOLADO LIBRE (norma de la casa)
-  map3d.addEventListener('gmp-animationend', () => { if (!freeFly.active) enterFree(false); }, { once: true });
-}
-// «A pie ante el kiosko»: VUELA desde donde esté el globo hasta un descenso sobre la plaza
-// y luego FUNDE al Street View real del kiosko con la señalización admira.tv (módulo SV).
-const CAM_DESCENT = { center: { ...PLAZA, altitude: 22 }, range: 85, tilt: 62, heading: 49.5 };
-let _humanTimer = 0;
-function human(){
-  setCamActive('human');
-  if (!map3d){ showStreetView(); return; }
-  hideStreetView();                 // durante el vuelo se ve el globo
-  exitFree();
-  map3d.stopCameraAnimation();
-  map3d.flyCameraTo({ endCamera: CAM_DESCENT, durationMillis: 3200 });
-  const land = () => { clearTimeout(_humanTimer); showStreetView(); };   // aterriza en el Street View
-  map3d.addEventListener('gmp-animationend', land, { once: true });
-  _humanTimer = setTimeout(land, 3600);   // fallback si no dispara animationend
+  routeStatus('Órbita manual', true);
+  const result = await cameraPath.run([{name:'Órbita manual', camera:CAM_KIOSK, durationMillis:40000, orbit:true}]);
+  if (intent !== cameraIntent) return;
+  setCamActive('stop');
+  routeStatus(result === 'ready' ? 'Órbita terminada' : 'Órbita detenida');
 }
 function stopCam(){
-  if (!map3d) return;
+  cancelCameraIntent();
   exitFree();
   setCamActive('stop');
-  map3d.stopCameraAnimation();
+  routeStatus('Recorrido detenido');
 }
 function replayFrom(){
   if (!map3d) return;
+  cancelCameraIntent();
   exitFree();
-  map3d.stopCameraAnimation();
-  Object.assign(map3d, { center: CAM_START.center, range: CAM_START.range, tilt: CAM_START.tilt, heading: CAM_START.heading });
-  flyIn();
+  Object.assign(map3d, { center:CAM_START.center, range:CAM_START.range, tilt:CAM_START.tilt, heading:CAM_START.heading });
+  return arriveAtKiosk();
 }
 
 /* ============ VOLADO LIBRE con las flechas (norma de la casa · igual que BETTER) ============
@@ -594,7 +638,8 @@ function showHint(){
 }
 function enterFree(fromKey){
   if (!map3d) return;
-  hideStreetView();   // volado libre trabaja sobre el globo, no sobre el Street View
+  cancelCameraIntent();
+  routeStatus('Control manual · flechas para moverte');
   setCamActive('free');
   map3d.stopCameraAnimation();
   readCamState();
@@ -674,14 +719,14 @@ async function addKiosk(){
   const interactive = !!lib.Model3DInteractiveElement;
   kioskModel = new Model({
     src: MODEL_SRC('neutral'),
-    position: { ...PLAZA, altitude: KIOSK_MODEL_ALT },
+    position: { ...KIOSK_LOCATION, altitude: KIOSK_MODEL_ALT },
     altitudeMode: AltitudeMode ? AltitudeMode.RELATIVE_TO_GROUND : 'RELATIVE_TO_GROUND',
     orientation: { heading: KIOSK_MODEL_HEADING, tilt: 0, roll: 0 },
     scale: KIOSK_MODEL_SCALE,
   });
   kioskPerfil = 'neutral';
-  if (interactive) kioskModel.addEventListener('gmp-click', () => orbit());
-  map3d.appendChild(kioskModel);
+  if (interactive) kioskModel.addEventListener('gmp-click', () => human());
+  if (routeSide === 'panels') map3d.appendChild(kioskModel);
   // pon ya la creatividad de la franja seleccionada
   setKioskModel(dominanteDe(FRANJAS[selFranjaIdx].mix));
 }
@@ -694,6 +739,7 @@ function setKioskModel(perfil){
 
 /* ============================ vista HYBRID/SATELLITE ============================ */
 function setView(v){
+  stopCam();
   viewMode = v;
   document.querySelectorAll('#viewmodes button').forEach(b => b.classList.toggle('active', b.dataset.view === v));
   if (map3d) map3d.mode = MapMode ? (MapMode[v] || v) : v;
@@ -948,7 +994,7 @@ function drawChannel(ctx, W, H){
 
 // ---- proyección mundo→pantalla desde el estado de cámara del Map3D ----
 // Ancla = centro de la pantalla del kiosko (~2 m sobre el pavimento en la plaza).
-const KIOSK_SCREEN = { lat: PLAZA.lat, lng: PLAZA.lng, alt: 2.5 };
+const KIOSK_SCREEN = { lat: KIOSK_LOCATION.lat, lng: KIOSK_LOCATION.lng, alt: 2.5 };
 // FOV vertical que FIJAMOS explícitamente en el Map3D (map3d.fov, grados) y reusamos EN LA
 // PROYECCIÓN → la pantalla se alinea con el kiosko por construcción (sin adivinar el FOV).
 let SCREEN_FOV_DEG = 35;
@@ -1023,6 +1069,15 @@ function projectKiosk(){
 const KIOSK_PANO = '2NoSvJbqMCZ0RXhR8pTSLA';   // panorama de la trasera del kiosko (del enlace de Carlos)
 const KIOSK_POS  = { lat: 41.4002271, lng: 2.1572578 };
 let KIOSK_POV = { heading: 49.5, pitch: 2, zoom: 0.9 };   // encuadre (calibrar en preview)
+// Front panorama inspected in Google Maps, 6 September 2026. It predates
+// News & Coffee, so its capture date remains visible throughout this view.
+const KIOSK_VIEWS = {
+  front: {pano:'9xunlB_EXfx7QBkGq7cZfA', pov:{heading:238.13,pitch:2,zoom:0}, panels:false,
+    label:'Mostrador · Street View, noviembre 2017 · Imagen histórica'},
+  panels: {pano:KIOSK_PANO, pov:KIOSK_POV, panels:true,
+    label:'Paneles publicitarios · Street View, marzo 2023'},
+};
+let activeSvView = KIOSK_VIEWS.front;
 // esquinas de cada panel en FRACCIÓN del lienzo (0..1), orden TL,TR,BR,BL — CALIBRAR sobre el pano real
 // Esquinas MEDIDAS sobre el panorama real (heading,pitch en grados, absolutos) — orden TL,TR,BR,BL.
 // Calibradas con renders rectilineos del pano a yaw/pitch/fov conocidos (13-jul-2026): las pantallas
@@ -1036,7 +1091,7 @@ let SV_PANELS = [
   { tl:[.418,.470], tr:[.548,.478], br:[.548,.808], bl:[.418,.812] },   // panel izquierdo (SAUVAGE)
   { tl:[.557,.478], tr:[.690,.470], br:[.692,.808], bl:[.557,.812] },   // panel derecho (SAUVAGE)
 ];
-let sv = null, SV_ON = false;
+let sv = null, SV_ON = false, svAbortController = null;
 const svKeys = {};            // flechas en Street View: giro suave integrado por frame
 let _svT = 0;                 // timestamp del ultimo frame SV (para dt)
 // toque suelto de flecha = paso corto inmediato (mantener = giro continuo por frame)
@@ -1052,51 +1107,65 @@ function svNudge(k){
     sv.setZoom(Math.max(0.4, Math.min(3, z + (k === 'PageUp' ? 0.08 : -0.08))));
 }
 
-async function showStreetView(){
+async function showStreetView(side = 'front'){
+  const view = KIOSK_VIEWS[side] || KIOSK_VIEWS.front;
+  svAbortController?.abort();
+  const controller = new AbortController(); svAbortController = controller;
+  const signal = controller.signal;
   hideGlobeInteractions();
+  // Keep the loaded globe visible underneath until the requested panorama exists.
   $('streetview').style.display = 'block';
-  $('sv-signage').classList.add('show');
-  SV_ON = true;
-  { const he = $('hint'); if (he){ if (!he.dataset.prev) he.dataset.prev = he.textContent;
-      he.textContent = '\ud83e\uddcd \u2190 \u2192 girar \u00b7 \u2191 \u2193 mirar \u00b7 Av/Re P\u00e1g zoom \u00b7 arrastra para mirar'; } }
-  if (!sv){
-    try{
+  try {
+    let requestPano;
+    if (!sv){
       const { StreetViewPanorama } = await google.maps.importLibrary('streetView');
+      if (signal.aborted) return false;
       sv = new StreetViewPanorama($('streetview'), {
-        pano: KIOSK_PANO,
-        pov: { heading: KIOSK_POV.heading, pitch: KIOSK_POV.pitch }, zoom: KIOSK_POV.zoom,
-        disableDefaultUI: true, clickToGo: false, scrollwheel: true, panControl: false,
-        linksControl: false, addressControl: false, showRoadLabels: false, zoomControl: false,
-        motionTracking: false, motionTrackingControl: false, fullscreenControl: false,
+        pano:view.pano,
+        pov:{heading:view.pov.heading, pitch:view.pov.pitch}, zoom:view.pov.zoom,
+        disableDefaultUI:true, clickToGo:false, scrollwheel:true, panControl:false,
+        linksControl:false, addressControl:false, showRoadLabels:false, zoomControl:false,
+        motionTracking:false, motionTrackingControl:false, fullscreenControl:false,
       });
-      // Reproyectar las pantallas al girar/moverse (además del bucle por frame).
       sv.addListener('pov_changed', layoutSvPanels);
       sv.addListener('zoom_changed', layoutSvPanels);
       sv.addListener('position_changed', layoutSvPanels);
-    }catch(e){ console.error('[SV] no se pudo cargar Street View:', e); }
-  } else {
-    sv.setPano(KIOSK_PANO); sv.setPov({ heading: KIOSK_POV.heading, pitch: KIOSK_POV.pitch }); sv.setZoom(KIOSK_POV.zoom);
-  }
-  // ancla las esquinas de los paneles a puntos del MUNDO (una vez) para que las pantallas
-  // se REPOSICIONEN al girar/moverse (tracking), no que floten fijas en el lienzo.
-  calibrateSvWorld();
-  // prueba de tracking: ?pov=<heading> mira desde otro ángulo sin recalibrar (debe seguir clavado)
-  const povTest = new URLSearchParams(location.search).get('pov');
-  if (povTest && sv) setTimeout(() => sv.setPov({ heading: +povTest, pitch: KIOSK_POV.pitch }), 300);
-  // robustez: el pov del constructor no siempre se respeta → forzar el encuadre del kiosko
-  // al cargar (varias veces por si el panorama tarda). Tras eso, el usuario ya puede girar.
-  else [150, 400, 800, 1400].forEach(ms => setTimeout(() => {
-    if (SV_ON && sv){
-      const p = sv.getPov();
-      if (Math.abs(((p.heading - KIOSK_POV.heading + 540) % 360) - 180) > 1.5 || Math.abs(p.pitch - KIOSK_POV.pitch) > 1.5)
-        sv.setPov({ heading: KIOSK_POV.heading, pitch: KIOSK_POV.pitch });
+    } else {
+      sv.setVisible(true);
+      if (sv.getPano() !== view.pano || sv.getStatus() !== 'OK') requestPano = () => sv.setPano(view.pano);
     }
-  }, ms));
-  requestAnimationFrame(() => { $('streetview').classList.add('sv-vis'); $('sv-signage').classList.add('sv-vis'); });
-  layoutSvPanels();
+    const result = await KioskCameraPath.waitForPanorama(sv, view.pano, signal, 10000, requestPano);
+    if (signal.aborted) return false;
+    if (result !== 'ready') { hideStreetView(); return false; }
+    // Set the intended view once after availability. Repeated timer-based POV
+    // resets used to fight the user's drag/arrow input after arrival.
+    const povTest = Number(new URLSearchParams(location.search).get('pov'));
+    const hasPovTest = new URLSearchParams(location.search).has('pov') && Number.isFinite(povTest);
+    sv.setPov({heading:hasPovTest ? povTest : view.pov.heading, pitch:view.pov.pitch});
+    sv.setZoom(view.pov.zoom);
+    activeSvView = view;
+    SV_ON = true;
+    if (view.panels) calibrateSvWorld();
+    $('sv-signage').classList.toggle('show', view.panels);
+    const hint = $('hint');
+    if (hint){
+      if (!hint.dataset.prev) hint.dataset.prev = hint.textContent;
+      hint.textContent = '🧍 ← → girar · ↑ ↓ mirar · Av/Re Pág zoom · arrastra para mirar';
+    }
+    requestAnimationFrame(() => {
+      if (signal.aborted || !SV_ON) return;
+      $('streetview').classList.add('sv-vis'); $('sv-signage').classList.toggle('sv-vis', view.panels);
+    });
+    layoutSvPanels();
+    return true;
+  } catch (error) {
+    if (!signal.aborted) { console.warn('[BEST] Street View no disponible:', error); hideStreetView(); }
+    return false;
+  }
 }
 function hideStreetView(){
-  if (!SV_ON) return;
+  svAbortController?.abort(); svAbortController = null;
+  if (sv) sv.setVisible(false);
   SV_ON = false;
   for (const k in svKeys) svKeys[k] = false;   // no arrastrar teclas al volver al globo
   { const he = $('hint'); if (he && he.dataset.prev) he.textContent = he.dataset.prev; }
@@ -1171,6 +1240,7 @@ function drawSvGrid(){
 // Si hay anclaje al mundo (SV_PANEL_WORLD), reproyecta según la cámara actual (TRACKING:
 // las pantallas siguen a los paneles al girar/moverse). Si no, usa las fracciones fijas.
 function layoutSvPanels(){
+  if (!activeSvView.panels) return;
   const st = $('sv-signage').getBoundingClientRect(); const W = st.width, H = st.height;
   if (W < 10) return;
   if (SV_PANELS_HP && sv){
@@ -1240,6 +1310,7 @@ function liveTick(){
       const dz = ((svKeys.PageUp?1:0) - (svKeys.PageDown?1:0)) * 0.8 * _dt;
       if (dz) sv.setZoom(Math.max(0.4, Math.min(3, z + dz)));
     }
+    if (!activeSvView.panels) return;
     layoutSvPanels();   // TRACKING: reproyecta cada frame según la cámara (giro/movimiento)
     const c1 = $('sv-p1').firstElementChild, c2 = $('sv-p2').firstElementChild;
     drawChannel(c1.getContext('2d'), c1.width, c1.height);
@@ -1249,7 +1320,7 @@ function liveTick(){
   }
   const ready = map3d && $('loading').classList.contains('done');
   let showGlue = false;
-  if (ready && LIVE_GLUE){
+  if (ready && LIVE_GLUE && routeSide === 'panels'){
     const p = projectKiosk();
     if (p){
       const h = SCREEN_H_M * p.pxPerM, w = SCREEN_W_M * p.pxPerM;
@@ -1338,6 +1409,10 @@ function updateCalHud(ready, showGlue){
 
 /* ============================ UI (marco compartido) ============================ */
 function wireUI(){
+  // Camera arrival/stop remain available with the sidebars closed.
+  $('route-arrive').onclick = () => human('front');
+  $('route-panels').onclick = () => human('panels');
+  $('route-stop').onclick = stopCam;
   // cámara
   const camFns = { free: () => enterFree(false), fly: replayFrom, orbit, human, stop: stopCam };
   document.querySelectorAll('#cammodes button').forEach(b => { b.onclick = () => camFns[b.dataset.cam](); });
@@ -1390,7 +1465,9 @@ function wireUI(){
     a.onclick = e => { e.preventDefault(); toggleSide(a.dataset.open); };
   });
   // tocar el globo cierra los overlays laterales (no roba el foco para las flechas)
-  $('stage').addEventListener('pointerdown', closeSides);
+  $('stage').addEventListener('pointerdown', () => { stopCam(); closeSides(); });
+  $('stage').addEventListener('wheel', stopCam, {passive:true});
+  $('stage').addEventListener('keydown', e => { if (e.key === 'Escape') stopCam(); });
   // restaurar estado (plegado por defecto: solo abre lo guardado como '1')
   try {
     if (localStorage.getItem('adc.best.opts') === '1') $('sidebar').classList.add('open');
@@ -1425,7 +1502,8 @@ function loadBootstrap(key){
 window.__best = {
   get map3d(){ return map3d; }, get camState(){ return camState; }, get freeFly(){ return freeFly; },
   get kioskPerfil(){ return kioskPerfil; }, get kioskModel(){ return kioskModel; },
-  enterFree, exitFree, flyTick, setKioskModel, human, orbit, setFranja: (i)=>{ selFranjaIdx=i; refreshFranja(); },
+  enterFree, exitFree, flyTick, setKioskModel, human, orbit, stopCam, replayFrom,
+  get arrivalShots(){ return ARRIVAL_SHOTS; }, get cameraPath(){ return cameraPath; }, setFranja: (i)=>{ selFranjaIdx=i; refreshFranja(); },
   setRT, rtSync, madridHour, wxIcon, get rt(){ return rt; }, get wxCurrent(){ return wxCurrent; },
   // --- calibración de la pantalla viva pegada al kiosko (usar en el preview de pages.dev) ---
   live: {
@@ -1437,7 +1515,7 @@ window.__best = {
     set anchor(o){ if (o.alt!=null) KIOSK_SCREEN.alt=o.alt; if (o.offE!=null) SCREEN_OFF_E=o.offE; if (o.offN!=null) SCREEN_OFF_N=o.offN; if (o.wM!=null) SCREEN_W_M=o.wM; if (o.hM!=null) SCREEN_H_M=o.hM; },
     // --- Street View «a pie ante el kiosko»: calibración del pano y de los dos paneles ---
     sv: {
-      show: showStreetView, hide: hideStreetView, get on(){ return SV_ON; }, get obj(){ return sv; },
+      show: showStreetView, hide: hideStreetView, get view(){ return activeSvView; }, get on(){ return SV_ON; }, get obj(){ return sv; },
       get pov(){ return sv ? { ...sv.getPov(), zoom: sv.getZoom() } : null; },
       setPov(o){ if (o.heading!=null) KIOSK_POV.heading=o.heading; if (o.pitch!=null) KIOSK_POV.pitch=o.pitch; if (o.zoom!=null) KIOSK_POV.zoom=o.zoom;
         if (sv){ sv.setPov({ heading: KIOSK_POV.heading, pitch: KIOSK_POV.pitch }); if (o.zoom!=null) sv.setZoom(o.zoom); } layoutSvPanels(); },

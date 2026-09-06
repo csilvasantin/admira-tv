@@ -10,6 +10,36 @@ Ficheros:
 - `index.html` — página autónoma (tokens del gemelo vendorizados, sin dependencias del demo padre).
 - `README.md` — esto.
 
+## Llegada guiada al quiosco (6 de septiembre de 2026)
+
+La entrada recorre tres planos: plaza, aproximación y llegada. Se centra en el
+quiosco real **41.4002641, 2.1573332** (`gracia-local.json`, nodo OSM 3350101407),
+y termina frente al mostrador. El punto anterior 41.4002243, 2.1575761 sigue
+sirviendo solo para la vista amplia de la plaza; no sitúa el modelo.
+
+- **Llegar al frente**: panorama `9xunlB_EXfx7QBkGq7cZfA`, observado en Google
+  Maps en **41.4003067, 2.1573298**, heading 238.13°, pitch 2°, zoom 0.
+  La foto es de **noviembre de 2017** y muestra el quiosco anterior a News & Coffee.
+  La fecha y «Imagen histórica» permanecen visibles. No hay pantallas publicitarias
+  superpuestas ni GLB publicitario durante esta llegada al mostrador.
+- **Paneles publicitarios · marzo 2023**: conserva el panorama
+  `2NoSvJbqMCZ0RXhR8pTSLA`, su encuadre calibrado 49.5° y los dos anuncios vivos.
+  Es una cara distinta; las homografías de esos paneles no se aplican al mostrador.
+- **Parar**, arrastrar el globo, usar la rueda o las flechas cancelan el recorrido.
+  La órbita queda disponible solo por acción explícita y no se encadena a la llegada.
+
+Las etapas usan `CameraOptions.altitudeMode: RELATIVE_TO_GROUND` y esperan
+`gmp-animationend` más `gmp-steadychange` con `isSteady === true`. El timeout
+pausa sin fingir llegada. El cambio a Street View espera la disponibilidad del
+panorama solicitado y sigue siendo cancelable durante la importación o consulta.
+`status_changed` confirma la consulta de Street View, no que cada píxel esté ya
+renderizado. Las imágenes siempre las sirve Google en vivo; no se precargan ni
+almacenan teselas, panoramas o capturas.
+
+Implementación: `camera-path.js`, integración en `index.html`.
+Pruebas: `node --test adcelerate/demo/best/tests/camera-path.test.cjs` desde el repo.
+Referencia de API: https://developers.google.com/maps/documentation/javascript/reference/3d-map
+
 ---
 
 ## Vía legal elegida (importante)
@@ -86,7 +116,7 @@ Trinity para no chocar con el otro subagente (marco cuadrático + slider 24h).
 
 - Canal **`v=beta`** del loader: `gmp-map-3d` aún vive en beta.
 - `mode: HYBRID` es **obligatorio** desde feb-2025 (o `SATELLITE`).
-- Cámara: `flyCameraTo` (descenso) → `flyCameraAround` (órbita del kiosko).
+- Cámara: `flyCameraTo` por etapas → panorama frontal fechado; `flyCameraAround` solo al elegir Órbita.
 - Kiosko: `Marker3DInteractiveElement` con `label`. Si más adelante hay un **GLB**
   del kiosko, se cambia por `Model3DElement({ src, position, altitudeMode })` en la
   misma coordenada.
