@@ -77,3 +77,60 @@ test('only the explicit DooH deep link survives legacy BEST entry as an automati
   assert.doesNotMatch(context.bestEntry('?tour=anything',false),/tour=/);
   assert.equal(context.bestEntry('?embed=1&tour=dooh',true),null);
 });
+
+const UrbanRoutes=require('../js/urban-route.js');
+function walkingHarness(){
+  const routes=UrbanRoutes.create([{id:'out',fromSiteId:'vila',toSiteId:'jardinets',panos:['V','X','Y','J']},{id:'back',fromSiteId:'jardinets',toSiteId:'vila',panos:['J','Z','V']}]);
+  const travel=[];
+  return {...harness({stops:[{id:'a',siteId:'vila',pano:'V'},{id:'b',siteId:'vila',pano:'V'},{id:'c',siteId:'jardinets',pano:'J'}],findRoute:routes.find,sendRoute:c=>travel.push(c)}),travel,routes};
+}
+test('walking entry waits for its real position and refuses to teleport from an unknown street',()=>{
+  const h=walkingHarness();h.tour.start('a',{mode:'walk'});assert.equal(h.tour.getState().status,'locating');assert.equal(h.sent.length,0);
+  h.tour.observePosition({pano:'unknown',status:'ready'});assert.equal(h.tour.getState().reason,'off-route');assert.equal(h.sent.length,0);assert.equal(h.travel.length,0);
+});
+test('a full walking loop visits both Vila screens then traverses the directed outward and return paths',()=>{
+  const h=walkingHarness();h.tour.observePosition({pano:'V',status:'ready'});h.tour.start('a',{mode:'walk'});
+  h.ready();h.tick(9000);assert.equal(h.tour.getState().surfaceId,'b');assert.equal(h.travel.length,0);
+  h.ready();h.tick(9000);let s=h.tour.getState();assert.equal(s.status,'travelling');assert.equal(s.routeId,'out');
+  h.tick(5000);assert.equal(h.sent.filter(c=>c.action==='focus').length,2);
+  h.tour.acceptRoute({routeId:'out',requestId:s.requestId,status:'ready',pano:'J',step:3,total:3});
+  assert.equal(h.tour.getState().status,'loading');h.ready();h.tick(9000);s=h.tour.getState();
+  assert.equal(s.routeId,'back');assert.equal(s.status,'travelling');
+  h.tour.acceptRoute({routeId:'back',requestId:s.requestId,status:'ready',pano:'V',step:2,total:2});h.ready();
+  assert.equal(h.tour.getState().surfaceId,'a');assert.equal(h.tour.getState().lap,2);
+});
+test('pausing on a street resumes from the completed in-flight hop and rejects the cancelled route token',()=>{
+  const h=walkingHarness();h.tour.observePosition({pano:'X',status:'ready'});h.tour.start('c',{mode:'walk'});
+  const old=h.tour.getState().requestId;h.tour.pause();h.tour.observePosition({pano:'Y',status:'ready'});h.tick(60000);
+  h.tour.resume();const s=h.tour.getState();assert.equal(s.routeStep,2);assert.notEqual(s.requestId,old);
+  assert.equal(h.tour.acceptRoute({routeId:'out',requestId:old,status:'ready',pano:'J'}),false);
+  assert.equal(h.sent.filter(c=>c.action==='focus').length,0);
+  h.tour.acceptRoute({routeId:'out',requestId:s.requestId,status:'ready',pano:'J'});assert.equal(h.tour.getState().status,'loading');
+});
+test('route progress refreshes a per-hop watchdog, while a stalled or missing link never skips ahead',()=>{
+  const h=walkingHarness();h.tour.observePosition({pano:'V',status:'ready'});h.tour.start('c',{mode:'walk'});
+  const requestId=h.tour.getState().requestId;h.tick(25000);
+  h.tour.acceptRoute({routeId:'out',requestId,status:'walking',pano:'X',step:1,total:3});h.tick(25000);assert.equal(h.tour.getState().status,'travelling');
+  h.tour.acceptRoute({routeId:'out',requestId,status:'walking',pano:'X',step:1,total:3});h.tick(5000);assert.equal(h.tour.getState().reason,'timeout');
+  assert.equal(h.sent.filter(c=>c.action==='focus').length,0);
+});
+test('manual control cancels a travelling tour and delayed arrival cannot reveal a destination screen',()=>{
+  const h=walkingHarness();h.tour.observePosition({pano:'X',status:'ready'});h.tour.start('c',{mode:'walk'});
+  const s=h.tour.getState();h.tour.stop('manual');h.tour.acceptRoute({routeId:s.routeId,requestId:s.requestId,status:'ready',pano:'J'});
+  h.tick(60000);assert.equal(h.tour.getState().status,'stopped');assert.equal(h.sent.length,0);
+});
+test('directed routes cannot be reversed implicitly and lookup chooses an actual suffix from the current panorama',()=>{
+  const routes=UrbanRoutes.create([{id:'out',fromSiteId:'vila',toSiteId:'jardinets',panos:['V','X','J']}]);
+  assert.equal(routes.find('X','jardinets').id,'out');assert.equal(routes.find('X','vila'),null);
+  assert.ok(Object.isFrozen(routes.get('out').panos));assert.throws(()=>routes.get('out').panos.push('fake'));
+});
+
+test('both Vila screen identities stay on their connected alternate photograph during a walking loop',()=>{
+  const routes=UrbanRoutes.create([{id:'return',fromSiteId:'jardinets',toSiteId:'vila',panos:['J','V2']}]);
+  const travel=[];const h=harness({stops:[{id:'a',siteId:'vila',pano:'V'},{id:'b',siteId:'vila',pano:'V'}],findRoute:routes.find,sendRoute:c=>travel.push(c),canFocus:(id,pano)=>['V','V2'].includes(pano)});
+  h.tour.observePosition({pano:'J',status:'ready'});h.tour.start('a',{mode:'walk'});const s=h.tour.getState();
+  h.tour.acceptRoute({routeId:'return',requestId:s.requestId,status:'ready',pano:'V2',step:1,total:1});
+  assert.equal(h.sent.at(-1).preservePano,true);h.ready();assert.equal(h.tour.getState().pano,'V2');
+  h.tick(9000);assert.equal(h.tour.getState().surfaceId,'b');assert.equal(h.sent.at(-1).preservePano,true);
+  h.ready();assert.equal(h.tour.getState().pano,'V2');assert.equal(travel.filter(c=>c.action==='start').length,1);
+});

@@ -127,3 +127,32 @@ el ciclo y `SurfaceFocus` prepara el panorama. El puente del mismo origen
 valida pantalla, acción y número de petición antes de aceptar una llegada.
 Las creatividades superpuestas son una demostración; la audiencia conserva
 su procedencia y Jardinets continúa sin aforo conectado.
+
+## Paseo por la ciudad y audio de pantalla
+
+Antes de iniciar Tour DooH, el selector permite elegir **Entre pantallas** o
+**Paseo por la ciudad**. El enlace `?view=human&tour=dooh&travel=walk` conserva
+el segundo modo. El paseo empieza desde el panorama actual: si no pertenece a
+una ruta comprobada, se detiene y ofrece control manual o una **Visita directa**
+explícita. No sustituye una calle sin conexión por un salto oculto.
+
+Las rutas dirigidas de `js/urban-route.js` proceden de conexiones de Google
+verificadas; su evidencia está en `data/urban-route-evidence.json`. La ida inicial
+hasta Jardinets tiene 40 enlaces; el regreso y las siguientes idas tienen 39.
+Cada enlace se comprueba de nuevo contra los enlaces del panorama cargado.
+La vuelta llega a otra fotografía conectada de Vila, donde se calibran las mismas
+dos pantallas: conserva sus identidades y evita saltar a la imagen inicial.
+La fecha corresponde siempre al panorama que se está mostrando.
+
+El panel distingue los tramos de calle de los 9 segundos de exposición. Pausar
+conserva el punto; reanudar continúa desde la imagen actual, incluso si el último
+paso acabó de cargar durante la pausa. Tomar control, navegar manualmente o
+cambiar de modo cancela la continuación. Ocultar la pestaña pausa el tour.
+
+Inspeccionar una pantalla —tocándola o mediante el botón/E con la pantalla
+visible— abre **Activar audio** y volumen. El sonido pertenece al mismo vídeo
+que se dibuja sobre la pantalla, sin un segundo reproductor desincronizado.
+Empieza silenciado; solo se activa por una acción explícita. Si el navegador
+requiere un gesto dentro de Street View, aparece allí un botón para autorizarlo.
+Cerrar la ficha, cambiar de pantalla, navegar u ocultar la pestaña lo silencia.
+La recomendación de audiencia simulada no se utiliza como título del vídeo.

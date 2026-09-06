@@ -49,3 +49,10 @@ test('fitted posters leave a clear margin above tour dock at desktop and mobile 
   assert.ok(Math.max(...pixels.map(p=>p[1]))<h-Math.min(275,h*.45)-16,JSON.stringify({w,h,id:surface.id,pixels}));
  }
 });
+
+test('walking arrival views preserve the same screen identities and reject unrelated panoramas',()=>{
+ const pano='xyBUNhtkdE7tUUGrvRPwmA';assert.equal(Surfaces.all.length,3);
+ for(const id of ['vila-left','vila-right']){const pose=Surfaces.poseFor(id,pano);assert.equal(pose.id,id);assert.equal(pose.pano,pano);assert.equal(pose.elementId,Surfaces.get(id).elementId);assert.ok(Surfaces.fit(pose,390,758).zoom>1);}
+ assert.equal(Surfaces.poseFor('jardinets-main',pano),null);assert.equal(Surfaces.poseFor('vila-left','unknown'),null);
+ const left=Surfaces.poseFor('vila-left',pano),pixel=Surfaces.project(...left.corners.tl,{heading:13,pitch:-6},2.3,1440,814);assert.ok(Math.abs(pixel[0]-615)<.01);assert.ok(Math.abs(pixel[1]-185)<.01);
+});

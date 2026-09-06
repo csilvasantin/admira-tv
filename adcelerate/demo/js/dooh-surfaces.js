@@ -20,6 +20,12 @@
    pov:{heading:290.49,pitch:-6.3,zoom:2.35},elementId:'sv-jardinets',width:512,height:1320,
    corners:{"tl":[288.40210155,1.19514536],"tr":[292.52043081,1.21815636],"br":[292.45242362,-9.5541484],"bl":[288.37259124,-9.23394198]}}
  ];
+ // Same physical Vila screens seen from the connected walking arrival, March2023.
+ // 1440x814,zoom2.3,pitch-6: left h13 (615,185),(840,179),(840,552),(619,532);
+ // right h29 (572,175),(877,170),(876,603),(578,581).
+ const walkingViews=[{"id":"vila-left","pano":"xyBUNhtkdE7tUUGrvRPwmA","pov":{"heading":13,"pitch":-7,"zoom":2.3},"corners":{"tl":[9.63606152,1.13559423],"tr":[16.84180584,1.32540668],"br":[16.92723304,-10.65128005],"bl":[9.69701118,-10.0168083]}},{"id":"vila-right","pano":"xyBUNhtkdE7tUUGrvRPwmA","pov":{"heading":29,"pitch":-7,"zoom":2.3},"corners":{"tl":[24.2665672,1.45056276],"tr":[34.01838787,1.60815356],"br":[34.11542054,-12.26126603],"bl":[24.34764864,-11.56825991]}}];
+ for(const view of walkingViews){const surface=all.find(s=>s.id===view.id);surface.views=[view];}
+ function poseFor(id,pano){const s=all.find(s=>s.id===id);if(!s)return null;if(s.pano===pano)return s;const view=s.views?.find(v=>v.pano===pano);return view?{...s,...view}:null;}
  function freeze(o){if(o&&typeof o==='object'){Object.values(o).forEach(freeze);Object.freeze(o)}return o}freeze(all);
  // Native Street View focal measured from the same feature at headings290.7/298.7:
  // W1440,H814,z2.8,pitch-4, TL619,179→263,179. Model predicts262.67px.
@@ -49,6 +55,6 @@
   const centerY=(top+height-bottom)/2;
   return {heading,pitch:pitch+Math.atan((centerY-height/2)/focal)/r,zoom};
  }
- const api={all,get:id=>all.find(s=>s.id===id)||null,fit,fov,project,unproject};
+ const api={all,poseFor,hasPose:(id,pano)=>!!poseFor(id,pano),get:id=>all.find(s=>s.id===id)||null,fit,fov,project,unproject};
  if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DoohSurfaces=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

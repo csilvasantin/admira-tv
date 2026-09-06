@@ -28,8 +28,8 @@
     if(settleMs>0)run.settle=setTimeout(finish,settleMs);else finish();
    });
   }
-  function focus(surfaceId,requestId){
-   const surface=getSurface(surfaceId);if(disposed||!surface||!Number.isSafeInteger(requestId)||requestId<1)return false;
+  function focus(surfaceId,requestId,options={}){
+   const surface=getSurface(surfaceId,options);if(disposed||!surface||!Number.isSafeInteger(requestId)||requestId<1)return false;
    cancel();const run={surface,requestId,prepared:false,ready:false,painting:false,scene:null,goal:null};active=run;
    run.timer=setTimeout(()=>fail(run,'timeout'),timeoutMs);emit(run,'loading');
    Promise.resolve().then(()=>active===run&&!disposed?prepare(surface,requestId):null).then(goal=>{if(active!==run||disposed)return;run.goal=goal;run.prepared=true;check()},()=>fail(run,'unavailable'));

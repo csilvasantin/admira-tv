@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="../css/admira-tokens.css?v=06.09.2026.r5.1313">
 <link rel="stylesheet" href="../css/style.css?v=06.09.2026.r5.1313">
 <script src="../js/outdoor-sites.js?v=06.09.2026.r5.1313"></script>
+<script src="../js/urban-route.js?v=walk-audio"></script>
 <script src="../js/dooh-surfaces.js?v=06.09.2026.r5.1313"></script>
 <script src="../js/outdoor-context.js?v=06.09.2026.r5.1313"></script>
 <script>
@@ -354,6 +355,8 @@
 </div>
 
 <script src="street-walk.js?v=06.09.2026.r5.1313"></script>
+<script src="route-walk.js?v=walk-audio"></script>
+<script src="screen-audio.js?v=walk-audio"></script>
 <script src="surface-focus.js?v=06.09.2026.r5.1313"></script>
 <script src="camera-path.js?v=06.09.2026.r5.1313"></script>
 <script>
@@ -380,7 +383,7 @@ function currentAudience(){
 function stopOutdoorChild(){
   outdoorStopped = true;
   ++walkBootGeneration; clearTimeout(walkBootTimer); walkBootFailed = true;
-  surfaceFocus.cancel();
+  surfaceFocus.cancel(); routeWalk.cancel(); screenAudio.mute();
   streetWalk?.dispose(); streetWalk = null;
   _shotDone = true;
   stopCam();
@@ -391,15 +394,29 @@ function installOutdoorChild(){
   addEventListener('message', event => {
     if (!OutdoorContext.accepts(event, window.parent, location.origin)) return;
     if (event.data.type === 'stop') { stopOutdoorChild(); return; }
+    if(event.data.type==='audio-command'&&!outdoorStopped&&WALK_MODE){screenAudio.command(event.data.payload);return;}
+    if(event.data.type==='route-command'&&!outdoorStopped&&WALK_MODE){
+      const p=event.data.payload;
+      if(p.action==='cancel')routeWalk.cancel('cancel',p.requestId);
+      else{surfaceFocus.cancel();screenAudio.mute();routeWalk.start(p.routeId,p.requestId);}
+      return;
+    }
     if (event.data.type === 'surface-command' && !outdoorStopped && WALK_MODE) {
       const p=event.data.payload;
       if(p.action==='cancel')surfaceFocus.cancel('cancel',p.requestId);
-      else if(outdoorBooted)surfaceFocus.focus(p.surfaceId,p.requestId);
+      else if(outdoorBooted){
+        routeWalk.cancel();screenAudio.mute();
+        const pano=p.preservePano?sv?.getPano():undefined;
+        if(p.preservePano&&!DoohSurfaces.poseFor(p.surfaceId,pano)){
+          surfaceFocus.cancel();window.parent.postMessage(OutdoorContext.message('surface-state',{surfaceId:p.surfaceId,requestId:p.requestId,status:'error',reason:'unavailable'}),location.origin);
+        }else surfaceFocus.focus(p.surfaceId,p.requestId,{pano});
+      }
       return;
     }
     if (event.data.type === 'walk-command') {
       if (!outdoorStopped && WALK_MODE) {
         if(event.data.payload.action!=='release')manualSurfaceInteraction();
+        if(event.data.payload.action==='inspect'){inspectVisibleSurface();return;}
         if (event.data.payload.action === 'site') {
           const site=OutdoorSites.get(event.data.payload.siteId);
           if(site){activeWalkSite=site;if(outdoorBooted)bootWalk('panels').catch(()=>walkLoadFailure());}
@@ -976,7 +993,15 @@ const chVid = document.createElement('video');
 chVid.muted = true; chVid.playsInline = true; chVid.preload = 'auto'; chVid.crossOrigin = 'anonymous';
 chVid.addEventListener('ended', () => chNext());
 chVid.addEventListener('error', () => chSkip());
-chVid.addEventListener('loadeddata', () => { chErr = 0; });
+chVid.addEventListener('loadeddata', () => { chErr = 0; screenAudio.mediaChanged(); });
+const audioRetry=document.createElement('button');audioRetry.id='screen-audio-retry';audioRetry.type='button';audioRetry.hidden=true;
+audioRetry.style.cssText='display:none;position:fixed;z-index:150;left:50%;top:40%;transform:translateX(-50%);max-width:280px;padding:14px 18px;background:#122d26;color:#e9ffd7;border:1px solid #bafd6f;border-radius:12px;font:600 14px system-ui;cursor:pointer';
+document.body.append(audioRetry);
+const screenAudio=ScreenAudio.create({media:chVid,isVisible:id=>visibleSurfaceIds().includes(id),isVideo:()=>chItem?.type==='video',onState:state=>{
+  audioRetry.hidden=state.status!=='blocked';audioRetry.style.display=audioRetry.hidden?'none':'block';audioRetry.textContent='Activar audio · '+(DoohSurfaces.get(state.screenId)?.label||'pantalla');
+  if(!outdoorStopped)window.parent.postMessage(OutdoorContext.message('audio-state',state),location.origin);
+}});
+audioRetry.addEventListener('click',()=>screenAudio.retry());
 const creLive = {};   // creatividades por perfil (fallback de pantalla, same-origin)
 function chTag(text){ const el = document.querySelector('.pip-tag'); if (el) el.textContent = text; }
 function loadCreLive(){
@@ -1028,7 +1053,7 @@ function chPlay(i){
     chVid.play().catch(() => { if (seq === chSeq && chVid.error) chSkip(); });
     chTimer = setTimeout(chNext, VIDEO_CAP_MS);
   } else {
-    chVid.pause(); chVid.removeAttribute('src');
+    chVid.pause(); chVid.removeAttribute('src');screenAudio.mediaChanged();
     const im = new Image(); im.crossOrigin = 'anonymous';
     im.onload = () => { chImg = im; chErr = 0; };
     im.onerror = () => chSkip();
@@ -1198,14 +1223,19 @@ function svNudge(k){
 }
 
 /* First-person photography: each step follows a real neighbouring panorama. */
-function surfacesHere(){return DoohSurfaces.all.filter(s=>s.pano===sv?.getPano()&&(!WALK_MODE||s.siteId===activeWalkSite.id))}
+function surfacesHere(){return DoohSurfaces.all.map(s=>DoohSurfaces.poseFor(s.id,sv?.getPano())).filter(s=>s&&(!WALK_MODE||s.siteId===activeWalkSite.id))}
 function visibleSurfaceIds(){
   if(!activeSvView.panels)return [];
   return surfacesHere().filter(s=>{const el=$(s.elementId),r=el.getBoundingClientRect();return el.style.display!=='none'&&r.width>0&&r.height>0&&r.right>0&&r.left<innerWidth&&r.bottom>0&&r.top<innerHeight}).map(s=>s.id);
 }
+function inspectVisibleSurface(){
+  const candidates=visibleSurfaceIds().map(id=>{const r=$(DoohSurfaces.get(id).elementId).getBoundingClientRect();return {id,distance:Math.hypot(r.x+r.width/2-innerWidth/2,r.y+r.height/2-innerHeight/2)}}).sort((a,b)=>a.distance-b.distance);
+  const screenId=candidates[0]?.id;
+  window.parent.postMessage(OutdoorContext.message('support-select',{siteId:activeWalkSite.id,...(screenId?{screenId}:{})}),location.origin);
+}
 function manualSurfaceInteraction(){
   if(!WALK_MODE||outdoorStopped)return;
-  surfaceFocus.cancel('manual');
+  surfaceFocus.cancel('manual'); routeWalk.cancel('manual');
   window.parent.postMessage(OutdoorContext.message('surface-interaction',{reason:'manual'}),location.origin);
 }
 let surfaceBootRequestId=null,surfaceMotion=null;
@@ -1227,12 +1257,13 @@ function animateSurfaceCamera(pov,requestId){
   });
 }
 const surfaceFocus=SurfaceFocus.create({
-  getSurface:id=>DoohSurfaces.get(id),
+  getSurface:(id,options)=>options.pano?{...DoohSurfaces.poseFor(id,options.pano),preservePano:true}:DoohSurfaces.get(id),
   async prepare(surface,requestId){
     const library=await google.maps.importLibrary('streetView');
     if(surfaceFocus.active?.requestId!==requestId||outdoorStopped)throw Error('Cancelled');
     const r=$('streetview').getBoundingClientRect(),pov=DoohSurfaces.fit(surface,r.width||innerWidth,r.height||innerHeight);
     const same=activeWalkSite.id===surface.siteId&&sv?.getPano()===surface.pano&&['ready','unavailable'].includes(streetWalk?.getState().status);
+    if(surface.preservePano&&!same)throw Error('Current walking panorama unavailable');
     activeWalkSite=OutdoorSites.get(surface.siteId);
     if(same){await animateSurfaceCamera(pov,requestId)}
     else{
@@ -1254,18 +1285,41 @@ const surfaceFocus=SurfaceFocus.create({
     if(!outdoorStopped)window.parent.postMessage(OutdoorContext.message('surface-state',state),location.origin)
   },
 });
+let routeMotion=null;
+function stopRouteOrientation(requestId){if(routeMotion?.requestId===requestId){const m=routeMotion;routeMotion=null;cancelAnimationFrame(m.frame);m.reject(Error('Cancelled'));}}
+function orientStreetRoute(heading,requestId){
+  if(!sv)return Promise.reject(Error('Panorama unavailable'));
+  const from=sv.getPov(),zoom=sv.getZoom(),began=performance.now(),dh=((heading-from.heading+540)%360)-180;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){sv.setPov({heading,pitch:0});sv.setZoom(.9);return;}
+  return new Promise((resolve,reject)=>{
+    const motion={requestId,frame:null,reject};routeMotion=motion;
+    function frame(now){
+      if(routeWalk.active?.requestId!==requestId||outdoorStopped){reject(Error('Cancelled'));return;}
+      const t=Math.min(1,(now-began)/400),ease=t*t*(3-2*t);
+      sv.setPov({heading:from.heading+dh*ease,pitch:from.pitch*(1-ease)});sv.setZoom(zoom+(.9-zoom)*ease);
+      if(t<1)motion.frame=requestAnimationFrame(frame);else{if(routeMotion===motion)routeMotion=null;resolve();}
+    }
+    motion.frame=requestAnimationFrame(frame);
+  });
+}
+const routeWalk=RouteWalk.create({getRoute:id=>UrbanRoutes.get(id),getWalker:()=>streetWalk,
+  setHeading:orientStreetRoute,onCancel:stopRouteOrientation,
+  onArrival:route=>{activeWalkSite=OutdoorSites.get(route.toSiteId);if(streetWalk)handleWalkState(streetWalk.getState());},
+  onState:state=>{if(!outdoorStopped)window.parent.postMessage(OutdoorContext.message('route-state',state),location.origin);},
+});
 function postWalkState(state){
   lastWalkState = {...state,siteId:activeWalkSite.id};
   window.parent.postMessage(OutdoorContext.message('walk-state', lastWalkState), location.origin);
 }
 function clearWalkSupport(){
+  screenAudio.mute();
   activeSvView = {...activeSvView, panels:false};
   $('sv-signage').classList.remove('show','sv-vis');
   $('kiosk-live').classList.remove('show'); $('pip-live').classList.remove('show');
 }
 function handleWalkState(state){
   if (outdoorStopped) return;
-  const calibrated = DoohSurfaces.all.some(s=>s.siteId===activeWalkSite.id&&s.pano===state.pano) && !['loading','error'].includes(state.status) && sv?.getPano()===state.pano;
+  const calibrated = DoohSurfaces.all.some(s=>s.siteId===activeWalkSite.id&&DoohSurfaces.hasPose(s.id,state.pano)) && !['loading','error'].includes(state.status) && sv?.getPano()===state.pano;
   activeSvView = {pano:state.pano, panels:calibrated, label:state.date ? `Street View · ${state.date}` : 'Street View · fecha no facilitada'};
   $('sv-signage').classList.toggle('show',calibrated);
   $('sv-signage').classList.toggle('sv-vis',calibrated);
@@ -1273,7 +1327,7 @@ function handleWalkState(state){
   const supportVisible=calibrated && visibleSurfaceIds().length>0;
   if (state.status !== 'loading') { clearTimeout(walkBootTimer); if(!surfaceFocus.active||surfaceFocus.active.ready)$('loading').classList.add('done'); $('streetview').classList.add('sv-vis'); }
   postWalkState({...state,supportVisible:!!supportVisible});
-  surfaceFocus.observe(state);
+  surfaceFocus.observe(state);routeWalk.observe(state);screenAudio.check();
 }
 function walkLoadFailure(message='No se pudo cargar la vista a pie.'){
   if (outdoorStopped) return;
@@ -1332,7 +1386,7 @@ addEventListener('keydown',event=>{
   if(target && (target.isContentEditable||['INPUT','TEXTAREA','SELECT','BUTTON'].includes(target.tagName)))return;
   const actions={w:'forward',W:'forward',ArrowUp:'forward',s:'backward',S:'backward',ArrowDown:'backward',a:'left',A:'left',ArrowLeft:'left',d:'right',D:'right',ArrowRight:'right',PageUp:'look-up',PageDown:'look-down','+':'zoom-in','-':'zoom-out'};
   if(event.key==='e'||event.key==='E'){
-    const screenId=visibleSurfaceIds()[0];if(screenId)window.parent.postMessage(OutdoorContext.message('support-select',{siteId:activeWalkSite.id,screenId}),location.origin);
+    inspectVisibleSurface();
     return;
   }
   const action=actions[event.key];if(!action)return;event.preventDefault();event.stopPropagation();
@@ -1343,7 +1397,7 @@ addEventListener('keydown',event=>{
 function releaseWalk(){if(WALK_MODE)streetWalk?.command({action:'release'});}
 addEventListener('keyup',event=>{if(['w','W','s','S','ArrowUp','ArrowDown'].includes(event.key))releaseWalk();},true);
 addEventListener('blur',releaseWalk);
-document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseWalk();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){releaseWalk();routeWalk.cancel();screenAudio.mute();}});
 $('streetview').addEventListener('pointerdown',()=>{releaseWalk();manualSurfaceInteraction()},true);
 $('streetview').addEventListener('wheel',manualSurfaceInteraction,{capture:true,passive:true});
 $('sv-signage').addEventListener('pointerdown',manualSurfaceInteraction,true);
@@ -1405,6 +1459,7 @@ async function showStreetView(side = 'front'){
   }
 }
 function hideStreetView(){
+  screenAudio.mute();routeWalk.cancel();
   svAbortController?.abort(); svAbortController = null;
   if (sv) sv.setVisible(false);
   SV_ON = false;
@@ -1476,16 +1531,18 @@ function drawSvGrid(){
 // las pantallas siguen a los paneles al girar/moverse). Si no, usa las fracciones fijas.
 function layoutSvPanels(){
   const surfaces=surfacesHere();
-  for(const surface of DoohSurfaces.all)if(!surfaces.includes(surface))$(surface.elementId).style.display='none';
+  for(const surface of DoohSurfaces.all)if(!surfaces.some(s=>s.id===surface.id))$(surface.elementId).style.display='none';
   if (!surfaces.length) { $('sv-signage').classList.remove('show','sv-vis'); return; }
   if (!activeSvView.panels) return;
   const st = $('sv-signage').getBoundingClientRect(); const W = st.width, H = st.height;
   if (W < 10) return;
-  if(surfaces[0].siteId==='jardinets'){
-    const surface=surfaces[0],el=$(surface.elementId),cv=el.firstElementChild;
-    const pts=['tl','tr','br','bl'].map(k=>projHP(...surface.corners[k],sv.getPov(),sv.getZoom(),W,H));
-    if(pts.some(p=>!p)){el.style.display='none';return}
-    el.style.display='block';el.style.width=cv.width+'px';el.style.height=cv.height+'px';el.style.transform=quadWarp(cv.width,cv.height,pts);
+  if(sv&&surfaces.every(surface=>surface.corners)){
+    for(const surface of surfaces){
+      const el=$(surface.elementId),cv=el.firstElementChild;
+      const pts=['tl','tr','br','bl'].map(k=>projHP(...surface.corners[k],sv.getPov(),sv.getZoom(),W,H));
+      if(pts.some(p=>!p)){el.style.display='none';continue;}
+      el.style.display='block';el.style.width=cv.width+'px';el.style.height=cv.height+'px';el.style.transform=quadWarp(cv.width,cv.height,pts);
+    }
     return;
   }
   if (SV_PANELS_HP && sv){
@@ -1748,6 +1805,7 @@ window.__best = {
   enterFree, exitFree, flyTick, setKioskModel, human, orbit, stopCam, replayFrom,
   get arrivalShots(){ return ARRIVAL_SHOTS; }, get cameraPath(){ return cameraPath; }, setFranja: (i)=>{ selFranjaIdx=i; refreshFranja(); },
   get streetWalk(){ return streetWalk; }, get walkState(){ return lastWalkState; },
+  routeWalk,screenAudio,
   currentAudience, get outdoorContext(){ return outdoorContext; },
   setRT, rtSync, madridHour, wxIcon, get rt(){ return rt; }, get wxCurrent(){ return wxCurrent; },
   // --- calibración de la pantalla viva pegada al kiosko (usar en el preview de pages.dev) ---

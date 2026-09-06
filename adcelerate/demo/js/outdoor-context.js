@@ -3,6 +3,7 @@
   'use strict';
   const sites=typeof module!=='undefined'&&module.exports?require('./outdoor-sites.js'):root.OutdoorSites;
   const surfaces=typeof module!=='undefined'&&module.exports?require('./dooh-surfaces.js'):root.DoohSurfaces;
+  const routes=typeof module!=='undefined'&&module.exports?require('./urban-route.js'):root.UrbanRoutes;
   const profiles = ['familias', 'jovenes', 'turistas', 'seniors'];
   const finite = (v, min, max) => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
   function validate(c) {
@@ -16,7 +17,7 @@
       manual:c.manual, selection:c.selection, mix:Object.fromEntries(profiles.map(p => [p,c.mix[p]])),
       layers:Object.fromEntries(['crowd','buildings','roads','night'].map(k => [k,c.layers[k]]))};
   }
-  const actions = ['forward','backward','left','right','look-up','look-down','home','panels','front','zoom-in','zoom-out','link','site','release','jesus','jesus-2023'];
+  const actions = ['forward','backward','left','right','look-up','look-down','home','panels','front','zoom-in','zoom-out','link','site','release','jesus','jesus-2023','inspect'];
   const shortString = (s, max, empty = true) => typeof s === 'string' && s.length <= max && (empty || s.length > 0);
   function validateWalkCommand(p) {
     if (!p || !actions.includes(p.action) || (p.action === 'link' && !shortString(p.pano,250,false))) return null;
@@ -41,25 +42,50 @@
   }
   function validSurfaceRequest(p){return !!(p && surfaces.get(p.surfaceId) && Number.isSafeInteger(p.requestId) && p.requestId>0);}
   function validateSurfaceCommand(p){
-    return validSurfaceRequest(p)&&['focus','cancel'].includes(p.action)?{action:p.action,surfaceId:p.surfaceId,requestId:p.requestId}:null;
+    return validSurfaceRequest(p)&&['focus','cancel'].includes(p.action)&&(p.preservePano===undefined||typeof p.preservePano==='boolean')?{action:p.action,surfaceId:p.surfaceId,requestId:p.requestId,...(p.preservePano!==undefined?{preservePano:p.preservePano}:{})}:null;
   }
   function validateSurfaceState(p){
     if(!validSurfaceRequest(p)||!['loading','ready','error','cancelled'].includes(p.status)||
       (p.reason!==undefined&&!['manual','cancel','timeout','unavailable'].includes(p.reason)))return null;
     return {surfaceId:p.surfaceId,requestId:p.requestId,status:p.status,...(p.reason!==undefined?{reason:p.reason}:{})};
   }
+  const validToken=p=>p&&Number.isSafeInteger(p.requestId)&&p.requestId>0;
+  function validateRouteCommand(p){
+    return validToken(p)&&routes.get(p.routeId)&&['start','cancel'].includes(p.action)?{action:p.action,routeId:p.routeId,requestId:p.requestId}:null;
+  }
+  function validateRouteState(p){
+    const route=p&&routes.get(p.routeId);
+    if(!validToken(p)||!route||!['loading','walking','ready','error','cancelled'].includes(p.status)||
+      !Number.isInteger(p.step)||p.step<0||p.step>=route.panos.length||p.total!==route.panos.length-1||
+      !shortString(p.pano,250)||
+      (p.reason!==undefined&&!['manual','cancel','timeout','unavailable','missing-link','off-route'].includes(p.reason)))return null;
+    return {requestId:p.requestId,routeId:p.routeId,status:p.status,step:p.step,total:p.total,pano:p.pano,...(p.reason!==undefined?{reason:p.reason}:{})};
+  }
+  function validateAudioCommand(p){
+    if(!validToken(p)||!surfaces.get(p.screenId)||!['enable','disable','volume'].includes(p.action)||
+      (p.volume!==undefined&&!finite(p.volume,0,1))||(p.action==='volume'&&p.volume===undefined))return null;
+    return {requestId:p.requestId,screenId:p.screenId,action:p.action,...(p.volume!==undefined?{volume:p.volume}:{})};
+  }
+  function validateAudioState(p){
+    return validToken(p)&&surfaces.get(p.screenId)&&['muted','playing','blocked','unavailable'].includes(p.status)&&finite(p.volume,0,1)?
+      {requestId:p.requestId,screenId:p.screenId,status:p.status,volume:p.volume}:null;
+  }
   function message(type, context) {
-    const payloadType=['walk-state','walk-command','surface-command','surface-state','surface-interaction'].includes(type)||(type==='support-select'&&context);
+    const payloadType=['walk-state','walk-command','surface-command','surface-state','surface-interaction','route-command','route-state','audio-command','audio-state'].includes(type)||(type==='support-select'&&context);
     const data=payloadType?{payload:context}:(context?{context}:{});
     return {channel:'admira-outdoor', version:1, type, ...data};
   }
   function accepts(event, source, origin) {
     const d = event && event.data;
     return !!(event && event.origin === origin && event.source === source && d &&
-      d.channel === 'admira-outdoor' && d.version === 1 && ['ready','context','close','stop','walk-state','walk-command','support-select','surface-command','surface-state','surface-interaction'].includes(d.type) &&
+      d.channel === 'admira-outdoor' && d.version === 1 && ['ready','context','close','stop','walk-state','walk-command','support-select','surface-command','surface-state','surface-interaction','route-command','route-state','audio-command','audio-state'].includes(d.type) &&
       (d.type !== 'context' || validate(d.context)) &&
       (d.type !== 'walk-state' || validateWalkState(d.payload)) &&
       (d.type !== 'walk-command' || validateWalkCommand(d.payload)) &&
+      (d.type!=='route-command'||validateRouteCommand(d.payload)) &&
+      (d.type!=='route-state'||validateRouteState(d.payload)) &&
+      (d.type!=='audio-command'||validateAudioCommand(d.payload)) &&
+      (d.type!=='audio-state'||validateAudioState(d.payload)) &&
       (d.type!=='surface-command'||validateSurfaceCommand(d.payload)) &&
       (d.type!=='surface-state'||validateSurfaceState(d.payload)) &&
       (d.type!=='surface-interaction'||(d.payload&&d.payload.reason==='manual')) &&
@@ -76,9 +102,10 @@
     if (params.get('walk') === '1') next.set('view', 'human');
     if(sites.get(params.get('site')))next.set('site',params.get('site'));
     if(params.get('tour')==='dooh'){next.set('tour','dooh');next.set('view','human');}
+    if(params.get('travel')==='walk')next.set('travel','walk');
     return '../' + (next.size ? '?' + next.toString() : '');
   }
-  const api = {validate, validateWalkState, validateWalkCommand, validateSurfaceCommand, validateSurfaceState, message, accepts, bestEntry};
+  const api = {validate, validateWalkState, validateWalkCommand, validateSurfaceCommand, validateSurfaceState, validateRouteCommand, validateRouteState, validateAudioCommand, validateAudioState, message, accepts, bestEntry};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.OutdoorContext = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

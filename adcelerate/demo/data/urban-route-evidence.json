@@ -1,0 +1,1577 @@
+{
+  "mission": "DCL-8ea2ff1f5edf319d1b320ed4",
+  "observedAt": "2026-09-06T11:26:28.337Z",
+  "source": "Google Maps JavaScript StreetViewService current directed links; validate again at runtime",
+  "routes": [
+    {
+      "id": "vila-jardinets",
+      "fromSiteId": "vila",
+      "toSiteId": "jardinets",
+      "metres": 409.1668778048672,
+      "panos": [
+        "2NoSvJbqMCZ0RXhR8pTSLA",
+        "QsoL4Bqdi27Ecd4OdTf2tw",
+        "2NOLXV_bglwvVhyS2TMSiQ",
+        "d2CKlpCfeRZw5xiLp18bZw",
+        "zDezQdIxtE3STOVvbI4zUw",
+        "Q50iSNwNqO_bGvpW51Y3Jw",
+        "FzzY1RXc6IHeeiaobpLTbA",
+        "eEb_2euAkknefnpyNv7Uaw",
+        "1FbwZIIgLOAJUxS9yiXomg",
+        "0k30KD7UMpmYmWELGU163g",
+        "P4nD_h-LIjoY_u4ichCT3Q",
+        "LzXKT6bWm1c0HVLvbC2KnQ",
+        "CIDP2mwUwxj5-jeyyAWHkw",
+        "SwVAev5Nh2mP_zgQvUbqGQ",
+        "cL8SFGERLjPBITxxIrytew",
+        "rorLZe-PqN1XPIL2AuVJ4w",
+        "LJ39jEgJZcZhqWHrulD21w",
+        "gEU5GIzcbdlMvO4mGwEMXg",
+        "yQDVGMF-KE6i0PtOCV5BDg",
+        "ouVLEv3Y_CYbQ4tx9GbAuQ",
+        "wQhBel1gfCjWvEAZR3c29Q",
+        "yuMT2dAKIFCyX-KSWWvV-g",
+        "uwqvr14yG9gPNZPz3J1vOw",
+        "qUOoZpXgJjZNQMeyXtgxWA",
+        "V22sG6dOE9lbGEJEQoP5Mg",
+        "UqWU7ylNewEIq8sqFWXRwQ",
+        "xjpm7swrmlUrldbjvuZcNw",
+        "qnpMTPlrIiLftiUtaSDdHQ",
+        "ZWw57M51YEX7oaZy2pVjDg",
+        "9ZU2NiXzbh-4d6NsDa9Ocw",
+        "_tq66Zl_I9BgI__VJCSDoQ",
+        "CmPt_8H33G1sSuTEiyhsoA",
+        "Ohjtmbu6LFTSk1YWU0bFUg",
+        "Hk-ETc4_gifXXs8Ez55yzw",
+        "FMHOmncArlsVAdqqgF2etg",
+        "e4VXNsVVbKP9WYWHn-pOxA",
+        "n-YiLHLmLabYbcsgAKfeKw",
+        "qYUzETqv33MplI6-mEPlwA",
+        "gpwi_JlBtxyP3fHhWpbtWg",
+        "OS4FQnNmUedi4E2MTwczrg",
+        "L6xcO37SQfBmCxsT9lPdjQ"
+      ],
+      "steps": [
+        {
+          "from": "2NoSvJbqMCZ0RXhR8pTSLA",
+          "to": "QsoL4Bqdi27Ecd4OdTf2tw",
+          "heading": 286.52344,
+          "description": "Carrer de Sant Domènec",
+          "metres": 9.632724288633522,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.400242614764764,
+            "lng": 2.157144446546375
+          }
+        },
+        {
+          "from": "QsoL4Bqdi27Ecd4OdTf2tw",
+          "to": "2NOLXV_bglwvVhyS2TMSiQ",
+          "heading": 228.98953,
+          "description": "Carrer de Sant Domènec",
+          "metres": 9.304828902004736,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.40018991532505,
+            "lng": 2.157057949960496
+          }
+        },
+        {
+          "from": "2NOLXV_bglwvVhyS2TMSiQ",
+          "to": "d2CKlpCfeRZw5xiLp18bZw",
+          "heading": 228.979,
+          "description": "Carrer de Sant Domènec",
+          "metres": 10.246697280277242,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.40012961626614,
+            "lng": 2.1569652324011455
+          }
+        },
+        {
+          "from": "d2CKlpCfeRZw5xiLp18bZw",
+          "to": "zDezQdIxtE3STOVvbI4zUw",
+          "heading": 228.98965,
+          "description": "Carrer de Sant Domènec",
+          "metres": 10.951385560139443,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.40006414253261,
+            "lng": 2.156867343253323
+          }
+        },
+        {
+          "from": "zDezQdIxtE3STOVvbI4zUw",
+          "to": "Q50iSNwNqO_bGvpW51Y3Jw",
+          "heading": 228.99423,
+          "description": "Carrer de Sant Domènec",
+          "metres": 10.48745902810075,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.40000071383157,
+            "lng": 2.156774476180683
+          }
+        },
+        {
+          "from": "Q50iSNwNqO_bGvpW51Y3Jw",
+          "to": "FzzY1RXc6IHeeiaobpLTbA",
+          "heading": 229.2208,
+          "description": "Carrer de Sant Domènec",
+          "metres": 14.254638459282639,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39991593888732,
+            "lng": 2.1566465313027665
+          }
+        },
+        {
+          "from": "FzzY1RXc6IHeeiaobpLTbA",
+          "to": "eEb_2euAkknefnpyNv7Uaw",
+          "heading": 229.18216,
+          "description": "Carrer de Sant Domènec",
+          "metres": 10.659038424064535,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.399854280088704,
+            "lng": 2.1565488677071896
+          }
+        },
+        {
+          "from": "eEb_2euAkknefnpyNv7Uaw",
+          "to": "1FbwZIIgLOAJUxS9yiXomg",
+          "heading": 229.23,
+          "description": "Carrer de Sant Domènec",
+          "metres": 9.620301493821115,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39979909938943,
+            "lng": 2.1564601986402963
+          }
+        },
+        {
+          "from": "1FbwZIIgLOAJUxS9yiXomg",
+          "to": "0k30KD7UMpmYmWELGU163g",
+          "heading": 229.18861,
+          "description": "Carrer de Sant Domènec",
+          "metres": 9.887135110408662,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.399740876802625,
+            "lng": 2.156370780223299
+          }
+        },
+        {
+          "from": "0k30KD7UMpmYmWELGU163g",
+          "to": "P4nD_h-LIjoY_u4ichCT3Q",
+          "heading": 229.20992,
+          "description": "Carrer de Sant Domènec",
+          "metres": 9.951837313680063,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39968158036181,
+            "lng": 2.1562815868411844
+          }
+        },
+        {
+          "from": "P4nD_h-LIjoY_u4ichCT3Q",
+          "to": "LzXKT6bWm1c0HVLvbC2KnQ",
+          "heading": 229.22563,
+          "description": "Carrer de Sant Domènec",
+          "metres": 10.290384694998965,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.399621527437546,
+            "lng": 2.156187896504306
+          }
+        },
+        {
+          "from": "LzXKT6bWm1c0HVLvbC2KnQ",
+          "to": "CIDP2mwUwxj5-jeyyAWHkw",
+          "heading": 229.20096,
+          "description": "Carrer de Sant Domènec",
+          "metres": 10.092355231482037,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.399562897857315,
+            "lng": 2.1560957054033896
+          }
+        },
+        {
+          "from": "CIDP2mwUwxj5-jeyyAWHkw",
+          "to": "SwVAev5Nh2mP_zgQvUbqGQ",
+          "heading": 229.20059,
+          "description": "Carrer de Sant Domènec",
+          "metres": 10.331206180420832,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.399498871544,
+            "lng": 2.156006137807536
+          }
+        },
+        {
+          "from": "SwVAev5Nh2mP_zgQvUbqGQ",
+          "to": "cL8SFGERLjPBITxxIrytew",
+          "heading": 231.60129,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 7.36189308400683,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.399468400025306,
+            "lng": 2.1559278881041437
+          }
+        },
+        {
+          "from": "cL8SFGERLjPBITxxIrytew",
+          "to": "rorLZe-PqN1XPIL2AuVJ4w",
+          "heading": 137.62938,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.788960576562745,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.3994029202571,
+            "lng": 2.156006137807536
+          }
+        },
+        {
+          "from": "rorLZe-PqN1XPIL2AuVJ4w",
+          "to": "LJ39jEgJZcZhqWHrulD21w",
+          "heading": 137.54774,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.06309516401158,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39933534411409,
+            "lng": 2.1560861864956093
+          }
+        },
+        {
+          "from": "LJ39jEgJZcZhqWHrulD21w",
+          "to": "gEU5GIzcbdlMvO4mGwEMXg",
+          "heading": 137.55046,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.844179301227843,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.399269400118214,
+            "lng": 2.1561647362831238
+          }
+        },
+        {
+          "from": "gEU5GIzcbdlMvO4mGwEMXg",
+          "to": "yQDVGMF-KE6i0PtOCV5BDg",
+          "heading": 137.54314,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.973729678276849,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39920229887306,
+            "lng": 2.1562438858261475
+          }
+        },
+        {
+          "from": "yQDVGMF-KE6i0PtOCV5BDg",
+          "to": "ouVLEv3Y_CYbQ4tx9GbAuQ",
+          "heading": 137.54945,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.36946834700171,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39913268986415,
+            "lng": 2.156326408367391
+          }
+        },
+        {
+          "from": "ouVLEv3Y_CYbQ4tx9GbAuQ",
+          "to": "wQhBel1gfCjWvEAZR3c29Q",
+          "heading": 137.57666,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.842714524739742,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39906711764358,
+            "lng": 2.156405483242477
+          }
+        },
+        {
+          "from": "wQhBel1gfCjWvEAZR3c29Q",
+          "to": "yuMT2dAKIFCyX-KSWWvV-g",
+          "heading": 137.9167,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.61318961116004,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398997206365316,
+            "lng": 2.1564919036204593
+          }
+        },
+        {
+          "from": "yuMT2dAKIFCyX-KSWWvV-g",
+          "to": "uwqvr14yG9gPNZPz3J1vOw",
+          "heading": 137.9189,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.251672209178253,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398931131489455,
+            "lng": 2.1565774247304597
+          }
+        },
+        {
+          "from": "uwqvr14yG9gPNZPz3J1vOw",
+          "to": "qUOoZpXgJjZNQMeyXtgxWA",
+          "heading": 137.88142,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.86969362682167,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.3988671127552,
+            "lng": 2.1566591983541157
+          }
+        },
+        {
+          "from": "qUOoZpXgJjZNQMeyXtgxWA",
+          "to": "V22sG6dOE9lbGEJEQoP5Mg",
+          "heading": 138.40695,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.15020289639201,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398800846224425,
+            "lng": 2.1567426960481395
+          }
+        },
+        {
+          "from": "V22sG6dOE9lbGEJEQoP5Mg",
+          "to": "UqWU7ylNewEIq8sqFWXRwQ",
+          "heading": 138.74672,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.956042489506032,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39873575769188,
+            "lng": 2.156824469972384
+          }
+        },
+        {
+          "from": "UqWU7ylNewEIq8sqFWXRwQ",
+          "to": "xjpm7swrmlUrldbjvuZcNw",
+          "heading": 138.73106,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.0964483629338,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39866868974848,
+            "lng": 2.156905869278409
+          }
+        },
+        {
+          "from": "xjpm7swrmlUrldbjvuZcNw",
+          "to": "qnpMTPlrIiLftiUtaSDdHQ",
+          "heading": 138.74423,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.943968561681869,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39859626326002,
+            "lng": 2.156975575983579
+          }
+        },
+        {
+          "from": "qnpMTPlrIiLftiUtaSDdHQ",
+          "to": "ZWw57M51YEX7oaZy2pVjDg",
+          "heading": 135.87648,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.969148644541411,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398523236676006,
+            "lng": 2.157044683167848
+          }
+        },
+        {
+          "from": "ZWw57M51YEX7oaZy2pVjDg",
+          "to": "9ZU2NiXzbh-4d6NsDa9Ocw",
+          "heading": 138.6642,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.235605194694996,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398454041852055,
+            "lng": 2.1571254082887523
+          }
+        },
+        {
+          "from": "9ZU2NiXzbh-4d6NsDa9Ocw",
+          "to": "_tq66Zl_I9BgI__VJCSDoQ",
+          "heading": 138.78975,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.252665850758657,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39838469269524,
+            "lng": 2.15720620850848
+          }
+        },
+        {
+          "from": "_tq66Zl_I9BgI__VJCSDoQ",
+          "to": "CmPt_8H33G1sSuTEiyhsoA",
+          "heading": 138.58807,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.982617852898633,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.3983177354789,
+            "lng": 2.157285734655019
+          }
+        },
+        {
+          "from": "CmPt_8H33G1sSuTEiyhsoA",
+          "to": "Ohjtmbu6LFTSk1YWU0bFUg",
+          "heading": 138.58621,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.133661005803608,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398249762571034,
+            "lng": 2.1573664602087006
+          }
+        },
+        {
+          "from": "Ohjtmbu6LFTSk1YWU0bFUg",
+          "to": "Hk-ETc4_gifXXs8Ez55yzw",
+          "heading": 138.59337,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.34945483940491,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398180901544805,
+            "lng": 2.1574497343532664
+          }
+        },
+        {
+          "from": "Hk-ETc4_gifXXs8Ez55yzw",
+          "to": "FMHOmncArlsVAdqqgF2etg",
+          "heading": 138.53535,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.995795640794618,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398114906253106,
+            "lng": 2.1575309099279605
+          }
+        },
+        {
+          "from": "FMHOmncArlsVAdqqgF2etg",
+          "to": "e4VXNsVVbKP9WYWHn-pOxA",
+          "heading": 138.60945,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.183093925427752,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39804855341234,
+            "lng": 2.157614858968213
+          }
+        },
+        {
+          "from": "e4VXNsVVbKP9WYWHn-pOxA",
+          "to": "n-YiLHLmLabYbcsgAKfeKw",
+          "heading": 137.86285,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.340838919951581,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39798341791896,
+            "lng": 2.157703155538601
+          }
+        },
+        {
+          "from": "n-YiLHLmLabYbcsgAKfeKw",
+          "to": "qYUzETqv33MplI6-mEPlwA",
+          "heading": 135.25523,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.015569055038831,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.397925999063204,
+            "lng": 2.1577954998452413
+          }
+        },
+        {
+          "from": "qYUzETqv33MplI6-mEPlwA",
+          "to": "gpwi_JlBtxyP3fHhWpbtWg",
+          "heading": 107.87455,
+          "description": "P.º de Gracia",
+          "metres": 9.02640511626923,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39788431073703,
+            "lng": 2.1578882191166566
+          }
+        },
+        {
+          "from": "gpwi_JlBtxyP3fHhWpbtWg",
+          "to": "OS4FQnNmUedi4E2MTwczrg",
+          "heading": 248.44655,
+          "description": "Plaça de Nicolás Salmerón",
+          "metres": 14.98554350477358,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39782938829405,
+            "lng": 2.157724367728623
+          }
+        },
+        {
+          "from": "OS4FQnNmUedi4E2MTwczrg",
+          "to": "L6xcO37SQfBmCxsT9lPdjQ",
+          "heading": 225.5464,
+          "description": "Plaça de Nicolás Salmerón",
+          "metres": 9.861227853693974,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.397772717774245,
+            "lng": 2.1576335976146668
+          }
+        }
+      ],
+      "maxStepMetres": 14.98554350477358
+    },
+    {
+      "id": "jardinets-vila-connected",
+      "fromSiteId": "jardinets",
+      "toSiteId": "vila",
+      "metres": 397.80251140576706,
+      "panos": [
+        "L6xcO37SQfBmCxsT9lPdjQ",
+        "OS4FQnNmUedi4E2MTwczrg",
+        "gpwi_JlBtxyP3fHhWpbtWg",
+        "qYUzETqv33MplI6-mEPlwA",
+        "n-YiLHLmLabYbcsgAKfeKw",
+        "e4VXNsVVbKP9WYWHn-pOxA",
+        "FMHOmncArlsVAdqqgF2etg",
+        "Hk-ETc4_gifXXs8Ez55yzw",
+        "Ohjtmbu6LFTSk1YWU0bFUg",
+        "CmPt_8H33G1sSuTEiyhsoA",
+        "_tq66Zl_I9BgI__VJCSDoQ",
+        "9ZU2NiXzbh-4d6NsDa9Ocw",
+        "ZWw57M51YEX7oaZy2pVjDg",
+        "qnpMTPlrIiLftiUtaSDdHQ",
+        "xjpm7swrmlUrldbjvuZcNw",
+        "UqWU7ylNewEIq8sqFWXRwQ",
+        "V22sG6dOE9lbGEJEQoP5Mg",
+        "qUOoZpXgJjZNQMeyXtgxWA",
+        "uwqvr14yG9gPNZPz3J1vOw",
+        "yuMT2dAKIFCyX-KSWWvV-g",
+        "wQhBel1gfCjWvEAZR3c29Q",
+        "VwkaClIfS6P2iUMmEnJS8A",
+        "LjgZsWqj86eM8pB2mrYuoQ",
+        "c-F0Hh0fDjpHAmCRy6HrFg",
+        "d8MZdwzNZ6RDoTWlITC_uQ",
+        "Wq7TaYTXgb1YsLXEg5z0vQ",
+        "nQtqovXhc2cdoq6sM0gTOw",
+        "2tvGt8Lq65CAlj_mx830cQ",
+        "MltE1E6xGzDuBtnsAevMLQ",
+        "4LMOivzbaQJvzchW11zCuw",
+        "VBdmpBi8zt8IAAi4pNRUsw",
+        "O9F947pqA70s9mn210eJdQ",
+        "5Ol4uoUJkL3MNr5--S8S6Q",
+        "q5uNnXMzkUXBI81YfjpSlg",
+        "4lx2kGEhPCwzSJH59QvS4Q",
+        "EVFCse110TV9YW0eExyt5w",
+        "7YOgaaDGXRMryNdYPoSn0A",
+        "N5LJ7l6Cljszjp_GRMwcOg",
+        "Ljd5loKhDEiwzW22xJtZ8g",
+        "xyBUNhtkdE7tUUGrvRPwmA"
+      ],
+      "steps": [
+        {
+          "from": "L6xcO37SQfBmCxsT9lPdjQ",
+          "to": "OS4FQnNmUedi4E2MTwczrg",
+          "heading": 45.5464,
+          "description": "Plaça de Nicolás Salmerón",
+          "metres": 9.861227853693974,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39782938829405,
+            "lng": 2.157724367728623
+          }
+        },
+        {
+          "from": "OS4FQnNmUedi4E2MTwczrg",
+          "to": "gpwi_JlBtxyP3fHhWpbtWg",
+          "heading": 68.446556,
+          "description": "P.º de Gracia",
+          "metres": 14.98554350477358,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39788431073703,
+            "lng": 2.1578882191166566
+          }
+        },
+        {
+          "from": "gpwi_JlBtxyP3fHhWpbtWg",
+          "to": "qYUzETqv33MplI6-mEPlwA",
+          "heading": 287.87454,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.02640511626923,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.397925999063204,
+            "lng": 2.1577954998452413
+          }
+        },
+        {
+          "from": "qYUzETqv33MplI6-mEPlwA",
+          "to": "n-YiLHLmLabYbcsgAKfeKw",
+          "heading": 315.25525,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.015569055038831,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39798341791896,
+            "lng": 2.157703155538601
+          }
+        },
+        {
+          "from": "n-YiLHLmLabYbcsgAKfeKw",
+          "to": "e4VXNsVVbKP9WYWHn-pOxA",
+          "heading": 317.86285,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.340838919951581,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39804855341234,
+            "lng": 2.157614858968213
+          }
+        },
+        {
+          "from": "e4VXNsVVbKP9WYWHn-pOxA",
+          "to": "FMHOmncArlsVAdqqgF2etg",
+          "heading": 318.60944,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.183093925427752,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398114906253106,
+            "lng": 2.1575309099279605
+          }
+        },
+        {
+          "from": "FMHOmncArlsVAdqqgF2etg",
+          "to": "Hk-ETc4_gifXXs8Ez55yzw",
+          "heading": 318.53534,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.995795640794618,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398180901544805,
+            "lng": 2.1574497343532664
+          }
+        },
+        {
+          "from": "Hk-ETc4_gifXXs8Ez55yzw",
+          "to": "Ohjtmbu6LFTSk1YWU0bFUg",
+          "heading": 318.59338,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.34945483940491,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398249762571034,
+            "lng": 2.1573664602087006
+          }
+        },
+        {
+          "from": "Ohjtmbu6LFTSk1YWU0bFUg",
+          "to": "CmPt_8H33G1sSuTEiyhsoA",
+          "heading": 318.5862,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.133661005803608,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.3983177354789,
+            "lng": 2.157285734655019
+          }
+        },
+        {
+          "from": "CmPt_8H33G1sSuTEiyhsoA",
+          "to": "_tq66Zl_I9BgI__VJCSDoQ",
+          "heading": 318.58807,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.982617852898633,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39838469269524,
+            "lng": 2.15720620850848
+          }
+        },
+        {
+          "from": "_tq66Zl_I9BgI__VJCSDoQ",
+          "to": "9ZU2NiXzbh-4d6NsDa9Ocw",
+          "heading": 318.78976,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.252665850758657,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398454041852055,
+            "lng": 2.1571254082887523
+          }
+        },
+        {
+          "from": "9ZU2NiXzbh-4d6NsDa9Ocw",
+          "to": "ZWw57M51YEX7oaZy2pVjDg",
+          "heading": 318.66418,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.235605194694996,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398523236676006,
+            "lng": 2.157044683167848
+          }
+        },
+        {
+          "from": "ZWw57M51YEX7oaZy2pVjDg",
+          "to": "qnpMTPlrIiLftiUtaSDdHQ",
+          "heading": 315.87646,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.969148644541411,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39859626326002,
+            "lng": 2.156975575983579
+          }
+        },
+        {
+          "from": "qnpMTPlrIiLftiUtaSDdHQ",
+          "to": "xjpm7swrmlUrldbjvuZcNw",
+          "heading": 318.74423,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.943968561681869,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39866868974848,
+            "lng": 2.156905869278409
+          }
+        },
+        {
+          "from": "xjpm7swrmlUrldbjvuZcNw",
+          "to": "UqWU7ylNewEIq8sqFWXRwQ",
+          "heading": 318.73105,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.0964483629338,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39873575769188,
+            "lng": 2.156824469972384
+          }
+        },
+        {
+          "from": "UqWU7ylNewEIq8sqFWXRwQ",
+          "to": "V22sG6dOE9lbGEJEQoP5Mg",
+          "heading": 318.74673,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.956042489506032,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398800846224425,
+            "lng": 2.1567426960481395
+          }
+        },
+        {
+          "from": "V22sG6dOE9lbGEJEQoP5Mg",
+          "to": "qUOoZpXgJjZNQMeyXtgxWA",
+          "heading": 318.40695,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.15020289639201,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.3988671127552,
+            "lng": 2.1566591983541157
+          }
+        },
+        {
+          "from": "qUOoZpXgJjZNQMeyXtgxWA",
+          "to": "uwqvr14yG9gPNZPz3J1vOw",
+          "heading": 317.88144,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.86969362682167,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398931131489455,
+            "lng": 2.1565774247304597
+          }
+        },
+        {
+          "from": "uwqvr14yG9gPNZPz3J1vOw",
+          "to": "yuMT2dAKIFCyX-KSWWvV-g",
+          "heading": 317.9189,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.251672209178253,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398997206365316,
+            "lng": 2.1564919036204593
+          }
+        },
+        {
+          "from": "yuMT2dAKIFCyX-KSWWvV-g",
+          "to": "wQhBel1gfCjWvEAZR3c29Q",
+          "heading": 317.91672,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.61318961116004,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39906711764358,
+            "lng": 2.156405483242477
+          }
+        },
+        {
+          "from": "wQhBel1gfCjWvEAZR3c29Q",
+          "to": "VwkaClIfS6P2iUMmEnJS8A",
+          "heading": 47.114506,
+          "description": "C. de Goya",
+          "metres": 7.575515642312314,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39911378377091,
+            "lng": 2.156471516491168
+          }
+        },
+        {
+          "from": "VwkaClIfS6P2iUMmEnJS8A",
+          "to": "LjgZsWqj86eM8pB2mrYuoQ",
+          "heading": 49.911694,
+          "description": "C. de Goya",
+          "metres": 10.294086617450539,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39917453856878,
+            "lng": 2.1565644578908723
+          }
+        },
+        {
+          "from": "LjgZsWqj86eM8pB2mrYuoQ",
+          "to": "c-F0Hh0fDjpHAmCRy6HrFg",
+          "heading": 49.926247,
+          "description": "C. de Goya",
+          "metres": 11.232585731786559,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39924320963721,
+            "lng": 2.1566630209561115
+          }
+        },
+        {
+          "from": "c-F0Hh0fDjpHAmCRy6HrFg",
+          "to": "d8MZdwzNZ6RDoTWlITC_uQ",
+          "heading": 49.91133,
+          "description": "C. de Goya",
+          "metres": 10.206324663346727,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.399301415097796,
+            "lng": 2.156757461814476
+          }
+        },
+        {
+          "from": "d8MZdwzNZ6RDoTWlITC_uQ",
+          "to": "Wq7TaYTXgb1YsLXEg5z0vQ",
+          "heading": 49.91883,
+          "description": "C. de Goya",
+          "metres": 10.35265610408068,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39936488664879,
+            "lng": 2.1568480802531593
+          }
+        },
+        {
+          "from": "Wq7TaYTXgb1YsLXEg5z0vQ",
+          "to": "nQtqovXhc2cdoq6sM0gTOw",
+          "heading": 49.89211,
+          "description": "C. de Goya",
+          "metres": 10.203092568402202,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39942723173784,
+            "lng": 2.1569376495262857
+          }
+        },
+        {
+          "from": "nQtqovXhc2cdoq6sM0gTOw",
+          "to": "2tvGt8Lq65CAlj_mx830cQ",
+          "heading": 49.904713,
+          "description": "C. de Goya",
+          "metres": 10.250378169985899,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39948612570448,
+            "lng": 2.157032016007903
+          }
+        },
+        {
+          "from": "2tvGt8Lq65CAlj_mx830cQ",
+          "to": "MltE1E6xGzDuBtnsAevMLQ",
+          "heading": 49.945034,
+          "description": "C. de Goya",
+          "metres": 10.254758078556128,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.3995498623992,
+            "lng": 2.157120686202481
+          }
+        },
+        {
+          "from": "MltE1E6xGzDuBtnsAevMLQ",
+          "to": "4LMOivzbaQJvzchW11zCuw",
+          "heading": 49.8893,
+          "description": "C. de Goya",
+          "metres": 9.928533955971771,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39960666745515,
+            "lng": 2.1572123547277955
+          }
+        },
+        {
+          "from": "4LMOivzbaQJvzchW11zCuw",
+          "to": "VBdmpBi8zt8IAAi4pNRUsw",
+          "heading": 50.431427,
+          "description": "C. de Goya",
+          "metres": 9.428654052201718,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.399661046612145,
+            "lng": 2.157298926564746
+          }
+        },
+        {
+          "from": "VBdmpBi8zt8IAAi4pNRUsw",
+          "to": "O9F947pqA70s9mn210eJdQ",
+          "heading": 50.3937,
+          "description": "C. de Goya",
+          "metres": 10.05093328424619,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.399719297279134,
+            "lng": 2.1573908952702334
+          }
+        },
+        {
+          "from": "O9F947pqA70s9mn210eJdQ",
+          "to": "5Ol4uoUJkL3MNr5--S8S6Q",
+          "heading": 50.445877,
+          "description": "C. de Goya",
+          "metres": 10.118282126112979,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39977815195063,
+            "lng": 2.157483238935588
+          }
+        },
+        {
+          "from": "5Ol4uoUJkL3MNr5--S8S6Q",
+          "to": "q5uNnXMzkUXBI81YfjpSlg",
+          "heading": 50.378414,
+          "description": "C. de Goya",
+          "metres": 10.714321605670495,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39984330793639,
+            "lng": 2.1575776815167638
+          }
+        },
+        {
+          "from": "q5uNnXMzkUXBI81YfjpSlg",
+          "to": "4lx2kGEhPCwzSJH59QvS4Q",
+          "heading": 63.878105,
+          "description": "Carrer de Mozart",
+          "metres": 9.518479008240694,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39985012232089,
+            "lng": 2.157691312694814
+          }
+        },
+        {
+          "from": "4lx2kGEhPCwzSJH59QvS4Q",
+          "to": "EVFCse110TV9YW0eExyt5w",
+          "heading": 316.88724,
+          "description": "Plaça de la Vila de Gràcia",
+          "metres": 11.188565884966751,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39992587019836,
+            "lng": 2.157603241011336
+          }
+        },
+        {
+          "from": "EVFCse110TV9YW0eExyt5w",
+          "to": "7YOgaaDGXRMryNdYPoSn0A",
+          "heading": 316.08392,
+          "description": "Plaça de la Vila de Gràcia",
+          "metres": 9.681805616637092,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39999213195628,
+            "lng": 2.1575281366141246
+          }
+        },
+        {
+          "from": "7YOgaaDGXRMryNdYPoSn0A",
+          "to": "N5LJ7l6Cljszjp_GRMwcOg",
+          "heading": 316.10254,
+          "description": "Plaça de la Vila de Gràcia",
+          "metres": 10.409877694533671,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.40006227413789,
+            "lng": 2.157445686821522
+          }
+        },
+        {
+          "from": "N5LJ7l6Cljszjp_GRMwcOg",
+          "to": "Ljd5loKhDEiwzW22xJtZ8g",
+          "heading": 316.1073,
+          "description": "Plaça de la Vila de Gràcia",
+          "metres": 10.083555173198464,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.40012866729672,
+            "lng": 2.157363536996707
+          }
+        },
+        {
+          "from": "Ljd5loKhDEiwzW22xJtZ8g",
+          "to": "xyBUNhtkdE7tUUGrvRPwmA",
+          "heading": 316.0984,
+          "description": "Plaça de la Vila de Gràcia",
+          "metres": 10.097260266340731,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.40019699752312,
+            "lng": 2.1572840107125573
+          }
+        }
+      ],
+      "maxStepMetres": 14.98554350477358
+    },
+    {
+      "id": "vila-connected-jardinets",
+      "fromSiteId": "vila",
+      "toSiteId": "jardinets",
+      "metres": 397.802511405767,
+      "panos": [
+        "xyBUNhtkdE7tUUGrvRPwmA",
+        "Ljd5loKhDEiwzW22xJtZ8g",
+        "N5LJ7l6Cljszjp_GRMwcOg",
+        "7YOgaaDGXRMryNdYPoSn0A",
+        "EVFCse110TV9YW0eExyt5w",
+        "4lx2kGEhPCwzSJH59QvS4Q",
+        "q5uNnXMzkUXBI81YfjpSlg",
+        "5Ol4uoUJkL3MNr5--S8S6Q",
+        "O9F947pqA70s9mn210eJdQ",
+        "VBdmpBi8zt8IAAi4pNRUsw",
+        "4LMOivzbaQJvzchW11zCuw",
+        "MltE1E6xGzDuBtnsAevMLQ",
+        "2tvGt8Lq65CAlj_mx830cQ",
+        "nQtqovXhc2cdoq6sM0gTOw",
+        "Wq7TaYTXgb1YsLXEg5z0vQ",
+        "d8MZdwzNZ6RDoTWlITC_uQ",
+        "c-F0Hh0fDjpHAmCRy6HrFg",
+        "LjgZsWqj86eM8pB2mrYuoQ",
+        "VwkaClIfS6P2iUMmEnJS8A",
+        "wQhBel1gfCjWvEAZR3c29Q",
+        "yuMT2dAKIFCyX-KSWWvV-g",
+        "uwqvr14yG9gPNZPz3J1vOw",
+        "qUOoZpXgJjZNQMeyXtgxWA",
+        "V22sG6dOE9lbGEJEQoP5Mg",
+        "UqWU7ylNewEIq8sqFWXRwQ",
+        "xjpm7swrmlUrldbjvuZcNw",
+        "qnpMTPlrIiLftiUtaSDdHQ",
+        "ZWw57M51YEX7oaZy2pVjDg",
+        "9ZU2NiXzbh-4d6NsDa9Ocw",
+        "_tq66Zl_I9BgI__VJCSDoQ",
+        "CmPt_8H33G1sSuTEiyhsoA",
+        "Ohjtmbu6LFTSk1YWU0bFUg",
+        "Hk-ETc4_gifXXs8Ez55yzw",
+        "FMHOmncArlsVAdqqgF2etg",
+        "e4VXNsVVbKP9WYWHn-pOxA",
+        "n-YiLHLmLabYbcsgAKfeKw",
+        "qYUzETqv33MplI6-mEPlwA",
+        "gpwi_JlBtxyP3fHhWpbtWg",
+        "OS4FQnNmUedi4E2MTwczrg",
+        "L6xcO37SQfBmCxsT9lPdjQ"
+      ],
+      "steps": [
+        {
+          "from": "xyBUNhtkdE7tUUGrvRPwmA",
+          "to": "Ljd5loKhDEiwzW22xJtZ8g",
+          "heading": 136.09837,
+          "description": "Plaça de la Vila de Gràcia",
+          "metres": 10.097260266340731,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.40012866729672,
+            "lng": 2.157363536996707
+          }
+        },
+        {
+          "from": "Ljd5loKhDEiwzW22xJtZ8g",
+          "to": "N5LJ7l6Cljszjp_GRMwcOg",
+          "heading": 136.1073,
+          "description": "Plaça de la Vila de Gràcia",
+          "metres": 10.083555173198464,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.40006227413789,
+            "lng": 2.157445686821522
+          }
+        },
+        {
+          "from": "N5LJ7l6Cljszjp_GRMwcOg",
+          "to": "7YOgaaDGXRMryNdYPoSn0A",
+          "heading": 136.10252,
+          "description": "Plaça de la Vila de Gràcia",
+          "metres": 10.409877694533671,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39999213195628,
+            "lng": 2.1575281366141246
+          }
+        },
+        {
+          "from": "7YOgaaDGXRMryNdYPoSn0A",
+          "to": "EVFCse110TV9YW0eExyt5w",
+          "heading": 136.08394,
+          "description": "Plaça de la Vila de Gràcia",
+          "metres": 9.681805616637092,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39992587019836,
+            "lng": 2.157603241011336
+          }
+        },
+        {
+          "from": "EVFCse110TV9YW0eExyt5w",
+          "to": "4lx2kGEhPCwzSJH59QvS4Q",
+          "heading": 136.88724,
+          "description": "Carrer de Mozart",
+          "metres": 11.188565884966751,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39985012232089,
+            "lng": 2.157691312694814
+          }
+        },
+        {
+          "from": "4lx2kGEhPCwzSJH59QvS4Q",
+          "to": "q5uNnXMzkUXBI81YfjpSlg",
+          "heading": 243.87811,
+          "description": "C. de Goya",
+          "metres": 9.518479008240694,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39984330793639,
+            "lng": 2.1575776815167638
+          }
+        },
+        {
+          "from": "q5uNnXMzkUXBI81YfjpSlg",
+          "to": "5Ol4uoUJkL3MNr5--S8S6Q",
+          "heading": 230.37842,
+          "description": "C. de Goya",
+          "metres": 10.714321605670495,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39977815195063,
+            "lng": 2.157483238935588
+          }
+        },
+        {
+          "from": "5Ol4uoUJkL3MNr5--S8S6Q",
+          "to": "O9F947pqA70s9mn210eJdQ",
+          "heading": 230.44588,
+          "description": "C. de Goya",
+          "metres": 10.118282126112979,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.399719297279134,
+            "lng": 2.1573908952702334
+          }
+        },
+        {
+          "from": "O9F947pqA70s9mn210eJdQ",
+          "to": "VBdmpBi8zt8IAAi4pNRUsw",
+          "heading": 230.39369,
+          "description": "C. de Goya",
+          "metres": 10.05093328424619,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.399661046612145,
+            "lng": 2.157298926564746
+          }
+        },
+        {
+          "from": "VBdmpBi8zt8IAAi4pNRUsw",
+          "to": "4LMOivzbaQJvzchW11zCuw",
+          "heading": 230.43143,
+          "description": "C. de Goya",
+          "metres": 9.428654052201718,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39960666745515,
+            "lng": 2.1572123547277955
+          }
+        },
+        {
+          "from": "4LMOivzbaQJvzchW11zCuw",
+          "to": "MltE1E6xGzDuBtnsAevMLQ",
+          "heading": 229.8893,
+          "description": "C. de Goya",
+          "metres": 9.928533955971771,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.3995498623992,
+            "lng": 2.157120686202481
+          }
+        },
+        {
+          "from": "MltE1E6xGzDuBtnsAevMLQ",
+          "to": "2tvGt8Lq65CAlj_mx830cQ",
+          "heading": 229.94504,
+          "description": "C. de Goya",
+          "metres": 10.254758078556128,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39948612570448,
+            "lng": 2.157032016007903
+          }
+        },
+        {
+          "from": "2tvGt8Lq65CAlj_mx830cQ",
+          "to": "nQtqovXhc2cdoq6sM0gTOw",
+          "heading": 229.90471,
+          "description": "C. de Goya",
+          "metres": 10.250378169985899,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39942723173784,
+            "lng": 2.1569376495262857
+          }
+        },
+        {
+          "from": "nQtqovXhc2cdoq6sM0gTOw",
+          "to": "Wq7TaYTXgb1YsLXEg5z0vQ",
+          "heading": 229.8921,
+          "description": "C. de Goya",
+          "metres": 10.203092568402202,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39936488664879,
+            "lng": 2.1568480802531593
+          }
+        },
+        {
+          "from": "Wq7TaYTXgb1YsLXEg5z0vQ",
+          "to": "d8MZdwzNZ6RDoTWlITC_uQ",
+          "heading": 229.91882,
+          "description": "C. de Goya",
+          "metres": 10.35265610408068,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.399301415097796,
+            "lng": 2.156757461814476
+          }
+        },
+        {
+          "from": "d8MZdwzNZ6RDoTWlITC_uQ",
+          "to": "c-F0Hh0fDjpHAmCRy6HrFg",
+          "heading": 229.91133,
+          "description": "C. de Goya",
+          "metres": 10.206324663346727,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39924320963721,
+            "lng": 2.1566630209561115
+          }
+        },
+        {
+          "from": "c-F0Hh0fDjpHAmCRy6HrFg",
+          "to": "LjgZsWqj86eM8pB2mrYuoQ",
+          "heading": 229.92624,
+          "description": "C. de Goya",
+          "metres": 11.232585731786559,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39917453856878,
+            "lng": 2.1565644578908723
+          }
+        },
+        {
+          "from": "LjgZsWqj86eM8pB2mrYuoQ",
+          "to": "VwkaClIfS6P2iUMmEnJS8A",
+          "heading": 229.9117,
+          "description": "C. de Goya",
+          "metres": 10.294086617450539,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39911378377091,
+            "lng": 2.156471516491168
+          }
+        },
+        {
+          "from": "VwkaClIfS6P2iUMmEnJS8A",
+          "to": "wQhBel1gfCjWvEAZR3c29Q",
+          "heading": 227.1145,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 7.575515642312314,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39906711764358,
+            "lng": 2.156405483242477
+          }
+        },
+        {
+          "from": "wQhBel1gfCjWvEAZR3c29Q",
+          "to": "yuMT2dAKIFCyX-KSWWvV-g",
+          "heading": 137.9167,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.61318961116004,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398997206365316,
+            "lng": 2.1564919036204593
+          }
+        },
+        {
+          "from": "yuMT2dAKIFCyX-KSWWvV-g",
+          "to": "uwqvr14yG9gPNZPz3J1vOw",
+          "heading": 137.9189,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.251672209178253,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398931131489455,
+            "lng": 2.1565774247304597
+          }
+        },
+        {
+          "from": "uwqvr14yG9gPNZPz3J1vOw",
+          "to": "qUOoZpXgJjZNQMeyXtgxWA",
+          "heading": 137.88142,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.86969362682167,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.3988671127552,
+            "lng": 2.1566591983541157
+          }
+        },
+        {
+          "from": "qUOoZpXgJjZNQMeyXtgxWA",
+          "to": "V22sG6dOE9lbGEJEQoP5Mg",
+          "heading": 138.40695,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.15020289639201,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398800846224425,
+            "lng": 2.1567426960481395
+          }
+        },
+        {
+          "from": "V22sG6dOE9lbGEJEQoP5Mg",
+          "to": "UqWU7ylNewEIq8sqFWXRwQ",
+          "heading": 138.74672,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.956042489506032,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39873575769188,
+            "lng": 2.156824469972384
+          }
+        },
+        {
+          "from": "UqWU7ylNewEIq8sqFWXRwQ",
+          "to": "xjpm7swrmlUrldbjvuZcNw",
+          "heading": 138.73106,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.0964483629338,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39866868974848,
+            "lng": 2.156905869278409
+          }
+        },
+        {
+          "from": "xjpm7swrmlUrldbjvuZcNw",
+          "to": "qnpMTPlrIiLftiUtaSDdHQ",
+          "heading": 138.74423,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.943968561681869,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39859626326002,
+            "lng": 2.156975575983579
+          }
+        },
+        {
+          "from": "qnpMTPlrIiLftiUtaSDdHQ",
+          "to": "ZWw57M51YEX7oaZy2pVjDg",
+          "heading": 135.87648,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.969148644541411,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398523236676006,
+            "lng": 2.157044683167848
+          }
+        },
+        {
+          "from": "ZWw57M51YEX7oaZy2pVjDg",
+          "to": "9ZU2NiXzbh-4d6NsDa9Ocw",
+          "heading": 138.6642,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.235605194694996,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398454041852055,
+            "lng": 2.1571254082887523
+          }
+        },
+        {
+          "from": "9ZU2NiXzbh-4d6NsDa9Ocw",
+          "to": "_tq66Zl_I9BgI__VJCSDoQ",
+          "heading": 138.78975,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.252665850758657,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39838469269524,
+            "lng": 2.15720620850848
+          }
+        },
+        {
+          "from": "_tq66Zl_I9BgI__VJCSDoQ",
+          "to": "CmPt_8H33G1sSuTEiyhsoA",
+          "heading": 138.58807,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.982617852898633,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.3983177354789,
+            "lng": 2.157285734655019
+          }
+        },
+        {
+          "from": "CmPt_8H33G1sSuTEiyhsoA",
+          "to": "Ohjtmbu6LFTSk1YWU0bFUg",
+          "heading": 138.58621,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.133661005803608,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398249762571034,
+            "lng": 2.1573664602087006
+          }
+        },
+        {
+          "from": "Ohjtmbu6LFTSk1YWU0bFUg",
+          "to": "Hk-ETc4_gifXXs8Ez55yzw",
+          "heading": 138.59337,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.34945483940491,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398180901544805,
+            "lng": 2.1574497343532664
+          }
+        },
+        {
+          "from": "Hk-ETc4_gifXXs8Ez55yzw",
+          "to": "FMHOmncArlsVAdqqgF2etg",
+          "heading": 138.53535,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 9.995795640794618,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.398114906253106,
+            "lng": 2.1575309099279605
+          }
+        },
+        {
+          "from": "FMHOmncArlsVAdqqgF2etg",
+          "to": "e4VXNsVVbKP9WYWHn-pOxA",
+          "heading": 138.60945,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.183093925427752,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39804855341234,
+            "lng": 2.157614858968213
+          }
+        },
+        {
+          "from": "e4VXNsVVbKP9WYWHn-pOxA",
+          "to": "n-YiLHLmLabYbcsgAKfeKw",
+          "heading": 137.86285,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.340838919951581,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39798341791896,
+            "lng": 2.157703155538601
+          }
+        },
+        {
+          "from": "n-YiLHLmLabYbcsgAKfeKw",
+          "to": "qYUzETqv33MplI6-mEPlwA",
+          "heading": 135.25523,
+          "description": "Carrer Gran de Gràcia",
+          "metres": 10.015569055038831,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.397925999063204,
+            "lng": 2.1577954998452413
+          }
+        },
+        {
+          "from": "qYUzETqv33MplI6-mEPlwA",
+          "to": "gpwi_JlBtxyP3fHhWpbtWg",
+          "heading": 107.87455,
+          "description": "P.º de Gracia",
+          "metres": 9.02640511626923,
+          "date": "2026-07",
+          "position": {
+            "lat": 41.39788431073703,
+            "lng": 2.1578882191166566
+          }
+        },
+        {
+          "from": "gpwi_JlBtxyP3fHhWpbtWg",
+          "to": "OS4FQnNmUedi4E2MTwczrg",
+          "heading": 248.44655,
+          "description": "Plaça de Nicolás Salmerón",
+          "metres": 14.98554350477358,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.39782938829405,
+            "lng": 2.157724367728623
+          }
+        },
+        {
+          "from": "OS4FQnNmUedi4E2MTwczrg",
+          "to": "L6xcO37SQfBmCxsT9lPdjQ",
+          "heading": 225.5464,
+          "description": "Plaça de Nicolás Salmerón",
+          "metres": 9.861227853693974,
+          "date": "2023-03",
+          "position": {
+            "lat": 41.397772717774245,
+            "lng": 2.1576335976146668
+          }
+        }
+      ],
+      "maxStepMetres": 14.98554350477358
+    }
+  ]
+}
