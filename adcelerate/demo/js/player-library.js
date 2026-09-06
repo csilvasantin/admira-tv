@@ -12,7 +12,8 @@
   const type=({animation:'video','digital-twin':'image','twin-npc':'image'})[value.type]||value.type,url=mediaURL(value.url);
   if(!['video','image'].includes(type)||!url)return null;
   const rawId=text(value.id||'program-'+index,stock?154:160),id=(stock?'stock:':'')+rawId;
-  return {id,url,type,title:title(value.title||value.name||value.id||'Contenido'),
+  const number=Number.isSafeInteger(value.num)&&value.num>0?value.num:index+1;
+  return {id,url,type,title:title(value.title||value.name||((type==='image'?'Imagen ':'Vídeo ')+number)),
    seconds:Number.isFinite(value.seconds)&&value.seconds>0?Math.min(120,value.seconds):9,
    lane:['publicidad','municipal'].includes(value.lane)?value.lane:null,source:stock?'stock':value.source||'grid'};
  }

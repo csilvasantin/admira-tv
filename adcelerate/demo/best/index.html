@@ -1212,18 +1212,24 @@ function drawChannel(ctx, W, H, surface=null){
     const sc = Math.max(W / sw, H / sh), dw = sw * sc, dh = sh * sc;
     try{ ctx.drawImage(src, (W - dw) / 2, (H - dh) / 2, dw, dh); live = true; }catch(e){}
   }
-  if (!live){   // fallback honesto: la creatividad recomendada por perfil
+  if (!live && !selectedPlayer){   // La programación conserva su creatividad de continuidad.
     const dom = audienceAllowed?dominanteDe(currentAudience().mix):null, im = dom?creLive[dom]:null;
     if (im && im.complete && im.naturalWidth){
       const sc = Math.max(W / im.naturalWidth, H / im.naturalHeight), dw = im.naturalWidth * sc, dh = im.naturalHeight * sc;
       try{ ctx.drawImage(im, (W - dw) / 2, (H - dh) / 2, dw, dh); }catch(e){}
     }
   }
-  if(!live && !audienceAllowed){
+  if(!live && !audienceAllowed && !selectedPlayer){
     ctx.fillStyle='#0b2627';ctx.fillRect(0,0,W,H);ctx.fillStyle='#bafd6f';
     ctx.font='800 '+Math.round(W*.13)+'px '+LIVE_SANS;ctx.textAlign='center';
     ctx.fillText('admira.tv',W/2,H*.42);ctx.font='600 '+Math.round(W*.055)+'px '+LIVE_MONO;
     ctx.fillText(siteLabel.toUpperCase(),W/2,H*.49);ctx.textAlign='left';
+  }
+  const localMessage=selectedPlayer?.state().status==='loading'?'Cargando contenido':'Contenido no disponible';
+  if(!live && selectedPlayer){
+    ctx.fillStyle='#0b2627';ctx.fillRect(0,0,W,H);ctx.fillStyle='#bafd6f';
+    ctx.font='600 '+Math.round(W*.055)+'px '+LIVE_SANS;ctx.textAlign='center';
+    ctx.fillText(channelLine(ctx,localMessage,W*.9),W/2,H*.45);ctx.textAlign='left';
   }
   const pad = Math.round(W * 0.035);
   // (sin chip EN VIVO/FALLBACK: el creativo va limpio, como una pantalla real — 13-jul-2026)
@@ -1237,9 +1243,9 @@ function drawChannel(ctx, W, H, surface=null){
   ctx.textBaseline = 'alphabetic';
   ctx.font = '700 ' + f2 + 'px ' + LIVE_MONO; ctx.fillStyle = '#50c8ff';
   const isGrid = playingItem && playingItem.source === 'grid';
-  ctx.fillText(channelLine(ctx,!audienceAllowed ? siteLabel.toUpperCase()+' · PANTALLA DEL GEMELO' : isGrid ? ('PARRILLA 50/50 · ' + (playingItem.lane === 'publicidad' ? 'PUBLICIDAD' : 'AYUNTAMIENTO')) : 'ADcelerate recomienda',W-2*pad), pad, H - bh + f2 * 1.5);
+  ctx.fillText(channelLine(ctx,selectedPlayer ? 'PLAYER DEL GEMELO' : !audienceAllowed ? siteLabel.toUpperCase()+' · PANTALLA DEL GEMELO' : isGrid ? ('PARRILLA 50/50 · ' + (playingItem.lane === 'publicidad' ? 'PUBLICIDAD' : 'AYUNTAMIENTO')) : 'ADcelerate recomienda',W-2*pad), pad, H - bh + f2 * 1.5);
   ctx.font = '800 ' + f3 + 'px ' + LIVE_SANS; ctx.fillStyle = '#eaf7ff';
-  ctx.fillText(channelLine(ctx,!audienceAllowed ? (live?playerTitle():'admira.tv') : isGrid ? playerTitle() : ('Creatividad ' + rg.cre + ' · ' + rg.titulo),W-2*pad), pad, H - Math.round(bh * 0.28));
+  ctx.fillText(channelLine(ctx,selectedPlayer ? (live?playerTitle():localMessage) : !audienceAllowed ? (live?playerTitle():'admira.tv') : isGrid ? playerTitle() : ('Creatividad ' + rg.cre + ' · ' + rg.titulo),W-2*pad), pad, H - Math.round(bh * 0.28));
 }
 
 // ---- proyección mundo→pantalla desde el estado de cámara del Map3D ----

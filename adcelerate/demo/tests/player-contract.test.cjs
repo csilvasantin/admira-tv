@@ -25,6 +25,7 @@ test('library keeps schedule order and resolves stock outside it without arbitra
  const lists=Object.fromEntries(result.playlists.map(p=>[p.id,p.items]));
  assert.deepEqual(lists.scheduled,['b','a']);assert.deepEqual(lists.all,['b','a','stock:new']);assert.deepEqual(lists.publicidad,['b']);assert.deepEqual(lists.municipal,['a']);assert.deepEqual(lists.stock,['b','stock:new']);
  assert.equal(result.items[2].type,'video');assert.equal(result.items.length,3);
+ assert.equal(library.build([],[{id:'asset',num:836,title:null,type:'image',url:'https://admira.tv/photo.jpg'}]).items[0].title,'Imagen 836');
 });
 test('catalogue fetch is a credential-free GET, failures preserve caller fallback',async()=>{
  let observed;
