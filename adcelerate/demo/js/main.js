@@ -4,9 +4,9 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
 
-const photo = {frame:null, ready:false, signature:'', returnMode:null, mode:'photo'};
+const photo = {frame:null, ready:false, signature:'', returnMode:null, mode:'photo', siteId:(OutdoorSites.get(new URLSearchParams(location.search).get('site'))||OutdoorSites.get('vila')).id};
 const humanHUD = HumanView.create({element:document.getElementById('human-hud'),
-  send:sendHumanCommand,onExit:closePhoto,onInspect:inspectHumanSupport});
+  send:sendHumanCommand,onExit:closePhoto,onInspect:inspectHumanSupport,onSiteChange:selectHumanSite});
 let selectedSite = 'kiosk';
 
 /* ============================== datos de demo ============================== */
@@ -1321,7 +1321,7 @@ function buildHUD() {
   $('universe-layers').onclick = () => toggleSide('left');
   $('nav-universe').onclick = e => { e.preventDefault(); closePhoto(); setQuality('better'); };
   $('universe-photo').onclick = () => openPhoto();
-  $('universe-human').onclick = () => openPhoto('human');
+  $('universe-human').onclick = () => {photo.siteId='vila';openPhoto('human');};
   $('universe-return').onclick = closePhoto;
   $('select-kiosk').onclick = () => { selectedSite = 'kiosk'; updateUniverseCard(); if (!photo.frame) focusKiosk(); };
   $('select-plaza').onclick = () => { selectedSite = 'plaza'; updateUniverseCard(); if (!photo.frame) focusOverview(); };
@@ -1660,7 +1660,7 @@ function updateModeButtons() {
 function setCamMode(m) {
   if (photo.frame) closePhoto();
   if (m === 'guided') { startFlight(); return; }
-  if (m === 'human') { openPhoto('human'); return; }
+  if (m === 'human') {photo.siteId='vila';openPhoto('human');return;}
   stopFlight();                    // corta un vuelo guiado si lo hubiera
   camMode = m;
   if (m === 'free') {
@@ -1897,12 +1897,12 @@ function openPhoto(mode = 'photo') {
   vid.pause(); clearTimeout(stockTimer);
   $('ficha').classList.add('hidden');
   const frame = document.createElement('iframe');
-  frame.title = 'Vista real del quiosco de la Plaça de la Vila de Gràcia';
+  frame.title = mode==='human' ? 'Exploración a pie · '+OutdoorSites.get(photo.siteId).area : 'Vista real del quiosco de Vila de Gràcia';
   frame.allow = 'fullscreen';
   const url = new URL('best/', location.href);
   const params = new URLSearchParams(location.search);
   url.searchParams.set('embed', '1');
-  if (mode === 'human') { url.searchParams.set('walk','1'); url.searchParams.set('side','panels'); }
+  if (mode === 'human') { url.searchParams.set('walk','1'); url.searchParams.set('side','panels'); url.searchParams.set('site',photo.siteId); photo.initialSiteId=photo.siteId; }
   if (params.has('cal')) url.searchParams.set('cal', params.get('cal'));
   if (['front','panels'].includes(params.get('side'))) url.searchParams.set('side', params.get('side'));
   photo.frame = frame; photo.ready = false; photo.signature = '';
@@ -1913,7 +1913,7 @@ function openPhoto(mode = 'photo') {
   for (const id of ['tg-left','tg-right']) $(id).classList.remove('on');
   document.body.classList.remove('universe-options-open');
   document.body.classList.toggle('human-active',mode === 'human');
-  if (mode === 'human') humanHUD.enter();
+  if (mode === 'human') { humanHUD.enter(photo.siteId); updateUniverseCard(); updateHumanUrl(); }
   document.body.classList.add('photo-active');
   $('universe-photo').classList.add('hidden');
   $('universe-human').classList.add('hidden');
@@ -1925,8 +1925,25 @@ function openPhoto(mode = 'photo') {
   resizePhotoViewport();
 }
 function inspectHumanSupport() {
-  selectedSite = 'kiosk'; updateUniverseCard(); humanHUD.inspect();
+  if(photo.siteId==='vila')selectedSite='kiosk';
+  updateUniverseCard();humanHUD.inspect();
 }
+function updateHumanUrl(){
+  const url=new URL(location.href);url.searchParams.set('view','human');url.searchParams.set('site',photo.siteId);
+  history.replaceState(null,'',url);
+  const site=OutdoorSites.get(photo.siteId);document.title='ADcelerate · Humano · '+site.shortLabel;
+  document.querySelector('.brand-txt .sub').textContent='Humano · '+site.shortLabel;
+}
+function selectHumanSite(siteId){
+  const site=OutdoorSites.get(siteId);if(!site||photo.mode!=='human'||!photo.frame)return;
+  photo.siteId=site.id;
+  humanHUD.enter(site.id);updateUniverseCard();
+  photo.frame.title='Exploración a pie · '+site.area;
+  const url=new URL(location.href);url.searchParams.delete('side');url.searchParams.delete('cal');history.replaceState(null,'',url);
+  updateHumanUrl();
+  sendHumanCommand({action:'site',siteId:site.id});
+}
+
 function sendHumanCommand(payload) {
   if (!photo.frame || !photo.ready || photo.mode !== 'human') return;
   const command = OutdoorContext.validateWalkCommand(payload); if (!command) return;
@@ -1947,6 +1964,7 @@ function closePhoto() {
   $('photo-view').classList.add('hidden');
   document.body.classList.remove('photo-active','human-active');
   humanHUD.leave();
+  if(photo.mode==='human'){const url=new URL(location.href);url.searchParams.delete('view');history.replaceState(null,'',url);document.title='ADcelerate · Gemelo Plaça de la Vila de Gràcia — demo';document.querySelector('.brand-txt .sub').textContent='Gemelo · Vila de Gràcia';}
   $('universe-photo').classList.remove('hidden');
   $('universe-human').classList.remove('hidden');
   $('universe-return').classList.add('hidden');
@@ -1967,10 +1985,10 @@ function closePhoto() {
 }
 addEventListener('message', event => {
   if (!photo.frame || !OutdoorContext.accepts(event, photo.frame.contentWindow, location.origin)) return;
-  if (event.data.type === 'ready') { photo.ready = true; photo.signature = ''; sendPhotoContext(); }
+  if (event.data.type === 'ready') { photo.ready = true; photo.signature = ''; sendPhotoContext(); if(photo.mode==='human'&&photo.initialSiteId!==photo.siteId)sendHumanCommand({action:'site',siteId:photo.siteId}); }
   if (event.data.type === 'close') closePhoto();
-  if (event.data.type === 'walk-state' && photo.mode === 'human') humanHUD.setState(OutdoorContext.validateWalkState(event.data.payload));
-  if (event.data.type === 'support-select' && photo.mode === 'human') inspectHumanSupport();
+  if (event.data.type === 'walk-state' && photo.mode === 'human' && (event.data.payload.siteId||'vila')===photo.siteId) humanHUD.setState(OutdoorContext.validateWalkState(event.data.payload));
+  if (event.data.type === 'support-select' && photo.mode === 'human' && (event.data.payload?.siteId||'vila')===photo.siteId) inspectHumanSupport();
 });
 addEventListener('keydown', event => { if (event.key === 'Escape' && photo.frame) { event.preventDefault(); closePhoto(); } });
 addEventListener('blur', () => { fly.keys = {}; pan2D.keys = {}; });
@@ -2132,7 +2150,7 @@ if (entry.get('view') === 'human' || entry.get('mode') === 'human') openPhoto('h
 
 // gancho de inspección (demo/debug)
 window.__dbg = {
-  openPhoto, closePhoto, sendHumanCommand, humanHUD, contextSnapshot, focusOverview, zoomUniverse, photo,
+  openPhoto, closePhoto, selectHumanSite, sendHumanCommand, humanHUD, contextSnapshot, focusOverview, zoomUniverse, photo,
   camera, camera2D, controls, state, startFlight, applyFranja, setCamMode, setQuality, nextStock, fly, pan2D, tickPan2D,
   get camMode() { return camMode; },
   get quality() { return quality; },

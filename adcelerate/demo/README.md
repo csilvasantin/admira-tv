@@ -38,6 +38,42 @@ Los comandos usan una lista cerrada; los estados y el emisor se validan antes de
 actualizar el HUD. `js/human-view.js` contiene el HUD y el radar; el renderer hijo
 resuelve las conexiones reales y descarta respuestas de navegación obsoletas.
 
+## Recorrido entre quioscos
+
+El selector **Destino** y **Siguiente quiosco** alternan entre Vila de Gràcia y
+Jardinets. **Volver al quiosco** regresa a la entrada del destino seleccionado.
+Los cambios entre destinos son accesos directos a fotografías verificadas, no
+pasos ficticios por la calle. El selector, la ficha, el radar, el título y la URL
+siguen el destino actual. Enlaces reproducibles:
+
+- `/adcelerate/demo/?view=human&site=vila`
+- `/adcelerate/demo/?view=human&site=jardinets`
+
+El catálogo compartido `js/outdoor-sites.js` identifica las dos entradas. Jardinets
+usa el panorama `L6xcO37SQfBmCxsT9lPdjQ` de marzo de 2023, con POV 265° / 0° / 0.9,
+comprobado con Street View y la fotografía solicitada. La posición
+41.397772717774245, 2.1576335976146668 es la cámara de esa fotografía; el radar la
+identifica como **Punto de visita**, no como coordenada inventariada del soporte.
+Su ficha muestra **Audiencia pendiente de conectar**, sin heredar la cifra,
+mezcla ni recomendación de Vila. La audiencia existente conserva su origen
+`bcn-kiosk-016`, separado de `walk-state.siteId`.
+
+El mapa 3D sigue representando Vila. Su tarjeta **Entrar a pie** entra en Vila;
+la opción **Humano** de la barra recuerda el último destino de exploración.
+El retorno al 3D conserva la cámara, hora, capas y aforo de Vila.
+
+Mantener W/S o un botón de avance mantiene una única intención de movimiento.
+Cada imagen debe terminar de cargar antes del siguiente paso: no se acumulan
+saltos por repetición del teclado. Soltar la tecla, el puntero, perder la captura
+o salir de la ventana cancela la continuación. Las teclas también funcionan
+tras pulsar los botones del HUD; los campos de texto y selectores mantienen su
+comportamiento nativo. Las rutas siguen siendo conexiones reales de Google.
+
+En el cruce de Mozart, **Rutas → Entrar en Jesús · 2 pasos** aparece solo cuando
+existe la primera conexión verificada. El recorrido hace el desplazamiento lateral
+y después entra en Jesús, validando ambos enlaces. **Parar recorrido** interrumpe
+la continuación; un movimiento manual o cambio de destino también la cancela.
+
 ## Audiencia de demostración
 
 La curva de 24 horas y las mezclas de perfiles son datos simulados definidos en `js/main.js`. No existe una fuente telco ni una calibración MITMA. La cifra base puede fijarse manualmente entre 0 y 800; la cifra de personas representadas aplica el factor meteorológico existente. Ambas cifras se muestran con su contexto. La meteo se obtiene de Open-Meteo; activar RT cambia reloj/meteo, no convierte la audiencia en una medición real. El contenido del canal puede ser real y es independiente de la audiencia simulada.

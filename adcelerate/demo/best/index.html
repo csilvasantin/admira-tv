@@ -15,6 +15,7 @@
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
 <link rel="stylesheet" href="../css/admira-tokens.css?v=06.09.2026.r3.1159">
 <link rel="stylesheet" href="../css/style.css?v=06.09.2026.r3.1159">
+<script src="../js/outdoor-sites.js?v=06.09.2026.r3.1159"></script>
 <script src="../js/outdoor-context.js?v=06.09.2026.r3.1159"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
@@ -360,6 +361,7 @@
 
 const $ = (id) => document.getElementById(id);
 const WALK_MODE = window.OUTDOOR_EMBED && new URLSearchParams(location.search).get('walk') === '1';
+let activeWalkSite = OutdoorSites.get(new URLSearchParams(location.search).get('site')) || OutdoorSites.get('vila');
 let streetWalk = null, lastWalkState = null, walkBootTimer = null, walkBootFailed = false, walkBootGeneration = 0;
 
 /* OUTDOOR CHILD BRIDGE START */
@@ -385,7 +387,11 @@ function installOutdoorChild(){
     if (event.data.type === 'stop') { stopOutdoorChild(); return; }
     if (event.data.type === 'walk-command') {
       if (!outdoorStopped && WALK_MODE) {
-        if (streetWalk) streetWalk.command(event.data.payload);
+        if (event.data.payload.action === 'site') {
+          const site=OutdoorSites.get(event.data.payload.siteId);
+          if(site){activeWalkSite=site;if(outdoorBooted)bootWalk('panels').catch(()=>walkLoadFailure());}
+        }
+        else if (streetWalk) streetWalk.command(event.data.payload);
         else if (['home','panels','front'].includes(event.data.payload.action)) bootWalk(event.data.payload.action==='front'?'front':'panels').catch(()=>walkLoadFailure());
       }
       return;
@@ -563,7 +569,7 @@ async function boot(){
     $('need-key').classList.add('show');
     return;
   }
-  if (WALK_MODE) window.gm_authFailure = () => walkLoadFailure('Street View no está autorizado en este dominio.');
+  if (WALK_MODE) window.gm_authFailure = () => {console.warn('[BEST] Street View no autorizado en este dominio.');walkLoadFailure();};
   loadBootstrap(GOOGLE_MAPS_KEY);
   try{
     if (WALK_MODE) { await bootWalk(); return; }
@@ -1179,8 +1185,8 @@ function svNudge(k){
 
 /* First-person photography: each step follows a real neighbouring panorama. */
 function postWalkState(state){
-  lastWalkState = state;
-  window.parent.postMessage(OutdoorContext.message('walk-state', state), location.origin);
+  lastWalkState = {...state,siteId:activeWalkSite.id};
+  window.parent.postMessage(OutdoorContext.message('walk-state', lastWalkState), location.origin);
 }
 function clearWalkSupport(){
   activeSvView = {...activeSvView, panels:false};
@@ -1189,32 +1195,38 @@ function clearWalkSupport(){
 }
 function handleWalkState(state){
   if (outdoorStopped) return;
-  const calibrated = state.pano === KIOSK_PANO && state.status !== 'loading' && state.status !== 'error' && sv?.getPano() === KIOSK_PANO;
+  const calibrated = activeWalkSite.id === 'vila' && state.pano === KIOSK_PANO && state.status !== 'loading' && state.status !== 'error' && sv?.getPano() === KIOSK_PANO;
   activeSvView = {pano:state.pano, panels:calibrated, label:state.date ? `Street View · ${state.date}` : 'Street View · fecha no facilitada'};
   $('sv-signage').classList.toggle('show',calibrated);
   $('sv-signage').classList.toggle('sv-vis',calibrated);
   if (calibrated) layoutSvPanels();
   const W=innerWidth,H=innerHeight;
-  const supportVisible = calibrated && ['sv-p1','sv-p2'].some(id=>{
+  const calibratedVisible = calibrated && ['sv-p1','sv-p2'].some(id=>{
     const el=$(id),r=el.getBoundingClientRect();
     return el.style.display!=='none' && r.width>0 && r.height>0 && r.right>0 && r.left<W && r.bottom>0 && r.top<H;
   });
+  // Jardinets has a verified viewing direction, not calibrated advertising polygons.
+  const direction=activeWalkSite.entry.pov;
+  const visitPoint=sv&&projHP(direction.heading,direction.pitch,sv.getPov(),sv.getZoom(),W,H);
+  const supportVisible = calibratedVisible || (activeWalkSite.id !== 'vila' && state.pano === activeWalkSite.entry.pano &&
+    !['loading','error'].includes(state.status) && visitPoint && visitPoint[0]>=0 && visitPoint[0]<=W && visitPoint[1]>=0 && visitPoint[1]<=H);
   if (state.status !== 'loading') { clearTimeout(walkBootTimer); $('loading').classList.add('done'); $('streetview').classList.add('sv-vis'); }
-  postWalkState({...state,supportVisible});
+  postWalkState({...state,supportVisible:!!supportVisible});
 }
 function walkLoadFailure(message='No se pudo cargar la vista a pie.'){
   if (outdoorStopped) return;
   ++walkBootGeneration;walkBootFailed=true;clearTimeout(walkBootTimer);streetWalk?.dispose();streetWalk=null;
   hideStreetView();clearWalkSupport();$('loading').classList.add('done');
-  $('need-key').querySelector('h1').textContent='Vista a pie no disponible';
-  $('need-key').querySelector('.card p').textContent=message+' Usa «Ir al quiosco» para reintentar o vuelve al mapa 3D.';
+  $('need-key').querySelector('.card').innerHTML='<h1>Vista a pie no disponible</h1><p>No se pudo cargar la imagen de esta calle.</p><button id="walk-retry" class="btn">Volver al quiosco</button> <button id="walk-return" class="btn">Mapa 3D</button>';
+  $('walk-retry').onclick=()=>bootWalk('panels').catch(()=>walkLoadFailure());
+  $('walk-return').onclick=()=>{stopOutdoorChild();window.parent.postMessage(OutdoorContext.message('close'),location.origin);};
   $('need-key').classList.add('show');
   postWalkState({status:'error',pano:'',heading:0,position:null,date:'',links:[],steps:0,supportVisible:false});
 }
 async function bootWalk(sideOverride){
   const attempt=++walkBootGeneration;
   walkBootFailed=false;clearTimeout(walkBootTimer);
-  streetWalk?.dispose();streetWalk=null;if(sv)sv.setVisible(false);
+  streetWalk?.dispose();streetWalk=null;clearWalkSupport();if(sv)sv.setVisible(false);
   $('loading').innerHTML='<div class="spin"></div>Cargando vista a pie…';$('loading').classList.remove('done');
   $('need-key').classList.remove('show');
   postWalkState({status:'loading',pano:'',heading:0,position:null,date:'',links:[],steps:0,supportVisible:false});
@@ -1223,25 +1235,29 @@ async function bootWalk(sideOverride){
   if (outdoorStopped || walkBootFailed || attempt!==walkBootGeneration) return;
   const {StreetViewPanorama,StreetViewService}=library;
   const side=sideOverride || (new URLSearchParams(location.search).get('side')==='front'?'front':'panels');
-  const view=KIOSK_VIEWS[side];
+  const site=activeWalkSite;
+  const view=side==='front'&&site.front?site.front:site.entry;
   $('streetview').style.display='block';
+  if(!sv){
   sv=new StreetViewPanorama($('streetview'),{
     pano:view.pano,pov:{heading:view.pov.heading,pitch:view.pov.pitch},zoom:view.pov.zoom,
     disableDefaultUI:true,clickToGo:true,linksControl:true,scrollwheel:true,
     imageDateControl:true,addressControl:false,showRoadLabels:false,
     panControl:false,zoomControl:false,motionTracking:false,motionTrackingControl:false,fullscreenControl:false,
   });
-  SV_ON=true;activeSvView=view;
   sv.addListener('pov_changed',layoutSvPanels);sv.addListener('zoom_changed',()=>{
     layoutSvPanels();if(streetWalk)handleWalkState(streetWalk.getState());
   });
+  }else{sv.setPov(view.pov);sv.setZoom(view.pov.zoom);sv.setVisible(true);}
+  SV_ON=true;activeSvView={...view,panels:false};
   streetWalk=StreetWalk.create({panorama:sv,service:new StreetViewService(),initialPano:view.pano,
-    panelPano:KIOSK_PANO,frontPano:KIOSK_VIEWS.front.pano,panelPov:KIOSK_POV,frontPov:KIOSK_VIEWS.front.pov,
+    panelPano:KIOSK_PANO,homePano:site.entry.pano,frontPano:site.front?.pano,homePov:site.entry.pov,frontPov:site.front?.pov,
     onPanoChange:clearWalkSupport,onState:handleWalkState,onFeedback:message=>routeStatus(message),
   });
+  if(sv.getPano()!==view.pano)sv.setPano(view.pano);
   for(const id of ['sv-p1','sv-p2']){
-    const el=$(id);el.setAttribute('role','button');el.setAttribute('aria-label','Inspeccionar soporte publicitario');el.tabIndex=0;
-    const inspect=()=>{if(lastWalkState?.supportVisible && sv.getPano()===KIOSK_PANO)window.parent.postMessage(OutdoorContext.message('support-select'),location.origin);};
+    const el=$(id);if(el.dataset.walkInspect)continue;el.dataset.walkInspect='1';el.setAttribute('role','button');el.setAttribute('aria-label','Inspeccionar soporte publicitario');el.tabIndex=0;
+    const inspect=()=>{if(lastWalkState?.supportVisible && sv.getPano()===KIOSK_PANO)window.parent.postMessage(OutdoorContext.message('support-select',{siteId:activeWalkSite.id}),location.origin);};
     el.addEventListener('click',inspect);
     el.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();inspect();}});
   }
@@ -1252,13 +1268,18 @@ addEventListener('keydown',event=>{
   if(target && (target.isContentEditable||['INPUT','TEXTAREA','SELECT','BUTTON'].includes(target.tagName)))return;
   const actions={w:'forward',W:'forward',ArrowUp:'forward',s:'backward',S:'backward',ArrowDown:'backward',a:'left',A:'left',ArrowLeft:'left',d:'right',D:'right',ArrowRight:'right',PageUp:'look-up',PageDown:'look-down','+':'zoom-in','-':'zoom-out'};
   if(event.key==='e'||event.key==='E'){
-    if(lastWalkState?.supportVisible)window.parent.postMessage(OutdoorContext.message('support-select'),location.origin);
+    if(lastWalkState?.supportVisible)window.parent.postMessage(OutdoorContext.message('support-select',{siteId:activeWalkSite.id}),location.origin);
     return;
   }
   const action=actions[event.key];if(!action)return;event.preventDefault();event.stopPropagation();
   if(event.repeat && ['forward','backward'].includes(action))return;
-  streetWalk?.command({action});
+  streetWalk?.command({action,hold:['forward','backward'].includes(action)});
 },true);
+function releaseWalk(){if(WALK_MODE)streetWalk?.command({action:'release'});}
+addEventListener('keyup',event=>{if(['w','W','s','S','ArrowUp','ArrowDown'].includes(event.key))releaseWalk();},true);
+addEventListener('blur',releaseWalk);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseWalk();});
+$('streetview').addEventListener('pointerdown',releaseWalk,true);
 
 async function showStreetView(side = 'front'){
   const view = KIOSK_VIEWS[side] || KIOSK_VIEWS.front;
