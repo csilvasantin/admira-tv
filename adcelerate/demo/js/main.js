@@ -8,6 +8,8 @@ const photo = {frame:null, ready:false, signature:'', returnMode:null, mode:'pho
 const humanHUD = HumanView.create({element:document.getElementById('human-hud'),
   send:sendHumanCommand,onExit:closePhoto,onInspect:inspectHumanSupport,onSiteChange:selectHumanSite});
 let selectedSite = 'kiosk';
+let pendingSurfaceCommand=null,doohUiTimer=null;
+const doohTour=DoohTour.create({stops:DoohSurfaces.all,send:sendSurfaceCommand,onChange:renderDoohTour,dwellMs:9000});
 
 /* ============================== datos de demo ============================== */
 // «Audiencia simulada de la plaza · curva de demostración» — deterministas
@@ -1322,6 +1324,10 @@ function buildHUD() {
   $('nav-universe').onclick = e => { e.preventDefault(); closePhoto(); setQuality('better'); };
   $('universe-photo').onclick = () => openPhoto();
   $('universe-human').onclick = () => {photo.siteId='vila';openPhoto('human');};
+  $('universe-tour-start').onclick=()=>{photo.siteId='vila';startDoohTour();};
+  $('human-tour-start').onclick=startDoohTour;
+  $('dooh-tour-pause').onclick=()=>{const status=doohTour.getState().status;if(status==='paused'||status==='error')doohTour.resume();else doohTour.pause();};
+  $('dooh-tour-end').onclick=()=>stopDoohTour('user');
   $('universe-return').onclick = closePhoto;
   $('select-kiosk').onclick = () => { selectedSite = 'kiosk'; updateUniverseCard(); if (!photo.frame) focusKiosk(); };
   $('select-plaza').onclick = () => { selectedSite = 'plaza'; updateUniverseCard(); if (!photo.frame) focusOverview(); };
@@ -1924,9 +1930,15 @@ function openPhoto(mode = 'photo') {
   document.querySelectorAll('#quality button').forEach(b => b.classList.toggle('active', b.dataset.q === (mode === 'human' ? 'human' : 'best')));
   resizePhotoViewport();
 }
-function inspectHumanSupport() {
+function inspectHumanSupport(screenId) {
+  const surface=DoohSurfaces.get(typeof screenId==='string'?screenId:doohTour.isActive()?doohTour.getState().surfaceId:'');
+  stopDoohTour('manual');
   if(photo.siteId==='vila')selectedSite='kiosk';
-  updateUniverseCard();humanHUD.inspect();
+  updateUniverseCard();
+  const count=DoohSurfaces.all.filter(item=>item.siteId===photo.siteId).length;
+  $('human-inventory-label').textContent=count+' '+(count===1?'pantalla mapeada':'pantallas mapeadas')+' · demostración';
+  $('human-site-name').textContent=surface?.siteId===photo.siteId?surface.label:OutdoorSites.get(photo.siteId).name;
+  humanHUD.inspect();
 }
 function updateHumanUrl(){
   const url=new URL(location.href);url.searchParams.set('view','human');url.searchParams.set('site',photo.siteId);
@@ -1935,6 +1947,7 @@ function updateHumanUrl(){
   document.querySelector('.brand-txt .sub').textContent='Humano · '+site.shortLabel;
 }
 function selectHumanSite(siteId){
+  stopDoohTour('manual');
   const site=OutdoorSites.get(siteId);if(!site||photo.mode!=='human'||!photo.frame)return;
   photo.siteId=site.id;
   humanHUD.enter(site.id);updateUniverseCard();
@@ -1945,16 +1958,73 @@ function selectHumanSite(siteId){
 }
 
 function sendHumanCommand(payload) {
+  const command=OutdoorContext.validateWalkCommand(payload);if(!command)return;
+  if(command.action!=='release')stopDoohTour('manual');
   if (!photo.frame || !photo.ready || photo.mode !== 'human') return;
-  const command = OutdoorContext.validateWalkCommand(payload); if (!command) return;
   photo.frame.contentWindow.postMessage(OutdoorContext.message('walk-command',command),location.origin);
 }
+function startDoohTour(){
+  openPhoto('human');
+  const first=DoohSurfaces.all.find(surface=>surface.siteId===photo.siteId)||DoohSurfaces.all[0];
+  const url=new URL(location.href);url.searchParams.set('tour','dooh');history.replaceState(null,'',url);
+  doohTour.start(first.id);
+}
+function stopDoohTour(reason='manual'){
+  doohTour.stop(reason);pendingSurfaceCommand=null;
+  const url=new URL(location.href);
+  if(url.searchParams.get('tour')==='dooh'){url.searchParams.delete('tour');history.replaceState(null,'',url);}
+}
+function sendSurfaceCommand(command){
+  const valid=OutdoorContext.validateSurfaceCommand(command);if(!valid)return;
+  if(valid.action==='cancel'){
+    if(pendingSurfaceCommand?.requestId===valid.requestId)pendingSurfaceCommand=null;
+    if(photo.frame&&photo.ready)photo.frame.contentWindow.postMessage(OutdoorContext.message('surface-command',valid),location.origin);
+    return;
+  }
+  const surface=DoohSurfaces.get(valid.surfaceId),site=OutdoorSites.get(surface.siteId);
+  photo.siteId=site.id;humanHUD.setSite(site);updateUniverseCard();updateHumanUrl();
+  if(photo.frame)photo.frame.title='Tour DooH · '+surface.label;
+  pendingSurfaceCommand=valid;flushSurfaceCommand();
+}
+function flushSurfaceCommand(){
+  if(!pendingSurfaceCommand||!photo.frame||!photo.ready||photo.mode!=='human')return;
+  const state=doohTour.getState(),command=pendingSurfaceCommand;
+  pendingSurfaceCommand=null;
+  if(state.status==='loading'&&state.requestId===command.requestId)
+    photo.frame.contentWindow.postMessage(OutdoorContext.message('surface-command',command),location.origin);
+}
+function paintDoohProgress(){
+  const state=doohTour.getState();
+  $('dooh-tour-progress').value=state.progress;
+  $('dooh-tour-progress').setAttribute('aria-valuetext',Math.ceil(state.remainingMs/1000)+' segundos restantes');
+}
+function renderDoohTour(state){
+  const active=['loading','playing','paused','error'].includes(state.status);
+  document.body.classList.toggle('dooh-active',active);
+  $('dooh-tour-panel').classList.toggle('hidden',!active);
+  $('human-tour-start').classList.toggle('hidden',active);
+  $('dooh-start-shield').classList.toggle('hidden',!(active&&photo.frame&&!photo.ready));
+  $('dooh-tour-step').textContent=(state.index+1)+' / '+state.total;
+  $('dooh-tour-screen').textContent=state.label;
+  $('dooh-tour-status').textContent=({loading:'Preparando fotografía y encuadre…',playing:'9 segundos por pantalla · recorrido en bucle',paused:'En pausa',error:'No se pudo preparar esta vista. Puedes reintentar.'})[state.status]||'Tour finalizado';
+  $('dooh-tour-pause').textContent=state.status==='paused'?'Reanudar':state.status==='error'?'Reintentar':'Pausar';
+  clearInterval(doohUiTimer);doohUiTimer=null;paintDoohProgress();
+  if(state.status==='playing')doohUiTimer=setInterval(paintDoohProgress,250);
+  if(state.status==='stopped'&&state.reason==='manual')showToast('Tour DooH detenido · control manual');
+}
+for(const event of ['pointerdown','wheel'])$('dooh-start-shield').addEventListener(event,()=>stopDoohTour('manual'),{passive:true});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden&&['loading','playing'].includes(doohTour.getState().status))doohTour.pause();
+});
+addEventListener('pagehide',()=>{doohTour.destroy();clearInterval(doohUiTimer);pendingSurfaceCommand=null;});
+
 function resizePhotoViewport() {
   $('photo-view').style.bottom = photo.frame && photo.mode !== 'human' && innerWidth <= 480
     ? Math.max(30, $('universe-card').getBoundingClientRect().height + 50) + 'px' : '';
 }
 new ResizeObserver(resizePhotoViewport).observe($('universe-card'));
 function closePhoto() {
+  stopDoohTour('mode');
   if (!photo.frame) return;
   const frame = photo.frame;
   photo.frame = null; photo.ready = false; photo.signature = '';
@@ -1985,10 +2055,12 @@ function closePhoto() {
 }
 addEventListener('message', event => {
   if (!photo.frame || !OutdoorContext.accepts(event, photo.frame.contentWindow, location.origin)) return;
-  if (event.data.type === 'ready') { photo.ready = true; photo.signature = ''; sendPhotoContext(); if(photo.mode==='human'&&photo.initialSiteId!==photo.siteId)sendHumanCommand({action:'site',siteId:photo.siteId}); }
+  if (event.data.type === 'ready') { photo.ready=true;photo.signature='';sendPhotoContext();$('dooh-start-shield').classList.add('hidden');if(doohTour.isActive())flushSurfaceCommand();else if(photo.mode==='human'&&photo.initialSiteId!==photo.siteId)sendHumanCommand({action:'site',siteId:photo.siteId}); }
   if (event.data.type === 'close') closePhoto();
+  if(event.data.type==='surface-state')doohTour.accept(OutdoorContext.validateSurfaceState(event.data.payload));
+  if(event.data.type==='surface-interaction')stopDoohTour('manual');
   if (event.data.type === 'walk-state' && photo.mode === 'human' && (event.data.payload.siteId||'vila')===photo.siteId) humanHUD.setState(OutdoorContext.validateWalkState(event.data.payload));
-  if (event.data.type === 'support-select' && photo.mode === 'human' && (event.data.payload?.siteId||'vila')===photo.siteId) inspectHumanSupport();
+  if (event.data.type === 'support-select' && photo.mode === 'human' && (event.data.payload?.siteId||'vila')===photo.siteId) inspectHumanSupport(event.data.payload?.screenId);
 });
 addEventListener('keydown', event => { if (event.key === 'Escape' && photo.frame) { event.preventDefault(); closePhoto(); } });
 addEventListener('blur', () => { fly.keys = {}; pan2D.keys = {}; });
@@ -2146,11 +2218,12 @@ setInterval(pollSignage, SIGNAGE_POLL_MS);
 requestAnimationFrame(animate);
 const entry = new URLSearchParams(location.search);
 if (entry.get('view') === 'photo') openPhoto();
-if (entry.get('view') === 'human' || entry.get('mode') === 'human') openPhoto('human');
+if (entry.get('view') === 'human' || entry.get('mode') === 'human' || entry.get('tour')==='dooh') openPhoto('human');
+if(entry.get('tour')==='dooh')startDoohTour();
 
 // gancho de inspección (demo/debug)
 window.__dbg = {
-  openPhoto, closePhoto, selectHumanSite, sendHumanCommand, humanHUD, contextSnapshot, focusOverview, zoomUniverse, photo,
+  doohTour,startDoohTour,stopDoohTour,openPhoto, closePhoto, selectHumanSite, sendHumanCommand, humanHUD, contextSnapshot, focusOverview, zoomUniverse, photo,
   camera, camera2D, controls, state, startFlight, applyFranja, setCamMode, setQuality, nextStock, fly, pan2D, tickPan2D,
   get camMode() { return camMode; },
   get quality() { return quality; },

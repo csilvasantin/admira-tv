@@ -11,10 +11,11 @@ const valid = () => ({siteId:'bcn-kiosk-016',hour:9.75,baseCount:173.5,effective
   mix:{familias:31,jovenes:29,turistas:13,seniors:27},manual:true,selection:'plaza',
   layers:{crowd:true,buildings:false,roads:true,night:false}});
 function fixture(embedded=true,walkMode=false) {
-  const listeners={},sent=[],calls={boot:0,refresh:0,stop:0,hide:0,walk:0};
+  const listeners={},sent=[],calls={boot:0,refresh:0,stop:0,hide:0,walk:0,surfaceCancel:0,surfaceFocus:[],manual:0};
   const parent={postMessage:(message,origin)=>sent.push({message,origin})};
   const context=vm.createContext({window:{OUTDOOR_EMBED:embedded,parent},location:{origin:'https://admira.tv'},OutdoorContext,OutdoorSites,activeWalkSite:OutdoorSites.get('vila'),bootWalk:async()=>calls.walk++,walkLoadFailure:()=>{},
     addEventListener:(name,fn)=>{listeners[name]=fn;},boot:()=>calls.boot++,refreshFranja:()=>calls.refresh++,
+    surfaceFocus:{cancel:()=>calls.surfaceCancel++,focus:(...args)=>calls.surfaceFocus.push(args)},manualSurfaceInteraction:()=>calls.manual++,
     streetWalk:null,WALK_MODE:walkMode,walkBootTimer:null,walkBootFailed:false,walkBootGeneration:0,clearTimeout,stopCam:()=>calls.stop++,hideStreetView:()=>calls.hide++,fmtHm:()=> '09:45',FRANJAS:[{aforo:460}],selFranjaIdx:0,_shotDone:false});
   vm.runInContext(bridge+';installOutdoorChild();',context);
   const dispatch=(data,overrides={})=>listeners.message?.({data,origin:'https://admira.tv',source:parent,...overrides});
@@ -46,7 +47,7 @@ test('new context updates the existing renderer without a second boot',()=>{
 test('stop cancels camera/panorama and refuses delayed context restarts',()=>{
   const f=fixture();f.dispatch(OutdoorContext.message('stop'));
   f.dispatch(OutdoorContext.message('context',valid()));
-  assert.equal(f.calls.stop,1);assert.equal(f.calls.hide,1);assert.equal(f.calls.boot,0);
+  assert.equal(f.calls.stop,1);assert.equal(f.calls.hide,1);assert.equal(f.calls.boot,0);assert.equal(f.calls.surfaceCancel,1);
   assert.equal(vm.runInContext('_shotDone',f.context),true);
 });
 test('Escape closes child through the exact parent origin and cancels rendering intent',()=>{

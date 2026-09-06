@@ -104,3 +104,26 @@ esa salida. **Rutas → Abrir cruce conectado · marzo 2023** cambia explícitam
 al panorama próximo de 2023; no suma un paso ni inventa un enlace de la imagen
 anterior. Una vez cargado, ofrece **Entrar en Jesús · 2 pasos** usando las conexiones
 verificadas. La fecha visible siempre se obtiene del panorama actual.
+
+
+## Tour DooH
+
+**Tour DooH** está disponible junto a **Siguiente quiosco** en Humano y desde
+la tarjeta del universo 3D. El enlace `?view=human&tour=dooh&site=jardinets`
+abre el recorrido desde ese destino. Las tres paradas son las dos pantallas
+de Vila y la pantalla de Jardinets junto al ATM. Se repiten en bucle, con
+9 segundos de exposición después de confirmar fotografía y encuadre listos.
+Los cambios de fotografía entre quioscos no representan pasos a pie.
+
+**Pausar** conserva el tiempo restante; **Reanudar** vuelve a verificar el
+encuadre. Un error ofrece **Reintentar**, sin saltar a otra pantalla. Ocultar
+la pestaña deja el recorrido en pausa hasta reanudarlo expresamente.
+**Finalizar**, mirar o navegar manualmente, seleccionar destino o volver al 3D
+cancela el recorrido y descarta confirmaciones antiguas. Los controles de
+destino y navegación manual siguen disponibles.
+
+`DoohSurfaces` contiene solo los tres encuadres calibrados; `DoohTour` controla
+el ciclo y `SurfaceFocus` prepara el panorama. El puente del mismo origen
+valida pantalla, acción y número de petición antes de aceptar una llegada.
+Las creatividades superpuestas son una demostración; la audiencia conserva
+su procedencia y Jardinets continúa sin aforo conectado.

@@ -2,6 +2,7 @@
 (function(root) {
   'use strict';
   const sites=typeof module!=='undefined'&&module.exports?require('./outdoor-sites.js'):root.OutdoorSites;
+  const surfaces=typeof module!=='undefined'&&module.exports?require('./dooh-surfaces.js'):root.DoohSurfaces;
   const profiles = ['familias', 'jovenes', 'turistas', 'seniors'];
   const finite = (v, min, max) => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
   function validate(c) {
@@ -38,18 +39,31 @@
       date:p.date,steps:p.steps,supportVisible:p.supportVisible,
       links:p.links.map(l => ({pano:l.pano,heading:l.heading,description:l.description}))};
   }
+  function validSurfaceRequest(p){return !!(p && surfaces.get(p.surfaceId) && Number.isSafeInteger(p.requestId) && p.requestId>0);}
+  function validateSurfaceCommand(p){
+    return validSurfaceRequest(p)&&['focus','cancel'].includes(p.action)?{action:p.action,surfaceId:p.surfaceId,requestId:p.requestId}:null;
+  }
+  function validateSurfaceState(p){
+    if(!validSurfaceRequest(p)||!['loading','ready','error','cancelled'].includes(p.status)||
+      (p.reason!==undefined&&!['manual','cancel','timeout','unavailable'].includes(p.reason)))return null;
+    return {surfaceId:p.surfaceId,requestId:p.requestId,status:p.status,...(p.reason!==undefined?{reason:p.reason}:{})};
+  }
   function message(type, context) {
-    const data = type === 'walk-state' || type === 'walk-command' || (type === 'support-select' && context) ? {payload:context} : (context ? {context} : {});
+    const payloadType=['walk-state','walk-command','surface-command','surface-state','surface-interaction'].includes(type)||(type==='support-select'&&context);
+    const data=payloadType?{payload:context}:(context?{context}:{});
     return {channel:'admira-outdoor', version:1, type, ...data};
   }
   function accepts(event, source, origin) {
     const d = event && event.data;
     return !!(event && event.origin === origin && event.source === source && d &&
-      d.channel === 'admira-outdoor' && d.version === 1 && ['ready','context','close','stop','walk-state','walk-command','support-select'].includes(d.type) &&
+      d.channel === 'admira-outdoor' && d.version === 1 && ['ready','context','close','stop','walk-state','walk-command','support-select','surface-command','surface-state','surface-interaction'].includes(d.type) &&
       (d.type !== 'context' || validate(d.context)) &&
       (d.type !== 'walk-state' || validateWalkState(d.payload)) &&
       (d.type !== 'walk-command' || validateWalkCommand(d.payload)) &&
-      (d.type !== 'support-select' || d.payload===undefined || (d.payload && !!sites.get(d.payload.siteId))));
+      (d.type!=='surface-command'||validateSurfaceCommand(d.payload)) &&
+      (d.type!=='surface-state'||validateSurfaceState(d.payload)) &&
+      (d.type!=='surface-interaction'||(d.payload&&d.payload.reason==='manual')) &&
+      (d.type !== 'support-select' || d.payload===undefined || (d.payload && !!sites.get(d.payload.siteId) && (d.payload.screenId===undefined || surfaces.get(d.payload.screenId)?.siteId===d.payload.siteId))));
   }
   function bestEntry(search, embedded) {
     const params = new URLSearchParams(search);
@@ -61,9 +75,10 @@
     if (params.has('cal') || params.has('side')) next.set('view', 'photo');
     if (params.get('walk') === '1') next.set('view', 'human');
     if(sites.get(params.get('site')))next.set('site',params.get('site'));
+    if(params.get('tour')==='dooh'){next.set('tour','dooh');next.set('view','human');}
     return '../' + (next.size ? '?' + next.toString() : '');
   }
-  const api = {validate, validateWalkState, validateWalkCommand, message, accepts, bestEntry};
+  const api = {validate, validateWalkState, validateWalkCommand, validateSurfaceCommand, validateSurfaceState, message, accepts, bestEntry};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.OutdoorContext = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

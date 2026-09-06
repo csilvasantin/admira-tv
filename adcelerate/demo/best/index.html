@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="../css/admira-tokens.css?v=06.09.2026.r4.1230">
 <link rel="stylesheet" href="../css/style.css?v=06.09.2026.r4.1230">
 <script src="../js/outdoor-sites.js?v=06.09.2026.r4.1230"></script>
+<script src="../js/dooh-surfaces.js?v=06.09.2026.r4.1230"></script>
 <script src="../js/outdoor-context.js?v=06.09.2026.r4.1230"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
@@ -211,6 +212,7 @@
   <div id="sv-signage">
     <div class="sv-panel" id="sv-p1"><canvas width="512" height="760"></canvas></div>
     <div class="sv-panel" id="sv-p2"><canvas width="512" height="760"></canvas></div>
+    <div class="sv-panel" id="sv-jardinets"><canvas width="512" height="1320"></canvas></div>
     <canvas id="sv-grid" style="position:absolute;inset:0;pointer-events:none"></canvas>
   </div>
 
@@ -350,6 +352,7 @@
 </div>
 
 <script src="street-walk.js?v=06.09.2026.r4.1230"></script>
+<script src="surface-focus.js?v=06.09.2026.r4.1230"></script>
 <script src="camera-path.js?v=06.09.2026.r4.1230"></script>
 <script>
 /* ============================================================
@@ -375,6 +378,7 @@ function currentAudience(){
 function stopOutdoorChild(){
   outdoorStopped = true;
   ++walkBootGeneration; clearTimeout(walkBootTimer); walkBootFailed = true;
+  surfaceFocus.cancel();
   streetWalk?.dispose(); streetWalk = null;
   _shotDone = true;
   stopCam();
@@ -385,8 +389,15 @@ function installOutdoorChild(){
   addEventListener('message', event => {
     if (!OutdoorContext.accepts(event, window.parent, location.origin)) return;
     if (event.data.type === 'stop') { stopOutdoorChild(); return; }
+    if (event.data.type === 'surface-command' && !outdoorStopped && WALK_MODE) {
+      const p=event.data.payload;
+      if(p.action==='cancel')surfaceFocus.cancel('cancel',p.requestId);
+      else if(outdoorBooted)surfaceFocus.focus(p.surfaceId,p.requestId);
+      return;
+    }
     if (event.data.type === 'walk-command') {
       if (!outdoorStopped && WALK_MODE) {
+        if(event.data.payload.action!=='release')manualSurfaceInteraction();
         if (event.data.payload.action === 'site') {
           const site=OutdoorSites.get(event.data.payload.siteId);
           if(site){activeWalkSite=site;if(outdoorBooted)bootWalk('panels').catch(()=>walkLoadFailure());}
@@ -1031,7 +1042,8 @@ function roundRect(c, x, y, w, h, r){
   c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
   c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
 }
-function drawChannel(ctx, W, H){
+function drawChannel(ctx, W, H, surface=null){
+  const audienceAllowed=!surface||surface.siteId==='vila';
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = '#06141a'; ctx.fillRect(0, 0, W, H);
   // media actual (vídeo/imagen del canal real) a cover
@@ -1045,27 +1057,33 @@ function drawChannel(ctx, W, H){
     try{ ctx.drawImage(src, (W - dw) / 2, (H - dh) / 2, dw, dh); live = true; }catch(e){}
   }
   if (!live){   // fallback honesto: la creatividad recomendada por perfil
-    const dom = dominanteDe(currentAudience().mix), im = creLive[dom];
+    const dom = audienceAllowed?dominanteDe(currentAudience().mix):null, im = dom?creLive[dom]:null;
     if (im && im.complete && im.naturalWidth){
       const sc = Math.max(W / im.naturalWidth, H / im.naturalHeight), dw = im.naturalWidth * sc, dh = im.naturalHeight * sc;
       try{ ctx.drawImage(im, (W - dw) / 2, (H - dh) / 2, dw, dh); }catch(e){}
     }
   }
+  if(!live && !audienceAllowed){
+    ctx.fillStyle='#0b2627';ctx.fillRect(0,0,W,H);ctx.fillStyle='#bafd6f';
+    ctx.font='800 '+Math.round(W*.13)+'px '+LIVE_SANS;ctx.textAlign='center';
+    ctx.fillText('admira.tv',W/2,H*.42);ctx.font='600 '+Math.round(W*.055)+'px '+LIVE_MONO;
+    ctx.fillText('JARDINETS',W/2,H*.49);ctx.textAlign='left';
+  }
   const pad = Math.round(W * 0.035);
   // (sin chip EN VIVO/FALLBACK: el creativo va limpio, como una pantalla real — 13-jul-2026)
   // banda editorial abajo: identifica la parrilla real cuando procede.
-  const dom = dominanteDe(currentAudience().mix), rg = REGLAS[dom];
+  const dom = audienceAllowed?dominanteDe(currentAudience().mix):null, rg = dom?REGLAS[dom]:null;
   const bh = Math.max(34, Math.round(H * 0.2));
   const grad = ctx.createLinearGradient(0, H - bh, 0, H);
   grad.addColorStop(0, 'rgba(3,10,14,0)'); grad.addColorStop(.4, 'rgba(3,10,14,.8)'); grad.addColorStop(1, 'rgba(3,10,14,.95)');
   ctx.fillStyle = grad; ctx.fillRect(0, H - bh, W, bh);
-  const f2 = Math.max(9, Math.round(H * 0.05)), f3 = Math.max(11, Math.round(H * 0.072));
+  const f2 = audienceAllowed?Math.max(9,Math.round(H*.05)):22, f3=audienceAllowed?Math.max(11,Math.round(H*.072)):36;
   ctx.textBaseline = 'alphabetic';
   ctx.font = '700 ' + f2 + 'px ' + LIVE_MONO; ctx.fillStyle = '#50c8ff';
   const isGrid = chItem && chItem.source === 'grid';
-  ctx.fillText(isGrid ? ('PARRILLA 50/50 · ' + (chItem.lane === 'publicidad' ? 'PUBLICIDAD' : 'AYUNTAMIENTO')) : 'ADcelerate recomienda', pad, H - bh + f2 * 1.5);
+  ctx.fillText(!audienceAllowed ? 'JARDINETS · PANTALLA DEL GEMELO' : isGrid ? ('PARRILLA 50/50 · ' + (chItem.lane === 'publicidad' ? 'PUBLICIDAD' : 'AYUNTAMIENTO')) : 'ADcelerate recomienda', pad, H - bh + f2 * 1.5);
   ctx.font = '800 ' + f3 + 'px ' + LIVE_SANS; ctx.fillStyle = '#eaf7ff';
-  ctx.fillText(isGrid ? chTitle() : ('Creatividad ' + rg.cre + ' · ' + rg.titulo), pad, H - Math.round(bh * 0.28));
+  ctx.fillText(!audienceAllowed ? (live?chTitle():'admira.tv') : isGrid ? chTitle() : ('Creatividad ' + rg.cre + ' · ' + rg.titulo), pad, H - Math.round(bh * 0.28));
 }
 
 // ---- proyección mundo→pantalla desde el estado de cámara del Map3D ----
@@ -1184,6 +1202,59 @@ function svNudge(k){
 }
 
 /* First-person photography: each step follows a real neighbouring panorama. */
+function surfacesHere(){return DoohSurfaces.all.filter(s=>s.pano===sv?.getPano()&&(!WALK_MODE||s.siteId===activeWalkSite.id))}
+function visibleSurfaceIds(){
+  if(!activeSvView.panels)return [];
+  return surfacesHere().filter(s=>{const el=$(s.elementId),r=el.getBoundingClientRect();return el.style.display!=='none'&&r.width>0&&r.height>0&&r.right>0&&r.left<innerWidth&&r.bottom>0&&r.top<innerHeight}).map(s=>s.id);
+}
+function manualSurfaceInteraction(){
+  if(!WALK_MODE||outdoorStopped)return;
+  surfaceFocus.cancel('manual');
+  window.parent.postMessage(OutdoorContext.message('surface-interaction',{reason:'manual'}),location.origin);
+}
+let surfaceBootRequestId=null,surfaceMotion=null;
+function animateSurfaceCamera(pov,requestId){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){
+    if(surfaceFocus.active?.requestId!==requestId||outdoorStopped)return Promise.reject(Error('Cancelled'));
+    sv.setPov({heading:pov.heading,pitch:pov.pitch});sv.setZoom(pov.zoom);return Promise.resolve();
+  }
+  const start=sv.getPov(),zoom=sv.getZoom(),began=performance.now(),dh=((pov.heading-start.heading+540)%360)-180;
+  return new Promise((resolve,reject)=>{
+    const motion={requestId,frame:null,reject};surfaceMotion=motion;
+    function step(now){
+      if(surfaceFocus.active?.requestId!==requestId||outdoorStopped){reject(Error('Cancelled'));return}
+      const t=Math.min(1,(now-began)/600),e=t*t*(3-2*t);
+      sv.setPov({heading:(start.heading+dh*e+360)%360,pitch:start.pitch+(pov.pitch-start.pitch)*e});sv.setZoom(zoom+(pov.zoom-zoom)*e);
+      if(t<1)motion.frame=requestAnimationFrame(step);else{if(surfaceMotion===motion)surfaceMotion=null;resolve()}
+    }
+    motion.frame=requestAnimationFrame(step);
+  });
+}
+const surfaceFocus=SurfaceFocus.create({
+  getSurface:id=>DoohSurfaces.get(id),
+  async prepare(surface,requestId){
+    await google.maps.importLibrary('streetView');
+    if(surfaceFocus.active?.requestId!==requestId||outdoorStopped)throw Error('Cancelled');
+    const r=$('streetview').getBoundingClientRect(),pov=DoohSurfaces.fit(surface,r.width||innerWidth,r.height||innerHeight);
+    const same=activeWalkSite.id===surface.siteId&&sv?.getPano()===surface.pano&&['ready','unavailable'].includes(streetWalk?.getState().status);
+    activeWalkSite=OutdoorSites.get(surface.siteId);
+    if(same){await animateSurfaceCamera(pov,requestId)}
+    else{
+      surfaceBootRequestId=requestId;
+      await bootWalk('panels',{pano:surface.pano,pov});
+      if(surfaceBootRequestId===requestId)surfaceBootRequestId=null;
+    }
+    if(surfaceFocus.active?.requestId!==requestId||outdoorStopped)throw Error('Cancelled');
+    layoutSvPanels();if(streetWalk)handleWalkState(streetWalk.getState());
+    return pov;
+  },
+  onCancel(requestId){
+    if(surfaceMotion?.requestId===requestId){const motion=surfaceMotion;surfaceMotion=null;cancelAnimationFrame(motion.frame);motion.reject(Error('Cancelled'))}
+    if(surfaceBootRequestId===requestId){surfaceBootRequestId=null;++walkBootGeneration;clearTimeout(walkBootTimer)}
+  },
+  getCamera(){const pov=sv?.getPov();return pov?{pano:sv.getPano(),heading:pov.heading,pitch:pov.pitch,zoom:sv.getZoom(),visible:visibleSurfaceIds().includes(surfaceFocus.active?.surfaceId)}:null},
+  onState:state=>{if(!outdoorStopped)window.parent.postMessage(OutdoorContext.message('surface-state',state),location.origin)},
+});
 function postWalkState(state){
   lastWalkState = {...state,siteId:activeWalkSite.id};
   window.parent.postMessage(OutdoorContext.message('walk-state', lastWalkState), location.origin);
@@ -1195,23 +1266,15 @@ function clearWalkSupport(){
 }
 function handleWalkState(state){
   if (outdoorStopped) return;
-  const calibrated = activeWalkSite.id === 'vila' && state.pano === KIOSK_PANO && state.status !== 'loading' && state.status !== 'error' && sv?.getPano() === KIOSK_PANO;
+  const calibrated = DoohSurfaces.all.some(s=>s.siteId===activeWalkSite.id&&s.pano===state.pano) && !['loading','error'].includes(state.status) && sv?.getPano()===state.pano;
   activeSvView = {pano:state.pano, panels:calibrated, label:state.date ? `Street View · ${state.date}` : 'Street View · fecha no facilitada'};
   $('sv-signage').classList.toggle('show',calibrated);
   $('sv-signage').classList.toggle('sv-vis',calibrated);
   if (calibrated) layoutSvPanels();
-  const W=innerWidth,H=innerHeight;
-  const calibratedVisible = calibrated && ['sv-p1','sv-p2'].some(id=>{
-    const el=$(id),r=el.getBoundingClientRect();
-    return el.style.display!=='none' && r.width>0 && r.height>0 && r.right>0 && r.left<W && r.bottom>0 && r.top<H;
-  });
-  // Jardinets has a verified viewing direction, not calibrated advertising polygons.
-  const direction=activeWalkSite.entry.pov;
-  const visitPoint=sv&&projHP(direction.heading,direction.pitch,sv.getPov(),sv.getZoom(),W,H);
-  const supportVisible = calibratedVisible || (activeWalkSite.id !== 'vila' && state.pano === activeWalkSite.entry.pano &&
-    !['loading','error'].includes(state.status) && visitPoint && visitPoint[0]>=0 && visitPoint[0]<=W && visitPoint[1]>=0 && visitPoint[1]<=H);
+  const supportVisible=calibrated && visibleSurfaceIds().length>0;
   if (state.status !== 'loading') { clearTimeout(walkBootTimer); $('loading').classList.add('done'); $('streetview').classList.add('sv-vis'); }
   postWalkState({...state,supportVisible:!!supportVisible});
+  surfaceFocus.observe(state);
 }
 function walkLoadFailure(message='No se pudo cargar la vista a pie.'){
   if (outdoorStopped) return;
@@ -1223,7 +1286,7 @@ function walkLoadFailure(message='No se pudo cargar la vista a pie.'){
   $('need-key').classList.add('show');
   postWalkState({status:'error',pano:'',heading:0,position:null,date:'',links:[],steps:0,supportVisible:false});
 }
-async function bootWalk(sideOverride){
+async function bootWalk(sideOverride,viewOverride=null){
   const attempt=++walkBootGeneration;
   walkBootFailed=false;clearTimeout(walkBootTimer);
   streetWalk?.dispose();streetWalk=null;clearWalkSupport();if(sv)sv.setVisible(false);
@@ -1236,7 +1299,7 @@ async function bootWalk(sideOverride){
   const {StreetViewPanorama,StreetViewService}=library;
   const side=sideOverride || (new URLSearchParams(location.search).get('side')==='front'?'front':'panels');
   const site=activeWalkSite;
-  const view=side==='front'&&site.front?site.front:site.entry;
+  const view=viewOverride||(side==='front'&&site.front?site.front:site.entry);
   $('streetview').style.display='block';
   if(!sv){
   sv=new StreetViewPanorama($('streetview'),{
@@ -1255,9 +1318,11 @@ async function bootWalk(sideOverride){
     onPanoChange:clearWalkSupport,onState:handleWalkState,onFeedback:message=>routeStatus(message),
   });
   if(sv.getPano()!==view.pano)sv.setPano(view.pano);
-  for(const id of ['sv-p1','sv-p2']){
-    const el=$(id);if(el.dataset.walkInspect)continue;el.dataset.walkInspect='1';el.setAttribute('role','button');el.setAttribute('aria-label','Inspeccionar soporte publicitario');el.tabIndex=0;
-    const inspect=()=>{if(lastWalkState?.supportVisible && sv.getPano()===KIOSK_PANO)window.parent.postMessage(OutdoorContext.message('support-select',{siteId:activeWalkSite.id}),location.origin);};
+  if(viewOverride){sv.setPov({heading:view.pov.heading,pitch:view.pov.pitch});sv.setZoom(view.pov.zoom)}
+  for(const surface of DoohSurfaces.all){
+    const el=$(surface.elementId);if(el.dataset.walkInspect)continue;el.dataset.walkInspect='1';el.dataset.screenId=surface.id;
+    el.setAttribute('role','button');el.setAttribute('aria-label','Inspeccionar '+surface.label);el.tabIndex=0;
+    const inspect=()=>{if(visibleSurfaceIds().includes(surface.id))window.parent.postMessage(OutdoorContext.message('support-select',{siteId:surface.siteId,screenId:surface.id}),location.origin);};
     el.addEventListener('click',inspect);
     el.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();inspect();}});
   }
@@ -1268,10 +1333,11 @@ addEventListener('keydown',event=>{
   if(target && (target.isContentEditable||['INPUT','TEXTAREA','SELECT','BUTTON'].includes(target.tagName)))return;
   const actions={w:'forward',W:'forward',ArrowUp:'forward',s:'backward',S:'backward',ArrowDown:'backward',a:'left',A:'left',ArrowLeft:'left',d:'right',D:'right',ArrowRight:'right',PageUp:'look-up',PageDown:'look-down','+':'zoom-in','-':'zoom-out'};
   if(event.key==='e'||event.key==='E'){
-    if(lastWalkState?.supportVisible)window.parent.postMessage(OutdoorContext.message('support-select',{siteId:activeWalkSite.id}),location.origin);
+    const screenId=visibleSurfaceIds()[0];if(screenId)window.parent.postMessage(OutdoorContext.message('support-select',{siteId:activeWalkSite.id,screenId}),location.origin);
     return;
   }
   const action=actions[event.key];if(!action)return;event.preventDefault();event.stopPropagation();
+  manualSurfaceInteraction();
   if(event.repeat && ['forward','backward'].includes(action))return;
   streetWalk?.command({action,hold:['forward','backward'].includes(action)});
 },true);
@@ -1279,7 +1345,9 @@ function releaseWalk(){if(WALK_MODE)streetWalk?.command({action:'release'});}
 addEventListener('keyup',event=>{if(['w','W','s','S','ArrowUp','ArrowDown'].includes(event.key))releaseWalk();},true);
 addEventListener('blur',releaseWalk);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseWalk();});
-$('streetview').addEventListener('pointerdown',releaseWalk,true);
+$('streetview').addEventListener('pointerdown',()=>{releaseWalk();manualSurfaceInteraction()},true);
+$('streetview').addEventListener('wheel',manualSurfaceInteraction,{capture:true,passive:true});
+$('sv-signage').addEventListener('pointerdown',manualSurfaceInteraction,true);
 
 async function showStreetView(side = 'front'){
   const view = KIOSK_VIEWS[side] || KIOSK_VIEWS.front;
@@ -1414,10 +1482,19 @@ function drawSvGrid(){
 // Si hay anclaje al mundo (SV_PANEL_WORLD), reproyecta según la cámara actual (TRACKING:
 // las pantallas siguen a los paneles al girar/moverse). Si no, usa las fracciones fijas.
 function layoutSvPanels(){
-  if (!sv || sv.getPano() !== KIOSK_PANO) { $('sv-signage').classList.remove('show','sv-vis'); return; }
+  const surfaces=surfacesHere();
+  for(const surface of DoohSurfaces.all)if(!surfaces.includes(surface))$(surface.elementId).style.display='none';
+  if (!surfaces.length) { $('sv-signage').classList.remove('show','sv-vis'); return; }
   if (!activeSvView.panels) return;
   const st = $('sv-signage').getBoundingClientRect(); const W = st.width, H = st.height;
   if (W < 10) return;
+  if(surfaces[0].siteId==='jardinets'){
+    const surface=surfaces[0],el=$(surface.elementId),cv=el.firstElementChild;
+    const pts=['tl','tr','br','bl'].map(k=>projHP(...surface.corners[k],sv.getPov(),sv.getZoom(),W,H));
+    if(pts.some(p=>!p)){el.style.display='none';return}
+    el.style.display='block';el.style.width=cv.width+'px';el.style.height=cv.height+'px';el.style.transform=quadWarp(cv.width,cv.height,pts);
+    return;
+  }
   if (SV_PANELS_HP && sv){
     const pov = sv.getPov(), zoom = sv.getZoom();
     SV_PANELS_HP.forEach((q, i) => {
@@ -1485,11 +1562,9 @@ function liveTick(){
       const dz = ((svKeys.PageUp?1:0) - (svKeys.PageDown?1:0)) * 0.8 * _dt;
       if (dz) sv.setZoom(Math.max(0.4, Math.min(3, z + dz)));
     }
-    if (!activeSvView.panels || sv?.getPano() !== KIOSK_PANO) { $('sv-signage').classList.remove('show','sv-vis'); return; }
+    if (!activeSvView.panels || !surfacesHere().length) { $('sv-signage').classList.remove('show','sv-vis'); return; }
     layoutSvPanels();   // TRACKING: reproyecta cada frame según la cámara (giro/movimiento)
-    const c1 = $('sv-p1').firstElementChild, c2 = $('sv-p2').firstElementChild;
-    drawChannel(c1.getContext('2d'), c1.width, c1.height);
-    drawChannel(c2.getContext('2d'), c2.width, c2.height);
+    for(const surface of surfacesHere()){const cv=$(surface.elementId).firstElementChild;drawChannel(cv.getContext('2d'),cv.width,cv.height,surface);}
     if (CAL_HUD){ updateCalHud(true, false); drawSvGrid(); }
     return;
   }
