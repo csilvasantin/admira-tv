@@ -71,6 +71,7 @@
       el('human-steps').textContent=state.steps+(state.steps===1?' cambio de vista':' cambios de vista');
       el('human-link-count').textContent=state.links.length+' rutas';
       el('human-jesus').classList.toggle('hidden',!state.canEnterJesus);
+      el('human-crossing-alternative').classList.toggle('hidden',!state.canOpenJesus2023);
       el('human-route-stop').classList.toggle('hidden',!state.routeActive);
       el('human-inspect').classList.toggle('nearby',state.supportVisible);
       el('human-inspect').textContent=state.supportVisible?'E · Inspeccionar soporte':'Ficha del quiosco';

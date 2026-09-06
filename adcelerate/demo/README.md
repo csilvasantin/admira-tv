@@ -50,7 +50,7 @@ siguen el destino actual. Enlaces reproducibles:
 - `/adcelerate/demo/?view=human&site=jardinets`
 
 El catálogo compartido `js/outdoor-sites.js` identifica las dos entradas. Jardinets
-usa el panorama `L6xcO37SQfBmCxsT9lPdjQ` de marzo de 2023, con POV 265° / 0° / 0.9,
+usa el panorama `L6xcO37SQfBmCxsT9lPdjQ` de marzo de 2023, con POV 290° / −6° / 0.9,
 comprobado con Street View y la fotografía solicitada. La posición
 41.397772717774245, 2.1576335976146668 es la cámara de esa fotografía; el radar la
 identifica como **Punto de visita**, no como coordenada inventariada del soporte.
@@ -97,3 +97,10 @@ git diff --check
 ```
 
 La vista Three puede verificarse con un servidor estático local del repositorio completo. Google requiere un origen autorizado; usar un preview Cloudflare del proyecto existente, sin cambiar las restricciones de la clave. El flujo de despliegue y el sello global siguen siendo los del repositorio.
+
+
+En la fotografía de 2022 del cruce (`CwrbI-sF75wSN69YO9QYEg`), Google no ofrece
+esa salida. **Rutas → Abrir cruce conectado · marzo 2023** cambia explícitamente
+al panorama próximo de 2023; no suma un paso ni inventa un enlace de la imagen
+anterior. Una vez cargado, ofrece **Entrar en Jesús · 2 pasos** usando las conexiones
+verificadas. La fecha visible siempre se obtiene del panorama actual.

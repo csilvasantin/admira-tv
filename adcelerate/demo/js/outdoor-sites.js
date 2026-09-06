@@ -13,7 +13,7 @@
     // It is not an inventoried coordinate of the physical advertising support.
     position:{lat:41.397772717774245,lng:2.1576335976146668},audienceSiteId:null,
     inventoryLabel:'QUIOSCO · JARDINETS',
-    entry:{pano:'L6xcO37SQfBmCxsT9lPdjQ',pov:{heading:265,pitch:0,zoom:.9}},front:null
+    entry:{pano:'L6xcO37SQfBmCxsT9lPdjQ',pov:{heading:290,pitch:-6,zoom:.9}},front:null
   }];
   function freeze(value){if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;}
   freeze(sites);

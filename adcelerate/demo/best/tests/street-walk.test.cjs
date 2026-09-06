@@ -112,3 +112,16 @@ test('guided crossing refuses a missing live link instead of synthesizing a seco
   assert.equal(f.requests.length,2);assert.equal(f.walk.getState().routeActive,false);
  }finally{f.walk.dispose();}
 });
+
+test('2022 crossing offers an explicit dated image change without inventing a walking link or adding steps',()=>{
+ const f=fixture({initialPano:'CwrbI-sF75wSN69YO9QYEg'});try{
+  f.reply(0,'2022-02',[{pano:'YnYnyxsjdCmg8F8mr2f5Wg',heading:139.53758}]);
+  assert.equal(f.walk.getState().canOpenJesus2023,true);assert.equal(f.walk.getState().canEnterJesus,false);
+  assert.equal(f.walk.command({action:'jesus'}),false);assert.equal(f.walk.command({action:'jesus-2023'}),true);
+  assert.equal(f.walk.getState().date,'');assert.equal(f.p.getPano(),jesus[0]);
+  f.reply(1,'2023-03',[{pano:jesus[1],heading:139.3922}]);
+  assert.equal(f.walk.getState().date,'2023-03');assert.equal(f.walk.getState().steps,0);
+  assert.equal(f.walk.getState().canOpenJesus2023,false);assert.equal(f.walk.getState().canEnterJesus,true);
+  assert.equal(f.walk.command({action:'jesus-2023'}),false);
+ }finally{f.walk.dispose();}
+});

@@ -12,6 +12,7 @@
     const sorted=linksOf(links).sort((a,b)=>angle(a.heading,target)-angle(b.heading,target));
     return sorted[0] && angle(sorted[0].heading,target)<=60 ? sorted[0] : null;
   }
+  const JESUS_2022='CwrbI-sF75wSN69YO9QYEg';
   const JESUS_PATH=['neHfCciaSwwcDYjCqOBBKQ','ChcRiAHJGowOisoZmsbTng','ri33zzkLzbZkkbAEBoWwiQ'];
   function create(options){
     const {panorama,service,onState=()=>{},onFeedback=()=>{},onPanoChange=()=>{}}=options;
@@ -21,7 +22,7 @@
     const afterPaint=options.afterPaint || (fn=>{const frame=root.requestAnimationFrame || (cb=>setTimeout(cb,0));frame(()=>frame(fn));});
     const state={status:'loading',pano:'',heading:0,position:null,date:'',links:[],steps:0,supportVisible:false,routeActive:false};
     const listeners=[];
-    const clone=()=>({...state,canEnterJesus:!pending&&state.pano===JESUS_PATH[0]&&state.links.some(l=>l.pano===JESUS_PATH[1]),position:state.position?{...state.position}:null,links:state.links.map(l=>({...l}))});
+    const clone=()=>({...state,canOpenJesus2023:!pending&&['ready','unavailable'].includes(state.status)&&state.pano===JESUS_2022,canEnterJesus:!pending&&state.pano===JESUS_PATH[0]&&state.links.some(l=>l.pano===JESUS_PATH[1]),position:state.position?{...state.position}:null,links:state.links.map(l=>({...l}))});
     function emit(){
       const pov=panorama.getPov?.();state.heading=heading(pov?.heading||0);
       const next=JSON.stringify(clone());if(next!==signature){signature=next;onState(clone());}
@@ -123,6 +124,12 @@
       const action=input.action;
       if(state.routeActive&&!['jesus','release'].includes(action))release();
       if(action==='release'){release();return true;}
+      if(action==='jesus-2023'){
+        release();if(pending||!['ready','unavailable'].includes(state.status)||state.pano!==JESUS_2022)return false;
+        // Explicit dated image change at the same crossing, never a walking link.
+        panorama.setPov({heading:234,pitch:0});panorama.setZoom(.9);
+        return navigate(JESUS_PATH[0],'return');
+      }
       if(action==='jesus'){
         release();if(pending||state.pano!==JESUS_PATH[0])return false;
         guidedPath=JESUS_PATH.slice(1);state.routeActive=true;return guidedStep();

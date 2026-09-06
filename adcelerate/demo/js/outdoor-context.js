@@ -15,7 +15,7 @@
       manual:c.manual, selection:c.selection, mix:Object.fromEntries(profiles.map(p => [p,c.mix[p]])),
       layers:Object.fromEntries(['crowd','buildings','roads','night'].map(k => [k,c.layers[k]]))};
   }
-  const actions = ['forward','backward','left','right','look-up','look-down','home','panels','front','zoom-in','zoom-out','link','site','release','jesus'];
+  const actions = ['forward','backward','left','right','look-up','look-down','home','panels','front','zoom-in','zoom-out','link','site','release','jesus','jesus-2023'];
   const shortString = (s, max, empty = true) => typeof s === 'string' && s.length <= max && (empty || s.length > 0);
   function validateWalkCommand(p) {
     if (!p || !actions.includes(p.action) || (p.action === 'link' && !shortString(p.pano,250,false))) return null;
@@ -27,14 +27,14 @@
   }
   function validateWalkState(p) {
     if (!p || (p.siteId!==undefined && !sites.get(p.siteId)) ||
-        ['canEnterJesus','routeActive'].some(key=>p[key]!==undefined&&typeof p[key]!=='boolean') || !['loading','ready','error','unavailable'].includes(p.status) ||
+        ['canEnterJesus','routeActive','canOpenJesus2023'].some(key=>p[key]!==undefined&&typeof p[key]!=='boolean') || !['loading','ready','error','unavailable'].includes(p.status) ||
         !shortString(p.pano,250) || !finite(p.heading,0,360) || !shortString(p.date,100) ||
         !Number.isInteger(p.steps) || !finite(p.steps,0,1000000) || typeof p.supportVisible !== 'boolean' ||
         !(p.position === null || (p.position && finite(p.position.lat,-90,90) && finite(p.position.lng,-180,180))) ||
         !Array.isArray(p.links) || p.links.length > 32 ||
         !p.links.every(l => l && shortString(l.pano,250,false) && finite(l.heading,0,360) && shortString(l.description,160))) return null;
     return {...(p.siteId!==undefined?{siteId:p.siteId}:{}),
-      ...Object.fromEntries(['canEnterJesus','routeActive'].filter(key=>p[key]!==undefined).map(key=>[key,p[key]])),status:p.status,pano:p.pano,heading:p.heading,position:p.position ? {...p.position} : null,
+      ...Object.fromEntries(['canEnterJesus','routeActive','canOpenJesus2023'].filter(key=>p[key]!==undefined).map(key=>[key,p[key]])),status:p.status,pano:p.pano,heading:p.heading,position:p.position ? {...p.position} : null,
       date:p.date,steps:p.steps,supportVisible:p.supportVisible,
       links:p.links.map(l => ({pano:l.pano,heading:l.heading,description:l.description}))};
   }

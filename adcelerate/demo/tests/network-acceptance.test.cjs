@@ -6,7 +6,8 @@ const Walk=require('../best/street-walk.js');
 
 // Independent acceptance fixtures: Google StreetViewService + renderer getLinks,
 // verified 2026-09-06 against Carlos's photograph (March 2023 imagery).
-const jardinets={pano:'L6xcO37SQfBmCxsT9lPdjQ',position:{lat:41.397772717774245,lng:2.1576335976146668},pov:{heading:265,pitch:0,zoom:.9}};
+// POV then centered visually at 390px and 1440px, preserving the same panorama.
+const jardinets={pano:'L6xcO37SQfBmCxsT9lPdjQ',position:{lat:41.397772717774245,lng:2.1576335976146668},pov:{heading:290,pitch:-6,zoom:.9}};
 
 test('Jardinets preserves the verified panorama, camera position and photographic POV',()=>{
  const site=Sites.get('jardinets');
@@ -60,4 +61,14 @@ test('Mozart screenshot has two lateral exits; the verified next node opens Jesu
  assert.equal(Walk.chooseLink(blocked,139).pano,'ChcRiAHJGowOisoZmsbTng');
  const intersection=[{pano:'ri33zzkLzbZkkbAEBoWwiQ',heading:256.35852},{pano:'kXNXtwitnXq2LNBGEWOSFQ',heading:139.25279},{pano:'neHfCciaSwwcDYjCqOBBKQ',heading:319.39218}];
  assert.equal(Walk.chooseLink(intersection,234).pano,'ri33zzkLzbZkkbAEBoWwiQ');
+});
+
+test('historical crossing alternative is an explicit command with boolean, frame-bound availability',()=>{
+ const origin='https://admira.tv',source={};
+ const state={siteId:'vila',status:'ready',pano:'CwrbI-sF75wSN69YO9QYEg',heading:234,position:{lat:41.39942127597713,lng:2.158188340041832},date:'2022-02',links:[],steps:9,supportVisible:false,canOpenJesus2023:true,canEnterJesus:false,routeActive:false};
+ assert.deepEqual(Contract.validateWalkState(state),state);
+ assert.equal(Contract.validateWalkState({...state,canOpenJesus2023:'true'}),null);
+ const data=Contract.message('walk-command',{action:'jesus-2023'});
+ assert.equal(Contract.accepts({source,origin,data},source,origin),true);
+ assert.equal(Contract.accepts({source:{},origin,data},source,origin),false);
 });
