@@ -160,12 +160,19 @@
       else return false;
       if(!pending&&state.links.length)state.status='ready';emit();return true;
     }
+    function setSite(site){
+      if(disposed||!site||typeof site.homePano!=='string'||!site.homePano||site.homePano.length>250)return false;
+      seeds.home=seeds.panels=site.homePano;seeds.front=site.frontPano||null;
+      options.homePano=site.homePano;options.panelPano=site.homePano;
+      options.homePov=site.homePov;options.frontPano=site.frontPano;options.frontPov=site.frontPov;
+      return true;
+    }
     function dispose(){
       if(disposed)return;release();disposed=true;++revision;clearTimeout(timer);pending=null;
       for(const listener of listeners)listener?.remove?.();
     }
     load(options.initialPano||panorama.getPano(),'initial');
-    return {command,dispose,getState:clone};
+    return {command,setSite,dispose,getState:clone};
   }
   const api={heading,angle,linksOf,chooseLink,create};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.StreetWalk=api;

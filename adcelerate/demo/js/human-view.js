@@ -19,7 +19,7 @@
     return new Intl.DateTimeFormat('es',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(year,month-1,1)));
   }
   function create({element,send,onExit,onInspect,onSiteChange=()=>{}}) {
-    let active=false, current=null, routesSignature='', currentSite=sites.get('vila'), audienceArgs=null, heldKey=null, heldPointer=null, heldButton=null;
+    let active=false, current=null, routesSignature='', currentSite=sites.get('vila'), routeTarget=null, audienceArgs=null, heldKey=null, heldPointer=null, heldButton=null;
     const el=id=>element.querySelector('#'+id);
     const command=action=>{ if(active)send({action}); };
     const release=()=>{const wasPointer=heldPointer!==null;heldKey=null;heldPointer=null;heldButton=null;if(active){send({action:'release'});if(wasPointer&&current)setState(current);}};
@@ -43,7 +43,7 @@
       const option=document.createElement('option');option.value=site.id;option.textContent=site.shortLabel||site.area;return option;
     }));
     el('human-site-select').onchange=event=>onSiteChange(event.target.value);
-    el('human-next-site').onclick=()=>onSiteChange(sites.next(currentSite.id).id);
+    el('human-next-site').onclick=()=>onSiteChange(sites.next((routeTarget||currentSite).id).id);
     function setSite(site){
       if(!site)return;currentSite=site;
       el('human-location').textContent='HUMANO / '+(site.shortLabel||site.area).toLocaleUpperCase('es');
@@ -55,7 +55,19 @@
       const front=element.querySelector('[data-walk="front"]');front?.classList.toggle('hidden',!site.front);
       const panels=element.querySelector('[data-walk="panels"]');if(panels)panels.textContent=site.front?'Paneles publicitarios':'Ver quiosco';
       if(audienceArgs)updateAudience(...audienceArgs);
+      renderTarget();
     }
+
+    function renderTarget(){
+      el('human-site-select').value=(routeTarget||currentSite).id;
+      el('human-target-label').textContent=routeTarget?'HACIA '+routeTarget.shortLabel.toLocaleUpperCase('es'):currentSite.targetLabel.toLocaleUpperCase('es');
+      const target=relativeTarget(current?.position,current?.heading||0,(routeTarget||currentSite).position);
+      el('human-distance').textContent=target?(target.distance<1000?Math.round(target.distance)+' m aprox.':(target.distance/1000).toFixed(1)+' km aprox.'):'Ubicando…';
+      el('human-target').setAttribute('cx',target?target.x:50);
+      el('human-target').setAttribute('cy',target?target.y:50);
+      el('human-target').style.visibility=target?'visible':'hidden';
+    }
+    function setRouteTarget(siteId){routeTarget=sites.get(siteId);renderTarget();}
 
     el('human-exit').onclick=onExit;
     el('human-inspect').onclick=onInspect;
@@ -78,11 +90,7 @@
       element.querySelectorAll('[data-walk]').forEach(button=> {
         button.disabled=(state.status==='loading' && button!==heldButton && !['home','panels','front','release'].includes(button.dataset.walk)) || (['forward','backward'].includes(button.dataset.walk) && !state.links.length && button!==heldButton);
       });
-      const target=relativeTarget(state.position,state.heading,currentSite.position);
-      el('human-distance').textContent=target?(target.distance<1000?Math.round(target.distance)+' m aprox.':(target.distance/1000).toFixed(1)+' km aprox.'):'Ubicando…';
-      el('human-target').setAttribute('cx',target?target.x:50);
-      el('human-target').setAttribute('cy',target?target.y:50);
-      el('human-target').style.visibility=target?'visible':'hidden';
+      renderTarget();
       const nextRoutes=JSON.stringify([state.links,state.status==='loading']);
       if(nextRoutes!==routesSignature) {
       routesSignature=nextRoutes;
@@ -135,7 +143,7 @@
     return {
       enter(siteId='vila'){if(active)release();active=true;routesSignature='';setSite(sites.get(siteId)||sites.get('vila'));element.classList.remove('hidden');element.tabIndex=-1;element.focus({preventScroll:true});setState({status:'loading',pano:'',heading:currentSite.entry.pov.heading,date:'',position:null,links:[],steps:0,supportVisible:false});},
       leave(){release();active=false;element.classList.add('hidden');el('human-support-card').classList.add('hidden');el('human-paths').classList.add('hidden');},
-      setState,setSite,
+      setState,setSite,setRouteTarget,
       inspect(){el('human-support-card').classList.remove('hidden');},
       updateAudience
     };

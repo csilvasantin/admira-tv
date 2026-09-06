@@ -114,3 +114,18 @@ test('radar follows the selected destination rather than the fixed Vila origin',
   assert.equal(relativeTarget(visit,265,visit).distance,0);
   assert.ok(relativeTarget(visit,265,sites.get('vila').position).distance>200);
 });
+
+test('a route target changes the destination and radar without lending Vila audience to Jardinets',t=>{
+  const h=hudHarness(t),sites=require('../js/outdoor-sites.js');h.hud.enter('vila');
+  h.hud.updateAudience({siteId:'bcn-kiosk-016',effectiveCount:460,baseCount:460,hour:18,manual:false,mix:{familias:25,jovenes:40,turistas:20,seniors:15}},{familias:'Familias',jovenes:'Jóvenes',turistas:'Turistas',seniors:'Seniors'},'Demo Vila');
+  h.hud.setState({status:'ready',pano:'on-street',heading:180,date:'2023-03',position:sites.get('vila').position,links:[],steps:4,supportVisible:false});
+  h.hud.setRouteTarget('jardinets');
+  assert.equal(h.elements.get('#human-site-select').value,'jardinets');
+  assert.equal(h.elements.get('#human-target-label').textContent,'HACIA JARDINETS');
+  assert.notEqual(h.elements.get('#human-distance').textContent,'0 m aprox.');
+  assert.equal(h.elements.get('#human-audience').textContent,460);
+  assert.match(h.elements.get('#human-audience-label').textContent,/Vila de Gràcia/);
+  assert.equal(h.elements.get('#human-site-name').textContent,'Quiosco News & Coffee');
+  h.hud.setRouteTarget(null);
+  assert.equal(h.elements.get('#human-site-select').value,'vila');assert.equal(h.elements.get('#human-distance').textContent,'0 m aprox.');
+});

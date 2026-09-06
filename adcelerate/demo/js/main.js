@@ -2046,18 +2046,19 @@ function flushSurfaceCommand(){
 }
 function paintDoohProgress(){
   const state=doohTour.getState();
-  $('dooh-tour-progress').value=state.status==='travelling'?(state.routeTotal?state.routeStep/state.routeTotal:0):state.progress;
-  $('dooh-tour-progress').setAttribute('aria-valuetext',state.status==='travelling'?state.routeStep+' de '+state.routeTotal+' tramos':Math.ceil(state.remainingMs/1000)+' segundos restantes');
+  $('dooh-tour-progress').value=state.routeId?(state.routeTotal?state.routeStep/state.routeTotal:0):state.progress;
+  $('dooh-tour-progress').setAttribute('aria-valuetext',state.routeId?state.routeStep+' de '+state.routeTotal+' tramos':Math.ceil(state.remainingMs/1000)+' segundos restantes');
 }
 function renderDoohTour(state){
   const active=['locating','travelling','loading','playing','paused','error'].includes(state.status);
+  humanHUD.setRouteTarget(active&&state.routeId?state.siteId:null);
   document.body.classList.toggle('dooh-active',active);
   $('dooh-tour-panel').classList.toggle('hidden',!active);
   $('human-tour-start').classList.toggle('hidden',active);
   $('dooh-start-shield').classList.toggle('hidden',!(active&&photo.frame&&!photo.ready));
   $('dooh-tour-step').textContent=(state.index+1)+' / '+state.total;
-  $('dooh-tour-screen').textContent=state.status==='travelling'?'Caminando hacia '+OutdoorSites.get(state.siteId).shortLabel:state.label;
-  $('dooh-tour-status').textContent=({locating:'Ubicando el punto actual de la calle…',travelling:'Conexiones reales · tramo '+state.routeStep+' de '+state.routeTotal,loading:'Preparando fotografía y encuadre…',playing:'9 segundos · '+(state.mode==='walk'?'paseo por la ciudad':'entre pantallas'),paused:state.routeId?'Paseo en pausa · se conserva este punto':'En pausa',error:state.mode==='walk'?'No hay una continuación verificada desde este punto. Puedes reintentar o tomar el control.':'No se pudo preparar esta vista. Puedes reintentar.'})[state.status]||'Tour finalizado';
+  $('dooh-tour-screen').textContent=state.routeId?'Caminando hacia '+OutdoorSites.get(state.siteId).shortLabel:state.label;
+  $('dooh-tour-status').textContent=({locating:'Ubicando el punto actual de la calle…',travelling:'Conexiones reales · tramo '+state.routeStep+' de '+state.routeTotal,loading:'Preparando fotografía y encuadre…',playing:'9 segundos · '+(state.mode==='walk'?'paseo por la ciudad':'entre pantallas'),paused:state.routeId?'Paseo en pausa · tramo '+state.routeStep+' de '+state.routeTotal:'En pausa',error:state.mode==='walk'?'No hay una continuación verificada desde este punto. Puedes reintentar o tomar el control.':'No se pudo preparar esta vista. Puedes reintentar.'})[state.status]||'Tour finalizado';
   $('dooh-tour-end').textContent=state.mode==='walk'?'Tomar control':'Finalizar';
   $('dooh-tour-direct').classList.toggle('hidden',!(state.mode==='walk'&&state.status==='error'));
   $('dooh-tour-pause').textContent=state.status==='paused'?'Reanudar':state.status==='error'?'Reintentar':'Pausar';

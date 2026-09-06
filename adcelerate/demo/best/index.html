@@ -1304,7 +1304,13 @@ function orientStreetRoute(heading,requestId){
 }
 const routeWalk=RouteWalk.create({getRoute:id=>UrbanRoutes.get(id),getWalker:()=>streetWalk,
   setHeading:orientStreetRoute,onCancel:stopRouteOrientation,
-  onArrival:route=>{activeWalkSite=OutdoorSites.get(route.toSiteId);if(streetWalk)handleWalkState(streetWalk.getState());},
+  onArrival:route=>{
+    activeWalkSite=OutdoorSites.get(route.toSiteId);
+    const homePano=route.panos.at(-1),pose=DoohSurfaces.all.map(s=>DoohSurfaces.poseFor(s.id,homePano)).find(Boolean);
+    const homePov=homePano===activeWalkSite.entry.pano?activeWalkSite.entry.pov:{heading:pose?.pov.heading??sv.getPov().heading,pitch:0,zoom:.9};
+    streetWalk?.setSite({homePano,homePov,frontPano:activeWalkSite.front?.pano,frontPov:activeWalkSite.front?.pov});
+    if(streetWalk)handleWalkState(streetWalk.getState());
+  },
   onState:state=>{if(!outdoorStopped)window.parent.postMessage(OutdoorContext.message('route-state',state),location.origin);},
 });
 function postWalkState(state){
