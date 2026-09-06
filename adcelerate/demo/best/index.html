@@ -1233,6 +1233,13 @@ function svNudge(k){
 
 /* First-person photography: each step follows a real neighbouring panorama. */
 function surfacesHere(){return DoohSurfaces.all.map(s=>DoohSurfaces.poseFor(s.id,sv?.getPano())).filter(s=>s&&(!WALK_MODE||s.siteId===activeWalkSite.id))}
+function clampSurfaceZoom(){
+  const caps=surfacesHere().map(surface=>surface.maxZoom).filter(Number.isFinite);
+  if(!caps.length||!sv)return false;
+  const cap=Math.min(...caps);
+  if(sv.getZoom()>cap){sv.setZoom(cap);return true;}
+  return false;
+}
 function visibleSurfaceIds(){
   if(!activeSvView.panels)return [];
   return surfacesHere().filter(s=>{const el=$(s.elementId),r=el.getBoundingClientRect();return el.style.display!=='none'&&r.width>0&&r.height>0&&r.right>0&&r.left<innerWidth&&r.bottom>0&&r.top<innerHeight}).map(s=>s.id);
@@ -1379,6 +1386,7 @@ async function bootWalk(sideOverride,viewOverride=null,preloadedLibrary=null){
     panControl:false,zoomControl:false,motionTracking:false,motionTrackingControl:false,fullscreenControl:false,
   });
   sv.addListener('pov_changed',layoutSvPanels);sv.addListener('zoom_changed',()=>{
+    if(clampSurfaceZoom())return;
     layoutSvPanels();if(streetWalk)handleWalkState(streetWalk.getState());
   });
   }else{sv.setPov(view.pov);sv.setZoom(view.pov.zoom);sv.setVisible(true);}
@@ -1440,7 +1448,7 @@ async function showStreetView(side = 'front'){
         motionTracking:false, motionTrackingControl:false, fullscreenControl:false,
       });
       sv.addListener('pov_changed', layoutSvPanels);
-      sv.addListener('zoom_changed', layoutSvPanels);
+      sv.addListener('zoom_changed',()=>{if(!clampSurfaceZoom())layoutSvPanels();});
       sv.addListener('position_changed', layoutSvPanels);
     } else {
       sv.setVisible(true);

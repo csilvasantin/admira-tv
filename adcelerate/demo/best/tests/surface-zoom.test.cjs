@@ -1,0 +1,6 @@
+const{test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+const source=html.slice(html.indexOf('function clampSurfaceZoom(){'),html.indexOf('function clampSurfaceZoom(){')+html.slice(html.indexOf('function clampSurfaceZoom(){')).indexOf('\n}')+2);
+function fixture(surfaces,initial){let zoom=initial;const changes=[];const context=vm.createContext({surfacesHere:()=>surfaces,sv:{getZoom:()=>zoom,setZoom:value=>{zoom=value;changes.push(value);assert.equal(context.clampSurfaceZoom(),false);}}});vm.runInContext(source,context);return{context,changes,zoom:()=>zoom};}
+test('manual zoom over a calibrated native cap clamps once despite synchronous zoom_changed reentrancy',()=>{const f=fixture([{maxZoom:3}],4);assert.equal(f.context.clampSurfaceZoom(),true);assert.equal(f.zoom(),3);assert.deepEqual(f.changes,[3]);assert.equal(f.context.clampSurfaceZoom(),false);});
+test('uncapped panoramas and zoom below the calibrated limit retain their manual range',()=>{for(const [surfaces,zoom]of [[[],4],[ [{}],4],[[{maxZoom:3}],2.8]]){const f=fixture(surfaces,zoom);assert.equal(f.context.clampSurfaceZoom(),false);assert.equal(f.zoom(),zoom);assert.deepEqual(f.changes,[]);}});

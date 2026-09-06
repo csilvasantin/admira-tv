@@ -114,7 +114,7 @@ la tarjeta del universo 3D. El enlace `?view=human&tour=dooh&site=jardinets`
 abre el recorrido desde ese destino. Las cuatro paradas son las dos pantallas
 de Vila, la pantalla de Jardinets junto al ATM y la pantalla de Lesseps. Se repiten en bucle, con
 9 segundos de exposición después de confirmar fotografía y encuadre listos.
-Los cambios de fotografía entre quioscos no representan pasos a pie.
+En modo Directo, los cambios de fotografía entre quioscos no representan pasos a pie.
 
 **Pausar** conserva el tiempo restante; **Reanudar** vuelve a verificar el
 encuadre. Un error ofrece **Reintentar**, sin saltar a otra pantalla. Ocultar
