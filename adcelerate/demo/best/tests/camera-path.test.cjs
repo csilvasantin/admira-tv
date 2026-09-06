@@ -1,7 +1,8 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 require('../camera-path.js');
-const {create, waitForPanorama} = globalThis.KioskCameraPath;
+const {create:createController, atCamera, anchorAltitude, waitForPanorama} = globalThis.KioskCameraPath;
+const create = (map, options = {}) => createController(map, {requestFrame:cb=>{queueMicrotask(cb);return 0;},cancelFrame:()=>{},...options});
 const flush = async()=>{for(let i=0;i<10;i++)await Promise.resolve();};
 const shot = {name:'plaza',durationMillis:100,camera:{center:{lat:41.4002641,lng:2.1573332,altitude:20},altitudeMode:'RELATIVE_TO_GROUND',range:220,tilt:45,heading:238.13}};
 const close = {...shot,name:'quiosco',camera:{...shot.camera,range:18,tilt:78}};
@@ -83,4 +84,24 @@ test('panorama availability failure and cancellation never reveal the requested 
 });
 test('the same already available panorama may be reused without another lookup',async()=>{
   const p=new Panorama();assert.equal(await waitForPanorama(p,'rear',new AbortController().signal),'ready');assert.equal(p.listeners.size,0);
+});
+
+// Captured from the real Google Maps preview after its first relative shot.
+const normalized = {center:{lat:41.40021528128905,lng:2.157228519095109,altitude:66.97383101705964},range:234.53992232134624,tilt:45.00009246065933,heading:238.12993077293044};
+test('real Google normalized center/range represents the requested eye, not a failed arrival',()=>{
+  assert.equal(atCamera(normalized,shot.camera),true);
+  assert.ok(Math.abs(anchorAltitude(normalized,shot.camera)-59.7553)<0.01);
+  assert.equal(atCamera({...normalized,range:normalized.range+10},shot.camera),false);
+  assert.equal(atCamera({...shot.camera,range:250},shot.camera),false);
+});
+test('normalized camera with earlier steady TRUE finishes after end and paint without a new steadychange',async()=>{
+  const map=new FakeMap(),path=create(map);let done=false;
+  const flight=path.run([shot]).then(s=>{done=true;return s;});await flush();map.steady(true);
+  Object.assign(map,normalized);map.emit('gmp-animationend');assert.equal(done,false);
+  assert.equal(await flight,'ready');path.dispose();
+});
+test('stop between animationend and paint cancels the scheduled readiness check',async()=>{
+  const frames=[];const map=new FakeMap(),path=create(map,{requestFrame:cb=>{frames.push(cb);return frames.length;},cancelFrame:()=>{}});
+  const flight=path.run([shot,close]);await flush();map.steady(true);map.land();path.cancel();
+  for(const frame of frames)frame();assert.equal(await flight,'cancelled');assert.equal(map.calls.length,1);path.dispose();
 });

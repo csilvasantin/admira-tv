@@ -560,9 +560,8 @@ async function arriveAtKiosk(side = 'front'){
   const shots = ARRIVAL_SHOTS.map(shot => ({...shot, camera:{...shot.camera, heading:view.pov.heading}}));
   const result = await cameraPath.run(shots, ({index,total,shot,phase}) => {
     if (phase === 'ready') {
-      const center = map3d.center;
-      const altitude = typeof center.altitude === 'function' ? center.altitude() : center.altitude;
-      if (Number.isFinite(altitude)) KIOSK_SCREEN.alt = altitude - shot.camera.center.altitude + 2.5;
+      const altitude = KioskCameraPath.anchorAltitude(map3d, shot.camera);
+      if (altitude !== null) KIOSK_SCREEN.alt = altitude;
       return;
     }
     routeStatus(`${index + 1}/${total} · ${phase === 'loading' ? 'Cargando detalle' : shot.name}`, true);
