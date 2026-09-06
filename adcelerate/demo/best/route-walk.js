@@ -4,7 +4,7 @@
  function create({getRoute,getWalker,setHeading=()=>{},onState=()=>{},onArrival=()=>{},onCancel=()=>{},stepDelayMs=1300,timeoutMs=18000,linkGraceMs=1200,linkRetryMs=80,minHopIntervalMs=600,timer=null}){
   const clock=timer||{now:()=>Date.now(),setTimeout:(fn,ms)=>setTimeout(fn,ms),clearTimeout:id=>clearTimeout(id)};
   const speeds=[1,2,4,6,8];
-  let active=null,disposed=false;
+  let active=null,disposed=false,lastHopAt;
   function emit(run,status,reason){run.status=status;onState({speed:run.speed,routeId:run.route.id,requestId:run.requestId,status,step:run.index,total:run.route.panos.length-1,pano:run.route.panos[run.index],...(reason?{reason}:{})})}
   function cancel(reason='cancel',requestId){if(!active||(requestId!==undefined&&requestId!==active.requestId))return false;const run=active;active=null;clock.clearTimeout(run.timer);clock.clearTimeout(run.next);onCancel(run.requestId);getWalker()?.command({action:'release'});emit(run,'cancelled',reason);return true;}
   function fail(run,reason){if(active!==run)return;active=null;clock.clearTimeout(run.timer);clock.clearTimeout(run.next);onCancel(run.requestId);getWalker()?.command({action:'release'});emit(run,'error',reason)}
@@ -12,12 +12,13 @@
    if(active!==run||disposed||run.pending)return;
    const walker=getWalker(),s=walker?.getState();
    if(!s||!['ready','unavailable'].includes(s.status)||s.pano!==run.route.panos[run.index]){fail(run,'unavailable');return;}
-   if(run.index===run.route.panos.length-1){run.ready=true;clock.clearTimeout(run.timer);onArrival(run.route);emit(run,'ready');return;}
    // Google's imagery viewer can publish a previous transition after status OK.
    // Do not overlap another orientation/hop with that native transition. This
-   // guard is independent of the user's readable-pause multiplier.
-   const settling=run.lastHopAt===undefined?0:minHopIntervalMs-(clock.now()-run.lastHopAt);
+   // guard survives pause/resume and also protects the final camera focus. It
+   // is independent of the user's readable-pause multiplier.
+   const settling=lastHopAt===undefined?0:minHopIntervalMs-(clock.now()-lastHopAt);
    if(settling>0){run.nextKind='sdk';run.next=clock.setTimeout(()=>{run.next=null;run.nextKind=null;next(run)},settling);return;}
+   if(run.index===run.route.panos.length-1){run.ready=true;clock.clearTimeout(run.timer);onArrival(run.route);emit(run,'ready');return;}
    const target=run.route.panos[run.index+1],link=s.links.find(l=>l.pano===target);
    if(!link){
     // StreetWalk first emits service metadata; a stable SDK links update can follow.
@@ -28,7 +29,7 @@
    run.linkDeadline=null;
    run.pending=target;run.orienting=true;emit(run,'walking');
    clock.clearTimeout(run.timer);run.timer=clock.setTimeout(()=>fail(run,'timeout'),timeoutMs);
-   const move=()=>{if(active!==run||disposed||run.pending!==target)return;run.orienting=false;run.lastHopAt=clock.now();if(!walker.command({action:'link',pano:target}))fail(run,'unavailable');};
+   const move=()=>{if(active!==run||disposed||run.pending!==target)return;run.orienting=false;lastHopAt=clock.now();if(!walker.command({action:'link',pano:target}))fail(run,'unavailable');};
    let orientation;try{orientation=setHeading(link.heading,run.requestId)}catch{fail(run,'unavailable');return;}
    if(orientation?.then)orientation.then(move,()=>fail(run,'unavailable'));else move();
   }
