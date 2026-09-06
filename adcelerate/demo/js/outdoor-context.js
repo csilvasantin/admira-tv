@@ -70,18 +70,42 @@
     return {requestId:p.requestId,screenId:p.screenId,action:p.action,...(p.volume!==undefined?{volume:p.volume}:{})};
   }
   function validateAudioState(p){
-    return validToken(p)&&surfaces.get(p.screenId)&&['muted','playing','blocked','unavailable'].includes(p.status)&&finite(p.volume,0,1)?
+    return validToken(p)&&surfaces.get(p.screenId)&&['muted','playing','paused','blocked','unavailable'].includes(p.status)&&finite(p.volume,0,1)?
       {requestId:p.requestId,screenId:p.screenId,status:p.status,volume:p.volume}:null;
   }
+  const playerActions=['open','close','next','prev','first','last','restart','play','pause','toggle-pause','seek','volume','mute','loop','content','playlist','restore','preview'];
+  function validatePlayerCommand(p){
+    if(!validToken(p)||!surfaces.get(p.screenId)||!playerActions.includes(p.action))return null;
+    const result={screenId:p.screenId,requestId:p.requestId,action:p.action};
+    const fields={seek:['seconds',v=>finite(v,0,86400)],volume:['volume',v=>finite(v,0,1)],mute:['muted',v=>typeof v==='boolean'],preview:['expanded',v=>typeof v==='boolean'],loop:['loop',v=>['one','playlist'].includes(v)],content:['contentId',v=>shortString(v,160,false)],playlist:['playlistId',v=>shortString(v,160,false)]};
+    const field=fields[p.action];
+    if(field){if(!field[1](p[field[0]]))return null;result[field[0]]=p[field[0]];}
+    return result;
+  }
+  function validatePlayerState(p){
+    if(!validToken(p)||!surfaces.get(p.screenId)||!['local','scheduled'].includes(p.mode)||
+      !['loading','playing','paused','blocked','error'].includes(p.status)||
+      !shortString(p.contentId,160)||!shortString(p.title,240)||!shortString(p.playlistId,160,false)||
+      !Number.isInteger(p.total)||!finite(p.total,0,512)||!Number.isInteger(p.index)||
+      (p.total===0?![-1,0].includes(p.index):!finite(p.index,0,p.total-1))||
+      !finite(p.position,0,86400)||!finite(p.duration,0,86400)||!finite(p.volume,0,1)||
+      typeof p.muted!=='boolean'||(p.expanded!==undefined&&typeof p.expanded!=='boolean')||!['one','playlist'].includes(p.loop)||
+      !Array.isArray(p.catalog)||p.catalog.length>512||!p.catalog.every(i=>i&&shortString(i.id,160,false)&&shortString(i.title,240)&&['video','image'].includes(i.type))||
+      !Array.isArray(p.playlists)||p.playlists.length>64||!p.playlists.every(i=>i&&shortString(i.id,160,false)&&shortString(i.title,240)))return null;
+    if(new Set(p.catalog.map(i=>i.id)).size!==p.catalog.length||new Set(p.playlists.map(i=>i.id)).size!==p.playlists.length)return null;
+    return {screenId:p.screenId,requestId:p.requestId,mode:p.mode,status:p.status,contentId:p.contentId,title:p.title,playlistId:p.playlistId,
+      index:p.index,total:p.total,position:p.position,duration:p.duration,volume:p.volume,muted:p.muted,loop:p.loop,expanded:!!p.expanded,
+      catalog:p.catalog.map(i=>({id:i.id,title:i.title,type:i.type})),playlists:p.playlists.map(i=>({id:i.id,title:i.title}))};
+  }
   function message(type, context) {
-    const payloadType=['walk-state','walk-command','surface-command','surface-state','surface-interaction','route-command','route-state','audio-command','audio-state'].includes(type)||(type==='support-select'&&context);
+    const payloadType=['walk-state','walk-command','surface-command','surface-state','surface-interaction','route-command','route-state','audio-command','audio-state','player-command','player-state'].includes(type)||(type==='support-select'&&context);
     const data=payloadType?{payload:context}:(context?{context}:{});
     return {channel:'admira-outdoor', version:1, type, ...data};
   }
   function accepts(event, source, origin) {
     const d = event && event.data;
     return !!(event && event.origin === origin && event.source === source && d &&
-      d.channel === 'admira-outdoor' && d.version === 1 && ['ready','context','close','stop','walk-state','walk-command','support-select','surface-command','surface-state','surface-interaction','route-command','route-state','audio-command','audio-state'].includes(d.type) &&
+      d.channel === 'admira-outdoor' && d.version === 1 && ['ready','context','close','stop','walk-state','walk-command','support-select','surface-command','surface-state','surface-interaction','route-command','route-state','audio-command','audio-state','player-command','player-state'].includes(d.type) &&
       (d.type !== 'context' || validate(d.context)) &&
       (d.type !== 'walk-state' || validateWalkState(d.payload)) &&
       (d.type !== 'walk-command' || validateWalkCommand(d.payload)) &&
@@ -89,6 +113,8 @@
       (d.type!=='route-state'||validateRouteState(d.payload)) &&
       (d.type!=='audio-command'||validateAudioCommand(d.payload)) &&
       (d.type!=='audio-state'||validateAudioState(d.payload)) &&
+      (d.type!=='player-command'||validatePlayerCommand(d.payload)) &&
+      (d.type!=='player-state'||validatePlayerState(d.payload)) &&
       (d.type!=='surface-command'||validateSurfaceCommand(d.payload)) &&
       (d.type!=='surface-state'||validateSurfaceState(d.payload)) &&
       (d.type!=='surface-interaction'||(d.payload&&d.payload.reason==='manual')) &&
@@ -109,7 +135,7 @@
     if(speeds.map(String).includes(params.get('speed')))next.set('speed',params.get('speed'));
     return '../' + (next.size ? '?' + next.toString() : '');
   }
-  const api = {validate, validateWalkState, validateWalkCommand, validateSurfaceCommand, validateSurfaceState, validateRouteCommand, validateRouteState, validateAudioCommand, validateAudioState, message, accepts, bestEntry};
+  const api = {validate, validateWalkState, validateWalkCommand, validateSurfaceCommand, validateSurfaceState, validateRouteCommand, validateRouteState, validateAudioCommand, validateAudioState, validatePlayerCommand, validatePlayerState, message, accepts, bestEntry};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.OutdoorContext = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

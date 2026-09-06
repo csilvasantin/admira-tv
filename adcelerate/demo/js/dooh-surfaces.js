@@ -48,7 +48,7 @@
   const v=f.map((n,i)=>n+right[i]*dx+up[i]*dy);return [(Math.atan2(v[0],v[1])*180/Math.PI+360)%360,Math.atan2(v[2],Math.hypot(v[0],v[1]))*180/Math.PI];
  }
  // Fit the entire calibrated poster between the human HUD and the tour controls.
- function fit(surface,width,height){
+ function fit(surface,width,height,margins={}){
   const r=Math.PI/180,points=Object.values(surface.corners);
   const heading=points.reduce((n,p)=>n+p[0],0)/4,pitch=points.reduce((n,p)=>n+p[1],0)/4;
   const vec=(h,p)=>[Math.sin(h*r)*Math.cos(p*r),Math.cos(h*r)*Math.cos(p*r),Math.sin(p*r)];
@@ -56,8 +56,9 @@
   const dot=(a,b)=>a.reduce((n,v,i)=>n+v*b[i],0);
   const plane=points.map(p=>{const v=vec(...p),z=dot(v,f);return [dot(v,right)/z,dot(v,up)/z]});
   const span=i=>Math.max(...plane.map(p=>p[i]))-Math.min(...plane.map(p=>p[i]));
-  const top=Math.min(155,height*.22),bottom=Math.min(275,height*.45);
-  const availableH=Math.max(100,height-top-bottom),availableW=Math.max(120,width-48);
+  const margin=(key,fallback,limit)=>Number.isFinite(margins[key])?Math.max(0,Math.min(limit,margins[key])):fallback;
+  const top=margin('top',Math.min(155,height*.22),height*.4),bottom=margin('bottom',Math.min(275,height*.45),height*.45),side=margin('side',24,width*.4);
+  const availableH=Math.max(100,height-top-bottom),availableW=Math.max(120,width-2*side);
   const focal=.82*Math.min(availableW/span(0),availableH/span(1));
   const zoom=Math.max(.9,Math.min(surface.maxZoom??4.5,1+Math.log2(2*focal/width)));
   const centerY=(top+height-bottom)/2;

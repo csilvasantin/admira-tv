@@ -12,6 +12,7 @@ let pendingSurfaceCommand=null,doohUiTimer=null;
 let tourTravelMode=new URLSearchParams(location.search).get('travel')==='direct'?'direct':'walk';
 let tourSpeed=DoohTour.speeds.includes(Number(new URLSearchParams(location.search).get('speed')))?Number(new URLSearchParams(location.search).get('speed')):1;
 const screenSound={screenId:null,requestId:0,status:'muted',volume:.7};
+const playerRemote=PlayerRemoteView.create({element:document.getElementById('player-remote'),send:sendPlayerCommand,onOpen:enterPlayerFocus,onClose:leavePlayerFocus});
 const doohTour=DoohTour.create({stops:DoohSurfaces.all,send:sendSurfaceCommand,sendRoute:sendRouteCommand,findRoute:UrbanRoutes.find,
   canFocus:(id,pano)=>DoohSurfaces.poseFor?!!DoohSurfaces.poseFor(id,pano):DoohSurfaces.get(id)?.pano===pano,
   onChange:renderDoohTour,dwellMs:9000});
@@ -1338,7 +1339,8 @@ function buildHUD() {
   $('dooh-tour-direct').onclick=()=>{const id=doohTour.getState().surfaceId;setTourTravelMode('direct');startDoohTour(id);};
   $('human-inspect-close').addEventListener('click',()=>muteScreenSound(true));
   $('human-audio-toggle').onclick=toggleScreenSound;
-  $('human-audio-volume').oninput=event=>{screenSound.volume=Number(event.target.value);if(screenSound.screenId&&screenSound.status==='playing')postAudioCommand('volume');};
+  $('human-player-remote').onclick=()=>playerRemote.open(DoohSurfaces.get(screenSound.screenId));
+  $('human-audio-volume').oninput=event=>{screenSound.volume=Number(event.target.value);if(screenSound.screenId&&['playing','paused'].includes(screenSound.status))postAudioCommand('volume');};
   $('human-paths-toggle').addEventListener('click',()=>{if(!$('human-paths').classList.contains('hidden'))stopDoohTour('manual');});
   $('dooh-tour-pause').onclick=()=>{const status=doohTour.getState().status;if(status==='paused'||status==='error')doohTour.resume();else doohTour.pause();};
   $('dooh-tour-end').onclick=()=>stopDoohTour('user');
@@ -1946,10 +1948,11 @@ function openPhoto(mode = 'photo') {
   resizePhotoViewport();
 }
 function inspectHumanSupport(screenId,fromChild=false) {
+  if(playerRemote.isOpen())return;
   if(!fromChild&&typeof screenId!=='string'&&photo.frame&&photo.ready){sendHumanCommand({action:'inspect'});return;}
   muteScreenSound(true);
   const surface=DoohSurfaces.get(typeof screenId==='string'?screenId:doohTour.isActive()?doohTour.getState().surfaceId:'');
-  stopDoohTour('manual');
+  if(['locating','travelling','loading','playing'].includes(doohTour.getState().status))doohTour.pause();
   if(photo.siteId==='vila')selectedSite='kiosk';
   updateUniverseCard();
   const count=DoohSurfaces.all.filter(item=>item.siteId===photo.siteId).length;
@@ -1965,6 +1968,7 @@ function updateHumanUrl(){
   document.querySelector('.brand-txt .sub').textContent='Humano · '+site.shortLabel;
 }
 function selectHumanSite(siteId){
+  if(playerRemote.isOpen())playerRemote.close();
   stopDoohTour('manual');muteScreenSound(true);
   const site=OutdoorSites.get(siteId);if(!site||photo.mode!=='human'||!photo.frame)return;
   photo.siteId=site.id;
@@ -1976,12 +1980,16 @@ function selectHumanSite(siteId){
 }
 
 function sendHumanCommand(payload) {
+  if(playerRemote.isOpen())return;
   const command=OutdoorContext.validateWalkCommand(payload);if(!command)return;
-  if(command.action!=='release'){stopDoohTour('manual');muteScreenSound();}
+  if(command.action==='inspect'){
+    if(['locating','travelling','loading','playing'].includes(doohTour.getState().status))doohTour.pause();
+  }else if(command.action!=='release'){stopDoohTour('manual');muteScreenSound();}
   if (!photo.frame || !photo.ready || photo.mode !== 'human') return;
   photo.frame.contentWindow.postMessage(OutdoorContext.message('walk-command',command),location.origin);
 }
 function startDoohTour(surfaceId){
+  if(playerRemote.isOpen())playerRemote.close();
   muteScreenSound(true);openPhoto('human');
   $('human-support-card').classList.add('hidden');
   $('human-paths').classList.add('hidden');
@@ -2001,6 +2009,32 @@ function setTourTravelMode(value){
   history.replaceState(null,'',url);
   doohTour.configure({mode:tourTravelMode,speed:tourSpeed});
 }
+function sendPlayerCommand(command){
+  if(!photo.frame||!photo.ready)return;
+  const payload=OutdoorContext.validatePlayerCommand(command);
+  if(payload)photo.frame.contentWindow.postMessage(OutdoorContext.message('player-command',payload),location.origin);
+}
+function enterPlayerFocus(){
+  if(['locating','travelling','loading','playing'].includes(doohTour.getState().status))doohTour.pause();
+  $('human-support-card').classList.add('hidden');$('human-paths').classList.add('hidden');
+  document.body.classList.add('player-focus');
+  for(const id of ['human-hud','topbar','sidebar','rightbar'])$(id).inert=true;
+  resizePhotoViewport();
+}
+function leavePlayerFocus(state){
+  document.body.classList.remove('player-focus');
+  for(const id of ['human-hud','topbar','sidebar','rightbar'])$(id).inert=false;
+  if(state)screenSound.volume=state.volume;
+  muteScreenSound();resizePhotoViewport();
+  $('human-support-card').classList.remove('hidden');
+}
+addEventListener('keydown',event=>{
+  if(!playerRemote.isOpen())return;
+  if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();playerRemote.close();return;}
+  if(event.metaKey||event.ctrlKey||event.altKey)return;
+  const editable=event.target?.isContentEditable||['INPUT','SELECT','TEXTAREA'].includes(event.target?.tagName);
+  if(!editable&&['w','a','s','d','e','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key.length===1?event.key.toLowerCase():event.key)){event.preventDefault();event.stopImmediatePropagation();}
+},true);
 function postAudioCommand(action){
   if(!photo.frame||!photo.ready||!screenSound.screenId)return;
   const payload=OutdoorContext.validateAudioCommand({action,screenId:screenSound.screenId,requestId:screenSound.requestId,volume:screenSound.volume});
@@ -2014,14 +2048,15 @@ function muteScreenSound(clearSelection=false){
 }
 function toggleScreenSound(){
   if(!screenSound.screenId)return;
-  if(['playing','pending','blocked'].includes(screenSound.status)){muteScreenSound();return;}
+  if(['playing','pending','blocked','paused'].includes(screenSound.status)){muteScreenSound();return;}
   ++screenSound.requestId;screenSound.status='pending';renderScreenSound();postAudioCommand('enable');
 }
 function renderScreenSound(){
+  $('human-player-remote').classList.toggle('hidden',!screenSound.screenId);
   $('human-screen-audio').classList.toggle('hidden',!screenSound.screenId);
-  $('human-audio-toggle').textContent=['playing','pending','blocked'].includes(screenSound.status)?'Silenciar':'Activar audio';
+  $('human-audio-toggle').textContent=['playing','pending','blocked','paused'].includes(screenSound.status)?'Silenciar':'Activar audio';
   $('human-audio-volume').value=screenSound.volume;
-  $('human-audio-status').textContent=({muted:'Silenciado',pending:'Preparando audio…',playing:'Audio activado',blocked:'Pulsa Activar audio en la imagen para autorizarlo.',unavailable:'Este contenido no tiene audio disponible.'})[screenSound.status];
+  $('human-audio-status').textContent=({muted:'Silenciado',pending:'Preparando audio…',playing:'Audio activado',paused:'Audio preparado · contenido en pausa',blocked:'Pulsa Activar audio en la imagen para autorizarlo.',unavailable:'Este contenido no tiene audio disponible.'})[screenSound.status];
 }
 function sendRouteCommand(command){
   const payload=OutdoorContext.validateRouteCommand(command);if(!payload||!photo.frame||!photo.ready)return;
@@ -2077,6 +2112,7 @@ function renderDoohTour(state){
 }
 for(const event of ['pointerdown','wheel'])$('dooh-start-shield').addEventListener(event,()=>stopDoohTour('manual'),{passive:true});
 document.addEventListener('visibilitychange',()=>{
+  if(document.hidden&&playerRemote.isOpen())playerRemote.close();
   if(document.hidden)muteScreenSound();
   if(document.hidden&&['locating','travelling','loading','playing'].includes(doohTour.getState().status))doohTour.pause();
 });
@@ -2088,6 +2124,7 @@ function resizePhotoViewport() {
 }
 new ResizeObserver(resizePhotoViewport).observe($('universe-card'));
 function closePhoto() {
+  if(playerRemote.isOpen())playerRemote.close();
   stopDoohTour('mode');muteScreenSound(true);doohTour.observePosition(null);
   if (!photo.frame) return;
   const frame = photo.frame;
@@ -2120,11 +2157,12 @@ function closePhoto() {
 addEventListener('message', event => {
   if (!photo.frame || !OutdoorContext.accepts(event, photo.frame.contentWindow, location.origin)) return;
   if (event.data.type === 'ready') { photo.ready=true;photo.signature='';sendPhotoContext();$('dooh-start-shield').classList.add('hidden');if(doohTour.isActive())flushSurfaceCommand();else if(photo.mode==='human'&&photo.initialSiteId!==photo.siteId)sendHumanCommand({action:'site',siteId:photo.siteId}); }
-  if (event.data.type === 'close') closePhoto();
+  if (event.data.type === 'close') {if(playerRemote.isOpen())playerRemote.close();else closePhoto();}
+  if(event.data.type==='player-state')playerRemote.accept(OutdoorContext.validatePlayerState(event.data.payload));
   if(event.data.type==='route-state')doohTour.acceptRoute(OutdoorContext.validateRouteState(event.data.payload));
   if(event.data.type==='audio-state'){const audio=OutdoorContext.validateAudioState(event.data.payload);if(audio.requestId===screenSound.requestId&&audio.screenId===screenSound.screenId){screenSound.status=audio.status;screenSound.volume=audio.volume;renderScreenSound();}}
   if(event.data.type==='surface-state')doohTour.accept(OutdoorContext.validateSurfaceState(event.data.payload));
-  if(event.data.type==='surface-interaction'){stopDoohTour('manual');muteScreenSound();}
+  if(event.data.type==='surface-interaction'&&!playerRemote.isOpen()){stopDoohTour('manual');muteScreenSound();}
   if(event.data.type==='walk-state'&&photo.mode==='human'){
     const walk=OutdoorContext.validateWalkState(event.data.payload),sameSite=(walk.siteId||'vila')===photo.siteId;
     if(sameSite)humanHUD.setState(walk);
@@ -2293,7 +2331,7 @@ if(entry.get('tour')==='dooh')startDoohTour();
 
 // gancho de inspección (demo/debug)
 window.__dbg = {
-  doohTour,startDoohTour,stopDoohTour,setTourTravelMode,screenSound,openPhoto, closePhoto, selectHumanSite, sendHumanCommand, humanHUD, contextSnapshot, focusOverview, zoomUniverse, photo,
+  playerRemote,doohTour,startDoohTour,stopDoohTour,setTourTravelMode,screenSound,openPhoto, closePhoto, selectHumanSite, sendHumanCommand, humanHUD, contextSnapshot, focusOverview, zoomUniverse, photo,
   camera, camera2D, controls, state, startFlight, applyFranja, setCamMode, setQuality, nextStock, fly, pan2D, tickPan2D,
   get camMode() { return camMode; },
   get quality() { return quality; },

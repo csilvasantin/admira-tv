@@ -356,6 +356,8 @@
 
 <script src="street-walk.js?v=06.09.2026.r7.1426"></script>
 <script src="route-walk.js?v=06.09.2026.r7.1426"></script>
+<script src="../js/player-library.js?v=06.09.2026.r7.1426"></script>
+<script src="screen-player.js?v=06.09.2026.r7.1426"></script>
 <script src="screen-audio.js?v=06.09.2026.r7.1426"></script>
 <script src="surface-focus.js?v=06.09.2026.r7.1426"></script>
 <script src="camera-path.js?v=06.09.2026.r7.1426"></script>
@@ -377,6 +379,7 @@ for(const surface of DoohSurfaces.all){
 
 const WALK_MODE = window.OUTDOOR_EMBED && new URLSearchParams(location.search).get('walk') === '1';
 let activeWalkSite = OutdoorSites.get(new URLSearchParams(location.search).get('site')) || OutdoorSites.get('vila');
+let remoteSession=null,remoteTicker=null,remoteLastToken=0,remotePreviewFrame=null;
 let streetWalk = null, lastWalkState = null, walkBootTimer = null, walkBootFailed = false, walkBootGeneration = 0;
 
 /* OUTDOOR CHILD BRIDGE START */
@@ -390,6 +393,7 @@ function currentAudience(){
 function stopOutdoorChild(){
   outdoorStopped = true;
   ++walkBootGeneration; clearTimeout(walkBootTimer); walkBootFailed = true;
+  playerStockAbort?.abort();closePlayerRemote();for(const player of screenPlayers.values())player.dispose();screenPlayers.clear();
   surfaceFocus.cancel(); routeWalk.cancel(); screenAudio.mute();
   streetWalk?.dispose(); streetWalk = null;
   _shotDone = true;
@@ -401,6 +405,8 @@ function installOutdoorChild(){
   addEventListener('message', event => {
     if (!OutdoorContext.accepts(event, window.parent, location.origin)) return;
     if (event.data.type === 'stop') { stopOutdoorChild(); return; }
+    if(event.data.type==='player-command'&&!outdoorStopped&&WALK_MODE){handlePlayerCommand(event.data.payload);return;}
+    if(remoteSession&&['walk-command','surface-command','route-command'].includes(event.data.type))return;
     if(event.data.type==='audio-command'&&!outdoorStopped&&WALK_MODE){screenAudio.command(event.data.payload);return;}
     if(event.data.type==='route-command'&&!outdoorStopped&&WALK_MODE){
       const p=event.data.payload;
@@ -423,7 +429,7 @@ function installOutdoorChild(){
     }
     if (event.data.type === 'walk-command') {
       if (!outdoorStopped && WALK_MODE) {
-        if(event.data.payload.action!=='release')manualSurfaceInteraction();
+        if(!['release','inspect'].includes(event.data.payload.action))manualSurfaceInteraction();
         if(event.data.payload.action==='inspect'){inspectVisibleSurface();return;}
         if (event.data.payload.action === 'site') {
           const site=OutdoorSites.get(event.data.payload.siteId);
@@ -996,20 +1002,126 @@ const GRID_DAY_URL = 'https://api.admira.store/grid/day?screen=' + GRID_SCREEN;
 // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
 const STOCK_URL = 'https://stock.admira.store/stock/index.json';
 const STOCK_MAX_ITEMS = 14, STOCK_MAX_VIDEO_BYTES = 15e6, IMG_SECONDS = 9, VIDEO_CAP_MS = 30000;
-let chQueue = [], chIdx = -1, chItem = null, chImg = null, chLive = false, chErr = 0, chTimer = 0, chSeq = 0;
+let chQueue = [], chIdx = -1, chItem = null, chImg = null, chLive = false, chErr = 0, chTimer = 0, chSeq = 0, chAt=0;
+const screenPlayers=new Map();
 const chVid = document.createElement('video');
 chVid.muted = true; chVid.playsInline = true; chVid.preload = 'auto'; chVid.crossOrigin = 'anonymous';
 chVid.addEventListener('ended', () => chNext());
 chVid.addEventListener('error', () => chSkip());
-chVid.addEventListener('loadeddata', () => { chErr = 0; screenAudio.mediaChanged(); });
+chVid.addEventListener('loadeddata', () => { chErr = 0; if(!screenAudio.owner||!screenPlayers.has(screenAudio.owner.screenId))screenAudio.mediaChanged(); });
 const audioRetry=document.createElement('button');audioRetry.id='screen-audio-retry';audioRetry.type='button';audioRetry.hidden=true;
 audioRetry.style.cssText='display:none;position:fixed;z-index:150;left:50%;top:40%;transform:translateX(-50%);max-width:280px;padding:14px 18px;background:#122d26;color:#e9ffd7;border:1px solid #bafd6f;border-radius:12px;font:600 14px system-ui;cursor:pointer';
 document.body.append(audioRetry);
-const screenAudio=ScreenAudio.create({media:chVid,isVisible:id=>visibleSurfaceIds().includes(id),isVideo:()=>chItem?.type==='video',onState:state=>{
+const screenAudio=ScreenAudio.create({resolveMedia:id=>ensureScreenPlayer(id)?.media,isVisible:id=>visibleSurfaceIds().includes(id),isVideo:id=>(screenPlayers.get(id)?.item||chItem)?.type==='video',isPaused:id=>!!screenPlayers.get(id)?.paused,onState:state=>{
   audioRetry.hidden=state.status!=='blocked';audioRetry.style.display=audioRetry.hidden?'none':'block';audioRetry.textContent='Activar audio · '+(DoohSurfaces.get(state.screenId)?.label||'pantalla');
   if(!outdoorStopped)window.parent.postMessage(OutdoorContext.message('audio-state',state),location.origin);
 }});
 audioRetry.addEventListener('click',()=>screenAudio.retry());
+let playerStock=[],playerStockPromise=null,playerStockAbort=null;
+function currentPlayerLibrary(){return PlayerLibrary.build(chQueue,playerStock);}
+function loadPlayerStock(){
+  if(!playerStockPromise){playerStockAbort=new AbortController();playerStockPromise=PlayerLibrary.fetchStock(fetch,playerStockAbort.signal).then(items=>{
+    if(outdoorStopped)return;playerStock=items;
+    for(const player of screenPlayers.values()){
+      const scheduledIds=player.library.playlists.find(p=>p.id==='scheduled')?.items||[];
+      const oldQueue=scheduledIds.map(id=>player.library.items.find(i=>i.id===id)).filter(Boolean);
+      const library=PlayerLibrary.build(oldQueue,playerStock);player.refreshCatalog(library);player.library=library;
+    }
+    emitPlayerState();
+  }).catch(()=>{playerStockPromise=null;});}
+  return playerStockPromise;
+}
+function scheduledPlayerIndex(library){
+  const ids=library.playlists.find(p=>p.id==='scheduled')?.items||[];
+  const item=library.items.find(i=>i.id===String(chItem?.id||'program-'+chIdx).slice(0,160))||library.items.find(i=>i.url===chItem?.url?.replace(/^https:\/\/www\.admira\.tv\//,'https://admira.tv/'));
+  return {index:Math.max(0,ids.indexOf(item?.id)),item,total:ids.length};
+}
+function ensureScreenPlayer(id){
+  if(!DoohSurfaces.get(id))return null;
+  if(screenPlayers.has(id))return screenPlayers.get(id);
+  const library=currentPlayerLibrary(),items=library.items;if(!items.length)return null;
+  const player=ScreenPlayer.create({items,playlists:library.playlists,initialIndex:scheduledPlayerIndex(library).index,initialTime:chItem?.type==='video'?chVid.currentTime:0,
+    createVideo:()=>document.createElement('video'),createImage:()=>new Image(),
+    onState:()=>{if(screenPlayers.has(id))emitPlayerState()},
+    onMedia:()=>{const current=screenPlayers.get(id);if(current&&current.state().status!=='paused')screenAudio.mediaChanged(id)},
+  });player.library=library;screenPlayers.set(id,player);return player;
+}
+function emitPlayerState(){
+  if(!remoteSession||outdoorStopped)return;
+  const player=screenPlayers.get(remoteSession.screenId),library=player?.library||currentPlayerLibrary(),items=library.items,media=player?.media||chVid;
+  const scheduled=scheduledPlayerIndex(library);
+  const state=player?player.state():{status:!chItem?'loading':chItem.type==='video'?(chVid.paused?'paused':'playing'):'playing',contentId:scheduled.item?.id||'',title:scheduled.item?.title||chTitle(),playlistId:'scheduled',index:scheduled.index,total:scheduled.total,position:chItem?.type==='video'?(chVid.currentTime||0):Math.max(0,(performance.now()-chAt)/1000),duration:chItem?.type==='video'?(Number.isFinite(chVid.duration)?chVid.duration:0):(chItem?.seconds||IMG_SECONDS),volume:media.volume,muted:media.muted,loop:'playlist'};
+  state.position=Number.isFinite(state.position)?state.position:0;state.duration=Number.isFinite(state.duration)?state.duration:0;
+  playerRetry.hidden=state.status!=='blocked'||!audioRetry.hidden;playerRetry.style.display=playerRetry.hidden?'none':'block';
+  window.parent.postMessage(OutdoorContext.message('player-state',{screenId:remoteSession.screenId,requestId:remoteSession.requestId,...state,mode:remoteSession.local?'local':'scheduled',expanded:!!remoteSession.expanded,catalog:items.map(i=>({id:i.id,title:String(i.title||i.id),type:i.type})),playlists:library.playlists.map(p=>({id:p.id,title:p.title}))}),location.origin);
+}
+function fitRemoteScreen(){
+  if(!remoteSession||!sv)return;
+  const pose=DoohSurfaces.poseFor(remoteSession.screenId,sv.getPano());if(!pose)return;
+  const r=$('streetview').getBoundingClientRect(),pov=DoohSurfaces.fit(pose,r.width||innerWidth,r.height||innerHeight,{top:24,bottom:48,side:24});
+  sv.setPov({heading:pov.heading,pitch:pov.pitch});sv.setZoom(pov.zoom);
+}
+function closePlayerRemote(){
+  if(!remoteSession)return;
+  if(screenAudio.owner?.screenId===remoteSession.screenId)screenAudio.mute();
+  screenPlayers.get(remoteSession.screenId)?.mute();remoteSession=null;clearInterval(remoteTicker);remoteTicker=null;
+  playerRetry.hidden=true;playerRetry.style.display='none';remotePreview.hidden=true;if(remotePreviewFrame!==null)cancelAnimationFrame(remotePreviewFrame);remotePreviewFrame=null;document.body.classList.remove('player-remote');
+  sv?.setOptions({clickToGo:true,linksControl:true,scrollwheel:true});
+}
+function handlePlayerCommand(input){
+  if(!DoohSurfaces.get(input.screenId))return;
+  if(input.action==='open'){
+    if(input.requestId<=remoteLastToken&&!(remoteSession?.requestId===input.requestId&&remoteSession.screenId===input.screenId))return;
+    if(!visibleSurfaceIds().includes(input.screenId)){window.parent.postMessage(OutdoorContext.message('player-state',{screenId:input.screenId,requestId:input.requestId,mode:'scheduled',status:'error',contentId:'',title:'La pantalla ya no está visible',playlistId:'scheduled',index:0,total:0,position:0,duration:0,volume:.7,muted:true,loop:'playlist',expanded:false,catalog:[],playlists:[]}),location.origin);return;}
+    if(remoteSession&&(remoteSession.requestId!==input.requestId||remoteSession.screenId!==input.screenId))closePlayerRemote();
+    surfaceFocus.cancel();routeWalk.cancel();streetWalk?.command({action:'release'});
+    remoteLastToken=input.requestId;remoteSession={screenId:input.screenId,requestId:input.requestId,local:screenPlayers.has(input.screenId),expanded:input.screenId==='lesseps-main'||innerWidth<600};showRemotePreview();
+    document.body.classList.add('player-remote');sv.setOptions({clickToGo:false,linksControl:false,scrollwheel:false});
+    clearInterval(remoteTicker);remoteTicker=setInterval(emitPlayerState,500);emitPlayerState();loadPlayerStock();
+    const token=input.requestId;requestAnimationFrame(()=>requestAnimationFrame(()=>{if(remoteSession?.requestId===token)fitRemoteScreen()}));return;
+  }
+  if(!remoteSession||input.screenId!==remoteSession.screenId||input.requestId!==remoteSession.requestId)return;
+  if(input.action==='close'){closePlayerRemote();return;}
+  if(input.action==='preview'){remoteSession.expanded=input.expanded;showRemotePreview();emitPlayerState();return;}
+  if(input.action==='restore'){
+    if(screenAudio.owner?.screenId===input.screenId)screenAudio.mute();screenPlayers.get(input.screenId)?.dispose();screenPlayers.delete(input.screenId);remoteSession.local=false;emitPlayerState();return;
+  }
+  const knownLibrary=screenPlayers.get(input.screenId)?.library||currentPlayerLibrary();
+  if(input.action==='content'&&!knownLibrary.items.some(i=>i.id===input.contentId))return;
+  if(input.action==='playlist'&&!knownLibrary.playlists.some(p=>p.id===input.playlistId))return;
+  const player=ensureScreenPlayer(input.screenId);if(!player){emitPlayerState();return;}
+  remoteSession.local=true;
+  if(input.action==='mute'){
+    if(input.muted){if(screenAudio.owner?.screenId===input.screenId)screenAudio.mute();player.mute();}
+    else screenAudio.command({action:'enable',screenId:input.screenId,requestId:input.requestId,volume:player.media.volume});
+  }else if(input.action==='volume'){
+    player.command(input);if(screenAudio.owner?.screenId===input.screenId)screenAudio.command({...input,requestId:screenAudio.owner.requestId});
+  }else{player.command(input);if(['play','pause','toggle-pause'].includes(input.action)&&screenAudio.owner?.screenId===input.screenId)screenAudio.mediaChanged(input.screenId);}
+  emitPlayerState();
+}
+const playerRetry=document.createElement('button');playerRetry.id='screen-player-retry';playerRetry.type='button';playerRetry.textContent='Reproducir contenido';playerRetry.hidden=true;playerRetry.style.cssText=audioRetry.style.cssText;document.body.append(playerRetry);
+playerRetry.addEventListener('click',()=>{if(remoteSession)screenPlayers.get(remoteSession.screenId)?.command({action:'play'})});
+const remotePreview=document.createElement('section');remotePreview.id='screen-player-preview';remotePreview.hidden=true;remotePreview.setAttribute('aria-label','Vista ampliada del soporte');remotePreview.style.cssText='position:fixed;z-index:140;left:50%;top:48%;transform:translate(-50%,-50%);padding:10px;background:#081713ee;border:1px solid #718878;border-radius:12px;box-shadow:0 12px 48px #0008;pointer-events:none;text-align:center;max-width:calc(100vw - 40px)';
+const previewLabel=document.createElement('div');previewLabel.textContent='Vista ampliada del soporte';previewLabel.style.cssText='font:600 12px system-ui;color:#ecf5ed;margin:0 0 8px';
+const previewCanvas=document.createElement('canvas');previewCanvas.style.cssText='display:block;margin:auto;width:auto;height:auto;max-width:calc(100vw - 64px);max-height:calc(100vh - 150px)';remotePreview.append(previewLabel,previewCanvas);document.body.append(remotePreview);
+function showRemotePreview(){
+  if(remotePreviewFrame!==null)cancelAnimationFrame(remotePreviewFrame);remotePreviewFrame=null;
+  remotePreview.hidden=!remoteSession?.expanded;
+  if(remotePreview.hidden)return;
+  const surface=DoohSurfaces.get(remoteSession.screenId);previewCanvas.width=surface.width;previewCanvas.height=surface.height;
+  function paint(){if(!remoteSession?.expanded)return;drawChannel(previewCanvas.getContext('2d'),surface.width,surface.height,surface);remotePreviewFrame=requestAnimationFrame(paint)}
+  remotePreviewFrame=requestAnimationFrame(paint);
+}
+new ResizeObserver(()=>{if(remoteSession)fitRemoteScreen()}).observe($('streetview'));
+function blockRemoteNavigation(event){
+  if(!remoteSession)return;
+  if(event.type==='keydown'&&event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();window.parent.postMessage(OutdoorContext.message('close'),location.origin);return;}
+  if(event.type==='keydown'){if(['w','a','s','d','W','A','S','D','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','+','-'].includes(event.key)){event.preventDefault();event.stopImmediatePropagation();}return;}
+  if(event.target?.closest?.('a,button,input,select,textarea'))return;
+  if(event.target?.closest?.('#streetview,#sv-signage')){event.preventDefault();event.stopImmediatePropagation();}
+}
+for(const event of ['pointerdown','click','dblclick','wheel','keydown'])window.addEventListener(event,blockRemoteNavigation,{capture:true,passive:false});
+
 const creLive = {};   // creatividades por perfil (fallback de pantalla, same-origin)
 function chTag(text){ const el = document.querySelector('.pip-tag'); if (el) el.textContent = text; }
 function loadCreLive(){
@@ -1054,17 +1166,17 @@ function chPlay(i){
   clearTimeout(chTimer); if (!chQueue.length) return;
   const seq = ++chSeq;
   chIdx = ((i % chQueue.length) + chQueue.length) % chQueue.length;
-  chItem = chQueue[chIdx]; chImg = null;
+  chItem = chQueue[chIdx]; chImg = null;chAt=performance.now();
   if (chItem.source === 'grid') chTag('parrilla 50/50 · ' + (chIdx + 1) + '/' + chQueue.length + ' · ' + chTitle());
   if (chItem.type === 'video'){
     chVid.src = chItem.url;
     chVid.play().catch(() => { if (seq === chSeq && chVid.error) chSkip(); });
     chTimer = setTimeout(chNext, VIDEO_CAP_MS);
   } else {
-    chVid.pause(); chVid.removeAttribute('src');screenAudio.mediaChanged();
+    chVid.pause(); chVid.removeAttribute('src');if(!screenAudio.owner||!screenPlayers.has(screenAudio.owner.screenId))screenAudio.mediaChanged();
     const im = new Image(); im.crossOrigin = 'anonymous';
-    im.onload = () => { chImg = im; chErr = 0; };
-    im.onerror = () => chSkip();
+    im.onload = () => { if(seq!==chSeq)return;chImg = im; chErr = 0; };
+    im.onerror = () => {if(seq===chSeq)chSkip();};
     im.src = chItem.url;
     chTimer = setTimeout(chNext, (chItem.seconds || IMG_SECONDS) * 1000);
   }
@@ -1077,14 +1189,22 @@ function roundRect(c, x, y, w, h, r){
   c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
   c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
 }
+function channelLine(ctx,text,width){
+  text=String(text);if(ctx.measureText(text).width<=width)return text;
+  let low=0,high=text.length;while(low<high){const mid=Math.ceil((low+high)/2);if(ctx.measureText(text.slice(0,mid)+'…').width<=width)low=mid;else high=mid-1;}return text.slice(0,low)+'…';
+}
 function drawChannel(ctx, W, H, surface=null){
+  const selectedPlayer=surface?screenPlayers.get(surface.id):null;
+  const playingItem=selectedPlayer?.item||chItem;
+  const playerTitle=()=>String(playingItem?.title||playingItem?.id||'').replace(/&#39;/g,"'").slice(0,52);
   const audienceAllowed=!surface||surface.siteId==='vila';
   const siteLabel=(surface?OutdoorSites.get(surface.siteId)?.name:null)||surface?.label||'Admira';
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = '#06141a'; ctx.fillRect(0, 0, W, H);
   // media actual (vídeo/imagen del canal real) a cover
   let src = null, sw = 0, sh = 0, live = false;
-  if (chLive && chItem){
+  if(selectedPlayer){src=selectedPlayer.source;if(src){sw=src.videoWidth||src.naturalWidth;sh=src.videoHeight||src.naturalHeight;}}
+  else if (chLive && chItem){
     if (chItem.type === 'video' && chVid.readyState >= 2){ src = chVid; sw = chVid.videoWidth; sh = chVid.videoHeight; }
     else if (chImg){ src = chImg; sw = chImg.naturalWidth; sh = chImg.naturalHeight; }
   }
@@ -1116,10 +1236,10 @@ function drawChannel(ctx, W, H, surface=null){
   const f2 = audienceAllowed?Math.max(9,Math.round(H*.05)):22, f3=audienceAllowed?Math.max(11,Math.round(H*.072)):36;
   ctx.textBaseline = 'alphabetic';
   ctx.font = '700 ' + f2 + 'px ' + LIVE_MONO; ctx.fillStyle = '#50c8ff';
-  const isGrid = chItem && chItem.source === 'grid';
-  ctx.fillText(!audienceAllowed ? siteLabel.toUpperCase()+' · PANTALLA DEL GEMELO' : isGrid ? ('PARRILLA 50/50 · ' + (chItem.lane === 'publicidad' ? 'PUBLICIDAD' : 'AYUNTAMIENTO')) : 'ADcelerate recomienda', pad, H - bh + f2 * 1.5);
+  const isGrid = playingItem && playingItem.source === 'grid';
+  ctx.fillText(channelLine(ctx,!audienceAllowed ? siteLabel.toUpperCase()+' · PANTALLA DEL GEMELO' : isGrid ? ('PARRILLA 50/50 · ' + (playingItem.lane === 'publicidad' ? 'PUBLICIDAD' : 'AYUNTAMIENTO')) : 'ADcelerate recomienda',W-2*pad), pad, H - bh + f2 * 1.5);
   ctx.font = '800 ' + f3 + 'px ' + LIVE_SANS; ctx.fillStyle = '#eaf7ff';
-  ctx.fillText(!audienceAllowed ? (live?chTitle():'admira.tv') : isGrid ? chTitle() : ('Creatividad ' + rg.cre + ' · ' + rg.titulo), pad, H - Math.round(bh * 0.28));
+  ctx.fillText(channelLine(ctx,!audienceAllowed ? (live?playerTitle():'admira.tv') : isGrid ? playerTitle() : ('Creatividad ' + rg.cre + ' · ' + rg.titulo),W-2*pad), pad, H - Math.round(bh * 0.28));
 }
 
 // ---- proyección mundo→pantalla desde el estado de cámara del Map3D ----
@@ -1422,10 +1542,10 @@ addEventListener('keydown',event=>{
 function releaseWalk(){if(WALK_MODE)streetWalk?.command({action:'release'});}
 addEventListener('keyup',event=>{if(['w','W','s','S','ArrowUp','ArrowDown'].includes(event.key))releaseWalk();},true);
 addEventListener('blur',releaseWalk);
-document.addEventListener('visibilitychange',()=>{if(document.hidden){releaseWalk();routeWalk.cancel();screenAudio.mute();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){closePlayerRemote();releaseWalk();routeWalk.cancel();screenAudio.mute();}});
 $('streetview').addEventListener('pointerdown',()=>{releaseWalk();manualSurfaceInteraction()},true);
 $('streetview').addEventListener('wheel',manualSurfaceInteraction,{capture:true,passive:true});
-$('sv-signage').addEventListener('pointerdown',manualSurfaceInteraction,true);
+$('sv-signage').addEventListener('pointerdown',event=>{if(!event.target.closest('[data-screen-id]'))manualSurfaceInteraction()},true);
 
 async function showStreetView(side = 'front'){
   const view = KIOSK_VIEWS[side] || KIOSK_VIEWS.front;
