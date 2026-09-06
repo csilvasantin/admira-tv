@@ -4,7 +4,7 @@ const tick=()=>new Promise(r=>setImmediate(r));
 function fixture(opts={}){
  const events=[],paints=[],cancelled=[],surface=Surfaces.get('jardinets-main');
  let camera={pano:surface.pano,...surface.pov,visible:true};
- const c=Focus.create({getSurface:Surfaces.get,prepare:async()=>surface.pov,getCamera:()=>camera,onState:s=>events.push(s),onCancel:id=>cancelled.push(id),afterPaint:f=>paints.push(f),timeoutMs:500,...opts});
+ const c=Focus.create({getSurface:Surfaces.get,prepare:async()=>surface.pov,getCamera:()=>camera,onState:s=>events.push(s),onCancel:id=>cancelled.push(id),afterPaint:f=>paints.push(f),timeoutMs:500,settleMs:0,...opts});
  return {c,events,paints,cancelled,surface,setCamera:c=>camera=c,scene:()=>c.observe({pano:surface.pano,status:'ready'})};
 }
 test('surface arrives only after prepared camera, fresh scene, and two-frame paint callback',async()=>{
@@ -28,5 +28,24 @@ test('loss of current scene or hidden/wrong camera cannot be acknowledged as a r
 test('calibrated inventory is exactly two Vila posters and one Jardinets poster; fitting adapts to portrait',()=>{
  assert.deepEqual(Surfaces.all.map(s=>s.siteId),['vila','vila','jardinets']);
  for(const s of Surfaces.all){const wide=Surfaces.fit(s,1440,814),narrow=Surfaces.fit(s,390,758);assert.ok(narrow.zoom>wide.zoom);assert.ok(narrow.zoom<=4.5);assert.ok(Math.abs(narrow.heading-s.pov.heading)<1);}
- assert.deepEqual(Surfaces.get('vila-left').corners.tl,[39.38,1.14]);assert.equal(Surfaces.get('unknown'),null);
+ assert.equal(Surfaces.get('unknown'),null);
+});
+
+test('optical projection follows the measured native Google turn, not a linear-angle zoom approximation',()=>{
+ const q=Surfaces.get('jardinets-main').corners.tl;
+ const initial=Surfaces.project(...q,{heading:290.7,pitch:-4},2.8,1440,814);
+ assert.ok(Math.abs(initial[0]-619)<.001);assert.ok(Math.abs(initial[1]-179)<.001);
+ const turned=Surfaces.project(...q,{heading:298.7,pitch:-4},2.8,1440,814);
+ assert.ok(Math.abs(turned[0]-263)<1,'same native poster feature measured at x263 after +8 degrees');
+ for(const zoom of [.9,1.6,2.8,4])for(const pov of [{heading:282.7,pitch:-4},{heading:298.7,pitch:2}]){
+  const pixel=Surfaces.project(...q,pov,zoom,1440,814),back=Surfaces.unproject(...pixel,pov,zoom,1440,814);
+  assert.ok(Math.abs(back[0]-q[0])<1e-8);assert.ok(Math.abs(back[1]-q[1])<1e-8);
+ }
+});
+test('fitted posters leave a clear margin above tour dock at desktop and mobile viewport sizes',()=>{
+ for(const [w,h] of [[1440,814],[1280,634],[390,758]])for(const surface of Surfaces.all){
+  const pov=Surfaces.fit(surface,w,h),pixels=Object.values(surface.corners).map(q=>Surfaces.project(...q,pov,pov.zoom,w,h));
+  assert.ok(pixels.every(p=>p[0]>16&&p[0]<w-16));
+  assert.ok(Math.max(...pixels.map(p=>p[1]))<h-Math.min(275,h*.45)-16,JSON.stringify({w,h,id:surface.id,pixels}));
+ }
 });

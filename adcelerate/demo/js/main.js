@@ -1326,6 +1326,7 @@ function buildHUD() {
   $('universe-human').onclick = () => {photo.siteId='vila';openPhoto('human');};
   $('universe-tour-start').onclick=()=>{photo.siteId='vila';startDoohTour();};
   $('human-tour-start').onclick=startDoohTour;
+  $('human-paths-toggle').addEventListener('click',()=>{if(!$('human-paths').classList.contains('hidden'))stopDoohTour('manual');});
   $('dooh-tour-pause').onclick=()=>{const status=doohTour.getState().status;if(status==='paused'||status==='error')doohTour.resume();else doohTour.pause();};
   $('dooh-tour-end').onclick=()=>stopDoohTour('user');
   $('universe-return').onclick = closePhoto;
@@ -1965,6 +1966,8 @@ function sendHumanCommand(payload) {
 }
 function startDoohTour(){
   openPhoto('human');
+  $('human-support-card').classList.add('hidden');
+  $('human-paths').classList.add('hidden');
   const first=DoohSurfaces.all.find(surface=>surface.siteId===photo.siteId)||DoohSurfaces.all[0];
   const url=new URL(location.href);url.searchParams.set('tour','dooh');history.replaceState(null,'',url);
   doohTour.start(first.id);

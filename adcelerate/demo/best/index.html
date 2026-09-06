@@ -197,6 +197,8 @@
   .outdoor-embed #hint{bottom:12px}
   @media(max-width:600px){.outdoor-embed #route-controls{max-width:calc(100% - 16px);padding:6px;gap:5px}.outdoor-embed #route-controls button{padding:6px;font-size:11px}}
   .walk-mode #route-controls,.walk-mode #hint,.walk-mode #pip-live,.walk-mode #kiosk-live,.walk-mode #attrib{display:none!important}
+  .walk-mode #loading{bottom:28px;background:radial-gradient(ellipse at 50% 40%,rgba(19,57,49,.94),rgba(5,22,24,.97));color:#e5f5eb;letter-spacing:.08em;font-size:12px;pointer-events:none;transition:opacity .2s;text-shadow:0 1px 2px #00110c}
+  .walk-mode #loading .spin{border-color:rgba(186,253,111,.22);border-top-color:#bafd6f;box-shadow:0 0 20px rgba(186,253,111,.15)}
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
@@ -1173,14 +1175,8 @@ const KIOSK_VIEWS = {
 };
 let activeSvView = KIOSK_VIEWS.front;
 // esquinas de cada panel en FRACCIÓN del lienzo (0..1), orden TL,TR,BR,BL — CALIBRAR sobre el pano real
-// Esquinas MEDIDAS sobre el panorama real (heading,pitch en grados, absolutos) — orden TL,TR,BR,BL.
-// Calibradas con renders rectilineos del pano a yaw/pitch/fov conocidos (13-jul-2026): las pantallas
-// quedan CLAVADAS a los dos posters SAUVAGE del MUPI a CUALQUIER pov/zoom (la camara del pano es fija,
-// asi que la proyeccion angular es exacta: gira, escala o reduce y el warp se recalcula por frame).
-let SV_PANELS_HP = [
-  { tl:[39.38,1.14], tr:[51.35,1.28], br:[51.31,-14.90], bl:[38.59,-14.74] },   // poster izquierdo (SAUVAGE)
-  { tl:[61.24,1.25], tr:[72.05,1.51], br:[73.41,-13.16], bl:[61.99,-14.39] },   // poster derecho (SAUVAGE)
-];
+// Recalibrated photographic poster bounds; one optical model shared with the tour.
+let SV_PANELS_HP = ['vila-left','vila-right'].map(id=>JSON.parse(JSON.stringify(DoohSurfaces.get(id).corners)));
 let SV_PANELS = [
   { tl:[.418,.470], tr:[.548,.478], br:[.548,.808], bl:[.418,.812] },   // panel izquierdo (SAUVAGE)
   { tl:[.557,.478], tr:[.690,.470], br:[.692,.808], bl:[.557,.812] },   // panel derecho (SAUVAGE)
@@ -1233,7 +1229,7 @@ function animateSurfaceCamera(pov,requestId){
 const surfaceFocus=SurfaceFocus.create({
   getSurface:id=>DoohSurfaces.get(id),
   async prepare(surface,requestId){
-    await google.maps.importLibrary('streetView');
+    const library=await google.maps.importLibrary('streetView');
     if(surfaceFocus.active?.requestId!==requestId||outdoorStopped)throw Error('Cancelled');
     const r=$('streetview').getBoundingClientRect(),pov=DoohSurfaces.fit(surface,r.width||innerWidth,r.height||innerHeight);
     const same=activeWalkSite.id===surface.siteId&&sv?.getPano()===surface.pano&&['ready','unavailable'].includes(streetWalk?.getState().status);
@@ -1241,7 +1237,7 @@ const surfaceFocus=SurfaceFocus.create({
     if(same){await animateSurfaceCamera(pov,requestId)}
     else{
       surfaceBootRequestId=requestId;
-      await bootWalk('panels',{pano:surface.pano,pov});
+      await bootWalk('panels',{pano:surface.pano,pov},library);
       if(surfaceBootRequestId===requestId)surfaceBootRequestId=null;
     }
     if(surfaceFocus.active?.requestId!==requestId||outdoorStopped)throw Error('Cancelled');
@@ -1253,7 +1249,10 @@ const surfaceFocus=SurfaceFocus.create({
     if(surfaceBootRequestId===requestId){surfaceBootRequestId=null;++walkBootGeneration;clearTimeout(walkBootTimer)}
   },
   getCamera(){const pov=sv?.getPov();return pov?{pano:sv.getPano(),heading:pov.heading,pitch:pov.pitch,zoom:sv.getZoom(),visible:visibleSurfaceIds().includes(surfaceFocus.active?.surfaceId)}:null},
-  onState:state=>{if(!outdoorStopped)window.parent.postMessage(OutdoorContext.message('surface-state',state),location.origin)},
+  onState:state=>{
+    if(state.status==='ready'||(['cancelled','error'].includes(state.status)&&['ready','unavailable'].includes(streetWalk?.getState().status)))$('loading').classList.add('done');
+    if(!outdoorStopped)window.parent.postMessage(OutdoorContext.message('surface-state',state),location.origin)
+  },
 });
 function postWalkState(state){
   lastWalkState = {...state,siteId:activeWalkSite.id};
@@ -1272,7 +1271,7 @@ function handleWalkState(state){
   $('sv-signage').classList.toggle('sv-vis',calibrated);
   if (calibrated) layoutSvPanels();
   const supportVisible=calibrated && visibleSurfaceIds().length>0;
-  if (state.status !== 'loading') { clearTimeout(walkBootTimer); $('loading').classList.add('done'); $('streetview').classList.add('sv-vis'); }
+  if (state.status !== 'loading') { clearTimeout(walkBootTimer); if(!surfaceFocus.active||surfaceFocus.active.ready)$('loading').classList.add('done'); $('streetview').classList.add('sv-vis'); }
   postWalkState({...state,supportVisible:!!supportVisible});
   surfaceFocus.observe(state);
 }
@@ -1286,15 +1285,15 @@ function walkLoadFailure(message='No se pudo cargar la vista a pie.'){
   $('need-key').classList.add('show');
   postWalkState({status:'error',pano:'',heading:0,position:null,date:'',links:[],steps:0,supportVisible:false});
 }
-async function bootWalk(sideOverride,viewOverride=null){
+async function bootWalk(sideOverride,viewOverride=null,preloadedLibrary=null){
   const attempt=++walkBootGeneration;
   walkBootFailed=false;clearTimeout(walkBootTimer);
-  streetWalk?.dispose();streetWalk=null;clearWalkSupport();if(sv)sv.setVisible(false);
+  streetWalk?.dispose();streetWalk=null;clearWalkSupport();
   $('loading').innerHTML='<div class="spin"></div>Cargando vista a pie…';$('loading').classList.remove('done');
   $('need-key').classList.remove('show');
   postWalkState({status:'loading',pano:'',heading:0,position:null,date:'',links:[],steps:0,supportVisible:false});
   walkBootTimer=setTimeout(()=>{if(attempt===walkBootGeneration)walkLoadFailure();},15000);
-  let library;try{library=await google.maps.importLibrary('streetView');}catch(error){if(attempt===walkBootGeneration)walkLoadFailure();return;}
+  let library;try{library=preloadedLibrary||await google.maps.importLibrary('streetView');}catch(error){if(attempt===walkBootGeneration)walkLoadFailure();return;}
   if (outdoorStopped || walkBootFailed || attempt!==walkBootGeneration) return;
   const {StreetViewPanorama,StreetViewService}=library;
   const side=sideOverride || (new URLSearchParams(location.search).get('side')==='front'?'front':'panels');
@@ -1421,7 +1420,9 @@ function hideGlobeInteractions(){ if (map3d) map3d.stopCameraAnimation(); }
 const SV_EYE = 2.5;      // altura del ojo del panorama (m)
 const SV_DEPTH = 7.5;    // distancia estimada cámara→paneles (m) — parallax al caminar
 let SV_PANEL_WORLD = null;   // [[{lat,lng,alt} x4] por panel]
-function svFovH(zoom){ return (180 / Math.pow(2, zoom)) * Math.PI / 180; }   // FOV horizontal (rad)
+// Measured against native Street View: a +8° turn at z2.8 moves TL619px→263px.
+// Focal scales by powers of two; halving an angle would predict174px (89px drift).
+function svFovH(zoom){ return DoohSurfaces.fov(zoom); }   // FOV horizontal (rad)
 function svPos(){
   try{ const l = sv && sv.getPosition && sv.getPosition();
     if (l) return { lat: (typeof l.lat==='function'?l.lat():l.lat), lng: (typeof l.lng==='function'?l.lng():l.lng) }; }catch(e){}
@@ -1435,16 +1436,8 @@ function dirTo(camLat, camLng, t){
   return { heading:(Math.atan2(dE,dN)*180/Math.PI+360)%360, pitch:Math.atan2(dU,Math.hypot(dE,dN))*180/Math.PI };
 }
 // proyecta una dirección (heading,pitch) al lienzo con el POV/zoom actuales
-function projHP(h, p, pov, zoom, W, H){
-  const f=hpToVec(pov.heading, pov.pitch);
-  let re=f.n, rn=-f.e, ru=0; const rl=Math.hypot(re,rn,ru)||1; re/=rl;rn/=rl;ru/=rl;
-  const ue=rn*f.u-ru*f.n, un=ru*f.e-re*f.u, uu=re*f.n-rn*f.e;
-  const d=hpToVec(h, p);
-  const cz=d.e*f.e+d.n*f.n+d.u*f.u; if (cz<=0.02) return null;   // detrás
-  const cx=d.e*re+d.n*rn+d.u*ru, cy=d.e*ue+d.n*un+d.u*uu;
-  const th=Math.tan(svFovH(zoom)/2), tv=th*(H/W);
-  return [ ((cx/cz)/th*0.5+0.5)*W, (0.5-(cy/cz)/tv*0.5)*H ];
-}
+function projHP(h,p,pov,zoom,W,H){return DoohSurfaces.project(h,p,pov,zoom,W,H);}
+
 // calibra los puntos del mundo desde las fracciones de referencia (POV del kiosko)
 function calibrateSvWorld(){
   const st=$('sv-signage').getBoundingClientRect(); const W=st.width, H=st.height; if (W<10) return;

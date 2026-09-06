@@ -19,7 +19,7 @@ function linked(){
  let time=0,timerId=0,camera=null;const timers=new Map(),prepares=[],paint=[],messages=[];
  let focus;
  const tour=Tour.create({stops:Surfaces.all,now:()=>time,setTimeout:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,at:time+ms});return id;},clearTimeout:id=>timers.delete(id),send:m=>{messages.push(m);if(m.action==='focus')focus.focus(m.surfaceId,m.requestId);else focus.cancel('cancel',m.requestId);}});
- focus=Focus.create({getSurface:Surfaces.get,getCamera:()=>camera,prepare:surface=>new Promise(resolve=>prepares.push({surface,resolve})),onState:s=>{assert.ok(Contract.validateSurfaceState(s));tour.accept(s);},afterPaint:fn=>paint.push(fn)});
+ focus=Focus.create({settleMs:0,getSurface:Surfaces.get,getCamera:()=>camera,prepare:surface=>new Promise(resolve=>prepares.push({surface,resolve})),onState:s=>{assert.ok(Contract.validateSurfaceState(s));tour.accept(s);},afterPaint:fn=>paint.push(fn)});
  const flush=async()=>{for(let i=0;i<5;i++)await Promise.resolve();};
  const settle=async index=>{const p=prepares[index];camera={pano:p.surface.pano,visible:true,...p.surface.pov};focus.observe({pano:p.surface.pano,status:'ready'});p.resolve(p.surface.pov);await flush();};
  const tick=ms=>{time+=ms;for(const [id,t] of [...timers])if(t.at<=time){timers.delete(id);t.fn();}};
@@ -48,4 +48,18 @@ test('late preparation of the former screen cannot confirm the newly requested s
   await f.settle(0);assert.equal(f.tour.getState().surfaceId,'jardinets-main');assert.equal(f.tour.getState().status,'loading');assert.equal(f.paint.length,0);
   await f.settle(1);f.paint.shift()();assert.equal(f.tour.getState().surfaceId,'jardinets-main');assert.equal(f.tour.getState().status,'playing');
  }finally{f.dispose();}
+});
+
+test('cancellation during texture settling suppresses readiness even after its timer would expire',async()=>{
+ const surface=Surfaces.get('jardinets-main'),events=[];let paint;
+ const focus=Focus.create({getSurface:Surfaces.get,prepare:async()=>surface.pov,
+  getCamera:()=>({pano:surface.pano,visible:true,...surface.pov}),
+  afterPaint:fn=>{paint=fn},settleMs:15,onState:state=>events.push(state)});
+ try{
+  focus.focus(surface.id,90);focus.observe({pano:surface.pano,status:'ready'});
+  for(let i=0;i<5;i++)await Promise.resolve();
+  assert.equal(typeof paint,'function');paint();focus.cancel('manual');
+  await new Promise(resolve=>setTimeout(resolve,35));
+  assert.deepEqual(events.map(e=>e.status),['loading','cancelled']);
+ }finally{focus.dispose()}
 });
