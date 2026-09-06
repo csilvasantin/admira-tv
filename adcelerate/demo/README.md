@@ -40,16 +40,17 @@ resuelve las conexiones reales y descarta respuestas de navegación obsoletas.
 
 ## Recorrido entre quioscos
 
-El selector **Destino** y **Siguiente quiosco** alternan entre Vila de Gràcia y
-Jardinets. **Volver al quiosco** regresa a la entrada del destino seleccionado.
+El selector **Destino** y **Siguiente quiosco** alternan entre Vila de Gràcia,
+Jardinets y Lesseps. **Volver al quiosco** regresa a la entrada del destino seleccionado.
 Los cambios entre destinos son accesos directos a fotografías verificadas, no
 pasos ficticios por la calle. El selector, la ficha, el radar, el título y la URL
 siguen el destino actual. Enlaces reproducibles:
 
 - `/adcelerate/demo/?view=human&site=vila`
 - `/adcelerate/demo/?view=human&site=jardinets`
+- `/adcelerate/demo/?view=human&site=lesseps`
 
-El catálogo compartido `js/outdoor-sites.js` identifica las dos entradas. Jardinets
+El catálogo compartido `js/outdoor-sites.js` identifica Vila, Jardinets y Lesseps. Jardinets
 usa el panorama `L6xcO37SQfBmCxsT9lPdjQ` de marzo de 2023, con POV 290° / −6° / 0.9,
 comprobado con Street View y la fotografía solicitada. La posición
 41.397772717774245, 2.1576335976146668 es la cámara de esa fotografía; el radar la
@@ -110,8 +111,8 @@ verificadas. La fecha visible siempre se obtiene del panorama actual.
 
 **Tour DooH** está disponible junto a **Siguiente quiosco** en Humano y desde
 la tarjeta del universo 3D. El enlace `?view=human&tour=dooh&site=jardinets`
-abre el recorrido desde ese destino. Las tres paradas son las dos pantallas
-de Vila y la pantalla de Jardinets junto al ATM. Se repiten en bucle, con
+abre el recorrido desde ese destino. Las cuatro paradas son las dos pantallas
+de Vila, la pantalla de Jardinets junto al ATM y la pantalla de Lesseps. Se repiten en bucle, con
 9 segundos de exposición después de confirmar fotografía y encuadre listos.
 Los cambios de fotografía entre quioscos no representan pasos a pie.
 
@@ -122,23 +123,30 @@ la pestaña deja el recorrido en pausa hasta reanudarlo expresamente.
 cancela el recorrido y descarta confirmaciones antiguas. Los controles de
 destino y navegación manual siguen disponibles.
 
-`DoohSurfaces` contiene solo los tres encuadres calibrados; `DoohTour` controla
+`DoohSurfaces` contiene cuatro identidades de pantalla con sus vistas calibradas; `DoohTour` controla
 el ciclo y `SurfaceFocus` prepara el panorama. El puente del mismo origen
 valida pantalla, acción y número de petición antes de aceptar una llegada.
 Las creatividades superpuestas son una demostración; la audiencia conserva
-su procedencia y Jardinets continúa sin aforo conectado.
+su procedencia; Jardinets y Lesseps continúan sin aforo conectado.
 
 ## Paseo por la ciudad y audio de pantalla
 
-Antes de iniciar Tour DooH, el selector permite elegir **Entre pantallas** o
-**Paseo por la ciudad**. El enlace `?view=human&tour=dooh&travel=walk` conserva
-el segundo modo. El paseo empieza desde el panorama actual: si no pertenece a
+Antes y durante Tour DooH, el selector permite elegir **Paseo ×1** (inicial),
+**×2**, **×4**, **×6**, **×8** o **Directo**. El enlace
+`?view=human&tour=dooh&travel=walk&speed=8&site=lesseps` conserva la selección.
+Los multiplicadores ajustan el giro y las esperas entre tramos sin saltar nodos
+ni reiniciar el recorrido; la carga real y la estabilización de Street View
+se esperan siempre. Los 9 segundos ante cada pantalla no cambian. Directo
+es un cambio explícito de vista; si se elige durante una pausa, espera a reanudar. El paseo empieza desde el panorama actual: si no pertenece a
 una ruta comprobada, se detiene y ofrece control manual o una **Visita directa**
 explícita. No sustituye una calle sin conexión por un salto oculto.
 
 Las rutas dirigidas de `js/urban-route.js` proceden de conexiones de Google
-verificadas; su evidencia está en `data/urban-route-evidence.json`. La ida inicial
-hasta Jardinets tiene 40 enlaces; el regreso y las siguientes idas tienen 39.
+verificadas; su evidencia está en `data/urban-route-evidence.json`. El circuito completo recorre Vila → Jardinets (40 enlaces iniciales),
+Jardinets → Lesseps (137) y Lesseps → la vista conectada de Vila (98).
+La siguiente salida desde esa vista de Vila tiene 39 enlaces. Las conexiones
+que faltan en el SDK obligan a pasar por Vila, Matilde y Sant Joaquim: no se
+promete un trayecto recto por Gran de Gràcia.
 Cada enlace se comprueba de nuevo contra los enlaces del panorama cargado.
 La vuelta llega a otra fotografía conectada de Vila, donde se calibran las mismas
 dos pantallas: conserva sus identidades y evita saltar a la imagen inicial.
@@ -156,3 +164,9 @@ Empieza silenciado; solo se activa por una acción explícita. Si el navegador
 requiere un gesto dentro de Street View, aparece allí un botón para autorizarlo.
 Cerrar la ficha, cambiar de pantalla, navegar u ocultar la pestaña lo silencia.
 La recomendación de audiencia simulada no se utiliza como título del vídeo.
+
+
+Lesseps usa la fotografía conectada `FSGuPbr-GnVq2_FxQVLfkg`, de agosto
+de 2024, junto a la plaza. Su única pantalla mantiene la identidad
+`lesseps-main`. La ficha indica **Audiencia pendiente de conectar**; no
+hereda las cifras ni las recomendaciones de la simulación de Vila.

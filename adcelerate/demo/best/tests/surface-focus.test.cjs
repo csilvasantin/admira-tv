@@ -25,9 +25,9 @@ test('timeout invalidates camera preparation before reporting error and ignores 
 test('loss of current scene or hidden/wrong camera cannot be acknowledged as a readable surface',async()=>{
  const f=fixture();f.c.focus(f.surface.id,1);await tick();f.setCamera({pano:f.surface.pano,...f.surface.pov,visible:false});f.scene();assert.equal(f.paints.length,0);f.setCamera({pano:f.surface.pano,...f.surface.pov,visible:true});f.scene();f.c.observe({pano:f.surface.pano,status:'loading'});f.paints.shift()();assert.equal(f.events.at(-1).status,'loading');f.c.dispose();
 });
-test('calibrated inventory is exactly two Vila posters and one Jardinets poster; fitting adapts to portrait',()=>{
- assert.deepEqual(Surfaces.all.map(s=>s.siteId),['vila','vila','jardinets']);
- for(const s of Surfaces.all){const wide=Surfaces.fit(s,1440,814),narrow=Surfaces.fit(s,390,758);assert.ok(narrow.zoom>wide.zoom);assert.ok(narrow.zoom<=4.5);assert.ok(Math.abs(narrow.heading-s.pov.heading)<1);}
+test('calibrated inventory has two Vila posters, Jardinets and Lesseps; portrait fit respects native zoom caps',()=>{
+ assert.deepEqual(Surfaces.all.map(s=>s.siteId),['vila','vila','jardinets','lesseps']);
+ for(const s of Surfaces.all){const wide=Surfaces.fit(s,1440,814),narrow=Surfaces.fit(s,390,758);assert.ok(narrow.zoom>=wide.zoom);assert.ok(narrow.zoom<=(s.maxZoom??4.5));assert.ok(Math.abs(narrow.heading-s.pov.heading)<1);}
  assert.equal(Surfaces.get('unknown'),null);
 });
 
@@ -51,7 +51,7 @@ test('fitted posters leave a clear margin above tour dock at desktop and mobile 
 });
 
 test('walking arrival views preserve the same screen identities and reject unrelated panoramas',()=>{
- const pano='xyBUNhtkdE7tUUGrvRPwmA';assert.equal(Surfaces.all.length,3);
+ const pano='xyBUNhtkdE7tUUGrvRPwmA';assert.equal(Surfaces.all.length,4);
  for(const id of ['vila-left','vila-right']){const pose=Surfaces.poseFor(id,pano);assert.equal(pose.id,id);assert.equal(pose.pano,pano);assert.equal(pose.elementId,Surfaces.get(id).elementId);assert.ok(Surfaces.fit(pose,390,758).zoom>1);}
  assert.equal(Surfaces.poseFor('jardinets-main',pano),null);assert.equal(Surfaces.poseFor('vila-left','unknown'),null);
  const left=Surfaces.poseFor('vila-left',pano),pixel=Surfaces.project(...left.corners.tl,{heading:13,pitch:-6},2.3,1440,814);assert.ok(Math.abs(pixel[0]-615)<.01);assert.ok(Math.abs(pixel[1]-185)<.01);

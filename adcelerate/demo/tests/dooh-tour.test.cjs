@@ -134,3 +134,52 @@ test('both Vila screen identities stay on their connected alternate photograph d
   h.tick(9000);assert.equal(h.tour.getState().surfaceId,'b');assert.equal(h.sent.at(-1).preservePano,true);
   h.ready();assert.equal(h.tour.getState().pano,'V2');assert.equal(travel.filter(c=>c.action==='start').length,1);
 });
+
+test('changing walking speed updates the active request without resetting its route or skipping a panorama',()=>{
+  const h=walkingHarness();h.tour.observePosition({pano:'X',status:'ready'});h.tour.start('c',{mode:'walk'});
+  const before=h.tour.getState();assert.equal(h.travel[0].speed,1);
+  for(const speed of [2,4,6,8]){
+    assert.equal(h.tour.configure({mode:'walk',speed}),true);
+    const after=h.tour.getState();assert.equal(after.requestId,before.requestId);assert.equal(after.routeStep,before.routeStep);assert.equal(after.pano,'X');
+    assert.deepEqual(h.travel.at(-1),{action:'speed',routeId:'out',requestId:before.requestId,speed});
+  }
+  assert.equal(h.travel.filter(c=>c.action==='start').length,1);assert.equal(h.travel.filter(c=>c.action==='cancel').length,0);assert.equal(h.sent.length,0);
+});
+test('speed changes never shorten the nine-second screen exposure, including a paused exposure',()=>{
+  const h=walkingHarness();h.tour.observePosition({pano:'V',status:'ready'});h.tour.start('a',{mode:'walk',speed:8});h.ready();h.tick(3000);
+  h.tour.configure({speed:2});assert.equal(h.tour.getState().remainingMs,6000);h.tour.pause();h.tour.configure({speed:6});
+  h.tick(40000);assert.equal(h.tour.getState().remainingMs,6000);h.tour.resume();h.ready();h.tick(5999);
+  assert.equal(h.tour.getState().surfaceId,'a');h.tick(1);assert.equal(h.tour.getState().surfaceId,'b');assert.equal(h.tour.getState().speed,6);
+});
+test('paused street speed is retained on resume without starting an extra route while paused',()=>{
+  const h=walkingHarness();h.tour.observePosition({pano:'X',status:'ready'});h.tour.start('c',{mode:'walk'});h.tour.pause();
+  const count=h.travel.length;h.tour.configure({speed:8});h.tour.observePosition({pano:'Y',status:'ready'});
+  assert.equal(h.tour.getState().status,'paused');assert.equal(h.travel.length,count);h.tour.resume();
+  assert.equal(h.travel.at(-1).speed,8);assert.equal(h.tour.getState().routeStep,2);
+});
+test('Directo is an explicit mode change preserving the destination and invalidating the former walking request',()=>{
+  const h=walkingHarness();h.tour.observePosition({pano:'X',status:'ready'});h.tour.start('c',{mode:'walk',speed:4});const old=h.tour.getState();
+  h.tour.configure({mode:'direct'});const direct=h.tour.getState();assert.equal(direct.surfaceId,old.surfaceId);assert.equal(direct.index,old.index);assert.equal(direct.lap,old.lap);assert.equal(direct.mode,'direct');
+  assert.equal(h.sent.at(-1).action,'focus');assert.equal(h.sent.at(-1).preservePano,undefined);
+  assert.equal(h.tour.acceptRoute({requestId:old.requestId,routeId:old.routeId,status:'ready',pano:'J'}),false);
+  for(const speed of [0,3,9,Infinity,NaN,'2'])assert.equal(h.tour.configure({speed}),false);
+});
+test('four screens in three sites form a complete cycle using the catalogue order without a three-stop assumption',()=>{
+  const routes=UrbanRoutes.create([{id:'vj',fromSiteId:'vila',toSiteId:'jardinets',panos:['V','J']},{id:'jl',fromSiteId:'jardinets',toSiteId:'lesseps',panos:['J','L']},{id:'lv',fromSiteId:'lesseps',toSiteId:'vila',panos:['L','V']}]);
+  const h=harness({stops:[{id:'a',siteId:'vila',pano:'V'},{id:'b',siteId:'vila',pano:'V'},{id:'c',siteId:'jardinets',pano:'J'},{id:'d',siteId:'lesseps',pano:'L'}],findRoute:routes.find,sendRoute(){}});
+  h.tour.observePosition({pano:'V',status:'ready'});h.tour.start('a',{mode:'walk',speed:8});h.ready();const seen=['a'];
+  for(let i=0;i<4;i++){
+    h.tick(9000);const s=h.tour.getState();if(s.status==='travelling')h.tour.acceptRoute({requestId:s.requestId,routeId:s.routeId,status:'ready',pano:routes.get(s.routeId).panos.at(-1)});
+    h.ready();seen.push(h.tour.getState().surfaceId);
+  }
+  assert.deepEqual(seen,['a','b','c','d','a']);assert.equal(h.tour.getState().total,4);assert.equal(h.tour.getState().lap,2);
+});
+
+test('selecting Directo resolves a blocked street explicitly while a paused route remains paused',()=>{
+  const h=walkingHarness();h.tour.observePosition({pano:'unknown',status:'ready'});h.tour.start('c',{mode:'walk'});
+  assert.equal(h.tour.getState().status,'error');h.tour.configure({speed:4});assert.equal(h.tour.getState().status,'error');
+  h.tour.configure({mode:'direct'});assert.equal(h.tour.getState().status,'loading');assert.equal(h.sent.at(-1).surfaceId,'c');
+  const p=walkingHarness();p.tour.observePosition({pano:'X',status:'ready'});p.tour.start('c',{mode:'walk'});p.tour.pause();const count=p.sent.length;
+  p.tour.configure({mode:'direct'});assert.equal(p.tour.getState().status,'paused');assert.equal(p.sent.length,count);
+  p.tour.resume();assert.equal(p.tour.getState().status,'loading');assert.equal(p.sent.at(-1).surfaceId,'c');
+});

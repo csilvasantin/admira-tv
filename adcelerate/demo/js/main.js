@@ -9,7 +9,8 @@ const humanHUD = HumanView.create({element:document.getElementById('human-hud'),
   send:sendHumanCommand,onExit:closePhoto,onInspect:inspectHumanSupport,onSiteChange:selectHumanSite});
 let selectedSite = 'kiosk';
 let pendingSurfaceCommand=null,doohUiTimer=null;
-let tourTravelMode=new URLSearchParams(location.search).get('travel')==='walk'?'walk':'direct';
+let tourTravelMode=new URLSearchParams(location.search).get('travel')==='direct'?'direct':'walk';
+let tourSpeed=DoohTour.speeds.includes(Number(new URLSearchParams(location.search).get('speed')))?Number(new URLSearchParams(location.search).get('speed')):1;
 const screenSound={screenId:null,requestId:0,status:'muted',volume:.7};
 const doohTour=DoohTour.create({stops:DoohSurfaces.all,send:sendSurfaceCommand,sendRoute:sendRouteCommand,findRoute:UrbanRoutes.find,
   canFocus:(id,pano)=>DoohSurfaces.poseFor?!!DoohSurfaces.poseFor(id,pano):DoohSurfaces.get(id)?.pano===pano,
@@ -1330,8 +1331,10 @@ function buildHUD() {
   $('universe-human').onclick = () => {photo.siteId='vila';openPhoto('human');};
   $('universe-tour-start').onclick=()=>{photo.siteId='vila';startDoohTour();};
   $('human-tour-start').onclick=startDoohTour;
-  $('dooh-travel-mode').value=tourTravelMode;
-  $('dooh-travel-mode').onchange=event=>setTourTravelMode(event.target.value);
+  syncTourSpeedControls();
+  for(const id of ['dooh-travel-mode','dooh-active-speed'])$(id).onchange=event=>setTourTravelMode(event.target.value);
+  $('universe-tour-start').textContent='▶ Tour DooH · '+DoohSurfaces.all.length+' pantallas';
+  $('dooh-tour-step').textContent='1 / '+DoohSurfaces.all.length;
   $('dooh-tour-direct').onclick=()=>{const id=doohTour.getState().surfaceId;setTourTravelMode('direct');startDoohTour(id);};
   $('human-inspect-close').addEventListener('click',()=>muteScreenSound(true));
   $('human-audio-toggle').onclick=toggleScreenSound;
@@ -1983,14 +1986,20 @@ function startDoohTour(surfaceId){
   $('human-support-card').classList.add('hidden');
   $('human-paths').classList.add('hidden');
   const first=DoohSurfaces.all.find(surface=>surface.siteId===photo.siteId)||DoohSurfaces.all[0];
-  const url=new URL(location.href);url.searchParams.set('tour','dooh');history.replaceState(null,'',url);
-  doohTour.start(typeof surfaceId==='string'&&DoohSurfaces.get(surfaceId)?surfaceId:first.id,{mode:tourTravelMode});
+  const url=new URL(location.href);url.searchParams.set('tour','dooh');url.searchParams.set('travel',tourTravelMode);url.searchParams.set('speed',String(tourSpeed));history.replaceState(null,'',url);
+  doohTour.start(typeof surfaceId==='string'&&DoohSurfaces.get(surfaceId)?surfaceId:first.id,{mode:tourTravelMode,speed:tourSpeed});
+}
+function syncTourSpeedControls(){
+  for(const id of ['dooh-travel-mode','dooh-active-speed'])$(id).value=tourTravelMode==='direct'?'direct':String(tourSpeed);
 }
 function setTourTravelMode(value){
-  stopDoohTour('manual');tourTravelMode=value==='walk'?'walk':'direct';
-  $('dooh-travel-mode').value=tourTravelMode;
-  const url=new URL(location.href);if(tourTravelMode==='walk')url.searchParams.set('travel','walk');else url.searchParams.delete('travel');
+  const nextMode=value==='direct'?'direct':'walk';
+  const nextSpeed=value==='direct'||value==='walk'?tourSpeed:Number(value);
+  if(!DoohTour.speeds.includes(nextSpeed))return;
+  tourTravelMode=nextMode;tourSpeed=nextSpeed;syncTourSpeedControls();
+  const url=new URL(location.href);url.searchParams.set('travel',tourTravelMode);url.searchParams.set('speed',String(tourSpeed));
   history.replaceState(null,'',url);
+  doohTour.configure({mode:tourTravelMode,speed:tourSpeed});
 }
 function postAudioCommand(action){
   if(!photo.frame||!photo.ready||!screenSound.screenId)return;
@@ -2058,7 +2067,7 @@ function renderDoohTour(state){
   $('dooh-start-shield').classList.toggle('hidden',!(active&&photo.frame&&!photo.ready));
   $('dooh-tour-step').textContent=(state.index+1)+' / '+state.total;
   $('dooh-tour-screen').textContent=state.routeId?'Caminando hacia '+OutdoorSites.get(state.siteId).shortLabel:state.label;
-  $('dooh-tour-status').textContent=({locating:'Ubicando el punto actual de la calle…',travelling:'Conexiones reales · tramo '+state.routeStep+' de '+state.routeTotal,loading:'Preparando fotografía y encuadre…',playing:'9 segundos · '+(state.mode==='walk'?'paseo por la ciudad':'entre pantallas'),paused:state.routeId?'Paseo en pausa · tramo '+state.routeStep+' de '+state.routeTotal:'En pausa',error:state.mode==='walk'?'No hay una continuación verificada desde este punto. Puedes reintentar o tomar el control.':'No se pudo preparar esta vista. Puedes reintentar.'})[state.status]||'Tour finalizado';
+  $('dooh-tour-status').textContent=({locating:'Ubicando el punto actual de la calle…',travelling:'Paseo ×'+state.speed+' · tramo '+state.routeStep+' de '+state.routeTotal,loading:'Preparando fotografía y encuadre…',playing:'9 segundos · '+(state.mode==='walk'?'paseo ×'+state.speed:'directo'),paused:state.routeId?(state.mode==='direct'?'En pausa · al reanudar irás directamente a la pantalla':'Paseo en pausa · tramo '+state.routeStep+' de '+state.routeTotal):'En pausa',error:state.mode==='walk'?'No hay una continuación verificada desde este punto. Puedes reintentar o tomar el control.':'No se pudo preparar esta vista. Puedes reintentar.'})[state.status]||'Tour finalizado';
   $('dooh-tour-end').textContent=state.mode==='walk'?'Tomar control':'Finalizar';
   $('dooh-tour-direct').classList.toggle('hidden',!(state.mode==='walk'&&state.status==='error'));
   $('dooh-tour-pause').textContent=state.status==='paused'?'Reanudar':state.status==='error'?'Reintentar':'Pausar';

@@ -44,11 +44,13 @@
       if(disposed)return;release();++revision;metadata=null;clearTimeout(timer);timer=null;pending=null;state.status=status;
       state.supportVisible=false;emit();onFeedback(message);
     }
+    const locationMatches=pano=>panorama.getLocation?.()?.pano===pano;
     function finish(){
-      if(disposed||!metadata||!statusReady||metadata.pano!==panorama.getPano()||panorama.getStatus()!=='OK'||paintPending===revision)return;
+      if(disposed||!metadata||!statusReady||metadata.pano!==panorama.getPano()||!locationMatches(metadata.pano)||panorama.getStatus()!=='OK'||paintPending===revision)return;
       const token=revision;paintPending=token;
       afterPaint(()=>{
-        if(disposed||token!==revision||!statusReady||!metadata||metadata.pano!==panorama.getPano())return;
+        if(disposed||token!==revision)return;
+        if(!statusReady||!metadata||metadata.pano!==panorama.getPano()||!locationMatches(metadata.pano)||panorama.getStatus()!=='OK'){paintPending=0;return;}
         const pano=metadata.pano;
         state.pano=pano;state.date=metadata.date;state.links=metadata.links;state.position=metadata.position;
         state.status=state.links.length?'ready':'unavailable';state.supportVisible=pano===options.panelPano;
@@ -88,6 +90,7 @@
       else if(pending && panorama.getStatus()==='ZERO_RESULTS')fail('error','No hay imagen disponible para este punto.');
     }
     function linksChanged(){
+      if(pending){finish();return;}
       if(disposed||pending||!metadata||!statusReady||metadata.pano!==panorama.getPano())return;
       const location=panorama.getLocation?.();if(!location||location.pano!==metadata.pano)return;
       const token=revision,observation=++linksRevision,observed=linksOf(panorama.getLinks?.()),signatureNow=JSON.stringify(observed);
@@ -104,7 +107,7 @@
         if(state.status==='unavailable'&&state.links.length)state.status='ready';emit();
       });
     }
-    for(const [event,fn] of [['pano_changed',panoChanged],['status_changed',statusChanged],['links_changed',linksChanged],['pov_changed',emit]]){
+    for(const [event,fn] of [['pano_changed',panoChanged],['status_changed',statusChanged],['links_changed',linksChanged],['pov_changed',emit],['position_changed',finish]]){
       const listener=panorama.addListener(event,fn);listeners.push(listener);
     }
     function navigate(pano,kind='walk'){

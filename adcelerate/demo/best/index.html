@@ -368,6 +368,13 @@
    ============================================================ */
 
 const $ = (id) => document.getElementById(id);
+// Surface inventory owns its canvas dimensions and identity, including newly added sites.
+for(const surface of DoohSurfaces.all){
+  let panel=$(surface.elementId);
+  if(!panel){panel=document.createElement('div');panel.id=surface.elementId;panel.className='sv-panel';panel.append(document.createElement('canvas'));$('sv-signage').append(panel);}
+  panel.firstElementChild.width=surface.width;panel.firstElementChild.height=surface.height;
+}
+
 const WALK_MODE = window.OUTDOOR_EMBED && new URLSearchParams(location.search).get('walk') === '1';
 let activeWalkSite = OutdoorSites.get(new URLSearchParams(location.search).get('site')) || OutdoorSites.get('vila');
 let streetWalk = null, lastWalkState = null, walkBootTimer = null, walkBootFailed = false, walkBootGeneration = 0;
@@ -398,7 +405,8 @@ function installOutdoorChild(){
     if(event.data.type==='route-command'&&!outdoorStopped&&WALK_MODE){
       const p=event.data.payload;
       if(p.action==='cancel')routeWalk.cancel('cancel',p.requestId);
-      else{surfaceFocus.cancel();screenAudio.mute();routeWalk.start(p.routeId,p.requestId);}
+      else if(p.action==='speed')routeWalk.setSpeed(p.speed,p.requestId,p.routeId);
+      else{surfaceFocus.cancel();screenAudio.mute();routeWalk.start(p.routeId,p.requestId,{speed:p.speed});}
       return;
     }
     if (event.data.type === 'surface-command' && !outdoorStopped && WALK_MODE) {
@@ -1071,6 +1079,7 @@ function roundRect(c, x, y, w, h, r){
 }
 function drawChannel(ctx, W, H, surface=null){
   const audienceAllowed=!surface||surface.siteId==='vila';
+  const siteLabel=(surface?OutdoorSites.get(surface.siteId)?.name:null)||surface?.label||'Admira';
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = '#06141a'; ctx.fillRect(0, 0, W, H);
   // media actual (vídeo/imagen del canal real) a cover
@@ -1094,7 +1103,7 @@ function drawChannel(ctx, W, H, surface=null){
     ctx.fillStyle='#0b2627';ctx.fillRect(0,0,W,H);ctx.fillStyle='#bafd6f';
     ctx.font='800 '+Math.round(W*.13)+'px '+LIVE_SANS;ctx.textAlign='center';
     ctx.fillText('admira.tv',W/2,H*.42);ctx.font='600 '+Math.round(W*.055)+'px '+LIVE_MONO;
-    ctx.fillText('JARDINETS',W/2,H*.49);ctx.textAlign='left';
+    ctx.fillText(siteLabel.toUpperCase(),W/2,H*.49);ctx.textAlign='left';
   }
   const pad = Math.round(W * 0.035);
   // (sin chip EN VIVO/FALLBACK: el creativo va limpio, como una pantalla real — 13-jul-2026)
@@ -1108,7 +1117,7 @@ function drawChannel(ctx, W, H, surface=null){
   ctx.textBaseline = 'alphabetic';
   ctx.font = '700 ' + f2 + 'px ' + LIVE_MONO; ctx.fillStyle = '#50c8ff';
   const isGrid = chItem && chItem.source === 'grid';
-  ctx.fillText(!audienceAllowed ? 'JARDINETS · PANTALLA DEL GEMELO' : isGrid ? ('PARRILLA 50/50 · ' + (chItem.lane === 'publicidad' ? 'PUBLICIDAD' : 'AYUNTAMIENTO')) : 'ADcelerate recomienda', pad, H - bh + f2 * 1.5);
+  ctx.fillText(!audienceAllowed ? siteLabel.toUpperCase()+' · PANTALLA DEL GEMELO' : isGrid ? ('PARRILLA 50/50 · ' + (chItem.lane === 'publicidad' ? 'PUBLICIDAD' : 'AYUNTAMIENTO')) : 'ADcelerate recomienda', pad, H - bh + f2 * 1.5);
   ctx.font = '800 ' + f3 + 'px ' + LIVE_SANS; ctx.fillStyle = '#eaf7ff';
   ctx.fillText(!audienceAllowed ? (live?chTitle():'admira.tv') : isGrid ? chTitle() : ('Creatividad ' + rg.cre + ' · ' + rg.titulo), pad, H - Math.round(bh * 0.28));
 }
@@ -1289,13 +1298,15 @@ let routeMotion=null;
 function stopRouteOrientation(requestId){if(routeMotion?.requestId===requestId){const m=routeMotion;routeMotion=null;cancelAnimationFrame(m.frame);m.reject(Error('Cancelled'));}}
 function orientStreetRoute(heading,requestId){
   if(!sv)return Promise.reject(Error('Panorama unavailable'));
-  const from=sv.getPov(),zoom=sv.getZoom(),began=performance.now(),dh=((heading-from.heading+540)%360)-180;
+  const from=sv.getPov(),zoom=sv.getZoom(),dh=((heading-from.heading+540)%360)-180;
   if(matchMedia('(prefers-reduced-motion: reduce)').matches){sv.setPov({heading,pitch:0});sv.setZoom(.9);return;}
   return new Promise((resolve,reject)=>{
     const motion={requestId,frame:null,reject};routeMotion=motion;
+    let previous=performance.now(),elapsed=0;
     function frame(now){
       if(routeWalk.active?.requestId!==requestId||outdoorStopped){reject(Error('Cancelled'));return;}
-      const t=Math.min(1,(now-began)/400),ease=t*t*(3-2*t);
+      elapsed+=Math.max(0,now-previous)*(routeWalk.active?.speed||1);previous=now;
+      const t=Math.min(1,elapsed/400),ease=t*t*(3-2*t);
       sv.setPov({heading:from.heading+dh*ease,pitch:from.pitch*(1-ease)});sv.setZoom(zoom+(.9-zoom)*ease);
       if(t<1)motion.frame=requestAnimationFrame(frame);else{if(routeMotion===motion)routeMotion=null;resolve();}
     }

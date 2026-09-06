@@ -129,3 +129,12 @@ test('a route target changes the destination and radar without lending Vila audi
   h.hud.setRouteTarget(null);
   assert.equal(h.elements.get('#human-site-select').value,'vila');assert.equal(h.elements.get('#human-distance').textContent,'0 m aprox.');
 });
+
+test('Lesseps appears as a third destination with its own empty audience state and can be the initial visit',t=>{
+  const h=hudHarness(t);h.hud.enter('lesseps');
+  assert.deepEqual(h.elements.get('#human-site-select').children.map(option=>option.value),['vila','jardinets','lesseps']);
+  assert.equal(h.elements.get('#human-site-select').value,'lesseps');assert.equal(h.elements.get('#human-site-name').textContent,'Quiosco de Lesseps');
+  h.hud.updateAudience({siteId:'bcn-kiosk-016',effectiveCount:460,baseCount:460,hour:18,manual:false,mix:{familias:25,jovenes:40,turistas:20,seniors:15}},{},'Vila only');
+  assert.equal(h.elements.get('#human-audience').textContent,'—');assert.equal(h.elements.get('#human-time').textContent,'');
+  assert.equal(h.elements.get('#human-audience-label').textContent,'Audiencia pendiente de conectar');assert.equal(h.elements.get('#human-recommendation').textContent,'');
+});

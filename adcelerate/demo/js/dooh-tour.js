@@ -1,13 +1,14 @@
 /* Screen exposure and linked street travel share one cancellable tour lifecycle. */
 (function(root){
   'use strict';
+  const speeds=Object.freeze([1,2,4,6,8]);
   function create(options){
     const stops=options.stops.slice();
     if(!stops.length||new Set(stops.map(s=>s.id)).size!==stops.length)throw Error('Tour requires unique screens');
     const now=options.now||(()=>performance.now()),later=options.setTimeout||setTimeout,clear=options.clearTimeout||clearTimeout;
     const dwellMs=options.dwellMs??9000,timeoutMs=options.timeoutMs??30000;
     const send=options.send,sendRoute=options.sendRoute||(()=>{throw Error('Route unavailable');}),onChange=options.onChange||(()=>{});
-    let order=stops.slice(),index=0,status='idle',requestId=0,sequence=0,lap=1,mode='direct';
+    let order=stops.slice(),index=0,status='idle',requestId=0,sequence=0,lap=1,mode='direct',speed=1;
     let remainingMs=dwellMs,deadline=0,loadTimer=null,dwellTimer=null,reason=null,destroyed=false;
     let kind=null,route=null,routeStep=0,routeTotal=0,position=null,positionStatus=null;
     const engaged=()=>['locating','travelling','loading','playing','paused','error'].includes(status);
@@ -16,7 +17,7 @@
     function getState(){
       const remaining=status==='playing'?Math.max(0,deadline-now()):remainingMs;
       return {status,index,total:order.length,surfaceId:current().id,siteId:current().siteId,label:current().label,
-        requestId,lap,mode,remainingMs:remaining,progress:Math.min(1,Math.max(0,1-remaining/dwellMs)),reason,
+        requestId,lap,mode,speed,remainingMs:remaining,progress:Math.min(1,Math.max(0,1-remaining/dwellMs)),reason,
         routeId:route?.id||null,routeStep,routeTotal,pano:position};
     }
     const emit=()=>onChange(getState());
@@ -41,7 +42,7 @@
     function travel(nextRoute){
       clearTimers();kind='route';route=nextRoute;routeStep=route.panos.indexOf(position);routeTotal=route.panos.length-1;
       status='travelling';reason=null;requestId=++sequence;emit();watch();
-      try{sendRoute({action:'start',routeId:route.id,requestId});}catch(_){fail('unavailable');}
+      try{sendRoute({action:'start',routeId:route.id,requestId,speed});}catch(_){fail('unavailable');}
     }
     function visit(nextIndex,remaining=dwellMs){
       clearTimers();index=nextIndex;remainingMs=remaining;reason=null;
@@ -102,9 +103,24 @@
     function start(surfaceId,settings={}){
       if(destroyed)return false;
       clearTimers();status='idle';cancel();kind=null;route=null;routeStep=routeTotal=0;
-      mode=settings.mode==='walk'?'walk':'direct';
+      mode=settings.mode==='walk'?'walk':'direct';speed=speeds.includes(settings.speed)?settings.speed:1;
       const startIndex=Math.max(0,stops.findIndex(stop=>stop.id===surfaceId));
       order=stops.slice(startIndex).concat(stops.slice(0,startIndex));index=0;lap=1;remainingMs=dwellMs;visit(0);return true;
+    }
+    function configure(settings={}){
+      if(destroyed||(settings.mode!==undefined&&!['walk','direct'].includes(settings.mode))||
+        (settings.speed!==undefined&&!speeds.includes(settings.speed)))return false;
+      const nextMode=settings.mode??mode,nextSpeed=settings.speed??speed,modeChanged=nextMode!==mode,speedChanged=nextSpeed!==speed;
+      if(!modeChanged&&!speedChanged)return true;
+      speed=nextSpeed;
+      if(modeChanged&&(['locating','travelling','loading'].includes(status)||(status==='error'&&nextMode==='direct'))){
+        clearTimers();cancel();mode=nextMode;visit(index,remainingMs);return true;
+      }
+      mode=nextMode;
+      if(speedChanged&&kind==='route'&&status==='travelling'){
+        try{sendRoute({action:'speed',routeId:route.id,requestId,speed});}catch(_){fail('unavailable');return false;}
+      }
+      emit();return true;
     }
     function pause(){
       if(!['locating','travelling','loading','playing'].includes(status))return;
@@ -112,8 +128,8 @@
       clearTimers();status='paused';reason=null;cancel();emit();
     }
     function resume(){if(['paused','error'].includes(status)&&!destroyed)visit(index,remainingMs);}
-    return {start,pause,resume,stop,accept,acceptRoute,observePosition,getState,isActive:engaged,
+    return {start,configure,pause,resume,stop,accept,acceptRoute,observePosition,getState,isActive:engaged,
       destroy(){stop('closed');destroyed=true;clearTimers();}};
   }
-  const api={create};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DoohTour=api;
+  const api={create,speeds};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DoohTour=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

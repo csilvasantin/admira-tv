@@ -18,7 +18,15 @@
    corners:{"tl":[61.32755652,1.52556329],"tr":[72.45074058,1.52613794],"br":[72.68665341,-12.83206512],"bl":[61.56409348,-13.7276217]}},
   {id:'jardinets-main',siteId:'jardinets',label:'Jardinets · pantalla junto al ATM',pano:'L6xcO37SQfBmCxsT9lPdjQ',
    pov:{heading:290.49,pitch:-6.3,zoom:2.35},elementId:'sv-jardinets',width:512,height:1320,
-   corners:{"tl":[288.40210155,1.19514536],"tr":[292.52043081,1.21815636],"br":[292.45242362,-9.5541484],"bl":[288.37259124,-9.23394198]}}
+   corners:{"tl":[288.40210155,1.19514536],"tr":[292.52043081,1.21815636],"br":[292.45242362,-9.5541484],"bl":[288.37259124,-9.23394198]}},
+  // August 2024, west pavement by Lesseps metro. One mapped poster; retain its
+  // metal frame, lower glass and neighbouring information panels. W1440,H814,
+  // POV297.5/1.5,z2.8: (700,328),(736,335),(737,472),(701,475).
+  // At heading301.5 the same corners are (525,328),(561,335),(562,472),(526,475).
+  // Cap the automatic close-up before this panorama's native high-zoom limit.
+  {id:'lesseps-main',siteId:'lesseps',label:'Lesseps · pantalla lateral',pano:'FSGuPbr-GnVq2_FxQVLfkg',
+   pov:{heading:297.47,pitch:1.6,zoom:3},maxZoom:3,elementId:'sv-lesseps',width:512,height:760,
+   corners:{"tl":[297.04242294,3.30465531],"tr":[297.86603766,3.14487305],"br":[297.88835824,0.01491152],"bl":[297.0659678,-0.05359627]}}
  ];
  // Same physical Vila screens seen from the connected walking arrival, March2023.
  // 1440x814,zoom2.3,pitch-6: left h13 (615,185),(840,179),(840,552),(619,532);
@@ -51,7 +59,7 @@
   const top=Math.min(155,height*.22),bottom=Math.min(275,height*.45);
   const availableH=Math.max(100,height-top-bottom),availableW=Math.max(120,width-48);
   const focal=.82*Math.min(availableW/span(0),availableH/span(1));
-  const zoom=Math.max(.9,Math.min(4.5,1+Math.log2(2*focal/width)));
+  const zoom=Math.max(.9,Math.min(surface.maxZoom??4.5,1+Math.log2(2*focal/width)));
   const centerY=(top+height-bottom)/2;
   return {heading,pitch:pitch+Math.atan((centerY-height/2)/focal)/r,zoom};
  }

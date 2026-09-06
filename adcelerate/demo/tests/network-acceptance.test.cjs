@@ -19,9 +19,10 @@ test('Jardinets preserves the verified panorama, camera position and photographi
  assert.ok(Object.isFrozen(site.entry.pov));
 });
 
-test('next kiosk cycles only through verified destinations without an invented third stop',()=>{
+test('next kiosk closes the verified Vila, Jardinets and Lesseps circuit',()=>{
  assert.equal(Sites.next('vila').id,'jardinets');
- assert.equal(Sites.next('jardinets').id,'vila');
+ assert.equal(Sites.next('jardinets').id,'lesseps');
+ assert.equal(Sites.next('lesseps').id,'vila');
  assert.equal(Sites.get('unverified'),null);
  assert.equal(new Set(Sites.all.map(s=>s.id)).size,Sites.all.length);
 });
@@ -44,6 +45,8 @@ test('photographic location cannot replace the audience provenance of Vila de Gr
  assert.equal(Contract.validate({...context,siteId:'jardinets'}),null);
  assert.equal(Sites.get('vila').audienceSiteId,context.siteId);
  assert.notEqual(Sites.get('jardinets').audienceSiteId,context.siteId);
+ assert.equal(Sites.get('lesseps').audienceSiteId,null);
+ assert.equal(Contract.validate({...context,siteId:'lesseps'}),null);
 });
 
 test('Jardinets deep links survive the legacy entry without embedding recursively',()=>{

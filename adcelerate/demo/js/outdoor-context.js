@@ -4,6 +4,7 @@
   const sites=typeof module!=='undefined'&&module.exports?require('./outdoor-sites.js'):root.OutdoorSites;
   const surfaces=typeof module!=='undefined'&&module.exports?require('./dooh-surfaces.js'):root.DoohSurfaces;
   const routes=typeof module!=='undefined'&&module.exports?require('./urban-route.js'):root.UrbanRoutes;
+  const speeds=[1,2,4,6,8];
   const profiles = ['familias', 'jovenes', 'turistas', 'seniors'];
   const finite = (v, min, max) => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
   function validate(c) {
@@ -51,15 +52,17 @@
   }
   const validToken=p=>p&&Number.isSafeInteger(p.requestId)&&p.requestId>0;
   function validateRouteCommand(p){
-    return validToken(p)&&routes.get(p.routeId)&&['start','cancel'].includes(p.action)?{action:p.action,routeId:p.routeId,requestId:p.requestId}:null;
+    return validToken(p)&&routes.get(p.routeId)&&['start','cancel','speed'].includes(p.action)&&
+      (p.speed===undefined||speeds.includes(p.speed))&&(p.action!=='speed'||p.speed!==undefined)?
+      {action:p.action,routeId:p.routeId,requestId:p.requestId,...(p.speed!==undefined?{speed:p.speed}:{})}:null;
   }
   function validateRouteState(p){
     const route=p&&routes.get(p.routeId);
     if(!validToken(p)||!route||!['loading','walking','ready','error','cancelled'].includes(p.status)||
       !Number.isInteger(p.step)||p.step<0||p.step>=route.panos.length||p.total!==route.panos.length-1||
-      !shortString(p.pano,250)||
+      !shortString(p.pano,250)||(p.speed!==undefined&&!speeds.includes(p.speed))||
       (p.reason!==undefined&&!['manual','cancel','timeout','unavailable','missing-link','off-route'].includes(p.reason)))return null;
-    return {requestId:p.requestId,routeId:p.routeId,status:p.status,step:p.step,total:p.total,pano:p.pano,...(p.reason!==undefined?{reason:p.reason}:{})};
+    return {requestId:p.requestId,routeId:p.routeId,status:p.status,step:p.step,total:p.total,pano:p.pano,...(p.speed!==undefined?{speed:p.speed}:{}),...(p.reason!==undefined?{reason:p.reason}:{})};
   }
   function validateAudioCommand(p){
     if(!validToken(p)||!surfaces.get(p.screenId)||!['enable','disable','volume'].includes(p.action)||
@@ -102,7 +105,8 @@
     if (params.get('walk') === '1') next.set('view', 'human');
     if(sites.get(params.get('site')))next.set('site',params.get('site'));
     if(params.get('tour')==='dooh'){next.set('tour','dooh');next.set('view','human');}
-    if(params.get('travel')==='walk')next.set('travel','walk');
+    if(['walk','direct'].includes(params.get('travel')))next.set('travel',params.get('travel'));
+    if(speeds.map(String).includes(params.get('speed')))next.set('speed',params.get('speed'));
     return '../' + (next.size ? '?' + next.toString() : '');
   }
   const api = {validate, validateWalkState, validateWalkCommand, validateSurfaceCommand, validateSurfaceState, validateRouteCommand, validateRouteState, validateAudioCommand, validateAudioState, message, accepts, bestEntry};
