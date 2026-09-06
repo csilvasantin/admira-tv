@@ -1,9 +1,9 @@
 {
-  "version": "v.06.09.2026.r8.14:51",
+  "version": "v.06.09.2026.r9.14:56",
   "signature": "OraculoMacMini · MacMini",
   "agent": "OraculoMacMini",
   "machine": "MacMini",
   "day": "06.09.2026",
-  "time": "14:51",
-  "evidence": "DCL-550c2640c49ff1842dfa5382 (ref. 1893): mando local de cada pantalla del gemelo, con modo foco, vista ampliada del mismo contenido, selección de pieza/lista, pausa, avance, repetición, posición y audio. Aislamiento entre caras de Vila, restauración individual, cierre silenciado y sonido real RMS 0.11935 verificados. 179 pruebas integradas y 13 pruebas finales del motor superadas. Sin órdenes a la flota ni cambios de programación externa."
+  "time": "14:56",
+  "evidence": "DCL-550c2640c49ff1842dfa5382 (ref. 1893): cierre del mando local por pantalla. Banda del player y título de Stock coherentes con la pieza seleccionada, con estados de carga/error sin sustituir por otra creatividad. Imagen836 real y su banda verificadas en navegador; 8 pruebas afectadas superadas. Conserva el aislamiento, audio y controles de r8, y la programación externa intacta."
 }
