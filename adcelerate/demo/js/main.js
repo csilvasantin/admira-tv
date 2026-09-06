@@ -4,8 +4,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
 
+const photo = {frame:null, ready:false, signature:'', returnMode:null};
+let selectedSite = 'kiosk';
+
 /* ============================== datos de demo ============================== */
-// «Datos telco de zona (simulados sobre patrón MITMA)» — deterministas
+// «Audiencia simulada de la plaza · curva de demostración» — deterministas
 const FRANJAS = [
   { id: '08h', aforo: 140, mix: { familias: 30, jovenes: 25, turistas: 10, seniors: 35 } },
   { id: '13h', aforo: 320, mix: { familias: 40, jovenes: 20, turistas: 25, seniors: 15 } },
@@ -30,7 +33,7 @@ const DAY_SECONDS = 90;               // AUTO: el día completo del gemelo en 90
 const FRANJA_H = [8, 13, 18, 22];     // los botones de franja son atajos del reloj
 
 // CURVA 24h construida sobre la tabla de franjas: valle nocturno 2–6h casi vacío,
-// pico de mediodía y pico de tarde 18–20h (patrón MITMA simulado, continuo)
+// pico de mediodía y pico de tarde 18–20h (curva de demostración, continuo)
 const CURVA24 = [
   { h: 0,    aforo: 90,  mix: { familias: 4,  jovenes: 42, turistas: 42, seniors: 12 } },
   { h: 2,    aforo: 22,  mix: { familias: 2,  jovenes: 56, turistas: 36, seniors: 6 } },
@@ -692,13 +695,13 @@ scene.add(kiosk);
 const state = {
   franjaIdx: 2,                      // franja más cercana al reloj (para fichas/experto)
   hour: 18, targetHour: 18,          // reloj de 24 h del gemelo (arranca en hora punta)
-  auto: true,
+  auto: false,
   cur: { aforo: 0, mix: { familias: 25, jovenes: 25, turistas: 25, seniors: 25 } },
   dominante: null,
   realItem: null,
 };
 let hourDirty = true;
-// aforo manual (slider de personas): manual=false → sigue el dato telco de la curva
+// aforo manual (slider de personas): manual=false → sigue el curva simulada de la curva
 const aforoCtl = { manual: false, value: 0 };
 function setHour(h, animar = true) {
   state.targetHour = ((h % 24) + 24) % 24;
@@ -763,7 +766,7 @@ function stockSkipError() {
   }
   nextStock();
 }
-function nextStock() { playStock(stockIdx + 1); }
+function nextStock() { if (!photo.frame) playStock(stockIdx + 1); }
 let playSeq = 0;                          // token: descarta rechazos de play() obsoletos
 function playStock(i) {
   clearTimeout(stockTimer);
@@ -775,7 +778,7 @@ function playStock(i) {
   if (stockItem.type === 'video') {
     vid.src = stockItem.url;
     // un salto rápido del player ABORTA el play() anterior: eso no es un fallo de pieza
-    vid.play().catch(() => { if (seq === playSeq && vid.error) stockSkipError(); });
+    if (!photo.frame) vid.play().catch(() => { if (seq === playSeq && vid.error) stockSkipError(); });
     stockTimer = setTimeout(nextStock, VIDEO_CAP_MS);
   } else {
     vid.pause(); vid.removeAttribute('src');
@@ -928,6 +931,8 @@ const rng = mulberry32(20260712);
 fetch('data/gracia-local.json').then(r => r.json()).then(data => {
   buildCity(data);
   buildCrowd(data);
+  buildingsMesh.visible = roofsMesh.visible = $('capa-edificios').checked;
+  roadsMesh.visible = $('capa-viales').checked;
   $('loading').classList.add('done');
 }).catch(err => {
   $('loading').innerHTML = '<p>Error cargando datos: ' + err + '</p>';
@@ -1113,7 +1118,8 @@ function buildCrowd(data) {
   group.add(body, legs, head);
   scene.add(group);
   figures = { group, body, legs, head };
-  applyFranja(state.franjaIdx, true);
+  updateCrowd();
+  figures.group.visible = $('capa-multitud').checked;
 }
 
 const _c = new THREE.Color();
@@ -1234,7 +1240,7 @@ function buildHUD() {
       <div class="track"><div class="fill" id="bar-${p}" style="background:${PERFIL_CSS[p]}"></div></div>`;
     mb.appendChild(row);
   });
-  // slider de PERSONAS: por defecto sigue el dato telco; al moverlo entra en manual
+  // slider de PERSONAS: por defecto sigue el curva simulada; al moverlo entra en manual
   const asl = $('aforo-slider');
   if (asl) {
     asl.max = String(MAX_CROWD);
@@ -1284,6 +1290,7 @@ function buildHUD() {
 
   // OPCIONES (izquierda) y AVANZADO (derecha): overlays plegables, uno abierto a la vez.
   const syncSideIcons = () => {
+    document.body.classList.toggle('universe-options-open', $('sidebar').classList.contains('open'));
     $('tg-left').classList.toggle('on', $('sidebar').classList.contains('open'));
     $('tg-right').classList.toggle('on', $('rightbar').classList.contains('open'));
   };
@@ -1308,6 +1315,16 @@ function buildHUD() {
   };
   $('tg-left').onclick = () => toggleSide('left');
   $('tg-right').onclick = () => toggleSide('right');
+  $('universe-audiences').onclick = () => toggleSide('right');
+  $('universe-layers').onclick = () => toggleSide('left');
+  $('nav-universe').onclick = e => { e.preventDefault(); closePhoto(); setQuality('better'); };
+  $('universe-photo').onclick = () => openPhoto();
+  $('universe-return').onclick = closePhoto;
+  $('select-kiosk').onclick = () => { selectedSite = 'kiosk'; updateUniverseCard(); if (!photo.frame) focusKiosk(); };
+  $('select-plaza').onclick = () => { selectedSite = 'plaza'; updateUniverseCard(); if (!photo.frame) focusOverview(); };
+  $('universe-center').onclick = focusOverview;
+  $('universe-in').onclick = () => zoomUniverse(1);
+  $('universe-out').onclick = () => zoomUniverse(-1);
   document.querySelectorAll('#mainnav a[data-open]').forEach(a => {
     a.onclick = e => { e.preventDefault(); toggleSide(a.dataset.open); };
   });
@@ -1365,9 +1382,9 @@ function updateExpert(force = false) {
       mix: Object.fromEntries(PERFILES.map(p => [p, +state.cur.mix[p].toFixed(1)])),
       dominante: state.dominante,
     },
-    aforo_fuente: aforoCtl.manual ? 'MANUAL (slider ' + aforoCtl.value + ')' : 'dato telco (curva 24h)',
+    aforo_fuente: aforoCtl.manual ? 'MANUAL (slider ' + aforoCtl.value + ')' : 'curva simulada (curva 24h)',
     reloj: rt.active ? 'RT 1:1 (Europe/Madrid)' : (state.auto ? 'AUTO 90s' : 'manual'),
-    fuente: 'simulado (patrón MITMA)',
+    fuente: 'simulación de demostración',
   }, null, 1);
   $('ex-signage').textContent = JSON.stringify({
     signage_now: lastSignageRaw,
@@ -1390,13 +1407,14 @@ function updateExpert(force = false) {
 function updateAforoUI() {
   const src = $('aforo-src'), rst = $('aforo-reset');
   if (!src) return;
-  src.textContent = aforoCtl.manual ? 'aforo manual' : 'dato telco';
+  src.textContent = aforoCtl.manual ? 'aforo manual' : 'curva simulada';
   src.classList.toggle('manual', aforoCtl.manual);
   rst.classList.toggle('hidden', !aforoCtl.manual);
 }
 function refreshHUD() {
+  updateUniverseCard();
   $('aforo').textContent = Math.round(state.cur.aforo);
-  // en automático el slider SIGUE al dato telco (posición viva)
+  // en automático el slider SIGUE al curva simulada (posición viva)
   const asl = $('aforo-slider');
   if (asl && !aforoCtl.manual && document.activeElement !== asl) asl.value = String(Math.round(state.cur.aforo));
   const mx = state.cur.mix;
@@ -1528,6 +1546,7 @@ function ficha(html) {
   $('ficha').classList.remove('hidden');
 }
 function showFichaKiosk() {
+  selectedSite = 'kiosk'; updateUniverseCard();
   const feed = state.realItem ? 'REAL · player del circuito' :
     (stockLive ? 'REAL · Stock del canal admira.tv' : 'Simulado · regla ADcelerate');
   const r = REGLAS[state.dominante || dominanteDe(franja().mix)];
@@ -1546,20 +1565,22 @@ function showFichaKiosk() {
     </dl>`);
 }
 function showFichaPlaza() {
-  const f = franja();
-  const mixTxt = PERFILES.map(p => `${PERFIL_LABEL[p]} ${f.mix[p]}%`).join(' · ');
+  selectedSite = 'plaza'; updateUniverseCard();
+  const f = {id:fmtHora(state.hour), aforo:Math.round(state.cur.aforo), mix:state.cur.mix};
+  const mixTxt = PERFILES.map(p => `${PERFIL_LABEL[p]} ${Math.round(f.mix[p])}%`).join(' · ');
   ficha(`
     <p class="tag">Zona de audiencia</p>
     <h3>Plaça de la Vila de Gràcia</h3>
     <dl>
       <dt>Franja</dt><dd>${f.id}</dd>
-      <dt>Aforo estimado</dt><dd>${f.aforo} personas</dd>
+      <dt>Base simulada</dt><dd>${f.aforo} personas</dd>
       <dt>Mezcla de perfiles</dt><dd>${mixTxt}</dd>
       <dt>Perfil dominante</dt><dd>${PERFIL_LABEL[dominanteDe(f.mix)]}</dd>
-      <dt>Fuente</dt><dd>Datos telco de zona (simulados sobre patrón MITMA)</dd>
+      <dt>Fuente</dt><dd>Audiencia simulada de la plaza · curva de demostración</dd>
     </dl>`);
 }
 function showFichaBuilding(pickArr, faceIndex) {
+  selectedSite = 'building'; updateUniverseCard();
   // búsqueda binaria del edificio por triángulo
   let lo = 0, hi = pickArr.length - 1, found = null;
   while (lo <= hi) {
@@ -1574,9 +1595,9 @@ function showFichaBuilding(pickArr, faceIndex) {
     <p class="tag">Edificio</p>
     <h3>${b.name || 'Edificio residencial'}</h3>
     <dl>
-      <dt>Altura</dt><dd>${b.h} m (~${Math.max(1, Math.round(b.h / 3))} plantas)</dd>
+      <dt>Altura de la maqueta</dt><dd>${b.h} m (~${Math.max(1, Math.round(b.h / 3))} plantas)</dd>
       ${b.id ? `<dt>OSM</dt><dd>way ${b.id}</dd>` : ''}
-      <dt>Datos</dt><dd>© OpenStreetMap contributors (ODbL)</dd>
+      <dt>Datos</dt><dd>Entorno OSM (ODbL) · alturas ilustrativas, sin validación individual</dd>
     </dl>`);
 }
 
@@ -1596,16 +1617,17 @@ fitOrtho();
 function activeCamera() { return quality === 'good' ? camera2D : camera; }
 function setQuality(q) {
   if (q === 'best') {                       // nivel fotorrealista: vive en la subcarpeta best/
-    location.href = 'best/';
+    openPhoto();
     return;
   }
+  if (photo.frame) closePhoto();
   quality = q;
   document.querySelectorAll('#quality button').forEach(b =>
     b.classList.toggle('active', b.dataset.q === q));
   if (q === 'good') {
     controls.enabled = false;
     $('hint').classList.add('gone');
-  } else if (camMode === 'free') {
+  } else if (camMode === 'free' || camMode === 'human') {
     controls.enabled = false;
   } else {
     controls.enabled = true;
@@ -1613,7 +1635,10 @@ function setQuality(q) {
 }
 // zoom con rueda en la vista 2D
 renderer.domElement.addEventListener('wheel', e => {
-  if (quality !== 'good') return;
+  if (quality !== 'good') {
+    if (camMode === 'free' || camMode === 'human') { e.preventDefault(); zoomUniverse(e.deltaY < 0 ? 1 : -1); }
+    return;
+  }
   e.preventDefault();
   camera2D.zoom = Math.min(6, Math.max(0.6, camera2D.zoom * (e.deltaY < 0 ? 1.12 : 0.89)));
   camera2D.updateProjectionMatrix();
@@ -1629,6 +1654,7 @@ function updateModeButtons() {
     b.classList.toggle('active', b.dataset.mode === camMode));
 }
 function setCamMode(m) {
+  if (photo.frame) closePhoto();
   if (m === 'guided') { startFlight(); return; }
   if (m === 'human') { enterHuman(); return; }
   stopFlight();                    // corta un vuelo guiado si lo hubiera
@@ -1654,7 +1680,8 @@ const FLY_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', '
 const pan2D = { keys: {}, vx: 0, vz: 0 };
 addEventListener('keydown', e => {
   if (!FLY_KEYS.includes(e.key)) return;
-  const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  if (photo.frame) return;
+  const t = e.target; if (t && (['INPUT','TEXTAREA','SELECT','BUTTON'].includes(t.tagName) || t.isContentEditable)) return;
   // ⇧+flechas = mando del PLAYER del kiosko (exclusivo; la altura de vuelo es Av/Re Pág)
   if (e.shiftKey && e.key.startsWith('Arrow')) { e.preventDefault(); playerCmd(e.key); return; }
   if (quality === 'good') {                  // 2D: flechas = pan del plano
@@ -1813,8 +1840,145 @@ function tickFlight(now) {
   if (p >= 1) stopFlight();
 }
 
+/* =================== universo compartido, dos vistas =================== */
+function contextSnapshot() {
+  const sum = PERFILES.reduce((n,p) => n + state.cur.mix[p], 0) || 1;
+  return OutdoorContext.validate({siteId:'bcn-kiosk-016', hour:state.hour,
+    baseCount:state.cur.aforo, effectiveCount:Math.min(MAX_CROWD, Math.round(state.cur.aforo * wxCrowdFactor)),
+    mix:Object.fromEntries(PERFILES.map(p => [p,state.cur.mix[p] * 100 / sum])), manual:aforoCtl.manual,
+    selection:selectedSite, layers:{crowd:$('capa-multitud').checked, buildings:$('capa-edificios').checked,
+      roads:$('capa-viales').checked, night:$('escena-noche').checked}});
+}
+function updateUniverseCard() {
+  const c = contextSnapshot(); if (!c) return;
+  $('universe-count').textContent = c.effectiveCount;
+  $('universe-base').textContent = `${fmtHora(c.hour)} · base ${Math.round(c.baseCount)}${c.manual ? ' manual' : ''}${c.effectiveCount < Math.round(c.baseCount) ? ' · ajuste por meteo' : ''}`;
+  $('universe-mix').innerHTML = PERFILES.map(p => `<span>${PERFIL_LABEL[p]} ${Math.round(c.mix[p])}%</span>`).join('');
+  $('select-kiosk').classList.toggle('active', selectedSite === 'kiosk');
+  $('select-plaza').classList.toggle('active', selectedSite === 'plaza');
+  sendPhotoContext();
+}
+function sendPhotoContext() {
+  if (!photo.frame || !photo.ready) return;
+  const c = contextSnapshot(); if (!c) return;
+  const signature = JSON.stringify(c);
+  if (signature === photo.signature) return;
+  photo.signature = signature;
+  photo.frame.contentWindow.postMessage(OutdoorContext.message('context', c), location.origin);
+}
+function cancelUniverseMotion() {
+  stopFlight(); humanTween = null; looking = false;
+  fly.keys = {}; fly.vF = fly.vY = fly.vYaw = 0;
+  pan2D.keys = {}; pan2D.vx = pan2D.vz = 0;
+  controls.autoRotate = false;
+  if (camMode === 'orbit') {
+    // Flush OrbitControls inertia without changing the camera the user chose.
+    const position = camera.position.clone(), target = controls.target.clone();
+    controls.enableDamping = false; controls.update();
+    camera.position.copy(position); controls.target.copy(target); controls.update();
+    controls.enableDamping = true;
+  }
+}
+function openPhoto() {
+  if (photo.frame) return;
+  cancelUniverseMotion();
+  photo.returnMode = camMode;
+  controls.enabled = false;
+  vid.pause(); clearTimeout(stockTimer);
+  $('ficha').classList.add('hidden');
+  const frame = document.createElement('iframe');
+  frame.title = 'Vista real del quiosco de la Plaça de la Vila de Gràcia';
+  frame.allow = 'fullscreen';
+  const url = new URL('best/', location.href);
+  const params = new URLSearchParams(location.search);
+  url.searchParams.set('embed', '1');
+  if (params.has('cal')) url.searchParams.set('cal', params.get('cal'));
+  if (['front','panels'].includes(params.get('side'))) url.searchParams.set('side', params.get('side'));
+  photo.frame = frame; photo.ready = false; photo.signature = '';
+  frame.src = url.href;
+  $('photo-view').replaceChildren(frame);
+  $('photo-view').classList.remove('hidden');
+  document.body.classList.add('photo-active');
+  $('universe-photo').classList.add('hidden');
+  $('universe-return').classList.remove('hidden');
+  $('universe-photo-note').classList.remove('hidden');
+  $('universe-view-label').textContent = 'Vista real · quiosco';
+  $('universe-model-note').classList.add('hidden');
+  document.querySelectorAll('#quality button').forEach(b => b.classList.toggle('active', b.dataset.q === 'best'));
+  resizePhotoViewport();
+}
+function resizePhotoViewport() {
+  $('photo-view').style.bottom = photo.frame && innerWidth <= 480
+    ? Math.max(30, $('universe-card').getBoundingClientRect().height + 50) + 'px' : '';
+}
+new ResizeObserver(resizePhotoViewport).observe($('universe-card'));
+function closePhoto() {
+  if (!photo.frame) return;
+  const frame = photo.frame;
+  photo.frame = null; photo.ready = false; photo.signature = '';
+  frame.contentWindow.postMessage(OutdoorContext.message('stop'), location.origin);
+  // Destroy the browsing context: no hidden Google renderer, audio, route or delayed callback survives.
+  frame.remove();
+  $('photo-view').classList.add('hidden');
+  document.body.classList.remove('photo-active');
+  $('universe-photo').classList.remove('hidden');
+  $('universe-return').classList.add('hidden');
+  $('universe-photo-note').classList.add('hidden');
+  $('universe-model-note').classList.remove('hidden');
+  $('universe-view-label').textContent = quality === 'good' ? 'Plano' : 'Explorar 3D';
+  camMode = photo.returnMode === 'human' ? 'free' : photo.returnMode;
+  if (camMode === 'free') {
+    const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ'); fly.yaw=e.y; fly.pitch=e.x;
+  }
+  controls.enabled = quality !== 'good' && camMode === 'orbit';
+  document.querySelectorAll('#quality button').forEach(b => b.classList.toggle('active', b.dataset.q === quality));
+  updateModeButtons(); updateCrowd();
+  if (stockItem && stockItem.type === 'video') { vid.play().catch(() => {}); stockTimer = setTimeout(nextStock, VIDEO_CAP_MS); }
+  else if (stockItem) stockTimer = setTimeout(nextStock, IMG_SECONDS * 1000);
+  $('universe-photo').focus();
+}
+addEventListener('message', event => {
+  if (!photo.frame || !OutdoorContext.accepts(event, photo.frame.contentWindow, location.origin)) return;
+  if (event.data.type === 'ready') { photo.ready = true; photo.signature = ''; sendPhotoContext(); }
+  if (event.data.type === 'close') closePhoto();
+});
+addEventListener('keydown', event => { if (event.key === 'Escape' && photo.frame) { event.preventDefault(); closePhoto(); } });
+addEventListener('blur', () => { fly.keys = {}; pan2D.keys = {}; });
+document.addEventListener('change', event => { if (event.target.closest('#panel-capas')) sendPhotoContext(); });
+function focusOverview() {
+  if (photo.frame) return;
+  cancelUniverseMotion();
+  camera.position.set(42, 62, -44);
+  controls.target.set(8, 0, 2);
+  camera.lookAt(controls.target);
+  camMode = 'orbit'; controls.enabled = quality !== 'good'; controls.update(); updateModeButtons();
+  camera2D.position.set(8,420,2); camera2D.zoom=3.5; camera2D.updateProjectionMatrix();
+}
+function focusKiosk() {
+  cancelUniverseMotion();
+  camera.position.set(22, 14, -17); controls.target.set(0,1.8,0); camera.lookAt(controls.target);
+  camMode='orbit'; controls.enabled=quality !== 'good'; controls.update(); updateModeButtons();
+  camera2D.position.set(0,420,0); camera2D.zoom=6; camera2D.updateProjectionMatrix();
+}
+function zoomUniverse(direction) {
+  if (photo.frame) return;
+  cancelUniverseMotion();
+  if (quality === 'good') {
+    camera2D.zoom=Math.max(.6,Math.min(6,camera2D.zoom*(direction>0?1.2:1/1.2))); camera2D.updateProjectionMatrix(); return;
+  }
+  if (camMode === 'orbit') {
+    const offset=camera.position.clone().sub(controls.target);
+    offset.setLength(Math.max(12,Math.min(520,offset.length()*(direction>0?.8:1.25))));
+    camera.position.copy(controls.target).add(offset); controls.update();
+  } else {
+    setCamMode('free');
+    const dir=new THREE.Vector3(); camera.getWorldDirection(dir); camera.position.addScaledVector(dir,direction*5);
+    camera.position.y=Math.max(2,Math.min(150,camera.position.y));
+  }
+}
+
 /* ============================== bucle ============================== */
-let lastHUD = 0;
+let lastHUD = 0, lastEffectiveCount = -1, lastBaseCount = -1;
 let lastT = performance.now();
 let lastScreen = 0;
 
@@ -1837,6 +2001,9 @@ function animate(now) {
     const paso = Math.sign(d) * Math.min(Math.abs(d), dt * 9);   // lerp, no salto
     state.hour = ((state.hour + paso) % 24 + 24) % 24;
     hourDirty = true;
+  } else if (state.hour !== state.targetHour) {
+    state.hour = state.targetHour;
+    hourDirty = true;
   }
   state.franjaIdx = nearestFranjaIdx(state.hour);
 
@@ -1855,9 +2022,11 @@ function animate(now) {
   }
 
   // entorno continuo: sol/cielo/farolas/ventanas/kiosko-neón según la hora
+  if (!photo.frame) {
   applyEnvironment(forceNight ? 1.5 : state.hour);
   applyWeatherToScene();                 // overlay meteo sobre el ciclo solar
-  updatePrecip(dt);                      // partículas de lluvia/nieve
+  updatePrecip(dt);
+  }                      // paused while the other WebGL renderer is visible
 
   // interpolación aforo/mix hacia la CURVA 24h (o el aforo MANUAL del slider);
   // el lerp se mantiene → spawns/despawns suaves de la multitud
@@ -1870,14 +2039,19 @@ function animate(now) {
     if (Math.abs(state.cur.mix[p] - objetivo.mix[p]) > 0.25) moving = true;
     state.cur.mix[p] = lerp(state.cur.mix[p], objetivo.mix[p], k);
   }
-  if ((moving || hourDirty) && now - lastHUD > 150) {
+  const effectiveCount = Math.round(state.cur.aforo * wxCrowdFactor);
+  const baseCount = Math.round(state.cur.aforo);
+  if ((moving || hourDirty || effectiveCount !== lastEffectiveCount || baseCount !== lastBaseCount) && now - lastHUD > 150) {
+    lastEffectiveCount = effectiveCount; lastBaseCount = baseCount;
     lastHUD = now;
     hourDirty = false;
-    updateCrowd();
+    if (!photo.frame) updateCrowd();
     refreshHUD();
     updateHoraUI();
     updateWxAdjustHUD();
   }
+
+  if (photo.frame) return;
 
   // pantalla del kiosko a ~25 fps (vídeo del canal + banda ADcelerate)
   if (now - lastScreen > 40) { lastScreen = now; renderScreen(); }
@@ -1906,11 +2080,13 @@ addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   fitOrtho();
   renderer.setSize(innerWidth, innerHeight);
+  resizePhotoViewport();
 });
 
 /* ============================== arranque ============================== */
 buildPrecip();                                // sistema de partículas de precipitación
 buildHUD();                                   // (incluye init del calendario → loadWeather HOY)
+focusOverview();
 updateModeButtons();
 applyFranja(state.franjaIdx, true);
 renderScreen();
@@ -1920,9 +2096,12 @@ setInterval(loadStock, 10 * 60 * 1000);       // refresco del stock cada 10 min
 pollSignage();
 setInterval(pollSignage, SIGNAGE_POLL_MS);
 requestAnimationFrame(animate);
+const entry = new URLSearchParams(location.search);
+if (entry.get('view') === 'photo') openPhoto();
 
 // gancho de inspección (demo/debug)
 window.__dbg = {
+  openPhoto, closePhoto, contextSnapshot, focusOverview, zoomUniverse, photo,
   camera, camera2D, controls, state, startFlight, applyFranja, setCamMode, setQuality, nextStock, fly, pan2D, tickPan2D,
   get camMode() { return camMode; },
   get quality() { return quality; },

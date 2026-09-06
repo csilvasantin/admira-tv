@@ -5,10 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>ADcelerate · Gemelo Plaça de la Vila de Gràcia — demo</title>
-<meta name="description" content="Demo ADcelerate: gemelo 3D de la Plaça de la Vila de Gràcia con kiosko reactivo a audiencias telco.">
+<meta name="description" content="Demo ADcelerate: gemelo 3D de la Plaça de la Vila de Gràcia con quiosco, vista real y audiencias simuladas.">
 <link rel="icon" href="../../favicon.svg">
 <link rel="stylesheet" href="css/admira-tokens.css?v=06.09.2026.r1.1114">
 <link rel="stylesheet" href="css/style.css?v=06.09.2026.r1.1114">
+<link rel="stylesheet" href="css/outdoor.css?v=06.09.2026.r1.1114">
+<script src="js/outdoor-context.js?v=06.09.2026.r1.1114"></script>
 <script type="importmap">
 {
   "imports": {
@@ -22,6 +24,19 @@
 
 <div id="app">
   <canvas id="scene"></canvas>
+  <section id="photo-view" class="hidden" aria-label="Vista real del quiosco"></section>
+  <section id="universe-card" aria-label="Control del universo outdoor">
+    <div class="universe-heading"><span>VILA DE GRÀCIA</span><span id="universe-view-label">Explorar 3D</span></div>
+    <div class="universe-selection"><button id="select-kiosk" class="active">Quiosco</button><button id="select-plaza">Plaza</button></div>
+    <p id="universe-model-note">Modelo ilustrativo · entorno OpenStreetMap</p>
+    <div class="universe-audience"><strong id="universe-count">—</strong><span>personas simuladas en la plaza<br><small id="universe-base">Preparando simulación…</small></span></div>
+    <div id="universe-mix" aria-label="Distribución simulada de perfiles"></div>
+    <div class="universe-actions"><button id="universe-audiences">Audiencias</button><button id="universe-layers">Hora y capas</button></div>
+    <div id="universe-camera"><button id="universe-out" aria-label="Alejar">−</button><button id="universe-center">Centrar plaza</button><button id="universe-in" aria-label="Acercar">+</button></div>
+    <button id="universe-photo" class="universe-primary">Acercarme · vista real</button>
+    <button id="universe-return" class="universe-primary hidden">← Volver a explorar 3D</button>
+    <p id="universe-photo-note" class="hidden">Fotos de Street View con fecha visible. La audiencia es una simulación de la plaza.</p>
+  </section>
 
   <!-- ============ MENÚ SUPERIOR (principal) ============ -->
   <header id="topbar">
@@ -33,15 +48,15 @@
       </div>
     </div>
     <nav id="mainnav">
-      <a href="#" class="active">Gemelo</a>
-      <a href="#" data-open="left">Audiencias</a>
-      <a href="#" data-open="right">Circuito</a>
+      <a href="#" id="nav-universe" class="active">Explorar 3D</a>
+      <a href="#" data-open="right">Audiencias</a>
+
       <a href="https://admira.tv/canal.html" target="_blank" rel="noopener">admira.tv ↗</a>
     </nav>
-    <div id="quality" title="Escalera del gemelo">
-      <button data-q="good">2D<small>Good</small></button>
-      <button data-q="better" class="active">3D<small>Better</small></button>
-      <button data-q="best">BEST<small>fotorreal</small></button>
+    <div id="quality" title="Vista del entorno">
+      <button data-q="good">Plano</button>
+      <button data-q="better" class="active">Explorar 3D</button>
+      <button data-q="best">Vista real</button>
     </div>
     <button id="tg-right" class="side-toggle" aria-label="Avanzado" title="Avanzado">⚙</button>
     <button id="tg-expert" class="side-toggle" aria-label="Experto" title="Experto">⌥</button>
@@ -60,7 +75,7 @@
       <p class="note" id="wx-note">meteo real · Open-Meteo · Vila de Gràcia</p>
 
       <h2 style="margin-top:16px">Franja horaria</h2>
-      <p class="note">Datos telco de zona (simulados sobre patrón MITMA)</p>
+      <p class="note">Audiencia simulada de la plaza · curva de demostración</p>
       <div class="hora-big">
         <span id="hora-lbl">18:00</span>
         <span id="wx-chip" title="Meteo de la hora"><span id="wx-ico">·</span><span id="wx-temp">—</span></span>
@@ -71,7 +86,7 @@
              aria-label="Hora del día (00:00–24:00)">
       <div class="franjas" id="franjas"></div>
       <label class="auto-row">
-        <input type="checkbox" id="auto-toggle" checked>
+        <input type="checkbox" id="auto-toggle">
         <span>AUTO · día completo en 90 s</span>
       </label>
     </section>
@@ -98,11 +113,11 @@
   <!-- ============ MENÚ DERECHO (opciones avanzadas) ============ -->
   <aside id="rightbar">
     <section class="panel" id="panel-live">
-      <h2>Dato telco de la franja</h2>
-      <div class="big-metric"><span id="aforo">—</span><span class="unit">personas</span></div>
+      <h2>Audiencia simulada · plaza</h2>
+      <div class="big-metric"><span id="aforo">—</span><span class="unit">personas · base simulada</span></div>
       <div class="aforo-ctl">
         <input type="range" id="aforo-slider" min="0" max="800" step="5" value="0" aria-label="Aforo de la multitud (0–800 personas)">
-        <div class="aforo-mode"><span id="aforo-src">dato telco</span><button id="aforo-reset" class="hidden" title="Volver al dato telco">↺</button></div>
+        <div class="aforo-mode"><span id="aforo-src">curva simulada</span><button id="aforo-reset" class="hidden" title="Volver a la curva simulada">↺</button></div>
       </div>
       <div id="mixbars"></div>
       <div class="kv"><span>Perfil dominante</span><b id="dominante">—</b></div>

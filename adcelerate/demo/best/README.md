@@ -1,14 +1,13 @@
 # ADcelerate · Nivel BEST — Plaça de la Vila de Gràcia fotorrealista
 
-Nivel **BEST** de la demo ADcelerate. Carga **en vivo** el globo fotorrealista de
-Google (**Photorealistic 3D Tiles**) centrado en la Plaça de la Vila de Gràcia
-(41.4002243 N, 2.1575761 E), con un vuelo cinematográfico de entrada estilo
-*Google Earth Studio*, el kiosko **News & Coffee · OOH Media** marcado en 3D, y la
-atribución de Google que exige la licencia.
+Motor fotorreal de la [vista real del universo outdoor](../README.md). La entrada
+pública `best/` abre ahora el universo Three.js; este motor se carga solo cuando
+el usuario elige acercarse al quiosco. Conserva Google Photorealistic 3D Tiles,
+la llegada guiada y los panoramas fechados. El iframe `?embed=1` espera el contexto
+validado del parent antes de cargar Google y se destruye al volver al universo.
 
-Ficheros:
-- `index.html` — página autónoma (tokens del gemelo vendorizados, sin dependencias del demo padre).
-- `README.md` — esto.
+Ficheros: `index.html` (renderer hijo), `camera-path.js` (trayectoria y esperas),
+`../js/outdoor-context.js` (contrato de contexto), `tests/` (pruebas focales).
 
 ## Llegada guiada al quiosco (6 de septiembre de 2026)
 
@@ -82,12 +81,12 @@ de una clave autorizada; no se deben ampliar sus restricciones para verificar un
 6. Si la consola pide **habilitar Billing** (lo hará: Photorealistic 3D Tiles exige
    cuenta de facturación activa), hay que **vincular una cuenta de facturación**.
    Sin billing, la clave devuelve error y la página muestra el aviso «pendiente de alta».
-7. Para usar otra clave de navegador ya autorizada, puede pasarse por URL:
-   `https://admira.tv/adcelerate/demo/best/?key=LA_CLAVE`
+7. La integración utiliza la clave de navegador ya configurada. No transmite claves
+   desde parámetros de enlaces públicos al iframe.
 
 > La página lee la clave con
 > `new URLSearchParams(location.search).get('key')`.
-> El parámetro opcional sustituye la clave pública de navegador configurada.
+> Esta posibilidad interna del renderer no se propaga desde la entrada del universo.
 > Las restricciones de referrer siguen aplicándose: si localhost no está autorizado,
 > verificar mediante un preview permitido del mismo proyecto, sin cambiar la clave.
 
@@ -106,12 +105,14 @@ de una clave autorizada; no se deben ampliar sus restricciones para verificar un
 
 ---
 
-## Integración en la pestaña BEST (pendiente, lo secuencia Trinity)
+## Integración en el universo outdoor
 
-Hoy la pestaña **Best** del demo padre está bloqueada («en el horno»). Cuando haya
-clave, la integración es: cargar `best/index.html` en la vista BEST (iframe o montaje
-directo) pasándole `?key=...`. **No** tocar `demo/index.html` desde aquí — lo coordina
-Trinity para no chocar con el otro subagente (marco cuadrático + slider 24h).
+La integración ya está implementada. El parent conserva la cámara Three, selección,
+hora y capas. Tras el handshake se envían aforo base y efectivo y mezcla exacta;
+no se redondea la hora a una de las cuatro franjas antiguas. La audiencia sigue
+siendo simulada. `Escape` cierra la fotografía. Ver contrato y ciclo de vida en
+`../README.md`. Los enlaces `best/?side=panels` o `best/?cal=1` conservan su intención
+mediante la entrada del universo, sin transportar claves en los enlaces.
 
 ---
 

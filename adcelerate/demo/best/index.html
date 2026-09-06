@@ -15,6 +15,13 @@
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
 <link rel="stylesheet" href="../css/admira-tokens.css?v=06.09.2026.r1.1114">
 <link rel="stylesheet" href="../css/style.css?v=06.09.2026.r1.1114">
+<script src="../js/outdoor-context.js?v=06.09.2026.r1.1114"></script>
+<script>
+  window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
+  const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
+  if (outdoorEntry) location.replace(outdoorEntry);
+  if (window.OUTDOOR_EMBED) document.documentElement.classList.add('outdoor-embed');
+</script>
 <style>
   /* ---- Solo lo específico del nivel BEST (globo Google en el hueco central) ---- */
   /* Iconos-ventana canónicos: los paneles laterales son overlays plegados (marco
@@ -178,6 +185,14 @@
     #attrib{ display: none; }
     #pip-live{ width: 172px; }
   }
+  /* The universe owns navigation and audience; this child only renders photographs. */
+  .outdoor-embed #topbar,.outdoor-embed #sidebar,.outdoor-embed #rightbar,.outdoor-embed #expertbar{display:none!important}
+  .outdoor-embed #stage,.outdoor-embed #streetview,.outdoor-embed #sv-signage{inset:0!important}
+  .outdoor-embed #route-controls{top:12px}
+  .outdoor-embed #pip-live{bottom:42px}
+  .outdoor-embed #attrib{bottom:6px}
+  .outdoor-embed #hint{bottom:12px}
+  @media(max-width:600px){.outdoor-embed #route-controls{max-width:calc(100% - 16px);padding:6px;gap:5px}.outdoor-embed #route-controls button{padding:6px;font-size:11px}}
 </style>
 </head>
 <body>
@@ -253,7 +268,7 @@
   <!-- ============ MENÚ DERECHO (avanzadas · capa ADcelerate) ============ -->
   <aside id="rightbar">
     <section class="panel" id="panel-live">
-      <h2>Dato telco de la franja</h2>
+      <h2>Audiencia simulada de la plaza</h2>
       <div class="rt-row">
         <div class="franjas" id="franjas"></div>
         <button id="rt-btn" type="button" aria-pressed="false" title="Tiempo real · franja, hora y meteo de ahora (Europe/Madrid)"><span class="rt-dot" aria-hidden="true"></span>RT</button>
@@ -339,6 +354,40 @@
    ============================================================ */
 
 const $ = (id) => document.getElementById(id);
+
+/* OUTDOOR CHILD BRIDGE START */
+let outdoorContext = null, outdoorBooted = false, outdoorStopped = false;
+function currentAudience(){
+  if (!outdoorContext) return FRANJAS[selFranjaIdx];
+  return {id:fmtHm(outdoorContext.hour), h:outdoorContext.hour,
+    aforo:outdoorContext.effectiveCount, baseCount:outdoorContext.baseCount,
+    mix:outdoorContext.mix, manual:outdoorContext.manual};
+}
+function stopOutdoorChild(){
+  outdoorStopped = true;
+  _shotDone = true;
+  stopCam();
+  hideStreetView();
+}
+function installOutdoorChild(){
+  if (!window.OUTDOOR_EMBED) return;
+  addEventListener('message', event => {
+    if (!OutdoorContext.accepts(event, window.parent, location.origin)) return;
+    if (event.data.type === 'stop') { stopOutdoorChild(); return; }
+    if (event.data.type !== 'context' || outdoorStopped) return;
+    outdoorContext = OutdoorContext.validate(event.data.context);
+    if (!outdoorBooted) { outdoorBooted = true; boot(); }
+    else refreshFranja();
+  });
+  addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    stopOutdoorChild();
+    window.parent.postMessage(OutdoorContext.message('close'), location.origin);
+  });
+  window.parent.postMessage(OutdoorContext.message('ready'), location.origin);
+}
+/* OUTDOOR CHILD BRIDGE END */
 
 // Plaça de la Vila de Gràcia (kiosko News & Coffee · OOH Media)
 const PLAZA = { lat: 41.4002243, lng: 2.1575761 };
@@ -483,8 +532,9 @@ let lastSignageRaw = null, signageItem = null;
 
 /* ============================ arranque ============================ */
 async function boot(){
+  if (!window.OUTDOOR_EMBED || !outdoorContext || outdoorStopped) return;
   buildFranjas();
-  buildRules(FRANJAS[selFranjaIdx]);
+  refreshFranja();
   loadCreatividades();
   wireUI();
   pollSignage(); setInterval(pollSignage, SIGNAGE_POLL_MS);
@@ -500,6 +550,7 @@ async function boot(){
   loadBootstrap(GOOGLE_MAPS_KEY);
   try{
     const lib = await google.maps.importLibrary('maps3d');
+    if (outdoorStopped) return;
     const { Map3DElement } = lib; MapMode = lib.MapMode || null;
 
     map3d = new Map3DElement({
@@ -529,7 +580,7 @@ function onSteady(event){ if (!event.isSteady) return; map3d.removeEventListener
 // arranque de escena: normal = vuelo cinematográfico; ?cal=1 = directo «a pie ante el kiosko»
 // (encuadre de calibración/demo de la pantalla viva, sin esperar la coreografía).
 let _shotDone = false;
-function startShot(){ if (_shotDone) return; _shotDone = true; const q = new URLSearchParams(location.search); if (q.has('cal') || q.get('side') === 'panels') human('panels'); else flyIn(); }
+function startShot(){ if (_shotDone || !outdoorContext || outdoorStopped) return; _shotDone = true; const q = new URLSearchParams(location.search); if (q.has('cal') || q.get('side') === 'panels') human('panels'); else flyIn(); }
 
 /* ============================ cámara ============================ */
 function setCamActive(cam){
@@ -688,13 +739,13 @@ function flyTick(now){
 addEventListener('keydown', (e) => {
   if (!FLY_KEYS.includes(e.key)) return;
   if (SV_ON){                    // Street View: las flechas GIRAN la vista
-    const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    const t = e.target; if (t && (t.isContentEditable || ['INPUT','TEXTAREA','SELECT','BUTTON'].includes(t.tagName))) return;
     e.preventDefault(); svKeys[e.key] = true;
     if (!e.repeat) svNudge(e.key);   // toque suelto: paso corto (el auto-repeat ya lo lleva el frame)
     return;
   }
   if (!map3d) return;
-  const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  const t = e.target; if (t && (t.isContentEditable || ['INPUT','TEXTAREA','SELECT','BUTTON'].includes(t.tagName))) return;
   e.preventDefault();
   if (!freeFly.active) enterFree(true);
   freeFly.keys[e.key] = true;
@@ -727,7 +778,7 @@ async function addKiosk(){
   if (interactive) kioskModel.addEventListener('gmp-click', () => human());
   if (routeSide === 'panels') map3d.appendChild(kioskModel);
   // pon ya la creatividad de la franja seleccionada
-  setKioskModel(dominanteDe(FRANJAS[selFranjaIdx].mix));
+  setKioskModel(dominanteDe(currentAudience().mix));
 }
 // SWAP de la pantalla del kiosko a la creatividad del perfil dominante
 function setKioskModel(perfil){
@@ -757,7 +808,7 @@ function buildFranjas(){
 }
 function refreshFranja(){
   document.querySelectorAll('#franjas button').forEach((b, i) => b.classList.toggle('active', i === selFranjaIdx));
-  const f = FRANJAS[selFranjaIdx];
+  const f = currentAudience();
   $('aforo').textContent = f.aforo;
   buildMix(f.mix);
   const dom = dominanteDe(f.mix);
@@ -854,7 +905,7 @@ function startTelemetry(){
     $('ex-session').innerHTML =
       'sesión activa <b>' + Math.floor(s / 60) + 'm ' + (s % 60) + 's</b><br>' +
       'globo: <b>' + (map3d ? 'en vivo' : '—') + '</b> · vista <b>' + viewMode + '</b><br>' +
-      'franja <b>' + FRANJAS[selFranjaIdx].id + '</b> · circuito <b>' + (signageItem ? 'emitiendo' : 'sin emisión') + '</b><br>' +
+      'franja <b>' + currentAudience().id + '</b> · circuito <b>' + (signageItem ? 'emitiendo' : 'sin emisión') + '</b><br>' +
       'tiempo real: ' + rtTxt + '<br>' +
       'atribución: © Google (Map Tiles) · © OpenStreetMap · escena ADcelerate by Admira';
   }, 700);
@@ -968,7 +1019,7 @@ function drawChannel(ctx, W, H){
     try{ ctx.drawImage(src, (W - dw) / 2, (H - dh) / 2, dw, dh); live = true; }catch(e){}
   }
   if (!live){   // fallback honesto: la creatividad recomendada por perfil
-    const dom = dominanteDe(FRANJAS[selFranjaIdx].mix), im = creLive[dom];
+    const dom = dominanteDe(currentAudience().mix), im = creLive[dom];
     if (im && im.complete && im.naturalWidth){
       const sc = Math.max(W / im.naturalWidth, H / im.naturalHeight), dw = im.naturalWidth * sc, dh = im.naturalHeight * sc;
       try{ ctx.drawImage(im, (W - dw) / 2, (H - dh) / 2, dw, dh); }catch(e){}
@@ -977,7 +1028,7 @@ function drawChannel(ctx, W, H){
   const pad = Math.round(W * 0.035);
   // (sin chip EN VIVO/FALLBACK: el creativo va limpio, como una pantalla real — 13-jul-2026)
   // banda editorial abajo: identifica la parrilla real cuando procede.
-  const dom = dominanteDe(FRANJAS[selFranjaIdx].mix), rg = REGLAS[dom];
+  const dom = dominanteDe(currentAudience().mix), rg = REGLAS[dom];
   const bh = Math.max(34, Math.round(H * 0.2));
   const grad = ctx.createLinearGradient(0, H - bh, 0, H);
   grad.addColorStop(0, 'rgba(3,10,14,0)'); grad.addColorStop(.4, 'rgba(3,10,14,.8)'); grad.addColorStop(1, 'rgba(3,10,14,.95)');
@@ -1503,6 +1554,7 @@ window.__best = {
   get kioskPerfil(){ return kioskPerfil; }, get kioskModel(){ return kioskModel; },
   enterFree, exitFree, flyTick, setKioskModel, human, orbit, stopCam, replayFrom,
   get arrivalShots(){ return ARRIVAL_SHOTS; }, get cameraPath(){ return cameraPath; }, setFranja: (i)=>{ selFranjaIdx=i; refreshFranja(); },
+  currentAudience, get outdoorContext(){ return outdoorContext; },
   setRT, rtSync, madridHour, wxIcon, get rt(){ return rt; }, get wxCurrent(){ return wxCurrent; },
   // --- calibración de la pantalla viva pegada al kiosko (usar en el preview de pages.dev) ---
   live: {
@@ -1523,7 +1575,7 @@ window.__best = {
   },
 };
 
-boot();
+installOutdoorChild();
 </script>
 </body>
 </html>
