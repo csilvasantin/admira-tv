@@ -26,6 +26,10 @@ test('quieta a propósito no es atasco: standby, directo, rundown y pausa reinic
   assert.match(canal, /if\(_standby\|\|directOn\|\|PREVIEW\.on\|\|paused\)\{ g\.lastProgressAt=now; g\.lastPlayAt=now; return; \}/);
 });
 
+test('sin media en el segmento no hay turno que vigilar: cero recuperaciones falsas', () => {
+  assert.match(canal, /if\(!v&&!mediaEl&&!\(typeof playlist!=='undefined'&&playlist&&playlist\.length\)\)\{ g\.lastPlayAt=now; return; \}/);
+});
+
 test('cada turno arranca el reloj de la guardia y la recuperación avanza o, si no puede, recarga', () => {
   assert.match(canal, /async function play\(i, forced\)\{\n  if\(_standby\) return;\n  guardPlayStarted\(\);/);
   assert.match(canal, /try\{ next\(\); \}catch\(_\)\{ try\{ location\.reload\(\); \}catch\(__\)\{\} \}/);

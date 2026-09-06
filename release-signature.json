@@ -1,9 +1,9 @@
 {
-  "version": "v.06.09.2026.r10.19:33",
+  "version": "v.06.09.2026.r11.19:50",
   "signature": "NeoMBP14 · MacBookProNegro14",
   "agent": "NeoMBP14",
   "machine": "MacBookProNegro14",
   "day": "06.09.2026",
-  "time": "19:33",
-  "evidence": "Guardia de emisión en el canal (vídeo atascado → avanza; turno eterno → avanza o recarga; latido nativo a las apps Android/iOS; salud live/cache en /signage/now), 7 tests; players Android e iOS sellados r10 con auto-alta por api.admira.store."
+  "time": "19:50",
+  "evidence": "Guardia de emisión: vídeo atascado y turno eterno avanzan solos, latido nativo a las apps Android/iOS, salud live/cache en /signage/now; «sin media en este segmento» no cuenta como recuperación. 8 tests."
 }
