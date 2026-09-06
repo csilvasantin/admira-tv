@@ -1,9 +1,9 @@
 {
-  "version": "v.06.09.2026.r6.13:45",
+  "version": "v.06.09.2026.r7.14:26",
   "signature": "OraculoMacMini · MacMini",
   "agent": "OraculoMacMini",
   "machine": "MacMini",
   "day": "06.09.2026",
-  "time": "13:45",
-  "evidence": "DCL-8ea2ff1f5edf319d1b320ed4 (ref. 1746): audio voluntario de la misma pieza de pantalla y Tour DooH a pie mediante rutas dirigidas verificadas. 118 pasos reales continuos, pausa y retorno sin saltos, calibración alternativa Vila y controles móviles aprobados. 122 pruebas base y 32 pruebas afectadas; señal de audio real RMS 0.086878 y silencio al cerrar verificados."
+  "time": "14:26",
+  "evidence": "DCL-0584623b45f5f2561ef86655 (ref. 1812): quiosco Lesseps y cuatro pantallas calibradas; Tour DooH a pie con velocidades ×1, ×2, ×4, ×6 y ×8, o Directo. 275 pasos reales enlazados, pausa y regreso a Vila verificados; óptica, controles móviles y audio de la misma pieza aprobados. Se preserva la programación del canal. Suite base de 150 pruebas y pruebas afectadas de estabilización y zoom superadas."
 }
