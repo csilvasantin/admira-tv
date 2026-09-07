@@ -1,9 +1,9 @@
 {
-  "version": "v.07.09.2026.r1.06:05",
-  "signature": "MorfeoMacMini · MacMini",
-  "agent": "MorfeoMacMini",
-  "machine": "MacMini",
+  "version": "v.07.09.2026.r2.07:32",
+  "signature": "TrinityMBP14 · MacBookPro14",
+  "agent": "TrinityMBP14",
+  "machine": "MacBookPro14",
   "day": "07.09.2026",
-  "time": "06:05",
-  "evidence": "Puerta MCP completa (normativa 24): /mcp/llms.txt existía en el manifest pero devolvía 404; se crea con las cuatro herramientas vivas de mcp-tv.admira.store (on_air, airtime_report, channel_url, player_info), se enlaza desde manifest.json (llms_txt) y la página /mcp/ lista player_info y enlaza llms.txt. Verificado con curl en producción."
+  "time": "07:32",
+  "evidence": "AdmiraXperience: dos oficinas en Gracia, paseo fotografico con enlaces dirigidos y acceso interior pendiente de vincular."
 }
