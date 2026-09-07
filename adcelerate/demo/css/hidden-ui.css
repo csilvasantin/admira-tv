@@ -1,0 +1,8 @@
+/* Do not mutate .hidden or inline styles: H restores exactly the existing state. */
+.ui-hidden #app > :not(#scene):not(#photo-view):not(#player-remote):not(#stage):not(#streetview):not(#sv-signage){visibility:hidden!important;pointer-events:none!important}
+.ui-hidden #app > #player-remote{visibility:visible}
+.ui-hidden #photo-view{top:0!important;left:0!important;bottom:0!important;right:0!important}
+.ui-hidden .player-focus #photo-view{right:336px!important}
+.ui-hidden #stage,.ui-hidden #streetview,.ui-hidden #sv-signage{inset:0!important}
+.ui-hidden #screen-player-preview{visibility:hidden!important}
+@media(max-width:600px){.ui-hidden .player-focus #photo-view{right:0!important;bottom:280px!important}}

@@ -203,7 +203,7 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r17.1106"></head>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r17.1106"><link rel="stylesheet" href="../css/hidden-ui.css?v=hidden-1"><script defer src="../js/hidden-ui.js?v=hidden-1"></script><script src="../js/interactive-scene.js?v=mapping-1"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=mapping-1"></head>
 <body>
 
 <div id="app">
@@ -1665,6 +1665,7 @@ async function showStreetView(side = 'front'){
   }
 }
 function hideStreetView(){
+  signMapping?.close();
   $('walk-overview').hidden=true;
   screenAudio.mute();routeWalk.cancel();
   svAbortController?.abort(); svAbortController = null;
@@ -1736,7 +1737,9 @@ function drawSvGrid(){
 // coloca cada pantalla admira.tv sobre su panel con warp de perspectiva de 4 esquinas.
 // Si hay anclaje al mundo (SV_PANEL_WORLD), reproyecta según la cámara actual (TRACKING:
 // las pantallas siguen a los paneles al girar/moverse). Si no, usa las fracciones fijas.
+const signMapping=InteractiveScene.create({getPanorama:()=>sv,container:$('streetview'),isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onOpen:()=>{routeWalk.cancel();streetWalk?.command({action:'release'});}});
 function layoutSvPanels(){
+  signMapping?.layout();
   const surfaces=surfacesHere();
   for(const surface of DoohSurfaces.all)if(!surfaces.some(s=>s.id===surface.id))$(surface.elementId).style.display='none';
   if (!surfaces.length) { $('sv-signage').classList.remove('show','sv-vis'); return; }

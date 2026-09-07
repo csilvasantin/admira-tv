@@ -1,0 +1,7 @@
+#mapped-no-parking{position:absolute;z-index:35;transform:translate(-50%,-50%);border-radius:50%;border:2px solid transparent;background:transparent;cursor:pointer;padding:0;pointer-events:auto}
+#mapped-no-parking:hover,#mapped-no-parking:focus-visible{border-color:#b8fa6a;background:#b8fa6a20;outline:3px solid #101a1a80}
+#mapped-no-parking[hidden],#mapped-scene-preview[hidden]{display:none!important}
+#mapped-scene-preview{position:fixed;inset:0;z-index:500;background:#07100f;display:grid;place-items:center}
+#mapped-scene-preview img{width:100%;height:100%;object-fit:contain}
+#mapped-scene-preview p{position:absolute;left:12px;bottom:12px;max-width:calc(100% - 48px);padding:8px 12px;background:#07100fe8;color:#e8f7ed;font:12px system-ui;border-radius:6px;pointer-events:none}
+#mapped-scene-preview button{position:absolute;right:14px;top:14px;padding:12px;background:#132b21;color:#fff;border:1px solid #c2fa8b;border-radius:8px;cursor:pointer}
