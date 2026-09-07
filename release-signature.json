@@ -1,9 +1,9 @@
 {
-  "version": "v.07.09.2026.r24.11:24",
-  "signature": "TrinityMBP14 · MacBookPro14",
-  "agent": "TrinityMBP14",
-  "machine": "MacBookPro14",
+  "version": "v.07.09.2026.r25.11:26",
+  "signature": "NeoMBP14 · MacBookProNegro14",
+  "agent": "NeoMBP14",
+  "machine": "MacBookProNegro14",
   "day": "07.09.2026",
-  "time": "11:24",
-  "evidence": "Jardinets: capas de peatones sin cambiar cámara y poste 1–10; DCL-cf9929e57840762292892769"
+  "time": "11:26",
+  "evidence": "Gemelo Lesseps → iphone17-mupi (app iOS que sí entra en sincro); la app TestFlight tv.admira.player.ipad no obedece la sincro remota y se queda en una pieza (va a la misión del player iOS). Misión Hoy #309."
 }
