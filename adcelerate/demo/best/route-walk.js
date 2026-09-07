@@ -1,7 +1,7 @@
 /* Execute only catalogued routes and revalidate every hop against the current SDK links. */
 (function(root){
  'use strict';
- function create({getRoute,getWalker,setHeading=()=>{},onState=()=>{},onArrival=()=>{},onCancel=()=>{},stepDelayMs=1300,timeoutMs=18000,linkGraceMs=1200,linkRetryMs=80,minHopIntervalMs=600,timer=null}){
+ function create({getRoute,getWalker,setHeading=()=>{},onState=()=>{},onArrival=()=>{},onCancel=()=>{},stepDelayMs=450,timeoutMs=18000,linkGraceMs=1200,linkRetryMs=80,minHopIntervalMs=600,timer=null}){
   const clock=timer||{now:()=>Date.now(),setTimeout:(fn,ms)=>setTimeout(fn,ms),clearTimeout:id=>clearTimeout(id)};
   const speeds=[1,2,4,6,8];
   let active=null,disposed=false,lastHopAt;
@@ -55,6 +55,7 @@
    else if(s.pano!==run.route.panos[run.index]){fail(run,'manual');return;}
    if(run.waiting){run.waiting=false;clock.clearTimeout(run.timer);}
    if(run.next)return;
+   if(run.index===run.route.panos.length-1){next(run);return;}
    run.dwell={remaining:stepDelayMs,since:clock.now()};scheduleDwell(run);
   }
   function start(routeId,requestId,options={}){

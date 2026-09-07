@@ -13,12 +13,12 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r6.0740">
-<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r6.0740">
-<script src="../js/outdoor-sites.js?v=07.09.2026.r6.0740"></script>
-<script src="../js/urban-route.js?v=07.09.2026.r6.0740"></script>
-<script src="../js/dooh-surfaces.js?v=07.09.2026.r6.0740"></script>
-<script src="../js/outdoor-context.js?v=07.09.2026.r6.0740"></script>
+<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r7.0748">
+<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r7.0748">
+<script src="../js/outdoor-sites.js?v=07.09.2026.r7.0748"></script>
+<script src="../js/urban-route.js?v=07.09.2026.r7.0748"></script>
+<script src="../js/dooh-surfaces.js?v=07.09.2026.r7.0748"></script>
+<script src="../js/outdoor-context.js?v=07.09.2026.r7.0748"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
   const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
@@ -203,7 +203,7 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-</head>
+<link rel="stylesheet" href="../js/cenital-panel.css"></head>
 <body>
 
 <div id="app">
@@ -211,7 +211,7 @@
   <div id="stage"></div>
 
   <!-- «A pie ante el kiosko»: Street View real del kiosko (oculto hasta pulsar 🧍) -->
-  <div id="streetview"></div>
+  <div id="streetview"></div><div id="walk-overview" class="cenital-floating" hidden></div>
   <div id="sv-signage">
     <div class="sv-panel" id="sv-p1"><canvas width="512" height="760"></canvas></div>
     <div class="sv-panel" id="sv-p2"><canvas width="512" height="760"></canvas></div>
@@ -354,13 +354,13 @@
   </div>
 </div>
 
-<script src="street-walk.js?v=07.09.2026.r6.0740"></script>
-<script src="route-walk.js?v=07.09.2026.r6.0740"></script>
-<script src="../js/player-library.js?v=07.09.2026.r6.0740"></script>
-<script src="screen-player.js?v=07.09.2026.r6.0740"></script>
-<script src="screen-audio.js?v=07.09.2026.r6.0740"></script>
-<script src="surface-focus.js?v=07.09.2026.r6.0740"></script>
-<script src="camera-path.js?v=07.09.2026.r6.0740"></script>
+<script src="street-walk.js?v=07.09.2026.r7.0748"></script>
+<script src="../js/cenital-panel.js"></script><script src="../js/walk-overview.js"></script><script src="walk-orientation.js"></script><script src="route-walk.js?v=07.09.2026.r7.0748"></script>
+<script src="../js/player-library.js?v=07.09.2026.r7.0748"></script>
+<script src="screen-player.js?v=07.09.2026.r7.0748"></script>
+<script src="screen-audio.js?v=07.09.2026.r7.0748"></script>
+<script src="surface-focus.js?v=07.09.2026.r7.0748"></script>
+<script src="camera-path.js?v=07.09.2026.r7.0748"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -1427,25 +1427,10 @@ const surfaceFocus=SurfaceFocus.create({
     if(!outdoorStopped)window.parent.postMessage(OutdoorContext.message('surface-state',state),location.origin)
   },
 });
-let routeMotion=null;
-function stopRouteOrientation(requestId){if(routeMotion?.requestId===requestId){const m=routeMotion;routeMotion=null;cancelAnimationFrame(m.frame);m.reject(Error('Cancelled'));}}
-function orientStreetRoute(heading,requestId){
-  if(!sv)return Promise.reject(Error('Panorama unavailable'));
-  const from=sv.getPov(),zoom=sv.getZoom(),dh=((heading-from.heading+540)%360)-180;
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches){sv.setPov({heading,pitch:0});sv.setZoom(.9);return;}
-  return new Promise((resolve,reject)=>{
-    const motion={requestId,frame:null,reject};routeMotion=motion;
-    let previous=performance.now(),elapsed=0;
-    function frame(now){
-      if(routeWalk.active?.requestId!==requestId||outdoorStopped){reject(Error('Cancelled'));return;}
-      elapsed+=Math.max(0,now-previous)*(routeWalk.active?.speed||1);previous=now;
-      const t=Math.min(1,elapsed/400),ease=t*t*(3-2*t);
-      sv.setPov({heading:from.heading+dh*ease,pitch:from.pitch*(1-ease)});sv.setZoom(zoom+(.9-zoom)*ease);
-      if(t<1)motion.frame=requestAnimationFrame(frame);else{if(routeMotion===motion)routeMotion=null;resolve();}
-    }
-    motion.frame=requestAnimationFrame(frame);
-  });
-}
+const walkOrientation=WalkOrientation.create({getView:()=>sv,getSpeed:()=>routeWalk?.active?.speed||1});
+function stopRouteOrientation(id){walkOrientation.cancel(id);}
+function orientStreetRoute(heading,id){return walkOrientation.turn(heading,id);}
+let walkOverview=null;
 const routeWalk=RouteWalk.create({getRoute:id=>UrbanRoutes.get(id),getWalker:()=>streetWalk,
   setHeading:orientStreetRoute,onCancel:stopRouteOrientation,
   onArrival:route=>{
@@ -1468,6 +1453,7 @@ function clearWalkSupport(){
   $('kiosk-live').classList.remove('show'); $('pip-live').classList.remove('show');
 }
 function handleWalkState(state){
+  walkOverview?.update(state);
   if (outdoorStopped) return;
   const calibrated = DoohSurfaces.all.some(s=>s.siteId===activeWalkSite.id&&DoohSurfaces.hasPose(s.id,state.pano)) && !['loading','error'].includes(state.status) && sv?.getPano()===state.pano;
   activeSvView = {pano:state.pano, panels:calibrated, label:state.date ? `Street View · ${state.date}` : 'Street View · fecha no facilitada'};
@@ -1500,6 +1486,7 @@ async function bootWalk(sideOverride,viewOverride=null,preloadedLibrary=null){
   let library;try{library=preloadedLibrary||await google.maps.importLibrary('streetView');}catch(error){if(attempt===walkBootGeneration)walkLoadFailure();return;}
   if (outdoorStopped || walkBootFailed || attempt!==walkBootGeneration) return;
   const {StreetViewPanorama,StreetViewService}=library;
+  $('walk-overview').hidden=false;if(!walkOverview)WalkOverview.create({host:$('walk-overview'),sites:OutdoorSites.all}).then(value=>{walkOverview=value;if(streetWalk)walkOverview.update(streetWalk.getState());}).catch(()=>{$('walk-overview').hidden=true;});
   const side=sideOverride || (new URLSearchParams(location.search).get('side')==='front'?'front':'panels');
   const site=activeWalkSite;
   const view=viewOverride||(side==='front'&&site.front?site.front:site.entry);
@@ -1610,6 +1597,7 @@ async function showStreetView(side = 'front'){
   }
 }
 function hideStreetView(){
+  $('walk-overview').hidden=true;
   screenAudio.mute();routeWalk.cancel();
   svAbortController?.abort(); svAbortController = null;
   if (sv) sv.setVisible(false);
