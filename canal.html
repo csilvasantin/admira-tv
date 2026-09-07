@@ -28,6 +28,7 @@
 <!-- r56 · PLAYER INTERACTIVO: doble clic o doble toque abre la ficha viva del contenido sin pausar ni alterar la emisión. -->
 <!-- r57 · FICHA HUMANA: doble clic prioriza el título editorial, hidrata el objeto sincro desde Stock y muestra #número como identificador único en lugar del UUID técnico. Hereda r56. -->
 <!-- r58 · RANURA EDITORIAL: imagen, audio e interactivo ocupan la duración de parrilla/borrador (slotSeconds); el audio se recorta a su longitud real y proof-of-play, /signage/now y /control/playlist cuentan lo mismo que se emite. -->
+<!-- r58 · GOTO EN SINCRO: el salto desde la playlist del mando (goto-N) abre la ventana forzada de un #ID: sale de sincro, la pieza va hasta el final y pollMode devuelve la asignación remota. Antes la sincro la revertía al cargar el vídeo. -->
 <!-- BUILD canal v.07.09.2026.r58 · RANURA EDITORIAL: una sola regla de duración (editorialSec) para emitir, imputar y publicar al mando; el audio programado deja de cortarse a ciegas a audioSec. Hereda r57. -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
@@ -2317,6 +2318,23 @@ async function queueTaggedContent(num){
   flashCli('⇩ contenido #'+wanted+' · descarga ASAP');
   return 'executed';
 }
+// Salto manual desde la playlist del mando (goto-<n>). Antes, en una pantalla
+// SINCRONIZADA, play(n,forzado) arrancaba la pieza y al cargar sus metadatos la
+// sincro la devolvía al índice del máster: el operador pulsaba y «no saltaba».
+// Ahora la orden abre la misma ventana forzada que un #ID: sale de sincro/directo,
+// la pieza va hasta su final (next() → finishForcedTagPlayback) y después pollMode
+// devuelve el player a su asignación remota.
+async function gotoPlaylistIndex(n){
+  if(!playlist.length||!(n>=0&&n<playlist.length)) return 'ignored';
+  const it=playlist[n]; if(!it) return 'ignored';
+  const forcedState=beginForcedTagPlayback('goto-'+n);
+  disableAdmiraSync();
+  if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
+  try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}
+  if(!ownsForcedTagPlayback(forcedState)) return 'ignored';
+  _asapItemId=null; markForcedTagPlaying(forcedState,it);
+  await play(n,it); flashCli('🎮 goto #'+(n+1)); return 'executed';
+}
 function clearTaggedContent(){
   taggedContentNums=[]; saveTaggedContent(); _asapItemId=null;
   if(_forcedTagPlayback) releaseForcedTagPlayback(_forcedTagPlayback);
@@ -3708,11 +3726,9 @@ async function applyCtrlCmd(cmd){
       if(cmd==='content-clear') return clearTaggedContent();
       // goto-<n>: salto directo al item n (0-based) de la playlist desde el mando
       // gráfico. Forzado (orden manual del operador) → por encima del disco-primero,
-      // igual que /play<N>. En sincro, play() reancla al índice del canal.
+      // igual que /play<N>.
       const m=/^goto-(\d{1,3})$/.exec(cmd);
-      if(m){ const n=parseInt(m[1],10);
-        if(!directOn&&playlist.length&&n<playlist.length){ await play(n,playlist[n]); flashCli('🎮 goto #'+(n+1)); return 'executed'; }
-        return 'ignored'; }
+      if(m) return gotoPlaylistIndex(parseInt(m[1],10));
       const seek=/^seek-(\d{1,5})$/.exec(cmd);
       if(seek){
         if(syncOn) return 'failed';

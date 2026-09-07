@@ -179,6 +179,16 @@ emisión). Sin teclado (tablet / WebView) son totalmente inocuos.
 
 ## Playlist (cola)
 
+### Saltar desde el mando (`goto-N`)
+
+La pestaña **Playlist** del mando (`/mando.html`, empotrado en el CMS experto) envía
+`goto-<índice>` por la cola confirmada. En el player el salto es una **orden manual**
+con la misma ventana forzada que un `#ID` (r58): sale de sincro/directo, pasa a modo
+local, la pieza va **hasta su final** y después `pollMode` devuelve la pantalla a su
+asignación remota (sincro, condicional…). Antes, en una pantalla sincronizada, la
+pieza arrancaba y al cargar sus metadatos la sincro la devolvía al índice del máster:
+el operador pulsaba y «no saltaba».
+
 Rail a la **izquierda** con **3 previos + el actual (● ahora) + 3 próximos**
 (ventana de 7 centrada en lo que emite). Miniaturas por tipo; **clic = saltar** a
 esa pieza. Se oculta en pantallas estrechas (≤900px), pensado para la vista de

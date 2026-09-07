@@ -208,7 +208,21 @@ test('las pastillas eliminan la posición y contienen título y estado dentro de
 test('goto-N atraviesa la cola confirmada y sólo acusa después de ejecutarlo', () => {
   assert.match(canal, /if\(\/\^goto-\\d\{1,3\}\$\/\.test\(cmd\)\) return applyCtrlCmd\(cmd\)/);
   assert.match(canal, /const m=\/\^goto-\(\\d\{1,3\}\)\$\/\.exec\(cmd\)/);
-  assert.match(canal, /await play\(n,playlist\[n\]\)/);
+  assert.match(canal, /if\(m\) return gotoPlaylistIndex\(parseInt\(m\[1\],10\)\);/);
+});
+
+test('goto-N en una pantalla sincronizada abre la ventana forzada y no vuelve al máster hasta acabar', () => {
+  // Antes: play(n,forzado) arrancaba la pieza y onloadedmetadata la devolvía a syncIndex().
+  const goto = functionSource(canal, 'gotoPlaylistIndex');
+  assert.match(goto, /const forcedState=beginForcedTagPlayback\('goto-'\+n\)/);
+  assert.match(goto, /disableAdmiraSync\(\);/);
+  assert.match(goto, /if\(playoutMode!=='local'\) setAdmiraMode\('local'\)/);
+  assert.match(goto, /markForcedTagPlaying\(forcedState,it\);/);
+  assert.match(goto, /await play\(n,it\); flashCli\('🎮 goto #'\+\(n\+1\)\);/);
+  assert.match(goto, /return 'executed';/);
+  assert.ok(goto.indexOf('disableAdmiraSync()') < goto.indexOf('await play(n,it)'));
+  // Y el retorno al loop/asignación remota es el mismo que el de un #ID: next() → finishForcedTagPlayback().
+  assert.match(functionSource(canal, 'next'), /if\(finishForcedTagPlayback\(\)\) return;/);
 });
 
 test('el modo sincro publica la playlist efectiva antes de reproducir y retornar', () => {
