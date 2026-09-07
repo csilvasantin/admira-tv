@@ -13,12 +13,12 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r27.1128">
-<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r27.1128">
-<script src="../js/outdoor-sites.js?v=07.09.2026.r27.1128"></script>
-<script src="../js/urban-route.js?v=07.09.2026.r27.1128"></script>
-<script src="../js/dooh-surfaces.js?v=07.09.2026.r27.1128"></script>
-<script src="../js/outdoor-context.js?v=07.09.2026.r27.1128"></script>
+<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r28.1145">
+<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r28.1145">
+<script src="../js/outdoor-sites.js?v=07.09.2026.r28.1145"></script>
+<script src="../js/urban-route.js?v=07.09.2026.r28.1145"></script>
+<script src="../js/dooh-surfaces.js?v=07.09.2026.r28.1145"></script>
+<script src="../js/outdoor-context.js?v=07.09.2026.r28.1145"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
   const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
@@ -203,7 +203,8 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r27.1128"><link rel="stylesheet" href="../css/hidden-ui.css?v=07.09.2026.r27.1128"><script defer src="../js/hidden-ui.js?v=07.09.2026.r27.1128"></script><script src="../js/pedestrian-layers.js?v=07.09.2026.r27.1128"></script><script src="../js/interactive-scene.js?v=07.09.2026.r27.1128"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=07.09.2026.r27.1128"></head>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r28.1145"><link rel="stylesheet" href="../css/hidden-ui.css?v=07.09.2026.r28.1145"><script defer src="../js/hidden-ui.js?v=07.09.2026.r28.1145"></script><script src="../js/pedestrian-layers.js?v=07.09.2026.r28.1145"></script><script src="../js/interactive-scene.js?v=07.09.2026.r28.1145"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=07.09.2026.r28.1145"></head>
+<script src="../js/pedestrian-music.js?v=07.09.2026.r28.1145"></script>
 <body>
 
 <div id="app">
@@ -354,13 +355,13 @@
   </div>
 </div>
 
-<script src="street-walk.js?v=07.09.2026.r27.1128"></script>
-<script src="../js/cenital-panel.js?v=07.09.2026.r27.1128"></script><script src="../js/walk-overview.js?v=07.09.2026.r27.1128"></script><script src="walk-orientation.js?v=07.09.2026.r27.1128"></script><script src="route-walk.js?v=07.09.2026.r27.1128"></script>
-<script src="../js/player-library.js?v=07.09.2026.r27.1128"></script>
-<script src="screen-player.js?v=07.09.2026.r27.1128"></script>
-<script src="screen-audio.js?v=07.09.2026.r27.1128"></script>
-<script src="surface-focus.js?v=07.09.2026.r27.1128"></script>
-<script src="camera-path.js?v=07.09.2026.r27.1128"></script>
+<script src="street-walk.js?v=07.09.2026.r28.1145"></script>
+<script src="../js/cenital-panel.js?v=07.09.2026.r28.1145"></script><script src="../js/walk-overview.js?v=07.09.2026.r28.1145"></script><script src="walk-orientation.js?v=07.09.2026.r28.1145"></script><script src="route-walk.js?v=07.09.2026.r28.1145"></script>
+<script src="../js/player-library.js?v=07.09.2026.r28.1145"></script>
+<script src="screen-player.js?v=07.09.2026.r28.1145"></script>
+<script src="screen-audio.js?v=07.09.2026.r28.1145"></script>
+<script src="surface-focus.js?v=07.09.2026.r28.1145"></script>
+<script src="camera-path.js?v=07.09.2026.r28.1145"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -1745,7 +1746,38 @@ function syncHiddenNavigation(){
  sv.setOptions({linksControl:hiding?false:(remoteSession?false:savedNavigationLinks)});
 }
 addEventListener('resize',syncHiddenNavigation);
-const signMapping=InteractiveScene.create({getPanorama:()=>sv,container:$('streetview'),warp:quadWarp,isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onOpen:()=>{routeWalk.cancel();streetWalk?.command({action:'release'});}});
+let mappedMusicPlayer=null,mappedPreviousPlayer=null,mappedMusicNumber=0,mappedMusicTimer=null;
+function stopMappedMusic(){
+ clearTimeout(mappedMusicTimer);mappedMusicTimer=null;
+ if(!mappedMusicPlayer)return;
+ if(screenAudio.owner?.screenId==='jardinets-main')screenAudio.mute();
+ if(screenPlayers.get('jardinets-main')===mappedMusicPlayer){if(mappedPreviousPlayer)screenPlayers.set('jardinets-main',mappedPreviousPlayer);else screenPlayers.delete('jardinets-main');}
+ mappedMusicPlayer.dispose();mappedMusicPlayer=null;mappedPreviousPlayer=null;mappedMusicNumber=0;emitPlayerState();
+}
+const mappedMusic=PedestrianMusic.create({load:()=>PedestrianMusic.fetchCatalog(fetch),stop:stopMappedMusic,
+ onState:state=>signMapping.setMusicState(state),
+ play:(item,items)=>{
+  mappedMusicNumber=item.number;
+  const playlists=[{id:'scheduled',title:'Personas · #musica',items:items.map(i=>i.id)},{id:'all',title:'Personas · #musica',items:items.map(i=>i.id)}],library={items,playlists};
+  if(!mappedMusicPlayer){
+   mappedPreviousPlayer=screenPlayers.get('jardinets-main')||null;mappedPreviousPlayer?.mute();
+   mappedMusicPlayer=ScreenPlayer.create({items,playlists,initialIndex:items.indexOf(item),createVideo:()=>document.createElement('video'),createImage:()=>new Image(),
+    onState:state=>{signMapping.setMusicState({number:mappedMusicNumber,...state});console.info('[Mapping] Música',JSON.stringify({number:mappedMusicNumber,...state}));emitPlayerState();},
+    onMedia:()=>{if(mappedMusicPlayer)screenAudio.mediaChanged('jardinets-main');}
+   });mappedMusicPlayer.library=library;screenPlayers.set('jardinets-main',mappedMusicPlayer);
+  }else{mappedMusicPlayer.refreshCatalog(library);mappedMusicPlayer.library=library;mappedMusicPlayer.command({action:'content',contentId:item.id});mappedMusicPlayer.command({action:'play'});}
+  mappedMusicPlayer.command({action:'loop',loop:'one'});
+  screenAudio.command({action:'enable',screenId:'jardinets-main',requestId:Date.now(),volume:.7});
+ }
+});
+function selectMappedMusic(number,options){
+ clearTimeout(mappedMusicTimer);
+ if(number===0||options.restart){mappedMusic.select(number,options);return;}
+ // Visuals follow every pointer event; media settles after a short fader pause.
+ mappedMusicTimer=setTimeout(()=>{mappedMusicTimer=null;mappedMusic.select(number,options)},140);
+}
+const signMapping=InteractiveScene.create({getPanorama:()=>sv,container:$('streetview'),warp:quadWarp,isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onSelect:selectMappedMusic,onClose:()=>{clearTimeout(mappedMusicTimer);mappedMusic.stop();}});
+if(WALK_MODE)mappedMusic.warm().catch(()=>{});
 function layoutSvPanels(){
   syncHiddenNavigation();
   signMapping?.layout();

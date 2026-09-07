@@ -9,6 +9,7 @@
  ];
  const pole=[[1130,235],[1151,235],[1107,657],[1085,657]];
  const clamp=n=>Math.max(0,Math.min(10,Math.round(n)));
- function countFromPoint(point,top,bottom){const dx=top[0]-bottom[0],dy=top[1]-bottom[1],den=dx*dx+dy*dy;if(den<1)return 1;const f=((point[0]-bottom[0])*dx+(point[1]-bottom[1])*dy)/den;return Math.max(1,Math.min(10,Math.floor(f*10)+1));}
- const api={reference,regions,pole,clamp,countFromPoint};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.PedestrianLayers=api;
+ function fractionFromPoint(point,top,bottom){const dx=top[0]-bottom[0],dy=top[1]-bottom[1],den=dx*dx+dy*dy;if(den<1)return 0;const f=((point[0]-bottom[0])*dx+(point[1]-bottom[1])*dy)/den;return Math.max(0,Math.min(1,f));}
+ function countFromPoint(point,top,bottom){return Math.min(10,Math.floor(fractionFromPoint(point,top,bottom)*10)+1);}
+ const api={reference,regions,pole,clamp,countFromPoint,fractionFromPoint};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.PedestrianLayers=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
