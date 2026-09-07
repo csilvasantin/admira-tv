@@ -1,7 +1,9 @@
-#mapped-no-parking{position:absolute;z-index:35;transform:translate(-50%,-50%);border-radius:50%;border:2px solid transparent;background:transparent;cursor:pointer;padding:0;pointer-events:auto}
-#mapped-no-parking:hover,#mapped-no-parking:focus-visible{border-color:#b8fa6a;background:#b8fa6a20;outline:3px solid #101a1a80}
-#mapped-no-parking[hidden],#mapped-scene-preview[hidden]{display:none!important}
-#mapped-scene-preview{position:fixed;inset:0;z-index:500;background:#07100f;display:grid;place-items:center}
-#mapped-scene-preview img{width:100%;height:100%;object-fit:contain}
-#mapped-scene-preview p{position:absolute;left:12px;bottom:12px;max-width:calc(100% - 48px);padding:8px 12px;background:#07100fe8;color:#e8f7ed;font:12px system-ui;border-radius:6px;pointer-events:none}
-#mapped-scene-preview button{position:absolute;right:14px;top:14px;padding:12px;background:#132b21;color:#fff;border:1px solid #c2fa8b;border-radius:8px;cursor:pointer}
+#mapped-no-parking{position:absolute;z-index:36;transform:translate(-50%,-50%);border-radius:50%;border:2px solid transparent;background:transparent;cursor:pointer;padding:0;pointer-events:auto;touch-action:none}
+#mapped-no-parking:hover,#mapped-no-parking:focus-visible{border-color:#b8fa6a;background:#b8fa6a12;outline:2px solid #101a1a80}
+.mapped-person-patch{position:absolute;left:0;top:0;transform-origin:0 0;z-index:30;pointer-events:none}
+#mapped-pole-slider{position:absolute;left:0;top:0;width:26px;height:420px;transform-origin:0 0;display:flex;flex-direction:column;z-index:37;cursor:ns-resize;pointer-events:auto;touch-action:none;outline:none}
+#mapped-pole-slider span{display:flex;flex:1;align-items:center;justify-content:center;border-top:1px solid #caff9860;color:#eaffda;background:#12332135;font:12px system-ui;pointer-events:none;text-shadow:0 1px 2px #000}
+#mapped-pole-slider:hover span,#mapped-pole-slider:focus span{background:#123321ae;border-color:#caff98}
+#mapped-pole-slider span.selected{background:#b8fa6abb;color:#13271a;text-shadow:none}
+#mapped-people-status{position:absolute;left:12px;bottom:30px;z-index:36;background:#122a20df;color:#edffe7;padding:6px 10px;font:11px system-ui;border-radius:5px;pointer-events:none}
+#mapped-no-parking[hidden],#mapped-pole-slider[hidden],#mapped-people-status[hidden],.mapped-person-patch[hidden]{display:none!important}
