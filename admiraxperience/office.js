@@ -9,7 +9,7 @@
   $('place').textContent=selected.name;
   document.querySelectorAll('.office').forEach(b=>b.classList.toggle('active',b.dataset.site===selected.id));
   const other=sites.all.find(s=>s.id!==selected.id);$('travel').textContent='Caminar a '+other.name;
-  const url=new URL(location.href);url.searchParams.set('site',selected.id);history.replaceState(null,'',url);document.title='AdmiraXperience · '+selected.name;
+  const url=new URL(location.href);url.searchParams.set('site',selected.id);history.replaceState(null,'',url);document.title='AdmiraXperience · '+selected.name;document.querySelector('header>a:last-child').href='https://www.admira.app/?locationId='+selected.locationId;
  }
  function closeInterior(){interior=false;$('interior').hidden=true;$('interior-media').replaceChildren();if(panorama)panorama.setVisible(true);updateArrival(lastState);}
  function cancel(){search?.abort();search=null;routeWalk?.cancel();route=null;paused=false;$('pause').disabled=true;$('pause').textContent='Pausar';$('travel').disabled=!ready;}
@@ -40,7 +40,7 @@
   $('travel').disabled=true;$('pause').disabled=false;$('pause').textContent='Cancelar búsqueda';$('arrival').hidden=true;status('Buscando conexiones fotográficas hacia '+target.name+'…');
   try{
    const start=await load(current.pano),goal=entries.get(target.id);
-   const path=await OfficePaths.findPath({start,goal,load,distance:sites.distance,signal:controller.signal,onProgress:n=>status('Verificando el paseo a '+target.name+' · '+n+' cruces comprobados…')});
+   const path=await OfficePaths.findPath({start,goal,load,distance:sites.distance,arrive:node=>sites.distance(node.position,target.position)<=18,signal:controller.signal,onProgress:n=>status('Verificando el paseo a '+target.name+' · '+n+' cruces comprobados…')});
    if(controller.signal.aborted||search!==controller)return;
    if(walker.getState().pano!==current.pano)throw Error('moved');
    search=null;selected=target;showSelected();
@@ -49,7 +49,7 @@
    route={id:'offices-'+(++routeRequest),panos:path.panos};$('pause').textContent='Pausar';
    routeWalk.start(route.id,routeRequest,{speed:Number($('speed').value)});
   }catch(error){
-   if(controller.signal.aborted)return;search=null;cancel();
+   if(controller.signal.aborted)return;console.warn('[AdmiraXperience] Paseo detenido:',error.message);search=null;cancel();
    status(error.message==='moved'?'Te has desplazado durante la búsqueda. Vuelve a iniciar el paseo desde aquí.':'No se ha encontrado un recorrido fotográfico continuo desde este punto. Puedes caminar con las flechas o abrir la llegada de la otra oficina.',true);
   }
  }
