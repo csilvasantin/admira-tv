@@ -20,11 +20,17 @@ def get(url):
     return json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA)))
 def main():
     dry = "--dry" in sys.argv
-    stock = get("https://api.admira.store/stock/list?limit=400"); items = stock.get("items", stock)
+    # El índice público trae TODO el Stock (889 piezas); /stock/list corta en 200.
+    stock = get("https://stock.admira.store/stock/index.json"); items = stock.get("items", stock) if isinstance(stock, dict) else stock
     def tagged(i, ts): return any(str(t).lower() in ts for t in (i.get("tags") or []))
     vis = [i for i in items if i.get("type") in ("video", "image") and i.get("url")]
-    listas = {k: [i for i in vis if tagged(i, ts)][:24] for k, ts in TAGS.items()}
-    listas["musica"] = [i for i in items if i.get("type") in ("music", "audio") and i.get("url")][:24]
+    listas = {k: [i for i in vis if tagged(i, ts)][:40] for k, ts in TAGS.items()}
+    # Música EN VÍDEO (Carlos, 7-sep-2026): las piezas con el hashtag #musica (y #music…, o etiqueta musica/music).
+    def texto(i): return " ".join(str(i.get(k) or "") for k in ("title", "comment", "prompt", "tags", "category", "hashtags"))
+    mus = [i for i in vis if i.get("type") == "video" and re.search(r"#m[úu]sica\b", texto(i), re.I)]
+    mus += [i for i in vis if i.get("type") == "video" and i not in mus and (re.search(r"#(m[úu]sica|music)\w*", texto(i), re.I)
+            or any(re.fullmatch(r"m[úu]sica|music", str(t), re.I) for t in (i.get("tags") or [])))]
+    listas["musica"] = mus[:40]
     for screen, tema in KIOSKOS.items():
         its = [{"id": i["id"], "title": (i.get("title") or "")[:80], "type": "audio" if i.get("type") in ("music", "audio") else i["type"],
                 "url": i["url"], "thumb": i.get("thumbnail") or "", "dur": DUR} for i in listas[tema]]
