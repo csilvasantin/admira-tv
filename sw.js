@@ -24,7 +24,7 @@
 // Ahora cada publicación cambia este literal → el navegador ve que sw.js ha
 // cambiado → install + activate → la despensa vieja se tira entera.
 // Lo mantiene al día ./deploy.sh, que ABORTA si no coincide con el sello.
-const CACHE = 'admira-shell-v.07.09.2026.r12.10:50';
+const CACHE = 'admira-shell-v.07.09.2026.r14.10:51';
 
 // Shell del canal: la HTML canónica + sus assets críticos same-origin.
 const SHELL = [
