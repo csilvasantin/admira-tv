@@ -5,3 +5,5 @@
 .destination-label{display:block;font-size:12px;margin-bottom:10px}.destination-label select{display:block;width:100%;padding:10px;margin-top:5px;border:1px solid #bac6ba;border-radius:8px;background:white;color:inherit}#map-panel{margin:18px 0 12px}#map-panel #map{margin:0;border-radius:0}#map-panel .cenital-body{height:160px}#map-panel #map{height:100%}#map-panel .cenital-reopen{width:100%}
 
 #map-panel{margin:0;bottom:auto;top:190px;right:22px}#map-panel .cenital-body{height:170px}@media(max-width:600px){#map-panel{top:auto;bottom:100px;right:12px}#map-panel .cenital-body{height:130px}}
+
+.interior-link{display:inline-block;padding:14px 20px;background:#234f37;color:#fff;border-radius:10px;font-weight:700;text-decoration:none;margin:12px 0}.pending[hidden]{display:none}

@@ -68,7 +68,18 @@
  document.querySelectorAll('[data-walk]').forEach(button=>button.addEventListener('click',()=>{cancel();walker?.command({action:button.dataset.walk});status('Paseo libre · sigue las conexiones de la calle.');}));
  $('enter').addEventListener('click',()=>{
   if(!sites.arrived(walker?.getState(),selected))return;
-  cancel();interior=true;panorama.setVisible(false);$('arrival').hidden=true;$('interior-title').textContent=selected.name;$('interior').hidden=false;$('exit-interior').focus();
+  cancel();
+  $('interior-media').replaceChildren();
+  $('interior-pending').hidden=!!selected.interiorUrl;
+  if(selected.interiorUrl){
+   const heading=document.createElement('h3');heading.textContent=selected.interiorName;
+   const instructions=document.createElement('p');
+   instructions.textContent='Abre IEU y elige «'+selected.interiorName+'» en el selector de oficinas. Si aparece otra oficina, cámbiala antes de usar sus controles.';
+   const link=document.createElement('a');link.className='interior-link';link.href=selected.interiorUrl;link.target='_blank';link.rel='noopener';link.textContent='Abrir IEU · '+selected.interiorName+' ↗';
+   const note=document.createElement('p');note.className='note';note.textContent='Se abre en otra pestaña. Usa tu cuenta autorizada de IEU para recorrer las escenas y controlar los dispositivos disponibles. Al terminar, vuelve a esta pestaña para continuar el paseo. La oficina todavía se selecciona manualmente.';
+   $('interior-media').append(heading,instructions,link,note);
+  }
+  interior=true;panorama.setVisible(false);$('arrival').hidden=true;$('interior-title').textContent=selected.name;$('interior').hidden=false;$('exit-interior').focus();
  });
  $('exit-interior').addEventListener('click',closeInterior);
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&interior)closeInterior();});
