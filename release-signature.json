@@ -1,9 +1,9 @@
 {
-  "version": "v.07.09.2026.r12.10:31",
+  "version": "v.07.09.2026.r13.10:47",
   "signature": "NeoMBP14 · MacBookProNegro14",
   "agent": "NeoMBP14",
   "machine": "MacBookProNegro14",
   "day": "07.09.2026",
-  "time": "10:31",
-  "evidence": "Gemelo CanalKiosk Gràcia (adcelerate/demo/best): espeja la antena real de sim-gracia-kiosko (signage/now) cuando late; sin antena, parrilla+Stock como antes. Galaxy Fold configurado como esa pantalla (misión yokup Hoy #281 · DCL-ddba235a). Tests del gemelo 107/107."
+  "time": "10:47",
+  "evidence": "Sincro al fotograma kioskos↔teléfonos: canal.html usa la playlist de sincro de SU pantalla (control/playlist) y la emite exacta; el gemelo CanalKiosk sigue el mismo reloj (sync/state) y la misma playlist por sitio (vila/jardinets/lesseps), situando el vídeo en el segundo que toca. Playlists temáticas publicadas (música/tecnología/creatividad) con tools/publica-playlists-kioskos.py. Misión yokup Hoy #309."
 }

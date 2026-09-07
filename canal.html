@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=07.09.2026.r12.1031"></script>
+<script src="xpl-runtime.js?v=07.09.2026.r13.1047"></script>
 <script>
-  window.ADMIRA_VERSION='v.07.09.2026.r12.10:31';
+  window.ADMIRA_VERSION='v.07.09.2026.r13.10:47';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -504,7 +504,7 @@ let syncTimeOffset=0;
 // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
 const SYNC_API='https://brain.digitalavatar.ai/sync/state';
 const SYNC_PLAYLIST_API='https://brain.digitalavatar.ai/control/playlist';
-let SYNC_REMOTE=null, syncStateTimer=null;
+let SYNC_REMOTE=null, syncStateTimer=null, _syncOwnPlaylist=false;
 let SYNC_GROUP_MASTER='';
 let _syncSig='';   // firma del máster: solo se re-monta la antena si CAMBIÓ (eficiencia FLT-1409)
 let _extendedAssignment=null, _extendedClockOffset=0;
@@ -529,12 +529,18 @@ async function fetchSyncState(){
     const d=await fetch(SYNC_API+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('http '+r.status)));
     if(d&&Array.isArray(d.items)&&d.items.length){
       let items=d.items;
-      const leader=SYNC_GROUP_MASTER;
+      // SINCRO POR KIOSKO (Carlos, 7-sep-2026: teléfonos físicos y kioskos digitales al fotograma,
+      // cada kiosko con su playlist). Sin grupo de playout, la playlist de sincro es la de ESTA
+      // pantalla (control/playlist?screen=<screen>) si alguien la publicó; si no, el máster global.
+      // El gemelo (adcelerate/demo/best) calcula esta MISMA línea de tiempo con el mismo reloj.
+      const leader=SYNC_GROUP_MASTER||(qs.get('leader')||scr.screen||'');
+      _syncOwnPlaylist=false;
       if(leader){
         try{
           const p=await fetch(SYNC_PLAYLIST_API+'?screen='+encodeURIComponent(leader)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('playlist http '+r.status)));
-          if(leader===SYNC_GROUP_MASTER&&p&&Array.isArray(p.items)&&p.items.length){
+          if((leader===SYNC_GROUP_MASTER||!SYNC_GROUP_MASTER)&&p&&Array.isArray(p.items)&&p.items.length){
             items=p.items.map(i=>Object.assign({},i,{thumbnail:i.thumbnail||i.thumb||'',_dur:Number(i._dur||i.dur)||0}));
+            _syncOwnPlaylist=true;   // playlist del kiosko: se emite EXACTA, sin entrelazar parrilla ni Stock
           }
         }catch(e){ try{ console.warn('[canal] sincro sin playlist de grupo:',leader,String(e&&e.message||e)); }catch(_){} }
       }
@@ -1394,6 +1400,7 @@ async function loadDefaultDraft(){
 // de verdad en su franja, en vez de aparecer 1 vez en un loop de 50. Cicla la lista
 // de la franja cada EVERY piezas de Stock.
 function gridWeave(pl){
+  if(syncOn&&_syncOwnPlaylist) return pl;   // sincro por kiosko: la playlist publicada es el contrato, sin parrilla ni RTB entrelazados
   // La parrilla vendida (own/paid) + los creativos PROGRAMÁTICOS vivos (RTB / fallback
   // ADS de la acción XPL showAd) se entrelazan igual: assets universales a cadencia fija.
   const rtb=(typeof rtbActive==='function')?rtbActive():[];
@@ -3842,6 +3849,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=07.09.2026.r12.1031" defer></script>
+  <script src="/assets/admira-version-watch.js?v=07.09.2026.r13.1047" defer></script>
 </body>
 </html>

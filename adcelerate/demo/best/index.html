@@ -13,12 +13,12 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r12.1031">
-<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r12.1031">
-<script src="../js/outdoor-sites.js?v=07.09.2026.r12.1031"></script>
-<script src="../js/urban-route.js?v=07.09.2026.r12.1031"></script>
-<script src="../js/dooh-surfaces.js?v=07.09.2026.r12.1031"></script>
-<script src="../js/outdoor-context.js?v=07.09.2026.r12.1031"></script>
+<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r13.1047">
+<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r13.1047">
+<script src="../js/outdoor-sites.js?v=07.09.2026.r13.1047"></script>
+<script src="../js/urban-route.js?v=07.09.2026.r13.1047"></script>
+<script src="../js/dooh-surfaces.js?v=07.09.2026.r13.1047"></script>
+<script src="../js/outdoor-context.js?v=07.09.2026.r13.1047"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
   const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
@@ -203,7 +203,7 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r12.1031"></head>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r13.1047"></head>
 <body>
 
 <div id="app">
@@ -354,13 +354,13 @@
   </div>
 </div>
 
-<script src="street-walk.js?v=07.09.2026.r12.1031"></script>
-<script src="../js/cenital-panel.js?v=07.09.2026.r12.1031"></script><script src="../js/walk-overview.js?v=07.09.2026.r12.1031"></script><script src="walk-orientation.js?v=07.09.2026.r12.1031"></script><script src="route-walk.js?v=07.09.2026.r12.1031"></script>
-<script src="../js/player-library.js?v=07.09.2026.r12.1031"></script>
-<script src="screen-player.js?v=07.09.2026.r12.1031"></script>
-<script src="screen-audio.js?v=07.09.2026.r12.1031"></script>
-<script src="surface-focus.js?v=07.09.2026.r12.1031"></script>
-<script src="camera-path.js?v=07.09.2026.r12.1031"></script>
+<script src="street-walk.js?v=07.09.2026.r13.1047"></script>
+<script src="../js/cenital-panel.js?v=07.09.2026.r13.1047"></script><script src="../js/walk-overview.js?v=07.09.2026.r13.1047"></script><script src="walk-orientation.js?v=07.09.2026.r13.1047"></script><script src="route-walk.js?v=07.09.2026.r13.1047"></script>
+<script src="../js/player-library.js?v=07.09.2026.r13.1047"></script>
+<script src="screen-player.js?v=07.09.2026.r13.1047"></script>
+<script src="screen-audio.js?v=07.09.2026.r13.1047"></script>
+<script src="surface-focus.js?v=07.09.2026.r13.1047"></script>
+<script src="camera-path.js?v=07.09.2026.r13.1047"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -1161,32 +1161,64 @@ async function chLoad(){
     if (chQueue.length){ chLive = true; chErr = 0; chTag('continuidad Stock · en vivo'); chNext(); } else chLive = false;
   }catch(e){ console.warn('[canal] no se pudo cargar Stock', e); chLive = false; }
 }
-// ── ESPEJO DE LA ANTENA REAL (Carlos, 7-sep-2026: «si voy por clearchannel.tv a ver qué
-// está emitiendo, que coincida con el móvil»). Si la pantalla del kiosko (GRID_SCREEN) tiene
-// un player real latiendo —hoy el Galaxy Fold configurado como sim-gracia-kiosko—, el gemelo
-// pinta LO QUE ESA ANTENA EMITE (api.admira.store/signage/now), no su propio bucle. Sin
-// antena viva (latido > 3 min) vuelve a la parrilla + Stock de siempre. Sondeo cada 5 s.
-const LIVE_NOW_URL = 'https://api.admira.store/signage/now?screen=' + GRID_SCREEN;
-const LIVE_FRESH_MS = 180000;
-let liveMirrorUrl = '';
-function liveMirrorOn(){ return !!liveMirrorUrl; }
-async function liveMirrorTick(){
+// ── SINCRO AL FOTOGRAMA CON LOS TELÉFONOS (Carlos, 7-sep-2026) ───────────────────
+// El gemelo ya no espeja por latido: sigue el MISMO reloj que el canal de los teléfonos
+// (brain.digitalavatar.ai/sync/state → serverNow) y la MISMA playlist del kiosko
+// (control/playlist?screen=<pantalla del sitio>; si no hay, el máster global). La línea
+// de tiempo es la de canal.html (syncTimeline): posición = serverNow mod duración total →
+// índice + segundos transcurridos, y el vídeo se sitúa en ese segundo. Un teléfono en modo
+// sincro con esa pantalla emite el mismo fotograma (± latencia de red).
+const SYNC_STATE_URL = 'https://brain.digitalavatar.ai/sync/state';
+const SYNC_PLAYLIST_URL = 'https://brain.digitalavatar.ai/control/playlist?screen=';
+const SITE_SCREEN = { vila: GRID_SCREEN, jardinets: 'sim-jardinets-kiosko', lesseps: 'sim-lesseps-kiosko' };
+let syncClock = { offset: 0, slotMs: 20000, master: [], own: new Map(), at: 0 };
+let syncSite = '', syncQueueSig = '';
+function liveMirrorOn(){ return syncClock.master.length > 0; }
+function syncSiteId(){ return (typeof activeWalkSite !== 'undefined' && activeWalkSite && activeWalkSite.id) || 'vila'; }
+async function syncClockRefresh(){
   try{
-    const d = await fetch(LIVE_NOW_URL, { cache: 'no-store' }).then(r => r.json());
-    const it = d && d.item, seen = Number(d && d.lastSeen) || 0;
-    const fresh = !!(it && it.url && /^https?:\/\//.test(it.url) && (it.type === 'video' || it.type === 'image') && seen && (Date.now() - seen) < LIVE_FRESH_MS);
-    if (fresh){
-      if (it.url !== liveMirrorUrl){
-        liveMirrorUrl = it.url;
-        chQueue = [{ id: String(it.id || it.url), url: it.url.replace(/^https:\/\/www\.admira\.tv\//, 'https://admira.tv/'), type: it.type, title: it.title || 'Antena real', source: 'live', seconds: 10 }];
-        chLive = true; chErr = 0; chIdx = -1; chTag('antena real · ' + String(it.title || '').slice(0, 44)); chNext();
-      }
-    } else if (liveMirrorUrl){ liveMirrorUrl = ''; chLoad(); }
-  }catch(_){ /* la antena no responde: se mantiene lo que haya */ }
+    const d = await fetch(SYNC_STATE_URL + '?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json());
+    if (d && Array.isArray(d.items) && d.items.length){ syncClock.master = d.items; syncClock.slotMs = d.slotMs || 20000; syncClock.offset = (d.serverNow || Date.now()) - Date.now(); syncClock.at = Date.now(); }
+    for (const [site, screen] of Object.entries(SITE_SCREEN)){
+      try{ const p = await fetch(SYNC_PLAYLIST_URL + encodeURIComponent(screen) + '&t=' + Date.now(), { cache: 'no-store' }).then(r => r.json());
+        syncClock.own.set(site, (p && Array.isArray(p.items) && p.items.length) ? p.items : null); }catch(_){ /* sin playlist propia: máster */ }
+    }
+  }catch(_){ /* sin máster: el bucle local sigue */ }
 }
-setInterval(liveMirrorTick, 5000); liveMirrorTick();
+function syncItems(){ const own = syncClock.own.get(syncSiteId()); return (own && own.length) ? own : syncClock.master; }
+function syncDurMs(it){ const d = Number(it && (it._dur || it.dur)) || 0; return d > 0 ? d * 1000 : syncClock.slotMs; }
+function syncTimelineTwin(items){
+  const durations = items.map(syncDurMs), total = durations.reduce((a, b) => a + b, 0) || syncClock.slotMs;
+  const now = Date.now() + syncClock.offset, pos = ((now % total) + total) % total;
+  let start = 0, index = durations.length - 1;
+  for (let i = 0; i < durations.length; i++){ if (pos < start + durations[i]){ index = i; break; } start += durations[i]; }
+  return { index, elapsed: Math.max(0, pos - start), duration: durations[index] };
+}
+function syncTick(){
+  if (!liveMirrorOn()) return;
+  const items = syncItems(); if (!items.length) return;
+  const site = syncSiteId();
+  const sig = site + '|' + items.map(i => i.id).join(',');
+  if (sig !== syncQueueSig){
+    syncQueueSig = sig; syncSite = site;
+    chQueue = items.map(it => ({ id: String(it.id || it.url), url: String(it.url).replace(/^https:\/\/www\.admira\.tv\//, 'https://admira.tv/'), type: it.type === 'video' ? 'video' : 'image', title: it.title || '', source: 'sync', seconds: syncDurMs(it) / 1000, thumb: it.thumb || it.thumbnail || '' }));
+    chLive = true; chErr = 0; chIdx = -1;
+  }
+  const line = syncTimelineTwin(items);
+  if (line.index !== chIdx){
+    chPlay(line.index); clearTimeout(chTimer);   // el reloj manda: ni el 'ended' ni el cap deciden el siguiente
+    chTag('sincro · ' + SITE_SCREEN[site] + ' · ' + (line.index + 1) + '/' + items.length + ' · ' + chTitle());
+  }
+  if (chItem && chItem.type === 'video' && chVid.readyState >= 1 && isFinite(chVid.duration) && chVid.duration > 1){
+    const target = Math.min(chVid.duration - 0.25, (line.elapsed / 1000) % chVid.duration);
+    if (Math.abs(chVid.currentTime - target) > 0.5){ try{ chVid.currentTime = target; }catch(_){} }
+    if (chVid.paused) chVid.play().catch(() => {});
+  }
+}
+syncClockRefresh(); setInterval(syncClockRefresh, 30000); setInterval(syncTick, 500);
+
 function chSkip(){ chErr++; if (chErr > chQueue.length){ chLive = false; chItem = null; return; } chNext(); }
-function chNext(){ chPlay(chIdx + 1); }
+function chNext(){ if (liveMirrorOn()) return; chPlay(chIdx + 1); }
 function chPlay(i){
   clearTimeout(chTimer); if (!chQueue.length) return;
   const seq = ++chSeq;
@@ -1201,8 +1233,8 @@ function chPlay(i){
     chVid.pause(); chVid.removeAttribute('src');if(!screenAudio.owner||!screenPlayers.has(screenAudio.owner.screenId))screenAudio.mediaChanged();
     const im = new Image(); im.crossOrigin = 'anonymous';
     im.onload = () => { if(seq!==chSeq)return;chImg = im; chErr = 0; };
-    im.onerror = () => {if(seq===chSeq)chSkip();};
-    im.src = chItem.url;
+    im.onerror = () => {if(seq===chSeq&&!liveMirrorOn())chSkip();};
+    im.src = (chItem.type !== 'video' && /\.(mp3|m4a|wav|ogg)(\?|$)/i.test(chItem.url) && chItem.thumb) ? chItem.thumb : chItem.url;
     chTimer = setTimeout(chNext, (chItem.seconds || IMG_SECONDS) * 1000);
   }
 }
