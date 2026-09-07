@@ -1,8 +1,8 @@
 {
   "name": "admira-tv",
   "title": "Admira TV · admira.tv — la capa Emitir de la suite AdmiraNeXT",
-  "description": "Hub MCP de admira.tv: qué se emite, dónde y con qué audiencia. Servidor MCP vivo en mcp-tv.admira.store con cuatro herramientas (on_air, airtime_report, channel_url, player_info) y el CMS de emisión con su guía para personas.",
-  "version": "v.07.09.2026.r1.06:05",
+  "description": "Hub MCP de admira.tv: qué se emite, dónde y con qué audiencia, y la FEDERACIÓN con circuitos externos (pedir antena fuera, recibir ofertas dentro, emisión real al aceptar). Servidor MCP vivo en mcp-tv.admira.store v2.0.0 con 13 herramientas y el CMS de emisión con su guía para personas.",
+  "version": "v.07.09.2026.r7.07:50",
   "site": "https://admira.tv",
   "hub": "https://admira.tv/mcp/",
   "llms_txt": "https://admira.tv/mcp/llms.txt",
@@ -10,12 +10,12 @@
   "repo": "https://github.com/csilvasantin/admira-tv",
   "contact": {
     "telegram_group": "AgoraMatrix",
-    "signature": "MorfeoMBP14 · responsable del proyecto"
+    "signature": "NeoMBP14 · MacBookProNegro14 (federación) · MorfeoMBP14 (responsable del proyecto)"
   },
   "mcp_server": {
     "endpoint": "https://mcp-tv.admira.store/mcp",
     "transport": "streamable-http",
-    "auth": "none — lectura abierta (sin clave)",
+    "auth": "lectura abierta (sin clave) · escrituras con clave de flota AdmiraNeXT (Authorization: Bearer) · circuitos externos con su clave cx_…",
     "tools": [
       {
         "name": "on_air",
@@ -23,7 +23,7 @@
       },
       {
         "name": "airtime_report",
-        "desc": "Proof-of-play de un circuito: pases, segundos, por tipo y por segmento."
+        "desc": "Proof-of-play de un circuito (pases, segundos, tipo, segmento) o de una antena federada por id."
       },
       {
         "name": "channel_url",
@@ -31,7 +31,43 @@
       },
       {
         "name": "player_info",
-        "desc": "Documentación del player nativo de Admira.tv: qué es, kiosko desatendido, versiones, instalación y configuración (por defecto el de macOS)."
+        "desc": "Documentación del player nativo: qué es, kiosko desatendido, versiones, instalación y configuración."
+      },
+      {
+        "name": "circuit_info",
+        "desc": "Ficha de admira.tv como circuito federable: formatos, canales, pantallas vivas, cómo federarse."
+      },
+      {
+        "name": "circuits",
+        "desc": "Directorio: nuestros canales con pantallas vivas y los circuitos externos federados."
+      },
+      {
+        "name": "circuit_register",
+        "desc": "Alta/actualización de un circuito externo; entrega su clave cx_. Clave de flota."
+      },
+      {
+        "name": "circuit_screens",
+        "desc": "Inventario de pantallas de un canal nuestro o de un circuito externo (en vivo si expone MCP)."
+      },
+      {
+        "name": "request_airtime",
+        "desc": "Nosotros → ellos: pedir antena en un circuito externo (se entrega por su MCP si lo tiene). Clave de flota."
+      },
+      {
+        "name": "offer_airtime",
+        "desc": "Ellos → nosotros: un circuito externo (Bearer cx_) nos ofrece una pieza; queda pendiente de decisión."
+      },
+      {
+        "name": "airtime_decide",
+        "desc": "accept = emisión real en la playlist de cada pantalla del canal; stop la retira; reject. Clave de flota."
+      },
+      {
+        "name": "airtime_status",
+        "desc": "Estado e historial de una antena federada (refresca contra el circuito remoto)."
+      },
+      {
+        "name": "quien_soy",
+        "desc": "Con qué identidad te ve el servidor: flota, circuito externo o anónimo."
       }
     ],
     "connect": {
@@ -40,6 +76,24 @@
           "url": "https://mcp-tv.admira.store/mcp"
         }
       }
+    },
+    "version": "2.0.0",
+    "resources": [
+      "admiratv://federacion",
+      "admiratv://llms.txt"
+    ],
+    "federation_protocol": {
+      "id": "federacion/1",
+      "doc": "https://mcp-tv.admira.store/federacion.md",
+      "directory": "https://mcp-tv.admira.store/federacion",
+      "reference_circuit": "https://circuito-espejo.csilvasantin.workers.dev/",
+      "symmetric_tools": [
+        "circuit_info",
+        "circuit_screens",
+        "offer_airtime",
+        "airtime_status",
+        "airtime_report"
+      ]
     }
   },
   "http_api": {
@@ -51,17 +105,36 @@
         "path": "/",
         "auth": "no",
         "desc": "Descriptor del servidor MCP: herramientas disponibles y estado."
+      },
+      {
+        "method": "GET",
+        "path": "/federacion",
+        "auth": "no",
+        "desc": "Directorio de circuitos externos federados (JSON)."
+      },
+      {
+        "method": "GET",
+        "path": "/federacion.md",
+        "auth": "no",
+        "desc": "Protocolo de federación (markdown)."
       }
     ],
     "interact": [],
     "auth": {
-      "how": "Las herramientas MCP no piden credencial. El CMS de emisión de la web sí va detrás de la verja de acceso.",
-      "protected": []
+      "how": "Lecturas sin credencial. circuit_register, request_airtime y airtime_decide exigen la clave de flota AdmiraNeXT (Bearer); offer_airtime exige la clave de circuito cx_ del circuito externo. El CMS de emisión de la web va detrás de la verja de acceso.",
+      "protected": [
+        "circuit_register",
+        "request_airtime",
+        "airtime_decide",
+        "offer_airtime"
+      ]
     }
   },
   "trampas": [
     "El canal se pone a emitir con la URL que devuelve channel_url: no la construyas a mano, que la detección de kiosko depende del user-agent.",
-    "Proof-of-play y audiencia son dos cosas distintas: admira.tv dice QUÉ se emitió, y la cámara de XpaceOS QUIÉN lo vio. Cruzarlas es lo que hace clearchannel.tv."
+    "Proof-of-play y audiencia son dos cosas distintas: admira.tv dice QUÉ se emitió, y la cámara de XpaceOS QUIÉN lo vio. Cruzarlas es lo que hace clearchannel.tv.",
+    "/signage/push no lo lee canal.html (es del gemelo XpaceOS): una pieza entra en una pantalla del canal por su playlist, que es lo que hace airtime_decide accept.",
+    "Un Worker no puede llamarse a sí mismo en Cloudflare (522): la federación se prueba contra un segundo servidor (circuito-espejo)."
   ],
   "federation": [
     {

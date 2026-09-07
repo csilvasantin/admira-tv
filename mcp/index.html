@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=07.09.2026.r7.0748"></script>
+<script src="/auth-gate.js?v=07.09.2026.r7.0750"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admira.tv · MCP — el canal, conectado</title>
 <meta name="description" content="Servidor MCP de Admira.tv: qué hay en antena en cada pantalla, proof-of-play y cómo poner una pantalla a emitir.">
@@ -23,8 +23,8 @@
 <script>
 window.ADMIRA_NAV={title:'MCP · el canal conectado'};
 </script>
-<script src="/admira-nav.js?v=07.09.2026.r7.0748" defer></script>
-<script src="/admira-frame.js?v=07.09.2026.r7.0748" defer></script>
+<script src="/admira-nav.js?v=07.09.2026.r7.0750" defer></script>
+<script src="/admira-frame.js?v=07.09.2026.r7.0750" defer></script>
 <style>
   :root{ --bg:#02080d; --panel:#0a1620; --line:#16303a; --txt:#dff8ff; --mut:#75aab9; --acc:#78f3ff; --pur:#88ffaa; --good:#88ffaa; }
   *{box-sizing:border-box}
@@ -52,13 +52,13 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
   a{color:var(--acc)}
   footer{color:var(--mut);font-size:13px;margin-top:38px;border-top:1px solid var(--line);padding-top:18px}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=07.09.2026.r7.0748">
+  <link rel="stylesheet" href="/admira-frame.css?v=07.09.2026.r7.0750">
 </head>
 <body>
 <div class="wrap">
   <div class="kick">Admira.tv · Model Context Protocol</div>
   <h1>El <b>canal</b>, conectado</h1>
-  <p class="lead">Servidor MCP de la capa <b>Emitir</b>: agentes (silicio) y personas (carbono) consultan qué hay en antena en cada pantalla, el proof-of-play de cada circuito y cómo poner una pantalla a emitir.</p>
+  <p class="lead">Servidor MCP de la capa <b>Emitir</b>: agentes (silicio) y personas (carbono) consultan qué hay en antena en cada pantalla, el proof-of-play de cada circuito y cómo poner una pantalla a emitir. Y desde hoy, <b>federación</b>: admira.tv se coordina con circuitos externos y viceversa.</p>
 
   <div class="status"><span class="dot" id="dot"></span><span id="status">comprobando servidor…</span></div>
 
@@ -74,6 +74,22 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
     <div class="tool"><b>airtime_report</b><span>Proof-of-play de un circuito: pases, segundos, por tipo y segmento.</span></div>
     <div class="tool"><b>channel_url</b><span>Construye la URL del canal para poner una pantalla a emitir.</span></div>
     <div class="tool"><b>player_info</b><span>Documentación del player nativo: qué es, kiosko desatendido, versiones, instalación y configuración.</span></div>
+    <div class="tool"><b>quien_soy</b><span>Con qué identidad te ve el servidor: flota AdmiraNeXT, circuito externo o anónimo.</span></div>
+  </div>
+
+  <h2 id="federacion">Federación con circuitos externos</h2>
+  <div class="card">
+    <p style="margin:0 0 12px;color:var(--mut)">Protocolo <code>federacion/1</code>, simétrico: las mismas herramientas a los dos lados. Nosotros pedimos antena en sus pantallas; ellos nos la ofrecen en las nuestras y, al aceptar, la pieza <b>entra de verdad en la playlist</b> de cada pantalla del canal. Lecturas abiertas; escrituras con clave de flota; el circuito externo usa su clave <code>cx_…</code>.</p>
+    <div class="tool"><b>circuit_info</b><span>Ficha de admira.tv como circuito: formatos, canales, pantallas vivas, cómo federarse.</span></div>
+    <div class="tool"><b>circuits</b><span>Directorio: nuestros canales con pantallas vivas + circuitos externos federados.</span></div>
+    <div class="tool"><b>circuit_register</b><span>Alta de un circuito externo; entrega su clave cx_. Clave de flota.</span></div>
+    <div class="tool"><b>circuit_screens</b><span>Pantallas de un canal nuestro o de un circuito externo (en vivo si expone MCP).</span></div>
+    <div class="tool"><b>request_airtime</b><span>Nosotros → ellos: pedir antena en un circuito externo (se entrega por su MCP). Clave de flota.</span></div>
+    <div class="tool"><b>offer_airtime</b><span>Ellos → nosotros: el circuito externo nos ofrece una pieza; queda pendiente de decisión.</span></div>
+    <div class="tool"><b>airtime_decide</b><span>accept = emisión real en las pantallas elegidas · stop la retira · reject. Clave de flota.</span></div>
+    <div class="tool"><b>airtime_status</b><span>Estado e historial de una antena federada, refrescado contra el circuito remoto.</span></div>
+    <div class="tool"><b>airtime_report {id}</b><span>Proof-of-play de una antena federada: despachos y qué emite ahora cada pantalla.</span></div>
+    <p style="margin:12px 0 0;color:var(--mut);font-size:14px">Para federar tu circuito: expón <code>offer_airtime</code> y <code>airtime_status</code> por MCP, dinos endpoint y clave, y te registramos. Referencia: <a href="https://circuito-espejo.csilvasantin.workers.dev/">circuito-espejo</a> · protocolo: <a href="https://mcp-tv.admira.store/federacion.md">federacion.md</a> · directorio: <a href="https://mcp-tv.admira.store/federacion">/federacion</a>.</p>
   </div>
 
   <h2>Conectar</h2>

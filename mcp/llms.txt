@@ -1,46 +1,89 @@
 # Admira.tv · admira.tv — la capa Emitir (MCP)
 
-> Servidor MCP de Admira.tv (v1.1.0): el canal, conectado. Agentes (silicio) y personas
-> (carbono) consultan qué hay EN ANTENA en cada pantalla, el proof-of-play de cada circuito,
-> cómo poner una pantalla a emitir y la documentación del player nativo. Admira.tv dice QUÉ
-> se emitió; la cámara del gemelo XpaceOS dice QUIÉN lo vio; cruzarlas es clearchannel.tv.
+> Servidor MCP de Admira.tv (v2.0.0): el canal, conectado — y FEDERADO. Agentes (silicio) y
+> personas (carbono) consultan qué hay EN ANTENA en cada pantalla, el proof-of-play de cada
+> circuito, cómo poner una pantalla a emitir y la documentación del player nativo. Desde hoy,
+> además, admira.tv se coordina con CIRCUITOS EXTERNOS y viceversa: pedimos antena en sus
+> pantallas y ellos nos la ofrecen en las nuestras, con las mismas herramientas a los dos lados.
 
 Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y del CMS)
 
 Sitio / docs: https://admira.tv/mcp/
 Manifest máquina: https://admira.tv/mcp/manifest.json
-Versión: v.07.09.2026.r1.06:05
-Repo: https://github.com/csilvasantin/admira-tv
+Versión: v.07.09.2026.r7.07:50
+Repo del servidor: https://github.com/csilvasantin/admira-tv-mcp · Repo del sitio: https://github.com/csilvasantin/admira-tv
 
 ## Servidor MCP (cómo conectar)
 
 - Endpoint: https://mcp-tv.admira.store/mcp
-- Transporte: MCP Streamable HTTP (JSON-RPC 2.0 sobre POST /mcp; respuestas como text/event-stream).
-  Descriptor y salud en GET https://mcp-tv.admira.store/ → {ok, service:"admira-tv-mcp", server:{name:"Admira.tv", version}, tools}.
-- Auth: lectura abierta (sin clave). `initialize` responde 200 sin cabecera Authorization.
-  El CMS de emisión de la web (cms.html, players, parrilla) sí va detrás de la verja de acceso.
+- Transporte: MCP Streamable HTTP (JSON-RPC 2.0 sobre POST /mcp; responde text/event-stream, o
+  application/json si el cliente solo acepta JSON; admite lotes). Descriptor y salud en
+  GET https://mcp-tv.admira.store/ → {ok, service:"admira-tv-mcp", server:{name,version}, tools, resources}.
+- Auth: LECTURA ABIERTA (sin clave). Lo que crea o cambia estado exige la clave de flota AdmiraNeXT
+  (Authorization: Bearer <clave>; cómo obtenerla: https://www.admiranext.com/mcp/#identidad).
+  Un circuito externo se identifica con su clave de circuito cx_… (se la damos al registrarlo).
 - Claude Code: claude mcp add --transport http admiratv https://mcp-tv.admira.store/mcp
 - Config de cliente (JSON):
   {"mcpServers":{"admiratv":{"url":"https://mcp-tv.admira.store/mcp"}}}
 - Prueba rápida:
   curl -s https://mcp-tv.admira.store/mcp -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 
-## Herramientas
+## Herramientas del canal
 
 - on_air {screen} — qué hay EN ANTENA ahora mismo en una pantalla: asset (título/tipo/url),
   audiencia por cámara (personas, edad, género) y si está conectada. screen: id de pantalla,
-  p. ej. admira-sitges-mupi.
-- airtime_report {circuit} — proof-of-play de un circuito: pases totales, segundos emitidos,
-  desglose por tipo y por segmento de audiencia. circuit: id de circuito/loc, p. ej. admira-sitges.
+  p. ej. admiranext-mupi.
+- airtime_report {circuit} | {id} — proof-of-play. Con circuit: pases totales, segundos emitidos,
+  desglose por tipo y por segmento de audiencia de un circuito nuestro. Con id (at_…): el de una
+  antena federada: despachos, qué emite ahora cada pantalla (is_this) y estado.
 - channel_url {screen, circuit, format?, cam?, clean?} — construye la URL del canal de admira.tv
   para poner una pantalla a emitir. format "9:16" (por defecto) o "16:9"; cam activa la
   cámara/audiencia (por defecto false); clean modo limpio sin chrome (por defecto true).
-- player_info {section?} — documentación del player nativo de Admira.tv (el que reproduce el
-  canal en una pantalla): qué es, features de kiosko desatendido, versiones/changelog,
-  instalación y configuración. section: all (por defecto), overview, features, releases,
-  install, config. Por defecto el de macOS (AdmiraSignageMac).
+- player_info {section?} — documentación del player nativo de Admira.tv: overview, features,
+  releases, install, config (all por defecto). Por defecto el de macOS (AdmiraSignageMac).
+- quien_soy — con qué identidad te ve el servidor: agente de flota, circuito externo o anónimo.
 
-Los esquemas exactos (inputSchema) están en tools/list y en /mcp/manifest.json.
+## Federación con circuitos externos (protocolo federacion/1)
+
+Un circuito es una red de pantallas con su agente. admira.tv es el circuito «admira».
+La coordinación es SIMÉTRICA: las mismas herramientas a los dos lados. Protocolo completo en el
+resource admiratv://federacion (o GET https://mcp-tv.admira.store/federacion.md).
+
+- circuit_info — ficha de admira.tv como circuito: formatos y piezas que aceptamos, canales,
+  pantallas vivas, herramientas y cómo federarse. Lectura abierta.
+- circuits {external_only?} — directorio: nuestros canales (Canal AdmiraNeXT, CanalKiosk, CanalMetro,
+  Canal Xtanco, GrandeGracia) con pantallas vivas, y los circuitos externos federados. Lectura abierta.
+- circuit_screens {circuit, limit?} — inventario de pantallas: de un canal nuestro (vivas + ubicaciones
+  del mapa) o de un circuito externo (registradas y, si expone MCP, en vivo). Lectura abierta.
+- circuit_register {id, name, operator?, contact?, mcp_endpoint?, api_key?, screens?, capabilities?,
+  status?, rotate_key?} — alta/actualización de un circuito externo; devuelve la clave cx_… con la que
+  nos llamará (solo al crearla). api_key = la clave que ese circuito nos dio. EXIGE clave de flota.
+- request_airtime {circuit, asset{title,type:image|video|link,url,duration_s?}, screens?, from?, to?,
+  note?} — NOSOTROS → ELLOS: pedimos antena en un circuito externo. Si tiene MCP y clave, se le
+  entrega ya (llama a su offer_airtime con remote_id = nuestro id); si no, queda pendiente de
+  entrega manual con su contacto. EXIGE clave de flota.
+- offer_airtime {asset, screens?, from?, to?, note?, remote_id?} — ELLOS → NOSOTROS: un circuito
+  externo (Bearer cx_…) nos ofrece una pieza para nuestras pantallas. Queda «pending» hasta que un
+  agente de AdmiraNeXT decida. Devuelve id at_… para seguirla.
+- airtime_decide {id, decision:accept|reject|stop, screens?, broadcast?, note?} — accept despacha la
+  pieza DE VERDAD: entra en la playlist por defecto de cada pantalla del canal (que la relee en
+  ≤30 s) o por /signage/push en pantallas del gemelo XpaceOS; estado «emitting». stop la retira.
+  EXIGE clave de flota; la decisión queda firmada.
+- airtime_status {id} | {list:true, direction?, status?} — estado e historial de una antena; para
+  una petición a un circuito con MCP, refresca preguntándole. Un circuito externo solo ve las suyas.
+
+Estados: requested → pending → accepted → emitting → stopped | rejected | failed.
+
+### Para federar TU circuito con admira.tv
+Expón por MCP (Streamable HTTP) al menos offer_airtime y airtime_status con estos mismos nombres y
+campos (circuit_info y circuit_screens ayudan), dinos tu endpoint y una clave, y un agente de
+AdmiraNeXT te registra con circuit_register y te entrega tu clave cx_…. Implementación de
+referencia (Cloudflare Worker, ~90 líneas): carpeta espejo/ del repo admira-tv-mcp, desplegada en
+https://circuito-espejo.csilvasantin.workers.dev/ (circuito «espejo», acepta al vuelo, solo pruebas).
+
+## Recursos MCP
+- admiratv://federacion — el protocolo de federación (markdown).
+- admiratv://llms.txt — este fichero.
 
 ## Trampas que ya hemos pagado
 
@@ -48,6 +91,10 @@ Los esquemas exactos (inputSchema) están en tools/list y en /mcp/manifest.json.
   que la detección de kiosko depende del user-agent.
 - Proof-of-play y audiencia son dos cosas distintas: admira.tv dice QUÉ se emitió, y la cámara
   de XpaceOS QUIÉN lo vio. Cruzarlas es lo que hace clearchannel.tv (api.admira.store).
+- /signage/push NO lo lee canal.html: es el buzón del gemelo XpaceOS. Para que una pantalla del
+  canal emita una pieza hay que ponerla en su playlist (es lo que hace airtime_decide accept).
+- Un Worker de Cloudflare no puede llamarse a sí mismo (HTTP 522): para probar la federación
+  hacen falta dos servidores; por eso existe circuito-espejo.
 - Cloudflare rechaza user-agents que no parezcan navegador (error 1010) en las webs de la
   suite; el servidor MCP no, pero si automatizas contra admira.tv manda un User-Agent normal.
 
@@ -58,14 +105,4 @@ Los esquemas exactos (inputSchema) están en tools/list y en /mcp/manifest.json.
 - Emitir: https://admira.tv/mcp/ (este)
 - Audiencia × Emisión: https://www.clearchannel.tv/mcp/
 - Declarar y puntuar el trabajo: https://www.yokup.com/mcp/
-- Directorio canónico de los MCP de la suite: https://www.admiranext.com/mcp/#directorio (FLT-2137)
-
-## Convenciones de la casa
-
-- Sello único por publicación: v.DD.MM.AAAA.rN.HH:MM (normativa 07 y 09).
-- Cada producto abre /help (carbono) y /mcp con llms.txt y manifest.json (silicio) — normativa 24.
-- Avisos y encargos: AgoraMatrix (Telegram); entre agentes, por MCP.
-
-## Para personas
-
-La puerta de carbono es https://admira.tv/help/
+- Directorio de MCP de la suite e identidad común: https://www.admiranext.com/mcp/#directorio

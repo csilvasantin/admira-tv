@@ -1,9 +1,9 @@
 {
-  "version": "v.07.09.2026.r7.07:48",
-  "signature": "TrinityMBP14 · MacBookPro14",
-  "agent": "TrinityMBP14",
-  "machine": "MacBookPro14",
+  "version": "v.07.09.2026.r7.07:50",
+  "signature": "NeoMBP14 · MacBookProNegro14",
+  "agent": "NeoMBP14",
+  "machine": "MacBookProNegro14",
   "day": "07.09.2026",
-  "time": "07:48",
-  "evidence": "AdmiraXperience: dos oficinas en Gracia, paseo fotografico con enlaces dirigidos y acceso interior pendiente de vincular."
+  "time": "07:50",
+  "evidence": "MCP de admira.tv v2.0.0: federación con circuitos externos (13 tools, protocolo federacion/1). Página /mcp con sección Federación, manifest.json y llms.txt actualizados. Verificado en producción: petición a circuito-espejo aceptada y oferta externa emitida en macbookpronegro14-mupi (misión yokup 0130 · DCL-5de09df4)."
 }
