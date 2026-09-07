@@ -22,6 +22,9 @@ segmentable y configurable por pantalla. Live en **https://admira.tv/canal.html*
 - **Vídeo / animación**: reproduce y avanza al acabar.
 - **Imagen / digital-twin / twin-npc**: se muestra `img` segundos (def. 9), con barra de progreso.
 - **Audio / música / locución**: tarjeta con ♪ + onda; ranura de `audio` segundos (def. 18).
+  Si el fichero es **más corto** que la ranura, ocupa su longitud real (una cuña de 6 s
+  no reserva 18). Si viene **programado** (parrilla, borrador o lista por defecto) ocupa
+  la **duración editorial** de esa programación, no la ranura de la pantalla (r58).
 
 ---
 
@@ -258,10 +261,29 @@ modo remoto del circuito; los comandos remotos de reproducción siguen funcionan
 Para **cablear un player huérfano** (vivo pero sin circuito) o **conectar una superficie
 de parrilla a su player físico**, ver `CMS.md` §6 (botones de un clic en «Descuadres»).
 
+### Duración editorial: una sola regla (r58)
+
+`editorialSec(it)` decide cuántos segundos **ocupa** una pieza en la emisión local, y la
+misma cifra es la que se **imputa** al proof-of-play (`/emit`) y la que se **publica** al
+mando (`/signage/now` y `/control/playlist`), así los tres cuentan lo mismo:
+
+| Tipo | Segundos |
+|---|---|
+| Vídeo / animación | duración real (`_dur`) en cuanto se conoce; hasta entonces 0 (el proof-of-play estima 15) |
+| Imagen | `_previewSec` (parrilla/borrador/por defecto) → si no, `img` de la pantalla (mín. 2) |
+| Interactivo | `_previewSec` → lo que declaró la Xperiencia → `inter` de la pantalla (mín. 5) |
+| Audio / música / locución | `_previewSec` → si no, `audio` de la pantalla (mín. 3); **recortado** a la longitud real del fichero si es menor |
+
+La parrilla horaria (`/grid/day`) entra con `config.slotSeconds` como `_previewSec`
+(2–120 s, 10 por defecto): imagen y audio programados ocupan **esa** ranura; un vídeo
+programado sigue yendo hasta su final. Un cambio de `slotSeconds` reconstruye el loop
+igual que un cambio de reserva. En **sincro** nada de esto aplica: manda la línea
+temporal del máster (`syncItemDurationMs`).
+
 ## Pendiente / siguiente paso
 
-- Soportar en `canal.html` `gridWeave` los creativos de tipo audio/música (hoy solo
-  vídeo/imagen entran en el loop de parrilla).
 - Programación por día futuro (hoy el panel de `cms.html` programa el día en curso).
+- `cms.html` → 📅 Programar no expone `slotSeconds` de la pantalla (hoy solo se ajusta
+  desde `/grid/config`); el player ya lo respeta.
 
 _Build documentado: 2026-06-19. Bucle /grid activado desde cms.html: 2026-06-26._

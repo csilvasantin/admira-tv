@@ -26,7 +26,9 @@
 <!-- r54 · INFO LOCAL: Ctrl+I abre/cierra una ficha viva del contenido que está emitiéndose (pieza, progreso, formato y estado en disco). -->
 <!-- r55 · IDENTIDAD DE DISPOSITIVO: alta one-shot ligada a machine↔screen, credencial local propia y acuse autenticado; nunca recibe ADMIN_TOKEN. -->
 <!-- r56 · PLAYER INTERACTIVO: doble clic o doble toque abre la ficha viva del contenido sin pausar ni alterar la emisión. -->
-<!-- BUILD canal v.13.08.2026.r57 · FICHA HUMANA: doble clic prioriza el título editorial, hidrata el objeto sincro desde Stock y muestra #número como identificador único en lugar del UUID técnico. Hereda r56. -->
+<!-- r57 · FICHA HUMANA: doble clic prioriza el título editorial, hidrata el objeto sincro desde Stock y muestra #número como identificador único en lugar del UUID técnico. Hereda r56. -->
+<!-- r58 · RANURA EDITORIAL: imagen, audio e interactivo ocupan la duración de parrilla/borrador (slotSeconds); el audio se recorta a su longitud real y proof-of-play, /signage/now y /control/playlist cuentan lo mismo que se emite. -->
+<!-- BUILD canal v.07.09.2026.r58 · RANURA EDITORIAL: una sola regla de duración (editorialSec) para emitir, imputar y publicar al mando; el audio programado deja de cortarse a ciegas a audioSec. Hereda r57. -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
@@ -718,6 +720,24 @@ function barFromAdv(){ const el=advElapsed+(paused?0:Date.now()-advStart); bar.s
 // pintando lo invisible. El avance real del bucle (timer=setTimeout(next,ms)) NO se toca.
 function startBar(){ stopBar(); if(__adtvClean) return; barTimer=setInterval(barFromAdv,120); }
 function startAdv(ms){ usesAdv=true; advTotal=ms; advElapsed=0; advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,ms); startBar(); }
+// ── RANURA EDITORIAL (r58): segundos que OCUPA una pieza en la emisión local ──────
+// Una sola regla para reproducir, para el proof-of-play (/emit) y para lo que se
+// publica al mando (/signage/now y /control/playlist), así los tres cuentan lo mismo:
+// · vídeo: su duración real (_dur) si ya se conoce; 0 = aún desconocida.
+// · imagen / interactivo: la duración editorial de parrilla, borrador o lista por
+//   defecto (_previewSec) manda; si no, la ranura configurada en la pantalla.
+// · audio: la ranura editorial (_previewSec) o la ranura de audio de la pantalla,
+//   recortada a la longitud real del fichero (_dur) cuando ésta es menor. Antes el
+//   audio ignoraba la parrilla y se cortaba SIEMPRE a `audioSec`, y el proof-of-play
+//   apuntaba 18 s a una cuña de 6 s (y `audioSec` a un interactivo).
+function editorialSec(it){
+  const k=KIND[(it&&it.type)||'image']||'image';
+  if(k==='video') return Math.max(0,Number(it&&it._dur)||0);
+  if(k==='image') return Math.max(2,Number(it._previewSec||cfg.imgSec)||0);
+  if(k==='interactive') return Math.max(5,Number(it._previewSec||it._interSec||it.dur||it.seconds||cfg.interSec)||0);
+  const slot=Math.max(3,Number(it._previewSec||cfg.audioSec)||0), real=Number(it._dur)||0;
+  return (real>0&&real<slot)?Math.max(1,Math.ceil(real)):slot;
+}
 function syncNow(){ return Date.now()+(SYNC_REMOTE?SYNC_REMOTE.offset:syncTimeOffset); }   // reloj del máster central si está
 function syncFallbackSlotMs(){ return (SYNC_REMOTE&&SYNC_REMOTE.slotMs)?SYNC_REMOTE.slotMs:syncSlotSec*1000; }
 function syncItemDurationMs(it){
@@ -1044,8 +1064,7 @@ function emitLoad(){ const d=emitDateStr();
 function emitRecord(it){
   if(!it||!it.id) return;
   const t=emitLoad(), type=it.type||'image', seg=emitSeg(it);
-  const secs = (type==='video'||type==='animation') ? (it._dur||15)
-             : ((KIND[type]||'image')==='image' ? Math.max(2,cfg.imgSec) : Math.max(3,cfg.audioSec));
+  const secs = editorialSec(it) || 15;   // vídeo aún sin metadatos: estimación histórica de 15 s
   t.totalPlays++; t.totalSecs+=Math.round(secs);
   t.byType[type]=(t.byType[type]||0)+1;
   if(seg) t.bySeg[seg]=(t.bySeg[seg]||0)+1;
@@ -1182,7 +1201,7 @@ function signageNowPush(it){
   const sinc = { on:(syncOn||!!_extendedAssignment)?1:0, modo:_extendedAssignment?'extended':playoutMode };
   if(syncOn){ try{ sinc.idx=syncIndex(); sinc.slot=Math.round(syncSlotMs()/1000); sinc.n=playlist.length; }catch(_){} }
   if(_extendedAssignment&&_extendedAssignment.tile){ sinc.tile=_extendedAssignment.tile; sinc.revision=_extendedAssignment.revision||0; }
-  const effectiveDuration=syncOn?Math.round(syncSlotMs()/1000):(it._dur||it._previewSec||0);
+  const effectiveDuration=syncOn?Math.round(syncSlotMs()/1000):editorialSec(it);
   const effectiveStartedAt=syncOn?(now-Math.round(syncElapsedMs())):now;
   const item={ id:it.id, url:it.url, type:it.type||'image', ar:(mupiAR||itemAR(it)||(9/16)),
     title:(it.title||it.prompt||'').slice(0,80), dur:effectiveDuration, startedAt:effectiveStartedAt, ts:now, aud:_lastAud, audio:playerAudioState(), sinc };
@@ -1236,8 +1255,8 @@ function signagePlaylistPush(){
     thumb:String(it.thumbnail||it.thumb||it.poster||'').slice(0,500),
     // La duración publicada es la MISMA que gobierna la línea de tiempo de sincro (metadatos
     // descubiertos o inventario técnico en caché): así el gemelo y el mando cuentan igual que
-    // esta pantalla. Antes solo iba _dur y las piezas conocidas por caché salían sin duración.
-    dur:(syncOn?Math.ceil(syncItemDurationMs(it)/1000):Math.ceil(it._dur||it._previewSec||0))||null }));
+    // esta pantalla. En local es la ranura editorial (editorialSec), la misma que emite e imputa.
+    dur:(syncOn?Math.ceil(syncItemDurationMs(it)/1000):Math.ceil(editorialSec(it)))||null }));
   // La duración también invalida la firma: al descubrir los metadatos del vídeo hay
   // que republicar la playlist, aunque id/url/miniatura no hayan cambiado.
   const sig=items.map(i=>[i.id,i.url,i.thumb,i.dur||0].join('~')).join('|');
@@ -1350,8 +1369,11 @@ async function loadGrid(){ if(!scr.screen) return;
   try{ const d=await fetch(GRID_API+'/grid/day?screen='+encodeURIComponent(scr.screen),{cache:'no-store'}).then(r=>r.json());
     if(!d||!d.ok){ return; }
     const cur=(d.bands||[]).find(b=>b.isNow); const out=[]; const seen=new Set();
+    // Duración editorial de la parrilla (config.slotSeconds de /grid/day): imagen y audio
+    // programados ocupan ESA ranura, no la de la pantalla. Un vídeo sigue yendo hasta su final.
+    const _gsec=Math.max(2,Math.min(120,Number(d.config&&d.config.slotSeconds)||10));
     if(cur) for(const s of cur.slots){ if((s.kind==='own'||s.kind==='paid') && s.creative && s.creative.url && !seen.has(s.bookingId)){ seen.add(s.bookingId);
-      out.push({ id:'grid:'+s.bookingId, url:s.creative.url, type:(s.creative.type==='audio'?'audio':s.creative.type==='video'?'video':'image'), title:s.title||s.advertiser||'Parrilla', motor:'parrilla', category:'parrilla', _grid:true, _gridKind:s.kind, _playlistId:s.playlistId||'', _position:Number.isFinite(s.position)?s.position:null, _lane:s.lane||'', createdAt:'9'+Date.now() }); } }
+      out.push({ id:'grid:'+s.bookingId, url:s.creative.url, type:(s.creative.type==='audio'?'audio':s.creative.type==='video'?'video':'image'), title:s.title||s.advertiser||'Parrilla', motor:'parrilla', category:'parrilla', _previewSec:_gsec, _grid:true, _gridKind:s.kind, _playlistId:s.playlistId||'', _position:Number.isFinite(s.position)?s.position:null, _lane:s.lane||'', createdAt:'9'+Date.now() }); } }
     gridExactMode=out.length>0 && out.every(x=>x._playlistId==='municipal-50-50');
     if(gridExactMode) out.sort((a,b)=>(a._position??9999)-(b._position??9999));
     gridInjected=out;
@@ -1360,7 +1382,7 @@ async function loadGrid(){ if(!scr.screen) return;
     // cada 60 s aunque /grid/day devolviera lo mismo todo el día. La franja resuelta entra
     // en la firma solo con slot 'auto' (los cruces de las 12/16/21h de Madrid deben seguir
     // re-segmentando); el push del camino de skip es no-op salvo reintento r45 pendiente.
-    const _gsig=out.map(x=>x.id+'~'+x.url+'~'+(x._position??'')).join('|')+'|'+(seg.slot==='auto'?madridSlot():'');
+    const _gsig=out.map(x=>x.id+'~'+x.url+'~'+(x._position??'')+'~'+(x._previewSec||'')).join('|')+'|'+(seg.slot==='auto'?madridSlot():'');
     if(_gsig===_gridSig){ try{ signagePlaylistPush(); }catch(_){} return; }
     _gridSig=_gsig;
     all=all.filter(a=>!a._grid).concat(gridInjected); rebuild(false);
@@ -1925,7 +1947,7 @@ async function play(i, forced){
       emitFrameState(it); localInfoRender(); };
     im.onerror=()=>{ if(!_coRetryI && im.crossOrigin){ _coRetryI=true; try{ im.removeAttribute('crossorigin'); im.src=SRC; }catch(_){} return; }   // asset sin CORS: recarga sin crossorigin (la emisión SIEMPRE se ve)
       setTimeout(next,600); };
-    im.src=SRC; stage.appendChild(im); startAdv(syncOn?syncRemainingMs():Math.max(2,(it._previewSec||cfg.imgSec))*1000);
+    im.src=SRC; stage.appendChild(im); startAdv(syncOn?syncRemainingMs():editorialSec(it)*1000);
   } else if(k==='interactive'){
     // ── INTERACTIVO (Xperiencia) ────────────────────────────────────────────────
     // La pieza es una página autocontenida que se gobierna sola: dentro corre su
@@ -1949,14 +1971,22 @@ async function play(i, forced){
     stage.appendChild(f);
     // Reloj provisional: en cuanto la pieza anuncie su duración, applyXperienciaDuration
     // lo rearma con la suya. `_interSec` recuerda lo que dijo en un pase anterior.
-    startAdv(syncOn?syncRemainingMs():Math.max(5,(it._previewSec||it._interSec||it.dur||it.seconds||cfg.interSec))*1000);
+    startAdv(syncOn?syncRemainingMs():editorialSec(it)*1000);
   } else {
     stage.innerHTML='<div class="audio-card"><div class="ico">♫</div><div class="wave">'
       +Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div><strong>'+title+'</strong></div>';
-    const a=document.createElement('audio'); a.src=SRC; a.autoplay=true; a.onerror=()=>setTimeout(next,600); a.onended=()=>syncOn?syncFinishCurrent():next();
+    const a=document.createElement('audio'); a.src=SRC; a.autoplay=true; a.preload='auto'; a.onerror=()=>setTimeout(next,600); a.onended=()=>syncOn?syncFinishCurrent():next();
+    // Longitud real del fichero → _dur (como el vídeo): la ranura editorial se recorta a
+    // ella, el mando recibe la duración verdadera y el proof-of-play no apunta de más.
+    a.onloadedmetadata=()=>{ if(_tok!==_playTok||!a.duration||!isFinite(a.duration)) return;
+      const before=editorialSec(it); it._dur=Math.ceil(a.duration);
+      try{ signagePlaylistPush(); }catch(_){}
+      if(_nowItem&&String(_nowItem.id)===String(it.id)){ _nowItem.dur=syncOn?Math.round(syncSlotMs()/1000):editorialSec(it); _nowItem.ts=Date.now(); _postNow(_nowItem); }
+      if(!syncOn&&usesAdv&&editorialSec(it)!==before) startAdv(editorialSec(it)*1000);   // cuña más corta que la ranura: la barra y el corte siguen al fichero
+      localInfoRender(); };
     mediaEl=a; applyAudio(); stage.querySelector('.audio-card').appendChild(a);
     a.play().then(()=>tap.classList.remove('show')).catch(()=>{ if(!muted) tap.classList.add('show'); });
-    startAdv(syncOn?syncRemainingMs():Math.max(3,cfg.audioSec)*1000);
+    startAdv(syncOn?syncRemainingMs():editorialSec(it)*1000);
   }
   // El previo NUNCA reporta a la antena real (ni proof-of-play ni espejo en vivo).
   if(!PREVIEW.on){ try{ emitRecord(it); }catch(_){} try{ signageNowPush(it); }catch(_){} }

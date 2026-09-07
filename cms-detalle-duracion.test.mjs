@@ -38,7 +38,7 @@ test('el progreso se calcula cada segundo y comunica cuánto queda', () => {
 });
 
 test('el player publica la duración efectiva y corrige el reloj al cargar el vídeo', () => {
-  assert.match(canal, /const effectiveDuration=syncOn\?Math\.round\(syncSlotMs\(\)\/1000\):\(it\._dur\|\|it\._previewSec\|\|0\)/);
+  assert.match(canal, /const effectiveDuration=syncOn\?Math\.round\(syncSlotMs\(\)\/1000\):editorialSec\(it\)/);   // r58: la misma regla que emite e imputa
   assert.match(canal, /const effectiveStartedAt=syncOn\?\(now-Math\.round\(syncElapsedMs\(\)\)\):now/);
   assert.match(canal, /_nowItem\.dur=syncOn\?Math\.round\(syncSlotMs\(\)\/1000\):it\._dur/);
   assert.match(canal, /clearTimeout\(timer\); timer=setTimeout\(next,syncRemainingMs\(\)\)/);
