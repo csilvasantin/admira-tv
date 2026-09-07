@@ -10,7 +10,7 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
 
 Sitio / docs: https://admira.tv/mcp/
 Manifest máquina: https://admira.tv/mcp/manifest.json
-Versión: v.07.09.2026.r7.07:50
+Versión: v.07.09.2026.r8.07:50
 Repo del servidor: https://github.com/csilvasantin/admira-tv-mcp · Repo del sitio: https://github.com/csilvasantin/admira-tv
 
 ## Servidor MCP (cómo conectar)

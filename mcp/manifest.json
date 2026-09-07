@@ -2,7 +2,7 @@
   "name": "admira-tv",
   "title": "Admira TV · admira.tv — la capa Emitir de la suite AdmiraNeXT",
   "description": "Hub MCP de admira.tv: qué se emite, dónde y con qué audiencia, y la FEDERACIÓN con circuitos externos (pedir antena fuera, recibir ofertas dentro, emisión real al aceptar). Servidor MCP vivo en mcp-tv.admira.store v2.0.0 con 13 herramientas y el CMS de emisión con su guía para personas.",
-  "version": "v.07.09.2026.r7.07:50",
+  "version": "v.07.09.2026.r8.07:50",
   "site": "https://admira.tv",
   "hub": "https://admira.tv/mcp/",
   "llms_txt": "https://admira.tv/mcp/llms.txt",
