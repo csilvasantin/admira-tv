@@ -15,14 +15,14 @@
  }
  async function fetchCatalog(fetcher){const response=await fetcher(URL,{cache:'no-store',credentials:'omit'});if(!response.ok)throw Error('Pixeria no está disponible');const data=await response.json();if(!Array.isArray(data.items))throw Error('Catálogo no válido');return resolve(data.items);}
  // Only the most recent intention can play after an asynchronous catalogue load.
- function create({load,play,stop,onState=()=>{}}){
+ function create({load,play,stop,isCurrent=()=>true,onState=()=>{}}){
   let slots=null,pending=null,revision=0,selected=0;
   const warm=()=>pending||(pending=load().then(value=>(slots=value,value)).catch(error=>{pending=null;throw error}));
   async function select(number,{restart=false}={}){
    if(!Number.isInteger(number)||number<0||number>10)return;
    const token=++revision;
    if(number===0){selected=0;stop();onState({number:0,status:'stopped',title:''});return;}
-   if(number===selected&&!restart)return;
+   if(number===selected&&!restart&&isCurrent(number))return;
    onState({number,status:'loading',title:'Buscando #musica + #'+number});
    try{const catalog=slots||await warm();if(token!==revision)return;
     const slot=catalog[number-1];if(!slot?.item){selected=0;stop();onState({number,status:'error',title:slot?.error||'Canción no disponible'});return;}

@@ -19,3 +19,6 @@ test('rapid fader intentions select only the latest song; zero cancels pending m
 test('missing music stops previous playback and reports the unavailable tag',async()=>{
  const states=[];let stopped=0;const c=music.create({load:()=>Promise.resolve(music.resolve([])),play:()=>assert.fail(),stop:()=>stopped++,onState:s=>states.push(s)});await c.select(4);assert.equal(stopped,1);assert.equal(states.at(-1).status,'error');assert.match(states.at(-1).title,/#4/);
 });
+test('the same fader number resumes its song after a remote player override',async()=>{
+ let current=true,plays=0;const c=music.create({load:()=>Promise.resolve(music.resolve([item('a')])),play:()=>plays++,stop:()=>{},isCurrent:()=>current});await c.select(1);await c.select(1);assert.equal(plays,1);current=false;await c.select(1);assert.equal(plays,2);
+});
