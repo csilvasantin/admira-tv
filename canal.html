@@ -1663,7 +1663,7 @@ async function fetchToCache(it){
       const blob=new Blob(chunks,{type:ct});
       await c.put(it.url, new Response(blob,{headers:{'content-type':blob.type||'application/octet-stream'}}));
     }
-    _dl.delete(it.id); _ready.add(it.id); queueTechnicalAnalysis(it); return true;
+    _dl.delete(it.id); _ready.add(it.id); if(_diskUrls) _diskUrls.add(it.url); queueTechnicalAnalysis(it); return true;
   }catch(_){ _dl.delete(it.id); return false; }
 }
 // URL reproducible desde la cache (objectURL) o null si la pieza aún no está bajada.
@@ -1774,11 +1774,28 @@ async function precacheLoop(){ if(_precaching) return; _precaching=true;
   try{ while(_precQ.length){ const it=_precQ.shift(); if(!it||_ready.has(it.id)||!cacheable(it)) continue; await fetchToCache(it); cacheReport(); maybeResumeCold(); if(_coldWaiting) coldTick(); } }
   finally{ _precaching=false; try{ await pruneCache(); }catch(_){} cacheReport(); if(_coldWaiting) coldTick(); }
 }
+// INVENTARIO HEREDADO (r59): lo que quedó en disco de un arranque anterior cuenta desde el
+// primer segundo. Antes _ready nacía vacío y solo se rellenaba al pasar la cola de
+// predescarga por cada pieza; tras relanzar la app el mando veía todo «pendiente» y, sin
+// predescarga (sincro), para siempre. Cada pieza se baja UNA sola vez por dispositivo.
+let _diskUrls=null;
+async function cacheAdopt(){
+  const c=await cacheOpen(); if(!c) return 0;
+  try{
+    if(!_diskUrls){ const keys=await c.keys(); _diskUrls=new Set(keys.map(r=>r.url)); }
+    let n=0;
+    for(const it of [...playlist, ...all]){ if(it&&it.url&&cacheable(it)&&!_ready.has(it.id)&&_diskUrls.has(it.url)){ _ready.add(it.id); queueTechnicalAnalysis(it); n++; } }
+    return n;
+  }catch(_){ return 0; }
+}
 function schedulePrecache(){
-  const head=playlist.slice(0,PRECACHE_MAX), qids=new Set(_precQ.map(x=>x.id));
-  for(const it of head){ if(cacheable(it)&&!_ready.has(it.id)&&!qids.has(it.id)){ _precQ.push(it); qids.add(it.id); } }
-  if(_precQ.length) precacheLoop();
-  cacheBadge();
+  cacheAdopt().then(adopted=>{
+    const head=playlist.slice(0,PRECACHE_MAX), qids=new Set(_precQ.map(x=>x.id));
+    for(const it of head){ if(cacheable(it)&&!_ready.has(it.id)&&!qids.has(it.id)){ _precQ.push(it); qids.add(it.id); } }
+    if(_precQ.length) precacheLoop();
+    if(adopted) cacheReport();   // el mando ve el inventario real sin esperar a la cola
+    cacheBadge();
+  }).catch(()=>{});
 }
 function precachePriority(it){
   if(!it||!cacheable(it)||_ready.has(it.id)) return;
@@ -2201,6 +2218,9 @@ function rebuild(restart){
             playlist.length>0 && !!SYNC_REMOTE);
     renderChan();
     try{ signagePlaylistPush(); }catch(_){}   // mando gráfico: el sincro también publica su orden efectivo
+    // La sincro era la única rama sin predescarga: la pantalla emitía online para siempre,
+    // /screen/cache no recibía inventario y el mando enseñaba «0 de 40 · pendiente» (r59).
+    try{ schedulePrecache(); }catch(_){}
     play(syncIndex());
     return;
   }
