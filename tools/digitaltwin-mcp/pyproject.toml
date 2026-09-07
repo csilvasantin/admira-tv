@@ -1,0 +1,9 @@
+[project]
+name = "admira-digitaltwin-mcp"
+version = "0.1.0"
+description = "Authenticated local MCP bridge for digitaltwin.ieu.ai"
+requires-python = ">=3.11"
+dependencies = ["mcp>=1.12,<2", "httpx>=0.28,<1"]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "pytest-asyncio>=0.24,<2"]

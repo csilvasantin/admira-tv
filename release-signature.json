@@ -1,9 +1,9 @@
 {
-  "version": "v.07.09.2026.r13.10:47",
+  "version": "v.07.09.2026.r12.10:50",
   "signature": "NeoMBP14 · MacBookProNegro14",
   "agent": "NeoMBP14",
   "machine": "MacBookProNegro14",
   "day": "07.09.2026",
-  "time": "10:47",
-  "evidence": "Sincro al fotograma kioskos↔teléfonos: canal.html usa la playlist de sincro de SU pantalla (control/playlist) y la emite exacta; el gemelo CanalKiosk sigue el mismo reloj (sync/state) y la misma playlist por sitio (vila/jardinets/lesseps), situando el vídeo en el segundo que toca. Playlists temáticas publicadas (música/tecnología/creatividad) con tools/publica-playlists-kioskos.py. Misión yokup Hoy #309."
+  "time": "10:50",
+  "evidence": "Santa Rosa 4 vinculada y prototipo MCP IEU local probado (sin cuenta de integración aún). Misión DCL-d1babc9d9de16e42dac0fb84."
 }
