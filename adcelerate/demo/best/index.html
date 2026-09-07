@@ -13,12 +13,12 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r21.1112">
-<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r21.1112">
-<script src="../js/outdoor-sites.js?v=07.09.2026.r21.1112"></script>
-<script src="../js/urban-route.js?v=07.09.2026.r21.1112"></script>
-<script src="../js/dooh-surfaces.js?v=07.09.2026.r21.1112"></script>
-<script src="../js/outdoor-context.js?v=07.09.2026.r21.1112"></script>
+<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r22.1119">
+<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r22.1119">
+<script src="../js/outdoor-sites.js?v=07.09.2026.r22.1119"></script>
+<script src="../js/urban-route.js?v=07.09.2026.r22.1119"></script>
+<script src="../js/dooh-surfaces.js?v=07.09.2026.r22.1119"></script>
+<script src="../js/outdoor-context.js?v=07.09.2026.r22.1119"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
   const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
@@ -203,7 +203,7 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r21.1112"><link rel="stylesheet" href="../css/hidden-ui.css?v=07.09.2026.r21.1112"><script defer src="../js/hidden-ui.js?v=07.09.2026.r21.1112"></script><script src="../js/interactive-scene.js?v=07.09.2026.r21.1112"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=07.09.2026.r21.1112"></head>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r22.1119"><link rel="stylesheet" href="../css/hidden-ui.css?v=07.09.2026.r22.1119"><script defer src="../js/hidden-ui.js?v=07.09.2026.r22.1119"></script><script src="../js/interactive-scene.js?v=07.09.2026.r22.1119"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=07.09.2026.r22.1119"></head>
 <body>
 
 <div id="app">
@@ -354,13 +354,13 @@
   </div>
 </div>
 
-<script src="street-walk.js?v=07.09.2026.r21.1112"></script>
-<script src="../js/cenital-panel.js?v=07.09.2026.r21.1112"></script><script src="../js/walk-overview.js?v=07.09.2026.r21.1112"></script><script src="walk-orientation.js?v=07.09.2026.r21.1112"></script><script src="route-walk.js?v=07.09.2026.r21.1112"></script>
-<script src="../js/player-library.js?v=07.09.2026.r21.1112"></script>
-<script src="screen-player.js?v=07.09.2026.r21.1112"></script>
-<script src="screen-audio.js?v=07.09.2026.r21.1112"></script>
-<script src="surface-focus.js?v=07.09.2026.r21.1112"></script>
-<script src="camera-path.js?v=07.09.2026.r21.1112"></script>
+<script src="street-walk.js?v=07.09.2026.r22.1119"></script>
+<script src="../js/cenital-panel.js?v=07.09.2026.r22.1119"></script><script src="../js/walk-overview.js?v=07.09.2026.r22.1119"></script><script src="walk-orientation.js?v=07.09.2026.r22.1119"></script><script src="route-walk.js?v=07.09.2026.r22.1119"></script>
+<script src="../js/player-library.js?v=07.09.2026.r22.1119"></script>
+<script src="screen-player.js?v=07.09.2026.r22.1119"></script>
+<script src="screen-audio.js?v=07.09.2026.r22.1119"></script>
+<script src="surface-focus.js?v=07.09.2026.r22.1119"></script>
+<script src="camera-path.js?v=07.09.2026.r22.1119"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -1171,7 +1171,7 @@ async function chLoad(){
 const SYNC_STATE_URL = 'https://brain.digitalavatar.ai/sync/state';
 const SYNC_PLAYLIST_URL = 'https://brain.digitalavatar.ai/control/playlist?screen=';
 // Pantalla REAL de cada kiosko (7-sep-2026): Fold 9 = Vila, Fold 8 = Jardinets, iPhone 17 = Lesseps.
-const SITE_SCREEN = { vila: 'samsung-galaxy-fold-9-mupi', jardinets: 'samsung-galaxy-fold-8-mupi', lesseps: 'iphone17-mupi' };
+const SITE_SCREEN = { vila: 'samsung-galaxy-fold-9-mupi', jardinets: 'samsung-galaxy-fold-8-mupi', lesseps: 'iphone-mupi' };
 let syncClock = { offset: 0, slotMs: 20000, master: [], own: new Map(), at: 0 };
 let syncSite = '', syncQueueSig = '';
 function liveMirrorOn(){ return syncClock.master.length > 0; }

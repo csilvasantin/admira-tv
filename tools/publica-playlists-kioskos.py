@@ -12,7 +12,8 @@ UA = {"User-Agent": "Mozilla/5.0 admira-tv/playlists"}
 KIOSKOS = {"samsung-galaxy-fold-9-mupi": "musica",   # Fold 9 · Vila (News & Coffee) — pantalla real
            "sim-gracia-kiosko": "musica",            # Vila · reserva (preview configurada)
            "samsung-galaxy-fold-8-mupi": "tecnologia",  # Fold 8 · Jardinets
-           "iphone17-mupi": "creatividad",           # iPhone 17 · Lesseps
+           "iphone-mupi": "creatividad",             # iPhone 17 · Lesseps (app tv.admira.player.ipad)
+           "iphone17-mupi": "creatividad",           # iPhone 17 · Lesseps (app antigua)
            "sim-jardinets-kiosko": "tecnologia", "sim-lesseps-kiosko": "creatividad"}   # pantallas de reserva (canal en navegador)
 TAGS = {"tecnologia": {"tecnología", "tecnologia", "tech", "ia", "inteligencia artificial", "robótica", "innovación", "innovation", "ai"},
         "creatividad": {"creativity", "creatividad", "diseño", "inspiración", "animaciones", "animation", "arte", "cine", "creativetech"}}
