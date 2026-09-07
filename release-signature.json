@@ -1,9 +1,9 @@
 {
-  "version": "v.07.09.2026.r17.11:06",
-  "signature": "NeoMBP14 · MacBookProNegro14",
-  "agent": "NeoMBP14",
-  "machine": "MacBookProNegro14",
+  "version": "v.07.09.2026.r18.11:07",
+  "signature": "TrinityMBP14 · MacBookPro14",
+  "agent": "TrinityMBP14",
+  "machine": "MacBookPro14",
   "day": "07.09.2026",
-  "time": "11:06",
-  "evidence": "Canal: el tema propio del kiosko (<pantalla>-tema) manda sobre la playlist del líder del grupo de playout; gemelo mapeado a las pantallas reales (Fold 9 Vila, Fold 8 Jardinets, iPhone 17 Lesseps). Misión Hoy #309."
+  "time": "11:07",
+  "evidence": "H oculta y restaura interfaz; prueba señal Jardinets y escena editada fija sin peatones. DCL-59ca7fb9fe17213f311491c9"
 }
