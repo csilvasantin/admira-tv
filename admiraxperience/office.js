@@ -15,7 +15,9 @@
  function cancel(){search?.abort();search=null;routeWalk?.cancel();route=null;paused=false;$('pause').disabled=true;$('pause').textContent='Pausar';$('travel').disabled=!ready;}
  function updateArrival(state){const near=sites.arrived(state,selected);$('arrival').hidden=!near||!!search||!!routeWalk?.active&&!paused||interior;$('distance').textContent=state?.position?Math.round(sites.distance(state.position,selected.position))+' m de '+selected.name:'';}
  function onState(state){
-  lastState=state;routeWalk?.observe(state);
+  lastState=state;
+  if(state.position&&['ready','unavailable'].includes(state.status)){const known=cache.get(state.pano);const links=new Map((known?.links||[]).map(l=>[l.pano,l]));state.links.forEach(l=>links.set(l.pano,l));cache.set(state.pano,{id:state.pano,position:state.position,date:state.date,links:[...links.values()]});}
+  routeWalk?.observe(state);
   if(state.position&&positionMarker)positionMarker.setPosition(state.position);
   $('date').textContent=state.date?'Fotografía · '+state.date:'Fecha no disponible';
   updateArrival(state);
@@ -39,7 +41,7 @@
   const target=sites.all.find(s=>s.id!==selected.id),controller=new AbortController();search=controller;
   $('travel').disabled=true;$('pause').disabled=false;$('pause').textContent='Cancelar búsqueda';$('arrival').hidden=true;status('Buscando conexiones fotográficas hacia '+target.name+'…');
   try{
-   const start=await load(current.pano),goal=entries.get(target.id);
+   const start=await load(current.pano),goal=entries.get(target.id);console.info('[AdmiraXperience] Inicio de paseo',JSON.stringify({pano:start.id,links:start.links.length,position:start.position,to:target.id}));
    const path=await OfficePaths.findPath({start,goal,load,distance:sites.distance,arrive:node=>sites.distance(node.position,target.position)<=18,signal:controller.signal,onProgress:n=>status('Verificando el paseo a '+target.name+' · '+n+' cruces comprobados…')});
    if(controller.signal.aborted||search!==controller)return;
    if(walker.getState().pano!==current.pano)throw Error('moved');
@@ -85,7 +87,7 @@
    routeWalk=RouteWalk.create({getRoute:id=>route?.id===id?route:null,getWalker:()=>walker,setHeading:heading=>{panorama.setPov({heading,pitch:0});return new Promise(resolve=>setTimeout(resolve,350));},onState:s=>{
     $('progress').value=s.total?s.step/s.total:0;
     if(s.status==='walking'||s.status==='loading')status('Caminando a '+selected.name+' · '+s.step+' / '+s.total+' tramos · ×'+s.speed);
-    if(s.status==='ready'){routeWalk.cancel();route=null;$('pause').disabled=true;$('travel').disabled=false;status('Has llegado a '+selected.name+'. Las pantallas están dentro.');updateArrival(walker.getState());}
+    if(s.status==='ready'){console.info('[AdmiraXperience] Llegada verificada',JSON.stringify({to:selected.id,step:s.step,total:s.total,pano:s.pano}));routeWalk.cancel();route=null;$('pause').disabled=true;$('travel').disabled=false;status('Has llegado a '+selected.name+'. Las pantallas están dentro.');updateArrival(walker.getState());}
     if(s.status==='error'){routeWalk.cancel();route=null;$('pause').disabled=true;$('travel').disabled=false;status('El paseo se ha detenido: una conexión ya no está disponible. Puedes reintentar desde aquí o seguir a mano.',true);}
    }});
    ready=true;$('travel').disabled=false;document.querySelectorAll('.office').forEach(b=>b.disabled=false);status('Llegada exterior · inicia el paseo a la otra oficina.');
