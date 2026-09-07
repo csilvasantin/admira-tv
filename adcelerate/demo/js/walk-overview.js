@@ -9,7 +9,7 @@
   const line=new Polyline({map,strokeColor:'#287e4b',strokeWeight:4});
   const marker=new Marker({map,icon:{path:google.maps.SymbolPath.CIRCLE,scale:6,fillColor:'#226943',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
   let last=null;const trail=[];
-  const panel=CenitalPanel.create({host,content:canvas,key:'walk',onShow:()=>{google.maps.event.trigger(map,'resize');if(last)map.panTo(last);else map.fitBounds(bounds,24);}});
+  const panel=CenitalPanel.create({host,content:canvas,key:'canalkiosk',name:'CanalKiosk',theme:'kiosk',onShow:()=>{google.maps.event.trigger(map,'resize');if(last)map.panTo(last);else map.fitBounds(bounds,24);}});
   function update(state){if(!state.position||!['ready','unavailable'].includes(state.status))return;const p=state.position;if(last&&p.lat===last.lat&&p.lng===last.lng)return;last=p;marker.setPosition(p);trail.push(p);if(trail.length>500)trail.shift();line.setPath(trail);if(panel.visible&&!map.getBounds()?.contains(p))map.panTo(p);}
   return {update};
  }

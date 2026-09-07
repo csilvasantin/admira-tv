@@ -3,3 +3,5 @@
 @media(min-width:601px) and (max-height:800px){header{height:60px}main{height:calc(100dvh - 60px)}aside{padding:20px 26px}h1{font-size:31px;margin:10px 0}.intro{font-size:12px;margin:8px 0}#map{height:120px;margin:14px 0 10px}.office{padding:10px;margin:6px 0}.travel{margin-top:12px}#status{min-height:30px;margin:8px 0}.note{margin:6px 0}}
 
 .destination-label{display:block;font-size:12px;margin-bottom:10px}.destination-label select{display:block;width:100%;padding:10px;margin-top:5px;border:1px solid #bac6ba;border-radius:8px;background:white;color:inherit}#map-panel{margin:18px 0 12px}#map-panel #map{margin:0;border-radius:0}#map-panel .cenital-body{height:160px}#map-panel #map{height:100%}#map-panel .cenital-reopen{width:100%}
+
+#map-panel{margin:0;bottom:auto;top:190px;right:22px}#map-panel .cenital-body{height:170px}@media(max-width:600px){#map-panel{top:auto;bottom:100px;right:12px}#map-panel .cenital-body{height:130px}}
