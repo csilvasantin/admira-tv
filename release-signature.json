@@ -1,9 +1,9 @@
 {
-  "version": "v.07.09.2026.r30.11:56",
-  "signature": "TrinityMBP14 · MacBookPro14",
-  "agent": "TrinityMBP14",
-  "machine": "MacBookPro14",
+  "version": "v.07.09.2026.r31.19:19",
+  "signature": "NeoMBP16 · MacBookPro16",
+  "agent": "NeoMBP16",
+  "machine": "MacBookPro16",
   "day": "07.09.2026",
-  "time": "11:56",
-  "evidence": "S alterna selección; limpieza al cambiar panorama; perfiles Metahuman. DCL-5a4110c41e451cc59429600f"
+  "time": "19:19",
+  "evidence": "Ranura editorial única (editorialSec) para imagen, audio e interactivo: la parrilla manda con slotSeconds, el audio se recorta a su longitud real y proof-of-play, /signage/now y /control/playlist cuentan lo mismo que se emite. goto-N desde la playlist del mando aguanta en pantallas sincronizadas: abre la ventana forzada de un #ID, va hasta el final y pollMode devuelve la asignación remota. Rebasado sobre la r30 de hoy."
 }
