@@ -31,17 +31,24 @@
     select{width:100%;font-size:14px;padding:11px 12px;border-radius:10px;background:#0d1018;color:var(--text);border:1px solid var(--border)}
     .target-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(196px,220px);gap:8px;align-items:stretch}
     .target-row select{min-width:0}
-    .rotation-picker{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible;border:1px solid var(--cyan);border-radius:10px;background:color-mix(in srgb,var(--cyan) 7%,transparent)}
+    .rotation-picker{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));overflow:visible;border:1px solid var(--cyan);border-radius:10px;background:color-mix(in srgb,var(--cyan) 7%,transparent)}
     .rotation-option{--cmd-progress:0deg;--cmd-ring:var(--cyan);position:relative;min-width:0;border:0;border-right:1px solid color-mix(in srgb,var(--cyan) 38%,transparent);background:transparent;color:var(--muted);font:700 11px var(--mono);cursor:pointer;white-space:nowrap}
     .rotation-option:first-child{border-radius:9px 0 0 9px}.rotation-option:last-child{border-right:0;border-radius:0 9px 9px 0}
     .rotation-option:hover{background:color-mix(in srgb,var(--violet) 13%,transparent);color:var(--text)}
     .rotation-option:active{transform:scale(.96)}
     .rotation-option:focus-visible{z-index:2;outline:2px solid #fff;outline-offset:2px}
+    .fit-option{padding:0 4px;letter-spacing:0}
+    @media(max-width:460px){.fit-option{font-size:10px;padding:0 2px}}
     .rotation-option.on{background:var(--cyan);color:#06130f;box-shadow:inset 0 0 0 1px color-mix(in srgb,#fff 35%,transparent)}
     .cinfo{display:flex;gap:8px;align-items:center;margin-top:6px;font-size:11px;color:var(--dim);font-family:var(--mono)}
     .cinfo b{color:var(--muted)}
     .stage{margin:12px 0;display:flex;gap:12px;align-items:stretch}
     .frame{--preview-progress:0deg;--preview-ring:#39d98a;position:relative;width:104px;flex:0 0 104px;aspect-ratio:9/16;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#000;cursor:zoom-in;isolation:isolate}
+    /* Previo APAISADO (r59): con «Rellenar» activo y una pieza horizontal, la pantalla se
+       enseña en horizontal y a todo el ancho, ENCIMA del bloque de control; una pieza
+       vertical conserva el marco 9:16 al lado. */
+    .stage.landscape{flex-direction:column}
+    .stage.landscape .frame{width:100%;flex:0 0 auto;aspect-ratio:16/9}
     .frame.has-progress{border-color:transparent;box-shadow:0 0 12px color-mix(in srgb,var(--preview-ring) 24%,transparent)}
     .frame.has-progress::after{content:"";position:absolute;z-index:8;inset:0;border-radius:inherit;padding:2px;pointer-events:none;background:conic-gradient(from -90deg,var(--preview-ring) var(--preview-progress),rgba(98,87,129,.34) 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
     .preview-media,.preview-media>*{position:absolute;inset:0;width:100%;height:100%}
@@ -162,6 +169,16 @@
     .remote-applied{--cmd-ring:#39d98a!important;color:#8fffc2!important;border-color:#39d98a!important;background-color:color-mix(in srgb,#39d98a 12%,transparent)!important;outline:2px solid #39d98a;outline-offset:1px;box-shadow:0 0 14px #39d98a55}
     .remote-failed,.remote-timeout{--cmd-ring:#ff667a!important;color:#ff9aaa!important;border-color:#ff667a!important;outline:2px solid #ff667a;outline-offset:1px;box-shadow:0 0 12px #ff667a44}
     .remote-pending:disabled,.remote-applied:disabled,.remote-failed:disabled,.remote-timeout:disabled{opacity:1}
+    /* DESCARGA EN EL EQUIPO DESTINO (r59): la pastilla se rellena de izquierda a derecha
+       con el % real que reporta el player (/screen/cache) y el número lo lleva al lado. */
+    .tag-field{position:relative;flex:1;min-width:0;display:flex}
+    .tag-field input{width:100%}
+    .tag-entry{--dl-pct:0%}
+    .tag-entry.dl input{padding-right:66px;background-image:linear-gradient(90deg,color-mix(in srgb,var(--cyan) 28%,transparent) var(--dl-pct),transparent var(--dl-pct))}
+    .tag-entry.dl.done input{background-image:linear-gradient(90deg,color-mix(in srgb,#39d98a 24%,transparent) 100%,transparent 0)}
+    .tag-entry.dl.stalled input{background-image:linear-gradient(90deg,color-mix(in srgb,#ff667a 22%,transparent) var(--dl-pct),transparent var(--dl-pct))}
+    .tag-pct{position:absolute;right:10px;top:50%;transform:translateY(-50%);font:700 11px var(--mono);letter-spacing:.04em;color:var(--cyan);pointer-events:none}
+    .tag-entry.dl.done .tag-pct{color:#8fffc2}.tag-entry.dl.stalled .tag-pct{color:#ff9aaa}
     .tag-entry.remote-pending input{border-color:var(--cyan);box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--cyan) 70%,transparent)}
     .tag-entry.remote-applied input{border-color:#39d98a;color:#8fffc2;box-shadow:inset 0 -2px 0 #39d98a}
     .tag-entry.remote-failed input,.tag-entry.remote-timeout input{border-color:#ff667a;color:#ff9aaa}
@@ -208,6 +225,7 @@
       <button type="button" class="rotation-option" data-rotation="90" aria-label="Girar pantalla a 90 grados" aria-pressed="false">90°</button>
       <button type="button" class="rotation-option" data-rotation="180" aria-label="Girar pantalla a 180 grados" aria-pressed="false">180°</button>
       <button type="button" class="rotation-option" data-rotation="270" aria-label="Girar pantalla a 270 grados" aria-pressed="false">270°</button>
+      <button type="button" class="rotation-option fit-option" id="fitOption" data-fit="fill" aria-label="Rellenar la pantalla: la pieza ocupa todo el dispositivo" aria-pressed="false" title="Rellenar: el contenido ocupa todo lo posible del dispositivo, sin recortar">⛶ Rellenar</button>
     </div>
   </div>
   <div class="cinfo">circuito: <b id="cir">—</b> · pantalla: <b id="scr">—</b></div>
@@ -272,7 +290,7 @@
   <div class="sec">🏷️ Contenido etiquetado <span class="hint">— #ID añade una pieza; #hashtag crea una playlist alternativa completa</span></div>
   <div class="tagrow">
     <div class="tag-entry" id="tagEntry">
-      <input id="tagInput" placeholder="p.ej. 712 · navidad · oferta-2x1" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <span class="tag-field"><input id="tagInput" placeholder="p.ej. 712 · navidad · oferta-2x1" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false"><b class="tag-pct" id="tagPct" aria-live="polite"></b></span>
       <button id="tagApply">Aplicar</button>
     </div>
     <button id="power" style="border-color:var(--border);background:transparent;color:var(--muted)">⏻ Apagar player</button>
@@ -520,6 +538,7 @@
         el.classList.remove('remote-pending','remote-applied','remote-failed','remote-timeout'); el.style.removeProperty('--cmd-progress');
         if('disabled' in el) el.disabled=false; el.removeAttribute('aria-busy');
       });
+      paintTagDownload(null);
     }
     function paintRemoteButton(action){
       if(!action||action.generation!==targetGeneration) return;
@@ -632,6 +651,30 @@
         if(ok&&T.screen===targetScreen){ rotationByScreen.set(targetScreen,degrees); paintRotationPicker(); }
       };
     });
+
+    // ── RELLENAR (r59): quinto botón del selector. Envía fit-fill / fit-editorial y solo
+    // se ilumina cuando el player lo confirma (o lo reporta en su telemetría display.fit).
+    var fitByScreen=new Map(), fitOption=document.getElementById('fitOption'), previewStage=document.querySelector('.stage[data-mando-pane="remote"]');
+    function currentFit(){ return fitByScreen.get(T&&T.screen)==='fill'?'fill':'editorial'; }
+    function paintFitOption(){
+      var on=currentFit()==='fill';
+      fitOption.classList.toggle('on',on); if(!on) fitOption.classList.remove('remote-applied');
+      fitOption.setAttribute('aria-pressed',on?'true':'false');
+      paintStageOrientation(previewItem);
+    }
+    // Pieza horizontal (ar>1) + Rellenar → previo apaisado encima del bloque de control.
+    function paintStageOrientation(it){
+      var ar=Number(it&&it.ar), landscape=currentFit()==='fill'&&Number.isFinite(ar)&&ar>1;
+      if(previewStage) previewStage.classList.toggle('landscape',!!landscape);
+    }
+    fitOption.onclick=async function(){
+      var targetScreen=T.screen, next=currentFit()==='fill'?'editorial':'fill';
+      if(BUTTON_ACTIONS.has(fitOption)) return;
+      var ok=false;
+      try{ ok=await sendRemote('fit-'+next,fitOption); }
+      finally{ }
+      if(ok&&T.screen===targetScreen){ fitByScreen.set(targetScreen,next); paintFitOption(); }
+    };
 
     var POWER_KEY='mando_standby_by_screen';
     function powerStore(){ try{ return JSON.parse(localStorage.getItem(POWER_KEY)||'{}'); }catch(_){ return {}; } }
@@ -805,21 +848,32 @@
           readyCount:ids.filter(function(id){ return ready.has(id); }).length,total:ids.length,at:Number(c.at||0)};
       }catch(_){ return null; }
     }
+    // Relleno progresivo de la pastilla del tag: % de descarga en el EQUIPO DESTINO.
+    // null limpia; 'dl' bajando; 'done' entera en disco; 'stalled' sin confirmar.
+    function paintTagDownload(pct,state){
+      var entry=document.getElementById('tagEntry'), label=document.getElementById('tagPct'); if(!entry||!label) return;
+      if(state==null){ entry.classList.remove('dl','done','stalled'); entry.style.removeProperty('--dl-pct'); label.textContent=''; return; }
+      var n=Math.max(0,Math.min(100,Math.round(Number(pct)||0)));
+      entry.classList.add('dl'); entry.classList.toggle('done',state==='done'); entry.classList.toggle('stalled',state==='stalled');
+      entry.style.setProperty('--dl-pct',(state==='done'?100:n)+'%');
+      label.textContent=state==='done'?'✓ 100%':state==='stalled'?('⌛ '+n+'%'):('⇩ '+n+'%');
+    }
     async function waitTaggedAvailability(sent,tagAction){
-      var visual=sent.action, started=Date.now(), ids=[];
+      var visual=sent.action, started=Date.now(), ids=[], lastPct=0;
+      paintTagDownload(0,'dl');
       while(Date.now()-started<DOWNLOAD_TIMEOUT_MS){
         if(!ids.length){ var fresh=await taggedExpectedIds(tagAction,sent.receipt,sent.target); if(fresh.length) ids=fresh; }
         var state=ids.length?await taggedCacheState(sent.target.screen,ids):null;
         if(state){
-          visual.progress=Math.max(.02,Math.min(1,state.pct/100));
+          visual.progress=Math.max(.02,Math.min(1,state.pct/100)); lastPct=state.pct;
           if(visual.label) visual.label.textContent=state.ready?'✓ Disponible':('⇩ '+state.pct+'%');
-          paintRemoteButton(visual);
+          paintRemoteButton(visual); paintTagDownload(state.pct,state.ready?'done':'dl');
           if(state.ready){ visual.doneLabel='✓ Disponible'; finishRemoteButton(visual,'executed');
             toast('✓ '+tagAction.clean+' disponible en '+sent.target.screen); return true; }
         }else if(visual.label){ visual.label.textContent='Preparando…'; }
         await new Promise(function(resolve){ setTimeout(resolve,650); });
       }
-      visual.doneLabel='Sin confirmar'; finishRemoteButton(visual,'timeout');
+      visual.doneLabel='Sin confirmar'; finishRemoteButton(visual,'timeout'); paintTagDownload(lastPct,'stalled');
       toast('⌛ descarga sin confirmar · '+tagAction.clean); return false;
     }
     async function applyTag(t,button){
@@ -828,6 +882,7 @@
       // Un número es el # persistente del Stock: se AÑADE a la playlist y se
       // precarga ASAP. El texto conserva el contrato histórico de filtro por tag.
       var b=button||document.getElementById('tagApply'), entry=document.getElementById('tagEntry'), input=document.getElementById('tagInput');
+      paintTagDownload(null);
       var sent=await sendRemote(action.cmd,b,{holdAfterAck:true,returnAction:true,mirror:entry,input:input,label:b});
       if(!sent||!sent.ok) return;
       if(!await waitTaggedAvailability(sent,action)) return;
@@ -843,6 +898,7 @@
       // cuando la selección activa era precisamente una pieza individual.
       if(curTag().charAt(0)==='@'&&!await sendRemote('content-clear',b)) return;
       if(!await sendRemote('tag-',b)) return;
+      paintTagDownload(null);
       setStoredTag(T.screen,''); document.getElementById('tagInput').value='';
       renderTagChips(); refreshTagline();
     }
@@ -1165,6 +1221,9 @@
         var reportedRotation=Number(d&&d.device&&d.device.display&&d.device.display.rotation);
         if(Number.isFinite(reportedRotation)){ rotationByScreen.set(target.screen,reportedRotation); paintRotationPicker(); }
         var it=d&&d.item, shotPreview=remoteShotPreview(shotMeta,target,it);
+        var reportedFit=d&&d.device&&d.device.display&&d.device.display.fit;
+        if(reportedFit==='fill'||reportedFit==='editorial'){ fitByScreen.set(target.screen,reportedFit); }
+        paintFitOption(); paintStageOrientation(it);
         var reportedAudio=(it&&it.audio)||(d&&d.device&&d.device.audio);
         paintPreviewAudio(reportedAudio||null);
         if(reportedAudio&&typeof reportedAudio.muted==='boolean'){

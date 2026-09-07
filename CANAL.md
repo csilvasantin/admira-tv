@@ -66,6 +66,23 @@ Barra inferior (auto-oculta a los 3,5 s de inactividad) y atajos de teclado:
 | Volumen | slider | + / − |
 | Always on top ON/OFF | — | **⇧ + Q** |
 
+### Giro y «Rellenar» desde el mando (r59)
+
+El selector del mando (`0° · 90° · 180° · 270° · ⛶ Rellenar`) gobierna cómo se
+presenta la pantalla física. El giro (`rotation-N`) ya existía; **Rellenar** añade
+el ajuste del marco (`fit-fill` / `fit-editorial`), persistente por pantalla:
+
+- **editorial** (por defecto en web/iOS/macOS): marco 9:16 del MUPI. Una pieza
+  horizontal en un teléfono girado 90° se ve pequeña dentro del marco vertical.
+- **fill**: el marco ocupa **todo el dispositivo** (girado o no, contrato `screen-fit`)
+  y la media se escala todo lo que cabe **sin recortar ni deformar** (`contain`).
+  Android WebView y `?fit=screen` nacen en este modo.
+
+El player lo reporta en `device.display.fit` (`/signage/now`), así el botón del mando
+se ilumina solo cuando está confirmado. En el mando, con Rellenar activo y una pieza
+**horizontal** (`ar > 1`), el previo se enseña **apaisado y a todo el ancho, encima
+del bloque de control**; con una pieza vertical conserva el marco 9:16 al lado.
+
 Arranca **en mudo** (para que el autoplay funcione); al desmutear, en algunos
 navegadores hace falta un gesto (hay overlay «toca para arrancar» de respaldo).
 
@@ -100,6 +117,19 @@ iOS suspende JavaScript y red cuando la app pasa a segundo plano. Al volver a pr
 el player consume la cola de control inmediatamente (`visibilitychange`, `pageshow`, `online`).
 Una app terminada por iOS no puede despertarse desde una página web, SSE, WebSocket ni Service
 Worker: ese caso requiere una siguiente fase nativa con APNs; el mando web no lo simula.
+
+### `#ID` desde el mando: nunca online, y el mando ve la descarga (r59)
+
+Un `content-<num>` añade la pieza delante de la playlist y la baja **ASAP**. Hasta que
+está **entera en el equipo** (`_ready`, tras completar la escritura en caché) el player
+**no la emite**: el bucle la salta, también con `?stream=1` (la app iOS arranca así, y
+antes el bucle la estrenaba online a medio bajar). Una entrada de caché parcial tampoco
+cuenta como «en disco» mientras la descarga sigue en vuelo.
+
+En el mando, la pastilla del tag se **rellena de izquierda a derecha** con el % real que
+reporta el player en `/screen/cache` y muestra el porcentaje al lado del número
+(`923 · ⇩ 37%`); en verde `✓ 100%` cuando está entera, y en rojo `⌛ n%` si la descarga
+no se confirma en el plazo. Aplicar otro tag, limpiar o cambiar de pantalla lo borra.
 
 ### Always on top (⇧Q) — la emisión nunca se tapa
 

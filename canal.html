@@ -29,7 +29,8 @@
 <!-- r57 · FICHA HUMANA: doble clic prioriza el título editorial, hidrata el objeto sincro desde Stock y muestra #número como identificador único en lugar del UUID técnico. Hereda r56. -->
 <!-- r58 · RANURA EDITORIAL: imagen, audio e interactivo ocupan la duración de parrilla/borrador (slotSeconds); el audio se recorta a su longitud real y proof-of-play, /signage/now y /control/playlist cuentan lo mismo que se emite. -->
 <!-- r58 · GOTO EN SINCRO: el salto desde la playlist del mando (goto-N) abre la ventana forzada de un #ID: sale de sincro, la pieza va hasta el final y pollMode devuelve la asignación remota. Antes la sincro la revertía al cargar el vídeo. -->
-<!-- BUILD canal v.07.09.2026.r58 · RANURA EDITORIAL: una sola regla de duración (editorialSec) para emitir, imputar y publicar al mando; el audio programado deja de cortarse a ciegas a audioSec. Hereda r57. -->
+<!-- r59 · RELLENAR: ajuste de pantalla por mando (fit-fill / fit-editorial): el marco ocupa todo el dispositivo, girado o no, y la media se escala sin recortar; se persiste por pantalla y se reporta en la telemetría (display.fit). El marco girado ya no se aplasta (max-width/flex-shrink). Un #ID del mando nunca se emite online mientras baja, ni con stream=1. -->
+<!-- BUILD canal v.07.09.2026.r59 · RELLENAR: el mando decide si el marco es editorial 9:16 o llena el dispositivo; hereda r58 (ranura editorial y goto en sincro). -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
@@ -904,6 +905,27 @@ function setDisplayRotation(degrees){
   return displayRotation;
 }
 function applyDisplayRotation(delta){ return setDisplayRotation(displayRotation+(Number(delta)||0)); }
+// ── RELLENAR (r59): el marco ocupa TODA la superficie del dispositivo ─────────────
+// «editorial» conserva el marco 9:16 del MUPI (una pieza horizontal se ve pequeña en
+// un teléfono girado 90°). «fill» reutiliza el contrato `screen-fit` del player físico:
+// el marco mide el viewport completo (girado o no) y la media se escala todo lo que
+// cabe sin recortar ni deformar. Persistente por pantalla y gobernable desde el mando
+// (fit-fill / fit-editorial), igual que el giro. Android WebView y `?fit=screen`
+// nacen en «fill»; `?fit=content` o el mando lo devuelven a editorial.
+const DISPLAY_FIT_KEY='adtv_display_fit:'+(scr.screen||scr.circuit||'unbound');
+let displayFit=(()=>{ const v=LS(DISPLAY_FIT_KEY,''); if(v==='fill'||v==='editorial') return v;
+  return document.documentElement.classList.contains('screen-fit')?'fill':'editorial'; })();
+function setDisplayFit(mode){
+  const m=String(mode||'').toLowerCase();
+  displayFit=(m==='fill'||m==='screen'||m==='on'||m==='rellenar')?'fill':'editorial';
+  save(DISPLAY_FIT_KEY,displayFit);
+  document.documentElement.classList.toggle('screen-fit',displayFit==='fill');
+  try{ if(DEVICE_TELEMETRY&&DEVICE_TELEMETRY.display) DEVICE_TELEMETRY.display.fit=displayFit; }catch(_){}
+  try{ if(_nowItem) setTimeout(()=>_postNow(_nowItem),0); }catch(_){}
+  fitMupi._retry=0; fitMupi();
+  return displayFit;
+}
+document.documentElement.classList.toggle('screen-fit',displayFit==='fill');
 function itemAR(it){
   if(it&&it._dim&&it._dim.w&&it._dim.h){ const r=it._dim.w/it._dim.h; return Math.max(9/21,Math.min(21/9,r)); }
   const tg=(it&&it.tags)||[];
@@ -947,6 +969,13 @@ function fitMupi(){ const mupi=$('mupi'), wrap=$('wrap'); if(!mupi||!wrap) retur
   // fitMupi aislado; en la página completa displayRotation siempre existe.
   const rotation=typeof displayRotation==='number'?displayRotation:0;
   const quarterTurn=rotation%180!==0;
+  // Con un cuarto de giro el rectángulo SIN transformar intercambia sus lados y puede ser
+  // más ANCHO que el viewport: la que debe caber es su caja girada. El tope `max-width:100vw`
+  // del modo limpio lo aplastaba a un cuadrado (iPhone girado 90°: la pieza horizontal se
+  // veía pequeña en el centro, r59). El tope se levanta solo mientras hay giro.
+  // Y #wrap es flex: con flex-shrink 1 el marco girado (más ancho que el viewport) se
+  // encogía a 440×440 en el iPhone aunque el inline dijera 833/956 px.
+  mupi.style.maxWidth=quarterTurn?'none':''; mupi.style.maxHeight=quarterTurn?'none':''; mupi.style.flexShrink=quarterTurn?'0':'';
   // `fit=screen` es un contrato explícito del player físico: el marco ocupa la
   // superficie completa y la propia media decide sus barras mediante contain.
   // Al girar 90/270°, el rectángulo SIN transformar intercambia sus lados para
@@ -1109,7 +1138,7 @@ function deviceTelemetryBase(){
   return {
     display:{ width:Math.round((screen.width||innerWidth)*dpr), height:Math.round((screen.height||innerHeight)*dpr),
       cssWidth:screen.width||innerWidth, cssHeight:screen.height||innerHeight, viewportWidth:innerWidth, viewportHeight:innerHeight,
-      devicePixelRatio:dpr, colorDepth:screen.colorDepth||0, orientation:(screen.orientation&&screen.orientation.type)||'', rotation:displayRotation },
+      devicePixelRatio:dpr, colorDepth:screen.colorDepth||0, orientation:(screen.orientation&&screen.orientation.type)||'', rotation:displayRotation, fit:(typeof displayFit==='string'?displayFit:'editorial') },
     system:{ os, osVersion, platform, language:navigator.language||'', timezone:(Intl.DateTimeFormat().resolvedOptions().timeZone||'') },
     hardware:{ cores:navigator.hardwareConcurrency||0, memoryGB:navigator.deviceMemory||0, touchPoints:navigator.maxTouchPoints||0,
       architecture:(navigator.userAgentData&&navigator.userAgentData.architecture)||'' },
@@ -1640,6 +1669,9 @@ async function fetchToCache(it){
 // URL reproducible desde la cache (objectURL) o null si la pieza aún no está bajada.
 async function cachedSrc(it){
   const c=await cacheOpen(); if(!c||!cacheable(it)) return null;
+  // Descarga EN VUELO: aunque el motor de caché ya deje ver una entrada parcial, la
+  // pieza no está entera en el equipo. Solo _ready (tras completar el put) la libera.
+  if(_dl.has(it.id)&&!_ready.has(it.id)) return null;
   try{ if(_objURLs.has(it.url)) return _objURLs.get(it.url);
     const hit=await c.match(it.url); if(!hit) return null;
     const u=URL.createObjectURL(await hit.blob()); _objURLs.set(it.url,u);
@@ -1855,6 +1887,15 @@ async function play(i, forced){
   // mantiene el fallback online), /play<N> forzado (orden manual del operador) y los items
   // NO cacheables (embeds/iframe/link → se emiten online como siempre).
   let _csrc=await cachedSrc(it); if(_tok!==_playTok) return;
+  // Pieza pedida por #ID desde el mando que AÚN está bajando: jamás se emite online,
+  // tampoco con ?stream=1 (la app iOS arranca así). Con stream el bucle llegaba a ella
+  // por su posición (va delante) y la estrenaba a medio descargar. Se salta hasta que
+  // esté entera en disco; maybeResumeCold la arranca entonces (r59).
+  if(!forced&&_asapItemId&&String(it.id)===String(_asapItemId)&&cacheable(it)&&!_csrc){
+    if(playlist.length>1){ play(cur+1); return; }
+    if(!stage.querySelector('video,img,audio')) coldStartPlaceholder();
+    return;
+  }
   if(!STREAM_OK && !syncOn && !forced && cacheable(it) && !_csrc){
     const found=await firstCachedFrom(cur); if(_tok!==_playTok) return;
     if(found){ if(found.idx!==cur){ cur=found.idx; it=playlist[cur]; } _csrc=found.src; }
@@ -3590,6 +3631,8 @@ async function executeQueuedCommand(c){
   // del mando. Sin esta junta, goto-N caía en runCli(), se ignoraba y aun así
   // devolvía un ACK optimista de executed.
   if(/^goto-\d{1,3}$/.test(cmd)) return applyCtrlCmd(cmd);
+  // «Rellenar» del mando: mismo dispatcher confirmado que el giro.
+  if(/^fit-(fill|editorial)$/.test(cmd)) return applyCtrlCmd(cmd);
   // Los tres fotogramas del Remote saltan a un segundo exacto del vídeo. Deben
   // atravesar el mismo dispatcher confirmado: runCli no conoce seek-* y daría un
   // ACK falso sin mover la emisión.
@@ -3719,6 +3762,8 @@ async function applyCtrlCmd(cmd){
       return captured?'executed':'failed';
     }
     default: {
+      const fit=/^fit-(fill|editorial)$/.exec(cmd);
+      if(fit){ setDisplayFit(fit[1]); flashCli(displayFit==='fill'?'⛶ rellenar pantalla':'▯ marco editorial'); return 'executed'; }
       const rotation=/^rotation-(0|90|180|270)$/.exec(cmd);
       if(rotation){ setDisplayRotation(Number(rotation[1])); flashCli('↻ pantalla '+displayRotation+'°'); return 'executed'; }
       const tagged=/^content-(\d{1,6})$/.exec(cmd);
