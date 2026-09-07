@@ -1,9 +1,9 @@
 {
-  "version": "v.07.09.2026.r11.10:00",
-  "signature": "TrinityMBP14 · MacBookPro14",
-  "agent": "TrinityMBP14",
-  "machine": "MacBookPro14",
+  "version": "v.07.09.2026.r12.10:31",
+  "signature": "NeoMBP14 · MacBookProNegro14",
+  "agent": "NeoMBP14",
+  "machine": "MacBookProNegro14",
   "day": "07.09.2026",
-  "time": "10:00",
-  "evidence": "Store Santa Rosa 19 y accesos autenticados IEU con selección manual. Misión DCL-d1babc9d9de16e42dac0fb84."
+  "time": "10:31",
+  "evidence": "Gemelo CanalKiosk Gràcia (adcelerate/demo/best): espeja la antena real de sim-gracia-kiosko (signage/now) cuando late; sin antena, parrilla+Stock como antes. Galaxy Fold configurado como esa pantalla (misión yokup Hoy #281 · DCL-ddba235a). Tests del gemelo 107/107."
 }

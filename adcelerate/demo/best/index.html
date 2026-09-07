@@ -13,12 +13,12 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r11.1000">
-<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r11.1000">
-<script src="../js/outdoor-sites.js?v=07.09.2026.r11.1000"></script>
-<script src="../js/urban-route.js?v=07.09.2026.r11.1000"></script>
-<script src="../js/dooh-surfaces.js?v=07.09.2026.r11.1000"></script>
-<script src="../js/outdoor-context.js?v=07.09.2026.r11.1000"></script>
+<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r12.1031">
+<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r12.1031">
+<script src="../js/outdoor-sites.js?v=07.09.2026.r12.1031"></script>
+<script src="../js/urban-route.js?v=07.09.2026.r12.1031"></script>
+<script src="../js/dooh-surfaces.js?v=07.09.2026.r12.1031"></script>
+<script src="../js/outdoor-context.js?v=07.09.2026.r12.1031"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
   const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
@@ -203,7 +203,7 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r11.1000"></head>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r12.1031"></head>
 <body>
 
 <div id="app">
@@ -354,13 +354,13 @@
   </div>
 </div>
 
-<script src="street-walk.js?v=07.09.2026.r11.1000"></script>
-<script src="../js/cenital-panel.js?v=07.09.2026.r11.1000"></script><script src="../js/walk-overview.js?v=07.09.2026.r11.1000"></script><script src="walk-orientation.js?v=07.09.2026.r11.1000"></script><script src="route-walk.js?v=07.09.2026.r11.1000"></script>
-<script src="../js/player-library.js?v=07.09.2026.r11.1000"></script>
-<script src="screen-player.js?v=07.09.2026.r11.1000"></script>
-<script src="screen-audio.js?v=07.09.2026.r11.1000"></script>
-<script src="surface-focus.js?v=07.09.2026.r11.1000"></script>
-<script src="camera-path.js?v=07.09.2026.r11.1000"></script>
+<script src="street-walk.js?v=07.09.2026.r12.1031"></script>
+<script src="../js/cenital-panel.js?v=07.09.2026.r12.1031"></script><script src="../js/walk-overview.js?v=07.09.2026.r12.1031"></script><script src="walk-orientation.js?v=07.09.2026.r12.1031"></script><script src="route-walk.js?v=07.09.2026.r12.1031"></script>
+<script src="../js/player-library.js?v=07.09.2026.r12.1031"></script>
+<script src="screen-player.js?v=07.09.2026.r12.1031"></script>
+<script src="screen-audio.js?v=07.09.2026.r12.1031"></script>
+<script src="surface-focus.js?v=07.09.2026.r12.1031"></script>
+<script src="camera-path.js?v=07.09.2026.r12.1031"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -1128,6 +1128,7 @@ function loadCreLive(){
   for (const p of PERFILES){ const im = new Image(); im.crossOrigin = 'anonymous'; im.src = '../creatividades/' + p + '.png'; creLive[p] = im; }
 }
 async function chLoad(){
+  if (liveMirrorOn()) return;   // la antena real manda mientras late
   try{
     // La parrilla es la fuente prioritaria: conserva exactamente el orden que Carlos
     // define en admira.tv/parrilla. Solo caemos a Stock cuando no hay programación.
@@ -1160,6 +1161,30 @@ async function chLoad(){
     if (chQueue.length){ chLive = true; chErr = 0; chTag('continuidad Stock · en vivo'); chNext(); } else chLive = false;
   }catch(e){ console.warn('[canal] no se pudo cargar Stock', e); chLive = false; }
 }
+// ── ESPEJO DE LA ANTENA REAL (Carlos, 7-sep-2026: «si voy por clearchannel.tv a ver qué
+// está emitiendo, que coincida con el móvil»). Si la pantalla del kiosko (GRID_SCREEN) tiene
+// un player real latiendo —hoy el Galaxy Fold configurado como sim-gracia-kiosko—, el gemelo
+// pinta LO QUE ESA ANTENA EMITE (api.admira.store/signage/now), no su propio bucle. Sin
+// antena viva (latido > 3 min) vuelve a la parrilla + Stock de siempre. Sondeo cada 5 s.
+const LIVE_NOW_URL = 'https://api.admira.store/signage/now?screen=' + GRID_SCREEN;
+const LIVE_FRESH_MS = 180000;
+let liveMirrorUrl = '';
+function liveMirrorOn(){ return !!liveMirrorUrl; }
+async function liveMirrorTick(){
+  try{
+    const d = await fetch(LIVE_NOW_URL, { cache: 'no-store' }).then(r => r.json());
+    const it = d && d.item, seen = Number(d && d.lastSeen) || 0;
+    const fresh = !!(it && it.url && /^https?:\/\//.test(it.url) && (it.type === 'video' || it.type === 'image') && seen && (Date.now() - seen) < LIVE_FRESH_MS);
+    if (fresh){
+      if (it.url !== liveMirrorUrl){
+        liveMirrorUrl = it.url;
+        chQueue = [{ id: String(it.id || it.url), url: it.url.replace(/^https:\/\/www\.admira\.tv\//, 'https://admira.tv/'), type: it.type, title: it.title || 'Antena real', source: 'live', seconds: 10 }];
+        chLive = true; chErr = 0; chIdx = -1; chTag('antena real · ' + String(it.title || '').slice(0, 44)); chNext();
+      }
+    } else if (liveMirrorUrl){ liveMirrorUrl = ''; chLoad(); }
+  }catch(_){ /* la antena no responde: se mantiene lo que haya */ }
+}
+setInterval(liveMirrorTick, 5000); liveMirrorTick();
 function chSkip(){ chErr++; if (chErr > chQueue.length){ chLive = false; chItem = null; return; } chNext(); }
 function chNext(){ chPlay(chIdx + 1); }
 function chPlay(i){
