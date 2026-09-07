@@ -1,10 +1,11 @@
 {
   "name": "admira-tv",
   "title": "Admira TV · admira.tv — la capa Emitir de la suite AdmiraNeXT",
-  "description": "Hub MCP de admira.tv: qué se emite, dónde y con qué audiencia. Servidor MCP vivo en mcp-tv.admira.store con tres herramientas (on_air, airtime_report, channel_url) y el CMS de emisión con su guía para personas.",
-  "version": "v.09.08.2026.r1",
+  "description": "Hub MCP de admira.tv: qué se emite, dónde y con qué audiencia. Servidor MCP vivo en mcp-tv.admira.store con cuatro herramientas (on_air, airtime_report, channel_url, player_info) y el CMS de emisión con su guía para personas.",
+  "version": "v.07.09.2026.r1.06:05",
   "site": "https://admira.tv",
   "hub": "https://admira.tv/mcp/",
+  "llms_txt": "https://admira.tv/mcp/llms.txt",
   "help_humans": "https://admira.tv/help/",
   "repo": "https://github.com/csilvasantin/admira-tv",
   "contact": {
@@ -14,7 +15,7 @@
   "mcp_server": {
     "endpoint": "https://mcp-tv.admira.store/mcp",
     "transport": "streamable-http",
-    "auth": "none",
+    "auth": "none — lectura abierta (sin clave)",
     "tools": [
       {
         "name": "on_air",
@@ -27,6 +28,10 @@
       {
         "name": "channel_url",
         "desc": "Construye la URL del canal para poner una pantalla a emitir."
+      },
+      {
+        "name": "player_info",
+        "desc": "Documentación del player nativo de Admira.tv: qué es, kiosko desatendido, versiones, instalación y configuración (por defecto el de macOS)."
       }
     ],
     "connect": {

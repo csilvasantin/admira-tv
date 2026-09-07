@@ -2,11 +2,13 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=06.09.2026.r13.2051"></script>
+<script src="/auth-gate.js?v=07.09.2026.r1.0605"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admira.tv · MCP — el canal, conectado</title>
 <meta name="description" content="Servidor MCP de Admira.tv: qué hay en antena en cada pantalla, proof-of-play y cómo poner una pantalla a emitir.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="alternate" type="text/plain" href="/mcp/llms.txt" title="MCP · llms.txt">
+<link rel="alternate" type="application/json" href="/mcp/manifest.json" title="MCP · manifest">
 <meta property="og:title" content="Admira.tv · MCP — el canal, conectado">
 <meta property="og:description" content="Servidor MCP de la capa Emitir: qué hay en antena, proof-of-play y cómo poner una pantalla a emitir.">
 <meta property="og:type" content="website">
@@ -21,8 +23,8 @@
 <script>
 window.ADMIRA_NAV={title:'MCP · el canal conectado'};
 </script>
-<script src="/admira-nav.js?v=06.09.2026.r13.2051" defer></script>
-<script src="/admira-frame.js?v=06.09.2026.r13.2051" defer></script>
+<script src="/admira-nav.js?v=07.09.2026.r1.0605" defer></script>
+<script src="/admira-frame.js?v=07.09.2026.r1.0605" defer></script>
 <style>
   :root{ --bg:#02080d; --panel:#0a1620; --line:#16303a; --txt:#dff8ff; --mut:#75aab9; --acc:#78f3ff; --pur:#88ffaa; --good:#88ffaa; }
   *{box-sizing:border-box}
@@ -50,7 +52,7 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
   a{color:var(--acc)}
   footer{color:var(--mut);font-size:13px;margin-top:38px;border-top:1px solid var(--line);padding-top:18px}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=06.09.2026.r13.2051">
+  <link rel="stylesheet" href="/admira-frame.css?v=07.09.2026.r1.0605">
 </head>
 <body>
 <div class="wrap">
@@ -71,12 +73,13 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
     <div class="tool"><b>on_air</b><span>Qué emite una pantalla ahora + audiencia por cámara + si está conectada.</span></div>
     <div class="tool"><b>airtime_report</b><span>Proof-of-play de un circuito: pases, segundos, por tipo y segmento.</span></div>
     <div class="tool"><b>channel_url</b><span>Construye la URL del canal para poner una pantalla a emitir.</span></div>
+    <div class="tool"><b>player_info</b><span>Documentación del player nativo: qué es, kiosko desatendido, versiones, instalación y configuración.</span></div>
   </div>
 
   <h2>Conectar</h2>
   <pre>{ "mcpServers": { "admiratv": { "url": "https://mcp-tv.admira.store/mcp" } } }</pre>
 
-  <footer>Admira.tv · capa Emitir de Admira · En crudo: <a href="/mcp/manifest.json">manifest.json</a>. Hermanos: <a href="https://www.pixeria.com/mcp/">pixeria</a> (Crear) · <a href="https://www.xpaceos.com/mcp/">xpaceos</a> (Operar).</footer>
+  <footer>Admira.tv · capa Emitir de Admira · Para silicio: <a href="/mcp/llms.txt">llms.txt</a> · <a href="/mcp/manifest.json">manifest.json</a>. Para personas: <a href="/help/">/help</a>. Hermanos: <a href="https://www.pixeria.com/mcp/">pixeria</a> (Crear) · <a href="https://www.xpaceos.com/mcp/">xpaceos</a> (Operar).</footer>
 </div>
 <script>
   fetch('https://mcp-tv.admira.store/',{cache:'no-store'}).then(r=>r.json()).then(j=>{

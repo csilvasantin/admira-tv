@@ -1,0 +1,71 @@
+# Admira.tv · admira.tv — la capa Emitir (MCP)
+
+> Servidor MCP de Admira.tv (v1.1.0): el canal, conectado. Agentes (silicio) y personas
+> (carbono) consultan qué hay EN ANTENA en cada pantalla, el proof-of-play de cada circuito,
+> cómo poner una pantalla a emitir y la documentación del player nativo. Admira.tv dice QUÉ
+> se emitió; la cámara del gemelo XpaceOS dice QUIÉN lo vio; cruzarlas es clearchannel.tv.
+
+Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y del CMS)
+
+Sitio / docs: https://admira.tv/mcp/
+Manifest máquina: https://admira.tv/mcp/manifest.json
+Versión: v.07.09.2026.r1.06:05
+Repo: https://github.com/csilvasantin/admira-tv
+
+## Servidor MCP (cómo conectar)
+
+- Endpoint: https://mcp-tv.admira.store/mcp
+- Transporte: MCP Streamable HTTP (JSON-RPC 2.0 sobre POST /mcp; respuestas como text/event-stream).
+  Descriptor y salud en GET https://mcp-tv.admira.store/ → {ok, service:"admira-tv-mcp", server:{name:"Admira.tv", version}, tools}.
+- Auth: lectura abierta (sin clave). `initialize` responde 200 sin cabecera Authorization.
+  El CMS de emisión de la web (cms.html, players, parrilla) sí va detrás de la verja de acceso.
+- Claude Code: claude mcp add --transport http admiratv https://mcp-tv.admira.store/mcp
+- Config de cliente (JSON):
+  {"mcpServers":{"admiratv":{"url":"https://mcp-tv.admira.store/mcp"}}}
+- Prueba rápida:
+  curl -s https://mcp-tv.admira.store/mcp -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+## Herramientas
+
+- on_air {screen} — qué hay EN ANTENA ahora mismo en una pantalla: asset (título/tipo/url),
+  audiencia por cámara (personas, edad, género) y si está conectada. screen: id de pantalla,
+  p. ej. admira-sitges-mupi.
+- airtime_report {circuit} — proof-of-play de un circuito: pases totales, segundos emitidos,
+  desglose por tipo y por segmento de audiencia. circuit: id de circuito/loc, p. ej. admira-sitges.
+- channel_url {screen, circuit, format?, cam?, clean?} — construye la URL del canal de admira.tv
+  para poner una pantalla a emitir. format "9:16" (por defecto) o "16:9"; cam activa la
+  cámara/audiencia (por defecto false); clean modo limpio sin chrome (por defecto true).
+- player_info {section?} — documentación del player nativo de Admira.tv (el que reproduce el
+  canal en una pantalla): qué es, features de kiosko desatendido, versiones/changelog,
+  instalación y configuración. section: all (por defecto), overview, features, releases,
+  install, config. Por defecto el de macOS (AdmiraSignageMac).
+
+Los esquemas exactos (inputSchema) están en tools/list y en /mcp/manifest.json.
+
+## Trampas que ya hemos pagado
+
+- El canal se pone a emitir con la URL que devuelve channel_url: no la construyas a mano,
+  que la detección de kiosko depende del user-agent.
+- Proof-of-play y audiencia son dos cosas distintas: admira.tv dice QUÉ se emitió, y la cámara
+  de XpaceOS QUIÉN lo vio. Cruzarlas es lo que hace clearchannel.tv (api.admira.store).
+- Cloudflare rechaza user-agents que no parezcan navegador (error 1010) en las webs de la
+  suite; el servidor MCP no, pero si automatizas contra admira.tv manda un User-Agent normal.
+
+## Ecosistema (una capa por verbo)
+
+- Crear: https://www.pixeria.com/mcp/ (Pixeria · stock de imágenes)
+- Operar: https://www.xpaceos.com/mcp/ (XpaceOS · red de pantallas y gemelos)
+- Emitir: https://admira.tv/mcp/ (este)
+- Audiencia × Emisión: https://www.clearchannel.tv/mcp/
+- Declarar y puntuar el trabajo: https://www.yokup.com/mcp/
+- Directorio canónico de los MCP de la suite: https://www.admiranext.com/mcp/#directorio (FLT-2137)
+
+## Convenciones de la casa
+
+- Sello único por publicación: v.DD.MM.AAAA.rN.HH:MM (normativa 07 y 09).
+- Cada producto abre /help (carbono) y /mcp con llms.txt y manifest.json (silicio) — normativa 24.
+- Avisos y encargos: AgoraMatrix (Telegram); entre agentes, por MCP.
+
+## Para personas
+
+La puerta de carbono es https://admira.tv/help/

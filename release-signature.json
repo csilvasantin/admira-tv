@@ -1,9 +1,9 @@
 {
-  "version": "v.06.09.2026.r13.20:51",
-  "signature": "NeoMBP14 · MacBookProNegro14",
-  "agent": "NeoMBP14",
-  "machine": "MacBookProNegro14",
-  "day": "06.09.2026",
-  "time": "20:51",
-  "evidence": "Política de privacidad del AdmiraNeXT Player en /player/privacidad (exigida por App Store Connect para la ficha de la app)."
+  "version": "v.07.09.2026.r1.06:05",
+  "signature": "MorfeoMacMini · MacMini",
+  "agent": "MorfeoMacMini",
+  "machine": "MacMini",
+  "day": "07.09.2026",
+  "time": "06:05",
+  "evidence": "Puerta MCP completa (normativa 24): /mcp/llms.txt existía en el manifest pero devolvía 404; se crea con las cuatro herramientas vivas de mcp-tv.admira.store (on_air, airtime_report, channel_url, player_info), se enlaza desde manifest.json (llms_txt) y la página /mcp/ lista player_info y enlaza llms.txt. Verificado con curl en producción."
 }
