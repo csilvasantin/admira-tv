@@ -9,7 +9,8 @@ OJO: el worker guarda la playlist con TTL de 24 h → hay que volver a publicar 
 (cron/launchd) o subir el TTL en omnipublicity-api. Uso: python3 tools/publica-playlists-kioskos.py [--dry]"""
 import json, re, sys, urllib.request
 UA = {"User-Agent": "Mozilla/5.0 admira-tv/playlists"}
-KIOSKOS = {"sim-gracia-kiosko": "musica",            # Fold 9 · Vila (News & Coffee)
+KIOSKOS = {"samsung-galaxy-fold-9-mupi": "musica",   # Fold 9 · Vila (News & Coffee) — pantalla real
+           "sim-gracia-kiosko": "musica",            # Vila · reserva (preview configurada)
            "samsung-galaxy-fold-8-mupi": "tecnologia",  # Fold 8 · Jardinets
            "iphone17-mupi": "creatividad",           # iPhone 17 · Lesseps
            "sim-jardinets-kiosko": "tecnologia", "sim-lesseps-kiosko": "creatividad"}   # pantallas de reserva (canal en navegador)
