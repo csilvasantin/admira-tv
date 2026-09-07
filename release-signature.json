@@ -1,9 +1,9 @@
 {
-  "version": "v.07.09.2026.r31.19:19",
+  "version": "v.07.09.2026.r32.21:33",
   "signature": "NeoMBP16 · MacBookPro16",
   "agent": "NeoMBP16",
   "machine": "MacBookPro16",
   "day": "07.09.2026",
-  "time": "19:19",
-  "evidence": "Ranura editorial única (editorialSec) para imagen, audio e interactivo: la parrilla manda con slotSeconds, el audio se recorta a su longitud real y proof-of-play, /signage/now y /control/playlist cuentan lo mismo que se emite. goto-N desde la playlist del mando aguanta en pantallas sincronizadas: abre la ventana forzada de un #ID, va hasta el final y pollMode devuelve la asignación remota. Rebasado sobre la r30 de hoy."
+  "time": "21:33",
+  "evidence": "Rellenar por mando (fit-fill/fit-editorial) con previo apaisado encima del bloque de control cuando la pieza es horizontal; el marco girado 90° ya no se aplasta (max-width/flex-shrink del modo limpio). Un #ID del mando no se emite hasta estar entero en el equipo, tampoco con stream=1; la pastilla del tag muestra el % real de descarga del equipo destino y se rellena progresivamente."
 }
