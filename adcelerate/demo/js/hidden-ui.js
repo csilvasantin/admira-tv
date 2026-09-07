@@ -14,6 +14,7 @@
   if(embedded&&e.source===parent&&e.data.type==='state'&&typeof e.data.hidden==='boolean')apply(e.data.hidden);
   if(!embedded&&frames().some(f=>f.contentWindow===e.source)){
    if(e.data.type==='toggle')apply(!hidden);
+   if(e.data.type==='preview'&&typeof e.data.active==='boolean')document.documentElement.classList.toggle('mapping-preview',e.data.active);
    if(e.data.type==='ready')e.source.postMessage({channel,type:'state',hidden},location.origin);
   }
  });

@@ -8,7 +8,8 @@
   const caption=document.createElement('p');caption.textContent='PRUEBA EDITADA · Vista fija sin peatones · No modifica el paseo ni sus fotografías originales';
   const back=document.createElement('button');back.textContent='Volver a la calle original · Esc';back.onclick=close;preview.append(img,caption,back);document.body.append(preview);
   let audio=null,open=false;
-  function close(){open=false;preview.hidden=true;document.documentElement.classList.remove('mapping-preview');if(!button.hidden)button.focus({preventScroll:true});}
+  function notifyPreview(active){if(parent!==window)parent.postMessage({channel:'admira-hidden-ui-v1',type:'preview',active},location.origin);}
+  function close(){if(open)notifyPreview(false);open=false;preview.hidden=true;document.documentElement.classList.remove('mapping-preview');if(!button.hidden)button.focus({preventScroll:true});}
   async function alertSound(){try{audio??=new (window.AudioContext||window.webkitAudioContext)();await audio.resume();const gain=audio.createGain();gain.connect(audio.destination);const now=audio.currentTime;gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(.12,now+.02);gain.gain.setValueAtTime(.12,now+.25);gain.gain.linearRampToValueAtTime(0,now+.4);const oscillator=audio.createOscillator();oscillator.type='sine';oscillator.frequency.setValueAtTime(740,now);oscillator.frequency.setValueAtTime(520,now+.15);oscillator.connect(gain);oscillator.start(now);oscillator.stop(now+.41);oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};console.info('[Mapping] Alerta emitida');}catch{caption.textContent='PRUEBA EDITADA · Vista fija sin peatones · Audio no disponible en este navegador';}}
   button.addEventListener('pointerdown',e=>e.stopPropagation());
   button.onclick=async(e)=>{
@@ -17,7 +18,7 @@
    alertSound();
    try{await img.decode();}catch{button.title='No se pudo cargar la prueba; vuelve a intentarlo';return;}
    if(getPanorama()?.getPano()!==anchor.pano)return;
-   onOpen();open=true;preview.hidden=false;document.documentElement.classList.add('mapping-preview');back.focus();console.info('[Mapping] Escena editada abierta');
+   onOpen();open=true;notifyPreview(true);preview.hidden=false;document.documentElement.classList.add('mapping-preview');back.focus();console.info('[Mapping] Escena editada abierta');
   };
   addEventListener('keydown',e=>{if(open&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close();}},true);
   addEventListener('pagehide',()=>audio?.close());
