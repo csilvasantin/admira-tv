@@ -105,7 +105,7 @@
       el('human-no-links').classList.toggle('hidden',!!state.links.length);
       element.dataset.status=state.status;
     }
-    const keyActions={w:'forward',s:'backward',a:'left',d:'right',ArrowUp:'forward',ArrowDown:'backward',ArrowLeft:'left',ArrowRight:'right'};
+    const keyActions={w:'forward',a:'left',d:'right',ArrowUp:'forward',ArrowDown:'backward',ArrowLeft:'left',ArrowRight:'right'};
     addEventListener('keydown',event=>{
       if(!active || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       const target=event.target;

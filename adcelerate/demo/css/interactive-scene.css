@@ -18,3 +18,4 @@
 #mapped-pole-slider .mapped-fader-thumb{position:absolute;left:-8px;width:42px;height:18px;top:calc((1 - var(--fader-position)) * 100%);transform:translateY(-50%);box-sizing:border-box;border:2px solid #defe9d;border-radius:4px;background:linear-gradient(#cffa88 0 40%,#153022 42% 57%,#cffa88 60%);box-shadow:0 2px 6px #000a;pointer-events:none}
 #mapped-pole-slider.dragging .mapped-fader-thumb{box-shadow:0 0 14px #cffa88}
 #mapped-people-status{max-width:calc(100% - 48px);white-space:normal;line-height:1.5}
+.targets-hidden .mapped-person-hit,.targets-hidden #mapped-pole-slider,.targets-hidden #mapped-no-parking,.targets-hidden #mapped-people-status{display:none!important;pointer-events:none!important}

@@ -1,6 +1,9 @@
 /* Resolve exact Pixeria music + number tags; never substitute unrelated content. */
 (function(root){
  const URL='https://stock.admira.store/stock/index.json';
+ // Authored fictional preferences for the ten demo characters, not inferred traits.
+ const artists={'1786643541589-rb1gz3':'White Rabbit · The Matrix','1786641001650-o0h5zu':'Rage Against the Machine','1786640403818-t5fpqo':'Westlife','1786640147155-omwc1l':'*NSYNC','1786638996270-46fd6n':'The Communards','1786637469495-8zzrgn':"Guns N' Roses",'1786533143983-n2y09e':'Berlin','1786532932584-a1412h':'Huey Lewis & The News','1782023136001-2aqafn':'Benson Boone','1781952357264-shzjr3':'Blur'};
+ function preference(number,artist){return 'A Metahuman '+number+' le gusta '+artist;}
  const tag=v=>String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/^#/,'');
  function resolve(items){
   const slots=Array.from({length:10},(_,i)=>({number:i+1,item:null,error:'Falta #musica + #'+(i+1)})),used=new Set();
@@ -10,7 +13,7 @@
    if(matches.length!==1)continue;
    const raw=matches[0];let url;try{url=new globalThis.URL(raw.url);if(url.protocol!=='https:'||url.username||url.password)continue;}catch{continue;}
    if(used.has(url.href)){slot.error='El vídeo ya está asociado a otra persona';continue;}
-   used.add(url.href);slot.item={id:'music:'+raw.id,url:url.href,type:'video',title:String(raw.title||'Canción '+slot.number),number:slot.number,tags:raw.tags};slot.error=null;
+   used.add(url.href);slot.item={id:'music:'+raw.id,url:url.href,type:'video',title:String(raw.title||'Canción '+slot.number),artist:String(raw.artist||artists[raw.id]||raw.title||'esta canción'),number:slot.number,tags:raw.tags};slot.error=null;
   }return slots;
  }
  async function fetchCatalog(fetcher){const response=await fetcher(URL,{cache:'no-store',credentials:'omit'});if(!response.ok)throw Error('Pixeria no está disponible');const data=await response.json();if(!Array.isArray(data.items))throw Error('Catálogo no válido');return resolve(data.items);}
@@ -31,5 +34,5 @@
   }
   return {warm,select,stop:()=>select(0)};
  }
- const api={resolve,fetchCatalog,create};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.PedestrianMusic=api;
+ const api={resolve,fetchCatalog,create,preference};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.PedestrianMusic=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

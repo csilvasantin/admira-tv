@@ -22,3 +22,5 @@ test('missing music stops previous playback and reports the unavailable tag',asy
 test('the same fader number resumes its song after a remote player override',async()=>{
  let current=true,plays=0;const c=music.create({load:()=>Promise.resolve(music.resolve([item('a')])),play:()=>plays++,stop:()=>{},isCurrent:()=>current});await c.select(1);await c.select(1);assert.equal(plays,1);current=false;await c.select(1);assert.equal(plays,2);
 });
+
+test('Metahuman preference uses the assigned artist, not the stock ordinal',()=>{const s=music.resolve([item('1781952357264-shzjr3',['musica','10'])])[9];assert.equal(s.item.artist,'Blur');assert.equal(music.preference(s.number,s.item.artist),'A Metahuman 10 le gusta Blur');});

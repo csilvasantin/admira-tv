@@ -13,12 +13,12 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r29.1150">
-<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r29.1150">
-<script src="../js/outdoor-sites.js?v=07.09.2026.r29.1150"></script>
-<script src="../js/urban-route.js?v=07.09.2026.r29.1150"></script>
-<script src="../js/dooh-surfaces.js?v=07.09.2026.r29.1150"></script>
-<script src="../js/outdoor-context.js?v=07.09.2026.r29.1150"></script>
+<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r30.1156">
+<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r30.1156">
+<script src="../js/outdoor-sites.js?v=07.09.2026.r30.1156"></script>
+<script src="../js/urban-route.js?v=07.09.2026.r30.1156"></script>
+<script src="../js/dooh-surfaces.js?v=07.09.2026.r30.1156"></script>
+<script src="../js/outdoor-context.js?v=07.09.2026.r30.1156"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
   const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
@@ -203,8 +203,8 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r29.1150"><link rel="stylesheet" href="../css/hidden-ui.css?v=07.09.2026.r29.1150"><script defer src="../js/hidden-ui.js?v=07.09.2026.r29.1150"></script><script src="../js/pedestrian-layers.js?v=07.09.2026.r29.1150"></script><script src="../js/interactive-scene.js?v=07.09.2026.r29.1150"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=07.09.2026.r29.1150"></head>
-<script src="../js/pedestrian-music.js?v=07.09.2026.r29.1150"></script>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r30.1156"><link rel="stylesheet" href="../css/hidden-ui.css?v=07.09.2026.r30.1156"><script defer src="../js/hidden-ui.js?v=07.09.2026.r30.1156"></script><script src="../js/pedestrian-layers.js?v=07.09.2026.r30.1156"></script><script src="../js/interactive-scene.js?v=07.09.2026.r30.1156"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=07.09.2026.r30.1156"></head>
+<script src="../js/pedestrian-music.js?v=07.09.2026.r30.1156"></script>
 <body>
 
 <div id="app">
@@ -355,13 +355,13 @@
   </div>
 </div>
 
-<script src="street-walk.js?v=07.09.2026.r29.1150"></script>
-<script src="../js/cenital-panel.js?v=07.09.2026.r29.1150"></script><script src="../js/walk-overview.js?v=07.09.2026.r29.1150"></script><script src="walk-orientation.js?v=07.09.2026.r29.1150"></script><script src="route-walk.js?v=07.09.2026.r29.1150"></script>
-<script src="../js/player-library.js?v=07.09.2026.r29.1150"></script>
-<script src="screen-player.js?v=07.09.2026.r29.1150"></script>
-<script src="screen-audio.js?v=07.09.2026.r29.1150"></script>
-<script src="surface-focus.js?v=07.09.2026.r29.1150"></script>
-<script src="camera-path.js?v=07.09.2026.r29.1150"></script>
+<script src="street-walk.js?v=07.09.2026.r30.1156"></script>
+<script src="../js/cenital-panel.js?v=07.09.2026.r30.1156"></script><script src="../js/walk-overview.js?v=07.09.2026.r30.1156"></script><script src="walk-orientation.js?v=07.09.2026.r30.1156"></script><script src="route-walk.js?v=07.09.2026.r30.1156"></script>
+<script src="../js/player-library.js?v=07.09.2026.r30.1156"></script>
+<script src="screen-player.js?v=07.09.2026.r30.1156"></script>
+<script src="screen-audio.js?v=07.09.2026.r30.1156"></script>
+<script src="surface-focus.js?v=07.09.2026.r30.1156"></script>
+<script src="camera-path.js?v=07.09.2026.r30.1156"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -1528,7 +1528,7 @@ function handleWalkState(state){
   activeSvView = {pano:state.pano, panels:calibrated, label:state.date ? `Street View · ${state.date}` : 'Street View · fecha no facilitada'};
   $('sv-signage').classList.toggle('show',calibrated);
   $('sv-signage').classList.toggle('sv-vis',calibrated);
-  if (calibrated) layoutSvPanels();
+  layoutSvPanels();
   const supportVisible=calibrated && visibleSurfaceIds().length>0;
   if (state.status !== 'loading') { clearTimeout(walkBootTimer); if(!surfaceFocus.active||surfaceFocus.active.ready)$('loading').classList.add('done'); $('streetview').classList.add('sv-vis'); }
   postWalkState({...state,supportVisible:!!supportVisible});
@@ -1567,6 +1567,7 @@ async function bootWalk(sideOverride,viewOverride=null,preloadedLibrary=null){
     imageDateControl:true,addressControl:false,showRoadLabels:false,
     panControl:false,zoomControl:false,motionTracking:false,motionTrackingControl:false,fullscreenControl:false,
   });
+  sv.addListener('pano_changed',layoutSvPanels);sv.addListener('position_changed',layoutSvPanels);
   sv.addListener('pov_changed',layoutSvPanels);sv.addListener('zoom_changed',()=>{
     if(clampSurfaceZoom())return;
     layoutSvPanels();if(streetWalk)handleWalkState(streetWalk.getState());
@@ -1591,7 +1592,7 @@ addEventListener('keydown',event=>{
   if(!WALK_MODE||outdoorStopped||event.defaultPrevented||event.ctrlKey||event.metaKey||event.altKey)return;
   const target=event.target;
   if(target && (target.isContentEditable||target.closest?.('[role="slider"]')||['INPUT','TEXTAREA','SELECT','BUTTON'].includes(target.tagName)))return;
-  const actions={w:'forward',W:'forward',ArrowUp:'forward',s:'backward',S:'backward',ArrowDown:'backward',a:'left',A:'left',ArrowLeft:'left',d:'right',D:'right',ArrowRight:'right',PageUp:'look-up',PageDown:'look-down','+':'zoom-in','-':'zoom-out'};
+  const actions={w:'forward',W:'forward',ArrowUp:'forward',ArrowDown:'backward',a:'left',A:'left',ArrowLeft:'left',d:'right',D:'right',ArrowRight:'right',PageUp:'look-up',PageDown:'look-down','+':'zoom-in','-':'zoom-out'};
   if(event.key==='e'||event.key==='E'){
     inspectVisibleSurface();
     return;
@@ -1602,7 +1603,7 @@ addEventListener('keydown',event=>{
   streetWalk?.command({action,hold:['forward','backward'].includes(action)});
 },true);
 function releaseWalk(){if(WALK_MODE)streetWalk?.command({action:'release'});}
-addEventListener('keyup',event=>{if(['w','W','s','S','ArrowUp','ArrowDown'].includes(event.key))releaseWalk();},true);
+addEventListener('keyup',event=>{if(['w','W','ArrowUp','ArrowDown'].includes(event.key))releaseWalk();},true);
 addEventListener('blur',releaseWalk);
 document.addEventListener('visibilitychange',()=>{if(document.hidden){closePlayerRemote();releaseWalk();routeWalk.cancel();screenAudio.mute();}});
 $('streetview').addEventListener('pointerdown',()=>{releaseWalk();manualSurfaceInteraction()},true);
@@ -1763,7 +1764,7 @@ const mappedMusic=PedestrianMusic.create({load:()=>PedestrianMusic.fetchCatalog(
   if(!mappedMusicPlayer){
    mappedPreviousPlayer=screenPlayers.get('jardinets-main')||null;mappedPreviousPlayer?.mute();
    mappedMusicPlayer=ScreenPlayer.create({items,playlists,initialIndex:items.indexOf(item),createVideo:()=>document.createElement('video'),createImage:()=>new Image(),
-    onState:state=>{signMapping.setMusicState({number:mappedMusicNumber,...state});console.info('[Mapping] Música',JSON.stringify({number:mappedMusicNumber,...state}));emitPlayerState();},
+    onState:state=>{signMapping.setMusicState({number:mappedMusicNumber,artist:items.find(i=>i.id===state.contentId)?.artist,...state});console.info('[Mapping] Música',JSON.stringify({number:mappedMusicNumber,...state}));emitPlayerState();},
     onMedia:()=>{if(mappedMusicPlayer)screenAudio.mediaChanged('jardinets-main');}
    });mappedMusicPlayer.library=library;screenPlayers.set('jardinets-main',mappedMusicPlayer);
   }else{mappedMusicPlayer.refreshCatalog(library);mappedMusicPlayer.library=library;mappedMusicPlayer.command({action:'content',contentId:item.id});mappedMusicPlayer.command({action:'play'});}
@@ -1864,8 +1865,9 @@ function liveTick(){
       const dz = ((svKeys.PageUp?1:0) - (svKeys.PageDown?1:0)) * 0.8 * _dt;
       if (dz) sv.setZoom(Math.max(0.4, Math.min(3, z + dz)));
     }
+    layoutSvPanels();
     if (!activeSvView.panels || !surfacesHere().length) { $('sv-signage').classList.remove('show','sv-vis'); return; }
-    layoutSvPanels();   // TRACKING: reproyecta cada frame según la cámara (giro/movimiento)
+    //   // TRACKING: reproyecta cada frame según la cámara (giro/movimiento)
     for(const surface of surfacesHere()){const cv=$(surface.elementId).firstElementChild;drawChannel(cv.getContext('2d'),cv.width,cv.height,surface);}
     if (CAL_HUD){ updateCalHud(true, false); drawSvGrid(); }
     return;
