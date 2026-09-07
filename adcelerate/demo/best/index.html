@@ -13,12 +13,12 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r19.1109">
-<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r19.1109">
-<script src="../js/outdoor-sites.js?v=07.09.2026.r19.1109"></script>
-<script src="../js/urban-route.js?v=07.09.2026.r19.1109"></script>
-<script src="../js/dooh-surfaces.js?v=07.09.2026.r19.1109"></script>
-<script src="../js/outdoor-context.js?v=07.09.2026.r19.1109"></script>
+<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r20.1111">
+<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r20.1111">
+<script src="../js/outdoor-sites.js?v=07.09.2026.r20.1111"></script>
+<script src="../js/urban-route.js?v=07.09.2026.r20.1111"></script>
+<script src="../js/dooh-surfaces.js?v=07.09.2026.r20.1111"></script>
+<script src="../js/outdoor-context.js?v=07.09.2026.r20.1111"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
   const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
@@ -203,7 +203,7 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r19.1109"><link rel="stylesheet" href="../css/hidden-ui.css?v=07.09.2026.r19.1109"><script defer src="../js/hidden-ui.js?v=07.09.2026.r19.1109"></script><script src="../js/interactive-scene.js?v=07.09.2026.r19.1109"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=07.09.2026.r19.1109"></head>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r20.1111"><link rel="stylesheet" href="../css/hidden-ui.css?v=07.09.2026.r20.1111"><script defer src="../js/hidden-ui.js?v=07.09.2026.r20.1111"></script><script src="../js/interactive-scene.js?v=07.09.2026.r20.1111"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=07.09.2026.r20.1111"></head>
 <body>
 
 <div id="app">
@@ -354,13 +354,13 @@
   </div>
 </div>
 
-<script src="street-walk.js?v=07.09.2026.r19.1109"></script>
-<script src="../js/cenital-panel.js?v=07.09.2026.r19.1109"></script><script src="../js/walk-overview.js?v=07.09.2026.r19.1109"></script><script src="walk-orientation.js?v=07.09.2026.r19.1109"></script><script src="route-walk.js?v=07.09.2026.r19.1109"></script>
-<script src="../js/player-library.js?v=07.09.2026.r19.1109"></script>
-<script src="screen-player.js?v=07.09.2026.r19.1109"></script>
-<script src="screen-audio.js?v=07.09.2026.r19.1109"></script>
-<script src="surface-focus.js?v=07.09.2026.r19.1109"></script>
-<script src="camera-path.js?v=07.09.2026.r19.1109"></script>
+<script src="street-walk.js?v=07.09.2026.r20.1111"></script>
+<script src="../js/cenital-panel.js?v=07.09.2026.r20.1111"></script><script src="../js/walk-overview.js?v=07.09.2026.r20.1111"></script><script src="walk-orientation.js?v=07.09.2026.r20.1111"></script><script src="route-walk.js?v=07.09.2026.r20.1111"></script>
+<script src="../js/player-library.js?v=07.09.2026.r20.1111"></script>
+<script src="screen-player.js?v=07.09.2026.r20.1111"></script>
+<script src="screen-audio.js?v=07.09.2026.r20.1111"></script>
+<script src="surface-focus.js?v=07.09.2026.r20.1111"></script>
+<script src="camera-path.js?v=07.09.2026.r20.1111"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -1737,8 +1737,17 @@ function drawSvGrid(){
 // coloca cada pantalla admira.tv sobre su panel con warp de perspectiva de 4 esquinas.
 // Si hay anclaje al mundo (SV_PANEL_WORLD), reproyecta según la cámara actual (TRACKING:
 // las pantallas siguen a los paneles al girar/moverse). Si no, usa las fracciones fijas.
+let hiddenNavigation=false,savedNavigationLinks=true;
+function syncHiddenNavigation(){
+ if(!sv)return;const hiding=document.documentElement.classList.contains('ui-hidden');
+ if(hiding===hiddenNavigation)return;hiddenNavigation=hiding;
+ if(hiding)savedNavigationLinks=sv.get('linksControl')??true;
+ sv.setOptions({linksControl:hiding?false:(remoteSession?false:savedNavigationLinks)});
+}
+addEventListener('resize',syncHiddenNavigation);
 const signMapping=InteractiveScene.create({getPanorama:()=>sv,container:$('streetview'),isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onOpen:()=>{routeWalk.cancel();streetWalk?.command({action:'release'});}});
 function layoutSvPanels(){
+  syncHiddenNavigation();
   signMapping?.layout();
   const surfaces=surfacesHere();
   for(const surface of DoohSurfaces.all)if(!surfaces.some(s=>s.id===surface.id))$(surface.elementId).style.display='none';
