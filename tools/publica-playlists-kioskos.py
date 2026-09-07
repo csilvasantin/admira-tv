@@ -2,7 +2,8 @@
 """Publica la playlist temática de cada kiosko digital (Carlos, 7-sep-2026):
    Vila · News & Coffee → música | Jardinets → tecnología | Lesseps → creatividad.
 Fuente: Stock (api.admira.store/stock/list) filtrado por etiquetas; destino:
-brain.digitalavatar.ai/control/playlist?screen=<pantalla del kiosko>, que leen canal.html
+brain.digitalavatar.ai/control/playlist?screen=<pantalla>-tema (la FUENTE; <pantalla> a secas es el espejo
+de lo que emite el teléfono), que leen canal.html
 (teléfonos en sincro) y el gemelo adcelerate/demo/best (mismo reloj, mismo fotograma).
 OJO: el worker guarda la playlist con TTL de 24 h → hay que volver a publicar cada día
 (cron/launchd) o subir el TTL en omnipublicity-api. Uso: python3 tools/publica-playlists-kioskos.py [--dry]"""
@@ -26,7 +27,7 @@ def main():
                 "url": i["url"], "thumb": i.get("thumbnail") or "", "dur": DUR} for i in listas[tema]]
         print(f"{screen} ← {tema}: {len(its)} piezas" + (" (dry)" if dry else ""))
         if dry or not its: continue
-        r = urllib.request.Request("https://brain.digitalavatar.ai/control/playlist", data=json.dumps({"screen": screen, "items": its}).encode(),
+        r = urllib.request.Request("https://brain.digitalavatar.ai/control/playlist", data=json.dumps({"screen": screen + "-tema", "items": its}).encode(),
                                    headers={**UA, "Content-Type": "application/json"})
         print("  ", urllib.request.urlopen(r).read().decode()[:80])
 if __name__ == "__main__": main()

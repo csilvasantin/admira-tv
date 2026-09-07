@@ -13,12 +13,12 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r15.1055">
-<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r15.1055">
-<script src="../js/outdoor-sites.js?v=07.09.2026.r15.1055"></script>
-<script src="../js/urban-route.js?v=07.09.2026.r15.1055"></script>
-<script src="../js/dooh-surfaces.js?v=07.09.2026.r15.1055"></script>
-<script src="../js/outdoor-context.js?v=07.09.2026.r15.1055"></script>
+<link rel="stylesheet" href="../css/admira-tokens.css?v=07.09.2026.r16.1058">
+<link rel="stylesheet" href="../css/style.css?v=07.09.2026.r16.1058">
+<script src="../js/outdoor-sites.js?v=07.09.2026.r16.1058"></script>
+<script src="../js/urban-route.js?v=07.09.2026.r16.1058"></script>
+<script src="../js/dooh-surfaces.js?v=07.09.2026.r16.1058"></script>
+<script src="../js/outdoor-context.js?v=07.09.2026.r16.1058"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
   const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
@@ -203,7 +203,7 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r15.1055"></head>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=07.09.2026.r16.1058"></head>
 <body>
 
 <div id="app">
@@ -354,13 +354,13 @@
   </div>
 </div>
 
-<script src="street-walk.js?v=07.09.2026.r15.1055"></script>
-<script src="../js/cenital-panel.js?v=07.09.2026.r15.1055"></script><script src="../js/walk-overview.js?v=07.09.2026.r15.1055"></script><script src="walk-orientation.js?v=07.09.2026.r15.1055"></script><script src="route-walk.js?v=07.09.2026.r15.1055"></script>
-<script src="../js/player-library.js?v=07.09.2026.r15.1055"></script>
-<script src="screen-player.js?v=07.09.2026.r15.1055"></script>
-<script src="screen-audio.js?v=07.09.2026.r15.1055"></script>
-<script src="surface-focus.js?v=07.09.2026.r15.1055"></script>
-<script src="camera-path.js?v=07.09.2026.r15.1055"></script>
+<script src="street-walk.js?v=07.09.2026.r16.1058"></script>
+<script src="../js/cenital-panel.js?v=07.09.2026.r16.1058"></script><script src="../js/walk-overview.js?v=07.09.2026.r16.1058"></script><script src="walk-orientation.js?v=07.09.2026.r16.1058"></script><script src="route-walk.js?v=07.09.2026.r16.1058"></script>
+<script src="../js/player-library.js?v=07.09.2026.r16.1058"></script>
+<script src="screen-player.js?v=07.09.2026.r16.1058"></script>
+<script src="screen-audio.js?v=07.09.2026.r16.1058"></script>
+<script src="surface-focus.js?v=07.09.2026.r16.1058"></script>
+<script src="camera-path.js?v=07.09.2026.r16.1058"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -1180,8 +1180,18 @@ async function syncClockRefresh(){
     const d = await fetch(SYNC_STATE_URL + '?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json());
     if (d && Array.isArray(d.items) && d.items.length){ syncClock.master = d.items; syncClock.slotMs = d.slotMs || 20000; syncClock.offset = (d.serverNow || Date.now()) - Date.now(); syncClock.at = Date.now(); }
     for (const [site, screen] of Object.entries(SITE_SCREEN)){
-      try{ const p = await fetch(SYNC_PLAYLIST_URL + encodeURIComponent(screen) + '&t=' + Date.now(), { cache: 'no-store' }).then(r => r.json());
-        syncClock.own.set(site, (p && Array.isArray(p.items) && p.items.length) ? p.items : null); }catch(_){ /* sin playlist propia: máster */ }
+      // <screen>-tema = playlist programada del kiosko (fuente); <screen> = espejo de lo que emite
+      // el teléfono, con las duraciones reales que descubre. Mismos ids → misma línea de tiempo.
+      try{
+        const p = await fetch(SYNC_PLAYLIST_URL + encodeURIComponent(screen + '-tema') + '&t=' + Date.now(), { cache: 'no-store' }).then(r => r.json());
+        let items = (p && Array.isArray(p.items) && p.items.length) ? p.items : null;
+        if (items){
+          try{ const m = await fetch(SYNC_PLAYLIST_URL + encodeURIComponent(screen) + '&t=' + Date.now(), { cache: 'no-store' }).then(r => r.json());
+            const durs = new Map(((m && m.items) || []).map(i => [String(i.id), Number(i.dur) || 0]));
+            items = items.map(i => durs.get(String(i.id)) > 0 ? { ...i, dur: durs.get(String(i.id)) } : i); }catch(_){ /* sin espejo aún */ }
+        }
+        syncClock.own.set(site, items);
+      }catch(_){ /* sin playlist propia: máster */ }
     }
   }catch(_){ /* sin máster: el bucle local sigue */ }
 }

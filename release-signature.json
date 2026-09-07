@@ -1,9 +1,9 @@
 {
-  "version": "v.07.09.2026.r15.10:55",
+  "version": "v.07.09.2026.r16.10:58",
   "signature": "NeoMBP14 · MacBookProNegro14",
   "agent": "NeoMBP14",
   "machine": "MacBookProNegro14",
   "day": "07.09.2026",
-  "time": "10:55",
-  "evidence": "canal.html: una pantalla sin orquestación (playout autonomous) obedece la SINCRO remota de su circuito (/locations/mode) en vez de quedar en local forzado; así los teléfonos-kiosko entran en sincro con su playlist propia. Misión Hoy #309."
+  "time": "10:58",
+  "evidence": "Playlist temática del kiosko en control/playlist?screen=<pantalla>-tema (fuente) separada del espejo <pantalla> (lo que emite, con duraciones reales): canal, gemelo y tools/publica-playlists-kioskos.py. Evita que el arranque en local pise el tema. Misión Hoy #309."
 }
