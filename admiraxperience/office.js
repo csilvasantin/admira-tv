@@ -80,7 +80,7 @@
    const bounds=new google.maps.LatLngBounds();
    for(const office of sites.all){bounds.extend(office.position);const marker=new Marker({map,position:office.position,label:{text:office.id==='santa-rosa'?'1':'2',color:'#fff'},title:'AdmiraXperience · '+office.name});marker.addListener('click',()=>openOffice(office));}
    map.fitBounds(bounds,35);line=new Polyline({map,strokeColor:'#376c42',strokeOpacity:.85,strokeWeight:4});positionMarker=new Marker({map,icon:{path:google.maps.SymbolPath.CIRCLE,scale:5,fillColor:'#234f37',fillOpacity:1,strokeWeight:2,strokeColor:'#fff'}});
-   for(const office of sites.all){const node=await getPano({location:office.position,radius:35,source:'outdoor',preference:'nearest'});if(sites.distance(node.position,office.position)>35)throw Error('far-photo');entries.set(office.id,node);}
+   for(const office of sites.all){const node=await getPano({location:office.position,radius:35,sources:[google.maps.StreetViewSource.GOOGLE,google.maps.StreetViewSource.OUTDOOR],preference:'nearest'});if(sites.distance(node.position,office.position)>35)throw Error('far-photo');entries.set(office.id,node);}
    const entry=entries.get(selected.id);
    panorama=new StreetViewPanorama($('street'),{pano:entry.id,pov:{heading:sites.bearing(entry.position,selected.position),pitch:0},zoom:1,disableDefaultUI:true,linksControl:true,clickToGo:true,scrollwheel:false,showRoadLabels:true,motionTracking:false});
    walker=StreetWalk.create({panorama,service,initialPano:entry.id,homePano:entry.id,homePov:{heading:sites.bearing(entry.position,selected.position),pitch:0},onState});
