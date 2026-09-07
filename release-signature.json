@@ -1,9 +1,9 @@
 {
-  "version": "v.07.09.2026.r14.10:51",
+  "version": "v.07.09.2026.r15.10:55",
   "signature": "NeoMBP14 · MacBookProNegro14",
   "agent": "NeoMBP14",
   "machine": "MacBookProNegro14",
   "day": "07.09.2026",
-  "time": "10:51",
-  "evidence": "Gemelo: relee la playlist del máster cada 10 s para converger con las duraciones reales que descubre el canal (sincro al fotograma, misión Hoy #309)."
+  "time": "10:55",
+  "evidence": "canal.html: una pantalla sin orquestación (playout autonomous) obedece la SINCRO remota de su circuito (/locations/mode) en vez de quedar en local forzado; así los teléfonos-kiosko entran en sincro con su playlist propia. Misión Hoy #309."
 }

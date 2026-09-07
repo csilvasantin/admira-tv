@@ -42,9 +42,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=07.09.2026.r14.1051"></script>
+<script src="xpl-runtime.js?v=07.09.2026.r15.1055"></script>
 <script>
-  window.ADMIRA_VERSION='v.07.09.2026.r14.10:51';
+  window.ADMIRA_VERSION='v.07.09.2026.r15.10:55';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -3420,12 +3420,15 @@ function applyPlayoutAssignment(d){
     if(leader!==SYNC_GROUP_MASTER){ SYNC_GROUP_MASTER=leader; _syncSig=''; SYNC_REMOTE=null; fetchSyncState(); }
     if(!syncOn||playoutMode!=='sync'||leftExtended) setAdmiraSync(true);
   }else if(syncOn||playoutMode!=='local'||leftExtended){
-    SYNC_GROUP_MASTER='';
-    setAdmiraMode('local');
+    // Si la sincro la puso el modo remoto del circuito (pantalla sin orquestación), se respeta.
+    if(!(_autonomousPlan&&_autonomousRemoteSync)){ SYNC_GROUP_MASTER=''; setAdmiraMode('local'); }
   }
   _playoutRevision=rev;
-  return true;
+  // Sin orquestación para esta pantalla, el sondeo sigue hasta el modo remoto de su circuito
+  // (solo la sincro remota puede tomar el mando; ver pollMode).
+  return mode!=='autonomous';
 }
+let _autonomousPlan=false, _autonomousRemoteSync=false;
 async function pollMode(){
   if(!scr.circuit) return;   // sólo equipos registrados (con circuito/id)
   // Un modo bloqueado por la integración, URL_TAG o tag EN VIVO = decisión
@@ -3434,12 +3437,20 @@ async function pollMode(){
   try{
     const plan=await fetch(PLAYOUT_ASSIGNMENT_API+'?screen='+encodeURIComponent(scr.screen||scr.circuit)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
     if(_forcedTagPlayback) return; // la orden pudo entrar mientras esperaba la red
+    // «autonomous» = esta pantalla NO está en ninguna orquestación (grupo sincro/extendido de
+    // otros equipos). Antes se aplicaba como LOCAL forzado y el modo remoto de su circuito ya
+    // no se consultaba: un kiosko con su propia playlist de sincro nunca podía entrar en sincro
+    // (Carlos, 7-sep-2026, teléfonos↔kioskos). Ahora, sin orquestación, el modo SINCRO remoto
+    // del circuito sí manda; cualquier otro modo remoto sigue sin pisar el contrato.
+    _autonomousPlan=!!(plan&&plan.configured&&String(plan.mode||'autonomous')==='autonomous');
     if(applyPlayoutAssignment(plan)) return;
   }catch(_){}
   try{
     const d=await fetch(MODE_API+'?id='+encodeURIComponent(scr.circuit)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
     if(_forcedTagPlayback) return;
     if(!d||!d.mode) return;
+    if(_autonomousPlan&&canonicalAdmiraMode(d.mode)!=='sync') return;   // sin orquestación solo la sincro remota manda
+    _autonomousRemoteSync=_autonomousPlan;
     const m=canonicalAdmiraMode(d.mode);
     if(m!==playoutMode){ clearExtendedAssignment(); setAdmiraMode(m); flashCli('◆ modo remoto: '+m); }
   }catch(_){}
@@ -3849,6 +3860,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=07.09.2026.r14.1051" defer></script>
+  <script src="/assets/admira-version-watch.js?v=07.09.2026.r15.1055" defer></script>
 </body>
 </html>
