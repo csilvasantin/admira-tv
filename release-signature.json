@@ -1,9 +1,9 @@
 {
-  "version": "v.07.09.2026.r32.21:33",
+  "version": "v.07.09.2026.r33.21:55",
   "signature": "NeoMBP16 · MacBookPro16",
   "agent": "NeoMBP16",
   "machine": "MacBookPro16",
   "day": "07.09.2026",
-  "time": "21:33",
-  "evidence": "Rellenar por mando (fit-fill/fit-editorial) con previo apaisado encima del bloque de control cuando la pieza es horizontal; el marco girado 90° ya no se aplasta (max-width/flex-shrink del modo limpio). Un #ID del mando no se emite hasta estar entero en el equipo, tampoco con stream=1; la pastilla del tag muestra el % real de descarga del equipo destino y se rellena progresivamente."
+  "time": "21:55",
+  "evidence": "La sincro predescarga su playlist a disco (antes emitía online para siempre y el mando enseñaba 0 de 40 pendiente) y el inventario de la Cache API se adopta al arrancar: cada pieza se baja una sola vez por dispositivo y el mando lo ve desde el primer segundo. Rellenar queda en icono cuando el selector va estrecho en el CMS."
 }
