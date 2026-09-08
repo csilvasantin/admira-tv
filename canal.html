@@ -47,9 +47,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=08.09.2026.r7.1059"></script>
+<script src="xpl-runtime.js?v=08.09.2026.r8.1108"></script>
 <script>
-  window.ADMIRA_VERSION='v.08.09.2026.r7.10:59';
+  window.ADMIRA_VERSION='v.08.09.2026.r8.11:08';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -2467,6 +2467,19 @@ async function gotoPlaylistIndex(n){
 // /play<N> del mando o del gemelo: ventana forzada (sale de sincro/directo, la pieza va
 // hasta su final y pollMode devuelve la asignación remota) y emisión INMEDIATA por la url
 // en línea — forzado ya es excepción del disco-primero en play(); la caché se rellena detrás.
+// Índice COMPLETO del Stock (stock.admira.store/stock/index.json, ~930 piezas) sólo cuando un
+// /play<N> apunta fuera del feed de 300; cacheado 10 min. Mismo índice que usa el gemelo.
+let _stockFull=null,_stockFullAt=0;
+async function stockItemByNum(pn){
+  try{
+    if(!_stockFull||Date.now()-_stockFullAt>600000){
+      const r=await fetch('https://stock.admira.store/stock/index.json?t='+Date.now(),{cache:'no-store'});
+      const j=await r.json(); _stockFull=j.items||(Array.isArray(j)?j:[]); _stockFullAt=Date.now();
+    }
+    const it=_stockFull.find(x=>x&&Number(x.num)===pn&&x.url&&MEDIA.includes(x.type)); if(!it) return null;
+    const copy=Object.assign({},it); copy._num=pn; copy.num=pn; return copy;
+  }catch(_){ return null; }
+}
 async function forcePlayNow(it,label){
   if(!it) return 'ignored';
   const forcedState=beginForcedTagPlayback(label||('play:'+String(it.id||'')));
@@ -2593,14 +2606,20 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   else if(/^play\d+$/.test(cmd)){ pn=parseInt(cmd.slice(4),10); }
   if(pn!=null){
     if(isNaN(pn)){ flashCli('uso: /play<N>  (1-'+all.length+')'); return; }
-    const target=all.find(it=>it._num===pn);
-    if(!target){ flashCli('#'+pn+' no existe o no es reproducible'); return; }
-    // r7 (08-09-2026): en una pantalla SINCRONIZADA play(0,target) arrancaba la pieza y el
-    // tick de sincro la devolvía al índice del máster en el mismo segundo: el gemelo
-    // (viandante → play<N>) acusaba «executed» y el player «no hacía ni caso». Misma
-    // ventana forzada que goto-N, y se emite YA en línea (sin esperar la descarga).
-    forcePlayNow(target,'play'+pn).catch(()=>{});
-    flashCli('▶ asset #'+pn+' · '+String(target.title||target.prompt||'').slice(0,24));
+    // r8 (08-09-2026): el feed del canal (INDEX = últimas 300 del Stock) no llega a las piezas
+    // antiguas: el gemelo pedía #722 (Westlife, ago-2026), el canal decía «no existe» y aun
+    // así el mando acusaba «executed». Se busca en el feed, en la playlist y, si no, en el
+    // índice COMPLETO del Stock (stockItemByNum).
+    const go=(target)=>{
+      if(!target){ flashCli('#'+pn+' no existe o no es reproducible'); return; }
+      // r7: en una pantalla SINCRONIZADA play(0,target) arrancaba la pieza y el tick de sincro
+      // la devolvía al índice del máster en el mismo segundo. Misma ventana forzada que goto-N,
+      // y se emite YA en línea (sin esperar la descarga).
+      forcePlayNow(target,'play'+pn).catch(()=>{});
+      flashCli('▶ asset #'+pn+' · '+String(target.title||target.prompt||'').slice(0,24));
+    };
+    const local=all.find(it=>it&&it._num===pn)||playlist.find(it=>it&&(it._num===pn||Number(it.num)===pn));
+    if(local) go(local); else stockItemByNum(pn).then(go);
     return;
   }
   // /import <url> → importa a pixeria.com/stock (igual que @AdmiraXPBot en Telegram).
@@ -4071,6 +4090,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=08.09.2026.r7.1059" defer></script>
+  <script src="/assets/admira-version-watch.js?v=08.09.2026.r8.1108" defer></script>
 </body>
 </html>
