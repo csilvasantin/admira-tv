@@ -11,6 +11,7 @@ import json, re, sys, urllib.request
 UA = {"User-Agent": "Mozilla/5.0 admira-tv/playlists"}
 KIOSKOS = {"samsung-galaxy-fold-9-mupi": "musica",   # Fold 9 · Vila (News & Coffee) — pantalla real
            "sim-gracia-kiosko": "musica",            # Vila · reserva (preview configurada)
+           "ipad-luna-mupi": "musica",               # iPad (9ª gen) · Vila · música (alta 08-09-2026)
            "samsung-galaxy-fold-8-mupi": "tecnologia",  # Fold 8 · Jardinets
            "iphone-mupi": "creatividad",             # iPhone 17 · Lesseps (app tv.admira.player.ipad)
            "iphone17-mupi": "creatividad",           # iPhone 17 · Lesseps (app antigua)
