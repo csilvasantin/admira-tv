@@ -20,6 +20,15 @@ KIOSKOS = {"samsung-galaxy-fold-9-mupi": "musica",   # Fold 9 · Vila (News & Co
 TAGS = {"tecnologia": {"tecnología", "tecnologia", "tech", "ia", "inteligencia artificial", "robótica", "innovación", "innovation", "ai"},
         "creatividad": {"creativity", "creatividad", "diseño", "inspiración", "animaciones", "animation", "arte", "cine", "creativetech"}}
 DUR = 20
+
+def perfil_de(i):
+    """Perfil de audiencia al que casa mejor una pieza, por sus etiquetas/título (heurística honesta)."""
+    t = " ".join(str(i.get(k) or "") for k in ("title", "tags", "comment")).lower()
+    if re.search(r"198\d|80s|ochent|billboard|retro|nostalg|guns n|berlin|top gun|huey lewis|communards|westlife|\*nsync|throwback", t): return "seniors"
+    if re.search(r"ia\b|inteligencia artificial|#ai|trend|tiktok|nyla stone|soul blues|shorts|humor|random|gpt|astra|3d|innovation|tech", t): return "jovenes"
+    if re.search(r"familia|vida m[ií]a|b[eé]same|cari[nñ]o|mam[aá]|amigo|ni[nñ]|kids|orenes|ocio", t): return "familias"
+    return "turistas"
+
 def get(url):
     return json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA)))
 def main():
@@ -48,8 +57,10 @@ def main():
         except Exception: pass
     print(f"duraciones reales conocidas: {len(conocidas)}")
     for screen, tema in KIOSKOS.items():
-        its = [{"id": i["id"], "title": (i.get("title") or "")[:80], "type": "audio" if i.get("type") in ("music", "audio") else i["type"],
-                "url": i["url"], "thumb": i.get("thumbnail") or "", "dur": conocidas.get(i["id"], DUR)} for i in listas[tema]]
+        # PERFIL de audiencia por pieza (8-sep-2026): el gemelo elige la pieza según el viandante dominante
+        # (familias · jóvenes · turistas · seniors) y se la manda a la pantalla real por su número (#num).
+        its = [{"id": i["id"], "num": i.get("num"), "title": (i.get("title") or "")[:80], "type": "audio" if i.get("type") in ("music", "audio") else i["type"],
+                "url": i["url"], "thumb": i.get("thumbnail") or "", "dur": conocidas.get(i["id"], DUR), "perfil": perfil_de(i)} for i in listas[tema]]
         print(f"{screen} ← {tema}: {len(its)} piezas" + (" (dry)" if dry else ""))
         if dry or not its: continue
         r = urllib.request.Request("https://brain.digitalavatar.ai/control/playlist", data=json.dumps({"screen": screen + "-tema", "items": its}).encode(),
