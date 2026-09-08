@@ -1,9 +1,9 @@
 {
-  "version": "v.08.09.2026.r4.10:28",
-  "signature": "NeoMBP16 · MacBookPro16",
-  "agent": "NeoMBP16",
-  "machine": "MacBookPro16",
+  "version": "v.08.09.2026.r5.10:31",
+  "signature": "NeoMBP14 · MacBookProNegro14",
+  "agent": "NeoMBP14",
+  "machine": "MacBookProNegro14",
   "day": "08.09.2026",
-  "time": "10:28",
-  "evidence": "Autoactualización en kiosko: el canal en embed/clean vigila version.json y se recarga solo al cambiar de pieza cuando hay release nuevo; la portada recupera el literal ADMIRA_VERSION que sondean los players macOS (admiranext-mupi llevaba 28 releases atrás); el botón VERSIÓN NUEVA del avisador no se pinta en pantallas públicas. Rebasado sobre la r3 del MBP14."
+  "time": "10:31",
+  "evidence": "Gemelo Jardinets: al pulsar una persona, su vídeo #musica también va a la pantalla real (iPad) por play<num>; reenvío en cada bucle. Misión Hoy #77 (continuación)."
 }
