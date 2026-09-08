@@ -30,7 +30,8 @@
 <!-- r58 · RANURA EDITORIAL: imagen, audio e interactivo ocupan la duración de parrilla/borrador (slotSeconds); el audio se recorta a su longitud real y proof-of-play, /signage/now y /control/playlist cuentan lo mismo que se emite. -->
 <!-- r58 · GOTO EN SINCRO: el salto desde la playlist del mando (goto-N) abre la ventana forzada de un #ID: sale de sincro, la pieza va hasta el final y pollMode devuelve la asignación remota. Antes la sincro la revertía al cargar el vídeo. -->
 <!-- r59 · RELLENAR: ajuste de pantalla por mando (fit-fill / fit-editorial): el marco ocupa todo el dispositivo, girado o no, y la media se escala sin recortar; se persiste por pantalla y se reporta en la telemetría (display.fit). El marco girado ya no se aplasta (max-width/flex-shrink). Un #ID del mando nunca se emite online mientras baja, ni con stream=1. -->
-<!-- BUILD canal v.07.09.2026.r59 · RELLENAR: el mando decide si el marco es editorial 9:16 o llena el dispositivo; hereda r58 (ranura editorial y goto en sincro). -->
+<!-- r60 · AUTOACTUALIZACIÓN EN KIOSKO: en embed/clean el canal vigila /version.json y se recarga solo al cambiar de pieza cuando hay release nuevo; el botón «VERSIÓN NUEVA» del avisador compartido nunca se pinta en una pantalla pública. -->
+<!-- BUILD canal v.08.09.2026.r60 · AUTOACTUALIZACIÓN EN KIOSKO; hereda r59 (Rellenar, #ID nunca online, sincro predescarga). -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
@@ -2090,7 +2091,7 @@ async function play(i, forced){
 }
 // antes de cada nuevo contenido, revisa si hay novedades en stock (nuevas
 // importaciones o tags/categorías editados) — con throttle para no saturar.
-function next(){ if(directOn) return; if(finishForcedTagPlayback()) return; if(PREVIEW.on){ play(cur+1); return; }
+function next(){ if(directOn) return; if(kioskReloadIfDue()) return; if(finishForcedTagPlayback()) return; if(PREVIEW.on){ play(cur+1); return; }
   // NOVEDAD AL AIRE: mientras dure su turno la pieza nueva se repite sola; al
   // agotarse, freshEnd() deja cur EN ella para que el loop siga por la siguiente
   // (o arranca otra novedad que hubiera entrado mientras).
@@ -2103,6 +2104,37 @@ function next(){ if(directOn) return; if(finishForcedTagPlayback()) return; if(P
   { const _ivl=(pendingImport||freshOn())?5000:Math.max(10,+cfg.refreshSec||30)*1000;
     if(Date.now()-_lastFeed>_ivl){ try{ loadFeed(false); }catch(_){} } } if(syncOn){ play(syncIndex()); return; } play(cur+1); }
 function prev(){ if(directOn) return; if(syncOn){ play(syncIndex()); return; } play(cur-1); }
+// ── AUTOACTUALIZACIÓN EN KIOSKO (r60) ────────────────────────────────────────────
+// Un player en emisión (embed/clean) no tiene a nadie que pulse «⟳ VERSIÓN NUEVA»: el
+// botón del avisador compartido salía en pantallas públicas (su clase .admira-stale pasa
+// la whitelist «adm» del always-on-top) y el código seguía siendo el de la carga. El
+// 08-sep admiranext-mupi llevaba 28 releases de retraso. Aquí el canal vigila
+// /version.json por su cuenta y, al cambiar la identidad del release, se recarga SOLO en
+// el siguiente cambio de pieza: nunca a mitad de una, y nunca durante una orden #ID o una
+// descarga en curso (con tope de 15 min para no eternizarse). El SW es network-first: al
+// recargar coge el release publicado.
+let _releaseRef=null, _pendingReload=0;
+function releaseIdentity(d){ if(!d||typeof d!=='object') return ''; return [d.version||d.sello||'', d.gitFull||d.git||d.gitShort||'', d.deployedAt||'', d.signature||''].map(x=>String(x).trim()).filter(Boolean).join('|'); }
+async function kioskVersionCheck(){
+  if(!__adtvClean) return;
+  try{
+    const d=await fetch('/version.json?vw='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
+    const id=releaseIdentity(d); if(!id) return;
+    if(_releaseRef===null){ _releaseRef=id; return; }
+    if(id!==_releaseRef&&!_pendingReload){ _pendingReload=Date.now(); flashCli('⟳ versión nueva: se recarga al cambiar de pieza'); }
+  }catch(_){}
+}
+function kioskReloadIfDue(){
+  if(!_pendingReload) return false;
+  const busy=!!_forcedTagPlayback||!!_asapItemId||_dl.size>0;
+  if(busy&&Date.now()-_pendingReload<15*60000) return false;
+  try{ location.reload(); }catch(_){ return false; }
+  return true;
+}
+if(__adtvClean){
+  setTimeout(kioskVersionCheck,15000); setInterval(kioskVersionCheck,60000);
+  try{ const st=document.createElement('style'); st.textContent='.admira-stale{display:none!important}'; document.head.appendChild(st); }catch(_){}
+}
 
 function setPaused(p){
   paused=p; document.body.classList.toggle('paused',p); $('pause').textContent=p?'▶':'⏸';
