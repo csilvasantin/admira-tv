@@ -46,9 +46,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=08.09.2026.r1.0946"></script>
+<script src="xpl-runtime.js?v=08.09.2026.r2.0956"></script>
 <script>
-  window.ADMIRA_VERSION='v.08.09.2026.r1.09:46';
+  window.ADMIRA_VERSION='v.08.09.2026.r2.09:56';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -1540,6 +1540,35 @@ let _playTok=0;
 let _cache=null, _ready=new Set(), _dl=new Map(), _cBytes=0, _precaching=false, _precQ=[], _objURLs=new Map(), _lastCacheRep=0;
 const CACHE_TECH_KEY='adtv_cache_tech:'+(scr.screen||scr.circuit||scr.machine||'unbound');
 let _cacheTech=new Map(), _techQ=[], _techQueued=new Set(), _techBusy=false;
+// ── CÓDEC NO SOPORTADO (Neo, 8-sep-2026) ─────────────────────────────────────────────
+// El iPad Pro 2017 (A10X) no decodifica AV1 y 31 de los 40 vídeos del tema música lo son: el
+// canal creía emitir (latido, startedAt) y la pantalla quedaba NEGRA. En un dispositivo sin AV1:
+//   1) variante H.264 del Stock si existe (stock/<id>/asset-h264.mp4, la sube el equipo);
+//   2) si no, portada + título durante la pieza. La línea de tiempo de sincro no se toca.
+// Un vídeo que falla con MEDIA_ERR_SRC_NOT_SUPPORTED/DECODE (o carga sin pista de vídeo) queda
+// marcado (adtv_codec_bad) y la pieza se re-emite por el respaldo; salud lastReason='codec'.
+const AV1_OK=(()=>{ try{ return !!document.createElement('video').canPlayType('video/mp4; codecs="av01.0.08M.08"'); }catch(_){ return false; } })();
+let _codecBad=new Set(); try{ _codecBad=new Set(JSON.parse(LS('adtv_codec_bad','[]'))); }catch(_){}
+function codecBadMark(it,why){ try{ _codecBad.add(String(it.id)); save('adtv_codec_bad',JSON.stringify([..._codecBad].slice(-200))); }catch(_){} try{ guardState().lastReason='codec:'+(why||'?'); }catch(_){} }
+function codecKnownAV1(it){ try{ const t=_cacheTech.get(String(it.id)); return !!(t&&/AV1/.test(String(t.codecs||''))); }catch(_){ return false; } }
+function codecNeedsFallback(it){ return !AV1_OK && (codecKnownAV1(it)||_codecBad.has(String(it.id))); }
+const _h264Variant=new Map();
+async function h264VariantFor(it){
+  const u=String(it.url||''); const m=/^(https?:\/\/[^?#]*\/stock\/[^\/?#]+\/)asset\.mp4/i.exec(u); if(!m) return null;
+  const key=String(it.id||u); if(_h264Variant.has(key)) return _h264Variant.get(key);
+  const alt=m[1]+'asset-h264.mp4'; let ok=false;
+  try{ const r=await fetch(alt,{method:'HEAD',cache:'no-store'}); ok=r.ok; }catch(_){ ok=false; }
+  _h264Variant.set(key, ok?alt:null); return ok?alt:null;
+}
+function renderCodecCard(it,title){
+  const thumb=it.thumbnail||it.thumb||it.poster||'';
+  const d=document.createElement('div'); d.className='empty codec-card';
+  d.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#000;color:#cfe9f5;text-align:center;padding:24px';
+  if(thumb){ const im=document.createElement('img'); im.src=thumb; im.alt=title; im.style.cssText='max-width:86%;max-height:70%;object-fit:contain;border-radius:8px'; d.appendChild(im); }
+  const t=document.createElement('div'); t.textContent=title; t.style.cssText='font:600 22px/1.3 -apple-system,system-ui,sans-serif;max-width:90%'; d.appendChild(t);
+  const n=document.createElement('div'); n.textContent='// esta pantalla no decodifica este vídeo (AV1)'; n.style.cssText='font:12px ui-monospace,monospace;opacity:.55'; d.appendChild(n);
+  stage.appendChild(d); mediaEl=null;
+}
 try{ const saved=JSON.parse(LS(CACHE_TECH_KEY,'{}')); if(saved&&typeof saved==='object') _cacheTech=new Map(Object.entries(saved)); }catch(_){}
 function saveCacheTech(){ try{ localStorage.setItem(CACHE_TECH_KEY,JSON.stringify(Object.fromEntries([..._cacheTech.entries()].slice(-300)))); }catch(_){} }
 function bytesAscii(bytes){ let out=''; for(let i=0;i<bytes.length;i+=32768) out+=String.fromCharCode.apply(null,bytes.subarray(i,Math.min(bytes.length,i+32768))); return out; }
@@ -1937,16 +1966,24 @@ async function play(i, forced){
   // las excepciones (stream/sync/forzado/no-cacheable), la url online.
   const SRC=_csrc||it.url; it._fromCache=!!_csrc;
   if(k==='video'){
+    let VSRC=SRC;
+    if(codecNeedsFallback(it)){
+      const alt=await h264VariantFor(it); if(_tok!==_playTok) return;
+      if(alt){ VSRC=alt; it._fromCache=false; }
+      else { renderCodecCard(it,title); startAdv(syncOn?syncRemainingMs():editorialSec(it)*1000); if(syncOn){ clearTimeout(timer); timer=setTimeout(next,syncRemainingMs()); } return; }
+    }
     const v=document.createElement('video');
     try{ v.crossOrigin='anonymous'; }catch(_){}   // permite capturar el frame en canvas SI el asset trae CORS; si no, se reintenta sin él (onerror) → la emisión SIEMPRE se ve
     let _coRetry=false;
-    v.src=SRC; v.autoplay=true; v.playsInline=true; v.preload='auto';
+    v.src=VSRC; v.autoplay=true; v.playsInline=true; v.preload='auto';
     // Oculto hasta que el vídeo PINTE frames: así nunca se ve el botón de play nativo
     // del navegador (Samsung Internet/WebView) en el hueco de carga entre contenidos.
     v.style.opacity='0';
     const _reveal=()=>{ try{ v.style.opacity='1'; }catch(_){} };
     v.addEventListener('playing', _reveal, {once:true}); setTimeout(_reveal, 1200);
-    v.onloadedmetadata=()=>{ if(_tok!==_playTok) return; if(v.duration&&isFinite(v.duration)){
+    v.onloadedmetadata=()=>{ if(_tok!==_playTok) return;
+      if(!v.videoWidth&&!v.videoHeight&&!AV1_OK&&!_codecBad.has(String(it.id))&&VSRC===SRC){ codecBadMark(it,'sin-pista-video'); play(cur,it); return; }
+      if(v.duration&&isFinite(v.duration)){
       it._dur=Math.ceil(v.duration);
       // Devuelve la duración descubierta al máster. Antes sólo se corregía /signage/now:
       // la playlist seguía en dur:0 y el temporizador sincro mantenía el corte de 20 s.
@@ -1969,7 +2006,8 @@ async function play(i, forced){
       localInfoRender();
     } };
     v.onended=()=>syncOn?syncFinishCurrent():next();
-    v.onerror=()=>{ if(!_coRetry && v.crossOrigin){ _coRetry=true; try{ v.removeAttribute('crossorigin'); v.load(); v.play().catch(()=>{}); }catch(_){} return; }   // asset sin CORS: reintenta sin crossorigin (nunca se corta la emisión)
+    v.onerror=()=>{ const ec=v.error&&v.error.code; if((ec===4||ec===3)&&!_codecBad.has(String(it.id))&&VSRC===SRC){ codecBadMark(it,'err'+ec); play(cur,it); return; }   // códec no soportado → respaldo (variante H.264 o portada), sin romper la sincro
+      if(!_coRetry && v.crossOrigin){ _coRetry=true; try{ v.removeAttribute('crossorigin'); v.load(); v.play().catch(()=>{}); }catch(_){} return; }   // asset sin CORS: reintenta sin crossorigin (orta la emisión)
       setTimeout(next,600); };
     v.ontimeupdate=()=>{ if(v.duration&&!paused) bar.style.width=(v.currentTime/v.duration*100)+'%'; };
     mediaEl=v; applyAudio(); stage.appendChild(v);
@@ -3987,6 +4025,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=08.09.2026.r1.0946" defer></script>
+  <script src="/assets/admira-version-watch.js?v=08.09.2026.r2.0956" defer></script>
 </body>
 </html>
