@@ -1,9 +1,9 @@
 {
-  "version": "v.08.09.2026.r5.10:31",
+  "version": "v.08.09.2026.r6.10:40",
   "signature": "NeoMBP14 · MacBookProNegro14",
   "agent": "NeoMBP14",
   "machine": "MacBookProNegro14",
   "day": "08.09.2026",
-  "time": "10:31",
-  "evidence": "Gemelo Jardinets: al pulsar una persona, su vídeo #musica también va a la pantalla real (iPad) por play<num>; reenvío en cada bucle. Misión Hoy #77 (continuación)."
+  "time": "10:40",
+  "evidence": "canal: el respaldo por códec ya no salta el latido ni el proof-of-play (sin AV1 se pide la variante H.264 antes de intentar el vídeo; la tarjeta va por la rama de imagen). Corrige el iPad mudo que ignoraba los mandos."
 }
