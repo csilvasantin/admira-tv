@@ -11,7 +11,8 @@ import json, re, sys, urllib.request
 UA = {"User-Agent": "Mozilla/5.0 admira-tv/playlists"}
 KIOSKOS = {"samsung-galaxy-fold-9-mupi": "musica",   # Fold 9 · Vila (News & Coffee) — pantalla real
            "sim-gracia-kiosko": "musica",            # Vila · reserva (preview configurada)
-           "ipad-luna-mupi": "musica",               # iPad (9ª gen) · Vila · música (alta 08-09-2026)
+           "ipad-admin-mupi": "musica",              # iPad de Admin (iOS 17) · Vila · música (alta 08-09-2026)
+           "ipad-luna-mupi": "musica",               # iPad de Luna · Vila · música
            "samsung-galaxy-fold-8-mupi": "tecnologia",  # Fold 8 · Jardinets
            "iphone-mupi": "creatividad",             # iPhone 17 · Lesseps (app tv.admira.player.ipad)
            "iphone17-mupi": "creatividad",           # iPhone 17 · Lesseps (app antigua)
@@ -34,9 +35,21 @@ def main():
     mus += [i for i in vis if i.get("type") == "video" and i not in mus and (re.search(r"#(m[úu]sica|music)\w*", texto(i), re.I)
             or any(re.fullmatch(r"m[úu]sica|music", str(t), re.I) for t in (i.get("tags") or [])))]
     listas["musica"] = mus[:40]
+    # DURACIONES REALES en el tema (8-sep-2026): una pantalla recién dada de alta arrancaba con 20 s
+    # por pieza mientras las veteranas ya sabían la duración real → líneas de tiempo distintas hasta
+    # completar una vuelta (el iPad iba por la pieza 35 y el Fold 9 por la 22). Se toman de los espejos
+    # (<pantalla>, lo que cada teléfono ha descubierto) de todas las pantallas del mismo tema.
+    conocidas = {}
+    for screen in KIOSKOS:
+        try:
+            for it in get("https://brain.digitalavatar.ai/control/playlist?screen=" + screen).get("items", []):
+                d = int(it.get("dur") or 0)
+                if d > 0 and d != DUR: conocidas[it["id"]] = d
+        except Exception: pass
+    print(f"duraciones reales conocidas: {len(conocidas)}")
     for screen, tema in KIOSKOS.items():
         its = [{"id": i["id"], "title": (i.get("title") or "")[:80], "type": "audio" if i.get("type") in ("music", "audio") else i["type"],
-                "url": i["url"], "thumb": i.get("thumbnail") or "", "dur": DUR} for i in listas[tema]]
+                "url": i["url"], "thumb": i.get("thumbnail") or "", "dur": conocidas.get(i["id"], DUR)} for i in listas[tema]]
         print(f"{screen} ← {tema}: {len(its)} piezas" + (" (dry)" if dry else ""))
         if dry or not its: continue
         r = urllib.request.Request("https://brain.digitalavatar.ai/control/playlist", data=json.dumps({"screen": screen + "-tema", "items": its}).encode(),
