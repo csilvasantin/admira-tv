@@ -47,9 +47,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=08.09.2026.r6.1040"></script>
+<script src="xpl-runtime.js?v=08.09.2026.r7.1059"></script>
 <script>
-  window.ADMIRA_VERSION='v.08.09.2026.r6.10:40';
+  window.ADMIRA_VERSION='v.08.09.2026.r7.10:59';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -1107,7 +1107,7 @@ function emitRecord(it){
 function emitFlush(){ _emitTimer=null; if(!_emitDirty) return;
   const t=_emitTally; if(!t||!scr.circuit) return;   // sin circuito no hay a quién imputar
   _emitDirty=false;
-  try{ fetch(EMIT_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({
+  try{ fetch(EMIT_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
     loc:scr.circuit, screen:scr.screen||(scr.circuit+'-led'), date:_emitDate,
     totalPlays:t.totalPlays, totalSecs:t.totalSecs, byType:t.byType, bySeg:t.bySeg, assets:t.assets })}).catch(()=>{}); }catch(_){}
 }
@@ -1164,7 +1164,10 @@ window.addEventListener('online',()=>refreshDeviceTelemetry(true));
 window.addEventListener('offline',()=>refreshDeviceTelemetry(true));
 // loc/locName → el worker refleja esta pantalla en /signage/screens (vista viva
 // unificada "qué equipo emite qué ahora"). loc = circuito; locName = nombre legible.
-function _postNow(item){ try{ if(item) item.audio=playerAudioState(); DEVICE_TELEMETRY.audio=playerAudioState(); fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
+// Sin keepalive (r7): en WebKit de iOS 17 la cuota de 64 KiB de cuerpos keepalive no se libera
+// y, tras unos POST, todos los siguientes se rechazan en silencio → el iPad latía UNA vez por
+// carga y perdía proof-of-play. Estos envíos ocurren con la página viva: fetch normal.
+function _postNow(item){ try{ if(item) item.audio=playerAudioState(); DEVICE_TELEMETRY.audio=playerAudioState(); fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},
   body:JSON.stringify({ screen:scr.screen, producer:TELEMETRY_PRODUCER, item, standby:false, role:'canal', version:window.ADMIRA_VERSION||'', device:DEVICE_TELEMETRY, health:guardHealth(),
     loc:scr.circuit||'', locName:scr.name||scr.circuit||'', machine:scr.machine||'' })}).catch(()=>{}); }catch(_){} }
 // ── GUARDIA DE EMISIÓN (06-09-2026, DCL-6cfb6dea, foco admira.tv · players Android/iOS) ─────────
@@ -1251,7 +1254,7 @@ function signageNowPush(it){
 // /locations/cmd, que ya sondean todos los players: mac/win/linux/ios/android).
 // El heartbeat sigue latiendo con standby:true → la pantalla NO se cuenta como caída.
 var _standby=false, _sbKeep=null;   // var (no let): setLive lo consulta antes de esta línea
-function _postStandby(){ try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
+function _postStandby(){ try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},
   body:JSON.stringify({ screen:scr.screen, producer:TELEMETRY_PRODUCER, standby:true, role:'canal', version:window.ADMIRA_VERSION||'', device:DEVICE_TELEMETRY,
     loc:scr.circuit||'', locName:scr.name||scr.circuit||'', machine:scr.machine||'', ts:Date.now() })}).catch(()=>{}); }catch(_){} }
 function standbyOn(on){
@@ -1293,7 +1296,7 @@ function signagePlaylistPush(){
   const sig=items.map(i=>[i.id,i.url,i.thumb,i.dur||0].join('~')).join('|');
   if(sig===_plSig) return;
   _plSig=sig;
-  try{ fetch(PLAYLIST_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
+  try{ fetch(PLAYLIST_API,{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({ screen:scr.screen, items })}).catch(()=>{ _plSig=''; }); }catch(_){ _plSig=''; }   // si falla, reintenta en el próximo rebuild
 }
 
@@ -1883,7 +1886,7 @@ function cacheReport(){ if(!scr.screen) return; _lastCacheRep=Date.now();
   const pl=cacheReportPayload();
   const sig=(pl.ready||[]).join(',')+'|'+(pl.total??'')+'|'+_dl.size+'|'+_cBytes+'|'+(pl.contents||[]).map(x=>[x.id,x.bytes,x.width,x.height,x.duration,x.bitrate,x.codec].join(':')).join(',');
   if(sig===_cacheSig && _dl.size===0 && Date.now()-_cacheSentAt<55000){ cacheBadge(); return; }
-  try{ fetch(CACHE_API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify(pl)})
+  try{ fetch(CACHE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pl)})
     .then(r=>{ if(r&&r.ok){ _cacheSig=sig; _cacheSentAt=Date.now(); } else { _cacheSig=''; } })
     .catch(()=>{ _cacheSig=''; }); }catch(_){ _cacheSig=''; }
   cacheBadge();
@@ -2461,6 +2464,19 @@ async function gotoPlaylistIndex(n){
   _asapItemId=null; markForcedTagPlaying(forcedState,it);
   await play(n,it); flashCli('🎮 goto #'+(n+1)); return 'executed';
 }
+// /play<N> del mando o del gemelo: ventana forzada (sale de sincro/directo, la pieza va
+// hasta su final y pollMode devuelve la asignación remota) y emisión INMEDIATA por la url
+// en línea — forzado ya es excepción del disco-primero en play(); la caché se rellena detrás.
+async function forcePlayNow(it,label){
+  if(!it) return 'ignored';
+  const forcedState=beginForcedTagPlayback(label||('play:'+String(it.id||'')));
+  disableAdmiraSync();
+  if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
+  try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}
+  if(!ownsForcedTagPlayback(forcedState)) return 'ignored';
+  _asapItemId=null; markForcedTagPlaying(forcedState,it);
+  await play(0,it); return 'executed';
+}
 function clearTaggedContent(){
   taggedContentNums=[]; saveTaggedContent(); _asapItemId=null;
   if(_forcedTagPlayback) releaseForcedTagPlayback(_forcedTagPlayback);
@@ -2579,8 +2595,11 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
     if(isNaN(pn)){ flashCli('uso: /play<N>  (1-'+all.length+')'); return; }
     const target=all.find(it=>it._num===pn);
     if(!target){ flashCli('#'+pn+' no existe o no es reproducible'); return; }
-    if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
-    play(0,target);                                  // forzado: manda por encima del filtro
+    // r7 (08-09-2026): en una pantalla SINCRONIZADA play(0,target) arrancaba la pieza y el
+    // tick de sincro la devolvía al índice del máster en el mismo segundo: el gemelo
+    // (viandante → play<N>) acusaba «executed» y el player «no hacía ni caso». Misma
+    // ventana forzada que goto-N, y se emite YA en línea (sin esperar la descarga).
+    forcePlayNow(target,'play'+pn).catch(()=>{});
     flashCli('▶ asset #'+pn+' · '+String(target.title||target.prompt||'').slice(0,24));
     return;
   }
@@ -3507,7 +3526,7 @@ const XPLCanal = (function(){
     const piece=(r.assets&&r.assets[0])||('tema:'+((r.tag||r.category)||'auto'));
     const sig=idx+'|'+piece+'|'+s.gender+'|'+s.age;
     if(sig===lastHitSig) return; lastHitSig=sig;
-    try{ fetch(SEG_URL+'/hit',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
+    try{ fetch(SEG_URL+'/hit',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ id:scr.circuit||'', screen:scr.screen||'', ruleId:r.id||('r'+idx), ruleIdx:idx,
         piece:String(piece).slice(0,80), aud:{gender:s.gender,age:s.age,faces:s.count}, slot:s.slot })}).catch(()=>{}); }catch(_){}
   }
@@ -4052,6 +4071,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=08.09.2026.r6.1040" defer></script>
+  <script src="/assets/admira-version-watch.js?v=08.09.2026.r7.1059" defer></script>
 </body>
 </html>
