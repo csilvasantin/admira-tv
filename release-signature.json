@@ -1,9 +1,9 @@
 {
-  "version": "v.07.09.2026.r33.21:55",
-  "signature": "NeoMBP16 · MacBookPro16",
-  "agent": "NeoMBP16",
-  "machine": "MacBookPro16",
-  "day": "07.09.2026",
-  "time": "21:55",
-  "evidence": "La sincro predescarga su playlist a disco (antes emitía online para siempre y el mando enseñaba 0 de 40 pendiente) y el inventario de la Cache API se adopta al arrancar: cada pieza se baja una sola vez por dispositivo y el mando lo ve desde el primer segundo. Rellenar queda en icono cuando el selector va estrecho en el CMS."
+  "version": "v.08.09.2026.r1.09:46",
+  "signature": "NeoMBP14 · MacBookProNegro14",
+  "agent": "NeoMBP14",
+  "machine": "MacBookProNegro14",
+  "day": "08.09.2026",
+  "time": "09:46",
+  "evidence": "Gemelo: las duraciones del tema (reales, fuente común) mandan sobre el espejo; alta del iPad de Admin como pantalla de música (misión Hoy #14)."
 }
