@@ -23,7 +23,7 @@ La activación usa el reproductor y el envío al player físico existentes. La c
 
 ## Evidencias
 
-126 pruebas automatizadas correctas. Prueba interactiva de entrada al kiosco de las diez selecciones, posiciones independientes y retorno a la música del ocupante anterior. Los cuatro cursores modifican la posición del personaje 1 y no alcanzan el receptor de navegación de cámara; Escape libera las teclas. Ocho fases revisadas en la página de poses de la propia implementación.
+127 pruebas automatizadas correctas. Prueba interactiva de entrada al kiosco de las diez selecciones, posiciones independientes y retorno a la música del ocupante anterior. Los cuatro cursores modifican la posición del personaje 1 y no alcanzan el receptor de navegación de cámara; Escape libera las teclas. Ocho fases revisadas en la página de poses de la propia implementación.
 
 Fases: https://admira.tv/adcelerate/demo/best/tests/walk-poses.html
 
@@ -31,4 +31,4 @@ Minitutorial: https://admira.tv/adcelerate/demo/tutorials/jardinets-personas-vid
 
 El tutorial es una guía animada exportada con ADmira Motion en https://www.admiranext.com/tiktok/, no una grabación de la demo. Se conserva el guion y se revisa el MP4 exportado.
 
-Guion: «Jardinets: diez personajes en movimiento. Arrastra cualquiera al quiosco. Selecciona al número uno y camina con las flechas. Música por personaje. Ocho fases de paso para el uno. Escape devuelve el control al paseo. admira.tv/adcelerate/demo».
+Guion: «Jardinets: diez personajes en movimiento. Arrastra al quiosco. Selecciona al 1: muévelo con flechas. Música por personaje. Ocho fases de paso para el uno. Escape devuelve el control al paseo. admira.tv/adcelerate/demo».

@@ -42,7 +42,7 @@
    foreground.append(hit);return hit;
   });
   const dropZone=document.createElement('div');dropZone.id='mapped-drop-zone';dropZone.hidden=true;foreground.append(dropZone);
-  const canMove=i=>loaded&&sourceLoaded&&i<count&&isAvailable()&&selectionEnabled()&&getPanorama()?.getPano()===anchor.pano;
+  const canMove=i=>loaded&&sourceLoaded&&i<count&&isAvailable()&&selectionEnabled()&&getPanorama()?.getVisible()&&getPanorama()?.getPano()===anchor.pano;
   function project(points){const sv=getPanorama(),rect=container.getBoundingClientRect();return points.map(r=>root.DoohSurfaces.project(...r,sv.getPov(),sv.getZoom(),rect.width,rect.height));}
   function targetBounds(){
    const surface=root.DoohSurfaces.get('jardinets-main'),pts=project(Object.values(surface.corners));if(pts.some(p=>!p))return null;

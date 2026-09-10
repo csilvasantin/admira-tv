@@ -36,3 +36,11 @@ test('missing Top Gun fails explicitly and leaving cancels a pending drop',async
  await missing.select(1,{atKiosk:true});assert.match(states.at(-1).title,/Top Gun/);assert.equal(states.at(-1).status,'error');
  let ready;const p=music.create({load:()=>new Promise(r=>ready=r),play:()=>assert.fail('stale drop'),stop:()=>{}});const drop=p.select(1,{atKiosk:true});await p.select(0);ready(music.resolve([item('1786533143983-n2y09e',['musica','7'])]));await drop;
 });
+
+test('each of the ten kiosk drops keeps its assigned music; only person 1 uses Top Gun',async()=>{
+ const raw=Array.from({length:10},(_,i)=>item('track-'+(i+1),['musica',String(i+1)]));
+ raw[6]=item('1786533143983-n2y09e',['musica','7']);const slots=music.resolve(raw),played=[];
+ const p=music.create({load:()=>Promise.resolve(slots),play:i=>played.push(i.id),stop:()=>{}});
+ for(let number=1;number<=10;number++)await p.select(number,{atKiosk:true,restart:true});
+ assert.deepEqual(played,raw.map((r,i)=>'music:'+(i===0?raw[6].id:r.id)));
+});
