@@ -1,9 +1,9 @@
 {
-  "version": "v.10.09.2026.r6",
+  "version": "v.10.09.2026.r7",
   "signature": "TrinityMBP14 · MacBookProNegro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookProNegro14",
   "day": "10.09.2026",
-  "time": "13:09",
-  "evidence": "DCL-64b79f7dc62d5f01f867e3ab: S conserva el personaje desplazado; arrastre Top Gun y tutorial verificados."
+  "time": "13:25",
+  "evidence": "DCL-0b0258a5587b9b56e9cbbee7: diez personajes arrastrables, cursores para personaje 1, ocho fases de paso, 126 pruebas correctas."
 }
