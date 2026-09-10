@@ -1,9 +1,9 @@
 {
-  "version": "v.10.09.2026.r3.11:07",
-  "signature": "NeoMBP14 · MacBookProNegro14",
-  "agent": "NeoMBP14",
+  "version": "v.10.09.2026.r4",
+  "signature": "TrinityMBP14 · MacBookProNegro14",
+  "agent": "TrinityMBP14",
   "machine": "MacBookProNegro14",
   "day": "10.09.2026",
-  "time": "11:07",
-  "evidence": "iPad de Jardinets: el tema (<screen>-tema) ya no caduca en el worker y conserva num/perfil; el canal dice en el rótulo si emite el KIOSKO o el máster global y avisa sin tema; el gemelo usa num/perfil del tema. Playlists republicadas el 10-sep. Rebasado sobre r2 (OraculoMacMini)."
+  "time": "13:09",
+  "evidence": "DCL-64b79f7dc62d5f01f867e3ab: menú oculto inicial, slider sin cifras y arrastre de persona 1 para Top Gun. 121 pruebas correctas."
 }
