@@ -35,3 +35,19 @@
 .mapped-person-hit{pointer-events:auto}
 
 .mapped-person-sprite{inset:auto;left:0;top:0;transform-origin:0 0;z-index:34}
+
+.mapped-character{position:absolute;left:0;top:0;transform-origin:0 0;z-index:34;pointer-events:none}
+.mapped-character[hidden]{display:none!important}
+.mapped-character-body,.mapped-walk-rig,.mapped-walk-part{position:absolute;inset:0;pointer-events:none}
+.mapped-character-body.person-one,.mapped-walk-part{background:url('../assets/mapping/person-1-reference.png') 59.26% 81.03% / 143.55% 143.28% no-repeat}
+.mapped-character-body.person-one{clip-path:polygon(37.10% .75%,57.26% .75%,65.32% 10.82%,86.29% 17.91%,93.55% 33.58%,100% 53.73%,91.13% 56.72%,84.68% 49.25%,72.58% 50%,70.97% 69.03%,66.94% 86.19%,70.16% 93.66%,65.32% 98.88%,54.03% 99.25%,51.61% 95.52%,56.45% 89.55%,45.16% 83.96%,45.16% 91.04%,37.90% 93.28%,34.68% 89.55%,37.90% 86.19%,29.84% 77.24%,23.39% 70.90%,19.35% 59.33%,19.35% 49.63%,17.74% 35.45%,12.90% 33.58%,3.23% 34.70%,0 32.09%,.81% 26.87%,11.29% 16.04%,14.52% 10.45%,23.39% 7.46%,26.61% 10.07%,22.58% 15.67%,30.65% 14.55%,31.45% 10.07%,33.87% 8.21%)}
+.mapped-person-hit{cursor:grab}
+.mapped-person-hit.is-selected{border-color:#e3ffb0;box-shadow:0 0 0 2px #c4fa7844}
+.mapped-person-hit.is-selected>span{background:#e3ffb0;color:#102a20}
+.mapped-walk-rig{display:none;transform:translateY(var(--body-bob,0px)) rotate(var(--body-tilt,0deg));transform-origin:50% 95%}
+.mapped-character.is-walking .mapped-character-body{display:none}
+.mapped-character.is-walking .mapped-walk-rig{display:block}
+.mapped-walk-part.torso{clip-path:polygon(37% 0,58% 0,66% 11%,86% 18%,94% 34%,100% 54%,91% 57%,85% 50%,74% 55%,22% 56%,19% 50%,18% 35%,13% 34%,3% 35%,0 32%,1% 27%,11% 16%,15% 10%,23% 7%,27% 10%,23% 16%,31% 15%,31% 10%,34% 8%)}
+.mapped-walk-part.left-leg{clip-path:polygon(21% 51%,49% 51%,54% 68%,46% 82%,49% 88%,45% 93%,41% 93%,38% 89%,40% 85%,30% 77%,24% 70%,19% 60%);transform-origin:35% 53%;transform:rotate(var(--left-leg,0deg))}
+.mapped-walk-part.right-leg{clip-path:polygon(47% 51%,74% 50%,71% 69%,67% 86%,71% 94%,66% 100%,54% 100%,51% 95%,56% 89%,45% 84%,45% 73%);transform-origin:61% 53%;transform:rotate(var(--right-leg,0deg))}
+@media(prefers-reduced-motion:reduce){.mapped-character.is-walking .mapped-character-body{display:block}.mapped-character.is-walking .mapped-walk-rig{display:none}}
