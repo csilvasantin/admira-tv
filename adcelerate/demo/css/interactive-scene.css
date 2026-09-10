@@ -26,10 +26,12 @@
 #mapped-pole-slider span,#mapped-pole-slider span.selected{color:transparent;text-shadow:none}
 .mapped-person-hit[data-person="1"]{cursor:grab;pointer-events:auto}
 .mapped-person-hit.is-dragging{cursor:grabbing;z-index:42}
-.mapped-person-sprite{position:absolute;inset:0;pointer-events:none;background:url('../assets/mapping/person-1-reference.png') 59.26% 81.03% / 143.55% 143.28% no-repeat;clip-path:polygon(36% 0,61% 0,67% 10%,79% 15%,87% 30%,100% 48%,98% 56%,87% 57%,80% 48%,77% 63%,67% 79%,67% 99%,48% 100%,43% 94%,48% 87%,39% 83%,37% 91%,24% 91%,21% 83%,28% 77%,21% 67%,19% 57%,22% 43%,18% 29%,10% 34%,0 31%,0 25%,11% 11%,20% 8%,30% 14%,32% 9%)}
+.mapped-person-sprite{position:absolute;inset:0;pointer-events:none;background:url('../assets/mapping/person-1-reference.png') 59.26% 81.03% / 143.55% 143.28% no-repeat;clip-path:polygon(37.10% 0.75%,57.26% 0.75%,65.32% 10.82%,86.29% 17.91%,93.55% 33.58%,100.00% 53.73%,91.13% 56.72%,84.68% 49.25%,72.58% 50.00%,70.97% 69.03%,66.94% 86.19%,70.16% 93.66%,65.32% 98.88%,54.03% 99.25%,51.61% 95.52%,56.45% 89.55%,45.16% 83.96%,45.16% 91.04%,37.90% 93.28%,34.68% 89.55%,37.90% 86.19%,29.84% 77.24%,23.39% 70.90%,19.35% 59.33%,19.35% 49.63%,17.74% 35.45%,12.90% 33.58%,3.23% 34.70%,0.00% 32.09%,0.81% 26.87%,11.29% 16.04%,14.52% 10.45%,23.39% 7.46%,26.61% 10.07%,22.58% 15.67%,30.65% 14.55%,31.45% 10.07%,33.87% 8.21%)}
 .mapped-person-sprite[hidden]{display:none!important}
 #mapped-drop-zone{position:absolute;z-index:34;border:2px dashed #c4fa78;border-radius:14px;background:#c4fa7815;color:#eaffd4;font:12px system-ui;text-align:center;padding-top:8px;box-sizing:border-box;pointer-events:none}
 #mapped-drop-zone.is-over{background:#c4fa7838;box-shadow:0 0 20px #c4fa7850}
 #mapped-drop-zone[hidden]{display:none!important}
 
 .mapped-person-hit{pointer-events:auto}
+
+.mapped-person-sprite{inset:auto;left:0;top:0;transform-origin:0 0;z-index:34}

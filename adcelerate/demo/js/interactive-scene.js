@@ -10,7 +10,7 @@
    return {canvas,x,y,r,b,rays:[[x,y],[r,y],[r,b],[x,b]].map(p=>ray(...p))};
   });
   const people=patches.map((patch,index)=>{const hit=document.createElement('button');hit.className='mapped-person-hit';hit.type='button';hit.style.width=patch.canvas.width+'px';hit.style.height=patch.canvas.height+'px';hit.hidden=true;hit.innerHTML='<span>'+(index+1)+'</span>';hit.setAttribute('aria-label','Persona '+(index+1)+': reproducir canción '+(index+1));hit.dataset.person=String(index+1);hit.title='Persona '+(index+1)+' · #musica + #'+(index+1);hit.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();});hit.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(index===0&&suppressClick){suppressClick=false;return;}if(index>=count||!isAvailable()||!selectionEnabled())return;active=true;onSelect(index+1,{restart:true});});container.append(hit);return hit;});
-  const sprite=document.createElement('div');sprite.className='mapped-person-sprite';sprite.hidden=true;people[0].prepend(sprite);
+  const sprite=document.createElement('div');sprite.className='mapped-person-sprite';sprite.hidden=true;sprite.style.width=patches[0].canvas.width+'px';sprite.style.height=patches[0].canvas.height+'px';foreground.append(sprite);
   people[0].setAttribute('aria-label','Persona 1: arrastra delante del quiosco para reproducir Top Gun');
   people[0].title='Arrastra delante de la pantalla · Top Gun · Escape cancela';
   const dropZone=document.createElement('div');dropZone.id='mapped-drop-zone';dropZone.textContent='Suelta aquí · Top Gun';dropZone.hidden=true;container.append(dropZone);
@@ -99,7 +99,7 @@
   function layout(){
    const sv=getPanorama(),rect=container.getBoundingClientRect();
    for(const el of [button,slider,note,dropZone,...patches.map(p=>p.canvas)])if(!el.isConnected)container.append(el);
-   for(const hit of people)if(hit.parentElement!==foreground)foreground.append(hit);
+   for(const hit of [sprite,...people])if(hit.parentElement!==foreground)foreground.append(hit);
    const here=sv?.getVisible()&&sv.getPano()===anchor.pano;
    if(!here){close();return;}
    const selecting=selectionEnabled();if((!selecting||!isAvailable()||count<1)&&personDrag)endPersonDrag(true);note.hidden=!selecting||!active;
@@ -109,7 +109,8 @@
     const pts=(i===0&&movedRays?movedRays:patch.rays).map(project);people[i].hidden=!selecting||!isAvailable()||i>=count||pts.some(p=>!p);if(!people[i].hidden)people[i].style.transform=warp(patch.canvas.width,patch.canvas.height,pts);const original=patch.rays.map(project);patch.canvas.hidden=!loaded||(i<count&&!(i===0&&movedRays))||original.some(p=>!p);
     if(!patch.canvas.hidden)patch.canvas.style.transform=warp(patch.canvas.width,patch.canvas.height,original);
    }
-   sprite.hidden=!movedRays;
+   const spritePoints=movedRays?.map(project);sprite.hidden=!spritePoints||spritePoints.some(p=>!p)||!isAvailable()||count<1;
+   if(!sprite.hidden)sprite.style.transform=warp(patches[0].canvas.width,patches[0].canvas.height,spritePoints);
    const box=personDrag?.started&&targetBounds();dropZone.hidden=!box;
    if(box){Object.assign(dropZone.style,{left:box.left+'px',top:box.top+'px',width:(box.right-box.left)+'px',height:(box.bottom-box.top)+'px'});dropZone.classList.toggle('is-over',inTarget());}
    const p=project([anchor.heading,anchor.pitch]),edge=project([anchor.heading+4,anchor.pitch]);
