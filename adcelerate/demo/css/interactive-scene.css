@@ -31,3 +31,5 @@
 #mapped-drop-zone{position:absolute;z-index:34;border:2px dashed #c4fa78;border-radius:14px;background:#c4fa7815;color:#eaffd4;font:12px system-ui;text-align:center;padding-top:8px;box-sizing:border-box;pointer-events:none}
 #mapped-drop-zone.is-over{background:#c4fa7838;box-shadow:0 0 20px #c4fa7850}
 #mapped-drop-zone[hidden]{display:none!important}
+
+.mapped-person-hit{pointer-events:auto}

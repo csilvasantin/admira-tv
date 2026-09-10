@@ -1841,7 +1841,7 @@ function selectMappedMusic(number,options){
  // Visuals follow every pointer event; media settles after a short fader pause.
  mappedMusicTimer=setTimeout(()=>{mappedMusicTimer=null;mappedMusic.select(number,options)},140);
 }
-const signMapping=InteractiveScene.create({getPanorama:()=>sv,container:$('streetview'),warp:quadWarp,isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onSelect:selectMappedMusic,onClose:()=>{clearTimeout(mappedMusicTimer);mappedMusic.stop();}});
+const signMapping=InteractiveScene.create({getPanorama:()=>sv,container:$('streetview'),foreground:$('sv-signage'),warp:quadWarp,isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onSelect:selectMappedMusic,onClose:()=>{clearTimeout(mappedMusicTimer);mappedMusic.stop();}});
 if(WALK_MODE)mappedMusic.warm().catch(()=>{});
 const shoeMapping=JardinetsShoes.create({getPanorama:()=>sv,container:$('streetview'),warp:quadWarp,isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onLeave:()=>{mappedMusic.stop();screenAudio.mute();routeWalk.cancel();}});
 function layoutSvPanels(){

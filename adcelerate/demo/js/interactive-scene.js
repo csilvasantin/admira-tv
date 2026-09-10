@@ -1,7 +1,7 @@
 /* Registered per-person clean patches, not a replacement view or camera command. */
 (function(root){
  const anchor={pano:'L6xcO37SQfBmCxsT9lPdjQ',heading:325.8989423,pitch:9.8861264};
- function create({getPanorama,container,warp,isAvailable=()=>true,onSelect=()=>{},onClose=()=>{}}){
+ function create({getPanorama,container,foreground=container,warp,isAvailable=()=>true,onSelect=()=>{},onClose=()=>{}}){
   const geometry=root.PedestrianLayers,ref=geometry.reference;
   const selectionEnabled=()=>!document.documentElement.classList.contains('targets-hidden');
   const ray=(x,y)=>root.DoohSurfaces.unproject(x,y,ref.pov,ref.zoom,ref.width,ref.height);
@@ -98,7 +98,8 @@
   function close(){endPersonDrag(true);movedRays=null;atKiosk=false;sprite.hidden=true;if(active){active=false;onClose();}count=10;people.forEach(hit=>hit.hidden=true);patches.forEach(p=>p.canvas.hidden=true);button.hidden=true;slider.hidden=true;note.hidden=true;pointer=null;}
   function layout(){
    const sv=getPanorama(),rect=container.getBoundingClientRect();
-   for(const el of [button,slider,note,dropZone,...patches.map(p=>p.canvas),...people])if(!el.isConnected)container.append(el);
+   for(const el of [button,slider,note,dropZone,...patches.map(p=>p.canvas)])if(!el.isConnected)container.append(el);
+   for(const hit of people)if(hit.parentElement!==foreground)foreground.append(hit);
    const here=sv?.getVisible()&&sv.getPano()===anchor.pano;
    if(!here){close();return;}
    const selecting=selectionEnabled();if((!selecting||!isAvailable()||count<1)&&personDrag)endPersonDrag(true);note.hidden=!selecting||!active;
