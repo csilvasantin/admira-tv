@@ -1,5 +1,8 @@
 # Universo outdoor · Vila de Gràcia
 
+Estado de la interactividad musical de Jardinets y siguiente incremento del Ojo de
+Dios: [revisión de handON del 10-09-2026](../../docs/AdmiraNeXT-interactividad-Jardinets-2026-09-10.md).
+
 La entrada `/adcelerate/demo/` abre el entorno Three.js controlable, centrado en la plaza a las 18:00 y con el reloj detenido. Arrastrar permite orbitar; rueda y botones acercan/alejan. Quiosco y Plaza seleccionan el soporte conocido y su ámbito. Hora y capas abre los controles existentes; Audiencias abre el detalle y la tarjeta mantiene el resumen visible.
 
 La geometría urbana proviene de `data/gracia-local.json` (OpenStreetMap, ODbL). Las extrusiones y sus alturas no tienen validación individual; la plaza y el modelo del quiosco son ilustrativos. No son una réplica catastral. El único soporte identificado es el quiosco OSM 3350101407, `bcn-kiosk-016`, origen 41.4002641 N, 2.1573332 E.
