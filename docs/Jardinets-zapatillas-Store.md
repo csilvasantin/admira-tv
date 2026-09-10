@@ -40,3 +40,11 @@ Entradas: `adcelerate/demo/js/jardinets-shoes.js`,
 
 Si Google cambia una conexión durante el recorrido, se recalcula desde el panorama
 actual hasta tres veces. Tocar la calle o sus controles cancela esa recuperación.
+
+Verificación en producción (v.10.09.2026.r2, commit 6504d82): recorrido completo
+Jardinets → Store, 95 tramos, probado a ×8 con pausa y reanudación. Llegada en el
+panorama `bGdpeVX--iYs2auAt3J1aQ`, marzo de 2023, posición
+41.4034616 / 2.1537582, a 4 m de Store; fachada del número 19 y botón
+«Acceso interior» visibles, recorrido detenido. Zonas comprobadas visualmente
+sobre ambas zapatillas. El enlace superior abre IEU; en el navegador de pruebas
+sin sesión muestra el acceso de Google, sin atribuirle una visita interior autenticada.
