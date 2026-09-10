@@ -2,20 +2,20 @@
 (() => {
  'use strict';
  const $=id=>document.getElementById(id),sites=AdmiraOffices,launch=StoreVisit.parse(location.search);
- let launchPending=launch.walk;
+ let launchPending=launch.walk,recoveryTimer=null,recoveryCount=0;
  let selected=sites.get(new URLSearchParams(location.search).get('site')),walker=null,panorama=null,map=null,service=null,routeWalk=null,route=null,routeRequest=0,search=null,paused=false,interior=false,ready=false;
  const entries=new Map(),cache=new Map();let line=null,positionMarker=null,lastState=null,overview=null;
  function status(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);}
  function showSelected(){
   $('place').textContent=selected.name;
   document.querySelectorAll('.office').forEach(b=>b.classList.toggle('active',b.dataset.site===selected.id));
-  const old=$('destination').value;$('destination').replaceChildren();sites.all.filter(s=>launchPending||s.id!==selected.id).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name;$('destination').append(o);});if(launchPending)$('destination').value='store';else if(old!==selected.id&&sites.all.some(s=>s.id===old))$('destination').value=old;updateTravelLabel();
+  const old=$('destination').value;$('destination').replaceChildren();sites.all.filter(s=>launchPending||s.id!==selected.id||!sites.arrived(lastState,selected)).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name;$('destination').append(o);});if(launchPending)$('destination').value='store';else if(sites.all.some(s=>s.id===old)&&[...$('destination').options].some(o=>o.value===old))$('destination').value=old;updateTravelLabel();
   const url=new URL(location.href);url.searchParams.set('site',selected.id);history.replaceState(null,'',url);document.title='AdmiraXperience · '+selected.name;document.querySelector('header>a:last-child').href='https://www.admira.app/?locationId='+selected.locationId;
  }
  function updateTravelLabel(){$('travel').textContent='Caminar a '+sites.get($('destination').value).name;}
  $('destination').addEventListener('change',updateTravelLabel);
  function closeInterior(){interior=false;$('interior').hidden=true;$('interior-media').replaceChildren();if(panorama)panorama.setVisible(true);updateArrival(lastState);}
- function cancel(){launchPending=false;search?.abort();search=null;routeWalk?.cancel();route=null;paused=false;$('pause').disabled=true;$('pause').textContent='Pausar';$('travel').disabled=!ready;$('destination').disabled=!ready;}
+ function cancel(){clearTimeout(recoveryTimer);recoveryTimer=null;launchPending=false;search?.abort();search=null;routeWalk?.cancel();route=null;paused=false;$('pause').disabled=true;$('pause').textContent='Pausar';$('travel').disabled=!ready;$('destination').disabled=!ready;}
  function updateArrival(state){const near=sites.arrived(state,selected);$('arrival').hidden=!near||!!search||!!routeWalk?.active&&!paused||interior;$('distance').textContent=state?.position?Math.round(sites.distance(state.position,selected.position))+' m de '+selected.name:'';}
  function onState(state){
   lastState=state;
@@ -39,11 +39,12 @@
   if(!ready)return;cancel();closeInterior();selected=office;showSelected();line?.setPath([]);$('progress').value=0;
   const entry=entries.get(office.id);walker.setSite({homePano:entry.id,homePov:{heading:sites.bearing(entry.position,office.position),pitch:0,zoom:1}});walker.command({action:'home'});map.panTo(office.position);status('Llegada exterior · puedes caminar o acceder al interior cuando estés cerca.');
  }
- async function travel(){
+ async function travel(targetId,recovering=false){
   if(!ready||search)return;
+  if(!recovering)recoveryCount=0;
   closeInterior();cancel();
   const current=walker.getState();if(!['ready','unavailable'].includes(current.status)){status('Espera a que termine de cargar la fotografía.');return;}
-  const target=sites.get($('destination').value),controller=new AbortController();search=controller;
+  const target=sites.get(typeof targetId==='string'?targetId:$('destination').value),controller=new AbortController();search=controller;
   $('travel').disabled=true;$('destination').disabled=true;$('pause').disabled=false;$('pause').textContent='Cancelar búsqueda';$('arrival').hidden=true;status('Buscando conexiones fotográficas hacia '+target.name+'…');
   try{
    const start=await load(current.pano),goal=entries.get(target.id);console.info('[AdmiraXperience] Inicio de paseo',JSON.stringify({pano:start.id,links:start.links.length,position:start.position,to:target.id}));
@@ -67,6 +68,8 @@
   if(paused){paused=false;$('pause').textContent='Pausar';routeWalk.start(route.id,++routeRequest,{speed:Number($('speed').value)});}
   else{paused=true;routeWalk.cancel();$('pause').textContent='Reanudar';status('Paseo en pausa.');updateArrival(walker.getState());}
  });
+ $('street').addEventListener('pointerdown',()=>{if(search||route||recoveryTimer){cancel();status('Paseo en pausa · navegación manual.');}});
+ $('street').addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))cancel();});
  $('speed').addEventListener('change',()=>routeWalk?.setSpeed(Number($('speed').value)));
  document.querySelectorAll('[data-walk]').forEach(button=>button.addEventListener('click',()=>{cancel();walker?.command({action:button.dataset.walk});status('Paseo libre · sigue las conexiones de la calle.');}));
  function enterInterior(direct=false){
@@ -108,7 +111,16 @@
     $('progress').value=s.total?s.step/s.total:0;
     if(s.status==='walking'||s.status==='loading')status('Caminando a '+selected.name+' · '+s.step+' / '+s.total+' tramos · ×'+s.speed);
     if(s.status==='ready'){panorama.setPov({heading:sites.bearing(walker.getState().position,selected.position),pitch:0});console.info('[AdmiraXperience] Llegada verificada',JSON.stringify({to:selected.id,step:s.step,total:s.total,pano:s.pano}));routeWalk.cancel();route=null;$('pause').disabled=true;$('travel').disabled=false;$('destination').disabled=false;status('Has llegado a '+selected.name+'. Paseo detenido: pulsa Acceso interior para continuar.');$('enter').textContent='Acceso interior →';updateArrival(walker.getState());}
-    if(s.status==='error'){routeWalk.cancel();route=null;$('pause').disabled=true;$('travel').disabled=false;$('destination').disabled=false;status('El paseo se ha detenido: una conexión ya no está disponible. Puedes reintentar desde aquí o seguir a mano.',true);}
+    if(s.status==='error'){
+     console.warn('[AdmiraXperience] Conexión interrumpida',JSON.stringify(s));
+     routeWalk.cancel();route=null;$('pause').disabled=true;$('travel').disabled=false;$('destination').disabled=false;
+     const current=walker.getState(),target=selected.id;
+     if(recoveryCount<3&&['ready','unavailable'].includes(current.status)){
+      recoveryCount++;status('La fotografía ha cambiado. Recalculando el paseo desde aquí…');
+      cache.clear();cache.set(current.pano,{id:current.pano,position:current.position,date:current.date,links:current.links});
+      recoveryTimer=setTimeout(()=>{recoveryTimer=null;travel(target,true);},750);
+     }else status('El paseo se ha detenido: una conexión ya no está disponible. Puedes reintentar desde aquí o seguir a mano.',true);
+    }
    }});
    ready=true;$('travel').disabled=false;$('destination').disabled=false;document.querySelectorAll('.office').forEach(b=>b.disabled=false);status(launch.walk?'Jardinets · preparando el paseo a Santa Rosa 19…':'Llegada exterior · elige un destino e inicia el paseo.');startLaunchWalk(walker.getState());
   }catch(error){status('Street View no está disponible en este momento. Las oficinas siguen identificadas en el mapa; vuelve a cargar para reintentar.',true);}

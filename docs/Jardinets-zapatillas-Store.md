@@ -37,3 +37,6 @@ exterior del número 19 a 4 m y escena interior Store aportadas por Carlos.
 
 Entradas: `adcelerate/demo/js/jardinets-shoes.js`,
 `admiraxperience/store-visit.js`, `admiraxperience/office.js`.
+
+Si Google cambia una conexión durante el recorrido, se recalcula desde el panorama
+actual hasta tres veces. Tocar la calle o sus controles cancela esa recuperación.

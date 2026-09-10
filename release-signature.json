@@ -1,9 +1,9 @@
 {
-  "version": "v.10.09.2026.r1",
+  "version": "v.10.09.2026.r2",
   "signature": "OraculoMacMini · MacMini",
   "agent": "OraculoMacMini",
   "machine": "MacMini",
   "day": "10.09.2026",
   "time": "07:47",
-  "evidence": "FLT-100187: zapatillas de Jardinets, acceso IEU directo y paseo a llegada Store con pausa explícita."
+  "evidence": "FLT-100187: recuperación acotada del paseo tras cambio de panorama; gesto manual cancela la recuperación."
 }
