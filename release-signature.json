@@ -1,9 +1,9 @@
 {
-  "version": "v.10.09.2026.r2",
-  "signature": "OraculoMacMini · MacMini",
-  "agent": "OraculoMacMini",
-  "machine": "MacMini",
+  "version": "v.10.09.2026.r3.11:07",
+  "signature": "NeoMBP14 · MacBookProNegro14",
+  "agent": "NeoMBP14",
+  "machine": "MacBookProNegro14",
   "day": "10.09.2026",
-  "time": "07:47",
-  "evidence": "FLT-100187: recuperación acotada del paseo tras cambio de panorama; gesto manual cancela la recuperación."
+  "time": "11:07",
+  "evidence": "iPad de Jardinets: el tema (<screen>-tema) ya no caduca en el worker y conserva num/perfil; el canal dice en el rótulo si emite el KIOSKO o el máster global y avisa sin tema; el gemelo usa num/perfil del tema. Playlists republicadas el 10-sep. Rebasado sobre r2 (OraculoMacMini)."
 }

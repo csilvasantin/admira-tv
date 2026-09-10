@@ -5,13 +5,15 @@ Fuente: Stock (api.admira.store/stock/list) filtrado por etiquetas; destino:
 brain.digitalavatar.ai/control/playlist?screen=<pantalla>-tema (la FUENTE; <pantalla> a secas es el espejo
 de lo que emite el teléfono), que leen canal.html
 (teléfonos en sincro) y el gemelo adcelerate/demo/best (mismo reloj, mismo fotograma).
-OJO: el worker guarda la playlist con TTL de 24 h → hay que volver a publicar cada día
-(cron/launchd) o subir el TTL en omnipublicity-api. Uso: python3 tools/publica-playlists-kioskos.py [--dry]"""
+Desde el 10-sep-2026 el worker (omnipublicity-api) NO caduca los <screen>-tema (antes 24 h: el iPad
+de Jardinets arrancaba al día siguiente sin tema y caía al máster global) y conserva num/perfil.
+Se vuelve a ejecutar solo cuando cambie el Stock o el reparto de temas.
+Uso: python3 tools/publica-playlists-kioskos.py [--dry]"""
 import json, re, sys, urllib.request
 UA = {"User-Agent": "Mozilla/5.0 admira-tv/playlists"}
 KIOSKOS = {"samsung-galaxy-fold-9-mupi": "musica",   # Fold 9 · Vila (News & Coffee) — pantalla real
            "sim-gracia-kiosko": "musica",            # Vila · reserva (preview configurada)
-           "ipad-admin-mupi": "musica",              # iPad de Admin (iOS 17) · Vila · música (alta 08-09-2026)
+           "ipad-admin-mupi": "musica",              # iPad de Admin (iOS 17) · JARDINETS · música (8-sep: pantalla real del gemelo de Jardinets)
            "ipad-luna-mupi": "musica",               # iPad de Luna · Vila · música
            "samsung-galaxy-fold-8-mupi": "tecnologia",  # Fold 8 · Jardinets
            "iphone-mupi": "creatividad",             # iPhone 17 · Lesseps (app tv.admira.player.ipad)

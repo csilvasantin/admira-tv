@@ -31,7 +31,7 @@
 <!-- r58 · GOTO EN SINCRO: el salto desde la playlist del mando (goto-N) abre la ventana forzada de un #ID: sale de sincro, la pieza va hasta el final y pollMode devuelve la asignación remota. Antes la sincro la revertía al cargar el vídeo. -->
 <!-- r59 · RELLENAR: ajuste de pantalla por mando (fit-fill / fit-editorial): el marco ocupa todo el dispositivo, girado o no, y la media se escala sin recortar; se persiste por pantalla y se reporta en la telemetría (display.fit). El marco girado ya no se aplasta (max-width/flex-shrink). Un #ID del mando nunca se emite online mientras baja, ni con stream=1. -->
 <!-- r60 · AUTOACTUALIZACIÓN EN KIOSKO: en embed/clean el canal vigila /version.json y se recarga solo al cambiar de pieza cuando hay release nuevo; el botón «VERSIÓN NUEVA» del avisador compartido nunca se pinta en una pantalla pública. -->
-<!-- BUILD canal v.08.09.2026.r60 · AUTOACTUALIZACIÓN EN KIOSKO; hereda r59 (Rellenar, #ID nunca online, sincro predescarga). -->
+<!-- BUILD canal v.10.09.2026.r61 · RÓTULO CON LA FUENTE DE LA SINCRO (KIOSKO <screen> / máster global) y aviso sin tema; hereda r60 (autoactualización). -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
@@ -47,9 +47,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=10.09.2026.r2"></script>
+<script src="xpl-runtime.js?v=10.09.2026.r3.1107"></script>
 <script>
-  window.ADMIRA_VERSION='v.10.09.2026.r2';
+  window.ADMIRA_VERSION='v.10.09.2026.r3.11:07';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -554,7 +554,13 @@ async function fetchSyncState(){
       if(propia){
         items=propia.map(i=>Object.assign({},i,{thumbnail:i.thumbnail||i.thumb||'',_dur:Number(i._dur||i.dur)||0}));
         _syncOwnPlaylist=true;   // playlist del kiosko: se emite EXACTA, sin entrelazar parrilla ni Stock
-      }else if(leader){
+      }else if(tema){
+        // 10-sep-2026: el iPad de Jardinets arrancó sin tema (el worker lo caducaba a las 24 h) y cayó
+        // al máster global EN SILENCIO: mismo rótulo «SINCRO CANAL», playlist distinta a la del gemelo.
+        // Se deja rastro y el rótulo lo dice (ver rebuild). El worker ya no caduca los <screen>-tema.
+        try{ console.warn('[canal] sincro sin tema propio:', tema, '→ máster global'); }catch(_){}
+      }
+      if(!propia&&leader){
         try{
           const p=await fetch(SYNC_PLAYLIST_API+'?screen='+encodeURIComponent(leader)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('playlist http '+r.status)));
           if(leader===SYNC_GROUP_MASTER&&p&&Array.isArray(p.items)&&p.items.length){
@@ -577,7 +583,7 @@ async function fetchSyncState(){
       const hadRemote=!!SYNC_REMOTE;
       SYNC_REMOTE={ items, slotMs:d.slotMs||20000, offset:(d.serverNow||Date.now())-Date.now() };   // el reloj del máster SIEMPRE fresco: no necesita rebuild
       if(syncOn && (sig!==_syncSig || !hadRemote)){ _syncSig=sig; rebuild(true); }
-      else if(syncOn){ try{ setLive('SINCRO CANAL · '+playlist.length+' en loop', playlist.length>0); }catch(_){} }   // tras un fallo con firma igual, el rótulo no puede seguir diciendo SIN MÁSTER
+      else if(syncOn){ try{ setLive('SINCRO '+(_syncOwnPlaylist?('KIOSKO '+scr.screen):'CANAL · máster global')+' · '+playlist.length+' en loop', playlist.length>0); }catch(_){} }   // tras un fallo con firma igual, el rótulo no puede seguir diciendo SIN MÁSTER
     }
   }catch(e){
     // Nunca corta la emisión, pero deja rastro: sin máster la pantalla ordena por su cuenta
@@ -2281,7 +2287,10 @@ function rebuild(restart){
     // Decir SINCRO CANAL sin el máster es mentir: sin SYNC_REMOTE la pantalla ordena por su
     // cuenta (defaultOrder) y dos pantallas "en sincro" emiten cosas distintas — pasó hoy entre
     // el Fold y el iPhone y no había forma de verlo, porque fetchSyncState falla en silencio.
-    setLive(SYNC_REMOTE ? ('SINCRO CANAL · '+playlist.length+' en loop')
+    // El rótulo dice DE DÓNDE sale la playlist: «KIOSKO <screen>» (su tema, el mismo que emite el
+    // gemelo) o «MÁSTER GLOBAL» (sin tema publicado). Antes ambos decían «SINCRO CANAL» y el iPad de
+    // Jardinets podía llevar un día emitiendo otra cosa sin que nadie lo viera (10-sep-2026).
+    setLive(SYNC_REMOTE ? ('SINCRO '+(_syncOwnPlaylist?('KIOSKO '+scr.screen):'CANAL · máster global')+' · '+playlist.length+' en loop')
                         : ('SINCRO SIN MÁSTER · '+playlist.length+' en loop · orden propio'),
             playlist.length>0 && !!SYNC_REMOTE);
     renderChan();
@@ -4090,6 +4099,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=10.09.2026.r2" defer></script>
+  <script src="/assets/admira-version-watch.js?v=10.09.2026.r3.1107" defer></script>
 </body>
 </html>

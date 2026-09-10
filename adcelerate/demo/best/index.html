@@ -13,12 +13,12 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=10.09.2026.r2">
-<link rel="stylesheet" href="../css/style.css?v=10.09.2026.r2">
-<script src="../js/outdoor-sites.js?v=10.09.2026.r2"></script>
-<script src="../js/urban-route.js?v=10.09.2026.r2"></script>
-<script src="../js/dooh-surfaces.js?v=10.09.2026.r2"></script>
-<script src="../js/outdoor-context.js?v=10.09.2026.r2"></script>
+<link rel="stylesheet" href="../css/admira-tokens.css?v=10.09.2026.r3.1107">
+<link rel="stylesheet" href="../css/style.css?v=10.09.2026.r3.1107">
+<script src="../js/outdoor-sites.js?v=10.09.2026.r3.1107"></script>
+<script src="../js/urban-route.js?v=10.09.2026.r3.1107"></script>
+<script src="../js/dooh-surfaces.js?v=10.09.2026.r3.1107"></script>
+<script src="../js/outdoor-context.js?v=10.09.2026.r3.1107"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
   const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
@@ -203,8 +203,8 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=10.09.2026.r2"><link rel="stylesheet" href="../css/hidden-ui.css?v=10.09.2026.r2"><script defer src="../js/hidden-ui.js?v=10.09.2026.r2"></script><script src="../js/pedestrian-layers.js?v=10.09.2026.r2"></script><script src="../js/jardinets-shoes.js?v=10.09.2026.r2"></script><script src="../js/interactive-scene.js?v=10.09.2026.r2"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=10.09.2026.r2"></head>
-<script src="../js/pedestrian-music.js?v=10.09.2026.r2"></script>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=10.09.2026.r3.1107"><link rel="stylesheet" href="../css/hidden-ui.css?v=10.09.2026.r3.1107"><script defer src="../js/hidden-ui.js?v=10.09.2026.r3.1107"></script><script src="../js/pedestrian-layers.js?v=10.09.2026.r3.1107"></script><script src="../js/jardinets-shoes.js?v=10.09.2026.r3.1107"></script><script src="../js/interactive-scene.js?v=10.09.2026.r3.1107"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=10.09.2026.r3.1107"></head>
+<script src="../js/pedestrian-music.js?v=10.09.2026.r3.1107"></script>
 <body>
 
 <div id="app">
@@ -355,13 +355,13 @@
   </div>
 </div>
 
-<script src="street-walk.js?v=10.09.2026.r2"></script>
-<script src="../js/cenital-panel.js?v=10.09.2026.r2"></script><script src="../js/walk-overview.js?v=10.09.2026.r2"></script><script src="walk-orientation.js?v=10.09.2026.r2"></script><script src="route-walk.js?v=10.09.2026.r2"></script>
-<script src="../js/player-library.js?v=10.09.2026.r2"></script>
-<script src="screen-player.js?v=10.09.2026.r2"></script>
-<script src="screen-audio.js?v=10.09.2026.r2"></script>
-<script src="surface-focus.js?v=10.09.2026.r2"></script>
-<script src="camera-path.js?v=10.09.2026.r2"></script>
+<script src="street-walk.js?v=10.09.2026.r3.1107"></script>
+<script src="../js/cenital-panel.js?v=10.09.2026.r3.1107"></script><script src="../js/walk-overview.js?v=10.09.2026.r3.1107"></script><script src="walk-orientation.js?v=10.09.2026.r3.1107"></script><script src="route-walk.js?v=10.09.2026.r3.1107"></script>
+<script src="../js/player-library.js?v=10.09.2026.r3.1107"></script>
+<script src="screen-player.js?v=10.09.2026.r3.1107"></script>
+<script src="screen-audio.js?v=10.09.2026.r3.1107"></script>
+<script src="surface-focus.js?v=10.09.2026.r3.1107"></script>
+<script src="camera-path.js?v=10.09.2026.r3.1107"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -1172,7 +1172,7 @@ async function chLoad(){
 const SYNC_STATE_URL = 'https://brain.digitalavatar.ai/sync/state';
 const SYNC_PLAYLIST_URL = 'https://brain.digitalavatar.ai/control/playlist?screen=';
 // Pantalla REAL de cada kiosko (7-sep-2026): Fold 9 = Vila, Fold 8 = Jardinets, iPhone 17 = Lesseps.
-const SITE_SCREEN = { vila: 'samsung-galaxy-fold-9-mupi', jardinets: 'ipad-admin-mupi', lesseps: 'iphone17-mupi' };   // 8-sep: Jardinets = iPad de Admin (música)
+const SITE_SCREEN = { vila: 'samsung-galaxy-fold-9-mupi', jardinets: 'ipad-admin-mupi', lesseps: 'iphone17-mupi' };   // 8-sep: Jardinets = iPad de Admin (música). Su tema vive en control/playlist?screen=ipad-admin-mupi-tema (lo publica tools/publica-playlists-kioskos.py; el iPad lee el MISMO tema en canal.html)
 const SITE_CIRCUIT = { vila: 'samsung-galaxy-fold-9', jardinets: 'ipad-admin', lesseps: 'iphone17' };   // id que sondea cada teléfono en /locations/cmd   // iPhone: app com.admira.next.player (la TestFlight tv.admira.player.ipad no entra en sincro)
 let syncClock = { offset: 0, slotMs: 20000, master: [], own: new Map(), at: 0 };
 let syncSite = '', syncQueueSig = '';
@@ -1243,6 +1243,7 @@ const CMD_URL = 'https://api.admira.store/locations/cmd';
 let stockIndexById = new Map(), perfilOverride = null, perfilDominante = '', perfilTurno = {};
 fetch(STOCK_URL, { cache: 'no-store' }).then(r => r.json()).then(j => { for (const it of (j.items || j || [])) stockIndexById.set(String(it.id), it); }).catch(() => {});
 function perfilDePieza(it){
+  if (it && it.perfil) return String(it.perfil);   // 10-sep: el worker ya conserva el perfil que publica publica-playlists-kioskos.py
   const st = stockIndexById.get(String(it.id)) || {};
   const t = [it.title, st.title, (st.tags || []).join(' '), st.comment].join(' ').toLowerCase();
   if (/198\d|80s|ochent|billboard|retro|nostalg|guns n|berlin|top gun|huey lewis|communards|westlife|\*nsync|throwback/.test(t)) return 'seniors';
@@ -1258,7 +1259,8 @@ function piezaParaPerfil(perfil){
   return lista[n];
 }
 async function mandarAlaPantalla(site, it){
-  const st = stockIndexById.get(String(it.id)); const num = st && st.num; const id = SITE_CIRCUIT[site]; if (!num || !id) return false;
+  // num: primero el de la playlist del tema (el worker lo conserva desde el 10-sep), si no el del índice del Stock.
+  const st = stockIndexById.get(String(it.id)); const num = (it && it.num) || (st && st.num); const id = SITE_CIRCUIT[site]; if (!num || !id) return false;
   try{ const r = await fetch(CMD_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, cmd: 'play' + num, screen: SITE_SCREEN[site] }) }); return r.ok; }catch(_){ return false; }
 }
 function viandanteTick(){
