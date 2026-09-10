@@ -21,3 +21,13 @@
 .targets-hidden .mapped-person-hit,.targets-hidden #mapped-pole-slider,.targets-hidden #mapped-no-parking,.targets-hidden #mapped-people-status{display:none!important;pointer-events:none!important}
 
 .jardinets-shoe{position:absolute;left:0;top:0;width:100px;height:48px;transform-origin:0 0;z-index:26;border:2px solid #c5f58c;border-radius:14px;background:#c5f58c0d;box-sizing:border-box;cursor:pointer;pointer-events:auto;color:#fff;text-decoration:none}.jardinets-shoe[hidden]{display:none}.jardinets-shoe:hover,.jardinets-shoe:focus-visible{background:#c5f58444;outline:3px solid #e4ffbb}.jardinets-shoe span{position:absolute;right:100%;top:0;white-space:nowrap;padding:6px 9px;background:#10251eef;border-radius:6px;font:14px system-ui;opacity:0;pointer-events:none}.jardinets-shoe:hover span,.jardinets-shoe:focus-visible span{opacity:1}
+
+/* Keep the ten levels in DOM/ARIA, without printing a numerical ruler. */
+#mapped-pole-slider span,#mapped-pole-slider span.selected{color:transparent;text-shadow:none}
+.mapped-person-hit[data-person="1"]{cursor:grab;pointer-events:auto}
+.mapped-person-hit.is-dragging{cursor:grabbing;z-index:42}
+.mapped-person-sprite{position:absolute;inset:0;pointer-events:none;background:url('../assets/mapping/person-1-reference.png') 59.26% 81.03% / 143.55% 143.28% no-repeat;clip-path:polygon(36% 0,61% 0,67% 10%,79% 15%,87% 30%,100% 48%,98% 56%,87% 57%,80% 48%,77% 63%,67% 79%,67% 99%,48% 100%,43% 94%,48% 87%,39% 83%,37% 91%,24% 91%,21% 83%,28% 77%,21% 67%,19% 57%,22% 43%,18% 29%,10% 34%,0 31%,0 25%,11% 11%,20% 8%,30% 14%,32% 9%)}
+.mapped-person-sprite[hidden]{display:none!important}
+#mapped-drop-zone{position:absolute;z-index:34;border:2px dashed #c4fa78;border-radius:14px;background:#c4fa7815;color:#eaffd4;font:12px system-ui;text-align:center;padding-top:8px;box-sizing:border-box;pointer-events:none}
+#mapped-drop-zone.is-over{background:#c4fa7838;box-shadow:0 0 20px #c4fa7850}
+#mapped-drop-zone[hidden]{display:none!important}

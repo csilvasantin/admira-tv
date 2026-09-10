@@ -1,6 +1,6 @@
 /* H: presentation. S: selection overlays. Neither changes camera or playback. */
 (function(){
- const embedded=window.parent!==window,channel='admira-hidden-ui-v1';let hidden=false,selectionHidden=false;
+ const embedded=window.parent!==window,channel='admira-hidden-ui-v1';let hidden=true,selectionHidden=false;
  const frames=()=>[...document.querySelectorAll('#photo-view iframe')];
  const state=()=>({channel,type:'state',hidden,selectionHidden});
  function apply(value,selection=selectionHidden){
@@ -27,5 +27,6 @@
    if(e.data.type==='ready')e.source.postMessage(state(),location.origin);
   }
  });
+ apply(hidden);
  if(embedded)parent.postMessage({channel,type:'ready'},location.origin);
 })();

@@ -14,22 +14,26 @@
    const raw=matches[0];let url;try{url=new globalThis.URL(raw.url);if(url.protocol!=='https:'||url.username||url.password)continue;}catch{continue;}
    if(used.has(url.href)){slot.error='El vídeo ya está asociado a otra persona';continue;}
    used.add(url.href);slot.item={id:'music:'+raw.id,url:url.href,type:'video',title:String(raw.title||'Canción '+slot.number),artist:String(raw.artist||artists[raw.id]||raw.title||'esta canción'),number:slot.number,tags:raw.tags};slot.error=null;
-  }return slots;
+  }
+  // Explicit authored drop assignment. Do not alter the catalogue's #7 tag.
+  const topGun=items.find(i=>i.id==='1786533143983-n2y09e'&&i.type==='video');
+  if(topGun){try{const u=new globalThis.URL(topGun.url);if(u.protocol==='https:'&&!u.username&&!u.password)slots.topGun={id:'music:'+topGun.id,url:u.href,type:'video',title:String(topGun.title),artist:'Berlin · Top Gun',number:1,tags:topGun.tags};}catch{}}
+  return slots;
  }
  async function fetchCatalog(fetcher){const response=await fetcher(URL,{cache:'no-store',credentials:'omit'});if(!response.ok)throw Error('Pixeria no está disponible');const data=await response.json();if(!Array.isArray(data.items))throw Error('Catálogo no válido');return resolve(data.items);}
  // Only the most recent intention can play after an asynchronous catalogue load.
  function create({load,play,stop,isCurrent=()=>true,onState=()=>{}}){
-  let slots=null,pending=null,revision=0,selected=0;
+  let slots=null,pending=null,revision=0,selected=0,selectedVariant=false;
   const warm=()=>pending||(pending=load().then(value=>(slots=value,value)).catch(error=>{pending=null;throw error}));
-  async function select(number,{restart=false}={}){
+  async function select(number,{restart=false,atKiosk=false}={}){
    if(!Number.isInteger(number)||number<0||number>10)return;
    const token=++revision;
    if(number===0){selected=0;stop();onState({number:0,status:'stopped',title:''});return;}
-   if(number===selected&&!restart&&isCurrent(number))return;
-   onState({number,status:'loading',title:'Buscando #musica + #'+number});
+   if(number===selected&&atKiosk===selectedVariant&&!restart&&isCurrent(number))return;
+   onState({number,status:'loading',title:atKiosk?'Buscando Top Gun':'Buscando #musica + #'+number});
    try{const catalog=slots||await warm();if(token!==revision)return;
-    const slot=catalog[number-1];if(!slot?.item){selected=0;stop();onState({number,status:'error',title:slot?.error||'Canción no disponible'});return;}
-    selected=number;play(slot.item,catalog.filter(s=>s.item).map(s=>s.item));
+    const slot=atKiosk&&number===1?{item:catalog.topGun,error:'Top Gun no está disponible en el catálogo'}:catalog[number-1];if(!slot?.item){selected=0;stop();onState({number,status:'error',title:slot?.error||'Canción no disponible'});return;}
+    selected=number;selectedVariant=atKiosk;const items=catalog.filter(s=>s.item).map(s=>s.item).filter(i=>i.id!==slot.item.id);items.unshift(slot.item);play(slot.item,items);
    }catch(error){if(token!==revision)return;selected=0;stop();onState({number,status:'error',title:error.message});}
   }
   return {warm,select,stop:()=>select(0)};

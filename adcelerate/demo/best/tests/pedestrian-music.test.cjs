@@ -24,3 +24,15 @@ test('the same fader number resumes its song after a remote player override',asy
 });
 
 test('Metahuman preference uses the assigned artist, not the stock ordinal',()=>{const s=music.resolve([item('1781952357264-shzjr3',['musica','10'])])[9];assert.equal(s.item.artist,'Blur');assert.equal(music.preference(s.number,s.item.artist),'A Metahuman 10 le gusta Blur');});
+
+test('dropping person 1 selects exact Top Gun asset without changing person 7 tags',async()=>{
+ const stock=[item('one'),item('1786533143983-n2y09e',['musica','7'])],slots=music.resolve(stock),played=[];
+ assert.equal(slots[6].item.number,7);assert.equal(slots.topGun.number,1);
+ const player=music.create({load:()=>Promise.resolve(slots),play:(i,items)=>{played.push(i.id);assert.equal(items.filter(x=>x.id===i.id).length,1)},stop:()=>{}});
+ await player.select(1,{atKiosk:true});await player.select(1);assert.deepEqual(played,['music:1786533143983-n2y09e','music:one']);
+});
+test('missing Top Gun fails explicitly and leaving cancels a pending drop',async()=>{
+ const states=[];const missing=music.create({load:()=>Promise.resolve(music.resolve([item('one')])),play:()=>assert.fail('unrelated video'),stop:()=>{},onState:s=>states.push(s)});
+ await missing.select(1,{atKiosk:true});assert.match(states.at(-1).title,/Top Gun/);assert.equal(states.at(-1).status,'error');
+ let ready;const p=music.create({load:()=>new Promise(r=>ready=r),play:()=>assert.fail('stale drop'),stop:()=>{}});const drop=p.select(1,{atKiosk:true});await p.select(0);ready(music.resolve([item('1786533143983-n2y09e',['musica','7'])]));await drop;
+});
