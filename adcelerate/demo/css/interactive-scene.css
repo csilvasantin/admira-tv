@@ -19,3 +19,5 @@
 #mapped-pole-slider.dragging .mapped-fader-thumb{box-shadow:0 0 14px #cffa88}
 #mapped-people-status{max-width:calc(100% - 48px);white-space:normal;line-height:1.5}
 .targets-hidden .mapped-person-hit,.targets-hidden #mapped-pole-slider,.targets-hidden #mapped-no-parking,.targets-hidden #mapped-people-status{display:none!important;pointer-events:none!important}
+
+.jardinets-shoe{position:absolute;left:0;top:0;width:100px;height:48px;transform-origin:0 0;z-index:26;border:2px solid #c5f58c;border-radius:14px;background:#c5f58c0d;box-sizing:border-box;cursor:pointer;pointer-events:auto;color:#fff;text-decoration:none}.jardinets-shoe[hidden]{display:none}.jardinets-shoe:hover,.jardinets-shoe:focus-visible{background:#c5f58444;outline:3px solid #e4ffbb}.jardinets-shoe span{position:absolute;right:100%;top:0;white-space:nowrap;padding:6px 9px;background:#10251eef;border-radius:6px;font:14px system-ui;opacity:0;pointer-events:none}.jardinets-shoe:hover span,.jardinets-shoe:focus-visible span{opacity:1}

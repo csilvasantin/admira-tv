@@ -173,3 +173,5 @@ Lesseps usa la fotografía conectada `FSGuPbr-GnVq2_FxQVLfkg`, de agosto
 de 2024, junto a la plaza. Su única pantalla mantiene la identidad
 `lesseps-main`. La ficha indica **Audiencia pendiente de conectar**; no
 hereda las cifras ni las recomendaciones de la simulación de Vila.
+
+Accesos del poste de Jardinets: [zapatillas y llegada a Store](../../docs/Jardinets-zapatillas-Store.md).
