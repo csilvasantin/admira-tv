@@ -10,13 +10,13 @@ async function fixture({surface='browser',denied=false,slowLoad=false,segment}={
     set id(id){this._id=id;if(id)nodes.set(id,this);}get id(){return this._id;}
     addEventListener(type,fn){(this.listeners[type]??=[]).push(fn);}
     async emit(type,event={}){for(const fn of this.listeners[type]||[])await fn(event);}
-    append(...children){this.children.push(...children);}replaceChildren(...children){this.children=children;}
+    append(...children){this.children.push(...children);for(const child of children)child.parentNode=this;}replaceChildren(...children){this.children=children;}
     querySelectorAll(tag){return this.children.flatMap(child=>[...(child.tagName===tag?[child]:[]),...child.querySelectorAll(tag)]);}
     getContext(){return {fillRect(){},clearRect(){},strokeRect(){},fillText(){},drawImage(){},putImageData:data=>{this.lastImageData=data;},getImageData:(x,y,width,height)=>({width,height,data:new Uint8ClampedArray(width*height*4).fill(127)}),measureText(){return {width:100};}};}
-    setAttribute(name,value){this[name]=value;}removeAttribute(name){delete this[name];}load(){}async play(){}remove(){}
+    setAttribute(name,value){this[name]=value;}removeAttribute(name){delete this[name];}load(){}async play(){}remove(){this.removed=true;if(this.parentNode)this.parentNode.children=this.parentNode.children.filter(c=>c!==this);}
   }
   const get=id=>nodes.get(id)||new Element(id);
-  const doc=new Element();doc.hidden=false;doc.getElementById=get;doc.createElement=tag=>Object.assign(new Element(),{tagName:tag});doc.head=new Element();
+  const doc=new Element();doc.hidden=false;doc.getElementById=get;doc.createElement=tag=>{const e=Object.assign(new Element(),{tagName:tag});if(tag==='iframe'){e.sent=[];e.contentWindow={postMessage:(data,origin)=>e.sent.push({data,origin})};}return e;};doc.head=new Element();
   const win=new Element();win.tf={ready:async()=>{},getBackend:()=> 'fixture'};
   if(segment)win.deeplab={load:async()=>({segment,dispose(){}})};
   let finishLoad,finishDetection;
@@ -31,7 +31,7 @@ async function fixture({surface='browser',denied=false,slowLoad=false,segment}={
   get('confidence').value='65';
   await import(`./xtore.mjs?fixture=${++serial}`);
   const calibrate=async()=>{await get('edit-coordinates').emit('click');await get('apply-coordinates').emit('click');};
-  return {get,doc,track,calibrate,detections,finishLoad:()=>finishLoad(),finishDetection:()=>finishDetection?.([])};
+  return {get,doc,win,track,calibrate,detections,finishLoad:()=>finishLoad(),finishDetection:()=>finishDetection?.([])};
 }
 
 test('permission denial stays disconnected and is explained',async()=>{
@@ -73,6 +73,45 @@ test('changing source resolution invalidates calibration',async()=>{
   f.get('scene').videoWidth=1440;await f.get('scene').emit('resize');
   assert.equal(f.get('analyze').disabled,true);assert.equal(f.get('tablet').hidden,true);
   await f.get('stop').emit('click');
+});
+test('optional signage coordinates enable a third surface, never a player without a click',async()=>{
+  const f=await fixture();await f.get('connect').emit('click');
+  await f.get('edit-coordinates').emit('click');
+  const quad=[50,25,75,25,75,85,50,85];
+  for(const [i,value] of quad.entries())f.get(`coord-${12+i}`).value=String(value);
+  await f.get('apply-coordinates').emit('click');
+  assert.equal(f.get('signage').hidden,false);assert.equal(f.get('start-signage').disabled,false);
+  assert.equal(f.get('signage').children.length,0);assert.match(f.get('calibration-status').textContent,/cartelería: marcada/);
+  f.get('scene').videoWidth=1440;await f.get('scene').emit('resize');
+  assert.equal(f.get('signage').hidden,true);assert.equal(f.get('start-signage').disabled,true);
+  await f.get('stop').emit('click');
+});
+test('partial signage coordinates cannot be accepted silently',async()=>{
+  const f=await fixture();await f.get('connect').emit('click');await f.get('edit-coordinates').emit('click');
+  f.get('coord-12').value='50';await f.get('apply-coordinates').emit('click');
+  assert.match(f.get('status').textContent,/Completa las ocho/);assert.equal(f.get('start-signage').disabled,true);
+  await f.get('stop').emit('click');
+});
+test('signage mounts only on explicit activation and is removed on hide; late loads are ignored',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture();await f.get('connect').emit('click');await f.get('edit-coordinates').emit('click');
+  for(const [i,value] of [50,25,75,25,75,85,50,85].entries())f.get(`coord-${12+i}`).value=String(value);
+  await f.get('apply-coordinates').emit('click');await f.get('start-signage').emit('click');
+  const iframe=f.get('signage').children[0];assert.ok(iframe.src.includes('xtore-virtual-'));assert.equal(iframe.sandbox,'allow-scripts');
+  const sent=iframe.sent;await iframe.emit('load');
+  await f.win.emit('message',{source:iframe.contentWindow,origin:'null',data:{source:'admira-tv-canal',requestId:sent[0].data.requestId,ok:true}});
+  assert.match(f.get('signage-status').textContent,/Neutro · orden aceptada/);
+  await f.get('analyze').emit('click');assert.equal(iframe.removed,undefined);
+  f.doc.hidden=true;await f.doc.emit('visibilitychange');assert.equal(iframe.removed,true);assert.equal(f.get('signage').children.length,0);
+  await iframe.emit('load');assert.equal(sent.length,1);await f.get('stop').emit('click');f.finishDetection();
+});
+test('signage with no reported media shuts down even after an ACK',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture();await f.get('connect').emit('click');await f.get('edit-coordinates').emit('click');
+  for(const [i,value] of [50,25,75,25,75,85,50,85].entries())f.get(`coord-${12+i}`).value=String(value);
+  await f.get('apply-coordinates').emit('click');await f.get('start-signage').emit('click');
+  const iframe=f.get('signage').children[0];await f.win.emit('message',{source:iframe.contentWindow,origin:'null',data:{source:'admira-tv-canal',requestId:iframe.sent[0].data.requestId,ok:true}});
+  t.mock.timers.tick(30001);assert.equal(iframe.removed,true);assert.match(f.get('signage-status').textContent,/Sin emisión confirmada/);await f.get('stop').emit('click');
 });
 test('an obsolete inference error cannot stop a newly resumed analysis',async()=>{
   const f=await fixture();await f.get('connect').emit('click');await f.calibrate();

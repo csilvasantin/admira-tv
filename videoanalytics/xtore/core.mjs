@@ -47,20 +47,25 @@ export class PassageTracker {
   update(predictions, now, width, height, threshold=.65){
     this.tracks=this.tracks.filter(t=>now-t.last<1500);
     const matched=new Set(), events=[];
-    const valid=predictions.filter(p=>Object.hasOwn(CLASSES,p.class) && Number.isFinite(p.score) && p.score >= threshold && Array.isArray(p.bbox) && p.bbox.length===4 && p.bbox.every(Number.isFinite) && p.bbox[2]>0 && p.bbox[3]>0).sort((a,b)=>b.score-a.score);
+    const limit=category=>typeof threshold==='number'?threshold:(threshold[category]??.65);
+    const valid=predictions.filter(p=>Object.hasOwn(CLASSES,p.class) && Number.isFinite(p.score) && p.score<=1 && p.score >= limit(p.class) && Array.isArray(p.bbox) && p.bbox.length===4 && p.bbox.every(Number.isFinite) && p.bbox[2]>0 && p.bbox[3]>0).sort((a,b)=>b.score-a.score);
     for(const p of valid){
       const b=[p.bbox[0]/width,p.bbox[1]/height,p.bbox[2]/width,p.bbox[3]/height], c=center(b);
       let best=null, bestCost=Infinity;
       for(const t of this.tracks){
         if(matched.has(t.id)||t.category!==p.class)continue;
         const tc=center(t.bbox),dist=Math.hypot(c[0]-tc[0],c[1]-tc[1]),iou=overlap(t.bbox,b);
-        if((iou>.1||dist<.10)&&dist+(1-iou)*.1<bestCost){best=t;bestCost=dist+(1-iou)*.1;}
+        const fast=p.class==='bicycle'||p.class==='motorcycle',elapsed=Math.max(0,now-t.last)/1000;
+        const reach=fast?Math.min(.28,.08+elapsed*.55):.10;
+        const ratio=b[2]*b[3]/(t.bbox[2]*t.bbox[3]);
+        if(ratio>.35&&ratio<2.85&&(iou>.1||dist<reach)&&dist+(1-iou)*.1<bestCost){best=t;bestCost=dist+(1-iou)*.1;}
       }
       if(!best){best={id:++this.sequence,category:p.class,bbox:b,origin:c,last:now,hits:0,emitted:false};this.tracks.push(best);}
       // A long detection gap is not consecutive evidence.
-      if(now-best.last>900)best.hits=0;
+      if(now-best.last>900){best.hits=0;best.origin=c;}
       best.hits++;best.bbox=b;best.last=now;matched.add(best.id);
-      if(!best.emitted && best.hits>=2 && Math.hypot(c[0]-best.origin[0],c[1]-best.origin[1])>=.012){
+      const needed=p.class==='bicycle'&&p.score<.65?3:2;
+      if(!best.emitted && best.hits>=needed && Math.hypot(c[0]-best.origin[0],c[1]-best.origin[1])>=.012){
         best.emitted=true;events.push({...p,trackId:best.id});
       }
     }

@@ -1,6 +1,8 @@
 import {CLASSES, SNAPSHOT_TTL, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
 import {CutoutJob} from './cutouts.mjs';
 import {installTwinUI} from './twin-ui.mjs';
+import {detectObjects} from './detector.mjs';
+import {installSignageUI} from './signage-ui.mjs';
 
 const $=id=>document.getElementById(id);
 const scene=$('scene'), stage=$('stage'), frame=document.createElement('canvas');
@@ -15,8 +17,10 @@ let stream=null, generation=0, analyzing=false, busy=false, loopTimer=0, expiryT
 let model=null, modelPromise=null, calibration=null, points=[], roiReady=false, tabletReady=false;
 let roi=[.706,.026,.282,.293];
 let quad=[[.773,.491],[.89,.51],[.874,.675],[.75,.647]];
+let signageQuad=[[.59,.37],[.78,.37],[.78,.9],[.59,.9]],signageReady=false;
 let sourceSize='', lastVideoTime=-1, lastFrameAt=0;
 const twins=installTwinUI({document,onOriginalRemoved:()=>clearCapture('Original temporal retirado')});
+const signage=installSignageUI({document,window});
 
 function status(message){$('status').textContent=message;}
 function renderCounts(){
@@ -27,7 +31,8 @@ function controls(){
   const connected=!!stream;
   $('connect').disabled=connected||busy;
   $('stop').disabled=!connected;
-  for(const id of ['set-roi','set-tablet','edit-coordinates'])$(id).disabled=!connected;
+  for(const id of ['set-roi','set-tablet','set-signage','edit-coordinates'])$(id).disabled=!connected;
+  signage.setEligible(connected&&signageReady&&!calibration);
   $('analyze').disabled=!connected||!roiReady||!tabletReady||!!calibration||busy;
   $('analyze').textContent=analyzing?'Pausar análisis':'Iniciar análisis';
   $('connection').textContent=analyzing?'Analizando':connected?'Pestaña conectada':'Sin conexión';
@@ -51,6 +56,7 @@ function clearCapture(message='Sin capturas'){
   tabletIdle(analyzing?'Esperando un paso':'Análisis en pausa');
 }
 function pause(message){
+  signage.stop();
   twins.cancelOriginal();
   analyzing=false;generation++;clearTimeout(loopTimer);tracker.reset();clearCapture();controls();
   frameContext.clearRect(0,0,frame.width,frame.height);
@@ -61,9 +67,9 @@ function disconnect(message='Desconectado. Capturas y vídeo borrados de la vist
   if(stream)for(const track of stream.getTracks())track.stop();
   stream=null;scene.srcObject=null;scene.removeAttribute('src');scene.load();
   frame.width=1;frame.height=1;sourceSize='';lastVideoTime=-1;
-  roiReady=false;tabletReady=false;calibration=null;points=[];
+  roiReady=false;tabletReady=false;signageReady=false;calibration=null;points=[];
   stage.classList.remove('calibrating');stage.style.aspectRatio='16 / 9';
-  $('tablet').hidden=true;$('roi').hidden=true;$('markers').replaceChildren();
+  $('tablet').hidden=true;$('signage').hidden=true;$('roi').hidden=true;$('markers').replaceChildren();
   $('empty-scene').hidden=false;$('source-info').textContent='ESPERANDO FUENTE';
   $('calibration-status').textContent='Encuadre pendiente de confirmar';
   $('coordinates').hidden=true;controls();status(message);
@@ -71,8 +77,10 @@ function disconnect(message='Desconectado. Capturas y vídeo borrados de la vist
 function layout(){
   const width=stage.clientWidth,height=stage.clientHeight;
   if(tabletReady){$('tablet').style.transform=`matrix3d(${quadMatrix(640,480,quad.map(([x,y])=>[x*width,y*height])).join(',')})`;}
+  if(signageReady){$('signage').style.transform=`matrix3d(${quadMatrix(540,960,signageQuad.map(([x,y])=>[x*width,y*height])).join(',')})`;}
   Object.assign($('roi').style,{left:`${roi[0]*100}%`,top:`${roi[1]*100}%`,width:`${roi[2]*100}%`,height:`${roi[3]*100}%`});
   $('tablet').hidden=!tabletReady||!stream;
+  $('signage').hidden=!signageReady||!stream;
   $('roi').hidden=!stream||!roiReady;
 }
 new ResizeObserver(layout).observe(stage);
@@ -88,7 +96,7 @@ $('connect').addEventListener('click',async()=>{
       selected.getTracks().forEach(t=>t.stop());
       status('Selecciona una pestaña de Chrome, no una ventana ni la pantalla completa.');return;
     }
-    stream=selected;generation++;roiReady=false;tabletReady=false;
+    stream=selected;generation++;roiReady=false;tabletReady=false;signageReady=false;
     track.addEventListener('ended',()=>disconnect('Se ha terminado de compartir. La captura se ha borrado.'),{once:true});
     track.addEventListener('mute',()=>pause('La fuente está interrumpida. Revisa la pestaña y vuelve a iniciar el análisis.'));
     scene.srcObject=stream;
@@ -108,7 +116,7 @@ function updateSourceSize(){
   const next=`${scene.videoWidth} × ${scene.videoHeight}`;
   if(sourceSize && sourceSize!==next){
     pause('La fuente ha cambiado de tamaño. Vuelve a marcar la cámara y el iPad antes de analizar.');
-    roiReady=false;tabletReady=false;$('calibration-status').textContent='Tamaño nuevo: repite el encuadre';
+    roiReady=false;tabletReady=false;signageReady=false;$('calibration-status').textContent='Tamaño nuevo: repite el encuadre';
   }
   sourceSize=next;stage.style.aspectRatio=`${scene.videoWidth} / ${scene.videoHeight}`;
   $('source-info').textContent=`PESTAÑA COMPARTIDA · ${next}`;layout();controls();
@@ -119,12 +127,14 @@ function startCalibration(kind){
   pause();calibration=kind;points=[];stage.classList.add('calibrating');$('markers').replaceChildren();
   $('coordinates').hidden=true;
   if(kind==='roi'){roiReady=false;$('roi').hidden=true;status('Marca dos puntos en la escena: esquina superior izquierda e inferior derecha del vídeo de Puerta Cam. No incluyas el resto de la tienda.');}
+  else if(kind==='signage'){signageReady=false;$('signage').hidden=true;status('Marca las cuatro esquinas interiores de la pantalla grande: superior izquierda → superior derecha → inferior derecha → inferior izquierda.');}
   else{tabletReady=false;$('tablet').hidden=true;status('Marca las cuatro esquinas interiores del iPad: superior izquierda → superior derecha → inferior derecha → inferior izquierda.');}
-  $('calibration-status').textContent=kind==='roi'?'Marcando cámara: 0 / 2':'Marcando iPad: 0 / 4';
+  $('calibration-status').textContent=kind==='roi'?'Marcando cámara: 0 / 2':`Marcando ${kind==='signage'?'cartelería':'iPad'}: 0 / 4`;
   controls();
 }
 $('set-roi').addEventListener('click',()=>startCalibration('roi'));
 $('set-tablet').addEventListener('click',()=>startCalibration('tablet'));
+$('set-signage').addEventListener('click',()=>startCalibration('signage'));
 stage.addEventListener('click',event=>{
   if(!calibration)return;
   const box=stage.getBoundingClientRect();
@@ -133,30 +143,32 @@ stage.addEventListener('click',event=>{
   const marker=document.createElement('span');marker.className='marker';marker.textContent=points.length;
   marker.style.left=`${point[0]*100}%`;marker.style.top=`${point[1]*100}%`;$('markers').append(marker);
   const required=calibration==='roi'?2:4;
-  $('calibration-status').textContent=`Marcando ${calibration==='roi'?'cámara':'iPad'}: ${points.length} / ${required}`;
+  $('calibration-status').textContent=`Marcando ${calibration==='roi'?'cámara':calibration==='signage'?'cartelería':'iPad'}: ${points.length} / ${required}`;
   if(points.length!==required)return;
   if(calibration==='roi'){
     const candidate=[points[0][0],points[0][1],points[1][0]-points[0][0],points[1][1]-points[0][1]];
     if(!validRect(candidate)){startCalibration('roi');status('El recuadro no es válido. Marca primero arriba a la izquierda y después abajo a la derecha.');return;}
     roi=candidate;roiReady=true;
   }else{
-    if(!validQuad(points)){startCalibration('tablet');status('Las esquinas se cruzan o el iPad es demasiado pequeño. Repite en sentido horario desde arriba a la izquierda.');return;}
-    quad=points.map(p=>[...p]);tabletReady=true;
+    if(!validQuad(points)){startCalibration(calibration);status('Las esquinas se cruzan o la pantalla es demasiado pequeña. Repite en sentido horario desde arriba a la izquierda.');return;}
+    if(calibration==='signage'){signageQuad=points.map(p=>[...p]);signageReady=true;}
+    else{quad=points.map(p=>[...p]);tabletReady=true;}
   }
   finishCalibration();
 });
 function finishCalibration(){
   calibration=null;points=[];stage.classList.remove('calibrating');$('markers').replaceChildren();
-  $('calibration-status').textContent=`Cámara: ${roiReady?'marcada':'pendiente'} · iPad: ${tabletReady?'marcado':'pendiente'}`;
+  $('calibration-status').textContent=`Cámara: ${roiReady?'marcada':'pendiente'} · iPad: ${tabletReady?'marcado':'pendiente'} · cartelería: ${signageReady?'marcada':'opcional, pendiente'}`;
   layout();controls();status(roiReady&&tabletReady?'Encuadre listo. Pulsa Iniciar análisis. Si giras o acercas el gemelo, pausa y vuelve a marcar.':'Marca también la otra zona antes de iniciar el análisis.');
 }
 const coordinateNames=['Cámara: izquierda','Cámara: arriba','Cámara: ancho','Cámara: alto','iPad: sup. izq. X','iPad: sup. izq. Y','iPad: sup. der. X','iPad: sup. der. Y','iPad: inf. der. X','iPad: inf. der. Y','iPad: inf. izq. X','iPad: inf. izq. Y'];
+const signageNames=['Cartelería: sup. izq. X','Cartelería: sup. izq. Y','Cartelería: sup. der. X','Cartelería: sup. der. Y','Cartelería: inf. der. X','Cartelería: inf. der. Y','Cartelería: inf. izq. X','Cartelería: inf. izq. Y'];
 $('edit-coordinates').addEventListener('click',()=>{
   pause();calibration=null;points=[];stage.classList.remove('calibrating');$('markers').replaceChildren();
   $('coordinate-fields').replaceChildren();
-  [...roi,...quad.flat()].forEach((value,i)=>{
-    const label=document.createElement('label');label.textContent=coordinateNames[i];
-    const input=document.createElement('input');input.type='number';input.min='0';input.max='100';input.step='.1';input.value=(value*100).toFixed(1);input.id=`coord-${i}`;label.append(input);$('coordinate-fields').append(label);
+  [...roi,...quad.flat(),...signageQuad.flat()].forEach((value,i)=>{
+    const label=document.createElement('label');label.textContent=[...coordinateNames,...signageNames][i];
+    const input=document.createElement('input');input.type='number';input.min='0';input.max='100';input.step='.1';input.value=i>=12&&!signageReady?'':(value*100).toFixed(1);input.id=`coord-${i}`;label.append(input);$('coordinate-fields').append(label);
   });
   $('coordinates').hidden=false;status('Ajusta los porcentajes y pulsa Aplicar coordenadas. Los valores iniciales son orientativos, no una calibración automática.');
 });
@@ -164,9 +176,16 @@ $('apply-coordinates').addEventListener('click',()=>{
   const values=coordinateNames.map((_,i)=>$(`coord-${i}`).value.trim()===''?NaN:Number($(`coord-${i}`).value)/100);
   const r=values.slice(0,4),q=[values.slice(4,6),values.slice(6,8),values.slice(8,10),values.slice(10,12)];
   if(!validRect(r)||!validQuad(q)){status('Coordenadas inválidas: cámara dentro de la escena y cuatro esquinas del iPad en sentido horario, sin cruces.');return;}
+  const s=signageNames.map((_,i)=>$(`coord-${i+12}`).value.trim());
+  if(s.some(Boolean)){
+    const sq=Array.from({length:4},(_,i)=>s.slice(i*2,i*2+2).map(v=>v===''?NaN:Number(v)/100));
+    if(!validQuad(sq)){status('Completa las ocho coordenadas de cartelería o déjalas todas vacías para omitirla.');return;}
+    signageQuad=sq;signageReady=true;
+  }else signageReady=false;
   roi=r;quad=q;roiReady=true;tabletReady=true;$('coordinates').hidden=true;finishCalibration();
 });
 $('confidence').addEventListener('input',()=>{$('confidence-value').value=`${$('confidence').value} %`;tracker.reset();});
+$('bicycle-confidence').addEventListener('input',()=>{$('bicycle-confidence-value').value=`${$('bicycle-confidence').value} %`;tracker.reset();});
 
 function loadScript(src,integrity){
   return new Promise((resolve,reject)=>{
@@ -203,13 +222,14 @@ $('analyze').addEventListener('click',async()=>{
     if(token!==generation||!stream)return;
     if(document.hidden){status('Vuelve a esta vista y pulsa Iniciar análisis.');return;}
     analyzing=true;tracker.reset();lastVideoTime=-1;lastFrameAt=performance.now();
-    status('Analizando solo Puerta Cam. Se captura al confirmar movimiento en dos fotogramas; las imágenes caducan a los 6 s.');
+    status('Analizando solo Puerta Cam. Pasos confirmados en dos fotogramas (tres para bicis de confianza baja); capturas de 6 s. Puedes activar la cartelería si está marcada.');
     tabletIdle();loop(token);
   }catch{status('No se ha iniciado el análisis. Revisa el estado del detector.');}
   finally{busy=false;controls();}
 });
 async function loop(token){
   if(!analyzing||token!==generation||!stream)return;
+  const iterationStart=performance.now();
   try{
     const now=performance.now();
     if(scene.readyState<2||scene.currentTime===lastVideoTime){
@@ -220,19 +240,21 @@ async function loop(token){
       const width=Math.max(1,Math.round(Math.min(960,w*sw))),height=Math.max(1,Math.round(width*h*sh/(w*sw)));
       if(frame.width!==width||frame.height!==height){frame.width=width;frame.height=height;}
       frameContext.drawImage(scene,x*sw,y*sh,w*sw,h*sh,0,0,width,height);
-      const start=performance.now(),threshold=Number($('confidence').value)/100;
-      const predictions=await model.detect(frame,20,threshold);
+      const start=performance.now(),threshold=Number($('confidence').value)/100,bikeThreshold=Number($('bicycle-confidence').value||40)/100;
+      const predictions=await detectObjects(model,window.tf,frame,Math.min(.25,threshold,bikeThreshold));
       if(!analyzing||token!==generation)return;
-      const events=tracker.update(predictions,performance.now(),width,height,threshold);
-      if(events.length){passages.add(events);renderCounts();}
+      const events=tracker.update(predictions,performance.now(),width,height,{person:threshold,car:threshold,motorcycle:threshold,bicycle:bikeThreshold});
+      if(events.length){passages.add(events);renderCounts();signage.passage(events);}
       $('source-info').textContent=`PUERTA CAM · ${width} × ${height} · ${Math.round(performance.now()-start)} ms / análisis`;
+      const bikes=predictions.filter(p=>p.class==='bicycle'),best=bikes.reduce((score,p)=>Math.max(score,p.score),0);
+      $('detection-status').textContent=`Bicis candidatas: ${bikes.length} · mejor ${Math.round(best*100)} % · umbral ${Math.round(bikeThreshold*100)} % · ${Math.round(performance.now()-start)} ms`;
       if(events.length)showCapture(events);
     }
   }catch{
     if(token!==generation||!analyzing)return;
     pause('El detector ha fallado. La captura se ha borrado; revisa la fuente y vuelve a iniciar.');return;
   }
-  if(analyzing&&token===generation)loopTimer=setTimeout(()=>loop(token),200);
+  if(analyzing&&token===generation)loopTimer=setTimeout(()=>loop(token),Math.max(0,125-(performance.now()-iterationStart)));
 }
 function showCapture(events){
   const main=CLASSES[events[0].class];

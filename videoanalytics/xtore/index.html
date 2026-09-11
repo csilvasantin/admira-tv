@@ -19,7 +19,7 @@
   </header>
   <main>
     <header class="heading">
-      <div><p class="eyebrow">VIDEO ANALYTICS / XTORE</p><h1>La calle, en el iPad.</h1><p class="intro">Puerta Cam detecta el paso. El player virtual muestra la captura.</p></div>
+      <div><p class="eyebrow">VIDEO ANALYTICS / XTORE</p><h1>La calle activa la Xtore.</h1><p class="intro">Puerta Cam detecta. El iPad muestra. La cartelería responde.</p></div>
       <span id="connection" class="badge">Sin conexión</span>
     </header>
     <section class="toolbar" aria-label="Conectar la Xtore">
@@ -35,10 +35,11 @@
           <video id="scene" muted playsinline aria-label="Pestaña compartida de Digital Twin"></video>
           <div id="empty-scene" class="empty-scene"><span class="scene-mark" aria-hidden="true">⌗</span><h2>Tu Xtore, conectada.</h2><p>La escena real aparecerá aquí al compartir la pestaña.<br>No hay vídeo ni detecciones simuladas.</p><span class="small">Chrome de escritorio · sesión de IEU necesaria</span></div>
           <div id="tablet" hidden aria-label="Player virtual sobre el iPad"><canvas id="tablet-canvas" width="640" height="480"></canvas></div>
+          <div id="signage" hidden aria-label="Cartelería digital virtual"><div id="signage-idle">Admira.tv<br><small>Player pendiente de activar</small></div></div>
           <div id="roi" hidden><span>Solo se analiza esta zona</span></div>
           <div id="markers" aria-hidden="true"></div>
         </div>
-        <div class="viewer-caption"><span id="source-info">ESPERANDO FUENTE</span><span>iPad virtual · no es un dispositivo físico</span></div>
+        <div class="viewer-caption"><span id="source-info">ESPERANDO FUENTE</span><span>iPad y cartelería virtuales · no son dispositivos físicos</span></div>
       </section>
       <aside class="inspector">
         <div class="section-title"><h2>Última captura</h2><span id="event-counter">0 pasos</span></div>
@@ -78,9 +79,17 @@
           <details class="help"><summary><span aria-hidden="true">›</span> Uso temporal y borrado</summary><p class="small">Solo se retiene un original en esta sesión, nunca en Stock ni en almacenamiento del navegador. Se retira al recibir una imagen válida, fallar, cancelar, pausar u ocultar la pestaña; máximo 3 min. El resultado local caduca a los 15 min. Publicar guarda únicamente el resultado en Stock y no lo elimina cuando cierres esta vista. La retirada local no certifica borrado de registros de Pixeria o Gemini. <a href="https://ai.google.dev/gemini-api/terms#how-google-uses-your-data-1" target="_blank" rel="noopener noreferrer">Condiciones de Gemini ↗</a></p></details>
         </details>
         <div class="divider"></div>
+        <h2>Cartelería condicionada</h2>
+        <p id="signage-status" class="small" role="status">Marca la pantalla grande para activar el player.</p>
+        <button id="start-signage" class="full" disabled>Activar player Admira.tv</button>
+        <button id="stop-signage" class="text-button" disabled>Apagar player</button>
+        <details class="help"><summary><span aria-hidden="true">›</span> Conexión con el player</summary><p>Solo envía categorías de pasos confirmados; nunca imágenes, sexo ni edad. Prioridad: bici → moto → coche → persona. Vuelve a neutro a los 6 s sin nuevos pasos. Al pausar, ocultar o recalibrar, se apaga. El player necesita reglas y contenidos compatibles; aceptar una orden no acredita un cambio de anuncio.</p><p id="signage-media">Sin confirmación de emisión</p><p>Activa una pantalla virtual con identificador independiente. Puede generar telemetría de reproducción; no controla pantallas físicas ni activa la cámara del player.</p></details>
+        <details class="help"><summary><span aria-hidden="true">›</span> Grabación de seguridad · no activa</summary><p><strong>No se está grabando ni archivando.</strong> Falta un grabador y un almacén privado. La propuesta es conservar originales sin alterar durante 28 días, con borrado automático en servidor y acceso restringido; nunca en Stock público de Pixeria.</p><p>Compartir una pestaña no sustituye un grabador 24/7: al ocultarla o cerrarla este análisis se detiene. Para seguridad continua necesitamos una conexión autorizada directa a la cámara y un equipo o servicio siempre encendido. Una imagen generada no sustituye el original.</p></details>
+        <div class="divider"></div>
         <h2>Encuadre y detección</h2>
-        <details class="help"><summary><span aria-hidden="true">›</span> Cómo marcar cámara e iPad</summary><p class="small">Antes de analizar, marca el recuadro de Puerta Cam y las cuatro esquinas de la pantalla del iPad. Repite si mueves el gemelo.</p></details>
+        <details class="help"><summary><span aria-hidden="true">›</span> Cómo marcar las tres superficies</summary><p class="small">Antes de analizar, marca el recuadro de Puerta Cam y las cuatro esquinas del iPad. Marca también las cuatro esquinas de la pantalla grande para usar cartelería. Repite si mueves el gemelo. En el ajuste numérico puedes dejar la cartelería vacía para omitirla.</p></details>
         <div class="calibration-buttons"><button id="set-roi" disabled>Marcar cámara</button><button id="set-tablet" disabled>Marcar iPad</button></div>
+        <button id="set-signage" class="full" disabled>Marcar cartelería (4 esquinas)</button>
         <p id="calibration-status" class="small" role="status">Encuadre pendiente de confirmar</p>
         <div id="coordinates" hidden>
           <p class="small">Coordenadas en % de la escena. También puedes ajustar con el teclado.</p>
@@ -89,12 +98,15 @@
         </div>
         <button id="edit-coordinates" class="text-button" disabled>Ajuste por coordenadas</button>
         <label class="threshold" for="confidence">Confianza mínima <output id="confidence-value">65 %</output><input id="confidence" type="range" min="50" max="90" value="65" step="5"></label>
+        <label class="threshold" for="bicycle-confidence">Confianza para bicis <output id="bicycle-confidence-value">40 %</output><input id="bicycle-confidence" type="range" min="35" max="80" value="40" step="5"></label>
+        <p id="detection-status" class="small" role="status">Diagnóstico de bicis: esperando análisis.</p>
+        <details class="help"><summary><span aria-hidden="true">›</span> Pasos rápidos y bicis</summary><p>El detector separa las candidatas de persona y bicicleta para que una no oculte a la otra. Las bicis por debajo del 65 % necesitan tres observaciones con movimiento. Un umbral bajo puede aumentar errores; las candidatas no son pasos confirmados. Objetivo: hasta 8 análisis/s, limitado por el equipo y el vídeo.</p></details>
         <button id="analyze" class="primary full" disabled>Iniciar análisis</button>
         <button id="prepare-model" class="text-button">Preparar detector sin conectar la cámara</button>
         <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. La detección no envía fotogramas.</p>
       </aside>
     </div>
-    <footer><span>TrinityMBA16 · <span data-release-version>v.11.09.2026.r8.18:47</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Player local · puente MCP remoto no activado</span></footer>
+    <footer><span>TrinityMBA16 · <span data-release-version>v.11.09.2026.r8.18:47</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
   </main>
 </body>
 </html>

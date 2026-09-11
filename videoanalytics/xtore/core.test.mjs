@@ -78,3 +78,20 @@ test('repeated frames do not increase totals; new confirmed passages do',()=>{
   counts.add(tracker.update([p(15)],2600,200,100));
   assert.equal(counts.counts.person,2);assert.equal(counts.total,3);
 });
+test('a low-confidence fast bicycle requires three moving observations and counts once',()=>{
+  const tracker=new PassageTracker(),thresholds={person:.65,car:.65,motorcycle:.65,bicycle:.4};
+  for(const [i,x] of [0,140,280,420].entries()){
+    const events=tracker.update([p(x,'bicycle',.45),p(x,'person',.45)],i*200,1000,500,thresholds);
+    assert.equal(events.length,i===2?1:0);
+    if(events.length)assert.equal(events[0].class,'bicycle');
+  }
+  assert.equal(tracker.tracks.length,1);
+});
+test('parked low-confidence bikes, a long observation gap and >100% scores do not count',()=>{
+  const t=new PassageTracker(),threshold={bicycle:.4};
+  for(const [i,x] of [10,11,12,11,10].entries())assert.deepEqual(t.update([p(x,'bicycle',.45)],i*200,1000,500,threshold),[]);
+  t.reset();t.update([p(10,'bicycle',.45)],0,1000,500,threshold);
+  assert.deepEqual(t.update([p(50,'bicycle',.45)],1000,1000,500,threshold),[]);
+  assert.deepEqual(t.update([p(50,'bicycle',.45)],1200,1000,500,threshold),[]);
+  t.reset();assert.deepEqual(t.update([p(20,'bicycle',1.5)],0,1000,500,threshold),[]);assert.equal(t.tracks.length,0);
+});

@@ -29,7 +29,8 @@ No clasifica sexo, género, edad, identidad o atención. No se presenta como Ast
 ni como un modelo de precisión ya validada. Los bordes rosa/azul requerirían otro
 productor evaluado: no se inventan atributos para cumplir la paleta.
 
-Un tracker efímero exige dos detecciones y desplazamiento, elimina tracks a los
+Un tracker efímero exige dos detecciones y desplazamiento (tres para bicis con
+confianza inferior al 65 %), elimina tracks a los
 1.5 s sin señal y emite una sola vez por track. No es reidentificación y puede
 duplicar eventos con oclusiones o perder pasos rápidos. Una cámara muy lejana,
 baja resolución, poca luz, reflejos o movimiento de la escena requieren evaluación.
@@ -46,6 +47,61 @@ fuente correctamente o recargar. No se reconstruyen a partir de los eventos de
 versiones anteriores ni se almacenan imágenes para reconstruirlos.
 Son pasos estimados, no individuos únicos: una pausa, oclusión o regreso al
 encuadre puede producir un nuevo paso. El desglose de sexo/género no se infiere.
+
+## Mejora de bicis y tercera superficie — 11 septiembre 2026
+
+`detector.mjs` decodifica la salida cruda de la versión fijada COCO-SSD 2.2.3:
+90 clases, 1917 anchors en el modelo comprobado. Conserva puntuaciones de persona
+y bici por separado y aplica NMS por categoría (IoU .45), no entre categorías.
+El wrapper original elegía una sola clase por anchor y podía suprimir la bici
+debajo del ciclista. Contrato inesperado → error y pausa; tensors liberados.
+
+Prueba local con la captura aportada por Carlos, sin subir imágenes: ROI
+490 × 355, wrapper original sin bici; adaptador nuevo devuelve bicicleta
+score .449962, bbox [14.71, 223.58, 103.22, 47.62]. Sin aumento de tensors vivos.
+Esto prueba recuperación de una candidata en esa imagen, no recall en vídeo.
+
+Umbral de bicis independiente (40 % inicial, ajustable 35–80); el resto conserva
+65 %. El tracker permite más desplazamiento entre fotogramas de bici/moto,
+limita cambios de tamaño, exige tres observaciones a confianza baja y reinicia
+evidencia tras huecos de más de 900 ms. No cuenta objetos estáticos ni repite un
+track confirmado. Bucle sin pausa extra cuando la inferencia supera 125 ms:
+objetivo hasta 8 análisis/s, no garantía de FPS. Diagnóstico visible de candidatas,
+mejor score, umbral y duración. Falta medir pasos perdidos/falsos con vídeo real.
+
+La cartelería es una tercera superficie opcional, independiente del iPad.
+Cuatro esquinas interiores en sentido horario, homografía 540 × 960, ajuste
+numérico opcional. No carga el iframe sin activar explícitamente el player.
+Redimensionar la fuente invalida las tres zonas; pausar/ocultar/desconectar o
+recalibrar retira el iframe. Nunca se embebe IEU ni se eligen permisos del usuario.
+
+`signage.mjs`/`signage-ui.mjs` montan el player real de Admira.tv con pantalla,
+circuito y máquina `xtore-virtual-<uuid>` nuevos; mute, conditional, modeLock,
+cam=0, shot=0, rtb=0. No se escriben etiquetas en un destino físico. El iframe
+es **opaco** (`sandbox=allow-scripts`, SIN allow-same-origin); no comparte DOM,
+canvas ni localStorage del portal. No quitar esa protección para resolver CORS.
+Los comandos sin imágenes se dirigen al WindowProxy exacto con targetOrigin `*`
+(necesario para origen opaco); respuestas requieren origin `null`, ventana exacta
+y requestId pendiente aleatorio. `null` por sí solo no autoriza mensajes.
+
+Arranque neutro con sondeo idempotente cada 500 ms, mismo requestId, límite20 s.
+No depende del load de recursos secundarios. Pasos confirmados → bici, moto,
+coche o persona por prioridad; neutro tras 6 s sin nuevos pasos. Un watchdog
+de racha sin ACK vigente cierra a los 2.5 s aunque haya pasos constantes.
+ACKs obsoletos no reactivan ni tumban una orden posterior. Se cierra si no hay
+reporte de emisión en 30 s o si el iframe vuelve a navegar.
+
+Prueba real en navegador: el canal remoto opaco respondió ACK neutro. No informó
+media y mostró «sin media en este segmento»; NO se acredita emisión ni cambio
+de creatividad. El endpoint real `/player/xtanco-totem` de Neo confirma que
+Persona/Coche/Moto/Bici aún no tienen asset. No se inyectaron detecciones ni
+audiencia simulada en el bus. El smoke creó únicamente players virtuales neutros.
+La versión de Neo r10 admite padres admira.tv/www; no debe admitir origin null
+como padre. La respuesta opaca y el origen real del padre son cosas distintas.
+
+Suite local: 60 pruebas (tracking, decoder, lifecycle, permisos, máscara,
+Pixeria y bridge), más cross-review independiente. Verificación real completa
+de cámara → categoría → creatividad sigue pendiente de fuente y contenido.
 
 ## Objetos sin fondo (vista previa local)
 
@@ -146,8 +202,8 @@ automático de un clic al vídeo: la selección de pestaña siempre requiere al 
 
 ## Integración MCP / Neo
 
-El player local se alimenta directamente de los eventos de este detector. No se
-activa ni se afirma un puente de audiencia remoto desde el navegador. No se incluyen
+El iPad y el puente opcional de cartelería se alimentan de los eventos del detector.
+No se activa ni se afirma un bus MCP remoto desde el navegador. No se incluyen
 secretos de flota. La transformación/publicación de Pixeria es un flujo separado,
 con los límites de autenticación y retención descritos arriba.
 
@@ -177,7 +233,7 @@ QA manual obligatoria antes de declarar directo validado:
 7. Activar «Recortes sin fondo» y comprobar los bordes de las cuatro categorías,
    oclusiones, tráfico seguido y caducidad. La carga e inferencia inicial del modelo
    se han probado en navegador con la CSP de la ruta; la calidad en calle sigue
-   pendiente. Suite local: 42 pruebas, incluida caducidad de una fuente activa
+   pendiente. La suite incluye caducidad de una fuente activa
    mientras otra captura espera en cola.
 8. Elegir un recorte, comprobar los tres estilos, consentimiento, resultado y
    retirada del original. Revisar contornos/identidad antes de publicar. Confirmar
@@ -186,6 +242,14 @@ QA manual obligatoria antes de declarar directo validado:
 
 La publicación sigue el deploy firmado del repo, tras cross-review de Neo.
 No ejecutar deploy desde una copia antigua ni sobrescribir su player en curso.
+
+## Grabación de seguridad
+
+No implementada ni activada. Diseño y condiciones de activación en
+[SECURITY-RECORDER.md](./SECURITY-RECORDER.md): flujo nativo autorizado, grabador
+software siempre encendido, almacenamiento privado dedicado, retención propuesta
+28 días, purga y auditoría independientes del navegador. No usar Pixeria ni el
+bucket público VIDEOS para originales. No confundirlo con las capturas efímeras.
 
 Referencias primarias:
 - https://github.com/tensorflow/tfjs-models/blob/master/coco-ssd/README.md
