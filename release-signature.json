@@ -1,9 +1,9 @@
 {
-  "version": "v.11.09.2026.r6.16:38",
-  "signature": "TrinityMBA16 · MacBookAir16plata",
-  "agent": "TrinityMBA16",
+  "version": "v.11.09.2026.r7.16:57",
+  "signature": "NeoMBA16 · MacBookAir16plata",
+  "agent": "NeoMBA16",
   "machine": "MacBookAir16plata",
   "day": "11.09.2026",
-  "time": "16:38",
-  "evidence": "FLT-100252 / FLT-100256: Carlos encarga a Trinity terminar la publicación del acceso Xtore sin esperar a Neo. Tarjeta Analítica de vídeo → /videoanalytics/xtore/, player virtual CanalKiosk, captura explícita de pestaña y detector local COCO-SSD. 16 pruebas automáticas, incluida la recuperación tras errores tardíos de inferencia; catálogo sincronizado y modelo probado bajo CSP/SRI. Revisión independiente del acceso, seguridad y conservación del player. Se conservan las mejoras de Neo de 092b9c99. Esta entrega no acredita precisión de campo ni conexión del productor al MCP remoto."
+  "time": "16:57",
+  "evidence": "Yokup #3066 · Alcampo: contenidos desde el catálogo. /contentcatalogue/ pasa de escaparate (iframe a Pixeria) a app: selector de catálogo, datos del folleto, buscador y filtros, 159 productos del catálogo Alcampo 10–23 sep 2026 (catalogos/alcampo-2026-09-10.json) y botón «Crear vídeo» por producto que abre el generador TikTok de AdmiraNeXT con el producto precargado (deep-link ?producto=). «Copiar guion», estado creado en localStorage, lote de destacados (máx 10). Subir folleto: PDF/imágenes renderizadas en cliente (pdf.js) → Pages Function /contentcatalogue/api/analizar (Grok 4.5, json_schema estricto, precios verificados con \\d+,\\d{2}); XAI_API_KEY subida al proyecto Pages desde la bóveda. Tarjeta Catálogo de la home enlaza a la app (campo href en public-catalog.json, generador de rejilla generalizado; Analítica de vídeo conserva su enlace Xtore). Probado en local: 159 productos, «coca» → 1, filtro sección, deep-link correcto."
 }
