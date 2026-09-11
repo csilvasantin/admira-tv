@@ -62,7 +62,7 @@ test('hidden view pauses and ignores an in-flight inference',async()=>{
   assert.equal(f.get('connection').textContent,'Analizando');
   f.doc.hidden=true;await f.doc.emit('visibilitychange');f.finishDetection();await Promise.resolve();
   assert.equal(f.get('connection').textContent,'Pestaña conectada');
-  assert.equal(f.get('capture-canvas').hidden,true);assert.equal(f.get('event-counter').textContent,'0 eventos');
+  assert.equal(f.get('capture-canvas').hidden,true);assert.equal(f.get('event-counter').textContent,'0 pasos');
   await f.get('stop').emit('click');
 });
 test('changing source resolution invalidates calibration',async()=>{
@@ -82,4 +82,34 @@ test('an obsolete inference error cannot stop a newly resumed analysis',async()=
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(f.get('connection').textContent,'Analizando');
   await f.get('stop').emit('click');f.finishDetection();
+});
+test('category totals survive expiry, pause and disconnect, then reset on a new connection',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture();
+  assert.equal(f.get('count-person').textContent,'0');
+  await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  const predictions=x=>['person','car','motorcycle','bicycle'].map(category=>({class:category,score:.9,bbox:[x,10,30,60]}));
+  f.detections[0].resolve(predictions(10));await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('event-counter').textContent,'0 pasos');
+  f.get('scene').currentTime++;t.mock.timers.tick(200);
+  f.detections[1].resolve(predictions(20));await new Promise(resolve=>setImmediate(resolve));
+  for(const category of ['person','car','motorcycle','bicycle'])assert.equal(f.get(`count-${category}`).textContent,'1');
+  assert.equal(f.get('event-counter').textContent,'4 pasos');
+  assert.equal(f.get('capture-canvas').hidden,false);
+  f.get('scene').currentTime++;t.mock.timers.tick(200);
+  f.detections[2].resolve(predictions(25));await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('event-counter').textContent,'4 pasos');
+  t.mock.timers.tick(6000);
+  assert.equal(f.get('capture-canvas').hidden,true);
+  assert.equal(f.get('count-person').textContent,'1');
+  assert.equal(f.get('event-counter').textContent,'4 pasos');
+  await f.get('analyze').emit('click');
+  assert.equal(f.get('connection').textContent,'Pestaña conectada');
+  assert.equal(f.get('event-counter').textContent,'4 pasos');
+  await f.get('stop').emit('click');
+  assert.equal(f.get('event-counter').textContent,'4 pasos');
+  await f.get('connect').emit('click');
+  assert.equal(f.get('event-counter').textContent,'0 pasos');
+  for(const category of ['person','car','motorcycle','bicycle'])assert.equal(f.get(`count-${category}`).textContent,'0');
+  await f.get('stop').emit('click');
 });

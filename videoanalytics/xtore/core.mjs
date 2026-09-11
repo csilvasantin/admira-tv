@@ -6,6 +6,17 @@ export const CLASSES = Object.freeze({
   bicycle: {label: 'Bici', color: '#F59E0B', priority: 2},
 });
 export const SNAPSHOT_TTL = 6000;
+// Aggregates confirmed passages only; no images, identities or browser storage.
+export class PassageCounts {
+  constructor(){this.reset();}
+  reset(){this.counts={person:0,car:0,motorcycle:0,bicycle:0};}
+  add(events){
+    for(const event of events){
+      if(event && Object.hasOwn(this.counts,event.class))this.counts[event.class]++;
+    }
+  }
+  get total(){return Object.values(this.counts).reduce((sum,value)=>sum+value,0);}
+}
 export function validRect(r) {
   return Array.isArray(r) && r.length === 4 && r.every(Number.isFinite) && r[0] >= 0 && r[1] >= 0 && r[2] >= .04 && r[3] >= .04 && r[0]+r[2] <= 1.00001 && r[1]+r[3] <= 1.00001;
 }

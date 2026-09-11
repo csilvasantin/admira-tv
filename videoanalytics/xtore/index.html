@@ -41,11 +41,17 @@
         <div class="viewer-caption"><span id="source-info">ESPERANDO FUENTE</span><span>iPad virtual · no es un dispositivo físico</span></div>
       </section>
       <aside class="inspector">
-        <div class="section-title"><h2>Última captura</h2><span id="event-counter">0 eventos</span></div>
+        <div class="section-title"><h2>Última captura</h2><span id="event-counter">0 pasos</span></div>
         <div id="capture" class="capture"><canvas id="capture-canvas" width="640" height="360" hidden aria-label="Última captura de la cámara, con detecciones señaladas"></canvas><p id="capture-empty">Esperando un paso confirmado</p></div>
         <p id="event-label" class="event-label" role="status">Sin capturas</p>
         <p id="event-meta" class="small">Las imágenes desaparecen a los 6 segundos. No se guardan.</p>
-        <div class="legend" aria-label="Colores de detección"><span><i class="person"></i>Persona</span><span><i class="car"></i>Coche</span><span><i class="motorcycle"></i>Moto</span><span><i class="bicycle"></i>Bici</span></div>
+        <dl class="legend" aria-label="Pasos detectados por categoría" aria-describedby="count-note">
+          <div><dt><i class="person" aria-hidden="true"></i>Personas</dt><dd id="count-person">0</dd></div>
+          <div><dt><i class="car" aria-hidden="true"></i>Coches</dt><dd id="count-car">0</dd></div>
+          <div><dt><i class="motorcycle" aria-hidden="true"></i>Motos</dt><dd id="count-motorcycle">0</dd></div>
+          <div><dt><i class="bicycle" aria-hidden="true"></i>Bicis</dt><dd id="count-bicycle">0</dd></div>
+        </dl>
+        <p id="count-note" class="small">Pasos de esta conexión; se conservan al pausar. Nueva conexión o recarga = contadores a cero. Conteo estimado: un mismo objeto puede volver a contarse tras una pausa u oclusión.</p>
         <p class="small">Persona = sin clasificación de sexo o edad. No hay reconocimiento de identidad. El resultado puede contener errores.</p>
         <div class="divider"></div>
         <h2>Encuadre y detección</h2>

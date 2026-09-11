@@ -36,6 +36,17 @@ baja resolución, poca luz, reflejos o movimiento de la escena requieren evaluac
 La vista debe permanecer visible. Pausa al ocultarla, cambiar tamaño de fuente,
 perder fotogramas o señal, recalibrar o producirse un error.
 
+La leyenda muestra pasos acumulados de Personas, Coches, Motos y Bicis. El total
+es siempre la suma de las cuatro categorías; cuenta todos los objetos confirmados
+de una captura, no solo la categoría que determina su borde. Una persona sobre
+una bici puede contribuir a ambas categorías si ambas detecciones se confirman.
+Los contadores viven solo en memoria y se conservan al caducar una captura,
+pausar, ocultar, recalibrar o desconectar. Empiezan de cero al conectar una nueva
+fuente correctamente o recargar. No se reconstruyen a partir de los eventos de
+versiones anteriores ni se almacenan imágenes para reconstruirlos.
+Son pasos estimados, no individuos únicos: una pausa, oclusión o regreso al
+encuadre puede producir un nuevo paso. El desglose de sexo/género no se infiere.
+
 ## Privacidad y límites
 
 - Frames y capturas solo en canvas/memoria. Nada se sube ni se guarda en storage.

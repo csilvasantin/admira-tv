@@ -1,17 +1,23 @@
-import {CLASSES, SNAPSHOT_TTL, PassageTracker, validRect, validQuad, quadMatrix} from './core.mjs';
+import {CLASSES, SNAPSHOT_TTL, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
 
 const $=id=>document.getElementById(id);
 const scene=$('scene'), stage=$('stage'), frame=document.createElement('canvas');
 const frameContext=frame.getContext('2d',{willReadFrequently:true});
 const tablet=$('tablet-canvas'), capture=$('capture-canvas');
 const tracker=new PassageTracker();
+const passages=new PassageCounts();
+const numberFormat=new Intl.NumberFormat('es-ES');
 let stream=null, generation=0, analyzing=false, busy=false, loopTimer=0, expiryTimer=0;
-let model=null, modelPromise=null, calibration=null, points=[], roiReady=false, tabletReady=false, eventCount=0;
+let model=null, modelPromise=null, calibration=null, points=[], roiReady=false, tabletReady=false;
 let roi=[.706,.026,.282,.293];
 let quad=[[.773,.491],[.89,.51],[.874,.675],[.75,.647]];
 let sourceSize='', lastVideoTime=-1, lastFrameAt=0;
 
 function status(message){$('status').textContent=message;}
+function renderCounts(){
+  for(const [category,count] of Object.entries(passages.counts))$(`count-${category}`).textContent=numberFormat.format(count);
+  $('event-counter').textContent=`${numberFormat.format(passages.total)} ${passages.total===1?'paso':'pasos'}`;
+}
 function controls(){
   const connected=!!stream;
   $('connect').disabled=connected||busy;
@@ -75,12 +81,12 @@ $('connect').addEventListener('click',async()=>{
       selected.getTracks().forEach(t=>t.stop());
       status('Selecciona una pestaña de Chrome, no una ventana ni la pantalla completa.');return;
     }
-    stream=selected;generation++;roiReady=false;tabletReady=false;eventCount=0;
-    $('event-counter').textContent='0 eventos';
+    stream=selected;generation++;roiReady=false;tabletReady=false;
     track.addEventListener('ended',()=>disconnect('Se ha terminado de compartir. La captura se ha borrado.'),{once:true});
     track.addEventListener('mute',()=>pause('La fuente está interrumpida. Revisa la pestaña y vuelve a iniciar el análisis.'));
     scene.srcObject=stream;
     await scene.play();
+    passages.reset();renderCounts();
     $('empty-scene').hidden=true;
     updateSourceSize();
     status('Pestaña conectada. Comprueba que es la Xtore y marca la cámara y el iPad. No se analiza todavía.');
@@ -211,6 +217,7 @@ async function loop(token){
       const predictions=await model.detect(frame,20,threshold);
       if(!analyzing||token!==generation)return;
       const events=tracker.update(predictions,performance.now(),width,height,threshold);
+      if(events.length){passages.add(events);renderCounts();}
       $('source-info').textContent=`PUERTA CAM · ${width} × ${height} · ${Math.round(performance.now()-start)} ms / análisis`;
       if(events.length)showCapture(events);
     }
@@ -221,7 +228,7 @@ async function loop(token){
   if(analyzing&&token===generation)loopTimer=setTimeout(()=>loop(token),200);
 }
 function showCapture(events){
-  const main=CLASSES[events[0].class];eventCount+=events.length;
+  const main=CLASSES[events[0].class];
   capture.width=frame.width;capture.height=frame.height;
   const c=capture.getContext('2d');c.drawImage(frame,0,0);
   const fontSize=Math.max(12,Math.round(frame.width/45));c.font=`bold ${fontSize}px sans-serif`;c.lineWidth=Math.max(2,frame.width/220);
@@ -238,7 +245,6 @@ function showCapture(events){
   ctx.strokeStyle=main.color;ctx.lineWidth=16;ctx.strokeRect(8,8,624,464);
   ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold 25px sans-serif';ctx.fillText(`${main.label} · ${new Date().toLocaleTimeString('es-ES')}`,320,446);
   capture.hidden=false;$('capture-empty').hidden=true;$('capture').style.borderColor=main.color;
-  $('event-counter').textContent=`${eventCount} eventos`;
   $('event-label').textContent=events.map(p=>CLASSES[p.class].label).join(' · ');
   $('event-meta').textContent=`${new Date().toLocaleTimeString('es-ES')} · ${Math.round(events[0].score*100)} % de confianza · caduca en 6 s`;
   clearTimeout(expiryTimer);expiryTimer=setTimeout(()=>clearCapture('Captura caducada'),SNAPSHOT_TTL);
@@ -246,4 +252,4 @@ function showCapture(events){
 // Do not leave identifiable frames sitting in a hidden tab or the back-forward cache.
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('Análisis pausado al ocultar esta vista. Pulsa Iniciar análisis para continuar.');});
 window.addEventListener('pagehide',()=>disconnect());
-tabletIdle();controls();
+tabletIdle();renderCounts();controls();

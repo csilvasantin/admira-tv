@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {PassageTracker, quadMatrix, validQuad, validRect, CLASSES, SNAPSHOT_TTL} from './core.mjs';
+import {PassageTracker, PassageCounts, quadMatrix, validQuad, validRect, CLASSES, SNAPSHOT_TTL} from './core.mjs';
 const p=(x=10,category='person',score=.9)=>({class:category,score,bbox:[x,10,30,60]});
 
 test('rectangles stay within the selected surface',()=>{
@@ -56,4 +56,25 @@ test('reset discards identities and a long gap is not consecutive evidence',()=>
   const t=new PassageTracker();t.update([p()],0,200,100);
   assert.deepEqual(t.update([p(15)],1100,200,100),[]);
   t.reset();assert.equal(t.tracks.length,0);
+});
+test('category counts accumulate all confirmed objects, not just the capture border',()=>{
+  const counts=new PassageCounts();
+  counts.add([p(),p(50),p(10,'car'),p(10,'motorcycle'),p(10,'bicycle')]);
+  counts.add([p(10,'car'),p(10,'dog'),null,{class:'__proto__'}]);
+  assert.deepEqual(counts.counts,{person:2,car:2,motorcycle:1,bicycle:1});
+  assert.equal(counts.total,6);
+  counts.reset();
+  assert.deepEqual(counts.counts,{person:0,car:0,motorcycle:0,bicycle:0});
+  assert.equal(counts.total,0);
+});
+test('repeated frames do not increase totals; new confirmed passages do',()=>{
+  const tracker=new PassageTracker(),counts=new PassageCounts();
+  for(const [time,x] of [[0,10],[200,15],[400,20],[600,25]]){
+    counts.add(tracker.update([p(x),p(x,'car')],time,200,100));
+  }
+  assert.deepEqual(counts.counts,{person:1,car:1,motorcycle:0,bicycle:0});
+  tracker.update([],2200,200,100);
+  counts.add(tracker.update([p(10)],2400,200,100));
+  counts.add(tracker.update([p(15)],2600,200,100));
+  assert.equal(counts.counts.person,2);assert.equal(counts.total,3);
 });
