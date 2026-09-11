@@ -125,6 +125,7 @@ scene.addEventListener('resize',updateSourceSize);
 
 function startCalibration(kind){
   pause();calibration=kind;points=[];stage.classList.add('calibrating');$('markers').replaceChildren();
+  stage.scrollIntoView?.({block:'center',behavior:'instant'});
   $('coordinates').hidden=true;
   if(kind==='roi'){roiReady=false;$('roi').hidden=true;status('Marca dos puntos en la escena: esquina superior izquierda e inferior derecha del vídeo de Puerta Cam. No incluyas el resto de la tienda.');}
   else if(kind==='signage'){signageReady=false;$('signage').hidden=true;status('Marca las cuatro esquinas interiores de la pantalla grande: superior izquierda → superior derecha → inferior derecha → inferior izquierda.');}
