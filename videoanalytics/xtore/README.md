@@ -178,6 +178,23 @@ Suite local ampliada (tracking, decoder, lifecycle, permisos, máscara,
 Pixeria, bridge e histórico con SQLite), más cross-review independiente. Verificación real completa
 de cámara → categoría → creatividad sigue pendiente de fuente y contenido.
 
+## Help de carga y documentación MCP — 11 septiembre 2026
+
+`Help · carga y reproducción` es un desplegable cerrado en Cartelería condicionada.
+Explica los estados, la descarga independiente de pesos, catálogo/reglas JSON y
+media online; no promete porcentaje descargado ni funcionamiento offline.
+`Preparando bucle general` era un placeholder ambiguo, no telemetría de descarga:
+ahora distingue Player en espera/apagado/detenido por error y remite al motivo.
+La guía advierte también de pendientes del histórico antes de una recarga.
+
+El MCP local independiente `/Users/Carlos/Claude/xtore-va-mcp` incluye la guía
+completa `docs/xtore-help.md`: `get_help` y recurso `admira-va://help` devuelven
+el mismo Markdown dentro de JSON, con `documentation_only:true`. No consultan
+estado ni red y no controlan la captura. `get_contract` enlaza la guía y separa
+el bus legado del postMessage de la web. MCP0.2.2: 20 herramientas contando
+alias y 4 recursos. Clientes ya abiertos requieren reinicio de su proceso MCP
+para descubrir la nueva ayuda; no se ha forzado ese reinicio ni un despliegue.
+
 ## Objetos sin fondo (vista previa local)
 
 Las ayudas de conteo, privacidad y calibración son desplegables cerrados con ›.

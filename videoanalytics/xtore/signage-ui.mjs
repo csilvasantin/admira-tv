@@ -8,6 +8,7 @@ export function installSignageUI({document,window}){
   function stop(message='El bucle arranca al conectar la vista y marcar la pantalla grande.'){
     clearTimeout(emissionTimer);bridge?.stop();bridge=null;dataBridge?.stop();dataBridge=null;
     if(iframe){iframe.remove();iframe=null;}
+    $('signage-idle-label').textContent=failed?'Player detenido por error':manuallyOff?'Player apagado':'Player en espera';
     $('signage-idle').hidden=false;$('signage-status').textContent=message;controls();
     $('signage-media').textContent='Sin emisión activa';
   }
@@ -35,7 +36,7 @@ export function installSignageUI({document,window}){
         else if(state.phase!=='selected'){
           emissionSeen=true;clearTimeout(emissionTimer);
           $('signage-status').textContent=`${state.loop?'Bucle general':'Contenido condicionado'} · ${state.phase==='playing'?'reproduciendo':state.phase==='poster-loaded'?'miniatura de respaldo':'interactivo cargado'}`;
-          $('signage-media').textContent=state.phase==='playing'?'El player confirma vídeo/audio iniciado o imagen cargada.':state.phase==='poster-loaded'?'Miniatura cargada; este vídeo no ha confirmado reproducción.':'Documento interactivo cargado; no acredita reproducción interna.';
+          $('signage-media').textContent=state.phase==='playing'?'El player confirma vídeo/audio iniciado o imagen cargada.':state.phase==='poster-loaded'?'Miniatura cargada; este vídeo no ha confirmado reproducción.':'Evento de carga del interactivo recibido; no confirma contenido visible ni reproducción interna.';
         }
       }});
     $('signage-status').textContent='Cargando player · comprobando canal de órdenes…';

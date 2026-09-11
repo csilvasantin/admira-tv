@@ -116,6 +116,7 @@ test('signage with no reported media shuts down even after an ACK',async t=>{
   await f.get('apply-coordinates').emit('click');await f.get('start-signage').emit('click');
   const iframe=f.get('signage').children[0];await f.win.emit('message',{source:iframe.contentWindow,origin:'null',data:{source:'admira-tv-canal',requestId:iframe.sent[0].data.requestId,ok:true}});
   t.mock.timers.tick(30001);assert.equal(iframe.removed,true);assert.match(f.get('signage-status').textContent,/Sin emisión confirmada/);
+  assert.equal(f.get('signage-idle-label').textContent,'Player detenido por error');
   await f.get('confidence').emit('input');assert.equal(f.get('signage').children.length,0);await f.get('stop').emit('click');
 });
 test('pause keeps the normal loop, manual stop stays off, returning to a visible tab never starts inference',async t=>{
@@ -129,6 +130,7 @@ test('pause keeps the normal loop, manual stop stays off, returning to a visible
   f.doc.hidden=true;await f.doc.emit('visibilitychange');assert.equal(iframe.removed,true);
   f.doc.hidden=false;await f.doc.emit('visibilitychange');assert.equal(f.get('signage').children.length,1);assert.equal(f.get('connection').textContent,'Pestaña conectada');
   await f.get('stop-signage').emit('click');await f.get('confidence').emit('input');
+  assert.equal(f.get('signage-idle-label').textContent,'Player apagado');
   assert.equal(f.get('signage').children.length,0);
   f.doc.hidden=true;await f.doc.emit('visibilitychange');f.doc.hidden=false;await f.doc.emit('visibilitychange');
   assert.equal(f.get('signage').children.length,0);await f.get('start-signage').emit('click');assert.equal(f.get('signage').children.length,1);
