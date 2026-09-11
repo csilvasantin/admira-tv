@@ -260,9 +260,12 @@ equipo (PuertaCam) y publica en el bus **`GET https://mcp-tv.admira.store/audien
 
 ```json
 {"ok":true,"screen":"xtanco-totem","fresh":true,"ttl_ms":2000,
- "label":{"sex":"m|f|u","age_band":"child|youth|adult|senior","confidence":0.91,"ts":"…","source":"PuertaCam"},
- "decision":{"lane":"Matrix|TopGun|neutral","creative":"Matrix|Top Gun|neutral_6s","age_ms":350}}
+ "label":{"sex":"m|f|u","kind":"person|car|motorcycle|bicycle","age_band":"child|youth|adult|senior","confidence":0.91,"ts":"…","source":"PuertaCam"},
+ "decision":{"lane":"Matrix|TopGun|Persona|Coche|Moto|Bici|neutral","creative":"Matrix|Top Gun|…|playlist","age_ms":350}}
 ```
+
+(`label.kind` y los carriles de tipología llegan con el bus **v2.2**; sin `kind` el canal asume
+`person`, y con un bus v2.1 todo sigue igual que en r62.)
 
 Con `?audience=remote` el canal:
 
@@ -287,16 +290,43 @@ re-evalúa la matriz ya):
 
 | Vía | Comando |
 |---|---|
-| Cola del mando (`/control/cmds`, `applyCtrlCmd`) | `audience-m` · `audience-f` · `audience-u` (alias `forcecam-m|f|u`; `u`/`off` = público real) |
-| `postMessage` desde el padre (source `xpaceos-robot-cli`) | `admiratv audiencia m|f|u` |
-| CLI local | `/forcecam m|f|u` |
+| Cola del mando (`/control/cmds`, `applyCtrlCmd`) | `audience-m` · `audience-f` · `audience-u` · `audience-coche` · `audience-moto` · `audience-bici` · `audience-persona` (alias `forcecam-*`, `car|motorcycle|bicycle|person`; `u`/`off` = público real) |
+| `postMessage` desde el padre (source `xpaceos-robot-cli`) | `admiratv audiencia m|f|u|coche|moto|bici|persona` |
+| CLI local | `/forcecam m|f|u|coche|moto|bici|persona` |
 
 **Salida al padre**: en cada cambio de carril el canal hace
-`parent.postMessage({source:'admira-tv-canal', event:'audience', lane, sex, fresh, ts}, '*')`
-(igual que `media-state`). `lane` es el del bus (`Matrix|TopGun|neutral`) o, si el bus no
-lo trae o el público se forzó a mano, el sexo (`m`/`f`) / `neutral`.
+`parent.postMessage({source:'admira-tv-canal', event:'audience', lane, sex, kind, fresh, ts}, '*')`
+(igual que `media-state`). `lane` es el del bus (`Matrix|TopGun|Persona|Coche|Moto|Bici|neutral`)
+o, si el bus no lo trae o el público se forzó a mano, el sexo (`m`/`f`), el carril de la
+tipología (`Coche|Moto|Bici|Persona`) o `neutral`. `kind` ∈ `person|car|motorcycle|bicycle|none`.
 
-Diagnóstico en consola: `window.__adtvAudienceRemote` (polls, ok, fails, lane, sex, last).
+Diagnóstico en consola: `window.__adtvAudienceRemote` (polls, ok, fails, lane, sex, kind, last).
+
+### Tipología (r64 · Xtore)
+
+Sin nadie delante → playlist normal; al aparecer alguien por la Puerta Cam → anuncio por
+**sexo** (hombre/mujer/persona) o por **tipología** (coche/moto/bici). El canal no distingue
+de dónde viene el dato: cámara local (`?cam=1`, siempre `person`), bus v2.2 (`label.kind`) o
+forzado a mano.
+
+- **Hecho XPL `audKind`** (`person|car|motorcycle|bicycle|none`), junto a `audGender`,
+  `audAge` y `viewers`. Un kind no-person entra en `window.__xplCam` como
+  `{faces:1, gender:null, age:null, kind, ts}`: `viewers` cuenta 1, `audGender` dice `mixed`.
+- **Campo `kind` de las reglas de la matriz** (`person|car|motorcycle|bicycle|any`). Si el
+  CMS/omnipublicity lo descarta, la regla lo lleva como tag `kind:<k>` (se retira del filtro
+  de piezas) y/o en el `id` (`r-coche`→car, `r-moto`→motorcycle, `r-bici`→bicycle,
+  `r-persona`→person). `any`/vacío = no filtra por tipología.
+- **Casado** (`matchMatrix`): una regla con `kind` concreto solo casa ese kind; con un kind
+  **no-person** las reglas de sexo `m`/`f` **nunca** casan (solo las de su kind o `any`). Sin
+  label fresco → catch-all (`minCount:0`) → si esa regla no fija assets ni tema, se emite la
+  playlist normal y el rótulo dice `CONDICIONAL · playlist normal · N en loop`. Si la regla
+  del kind existe pero aún no tiene assets (el anuncio no se ha generado), cae al carrusel
+  del feed sin romperse (mismo rótulo).
+- **Simular sin cámara**: `/forcecam coche|moto|bici|persona` (CLI), `audience-coche|moto|bici|persona`
+  (mando) o `admiratv audiencia coche|moto|bici|persona` (postMessage); `off`/`u` vuelve al
+  público real.
+- **Matriz de prueba**: `?seg_api=http://127.0.0.1:8787/segmentation` sirve la matriz desde un
+  mock (como `?audience_api=` para el bus) sin tocar el CMS.
 
 **Nunca negro (r63).** Los `assets` de la matriz que no estén en el feed de 300 del canal se
 resuelven contra el índice completo del Stock (`stockFullIndex()`, el mismo de `/play<N>`,

@@ -2,10 +2,10 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=11.09.2026.r7.1657"></script>
+<script src="/auth-gate.js?v=11.09.2026.r8.1847"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
-<meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, multi-Xpacio, PixerIA y alertas.">
+<meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
 <link rel="icon" href="/favicon.ico">
 <style>
   :root{--bg:#070b0a;--panel:#0e1714;--panel2:#13211c;--line:#1d3329;--txt:#dff5ec;--dim:#7fa595;--teal:#19e89a;--amber:#f5b431}
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=11.09.2026.r7.1657">
+  <link rel="stylesheet" href="/admira-frame.css?v=11.09.2026.r8.1847">
 </head>
 <body>
-<script src="/admira-nav.js?v=11.09.2026.r7.1657" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=11.09.2026.r7.1657" defer></script>
+<script src="/admira-nav.js?v=11.09.2026.r8.1847" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=11.09.2026.r8.1847" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -44,7 +44,7 @@
   <nav class="toc">
     <a href="#concepto">Concepto</a><a href="#vistas">Vistas</a><a href="#dispositivos">Dispositivos</a>
     <a href="#ocupacion">Ocupación</a><a href="#editar">Editar</a><a href="#vender">Vender cuñas</a>
-    <a href="#ventas">Informe de ventas</a><a href="#real">Planificado vs real</a><a href="#segmentar">Segmentación</a>
+    <a href="#ventas">Informe de ventas</a><a href="#real">Planificado vs real</a><a href="#segmentar">Segmentación</a><a href="#xtore">Player condicionado Xtore</a>
     <a href="#hilo">Hilo Musical</a><a href="#multixpacio">Multi-Xpacio</a><a href="#ia">PixerIA</a>
     <a href="#clonar">Clonar</a><a href="#gcal">Google Calendar</a><a href="#alertas">Alertas</a><a href="#auto">Automatización</a>
     <a href="#apps">Apps de la lanzadera</a><a href="#enlaces">Enlaces</a>
@@ -94,6 +94,17 @@
 
   <section id="segmentar"><h2>🎯 Segmentación por audiencia</h2>
     <p>El canal puede mostrar contenido distinto según quién mira (cámara→contenido: género/edad/franja). Desde cada dispositivo, el enlace <span class="pill">🎯 segmentar</span> abre el editor de reglas en <a href="/condicional.html">condicional.html</a>.</p>
+  </section>
+
+  <section id="xtore"><h2>👁️ Player condicionado Xtore</h2>
+    <p>Un tótem <b>sin cámara</b> que cambia de anuncio según quién pasa por delante. Sin nadie → emite su <b>playlist normal</b>. Alguien delante → el anuncio de su sexo (hombre / mujer / persona) o de su tipología (coche / moto / bici). Cuando se va, vuelve a la playlist en 2 segundos. Piloto: tótem <code>xtanco-totem</code> de Xtore Valencia.</p>
+    <p><b>Cómo se usa, en 3 pasos:</b></p>
+    <ul>
+      <li><b>1. Abre el panel de analítica</b>: <a href="/videoanalytics/xtore/">admira.tv/videoanalytics/xtore</a>. Comparte la pestaña de la Puerta Cam (a) elige la pestaña, b) marca el recuadro de la cámara, c) confirma las 4 esquinas). Desde ese momento el panel ve pasar personas, coches, motos y bicis y se lo cuenta al tótem. El vídeo <b>no sale</b> de tu navegador.</li>
+      <li><b>2. Mira el tótem</b>: en el mismo panel está el iframe del tótem (el canal con <code>audience=remote</code>). Pasa alguien → cambia el anuncio; se va → vuelve la playlist. Si quieres probar sin nadie delante, en el tótem escribe <code>/forcecam coche</code> (o <code>moto</code>, <code>bici</code>, <code>persona</code>, <code>m</code>, <code>f</code>; <code>off</code> para volver).</li>
+      <li><b>3. Crea los anuncios por tipología</b>: en el creador de AdmiraNeXT, página Xtore (<a href="https://www.admiranext.com/tiktok/xtore.html">admiranext.com/tiktok/xtore.html</a>) hay 4 briefs listos: Persona, Coche, Moto y Bici. Pulsa <b>Generar</b> en cada uno y la pieza sube sola al Stock con su etiqueta de carril. El tótem la recoge en el siguiente ciclo; hasta entonces ese carril emite el carrusel normal (rótulo <code>CONDICIONAL · playlist normal</code>). Los productos del folleto se crean desde el <a href="/contentcatalogue/">Catálogo</a> con el botón «Crear vídeo».</li>
+    </ul>
+    <p class="note">Para agentes y técnicos (contrato del label, rutas del bus, herramientas MCP, snippet del iframe y postMessage): <a href="/mcp/#player-condicionado">admira.tv/mcp/#player-condicionado</a>. Las reglas del motor se ven en <a href="/condicional.html">condicional.html</a>. El creador Xtore y la tipología del servidor (v2.2.0) están pendientes de publicar: hasta entonces funcionan hombre/mujer/neutro.</p>
   </section>
 
   <section id="hilo"><h2>🎵 Hilo Musical</h2>
@@ -150,6 +161,8 @@
       <a href="/cms.html"><b>CMS de flota</b><br><span>admira.tv/cms.html</span></a>
       <a href="/canal.html"><b>Canal en antena</b><br><span>admira.tv/canal.html</span></a>
       <a href="/condicional.html"><b>Segmentación</b><br><span>admira.tv/condicional.html</span></a>
+      <a href="/videoanalytics/xtore/"><b>Player condicionado Xtore</b><br><span>admira.tv/videoanalytics/xtore</span></a>
+      <a href="/mcp/#player-condicionado"><b>MCP · player condicionado</b><br><span>admira.tv/mcp/#player-condicionado</span></a>
       <a href="https://www.xpaceos.com/xpacios/xtanco-valencia/"><b>Gemelo · Xtanco Valencia</b><br><span>xpaceos.com/xpacios/…</span></a>
       <a href="/apps/"><b>Lanzadera de apps</b><br><span>admira.tv/apps</span></a>
       <a href="/dashboard/"><b>Dashboard</b><br><span>admira.tv/dashboard</span></a>
