@@ -31,7 +31,8 @@
 <!-- r58 · GOTO EN SINCRO: el salto desde la playlist del mando (goto-N) abre la ventana forzada de un #ID: sale de sincro, la pieza va hasta el final y pollMode devuelve la asignación remota. Antes la sincro la revertía al cargar el vídeo. -->
 <!-- r59 · RELLENAR: ajuste de pantalla por mando (fit-fill / fit-editorial): el marco ocupa todo el dispositivo, girado o no, y la media se escala sin recortar; se persiste por pantalla y se reporta en la telemetría (display.fit). El marco girado ya no se aplasta (max-width/flex-shrink). Un #ID del mando nunca se emite online mientras baja, ni con stream=1. -->
 <!-- r60 · AUTOACTUALIZACIÓN EN KIOSKO: en embed/clean el canal vigila /version.json y se recarga solo al cambiar de pieza cuando hay release nuevo; el botón «VERSIÓN NUEVA» del avisador compartido nunca se pinta en una pantalla pública. -->
-<!-- BUILD canal v.10.09.2026.r61 · RÓTULO CON LA FUENTE DE LA SINCRO (KIOSKO <screen> / máster global) y aviso sin tema; hereda r60 (autoactualización). -->
+<!-- r61 · RÓTULO CON LA FUENTE DE LA SINCRO (KIOSKO <screen> / máster global) y aviso sin tema; hereda r60 (autoactualización). -->
+<!-- BUILD canal v.11.09.2026.r62.15:52 · AUDIENCIA REMOTA (FLT-100243): ?audience=remote (alias va=1) arranca en condicional BLINDADO (pollMode/XPL no lo tocan) y sondea el bus mcp-tv.admira.store/audience/<screen> cada 500 ms (?audience_api= para mocks); m/f fresco → __xplCam y tick inmediato, !fresh/u → carril neutro (mín. 6 s). Inyección extra: mando audience-m|f|u y postMessage «admiratv audiencia m|f|u»; evento `audience` al padre en cada cambio de carril. -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
@@ -370,9 +371,18 @@ const PREVIEW = { on:!!qs.get('rundown'), screen:qs.get('rundown')||'', playlist
 const LS = (k,d)=>{ try{ const v=localStorage.getItem(k); return v==null?d:v; }catch(_){ return d; } };
 const save = (k,v)=>{ try{ localStorage.setItem(k,v); }catch(_){} };
 
+// ── AUDIENCIA REMOTA (?audience=remote | ?va=1) — r62 ────────────────────────
+// La pantalla NO lleva cámara: el público lo detecta otro equipo (PuertaCam) y lo
+// publica en el bus `mcp-tv.admira.store/audience/<screen>`. El canal lo sondea
+// cada 500 ms y lo inyecta como si fuera su cámara (window.__xplCam), así la
+// matriz cámara→contenido del condicional conduce el carril (Matrix/TopGun/neutro)
+// sin tocar nada más. `?audience=remote` NO es un valor de segmento: no filtra.
+// ?audience_api=<base> cambia el bus (pruebas locales con un mock).
+const AUDIENCE_REMOTE = /^(remote|remota|bus)$/i.test(qs.get('audience')||'') || /^(1|on|true|yes)$/i.test(qs.get('va')||'');
+const AUDIENCE_API = String(qs.get('audience_api')||'https://mcp-tv.admira.store').replace(/\/+$/,'');
 const segSaved = JSON.parse(LS('adtv_seg','{}')||'{}');
 const seg = {
-  medio: qs.get('medio')||segSaved.medio||'all', audience: qs.get('audience')||segSaved.audience||'all',
+  medio: qs.get('medio')||segSaved.medio||'all', audience: (AUDIENCE_REMOTE&&/^(remote|remota|bus)$/i.test(qs.get('audience')||''))?'all':(qs.get('audience')||segSaved.audience||'all'),
   category: qs.get('category')||segSaved.category||'all', age: qs.get('age')||segSaved.age||'all',
   slot: qs.get('slot')||segSaved.slot||'all', tag: (qs.get('tag')||segSaved.tag||'').toLowerCase().trim(),
   format: (qs.get('format')||segSaved.format||'').toLowerCase().trim(),
@@ -477,6 +487,10 @@ let _liveTag=!!_storedLiveTag;   // playlist alternativa puesta EN VIVO desde el
 if(_liveTag) seg.tag=_storedLiveTag;
 if(URL_TAG && modeParam==null && syncParam==null){ syncOn=false; playoutMode='local'; }
 if(_liveTag){ syncOn=false; playoutMode='local'; }
+// AUDIENCIA REMOTA = orden explícita del operador, misma doctrina que URL_TAG/URL_SYNC:
+// arranca en CONDICIONAL (la matriz cámara→contenido es quien lee el público del bus)
+// y pollMode / la directiva XPL no lo cambian mientras el parámetro viva en la URL.
+if(AUDIENCE_REMOTE){ syncOn=false; playoutMode='conditional'; }
 // El previo de borrador manda: nunca sincro ni condicional, es un bucle local fiel.
 if(PREVIEW.on){ syncOn=false; playoutMode='local'; }
 save('adtv_sync_slot',String(syncSlotSec));
@@ -841,7 +855,7 @@ function applyXplDirective(d){
   if(!d||typeof d!=='object') return false;
   applyingXpl=true;
   try{
-    if(d.mode||d.playout){ const m=canonicalAdmiraMode(d.mode||d.playout); if(m!=='conditional'){ setAdmiraMode(m); return true; } }
+    if((d.mode||d.playout)&&!AUDIENCE_REMOTE){ const m=canonicalAdmiraMode(d.mode||d.playout); if(m!=='conditional'){ setAdmiraMode(m); return true; } }   // con audiencia remota el modo está blindado
     const command=d.command||d.cli;
     if(command&&typeof command==='string'&&!/^\/?admiraTVcondicional/i.test(command)){ runCli(command); return true; }
     const direct=d.direct||d.embed||((d.type==='direct'||d.type==='url')&&d.url);
@@ -2514,6 +2528,20 @@ function applyCliSegment(msg){
   rebuild(true);
   if(msg) flashCli(msg+' · '+playlist.length+' assets');
 }
+// Forzar público SIN cámara: simula un hombre/mujer delante para disparar el condicional.
+// `m|hombre|chico` · `f|mujer|chica` · `u|off|x` (volver al público real: cámara o bus).
+// Devuelve el mensaje para el HUD. Un forzado 'u' también borra la última lectura del
+// bus/cámara (__xplCam) para que la matriz caiga YA al carril neutro.
+function forceAudience(r){
+  r=String(r||'').toLowerCase().trim(); let msg;
+  if(/female|mujer|chica|^f$|^w$/.test(r)){ window.__xplForce={gender:'f',age:'adulto'}; msg='👩 forzado: mujer'; }
+  else if(/male|hombre|chico|^m$|^h$/.test(r)){ window.__xplForce={gender:'m',age:'adulto'}; msg='👨 forzado: hombre'; }
+  else { window.__xplForce=null; if(/^(u|none|nadie|neutro|neutral)$/.test(r)) window.__xplCam=null; msg='📷 público real (cámara/bus)'; }
+  try{ setAdmiraMode('conditional'); }catch(_){}                 // el forzado tiene sentido en condicional
+  try{ if(window.XPLCanal&&XPLCanal.tick) XPLCanal.tick(); }catch(_){}   // re-evalúa ya
+  try{ const F=window.__xplForce; emitAudienceState(F?F.gender:'neutral', F?F.gender:'u', !!F); }catch(_){}
+  return msg;
+}
 function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   const cmd=v.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
   const rest=v.replace(/^\s*\/?\S+\s*/,'').trim();
@@ -2558,15 +2586,9 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='reloadmatrix'||cmd==='refreshrules'){ try{ if(window.XPLCanal&&XPLCanal.refreshMatrix){ XPLCanal.refreshMatrix(); setTimeout(()=>{ try{ XPLCanal.tick(); }catch(_){} },1200); } }catch(_){} flashCli('↻ reglas actualizadas'); return; }
   // Forzar público SIN cámara: simula un hombre/mujer delante para disparar el condicional.
   // `forcecam m|hombre|chico` · `forcecam f|mujer|chica` · `forcecam off|x` (volver a cámara real).
-  if(cmd==='forcecam'||cmd==='forzar'||cmd==='simaud'){
-    const r=rest.toLowerCase();
-    if(/female|mujer|chica|^f$|^w$/.test(r)){ window.__xplForce={gender:'f',age:'adulto'}; flashCli('👩 forzado: mujer'); }
-    else if(/male|hombre|chico|^m$|^h$/.test(r)){ window.__xplForce={gender:'m',age:'adulto'}; flashCli('👨 forzado: hombre'); }
-    else { window.__xplForce=null; flashCli('📷 público real (cámara)'); }
-    try{ setAdmiraMode('conditional'); }catch(_){}                 // el forzado tiene sentido en condicional
-    try{ if(window.XPLCanal&&XPLCanal.tick) XPLCanal.tick(); }catch(_){}   // re-evalúa ya
-    return;
-  }
+  // r62: misma ruta para el CLI, la cola del mando (audience-m|f|u) y el puente
+  // postMessage (admiratv audiencia m|f|u): forceAudience().
+  if(cmd==='forcecam'||cmd==='forzar'||cmd==='simaud'){ flashCli(forceAudience(rest)); return; }
   const playTag=parsePlayTag(v,cmd);
   if(playTag){ const n=applyPlayTag(playTag); flashCli('▶ tag '+canonicalPlayTag(playTag)+' · '+n+' assets'); return; }
   if(cmd==='reload'){ seenSig=''; loadFeed(true); rebuild(true); flashCli('↻ feed recargado'); return; }
@@ -2668,6 +2690,14 @@ function emitFrameState(it){
     window.parent.postMessage({ source:'admira-tv-canal', event:'media-state', orientation:aspect>=1?'landscape':'portrait', aspect, mode:playoutMode, sync:!!syncOn, id:it&&it.id }, '*');
   }catch(_){}
 }
+// r62: cada cambio de carril de audiencia (bus remoto o forzado) se cuenta al padre
+// que empotra el canal (gemelo/hub), con la misma forma que media-state.
+function emitAudienceState(lane, sex, fresh){
+  try{
+    if(window.parent===window) return;
+    window.parent.postMessage({ source:'admira-tv-canal', event:'audience', lane:lane||'neutral', sex:sex||'u', fresh:!!fresh, ts:Date.now() }, '*');
+  }catch(_){}
+}
 // ── LA XPERIENCIA DICE CUÁNTO DURA ────────────────────────────────────────────
 // El canal no puede leer nada de dentro de un iframe de otro dominio, así que la
 // pieza lo ANUNCIA al cargar. Antes la duración se tecleaba a mano al dar de alta
@@ -2727,7 +2757,9 @@ window.addEventListener('message',event=>{
       if(['sincro','sync','sincronizado'].includes(rest)){ _liveMode=true; setAdmiraMode('sync'); msg='🔗 admiraTVsincro'; }
       else if(['cond','condicional','conditional','xpl'].includes(rest)){ _liveMode=true; setAdmiraMode('conditional'); msg='◆ admiraTVcondicional'; }
       else if(['local','off'].includes(rest)){ _liveMode=true; setAdmiraMode('local'); msg='● admiraTVlocal'; }
-      else { ok=false; msg='usage: /admiraTV sincro|condicional|local'; }
+      // r62: `admiratv audiencia m|f|u` — inyecta público desde el padre (gemelo/hub).
+      else if(/^(audiencia|audience)\s+(m|f|u|hombre|mujer|off|none)$/.test(rest)){ msg=forceAudience(rest.split(/\s+/)[1]); }
+      else { ok=false; msg='usage: /admiraTV sincro|condicional|local|audiencia m|f|u'; }
     }
     else if(cmd==='admiratvsincro'||cmd==='admiratvsync'||cmd==='sincro'||cmd==='sync'){
       const rest=raw.replace(/^\s*\/?\S+\s*/,'').trim();
@@ -3588,6 +3620,63 @@ const XPLCanal = (function(){
 })();
 window.XPLCanal = XPLCanal;
 
+// ── AUDIENCIA REMOTA: sondeo del bus mcp-tv (r62) ─────────────────────────────
+// GET <AUDIENCE_API>/audience/<screen> cada 500 ms →
+//   {ok, fresh, ttl_ms, label:{sex:'m|f|u', age_band:'child|youth|adult|senior', ts…}|null,
+//    decision:{lane:'Matrix|TopGun|neutral', creative, age_ms}}
+// · fresh && sex∈{m,f}  → window.__xplCam = {faces:1, gender, age, ts} (mismo contrato que
+//   camLoop) y, si el carril cambió, XPLCanal.tick() YA (presupuesto < 2 s desde el label).
+// · !fresh o sex 'u'    → window.__xplCam = null → camFresh() devuelve null y matchMatrix
+//   cae a la regla catch-all = carril NEUTRO. Anti-flapeo: el neutro no se re-tickea
+//   antes de 6 s; un m/f fresco SIEMPRE gana al instante.
+// · Red: silenciosa, nunca rompe el bucle; back-off a 2 s tras 5 fallos seguidos y
+//   vuelta a 500 ms al primer éxito. No toca vídeo/precache: solo hechos para la matriz.
+const AUD_AGE_MAP={ child:'nino', kid:'nino', youth:'joven', young:'joven', teen:'joven', adult:'adulto', senior:'senior', elder:'vejez', old:'vejez' };
+const AUD_REMOTE={ on:false, timer:null, fails:0, lane:null, sex:'u', neutralSince:0, polls:0, ok:0, last:null };
+function audienceRemoteLane(d){
+  const lab=(d&&d.label)||null, fresh=!!(d&&d.fresh)&&!!lab;
+  const sex=(fresh&&lab&&(lab.sex==='m'||lab.sex==='f'))?lab.sex:'u';
+  const lane=(sex==='u')?'neutral':((d.decision&&typeof d.decision.lane==='string'&&d.decision.lane)||sex);
+  return { lab, fresh, sex, lane };
+}
+function audienceRemoteApply(d){
+  const r=audienceRemoteLane(d); AUD_REMOTE.last=r;
+  const now=Date.now(), changed=(r.lane!==AUD_REMOTE.lane)||(r.sex!==AUD_REMOTE.sex);
+  if(r.sex!=='u'){
+    window.__xplCam={ faces:1, gender:r.sex, age:AUD_AGE_MAP[String(r.lab.age_band||'').toLowerCase()]||'adulto', ts:now };
+    AUD_REMOTE.neutralSince=0;
+  } else {
+    // Neutro: se mantiene un mínimo de 6 s (no re-tickear neutro antes) — m/f fresco manda igual.
+    if(AUD_REMOTE.lane==='neutral' && AUD_REMOTE.neutralSince && (now-AUD_REMOTE.neutralSince)<6000){ window.__xplCam=null; return; }
+    window.__xplCam=null; if(changed) AUD_REMOTE.neutralSince=now;
+  }
+  if(!changed) return;
+  AUD_REMOTE.lane=r.lane; AUD_REMOTE.sex=r.sex;
+  try{ setNowAudience(r.sex==='u'?null:{ cam:false, bus:true, faces:1, gender:r.sex, age:window.__xplCam.age }); }catch(_){}
+  if(playoutMode==='conditional' && window.XPLCanal){ try{ XPLCanal.tick(); }catch(_){} }
+  try{ flashCli(r.sex==='f'?'👩 audiencia remota: mujer → '+r.lane:r.sex==='m'?'👨 audiencia remota: hombre → '+r.lane:'👥 audiencia remota: neutro'); }catch(_){}
+  emitAudienceState(r.lane, r.sex, r.fresh);
+}
+async function audienceRemotePoll(){
+  if(!AUD_REMOTE.on) return;
+  AUD_REMOTE.polls++;
+  try{
+    const r=await fetch(AUDIENCE_API+'/audience/'+encodeURIComponent(scr.screen||scr.circuit||'default'),{cache:'no-store'});
+    const d=r.ok?await r.json():null;
+    if(!d) throw new Error('audience '+r.status);
+    AUD_REMOTE.fails=0; AUD_REMOTE.ok++;
+    audienceRemoteApply(d);
+  }catch(_){ AUD_REMOTE.fails++; }
+  AUD_REMOTE.timer=setTimeout(audienceRemotePoll, AUD_REMOTE.fails>=5?2000:500);
+}
+function audienceRemoteStart(){
+  if(AUD_REMOTE.on) return; AUD_REMOTE.on=true;
+  try{ flashCli('👥 audiencia remota · '+AUDIENCE_API.replace(/^https?:\/\//,'')); }catch(_){}
+  audienceRemotePoll();
+}
+function audienceRemoteStop(){ AUD_REMOTE.on=false; if(AUD_REMOTE.timer){ clearTimeout(AUD_REMOTE.timer); AUD_REMOTE.timer=null; } }
+window.__adtvAudienceRemote=AUD_REMOTE;   // diagnóstico: estado del sondeo desde consola
+
 loadStores(); screenLbl(); applyAudio(); renderChan(); applyDisplayRotation(0);
 if(PREVIEW.on){
   // MODO PREVIO DE BORRADOR: no toca el Stock, la segmentación ni la programática;
@@ -3617,6 +3706,8 @@ if(PREVIEW.on){
   setInterval(()=>{ try{ cacheReport(); }catch(_){} }, 30000);
   // si arrancamos ya en modo conditional (persistido/URL), enciende el motor XPL
   if(playoutMode==='conditional' && window.XPLCanal) XPLCanal.start();
+  // r62: público desde el bus (?audience=remote) — sondeo a 500 ms desde el arranque
+  if(AUDIENCE_REMOTE) audienceRemoteStart();
 }
 
 // ── MODO REMOTO: el CMS fija el modo de emisión de ESTE equipo y el player reacciona.
@@ -3670,7 +3761,7 @@ async function pollMode(){
   if(!scr.circuit) return;   // sólo equipos registrados (con circuito/id)
   // Un modo bloqueado por la integración, URL_TAG o tag EN VIVO = decisión
   // explícita del operador: esta pantalla no obedece cambios de modo remotos.
-  if(MODE_LOCK||URL_TAG||URL_SYNC||_liveTag||_liveMode||_forcedTagPlayback) return;
+  if(MODE_LOCK||URL_TAG||URL_SYNC||AUDIENCE_REMOTE||_liveTag||_liveMode||_forcedTagPlayback) return;
   try{
     const plan=await fetch(PLAYOUT_ASSIGNMENT_API+'?screen='+encodeURIComponent(scr.screen||scr.circuit)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
     if(_forcedTagPlayback) return; // la orden pudo entrar mientras esperaba la red
@@ -3777,6 +3868,8 @@ async function executeQueuedCommand(c){
   // cola la entregaba a runCli(), que sólo entiende `tag valor` con espacio y la
   // ignoraba mientras respondíamos executed. Una única ruta evita esa mentira.
   if(/^tag-[a-z0-9_,+-]*$/.test(cmd)) return applyCtrlCmd(cmd);
+  // r62: audience-m|f|u del mando (alias forcecam-*) por el dispatcher confirmado.
+  if(/^(audience|forcecam)-(m|f|u|off)$/.test(cmd)) return applyCtrlCmd(cmd);
   try{ runCli(raw); return 'executed'; }catch(_){ return 'failed'; }
 }
 async function ackQueuedCommand(c,status){
@@ -3922,6 +4015,10 @@ async function applyCtrlCmd(cmd){
       // Orden manual del operador: fuerza LOCAL (el condicional XPL pisaría seg.tag)
       // y bloquea pollMode mientras el tag viva (_liveTag, misma doctrina que URL_TAG).
       // tag- vacío → quita el filtro y devuelve la pantalla al gobierno remoto.
+      // r62: audience-m|f|u (alias forcecam-*) desde la cola del mando: mismo efecto
+      // que el CLI /forcecam — fuerza condicional y re-evalúa la matriz al instante.
+      const aud=/^(?:audience|forcecam)-(m|f|u|off)$/.exec(cmd);
+      if(aud){ flashCli(forceAudience(aud[1])); return 'executed'; }
       const t=/^tag-([a-z0-9_,+-]*)$/.exec(cmd);
       if(t){
         if(t[1]){ await loadFeed(false); _liveTag=true; save(LIVE_TAG_KEY,canonicalPlayTag(t[1])); try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}

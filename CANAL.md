@@ -241,6 +241,8 @@ despliegas N pantallas con un enlace:
 | `embed=mupi` · `clean=1` · `chrome=0` | **modo limpio**: MUPI a pantalla completa, sin chrome/rail (para casting/empotrar) |
 | `fresh=<seg>` | **novedad al aire** (opt-in, r53): una pieza NUEVA del segmento toma la antena en exclusiva, en bucle, esos segundos; luego entra al loop y el loop sigue por la SIGUIENTE. Acompañantes: `freshMaxAge=<seg>` (900 por defecto: qué se considera «reciente») y `freshbadge=0` (quita el chip «✦ RECIÉN CREADO»). Sin `fresh` nada cambia. |
 | `freshtail=1` | la novedad se coloca **literalmente al final** del loop (por defecto queda a la cabeza, porque el orden de casa es lo más nuevo primero). Por pantalla y por sesión: al recargar vuelve el orden canónico. |
+| `audience=remote` (alias `va=1`) | **audiencia remota** (r62): la pantalla no lleva cámara; el público lo publica otro equipo en el bus `mcp-tv.admira.store/audience/<screen>`. El canal arranca en **condicional blindado** (ni `pollMode` ni la directiva XPL lo cambian mientras el parámetro viva en la URL, misma doctrina que `?tag=`) y sondea el bus cada 500 ms. `audience=remote` **no filtra** por segmento (`seg.audience` queda en `all`). Ver «Audiencia remota». |
+| `audience_api=<base>` | base del bus de audiencia (def. `https://mcp-tv.admira.store`); para pruebas locales con un mock (`http://127.0.0.1:8787`). |
 
 **Ejemplos**
 - Quiosc, solo imágenes, 8 máx: `?circuit=bcn-kiosk-005&screen=bcn-kiosk-005-led&medio=image&max=8`
@@ -249,6 +251,54 @@ despliegas N pantallas con un enlace:
 - Mupi del Xtanco (lo recién creado manda 3 min y luego entra por la cola): `?clean=1&screen=xtanco-totem&tag=tiktok&fresh=180&refresh=20&freshtail=1`
 
 ---
+
+## Audiencia remota (r62 · FLT-100243)
+
+Un tótem **sin cámara** puede condicionar su carril con el público que detecta otro
+equipo (PuertaCam) y publica en el bus **`GET https://mcp-tv.admira.store/audience/<screen>`**
+(CORS abierto):
+
+```json
+{"ok":true,"screen":"xtanco-totem","fresh":true,"ttl_ms":2000,
+ "label":{"sex":"m|f|u","age_band":"child|youth|adult|senior","confidence":0.91,"ts":"…","source":"PuertaCam"},
+ "decision":{"lane":"Matrix|TopGun|neutral","creative":"Matrix|Top Gun|neutral_6s","age_ms":350}}
+```
+
+Con `?audience=remote` el canal:
+
+1. arranca en **condicional** y lo **blinda** (`AUDIENCE_REMOTE` entra en la guarda de
+   `pollMode` junto a `URL_TAG`/`URL_SYNC`; la directiva XPL tampoco cambia el modo);
+2. sondea el bus **cada 500 ms** (`fetch … {cache:'no-store'}`): con `fresh` y
+   `sex ∈ {m,f}` escribe `window.__xplCam = {faces:1, gender:sex, age, ts}` — el mismo
+   contrato que la cámara local — y si el **carril cambió** llama a `XPLCanal.tick()` en
+   el acto (presupuesto < 2 s desde el label); con `fresh=false` o `sex='u'` pone
+   `__xplCam = null` → `camFresh()` no ve público y `matchMatrix` cae a la regla
+   catch-all = **carril neutro**;
+3. anti-flapeo: el neutro no se re-tickea antes de **6 s**; un `m`/`f` fresco gana siempre;
+4. red silenciosa: nunca rompe el bucle; tras 5 fallos seguidos sondea a 2 s y vuelve a
+   500 ms al primer éxito.
+
+Vocabulario que recibe la matriz: `gender` `m`/`f`; `age` = `age_band` mapeado a
+`nino` (child) · `joven` (youth) · `adulto` (adult, y por defecto) · `senior` (senior).
+Un `/forcecam` del CLI (`window.__xplForce`) sigue mandando sobre el bus.
+
+**Otras vías de inyectar público** (mismo efecto que `/forcecam`: fuerza condicional y
+re-evalúa la matriz ya):
+
+| Vía | Comando |
+|---|---|
+| Cola del mando (`/control/cmds`, `applyCtrlCmd`) | `audience-m` · `audience-f` · `audience-u` (alias `forcecam-m|f|u`; `u`/`off` = público real) |
+| `postMessage` desde el padre (source `xpaceos-robot-cli`) | `admiratv audiencia m|f|u` |
+| CLI local | `/forcecam m|f|u` |
+
+**Salida al padre**: en cada cambio de carril el canal hace
+`parent.postMessage({source:'admira-tv-canal', event:'audience', lane, sex, fresh, ts}, '*')`
+(igual que `media-state`). `lane` es el del bus (`Matrix|TopGun|neutral`) o, si el bus no
+lo trae o el público se forzó a mano, el sexo (`m`/`f`) / `neutral`.
+
+Diagnóstico en consola: `window.__adtvAudienceRemote` (polls, ok, fails, lane, sex, last).
+
+Ejemplo (tótem Xtanco): `?clean=1&screen=xtanco-totem&circuit=xtanco&audience=remote&muted=1`.
 
 ## Cómo entra en la trilogía
 
