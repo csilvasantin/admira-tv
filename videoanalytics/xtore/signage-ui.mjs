@@ -3,7 +3,7 @@ import {PlayerDataBridge} from './player-data.mjs';
 const LABEL={none:'Bucle general',person:'Persona',car:'Coche',motorcycle:'Moto',bicycle:'Bici'};
 export function installSignageUI({document,window}){
   const $=id=>document.getElementById(id);
-  let iframe=null,bridge=null,dataBridge=null,eligible=false,emissionTimer=0,emissionSeen=false,mediaReported=false,manuallyOff=false,failed=false;
+  let iframe=null,bridge=null,dataBridge=null,eligible=false,emissionTimer=0,emissionSeen=false,emissionDelayed=false,mediaReported=false,manuallyOff=false,failed=false;
   function controls(){$('start-signage').disabled=!eligible||!!iframe;$('stop-signage').disabled=!iframe;}
   function stop(message='El bucle arranca al conectar la vista y marcar la pantalla grande.'){
     clearTimeout(emissionTimer);bridge?.stop();bridge=null;dataBridge?.stop();dataBridge=null;
@@ -30,14 +30,16 @@ export function installSignageUI({document,window}){
     iframe.src=playerURL(`xtore-virtual-${crypto.randomUUID()}`,window.location?.origin);
     $('signage').append(iframe);$('signage-idle').hidden=true;
     dataBridge=new PlayerDataBridge({target:iframe.contentWindow});
-    emissionSeen=false;mediaReported=false;
-    emissionTimer=setTimeout(()=>{if(!emissionSeen){failed=true;stop('Sin emisión confirmada en 30 s. Revisa catálogo, reglas y compatibilidad del player aislado.');}},30000);
+    emissionSeen=false;emissionDelayed=false;mediaReported=false;
+    // Slow media is not a dead command channel. Keep the same player alive so
+    // catalogue retries can recover; only actual media may confirm playback.
+    emissionTimer=setTimeout(()=>{if(!emissionSeen){emissionDelayed=true;$('signage-status').textContent='Carga demorada · sin emisión confirmada. Reintentando sin apagar el player.';}},30000);
     bridge=new SignageBridge({target:iframe.contentWindow,onFailure:message=>{failed=true;stop(message);},onState:state=>{
         if(state.type==='ack'){
           $('signage-command').textContent=`${LABEL[state.kind]} · orden aceptada${state.kind==='none'?'':', vigencia 6 s'}. No confirma una creatividad concreta.`;
           // An ACK is control-plane evidence, not a new playback event. The
           // neutral ACK after pause/expiry must not erase confirmed playback.
-          if(!mediaReported)$('signage-status').textContent='Canal conectado · esperando emisión';
+          if(!mediaReported&&!emissionDelayed)$('signage-status').textContent='Canal conectado · esperando emisión';
         }else if(state.phase==='selected'){
           mediaReported=true;
           $('signage-status').textContent='Cargando contenido · emisión pendiente';

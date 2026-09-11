@@ -45,3 +45,44 @@ test('player authorizes actual Admira parents, not an opaque origin or third par
   for(const origin of ['null','https://evil.example','https://admira.tv.evil.example'])assert.equal(context.bridgeOriginAllowed(origin),false);
   assert.ok(html.includes("if((event.origin==='https://admira.tv'||event.origin==='https://www.admira.tv')&&event.source!==window.parent) return;"));
 });
+test('Xtore catalogue isolates malformed metadata and rejects an invalid replacement',()=>{
+  const code=html.slice(html.indexOf('function xtoreCatalogItems('),html.indexOf('async function loadFeed('));
+  const context={MEDIA:['image','video']};vm.runInNewContext(code,context);
+  const items=context.xtoreCatalogItems([{id:'ok',type:'image',url:'https://example.test/a.png',tags:'default',title:{}},null]);
+  assert.equal(items.length,1);assert.equal(items[0].title,'');assert.equal(items[0].tags.length,0);
+  assert.throws(()=>context.xtoreCatalogItems([{type:'image',url:{}}]),/No valid/);
+  assert.throws(()=>context.xtoreCatalogItems({}),/Invalid/);
+});
+test('optional H264 lookup has a deadline and transient timeouts do not poison the cache',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});let calls=0;
+  const context={XTORE_PARENT:'https://admira.tv',AbortController,setTimeout,clearTimeout,
+    fetch:async(url,{signal})=>{calls++;if(calls===1)return new Promise((resolve,reject)=>signal.addEventListener('abort',()=>reject(new Error('timeout'))));return {ok:true};}};
+  vm.runInNewContext(html.slice(html.indexOf('const _h264Variant='),html.indexOf("try{ const saved=JSON.parse(LS(CACHE_TECH_KEY")),context);
+  const it={id:'qa',url:'https://example.test/stock/qa/asset.mp4'};
+  const first=context.h264VariantFor(it);t.mock.timers.tick(2001);assert.equal(await first,null);
+  assert.equal(await context.h264VariantFor(it),'https://example.test/stock/qa/asset-h264.mp4');assert.equal(calls,2);
+});
+test('failed Xtore feed retries early, coalesces callers and preserves the last catalogue',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});let calls=0,release;const rebuilt=[];
+  const context={XTORE_PARENT:'https://admira.tv',Date,MEDIA:['image'],all:[{id:'old',type:'image',url:'https://example.test/old.png'}],playlist:[{id:'old'}],
+    setTimeout,clearTimeout,INDEX:'',setStockStatus(){},restoreCatalog:()=>false,setLive(){},_lastFeed:0,_statusT:0,_statusT2:0,
+    xtorePublicRead:()=>{calls++;return new Promise((resolve,reject)=>{release=calls===1?()=>reject(new Error('offline')):()=>resolve({items:[{id:'new',type:'image',url:'https://example.test/new.png',tags:'bad'}]});});},
+    mergeMatrixExtras(){},saveCatalog(){},guardState:()=>({}),dimCache:{},seenSig:'',seg:{},cfg:{max:50},playoutMode:'conditional',
+    rebuild:()=>rebuilt.push(true),freshScan(){},pendingImport:null,measurePass(){}};
+  vm.runInNewContext(html.slice(html.indexOf('let _xtoreFeedBusy='),html.indexOf('function restartFeed()')),context);
+  const first=context.loadFeed(true);await context.loadFeed(true);assert.equal(calls,1);release();await first;
+  assert.equal(context.all[0].id,'old');assert.equal(rebuilt.length,0);
+  t.mock.timers.tick(3001);assert.equal(calls,2);release();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(context.all[0].id,'new');assert.equal(rebuilt.length,1);
+  t.mock.timers.tick(30000);assert.equal(calls,2);
+});
+test('a delayed error or end from media A cannot skip media B',t=>{
+  t.mock.timers.enable({apis:['setTimeout']});let next=0,sync=0;
+  const context={_playTok:1,syncOn:false,next:()=>next++,syncFinishCurrent:()=>sync++};
+  vm.runInNewContext(html.slice(html.indexOf('function mediaAdvance('),html.indexOf('async function play(')),context);
+  setTimeout(()=>context.mediaAdvance(1),600);context._playTok=2;t.mock.timers.tick(601);
+  context.mediaAdvance(1,true);assert.equal(next,0);assert.equal(sync,0);
+  context.mediaAdvance(2);assert.equal(next,1);context.syncOn=true;context.mediaAdvance(2,true);assert.equal(sync,1);
+  const playback=html.slice(html.indexOf('async function play('),html.indexOf('function next()'));
+  assert.equal(playback.includes('setTimeout(next,600)'),false);
+});

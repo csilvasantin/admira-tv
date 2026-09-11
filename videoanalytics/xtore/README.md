@@ -107,13 +107,25 @@ objetivo hasta 8 análisis/s, no garantía de FPS. Diagnóstico visible de candi
 mejor score, umbral y duración. Falta medir pasos perdidos/falsos con vídeo real.
 
 La cartelería es una tercera superficie opcional, independiente del iPad.
+Validación de recuperación (11 septiembre, posterior a r12): 100 pruebas Xtore
+pasan. En navegador aislado, un catálogo QA falló con HTTP 503 durante los primeros
+31 s: se vio el aviso de demora, se mantuvo el iframe y a los 65 s llegó `playing`
+con una imagen pública real. En otra ejecución, bucle de dos imágenes → criterio
+de coche con regla QA → tercera imagen con `playing, loop=false` → vuelta a
+`playing, loop=true` a los 6 s. Criterio de bici sin regla conservó el bucle.
+Fixtures y diagnóstico solo en un servidor temporal fuera del repo; no publicados,
+sin cámara ni contadores ni pantallas físicas. No acredita detecciones reales ni
+que el Chrome de Carlos ya haya cargado la corrección. Los callbacks de una pieza
+antigua tampoco pueden avanzar la nueva tras una interrupción válida.
+
 Cuatro esquinas interiores en sentido horario, homografía 540 × 960, ajuste
 numérico opcional. El bucle general arranca automáticamente cuando hay fuente
 conectada, cartelería marcada y vista visible, aunque el análisis esté pausado.
 Pausar análisis devuelve al bucle sin apagarlo. Ocultar/desconectar/recalibrar
 (también mediante coordenadas) retira el iframe. Volver a la vista lo reanuda,
-pero no inicia inferencia. Apagar player y los errores requieren Reanudar manual;
-no hay reintentos infinitos. Redimensionar invalida las tres zonas.
+pero no inicia inferencia. Apagar player y los fallos del canal de órdenes requieren
+Reanudar manual. La demora de media no apaga el player: conserva los reintentos
+de catálogo mientras la vista siga activa. Redimensionar invalida las tres zonas.
 Nunca se embebe IEU ni se eligen permisos del usuario.
 
 `signage.mjs`/`signage-ui.mjs` montan el player real de Admira.tv con pantalla,
@@ -133,7 +145,9 @@ desde un origen opaco. No se cambia el comportamiento de disco de otros players.
 
 `player-data.mjs` obtiene únicamente catálogo público y matriz global: dos URLs
 fijas, GET sin credenciales ni redirecciones, máximo 2 MiB/10 s, una petición por
-recurso y mínimo 2 s entre lecturas. El hijo no elige URL, headers, método ni
+recurso y mínimo 2 s entre lecturas. Hasta 16 lectores concurrentes comparten la
+misma operación, cada uno con su requestId; en la ventana de 2 s se reutiliza la
+respuesta. Los timeouts responden error sin cuerpo. El hijo no elige URL, headers, método ni
 pantalla. Cierre aborta y descarta respuestas tardías. No lee ni envía capturas,
 histórico, cookies o tokens. CSP habilita solo esos endpoints para esta lectura.
 El CLI del opt-in también acepta exclusivamente el padre/origen configurados.
@@ -150,14 +164,24 @@ Arranque neutro con sondeo idempotente cada 500 ms, mismo requestId, límite 20 
 No depende del load de recursos secundarios. Pasos confirmados → bici, moto,
 coche o persona por prioridad; neutro tras 6 s sin nuevos pasos. Un watchdog
 de racha sin ACK vigente cierra a los 2.5 s aunque haya pasos constantes.
-ACKs obsoletos no reactivan ni tumban una orden posterior. Se cierra si no hay
-confirmación de reproducción/carga en 30 s o si el iframe vuelve a navegar.
+ACKs obsoletos no reactivan ni tumban una orden posterior. Si no hay confirmación
+de reproducción/carga en 30 s se muestra «Carga demorada» SIN desmontar el iframe;
+un evento real posterior puede confirmar la recuperación. Una navegación posterior
+del iframe sigue cerrando su canal.
+El catálogo Xtore tiene reintento single-flight a 3/6/12/24/30 s tras error,
+además del refresco normal. Se normalizan metadatos y se rechaza una sustitución
+malformada antes de perder el catálogo anterior. Las reglas son independientes.
+La variante H.264 tiene HEAD acotado a 2 s en Xtore (5 s en el canal ordinario),
+sin memorizar como inexistente un error de red. Se conserva la superficie anterior
+durante esa consulta. El vídeo Xtore sin datos tiene hasta 15 s para cargar;
+no se confunde automáticamente el búfer vacío a 3,5 s con un fallo de códec.
+No equivale a una playlist offline ni garantiza emisión sin media accesible.
 El ACK se muestra separado, dentro de «Conexión con el player»: nunca pisa
 el estado de reproducción después de pausar o volver al bucle. Antes de una
 primera emisión se indica «Canal conectado · esperando emisión». Seleccionar
 una nueva pieza retira el estado anterior y muestra «Cargando contenido ·
 emisión pendiente» hasta un evento de carga/reproducción, sin reiniciar plazos.
-Regresión local posterior (11 septiembre): 94 pruebas pasan. En un player real
+Registro previo r11 (11 septiembre): 94 pruebas pasaban. En un player real
 aislado, el primer arranque no confirmó media en 30 s y cerró; al repetir,
 catálogo y reglas respondieron HTTP 200 y hubo contenido visible con `playing`.
 Reafirmar neutro conservó el indicador de reproducción. Esto valida la corrección

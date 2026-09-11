@@ -23,3 +23,18 @@ test('oversized, malformed and non-JSON public replies fail without forwarding a
     const f=fixture(()=>response);await f.bridge.receive(f.event());assert.equal(f.replies[0][0].ok,false);assert.equal('data' in f.replies[0][0],false);f.bridge.stop();
   }
 });
+test('concurrent and rate-limited readers receive correlated replies from one fetch',async()=>{
+  let release;const f=fixture(()=>new Promise(resolve=>{release=resolve;}));
+  const first=f.bridge.receive(f.event());
+  const second=f.event();second.data.requestId='second-12345678';await f.bridge.receive(second);
+  assert.equal(f.calls.length,1);release(Response.json({items:[{id:'fixture'}]}));await first;
+  assert.deepEqual(f.replies.map(r=>r[0].requestId),['12345678','second-12345678']);
+  const third=f.event();third.data.requestId='third-12345678';await f.bridge.receive(third);
+  assert.equal(f.calls.length,1);assert.equal(f.replies.at(-1)[0].ok,true);f.bridge.stop();
+});
+test('network timeout returns a bounded error so the child can retry',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=fixture((url,{signal})=>new Promise((resolve,reject)=>signal.addEventListener('abort',()=>reject(new Error('aborted')))));
+  const pending=f.bridge.receive(f.event());t.mock.timers.tick(10001);await pending;
+  assert.equal(f.replies[0][0].ok,false);assert.equal('data' in f.replies[0][0],false);f.bridge.stop();
+});

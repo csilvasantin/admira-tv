@@ -37,14 +37,16 @@ for(const [phase,label] of [['playing','reproduciendo'],['poster-loaded','miniat
     f.media(phase);assert.equal(f.get('signage-status').textContent,`Bucle general · ${label}`);
   });
 }
-test('ACK alone or selection never confirms playback or cancels the startup deadline',t=>{
+test('slow media warns without destroying the connected player; late media recovers',t=>{
   const f=fixture(t),frame=f.frame();f.ack();
   assert.equal(f.get('signage-status').textContent,'Canal conectado · esperando emisión');
   f.media('selected');f.ui.neutral();f.ack();
   assert.equal(f.get('signage-status').textContent,'Cargando contenido · emisión pendiente');
-  t.mock.timers.tick(30001);assert.equal(frame.removed,true);
-  assert.match(f.get('signage-status').textContent,/Sin emisión confirmada/);
-  assert.equal(f.get('signage-command').textContent,'Canal de órdenes cerrado');
+  t.mock.timers.tick(30001);assert.notEqual(frame.removed,true);
+  assert.match(f.get('signage-status').textContent,/Carga demorada/);
+  assert.match(f.get('signage-command').textContent,/orden aceptada/);
+  f.media('playing');assert.equal(f.get('signage-status').textContent,'Bucle general · reproduciendo');
+  assert.equal(f.frame(),frame);
 });
 test('restart clears both channels; late media, ACK and loads from A cannot change B',t=>{
   const f=fixture(t),a=f.frame();f.ack();f.media('playing');a.listeners.load();
@@ -54,6 +56,8 @@ test('restart clears both channels; late media, ACK and loads from A cannot chan
   f.media('playing',a);f.emit({requestId:a.sent.at(-1).requestId,ok:false},a);a.listeners.load();
   assert.equal(f.get('signage-status').textContent,pending);assert.equal(f.frame(),b);
   assert.equal(f.get('signage-media').textContent,'Sin confirmación de emisión');
-  t.mock.timers.tick(30001);assert.equal(b.removed,true);
-  assert.match(f.get('signage-status').textContent,/Sin emisión confirmada/);
+  t.mock.timers.tick(30001);assert.notEqual(b.removed,true);
+  assert.match(f.get('signage-status').textContent,/Carga demorada/);
+  b.listeners.load();b.listeners.load();assert.equal(b.removed,true);
+  assert.match(f.get('signage-status').textContent,/intentó navegar/);
 });

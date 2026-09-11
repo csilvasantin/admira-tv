@@ -110,15 +110,15 @@ test('automatic signage is removed on hide; late loads are ignored',async t=>{
   f.doc.hidden=true;await f.doc.emit('visibilitychange');assert.equal(iframe.removed,true);assert.equal(f.get('signage').children.length,0);
   const afterHide=sent.length;await iframe.emit('load');assert.equal(sent.length,afterHide);await f.get('stop').emit('click');f.finishDetection();
 });
-test('signage with no reported media shuts down even after an ACK',async t=>{
+test('signage with a healthy ACK keeps retrying slow media without resetting the capture',async t=>{
   t.mock.timers.enable({apis:['setTimeout']});
   const f=await fixture();await f.get('connect').emit('click');await f.get('edit-coordinates').emit('click');
   for(const [i,value] of [50,25,75,25,75,85,50,85].entries())f.get(`coord-${12+i}`).value=String(value);
   await f.get('apply-coordinates').emit('click');await f.get('start-signage').emit('click');
   const iframe=f.get('signage').children[0];await f.win.emit('message',{source:iframe.contentWindow,origin:'null',data:{source:'admira-tv-canal',requestId:iframe.sent[0].data.requestId,ok:true}});
-  t.mock.timers.tick(30001);assert.equal(iframe.removed,true);assert.match(f.get('signage-status').textContent,/Sin emisión confirmada/);
-  assert.equal(f.get('signage-idle-label').textContent,'Player detenido por error');
-  await f.get('confidence').emit('input');assert.equal(f.get('signage').children.length,0);await f.get('stop').emit('click');
+  t.mock.timers.tick(30001);assert.notEqual(iframe.removed,true);assert.match(f.get('signage-status').textContent,/Carga demorada/);
+  assert.equal(f.get('signage-idle').hidden,true);
+  await f.get('confidence').emit('input');assert.equal(f.get('signage').children.length,1);await f.get('stop').emit('click');
 });
 test('pause keeps the normal loop, manual stop stays off, returning to a visible tab never starts inference',async t=>{
   t.mock.timers.enable({apis:['setTimeout']});

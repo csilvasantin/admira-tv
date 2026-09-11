@@ -3,14 +3,25 @@
 const RESOURCES=Object.freeze({catalog:'https://api.admira.store/stock/list?limit=300',rules:'https://brain.digitalavatar.ai/segmentation?target=all'});
 const LIMIT=2*1024*1024;
 export class PlayerDataBridge{
-  constructor({target,fetcher=fetch,now=()=>Date.now()}){Object.assign(this,{target,fetcher,now});this.closed=false;this.active=new Map();this.last=new Map();}
+  constructor({target,fetcher=fetch,now=()=>Date.now()}){Object.assign(this,{target,fetcher,now});this.closed=false;this.active=new Map();this.last=new Map();this.recent=new Map();}
+  reply(resource,requestId,result){
+    if(this.closed)return;
+    try{this.target.postMessage({source:'xtore-public-data',requestId,resource,...result},'*');}catch{/* Removed frame. */}
+  }
   async receive(event){
     if(this.closed||event.source!==this.target||event.origin!=='null')return;
     const d=event.data;
     if(!d||d.source!=='admira-tv-public-data'||!Object.hasOwn(RESOURCES,d.resource)||typeof d.requestId!=='string'||!/^[a-z0-9-]{8,80}$/i.test(d.requestId))return;
     if(Object.keys(d).some(k=>!['source','resource','requestId'].includes(k)))return;
-    if(this.active.has(d.resource)||this.now()-(this.last.get(d.resource)??-Infinity)<2000)return;
-    const controller=new AbortController();this.active.set(d.resource,controller);this.last.set(d.resource,this.now());
+    const pending=this.active.get(d.resource);
+    if(pending){
+      if(pending.requests.size<16)pending.requests.add(d.requestId);
+      else this.reply(d.resource,d.requestId,{ok:false});
+      return;
+    }
+    if(this.now()-(this.last.get(d.resource)??-Infinity)<2000){this.reply(d.resource,d.requestId,this.recent.get(d.resource)??{ok:false});return;}
+    const controller=new AbortController(),requests=new Set([d.requestId]);
+    this.active.set(d.resource,{controller,requests});this.last.set(d.resource,this.now());
     const timeout=setTimeout(()=>controller.abort(),10000);
     let data,ok=false;
     try{
@@ -25,8 +36,11 @@ export class PlayerDataBridge{
       ok=true;
     }catch{/* Report a bounded failure; never forward response headers/errors. */}
     finally{clearTimeout(timeout);this.active.delete(d.resource);}
-    if(this.closed||controller.signal.aborted)return;
-    try{this.target.postMessage({source:'xtore-public-data',requestId:d.requestId,resource:d.resource,ok,...(ok?{data}:{})},'*');}catch{/* The frame may have been removed. */}
+    if(this.closed)return;
+    // Timeout is an explicit failure, not a silent missing response. Share one
+    // bounded fetch with simultaneous readers, preserving every correlation ID.
+    const result={ok,...(ok?{data}:{})};this.recent.set(d.resource,result);
+    for(const requestId of requests)this.reply(d.resource,requestId,result);
   }
-  stop(){this.closed=true;for(const controller of this.active.values())controller.abort();this.active.clear();}
+  stop(){this.closed=true;for(const {controller} of this.active.values())controller.abort();this.active.clear();this.recent.clear();}
 }
