@@ -53,8 +53,18 @@ def tarjeta(app):
     estado = "Disponible · Available" if disponible else "Próximamente · Coming soon"
     video = url_segura(app.get("video"), slug, "video")
     pdf = url_segura(app.get("pdf"), slug, "pdf")
+    # Vista propia: IEU mantiene su autenticación y el operador comparte su pestaña.
+    es_analitica = slug == "videoanalytics"
+    titulo_html = esc(nombre_es)
+    if es_analitica:
+        titulo_html = (
+            '<a class="app-entry" href="/videoanalytics/xtore/"'
+            ' aria-label="Analítica de vídeo: entrar en la Xtore">{}</a>'
+        ).format(esc(nombre_es))
 
     acciones = []
+    if es_analitica:
+        acciones.append('<span class="app-entry-label">Entrar en la Xtore →</span>')
     if slug == "support":
         acciones.append('<a class="app-action" href="/support/">Abrir Soporte · Tester visual ↗</a>')
     if video:
@@ -72,10 +82,10 @@ def tarjeta(app):
     acciones.append('<span class="app-media-status" role="status" aria-live="polite"></span>')
 
     return (
-        '<article class="app-card" data-public-app-card="{slug}" data-app-title="{titulo}">'
+        '<article class="app-card{entry_class}" data-public-app-card="{slug}" data-app-title="{titulo}">'
         '<div class="app-card-head"><span class="app-icon" aria-hidden="true">{icono}</span>'
         '<span class="app-state">{estado}</span></div>'
-        "<h3>{nes}</h3>"
+        "<h3>{titulo_html}</h3>"
         '<p class="app-name-en" lang="en">{nen}</p>'
         '<p class="app-description">{des}</p>'
         '<p class="app-description app-description-en" lang="en">{den}</p>'
@@ -83,6 +93,8 @@ def tarjeta(app):
         "</article>"
     ).format(
         slug=esc(slug),
+        entry_class=" app-card-entry" if es_analitica else "",
+        titulo_html=titulo_html,
         titulo=esc("{} · {}".format(nombre_es, nombre_en)),
         icono=esc(app.get("icon", "")),
         estado=esc(estado),

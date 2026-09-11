@@ -30,6 +30,7 @@ LITERAL = re.compile(r"(window\.ADMIRA_VERSION\s*=\s*')(v\.[0-9.]+r[0-9]+(?:\.[0
 # Solo assets propios (rutas relativas o /): los externos no se tocan.
 TOKEN = re.compile(r'((?:href|src)="/?(?!//|https?:)[A-Za-z0-9._/-]+\.(?:js|css)\?v=)([^"]*)(")')
 SELLO_META = re.compile(r'<meta name="admiranext-version" content="([^"]+)"')
+SELLO_TEXTO = re.compile(r'(<span data-release-version>)[^<]*(</span>)')
 
 
 def sello_canonico():
@@ -50,9 +51,12 @@ def main():
         if any(p in f.parts for p in ("node_modules", ".git", ".wrangler", ".claude")):
             continue
         texto = f.read_text(encoding="utf-8")
-        if "ADMIRA_VERSION" not in texto and "?v=" not in texto:
+        if "ADMIRA_VERSION" not in texto and "?v=" not in texto and "data-release-version" not in texto:
             continue
         nuevo = LITERAL.sub(lambda m: m.group(1) + sello + m.group(3), texto)
+        if "data-release-version" in texto:
+            nuevo = SELLO_META.sub(lambda m: m.group(0).replace(m.group(1), sello), nuevo)
+            nuevo = SELLO_TEXTO.sub(lambda m: m.group(1) + sello + m.group(2), nuevo)
         # El token va sin la «v.» y sin los dos puntos de la hora: es una clave de
         # caché, no un sello que nadie vaya a leer.
         clave = sello.lstrip("v.").replace(":", "")
