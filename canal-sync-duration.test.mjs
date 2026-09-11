@@ -55,5 +55,6 @@ test('los 20 segundos son sólo respaldo y la duración descubierta se republica
   assert.match(canal, /const sig=items\.map\(i=>\[i\.id,i\.url,i\.thumb,i\.dur\|\|0\]\.join\('~'\)\)\.join\('\|'\)/);
   assert.match(canal, /try\{ signagePlaylistPush\(\); \}catch\(_\)\{\}/);
   assert.match(canal, /if\(target!==cur\)\{ play\(target\); return; \}/);
-  assert.match(canal, /v\.onended=\(\)=>syncOn\?syncFinishCurrent\(\):next\(\)/);
+  assert.match(canal, /v\.onended=\(\)=>mediaAdvance\(_tok,true\)/);
+  assert.match(canal, /if\(ended&&syncOn\)syncFinishCurrent\(\);else next\(\)/);
 });
