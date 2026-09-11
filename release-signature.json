@@ -1,9 +1,9 @@
 {
-  "version": "v.10.09.2026.r7",
-  "signature": "TrinityMBP14 · MacBookProNegro14",
-  "agent": "TrinityMBP14",
-  "machine": "MacBookProNegro14",
-  "day": "10.09.2026",
-  "time": "13:25",
-  "evidence": "DCL-0b0258a5587b9b56e9cbbee7: diez personajes arrastrables, cursores para personaje 1, ocho fases de paso, 127 pruebas correctas."
+  "version": "v.11.09.2026.r3",
+  "signature": "SmithMacMini · MacMini",
+  "agent": "SmithMacMini",
+  "machine": "MacMini",
+  "day": "11.09.2026",
+  "time": "13:16",
+  "evidence": "FLT-100224 / FLT-100226 encargo #2990: restore ADcelerate demo UI visible (revert 6ab91d5 default ui-hidden). H still toggles presentation. #human-hud.hidden until HumanView.enter()."
 }
