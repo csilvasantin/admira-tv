@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090e14">
+  <meta name="description" content="Xtore: análisis local de Puerta Cam y capturas efímeras en un iPad virtual, con permiso explícito para compartir la pestaña de Digital Twin.">
+  <meta name="admiranext-version" content="v.11.09.2026.r1.16:00">
+  <meta name="admiranext-agent" content="TrinityMBA16">
+  <title>Xtore · Analítica de vídeo · Admira.tv</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./xtore.css">
+  <script type="module" src="./xtore.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">Admira<span>.</span>tv</a>
+    <nav aria-label="Navegación"><a href="/videoanalytics/">Sobre la solución</a><a href="/#soluciones">Todas las soluciones ↗</a></nav>
+  </header>
+  <main>
+    <header class="heading">
+      <div><p class="eyebrow">VIDEO ANALYTICS / XTORE</p><h1>La calle, en el iPad.</h1><p class="intro">Puerta Cam detecta el paso. El player virtual muestra la captura.</p></div>
+      <span id="connection" class="badge">Sin conexión</span>
+    </header>
+    <section class="toolbar" aria-label="Conectar la Xtore">
+      <a class="button" href="https://digitaltwin.ieu.ai/" target="_blank" rel="noopener noreferrer">1. Abrir Digital Twin ↗</a>
+      <button id="connect" class="primary">2. Compartir pestaña</button>
+      <button id="stop" disabled>Desconectar</button>
+      <span class="local-note">Procesamiento local · sin audio · sin subir imágenes</span>
+    </section>
+    <p id="status" role="status" aria-live="polite">En Digital Twin, abre Store → Entrada y el stream de Puerta Cam. Después comparte únicamente esa pestaña.</p>
+    <div class="workspace">
+      <section class="viewer" aria-label="Escena Xtore con iPad virtual">
+        <div id="stage" class="stage">
+          <video id="scene" muted playsinline aria-label="Pestaña compartida de Digital Twin"></video>
+          <div id="empty-scene" class="empty-scene"><span class="scene-mark" aria-hidden="true">⌗</span><h2>Tu Xtore, conectada.</h2><p>La escena real aparecerá aquí al compartir la pestaña.<br>No hay vídeo ni detecciones simuladas.</p><span class="small">Chrome de escritorio · sesión de IEU necesaria</span></div>
+          <div id="tablet" hidden aria-label="Player virtual sobre el iPad"><canvas id="tablet-canvas" width="640" height="480"></canvas></div>
+          <div id="roi" hidden><span>Solo se analiza esta zona</span></div>
+          <div id="markers" aria-hidden="true"></div>
+        </div>
+        <div class="viewer-caption"><span id="source-info">ESPERANDO FUENTE</span><span>iPad virtual · no es un dispositivo físico</span></div>
+      </section>
+      <aside class="inspector">
+        <div class="section-title"><h2>Última captura</h2><span id="event-counter">0 eventos</span></div>
+        <div id="capture" class="capture"><canvas id="capture-canvas" width="640" height="360" hidden aria-label="Última captura de la cámara, con detecciones señaladas"></canvas><p id="capture-empty">Esperando un paso confirmado</p></div>
+        <p id="event-label" class="event-label" role="status">Sin capturas</p>
+        <p id="event-meta" class="small">Las imágenes desaparecen a los 6 segundos. No se guardan.</p>
+        <div class="legend" aria-label="Colores de detección"><span><i class="person"></i>Persona</span><span><i class="car"></i>Coche</span><span><i class="motorcycle"></i>Moto</span><span><i class="bicycle"></i>Bici</span></div>
+        <p class="small">Persona = sin clasificación de sexo o edad. No hay reconocimiento de identidad. El resultado puede contener errores.</p>
+        <div class="divider"></div>
+        <h2>Encuadre y detección</h2>
+        <p class="small">Antes de analizar, marca el recuadro de Puerta Cam y las cuatro esquinas de la pantalla del iPad. Repite si mueves el gemelo.</p>
+        <div class="calibration-buttons"><button id="set-roi" disabled>Marcar cámara</button><button id="set-tablet" disabled>Marcar iPad</button></div>
+        <p id="calibration-status" class="small" role="status">Encuadre pendiente de confirmar</p>
+        <div id="coordinates" hidden>
+          <p class="small">Coordenadas en % de la escena. También puedes ajustar con el teclado.</p>
+          <div id="coordinate-fields" class="coordinate-fields"></div>
+          <button id="apply-coordinates">Aplicar coordenadas</button>
+        </div>
+        <button id="edit-coordinates" class="text-button" disabled>Ajuste por coordenadas</button>
+        <label class="threshold" for="confidence">Confianza mínima <output id="confidence-value">65 %</output><input id="confidence" type="range" min="50" max="90" value="65" step="5"></label>
+        <button id="analyze" class="primary full" disabled>Iniciar análisis</button>
+        <button id="prepare-model" class="text-button">Preparar detector sin conectar la cámara</button>
+        <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. Los fotogramas no salen del navegador.</p>
+      </aside>
+    </div>
+    <footer><span>TrinityMBA16 · v.11.09.2026.r1.16:00</span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Player local · puente MCP remoto no activado</span></footer>
+  </main>
+</body>
+</html>

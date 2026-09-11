@@ -1,0 +1,246 @@
+import {CLASSES, SNAPSHOT_TTL, PassageTracker, validRect, validQuad, quadMatrix} from './core.mjs';
+
+const $=id=>document.getElementById(id);
+const scene=$('scene'), stage=$('stage'), frame=document.createElement('canvas');
+const frameContext=frame.getContext('2d',{willReadFrequently:true});
+const tablet=$('tablet-canvas'), capture=$('capture-canvas');
+const tracker=new PassageTracker();
+let stream=null, generation=0, analyzing=false, busy=false, loopTimer=0, expiryTimer=0;
+let model=null, modelPromise=null, calibration=null, points=[], roiReady=false, tabletReady=false, eventCount=0;
+let roi=[.706,.026,.282,.293];
+let quad=[[.773,.491],[.89,.51],[.874,.675],[.75,.647]];
+let sourceSize='', lastVideoTime=-1, lastFrameAt=0;
+
+function status(message){$('status').textContent=message;}
+function controls(){
+  const connected=!!stream;
+  $('connect').disabled=connected||busy;
+  $('stop').disabled=!connected;
+  for(const id of ['set-roi','set-tablet','edit-coordinates'])$(id).disabled=!connected;
+  $('analyze').disabled=!connected||!roiReady||!tabletReady||!!calibration||busy;
+  $('analyze').textContent=analyzing?'Pausar análisis':'Iniciar análisis';
+  $('connection').textContent=analyzing?'Analizando':connected?'Pestaña conectada':'Sin conexión';
+  $('connection').classList.toggle('live',analyzing);
+}
+function tabletIdle(text='Esperando un paso'){
+  const c=tablet.getContext('2d');
+  c.fillStyle='#09131b';c.fillRect(0,0,640,480);
+  c.strokeStyle='#33404a';c.lineWidth=16;c.strokeRect(8,8,624,464);
+  c.textAlign='center';c.fillStyle='#3df08a';c.font='bold 30px sans-serif';c.fillText('Admira.tv / Xtore',320,210);
+  c.fillStyle='#b4c4ce';c.font='24px sans-serif';c.fillText(text,320,266);
+}
+function clearCapture(message='Sin capturas'){
+  clearTimeout(expiryTimer);
+  capture.getContext('2d').clearRect(0,0,capture.width,capture.height);
+  capture.hidden=true;$('capture-empty').hidden=false;
+  $('capture').style.borderColor='#33404a';
+  $('event-label').textContent=message;
+  $('event-meta').textContent='Las imágenes desaparecen a los 6 segundos. No se guardan.';
+  tabletIdle(analyzing?'Esperando un paso':'Análisis en pausa');
+}
+function pause(message){
+  analyzing=false;generation++;clearTimeout(loopTimer);tracker.reset();clearCapture();controls();
+  frameContext.clearRect(0,0,frame.width,frame.height);
+  if(message)status(message);
+}
+function disconnect(message='Desconectado. Capturas y vídeo borrados de la vista.'){
+  pause();
+  if(stream)for(const track of stream.getTracks())track.stop();
+  stream=null;scene.srcObject=null;scene.removeAttribute('src');scene.load();
+  frame.width=1;frame.height=1;sourceSize='';lastVideoTime=-1;
+  roiReady=false;tabletReady=false;calibration=null;points=[];
+  stage.classList.remove('calibrating');stage.style.aspectRatio='16 / 9';
+  $('tablet').hidden=true;$('roi').hidden=true;$('markers').replaceChildren();
+  $('empty-scene').hidden=false;$('source-info').textContent='ESPERANDO FUENTE';
+  $('calibration-status').textContent='Encuadre pendiente de confirmar';
+  $('coordinates').hidden=true;controls();status(message);
+}
+function layout(){
+  const width=stage.clientWidth,height=stage.clientHeight;
+  if(tabletReady){$('tablet').style.transform=`matrix3d(${quadMatrix(640,480,quad.map(([x,y])=>[x*width,y*height])).join(',')})`;}
+  Object.assign($('roi').style,{left:`${roi[0]*100}%`,top:`${roi[1]*100}%`,width:`${roi[2]*100}%`,height:`${roi[3]*100}%`});
+  $('tablet').hidden=!tabletReady||!stream;
+  $('roi').hidden=!stream||!roiReady;
+}
+new ResizeObserver(layout).observe(stage);
+
+$('connect').addEventListener('click',async()=>{
+  if(!navigator.mediaDevices?.getDisplayMedia){status('Este navegador no permite compartir pestañas aquí. Abre esta vista en Chrome de escritorio, por HTTPS o localhost.');return;}
+  busy=true;controls();
+  try{
+    // The browser/user chooses the source. Never preselect an authenticated tab or reuse its cookies.
+    const selected=await navigator.mediaDevices.getDisplayMedia({video:{displaySurface:'browser',frameRate:{ideal:10,max:15}},audio:false,monitorTypeSurfaces:'exclude',selfBrowserSurface:'exclude',surfaceSwitching:'exclude',systemAudio:'exclude'});
+    const track=selected.getVideoTracks()[0];
+    if(track?.getSettings().displaySurface!=='browser'){
+      selected.getTracks().forEach(t=>t.stop());
+      status('Selecciona una pestaña de Chrome, no una ventana ni la pantalla completa.');return;
+    }
+    stream=selected;generation++;roiReady=false;tabletReady=false;eventCount=0;
+    $('event-counter').textContent='0 eventos';
+    track.addEventListener('ended',()=>disconnect('Se ha terminado de compartir. La captura se ha borrado.'),{once:true});
+    track.addEventListener('mute',()=>pause('La fuente está interrumpida. Revisa la pestaña y vuelve a iniciar el análisis.'));
+    scene.srcObject=stream;
+    await scene.play();
+    $('empty-scene').hidden=true;
+    updateSourceSize();
+    status('Pestaña conectada. Comprueba que es la Xtore y marca la cámara y el iPad. No se analiza todavía.');
+  }catch(error){
+    if(stream)disconnect();
+    status(error.name==='NotAllowedError'?'No se ha concedido permiso para compartir. Puedes volver a intentarlo.':`No se pudo compartir la pestaña (${error.name||'error del navegador'}).`);
+  }finally{busy=false;controls();}
+});
+$('stop').addEventListener('click',()=>disconnect());
+function updateSourceSize(){
+  if(!scene.videoWidth||!scene.videoHeight)return;
+  const next=`${scene.videoWidth} × ${scene.videoHeight}`;
+  if(sourceSize && sourceSize!==next){
+    pause('La fuente ha cambiado de tamaño. Vuelve a marcar la cámara y el iPad antes de analizar.');
+    roiReady=false;tabletReady=false;$('calibration-status').textContent='Tamaño nuevo: repite el encuadre';
+  }
+  sourceSize=next;stage.style.aspectRatio=`${scene.videoWidth} / ${scene.videoHeight}`;
+  $('source-info').textContent=`PESTAÑA COMPARTIDA · ${next}`;layout();controls();
+}
+scene.addEventListener('resize',updateSourceSize);
+
+function startCalibration(kind){
+  pause();calibration=kind;points=[];stage.classList.add('calibrating');$('markers').replaceChildren();
+  $('coordinates').hidden=true;
+  if(kind==='roi'){roiReady=false;$('roi').hidden=true;status('Marca dos puntos en la escena: esquina superior izquierda e inferior derecha del vídeo de Puerta Cam. No incluyas el resto de la tienda.');}
+  else{tabletReady=false;$('tablet').hidden=true;status('Marca las cuatro esquinas interiores del iPad: superior izquierda → superior derecha → inferior derecha → inferior izquierda.');}
+  $('calibration-status').textContent=kind==='roi'?'Marcando cámara: 0 / 2':'Marcando iPad: 0 / 4';
+  controls();
+}
+$('set-roi').addEventListener('click',()=>startCalibration('roi'));
+$('set-tablet').addEventListener('click',()=>startCalibration('tablet'));
+stage.addEventListener('click',event=>{
+  if(!calibration)return;
+  const box=stage.getBoundingClientRect();
+  const point=[Math.max(0,Math.min(1,(event.clientX-box.left)/box.width)),Math.max(0,Math.min(1,(event.clientY-box.top)/box.height))];
+  points.push(point);
+  const marker=document.createElement('span');marker.className='marker';marker.textContent=points.length;
+  marker.style.left=`${point[0]*100}%`;marker.style.top=`${point[1]*100}%`;$('markers').append(marker);
+  const required=calibration==='roi'?2:4;
+  $('calibration-status').textContent=`Marcando ${calibration==='roi'?'cámara':'iPad'}: ${points.length} / ${required}`;
+  if(points.length!==required)return;
+  if(calibration==='roi'){
+    const candidate=[points[0][0],points[0][1],points[1][0]-points[0][0],points[1][1]-points[0][1]];
+    if(!validRect(candidate)){startCalibration('roi');status('El recuadro no es válido. Marca primero arriba a la izquierda y después abajo a la derecha.');return;}
+    roi=candidate;roiReady=true;
+  }else{
+    if(!validQuad(points)){startCalibration('tablet');status('Las esquinas se cruzan o el iPad es demasiado pequeño. Repite en sentido horario desde arriba a la izquierda.');return;}
+    quad=points.map(p=>[...p]);tabletReady=true;
+  }
+  finishCalibration();
+});
+function finishCalibration(){
+  calibration=null;points=[];stage.classList.remove('calibrating');$('markers').replaceChildren();
+  $('calibration-status').textContent=`Cámara: ${roiReady?'marcada':'pendiente'} · iPad: ${tabletReady?'marcado':'pendiente'}`;
+  layout();controls();status(roiReady&&tabletReady?'Encuadre listo. Pulsa Iniciar análisis. Si giras o acercas el gemelo, pausa y vuelve a marcar.':'Marca también la otra zona antes de iniciar el análisis.');
+}
+const coordinateNames=['Cámara: izquierda','Cámara: arriba','Cámara: ancho','Cámara: alto','iPad: sup. izq. X','iPad: sup. izq. Y','iPad: sup. der. X','iPad: sup. der. Y','iPad: inf. der. X','iPad: inf. der. Y','iPad: inf. izq. X','iPad: inf. izq. Y'];
+$('edit-coordinates').addEventListener('click',()=>{
+  pause();calibration=null;points=[];stage.classList.remove('calibrating');$('markers').replaceChildren();
+  $('coordinate-fields').replaceChildren();
+  [...roi,...quad.flat()].forEach((value,i)=>{
+    const label=document.createElement('label');label.textContent=coordinateNames[i];
+    const input=document.createElement('input');input.type='number';input.min='0';input.max='100';input.step='.1';input.value=(value*100).toFixed(1);input.id=`coord-${i}`;label.append(input);$('coordinate-fields').append(label);
+  });
+  $('coordinates').hidden=false;status('Ajusta los porcentajes y pulsa Aplicar coordenadas. Los valores iniciales son orientativos, no una calibración automática.');
+});
+$('apply-coordinates').addEventListener('click',()=>{
+  const values=coordinateNames.map((_,i)=>$(`coord-${i}`).value.trim()===''?NaN:Number($(`coord-${i}`).value)/100);
+  const r=values.slice(0,4),q=[values.slice(4,6),values.slice(6,8),values.slice(8,10),values.slice(10,12)];
+  if(!validRect(r)||!validQuad(q)){status('Coordenadas inválidas: cámara dentro de la escena y cuatro esquinas del iPad en sentido horario, sin cruces.');return;}
+  roi=r;quad=q;roiReady=true;tabletReady=true;$('coordinates').hidden=true;finishCalibration();
+});
+$('confidence').addEventListener('input',()=>{$('confidence-value').value=`${$('confidence').value} %`;tracker.reset();});
+
+function loadScript(src,integrity){
+  return new Promise((resolve,reject)=>{
+    const script=document.createElement('script');script.src=src;script.integrity=integrity;script.crossOrigin='anonymous';
+    const timeout=setTimeout(()=>{script.remove();reject(new Error('La descarga del detector tardó demasiado.'));},30000);
+    script.onload=()=>{clearTimeout(timeout);resolve();};script.onerror=()=>{clearTimeout(timeout);script.remove();reject(new Error('No se pudo verificar o descargar el detector.'));};document.head.append(script);
+  });
+}
+async function prepareModel(){
+  if(model)return model;
+  if(modelPromise)return modelPromise;
+  $('prepare-model').disabled=true;$('model-status').textContent='Descargando detector local… No se envía ninguna imagen.';
+  modelPromise=(async()=>{
+    // ES2017 avoids the legacy bundle's dynamic Function/regenerator shim;
+    // keep CSP strict rather than enabling unsafe-eval for the entire page.
+    if(typeof window.tf?.ready!=='function')await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.es2017.min.js','sha384-ODzrY1mCTIRZRerZfDIqCoTQafA1St1OwLVc9SsTefnkCF1MeIaVSZ88wuK/NKfH');
+    if(typeof window.cocoSsd?.load!=='function')await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js','sha384-7qLdgfEQyO9ZQi9ArRHigK+IBto4XPk468jAqc+fnsXaZIcMAhQeLwzggRK7aESl');
+    await window.tf.ready();
+    let timedOut=false, timer;
+    const loading=window.cocoSsd.load({base:'mobilenet_v2'}).then(loaded=>{if(timedOut){loaded.dispose();throw new Error('Descarga caducada');}return loaded;});
+    try{model=await Promise.race([loading,new Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;reject(new Error('No se pudo completar la descarga del modelo en 60 segundos.'));},60000);})]);}finally{clearTimeout(timer);}
+    $('model-status').textContent=`Detector listo · COCO-SSD 2.2.3 / MobileNet v2 · ${window.tf.getBackend()}. Pendiente de validar precisión con esta cámara.`;
+    $('prepare-model').textContent='Detector preparado';return model;
+  })().catch(error=>{modelPromise=null;$('prepare-model').disabled=false;$('model-status').textContent=`${error.message} Reintenta Preparar detector.`;throw error;});
+  return modelPromise;
+}
+$('prepare-model').addEventListener('click',()=>{prepareModel().catch(()=>{});});
+$('analyze').addEventListener('click',async()=>{
+  if(analyzing){pause('Análisis en pausa. La pestaña continúa compartida, pero no se procesan fotogramas.');return;}
+  if(!stream||!roiReady||!tabletReady||calibration)return;
+  const token=++generation;busy=true;controls();
+  try{
+    await prepareModel();
+    if(token!==generation||!stream)return;
+    if(document.hidden){status('Vuelve a esta vista y pulsa Iniciar análisis.');return;}
+    analyzing=true;tracker.reset();lastVideoTime=-1;lastFrameAt=performance.now();
+    status('Analizando solo Puerta Cam. Se captura al confirmar movimiento en dos fotogramas; las imágenes caducan a los 6 s.');
+    tabletIdle();loop(token);
+  }catch{status('No se ha iniciado el análisis. Revisa el estado del detector.');}
+  finally{busy=false;controls();}
+});
+async function loop(token){
+  if(!analyzing||token!==generation||!stream)return;
+  try{
+    const now=performance.now();
+    if(scene.readyState<2||scene.currentTime===lastVideoTime){
+      if(now-lastFrameAt>3000){pause('No llegan fotogramas nuevos. Revisa Puerta Cam y vuelve a iniciar el análisis.');return;}
+    }else{
+      lastVideoTime=scene.currentTime;lastFrameAt=now;
+      const [x,y,w,h]=roi, sw=scene.videoWidth,sh=scene.videoHeight;
+      const width=Math.max(1,Math.round(Math.min(960,w*sw))),height=Math.max(1,Math.round(width*h*sh/(w*sw)));
+      if(frame.width!==width||frame.height!==height){frame.width=width;frame.height=height;}
+      frameContext.drawImage(scene,x*sw,y*sh,w*sw,h*sh,0,0,width,height);
+      const start=performance.now(),threshold=Number($('confidence').value)/100;
+      const predictions=await model.detect(frame,20,threshold);
+      if(!analyzing||token!==generation)return;
+      const events=tracker.update(predictions,performance.now(),width,height,threshold);
+      $('source-info').textContent=`PUERTA CAM · ${width} × ${height} · ${Math.round(performance.now()-start)} ms / análisis`;
+      if(events.length)showCapture(events);
+    }
+  }catch{pause('El detector ha fallado. La captura se ha borrado; revisa la fuente y vuelve a iniciar.');return;}
+  if(analyzing&&token===generation)loopTimer=setTimeout(()=>loop(token),200);
+}
+function showCapture(events){
+  const main=CLASSES[events[0].class];eventCount+=events.length;
+  capture.width=frame.width;capture.height=frame.height;
+  const c=capture.getContext('2d');c.drawImage(frame,0,0);
+  const fontSize=Math.max(12,Math.round(frame.width/45));c.font=`bold ${fontSize}px sans-serif`;c.lineWidth=Math.max(2,frame.width/220);
+  for(const item of events){
+    const style=CLASSES[item.class], [x,y,w,h]=item.bbox;
+    c.strokeStyle=style.color;c.strokeRect(x,y,w,h);
+    const text=`${style.label} ${Math.round(item.score*100)} %`, labelY=Math.max(fontSize+5,y);
+    c.fillStyle='#08121de8';c.fillRect(Math.max(0,x),labelY-fontSize-5,c.measureText(text).width+8,fontSize+8);
+    c.fillStyle='#fff';c.fillText(text,Math.max(0,x)+4,labelY);
+  }
+  const ctx=tablet.getContext('2d');ctx.fillStyle='#09131b';ctx.fillRect(0,0,640,480);
+  const scale=Math.min(612/capture.width,390/capture.height),dw=capture.width*scale,dh=capture.height*scale;
+  ctx.drawImage(capture,(640-dw)/2,16+(390-dh)/2,dw,dh);
+  ctx.strokeStyle=main.color;ctx.lineWidth=16;ctx.strokeRect(8,8,624,464);
+  ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold 25px sans-serif';ctx.fillText(`${main.label} · ${new Date().toLocaleTimeString('es-ES')}`,320,446);
+  capture.hidden=false;$('capture-empty').hidden=true;$('capture').style.borderColor=main.color;
+  $('event-counter').textContent=`${eventCount} eventos`;
+  $('event-label').textContent=events.map(p=>CLASSES[p.class].label).join(' · ');
+  $('event-meta').textContent=`${new Date().toLocaleTimeString('es-ES')} · ${Math.round(events[0].score*100)} % de confianza · caduca en 6 s`;
+  clearTimeout(expiryTimer);expiryTimer=setTimeout(()=>clearCapture('Captura caducada'),SNAPSHOT_TTL);
+}
+// Do not leave identifiable frames sitting in a hidden tab or the back-forward cache.
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('Análisis pausado al ocultar esta vista. Pulsa Iniciar análisis para continuar.');});
+window.addEventListener('pagehide',()=>disconnect());
+tabletIdle();controls();
