@@ -53,18 +53,26 @@ def tarjeta(app):
     estado = "Disponible · Available" if disponible else "Próximamente · Coming soon"
     video = url_segura(app.get("video"), slug, "video")
     pdf = url_segura(app.get("pdf"), slug, "pdf")
-    # Vista propia: IEU mantiene su autenticación y el operador comparte su pestaña.
-    es_analitica = slug == "videoanalytics"
+    # Tarjeta con entrada propia: si el catálogo declara `href` (y la solución está
+    # disponible), el título enlaza a la app y la tarjeta entera es clicable —el patrón
+    # que estrenó Analítica de vídeo (Xtore, 11-sep) y que ahora también usa Catálogo—.
+    # Vídeo y PDF se conservan: quedan por encima del enlace (z-index en la home).
+    # `href` sólo se acepta como ruta interna (/…): un catálogo manipulado no puede
+    # colar un destino externo en la home.
+    href = str(app.get("href") or "")
+    if not (disponible and href.startswith("/") and not href.startswith("//")):
+        href = ""
+    entry_label = app.get("entry_label") or "Abrir →"
+    entry_aria = app.get("entry_aria") or "{}: abrir la app".format(nombre_es)
     titulo_html = esc(nombre_es)
-    if es_analitica:
+    if href:
         titulo_html = (
-            '<a class="app-entry" href="/videoanalytics/xtore/"'
-            ' aria-label="Analítica de vídeo: entrar en la Xtore">{}</a>'
-        ).format(esc(nombre_es))
+            '<a class="app-entry" href="{}" aria-label="{}">{}</a>'
+        ).format(esc(href), esc(entry_aria), esc(nombre_es))
 
     acciones = []
-    if es_analitica:
-        acciones.append('<span class="app-entry-label">Entrar en la Xtore →</span>')
+    if href:
+        acciones.append('<span class="app-entry-label">{}</span>'.format(esc(entry_label)))
     if slug == "support":
         acciones.append('<a class="app-action" href="/support/">Abrir Soporte · Tester visual ↗</a>')
     if video:
@@ -93,7 +101,7 @@ def tarjeta(app):
         "</article>"
     ).format(
         slug=esc(slug),
-        entry_class=" app-card-entry" if es_analitica else "",
+        entry_class=" app-card-entry" if href else "",
         titulo_html=titulo_html,
         titulo=esc("{} · {}".format(nombre_es, nombre_en)),
         icono=esc(app.get("icon", "")),

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "nota": "Catálogos disponibles en admira.tv/contentcatalogue. Cada entrada apunta a un JSON con el mismo esquema: {catalogo, fuente, validez:{desde,hasta}, tiendas[], paginas, productos:[{p, seccion, nombre, marca, detalle, precio, unidad, promo, destacado}]}. El campo `etiqueta` es el texto corto que viaja en el deep-link al generador TikTok (campo `catalogo`).",
+  "catalogos": [
+    {
+      "id": "alcampo-2026-09-10",
+      "cliente": "Alcampo",
+      "nombre": "Catálogo Alcampo · Del 10 al 23 de septiembre de 2026",
+      "etiqueta": "Alcampo · 10–23 sep 2026",
+      "validez": { "desde": "2026-09-10", "hasta": "2026-09-23" },
+      "tiendas": ["Esplugues de Llobregat", "Vilanova i la Geltrú", "Salt Girona"],
+      "paginas": 16,
+      "productos": 159,
+      "archivo": "alcampo-2026-09-10.json",
+      "fuente": "https://www.tiendeo.com/Catalogos/148742"
+    }
+  ]
+}
