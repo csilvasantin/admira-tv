@@ -1,9 +1,9 @@
 {
-  "version": "v.11.09.2026.r11.20:14",
-  "signature": "TrinityMBA16 · MacBookAir16plata",
-  "agent": "TrinityMBA16",
+  "version": "v.11.09.2026.r12.20:19",
+  "signature": "NeoMBA16 · MacBookAir16plata",
+  "agent": "NeoMBA16",
   "machine": "MacBookAir16plata",
   "day": "11.09.2026",
-  "time": "20:14",
-  "evidence": "Xtore en pruebas, publicación autorizada por Carlos. Base actual ab999529 de Neo + mejoras locales hasta bb73c0f2: conteos y control de duplicados, patinetes manuales, controles superiores e histórico privado preparado sin D1 aprovisionado; recortes y Pixeria bajo acción explícita; bucle virtual opaco con catálogo público y ACK separado de emisión; Help actualizado. Revisión independiente Turing y 94 pruebas Xtore aprobadas. QA real aislada: arranque con fallo a 30 s, segundo arranque con HTTP 200 y contenido visible/playing; ACK neutro no pisa reproducción. No acreditar fiabilidad continua ni causa del arranque fallido. Sin grabador, inferencia de sexo/edad, histórico persistente activo ni cambios en pantallas físicas."
+  "time": "20:19",
+  "evidence": "Yokup #3109 · previo del vídeo en /contentcatalogue/: cada producto tiene identidad estable en el Stock (externalId admiranext:catalogo:<catalogo_id>:<slug>, misma receta que tiktok/app.js + claveExterna; id = auto- + sha256[0:20]); al cargar se consulta api.admira.store/stock/exists para los 159 productos (concurrencia 6, caché memoria + localStorage 5 min). Columna ANUNCIO con tres estados: sin vídeo / en curso (previo 9:16 con spinner «Generando…», sondeo cada 15 s durante 15 min, luego «sin noticias · reintentar») / existe (previo 9:16 96×170 con <video muted playsinline>, se mueve al pasar el ratón, clic = modal con controles, fecha, Rehacer, Ver en el Stock). Chip «Con vídeo N de 159» y filtro Solo con/sin vídeo. Probado en local: externalId coca-cola = admiranext:catalogo:alcampo-2026-09-10:coca-cola, derivación auto-9a75882d2e3a36bce8e6 verificada con admiranext:xtore:coche, previo real visible con simulación temporal (retirada)."
 }

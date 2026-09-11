@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=11.09.2026.r11.2014"></script>
+<script src="/auth-gate.js?v=11.09.2026.r12.2019"></script>
 <!-- preconnect: el generador de vídeo (TikTok de AdmiraNeXT) y la CDN de pdf.js -->
 <link rel="preconnect" href="https://www.admiranext.com" crossorigin>
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
@@ -129,6 +129,29 @@
   .done button{background:none;border:0;color:var(--dim);cursor:pointer;font:600 10.5px ui-monospace,monospace;padding:0 0 0 6px}
   .done button:hover{color:var(--red)}
   .empty{padding:40px 20px;text-align:center;color:var(--dim)}
+  /* previo del anuncio (9:16) */
+  .anuncio{display:flex;gap:10px;align-items:center;justify-content:flex-end}
+  .prev{position:relative;flex:none;width:96px;height:170px;border-radius:10px;border:1px solid var(--line);background:#05080d;overflow:hidden;padding:0;cursor:pointer;display:grid;place-items:center}
+  .prev video{width:100%;height:100%;object-fit:cover;display:block;background:#05080d}
+  .prev .play{position:absolute;inset:auto 6px 6px auto;width:24px;height:24px;border-radius:50%;background:rgba(3,20,10,.75);color:var(--green);display:grid;place-items:center;font-size:11px;pointer-events:none}
+  .prev:hover{border-color:var(--green)}
+  .prev.wait{cursor:default;gap:8px;grid-auto-rows:min-content;align-content:center;border-style:dashed;border-color:#2a3a66}
+  .prev.wait .spin{width:26px;height:26px;border-radius:50%;border:3px solid rgba(61,240,138,.18);border-top-color:var(--green);animation:sp .8s linear infinite}
+  .prev.wait .lt{font:600 10px ui-monospace,monospace;color:var(--dim);letter-spacing:.04em}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media(prefers-reduced-motion:reduce){.prev.wait .spin{animation:none}}
+  .done.dim{color:var(--dim)}
+  .done.warn{color:var(--amber)}
+  .done button.reintentar{color:var(--cyan);text-decoration:underline}
+  .stocklink{font:600 10.5px ui-monospace,monospace;color:var(--cyan);border-bottom:1px solid rgba(56,214,255,.35)}
+  /* modal del vídeo a tamaño completo */
+  .modal{position:fixed;inset:0;z-index:100;background:rgba(3,6,10,.86);display:flex;align-items:center;justify-content:center;padding:20px}
+  .mbox{position:relative;display:flex;flex-direction:column;gap:10px;align-items:center;max-width:min(92vw,520px)}
+  .mbox video{width:min(92vw,420px);max-height:78vh;aspect-ratio:9/16;border-radius:14px;border:1px solid var(--line);background:#000;object-fit:contain}
+  .mmeta{color:var(--dim);font:600 12px ui-monospace,monospace;text-align:center;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .mmeta b{color:var(--txt)}
+  .mclose{position:absolute;top:-6px;right:-6px;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--txt);cursor:pointer;font-weight:800}
+  .mclose:hover{border-color:var(--green);color:var(--green)}
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;margin:14px 0 10px}
   .toolbar .row{flex:1}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--panel2);border:1px solid var(--green);color:var(--txt);border-radius:999px;padding:9px 16px;font:600 13px ui-monospace,monospace;z-index:90;transition:opacity .2s,transform .2s;pointer-events:none;max-width:92vw}
@@ -148,12 +171,12 @@
   .foot b{color:var(--green);font-weight:700}
   @media(max-width:640px){.hero{padding-top:34px}.panel{padding:14px}.acts{align-items:stretch}.acts .row{justify-content:flex-start}}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=11.09.2026.r11.2014">
+  <link rel="stylesheet" href="/admira-frame.css?v=11.09.2026.r12.2019">
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.11.09.2026.r11.20:14';</script>
-<script src="/admira-nav.js?v=11.09.2026.r11.2014" data-active="apps" data-title="Catálogo" defer></script>
-<script src="/admira-frame.js?v=11.09.2026.r11.2014" defer></script>
+<script>window.ADMIRA_VERSION='v.11.09.2026.r12.20:19';</script>
+<script src="/admira-nav.js?v=11.09.2026.r12.2019" data-active="apps" data-title="Catálogo" defer></script>
+<script src="/admira-frame.js?v=11.09.2026.r12.2019" defer></script>
 
 <!-- barra de modo app (se muestra sólo con ?app=1) -->
 <div class="app-bar" id="appBar">
@@ -213,6 +236,7 @@
         <label class="f">Página <select id="selPag" aria-label="Filtrar por página"><option value="">Todas</option></select></label>
         <label class="tog"><input type="checkbox" id="soloPrecio"> Solo con precio</label>
         <label class="tog"><input type="checkbox" id="soloDest"> Solo destacados</label>
+        <label class="f">Vídeo <select id="selVideo" aria-label="Filtrar por vídeo creado"><option value="">Todos</option><option value="con">Solo con vídeo</option><option value="sin">Solo sin vídeo</option></select></label>
       </div>
       <div class="row" style="flex:0 0 auto">
         <button class="btn sm primary" id="btnTodos" type="button" title="Abre el generador para cada producto destacado, uno a uno, con confirmación (máx. 10)">▶ Crear vídeo de todos los destacados</button>
@@ -226,7 +250,7 @@
         <tbody id="cuerpo"><tr><td colspan="5" class="empty">Cargando el catálogo…</td></tr></tbody>
       </table>
     </div>
-    <p class="hint" style="margin-top:10px">«Crear vídeo» abre el generador TikTok de AdmiraNeXT en una pestaña nueva con el producto ya cargado (nombre, precio, promo, validez). «Copiar guion» deja en el portapapeles un guion corto por si prefieres dictarlo. Lo ya creado se marca aquí mismo (se guarda en este navegador).</p>
+    <p class="hint" style="margin-top:10px">«Crear vídeo» abre el generador TikTok de AdmiraNeXT en una pestaña nueva con el producto ya cargado (nombre, precio, promo, validez). «Copiar guion» deja en el portapapeles un guion corto por si prefieres dictarlo. Cuando el generador publica el máster en el Stock, aquí aparece el <b>previo</b> a la derecha (se sondea el Stock cada 15 s durante 15 min tras pulsar Crear vídeo): pasa el ratón para verlo moverse, haz clic para verlo a tamaño completo.</p>
 
   </div>
 
@@ -238,6 +262,13 @@
 
 </main>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-label="Vídeo del producto">
+  <div class="mbox">
+    <button type="button" class="mclose" id="mClose" aria-label="Cerrar">✕</button>
+    <video id="mVideo" controls playsinline preload="metadata"></video>
+    <div class="mmeta" id="mMeta"></div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -291,7 +322,9 @@
     return obj;
   }
   function deepLink(p){ return TIKTOK+'?producto='+encodeURIComponent(JSON.stringify(productoParaTikTok(p))); }
-  window.ADMIRA_CC={ deepLink:deepLink, producto:productoParaTikTok, actual:function(){return actual;} };
+  window.ADMIRA_CC={ deepLink:deepLink, producto:productoParaTikTok, actual:function(){return actual;},
+    externalId:function(p){ return externalIdProducto(p); }, stockId:function(eid){ return stockIdDerivado(eid); },
+    stock:function(){ return stock; }, refrescar:function(){ pintaCabecera(); pintaLista(); }, sondear:function(){ return sondeaCatalogo(actual,true); } };
 
   function guion(p){
     var partes=[p.nombre];
@@ -308,6 +341,78 @@
     return new Promise(function(res,rej){ try{ var ta=document.createElement('textarea'); ta.value=texto; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); document.body.removeChild(ta); ok?res():rej(new Error('copy')); }catch(e){ rej(e); } });
   }
 
+  /* ---- Stock: identidad estable por producto (misma receta que admiranext.com/tiktok) y previo ----
+     El generador publica el máster con externalId = admiranext:catalogo:<catalogo_id>:<slug>
+     (tiktok/app.js → fichaProducto; el servidor lo pasa por claveExterna). El Stock deriva el id
+     del asset como 'auto-' + 20 primeros hex de sha256(externalId), así que desde aquí se puede
+     saber si la pieza existe sin que nadie nos avise. */
+  var STOCK_API='https://api.admira.store', STOCK_WEB='https://www.pixeria.com/stock.html', STOCK_LS='admira.contentcatalogue.stock';
+  var STOCK_TTL=5*60*1000, POLL_MS=15000, POLL_MAX=15*60*1000, CONC=6;
+  var stock={}, stockLS={}, pendientes={};
+  function cleanTxt(v,max){ return String(v==null?'':v).replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim().slice(0,max); }
+  function slugCatalogo(v){ return String(v==null?'':v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40); }
+  function claveExterna(v){ var limpia=String(v==null?'':v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9:_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,120); return limpia.length>=8?limpia:''; }
+  function externalIdProducto(p,cat){ cat=cat||actual; if(!cat) return ''; var cid=slugCatalogo(cat.id)||'catalogo', slug=slugCatalogo(cleanTxt(p.nombre,120))||'producto'; return claveExterna(('admiranext:catalogo:'+cid+':'+slug).replace(/[^A-Za-z0-9:_-]+/g,'-').slice(0,120)); }
+  function sha256hex(txt){ return crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)).then(function(buf){ return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ('0'+b.toString(16)).slice(-2); }).join(''); }); }
+  function stockIdDerivado(eid){ return sha256hex(eid).then(function(h){ return 'auto-'+h.slice(0,20); }); }
+  function cargaStockLS(){ try{ stockLS=JSON.parse(localStorage.getItem(STOCK_LS)||'{}')||{}; }catch(_){ stockLS={}; } var ahora=Date.now(); Object.keys(stockLS).forEach(function(k){ if(!stockLS[k]||!stockLS[k].t||ahora-stockLS[k].t>STOCK_TTL) delete stockLS[k]; }); }
+  function guardaStockLS(){ try{ localStorage.setItem(STOCK_LS, JSON.stringify(stockLS)); }catch(_){} }
+  function estadoStock(eid){ if(stock[eid]) return stock[eid]; var c=stockLS[eid]; if(c&&Date.now()-c.t<STOCK_TTL){ stock[eid]=c; return c; } return null; }
+  function consultaStock(eid){
+    return fetch(STOCK_API+'/stock/exists?externalId='+encodeURIComponent(eid),{headers:{accept:'application/json'},cache:'no-store'})
+      .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(function(d){
+        var existe=!!(d&&d.ok!==false&&d.exists===true);
+        var info={t:Date.now(), exists:existe, id:existe?String(d.id||''):'', url:existe?String(d.url||''):'', createdAt:(d&&d.createdAt)||'', contentHash:(d&&d.contentHash)||''};
+        var fin=function(){ if(info.exists&&!info.url&&info.id) info.url=STOCK_API+'/stock/asset/'+info.id; stock[eid]=info; stockLS[eid]=info; guardaStockLS(); return info; };
+        if(info.exists&&!info.id) return stockIdDerivado(eid).then(function(id){ info.id=id; return fin(); });
+        return fin();
+      });
+  }
+  var refrescoT=null;
+  function refrescaFilas(){ clearTimeout(refrescoT); refrescoT=setTimeout(function(){ pintaCabecera(); pintaLista(); },250); }
+  function sondeaCatalogo(cat, forzar){
+    var vistos={}, cola=[];
+    cat.productos.forEach(function(p){ var eid=externalIdProducto(p,cat); if(eid&&!vistos[eid]&&(forzar||!estadoStock(eid))){ vistos[eid]=1; cola.push(eid); } });
+    if(!cola.length) return Promise.resolve();
+    var activos=0, i=0;
+    return new Promise(function(res){
+      function siguiente(){
+        if(i>=cola.length&&activos===0) return res();
+        while(activos<CONC&&i<cola.length){ var eid=cola[i++]; activos++; consultaStock(eid).catch(function(){}).then(function(){ activos--; refrescaFilas(); siguiente(); }); }
+      }
+      siguiente();
+    });
+  }
+  function urlVideo(st){ return st.url+(st.contentHash||st.createdAt?'?v='+encodeURIComponent(st.contentHash||st.createdAt):''); }
+  /* en curso: tras Crear vídeo, sondeo cada 15 s durante 15 min */
+  function iniciaPendiente(p, desde){
+    var eid=externalIdProducto(p); if(!eid) return;
+    if(pendientes[eid]) return;
+    pendientes[eid]={desde:desde||Date.now(), timer:null};
+    programaSondeo(eid);
+  }
+  function programaSondeo(eid){
+    var pd=pendientes[eid]; if(!pd) return;
+    pd.timer=setTimeout(function(){
+      consultaStock(eid).catch(function(){ return null; }).then(function(info){
+        if(!pendientes[eid]) return;
+        if(info&&info.exists){ delete pendientes[eid]; refrescaFilas(); return; }
+        if(Date.now()-pd.desde>POLL_MAX){ delete pendientes[eid]; refrescaFilas(); return; }
+        programaSondeo(eid);
+      });
+    }, POLL_MS);
+  }
+  /* reconciliación: lo creado hace <15 min y aún sin pieza pasa a «en curso»; si el Stock la tiene, manda el Stock */
+  function reconcilia(cat){
+    cat.productos.forEach(function(p){
+      var k=(cat.id)+'|'+p.p+'|'+p.nombre, fecha=creados[k]; if(!fecha) return;
+      var eid=externalIdProducto(p,cat), st=estadoStock(eid); if(st&&st.exists) return;
+      var t=Date.parse(fecha); if(isFinite(t)&&Date.now()-t<POLL_MAX) iniciaPendiente(p,t);
+    });
+  }
+  function conVideo(cat){ return cat.productos.filter(function(p){ var st=estadoStock(externalIdProducto(p,cat)); return !!(st&&st.exists); }).length; }
+
   /* ---- cabecera del catálogo ---- */
   function pintaCabecera(){
     var c=actual, meta=$('meta'), v=c.validez||{};
@@ -319,6 +424,8 @@
     chips.push('<span class="chip">Con precio <b>'+conPrecio+'</b></span>');
     var dest=c.productos.filter(function(p){return p.destacado;}).length;
     if(dest) chips.push('<span class="chip">Destacados <b>'+dest+'</b></span>');
+    var cv=conVideo(c);
+    chips.push('<span class="chip'+(cv?' ok':'')+'" id="chipVideo">Con vídeo <b>'+cv+' de '+c.productos.length+'</b></span>');
     var nv=c.productos.filter(function(p){return p.precio_verificado===false;}).length;
     if(nv) chips.push('<span class="chip warn">Precio sin verificar <b>'+nv+'</b></span>');
     meta.innerHTML=chips.join('');
@@ -336,8 +443,9 @@
 
   /* ---- listado ---- */
   function filtrados(){
-    var q=norm($('q').value.trim()), sec=$('selSec').value, pag=$('selPag').value, sp=$('soloPrecio').checked, sd=$('soloDest').checked;
+    var q=norm($('q').value.trim()), sec=$('selSec').value, pag=$('selPag').value, sp=$('soloPrecio').checked, sd=$('soloDest').checked, sv=$('selVideo').value;
     return actual.productos.filter(function(p){
+      if(sv){ var st=estadoStock(externalIdProducto(p)), hay=!!(st&&st.exists); if(sv==='con'&&!hay) return false; if(sv==='sin'&&hay) return false; }
       if(sec && (p.seccion||'Sin sección')!==sec) return false;
       if(pag && String(p.p)!==pag) return false;
       if(sp && typeof p.precio!=='number') return false;
@@ -345,6 +453,28 @@
       if(q){ var hay=norm([p.nombre,p.marca,p.detalle,p.promo,p.seccion].join(' ')); if(hay.indexOf(q)<0) return false; }
       return true;
     });
+  }
+  function celdaAnuncio(p, idx, st, existe, enCurso, fecha){
+    var link=esc(deepLink(p));
+    var btnCrear='<a class="btn sm primary crear" href="'+link+'" target="_blank" rel="noopener" data-i="'+idx+'" aria-label="Crear vídeo de '+esc(p.nombre)+'">▶ Crear vídeo</a>';
+    var btnGuion='<button type="button" class="btn sm guion" data-i="'+idx+'" aria-label="Copiar guion de '+esc(p.nombre)+'">⎘ Copiar guion</button>';
+    if(existe){
+      var cuando=st.createdAt?fmtFecha(String(st.createdAt).slice(0,10)):(fecha?fmtFecha(fecha.slice(0,10)):'');
+      return '<div class="anuncio">'
+        +'<button type="button" class="prev" data-i="'+idx+'" aria-label="Ver el vídeo de '+esc(p.nombre)+' a tamaño completo" title="Clic: ver a tamaño completo">'
+        +'<video muted playsinline preload="metadata" src="'+esc(urlVideo(st))+'#t=0.1"></video><span class="play">▶</span></button>'
+        +'<div class="acts"><span class="done">✓ vídeo'+(cuando?' · '+esc(cuando):'')+(enCurso?' · <em>rehaciendo…</em>':'')+'</span>'
+        +'<div class="row"><a class="btn sm crear rehacer" href="'+link+'" target="_blank" rel="noopener" data-i="'+idx+'" aria-label="Rehacer el vídeo de '+esc(p.nombre)+'">↻ Rehacer</a>'+btnGuion+'</div>'
+        +'<a class="stocklink" href="'+STOCK_WEB+'" target="_blank" rel="noopener">Ver en el Stock ↗</a></div></div>';
+    }
+    if(enCurso){
+      return '<div class="anuncio"><div class="prev wait" role="status" aria-live="polite"><span class="spin"></span><span class="lt">Generando…</span></div>'
+        +'<div class="acts"><span class="done dim">sondeando el Stock cada 15 s</span><div class="row">'+btnGuion+'</div></div></div>';
+    }
+    var t=fecha?Date.parse(fecha):NaN, sinNoticias=isFinite(t)&&Date.now()-t>=POLL_MAX;
+    return '<div class="acts"><div class="row">'+btnCrear+btnGuion+'</div>'
+      +(sinNoticias?'<span class="done warn">sin noticias · <button type="button" class="reintentar" data-i="'+idx+'">reintentar</button> <button type="button" class="olvidar" data-i="'+idx+'" title="Quitar la marca">×</button></span>':(fecha?'<span class="done dim">pulsado '+esc(fmtFecha(fecha.slice(0,10)))+' <button type="button" class="olvidar" data-i="'+idx+'" title="Quitar la marca de creado">×</button></span>':''))
+      +'</div>';
   }
   function pintaLista(){
     var lista=filtrados(), cuerpo=$('cuerpo');
@@ -354,7 +484,8 @@
       var precio=typeof p.precio==='number'
         ? '<div class="pr">'+esc(fmtPrecio(p.precio))+'<span class="u">'+esc((p.unidad||'ud').indexOf('€/')===0?p.unidad:(p.unidad&&p.unidad!=='ud'?'€/'+p.unidad:'€'))+'</span>'+(p.precio_verificado===false?'<span class="nv">⚠ sin verificar</span>':'')+'</div>'
         : '<div class="pr none">'+(p.precio_texto?esc(p.precio_texto)+' <span class="nv">⚠ no verificado</span>':'sin precio')+'</div>';
-      return '<tr data-i="'+idx+'"'+(fecha?' class="creado"':'')+'>'
+      var eid=externalIdProducto(p), st=estadoStock(eid), existe=!!(st&&st.exists), enCurso=!!pendientes[eid];
+      return '<tr data-i="'+idx+'" data-eid="'+esc(eid)+'"'+((fecha||existe)?' class="creado"':'')+'>'
         +'<td><span class="pg" title="Página '+p.p+' del folleto">'+p.p+'<small>pág</small></span></td>'
         +'<td><div class="nm">'+esc(p.nombre)+(p.destacado?'<span class="star" title="Destacado">★</span>':'')+'</div>'
         +(p.marca?'<div class="mk">'+esc(p.marca)+'</div>':'')
@@ -362,22 +493,36 @@
         +(p.promo?'<span class="promo">'+esc(p.promo)+'</span>':'')+'</td>'
         +'<td class="sec">'+esc(p.seccion||'—')+'</td>'
         +'<td>'+precio+'</td>'
-        +'<td><div class="acts"><div class="row">'
-        +'<a class="btn sm primary crear" href="'+esc(deepLink(p))+'" target="_blank" rel="noopener" data-i="'+idx+'" aria-label="Crear vídeo de '+esc(p.nombre)+'">▶ Crear vídeo</a>'
-        +'<button type="button" class="btn sm guion" data-i="'+idx+'" aria-label="Copiar guion de '+esc(p.nombre)+'">⎘ Copiar guion</button>'
-        +'</div>'+(fecha?'<span class="done">✓ creado '+esc(fmtFecha(fecha.slice(0,10)))+' <button type="button" class="olvidar" data-i="'+idx+'" title="Quitar la marca de creado">×</button></span>':'')+'</div></td>'
+        +'<td>'+celdaAnuncio(p, idx, st, existe, enCurso, fecha)+'</td>'
         +'</tr>';
     }).join('');
   }
   $('cuerpo').addEventListener('click', function(ev){
-    var a=ev.target.closest('a.crear, button.guion, button.olvidar'); if(!a) return;
+    var a=ev.target.closest('a.crear, button.guion, button.olvidar, button.reintentar, button.prev'); if(!a) return;
     var p=actual.productos[Number(a.getAttribute('data-i'))]; if(!p) return;
-    if(a.classList.contains('crear')){ marcaCreado(p); setTimeout(pintaLista, 50); return; }
+    if(a.classList.contains('crear')){ marcaCreado(p); iniciaPendiente(p); setTimeout(function(){ pintaCabecera(); pintaLista(); }, 50); return; }
     ev.preventDefault();
     if(a.classList.contains('olvidar')){ quitaCreado(p); pintaLista(); return; }
+    if(a.classList.contains('reintentar')){ marcaCreado(p); iniciaPendiente(p); pintaLista(); consultaStock(externalIdProducto(p)).catch(function(){}).then(refrescaFilas); return; }
+    if(a.classList.contains('prev')){ abreModal(p); return; }
     copiar(guion(p)).then(function(){ toast('Guion copiado'); }, function(){ toast('No se pudo copiar'); });
   });
-  ['q','selSec','selPag','soloPrecio','soloDest'].forEach(function(id){ $(id).addEventListener('input', pintaLista); $(id).addEventListener('change', pintaLista); });
+  /* previo: se mueve al pasar el ratón / tocar; se para al salir */
+  $('cuerpo').addEventListener('pointerenter', function(ev){ var b=ev.target&&ev.target.closest&&ev.target.closest('button.prev'); if(!b||ev.target!==b) return; var v=b.querySelector('video'); if(v){ var pr=v.play(); if(pr&&pr.catch) pr.catch(function(){}); } }, true);
+  $('cuerpo').addEventListener('pointerleave', function(ev){ var b=ev.target&&ev.target.closest&&ev.target.closest('button.prev'); if(!b||ev.target!==b) return; var v=b.querySelector('video'); if(v){ v.pause(); try{ v.currentTime=0.1; }catch(_){} } }, true);
+  /* modal a tamaño completo */
+  function abreModal(p){
+    var st=estadoStock(externalIdProducto(p)); if(!st||!st.exists) return;
+    var m=$('modal'), v=$('mVideo'); v.src=urlVideo(st); m.hidden=false;
+    $('mMeta').innerHTML='<b>'+esc(p.nombre)+'</b>'+(typeof p.precio==='number'?' · '+esc(precioTexto(p)):'')+(st.createdAt?' · '+esc(fmtFecha(String(st.createdAt).slice(0,10))):'')+' · <a class="stocklink" href="'+STOCK_WEB+'" target="_blank" rel="noopener">Ver en el Stock ↗</a> · <a class="stocklink" href="'+esc(st.url)+'" target="_blank" rel="noopener">Abrir el fichero ↗</a>';
+    var pr=v.play(); if(pr&&pr.catch) pr.catch(function(){});
+    $('mClose').focus();
+  }
+  function cierraModal(){ var m=$('modal'), v=$('mVideo'); if(m.hidden) return; v.pause(); v.removeAttribute('src'); v.load(); m.hidden=true; }
+  $('mClose').addEventListener('click', cierraModal);
+  $('modal').addEventListener('click', function(ev){ if(ev.target===$('modal')) cierraModal(); });
+  document.addEventListener('keydown', function(ev){ if(ev.key==='Escape') cierraModal(); });
+  ['q','selSec','selPag','soloPrecio','soloDest','selVideo'].forEach(function(id){ $(id).addEventListener('input', pintaLista); $(id).addEventListener('change', pintaLista); });
 
   /* ---- crear vídeo de todos los destacados (uno a uno, con confirmación, máx 10) ---- */
   $('btnTodos').addEventListener('click', function(){
@@ -389,9 +534,9 @@
     for(var i=0;i<lote.length;i++){
       var p=lote[i];
       if(!confirm((i+1)+'/'+lote.length+' · Crear vídeo de «'+p.nombre+'»'+(typeof p.precio==='number'?' · '+precioTexto(p):'')+'?\n(Cancelar salta este producto)')) continue;
-      window.open(deepLink(p),'_blank','noopener'); marcaCreado(p); abiertos++;
+      window.open(deepLink(p),'_blank','noopener'); marcaCreado(p); iniciaPendiente(p); abiertos++;
     }
-    pintaLista(); toast(abiertos+' generador(es) abierto(s)');
+    pintaCabecera(); pintaLista(); toast(abiertos+' generador(es) abierto(s)');
   });
 
   /* ---- selector de catálogo ---- */
@@ -400,7 +545,7 @@
     sel.innerHTML=indice.map(function(c){ return '<option value="'+esc(c.id)+'">'+esc(c.nombre)+(c.productos!=null?' · '+esc(c.productos)+' productos':'')+'</option>'; }).join('');
     if(actual) sel.value=actual.id;
   }
-  function activa(cat){ actual=cat; pintaSelector(); pintaCabecera(); pintaLista(); }
+  function activa(cat){ actual=cat; pintaSelector(); pintaCabecera(); pintaLista(); reconcilia(cat); sondeaCatalogo(cat).then(function(){ reconcilia(cat); refrescaFilas(); }); }
   $('selCat').addEventListener('change', function(){ cargaCatalogo(this.value); });
   function cargaCatalogo(id){
     var entrada=indice.filter(function(c){return c.id===id;})[0]; if(!entrada) return;
@@ -412,7 +557,7 @@
     }).catch(function(e){ $('cuerpo').innerHTML='<tr><td colspan="5" class="empty">No se pudo cargar el catálogo ('+esc(e.message)+').</td></tr>'; });
   }
   fetch('/contentcatalogue/catalogos/index.json',{cache:'no-cache'}).then(function(r){return r.json();}).then(function(d){
-    indice=(d&&d.catalogos)||[]; cargaCreados();
+    indice=(d&&d.catalogos)||[]; cargaCreados(); cargaStockLS();
     var pedido=null; try{ pedido=new URLSearchParams(location.search).get('catalogo'); }catch(_){}
     var primero=(pedido&&indice.filter(function(c){return c.id===pedido;})[0])||indice[0];
     if(primero){ pintaSelector(); cargaCatalogo(primero.id); }
@@ -505,6 +650,6 @@
   });
 })();
 </script>
-  <script src="/assets/admira-version-watch.js?v=11.09.2026.r11.2014" defer></script>
+  <script src="/assets/admira-version-watch.js?v=11.09.2026.r12.2019" defer></script>
 </body>
 </html>
