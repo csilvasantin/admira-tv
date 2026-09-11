@@ -1,9 +1,9 @@
 {
-  "version": "v.11.09.2026.r4.15:57",
-  "signature": "NeoMBA16 · MacBookAir16plata",
-  "agent": "NeoMBA16",
+  "version": "v.11.09.2026.r5.16:11",
+  "signature": "TrinityMBA16 · MacBookAir16plata",
+  "agent": "TrinityMBA16",
   "machine": "MacBookAir16plata",
   "day": "11.09.2026",
-  "time": "15:57",
-  "evidence": "FLT-100243 player condicionado de admira.tv: canal.html ?audience=remote (alias va=1) en condicional blindado, sondeo del bus mcp-tv.admira.store/audience/<screen> a 500 ms, carril neutro anti-flapeo, inyección audience-m|f|u (mando) y postMessage admiratv audiencia m|f|u, evento audience al padre. Probado local con mock (m/f/none, latencia 47-358 ms, back-off 2 s)."
+  "time": "16:11",
+  "evidence": "FLT-100252 / FLT-100256: acceso público Analítica de vídeo a /videoanalytics/xtore/, player virtual CanalKiosk con captura explícita de pestaña IEU y detector local COCO-SSD. 15 pruebas automáticas, catálogo sincronizado y descarga real del modelo bajo CSP estricta. No acredita precisión con tráfico real ni conexión del productor al MCP remoto. Publicación solicitada por Carlos; PR1 requiere revisión cruzada antes del despliegue."
 }

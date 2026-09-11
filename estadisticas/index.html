@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=11.09.2026.r4.1557"></script>
+<script src="/auth-gate.js?v=11.09.2026.r5.1611"></script>
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -24,11 +24,11 @@ a{color:inherit}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.w
 @media(max-width:850px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid{grid-template-columns:1fr}.card.wide{grid-column:auto}.facts{grid-template-columns:1fr}}
 @media(max-width:560px){.wrap{width:min(100% - 20px,1220px);padding-top:20px}.hero{grid-template-columns:1fr}.back{justify-self:start}.current{grid-template-columns:1fr}.current .passes{text-align:left}.kpis{grid-template-columns:1fr 1fr}.fact{grid-template-columns:1fr}.fact .fv{text-align:left}.title{min-width:180px}}
 </style>
-<link rel="stylesheet" href="/admira-frame.css?v=11.09.2026.r4.1557">
+<link rel="stylesheet" href="/admira-frame.css?v=11.09.2026.r5.1611">
 </head>
 <body>
-<script src="/admira-nav.js?v=11.09.2026.r4.1557" data-active="cms" data-title="Estadísticas" defer></script>
-<script src="/admira-frame.js?v=11.09.2026.r4.1557" defer></script>
+<script src="/admira-nav.js?v=11.09.2026.r5.1611" data-active="cms" data-title="Estadísticas" defer></script>
+<script src="/admira-frame.js?v=11.09.2026.r5.1611" defer></script>
 <main class="wrap">
   <header class="hero">
     <div><div class="eyebrow">Proof-of-play · Player</div><h1>Estadísticas</h1><p id="subtitle">Cargando la actividad del player…</p></div>
@@ -61,7 +61,7 @@ a{color:inherit}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.w
   </section>
 </main>
 <script>
-window.ADMIRA_VERSION='v.11.09.2026.r4.15:57';
+window.ADMIRA_VERSION='v.11.09.2026.r5.16:11';
 // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
 const API='https://api.admira.store', PLAYLIST='https://brain.digitalavatar.ai/control/playlist?screen=';
 const qs=new URLSearchParams(location.search), screenId=qs.get('screen')||'', locId=qs.get('loc')||String(screenId).replace(/-mupi$/,''), requestedItem=qs.get('item')||'';
@@ -107,6 +107,6 @@ async function load(){
 }
 load();
 </script>
-<script src="/assets/admira-version-watch.js?v=11.09.2026.r4.1557" defer></script>
+<script src="/assets/admira-version-watch.js?v=11.09.2026.r5.1611" defer></script>
 </body>
 </html>
