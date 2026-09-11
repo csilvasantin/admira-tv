@@ -26,7 +26,7 @@
       <a class="button" href="https://digitaltwin.ieu.ai/" target="_blank" rel="noopener noreferrer">1. Abrir Digital Twin ↗</a>
       <button id="connect" class="primary">2. Compartir pestaña</button>
       <button id="stop" disabled>Desconectar</button>
-      <span class="local-note">Procesamiento local · sin audio · sin subir imágenes</span>
+      <span class="local-note">Detección local · sin audio · envío a Pixeria solo al pulsar Generar</span>
     </section>
     <p id="status" role="status" aria-live="polite">En Digital Twin, abre Store → Entrada y el stream de Puerta Cam. Después comparte únicamente esa pestaña.</p>
     <div class="workspace">
@@ -52,13 +52,31 @@
           <div><dt><i class="bicycle" aria-hidden="true"></i>Bicis</dt><dd id="count-bicycle">0</dd></div>
         </dl>
         <details class="help"><summary><span aria-hidden="true">›</span> Cómo se cuentan los pasos</summary><p id="count-note" class="small">Pasos de esta conexión; se conservan al pausar. Nueva conexión o recarga = contadores a cero. Conteo estimado: un mismo objeto puede volver a contarse tras una pausa u oclusión.</p></details>
-        <details class="help"><summary><span aria-hidden="true">›</span> Privacidad y límites</summary><p class="small">Las capturas se borran a los 6 segundos. Persona = sin clasificación de sexo o edad. No hay reconocimiento de identidad. El resultado puede contener errores.</p></details>
+        <details class="help"><summary><span aria-hidden="true">›</span> Privacidad y límites</summary><p class="small">Las capturas se borran a los 6 segundos, excepto el recorte que selecciones para generar un gemelo: su copia temporal dura hasta terminar, cancelar o un máximo de 3 minutos. Persona = sin clasificación de sexo o edad. No hay reconocimiento de identidad. El resultado puede contener errores.</p></details>
         <div class="divider"></div>
         <div class="section-title"><h2>Objetos sin fondo</h2></div>
         <button id="prepare-cutouts" class="full">Activar recortes sin fondo</button>
         <p id="cutout-status" class="small" role="status">Desactivado · procesamiento local</p>
         <div id="cutouts" class="cutouts" aria-label="Últimos objetos aislados procesados"></div>
-        <details class="help"><summary><span aria-hidden="true">›</span> Recortes y Digital Twins</summary><p class="small">Máscara por categoría: separa el objeto de la calle y conserva transparencia. Puede perder detalles o incluir objetos solapados. Máximo cuatro recortes por captura, con hora propia y caducidad de 6 s. Si llegan más capturas mientras se procesa una, solo espera la más reciente; el conteo no se pierde. Un recorte no es anónimo ni un gemelo sintético. El envío a Pixeria todavía no está activado.</p></details>
+        <details class="help"><summary><span aria-hidden="true">›</span> Recortes y Digital Twins</summary><p class="small">Máscara por categoría: puede perder detalles o incluir objetos solapados. Máximo cuatro recortes por captura y 6 s de vida. Si hay otra captura en espera, se conserva solo la más reciente; el conteo no se pierde. «Elegir» retiene únicamente ese recorte temporalmente. No se envía nada automáticamente. Quitar el fondo o pixelar no garantiza anonimización.</p></details>
+        <details id="twin-panel" class="help twin-panel"><summary><span aria-hidden="true">›</span> Crear gemelo en Pixeria</summary>
+          <p id="twin-status" role="status">Elige un recorte para crear su gemelo.</p>
+          <canvas id="twin-source" class="twin-image" hidden width="1" height="1" aria-label="Recorte original temporal seleccionado"></canvas>
+          <p id="twin-source-label" class="small">Sin original retenido</p>
+          <label for="twin-style">Estilo de salida</label>
+          <select id="twin-style" disabled><option value="8bit">Píxel 8 bits</option><option value="16bit">Píxel 16 bits</option><option value="twin">Gemelo sintético</option></select>
+          <label class="twin-check"><input id="twin-consent" type="checkbox" disabled><span>Enviar este recorte a Pixeria / Gemini para generar. Nuestra copia se retira al terminar; el proveedor puede conservar registros.</span></label>
+          <button id="twin-generate" class="primary full" disabled>Generar en Pixeria</button>
+          <div id="twin-result-box" hidden>
+            <img id="twin-result" class="twin-image" alt="Resultado generado para revisar">
+            <p id="twin-result-label" class="small">Sin resultado</p>
+            <label class="twin-check"><input id="twin-review" type="checkbox" disabled><span>He revisado el resultado: no reproduce identidades, matrículas ni distintivos reconocibles y autorizo su publicación pública.</span></label>
+            <button id="twin-publish" class="full" disabled>Publicar resultado en Stock</button>
+          </div>
+          <p><a id="twin-public-link" hidden target="_blank" rel="noopener noreferrer">Ver resultado publicado ↗</a><a id="twin-stock-link" href="https://pixeria.com/stock" hidden target="_blank" rel="noopener noreferrer">Comprobar Stock ↗</a></p>
+          <button id="twin-clear" class="text-button" disabled>Descartar copia local</button>
+          <details class="help"><summary><span aria-hidden="true">›</span> Uso temporal y borrado</summary><p class="small">Solo se retiene un original en esta sesión, nunca en Stock ni en almacenamiento del navegador. Se retira al recibir una imagen válida, fallar, cancelar, pausar u ocultar la pestaña; máximo 3 min. El resultado local caduca a los 15 min. Publicar guarda únicamente el resultado en Stock y no lo elimina cuando cierres esta vista. La retirada local no certifica borrado de registros de Pixeria o Gemini. <a href="https://ai.google.dev/gemini-api/terms#how-google-uses-your-data-1" target="_blank" rel="noopener noreferrer">Condiciones de Gemini ↗</a></p></details>
+        </details>
         <div class="divider"></div>
         <h2>Encuadre y detección</h2>
         <details class="help"><summary><span aria-hidden="true">›</span> Cómo marcar cámara e iPad</summary><p class="small">Antes de analizar, marca el recuadro de Puerta Cam y las cuatro esquinas de la pantalla del iPad. Repite si mueves el gemelo.</p></details>
@@ -73,7 +91,7 @@
         <label class="threshold" for="confidence">Confianza mínima <output id="confidence-value">65 %</output><input id="confidence" type="range" min="50" max="90" value="65" step="5"></label>
         <button id="analyze" class="primary full" disabled>Iniciar análisis</button>
         <button id="prepare-model" class="text-button">Preparar detector sin conectar la cámara</button>
-        <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. Los fotogramas no salen del navegador.</p>
+        <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. La detección no envía fotogramas.</p>
       </aside>
     </div>
     <footer><span>TrinityMBA16 · <span data-release-version>v.11.09.2026.r7.16:57</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Player local · puente MCP remoto no activado</span></footer>

@@ -13,7 +13,7 @@ async function fixture({surface='browser',denied=false,slowLoad=false,segment}={
     append(...children){this.children.push(...children);}replaceChildren(...children){this.children=children;}
     querySelectorAll(tag){return this.children.flatMap(child=>[...(child.tagName===tag?[child]:[]),...child.querySelectorAll(tag)]);}
     getContext(){return {fillRect(){},clearRect(){},strokeRect(){},fillText(){},drawImage(){},putImageData:data=>{this.lastImageData=data;},getImageData:(x,y,width,height)=>({width,height,data:new Uint8ClampedArray(width*height*4).fill(127)}),measureText(){return {width:100};}};}
-    removeAttribute(){}load(){}async play(){}remove(){}
+    setAttribute(name,value){this[name]=value;}removeAttribute(name){delete this[name];}load(){}async play(){}remove(){}
   }
   const get=id=>nodes.get(id)||new Element(id);
   const doc=new Element();doc.hidden=false;doc.getElementById=get;doc.createElement=tag=>Object.assign(new Element(),{tagName:tag});doc.head=new Element();
@@ -194,4 +194,21 @@ test('a newer passage cannot extend the active cutout source lifetime',async t=>
   assert.equal(f.get('cutouts').querySelectorAll('figcaption')[0].textContent,'Coche');
   assert.equal(f.get('event-counter').textContent,'2 pasos');
   await f.get('stop').emit('click');
+});
+test('choosing a cutout retains only a temporary original and pause clears it',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture({segment:async()=>personMask});
+  await f.get('prepare-cutouts').emit('click');
+  await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  await confirmPerson(f,t);
+  await f.get('cutouts').querySelectorAll('button')[0].emit('click');
+  assert.equal(f.get('twin-panel').open,true);assert.equal(f.get('twin-source').hidden,false);
+  assert.equal(f.get('twin-generate').disabled,true);
+  const selected=f.get('twin-source').lastImageData;
+  f.get('twin-consent').checked=true;await f.get('twin-consent').emit('change');
+  assert.equal(f.get('twin-generate').disabled,false);
+  await f.get('analyze').emit('click');
+  assert.equal(f.get('twin-source').hidden,true);assert.equal(f.get('twin-source').width,1);
+  assert.ok(selected.data.every(value=>value===0));assert.equal(f.get('twin-generate').disabled,true);
+  assert.equal(f.get('count-person').textContent,'1');await f.get('stop').emit('click');
 });

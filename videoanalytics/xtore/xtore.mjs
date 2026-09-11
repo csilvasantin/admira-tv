@@ -1,5 +1,6 @@
 import {CLASSES, SNAPSHOT_TTL, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
 import {CutoutJob} from './cutouts.mjs';
+import {installTwinUI} from './twin-ui.mjs';
 
 const $=id=>document.getElementById(id);
 const scene=$('scene'), stage=$('stage'), frame=document.createElement('canvas');
@@ -15,6 +16,7 @@ let model=null, modelPromise=null, calibration=null, points=[], roiReady=false, 
 let roi=[.706,.026,.282,.293];
 let quad=[[.773,.491],[.89,.51],[.874,.675],[.75,.647]];
 let sourceSize='', lastVideoTime=-1, lastFrameAt=0;
+const twins=installTwinUI({document,onOriginalRemoved:()=>clearCapture('Original temporal retirado')});
 
 function status(message){$('status').textContent=message;}
 function renderCounts(){
@@ -49,6 +51,7 @@ function clearCapture(message='Sin capturas'){
   tabletIdle(analyzing?'Esperando un paso':'Análisis en pausa');
 }
 function pause(message){
+  twins.cancelOriginal();
   analyzing=false;generation++;clearTimeout(loopTimer);tracker.reset();clearCapture();controls();
   frameContext.clearRect(0,0,frame.width,frame.height);
   if(message)status(message);
@@ -294,7 +297,11 @@ async function runCutoutTask(task){
       for(const item of items){
         const figure=document.createElement('figure'),canvas=document.createElement('canvas'),caption=document.createElement('figcaption');
         canvas.width=item.width;canvas.height=item.height;canvas.getContext('2d').putImageData(new ImageData(item.data,item.width,item.height),0,0);
-        caption.textContent=CLASSES[item.category].label;figure.append(canvas,caption);$('cutouts').append(figure);item.data.fill(0);
+        const category=item.category,choose=document.createElement('button');
+        choose.textContent='Elegir';choose.setAttribute('aria-label',`Elegir recorte de ${CLASSES[category].label}`);
+        choose.disabled=['generating','publishing','review','publish-unknown'].includes(twins.session.phase);
+        choose.addEventListener('click',()=>twins.select(canvas,category));
+        caption.textContent=CLASSES[category].label;figure.append(canvas,caption,choose);$('cutouts').append(figure);item.data.fill(0);
       }
       $('cutout-status').textContent=items.length?`${time} · recortes locales, no anonimizados`:'Sin máscara fiable en esta captura';
       cutoutExpiryTimer=setTimeout(()=>{clearCutoutView();$('cutout-status').textContent='Recortes caducados · esperando otro paso';},Math.max(0,expiresAt-performance.now()));
@@ -338,6 +345,6 @@ $('prepare-cutouts').addEventListener('click',async()=>{
   finally{cutoutLoading=false;$('prepare-cutouts').disabled=false;}
 });
 // Do not leave identifiable frames sitting in a hidden tab or the back-forward cache.
-document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('Análisis pausado al ocultar esta vista. Pulsa Iniciar análisis para continuar.');});
-window.addEventListener('pagehide',()=>disconnect());
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('Análisis pausado al ocultar esta vista. Pulsa Iniciar análisis para continuar.');else twins.checkExpiry();});
+window.addEventListener('pagehide',()=>{twins.clear();disconnect();});
 tabletIdle();renderCounts();controls();

@@ -71,7 +71,7 @@ intermedios. Máximo cuatro objetos por captura, con hora y TTL original de 6 s;
 la cola no renueva el TTL. Caducidad, pausa y desconexión invalidan trabajo,
 borran fuentes y canvas. Los recortes son locales, no anónimos ni sintéticos.
 
-### Pixeria: contrato verificado, envío pendiente
+### Pixeria: original temporal → resultado revisado
 
 Inspeccionados remotos Pixeria 94986870d5fd630add906e21606bdf2ed8ee2152 y
 pixer-worker 87a76f704ca484c05910d82784d34cb4bb89920b. Stock publica bytes tal
@@ -81,11 +81,45 @@ El anonimizador requiere archivo/cámara, no tiene receptor de imágenes por
 postMessage. Su recorte anterior funciona con fondo uniforme y sus prompts
 de preservación de sexo/edad no se reutilizan.
 
-La decisión solicitada a Carlos es entre gemelos sintéticos revisados antes de
-publicar y recortes originales solo privados. Hasta resolverla no hay envío,
-publicación ni generación remota. La vía de brief de texto de Pixeria permitiría
-generar un representante sintético de la categoría sin transmitir fotografías,
-pero no conservaría la apariencia exacta. Integración y precisión de campo pendientes.
+Carlos decidió conservar temporalmente la imagen y retirarla cuando exista la
+salida elegida: píxel 8 bits, píxel 16 bits o gemelo sintético. Flujo implementado:
+
+1. «Elegir» bajo un recorte retiene una sola copia en memoria, máximo 3 minutos.
+   La selección no envía datos. No se puede sustituir una generación o revisión
+   pendiente sin cancelarla/descartarla primero.
+2. Selector de estilo, aviso de envío a Pixeria/Gemini y botón «Generar en Pixeria».
+   Un POST a https://api.admira.store/image/edit; timeout 90 s, sin reintentos,
+   cookies, secretos, redirecciones ni caché. Prompt de objeto nuevo, sin inferir
+   sexo/edad ni preservar identidades, matrículas o distintivos. No usa el antiguo
+   anonimizador ni guarda el original en Stock o en /twin/spawn.
+3. Se valida una respuesta raster acotada y decodificable, diferente del dataURL
+   de entrada. Se retira la copia original al terminar, fallar, cancelar, pausar,
+   ocultar, cerrar o caducar. Se invalidan respuestas tardías, se limpian arrays,
+   canvas y referencias. Una comparación de bytes no certifica anonimización.
+4. El resultado tiene vista local de hasta 15 minutos. Requiere revisión explícita
+   del operador antes de «Publicar resultado en Stock». Únicamente sus bytes van
+   a /stock/publish, type=digital-twin; categoría y estilo quedan en metadatos.
+   No se publica al terminar la generación automáticamente.
+5. Se valida el acuse real con id y URL exacta api.admira.store/stock/asset/<id>.
+   Una respuesta perdida deja publicación incierta y enlace a Stock, sin retry
+   automático. Caducar o descartar la vista local no elimina un asset ya publicado.
+
+Garantía limitada de borrado: se retiran las copias controladas por esta sesión;
+no es un borrado físico certificado de strings/base64 o buffers internos del
+navegador. El handler inspeccionado no escribe imágenes en R2/KV, pero sí envía
+el original a Gemini, no implementa borrado en Google ni cancelación del trabajo
+remoto. Las condiciones de Gemini permiten registros limitados incluso en servicio
+de pago; no se ha verificado la retención efectiva de la cuenta ni de plataforma.
+Aviso visible antes de enviar; no afirmar anonimización ni borrado remoto total.
+
+Se reutilizan las APIs existentes de Pixeria: CORS admite Admira.tv/localhost
+(OPTIONS verificado), pero los handlers no autentican al operador. No se amplían
+esas APIs ni se exponen credenciales. Para un despliegue restringido futuro se
+requiere endurecer el servicio/puente autenticado; CORS no es autorización.
+No se ha realizado una generación con imágenes reales ni una publicación de prueba.
+Contrato/ciclo probados con fixtures sin red; precisión y QA extremo a extremo pendientes.
+
+Referencia de retención: https://ai.google.dev/gemini-api/terms
 
 Referencias del separador:
 - https://github.com/tensorflow/tfjs-models/tree/master/deeplab
@@ -93,10 +127,13 @@ Referencias del separador:
 
 ## Privacidad y límites
 
-- Frames y capturas solo en canvas/memoria. Nada se sube ni se guarda en storage.
-- La captura visible caduca en 6 s; al pausar, ocultar o desconectar se borra.
+- Detección y recortes en canvas/memoria, sin storage. Generación opcional:
+  únicamente el recorte elegido sale a Pixeria/Gemini tras aviso y clic.
+- Captura visible: 6 s. Original seleccionado: hasta generar/fallar/cancelar o
+  3 minutos máximo. Pausar, ocultar o desconectar retira el original temporal.
 - En desconexión se paran tracks y se retira el fondo compartido.
-- Las descargas externas contienen bibliotecas/pesos, nunca fotos de la cámara.
+- Las descargas del detector/separador contienen bibliotecas/pesos; su ejecución
+  no envía fotos. El adaptador de generación es un flujo saliente distinto.
 - No se hace proxy del HLS, no se retira X-Frame-Options y no se incrusta IEU.
 - No se sirve ninguna captura a otro visitante de la ruta pública.
 - El operador debe elegir una pestaña que no contenga otros datos privados.
@@ -110,8 +147,9 @@ automático de un clic al vídeo: la selección de pestaña siempre requiere al 
 ## Integración MCP / Neo
 
 El player local se alimenta directamente de los eventos de este detector. No se
-activa ni se afirma un puente remoto desde el navegador. No se incluyen secretos
-de flota ni endpoints de escritura sin autenticar en el cliente.
+activa ni se afirma un puente de audiencia remoto desde el navegador. No se incluyen
+secretos de flota. La transformación/publicación de Pixeria es un flujo separado,
+con los límites de autenticación y retención descritos arriba.
 
 El MCP de Trinity (`xtore-va-mcp`, v0.2.1, fuera de este repo) ya tiene los colores
 y snapshots tipados de vehículo/persona, y entrega de audiencia al contrato de Neo.
@@ -139,8 +177,12 @@ QA manual obligatoria antes de declarar directo validado:
 7. Activar «Recortes sin fondo» y comprobar los bordes de las cuatro categorías,
    oclusiones, tráfico seguido y caducidad. La carga e inferencia inicial del modelo
    se han probado en navegador con la CSP de la ruta; la calidad en calle sigue
-   pendiente. Suite local: 28 pruebas, incluida caducidad de una fuente activa
+   pendiente. Suite local: 42 pruebas, incluida caducidad de una fuente activa
    mientras otra captura espera en cola.
+8. Elegir un recorte, comprobar los tres estilos, consentimiento, resultado y
+   retirada del original. Revisar contornos/identidad antes de publicar. Confirmar
+   en una prueba autorizada que solo el resultado llega a Stock. No marcar esta
+   prueba como realizada a partir de mocks o de un OPTIONS correcto.
 
 La publicación sigue el deploy firmado del repo, tras cross-review de Neo.
 No ejecutar deploy desde una copia antigua ni sobrescribir su player en curso.
