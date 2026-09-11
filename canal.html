@@ -35,6 +35,7 @@
 <!-- r62 · AUDIENCIA REMOTA (FLT-100243): ?audience=remote (alias va=1) arranca en condicional BLINDADO (pollMode/XPL no lo tocan) y sondea el bus mcp-tv.admira.store/audience/<screen> cada 500 ms (?audience_api= para mocks); m/f fresco → __xplCam y tick inmediato, !fresh/u → carril neutro (mín. 6 s). Inyección extra: mando audience-m|f|u y postMessage «admiratv audiencia m|f|u»; evento `audience` al padre en cada cambio de carril. -->
 <!-- r63 · NUNCA NEGRO EN CONDICIONAL (FLT-100243): los assets de la matriz fuera del feed de 300 se resuelven contra el índice completo del Stock (stockFullIndex, como /play<N>) y entran en el pool + precache; si la regla deja 0 piezas, cae al carrusel del feed y el rótulo dice «CONDICIONAL · sin assets → carrusel». -->
 <!-- BUILD canal v.11.09.2026.r64.18:50 · EMISIÓN POR TIPOLOGÍA (Xtore): el bus v2.2 trae label.kind (person|car|motorcycle|bicycle) y decision.lane (Matrix|TopGun|Persona|Coche|Moto|Bici|neutral); nuevo hecho XPL audKind; las reglas de la matriz casan también por kind (campo kind, tag kind:<k> o id r-coche/r-moto/r-bici/r-persona); un kind no-person nunca casa reglas de sexo m/f; /forcecam coche|moto|bici|persona simula tipologías; evento audience al padre lleva kind+lane; rótulo «CONDICIONAL · playlist normal» cuando la regla que manda no fija assets ni tema; ?seg_api= para matrices de prueba. -->
+<!-- BUILD canal v.11.09.2026.r65.18:58 · PUENTE DESDE ADMIRA.TV: bridgeOriginAllowed admite https://admira.tv y https://www.admira.tv, y el postMessage acepta source 'admira-tv-panel' como alias de 'xpaceos-robot-cli' (panel Xtore → iframe del canal). -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
@@ -2736,9 +2737,13 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   flashCli('?? /'+cmd+' · prueba /help');
 }
 const _cliForm=$('railCli'); if(_cliForm) _cliForm.addEventListener('submit',e=>{ e.preventDefault(); const i=$('railCliIn'); runCli(i.value); i.value=''; });
+// r65: también el propio admira.tv (panel Xtore de Trinity en /videoanalytics/xtore/ empotra el canal
+// y le manda `admiratv audiencia coche|moto|bici|persona|m|f|u`).
 function bridgeOriginAllowed(origin){
   return origin === 'https://www.xpaceos.com'
     || origin === 'https://xpaceos.com'
+    || origin === 'https://admira.tv'
+    || origin === 'https://www.admira.tv'
     || /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin || '');
 }
 function bridgeReply(event, ok, message){
@@ -2802,7 +2807,7 @@ window.addEventListener('message',event=>{
   if(d0.source==='ainimation-xperiencia'&&d0.event==='payment'){ applyXperienciaPayment(event); return; }
   if(!bridgeOriginAllowed(event.origin)) return;
   const data=event.data||{};
-  if(data.source!=='xpaceos-robot-cli') return;
+  if(data.source!=='xpaceos-robot-cli'&&data.source!=='admira-tv-panel') return;   // r65: alias del panel de admira.tv
   const raw=String(data.command||'').trim();
   const cmd=raw.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
   let ok=true, msg='ok';
