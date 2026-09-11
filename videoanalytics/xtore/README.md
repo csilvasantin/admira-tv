@@ -84,7 +84,7 @@ Los comandos sin imágenes se dirigen al WindowProxy exacto con targetOrigin `*`
 (necesario para origen opaco); respuestas requieren origin `null`, ventana exacta
 y requestId pendiente aleatorio. `null` por sí solo no autoriza mensajes.
 
-Arranque neutro con sondeo idempotente cada 500 ms, mismo requestId, límite20 s.
+Arranque neutro con sondeo idempotente cada 500 ms, mismo requestId, límite 20 s.
 No depende del load de recursos secundarios. Pasos confirmados → bici, moto,
 coche o persona por prioridad; neutro tras 6 s sin nuevos pasos. Un watchdog
 de racha sin ACK vigente cierra a los 2.5 s aunque haya pasos constantes.
@@ -98,8 +98,12 @@ Persona/Coche/Moto/Bici aún no tienen asset. No se inyectaron detecciones ni
 audiencia simulada en el bus. El smoke creó únicamente players virtuales neutros.
 La versión de Neo r10 admite padres admira.tv/www; no debe admitir origin null
 como padre. La respuesta opaca y el origen real del padre son cosas distintas.
+Incorporado origin/main ab999529 (r10) sin perder mejoras locales. Ajuste adicional
+local de canal.html: categoría persona mantiene age=null y gender=null; los padres
+de Admira se validan también con source===window.parent. Pendiente de revisión y
+publicación por Neo, no confundir con el canal remoto usado en el smoke neutro.
 
-Suite local: 60 pruebas (tracking, decoder, lifecycle, permisos, máscara,
+Suite local: 62 pruebas (tracking, decoder, lifecycle, permisos, máscara,
 Pixeria y bridge), más cross-review independiente. Verificación real completa
 de cámara → categoría → creatividad sigue pendiente de fuente y contenido.
 

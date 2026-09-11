@@ -2594,7 +2594,7 @@ const AUD_KIND_TXT={ person:'persona', car:'coche', motorcycle:'moto', bicycle:'
 function forceAudience(r){
   r=String(r||'').toLowerCase().trim(); let msg;
   const kind=AUD_KIND_ALIAS[r]||null;
-  if(kind){ window.__xplForce={gender:null,age:kind==='person'?'adulto':null,kind}; msg=AUD_KIND_ICON[kind]+' forzado: '+AUD_KIND_TXT[kind]; }
+  if(kind){ window.__xplForce={gender:null,age:null,kind}; msg=AUD_KIND_ICON[kind]+' forzado: '+AUD_KIND_TXT[kind]; }
   else if(/female|mujer|chica|^f$|^w$/.test(r)){ window.__xplForce={gender:'f',age:'adulto',kind:'person'}; msg='👩 forzado: mujer'; }
   else if(/male|hombre|chico|^m$|^h$/.test(r)){ window.__xplForce={gender:'m',age:'adulto',kind:'person'}; msg='👨 forzado: hombre'; }
   else { window.__xplForce=null; if(/^(u|none|nadie|neutro|neutral)$/.test(r)) window.__xplCam=null; msg='📷 público real (cámara/bus)'; }
@@ -2806,6 +2806,8 @@ window.addEventListener('message',event=>{
   if(d0.source==='ainimation-xperiencia'&&d0.event==='duration'){ applyXperienciaDuration(event); return; }
   if(d0.source==='ainimation-xperiencia'&&d0.event==='payment'){ applyXperienciaPayment(event); return; }
   if(!bridgeOriginAllowed(event.origin)) return;
+  // Xtore is the direct parent; sibling frames/popups cannot drive this player.
+  if((event.origin==='https://admira.tv'||event.origin==='https://www.admira.tv')&&event.source!==window.parent) return;
   const data=event.data||{};
   if(data.source!=='xpaceos-robot-cli'&&data.source!=='admira-tv-panel') return;   // r65: alias del panel de admira.tv
   const raw=String(data.command||'').trim();
