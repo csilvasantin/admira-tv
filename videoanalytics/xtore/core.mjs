@@ -4,12 +4,13 @@ export const CLASSES = Object.freeze({
   car: {label: 'Coche', color: '#8B5E3C', priority: 1},
   motorcycle: {label: 'Moto', color: '#2ECC71', priority: 3},
   bicycle: {label: 'Bici', color: '#F59E0B', priority: 2},
+  scooter: {label: 'Patinete', color: '#A78BFA', priority: 4, manualOnly: true},
 });
 export const SNAPSHOT_TTL = 6000;
 // Aggregates confirmed passages only; no images, identities or browser storage.
 export class PassageCounts {
   constructor(){this.reset();}
-  reset(){this.counts={person:0,car:0,motorcycle:0,bicycle:0};}
+  reset(){this.counts=Object.fromEntries(Object.keys(CLASSES).map(kind=>[kind,0]));}
   add(events){
     for(const event of events){
       if(event && Object.hasOwn(this.counts,event.class))this.counts[event.class]++;
@@ -41,33 +42,89 @@ export function quadMatrix(w,h,d){
 }
 const center=b=>[b[0]+b[2]/2,b[1]+b[3]/2];
 function overlap(a,b){const area=Math.max(0,Math.min(a[0]+a[2],b[0]+b[2])-Math.max(a[0],b[0]))*Math.max(0,Math.min(a[1]+a[3],b[1]+b[3])-Math.max(a[1],b[1]));return area/(a[2]*a[3]+b[2]*b[3]-area);}
+// Rectangular Hungarian assignment: dummy columns are expensive, so preserve
+// the maximum number of valid continuities, then minimize geometric cost.
+// Greedy pairs can steal another person's only valid match in a walking group.
+function assignment(costs,trackCount){
+  const n=costs.length;if(!n||!trackCount)return [];
+  const m=trackCount+n,u=new Float64Array(n+1),v=new Float64Array(m+1),p=new Int32Array(m+1),way=new Int32Array(m+1);
+  for(let i=1;i<=n;i++){
+    p[0]=i;let j0=0;const min=new Float64Array(m+1).fill(Infinity),used=new Uint8Array(m+1);
+    do{
+      used[j0]=1;const i0=p[j0];let delta=Infinity,j1=0;
+      for(let j=1;j<=m;j++)if(!used[j]){
+        const raw=j<=trackCount?costs[i0-1][j-1]:1000;
+        const current=(Number.isFinite(raw)?raw:1e6)-u[i0]-v[j];
+        if(current<min[j]){min[j]=current;way[j]=j0;}
+        if(min[j]<delta){delta=min[j];j1=j;}
+      }
+      for(let j=0;j<=m;j++)if(used[j]){u[p[j]]+=delta;v[j]-=delta;}else min[j]-=delta;
+      j0=j1;
+    }while(p[j0]!==0);
+    do{const j1=way[j0];p[j0]=p[j1];j0=j1;}while(j0);
+  }
+  const matches=[];
+  for(let j=1;j<=trackCount;j++)if(p[j]&&Number.isFinite(costs[p[j]-1][j-1]))matches.push([p[j]-1,j-1]);
+  return matches;
+}
 export class PassageTracker {
   constructor(){this.reset();}
-  reset(){this.tracks=[];this.sequence=0;}
+  reset(){this.tracks=[];this.sequence=(this.sequence??0);}
   update(predictions, now, width, height, threshold=.65){
-    this.tracks=this.tracks.filter(t=>now-t.last<1500);
+    if(!Number.isFinite(now)||!(width>0)||!(height>0))return [];
+    // Geometry only: tolerate short occlusions, never store faces/embeddings.
+    // An outward-moving object at the edge is retired sooner so a new arrival
+    // at the same entrance cannot inherit an already-counted track.
+    this.tracks=this.tracks.filter(t=>now-t.last<(t.exiting?1000:8000));
     const matched=new Set(), events=[];
     const limit=category=>typeof threshold==='number'?threshold:(threshold[category]??.65);
-    const valid=predictions.filter(p=>Object.hasOwn(CLASSES,p.class) && Number.isFinite(p.score) && p.score<=1 && p.score >= limit(p.class) && Array.isArray(p.bbox) && p.bbox.length===4 && p.bbox.every(Number.isFinite) && p.bbox[2]>0 && p.bbox[3]>0).sort((a,b)=>b.score-a.score);
-    for(const p of valid){
-      const b=[p.bbox[0]/width,p.bbox[1]/height,p.bbox[2]/width,p.bbox[3]/height], c=center(b);
-      let best=null, bestCost=Infinity;
-      for(const t of this.tracks){
-        if(matched.has(t.id)||t.category!==p.class)continue;
-        const tc=center(t.bbox),dist=Math.hypot(c[0]-tc[0],c[1]-tc[1]),iou=overlap(t.bbox,b);
-        const fast=p.class==='bicycle'||p.class==='motorcycle',elapsed=Math.max(0,now-t.last)/1000;
-        const reach=fast?Math.min(.28,.08+elapsed*.55):.10;
-        const ratio=b[2]*b[3]/(t.bbox[2]*t.bbox[3]);
-        if(ratio>.35&&ratio<2.85&&(iou>.1||dist<reach)&&dist+(1-iou)*.1<bestCost){best=t;bestCost=dist+(1-iou)*.1;}
+    const valid=predictions.filter(p=>Object.hasOwn(CLASSES,p.class) && !CLASSES[p.class].manualOnly && Number.isFinite(p.score) && p.score<=1 && p.score>=.25 && Array.isArray(p.bbox) && p.bbox.length===4 && p.bbox.every(Number.isFinite) && p.bbox[2]>0 && p.bbox[3]>0)
+      .sort((a,b)=>b.score-a.score).map(p=>({p,b:[p.bbox[0]/width,p.bbox[1]/height,p.bbox[2]/width,p.bbox[3]/height]}));
+    // Suppress near-identical same-class boxes before association. Distinct
+    // nearby people and rider+bicycle remain separate objects.
+    const candidates=[];
+    for(const item of valid)if(candidates.length<100&&!candidates.some(other=>other.p.class===item.p.class&&overlap(other.b,item.b)>.7))candidates.push(item);
+    const strong=candidates.filter(({p})=>p.score>=limit(p.class));
+    const weak=candidates.filter(({p})=>p.score<limit(p.class)&&p.score>=Math.max(.25,limit(p.class)*.55));
+    const cost=(t,{p,b})=>{
+      const c=center(b),tc=center(t.bbox),elapsed=Math.max(0,now-t.last)/1000;
+      const predicted=tc.map((v,i)=>v+Math.max(-.22,Math.min(.22,t.velocity[i]*Math.min(elapsed,.8))));
+      const dist=Math.hypot(c[0]-tc[0],c[1]-tc[1]),predDist=Math.hypot(c[0]-predicted[0],c[1]-predicted[1]);
+      const iou=overlap(t.bbox,b),fast=p.class==='bicycle'||p.class==='motorcycle';
+      const reach=fast?Math.min(.30,.08+elapsed*.55):Math.min(.20,.065+elapsed*.20);
+      const ratio=b[2]*b[3]/(t.bbox[2]*t.bbox[3]);
+      if(ratio<.3||ratio>3.3||(iou<=.1&&Math.min(dist,predDist)>=reach))return Infinity;
+      return predDist+(1-iou)*.06+Math.abs(Math.log(ratio))*.02;
+    };
+    const observe=(t,{p,b},isStrong)=>{
+      const c=center(b),previous=center(t.bbox),elapsed=(now-t.last)/1000;
+      if(elapsed>=.04&&elapsed<=1.5)t.velocity=t.velocity.map((v,i)=>v*.5+Math.max(-1.5,Math.min(1.5,(c[i]-previous[i])/elapsed))*.5);
+      else if(elapsed>1.5)t.velocity=[0,0];
+      if(isStrong){
+        // Low-score matches preserve continuity but cannot confirm a passage.
+        if(now-t.strongAt>3000){t.hits=0;t.origin=c;}
+        t.hits++;t.strongAt=now;
       }
-      if(!best){best={id:++this.sequence,category:p.class,bbox:b,origin:c,last:now,hits:0,emitted:false};this.tracks.push(best);}
-      // A long detection gap is not consecutive evidence.
-      if(now-best.last>900){best.hits=0;best.origin=c;}
-      best.hits++;best.bbox=b;best.last=now;matched.add(best.id);
+      t.bbox=b;t.last=now;matched.add(t.id);
+      t.exiting=(c[0]<.06&&t.velocity[0]<-.02)||(c[0]>.94&&t.velocity[0]>.02)||(c[1]<.04&&t.velocity[1]<-.02)||(c[1]>.96&&t.velocity[1]>.02);
       const needed=p.class==='bicycle'&&p.score<.65?3:2;
-      if(!best.emitted && best.hits>=needed && Math.hypot(c[0]-best.origin[0],c[1]-best.origin[1])>=.012){
-        best.emitted=true;events.push({...p,trackId:best.id});
+      if(isStrong&&!t.emitted&&t.hits>=needed&&Math.hypot(c[0]-t.origin[0],c[1]-t.origin[1])>=.012){t.emitted=true;events.push({...p,trackId:t.id});}
+    };
+    const associate=(items,isStrong)=>{
+      const available=this.tracks.filter(t=>!matched.has(t.id)),used=new Set();
+      const costs=items.map(item=>available.map(t=>t.category===item.p.class?cost(t,item):Infinity));
+      for(const [row,column] of assignment(costs,available.length)){
+        observe(available[column],items[row],isStrong);used.add(items[row]);
       }
+      return items.filter(item=>!used.has(item));
+    };
+    const unmatched=associate(strong,true);
+    associate(weak,false);
+    for(const item of unmatched){
+      // Bounded memory. Weak detections never create a new track.
+      if(this.tracks.length>=256)break;
+      const t={id:++this.sequence,category:item.p.class,bbox:item.b,origin:center(item.b),last:now,strongAt:now,hits:0,emitted:false,velocity:[0,0],exiting:false};
+      this.tracks.push(t);observe(t,item,true);
     }
     // A rider may also be detected as person; show the vehicle border first.
     return events.sort((a,b)=>CLASSES[b.class].priority-CLASSES[a.class].priority || b.score-a.score);

@@ -22,9 +22,10 @@
       <div><p class="eyebrow">VIDEO ANALYTICS / XTORE</p><h1>La calle activa la Xtore.</h1><p class="intro">Puerta Cam detecta. El iPad muestra. La cartelería responde.</p></div>
       <span id="connection" class="badge">Sin conexión</span>
     </header>
-    <section class="toolbar" aria-label="Conectar la Xtore">
+    <section class="toolbar" aria-label="Conexión y análisis">
+      <button id="analyze" class="primary" disabled>Iniciar análisis</button>
       <a class="button" href="https://digitaltwin.ieu.ai/" target="_blank" rel="noopener noreferrer">1. Abrir Digital Twin ↗</a>
-      <button id="connect" class="primary">2. Compartir pestaña</button>
+      <button id="connect">2. Compartir pestaña</button>
       <button id="stop" disabled>Desconectar</button>
       <span class="local-note">Detección local · sin audio · envío a Pixeria solo al pulsar Generar</span>
     </section>
@@ -42,7 +43,16 @@
         <div class="viewer-caption"><span id="source-info">ESPERANDO FUENTE</span><span>iPad y cartelería virtuales · no son dispositivos físicos</span></div>
       </section>
       <aside class="inspector">
-        <div class="section-title"><h2>Última captura</h2><span id="event-counter">0 pasos</span></div>
+        <div class="section-title capture-heading"><h2>Capturas</h2><span id="event-counter">0 pasos</span><button id="reset-counts" title="Poner a cero los contadores actuales sin borrar el histórico">Reset</button></div>
+        <details id="history-panel" class="help history-panel"><summary><span aria-hidden="true">›</span> Histórico · día y hora</summary>
+          <p class="small">Servidor privado · hora de Madrid · sin imágenes</p>
+          <div class="history-filters"><label>Día<select id="history-day" aria-label="Día del histórico"></select></label><label>Hora<select id="history-hour" aria-label="Hora del histórico"><option value="all">Todas las horas</option></select></label></div>
+          <button id="history-refresh">Actualizar / reintentar</button>
+          <p id="history-empty" class="small">El histórico necesita conexión al servidor privado.</p><ul id="history-rows"></ul>
+          <p class="small">Reset solo reinicia los contadores de esta conexión. No borra datos del servidor. Consulta los últimos 31 días; no es un archivo de fotos. Un único equipo debe analizar la cámara; los demás pueden consultar.</p>
+          <p class="small"><a href="/" target="_blank" rel="noopener noreferrer">Abrir Admira.tv para iniciar sesión ↗</a> y después pulsa Actualizar.</p>
+        </details>
+        <p id="history-status" class="small" role="status">Histórico pendiente de conexión al servidor privado.</p>
         <div id="capture" class="capture"><canvas id="capture-canvas" width="640" height="360" hidden aria-label="Última captura de la cámara, con detecciones señaladas"></canvas><p id="capture-empty">Esperando un paso confirmado</p></div>
         <p id="event-label" class="event-label" role="status">Sin capturas</p>
         <p id="event-meta" class="small">Capturas efímeras · 6 s</p>
@@ -51,8 +61,11 @@
           <div><dt><i class="car" aria-hidden="true"></i>Coches</dt><dd id="count-car">0</dd></div>
           <div><dt><i class="motorcycle" aria-hidden="true"></i>Motos</dt><dd id="count-motorcycle">0</dd></div>
           <div><dt><i class="bicycle" aria-hidden="true"></i>Bicis</dt><dd id="count-bicycle">0</dd></div>
+          <div class="scooter-count"><dt><i class="scooter" aria-hidden="true"></i>Patinetes <small>manual</small></dt><dd id="count-scooter">0</dd></div>
         </dl>
-        <details class="help"><summary><span aria-hidden="true">›</span> Cómo se cuentan los pasos</summary><p id="count-note" class="small">Pasos de esta conexión; se conservan al pausar. Nueva conexión o recarga = contadores a cero. Conteo estimado: un mismo objeto puede volver a contarse tras una pausa u oclusión.</p></details>
+        <button id="add-scooter" class="text-button" disabled>+ Patinete observado (manual)</button>
+        <details class="help"><summary><span aria-hidden="true">›</span> Patinetes: alcance actual</summary><p>El modelo COCO no detecta patinetes como categoría. El contador registra solo tus pulsaciones manuales; no genera capturas, recortes ni órdenes de player. Si el detector lo contó como bici o persona, esa posible confusión no se corrige automáticamente. La detección automática requiere otro modelo validado.</p></details>
+        <details class="help"><summary><span aria-hidden="true">›</span> Cómo se cuentan los pasos</summary><p id="count-note" class="small">Una trayectoria se cuenta una sola vez. Se conserva el seguimiento durante oclusiones o pausas breves de hasta 8 s y al ajustar la confianza. Reset pone a cero las cifras sin olvidar los objetos ya contados. Cambiar cámara/encuadre, una ausencia larga o volver a entrar puede generar otro paso: no es identificación de personas únicas. El histórico solo está guardado cuando lo confirma el servidor; no utiliza almacenamiento del navegador.</p></details>
         <details class="help"><summary><span aria-hidden="true">›</span> Privacidad y límites</summary><p class="small">Las capturas se borran a los 6 segundos, excepto el recorte que selecciones para generar un gemelo: su copia temporal dura hasta terminar, cancelar o un máximo de 3 minutos. Persona = sin clasificación de sexo o edad. No hay reconocimiento de identidad. El resultado puede contener errores.</p></details>
         <div class="divider"></div>
         <div class="section-title"><h2>Objetos sin fondo</h2></div>
@@ -101,7 +114,6 @@
         <label class="threshold" for="bicycle-confidence">Confianza para bicis <output id="bicycle-confidence-value">40 %</output><input id="bicycle-confidence" type="range" min="35" max="80" value="40" step="5"></label>
         <p id="detection-status" class="small" role="status">Diagnóstico de bicis: esperando análisis.</p>
         <details class="help"><summary><span aria-hidden="true">›</span> Pasos rápidos y bicis</summary><p>El detector separa las candidatas de persona y bicicleta para que una no oculte a la otra. Las bicis por debajo del 65 % necesitan tres observaciones con movimiento. Un umbral bajo puede aumentar errores; las candidatas no son pasos confirmados. Objetivo: hasta 8 análisis/s, limitado por el equipo y el vídeo.</p></details>
-        <button id="analyze" class="primary full" disabled>Iniciar análisis</button>
         <button id="prepare-model" class="text-button">Preparar detector sin conectar la cámara</button>
         <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. La detección no envía fotogramas.</p>
       </aside>

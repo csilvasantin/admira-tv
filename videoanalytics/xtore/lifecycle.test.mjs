@@ -155,6 +155,32 @@ test('category totals survive expiry, pause and disconnect, then reset on a new 
   for(const category of ['person','car','motorcycle','bicycle'])assert.equal(f.get(`count-${category}`).textContent,'0');
   await f.get('stop').emit('click');
 });
+test('pause, confidence edits and Reset do not recount the person still in view',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});let now=0;t.mock.method(performance,'now',()=>now);
+  const f=await fixture();await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  const detect=async x=>{f.detections.at(-1).resolve([{class:'person',score:.9,bbox:[x,10,30,60]}]);await new Promise(resolve=>setImmediate(resolve));};
+  await detect(10);now+=200;f.get('scene').currentTime++;t.mock.timers.tick(200);await detect(20);
+  assert.equal(f.get('count-person').textContent,'1');
+  await f.get('analyze').emit('click');now+=2200;
+  await f.get('analyze').emit('click');await detect(25);
+  assert.equal(f.get('count-person').textContent,'1');
+  f.get('confidence').value='70';await f.get('confidence').emit('input');
+  f.get('bicycle-confidence').value='45';await f.get('bicycle-confidence').emit('input');
+  await f.get('reset-counts').emit('click');assert.equal(f.get('event-counter').textContent,'0 pasos');
+  assert.equal(f.get('capture-canvas').hidden,true);
+  now+=200;f.get('scene').currentTime++;t.mock.timers.tick(200);await detect(30);
+  assert.equal(f.get('count-person').textContent,'0');
+  assert.match(f.get('history-status').textContent,/1 sin confirmar/);
+  await f.get('stop').emit('click');
+});
+test('manual scooters require a connected source and never fabricate a capture or player command',async()=>{
+  const f=await fixture();await f.get('add-scooter').emit('click');assert.equal(f.get('count-scooter').textContent,'0');
+  const wasHidden=f.get('capture-canvas').hidden;
+  await f.get('connect').emit('click');await f.get('add-scooter').emit('click');
+  assert.equal(f.get('count-scooter').textContent,'1');assert.equal(f.get('event-counter').textContent,'1 paso');
+  assert.equal(f.get('capture-canvas').hidden,wasHidden);assert.match(f.get('status').textContent,/manualmente/);
+  assert.equal(f.get('signage').children.length,0);await f.get('stop').emit('click');
+});
 const personMask={width:2,height:2,legend:{person:[128,0,0]},segmentationMap:new Uint8ClampedArray([128,0,0,255,128,0,0,255,128,0,0,255,128,0,0,255])};
 async function confirmPerson(f,t){
   const p=x=>[{class:'person',score:.9,bbox:[x,10,30,60]}];

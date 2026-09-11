@@ -3,6 +3,7 @@ import {CutoutJob} from './cutouts.mjs';
 import {installTwinUI} from './twin-ui.mjs';
 import {detectObjects} from './detector.mjs';
 import {installSignageUI} from './signage-ui.mjs';
+import {installHistoryUI} from './history.mjs';
 
 const $=id=>document.getElementById(id);
 const scene=$('scene'), stage=$('stage'), frame=document.createElement('canvas');
@@ -21,6 +22,12 @@ let signageQuad=[[.59,.37],[.78,.37],[.78,.9],[.59,.9]],signageReady=false;
 let sourceSize='', lastVideoTime=-1, lastFrameAt=0;
 const twins=installTwinUI({document,onOriginalRemoved:()=>clearCapture('Original temporal retirado')});
 const signage=installSignageUI({document,window});
+const history=installHistoryUI({document});
+let historyTimer=0;
+function queueHistory(events,source='detector'){
+  history.add(events,source);
+  if(!historyTimer)historyTimer=setTimeout(()=>{historyTimer=0;history.sync();},1500);
+}
 
 function status(message){$('status').textContent=message;}
 function renderCounts(){
@@ -31,6 +38,7 @@ function controls(){
   const connected=!!stream;
   $('connect').disabled=connected||busy;
   $('stop').disabled=!connected;
+  $('add-scooter').disabled=!connected;
   for(const id of ['set-roi','set-tablet','set-signage','edit-coordinates'])$(id).disabled=!connected;
   signage.setEligible(connected&&signageReady&&!calibration);
   $('analyze').disabled=!connected||!roiReady||!tabletReady||!!calibration||busy;
@@ -58,12 +66,13 @@ function clearCapture(message='Sin capturas'){
 function pause(message){
   signage.stop();
   twins.cancelOriginal();
-  analyzing=false;generation++;clearTimeout(loopTimer);tracker.reset();clearCapture();controls();
+  analyzing=false;generation++;clearTimeout(loopTimer);clearCapture();controls();
   frameContext.clearRect(0,0,frame.width,frame.height);
   if(message)status(message);
 }
 function disconnect(message='Desconectado. Capturas y vídeo borrados de la vista.'){
   pause();
+  tracker.reset();
   if(stream)for(const track of stream.getTracks())track.stop();
   stream=null;scene.srcObject=null;scene.removeAttribute('src');scene.load();
   frame.width=1;frame.height=1;sourceSize='';lastVideoTime=-1;
@@ -97,6 +106,7 @@ $('connect').addEventListener('click',async()=>{
       status('Selecciona una pestaña de Chrome, no una ventana ni la pantalla completa.');return;
     }
     stream=selected;generation++;roiReady=false;tabletReady=false;signageReady=false;
+    tracker.reset();
     track.addEventListener('ended',()=>disconnect('Se ha terminado de compartir. La captura se ha borrado.'),{once:true});
     track.addEventListener('mute',()=>pause('La fuente está interrumpida. Revisa la pestaña y vuelve a iniciar el análisis.'));
     scene.srcObject=stream;
@@ -111,11 +121,23 @@ $('connect').addEventListener('click',async()=>{
   }finally{busy=false;controls();}
 });
 $('stop').addEventListener('click',()=>disconnect());
+$('reset-counts').addEventListener('click',()=>{
+  // Do not reset tracking, cancel an inference or discard the archive outbox.
+  // Otherwise a person already in view would immediately count again.
+  passages.reset();renderCounts();twins.cancelOriginal();clearCapture('Contadores reiniciados');
+  status('Contadores a cero. Se conserva el seguimiento y el histórico; los envíos pendientes no se borran.');
+});
+$('add-scooter').addEventListener('click',()=>{
+  if(!stream)return;
+  const events=[{class:'scooter'}];passages.add(events);renderCounts();queueHistory(events,'manual');
+  status('Un patinete registrado manualmente. No es una detección automática ni cambia el player.');
+});
 function updateSourceSize(){
   if(!scene.videoWidth||!scene.videoHeight)return;
   const next=`${scene.videoWidth} × ${scene.videoHeight}`;
   if(sourceSize && sourceSize!==next){
     pause('La fuente ha cambiado de tamaño. Vuelve a marcar la cámara y el iPad antes de analizar.');
+    tracker.reset();
     roiReady=false;tabletReady=false;signageReady=false;$('calibration-status').textContent='Tamaño nuevo: repite el encuadre';
   }
   sourceSize=next;stage.style.aspectRatio=`${scene.videoWidth} / ${scene.videoHeight}`;
@@ -127,7 +149,7 @@ function startCalibration(kind){
   pause();calibration=kind;points=[];stage.classList.add('calibrating');$('markers').replaceChildren();
   stage.scrollIntoView?.({block:'center',behavior:'instant'});
   $('coordinates').hidden=true;
-  if(kind==='roi'){roiReady=false;$('roi').hidden=true;status('Marca dos puntos en la escena: esquina superior izquierda e inferior derecha del vídeo de Puerta Cam. No incluyas el resto de la tienda.');}
+  if(kind==='roi'){tracker.reset();roiReady=false;$('roi').hidden=true;status('Marca dos puntos en la escena: esquina superior izquierda e inferior derecha del vídeo de Puerta Cam. No incluyas el resto de la tienda.');}
   else if(kind==='signage'){signageReady=false;$('signage').hidden=true;status('Marca las cuatro esquinas interiores de la pantalla grande: superior izquierda → superior derecha → inferior derecha → inferior izquierda.');}
   else{tabletReady=false;$('tablet').hidden=true;status('Marca las cuatro esquinas interiores del iPad: superior izquierda → superior derecha → inferior derecha → inferior izquierda.');}
   $('calibration-status').textContent=kind==='roi'?'Marcando cámara: 0 / 2':`Marcando ${kind==='signage'?'cartelería':'iPad'}: 0 / 4`;
@@ -183,10 +205,11 @@ $('apply-coordinates').addEventListener('click',()=>{
     if(!validQuad(sq)){status('Completa las ocho coordenadas de cartelería o déjalas todas vacías para omitirla.');return;}
     signageQuad=sq;signageReady=true;
   }else signageReady=false;
+  if(r.some((value,i)=>Math.abs(value-roi[i])>.00001))tracker.reset();
   roi=r;quad=q;roiReady=true;tabletReady=true;$('coordinates').hidden=true;finishCalibration();
 });
-$('confidence').addEventListener('input',()=>{$('confidence-value').value=`${$('confidence').value} %`;tracker.reset();});
-$('bicycle-confidence').addEventListener('input',()=>{$('bicycle-confidence-value').value=`${$('bicycle-confidence').value} %`;tracker.reset();});
+$('confidence').addEventListener('input',()=>{$('confidence-value').value=`${$('confidence').value} %`;});
+$('bicycle-confidence').addEventListener('input',()=>{$('bicycle-confidence-value').value=`${$('bicycle-confidence').value} %`;});
 
 function loadScript(src,integrity){
   return new Promise((resolve,reject)=>{
@@ -222,7 +245,8 @@ $('analyze').addEventListener('click',async()=>{
     await prepareModel();
     if(token!==generation||!stream)return;
     if(document.hidden){status('Vuelve a esta vista y pulsa Iniciar análisis.');return;}
-    analyzing=true;tracker.reset();lastVideoTime=-1;lastFrameAt=performance.now();
+    analyzing=true;lastVideoTime=-1;lastFrameAt=performance.now();
+    history.sync();
     status('Analizando solo Puerta Cam. Pasos confirmados en dos fotogramas (tres para bicis de confianza baja); capturas de 6 s. Puedes activar la cartelería si está marcada.');
     tabletIdle();loop(token);
   }catch{status('No se ha iniciado el análisis. Revisa el estado del detector.');}
@@ -232,7 +256,7 @@ async function loop(token){
   if(!analyzing||token!==generation||!stream)return;
   const iterationStart=performance.now();
   try{
-    const now=performance.now();
+      const now=performance.now();
     if(scene.readyState<2||scene.currentTime===lastVideoTime){
       if(now-lastFrameAt>3000){pause('No llegan fotogramas nuevos. Revisa Puerta Cam y vuelve a iniciar el análisis.');return;}
     }else{
@@ -245,7 +269,7 @@ async function loop(token){
       const predictions=await detectObjects(model,window.tf,frame,Math.min(.25,threshold,bikeThreshold));
       if(!analyzing||token!==generation)return;
       const events=tracker.update(predictions,performance.now(),width,height,{person:threshold,car:threshold,motorcycle:threshold,bicycle:bikeThreshold});
-      if(events.length){passages.add(events);renderCounts();signage.passage(events);}
+      if(events.length){passages.add(events);renderCounts();queueHistory(events);signage.passage(events);}
       $('source-info').textContent=`PUERTA CAM · ${width} × ${height} · ${Math.round(performance.now()-start)} ms / análisis`;
       const bikes=predictions.filter(p=>p.class==='bicycle'),best=bikes.reduce((score,p)=>Math.max(score,p.score),0);
       $('detection-status').textContent=`Bicis candidatas: ${bikes.length} · mejor ${Math.round(best*100)} % · umbral ${Math.round(bikeThreshold*100)} % · ${Math.round(performance.now()-start)} ms`;
@@ -369,5 +393,6 @@ $('prepare-cutouts').addEventListener('click',async()=>{
 });
 // Do not leave identifiable frames sitting in a hidden tab or the back-forward cache.
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('Análisis pausado al ocultar esta vista. Pulsa Iniciar análisis para continuar.');else twins.checkExpiry();});
-window.addEventListener('pagehide',()=>{twins.clear();disconnect();});
+window.addEventListener('beforeunload',event=>{if(history.pending.length||history.lost){event.preventDefault();event.returnValue='';}});
+window.addEventListener('pagehide',()=>{clearTimeout(historyTimer);twins.clear();disconnect();});
 tabletIdle();renderCounts();controls();

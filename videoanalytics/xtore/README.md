@@ -24,29 +24,65 @@ El modelo se carga a petición, con errores y tiempos de espera visibles.
 El bundle ES2017 evita el shim `Function` del bundle legacy y permite mantener
 la CSP sin `unsafe-eval`. Verificar con las cabeceras reales, no solo http.server.
 
-Clases: person (gris), car (marrón), motorcycle (verde), bicycle (ámbar).
+Clases automáticas: person (gris), car (marrón), motorcycle (verde), bicycle (ámbar).
+Patinete (violeta) es registro manual explícito; COCO no tiene esa clase.
 No clasifica sexo, género, edad, identidad o atención. No se presenta como Astra
 ni como un modelo de precisión ya validada. Los bordes rosa/azul requerirían otro
 productor evaluado: no se inventan atributos para cumplir la paleta.
 
-Un tracker efímero exige dos detecciones y desplazamiento (tres para bicis con
-confianza inferior al 65 %), elimina tracks a los
-1.5 s sin señal y emite una sola vez por track. No es reidentificación y puede
-duplicar eventos con oclusiones o perder pasos rápidos. Una cámara muy lejana,
+Un tracker geométrico exige dos detecciones y desplazamiento (tres para bicis con
+confianza inferior al 65 %), conserva continuidad hasta 8 s sin señal y emite una
+sola vez por trayectoria. Usa asignación húngara de máxima cardinalidad/mínimo
+coste y velocidad acotada; no un emparejamiento greedy que robe otra trayectoria.
+Las candidatas de baja confianza conservan posición pero no crean ni confirman
+tracks. Tras una salida observada por el borde, el margen se reduce a 1 s.
+No es reidentificación y puede duplicar tras ausencias largas o perder pasos rápidos. Una cámara muy lejana,
 baja resolución, poca luz, reflejos o movimiento de la escena requieren evaluación.
 La vista debe permanecer visible. Pausa al ocultarla, cambiar tamaño de fuente,
 perder fotogramas o señal, recalibrar o producirse un error.
 
-La leyenda muestra pasos acumulados de Personas, Coches, Motos y Bicis. El total
-es siempre la suma de las cuatro categorías; cuenta todos los objetos confirmados
+La leyenda muestra pasos acumulados de Personas, Coches, Motos, Bicis y Patinetes
+(estos últimos manuales). El total es la suma de las cinco categorías; cuenta todos los objetos confirmados
 de una captura, no solo la categoría que determina su borde. Una persona sobre
 una bici puede contribuir a ambas categorías si ambas detecciones se confirman.
 Los contadores viven solo en memoria y se conservan al caducar una captura,
 pausar, ocultar, recalibrar o desconectar. Empiezan de cero al conectar una nueva
 fuente correctamente o recargar. No se reconstruyen a partir de los eventos de
 versiones anteriores ni se almacenan imágenes para reconstruirlos.
-Son pasos estimados, no individuos únicos: una pausa, oclusión o regreso al
-encuadre puede producir un nuevo paso. El desglose de sexo/género no se infiere.
+Reset pone a cero las cifras actuales, conserva los tracks y no borra el histórico
+ni su cola pendiente. Pausar, arrancar y ajustar confianza ya no borran tracks.
+Cambiar ROI/tamaño de fuente o desconectar sí invalida la geometría. Son pasos
+estimados, no individuos únicos: una ausencia larga o regreso al encuadre puede
+producir un nuevo paso. El desglose de sexo/género no se infiere.
+
+## Controles e histórico — ampliación 11 septiembre 2026
+
+Iniciar/Pausar análisis es el primer control de una barra sticky, visible al bajar
+por el inspector. Capturas incluye Reset y desplegable Histórico con día y hora
+de Europe/Madrid (horas repetidas de cambio horario diferenciadas por UTC).
+
+`history.mjs` consulta y envía únicamente metadatos a `/videoanalytics/api/history`.
+El backend Pages Functions utiliza D1 y sesión verificada del portal con rol raíz
+owner/admin. Consultas parametrizadas; lotes atómicos; UUID único por evento para
+reintentos idempotentes. No recibe fotografías, bbox, texto libre, sexo ni edad.
+Solo ACK del servidor confirma persistencia. Una cola en memoria de hasta 2000
+eventos protege reintentos durante la vista abierta; NO es almacenamiento durable.
+Errores, pendientes y expirados se muestran; beforeunload advierte si hay pendientes.
+No se usan localStorage, sessionStorage ni IndexedDB para simular histórico.
+Los eventos demasiado antiguos (>7 días para ingesta) no bloquean nuevas remesas;
+se informa de que ya no se pueden confirmar/reintentar, no de un borrado remoto.
+
+Consulta entre equipos preparada, pero **base D1 y despliegue aún pendientes de
+autorización**. La vista estática local muestra «Servidor de histórico no disponible».
+No reconstruye los 103 pasos de capturas anteriores. Instrucciones y límites en
+[HISTORY.md](HISTORY.md). Solo un navegador debe analizar una cámara; varios pueden
+consultar. Los UUID evitan reintentos, no deduplican dos productores simultáneos.
+
+Patinetes manuales no crean capturas, máscaras ni órdenes de player. No se mapea
+skateboard/bicycle/motorcycle a scooter. COCO y DeepLab Pascal no incorporan esa
+clase, y el player de Neo aún no tiene orden propia. Grounding DINO Tiny ONNX es
+un candidato de evaluación local por vocabulario abierto; no se han descargado
+pesos ni validado precisión/latencia ni activado un detector de patinetes.
 
 ## Mejora de bicis y tercera superficie — 11 septiembre 2026
 
@@ -64,7 +100,8 @@ Esto prueba recuperación de una candidata en esa imagen, no recall en vídeo.
 Umbral de bicis independiente (40 % inicial, ajustable 35–80); el resto conserva
 65 %. El tracker permite más desplazamiento entre fotogramas de bici/moto,
 limita cambios de tamaño, exige tres observaciones a confianza baja y reinicia
-evidencia tras huecos de más de 900 ms. No cuenta objetos estáticos ni repite un
+evidencia no confirmada tras huecos de más de 3 s (permite inferencia lenta).
+No cuenta objetos estáticos ni repite un
 track confirmado. Bucle sin pausa extra cuando la inferencia supera 125 ms:
 objetivo hasta 8 análisis/s, no garantía de FPS. Diagnóstico visible de candidatas,
 mejor score, umbral y duración. Falta medir pasos perdidos/falsos con vídeo real.
@@ -103,8 +140,8 @@ local de canal.html: categoría persona mantiene age=null y gender=null; los pad
 de Admira se validan también con source===window.parent. Pendiente de revisión y
 publicación por Neo, no confundir con el canal remoto usado en el smoke neutro.
 
-Suite local: 62 pruebas (tracking, decoder, lifecycle, permisos, máscara,
-Pixeria y bridge), más cross-review independiente. Verificación real completa
+Suite local ampliada (tracking, decoder, lifecycle, permisos, máscara,
+Pixeria, bridge e histórico con SQLite), más cross-review independiente. Verificación real completa
 de cámara → categoría → creatividad sigue pendiente de fuente y contenido.
 
 ## Objetos sin fondo (vista previa local)
