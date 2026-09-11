@@ -1,9 +1,9 @@
 {
-  "version": "v.11.09.2026.r10.18:58",
-  "signature": "NeoMBA16 · MacBookAir16plata",
-  "agent": "NeoMBA16",
+  "version": "v.11.09.2026.r11.20:14",
+  "signature": "TrinityMBA16 · MacBookAir16plata",
+  "agent": "TrinityMBA16",
   "machine": "MacBookAir16plata",
   "day": "11.09.2026",
-  "time": "18:58",
-  "evidence": "Xtore tipología · canal.html r65: puente postMessage desde admira.tv. bridgeOriginAllowed admite https://admira.tv y https://www.admira.tv; el mensaje {source, command} acepta source 'admira-tv-panel' como alias de 'xpaceos-robot-cli', para que el panel Xtore (/videoanalytics/xtore/) mande «admiratv audiencia coche|moto|bici|persona|m|f|u» al iframe del canal. Verificado en local (harness 127.0.0.1): admira-tv-panel → coche (lane Coche/kind car), f (mujer), off (neutral) con acuse ok; un source desconocido se ignora."
+  "time": "20:14",
+  "evidence": "Xtore en pruebas, publicación autorizada por Carlos. Base actual ab999529 de Neo + mejoras locales hasta bb73c0f2: conteos y control de duplicados, patinetes manuales, controles superiores e histórico privado preparado sin D1 aprovisionado; recortes y Pixeria bajo acción explícita; bucle virtual opaco con catálogo público y ACK separado de emisión; Help actualizado. Revisión independiente Turing y 94 pruebas Xtore aprobadas. QA real aislada: arranque con fallo a 30 s, segundo arranque con HTTP 200 y contenido visible/playing; ACK neutro no pisa reproducción. No acreditar fiabilidad continua ni causa del arranque fallido. Sin grabador, inferencia de sexo/edad, histórico persistente activo ni cambios en pantallas físicas."
 }
