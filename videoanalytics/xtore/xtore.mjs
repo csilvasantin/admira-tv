@@ -1,4 +1,5 @@
 import {CLASSES, SNAPSHOT_TTL, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
+import {CutoutJob} from './cutouts.mjs';
 
 const $=id=>document.getElementById(id);
 const scene=$('scene'), stage=$('stage'), frame=document.createElement('canvas');
@@ -7,6 +8,8 @@ const tablet=$('tablet-canvas'), capture=$('capture-canvas');
 const tracker=new PassageTracker();
 const passages=new PassageCounts();
 const numberFormat=new Intl.NumberFormat('es-ES');
+const cutoutJob=new CutoutJob();
+let segmenter=null,cutoutsEnabled=false,cutoutLoading=false,segmentInput=null,pendingCutout=null,cutoutExpiryTimer=0;
 let stream=null, generation=0, analyzing=false, busy=false, loopTimer=0, expiryTimer=0;
 let model=null, modelPromise=null, calibration=null, points=[], roiReady=false, tabletReady=false;
 let roi=[.706,.026,.282,.293];
@@ -37,11 +40,12 @@ function tabletIdle(text='Esperando un paso'){
 }
 function clearCapture(message='Sin capturas'){
   clearTimeout(expiryTimer);
+  clearCutouts();
   capture.getContext('2d').clearRect(0,0,capture.width,capture.height);
   capture.hidden=true;$('capture-empty').hidden=false;
   $('capture').style.borderColor='#33404a';
   $('event-label').textContent=message;
-  $('event-meta').textContent='Las imágenes desaparecen a los 6 segundos. No se guardan.';
+  $('event-meta').textContent='Capturas efímeras · 6 s';
   tabletIdle(analyzing?'Esperando un paso':'Análisis en pausa');
 }
 function pause(message){
@@ -248,7 +252,91 @@ function showCapture(events){
   $('event-label').textContent=events.map(p=>CLASSES[p.class].label).join(' · ');
   $('event-meta').textContent=`${new Date().toLocaleTimeString('es-ES')} · ${Math.round(events[0].score*100)} % de confianza · caduca en 6 s`;
   clearTimeout(expiryTimer);expiryTimer=setTimeout(()=>clearCapture('Captura caducada'),SNAPSHOT_TTL);
+  showCutouts(events);
 }
+function clearCutouts(){
+  cutoutJob.clear();
+  if(pendingCutout){pendingCutout.source.data.fill(0);pendingCutout=null;}
+  if(segmentInput){segmentInput.width=1;segmentInput.height=1;}
+  clearCutoutView();
+  if(!cutoutLoading)$('cutout-status').textContent=cutoutsEnabled?'Esperando un paso · recortes locales':'Desactivado · procesamiento local';
+}
+function clearCutoutView(){
+  clearTimeout(cutoutExpiryTimer);
+  for(const canvas of $('cutouts').querySelectorAll('canvas')){canvas.width=1;canvas.height=1;}
+  $('cutouts').replaceChildren();
+}
+function showCutouts(events){
+  if(!cutoutsEnabled||!segmenter)return;
+  try{
+    const task={source:frameContext.getImageData(0,0,frame.width,frame.height),events,token:generation,expiresAt:performance.now()+SNAPSHOT_TTL,time:new Date().toLocaleTimeString('es-ES')};
+    if(cutoutJob.busy){
+      if(pendingCutout)pendingCutout.source.data.fill(0);
+      pendingCutout=task;$('cutout-status').textContent='Separando · siguiente captura en espera';return;
+    }
+    runCutoutTask(task);
+  }catch{$('cutout-status').textContent='No se pudo leer la captura; el conteo continúa.';}
+}
+async function runCutoutTask(task){
+  const {source,events,token,expiresAt,time}=task;
+  let input,sourceExpiryTimer;
+  try{
+    input=document.createElement('canvas');segmentInput=input;input.width=source.width;input.height=source.height;
+    input.getContext('2d').putImageData(source,0,0);
+    sourceExpiryTimer=setTimeout(()=>{
+      source.data.fill(0);input.width=1;input.height=1;cutoutJob.clear();
+      if(token===generation&&cutoutsEnabled)$('cutout-status').textContent='Separación caducada · el conteo continúa';
+    },Math.max(0,expiresAt-performance.now()));
+    $('cutout-status').textContent='Separando objetos del fondo…';
+    await cutoutJob.run({source,events,expiresAt,segment:()=>segmenter.segment(input),onResult:items=>{
+      if(token!==generation||!analyzing||!cutoutsEnabled)return;
+      clearCutoutView();
+      for(const item of items){
+        const figure=document.createElement('figure'),canvas=document.createElement('canvas'),caption=document.createElement('figcaption');
+        canvas.width=item.width;canvas.height=item.height;canvas.getContext('2d').putImageData(new ImageData(item.data,item.width,item.height),0,0);
+        caption.textContent=CLASSES[item.category].label;figure.append(canvas,caption);$('cutouts').append(figure);item.data.fill(0);
+      }
+      $('cutout-status').textContent=items.length?`${time} · recortes locales, no anonimizados`:'Sin máscara fiable en esta captura';
+      cutoutExpiryTimer=setTimeout(()=>{clearCutoutView();$('cutout-status').textContent='Recortes caducados · esperando otro paso';},Math.max(0,expiresAt-performance.now()));
+    }});
+  }catch{
+    if(token===generation&&analyzing&&cutoutsEnabled)$('cutout-status').textContent='No se pudo separar el fondo; el conteo continúa.';
+  }finally{
+    clearTimeout(sourceExpiryTimer);
+    source.data.fill(0);
+    if(input){input.width=1;input.height=1;if(segmentInput===input)segmentInput=null;}
+    const next=pendingCutout;pendingCutout=null;
+    if(next){
+      if(next.token===generation&&analyzing&&cutoutsEnabled&&performance.now()<next.expiresAt)runCutoutTask(next);
+      else next.source.data.fill(0);
+    }
+  }
+}
+$('prepare-cutouts').addEventListener('click',async()=>{
+  if(cutoutsEnabled){cutoutsEnabled=false;clearCutouts();$('prepare-cutouts').textContent='Activar recortes sin fondo';return;}
+  cutoutLoading=true;$('prepare-cutouts').disabled=true;$('cutout-status').textContent='Preparando separación local…';
+  try{
+    await prepareModel();
+    if(!segmenter){
+      if(typeof window.deeplab?.load!=='function')await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/deeplab@0.2.2/dist/deeplab.min.js','sha384-E96lyx4l+7gIx8rSHIpUZRjM4TDSp0d7kr2rI+b78OPTU4FpbvWR80ljTbCj9WbU');
+      let timedOut=false,timer;
+      const loading=window.deeplab.load({base:'pascal',quantizationBytes:2,modelUrl:'https://www.kaggle.com/models/tensorflow/deeplab/tfJs/pascal-1-quantized/2/model.json?tfjs-format=file'}).then(async loaded=>{
+        const warmup=document.createElement('canvas');warmup.width=16;warmup.height=16;
+        try{
+          if(timedOut)throw new Error('Carga caducada');
+          await loaded.segment(warmup);
+          if(timedOut)throw new Error('Carga caducada');
+          return loaded;
+        }catch(error){loaded.dispose();throw error;}
+        finally{warmup.width=1;warmup.height=1;}
+      });
+      try{segmenter=await Promise.race([loading,new Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;reject(new Error('Tiempo de descarga agotado'));},60000);})]);}finally{clearTimeout(timer);}
+    }
+    cutoutsEnabled=true;$('prepare-cutouts').textContent='Desactivar recortes sin fondo';
+    $('cutout-status').textContent='Separación lista · se aplicará al próximo paso';
+  }catch{$('cutout-status').textContent='No se pudo preparar la separación. Puedes reintentarlo; el conteo no cambia.';}
+  finally{cutoutLoading=false;$('prepare-cutouts').disabled=false;}
+});
 // Do not leave identifiable frames sitting in a hidden tab or the back-forward cache.
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('Análisis pausado al ocultar esta vista. Pulsa Iniciar análisis para continuar.');});
 window.addEventListener('pagehide',()=>disconnect());

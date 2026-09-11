@@ -47,6 +47,50 @@ versiones anteriores ni se almacenan imágenes para reconstruirlos.
 Son pasos estimados, no individuos únicos: una pausa, oclusión o regreso al
 encuadre puede producir un nuevo paso. El desglose de sexo/género no se infiere.
 
+## Objetos sin fondo (vista previa local)
+
+Las ayudas de conteo, privacidad y calibración son desplegables cerrados con ›.
+Los estados de carga/error y los controles se mantienen visibles.
+
+«Activar recortes sin fondo» prepara DeepLab 0.2.2 / Pascal cuantizado a 2 bytes,
+reutilizando TensorFlow.js 4.22.0. Se comprueba carga e inferencia con un canvas
+vacío antes de declarar listo el separador. El modelo es el de TensorFlow,
+distribuido por Kaggle; script versionado con SRI y destinos limitados en CSP.
+Solo se descargan bibliotecas y pesos: las imágenes se procesan en el navegador.
+
+Cada máscara semántica se intersecta con el bounding box de COCO-SSD. Person,
+car, motorbike y bicycle se corresponden con las cuatro clases del contador.
+Los píxeles eliminados quedan RGBA=0 (no solo alfa transparente). Se rechazan
+máscaras vacías/mínimas; nunca se sustituye una máscara fallida por la foto completa.
+No es segmentación de instancias: dos objetos solapados de la misma categoría
+pueden aparecer juntos. Los detalles finos pueden perderse y necesitan QA real.
+
+Una segmentación activa y, como máximo, una captura pendiente —la más reciente—
+limitan la memoria. El conteo registra todos los pasos aunque se omitan recortes
+intermedios. Máximo cuatro objetos por captura, con hora y TTL original de 6 s;
+la cola no renueva el TTL. Caducidad, pausa y desconexión invalidan trabajo,
+borran fuentes y canvas. Los recortes son locales, no anónimos ni sintéticos.
+
+### Pixeria: contrato verificado, envío pendiente
+
+Inspeccionados remotos Pixeria 94986870d5fd630add906e21606bdf2ed8ee2152 y
+pixer-worker 87a76f704ca484c05910d82784d34cb4bb89920b. Stock publica bytes tal
+cual: type=digital-twin no anonimiza y no ofrece borrador privado. /twin/spawn
+también persiste originales. No se usa ninguno para subir recortes reales.
+El anonimizador requiere archivo/cámara, no tiene receptor de imágenes por
+postMessage. Su recorte anterior funciona con fondo uniforme y sus prompts
+de preservación de sexo/edad no se reutilizan.
+
+La decisión solicitada a Carlos es entre gemelos sintéticos revisados antes de
+publicar y recortes originales solo privados. Hasta resolverla no hay envío,
+publicación ni generación remota. La vía de brief de texto de Pixeria permitiría
+generar un representante sintético de la categoría sin transmitir fotografías,
+pero no conservaría la apariencia exacta. Integración y precisión de campo pendientes.
+
+Referencias del separador:
+- https://github.com/tensorflow/tfjs-models/tree/master/deeplab
+- https://www.kaggle.com/models/tensorflow/deeplab/tfJs/pascal-1-quantized/2
+
 ## Privacidad y límites
 
 - Frames y capturas solo en canvas/memoria. Nada se sube ni se guarda en storage.
@@ -92,6 +136,11 @@ QA manual obligatoria antes de declarar directo validado:
 4. Verificar persona, coche, moto, bici, oclusiones y paso con baja iluminación.
 5. Ver captura y color correctos, caducidad, pausa, desconexión y cambio de tamaño.
 6. Comprobar en producción las cabeceras CSP/Permissions-Policy de la ruta.
+7. Activar «Recortes sin fondo» y comprobar los bordes de las cuatro categorías,
+   oclusiones, tráfico seguido y caducidad. La carga e inferencia inicial del modelo
+   se han probado en navegador con la CSP de la ruta; la calidad en calle sigue
+   pendiente. Suite local: 28 pruebas, incluida caducidad de una fuente activa
+   mientras otra captura espera en cola.
 
 La publicación sigue el deploy firmado del repo, tras cross-review de Neo.
 No ejecutar deploy desde una copia antigua ni sobrescribir su player en curso.

@@ -3,20 +3,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 let serial=0;
-async function fixture({surface='browser',denied=false,slowLoad=false}={}){
+async function fixture({surface='browser',denied=false,slowLoad=false,segment}={}){
   const nodes=new Map();
   class Element {
     constructor(id=''){this.listeners={};this.style={};this.classList={add(){},remove(){},toggle(){}};this.hidden=false;this.disabled=false;this.value='';this.textContent='';this.children=[];this.clientWidth=960;this.clientHeight=540;this.videoWidth=1280;this.videoHeight=720;this.readyState=2;this.currentTime=1;this.width=640;this.height=480;this.id=id;}
     set id(id){this._id=id;if(id)nodes.set(id,this);}get id(){return this._id;}
     addEventListener(type,fn){(this.listeners[type]??=[]).push(fn);}
     async emit(type,event={}){for(const fn of this.listeners[type]||[])await fn(event);}
-    append(child){this.children.push(child);}replaceChildren(...children){this.children=children;}
-    getContext(){return {fillRect(){},clearRect(){},strokeRect(){},fillText(){},drawImage(){},measureText(){return {width:100};}};}
+    append(...children){this.children.push(...children);}replaceChildren(...children){this.children=children;}
+    querySelectorAll(tag){return this.children.flatMap(child=>[...(child.tagName===tag?[child]:[]),...child.querySelectorAll(tag)]);}
+    getContext(){return {fillRect(){},clearRect(){},strokeRect(){},fillText(){},drawImage(){},putImageData:data=>{this.lastImageData=data;},getImageData:(x,y,width,height)=>({width,height,data:new Uint8ClampedArray(width*height*4).fill(127)}),measureText(){return {width:100};}};}
     removeAttribute(){}load(){}async play(){}remove(){}
   }
   const get=id=>nodes.get(id)||new Element(id);
-  const doc=new Element();doc.hidden=false;doc.getElementById=get;doc.createElement=()=>new Element();doc.head=new Element();
+  const doc=new Element();doc.hidden=false;doc.getElementById=get;doc.createElement=tag=>Object.assign(new Element(),{tagName:tag});doc.head=new Element();
   const win=new Element();win.tf={ready:async()=>{},getBackend:()=> 'fixture'};
+  if(segment)win.deeplab={load:async()=>({segment,dispose(){}})};
   let finishLoad,finishDetection;
   const detections=[];
   const detector={detect:()=>new Promise((resolve,reject)=>{finishDetection=resolve;detections.push({resolve,reject});}),dispose(){}};
@@ -25,6 +27,7 @@ async function fixture({surface='browser',denied=false,slowLoad=false}={}){
   const stream={getTracks:()=>[track],getVideoTracks:()=>[track]};
   Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{getDisplayMedia:async()=>{if(denied)throw Object.assign(new Error(),{name:'NotAllowedError'});return stream;}}}});
   globalThis.document=doc;globalThis.window=win;globalThis.ResizeObserver=class{observe(){}};
+  globalThis.ImageData=class{constructor(data,width,height){Object.assign(this,{data,width,height});}};
   get('confidence').value='65';
   await import(`./xtore.mjs?fixture=${++serial}`);
   const calibrate=async()=>{await get('edit-coordinates').emit('click');await get('apply-coordinates').emit('click');};
@@ -111,5 +114,84 @@ test('category totals survive expiry, pause and disconnect, then reset on a new 
   await f.get('connect').emit('click');
   assert.equal(f.get('event-counter').textContent,'0 pasos');
   for(const category of ['person','car','motorcycle','bicycle'])assert.equal(f.get(`count-${category}`).textContent,'0');
+  await f.get('stop').emit('click');
+});
+const personMask={width:2,height:2,legend:{person:[128,0,0]},segmentationMap:new Uint8ClampedArray([128,0,0,255,128,0,0,255,128,0,0,255,128,0,0,255])};
+async function confirmPerson(f,t){
+  const p=x=>[{class:'person',score:.9,bbox:[x,10,30,60]}];
+  f.detections[0].resolve(p(10));await new Promise(resolve=>setImmediate(resolve));
+  f.get('scene').currentTime++;t.mock.timers.tick(200);
+  f.detections[1].resolve(p(20));await new Promise(resolve=>setImmediate(resolve));
+}
+test('rendered cutouts are wiped on pause without changing category counts',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture({segment:async()=>personMask});
+  await f.get('prepare-cutouts').emit('click');
+  await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  await confirmPerson(f,t);
+  const canvases=f.get('cutouts').querySelectorAll('canvas');
+  assert.equal(canvases.length,1);assert.equal(f.get('count-person').textContent,'1');
+  assert.match(f.get('cutout-status').textContent,/recortes locales, no anonimizados/);
+  await f.get('analyze').emit('click');
+  assert.equal(f.get('cutouts').children.length,0);assert.equal(canvases[0].width,1);
+  assert.equal(f.get('count-person').textContent,'1');await f.get('stop').emit('click');
+});
+test('a late mask cannot restore cutouts after disconnect',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});let finish;
+  const f=await fixture({segment:input=>input.width===16?Promise.resolve(personMask):new Promise(resolve=>{finish=resolve;})});
+  await f.get('prepare-cutouts').emit('click');
+  await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  await confirmPerson(f,t);await f.get('stop').emit('click');finish(personMask);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('cutouts').children.length,0);assert.equal(f.get('connection').textContent,'Sin conexión');
+  assert.equal(f.get('count-person').textContent,'1');
+});
+test('a new passage during segmentation queues the latest capture without cancelling both',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});const jobs=[];
+  const f=await fixture({segment:input=>input.width===16?Promise.resolve(personMask):new Promise(resolve=>{jobs.push(resolve);})});
+  await f.get('prepare-cutouts').emit('click');
+  await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  await confirmPerson(f,t);assert.equal(jobs.length,1);
+  for(const category of ['car','bicycle'])for(const x of [10,20]){
+    f.get('scene').currentTime++;t.mock.timers.tick(200);
+    f.detections.at(-1).resolve([{class:category,score:.9,bbox:[x,10,30,60]}]);
+    await new Promise(resolve=>setImmediate(resolve));
+  }
+  assert.equal(jobs.length,1);assert.equal(f.get('event-counter').textContent,'3 pasos');
+  jobs[0](personMask);await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('cutouts').querySelectorAll('canvas').length,1);
+  assert.equal(f.get('cutouts').querySelectorAll('figcaption')[0].textContent,'Persona');
+  assert.equal(jobs.length,2);
+  jobs[1]({...personMask,legend:{bicycle:[128,0,0]}});await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('cutouts').querySelectorAll('figcaption')[0].textContent,'Bici');
+  assert.equal(f.get('event-counter').textContent,'3 pasos');
+  await f.get('stop').emit('click');
+});
+test('a newer passage cannot extend the active cutout source lifetime',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});let now=0;const jobs=[];
+  t.mock.method(performance,'now',()=>now);
+  const tick=ms=>{now+=ms;t.mock.timers.tick(ms);};
+  const f=await fixture({segment:input=>input.width===16?Promise.resolve(personMask):new Promise(resolve=>{jobs.push({input,resolve});})});
+  await f.get('prepare-cutouts').emit('click');
+  await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  const detect=async(category,x,delay)=>{
+    if(delay){f.get('scene').currentTime++;tick(delay);}
+    f.detections.at(-1).resolve([{class:category,score:.9,bbox:[x,10,30,60]}]);
+    await new Promise(resolve=>setImmediate(resolve));
+  };
+  await detect('person',10,0);await detect('person',20,200);
+  assert.equal(jobs.length,1);const firstInput=jobs[0].input;
+  assert.ok(firstInput.lastImageData.data.some(value=>value!==0));
+  await detect('car',10,3800);await detect('car',20,200);
+  assert.equal(f.get('event-counter').textContent,'2 pasos');
+  tick(2001);
+  assert.equal(firstInput.width,1);assert.equal(firstInput.height,1);
+  assert.ok(firstInput.lastImageData.data.every(value=>value===0));
+  jobs[0].resolve(personMask);await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('cutouts').children.length,0);assert.equal(jobs.length,2);
+  assert.ok(jobs[1].input.lastImageData.data.some(value=>value!==0));
+  jobs[1].resolve({...personMask,legend:{car:[128,0,0]}});await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('cutouts').querySelectorAll('figcaption')[0].textContent,'Coche');
+  assert.equal(f.get('event-counter').textContent,'2 pasos');
   await f.get('stop').emit('click');
 });

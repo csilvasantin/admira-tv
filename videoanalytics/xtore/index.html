@@ -44,18 +44,24 @@
         <div class="section-title"><h2>Última captura</h2><span id="event-counter">0 pasos</span></div>
         <div id="capture" class="capture"><canvas id="capture-canvas" width="640" height="360" hidden aria-label="Última captura de la cámara, con detecciones señaladas"></canvas><p id="capture-empty">Esperando un paso confirmado</p></div>
         <p id="event-label" class="event-label" role="status">Sin capturas</p>
-        <p id="event-meta" class="small">Las imágenes desaparecen a los 6 segundos. No se guardan.</p>
+        <p id="event-meta" class="small">Capturas efímeras · 6 s</p>
         <dl class="legend" aria-label="Pasos detectados por categoría" aria-describedby="count-note">
           <div><dt><i class="person" aria-hidden="true"></i>Personas</dt><dd id="count-person">0</dd></div>
           <div><dt><i class="car" aria-hidden="true"></i>Coches</dt><dd id="count-car">0</dd></div>
           <div><dt><i class="motorcycle" aria-hidden="true"></i>Motos</dt><dd id="count-motorcycle">0</dd></div>
           <div><dt><i class="bicycle" aria-hidden="true"></i>Bicis</dt><dd id="count-bicycle">0</dd></div>
         </dl>
-        <p id="count-note" class="small">Pasos de esta conexión; se conservan al pausar. Nueva conexión o recarga = contadores a cero. Conteo estimado: un mismo objeto puede volver a contarse tras una pausa u oclusión.</p>
-        <p class="small">Persona = sin clasificación de sexo o edad. No hay reconocimiento de identidad. El resultado puede contener errores.</p>
+        <details class="help"><summary><span aria-hidden="true">›</span> Cómo se cuentan los pasos</summary><p id="count-note" class="small">Pasos de esta conexión; se conservan al pausar. Nueva conexión o recarga = contadores a cero. Conteo estimado: un mismo objeto puede volver a contarse tras una pausa u oclusión.</p></details>
+        <details class="help"><summary><span aria-hidden="true">›</span> Privacidad y límites</summary><p class="small">Las capturas se borran a los 6 segundos. Persona = sin clasificación de sexo o edad. No hay reconocimiento de identidad. El resultado puede contener errores.</p></details>
+        <div class="divider"></div>
+        <div class="section-title"><h2>Objetos sin fondo</h2></div>
+        <button id="prepare-cutouts" class="full">Activar recortes sin fondo</button>
+        <p id="cutout-status" class="small" role="status">Desactivado · procesamiento local</p>
+        <div id="cutouts" class="cutouts" aria-label="Últimos objetos aislados procesados"></div>
+        <details class="help"><summary><span aria-hidden="true">›</span> Recortes y Digital Twins</summary><p class="small">Máscara por categoría: separa el objeto de la calle y conserva transparencia. Puede perder detalles o incluir objetos solapados. Máximo cuatro recortes por captura, con hora propia y caducidad de 6 s. Si llegan más capturas mientras se procesa una, solo espera la más reciente; el conteo no se pierde. Un recorte no es anónimo ni un gemelo sintético. El envío a Pixeria todavía no está activado.</p></details>
         <div class="divider"></div>
         <h2>Encuadre y detección</h2>
-        <p class="small">Antes de analizar, marca el recuadro de Puerta Cam y las cuatro esquinas de la pantalla del iPad. Repite si mueves el gemelo.</p>
+        <details class="help"><summary><span aria-hidden="true">›</span> Cómo marcar cámara e iPad</summary><p class="small">Antes de analizar, marca el recuadro de Puerta Cam y las cuatro esquinas de la pantalla del iPad. Repite si mueves el gemelo.</p></details>
         <div class="calibration-buttons"><button id="set-roi" disabled>Marcar cámara</button><button id="set-tablet" disabled>Marcar iPad</button></div>
         <p id="calibration-status" class="small" role="status">Encuadre pendiente de confirmar</p>
         <div id="coordinates" hidden>
