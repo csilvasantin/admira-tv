@@ -152,6 +152,17 @@ coche o persona por prioridad; neutro tras 6 s sin nuevos pasos. Un watchdog
 de racha sin ACK vigente cierra a los 2.5 s aunque haya pasos constantes.
 ACKs obsoletos no reactivan ni tumban una orden posterior. Se cierra si no hay
 confirmación de reproducción/carga en 30 s o si el iframe vuelve a navegar.
+El ACK se muestra separado, dentro de «Conexión con el player»: nunca pisa
+el estado de reproducción después de pausar o volver al bucle. Antes de una
+primera emisión se indica «Canal conectado · esperando emisión». Seleccionar
+una nueva pieza retira el estado anterior y muestra «Cargando contenido ·
+emisión pendiente» hasta un evento de carga/reproducción, sin reiniciar plazos.
+Regresión local posterior (11 septiembre): 94 pruebas pasan. En un player real
+aislado, el primer arranque no confirmó media en 30 s y cerró; al repetir,
+catálogo y reglas respondieron HTTP 200 y hubo contenido visible con `playing`.
+Reafirmar neutro conservó el indicador de reproducción. Esto valida la corrección
+del indicador, NO demuestra la causa del primer fallo ni la del Chrome de Carlos.
+No se recargó su captura ni se introdujeron detecciones simuladas.
 `selected` no acredita emisión; `playing`, `poster-loaded` y `document-loaded`
 distinguen reproducción/carga de media, miniatura de respaldo e interactivo
 cargado (este último no acredita reproducción interna). Además del TTL de 6 s

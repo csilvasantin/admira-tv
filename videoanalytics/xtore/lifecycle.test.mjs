@@ -104,7 +104,8 @@ test('automatic signage is removed on hide; late loads are ignored',async t=>{
   const iframe=f.get('signage').children[0];assert.ok(iframe.src.includes('xtore-virtual-'));assert.equal(iframe.sandbox,'allow-scripts');
   const sent=iframe.sent;await iframe.emit('load');
   await f.win.emit('message',{source:iframe.contentWindow,origin:'null',data:{source:'admira-tv-canal',requestId:sent[0].data.requestId,ok:true}});
-  assert.match(f.get('signage-status').textContent,/Bucle general · orden aceptada/);
+  assert.equal(f.get('signage-status').textContent,'Canal conectado · esperando emisión');
+  assert.match(f.get('signage-command').textContent,/Bucle general · orden aceptada/);
   await f.get('analyze').emit('click');assert.equal(iframe.removed,undefined);
   f.doc.hidden=true;await f.doc.emit('visibilitychange');assert.equal(iframe.removed,true);assert.equal(f.get('signage').children.length,0);
   const afterHide=sent.length;await iframe.emit('load');assert.equal(sent.length,afterHide);await f.get('stop').emit('click');f.finishDetection();

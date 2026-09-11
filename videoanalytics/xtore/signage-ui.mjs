@@ -3,7 +3,7 @@ import {PlayerDataBridge} from './player-data.mjs';
 const LABEL={none:'Bucle general',person:'Persona',car:'Coche',motorcycle:'Moto',bicycle:'Bici'};
 export function installSignageUI({document,window}){
   const $=id=>document.getElementById(id);
-  let iframe=null,bridge=null,dataBridge=null,eligible=false,emissionTimer=0,emissionSeen=false,manuallyOff=false,failed=false;
+  let iframe=null,bridge=null,dataBridge=null,eligible=false,emissionTimer=0,emissionSeen=false,mediaReported=false,manuallyOff=false,failed=false;
   function controls(){$('start-signage').disabled=!eligible||!!iframe;$('stop-signage').disabled=!iframe;}
   function stop(message='El bucle arranca al conectar la vista y marcar la pantalla grande.'){
     clearTimeout(emissionTimer);bridge?.stop();bridge=null;dataBridge?.stop();dataBridge=null;
@@ -11,6 +11,7 @@ export function installSignageUI({document,window}){
     $('signage-idle-label').textContent=failed?'Player detenido por error':manuallyOff?'Player apagado':'Player en espera';
     $('signage-idle').hidden=false;$('signage-status').textContent=message;controls();
     $('signage-media').textContent='Sin emisión activa';
+    $('signage-command').textContent='Canal de órdenes cerrado';
   }
   function start(){
     if(!eligible||iframe||document.hidden)return;
@@ -29,11 +30,20 @@ export function installSignageUI({document,window}){
     iframe.src=playerURL(`xtore-virtual-${crypto.randomUUID()}`,window.location?.origin);
     $('signage').append(iframe);$('signage-idle').hidden=true;
     dataBridge=new PlayerDataBridge({target:iframe.contentWindow});
-    emissionSeen=false;
+    emissionSeen=false;mediaReported=false;
     emissionTimer=setTimeout(()=>{if(!emissionSeen){failed=true;stop('Sin emisión confirmada en 30 s. Revisa catálogo, reglas y compatibilidad del player aislado.');}},30000);
     bridge=new SignageBridge({target:iframe.contentWindow,onFailure:message=>{failed=true;stop(message);},onState:state=>{
-        if(state.type==='ack')$('signage-status').textContent=`${LABEL[state.kind]} · orden aceptada${state.kind==='none'?'':', vigencia 6 s'}. No confirma una creatividad concreta.`;
-        else if(state.phase!=='selected'){
+        if(state.type==='ack'){
+          $('signage-command').textContent=`${LABEL[state.kind]} · orden aceptada${state.kind==='none'?'':', vigencia 6 s'}. No confirma una creatividad concreta.`;
+          // An ACK is control-plane evidence, not a new playback event. The
+          // neutral ACK after pause/expiry must not erase confirmed playback.
+          if(!mediaReported)$('signage-status').textContent='Canal conectado · esperando emisión';
+        }else if(state.phase==='selected'){
+          mediaReported=true;
+          $('signage-status').textContent='Cargando contenido · emisión pendiente';
+          $('signage-media').textContent='Pieza seleccionada; todavía no confirma reproducción ni carga.';
+        }else{
+          mediaReported=true;
           emissionSeen=true;clearTimeout(emissionTimer);
           $('signage-status').textContent=`${state.loop?'Bucle general':'Contenido condicionado'} · ${state.phase==='playing'?'reproduciendo':state.phase==='poster-loaded'?'miniatura de respaldo':'interactivo cargado'}`;
           $('signage-media').textContent=state.phase==='playing'?'El player confirma vídeo/audio iniciado o imagen cargada.':state.phase==='poster-loaded'?'Miniatura cargada; este vídeo no ha confirmado reproducción.':'Evento de carga del interactivo recibido; no confirma contenido visible ni reproducción interna.';
@@ -41,6 +51,7 @@ export function installSignageUI({document,window}){
       }});
     $('signage-status').textContent='Cargando player · comprobando canal de órdenes…';
     $('signage-media').textContent='Sin confirmación de emisión';
+    $('signage-command').textContent='Comprobando canal de órdenes…';
     bridge.start();controls();
   }
   $('start-signage').addEventListener('click',()=>{manuallyOff=false;failed=false;start();});
