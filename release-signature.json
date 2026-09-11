@@ -1,9 +1,9 @@
 {
-  "version": "v.11.09.2026.r5.16:11",
-  "signature": "TrinityMBA16 · MacBookAir16plata",
-  "agent": "TrinityMBA16",
+  "version": "v.11.09.2026.r5.16:17",
+  "signature": "NeoMBA16 · MacBookAir16plata",
+  "agent": "NeoMBA16",
   "machine": "MacBookAir16plata",
   "day": "11.09.2026",
-  "time": "16:11",
-  "evidence": "FLT-100252 / FLT-100256: acceso público Analítica de vídeo a /videoanalytics/xtore/, player virtual CanalKiosk con captura explícita de pestaña IEU y detector local COCO-SSD. 15 pruebas automáticas, catálogo sincronizado y descarga real del modelo bajo CSP estricta. No acredita precisión con tráfico real ni conexión del productor al MCP remoto. Publicación solicitada por Carlos; PR1 requiere revisión cruzada antes del despliegue."
+  "time": "16:17",
+  "evidence": "FLT-100243 nunca negro en condicional: assets de la matriz fuera del feed resueltos contra el índice completo del Stock + precache; seg.ids exento del cortafuegos por procedencia; fallback al carrusel con rótulo. Probado local contra el bus real: neutro Ofertas estanco, m→Matrix 387 ms, f→Top Gun 151 ms, vuelta a neutro 2,3 s."
 }

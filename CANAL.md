@@ -298,6 +298,16 @@ lo trae o el público se forzó a mano, el sexo (`m`/`f`) / `neutral`.
 
 Diagnóstico en consola: `window.__adtvAudienceRemote` (polls, ok, fails, lane, sex, last).
 
+**Nunca negro (r63).** Los `assets` de la matriz que no estén en el feed de 300 del canal se
+resuelven contra el índice completo del Stock (`stockFullIndex()`, el mismo de `/play<N>`,
+cacheado 10 min), entran en el pool (`_matrixExtra`, re-inyectado en cada `loadFeed`) y se
+precachean como el resto de `_condUrls`. Una regla con assets concretos es decisión del CMS:
+el cortafuegos por procedencia (`MOTOR_REFERENCIA`) no la veta. Y si aun así la regla deja
+0 piezas, el canal cae al carrusel completo del feed y el rótulo dice
+`CONDICIONAL · sin assets → carrusel · N en loop` (`_condFallback`); la regla vuelve a mandar
+en cuanto la pieza se resuelve. Medido en el Xtanco (11-sep): label→asset visible 151–593 ms;
+vuelta al neutro ~2,3 s tras el último label (TTL 2 s del bus).
+
 Ejemplo (tótem Xtanco): `?clean=1&screen=xtanco-totem&circuit=xtanco&audience=remote&muted=1`.
 
 ## Cómo entra en la trilogía

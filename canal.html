@@ -32,7 +32,8 @@
 <!-- r59 · RELLENAR: ajuste de pantalla por mando (fit-fill / fit-editorial): el marco ocupa todo el dispositivo, girado o no, y la media se escala sin recortar; se persiste por pantalla y se reporta en la telemetría (display.fit). El marco girado ya no se aplasta (max-width/flex-shrink). Un #ID del mando nunca se emite online mientras baja, ni con stream=1. -->
 <!-- r60 · AUTOACTUALIZACIÓN EN KIOSKO: en embed/clean el canal vigila /version.json y se recarga solo al cambiar de pieza cuando hay release nuevo; el botón «VERSIÓN NUEVA» del avisador compartido nunca se pinta en una pantalla pública. -->
 <!-- r61 · RÓTULO CON LA FUENTE DE LA SINCRO (KIOSKO <screen> / máster global) y aviso sin tema; hereda r60 (autoactualización). -->
-<!-- BUILD canal v.11.09.2026.r62.15:52 · AUDIENCIA REMOTA (FLT-100243): ?audience=remote (alias va=1) arranca en condicional BLINDADO (pollMode/XPL no lo tocan) y sondea el bus mcp-tv.admira.store/audience/<screen> cada 500 ms (?audience_api= para mocks); m/f fresco → __xplCam y tick inmediato, !fresh/u → carril neutro (mín. 6 s). Inyección extra: mando audience-m|f|u y postMessage «admiratv audiencia m|f|u»; evento `audience` al padre en cada cambio de carril. -->
+<!-- r62 · AUDIENCIA REMOTA (FLT-100243): ?audience=remote (alias va=1) arranca en condicional BLINDADO (pollMode/XPL no lo tocan) y sondea el bus mcp-tv.admira.store/audience/<screen> cada 500 ms (?audience_api= para mocks); m/f fresco → __xplCam y tick inmediato, !fresh/u → carril neutro (mín. 6 s). Inyección extra: mando audience-m|f|u y postMessage «admiratv audiencia m|f|u»; evento `audience` al padre en cada cambio de carril. -->
+<!-- BUILD canal v.11.09.2026.r63.16:08 · NUNCA NEGRO EN CONDICIONAL (FLT-100243): los assets de la matriz fuera del feed de 300 se resuelven contra el índice completo del Stock (stockFullIndex, como /play<N>) y entran en el pool + precache; si la regla deja 0 piezas, cae al carrusel del feed y el rótulo dice «CONDICIONAL · sin assets → carrusel». -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
@@ -48,9 +49,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=11.09.2026.r5.1611"></script>
+<script src="xpl-runtime.js?v=11.09.2026.r5.1617"></script>
 <script>
-  window.ADMIRA_VERSION='v.11.09.2026.r5.16:11';
+  window.ADMIRA_VERSION='v.11.09.2026.r5.16:17';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -877,9 +878,12 @@ async function fetchXplDirective(){
     const r=await fetch(u,{cache:'no-store'}); if(!r.ok) throw new Error('xpl '+r.status);
     const d=await r.json();
     if(applyXplDirective(d)) flashCli('◆ XPL actualizado');
-    else setLive('CONDICIONAL · '+playlist.length+' en loop', playlist.length>0);
-  }catch(_){ if(playoutMode==='conditional') setLive('CONDICIONAL · XPL pendiente', playlist.length>0); }
+    else setLive(condLiveLabel()+playlist.length+' en loop', playlist.length>0);
+  }catch(_){ if(playoutMode==='conditional') setLive(condLiveLabel()+(_condFallback?playlist.length+' en loop':'XPL pendiente'), playlist.length>0); }
 }
+// r63: rótulo del condicional; dice cuando la matriz no pudo aplicarse y se emite el carrusel.
+let _condFallback=false;
+function condLiveLabel(){ return playoutMode==='conditional' ? (_condFallback?'CONDICIONAL · sin assets → carrusel · ':'CONDICIONAL · ') : 'LIVE · '; }
 
 function thumbHtml(it){ const k=KIND[it.type]||'image';
   if(k==='image') return '<img loading="lazy" decoding="async" class="'+(it.type==='twin-npc'?'pixel':'')+'" src="'+it.url+'" alt="">';
@@ -1851,6 +1855,31 @@ function precachePriority(it){
 // la cámara los dispare, para que el cambio carrusel→condicional sea instantáneo (blob de
 // disco) y no se vea el hueco de carga con el botón de play. Resuelve ids→url desde `all`.
 let _condUrls=new Set(), _condItems=new Map();   // assets condicionales (variantes que puede disparar la cámara)
+// r63 · NUNCA NEGRO: los assets de la matriz que NO están en el feed de 300 (el 11-sep el
+// neutro del Xtanco, «Ofertas estanco», era la pieza 725 de 957) se resuelven contra el
+// índice COMPLETO del Stock (mismo que /play<N>, cacheado 10 min) y entran en `all` con su
+// url/type: matchesSeg(seg.ids) los encuentra, precacheIds los baja y el loop los emite.
+// loadFeed re-inyecta los extras en cada refresco (si no, desaparecerían a los 30 s).
+let _matrixExtra=new Map(), _matrixResolving=null;
+function mergeMatrixExtras(){
+  if(!_matrixExtra.size) return false;
+  const have=new Set(all.map(it=>String(it.id))); let added=false;
+  for(const [id,it] of _matrixExtra){ if(!have.has(id)){ all.push(it); added=true; } }
+  return added;
+}
+function resolveMatrixAssets(ids){
+  const have=new Set(all.map(it=>String(it.id)));
+  const missing=[...new Set((ids||[]).map(String))].filter(id=>!have.has(id)&&!_matrixExtra.has(id));
+  if(!missing.length||_matrixResolving) return _matrixResolving||Promise.resolve(false);
+  _matrixResolving=stockFullIndex().then(full=>{
+    let found=0;
+    for(const id of missing){ const it=full.find(x=>x&&String(x.id)===id&&x.url&&MEDIA.includes(x.type)); if(!it) continue;
+      const copy=Object.assign({},it,{_num:it.num,_matrix:true}); _matrixExtra.set(id,copy); found++; }
+    if(found&&mergeMatrixExtras()){ precacheIds(ids); if(playoutMode==='conditional'){ seenSig=''; rebuild(false); } }
+    return found>0;
+  }).catch(()=>false).finally(()=>{ _matrixResolving=null; });
+  return _matrixResolving;
+}
 function precacheIds(ids){
   if(!ids||!ids.length||!all.length) return;
   const byId=new Map(all.map(it=>[String(it.id),it]));
@@ -2275,7 +2304,10 @@ function rebuild(restart){
   // Y la doctrina DOOH manda sobre esto: si el filtro dejara la pantalla casi
   // vacía se descarta y vuelve el catálogo entero — una pantalla en negro es peor
   // que una pantalla con algo inesperado.
-  const sinDecidir = !gridInjected.length && !syncOn && !URL_TAG && !seg.tag
+  // r63: una regla de la matriz con assets CONCRETOS (seg.ids) es una decisión del CMS:
+  // el cortafuegos por procedencia no puede vetarla (el 11-sep dejaba fuera los vídeos
+  // Matrix/Top Gun del Xtanco por venir de yt-dlp y el carril caía al carrusel).
+  const sinDecidir = !gridInjected.length && !syncOn && !URL_TAG && !seg.tag && !(seg.ids&&seg.ids.length)
     && seg.medio==='all' && seg.category==='all' && !PREVIEW.on && !directOn;
   // Precedencia, de más a menos mandato explícito:
   //   1. parrilla propia o heredada del canal  → ni se llega aquí (gridInjected)
@@ -2296,6 +2328,16 @@ function rebuild(restart){
     }
   }
   playlist=syncOn ? syncMasterOrder() : base.filter(matches).slice(0,Math.max(1,cfg.max));
+  // r63 · RED DE SEGURIDAD del condicional: si la regla de la matriz apunta a assets que
+  // no existen (aún) en el pool, la pantalla NO se queda en negro: cae al carrusel completo
+  // del feed (segmento sin ids) y lo dice en el rótulo. La regla vuelve a mandar en cuanto
+  // resolveMatrixAssets incorpora la pieza (rebuild) o el CMS corrige la matriz.
+  _condFallback=false;
+  if(!syncOn && playoutMode==='conditional' && seg.ids && seg.ids.length && !playlist.length){
+    const sinIds=Object.assign({},seg,{ids:null});
+    playlist=base.filter(it=>matchesSeg(it,sinIds)).slice(0,Math.max(1,cfg.max)); _condFallback=true;
+    try{ resolveMatrixAssets(seg.ids); }catch(_){}
+  }
   if(syncOn){
     $('segCount').textContent=playlist.length+' desde '+SYNC_MASTER;
     // Decir SINCRO CANAL sin el máster es mentir: sin SYNC_REMOTE la pantalla ordena por su
@@ -2326,7 +2368,7 @@ function rebuild(restart){
             : _porDefecto==='motor' ? (' · sin #'+TAG_DEFAULT+' todavía: '+_cortafuegos+' de referencia fuera')
             : _cortafuegos<0 ? ' · sin material propio: emitiendo todo' : '';
   $('segCount').textContent=playlist.length+(playoutMode==='conditional'?' en condicional XPL':' en este segmento')+_cf;
-  setLive(directOn?'● DIRECTO':((playoutMode==='conditional'?'CONDICIONAL · ':'LIVE · ')+playlist.length+' en loop'), directOn||playlist.length>0);
+  setLive(directOn?'● DIRECTO':(condLiveLabel()+playlist.length+' en loop'), directOn||playlist.length>0);
   renderChan();
   try{ signagePlaylistPush(); }catch(_){}   // mando gráfico: publica la playlist efectiva (solo si cambió)
   if(directOn){ renderRail(); return; }   // en directo no tocamos el escenario
@@ -2378,6 +2420,7 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   all=items.filter(i=>i&&MEDIA.includes(i.type)&&i.url).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   // número PERSISTENTE de cada asset (lo asigna el worker y va en el meta/stock). Para /play<N>.
   all.forEach(it=>{ it._num=it.num; });
+  try{ mergeMatrixExtras(); }catch(_){}   // r63: los assets de la matriz fuera del feed siguen en el pool
   saveCatalog();   // persiste el último catálogo bueno para arranque offline
   guardState().source='live';
   // etiquetas de formato/aspecto/resolución desde la caché de dimensiones (instantáneo).
@@ -2493,13 +2536,17 @@ async function gotoPlaylistIndex(n){
 // Índice COMPLETO del Stock (stock.admira.store/stock/index.json, ~930 piezas) sólo cuando un
 // /play<N> apunta fuera del feed de 300; cacheado 10 min. Mismo índice que usa el gemelo.
 let _stockFull=null,_stockFullAt=0;
+async function stockFullIndex(){
+  if(!_stockFull||Date.now()-_stockFullAt>600000){
+    const r=await fetch('https://stock.admira.store/stock/index.json?t='+Date.now(),{cache:'no-store'});
+    const j=await r.json(); _stockFull=j.items||(Array.isArray(j)?j:[]); _stockFullAt=Date.now();
+  }
+  return _stockFull;
+}
 async function stockItemByNum(pn){
   try{
-    if(!_stockFull||Date.now()-_stockFullAt>600000){
-      const r=await fetch('https://stock.admira.store/stock/index.json?t='+Date.now(),{cache:'no-store'});
-      const j=await r.json(); _stockFull=j.items||(Array.isArray(j)?j:[]); _stockFullAt=Date.now();
-    }
-    const it=_stockFull.find(x=>x&&Number(x.num)===pn&&x.url&&MEDIA.includes(x.type)); if(!it) return null;
+    const full=await stockFullIndex();
+    const it=full.find(x=>x&&Number(x.num)===pn&&x.url&&MEDIA.includes(x.type)); if(!it) return null;
     const copy=Object.assign({},it); copy._num=pn; copy.num=pn; return copy;
   }catch(_){ return null; }
 }
@@ -3533,7 +3580,9 @@ const XPLCanal = (function(){
         // disparo carrusel→condicional sea INSTANTÁNEO y sin botón de play de carga.
         try{ const ids=[]; for(const r of (d.rules||[])) for(const a of (r.assets||[])) ids.push(a);
           for(const a of ((d.default&&d.default.assets)||[])) ids.push(a);
-          if(ids.length && typeof precacheIds==='function') precacheIds(ids); }catch(_){}
+          if(ids.length && typeof precacheIds==='function') precacheIds(ids);
+          // r63: lo que no esté en el feed de 300 se trae del índice completo (nunca negro)
+          if(ids.length && typeof resolveMatrixAssets==='function') resolveMatrixAssets(ids); }catch(_){}
         // sellar SOLO si `all` ya permitía resolver ids→url: si la matriz llegó antes que la
         // sincro del catálogo, el siguiente ciclo de 15 s reintenta el precache (auto-curación).
         try{ if(typeof all!=='undefined' && all.length) lastMTxt=t; }catch(_){}
@@ -4196,6 +4245,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=11.09.2026.r5.1611" defer></script>
+  <script src="/assets/admira-version-watch.js?v=11.09.2026.r5.1617" defer></script>
 </body>
 </html>
