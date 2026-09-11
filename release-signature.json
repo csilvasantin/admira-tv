@@ -1,9 +1,9 @@
 {
-  "version": "v.11.09.2026.r4.15:57",
+  "version": "v.11.09.2026.r5.16:17",
   "signature": "NeoMBA16 · MacBookAir16plata",
   "agent": "NeoMBA16",
   "machine": "MacBookAir16plata",
   "day": "11.09.2026",
-  "time": "15:57",
-  "evidence": "FLT-100243 player condicionado de admira.tv: canal.html ?audience=remote (alias va=1) en condicional blindado, sondeo del bus mcp-tv.admira.store/audience/<screen> a 500 ms, carril neutro anti-flapeo, inyección audience-m|f|u (mando) y postMessage admiratv audiencia m|f|u, evento audience al padre. Probado local con mock (m/f/none, latencia 47-358 ms, back-off 2 s)."
+  "time": "16:17",
+  "evidence": "FLT-100243 nunca negro en condicional: assets de la matriz fuera del feed resueltos contra el índice completo del Stock + precache; seg.ids exento del cortafuegos por procedencia; fallback al carrusel con rótulo. Probado local contra el bus real: neutro Ofertas estanco, m→Matrix 387 ms, f→Top Gun 151 ms, vuelta a neutro 2,3 s."
 }
