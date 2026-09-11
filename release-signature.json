@@ -1,9 +1,9 @@
 {
-  "version": "v.11.09.2026.r3",
-  "signature": "SmithMacMini · MacMini",
-  "agent": "SmithMacMini",
-  "machine": "MacMini",
+  "version": "v.11.09.2026.r4.15:57",
+  "signature": "NeoMBA16 · MacBookAir16plata",
+  "agent": "NeoMBA16",
+  "machine": "MacBookAir16plata",
   "day": "11.09.2026",
-  "time": "13:16",
-  "evidence": "FLT-100224 / FLT-100226 encargo #2990: restore ADcelerate demo UI visible (revert 6ab91d5 default ui-hidden). H still toggles presentation. #human-hud.hidden until HumanView.enter()."
+  "time": "15:57",
+  "evidence": "FLT-100243 player condicionado de admira.tv: canal.html ?audience=remote (alias va=1) en condicional blindado, sondeo del bus mcp-tv.admira.store/audience/<screen> a 500 ms, carril neutro anti-flapeo, inyección audience-m|f|u (mando) y postMessage admiratv audiencia m|f|u, evento audience al padre. Probado local con mock (m/f/none, latencia 47-358 ms, back-off 2 s)."
 }
