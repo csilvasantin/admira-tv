@@ -1,9 +1,9 @@
 {
-  "version": "v.11.09.2026.r8.18:47",
+  "version": "v.11.09.2026.r10.18:58",
   "signature": "NeoMBA16 · MacBookAir16plata",
   "agent": "NeoMBA16",
   "machine": "MacBookAir16plata",
   "day": "11.09.2026",
-  "time": "18:47",
-  "evidence": "Xtore tipología · canal.html r64: emisión condicionada por TIPOLOGÍA. El bus mcp-tv v2.2 trae label.kind (person|car|motorcycle|bicycle) y decision.lane (Matrix|TopGun|Persona|Coche|Moto|Bici|neutral); el poller lo guarda en window.__xplCam (kind; gender null si no es persona); nuevo hecho XPL audKind; matchMatrix casa por kind (campo kind, tag kind:<k> o id r-coche/r-moto/r-bici/r-persona) y un kind no-person nunca casa reglas de sexo m/f; sin label → catch-all → rótulo «CONDICIONAL · playlist normal · N en loop»; /forcecam, audience-* del mando y postMessage aceptan coche|moto|bici|persona; evento audience al padre lleva kind+lane; ?seg_api= para matrices de prueba. Probado en local con bus y matriz simulados (car→r-coche, person+m→r-hombre, bicycle→r-bici sin assets→playlist normal, none→playlist normal, moto forzada por tag kind:motorcycle, persona sin regla→playlist normal, postMessage admiratv audiencia moto→evento lane Moto/kind motorcycle). CANAL.md documenta audKind, kind y comandos."
+  "time": "18:58",
+  "evidence": "Xtore tipología · canal.html r65: puente postMessage desde admira.tv. bridgeOriginAllowed admite https://admira.tv y https://www.admira.tv; el mensaje {source, command} acepta source 'admira-tv-panel' como alias de 'xpaceos-robot-cli', para que el panel Xtore (/videoanalytics/xtore/) mande «admiratv audiencia coche|moto|bici|persona|m|f|u» al iframe del canal. Verificado en local (harness 127.0.0.1): admira-tv-panel → coche (lane Coche/kind car), f (mujer), off (neutral) con acuse ok; un source desconocido se ignora."
 }

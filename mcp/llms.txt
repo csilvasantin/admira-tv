@@ -1,10 +1,12 @@
 # Admira.tv · admira.tv — la capa Emitir (MCP)
 
-> Servidor MCP de Admira.tv (v2.0.0): el canal, conectado — y FEDERADO. Agentes (silicio) y
+> Servidor MCP de Admira.tv (v2.2.0): el canal, conectado, FEDERADO y CONDICIONADO. Agentes (silicio) y
 > personas (carbono) consultan qué hay EN ANTENA en cada pantalla, el proof-of-play de cada
 > circuito, cómo poner una pantalla a emitir y la documentación del player nativo. Desde hoy,
 > además, admira.tv se coordina con CIRCUITOS EXTERNOS y viceversa: pedimos antena en sus
 > pantallas y ellos nos la ofrecen en las nuestras, con las mismas herramientas a los dos lados.
+> Y el PLAYER CONDICIONADO (Xtore): un tótem sin cámara emite su playlist y, cuando alguien pasa
+> por la Puerta Cam, el anuncio de su sexo o tipología (persona/coche/moto/bici) en < 2 s.
 
 Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y del CMS)
 
@@ -36,9 +38,11 @@ Repo del servidor: https://github.com/csilvasantin/admira-tv-mcp · Repo del sit
 - airtime_report {circuit} | {id} — proof-of-play. Con circuit: pases totales, segundos emitidos,
   desglose por tipo y por segmento de audiencia de un circuito nuestro. Con id (at_…): el de una
   antena federada: despachos, qué emite ahora cada pantalla (is_this) y estado.
-- channel_url {screen, circuit, format?, cam?, clean?} — construye la URL del canal de admira.tv
-  para poner una pantalla a emitir. format "9:16" (por defecto) o "16:9"; cam activa la
-  cámara/audiencia (por defecto false); clean modo limpio sin chrome (por defecto true).
+- channel_url {screen, circuit, format?, cam?, clean?, mode?, audience?, muted?} — construye la URL del
+  canal de admira.tv para poner una pantalla a emitir. format "9:16" (por defecto) o "16:9"; cam activa
+  la cámara/audiencia (por defecto false); clean modo limpio sin chrome (por defecto true); mode
+  local|sync|conditional; audience "remote" = el canal lee el bus /audience/<screen> y arranca en
+  condicional blindado; muted=1. NO la construyas a mano: la detección de kiosko depende del UA.
 - player_info {section?} — documentación del player nativo de Admira.tv: overview, features,
   releases, install, config (all por defecto). Por defecto el de macOS (AdmiraSignageMac).
 - quien_soy — con qué identidad te ve el servidor: agente de flota, circuito externo o anónimo.
@@ -81,6 +85,88 @@ AdmiraNeXT te registra con circuit_register y te entrega tu clave cx_…. Implem
 referencia (Cloudflare Worker, ~90 líneas): carpeta espejo/ del repo admira-tv-mcp, desplegada en
 https://circuito-espejo.csilvasantin.workers.dev/ (circuito «espejo», acepta al vuelo, solo pruebas).
 
+## Player condicionado · Xtore (v2.2.0 · tipología)
+
+Docs con ejemplos: https://admira.tv/mcp/#player-condicionado · guía para personas: https://admira.tv/help/#xtore
+Caso real: pantalla xtanco-totem, circuito xtanco, superficie metahuman del gemelo (FLT-100243 / FLT-100280).
+Flujo: Puerta Cam (pestaña compartida) → analizador local admira.tv/videoanalytics/xtore/ (COCO-SSD:
+person|car|motorcycle|bicycle) → POST /audience/<screen> (bus, Durable Object AudienceBus, TTL 2 s)
+→ canal.html?audience=remote sondea GET /audience/<screen> cada 500 ms → carril.
+Carriles: person+m → Matrix (r-hombre) · person+f → TopGun (r-mujer) · person+u → Persona (r-persona)
+· car → Coche (r-coche) · motorcycle → Moto (r-moto) · bicycle → Bici (r-bici) · sin label fresco (2 s)
+→ neutral, creative "playlist" = catch-all r-neutro (minCount 0, assets []) = PLAYLIST NORMAL, hold 6 s, fade 350 ms.
+Un kind no-person nunca casa reglas de sexo (su sex se normaliza a u). age_band omitido = unknown (nunca adult).
+
+Contrato del label (v3): {"kind":"person|car|motorcycle|bicycle","sex":"m|f|u",
+  "age_band":"child|youth|adult|senior|unknown","confidence":0..1,"ts":ISO,"source":"≤80"}
+  kind omitido = person; sex obligatorio solo si kind = person (el resto → u). Auth del POST: clave de flota
+  (Authorization: Bearer | X-MCP-Key); Idempotency-Key honrada (misma clave → mismo event_id, últimas 50).
+  200 {ok,accepted:true,screen,event_id,decision:{lane,creative,kind,sex}} · 400 {error:"stale"} (ts anterior
+  al último aceptado o fuera de la ventana de 2 s ±500 ms) · 401 {error:"clave de flota requerida"}.
+
+Rutas HTTP (base https://mcp-tv.admira.store, CORS abierto, Cache-Control: no-store):
+- GET  /audience/<screen>              → {ok, screen, fresh, ttl_ms:2000, label|null,
+                                          decision:{lane, creative, kind, sex, age_ms, hold_ms, since}, server_ts}. Público.
+- GET  /audience/<screen>/events?limit=20 → últimos eventos (publish, lane_change), recientes primero. Público.
+- GET  /audience/<screen>/stream       → SSE: event hello al conectar; event audience {screen, fresh, lane, creative, kind,
+                                          sex, age_ms, hold_ms, label, server_ts} en cada cambio de carril o publish;
+                                          keepalive 15 s; event bye a los 5 min (reconectar). Público.
+- POST /audience/<screen>              → publica un label (contrato de arriba). Clave de flota.
+- GET  /player/<screen>[?circuit=]     → = tool player_embed: {screen, circuit, url_player, url_gemelo, iframe_html, aspect,
+                                          postmessage:{in,out,origin_allowed}, bus:{get,post,events,stream,health}, lanes,
+                                          sin_anuncio, briefs, contract}. Público.
+- GET  /player/<screen>/health         → = player_conditional_status con reglas resumidas: {ok, screen, target, release,
+                                          bus, mode:{id,mode}, rules:{count,ids,kinds,…}, events[10], contract, get_url, stream_url}.
+
+Herramientas (por defecto screen xtanco-totem, target xtanco):
+- player_xtore_map — mapa del caso: pantalla, circuito, superficie, URL del canal
+  (mode=conditional&audience=remote), endpoints del bus, carriles y assets, contrato (ttl 2 s · neutro
+  6 s · fade 350 ms · debug off) y estado vivo (bus + modo + reglas). Lectura abierta.
+- player_conditional_set {target?, screen?, auto_assets? (default true), matrix_asset?, topgun_asset?, persona_asset?,
+  coche_asset?, moto_asset?, bici_asset?, neutral_assets?[], with_age?, mode?:local|sync|conditional} — escribe en
+  orden r-hombre (person,m) · r-mujer (person,f) · r-persona (person,any) · r-coche (car) · r-moto (motorcycle) ·
+  r-bici (bicycle) · r-neutro catch-all (kind any, minCount 0, assets [] = playlist) en omnipublicity
+  /segmentation?target=, cada una con kind + tag 'kind:<kind>' (omnipublicity NO conserva kind: conserva tag e id; el canal lee rule.kind || tag || id). auto_assets
+  resuelve cada carril buscando en el Stock (tope 200 por tipo, no pagina) el ítem cuyo externalRef empiece por
+  admiranext:xtore:<lane> (matrix|topgun|persona|coche|moto|bici); si no, el arg; si no, placeholder (solo
+  Matrix/Top Gun) y el resto SE OMITE (devuelve sin_anuncio + briefs). Fija el modo en /locations/mode (404
+  tolerado). SUSTITUYE el conjunto de reglas del target. Clave de flota.
+- player_consume_label {screen?, kind? (omitido = person), sex? (obligatorio si person), age_band?, confidence?,
+  source?, ts?, idempotency_key?} — publica un label en el bus y devuelve la decisión de carril + poll_url +
+  stream_url. = POST /audience. Clave de flota.
+- player_conditional_status {screen?, target?} — bus {fresh, ttl_ms, label, decision, server_ts}, mode, rules (kind
+  decodificado de rule.kind || tag), últimos 10 events, tipologias, lanes con asset resuelto, con_anuncio,
+  sin_anuncio, briefs, contract, get_url, stream_url. Lectura abierta. Alias: GET /player/<screen>/health.
+- player_smoke {screen?} — 7 pasos con latencia: m → Matrix, f → Top Gun, car → Coche, motorcycle → Moto,
+  bicycle → Bici, person+u → Persona y, tras el TTL, sin label → playlist. {ok, male_to_matrix, female_to_topgun,
+  car_to_coche, motorcycle_to_moto, bicycle_to_bici, unknown_to_persona, neutral_playlist_ok, latency_ms, steps,
+  get_url, stream_url}. No toca reglas ni modo. Clave de flota.
+- player_embed {screen?, circuit?} — url_player, url_gemelo, iframe_html 9:16, postmessage {in, out, origin_allowed},
+  bus {get, post, events, stream, health}, lanes con asset o null, sin_anuncio, briefs, contract. Lectura abierta.
+  Alias HTTP: GET /player/<screen>[?circuit=].
+
+Embeber el tótem: iframe_html de GET /player/<screen> = <iframe src="https://admira.tv/canal.html?clean=1&screen=xtanco-totem
+  &circuit=xtanco&max=24&format=9%3A16&mode=conditional&audience=remote&muted=1" style="width:100%;aspect-ratio:9/16"
+  allow="autoplay; fullscreen" sandbox="allow-scripts allow-same-origin">. SALE del canal (parent.postMessage, filtra
+  e.origin ∈ https://admira.tv|https://www.admira.tv): {source:'admira-tv-canal', event:'audience', lane, sex, kind, fresh, ts}
+  y {event:'media-state', state, asset}. ENTRA al canal SOLO como objeto {source:'xpaceos-robot-cli', command, requestId?}
+  y SOLO desde https://www.xpaceos.com | https://xpaceos.com | http://localhost:*: command 'admiratv audiencia
+  m|f|u|coche|moto|bici|persona' (u/off = público real) · 'admiratv sincro|condicional|local' · playnext · mute · unmute.
+  Desde otro dominio, simula público por el bus (player_consume_label / POST) o escucha por SSE.
+
+Anuncios por tipología (creador → carril): 1) las tools de lectura devuelven briefs: un deep-link por carril sin
+  anuncio https://www.admiranext.com/tiktok/?brief=<encodeURIComponent(JSON)> con {"campana":"Xtore · Puerta Cam",
+  "lane":"coche","tipologia":"coche","titulo":"…","mensaje":"…","externalId":"admiranext:xtore:coche","formato":"9:16",
+  "duracion":15} (lanes persona|coche|moto|bici; la página https://www.admiranext.com/tiktok/xtore.html trae los 4 briefs
+  precargados). La pieza sube al Stock con externalRef = admiranext:xtore:<lane> (desde brief.externalId); el Stock
+  no expone ese campo: id fijo del asset = "auto-" + 20 hex de sha256(externalId) → persona auto-5b9834e34116f1260f2f
+  · coche auto-9a75882d2e3a36bce8e6 · moto auto-50312e3b227b47324a9b · bici auto-f8e5daa9669ca4adff65 (v2.2.1 los
+  comprueba con GET api.admira.store/stock/asset/<id> y engancha la regla). 2) player_conditional_set {} (auto_assets) engancha el asset y escribe las 7 reglas; sin
+  anuncio, el carril se omite (sin_anuncio) y ese público ve la playlist normal. 3) player_consume_label
+  {kind:"car"} → decision.lane "Coche"; GET /player/<screen>/health enseña rules.kinds (r-coche:car).
+Placeholders del Stock hoy: Matrix 1786643541589-rb1gz3 · Top Gun 1786533143983-n2y09e; neutro = playlist (sin creative fijo).
+Estado real 11-09-2026 18:51: reglas vivas r-hombre · r-mujer · r-neutro; Persona/Coche/Moto/Bici sin anuncio aún.
+
 ## Recursos MCP
 - admiratv://federacion — el protocolo de federación (markdown).
 - admiratv://llms.txt — este fichero.
@@ -95,6 +181,8 @@ https://circuito-espejo.csilvasantin.workers.dev/ (circuito «espejo», acepta a
   canal emita una pieza hay que ponerla en su playlist (es lo que hace airtime_decide accept).
 - Un Worker de Cloudflare no puede llamarse a sí mismo (HTTP 522): para probar la federación
   hacen falta dos servidores; por eso existe circuito-espejo.
+- El bus de audiencia NO es proof-of-play: cuenta labels, no pases. Y un label con ts viejo o
+  futuro (> 500 ms) se rechaza como stale: sincroniza el reloj del sidecar.
 - Cloudflare rechaza user-agents que no parezcan navegador (error 1010) en las webs de la
   suite; el servidor MCP no, pero si automatizas contra admira.tv manda un User-Agent normal.
 

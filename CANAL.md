@@ -291,7 +291,7 @@ re-evalúa la matriz ya):
 | Vía | Comando |
 |---|---|
 | Cola del mando (`/control/cmds`, `applyCtrlCmd`) | `audience-m` · `audience-f` · `audience-u` · `audience-coche` · `audience-moto` · `audience-bici` · `audience-persona` (alias `forcecam-*`, `car|motorcycle|bicycle|person`; `u`/`off` = público real) |
-| `postMessage` desde el padre (source `xpaceos-robot-cli`) | `admiratv audiencia m|f|u|coche|moto|bici|persona` |
+| `postMessage` desde el padre (source `xpaceos-robot-cli` o alias `admira-tv-panel`; orígenes admitidos: xpaceos.com, **admira.tv** (r65, panel Xtore de `/videoanalytics/xtore/`) y 127.0.0.1/localhost) | `admiratv audiencia m|f|u|coche|moto|bici|persona` |
 | CLI local | `/forcecam m|f|u|coche|moto|bici|persona` |
 
 **Salida al padre**: en cada cambio de carril el canal hace

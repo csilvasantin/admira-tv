@@ -2,10 +2,10 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=11.09.2026.r7.1657"></script>
+<script src="/auth-gate.js?v=11.09.2026.r10.1858"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admira.tv · MCP — el canal, conectado</title>
-<meta name="description" content="Servidor MCP de Admira.tv: qué hay en antena en cada pantalla, proof-of-play y cómo poner una pantalla a emitir.">
+<meta name="description" content="Servidor MCP de Admira.tv: qué hay en antena en cada pantalla, proof-of-play, cómo poner una pantalla a emitir, federación con circuitos externos y el player condicionado por audiencia (Xtore).">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="alternate" type="text/plain" href="/mcp/llms.txt" title="MCP · llms.txt">
 <link rel="alternate" type="application/json" href="/mcp/manifest.json" title="MCP · manifest">
@@ -23,8 +23,8 @@
 <script>
 window.ADMIRA_NAV={title:'MCP · el canal conectado'};
 </script>
-<script src="/admira-nav.js?v=11.09.2026.r7.1657" defer></script>
-<script src="/admira-frame.js?v=11.09.2026.r7.1657" defer></script>
+<script src="/admira-nav.js?v=11.09.2026.r10.1858" defer></script>
+<script src="/admira-frame.js?v=11.09.2026.r10.1858" defer></script>
 <style>
   :root{ --bg:#02080d; --panel:#0a1620; --line:#16303a; --txt:#dff8ff; --mut:#75aab9; --acc:#78f3ff; --pur:#88ffaa; --good:#88ffaa; }
   *{box-sizing:border-box}
@@ -52,13 +52,13 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
   a{color:var(--acc)}
   footer{color:var(--mut);font-size:13px;margin-top:38px;border-top:1px solid var(--line);padding-top:18px}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=11.09.2026.r7.1657">
+  <link rel="stylesheet" href="/admira-frame.css?v=11.09.2026.r10.1858">
 </head>
 <body>
 <div class="wrap">
   <div class="kick">Admira.tv · Model Context Protocol</div>
   <h1>El <b>canal</b>, conectado</h1>
-  <p class="lead">Servidor MCP de la capa <b>Emitir</b>: agentes (silicio) y personas (carbono) consultan qué hay en antena en cada pantalla, el proof-of-play de cada circuito y cómo poner una pantalla a emitir. Y desde hoy, <b>federación</b>: admira.tv se coordina con circuitos externos y viceversa.</p>
+  <p class="lead">Servidor MCP de la capa <b>Emitir</b>: agentes (silicio) y personas (carbono) consultan qué hay en antena en cada pantalla, el proof-of-play de cada circuito y cómo poner una pantalla a emitir. Y desde hoy, <b>federación</b>: admira.tv se coordina con circuitos externos y viceversa. Y el <a href="#player-condicionado"><b>player condicionado</b></a>: sin nadie delante, playlist; alguien delante, el anuncio de su sexo o tipología.</p>
 
   <div class="status"><span class="dot" id="dot"></span><span id="status">comprobando servidor…</span></div>
 
@@ -72,7 +72,13 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
   <div class="card">
     <div class="tool"><b>on_air</b><span>Qué emite una pantalla ahora + audiencia por cámara + si está conectada.</span></div>
     <div class="tool"><b>airtime_report</b><span>Proof-of-play de un circuito: pases, segundos, por tipo y segmento.</span></div>
-    <div class="tool"><b>channel_url</b><span>Construye la URL del canal para poner una pantalla a emitir.</span></div>
+    <div class="tool"><b>channel_url</b><span>Construye la URL del canal para poner una pantalla a emitir (opcional <code>mode</code> local|sync|conditional, <code>audience=remote</code>, <code>muted</code>).</span></div>
+    <div class="tool"><b>player_xtore_map</b><span>Sin argumentos. Devuelve pantalla, circuito, superficie <code>metahuman</code> del gemelo, URL del canal (<code>mode=conditional&amp;audience=remote</code>), endpoints del bus (<code>get</code>, <code>post</code>, <code>events</code>, <code>stream</code>), carriles por tipología con su asset resuelto y origen (stock|arg|placeholder|null), <code>con_anuncio</code>/<code>sin_anuncio</code>, <code>stock</code> (escaneados/total/truncado), <code>briefs</code> para el creador, contrato (ttl 2 s · neutro 6 s · fade 350 ms · debug off) y estado vivo (bus + modo + reglas). Lectura abierta.</span></div>
+    <div class="tool"><b>player_conditional_set</b><span><code>target?</code> (circuito de segmentación, «xtanco») · <code>screen?</code> («xtanco-totem») · <code>auto_assets?</code> (bool, <b>por defecto true</b>: busca en el Stock el ítem cuyo <code>externalRef</code> empiece por <code>admiranext:xtore:&lt;lane&gt;</code>; gana sobre los args) · <code>matrix_asset?</code> (id del Stock para person+m; fallback placeholder Matrix) · <code>topgun_asset?</code> (person+f; fallback placeholder Top Gun) · <code>persona_asset?</code> (person+u) · <code>coche_asset?</code> (car) · <code>moto_asset?</code> (motorcycle) · <code>bici_asset?</code> (bicycle) — estos cuatro <b>sin fallback: sin asset la regla se omite</b> · <code>neutral_assets?</code> (array de ids; <code>[]</code> = carrusel del canal = playlist) · <code>with_age?</code> (bool: añade nino|joven|adulto|senior antes de las reglas por sexo) · <code>mode?</code> (local|sync|conditional, por defecto conditional). Escribe en este orden <code>r-hombre</code> · <code>r-mujer</code> · <code>r-persona</code> · <code>r-coche</code> · <code>r-moto</code> · <code>r-bici</code> · <code>r-neutro</code> (catch-all, kind any, minCount 0, assets []) en omnipublicity <code>/segmentation?target=</code>, cada una con campo <code>kind</code> y tag <code>kind:&lt;kind&gt;</code> (omnipublicity <b>no conserva</b> <code>kind</code>: conserva el tag y el id, y el canal lee <code>rule.kind || tag || id</code>), y fija el modo en <code>/locations/mode</code> (404 tolerado). <b>SUSTITUYE</b> el conjunto de reglas del target. Devuelve lo escrito, lo releído, <code>sin_anuncio</code> y <code>briefs</code>. Clave de flota.</span></div>
+    <div class="tool"><b>player_consume_label</b><span><code>screen?</code> · <code>kind?</code> (person|car|motorcycle|bicycle; omitido = person) · <code>sex?</code> (m|f|u; obligatorio si kind = person, para el resto se normaliza a u) · <code>age_band?</code> (child|youth|adult|senior|unknown) · <code>confidence?</code> (0..1, 0.8) · <code>source?</code> (≤80) · <code>ts?</code> (ISO; stale si es anterior al último aceptado o fuera de la ventana de 2 s ±500 ms) · <code>idempotency_key?</code>. Es lo mismo que el POST del bus; devuelve la decisión de carril + <code>poll_url</code> + <code>stream_url</code>. Clave de flota.</span></div>
+    <div class="tool"><b>player_conditional_status</b><span><code>screen?</code> · <code>target?</code>. Devuelve <code>bus</code> {fresh, ttl_ms, label, decision, server_ts}, <code>mode</code>, <code>rules</code> (con el kind decodificado de <code>rule.kind || tag</code>), los últimos 10 <code>events</code>, <code>tipologias</code>, <code>lanes</code> con asset resuelto, <code>con_anuncio</code>/<code>sin_anuncio</code>, <code>briefs</code>, <code>contract</code>, <code>get_url</code> y <code>stream_url</code>. Lectura abierta. Alias HTTP: <code>GET /player/&lt;screen&gt;/health</code> (reglas solo como counts/ids/kinds).</span></div>
+    <div class="tool"><b>player_smoke</b><span><code>screen?</code>. Siete pasos midiendo latencia: m → Matrix, f → Top Gun, car → Coche, motorcycle → Moto, bicycle → Bici, person+u → Persona y, tras esperar el TTL (2 s), sin label → creative <code>playlist</code>. Devuelve <code>{ok, male_to_matrix, female_to_topgun, car_to_coche, motorcycle_to_moto, bicycle_to_bici, unknown_to_persona, neutral_playlist_ok, latency_ms:{…, budget:2000}, steps, get_url, stream_url}</code>. No toca reglas ni modo; deja el bus en neutro. Clave de flota.</span></div>
+    <div class="tool"><b>player_embed</b><span>Cómo embeber el player condicionado en un panel externo: URL, iframe, postMessage, bus y carriles. Lectura abierta.</span></div>
     <div class="tool"><b>player_info</b><span>Documentación del player nativo: qué es, kiosko desatendido, versiones, instalación y configuración.</span></div>
     <div class="tool"><b>quien_soy</b><span>Con qué identidad te ve el servidor: flota AdmiraNeXT, circuito externo o anónimo.</span></div>
   </div>
@@ -90,6 +96,125 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
     <div class="tool"><b>airtime_status</b><span>Estado e historial de una antena federada, refrescado contra el circuito remoto.</span></div>
     <div class="tool"><b>airtime_report {id}</b><span>Proof-of-play de una antena federada: despachos y qué emite ahora cada pantalla.</span></div>
     <p style="margin:12px 0 0;color:var(--mut);font-size:14px">Para federar tu circuito: expón <code>offer_airtime</code> y <code>airtime_status</code> por MCP, dinos endpoint y clave, y te registramos. Referencia: <a href="https://circuito-espejo.csilvasantin.workers.dev/">circuito-espejo</a> · protocolo: <a href="https://mcp-tv.admira.store/federacion.md">federacion.md</a> · directorio: <a href="https://mcp-tv.admira.store/federacion">/federacion</a>.</p>
+  </div>
+
+  <h2 id="player-condicionado">Player condicionado · Xtore</h2>
+  <div class="card">
+    <p style="margin:0 0 12px;color:var(--mut)"><b>Qué es.</b> Un tótem <b>sin cámara</b> que cambia de anuncio según quién pasa por delante. Sin nadie → emite su <b>playlist normal</b>. Alguien delante → el anuncio de su <b>sexo</b> (hombre → «Matrix», mujer → «Top Gun», persona sin sexo → «Persona») o de su <b>tipología</b> (coche → «Coche», moto → «Moto», bici → «Bici»). En cuanto se va (2 s sin label) vuelve a la playlist. Caso real: tótem <code>xtanco-totem</code> del circuito <code>xtanco</code> (Xtore Valencia), misión FLT-100243 / FLT-100280.</p>
+    <p style="margin:0 0 6px"><b>Flujo</b> (de la puerta a la pantalla, &lt; 2 s):</p>
+<pre>Puerta Cam (IEU, pestaña compartida)
+   │  vídeo, nunca sale del navegador
+   ▼
+Analizador local  admira.tv/videoanalytics/xtore/   (COCO-SSD: person · car · motorcycle · bicycle)
+   │  POST /audience/&lt;screen&gt;  {kind, sex, age_band, confidence, ts, source}   (clave de flota)
+   ▼
+Bus de audiencia  mcp-tv.admira.store  (Durable Object AudienceBus, un estado por pantalla, TTL 2 s)
+   │  GET /audience/&lt;screen&gt; cada 500 ms   →  {fresh, label, decision:{lane, creative}}
+   ▼
+Canal  admira.tv/canal.html?audience=remote   →  carril Matrix | TopGun | Persona | Coche | Moto | Bici | neutral</pre>
+
+    <p style="margin:14px 0 6px"><b>Carriles</b> (lo decide el bus; el canal casa la regla de la matriz con el mismo nombre):</p>
+    <div class="tool"><b>person + m</b><span>→ <code>Matrix</code> · regla <code>r-hombre</code></span></div>
+    <div class="tool"><b>person + f</b><span>→ <code>TopGun</code> · regla <code>r-mujer</code></span></div>
+    <div class="tool"><b>person + u</b><span>→ <code>Persona</code> · regla <code>r-persona</code></span></div>
+    <div class="tool"><b>car</b><span>→ <code>Coche</code> · regla <code>r-coche</code></span></div>
+    <div class="tool"><b>motorcycle</b><span>→ <code>Moto</code> · regla <code>r-moto</code></span></div>
+    <div class="tool"><b>bicycle</b><span>→ <code>Bici</code> · regla <code>r-bici</code></span></div>
+    <div class="tool"><b>sin label fresco</b><span>→ <code>neutral</code> · creative <code>playlist</code> · regla catch-all <code>r-neutro</code> (minCount 0, assets []) = <b>playlist normal</b>; hold neutro 6 s, fade 350 ms</span></div>
+    <p style="margin:10px 0 0;color:var(--mut);font-size:14px">Un kind que no es <code>person</code> <b>nunca</b> casa las reglas de sexo (su <code>sex</code> se normaliza a <code>u</code>). <code>age_band</code> omitido = <code>unknown</code> (nunca se rellena adult); solo <code>kind</code> y <code>sex</code> deciden el carril. Servidor: mcp-tv <b>v2.2.0</b> (retrocompatible con labels v2.1 sin <code>kind</code>).</p>
+  </div>
+
+  <div class="card">
+    <p style="margin:0 0 8px"><b>Contrato del label (v3)</b> — lo que publica el analizador (o cualquier sidecar) en el bus:</p>
+<pre>{
+  "kind":       "person" | "car" | "motorcycle" | "bicycle",     // omitido = person
+  "sex":        "m" | "f" | "u",                                   // obligatorio si kind = person; el resto → u
+  "age_band":   "child" | "youth" | "adult" | "senior" | "unknown",// opcional; omitido = unknown
+  "confidence": 0..1,                                              // opcional (por defecto 0.8)
+  "ts":         "2026-09-11T18:40:12.345Z",                        // ISO; opcional = ahora
+  "source":     "puerta-cam"                                       // ≤ 80 caracteres
+}</pre>
+    <p style="margin:12px 0 6px"><b>Publicar un label</b> (clave de flota en <code>Authorization: Bearer</code> o <code>X-MCP-Key</code>; <code>Idempotency-Key</code> opcional, misma clave → mismo <code>event_id</code>, se recuerdan las últimas 50):</p>
+<pre>curl -s -X POST https://mcp-tv.admira.store/audience/xtanco-totem \
+  -H "Authorization: Bearer $ADMIRA_FLEET_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: puerta-cam-$(date +%s%3N)" \
+  -d '{"kind":"person","sex":"m","age_band":"adult","confidence":0.91,"ts":"'"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"'","source":"puerta-cam"}'
+
+→ 200 {"ok":true,"accepted":true,"screen":"xtanco-totem","event_id":"ev_…","decision":{"lane":"Matrix","creative":"Matrix","kind":"person","sex":"m"}}
+   (con {"kind":"car"} → decision {"lane":"Coche","creative":"Coche","kind":"car","sex":"u"})
+→ 400 {"ok":false,"accepted":false,"error":"stale"}   # ts anterior al último aceptado o fuera de la ventana de 2 s (±500 ms; futuro > 500 ms también)
+→ 401 {"ok":false,"accepted":false,"error":"clave de flota requerida","ayuda":"Authorization: Bearer <clave de flota> · https://www.admiranext.com/mcp/#identidad"}</pre>
+  </div>
+
+  <div class="card">
+    <p style="margin:0 0 8px"><b>Rutas HTTP del bus y del player</b> (CORS abierto, <code>Cache-Control: no-store</code>; lecturas sin clave):</p>
+    <div class="tool"><b>GET /audience/&lt;screen&gt;</b><span>estado actual. <code>{ok, screen, fresh, ttl_ms:2000, label|null, decision:{lane, creative, kind, sex, age_ms, hold_ms, since}, server_ts}</code> (<code>decision.kind/sex</code> = null sin label fresco). Es lo que el canal sondea cada 500 ms.</span></div>
+    <div class="tool"><b>GET /audience/&lt;screen&gt;/events?limit=20</b><span>últimos eventos (<code>publish</code> con el label; <code>lane_change</code> con from/to/creative/cause publish|expiry), más recientes primero; retención 60 s / 100.</span></div>
+    <div class="tool"><b>GET /audience/&lt;screen&gt;/stream</b><span>SSE (<code>text/event-stream</code>, CORS abierto): <code>event: hello</code> al conectar, <code>event: audience</code> con <code>{screen, fresh, lane, creative, kind, sex, age_ms, hold_ms, label, server_ts}</code> en cada cambio de carril o publish, keepalive cada 15 s y <code>event: bye</code> a los 5 min (reconectar).</span></div>
+    <div class="tool"><b>POST /audience/&lt;screen&gt;</b><span>publica un label (contrato de arriba). Clave de flota.</span></div>
+    <div class="tool"><b>GET /player/&lt;screen&gt;</b><span>(<code>?circuit=</code> opcional) ficha de embebido = tool <code>player_embed</code>: <code>{screen, circuit, url_player, url_gemelo, iframe_html, aspect, postmessage:{in, out, origin_allowed}, bus:{get, post, events, stream, health}, lanes, sin_anuncio, briefs, contract}</code>.</span></div>
+    <div class="tool"><b>GET /player/&lt;screen&gt;/health</b><span>alias de <code>player_conditional_status</code> con las reglas resumidas: <code>{ok, screen, target, release, bus:{fresh, ttl_ms, label, decision, server_ts}, mode:{id, mode}, rules:{count, ids, kinds, assigned, updatedAt, default}, events[10], contract, get_url, stream_url}</code>.</span></div>
+<pre>curl -s https://mcp-tv.admira.store/audience/xtanco-totem        # respuesta real del 11-09-2026
+{"ok":true,"screen":"xtanco-totem","fresh":false,"ttl_ms":2000,
+ "label":{"kind":"car","sex":"u","age_band":"adult","confidence":0.9,"ts":"2026-09-11T16:51:12.926Z","ts_ms":1789145472926,"source":"smoke-neo"},
+ "decision":{"lane":"neutral","creative":"playlist","kind":null,"sex":null,"age_ms":5072,"hold_ms":3152,"since":"2026-09-11T16:51:15.150Z"},
+ "server_ts":"2026-09-11T16:51:17.998Z"}
+
+curl -s "https://mcp-tv.admira.store/audience/xtanco-totem/events?limit=2"
+{"ok":true,"screen":"xtanco-totem","events":[
+ {"id":"ev_…","type":"lane_change","ts":"…","from":"Coche","to":"neutral","creative":"playlist","cause":"expiry"},
+ {"id":"ev_…","type":"publish","ts":"…","kind":"car","sex":"u","age_band":"adult","confidence":0.9,"source":"smoke-neo","label_ts":"…"}],"total":100}
+
+# SSE en el navegador (sin clave)
+const es = new EventSource('https://mcp-tv.admira.store/audience/xtanco-totem/stream');
+es.addEventListener('audience', ev =&gt; { const d = JSON.parse(ev.data); pintar(d.lane, d.creative, d.kind, d.sex, d.fresh, d.hold_ms); });
+es.addEventListener('bye', () =&gt; { es.close(); /* reabrir: cierra a los 5 min */ });</pre>
+  </div>
+
+  <div class="card">
+    <p style="margin:0 0 8px"><b>Herramientas MCP del player condicionado</b> (argumentos tal cual el <code>inputSchema</code>; por defecto pantalla <code>xtanco-totem</code> y target <code>xtanco</code>):</p>
+    <div class="tool"><b>player_xtore_map</b><span>Sin argumentos. Devuelve pantalla, circuito, superficie <code>metahuman</code> del gemelo, URL del canal (<code>mode=conditional&amp;audience=remote</code>), endpoints del bus (<code>get</code>, <code>post</code>, <code>events</code>, <code>stream</code>), carriles por tipología con su asset resuelto y origen (stock|arg|placeholder|null), <code>con_anuncio</code>/<code>sin_anuncio</code>, <code>stock</code> (escaneados/total/truncado), <code>briefs</code> para el creador, contrato (ttl 2 s · neutro 6 s · fade 350 ms · debug off) y estado vivo (bus + modo + reglas). Lectura abierta.</span></div>
+    <div class="tool"><b>player_conditional_set</b><span><code>target?</code> (circuito de segmentación, «xtanco») · <code>screen?</code> («xtanco-totem») · <code>auto_assets?</code> (bool, <b>por defecto true</b>: busca en el Stock el ítem cuyo <code>externalRef</code> empiece por <code>admiranext:xtore:&lt;lane&gt;</code>; gana sobre los args) · <code>matrix_asset?</code> (id del Stock para person+m; fallback placeholder Matrix) · <code>topgun_asset?</code> (person+f; fallback placeholder Top Gun) · <code>persona_asset?</code> (person+u) · <code>coche_asset?</code> (car) · <code>moto_asset?</code> (motorcycle) · <code>bici_asset?</code> (bicycle) — estos cuatro <b>sin fallback: sin asset la regla se omite</b> · <code>neutral_assets?</code> (array de ids; <code>[]</code> = carrusel del canal = playlist) · <code>with_age?</code> (bool: añade nino|joven|adulto|senior antes de las reglas por sexo) · <code>mode?</code> (local|sync|conditional, por defecto conditional). Escribe en este orden <code>r-hombre</code> · <code>r-mujer</code> · <code>r-persona</code> · <code>r-coche</code> · <code>r-moto</code> · <code>r-bici</code> · <code>r-neutro</code> (catch-all, kind any, minCount 0, assets []) en omnipublicity <code>/segmentation?target=</code>, cada una con campo <code>kind</code> y tag <code>kind:&lt;kind&gt;</code> (omnipublicity <b>no conserva</b> <code>kind</code>: conserva el tag y el id, y el canal lee <code>rule.kind || tag || id</code>), y fija el modo en <code>/locations/mode</code> (404 tolerado). <b>SUSTITUYE</b> el conjunto de reglas del target. Devuelve lo escrito, lo releído, <code>sin_anuncio</code> y <code>briefs</code>. Clave de flota.</span></div>
+    <div class="tool"><b>player_consume_label</b><span><code>screen?</code> · <code>kind?</code> (person|car|motorcycle|bicycle; omitido = person) · <code>sex?</code> (m|f|u; obligatorio si kind = person, para el resto se normaliza a u) · <code>age_band?</code> (child|youth|adult|senior|unknown) · <code>confidence?</code> (0..1, 0.8) · <code>source?</code> (≤80) · <code>ts?</code> (ISO; stale si es anterior al último aceptado o fuera de la ventana de 2 s ±500 ms) · <code>idempotency_key?</code>. Es lo mismo que el POST del bus; devuelve la decisión de carril + <code>poll_url</code> + <code>stream_url</code>. Clave de flota.</span></div>
+    <div class="tool"><b>player_conditional_status</b><span><code>screen?</code> · <code>target?</code>. Devuelve <code>bus</code> {fresh, ttl_ms, label, decision, server_ts}, <code>mode</code>, <code>rules</code> (con el kind decodificado de <code>rule.kind || tag</code>), los últimos 10 <code>events</code>, <code>tipologias</code>, <code>lanes</code> con asset resuelto, <code>con_anuncio</code>/<code>sin_anuncio</code>, <code>briefs</code>, <code>contract</code>, <code>get_url</code> y <code>stream_url</code>. Lectura abierta. Alias HTTP: <code>GET /player/&lt;screen&gt;/health</code> (reglas solo como counts/ids/kinds).</span></div>
+    <div class="tool"><b>player_smoke</b><span><code>screen?</code>. Siete pasos midiendo latencia: m → Matrix, f → Top Gun, car → Coche, motorcycle → Moto, bicycle → Bici, person+u → Persona y, tras esperar el TTL (2 s), sin label → creative <code>playlist</code>. Devuelve <code>{ok, male_to_matrix, female_to_topgun, car_to_coche, motorcycle_to_moto, bicycle_to_bici, unknown_to_persona, neutral_playlist_ok, latency_ms:{…, budget:2000}, steps, get_url, stream_url}</code>. No toca reglas ni modo; deja el bus en neutro. Clave de flota.</span></div>
+    <div class="tool"><b>player_embed</b><span><code>screen?</code> («xtanco-totem») · <code>circuit?</code> («xtanco»). Devuelve <code>url_player</code>, <code>url_gemelo</code> (xpaceos.com/admira-xp?totem=condicional), <code>iframe_html</code> 9:16, <code>postmessage</code> {in, out, origin_allowed}, <code>bus</code> {get, post, events, stream, health}, <code>lanes</code> con asset resuelto o null, <code>sin_anuncio</code>, <code>briefs</code> y <code>contract</code>. Lectura abierta. Alias HTTP: <code>GET /player/&lt;screen&gt;[?circuit=]</code>.</span></div>
+    <div class="tool"><b>channel_url</b><span><code>screen</code> · <code>circuit</code> · <code>format?</code> · <code>cam?</code> · <code>clean?</code> · <code>mode?</code> (local|sync|conditional) · <code>audience?</code> (remote = el canal lee el bus y arranca en condicional blindado) · <code>muted?</code>.</span></div>
+  </div>
+
+  <div class="card">
+    <p style="margin:0 0 8px"><b>Embeber el tótem en un panel externo</b> (analítica, gemelo, dashboard). Un solo iframe; el canal se gobierna con la URL:</p>
+<pre>&lt;!-- tal cual lo devuelve GET /player/xtanco-totem (iframe_html) --&gt;
+&lt;iframe id="totem"
+  src="https://admira.tv/canal.html?clean=1&amp;screen=xtanco-totem&amp;circuit=xtanco&amp;max=24&amp;format=9%3A16&amp;mode=conditional&amp;audience=remote&amp;muted=1"
+  title="Admira.tv · xtanco-totem" style="width:100%;aspect-ratio:9/16;border:0;background:#000"
+  allow="autoplay; fullscreen" sandbox="allow-scripts allow-same-origin" referrerpolicy="no-referrer" loading="eager"&gt;&lt;/iframe&gt;</pre>
+    <p style="margin:12px 0 6px"><b>postMessage que SALE del canal</b> (en cada cambio de carril, igual que <code>media-state</code>):</p>
+<pre>const ORIGENES = ['https://admira.tv', 'https://www.admira.tv'];
+window.addEventListener('message', e =&gt; {
+  if (!ORIGENES.includes(e.origin) || !e.data || e.data.source !== 'admira-tv-canal') return;
+  if (e.data.event === 'audience')    pintar(e.data.lane, e.data.kind, e.data.sex, e.data.fresh, e.data.ts);
+  if (e.data.event === 'media-state') console.log('media', e.data.state, e.data.asset);
+  // audience    = {source:'admira-tv-canal', event:'audience', lane:'Matrix|TopGun|Persona|Coche|Moto|Bici|neutral',
+  //                sex:'m|f|u', kind:'person|car|motorcycle|bicycle|none', fresh:bool, ts}
+  // media-state = {source:'admira-tv-canal', event:'media-state', state:'playing|paused|ended|error', asset}
+});</pre>
+    <p style="margin:12px 0 6px"><b>postMessage que ENTRA al canal</b> (simula público sin cámara ni bus). El canal solo lo acepta como objeto <code>{source:'xpaceos-robot-cli', command}</code> y desde los orígenes del puente: <code>https://www.xpaceos.com</code>, <code>https://xpaceos.com</code> o <code>http://localhost:*</code> / <code>127.0.0.1:*</code> (un panel en otro dominio debe usar el bus: <code>player_consume_label</code> / POST). Responde <code>{source:'admira-tv-canal', requestId, ok, message}</code>.</p>
+<pre>const totem = document.getElementById('totem').contentWindow;
+totem.postMessage({source:'xpaceos-robot-cli', requestId:'x1', command:'admiratv audiencia coche'}, 'https://admira.tv');
+//   admiratv audiencia m|f|u|coche|moto|bici|persona    (u/off = vuelve al público real)
+//   admiratv sincro|condicional|local                    (modo de playout)
+//   playnext · playprevious · mute · unmute</pre>
+    <p style="margin:10px 0 0;color:var(--mut);font-size:14px">Diagnóstico dentro del canal: <code>window.__adtvAudienceRemote</code> (polls, ok, fails, lane, sex, kind, last) y el CLI local <code>/forcecam m|f|u|coche|moto|bici|persona</code>. Con <code>?audience_api=</code> y <code>?seg_api=</code> el canal lee un bus o una matriz de prueba sin tocar producción.</p>
+  </div>
+
+  <div class="card">
+    <p style="margin:0 0 8px"><b>Anuncios por tipología: del creador al carril en 3 pasos</b></p>
+    <p style="margin:0 0 8px"><b>1.</b> Crear las piezas en el creador TikTok de AdmiraNeXT. Cada tool de lectura (<code>player_xtore_map</code>, <code>player_conditional_status</code>, <code>player_embed</code>, <code>GET /player/&lt;screen&gt;</code>) devuelve <code>briefs</code>: un deep-link por carril sin anuncio, <code>https://www.admiranext.com/tiktok/?brief=&lt;encodeURIComponent(JSON)&gt;</code> con <code>{"campana":"Xtore · Puerta Cam","lane":"coche","tipologia":"coche","titulo":"…","mensaje":"…","externalId":"admiranext:xtore:coche","formato":"9:16","duracion":15}</code> (uno por lane <b>persona</b>, <b>coche</b>, <b>moto</b>, <b>bici</b>). La página <a href="https://www.admiranext.com/tiktok/xtore.html">admiranext.com/tiktok/xtore.html</a> los trae ya cargados (4 briefs). La pieza generada sube al Stock con la identidad <b><code>externalRef = admiranext:xtore:&lt;lane&gt;</code></b> (el creador la publica desde <code>brief.externalId</code>); el Stock no expone ese campo: deriva el <b>id fijo</b> del asset como <code>auto-</code> + 20 hex de sha256(externalId) → persona <code>auto-5b9834e34116f1260f2f</code> · coche <code>auto-9a75882d2e3a36bce8e6</code> · moto <code>auto-50312e3b227b47324a9b</code> · bici <code>auto-f8e5daa9669ca4adff65</code>. Clave estable: dos clics no hacen dos piezas. Los productos del folleto se crean desde <a href="/contentcatalogue/">/contentcatalogue/</a> (deep-link <code>?producto=</code>).</p>
+    <p style="margin:0 0 8px"><b>2.</b> Cablear: <code>player_conditional_set {}</code> (con <code>auto_assets</code> por defecto) busca en el Stock (<code>/stock/list?limit=200&amp;type=video|image</code>; <b>no pagina: 200 más recientes por tipo</b>) el ítem cuyo <code>externalRef</code> empiece por <code>admiranext:xtore:&lt;lane&gt;</code>, escribe las 7 reglas en <code>/segmentation?target=xtanco</code> y fija <code>conditional</code>. (v2.2.1, en despliegue: comprueba además la existencia de los ids fijos con <code>GET api.admira.store/stock/asset/&lt;id&gt;</code> y engancha la regla). Los carriles sin anuncio se omiten y vuelven en <code>sin_anuncio</code> + <code>briefs</code>: mientras tanto ese público ve la playlist normal (rótulo <code>CONDICIONAL · playlist normal</code>), nunca negro.</p>
+    <p style="margin:0 0 8px"><b>3.</b> Comprobar: <code>player_smoke</code> (7 pasos) o <code>player_consume_label {kind:"car"}</code> → <code>decision.lane = "Coche"</code>; <code>GET /player/xtanco-totem/health</code> enseña <code>rules.kinds</code> (p. ej. <code>r-coche:car</code>) y el último carril. En el tótem el rótulo pasa a <code>CONDICIONAL · Coche</code> en &lt; 2 s; sin label 2 s → playlist.</p>
+    <p style="margin:10px 0 0;color:var(--mut);font-size:14px">Placeholders de hoy (Stock, hasta los de Lucas): Matrix <code>1786643541589-rb1gz3</code> · Top Gun <code>1786533143983-n2y09e</code>; el neutro ya no tiene creative fijo (es la playlist). Estado real el 11-09-2026 18:51: reglas vivas r-hombre · r-mujer · r-neutro; Persona/Coche/Moto/Bici <b>sin anuncio</b> aún. Guía para personas: <a href="/help/#xtore">/help/#xtore</a>. Analizador: <a href="/videoanalytics/xtore/">/videoanalytics/xtore/</a>. Contrato del canal: <code>CANAL.md</code> § «Audiencia remota» y «Tipología» del repo admira-tv.</p>
   </div>
 
   <h2>Conectar</h2>

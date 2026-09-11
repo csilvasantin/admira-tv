@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=11.09.2026.r8.1847"></script>
+<script src="/auth-gate.js?v=11.09.2026.r10.1858"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=11.09.2026.r8.1847">
+  <link rel="stylesheet" href="/admira-frame.css?v=11.09.2026.r10.1858">
 </head>
 <body>
-<script src="/admira-nav.js?v=11.09.2026.r8.1847" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=11.09.2026.r8.1847" defer></script>
+<script src="/admira-nav.js?v=11.09.2026.r10.1858" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=11.09.2026.r10.1858" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -102,9 +102,9 @@
     <ul>
       <li><b>1. Abre el panel de analítica</b>: <a href="/videoanalytics/xtore/">admira.tv/videoanalytics/xtore</a>. Comparte la pestaña de la Puerta Cam (a) elige la pestaña, b) marca el recuadro de la cámara, c) confirma las 4 esquinas). Desde ese momento el panel ve pasar personas, coches, motos y bicis y se lo cuenta al tótem. El vídeo <b>no sale</b> de tu navegador.</li>
       <li><b>2. Mira el tótem</b>: en el mismo panel está el iframe del tótem (el canal con <code>audience=remote</code>). Pasa alguien → cambia el anuncio; se va → vuelve la playlist. Si quieres probar sin nadie delante, en el tótem escribe <code>/forcecam coche</code> (o <code>moto</code>, <code>bici</code>, <code>persona</code>, <code>m</code>, <code>f</code>; <code>off</code> para volver).</li>
-      <li><b>3. Crea los anuncios por tipología</b>: en el creador de AdmiraNeXT, página Xtore (<a href="https://www.admiranext.com/tiktok/xtore.html">admiranext.com/tiktok/xtore.html</a>) hay 4 briefs listos: Persona, Coche, Moto y Bici. Pulsa <b>Generar</b> en cada uno y la pieza sube sola al Stock con su etiqueta de carril. El tótem la recoge en el siguiente ciclo; hasta entonces ese carril emite el carrusel normal (rótulo <code>CONDICIONAL · playlist normal</code>). Los productos del folleto se crean desde el <a href="/contentcatalogue/">Catálogo</a> con el botón «Crear vídeo».</li>
+      <li><b>3. Crea los anuncios por tipología</b>: en el creador de AdmiraNeXT, página Xtore (<a href="https://www.admiranext.com/tiktok/xtore.html">admiranext.com/tiktok/xtore.html</a>) hay 4 briefs listos: Persona, Coche, Moto y Bici. Pulsa <b>Generar</b> en cada uno y la pieza sube sola al Stock con su identidad de carril (<code>admiranext:xtore:coche</code>, etc.; el Stock la convierte en un id fijo <code>auto-…</code>). Un agente pasa <code>player_conditional_set</code> y el anuncio <b>aparece solo en su regla</b>; hasta entonces ese carril emite la playlist normal (rótulo <code>CONDICIONAL · playlist normal</code>), nunca negro. Los productos del folleto se crean desde el <a href="/contentcatalogue/">Catálogo</a> con el botón «Crear vídeo».</li>
     </ul>
-    <p class="note">Para agentes y técnicos (contrato del label, rutas del bus, herramientas MCP, snippet del iframe y postMessage): <a href="/mcp/#player-condicionado">admira.tv/mcp/#player-condicionado</a>. Las reglas del motor se ven en <a href="/condicional.html">condicional.html</a>. El creador Xtore y la tipología del servidor (v2.2.0) están pendientes de publicar: hasta entonces funcionan hombre/mujer/neutro.</p>
+    <p class="note">Para agentes y técnicos (contrato del label, rutas del bus, herramientas MCP, snippet del iframe y postMessage): <a href="/mcp/#player-condicionado">admira.tv/mcp/#player-condicionado</a>. Las reglas del motor se ven en <a href="/condicional.html">condicional.html</a>; el estado del tótem en <a href="https://mcp-tv.admira.store/player/xtanco-totem/health">/player/xtanco-totem/health</a>. Servidor mcp-tv v2.2.0 (tipología) y creador Xtore publicados el 11-09-2026.</p>
   </section>
 
   <section id="hilo"><h2>🎵 Hilo Musical</h2>

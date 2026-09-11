@@ -1,7 +1,7 @@
 {
   "name": "admira-tv",
   "title": "Admira TV · admira.tv — la capa Emitir de la suite AdmiraNeXT",
-  "description": "Hub MCP de admira.tv: qué se emite, dónde y con qué audiencia, y la FEDERACIÓN con circuitos externos (pedir antena fuera, recibir ofertas dentro, emisión real al aceptar). Servidor MCP vivo en mcp-tv.admira.store v2.0.0 con 13 herramientas y el CMS de emisión con su guía para personas.",
+  "description": "Hub MCP de admira.tv: qué se emite, dónde y con qué audiencia, la FEDERACIÓN con circuitos externos (pedir antena fuera, recibir ofertas dentro, emisión real al aceptar) y el PLAYER CONDICIONADO Xtore (sin nadie → playlist; alguien → anuncio por sexo o tipología, < 2 s). Servidor MCP vivo en mcp-tv.admira.store v2.2.0 (19 herramientas) y el CMS de emisión con su guía para personas.",
   "version": "v.07.09.2026.r8.07:50",
   "site": "https://admira.tv",
   "hub": "https://admira.tv/mcp/",
@@ -27,11 +27,35 @@
       },
       {
         "name": "channel_url",
-        "desc": "Construye la URL del canal para poner una pantalla a emitir."
+        "desc": "Construye la URL del canal para poner una pantalla a emitir (mode local|sync|conditional, audience=remote, muted)."
       },
       {
         "name": "player_info",
         "desc": "Documentación del player nativo: qué es, kiosko desatendido, versiones, instalación y configuración."
+      },
+      {
+        "name": "player_xtore_map",
+        "desc": "Mapa del caso Xtore: pantalla, circuito, URL del canal, bus, carriles, contrato y estado vivo. Lectura abierta."
+      },
+      {
+        "name": "player_conditional_set",
+        "desc": "Escribe las 7 reglas del motor condicional v2 (r-hombre, r-mujer, r-persona, r-coche, r-moto, r-bici, r-neutro=playlist) y fija el modo; auto_assets (default true) resuelve cada carril por externalRef admiranext:xtore:<lane> en el Stock. Clave de flota."
+      },
+      {
+        "name": "player_consume_label",
+        "desc": "Publica un label de audiencia {kind, sex, age_band, confidence, ts, source} en el bus y devuelve el carril. Clave de flota."
+      },
+      {
+        "name": "player_conditional_status",
+        "desc": "Health del player condicionado: label + carril + frescura, reglas vivas, modo y últimos eventos. Lectura abierta."
+      },
+      {
+        "name": "player_smoke",
+        "desc": "Prueba de humo del bus en 7 pasos: m → Matrix, f → Top Gun, car → Coche, motorcycle → Moto, bicycle → Bici, person+u → Persona, sin label → playlist. Clave de flota."
+      },
+      {
+        "name": "player_embed",
+        "desc": "Embebido del player condicionado en un panel externo: url_player, url_gemelo, iframe_html, postmessage, bus, lanes, briefs, contract. Lectura abierta. Alias GET /player/<screen>."
       },
       {
         "name": "circuit_info",
@@ -77,7 +101,7 @@
         }
       }
     },
-    "version": "2.0.0",
+    "version": "2.2.0",
     "resources": [
       "admiratv://federacion",
       "admiratv://llms.txt"
@@ -94,6 +118,74 @@
         "airtime_status",
         "airtime_report"
       ]
+    },
+    "player_condicionado": {
+      "doc": "https://admira.tv/mcp/#player-condicionado",
+      "help": "https://admira.tv/help/#xtore",
+      "analyzer": "https://admira.tv/videoanalytics/xtore/",
+      "creator": "https://www.admiranext.com/tiktok/xtore.html (4 briefs: persona, coche, moto, bici)",
+      "screen": "xtanco-totem",
+      "circuit": "xtanco",
+      "channel_url": "https://admira.tv/canal.html?clean=1&screen=xtanco-totem&circuit=xtanco&max=24&format=9%3A16&mode=conditional&audience=remote&muted=1",
+      "label_contract": {
+        "kind": "person|car|motorcycle|bicycle",
+        "sex": "m|f|u",
+        "age_band": "child|youth|adult|senior|unknown",
+        "confidence": "0..1",
+        "ts": "ISO",
+        "source": "≤80"
+      },
+      "lanes": {
+        "person+m": "Matrix",
+        "person+f": "TopGun",
+        "person+u": "Persona",
+        "car": "Coche",
+        "motorcycle": "Moto",
+        "bicycle": "Bici",
+        "stale": "neutral · creative playlist = playlist normal"
+      },
+      "timing": {
+        "ttl_ms": 2000,
+        "neutral_hold_ms": 6000,
+        "fade_ms": 350
+      },
+      "postmessage_out": {
+        "source": "admira-tv-canal",
+        "event": "audience",
+        "fields": [
+          "lane",
+          "sex",
+          "kind",
+          "fresh",
+          "ts"
+        ],
+        "origin_filter": [
+          "https://admira.tv",
+          "https://www.admira.tv"
+        ]
+      },
+      "postmessage_in": {
+        "source": "xpaceos-robot-cli",
+        "command": "admiratv audiencia m|f|u|coche|moto|bici|persona",
+        "origins": [
+          "https://www.xpaceos.com",
+          "https://xpaceos.com",
+          "http://localhost:*"
+        ],
+        "note": "el canal solo acepta objeto {source, command} desde esos orígenes; desde otro dominio usar el bus"
+      },
+      "embed": "https://mcp-tv.admira.store/player/xtanco-totem",
+      "health": "https://mcp-tv.admira.store/player/xtanco-totem/health",
+      "stream": "https://mcp-tv.admira.store/audience/xtanco-totem/stream",
+      "briefs": "https://www.admiranext.com/tiktok/?brief=<encodeURIComponent(JSON)> (los devuelven player_xtore_map / player_conditional_status / player_embed)",
+      "stock_external_ref": "externalRef = admiranext:xtore:<lane> (matrix|topgun|persona|coche|moto|bici)",
+      "stock_asset_ids": {
+        "note": "el Stock no expone externalId: id del asset = 'auto-' + 20 hex de sha256(externalId)",
+        "persona": "auto-5b9834e34116f1260f2f",
+        "coche": "auto-9a75882d2e3a36bce8e6",
+        "moto": "auto-50312e3b227b47324a9b",
+        "bici": "auto-f8e5daa9669ca4adff65"
+      }
     }
   },
   "http_api": {
@@ -117,16 +209,57 @@
         "path": "/federacion.md",
         "auth": "no",
         "desc": "Protocolo de federación (markdown)."
+      },
+      {
+        "method": "GET",
+        "path": "/audience/<screen>",
+        "auth": "no",
+        "desc": "Estado del bus de audiencia: fresh, label, decision {lane, creative}. Lo que el canal sondea cada 500 ms."
+      },
+      {
+        "method": "GET",
+        "path": "/audience/<screen>/events?limit=20",
+        "auth": "no",
+        "desc": "Últimos eventos del bus (publish, lane_change)."
+      },
+      {
+        "method": "GET",
+        "path": "/audience/<screen>/stream",
+        "auth": "no",
+        "desc": "Bus por SSE: event hello, event audience {lane, creative, kind, sex, fresh, label…}, keepalive 15 s, bye a los 5 min."
+      },
+      {
+        "method": "GET",
+        "path": "/player/<screen>[?circuit=]",
+        "auth": "no",
+        "desc": "= player_embed: url_player, url_gemelo, iframe_html, postmessage, bus, lanes, sin_anuncio, briefs, contract."
+      },
+      {
+        "method": "GET",
+        "path": "/player/<screen>/health",
+        "auth": "no",
+        "desc": "= player_conditional_status con reglas resumidas (count, ids, kinds): bus, mode, rules, events[10], contract."
       }
     ],
-    "interact": [],
+    "interact": [
+      {
+        "method": "POST",
+        "path": "/audience/<screen>",
+        "auth": "clave de flota (Authorization: Bearer | X-MCP-Key) · Idempotency-Key opcional",
+        "desc": "Publica un label {kind, sex, age_band, confidence, ts, source}; 200 {accepted, event_id, decision} · 400 stale · 401 sin clave."
+      }
+    ],
     "auth": {
       "how": "Lecturas sin credencial. circuit_register, request_airtime y airtime_decide exigen la clave de flota AdmiraNeXT (Bearer); offer_airtime exige la clave de circuito cx_ del circuito externo. El CMS de emisión de la web va detrás de la verja de acceso.",
       "protected": [
         "circuit_register",
         "request_airtime",
         "airtime_decide",
-        "offer_airtime"
+        "offer_airtime",
+        "player_conditional_set",
+        "player_consume_label",
+        "player_smoke",
+        "POST /audience/<screen>"
       ]
     }
   },
@@ -134,7 +267,10 @@
     "El canal se pone a emitir con la URL que devuelve channel_url: no la construyas a mano, que la detección de kiosko depende del user-agent.",
     "Proof-of-play y audiencia son dos cosas distintas: admira.tv dice QUÉ se emitió, y la cámara de XpaceOS QUIÉN lo vio. Cruzarlas es lo que hace clearchannel.tv.",
     "/signage/push no lo lee canal.html (es del gemelo XpaceOS): una pieza entra en una pantalla del canal por su playlist, que es lo que hace airtime_decide accept.",
-    "Un Worker no puede llamarse a sí mismo en Cloudflare (522): la federación se prueba contra un segundo servidor (circuito-espejo)."
+    "Un Worker no puede llamarse a sí mismo en Cloudflare (522): la federación se prueba contra un segundo servidor (circuito-espejo).",
+    "El bus de audiencia no es proof-of-play (cuenta labels, no pases) y rechaza como stale un ts viejo o futuro (> 500 ms): sincroniza el reloj del sidecar.",
+    "Un kind que no es person nunca casa las reglas de sexo m/f: para coche/moto/bici hace falta su propia regla (player_conditional_set {kind}).",
+    "omnipublicity NO conserva el campo kind de una regla: las reglas por tipología llevan tag 'kind:<kind>' e id r-coche/r-moto/r-bici/r-persona, y el canal lee rule.kind || tag || id."
   ],
   "federation": [
     {
