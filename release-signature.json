@@ -5,5 +5,5 @@
   "machine": "MacBookAir16plata",
   "day": "11.09.2026",
   "time": "16:38",
-  "evidence": "FLT-100252 / FLT-100256: Carlos encarga a Trinity terminar la publicación del acceso Xtore sin esperar a Neo. Tarjeta Analítica de vídeo → /videoanalytics/xtore/, player virtual CanalKiosk, captura explícita de pestaña y detector local COCO-SSD. 15 pruebas automáticas, catálogo sincronizado y modelo probado bajo CSP/SRI. Se conservan las mejoras de Neo de 092b9c99. Esta entrega no acredita precisión de campo ni conexión del productor al MCP remoto."
+  "evidence": "FLT-100252 / FLT-100256: Carlos encarga a Trinity terminar la publicación del acceso Xtore sin esperar a Neo. Tarjeta Analítica de vídeo → /videoanalytics/xtore/, player virtual CanalKiosk, captura explícita de pestaña y detector local COCO-SSD. 16 pruebas automáticas, incluida la recuperación tras errores tardíos de inferencia; catálogo sincronizado y modelo probado bajo CSP/SRI. Revisión independiente del acceso, seguridad y conservación del player. Se conservan las mejoras de Neo de 092b9c99. Esta entrega no acredita precisión de campo ni conexión del productor al MCP remoto."
 }

@@ -18,7 +18,8 @@ async function fixture({surface='browser',denied=false,slowLoad=false}={}){
   const doc=new Element();doc.hidden=false;doc.getElementById=get;doc.createElement=()=>new Element();doc.head=new Element();
   const win=new Element();win.tf={ready:async()=>{},getBackend:()=> 'fixture'};
   let finishLoad,finishDetection;
-  const detector={detect:()=>new Promise(resolve=>{finishDetection=resolve;}),dispose(){}};
+  const detections=[];
+  const detector={detect:()=>new Promise((resolve,reject)=>{finishDetection=resolve;detections.push({resolve,reject});}),dispose(){}};
   win.cocoSsd={load:()=>slowLoad?new Promise(resolve=>{finishLoad=()=>resolve(detector);}):Promise.resolve(detector)};
   const track=new Element();track.stopped=false;track.stop=()=>{track.stopped=true;};track.getSettings=()=>({displaySurface:surface});
   const stream={getTracks:()=>[track],getVideoTracks:()=>[track]};
@@ -27,7 +28,7 @@ async function fixture({surface='browser',denied=false,slowLoad=false}={}){
   get('confidence').value='65';
   await import(`./xtore.mjs?fixture=${++serial}`);
   const calibrate=async()=>{await get('edit-coordinates').emit('click');await get('apply-coordinates').emit('click');};
-  return {get,doc,track,calibrate,finishLoad:()=>finishLoad(),finishDetection:()=>finishDetection?.([])};
+  return {get,doc,track,calibrate,detections,finishLoad:()=>finishLoad(),finishDetection:()=>finishDetection?.([])};
 }
 
 test('permission denial stays disconnected and is explained',async()=>{
@@ -69,4 +70,16 @@ test('changing source resolution invalidates calibration',async()=>{
   f.get('scene').videoWidth=1440;await f.get('scene').emit('resize');
   assert.equal(f.get('analyze').disabled,true);assert.equal(f.get('tablet').hidden,true);
   await f.get('stop').emit('click');
+});
+test('an obsolete inference error cannot stop a newly resumed analysis',async()=>{
+  const f=await fixture();await f.get('connect').emit('click');await f.calibrate();
+  await f.get('analyze').emit('click');
+  const oldInference=f.detections[0];
+  await f.get('analyze').emit('click');
+  await f.get('analyze').emit('click');
+  assert.equal(f.detections.length,2);
+  oldInference.reject(new Error('Late failure from the previous generation'));
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('connection').textContent,'Analizando');
+  await f.get('stop').emit('click');f.finishDetection();
 });

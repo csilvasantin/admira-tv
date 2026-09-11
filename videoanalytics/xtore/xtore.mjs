@@ -214,7 +214,10 @@ async function loop(token){
       $('source-info').textContent=`PUERTA CAM · ${width} × ${height} · ${Math.round(performance.now()-start)} ms / análisis`;
       if(events.length)showCapture(events);
     }
-  }catch{pause('El detector ha fallado. La captura se ha borrado; revisa la fuente y vuelve a iniciar.');return;}
+  }catch{
+    if(token!==generation||!analyzing)return;
+    pause('El detector ha fallado. La captura se ha borrado; revisa la fuente y vuelve a iniciar.');return;
+  }
   if(analyzing&&token===generation)loopTimer=setTimeout(()=>loop(token),200);
 }
 function showCapture(events){
