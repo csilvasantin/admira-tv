@@ -17,6 +17,10 @@ test('virtual player URL is isolated, muted, conditional and without camera, scr
   for(const k of ['screen','circuit','machine'])assert.equal(url.searchParams.get(k),'xtore-virtual-12345678');
   for(const k of ['cam','shot','rtb'])assert.equal(url.searchParams.get(k),'0');
   assert.equal(url.searchParams.get('mode'),'conditional');assert.equal(url.searchParams.get('muted'),'1');
+  assert.equal(url.searchParams.get('format'),null);assert.equal(url.searchParams.get('stream'),'1');assert.equal(url.searchParams.get('xtoreParent'),'1');
+  assert.equal(url.searchParams.get('parentOrigin'),PLAYER_ORIGIN);
+  assert.equal(new URL(playerURL('xtore-virtual-12345678','http://127.0.0.1:56594')).origin,'http://127.0.0.1:56594');
+  assert.throws(()=>playerURL('xtore-virtual-12345678','https://evil.example'));
 });
 test('bridge requires source, origin and correlated ACK; sends only category and expires to neutral',t=>{
   const f=fixture(t);f.bridge.start();f.bridge.passage([{class:'bicycle'}]);assert.equal(f.sent.length,1);
@@ -69,4 +73,9 @@ test('startup probes reuse a neutral request ID, stop after ACK and are bounded 
 });
 test('startup without a reply closes after 20s',t=>{
   const g=fixture(t);g.bridge.start();g.tick(20001);assert.equal(g.bridge.closed,true);assert.equal(g.errors.length,1);
+});
+test('pausing analysis returns to the general loop without closing the bridge or leaking an old expiry',t=>{
+  const f=fixture(t);f.bridge.start();f.ack();f.bridge.passage([{class:'car'}]);f.ack();f.tick(1000);
+  f.bridge.neutral();f.ack();const count=f.sent.length;f.tick(6000);
+  assert.equal(f.sent.length,count);assert.equal(f.bridge.closed,false);assert.equal(f.states.at(-1).kind,'none');f.bridge.stop();
 });

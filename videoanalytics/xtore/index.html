@@ -36,7 +36,7 @@
           <video id="scene" muted playsinline aria-label="Pestaña compartida de Digital Twin"></video>
           <div id="empty-scene" class="empty-scene"><span class="scene-mark" aria-hidden="true">⌗</span><h2>Tu Xtore, conectada.</h2><p>La escena real aparecerá aquí al compartir la pestaña.<br>No hay vídeo ni detecciones simuladas.</p><span class="small">Chrome de escritorio · sesión de IEU necesaria</span></div>
           <div id="tablet" hidden aria-label="Player virtual sobre el iPad"><canvas id="tablet-canvas" width="640" height="480"></canvas></div>
-          <div id="signage" hidden aria-label="Cartelería digital virtual"><div id="signage-idle">Admira.tv<br><small>Player pendiente de activar</small></div></div>
+          <div id="signage" hidden aria-label="Cartelería digital virtual"><div id="signage-idle">Admira.tv<br><small>Preparando bucle general</small></div></div>
           <div id="roi" hidden><span>Solo se analiza esta zona</span></div>
           <div id="markers" aria-hidden="true"></div>
         </div>
@@ -93,10 +93,10 @@
         </details>
         <div class="divider"></div>
         <h2>Cartelería condicionada</h2>
-        <p id="signage-status" class="small" role="status">Marca la pantalla grande para activar el player.</p>
-        <button id="start-signage" class="full" disabled>Activar player Admira.tv</button>
+        <p id="signage-status" class="small" role="status">El bucle arranca al marcar la pantalla grande.</p>
+        <button id="start-signage" class="full" disabled>Reanudar bucle Admira.tv</button>
         <button id="stop-signage" class="text-button" disabled>Apagar player</button>
-        <details class="help"><summary><span aria-hidden="true">›</span> Conexión con el player</summary><p>Solo envía categorías de pasos confirmados; nunca imágenes, sexo ni edad. Prioridad: bici → moto → coche → persona. Vuelve a neutro a los 6 s sin nuevos pasos. Al pausar, ocultar o recalibrar, se apaga. El player necesita reglas y contenidos compatibles; aceptar una orden no acredita un cambio de anuncio.</p><p id="signage-media">Sin confirmación de emisión</p><p>Activa una pantalla virtual con identificador independiente. Puede generar telemetría de reproducción; no controla pantallas físicas ni activa la cámara del player.</p></details>
+        <details class="help"><summary><span aria-hidden="true">›</span> Conexión con el player</summary><p>El bucle general arranca al marcar la pantalla grande y sigue al pausar el análisis. Solo lo interrumpen pasos confirmados con una regla y contenido disponibles; vuelve al bucle a los 6 s sin nuevos pasos. Prioridad: bici → moto → coche → persona. Si falta una regla, sigue el bucle. El detector no distingue hombre/mujer ni patinetes automáticamente.</p><p>Al ocultar la pestaña o recalibrar, el player se cierra por seguridad. Al volver a una vista preparada se reanuda el bucle, no el análisis. Apagar player mantiene el apagado hasta pulsar Reanudar.</p><p id="signage-media">Sin confirmación de emisión</p><p>Solo se envían categorías, nunca imágenes, sexo ni edad. El catálogo público se carga sin credenciales. Es una pantalla virtual independiente, no controla pantallas físicas ni activa la cámara del player. Una orden aceptada no acredita un anuncio concreto.</p></details>
         <details class="help"><summary><span aria-hidden="true">›</span> Grabación de seguridad · no activa</summary><p><strong>No se está grabando ni archivando.</strong> Falta un grabador y un almacén privado. La propuesta es conservar originales sin alterar durante 28 días, con borrado automático en servidor y acceso restringido; nunca en Stock público de Pixeria.</p><p>Compartir una pestaña no sustituye un grabador 24/7: al ocultarla o cerrarla este análisis se detiene. Para seguridad continua necesitamos una conexión autorizada directa a la cámara y un equipo o servicio siempre encendido. Una imagen generada no sustituye el original.</p></details>
         <div class="divider"></div>
         <h2>Encuadre y detección</h2>

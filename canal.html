@@ -365,6 +365,26 @@ const MEDIA = ['video','animation','image','digital-twin','audio','music','locuc
 // que ni se precachea ni se captura como fotograma. Ver INTERACTIVO más abajo.
 const KIND = { video:'video', animation:'video', image:'image', 'digital-twin':'image', 'twin-npc':'image', audio:'audio', music:'audio', locucion:'audio', interactive:'interactive', xperiencia:'interactive' };
 const qs = new URLSearchParams(location.search);
+// Xtore's isolated virtual player reads public data through its exact parent.
+// Opt-in only: ordinary players keep their existing feed and remote governance.
+const XTORE_PARENT = qs.get('xtoreParent')==='1' && window.parent!==window &&
+  /^(https:\/\/(www\.)?admira\.tv|http:\/\/(localhost|127\.0\.0\.1):\d+)$/.test(qs.get('parentOrigin')||'')
+  ? qs.get('parentOrigin') : '';
+function xtorePublicRead(resource){
+  if(!XTORE_PARENT||!['catalog','rules'].includes(resource))return Promise.reject(new Error('Public bridge unavailable'));
+  return new Promise((resolve,reject)=>{
+    const requestId=crypto.randomUUID();
+    const cleanup=()=>{clearTimeout(timeout);window.removeEventListener('message',receive);};
+    const receive=event=>{
+      const d=event.data;
+      if(event.source!==window.parent||event.origin!==XTORE_PARENT||d?.source!=='xtore-public-data'||d.requestId!==requestId||d.resource!==resource)return;
+      cleanup();if(d.ok===true)resolve(d.data);else reject(new Error('Public data unavailable'));
+    };
+    const timeout=setTimeout(()=>{cleanup();reject(new Error('Public bridge timeout'));},12000);
+    window.addEventListener('message',receive);
+    window.parent.postMessage({source:'admira-tv-public-data',resource,requestId},XTORE_PARENT);
+  });
+}
 // ── PREVIO DE PARRILLA (borrador) ─────────────────────────────────────────────
 // La parrilla abre el canal con ?rundown=<screen>&playlist=<id>&draft=1 para ver
 // el BORRADOR actual de esa pantalla en bucle, en orden y con las duraciones de
@@ -855,6 +875,7 @@ function restartXpl(){
   xplTimer=setInterval(fetchXplDirective,Math.max(10,cfg.refreshSec||30)*1000);
 }
 function applyXplDirective(d){
+  if(XTORE_PARENT)return false; // Presence bridge is the only controller here.
   if(!d||typeof d!=='object') return false;
   applyingXpl=true;
   try{
@@ -874,6 +895,7 @@ function applyXplDirective(d){
   } finally { applyingXpl=false; }
 }
 async function fetchXplDirective(){
+  if(XTORE_PARENT)return;
   if(playoutMode!=='conditional') return;
   try{
     const u=xplUrl()+(xplUrl().indexOf('?')>=0?'&':'?')+'screen='+encodeURIComponent(scr.screen||'default')+'&t='+Date.now();
@@ -2034,6 +2056,7 @@ async function play(i, forced){
     v.style.opacity='0';
     const _reveal=()=>{ try{ v.style.opacity='1'; }catch(_){} };
     v.addEventListener('playing', _reveal, {once:true}); setTimeout(_reveal, 1200);
+    if(XTORE_PARENT)v.addEventListener('playing',()=>{if(_tok===_playTok)emitFrameState(it,'playing');},{once:true});
     v.onloadedmetadata=()=>{ if(_tok!==_playTok) return;
       if(!v.videoWidth&&!v.videoHeight&&!AV1_OK&&!_codecBad.has(String(it.id))&&VSRC===SRC){ codecBadMark(it,'sin-pista-video'); play(cur,it); return; }
       if(v.duration&&isFinite(v.duration)){
@@ -2083,7 +2106,9 @@ async function play(i, forced){
       mediaEl=null;
       const poster=it.thumbnail||it.thumb||it.poster||((it.type==='image'||it.type==='animation')?it.url:'');
       stage.innerHTML='';
-      if(poster){ const im=document.createElement('img'); im.src=poster; im.alt=title; stage.appendChild(im); }
+      if(poster){ const im=document.createElement('img');
+        if(XTORE_PARENT)im.onload=()=>{if(_tok===_playTok&&im.isConnected&&im.naturalWidth&&im.naturalHeight)emitFrameState(it,'poster-loaded');};
+        im.src=poster; im.alt=title; stage.appendChild(im); }
       else { const dv=document.createElement('div'); dv.className='empty'; dv.textContent='▣ '+title; stage.appendChild(dv); }
       startAdv(syncOn?syncRemainingMs():Math.max(4,(it._previewSec||cfg.imgSec))*1000);   // avanza como imagen
     }, 3500);
@@ -2094,7 +2119,7 @@ async function play(i, forced){
     im.onload=()=>{ if(_tok!==_playTok||!im.isConnected||!im.naturalWidth||!im.naturalHeight) return;
       it._dim={w:im.naturalWidth,h:im.naturalHeight}; mupiAR=im.naturalWidth/im.naturalHeight; fitMupi();
       if(_extendedAssignment){ mupiAR=window.innerWidth/Math.max(1,window.innerHeight); fitMupi(); }
-      emitFrameState(it); localInfoRender(); };
+      emitFrameState(it,XTORE_PARENT?'playing':'selected'); localInfoRender(); };
     im.onerror=()=>{ if(!_coRetryI && im.crossOrigin){ _coRetryI=true; try{ im.removeAttribute('crossorigin'); im.src=codecCard?CARD_SRC:SRC; }catch(_){} return; }   // asset sin CORS: recarga sin crossorigin (la emisión SIEMPRE se ve)
       setTimeout(next,600); };
     im.src=codecCard?CARD_SRC:SRC; stage.appendChild(im); startAdv(syncOn?syncRemainingMs():editorialSec(it)*1000);
@@ -2118,6 +2143,7 @@ async function play(i, forced){
     const isPayment=interTags.some(t=>normTag(t)==='payment');
     f.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms'+(isPayment?' allow-popups allow-popups-to-escape-sandbox':''));
     f.onerror=()=>setTimeout(next,600);
+    if(XTORE_PARENT)f.addEventListener('load',()=>{if(_tok===_playTok)emitFrameState(it,'document-loaded');},{once:true});
     stage.appendChild(f);
     // Reloj provisional: en cuanto la pieza anuncie su duración, applyXperienciaDuration
     // lo rearma con la suya. `_interSec` recuerda lo que dijo en un pase anterior.
@@ -2126,6 +2152,7 @@ async function play(i, forced){
     stage.innerHTML='<div class="audio-card"><div class="ico">♫</div><div class="wave">'
       +Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div><strong>'+title+'</strong></div>';
     const a=document.createElement('audio'); a.src=SRC; a.autoplay=true; a.preload='auto'; a.onerror=()=>setTimeout(next,600); a.onended=()=>syncOn?syncFinishCurrent():next();
+    if(XTORE_PARENT)a.addEventListener('playing',()=>{if(_tok===_playTok)emitFrameState(it,'playing');},{once:true});
     // Longitud real del fichero → _dur (como el vídeo): la ranura editorial se recorta a
     // ella, el mando recibe la duración verdadera y el proof-of-play no apunta de más.
     a.onloadedmetadata=()=>{ if(_tok!==_playTok||!a.duration||!isFinite(a.duration)) return;
@@ -2289,7 +2316,7 @@ function rebuild(restart){
     else if(restart||cur<0||!stage.querySelector('video,img,audio')) play(cur>=0?cur:0);
     return;
   }
-  if(DEFAULT_DRAFT.items.length&&!syncOn&&!gridInjected.length){
+  if(DEFAULT_DRAFT.items.length&&!syncOn&&!gridInjected.length&&(!XTORE_PARENT||_condPlaylist)){
     const previous=playlist[cur]&&String(playlist[cur].id||'');
     playlist=DEFAULT_DRAFT.items.slice();cur=previous?playlist.findIndex(it=>String(it.id||'')===previous):-1;
     $('segCount').textContent=playlist.length+' en Por defecto';
@@ -2411,8 +2438,8 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   if(showStatus) setStockStatus('checking');                  // 🟡 revisando stock
   try{
   const _reqT=Date.now();
-  const r=await fetch(INDEX+(INDEX.indexOf('?')>=0?'&':'?')+'t='+_reqT,{cache:'no-store'});
-  const _dateHdr=r.headers.get('date');
+  const r=XTORE_PARENT?null:await fetch(INDEX+(INDEX.indexOf('?')>=0?'&':'?')+'t='+_reqT,{cache:'no-store'});
+  const _dateHdr=r?.headers.get('date');
   if(_dateHdr){
     const _serverT=Date.parse(_dateHdr);
     if(Number.isFinite(_serverT)){
@@ -2421,7 +2448,7 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
       syncTimeOffset=syncTimeOffset ? (syncTimeOffset*0.7+_nextOffset*0.3) : _nextOffset;
     }
   }
-  const d=await r.json(); const items=d.items||(Array.isArray(d)?d:[]);
+  const d=XTORE_PARENT?await xtorePublicRead('catalog'):await r.json(); const items=d.items||(Array.isArray(d)?d:[]);
   all=items.filter(i=>i&&MEDIA.includes(i.type)&&i.url).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   // número PERSISTENTE de cada asset (lo asigna el worker y va en el meta/stock). Para /play<N>.
   all.forEach(it=>{ it._num=it.num; });
@@ -2598,7 +2625,8 @@ function forceAudience(r){
   else if(/female|mujer|chica|^f$|^w$/.test(r)){ window.__xplForce={gender:'f',age:'adulto',kind:'person'}; msg='👩 forzado: mujer'; }
   else if(/male|hombre|chico|^m$|^h$/.test(r)){ window.__xplForce={gender:'m',age:'adulto',kind:'person'}; msg='👨 forzado: hombre'; }
   else { window.__xplForce=null; if(/^(u|none|nadie|neutro|neutral)$/.test(r)) window.__xplCam=null; msg='📷 público real (cámara/bus)'; }
-  try{ setAdmiraMode('conditional'); }catch(_){}                 // el forzado tiene sentido en condicional
+  if(XTORE_PARENT&&window.__xplForce)window.__xplForce.expiresAt=Date.now()+6000;
+  try{ if(!XTORE_PARENT||playoutMode!=='conditional')setAdmiraMode('conditional'); }catch(_){} // Don't restart the loop for an unchanged audience.
   try{ if(window.XPLCanal&&XPLCanal.tick) XPLCanal.tick(); }catch(_){}   // re-evalúa ya
   try{ const F=window.__xplForce; emitAudienceState(F?(F.gender||AUD_KIND_LANE[F.kind]||F.kind):'neutral', F&&F.gender?F.gender:'u', !!F, F?F.kind:'none'); }catch(_){}
   return msg;
@@ -2749,11 +2777,11 @@ function bridgeOriginAllowed(origin){
 function bridgeReply(event, ok, message){
   try{ event.source.postMessage({ source:'admira-tv-canal', requestId:event.data&&event.data.requestId, ok, message }, event.origin); }catch(_){}
 }
-function emitFrameState(it){
+function emitFrameState(it,phase='selected'){
   try{
     if(window.parent===window) return;
     const aspect=mupiAR||itemAR(it)||1;
-    window.parent.postMessage({ source:'admira-tv-canal', event:'media-state', orientation:aspect>=1?'landscape':'portrait', aspect, mode:playoutMode, sync:!!syncOn, id:it&&it.id }, '*');
+    window.parent.postMessage({ source:'admira-tv-canal', event:'media-state', orientation:aspect>=1?'landscape':'portrait', aspect, mode:playoutMode, sync:!!syncOn, id:it&&it.id, ...(XTORE_PARENT?{phase,loop:_condPlaylist||_condFallback}: {}) }, XTORE_PARENT||'*');
   }catch(_){}
 }
 // r62: cada cambio de carril de audiencia (bus remoto o forzado) se cuenta al padre
@@ -2806,6 +2834,7 @@ window.addEventListener('message',event=>{
   if(d0.source==='ainimation-xperiencia'&&d0.event==='duration'){ applyXperienciaDuration(event); return; }
   if(d0.source==='ainimation-xperiencia'&&d0.event==='payment'){ applyXperienciaPayment(event); return; }
   if(!bridgeOriginAllowed(event.origin)) return;
+  if(XTORE_PARENT&&(event.source!==window.parent||event.origin!==XTORE_PARENT))return;
   // Xtore is the direct parent; sibling frames/popups cannot drive this player.
   if((event.origin==='https://admira.tv'||event.origin==='https://www.admira.tv')&&event.source!==window.parent) return;
   const data=event.data||{};
@@ -3462,7 +3491,7 @@ function fetchWeather(){
     try{ if(window.XPLCanal&&XPLCanal.tick) XPLCanal.tick(); }catch(_){}   // re-evalúa con el clima fresco
   }).catch(()=>{});   // sin red / bloqueo → silencio; los hechos usan sus defaults
 }
-setTimeout(fetchWeather, 4000); setInterval(fetchWeather, 15*60*1000);
+if(!XTORE_PARENT){setTimeout(fetchWeather, 4000); setInterval(fetchWeather, 15*60*1000);}
 // — FESTIVOS — hecho `holiday` real. Tabla embebida (fallback offline) de los 10 festivos
 //   NACIONALES ES 2026 (verificados contra date.nager.at, global:true) + fetch anual
 //   cacheado en localStorage. Nota: Jueves Santo/Lunes de Pascua NO son nacionales (regionales).
@@ -3505,7 +3534,11 @@ const XPLCanal = (function(){
   const SEG_URL = String(qs.get('seg_api')||'https://brain.digitalavatar.ai/segmentation').replace(/\/+$/,'');
   let engine=null, timer=null, mtimer=null, REMOTE=null, want={category:'all'}, MATRIX=null, lastSig='', lastMTxt='';
 
-  function camFresh(){ if(window.__xplForce){ const F=window.__xplForce; return {faces:1, gender:F.gender, age:F.age||(F.kind&&F.kind!=='person'?null:'adulto'), kind:F.kind||'person', ts:Date.now()}; } const c=window.__xplCam; return (c && c.faces>0 && (Date.now()-c.ts)<6000) ? c : null; }
+  function camFresh(){
+    if(XTORE_PARENT&&window.__xplForce?.expiresAt<=Date.now())window.__xplForce=null;
+    if(window.__xplForce){const F=window.__xplForce;return {faces:1,gender:F.gender,age:F.age??null,kind:F.kind||'person',ts:Date.now()};}
+    const c=window.__xplCam;return(c&&c.faces>0&&(Date.now()-c.ts)<6000)?c:null;
+  }
   function nowH(){ try{ return +new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ return new Date().getHours(); } }
   function seasonNow(){ const m=new Date().getMonth(); return (m>=2&&m<=4)?'spring':(m>=5&&m<=7)?'summer':(m>=8&&m<=10)?'autumn':'winter'; }
   const world = {
@@ -3522,7 +3555,7 @@ const XPLCanal = (function(){
         case 'temperature': return typeof w.temperature==='number'?w.temperature:20;
         case 'viewers':     { const c=camFresh(); return c?c.faces:0; }
         case 'audGender':   { const c=camFresh(); return c?(c.gender==='m'?'male':c.gender==='f'?'female':'mixed'):'none'; }
-        case 'audAge':      { const c=camFresh(); return c?(c.age||'adulto'):'none'; }
+        case 'audAge':      { const c=camFresh(); return c?(c.age||'unknown'):'none'; }
         case 'audKind':     { const c=camFresh(); return c?(c.kind||'person'):'none'; }   // r64: person|car|motorcycle|bicycle|none
         case 'holiday':     return (typeof isHolidayToday==='function') ? isHolidayToday() : false;
       }
@@ -3586,6 +3619,7 @@ const XPLCanal = (function(){
   }
   function loadRules(){ return (REMOTE && REMOTE.length) ? REMOTE : seeds(); }
   function fetchRemote(){
+    if(XTORE_PARENT)return;
     const u = STORE+'/xpl/resolve?screen='+encodeURIComponent(scr.screen||'default')+(scr.circuit?('&circuit='+encodeURIComponent(scr.circuit)):'')+'&t='+Date.now();
     fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
       if(d && Array.isArray(d.rules) && d.rules.length){ REMOTE=d.rules; if(engine) engine.setRules(loadRules()); }
@@ -3597,7 +3631,7 @@ const XPLCanal = (function(){
   // matriz propia si la tiene asignada, o la global ('all') en su defecto.
   function fetchMatrix(){
     var tgt = (typeof scr==='object' && scr.circuit) ? scr.circuit : 'all';
-    fetch(SEG_URL+'?target='+encodeURIComponent(tgt)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null).then(t=>{
+    (XTORE_PARENT?xtorePublicRead('rules').then(d=>JSON.stringify(d)):fetch(SEG_URL+'?target='+encodeURIComponent(tgt)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null)).then(t=>{
       if(!t) return;
       if(t===lastMTxt) return;                     // matriz sin cambios en el CMS → nada que reprocesar (la cadencia de 15 s se mantiene)
       let d=null; try{ d=JSON.parse(t); }catch(_){ return; }
@@ -3636,6 +3670,10 @@ const XPLCanal = (function(){
   function matchMatrix(s){
     const sk=s.kind||null;
     for(const r of (MATRIX.rules||[])){
+      // No audience = normal loop, including on rainy days/weekends. Unknown
+      // sex/age never satisfies a demographic rule. Only explicit audience
+      // criteria can interrupt this virtual player's general loop.
+      if(XTORE_PARENT&&(r.enabled===false||!s.count||!(ruleKind(r)||(r.gender&&r.gender!=='any')||(r.age&&r.age!=='any'))))continue;
       const mc = (r.minCount==null?1:r.minCount);   // 0 = NO necesita cámara (patrón por tiempo)
       if(mc > s.count) continue;
       const rk=ruleKind(r);
@@ -3645,10 +3683,20 @@ const XPLCanal = (function(){
       if(r.age&&r.age!=='any'&&r.age!==s.age) continue;
       if(r.slot&&r.slot!=='any'&&r.slot!==s.slot) continue;
       // condiciones XPL extra (clima/día) → se evalúan con el world y el motor XPL
+      if(XTORE_PARENT&&r.conds?.length){
+        const known=new Set(['viewers','audKind','hour','dayPart','night','weekend','season']);
+        if(s.gender)known.add('audGender');if(s.age)known.add('audAge');
+        if(!r.conds.every(c=>c&&known.has(c.fact)))continue; // No fabricated weather/unknown demographic facts.
+      }
       if(r.conds&&r.conds.length&&window.XPL&&!XPL.evalCondition({join:r.join||'and',conds:r.conds},world)) continue;
+      if(XTORE_PARENT){
+        const ids=r.assets?.length?r.assets:null;
+        const candidate={ids,category:ids?'all':(r.category==='any'?'all':r.category||'all'),tag:ids?'':ruleTag(r),medio:ids?'all':(r.medio==='any'?'all':r.medio||'all'),audience:'all',age:'all',slot:'all',format:''};
+        if(!all.some(it=>matchesSeg(it,candidate)))continue; // Missing creativity: keep the general loop.
+      }
       return r;
     }
-    return MATRIX.default||{category:'atraer'};
+    return XTORE_PARENT?{category:'all',tag:'',medio:'all'}:(MATRIX.default||{category:'atraer'});
   }
   // Aplica el resultado de una regla al segmento, unificado y con dedup por firma:
   //  - si la regla trae assets CONCRETOS → se emiten exactamente esos (seg.ids).
@@ -3670,6 +3718,7 @@ const XPLCanal = (function(){
   // discrimina por público/contexto. Dedupe por firma → solo en cambio (no cada 2s).
   let lastHitSig='';
   function reportHit(s, r){
+    if(XTORE_PARENT)return; // This is a private virtual preview, not fleet telemetry.
     if(!(s.count>0)) return;                            // sin público no es cazado
     const idx=(MATRIX.rules||[]).indexOf(r);
     if(idx<0) return;                                   // default → no es match específico
@@ -3691,6 +3740,8 @@ const XPLCanal = (function(){
       _condPlaylist = !(r.assets&&r.assets.length) && cat==='all' && !tg && med==='all';
       applySeg({ ids:r.assets, category:cat, tag:tg, medio:med });
       reportHit(s, r);
+    } else if(XTORE_PARENT){
+      _condPlaylist=true;applySeg({ids:null,category:'all',tag:'',medio:'all'});
     } else if(engine){                                // fallback: reglas semilla del runtime
       want={category:'all'}; engine.tick();
       applySeg({ category: want.category||'all' });

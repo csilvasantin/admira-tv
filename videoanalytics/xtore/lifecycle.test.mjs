@@ -74,14 +74,18 @@ test('changing source resolution invalidates calibration',async()=>{
   assert.equal(f.get('analyze').disabled,true);assert.equal(f.get('tablet').hidden,true);
   await f.get('stop').emit('click');
 });
-test('optional signage coordinates enable a third surface, never a player without a click',async()=>{
+test('calibrated signage automatically starts the loop without starting analysis',async()=>{
   const f=await fixture();await f.get('connect').emit('click');
   await f.get('edit-coordinates').emit('click');
   const quad=[50,25,75,25,75,85,50,85];
   for(const [i,value] of quad.entries())f.get(`coord-${12+i}`).value=String(value);
   await f.get('apply-coordinates').emit('click');
-  assert.equal(f.get('signage').hidden,false);assert.equal(f.get('start-signage').disabled,false);
-  assert.equal(f.get('signage').children.length,0);assert.match(f.get('calibration-status').textContent,/cartelería: marcada/);
+  assert.equal(f.get('signage').hidden,false);assert.equal(f.get('start-signage').disabled,true);
+  assert.equal(f.get('signage').children.length,1);assert.match(f.get('calibration-status').textContent,/cartelería: marcada/);
+  assert.equal(f.get('connection').textContent,'Pestaña conectada');
+  const first=f.get('signage').children[0];await f.get('edit-coordinates').emit('click');
+  assert.equal(first.removed,true);assert.equal(f.get('analyze').disabled,true);
+  await f.get('stage').emit('click');await f.get('apply-coordinates').emit('click');assert.equal(f.get('signage').children.length,1);
   f.get('scene').videoWidth=1440;await f.get('scene').emit('resize');
   assert.equal(f.get('signage').hidden,true);assert.equal(f.get('start-signage').disabled,true);
   await f.get('stop').emit('click');
@@ -92,7 +96,7 @@ test('partial signage coordinates cannot be accepted silently',async()=>{
   assert.match(f.get('status').textContent,/Completa las ocho/);assert.equal(f.get('start-signage').disabled,true);
   await f.get('stop').emit('click');
 });
-test('signage mounts only on explicit activation and is removed on hide; late loads are ignored',async t=>{
+test('automatic signage is removed on hide; late loads are ignored',async t=>{
   t.mock.timers.enable({apis:['setTimeout']});
   const f=await fixture();await f.get('connect').emit('click');await f.get('edit-coordinates').emit('click');
   for(const [i,value] of [50,25,75,25,75,85,50,85].entries())f.get(`coord-${12+i}`).value=String(value);
@@ -100,10 +104,10 @@ test('signage mounts only on explicit activation and is removed on hide; late lo
   const iframe=f.get('signage').children[0];assert.ok(iframe.src.includes('xtore-virtual-'));assert.equal(iframe.sandbox,'allow-scripts');
   const sent=iframe.sent;await iframe.emit('load');
   await f.win.emit('message',{source:iframe.contentWindow,origin:'null',data:{source:'admira-tv-canal',requestId:sent[0].data.requestId,ok:true}});
-  assert.match(f.get('signage-status').textContent,/Neutro · orden aceptada/);
+  assert.match(f.get('signage-status').textContent,/Bucle general · orden aceptada/);
   await f.get('analyze').emit('click');assert.equal(iframe.removed,undefined);
   f.doc.hidden=true;await f.doc.emit('visibilitychange');assert.equal(iframe.removed,true);assert.equal(f.get('signage').children.length,0);
-  await iframe.emit('load');assert.equal(sent.length,1);await f.get('stop').emit('click');f.finishDetection();
+  const afterHide=sent.length;await iframe.emit('load');assert.equal(sent.length,afterHide);await f.get('stop').emit('click');f.finishDetection();
 });
 test('signage with no reported media shuts down even after an ACK',async t=>{
   t.mock.timers.enable({apis:['setTimeout']});
@@ -111,7 +115,24 @@ test('signage with no reported media shuts down even after an ACK',async t=>{
   for(const [i,value] of [50,25,75,25,75,85,50,85].entries())f.get(`coord-${12+i}`).value=String(value);
   await f.get('apply-coordinates').emit('click');await f.get('start-signage').emit('click');
   const iframe=f.get('signage').children[0];await f.win.emit('message',{source:iframe.contentWindow,origin:'null',data:{source:'admira-tv-canal',requestId:iframe.sent[0].data.requestId,ok:true}});
-  t.mock.timers.tick(30001);assert.equal(iframe.removed,true);assert.match(f.get('signage-status').textContent,/Sin emisión confirmada/);await f.get('stop').emit('click');
+  t.mock.timers.tick(30001);assert.equal(iframe.removed,true);assert.match(f.get('signage-status').textContent,/Sin emisión confirmada/);
+  await f.get('confidence').emit('input');assert.equal(f.get('signage').children.length,0);await f.get('stop').emit('click');
+});
+test('pause keeps the normal loop, manual stop stays off, returning to a visible tab never starts inference',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture();await f.get('connect').emit('click');await f.get('edit-coordinates').emit('click');
+  for(const [i,value] of [50,25,75,25,75,85,50,85].entries())f.get(`coord-${12+i}`).value=String(value);
+  await f.get('apply-coordinates').emit('click');const iframe=f.get('signage').children[0];
+  await f.win.emit('message',{source:iframe.contentWindow,origin:'null',data:{source:'admira-tv-canal',requestId:iframe.sent[0].data.requestId,ok:true}});
+  await f.get('analyze').emit('click');await f.get('analyze').emit('click');
+  assert.equal(iframe.removed,undefined);assert.equal(iframe.sent.at(-1).data.command,'admiratv audiencia u');f.finishDetection();
+  f.doc.hidden=true;await f.doc.emit('visibilitychange');assert.equal(iframe.removed,true);
+  f.doc.hidden=false;await f.doc.emit('visibilitychange');assert.equal(f.get('signage').children.length,1);assert.equal(f.get('connection').textContent,'Pestaña conectada');
+  await f.get('stop-signage').emit('click');await f.get('confidence').emit('input');
+  assert.equal(f.get('signage').children.length,0);
+  f.doc.hidden=true;await f.doc.emit('visibilitychange');f.doc.hidden=false;await f.doc.emit('visibilitychange');
+  assert.equal(f.get('signage').children.length,0);await f.get('start-signage').emit('click');assert.equal(f.get('signage').children.length,1);
+  await f.get('stop').emit('click');
 });
 test('an obsolete inference error cannot stop a newly resumed analysis',async()=>{
   const f=await fixture();await f.get('connect').emit('click');await f.calibrate();

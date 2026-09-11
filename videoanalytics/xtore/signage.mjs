@@ -2,10 +2,13 @@
 export const PLAYER_ORIGIN='https://admira.tv';
 export const AUDIENCE_TTL=6000;
 const KIND_COMMAND={person:'persona',car:'coche',motorcycle:'moto',bicycle:'bici',none:'u'};
-export function playerURL(id){
+export function playerURL(id,origin=PLAYER_ORIGIN){
   if(!/^xtore-virtual-[a-z0-9-]{8,64}$/.test(id))throw new Error('Expected a dedicated virtual player ID');
-  const url=new URL('/canal.html',PLAYER_ORIGIN);
-  for(const [k,v] of Object.entries({clean:1,format:'9:16',mode:'conditional',modeLock:1,muted:1,cam:0,shot:0,rtb:0,screen:id,circuit:id,machine:id,audience:'all',age:'all',category:'all'}))url.searchParams.set(k,v);
+  if(!/^(https:\/\/(www\.)?admira\.tv|http:\/\/(localhost|127\.0\.0\.1):\d+)$/.test(origin))throw new Error('Untrusted virtual player origin');
+  const url=new URL('/canal.html',origin);
+  // Aspect is CSS geometry, not a catalogue tag. Opaque frames cannot use the
+  // player's disk-first cache; stream is its existing, explicit fallback.
+  for(const [k,v] of Object.entries({clean:1,stream:1,xtoreParent:1,parentOrigin:origin,mode:'conditional',modeLock:1,muted:1,cam:0,shot:0,rtb:0,screen:id,circuit:id,machine:id,audience:'all',age:'all',category:'all'}))url.searchParams.set(k,v);
   return url.href;
 }
 export class SignageBridge{
@@ -52,6 +55,10 @@ export class SignageBridge{
     this.command(item.class);
     this.expiry=this.setTimer(()=>{this.deadline=0;this.command('none');},AUDIENCE_TTL);
   }
+  neutral(){
+    if(!this.ready||this.closed)return;
+    this.clearTimer(this.expiry);this.deadline=0;this.command('none');
+  }
   receive(event){
     // 'null' alone is NOT trust: require the dedicated frame and a pending ID.
     if(this.closed||event.origin!=='null'||event.source!==this.target)return;
@@ -67,7 +74,7 @@ export class SignageBridge{
       this.ready=true;this.onState({type:'ack',kind:request.kind});
     }else if(data.event==='media-state'&&['conditional','sync','local'].includes(data.mode)&&((typeof data.id==='string'&&data.id.length>0)||typeof data.id==='number')){
       // This is an emission report, not proof that the rule selected the right ad.
-      this.onState({type:'media',mode:data.mode});
+      this.onState({type:'media',mode:data.mode,phase:['playing','document-loaded','poster-loaded'].includes(data.phase)?data.phase:'selected',loop:data.loop===true});
     }
   }
   fail(message){if(this.closed)return;this.stop();this.onFailure(message);}

@@ -40,7 +40,7 @@ function controls(){
   $('stop').disabled=!connected;
   $('add-scooter').disabled=!connected;
   for(const id of ['set-roi','set-tablet','set-signage','edit-coordinates'])$(id).disabled=!connected;
-  signage.setEligible(connected&&signageReady&&!calibration);
+  signage.setEligible(connected&&signageReady&&!calibration&&!document.hidden);
   $('analyze').disabled=!connected||!roiReady||!tabletReady||!!calibration||busy;
   $('analyze').textContent=analyzing?'Pausar análisis':'Iniciar análisis';
   $('connection').textContent=analyzing?'Analizando':connected?'Pestaña conectada':'Sin conexión';
@@ -64,7 +64,8 @@ function clearCapture(message='Sin capturas'){
   tabletIdle(analyzing?'Esperando un paso':'Análisis en pausa');
 }
 function pause(message){
-  signage.stop();
+  // Pausing detection returns to the normal loop; it is not a screen power-off.
+  signage.neutral();
   twins.cancelOriginal();
   analyzing=false;generation++;clearTimeout(loopTimer);clearCapture();controls();
   frameContext.clearRect(0,0,frame.width,frame.height);
@@ -159,7 +160,7 @@ $('set-roi').addEventListener('click',()=>startCalibration('roi'));
 $('set-tablet').addEventListener('click',()=>startCalibration('tablet'));
 $('set-signage').addEventListener('click',()=>startCalibration('signage'));
 stage.addEventListener('click',event=>{
-  if(!calibration)return;
+  if(!calibration||calibration==='coordinates')return;
   const box=stage.getBoundingClientRect();
   const point=[Math.max(0,Math.min(1,(event.clientX-box.left)/box.width)),Math.max(0,Math.min(1,(event.clientY-box.top)/box.height))];
   points.push(point);
@@ -187,7 +188,7 @@ function finishCalibration(){
 const coordinateNames=['Cámara: izquierda','Cámara: arriba','Cámara: ancho','Cámara: alto','iPad: sup. izq. X','iPad: sup. izq. Y','iPad: sup. der. X','iPad: sup. der. Y','iPad: inf. der. X','iPad: inf. der. Y','iPad: inf. izq. X','iPad: inf. izq. Y'];
 const signageNames=['Cartelería: sup. izq. X','Cartelería: sup. izq. Y','Cartelería: sup. der. X','Cartelería: sup. der. Y','Cartelería: inf. der. X','Cartelería: inf. der. Y','Cartelería: inf. izq. X','Cartelería: inf. izq. Y'];
 $('edit-coordinates').addEventListener('click',()=>{
-  pause();calibration=null;points=[];stage.classList.remove('calibrating');$('markers').replaceChildren();
+  pause();calibration='coordinates';points=[];stage.classList.remove('calibrating');$('markers').replaceChildren();controls();
   $('coordinate-fields').replaceChildren();
   [...roi,...quad.flat(),...signageQuad.flat()].forEach((value,i)=>{
     const label=document.createElement('label');label.textContent=[...coordinateNames,...signageNames][i];
@@ -247,7 +248,7 @@ $('analyze').addEventListener('click',async()=>{
     if(document.hidden){status('Vuelve a esta vista y pulsa Iniciar análisis.');return;}
     analyzing=true;lastVideoTime=-1;lastFrameAt=performance.now();
     history.sync();
-    status('Analizando solo Puerta Cam. Pasos confirmados en dos fotogramas (tres para bicis de confianza baja); capturas de 6 s. Puedes activar la cartelería si está marcada.');
+    status('Analizando solo Puerta Cam. Pasos confirmados en dos fotogramas (tres para bicis de confianza baja); capturas de 6 s. La cartelería marcada reproduce su bucle automáticamente.');
     tabletIdle();loop(token);
   }catch{status('No se ha iniciado el análisis. Revisa el estado del detector.');}
   finally{busy=false;controls();}
@@ -392,7 +393,7 @@ $('prepare-cutouts').addEventListener('click',async()=>{
   finally{cutoutLoading=false;$('prepare-cutouts').disabled=false;}
 });
 // Do not leave identifiable frames sitting in a hidden tab or the back-forward cache.
-document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('Análisis pausado al ocultar esta vista. Pulsa Iniciar análisis para continuar.');else twins.checkExpiry();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('Análisis pausado al ocultar esta vista. Pulsa Iniciar análisis para continuar.');else{twins.checkExpiry();controls();}});
 window.addEventListener('beforeunload',event=>{if(history.pending.length||history.lost){event.preventDefault();event.returnValue='';}});
 window.addEventListener('pagehide',()=>{clearTimeout(historyTimer);twins.clear();disconnect();});
 tabletIdle();renderCounts();controls();

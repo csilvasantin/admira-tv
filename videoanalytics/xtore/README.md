@@ -108,37 +108,71 @@ mejor score, umbral y duración. Falta medir pasos perdidos/falsos con vídeo re
 
 La cartelería es una tercera superficie opcional, independiente del iPad.
 Cuatro esquinas interiores en sentido horario, homografía 540 × 960, ajuste
-numérico opcional. No carga el iframe sin activar explícitamente el player.
-Redimensionar la fuente invalida las tres zonas; pausar/ocultar/desconectar o
-recalibrar retira el iframe. Nunca se embebe IEU ni se eligen permisos del usuario.
+numérico opcional. El bucle general arranca automáticamente cuando hay fuente
+conectada, cartelería marcada y vista visible, aunque el análisis esté pausado.
+Pausar análisis devuelve al bucle sin apagarlo. Ocultar/desconectar/recalibrar
+(también mediante coordenadas) retira el iframe. Volver a la vista lo reanuda,
+pero no inicia inferencia. Apagar player y los errores requieren Reanudar manual;
+no hay reintentos infinitos. Redimensionar invalida las tres zonas.
+Nunca se embebe IEU ni se eligen permisos del usuario.
 
 `signage.mjs`/`signage-ui.mjs` montan el player real de Admira.tv con pantalla,
 circuito y máquina `xtore-virtual-<uuid>` nuevos; mute, conditional, modeLock,
-cam=0, shot=0, rtb=0. No se escriben etiquetas en un destino físico. El iframe
+cam=0, shot=0, rtb=0, stream=1. No se escriben etiquetas en un destino físico. El iframe
 es **opaco** (`sandbox=allow-scripts`, SIN allow-same-origin); no comparte DOM,
 canvas ni localStorage del portal. No quitar esa protección para resolver CORS.
 Los comandos sin imágenes se dirigen al WindowProxy exacto con targetOrigin `*`
 (necesario para origen opaco); respuestas requieren origin `null`, ventana exacta
 y requestId pendiente aleatorio. `null` por sí solo no autoriza mensajes.
 
+El canal usa la misma versión local/publicada del portal, mediante el opt-in
+`xtoreParent=1` y padre exacto validado (Admira/www o localhost con puerto).
+Sin filtro `format=9:16`: este parámetro filtraba etiquetas del catálogo, no
+la geometría de la superficie. `stream=1` evita esperar CacheStorage inaccesible
+desde un origen opaco. No se cambia el comportamiento de disco de otros players.
+
+`player-data.mjs` obtiene únicamente catálogo público y matriz global: dos URLs
+fijas, GET sin credenciales ni redirecciones, máximo 2 MiB/10 s, una petición por
+recurso y mínimo 2 s entre lecturas. El hijo no elige URL, headers, método ni
+pantalla. Cierre aborta y descarta respuestas tardías. No lee ni envía capturas,
+histórico, cookies o tokens. CSP habilita solo esos endpoints para esta lectura.
+El CLI del opt-in también acepta exclusivamente el padre/origen configurados.
+
+Sin presencia, con criterio desconocido o sin contenido compatible se aplica
+el bucle general, no el default contextual de la matriz. Solo una regla de
+audiencia concreta con creatividad disponible puede interrumpirlo. No se inventa
+edad adulta para persona; clima/geolocalización y condiciones de sexo/edad
+desconocidos no disparan reglas. Las directivas remotas genéricas no toman control
+del opt-in. Repetir el mismo segmento no reinicia el vídeo. Se conservan las
+reglas y el comportamiento de players ordinarios fuera de este opt-in.
+
 Arranque neutro con sondeo idempotente cada 500 ms, mismo requestId, límite 20 s.
 No depende del load de recursos secundarios. Pasos confirmados → bici, moto,
 coche o persona por prioridad; neutro tras 6 s sin nuevos pasos. Un watchdog
 de racha sin ACK vigente cierra a los 2.5 s aunque haya pasos constantes.
 ACKs obsoletos no reactivan ni tumban una orden posterior. Se cierra si no hay
-reporte de emisión en 30 s o si el iframe vuelve a navegar.
+confirmación de reproducción/carga en 30 s o si el iframe vuelve a navegar.
+`selected` no acredita emisión; `playing`, `poster-loaded` y `document-loaded`
+distinguen reproducción/carga de media, miniatura de respaldo e interactivo
+cargado (este último no acredita reproducción interna). Además del TTL de 6 s
+del padre, el forzado caduca en el hijo y su tick de 2 s lo retira si el padre
+no puede enviar el neutral a tiempo.
 
-Prueba real en navegador: el canal remoto opaco respondió ACK neutro. No informó
-media y mostró «sin media en este segmento»; NO se acredita emisión ni cambio
-de creatividad. El endpoint real `/player/xtanco-totem` de Neo confirma que
+Prueba real inicial en navegador: el canal remoto opaco respondió ACK neutro,
+pero no informó media. Resuelto localmente en esta ampliación: catálogo/reglas
+HTTP 200 bajo la CSP de Xtore, iframe opaco y `playing` de al menos dos piezas
+distintas (19:33:46 y 19:34:02 Europe/Madrid, 11 septiembre 2026). Captura visual
+confirma contenido Xtore. Sin cámara, fotografías ni detecciones simuladas en
+la prueba real. La prueba no acredita anuncios por categoría en producción.
+El endpoint real `/player/xtanco-totem` de Neo confirma que
 Persona/Coche/Moto/Bici aún no tienen asset. No se inyectaron detecciones ni
 audiencia simulada en el bus. El smoke creó únicamente players virtuales neutros.
 La versión de Neo r10 admite padres admira.tv/www; no debe admitir origin null
 como padre. La respuesta opaca y el origen real del padre son cosas distintas.
 Incorporado origin/main ab999529 (r10) sin perder mejoras locales. Ajuste adicional
-local de canal.html: categoría persona mantiene age=null y gender=null; los padres
-de Admira se validan también con source===window.parent. Pendiente de revisión y
-publicación por Neo, no confundir con el canal remoto usado en el smoke neutro.
+local de canal.html: categoría persona mantiene age=null y gender=null hasta el
+motor de reglas, no solo en la entrada. Cross-review independiente aprobado y
+89/89 pruebas locales. Cambios locales, aún no publicados; D1 tampoco provisionado.
 
 Suite local ampliada (tracking, decoder, lifecycle, permisos, máscara,
 Pixeria, bridge e histórico con SQLite), más cross-review independiente. Verificación real completa
