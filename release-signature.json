@@ -1,9 +1,9 @@
 {
-  "version": "v.11.09.2026.r8.18:47",
+  "version": "v.11.09.2026.r9.18:55",
   "signature": "NeoMBA16 · MacBookAir16plata",
   "agent": "NeoMBA16",
   "machine": "MacBookAir16plata",
   "day": "11.09.2026",
-  "time": "18:47",
-  "evidence": "Xtore tipología · canal.html r64: emisión condicionada por TIPOLOGÍA. El bus mcp-tv v2.2 trae label.kind (person|car|motorcycle|bicycle) y decision.lane (Matrix|TopGun|Persona|Coche|Moto|Bici|neutral); el poller lo guarda en window.__xplCam (kind; gender null si no es persona); nuevo hecho XPL audKind; matchMatrix casa por kind (campo kind, tag kind:<k> o id r-coche/r-moto/r-bici/r-persona) y un kind no-person nunca casa reglas de sexo m/f; sin label → catch-all → rótulo «CONDICIONAL · playlist normal · N en loop»; /forcecam, audience-* del mando y postMessage aceptan coche|moto|bici|persona; evento audience al padre lleva kind+lane; ?seg_api= para matrices de prueba. Probado en local con bus y matriz simulados (car→r-coche, person+m→r-hombre, bicycle→r-bici sin assets→playlist normal, none→playlist normal, moto forzada por tag kind:motorcycle, persona sin regla→playlist normal, postMessage admiratv audiencia moto→evento lane Moto/kind motorcycle). CANAL.md documenta audKind, kind y comandos."
+  "time": "18:55",
+  "evidence": "FLT-100280 · Documentación del player condicionado Xtore: /mcp/ (sección «Player condicionado · Xtore»: flujo, contrato del label v3, rutas del bus y /player, tools con sus inputSchema, iframe + postMessage, guía de anuncios por tipología), llms.txt y manifest.json actualizados, y entrada «Player condicionado Xtore» en /help/ con pasos 1-2-3. Worker mcp-tv v2.2.0: publicado."
 }
