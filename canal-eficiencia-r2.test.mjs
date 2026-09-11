@@ -20,7 +20,7 @@ test("[2] la onda de audio compone en el compositor: transform, no height", () =
 });
 
 test("[3] con cámara, el POST viaja solo si la lectura CAMBIÓ; el HUD no repinta idéntico", () => {
-  assert.match(canal, /const sig=a\?\[a\.faces\|\|0,a\.gender\|\|'',a\.age\|\|''\]\.join\('\|'\):'null';/);
+  assert.match(canal, /const sig=a\?\[a\.faces\|\|0,a\.gender\|\|'',a\.age\|\|'',a\.kind\|\|''\]\.join\('\|'\):'null';/);   // r64: la firma incluye la tipología (kind)
   assert.match(canal, /if\(sig===_audSig\) return;/);
   assert.match(canal, /if\(html!==camHud\._last\)\{ camHud\._last=html; h\.innerHTML=html; \}/);
   // La cadencia de DETECCIÓN de 1 s es deliberada y no se toca.

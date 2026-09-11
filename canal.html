@@ -33,7 +33,8 @@
 <!-- r60 · AUTOACTUALIZACIÓN EN KIOSKO: en embed/clean el canal vigila /version.json y se recarga solo al cambiar de pieza cuando hay release nuevo; el botón «VERSIÓN NUEVA» del avisador compartido nunca se pinta en una pantalla pública. -->
 <!-- r61 · RÓTULO CON LA FUENTE DE LA SINCRO (KIOSKO <screen> / máster global) y aviso sin tema; hereda r60 (autoactualización). -->
 <!-- r62 · AUDIENCIA REMOTA (FLT-100243): ?audience=remote (alias va=1) arranca en condicional BLINDADO (pollMode/XPL no lo tocan) y sondea el bus mcp-tv.admira.store/audience/<screen> cada 500 ms (?audience_api= para mocks); m/f fresco → __xplCam y tick inmediato, !fresh/u → carril neutro (mín. 6 s). Inyección extra: mando audience-m|f|u y postMessage «admiratv audiencia m|f|u»; evento `audience` al padre en cada cambio de carril. -->
-<!-- BUILD canal v.11.09.2026.r63.16:08 · NUNCA NEGRO EN CONDICIONAL (FLT-100243): los assets de la matriz fuera del feed de 300 se resuelven contra el índice completo del Stock (stockFullIndex, como /play<N>) y entran en el pool + precache; si la regla deja 0 piezas, cae al carrusel del feed y el rótulo dice «CONDICIONAL · sin assets → carrusel». -->
+<!-- r63 · NUNCA NEGRO EN CONDICIONAL (FLT-100243): los assets de la matriz fuera del feed de 300 se resuelven contra el índice completo del Stock (stockFullIndex, como /play<N>) y entran en el pool + precache; si la regla deja 0 piezas, cae al carrusel del feed y el rótulo dice «CONDICIONAL · sin assets → carrusel». -->
+<!-- BUILD canal v.11.09.2026.r64.18:50 · EMISIÓN POR TIPOLOGÍA (Xtore): el bus v2.2 trae label.kind (person|car|motorcycle|bicycle) y decision.lane (Matrix|TopGun|Persona|Coche|Moto|Bici|neutral); nuevo hecho XPL audKind; las reglas de la matriz casan también por kind (campo kind, tag kind:<k> o id r-coche/r-moto/r-bici/r-persona); un kind no-person nunca casa reglas de sexo m/f; /forcecam coche|moto|bici|persona simula tipologías; evento audience al padre lleva kind+lane; rótulo «CONDICIONAL · playlist normal» cuando la regla que manda no fija assets ni tema; ?seg_api= para matrices de prueba. -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
@@ -49,9 +50,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=11.09.2026.r7.1657"></script>
+<script src="xpl-runtime.js?v=11.09.2026.r8.1847"></script>
 <script>
-  window.ADMIRA_VERSION='v.11.09.2026.r7.16:57';
+  window.ADMIRA_VERSION='v.11.09.2026.r8.18:47';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -879,11 +880,14 @@ async function fetchXplDirective(){
     const d=await r.json();
     if(applyXplDirective(d)) flashCli('◆ XPL actualizado');
     else setLive(condLiveLabel()+playlist.length+' en loop', playlist.length>0);
-  }catch(_){ if(playoutMode==='conditional') setLive(condLiveLabel()+(_condFallback?playlist.length+' en loop':'XPL pendiente'), playlist.length>0); }
+  }catch(_){ if(playoutMode==='conditional') setLive(condLiveLabel()+((_condFallback||_condPlaylist)?playlist.length+' en loop':'XPL pendiente'), playlist.length>0); }   // r64: con playlist normal el rótulo cuenta piezas
 }
 // r63: rótulo del condicional; dice cuando la matriz no pudo aplicarse y se emite el carrusel.
 let _condFallback=false;
-function condLiveLabel(){ return playoutMode==='conditional' ? (_condFallback?'CONDICIONAL · sin assets → carrusel · ':'CONDICIONAL · ') : 'LIVE · '; }
+// r64: la regla que manda no fija assets ni tema (catch-all «vacío», p. ej. sin nadie delante)
+// → se emite la playlist normal y el rótulo lo dice, sin confundirlo con el fallback de r63.
+let _condPlaylist=false;
+function condLiveLabel(){ return playoutMode==='conditional' ? (_condFallback?'CONDICIONAL · sin assets → carrusel · ':_condPlaylist?'CONDICIONAL · playlist normal · ':'CONDICIONAL · ') : 'LIVE · '; }
 
 function thumbHtml(it){ const k=KIND[it.type]||'image';
   if(k==='image') return '<img loading="lazy" decoding="async" class="'+(it.type==='twin-npc'?'pixel':'')+'" src="'+it.url+'" alt="">';
@@ -1330,7 +1334,7 @@ function setNowAudience(a){
   // El POST viaja SOLO si la lectura cambió — que es lo que el comentario de la
   // cámara siempre prometió. La detección sigue a 1 s (deliberada); el keepalive
   // de 60 s de _nowKeep y el push por pieza siguen llevando aud igual.
-  const sig=a?[a.faces||0,a.gender||'',a.age||''].join('|'):'null';
+  const sig=a?[a.faces||0,a.gender||'',a.age||'',a.kind||''].join('|'):'null';
   if(sig===_audSig) return;
   _audSig=sig;
   _lastAud=a;
@@ -1379,7 +1383,7 @@ async function camLoop(){ if(!CAM.on) return;
     const aud=d.faces?d.gender:'all', age=d.faces?d.age:'all';
     // hook para el motor XPL: la última lectura de cámara como fuente de HECHOS
     // (audGender/audAge/viewers). Anónimo; solo el agregado, nunca el frame.
-    window.__xplCam = { faces:d.faces||0, gender:d.faces?d.gender:null, age:d.faces?d.age:null, ts:Date.now() };
+    window.__xplCam = { faces:d.faces||0, gender:d.faces?d.gender:null, age:d.faces?d.age:null, kind:d.faces?'person':null, ts:Date.now() };
     camHud(d.faces?('👥 '+d.faces+' · '+(AGE_LBL[age]||age)+' · '+(aud==='f'?'♀ Mujer':'♂ Hombre')):'👥 0 · sin audiencia',true);
     try{ setNowAudience({ cam:true, faces:d.faces||0, gender:d.faces?d.gender:null, age:d.faces?d.age:null }); }catch(_){}
     if(camStable(aud+'_'+age)) camApply(aud,age);   // solo cambia tras 2 lecturas estables (modo local)
@@ -2579,14 +2583,23 @@ function applyCliSegment(msg){
 // `m|hombre|chico` · `f|mujer|chica` · `u|off|x` (volver al público real: cámara o bus).
 // Devuelve el mensaje para el HUD. Un forzado 'u' también borra la última lectura del
 // bus/cámara (__xplCam) para que la matriz caiga YA al carril neutro.
+// r64 · TIPOLOGÍA: `coche|car` · `moto|motorcycle` · `bici|bicycle` · `persona|person` simulan
+// lo que el bus v2.2 publica como label.kind (sin cámara): kind no-person → gender null, así
+// las reglas de sexo m/f no casan y manda la regla de su kind (o el catch-all).
+const AUD_KIND_ALIAS={ person:'person', persona:'person', people:'person', car:'car', coche:'car', auto:'car', vehicle:'car', motorcycle:'motorcycle', moto:'motorcycle', motorbike:'motorcycle', bicycle:'bicycle', bici:'bicycle', bike:'bicycle' };
+const AUD_KIND_LANE={ person:'Persona', car:'Coche', motorcycle:'Moto', bicycle:'Bici' };
+const AUD_KIND_ICON={ person:'🧍', car:'🚗', motorcycle:'🏍', bicycle:'🚲' };
+const AUD_KIND_TXT={ person:'persona', car:'coche', motorcycle:'moto', bicycle:'bici' };
 function forceAudience(r){
   r=String(r||'').toLowerCase().trim(); let msg;
-  if(/female|mujer|chica|^f$|^w$/.test(r)){ window.__xplForce={gender:'f',age:'adulto'}; msg='👩 forzado: mujer'; }
-  else if(/male|hombre|chico|^m$|^h$/.test(r)){ window.__xplForce={gender:'m',age:'adulto'}; msg='👨 forzado: hombre'; }
+  const kind=AUD_KIND_ALIAS[r]||null;
+  if(kind){ window.__xplForce={gender:null,age:kind==='person'?'adulto':null,kind}; msg=AUD_KIND_ICON[kind]+' forzado: '+AUD_KIND_TXT[kind]; }
+  else if(/female|mujer|chica|^f$|^w$/.test(r)){ window.__xplForce={gender:'f',age:'adulto',kind:'person'}; msg='👩 forzado: mujer'; }
+  else if(/male|hombre|chico|^m$|^h$/.test(r)){ window.__xplForce={gender:'m',age:'adulto',kind:'person'}; msg='👨 forzado: hombre'; }
   else { window.__xplForce=null; if(/^(u|none|nadie|neutro|neutral)$/.test(r)) window.__xplCam=null; msg='📷 público real (cámara/bus)'; }
   try{ setAdmiraMode('conditional'); }catch(_){}                 // el forzado tiene sentido en condicional
   try{ if(window.XPLCanal&&XPLCanal.tick) XPLCanal.tick(); }catch(_){}   // re-evalúa ya
-  try{ const F=window.__xplForce; emitAudienceState(F?F.gender:'neutral', F?F.gender:'u', !!F); }catch(_){}
+  try{ const F=window.__xplForce; emitAudienceState(F?(F.gender||AUD_KIND_LANE[F.kind]||F.kind):'neutral', F&&F.gender?F.gender:'u', !!F, F?F.kind:'none'); }catch(_){}
   return msg;
 }
 function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
@@ -2633,6 +2646,7 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='reloadmatrix'||cmd==='refreshrules'){ try{ if(window.XPLCanal&&XPLCanal.refreshMatrix){ XPLCanal.refreshMatrix(); setTimeout(()=>{ try{ XPLCanal.tick(); }catch(_){} },1200); } }catch(_){} flashCli('↻ reglas actualizadas'); return; }
   // Forzar público SIN cámara: simula un hombre/mujer delante para disparar el condicional.
   // `forcecam m|hombre|chico` · `forcecam f|mujer|chica` · `forcecam off|x` (volver a cámara real).
+  // r64: `forcecam coche|moto|bici|persona` (alias car|motorcycle|bicycle|person) simula tipologías.
   // r62: misma ruta para el CLI, la cola del mando (audience-m|f|u) y el puente
   // postMessage (admiratv audiencia m|f|u): forceAudience().
   if(cmd==='forcecam'||cmd==='forzar'||cmd==='simaud'){ flashCli(forceAudience(rest)); return; }
@@ -2739,10 +2753,12 @@ function emitFrameState(it){
 }
 // r62: cada cambio de carril de audiencia (bus remoto o forzado) se cuenta al padre
 // que empotra el canal (gemelo/hub), con la misma forma que media-state.
-function emitAudienceState(lane, sex, fresh){
+// r64: lleva también `kind` (person|car|motorcycle|bicycle|none) y `lane` incluye los carriles
+// de tipología del bus v2.2 (Persona|Coche|Moto|Bici).
+function emitAudienceState(lane, sex, fresh, kind){
   try{
     if(window.parent===window) return;
-    window.parent.postMessage({ source:'admira-tv-canal', event:'audience', lane:lane||'neutral', sex:sex||'u', fresh:!!fresh, ts:Date.now() }, '*');
+    window.parent.postMessage({ source:'admira-tv-canal', event:'audience', lane:lane||'neutral', sex:sex||'u', kind:kind||'none', fresh:!!fresh, ts:Date.now() }, '*');
   }catch(_){}
 }
 // ── LA XPERIENCIA DICE CUÁNTO DURA ────────────────────────────────────────────
@@ -2805,8 +2821,9 @@ window.addEventListener('message',event=>{
       else if(['cond','condicional','conditional','xpl'].includes(rest)){ _liveMode=true; setAdmiraMode('conditional'); msg='◆ admiraTVcondicional'; }
       else if(['local','off'].includes(rest)){ _liveMode=true; setAdmiraMode('local'); msg='● admiraTVlocal'; }
       // r62: `admiratv audiencia m|f|u` — inyecta público desde el padre (gemelo/hub).
-      else if(/^(audiencia|audience)\s+(m|f|u|hombre|mujer|off|none)$/.test(rest)){ msg=forceAudience(rest.split(/\s+/)[1]); }
-      else { ok=false; msg='usage: /admiraTV sincro|condicional|local|audiencia m|f|u'; }
+      // r64: también tipologías coche|moto|bici|persona (alias car|motorcycle|bicycle|person).
+      else if(/^(audiencia|audience)\s+(m|f|u|hombre|mujer|off|none|coche|car|moto|motorcycle|bici|bicycle|persona|person)$/.test(rest)){ msg=forceAudience(rest.split(/\s+/)[1]); }
+      else { ok=false; msg='usage: /admiraTV sincro|condicional|local|audiencia m|f|u|coche|moto|bici|persona'; }
     }
     else if(cmd==='admiratvsincro'||cmd==='admiratvsync'||cmd==='sincro'||cmd==='sync'){
       const rest=raw.replace(/^\s*\/?\S+\s*/,'').trim();
@@ -3477,10 +3494,11 @@ const XPLCanal = (function(){
   const XPL = window.XPL;
   const STORE = 'https://xpl.admira.store';
   // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
-  const SEG_URL = 'https://brain.digitalavatar.ai/segmentation';
+  // r64: ?seg_api= permite servir una matriz de prueba (mock) sin tocar el CMS.
+  const SEG_URL = String(qs.get('seg_api')||'https://brain.digitalavatar.ai/segmentation').replace(/\/+$/,'');
   let engine=null, timer=null, mtimer=null, REMOTE=null, want={category:'all'}, MATRIX=null, lastSig='', lastMTxt='';
 
-  function camFresh(){ if(window.__xplForce){ const F=window.__xplForce; return {faces:1, gender:F.gender, age:F.age||'adulto', ts:Date.now()}; } const c=window.__xplCam; return (c && c.faces>0 && (Date.now()-c.ts)<6000) ? c : null; }
+  function camFresh(){ if(window.__xplForce){ const F=window.__xplForce; return {faces:1, gender:F.gender, age:F.age||(F.kind&&F.kind!=='person'?null:'adulto'), kind:F.kind||'person', ts:Date.now()}; } const c=window.__xplCam; return (c && c.faces>0 && (Date.now()-c.ts)<6000) ? c : null; }
   function nowH(){ try{ return +new Date().toLocaleString('en-US',{hour:'2-digit',hour12:false,timeZone:'Europe/Madrid'}); }catch(_){ return new Date().getHours(); } }
   function seasonNow(){ const m=new Date().getMonth(); return (m>=2&&m<=4)?'spring':(m>=5&&m<=7)?'summer':(m>=8&&m<=10)?'autumn':'winter'; }
   const world = {
@@ -3498,6 +3516,7 @@ const XPLCanal = (function(){
         case 'viewers':     { const c=camFresh(); return c?c.faces:0; }
         case 'audGender':   { const c=camFresh(); return c?(c.gender==='m'?'male':c.gender==='f'?'female':'mixed'):'none'; }
         case 'audAge':      { const c=camFresh(); return c?(c.age||'adulto'):'none'; }
+        case 'audKind':     { const c=camFresh(); return c?(c.kind||'person'):'none'; }   // r64: person|car|motorcycle|bicycle|none
         case 'holiday':     return (typeof isHolidayToday==='function') ? isHolidayToday() : false;
       }
       return 0;
@@ -3592,12 +3611,29 @@ const XPLCanal = (function(){
   function camSeg(){
     const f=camFresh();   // honra el forzado (__xplForce) y, si no, la cámara real
     return { gender: f?(f.gender==='m'?'m':f.gender==='f'?'f':null):null, age: f?(f.age||null):null,
+             kind: f?(f.kind||'person'):null,   // r64: tipología (person por defecto = cámara/bus v2.1)
              count: f?f.faces:0, slot: (typeof madridSlot==='function'?madridSlot():'') };
   }
+  // r64 · kind de una regla: campo `kind` (person|car|motorcycle|bicycle|any); si omnipublicity
+  // lo descarta, viene como tag `kind:<k>` y/o en el id (r-coche, r-moto, r-bici, r-persona).
+  // '' o 'any' = no filtra por tipología.
+  function ruleKind(r){
+    let k=String(r.kind||'').toLowerCase().trim();
+    if(!k){ for(const t of String(r.tag||'').split(/[,+]/)){ const m=/^\s*kind:([a-z]+)/i.exec(t); if(m){ k=m[1].toLowerCase(); break; } } }
+    if(!k){ for(const t of String(r.id||'').toLowerCase().split(/[-_:.\s]+/)){ if(AUD_KIND_ALIAS[t]){ k=t; break; } } }   // r-coche → car, r-moto → motorcycle…
+    if(!k||k==='any') return '';
+    return AUD_KIND_ALIAS[k]||k;
+  }
+  // el tag de contenido de la regla, sin los tokens kind:<k> (que son condición, no filtro de piezas)
+  function ruleTag(r){ return String(r.tag||'').split(/[,+]/).map(x=>x.trim()).filter(x=>x&&!/^kind:/i.test(x)).join(','); }
   function matchMatrix(s){
+    const sk=s.kind||null;
     for(const r of (MATRIX.rules||[])){
       const mc = (r.minCount==null?1:r.minCount);   // 0 = NO necesita cámara (patrón por tiempo)
       if(mc > s.count) continue;
+      const rk=ruleKind(r);
+      if(rk&&rk!==sk) continue;                                        // r64: la regla pide una tipología concreta
+      if(sk&&sk!=='person'&&r.gender&&r.gender!=='any') continue;      // r64: coche/moto/bici NUNCA casan reglas de sexo
       if(r.gender&&r.gender!=='any'&&r.gender!==s.gender) continue;
       if(r.age&&r.age!=='any'&&r.age!==s.age) continue;
       if(r.slot&&r.slot!=='any'&&r.slot!==s.slot) continue;
@@ -3630,21 +3666,23 @@ const XPLCanal = (function(){
     if(!(s.count>0)) return;                            // sin público no es cazado
     const idx=(MATRIX.rules||[]).indexOf(r);
     if(idx<0) return;                                   // default → no es match específico
-    const discrim=(r.gender&&r.gender!=='any')||(r.age&&r.age!=='any')||(r.slot&&r.slot!=='any')||(r.conds&&r.conds.length);
+    const discrim=(r.gender&&r.gender!=='any')||(r.age&&r.age!=='any')||(r.slot&&r.slot!=='any')||(r.conds&&r.conds.length)||!!ruleKind(r);
     if(!discrim) return;                                // catch-all puro → no cuenta como caza
     const piece=(r.assets&&r.assets[0])||('tema:'+((r.tag||r.category)||'auto'));
-    const sig=idx+'|'+piece+'|'+s.gender+'|'+s.age;
+    const sig=idx+'|'+piece+'|'+s.gender+'|'+s.age+'|'+(s.kind||'');
     if(sig===lastHitSig) return; lastHitSig=sig;
     try{ fetch(SEG_URL+'/hit',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ id:scr.circuit||'', screen:scr.screen||'', ruleId:r.id||('r'+idx), ruleIdx:idx,
-        piece:String(piece).slice(0,80), aud:{gender:s.gender,age:s.age,faces:s.count}, slot:s.slot })}).catch(()=>{}); }catch(_){}
+        piece:String(piece).slice(0,80), aud:{gender:s.gender,age:s.age,kind:s.kind||null,faces:s.count}, slot:s.slot })}).catch(()=>{}); }catch(_){}
   }
   function tick(){
     if(playoutMode!=='conditional') return;
     if(MATRIX && Array.isArray(MATRIX.rules)){
       const s=camSeg(), r=matchMatrix(s);
-      applySeg({ ids:r.assets, category:(r.category&&r.category!=='any')?r.category:'all',
-                 tag:r.tag||'', medio:(r.medio&&r.medio!=='any')?r.medio:'all' });
+      const cat=(r.category&&r.category!=='any')?r.category:'all', tg=ruleTag(r), med=(r.medio&&r.medio!=='any')?r.medio:'all';
+      // r64: regla «vacía» (sin assets ni tema) → playlist normal; el rótulo lo dice (condLiveLabel)
+      _condPlaylist = !(r.assets&&r.assets.length) && cat==='all' && !tg && med==='all';
+      applySeg({ ids:r.assets, category:cat, tag:tg, medio:med });
       reportHit(s, r);
     } else if(engine){                                // fallback: reglas semilla del runtime
       want={category:'all'}; engine.tick();
@@ -3671,8 +3709,8 @@ window.XPLCanal = XPLCanal;
 
 // ── AUDIENCIA REMOTA: sondeo del bus mcp-tv (r62) ─────────────────────────────
 // GET <AUDIENCE_API>/audience/<screen> cada 500 ms →
-//   {ok, fresh, ttl_ms, label:{sex:'m|f|u', age_band:'child|youth|adult|senior', ts…}|null,
-//    decision:{lane:'Matrix|TopGun|neutral', creative, age_ms}}
+//   {ok, fresh, ttl_ms, label:{sex:'m|f|u', age_band:'child|youth|adult|senior', kind:'person|car|motorcycle|bicycle' (v2.2), ts…}|null,
+//    decision:{lane:'Matrix|TopGun|Persona|Coche|Moto|Bici|neutral', creative ('playlist' si neutral en v2.2), age_ms}}
 // · fresh && sex∈{m,f}  → window.__xplCam = {faces:1, gender, age, ts} (mismo contrato que
 //   camLoop) y, si el carril cambió, XPLCanal.tick() YA (presupuesto < 2 s desde el label).
 // · !fresh o sex 'u'    → window.__xplCam = null → camFresh() devuelve null y matchMatrix
@@ -3680,31 +3718,40 @@ window.XPLCanal = XPLCanal;
 //   antes de 6 s; un m/f fresco SIEMPRE gana al instante.
 // · Red: silenciosa, nunca rompe el bucle; back-off a 2 s tras 5 fallos seguidos y
 //   vuelta a 500 ms al primer éxito. No toca vídeo/precache: solo hechos para la matriz.
+// r64 · TIPOLOGÍA (bus v2.2, retrocompatible): label.kind ∈ person|car|motorcycle|bicycle (sin
+// kind = person) y decision.lane ∈ Matrix|TopGun|Persona|Coche|Moto|Bici|neutral. Un kind
+// no-person entra como {faces:1, gender:null, kind} → solo casan sus reglas (o el catch-all).
+// Una persona con sexo 'u' cuenta como presente SOLO si el bus la pone en un carril (v2.2
+// «Persona»); con el bus v2.1 (lane neutral) sigue siendo neutro, como en r62.
 const AUD_AGE_MAP={ child:'nino', kid:'nino', youth:'joven', young:'joven', teen:'joven', adult:'adulto', senior:'senior', elder:'vejez', old:'vejez' };
-const AUD_REMOTE={ on:false, timer:null, fails:0, lane:null, sex:'u', neutralSince:0, polls:0, ok:0, last:null };
+const AUD_REMOTE={ on:false, timer:null, fails:0, lane:null, sex:'u', kind:'none', neutralSince:0, polls:0, ok:0, last:null };
 function audienceRemoteLane(d){
   const lab=(d&&d.label)||null, fresh=!!(d&&d.fresh)&&!!lab;
-  const sex=(fresh&&lab&&(lab.sex==='m'||lab.sex==='f'))?lab.sex:'u';
-  const lane=(sex==='u')?'neutral':((d.decision&&typeof d.decision.lane==='string'&&d.decision.lane)||sex);
-  return { lab, fresh, sex, lane };
+  const busLane=(d&&d.decision&&typeof d.decision.lane==='string')?d.decision.lane:'';
+  let kind=fresh?(AUD_KIND_ALIAS[String(lab.kind||'person').toLowerCase()]||'person'):'none';
+  const sex=(fresh&&kind==='person'&&(lab.sex==='m'||lab.sex==='f'))?lab.sex:'u';
+  const present=fresh&&(kind!=='person'||sex!=='u'||(!!busLane&&busLane!=='neutral'));
+  if(!present) kind='none';
+  const lane=!present?'neutral':(busLane&&busLane!=='neutral'?busLane:(sex!=='u'?sex:AUD_KIND_LANE[kind]||kind));
+  return { lab, fresh, sex, kind, present, lane };
 }
 function audienceRemoteApply(d){
   const r=audienceRemoteLane(d); AUD_REMOTE.last=r;
-  const now=Date.now(), changed=(r.lane!==AUD_REMOTE.lane)||(r.sex!==AUD_REMOTE.sex);
-  if(r.sex!=='u'){
-    window.__xplCam={ faces:1, gender:r.sex, age:AUD_AGE_MAP[String(r.lab.age_band||'').toLowerCase()]||'adulto', ts:now };
+  const now=Date.now(), changed=(r.lane!==AUD_REMOTE.lane)||(r.sex!==AUD_REMOTE.sex)||(r.kind!==AUD_REMOTE.kind);
+  if(r.present){
+    window.__xplCam={ faces:1, gender:r.sex==='u'?null:r.sex, age:r.kind==='person'?(AUD_AGE_MAP[String(r.lab.age_band||'').toLowerCase()]||'adulto'):null, kind:r.kind, ts:now };
     AUD_REMOTE.neutralSince=0;
   } else {
-    // Neutro: se mantiene un mínimo de 6 s (no re-tickear neutro antes) — m/f fresco manda igual.
+    // Neutro: se mantiene un mínimo de 6 s (no re-tickear neutro antes) — un label fresco manda igual.
     if(AUD_REMOTE.lane==='neutral' && AUD_REMOTE.neutralSince && (now-AUD_REMOTE.neutralSince)<6000){ window.__xplCam=null; return; }
     window.__xplCam=null; if(changed) AUD_REMOTE.neutralSince=now;
   }
   if(!changed) return;
-  AUD_REMOTE.lane=r.lane; AUD_REMOTE.sex=r.sex;
-  try{ setNowAudience(r.sex==='u'?null:{ cam:false, bus:true, faces:1, gender:r.sex, age:window.__xplCam.age }); }catch(_){}
+  AUD_REMOTE.lane=r.lane; AUD_REMOTE.sex=r.sex; AUD_REMOTE.kind=r.kind;
+  try{ setNowAudience(!r.present?null:{ cam:false, bus:true, faces:1, gender:window.__xplCam.gender, age:window.__xplCam.age, kind:r.kind }); }catch(_){}
   if(playoutMode==='conditional' && window.XPLCanal){ try{ XPLCanal.tick(); }catch(_){} }
-  try{ flashCli(r.sex==='f'?'👩 audiencia remota: mujer → '+r.lane:r.sex==='m'?'👨 audiencia remota: hombre → '+r.lane:'👥 audiencia remota: neutro'); }catch(_){}
-  emitAudienceState(r.lane, r.sex, r.fresh);
+  try{ flashCli(!r.present?'👥 audiencia remota: neutro':(r.sex==='f'?'👩 audiencia remota: mujer → ':r.sex==='m'?'👨 audiencia remota: hombre → ':(AUD_KIND_ICON[r.kind]||'👥')+' audiencia remota: '+(AUD_KIND_TXT[r.kind]||r.kind)+' → ')+r.lane); }catch(_){}
+  emitAudienceState(r.lane, r.sex, r.fresh, r.kind);
 }
 async function audienceRemotePoll(){
   if(!AUD_REMOTE.on) return;
@@ -3918,7 +3965,7 @@ async function executeQueuedCommand(c){
   // ignoraba mientras respondíamos executed. Una única ruta evita esa mentira.
   if(/^tag-[a-z0-9_,+-]*$/.test(cmd)) return applyCtrlCmd(cmd);
   // r62: audience-m|f|u del mando (alias forcecam-*) por el dispatcher confirmado.
-  if(/^(audience|forcecam)-(m|f|u|off)$/.test(cmd)) return applyCtrlCmd(cmd);
+  if(/^(audience|forcecam)-(m|f|u|off|coche|car|moto|motorcycle|bici|bicycle|persona|person)$/.test(cmd)) return applyCtrlCmd(cmd);   // r64: + tipologías
   try{ runCli(raw); return 'executed'; }catch(_){ return 'failed'; }
 }
 async function ackQueuedCommand(c,status){
@@ -4066,7 +4113,8 @@ async function applyCtrlCmd(cmd){
       // tag- vacío → quita el filtro y devuelve la pantalla al gobierno remoto.
       // r62: audience-m|f|u (alias forcecam-*) desde la cola del mando: mismo efecto
       // que el CLI /forcecam — fuerza condicional y re-evalúa la matriz al instante.
-      const aud=/^(?:audience|forcecam)-(m|f|u|off)$/.exec(cmd);
+      // r64: audience-coche|moto|bici|persona (alias car|motorcycle|bicycle|person) simulan tipologías.
+      const aud=/^(?:audience|forcecam)-(m|f|u|off|coche|car|moto|motorcycle|bici|bicycle|persona|person)$/.exec(cmd);
       if(aud){ flashCli(forceAudience(aud[1])); return 'executed'; }
       const t=/^tag-([a-z0-9_,+-]*)$/.exec(cmd);
       if(t){
@@ -4245,6 +4293,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=11.09.2026.r7.1657" defer></script>
+  <script src="/assets/admira-version-watch.js?v=11.09.2026.r8.1847" defer></script>
 </body>
 </html>
