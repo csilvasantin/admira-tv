@@ -5,9 +5,13 @@ const LABEL={none:'Bucle general',person:'Persona',car:'Coche',motorcycle:'Moto'
 export function installSignageUI({document,window}){
   const $=id=>document.getElementById(id);
   let iframe=null,bridge=null,dataBridge=null,eligible=false,analysisEnabled=false,emissionTimer=0,emissionSeen=false,emissionDelayed=false,mediaReported=false,manuallyOff=false,failed=false;
-  function controls(){$('start-signage').disabled=!eligible||!!iframe;$('stop-signage').disabled=!iframe;}
-  function stop(message='Player en pausa mientras la pestaña está oculta. Al volver se reanuda la música, no el análisis.'){
-    clearTimeout(emissionTimer);bridge?.stop();bridge=null;dataBridge?.stop();dataBridge=null;
+  let manualAllowed=true,manualTestActive=false;
+  function controls(){
+    $('start-signage').disabled=!eligible||!!iframe;$('stop-signage').disabled=!iframe;
+    for(const kind of ['person','car','motorcycle','bicycle','none'])$(`test-${kind}`).disabled=!eligible||!bridge?.ready||!manualAllowed;
+  }
+  function stop(message='Player en pausa mientras la pestaña está oculta. Al volver se reanuda la música; el análisis solo se recupera si estaba activo y vuelve vídeo válido.'){
+    clearTimeout(emissionTimer);bridge?.stop();bridge=null;dataBridge?.stop();dataBridge=null;manualTestActive=false;
     if(iframe){iframe.remove();iframe=null;}
     $('signage-idle-label').textContent=failed?'Player detenido por error':manuallyOff?'Player apagado':'Player en espera';
     $('signage-idle').hidden=false;$('signage-status').textContent=message;controls();
@@ -63,6 +67,7 @@ export function installSignageUI({document,window}){
           $('signage-status').textContent=`${state.loop?(state.music?(state.musicSource==='pixeria-musica'?'Pixeria #musica · últimos 5':'Playlist musical asociada'):'Bucle general'):'Contenido condicionado'} · ${state.phase==='playing'?'reproduciendo':state.phase==='poster-loaded'?'miniatura de respaldo':'interactivo cargado'}`;
           $('signage-media').textContent=state.phase==='playing'?(state.mediaType==='audio'?(state.muted===true||state.volume===0?'Audio iniciado en silencio.':'Audio iniciado por el navegador; no confirma el volumen de los altavoces del equipo.'):'El player confirma vídeo/audio iniciado o imagen cargada.'):state.phase==='poster-loaded'?'Miniatura cargada; este vídeo no ha confirmado reproducción.':'Evento de carga del interactivo recibido; no confirma contenido visible ni reproducción interna.';
         }
+        controls();
       }});
     $('signage-status').textContent='Cargando player · comprobando canal de órdenes…';
     $('signage-media').textContent='Sin confirmación de emisión';
@@ -71,15 +76,24 @@ export function installSignageUI({document,window}){
   }
   $('start-signage').addEventListener('click',()=>{manuallyOff=false;failed=false;start();});
   $('stop-signage').addEventListener('click',()=>{manuallyOff=true;stop('Player apagado manualmente. Pulsa Reanudar bucle para volver.');});
+  for(const kind of ['person','car','motorcycle','bicycle','none'])$(`test-${kind}`).addEventListener('click',()=>{
+    if(!eligible||!bridge?.ready||!manualAllowed||document.hidden)return;
+    manualTestActive=kind!=='none';
+    if(kind==='none')bridge.neutral();else bridge.passage([{class:kind}]);
+    $('signage-test-status').textContent=`Última prueba manual: ${LABEL[kind]}. ${kind==='none'?'Vuelta a playlist.':'Vigencia máxima 6 s desde el clic.'} Sin detección, captura ni incremento de contadores.`;
+  });
   window.addEventListener('message',event=>{bridge?.receive(event);void dataBridge?.receive(event);});
   controls();
   return {
     setEligible(value){eligible=value;if(!value&&iframe)stop();else if(value&&!iframe&&!manuallyOff&&!failed)start();controls();},
-    setAnalysis(value){
+    setAnalysis(value,allowManual=!value){
       const next=value===true;
+      manualAllowed=allowManual===true&&!next;
+      if(!manualAllowed&&manualTestActive){bridge?.neutral();manualTestActive=false;}
       if(analysisEnabled&&!next)bridge?.neutral();
       analysisEnabled=next;
       $('signage-mode').textContent=next?'Audiencia activa · la música se interrumpe solo con regla y contenido disponibles.':'Música por defecto · analizador inactivo. No necesita compartir vídeo.';
+      controls();
     },
     stop,neutral:()=>bridge?.neutral(),passage:events=>{if(analysisEnabled)bridge?.passage(events);}
   };

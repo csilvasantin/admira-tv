@@ -34,7 +34,7 @@ async function fixture({surface='browser',denied=false,slowLoad=false,segment,st
   globalThis.ImageData=class{constructor(data,width,height){Object.assign(this,{data,width,height});}};
   get('confidence').value='65';
   await import(`./xtore.mjs?fixture=${++serial}`);
-  cleanups.push(()=>get('stop-signage').emit('click'));
+  cleanups.push(async()=>{await get('stop').emit('click');await get('stop-signage').emit('click');});
   const calibrate=async()=>{await get('edit-coordinates').emit('click');await get('apply-coordinates').emit('click');};
   return {get,doc,win,track,calibrate,detections,finishLoad:()=>finishLoad(),finishDetection:()=>finishDetection?.([])};
 }
@@ -89,7 +89,7 @@ test('incremental aspect drift is compared to the calibrated source, not the las
   for(let w=1285;w<=1440;w+=5){f.get('scene').videoWidth=w;await f.get('scene').emit('resize');}
   assert.equal(f.get('analyze').disabled,true);assert.equal(f.get('tablet').hidden,true);await f.get('stop').emit('click');
 });
-test('delayed metadata restores once and proportional resize cancels inference without resuming',async t=>{
+test('delayed metadata restores once and proportional resize waits for a fresh frame',async t=>{
   t.mock.timers.enable({apis:['setTimeout']});
   const data=new Map(),storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
   const a=await fixture({storage});await a.get('connect').emit('click');await a.calibrate();await a.get('stop').emit('click');
@@ -99,7 +99,8 @@ test('delayed metadata restores once and proportional resize cancels inference w
   await f.get('set-roi').emit('click');await f.get('scene').emit('resize');assert.equal(f.get('analyze').disabled,true);
   await f.calibrate();await f.get('analyze').emit('click');
   f.get('scene').videoWidth=1920;f.get('scene').videoHeight=1080;await f.get('scene').emit('resize');f.finishDetection();await new Promise(resolve=>setImmediate(resolve));
-  assert.equal(f.get('connection').textContent,'Pestaña conectada');assert.equal(f.get('analyze').textContent,'Iniciar análisis');
+  assert.equal(f.get('connection').textContent,'Pestaña conectada');assert.equal(f.get('analyze').textContent,'Pausar análisis');
+  assert.match(f.get('analysis-health').textContent,/reanudación automática/);
   assert.equal(f.get('tablet').hidden,false);assert.equal(f.get('count-person').textContent,'0');await f.get('stop').emit('click');
 });
 test('storage quota failure preserves the previous preset and leaves forget available',async()=>{
@@ -148,6 +149,103 @@ test('hidden view pauses and ignores an in-flight inference',async()=>{
   assert.equal(f.get('connection').textContent,'Pestaña conectada');
   assert.equal(f.get('capture-canvas').hidden,true);assert.equal(f.get('event-counter').textContent,'0 pasos');
   await f.get('stop').emit('click');
+});
+test('returning from hidden resumes only the previously active analysis and only on a fresh frame',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture();await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  f.doc.hidden=true;await f.doc.emit('visibilitychange');f.finishDetection();await new Promise(resolve=>setImmediate(resolve));
+  f.get('scene').currentTime++;t.mock.timers.tick(1000);await new Promise(resolve=>setImmediate(resolve));assert.equal(f.detections.length,1);
+  f.doc.hidden=false;await f.doc.emit('visibilitychange');t.mock.timers.tick(500);await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('connection').textContent,'Analizando');assert.equal(f.detections.length,2);assert.equal(f.get('count-person').textContent,'0');
+  await f.get('analyze').emit('click');f.finishDetection();await new Promise(resolve=>setImmediate(resolve));
+  f.doc.hidden=true;await f.doc.emit('visibilitychange');f.doc.hidden=false;await f.doc.emit('visibilitychange');f.get('scene').currentTime++;t.mock.timers.tick(2000);
+  assert.equal(f.detections.length,2);assert.equal(f.get('analyze').textContent,'Iniciar análisis');
+});
+test('temporary track mute recovers after unmute and fresh video; manual pause cancels recovery',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture();await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  await f.track.emit('mute');f.finishDetection();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('test-person').disabled,true);
+  f.get('scene').currentTime++;t.mock.timers.tick(1000);await new Promise(resolve=>setImmediate(resolve));assert.equal(f.detections.length,1);
+  await f.track.emit('unmute');t.mock.timers.tick(500);await new Promise(resolve=>setImmediate(resolve));assert.equal(f.detections.length,2);
+  await f.track.emit('mute');f.finishDetection();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('analyze').disabled,false);await f.get('analyze').emit('click');
+  await f.track.emit('unmute');f.get('scene').currentTime++;t.mock.timers.tick(1000);await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.detections.length,2);assert.equal(f.get('analyze').textContent,'Iniciar análisis');
+});
+test('manual music tests are cleared before detector loading and stay blocked through automatic recovery',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture({slowLoad:true});
+  const frame=f.get('signage').children.find(node=>node.tagName==='iframe');
+  const ack=()=>f.win.emit('message',{source:frame.contentWindow,origin:'null',data:{source:'admira-tv-canal',requestId:frame.sent.at(-1).data.requestId,ok:true}});
+  await ack();await f.get('connect').emit('click');await f.calibrate();
+  await f.get('test-person').emit('click');await ack();
+  assert.equal(frame.sent.at(-1).data.command,'admiratv audiencia persona');
+  assert.equal(f.get('event-counter').textContent,'0 pasos');assert.equal(f.get('capture-canvas').hidden,true);
+  const starting=f.get('analyze').emit('click');await Promise.resolve();
+  assert.equal(f.detections.length,0);assert.equal(f.get('test-person').disabled,true);
+  assert.equal(frame.sent.at(-1).data.command,'admiratv audiencia u');await ack();
+  const loadingCommands=frame.sent.length;await f.get('test-car').emit('click');assert.equal(frame.sent.length,loadingCommands);
+  f.finishLoad();await starting;assert.equal(f.detections.length,1);assert.equal(frame.sent.length,loadingCommands);
+  await f.track.emit('mute');await ack();
+  assert.equal(f.get('analyze').textContent,'Pausar análisis');assert.match(f.get('analysis-health').textContent,/reanudación automática/);
+  const suspendedCommands=frame.sent.length;
+  for(const kind of ['person','car','motorcycle','bicycle','none']){
+    assert.equal(f.get(`test-${kind}`).disabled,true);await f.get(`test-${kind}`).emit('click');
+  }
+  assert.equal(frame.sent.length,suspendedCommands);
+  f.finishDetection();await new Promise(resolve=>setImmediate(resolve));
+  await f.track.emit('unmute');f.get('scene').currentTime++;t.mock.timers.tick(500);await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('connection').textContent,'Analizando');assert.equal(f.detections.length,2);
+  assert.equal(frame.sent.length,suspendedCommands);assert.equal(frame.sent.at(-1).data.command,'admiratv audiencia u');
+  assert.equal(f.get('event-counter').textContent,'0 pasos');assert.equal(f.get('capture-canvas').hidden,true);
+  await f.get('analyze').emit('click');await ack();f.finishDetection();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('test-person').disabled,false);await f.get('test-car').emit('click');await ack();
+  assert.equal(frame.sent.at(-1).data.command,'admiratv audiencia coche');assert.equal(f.get('event-counter').textContent,'0 pasos');
+});
+test('missing frames waits without counting frozen images, then recovers from the same source',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});let now=0;t.mock.method(performance,'now',()=>now);
+  const f=await fixture();await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  f.finishDetection();await new Promise(resolve=>setImmediate(resolve));now=3100;t.mock.timers.tick(3100);
+  assert.match(f.get('analysis-health').textContent,/reanudación automática/);assert.equal(f.detections.length,1);
+  now+=5000;t.mock.timers.tick(5000);assert.equal(f.detections.length,1);assert.equal(f.get('count-person').textContent,'0');
+  f.get('scene').currentTime++;now+=500;t.mock.timers.tick(500);await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('connection').textContent,'Analizando');assert.equal(f.detections.length,2);f.finishDetection();
+});
+test('recovery waits for an old inference; late detections are discarded and disconnect cancels intent',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture();await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  await f.track.emit('mute');await f.track.emit('unmute');f.get('scene').currentTime++;t.mock.timers.tick(1000);await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.detections.length,1);
+  f.detections[0].resolve([{class:'person',score:.99,bbox:[10,10,50,90]}]);await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('count-person').textContent,'0');t.mock.timers.tick(500);await new Promise(resolve=>setImmediate(resolve));assert.equal(f.detections.length,2);
+  await f.track.emit('mute');await f.get('stop').emit('click');f.finishDetection();await new Promise(resolve=>setImmediate(resolve));
+  await f.track.emit('unmute');f.get('scene').currentTime++;t.mock.timers.tick(2000);await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.detections.length,2);assert.equal(f.get('connection').textContent,'Cámara sin conectar');
+});
+test('recovery retries a browser-paused source only while visible and requested, never granting a new capture',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});let now=0;t.mock.method(performance,'now',()=>now);
+  const f=await fixture();await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  const scene=f.get('scene');let plays=0;scene.paused=true;scene.play=async()=>{plays++;scene.paused=false;};
+  f.doc.hidden=true;await f.doc.emit('visibilitychange');f.finishDetection();await new Promise(resolve=>setImmediate(resolve));
+  now+=1000;t.mock.timers.tick(1000);await new Promise(resolve=>setImmediate(resolve));assert.equal(plays,0);
+  f.doc.hidden=false;await f.doc.emit('visibilitychange');now+=500;t.mock.timers.tick(500);await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(plays,1);assert.equal(f.detections.length,1);
+  scene.currentTime++;now+=500;t.mock.timers.tick(500);await new Promise(resolve=>setImmediate(resolve));assert.equal(f.detections.length,2);
+  await f.track.emit('mute');f.finishDetection();await new Promise(resolve=>setImmediate(resolve));await f.get('analyze').emit('click');
+  scene.paused=true;await f.track.emit('unmute');now+=3000;t.mock.timers.tick(3000);await new Promise(resolve=>setImmediate(resolve));assert.equal(plays,1);
+  assert.equal(f.get('analyze').textContent,'Iniciar análisis');assert.equal(f.track.stopped,false);
+});
+test('format changes and calibration cancel automatic recovery while a proportional resize recovers',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture();await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  f.get('scene').videoWidth=1920;f.get('scene').videoHeight=1080;await f.get('scene').emit('resize');f.finishDetection();await new Promise(resolve=>setImmediate(resolve));
+  f.get('scene').currentTime++;t.mock.timers.tick(500);await new Promise(resolve=>setImmediate(resolve));assert.equal(f.detections.length,2);
+  f.get('scene').videoWidth=2100;await f.get('scene').emit('resize');f.finishDetection();await new Promise(resolve=>setImmediate(resolve));
+  f.get('scene').currentTime++;t.mock.timers.tick(2000);await new Promise(resolve=>setImmediate(resolve));assert.equal(f.detections.length,2);assert.equal(f.get('analyze').disabled,true);
+  await f.calibrate();await f.get('analyze').emit('click');await f.track.emit('mute');f.finishDetection();await new Promise(resolve=>setImmediate(resolve));
+  await f.get('edit-coordinates').emit('click');await f.get('apply-coordinates').emit('click');await f.track.emit('unmute');f.get('scene').currentTime++;t.mock.timers.tick(1000);
+  assert.equal(f.detections.length,3);assert.equal(f.get('analyze').textContent,'Iniciar análisis');
 });
 test('changing source resolution invalidates calibration',async()=>{
   const f=await fixture();await f.get('connect').emit('click');await f.calibrate();

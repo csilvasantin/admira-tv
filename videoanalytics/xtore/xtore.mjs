@@ -16,6 +16,8 @@ const numberFormat=new Intl.NumberFormat('es-ES');
 const cutoutJob=new CutoutJob();
 let segmenter=null,cutoutsEnabled=false,cutoutLoading=false,segmentInput=null,pendingCutout=null,cutoutExpiryTimer=0;
 let stream=null, generation=0, analyzing=false, busy=false, loopTimer=0, expiryTimer=0;
+let analysisRequested=false,suspendedReason=null,recoveryTimer=0,recoveryVideoTime=-1,sourceMuted=false,inferences=0;
+let sourcePlayPending=null,sourcePlayRetryAt=0;
 let model=null, modelPromise=null, calibration=null, points=[], roiReady=false, tabletReady=false;
 let roi=[.706,.026,.282,.293];
 let quad=[[.773,.491],[.89,.51],[.874,.675],[.75,.647]];
@@ -80,11 +82,12 @@ function controls(){
   $('add-scooter').disabled=!connected;
   for(const id of ['set-roi','set-tablet','set-signage','edit-coordinates'])$(id).disabled=!connected;
   // Playback owns its browser instance, independently of the captured video.
-  signage.setAnalysis(analyzing&&!calibration&&!document.hidden);
+  signage.setAnalysis(analyzing&&!calibration&&!document.hidden,!analysisRequested&&!calibration);
   signage.setEligible(!document.hidden);
   layout();
-  $('analyze').disabled=!connected||!roiReady||!tabletReady||!!calibration||busy;
-  $('analyze').textContent=analyzing?'Pausar análisis':'Iniciar análisis';
+  $('analyze').disabled=!connected||!roiReady||!tabletReady||!!calibration||(busy&&!analysisRequested);
+  $('analyze').textContent=analysisRequested?'Pausar análisis':'Iniciar análisis';
+  $('analysis-health').textContent=analyzing?'Analizando Puerta Cam':suspendedReason?'Esperando vídeo · reanudación automática':analysisRequested?'Preparando detector…':!connected?'Cámara sin conectar':!roiReady||!tabletReady?'Completa cámara e iPad':'Análisis en pausa';
   $('connection').textContent=analyzing?'Analizando':connected?'Pestaña conectada':'Cámara sin conectar';
   $('connection').classList.toggle('live',analyzing);
 }
@@ -107,17 +110,43 @@ function clearCapture(message='Sin capturas'){
 }
 function pause(message){
   // Pausing detection returns to the normal loop; it is not a screen power-off.
+  analysisRequested=false;suspendedReason=null;clearTimeout(recoveryTimer);recoveryTimer=0;
   twins.cancelOriginal();
   analyzing=false;generation++;clearTimeout(loopTimer);clearCapture();controls();
   frameContext.clearRect(0,0,frame.width,frame.height);
   if(message)status(message);
+}
+function scheduleRecovery(){
+  if(recoveryTimer||!analysisRequested||!suspendedReason)return;
+  recoveryTimer=setTimeout(()=>{
+    recoveryTimer=0;
+    if(!analysisRequested||!suspendedReason||!stream)return;
+    if(!document.hidden&&!sourceMuted&&scene.paused===true&&!sourcePlayPending&&performance.now()>=sourcePlayRetryAt){
+      const request={},source=stream;sourcePlayPending=request;sourcePlayRetryAt=performance.now()+2000;
+      Promise.resolve().then(()=>{if(stream===source&&analysisRequested&&!document.hidden&&!sourceMuted)return scene.play();})
+        .catch(()=>{if(stream===source&&analysisRequested)status('Esperando que el navegador reanude el vídeo compartido. Puedes pausar o reconectar si la fuente no vuelve.');})
+        .finally(()=>{if(sourcePlayPending===request)sourcePlayPending=null;});
+    }
+    if(!document.hidden&&!sourceMuted&&!busy&&!inferences&&!calibration&&roiReady&&tabletReady&&scene.readyState>=2&&scene.currentTime!==recoveryVideoTime){
+      // A fresh frame in the same authorized source is required. Never infer
+      // on the last frozen frame or silently acquire another capture source.
+      void startAnalysis(true);
+    }else scheduleRecovery();
+  },500);
+}
+function suspendAnalysis(reason,message){
+  const wanted=analysisRequested;
+  pause(wanted?message:undefined);
+  if(!wanted)return;
+  analysisRequested=true;suspendedReason=reason;recoveryVideoTime=scene.currentTime;
+  controls();scheduleRecovery();
 }
 function disconnect(message='Desconectado. Capturas y vídeo borrados de la vista.'){
   pause();
   tracker.reset();
   if(stream)for(const track of stream.getTracks())track.stop();
   stream=null;scene.srcObject=null;scene.removeAttribute('src');scene.load();
-  frame.width=1;frame.height=1;sourceSize='';sourceDimensions=null;calibrationDimensions=null;lastVideoTime=-1;
+  frame.width=1;frame.height=1;sourceSize='';sourceDimensions=null;calibrationDimensions=null;lastVideoTime=-1;sourceMuted=false;sourcePlayPending=null;sourcePlayRetryAt=0;
   roiReady=false;tabletReady=false;signageReady=false;calibration=null;points=[];
   stage.classList.remove('calibrating');stage.style.aspectRatio='16 / 9';
   $('tablet').hidden=true;$('signage').hidden=true;$('roi').hidden=true;$('markers').replaceChildren();
@@ -152,10 +181,11 @@ $('connect').addEventListener('click',async()=>{
       selected.getTracks().forEach(t=>t.stop());
       status('Selecciona una pestaña de Chrome, no una ventana ni la pantalla completa.');return;
     }
-    stream=selected;generation++;roiReady=false;tabletReady=false;signageReady=false;
+    stream=selected;sourceMuted=track.muted===true;generation++;roiReady=false;tabletReady=false;signageReady=false;
     tracker.reset();
-    track.addEventListener('ended',()=>disconnect('Se ha terminado de compartir. La captura se ha borrado.'),{once:true});
-    track.addEventListener('mute',()=>pause('La fuente está interrumpida. Revisa la pestaña y vuelve a iniciar el análisis.'));
+    track.addEventListener('ended',()=>{if(stream===selected)disconnect('Se ha terminado de compartir. La captura se ha borrado.');},{once:true});
+    track.addEventListener('mute',()=>{if(stream!==selected)return;sourceMuted=true;suspendAnalysis('source','Puerta Cam está interrumpida temporalmente. El análisis se reanudará cuando lleguen fotogramas nuevos.');});
+    track.addEventListener('unmute',()=>{if(stream!==selected)return;sourceMuted=false;scheduleRecovery();});
     scene.srcObject=stream;
     await scene.play();
     passages.reset();renderCounts();
@@ -186,7 +216,8 @@ function updateSourceSize(){
   if(sourceSize && sourceSize!==next){
     const reference=calibrationDimensions||sourceDimensions;
     const proportional=reference&&Math.abs((reference[0]/reference[1])/(dimensions[0]/dimensions[1])-1)<=.005;
-    pause(proportional?'La resolución ha cambiado proporcionalmente. Se conserva el encuadre; comprueba la vista antes de reanudar.':'La fuente ha cambiado de formato. Vuelve a marcar las superficies antes de analizar. El preset anterior se conserva.');
+    if(proportional&&!calibration)suspendAnalysis('resize','La resolución ha cambiado proporcionalmente. Se conserva el encuadre y se reanudará al llegar vídeo nuevo.');
+    else pause('La fuente ha cambiado de formato o interrumpido una marcación. Comprueba las superficies antes de iniciar. El preset anterior se conserva.');
     tracker.reset();
     calibration=null;points=[];stage.classList.remove('calibrating');$('markers').replaceChildren();$('coordinates').hidden=true;
     if(!proportional){roiReady=false;tabletReady=false;signageReady=false;calibrationDimensions=null;$('calibration-status').textContent='Formato nuevo: repite el encuadre';}
@@ -295,20 +326,27 @@ async function prepareModel(){
   return modelPromise;
 }
 $('prepare-model').addEventListener('click',()=>{prepareModel().catch(()=>{});});
-$('analyze').addEventListener('click',async()=>{
-  if(analyzing){pause('Análisis en pausa. La pestaña continúa compartida, pero no se procesan fotogramas.');return;}
+async function startAnalysis(recovering=false){
   if(!stream||!roiReady||!tabletReady||calibration)return;
+  if(recovering&&(!analysisRequested||!suspendedReason))return;
+  analysisRequested=true;
+  if(document.hidden||sourceMuted){suspendAnalysis('source','Esperando que la vista y Puerta Cam estén disponibles. Se reanudará automáticamente.');return;}
+  suspendedReason=null;clearTimeout(recoveryTimer);recoveryTimer=0;
   const token=++generation;busy=true;controls();
   try{
     await prepareModel();
     if(token!==generation||!stream)return;
-    if(document.hidden){status('Vuelve a esta vista y pulsa Iniciar análisis.');return;}
+    if(document.hidden||sourceMuted){suspendAnalysis('source','Esperando vídeo disponible; el análisis se reanudará automáticamente.');return;}
     analyzing=true;lastVideoTime=-1;lastFrameAt=performance.now();
     history.sync();
     status('Analizando solo Puerta Cam. Pasos confirmados en dos fotogramas (tres para bicis de confianza baja); capturas de 6 s. Los pasos con regla y contenido interrumpen la música; sin coincidencia continúa la playlist.');
     tabletIdle();loop(token);
-  }catch{status('No se ha iniciado el análisis. Revisa el estado del detector.');}
+  }catch{if(token===generation)pause('No se ha iniciado el análisis. Revisa el estado del detector.');}
   finally{busy=false;controls();}
+}
+$('analyze').addEventListener('click',async()=>{
+  if(analysisRequested){pause('Análisis en pausa manual. No se reanudará solo; pulsa Iniciar análisis cuando quieras.');return;}
+  await startAnalysis();
 });
 async function loop(token){
   if(!analyzing||token!==generation||!stream)return;
@@ -316,7 +354,7 @@ async function loop(token){
   try{
       const now=performance.now();
     if(scene.readyState<2||scene.currentTime===lastVideoTime){
-      if(now-lastFrameAt>3000){pause('No llegan fotogramas nuevos. Revisa Puerta Cam y vuelve a iniciar el análisis.');return;}
+      if(now-lastFrameAt>3000){suspendAnalysis('frames','No llegan fotogramas nuevos. Esperando Puerta Cam; el análisis se reanudará automáticamente al recuperarse.');return;}
     }else{
       lastVideoTime=scene.currentTime;lastFrameAt=now;
       const [x,y,w,h]=roi, sw=scene.videoWidth,sh=scene.videoHeight;
@@ -324,7 +362,8 @@ async function loop(token){
       if(frame.width!==width||frame.height!==height){frame.width=width;frame.height=height;}
       frameContext.drawImage(scene,x*sw,y*sh,w*sw,h*sh,0,0,width,height);
       const start=performance.now(),threshold=Number($('confidence').value)/100,bikeThreshold=Number($('bicycle-confidence').value||40)/100;
-      const predictions=await detectObjects(model,window.tf,frame,Math.min(.25,threshold,bikeThreshold));
+      let predictions;inferences++;
+      try{predictions=await detectObjects(model,window.tf,frame,Math.min(.25,threshold,bikeThreshold));}finally{inferences--;}
       if(!analyzing||token!==generation)return;
       const events=tracker.update(predictions,performance.now(),width,height,{person:threshold,car:threshold,motorcycle:threshold,bicycle:bikeThreshold});
       if(events.length){passages.add(events);renderCounts();queueHistory(events);signage.passage(events);}
@@ -450,7 +489,7 @@ $('prepare-cutouts').addEventListener('click',async()=>{
   finally{cutoutLoading=false;$('prepare-cutouts').disabled=false;}
 });
 // Do not leave identifiable frames sitting in a hidden tab or the back-forward cache.
-document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('Análisis pausado al ocultar esta vista. Pulsa Iniciar análisis para continuar.');else{twins.checkExpiry();controls();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)suspendAnalysis('hidden','Vista oculta: no se procesan imágenes. Al volver se reanudará el análisis si seguía activo.');else{twins.checkExpiry();controls();scheduleRecovery();}});
 window.addEventListener('beforeunload',event=>{if(history.pending.length||history.lost){event.preventDefault();event.returnValue='';}});
 window.addEventListener('pagehide',()=>{clearTimeout(historyTimer);twins.clear();disconnect();});
 tabletIdle();renderCounts();controls();

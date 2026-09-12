@@ -12,6 +12,22 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
 
 ## Player virtual Xtore · música por defecto
 
+- Recuperación del análisis solicitado: ocultación, mute, más de 3 s sin fotogramas y
+  resize proporcional suspenden; cada 500 ms se comprueba vista visible, misma fuente sin
+  mute, fotograma nuevo, marcas válidas y ninguna inferencia pendiente. Pausa manual,
+  desconexión, recalibración, formato incompatible o fallo del detector cancelan la intención.
+  No infiere en segundo plano ni obtiene nuevos permisos; reintenta play de la fuente existente.
+- Matriz local exclusiva xtore-virtual-zapatillas: persona = Berlin / Take My Breath Away
+  (Top Gun), asset 1786533143983-n2y09e; coche/moto/bici = Huey Lewis & The News /
+  The Power of Love (Regreso al Futuro), asset 1786532932584-a1412h. Sin inferencia de sexo/edad.
+  IDs resueltos contra catálogo vigente con medios reproducibles HTTPS; sin pieza válida sigue
+  la base. No cambia reglas globales, hardware ni asociación de playlist.
+- TTL 6 s desde último evento o clic, NO desde playing; la carga consume ese plazo.
+  Regla repetida renueva sin reiniciar la pieza; expiración vuelve a base desde el principio.
+  Pruebas manuales UI en «Reglas musicales · probar», solo sin intención de análisis ni
+  calibración; no suman capturas/pasos/histórico y se neutralizan al solicitar análisis.
+  Estos botones NO son herramientas MCP. Misión DCL-cb51d8a1e6452a99de76f4e1.
+
 - Preset de cámara/iPad/DS: autoguardado tras cada marcación válida en localStorage
   admira.xtore.zapatillas.calibration.v1 (geometría, dimensiones y fecha; 4096 caracteres).
   Se restaura después de compartir una fuente de proporción compatible (tolerancia 0,5 %
@@ -55,7 +71,7 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
 
 Sitio / docs: https://admira.tv/mcp/
 Manifest máquina: https://admira.tv/mcp/manifest.json
-Versión: v.12.09.2026.r6.12:21
+Versión: v.12.09.2026.r7.13:36
 Repo del servidor: https://github.com/csilvasantin/admira-tv-mcp · Repo del sitio: https://github.com/csilvasantin/admira-tv
 
 ## Servidor MCP (cómo conectar)

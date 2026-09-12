@@ -3,6 +3,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {PlayerDataBridge} from './player-data.mjs';
+import {XTORE_MUSIC_ASSETS} from './conditional-music.mjs';
 
 const html=readFileSync(new URL('../../canal.html',import.meta.url),'utf8');
 const section=(from,to)=>html.slice(html.indexOf(from),html.indexOf(to,html.indexOf(from)));
@@ -421,6 +423,55 @@ test('real conditional engine preserves first neutral, interrupts only a resolva
   c.forceAudience('coche');await settle();assert.equal(c.playlist[0].id,'promo');assert.equal(first.pauseCount,1);
   now+=6001;c.window.XPLCanal.tick();await settle();assert.equal(c.playlist[0].id,'default:song');
   assert.notEqual(c.mediaEl,first);const resumed=c.mediaEl;c.forceAudience('u');assert.equal(c.mediaEl,resumed);
+});
+
+test('local bridge and real engine select Top Gun for any person and Power Of Love for vehicles, without editorial cuts',async()=>{
+  const f=fixture(),c=f.c,replies=[];let now=10000,sequence=0;
+  const target={postMessage:data=>replies.push(data)};
+  const bridge=new PlayerDataBridge({target,fetcher:()=>assert.fail('Music rules never fetch/write global settings')});
+  Object.assign(c,{Date:class extends Date{static now(){return now;}},setTimeout:()=>0,setInterval:()=>0,clearInterval(){},
+    seenSig:'',scr:{screen:'xtore-virtual-zapatillas'},syncSegPanel(){},flashCli(){},setAdmiraMode:()=>assert.fail('No engine restart'),
+    rebuild:()=>c.xtoreMusicRebuild(),xtorePublicRead:async resource=>{
+      assert.equal(resource,'rules');const requestId='local-rules-'+(++sequence);
+      await bridge.receive({origin:'null',source:target,data:{source:'admira-tv-public-data',resource,requestId}});
+      const reply=replies.find(r=>r.requestId===requestId);assert.equal(reply.ok,true);return reply.data;
+    }});
+  const top={id:XTORE_MUSIC_ASSETS.person,type:'video',url:'https://media.example/topgun.mp4',title:'Top Gun'},
+    future={id:XTORE_MUSIC_ASSETS.car,type:'video',url:'https://media.example/future.mp4',title:'The Power Of Love'};
+  c.all=[top,future];f.draft([song('base'),song('base-two')]);c.xtoreMusicRebuild();await settle();const base=c.mediaEl;
+  vm.runInContext(readFileSync(new URL('../../xpl-runtime.js',import.meta.url),'utf8'),c);
+  vm.runInContext(section('const AUD_KIND_ALIAS=','function runCli(raw)'),c);
+  vm.runInContext(section('const XPLCanal = (function(){','// ── AUDIENCIA REMOTA: sondeo'),c);
+  const engine=c.window.XPLCanal;engine.start();await settle();c.forceAudience('u');assert.equal(c.mediaEl,base);
+  c.forceAudience('persona');await settle();const personClip=c.mediaEl;
+  assert.equal(c.playlist[0].id,top.id);assert.equal(f.messages.at(-1).data.loop,false);
+  assert.equal(c.window.__xplForce.gender,null);assert.equal(c.window.__xplForce.age,null);
+  personClip.duration=300;personClip.videoWidth=640;personClip.videoHeight=360;personClip.onloadedmetadata();
+  assert.deepEqual(f.timers,[]);assert.equal(top._dur,300);
+  now+=5000;c.forceAudience('persona');assert.equal(c.mediaEl,personClip);
+  now+=5999;engine.tick();assert.equal(c.mediaEl,personClip);
+  now+=1;engine.tick();await settle();assert.equal(c.playlist[0].id,'default:base');assert.equal(f.messages.at(-1).data.loop,true);
+  let vehicleClip;
+  for(const command of ['coche','moto','bici']){
+    now+=1000;c.forceAudience(command);await settle();assert.equal(c.playlist[0].id,future.id);
+    assert.equal(c.window.__xplForce.gender,null);assert.equal(c.window.__xplForce.age,null);
+    if(vehicleClip)assert.equal(c.mediaEl,vehicleClip);else vehicleClip=c.mediaEl;
+  }
+  c.forceAudience('u');await settle();assert.equal(c.playlist[0].id,'default:base');const returned=c.mediaEl;
+  c.forceAudience('u');assert.equal(c.mediaEl,returned);assert.deepEqual(f.timers,[]);
+  // An explicit rule cannot fall through to a different song or a non-musical asset.
+  for(const replacement of [null,{...top,type:'image'},{...top,type:'locucion'},
+    {...top,url:'http://media.example/topgun.mp4'},{...top,url:'https://user:pass@media.example/topgun.mp4'}]){
+    c.all=replacement?[replacement,future]:[future];c.forceAudience('persona');await settle();
+    assert.equal(c.mediaEl,returned);assert.equal(c.playlist[0].id,'default:base');
+  }
+  // Expiry also invalidates a still-loading conditional piece before its cache lookup settles.
+  c.all=[top,future];let release;c.cachedSrc=()=>new Promise(resolve=>{release=resolve;});
+  c.forceAudience('persona');const staleToken=c._playTok;c.cachedSrc=async()=>null;
+  now+=6000;engine.tick();await settle();const current=c.mediaEl;
+  release(null);await settle();assert.equal(c.mediaEl,current);assert.ok(c._playTok>staleToken);
+  assert.equal(c.playlist[0].id,'default:base');assert.equal(f.messages.at(-1).data.loop,true);
+  engine.stop();bridge.stop();
 });
 
 test('opaque music selection/playing/blocked/empty cannot write proof, presence, playlist/cache mirrors or location',async()=>{

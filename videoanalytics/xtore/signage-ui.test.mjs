@@ -73,6 +73,21 @@ test('music starts without an analyzer and only active analysis may condition it
   assert.equal(frame.sent.length,paused);assert.equal(f.frame(),frame);
   assert.match(f.get('signage-mode').textContent,/analizador inactivo/);
 });
+test('explicit manual music tests require ACK and paused analysis, and expire back to the playlist',t=>{
+  const f=fixture(t),frame=f.frame(),initial=frame.sent.length;
+  assert.equal(f.get('test-person').disabled,true);f.get('test-person').listeners.click();assert.equal(frame.sent.length,initial);
+  f.ack();assert.equal(f.get('test-person').disabled,false);
+  for(const [kind,command] of [['person','persona'],['car','coche'],['motorcycle','moto'],['bicycle','bici']]){
+    f.get(`test-${kind}`).listeners.click();assert.equal(frame.sent.at(-1).command,`admiratv audiencia ${command}`);f.ack();
+    assert.match(f.get('signage-test-status').textContent,/Última prueba manual/);
+    assert.match(f.get('signage-test-status').textContent,/Sin detección, captura ni incremento de contadores/);
+  }
+  t.mock.timers.tick(6001);assert.equal(frame.sent.at(-1).command,'admiratv audiencia u');f.ack();
+  f.get('test-person').listeners.click();f.ack();f.get('test-none').listeners.click();assert.equal(frame.sent.at(-1).command,'admiratv audiencia u');f.ack();
+  f.ui.setAnalysis(true);const active=frame.sent.length;assert.equal(f.get('test-person').disabled,true);
+  f.get('test-person').listeners.click();assert.equal(frame.sent.length,active);
+  f.ui.setAnalysis(false);f.ack();f.ui.stop();assert.equal(f.get('test-person').disabled,true);
+});
 test('missing playlist and autoplay rejection are not called playback or stalled downloads',t=>{
   const f=fixture(t);f.ack();
   for(const [phase,label] of [['playlist-empty',/Sin contenidos reproducibles con #musica/],['audio-blocked',/Sonido pendiente/]]){
@@ -84,4 +99,14 @@ test('missing playlist and autoplay rejection are not called playback or stalled
   assert.match(f.get('signage-media').textContent,/no confirma el volumen/);
   f.emit({event:'media-state',id:'music-test-only',mode:'conditional',phase:'playing',music:true,loop:true,mediaType:'audio',muted:true,volume:1});
   assert.match(f.get('signage-media').textContent,/en silencio/);
+});
+test('manual tests cannot cross into requested analysis or its temporary recovery',t=>{
+  const f=fixture(t),frame=f.frame();f.ack();f.get('test-person').listeners.click();f.ack();
+  f.ui.setAnalysis(false,false);assert.equal(frame.sent.at(-1).command,'admiratv audiencia u');f.ack();
+  assert.equal(f.get('test-person').disabled,true);const waiting=frame.sent.length;
+  f.get('test-person').listeners.click();assert.equal(frame.sent.length,waiting);
+  f.ui.setAnalysis(true,false);assert.equal(frame.sent.length,waiting);
+  f.ui.setAnalysis(false,false);f.ack();const recovering=frame.sent.length;
+  f.get('test-person').listeners.click();assert.equal(frame.sent.length,recovering);
+  f.ui.setAnalysis(false,true);assert.equal(f.get('test-person').disabled,false);
 });

@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PlayerDataBridge} from './player-data.mjs';
+import {xtoreMusicRules} from './conditional-music.mjs';
+import {XTORE_VIRTUAL_SCREEN} from './virtual-player.mjs';
 function fixture(fetcher){
   const replies=[],calls=[];const target={postMessage:(...args)=>replies.push(args)};
   const bridge=new PlayerDataBridge({target,fetcher:async(...args)=>{calls.push(args);return fetcher?fetcher(...args):Response.json({items:[],rules:[]});}});
@@ -30,6 +32,17 @@ test('playlist is pinned to the canonical virtual screen; no audit identity cros
   assert.equal(f.calls[0][0],'https://admira.tv/api/playlist?screen=xtore-virtual-zapatillas');
   assert.equal(f.replies[0][0].ok,true);assert.deepEqual(f.replies[0][0].data,{ok:true,draft:{items:[{id:'fixture'}]}});
   const bad=f.event('playlist');bad.data.screen='physical';await f.bridge.receive(bad);assert.equal(f.calls.length,1);f.bridge.stop();
+});
+test('music rules are local and correlated, never request global segmentation or accept a screen from the child',async()=>{
+  const f=fixture(()=>assert.fail('Local rules cannot fetch global settings'));
+  await f.bridge.receive(f.event('rules',{source:{}}));await f.bridge.receive(f.event('rules',{origin:'https://evil.example'}));
+  const forged=f.event('rules');forged.data.screen='xtanco-totem';await f.bridge.receive(forged);
+  assert.equal(f.replies.length,0);
+  await f.bridge.receive(f.event('rules'));
+  assert.deepEqual(f.replies[0][0].data,xtoreMusicRules(XTORE_VIRTUAL_SCREEN));
+  const second=f.event('rules');second.data.requestId='repeat-rules-123';await f.bridge.receive(second);
+  assert.equal(f.replies.at(-1)[0].requestId,'repeat-rules-123');assert.equal(f.calls.length,0);
+  f.bridge.stop();await f.bridge.receive(f.event('rules'));assert.equal(f.replies.length,2);
 });
 test('oversized, malformed and non-JSON public replies fail without forwarding any body',async()=>{
   for(const response of [new Response('x'.repeat(2*1024*1024+1)),Response.json({token:'not-a-catalogue'}),new Response('<html>bad</html>')]){

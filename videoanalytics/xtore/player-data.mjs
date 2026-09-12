@@ -1,9 +1,10 @@
-// Public catalogue/rules only. The opaque child can never choose a URL,
+// Public catalogue/playlist and local music rules. The opaque child cannot choose a URL,
 // credentials, a physical screen, or access Xtore images/history/storage.
 import {XTORE_VIRTUAL_SCREEN} from './virtual-player.mjs';
+import {xtoreMusicRules} from './conditional-music.mjs';
 // Complete public index: stock/list caps at 200, which can hide newer #musica
 // matches. The same 2 MiB bounded, credential-free read applies to this URL.
-const RESOURCES=Object.freeze({catalog:'https://stock.admira.store/stock/index.json',rules:'https://brain.digitalavatar.ai/segmentation?target=all',playlist:`https://admira.tv/api/playlist?screen=${XTORE_VIRTUAL_SCREEN}`});
+const RESOURCES=Object.freeze({catalog:'https://stock.admira.store/stock/index.json',rules:null,playlist:`https://admira.tv/api/playlist?screen=${XTORE_VIRTUAL_SCREEN}`});
 const LIMIT=2*1024*1024;
 export class PlayerDataBridge{
   constructor({target,fetcher=fetch,now=()=>Date.now()}){Object.assign(this,{target,fetcher,now});this.closed=false;this.active=new Map();this.last=new Map();this.recent=new Map();}
@@ -23,6 +24,13 @@ export class PlayerDataBridge{
       return;
     }
     if(this.now()-(this.last.get(d.resource)??-Infinity)<2000){this.reply(d.resource,d.requestId,this.recent.get(d.resource)??{ok:false});return;}
+    if(d.resource==='rules'){
+      // This bridge belongs exclusively to the canonical Xtore virtual screen.
+      // No request to, or mutation of, global rules or physical-player settings.
+      const result={ok:true,data:xtoreMusicRules(XTORE_VIRTUAL_SCREEN)};
+      this.last.set(d.resource,this.now());this.recent.set(d.resource,result);
+      this.reply(d.resource,d.requestId,result);return;
+    }
     const controller=new AbortController(),requests=new Set([d.requestId]);
     this.active.set(d.resource,{controller,requests});this.last.set(d.resource,this.now());
     const timeout=setTimeout(()=>controller.abort(),10000);
@@ -40,7 +48,7 @@ export class PlayerDataBridge{
       const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
       stage='json';data=JSON.parse(new TextDecoder().decode(bytes));
       stage='shape';
-      if(d.resource==='catalog'?!Array.isArray(data?.items):d.resource==='rules'?!Array.isArray(data?.rules):data?.ok!==true||!Array.isArray(data?.draft?.items))throw new Error('Invalid public data');
+      if(d.resource==='catalog'?!Array.isArray(data?.items):data?.ok!==true||!Array.isArray(data?.draft?.items))throw new Error('Invalid public data');
       // The frame needs only the public playlist, never audit fields/user email.
       if(d.resource==='playlist')data={ok:true,draft:{items:data.draft.items}};
       ok=true;

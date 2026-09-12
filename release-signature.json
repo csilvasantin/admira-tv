@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r6.12:21",
+  "version": "v.12.09.2026.r7.13:36",
   "signature": "TrinityMBA16 · MacBookAir16plata",
   "agent": "TrinityMBA16",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "12:21",
-  "evidence": "Xtore: ultimo preset local de camara/iPad/DS, autoguardado parcial y restauracion compatible tras compartir sin iniciar analisis; sin fotos. Resize con referencia fija, callbacks cancelados y quota segura. Mini mando anterior/siguiente/mute en Contenido en antena, solo instancia musical, ficha desplazable. Help y MCP actualizados. 67/67 pruebas focales; revision cruzada Turing aprobada; navegador local: cambio real de pieza, mute/unmute y paused:false. Yokup DCL-a548661677f72f2464249cb0."
+  "time": "13:36",
+  "evidence": "Xtore: recuperacion de analisis solicitado tras ocultacion, mute, falta temporal de frames y resize proporcional, con fuente fresca visible y sin inferencias pendientes; pausa manual y cambios de encuadre no se reactivan. Matriz musical local: persona Top Gun; coche/moto/bici The Power of Love; sin sexo/edad ni cambios globales. Pruebas manuales separadas sin contadores. Help/MCP actualizados, 99/99 pruebas dirigidas, revision cruzada Turing aprobada y navegador local con ambas piezas reproduciendo. Yokup DCL-cb51d8a1e6452a99de76f4e1."
 }

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=12.09.2026.r6.1221"></script>
+<script src="/auth-gate.js?v=12.09.2026.r7.1336"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r6.1221">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r7.1336">
 </head>
 <body>
-<script src="/admira-nav.js?v=12.09.2026.r6.1221" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=12.09.2026.r6.1221" defer></script>
+<script src="/admira-nav.js?v=12.09.2026.r7.1336" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=12.09.2026.r7.1336" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -103,8 +103,10 @@
     <p>La ficha <b>Xtore · zapatillas — Player virtual</b> usa el ID estable <code>xtore-virtual-zapatillas</code>. Aparece como <b>Virtual · navegador</b> en <a href="/cms.html">Flota</a>, los destinos de <a href="/playlists/">Playlists</a> y su <a href="/parrilla/?project=admiranext&amp;xpace=admiranext&amp;device=xtore-virtual-zapatillas&amp;playlist=default">playlist Por defecto</a>. El alta no significa «en línea» ni «reproduciendo»: esas señales proceden del player abierto. Varias pestañas del mismo ID comparten playlist; no son hardware adicional ni emisores independientes.</p>
     <p>En el <a href="/videoanalytics/xtore/">analizador de la tienda de zapatillas</a>, la <b>playlist Por defecto asociada</b> tiene prioridad y conserva su orden. Sin asociación, la base son los <b>últimos cinco contenidos Pixeria con la etiqueta exacta #musica</b>, normalizada sin distinguir mayúsculas, acentos ni el prefijo #. Incluye audio, music, vídeo y animation, por fecha de creación descendente; no incluye imágenes, interactivos ni locuciones en esa selección automática. No necesita compartir Puerta Cam ni activar el detector. La playlist se relee cada 30 segundos; editarla sigue requiriendo la sesión autorizada del portal.</p>
     <p>Si no se puede consultar la asociación por primera vez, espera y reintenta: un error de red no equivale a una playlist vacía. Una playlist asociada sin medios reproducibles muestra un error, no se sustituye por otra. Sin asociación ni coincidencias #musica, espera contenido. El <a href="https://stock.admira.store/stock/index.json">índice público completo</a> se lee con límite de 2 MiB/10 s y se filtra antes de elegir cinco; un fallo posterior conserva la última playlist y el catálogo válidos. No es una descarga offline ni cambia el comportamiento de otros players.</p>
-    <p>Al activar el analizador, un paso confirmado puede interrumpir la música si coincide una regla con contenido disponible; tras 6 segundos sin renovar el evento o al pausar, vuelve la base musical desde el principio. Sin coincidencia no reinicia la pieza. Compartir, desconectar y recalibrar mantienen el mismo player; ocultar la pestaña lo detiene, y volver reanuda música sin activar el análisis. Audios y vídeos musicales se reproducen hasta terminar el archivo, sin duración editorial. El navegador puede exigir pulsar dentro del player o usar Enter/Espacio en su botón para habilitar sonido: mientras lo bloquea, la pieza espera sin saltar, sin diagnosticar un códec ni forzar pantalla completa.</p>
+    <p>Al activar el analizador, un paso confirmado puede interrumpir la música si coincide una regla con contenido disponible; tras 6 segundos sin renovar el evento o al pausar, vuelve la base musical desde el principio. Sin coincidencia no reinicia la pieza. Compartir, desconectar y recalibrar mantienen el mismo player; ocultar la pestaña lo detiene, y volver reanuda música y recupera el análisis solo si estaba solicitado y vuelve vídeo fresco; la pausa manual no se reanuda sola. La base musical se reproduce hasta terminar el archivo, sin duración editorial; una condición dura hasta 6 s desde el último evento, incluyendo el tiempo de carga. El navegador puede exigir pulsar dentro del player o usar Enter/Espacio en su botón para habilitar sonido: mientras lo bloquea, la pieza espera sin saltar, sin diagnosticar un códec ni forzar pantalla completa.</p>
     <p>El player integrado está aislado: sin cámara, micrófono, capturas, cookies ni acceso al vídeo de la calle; los controles de audiencia vienen del analizador, no de otro equipo físico. El alta no crea anuncios ni altera las reglas existentes. No hay inferencia de sexo ni edad. Esta base musical es un perfil del analizador de zapatillas; no cambia los demás players.</p>
+    <p><strong>Reglas musicales de esta Xtore:</strong> cualquier persona activa Berlin — Take My Breath Away (Top Gun); coche, moto o bici activan Huey Lewis &amp; The News — The Power of Love (Regreso al Futuro). No se clasifica sexo ni edad. Si la pieza no está disponible, conserva la base. Son reglas locales, sin alterar otras pantallas. En <strong>Reglas musicales · probar</strong> puedes comprobar cada categoría y volver a playlist con el analizador detenido: no suma pasos, capturas ni histórico. Las pruebas se cancelan al solicitar análisis; no están disponibles durante su preparación, recuperación o calibración.</p>
+    <p><strong>Continuidad:</strong> si estaba activo, ocultar la vista, un mute temporal de fuente, más de 3 s sin fotogramas o un cambio proporcional de tamaño suspenden el análisis y permiten recuperarlo al llegar vídeo nuevo, con vista visible y marcas válidas. No se analiza en segundo plano. Pausa manual, desconexión, recalibración, formato incompatible o error del detector requieren un nuevo inicio; nunca se concede permiso de compartir automáticamente.</p>
     <p>Para agentes: <a href="/mcp/#player-virtual">player_virtual_register y player_virtual_list</a>. El registro se guarda en servidor; no depende de localStorage. El reintento del mismo alta no duplica la ficha. La propagación del registro puede tardar unos segundos.</p>
     <p>Este iframe musical comunica el estado de reproducción al visor Xtore, no publica telemetría de presencia ni proof-of-play a la flota. Ver la ficha en Flota acredita su registro y playlist, no sonido ni emisión actual.</p>
   </section>

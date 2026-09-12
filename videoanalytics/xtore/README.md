@@ -40,8 +40,11 @@ Las candidatas de baja confianza conservan posición pero no crean ni confirman
 tracks. Tras una salida observada por el borde, el margen se reduce a 1 s.
 No es reidentificación y puede duplicar tras ausencias largas o perder pasos rápidos. Una cámara muy lejana,
 baja resolución, poca luz, reflejos o movimiento de la escena requieren evaluación.
-La vista debe permanecer visible. Pausa al ocultarla, cambiar tamaño de fuente,
-perder fotogramas o señal, recalibrar o producirse un error.
+La vista debe permanecer visible para inferir. Ocultación, mute de la fuente o
+más de 3 s sin fotogramas suspenden temporalmente un análisis solicitado. Al
+volver vídeo fresco en la misma fuente y estar visible, se recupera automáticamente.
+Pausa manual, desconexión, recalibración, formato incompatible o error del detector
+cancelan esa intención: no se reactivan solos ni se solicita otra captura.
 
 La leyenda muestra pasos acumulados de Personas, Coches, Motos, Bicis y Patinetes
 (estos últimos manuales). El total es la suma de las cinco categorías; cuenta todos los objetos confirmados
@@ -56,6 +59,33 @@ ni su cola pendiente. Pausar, arrancar y ajustar confianza ya no borran tracks.
 Cambiar ROI/tamaño de fuente o desconectar sí invalida la geometría. Son pasos
 estimados, no individuos únicos: una ausencia larga o regreso al encuadre puede
 producir un nuevo paso. El desglose de sexo/género no se infiere.
+
+## Recuperación y música condicionada — 12 septiembre 2026
+
+Se conserva la intención de análisis durante ocultación, mute temporal, más de
+3 s sin fotogramas y cambios proporcionales de tamaño. Un único sondeo de 500 ms
+espera vista visible, fuente sin mute, fotograma nuevo, marcas válidas y que termine
+la inferencia anterior. No procesa imágenes oculto. Si el navegador pausó el vídeo,
+reintenta play en la misma fuente con espera de 2 s, sin pedir otra captura.
+Pausa manual, desconexión, recalibración, formato incompatible o error del detector
+cancelan la intención. La barra superior muestra si analiza o espera recuperación.
+
+`conditional-music.mjs` entrega cuatro reglas locales exclusivamente para
+`xtore-virtual-zapatillas`: persona → Berlin / Take My Breath Away (Top Gun),
+ID `1786533143983-n2y09e`; coche, moto o bici → Huey Lewis & The News /
+The Power of Love (Regreso al Futuro), ID `1786532932584-a1412h`.
+Se resuelven contra el catálogo vigente; solo medios musicales reproducibles HTTPS.
+No clasifica sexo/edad, no modifica matriz global ni playlist de Flota. Si falta la
+pieza mantiene la base. Prioridad simultánea: bici, moto, coche, persona.
+TTL 6 s desde último evento/clic, no desde playing: la carga consume parte del plazo.
+Eventos repetidos renuevan sin reiniciar; al caducar vuelve a base desde el principio.
+
+«Reglas musicales · probar» ofrece botones explícitos para esas cuatro categorías
+y volver a playlist. Solo sin intención de análisis ni calibración; no incrementa
+pasos, capturas ni histórico. Solicitar análisis neutraliza una prueba anterior.
+No es una herramienta MCP ni evidencia de detección. Las reglas y recuperación
+se prueban con fixtures; la reproducción también se verifica con medios reales
+y esos botones, sin solicitar captura ni alterar la sesión de vídeo del usuario.
 
 ## Último preset y mini mando — 12 septiembre 2026
 
@@ -73,8 +103,9 @@ Se restaura después del permiso de compartir y de recibir dimensiones válidas,
 sin iniciar detección. Admite escalado proporcional con tolerancia del 0,5 %
 respecto a la referencia fija de calibración, no respecto al último resize.
 Un formato incompatible conserva el preset pero exige nuevas marcas. Un resize
-cancela análisis e inferencias tardías; si es proporcional conserva las marcas,
-pero no reanuda. También cancela la selección en curso y el diálogo numérico.
+cancela inferencias tardías; si es proporcional conserva las marcas y recupera
+solo el análisis previamente activo al llegar vídeo fresco. Si había selección
+en curso, esta y el diálogo numérico se cancelan sin reanudar automáticamente.
 No detecta giros/zoom del gemelo con igual proporción: el operador debe comprobar
 la superposición y remarcar si cambió la vista antes de iniciar análisis.
 

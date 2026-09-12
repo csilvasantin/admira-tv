@@ -2,7 +2,7 @@
   "name": "admira-tv",
   "title": "Admira TV · admira.tv — la capa Emitir de la suite AdmiraNeXT",
   "description": "Hub MCP de admira.tv: emisión, federación, player condicionado y registro de players virtuales (navegador sin hardware dedicado). Servidor mcp-tv.admira.store v2.3.0; el descriptor raíz publica la lista vigente de herramientas. Alta no equivale a presencia ni a proof-of-play.",
-  "version": "v.12.09.2026.r6.12:21",
+  "version": "v.12.09.2026.r7.13:36",
   "site": "https://admira.tv",
   "hub": "https://admira.tv/mcp/",
   "llms_txt": "https://admira.tv/mcp/llms.txt",
@@ -150,6 +150,26 @@
       "help": "https://admira.tv/help/#player-virtual",
       "mission": "DCL-f9824e3bba6cee600b73810d",
       "registration_is_not_presence": true,
+      "analysis_recovery": {
+        "scope": "UI local; no herramienta MCP ni permiso de captura",
+        "temporary": ["vista oculta", "mute de fuente", "más de 3 s sin fotogramas", "resize proporcional"],
+        "resume": "Comprobación cada 500 ms: intención activa, vista visible, misma fuente sin mute, fotograma nuevo, marcas válidas y ninguna inferencia pendiente",
+        "hard_stop": ["pausa manual", "desconexión", "recalibración", "formato incompatible", "error del detector"],
+        "background_inference": false,
+        "reacquire_capture": false
+      },
+      "conditional_music": {
+        "source": "Matriz local empaquetada; solo xtore-virtual-zapatillas; sin mutar reglas globales o playlist",
+        "assets": {"person": "1786533143983-n2y09e", "car": "1786532932584-a1412h", "motorcycle": "1786532932584-a1412h", "bicycle": "1786532932584-a1412h"},
+        "titles": {"person": "Berlin — Take My Breath Away (Top Gun)", "vehicles": "Huey Lewis & The News — The Power of Love (Regreso al Futuro)"},
+        "sex_age_inference": false,
+        "ttl_ms": 6000,
+        "ttl_start": "Último evento o clic de prueba, no comienzo de reproducción; la carga consume parte del plazo",
+        "unavailable_asset": "Conserva playlist base; no inventa coincidencia ni sustituye por otro tema",
+        "manual_test": "Reglas musicales · probar: solo sin intención de análisis y sin calibración; no suma pasos/capturas/histórico; se neutraliza al solicitar análisis",
+        "mcp_callable_test": false,
+        "mission": "DCL-cb51d8a1e6452a99de76f4e1"
+      },
       "calibration_preset": {
         "scope": "UI del analizador; no es una herramienta MCP invocable",
         "storage": "localStorage por navegador y origen; sin sincronización entre equipos",
