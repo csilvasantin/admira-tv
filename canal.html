@@ -1262,7 +1262,7 @@ function guardTick(){
   if(_standby||directOn||PREVIEW.on||paused){ g.lastProgressAt=now; g.lastPlayAt=now; return; }   // quieta A PROPÓSITO: no es un atasco
   // Full songs have no total slot deadline. A paused/blocked element waits for a
   // gesture; an actively playing element must still make progress through the file.
-  if(xtoreMusicEnabled()&&mediaEl&&mediaEl.tagName==='AUDIO'){
+  if(xtoreMusicEnabled()&&mediaEl&&['AUDIO','VIDEO'].includes(mediaEl.tagName)){
     const pos=Number(mediaEl.currentTime)||0;
     if(mediaEl.paused||mediaEl.ended||pos!==g.lastPos){g.lastPos=pos;g.lastProgressAt=now;}
     else if(now-g.lastProgressAt>GUARD_STALL_S*1000){g.stalls++;guardRecover('audio atascado '+Math.round((now-g.lastProgressAt)/1000)+'s');return;}
@@ -1528,16 +1528,26 @@ function previewFallback(msg){
 // a ser la programación base del player: orden exacto, duración editorial y
 // caché disco-primero. Sincro, extendido, parrilla horaria y un tag remoto siguen
 // teniendo precedencia explícita; una lista vacía conserva el fallback seguro.
-const DEFAULT_DRAFT={items:[],signature:''};
+const DEFAULT_DRAFT={items:[],signature:'',ready:false,assigned:false};
 let _xtoreMusicBase=true, _xtoreMusicItem=null;
 function xtoreMusicItems(items,catalog=[]){
   const known=new Map(catalog.map(it=>[String(it.id),it]));
   return items.filter(it=>{
-    if(!it||!['audio','music'].includes(String(it.assetType||it.type||'').toLowerCase()))return false;
+    if(!it||!['audio','music','video','animation','image'].includes(String(it.assetType||it.type||'').toLowerCase()))return false;
     const original=known.get(String(it.stockId||it.id||'').replace(/^default:/,''));
     if([it.type,it.assetType,original&&original.type].some(t=>String(t||'').toLowerCase()==='locucion'))return false;
-    try{return new URL(it.asset||it.url).protocol==='https:';}catch(_){return false;}
+    try{const u=new URL(it.asset||it.url);return u.protocol==='https:'&&!u.username&&!u.password;}catch(_){return false;}
   });
+}
+function xtoreLatestStock(items,tag=''){
+  // Filter BEFORE taking five: the newest global items need not be music.
+  const canonical=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().replace(/^#+/,'').toLowerCase();
+  const wanted=canonical(tag), seenIds=new Set(),seenUrls=new Set();
+  return xtoreMusicItems(items).filter(it=>(wanted!=='musica'||['audio','music','video','animation'].includes(it.type))&&
+      (!wanted||(Array.isArray(it.tags)&&it.tags.some(t=>typeof t==='string'&&canonical(t)===wanted))))
+    .slice().sort((a,b)=>(Date.parse(b.createdAt)||0)-(Date.parse(a.createdAt)||0)||String(a.id).localeCompare(String(b.id)))
+    .filter(it=>{const id=String(it.id||''),url=it.asset||it.url;if(!id||seenIds.has(id)||seenUrls.has(url))return false;seenIds.add(id);seenUrls.add(url);return true;})
+    .slice(0,5);
 }
 function xtoreMusicRelease(){
   // Removing an <audio> from the DOM is not a stop command. Invalidate callbacks first.
@@ -1549,19 +1559,24 @@ function xtoreMusicRelease(){
   mediaEl=null; tap.classList.remove('show');
 }
 function xtoreMusicRebuild(){
+  // Wait for the first bounded playlist read so an assigned list takes priority
+  // even when the public catalogue responds faster. On failure, retry normally.
+  if(!DEFAULT_DRAFT.ready)return;
   const previous=_xtoreMusicItem, wasBase=_xtoreMusicBase;
   const candidates=!_condPlaylist&&seg.ids&&seg.ids.length
     ?all.filter(it=>it&&MEDIA.includes(it.type)&&/^https:\/\//i.test(it.url||'')&&matchesSeg(it,seg)):[];
   _xtoreMusicBase=!candidates.length;
-  playlist=_xtoreMusicBase?xtoreMusicItems(DEFAULT_DRAFT.items,all).slice():candidates;
+  playlist=_xtoreMusicBase?(DEFAULT_DRAFT.assigned||DEFAULT_DRAFT.items.length
+    ?xtoreMusicItems(DEFAULT_DRAFT.items,all).slice():xtoreLatestStock(all,'musica')):candidates;
   cur=previous?playlist.findIndex(it=>it.id===previous.id&&it.url===previous.url&&it.type===previous.type):-1;
   $('segCount').textContent=playlist.length+(_xtoreMusicBase?' en música':' en condicional XPL');
-  setLive(_xtoreMusicBase?'MÚSICA · '+playlist.length+' pistas':'CONDICIONAL · '+playlist.length+' piezas',playlist.length>0);
+  setLive(_xtoreMusicBase?(DEFAULT_DRAFT.assigned||DEFAULT_DRAFT.items.length?'PLAYLIST ASOCIADA':'PIXERIA #musica · últimos 5')+' · '+playlist.length+' piezas':'CONDICIONAL · '+playlist.length+' piezas',playlist.length>0);
   renderChan();renderRail();try{signagePlaylistPush();}catch(_){}
   if(!playlist.length){
     ++_playTok;clearTimeout(timer);stopBar();usesAdv=false;xtoreMusicRelease();cur=-1;
-    stage.innerHTML='<div class="empty">Asocia una playlist de música a este player virtual.</div>';
-    nowEl.textContent='Asocia una playlist de música…';
+    const empty=DEFAULT_DRAFT.assigned?'La playlist asociada no contiene medios reproducibles.':'No hay contenidos reproducibles con #musica. Reintentando Pixeria…';
+    stage.innerHTML='<div class="empty">'+empty+'</div>';
+    nowEl.textContent=empty;
     emitFrameState({id:'playlist-default'},'playlist-empty');return;
   }
   // Neutral probes / catalogue refreshes preserve a selected or blocked song, even before play() settles.
@@ -1572,9 +1587,11 @@ async function xtoreMusicPlayAudio(el,it,token){
   try{
     await el.play();
     if(token!==_playTok||mediaEl!==el){try{el.pause();}catch(_){}return;}
+    el._xtoreAutoplayBlocked=false;
     tap.classList.remove('show');
   }catch(_){
     if(token!==_playTok||mediaEl!==el)return;
+    el._xtoreAutoplayBlocked=true;
     tap.textContent='▶ Toca para activar el sonido';tap.classList.add('show');emitFrameState(it,'audio-blocked');
   }
 }
@@ -1594,14 +1611,21 @@ async function loadDefaultDraft(){
   const screen=String(scr.screen||scr.circuit||'').trim();if(!screen||PREVIEW.on)return;
   try{
     const d=XTORE_PARENT?await xtorePublicRead('playlist'):await fetch('/api/playlist?screen='+encodeURIComponent(screen)+'&_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
-    if(xtoreMusicEnabled()&&(d?.ok!==true||!Array.isArray(d?.draft?.items)))return;
+    if(xtoreMusicEnabled()&&(d?.ok!==true||!Array.isArray(d?.draft?.items)))throw new Error('Playlist unavailable');
     let raw=d&&d.draft&&Array.isArray(d.draft.items)?d.draft.items:[];
+    if(xtoreMusicEnabled()){DEFAULT_DRAFT.ready=true;DEFAULT_DRAFT.assigned=raw.length>0;}
     if(xtoreMusicEnabled())raw=xtoreMusicItems(raw,all);
     const mapped=raw.map((it,ix)=>{const t=String(it.assetType||it.type||'').toLowerCase(),type=(t==='video'||t==='animation')?'video':(t==='audio'||t==='music'||t==='locucion')?'audio':'image';return{id:'default:'+String(it.stockId||it.id||ix),url:it.asset||it.url||'',type,title:it.title||('Contenido '+(ix+1)),motor:'parrilla-default',category:'por-defecto',_default:true,_position:ix,_previewSec:Math.max(2,+it.seconds||10),createdAt:'8'+String(1000+ix)}}).filter(x=>x.url);
-    const signature=mapped.map(x=>x.id+'|'+x.url+'|'+x._previewSec).join('~');
+    const signature=(xtoreMusicEnabled()?(DEFAULT_DRAFT.assigned?'assigned:':'stock:'):'')+mapped.map(x=>x.id+'|'+x.type+'|'+x.url+'|'+x._previewSec).join('~');
     if(signature===DEFAULT_DRAFT.signature){if(xtoreMusicEnabled()&&!playlist.length)rebuild(false);return;}
     DEFAULT_DRAFT.items=mapped;DEFAULT_DRAFT.signature=signature;rebuild(false);
-  }catch(_){}
+  }catch(_){
+    if(xtoreMusicEnabled()&&!DEFAULT_DRAFT.ready){
+      stage.innerHTML='<div class="empty">No se pudo consultar la playlist. Reintentando…</div>';
+      nowEl.textContent='Playlist pendiente de consulta';
+      emitFrameState({id:'playlist-default'},'playlist-unavailable');
+    }
+  }
 }
 // Entrelaza los creativos de la parrilla (own/paid) a cadencia fija para que AIREN
 // de verdad en su franja, en vez de aparecer 1 vez en un loop de 50. Cicla la lista
@@ -2151,7 +2175,7 @@ async function play(i, forced){
     v.style.opacity='0';
     const _reveal=()=>{ try{ v.style.opacity='1'; }catch(_){} };
     v.addEventListener('playing', _reveal, {once:true}); setTimeout(_reveal, 1200);
-    if(XTORE_PARENT)v.addEventListener('playing',()=>{if(_tok===_playTok)emitFrameState(it,'playing');},{once:true});
+    if(XTORE_PARENT)v.addEventListener('playing',()=>{if(_tok===_playTok){v._xtoreAutoplayBlocked=false;v._xtorePlaybackStarted=true;emitFrameState(it,'playing');}},{once:true});
     v.onloadedmetadata=()=>{ if(_tok!==_playTok) return;
       if(!v.videoWidth&&!v.videoHeight&&!AV1_OK&&!_codecBad.has(String(it.id))&&VSRC===SRC){ codecBadMark(it,'sin-pista-video'); play(cur,it); return; }
       if(v.duration&&isFinite(v.duration)){
@@ -2164,7 +2188,7 @@ async function play(i, forced){
         if(syncOn){ _nowItem.startedAt=Date.now()-Math.round(syncElapsedMs()); _nowItem.sinc.idx=syncIndex(); _nowItem.sinc.slot=Math.round(syncSlotMs()/1000); }
         _nowItem.ts=Date.now(); _postNow(_nowItem);
       }
-      if(v.videoWidth&&v.videoHeight){ it._dim={w:v.videoWidth,h:v.videoHeight}; mupiAR=_extendedAssignment?(window.innerWidth/Math.max(1,window.innerHeight)):(v.videoWidth/v.videoHeight); fitMupi(); emitFrameState(it); }
+      if(v.videoWidth&&v.videoHeight){ it._dim={w:v.videoWidth,h:v.videoHeight}; mupiAR=_extendedAssignment?(window.innerWidth/Math.max(1,window.innerHeight)):(v.videoWidth/v.videoHeight); fitMupi(); emitFrameState(it,xtoreMusicEnabled()?(v._xtoreAutoplayBlocked?'audio-blocked':v._xtorePlaybackStarted?'playing':'selected'):'selected'); }
       if(_extendedAssignment&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,((Date.now()+_extendedClockOffset)/1000)%v.duration); }catch(_){} }
       else if(syncOn&&v.duration>1){
         const target=syncIndex();
@@ -2178,11 +2202,12 @@ async function play(i, forced){
     } };
     v.onended=()=>mediaAdvance(_tok,true);
     v.onerror=()=>{ if(_tok!==_playTok)return; const ec=v.error&&v.error.code; if((ec===4||ec===3)&&!_codecBad.has(String(it.id))&&VSRC===SRC){ codecBadMark(it,'err'+ec); play(cur,it); return; }   // códec no soportado → respaldo (variante H.264 o portada), sin romper la sincro
-      if(!_coRetry && v.crossOrigin){ _coRetry=true; try{ v.removeAttribute('crossorigin'); v.load(); v.play().catch(()=>{}); }catch(_){} return; }   // asset sin CORS: reintenta sin crossorigin (orta la emisión)
+      if(!_coRetry && v.crossOrigin){ _coRetry=true; try{ v.removeAttribute('crossorigin'); v.load(); if(xtoreMusicEnabled())xtoreMusicPlayAudio(v,it,_tok);else v.play().catch(()=>{}); }catch(_){} return; }   // asset sin CORS: reintenta sin crossorigin (orta la emisión)
       setTimeout(()=>mediaAdvance(_tok),600); };
     v.ontimeupdate=()=>{ if(v.duration&&!paused) bar.style.width=(v.currentTime/v.duration*100)+'%'; };
     mediaEl=v; applyAudio(); stage.appendChild(v);
-    v.play().then(()=>tap.classList.remove('show')).catch(()=>{
+    if(xtoreMusicEnabled())xtoreMusicPlayAudio(v,it,_tok);
+    else v.play().then(()=>tap.classList.remove('show')).catch(()=>{
       // autoarranque bloqueado → reintenta en mute (señalética: nunca un botón de play al público)
       try{ v.muted=true; v.play().then(()=>tap.classList.remove('show')).catch(()=>tap.classList.add('show')); }catch(_){ tap.classList.add('show'); }
     });
@@ -2192,11 +2217,15 @@ async function play(i, forced){
     // (el audio sí suena, por eso no salta ningún onerror). Si tras 3,5 s no se ha
     // decodificado NINGÚN frame, caemos a la miniatura y avanzamos como imagen: nunca negro.
     // Impacto cero en players sanos (frames>0 → no hace nada). Ver memoria stock-codec-mediatek.
-    const decodeStarted=Date.now();
+    let decodeStarted=Date.now();
     function checkDecoded(){
       if(_tok!==_playTok || !mediaEl || mediaEl!==v) return;
+      // An autoplay permission block is not a decoding failure. Keep this piece
+      // and its sound button until the user gesture, as with audio-only music.
+      if(xtoreMusicEnabled()&&v.paused&&!v.error){decodeStarted=Date.now();setTimeout(checkDecoded,750);return;}
       let frames=0; try{ frames=(v.getVideoPlaybackQuality?v.getVideoPlaybackQuality().totalVideoFrames:(v.webkitDecodedFrameCount||0))||0; }catch(_){}
       if(frames>0 || (XTORE_PARENT&&v.videoWidth>0&&v.currentTime>0&&v.readyState>=2)) return;
+      if(xtoreMusicEnabled()&&!v.error&&Date.now()-decodeStarted<3500){setTimeout(checkDecoded,750);return;}
       // Online Xtore may still be buffering. Allow up to 15 s for actual
       // media data before falling back; do not diagnose a codec from latency.
       if(XTORE_PARENT&&!v.error&&v.readyState<2&&Date.now()-decodeStarted<15000){setTimeout(checkDecoded,750);return;}
@@ -2572,7 +2601,7 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   // etiquetas de formato/aspecto/resolución desde la caché de dimensiones (instantáneo).
   for(const it of all){ const dd=dimCache[it.id]; if(dd){ applyFmt(it,dd); if(dd.dur>0) it._dur=Math.ceil(dd.dur); it._fmtDone=true; } }
   // la firma incluye tags+categoría: si editas el metadato de un vídeo, se detecta y reordena.
-  const sig=all.map(v=>v.id+'~'+((v.tags||[]).join('.'))+'~'+(v.category||'')).join(',')+'|'+JSON.stringify(seg)+'|'+cfg.max+'|'+playoutMode;
+  const sig=all.map(v=>v.id+'~'+((v.tags||[]).join('.'))+'~'+(v.category||'')+(xtoreMusicEnabled()?'~'+v.type+'~'+v.url+'~'+v.createdAt:'')).join(',')+'|'+JSON.stringify(seg)+'|'+cfg.max+'|'+playoutMode;
   const isNew=(sig!==seenSig);
   if(isNew){ seenSig=sig; rebuild(false); }                   // 🔴 hay novedad → actualiza
   // NOVEDAD AL AIRE: después de rebuild (la pieza ya está en playlist si toca).
@@ -2900,7 +2929,7 @@ function emitFrameState(it,phase='selected'){
     if(window.parent===window) return;
     const aspect=mupiAR||itemAR(it)||1;
     window.parent.postMessage({ source:'admira-tv-canal', event:'media-state', orientation:aspect>=1?'landscape':'portrait', aspect, mode:playoutMode, sync:!!syncOn, id:it&&it.id, ...(XTORE_PARENT?{phase,loop:xtoreMusicEnabled()?_xtoreMusicBase:_condPlaylist||_condFallback,
-      ...(xtoreMusicEnabled()?{music:true}:{}),mediaType:KIND[it&&it.type]||null,muted:!!muted||volume===0,volume}: {}) }, XTORE_PARENT||'*');
+      ...(xtoreMusicEnabled()?{music:true,musicSource:DEFAULT_DRAFT.assigned||DEFAULT_DRAFT.items.length?'playlist':'pixeria-musica'}:{}),mediaType:KIND[it&&it.type]||null,muted:!!muted||volume===0,volume}: {}) }, XTORE_PARENT||'*');
   }catch(_){}
 }
 // r62: cada cambio de carril de audiencia (bus remoto o forzado) se cuenta al padre

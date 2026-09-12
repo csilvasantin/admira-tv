@@ -64,7 +64,7 @@ test('optional H264 lookup has a deadline and transient timeouts do not poison t
 });
 test('failed Xtore feed retries early, coalesces callers and preserves the last catalogue',async t=>{
   t.mock.timers.enable({apis:['setTimeout']});let calls=0,release;const rebuilt=[];
-  const context={XTORE_PARENT:'https://admira.tv',Date,MEDIA:['image'],all:[{id:'old',type:'image',url:'https://example.test/old.png'}],playlist:[{id:'old'}],
+  const context={XTORE_PARENT:'https://admira.tv',xtoreMusicEnabled:()=>true,Date,MEDIA:['image'],all:[{id:'old',type:'image',url:'https://example.test/old.png'}],playlist:[{id:'old'}],
     setTimeout,clearTimeout,INDEX:'',setStockStatus(){},restoreCatalog:()=>false,setLive(){},_lastFeed:0,_statusT:0,_statusT2:0,
     xtorePublicRead:()=>{calls++;return new Promise((resolve,reject)=>{release=calls===1?()=>reject(new Error('offline')):()=>resolve({items:[{id:'new',type:'image',url:'https://example.test/new.png',tags:'bad'}]});});},
     mergeMatrixExtras(){},saveCatalog(){},guardState:()=>({}),dimCache:{},seenSig:'',seg:{},cfg:{max:50},playoutMode:'conditional',

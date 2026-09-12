@@ -16,13 +16,25 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
 - Analizador: https://admira.tv/videoanalytics/xtore/ — música independiente del vídeo en directo.
 - Playlist propia: https://admira.tv/parrilla/?project=admiranext&xpace=admiranext&device=xtore-virtual-zapatillas&playlist=default
 - Perfil del iframe: xtoreParent=1, xtoreMusic=1, screen exacto, muted=0; sandbox opaco.
-- Base: solo audios de Por defecto, orden exacto y pistas completas hasta ended. Vacía = espera
-  asociación, nunca Stock aleatorio. La playlist se relee cada 30 s; editar exige sesión del portal.
+- Base: playlist Por defecto asociada tiene prioridad y conserva el orden. Sin asociación usa
+  los últimos cinco contenidos reproducibles Pixeria con tag exacto #musica, normalizando
+  mayúsculas, acentos, espacios exteriores y prefijo #. Admite audio/music/video/animation,
+  no image/interactive/locucion; orden createdAt descendente, sin duplicados por ID o URL.
+  Audios y vídeos musicales terminan con ended, no por una duración editorial.
+- Índice completo fijo: https://stock.admira.store/stock/index.json — máximo 2 MiB/10 s,
+  filtrar antes de limitar a cinco, conservar último catálogo válido si falla la red.
+  El helper genérico latest5 sin filtro no cambia el comportamiento de otros players.
+- La playlist se relee cada 30 s; editar exige sesión del portal. Fallo inicial de consulta =
+  playlist-unavailable y reintento, no asumir que está vacía. Fallos posteriores conservan
+  la última asociación válida. Playlist asignada no reproducible = playlist-empty, sin
+  sustituirla por otra; sin asociación ni coincidencias #musica también espera contenido.
 - Solo el analizador activo envía pasos confirmados (persona/coche/moto/bici), sin sexo, edad,
   identidad ni imágenes. Una regla con asset compatible interrumpe la música. Pausa o 6 s sin
   renovar retornan desde el inicio de la base; si no había interrupción, la canción continúa.
-- Audio-blocked exige gesto dentro del iframe; no avanza canciones mientras está bloqueado.
-  Playing no garantiza sonido físico. Playlist-empty no es descarga ni emisión.
+- Audio-blocked exige clic o Enter/Espacio en el botón del iframe, sin forzar pantalla completa;
+  audio/vídeo musical espera sin saltar ni diagnosticar códec por ese bloqueo. Playing no
+  garantiza sonido físico. Playlist-empty/playlist-unavailable no son descarga ni emisión.
+  media-state.musicSource = playlist | pixeria-musica identifica la base, no prueba reproducción.
 - Este iframe muestra estado en el visor, no publica proof-of-play/presencia a la flota.
   El registro y la playlist son persistentes; su alta no acredita online.
 - Registro: player_virtual_register/list. No usar el alta para asignar música, no modificar
@@ -31,7 +43,7 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
 
 Sitio / docs: https://admira.tv/mcp/
 Manifest máquina: https://admira.tv/mcp/manifest.json
-Versión: v.12.09.2026.r2.11:00
+Versión: v.12.09.2026.r3.11:43
 Repo del servidor: https://github.com/csilvasantin/admira-tv-mcp · Repo del sitio: https://github.com/csilvasantin/admira-tv
 
 ## Servidor MCP (cómo conectar)

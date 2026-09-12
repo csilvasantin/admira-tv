@@ -48,6 +48,7 @@ function fixture(){
   vm.createContext(c);
   vm.runInContext(section('function xtoreMusicEnabled()','function xtorePublicRead('),c);
   vm.runInContext(section('const DEFAULT_DRAFT=','async function loadDefaultDraft('),c);
+  vm.runInContext('DEFAULT_DRAFT.ready=true',c);
   vm.runInContext(section('function editorialSec(','function syncNow('),c);
   vm.runInContext(section('function emitFrameState(','// r62: cada cambio de carril'),c);
   vm.runInContext(section('function mediaAdvance(','// antes de cada nuevo contenido'),c);
@@ -66,20 +67,21 @@ test('music opt-in is restricted to the exact Xtore parent profile and screen',(
   assert.equal(f.c.xtoreMusicEnabled(),false);
 });
 
-test('base accepts HTTPS audio/music only and rejects known locutions before/after mapping',()=>{
+test('assigned base accepts HTTPS media including music videos and rejects locutions/credentials',()=>{
   const {c}=fixture();
   const items=[song(),song('music',{type:'music'}),song('video',{type:'video'}),song('image',{type:'image'}),
     song('speech',{type:'locucion',assetType:'audio'}),song('known-speech'),song('bad',{url:'javascript:alert(1)'})];
-  assert.deepEqual(Array.from(c.xtoreMusicItems(items,[{id:'known-speech',type:'locucion'}]),it=>it.id),['default:song','default:music']);
+  items.push(song('credentials',{url:'https://user:pass@media.example/a.mp3'}));
+  assert.deepEqual(Array.from(c.xtoreMusicItems(items,[{id:'known-speech',type:'locucion'}]),it=>it.id),['default:song','default:music','default:video','default:image']);
 });
 
-test('empty base emits an explicit empty state and never plays Stock',()=>{
+test('empty #musica base never falls through to unrelated Stock',()=>{
   const f=fixture();f.c.all=[song('stock'),song('stock-video',{type:'video'})];
   f.c.xtoreMusicRebuild();
   assert.equal(f.created.length,0);assert.equal(f.c.playlist.length,0);
-  assert.match(f.c.stage.innerHTML,/Asocia una playlist de música/);
+  assert.match(f.c.stage.innerHTML,/No hay contenidos reproducibles con #musica/);
   assert.deepEqual(JSON.parse(JSON.stringify(f.messages.at(-1))),{origin:'https://admira.tv',data:{source:'admira-tv-canal',event:'media-state',orientation:'landscape',aspect:1,
-    mode:'conditional',sync:false,id:'playlist-default',phase:'playlist-empty',loop:true,music:true,mediaType:null,muted:false,volume:0.8}});
+    mode:'conditional',sync:false,id:'playlist-default',phase:'playlist-empty',loop:true,music:true,musicSource:'pixeria-musica',mediaType:null,muted:false,volume:0.8}});
 });
 
 test('actual audio playback uses onended, no editorial timer and no opaque cold-cache waiting',async()=>{
@@ -88,6 +90,88 @@ test('actual audio playback uses onended, no editorial timer and no opaque cold-
   audio.duration=420;audio.onloadedmetadata();assert.equal(f.c.editorialSec(f.c.playlist[0]),420);assert.deepEqual(f.timers,[]);
   assert.equal(f.messages.at(-1).data.phase,'playing');assert.equal(f.messages.at(-1).data.mediaType,'audio');
   audio.onended();assert.equal(f.advances.length,1);
+});
+
+test('fallback filters exact normalized hashtag before latest-five limit, accepts music video and deduplicates',()=>{
+  const {c}=fixture();
+  const items=Array.from({length:310},(_,i)=>song('unrelated'+i,{createdAt:'2026-09-12T00:00:00Z',tags:['news']}));
+  for(let i=1;i<=7;i++)items.push(song('tag'+i,{type:i%2?'video':'audio',createdAt:`2026-09-0${i}T00:00:00Z`,tags:[i%2?'#MÚSICA':'musica']}));
+  items.push({...items.at(-1)},song('same-url',{url:items.at(-1).url,tags:['musica']}),song('title-only',{title:'#musica',tags:['musical']}),song('image',{type:'image',tags:['musica']}));
+  const before=items.map(i=>i.id);
+  assert.deepEqual(Array.from(c.xtoreLatestStock(items,'musica'),i=>i.id),['default:tag7','default:tag6','default:tag5','default:tag4','default:tag3']);
+  assert.deepEqual(items.map(i=>i.id),before);
+  assert.equal(c.xtoreLatestStock(items).length,5); // generic rule without a theme
+  assert.deepEqual(Array.from(c.xtoreLatestStock([song('bad-date',{tags:['musica'],createdAt:'not-a-date'}),items[310]],'musica'),i=>i.id),['default:tag1','default:bad-date']);
+});
+
+test('assigned list takes priority and deleting it restores dynamic #musica baseline',async()=>{
+  const f=fixture();f.c.all=[song('tagged',{tags:['musica']})];
+  f.draft([song('assigned')]);f.c.xtoreMusicRebuild();await settle();assert.equal(f.c.playlist[0].id,'default:assigned');
+  const old=f.c.mediaEl;f.draft([]);f.c.xtoreMusicRebuild();await settle();
+  assert.equal(f.c.playlist[0].id,'default:tagged');assert.equal(old.pauseCount,1);
+  assert.equal(f.messages.at(-1).data.musicSource,'pixeria-musica');
+  const playing=f.c.mediaEl;f.c.xtoreMusicRebuild();assert.equal(f.c.mediaEl,playing);
+});
+
+test('first playlist read wins the catalogue race; failure is not an unassigned playlist',async()=>{
+  const f=fixture(),c=f.c;f.eval('DEFAULT_DRAFT.ready=false');c.all=[song('fallback',{tags:['musica']})];
+  c.xtoreMusicRebuild();assert.equal(f.created.length,0);
+  Object.assign(c,{scr:{screen:'xtore-virtual-zapatillas'},PREVIEW:{on:false},rebuild:()=>c.xtoreMusicRebuild(),xtorePublicRead:async()=>{throw new Error('offline');}});
+  vm.runInContext(section('async function loadDefaultDraft()','// Entrelaza los creativos'),c);
+  await c.loadDefaultDraft();await settle();assert.equal(c.playlist.length,0);assert.equal(f.messages.at(-1).data.phase,'playlist-unavailable');
+  c.xtorePublicRead=async()=>({ok:true,draft:{items:[]}});await c.loadDefaultDraft();await settle();assert.equal(c.playlist[0].id,'default:fallback');
+  c.xtorePublicRead=async()=>({ok:true,draft:{items:[{type:'interactive',url:'https://example.test'}]}});
+  await c.loadDefaultDraft();assert.equal(c.playlist.length,0);assert.match(c.stage.innerHTML,/playlist asociada/);
+  c.xtorePublicRead=async()=>({ok:true,draft:{items:[]}});await c.loadDefaultDraft();await settle();assert.equal(c.playlist[0].id,'default:fallback');
+});
+
+test('music video autoplay block waits with sound control and is not a decode failure',async()=>{
+  const f=fixture();f.audioPlay(()=>Promise.reject(new Error('NotAllowedError')));
+  const waits=[];f.c.setTimeout=(fn,ms)=>{waits.push({fn,ms});return waits.length;};
+  f.c.all=[song('clip',{type:'video',tags:['musica']})];f.c.xtoreMusicRebuild();await settle();
+  const video=f.c.mediaEl;assert.equal(video.tagName,'VIDEO');assert.equal(f.messages.at(-1).data.phase,'audio-blocked');
+  waits.find(x=>x.ms===3500).fn();assert.equal(f.c.mediaEl,video);assert.deepEqual(f.timers,[]);assert.equal(f.advances.length,0);
+  f.audioPlay(el=>{el.paused=false;el.emit('playing');return Promise.resolve();});
+  f.c.xtoreMusicTap();await settle();assert.equal(f.messages.at(-1).data.phase,'playing');
+  video.onended();assert.equal(f.advances.length,1);
+});
+
+test('permission wait over 15s does not consume music video buffering time after the gesture',async()=>{
+  for(const readyState of [1,2]){
+    const f=fixture(),waits=[];let now=0;
+    f.c.Date=class extends Date{static now(){return now;}};
+    f.c.setTimeout=(fn,ms)=>{waits.push({fn,ms});return waits.length;};
+    f.audioPlay(()=>Promise.reject(new Error('NotAllowedError')));
+    f.c.all=[song('clip',{type:'video',tags:['musica']})];f.c.xtoreMusicRebuild();await settle();
+    const video=f.c.mediaEl;Object.assign(video,{videoWidth:640,videoHeight:360,readyState,currentTime:0});
+    now=20000;waits.find(t=>t.ms===3500).fn();
+    assert.equal(f.messages.at(-1).data.phase,'audio-blocked');assert.equal(f.c.mediaEl,video);
+    // A gesture starts play(), but no frame/playing yet, even if a first datum exists.
+    f.audioPlay(el=>{el.paused=false;return new Promise(()=>{});});
+    f.c.xtoreMusicTap();now+=750;waits.at(-1).fn();
+    assert.equal(f.c.mediaEl,video);assert.deepEqual(f.timers,[]);assert.equal(f.advances.length,0);
+    now=23000;waits.at(-1).fn();
+    assert.equal(f.c.mediaEl,video);assert.deepEqual(f.timers,[]);
+    // The network/decoder allowance remains bounded, not an endless wait.
+    now=readyState<2?36000:24000;waits.at(-1).fn();
+    assert.equal(f.c.mediaEl,null);assert.deepEqual(f.timers,[10000]);
+  }
+});
+
+test('late video metadata preserves audio-blocked and then confirmed playing instead of selected',async()=>{
+  const f=fixture();f.c.setTimeout=()=>0;
+  f.audioPlay(()=>Promise.reject(new Error('NotAllowedError')));
+  f.c.all=[song('clip',{type:'video',tags:['musica']})];f.c.xtoreMusicRebuild();await settle();
+  const video=f.c.mediaEl;Object.assign(video,{duration:420,videoWidth:640,videoHeight:360,readyState:1,currentTime:0});
+  assert.equal(f.messages.at(-1).data.phase,'audio-blocked');
+  video.onloadedmetadata();
+  assert.equal(video.paused,true);assert.equal(f.messages.at(-1).data.phase,'audio-blocked');
+  assert.equal(f.c.tap.classList.contains('show'),true);assert.deepEqual(f.timers,[]);
+  f.audioPlay(el=>{el.paused=false;el.emit('playing');return Promise.resolve();});
+  f.c.xtoreMusicTap();await settle();assert.equal(f.messages.at(-1).data.phase,'playing');
+  video.onloadedmetadata();
+  assert.equal(f.messages.at(-1).data.phase,'playing');assert.equal(f.c.mediaEl,video);
+  assert.equal(f.c.tap.classList.contains('show'),false);assert.equal(f.advances.length,0);
 });
 
 test('blocked autoplay stays on the same song; tap retries sound without fullscreen',async()=>{
@@ -203,7 +287,7 @@ test('actual default reader filters raw types, recovers from empty on later read
   reply={ok:true,draft:{items:[{id:'music',assetType:'music',asset:'https://media.example/music.mp3'},
     {id:'speech',type:'locucion',assetType:'audio',asset:'https://media.example/speech.mp3'},
     {id:'video',assetType:'video',asset:'https://media.example/video.mp4'}]}};
-  await c.loadDefaultDraft();await settle();const audio=c.mediaEl;assert.equal(c.playlist.length,1);assert.equal(c.playlist[0].id,'default:music');
+  await c.loadDefaultDraft();await settle();const audio=c.mediaEl;assert.equal(c.playlist.length,2);assert.equal(c.playlist[0].id,'default:music');
   fail=true;await c.loadDefaultDraft();assert.equal(c.mediaEl,audio);
   fail=false;reply={ok:false};await c.loadDefaultDraft();assert.equal(c.mediaEl,audio);
   reply={ok:true,draft:{items:[]}};await c.loadDefaultDraft();assert.equal(c.mediaEl,null);

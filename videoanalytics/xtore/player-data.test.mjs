@@ -10,13 +10,19 @@ function fixture(fetcher){
 test('public bridge accepts only exact child, enum resource and bounded request shape; no credentials',async()=>{
   const f=fixture();await f.bridge.receive(f.event('history'));await f.bridge.receive(f.event('catalog',{source:{}}));await f.bridge.receive(f.event('catalog',{origin:'https://admira.tv'}));
   const e=f.event();e.data.url='https://evil.example';await f.bridge.receive(e);assert.equal(f.calls.length,0);
-  await f.bridge.receive(f.event());assert.equal(f.calls.length,1);assert.match(f.calls[0][0],/^https:\/\/api.admira.store\/stock\/list\?limit=300$/);
+  await f.bridge.receive(f.event());assert.equal(f.calls.length,1);assert.equal(f.calls[0][0],'https://stock.admira.store/stock/index.json');
   assert.equal(f.calls[0][1].credentials,'omit');assert.equal(f.calls[0][1].redirect,'error');assert.equal(f.replies[0][0].ok,true);
   await f.bridge.receive(f.event());assert.equal(f.calls.length,1);f.bridge.stop();
 });
 test('closed or navigated child gets no late data; fetch aborted',async()=>{
   let release;const f=fixture(()=>new Promise(resolve=>{release=resolve;}));const request=f.bridge.receive(f.event());
   f.bridge.stop();assert.equal(f.calls[0][1].signal.aborted,true);release(Response.json({items:[]}));await request;assert.equal(f.replies.length,0);
+});
+test('native-style fetch is not invoked with the bridge as receiver',async()=>{
+  const replies=[],target={postMessage:data=>replies.push(data)};
+  const bridge=new PlayerDataBridge({target,fetcher:async function(){assert.equal(this,undefined);return Response.json({items:[]});}});
+  await bridge.receive({origin:'null',source:target,data:{source:'admira-tv-public-data',resource:'catalog',requestId:'native-fetch-123'}});
+  assert.equal(replies[0].ok,true);bridge.stop();
 });
 test('playlist is pinned to the canonical virtual screen; no audit identity crosses',async()=>{
   const f=fixture(()=>Response.json({ok:true,draft:{items:[{id:'fixture'}],updatedBy:'private-audit@example.invalid'}}));

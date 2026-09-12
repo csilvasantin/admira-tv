@@ -75,12 +75,12 @@ test('music starts without an analyzer and only active analysis may condition it
 });
 test('missing playlist and autoplay rejection are not called playback or stalled downloads',t=>{
   const f=fixture(t);f.ack();
-  for(const [phase,label] of [['playlist-empty',/Sin música asociada/],['audio-blocked',/Sonido pendiente/]]){
+  for(const [phase,label] of [['playlist-empty',/Sin contenidos reproducibles con #musica/],['audio-blocked',/Sonido pendiente/]]){
     f.emit({event:'media-state',id:'playlist-default',mode:'conditional',phase,music:true,loop:true});
     t.mock.timers.tick(30001);f.ui.neutral();f.ack();assert.match(f.get('signage-status').textContent,label);
   }
   f.emit({event:'media-state',id:'music-test-only',mode:'conditional',phase:'playing',music:true,loop:true,mediaType:'audio',muted:false,volume:1});
-  assert.equal(f.get('signage-status').textContent,'Música por defecto · reproduciendo');
+  assert.equal(f.get('signage-status').textContent,'Playlist musical asociada · reproduciendo');
   assert.match(f.get('signage-media').textContent,/no confirma el volumen/);
   f.emit({event:'media-state',id:'music-test-only',mode:'conditional',phase:'playing',music:true,loop:true,mediaType:'audio',muted:true,volume:1});
   assert.match(f.get('signage-media').textContent,/en silencio/);

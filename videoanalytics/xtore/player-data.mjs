@@ -1,7 +1,9 @@
 // Public catalogue/rules only. The opaque child can never choose a URL,
 // credentials, a physical screen, or access Xtore images/history/storage.
 import {XTORE_VIRTUAL_SCREEN} from './virtual-player.mjs';
-const RESOURCES=Object.freeze({catalog:'https://api.admira.store/stock/list?limit=300',rules:'https://brain.digitalavatar.ai/segmentation?target=all',playlist:`https://admira.tv/api/playlist?screen=${XTORE_VIRTUAL_SCREEN}`});
+// Complete public index: stock/list caps at 200, which can hide newer #musica
+// matches. The same 2 MiB bounded, credential-free read applies to this URL.
+const RESOURCES=Object.freeze({catalog:'https://stock.admira.store/stock/index.json',rules:'https://brain.digitalavatar.ai/segmentation?target=all',playlist:`https://admira.tv/api/playlist?screen=${XTORE_VIRTUAL_SCREEN}`});
 const LIMIT=2*1024*1024;
 export class PlayerDataBridge{
   constructor({target,fetcher=fetch,now=()=>Date.now()}){Object.assign(this,{target,fetcher,now});this.closed=false;this.active=new Map();this.last=new Map();this.recent=new Map();}
@@ -24,20 +26,27 @@ export class PlayerDataBridge{
     const controller=new AbortController(),requests=new Set([d.requestId]);
     this.active.set(d.resource,{controller,requests});this.last.set(d.resource,this.now());
     const timeout=setTimeout(()=>controller.abort(),10000);
-    let data,ok=false;
+    let data,ok=false,stage='network';
     try{
-      const response=await this.fetcher(RESOURCES[d.resource],{method:'GET',credentials:'omit',cache:'no-store',redirect:'error',signal:controller.signal});
+      // Browser fetch must not receive this bridge instance as its receiver.
+      // Calling this.fetcher(...) can throw Illegal invocation before any network.
+      const response=await (0,this.fetcher)(RESOURCES[d.resource],{method:'GET',credentials:'omit',cache:'no-store',redirect:'error',signal:controller.signal});
+      stage='http-'+response.status;
       if(!response.ok||!response.body||Number(response.headers.get('content-length'))>LIMIT)throw new Error('Unavailable public data');
       const reader=response.body.getReader();const chunks=[];let size=0;
+      stage='read-body';
       try{for(;;){const item=await reader.read();if(item.done)break;size+=item.value.byteLength;if(size>LIMIT)throw new Error('Public data too large');chunks.push(item.value);}}
       catch(error){await reader.cancel().catch(()=>{});throw error;}
       const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
-      data=JSON.parse(new TextDecoder().decode(bytes));
+      stage='json';data=JSON.parse(new TextDecoder().decode(bytes));
+      stage='shape';
       if(d.resource==='catalog'?!Array.isArray(data?.items):d.resource==='rules'?!Array.isArray(data?.rules):data?.ok!==true||!Array.isArray(data?.draft?.items))throw new Error('Invalid public data');
       // The frame needs only the public playlist, never audit fields/user email.
       if(d.resource==='playlist')data={ok:true,draft:{items:data.draft.items}};
       ok=true;
-    }catch{/* Report a bounded failure; never forward response headers/errors. */}
+    }catch{/* Bounded diagnostics: no headers, URLs, response bodies or raw errors. */
+      console.warn('[xtore-public-data]',d.resource,controller.signal.aborted?'timeout':stage);
+    }
     finally{clearTimeout(timeout);this.active.delete(d.resource);}
     if(this.closed)return;
     // Timeout is an explicit failure, not a silent missing response. Share one

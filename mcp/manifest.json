@@ -2,7 +2,7 @@
   "name": "admira-tv",
   "title": "Admira TV · admira.tv — la capa Emitir de la suite AdmiraNeXT",
   "description": "Hub MCP de admira.tv: emisión, federación, player condicionado y registro de players virtuales (navegador sin hardware dedicado). Servidor mcp-tv.admira.store v2.3.0; el descriptor raíz publica la lista vigente de herramientas. Alta no equivale a presencia ni a proof-of-play.",
-  "version": "v.12.09.2026.r2.11:00",
+  "version": "v.12.09.2026.r3.11:43",
   "site": "https://admira.tv",
   "hub": "https://admira.tv/mcp/",
   "llms_txt": "https://admira.tv/mcp/llms.txt",
@@ -156,12 +156,30 @@
         "profile": "xtoreMusic=1",
         "requires_live_video": false,
         "fleet_playback_telemetry": false,
-        "playlist_source": "Por defecto del mismo screen; solo audio, pistas completas",
-        "empty_playlist": "Espera asociación; no usa Stock general",
+        "playlist_source": "Por defecto del mismo screen; una asociación válida tiene prioridad y conserva el orden",
+        "empty_playlist": "Sin asociación: últimos cinco contenidos reproducibles Pixeria con etiqueta exacta normalizada #musica; sin coincidencias espera contenido",
+        "unplayable_assignment": "Muestra playlist-empty; no sustituye una playlist asociada por otro contenido",
+        "unavailable_assignment": "Primera lectura fallida: playlist-unavailable y reintento cada 30 s, sin asumir ausencia; fallos posteriores conservan la última lista válida",
+        "fallback": {
+          "tag": "musica",
+          "tag_normalization": "Minúsculas, sin acentos, espacios exteriores ni prefijo #; coincidencia exacta en tags",
+          "types": ["audio", "music", "video", "animation"],
+          "excluded": ["image", "interactive", "locucion"],
+          "order": "createdAt descendente; sin duplicados por ID o URL; máximo cinco tras filtrar",
+          "generic_latest_five": "Helper interno sin filtro; no activa ese comportamiento en otros players"
+        },
+        "catalog": {
+          "url": "https://stock.admira.store/stock/index.json",
+          "max_bytes": 2097152,
+          "timeout_ms": 10000,
+          "on_failure": "Conserva el último catálogo válido; no es una copia offline"
+        },
+        "musicSource": ["playlist", "pixeria-musica"],
+        "duration": "Audios y vídeos musicales completos hasta ended; sin corte por duración editorial",
         "assignment": "Parrilla con sesión autorizada; no es un alta ni escritura MCP anónima",
         "audience": "Solo con análisis activo, paso confirmado y regla con contenido disponible",
-        "return": "Pausa o 6 s sin renovar: playlist musical desde el principio",
-        "autoplay": "muted=0; el navegador puede exigir gesto dentro del iframe; pista espera sin avanzar",
+        "return": "Tras interrupción, pausa o 6 s sin renovar: base musical desde el principio; neutral sin interrupción no reinicia la pieza",
+        "autoplay": "muted=0; el navegador puede exigir clic o Enter/Espacio dentro del iframe; audio-blocked espera sin saltar de pieza, diagnosticar códec ni forzar pantalla completa",
         "music_mission": "DCL-a2d1afecee4fa4c73ba924d3"
       }
     },

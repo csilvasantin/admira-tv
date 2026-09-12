@@ -75,7 +75,7 @@ export class SignageBridge{
       this.ready=true;this.onState({type:'ack',kind:request.kind});
     }else if(data.event==='media-state'&&['conditional','sync','local'].includes(data.mode)&&((typeof data.id==='string'&&data.id.length>0)||typeof data.id==='number')){
       // This is an emission report, not proof that the rule selected the right ad.
-      this.onState({type:'media',mode:data.mode,phase:['playing','document-loaded','poster-loaded','audio-blocked','playlist-empty'].includes(data.phase)?data.phase:'selected',loop:data.loop===true,music:data.music===true,mediaType:data.mediaType==='audio'?'audio':null,muted:typeof data.muted==='boolean'?data.muted:null,volume:Number.isFinite(data.volume)?Math.max(0,Math.min(1,data.volume)):null});
+      this.onState({type:'media',mode:data.mode,phase:['playing','document-loaded','poster-loaded','audio-blocked','playlist-empty','playlist-unavailable'].includes(data.phase)?data.phase:'selected',loop:data.loop===true,music:data.music===true,musicSource:['playlist','pixeria-musica'].includes(data.musicSource)?data.musicSource:null,mediaType:data.mediaType==='audio'?'audio':null,muted:typeof data.muted==='boolean'?data.muted:null,volume:Number.isFinite(data.volume)?Math.max(0,Math.min(1,data.volume)):null});
     }
   }
   fail(message){if(this.closed)return;this.stop();this.onFailure(message);}

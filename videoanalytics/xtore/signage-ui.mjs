@@ -41,10 +41,14 @@ export function installSignageUI({document,window}){
           // An ACK is control-plane evidence, not a new playback event. The
           // neutral ACK after pause/expiry must not erase confirmed playback.
           if(!mediaReported&&!emissionDelayed)$('signage-status').textContent='Canal conectado · esperando emisión';
+        }else if(state.phase==='playlist-unavailable'){
+          mediaReported=true;clearTimeout(emissionTimer);
+          $('signage-status').textContent='Playlist no disponible · reintentando consulta';
+          $('signage-media').textContent='No se ha podido comprobar si hay una playlist asociada. Se consulta de nuevo cada 30 s; un fallo de red no significa playlist vacía.';
         }else if(state.phase==='playlist-empty'){
           mediaReported=true;clearTimeout(emissionTimer);
-          $('signage-status').textContent='Sin música asociada · elige pistas en la playlist del virtual';
-          $('signage-media').textContent='No hay audio en Por defecto. No se reproduce el Stock general ni se eligen canciones automáticamente.';
+          $('signage-status').textContent=state.musicSource==='playlist'?'Playlist asociada sin medios reproducibles':'Sin contenidos reproducibles con #musica';
+          $('signage-media').textContent='Se reintenta la consulta. Sin playlist asociada se usan los cinco últimos audios o vídeos musicales de Pixeria con #musica; nunca se amplía a otros temas.';
         }else if(state.phase==='audio-blocked'){
           mediaReported=true;clearTimeout(emissionTimer);
           $('signage-status').textContent='Sonido pendiente de permiso del navegador';
@@ -56,7 +60,7 @@ export function installSignageUI({document,window}){
         }else{
           mediaReported=true;
           emissionSeen=true;clearTimeout(emissionTimer);
-          $('signage-status').textContent=`${state.loop?(state.music?'Música por defecto':'Bucle general'):'Contenido condicionado'} · ${state.phase==='playing'?'reproduciendo':state.phase==='poster-loaded'?'miniatura de respaldo':'interactivo cargado'}`;
+          $('signage-status').textContent=`${state.loop?(state.music?(state.musicSource==='pixeria-musica'?'Pixeria #musica · últimos 5':'Playlist musical asociada'):'Bucle general'):'Contenido condicionado'} · ${state.phase==='playing'?'reproduciendo':state.phase==='poster-loaded'?'miniatura de respaldo':'interactivo cargado'}`;
           $('signage-media').textContent=state.phase==='playing'?(state.mediaType==='audio'?(state.muted===true||state.volume===0?'Audio iniciado en silencio.':'Audio iniciado por el navegador; no confirma el volumen de los altavoces del equipo.'):'El player confirma vídeo/audio iniciado o imagen cargada.'):state.phase==='poster-loaded'?'Miniatura cargada; este vídeo no ha confirmado reproducción.':'Evento de carga del interactivo recibido; no confirma contenido visible ni reproducción interna.';
         }
       }});
