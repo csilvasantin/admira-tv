@@ -4,8 +4,29 @@
     {
       "name": "admira-tv-static",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8811", "--bind", "127.0.0.1"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8811",
+        "--bind",
+        "127.0.0.1"
+      ],
       "port": 8811
+    },
+    {
+      "name": "admira-tv-pages",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "wrangler",
+        "pages",
+        "dev",
+        "--port",
+        "8812",
+        "--ip",
+        "127.0.0.1",
+        "--local"
+      ],
+      "port": 8812
     }
   ]
 }

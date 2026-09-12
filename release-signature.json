@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r2.11:00",
-  "signature": "TrinityMBA16 · MacBookAir16plata",
-  "agent": "TrinityMBA16",
+  "version": "v.12.09.2026.r3.11:41",
+  "signature": "NeoMBA16 · MacBookAir16plata",
+  "agent": "NeoMBA16",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "11:00",
-  "evidence": "Xtore virtual: música por defecto sin compartir vídeo; pistas completas hasta ended, eventos solo con analizador activo y creatividad disponible, vuelta a base tras pausa o TTL. Mismo iframe durante conexión y calibración; autoplay bloqueado espera gesto y nunca acredita emisión. Perfil acotado, sin telemetría de hardware ni Stock aleatorio; Help/MCP documentados. Revisión cruzada Turing; 131 pruebas web específicas y 27 MCP local. Playlist todavía vacía: selección de música pendiente de Carlos. Sin QA visual ni certificación de sonido físico. No se alteran otras playlists, reglas, cámara, histórico ni grabador. Yokup DCL-a2d1afecee4fa4c73ba924d3."
+  "time": "11:41",
+  "evidence": "Catálogo: imagen real del producto (FLT-100318). analizar.js devuelve bbox por producto (json_schema) y la página envía la copia con rejilla de coordenadas; recorte sobre el lienzo limpio (margen 3 %, ≤512 px, JPEG 0,85) y subida a R2 admira-catalogo-imagenes (binding CATALOGO) vía /contentcatalogue/api/imagen (POST con la sesión del portal; GET público con CORS * y caché 1 día). Miniatura 72 px en la fila, modal con la página y la caja resaltada, chip «Con imagen», progreso «Recortando N/M». Alcampo sembrado: 159 de 159 con imagen (151 casados solos, 8 a mano) + 16 páginas. Probado en local (wrangler pages dev: POST con sesión, GET, 401/403/400) y flujo Subir folleto con p2 (7/7 cajas). Deep-link lleva imagen; no lleva bbox."
 }

@@ -24,6 +24,14 @@ id = "e909a0bea0b34997bdef34bcd012c16f"
 binding = "VIDEOS"
 bucket_name = "admira-app-videos"
 
+# R2 de las imágenes reales de producto del Catálogo (FLT-100318): recortes del folleto
+# (cc/img/<catalogo_id>/<slug>) y páginas completas (cc/img/<catalogo_id>/pagina-<n>).
+# functions/contentcatalogue/api/imagen/[[ruta]].js: POST con la sesión del portal; GET público, CORS *, caché 1 día.
+# Sembrado desde la CLI: wrangler r2 object put admira-catalogo-imagenes/cc/img/<id>/<slug> --file x.jpg --content-type image/jpeg --remote
+[[r2_buckets]]
+binding = "CATALOGO"
+bucket_name = "admira-catalogo-imagenes"
+
 # Secretos (se fijan con `wrangler pages secret put <NOMBRE> --project-name admira-tv`):
 #   TG_TOKEN     — token del bot de Telegram (Neo) para notificar leads
 #   TG_CHAT      — chat_id del grupo AgoraMatrix

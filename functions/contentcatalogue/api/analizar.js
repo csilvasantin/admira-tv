@@ -5,7 +5,13 @@
 // límites de tamaño, llamada a xAI /v1/responses con json_schema estricto.
 //
 // Cuerpo:      {pages:[{n:<nº de página>, image:"data:image/jpeg;base64,…"}]}
-// Respuesta:   {ok:true, productos:[{p, seccion, nombre, marca, detalle, precio, unidad, promo, precio_texto, precio_verificado}]}
+// Respuesta:   {ok:true, productos:[{p, seccion, nombre, marca, detalle, precio, unidad, promo, precio_texto, precio_verificado, bbox}]}
+//              bbox = {x,y,w,h} normalizado 0..1 respecto a la imagen de la página: la caja de la
+//              FOTOGRAFÍA del producto (FLT-100318). La página la recorta y la sube a /api/imagen.
+//              Precisión: el modelo sitúa mucho mejor las cajas si la imagen lleva una REJILLA de
+//              referencia (líneas cada 0,1 rotuladas x=…/y=…); la página la dibuja antes de enviar
+//              (ADMIRA_CC.rejilla) y recorta sobre el lienzo limpio. Sin rejilla las cajas salen
+//              «a columnas»: bien en páginas de 4–7 productos, desplazadas en las densas.
 // Clave:       XAI_API_KEY (wrangler pages secret put XAI_API_KEY --project-name admira-tv)
 //
 // Los precios se contrastan: el modelo devuelve el precio tal como lo LEE en la
@@ -114,7 +120,25 @@ function publicProducto(candidate, n){
   if(!out.marca) delete out.marca;
   if(!out.detalle) delete out.detalle;
   if(!out.promo) delete out.promo;
+  const bbox = limpiaBbox(candidate?.bbox);
+  if(bbox) out.bbox = bbox;
   return out;
+}
+
+// La caja llega normalizada 0..1; se recorta a la imagen y se descarta si es
+// degenerada (menos del 2 % de lado) o si el modelo devolvió píxeles en vez de
+// fracciones (cualquier valor > 1). Sin caja el producto sigue valiendo: solo
+// se queda sin recorte.
+function limpiaBbox(b){
+  if(!b || typeof b !== 'object') return null;
+  const n = k => (typeof b[k] === 'number' && isFinite(b[k])) ? b[k] : NaN;
+  let x = n('x'), y = n('y'), w = n('w'), h = n('h');
+  if([x, y, w, h].some(v => isNaN(v) || v < 0 || v > 1)) return null;
+  const x1 = Math.min(1, x + w), y1 = Math.min(1, y + h);
+  x = Math.max(0, x); y = Math.max(0, y); w = x1 - x; h = y1 - y;
+  if(w < 0.02 || h < 0.02) return null;
+  const r = v => Math.round(v * 1000) / 1000;
+  return {x:r(x), y:r(y), w:r(w), h:r(h)};
 }
 
 const SCHEMA = {
@@ -134,16 +158,22 @@ const SCHEMA = {
           precio_texto:{type:'string'},
           unidad:{type:'string'},
           promo:{type:'string'},
-          seccion:{type:'string'}
+          seccion:{type:'string'},
+          bbox:{
+            type:'object',
+            additionalProperties:false,
+            properties:{x:{type:'number'}, y:{type:'number'}, w:{type:'number'}, h:{type:'number'}},
+            required:['x','y','w','h']
+          }
         },
-        required:['nombre','marca','detalle','precio','precio_texto','unidad','promo','seccion']
+        required:['nombre','marca','detalle','precio','precio_texto','unidad','promo','seccion','bbox']
       }
     }
   },
   required:['productos']
 };
 
-const SYSTEM = 'Eres un lector de folletos de supermercado en español. Recibes la imagen de UNA página y devuelves SOLO JSON con todos los productos con precio visible. Por producto: nombre (tal como aparece, con la marca dentro si forma parte del nombre), marca (o cadena vacía), detalle (formato, peso, número de unidades, precio por kilo entre paréntesis si se ve; cadena vacía si no hay), precio (número con dos decimales, el precio principal en euros; null si no se lee con claridad), precio_texto (el precio EXACTAMENTE como está impreso, p. ej. "6,99"; cadena vacía si no hay), unidad ("ud", "€/kg", "€/l", "pack"…), promo (texto de la oferta: "2x1", "2ª unidad al 50%", "Club Alcampo", "a partir del…"; cadena vacía si no hay), seccion (el rótulo de sección de la página: "Pescadería", "Lácteos", "Bebidas"…). No inventes productos ni precios: si algo no se lee, deja el precio en null y el texto vacío. No repitas un mismo producto.';
+const SYSTEM = 'Eres un lector de folletos de supermercado en español. Recibes la imagen de UNA página y devuelves SOLO JSON con todos los productos anunciados: los que tienen precio visible Y los que solo llevan promoción sin precio (p. ej. «2ª unidad -50%», «-15%», «Club Alcampo»); en esos, precio null y precio_texto vacío pero promo rellena. Por producto: nombre (tal como aparece, con la marca dentro si forma parte del nombre), marca (o cadena vacía), detalle (formato, peso, número de unidades, precio por kilo entre paréntesis si se ve; cadena vacía si no hay), precio (número con dos decimales, el precio principal en euros; null si no se lee con claridad), precio_texto (el precio EXACTAMENTE como está impreso, p. ej. "6,99"; cadena vacía si no hay), unidad ("ud", "€/kg", "€/l", "pack"…), promo (texto de la oferta: "2x1", "2ª unidad al 50%", "Club Alcampo", "a partir del…"; cadena vacía si no hay), seccion (el rótulo de sección de la página: "Pescadería", "Lácteos", "Bebidas"…), y bbox: la caja normalizada de la FOTOGRAFÍA del producto, con x,y = esquina superior izquierda y w,h = ancho y alto, todos entre 0 y 1 respecto al ancho y alto totales de la imagen (x=0 borde izquierdo, y=0 borde superior). Si la imagen lleva dibujada una REJILLA de referencia azul (líneas verticales cada 0,1 del ancho rotuladas x=0.1…0.9 y horizontales cada 0,1 del alto rotuladas y=0.1…0.9), lee las coordenadas sobre esa rejilla interpolando entre líneas (una foto que empieza a mitad entre y=0.3 e y=0.4 tiene y=0.35); la rejilla no forma parte del folleto. La caja debe encerrar la fotografía COMPLETA del artículo (plato, bandeja o envase entero, sin el texto del nombre ni la etiqueta del precio); ante la duda, algo más grande antes que cortar el producto. Las cajas de productos vecinos no deben solaparse. No inventes productos ni precios: si algo no se lee, deja el precio en null y el texto vacío. No repitas un mismo producto.';
 
 async function leerPagina(page, env){
   const response = await fetch('https://api.x.ai/v1/responses', {
@@ -155,7 +185,7 @@ async function leerPagina(page, env){
       input:[
         {role:'system', content:[{type:'input_text', text:SYSTEM}]},
         {role:'user', content:[
-          {type:'input_text', text:`Página ${page.n} del folleto. Extrae todos los productos con su precio.`},
+          {type:'input_text', text:`Página ${page.n} del folleto. Extrae todos los productos con su precio y devuelve para cada producto la caja normalizada (bbox) de su fotografía.`},
           {type:'input_image', image_url:page.image, detail:'high'}
         ]}
       ],
@@ -174,7 +204,7 @@ async function leerPagina(page, env){
 export async function onRequest(context){
   const {request, env} = context;
   // GET = sonda: la UI pregunta si el análisis IA está configurado antes de ofrecerlo.
-  if(request.method === 'GET') return json({ok:true, configured:Boolean(env.XAI_API_KEY), maxPages:MAX_PAGES, modelo:env.XAI_VISION_MODEL || env.XAI_TEXT_MODEL || 'grok-4.5'});
+  if(request.method === 'GET') return json({ok:true, configured:Boolean(env.XAI_API_KEY), maxPages:MAX_PAGES, bbox:true, rejilla:0.1, modelo:env.XAI_VISION_MODEL || env.XAI_TEXT_MODEL || 'grok-4.5'});
   if(request.method !== 'POST') return json({error:'Método no permitido.'}, 405);
   if(!sameOrigin(request)) return json({error:'Origen no permitido.'}, 403);
   if(!env.XAI_API_KEY) return json({error:'Análisis IA no configurado: falta XAI_API_KEY en el proyecto Pages.', configured:false}, 503);
