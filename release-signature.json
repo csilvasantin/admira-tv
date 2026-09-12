@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r9.14:13",
-  "signature": "TrinityMBA16 · MacBookAir16plata",
-  "agent": "TrinityMBA16",
+  "version": "v.12.09.2026.r10.14:49",
+  "signature": "NeoMBA16 · MacBookAir16plata",
+  "agent": "NeoMBA16",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "14:13",
-  "evidence": "Ficha compartida Xtore previo/integrado: X y Escape, movimiento acotado al visor con puntero/teclado, toolbar fija, repetir audio/video local subordinado a audiencia/TTL, posicion 1 de X y AUDIO separado de barras. Rebase conserva 0009c77a de Neo/APIplaylist. Cross-review Turing aprobado; 468 tests con 466 pass y 2 fallos previos ajenos; MCP local 27/27. Browser real con base, Top Gun persona, Power of Love coche/moto/bici, contador efectivo, cierre y movimiento por teclado; perspectiva cuatro esquinas en harness aislado sin camara ni contadores. Yokup DCL-2ef0288ee26e132ffb3ab77d."
+  "time": "14:49",
+  "evidence": "Catálogo tipo hoja de cálculo (contentcatalogue): 8 columnas ordenables por cabezal (asc/desc/origen, aria-sort, sin precio al final, vídeo primero), movibles por arrastre y ←/→, filas movibles por el chip de página con orden manual, anchos por el borde, selector de orden en móvil, Restablecer vista; persistencia por catálogo en localStorage admira.contentcatalogue.tabla.<id>. Probado en local: PRECIO asc/desc/origen, columna PRECIO delante de PRODUCTO, fila movida y persistente tras recargar, restablecer, filtros sobre el orden; sin errores de consola. Yokup #3198."
 }

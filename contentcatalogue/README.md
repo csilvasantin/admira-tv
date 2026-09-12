@@ -42,6 +42,31 @@ del portal válida (`readSession` + `hasAnyAccess`) y email en la lista; mismo o
 `csilva@admira.com,csilvasantin@gmail.com`, que es también el defecto en código). En local:
 `.dev.vars` con un secreto de prueba y la sesión `admira-tv:auth:session:testtoken` del KV local.
 
+**Listado tipo hoja de cálculo (Yokup #3198).** Ocho columnas, una por dato: Pág. · Imagen · Producto ·
+Marca · Sección · Precio · Promo · Anuncio. Se manejan como en una hoja de cálculo, sin librerías:
+
+- **Ordenar**: clic en el cabezal = ▲ ascendente, otro clic = ▼ descendente, un tercero = orden de origen.
+  Producto/Marca/Sección/Promo van alfabéticos sin acentos; Precio es numérico y deja los «sin precio» al
+  final (suba o baje); Anuncio pone primero los que ya tienen vídeo (luego «generando», luego «pulsado»);
+  Imagen pone primero los que tienen foto. El cabezal lleva `scope="col"` y `aria-sort`; con el foco en
+  él, Enter/Espacio ordena. El orden es estable (empata por la posición de origen).
+- **Mover columnas**: arrastrar el cabezal (handle ⋮⋮, drag & drop nativo) o ←/→ con el foco en él. La
+  columna arrastrada ocupa el sitio de la columna donde se suelta.
+- **Mover filas**: arrastrar el chip de página. La fila ocupa el sitio de la fila donde se suelta y ese
+  orden que se ve pasa a ser el **orden manual** del catálogo (anula el orden por columna; se avisa).
+- **Anchos**: tirar del borde derecho del cabezal; doble clic en el borde = ancho automático.
+- **Restablecer vista**: botón en la barra; vuelve a columnas, orden y anchos de origen.
+- **Móvil (<900 px)**: aparece el selector «Orden» en la barra con las mismas opciones que el cabezal.
+
+El orden se calcula sobre TODOS los productos y los filtros/buscador se aplican encima, así que filtrar
+nunca cambia el orden elegido; el sondeo del Stock, el previo del vídeo, las miniaturas y los deep-links
+siguen igual (las filas siguen llevando `data-i` = índice real del producto). Todo se guarda por catálogo
+en `localStorage` `admira.contentcatalogue.tabla.<catalogo_id>`:
+`{v:1, cols:[ids], sort:{col,dir}|null, manual:[índices]|null, widths:{id:px}}`; si la vista es la de
+origen la clave se borra. Un `manual` cuya longitud no coincide con el catálogo se ignora. Depurar desde la
+consola: `ADMIRA_CC.tabla()`, `ADMIRA_CC.ordenar('precio','desc')`, `ADMIRA_CC.moverColumna('precio',2)`,
+`ADMIRA_CC.moverFila(5,0)`, `ADMIRA_CC.ordenados()`, `ADMIRA_CC.restablecer()`.
+
 **Añadir un catálogo a mano.** Deja el JSON en `catalogos/` y añade su entrada en
 `catalogos/index.json`. Si sale del análisis IA, el botón «Descargar JSON del análisis»
 te da el fichero ya con el esquema correcto.

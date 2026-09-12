@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=12.09.2026.r9.1413"></script>
+<script src="/auth-gate.js?v=12.09.2026.r10.1449"></script>
 <!-- preconnect: el generador de vídeo (TikTok de AdmiraNeXT) y la CDN de pdf.js -->
 <link rel="preconnect" href="https://www.admiranext.com" crossorigin>
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
@@ -105,9 +105,32 @@
 
   /* listado */
   .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
-  table{width:100%;border-collapse:collapse;min-width:760px}
+  table{width:100%;border-collapse:collapse;min-width:960px}
   th{font:600 10.5px ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
   td{padding:10px 12px;border-bottom:1px solid rgba(30,41,64,.6);vertical-align:middle}
+  /* tabla tipo hoja de cálculo (Yokup #3198): cabezal ordenable, movible y redimensionable; filas movibles por el chip */
+  th{position:relative;cursor:pointer;user-select:none;-webkit-user-select:none}
+  th .hd{display:inline-flex;align-items:center;gap:6px}
+  th .grab{color:#2a3a66;cursor:grab;font-size:12px;letter-spacing:-3px;line-height:1}
+  th:hover .grab,th:focus-visible .grab{color:var(--dim)}
+  th .ind{font-size:9px;color:#2a3a66;min-width:9px}
+  th .ind::after{content:"⇅"}
+  th[aria-sort=ascending] .ind::after{content:"▲"}
+  th[aria-sort=descending] .ind::after{content:"▼"}
+  th[aria-sort=ascending],th[aria-sort=descending]{color:var(--green)}
+  th[aria-sort=ascending] .ind,th[aria-sort=descending] .ind{color:var(--green)}
+  th.over{box-shadow:inset 3px 0 0 var(--green)}
+  th.dragging,tr.dragging td{opacity:.35}
+  th .grip{position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:1}
+  th .grip:hover,th.resizing .grip{background:rgba(61,240,138,.35)}
+  th.der,td.der{text-align:right}
+  .pg[draggable=true]{cursor:grab}
+  .pg[draggable=true]:active{cursor:grabbing}
+  tr.over td{box-shadow:inset 0 2px 0 var(--green)}
+  td.mk{margin:0;white-space:normal}
+  td.pc .promo{margin-top:0}
+  label.soloMovil{display:none}
+  @media(max-width:899px){label.soloMovil{display:flex}}
   tr:last-child td{border-bottom:0}
   tr:hover td{background:rgba(255,255,255,.015)}
   tr.creado td{background:rgba(61,240,138,.035)}
@@ -181,12 +204,12 @@
   .foot b{color:var(--green);font-weight:700}
   @media(max-width:640px){.hero{padding-top:34px}.panel{padding:14px}.acts{align-items:stretch}.acts .row{justify-content:flex-start}}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r9.1413">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r10.1449">
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.12.09.2026.r9.14:13';</script>
-<script src="/admira-nav.js?v=12.09.2026.r9.1413" data-active="apps" data-title="Catálogo" defer></script>
-<script src="/admira-frame.js?v=12.09.2026.r9.1413" defer></script>
+<script>window.ADMIRA_VERSION='v.12.09.2026.r10.14:49';</script>
+<script src="/admira-nav.js?v=12.09.2026.r10.1449" data-active="apps" data-title="Catálogo" defer></script>
+<script src="/admira-frame.js?v=12.09.2026.r10.1449" defer></script>
 
 <!-- barra de modo app (se muestra sólo con ?app=1) -->
 <div class="app-bar" id="appBar">
@@ -247,8 +270,10 @@
         <label class="tog"><input type="checkbox" id="soloPrecio"> Solo con precio</label>
         <label class="tog"><input type="checkbox" id="soloDest"> Solo destacados</label>
         <label class="f">Vídeo <select id="selVideo" aria-label="Filtrar por vídeo creado"><option value="">Todos</option><option value="con">Solo con vídeo</option><option value="sin">Solo sin vídeo</option></select></label>
+        <label class="f soloMovil">Orden <select id="selOrden" aria-label="Ordenar el listado por una columna"><option value="">Orden original</option></select></label>
       </div>
       <div class="row" style="flex:0 0 auto">
+        <button class="btn sm" id="btnReset" type="button" title="Vuelve al orden de origen, a las columnas de origen y a sus anchos" disabled>↺ Restablecer vista</button>
         <button class="btn sm primary" id="btnTodos" type="button" title="Abre el generador para cada producto destacado, uno a uno, con confirmación (máx. 10)">▶ Crear vídeo de todos los destacados</button>
       </div>
     </div>
@@ -256,11 +281,11 @@
     <!-- LISTADO -->
     <div class="tablewrap">
       <table id="tabla" aria-describedby="contador">
-        <thead><tr><th>Pág.</th><th>Producto</th><th>Sección</th><th>Precio</th><th style="text-align:right">Anuncio</th></tr></thead>
-        <tbody id="cuerpo"><tr><td colspan="5" class="empty">Cargando el catálogo…</td></tr></tbody>
+        <thead id="cabezal"><tr><th scope="col">Pág.</th><th scope="col">Imagen</th><th scope="col">Producto</th><th scope="col">Marca</th><th scope="col">Sección</th><th scope="col">Precio</th><th scope="col">Promo</th><th scope="col" class="der">Anuncio</th></tr></thead>
+        <tbody id="cuerpo"><tr><td colspan="8" class="empty">Cargando el catálogo…</td></tr></tbody>
       </table>
     </div>
-    <p class="hint" style="margin-top:10px">«Crear vídeo» abre el generador TikTok de AdmiraNeXT en una pestaña nueva con el producto ya cargado (nombre, precio, promo, validez) y con un <b>pase de entrada</b> de 2 minutos firmado por admira.tv, para que el generador no vuelva a pedirte sesión (si no hay pase, avisa y lo abre igual). «Copiar guion» deja en el portapapeles un guion corto por si prefieres dictarlo. Cuando el generador publica el máster en el Stock, aquí aparece el <b>previo</b> a la derecha (se sondea el Stock cada 15 s durante 15 min tras pulsar Crear vídeo): pasa el ratón para verlo moverse, haz clic para verlo a tamaño completo. La <b>miniatura</b> de la columna Producto es la foto real recortada del folleto: clic = la página completa con la caja resaltada; esa misma imagen viaja al generador dentro del anuncio.</p>
+    <p class="hint" style="margin-top:10px">«Crear vídeo» abre el generador TikTok de AdmiraNeXT en una pestaña nueva con el producto ya cargado (nombre, precio, promo, validez) y con un <b>pase de entrada</b> de 2 minutos firmado por admira.tv, para que el generador no vuelva a pedirte sesión (si no hay pase, avisa y lo abre igual). «Copiar guion» deja en el portapapeles un guion corto por si prefieres dictarlo. Cuando el generador publica el máster en el Stock, aquí aparece el <b>previo</b> a la derecha (se sondea el Stock cada 15 s durante 15 min tras pulsar Crear vídeo): pasa el ratón para verlo moverse, haz clic para verlo a tamaño completo. La <b>miniatura</b> de la columna Imagen es la foto real recortada del folleto: clic = la página completa con la caja resaltada; esa misma imagen viaja al generador dentro del anuncio. El listado se maneja <b>como una hoja de cálculo</b>: clic en un cabezal ordena (▲, otro clic ▼, un tercero vuelve al orden de origen; el precio deja los «sin precio» al final y Anuncio pone primero los que ya tienen vídeo), arrastra un cabezal por ⋮⋮ (o ←/→ con el teclado) para mover la columna, arrastra el chip de página para reordenar filas a mano y tira del borde de un cabezal para cambiar el ancho. Todo se recuerda por catálogo en este navegador; «Restablecer vista» lo deja como de origen.</p>
 
   </div>
 
@@ -370,6 +395,7 @@
   window.ADMIRA_CC={ deepLink:deepLink, pase:pidePase, abrir:abreGenerador, producto:productoParaTikTok, actual:function(){return actual;},
     externalId:function(p){ return externalIdProducto(p); }, stockId:function(eid){ return stockIdDerivado(eid); },
     stock:function(){ return stock; }, refrescar:function(){ pintaCabecera(); pintaLista(); }, sondear:function(){ return sondeaCatalogo(actual,true); },
+    tabla:function(){ return tabla; }, ordenados:function(){ return ordenados(); }, ordenar:function(id,dir){ ordenaPor(id,dir); }, moverColumna:function(id,a){ mueveCol(id,a); }, moverFila:function(de,a){ mueveFila(de,a); }, restablecer:function(){ restableceTabla(); },
     rejilla:function(dataURL){ return rejilla(dataURL); }, procesa:function(files){ return procesa(files); }, recorta:function(dataURL,bbox){ return recorta(dataURL,bbox); }, imagenUrl:function(p){ return urlImagen(p); }, paginaUrl:function(p){ return urlPagina(p); } };
 
   function guion(p){
@@ -489,10 +515,136 @@
     $('btnTodos').disabled=!dest;
   }
 
+  /* ---- tabla tipo hoja de cálculo (Yokup #3198) ----
+     Columnas ordenables por el cabezal (asc → desc → orden de origen), movibles (arrastre del
+     cabezal o ←/→ con el foco en él), filas reordenables a mano por el chip de página y anchos
+     por el borde del cabezal. El orden se calcula sobre TODOS los productos y los filtros se
+     aplican encima, así que filtrar nunca cambia el orden elegido. Todo se guarda por catálogo
+     en localStorage (admira.contentcatalogue.tabla.<catalogo_id>): orden de columnas, columna y
+     sentido de orden, orden manual y anchos. Sin librerías. */
+  var TABLA_LS='admira.contentcatalogue.tabla.';
+  function estadoAnuncio(p){ var eid=externalIdProducto(p), st=estadoStock(eid); if(st&&st.exists) return 3; if(pendientes[eid]) return 2; if(creados[claveProd(p)]) return 1; return 0; }
+  function claveTexto(v){ v=norm(v).trim(); return v||null; }
+  var COLS=[
+    {id:'pag', label:'Pág.', clave:function(p){ var n=Number(p.p); return isFinite(n)?n:null; }},
+    {id:'imagen', label:'Imagen', clave:function(p){ return urlImagen(p)?0:1; }, pista:'con imagen primero'},
+    {id:'producto', label:'Producto', clave:function(p){ return claveTexto(p.nombre); }, pista:'alfabético'},
+    {id:'marca', label:'Marca', clave:function(p){ return claveTexto(p.marca); }, pista:'sin marca al final'},
+    {id:'seccion', label:'Sección', clave:function(p){ return claveTexto(p.seccion); }},
+    {id:'precio', label:'Precio', clave:function(p){ return typeof p.precio==='number'?p.precio:null; }, pista:'sin precio al final'},
+    {id:'promo', label:'Promo', clave:function(p){ return claveTexto(p.promo); }, pista:'sin promo al final'},
+    {id:'anuncio', label:'Anuncio', clave:function(p){ return 3-estadoAnuncio(p); }, pista:'con vídeo primero', der:true}
+  ];
+  var COL_POR_ID={}; COLS.forEach(function(c){ COL_POR_ID[c.id]=c; });
+  function colsDefecto(){ return COLS.map(function(c){ return c.id; }); }
+  function tablaDefecto(){ return {v:1, cols:colsDefecto(), sort:null, manual:null, widths:{}}; }
+  var tabla=tablaDefecto();
+  function claveTabla(){ return TABLA_LS+(actual?actual.id:'-'); }
+  function cargaTabla(){
+    tabla=tablaDefecto(); if(!actual) return;
+    var d=null; try{ d=JSON.parse(localStorage.getItem(claveTabla())||'null'); }catch(_){ d=null; }
+    if(!d||typeof d!=='object') return;
+    if(Array.isArray(d.cols)){ var cols=d.cols.filter(function(id,i){ return COL_POR_ID[id]&&d.cols.indexOf(id)===i; }); COLS.forEach(function(c){ if(cols.indexOf(c.id)<0) cols.push(c.id); }); tabla.cols=cols; }
+    if(d.sort&&COL_POR_ID[d.sort.col]&&(d.sort.dir==='asc'||d.sort.dir==='desc')) tabla.sort={col:d.sort.col, dir:d.sort.dir};
+    var n=actual.productos.length;
+    if(Array.isArray(d.manual)&&d.manual.length===n){ var ok=true, visto={}; d.manual.forEach(function(i){ if(typeof i!=='number'||i<0||i>=n||i%1||visto[i]) ok=false; visto[i]=1; }); if(ok) tabla.manual=d.manual.slice(); }
+    if(d.widths&&typeof d.widths==='object') Object.keys(d.widths).forEach(function(id){ var w=Number(d.widths[id]); if(COL_POR_ID[id]&&w>=40&&w<=1200) tabla.widths[id]=Math.round(w); });
+  }
+  function esDefecto(){ return !tabla.sort&&!tabla.manual&&!Object.keys(tabla.widths).length&&tabla.cols.join()===colsDefecto().join(); }
+  function guardaTabla(){ try{ if(esDefecto()) localStorage.removeItem(claveTabla()); else localStorage.setItem(claveTabla(), JSON.stringify(tabla)); }catch(_){} $('btnReset').disabled=esDefecto(); }
+  function ordenBase(){ var n=actual.productos.length, idx=[]; if(tabla.manual&&tabla.manual.length===n) return tabla.manual.slice(); for(var i=0;i<n;i++) idx.push(i); return idx; }
+  /* estable: empata por la posición base; los vacíos (null) van SIEMPRE al final, suba o baje */
+  function comparador(col, dir){
+    var clave=col.clave, signo=dir==='desc'?-1:1;
+    return function(a,b){
+      var va=clave(a.p), vb=clave(b.p);
+      if(va==null&&vb==null) return a.o-b.o;
+      if(va==null) return 1; if(vb==null) return -1;
+      var r=(typeof va==='number'&&typeof vb==='number')?va-vb:(va<vb?-1:(va>vb?1:0));
+      return r?r*signo:a.o-b.o;
+    };
+  }
+  /* orden completo del catálogo (todos los productos): base manual/origen y encima la columna elegida */
+  function ordenados(){
+    var col=tabla.sort&&COL_POR_ID[tabla.sort.col];
+    var filas=ordenBase().map(function(i,o){ return {p:actual.productos[i], o:o}; });
+    if(col) filas.sort(comparador(col, tabla.sort.dir));
+    return filas.map(function(f){ return f.p; });
+  }
+  function ordenaPor(id, dir){
+    if(!id||!COL_POR_ID[id]){ tabla.sort=null; }
+    else{
+      if(dir===undefined){ var s=tabla.sort; dir=(!s||s.col!==id)?'asc':(s.dir==='asc'?'desc':null); }
+      tabla.sort=dir?{col:id, dir:dir}:null;
+    }
+    guardaTabla(); pintaCabezal(); pintaLista();
+  }
+  function mueveCol(id, a){ var cols=tabla.cols, de=cols.indexOf(id); if(de<0) return; a=Math.max(0,Math.min(cols.length-1,Number(a))); if(!isFinite(a)||a===de) return; cols.splice(de,1); cols.splice(a,0,id); guardaTabla(); pintaCabezal(); pintaLista(); }
+  /* la fila arrastrada ocupa el sitio de la fila destino en el orden que se VE; ese orden pasa a ser el manual */
+  function mueveFila(idx, idxDestino){
+    if(idx===idxDestino) return;
+    var orden=ordenados().map(function(p){ return actual.productos.indexOf(p); });
+    var de=orden.indexOf(idx), a=orden.indexOf(idxDestino); if(de<0||a<0) return;
+    orden.splice(de,1); orden.splice(a,0,idx);
+    var teniaOrden=!!tabla.sort; tabla.manual=orden; tabla.sort=null;
+    guardaTabla(); pintaCabezal(); pintaLista();
+    toast(teniaOrden?'Orden manual guardado (sustituye al de la columna)':'Orden manual guardado');
+  }
+  function restableceTabla(){ try{ localStorage.removeItem(claveTabla()); }catch(_){} tabla=tablaDefecto(); guardaTabla(); pintaCabezal(); pintaLista(); toast('Vista restablecida'); }
+  function pintaCabezal(){
+    var s=tabla.sort;
+    $('cabezal').innerHTML='<tr>'+tabla.cols.map(function(id){
+      var c=COL_POR_ID[id], as=(s&&s.col===id)?(s.dir==='asc'?'ascending':'descending'):'none', w=tabla.widths[id];
+      return '<th scope="col" data-col="'+id+'" draggable="true" tabindex="0" aria-sort="'+as+'"'+(c.der?' class="der"':'')+(w?' style="width:'+w+'px;min-width:'+w+'px"':'')
+        +' title="Clic: ordenar'+(c.pista?' ('+esc(c.pista)+')':'')+' · arrastra ⋮⋮ o ←/→: mover columna · borde: ancho">'
+        +'<span class="hd"><span class="grab" aria-hidden="true">⋮⋮</span><span class="lbl">'+esc(c.label)+'</span><span class="ind" aria-hidden="true"></span></span>'
+        +'<span class="grip" aria-hidden="true"></span></th>';
+    }).join('')+'</tr>';
+    var sel=$('selOrden'), v=s?(s.col+':'+s.dir):''; sel.value=v; if(sel.value!==v) sel.value='';
+    $('btnReset').disabled=esDefecto();
+  }
+  $('selOrden').innerHTML='<option value="">Orden original</option>'+COLS.map(function(c){ return '<option value="'+c.id+':asc">'+esc(c.label)+' ▲'+(c.pista?' · '+esc(c.pista):'')+'</option><option value="'+c.id+':desc">'+esc(c.label)+' ▼</option>'; }).join('');
+  $('selOrden').addEventListener('change', function(){ var v=this.value.split(':'); ordenaPor(v[0]||null, v[1]||null); });
+  $('btnReset').addEventListener('click', restableceTabla);
+  var cabezal=$('cabezal'), dragCol=null, dragFila=null;
+  function limpiaDrag(){ dragCol=null; dragFila=null; Array.prototype.forEach.call(document.querySelectorAll('#tabla .over, #tabla .dragging'), function(t){ t.classList.remove('over'); t.classList.remove('dragging'); }); }
+  function enfocaTh(id){ var th=cabezal.querySelector('th[data-col="'+id+'"]'); if(th) th.focus(); }
+  cabezal.addEventListener('click', function(ev){ var th=ev.target.closest('th[data-col]'); if(!th||ev.target.classList.contains('grip')||cabezal.classList.contains('resizing')) return; ordenaPor(th.getAttribute('data-col')); });
+  cabezal.addEventListener('keydown', function(ev){
+    var th=ev.target.closest&&ev.target.closest('th[data-col]'); if(!th) return; var id=th.getAttribute('data-col'), i=tabla.cols.indexOf(id);
+    if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); ordenaPor(id); enfocaTh(id); }
+    else if(ev.key==='ArrowLeft'){ ev.preventDefault(); mueveCol(id,i-1); enfocaTh(id); }
+    else if(ev.key==='ArrowRight'){ ev.preventDefault(); mueveCol(id,i+1); enfocaTh(id); }
+  });
+  /* mover columnas: arrastre nativo del cabezal (el dato viaja en una variable; dataTransfer es solo cortesía) */
+  cabezal.addEventListener('dragstart', function(ev){ var th=ev.target.closest&&ev.target.closest('th[data-col]'); if(!th) return; dragCol=th.getAttribute('data-col'); th.classList.add('dragging'); try{ ev.dataTransfer.effectAllowed='move'; ev.dataTransfer.setData('text/plain','col:'+dragCol); }catch(_){} });
+  cabezal.addEventListener('dragover', function(ev){ if(!dragCol) return; var th=ev.target.closest&&ev.target.closest('th[data-col]'); if(!th) return; ev.preventDefault(); try{ ev.dataTransfer.dropEffect='move'; }catch(_){} Array.prototype.forEach.call(cabezal.querySelectorAll('th.over'), function(t){ if(t!==th) t.classList.remove('over'); }); th.classList.add('over'); });
+  cabezal.addEventListener('dragleave', function(ev){ var th=ev.target.closest&&ev.target.closest('th[data-col]'); if(th&&!(ev.relatedTarget&&th.contains(ev.relatedTarget))) th.classList.remove('over'); });
+  cabezal.addEventListener('drop', function(ev){ var th=ev.target.closest&&ev.target.closest('th[data-col]'); if(!th||!dragCol) return; ev.preventDefault(); var id=dragCol, a=tabla.cols.indexOf(th.getAttribute('data-col')); limpiaDrag(); mueveCol(id,a); });
+  cabezal.addEventListener('dragend', limpiaDrag);
+  /* ancho por el borde del cabezal (doble clic en el borde = ancho automático) */
+  cabezal.addEventListener('pointerdown', function(ev){
+    var g=ev.target.closest&&ev.target.closest('.grip'); if(!g) return;
+    var th=g.closest('th'), id=th.getAttribute('data-col'), x0=ev.clientX, w0=th.getBoundingClientRect().width;
+    ev.preventDefault(); th.draggable=false; th.classList.add('resizing'); cabezal.classList.add('resizing');
+    function mueve(e){ var w=Math.max(40,Math.min(1200,Math.round(w0+(e.clientX-x0)))); th.style.width=w+'px'; th.style.minWidth=w+'px'; tabla.widths[id]=w; }
+    function suelta(){ document.removeEventListener('pointermove',mueve); document.removeEventListener('pointerup',suelta); th.draggable=true; th.classList.remove('resizing'); setTimeout(function(){ cabezal.classList.remove('resizing'); },0); guardaTabla(); }
+    document.addEventListener('pointermove',mueve); document.addEventListener('pointerup',suelta);
+  });
+  cabezal.addEventListener('dblclick', function(ev){ var g=ev.target.closest&&ev.target.closest('.grip'); if(!g) return; var th=g.closest('th'); delete tabla.widths[th.getAttribute('data-col')]; th.style.width=''; th.style.minWidth=''; guardaTabla(); });
+  /* mover filas: arrastre del chip de página; la fila ocupa el sitio de la fila donde se suelta */
+  $('cuerpo').addEventListener('dragstart', function(ev){ var chip=ev.target.closest&&ev.target.closest('.pg'); if(!chip) return; var tr=chip.closest('tr[data-i]'); if(!tr) return; dragFila=Number(tr.getAttribute('data-i')); tr.classList.add('dragging'); try{ ev.dataTransfer.effectAllowed='move'; ev.dataTransfer.setData('text/plain','fila:'+dragFila); }catch(_){} });
+  $('cuerpo').addEventListener('dragover', function(ev){ if(dragFila==null) return; var tr=ev.target.closest&&ev.target.closest('tr[data-i]'); if(!tr) return; ev.preventDefault(); try{ ev.dataTransfer.dropEffect='move'; }catch(_){} Array.prototype.forEach.call($('cuerpo').querySelectorAll('tr.over'), function(t){ if(t!==tr) t.classList.remove('over'); }); tr.classList.add('over'); });
+  $('cuerpo').addEventListener('dragleave', function(ev){ var tr=ev.target.closest&&ev.target.closest('tr[data-i]'); if(tr&&!(ev.relatedTarget&&tr.contains(ev.relatedTarget))) tr.classList.remove('over'); });
+  $('cuerpo').addEventListener('drop', function(ev){ var tr=ev.target.closest&&ev.target.closest('tr[data-i]'); if(!tr||dragFila==null) return; ev.preventDefault(); var de=dragFila, a=Number(tr.getAttribute('data-i')); limpiaDrag(); mueveFila(de,a); });
+  $('cuerpo').addEventListener('dragend', limpiaDrag);
+  function filaVacia(msg){ return '<tr><td colspan="'+COLS.length+'" class="empty">'+msg+'</td></tr>'; }
+  pintaCabezal();
+
   /* ---- listado ---- */
   function filtrados(){
     var q=norm($('q').value.trim()), sec=$('selSec').value, pag=$('selPag').value, sp=$('soloPrecio').checked, sd=$('soloDest').checked, sv=$('selVideo').value;
-    return actual.productos.filter(function(p){
+    return ordenados().filter(function(p){
       if(sv){ var st=estadoStock(externalIdProducto(p)), hay=!!(st&&st.exists); if(sv==='con'&&!hay) return false; if(sv==='sin'&&hay) return false; }
       if(sec && (p.seccion||'Sin sección')!==sec) return false;
       if(pag && String(p.p)!==pag) return false;
@@ -552,23 +704,26 @@
 
   function pintaLista(){
     var lista=filtrados(), cuerpo=$('cuerpo');
-    if(!lista.length){ cuerpo.innerHTML='<tr><td colspan="5" class="empty">Ningún producto coincide con el filtro.</td></tr>'; return; }
+    if(!lista.length){ cuerpo.innerHTML=filaVacia('Ningún producto coincide con el filtro.'); return; }
     cuerpo.innerHTML=lista.map(function(p){
       var idx=actual.productos.indexOf(p), k=claveProd(p), fecha=creados[k];
-      var precio=typeof p.precio==='number'
-        ? '<div class="pr">'+esc(fmtPrecio(p.precio))+'<span class="u">'+esc((p.unidad||'ud').indexOf('€/')===0?p.unidad:(p.unidad&&p.unidad!=='ud'?'€/'+p.unidad:'€'))+'</span>'+(p.precio_verificado===false?'<span class="nv">⚠ sin verificar</span>':'')+'</div>'
-        : '<div class="pr none">'+(p.precio_texto?esc(p.precio_texto)+' <span class="nv">⚠ no verificado</span>':'sin precio')+'</div>';
       var eid=externalIdProducto(p), st=estadoStock(eid), existe=!!(st&&st.exists), enCurso=!!pendientes[eid];
-      return '<tr data-i="'+idx+'" data-eid="'+esc(eid)+'"'+((fecha||existe)?' class="creado"':'')+'>'
-        +'<td><span class="pg" title="Página '+p.p+' del folleto">'+p.p+'<small>pág</small></span></td>'
-        +'<td><div class="prod">'+celdaImagen(p,idx)+'<div><div class="nm">'+esc(p.nombre)+(p.destacado?'<span class="star" title="Destacado">★</span>':'')+'</div>'
-        +(p.marca?'<div class="mk">'+esc(p.marca)+'</div>':'')
-        +(p.detalle?'<div class="dt">'+esc(p.detalle)+'</div>':'')
-        +(p.promo?'<span class="promo">'+esc(p.promo)+'</span>':'')+'</div></div></td>'
-        +'<td class="sec">'+esc(p.seccion||'—')+'</td>'
-        +'<td>'+precio+'</td>'
-        +'<td>'+celdaAnuncio(p, idx, st, existe, enCurso, fecha)+'</td>'
-        +'</tr>';
+      var celdas=tabla.cols.map(function(id){
+        switch(id){
+          case 'pag': return '<td><span class="pg" draggable="true" title="Página '+p.p+' del folleto · arrastra para reordenar la fila">'+p.p+'<small>pág</small></span></td>';
+          case 'imagen': return '<td>'+celdaImagen(p,idx)+'</td>';
+          case 'producto': return '<td><div class="nm">'+esc(p.nombre)+(p.destacado?'<span class="star" title="Destacado">★</span>':'')+'</div>'+(p.detalle?'<div class="dt">'+esc(p.detalle)+'</div>':'')+'</td>';
+          case 'marca': return '<td class="mk">'+(p.marca?esc(p.marca):'<span class="sec">—</span>')+'</td>';
+          case 'seccion': return '<td class="sec">'+esc(p.seccion||'—')+'</td>';
+          case 'precio': return '<td>'+(typeof p.precio==='number'
+            ? '<div class="pr">'+esc(fmtPrecio(p.precio))+'<span class="u">'+esc((p.unidad||'ud').indexOf('€/')===0?p.unidad:(p.unidad&&p.unidad!=='ud'?'€/'+p.unidad:'€'))+'</span>'+(p.precio_verificado===false?'<span class="nv">⚠ sin verificar</span>':'')+'</div>'
+            : '<div class="pr none">'+(p.precio_texto?esc(p.precio_texto)+' <span class="nv">⚠ no verificado</span>':'sin precio')+'</div>')+'</td>';
+          case 'promo': return '<td class="pc">'+(p.promo?'<span class="promo">'+esc(p.promo)+'</span>':'<span class="sec">—</span>')+'</td>';
+          case 'anuncio': return '<td class="der">'+celdaAnuncio(p, idx, st, existe, enCurso, fecha)+'</td>';
+        }
+        return '<td></td>';
+      });
+      return '<tr data-i="'+idx+'" data-eid="'+esc(eid)+'"'+((fecha||existe)?' class="creado"':'')+'>'+celdas.join('')+'</tr>';
     }).join('');
   }
   $('cuerpo').addEventListener('click', function(ev){
@@ -624,24 +779,24 @@
     sel.innerHTML=indice.map(function(c){ return '<option value="'+esc(c.id)+'">'+esc(c.nombre)+(c.productos!=null?' · '+esc(c.productos)+' productos':'')+'</option>'; }).join('');
     if(actual) sel.value=actual.id;
   }
-  function activa(cat){ actual=cat; pintaSelector(); pintaCabecera(); pintaLista(); reconcilia(cat); sondeaCatalogo(cat).then(function(){ reconcilia(cat); refrescaFilas(); }); }
+  function activa(cat){ actual=cat; cargaTabla(); pintaSelector(); pintaCabecera(); pintaCabezal(); pintaLista(); reconcilia(cat); sondeaCatalogo(cat).then(function(){ reconcilia(cat); refrescaFilas(); }); }
   $('selCat').addEventListener('change', function(){ cargaCatalogo(this.value); });
   function cargaCatalogo(id){
     var entrada=indice.filter(function(c){return c.id===id;})[0]; if(!entrada) return;
     if(catalogos[id]){ activa(catalogos[id]); return; }
-    $('cuerpo').innerHTML='<tr><td colspan="5" class="empty">Cargando el catálogo…</td></tr>';
+    $('cuerpo').innerHTML=filaVacia('Cargando el catálogo…');
     fetch('/contentcatalogue/catalogos/'+entrada.archivo,{cache:'no-cache'}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }).then(function(d){
       var cat={id:entrada.id, cliente:entrada.cliente, nombre:d.catalogo||entrada.nombre, etiqueta:entrada.etiqueta||entrada.nombre, validez:d.validez||entrada.validez, tiendas:d.tiendas||entrada.tiendas||[], paginas:d.paginas||entrada.paginas, fuente:d.fuente||entrada.fuente, extraido_por:d.extraido_por, imagenes:d.imagenes||null, productos:Array.isArray(d.productos)?d.productos:[]};
       catalogos[id]=cat; activa(cat);
-    }).catch(function(e){ $('cuerpo').innerHTML='<tr><td colspan="5" class="empty">No se pudo cargar el catálogo ('+esc(e.message)+').</td></tr>'; });
+    }).catch(function(e){ $('cuerpo').innerHTML=filaVacia('No se pudo cargar el catálogo ('+esc(e.message)+').'); });
   }
   fetch('/contentcatalogue/catalogos/index.json',{cache:'no-cache'}).then(function(r){return r.json();}).then(function(d){
     indice=(d&&d.catalogos)||[]; cargaCreados(); cargaStockLS();
     var pedido=null; try{ pedido=new URLSearchParams(location.search).get('catalogo'); }catch(_){}
     var primero=(pedido&&indice.filter(function(c){return c.id===pedido;})[0])||indice[0];
     if(primero){ pintaSelector(); cargaCatalogo(primero.id); }
-    else $('cuerpo').innerHTML='<tr><td colspan="5" class="empty">No hay catálogos disponibles. Sube un folleto para analizarlo.</td></tr>';
-  }).catch(function(){ $('cuerpo').innerHTML='<tr><td colspan="5" class="empty">No se pudo leer la lista de catálogos.</td></tr>'; });
+    else $('cuerpo').innerHTML=filaVacia('No hay catálogos disponibles. Sube un folleto para analizarlo.');
+  }).catch(function(){ $('cuerpo').innerHTML=filaVacia('No se pudo leer la lista de catálogos.'); });
 
   /* ---- análisis de folleto: PDF/imágenes → páginas ~1200px → Pages Function → catálogo nuevo ---- */
   var iaConfigurada=null, analisisActual=null, imagenConfigurada=null;
@@ -781,6 +936,6 @@
   });
 })();
 </script>
-  <script src="/assets/admira-version-watch.js?v=12.09.2026.r9.1413" defer></script>
+  <script src="/assets/admira-version-watch.js?v=12.09.2026.r10.1449" defer></script>
 </body>
 </html>
