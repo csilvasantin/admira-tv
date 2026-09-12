@@ -1,6 +1,6 @@
 # Admira.tv · admira.tv — la capa Emitir (MCP)
 
-> Servidor MCP de Admira.tv (v2.2.0): el canal, conectado, FEDERADO y CONDICIONADO. Agentes (silicio) y
+> Servidor MCP de Admira.tv (v2.3.0): el canal, conectado, FEDERADO y CONDICIONADO. Agentes (silicio) y
 > personas (carbono) consultan qué hay EN ANTENA en cada pantalla, el proof-of-play de cada
 > circuito, cómo poner una pantalla a emitir y la documentación del player nativo. Desde hoy,
 > además, admira.tv se coordina con CIRCUITOS EXTERNOS y viceversa: pedimos antena en sus
@@ -10,9 +10,28 @@
 
 Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y del CMS)
 
+## Player virtual Xtore · música por defecto
+
+- ID persistente xtore-virtual-zapatillas: navegador sin hardware dedicado, registrado en Flota.
+- Analizador: https://admira.tv/videoanalytics/xtore/ — música independiente del vídeo en directo.
+- Playlist propia: https://admira.tv/parrilla/?project=admiranext&xpace=admiranext&device=xtore-virtual-zapatillas&playlist=default
+- Perfil del iframe: xtoreParent=1, xtoreMusic=1, screen exacto, muted=0; sandbox opaco.
+- Base: solo audios de Por defecto, orden exacto y pistas completas hasta ended. Vacía = espera
+  asociación, nunca Stock aleatorio. La playlist se relee cada 30 s; editar exige sesión del portal.
+- Solo el analizador activo envía pasos confirmados (persona/coche/moto/bici), sin sexo, edad,
+  identidad ni imágenes. Una regla con asset compatible interrumpe la música. Pausa o 6 s sin
+  renovar retornan desde el inicio de la base; si no había interrupción, la canción continúa.
+- Audio-blocked exige gesto dentro del iframe; no avanza canciones mientras está bloqueado.
+  Playing no garantiza sonido físico. Playlist-empty no es descarga ni emisión.
+- Este iframe muestra estado en el visor, no publica proof-of-play/presencia a la flota.
+  El registro y la playlist son persistentes; su alta no acredita online.
+- Registro: player_virtual_register/list. No usar el alta para asignar música, no modificar
+  reglas de pantallas físicas. El piloto remoto xtanco-totem descrito debajo es distinto.
+- Help/contrato: https://admira.tv/help/#player-virtual · https://admira.tv/mcp/#player-virtual
+
 Sitio / docs: https://admira.tv/mcp/
 Manifest máquina: https://admira.tv/mcp/manifest.json
-Versión: v.07.09.2026.r8.07:50
+Versión: v.12.09.2026.r2.11:00
 Repo del servidor: https://github.com/csilvasantin/admira-tv-mcp · Repo del sitio: https://github.com/csilvasantin/admira-tv
 
 ## Servidor MCP (cómo conectar)

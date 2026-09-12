@@ -2,7 +2,7 @@
   "name": "admira-tv",
   "title": "Admira TV · admira.tv — la capa Emitir de la suite AdmiraNeXT",
   "description": "Hub MCP de admira.tv: emisión, federación, player condicionado y registro de players virtuales (navegador sin hardware dedicado). Servidor mcp-tv.admira.store v2.3.0; el descriptor raíz publica la lista vigente de herramientas. Alta no equivale a presencia ni a proof-of-play.",
-  "version": "v.12.09.2026.r1.09:42",
+  "version": "v.12.09.2026.r2.11:00",
   "site": "https://admira.tv",
   "hub": "https://admira.tv/mcp/",
   "llms_txt": "https://admira.tv/mcp/llms.txt",
@@ -149,7 +149,21 @@
       "playlist": "https://admira.tv/parrilla/?project=admiranext&xpace=admiranext&device=xtore-virtual-zapatillas&playlist=default",
       "help": "https://admira.tv/help/#player-virtual",
       "mission": "DCL-f9824e3bba6cee600b73810d",
-      "registration_is_not_presence": true
+      "registration_is_not_presence": true,
+      "music_baseline": {
+        "scope": "Iframe aislado del analizador Xtore zapatillas; no cambia otros players",
+        "analyzer": "https://admira.tv/videoanalytics/xtore/",
+        "profile": "xtoreMusic=1",
+        "requires_live_video": false,
+        "fleet_playback_telemetry": false,
+        "playlist_source": "Por defecto del mismo screen; solo audio, pistas completas",
+        "empty_playlist": "Espera asociación; no usa Stock general",
+        "assignment": "Parrilla con sesión autorizada; no es un alta ni escritura MCP anónima",
+        "audience": "Solo con análisis activo, paso confirmado y regla con contenido disponible",
+        "return": "Pausa o 6 s sin renovar: playlist musical desde el principio",
+        "autoplay": "muted=0; el navegador puede exigir gesto dentro del iframe; pista espera sin avanzar",
+        "music_mission": "DCL-a2d1afecee4fa4c73ba924d3"
+      }
     },
     "player_condicionado": {
       "scope": "Piloto remoto xtanco-totem; distinto del iframe opaco del analizador virtual zapatillas",

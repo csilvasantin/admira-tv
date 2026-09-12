@@ -4,9 +4,9 @@ import {XTORE_VIRTUAL_SCREEN} from './virtual-player.mjs';
 const LABEL={none:'Bucle general',person:'Persona',car:'Coche',motorcycle:'Moto',bicycle:'Bici'};
 export function installSignageUI({document,window}){
   const $=id=>document.getElementById(id);
-  let iframe=null,bridge=null,dataBridge=null,eligible=false,emissionTimer=0,emissionSeen=false,emissionDelayed=false,mediaReported=false,manuallyOff=false,failed=false;
+  let iframe=null,bridge=null,dataBridge=null,eligible=false,analysisEnabled=false,emissionTimer=0,emissionSeen=false,emissionDelayed=false,mediaReported=false,manuallyOff=false,failed=false;
   function controls(){$('start-signage').disabled=!eligible||!!iframe;$('stop-signage').disabled=!iframe;}
-  function stop(message='El bucle arranca al conectar la vista y marcar la pantalla grande.'){
+  function stop(message='Player en pausa mientras la pestaña está oculta. Al volver se reanuda la música, no el análisis.'){
     clearTimeout(emissionTimer);bridge?.stop();bridge=null;dataBridge?.stop();dataBridge=null;
     if(iframe){iframe.remove();iframe=null;}
     $('signage-idle-label').textContent=failed?'Player detenido por error':manuallyOff?'Player apagado':'Player en espera';
@@ -17,12 +17,12 @@ export function installSignageUI({document,window}){
   function start(){
     if(!eligible||iframe||document.hidden)return;
     iframe=document.createElement('iframe');
-    iframe.title='Player condicionado Admira.tv · pantalla virtual';
+    iframe.title='Player virtual Xtore · música y cartelería condicionada';
     // Opaque origin even when Xtore is on admira.tv. No parent DOM, cookies or
     // shared localStorage access; the player must tolerate unavailable storage.
     iframe.setAttribute('sandbox','allow-scripts');
     iframe.setAttribute('allow',"autoplay; camera 'none'; microphone 'none'; geolocation 'none'");
-    iframe.referrerPolicy='no-referrer';iframe.tabIndex=-1;
+    iframe.referrerPolicy='no-referrer';iframe.tabIndex=0;
     const loadingFrame=iframe;let loaded=false;
     iframe.addEventListener('load',()=>{
       if(iframe!==loadingFrame)return;
@@ -41,6 +41,14 @@ export function installSignageUI({document,window}){
           // An ACK is control-plane evidence, not a new playback event. The
           // neutral ACK after pause/expiry must not erase confirmed playback.
           if(!mediaReported&&!emissionDelayed)$('signage-status').textContent='Canal conectado · esperando emisión';
+        }else if(state.phase==='playlist-empty'){
+          mediaReported=true;clearTimeout(emissionTimer);
+          $('signage-status').textContent='Sin música asociada · elige pistas en la playlist del virtual';
+          $('signage-media').textContent='No hay audio en Por defecto. No se reproduce el Stock general ni se eligen canciones automáticamente.';
+        }else if(state.phase==='audio-blocked'){
+          mediaReported=true;clearTimeout(emissionTimer);
+          $('signage-status').textContent='Sonido pendiente de permiso del navegador';
+          $('signage-media').textContent='Pulsa el botón de sonido dentro del player virtual. La pista espera: no avanza mientras el navegador bloquea el audio.';
         }else if(state.phase==='selected'){
           mediaReported=true;
           $('signage-status').textContent='Cargando contenido · emisión pendiente';
@@ -48,8 +56,8 @@ export function installSignageUI({document,window}){
         }else{
           mediaReported=true;
           emissionSeen=true;clearTimeout(emissionTimer);
-          $('signage-status').textContent=`${state.loop?'Bucle general':'Contenido condicionado'} · ${state.phase==='playing'?'reproduciendo':state.phase==='poster-loaded'?'miniatura de respaldo':'interactivo cargado'}`;
-          $('signage-media').textContent=state.phase==='playing'?'El player confirma vídeo/audio iniciado o imagen cargada.':state.phase==='poster-loaded'?'Miniatura cargada; este vídeo no ha confirmado reproducción.':'Evento de carga del interactivo recibido; no confirma contenido visible ni reproducción interna.';
+          $('signage-status').textContent=`${state.loop?(state.music?'Música por defecto':'Bucle general'):'Contenido condicionado'} · ${state.phase==='playing'?'reproduciendo':state.phase==='poster-loaded'?'miniatura de respaldo':'interactivo cargado'}`;
+          $('signage-media').textContent=state.phase==='playing'?(state.mediaType==='audio'?(state.muted===true||state.volume===0?'Audio iniciado en silencio.':'Audio iniciado por el navegador; no confirma el volumen de los altavoces del equipo.'):'El player confirma vídeo/audio iniciado o imagen cargada.'):state.phase==='poster-loaded'?'Miniatura cargada; este vídeo no ha confirmado reproducción.':'Evento de carga del interactivo recibido; no confirma contenido visible ni reproducción interna.';
         }
       }});
     $('signage-status').textContent='Cargando player · comprobando canal de órdenes…';
@@ -61,5 +69,14 @@ export function installSignageUI({document,window}){
   $('stop-signage').addEventListener('click',()=>{manuallyOff=true;stop('Player apagado manualmente. Pulsa Reanudar bucle para volver.');});
   window.addEventListener('message',event=>{bridge?.receive(event);void dataBridge?.receive(event);});
   controls();
-  return {setEligible(value){eligible=value;if(!value&&iframe)stop();else if(value&&!iframe&&!manuallyOff&&!failed)start();controls();},stop,neutral:()=>bridge?.neutral(),passage:events=>bridge?.passage(events)};
+  return {
+    setEligible(value){eligible=value;if(!value&&iframe)stop();else if(value&&!iframe&&!manuallyOff&&!failed)start();controls();},
+    setAnalysis(value){
+      const next=value===true;
+      if(analysisEnabled&&!next)bridge?.neutral();
+      analysisEnabled=next;
+      $('signage-mode').textContent=next?'Audiencia activa · la música se interrumpe solo con regla y contenido disponibles.':'Música por defecto · analizador inactivo. No necesita compartir vídeo.';
+    },
+    stop,neutral:()=>bridge?.neutral(),passage:events=>{if(analysisEnabled)bridge?.passage(events);}
+  };
 }

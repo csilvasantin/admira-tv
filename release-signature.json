@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r1.09:42",
+  "version": "v.12.09.2026.r2.11:00",
   "signature": "TrinityMBA16 · MacBookAir16plata",
   "agent": "TrinityMBA16",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "09:42",
-  "evidence": "Player virtual Xtore: identidad estable xtore-virtual-zapatillas, sin hardware dedicado, ficha de flota y playlist Por defecto compartida. MCP register/list con autoridad SQLite por ID y proyección KV reparable. Puente de playlist fijo; sandbox opaco preservado; sin colas compartidas. Revisión Turing aprobada; 23 tests MCP, integración workerd concurrente, 109 tests web específicos; batería general 389/391 (2 fallos preexistentes). No QA visual ni certificación de reproducción en esta revisión. No se cambian reglas, anuncios, cámaras, históricos ni grabador. Yokup DCL-f9824e3bba6cee600b73810d."
+  "time": "11:00",
+  "evidence": "Xtore virtual: música por defecto sin compartir vídeo; pistas completas hasta ended, eventos solo con analizador activo y creatividad disponible, vuelta a base tras pausa o TTL. Mismo iframe durante conexión y calibración; autoplay bloqueado espera gesto y nunca acredita emisión. Perfil acotado, sin telemetría de hardware ni Stock aleatorio; Help/MCP documentados. Revisión cruzada Turing; 131 pruebas web específicas y 27 MCP local. Playlist todavía vacía: selección de música pendiente de Carlos. Sin QA visual ni certificación de sonido físico. No se alteran otras playlists, reglas, cámara, histórico ni grabador. Yokup DCL-a2d1afecee4fa4c73ba924d3."
 }

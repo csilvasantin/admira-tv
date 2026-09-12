@@ -10,7 +10,7 @@ function fixture(t){
   const tick=ms=>{now+=ms;t.mock.timers.tick(ms);};
   return {sent,states,errors,bridge,target,ack,tick};
 }
-test('virtual player URL is isolated, muted, conditional and without camera, screenshots or auction',()=>{
+test('virtual player URL is isolated, music-enabled, conditional and without camera, screenshots or auction',()=>{
   assert.throws(()=>playerURL('xtanco-totem'));
   const url=new URL(playerURL('xtore-virtual-12345678'));
   assert.equal(url.origin,PLAYER_ORIGIN);
@@ -18,7 +18,7 @@ test('virtual player URL is isolated, muted, conditional and without camera, scr
   assert.equal(url.searchParams.get('circuit'),'admiranext');assert.equal(url.searchParams.get('machine'),'');
   assert.equal(url.searchParams.get('playerType'),'virtual');
   for(const k of ['cam','shot','rtb'])assert.equal(url.searchParams.get(k),'0');
-  assert.equal(url.searchParams.get('mode'),'conditional');assert.equal(url.searchParams.get('muted'),'1');
+  assert.equal(url.searchParams.get('mode'),'conditional');assert.equal(url.searchParams.get('muted'),'0');assert.equal(url.searchParams.get('xtoreMusic'),'1');
   assert.equal(url.searchParams.get('format'),null);assert.equal(url.searchParams.get('stream'),'1');assert.equal(url.searchParams.get('xtoreParent'),'1');
   assert.equal(url.searchParams.get('parentOrigin'),PLAYER_ORIGIN);
   assert.equal(new URL(playerURL('xtore-virtual-12345678','http://127.0.0.1:56594')).origin,'http://127.0.0.1:56594');

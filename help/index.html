@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=12.09.2026.r1.0942"></script>
+<script src="/auth-gate.js?v=12.09.2026.r2.1100"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r1.0942">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r2.1100">
 </head>
 <body>
-<script src="/admira-nav.js?v=12.09.2026.r1.0942" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=12.09.2026.r1.0942" defer></script>
+<script src="/admira-nav.js?v=12.09.2026.r2.1100" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=12.09.2026.r2.1100" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -99,8 +99,11 @@
   <section id="player-virtual"><h2>Player virtual · navegador</h2>
     <p>Un <b>player virtual</b> corre en un navegador y <b>no tiene hardware dedicado asociado</b>. No es una simulación: reproduce contenidos reales, pero cerrar la pestaña detiene esa instancia. Su alta permanece en la flota y su playlist se conserva entre equipos.</p>
     <p>La ficha <b>Xtore · zapatillas — Player virtual</b> usa el ID estable <code>xtore-virtual-zapatillas</code>. Aparece como <b>Virtual · navegador</b> en <a href="/cms.html">Flota</a>, los destinos de <a href="/playlists/">Playlists</a> y su <a href="/parrilla/?project=admiranext&amp;xpace=admiranext&amp;device=xtore-virtual-zapatillas&amp;playlist=default">playlist Por defecto</a>. El alta no significa «en línea» ni «reproduciendo»: esas señales proceden del player abierto. Varias pestañas del mismo ID comparten playlist; no son hardware adicional ni emisores independientes.</p>
-    <p>En el <a href="/videoanalytics/xtore/">analizador de la tienda de zapatillas</a>, el bucle base lee esa playlist. Si está vacía, usa el catálogo general. Un paso confirmado puede interrumpirlo si coincide una regla; tras 6 segundos sin renovar el evento vuelve al bucle. El player integrado está aislado: sin cámara, micrófono, capturas, cookies ni acceso al vídeo de la calle; los controles de audiencia vienen del analizador, no de otro equipo físico. El alta no crea anuncios ni altera las reglas existentes.</p>
+    <p>En el <a href="/videoanalytics/xtore/">analizador de la tienda de zapatillas</a>, la base es <b>música por defecto</b>: los audios de esa playlist, en orden y completos. No necesita compartir vídeo ni activar el detector. Una lista vacía espera su asociación; no reproduce música ni vídeos aleatorios del Stock. La playlist se relee cada 30 segundos. La escritura sigue requiriendo la sesión autorizada del portal.</p>
+    <p>Al activar el analizador, un paso confirmado puede interrumpir la música si coincide una regla con contenido disponible; tras 6 segundos sin renovar el evento o al pausar, vuelve la playlist musical desde el principio. Sin coincidencia no reinicia la canción. Compartir, desconectar y recalibrar mantienen el mismo player; ocultar la pestaña lo detiene, y volver reanuda música sin activar el análisis. El navegador puede exigir pulsar dentro del player para habilitar sonido: mientras lo bloquea, la pista no avanza.</p>
+    <p>El player integrado está aislado: sin cámara, micrófono, capturas, cookies ni acceso al vídeo de la calle; los controles de audiencia vienen del analizador, no de otro equipo físico. El alta no crea anuncios ni altera las reglas existentes. No hay inferencia de sexo ni edad. Esta base musical es un perfil del analizador de zapatillas; no cambia los demás players.</p>
     <p>Para agentes: <a href="/mcp/#player-virtual">player_virtual_register y player_virtual_list</a>. El registro se guarda en servidor; no depende de localStorage. El reintento del mismo alta no duplica la ficha. La propagación del registro puede tardar unos segundos.</p>
+    <p>Este iframe musical comunica el estado de reproducción al visor Xtore, no publica telemetría de presencia ni proof-of-play a la flota. Ver la ficha en Flota acredita su registro y playlist, no sonido ni emisión actual.</p>
   </section>
 
   <section id="xtore"><h2>👁️ Player condicionado Xtore</h2>

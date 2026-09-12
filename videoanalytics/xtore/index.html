@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090e14">
   <meta name="description" content="Xtore: análisis local de Puerta Cam y capturas efímeras en un iPad virtual, con permiso explícito para compartir la pestaña de Digital Twin.">
-  <meta name="admiranext-version" content="v.12.09.2026.r1.09:42">
+  <meta name="admiranext-version" content="v.12.09.2026.r2.11:00">
   <meta name="admiranext-agent" content="TrinityMBA16">
   <title>Xtore · Analítica de vídeo · Admira.tv</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -20,16 +20,16 @@
   <main>
     <header class="heading">
       <div><p class="eyebrow">VIDEO ANALYTICS / XTORE</p><h1>La calle activa la Xtore.</h1><p class="intro">Puerta Cam detecta. El iPad muestra. La cartelería responde.</p></div>
-      <span id="connection" class="badge">Sin conexión</span>
+      <span id="connection" class="badge">Cámara sin conectar</span>
     </header>
     <section class="toolbar" aria-label="Conexión y análisis">
       <button id="analyze" class="primary" disabled>Iniciar análisis</button>
       <a class="button" href="https://digitaltwin.ieu.ai/" target="_blank" rel="noopener noreferrer">1. Abrir Digital Twin ↗</a>
       <button id="connect">2. Compartir pestaña</button>
       <button id="stop" disabled>Desconectar</button>
-      <span class="local-note">Detección local · sin audio · envío a Pixeria solo al pulsar Generar</span>
+      <span class="local-note">Detección local · cámara sin audio · música independiente · envío a Pixeria solo al pulsar Generar</span>
     </section>
-    <p id="status" role="status" aria-live="polite">En Digital Twin, abre Store → Entrada y el stream de Puerta Cam. Después comparte únicamente esa pestaña.</p>
+    <p id="status" role="status" aria-live="polite">La música no necesita vídeo en directo. Para activar la audiencia, abre Store → Entrada y Puerta Cam en Digital Twin; después comparte únicamente esa pestaña.</p>
     <div class="workspace">
       <section class="viewer" aria-label="Escena Xtore con iPad virtual">
         <div id="stage" class="stage">
@@ -40,7 +40,7 @@
           <div id="roi" hidden><span>Solo se analiza esta zona</span></div>
           <div id="markers" aria-hidden="true"></div>
         </div>
-        <div class="viewer-caption"><span id="source-info">ESPERANDO FUENTE</span><span>iPad y cartelería virtuales · no son dispositivos físicos</span></div>
+        <div class="viewer-caption"><span id="source-info">PLAYER VIRTUAL · SIN VÍDEO EN DIRECTO</span><span>iPad y cartelería virtuales · no son dispositivos físicos</span></div>
       </section>
       <aside class="inspector">
         <div class="section-title capture-heading"><h2>Capturas</h2><span id="event-counter">0 pasos</span><button id="reset-counts" title="Poner a cero los contadores actuales sin borrar el histórico">Reset</button></div>
@@ -92,12 +92,16 @@
           <details class="help"><summary><span aria-hidden="true">›</span> Uso temporal y borrado</summary><p class="small">Solo se retiene un original en esta sesión, nunca en Stock ni en almacenamiento del navegador. Se retira al recibir una imagen válida, fallar, cancelar, pausar u ocultar la pestaña; máximo 3 min. El resultado local caduca a los 15 min. Publicar guarda únicamente el resultado en Stock y no lo elimina cuando cierres esta vista. La retirada local no certifica borrado de registros de Pixeria o Gemini. <a href="https://ai.google.dev/gemini-api/terms#how-google-uses-your-data-1" target="_blank" rel="noopener noreferrer">Condiciones de Gemini ↗</a></p></details>
         </details>
         <div class="divider"></div>
-        <h2>Player virtual · cartelería</h2>
+        <h2>Player virtual · música y cartelería</h2>
         <p class="small">Navegador · sin hardware dedicado · <a href="/parrilla/?project=admiranext&amp;xpace=admiranext&amp;device=xtore-virtual-zapatillas&amp;playlist=default" target="_blank" rel="noopener">Playlist de flota ↗</a> · <a href="/help/#player-virtual" target="_blank" rel="noopener">Help ↗</a></p>
-        <p id="signage-status" class="small" role="status">El bucle arranca al marcar la pantalla grande.</p>
+        <p id="signage-mode" class="small">Música por defecto · analizador inactivo. No necesita compartir vídeo.</p>
+        <p id="signage-status" class="small" role="status">Preparando la playlist musical del virtual.</p>
         <button id="start-signage" class="full" disabled>Reanudar bucle Admira.tv</button>
         <button id="stop-signage" class="text-button" disabled>Apagar player</button>
         <details class="help" id="help-player"><summary><span aria-hidden="true">›</span> Help · carga y reproducción</summary>
+          <p><strong>Música por defecto:</strong> añade las pistas a la playlist de este virtual. Solo se usan los audios de Por defecto, en orden y completos; una lista vacía no reproduce el Stock general. La lista se consulta cada 30 s. Asociar música no activa cámara ni analizador.</p>
+          <p><strong>Sonido pendiente:</strong> si el navegador bloquea el autoplay, pulsa dentro del player para escuchar. La pista espera sin saltar a la siguiente. «Reproduciendo» no acredita que los altavoces del equipo tengan volumen.</p>
+          <p><strong>Flota:</strong> conserva la ficha y su playlist. Este iframe musical informa de reproducción en el visor Xtore, pero no publica presencia ni proof-of-play en Flota. Tener la ficha no significa estar emitiendo.</p>
           <p><strong>«Preparando bucle general» no era un indicador de descarga.</strong> Era una pantalla de espera que también aparecía al detenerse el player. Consulta el estado que figura encima de Reanudar bucle.</p>
           <p><strong>Cargando player:</strong> se está iniciando el reproductor y comprobando su comunicación. No acredita que haya descargado una pieza.</p>
           <p><strong>Orden aceptada:</strong> el player ha recibido el criterio; no confirma reproducción ni un anuncio concreto. El detalle de órdenes está en «Conexión con el player» y no sustituye el estado de reproducción. «Canal conectado · esperando emisión» indica que aún falta la primera confirmación de contenido.</p>
@@ -110,7 +114,7 @@
           <p><strong>Si no arranca:</strong> a los 20 s sin respuesta del canal de órdenes se detiene por error. Una navegación no autorizada también lo cierra. Estos errores y el apagado manual requieren Reanudar; una carga lenta de contenido no. La comprobación del códec tiene un límite de 2 s y el vídeo online dispone de hasta 15 s para recibir datos antes de recurrir a una miniatura y continuar la lista.</p>
           <p><strong>Antes de recargar:</strong> revisa Histórico. Los pasos «sin confirmar» siguen en memoria y pueden perderse al recargar o cerrar. Una vista local sin servidor de histórico no puede sincronizarlos. Reset no borra el histórico ni soluciona la conexión.</p>
         </details>
-        <details class="help"><summary><span aria-hidden="true">›</span> Conexión con el player</summary><p id="signage-command">Canal de órdenes cerrado</p><p>El bucle general arranca al marcar la pantalla grande y sigue al pausar el análisis. Solo lo interrumpen pasos confirmados con una regla y contenido disponibles; vuelve al bucle a los 6 s sin nuevos pasos. Prioridad: bici → moto → coche → persona. Si falta una regla, sigue el bucle. El detector no distingue hombre/mujer ni patinetes automáticamente.</p><p>Al ocultar la pestaña o recalibrar, el player se cierra por seguridad. Al volver a una vista preparada se reanuda el bucle, no el análisis. Apagar player mantiene el apagado hasta pulsar Reanudar.</p><p id="signage-media">Sin confirmación de emisión</p><p>Solo se envían categorías, nunca imágenes, sexo ni edad. El catálogo público se carga sin credenciales. Es una pantalla virtual independiente, no controla pantallas físicas ni activa la cámara del player. Una orden aceptada no acredita un anuncio concreto.</p></details>
+        <details class="help"><summary><span aria-hidden="true">›</span> Conexión con el player</summary><p id="signage-command">Canal de órdenes cerrado</p><p>La música arranca al abrir esta vista, sin compartir vídeo. Activar el analizador habilita las condiciones: solo interrumpen la música pasos confirmados con regla y contenido disponibles. A los 6 s sin nuevos pasos o al pausar el análisis vuelve la playlist musical desde el principio. Sin coincidencia no se reinicia la canción. Prioridad: bici → moto → coche → persona. El detector no distingue hombre/mujer ni patinetes automáticamente.</p><p>Compartir, desconectar o recalibrar no crea otro player ni reinicia la música. Sin escena aparece a tamaño completo; con escena sin marcar aparece en una vista pequeña provisional; al marcar las cuatro esquinas se coloca en la pantalla grande. Mientras marcas se oculta la proyección, no el audio. Al ocultar la pestaña se cierra; al volver se reanuda la música, nunca el análisis. Apagar player mantiene el apagado hasta pulsar Reanudar.</p><p id="signage-media">Sin confirmación de emisión</p><p>Solo se envían categorías, nunca imágenes, sexo ni edad. El catálogo público se carga sin credenciales. Es una pantalla virtual independiente, no controla pantallas físicas ni activa la cámara del player. Una orden aceptada no acredita un anuncio concreto.</p></details>
         <details class="help"><summary><span aria-hidden="true">›</span> Grabación de seguridad · no activa</summary><p><strong>No se está grabando ni archivando.</strong> Falta un grabador y un almacén privado. La propuesta es conservar originales sin alterar durante 28 días, con borrado automático en servidor y acceso restringido; nunca en Stock público de Pixeria.</p><p>Compartir una pestaña no sustituye un grabador 24/7: al ocultarla o cerrarla este análisis se detiene. Para seguridad continua necesitamos una conexión autorizada directa a la cámara y un equipo o servicio siempre encendido. Una imagen generada no sustituye el original.</p></details>
         <div class="divider"></div>
         <h2>Encuadre y detección</h2>
@@ -132,7 +136,7 @@
         <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. La detección no envía fotogramas.</p>
       </aside>
     </div>
-    <footer><span>TrinityMBA16 · <span data-release-version>v.12.09.2026.r1.09:42</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
+    <footer><span>TrinityMBA16 · <span data-release-version>v.12.09.2026.r2.11:00</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
   </main>
 </body>
 </html>

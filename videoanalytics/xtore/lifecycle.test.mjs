@@ -1,8 +1,10 @@
 // In-process fixtures only. These do not select a real browser capture source,
 // bypass browser permissions, or inject synthetic detections into the UI preview.
-import test from 'node:test';
+import test,{afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 let serial=0;
+const cleanups=[];
+afterEach(async()=>{for(const cleanup of cleanups.splice(0))await cleanup();});
 async function fixture({surface='browser',denied=false,slowLoad=false,segment}={}){
   const nodes=new Map();
   class Element {
@@ -30,15 +32,28 @@ async function fixture({surface='browser',denied=false,slowLoad=false,segment}={
   globalThis.ImageData=class{constructor(data,width,height){Object.assign(this,{data,width,height});}};
   get('confidence').value='65';
   await import(`./xtore.mjs?fixture=${++serial}`);
+  cleanups.push(()=>get('stop-signage').emit('click'));
   const calibrate=async()=>{await get('edit-coordinates').emit('click');await get('apply-coordinates').emit('click');};
   return {get,doc,win,track,calibrate,detections,finishLoad:()=>finishLoad(),finishDetection:()=>finishDetection?.([])};
 }
 
 test('permission denial stays disconnected and is explained',async()=>{
   const f=await fixture({denied:true});await f.get('connect').emit('click');
-  assert.equal(f.get('connection').textContent,'Sin conexión');
+  assert.equal(f.get('connection').textContent,'Cámara sin conectar');
   assert.match(f.get('status').textContent,/No se ha concedido permiso/);
   assert.equal(f.get('analyze').disabled,true);
+});
+test('music has one player before sharing, through capture calibration and after disconnect',async()=>{
+  const f=await fixture(),frame=f.get('signage').children[0];
+  assert.ok(frame);assert.equal(f.get('signage').hidden,false);
+  assert.equal(f.get('scene').srcObject,undefined);assert.equal(f.get('analyze').disabled,true);
+  assert.match(frame.src,/xtoreMusic=1/);assert.match(frame.src,/muted=0/);
+  await f.get('connect').emit('click');await f.calibrate();
+  assert.equal(f.get('signage').children[0],frame);
+  await f.get('stop').emit('click');
+  assert.equal(f.get('signage').children[0],frame);assert.equal(frame.removed,undefined);
+  assert.equal(f.get('scene').srcObject,null);assert.equal(f.track.stopped,true);
+  assert.equal(f.get('signage').hidden,false);assert.match(f.get('signage-mode').textContent,/analizador inactivo/);
 });
 test('a monitor/window selection is stopped, not analyzed',async()=>{
   const f=await fixture({surface:'window'});await f.get('connect').emit('click');
@@ -57,7 +72,7 @@ test('late model load after disconnect never resumes analysis',async()=>{
   const f=await fixture({slowLoad:true});await f.get('connect').emit('click');await f.calibrate();
   const starting=f.get('analyze').emit('click');
   await Promise.resolve();await f.get('stop').emit('click');f.finishLoad();await starting;
-  assert.equal(f.get('connection').textContent,'Sin conexión');assert.equal(f.get('scene').srcObject,null);
+  assert.equal(f.get('connection').textContent,'Cámara sin conectar');assert.equal(f.get('scene').srcObject,null);
   assert.equal(f.get('connect').disabled,false);
 });
 test('hidden view pauses and ignores an in-flight inference',async()=>{
@@ -74,7 +89,7 @@ test('changing source resolution invalidates calibration',async()=>{
   assert.equal(f.get('analyze').disabled,true);assert.equal(f.get('tablet').hidden,true);
   await f.get('stop').emit('click');
 });
-test('calibrated signage automatically starts the loop without starting analysis',async()=>{
+test('calibrated signage projects the existing music player without starting analysis or restarting music',async()=>{
   const f=await fixture();await f.get('connect').emit('click');
   await f.get('edit-coordinates').emit('click');
   const quad=[50,25,75,25,75,85,50,85];
@@ -84,10 +99,10 @@ test('calibrated signage automatically starts the loop without starting analysis
   assert.equal(f.get('signage').children.length,1);assert.match(f.get('calibration-status').textContent,/cartelería: marcada/);
   assert.equal(f.get('connection').textContent,'Pestaña conectada');
   const first=f.get('signage').children[0];await f.get('edit-coordinates').emit('click');
-  assert.equal(first.removed,true);assert.equal(f.get('analyze').disabled,true);
+  assert.equal(first.removed,undefined);assert.equal(f.get('signage').hidden,true);assert.equal(f.get('analyze').disabled,true);
   await f.get('stage').emit('click');await f.get('apply-coordinates').emit('click');assert.equal(f.get('signage').children.length,1);
   f.get('scene').videoWidth=1440;await f.get('scene').emit('resize');
-  assert.equal(f.get('signage').hidden,true);assert.equal(f.get('start-signage').disabled,true);
+  assert.equal(f.get('signage').hidden,false);assert.equal(f.get('start-signage').disabled,true);assert.equal(f.get('signage').children[0],first);
   await f.get('stop').emit('click');
 });
 test('partial signage coordinates cannot be accepted silently',async()=>{
@@ -199,11 +214,11 @@ test('pause, confidence edits and Reset do not recount the person still in view'
 });
 test('manual scooters require a connected source and never fabricate a capture or player command',async()=>{
   const f=await fixture();await f.get('add-scooter').emit('click');assert.equal(f.get('count-scooter').textContent,'0');
-  const wasHidden=f.get('capture-canvas').hidden;
+  const wasHidden=f.get('capture-canvas').hidden,player=f.get('signage').children[0],commands=player.sent.length;
   await f.get('connect').emit('click');await f.get('add-scooter').emit('click');
   assert.equal(f.get('count-scooter').textContent,'1');assert.equal(f.get('event-counter').textContent,'1 paso');
   assert.equal(f.get('capture-canvas').hidden,wasHidden);assert.match(f.get('status').textContent,/manualmente/);
-  assert.equal(f.get('signage').children.length,0);await f.get('stop').emit('click');
+  assert.equal(f.get('signage').children[0],player);assert.equal(player.sent.length,commands);await f.get('stop').emit('click');
 });
 const personMask={width:2,height:2,legend:{person:[128,0,0]},segmentationMap:new Uint8ClampedArray([128,0,0,255,128,0,0,255,128,0,0,255,128,0,0,255])};
 async function confirmPerson(f,t){
@@ -232,7 +247,7 @@ test('a late mask cannot restore cutouts after disconnect',async t=>{
   await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
   await confirmPerson(f,t);await f.get('stop').emit('click');finish(personMask);
   await new Promise(resolve=>setImmediate(resolve));
-  assert.equal(f.get('cutouts').children.length,0);assert.equal(f.get('connection').textContent,'Sin conexión');
+  assert.equal(f.get('cutouts').children.length,0);assert.equal(f.get('connection').textContent,'Cámara sin conectar');
   assert.equal(f.get('count-person').textContent,'1');
 });
 test('a new passage during segmentation queues the latest capture without cancelling both',async t=>{

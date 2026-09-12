@@ -40,10 +40,13 @@ function controls(){
   $('stop').disabled=!connected;
   $('add-scooter').disabled=!connected;
   for(const id of ['set-roi','set-tablet','set-signage','edit-coordinates'])$(id).disabled=!connected;
-  signage.setEligible(connected&&signageReady&&!calibration&&!document.hidden);
+  // Playback owns its browser instance, independently of the captured video.
+  signage.setAnalysis(analyzing&&!calibration&&!document.hidden);
+  signage.setEligible(!document.hidden);
+  layout();
   $('analyze').disabled=!connected||!roiReady||!tabletReady||!!calibration||busy;
   $('analyze').textContent=analyzing?'Pausar análisis':'Iniciar análisis';
-  $('connection').textContent=analyzing?'Analizando':connected?'Pestaña conectada':'Sin conexión';
+  $('connection').textContent=analyzing?'Analizando':connected?'Pestaña conectada':'Cámara sin conectar';
   $('connection').classList.toggle('live',analyzing);
 }
 function tabletIdle(text='Esperando un paso'){
@@ -65,7 +68,6 @@ function clearCapture(message='Sin capturas'){
 }
 function pause(message){
   // Pausing detection returns to the normal loop; it is not a screen power-off.
-  signage.neutral();
   twins.cancelOriginal();
   analyzing=false;generation++;clearTimeout(loopTimer);clearCapture();controls();
   frameContext.clearRect(0,0,frame.width,frame.height);
@@ -80,7 +82,7 @@ function disconnect(message='Desconectado. Capturas y vídeo borrados de la vist
   roiReady=false;tabletReady=false;signageReady=false;calibration=null;points=[];
   stage.classList.remove('calibrating');stage.style.aspectRatio='16 / 9';
   $('tablet').hidden=true;$('signage').hidden=true;$('roi').hidden=true;$('markers').replaceChildren();
-  $('empty-scene').hidden=false;$('source-info').textContent='ESPERANDO FUENTE';
+  $('empty-scene').hidden=false;$('source-info').textContent='PLAYER VIRTUAL · SIN VÍDEO EN DIRECTO';
   $('calibration-status').textContent='Encuadre pendiente de confirmar';
   $('coordinates').hidden=true;controls();status(message);
 }
@@ -90,7 +92,12 @@ function layout(){
   if(signageReady){$('signage').style.transform=`matrix3d(${quadMatrix(540,960,signageQuad.map(([x,y])=>[x*width,y*height])).join(',')})`;}
   Object.assign($('roi').style,{left:`${roi[0]*100}%`,top:`${roi[1]*100}%`,width:`${roi[2]*100}%`,height:`${roi[3]*100}%`});
   $('tablet').hidden=!tabletReady||!stream;
-  $('signage').hidden=!signageReady||!stream;
+  const standalone=!stream,unplaced=!!stream&&!signageReady;
+  $('signage').classList.toggle('standalone',standalone);
+  $('signage').classList.toggle('unplaced',unplaced);
+  if(standalone||unplaced)$('signage').style.transform='none';
+  $('signage').hidden=!!calibration;
+  $('empty-scene').hidden=true;
   $('roi').hidden=!stream||!roiReady;
 }
 new ResizeObserver(layout).observe(stage);
@@ -248,7 +255,7 @@ $('analyze').addEventListener('click',async()=>{
     if(document.hidden){status('Vuelve a esta vista y pulsa Iniciar análisis.');return;}
     analyzing=true;lastVideoTime=-1;lastFrameAt=performance.now();
     history.sync();
-    status('Analizando solo Puerta Cam. Pasos confirmados en dos fotogramas (tres para bicis de confianza baja); capturas de 6 s. La cartelería marcada reproduce su bucle automáticamente.');
+    status('Analizando solo Puerta Cam. Pasos confirmados en dos fotogramas (tres para bicis de confianza baja); capturas de 6 s. Los pasos con regla y contenido interrumpen la música; sin coincidencia continúa la playlist.');
     tabletIdle();loop(token);
   }catch{status('No se ha iniciado el análisis. Revisa el estado del detector.');}
   finally{busy=false;controls();}

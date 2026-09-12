@@ -61,3 +61,27 @@ test('restart clears both channels; late media, ACK and loads from A cannot chan
   b.listeners.load();b.listeners.load();assert.equal(b.removed,true);
   assert.match(f.get('signage-status').textContent,/intentó navegar/);
 });
+test('music starts without an analyzer and only active analysis may condition it',t=>{
+  const f=fixture(t),frame=f.frame();f.ack();
+  const first=frame.sent.length;
+  f.ui.passage([{class:'car'}]);assert.equal(frame.sent.length,first);
+  f.ui.setAnalysis(true);assert.equal(frame.sent.length,first);
+  f.ui.passage([{class:'car'}]);assert.equal(frame.sent.at(-1).command,'admiratv audiencia coche');f.ack();
+  f.ui.setAnalysis(false);assert.equal(frame.sent.at(-1).command,'admiratv audiencia u');f.ack();
+  const paused=frame.sent.length;
+  f.ui.setAnalysis(false);f.ui.passage([{class:'car'}]);t.mock.timers.tick(6001);
+  assert.equal(frame.sent.length,paused);assert.equal(f.frame(),frame);
+  assert.match(f.get('signage-mode').textContent,/analizador inactivo/);
+});
+test('missing playlist and autoplay rejection are not called playback or stalled downloads',t=>{
+  const f=fixture(t);f.ack();
+  for(const [phase,label] of [['playlist-empty',/Sin música asociada/],['audio-blocked',/Sonido pendiente/]]){
+    f.emit({event:'media-state',id:'playlist-default',mode:'conditional',phase,music:true,loop:true});
+    t.mock.timers.tick(30001);f.ui.neutral();f.ack();assert.match(f.get('signage-status').textContent,label);
+  }
+  f.emit({event:'media-state',id:'music-test-only',mode:'conditional',phase:'playing',music:true,loop:true,mediaType:'audio',muted:false,volume:1});
+  assert.equal(f.get('signage-status').textContent,'Música por defecto · reproduciendo');
+  assert.match(f.get('signage-media').textContent,/no confirma el volumen/);
+  f.emit({event:'media-state',id:'music-test-only',mode:'conditional',phase:'playing',music:true,loop:true,mediaType:'audio',muted:true,volume:1});
+  assert.match(f.get('signage-media').textContent,/en silencio/);
+});
