@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r12.15:38",
+  "version": "v.12.09.2026.r13.15:17",
   "signature": "NeoMBA16 · MacBookAir16plata",
   "agent": "NeoMBA16",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "15:38",
-  "evidence": "Previo NUNCA negro en /contentcatalogue (Yokup #3199): causa = fotograma 0 del máster es el relleno #020508 (luma 20 → 4,7/255) de un webm de MediaRecorder sin Duration/Cues y el #t=0.1 acababa pintándolo (Chrome con el elemento fuera de pantalla, Safari). /stock/exists devuelve poster y posterFrameAt; el previo usa meta.poster como poster del <video preload=none> e <img> de respaldo; sin póster se captura en cliente el fotograma con más información (12 muestras, luma 40..220, máxima varianza, fuera de los 0,8 s de los extremos), se descarga el elemento y se enseña el póster (Chromium no repinta un seek fuera de pantalla). Pósters de los 4 de Alcampo + coche Xtore generados con ffmpeg y subidos; validador repetible tools/valida-videos-catalogo.mjs (admira-next-web) en verde: 5/5 válidos y con póster. Verificado en Chromium local en las dos rutas: el previo del Langostino ya no es negro. Rebase sobre c69e644f (Trinity r11.14:51)."
+  "time": "15:17",
+  "evidence": "Pages Function functions/api/previo/[[ruta]].js: GET /api/previo/<id>.jpg sirve desde R2 admira-catalogo-imagenes (binding CATALOGO, clave previo/<id>.jpg) con caché 1 día, CORS * y 404 si no existe; sonda GET /api/previo. Es la imagen de fachada del Previo DooH del circuito Alcampo (FLT-100364 · Yokup #3210): capturas Street View proyectadas 1600x900 y quad del player analizado con Grok; el KV de omnipublicity (previo.imagen) apunta aquí. Probado: 6 tiendas de muestra subidas a R2 (alcampo-breton…) y servidas por la Function del catálogo como puente; tras el deploy se verifica curl -sI https://admira.tv/api/previo/alcampo-breton.jpg → 200."
 }
