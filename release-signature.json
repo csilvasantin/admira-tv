@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r10.14:49",
-  "signature": "NeoMBA16 · MacBookAir16plata",
-  "agent": "NeoMBA16",
+  "version": "v.12.09.2026.r11.14:51",
+  "signature": "TrinityMBA16 · MacBookAir16plata",
+  "agent": "TrinityMBA16",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "14:49",
-  "evidence": "Catálogo tipo hoja de cálculo (contentcatalogue): 8 columnas ordenables por cabezal (asc/desc/origen, aria-sort, sin precio al final, vídeo primero), movibles por arrastre y ←/→, filas movibles por el chip de página con orden manual, anchos por el borde, selector de orden en móvil, Restablecer vista; persistencia por catálogo en localStorage admira.contentcatalogue.tabla.<id>. Probado en local: PRECIO asc/desc/origen, columna PRECIO delante de PRODUCTO, fila movida y persistente tras recargar, restablecer, filtros sobre el orden; sin errores de consola. Yokup #3198."
+  "time": "14:51",
+  "evidence": "Xtore: presencia confirmada continua independiente de conteo y capturas; renovación cada 1 s sin reinicio, caducidad visual 1.5 s con timer independiente y respaldo/manual 6 s. Rectángulos locales con clase, ID y color estable, etiquetas sin solape. Cross-review Turing aprobado; 220/220 dirigidas y 485/487 general con 2 fallos previos ajenos; MCP local 27/27. Browser QA aislada sin cámara: Top Gun >90 s, dos tracks/count2, coche-bici-moto mantiene Power of Love, ausencia devuelve base y limpia cajas. Rebase conserva catálogo Neo 797f6016 r10.14:49. Yokup DCL-ea4f046ffd30919c4c705137."
 }
