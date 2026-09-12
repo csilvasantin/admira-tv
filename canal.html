@@ -51,9 +51,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=12.09.2026.r5.1156"></script>
+<script src="xpl-runtime.js?v=12.09.2026.r6.1221"></script>
 <script>
-  window.ADMIRA_VERSION='v.12.09.2026.r5.11:56';
+  window.ADMIRA_VERSION='v.12.09.2026.r6.12:21';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -240,6 +240,20 @@
   #localInfo .li-audio-label{position:absolute;right:10px;bottom:2px;width:62px;text-align:center;color:currentColor;font-size:7px;letter-spacing:.09em}
   @media(max-width:560px){ #localInfo{ top:10px; left:10px; width:calc(100% - 20px); padding:12px 72px 14px 12px; }
     #localInfo .li-grid{ gap:5px 9px; } }
+  /* Local music controls only: ordinary kiosk cards keep their passive overlay. */
+  .xtore-music #localInfo{ max-height:calc(100% - 36px); overflow-y:auto; overscroll-behavior:contain;
+    pointer-events:auto; touch-action:pan-y; padding-right:16px; scrollbar-width:thin; }
+  .xtore-music #localInfo .li-head{ flex-wrap:wrap; gap:5px; }
+  .xtore-music #li-remote{ position:sticky; top:0; z-index:1; display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:6px; padding:5px 0 9px; margin-bottom:8px; background:#07151c; }
+  #li-remote[hidden]{ display:none!important; }
+  #li-remote button{ min-width:0; min-height:40px; padding:6px 4px; border:1px solid #4c8175; border-radius:7px;
+    font:inherit; font-size:11px; color:#eafff0; background:#122b30; cursor:pointer; touch-action:manipulation; }
+  #li-remote button:focus-visible{ outline:3px solid #2bea86; outline-offset:2px; }
+  #li-remote button:disabled{ opacity:.45; cursor:default; }
+  #li-remote button[aria-pressed="true"]{ color:#ffd4d4; border-color:#c78080; }
+  .xtore-music #localInfo .li-audio{ position:relative; right:auto; bottom:auto; margin:12px 0 0 auto; }
+  @media(max-width:560px){ .xtore-music #localInfo{ max-height:calc(100% - 20px); padding-right:12px; } }
   @keyframes pulse{ 50%{ opacity:.25 } }
   #ctrls{ display:flex; align-items:center; gap:10px; margin:0 0 14px; transition:opacity .3s; }
   .cbtn{ width:40px; height:40px; border-radius:50%; border:1px solid rgba(125,184,255,.4); background:rgba(8,14,22,.7); color:#eafff0;
@@ -317,6 +331,11 @@
   </div>
   <aside id="localInfo" hidden aria-live="polite" aria-label="Información del contenido en emisión">
     <div class="li-head"><strong>ⓘ CONTENIDO EN ANTENA</strong><span class="li-close">DOBLE TOQUE / CTRL+I · CERRAR</span></div>
+    <div id="li-remote" hidden role="group" aria-label="Mando local de este player virtual">
+      <button id="li-prev" type="button" disabled aria-label="Contenido anterior">⏮ Anterior</button>
+      <button id="li-next" type="button" disabled aria-label="Contenido siguiente">Siguiente ⏭</button>
+      <button id="li-mute" type="button" disabled aria-label="Silenciar audio" aria-pressed="false">🔊 Sonido</button>
+    </div>
     <div class="li-title" id="li-title">sin contenido</div>
     <div class="li-primary-tag" id="li-primary-tag" hidden></div>
     <div class="li-grid" id="li-grid"></div>
@@ -758,6 +777,7 @@ function applyAudio(){
   $('mute').textContent=(muted||volume===0)?'🔇':(volume<0.5?'🔉':'🔊'); $('vol').value=volume;
   save('adtv_muted',muted?'1':'0'); save('adtv_vol',String(volume));
   try{ localInfoAudioPaint(); }catch(_){}
+  try{ localInfoRemoteRender(); }catch(_){}
   pushAudioStateSoon();
 }
 function setAudio(on, level){
@@ -3127,6 +3147,52 @@ function testTags(it){
 // Diagnóstico bajo demanda para el operador que está delante del player. No
 // persiste, no se activa remotamente y no altera la reproducción ni el proof.
 let _localInfoItem=null, _localInfoTimer=null;
+let _localInfoRemoteBusy=false;
+function localInfoRemoteAudio(){
+  const level=mediaEl&&Number.isFinite(mediaEl.volume)?mediaEl.volume:volume;
+  const vol=Math.max(0,Math.min(1,Number.isFinite(level)?level:0));
+  return {muted:!!(mediaEl&&typeof mediaEl.muted==='boolean'?mediaEl.muted:muted)||vol===0,volume:vol};
+}
+function localInfoRemoteRender(){
+  const remote=$('li-remote');if(!remote)return;
+  remote.hidden=!xtoreMusicEnabled();if(remote.hidden)return;
+  const disabled=_localInfoRemoteBusy||_standby||directOn||!playlist.length;
+  $('li-prev').disabled=$('li-next').disabled=disabled||cur<0;
+  const button=$('li-mute'), state=localInfoRemoteAudio(), text=state.muted?'🔇 Silencio':'🔊 Sonido';
+  button.disabled=disabled;
+  if(button.textContent!==text)button.textContent=text;
+  button.setAttribute('aria-pressed',String(state.muted));
+  button.title=state.muted?'Activar sonido de este player':'Silenciar este player · volumen '+Math.round(state.volume*100)+'%';
+}
+function localInfoRemoteAction(action){
+  if(!xtoreMusicEnabled()||$('localInfo').hidden||_localInfoRemoteBusy||_standby||directOn||!playlist.length)return false;
+  if(!['prev','next','mute'].includes(action)||(action!=='mute'&&cur<0))return false;
+  _localInfoRemoteBusy=true;
+  try{
+    if(action==='mute'){
+      const state=localInfoRemoteAudio();muted=!state.muted;volume=state.volume;
+      if(!muted&&volume===0)volume=0.6;
+      applyAudio();
+      if(!muted&&mediaEl&&mediaEl.play&&mediaEl.paused&&!paused)xtoreMusicPlayAudio(mediaEl,_xtoreMusicItem,_playTok);
+    }else if(action==='prev')prev();else next();
+    // next/prev select synchronously; play's existing token cancels stale async media.
+    // No queued navigation or delayed callback can act on a later playlist here.
+    return true;
+  }finally{_localInfoRemoteBusy=false;localInfoRemoteRender();}
+}
+function localInfoRemoteBind(){
+  const remote=$('li-remote');if(!remote||!xtoreMusicEnabled())return;
+  $('localInfo').tabIndex=0;
+  for(const action of ['prev','next','mute'])$('li-'+action).addEventListener('click',event=>{
+    event.preventDefault();event.stopPropagation();localInfoRemoteAction(action);
+  });
+  for(const type of ['pointerdown','pointerup','dblclick'])remote.addEventListener(type,event=>event.stopPropagation());
+  remote.addEventListener('keydown',event=>{
+    if(!['Enter',' '].includes(event.key))return; // Ctrl+I still reaches the existing card shortcut.
+    event.stopPropagation();if(event.repeat)event.preventDefault();
+  });
+  localInfoRemoteRender();
+}
 function audioMeterDetach(){
   const m=AUDIO_METER||{};
   if(m.raf) cancelAnimationFrame(m.raf);
@@ -3204,6 +3270,7 @@ function localInfoHumanTitle(it,meta){
 }
 function localInfoRender(){
   const box=$('localInfo'); if(!box||box.hidden) return;
+  localInfoRemoteRender();
   const it=_localInfoItem, meta=localInfoStock(it), title=it?localInfoHumanTitle(it,meta):'sin contenido en antena';
   $('li-title').textContent=title;
   const primaryTag=$('li-primary-tag'), stockTag=meta&&meta.num!=null?'#'+String(meta.num):'';
@@ -3407,6 +3474,7 @@ if(xtoreMusicEnabled()){
   document.documentElement.classList.add('xtore-music');
   tap.setAttribute('role','button');tap.tabIndex=0;tap.addEventListener('keydown',xtoreMusicKeydown);
 }
+localInfoRemoteBind();
 let hideT; function ui(){ document.body.classList.remove('idle'); clearTimeout(hideT); hideT=setTimeout(()=>document.body.classList.add('idle'),3500); }
 ['mousemove','touchstart','keydown','click'].forEach(ev=>window.addEventListener(ev,ui)); ui();
 
@@ -4511,6 +4579,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=12.09.2026.r5.1156" defer></script>
+  <script src="/assets/admira-version-watch.js?v=12.09.2026.r6.1221" defer></script>
 </body>
 </html>

@@ -21,7 +21,7 @@ function fixture(){
       querySelectorAll(){return this.children.filter(n=>['AUDIO','VIDEO'].includes(n.tagName));},
       querySelector(selector){return selector==='.audio-card'?this:this.children.find(n=>['AUDIO','VIDEO','IMG'].includes(n.tagName))||null;},
       pause(){this.paused=true;this.pauseCount++;},load(){this.loadCount++;},
-      emit(type){handlers.get(type)?.();},
+      emit(type,event){handlers.get(type)?.(event);},
       play(){if(audioPlay)return audioPlay(this);this.paused=false;this.emit('playing');return Promise.resolve();},
     };
     Object.defineProperty(el,'innerHTML',{get(){return this.markup||'';},set(value){this.markup=value;this.children=[];}});
@@ -34,7 +34,7 @@ function fixture(){
     _standby:false,_playTok:0,timer:0,bar:{style:{}},mediaEl:null,usesAdv:false,paused:false,stage,tap,
     document:{body:node(),documentElement:node(),createElement(tag){const el=node(tag);created.push(el);return el;}},
     $:id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);},
-    guardPlayStarted(){},stopBar(){},syncOn:false,playlist:[],all:[],cur:-1,
+    guardPlayStarted(){},stopBar(){},syncOn:false,directOn:false,playlist:[],all:[],cur:-1,
     cachedSrc:async()=>null,cacheable:()=>true,firstCachedFrom:()=>assert.fail('Music cannot wait for opaque storage'),
     _asapItemId:null,STREAM_OK:false,_warmWaiting:false,_coldWaiting:false,_extendedAssignment:null,
     itemAR:()=>1,fitMupi(){},mupiAR:1,nowEl:node(),metaEl:node(),renderRail(){},localInfoSet(){},renderChan(){},setLive(){},
@@ -52,6 +52,8 @@ function fixture(){
   vm.runInContext(section('function editorialSec(','function syncNow('),c);
   vm.runInContext(section('function emitFrameState(','// r62: cada cambio de carril'),c);
   vm.runInContext(section('function mediaAdvance(','// antes de cada nuevo contenido'),c);
+  vm.runInContext(section('let _localInfoRemoteBusy=','function audioMeterDetach('),c);
+  c.$('localInfo').hidden=true;
   return {c,created,messages,advances,timers,eval:code=>vm.runInContext(code,c),
     draft(items){c.draftInput=items;vm.runInContext('DEFAULT_DRAFT.items=draftInput',c);},
     audioPlay(fn){audioPlay=fn;},
@@ -70,6 +72,92 @@ test('music opt-in is restricted to the exact Xtore parent profile and screen',(
 test('clean musical embed keeps its autoplay gesture visible and keyboard accessible',()=>{
   assert.match(html,/\.clean\.xtore-music #tap\.show\{ display:grid!important; \}/);
   assert.match(html,/if\(xtoreMusicEnabled\(\)\)\{\s*document\.documentElement\.classList\.add\('xtore-music'\);\s*tap\.setAttribute\('role','button'\)/);
+});
+
+test('local mini remote precedes long content, is natively accessible and scroll is scoped to music',()=>{
+  assert.ok(html.indexOf('id="li-remote"')<html.indexOf('id="li-title"'));
+  assert.match(html,/<div id="li-remote" hidden role="group"/);
+  for(const id of ['prev','next','mute'])assert.match(html,new RegExp('<button id="li-'+id+'" type="button"[^>]*aria-label='));
+  assert.match(html,/\.xtore-music #localInfo\{[^}]*max-height:calc\(100% - 36px\)[^}]*overflow-y:auto[^}]*pointer-events:auto[^}]*touch-action:pan-y/);
+  assert.match(html,/\.xtore-music #li-remote\{[^}]*position:sticky/);
+  assert.match(html,/#li-remote\[hidden\]\{ display:none!important/);
+  assert.match(html,/#li-remote button:focus-visible/);
+});
+
+test('local remote is hidden/inert outside Xtore, with no playlist or while standby/direct/closed',()=>{
+  const f=fixture(),c=f.c;let calls=0;c.next=()=>calls++;c.prev=()=>calls++;
+  c.$('localInfo').hidden=false;c.localInfoRemoteBind();
+  assert.equal(c.$('li-remote').hidden,false);assert.equal(c.$('li-next').disabled,true);
+  assert.equal(c.localInfoRemoteAction('next'),false);
+  c.playlist=[song()];c.cur=0;c.localInfoRemoteRender();assert.equal(c.$('li-next').disabled,false);
+  for(const key of ['_standby','directOn']){c[key]=true;assert.equal(c.localInfoRemoteAction('next'),false);c[key]=false;}
+  c.$('localInfo').hidden=true;assert.equal(c.localInfoRemoteAction('prev'),false);c.$('localInfo').hidden=false;
+  c.XTORE_PARENT='';c.localInfoRemoteRender();assert.equal(c.$('li-remote').hidden,true);
+  assert.equal(c.localInfoRemoteAction('next'),false);assert.equal(c.localInfoRemoteAction('mute'),false);
+  assert.equal(calls,0);
+});
+
+test('remote pointer/button gestures stay in the card; native Enter/Space are not global pause, Ctrl+I bubbles',()=>{
+  const f=fixture(),c=f.c;c.$('localInfo').hidden=false;c.playlist=[song()];c.cur=0;c.localInfoRemoteBind();
+  let calls=0;c.next=()=>calls++;
+  const event=(key,repeat=false)=>({key,repeat,stopped:false,prevented:false,stopPropagation(){this.stopped=true;},preventDefault(){this.prevented=true;}});
+  const click=event();c.$('li-next').emit('click',click);
+  assert.equal(calls,1);assert.equal(click.stopped,true);assert.equal(c.$('localInfo').hidden,false);
+  for(const type of ['pointerdown','pointerup','dblclick']){const e=event();c.$('li-remote').emit(type,e);assert.equal(e.stopped,true);}
+  for(const key of ['Enter',' ']){
+    const e=event(key);c.$('li-remote').emit('keydown',e);assert.equal(e.stopped,true);assert.equal(e.prevented,false);
+    const repeated=event(key,true);c.$('li-remote').emit('keydown',repeated);assert.equal(repeated.prevented,true);
+  }
+  const shortcut=event('i');shortcut.ctrlKey=true;c.$('li-remote').emit('keydown',shortcut);assert.equal(shortcut.stopped,false);
+  assert.equal(c.$('localInfo').tabIndex,0);
+});
+
+test('remote mute reads the actual element, applies sound locally and refreshes from applyAudio',async()=>{
+  const f=fixture(),c=f.c;f.draft([song()]);c.xtoreMusicRebuild();await settle();
+  c.$('localInfo').hidden=false;c.localInfoRemoteBind();
+  Object.assign(c,{save(){},localInfoAudioPaint(){},pushAudioStateSoon(){}});
+  vm.runInContext(section('function applyAudio()','function setAudio('),c);
+  c.mediaEl.muted=true;c.mediaEl.volume=0;c.muted=false;c.volume=0.8;c.localInfoRemoteRender();
+  assert.equal(c.$('li-mute')['aria-pressed'],'true');
+  assert.equal(c.localInfoRemoteAction('mute'),true);await settle();
+  assert.equal(c.mediaEl.muted,false);assert.equal(c.mediaEl.volume,0.6);assert.equal(c.$('li-mute')['aria-pressed'],'false');
+  c.localInfoRemoteAction('mute');assert.equal(c.mediaEl.muted,true);assert.equal(c.$('li-mute')['aria-pressed'],'true');
+  // The existing volume control/command also refreshes the mini remote, not just its own clicks.
+  c.muted=false;c.volume=0.4;c.applyAudio();assert.equal(c.$('li-mute')['aria-pressed'],'false');
+  assert.match(c.$('li-mute').title,/40%/);
+});
+
+test('remote unmute retains blocked media until gesture succeeds and does not advance it',async()=>{
+  const f=fixture(),c=f.c;f.audioPlay(()=>Promise.reject(new Error('NotAllowedError')));
+  f.draft([song()]);c.xtoreMusicRebuild();await settle();c.$('localInfo').hidden=false;c.muted=true;c.applyAudio();
+  const audio=c.mediaEl;c.localInfoRemoteAction('mute');await settle();
+  assert.equal(c.mediaEl,audio);assert.equal(f.messages.at(-1).data.phase,'audio-blocked');assert.equal(f.advances.length,0);
+});
+
+test('remote rejects synchronous reentrancy and unknown actions without enqueuing later navigation',()=>{
+  const f=fixture(),c=f.c;c.$('localInfo').hidden=false;c.playlist=[song()];c.cur=0;let calls=0;
+  c.next=()=>{calls++;assert.equal(c.localInfoRemoteAction('prev'),false);};
+  c.prev=()=>calls++;
+  assert.equal(c.localInfoRemoteAction('bad'),false);assert.equal(c.localInfoRemoteAction('next'),true);assert.equal(calls,1);
+  assert.equal(c.localInfoRemoteAction('prev'),true);assert.equal(calls,2);
+});
+
+test('rapid remote next/prev reuse tokenized play; late cache, ended and blocked play cannot replace newest choice',async()=>{
+  const f=fixture(),c=f.c;let rejectOld;
+  f.audioPlay(()=>new Promise((resolve,reject)=>{rejectOld=reject;}));
+  f.draft([song('one'),song('two'),song('three')]);c.xtoreMusicRebuild();await settle();
+  const old=c.mediaEl,ended=old.onended;c.$('localInfo').hidden=false;f.audioPlay(null);
+  Object.assign(c,{kioskReloadIfDue:()=>false,finishForcedTagPlayback:()=>false});
+  vm.runInContext(section('function next()','// ── AUTOACTUALIZACIÓN EN KIOSKO'),c);
+  const pending=[];c.cachedSrc=()=>new Promise(resolve=>pending.push(resolve));
+  c.localInfoRemoteAction('next');assert.equal(c.cur,1);
+  c.localInfoRemoteAction('prev');assert.equal(c.cur,0);
+  c.localInfoRemoteAction('prev');assert.equal(c.cur,2);
+  pending[2](null);await settle();const newest=c.mediaEl,token=c._playTok,count=f.messages.length;
+  pending[0](null);pending[1](null);rejectOld(new Error('late autoplay rejection'));ended();await settle();
+  assert.equal(c.mediaEl,newest);assert.equal(c.cur,2);assert.equal(c._playTok,token);assert.equal(f.messages.length,count);
+  assert.ok(old.pauseCount>=1);assert.equal(old.src,undefined);assert.equal(newest.src,'https://media.example/three.mp3');
+  assert.equal(f.created.length,2);assert.equal(c.$('localInfo').hidden,false);
 });
 
 test('assigned base accepts HTTPS media including music videos and rejects locutions/credentials',()=>{

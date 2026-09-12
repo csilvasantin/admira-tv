@@ -4,6 +4,7 @@ import {installTwinUI} from './twin-ui.mjs';
 import {detectObjects} from './detector.mjs';
 import {installSignageUI} from './signage-ui.mjs';
 import {installHistoryUI} from './history.mjs';
+import {CalibrationPresetStore,compatiblePreset} from './preset.mjs';
 
 const $=id=>document.getElementById(id);
 const scene=$('scene'), stage=$('stage'), frame=document.createElement('canvas');
@@ -20,6 +21,44 @@ let roi=[.706,.026,.282,.293];
 let quad=[[.773,.491],[.89,.51],[.874,.675],[.75,.647]];
 let signageQuad=[[.59,.37],[.78,.37],[.78,.9],[.59,.9]],signageReady=false;
 let sourceSize='', lastVideoTime=-1, lastFrameAt=0;
+let sourceDimensions=null,calibrationDimensions=null;
+const presetStore=new CalibrationPresetStore(()=>window.localStorage);
+let presetState=presetStore.read();
+function presetStatus(message){
+  const p=presetState.preset;
+  const saved=p?`Último preset · ${new Date(p.savedAt).toLocaleString('es-ES')} · ${[p.roi&&'cámara',p.tablet&&'iPad',p.signage&&'DS'].filter(Boolean).join(' + ')}`:'';
+  $('preset-status').textContent=message||(saved?`${saved}. Se carga al compartir una vista compatible.`:presetState.state==='unavailable'?'El navegador no permite guardar el preset. Encuadre disponible solo en esta sesión.':presetState.state==='invalid'?'Preset no válido: vuelve a marcar las superficies.':'Sin preset guardado. Marca las superficies una vez.');
+  $('forget-preset').disabled=presetState.state==='empty'||(presetState.state==='unavailable'&&!p);
+}
+function restorePreset(){
+  presetState=presetStore.read();presetStatus();
+  const p=presetState.preset;
+  if(!p)return false;
+  if(!compatiblePreset(p,sourceDimensions)){
+    presetStatus('Preset conservado, pero el formato de esta pestaña es distinto. Vuelve a marcar las superficies.');return false;
+  }
+  roiReady=!!p.roi;tabletReady=!!p.tablet;signageReady=!!p.signage;
+  calibrationDimensions=[...p.source];
+  if(p.roi)roi=[...p.roi];if(p.tablet)quad=p.tablet.map(p=>[...p]);if(p.signage)signageQuad=p.signage.map(p=>[...p]);
+  $('calibration-status').textContent=`Preset cargado · Cámara: ${roiReady?'marcada':'pendiente'} · iPad: ${tabletReady?'marcado':'pendiente'} · cartelería: ${signageReady?'marcada':'pendiente'}`;
+  presetStatus('Último preset cargado automáticamente. Comprueba la vista antes de iniciar; si has movido el gemelo, vuelve a marcar.');
+  return true;
+}
+function savePreset(){
+  if(!stream||!sourceDimensions)return;
+  const result=presetStore.save({source:calibrationDimensions||sourceDimensions,roi:roiReady?roi:null,tablet:tabletReady?quad:null,signage:signageReady?signageQuad:null});
+  if(result.state==='unavailable'){
+    presetState={...result,preset:presetState.preset};
+    presetStatus('No se pudo guardar el nuevo encuadre. El último preset guardado no se ha sustituido; el encuadre nuevo solo está en esta sesión.');return;
+  }
+  presetState=result;
+  presetStatus(presetState.state==='saved'?'Último encuadre guardado automáticamente en este navegador.':undefined);
+}
+$('forget-preset').addEventListener('click',()=>{
+  if(!presetStore.clear()){presetStatus('No se pudo borrar el preset del navegador.');return;}
+  presetState={state:'empty',preset:null};presetStatus('Preset olvidado. El encuadre actual no cambia; una nueva marcación volverá a guardarlo.');
+});
+presetStatus();
 const twins=installTwinUI({document,onOriginalRemoved:()=>clearCapture('Original temporal retirado')});
 const signage=installSignageUI({document,window});
 const history=installHistoryUI({document});
@@ -78,7 +117,7 @@ function disconnect(message='Desconectado. Capturas y vídeo borrados de la vist
   tracker.reset();
   if(stream)for(const track of stream.getTracks())track.stop();
   stream=null;scene.srcObject=null;scene.removeAttribute('src');scene.load();
-  frame.width=1;frame.height=1;sourceSize='';lastVideoTime=-1;
+  frame.width=1;frame.height=1;sourceSize='';sourceDimensions=null;calibrationDimensions=null;lastVideoTime=-1;
   roiReady=false;tabletReady=false;signageReady=false;calibration=null;points=[];
   stage.classList.remove('calibrating');stage.style.aspectRatio='16 / 9';
   $('tablet').hidden=true;$('signage').hidden=true;$('roi').hidden=true;$('markers').replaceChildren();
@@ -122,7 +161,7 @@ $('connect').addEventListener('click',async()=>{
     passages.reset();renderCounts();
     $('empty-scene').hidden=true;
     updateSourceSize();
-    status('Pestaña conectada. Comprueba que es la Xtore y marca la cámara y el iPad. No se analiza todavía.');
+    status(roiReady&&tabletReady?'Preset cargado. Comprueba que cámara, iPad y DS coinciden con la vista; pulsa Iniciar análisis cuando quieras.':'Pestaña conectada. Comprueba que es la Xtore y marca las superficies pendientes. No se analiza todavía.');
   }catch(error){
     if(stream)disconnect();
     status(error.name==='NotAllowedError'?'No se ha concedido permiso para compartir. Puedes volver a intentarlo.':`No se pudo compartir la pestaña (${error.name||'error del navegador'}).`);
@@ -141,19 +180,26 @@ $('add-scooter').addEventListener('click',()=>{
   status('Un patinete registrado manualmente. No es una detección automática ni cambia el player.');
 });
 function updateSourceSize(){
-  if(!scene.videoWidth||!scene.videoHeight)return;
+  if(!stream||!scene.videoWidth||!scene.videoHeight)return;
   const next=`${scene.videoWidth} × ${scene.videoHeight}`;
+  const dimensions=[scene.videoWidth,scene.videoHeight],first=!sourceSize;
   if(sourceSize && sourceSize!==next){
-    pause('La fuente ha cambiado de tamaño. Vuelve a marcar la cámara y el iPad antes de analizar.');
+    const reference=calibrationDimensions||sourceDimensions;
+    const proportional=reference&&Math.abs((reference[0]/reference[1])/(dimensions[0]/dimensions[1])-1)<=.005;
+    pause(proportional?'La resolución ha cambiado proporcionalmente. Se conserva el encuadre; comprueba la vista antes de reanudar.':'La fuente ha cambiado de formato. Vuelve a marcar las superficies antes de analizar. El preset anterior se conserva.');
     tracker.reset();
-    roiReady=false;tabletReady=false;signageReady=false;$('calibration-status').textContent='Tamaño nuevo: repite el encuadre';
+    calibration=null;points=[];stage.classList.remove('calibrating');$('markers').replaceChildren();$('coordinates').hidden=true;
+    if(!proportional){roiReady=false;tabletReady=false;signageReady=false;calibrationDimensions=null;$('calibration-status').textContent='Formato nuevo: repite el encuadre';}
   }
+  sourceDimensions=dimensions;
+  if(first&&!calibration)restorePreset();
   sourceSize=next;stage.style.aspectRatio=`${scene.videoWidth} / ${scene.videoHeight}`;
   $('source-info').textContent=`PESTAÑA COMPARTIDA · ${next}`;layout();controls();
 }
 scene.addEventListener('resize',updateSourceSize);
 
 function startCalibration(kind){
+  if(!stream||!sourceDimensions){status('Espera a que la pestaña compartida tenga vídeo antes de marcar.');return;}
   pause();calibration=kind;points=[];stage.classList.add('calibrating');$('markers').replaceChildren();
   stage.scrollIntoView?.({block:'center',behavior:'instant'});
   $('coordinates').hidden=true;
@@ -188,13 +234,16 @@ stage.addEventListener('click',event=>{
   finishCalibration();
 });
 function finishCalibration(){
+  calibrationDimensions||=[...sourceDimensions];
   calibration=null;points=[];stage.classList.remove('calibrating');$('markers').replaceChildren();
   $('calibration-status').textContent=`Cámara: ${roiReady?'marcada':'pendiente'} · iPad: ${tabletReady?'marcado':'pendiente'} · cartelería: ${signageReady?'marcada':'opcional, pendiente'}`;
   layout();controls();status(roiReady&&tabletReady?'Encuadre listo. Pulsa Iniciar análisis. Si giras o acercas el gemelo, pausa y vuelve a marcar.':'Marca también la otra zona antes de iniciar el análisis.');
+  savePreset();
 }
 const coordinateNames=['Cámara: izquierda','Cámara: arriba','Cámara: ancho','Cámara: alto','iPad: sup. izq. X','iPad: sup. izq. Y','iPad: sup. der. X','iPad: sup. der. Y','iPad: inf. der. X','iPad: inf. der. Y','iPad: inf. izq. X','iPad: inf. izq. Y'];
 const signageNames=['Cartelería: sup. izq. X','Cartelería: sup. izq. Y','Cartelería: sup. der. X','Cartelería: sup. der. Y','Cartelería: inf. der. X','Cartelería: inf. der. Y','Cartelería: inf. izq. X','Cartelería: inf. izq. Y'];
 $('edit-coordinates').addEventListener('click',()=>{
+  if(!stream||!sourceDimensions)return;
   pause();calibration='coordinates';points=[];stage.classList.remove('calibrating');$('markers').replaceChildren();controls();
   $('coordinate-fields').replaceChildren();
   [...roi,...quad.flat(),...signageQuad.flat()].forEach((value,i)=>{
@@ -204,6 +253,7 @@ $('edit-coordinates').addEventListener('click',()=>{
   $('coordinates').hidden=false;status('Ajusta los porcentajes y pulsa Aplicar coordenadas. Los valores iniciales son orientativos, no una calibración automática.');
 });
 $('apply-coordinates').addEventListener('click',()=>{
+  if(!stream||!sourceDimensions||calibration!=='coordinates'||$('coordinates').hidden)return;
   const values=coordinateNames.map((_,i)=>$(`coord-${i}`).value.trim()===''?NaN:Number($(`coord-${i}`).value)/100);
   const r=values.slice(0,4),q=[values.slice(4,6),values.slice(6,8),values.slice(8,10),values.slice(10,12)];
   if(!validRect(r)||!validQuad(q)){status('Coordenadas inválidas: cámara dentro de la escena y cuatro esquinas del iPad en sentido horario, sin cruces.');return;}

@@ -13,7 +13,9 @@ pestaña. No se modifica ni elimina el auth-gate de las páginas existentes.
 El operador abre Digital Twin, selecciona Store → Entrada y muestra Puerta Cam.
 Comparte esa pestaña mediante el selector nativo de Chrome, sin audio. Se rechazan
 ventanas y monitores, y no se intenta preseleccionar la pestaña ni copiar cookies.
-El usuario confirma el recuadro de cámara y las cuatro esquinas del iPad.
+La primera vez el usuario confirma el recuadro de cámara y las cuatro esquinas del iPad.
+Las marcaciones válidas de cámara, iPad y cartelería se guardan automáticamente
+como último preset local y se restauran al volver a compartir una vista compatible.
 El contenido compartido es el fondo; un canvas se transforma con la misma
 homografía de cuatro esquinas que usa CanalKiosk. No se controla un iPad físico.
 
@@ -54,6 +56,36 @@ ni su cola pendiente. Pausar, arrancar y ajustar confianza ya no borran tracks.
 Cambiar ROI/tamaño de fuente o desconectar sí invalida la geometría. Son pasos
 estimados, no individuos únicos: una ausencia larga o regreso al encuadre puede
 producir un nuevo paso. El desglose de sexo/género no se infiere.
+
+## Último preset y mini mando — 12 septiembre 2026
+
+`preset.mjs` conserva solo geometría normalizada (ROI, cuatro esquinas de iPad
+y DS), dimensiones de referencia y fecha. Clave propia
+`admira.xtore.zapatillas.calibration.v1`, esquema v1, máximo 4096 caracteres.
+Guarda cada marcación válida, también presets parciales; nunca valores iniciales
+sin confirmar, imágenes, permisos, identidad, eventos ni credenciales.
+Es local a navegador y origen: no se sincroniza con la playlist de Flota ni
+entre equipos. Almacenamiento bloqueado, cuota o datos corruptos se explican
+sin fingir persistencia. Un fallo de escritura no sustituye el preset anterior.
+Olvidar borra únicamente esta clave, no el encuadre activo, contadores o histórico.
+
+Se restaura después del permiso de compartir y de recibir dimensiones válidas,
+sin iniciar detección. Admite escalado proporcional con tolerancia del 0,5 %
+respecto a la referencia fija de calibración, no respecto al último resize.
+Un formato incompatible conserva el preset pero exige nuevas marcas. Un resize
+cancela análisis e inferencias tardías; si es proporcional conserva las marcas,
+pero no reanuda. También cancela la selección en curso y el diálogo numérico.
+No detecta giros/zoom del gemelo con igual proporción: el operador debe comprobar
+la superposición y remarcar si cambió la vista antes de iniciar análisis.
+
+El perfil musical exacto de Xtore añade Anterior, Siguiente y Sonido/Mute al
+principio de «Contenido en antena» (doble toque o Ctrl+I). Botones nativos con
+foco y estado accesibles, barra sticky y ficha con scroll para títulos largos.
+Reutiliza navegación tokenizada y audio del player: no añade un bus MCP ni
+modifica la playlist o otros equipos. Queda inactivo sin lista, fuera del perfil,
+con ficha cerrada, en standby o directo. Mute lee el estado real del elemento;
+desmutear sigue sujeto al permiso de autoplay. «NO DESCARGADO» es falta de copia
+offline, no ausencia de reproducción online. El resto de players no cambia.
 
 ## Controles e histórico — ampliación 11 septiembre 2026
 

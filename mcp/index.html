@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=12.09.2026.r5.1156"></script>
+<script src="/auth-gate.js?v=12.09.2026.r6.1221"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admira.tv · MCP — el canal, conectado</title>
 <meta name="description" content="Servidor MCP de Admira.tv: qué hay en antena en cada pantalla, proof-of-play, cómo poner una pantalla a emitir, federación con circuitos externos y el player condicionado por audiencia (Xtore).">
@@ -23,8 +23,8 @@
 <script>
 window.ADMIRA_NAV={title:'MCP · el canal conectado'};
 </script>
-<script src="/admira-nav.js?v=12.09.2026.r5.1156" defer></script>
-<script src="/admira-frame.js?v=12.09.2026.r5.1156" defer></script>
+<script src="/admira-nav.js?v=12.09.2026.r6.1221" defer></script>
+<script src="/admira-frame.js?v=12.09.2026.r6.1221" defer></script>
 <style>
   :root{ --bg:#02080d; --panel:#0a1620; --line:#16303a; --txt:#dff8ff; --mut:#75aab9; --acc:#78f3ff; --pur:#88ffaa; --good:#88ffaa; }
   *{box-sizing:border-box}
@@ -52,7 +52,7 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
   a{color:var(--acc)}
   footer{color:var(--mut);font-size:13px;margin-top:38px;border-top:1px solid var(--line);padding-top:18px}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r5.1156">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r6.1221">
 </head>
 <body>
 <div class="wrap">
@@ -63,6 +63,7 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
   <div class="status"><span class="dot" id="dot"></span><span id="status">comprobando servidor…</span></div>
 
   <h2 id="player-virtual">Player virtual · alta en flota</h2>
+  <p><b>Preset y mini mando:</b> el analizador guarda automáticamente el último encuadre de cámara, iPad y DS en este navegador/origen (solo coordenadas, dimensiones y fecha). Se recupera tras compartir una fuente con proporción compatible, sin conceder permisos ni iniciar análisis; admite superficies parciales. El operador revisa giros/zoom y remarca cuando cambie la escena. La cápsula «Contenido en antena» incorpora Anterior, Siguiente y Sonido/Mute, con botones arriba y ficha desplazable. Solo controla la instancia y su lista actual, no edita Flota ni hardware. Son funciones de interfaz documentadas en el <a href="/mcp/manifest.json">manifest</a>, no nuevas herramientas MCP invocables.</p>
   <p>El virtual de zapatillas en <a href="/videoanalytics/xtore/">Xtore</a> tiene base musical sin necesitar vídeo en directo de la cámara. Su iframe usa <code>xtoreMusic=1</code> y <code>muted=0</code>, con permiso de sonido sujeto al navegador. Una playlist Por defecto asociada tiene prioridad y conserva su orden; sin asociación elige los últimos cinco contenidos Pixeria con etiqueta exacta <code>#musica</code>, normalizada en mayúsculas, acentos y prefijo #. Tipos automáticos: audio, music, video y animation, por <code>createdAt</code> descendente; no imágenes, interactivos ni locuciones. Audios y vídeos musicales terminan con <code>ended</code>, no con un temporizador editorial. El autoplay bloqueado espera gesto, sin saltar de pieza ni atribuirlo a un códec. El motor condicional queda neutro hasta activar el analizador y recibir un paso con regla/creatividad. Pausa o 6 s sin renovar = vuelta a la base desde el principio; neutral sin interrupción no reinicia la pieza. La asociación sigue en Parrilla con sesión del portal; no hay una escritura MCP anónima. <a href="/help/#player-virtual">Contrato y límites</a>.</p>
   <p>La asociación se relee cada 30 s. Un fallo inicial comunica <code>playlist-unavailable</code> y reintenta sin asumir ausencia; una playlist asociada no reproducible no se reemplaza. <code>playlist-empty</code> indica esa lista no reproducible o falta de coincidencias musicales sin asociación. <code>media-state.musicSource</code> distingue <code>playlist</code> de <code>pixeria-musica</code>; no acredita reproducción. La selección sin filtro existe solo como helper interno y no cambia otros players.</p>
   <div class="card">

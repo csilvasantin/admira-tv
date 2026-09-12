@@ -2,7 +2,7 @@
   "name": "admira-tv",
   "title": "Admira TV · admira.tv — la capa Emitir de la suite AdmiraNeXT",
   "description": "Hub MCP de admira.tv: emisión, federación, player condicionado y registro de players virtuales (navegador sin hardware dedicado). Servidor mcp-tv.admira.store v2.3.0; el descriptor raíz publica la lista vigente de herramientas. Alta no equivale a presencia ni a proof-of-play.",
-  "version": "v.12.09.2026.r4.11:52",
+  "version": "v.12.09.2026.r6.12:21",
   "site": "https://admira.tv",
   "hub": "https://admira.tv/mcp/",
   "llms_txt": "https://admira.tv/mcp/llms.txt",
@@ -150,6 +150,27 @@
       "help": "https://admira.tv/help/#player-virtual",
       "mission": "DCL-f9824e3bba6cee600b73810d",
       "registration_is_not_presence": true,
+      "calibration_preset": {
+        "scope": "UI del analizador; no es una herramienta MCP invocable",
+        "storage": "localStorage por navegador y origen; sin sincronización entre equipos",
+        "key": "admira.xtore.zapatillas.calibration.v1",
+        "max_characters": 4096,
+        "fields": ["version", "savedAt", "source", "roi", "tablet", "signage"],
+        "save": "Automático al terminar cada marcación válida; admite superficies parciales",
+        "restore": "Último preset tras permiso de compartir y dimensiones válidas; proporción compatible con tolerancia 0.5% sobre referencia fija",
+        "auto_start_analysis": false,
+        "images_or_credentials": false,
+        "limits": "No reconoce giro o zoom del gemelo; comprobar vista y remarcar. Formato incompatible exige nuevas marcas sin borrar preset",
+        "forget": "Solo elimina la clave propia; no modifica encuadre activo, contadores ni histórico"
+      },
+      "local_remote": {
+        "scope": "Solo UI del perfil musical Xtore; no es una herramienta MCP invocable",
+        "open": "Doble toque o Ctrl+I en el player: Contenido en antena",
+        "controls": ["previous", "next", "mute"],
+        "target": "Instancia del navegador y lista actual, sin escritura en Flota ni control de hardware",
+        "layout": "Botones nativos arriba, barra sticky y ficha desplazable",
+        "autoplay": "Mute no evita el permiso de sonido del navegador"
+      },
       "music_baseline": {
         "scope": "Iframe aislado del analizador Xtore zapatillas; no cambia otros players",
         "analyzer": "https://admira.tv/videoanalytics/xtore/",

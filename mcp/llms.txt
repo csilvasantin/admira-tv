@@ -12,6 +12,18 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
 
 ## Player virtual Xtore · música por defecto
 
+- Preset de cámara/iPad/DS: autoguardado tras cada marcación válida en localStorage
+  admira.xtore.zapatillas.calibration.v1 (geometría, dimensiones y fecha; 4096 caracteres).
+  Se restaura después de compartir una fuente de proporción compatible (tolerancia 0,5 %
+  sobre referencia fija), nunca concede permisos ni inicia análisis. Parciales admitidos.
+  Local a navegador/origen, sin sincronización entre equipos, imágenes ni credenciales.
+  Formato distinto exige remarcar; giros/zoom de igual proporción requieren revisión humana.
+  Olvidar preset no borra contadores/histórico. Un fallo de guardado mantiene el anterior.
+- Mini mando en Contenido en antena (doble toque/Ctrl+I): anterior/siguiente/mute,
+  solo instancia Xtore musical y lista actual, sin edición de playlist ni control de hardware.
+  Accesible por teclado; ficha desplazable y botones arriba. Autoplay sigue requiriendo gesto.
+  Son controles UI, NO nuevas herramientas invocables del MCP. NO DESCARGADO = sin copia offline.
+
 - ID persistente xtore-virtual-zapatillas: navegador sin hardware dedicado, registrado en Flota.
 - Analizador: https://admira.tv/videoanalytics/xtore/ — música independiente del vídeo en directo.
 - Playlist propia: https://admira.tv/parrilla/?project=admiranext&xpace=admiranext&device=xtore-virtual-zapatillas&playlist=default
@@ -43,7 +55,7 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
 
 Sitio / docs: https://admira.tv/mcp/
 Manifest máquina: https://admira.tv/mcp/manifest.json
-Versión: v.12.09.2026.r4.11:52
+Versión: v.12.09.2026.r6.12:21
 Repo del servidor: https://github.com/csilvasantin/admira-tv-mcp · Repo del sitio: https://github.com/csilvasantin/admira-tv
 
 ## Servidor MCP (cómo conectar)

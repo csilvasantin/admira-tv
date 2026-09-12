@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r5.11:56",
-  "signature": "NeoMBA16 · MacBookAir16plata",
-  "agent": "NeoMBA16",
+  "version": "v.12.09.2026.r6.12:21",
+  "signature": "TrinityMBA16 · MacBookAir16plata",
+  "agent": "TrinityMBA16",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "11:56",
-  "evidence": "SSO entre admira.tv y el creador de admiranext (Yokup #3165): pase firmado de un solo uso y 2 minutos. functions/_sso-pase.js (emitir/verificar: payload base64url {v:1,email,iat,exp=iat+120,nonce 16 hex,iss:admira.tv,aud:admiranext.com,origen:contentcatalogue} + firma base64url HMAC-SHA256 con ADMIRA_SSO_SECRET, pase=payload.firma) con test node:test (5 casos, incluida la referencia HMAC de node:crypto). functions/api/sso/pase.js: GET /api/sso/pase?aud=admiranext.com, mismo origen, no-store; 401 sin sesión del portal (readSession+hasAnyAccess), 403 si el email no está en ADMIRA_SSO_EMAILS (secreto de Pages, defecto csilva@admira.com,csilvasantin@gmail.com), 400 aud desconocida, 200 {ok,pase,exp,email_masked}; el pase nunca se loguea. contentcatalogue: Crear vídeo, Rehacer y el lote de destacados piden el pase (fetch credentials:include) y abren el deep-link con &pase=; la pestaña se abre en el gesto del clic (about:blank) y se navega al llegar el pase; si falla (401/403/red) abre sin pase y avisa «Sin pase: el Generador puede pedir sesión»; ADMIRA_CC.pase() y ADMIRA_CC.abrir(p). Probado en local con wrangler pages dev (.dev.vars + sesión testtoken del KV local): 401/200 con firma verificada/403/400/405 y el clic real en el navegador con el pase en la URL. README del catálogo."
+  "time": "12:21",
+  "evidence": "Xtore: ultimo preset local de camara/iPad/DS, autoguardado parcial y restauracion compatible tras compartir sin iniciar analisis; sin fotos. Resize con referencia fija, callbacks cancelados y quota segura. Mini mando anterior/siguiente/mute en Contenido en antena, solo instancia musical, ficha desplazable. Help y MCP actualizados. 67/67 pruebas focales; revision cruzada Turing aprobada; navegador local: cambio real de pieza, mute/unmute y paused:false. Yokup DCL-a548661677f72f2464249cb0."
 }

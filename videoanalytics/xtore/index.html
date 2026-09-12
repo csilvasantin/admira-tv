@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090e14">
   <meta name="description" content="Xtore: análisis local de Puerta Cam y capturas efímeras en un iPad virtual, con permiso explícito para compartir la pestaña de Digital Twin.">
-  <meta name="admiranext-version" content="v.12.09.2026.r5.11:56">
+  <meta name="admiranext-version" content="v.12.09.2026.r6.12:21">
   <meta name="admiranext-agent" content="TrinityMBA16">
   <title>Xtore · Analítica de vídeo · Admira.tv</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -99,6 +99,7 @@
         <button id="start-signage" class="full" disabled>Reanudar bucle Admira.tv</button>
         <button id="stop-signage" class="text-button" disabled>Apagar player</button>
         <details class="help" id="help-player"><summary><span aria-hidden="true">›</span> Help · carga y reproducción</summary>
+          <p><strong>Mini mando:</strong> abre «Contenido en antena» con doble toque o Ctrl+I dentro del player. Anterior, Siguiente y Sonido/Mute controlan solo esta instancia; no editan la playlist de Flota ni otros equipos. Los botones quedan arriba y la ficha se desplaza si no cabe. «NO DESCARGADO» significa sin copia offline, no que el contenido online no esté reproduciéndose.</p>
           <p><strong>Música por defecto:</strong> la playlist Por defecto asociada a este virtual tiene prioridad y conserva su orden. Sin asociación se eligen los cinco contenidos reproducibles más recientes de Pixeria con la etiqueta exacta <code>#musica</code>, normalizando mayúsculas, acentos y el prefijo #. Incluye audio, music, vídeo y animation; excluye imágenes, interactivos y locuciones de esta selección automática. Se ordena por fecha de creación descendente, no al azar. La playlist se consulta cada 30 s; asociarla exige sesión del portal y no activa cámara ni analizador.</p>
           <p><strong>Lista no disponible o vacía:</strong> si la primera consulta de asociación falla, se espera y reintenta sin asumir que no hay playlist. Una playlist asociada sin medios reproducibles muestra un error y no se sustituye por Pixeria. Sin asociación y sin coincidencias <code>#musica</code>, se espera contenido. Un fallo posterior conserva la última lista y el catálogo válidos.</p>
           <p><strong>Sonido pendiente:</strong> los audios y vídeos musicales se reproducen hasta terminar el archivo, sin cortarlos por la duración editorial. Si el navegador bloquea el autoplay, pulsa dentro del player o usa Enter/Espacio en su botón para escuchar, sin forzar pantalla completa. La pieza espera sin saltar a la siguiente ni atribuir el bloqueo a un códec. «Reproduciendo» no acredita que los altavoces del equipo tengan volumen.</p>
@@ -119,7 +120,9 @@
         <details class="help"><summary><span aria-hidden="true">›</span> Grabación de seguridad · no activa</summary><p><strong>No se está grabando ni archivando.</strong> Falta un grabador y un almacén privado. La propuesta es conservar originales sin alterar durante 28 días, con borrado automático en servidor y acceso restringido; nunca en Stock público de Pixeria.</p><p>Compartir una pestaña no sustituye un grabador 24/7: al ocultarla o cerrarla este análisis se detiene. Para seguridad continua necesitamos una conexión autorizada directa a la cámara y un equipo o servicio siempre encendido. Una imagen generada no sustituye el original.</p></details>
         <div class="divider"></div>
         <h2>Encuadre y detección</h2>
-        <details class="help"><summary><span aria-hidden="true">›</span> Cómo marcar las tres superficies</summary><p class="small">Antes de analizar, marca el recuadro de Puerta Cam y las cuatro esquinas del iPad. Marca también las cuatro esquinas de la pantalla grande para usar cartelería. Repite si mueves el gemelo. En el ajuste numérico puedes dejar la cartelería vacía para omitirla.</p></details>
+        <p id="preset-status" class="small" role="status">Cargando último preset de encuadre…</p>
+        <button id="forget-preset" class="text-button" disabled>Olvidar preset</button>
+        <details class="help"><summary><span aria-hidden="true">›</span> Preset y encuadre</summary><p class="small">Cada superficie marcada se guarda automáticamente como último preset en este navegador: recuadro de Puerta Cam y cuatro esquinas del iPad y de la pantalla DS. Al volver a compartir una pestaña del mismo formato se recuperan, incluso con resolución proporcional distinta; si falta alguna, solo tienes que marcar la pendiente. No inicia análisis ni concede permiso de captura.</p><p class="small">Solo se guardan coordenadas, tamaño de origen y fecha; nunca imágenes. No se sincroniza entre equipos, navegadores, incógnito ni dominios. Comprueba la vista antes de iniciar: un giro, zoom o cambio de escena con el mismo formato no puede detectarse automáticamente. Si mueves el gemelo o cambia la proporción, vuelve a marcar. En el ajuste numérico puedes dejar DS vacía para omitirla. Olvidar preset no borra contadores, histórico ni el encuadre de esta sesión.</p></details>
         <div class="calibration-buttons"><button id="set-roi" disabled>Marcar cámara</button><button id="set-tablet" disabled>Marcar iPad</button></div>
         <button id="set-signage" class="full" disabled>Marcar cartelería (4 esquinas)</button>
         <p id="calibration-status" class="small" role="status">Encuadre pendiente de confirmar</p>
@@ -137,7 +140,7 @@
         <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. La detección no envía fotogramas.</p>
       </aside>
     </div>
-    <footer><span>TrinityMBA16 · <span data-release-version>v.12.09.2026.r5.11:56</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
+    <footer><span>TrinityMBA16 · <span data-release-version>v.12.09.2026.r6.12:21</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
   </main>
 </body>
 </html>

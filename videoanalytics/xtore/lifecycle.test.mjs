@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 let serial=0;
 const cleanups=[];
 afterEach(async()=>{for(const cleanup of cleanups.splice(0))await cleanup();});
-async function fixture({surface='browser',denied=false,slowLoad=false,segment}={}){
+async function fixture({surface='browser',denied=false,slowLoad=false,segment,storage,sourceWidth=1280,sourceHeight=720}={}){
   const nodes=new Map();
   class Element {
     constructor(id=''){this.listeners={};this.style={};this.classList={add(){},remove(){},toggle(){}};this.hidden=false;this.disabled=false;this.value='';this.textContent='';this.children=[];this.clientWidth=960;this.clientHeight=540;this.videoWidth=1280;this.videoHeight=720;this.readyState=2;this.currentTime=1;this.width=640;this.height=480;this.id=id;}
@@ -20,6 +20,8 @@ async function fixture({surface='browser',denied=false,slowLoad=false,segment}={
   const get=id=>nodes.get(id)||new Element(id);
   const doc=new Element();doc.hidden=false;doc.getElementById=get;doc.createElement=tag=>{const e=Object.assign(new Element(),{tagName:tag});if(tag==='iframe'){e.sent=[];e.contentWindow={postMessage:(data,origin)=>e.sent.push({data,origin})};}return e;};doc.head=new Element();
   const win=new Element();win.tf={ready:async()=>{},getBackend:()=> 'fixture'};
+  win.localStorage=storage;
+  get('scene').videoWidth=sourceWidth;get('scene').videoHeight=sourceHeight;
   if(segment)win.deeplab={load:async()=>({segment,dispose(){}})};
   let finishLoad,finishDetection;
   const detections=[];
@@ -42,6 +44,70 @@ test('permission denial stays disconnected and is explained',async()=>{
   assert.equal(f.get('connection').textContent,'Cámara sin conectar');
   assert.match(f.get('status').textContent,/No se ha concedido permiso/);
   assert.equal(f.get('analyze').disabled,true);
+});
+
+test('last marked camera iPad and DS restore on a new visit only after sharing, never start analysis',async()=>{
+  const data=new Map(),storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
+  const a=await fixture({storage});await a.get('connect').emit('click');await a.get('edit-coordinates').emit('click');
+  for(const [i,value] of [50,25,75,25,75,85,50,85].entries())a.get(`coord-${12+i}`).value=String(value);
+  await a.get('apply-coordinates').emit('click');assert.match(a.get('preset-status').textContent,/guardado automáticamente/);
+  await a.get('stop').emit('click');
+  const b=await fixture({storage,sourceWidth:1920,sourceHeight:1080});
+  assert.equal(b.get('analyze').disabled,true);assert.equal(b.get('scene').srcObject,undefined);
+  await b.get('connect').emit('click');
+  assert.equal(b.get('analyze').disabled,false);assert.equal(b.get('connection').textContent,'Pestaña conectada');
+  assert.match(b.get('calibration-status').textContent,/Preset cargado.*cartelería: marcada/);
+  assert.equal(b.get('tablet').hidden,false);assert.match(b.get('signage').style.transform,/matrix3d/);
+  await b.get('stop').emit('click');
+});
+test('wrong format preserves the saved preset without applying it or changing the counters',async()=>{
+  const data=new Map(),storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
+  const a=await fixture({storage});await a.get('connect').emit('click');await a.calibrate();await a.get('stop').emit('click');
+  const before=[...data.values()][0];const b=await fixture({storage,sourceWidth:1440});await b.get('connect').emit('click');
+  assert.equal(b.get('analyze').disabled,true);assert.equal(b.get('tablet').hidden,true);
+  assert.match(b.get('preset-status').textContent,/formato.*distinto/);assert.equal([...data.values()][0],before);
+  await b.get('stop').emit('click');
+});
+test('forget preset leaves current framing and counts alone but next connection needs new marks',async()=>{
+  const data=new Map(),storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
+  const f=await fixture({storage});await f.get('connect').emit('click');await f.calibrate();await f.get('add-scooter').emit('click');
+  await f.get('forget-preset').emit('click');assert.equal(f.get('analyze').disabled,false);assert.equal(f.get('count-scooter').textContent,'1');assert.equal(data.size,0);
+  await f.get('stop').emit('click');await f.get('connect').emit('click');assert.equal(f.get('analyze').disabled,true);await f.get('stop').emit('click');
+});
+test('cancelled coordinates cannot apply after format change or disconnect',async()=>{
+  const data=new Map(),storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
+  const f=await fixture({storage});await f.get('connect').emit('click');await f.calibrate();
+  const saved=[...data.values()][0];
+  await f.get('edit-coordinates').emit('click');f.get('scene').videoWidth=1440;await f.get('scene').emit('resize');
+  await f.get('apply-coordinates').emit('click');assert.equal(f.get('analyze').disabled,true);assert.equal([...data.values()][0],saved);
+  await f.get('edit-coordinates').emit('click');await f.get('stop').emit('click');await f.get('apply-coordinates').emit('click');
+  assert.equal(f.get('analyze').disabled,true);assert.equal([...data.values()][0],saved);
+  await f.get('scene').emit('resize');assert.equal(f.get('tablet').hidden,true);assert.equal(f.get('scene').srcObject,null);
+});
+test('incremental aspect drift is compared to the calibrated source, not the last resize',async()=>{
+  const f=await fixture();await f.get('connect').emit('click');await f.calibrate();
+  for(let w=1285;w<=1440;w+=5){f.get('scene').videoWidth=w;await f.get('scene').emit('resize');}
+  assert.equal(f.get('analyze').disabled,true);assert.equal(f.get('tablet').hidden,true);await f.get('stop').emit('click');
+});
+test('delayed metadata restores once and proportional resize cancels inference without resuming',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const data=new Map(),storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
+  const a=await fixture({storage});await a.get('connect').emit('click');await a.calibrate();await a.get('stop').emit('click');
+  const f=await fixture({storage,sourceWidth:0,sourceHeight:0});await f.get('connect').emit('click');
+  assert.equal(f.get('analyze').disabled,true);f.get('scene').videoWidth=1280;f.get('scene').videoHeight=720;await f.get('scene').emit('resize');
+  assert.equal(f.get('analyze').disabled,false);
+  await f.get('set-roi').emit('click');await f.get('scene').emit('resize');assert.equal(f.get('analyze').disabled,true);
+  await f.calibrate();await f.get('analyze').emit('click');
+  f.get('scene').videoWidth=1920;f.get('scene').videoHeight=1080;await f.get('scene').emit('resize');f.finishDetection();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.get('connection').textContent,'Pestaña conectada');assert.equal(f.get('analyze').textContent,'Iniciar análisis');
+  assert.equal(f.get('tablet').hidden,false);assert.equal(f.get('count-person').textContent,'0');await f.get('stop').emit('click');
+});
+test('storage quota failure preserves the previous preset and leaves forget available',async()=>{
+  let full=false;const data=new Map(),storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>{if(full)throw new Error('QuotaExceededError');data.set(k,v);},removeItem:k=>data.delete(k)};
+  const f=await fixture({storage});await f.get('connect').emit('click');await f.calibrate();const saved=[...data.values()][0];full=true;
+  await f.get('edit-coordinates').emit('click');f.get('coord-0').value='65';await f.get('apply-coordinates').emit('click');
+  assert.equal([...data.values()][0],saved);assert.match(f.get('preset-status').textContent,/No se pudo guardar/);assert.equal(f.get('forget-preset').disabled,false);
+  await f.get('forget-preset').emit('click');assert.equal(data.size,0);await f.get('stop').emit('click');
 });
 test('music has one player before sharing, through capture calibration and after disconnect',async()=>{
   const f=await fixture(),frame=f.get('signage').children[0];
