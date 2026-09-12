@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r7.13:36",
-  "signature": "TrinityMBA16 · MacBookAir16plata",
-  "agent": "TrinityMBA16",
+  "version": "v.12.09.2026.r8.13:44",
+  "signature": "NeoMBA16 · MacBookAir16plata",
+  "agent": "NeoMBA16",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "13:36",
-  "evidence": "Xtore: recuperacion de analisis solicitado tras ocultacion, mute, falta temporal de frames y resize proporcional, con fuente fresca visible y sin inferencias pendientes; pausa manual y cambios de encuadre no se reactivan. Matriz musical local: persona Top Gun; coche/moto/bici The Power of Love; sin sexo/edad ni cambios globales. Pruebas manuales separadas sin contadores. Help/MCP actualizados, 99/99 pruebas dirigidas, revision cruzada Turing aprobada y navegador local con ambas piezas reproduciendo. Yokup DCL-cb51d8a1e6452a99de76f4e1."
+  "time": "13:44",
+  "evidence": "api/playlist acepta la clave del Stock de Pixeria (secreto STOCK_NOTIFY_KEY, body {secret} o X-Notify-Key) con CORS solo para pixeria.com, OPTIONS y name/source del catálogo; sesión del portal intacta. 3/3 node:test (preflight, escritura con clave y firma updatedBy, 401 sin/mala clave). Rebase sobre r7.13:36 de Trinity. Yokup #3183."
 }
