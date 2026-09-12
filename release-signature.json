@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r16.15:56",
-  "signature": "TrinityMBA16 · MacBookAir16plata",
-  "agent": "TrinityMBA16",
+  "version": "v.12.09.2026.r17.19:25",
+  "signature": "NeoMBA16 · MacBookAir16plata",
+  "agent": "NeoMBA16",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "15:56",
-  "evidence": "Xtore H: vista local modificada ROI+iPad, fondo observado3frames estable, trama desconocido, cajas/IDs conservados. Detector original, cero IA externa; no anonimización/evidencia seguridad. Imagen caduca1.5s, fondo20s; pausa/oculta/desconexión limpian. Vehículos car/moto/bici +2s cola (3.5s desde strong frame), sin prolongar cajas/conteos/replay. Bici998 mitad intacta. Turing cross-review aprobado. 243/243 foco, general2fallos previos ajenos, MCP27/27. Browser QA sintética no cámara: original vs H, fondo desconocido, expiry, toggle comprobados. Yokup DCL-b7723cea465ac94cb685d1de."
+  "time": "19:25",
+  "evidence": "Catálogo (FLT-100372 · Yokup #3228): «Crear vídeo» abre el generador con auto=1 (arranca solo: idea → Grok → máster → Stock); selector Formato en la barra (vertical 9:16 / horizontal 16:9 / las dos) recordado en localStorage y enviado en el deep-link (formatos); estética del folleto medida sobre la portada (fondo, claro/oscuro, 3 colores de marca) enviada como estilo y enseñada como chip; identidad por formato (la horizontal lleva :16x9), sondeo del Stock de las dos, previo doble (9:16 y 16:9) en la columna Anuncio y modal por versión. Probado: overlays del máster renderizados en los 4 casos (V/H × claro/oscuro) y sintaxis del inline script con node --check. Rebasado sobre r16 de Trinity (Xtore)."
 }

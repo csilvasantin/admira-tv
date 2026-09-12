@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=12.09.2026.r16.1556"></script>
+<script src="/auth-gate.js?v=12.09.2026.r17.1925"></script>
 <!-- preconnect: el generador de vídeo (TikTok de AdmiraNeXT) y la CDN de pdf.js -->
 <link rel="preconnect" href="https://www.admiranext.com" crossorigin>
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
@@ -170,6 +170,10 @@
   .prev video.pv-pend{opacity:0}
   .prev .play{position:absolute;inset:auto 6px 6px auto;width:24px;height:24px;border-radius:50%;background:rgba(3,20,10,.75);color:var(--green);display:grid;place-items:center;font-size:11px;pointer-events:none}
   .prev:hover{border-color:var(--green)}
+  .prev.h{width:170px;height:96px}
+  .prev .fmt{position:absolute;left:5px;top:5px;font:700 9px ui-monospace,monospace;letter-spacing:.04em;background:rgba(0,0,0,.62);color:#fff;padding:1px 5px;border-radius:4px;pointer-events:none}
+  .anuncio .dos{display:flex;gap:6px;align-items:center}
+  .estilo-chip i{display:inline-block;width:11px;height:11px;border-radius:50%;border:1px solid rgba(255,255,255,.35);vertical-align:-1px;margin-left:2px}
   .prev.wait{cursor:default;gap:8px;grid-auto-rows:min-content;align-content:center;border-style:dashed;border-color:#2a3a66}
   .prev.wait .spin{width:26px;height:26px;border-radius:50%;border:3px solid rgba(61,240,138,.18);border-top-color:var(--green);animation:sp .8s linear infinite}
   .prev.wait .lt{font:600 10px ui-monospace,monospace;color:var(--dim);letter-spacing:.04em}
@@ -206,12 +210,12 @@
   .foot b{color:var(--green);font-weight:700}
   @media(max-width:640px){.hero{padding-top:34px}.panel{padding:14px}.acts{align-items:stretch}.acts .row{justify-content:flex-start}}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r16.1556">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r17.1925">
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.12.09.2026.r16.15:56';</script>
-<script src="/admira-nav.js?v=12.09.2026.r16.1556" data-active="apps" data-title="Catálogo" defer></script>
-<script src="/admira-frame.js?v=12.09.2026.r16.1556" defer></script>
+<script>window.ADMIRA_VERSION='v.12.09.2026.r17.19:25';</script>
+<script src="/admira-nav.js?v=12.09.2026.r17.1925" data-active="apps" data-title="Catálogo" defer></script>
+<script src="/admira-frame.js?v=12.09.2026.r17.1925" defer></script>
 
 <!-- barra de modo app (se muestra sólo con ?app=1) -->
 <div class="app-bar" id="appBar">
@@ -272,6 +276,7 @@
         <label class="tog"><input type="checkbox" id="soloPrecio"> Solo con precio</label>
         <label class="tog"><input type="checkbox" id="soloDest"> Solo destacados</label>
         <label class="f">Vídeo <select id="selVideo" aria-label="Filtrar por vídeo creado"><option value="">Todos</option><option value="con">Solo con vídeo</option><option value="sin">Solo sin vídeo</option></select></label>
+        <label class="f" title="Formato de los vídeos que se crean desde aquí: vertical 9:16 (MUPI), horizontal 16:9 (pantalla apaisada) o las dos versiones">Formato <select id="selFormato" aria-label="Formato de los vídeos a crear"><option value="9:16">Vertical 9:16</option><option value="16:9">Horizontal 16:9</option><option value="ambos">Las dos versiones</option></select></label>
         <label class="f soloMovil">Orden <select id="selOrden" aria-label="Ordenar el listado por una columna"><option value="">Orden original</option></select></label>
       </div>
       <div class="row" style="flex:0 0 auto">
@@ -287,7 +292,7 @@
         <tbody id="cuerpo"><tr><td colspan="8" class="empty">Cargando el catálogo…</td></tr></tbody>
       </table>
     </div>
-    <p class="hint" style="margin-top:10px">«Crear vídeo» abre el generador TikTok de AdmiraNeXT en una pestaña nueva con el producto ya cargado (nombre, precio, promo, validez) y con un <b>pase de entrada</b> de 2 minutos firmado por admira.tv, para que el generador no vuelva a pedirte sesión (si no hay pase, avisa y lo abre igual). «Copiar guion» deja en el portapapeles un guion corto por si prefieres dictarlo. Cuando el generador publica el máster en el Stock, aquí aparece el <b>previo</b> a la derecha (se sondea el Stock cada 15 s durante 15 min tras pulsar Crear vídeo): pasa el ratón para verlo moverse, haz clic para verlo a tamaño completo. La <b>miniatura</b> de la columna Imagen es la foto real recortada del folleto: clic = la página completa con la caja resaltada; esa misma imagen viaja al generador dentro del anuncio. El listado se maneja <b>como una hoja de cálculo</b>: clic en un cabezal ordena (▲, otro clic ▼, un tercero vuelve al orden de origen; el precio deja los «sin precio» al final y Anuncio pone primero los que ya tienen vídeo), arrastra un cabezal por ⋮⋮ (o ←/→ con el teclado) para mover la columna, arrastra el chip de página para reordenar filas a mano y tira del borde de un cabezal para cambiar el ancho. Todo se recuerda por catálogo en este navegador; «Restablecer vista» lo deja como de origen.</p>
+    <p class="hint" style="margin-top:10px">«Crear vídeo» abre el generador TikTok de AdmiraNeXT en una pestaña nueva con el producto ya cargado (nombre, precio, promo, validez) y con un <b>pase de entrada</b> de 2 minutos firmado por admira.tv, para que el generador no vuelva a pedirte sesión (si no hay pase, avisa y lo abre igual). Desde el 12-sep el generador <b>arranca solo</b> (idea → Grok → máster → Stock) sin volver a pulsar «Generar anuncio», con la <b>estética del folleto</b> por defecto (fondo claro y colores medidos sobre la portada, para continuidad de marca) y en el <b>formato</b> elegido en la barra: vertical 9:16, horizontal 16:9 o las dos versiones (cada una es una pieza propia en el Stock; la horizontal lleva «:16x9» en su identidad). «Copiar guion» deja en el portapapeles un guion corto por si prefieres dictarlo. Cuando el generador publica el máster en el Stock, aquí aparece el <b>previo</b> a la derecha (se sondea el Stock cada 15 s durante 15 min tras pulsar Crear vídeo): pasa el ratón para verlo moverse, haz clic para verlo a tamaño completo. La <b>miniatura</b> de la columna Imagen es la foto real recortada del folleto: clic = la página completa con la caja resaltada; esa misma imagen viaja al generador dentro del anuncio. El listado se maneja <b>como una hoja de cálculo</b>: clic en un cabezal ordena (▲, otro clic ▼, un tercero vuelve al orden de origen; el precio deja los «sin precio» al final y Anuncio pone primero los que ya tienen vídeo), arrastra un cabezal por ⋮⋮ (o ←/→ con el teclado) para mover la columna, arrastra el chip de página para reordenar filas a mano y tira del borde de un cabezal para cambiar el ancho. Todo se recuerda por catálogo en este navegador; «Restablecer vista» lo deja como de origen.</p>
 
   </div>
 
@@ -363,9 +368,52 @@
     obj.validez={desde:(actual.validez&&actual.validez.desde)||'', hasta:(actual.validez&&actual.validez.hasta)||''};
     obj.origen=ORIGEN;
     obj.catalogo_id=actual.id;
+    /* FLT-100372: formato(s) elegidos en la barra y estética medida sobre la portada del folleto,
+       para que el generador haga la versión vertical, la horizontal o las dos con continuidad de marca. */
+    obj.formatos=formatosElegidos();
+    obj.estilo=estiloActual();
     return obj;
   }
-  function deepLink(p, pase){ return TIKTOK+'?producto='+encodeURIComponent(JSON.stringify(productoParaTikTok(p)))+(pase?'&pase='+encodeURIComponent(pase):''); }
+  /* auto=1: el generador arranca solo (idea → Grok → máster → Stock) sin volver a pulsar «Generar anuncio». */
+  function deepLink(p, pase){ return TIKTOK+'?producto='+encodeURIComponent(JSON.stringify(productoParaTikTok(p)))+'&auto=1'+(pase?'&pase='+encodeURIComponent(pase):''); }
+  /* ---- formato (FLT-100372): se recuerda en este navegador ---- */
+  var FORMATO_LS='admira.contentcatalogue.formato', FORMATOS={'9:16':{nombre:'Vertical 9:16',sufijo:''},'16:9':{nombre:'Horizontal 16:9',sufijo:':16x9'}};
+  function formatosElegidos(){ var v=$('selFormato').value; return v==='ambos'?['9:16','16:9']:(FORMATOS[v]?[v]:['9:16']); }
+  try{ var fLS=localStorage.getItem(FORMATO_LS); if(fLS&&(FORMATOS[fLS]||fLS==='ambos')) $('selFormato').value=fLS; }catch(_){}
+  $('selFormato').addEventListener('change', function(){ try{ localStorage.setItem(FORMATO_LS,this.value); }catch(_){} if(actual){ reconcilia(actual); pintaLista(); } });
+  /* ---- estética del folleto (FLT-100372): se mide sobre la portada (página 1) ----
+     Fondo = color más repetido en el borde de la página; claro/oscuro por su luma; colores de marca =
+     los 3 tonos saturados más frecuentes (agrupados por matiz). Se guarda por catálogo en localStorage
+     y viaja en el deep-link como `estilo` {fondo, claro, colores[], tinta, origen}. Si el JSON del
+     catálogo trae `estilo`, manda él. Sin nada medido: folleto claro por defecto. */
+  var ESTILO_LS='admira.contentcatalogue.estilo.';
+  function estiloPorDefecto(){ return {fondo:'#ffffff', claro:true, colores:[], tinta:'#111111', origen:'defecto'}; }
+  function estiloActual(){ if(!actual) return estiloPorDefecto(); if(actual.estilo&&actual.estilo.fondo) return actual.estilo; if(actual._estilo) return actual._estilo; try{ var c=JSON.parse(localStorage.getItem(ESTILO_LS+actual.id)||'null'); if(c&&c.fondo){ actual._estilo=c; return c; } }catch(_){} return estiloPorDefecto(); }
+  function hex(r,g,b){ return '#'+[r,g,b].map(function(x){ x=Math.max(0,Math.min(255,Math.round(x))); return (x<16?'0':'')+x.toString(16); }).join(''); }
+  function mideEstilo(cat){
+    if(!cat||(cat.estilo&&cat.estilo.fondo)||cat._estilo) return Promise.resolve(estiloActual());
+    var p1=cat.productos.filter(function(p){ return p.p===1; })[0]||cat.productos[0]; var url=p1?urlPagina(p1,cat):''; if(!url) return Promise.resolve(estiloPorDefecto());
+    return new Promise(function(res){
+      var img=new Image(); img.crossOrigin='anonymous'; img.decoding='async';
+      img.onload=function(){
+        try{
+          var W=96, H=Math.max(32,Math.round(96*img.naturalHeight/img.naturalWidth)), c=document.createElement('canvas'); c.width=W; c.height=H; var ctx=c.getContext('2d',{willReadFrequently:true}); ctx.drawImage(img,0,0,W,H);
+          var d=ctx.getImageData(0,0,W,H).data, borde={}, tonos={}, i, x, y;
+          for(y=0;y<H;y++) for(x=0;x<W;x++){ i=(y*W+x)*4; var r=d[i],g=d[i+1],b=d[i+2]; var mx=Math.max(r,g,b), mn=Math.min(r,g,b), sat=mx?(mx-mn)/mx:0, v=mx/255;
+            if(x<4||y<4||x>=W-4||y>=H-4){ var k=hex(Math.round(r/16)*16,Math.round(g/16)*16,Math.round(b/16)*16); borde[k]=(borde[k]||0)+1; }
+            if(sat>0.45&&v>0.35){ var h=mx===mn?0:(mx===r?((g-b)/(mx-mn))%6:(mx===g?(b-r)/(mx-mn)+2:(r-g)/(mx-mn)+4)); h=Math.round(((h*60+360)%360)/30)%12; var t=tonos[h]||(tonos[h]={n:0,r:0,g:0,b:0}); t.n++; t.r+=r; t.g+=g; t.b+=b; } }
+          var fondo='#ffffff', max=0; Object.keys(borde).forEach(function(k){ if(borde[k]>max){ max=borde[k]; fondo=k; } });
+          var fr=parseInt(fondo.slice(1,3),16), fg=parseInt(fondo.slice(3,5),16), fb=parseInt(fondo.slice(5,7),16); var luma=0.2126*fr+0.7152*fg+0.0722*fb;
+          var colores=Object.keys(tonos).map(function(h){ var t=tonos[h]; return {n:t.n, hex:hex(t.r/t.n,t.g/t.n,t.b/t.n)}; }).sort(function(a,b){ return b.n-a.n; }).slice(0,3).map(function(t){ return t.hex; });
+          var est={fondo:fondo, claro:luma>140, colores:colores, tinta:luma>140?'#111111':'#ffffff', origen:'pagina-1'};
+          cat._estilo=est; try{ localStorage.setItem(ESTILO_LS+cat.id, JSON.stringify(est)); }catch(_){}
+          res(est);
+        }catch(e){ res(estiloPorDefecto()); }
+      };
+      img.onerror=function(){ res(estiloPorDefecto()); };
+      img.src=url;
+    });
+  }
   /* ---- pase SSO (Yokup #3165): admira.tv firma un pase de un solo uso y 2 min con la sesión del
      portal (/api/sso/pase, functions/api/sso/pase.js) y el Generador de admiranext lo acepta sin
      volver a pedir sesión. Si no hay pase (401 sin sesión, 403 email fuera de lista, red), el
@@ -426,7 +474,11 @@
   function cleanTxt(v,max){ return String(v==null?'':v).replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim().slice(0,max); }
   function slugCatalogo(v){ return String(v==null?'':v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40); }
   function claveExterna(v){ var limpia=String(v==null?'':v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9:_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,120); return limpia.length>=8?limpia:''; }
-  function externalIdProducto(p,cat){ cat=cat||actual; if(!cat) return ''; var cid=slugCatalogo(cat.id)||'catalogo', slug=slugCatalogo(cleanTxt(p.nombre,120))||'producto'; return claveExterna(('admiranext:catalogo:'+cid+':'+slug).replace(/[^A-Za-z0-9:_-]+/g,'-').slice(0,120)); }
+  function externalIdProducto(p,cat,formato){ cat=cat||actual; if(!cat) return ''; var cid=slugCatalogo(cat.id)||'catalogo', slug=slugCatalogo(cleanTxt(p.nombre,120))||'producto'; var suf=(formato&&FORMATOS[formato])?FORMATOS[formato].sufijo:''; return claveExterna(('admiranext:catalogo:'+cid+':'+slug+suf).replace(/[^A-Za-z0-9:_-]+/g,'-').slice(0,120)); }
+  /* FLT-100372: la vertical conserva la identidad de siempre; la horizontal es otra pieza (sufijo :16x9). */
+  function eidsProducto(p,cat){ return {'9:16':externalIdProducto(p,cat,'9:16'), '16:9':externalIdProducto(p,cat,'16:9')}; }
+  function estadoFormatos(p,cat){ var e=eidsProducto(p,cat), r={}; Object.keys(e).forEach(function(f){ var st=estadoStock(e[f]); r[f]={eid:e[f], st:st, existe:!!(st&&st.exists), enCurso:!!pendientes[e[f]]}; }); return r; }
+  function tieneVideo(p,cat){ var r=estadoFormatos(p,cat); return r['9:16'].existe||r['16:9'].existe; }
   function sha256hex(txt){ return crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)).then(function(buf){ return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ('0'+b.toString(16)).slice(-2); }).join(''); }); }
   function stockIdDerivado(eid){ return sha256hex(eid).then(function(h){ return 'auto-'+h.slice(0,20); }); }
   function cargaStockLS(){ try{ stockLS=JSON.parse(localStorage.getItem(STOCK_LS)||'{}')||{}; }catch(_){ stockLS={}; } var ahora=Date.now(); Object.keys(stockLS).forEach(function(k){ if(!stockLS[k]||!stockLS[k].t||ahora-stockLS[k].t>STOCK_TTL) delete stockLS[k]; }); }
@@ -451,7 +503,7 @@
   function refrescaFilas(){ clearTimeout(refrescoT); refrescoT=setTimeout(function(){ pintaCabecera(); pintaLista(); },250); }
   function sondeaCatalogo(cat, forzar){
     var vistos={}, cola=[];
-    cat.productos.forEach(function(p){ var eid=externalIdProducto(p,cat); if(eid&&!vistos[eid]&&(forzar||!estadoStock(eid))){ vistos[eid]=1; cola.push(eid); } });
+    cat.productos.forEach(function(p){ var e=eidsProducto(p,cat); Object.keys(e).forEach(function(f){ var eid=e[f]; if(eid&&!vistos[eid]&&(forzar||!estadoStock(eid))){ vistos[eid]=1; cola.push(eid); } }); });
     if(!cola.length) return Promise.resolve();
     var activos=0, i=0;
     return new Promise(function(res){
@@ -538,11 +590,13 @@
     });
   }
   /* en curso: tras Crear vídeo, sondeo cada 15 s durante 15 min */
-  function iniciaPendiente(p, desde){
-    var eid=externalIdProducto(p); if(!eid) return;
-    if(pendientes[eid]) return;
-    pendientes[eid]={desde:desde||Date.now(), timer:null};
-    programaSondeo(eid);
+  function iniciaPendiente(p, desde, formatos){
+    (formatos||formatosElegidos()).forEach(function(f){
+      var eid=externalIdProducto(p,null,f); if(!eid) return;
+      if(pendientes[eid]) return;
+      pendientes[eid]={desde:desde||Date.now(), timer:null};
+      programaSondeo(eid);
+    });
   }
   function programaSondeo(eid){
     var pd=pendientes[eid]; if(!pd) return;
@@ -559,11 +613,11 @@
   function reconcilia(cat){
     cat.productos.forEach(function(p){
       var k=(cat.id)+'|'+p.p+'|'+p.nombre, fecha=creados[k]; if(!fecha) return;
-      var eid=externalIdProducto(p,cat), st=estadoStock(eid); if(st&&st.exists) return;
-      var t=Date.parse(fecha); if(isFinite(t)&&Date.now()-t<POLL_MAX) iniciaPendiente(p,t);
+      var faltan=formatosElegidos().filter(function(f){ var st=estadoStock(externalIdProducto(p,cat,f)); return !(st&&st.exists); }); if(!faltan.length) return;
+      var t=Date.parse(fecha); if(isFinite(t)&&Date.now()-t<POLL_MAX) iniciaPendiente(p,t,faltan);
     });
   }
-  function conVideo(cat){ return cat.productos.filter(function(p){ var st=estadoStock(externalIdProducto(p,cat)); return !!(st&&st.exists); }).length; }
+  function conVideo(cat){ return cat.productos.filter(function(p){ return tieneVideo(p,cat); }).length; }
 
   /* ---- cabecera del catálogo ---- */
   function pintaCabecera(){
@@ -582,6 +636,7 @@
     if(nv) chips.push('<span class="chip warn">Precio sin verificar <b>'+nv+'</b></span>');
     var ci=c.productos.filter(function(p){return !!urlImagen(p);}).length;
     chips.push('<span class="chip'+(ci?' ok':'')+'" id="chipImagen">Con imagen <b>'+ci+' de '+c.productos.length+'</b></span>');
+    var est=estiloActual(); chips.push('<span class="chip estilo-chip" title="Estética del folleto medida sobre la portada: fondo '+esc(est.fondo)+(est.colores.length?' · colores '+esc(est.colores.join(' ')):'')+' · la usa el generador para la continuidad de marca">Estética <b>'+(est.claro?'clara':'oscura')+'</b><i style="background:'+esc(est.fondo)+'"></i>'+est.colores.slice(0,3).map(function(c){ return '<i style="background:'+esc(c)+'"></i>'; }).join('')+'</span>');
     meta.innerHTML=chips.join('');
     $('contador').innerHTML=c.productos.length+' <small>productos</small>';
     $('fuente').innerHTML=c.fuente?('Fuente: <a href="'+esc(c.fuente)+'" target="_blank" rel="noopener">'+esc(c.fuente)+'</a>'+(c.extraido_por?' · '+esc(c.extraido_por):'')):(c.extraido_por?esc(c.extraido_por):'');
@@ -603,7 +658,7 @@
      en localStorage (admira.contentcatalogue.tabla.<catalogo_id>): orden de columnas, columna y
      sentido de orden, orden manual y anchos. Sin librerías. */
   var TABLA_LS='admira.contentcatalogue.tabla.';
-  function estadoAnuncio(p){ var eid=externalIdProducto(p), st=estadoStock(eid); if(st&&st.exists) return 3; if(pendientes[eid]) return 2; if(creados[claveProd(p)]) return 1; return 0; }
+  function estadoAnuncio(p){ var r=estadoFormatos(p); if(r['9:16'].existe||r['16:9'].existe) return 3; if(r['9:16'].enCurso||r['16:9'].enCurso) return 2; if(creados[claveProd(p)]) return 1; return 0; }
   function claveTexto(v){ v=norm(v).trim(); return v||null; }
   var COLS=[
     {id:'pag', label:'Pág.', clave:function(p){ var n=Number(p.p); return isFinite(n)?n:null; }},
@@ -725,7 +780,7 @@
   function filtrados(){
     var q=norm($('q').value.trim()), sec=$('selSec').value, pag=$('selPag').value, sp=$('soloPrecio').checked, sd=$('soloDest').checked, sv=$('selVideo').value;
     return ordenados().filter(function(p){
-      if(sv){ var st=estadoStock(externalIdProducto(p)), hay=!!(st&&st.exists); if(sv==='con'&&!hay) return false; if(sv==='sin'&&hay) return false; }
+      if(sv){ var hay=tieneVideo(p); if(sv==='con'&&!hay) return false; if(sv==='sin'&&hay) return false; }
       if(sec && (p.seccion||'Sin sección')!==sec) return false;
       if(pag && String(p.p)!==pag) return false;
       if(sp && typeof p.precio!=='number') return false;
@@ -734,21 +789,28 @@
       return true;
     });
   }
-  function celdaAnuncio(p, idx, st, existe, enCurso, fecha){
-    var link=esc(deepLink(p));
-    var btnCrear='<a class="btn sm primary crear" href="'+link+'" target="_blank" rel="noopener" data-i="'+idx+'" aria-label="Crear vídeo de '+esc(p.nombre)+'">▶ Crear vídeo</a>';
+  function celdaAnuncio(p, idx, fecha){
+    var link=esc(deepLink(p)), r=estadoFormatos(p), elegidos=formatosElegidos();
+    var btnCrear='<a class="btn sm primary crear" href="'+link+'" target="_blank" rel="noopener" data-i="'+idx+'" aria-label="Crear vídeo de '+esc(p.nombre)+'" title="Arranca solo el generador: '+esc(elegidos.map(function(f){ return FORMATOS[f].nombre; }).join(' + '))+'">▶ Crear vídeo</a>';
     var btnGuion='<button type="button" class="btn sm guion" data-i="'+idx+'" aria-label="Copiar guion de '+esc(p.nombre)+'">⎘ Copiar guion</button>';
-    if(existe){
-      var cuando=st.createdAt?fmtFecha(String(st.createdAt).slice(0,10)):(fecha?fmtFecha(fecha.slice(0,10)):'');
-      return '<div class="anuncio">'
-        +'<button type="button" class="prev" data-i="'+idx+'" aria-label="Ver el vídeo de '+esc(p.nombre)+' a tamaño completo" title="Clic: ver a tamaño completo">'
-        +previoVideoHtml(st)+'<span class="play">▶</span></button>'
-        +'<div class="acts"><span class="done">✓ vídeo'+(cuando?' · '+esc(cuando):'')+(enCurso?' · <em>rehaciendo…</em>':'')+'</span>'
-        +'<div class="row"><a class="btn sm crear rehacer" href="'+link+'" target="_blank" rel="noopener" data-i="'+idx+'" aria-label="Rehacer el vídeo de '+esc(p.nombre)+'">↻ Rehacer</a>'+btnGuion+'</div>'
+    var existeAlguno=r['9:16'].existe||r['16:9'].existe, enCursoAlguno=r['9:16'].enCurso||r['16:9'].enCurso;
+    if(existeAlguno){
+      /* un previo por versión publicada (9:16 y/o 16:9); la versión elegida y aún en curso sale como «Generando…» */
+      var previos=['9:16','16:9'].map(function(f){
+        var x=r[f]; if(x.existe) return '<button type="button" class="prev'+(f==='16:9'?' h':'')+'" data-i="'+idx+'" data-f="'+f+'" aria-label="Ver el vídeo '+esc(FORMATOS[f].nombre)+' de '+esc(p.nombre)+' a tamaño completo" title="'+esc(FORMATOS[f].nombre)+' · clic: ver a tamaño completo">'+previoVideoHtml(x.st)+'<span class="fmt">'+(f==='16:9'?'16:9':'9:16')+'</span><span class="play">▶</span></button>';
+        if(x.enCurso) return '<div class="prev wait'+(f==='16:9'?' h':'')+'" role="status" aria-live="polite" title="Generando la versión '+esc(FORMATOS[f].nombre)+'"><span class="spin"></span><span class="lt">'+(f==='16:9'?'16:9':'9:16')+'</span></div>';
+        return '';
+      }).join('');
+      var cuandoSt=(r['9:16'].existe?r['9:16'].st:r['16:9'].st), cuando=cuandoSt.createdAt?fmtFecha(String(cuandoSt.createdAt).slice(0,10)):(fecha?fmtFecha(fecha.slice(0,10)):'');
+      var versiones=['9:16','16:9'].filter(function(f){ return r[f].existe; }).map(function(f){ return f; }).join(' + ');
+      return '<div class="anuncio"><div class="dos">'+previos+'</div>'
+        +'<div class="acts"><span class="done">✓ vídeo '+esc(versiones)+(cuando?' · '+esc(cuando):'')+(enCursoAlguno?' · <em>generando…</em>':'')+'</span>'
+        +'<div class="row"><a class="btn sm crear rehacer" href="'+link+'" target="_blank" rel="noopener" data-i="'+idx+'" aria-label="Rehacer el vídeo de '+esc(p.nombre)+'" title="Vuelve a generar: '+esc(elegidos.map(function(f){ return FORMATOS[f].nombre; }).join(' + '))+'">↻ Rehacer</a>'+btnGuion+'</div>'
         +'<a class="stocklink" href="'+STOCK_WEB+'" target="_blank" rel="noopener">Ver en el Stock ↗</a></div></div>';
     }
-    if(enCurso){
-      return '<div class="anuncio"><div class="prev wait" role="status" aria-live="polite"><span class="spin"></span><span class="lt">Generando…</span></div>'
+    if(enCursoAlguno){
+      var esperando=['9:16','16:9'].filter(function(f){ return r[f].enCurso; });
+      return '<div class="anuncio"><div class="dos">'+esperando.map(function(f){ return '<div class="prev wait'+(f==='16:9'?' h':'')+'" role="status" aria-live="polite"><span class="spin"></span><span class="lt">'+(esperando.length>1?(f==='16:9'?'16:9':'9:16'):'Generando…')+'</span></div>'; }).join('')+'</div>'
         +'<div class="acts"><span class="done dim">sondeando el Stock cada 15 s</span><div class="row">'+btnGuion+'</div></div></div>';
     }
     var t=fecha?Date.parse(fecha):NaN, sinNoticias=isFinite(t)&&Date.now()-t>=POLL_MAX;
@@ -787,7 +849,7 @@
     if(!lista.length){ cuerpo.innerHTML=filaVacia('Ningún producto coincide con el filtro.'); return; }
     cuerpo.innerHTML=lista.map(function(p){
       var idx=actual.productos.indexOf(p), k=claveProd(p), fecha=creados[k];
-      var eid=externalIdProducto(p), st=estadoStock(eid), existe=!!(st&&st.exists), enCurso=!!pendientes[eid];
+      var eid=externalIdProducto(p), existe=tieneVideo(p);
       var celdas=tabla.cols.map(function(id){
         switch(id){
           case 'pag': return '<td><span class="pg" draggable="true" title="Página '+p.p+' del folleto · arrastra para reordenar la fila">'+p.p+'<small>pág</small></span></td>';
@@ -799,7 +861,7 @@
             ? '<div class="pr">'+esc(fmtPrecio(p.precio))+'<span class="u">'+esc((p.unidad||'ud').indexOf('€/')===0?p.unidad:(p.unidad&&p.unidad!=='ud'?'€/'+p.unidad:'€'))+'</span>'+(p.precio_verificado===false?'<span class="nv">⚠ sin verificar</span>':'')+'</div>'
             : '<div class="pr none">'+(p.precio_texto?esc(p.precio_texto)+' <span class="nv">⚠ no verificado</span>':'sin precio')+'</div>')+'</td>';
           case 'promo': return '<td class="pc">'+(p.promo?'<span class="promo">'+esc(p.promo)+'</span>':'<span class="sec">—</span>')+'</td>';
-          case 'anuncio': return '<td class="der">'+celdaAnuncio(p, idx, st, existe, enCurso, fecha)+'</td>';
+          case 'anuncio': return '<td class="der">'+celdaAnuncio(p, idx, fecha)+'</td>';
         }
         return '<td></td>';
       });
@@ -813,8 +875,8 @@
     ev.preventDefault();
     if(a.classList.contains('crear')){ abreGenerador(p); marcaCreado(p); iniciaPendiente(p); setTimeout(function(){ pintaCabecera(); pintaLista(); }, 50); return; }
     if(a.classList.contains('olvidar')){ quitaCreado(p); pintaLista(); return; }
-    if(a.classList.contains('reintentar')){ marcaCreado(p); iniciaPendiente(p); pintaLista(); consultaStock(externalIdProducto(p)).catch(function(){}).then(refrescaFilas); return; }
-    if(a.classList.contains('prev')){ abreModal(p); return; }
+    if(a.classList.contains('reintentar')){ marcaCreado(p); iniciaPendiente(p); pintaLista(); Promise.all(formatosElegidos().map(function(f){ return consultaStock(externalIdProducto(p,null,f)).catch(function(){}); })).then(refrescaFilas); return; }
+    if(a.classList.contains('prev')){ abreModal(p, a.getAttribute('data-f')||'9:16'); return; }
     if(a.classList.contains('thumb')){ abreModalImg(p); return; }
     copiar(guion(p)).then(function(){ toast('Guion copiado'); }, function(){ toast('No se pudo copiar'); });
   });
@@ -822,10 +884,10 @@
   $('cuerpo').addEventListener('pointerenter', function(ev){ var b=ev.target&&ev.target.closest&&ev.target.closest('button.prev'); if(!b||ev.target!==b) return; var v=b.querySelector('video'); if(v){ var pr=v.play(); if(pr&&pr.catch) pr.catch(function(){}); } }, true);
   $('cuerpo').addEventListener('pointerleave', function(ev){ var b=ev.target&&ev.target.closest&&ev.target.closest('button.prev'); if(!b||ev.target!==b) return; var v=b.querySelector('video'); if(v){ v.pause(); try{ var t=parseFloat(v.getAttribute('data-poster-t')); v.currentTime=isFinite(t)?t:1; }catch(_){} } }, true);
   /* modal a tamaño completo */
-  function abreModal(p){
-    var st=estadoStock(externalIdProducto(p)); if(!st||!st.exists) return;
+  function abreModal(p, formato){
+    var st=estadoStock(externalIdProducto(p,null,formato||'9:16')); if(!st||!st.exists) return;
     var m=$('modal'), v=$('mVideo'); if(st.poster) v.poster=st.poster; else v.removeAttribute('poster'); v.src=urlVideo(st); m.hidden=false;
-    $('mMeta').innerHTML='<b>'+esc(p.nombre)+'</b>'+(typeof p.precio==='number'?' · '+esc(precioTexto(p)):'')+(st.createdAt?' · '+esc(fmtFecha(String(st.createdAt).slice(0,10))):'')+' · <a class="stocklink" href="'+STOCK_WEB+'" target="_blank" rel="noopener">Ver en el Stock ↗</a> · <a class="stocklink" href="'+esc(st.url)+'" target="_blank" rel="noopener">Abrir el fichero ↗</a>';
+    $('mMeta').innerHTML='<b>'+esc(p.nombre)+'</b>'+(typeof p.precio==='number'?' · '+esc(precioTexto(p)):'')+' · '+esc(FORMATOS[formato||'9:16'].nombre)+(st.createdAt?' · '+esc(fmtFecha(String(st.createdAt).slice(0,10))):'')+' · <a class="stocklink" href="'+STOCK_WEB+'" target="_blank" rel="noopener">Ver en el Stock ↗</a> · <a class="stocklink" href="'+esc(st.url)+'" target="_blank" rel="noopener">Abrir el fichero ↗</a>';
     var pr=v.play(); if(pr&&pr.catch) pr.catch(function(){});
     $('mClose').focus();
   }
@@ -860,14 +922,14 @@
     sel.innerHTML=indice.map(function(c){ return '<option value="'+esc(c.id)+'">'+esc(c.nombre)+(c.productos!=null?' · '+esc(c.productos)+' productos':'')+'</option>'; }).join('');
     if(actual) sel.value=actual.id;
   }
-  function activa(cat){ actual=cat; cargaTabla(); pintaSelector(); pintaCabecera(); pintaCabezal(); pintaLista(); reconcilia(cat); sondeaCatalogo(cat).then(function(){ reconcilia(cat); refrescaFilas(); }); }
+  function activa(cat){ actual=cat; cargaTabla(); pintaSelector(); pintaCabecera(); pintaCabezal(); pintaLista(); reconcilia(cat); sondeaCatalogo(cat).then(function(){ reconcilia(cat); refrescaFilas(); }); mideEstilo(cat).then(function(){ if(actual===cat) pintaCabecera(); }); }
   $('selCat').addEventListener('change', function(){ cargaCatalogo(this.value); });
   function cargaCatalogo(id){
     var entrada=indice.filter(function(c){return c.id===id;})[0]; if(!entrada) return;
     if(catalogos[id]){ activa(catalogos[id]); return; }
     $('cuerpo').innerHTML=filaVacia('Cargando el catálogo…');
     fetch('/contentcatalogue/catalogos/'+entrada.archivo,{cache:'no-cache'}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }).then(function(d){
-      var cat={id:entrada.id, cliente:entrada.cliente, nombre:d.catalogo||entrada.nombre, etiqueta:entrada.etiqueta||entrada.nombre, validez:d.validez||entrada.validez, tiendas:d.tiendas||entrada.tiendas||[], paginas:d.paginas||entrada.paginas, fuente:d.fuente||entrada.fuente, extraido_por:d.extraido_por, imagenes:d.imagenes||null, productos:Array.isArray(d.productos)?d.productos:[]};
+      var cat={id:entrada.id, cliente:entrada.cliente, nombre:d.catalogo||entrada.nombre, etiqueta:entrada.etiqueta||entrada.nombre, validez:d.validez||entrada.validez, tiendas:d.tiendas||entrada.tiendas||[], paginas:d.paginas||entrada.paginas, fuente:d.fuente||entrada.fuente, extraido_por:d.extraido_por, imagenes:d.imagenes||null, estilo:(d.estilo&&d.estilo.fondo)?d.estilo:null, productos:Array.isArray(d.productos)?d.productos:[]};
       catalogos[id]=cat; activa(cat);
     }).catch(function(e){ $('cuerpo').innerHTML=filaVacia('No se pudo cargar el catálogo ('+esc(e.message)+').'); });
   }
@@ -1017,6 +1079,6 @@
   });
 })();
 </script>
-  <script src="/assets/admira-version-watch.js?v=12.09.2026.r16.1556" defer></script>
+  <script src="/assets/admira-version-watch.js?v=12.09.2026.r17.1925" defer></script>
 </body>
 </html>
