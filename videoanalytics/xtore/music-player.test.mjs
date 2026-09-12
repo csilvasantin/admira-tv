@@ -76,12 +76,12 @@ test('clean musical embed keeps its autoplay gesture visible and keyboard access
   assert.match(html,/if\(xtoreMusicEnabled\(\)\)\{\s*document\.documentElement\.classList\.add\('xtore-music'\);\s*tap\.setAttribute\('role','button'\)/);
 });
 
-test('local mini remote precedes long content, is natively accessible and scroll is scoped to music',()=>{
+test('local mini remote precedes long content and uses the common accessible sticky card toolbar',()=>{
   assert.ok(html.indexOf('id="li-remote"')<html.indexOf('id="li-title"'));
   assert.match(html,/<div id="li-remote" hidden role="group"/);
-  for(const id of ['prev','next','mute'])assert.match(html,new RegExp('<button id="li-'+id+'" type="button"[^>]*aria-label='));
-  assert.match(html,/\.xtore-music #localInfo\{[^}]*max-height:calc\(100% - 36px\)[^}]*overflow-y:auto[^}]*pointer-events:auto[^}]*touch-action:pan-y/);
-  assert.match(html,/\.xtore-music #li-remote\{[^}]*position:sticky/);
+  for(const id of ['prev','next','mute','repeat'])assert.match(html,new RegExp('<button id="li-'+id+'" type="button"[^>]*aria-label='));
+  assert.match(html,/#localInfo\{[^}]*max-height:calc\(100% - 60px\)[^}]*overflow-y:auto[^}]*pointer-events:auto[^}]*touch-action:pan-y/);
+  assert.match(html,/#localInfo \.li-toolbar\{[^}]*position:sticky/);
   assert.match(html,/#li-remote\[hidden\]\{ display:none!important/);
   assert.match(html,/#li-remote button:focus-visible/);
 });
@@ -160,6 +160,97 @@ test('rapid remote next/prev reuse tokenized play; late cache, ended and blocked
   assert.equal(c.mediaEl,newest);assert.equal(c.cur,2);assert.equal(c._playTok,token);assert.equal(f.messages.length,count);
   assert.ok(old.pauseCount>=1);assert.equal(old.src,undefined);assert.equal(newest.src,'https://media.example/three.mp3');
   assert.equal(f.created.length,2);assert.equal(c.$('localInfo').hidden,false);
+});
+
+for(const type of ['audio','video'])test(`repeat replays the same base ${type} only on natural ended, even with the card closed`,async()=>{
+  const f=fixture(),c=f.c;c.setTimeout=()=>0;
+  f.draft([song('one',{type}),song('two')]);c.xtoreMusicRebuild();await settle();
+  const first=c.mediaEl,token=c._playTok;c.$('localInfo').hidden=false;
+  assert.equal(c.localInfoRemoteAction('repeat'),true);assert.equal(c.$('li-repeat')['aria-pressed'],'true');
+  c.$('localInfo').hidden=true;first.onended();await settle();
+  assert.equal(c.cur,0);assert.equal(c.playlist[c.cur].id,'default:one');assert.notEqual(c.mediaEl,first);
+  assert.equal(c._playTok,token+1);assert.ok(first.pauseCount>=1);assert.equal(first.src,undefined);
+  assert.equal(f.eval('_localInfoRepeatKey'),c.localInfoRepeatIdentity(c.playlist[0]));
+  assert.equal(f.advances.length,0);assert.deepEqual(f.timers,[]);assert.equal(f.messages.at(-1).data.loop,true);
+  c.$('localInfo').hidden=false;c.localInfoRemoteAction('repeat');c.mediaEl.onended();
+  assert.equal(f.advances.length,1);assert.equal(f.eval('_localInfoRepeatKey'),'');
+});
+
+test('a repeated audio error leaves the piece and manual previous/next disarm repetition',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=fixture(),c=f.c;Object.assign(c,{kioskReloadIfDue:()=>false,finishForcedTagPlayback:()=>false});
+  vm.runInContext(section('function next()','// ── AUTOACTUALIZACIÓN EN KIOSKO'),c);
+  f.draft([song('one'),song('two'),song('three')]);c.xtoreMusicRebuild();await settle();c.$('localInfo').hidden=false;
+  c.localInfoRemoteAction('repeat');const failed=c.mediaEl;failed.onerror();
+  t.mock.timers.tick(601);await settle();assert.equal(c.cur,1);assert.equal(f.eval('_localInfoRepeatKey'),'');
+  assert.ok(failed.pauseCount>=1);assert.equal(failed.src,undefined);
+  c.localInfoRemoteAction('repeat');c.localInfoRemoteAction('next');await settle();
+  assert.equal(c.cur,2);assert.equal(f.eval('_localInfoRepeatKey'),'');
+  c.localInfoRemoteAction('repeat');c.localInfoRemoteAction('prev');await settle();
+  assert.equal(c.cur,1);assert.equal(f.eval('_localInfoRepeatKey'),'');
+});
+
+test('base and conditional contexts cancel repeat even when both resolve the same id and URL',async()=>{
+  const f=fixture(),c=f.c,one=song('shared');c.all=[one];f.draft([one]);
+  c.xtoreMusicRebuild();await settle();c.$('localInfo').hidden=false;c.localInfoRemoteAction('repeat');
+  const base=c.mediaEl;c._condPlaylist=false;c.seg.ids=[one.id];c.xtoreMusicRebuild();await settle();
+  assert.notEqual(c.mediaEl,base);assert.equal(f.eval('_xtoreMusicBase'),false);assert.equal(f.eval('_localInfoRepeatKey'),'');
+  c.localInfoRemoteAction('repeat');const conditional=c.mediaEl;c._condPlaylist=true;c.seg.ids=null;c.xtoreMusicRebuild();await settle();
+  assert.notEqual(c.mediaEl,conditional);assert.equal(f.eval('_xtoreMusicBase'),true);assert.equal(f.eval('_localInfoRepeatKey'),'');
+  assert.equal(c.playlist[0].id,one.id);assert.equal(c.playlist[0].url,one.url);
+});
+
+test('sync, direct, standby and a non-Xtore profile cannot arm or retain repeat',async()=>{
+  for(const mode of ['syncOn','directOn','_standby','ordinary']){
+    const f=fixture(),c=f.c;f.draft([song()]);c.xtoreMusicRebuild();await settle();c.$('localInfo').hidden=false;
+    c.localInfoRemoteAction('repeat');const token=c._playTok,el=c.mediaEl;
+    if(mode==='ordinary')c.XTORE_PARENT='';else c[mode]=true;
+    assert.equal(c.localInfoRepeatAllowed(c.playlist[0]),false);assert.equal(c.localInfoRemoteAction('repeat'),false);
+    el.onended();assert.equal(c._playTok,token);assert.equal(f.eval('_localInfoRepeatKey'),'');
+    assert.deepEqual(f.advances,mode==='syncOn'?['sync']:[true]);
+  }
+  const f=fixture();f.draft([song('still',{type:'image'})]);f.c.xtoreMusicRebuild();await settle();f.c.$('localInfo').hidden=false;f.c.localInfoRemoteRender();
+  assert.equal(f.c.localInfoRemoteAction('repeat'),false);assert.equal(f.c.$('li-repeat').disabled,true);
+});
+
+test('stale ended/error tokens cannot replay old media or clear the newest repeat choice',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=fixture(),c=f.c;Object.assign(c,{kioskReloadIfDue:()=>false,finishForcedTagPlayback:()=>false});
+  vm.runInContext(section('function next()','// ── AUTOACTUALIZACIÓN EN KIOSKO'),c);
+  f.draft([song('one'),song('two')]);c.xtoreMusicRebuild();await settle();c.$('localInfo').hidden=false;
+  c.localInfoRemoteAction('repeat');const old=c.mediaEl;old.onerror();c.localInfoRemoteAction('next');await settle();
+  c.localInfoRemoteAction('repeat');const current=c.mediaEl,key=f.eval('_localInfoRepeatKey'),token=c._playTok;
+  old.onended();t.mock.timers.tick(601);await settle();
+  assert.equal(c.mediaEl,current);assert.equal(c._playTok,token);assert.equal(f.eval('_localInfoRepeatKey'),key);
+  current.onended();await settle();assert.equal(c.cur,1);assert.notEqual(c.mediaEl,current);assert.equal(f.eval('_localInfoRepeatKey'),key);
+});
+
+test('real musical audience interrupts repeat and neutral/TTL replace it without extending presence',async()=>{
+  const f=fixture(),c=f.c;let now=10000;
+  Object.assign(c,{Date:class extends Date{static now(){return now;}},setTimeout:()=>0,setInterval:()=>0,clearInterval(){},
+    seenSig:'',scr:{},syncSegPanel(){},flashCli(){},setAdmiraMode:()=>assert.fail('No engine restart'),
+    rebuild:()=>c.xtoreMusicRebuild(),xtorePublicRead:async()=>({rules:[
+      {kind:'person',assets:[XTORE_MUSIC_ASSETS.person],musicOnly:true},
+      {kind:'car',assets:[XTORE_MUSIC_ASSETS.car],musicOnly:true},
+    ]})});
+  c.all=[{id:XTORE_MUSIC_ASSETS.person,type:'video',url:'https://media.example/topgun.mp4'},
+    {id:XTORE_MUSIC_ASSETS.car,type:'video',url:'https://media.example/future.mp4'}];
+  f.draft([song('base'),song('two')]);c.xtoreMusicRebuild();await settle();c.$('localInfo').hidden=false;
+  vm.runInContext(readFileSync(new URL('../../xpl-runtime.js',import.meta.url),'utf8'),c);
+  vm.runInContext(section('const AUD_KIND_ALIAS=','function runCli(raw)'),c);
+  vm.runInContext(section('const XPLCanal = (function(){','// ── AUDIENCIA REMOTA: sondeo'),c);
+  const engine=c.window.XPLCanal;engine.start();await settle();c.forceAudience('u');c.localInfoRemoteAction('repeat');
+  const base=c.mediaEl;c.forceAudience('persona');await settle();
+  assert.equal(c.playlist[0].id,XTORE_MUSIC_ASSETS.person);assert.equal(f.eval('_localInfoRepeatKey'),'');
+  c.localInfoRemoteAction('repeat');const top=c.mediaEl;c.forceAudience('coche');await settle();
+  assert.equal(c.playlist[0].id,XTORE_MUSIC_ASSETS.car);assert.equal(f.eval('_localInfoRepeatKey'),'');
+  c.localInfoRemoteAction('repeat');const deadline=c.window.__xplForce.expiresAt;
+  now+=1000;c.mediaEl.onended();await settle();assert.equal(c.window.__xplForce.expiresAt,deadline);
+  now=deadline;engine.tick();await settle();const returned=c.mediaEl;
+  assert.equal(c.playlist[0].id,'default:base');assert.equal(f.eval('_localInfoRepeatKey'),'');assert.equal(f.messages.at(-1).data.loop,true);
+  base.onended();top.onended();await settle();assert.equal(c.mediaEl,returned);
+  c.forceAudience('persona');await settle();c.localInfoRemoteAction('repeat');c.forceAudience('u');await settle();
+  assert.equal(c.playlist[0].id,'default:base');assert.equal(f.eval('_localInfoRepeatKey'),'');engine.stop();
 });
 
 test('assigned base accepts HTTPS media including music videos and rejects locutions/credentials',()=>{

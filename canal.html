@@ -208,19 +208,30 @@
   #hud .line{ display:flex; justify-content:space-between; gap:12px; font-size:10px; letter-spacing:.1em; margin-top:9px; color:#7dff9e; opacity:.85; }
   #hud .live{ color:var(--air); } #hud .live::before{ content:"●"; margin-right:5px; animation:pulse 1.3s infinite; }
   body.paused #hud .live::before{ animation:none; opacity:.4; }
-  /* Ficha LOCAL (doble clic / doble toque / Ctrl+I). Vive dentro del MUPI para
-     funcionar también en clean/kiosco y solo aparece por una acción física. */
+  /* Ficha LOCAL: el bind la eleva al wrap de ESTE iframe, no al padre. Así no
+     encoge al cambiar a una pieza horizontal y funciona también en clean. */
   #localInfo{ position:absolute; z-index:70; top:18px; left:18px; width:min(520px,calc(100% - 36px));
     box-sizing:border-box; border:1px solid rgba(125,255,208,.68); border-radius:15px;
-    padding:14px 82px 16px 16px; color:#dfffee; background:rgba(3,12,18,.91);
+    padding:14px 16px 16px; color:#dfffee; background:rgba(3,12,18,.91);
     box-shadow:0 0 28px rgba(74,255,164,.22),inset 0 0 22px rgba(42,154,112,.06);
-    backdrop-filter:blur(9px); font:12px ui-monospace,Menlo,Monaco,monospace; pointer-events:none; }
+    backdrop-filter:blur(9px); font:12px ui-monospace,Menlo,Monaco,monospace;
+    max-height:calc(100% - 60px); overflow-y:auto; overscroll-behavior:contain;
+    pointer-events:auto; touch-action:pan-y; scrollbar-width:thin; }
   #localInfo[hidden]{ display:none!important; }
   #localInfo .li-head{ display:flex; align-items:center; justify-content:space-between; gap:14px;
     padding-bottom:9px; margin-bottom:10px; border-bottom:1px solid rgba(125,255,208,.2); }
-  #localInfo .li-head strong{ color:#7dffd0; font-size:12px; letter-spacing:.14em; }
-  #localInfo .li-close{ color:#91a9b8; font-size:9px; letter-spacing:.08em; white-space:nowrap; }
-  #localInfo .li-title{ color:#fff; font-size:clamp(20px,3.2vw,28px); line-height:1.14; font-weight:800;
+  #localInfo .li-toolbar{ position:sticky; top:-1px; z-index:2; background:#07151c; padding-top:1px; }
+  #localInfo .li-head{ gap:8px; }
+  #li-drag{ flex:1; min-width:0; padding:8px 0; border:0; text-align:left; color:#7dffd0;
+    background:transparent; font:inherit; font-weight:700; font-size:12px; letter-spacing:.1em;
+    cursor:grab; touch-action:none; user-select:none; }
+  #li-drag:active{ cursor:grabbing; }
+  #li-close{ flex:0 0 36px; min-height:36px; border:1px solid #4c8175; border-radius:7px;
+    color:#eafff0; background:#122b30; font-size:24px; cursor:pointer; }
+  #localInfo .li-hint{ color:#91a9b8; font-size:10px; line-height:1.4; margin:0 0 8px; }
+  #li-position{ display:block; color:#7dffd0; font-size:15px; font-weight:700; margin-bottom:8px; }
+  #li-drag:focus-visible,#li-close:focus-visible{ outline:3px solid #2bea86; outline-offset:2px; }
+  #localInfo .li-title{ color:#fff; font-size:clamp(18px,2.6vw,24px); line-height:1.2; font-weight:800;
     margin-bottom:6px; letter-spacing:-.02em; text-shadow:0 0 8px rgba(125,255,208,.3); overflow-wrap:anywhere; }
   #localInfo .li-primary-tag{ display:inline-block; margin:0 0 13px; padding:4px 9px;
     border:1px solid rgba(125,255,208,.5); border-radius:999px; color:#7dffd0;
@@ -232,19 +243,17 @@
   #localInfo .li-v.warn{ color:#ffc65c; text-shadow:0 0 7px rgba(255,176,42,.35); }
   #localInfo .li-v.bad{ color:#ff6b6b; text-shadow:0 0 7px rgba(255,64,64,.35); }
   #localInfo .li-tags{ margin-top:10px; color:#9fe8ff; font-size:10px; line-height:1.45; opacity:.9; overflow-wrap:anywhere; }
-  #localInfo .li-audio{position:absolute;right:14px;bottom:13px;width:52px;height:43px;display:flex;align-items:flex-end;
-    justify-content:center;gap:3px;padding:8px 7px 7px;box-sizing:border-box;color:#78ff9d;border:1px solid currentColor;
+  #localInfo .li-audio{position:relative;margin:12px 0 0 auto;width:64px;display:flex;flex-direction:column;align-items:stretch;
+    gap:6px;padding:8px;box-sizing:border-box;color:#78ff9d;border:1px solid currentColor;
     border-radius:12px;background:rgba(2,10,15,.82);box-shadow:0 0 16px rgba(67,255,133,.32)}
+  #localInfo .li-audio-bars{display:flex;align-items:flex-end;justify-content:center;gap:3px;height:26px;flex-shrink:0}
   #localInfo .li-audio i{display:block;width:3px;height:100%;border-radius:3px;background:currentColor;transform:scaleY(.12);transform-origin:bottom;will-change:transform}
   #localInfo .li-audio.muted{color:#ff6b6b;box-shadow:0 0 15px rgba(255,64,64,.28)}
-  #localInfo .li-audio-label{position:absolute;right:10px;bottom:2px;width:62px;text-align:center;color:currentColor;font-size:7px;letter-spacing:.09em}
-  @media(max-width:560px){ #localInfo{ top:10px; left:10px; width:calc(100% - 20px); padding:12px 72px 14px 12px; }
+  #localInfo .li-audio-label{display:block;text-align:center;color:currentColor;font-size:9px;line-height:12px;letter-spacing:.09em}
+  @media(max-width:560px){ #localInfo{ top:10px; left:10px; width:calc(100% - 20px); padding:12px; }
     #localInfo .li-grid{ gap:5px 9px; } }
-  /* Local music controls only: ordinary kiosk cards keep their passive overlay. */
-  .xtore-music #localInfo{ max-height:calc(100% - 36px); overflow-y:auto; overscroll-behavior:contain;
-    pointer-events:auto; touch-action:pan-y; padding-right:16px; scrollbar-width:thin; }
-  .xtore-music #localInfo .li-head{ flex-wrap:wrap; gap:5px; }
-  .xtore-music #li-remote{ position:sticky; top:0; z-index:1; display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
+  /* The same card is closable/movable everywhere; music actions stay local to Xtore. */
+  .xtore-music #li-remote{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
     gap:6px; padding:5px 0 9px; margin-bottom:8px; background:#07151c; }
   #li-remote[hidden]{ display:none!important; }
   #li-remote button{ min-width:0; min-height:40px; padding:6px 4px; border:1px solid #4c8175; border-radius:7px;
@@ -252,8 +261,7 @@
   #li-remote button:focus-visible{ outline:3px solid #2bea86; outline-offset:2px; }
   #li-remote button:disabled{ opacity:.45; cursor:default; }
   #li-remote button[aria-pressed="true"]{ color:#ffd4d4; border-color:#c78080; }
-  .xtore-music #localInfo .li-audio{ position:relative; right:auto; bottom:auto; margin:12px 0 0 auto; }
-  @media(max-width:560px){ .xtore-music #localInfo{ max-height:calc(100% - 20px); padding-right:12px; } }
+  @media(max-width:300px){ #localInfo .li-grid{ grid-template-columns:minmax(0,1fr); } }
   @keyframes pulse{ 50%{ opacity:.25 } }
   #ctrls{ display:flex; align-items:center; gap:10px; margin:0 0 14px; transition:opacity .3s; }
   .cbtn{ width:40px; height:40px; border-radius:50%; border:1px solid rgba(125,184,255,.4); background:rgba(8,14,22,.7); color:#eafff0;
@@ -330,17 +338,22 @@
     <div class="line"><span id="meta">feed: pixer-eleven · stock</span><span class="live" id="live">conectando</span></div>
   </div>
   <aside id="localInfo" hidden aria-live="polite" aria-label="Información del contenido en emisión">
-    <div class="li-head"><strong>ⓘ CONTENIDO EN ANTENA</strong><span class="li-close">DOBLE TOQUE / CTRL+I · CERRAR</span></div>
+    <div class="li-toolbar">
+    <div class="li-head"><button id="li-drag" type="button" aria-label="Mover ficha" title="Arrastra la cabecera o usa las flechas del teclado">⠿ CONTENIDO EN ANTENA</button><button id="li-close" type="button" aria-label="Cerrar ficha" title="Cerrar ficha · Escape">×</button></div>
+    <p class="li-hint">Arrastra la cabecera · Ctrl+I abre/cierra</p>
+    <output id="li-position" aria-label="Posición en la playlist">— de —</output>
     <div id="li-remote" hidden role="group" aria-label="Mando local de este player virtual">
       <button id="li-prev" type="button" disabled aria-label="Contenido anterior">⏮ Anterior</button>
       <button id="li-next" type="button" disabled aria-label="Contenido siguiente">Siguiente ⏭</button>
       <button id="li-mute" type="button" disabled aria-label="Silenciar audio" aria-pressed="false">🔊 Sonido</button>
+      <button id="li-repeat" type="button" disabled aria-label="Repetir pieza" aria-pressed="false">↻ Repetir pieza</button>
+    </div>
     </div>
     <div class="li-title" id="li-title">sin contenido</div>
     <div class="li-primary-tag" id="li-primary-tag" hidden></div>
     <div class="li-grid" id="li-grid"></div>
     <div class="li-tags" id="li-tags"></div>
-    <div class="li-audio muted" id="li-audio" role="img" aria-label="Audio silenciado"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span class="li-audio-label" id="li-audio-label">MUTE</span></div>
+    <div class="li-audio muted" id="li-audio" role="img" aria-label="Audio silenciado"><span class="li-audio-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="li-audio-label" id="li-audio-label">MUTE</span></div>
   </aside>
   <div id="seg">
     <span class="close" id="segClose">×</span>
@@ -1075,7 +1088,7 @@ let _mupiResizeObserver=null;
 // Único observer del wrap (hubo DOS llamando a fitMupi entre r23 y r24 — el segundo
 // entró sin ver éste). Resetea el contador de reintentos: un relayout real es la señal
 // de que ya se puede medir.
-try{ if(window.ResizeObserver){ _mupiResizeObserver=new ResizeObserver(()=>{ fitMupi._retry=0; fitMupi(); }); _mupiResizeObserver.observe($('wrap')); } }catch(_){}
+try{ if(window.ResizeObserver){ _mupiResizeObserver=new ResizeObserver(()=>{ fitMupi._retry=0; fitMupi(); localInfoClamp(); }); _mupiResizeObserver.observe($('wrap')); } }catch(_){}
 
 // ── CONTENIDO EXPANDIDO (pantallas plegables) ───────────────────────────────────────
 // Un plegable tiene dos pantallas de relación de aspecto muy distinta: cerrado es ultra
@@ -2117,6 +2130,7 @@ function cacheBadge(){ if(qs.get('cachehud')!=='1') return;
 
 function mediaAdvance(token,ended=false){
   if(token!==_playTok)return;
+  if(typeof localInfoRepeatAdvance==='function'&&localInfoRepeatAdvance(ended))return;
   if(ended&&syncOn)syncFinishCurrent();else next();
 }
 async function play(i, forced){
@@ -2135,6 +2149,7 @@ async function play(i, forced){
     it=playlist[cur];
   }
   if(xtoreMusicEnabled())_xtoreMusicItem=it;
+  if(typeof localInfoRepeatSelect==='function')localInfoRepeatSelect(it);
   // ── PSEUDO-STREAMING ESTRICTO (r43): se emite lo que está EN DISCO, no online ──────
   // Si la pieza del índice es cacheable pero AÚN no está bajada, se salta a la siguiente
   // que SÍ lo esté (respeta orden/bucle; escaneo acotado a una vuelta → sin recursión).
@@ -3148,6 +3163,23 @@ function testTags(it){
 // persiste, no se activa remotamente y no altera la reproducción ni el proof.
 let _localInfoItem=null, _localInfoTimer=null;
 let _localInfoRemoteBusy=false;
+let _localInfoRepeatKey='';
+function localInfoRepeatIdentity(it){
+  return it?JSON.stringify([String(it.id),it.url,!!_xtoreMusicBase]):'';
+}
+function localInfoRepeatAllowed(it){
+  return xtoreMusicEnabled()&&!syncOn&&!directOn&&!_standby&&!!it&&['audio','video'].includes(KIND[it.type]);
+}
+function localInfoRepeatSelect(it){
+  if(!localInfoRepeatAllowed(it)||_localInfoRepeatKey!==localInfoRepeatIdentity(it))_localInfoRepeatKey='';
+}
+function localInfoRepeatAdvance(ended){
+  const it=_xtoreMusicItem;
+  const repeat=ended&&localInfoRepeatAllowed(it)&&_localInfoRepeatKey&&_localInfoRepeatKey===localInfoRepeatIdentity(it);
+  const index=repeat?playlist.findIndex(item=>localInfoRepeatIdentity(item)===_localInfoRepeatKey):-1;
+  if(index>=0){play(index);return true;}
+  _localInfoRepeatKey='';return false; // Errors, sync and expired audience always advance normally.
+}
 function localInfoRemoteAudio(){
   const level=mediaEl&&Number.isFinite(mediaEl.volume)?mediaEl.volume:volume;
   const vol=Math.max(0,Math.min(1,Number.isFinite(level)?level:0));
@@ -3162,11 +3194,19 @@ function localInfoRemoteRender(){
   button.disabled=disabled;
   if(button.textContent!==text)button.textContent=text;
   button.setAttribute('aria-pressed',String(state.muted));
+  button.setAttribute('aria-label',state.muted?'Activar sonido':'Silenciar audio');
   button.title=state.muted?'Activar sonido de este player':'Silenciar este player · volumen '+Math.round(state.volume*100)+'%';
+  const repeat=$('li-repeat'),allowed=localInfoRepeatAllowed(_xtoreMusicItem);
+  if(!allowed)_localInfoRepeatKey='';
+  repeat.disabled=disabled||cur<0||!allowed;
+  repeat.setAttribute('aria-pressed',String(!!_localInfoRepeatKey));
+  repeat.textContent=_localInfoRepeatKey?'↻ Repetición activa':'↻ Repetir pieza';
+  repeat.title='Repite este audio o vídeo al terminar. Las audiencias y su caducidad tienen prioridad.';
 }
 function localInfoRemoteAction(action){
   if(!xtoreMusicEnabled()||$('localInfo').hidden||_localInfoRemoteBusy||_standby||directOn||!playlist.length)return false;
-  if(!['prev','next','mute'].includes(action)||(action!=='mute'&&cur<0))return false;
+  if(!['prev','next','mute','repeat'].includes(action)||(action!=='mute'&&cur<0))return false;
+  if(action==='repeat'&&!localInfoRepeatAllowed(_xtoreMusicItem))return false;
   _localInfoRemoteBusy=true;
   try{
     if(action==='mute'){
@@ -3174,7 +3214,9 @@ function localInfoRemoteAction(action){
       if(!muted&&volume===0)volume=0.6;
       applyAudio();
       if(!muted&&mediaEl&&mediaEl.play&&mediaEl.paused&&!paused)xtoreMusicPlayAudio(mediaEl,_xtoreMusicItem,_playTok);
-    }else if(action==='prev')prev();else next();
+    }else if(action==='repeat'){
+      _localInfoRepeatKey=_localInfoRepeatKey?'':localInfoRepeatIdentity(_xtoreMusicItem);
+    }else{_localInfoRepeatKey='';if(action==='prev')prev();else next();}
     // next/prev select synchronously; play's existing token cancels stale async media.
     // No queued navigation or delayed callback can act on a later playlist here.
     return true;
@@ -3183,7 +3225,7 @@ function localInfoRemoteAction(action){
 function localInfoRemoteBind(){
   const remote=$('li-remote');if(!remote||!xtoreMusicEnabled())return;
   $('localInfo').tabIndex=0;
-  for(const action of ['prev','next','mute'])$('li-'+action).addEventListener('click',event=>{
+  for(const action of ['prev','next','mute','repeat'])$('li-'+action).addEventListener('click',event=>{
     event.preventDefault();event.stopPropagation();localInfoRemoteAction(action);
   });
   for(const type of ['pointerdown','pointerup','dblclick'])remote.addEventListener(type,event=>event.stopPropagation());
@@ -3280,7 +3322,8 @@ function localInfoRender(){
     a.className='li-k'; a.textContent=k; b.className='li-v'+(cls?(' '+cls):''); b.textContent=v||'—';
     grid.appendChild(a); grid.appendChild(b); };
   const samePos=it&&playlist.length&&playlist[cur]&&String(playlist[cur].id)===String(it.id);
-  const disk=localInfoDisk(it), pos=samePos?(cur+1)+' / '+playlist.length:'—';
+  const disk=localInfoDisk(it), pos=samePos?(cur+1)+' de '+playlist.length:'— de —';
+  $('li-position').textContent=pos;
   const dur=(mediaEl&&isFinite(mediaEl.duration)&&mediaEl.duration>0)?mediaEl.duration:(it&&it._dur)||0;
   const elapsed=(mediaEl&&isFinite(mediaEl.currentTime))?mediaEl.currentTime:0;
   const dim=it&&it._dim, vw=mediaEl&&mediaEl.videoWidth, vh=mediaEl&&mediaEl.videoHeight;
@@ -3297,16 +3340,61 @@ function localInfoRender(){
   row('pantalla',scr.screen||scr.machine||'sin identificar');
   $('li-tags').textContent=meta?(testTags(meta)||'sin etiquetas'):'sin etiquetas';
   localInfoAudioPaint((AUDIO_METER&&AUDIO_METER.level)||0);
+  localInfoClamp();
 }
 function localInfoVisible(opening){
   const box=$('localInfo'); box.hidden=!opening;
   clearInterval(_localInfoTimer); _localInfoTimer=null;
   if(opening){ localInfoRender(); audioMeterStart(); _localInfoTimer=setInterval(localInfoRender,1000); }
-  else audioMeterStop();
+  else{localInfoDragEnd();audioMeterStop();}
 }
 function localInfoToggle(){ const opening=$('localInfo').hidden; localInfoVisible(opening); return opening; }
 function localInfoShow(){ localInfoVisible(true); return true; }
 function localInfoHide(){ localInfoVisible(false); return false; }
+// Card uses the stable viewport wrap of THIS iframe, not the changing media box.
+// Its axes do not rotate with a video. The outer Xtore homography still projects everything.
+let _localInfoDrag=null;
+function localInfoBounds(x,y,width,height,cardWidth,cardHeight){
+  const edge=Math.min(10,width/2,height/2);
+  return {x:Math.max(edge,Math.min(x,width-cardWidth-edge)),y:Math.max(edge,Math.min(y,height-cardHeight-edge))};
+}
+function localInfoClamp(x,y){
+  const box=$('localInfo'),wrap=$('wrap');if(!box||box.hidden||!wrap.clientWidth||!wrap.clientHeight)return;
+  const point=localInfoBounds(x??box.offsetLeft,y??box.offsetTop,wrap.clientWidth,wrap.clientHeight,box.offsetWidth,box.offsetHeight);
+  box.style.left=point.x+'px';box.style.top=point.y+'px';
+}
+function localInfoDragEnd(){
+  const drag=_localInfoDrag;_localInfoDrag=null;
+  if(drag)try{$('li-drag').releasePointerCapture(drag.id);}catch(_){}
+}
+function localInfoCardBind(){
+  const box=$('localInfo'),handle=$('li-drag');
+  $('wrap').appendChild(box);
+  $('li-close').addEventListener('click',event=>{event.stopPropagation();localInfoHide();});
+  for(const type of ['pointerup','dblclick'])box.addEventListener(type,event=>event.stopPropagation());
+  box.addEventListener('keydown',event=>{
+    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();localInfoHide();}
+    else if(['Enter',' '].includes(event.key))event.stopPropagation();
+  });
+  handle.addEventListener('pointerdown',event=>{
+    if(event.isPrimary===false||event.button!==0)return;
+    event.preventDefault();event.stopPropagation();localInfoDragEnd();
+    _localInfoDrag={id:event.pointerId,x:event.clientX,y:event.clientY,left:box.offsetLeft,top:box.offsetTop};
+    handle.setPointerCapture(event.pointerId);
+  });
+  handle.addEventListener('pointermove',event=>{
+    const drag=_localInfoDrag;if(!drag||drag.id!==event.pointerId)return;
+    localInfoClamp(drag.left+event.clientX-drag.x,drag.top+event.clientY-drag.y);
+  });
+  for(const type of ['pointerup','pointercancel','lostpointercapture'])handle.addEventListener(type,localInfoDragEnd);
+  handle.addEventListener('keydown',event=>{
+    const step=event.shiftKey?30:10,delta={ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step],ArrowDown:[0,step]}[event.key];
+    if(!delta)return;
+    event.preventDefault();event.stopPropagation();localInfoClamp(box.offsetLeft+delta[0],box.offsetTop+delta[1]);
+  });
+  if(_mupiResizeObserver)_mupiResizeObserver.observe(box);
+}
+localInfoCardBind();
 // Pointer Events da un doble toque fiable en Android/WebView sin depender del
 // `dblclick` sintetizado por cada navegador. El ratón usa `dblclick`; touch/pen
 // usa dos pointerup cercanos (tiempo + distancia). `touch-action:manipulation`

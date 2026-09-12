@@ -35,10 +35,19 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
   Local a navegador/origen, sin sincronización entre equipos, imágenes ni credenciales.
   Formato distinto exige remarcar; giros/zoom de igual proporción requieren revisión humana.
   Olvidar preset no borra contadores/histórico. Un fallo de guardado mantiene el anterior.
-- Mini mando en Contenido en antena (doble toque/Ctrl+I): anterior/siguiente/mute,
-  solo instancia Xtore musical y lista actual, sin edición de playlist ni control de hardware.
-  Accesible por teclado; ficha desplazable y botones arriba. Autoplay sigue requiriendo gesto.
-  Son controles UI, NO nuevas herramientas invocables del MCP. NO DESCARGADO = sin copia offline.
+- Ficha Contenido en antena (doble toque/Ctrl+I): X o Escape con foco dentro cierran;
+  cabecera arrastrable o Tab y flechas (Mayús acelera), foco visible, toolbar sticky y scroll.
+  Cierre/arrastre/ecualizador son comunes al player; no alteran la homografía exterior.
+  La ficha usa el viewport del player: no se encoge con vídeos horizontales ni hereda su giro.
+- Mini mando exclusivo de Xtore musical, previo e integrado: anterior/siguiente/mute/repeat,
+  solo instancia y lista actual, sin edición de playlist ni control de hardware.
+  Repeat reinicia audio/vídeo al terminar naturalmente; navegación, cambio de pieza/contexto,
+  error o sustitución por neutral/TTL lo desarman. No renueva los 6 s de audiencia.
+  No disponible para imágenes, sincro/directo/standby ni otros perfiles. Cerrar no cancela loop.
+  1 de X = playlist efectiva (condicional único, 1 de 1), no prueba de emisión; AUDIO/LIVE/MUTE
+  ocupa otra fila bajo las barras. Autoplay sigue requiriendo gesto. Son UI documentada,
+  NO herramientas MCP nuevas. MCP local 0.2.8 / Help2026-09-12.6; no estado vivo ni despliegue.
+  NO DESCARGADO = sin copia offline, no ausencia de reproducción online.
 
 - ID persistente xtore-virtual-zapatillas: navegador sin hardware dedicado, registrado en Flota.
 - Analizador: https://admira.tv/videoanalytics/xtore/ — música independiente del vídeo en directo.

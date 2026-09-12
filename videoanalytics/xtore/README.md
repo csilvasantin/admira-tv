@@ -109,14 +109,36 @@ en curso, esta y el diálogo numérico se cancelan sin reanudar automáticamente
 No detecta giros/zoom del gemelo con igual proporción: el operador debe comprobar
 la superposición y remarcar si cambió la vista antes de iniciar análisis.
 
-El perfil musical exacto de Xtore añade Anterior, Siguiente y Sonido/Mute al
-principio de «Contenido en antena» (doble toque o Ctrl+I). Botones nativos con
-foco y estado accesibles, barra sticky y ficha con scroll para títulos largos.
-Reutiliza navegación tokenizada y audio del player: no añade un bus MCP ni
-modifica la playlist o otros equipos. Queda inactivo sin lista, fuera del perfil,
-con ficha cerrada, en standby o directo. Mute lee el estado real del elemento;
-desmutear sigue sujeto al permiso de autoplay. «NO DESCARGADO» es falta de copia
-offline, no ausencia de reproducción online. El resto de players no cambia.
+El perfil musical exacto de Xtore añade Anterior, Siguiente, Sonido/Mute y Repetir
+pieza al principio de «Contenido en antena», tanto en presentación previa como
+integrada. No es el previo de parrilla de un equipo físico ni amplía controles a
+otros perfiles. Doble toque o Ctrl+I abre la ficha; X o Escape con foco dentro la
+cierran sin detener música ni desactivar una repetición. La cabecera se arrastra
+dentro del player o se mueve con flechas al enfocarla con Tab (10 px; Mayús, 30 px).
+Botones nativos y foco visible; toolbar sticky, cuerpo con scroll y posición
+limitada al viewport del player (`#wrap`), no al rectángulo editorial del vídeo.
+La ficha se mantiene vertical y dispone del alto del visor aunque una pieza
+horizontal reduzca o gire el MUPI. Dentro de Xtore sigue proyectándose con el
+iframe exterior. Cierre, arrastre y ecualizador sí son comunes al player;
+no modifican la homografía/calibración exterior ni acceden al DOM del padre.
+
+Repetir pieza es local y solo para audio/vídeo al terminar naturalmente. Liga
+identidad ID/URL y contexto base/condicional; se desarma al cambiar de pieza o
+contexto, con Anterior/Siguiente, al desactivarlo o al avanzar por un error.
+No se permite en sincro, directo o standby ni para imágenes. Una audiencia válida
+puede interrumpirlo y neutral/TTL sustituye la pieza: repetir NO renueva los 6 s
+desde el último evento. No persiste ni escribe reglas/playlist; cerrar la ficha
+no lo desarma. Los callbacks se verifican con `_playTok` y el audio sustituido se
+detiene. Mute lee el elemento real y sigue sujeto al permiso de autoplay.
+
+El contador superior «1 de X» corresponde a la playlist efectiva; un condicional
+de una sola pieza es «1 de 1». Si no coincide la pieza seleccionada con la posición
+de la lista, muestra «— de —», nunca una posición inventada. No es proof-of-play.
+AUDIO/LIVE/MUTE ocupa otra fila debajo de las barras del ecualizador. El mando
+reutiliza navegación y audio de esta instancia: no añade herramientas MCP, no
+modifica Flota ni controla otros equipos. Sin lista, fuera del perfil, con ficha
+cerrada, en standby o directo no acepta acciones. «NO DESCARGADO» es falta de
+copia offline, no ausencia de reproducción online.
 
 ## Controles e histórico — ampliación 11 septiembre 2026
 
@@ -289,7 +311,8 @@ El MCP local independiente `/Users/Carlos/Claude/xtore-va-mcp` incluye la guía
 completa `docs/xtore-help.md`: `get_help` y recurso `admira-va://help` devuelven
 el mismo Markdown dentro de JSON, con `documentation_only:true`. No consultan
 estado ni red y no controlan la captura. `get_contract` enlaza la guía y separa
-el bus legado del postMessage de la web. MCP0.2.2: 20 herramientas contando
+el bus legado del postMessage de la web. MCP local 0.2.8, ayuda 2026-09-12.6:
+20 herramientas contando
 alias y 4 recursos. Clientes ya abiertos requieren reinicio de su proceso MCP
 para descubrir la nueva ayuda; no se ha forzado ese reinicio ni un despliegue.
 

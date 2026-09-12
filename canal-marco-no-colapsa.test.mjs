@@ -116,8 +116,51 @@ test("el reintento no se vuelve infinito", () => {
 test("el canal se autocura ante cualquier cambio de tamaño", () => {
   // Sin esto, una medida mala que llegara a colarse duraría hasta la siguiente pieza.
   // Desde r24 hay UN solo observer (hubo dos entre r23 y r24) y hereda el reset.
-  assert.match(canal, /_mupiResizeObserver=new ResizeObserver\(\(\)=>\{ fitMupi\._retry=0; fitMupi\(\); \}\)/);
+  assert.match(canal, /_mupiResizeObserver=new ResizeObserver\(\(\)=>\{ fitMupi\._retry=0; fitMupi\(\); localInfoClamp\(\); \}\)/);
   assert.equal((canal.match(/new ResizeObserver/g) || []).length, 1);
   // Y el Math.max(1,…) que lo causaba no puede volver.
   assert.doesNotMatch(canal, /const aH=Math\.max\(1,wrap\.clientHeight-padY\)/);
+});
+
+test("un único observer reajusta el marco y mantiene la ficha dentro del wrap", () => {
+  const nodes = new Map();
+  const node = (id) => {
+    if (!nodes.has(id)) nodes.set(id, {
+      id, hidden: false, clientWidth: 540, clientHeight: 960,
+      offsetWidth: 220, offsetHeight: 320, offsetLeft: 500, offsetTop: 900,
+      style: {}, addEventListener() {}, appendChild(child) { this.child = child; },
+    });
+    return nodes.get(id);
+  };
+  const observers = [];
+  class ResizeObserver {
+    constructor(callback) { this.callback = callback; this.observed = []; observers.push(this); }
+    observe(element) { this.observed.push(element); }
+  }
+  let fits = 0;
+  const fitMupi = () => { fits++; };
+  fitMupi._retry = 9;
+  const ctx = vm.createContext({ $: node, window: { ResizeObserver }, ResizeObserver, fitMupi });
+  const observerStart = canal.indexOf("let _mupiResizeObserver=null;");
+  vm.runInContext(canal.slice(observerStart, canal.indexOf("// ── CONTENIDO EXPANDIDO", observerStart)), ctx);
+  vm.runInContext(canal.slice(canal.indexOf("let _localInfoDrag=null;"), canal.indexOf("// Pointer Events da un doble toque")), ctx);
+
+  assert.equal(observers.length, 1);
+  assert.deepEqual(observers[0].observed, [node("wrap"), node("localInfo")]);
+  assert.equal(node("wrap").child, node("localInfo"));
+  observers[0].callback();
+  assert.equal(fits, 1);
+  assert.equal(fitMupi._retry, 0);
+  assert.deepEqual(node("localInfo").style, { left: "310px", top: "630px" });
+
+  node("wrap").clientWidth = 260;
+  node("wrap").clientHeight = 380;
+  observers[0].callback();
+  assert.deepEqual(node("localInfo").style, { left: "30px", top: "50px" });
+  node("localInfo").hidden = true;
+  node("wrap").clientWidth = 240;
+  observers[0].callback();
+  assert.equal(fits, 3);
+  assert.deepEqual(node("localInfo").style, { left: "30px", top: "50px" });
+  assert.equal(observers.length, 1, "mostrar/redimensionar no crea observers adicionales");
 });
