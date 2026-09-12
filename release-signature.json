@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r17.19:25",
-  "signature": "NeoMBA16 · MacBookAir16plata",
-  "agent": "NeoMBA16",
+  "version": "v.12.09.2026.r18.21:46",
+  "signature": "Codex · MacBookAir16plata",
+  "agent": "Codex",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "19:25",
-  "evidence": "Catálogo (FLT-100372 · Yokup #3228): «Crear vídeo» abre el generador con auto=1 (arranca solo: idea → Grok → máster → Stock); selector Formato en la barra (vertical 9:16 / horizontal 16:9 / las dos) recordado en localStorage y enviado en el deep-link (formatos); estética del folleto medida sobre la portada (fondo, claro/oscuro, 3 colores de marca) enviada como estilo y enseñada como chip; identidad por formato (la horizontal lleva :16x9), sondeo del Stock de las dos, previo doble (9:16 y 16:9) en la columna Anuncio y modal por versión. Probado: overlays del máster renderizados en los 4 casos (V/H × claro/oscuro) y sintaxis del inline script con node --check. Rebasado sobre r16 de Trinity (Xtore)."
+  "time": "21:46",
+  "evidence": "Alta desde admira.app, registro persistente y emparejamiento con identidad física independiente. Pruebas de API, SQLite, reproductor musical e integración local con Durable Object. Prueba física con el iPad de Luna pendiente de identificar su ID."
 }

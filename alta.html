@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=12.09.2026.r17.1925"></script>
+<script src="/auth-gate.js?v=12.09.2026.r18.2146"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -44,12 +44,12 @@
   .spin{display:inline-block;width:13px;height:13px;border:2px solid var(--mut);border-top-color:transparent;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}
   @keyframes s{to{transform:rotate(360deg)}}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r17.1925">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r18.2146">
 </head>
 <body>
 <!-- tarea4-alta-r35 · alta entrega el canal ya cableado (proxy /locations + circuit garantizado + canal que emitirá) -->
-<script src="/admira-nav.js?v=12.09.2026.r17.1925" data-active="alta" data-title="Alta de dispositivo" defer></script>
-<script src="/admira-frame.js?v=12.09.2026.r17.1925" defer></script>
+<script src="/admira-nav.js?v=12.09.2026.r18.2146" data-active="alta" data-title="Alta de dispositivo" defer></script>
+<script src="/admira-frame.js?v=12.09.2026.r18.2146" defer></script>
 <div class="wrap">
   <div class="brand">Admira · circuito DOOH</div>
   <nav style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:4px 0 14px">
@@ -58,6 +58,7 @@
     <a href="/canal.html" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border:1px solid var(--line);border-radius:8px;background:#08121b;color:var(--txt);font:600 12px ui-monospace,Menlo,monospace;text-decoration:none">📺 Canal</a>
   </nav>
   <h1>Alta de equipo</h1>
+  <p><a href="/virtual-players/" style="color:var(--acc)">Dar de alta o emparejar un Player virtual →</a></p>
   <p class="sub">Registra ESTA pantalla en el mapa y arranca su canal. Tarda un minuto.</p>
 
   <form id="form" class="card" autocomplete="off">
@@ -206,6 +207,6 @@ $('form').addEventListener('submit',async e=>{
 refreshPrev();
 loadProjects();
 </script>
-  <script src="/assets/admira-version-watch.js?v=12.09.2026.r17.1925" defer></script>
+  <script src="/assets/admira-version-watch.js?v=12.09.2026.r18.2146" defer></script>
 </body>
 </html>

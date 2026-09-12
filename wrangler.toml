@@ -4,6 +4,11 @@ name = "admira-tv"
 compatibility_date = "2024-09-23"
 pages_build_output_dir = "."
 
+[[durable_objects.bindings]]
+name = "VIRTUAL_PLAYERS"
+class_name = "VirtualPlayerRegistry"
+script_name = "admira-tv-mcp"
+
 # KV de captura de leads del formulario de ADcelerate (/lead → LEADS).
 # COMPARTIDO con admira-adstack (mismo namespace): un solo pool de leads.
 [[kv_namespaces]]

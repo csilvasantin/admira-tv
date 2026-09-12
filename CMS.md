@@ -139,3 +139,36 @@ Auto-refresco cada **40 s** (independiente del grid de flota de 10 s).
 
 _Documentado: 2026-06-26 · §6 añadido 2026-07-07 · descuadres accionables (tarea #4, r35)
 2026-07-07 (subMorfeo · MacBookProNegro14)._
+
+## Alta web y emparejamiento de Player virtual
+
+`https://admira.app/players/` inicia el alta y entrega los campos a
+`https://admira.tv/virtual-players/`, donde se confirma con la sesión de Admira.
+El CMS ofrece **Emparejar** junto a cada ficha virtual. La página permite consultar
+la asociación por ID físico, emparejar y desvincular. La API exige sesión y rol de
+edición; las lecturas públicas solo exponen identidad de programación.
+
+La autoridad sigue siendo `VirtualPlayerRegistry` del Worker `admira-tv-mcp`.
+Pages lo enlaza mediante `VIRTUAL_PLAYERS`: por ID virtual almacena el registro y
+por `physical:<ID>` almacena la asociación con revisión creciente. No hay claves
+de flota en el navegador. Los cambios concurrentes reciben 409 y no se pisan.
+Desvincular conserva la ficha virtual y la programación propia del dispositivo.
+
+`canal.html` consulta la asociación al arrancar y cada 15 segundos. Una revisión
+nueva recarga el canal. Playlist, parrilla, reglas y bus opcional usan el ID lógico;
+telemetría, control remoto y proof-of-play conservan el ID físico. Los previews y
+los iframes virtuales no consumen asociaciones físicas. La última asociación
+confirmada se conserva ante fallos de red; nunca se interpreta un fallo como una
+desvinculación. El perfil Xtore mantiene su playlist musical y reglas locales.
+La asociación no transporta las detecciones del iframe del analizador: una señal
+de audiencia remota debe configurarse/publicarse separadamente.
+
+Compatibilidad: `pixerScreens` se conserva como campo de las APIs históricas del
+grid. En la interfaz se habla de Player virtual y player real. No se migran ni se
+reescriben las asociaciones anteriores del grid.
+
+Despliegue: primero el Worker, después admira.tv (nuevo binding DO), después el
+núcleo compartido clearchannel-tv/admira.app. No requiere migrar ni borrar datos.
+Validación: tests de API, SQLite/CAS, aislamiento virtual/físico, perfil musical,
+y prueba local Pages → Durable Object. Para certificar el iPad de Luna falta
+identificar su ID y comprobar reproducción real en el dispositivo y en Flota.

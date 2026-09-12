@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=12.09.2026.r17.1925"></script>
+<script src="/auth-gate.js?v=12.09.2026.r18.2146"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -523,7 +523,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r17.1925">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r18.2146">
 </head>
 <body>
 <script>
@@ -542,8 +542,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=12.09.2026.r17.1925"></script>
-<script src="/admira-frame.js?v=12.09.2026.r17.1925" defer></script>
+<script src="/admira-nav.js?v=12.09.2026.r18.2146"></script>
+<script src="/admira-frame.js?v=12.09.2026.r18.2146" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -708,7 +708,7 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=12.09.2026.r17.1925"></script>
+<script src="xpl-runtime.js?v=12.09.2026.r18.2146"></script>
 <script src="/assets/virtual-players.js"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
@@ -1943,7 +1943,7 @@ $('progBands').addEventListener('click',e=>{
           '</span></td>'+
           '<td data-col="player" class="ebPlayerCell"><button type="button" class="ebScreenShortcut" data-open-remote aria-label="Abrir modo experto de '+esc(p.screen)+'">'+
             '<span class="ebScreen">'+esc(p.name||p.screen)+'</span></button>'+
-            (AdmiraVirtualPlayers.isVirtual(p)?'<div class="ebMeta" title="Corre en un navegador; no tiene hardware dedicado asociado">Virtual · navegador</div>':'')+'</td>'+
+            (AdmiraVirtualPlayers.isVirtual(p)?'<div class="ebMeta">Player virtual · <a href="/virtual-players/?screen='+encodeURIComponent(p.screen)+'">Emparejar</a></div>':'')+'</td>'+
           '<td data-col="rol"><span class="ebRoleStack">'+
             (role? '<span class="ebRole '+rCls+'">'+esc(role)+'</span>':hole('—'))+
             '<a class="ebPasses" href="'+passes.href+'" aria-label="Ver estadísticas de '+esc(p.screen)+': '+passes.count+' pases hoy"><b>'+passes.count+'</b> pases hoy <span aria-hidden="true">↗</span></a>'+
@@ -2000,7 +2000,7 @@ $('progBands').addEventListener('click',e=>{
         '<span class="ebAct"><select class="ebSel" data-role="player" title="Player físico vivo">'+playerOpts+'</select>'+
         '<button class="ebBtn" data-act="wire" data-screen="'+esc(g.screen)+'">asignar player</button></span></div>';
     }).join('') : '<div class="ebGapEmpty">✓ todas las superficies tienen player</div>') +'</div>';
-    gapHtml.push(gapSection('surfaces','Superficies de parrilla sin player (pixerScreens:[])',emptySurfaces.length,surfaceBody));
+    gapHtml.push(gapSection('surfaces','Players virtuales sin player real asociado',emptySurfaces.length,surfaceBody));
     const noP=locsDown?[]:locations.filter(L=>{const c=String(L.id||'').split('-')[0];return !liveCircuits.has(c)&&!players.some(p=>{const l=findLoc(p.loc);return l&&l.id===L.id;});});
     const siteBody=locsDown
       ? '<div class="ebGapList"><div class="ebGap crit"><span class="gk">mapa n/d</span><span class="gd">locations no accesible: '+esc(lc.err)+' (bloqueado en ES / timeout)</span></div></div>'
@@ -2082,7 +2082,7 @@ $('progBands').addEventListener('click',e=>{
         const next=Array.from(new Set(cur.concat([pid])));
         const {ok,status,j}=await ebPost(GRID_BASE+'/grid/config',{key,screen,pixerScreens:next});
         if(!ok){ ebMsg('No se pudo asignar player a '+screen+': '+((j&&j.error)||('HTTP '+status))+(status===403?' (clave GRID_KEY incorrecta)':''), false); return; }
-        ebMsg('✓ player '+pid+' cableado a la superficie '+screen+' (pixerScreens: '+next.join(', ')+').', true);
+        ebMsg('✓ player '+pid+' cableado a la superficie '+screen+' (players reales: '+next.join(', ')+').', true);
         ebLoad();
       }
     }catch(err){ ebMsg('Error de red: '+((err&&err.message)||err), false); }
@@ -2136,10 +2136,10 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-session.js?v=12.09.2026.r17.1925"></script>
-<script src="/admira-avatar.js?v=12.09.2026.r17.1925"></script>
-<script src="/cms-pacman.js?v=12.09.2026.r17.1925"></script>
-  <script src="/assets/admira-version-watch.js?v=12.09.2026.r17.1925" defer></script>
+<script src="/admira-session.js?v=12.09.2026.r18.2146"></script>
+<script src="/admira-avatar.js?v=12.09.2026.r18.2146"></script>
+<script src="/cms-pacman.js?v=12.09.2026.r18.2146"></script>
+  <script src="/assets/admira-version-watch.js?v=12.09.2026.r18.2146" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
    Mismo patrón que el highscore de yokup: tirador por columna, mínimo por

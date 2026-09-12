@@ -49,6 +49,7 @@ function fixture(){
     startAdv:ms=>timers.push(ms),setTimeout,clearTimeout,
   };
   vm.createContext(c);
+  vm.runInContext(section('const pairingReady =','// Xtore\'s isolated virtual player'),c);
   vm.runInContext(section('function xtoreMusicEnabled()','function xtorePublicRead('),c);
   vm.runInContext(section('const DEFAULT_DRAFT=','async function loadDefaultDraft('),c);
   vm.runInContext('DEFAULT_DRAFT.ready=true',c);
@@ -716,4 +717,15 @@ test('opaque music selection/playing/blocked/empty cannot write proof, presence,
   for(const fn of ['emitFlush','_postNow','_postStandby','signagePlaylistPush','cacheReport','startPositionBeat'])c[fn]();
   c.pushPosition([0,0]);
   assert.equal(tallyCalls,0);assert.deepEqual(writes,[]);assert.equal(c._nowItem,null);
+});
+
+test('paired physical player keeps the Xtore music behavior and reports its own identity',async()=>{
+  const f=fixture(),c=f.c,writes=[];
+  c.XTORE_PARENT='';c.qs=new URLSearchParams('screen=ipad-local-test');
+  c.window.AdmiraPlayerPairing={source:{screen:'xtore-virtual-zapatillas',name:'Zapatillas',circuit:'admiranext',mode:'conditional'}};
+  assert.equal(c.xtoreMusicEnabled(),true);
+  f.draft([song()]);c.xtoreMusicRebuild();await settle();assert.equal(c.mediaEl.tagName,'AUDIO');assert.equal(c.mediaEl.paused,false);assert.equal(f.timers.length,0);
+  Object.assign(c,{scr:{screen:'ipad-local-test',circuit:'luna',machine:''},NOW_API:'https://example.invalid/now',TELEMETRY_PRODUCER:'local-test',DEVICE_TELEMETRY:{},playerAudioState:()=>({muted:false}),guardHealth:()=>({}),fetch:async(url,options)=>{writes.push(JSON.parse(options.body));return{ok:true};}});
+  vm.runInContext(section('function _postNow(item)','// ── GUARDIA DE EMISIÓN'),c);
+  c._postNow({id:'song'});assert.equal(writes.length,1);assert.equal(writes[0].screen,'ipad-local-test');assert.equal(writes[0].loc,'luna');
 });

@@ -24,7 +24,7 @@
 // Ahora cada publicación cambia este literal → el navegador ve que sw.js ha
 // cambiado → install + activate → la despensa vieja se tira entera.
 // Lo mantiene al día ./deploy.sh, que ABORTA si no coincide con el sello.
-const CACHE = 'admira-shell-v.12.09.2026.r17.19:25';
+const CACHE = 'admira-shell-v.12.09.2026.r18.21:46';
 
 // Shell del canal: la HTML canónica + sus assets críticos same-origin.
 const SHELL = [
@@ -37,6 +37,9 @@ const SHELL = [
   '/favicon.svg',
   '/admira-nav.js',
   '/xpl-runtime.js',
+  '/assets/player-pairing.js',
+  '/videoanalytics/xtore/conditional-music.mjs',
+  '/videoanalytics/xtore/virtual-player.mjs',
   '/offline.html',
   '/icon-192.png',
   '/icon-512.png',
@@ -48,6 +51,9 @@ const CRITICAL = new Set([
   '/favicon.svg',
   '/admira-nav.js',
   '/xpl-runtime.js',
+  '/assets/player-pairing.js',
+  '/videoanalytics/xtore/conditional-music.mjs',
+  '/videoanalytics/xtore/virtual-player.mjs',
   '/icon-192.png',
   '/icon-512.png',
 ]);

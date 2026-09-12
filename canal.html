@@ -51,9 +51,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=12.09.2026.r17.1925"></script>
+<script src="xpl-runtime.js?v=12.09.2026.r18.2146"></script>
 <script>
-  window.ADMIRA_VERSION='v.12.09.2026.r17.19:25';
+  window.ADMIRA_VERSION='v.12.09.2026.r18.21:46';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -387,6 +387,7 @@
   <aside id="chan"></aside>
 </div>
 
+<script src="/assets/player-pairing.js?v=12.09.2026.r18.2146"></script>
 <script>
 // Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
 // directo (pub-…r2.dev): más resiliente y evita bloqueos de DNS/filtrado en algunas
@@ -400,13 +401,16 @@ const MEDIA = ['video','animation','image','digital-twin','audio','music','locuc
 // que ni se precachea ni se captura como fotograma. Ver INTERACTIVO más abajo.
 const KIND = { video:'video', animation:'video', image:'image', 'digital-twin':'image', 'twin-npc':'image', audio:'audio', music:'audio', locucion:'audio', interactive:'interactive', xperiencia:'interactive' };
 const qs = new URLSearchParams(location.search);
+const pairingReady = window.AdmiraPlayerPairing?.ready || Promise.resolve();
+function programScreen(){return window.AdmiraPlayerPairing?.source?.screen || scr.screen;}
+function programCircuit(){return window.AdmiraPlayerPairing?.source?.circuit || scr.circuit;}
 // Xtore's isolated virtual player reads public data through its exact parent.
 // Opt-in only: ordinary players keep their existing feed and remote governance.
 const XTORE_PARENT = qs.get('xtoreParent')==='1' && window.parent!==window &&
   /^(https:\/\/(www\.)?admira\.tv|http:\/\/(localhost|127\.0\.0\.1):\d+)$/.test(qs.get('parentOrigin')||'')
   ? qs.get('parentOrigin') : '';
 function xtoreMusicEnabled(){
-  return !!XTORE_PARENT && qs.get('xtoreMusic')==='1' && qs.get('screen')==='xtore-virtual-zapatillas';
+  return (!!XTORE_PARENT && qs.get('xtoreMusic')==='1' && qs.get('screen')==='xtore-virtual-zapatillas') || window.AdmiraPlayerPairing?.source?.screen==='xtore-virtual-zapatillas';
 }
 function xtorePublicRead(resource){
   if(!XTORE_PARENT||!['catalog','rules','playlist'].includes(resource))return Promise.reject(new Error('Public bridge unavailable'));
@@ -1189,7 +1193,7 @@ function emitLoad(){ const d=emitDateStr();
 function emitRecord(it){
   // This opaque music instance reports media evidence only to its exact parent.
   // Selection/autoplay denial must never be recorded as fleet proof-of-play.
-  if(xtoreMusicEnabled())return;
+  if(XTORE_PARENT&&xtoreMusicEnabled())return;
   if(!it||!it.id) return;
   const t=emitLoad(), type=it.type||'image', seg=emitSeg(it);
   const secs = editorialSec(it) || 15;   // vídeo aún sin metadatos: estimación histórica de 15 s
@@ -1201,7 +1205,7 @@ function emitRecord(it){
   try{ localStorage.setItem('adtv_emit:'+scr.screen+':'+_emitDate, JSON.stringify(t)); }catch(_){}
   _emitDirty=true; if(!_emitTimer) _emitTimer=setTimeout(emitFlush,60000);   // 60 s: el tally vive en localStorage (L855) y beforeunload flushea — 12 s eran ~4.300 POST/día de más
 }
-function emitFlush(){ if(xtoreMusicEnabled())return; _emitTimer=null; if(!_emitDirty) return;
+function emitFlush(){ if(XTORE_PARENT&&xtoreMusicEnabled())return; _emitTimer=null; if(!_emitDirty) return;
   const t=_emitTally; if(!t||!scr.circuit) return;   // sin circuito no hay a quién imputar
   _emitDirty=false;
   try{ fetch(EMIT_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
@@ -1265,7 +1269,7 @@ window.addEventListener('offline',()=>refreshDeviceTelemetry(true));
 // Sin keepalive (r7): en WebKit de iOS 17 la cuota de 64 KiB de cuerpos keepalive no se libera
 // y, tras unos POST, todos los siguientes se rechazan en silencio → el iPad latía UNA vez por
 // carga y perdía proof-of-play. Estos envíos ocurren con la página viva: fetch normal.
-function _postNow(item){ if(xtoreMusicEnabled())return; try{ if(item) item.audio=playerAudioState(); DEVICE_TELEMETRY.audio=playerAudioState(); fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},
+function _postNow(item){ if(XTORE_PARENT&&xtoreMusicEnabled())return; try{ if(item) item.audio=playerAudioState(); DEVICE_TELEMETRY.audio=playerAudioState(); fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},
   body:JSON.stringify({ screen:scr.screen, producer:TELEMETRY_PRODUCER, item, standby:false, role:'canal', version:window.ADMIRA_VERSION||'', device:DEVICE_TELEMETRY, health:guardHealth(),
     loc:scr.circuit||'', locName:scr.name||scr.circuit||'', machine:scr.machine||'' })}).catch(()=>{}); }catch(_){} }
 // ── GUARDIA DE EMISIÓN (06-09-2026, DCL-6cfb6dea, foco admira.tv · players Android/iOS) ─────────
@@ -1326,7 +1330,7 @@ function guardTick(){
 setInterval(guardTick,GUARD_TICK_MS);
 
 function signageNowPush(it){
-  if(xtoreMusicEnabled())return;
+  if(XTORE_PARENT&&xtoreMusicEnabled())return;
   if(!it||!it.id||!scr.screen||!it.url) return;
   const now=Date.now();
   // startedAt = instante real en que ESTA pantalla empezó el asset → el preview
@@ -1361,7 +1365,7 @@ function signageNowPush(it){
 // /locations/cmd, que ya sondean todos los players: mac/win/linux/ios/android).
 // El heartbeat sigue latiendo con standby:true → la pantalla NO se cuenta como caída.
 var _standby=false, _sbKeep=null;   // var (no let): setLive lo consulta antes de esta línea
-function _postStandby(){ if(xtoreMusicEnabled())return; try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},
+function _postStandby(){ if(XTORE_PARENT&&xtoreMusicEnabled())return; try{ fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},
   body:JSON.stringify({ screen:scr.screen, producer:TELEMETRY_PRODUCER, standby:true, role:'canal', version:window.ADMIRA_VERSION||'', device:DEVICE_TELEMETRY,
     loc:scr.circuit||'', locName:scr.name||scr.circuit||'', machine:scr.machine||'', ts:Date.now() })}).catch(()=>{}); }catch(_){} }
 function standbyOn(on){
@@ -1387,7 +1391,7 @@ function standbyOn(on){
 const PLAYLIST_API='https://brain.digitalavatar.ai/control/playlist';
 let _plSig='';
 function signagePlaylistPush(){
-  if(xtoreMusicEnabled())return;
+  if(XTORE_PARENT&&xtoreMusicEnabled())return;
   if(PREVIEW.on||!scr.screen) return;   // el previo de borrador jamás contamina el mando
   // (una playlist VACÍA sí se publica: el mando debe reflejar el segmento vacío,
   //  no quedarse con la lista de un lanzamiento anterior)
@@ -1507,8 +1511,8 @@ const tieneTagDefault=it=>(it&&Array.isArray(it.tags)?it.tags:[]).some(t=>String
 let gridInjected=[], gridExactMode=false;
 let _gridSig='·';   // firma de la última parrilla aplicada ('·' = imposible → el primer loadGrid siempre aplica)
 function gridBadge(txt){ let b=$('gridBadge'); if(!b){ b=document.createElement('div'); b.id='gridBadge'; b.style.cssText='position:absolute;top:8px;right:8px;z-index:40;background:rgba(22,16,4,.82);border:1px solid rgba(255,200,90,.45);color:#ffd866;border-radius:999px;padding:4px 11px;font:12px ui-monospace,Menlo,monospace;backdrop-filter:blur(4px)'; ($('mupi')||document.body).appendChild(b); } b.style.display=txt?'block':'none'; b.textContent=txt; }
-async function loadGrid(){ if(!scr.screen) return;
-  try{ const d=await fetch(GRID_API+'/grid/day?screen='+encodeURIComponent(scr.screen),{cache:'no-store'}).then(r=>r.json());
+async function loadGrid(){ await pairingReady; if(!scr.screen) return;
+  try{ const d=await fetch(GRID_API+'/grid/day?screen='+encodeURIComponent(programScreen()),{cache:'no-store'}).then(r=>r.json());
     if(!d||!d.ok){ return; }
     const cur=(d.bands||[]).find(b=>b.isNow); const out=[]; const seen=new Set();
     // Duración editorial de la parrilla (config.slotSeconds de /grid/day): imagen y audio
@@ -1673,7 +1677,8 @@ function xtoreMusicKeydown(event){
   event.preventDefault();if(!event.repeat)xtoreMusicTap();
 }
 async function loadDefaultDraft(){
-  const screen=String(scr.screen||scr.circuit||'').trim();if(!screen||PREVIEW.on)return;
+  await pairingReady;
+  const screen=String(programScreen()||programCircuit()||'').trim();if(!screen||PREVIEW.on)return;
   try{
     const d=XTORE_PARENT?await xtorePublicRead('playlist'):await fetch('/api/playlist?screen='+encodeURIComponent(screen)+'&_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
     if(xtoreMusicEnabled()&&(d?.ok!==true||!Array.isArray(d?.draft?.items)))throw new Error('Playlist unavailable');
@@ -2131,7 +2136,7 @@ function cacheReportPayload(){
   return { screen:scr.screen, ready, total:inv.length, downloading, bytes:_cBytes, contents };
 }
 let _cacheSig='', _cacheSentAt=0;   // dedupe del inventario: el mando exige at<120 s → latido ≤60 s, nunca más lento
-function cacheReport(){ if(xtoreMusicEnabled())return; if(!scr.screen) return; _lastCacheRep=Date.now();
+function cacheReport(){ if(XTORE_PARENT&&xtoreMusicEnabled())return; if(!scr.screen) return; _lastCacheRep=Date.now();
   // El payload solo viaja si CAMBIÓ, hay descargas en curso, o toca latido (55 s desde el
   // último ACEPTADO). Antes eran 2.880 POST/día con el mismo inventario durante horas.
   // La firma se resetea en el catch para que el arranque offline reintente (patrón r45).
@@ -2655,7 +2660,8 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   if(showStatus) setStockStatus('checking');                  // 🟡 revisando stock
   try{
   const _reqT=Date.now();
-  const r=XTORE_PARENT?null:await fetch(INDEX+(INDEX.indexOf('?')>=0?'&':'?')+'t='+_reqT,{cache:'no-store'});
+  const feedIndex=xtoreMusicEnabled()?'https://stock.admira.store/stock/index.json':INDEX;
+  const r=XTORE_PARENT?null:await fetch(feedIndex+(feedIndex.indexOf('?')>=0?'&':'?')+'t='+_reqT,{cache:'no-store'});
   const _dateHdr=r?.headers.get('date');
   if(_dateHdr){
     const _serverT=Date.parse(_dateHdr);
@@ -3789,7 +3795,7 @@ let _lastPos=null, _lastPosSent=0, _posInFlight=false;
 function _haversine(a,b){ const R=6371000,t=x=>x*Math.PI/180; const dla=t(b[1]-a[1]),dlo=t(b[0]-a[0]);
   const s=Math.sin(dla/2)**2+Math.cos(t(a[1]))*Math.cos(t(b[1]))*Math.sin(dlo/2)**2; return 2*R*Math.asin(Math.sqrt(s)); }
 function pushPosition(coords){
-  if(xtoreMusicEnabled())return;
+  if(XTORE_PARENT&&xtoreMusicEnabled())return;
   if(!scr.circuit || _posInFlight){ return; }   // sin id no hay a quién mover; guarda anti-solapamiento
   _posInFlight=true;
   const prev=_lastPos, prevT=_lastPosSent;
@@ -3808,7 +3814,7 @@ function onGeo(pos){
   if(movedFar || stale) pushPosition(coords);
 }
 function startPositionBeat(){
-  if(xtoreMusicEnabled())return;
+  if(XTORE_PARENT&&xtoreMusicEnabled())return;
   if(!isMobileScreen || !navigator.geolocation) return;
   save('adtv_mobile','1');
   const opt={ enableHighAccuracy:true, maximumAge:30000, timeout:20000 };
@@ -3969,7 +3975,7 @@ const XPLCanal = (function(){
   function loadRules(){ return (REMOTE && REMOTE.length) ? REMOTE : seeds(); }
   function fetchRemote(){
     if(XTORE_PARENT)return;
-    const u = STORE+'/xpl/resolve?screen='+encodeURIComponent(scr.screen||'default')+(scr.circuit?('&circuit='+encodeURIComponent(scr.circuit)):'')+'&t='+Date.now();
+    const u = STORE+'/xpl/resolve?screen='+encodeURIComponent(programScreen()||'default')+(programCircuit()?('&circuit='+encodeURIComponent(programCircuit())):'')+'&t='+Date.now();
     fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
       if(d && Array.isArray(d.rules) && d.rules.length){ REMOTE=d.rules; if(engine) engine.setRules(loadRules()); }
     }).catch(()=>{});
@@ -3979,8 +3985,8 @@ const XPLCanal = (function(){
   // Pide la segmentación de ESTE equipo (target=su circuito); el worker devuelve su
   // matriz propia si la tiene asignada, o la global ('all') en su defecto.
   function fetchMatrix(){
-    var tgt = (typeof scr==='object' && scr.circuit) ? scr.circuit : 'all';
-    (XTORE_PARENT?xtorePublicRead('rules').then(d=>JSON.stringify(d)):fetch(SEG_URL+'?target='+encodeURIComponent(tgt)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null)).then(t=>{
+    var tgt = window.AdmiraPlayerPairing?.source?.screen || programCircuit() || 'all';
+    (window.AdmiraPlayerPairing?.rules?Promise.resolve(JSON.stringify(window.AdmiraPlayerPairing.rules)):XTORE_PARENT?xtorePublicRead('rules').then(d=>JSON.stringify(d)):fetch(SEG_URL+'?target='+encodeURIComponent(tgt)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null)).then(t=>{
       if(!t) return;
       if(t===lastMTxt) return;                     // matriz sin cambios en el CMS → nada que reprocesar (la cadencia de 15 s se mantiene)
       let d=null; try{ d=JSON.parse(t); }catch(_){ return; }
@@ -4170,7 +4176,7 @@ async function audienceRemotePoll(){
   if(!AUD_REMOTE.on) return;
   AUD_REMOTE.polls++;
   try{
-    const r=await fetch(AUDIENCE_API+'/audience/'+encodeURIComponent(scr.screen||scr.circuit||'default'),{cache:'no-store'});
+    const r=await fetch(AUDIENCE_API+'/audience/'+encodeURIComponent(programScreen()||programCircuit()||'default'),{cache:'no-store'});
     const d=r.ok?await r.json():null;
     if(!d) throw new Error('audience '+r.status);
     AUD_REMOTE.fails=0; AUD_REMOTE.ok++;
@@ -4197,6 +4203,18 @@ if(PREVIEW.on){
   setInterval(()=>{ try{ schedulePrecache(); }catch(_){} }, 12000);
   setInterval(()=>{ try{ cacheReport(); }catch(_){} }, 30000);
 } else {
+  (async()=>{
+  await pairingReady;
+  if(xtoreMusicEnabled()){
+    document.documentElement.classList.add('xtore-music');
+    tap.setAttribute('role','button');tap.tabIndex=0;tap.addEventListener('keydown',xtoreMusicKeydown);
+  }
+  const pairedSource=window.AdmiraPlayerPairing?.source;
+  if(pairedSource){
+    const ownMode=LS('adtv_mode','local'),ownSync=LS('adtv_sincro','0');
+    setAdmiraMode(pairedSource.mode); save('adtv_mode',ownMode); save('adtv_sincro',ownSync);
+    $('screenLbl').textContent += ' · Player virtual: '+pairedSource.name;
+  }
   // Arranque offline-safe: sin red, pinta ya el loop desde el catálogo cacheado
   // (el fetch normal lo refresca en cuanto vuelva la conexión).
   if(!navigator.onLine && restoreCatalog()){ rebuild(false); setLive('OFFLINE · loop en caché · '+playlist.length, playlist.length>0); }
@@ -4217,6 +4235,7 @@ if(PREVIEW.on){
   if(playoutMode==='conditional' && window.XPLCanal) XPLCanal.start();
   // r62: público desde el bus (?audience=remote) — sondeo a 500 ms desde el arranque
   if(AUDIENCE_REMOTE) audienceRemoteStart();
+  })().catch(error=>console.error('[Player virtual] Error de arranque',error));
 }
 
 // ── MODO REMOTO: el CMS fija el modo de emisión de ESTE equipo y el player reacciona.
@@ -4267,6 +4286,8 @@ function applyPlayoutAssignment(d){
 }
 let _autonomousPlan=false, _autonomousRemoteSync=false;
 async function pollMode(){
+  await pairingReady;
+  if(window.AdmiraPlayerPairing?.source) return;
   if(!scr.circuit) return;   // sólo equipos registrados (con circuito/id)
   // Un modo bloqueado por la integración, URL_TAG o tag EN VIVO = decisión
   // explícita del operador: esta pantalla no obedece cambios de modo remotos.
@@ -4708,6 +4729,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=12.09.2026.r17.1925" defer></script>
+  <script src="/assets/admira-version-watch.js?v=12.09.2026.r18.2146" defer></script>
 </body>
 </html>
