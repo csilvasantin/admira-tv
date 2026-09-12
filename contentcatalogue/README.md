@@ -13,6 +13,7 @@ cargado. Piloto: catálogo Alcampo del 10 al 23 de septiembre de 2026 (Yokup #30
 | `catalogos/index.json` | Lista de catálogos disponibles (`id`, `etiqueta`, `validez`, `archivo`…). |
 | `catalogos/<id>.json` | Un catálogo: `{catalogo, fuente, validez, tiendas, paginas, productos:[{p, seccion, nombre, marca, detalle, precio, unidad, promo, destacado}]}`. |
 | `/functions/contentcatalogue/api/analizar.js` | Pages Function. `GET` → `{configured, bbox:true, rejilla:0.1}`; `POST {pages:[{n, image}]}` (1–4 páginas `data:image/jpeg`) → `{productos}` leídos con Grok (xAI, `json_schema` estricto), cada uno con su `bbox`. Precios verificados con `\d+,\d{2}`. |
+| `/functions/api/sso/pase.js` | Pase SSO (Yokup #3165). `GET /api/sso/pase?aud=admiranext.com` con la sesión del portal → `{ok, pase, exp, email_masked}`; 401 sin sesión, 403 si el email no está en `ADMIRA_SSO_EMAILS`. Firma/verificación en `functions/_sso-pase.js` (test `functions/_sso-pase.test.mjs`). |
 | `/functions/contentcatalogue/api/imagen/[[ruta]].js` | Imagen real del producto (FLT-100318). `POST {catalogo_id, slug, image}` guarda el recorte en R2 (sesión del portal); `GET /contentcatalogue/api/imagen/<catalogo_id>/<slug>` lo sirve público con CORS `*` y caché de 1 día. `_imagen-lib.js` es el código común. |
 
 **Deep-link al generador (contrato con admiranext.com/tiktok).**
@@ -20,6 +21,26 @@ cargado. Piloto: catálogo Alcampo del 10 al 23 de septiembre de 2026 (Yokup #30
 producto del catálogo más `{catalogo, validez:{desde,hasta}, origen:"admira.tv/contentcatalogue", catalogo_id}`.
 Viaja `imagen` (URL pública de la foto recortada, ver abajo); NO viaja `bbox` ni los campos internos `_*`.
 Se abre en pestaña nueva. Desde la consola: `ADMIRA_CC.deepLink(ADMIRA_CC.actual().productos[0])`.
+
+**Pase SSO al generador (Yokup #3165).** Al pulsar «Crear vídeo», «Rehacer» o el lote de destacados,
+la página pide `GET /api/sso/pase?aud=admiranext.com` (`fetch` con `credentials:'include'`) y abre el
+deep-link con `&pase=<pase>`; el Generador lo acepta y no vuelve a pedir sesión. La pestaña se abre en
+el mismo gesto del clic (`about:blank`) y se navega cuando llega el pase, para que el bloqueador de
+ventanas no la tire; en el lote se piden tantos pases como productos (son de un solo uso) antes de las
+confirmaciones. Si el pase falla (401 sin sesión, 403 email fuera de lista, red), el deep-link va sin
+pase como siempre y sale un aviso discreto («Sin pase: el Generador puede pedir sesión»). Depurar:
+`ADMIRA_CC.pase()` (la respuesta del endpoint) y `ADMIRA_CC.abrir(p)`.
+
+*Contrato del pase (fijo, el mismo que verifica admiranext):* `payload = base64url(JSON.stringify({v:1,
+email, iat, exp (iat+120 s), nonce (16 hex), iss:"admira.tv", aud:"admiranext.com", origen:"contentcatalogue"}))`,
+`firma = base64url(HMAC-SHA256(ADMIRA_SSO_SECRET, payload))`, `pase = payload + "." + firma`; `iat`/`exp`
+en segundos Unix; el secreto (hex de 64 chars) se usa como bytes UTF-8 tal cual. Solo se emite con sesión
+del portal válida (`readSession` + `hasAnyAccess`) y email en la lista; mismo origen (`Sec-Fetch-Site`);
+`Cache-Control: no-store`; el pase nunca se escribe en logs. Secretos del proyecto Pages `admira-tv`:
+`ADMIRA_SSO_SECRET` (compartido con admiranext, en la bóveda) y `ADMIRA_SSO_EMAILS`
+(`wrangler pages secret put ADMIRA_SSO_EMAILS --project-name admira-tv`, valor
+`csilva@admira.com,csilvasantin@gmail.com`, que es también el defecto en código). En local:
+`.dev.vars` con un secreto de prueba y la sesión `admira-tv:auth:session:testtoken` del KV local.
 
 **Añadir un catálogo a mano.** Deja el JSON en `catalogos/` y añade su entrada en
 `catalogos/index.json`. Si sale del análisis IA, el botón «Descargar JSON del análisis»

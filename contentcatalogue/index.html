@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=12.09.2026.r4.1152"></script>
+<script src="/auth-gate.js?v=12.09.2026.r5.1156"></script>
 <!-- preconnect: el generador de vídeo (TikTok de AdmiraNeXT) y la CDN de pdf.js -->
 <link rel="preconnect" href="https://www.admiranext.com" crossorigin>
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
@@ -181,12 +181,12 @@
   .foot b{color:var(--green);font-weight:700}
   @media(max-width:640px){.hero{padding-top:34px}.panel{padding:14px}.acts{align-items:stretch}.acts .row{justify-content:flex-start}}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r4.1152">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r5.1156">
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.12.09.2026.r4.11:52';</script>
-<script src="/admira-nav.js?v=12.09.2026.r4.1152" data-active="apps" data-title="Catálogo" defer></script>
-<script src="/admira-frame.js?v=12.09.2026.r4.1152" defer></script>
+<script>window.ADMIRA_VERSION='v.12.09.2026.r5.11:56';</script>
+<script src="/admira-nav.js?v=12.09.2026.r5.1156" data-active="apps" data-title="Catálogo" defer></script>
+<script src="/admira-frame.js?v=12.09.2026.r5.1156" defer></script>
 
 <!-- barra de modo app (se muestra sólo con ?app=1) -->
 <div class="app-bar" id="appBar">
@@ -260,7 +260,7 @@
         <tbody id="cuerpo"><tr><td colspan="5" class="empty">Cargando el catálogo…</td></tr></tbody>
       </table>
     </div>
-    <p class="hint" style="margin-top:10px">«Crear vídeo» abre el generador TikTok de AdmiraNeXT en una pestaña nueva con el producto ya cargado (nombre, precio, promo, validez). «Copiar guion» deja en el portapapeles un guion corto por si prefieres dictarlo. Cuando el generador publica el máster en el Stock, aquí aparece el <b>previo</b> a la derecha (se sondea el Stock cada 15 s durante 15 min tras pulsar Crear vídeo): pasa el ratón para verlo moverse, haz clic para verlo a tamaño completo. La <b>miniatura</b> de la columna Producto es la foto real recortada del folleto: clic = la página completa con la caja resaltada; esa misma imagen viaja al generador dentro del anuncio.</p>
+    <p class="hint" style="margin-top:10px">«Crear vídeo» abre el generador TikTok de AdmiraNeXT en una pestaña nueva con el producto ya cargado (nombre, precio, promo, validez) y con un <b>pase de entrada</b> de 2 minutos firmado por admira.tv, para que el generador no vuelva a pedirte sesión (si no hay pase, avisa y lo abre igual). «Copiar guion» deja en el portapapeles un guion corto por si prefieres dictarlo. Cuando el generador publica el máster en el Stock, aquí aparece el <b>previo</b> a la derecha (se sondea el Stock cada 15 s durante 15 min tras pulsar Crear vídeo): pasa el ratón para verlo moverse, haz clic para verlo a tamaño completo. La <b>miniatura</b> de la columna Producto es la foto real recortada del folleto: clic = la página completa con la caja resaltada; esa misma imagen viaja al generador dentro del anuncio.</p>
 
   </div>
 
@@ -338,8 +338,36 @@
     obj.catalogo_id=actual.id;
     return obj;
   }
-  function deepLink(p){ return TIKTOK+'?producto='+encodeURIComponent(JSON.stringify(productoParaTikTok(p))); }
-  window.ADMIRA_CC={ deepLink:deepLink, producto:productoParaTikTok, actual:function(){return actual;},
+  function deepLink(p, pase){ return TIKTOK+'?producto='+encodeURIComponent(JSON.stringify(productoParaTikTok(p)))+(pase?'&pase='+encodeURIComponent(pase):''); }
+  /* ---- pase SSO (Yokup #3165): admira.tv firma un pase de un solo uso y 2 min con la sesión del
+     portal (/api/sso/pase, functions/api/sso/pase.js) y el Generador de admiranext lo acepta sin
+     volver a pedir sesión. Si no hay pase (401 sin sesión, 403 email fuera de lista, red), el
+     deep-link va como siempre y se avisa: el Generador puede pedir sesión. Un pase por pestaña. */
+  var SSO_AUD='admiranext.com', avisoPaseT=0;
+  function pidePase(){
+    return fetch('/api/sso/pase?aud='+encodeURIComponent(SSO_AUD),{credentials:'include',cache:'no-store',headers:{accept:'application/json'}})
+      .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(d){ d=d||{}; if(!('ok' in d)) d.ok=r.ok; d.status=r.status; return d; }); })
+      .catch(function(e){ return {ok:false, status:0, error:'red', detalle:String(e&&e.message||e)}; });
+  }
+  function avisaSinPase(d){
+    if(Date.now()-avisoPaseT<4000) return; avisoPaseT=Date.now();
+    var por=d&&d.status===401?'sin sesión en admira.tv':(d&&d.status===403?'tu email no está autorizado':'sin respuesta del portal');
+    toast('Sin pase ('+por+'): el Generador puede pedir sesión');
+  }
+  /* Abre el generador en pestaña nueva CON pase. La pestaña se abre en el mismo gesto del clic
+     (about:blank) para que el bloqueador de ventanas no la tire mientras llega el pase. */
+  function abreGenerador(p){
+    var w=null; try{ w=window.open('about:blank','_blank'); }catch(_){ w=null; }
+    return pidePase().then(function(d){
+      var pase=d&&d.ok&&d.pase?d.pase:''; if(!pase) avisaSinPase(d);
+      var url=deepLink(p,pase);
+      if(w&&!w.closed){ try{ w.opener=null; }catch(_){} w.location.href=url; return true; }
+      var w2=null; try{ w2=window.open(url,'_blank','noopener'); }catch(_){ w2=null; }
+      if(!w2) toast('El navegador ha bloqueado la pestaña del generador');
+      return Boolean(w2);
+    });
+  }
+  window.ADMIRA_CC={ deepLink:deepLink, pase:pidePase, abrir:abreGenerador, producto:productoParaTikTok, actual:function(){return actual;},
     externalId:function(p){ return externalIdProducto(p); }, stockId:function(eid){ return stockIdDerivado(eid); },
     stock:function(){ return stock; }, refrescar:function(){ pintaCabecera(); pintaLista(); }, sondear:function(){ return sondeaCatalogo(actual,true); },
     rejilla:function(dataURL){ return rejilla(dataURL); }, procesa:function(files){ return procesa(files); }, recorta:function(dataURL,bbox){ return recorta(dataURL,bbox); }, imagenUrl:function(p){ return urlImagen(p); }, paginaUrl:function(p){ return urlPagina(p); } };
@@ -546,8 +574,8 @@
   $('cuerpo').addEventListener('click', function(ev){
     var a=ev.target.closest('a.crear, button.guion, button.olvidar, button.reintentar, button.prev, button.thumb'); if(!a) return;
     var p=actual.productos[Number(a.getAttribute('data-i'))]; if(!p) return;
-    if(a.classList.contains('crear')){ marcaCreado(p); iniciaPendiente(p); setTimeout(function(){ pintaCabecera(); pintaLista(); }, 50); return; }
     ev.preventDefault();
+    if(a.classList.contains('crear')){ abreGenerador(p); marcaCreado(p); iniciaPendiente(p); setTimeout(function(){ pintaCabecera(); pintaLista(); }, 50); return; }
     if(a.classList.contains('olvidar')){ quitaCreado(p); pintaLista(); return; }
     if(a.classList.contains('reintentar')){ marcaCreado(p); iniciaPendiente(p); pintaLista(); consultaStock(externalIdProducto(p)).catch(function(){}).then(refrescaFilas); return; }
     if(a.classList.contains('prev')){ abreModal(p); return; }
@@ -577,13 +605,17 @@
     if(!dest.length){ toast('Este catálogo no tiene destacados'); return; }
     var lote=dest.slice(0,MAX_LOTE);
     if(!confirm('Se abrirá el generador para '+lote.length+' producto(s) destacado(s)'+(dest.length>MAX_LOTE?' (de '+dest.length+', máx. '+MAX_LOTE+' de golpe)':'')+', uno a uno. ¿Seguimos?')) return;
-    var abiertos=0;
-    for(var i=0;i<lote.length;i++){
-      var p=lote[i];
-      if(!confirm((i+1)+'/'+lote.length+' · Crear vídeo de «'+p.nombre+'»'+(typeof p.precio==='number'?' · '+precioTexto(p):'')+'?\n(Cancelar salta este producto)')) continue;
-      window.open(deepLink(p),'_blank','noopener'); marcaCreado(p); iniciaPendiente(p); abiertos++;
-    }
-    pintaCabecera(); pintaLista(); toast(abiertos+' generador(es) abierto(s)');
+    /* un pase por pestaña (son de un solo uso): se piden todos a la vez antes de las confirmaciones */
+    Promise.all(lote.map(function(){ return pidePase(); })).then(function(pases){
+      var abiertos=0, sinPase=pases.filter(function(d){ return !(d&&d.ok&&d.pase); }).length;
+      if(sinPase) avisaSinPase(pases[0]);
+      for(var i=0;i<lote.length;i++){
+        var p=lote[i];
+        if(!confirm((i+1)+'/'+lote.length+' · Crear vídeo de «'+p.nombre+'»'+(typeof p.precio==='number'?' · '+precioTexto(p):'')+'?\n(Cancelar salta este producto)')) continue;
+        window.open(deepLink(p, pases[i]&&pases[i].ok?pases[i].pase:''),'_blank','noopener'); marcaCreado(p); iniciaPendiente(p); abiertos++;
+      }
+      pintaCabecera(); pintaLista(); toast(abiertos+' generador(es) abierto(s)'+(sinPase?' · sin pase':''));
+    });
   });
 
   /* ---- selector de catálogo ---- */
@@ -749,6 +781,6 @@
   });
 })();
 </script>
-  <script src="/assets/admira-version-watch.js?v=12.09.2026.r4.1152" defer></script>
+  <script src="/assets/admira-version-watch.js?v=12.09.2026.r5.1156" defer></script>
 </body>
 </html>
