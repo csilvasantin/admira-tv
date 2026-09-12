@@ -1,16 +1,18 @@
-import {CLASSES, SNAPSHOT_TTL, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
+import {CLASSES, SNAPSHOT_TTL, PRESENCE_GRACE, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
 import {CutoutJob} from './cutouts.mjs';
 import {installTwinUI} from './twin-ui.mjs';
 import {detectObjects} from './detector.mjs';
 import {installSignageUI} from './signage-ui.mjs';
 import {installHistoryUI} from './history.mjs';
 import {CalibrationPresetStore,compatiblePreset} from './preset.mjs';
+import {TrackingOverlay} from './tracking-overlay.mjs';
 
 const $=id=>document.getElementById(id);
 const scene=$('scene'), stage=$('stage'), frame=document.createElement('canvas');
 const frameContext=frame.getContext('2d',{willReadFrequently:true});
 const tablet=$('tablet-canvas'), capture=$('capture-canvas');
 const tracker=new PassageTracker();
+const trackingOverlay=new TrackingOverlay($('tracking-overlay'));
 const passages=new PassageCounts();
 const numberFormat=new Intl.NumberFormat('es-ES');
 const cutoutJob=new CutoutJob();
@@ -112,7 +114,7 @@ function pause(message){
   // Pausing detection returns to the normal loop; it is not a screen power-off.
   analysisRequested=false;suspendedReason=null;clearTimeout(recoveryTimer);recoveryTimer=0;
   twins.cancelOriginal();
-  analyzing=false;generation++;clearTimeout(loopTimer);clearCapture();controls();
+  analyzing=false;generation++;clearTimeout(loopTimer);trackingOverlay.clear();tracker.resetPresence();clearCapture();controls();
   frameContext.clearRect(0,0,frame.width,frame.height);
   if(message)status(message);
 }
@@ -155,6 +157,7 @@ function disconnect(message='Desconectado. Capturas y vídeo borrados de la vist
   $('coordinates').hidden=true;controls();status(message);
 }
 function layout(){
+  trackingOverlay.layoutLabels();
   const width=stage.clientWidth,height=stage.clientHeight;
   if(tabletReady){$('tablet').style.transform=`matrix3d(${quadMatrix(640,480,quad.map(([x,y])=>[x*width,y*height])).join(',')})`;}
   if(signageReady){$('signage').style.transform=`matrix3d(${quadMatrix(540,960,signageQuad.map(([x,y])=>[x*width,y*height])).join(',')})`;}
@@ -339,7 +342,7 @@ async function startAnalysis(recovering=false){
     if(document.hidden||sourceMuted){suspendAnalysis('source','Esperando vídeo disponible; el análisis se reanudará automáticamente.');return;}
     analyzing=true;lastVideoTime=-1;lastFrameAt=performance.now();
     history.sync();
-    status('Analizando solo Puerta Cam. Pasos confirmados en dos fotogramas (tres para bicis de confianza baja); capturas de 6 s. Los pasos con regla y contenido interrumpen la música; sin coincidencia continúa la playlist.');
+    status('Analizando solo Puerta Cam. Rectángulos numerados por trayectoria; presencia confirmada en dos fotogramas (tres para bicis de confianza baja). Mantiene la música condicionada mientras siga visible; margen de pérdida de 1,5 s. Capturas de 6 s, sin repetir el conteo.');
     tabletIdle();loop(token);
   }catch{if(token===generation)pause('No se ha iniciado el análisis. Revisa el estado del detector.');}
   finally{busy=false;controls();}
@@ -365,13 +368,15 @@ async function loop(token){
       let predictions;inferences++;
       try{predictions=await detectObjects(model,window.tf,frame,Math.min(.25,threshold,bikeThreshold));}finally{inferences--;}
       if(!analyzing||token!==generation)return;
-      const events=tracker.update(predictions,performance.now(),width,height,{person:threshold,car:threshold,motorcycle:threshold,bicycle:bikeThreshold});
-      if(events.length){passages.add(events);renderCounts();queueHistory(events);signage.passage(events);}
+      const events=performance.now()-now<PRESENCE_GRACE?tracker.update(predictions,now,width,height,{person:threshold,car:threshold,motorcycle:threshold,bicycle:bikeThreshold}):[];
+      if(events.length){passages.add(events);renderCounts();queueHistory(events);}
       $('source-info').textContent=`PUERTA CAM · ${width} × ${height} · ${Math.round(performance.now()-start)} ms / análisis`;
       const bikes=predictions.filter(p=>p.class==='bicycle'),best=bikes.reduce((score,p)=>Math.max(score,p.score),0);
       $('detection-status').textContent=`Bicis candidatas: ${bikes.length} · mejor ${Math.round(best*100)} % · umbral ${Math.round(bikeThreshold*100)} % · ${Math.round(performance.now()-start)} ms`;
       if(events.length)showCapture(events);
     }
+    const visible=tracker.visible(performance.now());
+    trackingOverlay.render(visible);signage.presence(visible);
   }catch{
     if(token!==generation||!analyzing)return;
     pause('El detector ha fallado. La captura se ha borrado; revisa la fuente y vuelve a iniciar.');return;

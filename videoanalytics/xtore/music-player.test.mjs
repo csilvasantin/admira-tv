@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {PlayerDataBridge} from './player-data.mjs';
-import {XTORE_MUSIC_ASSETS} from './conditional-music.mjs';
+import {XTORE_MUSIC_ASSETS,xtoreMusicRules} from './conditional-music.mjs';
+import {SignageBridge} from './signage.mjs';
 
 const html=readFileSync(new URL('../../canal.html',import.meta.url),'utf8');
 const section=(from,to)=>html.slice(html.indexOf(from),html.indexOf(to,html.indexOf(from)));
@@ -563,6 +564,47 @@ test('local bridge and real engine select Top Gun for any person and Power Of Lo
   release(null);await settle();assert.equal(c.mediaEl,current);assert.ok(c._playTok>staleToken);
   assert.equal(c.playlist[0].id,'default:base');assert.equal(f.messages.at(-1).data.loop,true);
   engine.stop();bridge.stop();
+});
+
+test('presence heartbeats through the real bridge preserve media, currentTime and token until neutral or TTL',async()=>{
+  const f=fixture(),c=f.c;let now=10000,sequence=0;
+  Object.assign(c,{Date:class extends Date{static now(){return now;}},setTimeout:()=>0,setInterval:()=>0,clearInterval(){},
+    seenSig:'',scr:{},syncSegPanel(){},flashCli(){},setAdmiraMode:()=>assert.fail('Presence cannot restart the engine'),
+    rebuild:()=>c.xtoreMusicRebuild(),xtorePublicRead:async()=>xtoreMusicRules('xtore-virtual-zapatillas')});
+  c.all=[{id:XTORE_MUSIC_ASSETS.person,type:'video',url:'https://media.example/top.mp4'},
+    {id:XTORE_MUSIC_ASSETS.car,type:'video',url:'https://media.example/future.mp4'}];
+  f.draft([song('base')]);c.xtoreMusicRebuild();await settle();
+  vm.runInContext(readFileSync(new URL('../../xpl-runtime.js',import.meta.url),'utf8'),c);
+  vm.runInContext(section('const AUD_KIND_ALIAS=','function runCli(raw)'),c);
+  vm.runInContext(section('const XPLCanal = (function(){','// ── AUDIENCIA REMOTA: sondeo'),c);
+  const engine=c.window.XPLCanal;engine.start();await settle();
+  const sent=[];let bridge;
+  const target={postMessage(data){
+    sent.push({data,at:now});c.forceAudience(data.command.split(' ').at(-1));
+    bridge.receive({origin:'null',source:target,data:{source:'admira-tv-canal',requestId:data.requestId,ok:true}});
+  }};
+  bridge=new SignageBridge({target,now:()=>now,id:()=>String(++sequence),setTimer:()=>0,clearTimer(){},onFailure:error=>assert.fail(error)});
+  bridge.start();bridge.presence([{class:'person',confirmed:true,ageMs:0}]);await settle();
+  const person=c.mediaEl,token=c._playTok;person.currentTime=42;
+  for(let i=1;i<=110;i++){
+    now+=200;bridge.presence([{class:'person',confirmed:true,ageMs:0}]);engine.tick();await settle();
+    assert.equal(c.mediaEl,person);assert.equal(c._playTok,token);assert.equal(person.currentTime,42);assert.equal(person.pauseCount,0);
+  }
+  const renewals=sent.filter(s=>s.data.command==='admiratv audiencia persona');
+  assert.equal(renewals.length,23);assert.ok(renewals.every((s,i)=>i===0||s.at-renewals[i-1].at===1000));
+  bridge.presence([{class:'car',confirmed:true,ageMs:0}]);await settle();
+  const vehicle=c.mediaEl,vehicleToken=c._playTok;vehicle.currentTime=19;
+  for(const kind of ['motorcycle','bicycle','car']){
+    now+=1000;bridge.presence([{class:kind,confirmed:true,ageMs:0}]);await settle();
+    assert.equal(c.mediaEl,vehicle);assert.equal(c._playTok,vehicleToken);assert.equal(vehicle.currentTime,19);
+  }
+  // Child-side transport safeguard still works if no further parent callback runs.
+  now+=5999;engine.tick();assert.equal(c.mediaEl,vehicle);
+  now++;engine.tick();await settle();assert.equal(c.playlist[0].id,'default:base');
+  bridge.presence([{class:'person',confirmed:true,ageMs:0}]);await settle();
+  now+=1500;bridge.neutral();await settle();assert.equal(c.playlist[0].id,'default:base');
+  assert.equal(c.window.__xplForce,null);assert.deepEqual(f.timers,[]);
+  bridge.stop();engine.stop();
 });
 
 test('opaque music selection/playing/blocked/empty cannot write proof, presence, playlist/cache mirrors or location',async()=>{

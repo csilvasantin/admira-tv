@@ -143,3 +143,12 @@ test('a new person after an observed exit counts; scooters are never fabricated 
   assert.deepEqual(t.update([p(10,'scooter')],2000,1000,500),[]);
   const counts=new PassageCounts();counts.add([{class:'scooter'}]);assert.equal(counts.counts.scooter,1);
 });
+test('fully outside ROI never becomes presence; partially visible object remains eligible',()=>{
+  const tracker=new PassageTracker();
+  for(const now of [0,200])tracker.update([
+    {class:'person',score:.95,bbox:[1100,10,50,90]},
+    {class:'person',score:.95,bbox:[-100,10,40,90]},
+    {class:'person',score:.95,bbox:[980,10,50,90]}
+  ],now,1000,600);
+  assert.equal(tracker.visible(200).length,1);assert.equal(tracker.visible(200)[0].confirmed,true);
+});

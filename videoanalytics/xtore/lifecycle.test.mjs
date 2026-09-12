@@ -8,6 +8,7 @@ afterEach(async()=>{for(const cleanup of cleanups.splice(0))await cleanup();});
 async function fixture({surface='browser',denied=false,slowLoad=false,segment,storage,sourceWidth=1280,sourceHeight=720}={}){
   const nodes=new Map();
   class Element {
+    get ownerDocument(){return doc;}
     constructor(id=''){this.listeners={};this.style={};this.classList={add(){},remove(){},toggle(){}};this.hidden=false;this.disabled=false;this.value='';this.textContent='';this.children=[];this.clientWidth=960;this.clientHeight=540;this.videoWidth=1280;this.videoHeight=720;this.readyState=2;this.currentTime=1;this.width=640;this.height=480;this.id=id;}
     set id(id){this._id=id;if(id)nodes.set(id,this);}get id(){return this._id;}
     addEventListener(type,fn){(this.listeners[type]??=[]).push(fn);}
@@ -211,6 +212,41 @@ test('missing frames waits without counting frozen images, then recovers from th
   now+=5000;t.mock.timers.tick(5000);assert.equal(f.detections.length,1);assert.equal(f.get('count-person').textContent,'0');
   f.get('scene').currentTime++;now+=500;t.mock.timers.tick(500);await new Promise(resolve=>setImmediate(resolve));
   assert.equal(f.get('connection').textContent,'Analizando');assert.equal(f.detections.length,2);f.finishDetection();
+});
+test('live presence renews a single count beyond snapshot expiry; a stalled inference expires independently',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});let now=10000;t.mock.method(performance,'now',()=>now);t.mock.method(Date,'now',()=>now);
+  const f=await fixture();const frame=f.get('signage').children[0];
+  const ack=()=>f.win.emit('message',{source:frame.contentWindow,origin:'null',data:{source:'admira-tv-canal',requestId:frame.sent.at(-1).data.requestId,ok:true}});
+  const flush=()=>new Promise(resolve=>setImmediate(resolve));
+  await ack();await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  for(let i=0;i<72;i++){
+    if(i){f.get('scene').currentTime++;now+=125;t.mock.timers.tick(125);await flush();}
+    f.detections.at(-1).resolve([{class:'person',score:.99,bbox:[i?20:10,10,50,90]}]);await flush();await ack();
+  }
+  assert.equal(f.get('count-person').textContent,'1');assert.equal(f.get('capture-canvas').hidden,true);
+  assert.equal(frame.sent.at(-1).data.command,'admiratv audiencia persona');
+  assert.equal(f.get('tracking-overlay').children.length,1);
+  const box=f.get('tracking-overlay').children[0];assert.equal(box.children[0].textContent,'Persona #1');
+  await f.get('reset-counts').emit('click');assert.equal(f.get('tracking-overlay').children[0],box);
+  f.get('scene').currentTime++;now+=125;t.mock.timers.tick(125);await flush(); // leave inference pending
+  now+=1500;t.mock.timers.tick(1500);await flush();
+  assert.equal(f.get('tracking-overlay').children.length,0);assert.equal(frame.sent.at(-1).data.command,'admiratv audiencia u');await ack();
+  f.detections.at(-1).resolve([{class:'person',score:.99,bbox:[30,10,50,90]}]);await flush();
+  assert.equal(f.get('tracking-overlay').children.length,0);assert.equal(f.get('count-person').textContent,'0');
+  assert.equal(frame.sent.at(-1).data.command,'admiratv audiencia u');
+});
+test('pause clears live boxes and reconfirms presence on fresh frames without recounting',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});let now=10000;t.mock.method(performance,'now',()=>now);t.mock.method(Date,'now',()=>now);
+  const f=await fixture(),flush=()=>new Promise(resolve=>setImmediate(resolve));
+  await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  f.detections.at(-1).resolve([{class:'person',score:.99,bbox:[10,10,50,90]}]);await flush();
+  f.get('scene').currentTime++;now+=125;t.mock.timers.tick(125);await flush();
+  f.detections.at(-1).resolve([{class:'person',score:.99,bbox:[20,10,50,90]}]);await flush();
+  assert.equal(f.get('tracking-overlay').children.length,1);assert.equal(f.get('count-person').textContent,'1');
+  await f.get('analyze').emit('click');assert.equal(f.get('tracking-overlay').children.length,0);
+  await f.get('analyze').emit('click');f.detections.at(-1).resolve([{class:'person',score:.99,bbox:[20,10,50,90]}]);await flush();
+  assert.match(f.get('tracking-overlay').children[0].title,/confirmando/);assert.equal(f.get('count-person').textContent,'1');
+  await f.get('set-roi').emit('click');assert.equal(f.get('tracking-overlay').children.length,0);
 });
 test('recovery waits for an old inference; late detections are discarded and disconnect cancels intent',async t=>{
   t.mock.timers.enable({apis:['setTimeout']});

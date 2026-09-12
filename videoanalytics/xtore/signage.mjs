@@ -1,5 +1,6 @@
 // Only commands without images, identity, sex or age cross this bridge.
 import {XTORE_VIRTUAL_CIRCUIT,XTORE_VIRTUAL_NAME} from './virtual-player.mjs';
+import {PRESENCE_GRACE} from './core.mjs';
 export const PLAYER_ORIGIN='https://admira.tv';
 export const AUDIENCE_TTL=6000;
 const KIND_COMMAND={person:'persona',car:'coche',motorcycle:'moto',bicycle:'bici',none:'u'};
@@ -16,6 +17,7 @@ export class SignageBridge{
   constructor({target,onState=()=>{},onFailure=()=>{},now=()=>Date.now(),setTimer=(fn,ms)=>setTimeout(fn,ms),clearTimer=timer=>clearTimeout(timer),id=()=>crypto.randomUUID()}){
     Object.assign(this,{target,onState,onFailure,now,setTimer,clearTimer,id});
     this.pending=new Map();this.ready=false;this.closed=false;this.expiry=0;this.deadline=0;this.revision=0;this.watchdog=null;this.probeTimer=0;
+    this.presenceSamples=[];this.presenceKind=null;this.presenceSentAt=-Infinity;
   }
   start(){
     this.command('none',20000);
@@ -52,19 +54,50 @@ export class SignageBridge{
     // Vehicle priority matches the capture; never use incidental rider sex/age.
     const item=['bicycle','motorcycle','car','person'].map(kind=>events.find(e=>e.class===kind)).find(Boolean);
     if(!item)return;
+    this.presenceSamples=[];this.presenceKind=null;
     this.clearTimer(this.expiry);this.deadline=this.now()+AUDIENCE_TTL;
     this.command(item.class);
     this.expiry=this.setTimer(()=>{this.deadline=0;this.command('none');},AUDIENCE_TTL);
   }
+  presence(observations){
+    if(!this.ready||this.closed)return;
+    const now=this.now();
+    // ageMs comes from the captured frame, not inference completion. Neither
+    // ID nor geometry crosses the player bridge. Old snapshots cannot renew.
+    this.presenceSamples=observations.filter(o=>o.confirmed===true&&o.class!=='none'&&Object.hasOwn(KIND_COMMAND,o.class)&&Number.isFinite(o.ageMs)&&o.ageMs>=0&&o.ageMs<PRESENCE_GRACE)
+      .map(o=>({kind:o.class,until:now+PRESENCE_GRACE-o.ageMs}));
+    this.syncPresence();
+  }
+  syncPresence(){
+    if(!this.ready||this.closed)return;
+    const now=this.now();
+    this.presenceSamples=this.presenceSamples.filter(o=>o.until>now);
+    const item=['bicycle','motorcycle','car','person'].map(kind=>this.presenceSamples.filter(o=>o.kind===kind).sort((a,b)=>b.until-a.until)[0]).find(Boolean);
+    if(!item){if(this.presenceKind!==null)this.neutral();return;}
+    this.clearTimer(this.expiry);this.deadline=item.until;
+    const changed=this.presenceKind!==item.kind;
+    this.presenceKind=item.kind;
+    // Wait for an outstanding same-kind ACK instead of replacing its ID at
+    // frame rate. The original watchdog still bounds an unresponsive player.
+    if(changed||(now-this.presenceSentAt>=1000&&!Array.from(this.pending.values()).some(p=>p.kind===item.kind))){
+      this.presenceSentAt=now;this.command(item.kind);
+    }
+    // Independent of new inferences: expire on a stalled stream too, or fall
+    // directly to another still-fresh category without a neutral interlude.
+    this.expiry=this.setTimer(()=>this.syncPresence(),Math.max(1,item.until-now));
+  }
   neutral(){
     if(!this.ready||this.closed)return;
-    this.clearTimer(this.expiry);this.deadline=0;this.command('none');
+    this.clearTimer(this.expiry);this.deadline=0;this.presenceSamples=[];this.presenceKind=null;this.command('none');
   }
   receive(event){
     // 'null' alone is NOT trust: require the dedicated frame and a pending ID.
     if(this.closed||event.origin!=='null'||event.source!==this.target)return;
     const data=event.data;if(!data||data.source!=='admira-tv-canal')return;
-    if(this.deadline&&this.now()>=this.deadline){this.clearTimer(this.expiry);this.deadline=0;this.command('none');}
+    if(this.deadline&&this.now()>=this.deadline){
+      if(this.presenceKind!==null)this.syncPresence();
+      else{this.clearTimer(this.expiry);this.deadline=0;this.command('none');}
+    }
     const request=this.pending.get(data.requestId);
     if(request){
       this.pending.delete(data.requestId);
@@ -81,6 +114,7 @@ export class SignageBridge{
   fail(message){if(this.closed)return;this.stop();this.onFailure(message);}
   stop(){
     this.closed=true;this.ready=false;this.clearTimer(this.expiry);this.clearTimer(this.probeTimer);
+    this.presenceSamples=[];this.presenceKind=null;
     this.clearTimer(this.watchdog);this.watchdog=null;this.pending.clear();
   }
 }

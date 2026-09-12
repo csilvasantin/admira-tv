@@ -77,8 +77,32 @@ The Power of Love (Regreso al Futuro), ID `1786532932584-a1412h`.
 Se resuelven contra el catálogo vigente; solo medios musicales reproducibles HTTPS.
 No clasifica sexo/edad, no modifica matriz global ni playlist de Flota. Si falta la
 pieza mantiene la base. Prioridad simultánea: bici, moto, coche, persona.
-TTL 6 s desde último evento/clic, no desde playing: la carga consume parte del plazo.
-Eventos repetidos renuevan sin reiniciar; al caducar vuelve a base desde el principio.
+La presencia confirmada renueva la misma categoría cada 1 s sin reiniciar la pieza.
+El margen de pérdida es 1,5 s desde el fotograma observado, no desde el fin de la
+inferencia. Un temporizador independiente devuelve a base aunque el detector
+se quede esperando; si queda otra categoría válida pasa directamente a ella.
+El TTL del hijo sigue siendo 6 s de respaldo. Las pruebas manuales conservan
+6 s desde el clic, no desde playing: la carga consume parte del plazo.
+
+## Presencia y rectángulos — 12 septiembre 2026
+
+Conteo, presencia y capturas son independientes. `PassageTracker.visible(now)`
+devuelve bbox normalizada, número local, confianza, edad del fotograma y confirmación.
+Dos observaciones fuertes confirman presencia aun estando quieto (tres para bici
+inferior al 65 %); solo movimiento confirmado suma un paso. Tras 1,5 s sin evidencia
+fuerte hay que reconfirmar sin olvidar el conteo durante los 8 s de asociación.
+Las candidatas débiles no pueden sostener el condicional indefinidamente.
+Inferencias de >=1,5 s se descartan; la geometría retenida/predicha no es presencia.
+
+`TrackingOverlay` pinta rectángulos e ID (#1, #2…) con color estable por trayectoria,
+no por sexo ni identidad, dentro del ROI y sin interceptar clics. Discontinuo
+significa pendiente de confirmar o continuidad breve incierta. Se borra por edad
+con temporizador propio aunque no llegue otro fotograma; pausa/calibración limpia
+la capa y reconfirma presencia. Reset de cifras mantiene geometría y presencia.
+No usa rostros/embeddings, no guarda trayectorias y no envía IDs/cajas al player.
+No es identificación; cruces, oclusiones o reentradas pueden cambiar/asociar mal IDs.
+Patinetes siguen siendo registro manual sin cajas ni comandos automáticos.
+Las capturas de iPad siguen caducando a los 6 s y solo se crean al contar pasos.
 
 «Reglas musicales · probar» ofrece botones explícitos para esas cuatro categorías
 y volver a playlist. Solo sin intención de análisis ni calibración; no incrementa
@@ -127,7 +151,7 @@ identidad ID/URL y contexto base/condicional; se desarma al cambiar de pieza o
 contexto, con Anterior/Siguiente, al desactivarlo o al avanzar por un error.
 No se permite en sincro, directo o standby ni para imágenes. Una audiencia válida
 puede interrumpirlo y neutral/TTL sustituye la pieza: repetir NO renueva los 6 s
-desde el último evento. No persiste ni escribe reglas/playlist; cerrar la ficha
+del transporte: solo la presencia fresca renueva. No persiste ni escribe reglas/playlist; cerrar la ficha
 no lo desarma. Los callbacks se verifican con `_playTok` y el audio sustituido se
 detiene. Mute lee el elemento real y sigue sujeto al permiso de autoplay.
 
@@ -246,8 +270,8 @@ del opt-in. Repetir el mismo segmento no reinicia el vídeo. Se conservan las
 reglas y el comportamiento de players ordinarios fuera de este opt-in.
 
 Arranque neutro con sondeo idempotente cada 500 ms, mismo requestId, límite 20 s.
-No depende del load de recursos secundarios. Pasos confirmados → bici, moto,
-coche o persona por prioridad; neutro tras 6 s sin nuevos pasos. Un watchdog
+No depende del load de recursos secundarios. Presencia confirmada → bici, moto,
+coche o persona por prioridad; neutro tras 1,5 s sin presencia válida. Un watchdog
 de racha sin ACK vigente cierra a los 2.5 s aunque haya pasos constantes.
 ACKs obsoletos no reactivan ni tumban una orden posterior. Si no hay confirmación
 de reproducción/carga en 30 s se muestra «Carga demorada» SIN desmontar el iframe;
@@ -274,8 +298,8 @@ del indicador, NO demuestra la causa del primer fallo ni la del Chrome de Carlos
 No se recargó su captura ni se introdujeron detecciones simuladas.
 `selected` no acredita emisión; `playing`, `poster-loaded` y `document-loaded`
 distinguen reproducción/carga de media, miniatura de respaldo e interactivo
-cargado (este último no acredita reproducción interna). Además del TTL de 6 s
-del padre, el forzado caduca en el hijo y su tick de 2 s lo retira si el padre
+cargado (este último no acredita reproducción interna). Además del margen de presencia
+de 1,5 s del padre, el forzado caduca en el hijo a los 6 s y su tick de 2 s lo retira si el padre
 no puede enviar el neutral a tiempo.
 
 Prueba real inicial en navegador: el canal remoto opaco respondió ACK neutro,
@@ -311,7 +335,7 @@ El MCP local independiente `/Users/Carlos/Claude/xtore-va-mcp` incluye la guía
 completa `docs/xtore-help.md`: `get_help` y recurso `admira-va://help` devuelven
 el mismo Markdown dentro de JSON, con `documentation_only:true`. No consultan
 estado ni red y no controlan la captura. `get_contract` enlaza la guía y separa
-el bus legado del postMessage de la web. MCP local 0.2.8, ayuda 2026-09-12.6:
+el bus legado del postMessage de la web. MCP local 0.2.9, ayuda 2026-09-12.7:
 20 herramientas contando
 alias y 4 recursos. Clientes ya abiertos requieren reinicio de su proceso MCP
 para descubrir la nueva ayuda; no se ha forzado ese reinicio ni un despliegue.

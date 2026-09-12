@@ -7,6 +7,8 @@ export const CLASSES = Object.freeze({
   scooter: {label: 'Patinete', color: '#A78BFA', priority: 4, manualOnly: true},
 });
 export const SNAPSHOT_TTL = 6000;
+// Presence is evidence from a recent frame, not the 8 s association memory.
+export const PRESENCE_GRACE = 1500;
 // Aggregates confirmed passages only; no images, identities or browser storage.
 export class PassageCounts {
   constructor(){this.reset();}
@@ -70,6 +72,15 @@ function assignment(costs,trackCount){
 export class PassageTracker {
   constructor(){this.reset();}
   reset(){this.tracks=[];this.sequence=(this.sequence??0);}
+  resetPresence(){for(const t of this.tracks)t.presenceHits=0;}
+  visible(now){
+    if(!Number.isFinite(now))return [];
+    return this.tracks.filter(t=>now>=t.last&&now-t.last<PRESENCE_GRACE&&now-t.strongAt<PRESENCE_GRACE).map(t=>({
+      trackId:t.id,class:t.category,bbox:[...t.bbox],score:t.score,
+      ageMs:now-Math.min(t.last,t.strongAt),confirmed:t.presenceHits>=t.presenceNeeded,
+      uncertain:now-t.last>300||t.last>t.strongAt
+    }));
+  }
   update(predictions, now, width, height, threshold=.65){
     if(!Number.isFinite(now)||!(width>0)||!(height>0))return [];
     // Geometry only: tolerate short occlusions, never store faces/embeddings.
@@ -79,7 +90,8 @@ export class PassageTracker {
     const matched=new Set(), events=[];
     const limit=category=>typeof threshold==='number'?threshold:(threshold[category]??.65);
     const valid=predictions.filter(p=>Object.hasOwn(CLASSES,p.class) && !CLASSES[p.class].manualOnly && Number.isFinite(p.score) && p.score<=1 && p.score>=.25 && Array.isArray(p.bbox) && p.bbox.length===4 && p.bbox.every(Number.isFinite) && p.bbox[2]>0 && p.bbox[3]>0)
-      .sort((a,b)=>b.score-a.score).map(p=>({p,b:[p.bbox[0]/width,p.bbox[1]/height,p.bbox[2]/width,p.bbox[3]/height]}));
+      .sort((a,b)=>b.score-a.score).map(p=>({p,b:[p.bbox[0]/width,p.bbox[1]/height,p.bbox[2]/width,p.bbox[3]/height]}))
+      .filter(({b})=>b[0]<1&&b[1]<1&&b[0]+b[2]>0&&b[1]+b[3]>0);
     // Suppress near-identical same-class boxes before association. Distinct
     // nearby people and rider+bicycle remain separate objects.
     const candidates=[];
@@ -101,11 +113,14 @@ export class PassageTracker {
       if(elapsed>=.04&&elapsed<=1.5)t.velocity=t.velocity.map((v,i)=>v*.5+Math.max(-1.5,Math.min(1.5,(c[i]-previous[i])/elapsed))*.5);
       else if(elapsed>1.5)t.velocity=[0,0];
       if(isStrong){
+        // Reconfirm after a gap without discarding the already-counted track.
+        if(now-t.strongAt>=PRESENCE_GRACE)t.presenceHits=0;
+        t.presenceHits++;t.presenceNeeded=p.class==='bicycle'&&p.score<.65?3:2;
         // Low-score matches preserve continuity but cannot confirm a passage.
         if(now-t.strongAt>3000){t.hits=0;t.origin=c;}
         t.hits++;t.strongAt=now;
       }
-      t.bbox=b;t.last=now;matched.add(t.id);
+      t.bbox=b;t.last=now;t.score=p.score;matched.add(t.id);
       t.exiting=(c[0]<.06&&t.velocity[0]<-.02)||(c[0]>.94&&t.velocity[0]>.02)||(c[1]<.04&&t.velocity[1]<-.02)||(c[1]>.96&&t.velocity[1]>.02);
       const needed=p.class==='bicycle'&&p.score<.65?3:2;
       if(isStrong&&!t.emitted&&t.hits>=needed&&Math.hypot(c[0]-t.origin[0],c[1]-t.origin[1])>=.012){t.emitted=true;events.push({...p,trackId:t.id});}
@@ -123,7 +138,7 @@ export class PassageTracker {
     for(const item of unmatched){
       // Bounded memory. Weak detections never create a new track.
       if(this.tracks.length>=256)break;
-      const t={id:++this.sequence,category:item.p.class,bbox:item.b,origin:center(item.b),last:now,strongAt:now,hits:0,emitted:false,velocity:[0,0],exiting:false};
+      const t={id:++this.sequence,category:item.p.class,bbox:item.b,origin:center(item.b),last:now,strongAt:now,hits:0,presenceHits:0,presenceNeeded:2,emitted:false,velocity:[0,0],exiting:false};
       this.tracks.push(t);observe(t,item,true);
     }
     // A rider may also be detected as person; show the vehicle border first.

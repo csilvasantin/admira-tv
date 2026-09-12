@@ -150,6 +150,7 @@
       "help": "https://admira.tv/help/#player-virtual",
       "mission": "DCL-f9824e3bba6cee600b73810d",
       "registration_is_not_presence": true,
+      "local_documentation": {"mcp_version": "0.2.9", "help_revision": "2026-09-12.7", "live_status": false},
       "analysis_recovery": {
         "scope": "UI local; no herramienta MCP ni permiso de captura",
         "temporary": ["vista oculta", "mute de fuente", "más de 3 s sin fotogramas", "resize proporcional"],
@@ -164,11 +165,34 @@
         "titles": {"person": "Berlin — Take My Breath Away (Top Gun)", "vehicles": "Huey Lewis & The News — The Power of Love (Regreso al Futuro)"},
         "sex_age_inference": false,
         "ttl_ms": 6000,
-        "ttl_start": "Último evento o clic de prueba, no comienzo de reproducción; la carga consume parte del plazo",
+        "ttl_role": "Respaldo del transporte del hijo y prueba manual; no es el plazo de presencia visual",
+        "ttl_start": "Última orden aceptada o clic de prueba, no comienzo de reproducción; la carga consume parte del plazo",
         "unavailable_asset": "Conserva playlist base; no inventa coincidencia ni sustituye por otro tema",
         "manual_test": "Reglas musicales · probar: solo sin intención de análisis y sin calibración; no suma pasos/capturas/histórico; se neutraliza al solicitar análisis",
         "mcp_callable_test": false,
         "mission": "DCL-cb51d8a1e6452a99de76f4e1"
+      },
+      "visual_presence": {
+        "scope": "Solo analizador local y player virtual xtore-virtual-zapatillas; no herramienta MCP ni bus físico",
+        "mission": "DCL-ea4f046ffd30919c4c705137",
+        "confirmation": {"strong_frames": 2, "low_confidence_bicycle_frames": 3, "stationary_allowed": true},
+        "freshness_ms": 1500,
+        "freshness": "Último fotograma y última evidencia fuerte menores de 1,5 s; edad desde captura, no desde final de inferencia",
+        "association_memory_max_ms": 8000,
+        "association_is_presence": false,
+        "weak_observations": "Continuidad breve, nunca presencia indefinida; tras un hueco se reconfirma sin duplicar el paso ya contado",
+        "refresh_ms": 1000,
+        "refresh": "La misma selección conserva nodo y currentTime; ACK pendiente de la misma categoría conserva requestId y watchdog",
+        "priority": ["bicycle", "motorcycle", "car", "person"],
+        "absence": "Al caducar 1,5 s, pasar directamente a otra categoría fresca o neutral; temporizador independiente de inferencia. Pausa también neutraliza",
+        "transport_ttl_ms": 6000,
+        "child_expiry_check_ms": 2000,
+        "manual_test_ttl_ms": 6000,
+        "passage_counts": "Continuidad más desplazamiento, una vez por track asociado; presencia quieta no suma pasos ni genera capturas",
+        "ordinary_capture_ttl_ms": 6000,
+        "presence_renews_capture": false,
+        "overlay": {"surface": "ROI Puerta Cam", "labels": "Clase y #ID local; colores estables por trayectoria, sin identidad ni reidentificación", "dense_labels": "Se distribuyen sin solaparse; si no caben se oculta texto, no el rectángulo", "persistence": false, "clear": "Caducidad, pausa, ocultación, desconexión o recalibración", "player_payload": "Solo categoría; sin IDs, geometría, colores, imágenes, sexo ni edad"},
+        "scooter": "Solo contador manual; no presencia, overlay automático ni comando musical"
       },
       "calibration_preset": {
         "scope": "UI del analizador; no es una herramienta MCP invocable",
@@ -192,7 +216,7 @@
         "repeat": {
           "scope": "Audio/vídeo al terminar naturalmente, solo instancia local; no persiste",
           "cancels": "Otro clic, Anterior/Siguiente, cambio de pieza o contexto base-condicional, error o sustitución por neutral/TTL",
-          "priority": "Audiencia y TTL 6 s mandan; repetir no renueva presencia; cerrar la ficha no cancela repetición",
+          "priority": "Presencia fresca y neutral/TTL mandan; repetir no renueva presencia ni capturas; cerrar la ficha no cancela repetición",
           "excluded": ["image", "interactive", "sync", "direct", "standby", "non-Xtore profiles"]
         },
         "position": "1 de X en playlist efectiva; condicional con una pieza = 1 de 1; posición no confirmada = — de —. No es proof-of-play",
@@ -226,8 +250,8 @@
         "musicSource": ["playlist", "pixeria-musica"],
         "duration": "Audios y vídeos musicales completos hasta ended; sin corte por duración editorial",
         "assignment": "Parrilla con sesión autorizada; no es un alta ni escritura MCP anónima",
-        "audience": "Solo con análisis activo, paso confirmado y regla con contenido disponible",
-        "return": "Tras interrupción, pausa o 6 s sin renovar: base musical desde el principio; neutral sin interrupción no reinicia la pieza",
+        "audience": "Con análisis activo, presencia confirmada fresca incluso quieta y regla con contenido; no depende de un paso nuevo",
+        "return": "Tras interrupción, pausa o 1,5 s sin presencia fresca y sin otra categoría válida: base desde el principio; neutral sin interrupción no reinicia. Los 6 s quedan para respaldo/manual",
         "autoplay": "muted=0; el navegador puede exigir clic o Enter/Espacio dentro del iframe; audio-blocked espera sin saltar de pieza, diagnosticar códec ni forzar pantalla completa",
         "music_mission": "DCL-a2d1afecee4fa4c73ba924d3"
       }

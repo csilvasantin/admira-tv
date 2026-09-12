@@ -22,11 +22,25 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
   The Power of Love (Regreso al Futuro), asset 1786532932584-a1412h. Sin inferencia de sexo/edad.
   IDs resueltos contra catálogo vigente con medios reproducibles HTTPS; sin pieza válida sigue
   la base. No cambia reglas globales, hardware ni asociación de playlist.
-- TTL 6 s desde último evento o clic, NO desde playing; la carga consume ese plazo.
-  Regla repetida renueva sin reiniciar la pieza; expiración vuelve a base desde el principio.
+- Presencia visual confirmada: dos fotogramas fuertes (tres para bici de confianza baja),
+  incluso si el sujeto queda quieto. Último fotograma y evidencia fuerte menores de 1,5 s;
+  edad desde captura, no final de inferencia. Memoria de asociación hasta 8 s no es presencia.
+  Tras un hueco se reconfirma sin contar de nuevo el mismo paso; weak no mantiene presencia.
+- Renovación cada 1000 ms; mismo asset conserva nodo y posición, ACK pendiente mantiene ID.
+  Prioridad bici/moto/coche/persona; al caducar 1,5 s pasa directamente a otra categoría
+  fresca o neutral por un temporizador independiente de nuevas inferencias. Pausa neutraliza.
+  TTL 6 s solo como respaldo del transporte (hijo revisa cada 2 s) y pruebas manuales desde
+  clic, NO desde playing; la carga consume ese plazo. Neutral tras interrupción vuelve a base.
   Pruebas manuales UI en «Reglas musicales · probar», solo sin intención de análisis ni
   calibración; no suman capturas/pasos/histórico y se neutralizan al solicitar análisis.
   Estos botones NO son herramientas MCP. Misión DCL-cb51d8a1e6452a99de76f4e1.
+- Overlay local en ROI Puerta Cam: rectángulos, clase y #ID por trayectoria, con colores
+  estables y estilo incierto al confirmar/continuidad breve. Etiquetas sin solapamiento;
+  si no caben, se oculta texto, no cajas. No identidad, reidentificación ni almacenamiento.
+  Expira a1,5s y se limpia al pausar/ocultar/desconectar/recalibrar. Solo categoría al player,
+  no IDs, geometría, colores ni fotos. Patinete manual no produce overlay ni comando musical.
+  Capturas ordinarias6s independientes; presencia quieta no genera pasos/fotos y no las renueva.
+  Misión presencia DCL-ea4f046ffd30919c4c705137; documentación de implementación, no cámara real.
 
 - Preset de cámara/iPad/DS: autoguardado tras cada marcación válida en localStorage
   admira.xtore.zapatillas.calibration.v1 (geometría, dimensiones y fecha; 4096 caracteres).
@@ -42,11 +56,11 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
 - Mini mando exclusivo de Xtore musical, previo e integrado: anterior/siguiente/mute/repeat,
   solo instancia y lista actual, sin edición de playlist ni control de hardware.
   Repeat reinicia audio/vídeo al terminar naturalmente; navegación, cambio de pieza/contexto,
-  error o sustitución por neutral/TTL lo desarman. No renueva los 6 s de audiencia.
+  error o sustitución por neutral/TTL lo desarman. No renueva presencia ni capturas.
   No disponible para imágenes, sincro/directo/standby ni otros perfiles. Cerrar no cancela loop.
   1 de X = playlist efectiva (condicional único, 1 de 1), no prueba de emisión; AUDIO/LIVE/MUTE
   ocupa otra fila bajo las barras. Autoplay sigue requiriendo gesto. Son UI documentada,
-  NO herramientas MCP nuevas. MCP local 0.2.8 / Help2026-09-12.6; no estado vivo ni despliegue.
+  NO herramientas MCP nuevas. MCP local 0.2.9 / Help2026-09-12.7; no estado vivo ni despliegue.
   NO DESCARGADO = sin copia offline, no ausencia de reproducción online.
 
 - ID persistente xtore-virtual-zapatillas: navegador sin hardware dedicado, registrado en Flota.
@@ -65,9 +79,10 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
   playlist-unavailable y reintento, no asumir que está vacía. Fallos posteriores conservan
   la última asociación válida. Playlist asignada no reproducible = playlist-empty, sin
   sustituirla por otra; sin asociación ni coincidencias #musica también espera contenido.
-- Solo el analizador activo envía pasos confirmados (persona/coche/moto/bici), sin sexo, edad,
-  identidad ni imágenes. Una regla con asset compatible interrumpe la música. Pausa o 6 s sin
-  renovar retornan desde el inicio de la base; si no había interrupción, la canción continúa.
+- Solo el analizador activo envía presencia confirmada fresca (persona/coche/moto/bici), sin
+  sexo, edad, identidad ni imágenes. Una regla con asset compatible interrumpe la música;
+  no necesita un paso nuevo. Pausa o 1,5 s sin presencia fresca y sin otra categoría válida
+  retornan desde el inicio de la base; si no había interrupción, la canción continúa.
 - Audio-blocked exige clic o Enter/Espacio en el botón del iframe, sin forzar pantalla completa;
   audio/vídeo musical espera sin saltar ni diagnosticar códec por ese bloqueo. Playing no
   garantiza sonido físico. Playlist-empty/playlist-unavailable no son descarga ni emisión.
