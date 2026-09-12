@@ -12,11 +12,13 @@ cargado. Piloto: catálogo Alcampo del 10 al 23 de septiembre de 2026 (Yokup #30
 | `index.html` | La app (cabecera + subir folleto + listado). Modo `?app=1` sin marketing. `?catalogo=<id>` abre uno concreto. |
 | `catalogos/index.json` | Lista de catálogos disponibles (`id`, `etiqueta`, `validez`, `archivo`…). |
 | `catalogos/<id>.json` | Un catálogo: `{catalogo, fuente, validez, tiendas, paginas, productos:[{p, seccion, nombre, marca, detalle, precio, unidad, promo, destacado}]}`. |
-| `/functions/contentcatalogue/api/analizar.js` | Pages Function. `GET` → `{configured}`; `POST {pages:[{n, image}]}` (1–4 páginas `data:image/jpeg`) → `{productos}` leídos con Grok (xAI, `json_schema` estricto). Precios verificados con `\d+,\d{2}`. |
+| `/functions/contentcatalogue/api/analizar.js` | Pages Function. `GET` → `{configured, bbox:true, rejilla:0.1}`; `POST {pages:[{n, image}]}` (1–4 páginas `data:image/jpeg`) → `{productos}` leídos con Grok (xAI, `json_schema` estricto), cada uno con su `bbox`. Precios verificados con `\d+,\d{2}`. |
+| `/functions/contentcatalogue/api/imagen/[[ruta]].js` | Imagen real del producto (FLT-100318). `POST {catalogo_id, slug, image}` guarda el recorte en R2 (sesión del portal); `GET /contentcatalogue/api/imagen/<catalogo_id>/<slug>` lo sirve público con CORS `*` y caché de 1 día. `_imagen-lib.js` es el código común. |
 
 **Deep-link al generador (contrato con admiranext.com/tiktok).**
 `https://www.admiranext.com/tiktok/?producto=<encodeURIComponent(JSON)>` donde el JSON es el
 producto del catálogo más `{catalogo, validez:{desde,hasta}, origen:"admira.tv/contentcatalogue", catalogo_id}`.
+Viaja `imagen` (URL pública de la foto recortada, ver abajo); NO viaja `bbox` ni los campos internos `_*`.
 Se abre en pestaña nueva. Desde la consola: `ADMIRA_CC.deepLink(ADMIRA_CC.actual().productos[0])`.
 
 **Añadir un catálogo a mano.** Deja el JSON en `catalogos/` y añade su entrada en
@@ -52,3 +54,37 @@ controles; fecha, «Rehacer» con el mismo deep-link y «Ver en el Stock» → p
 La cabecera muestra «Con vídeo N de M» y el filtro Vídeo permite «Solo con vídeo» / «Solo sin vídeo».
 Depuración desde consola: `ADMIRA_CC.externalId(p)`, `ADMIRA_CC.stockId(eid)`, `ADMIRA_CC.stock()`,
 `ADMIRA_CC.sondear()`, `ADMIRA_CC.refrescar()`.
+
+**Imagen real del producto (FLT-100318).** Cada producto puede llevar `imagen` (URL pública) y
+`bbox` (`{x,y,w,h}` normalizado 0..1 respecto a la imagen de su página: la caja de su fotografía).
+La miniatura (72 px) sale en la columna Producto; clic = modal con la página completa y la caja
+resaltada (la página se lee de `imagenes.paginas` del JSON, con `{n}`, o de `…/pagina-<n>` junto a
+la foto; si no existe, se enseña el recorte solo). El generador recibe `imagen` en el deep-link y la
+pinta dentro del anuncio (`crossOrigin="anonymous"`, de ahí el CORS abierto del GET).
+
+*Cómo se obtiene la caja.* `analizar.js` pide a Grok un `bbox` por producto. Sin ayuda las cajas
+salen «a columnas» (bien en páginas de 4–7 productos, desplazadas en las densas): la página dibuja
+una **rejilla de coordenadas** sobre la copia que envía (líneas cada 0,1 rotuladas `x=…`/`y=…`,
+`ADMIRA_CC.rejilla(dataURL)`) y el prompt le dice que lea las coordenadas sobre ella. Con rejilla, en
+la página 5 del folleto de Alcampo (13 productos) las 13 cajas caen sobre su producto; en la 2 (7)
+las 7. El recorte se hace sobre el lienzo **limpio** con un margen del 3 % (las cajas tienden a
+cortar un borde), máx. 512 px de lado, JPEG 0,85 (`ADMIRA_CC.recorta(dataURL, bbox)`).
+
+*Almacén.* Bucket R2 `admira-catalogo-imagenes` (binding `CATALOGO` en `wrangler.toml`), clave
+`cc/img/<catalogo_id>/<slug>` (`slug` = la misma receta que el Stock, 40 chars; si dos productos
+del catálogo dan el mismo slug, `-2`, `-3`…). Las páginas completas van como `pagina-<n>`.
+`POST /contentcatalogue/api/imagen` exige la **misma verja que la página**: la cookie de sesión del
+portal (`functions/_auth-session.js`, `readSession` + `hasAnyAccess`) y mismo origen; no hay token
+aparte que custodiar. Sin sesión o sin almacén, el análisis sigue: la miniatura se pinta desde el
+recorte local (`_local`) y el deep-link va sin `imagen`. Barra de progreso «Recortando N/M» tras la
+lectura IA. Sembrado desde la CLI (sin pasar por el POST):
+`npx wrangler r2 object put admira-catalogo-imagenes/cc/img/<id>/<slug> --file x.jpg --content-type image/jpeg --remote`.
+
+*Catálogo de Alcampo.* Sembrado el 12-sep-2026 desde las 16 páginas públicas del folleto en Tiendeo
+(900×1299, `…/publications/page_assets/178703/<n>/page_<n>_level_4_<hash>.webp`, las URLs salen del
+visor): análisis con rejilla, casado con los 159 canónicos por página + nombre normalizado
+(similitud ≥ 0,6, +0,25 si el precio coincide) y recorte con margen. El JSON canónico lleva
+`imagenes:{origen, paginas, con_imagen}`. Resultado: 159 de 159 con imagen — 151 casados solos y 8
+a mano (mismo artículo con otra redacción: «Body Milk Nutritivo NIVEA» ↔ «Cremas corporales y geles
+de baño NIVEA», etc.; p. 6, 9 y 12). Para las promos sin precio («2ª unidad -50 %») el prompt pide
+también los productos «solo con promoción»; sin eso Grok se saltaba 7 de la página 12.

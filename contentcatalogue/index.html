@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=12.09.2026.r2.1100"></script>
+<script src="/auth-gate.js?v=12.09.2026.r3.1141"></script>
 <!-- preconnect: el generador de vídeo (TikTok de AdmiraNeXT) y la CDN de pdf.js -->
 <link rel="preconnect" href="https://www.admiranext.com" crossorigin>
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
@@ -117,6 +117,16 @@
   .nm .star{color:var(--amber);margin-left:4px}
   .mk{font:600 10.5px ui-monospace,monospace;color:var(--green);letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
   .dt{font-size:12.5px;color:var(--dim);margin-top:2px}
+  /* imagen real del producto, recortada del folleto (FLT-100318) */
+  .prod{display:flex;gap:12px;align-items:center}
+  .thumb{flex:none;width:72px;height:72px;border-radius:10px;border:1px solid var(--line);background:#fff;overflow:hidden;padding:0;cursor:pointer;display:grid;place-items:center}
+  .thumb img{width:100%;height:100%;object-fit:contain;display:block}
+  .thumb:hover{border-color:var(--green)}
+  .thumb.none{cursor:default;background:#0a1019;border-style:dashed;border-color:#2a3a66;color:#2a3a66;font:600 9px ui-monospace,monospace;letter-spacing:.04em;text-align:center}
+  .mbox.img{max-width:min(94vw,760px)}
+  .pagewrap{position:relative;display:inline-block;line-height:0;border-radius:14px;border:1px solid var(--line);overflow:hidden;background:#fff}
+  .pagewrap img{max-width:min(94vw,700px);max-height:78vh;width:auto;height:auto;display:block}
+  .pagewrap .caja{position:absolute;border:3px solid var(--green);box-shadow:0 0 0 9999px rgba(3,6,10,.5);border-radius:4px;pointer-events:none}
   .sec{font:600 11px ui-monospace,monospace;color:var(--dim);white-space:nowrap}
   .pr{font:800 22px ui-monospace,monospace;color:var(--txt);letter-spacing:-.02em;white-space:nowrap;line-height:1}
   .pr .u{font:600 11px ui-monospace,monospace;color:var(--dim);margin-left:3px;letter-spacing:.02em}
@@ -171,12 +181,12 @@
   .foot b{color:var(--green);font-weight:700}
   @media(max-width:640px){.hero{padding-top:34px}.panel{padding:14px}.acts{align-items:stretch}.acts .row{justify-content:flex-start}}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r2.1100">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r3.1141">
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.12.09.2026.r2.11:00';</script>
-<script src="/admira-nav.js?v=12.09.2026.r2.1100" data-active="apps" data-title="Catálogo" defer></script>
-<script src="/admira-frame.js?v=12.09.2026.r2.1100" defer></script>
+<script>window.ADMIRA_VERSION='v.12.09.2026.r3.11:41';</script>
+<script src="/admira-nav.js?v=12.09.2026.r3.1141" data-active="apps" data-title="Catálogo" defer></script>
+<script src="/admira-frame.js?v=12.09.2026.r3.1141" defer></script>
 
 <!-- barra de modo app (se muestra sólo con ?app=1) -->
 <div class="app-bar" id="appBar">
@@ -225,7 +235,7 @@
         <button class="btn sm" id="btnDescargar" type="button" hidden>↓ Descargar JSON del análisis</button>
       </div>
       <div class="noia" id="noIA">Análisis IA no configurado — falta la clave xAI en el proyecto. El listado de catálogos guardados sigue funcionando.</div>
-      <p class="hint">Las páginas se renderizan en tu navegador (≈1200 px de ancho) y se leen con Grok (xAI). Los precios sólo se dan por buenos si el texto leído tiene forma de precio (<span class="mono">6,99</span>); si no, quedan vacíos y marcados. El resultado se convierte en un catálogo nuevo con el mismo esquema y alimenta este mismo listado.</p>
+      <p class="hint">Las páginas se renderizan en tu navegador (≈1200 px de ancho) y se leen con Grok (xAI). Los precios sólo se dan por buenos si el texto leído tiene forma de precio (<span class="mono">6,99</span>); si no, quedan vacíos y marcados. El resultado se convierte en un catálogo nuevo con el mismo esquema y alimenta este mismo listado. Grok devuelve además la <b>caja</b> de la foto de cada producto (se le envía la página con una rejilla de coordenadas); la página recorta cada foto del lienzo limpio y la guarda en admira.tv para que salga en el anuncio.</p>
     </section>
 
     <!-- TOOLBAR: buscador, filtros, acciones globales -->
@@ -250,7 +260,7 @@
         <tbody id="cuerpo"><tr><td colspan="5" class="empty">Cargando el catálogo…</td></tr></tbody>
       </table>
     </div>
-    <p class="hint" style="margin-top:10px">«Crear vídeo» abre el generador TikTok de AdmiraNeXT en una pestaña nueva con el producto ya cargado (nombre, precio, promo, validez). «Copiar guion» deja en el portapapeles un guion corto por si prefieres dictarlo. Cuando el generador publica el máster en el Stock, aquí aparece el <b>previo</b> a la derecha (se sondea el Stock cada 15 s durante 15 min tras pulsar Crear vídeo): pasa el ratón para verlo moverse, haz clic para verlo a tamaño completo.</p>
+    <p class="hint" style="margin-top:10px">«Crear vídeo» abre el generador TikTok de AdmiraNeXT en una pestaña nueva con el producto ya cargado (nombre, precio, promo, validez). «Copiar guion» deja en el portapapeles un guion corto por si prefieres dictarlo. Cuando el generador publica el máster en el Stock, aquí aparece el <b>previo</b> a la derecha (se sondea el Stock cada 15 s durante 15 min tras pulsar Crear vídeo): pasa el ratón para verlo moverse, haz clic para verlo a tamaño completo. La <b>miniatura</b> de la columna Producto es la foto real recortada del folleto: clic = la página completa con la caja resaltada; esa misma imagen viaja al generador dentro del anuncio.</p>
 
   </div>
 
@@ -267,6 +277,13 @@
     <button type="button" class="mclose" id="mClose" aria-label="Cerrar">✕</button>
     <video id="mVideo" controls playsinline preload="metadata"></video>
     <div class="mmeta" id="mMeta"></div>
+  </div>
+</div>
+<div class="modal" id="modalImg" hidden role="dialog" aria-modal="true" aria-label="Imagen del producto en su página del folleto">
+  <div class="mbox img">
+    <button type="button" class="mclose" id="mImgClose" aria-label="Cerrar">✕</button>
+    <div class="pagewrap"><img id="mPag" alt=""><div class="caja" id="mCaja" hidden></div></div>
+    <div class="mmeta" id="mImgMeta"></div>
   </div>
 </div>
 
@@ -314,7 +331,7 @@
   /* ---- deep-link al generador TikTok (contrato acordado con admiranext.com/tiktok) ---- */
   function productoParaTikTok(p){
     var obj={};
-    for(var k in p){ if(Object.prototype.hasOwnProperty.call(p,k)) obj[k]=p[k]; }
+    for(var k in p){ if(Object.prototype.hasOwnProperty.call(p,k)&&k.charAt(0)!=='_'&&k!=='bbox') obj[k]=p[k]; }
     obj.catalogo=actual.etiqueta||actual.nombre;
     obj.validez={desde:(actual.validez&&actual.validez.desde)||'', hasta:(actual.validez&&actual.validez.hasta)||''};
     obj.origen=ORIGEN;
@@ -324,7 +341,8 @@
   function deepLink(p){ return TIKTOK+'?producto='+encodeURIComponent(JSON.stringify(productoParaTikTok(p))); }
   window.ADMIRA_CC={ deepLink:deepLink, producto:productoParaTikTok, actual:function(){return actual;},
     externalId:function(p){ return externalIdProducto(p); }, stockId:function(eid){ return stockIdDerivado(eid); },
-    stock:function(){ return stock; }, refrescar:function(){ pintaCabecera(); pintaLista(); }, sondear:function(){ return sondeaCatalogo(actual,true); } };
+    stock:function(){ return stock; }, refrescar:function(){ pintaCabecera(); pintaLista(); }, sondear:function(){ return sondeaCatalogo(actual,true); },
+    rejilla:function(dataURL){ return rejilla(dataURL); }, procesa:function(files){ return procesa(files); }, recorta:function(dataURL,bbox){ return recorta(dataURL,bbox); }, imagenUrl:function(p){ return urlImagen(p); }, paginaUrl:function(p){ return urlPagina(p); } };
 
   function guion(p){
     var partes=[p.nombre];
@@ -428,6 +446,8 @@
     chips.push('<span class="chip'+(cv?' ok':'')+'" id="chipVideo">Con vídeo <b>'+cv+' de '+c.productos.length+'</b></span>');
     var nv=c.productos.filter(function(p){return p.precio_verificado===false;}).length;
     if(nv) chips.push('<span class="chip warn">Precio sin verificar <b>'+nv+'</b></span>');
+    var ci=c.productos.filter(function(p){return !!urlImagen(p);}).length;
+    chips.push('<span class="chip'+(ci?' ok':'')+'" id="chipImagen">Con imagen <b>'+ci+' de '+c.productos.length+'</b></span>');
     meta.innerHTML=chips.join('');
     $('contador').innerHTML=c.productos.length+' <small>productos</small>';
     $('fuente').innerHTML=c.fuente?('Fuente: <a href="'+esc(c.fuente)+'" target="_blank" rel="noopener">'+esc(c.fuente)+'</a>'+(c.extraido_por?' · '+esc(c.extraido_por):'')):(c.extraido_por?esc(c.extraido_por):'');
@@ -476,6 +496,32 @@
       +(sinNoticias?'<span class="done warn">sin noticias · <button type="button" class="reintentar" data-i="'+idx+'">reintentar</button> <button type="button" class="olvidar" data-i="'+idx+'" title="Quitar la marca">×</button></span>':(fecha?'<span class="done dim">pulsado '+esc(fmtFecha(fecha.slice(0,10)))+' <button type="button" class="olvidar" data-i="'+idx+'" title="Quitar la marca de creado">×</button></span>':''))
       +'</div>';
   }
+  /* ---- imagen real del producto (FLT-100318): miniatura 72 px + modal con la página y la caja ---- */
+  function urlImagen(p){ return p.imagen||p._local||''; }
+  function urlPagina(p, cat){
+    cat=cat||actual; if(!cat) return '';
+    if(cat._paginas&&cat._paginas[p.p]) return cat._paginas[p.p];
+    if(cat.imagenes&&cat.imagenes.paginas) return String(cat.imagenes.paginas).replace('{n}',p.p);
+    var m=/^(.*\/contentcatalogue\/api\/imagen\/[a-z0-9-]+)\/[a-z0-9-]+$/.exec(p.imagen||''); return m?m[1]+'/pagina-'+p.p:'';
+  }
+  function celdaImagen(p, idx){
+    var u=urlImagen(p);
+    if(!u) return '<span class="thumb none" title="Sin foto del folleto">sin<br>foto</span>';
+    return '<button type="button" class="thumb" data-i="'+idx+'" aria-label="Ver la foto de '+esc(p.nombre)+' en su página del folleto" title="Clic: la página con la foto resaltada"><img loading="lazy" decoding="async" src="'+esc(u)+'" alt=""></button>';
+  }
+  function abreModalImg(p){
+    var u=urlImagen(p); if(!u) return;
+    var m=$('modalImg'), img=$('mPag'), caja=$('mCaja'), pag=urlPagina(p);
+    caja.hidden=true; img.removeAttribute('src');
+    $('mImgMeta').innerHTML='<b>'+esc(p.nombre)+'</b>'+(typeof p.precio==='number'?' · '+esc(precioTexto(p)):'')+' · página '+p.p+(p.imagen?' · <a class="stocklink" href="'+esc(p.imagen)+'" target="_blank" rel="noopener">Abrir la foto ↗</a>':'');
+    img.onload=function(){ if(img.src===pag&&p.bbox){ var b=p.bbox; caja.style.left=(b.x*100)+'%'; caja.style.top=(b.y*100)+'%'; caja.style.width=(b.w*100)+'%'; caja.style.height=(b.h*100)+'%'; caja.hidden=false; } };
+    img.onerror=function(){ if(img.src!==u){ caja.hidden=true; img.src=u; } };
+    img.src=pag||u; m.hidden=false; $('mImgClose').focus();
+  }
+  function cierraModalImg(){ var m=$('modalImg'); if(m.hidden) return; $('mPag').removeAttribute('src'); m.hidden=true; }
+  $('mImgClose').addEventListener('click', cierraModalImg);
+  $('modalImg').addEventListener('click', function(ev){ if(ev.target===$('modalImg')) cierraModalImg(); });
+
   function pintaLista(){
     var lista=filtrados(), cuerpo=$('cuerpo');
     if(!lista.length){ cuerpo.innerHTML='<tr><td colspan="5" class="empty">Ningún producto coincide con el filtro.</td></tr>'; return; }
@@ -487,10 +533,10 @@
       var eid=externalIdProducto(p), st=estadoStock(eid), existe=!!(st&&st.exists), enCurso=!!pendientes[eid];
       return '<tr data-i="'+idx+'" data-eid="'+esc(eid)+'"'+((fecha||existe)?' class="creado"':'')+'>'
         +'<td><span class="pg" title="Página '+p.p+' del folleto">'+p.p+'<small>pág</small></span></td>'
-        +'<td><div class="nm">'+esc(p.nombre)+(p.destacado?'<span class="star" title="Destacado">★</span>':'')+'</div>'
+        +'<td><div class="prod">'+celdaImagen(p,idx)+'<div><div class="nm">'+esc(p.nombre)+(p.destacado?'<span class="star" title="Destacado">★</span>':'')+'</div>'
         +(p.marca?'<div class="mk">'+esc(p.marca)+'</div>':'')
         +(p.detalle?'<div class="dt">'+esc(p.detalle)+'</div>':'')
-        +(p.promo?'<span class="promo">'+esc(p.promo)+'</span>':'')+'</td>'
+        +(p.promo?'<span class="promo">'+esc(p.promo)+'</span>':'')+'</div></div></td>'
         +'<td class="sec">'+esc(p.seccion||'—')+'</td>'
         +'<td>'+precio+'</td>'
         +'<td>'+celdaAnuncio(p, idx, st, existe, enCurso, fecha)+'</td>'
@@ -498,13 +544,14 @@
     }).join('');
   }
   $('cuerpo').addEventListener('click', function(ev){
-    var a=ev.target.closest('a.crear, button.guion, button.olvidar, button.reintentar, button.prev'); if(!a) return;
+    var a=ev.target.closest('a.crear, button.guion, button.olvidar, button.reintentar, button.prev, button.thumb'); if(!a) return;
     var p=actual.productos[Number(a.getAttribute('data-i'))]; if(!p) return;
     if(a.classList.contains('crear')){ marcaCreado(p); iniciaPendiente(p); setTimeout(function(){ pintaCabecera(); pintaLista(); }, 50); return; }
     ev.preventDefault();
     if(a.classList.contains('olvidar')){ quitaCreado(p); pintaLista(); return; }
     if(a.classList.contains('reintentar')){ marcaCreado(p); iniciaPendiente(p); pintaLista(); consultaStock(externalIdProducto(p)).catch(function(){}).then(refrescaFilas); return; }
     if(a.classList.contains('prev')){ abreModal(p); return; }
+    if(a.classList.contains('thumb')){ abreModalImg(p); return; }
     copiar(guion(p)).then(function(){ toast('Guion copiado'); }, function(){ toast('No se pudo copiar'); });
   });
   /* previo: se mueve al pasar el ratón / tocar; se para al salir */
@@ -521,7 +568,7 @@
   function cierraModal(){ var m=$('modal'), v=$('mVideo'); if(m.hidden) return; v.pause(); v.removeAttribute('src'); v.load(); m.hidden=true; }
   $('mClose').addEventListener('click', cierraModal);
   $('modal').addEventListener('click', function(ev){ if(ev.target===$('modal')) cierraModal(); });
-  document.addEventListener('keydown', function(ev){ if(ev.key==='Escape') cierraModal(); });
+  document.addEventListener('keydown', function(ev){ if(ev.key==='Escape'){ cierraModal(); cierraModalImg(); } });
   ['q','selSec','selPag','soloPrecio','soloDest','selVideo'].forEach(function(id){ $(id).addEventListener('input', pintaLista); $(id).addEventListener('change', pintaLista); });
 
   /* ---- crear vídeo de todos los destacados (uno a uno, con confirmación, máx 10) ---- */
@@ -552,7 +599,7 @@
     if(catalogos[id]){ activa(catalogos[id]); return; }
     $('cuerpo').innerHTML='<tr><td colspan="5" class="empty">Cargando el catálogo…</td></tr>';
     fetch('/contentcatalogue/catalogos/'+entrada.archivo,{cache:'no-cache'}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }).then(function(d){
-      var cat={id:entrada.id, cliente:entrada.cliente, nombre:d.catalogo||entrada.nombre, etiqueta:entrada.etiqueta||entrada.nombre, validez:d.validez||entrada.validez, tiendas:d.tiendas||entrada.tiendas||[], paginas:d.paginas||entrada.paginas, fuente:d.fuente||entrada.fuente, extraido_por:d.extraido_por, productos:Array.isArray(d.productos)?d.productos:[]};
+      var cat={id:entrada.id, cliente:entrada.cliente, nombre:d.catalogo||entrada.nombre, etiqueta:entrada.etiqueta||entrada.nombre, validez:d.validez||entrada.validez, tiendas:d.tiendas||entrada.tiendas||[], paginas:d.paginas||entrada.paginas, fuente:d.fuente||entrada.fuente, extraido_por:d.extraido_por, imagenes:d.imagenes||null, productos:Array.isArray(d.productos)?d.productos:[]};
       catalogos[id]=cat; activa(cat);
     }).catch(function(e){ $('cuerpo').innerHTML='<tr><td colspan="5" class="empty">No se pudo cargar el catálogo ('+esc(e.message)+').</td></tr>'; });
   }
@@ -565,8 +612,57 @@
   }).catch(function(){ $('cuerpo').innerHTML='<tr><td colspan="5" class="empty">No se pudo leer la lista de catálogos.</td></tr>'; });
 
   /* ---- análisis de folleto: PDF/imágenes → páginas ~1200px → Pages Function → catálogo nuevo ---- */
-  var iaConfigurada=null, analisisActual=null;
+  var iaConfigurada=null, analisisActual=null, imagenConfigurada=null;
   fetch('/contentcatalogue/api/analizar',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){ iaConfigurada=!!(d&&d.configured); if(!iaConfigurada) $('noIA').style.display='block'; }).catch(function(){ iaConfigurada=null; });
+  fetch('/contentcatalogue/api/imagen',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){ imagenConfigurada=!!(d&&d.configured); }).catch(function(){ imagenConfigurada=null; });
+
+  /* rejilla de coordenadas (líneas cada 0,1 rotuladas x=…/y=…): Grok sitúa las cajas mucho mejor
+     leyéndolas sobre la rejilla; el recorte se hace después sobre el lienzo LIMPIO. */
+  var REJILLA=0.1, MARGEN_RECORTE=0.03, MAX_RECORTE=512, MAX_PAGINA_SUBIDA=1000;
+  function cargaImg(src){ return new Promise(function(res,rej){ var im=new Image(); im.onload=function(){res(im);}; im.onerror=function(){rej(new Error('imagen'));}; im.src=src; }); }
+  function rejilla(dataURL){
+    return cargaImg(dataURL).then(function(im){
+      var W=im.naturalWidth, H=im.naturalHeight, c=document.createElement('canvas'); c.width=W; c.height=H; var g=c.getContext('2d');
+      g.drawImage(im,0,0); g.strokeStyle='rgba(0,120,255,.55)'; g.lineWidth=1; g.fillStyle='#0000ff'; g.font='bold '+Math.round(W/56)+'px sans-serif';
+      for(var i=1;i<Math.round(1/REJILLA);i++){ var x=Math.round(i*REJILLA*W)+.5, y=Math.round(i*REJILLA*H)+.5, t=(i*REJILLA).toFixed(1);
+        g.beginPath(); g.moveTo(x,0); g.lineTo(x,H); g.stroke(); g.beginPath(); g.moveTo(0,y); g.lineTo(W,y); g.stroke();
+        g.fillText('x='+t,x+3,Math.round(W/56)+2); g.fillText('x='+t,x+3,H-6); g.fillText('y='+t,3,y+Math.round(W/56)+2); g.fillText('y='+t,W-Math.round(W/9),y+Math.round(W/56)+2); }
+      return c.toDataURL('image/jpeg',0.82);
+    });
+  }
+  function recorta(dataURL, bbox, maxLado){
+    return cargaImg(dataURL).then(function(im){
+      var W=im.naturalWidth, H=im.naturalHeight, m=MARGEN_RECORTE;
+      var x0=Math.max(0,bbox.x-m)*W, y0=Math.max(0,bbox.y-m)*H, x1=Math.min(1,bbox.x+bbox.w+m)*W, y1=Math.min(1,bbox.y+bbox.h+m)*H;
+      var w=Math.max(1,Math.round(x1-x0)), h=Math.max(1,Math.round(y1-y0)), esc=Math.min(1,(maxLado||MAX_RECORTE)/Math.max(w,h));
+      var c=document.createElement('canvas'); c.width=Math.round(w*esc); c.height=Math.round(h*esc);
+      c.getContext('2d').drawImage(im,x0,y0,w,h,0,0,c.width,c.height); return c.toDataURL('image/jpeg',0.85);
+    });
+  }
+  function reduce(dataURL, maxLado){ return recorta(dataURL,{x:0,y:0,w:1,h:1},maxLado); }
+  function subeImagen(catalogoId, slug, dataURL){
+    return fetch('/contentcatalogue/api/imagen',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({catalogo_id:catalogoId, slug:slug, image:dataURL})})
+      .then(function(r){ return r.json().then(function(d){ if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); return d.url; }); });
+  }
+  /* tras el análisis: recorte de cada caja sobre la página limpia, miniatura inmediata (_local) y subida
+     (si el almacén está configurado y hay sesión) → p.imagen = URL pública que viaja en el deep-link */
+  function recortaYSube(cat, paginas){
+    var porN={}; paginas.forEach(function(pg){ porN[pg.n]=pg.image; });
+    var conCaja=cat.productos.filter(function(p){ return p.bbox&&porN[p.p]; });
+    var total=conCaja.length+paginas.length, hechos=0, subidas=0, fallos=0, slugs={}, cadena=Promise.resolve();
+    cat._paginas={}; paginas.forEach(function(pg){ cat._paginas[pg.n]=pg.image; });
+    function avanza(){ hechos++; setProg(hechos/total); setStatus('Recortando '+hechos+'/'+total+'…'+(fallos?' ('+fallos+' sin subir)':'')); }
+    conCaja.forEach(function(p){ cadena=cadena.then(function(){
+      var s=slugCatalogo(cleanTxt(p.nombre,120))||'producto', base=s, k=2; while(slugs[s]){ s=(base+'-'+k).slice(0,40); k++; } slugs[s]=1;
+      return recorta(porN[p.p],p.bbox).then(function(d){ p._local=d; if(imagenConfigurada===false) return; return subeImagen(cat.id,s,d).then(function(url){ p.imagen=url; subidas++; }, function(e){ fallos++; if(/sesión|401/.test(e.message)) imagenConfigurada=false; }); })
+        .catch(function(){ fallos++; }).then(function(){ avanza(); if(hechos%6===0) refrescaFilas(); });
+    }); });
+    paginas.forEach(function(pg){ cadena=cadena.then(function(){
+      if(imagenConfigurada===false){ avanza(); return; }
+      return reduce(pg.image,MAX_PAGINA_SUBIDA).then(function(d){ return subeImagen(cat.id,'pagina-'+pg.n,d); }).then(function(){ if(!cat.imagenes) cat.imagenes={paginas:location.origin+'/contentcatalogue/api/imagen/'+cat.id+'/pagina-{n}'}; }, function(){ fallos++; }).then(avanza);
+    }); });
+    return cadena.then(function(){ return {recortes:conCaja.length, subidas:subidas, fallos:fallos}; });
+  }
 
   function setProg(f){ $('progBar').style.width=Math.round(Math.max(0,Math.min(1,f))*100)+'%'; }
   function setStatus(msg,cls){ var s=$('anStatus'); s.textContent=msg; s.className='status'+(cls?' '+cls:''); }
@@ -582,7 +678,7 @@
       for(var i=1;i<=n;i++)(function(i){ cadena=cadena.then(function(){ return pdf.getPage(i).then(function(page){
         var vp0=page.getViewport({scale:1}), scale=ANCHO_RENDER/vp0.width, vp=page.getViewport({scale:scale});
         var c=document.createElement('canvas'); c.width=Math.round(vp.width); c.height=Math.round(vp.height);
-        return page.render({canvasContext:c.getContext('2d'), viewport:vp}).promise.then(function(){ paginas.push({n:i, image:canvasAJpeg(c)}); onPage(i,n); });
+        return page.render({canvasContext:c.getContext('2d'), viewport:vp}).promise.then(function(){ var limpia=canvasAJpeg(c); return rejilla(limpia).then(function(grid){ paginas.push({n:i, image:limpia, grid:grid}); onPage(i,n); }); });
       }); }); })(i);
       return cadena.then(function(){ return paginas; });
     });
@@ -591,7 +687,7 @@
     var paginas=[], cadena=Promise.resolve();
     files.forEach(function(f,idx){ cadena=cadena.then(function(){ return new Promise(function(res,rej){
       var img=new Image(); var url=URL.createObjectURL(f);
-      img.onload=function(){ var scale=Math.min(1,ANCHO_RENDER/img.naturalWidth); var c=document.createElement('canvas'); c.width=Math.round(img.naturalWidth*scale); c.height=Math.round(img.naturalHeight*scale); c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url); paginas.push({n:idx+1,image:canvasAJpeg(c)}); onPage(idx+1,files.length); res(); };
+      img.onload=function(){ var scale=Math.min(1,ANCHO_RENDER/img.naturalWidth); var c=document.createElement('canvas'); c.width=Math.round(img.naturalWidth*scale); c.height=Math.round(img.naturalHeight*scale); c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url); var limpia=canvasAJpeg(c); rejilla(limpia).then(function(grid){ paginas.push({n:idx+1,image:limpia,grid:grid}); onPage(idx+1,files.length); res(); },rej); };
       img.onerror=function(){ URL.revokeObjectURL(url); rej(new Error('No se pudo leer '+f.name)); };
       img.src=url;
     }); }); });
@@ -603,9 +699,9 @@
     var cadena=Promise.resolve(), hechos=0;
     lotes.forEach(function(lote){ cadena=cadena.then(function(){
       setStatus('Leyendo con IA la página '+lote[0].n+(lote.length>1?'–'+lote[lote.length-1].n:'')+' de '+paginas.length+'…');
-      return fetch('/contentcatalogue/api/analizar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pages:lote})})
+      return fetch('/contentcatalogue/api/analizar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pages:lote.map(function(pg){ return {n:pg.n, image:pg.grid||pg.image}; })})})
         .then(function(r){ return r.json().then(function(d){ if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); return d; }); })
-        .then(function(d){ productos=productos.concat(d.productos||[]); errores=errores.concat(d.errores||[]); hechos+=lote.length; setProg(0.5+0.5*hechos/paginas.length); });
+        .then(function(d){ productos=productos.concat(d.productos||[]); errores=errores.concat(d.errores||[]); hechos+=lote.length; setProg(0.5+0.4*hechos/paginas.length); });
     }); });
     return cadena.then(function(){ return {productos:productos, errores:errores}; });
   }
@@ -631,10 +727,13 @@
         var cat=catalogoDesdeAnalisis(res, pdf?pdf.name:(imgs.length+' imágenes'), paginas.length);
         analisisActual=cat; catalogos[cat.id]=cat;
         indice.unshift({id:cat.id, cliente:'', nombre:cat.nombre, etiqueta:cat.etiqueta, validez:cat.validez, tiendas:cat.tiendas, paginas:cat.paginas, productos:cat.productos.length, archivo:''});
-        activa(cat); setProg(1);
-        var nv=cat.productos.filter(function(p){return p.precio_verificado===false;}).length;
-        setStatus(cat.productos.length+' productos leídos en '+paginas.length+' página(s)'+(nv?' · '+nv+' con precio sin verificar':'')+(res.errores.length?' · '+res.errores.length+' página(s) con error':''),'ok');
-        $('btnDescargar').hidden=false;
+        activa(cat);
+        return recortaYSube(cat, paginas).then(function(img){
+          pintaCabecera(); pintaLista(); setProg(1);
+          var nv=cat.productos.filter(function(p){return p.precio_verificado===false;}).length;
+          setStatus(cat.productos.length+' productos leídos en '+paginas.length+' página(s) · '+img.recortes+' fotos recortadas'+(img.subidas?' ('+img.subidas+' guardadas en admira.tv)':(imagenConfigurada===false?' (sin guardar: inicia sesión o falta el almacén)':''))+(nv?' · '+nv+' con precio sin verificar':'')+(res.errores.length?' · '+res.errores.length+' página(s) con error':''),'ok');
+          $('btnDescargar').hidden=false;
+        });
       });
     }).catch(function(e){ setStatus(e.message||'Error al analizar','err'); setProg(0); }).then(function(){ $('fileIn').disabled=false; });
   }
@@ -645,11 +744,11 @@
   drop.addEventListener('drop', function(e){ e.preventDefault(); drop.classList.remove('over'); procesa(Array.prototype.slice.call(e.dataTransfer.files||[])); });
   $('btnDescargar').addEventListener('click', function(){
     if(!analisisActual) return;
-    var c=analisisActual, out={catalogo:c.nombre, fuente:c.fuente, validez:c.validez, tiendas:c.tiendas, paginas:c.paginas, extraido_por:c.extraido_por, productos:c.productos};
+    var c=analisisActual, out={catalogo:c.nombre, fuente:c.fuente, validez:c.validez, tiendas:c.tiendas, paginas:c.paginas, extraido_por:c.extraido_por, imagenes:c.imagenes||undefined, productos:c.productos.map(function(p){ var o={}; for(var k in p){ if(Object.prototype.hasOwnProperty.call(p,k)&&k.charAt(0)!=='_') o[k]=p[k]; } return o; })};
     var blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=c.id+'.json'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
   });
 })();
 </script>
-  <script src="/assets/admira-version-watch.js?v=12.09.2026.r2.1100" defer></script>
+  <script src="/assets/admira-version-watch.js?v=12.09.2026.r3.1141" defer></script>
 </body>
 </html>
