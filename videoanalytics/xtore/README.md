@@ -76,8 +76,8 @@ ID `1786533143983-n2y09e`; coche y moto → Huey Lewis & The News /
 The Power of Love (Regreso al Futuro), ID `1786532932584-a1412h`; bici → Pixeria #998,
 AZUL Y NEGRO - Me estoy volviendo loco, vídeo ID `1789214248874-j6qqjo`, URL observada
 `https://stock.admira.store/stock/1789214248874-j6qqjo/asset.mp4?v=8878237`.
-Nueva regla de bici, misión `DCL-0c79557c38bde9f05e2ec381`: pendiente de publicación
-y verificación. Su vídeo inicia al 50 % de la duración real del medio en cada nueva
+Nueva regla de bici, misión `DCL-0c79557c38bde9f05e2ec381`: incluida en
+`v.12.09.2026.r14.15:30`; contrato, no estado en vivo. Su vídeo inicia al 50 % de la duración real del medio en cada nueva
 activación o repetición, nunca a partir de una duración editorial. Renovar la misma
 presencia mantiene posición sin volver a buscar la mitad. Esta excepción pertenece
 solo al condicional de bici del perfil virtual exacto; no a la playlist base aunque
