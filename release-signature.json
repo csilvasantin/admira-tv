@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r11.14:51",
-  "signature": "TrinityMBA16 · MacBookAir16plata",
-  "agent": "TrinityMBA16",
+  "version": "v.12.09.2026.r12.15:38",
+  "signature": "NeoMBA16 · MacBookAir16plata",
+  "agent": "NeoMBA16",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "14:51",
-  "evidence": "Xtore: presencia confirmada continua independiente de conteo y capturas; renovación cada 1 s sin reinicio, caducidad visual 1.5 s con timer independiente y respaldo/manual 6 s. Rectángulos locales con clase, ID y color estable, etiquetas sin solape. Cross-review Turing aprobado; 220/220 dirigidas y 485/487 general con 2 fallos previos ajenos; MCP local 27/27. Browser QA aislada sin cámara: Top Gun >90 s, dos tracks/count2, coche-bici-moto mantiene Power of Love, ausencia devuelve base y limpia cajas. Rebase conserva catálogo Neo 797f6016 r10.14:49. Yokup DCL-ea4f046ffd30919c4c705137."
+  "time": "15:38",
+  "evidence": "Previo NUNCA negro en /contentcatalogue (Yokup #3199): causa = fotograma 0 del máster es el relleno #020508 (luma 20 → 4,7/255) de un webm de MediaRecorder sin Duration/Cues y el #t=0.1 acababa pintándolo (Chrome con el elemento fuera de pantalla, Safari). /stock/exists devuelve poster y posterFrameAt; el previo usa meta.poster como poster del <video preload=none> e <img> de respaldo; sin póster se captura en cliente el fotograma con más información (12 muestras, luma 40..220, máxima varianza, fuera de los 0,8 s de los extremos), se descarga el elemento y se enseña el póster (Chromium no repinta un seek fuera de pantalla). Pósters de los 4 de Alcampo + coche Xtore generados con ffmpeg y subidos; validador repetible tools/valida-videos-catalogo.mjs (admira-next-web) en verde: 5/5 válidos y con póster. Verificado en Chromium local en las dos rutas: el previo del Langostino ya no es negro. Rebase sobre c69e644f (Trinity r11.14:51)."
 }

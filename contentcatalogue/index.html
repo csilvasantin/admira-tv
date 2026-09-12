@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=12.09.2026.r11.1451"></script>
+<script src="/auth-gate.js?v=12.09.2026.r12.1538"></script>
 <!-- preconnect: el generador de vídeo (TikTok de AdmiraNeXT) y la CDN de pdf.js -->
 <link rel="preconnect" href="https://www.admiranext.com" crossorigin>
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
@@ -165,7 +165,9 @@
   /* previo del anuncio (9:16) */
   .anuncio{display:flex;gap:10px;align-items:center;justify-content:flex-end}
   .prev{position:relative;flex:none;width:96px;height:170px;border-radius:10px;border:1px solid var(--line);background:#05080d;overflow:hidden;padding:0;cursor:pointer;display:grid;place-items:center}
-  .prev video{width:100%;height:100%;object-fit:cover;display:block;background:#05080d}
+  .prev video{position:relative;width:100%;height:100%;object-fit:cover;display:block;background:#05080d}
+  .prev .pv-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .prev video.pv-pend{opacity:0}
   .prev .play{position:absolute;inset:auto 6px 6px auto;width:24px;height:24px;border-radius:50%;background:rgba(3,20,10,.75);color:var(--green);display:grid;place-items:center;font-size:11px;pointer-events:none}
   .prev:hover{border-color:var(--green)}
   .prev.wait{cursor:default;gap:8px;grid-auto-rows:min-content;align-content:center;border-style:dashed;border-color:#2a3a66}
@@ -204,12 +206,12 @@
   .foot b{color:var(--green);font-weight:700}
   @media(max-width:640px){.hero{padding-top:34px}.panel{padding:14px}.acts{align-items:stretch}.acts .row{justify-content:flex-start}}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r11.1451">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r12.1538">
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.12.09.2026.r11.14:51';</script>
-<script src="/admira-nav.js?v=12.09.2026.r11.1451" data-active="apps" data-title="Catálogo" defer></script>
-<script src="/admira-frame.js?v=12.09.2026.r11.1451" defer></script>
+<script>window.ADMIRA_VERSION='v.12.09.2026.r12.15:38';</script>
+<script src="/admira-nav.js?v=12.09.2026.r12.1538" data-active="apps" data-title="Catálogo" defer></script>
+<script src="/admira-frame.js?v=12.09.2026.r12.1538" defer></script>
 
 <!-- barra de modo app (se muestra sólo con ?app=1) -->
 <div class="app-bar" id="appBar">
@@ -435,7 +437,11 @@
       .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
       .then(function(d){
         var existe=!!(d&&d.ok!==false&&d.exists===true);
-        var info={t:Date.now(), exists:existe, id:existe?String(d.id||''):'', url:existe?String(d.url||''):'', createdAt:(d&&d.createdAt)||'', contentHash:(d&&d.contentHash)||''};
+        var info={t:Date.now(), exists:existe, id:existe?String(d.id||''):'', url:existe?String(d.url||''):'', createdAt:(d&&d.createdAt)||'', contentHash:(d&&d.contentHash)||'',
+          /* Yokup #3199: póster representativo del Stock (meta.poster; thumbnail de respaldo) y su instante */
+          poster:(existe&&/^https?:\/\//.test(String((d&&(d.poster||d.thumbnail))||'')))?String(d.poster||d.thumbnail):'',
+          posterT:(d&&d.posterFrameAt!=null&&isFinite(+d.posterFrameAt))?+d.posterFrameAt:null,
+          validacion:(d&&d.validacion)||null};
         var fin=function(){ if(info.exists&&!info.url&&info.id) info.url=STOCK_API+'/stock/asset/'+info.id; stock[eid]=info; stockLS[eid]=info; guardaStockLS(); return info; };
         if(info.exists&&!info.id) return stockIdDerivado(eid).then(function(id){ info.id=id; return fin(); });
         return fin();
@@ -457,6 +463,80 @@
     });
   }
   function urlVideo(st){ return st.url+(st.contentHash||st.createdAt?'?v='+encodeURIComponent(st.contentHash||st.createdAt):''); }
+  /* PREVIO NUNCA NEGRO (Yokup #3199, 12-sep-2026). El máster que monta el creador
+     con MediaRecorder empieza con un fotograma de relleno (#020508, luma ≈ 20) y el
+     webm no lleva Duration ni Cues, así que el «#t=0.1» de antes acababa pintando
+     ese fotograma 0 en negro (Chrome con el elemento fuera de pantalla al cargar;
+     Safari siempre). Ahora: si el Stock trae meta.poster se usa como poster del
+     <video> y como imagen de respaldo debajo; si no lo trae, se captura en cliente
+     el fotograma con más información (luma 40..220, máxima varianza, fuera de los
+     0,8 s de cada extremo) y hasta entonces el vídeo no se enseña. */
+  function previoVideoHtml(st){
+    var src=esc(urlVideo(st));
+    if(st.poster){
+      var t=(st.posterT!=null&&isFinite(st.posterT))?st.posterT:1;
+      return '<img class="pv-img" src="'+esc(st.poster)+'" alt="" loading="lazy" decoding="async">'
+        +'<video muted playsinline preload="none" poster="'+esc(st.poster)+'" data-poster-t="'+t+'" src="'+src+'"></video>';
+    }
+    return '<video class="pv-pend" muted playsinline preload="metadata" crossorigin="anonymous" data-poster-auto="1" src="'+src+'"></video>';
+  }
+  var POSTER_PARALELO=2, posterCola=[], posterActivos=0;
+  function programaPosters(){
+    var vs=$('cuerpo').querySelectorAll('video[data-poster-auto]:not([data-poster-hecho])');
+    for(var i=0;i<vs.length;i++){ vs[i].setAttribute('data-poster-hecho','1'); posterCola.push(vs[i]); }
+    bombeaPosters();
+  }
+  function bombeaPosters(){
+    while(posterActivos<POSTER_PARALELO&&posterCola.length){
+      var v=posterCola.shift(); if(!v.isConnected) continue;
+      posterActivos++;
+      capturaPoster(v).catch(function(){}).then(function(){ posterActivos--; bombeaPosters(); });
+    }
+  }
+  function lumaVar(ctx,w,h){ var d=ctx.getImageData(0,0,w,h).data,s=0,s2=0,n=0; for(var i=0;i<d.length;i+=4){ var y=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]; s+=y; s2+=y*y; n++; } var m=n?s/n:0; return {luma:m, v:n?Math.max(0,s2/n-m*m):0}; }
+  function esNegra(m){ return !(m.luma>=16)||(m.luma<24&&m.v<25); }
+  function esperaEv(v,ev,ms){ return new Promise(function(res){ var ok=false; function f(){ if(ok) return; ok=true; v.removeEventListener(ev,f); res(); } v.addEventListener(ev,f); setTimeout(f,ms); }); }
+  function capturaPoster(v){
+    var c=document.createElement('canvas'); c.width=54; c.height=96; var ctx=c.getContext('2d',{willReadFrequently:true});
+    var listo=(v.readyState>=1)?Promise.resolve():esperaEv(v,'loadedmetadata',8000);
+    return listo.then(function(){
+      var dur=(isFinite(v.duration)&&v.duration>0)?v.duration:15, mejor=null, n=12, i=0;
+      function rango(m){ return ((m.centro&&m.enRango)?3:(m.enRango?2:(m.centro?1:0))); }
+      function paso(){
+        if(i>=n) return Promise.resolve();
+        var t=+(((i+0.5)/n)*dur).toFixed(3); i++;
+        var s=esperaEv(v,'seeked',2500); try{ v.currentTime=t; }catch(_){}
+        return s.then(function(){
+          try{
+            ctx.drawImage(v,0,0,54,96); var m=lumaVar(ctx,54,96); m.t=t; m.centro=(t>=0.8&&t<=dur-0.8); m.enRango=(m.luma>=40&&m.luma<=220);
+            if(!esNegra(m)&&(!mejor||rango(m)>rango(mejor)||(rango(m)===rango(mejor)&&m.v>mejor.v))) mejor=m;
+          }catch(_){}
+          return paso();
+        });
+      }
+      return paso().then(function(){
+        if(!mejor){ v.setAttribute('data-poster-ko','1'); v.classList.remove('pv-pend'); try{ v.currentTime=1; }catch(_){} return; }
+        var s=esperaEv(v,'seeked',2500); try{ v.currentTime=mejor.t; }catch(_){}
+        return s.then(function(){
+          var poster='';
+          try{ var pc=document.createElement('canvas'); pc.width=270; pc.height=480; pc.getContext('2d').drawImage(v,0,0,270,480); poster=pc.toDataURL('image/jpeg',0.8); }catch(_){}
+          v.setAttribute('data-poster-t', mejor.t);
+          if(poster){
+            /* El <video> pausado y fuera de pantalla NO repinta el fotograma al que se ha
+               hecho seek (Chromium se queda con el primero, el negro) y el atributo poster
+               solo se enseña mientras no hay fotograma decodificado. Así que se descarga el
+               elemento y se deja como el previo con póster del Stock: poster + preload=none;
+               al pasar el ratón vuelve a cargar (el asset es immutable, sale de caché). */
+            var src=v.getAttribute('src');
+            v.setAttribute('poster', poster); v.preload='none';
+            v.removeAttribute('src'); try{ v.load(); }catch(_){}
+            v.setAttribute('src', src);
+          }
+          v.classList.remove('pv-pend');
+        });
+      });
+    });
+  }
   /* en curso: tras Crear vídeo, sondeo cada 15 s durante 15 min */
   function iniciaPendiente(p, desde){
     var eid=externalIdProducto(p); if(!eid) return;
@@ -662,7 +742,7 @@
       var cuando=st.createdAt?fmtFecha(String(st.createdAt).slice(0,10)):(fecha?fmtFecha(fecha.slice(0,10)):'');
       return '<div class="anuncio">'
         +'<button type="button" class="prev" data-i="'+idx+'" aria-label="Ver el vídeo de '+esc(p.nombre)+' a tamaño completo" title="Clic: ver a tamaño completo">'
-        +'<video muted playsinline preload="metadata" src="'+esc(urlVideo(st))+'#t=0.1"></video><span class="play">▶</span></button>'
+        +previoVideoHtml(st)+'<span class="play">▶</span></button>'
         +'<div class="acts"><span class="done">✓ vídeo'+(cuando?' · '+esc(cuando):'')+(enCurso?' · <em>rehaciendo…</em>':'')+'</span>'
         +'<div class="row"><a class="btn sm crear rehacer" href="'+link+'" target="_blank" rel="noopener" data-i="'+idx+'" aria-label="Rehacer el vídeo de '+esc(p.nombre)+'">↻ Rehacer</a>'+btnGuion+'</div>'
         +'<a class="stocklink" href="'+STOCK_WEB+'" target="_blank" rel="noopener">Ver en el Stock ↗</a></div></div>';
@@ -725,6 +805,7 @@
       });
       return '<tr data-i="'+idx+'" data-eid="'+esc(eid)+'"'+((fecha||existe)?' class="creado"':'')+'>'+celdas.join('')+'</tr>';
     }).join('');
+    programaPosters();
   }
   $('cuerpo').addEventListener('click', function(ev){
     var a=ev.target.closest('a.crear, button.guion, button.olvidar, button.reintentar, button.prev, button.thumb'); if(!a) return;
@@ -739,11 +820,11 @@
   });
   /* previo: se mueve al pasar el ratón / tocar; se para al salir */
   $('cuerpo').addEventListener('pointerenter', function(ev){ var b=ev.target&&ev.target.closest&&ev.target.closest('button.prev'); if(!b||ev.target!==b) return; var v=b.querySelector('video'); if(v){ var pr=v.play(); if(pr&&pr.catch) pr.catch(function(){}); } }, true);
-  $('cuerpo').addEventListener('pointerleave', function(ev){ var b=ev.target&&ev.target.closest&&ev.target.closest('button.prev'); if(!b||ev.target!==b) return; var v=b.querySelector('video'); if(v){ v.pause(); try{ v.currentTime=0.1; }catch(_){} } }, true);
+  $('cuerpo').addEventListener('pointerleave', function(ev){ var b=ev.target&&ev.target.closest&&ev.target.closest('button.prev'); if(!b||ev.target!==b) return; var v=b.querySelector('video'); if(v){ v.pause(); try{ var t=parseFloat(v.getAttribute('data-poster-t')); v.currentTime=isFinite(t)?t:1; }catch(_){} } }, true);
   /* modal a tamaño completo */
   function abreModal(p){
     var st=estadoStock(externalIdProducto(p)); if(!st||!st.exists) return;
-    var m=$('modal'), v=$('mVideo'); v.src=urlVideo(st); m.hidden=false;
+    var m=$('modal'), v=$('mVideo'); if(st.poster) v.poster=st.poster; else v.removeAttribute('poster'); v.src=urlVideo(st); m.hidden=false;
     $('mMeta').innerHTML='<b>'+esc(p.nombre)+'</b>'+(typeof p.precio==='number'?' · '+esc(precioTexto(p)):'')+(st.createdAt?' · '+esc(fmtFecha(String(st.createdAt).slice(0,10))):'')+' · <a class="stocklink" href="'+STOCK_WEB+'" target="_blank" rel="noopener">Ver en el Stock ↗</a> · <a class="stocklink" href="'+esc(st.url)+'" target="_blank" rel="noopener">Abrir el fichero ↗</a>';
     var pr=v.play(); if(pr&&pr.catch) pr.catch(function(){});
     $('mClose').focus();
@@ -936,6 +1017,6 @@
   });
 })();
 </script>
-  <script src="/assets/admira-version-watch.js?v=12.09.2026.r11.1451" defer></script>
+  <script src="/assets/admira-version-watch.js?v=12.09.2026.r12.1538" defer></script>
 </body>
 </html>

@@ -134,3 +134,14 @@ visor): análisis con rejilla, casado con los 159 canónicos por página + nombr
 a mano (mismo artículo con otra redacción: «Body Milk Nutritivo NIVEA» ↔ «Cremas corporales y geles
 de baño NIVEA», etc.; p. 6, 9 y 12). Para las promos sin precio («2ª unidad -50 %») el prompt pide
 también los productos «solo con promoción»; sin eso Grok se saltaba 7 de la página 12.
+
+*Previo NUNCA negro (Yokup #3199, 12-sep-2026).* El máster que monta el creador con MediaRecorder
+empieza con un fotograma de relleno (`#020508`, luma ≈ 20) y el webm no lleva Duration ni Cues, así
+que el `<video preload=metadata src="…#t=0.1">` de antes acababa pintando ese fotograma 0 en negro
+(Chrome con el elemento fuera de pantalla al cargar; Safari siempre). Ahora `/stock/exists` devuelve
+`poster` (`https://api.admira.store/stock/poster/<id>`, elegido por luma 40..220 y máxima varianza,
+fuera de los 0,8 s de cada extremo) y `posterFrameAt`; el previo lo usa como `poster` del `<video>`
+(`preload=none`) y como `<img>` de respaldo debajo. Sin póster en el Stock, `capturaPoster()` muestrea
+12 fotogramas en cliente con el mismo criterio (`crossorigin=anonymous`, canvas 54×96) y no enseña el
+vídeo (`.pv-pend`) hasta tener uno; al soltar el ratón vuelve a ese instante (`data-poster-t`), no a 0,1 s.
+Prueba repetible: `node tools/valida-videos-catalogo.mjs --catalogo alcampo-2026-09-10` en admira-next-web.
