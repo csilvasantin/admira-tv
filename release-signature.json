@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r18.21:46",
+  "version": "v.12.09.2026.r19.22:38",
   "signature": "Codex · MacBookAir16plata",
   "agent": "Codex",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "21:46",
-  "evidence": "Alta desde admira.app, registro persistente y emparejamiento con identidad física independiente. Pruebas de API, SQLite, reproductor musical e integración local con Durable Object. Prueba física con el iPad de Luna pendiente de identificar su ID."
+  "time": "22:38",
+  "evidence": "El catálogo opcional de tiendas se carga sin bloquear el arranque del player. 23 pruebas de emparejamiento, reproducción iOS y caché superadas. Asociación iphone17-mupi con demo Alcampo verificada; reproducción física pendiente de comprobar."
 }
