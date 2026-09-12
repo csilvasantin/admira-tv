@@ -1,8 +1,8 @@
 {
   "name": "admira-tv",
   "title": "Admira TV · admira.tv — la capa Emitir de la suite AdmiraNeXT",
-  "description": "Hub MCP de admira.tv: qué se emite, dónde y con qué audiencia, la FEDERACIÓN con circuitos externos (pedir antena fuera, recibir ofertas dentro, emisión real al aceptar) y el PLAYER CONDICIONADO Xtore (sin nadie → playlist; alguien → anuncio por sexo o tipología, < 2 s). Servidor MCP vivo en mcp-tv.admira.store v2.2.0 (19 herramientas) y el CMS de emisión con su guía para personas.",
-  "version": "v.07.09.2026.r8.07:50",
+  "description": "Hub MCP de admira.tv: emisión, federación, player condicionado y registro de players virtuales (navegador sin hardware dedicado). Servidor mcp-tv.admira.store v2.3.0; el descriptor raíz publica la lista vigente de herramientas. Alta no equivale a presencia ni a proof-of-play.",
+  "version": "v.12.09.2026.r1.09:42",
   "site": "https://admira.tv",
   "hub": "https://admira.tv/mcp/",
   "llms_txt": "https://admira.tv/mcp/llms.txt",
@@ -17,6 +17,26 @@
     "transport": "streamable-http",
     "auth": "lectura abierta (sin clave) · escrituras con clave de flota AdmiraNeXT (Authorization: Bearer) · circuitos externos con su clave cx_…",
     "tools": [
+      {
+        "name": "player_virtual_register",
+        "desc": "Alta persistente e idempotente por screen virtual, name, circuit y mode opcional. Clave de flota. Conflictos no sobrescriben. No abre navegador ni escribe playlists."
+      },
+      {
+        "name": "player_virtual_list",
+        "desc": "Registro público paginado de players virtuales; screen o cursor opcional. Fichas sin hardware dedicado; no acredita online."
+      },
+      {
+        "name": "player_autolink_status",
+        "desc": "Lectura del estado del autoenganche de anuncios Xtore."
+      },
+      {
+        "name": "player_autolink_run",
+        "desc": "Ejecuta la comprobación de autoenganche existente. Clave de flota; puede modificar reglas."
+      },
+      {
+        "name": "player_autolink_notify_test",
+        "desc": "Aviso de prueba del autoenganche. Clave de flota; envía notificación externa."
+      },
       {
         "name": "on_air",
         "desc": "Qué emite una pantalla ahora, su audiencia por cámara y si está conectada."
@@ -101,7 +121,7 @@
         }
       }
     },
-    "version": "2.2.0",
+    "version": "2.3.0",
     "resources": [
       "admiratv://federacion",
       "admiratv://llms.txt"
@@ -119,7 +139,20 @@
         "airtime_report"
       ]
     },
+    "player_virtual": {
+      "definition": "Player en navegador sin hardware dedicado asociado",
+      "screen": "xtore-virtual-zapatillas",
+      "name": "Xtore · zapatillas — Player virtual",
+      "circuit": "admiranext",
+      "hardware": false,
+      "registry": "https://mcp-tv.admira.store/virtual-players",
+      "playlist": "https://admira.tv/parrilla/?project=admiranext&xpace=admiranext&device=xtore-virtual-zapatillas&playlist=default",
+      "help": "https://admira.tv/help/#player-virtual",
+      "mission": "DCL-f9824e3bba6cee600b73810d",
+      "registration_is_not_presence": true
+    },
     "player_condicionado": {
+      "scope": "Piloto remoto xtanco-totem; distinto del iframe opaco del analizador virtual zapatillas",
       "doc": "https://admira.tv/mcp/#player-condicionado",
       "help": "https://admira.tv/help/#xtore",
       "analyzer": "https://admira.tv/videoanalytics/xtore/",
@@ -194,6 +227,12 @@
     "read": [
       {
         "method": "GET",
+        "path": "/virtual-players?screen=<screen>&cursor=<cursor>",
+        "auth": "no",
+        "desc": "Registro público (filtro screen o paginación cursor), 100 por página; seguir cursor hasta null. Alta exclusivamente por MCP con clave de flota."
+      },
+      {
+        "method": "GET",
         "path": "/",
         "auth": "no",
         "desc": "Descriptor del servidor MCP: herramientas disponibles y estado."
@@ -252,6 +291,7 @@
     "auth": {
       "how": "Lecturas sin credencial. circuit_register, request_airtime y airtime_decide exigen la clave de flota AdmiraNeXT (Bearer); offer_airtime exige la clave de circuito cx_ del circuito externo. El CMS de emisión de la web va detrás de la verja de acceso.",
       "protected": [
+        "player_virtual_register",
         "circuit_register",
         "request_airtime",
         "airtime_decide",

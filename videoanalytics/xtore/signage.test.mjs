@@ -14,7 +14,9 @@ test('virtual player URL is isolated, muted, conditional and without camera, scr
   assert.throws(()=>playerURL('xtanco-totem'));
   const url=new URL(playerURL('xtore-virtual-12345678'));
   assert.equal(url.origin,PLAYER_ORIGIN);
-  for(const k of ['screen','circuit','machine'])assert.equal(url.searchParams.get(k),'xtore-virtual-12345678');
+  assert.equal(url.searchParams.get('screen'),'xtore-virtual-12345678');
+  assert.equal(url.searchParams.get('circuit'),'admiranext');assert.equal(url.searchParams.get('machine'),'');
+  assert.equal(url.searchParams.get('playerType'),'virtual');
   for(const k of ['cam','shot','rtb'])assert.equal(url.searchParams.get(k),'0');
   assert.equal(url.searchParams.get('mode'),'conditional');assert.equal(url.searchParams.get('muted'),'1');
   assert.equal(url.searchParams.get('format'),null);assert.equal(url.searchParams.get('stream'),'1');assert.equal(url.searchParams.get('xtoreParent'),'1');

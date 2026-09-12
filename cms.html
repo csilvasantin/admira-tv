@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=11.09.2026.r13.2034"></script>
+<script src="/auth-gate.js?v=12.09.2026.r1.0942"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -523,7 +523,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   padding:4px 8px;font:inherit;font-size:13px;max-width:min(320px,42vw)}
 #mandoPick:hover,#mandoPick:focus{border-color:var(--green,#3df08a);outline:none}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=11.09.2026.r13.2034">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r1.0942">
 </head>
 <body>
 <script>
@@ -542,8 +542,8 @@ window.ADMIRA_NAV={
      los paneles AVANZADO (derecha) y EXPERTO (abajo) de admira-frame, más abajo en el body. */
 };
 </script>
-<script src="/admira-nav.js?v=11.09.2026.r13.2034"></script>
-<script src="/admira-frame.js?v=11.09.2026.r13.2034" defer></script>
+<script src="/admira-nav.js?v=12.09.2026.r1.0942"></script>
+<script src="/admira-frame.js?v=12.09.2026.r1.0942" defer></script>
 
 <!-- Controles propios del CMS de flota, servidos al marco cuadrático (admira-frame).
      El marco los MUEVE (no clona) a sus paneles; conservan id y handlers, que se enlazan
@@ -708,7 +708,8 @@ window.ADMIRA_NAV={
 <footer>Auto-refresco cada 10 s · fuente: <code>omnipublicity-api</code> (flota) + <code>signage/now</code> (emisión) · <span id="stamp"></span> · <b id="appVer" style="color:var(--accent)"></b></footer>
 <div id="toasts"></div>
 
-<script src="xpl-runtime.js?v=11.09.2026.r13.2034"></script>
+<script src="xpl-runtime.js?v=12.09.2026.r1.0942"></script>
+<script src="/assets/virtual-players.js"></script>
 <script>
 // ── Skeletons de carga (shimmer) reutilizables ──
 const SKEL={
@@ -950,6 +951,9 @@ async function load(){
   let devs=[];
   try{ const r=await fetch(FLEET,{cache:'no-store'}); const d=await r.json(); devs=(d.locations||d||[]).filter(x=>x&&x.id); }
   catch(_){ $('liveTxt').textContent='sin conexión con la flota'; return; }
+  const virtuals=await AdmiraVirtualPlayers.list().catch(()=>[]);
+  const virtualIds=new Set(virtuals.map(p=>p.screen));
+  devs=devs.filter(d=>!virtualIds.has(d.screen||d.id)).concat(AdmiraVirtualPlayers.merge([],virtuals));
   devs=filterByCanal(devs);   // canal/proyecto seleccionado (o todos)
   // ordena: robot/móvil primero, luego por nombre
   devs.sort((a,b)=> (b.deviceType==='robot')-(a.deviceType==='robot') || String(a.name||a.id).localeCompare(String(b.name||b.id)));
@@ -1013,7 +1017,7 @@ async function load(){
         <div class="ava ${isRobot?'robot':''}">${isRobot?'🤖':(d.orientation==='landscape'?'🖥️':'📱')}</div>
         <div style="min-width:0;flex:1">
           <div class="nm">${esc(d.name||d.id)}</div>
-          <div class="meta">${esc(d.id)} · ${isRobot?'robot móvil':'pantalla'} · ${esc(d.orientation||'portrait')}${d.device?(' · 💻 '+esc(d.device)):''}${(it&&it._ip)?(' · 🌐 '+esc(it._ip)):''}</div>
+          <div class="meta">${esc(d.id)} · ${AdmiraVirtualPlayers.isVirtual(d)?'Virtual · navegador · sin hardware dedicado':isRobot?'robot móvil':'pantalla'} · ${esc(d.orientation||'portrait')}${d.device?(' · 💻 '+esc(d.device)):''}${(it&&it._ip)?(' · 🌐 '+esc(it._ip)):''}</div>
         </div>
         <span class="cmode ${cmode}" title="${MODE_LBL[cmode]}">${CMICON[cmode]}</span>
         <div class="st ${isOn?'on':'off'}"><span class="d"></span>${isOn?'Emitiendo':'sin señal'}</div>
@@ -1073,7 +1077,7 @@ async function load(){
           '</div>';
         })()}
         <div class="acts">
-          <a class="btn" href="${esc(canalUrl(d))}" target="_blank" rel="noopener">▶ Abrir canal</a>
+          <a class="btn" href="${esc(d.channel_url||canalUrl(d))}" target="_blank" rel="noopener">▶ Abrir canal</a>
           <a class="btn ghost" href="/cms/calendar/?screen=${encodeURIComponent(d.screen||d.id)}" title="parrilla de este dispositivo">🗓 Parrilla</a>
           <a class="btn ghost" href="/condicional.html?target=${encodeURIComponent(d.id)}" title="segmentar por audiencia">🎯 Segmentar</a>
           <a class="btn ghost" href="${(d.coords&&d.coords.length===2)?('https://www.clearchannel.tv/?lng='+d.coords[0]+'&lat='+d.coords[1]+'&label='+encodeURIComponent(d.name||d.id)):('https://www.clearchannel.tv/?screen='+encodeURIComponent(d.screen||''))}" target="_blank" rel="noopener" title="ver este punto en el mapa">🗺 Mapa</a>
@@ -1709,12 +1713,14 @@ $('progBands').addEventListener('click',e=>{
     // Fuentes base en paralelo, cada una aislada. Stock es respaldo: el nombre
     // vivo manda porque es exactamente el título que el player está emitiendo.
     const stockReq=EB_STOCK?Promise.resolve({data:{items:EB_STOCK}}):grab(EB.STOCK,8000);
-    const [sc, gr, pj, lc, fl, st] = await Promise.all([
+    const [sc, gr, pj, lc, fl, st, virtuals] = await Promise.all([
       grab(EB.SCREENS,8000), grab(EB.GRID,8000), grab(EB.PROJ,8000),
-      grab(EB.LOCS,12000), grab(EB.FLEET,8000), stockReq
+      grab(EB.LOCS,12000), grab(EB.FLEET,8000), stockReq,
+      AdmiraVirtualPlayers.list().catch(()=>null)
     ]);
     const errs=[];
-    const players = (sc.data&&Array.isArray(sc.data.screens))?sc.data.screens:[];
+    const players = AdmiraVirtualPlayers.merge((sc.data&&Array.isArray(sc.data.screens))?sc.data.screens:[],virtuals);
+    if(!virtuals) errs.push('Registro de players virtuales no disponible');
     if(sc.err){ errs.push('signage/screens: '+sc.err); }
     const gridScreens = (gr.data&&Array.isArray(gr.data.screens))?gr.data.screens:[];
     if(gr.err) errs.push('grid/screens: '+gr.err);
@@ -1835,7 +1841,7 @@ $('progBands').addEventListener('click',e=>{
     }).length;
     el('ebStats').innerHTML =
       '<div class="ebStat air"><b>'+online+'</b><span>players emitiendo</span></div>'+
-      '<div class="ebStat accent"><b>'+players.length+'</b><span>players vivos</span></div>'+
+      '<div class="ebStat accent"><b>'+players.length+'</b><span>players registrados</span></div>'+
       '<div class="ebStat amber"><b>'+noLoc+'</b><span>sin circuito (loc)</span></div>'+
       '<div class="ebStat amber"><b>'+emptySurf+'</b><span>superficies sin player</span></div>'+
       '<div class="ebStat off"><b>'+(locsDown?'n/d':locsNoPlayer)+'</b><span>sitios sin player</span></div>';
@@ -1936,7 +1942,8 @@ $('progBands').addEventListener('click',e=>{
             '<span class="ebSt '+mode.key+'"><span class="d" aria-hidden="true"></span>'+mode.label+'</span>'+
           '</span></td>'+
           '<td data-col="player" class="ebPlayerCell"><button type="button" class="ebScreenShortcut" data-open-remote aria-label="Abrir modo experto de '+esc(p.screen)+'">'+
-            '<span class="ebScreen">'+esc(p.screen)+'</span></button></td>'+
+            '<span class="ebScreen">'+esc(p.name||p.screen)+'</span></button>'+
+            (AdmiraVirtualPlayers.isVirtual(p)?'<div class="ebMeta" title="Corre en un navegador; no tiene hardware dedicado asociado">Virtual · navegador</div>':'')+'</td>'+
           '<td data-col="rol"><span class="ebRoleStack">'+
             (role? '<span class="ebRole '+rCls+'">'+esc(role)+'</span>':hole('—'))+
             '<a class="ebPasses" href="'+passes.href+'" aria-label="Ver estadísticas de '+esc(p.screen)+': '+passes.count+' pases hoy"><b>'+passes.count+'</b> pases hoy <span aria-hidden="true">↗</span></a>'+
@@ -2129,10 +2136,10 @@ $('progBands').addEventListener('click',e=>{
   EB_TIMER=setInterval(function(){ ebLoad().then(probeRooms); }, EB.REFRESH);
 })();
 </script>
-<script src="/admira-session.js?v=11.09.2026.r13.2034"></script>
-<script src="/admira-avatar.js?v=11.09.2026.r13.2034"></script>
-<script src="/cms-pacman.js?v=11.09.2026.r13.2034"></script>
-  <script src="/assets/admira-version-watch.js?v=11.09.2026.r13.2034" defer></script>
+<script src="/admira-session.js?v=12.09.2026.r1.0942"></script>
+<script src="/admira-avatar.js?v=12.09.2026.r1.0942"></script>
+<script src="/cms-pacman.js?v=12.09.2026.r1.0942"></script>
+  <script src="/assets/admira-version-watch.js?v=12.09.2026.r1.0942" defer></script>
 <script>
 /* ── COLUMNAS REAJUSTABLES DE LA TABLA DE FLOTA ──────────────────────────────
    Mismo patrón que el highscore de yokup: tirador por columna, mínimo por

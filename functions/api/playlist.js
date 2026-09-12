@@ -44,6 +44,14 @@ async function readDraft(env, screen) {
 export async function onRequestGet({ request, env }) {
   const screen = cleanScreen(new URL(request.url).searchParams.get("screen"));
   if (!screen) return json({ ok: false, error: "bad_screen" }, 400);
+  // Public virtual playlists are also read by Xtore on www/localhost through
+  // its bounded parent bridge. Never enable cross-origin credentialed writes.
+  if (/^(?:xtore-)?virtual-[a-z0-9-]+$/.test(screen)) {
+    const draft = await readDraft(env, screen);
+    return Response.json({ ok: true, draft: { screen, playlist: 'default', items: draft.items, rev: draft.rev } }, {
+      headers: authHeaders({ 'Access-Control-Allow-Origin': '*' }),
+    });
+  }
   return json({ ok: true, draft: await readDraft(env, screen) });
 }
 

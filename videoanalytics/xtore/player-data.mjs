@@ -1,6 +1,7 @@
 // Public catalogue/rules only. The opaque child can never choose a URL,
 // credentials, a physical screen, or access Xtore images/history/storage.
-const RESOURCES=Object.freeze({catalog:'https://api.admira.store/stock/list?limit=300',rules:'https://brain.digitalavatar.ai/segmentation?target=all'});
+import {XTORE_VIRTUAL_SCREEN} from './virtual-player.mjs';
+const RESOURCES=Object.freeze({catalog:'https://api.admira.store/stock/list?limit=300',rules:'https://brain.digitalavatar.ai/segmentation?target=all',playlist:`https://admira.tv/api/playlist?screen=${XTORE_VIRTUAL_SCREEN}`});
 const LIMIT=2*1024*1024;
 export class PlayerDataBridge{
   constructor({target,fetcher=fetch,now=()=>Date.now()}){Object.assign(this,{target,fetcher,now});this.closed=false;this.active=new Map();this.last=new Map();this.recent=new Map();}
@@ -32,7 +33,9 @@ export class PlayerDataBridge{
       catch(error){await reader.cancel().catch(()=>{});throw error;}
       const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
       data=JSON.parse(new TextDecoder().decode(bytes));
-      if(d.resource==='catalog'?!Array.isArray(data?.items):!Array.isArray(data?.rules))throw new Error('Invalid public data');
+      if(d.resource==='catalog'?!Array.isArray(data?.items):d.resource==='rules'?!Array.isArray(data?.rules):data?.ok!==true||!Array.isArray(data?.draft?.items))throw new Error('Invalid public data');
+      // The frame needs only the public playlist, never audit fields/user email.
+      if(d.resource==='playlist')data={ok:true,draft:{items:data.draft.items}};
       ok=true;
     }catch{/* Report a bounded failure; never forward response headers/errors. */}
     finally{clearTimeout(timeout);this.active.delete(d.resource);}

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=11.09.2026.r13.2034"></script>
+<script src="/auth-gate.js?v=12.09.2026.r1.0942"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admira.tv · MCP — el canal, conectado</title>
 <meta name="description" content="Servidor MCP de Admira.tv: qué hay en antena en cada pantalla, proof-of-play, cómo poner una pantalla a emitir, federación con circuitos externos y el player condicionado por audiencia (Xtore).">
@@ -23,8 +23,8 @@
 <script>
 window.ADMIRA_NAV={title:'MCP · el canal conectado'};
 </script>
-<script src="/admira-nav.js?v=11.09.2026.r13.2034" defer></script>
-<script src="/admira-frame.js?v=11.09.2026.r13.2034" defer></script>
+<script src="/admira-nav.js?v=12.09.2026.r1.0942" defer></script>
+<script src="/admira-frame.js?v=12.09.2026.r1.0942" defer></script>
 <style>
   :root{ --bg:#02080d; --panel:#0a1620; --line:#16303a; --txt:#dff8ff; --mut:#75aab9; --acc:#78f3ff; --pur:#88ffaa; --good:#88ffaa; }
   *{box-sizing:border-box}
@@ -52,7 +52,7 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
   a{color:var(--acc)}
   footer{color:var(--mut);font-size:13px;margin-top:38px;border-top:1px solid var(--line);padding-top:18px}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=11.09.2026.r13.2034">
+  <link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r1.0942">
 </head>
 <body>
 <div class="wrap">
@@ -62,6 +62,14 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
 
   <div class="status"><span class="dot" id="dot"></span><span id="status">comprobando servidor…</span></div>
 
+  <h2 id="player-virtual">Player virtual · alta en flota</h2>
+  <div class="card">
+    <p>Player que corre en un navegador, sin hardware dedicado asociado. Ficha persistente, playlist compartida; abrir, cerrar o reiniciar su instancia no crea otro equipo. <a href="/help/#player-virtual">Help</a> · <a href="/cms.html">Flota</a>.</p>
+    <div class="tool"><b>player_virtual_register</b><span><code>screen</code> (prefijo virtual- o xtore-virtual-), <code>name</code>, <code>circuit</code>, <code>mode?</code> (local por defecto o conditional). Exige clave de flota. Alta idempotente: mismos datos devuelven la ficha; un ID ocupado con datos distintos se rechaza sin sobrescribir. No abre navegador, no marca online, no modifica playlists ni reglas. Devuelve channel_url, playlist_url y control_url.</span></div>
+    <div class="tool"><b>player_virtual_list</b><span><code>screen?</code> o <code>cursor?</code>. Registro público, 100 fichas por página; seguir cursor hasta null. Alias <a href="https://mcp-tv.admira.store/virtual-players">GET /virtual-players</a>. Estar registrado no acredita presencia ni emisión.</span></div>
+    <pre>{"name":"player_virtual_register","arguments":{"screen":"xtore-virtual-zapatillas","name":"Xtore · zapatillas — Player virtual","circuit":"admiranext","mode":"conditional"}}</pre>
+    <p>La vista Xtore usa un iframe opaco, sin cámara ni captura ni credenciales. Solo lee catálogo, reglas globales y su playlist pública fija mediante un puente con lista cerrada. No aceptar URLs o IDs de hardware enviados por el iframe. No se migra ni elimina el histórico de IDs de sesión antiguos.</p>
+  </div>
   <h2>Endpoint</h2>
   <div class="card endpoint">
     <code class="url" id="ep">https://mcp-tv.admira.store/mcp</code>

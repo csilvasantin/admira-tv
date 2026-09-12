@@ -167,6 +167,19 @@ Anuncios por tipología (creador → carril): 1) las tools de lectura devuelven 
 Placeholders del Stock hoy: Matrix 1786643541589-rb1gz3 · Top Gun 1786533143983-n2y09e; neutro = playlist (sin creative fijo).
 Estado real 11-09-2026 18:51: reglas vivas r-hombre · r-mujer · r-neutro; Persona/Coche/Moto/Bici sin anuncio aún.
 
+## Player virtual (registro persistente)
+
+Player virtual = navegador sin hardware dedicado asociado; no equivale a simulación.
+player_virtual_register {screen,name,circuit,mode?}: clave de flota requerida, prefijos virtual- o xtore-virtual-.
+Alta create-or-read: mismos datos no duplican; configuración distinta para el mismo ID falla sin sobrescribir.
+No abre navegador, no publica online y no modifica playlists, reglas, hardware ni anuncios.
+player_virtual_list {screen?,cursor?}: lectura pública paginada (100/página); GET https://mcp-tv.admira.store/virtual-players.
+Xtore zapatillas: screen xtore-virtual-zapatillas, circuit admiranext, mode conditional.
+Playlist base: https://admira.tv/parrilla/?project=admiranext&xpace=admiranext&device=xtore-virtual-zapatillas&playlist=default
+Presencia de runtime y emisión se consultan aparte: registro no es heartbeat ni proof-of-play.
+Varias pestañas del mismo ID comparten playlist: no cuentan como hardware adicional.
+Help: https://admira.tv/help/#player-virtual · MCP: https://admira.tv/mcp/#player-virtual
+
 ## Recursos MCP
 - admiratv://federacion — el protocolo de federación (markdown).
 - admiratv://llms.txt — este fichero.

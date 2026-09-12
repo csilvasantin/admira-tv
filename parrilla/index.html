@@ -7,7 +7,7 @@
   <meta name="description" content="Editor de parrilla municipal y publicitaria de Admira.tv.">
   <meta name="theme-color" content="#070a10">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <script>if(!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)){document.write('<script src="/auth-gate.js?v=11.09.2026.r13.2034"><\/script>')}</script>
+  <script>if(!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)){document.write('<script src="/auth-gate.js?v=12.09.2026.r1.0942"><\/script>')}</script>
   <script src="https://www.clearchannel.tv/locations.js?v=14.07.2026.r17"></script>
   <style>
     :root{--bg:#070a10;--panel:#0e141d;--panel2:#121b28;--line:#223049;--ink:#d9e4f2;--dim:#8999ae;--green:#3df08a;--blue:#7aa2ff;--amber:#ffbd59;--red:#ff6262}
@@ -93,10 +93,11 @@
 </head>
 <body>
   <script>
-    window.ADMIRA_VERSION='v.11.09.2026.r13.20:34';
+    window.ADMIRA_VERSION='v.12.09.2026.r1.09:42';
     window.ADMIRA_NAV={active:'parrilla',title:'Parrilla por Xpacio',topRight:'<a class="admtR" href="/playlists/">Playlists</a><a class="admtR admtR-cta" href="/canal.html" target="_blank" rel="noopener">Ver canal ↗</a>'};
   </script>
-  <script src="/admira-nav.js?v=11.09.2026.r13.2034"></script>
+  <script src="/assets/virtual-players.js"></script>
+  <script src="/admira-nav.js?v=12.09.2026.r1.0942"></script>
 
   <main class="page">
     <section class="context-picker" aria-label="Selector de proyecto, Xpacio y dispositivo IoT">
@@ -236,7 +237,7 @@
     function devicesFor(locationId){return screens.filter(s=>locationIdFor(s)===locationId)}
     function activeScreen(){return screens.find(s=>s.screen===activeScreenId)||devicesFor(activeLocationId)[0]||screens[0]}
     function activeLocation(){return locationsFor(activeProjectId).find(x=>x.id===activeLocationId)||locationsFor(activeProjectId)[0]}
-    function deviceKind(screen){const type=String(screen.deviceType||'').toLowerCase(),s=(screen.name+' '+screen.screen+' '+type).toLowerCase();if(/camera|cámara/.test(s))return{icon:'◉',name:'Cámara'};if(/audio|speaker|altavoz|radio/.test(s))return{icon:'♪',name:'Altavoz'};if(/sensor|sonda/.test(s))return{icon:'⌁',name:'Sensor'};if(/vending/.test(s))return{icon:'▤',name:'Vending'};return{icon:'▣',name:'Pantalla'}}
+    function deviceKind(screen){if(AdmiraVirtualPlayers.isVirtual(screen))return{icon:'▣',name:'Player virtual · navegador · sin hardware dedicado'};const type=String(screen.deviceType||'').toLowerCase(),s=(screen.name+' '+screen.screen+' '+type).toLowerCase();if(/camera|cámara/.test(s))return{icon:'◉',name:'Cámara'};if(/audio|speaker|altavoz|radio/.test(s))return{icon:'♪',name:'Altavoz'};if(/sensor|sonda/.test(s))return{icon:'⌁',name:'Sensor'};if(/vending/.test(s))return{icon:'▤',name:'Vending'};return{icon:'▣',name:'Pantalla'}}
     function shortDeviceName(screen){return String(screen&&screen.name||'Dispositivo').replace(/^Canal\s*Kiosk\s*/i,'').replace(/^CanalKiosk\s*/i,'').replace(/^Xtanco Valencia\s*·\s*/i,'')}
     function persistContext(){try{localStorage.setItem('adtv_active_project',activeProjectId);localStorage.setItem('adtv_active_xpace',activeLocationId);localStorage.setItem('adtv_active_device',activeScreenId)}catch(_){}const u=new URL(location.href);u.searchParams.set('project',activeProjectId);u.searchParams.set('xpace',activeLocationId);u.searchParams.set('device',activeScreenId);u.searchParams.delete('screen');history.replaceState(null,'',u)}
     function renderContext(){
@@ -252,6 +253,9 @@
     }
     async function loadContext(){
       try{const [pd,sd,live]=await Promise.all([fetch(API+'/grid/projects',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()),fetch(API+'/grid/screens',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()),fetch(API+'/signage/screens',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject())]);projects=(pd.projects||FALLBACK_PROJECTS).filter(p=>p.id==='kiosk'||p.id==='xtanco'||p.id==='admiranext');if(!projects.some(p=>p.id==='admiranext'))projects.unshift({id:'admiranext',name:'Canal AdmiraNeXT',circuits:['admiranext']});for(const p of projects)if(p.id==='kiosk'&&!p.circuits.includes('gracia'))p.circuits.push('gracia');const base=sourceXtancos().length?mergeSourceDevices(sd.screens||[]):sd.screens||FALLBACK_SCREENS,used=new Set(base.flatMap(s=>[s.screen].concat(s.pixerScreens||[]))),players=(live.screens||[]).filter(p=>p&&p.screen&&!used.has(p.screen)).map(p=>({screen:p.screen,name:String(p.name||p.screen).replace(/-/g,' '),circuit:p.loc||p.screen,locationId:p.loc||p.screen,bands:4,pixerScreens:[p.screen],projectId:'admiranext',programmable:true,playerVersion:p.version||''}));screens=base.concat(players)}catch(_){projects=FALLBACK_PROJECTS.slice();screens=sourceXtancos().length?mergeSourceDevices(FALLBACK_SCREENS):FALLBACK_SCREENS.slice();feedback('No se pudo actualizar la flota; se muestra la última configuración conocida.',false)}
+      const virtuals=await AdmiraVirtualPlayers.list().catch(()=>[]);
+      const virtualIds=new Set(virtuals.map(p=>p.screen));
+      screens=screens.filter(s=>!virtualIds.has(s.screen)).concat(virtuals.map(p=>({...p,locationId:p.circuit,bands:4,pixerScreens:[p.screen],projectId:'admiranext',programmable:true})));
       // Un acceso directo desde Flota debe seguir siendo editable aunque el player
       // esté offline o el censo vivo esté temporalmente vacío: la URL ya identifica
       // el destino de forma inequívoca. Se crea sólo como contexto de edición; no

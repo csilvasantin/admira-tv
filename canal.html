@@ -51,9 +51,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=11.09.2026.r13.2034"></script>
+<script src="xpl-runtime.js?v=12.09.2026.r1.0942"></script>
 <script>
-  window.ADMIRA_VERSION='v.11.09.2026.r13.20:34';
+  window.ADMIRA_VERSION='v.12.09.2026.r1.09:42';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -371,7 +371,7 @@ const XTORE_PARENT = qs.get('xtoreParent')==='1' && window.parent!==window &&
   /^(https:\/\/(www\.)?admira\.tv|http:\/\/(localhost|127\.0\.0\.1):\d+)$/.test(qs.get('parentOrigin')||'')
   ? qs.get('parentOrigin') : '';
 function xtorePublicRead(resource){
-  if(!XTORE_PARENT||!['catalog','rules'].includes(resource))return Promise.reject(new Error('Public bridge unavailable'));
+  if(!XTORE_PARENT||!['catalog','rules','playlist'].includes(resource))return Promise.reject(new Error('Public bridge unavailable'));
   return new Promise((resolve,reject)=>{
     const requestId=crypto.randomUUID();
     const cleanup=()=>{clearTimeout(timeout);window.removeEventListener('message',receive);};
@@ -454,6 +454,9 @@ const scr = { circuit: qs.get('circuit')||LS('adtv_circuit',''), screen: qs.get(
   // machine = id del equipo en la flota de admira.live/control (?machine=, lo pone
   // el lanzador del hub). Se reporta a /signage/now para que el 🎛️ mando enganche exacto.
   machine: qs.get('machine')||LS('adtv_machine','') };
+// A virtual player's host browser is not a dedicated physical fleet machine.
+const VIRTUAL_PLAYER = qs.get('playerType')==='virtual' && /^(?:xtore-)?virtual-[a-z0-9-]+$/.test(scr.screen);
+if(VIRTUAL_PLAYER){scr.machine='';scr.name=qs.get('name')||scr.screen;}
 if(qs.get('machine')) save('adtv_machine', scr.machine);
 // Si el equipo se registró/abrió sin circuito pero sí con screen ('<id>-mupi'),
 // derivamos el circuito del screen. Sin esto, un equipo sin circuit no recibe
@@ -1185,6 +1188,7 @@ function deviceTelemetryBase(){
   else if(nativeAndroid || (/Android/i.test(ua)&&/\bwv\b/i.test(ua))){ player='AdmiraNeXT Android Player'; playerVersion=(nativeAndroid&&nativeAndroid[1])||androidRelease; }
   else if(nativeIOS){ player='Admira Player'; playerVersion=nativeIOS[1]; }
   const wk=/AppleWebKit\/([0-9.]+)/i.exec(ua), chrome=/(?:Chrome|CriOS)\/([0-9.]+)/i.exec(ua), firefox=/Firefox\/([0-9.]+)/i.exec(ua);
+  if(VIRTUAL_PLAYER){player='Player virtual · navegador';playerVersion='';}
   const engine=chrome?'Chromium '+chrome[1]:firefox?'Firefox '+firefox[1]:wk?'WebKit '+wk[1]:'WebView';
   const dpr=Number(window.devicePixelRatio)||1, conn=navigator.connection||navigator.mozConnection||navigator.webkitConnection||{};
   return {
@@ -1192,7 +1196,7 @@ function deviceTelemetryBase(){
       cssWidth:screen.width||innerWidth, cssHeight:screen.height||innerHeight, viewportWidth:innerWidth, viewportHeight:innerHeight,
       devicePixelRatio:dpr, colorDepth:screen.colorDepth||0, orientation:(screen.orientation&&screen.orientation.type)||'', rotation:displayRotation, fit:(typeof displayFit==='string'?displayFit:'editorial') },
     system:{ os, osVersion, platform, language:navigator.language||'', timezone:(Intl.DateTimeFormat().resolvedOptions().timeZone||'') },
-    hardware:{ cores:navigator.hardwareConcurrency||0, memoryGB:navigator.deviceMemory||0, touchPoints:navigator.maxTouchPoints||0,
+    hardware:VIRTUAL_PLAYER?{dedicated:false}:{ cores:navigator.hardwareConcurrency||0, memoryGB:navigator.deviceMemory||0, touchPoints:navigator.maxTouchPoints||0,
       architecture:(navigator.userAgentData&&navigator.userAgentData.architecture)||'' },
     software:{ player, playerVersion, webRelease:window.ADMIRA_VERSION||'', engine, userAgent:ua },
     audio:playerAudioState(),
@@ -1511,7 +1515,7 @@ const DEFAULT_DRAFT={items:[],signature:''};
 async function loadDefaultDraft(){
   const screen=String(scr.screen||scr.circuit||'').trim();if(!screen||PREVIEW.on)return;
   try{
-    const d=await fetch('/api/playlist?screen='+encodeURIComponent(screen)+'&_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
+    const d=XTORE_PARENT?await xtorePublicRead('playlist'):await fetch('/api/playlist?screen='+encodeURIComponent(screen)+'&_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
     const raw=d&&d.draft&&Array.isArray(d.draft.items)?d.draft.items:[];
     const mapped=raw.map((it,ix)=>{const t=String(it.assetType||it.type||'').toLowerCase(),type=(t==='video'||t==='animation')?'video':(t==='audio'||t==='music'||t==='locucion')?'audio':'image';return{id:'default:'+String(it.stockId||it.id||ix),url:it.asset||it.url||'',type,title:it.title||('Contenido '+(ix+1)),motor:'parrilla-default',category:'por-defecto',_default:true,_position:ix,_previewSec:Math.max(2,+it.seconds||10),createdAt:'8'+String(1000+ix)}}).filter(x=>x.url);
     const signature=mapped.map(x=>x.id+'|'+x.url+'|'+x._previewSec).join('~');
@@ -3982,11 +3986,12 @@ let __cmdHost=0;
 // por `circuit`. Un equipo como macbookpro16 pertenece al circuito `osx`: si se
 // sondea una sola identidad el mando confirma el envío pero el player nunca lo ve.
 // Cada cola conserva su cursor propio para escuchar ambas sin duplicar acciones.
-const __cmdIds=Array.from(new Set([scr.circuit,scr.screen].map(x=>String(x||'').trim()).filter(Boolean)));
+// Virtuales: cola propia; nunca heredan órdenes destinadas al circuito físico.
+const __cmdIds=Array.from(new Set((VIRTUAL_PLAYER?[scr.screen]:[scr.circuit,scr.screen]).map(x=>String(x||'').trim()).filter(Boolean)));
 const __cmdState=Object.fromEntries(__cmdIds.map(id=>[id,{since:0,init:false}]));
 let __cmdPolling=false;
 const LEGACY_ACTION_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const CMD_ACK_OUTBOX_KEY='adtv_cmd_ack_outbox:'+(scr.circuit||'unbound');
+const CMD_ACK_OUTBOX_KEY='adtv_cmd_ack_outbox:'+((VIRTUAL_PLAYER?scr.screen:scr.circuit)||'unbound');
 function validCmdAckReceipt(x){
   return !!x&&typeof x.id==='string'&&x.id.trim().length>0&&x.id.length<=160&&
     typeof x.cid==='number'&&Number.isSafeInteger(x.cid)&&x.cid>0&&
@@ -4066,6 +4071,7 @@ async function ackQueuedCommand(c,status){
   return !__cmdAckOutbox.some(x=>x.action===c.action);
 }
 async function pollCmd(){
+  if(XTORE_PARENT) return; // El iframe aislado sólo acepta el puente de su padre.
   if(!__cmdIds.length||__cmdPolling) return;
   __cmdPolling=true;
   try{
@@ -4381,6 +4387,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=11.09.2026.r13.2034" defer></script>
+  <script src="/assets/admira-version-watch.js?v=12.09.2026.r1.0942" defer></script>
 </body>
 </html>

@@ -1,9 +1,9 @@
 {
-  "version": "v.11.09.2026.r13.20:34",
+  "version": "v.12.09.2026.r1.09:42",
   "signature": "TrinityMBA16 · MacBookAir16plata",
   "agent": "TrinityMBA16",
   "machine": "MacBookAir16plata",
-  "day": "11.09.2026",
-  "time": "20:34",
-  "evidence": "Corrección del ensayo Xtore: aviso30s sin desmontar; reintentos de catálogo; lecturas públicas coalescentes; HEAD H264 acotado; búfer online y callbacks obsoletos protegidos. 100 pruebas Xtore PASS y cross-review Turing aprobado. Navegador aislado: catálogo503 durante31s recupera65s, bucle2imágenes reales→regla coche QA→tercera imagen→vuelta6s; bici sin regla mantiene base. Fixtures fuera del repo, no publicadas. Preserva catálogo Neo r12; sin cambios de permisos, D1, grabador, destinatarios físicos ni sesión de cámara. Help web y MCP rev2026-09-11.4. Continuidad FLT-100252."
+  "day": "12.09.2026",
+  "time": "09:42",
+  "evidence": "Player virtual Xtore: identidad estable xtore-virtual-zapatillas, sin hardware dedicado, ficha de flota y playlist Por defecto compartida. MCP register/list con autoridad SQLite por ID y proyección KV reparable. Puente de playlist fijo; sandbox opaco preservado; sin colas compartidas. Revisión Turing aprobada; 23 tests MCP, integración workerd concurrente, 109 tests web específicos; batería general 389/391 (2 fallos preexistentes). No QA visual ni certificación de reproducción en esta revisión. No se cambian reglas, anuncios, cámaras, históricos ni grabador. Yokup DCL-f9824e3bba6cee600b73810d."
 }

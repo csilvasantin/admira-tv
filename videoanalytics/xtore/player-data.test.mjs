@@ -18,6 +18,13 @@ test('closed or navigated child gets no late data; fetch aborted',async()=>{
   let release;const f=fixture(()=>new Promise(resolve=>{release=resolve;}));const request=f.bridge.receive(f.event());
   f.bridge.stop();assert.equal(f.calls[0][1].signal.aborted,true);release(Response.json({items:[]}));await request;assert.equal(f.replies.length,0);
 });
+test('playlist is pinned to the canonical virtual screen; no audit identity crosses',async()=>{
+  const f=fixture(()=>Response.json({ok:true,draft:{items:[{id:'fixture'}],updatedBy:'private-audit@example.invalid'}}));
+  await f.bridge.receive(f.event('playlist'));
+  assert.equal(f.calls[0][0],'https://admira.tv/api/playlist?screen=xtore-virtual-zapatillas');
+  assert.equal(f.replies[0][0].ok,true);assert.deepEqual(f.replies[0][0].data,{ok:true,draft:{items:[{id:'fixture'}]}});
+  const bad=f.event('playlist');bad.data.screen='physical';await f.bridge.receive(bad);assert.equal(f.calls.length,1);f.bridge.stop();
+});
 test('oversized, malformed and non-JSON public replies fail without forwarding any body',async()=>{
   for(const response of [new Response('x'.repeat(2*1024*1024+1)),Response.json({token:'not-a-catalogue'}),new Response('<html>bad</html>')]){
     const f=fixture(()=>response);await f.bridge.receive(f.event());assert.equal(f.replies[0][0].ok,false);assert.equal('data' in f.replies[0][0],false);f.bridge.stop();

@@ -1,4 +1,5 @@
 // Only commands without images, identity, sex or age cross this bridge.
+import {XTORE_VIRTUAL_CIRCUIT,XTORE_VIRTUAL_NAME} from './virtual-player.mjs';
 export const PLAYER_ORIGIN='https://admira.tv';
 export const AUDIENCE_TTL=6000;
 const KIND_COMMAND={person:'persona',car:'coche',motorcycle:'moto',bicycle:'bici',none:'u'};
@@ -8,7 +9,7 @@ export function playerURL(id,origin=PLAYER_ORIGIN){
   const url=new URL('/canal.html',origin);
   // Aspect is CSS geometry, not a catalogue tag. Opaque frames cannot use the
   // player's disk-first cache; stream is its existing, explicit fallback.
-  for(const [k,v] of Object.entries({clean:1,stream:1,xtoreParent:1,parentOrigin:origin,mode:'conditional',modeLock:1,muted:1,cam:0,shot:0,rtb:0,screen:id,circuit:id,machine:id,audience:'all',age:'all',category:'all'}))url.searchParams.set(k,v);
+  for(const [k,v] of Object.entries({clean:1,stream:1,xtoreParent:1,parentOrigin:origin,playerType:'virtual',name:XTORE_VIRTUAL_NAME,mode:'conditional',modeLock:1,muted:1,cam:0,shot:0,rtb:0,screen:id,circuit:XTORE_VIRTUAL_CIRCUIT,machine:'',audience:'all',age:'all',category:'all'}))url.searchParams.set(k,v);
   return url.href;
 }
 export class SignageBridge{

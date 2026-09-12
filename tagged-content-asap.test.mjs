@@ -150,8 +150,8 @@ test('el antiguo Quitar es ahora un apagado confirmado que se convierte en Arran
   assert.match(mando, /sendRemote\(desired\?'standby':'resume',pwr\)/);
 });
 
-test('el player escucha la cola de pantalla y la de circuito con cursores independientes', () => {
-  assert.match(canal, /const __cmdIds=Array\.from\(new Set\(\[scr\.circuit,scr\.screen\]/);
+test('el player físico escucha pantalla y circuito; el virtual solo su propia pantalla', () => {
+  assert.match(canal, /const __cmdIds=Array\.from\(new Set\(\(VIRTUAL_PLAYER\?\[scr\.screen\]:\[scr\.circuit,scr\.screen\]\)/);
   assert.match(canal, /const __cmdState=Object\.fromEntries/);
   assert.match(canal, /for\(const id of __cmdIds\)/);
   assert.match(canal, /c\._queueId=id/);

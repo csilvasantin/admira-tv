@@ -264,6 +264,7 @@
   </div>
 
   <section id="playlistView" data-mando-pane="playlist" hidden>
+    <p id="virtualPlayerNote" class="hint" hidden>Player virtual · navegador · sin hardware dedicado. La ficha no confirma emisión; esta depende del player abierto.</p>
     <div class="sec" id="playerPlaylist">Playlist completa del player <span class="hint" id="playlistSummary">— cargando inventario</span></div>
     <div class="player-playlist" id="playlistList" aria-live="polite">
       <div class="pl-empty">Esperando la playlist efectiva del player seleccionado</div>
@@ -317,6 +318,7 @@
 
   <div id="toast"></div>
 
+  <script src="/assets/virtual-players.js"></script>
   <script>
     // Dominio propio primero: varios ISP españoles bloquean *.workers.dev y este mando
     // se usa desde el móvil, en España. api.admira.store proxea al MISMO worker; el
@@ -523,6 +525,7 @@
       T = FLAT[+selEl.value];
       document.getElementById('cir').textContent = T.circuit;
       document.getElementById('scr').textContent = T.screen;
+      document.getElementById('virtualPlayerNote').hidden=!AdmiraVirtualPlayers.isVirtual(T);
       paintRotationPicker();
       closePreview(); previewSignature=''; previewItem=null; previewVisual=null; previewAudioState=null; setPreviewPaused(false); previewEmpty('Esperando señal del player remoto'); paintPreviewTelemetry(Date.now());
       remotePlaylistItems=[]; document.getElementById('playlistSummary').textContent='— cargando inventario';
@@ -1065,7 +1068,7 @@
           ['Red del runtime',network.online===false?'Sin conexión':network.online===true?'Conectada':''],['Tipo de red',network.effectiveType,'','connection.networkType'],['IP pública',statusMaskIp(nowData.ip)]
         ]),
         statusCard('Identidad',[
-          ['Pantalla',nowData.screen||record.screen||T.screen],['Equipo',record.machine||'','','identity.machine'],['Circuito',record.loc||T.circuit],['Nombre',record.locName,'','identity.name'],['Rol',record.role||'canal'],['Productor',nowData.producer]
+          ['Pantalla',nowData.screen||record.screen||T.screen],['Tipo',AdmiraVirtualPlayers.label(T)||'Sin tipo virtual declarado'],['Equipo',AdmiraVirtualPlayers.isVirtual(T)?'Sin hardware dedicado':record.machine||'','','identity.machine'],['Circuito',record.loc||T.circuit],['Nombre',record.locName,'','identity.name'],['Rol',record.role||'canal'],['Productor',nowData.producer]
         ]),
         statusCard('Pantalla',[
           ['Resolución física',physical,'','display.resolution'],['Resolución lógica',css,'','display.logicalResolution'],['Viewport',viewport,'','display.viewport'],['Escala / DPR',display.devicePixelRatio,'','display.dpr'],['Color',display.colorDepth?(display.colorDepth+' bits'):'','','display.colorDepth'],['Orientación',display.orientation,'','display.orientation']
@@ -1256,6 +1259,6 @@
     setInterval(pollNow, 5000);
     setInterval(function(){ if(!document.hidden) paintPreviewProgress(Date.now()); },500);
   </script>
-  <script src="/assets/admira-version-watch.js?v=11.09.2026.r13.2034" defer></script>
+  <script src="/assets/admira-version-watch.js?v=12.09.2026.r1.0942" defer></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 import {SignageBridge,playerURL} from './signage.mjs';
 import {PlayerDataBridge} from './player-data.mjs';
+import {XTORE_VIRTUAL_SCREEN} from './virtual-player.mjs';
 const LABEL={none:'Bucle general',person:'Persona',car:'Coche',motorcycle:'Moto',bicycle:'Bici'};
 export function installSignageUI({document,window}){
   const $=id=>document.getElementById(id);
@@ -27,7 +28,7 @@ export function installSignageUI({document,window}){
       if(iframe!==loadingFrame)return;
       if(loaded){failed=true;stop('El player intentó navegar. Se ha cerrado su canal de órdenes.');return;}loaded=true;
     });
-    iframe.src=playerURL(`xtore-virtual-${crypto.randomUUID()}`,window.location?.origin);
+    iframe.src=playerURL(XTORE_VIRTUAL_SCREEN,window.location?.origin);
     $('signage').append(iframe);$('signage-idle').hidden=true;
     dataBridge=new PlayerDataBridge({target:iframe.contentWindow});
     emissionSeen=false;emissionDelayed=false;mediaReported=false;

@@ -123,7 +123,7 @@ function queuedAckHarness(stored, replies=[]){
   const writes=[],calls=[];
   const context=vm.createContext({
     Date,Number,JSON,String,Array,Set,Promise,
-    scr:{circuit:'osx',screen:'macbookpro16'},
+    scr:{circuit:'osx',screen:'macbookpro16'},VIRTUAL_PLAYER:false,
     CMD_HOSTS:['https://primary.test/locations/cmd','https://fallback.test/locations/cmd'],
     __cmdHost:0,
     LS:()=>JSON.stringify(stored),save:(key,value)=>writes.push({key,value}),

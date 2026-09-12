@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=11.09.2026.r13.2034"></script>
+<script src="/auth-gate.js?v=12.09.2026.r1.0942"></script>
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
 <link rel="dns-prefetch" href="https://api.admira.store">
@@ -165,7 +165,7 @@
 <body>
 <script>
 /* Config del chrome cuadrático unificado (lo monta /admira-nav.js). */
-window.ADMIRA_VERSION='v.11.09.2026.r13.20:34';
+window.ADMIRA_VERSION='v.12.09.2026.r1.09:42';
 window.ADMIRA_NAV={
   active:'playlists', title:'Playlists · conjuntos de contenidos',
   topRight:
@@ -173,9 +173,10 @@ window.ADMIRA_NAV={
     '<div class="live"><span class="dot"></span><span id="liveTxt">en vivo</span></div>'
 };
 </script>
-<script src="/admira-nav.js?v=11.09.2026.r13.2034"></script>
-<script src="/admira-frame.js?v=11.09.2026.r13.2034" defer></script>
-<link rel="stylesheet" href="/admira-frame.css?v=11.09.2026.r13.2034">
+<script src="/assets/virtual-players.js"></script>
+<script src="/admira-nav.js?v=12.09.2026.r1.0942"></script>
+<script src="/admira-frame.js?v=12.09.2026.r1.0942" defer></script>
+<link rel="stylesheet" href="/admira-frame.css?v=12.09.2026.r1.0942">
 
 <!-- AVANZADO (panel derecho): acciones peligrosas -->
 <div class="afSlotHidden" data-af-slot="right" aria-label="Acciones avanzadas de playlists">
@@ -367,6 +368,7 @@ async function loadStock(){
 }
 async function loadTargets(){
   try{ const d=await fetch(GRID+'/signage/screens',{cache:'no-store'}).then(r=>r.json()); LIVE=(d.screens||[]); }catch(_){ LIVE=[]; }
+  const virtuals=await AdmiraVirtualPlayers.list().catch(()=>[]); LIVE=AdmiraVirtualPlayers.merge(LIVE,virtuals);
   try{ const d=await fetch(GRID+'/grid/screens',{cache:'no-store'}).then(r=>r.json()); SURF=(d.screens||[]); }catch(_){ SURF=[]; }
   LIVEMAP={}; LIVE.forEach(s=>{ LIVEMAP[s.screen]=s; });
 }
@@ -504,12 +506,12 @@ function renderTargets(){
   const already=new Set((ASSIGN[asgId]||[]).map(a=>a.screen));
   let html='';
   // Players VIVOS (la estrella): reproducen de verdad su canal
-  html+='<div class="grp-h">Players vivos (/signage/screens)</div>';
+  html+='<div class="grp-h">Players · en línea y virtuales registrados</div>';
   if(!LIVE.length){ html+='<div class="aNone" style="padding:4px 2px">— ningún player latiendo ahora mismo</div>'; }
   else html+=LIVE.map(s=>{ const on=isLiveOnline(s); const already2=already.has(s.screen);
       return '<div class="tgRow '+(on?'on':'off')+(asgSel.has(s.screen)?' sel':'')+'" data-tg="'+esc(s.screen)+'">'+
-        '<span class="d"></span><div class="tx"><div class="tt">'+esc(s.screen)+(already2?' · <span class="pill">ya asignada</span>':'')+'</div>'+
-        '<div class="ty">'+esc(s.role||'player')+(s.locName?' · '+esc(s.locName):'')+' · '+(on?('vivo · '+(s.age_seconds!=null?s.age_seconds+'s':'')):'sin señal')+'</div></div>'+
+        '<span class="d"></span><div class="tx"><div class="tt">'+esc(s.name||s.screen)+(already2?' · <span class="pill">ya asignada</span>':'')+'</div>'+
+        '<div class="ty">'+esc(AdmiraVirtualPlayers.label(s)||s.role||'player')+(s.locName?' · '+esc(s.locName):'')+' · '+(on?('vivo · '+(s.age_seconds!=null?s.age_seconds+'s':'')):'sin señal')+'</div></div>'+
         '<div class="chk">'+(asgSel.has(s.screen)?'✓':'')+'</div></div>';
     }).join('');
   // Superficies de parrilla (grid): pantallas lógicas con su franja
