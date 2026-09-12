@@ -72,8 +72,21 @@ cancelan la intención. La barra superior muestra si analiza o espera recuperaci
 
 `conditional-music.mjs` entrega cuatro reglas locales exclusivamente para
 `xtore-virtual-zapatillas`: persona → Berlin / Take My Breath Away (Top Gun),
-ID `1786533143983-n2y09e`; coche, moto o bici → Huey Lewis & The News /
-The Power of Love (Regreso al Futuro), ID `1786532932584-a1412h`.
+ID `1786533143983-n2y09e`; coche y moto → Huey Lewis & The News /
+The Power of Love (Regreso al Futuro), ID `1786532932584-a1412h`; bici → Pixeria #998,
+AZUL Y NEGRO - Me estoy volviendo loco, vídeo ID `1789214248874-j6qqjo`, URL observada
+`https://stock.admira.store/stock/1789214248874-j6qqjo/asset.mp4?v=8878237`.
+Nueva regla de bici, misión `DCL-0c79557c38bde9f05e2ec381`: pendiente de publicación
+y verificación. Su vídeo inicia al 50 % de la duración real del medio en cada nueva
+activación o repetición, nunca a partir de una duración editorial. Renovar la misma
+presencia mantiene posición sin volver a buscar la mitad. Esta excepción pertenece
+solo al condicional de bici del perfil virtual exacto; no a la playlist base aunque
+incluya ese asset, ni a otros players. Persona y bici de un ciclista conservan ambos
+pasos si se confirman: la prioridad de bici no elimina el conteo de persona.
+Se posiciona antes de reproducir; sin duración válida en 10 s o si falla el seek,
+se permite reproducción desde cero con aviso en consola, sin garantizar la mitad
+ni evitar autoplay. Duración real observada de #998: 215,434739 s, mitad ≈107,717 s
+(1:47,7); es referencia del archivo consultado, no un offset fijo de configuración.
 Se resuelven contra el catálogo vigente; solo medios musicales reproducibles HTTPS.
 No clasifica sexo/edad, no modifica matriz global ni playlist de Flota. Si falta la
 pieza mantiene la base. Prioridad simultánea: bici, moto, coche, persona.
@@ -335,7 +348,7 @@ El MCP local independiente `/Users/Carlos/Claude/xtore-va-mcp` incluye la guía
 completa `docs/xtore-help.md`: `get_help` y recurso `admira-va://help` devuelven
 el mismo Markdown dentro de JSON, con `documentation_only:true`. No consultan
 estado ni red y no controlan la captura. `get_contract` enlaza la guía y separa
-el bus legado del postMessage de la web. MCP local 0.2.9, ayuda 2026-09-12.7:
+el bus legado del postMessage de la web. MCP local 0.2.10, ayuda 2026-09-12.8:
 20 herramientas contando
 alias y 4 recursos. Clientes ya abiertos requieren reinicio de su proceso MCP
 para descubrir la nueva ayuda; no se ha forzado ese reinicio ni un despliegue.

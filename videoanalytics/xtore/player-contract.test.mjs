@@ -29,6 +29,7 @@ test('actual conditional engine keeps the general loop until a known criterion h
     xtorePublicRead:async()=>rules,all:[{id:'default'},{id:'promo'}],matchesSeg:(it,s)=>!s.ids||s.ids.includes(it.id),
     rebuild:()=>rebuilds.push(JSON.parse(JSON.stringify(context.seg))),setAdmiraMode:()=>assert.fail('An existing conditional loop must not restart its engine')};
   vm.runInNewContext(readFileSync(new URL('../../xpl-runtime.js',import.meta.url),'utf8'),context);
+  vm.runInNewContext(html.slice(html.indexOf('function xtoreMusicEnabled()'),html.indexOf('function xtorePublicRead(')),context);
   vm.runInNewContext(html.slice(html.indexOf('const AUD_KIND_ALIAS='),html.indexOf('function runCli(raw)')),context);
   vm.runInNewContext(html.slice(html.indexOf('const XPLCanal = (function(){'),html.indexOf('// ── AUDIENCIA REMOTA: sondeo')),context);
   const engine=context.window.XPLCanal;engine.start();await new Promise(resolve=>setImmediate(resolve));

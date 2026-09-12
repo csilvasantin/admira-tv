@@ -58,6 +58,34 @@ test('one moving passage stays visible and keeps its ID for over 20s without dup
   assert.equal(counts.total,1);assert.equal(counts.counts.person,1);
 });
 
+test('a cyclist keeps both person and bicycle passage counts while confirmed bicycle wins playback priority',()=>{
+  const tracker=new PassageTracker(),counts=new PassageCounts(),f=bridgeFixture();let ids;
+  for(let elapsed=0;elapsed<=2400;elapsed+=200){
+    if(elapsed)f.tick(200);
+    const x=100+Math.min(elapsed/10,40);
+    // Overlapping rider and bike boxes are distinct classes, not duplicate people.
+    const detections=[
+      {class:'person',score:.9,bbox:[x,100,60,140]},
+      {class:'bicycle',score:.45,bbox:[x-20,160,140,85]},
+    ];
+    counts.add(tracker.update(detections,f.now,1000,600,thresholds));
+    const visible=tracker.visible(f.now);
+    assert.equal(visible.length,2);
+    ids??=visible.map(o=>o.trackId);assert.deepEqual(visible.map(o=>o.trackId),ids);
+    assert.equal(new Set(ids).size,2);
+    f.bridge.presence(visible);f.ack();
+    if(elapsed>=400){
+      assert.ok(visible.every(o=>o.confirmed));
+      assert.equal(counts.counts.person,1);assert.equal(counts.counts.bicycle,1);
+      assert.equal(counts.total,2,'bicycle priority does not subtract the rider passage');
+      assert.equal(f.sent.at(-1).data.command,'admiratv audiencia bici');
+    }
+  }
+  assert.equal(counts.counts.car,0);assert.equal(counts.counts.motorcycle,0);
+  assert.ok(f.sent.filter(s=>s.at>=10400).every(s=>s.data.command==='admiratv audiencia bici'));
+  assert.equal(f.bridge.closed,false);assert.deepEqual(f.errors,[]);f.bridge.stop();
+});
+
 test('1.5s absence expires presence, then reconfirms the same already-counted track',()=>{
   const tracker=new PassageTracker(),counts=new PassageCounts();
   counts.add(tracker.update([detection()],0,1000,600,thresholds));

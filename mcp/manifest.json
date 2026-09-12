@@ -150,7 +150,7 @@
       "help": "https://admira.tv/help/#player-virtual",
       "mission": "DCL-f9824e3bba6cee600b73810d",
       "registration_is_not_presence": true,
-      "local_documentation": {"mcp_version": "0.2.9", "help_revision": "2026-09-12.7", "live_status": false},
+      "local_documentation": {"mcp_version": "0.2.10", "help_revision": "2026-09-12.8", "live_status": false},
       "analysis_recovery": {
         "scope": "UI local; no herramienta MCP ni permiso de captura",
         "temporary": ["vista oculta", "mute de fuente", "más de 3 s sin fotogramas", "resize proporcional"],
@@ -161,8 +161,11 @@
       },
       "conditional_music": {
         "source": "Matriz local empaquetada; solo xtore-virtual-zapatillas; sin mutar reglas globales o playlist",
-        "assets": {"person": "1786533143983-n2y09e", "car": "1786532932584-a1412h", "motorcycle": "1786532932584-a1412h", "bicycle": "1786532932584-a1412h"},
-        "titles": {"person": "Berlin — Take My Breath Away (Top Gun)", "vehicles": "Huey Lewis & The News — The Power of Love (Regreso al Futuro)"},
+        "assets": {"person": "1786533143983-n2y09e", "car": "1786532932584-a1412h", "motorcycle": "1786532932584-a1412h", "bicycle": "1789214248874-j6qqjo"},
+        "titles": {"person": "Berlin — Take My Breath Away (Top Gun)", "car": "Huey Lewis & The News — The Power of Love (Regreso al Futuro)", "motorcycle": "Huey Lewis & The News — The Power of Love (Regreso al Futuro)", "bicycle": "AZUL Y NEGRO - Me estoy volviendo loco"},
+        "bicycle_asset": {"pixeria_number": 998, "type": "video", "observed_url": "https://stock.admira.store/stock/1789214248874-j6qqjo/asset.mp4?v=8878237"},
+        "bicycle_start": {"ratio": 0.5, "duration": "Duración real del medio, no duración editorial", "apply": "Cada nueva activación o repetición; posicionar antes de reproducir", "renewal": "Misma presencia no reinicia ni vuelve a buscar la mitad", "scope": "Solo condicional bicicleta del perfil xtore-virtual-zapatillas; no playlist base ni otras pantallas", "metadata_timeout_ms": 10000, "fallback": "Sin duración válida en 10 s o seek fallido: permitir reproducción desde inicio con aviso en consola; no garantiza la mitad ni evita autoplay"},
+        "cyclist_counts": "Persona y bicicleta conservan sus pasos independientes cuando ambas se confirman; bici gana la selección musical, sin restar personas ni inferir identidad",
         "sex_age_inference": false,
         "ttl_ms": 6000,
         "ttl_role": "Respaldo del transporte del hijo y prueba manual; no es el plazo de presencia visual",
@@ -170,7 +173,8 @@
         "unavailable_asset": "Conserva playlist base; no inventa coincidencia ni sustituye por otro tema",
         "manual_test": "Reglas musicales · probar: solo sin intención de análisis y sin calibración; no suma pasos/capturas/histórico; se neutraliza al solicitar análisis",
         "mcp_callable_test": false,
-        "mission": "DCL-cb51d8a1e6452a99de76f4e1"
+        "mission": "DCL-0c79557c38bde9f05e2ec381",
+        "publication": "Nueva regla de bici y arranque al 50 % pendientes de publicación/verificación"
       },
       "visual_presence": {
         "scope": "Solo analizador local y player virtual xtore-virtual-zapatillas; no herramienta MCP ni bus físico",

@@ -6,7 +6,7 @@ export const XTORE_MUSIC_ASSETS=Object.freeze({
   person:'1786533143983-n2y09e', // Berlin — Take My Breath Away (Top Gun).
   car:'1786532932584-a1412h', // Huey Lewis & The News — The Power Of Love.
   motorcycle:'1786532932584-a1412h',
-  bicycle:'1786532932584-a1412h',
+  bicycle:'1789214248874-j6qqjo', // Pixeria #998 — Azul y Negro: Me estoy volviendo loco.
 });
 export function xtoreMusicRules(screen){
   if(screen!==XTORE_VIRTUAL_SCREEN)return null;
@@ -16,6 +16,7 @@ export function xtoreMusicRules(screen){
       id:`xtore-music-${kind}`,kind,enabled:true,minCount:1,
       gender:'any',age:'any',slot:'any',category:'any',tag:'',medio:'any',
       assets:[id],musicOnly:true,conds:[],join:'and',
+      ...(kind==='bicycle'?{startFraction:0.5}:{}),
     })),
     default:{category:'any',tag:'',medio:'any'},
   };

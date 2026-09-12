@@ -12,7 +12,7 @@ const section=(from,to)=>html.slice(html.indexOf(from),html.indexOf(to,html.inde
 const song=(id='song',extra={})=>({id:'default:'+id,type:'audio',url:'https://media.example/'+id+'.mp3',title:id,_previewSec:10,...extra});
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 function fixture(){
-  const classes=()=>{const set=new Set();return {add:x=>set.add(x),remove:x=>set.delete(x),contains:x=>set.has(x)};};
+  const classes=()=>{const set=new Set();return {add:x=>set.add(x),remove:x=>set.delete(x),contains:x=>set.has(x),toggle(x,on){if(on)set.add(x);else set.delete(x);}};};
   const nodes=new Map(),created=[],messages=[],advances=[],timers=[];
   let audioPlay=null;
   function node(tagName='DIV'){
@@ -517,7 +517,7 @@ test('real conditional engine preserves first neutral, interrupts only a resolva
   assert.notEqual(c.mediaEl,first);const resumed=c.mediaEl;c.forceAudience('u');assert.equal(c.mediaEl,resumed);
 });
 
-test('local bridge and real engine select Top Gun for any person and Power Of Love for vehicles, without editorial cuts',async()=>{
+test('local bridge selects Top Gun, Power Of Love for car/moto and Pixeria #998 from halfway for bicycle',async()=>{
   const f=fixture(),c=f.c,replies=[];let now=10000,sequence=0;
   const target={postMessage:data=>replies.push(data)};
   const bridge=new PlayerDataBridge({target,fetcher:()=>assert.fail('Music rules never fetch/write global settings')});
@@ -529,8 +529,9 @@ test('local bridge and real engine select Top Gun for any person and Power Of Lo
       const reply=replies.find(r=>r.requestId===requestId);assert.equal(reply.ok,true);return reply.data;
     }});
   const top={id:XTORE_MUSIC_ASSETS.person,type:'video',url:'https://media.example/topgun.mp4',title:'Top Gun'},
-    future={id:XTORE_MUSIC_ASSETS.car,type:'video',url:'https://media.example/future.mp4',title:'The Power Of Love'};
-  c.all=[top,future];f.draft([song('base'),song('base-two')]);c.xtoreMusicRebuild();await settle();const base=c.mediaEl;
+    future={id:XTORE_MUSIC_ASSETS.car,type:'video',url:'https://media.example/future.mp4',title:'The Power Of Love'},
+    bike={id:XTORE_MUSIC_ASSETS.bicycle,type:'video',url:'https://media.example/bike998.mp4',title:'Me estoy volviendo loco'};
+  c.all=[top,future,bike];f.draft([song('base'),song('base-two')]);c.xtoreMusicRebuild();await settle();const base=c.mediaEl;
   vm.runInContext(readFileSync(new URL('../../xpl-runtime.js',import.meta.url),'utf8'),c);
   vm.runInContext(section('const AUD_KIND_ALIAS=','function runCli(raw)'),c);
   vm.runInContext(section('const XPLCanal = (function(){','// ── AUDIENCIA REMOTA: sondeo'),c);
@@ -539,16 +540,24 @@ test('local bridge and real engine select Top Gun for any person and Power Of Lo
   assert.equal(c.playlist[0].id,top.id);assert.equal(f.messages.at(-1).data.loop,false);
   assert.equal(c.window.__xplForce.gender,null);assert.equal(c.window.__xplForce.age,null);
   personClip.duration=300;personClip.videoWidth=640;personClip.videoHeight=360;personClip.onloadedmetadata();
-  assert.deepEqual(f.timers,[]);assert.equal(top._dur,300);
+  assert.deepEqual(f.timers,[]);assert.equal(c.playlist[0]._dur,300);
   now+=5000;c.forceAudience('persona');assert.equal(c.mediaEl,personClip);
   now+=5999;engine.tick();assert.equal(c.mediaEl,personClip);
   now+=1;engine.tick();await settle();assert.equal(c.playlist[0].id,'default:base');assert.equal(f.messages.at(-1).data.loop,true);
   let vehicleClip;
-  for(const command of ['coche','moto','bici']){
+  for(const command of ['coche','moto']){
     now+=1000;c.forceAudience(command);await settle();assert.equal(c.playlist[0].id,future.id);
     assert.equal(c.window.__xplForce.gender,null);assert.equal(c.window.__xplForce.age,null);
     if(vehicleClip)assert.equal(c.mediaEl,vehicleClip);else vehicleClip=c.mediaEl;
   }
+  c.forceAudience('bici');await settle();const bicycleClip=c.mediaEl;
+  assert.notEqual(bicycleClip,vehicleClip);assert.equal(c.playlist[0].id,bike.id);
+  assert.equal(bicycleClip.autoplay,false);assert.equal(bicycleClip.paused,true);
+  bicycleClip.duration=215.434739;bicycleClip.videoWidth=640;bicycleClip.videoHeight=360;bicycleClip.onloadedmetadata();await settle();
+  assert.equal(bicycleClip.currentTime,215.434739/2);assert.equal(bicycleClip.paused,false);
+  assert.equal(bike._xtoreStartFraction,undefined,'catalogue asset is not changed by the rule');
+  bicycleClip.currentTime=120;now+=1000;c.forceAudience('bici');await settle();
+  assert.equal(c.mediaEl,bicycleClip);assert.equal(bicycleClip.currentTime,120);
   c.forceAudience('u');await settle();assert.equal(c.playlist[0].id,'default:base');const returned=c.mediaEl;
   c.forceAudience('u');assert.equal(c.mediaEl,returned);assert.deepEqual(f.timers,[]);
   // An explicit rule cannot fall through to a different song or a non-musical asset.
@@ -572,7 +581,8 @@ test('presence heartbeats through the real bridge preserve media, currentTime an
     seenSig:'',scr:{},syncSegPanel(){},flashCli(){},setAdmiraMode:()=>assert.fail('Presence cannot restart the engine'),
     rebuild:()=>c.xtoreMusicRebuild(),xtorePublicRead:async()=>xtoreMusicRules('xtore-virtual-zapatillas')});
   c.all=[{id:XTORE_MUSIC_ASSETS.person,type:'video',url:'https://media.example/top.mp4'},
-    {id:XTORE_MUSIC_ASSETS.car,type:'video',url:'https://media.example/future.mp4'}];
+    {id:XTORE_MUSIC_ASSETS.car,type:'video',url:'https://media.example/future.mp4'},
+    {id:XTORE_MUSIC_ASSETS.bicycle,type:'video',url:'https://media.example/bike998.mp4'}];
   f.draft([song('base')]);c.xtoreMusicRebuild();await settle();
   vm.runInContext(readFileSync(new URL('../../xpl-runtime.js',import.meta.url),'utf8'),c);
   vm.runInContext(section('const AUD_KIND_ALIAS=','function runCli(raw)'),c);
@@ -594,17 +604,80 @@ test('presence heartbeats through the real bridge preserve media, currentTime an
   assert.equal(renewals.length,23);assert.ok(renewals.every((s,i)=>i===0||s.at-renewals[i-1].at===1000));
   bridge.presence([{class:'car',confirmed:true,ageMs:0}]);await settle();
   const vehicle=c.mediaEl,vehicleToken=c._playTok;vehicle.currentTime=19;
-  for(const kind of ['motorcycle','bicycle','car']){
+  for(const kind of ['motorcycle','car']){
     now+=1000;bridge.presence([{class:kind,confirmed:true,ageMs:0}]);await settle();
     assert.equal(c.mediaEl,vehicle);assert.equal(c._playTok,vehicleToken);assert.equal(vehicle.currentTime,19);
   }
+  bridge.presence([{class:'person',confirmed:true,ageMs:0},{class:'bicycle',confirmed:true,ageMs:0}]);await settle();
+  const bike=c.mediaEl,bikeToken=c._playTok;assert.notEqual(bike,vehicle);
+  bike.duration=215.434739;bike.videoWidth=640;bike.videoHeight=360;bike.onloadedmetadata();await settle();
+  assert.equal(bike.currentTime,bike.duration/2);assert.equal(bike.paused,false);
+  for(let i=1;i<=80;i++){
+    now+=200;bike.currentTime=bike.duration/2+i/5;
+    bridge.presence([{class:'person',confirmed:true,ageMs:0},{class:'bicycle',confirmed:true,ageMs:0}]);engine.tick();await settle();
+    assert.equal(c.mediaEl,bike);assert.equal(c._playTok,bikeToken);assert.equal(bike.currentTime,bike.duration/2+i/5);
+  }
   // Child-side transport safeguard still works if no further parent callback runs.
-  now+=5999;engine.tick();assert.equal(c.mediaEl,vehicle);
+  now+=5999;engine.tick();assert.equal(c.mediaEl,bike);
   now++;engine.tick();await settle();assert.equal(c.playlist[0].id,'default:base');
   bridge.presence([{class:'person',confirmed:true,ageMs:0}]);await settle();
   now+=1500;bridge.neutral();await settle();assert.equal(c.playlist[0].id,'default:base');
   assert.equal(c.window.__xplForce,null);assert.deepEqual(f.timers,[]);
   bridge.stop();engine.stop();
+});
+
+test('midpoint waits for metadata once, survives blocked audio and restarts halfway only on a new activation',async()=>{
+  const f=fixture(),c=f.c,callbacks=[];
+  c.setTimeout=(fn,ms)=>{callbacks.push({fn,ms});return 0;};
+  const bike={id:XTORE_MUSIC_ASSETS.bicycle,type:'video',url:'https://media.example/bike998.mp4'};
+  c.all=[bike];c._condPlaylist=false;c.seg.ids=[bike.id];c.seg.startFraction=.5;
+  f.draft([song('base')]);c.xtoreMusicRebuild();await settle();const v=c.mediaEl;
+  assert.equal(v.paused,true);assert.equal(v._xtoreStartPending,true);
+  vm.runInContext(section('function setPaused(','// PLAY REMOTO'),c);
+  vm.runInContext(section('function setAudio(','// barra/avance temporizado'),c);
+  vm.runInContext(section('async function remoteStartPlayback()','// Orden POR DEFECTO:'),c);
+  vm.runInContext(section("$('mute').onclick=","$('vol').oninput="),c);
+  c.setPaused(true);c.setPaused(false);c.setAudio(true,1);c.$('mute').onclick();c.$('mute').onclick();
+  await c.remoteStartPlayback();assert.equal(v.paused,true,'pause/resume and unmute must wait for midpoint metadata');
+  // A gesture before metadata cannot start the quiet first half.
+  c.xtoreMusicTap();await settle();assert.equal(v.paused,true);
+  f.audioPlay(()=>Promise.reject(new Error('NotAllowedError')));
+  v.duration=216;v.videoWidth=640;v.videoHeight=360;v.onloadedmetadata();await settle();
+  assert.equal(v.currentTime,108);assert.equal(v._xtoreAutoplayBlocked,true);
+  f.audioPlay(null);c.xtoreMusicTap();await settle();assert.equal(v.currentTime,108);assert.equal(v.paused,false);
+  v.currentTime=130;v.onloadedmetadata();callbacks.filter(t=>t.ms===10000).forEach(t=>t.fn());await settle();
+  assert.equal(v.currentTime,130,'late metadata and deadline cannot re-seek');
+  c.xtoreMusicRebuild();assert.equal(c.mediaEl,v);
+  // Actual ended/repeat creates a new node and therefore uses the midpoint again.
+  c.$('localInfo').hidden=false;c.localInfoRemoteAction('repeat');v.onended();await settle();const repeat=c.mediaEl;
+  assert.notEqual(repeat,v);assert.equal(repeat.paused,true);
+  repeat.duration=216;repeat.videoWidth=640;repeat.videoHeight=360;repeat.onloadedmetadata();await settle();assert.equal(repeat.currentTime,108);
+  // Neutral invalidates both a pending seek and its deadline.
+  await c.play(0);const stale=c.mediaEl,token=c._playTok;
+  c._condPlaylist=true;c.seg.ids=null;c.seg.startFraction=0;c.xtoreMusicRebuild();await settle();const base=c.mediaEl;
+  stale.duration=216;stale.onloadedmetadata();callbacks.filter(t=>t.ms===10000).forEach(t=>t.fn());await settle();
+  assert.equal(c.mediaEl,base);assert.ok(c._playTok>token);assert.equal(stale.paused,true);assert.equal(stale.currentTime,undefined);
+  assert.equal(base._xtoreStartFraction,0);
+});
+
+test('midpoint is bounded, finite, per-rule and isolated from the base, sync, direct and other screens',async()=>{
+  const f=fixture(),c=f.c,callbacks=[],warnings=[];
+  c.console={...console,warn:(...args)=>warnings.push(args)};c.setTimeout=(fn,ms)=>{callbacks.push({fn,ms});return 0;};
+  const it={id:'finite',type:'video',url:'https://media.example/finite.mp4',_xtoreStartFraction:.5};
+  f.draft([it]);c.xtoreMusicRebuild();await settle();assert.equal(c.mediaEl._xtoreStartFraction,0,'base must start normally even for same asset');
+  f.eval('_xtoreMusicBase=false');
+  for(const fraction of [undefined,-1,0,1,2,NaN,Infinity,'0.5']){
+    const el={};c.xtoreMusicPrepareStart(el,{...it,_xtoreStartFraction:fraction},c._playTok);assert.equal(el._xtoreStartPending,false);
+  }
+  for(const override of [{syncOn:true},{directOn:true},{XTORE_PARENT:''}]){
+    const before={syncOn:c.syncOn,directOn:c.directOn,XTORE_PARENT:c.XTORE_PARENT};Object.assign(c,override);
+    const el={};c.xtoreMusicPrepareStart(el,it,c._playTok);assert.equal(el._xtoreStartPending,false);Object.assign(c,before);
+  }
+  // Invalid duration cannot freeze the player; bounded fallback is reported.
+  c.playlist=[it];await c.play(0);const v=c.mediaEl;v.duration=Infinity;
+  callbacks.filter(t=>t.ms===10000).forEach(t=>t.fn());await settle();assert.equal(v.paused,false);assert.equal(v.currentTime,undefined);assert.equal(warnings.length,1);
+  await c.play(0);const broken=c.mediaEl;broken.duration=216;Object.defineProperty(broken,'currentTime',{set(){throw new Error('seek unsupported');}});
+  broken.onloadedmetadata();await settle();assert.equal(broken.paused,false);assert.equal(warnings.length,2);
 });
 
 test('opaque music selection/playing/blocked/empty cannot write proof, presence, playlist/cache mirrors or location',async()=>{

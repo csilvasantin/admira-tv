@@ -18,8 +18,17 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
   desconexión, recalibración, formato incompatible o fallo del detector cancelan la intención.
   No infiere en segundo plano ni obtiene nuevos permisos; reintenta play de la fuente existente.
 - Matriz local exclusiva xtore-virtual-zapatillas: persona = Berlin / Take My Breath Away
-  (Top Gun), asset 1786533143983-n2y09e; coche/moto/bici = Huey Lewis & The News /
-  The Power of Love (Regreso al Futuro), asset 1786532932584-a1412h. Sin inferencia de sexo/edad.
+  (Top Gun), asset 1786533143983-n2y09e; coche/moto = Huey Lewis & The News /
+  The Power of Love (Regreso al Futuro), asset 1786532932584-a1412h. Bici = Pixeria #998,
+  AZUL Y NEGRO - Me estoy volviendo loco, vídeo 1789214248874-j6qqjo.
+  URL observada: https://stock.admira.store/stock/1789214248874-j6qqjo/asset.mp4?v=8878237.
+  Solo este condicional inicia al 50 % de la duración real en cada nueva activación/repetición;
+  renovar presencia conserva posición sin reseek. No aplica a la base ni a otros players.
+  Posiciona antes de reproducir; sin duración válida en 10 s o seek fallido permite inicio
+  desde cero con aviso consola. Fallback no garantiza la mitad ni evita el permiso de sonido.
+  Persona+bici confirmadas conservan ambos conteos: bici gana la música, no resta personas.
+  Sin inferencia de sexo/edad/identidad. Misión DCL-0c79557c38bde9f05e2ec381;
+  nueva regla de bici y arranque al 50 % pendientes de publicación/verificación.
   IDs resueltos contra catálogo vigente con medios reproducibles HTTPS; sin pieza válida sigue
   la base. No cambia reglas globales, hardware ni asociación de playlist.
 - Presencia visual confirmada: dos fotogramas fuertes (tres para bici de confianza baja),
@@ -60,7 +69,7 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
   No disponible para imágenes, sincro/directo/standby ni otros perfiles. Cerrar no cancela loop.
   1 de X = playlist efectiva (condicional único, 1 de 1), no prueba de emisión; AUDIO/LIVE/MUTE
   ocupa otra fila bajo las barras. Autoplay sigue requiriendo gesto. Son UI documentada,
-  NO herramientas MCP nuevas. MCP local 0.2.9 / Help2026-09-12.7; no estado vivo ni despliegue.
+  NO herramientas MCP nuevas. MCP local 0.2.10 / Help2026-09-12.8; no estado vivo ni despliegue.
   NO DESCARGADO = sin copia offline, no ausencia de reproducción online.
 
 - ID persistente xtore-virtual-zapatillas: navegador sin hardware dedicado, registrado en Flota.

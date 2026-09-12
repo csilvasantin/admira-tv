@@ -797,7 +797,7 @@ function setAudio(on, level){
   muted=!on;
   if(on) volume=Math.max(0.1,Math.min(1,parseFloat(level)||volume||1));
   applyAudio();
-  if(on&&mediaEl&&mediaEl.play&&!paused) mediaEl.play().catch(()=>{ try{ tap.classList.add('show'); }catch(_){} });
+  if(on&&mediaEl&&mediaEl.play&&!paused&&!mediaEl._xtoreStartPending) mediaEl.play().catch(()=>{ try{ tap.classList.add('show'); }catch(_){} });
 }
 
 // barra/avance temporizado (imagen y audio) — pausable
@@ -1600,11 +1600,13 @@ function xtoreMusicRebuild(){
   if(!DEFAULT_DRAFT.ready)return;
   const previous=_xtoreMusicItem, wasBase=_xtoreMusicBase;
   const candidates=!_condPlaylist&&seg.ids&&seg.ids.length
-    ?all.filter(it=>it&&MEDIA.includes(it.type)&&/^https:\/\//i.test(it.url||'')&&matchesSeg(it,seg)):[];
+    ?all.filter(it=>it&&MEDIA.includes(it.type)&&/^https:\/\//i.test(it.url||'')&&matchesSeg(it,seg))
+      .map(it=>({...it,_xtoreStartFraction:seg.startFraction||0})):[];
   _xtoreMusicBase=!candidates.length;
   playlist=_xtoreMusicBase?(DEFAULT_DRAFT.assigned||DEFAULT_DRAFT.items.length
     ?xtoreMusicItems(DEFAULT_DRAFT.items,all).slice():xtoreLatestStock(all,'musica')):candidates;
-  cur=previous?playlist.findIndex(it=>it.id===previous.id&&it.url===previous.url&&it.type===previous.type):-1;
+  cur=previous?playlist.findIndex(it=>it.id===previous.id&&it.url===previous.url&&it.type===previous.type&&
+    (it._xtoreStartFraction||0)===(previous._xtoreStartFraction||0)):-1;
   $('segCount').textContent=playlist.length+(_xtoreMusicBase?' en música':' en condicional XPL');
   setLive(_xtoreMusicBase?(DEFAULT_DRAFT.assigned||DEFAULT_DRAFT.items.length?'PLAYLIST ASOCIADA':'PIXERIA #musica · últimos 5')+' · '+playlist.length+' piezas':'CONDICIONAL · '+playlist.length+' piezas',playlist.length>0);
   renderChan();renderRail();try{signagePlaylistPush();}catch(_){}
@@ -1619,7 +1621,34 @@ function xtoreMusicRebuild(){
   // After an actual interruption the base restarts at its first song, never resumes an old audio node.
   if(cur<0||wasBase!==_xtoreMusicBase)play(0);
 }
+function xtoreMusicPrepareStart(el,it,token){
+  // Per activation, never on presence renewal. Copy the rule onto the media
+  // node: a later segment must not change the seek of a still-loading video.
+  const fraction=it._xtoreStartFraction;
+  el._xtoreStartFraction=xtoreMusicEnabled()&&!_xtoreMusicBase&&!syncOn&&!directOn&&
+    Number.isFinite(fraction)&&fraction>0&&fraction<1?fraction:0;
+  el._xtoreStartPending=el._xtoreStartFraction>0;
+  el.autoplay=!el._xtoreStartPending;
+  if(el._xtoreStartPending)setTimeout(()=>{
+    if(xtoreMusicApplyStart(el,it,token,true))xtoreMusicPlayAudio(el,it,token);
+  },10000); // Missing metadata must not leave the player waiting forever.
+}
+function xtoreMusicApplyStart(el,it,token,expired=false){
+  if(token!==_playTok||mediaEl!==el||!el._xtoreStartPending)return false;
+  const valid=Number.isFinite(el.duration)&&el.duration>0;
+  if(!valid&&!expired)return false;
+  el._xtoreStartPending=false;
+  try{
+    if(!valid)throw new Error('Duración no disponible');
+    el.currentTime=el.duration*el._xtoreStartFraction;
+  }catch(error){
+    // Degraded playback is explicit, not a fictitious successful seek.
+    console.warn('[Xtore] No se pudo iniciar al 50%; se reproduce desde el inicio:',error.message);
+  }
+  return true;
+}
 async function xtoreMusicPlayAudio(el,it,token){
+  if(token!==_playTok||mediaEl!==el||el._xtoreStartPending||paused||_standby)return;
   try{
     await el.play();
     if(token!==_playTok||mediaEl!==el){try{el.pause();}catch(_){}return;}
@@ -2208,6 +2237,7 @@ async function play(i, forced){
     try{ v.crossOrigin='anonymous'; }catch(_){}   // permite capturar el frame en canvas SI el asset trae CORS; si no, se reintenta sin él (onerror) → la emisión SIEMPRE se ve
     let _coRetry=false;
     v.src=VSRC; v.autoplay=true; v.playsInline=true; v.preload='auto';
+    if(xtoreMusicEnabled())xtoreMusicPrepareStart(v,it,_tok);
     // Oculto hasta que el vídeo PINTE frames: así nunca se ve el botón de play nativo
     // del navegador (Samsung Internet/WebView) en el hueco de carga entre contenidos.
     v.style.opacity='0';
@@ -2237,10 +2267,12 @@ async function play(i, forced){
         clearTimeout(timer); timer=setTimeout(next,syncRemainingMs());
       }
       localInfoRender();
-    } };
+    }
+      if(xtoreMusicApplyStart(v,it,_tok))xtoreMusicPlayAudio(v,it,_tok);
+    };
     v.onended=()=>mediaAdvance(_tok,true);
     v.onerror=()=>{ if(_tok!==_playTok)return; const ec=v.error&&v.error.code; if((ec===4||ec===3)&&!_codecBad.has(String(it.id))&&VSRC===SRC){ codecBadMark(it,'err'+ec); play(cur,it); return; }   // códec no soportado → respaldo (variante H.264 o portada), sin romper la sincro
-      if(!_coRetry && v.crossOrigin){ _coRetry=true; try{ v.removeAttribute('crossorigin'); v.load(); if(xtoreMusicEnabled())xtoreMusicPlayAudio(v,it,_tok);else v.play().catch(()=>{}); }catch(_){} return; }   // asset sin CORS: reintenta sin crossorigin (orta la emisión)
+      if(!_coRetry && v.crossOrigin){ _coRetry=true; try{ v.removeAttribute('crossorigin'); if(xtoreMusicEnabled())xtoreMusicPrepareStart(v,it,_tok); v.load(); if(xtoreMusicEnabled())xtoreMusicPlayAudio(v,it,_tok);else v.play().catch(()=>{}); }catch(_){} return; }   // asset sin CORS: reintenta sin crossorigin (orta la emisión)
       setTimeout(()=>mediaAdvance(_tok),600); };
     v.ontimeupdate=()=>{ if(v.duration&&!paused) bar.style.width=(v.currentTime/v.duration*100)+'%'; };
     mediaEl=v; applyAudio(); stage.appendChild(v);
@@ -2319,6 +2351,7 @@ async function play(i, forced){
     stage.innerHTML='<div class="audio-card"><div class="ico">♫</div><div class="wave">'
       +Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div><strong>'+(xtoreMusicEnabled()?title.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):title)+'</strong></div>';
     const a=document.createElement('audio'); a.src=SRC; a.autoplay=true; a.preload='auto'; a.onerror=()=>setTimeout(()=>mediaAdvance(_tok),600); a.onended=()=>mediaAdvance(_tok,true);
+    if(xtoreMusicEnabled())xtoreMusicPrepareStart(a,it,_tok);
     if(XTORE_PARENT)a.addEventListener('playing',()=>{if(_tok===_playTok)emitFrameState(it,'playing');},{once:true});
     // Longitud real del fichero → _dur (como el vídeo): la ranura editorial se recorta a
     // ella, el mando recibe la duración verdadera y el proof-of-play no apunta de más.
@@ -2327,7 +2360,9 @@ async function play(i, forced){
       try{ signagePlaylistPush(); }catch(_){}
       if(_nowItem&&String(_nowItem.id)===String(it.id)){ _nowItem.dur=syncOn?Math.round(syncSlotMs()/1000):editorialSec(it); _nowItem.ts=Date.now(); _postNow(_nowItem); }
       if(!syncOn&&usesAdv&&editorialSec(it)!==before) startAdv(editorialSec(it)*1000);   // cuña más corta que la ranura: la barra y el corte siguen al fichero
-      localInfoRender(); };
+      localInfoRender();
+      if(xtoreMusicApplyStart(a,it,_tok))xtoreMusicPlayAudio(a,it,_tok);
+    };
     mediaEl=a; applyAudio(); stage.querySelector('.audio-card').appendChild(a);
     if(xtoreMusicEnabled())xtoreMusicPlayAudio(a,it,_tok);
     else {a.play().then(()=>tap.classList.remove('show')).catch(()=>{ if(!muted) tap.classList.add('show'); });
@@ -2386,7 +2421,7 @@ if(__adtvClean){
 function setPaused(p){
   paused=p; document.body.classList.toggle('paused',p); $('pause').textContent=p?'▶':'⏸';
   if(p){ if(mediaEl&&mediaEl.pause) mediaEl.pause(); if(usesAdv){ advElapsed+=Date.now()-advStart; clearTimeout(timer); timer=null; } stopBar(); }
-  else { if(syncOn){ play(syncIndex()); return; } if(mediaEl&&mediaEl.play) mediaEl.play().catch(()=>{}); if(usesAdv){ advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,Math.max(0,advTotal-advElapsed)); startBar(); } }
+  else { if(syncOn){ play(syncIndex()); return; } if(mediaEl&&mediaEl.play&&!mediaEl._xtoreStartPending) mediaEl.play().catch(()=>{}); if(usesAdv){ advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,Math.max(0,advTotal-advElapsed)); startBar(); } }
 }
 
 // PLAY REMOTO = intención de ARRANCAR, no solo de quitar una pausa. En iPhone el
@@ -2410,6 +2445,7 @@ async function remoteStartPlayback(){
     try{ tap.classList.remove('show'); }catch(_){}
     return 'executed';
   }
+  if(el._xtoreStartPending)return 'executed'; // Resume intent accepted; metadata still owns the initial seek.
   try{
     await Promise.resolve(el.play());
     try{ tap.classList.remove('show'); }catch(_){}
@@ -2665,7 +2701,7 @@ function restartFeed(){ if(feedTimer) clearInterval(feedTimer); feedTimer=setInt
 
 // ── controles ──
 $('prev').onclick=prev; $('next').onclick=next; $('pause').onclick=()=>setPaused(!paused);
-$('mute').onclick=()=>{ muted=!muted; if(!muted&&volume===0) volume=0.6; if(!muted&&mediaEl&&mediaEl.play&&!paused) mediaEl.play().catch(()=>{}); applyAudio(); };
+$('mute').onclick=()=>{ muted=!muted; if(!muted&&volume===0) volume=0.6; if(!muted&&mediaEl&&mediaEl.play&&!paused&&!mediaEl._xtoreStartPending) mediaEl.play().catch(()=>{}); applyAudio(); };
 $('vol').oninput=e=>{ volume=parseFloat(e.target.value); muted=(volume===0); applyAudio(); };
 $('rail').addEventListener('click',e=>{ const it=e.target.closest('.rail-it'); if(!it) return; disableAdmiraSync(); if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} } play(+it.dataset.i); });
 // ── reordenar la cola arrastrando ──
@@ -2831,7 +2867,7 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='audioon'||cmd==='soundon'||cmd==='unmute'||(cmd==='audio'&&rest.toLowerCase()!=='off')){ setAudio(true,rest); flashCli('🔊 audio on'); return; }
   if(cmd==='audiooff'||cmd==='soundoff'||cmd==='muteoff'||(cmd==='audio'&&rest.toLowerCase()==='off')){ setAudio(false); flashCli('🔇 audio off'); return; }
   if(cmd==='mute'||cmd==='muted'){ setAudio(rest==='0'); flashCli(rest==='0'?'🔊 audio on':'🔇 audio off'); return; }
-  if(cmd==='volume'||cmd==='vol'){ let v=parseFloat(rest); if(v>1) v=v/100; v=Math.max(0,Math.min(1, isNaN(v)?volume:v)); volume=v; muted=(v<=0); applyAudio(); if(!muted&&mediaEl&&mediaEl.play&&!paused) mediaEl.play().catch(()=>{}); flashCli('🔊 '+Math.round(v*100)+'%'); return; }
+  if(cmd==='volume'||cmd==='vol'){ let v=parseFloat(rest); if(v>1) v=v/100; v=Math.max(0,Math.min(1, isNaN(v)?volume:v)); volume=v; muted=(v<=0); applyAudio(); if(!muted&&mediaEl&&mediaEl.play&&!paused&&!mediaEl._xtoreStartPending) mediaEl.play().catch(()=>{}); flashCli('🔊 '+Math.round(v*100)+'%'); return; }
   // MODO PEDIDO POR EL OPERADOR: manda más que el gobierno remoto. Sin esto, poner una
   // pantalla en sincro desde el mando duraba 12 s — pollMode leía el modo del circuito
   // (p.ej. 'conditional') y lo deshacía. Misma doctrina que _liveTag/URL_TAG: la orden
@@ -4019,10 +4055,13 @@ const XPLCanal = (function(){
   //  - si no → el TEMA (categoría/tag/medio); audience/age a 'all' (no doble-filtro).
   function applySeg(next){
     const ids=(next.ids&&next.ids.length)?next.ids.slice():null;
-    const sig=JSON.stringify([ids, next.category||'all', next.tag||'', next.medio||'all']);
+    const startFraction=xtoreMusicEnabled()&&ids&&Number.isFinite(next.startFraction)&&
+      next.startFraction>0&&next.startFraction<1?next.startFraction:0;
+    const sig=JSON.stringify([ids, next.category||'all', next.tag||'', next.medio||'all',startFraction]);
     if(sig===lastSig) return;
     lastSig=sig;
     seg.ids=ids;
+    seg.startFraction=startFraction;
     seg.category=ids?'all':(next.category||'all');
     seg.tag=ids?'':(next.tag||'');
     seg.medio=ids?'all':(next.medio||'all');
@@ -4054,7 +4093,7 @@ const XPLCanal = (function(){
       const cat=(r.category&&r.category!=='any')?r.category:'all', tg=ruleTag(r), med=(r.medio&&r.medio!=='any')?r.medio:'all';
       // r64: regla «vacía» (sin assets ni tema) → playlist normal; el rótulo lo dice (condLiveLabel)
       _condPlaylist = !(r.assets&&r.assets.length) && cat==='all' && !tg && med==='all';
-      applySeg({ ids:r.assets, category:cat, tag:tg, medio:med });
+      applySeg({ ids:r.assets, category:cat, tag:tg, medio:med, startFraction:r.startFraction });
       reportHit(s, r);
     } else if(XTORE_PARENT){
       _condPlaylist=true;applySeg({ids:null,category:'all',tag:'',medio:'all'});
@@ -4440,10 +4479,10 @@ async function applyCtrlCmd(cmd){
       if(_standby||paused) return remoteStartPlayback();
       setPaused(true); return 'executed';
     case 'mute':   muted=true; applyAudio(); flashCli('🔇 mute'); return 'executed';
-    case 'unmute': muted=false; if(volume===0) volume=0.6; if(mediaEl&&mediaEl.play&&!paused) mediaEl.play().catch(()=>{}); applyAudio(); flashCli('🔊 unmute'); return 'executed';
+    case 'unmute': muted=false; if(volume===0) volume=0.6; if(mediaEl&&mediaEl.play&&!paused&&!mediaEl._xtoreStartPending) mediaEl.play().catch(()=>{}); applyAudio(); flashCli('🔊 unmute'); return 'executed';
     case 'toggle-mute': { const b=$('mute'); if(b) b.click(); return b?'executed':'ignored'; }
     case 'rotate-90': applyDisplayRotation(90); flashCli('↻ pantalla '+displayRotation+'°'); return 'executed';
-    case 'vol-up':   volume=Math.min(1,volume+0.1); muted=false; if(mediaEl&&mediaEl.play&&!paused) mediaEl.play().catch(()=>{}); applyAudio(); flashCli('🔊 '+Math.round(volume*100)+'%'); return 'executed';
+    case 'vol-up':   volume=Math.min(1,volume+0.1); muted=false; if(mediaEl&&mediaEl.play&&!paused&&!mediaEl._xtoreStartPending) mediaEl.play().catch(()=>{}); applyAudio(); flashCli('🔊 '+Math.round(volume*100)+'%'); return 'executed';
     case 'vol-down': volume=Math.max(0,volume-0.1); muted=(volume===0); applyAudio(); flashCli('🔉 '+Math.round(volume*100)+'%'); return 'executed';
     case 'ontop-on':     if(window.ADM_ONTOP&&!window.ADM_ONTOP.on) window.ADM_ONTOP.toggle(); return 'executed';
     case 'ontop-off':    if(window.ADM_ONTOP&&window.ADM_ONTOP.on) window.ADM_ONTOP.toggle(); return 'executed';
@@ -4475,7 +4514,7 @@ async function applyCtrlCmd(cmd){
       if(seek){
         if(syncOn) return 'failed';
         const el=mediaEl, duration=Number(el&&el.duration)||0;
-        if(!el||!/^(VIDEO|AUDIO)$/.test(el.tagName)||!duration) return 'failed';
+        if(!el||!/^(VIDEO|AUDIO)$/.test(el.tagName)||!duration||el._xtoreStartPending) return 'failed';
         const second=Math.max(0,Math.min(parseInt(seek[1],10),Math.max(0,duration-.25)));
         await new Promise(resolve=>{ let done=false, timer=setTimeout(finish,1400); function finish(){ if(done)return; done=true; clearTimeout(timer); try{el.removeEventListener('seeked',finish);}catch(_){} resolve(); }
           try{ el.addEventListener('seeked',finish,{once:true}); el.currentTime=second; }catch(_){ finish(); } });
