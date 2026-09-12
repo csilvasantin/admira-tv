@@ -174,7 +174,7 @@
         "manual_test": "Reglas musicales · probar: solo sin intención de análisis y sin calibración; no suma pasos/capturas/histórico; se neutraliza al solicitar análisis",
         "mcp_callable_test": false,
         "mission": "DCL-0c79557c38bde9f05e2ec381",
-        "publication": "Nueva regla de bici y arranque al 50 % pendientes de publicación/verificación"
+        "publication": "Implementación incluida en v.12.09.2026.r14.15:30; descripción del contrato, no estado en vivo"
       },
       "visual_presence": {
         "scope": "Solo analizador local y player virtual xtore-virtual-zapatillas; no herramienta MCP ni bus físico",

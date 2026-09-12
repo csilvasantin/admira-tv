@@ -28,7 +28,7 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
   desde cero con aviso consola. Fallback no garantiza la mitad ni evita el permiso de sonido.
   Persona+bici confirmadas conservan ambos conteos: bici gana la música, no resta personas.
   Sin inferencia de sexo/edad/identidad. Misión DCL-0c79557c38bde9f05e2ec381;
-  nueva regla de bici y arranque al 50 % pendientes de publicación/verificación.
+  nueva regla de bici y arranque al 50 % incluidos en v.12.09.2026.r14.15:30; no estado en vivo.
   IDs resueltos contra catálogo vigente con medios reproducibles HTTPS; sin pieza válida sigue
   la base. No cambia reglas globales, hardware ni asociación de playlist.
 - Presencia visual confirmada: dos fotogramas fuertes (tres para bici de confianza baja),

@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r13.15:17",
-  "signature": "NeoMBA16 · MacBookAir16plata",
-  "agent": "NeoMBA16",
+  "version": "v.12.09.2026.r14.15:30",
+  "signature": "TrinityMBA16 · MacBookAir16plata",
+  "agent": "TrinityMBA16",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "15:17",
-  "evidence": "Pages Function functions/api/previo/[[ruta]].js: GET /api/previo/<id>.jpg sirve desde R2 admira-catalogo-imagenes (binding CATALOGO, clave previo/<id>.jpg) con caché 1 día, CORS * y 404 si no existe; sonda GET /api/previo. Es la imagen de fachada del Previo DooH del circuito Alcampo (FLT-100364 · Yokup #3210): capturas Street View proyectadas 1600x900 y quad del player analizado con Grok; el KV de omnipublicity (previo.imagen) apunta aquí. Probado: 6 tiendas de muestra subidas a R2 (alcampo-breton…) y servidas por la Function del catálogo como puente; tras el deploy se verifica curl -sI https://admira.tv/api/previo/alcampo-breton.jpg → 200."
+  "time": "15:30",
+  "evidence": "Xtore: ciclista suma persona y bici; prioridad bici con Pixeria #998 Azul y Negro, Me estoy volviendo loco, ID1789214248874-j6qqjo. Inicio al50% de duración real por nueva activación/repetición, sin reinicios por presencia. Espera metadatos y guardias de pausa/audio; neutral invalida callbacks. 223/223 foco, 488/490 general (2 fallos previos ajenos), MCP27/27. Turing cross-review aprobado tras corregir bypass pausa. Browser QA sin cámara: persona1+bici1, #998 desde107.717s de215.434739s; previo/proyección y regreso a base comprobados, coche/persona conservan su música. Integra Neo812d8f2d r13 sin cambios a catálogo/APIprevio. Yokup DCL-0c79557c38bde9f05e2ec381."
 }
