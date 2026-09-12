@@ -77,7 +77,7 @@ export class PassageTracker {
     if(!Number.isFinite(now))return [];
     return this.tracks.filter(t=>now>=t.last&&now-t.last<PRESENCE_GRACE&&now-t.strongAt<PRESENCE_GRACE).map(t=>({
       trackId:t.id,class:t.category,bbox:[...t.bbox],score:t.score,
-      ageMs:now-Math.min(t.last,t.strongAt),confirmed:t.presenceHits>=t.presenceNeeded,
+      observedAt:Math.min(t.last,t.strongAt),ageMs:now-Math.min(t.last,t.strongAt),confirmed:t.presenceHits>=t.presenceNeeded,
       uncertain:now-t.last>300||t.last>t.strongAt
     }));
   }

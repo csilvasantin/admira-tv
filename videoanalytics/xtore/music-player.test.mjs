@@ -617,8 +617,23 @@ test('presence heartbeats through the real bridge preserve media, currentTime an
     bridge.presence([{class:'person',confirmed:true,ageMs:0},{class:'bicycle',confirmed:true,ageMs:0}]);engine.tick();await settle();
     assert.equal(c.mediaEl,bike);assert.equal(c._playTok,bikeToken);assert.equal(bike.currentTime,bike.duration/2+i/5);
   }
+  // Losing all visual presence retains only the vehicle music for 1.5s + 2s,
+  // without a new seek, playback node, counter or synthetic presence sample.
+  const position=bike.currentTime;
+  for(let i=0;i<17;i++){
+    now+=200;bridge.presence([]);engine.tick();await settle();
+    assert.equal(c.mediaEl,bike);assert.equal(c._playTok,bikeToken);assert.equal(bike.currentTime,position);
+    assert.equal(bridge.presenceSamples.length,0);
+  }
+  now+=100;bridge.presence([]);engine.tick();await settle();assert.equal(c.playlist[0].id,'default:base');
+  // A real new activation uses the midpoint again, then the child's independent
+  // six-second safeguard still works if every subsequent parent callback stops.
+  bridge.presence([{class:'bicycle',confirmed:true,ageMs:0,observedAt:now}]);await settle();
+  const nextBike=c.mediaEl;assert.notEqual(nextBike,bike);
+  nextBike.duration=215.434739;nextBike.videoWidth=640;nextBike.videoHeight=360;nextBike.onloadedmetadata();await settle();
+  assert.equal(nextBike.currentTime,nextBike.duration/2);
   // Child-side transport safeguard still works if no further parent callback runs.
-  now+=5999;engine.tick();assert.equal(c.mediaEl,bike);
+  now+=5999;engine.tick();assert.equal(c.mediaEl,nextBike);
   now++;engine.tick();await settle();assert.equal(c.playlist[0].id,'default:base');
   bridge.presence([{class:'person',confirmed:true,ageMs:0}]);await settle();
   now+=1500;bridge.neutral();await settle();assert.equal(c.playlist[0].id,'default:base');

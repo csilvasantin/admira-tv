@@ -3,7 +3,9 @@ import {XTORE_VIRTUAL_CIRCUIT,XTORE_VIRTUAL_NAME} from './virtual-player.mjs';
 import {PRESENCE_GRACE} from './core.mjs';
 export const PLAYER_ORIGIN='https://admira.tv';
 export const AUDIENCE_TTL=6000;
+export const VEHICLE_EXIT_TAIL=2000;
 const KIND_COMMAND={person:'persona',car:'coche',motorcycle:'moto',bicycle:'bici',none:'u'};
+const VEHICLES=new Set(['bicycle','motorcycle','car']);
 export function playerURL(id,origin=PLAYER_ORIGIN){
   if(!/^xtore-virtual-[a-z0-9-]{8,64}$/.test(id))throw new Error('Expected a dedicated virtual player ID');
   if(!/^(https:\/\/(www\.)?admira\.tv|http:\/\/(localhost|127\.0\.0\.1):\d+)$/.test(origin))throw new Error('Untrusted virtual player origin');
@@ -18,6 +20,7 @@ export class SignageBridge{
     Object.assign(this,{target,onState,onFailure,now,setTimer,clearTimer,id});
     this.pending=new Map();this.ready=false;this.closed=false;this.expiry=0;this.deadline=0;this.revision=0;this.watchdog=null;this.probeTimer=0;
     this.presenceSamples=[];this.presenceKind=null;this.presenceSentAt=-Infinity;
+    this.vehicleTails=new Map();this.presenceEvidence=new Map();this.seenObservations=new WeakMap();
   }
   start(){
     this.command('none',20000);
@@ -54,41 +57,65 @@ export class SignageBridge{
     // Vehicle priority matches the capture; never use incidental rider sex/age.
     const item=['bicycle','motorcycle','car','person'].map(kind=>events.find(e=>e.class===kind)).find(Boolean);
     if(!item)return;
-    this.presenceSamples=[];this.presenceKind=null;
+    this.presenceSamples=[];this.presenceKind=null;this.vehicleTails.clear();
     this.clearTimer(this.expiry);this.deadline=this.now()+AUDIENCE_TTL;
     this.command(item.class);
     this.expiry=this.setTimer(()=>{this.deadline=0;this.command('none');},AUDIENCE_TTL);
   }
   presence(observations){
     if(!this.ready||this.closed)return;
-    const now=this.now();
+    const now=this.now(),fresh=new Map();
     // ageMs comes from the captured frame, not inference completion. Neither
-    // ID nor geometry crosses the player bridge. Old snapshots cannot renew.
-    this.presenceSamples=observations.filter(o=>o.confirmed===true&&o.class!=='none'&&Object.hasOwn(KIND_COMMAND,o.class)&&Number.isFinite(o.ageMs)&&o.ageMs>=0&&o.ageMs<PRESENCE_GRACE)
-      .map(o=>({kind:o.class,until:now+PRESENCE_GRACE-o.ageMs}));
+    // ID nor geometry crosses the player bridge. observedAt is only a local
+    // evidence token: its clock need not match the bridge's clock. Replaying
+    // the same frame, including a copied object with old ageMs, cannot renew.
+    for(const o of Array.isArray(observations)?observations:[]){
+      if(!o||o.confirmed!==true||o.class==='none'||!Object.hasOwn(KIND_COMMAND,o.class)||!Number.isFinite(o.ageMs)||o.ageMs<0||o.ageMs>=PRESENCE_GRACE)continue;
+      const stamp=Number.isFinite(o.observedAt)&&o.observedAt>=0?o.observedAt:null;
+      let until=now+PRESENCE_GRACE-o.ageMs;
+      const seen=this.seenObservations.get(o),prior=this.presenceEvidence.get(o.class);
+      if(seen&&seen.stamp===stamp)until=Math.min(until,seen.until);
+      if(stamp!==null&&prior){
+        if(stamp<prior.stamp)continue;
+        if(stamp===prior.stamp)until=Math.min(until,prior.until);
+      }
+      this.seenObservations.set(o,{stamp,until});
+      if(stamp!==null)this.presenceEvidence.set(o.class,{stamp,until});
+      if(until<=now)continue;
+      if(!fresh.has(o.class)||fresh.get(o.class).until<until)fresh.set(o.class,{kind:o.class,freshUntil:until,until});
+      if(VEHICLES.has(o.class)){
+        const tail=this.vehicleTails.get(o.class),end=until+VEHICLE_EXIT_TAIL;
+        if(!tail||tail.until<end)this.vehicleTails.set(o.class,{kind:o.class,freshUntil:until,until:end});
+      }
+    }
+    this.presenceSamples=[...fresh.values()];
     this.syncPresence();
   }
   syncPresence(){
     if(!this.ready||this.closed)return;
     const now=this.now();
     this.presenceSamples=this.presenceSamples.filter(o=>o.until>now);
-    const item=['bicycle','motorcycle','car','person'].map(kind=>this.presenceSamples.filter(o=>o.kind===kind).sort((a,b)=>b.until-a.until)[0]).find(Boolean);
+    for(const [kind,tail] of this.vehicleTails)if(tail.until<=now)this.vehicleTails.delete(kind);
+    const candidates=[...this.presenceSamples,...this.vehicleTails.values()];
+    const item=['bicycle','motorcycle','car','person'].map(kind=>candidates.filter(o=>o.kind===kind).sort((a,b)=>b.until-a.until)[0]).find(Boolean);
     if(!item){if(this.presenceKind!==null)this.neutral();return;}
     this.clearTimer(this.expiry);this.deadline=item.until;
     const changed=this.presenceKind!==item.kind;
     this.presenceKind=item.kind;
     // Wait for an outstanding same-kind ACK instead of replacing its ID at
     // frame rate. The original watchdog still bounds an unresponsive player.
-    if(changed||(now-this.presenceSentAt>=1000&&!Array.from(this.pending.values()).some(p=>p.kind===item.kind))){
+    if(changed||(now<item.freshUntil&&now-this.presenceSentAt>=1000&&!Array.from(this.pending.values()).some(p=>p.kind===item.kind))){
       this.presenceSentAt=now;this.command(item.kind);
     }
-    // Independent of new inferences: expire on a stalled stream too, or fall
-    // directly to another still-fresh category without a neutral interlude.
-    this.expiry=this.setTimer(()=>this.syncPresence(),Math.max(1,item.until-now));
+    // The exit tail only retains music, not visual presence or boxes. Never
+    // renew a command solely because its tail is still running. Both stages
+    // expire without requiring another frame; a higher-priority vehicle wins.
+    const next=item.freshUntil>now?item.freshUntil:item.until;
+    this.expiry=this.setTimer(()=>this.syncPresence(),Math.max(1,next-now));
   }
   neutral(){
     if(!this.ready||this.closed)return;
-    this.clearTimer(this.expiry);this.deadline=0;this.presenceSamples=[];this.presenceKind=null;this.command('none');
+    this.clearTimer(this.expiry);this.deadline=0;this.presenceSamples=[];this.presenceKind=null;this.vehicleTails.clear();this.command('none');
   }
   receive(event){
     // 'null' alone is NOT trust: require the dedicated frame and a pending ID.
@@ -114,7 +141,7 @@ export class SignageBridge{
   fail(message){if(this.closed)return;this.stop();this.onFailure(message);}
   stop(){
     this.closed=true;this.ready=false;this.clearTimer(this.expiry);this.clearTimer(this.probeTimer);
-    this.presenceSamples=[];this.presenceKind=null;
+    this.presenceSamples=[];this.presenceKind=null;this.vehicleTails.clear();this.presenceEvidence.clear();this.seenObservations=new WeakMap();
     this.clearTimer(this.watchdog);this.watchdog=null;this.pending.clear();
   }
 }

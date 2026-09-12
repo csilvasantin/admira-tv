@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090e14">
   <meta name="description" content="Xtore: análisis local de Puerta Cam y capturas efímeras en un iPad virtual, con permiso explícito para compartir la pestaña de Digital Twin.">
-  <meta name="admiranext-version" content="v.12.09.2026.r14.15:30">
+  <meta name="admiranext-version" content="v.12.09.2026.r15.15:52">
   <meta name="admiranext-agent" content="TrinityMBA16">
   <title>Xtore · Analítica de vídeo · Admira.tv</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -27,6 +27,7 @@
       <a class="button" href="https://digitaltwin.ieu.ai/" target="_blank" rel="noopener noreferrer">1. Abrir Digital Twin ↗</a>
       <button id="connect">2. Compartir pestaña</button>
       <button id="stop" disabled>Desconectar</button>
+      <button id="hide-people" disabled aria-pressed="false" aria-keyshortcuts="H" title="H con foco en el analizador: vista modificada, no anonimización">H · Ocultar personas</button>
       <span id="analysis-health" class="small" role="status" aria-live="polite">Cámara sin conectar</span>
       <span class="local-note">Detección local · cámara sin audio · música independiente · envío a Pixeria solo al pulsar Generar</span>
     </section>
@@ -36,9 +37,9 @@
         <div id="stage" class="stage">
           <video id="scene" muted playsinline aria-label="Pestaña compartida de Digital Twin"></video>
           <div id="empty-scene" class="empty-scene"><span class="scene-mark" aria-hidden="true">⌗</span><h2>Tu Xtore, conectada.</h2><p>La escena real aparecerá aquí al compartir la pestaña.<br>No hay vídeo ni detecciones simuladas.</p><span class="small">Chrome de escritorio · sesión de IEU necesaria</span></div>
-          <div id="tablet" hidden aria-label="Player virtual sobre el iPad"><canvas id="tablet-canvas" width="640" height="480"></canvas></div>
+          <div id="tablet" hidden aria-label="Player virtual sobre el iPad"><canvas id="tablet-canvas" width="640" height="480"></canvas><div id="tablet-tracking" hidden aria-hidden="true"></div></div>
           <div id="signage" hidden aria-label="Cartelería digital virtual"><div id="signage-idle">Admira.tv<br><small id="signage-idle-label">Player en espera</small><small>Consulta el estado en Cartelería condicionada</small></div></div>
-          <div id="roi" hidden><span>Solo se analiza esta zona</span><div id="tracking-overlay" aria-hidden="true"></div></div>
+          <div id="roi" hidden><canvas id="clean-preview" hidden aria-label="Vista modificada con fondo temporal, no vídeo original"></canvas><span>Solo se analiza esta zona</span><div id="tracking-overlay" aria-hidden="true"></div><p id="clean-status" hidden role="status"></p></div>
           <div id="markers" aria-hidden="true"></div>
         </div>
         <div class="viewer-caption"><span id="source-info">PLAYER VIRTUAL · SIN VÍDEO EN DIRECTO</span><span>iPad y cartelería virtuales · no son dispositivos físicos</span></div>
@@ -68,6 +69,8 @@
         <details class="help"><summary><span aria-hidden="true">›</span> Patinetes: alcance actual</summary><p>El modelo COCO no detecta patinetes como categoría. El contador registra solo tus pulsaciones manuales; no genera capturas, recortes ni órdenes de player. Si el detector lo contó como bici o persona, esa posible confusión no se corrige automáticamente. La detección automática requiere otro modelo validado.</p></details>
         <details class="help"><summary><span aria-hidden="true">›</span> Cómo se cuentan los pasos</summary><p id="count-note" class="small">Una trayectoria se cuenta una sola vez. Se conserva el seguimiento durante oclusiones o pausas breves de hasta 8 s y al ajustar la confianza. Reset pone a cero las cifras sin olvidar los objetos ya contados. Cambiar cámara/encuadre, una ausencia larga o volver a entrar puede generar otro paso: no es identificación de personas únicas. El histórico solo está guardado cuando lo confirma el servidor; no utiliza almacenamiento del navegador.</p></details>
         <details class="help"><summary><span aria-hidden="true">›</span> Rectángulos y presencia continua</summary><p>En Puerta Cam cada trayectoria tiene un rectángulo de color y un número local (#1, #2…). Mantiene su número mientras se conserva el seguimiento; no identifica a la persona. Línea discontinua = confirmación pendiente o continuidad breve con menos certeza. Las cajas se limitan a la cámara y desaparecen al perder detección durante 1,5 s, pausar o recalibrar.</p><p>La presencia se confirma en dos fotogramas (tres para bicis de confianza baja), incluso si el objeto está quieto. Mantiene el contenido condicionado sin reiniciarlo ni sumar pasos repetidos. Las capturas siguen caducando a los 6 s. El seguimiento puede equivocarse con cruces, oclusiones, poca luz o una fuente congelada; no garantiza identidad ni detección de patinetes.</p></details>
+        <details class="help"><summary><span aria-hidden="true">›</span> H · ocultar personas en vídeo</summary><p>Pulsa H con foco en el analizador, o el botón superior. El previo y el iPad muestran vídeo modificado con los mismos rectángulos y números. H de nuevo recupera el original; no cambia detección, conteos ni música. En modo H se oculta la foto original de Capturas y el iPad pasa a vista en directo.</p><p>Se sustituyen cajas ampliadas de personas detectadas por fondo observado previamente en al menos tres fotogramas despejados y estables. No es recorte de silueta: puede tapar objetos solapados. Una trama indica «fondo sin observar». El fondo vive solo en memoria, caduca a los 20 s y se reinicia al pausar, ocultar la pestaña, reencuadrar, desconectar o detectar un cambio amplio de escena. Sin fotograma reciente, la vista se tapa tras 1,5 s.</p><p>Es una transformación visual local, no anonimización garantizada ni grabación original de seguridad: puede dejar visibles personas no detectadas, sombras o reflejos. No modifica el stream de IEU. Los recortes y gemelos tienen su flujo independiente y pueden contener la imagen original. No se envía este fondo a Pixeria ni al MCP.</p></details>
+        <details class="help"><summary><span aria-hidden="true">›</span> Vehículos · 2 segundos extra</summary><p>Tras el margen de presencia de 1,5 s, el contenido de bici, moto o coche se mantiene 2 s más (3,5 s desde el último fotograma válido). Durante la cola no se simulan rectángulos ni se suman pasos. Bici sigue teniendo prioridad sobre su ciclista y usa #998 desde la mitad. Pausar o desconectar cancela la cola. Las pruebas manuales duran 6 s; patinetes siguen siendo un registro manual sin regla automática de reproducción.</p></details>
         <details class="help"><summary><span aria-hidden="true">›</span> Privacidad y límites</summary><p class="small">Las capturas se borran a los 6 segundos, excepto el recorte que selecciones para generar un gemelo: su copia temporal dura hasta terminar, cancelar o un máximo de 3 minutos. Persona = sin clasificación de sexo o edad. No hay reconocimiento de identidad. El resultado puede contener errores.</p></details>
         <div class="divider"></div>
         <div class="section-title"><h2>Objetos sin fondo</h2></div>
@@ -154,7 +157,7 @@
         <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. La detección no envía fotogramas.</p>
       </aside>
     </div>
-    <footer><span>TrinityMBA16 · <span data-release-version>v.12.09.2026.r14.15:30</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
+    <footer><span>TrinityMBA16 · <span data-release-version>v.12.09.2026.r15.15:52</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
   </main>
 </body>
 </html>

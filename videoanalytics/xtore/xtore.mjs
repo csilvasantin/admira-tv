@@ -6,13 +6,14 @@ import {installSignageUI} from './signage-ui.mjs';
 import {installHistoryUI} from './history.mjs';
 import {CalibrationPresetStore,compatiblePreset} from './preset.mjs';
 import {TrackingOverlay} from './tracking-overlay.mjs';
+import {installCleanStreetUI} from './clean-street-ui.mjs';
 
 const $=id=>document.getElementById(id);
 const scene=$('scene'), stage=$('stage'), frame=document.createElement('canvas');
 const frameContext=frame.getContext('2d',{willReadFrequently:true});
 const tablet=$('tablet-canvas'), capture=$('capture-canvas');
 const tracker=new PassageTracker();
-const trackingOverlay=new TrackingOverlay($('tracking-overlay'));
+const trackingOverlay=new TrackingOverlay($('tracking-overlay'),{reservedBottom:()=>$('clean-status').hidden?0:$('clean-status').offsetHeight+2});
 const passages=new PassageCounts();
 const numberFormat=new Intl.NumberFormat('es-ES');
 const cutoutJob=new CutoutJob();
@@ -66,6 +67,10 @@ presetStatus();
 const twins=installTwinUI({document,onOriginalRemoved:()=>clearCapture('Original temporal retirado')});
 const signage=installSignageUI({document,window});
 const history=installHistoryUI({document});
+const cleanStreet=installCleanStreetUI({document,onToggle:enabled=>{
+  clearCapture();
+  $('capture-empty').textContent=enabled?'Vista H en directo en el iPad':'Esperando un paso confirmado';
+}});
 let historyTimer=0;
 function queueHistory(events,source='detector'){
   history.add(events,source);
@@ -81,6 +86,7 @@ function controls(){
   const connected=!!stream;
   $('connect').disabled=connected||busy;
   $('stop').disabled=!connected;
+  $('hide-people').disabled=!connected||!roiReady||!tabletReady||!!calibration;
   $('add-scooter').disabled=!connected;
   for(const id of ['set-roi','set-tablet','set-signage','edit-coordinates'])$(id).disabled=!connected;
   // Playback owns its browser instance, independently of the captured video.
@@ -108,13 +114,13 @@ function clearCapture(message='Sin capturas'){
   $('capture').style.borderColor='#33404a';
   $('event-label').textContent=message;
   $('event-meta').textContent='Capturas efímeras · 6 s';
-  tabletIdle(analyzing?'Esperando un paso':'Análisis en pausa');
+  if(!cleanStreet.enabled)tabletIdle(analyzing?'Esperando un paso':'Análisis en pausa');
 }
 function pause(message){
   // Pausing detection returns to the normal loop; it is not a screen power-off.
   analysisRequested=false;suspendedReason=null;clearTimeout(recoveryTimer);recoveryTimer=0;
   twins.cancelOriginal();
-  analyzing=false;generation++;clearTimeout(loopTimer);trackingOverlay.clear();tracker.resetPresence();clearCapture();controls();
+  analyzing=false;generation++;clearTimeout(loopTimer);trackingOverlay.clear();cleanStreet.reset();tracker.resetPresence();clearCapture();controls();
   frameContext.clearRect(0,0,frame.width,frame.height);
   if(message)status(message);
 }
@@ -158,6 +164,7 @@ function disconnect(message='Desconectado. Capturas y vídeo borrados de la vist
 }
 function layout(){
   trackingOverlay.layoutLabels();
+  cleanStreet.layout();
   const width=stage.clientWidth,height=stage.clientHeight;
   if(tabletReady){$('tablet').style.transform=`matrix3d(${quadMatrix(640,480,quad.map(([x,y])=>[x*width,y*height])).join(',')})`;}
   if(signageReady){$('signage').style.transform=`matrix3d(${quadMatrix(540,960,signageQuad.map(([x,y])=>[x*width,y*height])).join(',')})`;}
@@ -342,8 +349,8 @@ async function startAnalysis(recovering=false){
     if(document.hidden||sourceMuted){suspendAnalysis('source','Esperando vídeo disponible; el análisis se reanudará automáticamente.');return;}
     analyzing=true;lastVideoTime=-1;lastFrameAt=performance.now();
     history.sync();
-    status('Analizando solo Puerta Cam. Rectángulos numerados por trayectoria; presencia confirmada en dos fotogramas (tres para bicis de confianza baja). Mantiene la música condicionada mientras siga visible; margen de pérdida de 1,5 s. Capturas de 6 s, sin repetir el conteo.');
-    tabletIdle();loop(token);
+    status('Analizando solo Puerta Cam. Rectángulos por trayectoria; margen de pérdida de 1,5 s. Vehículos automáticos: 2 s adicionales de contenido tras ese margen. H modifica solo el previo y el iPad; el detector usa el original. Capturas de 6 s, sin repetir conteo.');
+    if(!cleanStreet.enabled)tabletIdle();loop(token);
   }catch{if(token===generation)pause('No se ha iniciado el análisis. Revisa el estado del detector.');}
   finally{busy=false;controls();}
 }
@@ -374,6 +381,7 @@ async function loop(token){
       const bikes=predictions.filter(p=>p.class==='bicycle'),best=bikes.reduce((score,p)=>Math.max(score,p.score),0);
       $('detection-status').textContent=`Bicis candidatas: ${bikes.length} · mejor ${Math.round(best*100)} % · umbral ${Math.round(bikeThreshold*100)} % · ${Math.round(performance.now()-start)} ms`;
       if(events.length)showCapture(events);
+      cleanStreet.update(frame,predictions,tracker.visible(performance.now()),now);
     }
     const visible=tracker.visible(performance.now());
     trackingOverlay.render(visible);signage.presence(visible);
@@ -395,12 +403,14 @@ function showCapture(events){
     c.fillStyle='#08121de8';c.fillRect(Math.max(0,x),labelY-fontSize-5,c.measureText(text).width+8,fontSize+8);
     c.fillStyle='#fff';c.fillText(text,Math.max(0,x)+4,labelY);
   }
+  if(!cleanStreet.enabled){
   const ctx=tablet.getContext('2d');ctx.fillStyle='#09131b';ctx.fillRect(0,0,640,480);
   const scale=Math.min(612/capture.width,390/capture.height),dw=capture.width*scale,dh=capture.height*scale;
   ctx.drawImage(capture,(640-dw)/2,16+(390-dh)/2,dw,dh);
   ctx.strokeStyle=main.color;ctx.lineWidth=16;ctx.strokeRect(8,8,624,464);
   ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold 25px sans-serif';ctx.fillText(`${main.label} · ${new Date().toLocaleTimeString('es-ES')}`,320,446);
-  capture.hidden=false;$('capture-empty').hidden=true;$('capture').style.borderColor=main.color;
+  }
+  capture.hidden=cleanStreet.enabled;$('capture-empty').hidden=!cleanStreet.enabled;$('capture').style.borderColor=main.color;
   $('event-label').textContent=events.map(p=>CLASSES[p.class].label).join(' · ');
   $('event-meta').textContent=`${new Date().toLocaleTimeString('es-ES')} · ${Math.round(events[0].score*100)} % de confianza · caduca en 6 s`;
   clearTimeout(expiryTimer);expiryTimer=setTimeout(()=>clearCapture('Captura caducada'),SNAPSHOT_TTL);

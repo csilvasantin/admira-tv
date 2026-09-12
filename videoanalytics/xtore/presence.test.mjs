@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PassageTracker,PassageCounts,PRESENCE_GRACE} from './core.mjs';
-import {SignageBridge,AUDIENCE_TTL} from './signage.mjs';
+import {SignageBridge,AUDIENCE_TTL,VEHICLE_EXIT_TAIL} from './signage.mjs';
 
 const thresholds={person:.65,car:.65,motorcycle:.65,bicycle:.4};
 const detection=(category='person',x=100,score=.9)=>({class:category,score,bbox:[x,100,80,180]});
@@ -151,7 +151,9 @@ test('priority falls directly bicycle → motorcycle → car → person as fresh
   const f=bridgeFixture();
   f.bridge.presence([observation('person'),observation('car',200),observation('motorcycle',400),observation('bicycle',600)]);f.ack();
   assert.equal(f.sent.at(-1).data.command,'admiratv audiencia bici');
-  for(const [delay,expected] of [[900,'moto'],[200,'coche'],[200,'persona'],[200,'u']]){
+  f.tick(2300);f.bridge.presence([observation('person')]);
+  assert.equal(f.sent.at(-1).data.command,'admiratv audiencia bici','vehicle tail still outranks fresh person');
+  for(const [delay,expected] of [[600,'moto'],[200,'coche'],[200,'persona'],[500,'u']]){
     f.tick(delay);assert.equal(f.sent.at(-1).data.command,'admiratv audiencia '+expected);f.ack();
   }
   assert.deepEqual(f.sent.slice(1).map(s=>s.data.command),['bici','moto','coche','persona','u'].map(k=>'admiratv audiencia '+k));
@@ -165,7 +167,62 @@ test('absence, stale/unconfirmed/invalid labels and no further frames cannot pro
   assert.equal(f.sent.at(-1).data.command,'admiratv audiencia u');f.ack();
   const count=f.sent.length;f.bridge.presence([]);f.tick(PRESENCE_GRACE);assert.equal(f.sent.length,count);
   f.bridge.presence([observation('car',1000)]);f.ack();f.tick(499);assert.equal(f.sent.at(-1).data.command,'admiratv audiencia coche');
+  f.tick(1);assert.equal(f.sent.at(-1).data.command,'admiratv audiencia coche');
+  f.tick(VEHICLE_EXIT_TAIL-1);assert.equal(f.sent.at(-1).data.command,'admiratv audiencia coche');
   f.tick(1);assert.equal(f.sent.at(-1).data.command,'admiratv audiencia u');f.ack();f.bridge.stop();
+});
+
+for(const kind of ['car','motorcycle','bicycle'])test(`${kind} music has a 2s exit tail without keeping visual presence or renewing old evidence`,()=>{
+  const tracker=new PassageTracker(),f=bridgeFixture();
+  tracker.update([detection(kind)],f.now-200,1000,600,thresholds);
+  tracker.update([detection(kind)],f.now,1000,600,thresholds);
+  const observed=tracker.visible(f.now);
+  assert.ok(observed.every(o=>o.observedAt===f.now),'use the tracker evidence token, not a bridge-generated timestamp');
+  f.bridge.presence(observed);f.ack();const commandCount=f.sent.length;
+  const deadline=f.now+PRESENCE_GRACE+VEHICLE_EXIT_TAIL;
+  for(let i=0;i<7;i++){
+    f.tick(200);f.bridge.presence(observed.map(o=>({...o})));f.ack();
+    assert.equal(f.bridge.deadline,deadline,'copied old ageMs must not renew its deadline');
+  }
+  f.tick(100);assert.deepEqual(tracker.visible(f.now),[],'no visual box or inferred presence during the tail');
+  assert.equal(f.bridge.presenceSamples.length,0);assert.equal(f.bridge.vehicleTails.size,1);
+  const tailCommands=f.sent.length;
+  for(let i=0;i<9;i++){
+    f.tick(200);f.bridge.presence(observed);assert.equal(f.sent.length,tailCommands,'tail cannot itself renew commands');
+  }
+  f.tick(199);assert.equal(f.bridge.presenceKind,kind);
+  f.tick(1);assert.equal(f.sent.at(-1).data.command,'admiratv audiencia u');f.ack();
+  const count=f.sent.length;f.bridge.presence(observed.map(o=>({...o})));f.tick(1000);
+  assert.equal(f.sent.length,count,'expired frame cannot reactivate the tail');
+  assert.ok(commandCount<=tailCommands);f.bridge.stop();
+});
+
+test('unstamped observations require real ageing: replaying the same object never renews its exit tail',()=>{
+  const f=bridgeFixture(),sample=observation('car');
+  f.bridge.presence([sample]);f.ack();const until=f.bridge.deadline;
+  for(let i=0;i<17;i++){f.tick(200);f.bridge.presence([sample]);f.ack();assert.equal(f.bridge.deadline,until);}
+  f.tick(100);assert.equal(f.sent.at(-1).data.command,'admiratv audiencia u');f.ack();
+  const count=f.sent.length;f.bridge.presence([sample]);assert.equal(f.sent.length,count);f.bridge.stop();
+});
+
+test('only newer strong evidence extends a tail; older stamps cannot replace it and higher-priority vehicles interrupt',()=>{
+  const f=bridgeFixture();f.bridge.presence([observation('car',0,{observedAt:10})]);f.ack();
+  f.tick(1000);f.bridge.presence([observation('car',0,{observedAt:20})]);f.ack();
+  const until=f.bridge.deadline;
+  f.tick(500);f.bridge.presence([observation('car',0,{observedAt:10})]);assert.equal(f.bridge.deadline,until);
+  f.tick(1000);f.bridge.presence([observation('person',0,{observedAt:30})]);
+  assert.equal(f.sent.at(-1).data.command,'admiratv audiencia coche');
+  f.bridge.presence([observation('bicycle',0,{observedAt:30}),observation('person',0,{observedAt:30})]);f.ack();
+  assert.equal(f.sent.at(-1).data.command,'admiratv audiencia bici');
+  f.bridge.neutral();f.ack();const count=f.sent.length;assert.equal(f.bridge.vehicleTails.size,0);
+  f.tick(5000);assert.equal(f.sent.length,count,'pause removes every queued vehicle immediately');f.bridge.stop();
+});
+
+test('stop clears an automatic exit tail and pending timers without allowing later commands',()=>{
+  const f=bridgeFixture();f.bridge.presence([observation('bicycle')]);f.ack();
+  f.tick(PRESENCE_GRACE);assert.equal(f.bridge.vehicleTails.size,1);
+  f.bridge.stop();assert.equal(f.bridge.vehicleTails.size,0);assert.equal(f.timers.size,0);
+  const count=f.sent.length;f.tick(10000);f.bridge.presence([observation('car')]);assert.equal(f.sent.length,count);
 });
 
 test('same-category pending ACK keeps its request ID and remains bounded by the first watchdog',()=>{

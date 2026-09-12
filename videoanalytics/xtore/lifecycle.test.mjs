@@ -46,6 +46,32 @@ test('permission denial stays disconnected and is explained',async()=>{
   assert.match(f.get('status').textContent,/No se ha concedido permiso/);
   assert.equal(f.get('analyze').disabled,true);
 });
+test('H requires calibration, toggles preview/iPad only and never starts analysis or resets counts',async()=>{
+  const f=await fixture();assert.equal(f.get('hide-people').disabled,true);
+  await f.get('connect').emit('click');assert.equal(f.get('hide-people').disabled,true);await f.calibrate();
+  await f.get('add-scooter').emit('click');assert.equal(f.get('hide-people').disabled,false);
+  await f.get('hide-people').emit('click');assert.equal(f.get('hide-people')['aria-pressed'],'true');
+  assert.equal(f.get('clean-preview').hidden,false);assert.equal(f.get('tablet-tracking').hidden,false);
+  assert.equal(f.get('count-scooter').textContent,'1');assert.equal(f.get('analyze').textContent,'Iniciar análisis');
+  await f.doc.emit('keydown',{key:'h',preventDefault(){}});assert.equal(f.get('clean-preview').hidden,true);
+  assert.equal(f.get('tablet-tracking').hidden,true);assert.equal(f.get('count-scooter').textContent,'1');
+});
+test('H live output survives capture expiry but pause and disconnect clear its labels/background',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});const f=await fixture();await f.get('connect').emit('click');await f.calibrate();
+  await f.get('hide-people').emit('click');await f.get('analyze').emit('click');
+  f.detections[0].resolve([{class:'person',score:.95,bbox:[50,20,50,120]}]);await new Promise(r=>setImmediate(r));
+  assert.equal(f.get('tablet-tracking').children.length,1);assert.equal(f.get('clean-preview').hidden,false);
+  await f.get('reset-counts').emit('click');assert.equal(f.get('tablet-tracking').children.length,1);
+  await f.get('analyze').emit('click');assert.equal(f.get('tablet-tracking').children.length,0);
+  assert.match(f.get('clean-status').textContent,/esperando vídeo/);assert.equal(f.get('capture-canvas').hidden,true);
+  await f.get('stop').emit('click');assert.equal(f.get('tablet').hidden,true);assert.equal(f.get('hide-people').disabled,true);
+});
+test('H output expires independently when the next inference has not returned',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});const f=await fixture();await f.get('connect').emit('click');await f.calibrate();
+  await f.get('hide-people').emit('click');await f.get('analyze').emit('click');f.finishDetection();await new Promise(r=>setImmediate(r));
+  t.mock.timers.tick(1501);assert.match(f.get('clean-status').textContent,/sin fotograma reciente/);
+  assert.equal(f.get('clean-preview').hidden,false);assert.equal(f.get('tablet-tracking').children.length,0);
+});
 
 test('last marked camera iPad and DS restore on a new visit only after sharing, never start analysis',async()=>{
   const data=new Map(),storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};

@@ -150,7 +150,8 @@
       "help": "https://admira.tv/help/#player-virtual",
       "mission": "DCL-f9824e3bba6cee600b73810d",
       "registration_is_not_presence": true,
-      "local_documentation": {"mcp_version": "0.2.10", "help_revision": "2026-09-12.8", "live_status": false},
+      "local_documentation": {"mcp_version": "0.2.11", "help_revision": "2026-09-12.9", "live_status": false},
+      "local_person_hiding": {"control": "Botón H o tecla H con foco en analizador y fuera de campos", "scope": "Previo ROI e iPad en directo; transformación temporal/reversible local", "background": "Regiones despejadas con tres frames estables; cajas de persona dilatadas; fondo desconocido cubierto con trama y rótulo, no generado", "detector": "Cuenta y decide sobre original", "original_capture": "H oculta el original de Capturas; recortes/Twins son flujos independientes", "freshness_ms": 1500, "clear": "Pausa, ocultación, reencuadre o desconexión", "storage": "Memoria volátil; sin IA externa", "limitations": "No anonimización garantizada, identidad, grabación ni evidencia de seguridad", "mission": "DCL-b7723cea465ac94cb685d1de", "publication": "Incluida en v.12.09.2026.r15.15:52; contrato de implementación, no estado en vivo"},
       "analysis_recovery": {
         "scope": "UI local; no herramienta MCP ni permiso de captura",
         "temporary": ["vista oculta", "mute de fuente", "más de 3 s sin fotogramas", "resize proporcional"],
@@ -188,7 +189,8 @@
         "refresh_ms": 1000,
         "refresh": "La misma selección conserva nodo y currentTime; ACK pendiente de la misma categoría conserva requestId y watchdog",
         "priority": ["bicycle", "motorcycle", "car", "person"],
-        "absence": "Al caducar 1,5 s, pasar directamente a otra categoría fresca o neutral; temporizador independiente de inferencia. Pausa también neutraliza",
+        "absence": "Presencia/cajas caducan a 1,5 s; persona sin cola. Coche/moto/bici conservan solo contenido 2 s más; prioridad intacta y salida a otra categoría vigente o neutral. Pausa/desconexión cancelan inmediatamente",
+        "vehicle_exit_tail": {"categories": ["bicycle", "motorcycle", "car"], "extra_ms": 2000, "total_from_strong_frame_ms": 3500, "renewal": "Solo evidencia fuerte nueva; repetir objetos o sello observedAt no extiende cola", "visual_presence": false, "manual_test_ms": 6000, "child_ttl_ms": 6000, "mission": "DCL-b7723cea465ac94cb685d1de", "publication": "Incluida en v.12.09.2026.r15.15:52; contrato de implementación, no estado en vivo"},
         "transport_ttl_ms": 6000,
         "child_expiry_check_ms": 2000,
         "manual_test_ttl_ms": 6000,
@@ -255,7 +257,7 @@
         "duration": "Audios y vídeos musicales completos hasta ended; sin corte por duración editorial",
         "assignment": "Parrilla con sesión autorizada; no es un alta ni escritura MCP anónima",
         "audience": "Con análisis activo, presencia confirmada fresca incluso quieta y regla con contenido; no depende de un paso nuevo",
-        "return": "Tras interrupción, pausa o 1,5 s sin presencia fresca y sin otra categoría válida: base desde el principio; neutral sin interrupción no reinicia. Los 6 s quedan para respaldo/manual",
+        "return": "Persona: 1,5 s sin presencia fresca; coche/moto/bici: 2 s adicionales solo de contenido (3,5 s total desde última evidencia fuerte). Sin otra categoría vigente: base desde principio. Pausa/desconexión inmediatas; neutral sin interrupción no reinicia; respaldo/manual 6 s",
         "autoplay": "muted=0; el navegador puede exigir clic o Enter/Espacio dentro del iframe; audio-blocked espera sin saltar de pieza, diagnosticar códec ni forzar pantalla completa",
         "music_mission": "DCL-a2d1afecee4fa4c73ba924d3"
       }

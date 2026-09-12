@@ -41,7 +41,7 @@ export function installSignageUI({document,window}){
     emissionTimer=setTimeout(()=>{if(!emissionSeen){emissionDelayed=true;$('signage-status').textContent='Carga demorada · sin emisión confirmada. Reintentando sin apagar el player.';}},30000);
     bridge=new SignageBridge({target:iframe.contentWindow,onFailure:message=>{failed=true;stop(message);},onState:state=>{
         if(state.type==='ack'){
-          $('signage-command').textContent=`${LABEL[state.kind]} · orden aceptada${state.kind==='none'?'':analysisEnabled?', renovada por presencia en cámara':', prueba manual de 6 s'}. No confirma una creatividad concreta.`;
+          $('signage-command').textContent=`${LABEL[state.kind]} · orden aceptada${state.kind==='none'?'':analysisEnabled?', presencia o cola de salida':', prueba manual de 6 s'}. No confirma una creatividad concreta.`;
           // An ACK is control-plane evidence, not a new playback event. The
           // neutral ACK after pause/expiry must not erase confirmed playback.
           if(!mediaReported&&!emissionDelayed)$('signage-status').textContent='Canal conectado · esperando emisión';

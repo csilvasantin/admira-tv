@@ -62,6 +62,34 @@ producir un nuevo paso. El desglose de sexo/género no se infiere.
 
 ## Recuperación y música condicionada — 12 septiembre 2026
 
+### H: fondo temporal local y cola de salida de vehículos
+
+`clean-street.mjs` y `clean-street-ui.mjs` implementan H/botón reversible en el
+analizador. No se modifica el vídeo original que utiliza el detector. En H, ROI e
+iPad muestran la vista modificada con sus rectángulos locales; la foto original
+de Capturas queda oculta. El iPad pasa de instantánea efímera a vídeo procesado.
+No hay reconstrucción generativa ni reconocimiento de identidad. El atajo no
+actúa al escribir en campos, ni dentro del iframe independiente del player.
+
+Se aprende fondo únicamente fuera de cajas detectadas de personas/vehículos,
+tras tres fotogramas despejados y estables, en un máximo de 320 × 480 píxeles.
+Las cajas de persona ampliadas se rellenan con fondo observado de hasta 20 s;
+regiones desconocidas se tapan con trama y rótulo, nunca se presentan como calle
+real reconstruida. Un cambio amplio de escena invalida el fondo. Puede borrar
+objetos solapados, dejar sombras/reflejos o personas no detectadas: NO garantiza
+anonimización y NO sirve como original de seguridad. Recortes/Twins conservan
+su circuito explícito de originales independiente. No se envía el fondo a red.
+Pausa, vista oculta, reencuadre y desconexión borran esta memoria; una imagen
+modificada sin fotograma fresco se tapa en 1,5 s. H no persiste tras recargar.
+
+Vehículos automáticos (bici/moto/coche): el contenido tiene 2 s de cola adicional
+tras los 1,5 s de frescura, total 3,5 s desde la última observación fuerte.
+`observedAt` es un sello geométrico local que impide renovar la cola con copias
+del mismo fotograma; no sale por MCP. No prolonga cajas ni incrementa contadores.
+La prioridad bici/moto/coche/persona y #998 desde el 50 % se conservan. Pausa o
+desconexión neutralizan inmediatamente. Prueba manual: 6 s. Patinete: sigue
+manual, sin regla automática compatible; no se inventa detección ni contenido.
+
 Se conserva la intención de análisis durante ocultación, mute temporal, más de
 3 s sin fotogramas y cambios proporcionales de tamaño. Un único sondeo de 500 ms
 espera vista visible, fuente sin mute, fotograma nuevo, marcas válidas y que termine
@@ -91,8 +119,8 @@ Se resuelven contra el catálogo vigente; solo medios musicales reproducibles HT
 No clasifica sexo/edad, no modifica matriz global ni playlist de Flota. Si falta la
 pieza mantiene la base. Prioridad simultánea: bici, moto, coche, persona.
 La presencia confirmada renueva la misma categoría cada 1 s sin reiniciar la pieza.
-El margen de pérdida es 1,5 s desde el fotograma observado, no desde el fin de la
-inferencia. Un temporizador independiente devuelve a base aunque el detector
+El margen de pérdida visual es 1,5 s desde el fotograma observado, no desde el fin de la
+inferencia. Coche/moto/bici añaden una cola de contenido de 2 s. Un temporizador independiente devuelve a base aunque el detector
 se quede esperando; si queda otra categoría válida pasa directamente a ella.
 El TTL del hijo sigue siendo 6 s de respaldo. Las pruebas manuales conservan
 6 s desde el clic, no desde playing: la carga consume parte del plazo.
@@ -115,7 +143,8 @@ la capa y reconfirma presencia. Reset de cifras mantiene geometría y presencia.
 No usa rostros/embeddings, no guarda trayectorias y no envía IDs/cajas al player.
 No es identificación; cruces, oclusiones o reentradas pueden cambiar/asociar mal IDs.
 Patinetes siguen siendo registro manual sin cajas ni comandos automáticos.
-Las capturas de iPad siguen caducando a los 6 s y solo se crean al contar pasos.
+Las capturas ordinarias de iPad caducan a los 6 s y solo se crean al contar pasos.
+En H el iPad muestra vídeo local modificado con cajas; no renueva esas capturas.
 
 «Reglas musicales · probar» ofrece botones explícitos para esas cuatro categorías
 y volver a playlist. Solo sin intención de análisis ni calibración; no incrementa
@@ -284,7 +313,8 @@ reglas y el comportamiento de players ordinarios fuera de este opt-in.
 
 Arranque neutro con sondeo idempotente cada 500 ms, mismo requestId, límite 20 s.
 No depende del load de recursos secundarios. Presencia confirmada → bici, moto,
-coche o persona por prioridad; neutro tras 1,5 s sin presencia válida. Un watchdog
+coche o persona por prioridad; neutro tras 1,5 s sin persona válida, o 3,5 s desde
+la última evidencia fuerte de vehículo (incluye cola de 2 s). Un watchdog
 de racha sin ACK vigente cierra a los 2.5 s aunque haya pasos constantes.
 ACKs obsoletos no reactivan ni tumban una orden posterior. Si no hay confirmación
 de reproducción/carga en 30 s se muestra «Carga demorada» SIN desmontar el iframe;
@@ -312,7 +342,7 @@ No se recargó su captura ni se introdujeron detecciones simuladas.
 `selected` no acredita emisión; `playing`, `poster-loaded` y `document-loaded`
 distinguen reproducción/carga de media, miniatura de respaldo e interactivo
 cargado (este último no acredita reproducción interna). Además del margen de presencia
-de 1,5 s del padre, el forzado caduca en el hijo a los 6 s y su tick de 2 s lo retira si el padre
+de 1,5 s del padre y la cola musical de vehículos de 2 s, el forzado caduca en el hijo a los 6 s y su tick de 2 s lo retira si el padre
 no puede enviar el neutral a tiempo.
 
 Prueba real inicial en navegador: el canal remoto opaco respondió ACK neutro,
