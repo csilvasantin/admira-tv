@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r19.22:38",
+  "version": "v.12.09.2026.r20.22:41",
   "signature": "Codex · MacBookAir16plata",
   "agent": "Codex",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "22:38",
-  "evidence": "El catálogo opcional de tiendas se carga sin bloquear el arranque del player. 23 pruebas de emparejamiento, reproducción iOS y caché superadas. Asociación iphone17-mupi con demo Alcampo verificada; reproducción física pendiente de comprobar."
+  "time": "22:41",
+  "evidence": "El modo local o sincronizado del player virtual evita el arranque automático de cámara heredado de iOS beta 2. 24 pruebas superadas. Beta 1.0(2) instalada y persistencia y reproducción Alcampo verificadas en iPhone 17 Pro Max."
 }

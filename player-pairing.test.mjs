@@ -22,3 +22,16 @@ test('playlist is read from logical source while physical identity is retained',
  const fn=html.slice(html.indexOf('async function loadDefaultDraft(){'),html.indexOf('// Entrelaza los creativos'));
  const calls=[];const ctx=vm.createContext({pairingReady:Promise.resolve(),programScreen:()=>source.screen,programCircuit:()=>source.circuit,scr:{screen:'ipad-local-test',circuit:'luna'},PREVIEW:{on:false},XTORE_PARENT:false,xtoreMusicEnabled:()=>false,DEFAULT_DRAFT:{signature:'',items:[]},fetch:async url=>{calls.push(url);return Response.json({ok:true,draft:{items:[{id:'shoe',asset:'https://example.com/shoe.jpg',type:'image',seconds:12}]}});},rebuild(){},encodeURIComponent,Date});vm.runInContext(fn,ctx);await ctx.loadDefaultDraft();assert.match(calls[0],/screen=xtore-virtual-zapatillas/);assert.equal(ctx.scr.screen,'ipad-local-test');assert.equal(ctx.DEFAULT_DRAFT.items[0]._previewSec,12);
 });
+
+test('paired loop ignores legacy iOS camera flag; conditional and unpaired camera remain available',()=>{
+ const html=fs.readFileSync(new URL('./canal.html',import.meta.url),'utf8');
+ const start=html.indexOf('function wireCam()');
+ const fn=html.slice(start,html.indexOf('// ── PARRILLA REAL',start));
+ for(const mode of ['local','sync','conditional',null]){
+  let starts=0;const checkbox={checked:false};
+  const ctx=vm.createContext({window:{AdmiraPlayerPairing:{source:mode?{mode}:null}},$ :()=>checkbox,qs:new URLSearchParams('cam=1'),LS:()=> '1',camStart(){starts++;},camStop(){}});
+  vm.runInContext(fn,ctx);ctx.wireCam();
+  assert.equal(starts,mode==='local'||mode==='sync'?0:1,`mode ${mode}`);
+  assert.equal(checkbox.checked,starts===1);
+ }
+});
