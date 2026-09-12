@@ -98,5 +98,5 @@ test("[10] en kiosko no se pinta lo invisible: barra, reloj, rail y chan con gua
 
 test("[extra] un solo ResizeObserver sobre el wrap — hubo dos entre r23 y r24", () => {
   assert.equal((canal.match(/new ResizeObserver/g) || []).length, 1);
-  assert.match(canal, /_mupiResizeObserver=new ResizeObserver\(\(\)=>\{ fitMupi\._retry=0; fitMupi\(\); \}\)/);
+  assert.match(canal, /_mupiResizeObserver=new ResizeObserver\(\(\)=>\{ fitMupi\._retry=0; fitMupi\(\); localInfoClamp\(\); \}\)/);
 });

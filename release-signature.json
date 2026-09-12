@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r8.13:44",
-  "signature": "NeoMBA16 · MacBookAir16plata",
-  "agent": "NeoMBA16",
+  "version": "v.12.09.2026.r9.14:13",
+  "signature": "TrinityMBA16 · MacBookAir16plata",
+  "agent": "TrinityMBA16",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "13:44",
-  "evidence": "api/playlist acepta la clave del Stock de Pixeria (secreto STOCK_NOTIFY_KEY, body {secret} o X-Notify-Key) con CORS solo para pixeria.com, OPTIONS y name/source del catálogo; sesión del portal intacta. 3/3 node:test (preflight, escritura con clave y firma updatedBy, 401 sin/mala clave). Rebase sobre r7.13:36 de Trinity. Yokup #3183."
+  "time": "14:13",
+  "evidence": "Ficha compartida Xtore previo/integrado: X y Escape, movimiento acotado al visor con puntero/teclado, toolbar fija, repetir audio/video local subordinado a audiencia/TTL, posicion 1 de X y AUDIO separado de barras. Rebase conserva 0009c77a de Neo/APIplaylist. Cross-review Turing aprobado; 468 tests con 466 pass y 2 fallos previos ajenos; MCP local 27/27. Browser real con base, Top Gun persona, Power of Love coche/moto/bici, contador efectivo, cierre y movimiento por teclado; perspectiva cuatro esquinas en harness aislado sin camara ni contadores. Yokup DCL-2ef0288ee26e132ffb3ab77d."
 }
