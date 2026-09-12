@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r15.15:52",
+  "version": "v.12.09.2026.r16.15:56",
   "signature": "TrinityMBA16 · MacBookAir16plata",
   "agent": "TrinityMBA16",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "15:52",
+  "time": "15:56",
   "evidence": "Xtore H: vista local modificada ROI+iPad, fondo observado3frames estable, trama desconocido, cajas/IDs conservados. Detector original, cero IA externa; no anonimización/evidencia seguridad. Imagen caduca1.5s, fondo20s; pausa/oculta/desconexión limpian. Vehículos car/moto/bici +2s cola (3.5s desde strong frame), sin prolongar cajas/conteos/replay. Bici998 mitad intacta. Turing cross-review aprobado. 243/243 foco, general2fallos previos ajenos, MCP27/27. Browser QA sintética no cámara: original vs H, fondo desconocido, expiry, toggle comprobados. Yokup DCL-b7723cea465ac94cb685d1de."
 }
