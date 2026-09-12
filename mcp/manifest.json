@@ -2,7 +2,7 @@
   "name": "admira-tv",
   "title": "Admira TV · admira.tv — la capa Emitir de la suite AdmiraNeXT",
   "description": "Hub MCP de admira.tv: emisión, federación, player condicionado y registro de players virtuales (navegador sin hardware dedicado). Servidor mcp-tv.admira.store v2.3.0; el descriptor raíz publica la lista vigente de herramientas. Alta no equivale a presencia ni a proof-of-play.",
-  "version": "v.12.09.2026.r3.11:43",
+  "version": "v.12.09.2026.r4.11:52",
   "site": "https://admira.tv",
   "hub": "https://admira.tv/mcp/",
   "llms_txt": "https://admira.tv/mcp/llms.txt",

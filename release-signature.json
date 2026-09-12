@@ -1,9 +1,9 @@
 {
-  "version": "v.12.09.2026.r3.11:41",
-  "signature": "NeoMBA16 · MacBookAir16plata",
-  "agent": "NeoMBA16",
+  "version": "v.12.09.2026.r4.11:52",
+  "signature": "TrinityMBA16 · MacBookAir16plata",
+  "agent": "TrinityMBA16",
   "machine": "MacBookAir16plata",
   "day": "12.09.2026",
-  "time": "11:41",
-  "evidence": "Catálogo: imagen real del producto (FLT-100318). analizar.js devuelve bbox por producto (json_schema) y la página envía la copia con rejilla de coordenadas; recorte sobre el lienzo limpio (margen 3 %, ≤512 px, JPEG 0,85) y subida a R2 admira-catalogo-imagenes (binding CATALOGO) vía /contentcatalogue/api/imagen (POST con la sesión del portal; GET público con CORS * y caché 1 día). Miniatura 72 px en la fila, modal con la página y la caja resaltada, chip «Con imagen», progreso «Recortando N/M». Alcampo sembrado: 159 de 159 con imagen (151 casados solos, 8 a mano) + 16 páginas. Probado en local (wrangler pages dev: POST con sesión, GET, 401/403/400) y flujo Subir folleto con p2 (7/7 cajas). Deep-link lleva imagen; no lleva bbox."
+  "time": "11:52",
+  "evidence": "Xtore: playlist asociada prioritaria; sin asociación, últimos cinco contenidos reproducibles con tag exacto normalizado #musica, filtrados antes de ordenar por createdAt. Incluye vídeo musical completo y audio; conserva música con análisis inactivo, interrupción solo por creatividad resoluble y vuelta al bucle. Corregidos puente fetch del catálogo completo y permiso de audio visible en modo clean sin fullscreen. Asociación real de cinco musicales rev1789206491398 mediante portal autenticado, solo xtore-virtual-zapatillas. QA navegador: primer musical completo 33.19s y paso a OBK 240.701s, muted:false, paused:false, sin cámara; no certifica sonido físico. 140 pruebas web específicas, 27 MCP local; general 420/422 con dos fallos previos ajenos. Cross-review Turing aprobado. Se preserva release Neo r3 catálogo/R2. Help/MCP actualizados. Yokup DCL-a2d1afecee4fa4c73ba924d3."
 }

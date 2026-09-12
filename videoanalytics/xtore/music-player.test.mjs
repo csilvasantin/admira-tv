@@ -32,7 +32,7 @@ function fixture(){
     qs:new URLSearchParams('xtoreMusic=1&screen=xtore-virtual-zapatillas'),XTORE_PARENT:'https://admira.tv',
     KIND:{audio:'audio',music:'audio',locucion:'audio',image:'image',video:'video',interactive:'interactive'},MEDIA:['audio','music','locucion','image','video','interactive'],
     _standby:false,_playTok:0,timer:0,bar:{style:{}},mediaEl:null,usesAdv:false,paused:false,stage,tap,
-    document:{body:node(),createElement(tag){const el=node(tag);created.push(el);return el;}},
+    document:{body:node(),documentElement:node(),createElement(tag){const el=node(tag);created.push(el);return el;}},
     $:id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);},
     guardPlayStarted(){},stopBar(){},syncOn:false,playlist:[],all:[],cur:-1,
     cachedSrc:async()=>null,cacheable:()=>true,firstCachedFrom:()=>assert.fail('Music cannot wait for opaque storage'),
@@ -65,6 +65,11 @@ test('music opt-in is restricted to the exact Xtore parent profile and screen',(
   }
   f.c.qs=new URLSearchParams('xtoreMusic=1&screen=xtore-virtual-zapatillas');f.c.XTORE_PARENT='';
   assert.equal(f.c.xtoreMusicEnabled(),false);
+});
+
+test('clean musical embed keeps its autoplay gesture visible and keyboard accessible',()=>{
+  assert.match(html,/\.clean\.xtore-music #tap\.show\{ display:grid!important; \}/);
+  assert.match(html,/if\(xtoreMusicEnabled\(\)\)\{\s*document\.documentElement\.classList\.add\('xtore-music'\);\s*tap\.setAttribute\('role','button'\)/);
 });
 
 test('assigned base accepts HTTPS media including music videos and rejects locutions/credentials',()=>{
@@ -258,7 +263,11 @@ test('bad/missing metadata adds no timer, and stale metadata cannot alter the ne
 test('sound affordance has button semantics and Enter/Space retry without fullscreen or repeated keys',async()=>{
   const f=fixture();f.draft([song()]);f.c.xtoreMusicRebuild();await settle();let prevent=0,calls=0;
   f.audioPlay(()=>{calls++;return Promise.resolve();});
-  vm.runInContext(section("if(xtoreMusicEnabled()){\n  tap.setAttribute('role'",'let hideT;'),f.c);
+  const bind=section("if(xtoreMusicEnabled()){\n  document.documentElement.classList.add('xtore-music')",'let hideT;');
+  vm.runInContext(bind,f.c);
+  assert.equal(f.c.document.documentElement.classList.contains('xtore-music'),true);
+  const ordinary=fixture();ordinary.c.XTORE_PARENT='';vm.runInContext(bind,ordinary.c);
+  assert.equal(ordinary.c.document.documentElement.classList.contains('xtore-music'),false);
   assert.equal(f.c.tap.role,'button');assert.equal(f.c.tap.tabIndex,0);
   for(const key of ['Enter',' '])f.c.xtoreMusicKeydown({key,preventDefault(){prevent++;}});
   f.c.xtoreMusicKeydown({key:'Enter',repeat:true,preventDefault(){prevent++;}});
@@ -270,6 +279,17 @@ test('sound affordance has button semantics and Enter/Space retry without fullsc
 test('outside music profile actual audio retains its editorial slot',async()=>{
   const f=fixture();f.c.qs=new URLSearchParams();f.c.STREAM_OK=true;f.c.playlist=[song()];await f.c.play(0);
   assert.deepEqual(f.timers,[10000]);assert.equal(f.c.editorialSec({...song(),_dur:420}),10);
+});
+
+test('clean music never requests kiosk fullscreen while ordinary clean profiles retain it',()=>{
+  for(const music of [true,false]){
+    const f=fixture(),listeners=[];f.c.document.documentElement.classList.add('clean');
+    if(!music)f.c.XTORE_PARENT='';
+    f.c.document.addEventListener=type=>listeners.push(type);
+    vm.runInContext(section('const KIOSK =','tap.addEventListener(\'click\''),f.c);
+    assert.equal(f.eval('KIOSK'),!music);
+    assert.deepEqual(listeners,music?[]:['pointerdown']);
+  }
 });
 
 test('music does not probe unrelated catalogue video/image media',async()=>{
