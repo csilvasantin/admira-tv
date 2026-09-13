@@ -75,7 +75,7 @@ const xpace=installXpaceLink({document,window,onChange:()=>{
 const sourceVisible=()=>!document.hidden||xpace.backgroundActive;
 const signage=installSignageUI({document,window,onMirror:state=>xpace.media(state),onStop:()=>xpace.stop()});
 const history=installHistoryUI({document});
-const cleanStreet=installCleanStreetUI({document,onToggle:enabled=>{
+const cleanStreet=installCleanStreetUI({document,getPassages:()=>passages.counts,onToggle:enabled=>{
   xpace.cameraOff();previewVideoTime=-1;
   clearCapture();
   $('capture-empty').textContent=enabled?'Vídeo original en directo en el iPad':'Esperando un paso confirmado';
@@ -89,6 +89,8 @@ function queueHistory(events,source='detector'){
 function status(message){$('status').textContent=message;}
 function renderCounts(){
   for(const [category,count] of Object.entries(passages.counts))$(`count-${category}`).textContent=numberFormat.format(count);
+  xpace.statistics(passages.counts);
+  $('camera-passage-count').textContent=`Personas que han pasado: ${numberFormat.format(passages.counts.person)}`;
   $('event-counter').textContent=`${numberFormat.format(passages.total)} ${passages.total===1?'paso':'pasos'}`;
 }
 function controls(){
@@ -396,7 +398,8 @@ async function loop(token){
     }
     const visible=tracker.visible(performance.now());
     trackingOverlay.render(visible);signage.presence(visible);
-    if(cleanStreet.enabled)void xpace.camera($('clean-preview'),visible,performance.now()-lastFrameAt,passages.counts);
+    const views=cleanStreet.frames();
+    if(views)void xpace.camera(views.clean,visible,performance.now()-views.capturedAt,passages.counts,{original:views.original,modified:true});
   }catch{
     if(token!==generation||!analyzing)return;
     pause('El detector ha fallado. La captura se ha borrado; revisa la fuente y vuelve a iniciar.');return;
@@ -409,7 +412,7 @@ async function loop(token){
 function previewCamera(token){
   clearTimeout(cameraPreviewTimer);
   if(!analyzing||token!==generation||!stream)return;
-  if(xpace.cameraOnly&&!cleanStreet.enabled&&sourceVisible()&&!sourceMuted&&!calibration&&roiReady&&scene.readyState>=2&&scene.currentTime!==previewVideoTime){
+  if(xpace.cameraOnly&&!cleanStreet.frames()&&sourceVisible()&&!sourceMuted&&!calibration&&roiReady&&scene.readyState>=2&&scene.currentTime!==previewVideoTime){
     const at=performance.now();previewVideoTime=scene.currentTime;
     const [x,y,w,h]=roi,sw=scene.videoWidth,sh=scene.videoHeight;
     const width=Math.max(1,Math.round(Math.min(480,w*sw))),height=Math.max(1,Math.round(width*h*sh/(w*sw)));

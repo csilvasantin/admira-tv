@@ -77,3 +77,24 @@ test('manual scooter passages travel independently; absent or invalid totals are
  t.mock.timers.tick(300);await f.link.camera({width:480},[],0,{...totals,scooter:-1});
  assert.equal(f.sent.at(-1).d.passages.scooter,undefined);
 });
+
+test('statistics use the exact cumulative values and propagate resets even without camera frames',t=>{
+ const f=fixture(t),totals={person:47,car:0,motorcycle:1,bicycle:3,scooter:0};
+ f.link.statistics(totals);assert.equal(f.sent.length,0);f.receive({event:'ready'});
+ assert.deepEqual(f.sent.at(-1).d.passages,totals);assert.equal(f.sent.at(-1).d.event,'statistics');
+ f.link.cameraOff();f.link.statistics({...totals,person:0,scooter:2});
+ assert.equal(f.sent.at(-1).d.passages.person,0);assert.equal(f.sent.at(-1).d.passages.scooter,2);
+ const count=f.sent.length;f.link.statistics({...totals,person:-1});assert.equal(f.sent.length,count);
+});
+test('paired views share a capture timestamp and both bitmaps close if paused or one fails',async t=>{
+ const f=fixture(t);f.receive({event:'ready'});const clean={width:320},original={width:320},bitmaps=[];
+ f.window.createImageBitmap=async source=>{const b={source,closed:false,close(){this.closed=true;}};bitmaps.push(b);return b;};
+ await f.link.camera(clean,[],0,null,{original,modified:true});
+ const packet=f.sent.at(-1);assert.equal(packet.d.modified,true);assert.equal(packet.d.bitmap.source,clean);assert.equal(packet.d.originalBitmap.source,original);assert.equal(packet.tr.length,2);
+ t.mock.timers.tick(300);let resolvers=[];f.window.createImageBitmap=()=>new Promise(resolve=>resolvers.push(resolve));
+ const pending=f.link.camera(clean,[],0,null,{original,modified:true});f.link.cameraOff();
+ const a={closed:false,close(){this.closed=true;}},b={closed:false,close(){this.closed=true;}};resolvers[0](a);resolvers[1](b);await pending;assert.equal(a.closed,true);assert.equal(b.closed,true);
+ t.mock.timers.tick(300);const c={closed:false,close(){this.closed=true;}};
+ f.window.createImageBitmap=async source=>{if(source===original)throw Error('unavailable');return c;};
+ await f.link.camera(clean,[],0,null,{original,modified:true});assert.equal(c.closed,true);
+});

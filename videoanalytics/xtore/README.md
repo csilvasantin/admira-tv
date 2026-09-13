@@ -566,3 +566,10 @@ DooH en XpaceOS recibe los acumulados de las cuatro categorías automáticas y
 `scooter` (observación manual). No se añade a la presencia automática ni se
 deriva de bicicletas/personas. Emisores anteriores omiten el campo; el receptor
 lo muestra no disponible. Los contadores conservan su caducidad y reset de sesión.
+
+Los mensajes `statistics` replican directamente los acumulados de `PassageCounts`
+al cambiar y cada 500 ms con enlace activo, independientes de la cámara. Nunca
+son el último trackId ni una suma de snapshots. Cámara transmite clean + original
+del mismo fotograma efímero y frameAt, máximo 480 px por vista. Caducidad/pérdida
+de enlace descartan ambos bitmaps; un fallo de una vista libera la otra. La Xtore
+y el iPad rotulan expresamente el acumulado de personas para distinguirlo de IDs.

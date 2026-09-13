@@ -1,7 +1,7 @@
 import {TemporalStreetBackground,CLEAN_FRAME_TTL,hideShortcut} from './clean-street.mjs';
 import {TrackingOverlay} from './tracking-overlay.mjs';
 
-export function installCleanStreetUI({document,onToggle=()=>{}}){
+export function installCleanStreetUI({document,onToggle=()=>{},getPassages=()=>null}){
   const $=id=>document.getElementById(id),canvas=$('clean-preview'),tablet=$('tablet-canvas');
   const input=document.createElement('canvas'),context=input.getContext('2d',{willReadFrequently:true});
   const background=new TemporalStreetBackground(),overlay=new TrackingOverlay($('tablet-tracking'),{labelHeight:20,labelCharWidth:9.5,reservedTop:0});
@@ -21,7 +21,7 @@ export function installCleanStreetUI({document,onToggle=()=>{}}){
     t.fillStyle='#09131b';t.fillRect(0,0,640,480);t.drawImage(input,x,y,w,h);
     t.strokeStyle='#3df08a';t.lineWidth=12;t.strokeRect(6,6,628,468);
     t.fillStyle='#3df08a';t.font='bold 18px sans-serif';t.textAlign='center';t.fillText('Puerta Cam · vídeo original',320,435);
-    t.fillStyle='#b4c4ce';t.font='16px sans-serif';t.fillText('Personas visibles · detección en directo',320,461,600);
+    t.fillStyle='#b4c4ce';t.font='16px sans-serif';t.fillText('Personas que han pasado: '+(getPassages()?.person??'—'),320,461,600);
     Object.assign($('tablet-tracking').style,{left:`${x}px`,top:`${y}px`,width:`${w}px`,height:`${h}px`});
     overlay.render(observations.map(o=>({...o,ageMs:o.ageMs+Math.max(0,performance.now()-labelsAt)})));
   }
@@ -49,5 +49,5 @@ export function installCleanStreetUI({document,onToggle=()=>{}}){
     }catch{reset();message('H · vista no disponible; análisis independiente');}
   }
   blank();
-  return {get enabled(){return enabled;},update,reset,setEnabled,layout:()=>overlay.layoutLabels()};
+  return {get enabled(){return enabled;},frames(){return performance.now()-lastAt<CLEAN_FRAME_TTL?{clean:canvas,original:input,capturedAt:lastAt}:null;},update,reset,setEnabled,layout:()=>overlay.layoutLabels()};
 }
