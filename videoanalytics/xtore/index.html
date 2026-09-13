@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090e14">
   <meta name="description" content="Xtore: análisis local de Puerta Cam y capturas efímeras en un iPad virtual, con permiso explícito para compartir la pestaña de Digital Twin.">
-  <meta name="admiranext-version" content="v.13.09.2026.r19.15:39">
+  <meta name="admiranext-version" content="v.13.09.2026.r20.16:06">
   <meta name="admiranext-agent" content="TrinityMBA16">
   <title>Xtore · Analítica de vídeo · Admira.tv</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./xtore.css?v=13.09.2026.r19.1539">
-  <script type="module" src="./xtore.mjs?v=xtanco-entry-1"></script>
+  <link rel="stylesheet" href="./xtore.css?v=13.09.2026.r20.1606">
+  <script type="module" src="./xtore.mjs?v=quick-start-1"></script>
 </head>
 <body>
   <header class="topbar">
@@ -23,9 +23,8 @@
       <span id="connection" class="badge">Cámara sin conectar</span>
     </header>
     <section class="toolbar" aria-label="Conexión y análisis">
-      <button id="analyze" class="primary" disabled>Iniciar análisis</button>
-      <a class="button" href="https://digitaltwin.ieu.ai/" target="_blank" rel="noopener noreferrer">1. Abrir Digital Twin ↗</a>
-      <button id="connect">2. Compartir pestaña</button>
+      <button id="analyze" class="primary" disabled>Arrancar cámara y análisis</button>
+      <a class="button" href="https://digitaltwin.ieu.ai/" target="_blank" rel="noopener noreferrer">Abrir Digital Twin ↗</a>
       <button id="stop" disabled>Desconectar</button>
       <button id="open-xpace">Abrir gemelo · zapatillas ↗</button>
       <button id="open-xtanco" title="Abre el Xtanco con el player de la Xtore de zapatillas enlazado a su pantalla exterior">Abrir gemelo · Xtanco ↗</button>
@@ -33,7 +32,7 @@
       <span id="analysis-health" class="small" role="status" aria-live="polite">Cámara sin conectar</span>
       <span class="local-note">Detección local · cámara sin audio · música independiente · envío a Pixeria solo al pulsar Generar</span>
     </section>
-    <p id="status" role="status" aria-live="polite">La música no necesita vídeo en directo. Para activar la audiencia, abre Store → Entrada y Puerta Cam en Digital Twin; después comparte únicamente esa pestaña.</p>
+    <p id="status" role="status" aria-live="polite">Con Puerta Cam abierta en Digital Twin, pulsa Arrancar cámara y análisis y selecciona esa pestaña. Si ya guardaste el encuadre de esta vista, el análisis comenzará automáticamente.</p>
     <p id="xpace-status" class="small" role="status">Gemelo sin conectar. Al abrirlo compartes el player y el recorte de Puerta Cam con esa ventana de XpaceOS. No se graba ni se publica el vídeo.</p>
     <div class="workspace">
       <section class="viewer" aria-label="Escena Xtore con iPad virtual">
@@ -154,10 +153,11 @@
         <details class="help"><summary><span aria-hidden="true">›</span> Grabación de seguridad · no activa</summary><p><strong>No se está grabando ni archivando.</strong> Falta un grabador y un almacén privado. La propuesta es conservar originales sin alterar durante 28 días, con borrado automático en servidor y acceso restringido; nunca en Stock público de Pixeria.</p><p>Compartir una pestaña no sustituye un grabador 24/7: al cerrar la pestaña se detiene, y el navegador puede suspenderla en segundo plano. Para seguridad continua necesitamos una conexión autorizada directa a la cámara y un equipo o servicio siempre encendido. Una imagen generada no sustituye el original.</p></details>
         <div class="divider"></div>
         <h2>Encuadre y detección</h2>
+        <details class="help"><summary><span aria-hidden="true">›</span> Arranque y conexión manual</summary><p>Para el arranque habitual, deja abierta Puerta Cam en Digital Twin y pulsa Arrancar cámara y análisis. Chrome te pedirá elegir esa pestaña. Con el encuadre guardado y compatible, se prepara el detector y comienza el análisis sin otro botón.</p><p>La primera vez, abre Store → Entrada → Puerta Cam en Digital Twin. Después de compartir, marca la cámara y el iPad; si el Xtanco está enlazado, basta con la cámara. Si has movido la vista, girado la tienda o cambiado el zoom, utiliza la conexión manual y revisa las marcas antes de analizar.</p><button id="connect">Compartir sin analizar</button><p class="small">Pausar conserva la captura y los contadores: Iniciar análisis la reanuda sin volver a compartir. Desconectar termina la captura; un nuevo arranque requiere seleccionar otra vez la pestaña. La música funciona también con el análisis parado.</p></details>
         <details class="help"><summary><span aria-hidden="true">›</span> Continuidad del análisis</summary><p>Con el gemelo XpaceOS enlazado, cambiar de pestaña mantiene el análisis activo. Si se pierde el enlace con esta vista oculta, se silencia la fuente o pasan más de 3 s sin fotogramas, espera y se recupera cuando vuelve vídeo fresco y la vista está visible o el gemelo vuelve a conectar. No solicita otra captura.</p><p>Pausar manualmente, desconectar, recalibrar, cambiar a un formato incompatible o un error del detector detienen la recuperación. La barra superior muestra el estado. Si el gemelo gira o cambia el zoom, revisa las marcas: conservar la proporción no garantiza el mismo encuadre.</p></details>
         <p id="preset-status" class="small" role="status">Cargando último preset de encuadre…</p>
         <button id="forget-preset" class="text-button" disabled>Olvidar preset</button>
-        <details class="help"><summary><span aria-hidden="true">›</span> Preset y encuadre</summary><p class="small">Cada superficie marcada se guarda automáticamente como último preset en este navegador: recuadro de Puerta Cam y cuatro esquinas del iPad y de la pantalla DS. Al volver a compartir una pestaña del mismo formato se recuperan, incluso con resolución proporcional distinta; si falta alguna, solo tienes que marcar la pendiente. No inicia análisis ni concede permiso de captura.</p><p class="small">Solo se guardan coordenadas, tamaño de origen y fecha; nunca imágenes. No se sincroniza entre equipos, navegadores, incógnito ni dominios. Comprueba la vista antes de iniciar: un giro, zoom o cambio de escena con el mismo formato no puede detectarse automáticamente. Si mueves el gemelo o cambia la proporción, vuelve a marcar. En el ajuste numérico puedes dejar DS vacía para omitirla. Olvidar preset no borra contadores, histórico ni el encuadre de esta sesión.</p></details>
+        <details class="help"><summary><span aria-hidden="true">›</span> Preset y encuadre</summary><p class="small">Cada superficie marcada se guarda automáticamente como último preset en este navegador: recuadro de Puerta Cam y cuatro esquinas del iPad y de la pantalla DS. Al volver a compartir una pestaña del mismo formato se recuperan, incluso con resolución proporcional distinta; si falta alguna, solo tienes que marcar la pendiente. Arrancar cámara y análisis inicia el detector cuando el encuadre está listo; Compartir sin analizar permite revisarlo primero. El permiso de captura lo concede Chrome en cada conexión nueva.</p><p class="small">Solo se guardan coordenadas, tamaño de origen y fecha; nunca imágenes. No se sincroniza entre equipos, navegadores, incógnito ni dominios. Comprueba la vista antes de iniciar: un giro, zoom o cambio de escena con el mismo formato no puede detectarse automáticamente. Si mueves el gemelo o cambia la proporción, vuelve a marcar. En el ajuste numérico puedes dejar DS vacía para omitirla. Olvidar preset no borra contadores, histórico ni el encuadre de esta sesión.</p></details>
         <div class="calibration-buttons"><button id="set-roi" disabled>Marcar cámara</button><button id="set-tablet" disabled>Marcar iPad</button></div>
         <button id="set-signage" class="full" disabled>Marcar cartelería (4 esquinas)</button>
         <p id="calibration-status" class="small" role="status">Encuadre pendiente de confirmar</p>
@@ -175,7 +175,7 @@
         <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. La detección no envía fotogramas.</p>
       </aside>
     </div>
-    <footer><span>TrinityMBA16 · <span data-release-version>v.13.09.2026.r19.15:39</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
+    <footer><span>TrinityMBA16 · <span data-release-version>v.13.09.2026.r20.16:06</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
   </main>
 </body>
 </html>

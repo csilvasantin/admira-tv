@@ -16,6 +16,12 @@ ventanas y monitores, y no se intenta preseleccionar la pestaña ni copiar cooki
 La primera vez el usuario confirma el recuadro de cámara y las cuatro esquinas del iPad.
 Las marcaciones válidas de cámara, iPad y cartelería se guardan automáticamente
 como último preset local y se restauran al volver a compartir una vista compatible.
+El botón principal «Arrancar cámara y análisis» agrupa la selección nativa de
+pestaña, la recuperación de ese preset y el inicio del detector. Si faltan marcas
+o el formato es incompatible, queda conectado para encuadrar y no analiza hasta
+que el operador lo inicia. «Compartir sin analizar» conserva el flujo manual,
+disponible en el desplegable «Arranque y conexión manual». Pausar y reanudar
+utilizan la captura existente y mantienen los totales de sesión.
 El contenido compartido es el fondo; un canvas se transforma con la misma
 homografía de cuatro esquinas que usa CanalKiosk. No se controla un iPad físico.
 

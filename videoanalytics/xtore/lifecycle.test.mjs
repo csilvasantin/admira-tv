@@ -3,16 +3,18 @@
 import test,{afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import {trackColor} from './tracking-overlay.mjs';
+import {PRESET_KEY} from './preset.mjs';
 let serial=0;
 const cleanups=[];
 afterEach(async()=>{for(const cleanup of cleanups.splice(0))await cleanup();});
-async function fixture({surface='browser',denied=false,slowLoad=false,segment,storage,sourceWidth=1280,sourceHeight=720,twin=false}={}){
+async function fixture({surface='browser',denied=false,slowLoad=false,slowCapture=false,slowPlay=false,segment,storage,sourceWidth=1280,sourceHeight=720,twin=false}={}){
   const nodes=new Map();
   class Element {
     get ownerDocument(){return doc;}
     constructor(id=''){this.listeners={};this.style={};this.classList={add(){},remove(){},toggle(){}};this.hidden=false;this.disabled=false;this.value='';this.textContent='';this.children=[];this.clientWidth=960;this.clientHeight=540;this.videoWidth=1280;this.videoHeight=720;this.readyState=2;this.currentTime=1;this.width=640;this.height=480;this.id=id;}
     set id(id){this._id=id;if(id)nodes.set(id,this);}get id(){return this._id;}
     addEventListener(type,fn){(this.listeners[type]??=[]).push(fn);}
+    removeEventListener(type,fn){this.listeners[type]=(this.listeners[type]||[]).filter(listener=>listener!==fn);}
     async emit(type,event={}){for(const fn of this.listeners[type]||[])await fn(event);}
     append(...children){this.children.push(...children);for(const child of children)child.parentNode=this;}replaceChildren(...children){this.children=children;}
     querySelectorAll(tag){return this.children.flatMap(child=>[...(child.tagName===tag?[child]:[]),...child.querySelectorAll(tag)]);}
@@ -30,21 +32,136 @@ async function fixture({surface='browser',denied=false,slowLoad=false,segment,st
   win.localStorage=storage;
   get('scene').videoWidth=sourceWidth;get('scene').videoHeight=sourceHeight;
   if(segment)win.deeplab={load:async()=>({segment,dispose(){}})};
-  let finishLoad,finishDetection;
+  let finishLoad,finishDetection,finishPlay;
+  if(slowPlay)get('scene').play=()=>new Promise(resolve=>{finishPlay=resolve;});
   const detections=[];
   const detector={detect:()=>new Promise((resolve,reject)=>{finishDetection=resolve;detections.push({resolve,reject});}),dispose(){}};
   win.cocoSsd={load:()=>slowLoad?new Promise(resolve=>{finishLoad=()=>resolve(detector);}):Promise.resolve(detector)};
-  const track=new Element();track.stopped=false;track.stop=()=>{track.stopped=true;};track.getSettings=()=>({displaySurface:surface});
-  const stream={getTracks:()=>[track],getVideoTracks:()=>[track]};
-  Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{getDisplayMedia:async()=>{if(denied)throw Object.assign(new Error(),{name:'NotAllowedError'});return stream;}}}});
+  const captures=[];
+  function captureSource(){
+    const track=new Element();track.stopped=false;track.stop=()=>{track.stopped=true;};track.getSettings=()=>({displaySurface:surface});
+    return {track,stream:{getTracks:()=>[track],getVideoTracks:()=>[track]}};
+  }
+  const firstCapture=captureSource(),{track}=firstCapture;
+  Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{getDisplayMedia:async()=>{
+    const capture=captures.length?captureSource():firstCapture;captures.push(capture);
+    if(denied)throw Object.assign(new Error(),{name:'NotAllowedError'});
+    if(slowCapture)return new Promise((resolve,reject)=>{capture.resolve=()=>resolve(capture.stream);capture.reject=reject;});
+    return capture.stream;
+  }}}});
   globalThis.document=doc;globalThis.window=win;globalThis.ResizeObserver=class{observe(){}};
   globalThis.ImageData=class{constructor(data,width,height){Object.assign(this,{data,width,height});}};
   get('confidence').value='65';
   await import(`./xtore.mjs?fixture=${++serial}`);
   cleanups.push(async()=>{await get('stop').emit('click');await get('stop-signage').emit('click');});
   const calibrate=async()=>{await get('edit-coordinates').emit('click');await get('apply-coordinates').emit('click');};
-  return {get,doc,win,track,calibrate,detections,twinSent,twinPeer,finishLoad:()=>finishLoad(),finishDetection:()=>finishDetection?.([])};
+  return {get,doc,win,track,calibrate,detections,twinSent,twinPeer,captures,finishCapture:(index=0)=>captures[index].resolve(),finishPlay:()=>finishPlay(),finishLoad:()=>finishLoad(),finishDetection:()=>finishDetection?.([])};
 }
+
+function savedFraming({source=[1280,720],tablet=true}={}){
+  const data=new Map([[PRESET_KEY,JSON.stringify({version:1,savedAt:1000,source,roi:[.7,.02,.28,.3],tablet:tablet?[[.77,.49],[.89,.51],[.87,.67],[.75,.64]]:null,signage:null})]]);
+  return {getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
+}
+const flush=()=>new Promise(resolve=>setImmediate(resolve));
+
+test('quick start requests the picker in the click and starts with compatible saved framing without another click',async()=>{
+  const f=await fixture({storage:savedFraming()});
+  assert.equal(f.get('analyze').disabled,false);assert.equal(f.get('analyze').textContent,'Arrancar cámara y análisis');
+  const starting=f.get('analyze').emit('click');assert.equal(f.captures.length,1);
+  await starting;
+  assert.equal(f.get('connection').textContent,'Analizando');assert.equal(f.detections.length,1);
+  assert.equal(f.get('analyze').textContent,'Pausar análisis');assert.equal(f.get('tablet').hidden,false);
+});
+test('quick start without saved framing only opens explicit marking and never starts when marking completes',async()=>{
+  const f=await fixture();await f.get('analyze').emit('click');
+  assert.equal(f.get('connection').textContent,'Pestaña conectada');assert.equal(f.detections.length,0);
+  assert.match(f.get('calibration-status').textContent,/Marcando cámara/);assert.match(f.get('status').textContent,/después.*pulsa Iniciar/);
+  await f.calibrate();await flush();assert.equal(f.detections.length,0);
+  assert.equal(f.get('analyze').disabled,false);await f.get('analyze').emit('click');assert.equal(f.detections.length,1);
+  assert.equal(f.captures.length,1);
+});
+test('quick start preserves an incompatible preset and requires new explicit marking',async()=>{
+  const storage=savedFraming(),saved=storage.getItem(PRESET_KEY),f=await fixture({storage,sourceWidth:1440});
+  await f.get('analyze').emit('click');
+  assert.equal(f.detections.length,0);assert.equal(f.get('analyze').disabled,true);
+  assert.match(f.get('preset-status').textContent,/formato.*distinto/);assert.match(f.get('calibration-status').textContent,/Marcando cámara/);
+  assert.equal(storage.getItem(PRESET_KEY),saved);assert.equal(f.get('count-person').textContent,'0');
+});
+test('quick start requires the iPad mark except for an explicitly linked camera-only twin',async t=>{
+  t.mock.timers.enable({apis:['setTimeout','setInterval']});
+  const f=await fixture({storage:savedFraming({tablet:false})});await f.get('analyze').emit('click');
+  assert.equal(f.detections.length,0);assert.equal(f.get('analyze').disabled,true);assert.match(f.get('status').textContent,/superficies pendientes/);
+  await f.get('stop').emit('click');
+  const twin=await fixture({storage:savedFraming({tablet:false}),twin:true});await twin.get('analyze').emit('click');
+  assert.equal(twin.detections.length,1);assert.equal(twin.get('connection').textContent,'Analizando');
+});
+test('quick start permission denial remains retryable and never invokes the detector',async()=>{
+  const f=await fixture({denied:true,storage:savedFraming()});await f.get('analyze').emit('click');
+  assert.equal(f.captures.length,1);assert.equal(f.detections.length,0);assert.equal(f.get('analyze').disabled,false);
+  assert.equal(f.get('analyze').textContent,'Arrancar cámara y análisis');assert.match(f.get('status').textContent,/No se ha concedido permiso/);
+});
+test('quick start suppresses double clicks and a cancelled picker cannot replace a later request',async()=>{
+  const f=await fixture({slowCapture:true,storage:savedFraming()});
+  const first=f.get('analyze').emit('click');await f.get('analyze').emit('click');await f.get('connect').emit('click');
+  assert.equal(f.captures.length,1);assert.equal(f.get('stop').disabled,false);
+  await f.get('stop').emit('click');const second=f.get('analyze').emit('click');
+  assert.equal(f.captures.length,2);f.finishCapture(0);await first;
+  assert.equal(f.captures[0].track.stopped,true);assert.equal(f.get('analyze').disabled,true);
+  assert.equal(f.get('analyze').textContent,'Conectando cámara…');assert.equal(f.get('scene').srcObject,null);assert.equal(f.detections.length,0);
+  f.finishCapture(1);await second;
+  assert.equal(f.get('scene').srcObject,f.captures[1].stream);assert.equal(f.captures[1].track.stopped,false);assert.equal(f.detections.length,1);
+});
+test('a rejected obsolete picker does not replace the status or busy state of the current request',async()=>{
+  const f=await fixture({slowCapture:true});const first=f.get('analyze').emit('click');await f.get('stop').emit('click');
+  const second=f.get('analyze').emit('click');const status=f.get('status').textContent;
+  f.captures[0].reject(Object.assign(new Error(),{name:'NotAllowedError'}));await first;
+  assert.equal(f.get('status').textContent,status);assert.equal(f.get('analyze').disabled,true);
+  await f.get('stop').emit('click');f.finishCapture(1);await second;
+  assert.equal(f.captures[1].track.stopped,true);assert.equal(f.detections.length,0);
+});
+test('quick start waits for video dimensions to restore the preset but does not need another click',async()=>{
+  const f=await fixture({storage:savedFraming(),sourceWidth:0,sourceHeight:0});
+  const starting=f.get('analyze').emit('click');await flush();assert.equal(f.get('stop').disabled,false);assert.equal(f.detections.length,0);
+  f.get('scene').videoWidth=1280;f.get('scene').videoHeight=720;await f.get('scene').emit('loadedmetadata');await starting;
+  assert.equal(f.detections.length,1);assert.equal(f.get('connection').textContent,'Analizando');
+  assert.equal(f.get('scene').listeners.loadedmetadata.length,0);
+});
+test('a metadata timeout leaves a connected source with no delayed auto-start when dimensions arrive later',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture({storage:savedFraming(),sourceWidth:0,sourceHeight:0}),starting=f.get('analyze').emit('click');await flush();
+  t.mock.timers.tick(10000);await starting;
+  assert.equal(f.get('connection').textContent,'Pestaña conectada');assert.equal(f.detections.length,0);
+  assert.match(f.get('status').textContent,/esperando vídeo/);assert.equal(f.get('scene').listeners.loadedmetadata.length,0);
+  f.get('scene').videoWidth=1280;f.get('scene').videoHeight=720;await f.get('scene').emit('resize');
+  assert.equal(f.get('analyze').disabled,false);assert.equal(f.detections.length,0);
+  await f.get('analyze').emit('click');assert.equal(f.detections.length,1);assert.equal(f.captures.length,1);
+});
+test('a picker-induced hidden page retains the request but waits for available video before analysis',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture({slowCapture:true,storage:savedFraming()}),starting=f.get('analyze').emit('click');
+  f.doc.hidden=true;await f.doc.emit('visibilitychange');assert.equal(f.get('analyze').textContent,'Conectando cámara…');
+  f.finishCapture();await starting;
+  assert.equal(f.track.stopped,false);assert.equal(f.detections.length,0);assert.match(f.get('analysis-health').textContent,/reanudación automática/);
+  f.doc.hidden=false;await f.doc.emit('visibilitychange');f.get('scene').currentTime++;t.mock.timers.tick(500);await flush();
+  assert.equal(f.detections.length,1);assert.equal(f.captures.length,1);
+});
+test('disconnect cancels a pending video play or metadata wait and late readiness cannot start analysis',async()=>{
+  for(const options of [{slowPlay:true},{sourceWidth:0,sourceHeight:0}]){
+    const f=await fixture({...options,storage:savedFraming()}),starting=f.get('analyze').emit('click');await flush();
+    await f.get('stop').emit('click');await starting;
+    assert.equal(f.track.stopped,true);assert.equal(f.get('scene').srcObject,null);assert.equal(f.get('analyze').disabled,false);
+    if(options.slowPlay)f.finishPlay();else{f.get('scene').videoWidth=1280;f.get('scene').videoHeight=720;await f.get('scene').emit('loadedmetadata');}
+    await flush();assert.equal(f.detections.length,0);assert.equal(f.get('connection').textContent,'Cámara sin conectar');
+  }
+});
+test('resuming connected analysis reuses its capture and preserves counts and the music player',async()=>{
+  const f=await fixture({storage:savedFraming()}),player=f.get('signage').children[0];
+  await f.get('analyze').emit('click');await f.get('add-scooter').emit('click');await f.get('analyze').emit('click');
+  assert.equal(f.get('analyze').textContent,'Iniciar análisis');f.finishDetection();await flush();
+  await f.get('analyze').emit('click');
+  assert.equal(f.captures.length,1);assert.equal(f.get('count-scooter').textContent,'1');assert.equal(f.get('signage').children[0],player);
+  assert.equal(f.get('connection').textContent,'Analizando');
+});
 
 test('twin camera stays independent of pending inference, never repeats a frozen frame, and stops on pause',async t=>{
   t.mock.timers.enable({apis:['setTimeout','setInterval','Date'],now:10000});
@@ -125,7 +242,8 @@ test('permission denial stays disconnected and is explained',async()=>{
   const f=await fixture({denied:true});await f.get('connect').emit('click');
   assert.equal(f.get('connection').textContent,'Cámara sin conectar');
   assert.match(f.get('status').textContent,/No se ha concedido permiso/);
-  assert.equal(f.get('analyze').disabled,true);
+  assert.equal(f.get('analyze').disabled,false);
+  assert.equal(f.get('analyze').textContent,'Arrancar cámara y análisis');
 });
 test('H requires calibration, toggles preview and original iPad feed and never starts analysis or resets counts',async()=>{
   const f=await fixture();assert.equal(f.get('hide-people').disabled,true);
@@ -188,9 +306,10 @@ test('last marked camera iPad and DS restore on a new visit only after sharing, 
   await a.get('apply-coordinates').emit('click');assert.match(a.get('preset-status').textContent,/guardado automáticamente/);
   await a.get('stop').emit('click');
   const b=await fixture({storage,sourceWidth:1920,sourceHeight:1080});
-  assert.equal(b.get('analyze').disabled,true);assert.equal(b.get('scene').srcObject,undefined);
+  assert.equal(b.get('analyze').disabled,false);assert.equal(b.get('scene').srcObject,undefined);
   await b.get('connect').emit('click');
   assert.equal(b.get('analyze').disabled,false);assert.equal(b.get('connection').textContent,'Pestaña conectada');
+  assert.equal(b.detections.length,0);
   assert.match(b.get('calibration-status').textContent,/Preset cargado.*cartelería: marcada/);
   assert.equal(b.get('tablet').hidden,false);assert.match(b.get('signage').style.transform,/matrix3d/);
   await b.get('stop').emit('click');
@@ -216,7 +335,7 @@ test('cancelled coordinates cannot apply after format change or disconnect',asyn
   await f.get('edit-coordinates').emit('click');f.get('scene').videoWidth=1440;await f.get('scene').emit('resize');
   await f.get('apply-coordinates').emit('click');assert.equal(f.get('analyze').disabled,true);assert.equal([...data.values()][0],saved);
   await f.get('edit-coordinates').emit('click');await f.get('stop').emit('click');await f.get('apply-coordinates').emit('click');
-  assert.equal(f.get('analyze').disabled,true);assert.equal([...data.values()][0],saved);
+  assert.equal(f.get('analyze').disabled,false);assert.equal([...data.values()][0],saved);
   await f.get('scene').emit('resize');assert.equal(f.get('tablet').hidden,true);assert.equal(f.get('scene').srcObject,null);
 });
 test('incremental aspect drift is compared to the calibrated source, not the last resize',async()=>{
@@ -248,7 +367,7 @@ test('storage quota failure preserves the previous preset and leaves forget avai
 test('music has one player before sharing, through capture calibration and after disconnect',async()=>{
   const f=await fixture(),frame=f.get('signage').children[0];
   assert.ok(frame);assert.equal(f.get('signage').hidden,false);
-  assert.equal(f.get('scene').srcObject,undefined);assert.equal(f.get('analyze').disabled,true);
+  assert.equal(f.get('scene').srcObject,undefined);assert.equal(f.get('analyze').disabled,false);
   assert.match(frame.src,/xtoreMusic=1/);assert.match(frame.src,/muted=0/);
   await f.get('connect').emit('click');await f.calibrate();
   assert.equal(f.get('signage').children[0],frame);
