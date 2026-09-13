@@ -5,7 +5,7 @@ const local=origin=>/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
 export function allowedTwinOrigin(origin,own){return ORIGINS.has(origin)||(local(own)&&local(origin));}
 // Only the explicitly paired window receives data, whether in a tab or popup.
 export function installXpaceLink({window,document,onChange=()=>{}}){
-  const status=document.getElementById('xpace-status'),button=document.getElementById('open-xpace');
+  const status=document.getElementById('xpace-status');
   const qs=new URLSearchParams(window.location?.search||'');
   let peer=null,origin='',session='',ready=false,seq=0,media=null,cameraAt=0,busy=false;
   let cameraGeneration=0,lastSend=0,lastHeartbeat=0,statistics=null;
@@ -24,7 +24,7 @@ export function installXpaceLink({window,document,onChange=()=>{}}){
     if(!peer||peer.closed)return;
     peer.postMessage({source:'admira-xtore-twin',screen:XTORE_VIRTUAL_SCREEN,session,event:'hello'},origin);
   }
-  button.addEventListener('click',()=>{
+  function openTwin(){
     if(peer&&!peer.closed){hello();peer.focus();return;}
     session=window.crypto.randomUUID();origin='https://www.xpaceos.com';ready=false;
     const url=new URL('/admira-xp/',origin);
@@ -32,7 +32,8 @@ export function installXpaceLink({window,document,onChange=()=>{}}){
     peer=window.open(url.href,'xtore-zapatillas-'+session,'popup,width=1240,height=850');
     status.textContent=peer?'Conectando el gemelo…':'Chrome bloqueó la ventana. Permite abrir el gemelo y vuelve a pulsar.';
     hello();startTimer();onChange();
-  });
+  }
+  for(const id of ['open-xpace','open-xtanco'])document.getElementById(id)?.addEventListener('click',openTwin);
   window.addEventListener('message',e=>{
     const d=e.data;
     if(!peer||e.source!==peer||e.origin!==origin||d?.source!=='xpace-xtore-twin'||d.screen!==XTORE_VIRTUAL_SCREEN||d.session!==session)return;

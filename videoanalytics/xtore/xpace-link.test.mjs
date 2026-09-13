@@ -43,16 +43,26 @@ test('camera carries confirmed passage totals separately from current presence',
  t.mock.timers.tick(300);await f.link.camera({width:480},[],0,{...totals,person:-1});
  assert.equal(f.sent.at(-1).d.passages,null);
 });
-test('opening the twin refreshes camera-only controls without another calibration',t=>{
+for(const entry of ['open-xpace','open-xtanco'])test(`${entry} pairs Xtanco with the shoe player and reuses the linked window`,t=>{
  t.mock.timers.enable({apis:['setInterval']});
- const button={},status={},peer={closed:false,postMessage(){}};
- const document={getElementById:id=>id==='open-xpace'?button:status,addEventListener(){}};
- button.addEventListener=(type,fn)=>{button[type]=fn;};
- let changes=0;
- const window={location:{origin:'https://admira.tv',search:''},crypto:{randomUUID:()=> '00000000-0000-0000-0000-000000000001'},open:()=>peer,addEventListener(){}};
+ const buttons=Object.fromEntries(['open-xpace','open-xtanco'].map(id=>[id,{addEventListener(type,fn){this[type]=fn;}}]));
+ const status={},sent=[],opened=[];let changes=0,focused=0;
+ const peer={closed:false,postMessage:(data,origin)=>sent.push({data,origin}),focus(){focused++;}};
+ const document={getElementById:id=>buttons[id]||(id==='xpace-status'?status:null),addEventListener(){}};
+ const window={location:{origin:'https://admira.tv',search:''},crypto:{randomUUID:()=> '00000000-0000-0000-0000-000000000001'},open:(url,name)=>{opened.push({url,name});return peer;},addEventListener(){}};
  const link=installXpaceLink({window,document,onChange:()=>changes++});
- assert.equal(link.cameraOnly,false);button.click();
+ assert.equal(link.cameraOnly,false);buttons[entry].click();
  assert.equal(link.cameraOnly,true);assert.equal(changes,1);
+ const url=new URL(opened[0].url);
+ assert.equal(url.origin,'https://www.xpaceos.com');assert.equal(url.pathname,'/admira-xp/');
+ assert.equal(url.searchParams.get('autostart'),'xtanco');
+ assert.equal(url.searchParams.get('virtualPlayer'),'xtore-virtual-zapatillas');
+ assert.equal(url.searchParams.get('twinOrigin'),'https://admira.tv');
+ assert.equal(url.searchParams.get('twinSession'),sent[0].data.session);
+ buttons[entry==='open-xtanco'?'open-xpace':'open-xtanco'].click();
+ assert.equal(opened.length,1);assert.equal(focused,1);assert.equal(changes,1);
+ assert.equal(sent.at(-1).data.event,'hello');assert.equal(sent.at(-1).data.session,sent[0].data.session);
+ assert.equal(sent.at(-1).origin,'https://www.xpaceos.com');
 });
 
 test('paired background tab keeps fresh media and camera until heartbeat expires',async t=>{

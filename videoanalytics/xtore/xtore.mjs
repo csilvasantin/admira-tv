@@ -1,4 +1,4 @@
-import {installXpaceLink} from './xpace-link.mjs?v=real-traffic-1';
+import {installXpaceLink} from './xpace-link.mjs?v=xtanco-entry-1';
 import {CLASSES, SNAPSHOT_TTL, PRESENCE_GRACE, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
 import {CutoutJob} from './cutouts.mjs';
 import {installTwinUI} from './twin-ui.mjs?v=avatar-photo-1';
