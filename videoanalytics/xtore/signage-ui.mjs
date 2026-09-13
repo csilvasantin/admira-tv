@@ -1,6 +1,9 @@
 import {SignageBridge,playerURL} from './signage.mjs';
 import {PlayerDataBridge} from './player-data.mjs';
 import {XTORE_VIRTUAL_SCREEN} from './virtual-player.mjs';
+// FLT-100400: publica SOLO la categoría en el bus del player virtual para los equipos emparejados.
+// Mismo origen y sesión del portal; sin sesión válida el relé responde 401 y el player local sigue igual.
+const relayAudience=kind=>fetch('/api/audiencia-virtual',{method:'POST',credentials:'same-origin',keepalive:true,headers:{'content-type':'application/json'},body:JSON.stringify({screen:XTORE_VIRTUAL_SCREEN,kind})});
 const LABEL={none:'Bucle general',person:'Persona',car:'Coche',motorcycle:'Moto',bicycle:'Bici'};
 export function installSignageUI({document,window,onMirror=()=>{},onStop=()=>{}}){
   const $=id=>document.getElementById(id);
@@ -39,7 +42,7 @@ export function installSignageUI({document,window,onMirror=()=>{},onStop=()=>{}}
     // Slow media is not a dead command channel. Keep the same player alive so
     // catalogue retries can recover; only actual media may confirm playback.
     emissionTimer=setTimeout(()=>{if(!emissionSeen){emissionDelayed=true;$('signage-status').textContent='Carga demorada · sin emisión confirmada. Reintentando sin apagar el player.';}},30000);
-    bridge=new SignageBridge({target:iframe.contentWindow,onFailure:message=>{failed=true;stop(message);},onState:state=>{
+    bridge=new SignageBridge({target:iframe.contentWindow,relay:relayAudience,onFailure:message=>{failed=true;stop(message);},onState:state=>{
         if(state.type==='ack'){
           $('signage-command').textContent=`${LABEL[state.kind]} · orden aceptada${state.kind==='none'?'':analysisEnabled?', presencia o cola de salida':', prueba manual de 6 s'}. No confirma una creatividad concreta.`;
           // An ACK is control-plane evidence, not a new playback event. The

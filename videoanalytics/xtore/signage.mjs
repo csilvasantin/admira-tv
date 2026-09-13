@@ -16,8 +16,9 @@ export function playerURL(id,origin=PLAYER_ORIGIN){
   return url.href;
 }
 export class SignageBridge{
-  constructor({target,onState=()=>{},onFailure=()=>{},now=()=>Date.now(),setTimer=(fn,ms)=>setTimeout(fn,ms),clearTimer=timer=>clearTimeout(timer),id=()=>crypto.randomUUID()}){
-    Object.assign(this,{target,onState,onFailure,now,setTimer,clearTimer,id});
+  constructor({target,onState=()=>{},onFailure=()=>{},now=()=>Date.now(),setTimer=(fn,ms)=>setTimeout(fn,ms),clearTimer=timer=>clearTimeout(timer),id=()=>crypto.randomUUID(),relay=null}){
+    Object.assign(this,{target,onState,onFailure,now,setTimer,clearTimer,id,relay});
+    this.relayKind=null;this.relayAt=-Infinity;
     this.pending=new Map();this.ready=false;this.closed=false;this.expiry=0;this.deadline=0;this.revision=0;this.watchdog=null;this.probeTimer=0;
     this.presenceSamples=[];this.presenceKind=null;this.presenceSentAt=-Infinity;
     this.vehicleTails=new Map();this.presenceEvidence=new Map();this.seenObservations=new WeakMap();
@@ -51,6 +52,18 @@ export class SignageBridge{
     // The iframe has an opaque sandbox origin, so '*' is required. The target
     // is the exact iframe WindowProxy, never a broadcast; payload has no images.
     this.send(requestId,kind);
+    this.relayCategory(kind);
+  }
+  // FLT-100400: paired physical screens follow this player through the audience bus. Only the
+  // category crosses (person|car|motorcycle|bicycle|none), at most once per second per kind; a
+  // change of category or «none» goes out at once. Relay failures never touch the local player.
+  relayCategory(kind){
+    if(typeof this.relay!=='function')return;
+    const now=this.now();
+    if(kind===this.relayKind&&kind!=='none'&&now-this.relayAt<900)return;
+    if(kind==='none'&&this.relayKind==='none')return;
+    this.relayKind=kind;this.relayAt=now;
+    try{Promise.resolve(this.relay(kind)).catch(()=>{});}catch{}
   }
   passage(events){
     if(!this.ready||this.closed)return;
