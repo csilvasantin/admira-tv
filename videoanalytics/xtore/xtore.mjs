@@ -92,7 +92,7 @@ function status(message){$('status').textContent=message;}
 function renderCounts(){
   for(const [category,count] of Object.entries(passages.counts))$(`count-${category}`).textContent=numberFormat.format(count);
   xpace.statistics(passages.counts);
-  $('camera-passage-count').textContent=`Personas que han pasado: ${numberFormat.format(passages.counts.person)}`;
+  $('camera-passage-count').textContent=`Personas que han pasado: ${numberFormat.format(passages.counts.person)} · Coches: ${numberFormat.format(passages.counts.car)} · Motos: ${numberFormat.format(passages.counts.motorcycle)} · Bicis: ${numberFormat.format(passages.counts.bicycle)}`;
   $('event-counter').textContent=`${numberFormat.format(passages.total)} ${passages.total===1?'paso':'pasos'}`;
 }
 function controls(){
