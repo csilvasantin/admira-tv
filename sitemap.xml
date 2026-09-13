@@ -56,6 +56,16 @@
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>https://admira.tv/support/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://admira.tv/support/app/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://admira.tv/wall/</loc>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>

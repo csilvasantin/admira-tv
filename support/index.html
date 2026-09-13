@@ -156,15 +156,16 @@
     <p class="en">Support</p>
     <p class="lead">La pantalla cae y el parte se abre solo. Un técnico lo acepta, va, lo resuelve y el punto lo valora. Incidencias, tickets y ayuda de toda la red, en una herramienta viva que mejora sola.</p>
     <div class="hero-actions">
-      <a class="btn primary" href="#herramienta">▶ Abrir la herramienta</a>
+      <a class="btn primary" href="/support/app/">▶ Abrir el gestor</a>
+      <a class="btn" href="/support/app/?view=sala&amp;playerId=admiranext-mupi&amp;source=asistencia_click">P2 Sala</a>
+      <a class="btn" href="/support/app/?view=parte&amp;incidentId=INC-10482">P3 Parte</a>
       <a class="btn" href="/tester/" target="_blank" rel="noopener noreferrer">◉ Tester visual con webcam ↗</a>
       <a class="btn" href="#capacidades">Qué resuelve</a>
-      <a class="btn" href="#stack">Cómo se integra</a>
     </div>
     <div class="flow">
-      <div class="fstep a"><div class="fk">Cae</div><div class="fw">&#128225;</div><div class="fd">la pantalla deja de reportar y la incidencia nace sola, sin llamada ni ticket a mano</div></div>
-      <div class="fstep b"><div class="fk">Se asigna</div><div class="fw">&#128295;</div><div class="fd">un técnico la acepta, con ruta, prioridad y parte de trabajo</div></div>
-      <div class="fstep c"><div class="fk">Se cierra</div><div class="fw">&#9989;</div><div class="fd">resuelta y trazada; el punto valora el trabajo</div></div>
+      <div class="fstep a"><div class="fk">P1 · Radar</div><div class="fw">&#128225;</div><div class="fd">«La flota no grita: entra en cola.» La incidencia nace sola y prioriza P0.</div></div>
+      <div class="fstep b"><div class="fk">P2 · Sala</div><div class="fw">&#128295;</div><div class="fd">«No vas al ticket: entras en la pantalla.» Flota → Asistencia abre la sala con incidentId.</div></div>
+      <div class="fstep c"><div class="fk">P3 · Parte</div><div class="fw">&#9989;</div><div class="fd">«Se cierra con valor, no con “cerrado”.» assigned → in_field → resolved → valued.</div></div>
     </div>
   </header>
 
@@ -177,9 +178,10 @@
     </div>
     <div class="live">
       <div class="live-h">
-        <span class="ttl"><span class="dot"></span>Soporte · panel en vivo</span>
+        <span class="ttl"><span class="dot"></span>Gestor · P1 Radar · P2 Sala · P3 Parte</span>
         <span class="tools">
           <span class="tag-real">Real · en vivo</span>
+          <a class="btn sm" href="/support/app/" target="_blank" rel="noopener noreferrer">Abrir /support/app ↗</a>
           <a class="btn sm" href="/tester/" target="_blank" rel="noopener noreferrer">Tester visual ↗</a>
           <button class="btn sm" type="button" id="btnFull">⛶ Pantalla completa</button>
           <a class="btn sm primary" href="?app=1" id="btnApp">Abrir en grande</a>
@@ -196,8 +198,8 @@
           sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
       </div>
       <div class="live-f">
-        <span>Siempre fresco · la mejora aparece sola, sin instalar nada</span>
-        <span class="credit">Motor: <b>Yokup</b></span>
+        <span>Siempre fresco · CAE → SE ASIGNA → SE CIERRA · FLT-100395 / FLT-100396</span>
+        <span class="credit">Motor: <b>Gestor de soporte · Admira.tv</b></span>
       </div>
     </div>
   </section>
@@ -281,7 +283,7 @@
       <h2>Abre el soporte</h2>
       <p>La herramienta real, a gran formato. Da de alta un punto, acepta un trabajo o consulta el estado de una incidencia.</p>
       <div class="cta-actions">
-        <a class="btn primary" href="#herramienta">▶ Abrir la herramienta</a>
+        <a class="btn primary" href="/support/app/">▶ Abrir el gestor</a>
         <a class="back" href="/apps/">&larr; Volver a la lanzadera</a>
       </div>
     </div>
@@ -297,7 +299,7 @@
 <script>
 (function(){
   'use strict';
-  var SRC='https://yokup.com/tool/';
+  var SRC='/support/app/';
   var frame=document.getElementById('frame');
   var load=document.getElementById('load');
   var embed=document.getElementById('embed');

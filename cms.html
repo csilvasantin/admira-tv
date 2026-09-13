@@ -617,7 +617,7 @@ window.ADMIRA_NAV={
   </div>
 </details>
 
-<!-- tarea5-asistencia-r36 · EN EMISIÓN + botón 🎥 Asistencia recíproco con Yokup (sala = id de pantalla, ocupación por sonda WS) -->
+<!-- tarea5-asistencia · EN EMISIÓN + Asistencia → /support/app P2 Sala (FLT-100395). Nunca hueco vacío. -->
 <section class="emitBoard" id="emitBoard">
   <details class="emitDetails" id="emitDetails" open>
   <summary class="ebHead">
@@ -2089,16 +2089,14 @@ $('progBands').addEventListener('click',e=>{
     finally{ btn.disabled=false; btn.textContent=orig; }
   });
 
-  // ── ASISTENCIA (tarea #5): reciprocidad admira.tv ↔ Yokup ──
-  // La sala = id de pantalla (determinista): el técnico entra a la misma sala desde cualquier sitio.
-  const YOKUP_ASSIST='https://www.yokup.com/asistencia?room=';
+  // ── ASISTENCIA FLT-100395: Flota → P2 Sala del gestor. Nunca hueco vacío: /support/app crea INC al click.
+  const SUPPORT_SALA='/support/app/?view=sala&source=asistencia_click&playerId=';
   // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
   const RTC_WS='wss://api.yokup.com/room/';
-  // Abrir/unirse a la videollamada de asistencia de esa pantalla en Yokup
   el('ebBody').addEventListener('click', function(e){
     const btn=e.target.closest('.ebAssist'); if(!btn) return;
     const room=btn.getAttribute('data-room')||'';
-    window.open(YOKUP_ASSIST+encodeURIComponent(room),'_blank','noopener');
+    window.open(SUPPORT_SALA+encodeURIComponent(room),'_blank','noopener');
   });
   // Sonda de ocupación: entra a la sala WS, lee el welcome (peers) y sale sin enviar nada (inofensivo).
   function probeRoom(room){
@@ -2125,9 +2123,9 @@ $('progBands').addEventListener('click',e=>{
         const room=cell.getAttribute('data-room')||'';
         const n=await probeRoom(room);
         const btn=cell.parentNode&&cell.parentNode.querySelector('.ebAssist');
-        if(n==null){ cell.className='ebAssistSt'; cell.textContent='n/d'; }
-        else if(n>=1){ cell.className='ebAssistSt live'; cell.textContent='🔴 EN CURSO · '+n; if(btn) btn.textContent='🎥 Unirse'; }
-        else { cell.className='ebAssistSt'; cell.textContent='— sala vacía'; if(btn) btn.textContent='🎥 Asistencia'; }
+        if(n==null){ cell.className='ebAssistSt'; cell.textContent='entrar a pantalla'; if(btn) btn.textContent='Asistencia'; }
+        else if(n>=1){ cell.className='ebAssistSt live'; cell.textContent='🔴 llamada · '+n; if(btn) btn.textContent='Asistencia'; }
+        else { cell.className='ebAssistSt'; cell.textContent='entrar a pantalla'; if(btn) btn.textContent='Asistencia'; }
       }));
     }
   }

@@ -21,3 +21,14 @@ test('public support card links to support workflow',()=>{
  const card=html.match(/<article[^>]*data-public-app-card="support"[\s\S]*?<\/article>/)?.[0];
  assert.ok(card);assert.match(card,/href="\/support\/"/);
 });
+test('support live tool is the first-party gestor at /support/app/',()=>{
+ const html=readFileSync(new URL('./support/index.html',import.meta.url),'utf8');
+ assert.match(html,/SRC='\/support\/app\/'/);
+ assert.match(html,/La flota no grita: entra en cola/);
+ assert.doesNotMatch(html,/yokup.com\/tool/);
+});
+test('flota asistencia opens support sala and never says empty room',()=>{
+ const cms=readFileSync(new URL('./cms.html',import.meta.url),'utf8');
+ assert.match(cms,/\/support\/app\/\?view=sala&source=asistencia_click&playerId=/);
+ assert.doesNotMatch(cms,/sala vacía/);
+});
