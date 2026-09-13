@@ -406,13 +406,17 @@ async function loop(token){
   }
   if(analyzing&&token===generation)loopTimer=setTimeout(()=>loop(token),Math.max(0,125-(performance.now()-iterationStart)));
 }
-// Rendering the live crop must not wait for GPU inference. The detector keeps
-// its original timestamps and drops late results; this is a fresh video frame,
-// with only currently confirmed aggregate presence attached.
+// Retry fresh analyzed pairs independently of inference: its first send may
+// have been throttled by a raw preview. Retain the original capture timestamp;
+// only a new live crop can replace an expired pair while inference is pending.
 function previewCamera(token){
   clearTimeout(cameraPreviewTimer);
   if(!analyzing||token!==generation||!stream)return;
-  if(xpace.cameraOnly&&!cleanStreet.frames()&&sourceVisible()&&!sourceMuted&&!calibration&&roiReady&&scene.readyState>=2&&scene.currentTime!==previewVideoTime){
+  const views=xpace.cameraOnly?cleanStreet.frames():null;
+  if(xpace.cameraOnly&&views&&sourceVisible()&&!sourceMuted&&!calibration){
+    const at=performance.now();
+    void xpace.camera(views.clean,tracker.visible(at),at-views.capturedAt,passages.counts,{original:views.original,modified:true});
+  }else if(xpace.cameraOnly&&!views&&sourceVisible()&&!sourceMuted&&!calibration&&roiReady&&scene.readyState>=2&&scene.currentTime!==previewVideoTime){
     const at=performance.now();previewVideoTime=scene.currentTime;
     const [x,y,w,h]=roi,sw=scene.videoWidth,sh=scene.videoHeight;
     const width=Math.max(1,Math.round(Math.min(480,w*sw))),height=Math.max(1,Math.round(width*h*sh/(w*sw)));

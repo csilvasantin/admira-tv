@@ -1,8 +1,10 @@
 # Histórico privado de pasos Xtore
 
-Estado 13/09/2026: D1 dedicada creada y migrada vacía; binding preparado en wrangler.toml.
-Carlos ha autorizado explícitamente la persistencia y su activación en producción.
-El binding se publica en r11; comprobar ACK real antes de afirmar que una sesión está guardada.
+Estado 13/09/2026: persistencia autorizada por Carlos y activada en producción en
+r11 (commit `1e57db4`, despliegue Cloudflare `8ddecd35`). El navegador confirmó
+«Histórico sincronizado» con 17 pasos; una consulta remota posterior, solo de
+agregados, verificó 21 pasos guardados: 19 personas y 2 bicicletas, origen detector.
+Son comprobaciones puntuales de una cámara que continúa analizando, no cifras fijas.
 No es grabador de seguridad ni conserva capturas. La retención de originales de
 seguridad sigue fuera de este módulo y no está activada.
 
@@ -24,28 +26,26 @@ seguridad sigue fuera de este módulo y no está activada.
   futuros. Scooters solo manuales hasta validar un detector propio.
 - Respuestas privadas `no-store`; no se publican imágenes ni datos en Pixeria.
 
-## Antes de producción (requiere autorización)
+## Configuración y verificación en producción
 
-1. Crear una D1 privada dedicada, por ejemplo `admira-xtore-history`. No reutilizar
-   KV de leads/ACL para contadores: no ofrece la idempotencia transaccional requerida.
-2. Añadir a `wrangler.toml` el binding `VIDEO_ANALYTICS_DB`, nombre real e ID
-   devuelto al crear la base, y `migrations_dir = "drizzle"`. No introducir un ID
-   ficticio en la configuración de despliegue.
-3. Aplicar la migración `drizzle/0000_xtore_passages.sql` usando el flujo de
-   migraciones D1 de Wrangler. No crear tablas dentro de handlers HTTP.
-4. Publicar únicamente los archivos propios revisados, excluyendo siempre
-   `jobs-evidencias/` y cualquier cambio ajeno; subir sello de versión coordinado
-   con Neo. No lanzar despliegue global del worktree sin revisar su empaquetado.
-5. Verificar: anónimo 401; usuario no administrador 403; owner/admin 200;
-   origen distinto 403; reintento de mismo UUID no suma; segundo equipo con
-   sesión autorizada ve los mismos agregados tras Actualizar.
-6. Validar con la cámara los pasos reales y posibles oclusiones. No inyectar
-   detecciones de prueba en la producción ni dar una prueba SQLite por prueba
-   de Cloudflare remoto/cámara → player.
+- D1 dedicada `admira-xtore-history`, ID `1908cb29-fccf-418f-915c-4c0cbeb1376a`,
+  región WEUR; binding `VIDEO_ANALYTICS_DB` publicado desde `wrangler.toml`.
+- Migración `drizzle/0000_xtore_passages.sql` aplicada. El esquema está en
+  `db/schema.ts`; SQL y snapshots se generaron con drizzle-kit. Las migraciones
+  aplicadas deben ser inmutables. No se crean tablas dentro de handlers HTTP.
+- Comprobaciones reales del 13/09/2026: petición sin sesión rechazada con 401;
+  cliente autorizado con ACK y estado «Histórico sincronizado»; D1 con 21 filas
+  verificadas mediante `COUNT(*)` agrupado por clase y origen, sin leer eventos
+  individuales ni escribir datos. El total puede crecer con el análisis activo.
+- Los rechazos por rol/origen, la idempotencia y la consulta desde otro usuario
+  autorizado están cubiertos por pruebas locales. No se presentan como pruebas
+  realizadas desde un segundo equipo en producción.
 
-El esquema está en `db/schema.ts`; SQL y snapshots Drizzle se generaron localmente
-con drizzle-kit. La migración 0000 se aplicó en admira-xtore-history (1908cb29-fccf-418f-915c-4c0cbeb1376a). Las migraciones aplicadas deben
-ser inmutables. El módulo usa únicamente Web APIs y D1, sin requerir nodejs_compat.
+Para próximas publicaciones, revisar el empaquetado y coordinar el sello de
+versión, excluyendo `jobs-evidencias/` y cambios ajenos. Validar con pasos reales
+de la cámara; no inyectar detecciones de prueba en producción. Una prueba SQLite
+no acredita por sí sola el circuito remoto cámara → servidor → player.
+El módulo usa únicamente Web APIs y D1, sin requerir `nodejs_compat`.
 
 ## Operación y límites
 

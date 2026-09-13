@@ -224,11 +224,14 @@ No se usan localStorage, sessionStorage ni IndexedDB para simular histórico.
 Los eventos demasiado antiguos (>7 días para ingesta) no bloquean nuevas remesas;
 se informa de que ya no se pueden confirmar/reintentar, no de un borrado remoto.
 
-Consulta entre equipos preparada, pero **base D1 y despliegue aún pendientes de
-autorización**. La vista estática local muestra «Servidor de histórico no disponible».
-No reconstruye los 103 pasos de capturas anteriores. Instrucciones y límites en
-[HISTORY.md](HISTORY.md). Solo un navegador debe analizar una cámara; varios pueden
-consultar. Los UUID evitan reintentos, no deduplican dos productores simultáneos.
+Persistencia autorizada y activa en producción desde el 13/09/2026, versión r11
+(commit `1e57db4`, despliegue Cloudflare `8ddecd35`): ACK del cliente y agregados
+guardados en D1 verificados. Configuración, comprobaciones y límites en
+[HISTORY.md](HISTORY.md). Una vista estática sin backend conserva el aviso
+«Servidor de histórico no disponible». No reconstruye pasos de sesiones anteriores
+que solo estaban en memoria o en capturas. Solo un navegador debe analizar una
+cámara; varios pueden consultar. Los UUID evitan reintentos, no deduplican dos
+productores simultáneos.
 
 Patinetes manuales no crean capturas, máscaras ni órdenes de player. No se mapea
 skateboard/bicycle/motorcycle a scooter. COCO y DeepLab Pascal no incorporan esa

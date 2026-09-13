@@ -61,6 +61,38 @@ test('twin camera stays independent of pending inference, never repeats a frozen
   f.finishDetection();await new Promise(r=>setImmediate(r));
 });
 
+test('clean pair retries after a recent raw preview throttled its first send, keeping the capture age and expiry',async t=>{
+  t.mock.timers.enable({apis:['setTimeout','setInterval','Date'],now:10000});
+  let now=10000;t.mock.method(performance,'now',()=>now);
+  const tick=async ms=>{now+=ms;t.mock.timers.tick(ms);await new Promise(r=>setImmediate(r));};
+  const f=await fixture({twin:true});
+  await f.win.emit('message',{source:f.twinPeer,origin:'https://www.xpaceos.com',data:{source:'xpace-xtore-twin',screen:'xtore-virtual-zapatillas',session:'00000000-0000-0000-0000-000000000001',event:'ready'}});
+  await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  await new Promise(r=>setImmediate(r));
+  f.get('scene').currentTime=2;await tick(250);
+  assert.equal(f.twinSent.filter(d=>d.event==='camera').at(-1).frameAt,10250);
+  await tick(50);
+  f.detections[0].resolve([{class:'person',score:.95,bbox:[50,20,50,120]}]);
+  await new Promise(r=>setImmediate(r));
+  assert.equal(f.twinSent.some(d=>d.event==='camera'&&d.modified),false);
+  // The next inference remains pending. The preview timer must retry the fresh
+  // analyzed pair rather than suppress all camera output while it exists.
+  await tick(200);
+  const first=f.twinSent.filter(d=>d.event==='camera'&&d.modified).at(-1);assert.ok(first);
+  assert.equal(first.frameAt,10000);assert.ok(first.originalBitmap);
+  assert.equal(first.bitmap.source.labels.at(-1).text,'Persona #1');
+  assert.equal(first.bitmap.source.strokes.at(-1).color,trackColor(1));
+  await tick(500);
+  assert.equal(f.twinSent.filter(d=>d.event==='camera'&&d.modified).at(-1).frameAt,10000);
+  const sent=f.twinSent.filter(d=>d.event==='camera'&&d.modified).length;
+  f.get('scene').currentTime=3;await tick(500);
+  assert.equal(f.twinSent.filter(d=>d.event==='camera'&&d.modified).length,sent);
+  assert.equal(f.twinSent.filter(d=>d.event==='camera').at(-1).modified,false);
+  assert.equal(f.get('count-person').textContent,'0');
+  assert.match(f.get('clean-status').textContent,/sin fotograma reciente/);
+  await f.get('analyze').emit('click');f.finishDetection();await new Promise(r=>setImmediate(r));
+});
+
 test('permission denial stays disconnected and is explained',async()=>{
   const f=await fixture({denied:true});await f.get('connect').emit('click');
   assert.equal(f.get('connection').textContent,'Cámara sin conectar');

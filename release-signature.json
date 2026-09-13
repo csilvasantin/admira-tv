@@ -1,10 +1,10 @@
 {
-  "version": "v.13.09.2026.r12.13:59",
-  "signature": "NeoMBA16 · MacBookAir16plata",
+  "version": "v.13.09.2026.r13.14:04",
+  "signature": "Codex · MacBookAir16plata",
   "machine": "MacBookAir16plata",
-  "agent": "NeoMBA16",
+  "agent": "Codex",
   "deployer": "Codex",
-  "evidence": "Relé de audiencia del player virtual (FLT-100400 · Yokup #3256): functions/api/audiencia-virtual.js (sesión + ACL digitalsignage-player; solo {screen virtual, kind person|car|motorcycle|bicycle|none}; reenvía al bus mcp-tv /audience/<screen> con clave de flota en el secreto XTORE_AUDIENCE_FLEET_KEY; «none» no se publica) + canal.html (equipo emparejado con player virtual en condicional arranca el sondeo del bus de la pantalla virtual) + videoanalytics/xtore/signage.mjs y signage-ui.mjs (SignageBridge.relayCategory: cada orden al player replica la categoría al relé, máx. 1/s por categoría, fallos aislados). Pruebas: audiencia-virtual.test.mjs (3) y relay.test.mjs (2) en verde; Xtore 232/233 con el fallo previo de player-contract ya presente en main. Clave verificada contra el bus (decisión Coche en pantalla de prueba).",
+  "evidence": "Corrección puntual del envío de cámara Xtore: reintenta el par limpio/original si el envío inicial coincidió con el límite temporal del previo raw; conserva hora de captura, recuadros de colores y caducidad de 1,5 s. Prueba de regresión reproducida y 59 pruebas de ciclo de cámara, seguimiento, enlace Xpace y relé aprobadas. Conserva exactamente el soporte y el relé ya publicados en producción 56e3d81. Historial privado D1 autorizado y verificado con ACK reales; sin imágenes persistidas.",
   "day": "13.09.2026",
-  "time": "13:59"
+  "time": "14:04"
 }
