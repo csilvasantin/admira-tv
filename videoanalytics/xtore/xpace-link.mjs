@@ -71,6 +71,8 @@ export function installXpaceLink({window,document,onChange=()=>{}}){
         for(const o of observations||[])if(o.confirmed===true&&o.ageMs<1500&&Object.hasOwn(counts,o.class))counts[o.class]++;
         const totals=passages&&Object.keys(counts).every(k=>Number.isSafeInteger(passages[k])&&passages[k]>=0&&passages[k]<=10000000)
           ?Object.fromEntries(Object.keys(counts).map(k=>[k,passages[k]])):null;
+        // Patinetes are observed manually in the analyzer; never infer them from people/bikes.
+        if(totals&&Number.isSafeInteger(passages.scooter)&&passages.scooter>=0&&passages.scooter<=10000000)totals.scooter=passages.scooter;
         if(!send('camera',{bitmap,frameAt:stamp,counts,passages:totals},[bitmap]))bitmap.close();
       }catch{/* Source unavailable; receiver expires its last frame. */}finally{busy=false;}
     }

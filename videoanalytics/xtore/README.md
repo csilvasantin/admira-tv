@@ -561,3 +561,8 @@ Si caduca el enlace con el analizador oculto, se suspende; al recuperarse se esp
 un fotograma nuevo. La pausa manual no se revierte. Los medios conservan su edad
 original: nunca se renueva la fecha de una cámara o pieza congelada.
 No se ha automatizado ni eludido el selector de pestaña de Chrome.
+
+DooH en XpaceOS recibe los acumulados de las cuatro categorías automáticas y
+`scooter` (observación manual). No se añade a la presencia automática ni se
+deriva de bicicletas/personas. Emisores anteriores omiten el campo; el receptor
+lo muestra no disponible. Los contadores conservan su caducidad y reset de sesión.

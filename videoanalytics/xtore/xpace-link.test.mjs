@@ -68,3 +68,12 @@ test('paired background tab keeps fresh media and camera until heartbeat expires
  f.receive({event:'ready'});assert.equal(f.link.backgroundActive,true);
  t.mock.timers.tick(500);assert.equal(f.sent.filter(x=>x.d.event.startsWith('playback')).at(-1).d.event,'playback-off');
 });
+
+test('manual scooter passages travel independently; absent or invalid totals are not invented',async t=>{
+ const f=fixture(t);f.receive({event:'ready'});f.window.createImageBitmap=async()=>({close(){}});
+ const totals={person:9,car:2,motorcycle:1,bicycle:3,scooter:4};
+ await f.link.camera({width:480},[],0,totals);
+ assert.deepEqual(f.sent.at(-1).d.passages,totals);assert.equal(f.sent.at(-1).d.counts.scooter,undefined);
+ t.mock.timers.tick(300);await f.link.camera({width:480},[],0,{...totals,scooter:-1});
+ assert.equal(f.sent.at(-1).d.passages.scooter,undefined);
+});
