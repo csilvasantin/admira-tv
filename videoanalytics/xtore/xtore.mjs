@@ -1,4 +1,4 @@
-import {installXpaceLink} from './xpace-link.mjs';
+import {installXpaceLink} from './xpace-link.mjs?v=real-traffic-1';
 import {CLASSES, SNAPSHOT_TTL, PRESENCE_GRACE, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
 import {CutoutJob} from './cutouts.mjs';
 import {installTwinUI} from './twin-ui.mjs?v=avatar-photo-1';
@@ -8,6 +8,7 @@ import {installHistoryUI} from './history.mjs';
 import {CalibrationPresetStore,compatiblePreset} from './preset.mjs';
 import {TrackingOverlay} from './tracking-overlay.mjs';
 import {installCleanStreetUI} from './clean-street-ui.mjs';
+import {installScooterTracks} from './scooter-tracks.mjs';
 
 const $=id=>document.getElementById(id);
 const scene=$('scene'), stage=$('stage'), frame=document.createElement('canvas');
@@ -75,6 +76,7 @@ const xpace=installXpaceLink({document,window,onChange:()=>{
 const sourceVisible=()=>!document.hidden||xpace.backgroundActive;
 const signage=installSignageUI({document,window,onMirror:state=>xpace.media(state),onStop:()=>xpace.stop()});
 const history=installHistoryUI({document});
+const scooterTracks=installScooterTracks({document,onConfirm:events=>{passages.add(events);renderCounts();queueHistory(events,'manual');}});
 const cleanStreet=installCleanStreetUI({document,getPassages:()=>passages.counts,onToggle:enabled=>{
   xpace.cameraOff();previewVideoTime=-1;
   clearCapture();
@@ -130,6 +132,8 @@ function clearCapture(message='Sin capturas'){
 function pause(message){
   clearTimeout(cameraPreviewTimer);cameraPreviewTimer=0;previewVideoTime=-1;
   xpace.cameraOff();
+  xpace.trafficOff();
+  scooterTracks.clear();
   // Pausing detection returns to the normal loop; it is not a screen power-off.
   analysisRequested=false;suspendedReason=null;clearTimeout(recoveryTimer);recoveryTimer=0;
   twins.cancelOriginal();
@@ -224,7 +228,7 @@ $('stop').addEventListener('click',()=>disconnect());
 $('reset-counts').addEventListener('click',()=>{
   // Do not reset tracking, cancel an inference or discard the archive outbox.
   // Otherwise a person already in view would immediately count again.
-  passages.reset();renderCounts();twins.cancelOriginal();clearCapture('Contadores reiniciados');
+  passages.reset();renderCounts();scooterTracks.clear();twins.cancelOriginal();clearCapture('Contadores reiniciados');
   status('Contadores a cero. Se conserva el seguimiento y el histórico; los envíos pendientes no se borran.');
 });
 $('add-scooter').addEventListener('click',()=>{
@@ -396,8 +400,10 @@ async function loop(token){
       if(events.length)showCapture(events);
       cleanStreet.update(frame,predictions,tracker.visible(performance.now()),now);
     }
-    const visible=tracker.visible(performance.now());
+    const observedNow=performance.now(),visible=tracker.visible(observedNow);
     trackingOverlay.render(visible);signage.presence(visible);
+    scooterTracks.update(visible);
+    xpace.traffic(scooterTracks.annotate(visible),observedNow-lastFrameAt);
     const views=cleanStreet.frames();
     if(views)void xpace.camera(views.clean,visible,performance.now()-views.capturedAt,passages.counts,{original:views.original,modified:true});
   }catch{

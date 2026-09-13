@@ -1,10 +1,10 @@
 {
-  "version": "v.13.09.2026.r16.14:50",
+  "version": "v.13.09.2026.r17.15:10",
   "signature": "Codex · MacBookAir16plata",
   "machine": "MacBookAir16plata",
   "agent": "Codex",
   "deployer": "Codex",
-  "evidence": "Anonymizer imagen a avatar: foto local JPG/PNG/WebP hasta8MB/24MP, normalización1024px, selector8/16bits y descarga privada del resultado generado. Reutiliza la generación de personaje ficticio por pose; no añade clasificación de sexo/género ni publicación automática. Limpieza y cancelación con guardas de decodificación tardía. 61 pruebas focalizadas aprobadas y UI nueva comprobada en Chrome local; sin producir un avatar real durante esta prueba. Conserva audio lateral r15.",
+  "evidence": "Trayectorias reales de Puerta Cam por canal efímero separado, geometría normalizada sin fotos ni demografía, TTL1500ms y patinetes confirmados manualmente sobre track existente. 77 pruebas finales de transporte, patinetes, ciclo de vida y contrato del player aprobadas. UI local comprobada, pendiente activar nueva fuente en captura real.",
   "day": "13.09.2026",
-  "time": "14:50"
+  "time": "15:10"
 }

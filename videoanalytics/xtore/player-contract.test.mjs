@@ -26,7 +26,7 @@ test('actual conditional engine keeps the general loop until a known criterion h
   ]};
   const context={window:{},qs:new URLSearchParams(),XTORE_PARENT:'http://127.0.0.1:56594',playoutMode:'conditional',console,seg:{},seenSig:'',scr:{},
     Date:class extends Date{static now(){return now;}},setInterval:()=>0,clearInterval(){},flashCli(){},syncSegPanel(){},emitAudienceState(){},
-    xtorePublicRead:async()=>rules,all:[{id:'default'},{id:'promo'}],matchesSeg:(it,s)=>!s.ids||s.ids.includes(it.id),
+    programCircuit:()=> 'admiranext',xtorePublicRead:async()=>rules,all:[{id:'default'},{id:'promo'}],matchesSeg:(it,s)=>!s.ids||s.ids.includes(it.id),
     rebuild:()=>rebuilds.push(JSON.parse(JSON.stringify(context.seg))),setAdmiraMode:()=>assert.fail('An existing conditional loop must not restart its engine')};
   vm.runInNewContext(readFileSync(new URL('../../xpl-runtime.js',import.meta.url),'utf8'),context);
   vm.runInNewContext(html.slice(html.indexOf('function xtoreMusicEnabled()'),html.indexOf('function xtorePublicRead(')),context);

@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090e14">
   <meta name="description" content="Xtore: análisis local de Puerta Cam y capturas efímeras en un iPad virtual, con permiso explícito para compartir la pestaña de Digital Twin.">
-  <meta name="admiranext-version" content="v.13.09.2026.r16.14:50">
+  <meta name="admiranext-version" content="v.13.09.2026.r17.15:10">
   <meta name="admiranext-agent" content="TrinityMBA16">
   <title>Xtore · Analítica de vídeo · Admira.tv</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./xtore.css?v=13.09.2026.r16.1450">
-  <script type="module" src="./xtore.mjs?v=avatar-photo-1"></script>
+  <link rel="stylesheet" href="./xtore.css?v=13.09.2026.r17.1510">
+  <script type="module" src="./xtore.mjs?v=real-traffic-1"></script>
 </head>
 <body>
   <header class="topbar">
@@ -67,8 +67,16 @@
           <div><dt><i class="bicycle" aria-hidden="true"></i>Bicis</dt><dd id="count-bicycle">0</dd></div>
           <div class="scooter-count"><dt><i class="scooter" aria-hidden="true"></i>Patinetes <small>manual</small></dt><dd id="count-scooter">0</dd></div>
         </dl>
-        <button id="add-scooter" class="text-button" disabled>+ Patinete observado (manual)</button>
-        <details class="help"><summary><span aria-hidden="true">›</span> Patinetes: alcance actual</summary><p>El modelo COCO no detecta patinetes como categoría. El contador registra solo tus pulsaciones manuales; no genera capturas, recortes ni órdenes de player. Si el detector lo contó como bici o persona, esa posible confusión no se corrige automáticamente. La detección automática requiere otro modelo validado.</p></details>
+        <details id="scooter-tracks" class="help"><summary><span aria-hidden="true">›</span> Patinetes · confirmar trayectoria</summary>
+          <p class="small">COCO no reconoce patinetes. Si ves uno, selecciona su trayectoria real de persona, bici o moto y confírmala. Su representación exterior pasa a patinete, con la misma posición y movimiento; se registra un paso manual sin borrar los conteos originales.</p>
+          <label for="scooter-track">Trayectoria visible</label>
+          <select id="scooter-track" disabled><option value="">Sin trayectorias confirmadas recientes</option></select>
+          <button id="confirm-scooter-track" class="full" disabled>Confirmar patinete en esta trayectoria</button>
+          <p id="scooter-tracks-status" class="small" role="status">Sin marcas manuales.</p>
+          <button id="clear-scooter-tracks" class="text-button" disabled>Retirar marcas de patinete</button>
+          <p class="small">Una confirmación por número de trayectoria. La marca se retira al pausar o tras 8 s sin observarla; sus estadísticas ya registradas se conservan. No modifica el vídeo original ni la música interior.</p>
+          <details class="help"><summary><span aria-hidden="true">›</span> Registrar solo un paso</summary><button id="add-scooter" class="text-button" disabled>+ Patinete observado (manual)</button><p class="small">Este registro no se vincula a una trayectoria ni genera movimiento, capturas u órdenes de player.</p></details>
+        </details>
         <details class="help"><summary><span aria-hidden="true">›</span> Cómo se cuentan los pasos</summary><p id="count-note" class="small">Una trayectoria se cuenta una sola vez. Se conserva el seguimiento durante oclusiones o pausas breves de hasta 8 s y al ajustar la confianza. Reset pone a cero las cifras sin olvidar los objetos ya contados. Cambiar cámara/encuadre, una ausencia larga o volver a entrar puede generar otro paso: no es identificación de personas únicas. El histórico solo está guardado cuando lo confirma el servidor; no utiliza almacenamiento del navegador.</p></details>
         <details class="help"><summary><span aria-hidden="true">›</span> Rectángulos y presencia continua</summary><p>En Puerta Cam cada trayectoria tiene un rectángulo de color y un número local (#1, #2…). Mantiene su número mientras se conserva el seguimiento; no identifica a la persona. Línea discontinua = confirmación pendiente o continuidad breve con menos certeza. Las cajas se limitan a la cámara y desaparecen al perder detección durante 1,5 s, pausar o recalibrar.</p><p>La presencia se confirma en dos fotogramas (tres para bicis de confianza baja), incluso si el objeto está quieto. Mantiene el contenido condicionado sin reiniciarlo ni sumar pasos repetidos. Las capturas siguen caducando a los 6 s. El seguimiento puede equivocarse con cruces, oclusiones, poca luz o una fuente congelada; no garantiza identidad ni detección de patinetes.</p></details>
         <details class="help"><summary><span aria-hidden="true">›</span> H · ocultar personas en vídeo</summary><p>Pulsa H con foco en el analizador, o el botón superior. Solo el previo oculta las personas. El iPad muestra el vídeo original en directo, con personas, rectángulos y números. H de nuevo recupera el original en el previo; no cambia detección, conteos ni música. En modo H se oculta la foto original de Capturas y el iPad pasa a vista en directo.</p><p>Se sustituyen cajas ampliadas de personas detectadas por fondo observado previamente en al menos tres fotogramas despejados y estables. No es recorte de silueta: puede tapar objetos solapados. Una trama indica «fondo sin observar». El fondo vive solo en memoria, caduca a los 20 s y se reinicia al pausar, perder el enlace con la pestaña oculta, reencuadrar, desconectar o detectar un cambio amplio de escena. Sin fotograma reciente, la vista se tapa tras 1,5 s.</p><p>Es una transformación visual local, no anonimización garantizada ni grabación original de seguridad: puede dejar visibles personas no detectadas, sombras o reflejos. No modifica el stream de IEU. Los recortes y gemelos tienen su flujo independiente y pueden contener la imagen original. No se envía este fondo a Pixeria ni al MCP.</p></details>
@@ -166,7 +174,7 @@
         <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. La detección no envía fotogramas.</p>
       </aside>
     </div>
-    <footer><span>TrinityMBA16 · <span data-release-version>v.13.09.2026.r16.14:50</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
+    <footer><span>TrinityMBA16 · <span data-release-version>v.13.09.2026.r17.15:10</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
   </main>
 </body>
 </html>

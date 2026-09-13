@@ -61,6 +61,34 @@ test('twin camera stays independent of pending inference, never repeats a frozen
   f.finishDetection();await new Promise(r=>setImmediate(r));
 });
 
+test('real confirmed trajectories travel while bitmaps wait; H preserves traffic and a manual scooter reuses its geometry',async t=>{
+  t.mock.timers.enable({apis:['setTimeout','setInterval','Date'],now:10000});
+  let now=10000;t.mock.method(performance,'now',()=>now);
+  const flush=()=>new Promise(r=>setImmediate(r));
+  const f=await fixture({twin:true});
+  await f.win.emit('message',{source:f.twinPeer,origin:'https://www.xpaceos.com',data:{source:'xpace-xtore-twin',screen:'xtore-virtual-zapatillas',session:'00000000-0000-0000-0000-000000000001',event:'ready'}});
+  let resolveBitmap;f.win.createImageBitmap=()=>new Promise(resolve=>{resolveBitmap=resolve;});
+  await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');await flush();
+  const prediction=[{class:'person',score:.95,bbox:[50,20,50,120]}];
+  f.detections[0].resolve(prediction);await flush();
+  const latest=()=>f.twinSent.filter(d=>d.event==='traffic').at(-1);
+  assert.equal(latest().traffic.tracks.length,0); // The first observation is not confirmed.
+  f.get('scene').currentTime++;now+=125;t.mock.timers.tick(125);await flush();f.detections[1].resolve(prediction);await flush();
+  const person=latest().traffic.tracks[0];assert.equal(person.kind,'person');assert.equal(person.id,1);
+  assert.equal(latest().traffic.frameAt,10125);assert.equal(person.observedAt,10125);
+  assert.equal(f.twinSent.some(d=>d.event==='camera'),false); // Metadata did not wait for encoding.
+  const off=f.twinSent.filter(d=>d.event==='traffic-off').length;
+  await f.get('hide-people').emit('click');assert.equal(f.twinSent.filter(d=>d.event==='traffic-off').length,off);
+  f.get('scooter-track').value='1';await f.get('confirm-scooter-track').emit('click');assert.equal(f.get('count-scooter').textContent,'1');
+  f.get('scene').currentTime++;now+=125;t.mock.timers.tick(125);await flush();f.detections[2].resolve(prediction);await flush();
+  const scooter=latest().traffic.tracks[0];assert.equal(scooter.kind,'scooter');assert.equal(scooter.manual,true);
+  assert.deepEqual(scooter.box,person.box);assert.equal(scooter.id,person.id);
+  await f.get('analyze').emit('click');assert.equal(f.twinSent.filter(d=>d.event==='traffic-off').length,off+1);
+  const packets=f.twinSent.filter(d=>d.event==='traffic').length;
+  resolveBitmap({close(){}});await flush();now+=500;t.mock.timers.tick(500);await flush();
+  assert.equal(f.twinSent.filter(d=>d.event==='traffic').length,packets);assert.equal(f.get('count-scooter').textContent,'1');
+});
+
 test('clean pair retries after a recent raw preview throttled its first send, keeping the capture age and expiry',async t=>{
   t.mock.timers.enable({apis:['setTimeout','setInterval','Date'],now:10000});
   let now=10000;t.mock.method(performance,'now',()=>now);

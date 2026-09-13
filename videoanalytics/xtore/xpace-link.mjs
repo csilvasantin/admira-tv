@@ -1,4 +1,5 @@
 import {XTORE_VIRTUAL_SCREEN} from './virtual-player.mjs';
+import {trafficSnapshot} from './traffic.mjs';
 const ORIGINS=new Set(['https://www.xpaceos.com','https://xpaceos.com']);
 const local=origin=>/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
 export function allowedTwinOrigin(origin,own){return ORIGINS.has(origin)||(local(own)&&local(origin));}
@@ -37,7 +38,7 @@ export function installXpaceLink({window,document,onChange=()=>{}}){
     if(!peer||e.source!==peer||e.origin!==origin||d?.source!=='xpace-xtore-twin'||d.screen!==XTORE_VIRTUAL_SCREEN||d.session!==session)return;
     if(d.event==='hello'||d.event==='ready'){
       ready=true;lastHeartbeat=Date.now();
-      status.textContent='Gemelo conectado · interior y escaparate siguen este player. Cámara compartida solo entre estas ventanas.';
+      status.textContent='Gemelo conectado · player interior enlazado. Cámara y trayectorias compartidas solo entre estas ventanas.';
       send('ready');reportStatistics();
       onChange();
     }else if(d.event==='heartbeat'){lastHeartbeat=Date.now();}
@@ -67,6 +68,12 @@ export function installXpaceLink({window,document,onChange=()=>{}}){
       statistics=Object.fromEntries(keys.map(k=>[k,value[k]]));reportStatistics();
     },
     stop(){media=null;send('playback-off');},
+    traffic(observations,frameAgeMs=0){
+      if(!ready||(document.hidden&&!backgroundActive()))return false;
+      const value=trafficSnapshot(observations,frameAgeMs);
+      return !!value&&send('traffic',{traffic:value});
+    },
+    trafficOff(){send('traffic-off');},
     cameraOff:resetCamera,
     async camera(canvas,observations,ageMs=0,passages=null,views=null){
       if(!ready||(document.hidden&&!backgroundActive())||busy||Date.now()-lastSend<250||!Number.isFinite(ageMs)||ageMs<0||ageMs>=1500)return;

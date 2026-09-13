@@ -98,3 +98,34 @@ test('paired views share a capture timestamp and both bitmaps close if paused or
  f.window.createImageBitmap=async source=>{if(source===original)throw Error('unavailable');return c;};
  await f.link.camera(clean,[],0,null,{original,modified:true});assert.equal(c.closed,true);
 });
+
+test('trajectory metadata is independent of an unresolved bitmap encoder and retains source timestamps',async t=>{
+ const f=fixture(t),observation={trackId:7,class:'person',confirmed:true,bbox:[.1,.2,.3,.4],ageMs:250};
+ assert.equal(f.link.traffic([observation],100),false);
+ f.receive({event:'ready'});let resolve;f.window.createImageBitmap=()=>new Promise(r=>resolve=r);
+ const pending=f.link.camera({width:480},[],0);
+ assert.equal(f.link.traffic([observation],100),true);
+ const packet=f.sent.at(-1);assert.equal(packet.d.event,'traffic');assert.equal(packet.o,'https://www.xpaceos.com');
+ assert.equal(packet.d.traffic.frameAt,9900);assert.equal(packet.d.traffic.tracks[0].observedAt,9750);
+ assert.equal(packet.d.bitmap,undefined);assert.deepEqual(packet.tr,[]);
+ t.mock.timers.tick(100);assert.equal(f.link.traffic([{...observation,bbox:[.2,.2,.3,.4],ageMs:350}],200),true);
+ assert.equal(f.sent.at(-1).d.traffic.tracks[0].x,.35);assert.equal(f.sent.at(-1).d.traffic.frameAt,9900);
+ assert.equal(f.sent.at(-1).d.traffic.tracks[0].observedAt,9750);
+ resolve({close(){}});await pending;
+});
+
+test('traffic-off does not erase authoritative totals and a camera-only toggle does not clear trajectories',t=>{
+ const f=fixture(t);f.receive({event:'ready'});const totals={person:47,car:1,motorcycle:2,bicycle:3,scooter:4};
+ f.link.statistics(totals);f.link.traffic([],0);const at=f.sent.length;f.link.cameraOff();
+ assert.deepEqual(f.sent.slice(at).map(p=>p.d.event),['camera-off']);
+ f.link.trafficOff();assert.equal(f.sent.at(-1).d.event,'traffic-off');
+ t.mock.timers.tick(500);assert.deepEqual(f.sent.filter(p=>p.d.event==='statistics').at(-1).d.passages,totals);
+});
+
+test('hidden traffic is limited to a living paired heartbeat and expires rather than being re-stamped',t=>{
+ const f=fixture(t);f.receive({event:'ready'});f.document.hidden=true;
+ assert.equal(f.link.traffic([],0),true);t.mock.timers.tick(4500);
+ assert.equal(f.link.traffic([],0),false);f.receive({event:'ready'});
+ assert.equal(f.link.traffic([],1500),false);assert.equal(f.link.traffic([],0),true);
+ f.receive({event:'disconnect'});assert.equal(f.link.traffic([],0),false);
+});
