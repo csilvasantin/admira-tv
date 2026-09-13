@@ -278,6 +278,7 @@ Player virtual = navegador sin hardware dedicado asociado; no equivale a simulac
 player_virtual_register {screen,name,circuit,mode?}: clave de flota requerida, prefijos virtual- o xtore-virtual-.
 Alta create-or-read: mismos datos no duplican; configuración distinta para el mismo ID falla sin sobrescribir.
 No abre navegador, no publica online y no modifica playlists, reglas, hardware ni anuncios.
+player_virtual_pair {device,screen|null,revision?} (clave de flota): empareja un player real con un player virtual registrado; adopta playlist, parrilla, modo y reglas y, si es condicional, sigue su bus de audiencia (/api/audiencia-virtual publica solo la categoría). null desvincula; idempotente.
 player_virtual_list {screen?,cursor?}: lectura pública paginada (100/página); GET https://mcp-tv.admira.store/virtual-players.
 Xtore zapatillas: screen xtore-virtual-zapatillas, circuit admiranext, mode conditional.
 Playlist base: https://admira.tv/parrilla/?project=admiranext&xpace=admiranext&device=xtore-virtual-zapatillas&playlist=default

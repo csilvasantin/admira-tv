@@ -1,10 +1,10 @@
 {
-  "version": "v.13.09.2026.r13.14:04",
-  "signature": "Codex · MacBookAir16plata",
+  "version": "v.13.09.2026.r14.14:07",
+  "signature": "NeoMBA16 · MacBookAir16plata",
   "machine": "MacBookAir16plata",
-  "agent": "Codex",
+  "agent": "NeoMBA16",
   "deployer": "Codex",
-  "evidence": "Corrección puntual del envío de cámara Xtore: reintenta el par limpio/original si el envío inicial coincidió con el límite temporal del previo raw; conserva hora de captura, recuadros de colores y caducidad de 1,5 s. Prueba de regresión reproducida y 59 pruebas de ciclo de cámara, seguimiento, enlace Xpace y relé aprobadas. Conserva exactamente el soporte y el relé ya publicados en producción 56e3d81. Historial privado D1 autorizado y verificado con ACK reales; sin imágenes persistidas.",
+  "evidence": "Documentación de la herramienta MCP player_virtual_pair (admira-tv-mcp v.13.09.2026.r1.14:20, desplegada y probada en producción: sin clave → rechazo; con clave de flota empareja y desvincula un dispositivo de prueba; idempotente con el Fold 8) en mcp/index.html, mcp/llms.txt, mcp/manifest.json y help/index.html. FLT-100400 · Yokup #3256.",
   "day": "13.09.2026",
-  "time": "14:04"
+  "time": "14:07"
 }

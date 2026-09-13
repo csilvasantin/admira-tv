@@ -22,6 +22,10 @@
         "desc": "Alta persistente e idempotente por screen virtual, name, circuit y mode opcional. Clave de flota. Conflictos no sobrescriben. No abre navegador ni escribe playlists."
       },
       {
+        "name": "player_virtual_pair",
+        "desc": "Empareja un player real con un player virtual registrado (device, screen o null para desvincular, revision opcional). Clave de flota. Idempotente; si el virtual es condicional, el real sigue su bus de audiencia."
+      },
+      {
         "name": "player_virtual_list",
         "desc": "Registro público paginado de players virtuales; screen o cursor opcional. Fichas sin hardware dedicado; no acredita online."
       },
