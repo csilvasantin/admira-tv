@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {TrackingOverlay,trackColor} from './tracking-overlay.mjs';
+import {TrackingOverlay,trackColor,drawTrackingAnnotations} from './tracking-overlay.mjs';
 function fixture(t,options={}){
   t.mock.timers.enable({apis:['setTimeout']});let now=0;
   class Node{
@@ -84,4 +84,18 @@ test('invalid or unavailable reservations fail closed and recover at the next la
   f.overlay.render([f.obs(1)]);const e=f.overlay.nodes.get(1);assert.equal(e.label.hidden,true);
   reserved='throw';assert.doesNotThrow(()=>f.overlay.layoutLabels());assert.equal(e.label.hidden,true);
   reserved=0;f.overlay.layoutLabels();assert.equal(e.label.hidden,false);f.overlay.clear();
+});
+test('bitmap annotations retain ID colors, separate labels, clip boxes and omit expired or manual observations',()=>{
+  const boxes=[],labels=[];
+  const c={save(){},restore(){},setLineDash(dash){this.dash=dash;},fillRect(){},measureText(text){return {width:text.length*7};},strokeRect(...rect){boxes.push({rect,color:this.strokeStyle,dash:this.dash});},fillText(text,x,y){labels.push({text,x,y,color:this.fillStyle});}};
+  const obs=id=>({trackId:id,class:'person',bbox:[-.1,.9,.3,.3],ageMs:0,confirmed:true});
+  drawTrackingAnnotations(c,320,180,[obs(2),{...obs(1),confirmed:false},{...obs(3),ageMs:1400},{...obs(4),class:'scooter'},{...obs(5),bbox:[2,0,.1,.2]}],100);
+  assert.equal(boxes.length,2);assert.equal(labels.length,2);
+  assert.deepEqual(labels.map(label=>label.text),['Persona #1','Persona #2']);
+  assert.deepEqual(boxes.map(box=>box.color),[trackColor(1),trackColor(2)]);
+  assert.deepEqual(boxes[0].dash,[4,3]);assert.deepEqual(boxes[1].dash,[]);
+  assert.equal(boxes[0].rect[0],0);assert.ok(boxes[0].rect[1]+boxes[0].rect[3]<=180);
+  assert.ok(Math.abs(labels[0].y-labels[1].y)>=20);assert.ok(labels.every(label=>label.x>=0&&label.y>=9&&label.y<=171));
+  boxes.length=0;labels.length=0;drawTrackingAnnotations(c,320,180,[obs(1)],1500);
+  assert.equal(boxes.length,0);assert.equal(labels.length,0);
 });

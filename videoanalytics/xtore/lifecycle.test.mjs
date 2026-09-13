@@ -2,6 +2,7 @@
 // bypass browser permissions, or inject synthetic detections into the UI preview.
 import test,{afterEach} from 'node:test';
 import assert from 'node:assert/strict';
+import {trackColor} from './tracking-overlay.mjs';
 let serial=0;
 const cleanups=[];
 afterEach(async()=>{for(const cleanup of cleanups.splice(0))await cleanup();});
@@ -15,7 +16,7 @@ async function fixture({surface='browser',denied=false,slowLoad=false,segment,st
     async emit(type,event={}){for(const fn of this.listeners[type]||[])await fn(event);}
     append(...children){this.children.push(...children);for(const child of children)child.parentNode=this;}replaceChildren(...children){this.children=children;}
     querySelectorAll(tag){return this.children.flatMap(child=>[...(child.tagName===tag?[child]:[]),...child.querySelectorAll(tag)]);}
-    getContext(){return {fillRect(){},clearRect(){},strokeRect(){},fillText(){},drawImage:source=>{this.lastDrawSource=source;},putImageData:data=>{this.lastImageData=data;},getImageData:(x,y,width,height)=>({width,height,data:new Uint8ClampedArray(width*height*4).fill(127)}),measureText(){return {width:100};}};}
+    getContext(){const node=this;return {save(){},restore(){},setLineDash(value){this.dash=value;},fillRect(){},clearRect(){},strokeRect(...rect){(node.strokes??=[]).push({rect,color:this.strokeStyle,dash:this.dash});},fillText(text){(node.labels??=[]).push({text,color:this.fillStyle});},drawImage:source=>{this.lastDrawSource=source;},putImageData:data=>{this.lastImageData=data;},getImageData:(x,y,width,height)=>({width,height,data:new Uint8ClampedArray(width*height*4).fill(127)}),measureText(){return {width:100};}};}
     setAttribute(name,value){this[name]=value;}removeAttribute(name){delete this[name];}load(){}async play(){}remove(){this.removed=true;if(this.parentNode)this.parentNode.children=this.parentNode.children.filter(c=>c!==this);}
   }
   const get=id=>nodes.get(id)||new Element(id);
@@ -24,7 +25,7 @@ async function fixture({surface='browser',denied=false,slowLoad=false,segment,st
   const twinSent=[],twinPeer={closed:false,postMessage:data=>twinSent.push(data)};
   if(twin){
     win.location={origin:'https://admira.tv',search:'?twinOrigin=https%3A%2F%2Fwww.xpaceos.com&twinSession=00000000-0000-0000-0000-000000000001'};
-    win.opener=twinPeer;win.createImageBitmap=async()=>({close(){}});
+    win.opener=twinPeer;win.createImageBitmap=async source=>({source,close(){}});
   }
   win.localStorage=storage;
   get('scene').videoWidth=sourceWidth;get('scene').videoHeight=sourceHeight;
@@ -95,6 +96,29 @@ test('H output expires independently when the next inference has not returned',a
   await f.get('hide-people').emit('click');await f.get('analyze').emit('click');f.finishDetection();await new Promise(r=>setImmediate(r));
   t.mock.timers.tick(1501);assert.match(f.get('clean-status').textContent,/sin fotograma reciente/);
   assert.equal(f.get('clean-preview').hidden,false);assert.equal(f.get('tablet-tracking').children.length,0);
+});
+test('paired clean camera carries colored trajectory labels while original and iPad keep the original frame',async t=>{
+  t.mock.timers.enable({apis:['setTimeout','setInterval','Date'],now:10000});
+  let now=10000;t.mock.method(performance,'now',()=>now);
+  const f=await fixture({twin:true});
+  await f.win.emit('message',{source:f.twinPeer,origin:'https://www.xpaceos.com',data:{source:'xpace-xtore-twin',screen:'xtore-virtual-zapatillas',session:'00000000-0000-0000-0000-000000000001',event:'ready'}});
+  await f.get('connect').emit('click');await f.calibrate();await f.get('hide-people').emit('click');await f.get('analyze').emit('click');
+  now+=250;t.mock.timers.tick(250); // Permit the analyzed pair after the initial unannotated preview.
+  f.detections[0].resolve([{class:'person',score:.95,bbox:[50,20,50,120]},{class:'person',score:.96,bbox:[300,30,50,120]}]);
+  await new Promise(r=>setImmediate(r));
+  const paired=f.twinSent.filter(d=>d.event==='camera'&&d.modified===true).at(-1);assert.ok(paired);
+  const clean=paired.bitmap.source,original=paired.originalBitmap.source;
+  assert.notEqual(clean,f.get('clean-preview'));assert.equal(clean.lastDrawSource,f.get('clean-preview'));
+  assert.deepEqual(clean.labels.map(label=>label.text),['Persona #1','Persona #2']);
+  assert.deepEqual(clean.strokes.map(stroke=>stroke.color),[trackColor(1),trackColor(2)]);
+  assert.notEqual(clean.strokes[0].color,clean.strokes[1].color);
+  assert.equal(original,f.get('tablet-canvas').lastDrawSource);assert.equal(original.lastImageData,undefined);
+  assert.equal(original.labels,undefined);assert.equal(original.strokes,undefined);
+  assert.equal(f.get('clean-preview').labels,undefined); // Its existing DOM overlay remains separate.
+  const packets=f.twinSent.filter(d=>d.event==='camera').length;
+  now+=1501;t.mock.timers.tick(1501);await new Promise(r=>setImmediate(r));
+  assert.equal(clean.width,1);assert.equal(clean.height,1);assert.equal(f.get('tablet-tracking').children.length,0);
+  assert.equal(f.twinSent.filter(d=>d.event==='camera').length,packets);assert.ok(f.twinSent.some(d=>d.event==='camera-off'));
 });
 
 test('last marked camera iPad and DS restore on a new visit only after sharing, never start analysis',async()=>{

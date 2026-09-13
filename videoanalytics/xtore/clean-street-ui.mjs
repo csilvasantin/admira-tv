@@ -1,16 +1,17 @@
 import {TemporalStreetBackground,CLEAN_FRAME_TTL,hideShortcut} from './clean-street.mjs';
-import {TrackingOverlay} from './tracking-overlay.mjs';
+import {TrackingOverlay,drawTrackingAnnotations} from './tracking-overlay.mjs';
 
 export function installCleanStreetUI({document,onToggle=()=>{},getPassages=()=>null}){
   const $=id=>document.getElementById(id),canvas=$('clean-preview'),tablet=$('tablet-canvas');
   const input=document.createElement('canvas'),context=input.getContext('2d',{willReadFrequently:true});
+  const annotated=document.createElement('canvas');
   const background=new TemporalStreetBackground(),overlay=new TrackingOverlay($('tablet-tracking'),{labelHeight:20,labelCharWidth:9.5,reservedTop:0});
   let enabled=false,timer=0,lastAt=-Infinity,labelsAt=0,observations=[];
   const message=text=>{$('clean-status').textContent=text;};
   function blank(text='H · esperando vídeo analizado'){
     canvas.width=320;canvas.height=180;
     const c=canvas.getContext('2d');c.fillStyle='#101923';c.fillRect(0,0,320,180);
-    overlay.clear();lastAt=-Infinity;observations=[];message(text);
+    annotated.width=1;annotated.height=1;overlay.clear();lastAt=-Infinity;observations=[];message(text);
     if(enabled){const t=tablet.getContext('2d');t.fillStyle='#09131b';t.fillRect(0,0,640,480);t.fillStyle='#3df08a';t.font='22px sans-serif';t.textAlign='center';t.fillText(text,320,240);}
   }
   function reset(){clearTimeout(timer);background.reset();input.width=1;input.height=1;blank();}
@@ -48,6 +49,13 @@ export function installCleanStreetUI({document,onToggle=()=>{},getPassages=()=>n
       timer=setTimeout(()=>{background.reset();input.width=1;input.height=1;blank('H · sin fotograma reciente');},Math.max(0,CLEAN_FRAME_TTL-(performance.now()-capturedAt)));
     }catch{reset();message('H · vista no disponible; análisis independiente');}
   }
+  function frames(){
+    const now=performance.now();if(now-lastAt>=CLEAN_FRAME_TTL)return null;
+    annotated.width=canvas.width;annotated.height=canvas.height;
+    const c=annotated.getContext('2d');c.drawImage(canvas,0,0);
+    drawTrackingAnnotations(c,annotated.width,annotated.height,observations,Math.max(0,now-labelsAt));
+    return {clean:annotated,original:input,capturedAt:lastAt};
+  }
   blank();
-  return {get enabled(){return enabled;},frames(){return performance.now()-lastAt<CLEAN_FRAME_TTL?{clean:canvas,original:input,capturedAt:lastAt}:null;},update,reset,setEnabled,layout:()=>overlay.layoutLabels()};
+  return {get enabled(){return enabled;},frames,update,reset,setEnabled,layout:()=>overlay.layoutLabels()};
 }
