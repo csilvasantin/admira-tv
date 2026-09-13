@@ -16,12 +16,12 @@ export function installCleanStreetUI({document,onToggle=()=>{}}){
   function reset(){clearTimeout(timer);background.reset();input.width=1;input.height=1;blank();}
   function tabletFrame(){
     if(!enabled||performance.now()-lastAt>=CLEAN_FRAME_TTL)return;
-    const t=tablet.getContext('2d'),scale=Math.min(612/canvas.width,390/canvas.height);
-    const w=canvas.width*scale,h=canvas.height*scale,x=(640-w)/2,y=16+(390-h)/2;
-    t.fillStyle='#09131b';t.fillRect(0,0,640,480);t.drawImage(canvas,x,y,w,h);
+    const t=tablet.getContext('2d'),scale=Math.min(612/input.width,390/input.height);
+    const w=input.width*scale,h=input.height*scale,x=(640-w)/2,y=16+(390-h)/2;
+    t.fillStyle='#09131b';t.fillRect(0,0,640,480);t.drawImage(input,x,y,w,h);
     t.strokeStyle='#3df08a';t.lineWidth=12;t.strokeRect(6,6,628,468);
-    t.fillStyle='#3df08a';t.font='bold 18px sans-serif';t.textAlign='center';t.fillText('H · vista modificada · fondo temporal',320,435);
-    t.fillStyle='#b4c4ce';t.font='16px sans-serif';t.fillText($('clean-status').textContent,320,461,600);
+    t.fillStyle='#3df08a';t.font='bold 18px sans-serif';t.textAlign='center';t.fillText('Puerta Cam · vídeo original',320,435);
+    t.fillStyle='#b4c4ce';t.font='16px sans-serif';t.fillText('Personas visibles · detección en directo',320,461,600);
     Object.assign($('tablet-tracking').style,{left:`${x}px`,top:`${y}px`,width:`${w}px`,height:`${h}px`});
     overlay.render(observations.map(o=>({...o,ageMs:o.ageMs+Math.max(0,performance.now()-labelsAt)})));
   }

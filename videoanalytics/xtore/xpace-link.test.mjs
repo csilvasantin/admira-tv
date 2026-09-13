@@ -17,12 +17,12 @@ test('unrelated window cannot open media or camera transmission; reports retain 
  f.receive({event:'ready'});t.mock.timers.tick(500);assert.equal(f.sent.at(-1).d.playback.ts,10000);
  t.mock.timers.tick(1500);assert.equal(f.sent.at(-1).d.event,'playback-off');
 });
-test('hiding, pause or a late bitmap cannot retain a camera frame',async t=>{
+test('pause or a late bitmap cannot retain a camera frame',async t=>{
  const f=fixture(t);f.receive({event:'ready'});let resolve,closed=0;
  f.window.createImageBitmap=()=>new Promise(r=>resolve=r);
  const pending=f.link.camera({width:640},[],0);f.link.cameraOff();resolve({close(){closed++;}});await pending;
  assert.equal(closed,1);assert.equal(f.sent.some(x=>x.d.event==='camera'),false);
- f.document.hidden=true;f.listeners['doc:visibilitychange']();assert.equal(f.sent.at(-1).d.event,'playback-off');
+ f.receive({event:'disconnect'});f.document.hidden=true;f.listeners['doc:visibilitychange']();assert.equal(f.link.backgroundActive,false);
 });
 test('camera sends only the crop and bounded aggregate categories to its exact peer',async t=>{
  const f=fixture(t);f.receive({event:'ready'});const bitmap={close(){}};f.window.createImageBitmap=async()=>bitmap;
@@ -53,4 +53,18 @@ test('opening the twin refreshes camera-only controls without another calibratio
  const link=installXpaceLink({window,document,onChange:()=>changes++});
  assert.equal(link.cameraOnly,false);button.click();
  assert.equal(link.cameraOnly,true);assert.equal(changes,1);
+});
+
+test('paired background tab keeps fresh media and camera until heartbeat expires',async t=>{
+ const f=fixture(t);f.receive({event:'ready'});f.document.hidden=true;
+ f.listeners['doc:visibilitychange']();assert.equal(f.link.backgroundActive,true);
+ f.link.media({ts:10000,id:'live'});t.mock.timers.tick(500);
+ assert.equal(f.sent.at(-1).d.event,'playback');assert.equal(f.sent.at(-1).d.playback.ts,10000);
+ f.window.createImageBitmap=async()=>({close(){}});await f.link.camera({width:320},[]);
+ assert.equal(f.sent.at(-1).d.event,'camera');
+ t.mock.timers.tick(4000);assert.equal(f.link.backgroundActive,false);
+ const frames=f.sent.filter(x=>x.d.event==='camera').length;
+ await f.link.camera({width:320},[]);assert.equal(f.sent.filter(x=>x.d.event==='camera').length,frames);
+ f.receive({event:'ready'});assert.equal(f.link.backgroundActive,true);
+ t.mock.timers.tick(500);assert.equal(f.sent.filter(x=>x.d.event.startsWith('playback')).at(-1).d.event,'playback-off');
 });

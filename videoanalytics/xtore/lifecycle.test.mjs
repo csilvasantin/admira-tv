@@ -15,7 +15,7 @@ async function fixture({surface='browser',denied=false,slowLoad=false,segment,st
     async emit(type,event={}){for(const fn of this.listeners[type]||[])await fn(event);}
     append(...children){this.children.push(...children);for(const child of children)child.parentNode=this;}replaceChildren(...children){this.children=children;}
     querySelectorAll(tag){return this.children.flatMap(child=>[...(child.tagName===tag?[child]:[]),...child.querySelectorAll(tag)]);}
-    getContext(){return {fillRect(){},clearRect(){},strokeRect(){},fillText(){},drawImage(){},putImageData:data=>{this.lastImageData=data;},getImageData:(x,y,width,height)=>({width,height,data:new Uint8ClampedArray(width*height*4).fill(127)}),measureText(){return {width:100};}};}
+    getContext(){return {fillRect(){},clearRect(){},strokeRect(){},fillText(){},drawImage:source=>{this.lastDrawSource=source;},putImageData:data=>{this.lastImageData=data;},getImageData:(x,y,width,height)=>({width,height,data:new Uint8ClampedArray(width*height*4).fill(127)}),measureText(){return {width:100};}};}
     setAttribute(name,value){this[name]=value;}removeAttribute(name){delete this[name];}load(){}async play(){}remove(){this.removed=true;if(this.parentNode)this.parentNode.children=this.parentNode.children.filter(c=>c!==this);}
   }
   const get=id=>nodes.get(id)||new Element(id);
@@ -66,7 +66,7 @@ test('permission denial stays disconnected and is explained',async()=>{
   assert.match(f.get('status').textContent,/No se ha concedido permiso/);
   assert.equal(f.get('analyze').disabled,true);
 });
-test('H requires calibration, toggles preview/iPad only and never starts analysis or resets counts',async()=>{
+test('H requires calibration, toggles preview and original iPad feed and never starts analysis or resets counts',async()=>{
   const f=await fixture();assert.equal(f.get('hide-people').disabled,true);
   await f.get('connect').emit('click');assert.equal(f.get('hide-people').disabled,true);await f.calibrate();
   await f.get('add-scooter').emit('click');assert.equal(f.get('hide-people').disabled,false);
@@ -81,6 +81,10 @@ test('H live output survives capture expiry but pause and disconnect clear its l
   await f.get('hide-people').emit('click');await f.get('analyze').emit('click');
   f.detections[0].resolve([{class:'person',score:.95,bbox:[50,20,50,120]}]);await new Promise(r=>setImmediate(r));
   assert.equal(f.get('tablet-tracking').children.length,1);assert.equal(f.get('clean-preview').hidden,false);
+  const original=f.get('tablet-canvas').lastDrawSource;
+  assert.ok(original);assert.notEqual(original,f.get('clean-preview'));
+  assert.equal(original.lastImageData,undefined);assert.ok(original.lastDrawSource);
+  assert.ok(f.get('clean-preview').lastImageData);
   await f.get('reset-counts').emit('click');assert.equal(f.get('tablet-tracking').children.length,1);
   await f.get('analyze').emit('click');assert.equal(f.get('tablet-tracking').children.length,0);
   assert.match(f.get('clean-status').textContent,/esperando vídeo/);assert.equal(f.get('capture-canvas').hidden,true);
@@ -561,4 +565,25 @@ test('choosing a cutout retains only a temporary original and pause clears it',a
   assert.equal(f.get('twin-source').hidden,true);assert.equal(f.get('twin-source').width,1);
   assert.ok(selected.data.every(value=>value===0));assert.equal(f.get('twin-generate').disabled,true);
   assert.equal(f.get('count-person').textContent,'1');await f.get('stop').emit('click');
+});
+
+test('linked hidden analyzer keeps its player and inference; lost link pauses, reconnection resumes only fresh frames',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','setInterval','Date'],now:10000});
+ const f=await fixture({twin:true});
+ const receive=event=>f.win.emit('message',{source:f.twinPeer,origin:'https://www.xpaceos.com',data:{source:'xpace-xtore-twin',screen:'xtore-virtual-zapatillas',session:'00000000-0000-0000-0000-000000000001',event}});
+ await receive('ready');await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+ const player=f.get('signage').children[0];
+ f.doc.hidden=true;await f.doc.emit('visibilitychange');
+ assert.equal(f.get('connection').textContent,'Analizando');assert.equal(player.removed,undefined);
+ f.finishDetection();await new Promise(r=>setImmediate(r));f.get('scene').currentTime++;
+ t.mock.timers.tick(500);await new Promise(r=>setImmediate(r));assert.equal(f.detections.length,2);
+ t.mock.timers.tick(4001);await new Promise(r=>setImmediate(r));
+ assert.equal(player.removed,true);assert.equal(f.get('analyze').textContent,'Pausar análisis');
+ f.finishDetection();await new Promise(r=>setImmediate(r));await receive('ready');
+ t.mock.timers.tick(500);await new Promise(r=>setImmediate(r));assert.equal(f.detections.length,2);
+ f.get('scene').currentTime++;t.mock.timers.tick(500);await new Promise(r=>setImmediate(r));
+ assert.equal(f.detections.length,3);assert.equal(f.get('connection').textContent,'Analizando');
+ await f.get('analyze').emit('click');f.finishDetection();await new Promise(r=>setImmediate(r));
+ await receive('ready');f.get('scene').currentTime++;t.mock.timers.tick(500);
+ assert.equal(f.detections.length,3);assert.equal(f.get('analyze').textContent,'Iniciar análisis');
 });

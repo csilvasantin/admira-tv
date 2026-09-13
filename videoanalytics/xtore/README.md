@@ -40,9 +40,10 @@ Las candidatas de baja confianza conservan posición pero no crean ni confirman
 tracks. Tras una salida observada por el borde, el margen se reduce a 1 s.
 No es reidentificación y puede duplicar tras ausencias largas o perder pasos rápidos. Una cámara muy lejana,
 baja resolución, poca luz, reflejos o movimiento de la escena requieren evaluación.
-La vista debe permanecer visible para inferir. Ocultación, mute de la fuente o
+La vista debe estar visible o tener el gemelo XpaceOS enlazado para inferir.
+Ocultación sin enlace, mute de la fuente o
 más de 3 s sin fotogramas suspenden temporalmente un análisis solicitado. Al
-volver vídeo fresco en la misma fuente y estar visible, se recupera automáticamente.
+volver vídeo fresco en la misma fuente y estar visible o enlazada, se recupera automáticamente.
 Pausa manual, desconexión, recalibración, formato incompatible o error del detector
 cancelan esa intención: no se reactivan solos ni se solicita otra captura.
 
@@ -65,9 +66,9 @@ producir un nuevo paso. El desglose de sexo/género no se infiere.
 ### H: fondo temporal local y cola de salida de vehículos
 
 `clean-street.mjs` y `clean-street-ui.mjs` implementan H/botón reversible en el
-analizador. No se modifica el vídeo original que utiliza el detector. En H, ROI e
-iPad muestran la vista modificada con sus rectángulos locales; la foto original
-de Capturas queda oculta. El iPad pasa de instantánea efímera a vídeo procesado.
+analizador. No se modifica el vídeo original que utiliza el detector. En H, solo el previo ROI muestra la vista modificada; la foto original
+de Capturas queda oculta. El iPad muestra vídeo original en directo con personas
+y rectángulos locales. Usa el canvas de entrada, nunca el fondo reconstruido.
 No hay reconstrucción generativa ni reconocimiento de identidad. El atajo no
 actúa al escribir en campos, ni dentro del iframe independiente del player.
 
@@ -79,7 +80,7 @@ real reconstruida. Un cambio amplio de escena invalida el fondo. Puede borrar
 objetos solapados, dejar sombras/reflejos o personas no detectadas: NO garantiza
 anonimización y NO sirve como original de seguridad. Recortes/Twins conservan
 su circuito explícito de originales independiente. No se envía el fondo a red.
-Pausa, vista oculta, reencuadre y desconexión borran esta memoria; una imagen
+Pausa, vista oculta sin enlace, reencuadre y desconexión borran esta memoria; una imagen
 modificada sin fotograma fresco se tapa en 1,5 s. H no persiste tras recargar.
 
 Vehículos automáticos (bici/moto/coche): el contenido tiene 2 s de cola adicional
@@ -92,8 +93,8 @@ manual, sin regla automática compatible; no se inventa detección ni contenido.
 
 Se conserva la intención de análisis durante ocultación, mute temporal, más de
 3 s sin fotogramas y cambios proporcionales de tamaño. Un único sondeo de 500 ms
-espera vista visible, fuente sin mute, fotograma nuevo, marcas válidas y que termine
-la inferencia anterior. No procesa imágenes oculto. Si el navegador pausó el vídeo,
+espera vista visible o gemelo enlazado, fuente sin mute, fotograma nuevo, marcas válidas y que termine
+la inferencia anterior. Oculto solo procesa con un gemelo enlazado y latidos recientes. Si el navegador pausó el vídeo,
 reintenta play en la misma fuente con espera de 2 s, sin pedir otra captura.
 Pausa manual, desconexión, recalibración, formato incompatible o error del detector
 cancelan la intención. La barra superior muestra si analiza o espera recuperación.
@@ -144,7 +145,7 @@ No usa rostros/embeddings, no guarda trayectorias y no envía IDs/cajas al playe
 No es identificación; cruces, oclusiones o reentradas pueden cambiar/asociar mal IDs.
 Patinetes siguen siendo registro manual sin cajas ni comandos automáticos.
 Las capturas ordinarias de iPad caducan a los 6 s y solo se crean al contar pasos.
-En H el iPad muestra vídeo local modificado con cajas; no renueva esas capturas.
+En H el iPad muestra vídeo original en directo con cajas; no renueva esas capturas.
 
 «Reglas musicales · probar» ofrece botones explícitos para esas cuatro categorías
 y volver a playlist. Solo sin intención de análisis ni calibración; no incrementa
@@ -554,5 +555,9 @@ limitado); la nueva telemetría de espejo solo sale a su padre exacto.
 El gemelo verifica origen, WindowProxy, token de sesión y secuencia; las señales
 caducan aunque el origen deje de responder. No crea hardware ni proof-of-play.
 El enlace funciona en esta sesión de navegador, no como bus entre dispositivos.
-Mantener visibles las dos ventanas para el análisis. No se ha automatizado ni
-eludido el selector de pestaña de Chrome.
+Al pasar del analizador al gemelo en otra pestaña se mantienen player e inferencia.
+Se exige un enlace con el WindowProxy autorizado y latidos de menos de 4 s.
+Si caduca el enlace con el analizador oculto, se suspende; al recuperarse se espera
+un fotograma nuevo. La pausa manual no se revierte. Los medios conservan su edad
+original: nunca se renueva la fecha de una cámara o pieza congelada.
+No se ha automatizado ni eludido el selector de pestaña de Chrome.

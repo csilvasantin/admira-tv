@@ -19,7 +19,7 @@ export function installSignageUI({document,window,onMirror=()=>{},onStop=()=>{}}
     $('signage-command').textContent='Canal de órdenes cerrado';
   }
   function start(){
-    if(!eligible||iframe||document.hidden)return;
+    if(!eligible||iframe)return;
     iframe=document.createElement('iframe');
     iframe.title='Player virtual Xtore · música y cartelería condicionada';
     // Opaque origin even when Xtore is on admira.tv. No parent DOM, cookies or
