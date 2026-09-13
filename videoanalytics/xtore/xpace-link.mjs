@@ -58,7 +58,7 @@ export function installXpaceLink({window,document,onChange=()=>{}}){
     media(value){media=value;},
     stop(){media=null;send('playback-off');},
     cameraOff:resetCamera,
-    async camera(canvas,observations,ageMs=0){
+    async camera(canvas,observations,ageMs=0,passages=null){
       if(!ready||document.hidden||busy||Date.now()-lastSend<250||!Number.isFinite(ageMs)||ageMs<0||ageMs>=1500)return;
       lastSend=Date.now();cameraAt=Date.now()-ageMs;busy=true;
       const generation=cameraGeneration,stamp=cameraAt;
@@ -67,7 +67,9 @@ export function installXpaceLink({window,document,onChange=()=>{}}){
         if(generation!==cameraGeneration||!ready||document.hidden||Date.now()-stamp>=1500){bitmap.close();return;}
         const counts={person:0,car:0,motorcycle:0,bicycle:0};
         for(const o of observations||[])if(o.confirmed===true&&o.ageMs<1500&&Object.hasOwn(counts,o.class))counts[o.class]++;
-        if(!send('camera',{bitmap,frameAt:stamp,counts},[bitmap]))bitmap.close();
+        const totals=passages&&Object.keys(counts).every(k=>Number.isSafeInteger(passages[k])&&passages[k]>=0&&passages[k]<=10000000)
+          ?Object.fromEntries(Object.keys(counts).map(k=>[k,passages[k]])):null;
+        if(!send('camera',{bitmap,frameAt:stamp,counts,passages:totals},[bitmap]))bitmap.close();
       }catch{/* Source unavailable; receiver expires its last frame. */}finally{busy=false;}
     }
   };

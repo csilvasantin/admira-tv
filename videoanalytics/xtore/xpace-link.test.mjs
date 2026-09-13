@@ -35,6 +35,14 @@ test('local development origins do not expand production access',()=>{
  assert.equal(allowedTwinOrigin('http://localhost:9000','https://admira.tv'),false);
  assert.equal(allowedTwinOrigin('https://xpaceos.com.evil.test','https://admira.tv'),false);
 });
+test('camera carries confirmed passage totals separately from current presence',async t=>{
+ const f=fixture(t);f.receive({event:'ready'});f.window.createImageBitmap=async()=>({close(){}});
+ const totals={person:17,car:4,motorcycle:2,bicycle:1};
+ await f.link.camera({width:480},[{confirmed:true,ageMs:50,class:'person'}],0,totals);
+ assert.equal(f.sent.at(-1).d.counts.person,1);assert.deepEqual(f.sent.at(-1).d.passages,totals);
+ t.mock.timers.tick(300);await f.link.camera({width:480},[],0,{...totals,person:-1});
+ assert.equal(f.sent.at(-1).d.passages,null);
+});
 test('opening the twin refreshes camera-only controls without another calibration',t=>{
  t.mock.timers.enable({apis:['setInterval']});
  const button={},status={},peer={closed:false,postMessage(){}};

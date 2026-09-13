@@ -392,7 +392,7 @@ async function loop(token){
     }
     const visible=tracker.visible(performance.now());
     trackingOverlay.render(visible);signage.presence(visible);
-    if(cleanStreet.enabled)void xpace.camera($('clean-preview'),visible,performance.now()-lastFrameAt);
+    if(cleanStreet.enabled)void xpace.camera($('clean-preview'),visible,performance.now()-lastFrameAt,passages.counts);
   }catch{
     if(token!==generation||!analyzing)return;
     pause('El detector ha fallado. La captura se ha borrado; revisa la fuente y vuelve a iniciar.');return;
@@ -411,7 +411,7 @@ function previewCamera(token){
     const width=Math.max(1,Math.round(Math.min(480,w*sw))),height=Math.max(1,Math.round(width*h*sh/(w*sw)));
     cameraPreview.width=width;cameraPreview.height=height;
     cameraPreview.getContext('2d').drawImage(scene,x*sw,y*sh,w*sw,h*sh,0,0,width,height);
-    void xpace.camera(cameraPreview,tracker.visible(at),performance.now()-at);
+    void xpace.camera(cameraPreview,tracker.visible(at),performance.now()-at,passages.counts);
   }
   cameraPreviewTimer=setTimeout(()=>previewCamera(token),250);
 }
