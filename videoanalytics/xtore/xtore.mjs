@@ -12,6 +12,8 @@ import {installCleanStreetUI} from './clean-street-ui.mjs';
 const $=id=>document.getElementById(id);
 const scene=$('scene'), stage=$('stage'), frame=document.createElement('canvas');
 const frameContext=frame.getContext('2d',{willReadFrequently:true});
+const cameraPreview=document.createElement('canvas');
+let cameraPreviewTimer=0,previewVideoTime=-1;
 const tablet=$('tablet-canvas'), capture=$('capture-canvas');
 const tracker=new PassageTracker();
 const trackingOverlay=new TrackingOverlay($('tracking-overlay'),{reservedBottom:()=>$('clean-status').hidden?0:$('clean-status').offsetHeight+2});
@@ -70,6 +72,7 @@ const xpace=installXpaceLink({document,window,onChange:()=>controls()});
 const signage=installSignageUI({document,window,onMirror:state=>xpace.media(state),onStop:()=>xpace.stop()});
 const history=installHistoryUI({document});
 const cleanStreet=installCleanStreetUI({document,onToggle:enabled=>{
+  xpace.cameraOff();previewVideoTime=-1;
   clearCapture();
   $('capture-empty').textContent=enabled?'Vista H en directo en el iPad':'Esperando un paso confirmado';
 }});
@@ -119,6 +122,7 @@ function clearCapture(message='Sin capturas'){
   if(!cleanStreet.enabled)tabletIdle(analyzing?'Esperando un paso':'Análisis en pausa');
 }
 function pause(message){
+  clearTimeout(cameraPreviewTimer);cameraPreviewTimer=0;previewVideoTime=-1;
   xpace.cameraOff();
   // Pausing detection returns to the normal loop; it is not a screen power-off.
   analysisRequested=false;suspendedReason=null;clearTimeout(recoveryTimer);recoveryTimer=0;
@@ -353,7 +357,7 @@ async function startAnalysis(recovering=false){
     analyzing=true;lastVideoTime=-1;lastFrameAt=performance.now();
     history.sync();
     status('Analizando solo Puerta Cam. Rectángulos por trayectoria; margen de pérdida de 1,5 s. Vehículos automáticos: 2 s adicionales de contenido tras ese margen. H modifica solo el previo y el iPad; el detector usa el original. Capturas de 6 s, sin repetir conteo.');
-    if(!cleanStreet.enabled)tabletIdle();loop(token);
+    if(!cleanStreet.enabled)tabletIdle();loop(token);previewCamera(token);
   }catch{if(token===generation)pause('No se ha iniciado el análisis. Revisa el estado del detector.');}
   finally{busy=false;controls();}
 }
@@ -388,12 +392,28 @@ async function loop(token){
     }
     const visible=tracker.visible(performance.now());
     trackingOverlay.render(visible);signage.presence(visible);
-    void xpace.camera(cleanStreet.enabled?$('clean-preview'):frame,visible,performance.now()-lastFrameAt);
+    if(cleanStreet.enabled)void xpace.camera($('clean-preview'),visible,performance.now()-lastFrameAt);
   }catch{
     if(token!==generation||!analyzing)return;
     pause('El detector ha fallado. La captura se ha borrado; revisa la fuente y vuelve a iniciar.');return;
   }
   if(analyzing&&token===generation)loopTimer=setTimeout(()=>loop(token),Math.max(0,125-(performance.now()-iterationStart)));
+}
+// Rendering the live crop must not wait for GPU inference. The detector keeps
+// its original timestamps and drops late results; this is a fresh video frame,
+// with only currently confirmed aggregate presence attached.
+function previewCamera(token){
+  clearTimeout(cameraPreviewTimer);
+  if(!analyzing||token!==generation||!stream)return;
+  if(xpace.cameraOnly&&!cleanStreet.enabled&&!document.hidden&&!sourceMuted&&!calibration&&roiReady&&scene.readyState>=2&&scene.currentTime!==previewVideoTime){
+    const at=performance.now();previewVideoTime=scene.currentTime;
+    const [x,y,w,h]=roi,sw=scene.videoWidth,sh=scene.videoHeight;
+    const width=Math.max(1,Math.round(Math.min(480,w*sw))),height=Math.max(1,Math.round(width*h*sh/(w*sw)));
+    cameraPreview.width=width;cameraPreview.height=height;
+    cameraPreview.getContext('2d').drawImage(scene,x*sw,y*sh,w*sw,h*sh,0,0,width,height);
+    void xpace.camera(cameraPreview,tracker.visible(at),performance.now()-at);
+  }
+  cameraPreviewTimer=setTimeout(()=>previewCamera(token),250);
 }
 function showCapture(events){
   const main=CLASSES[events[0].class];

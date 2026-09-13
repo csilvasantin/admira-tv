@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 let serial=0;
 const cleanups=[];
 afterEach(async()=>{for(const cleanup of cleanups.splice(0))await cleanup();});
-async function fixture({surface='browser',denied=false,slowLoad=false,segment,storage,sourceWidth=1280,sourceHeight=720}={}){
+async function fixture({surface='browser',denied=false,slowLoad=false,segment,storage,sourceWidth=1280,sourceHeight=720,twin=false}={}){
   const nodes=new Map();
   class Element {
     get ownerDocument(){return doc;}
@@ -21,6 +21,11 @@ async function fixture({surface='browser',denied=false,slowLoad=false,segment,st
   const get=id=>nodes.get(id)||new Element(id);
   const doc=new Element();doc.hidden=false;doc.getElementById=get;doc.createElement=tag=>{const e=Object.assign(new Element(),{tagName:tag});if(tag==='iframe'){e.sent=[];e.contentWindow={postMessage:(data,origin)=>e.sent.push({data,origin})};}return e;};doc.head=new Element();
   const win=new Element();win.tf={ready:async()=>{},getBackend:()=> 'fixture'};
+  const twinSent=[],twinPeer={closed:false,postMessage:data=>twinSent.push(data)};
+  if(twin){
+    win.location={origin:'https://admira.tv',search:'?twinOrigin=https%3A%2F%2Fwww.xpaceos.com&twinSession=00000000-0000-0000-0000-000000000001'};
+    win.opener=twinPeer;win.createImageBitmap=async()=>({close(){}});
+  }
   win.localStorage=storage;
   get('scene').videoWidth=sourceWidth;get('scene').videoHeight=sourceHeight;
   if(segment)win.deeplab={load:async()=>({segment,dispose(){}})};
@@ -37,8 +42,23 @@ async function fixture({surface='browser',denied=false,slowLoad=false,segment,st
   await import(`./xtore.mjs?fixture=${++serial}`);
   cleanups.push(async()=>{await get('stop').emit('click');await get('stop-signage').emit('click');});
   const calibrate=async()=>{await get('edit-coordinates').emit('click');await get('apply-coordinates').emit('click');};
-  return {get,doc,win,track,calibrate,detections,finishLoad:()=>finishLoad(),finishDetection:()=>finishDetection?.([])};
+  return {get,doc,win,track,calibrate,detections,twinSent,twinPeer,finishLoad:()=>finishLoad(),finishDetection:()=>finishDetection?.([])};
 }
+
+test('twin camera stays independent of pending inference, never repeats a frozen frame, and stops on pause',async t=>{
+  t.mock.timers.enable({apis:['setTimeout','setInterval','Date'],now:10000});
+  const f=await fixture({twin:true});
+  await f.win.emit('message',{source:f.twinPeer,origin:'https://www.xpaceos.com',data:{source:'xpace-xtore-twin',screen:'xtore-virtual-zapatillas',session:'00000000-0000-0000-0000-000000000001',event:'ready'}});
+  await f.get('connect').emit('click');await f.calibrate();await f.get('analyze').emit('click');
+  await new Promise(r=>setImmediate(r));
+  const frames=()=>f.twinSent.filter(d=>d.event==='camera').length;
+  assert.equal(f.detections.length,1);assert.equal(frames(),1);
+  t.mock.timers.tick(1000);await new Promise(r=>setImmediate(r));assert.equal(frames(),1);
+  f.get('scene').currentTime=2;t.mock.timers.tick(250);await new Promise(r=>setImmediate(r));assert.equal(frames(),2);
+  await f.get('analyze').emit('click');
+  f.get('scene').currentTime=3;t.mock.timers.tick(1000);await new Promise(r=>setImmediate(r));assert.equal(frames(),2);
+  f.finishDetection();await new Promise(r=>setImmediate(r));
+});
 
 test('permission denial stays disconnected and is explained',async()=>{
   const f=await fixture({denied:true});await f.get('connect').emit('click');
