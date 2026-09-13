@@ -1,10 +1,10 @@
 {
-  "version": "v.13.09.2026.r15.14:16",
+  "version": "v.13.09.2026.r16.14:50",
   "signature": "Codex · MacBookAir16plata",
   "machine": "MacBookAir16plata",
   "agent": "Codex",
   "deployer": "Codex",
-  "evidence": "Control lateral Silenciar player / Activar sonido con ACK propio del iframe, estado efectivo y persistencia local de preferencia. Conserva reproducción, cámara, conteo y TTL de audiencia. 75 pruebas focalizadas aprobadas y Chrome local comprobó silencio y reactivación sin apagar player. Base7f7716a ya publicada, sin cambiar el MCP.",
+  "evidence": "Anonymizer imagen a avatar: foto local JPG/PNG/WebP hasta8MB/24MP, normalización1024px, selector8/16bits y descarga privada del resultado generado. Reutiliza la generación de personaje ficticio por pose; no añade clasificación de sexo/género ni publicación automática. Limpieza y cancelación con guardas de decodificación tardía. 61 pruebas focalizadas aprobadas y UI nueva comprobada en Chrome local; sin producir un avatar real durante esta prueba. Conserva audio lateral r15.",
   "day": "13.09.2026",
-  "time": "14:16"
+  "time": "14:50"
 }

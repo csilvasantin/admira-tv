@@ -1,7 +1,7 @@
 import {installXpaceLink} from './xpace-link.mjs';
 import {CLASSES, SNAPSHOT_TTL, PRESENCE_GRACE, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
 import {CutoutJob} from './cutouts.mjs';
-import {installTwinUI} from './twin-ui.mjs';
+import {installTwinUI} from './twin-ui.mjs?v=avatar-photo-1';
 import {detectObjects} from './detector.mjs';
 import {installSignageUI} from './signage-ui.mjs';
 import {installHistoryUI} from './history.mjs';

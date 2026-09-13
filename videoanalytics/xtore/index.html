@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090e14">
   <meta name="description" content="Xtore: análisis local de Puerta Cam y capturas efímeras en un iPad virtual, con permiso explícito para compartir la pestaña de Digital Twin.">
-  <meta name="admiranext-version" content="v.13.09.2026.r15.14:16">
+  <meta name="admiranext-version" content="v.13.09.2026.r16.14:50">
   <meta name="admiranext-agent" content="TrinityMBA16">
   <title>Xtore · Analítica de vídeo · Admira.tv</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./xtore.css">
-  <script type="module" src="./xtore.mjs"></script>
+  <link rel="stylesheet" href="./xtore.css?v=13.09.2026.r16.1450">
+  <script type="module" src="./xtore.mjs?v=avatar-photo-1"></script>
 </head>
 <body>
   <header class="topbar">
@@ -80,17 +80,21 @@
         <p id="cutout-status" class="small" role="status">Desactivado · procesamiento local</p>
         <div id="cutouts" class="cutouts" aria-label="Últimos objetos aislados procesados"></div>
         <details class="help"><summary><span aria-hidden="true">›</span> Recortes y Digital Twins</summary><p class="small">Máscara por categoría: puede perder detalles o incluir objetos solapados. Máximo cuatro recortes por captura y 6 s de vida. Si hay otra captura en espera, se conserva solo la más reciente; el conteo no se pierde. «Elegir» retiene únicamente ese recorte temporalmente. No se envía nada automáticamente. Quitar el fondo o pixelar no garantiza anonimización.</p></details>
-        <details id="twin-panel" class="help twin-panel"><summary><span aria-hidden="true">›</span> Crear gemelo en Pixeria</summary>
-          <p id="twin-status" role="status">Elige un recorte para crear su gemelo.</p>
+        <details id="twin-panel" class="help twin-panel"><summary><span aria-hidden="true">›</span> Anonymizer · imagen → avatar</summary>
+          <p class="small">Foto o recorte real → avatar de 8 o 16 bits. Se redibuja un personaje ficticio tomando la pose como referencia. También puedes elegir una representación sintética.</p>
+          <label for="twin-photo">Elegir una foto · JPG, PNG o WebP</label>
+          <input id="twin-photo" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="twin-status">
+          <p id="twin-status" role="status">Elige una foto o un recorte para crear un avatar.</p>
           <canvas id="twin-source" class="twin-image" hidden width="1" height="1" aria-label="Recorte original temporal seleccionado"></canvas>
           <p id="twin-source-label" class="small">Sin original retenido</p>
           <label for="twin-style">Estilo de salida</label>
-          <select id="twin-style" disabled><option value="8bit">Píxel 8 bits</option><option value="16bit">Píxel 16 bits</option><option value="twin">Gemelo sintético</option></select>
+          <select id="twin-style" disabled><option value="8bit">Avatar 8 bits</option><option value="16bit">Avatar 16 bits</option><option value="twin">Gemelo sintético</option></select>
           <label class="twin-check"><input id="twin-consent" type="checkbox" disabled><span>Enviar este recorte a Pixeria / Gemini para generar. Nuestra copia se retira al terminar; el proveedor puede conservar registros.</span></label>
-          <button id="twin-generate" class="primary full" disabled>Generar en Pixeria</button>
+          <button id="twin-generate" class="primary full" disabled>Generar avatar</button>
           <div id="twin-result-box" hidden>
             <img id="twin-result" class="twin-image" alt="Resultado generado para revisar">
             <p id="twin-result-label" class="small">Sin resultado</p>
+            <p><a id="twin-download" hidden>Descargar avatar</a></p>
             <label class="twin-check"><input id="twin-review" type="checkbox" disabled><span>He revisado el resultado: no reproduce identidades, matrículas ni distintivos reconocibles y autorizo su publicación pública.</span></label>
             <button id="twin-publish" class="full" disabled>Publicar resultado en Stock</button>
           </div>
@@ -162,7 +166,7 @@
         <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. La detección no envía fotogramas.</p>
       </aside>
     </div>
-    <footer><span>TrinityMBA16 · <span data-release-version>v.13.09.2026.r15.14:16</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
+    <footer><span>TrinityMBA16 · <span data-release-version>v.13.09.2026.r16.14:50</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
   </main>
 </body>
 </html>
