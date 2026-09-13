@@ -66,7 +66,7 @@ $('forget-preset').addEventListener('click',()=>{
 });
 presetStatus();
 const twins=installTwinUI({document,onOriginalRemoved:()=>clearCapture('Original temporal retirado')});
-const xpace=installXpaceLink({document,window});
+const xpace=installXpaceLink({document,window,onChange:()=>controls()});
 const signage=installSignageUI({document,window,onMirror:state=>xpace.media(state),onStop:()=>xpace.stop()});
 const history=installHistoryUI({document});
 const cleanStreet=installCleanStreetUI({document,onToggle:enabled=>{

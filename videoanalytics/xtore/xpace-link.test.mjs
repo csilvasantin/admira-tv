@@ -35,3 +35,14 @@ test('local development origins do not expand production access',()=>{
  assert.equal(allowedTwinOrigin('http://localhost:9000','https://admira.tv'),false);
  assert.equal(allowedTwinOrigin('https://xpaceos.com.evil.test','https://admira.tv'),false);
 });
+test('opening the twin refreshes camera-only controls without another calibration',t=>{
+ t.mock.timers.enable({apis:['setInterval']});
+ const button={},status={},peer={closed:false,postMessage(){}};
+ const document={getElementById:id=>id==='open-xpace'?button:status,addEventListener(){}};
+ button.addEventListener=(type,fn)=>{button[type]=fn;};
+ let changes=0;
+ const window={location:{origin:'https://admira.tv',search:''},crypto:{randomUUID:()=> '00000000-0000-0000-0000-000000000001'},open:()=>peer,addEventListener(){}};
+ const link=installXpaceLink({window,document,onChange:()=>changes++});
+ assert.equal(link.cameraOnly,false);button.click();
+ assert.equal(link.cameraOnly,true);assert.equal(changes,1);
+});

@@ -3,7 +3,7 @@ const ORIGINS=new Set(['https://www.xpaceos.com','https://xpaceos.com']);
 const local=origin=>/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
 export function allowedTwinOrigin(origin,own){return ORIGINS.has(origin)||(local(own)&&local(origin));}
 // A dedicated popup is the only receiver. No broadcast, storage or camera upload.
-export function installXpaceLink({window,document}){
+export function installXpaceLink({window,document,onChange=()=>{}}){
   const status=document.getElementById('xpace-status'),button=document.getElementById('open-xpace');
   const qs=new URLSearchParams(window.location?.search||'');
   let peer=null,origin='',session='',ready=false,seq=0,media=null,cameraAt=0,busy=false;
@@ -28,7 +28,7 @@ export function installXpaceLink({window,document}){
     url.search=new URLSearchParams({autostart:'xtanco',virtualPlayer:XTORE_VIRTUAL_SCREEN,twinOrigin:window.location?.origin||'https://admira.tv',twinSession:session});
     peer=window.open(url.href,'xtore-zapatillas-'+session,'popup,width=1240,height=850');
     status.textContent=peer?'Conectando el gemelo…':'Chrome bloqueó la ventana. Permite abrir el gemelo y vuelve a pulsar.';
-    hello();startTimer();
+    hello();startTimer();onChange();
   });
   window.addEventListener('message',e=>{
     const d=e.data;
@@ -37,6 +37,7 @@ export function installXpaceLink({window,document}){
       ready=true;lastHeartbeat=Date.now();
       status.textContent='Gemelo conectado · interior y escaparate siguen este player. Cámara compartida solo entre estas ventanas.';
       send('ready');
+      onChange();
     }else if(d.event==='heartbeat'){lastHeartbeat=Date.now();}
     else if(d.event==='disconnect'){ready=false;media=null;resetCamera();status.textContent='Gemelo desconectado.';}
   });
