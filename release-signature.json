@@ -1,10 +1,10 @@
 {
-  "version": "v.13.09.2026.r10.13:13",
-  "signature": "NeoMBA16 · MacBookAir16plata",
+  "version": "v.13.09.2026.r11.13:47",
+  "signature": "Codex · MacBookAir16plata",
   "machine": "MacBookAir16plata",
-  "agent": "NeoMBA16",
+  "agent": "Codex",
   "deployer": "Codex",
-  "evidence": "Nueva página player/privacidad/index.html → https://admira.tv/player/privacidad/ : política de privacidad de la app AdmiraNeXT (Android/iOS/iPadOS/tvOS/visionOS), obligatoria para la ficha de Google Play (FLT-100400 · Yokup #3256). Responsable con los datos públicos del aviso legal de admira.com: Admira Digital Networks SL, B64382187, Santa Rosa 4 bajos 08012 Barcelona, info@admira.com. Datos declarados: código de pantalla/circuito, estado técnico del player e IP; sin datos personales, cámara ni micrófono. Sin cambios en canal ni player.",
+  "evidence": "Persistencia privada de pasos Xtore autorizada explícitamente por Carlos. Activa binding VIDEO_ANALYTICS_DB de D1 dedicada y migrada; API autenticada owner/admin, sin imágenes y con reintentos idempotentes. Verificación de cámara limpia con recuadros e IDs coloreados. Conserva política privacidad r10.",
   "day": "13.09.2026",
-  "time": "13:13"
+  "time": "13:47"
 }

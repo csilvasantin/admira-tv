@@ -1,6 +1,8 @@
 # Histórico privado de pasos Xtore
 
-Estado: implementado y probado localmente; SIN base remota creada, SIN publicación.
+Estado 13/09/2026: D1 dedicada creada y migrada vacía; binding preparado en wrangler.toml.
+Carlos ha autorizado explícitamente la persistencia y su activación en producción.
+El binding se publica en r11; comprobar ACK real antes de afirmar que una sesión está guardada.
 No es grabador de seguridad ni conserva capturas. La retención de originales de
 seguridad sigue fuera de este módulo y no está activada.
 
@@ -42,7 +44,7 @@ seguridad sigue fuera de este módulo y no está activada.
    de Cloudflare remoto/cámara → player.
 
 El esquema está en `db/schema.ts`; SQL y snapshots Drizzle se generaron localmente
-con drizzle-kit. No se han aplicado remotamente. Las migraciones aplicadas deben
+con drizzle-kit. La migración 0000 se aplicó en admira-xtore-history (1908cb29-fccf-418f-915c-4c0cbeb1376a). Las migraciones aplicadas deben
 ser inmutables. El módulo usa únicamente Web APIs y D1, sin requerir nodejs_compat.
 
 ## Operación y límites
