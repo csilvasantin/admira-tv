@@ -52,12 +52,13 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=13.09.2026.r4.1149"></script>
+<script src="xpl-runtime.js?v=13.09.2026.r5.1207"></script>
 <script>
-  window.ADMIRA_VERSION='v.13.09.2026.r4.11:49';
+  window.ADMIRA_VERSION='v.13.09.2026.r5.12:07';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
+  if (__adtvParams.get('overlays') === '1') document.documentElement.classList.add('overlays');
   // Los players nativos pueden pedir el lienzo físico completo. El canal web
   // normal conserva su marco editorial adaptativo; solo ?fit=screen elimina el
   // 9:16 inicial que, en un iPhone horizontal, parecía un MUPI estrecho centrado.
@@ -297,6 +298,15 @@
   .clean #tap,
   .clean #camHud,
   .clean #seg{ display:none!important; }
+  /* EMISIÓN LIMPIA (FLT-100394, Carlos 13-sep-2026: «se ponen popups por encima y eso no puede ser en un
+     player de Digital Signage»). En modo limpio no se pinta NADA encima de la emisión: ni el HUD de pruebas
+     del mando, ni «recién creado», ni el distintivo de parrilla. ?overlays=1 los devuelve para depurar. */
+  html.clean:not(.overlays) #testHud,
+  html.clean:not(.overlays) #freshBadge,
+  html.clean:not(.overlays) #gridBadge{ display:none!important; }
+  /* CUBRIR (fit-cover): el marco ocupa toda la pantalla y la media la LLENA recortando lo que sobre
+     (iPad 3:4 con piezas 9:16: sin bandas laterales). «rellenar» (fit-fill) encaja sin recortar. */
+  .screen-cover #stage video, .screen-cover #stage img{ object-fit:cover!important; }
   /* The isolated music player still needs a visible user-gesture control. */
   .clean.xtore-music #tap.show{ display:grid!important; }
   .clean.xtore-music #tap:focus-visible{ outline:3px solid #2bea86; outline-offset:-5px; }
@@ -388,7 +398,7 @@
   <aside id="chan"></aside>
 </div>
 
-<script src="/assets/player-pairing.js?v=13.09.2026.r4.1149"></script>
+<script src="/assets/player-pairing.js?v=13.09.2026.r5.1207"></script>
 <script>
 // Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
 // directo (pub-…r2.dev): más resiliente y evita bloqueos de DNS/filtrado en algunas
@@ -1013,19 +1023,21 @@ function applyDisplayRotation(delta){ return setDisplayRotation(displayRotation+
 // (fit-fill / fit-editorial), igual que el giro. Android WebView y `?fit=screen`
 // nacen en «fill»; `?fit=content` o el mando lo devuelven a editorial.
 const DISPLAY_FIT_KEY='adtv_display_fit:'+(scr.screen||scr.circuit||'unbound');
-let displayFit=(()=>{ const v=LS(DISPLAY_FIT_KEY,''); if(v==='fill'||v==='editorial') return v;
+let displayFit=(()=>{ const v=LS(DISPLAY_FIT_KEY,''); if(v==='fill'||v==='editorial'||v==='cover') return v;
   return document.documentElement.classList.contains('screen-fit')?'fill':'editorial'; })();
 function setDisplayFit(mode){
   const m=String(mode||'').toLowerCase();
-  displayFit=(m==='fill'||m==='screen'||m==='on'||m==='rellenar')?'fill':'editorial';
+  displayFit=(m==='cover'||m==='cubrir'||m==='full')?'cover':(m==='fill'||m==='screen'||m==='on'||m==='rellenar')?'fill':'editorial';
   save(DISPLAY_FIT_KEY,displayFit);
-  document.documentElement.classList.toggle('screen-fit',displayFit==='fill');
+  document.documentElement.classList.toggle('screen-fit',displayFit!=='editorial');
+  document.documentElement.classList.toggle('screen-cover',displayFit==='cover');
   try{ if(DEVICE_TELEMETRY&&DEVICE_TELEMETRY.display) DEVICE_TELEMETRY.display.fit=displayFit; }catch(_){}
   try{ if(_nowItem) setTimeout(()=>_postNow(_nowItem),0); }catch(_){}
   fitMupi._retry=0; fitMupi();
   return displayFit;
 }
-document.documentElement.classList.toggle('screen-fit',displayFit==='fill');
+document.documentElement.classList.toggle('screen-fit',displayFit!=='editorial');
+document.documentElement.classList.toggle('screen-cover',displayFit==='cover');
 function itemAR(it){
   if(it&&it._dim&&it._dim.w&&it._dim.h){ const r=it._dim.w/it._dim.h; return Math.max(9/21,Math.min(21/9,r)); }
   const tg=(it&&it.tags)||[];
@@ -3400,9 +3412,16 @@ function localInfoRender(){
   localInfoAudioPaint((AUDIO_METER&&AUDIO_METER.level)||0);
   localInfoClamp();
 }
+// En emisión limpia la ficha solo la abre el mando («Informar») y se cierra sola a los 12 s:
+// un player de señalética no puede quedarse con una ventana encima (FLT-100394).
+const LOCAL_INFO_CLEAN=document.documentElement.classList.contains('clean')&&!document.documentElement.classList.contains('overlays');
+const LOCAL_INFO_TOUCH=!LOCAL_INFO_CLEAN||qs.get('touchinfo')==='1';
+let _localInfoAutoClose=null;
 function localInfoVisible(opening){
   const box=$('localInfo'); box.hidden=!opening;
   clearInterval(_localInfoTimer); _localInfoTimer=null;
+  clearTimeout(_localInfoAutoClose); _localInfoAutoClose=null;
+  if(opening&&LOCAL_INFO_CLEAN) _localInfoAutoClose=setTimeout(()=>localInfoVisible(false),12000);
   if(opening){ localInfoRender(); audioMeterStart(); _localInfoTimer=setInterval(localInfoRender,1000); }
   else{localInfoDragEnd();audioMeterStop();}
 }
@@ -3462,6 +3481,7 @@ function localInfoInteractiveTarget(target){
   return !!(target&&target.closest&&target.closest('button,input,select,textarea,a,#seg,#tap'));
 }
 function localInfoPointerUp(e){
+  if(!LOCAL_INFO_TOUCH) return;
   if(e.pointerType==='mouse'||e.isPrimary===false||localInfoInteractiveTarget(e.target)) return;
   const now=performance.now(), dx=e.clientX-_localInfoTapX, dy=e.clientY-_localInfoTapY;
   const isDouble=_localInfoTapAt>0&&now-_localInfoTapAt<=420&&Math.hypot(dx,dy)<=56;
@@ -3471,6 +3491,7 @@ function localInfoPointerUp(e){
   _localInfoTapAt=now; _localInfoTapX=e.clientX; _localInfoTapY=e.clientY;
 }
 function localInfoDoubleClick(e){
+  if(!LOCAL_INFO_TOUCH) return;
   if(performance.now()<_localInfoIgnoreDblUntil||localInfoInteractiveTarget(e.target)) return;
   e.preventDefault(); localInfoToggle();
 }
@@ -4402,7 +4423,7 @@ async function executeQueuedCommand(c){
   // devolvía un ACK optimista de executed.
   if(/^goto-\d{1,3}$/.test(cmd)) return applyCtrlCmd(cmd);
   // «Rellenar» del mando: mismo dispatcher confirmado que el giro.
-  if(/^fit-(fill|editorial)$/.test(cmd)) return applyCtrlCmd(cmd);
+  if(/^fit-(fill|editorial|cover)$/.test(cmd)) return applyCtrlCmd(cmd);
   // Los tres fotogramas del Remote saltan a un segundo exacto del vídeo. Deben
   // atravesar el mismo dispatcher confirmado: runCli no conoce seek-* y daría un
   // ACK falso sin mover la emisión.
@@ -4535,8 +4556,8 @@ async function applyCtrlCmd(cmd){
       return captured?'executed':'failed';
     }
     default: {
-      const fit=/^fit-(fill|editorial)$/.exec(cmd);
-      if(fit){ setDisplayFit(fit[1]); flashCli(displayFit==='fill'?'⛶ rellenar pantalla':'▯ marco editorial'); return 'executed'; }
+      const fit=/^fit-(fill|editorial|cover)$/.exec(cmd);
+      if(fit){ setDisplayFit(fit[1]); flashCli(displayFit==='cover'?'⬛ cubrir pantalla':displayFit==='fill'?'⛶ rellenar pantalla':'▯ marco editorial'); return 'executed'; }
       const rotation=/^rotation-(0|90|180|270)$/.exec(cmd);
       if(rotation){ setDisplayRotation(Number(rotation[1])); flashCli('↻ pantalla '+displayRotation+'°'); return 'executed'; }
       const tagged=/^content-(\d{1,6})$/.exec(cmd);
@@ -4745,6 +4766,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=13.09.2026.r4.1149" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.09.2026.r5.1207" defer></script>
 </body>
 </html>

@@ -1,8 +1,10 @@
 {
-  "version": "v.13.09.2026.r4.11:49",
-  "signature": "Codex · MacBookAir16plata",
+  "version": "v.13.09.2026.r5.12:07",
+  "signature": "NeoMBA16 · MacBookAir16plata",
   "machine": "MacBookAir16plata",
-  "agent": "Codex",
+  "agent": "NeoMBA16",
   "deployer": "Codex",
-  "evidence": "Espejo Xtore de player y Puerta Cam en XpaceOS; pruebas de protocolo y regresión, QA de playlist y cambio condicional en navegador."
+  "evidence": "canal.html (FLT-100394 · Yokup #3250): emisión limpia sin capas encima en modo clean (testHud, freshBadge y gridBadge ocultos salvo ?overlays=1; la ficha «Contenido en antena» no se abre con doble toque salvo ?touchinfo=1 y, abierta por el mando, se cierra sola a los 12 s) y nuevo ajuste fit-cover (object-fit:cover a pantalla completa, persistente por pantalla, en applyCtrlCmd y en la cola locations/cmd). Pruebas: canal-emision-limpia.test.mjs nueva + mando-rellenar.test.mjs adaptada; 118/119 (el fallo de sincro 'no re-monta la antena' ya existía en main). Verificado en navegador 810x1080 clean: cover llena 810x1080 con object-fit cover; HUD/badges display:none; ficha cerrada sola a los 12 s.",
+  "day": "13.09.2026",
+  "time": "12:07"
 }

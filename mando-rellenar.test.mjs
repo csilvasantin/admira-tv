@@ -33,9 +33,10 @@ test('con Rellenar y pieza horizontal el previo se pone apaisado ENCIMA del bloq
 test('el player persiste el ajuste por pantalla, lo reporta y lo ejecuta por la cola confirmada', () => {
   assert.match(canal, /const DISPLAY_FIT_KEY='adtv_display_fit:'/);
   assert.match(canal, /function setDisplayFit\(mode\)/);
-  assert.match(canal, /document\.documentElement\.classList\.toggle\('screen-fit',displayFit==='fill'\)/);
+  assert.match(canal, /document\.documentElement\.classList\.toggle\('screen-fit',displayFit!=='editorial'\)/);
+  assert.match(canal, /document\.documentElement\.classList\.toggle\('screen-cover',displayFit==='cover'\)/);
   assert.match(canal, /rotation:displayRotation, fit:\(typeof displayFit==='string'\?displayFit:'editorial'\)/);
-  assert.match(canal, /if\(\/\^fit-\(fill\|editorial\)\$\/\.test\(cmd\)\) return applyCtrlCmd\(cmd\);/);
+  assert.match(canal, /if\(\/\^fit-\(fill\|editorial\|cover\)\$\/\.test\(cmd\)\) return applyCtrlCmd\(cmd\);/);
   assert.match(canal, /if\(fit\)\{ setDisplayFit\(fit\[1\]\);[^\n]*return 'executed'; \}/);
 });
 
