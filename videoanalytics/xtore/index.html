@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090e14">
   <meta name="description" content="Xtore: análisis local de Puerta Cam y capturas efímeras en un iPad virtual, con permiso explícito para compartir la pestaña de Digital Twin.">
-  <meta name="admiranext-version" content="v.12.09.2026.r20.22:41">
+  <meta name="admiranext-version" content="v.13.09.2026.r1.11:26">
   <meta name="admiranext-agent" content="TrinityMBA16">
   <title>Xtore · Analítica de vídeo · Admira.tv</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -27,11 +27,13 @@
       <a class="button" href="https://digitaltwin.ieu.ai/" target="_blank" rel="noopener noreferrer">1. Abrir Digital Twin ↗</a>
       <button id="connect">2. Compartir pestaña</button>
       <button id="stop" disabled>Desconectar</button>
+      <button id="open-xpace">Abrir gemelo · zapatillas ↗</button>
       <button id="hide-people" disabled aria-pressed="false" aria-keyshortcuts="H" title="H con foco en el analizador: vista modificada, no anonimización">H · Ocultar personas</button>
       <span id="analysis-health" class="small" role="status" aria-live="polite">Cámara sin conectar</span>
       <span class="local-note">Detección local · cámara sin audio · música independiente · envío a Pixeria solo al pulsar Generar</span>
     </section>
     <p id="status" role="status" aria-live="polite">La música no necesita vídeo en directo. Para activar la audiencia, abre Store → Entrada y Puerta Cam en Digital Twin; después comparte únicamente esa pestaña.</p>
+    <p id="xpace-status" class="small" role="status">Gemelo sin conectar. Al abrirlo compartes el player y el recorte de Puerta Cam con esa ventana de XpaceOS. No se graba ni se publica el vídeo.</p>
     <div class="workspace">
       <section class="viewer" aria-label="Escena Xtore con iPad virtual">
         <div id="stage" class="stage">
@@ -157,7 +159,7 @@
         <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. La detección no envía fotogramas.</p>
       </aside>
     </div>
-    <footer><span>TrinityMBA16 · <span data-release-version>v.12.09.2026.r20.22:41</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
+    <footer><span>TrinityMBA16 · <span data-release-version>v.13.09.2026.r1.11:26</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
   </main>
 </body>
 </html>

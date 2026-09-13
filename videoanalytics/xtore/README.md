@@ -535,3 +535,24 @@ Referencias primarias:
 - https://github.com/tensorflow/tfjs-models/blob/master/coco-ssd/README.md
 - https://developer.chrome.com/docs/web-platform/screen-sharing-controls
 - https://developers.cloudflare.com/pages/configuration/headers/
+
+## XpaceOS: espejo del player y Puerta Cam — 13 septiembre 2026
+
+`Abrir gemelo · zapatillas` enlaza una ventana de XpaceOS. La entrada inversa es
+`https://www.xpaceos.com/admira-xp/?autostart=xtanco&virtualPlayer=xtore-virtual-zapatillas`.
+Se comparte con esa ventana la reproducción de esta instancia y únicamente el
+recorte Puerta Cam durante el análisis. En el flujo enlazado el iPad es opcional;
+siempre se exige compartir una pestaña y confirmar el recorte de cámara.
+
+No hay un segundo motor de selección: pared y escaparate siguen pieza, posición,
+pausa y retorno a base del interior. La prueba manual de bici también se refleja,
+pero no se presenta como detección de tráfico. El vídeo de la cámara es efímero,
+local entre ventanas, sin upload ni storage; H utiliza el previo modificado.
+Las protecciones anteriores del iframe se conservan (origen opaco y puente
+limitado); la nueva telemetría de espejo solo sale a su padre exacto.
+
+El gemelo verifica origen, WindowProxy, token de sesión y secuencia; las señales
+caducan aunque el origen deje de responder. No crea hardware ni proof-of-play.
+El enlace funciona en esta sesión de navegador, no como bus entre dispositivos.
+Mantener visibles las dos ventanas para el análisis. No se ha automatizado ni
+eludido el selector de pestaña de Chrome.

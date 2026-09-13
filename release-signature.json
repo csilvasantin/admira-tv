@@ -1,9 +1,8 @@
 {
-  "version": "v.12.09.2026.r20.22:41",
+  "version": "v.13.09.2026.r1.11:26",
   "signature": "Codex · MacBookAir16plata",
-  "agent": "Codex",
   "machine": "MacBookAir16plata",
-  "day": "12.09.2026",
-  "time": "22:41",
-  "evidence": "El modo local o sincronizado del player virtual evita el arranque automático de cámara heredado de iOS beta 2. 24 pruebas superadas. Beta 1.0(2) instalada y persistencia y reproducción Alcampo verificadas en iPhone 17 Pro Max."
+  "agent": "Codex",
+  "deployer": "Codex",
+  "evidence": "Espejo Xtore de player y Puerta Cam en XpaceOS; pruebas de protocolo y regresión, QA de playlist y cambio condicional en navegador."
 }

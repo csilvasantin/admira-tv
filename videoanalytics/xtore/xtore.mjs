@@ -1,3 +1,4 @@
+import {installXpaceLink} from './xpace-link.mjs';
 import {CLASSES, SNAPSHOT_TTL, PRESENCE_GRACE, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
 import {CutoutJob} from './cutouts.mjs';
 import {installTwinUI} from './twin-ui.mjs';
@@ -65,7 +66,8 @@ $('forget-preset').addEventListener('click',()=>{
 });
 presetStatus();
 const twins=installTwinUI({document,onOriginalRemoved:()=>clearCapture('Original temporal retirado')});
-const signage=installSignageUI({document,window});
+const xpace=installXpaceLink({document,window});
+const signage=installSignageUI({document,window,onMirror:state=>xpace.media(state),onStop:()=>xpace.stop()});
 const history=installHistoryUI({document});
 const cleanStreet=installCleanStreetUI({document,onToggle:enabled=>{
   clearCapture();
@@ -86,16 +88,16 @@ function controls(){
   const connected=!!stream;
   $('connect').disabled=connected||busy;
   $('stop').disabled=!connected;
-  $('hide-people').disabled=!connected||!roiReady||!tabletReady||!!calibration;
+  $('hide-people').disabled=!connected||!roiReady||(!tabletReady&&!xpace.cameraOnly)||!!calibration;
   $('add-scooter').disabled=!connected;
   for(const id of ['set-roi','set-tablet','set-signage','edit-coordinates'])$(id).disabled=!connected;
   // Playback owns its browser instance, independently of the captured video.
   signage.setAnalysis(analyzing&&!calibration&&!document.hidden,!analysisRequested&&!calibration);
   signage.setEligible(!document.hidden);
   layout();
-  $('analyze').disabled=!connected||!roiReady||!tabletReady||!!calibration||(busy&&!analysisRequested);
+  $('analyze').disabled=!connected||!roiReady||(!tabletReady&&!xpace.cameraOnly)||!!calibration||(busy&&!analysisRequested);
   $('analyze').textContent=analysisRequested?'Pausar análisis':'Iniciar análisis';
-  $('analysis-health').textContent=analyzing?'Analizando Puerta Cam':suspendedReason?'Esperando vídeo · reanudación automática':analysisRequested?'Preparando detector…':!connected?'Cámara sin conectar':!roiReady||!tabletReady?'Completa cámara e iPad':'Análisis en pausa';
+  $('analysis-health').textContent=analyzing?'Analizando Puerta Cam':suspendedReason?'Esperando vídeo · reanudación automática':analysisRequested?'Preparando detector…':!connected?'Cámara sin conectar':!roiReady||(!tabletReady&&!xpace.cameraOnly)?(xpace.cameraOnly?'Marca la cámara del escaparate':'Completa cámara e iPad'):'Análisis en pausa';
   $('connection').textContent=analyzing?'Analizando':connected?'Pestaña conectada':'Cámara sin conectar';
   $('connection').classList.toggle('live',analyzing);
 }
@@ -117,6 +119,7 @@ function clearCapture(message='Sin capturas'){
   if(!cleanStreet.enabled)tabletIdle(analyzing?'Esperando un paso':'Análisis en pausa');
 }
 function pause(message){
+  xpace.cameraOff();
   // Pausing detection returns to the normal loop; it is not a screen power-off.
   analysisRequested=false;suspendedReason=null;clearTimeout(recoveryTimer);recoveryTimer=0;
   twins.cancelOriginal();
@@ -135,7 +138,7 @@ function scheduleRecovery(){
         .catch(()=>{if(stream===source&&analysisRequested)status('Esperando que el navegador reanude el vídeo compartido. Puedes pausar o reconectar si la fuente no vuelve.');})
         .finally(()=>{if(sourcePlayPending===request)sourcePlayPending=null;});
     }
-    if(!document.hidden&&!sourceMuted&&!busy&&!inferences&&!calibration&&roiReady&&tabletReady&&scene.readyState>=2&&scene.currentTime!==recoveryVideoTime){
+    if(!document.hidden&&!sourceMuted&&!busy&&!inferences&&!calibration&&roiReady&&(tabletReady||xpace.cameraOnly)&&scene.readyState>=2&&scene.currentTime!==recoveryVideoTime){
       // A fresh frame in the same authorized source is required. Never infer
       // on the last frozen frame or silently acquire another capture source.
       void startAnalysis(true);
@@ -201,7 +204,7 @@ $('connect').addEventListener('click',async()=>{
     passages.reset();renderCounts();
     $('empty-scene').hidden=true;
     updateSourceSize();
-    status(roiReady&&tabletReady?'Preset cargado. Comprueba que cámara, iPad y DS coinciden con la vista; pulsa Iniciar análisis cuando quieras.':'Pestaña conectada. Comprueba que es la Xtore y marca las superficies pendientes. No se analiza todavía.');
+    status(roiReady&&(tabletReady||xpace.cameraOnly)?'Preset cargado. Comprueba que cámara, iPad y DS coinciden con la vista; pulsa Iniciar análisis cuando quieras.':'Pestaña conectada. Comprueba que es la Xtore y marca las superficies pendientes. No se analiza todavía.');
   }catch(error){
     if(stream)disconnect();
     status(error.name==='NotAllowedError'?'No se ha concedido permiso para compartir. Puedes volver a intentarlo.':`No se pudo compartir la pestaña (${error.name||'error del navegador'}).`);
@@ -278,7 +281,7 @@ function finishCalibration(){
   calibrationDimensions||=[...sourceDimensions];
   calibration=null;points=[];stage.classList.remove('calibrating');$('markers').replaceChildren();
   $('calibration-status').textContent=`Cámara: ${roiReady?'marcada':'pendiente'} · iPad: ${tabletReady?'marcado':'pendiente'} · cartelería: ${signageReady?'marcada':'opcional, pendiente'}`;
-  layout();controls();status(roiReady&&tabletReady?'Encuadre listo. Pulsa Iniciar análisis. Si giras o acercas el gemelo, pausa y vuelve a marcar.':'Marca también la otra zona antes de iniciar el análisis.');
+  layout();controls();status(roiReady&&(tabletReady||xpace.cameraOnly)?'Encuadre listo. Pulsa Iniciar análisis. Si giras o acercas el gemelo, pausa y vuelve a marcar.':'Marca también la otra zona antes de iniciar el análisis.');
   savePreset();
 }
 const coordinateNames=['Cámara: izquierda','Cámara: arriba','Cámara: ancho','Cámara: alto','iPad: sup. izq. X','iPad: sup. izq. Y','iPad: sup. der. X','iPad: sup. der. Y','iPad: inf. der. X','iPad: inf. der. Y','iPad: inf. izq. X','iPad: inf. izq. Y'];
@@ -337,7 +340,7 @@ async function prepareModel(){
 }
 $('prepare-model').addEventListener('click',()=>{prepareModel().catch(()=>{});});
 async function startAnalysis(recovering=false){
-  if(!stream||!roiReady||!tabletReady||calibration)return;
+  if(!stream||!roiReady||(!tabletReady&&!xpace.cameraOnly)||calibration)return;
   if(recovering&&(!analysisRequested||!suspendedReason))return;
   analysisRequested=true;
   if(document.hidden||sourceMuted){suspendAnalysis('source','Esperando que la vista y Puerta Cam estén disponibles. Se reanudará automáticamente.');return;}
@@ -385,6 +388,7 @@ async function loop(token){
     }
     const visible=tracker.visible(performance.now());
     trackingOverlay.render(visible);signage.presence(visible);
+    void xpace.camera(cleanStreet.enabled?$('clean-preview'):frame,visible,performance.now()-lastFrameAt);
   }catch{
     if(token!==generation||!analyzing)return;
     pause('El detector ha fallado. La captura se ha borrado; revisa la fuente y vuelve a iniciar.');return;

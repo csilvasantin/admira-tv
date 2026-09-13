@@ -52,9 +52,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=12.09.2026.r20.2241"></script>
+<script src="xpl-runtime.js?v=13.09.2026.r1.1126"></script>
 <script>
-  window.ADMIRA_VERSION='v.12.09.2026.r20.22:41';
+  window.ADMIRA_VERSION='v.13.09.2026.r1.11:26';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -388,7 +388,7 @@
   <aside id="chan"></aside>
 </div>
 
-<script src="/assets/player-pairing.js?v=12.09.2026.r20.2241"></script>
+<script src="/assets/player-pairing.js?v=13.09.2026.r1.1126"></script>
 <script>
 // Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
 // directo (pub-…r2.dev): más resiliente y evita bloqueos de DNS/filtrado en algunas
@@ -3026,6 +3026,18 @@ function emitAudienceState(lane, sex, fresh, kind){
     window.parent.postMessage({ source:'admira-tv-canal', event:'audience', lane:lane||'neutral', sex:sex||'u', kind:kind||'none', fresh:!!fresh, ts:Date.now() }, '*');
   }catch(_){}
 }
+// Read-only mirror of this exact virtual playout. Only its isolated parent receives it.
+setInterval(()=>{
+  if(!XTORE_PARENT||!xtoreMusicEnabled()||window.parent===window)return;
+  const it=_xtoreMusicItem,el=mediaEl;
+  const type=it&&KIND[it.type];
+  const ready=!!it&&!!el&&['video','audio','image'].includes(type)&&
+    (type==='image'?el.complete&&el.naturalWidth>0:el.readyState>=2);
+  const playback=ready?{id:String(it.id),url:it.url,title:it.title||'',type,
+    position:Number(el.currentTime)||0,duration:Number.isFinite(el.duration)?el.duration:0,
+    paused:!!el.paused,rate:Number(el.playbackRate)||1,loop:!!_xtoreMusicBase,ts:Date.now()}:null;
+  window.parent.postMessage({source:'admira-tv-canal',event:'mirror-state',playback},XTORE_PARENT);
+},500);
 // ── LA XPERIENCIA DICE CUÁNTO DURA ────────────────────────────────────────────
 // El canal no puede leer nada de dentro de un iframe de otro dominio, así que la
 // pieza lo ANUNCIA al cargar. Antes la duración se tecleaba a mano al dar de alta
@@ -4733,6 +4745,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=12.09.2026.r20.2241" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.09.2026.r1.1126" defer></script>
 </body>
 </html>
