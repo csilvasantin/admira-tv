@@ -1,5 +1,6 @@
 import {SignageBridge,playerURL} from './signage.mjs';
 import {PlayerDataBridge} from './player-data.mjs';
+import {PlayerAudioBridge} from './player-audio.mjs';
 import {XTORE_VIRTUAL_SCREEN} from './virtual-player.mjs';
 // FLT-100400: publica SOLO la categoría en el bus del player virtual para los equipos emparejados.
 // Mismo origen y sesión del portal; sin sesión válida el relé responde 401 y el player local sigue igual.
@@ -8,18 +9,24 @@ const LABEL={none:'Bucle general',person:'Persona',car:'Coche',motorcycle:'Moto'
 export function installSignageUI({document,window,onMirror=()=>{},onStop=()=>{}}){
   const $=id=>document.getElementById(id);
   let iframe=null,bridge=null,dataBridge=null,eligible=false,analysisEnabled=false,emissionTimer=0,emissionSeen=false,emissionDelayed=false,mediaReported=false,manuallyOff=false,failed=false;
-  let manualAllowed=true,manualTestActive=false;
+  let manualAllowed=true,manualTestActive=false,audioBridge=null,playerMuted=false,audioPending=false;
+  const audioPreference='admira.xtore.playerMuted.v1';
+  try{playerMuted=window.localStorage?.getItem(audioPreference)==='1';}catch{}
   function controls(){
     $('start-signage').disabled=!eligible||!!iframe;$('stop-signage').disabled=!iframe;
+    $('mute-signage').disabled=!eligible||!iframe||!bridge?.ready||audioPending;
+    $('mute-signage').textContent=audioPending?'Cambiando sonido…':playerMuted?'🔊 Activar sonido':'🔇 Silenciar player';
+    $('mute-signage').setAttribute('aria-pressed',String(playerMuted));
     for(const kind of ['person','car','motorcycle','bicycle','none'])$(`test-${kind}`).disabled=!eligible||!bridge?.ready||!manualAllowed;
   }
   function stop(message='Player en pausa mientras la pestaña está oculta. Al volver se reanuda la música; el análisis solo se recupera si estaba activo y vuelve vídeo válido.'){
-    onStop();clearTimeout(emissionTimer);bridge?.stop();bridge=null;dataBridge?.stop();dataBridge=null;manualTestActive=false;
+    onStop();clearTimeout(emissionTimer);bridge?.stop();bridge=null;dataBridge?.stop();dataBridge=null;audioBridge?.stop();audioBridge=null;audioPending=false;manualTestActive=false;
     if(iframe){iframe.remove();iframe=null;}
     $('signage-idle-label').textContent=failed?'Player detenido por error':manuallyOff?'Player apagado':'Player en espera';
     $('signage-idle').hidden=false;$('signage-status').textContent=message;controls();
     $('signage-media').textContent='Sin emisión activa';
     $('signage-command').textContent='Canal de órdenes cerrado';
+    $('signage-audio').textContent='';
   }
   function start(){
     if(!eligible||iframe)return;
@@ -35,9 +42,19 @@ export function installSignageUI({document,window,onMirror=()=>{},onStop=()=>{}}
       if(iframe!==loadingFrame)return;
       if(loaded){failed=true;stop('El player intentó navegar. Se ha cerrado su canal de órdenes.');return;}loaded=true;
     });
-    iframe.src=playerURL(XTORE_VIRTUAL_SCREEN,window.location?.origin);
+    const src=new URL(playerURL(XTORE_VIRTUAL_SCREEN,window.location?.origin));
+    src.searchParams.set('muted',playerMuted?'1':'0');iframe.src=src.href;
     $('signage').append(iframe);$('signage-idle').hidden=true;
     dataBridge=new PlayerDataBridge({target:iframe.contentWindow});
+    audioBridge=new PlayerAudioBridge({target:iframe.contentWindow,onState:state=>{
+      audioPending=state.pending;
+      if(typeof state.muted==='boolean'){
+        playerMuted=state.muted;
+        try{window.localStorage?.setItem(audioPreference,playerMuted?'1':'0');}catch{}
+      }
+      $('signage-audio').textContent=state.error|| (state.pending?'Aplicando cambio de sonido…':playerMuted?'Player silenciado.':'Silencio desactivado en el player.');
+      controls();
+    }});
     emissionSeen=false;emissionDelayed=false;mediaReported=false;
     // Slow media is not a dead command channel. Keep the same player alive so
     // catalogue retries can recover; only actual media may confirm playback.
@@ -79,6 +96,9 @@ export function installSignageUI({document,window,onMirror=()=>{},onStop=()=>{}}
   }
   $('start-signage').addEventListener('click',()=>{manuallyOff=false;failed=false;start();});
   $('stop-signage').addEventListener('click',()=>{manuallyOff=true;stop('Player apagado manualmente. Pulsa Reanudar bucle para volver.');});
+  $('mute-signage').addEventListener('click',()=>{
+    if(eligible&&iframe&&bridge?.ready&&!audioPending)audioBridge?.setMuted(!playerMuted);
+  });
   for(const kind of ['person','car','motorcycle','bicycle','none'])$(`test-${kind}`).addEventListener('click',()=>{
     if(!eligible||!bridge?.ready||!manualAllowed||document.hidden)return;
     manualTestActive=kind!=='none';
@@ -87,7 +107,7 @@ export function installSignageUI({document,window,onMirror=()=>{},onStop=()=>{}}
   });
   window.addEventListener('message',event=>{
     if(iframe&&event.source===iframe.contentWindow&&event.origin==='null'&&event.data?.source==='admira-tv-canal'&&event.data.event==='mirror-state')onMirror(event.data.playback);
-    bridge?.receive(event);void dataBridge?.receive(event);
+    bridge?.receive(event);audioBridge?.receive(event);void dataBridge?.receive(event);
   });
   controls();
   return {

@@ -807,6 +807,9 @@ function applyAudio(){
   try{ localInfoAudioPaint(); }catch(_){}
   try{ localInfoRemoteRender(); }catch(_){}
   pushAudioStateSoon();
+  // Report the element's effective mute/volume after every local or remote control.
+  // This acknowledges audio configuration, not successful autoplay or speaker output.
+  try{ if(XTORE_PARENT)window.parent.postMessage({source:'admira-tv-canal',event:'audio-state',...localInfoRemoteAudio()},XTORE_PARENT); }catch(_){}
 }
 function setAudio(on, level){
   muted=!on;
@@ -3018,7 +3021,7 @@ function bridgeOriginAllowed(origin){
     || /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin || '');
 }
 function bridgeReply(event, ok, message){
-  try{ event.source.postMessage({ source:'admira-tv-canal', requestId:event.data&&event.data.requestId, ok, message }, event.origin); }catch(_){}
+  try{ event.source.postMessage({ source:'admira-tv-canal', requestId:event.data&&event.data.requestId, ok, message, ...(XTORE_PARENT?{audio:localInfoRemoteAudio()}:{}) }, event.origin); }catch(_){}
 }
 function emitFrameState(it,phase='selected'){
   try{

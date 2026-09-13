@@ -110,3 +110,26 @@ test('manual tests cannot cross into requested analysis or its temporary recover
   f.get('test-person').listeners.click();assert.equal(frame.sent.length,recovering);
   f.ui.setAnalysis(false,true);assert.equal(f.get('test-person').disabled,false);
 });
+test('sidebar mute leaves the same player and audience active, follows internal sound controls and survives restart',t=>{
+  const f=fixture(t),frame=f.frame();
+  assert.equal(f.get('mute-signage').disabled,true);f.ack();f.ui.setAnalysis(true);
+  assert.equal(f.get('mute-signage').disabled,false);
+  f.get('mute-signage').listeners.click();const audioRequest=frame.sent.at(-1).requestId;
+  assert.equal(frame.sent.at(-1).command,'audiooff');assert.equal(f.get('mute-signage').disabled,true);
+  f.ui.passage([{class:'car'}]);assert.equal(frame.sent.at(-1).command,'admiratv audiencia coche');f.ack();
+  f.emit({requestId:audioRequest,ok:true,audio:{muted:true,volume:1}});
+  assert.equal(f.frame(),frame);assert.equal(f.get('mute-signage')['aria-pressed'],'true');
+  assert.match(f.get('mute-signage').textContent,/Activar sonido/);
+  f.emit({event:'media-state',id:'new-piece',mode:'conditional',phase:'playing',muted:true,volume:1});
+  assert.equal(f.get('mute-signage')['aria-pressed'],'true');
+  f.ui.setEligible(false);f.ui.setEligible(true);
+  assert.equal(new URL(f.frame().src).searchParams.get('muted'),'1');f.ack();
+  f.emit({event:'audio-state',muted:false,volume:0.6});
+  assert.match(f.get('mute-signage').textContent,/Silenciar player/);assert.equal(f.get('mute-signage')['aria-pressed'],'false');
+  f.emit({event:'audio-state',muted:true,volume:1},frame);assert.equal(f.get('mute-signage')['aria-pressed'],'false');
+});
+test('unconfirmed sound command shows a retry without stopping or falsely muting the player',t=>{
+  const f=fixture(t),frame=f.frame();f.ack();f.get('mute-signage').listeners.click();
+  t.mock.timers.tick(2501);assert.equal(f.frame(),frame);assert.equal(f.get('mute-signage').disabled,false);
+  assert.equal(f.get('mute-signage')['aria-pressed'],'false');assert.match(f.get('signage-audio').textContent,/Sin confirmación/);
+});
