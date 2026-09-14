@@ -1,10 +1,10 @@
 {
-  "version": "v.13.09.2026.r20.16:06",
-  "signature": "Codex · MacBookAir16plata",
-  "machine": "MacBookAir16plata",
-  "agent": "Codex",
-  "deployer": "Codex",
-  "evidence": "Arranque de cámara y análisis desde un botón: selector nativo, recuperación del preset e inicio automático con encuadre compatible. Conexión manual en desplegable. 62 pruebas de ciclo de vida y presets aprobadas; barra y opciones comprobadas en navegador independiente, sin interrumpir captura activa.",
-  "day": "13.09.2026",
-  "time": "16:06"
+  "version": "v.14.09.2026.r1.11:51",
+  "signature": "TrinityMBP14 · MacBookProNegro14",
+  "machine": "MacBookProNegro14",
+  "agent": "TrinityMBP14",
+  "deployer": "TrinityMBP14",
+  "evidence": "DCL-d35d57ad72c6b528c2cb0a87 · Android USB, MCP player_info Android, Help y minitutorial",
+  "day": "14.09.2026",
+  "time": "11:51"
 }

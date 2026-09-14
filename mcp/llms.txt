@@ -6,7 +6,11 @@
 > además, admira.tv se coordina con CIRCUITOS EXTERNOS y viceversa: pedimos antena en sus
 > pantallas y ellos nos la ofrecen en las nuestras, con las mismas herramientas a los dos lados.
 > Y el PLAYER CONDICIONADO (Xtore): un tótem sin cámara emite su playlist y, cuando alguien pasa
-> por la Puerta Cam, el anuncio de su sexo o tipología (persona/coche/moto/bici) en < 2 s.
+> por la Puerta Cam, contenido por las categorías de su productor; Zapatillas solo persona/coche/moto/bici, sin sexo/edad.
+
+Manual Android exhaustivo: https://admira.tv/mcp/android-player.md
+MCP player_info {platform:"android",section:"all"}; omitir platform conserva macOS.
+No existen tools player_install/player_resume/player_screenshot: instalación por ADB, mando con sesión autorizada.
 
 Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y del CMS)
 
@@ -16,7 +20,7 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
   resize proporcional suspenden; cada 500 ms se comprueba vista visible, misma fuente sin
   mute, fotograma nuevo, marcas válidas y ninguna inferencia pendiente. Pausa manual,
   desconexión, recalibración, formato incompatible o fallo del detector cancelan la intención.
-  No infiere en segundo plano ni obtiene nuevos permisos; reintenta play de la fuente existente.
+  Puede inferir oculto con gemelo XpaceOS autorizado y latidos frescos; sin enlace se suspende. No obtiene nuevos permisos; reintenta play de la fuente existente.
 - Matriz local exclusiva xtore-virtual-zapatillas: persona = Berlin / Take My Breath Away
   (Top Gun), asset 1786533143983-n2y09e; coche/moto = Huey Lewis & The News /
   The Power of Love (Regreso al Futuro), asset 1786532932584-a1412h. Bici = Pixeria #998,
@@ -57,7 +61,7 @@ Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y d
 - Preset de cámara/iPad/DS: autoguardado tras cada marcación válida en localStorage
   admira.xtore.zapatillas.calibration.v1 (geometría, dimensiones y fecha; 4096 caracteres).
   Se restaura después de compartir una fuente de proporción compatible (tolerancia 0,5 %
-  sobre referencia fija), nunca concede permisos ni inicia análisis. Parciales admitidos.
+  sobre referencia fija), nunca concede permisos; el botón Arrancar cámara y análisis inicia con preset compatible y Compartir sin analizar mantiene inicio manual. Parciales admitidos.
   Local a navegador/origen, sin sincronización entre equipos, imágenes ni credenciales.
   Formato distinto exige remarcar; giros/zoom de igual proporción requieren revisión humana.
   Olvidar preset no borra contadores/histórico. Un fallo de guardado mantiene el anterior.

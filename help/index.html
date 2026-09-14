@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=13.09.2026.r20.1606"></script>
+<script src="/auth-gate.js?v=14.09.2026.r1.1151"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,16 +32,17 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=13.09.2026.r20.1606">
+  <link rel="stylesheet" href="/admira-frame.css?v=14.09.2026.r1.1151">
 </head>
 <body>
-<script src="/admira-nav.js?v=13.09.2026.r20.1606" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=13.09.2026.r20.1606" defer></script>
+<script src="/admira-nav.js?v=14.09.2026.r1.1151" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=14.09.2026.r1.1151" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
 
   <nav class="toc">
+    <a href="#android-player">Player Android / Samsung Fold</a>
     <a href="#concepto">Concepto</a><a href="#vistas">Vistas</a><a href="#dispositivos">Dispositivos</a>
     <a href="#ocupacion">Ocupación</a><a href="#editar">Editar</a><a href="#vender">Vender cuñas</a>
     <a href="#ventas">Informe de ventas</a><a href="#real">Planificado vs real</a><a href="#segmentar">Segmentación</a><a href="#xtore">Player condicionado Xtore</a>
@@ -49,6 +50,19 @@
     <a href="#clonar">Clonar</a><a href="#gcal">Google Calendar</a><a href="#alertas">Alertas</a><a href="#auto">Automatización</a>
     <a href="#apps">Apps de la lanzadera</a><a href="#enlaces">Enlaces</a>
   </nav>
+
+  <section id="android-player"><h2>Player Android · Samsung Fold</h2>
+<p><a href="/help/tutorials/player-android-usb-mcp.mp4">Ver minitutorial de instalación y MCP</a> · 15 s, guía animada creada con ADmira Motion; no es una grabación del teléfono.</p>
+    <p>El player oficial es <b>tv.admira.signage</b>. El APK y el canal web se actualizan por separado. <a href="/player/android-release.json">Última versión distribuida</a> · <a href="/player/admira-player.apk">Descargar APK</a> · <a href="/mcp/android-player.md">Manual técnico completo</a>.</p>
+    <ol><li><b>Instalar:</b> conecta el equipo por USB y autoriza ADB. Identifica el serial y la app; comprueba el hash del APK contra su manifiesto e instala con <code>adb -s SERIAL install -r admira-player.apk</code>. Esto conserva configuración y datos.</li>
+    <li><b>Abrir y comprobar:</b> inicia AdmiraNeXT y toca dos veces el contenido para abrir su ficha. Revisa Pantalla, estado, pieza y audio. Cinco toques rápidos en la esquina superior izquierda cierran el kiosko para mantenimiento.</li>
+    <li><b>Si ves solo fondo:</b> puede estar en standby. En el <a href="/remotecontrol/">mando autorizado</a>, selecciona la pantalla exacta y reanuda. Confirma que avanza el vídeo; un acuse no prueba reproducción. Si falta contenido, revisa playlist y filtros.</li>
+    <li><b>Conectar a Zapatillas:</b> el agente empareja el ID físico con <code>xtore-virtual-zapatillas</code>. En el ordenador, abre Puerta Cam y pulsa «Arrancar cámara y análisis». Selecciona la pestaña y comprueba el encuadre. El teléfono sigue categorías; no necesita abrir su cámara.</li>
+    <li><b>Verificar:</b> persona → Top Gun; coche/moto → The Power of Love; bici → Pixeria #998 desde la mitad; ausencia → base. Primero prueba el contenido, después detecciones reales, retorno y recuperación. La precisión en calle necesita evaluación.</li></ol>
+    <p><b>Sonido:</b> mute y volumen del player, volumen multimedia de Android y salida Bluetooth son controles diferentes. En plegables, verificar por separado pantalla interior, exterior y orientación. No se ha certificado el plegado físico por instalar el APK.</p>
+    <p class="note">No desinstales para solucionar una firma incompatible. Las apps com.admira.signage y com.admira.signage.preview son variantes distintas. La reinstalación r16 del 14/09/2026 fue correcta; el equipo conservaba standby. La guía distingue instalación, conexión y reproducción.</p>
+    <p>Para agentes: <code>player_info {"platform":"android","section":"all"}</code>. <a href="/mcp/#android-player">Contratos MCP</a>.</p>
+  </section>
 
   <section id="concepto"><h2>Concepto</h2>
     <p>Cada <b>Xpacio</b> (tienda/gemelo digital) tiene varios <b>dispositivos</b>: pantallas DOOH y un <span class="pill">🎵 Hilo Musical</span>. Cada dispositivo emite un bucle por <b>franja</b> del día (<code>Mañana</code> · <code>Mediodía</code> · <code>Tarde</code> · <code>Noche</code>). El contenido puede ser <b>propio</b> (own) o <b>vendido</b> (cuñas/spots de anunciantes); las franjas sin programar emiten el loop de <b>Stock</b> genérico.</p>
@@ -120,7 +134,7 @@
 
   <section id="xtore"><h2>👁️ Player condicionado Xtore</h2>
     <p class="note">El piloto del bus remoto descrito debajo (<code>xtanco-totem</code>) es distinto del <a href="#player-virtual">player virtual del analizador de zapatillas</a> (<code>xtore-virtual-zapatillas</code>). Este último no infiere sexo ni edad: usa presencia fresca de 1,5 s, cola musical automática de vehículos de 2 s adicionales y respaldo/manual de 6 s. No se debe dar de alta como hardware ni mezclar sus plazos con el bus físico.</p>
-    <p>Un tótem <b>sin cámara</b> que cambia de anuncio según quién pasa por delante. Sin nadie → emite su <b>playlist normal</b>. Alguien delante → el anuncio de su sexo (hombre / mujer / persona) o de su tipología (coche / moto / bici). Cuando se va, vuelve a la playlist en 2 segundos. Piloto: tótem <code>xtanco-totem</code> de Xtore Valencia.</p>
+    <p>Un tótem <b>sin cámara</b> que cambia de anuncio según quién pasa por delante. Sin nadie → emite su <b>playlist normal</b>. Alguien delante → contenido según las categorías disponibles del productor y las reglas del destino. El analizador local de Zapatillas detecta persona/coche/moto/bici, sin sexo ni edad. La vuelta a base depende de los temporizadores de presencia y del bus, que son distintos. Piloto: tótem <code>xtanco-totem</code> de Xtore Valencia.</p>
     <p><b>Cómo se usa, en 3 pasos:</b></p>
     <ul>
       <li><b>1. Abre el panel de analítica</b>: <a href="/videoanalytics/xtore/">admira.tv/videoanalytics/xtore</a>. Comparte la pestaña de la Puerta Cam (a) elige la pestaña, b) marca el recuadro de la cámara, c) confirma las 4 esquinas). Desde ese momento el panel ve pasar personas, coches, motos y bicis y se lo cuenta al tótem. El vídeo <b>no sale</b> de tu navegador.</li>

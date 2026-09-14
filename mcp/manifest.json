@@ -1,8 +1,8 @@
 {
   "name": "admira-tv",
   "title": "Admira TV · admira.tv — la capa Emitir de la suite AdmiraNeXT",
-  "description": "Hub MCP de admira.tv: emisión, federación, player condicionado y registro de players virtuales (navegador sin hardware dedicado). Servidor mcp-tv.admira.store v2.3.0; el descriptor raíz publica la lista vigente de herramientas. Alta no equivale a presencia ni a proof-of-play.",
-  "version": "v.12.09.2026.r7.13:36",
+  "description": "Hub MCP de admira.tv: emisión, proof-of-play, federación, players virtuales, pairing y documentación nativa Android/macOS. Consultar el descriptor vivo para herramientas y versión.",
+  "version": "v.14.09.2026.r1.11:51",
   "site": "https://admira.tv",
   "hub": "https://admira.tv/mcp/",
   "llms_txt": "https://admira.tv/mcp/llms.txt",
@@ -55,7 +55,25 @@
       },
       {
         "name": "player_info",
-        "desc": "Documentación del player nativo: qué es, kiosko desatendido, versiones, instalación y configuración."
+        "desc": "Documentación nativa: platform macos (por defecto) o android; section all/overview/features/releases/install/config y controls/conditional/diagnostics para Android.",
+        "arguments": {
+          "platform": [
+            "macos",
+            "android"
+          ],
+          "section": [
+            "all",
+            "overview",
+            "features",
+            "releases",
+            "install",
+            "config",
+            "controls",
+            "conditional",
+            "diagnostics"
+          ]
+        },
+        "notes": "macos por defecto; las tres últimas secciones son Android. Lectura documental."
       },
       {
         "name": "player_xtore_map",
@@ -125,7 +143,7 @@
         }
       }
     },
-    "version": "2.3.0",
+    "version": "2.3.1",
     "resources": [
       "admiratv://federacion",
       "admiratv://llms.txt"
@@ -154,22 +172,71 @@
       "help": "https://admira.tv/help/#player-virtual",
       "mission": "DCL-f9824e3bba6cee600b73810d",
       "registration_is_not_presence": true,
-      "local_documentation": {"mcp_version": "0.2.11", "help_revision": "2026-09-12.9", "live_status": false},
-      "local_person_hiding": {"control": "Botón H o tecla H con foco en analizador y fuera de campos", "scope": "Previo ROI e iPad en directo; transformación temporal/reversible local", "background": "Regiones despejadas con tres frames estables; cajas de persona dilatadas; fondo desconocido cubierto con trama y rótulo, no generado", "detector": "Cuenta y decide sobre original", "original_capture": "H oculta el original de Capturas; recortes/Twins son flujos independientes", "freshness_ms": 1500, "clear": "Pausa, ocultación, reencuadre o desconexión", "storage": "Memoria volátil; sin IA externa", "limitations": "No anonimización garantizada, identidad, grabación ni evidencia de seguridad", "mission": "DCL-b7723cea465ac94cb685d1de", "publication": "Incluida en v.12.09.2026.r15.15:52; contrato de implementación, no estado en vivo"},
+      "local_documentation": {
+        "mcp_version": "0.2.11",
+        "help_revision": "2026-09-12.9",
+        "live_status": false
+      },
+      "local_person_hiding": {
+        "control": "Botón H o tecla H con foco en analizador y fuera de campos",
+        "scope": "Previo ROI modificado; iPad conserva original con cajas; transformación local temporal",
+        "background": "Regiones despejadas con tres frames estables; cajas de persona dilatadas; fondo desconocido cubierto con trama y rótulo, no generado",
+        "detector": "Cuenta y decide sobre original",
+        "original_capture": "H oculta el original de Capturas; recortes/Twins son flujos independientes",
+        "freshness_ms": 1500,
+        "clear": "Pausa, ocultación, reencuadre o desconexión",
+        "storage": "Memoria volátil; sin IA externa",
+        "limitations": "No anonimización garantizada, identidad, grabación ni evidencia de seguridad",
+        "mission": "DCL-b7723cea465ac94cb685d1de",
+        "publication": "Incluida en v.12.09.2026.r15.15:52; contrato de implementación, no estado en vivo"
+      },
       "analysis_recovery": {
         "scope": "UI local; no herramienta MCP ni permiso de captura",
-        "temporary": ["vista oculta", "mute de fuente", "más de 3 s sin fotogramas", "resize proporcional"],
+        "temporary": [
+          "vista oculta",
+          "mute de fuente",
+          "más de 3 s sin fotogramas",
+          "resize proporcional"
+        ],
         "resume": "Comprobación cada 500 ms: intención activa, vista visible, misma fuente sin mute, fotograma nuevo, marcas válidas y ninguna inferencia pendiente",
-        "hard_stop": ["pausa manual", "desconexión", "recalibración", "formato incompatible", "error del detector"],
-        "background_inference": false,
+        "hard_stop": [
+          "pausa manual",
+          "desconexión",
+          "recalibración",
+          "formato incompatible",
+          "error del detector"
+        ],
+        "background_inference": "Solo con gemelo XpaceOS enlazado y latidos frescos",
         "reacquire_capture": false
       },
       "conditional_music": {
         "source": "Matriz local empaquetada; solo xtore-virtual-zapatillas; sin mutar reglas globales o playlist",
-        "assets": {"person": "1786533143983-n2y09e", "car": "1786532932584-a1412h", "motorcycle": "1786532932584-a1412h", "bicycle": "1789214248874-j6qqjo"},
-        "titles": {"person": "Berlin — Take My Breath Away (Top Gun)", "car": "Huey Lewis & The News — The Power of Love (Regreso al Futuro)", "motorcycle": "Huey Lewis & The News — The Power of Love (Regreso al Futuro)", "bicycle": "AZUL Y NEGRO - Me estoy volviendo loco"},
-        "bicycle_asset": {"pixeria_number": 998, "type": "video", "observed_url": "https://stock.admira.store/stock/1789214248874-j6qqjo/asset.mp4?v=8878237"},
-        "bicycle_start": {"ratio": 0.5, "duration": "Duración real del medio, no duración editorial", "apply": "Cada nueva activación o repetición; posicionar antes de reproducir", "renewal": "Misma presencia no reinicia ni vuelve a buscar la mitad", "scope": "Solo condicional bicicleta del perfil xtore-virtual-zapatillas; no playlist base ni otras pantallas", "metadata_timeout_ms": 10000, "fallback": "Sin duración válida en 10 s o seek fallido: permitir reproducción desde inicio con aviso en consola; no garantiza la mitad ni evita autoplay"},
+        "assets": {
+          "person": "1786533143983-n2y09e",
+          "car": "1786532932584-a1412h",
+          "motorcycle": "1786532932584-a1412h",
+          "bicycle": "1789214248874-j6qqjo"
+        },
+        "titles": {
+          "person": "Berlin — Take My Breath Away (Top Gun)",
+          "car": "Huey Lewis & The News — The Power of Love (Regreso al Futuro)",
+          "motorcycle": "Huey Lewis & The News — The Power of Love (Regreso al Futuro)",
+          "bicycle": "AZUL Y NEGRO - Me estoy volviendo loco"
+        },
+        "bicycle_asset": {
+          "pixeria_number": 998,
+          "type": "video",
+          "observed_url": "https://stock.admira.store/stock/1789214248874-j6qqjo/asset.mp4?v=8878237"
+        },
+        "bicycle_start": {
+          "ratio": 0.5,
+          "duration": "Duración real del medio, no duración editorial",
+          "apply": "Cada nueva activación o repetición; posicionar antes de reproducir",
+          "renewal": "Misma presencia no reinicia ni vuelve a buscar la mitad",
+          "scope": "Solo condicional bicicleta del perfil xtore-virtual-zapatillas; no playlist base ni otras pantallas",
+          "metadata_timeout_ms": 10000,
+          "fallback": "Sin duración válida en 10 s o seek fallido: permitir reproducción desde inicio con aviso en consola; no garantiza la mitad ni evita autoplay"
+        },
         "cyclist_counts": "Persona y bicicleta conservan sus pasos independientes cuando ambas se confirman; bici gana la selección musical, sin restar personas ni inferir identidad",
         "sex_age_inference": false,
         "ttl_ms": 6000,
@@ -184,7 +251,11 @@
       "visual_presence": {
         "scope": "Solo analizador local y player virtual xtore-virtual-zapatillas; no herramienta MCP ni bus físico",
         "mission": "DCL-ea4f046ffd30919c4c705137",
-        "confirmation": {"strong_frames": 2, "low_confidence_bicycle_frames": 3, "stationary_allowed": true},
+        "confirmation": {
+          "strong_frames": 2,
+          "low_confidence_bicycle_frames": 3,
+          "stationary_allowed": true
+        },
         "freshness_ms": 1500,
         "freshness": "Último fotograma y última evidencia fuerte menores de 1,5 s; edad desde captura, no desde final de inferencia",
         "association_memory_max_ms": 8000,
@@ -192,16 +263,42 @@
         "weak_observations": "Continuidad breve, nunca presencia indefinida; tras un hueco se reconfirma sin duplicar el paso ya contado",
         "refresh_ms": 1000,
         "refresh": "La misma selección conserva nodo y currentTime; ACK pendiente de la misma categoría conserva requestId y watchdog",
-        "priority": ["bicycle", "motorcycle", "car", "person"],
+        "priority": [
+          "bicycle",
+          "motorcycle",
+          "car",
+          "person"
+        ],
         "absence": "Presencia/cajas caducan a 1,5 s; persona sin cola. Coche/moto/bici conservan solo contenido 2 s más; prioridad intacta y salida a otra categoría vigente o neutral. Pausa/desconexión cancelan inmediatamente",
-        "vehicle_exit_tail": {"categories": ["bicycle", "motorcycle", "car"], "extra_ms": 2000, "total_from_strong_frame_ms": 3500, "renewal": "Solo evidencia fuerte nueva; repetir objetos o sello observedAt no extiende cola", "visual_presence": false, "manual_test_ms": 6000, "child_ttl_ms": 6000, "mission": "DCL-b7723cea465ac94cb685d1de", "publication": "Incluida en v.12.09.2026.r15.15:52; contrato de implementación, no estado en vivo"},
+        "vehicle_exit_tail": {
+          "categories": [
+            "bicycle",
+            "motorcycle",
+            "car"
+          ],
+          "extra_ms": 2000,
+          "total_from_strong_frame_ms": 3500,
+          "renewal": "Solo evidencia fuerte nueva; repetir objetos o sello observedAt no extiende cola",
+          "visual_presence": false,
+          "manual_test_ms": 6000,
+          "child_ttl_ms": 6000,
+          "mission": "DCL-b7723cea465ac94cb685d1de",
+          "publication": "Incluida en v.12.09.2026.r15.15:52; contrato de implementación, no estado en vivo"
+        },
         "transport_ttl_ms": 6000,
         "child_expiry_check_ms": 2000,
         "manual_test_ttl_ms": 6000,
         "passage_counts": "Continuidad más desplazamiento, una vez por track asociado; presencia quieta no suma pasos ni genera capturas",
         "ordinary_capture_ttl_ms": 6000,
         "presence_renews_capture": false,
-        "overlay": {"surface": "ROI Puerta Cam", "labels": "Clase y #ID local; colores estables por trayectoria, sin identidad ni reidentificación", "dense_labels": "Se distribuyen sin solaparse; si no caben se oculta texto, no el rectángulo", "persistence": false, "clear": "Caducidad, pausa, ocultación, desconexión o recalibración", "player_payload": "Solo categoría; sin IDs, geometría, colores, imágenes, sexo ni edad"},
+        "overlay": {
+          "surface": "ROI Puerta Cam",
+          "labels": "Clase y #ID local; colores estables por trayectoria, sin identidad ni reidentificación",
+          "dense_labels": "Se distribuyen sin solaparse; si no caben se oculta texto, no el rectángulo",
+          "persistence": false,
+          "clear": "Caducidad, pausa, ocultación, desconexión o recalibración",
+          "player_payload": "Solo categoría; sin IDs, geometría, colores, imágenes, sexo ni edad"
+        },
         "scooter": "Solo contador manual; no presencia, overlay automático ni comando musical"
       },
       "calibration_preset": {
@@ -209,10 +306,17 @@
         "storage": "localStorage por navegador y origen; sin sincronización entre equipos",
         "key": "admira.xtore.zapatillas.calibration.v1",
         "max_characters": 4096,
-        "fields": ["version", "savedAt", "source", "roi", "tablet", "signage"],
+        "fields": [
+          "version",
+          "savedAt",
+          "source",
+          "roi",
+          "tablet",
+          "signage"
+        ],
         "save": "Automático al terminar cada marcación válida; admite superficies parciales",
         "restore": "Último preset tras permiso de compartir y dimensiones válidas; proporción compatible con tolerancia 0.5% sobre referencia fija",
-        "auto_start_analysis": false,
+        "auto_start_analysis": "Arrancar cámara y análisis: sí con preset compatible; Compartir sin analizar: no",
         "images_or_credentials": false,
         "limits": "No reconoce giro o zoom del gemelo; comprobar vista y remarcar. Formato incompatible exige nuevas marcas sin borrar preset",
         "forget": "Solo elimina la clave propia; no modifica encuadre activo, contadores ni histórico"
@@ -220,14 +324,26 @@
       "local_remote": {
         "scope": "Acciones musicales solo en el perfil exacto Xtore, previo e integrado; cierre, arrastre y ecualizador comunes al player. No es una herramienta MCP invocable",
         "open": "Doble toque o Ctrl+I en el player: Contenido en antena",
-        "controls": ["previous", "next", "mute", "repeat"],
+        "controls": [
+          "previous",
+          "next",
+          "mute",
+          "repeat"
+        ],
         "target": "Instancia del navegador y lista actual, sin escritura en Flota ni control de hardware",
         "layout": "X o Escape con foco en la ficha cierran sin parar media; cabecera arrastrable o Tab y flechas (Mayús acelera), foco visible, toolbar sticky y cuerpo desplazable; límites del viewport del player, no del vídeo ni su giro",
         "repeat": {
           "scope": "Audio/vídeo al terminar naturalmente, solo instancia local; no persiste",
           "cancels": "Otro clic, Anterior/Siguiente, cambio de pieza o contexto base-condicional, error o sustitución por neutral/TTL",
           "priority": "Presencia fresca y neutral/TTL mandan; repetir no renueva presencia ni capturas; cerrar la ficha no cancela repetición",
-          "excluded": ["image", "interactive", "sync", "direct", "standby", "non-Xtore profiles"]
+          "excluded": [
+            "image",
+            "interactive",
+            "sync",
+            "direct",
+            "standby",
+            "non-Xtore profiles"
+          ]
         },
         "position": "1 de X en playlist efectiva; condicional con una pieza = 1 de 1; posición no confirmada = — de —. No es proof-of-play",
         "audio_meter": "AUDIO/LIVE/MUTE en fila separada bajo las barras",
@@ -246,8 +362,17 @@
         "fallback": {
           "tag": "musica",
           "tag_normalization": "Minúsculas, sin acentos, espacios exteriores ni prefijo #; coincidencia exacta en tags",
-          "types": ["audio", "music", "video", "animation"],
-          "excluded": ["image", "interactive", "locucion"],
+          "types": [
+            "audio",
+            "music",
+            "video",
+            "animation"
+          ],
+          "excluded": [
+            "image",
+            "interactive",
+            "locucion"
+          ],
           "order": "createdAt descendente; sin duplicados por ID o URL; máximo cinco tras filtrar",
           "generic_latest_five": "Helper interno sin filtro; no activa ese comportamiento en otros players"
         },
@@ -257,7 +382,10 @@
           "timeout_ms": 10000,
           "on_failure": "Conserva el último catálogo válido; no es una copia offline"
         },
-        "musicSource": ["playlist", "pixeria-musica"],
+        "musicSource": [
+          "playlist",
+          "pixeria-musica"
+        ],
         "duration": "Audios y vídeos musicales completos hasta ended; sin corte por duración editorial",
         "assignment": "Parrilla con sesión autorizada; no es un alta ni escritura MCP anónima",
         "audience": "Con análisis activo, presencia confirmada fresca incluso quieta y regla con contenido; no depende de un paso nuevo",
@@ -414,7 +542,8 @@
         "player_conditional_set",
         "player_consume_label",
         "player_smoke",
-        "POST /audience/<screen>"
+        "POST /audience/<screen>",
+        "player_virtual_pair"
       ]
     }
   },
@@ -448,5 +577,36 @@
       "hub": "https://www.yokup.com/mcp/",
       "rol": "Donde se declara y se puntúa el trabajo"
     }
-  ]
+  ],
+  "android_player": {
+    "doc": "https://admira.tv/mcp/android-player.md",
+    "help": "https://admira.tv/help/#android-player",
+    "tool": {
+      "name": "player_info",
+      "arguments": {
+        "platform": "android",
+        "section": "all"
+      }
+    },
+    "package": "tv.admira.signage",
+    "release_manifest": "https://admira.tv/player/android-release.json",
+    "native_config_keys": [
+      "screen",
+      "circuit",
+      "machine",
+      "tag",
+      "muted",
+      "volume"
+    ],
+    "evidence_levels": [
+      "installed",
+      "started",
+      "connected",
+      "selected",
+      "playing",
+      "audible",
+      "real_detection_verified"
+    ],
+    "observed": "2026-09-14: official r16 reinstall succeeded; standby retained; no live-camera claim"
+  }
 }
