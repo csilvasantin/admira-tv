@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=14.09.2026.r8.1915"></script>
+<script src="/auth-gate.js?v=14.09.2026.r9.1938"></script>
 <!-- preconnect a orígenes críticos (CSS del chrome + backbone /grid, dominio propio) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -86,6 +86,8 @@
   .circ .chips{display:flex;flex-wrap:wrap;gap:6px}
   .circ .chip{font:600 11.5px ui-monospace,monospace;border:1px solid var(--line);border-radius:999px;padding:3px 9px;color:var(--dim)}
   .circ .go{font:700 12.5px ui-monospace,monospace;color:var(--green);margin-top:auto}
+  .circ.nocanal{border-style:dashed;border-color:rgba(255,216,102,.45)}
+  .circ .chip.src{color:var(--green);border-color:rgba(61,240,138,.35)}
   .circs-status{color:var(--dim);text-align:center;margin:12px 0 0;font-size:14px}
 
   /* flujo del stack */
@@ -186,12 +188,12 @@
   .back{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 15px;font-weight:600;font-size:13.5px;transition:border-color .2s,color .2s}
   .back:hover{border-color:var(--green);color:#fff}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=14.09.2026.r8.1915">
+  <link rel="stylesheet" href="/admira-frame.css?v=14.09.2026.r9.1938">
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.14.09.2026.r8.19:15';</script>
-<script src="/admira-nav.js?v=14.09.2026.r8.1915" data-active="apps" data-title="Cartelería Digital" defer></script>
-<script src="/admira-frame.js?v=14.09.2026.r8.1915" defer></script>
+<script>window.ADMIRA_VERSION='v.14.09.2026.r9.19:38';</script>
+<script src="/admira-nav.js?v=14.09.2026.r9.1938" data-active="apps" data-title="Cartelería Digital" defer></script>
+<script src="/admira-frame.js?v=14.09.2026.r9.1938" defer></script>
 
 <main id="admskip-target">
 
@@ -414,12 +416,23 @@
   (function(){
     var list=document.getElementById('circList'), st=document.getElementById('circStatus');
     function done(es,en){ st.setAttribute('data-es',es); st.setAttribute('data-en',en); st.textContent=T(es,en); st.hidden=!es; }
-    fetch(API+'/grid/projects',{cache:'no-store'}).then(function(r){ return r.ok?r.json():Promise.reject(); }).then(function(d){
-      var ps=(d&&d.projects)||[];
+    var getJ=function(u){ return fetch(u,{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; }); };
+    // Canales (CMS) + registro de circuitos (altas desde yokup.com) + flota viva: lo que no
+    // está en ningún canal se enseña como «Sin canal» para que ningún circuito quede invisible.
+    Promise.all([fetch(API+'/grid/projects',{cache:'no-store'}).then(function(r){ return r.ok?r.json():Promise.reject(); }), getJ(API+'/grid/circuits'), getJ(API+'/signage/screens')]).then(function(all){
+      var d=all[0], reg=(all[1]&&all[1].circuits)||[], live=(all[2]&&all[2].screens)||[];
+      var ps=((d&&d.projects)||[]).slice();
       if(!ps.length) return done('Todavía no hay circuitos dados de alta.','No circuits registered yet.');
+      var inCanal={}; ps.forEach(function(p){ (p.circuits||[]).forEach(function(c){ inCanal[String(c).toLowerCase()]=1; }); });
+      var names={}, srcs={}; reg.forEach(function(c){ if(c&&c.id){ names[c.id]=c.name||c.id; srcs[c.id]=c.source||''; } });
+      var loose={};
+      reg.forEach(function(c){ if(c&&c.id&&!inCanal[c.id]) loose[c.id]=1; });
+      live.forEach(function(x){ var full=String(x.loc||x.circuit||'').toLowerCase(), pre=full.split('-')[0]; if(full&&!inCanal[full]&&!inCanal[pre]&&!/^(?:xtore-)?virtual-/.test(full)) loose[full]=1; });
+      var looseIds=Object.keys(loose).sort();
+      if(looseIds.length) ps.unshift({ id:'all', name:T('Sin canal','No channel'), circuits:looseIds, loose:true });
       list.innerHTML=ps.map(function(p){
-        var cs=(p.circuits||[]).map(function(c){ return '<span class="chip">'+esc(c)+'</span>'; }).join('');
-        return '<a class="circ" role="listitem" href="/cms.html?canal='+encodeURIComponent(p.id)+'"><h3>'+esc(p.name||p.id)+'</h3>'+
+        var cs=(p.circuits||[]).map(function(c){ return '<span class="chip'+(srcs[c]==='yokup'?' src':'')+'" title="'+esc(names[c]||c)+(srcs[c]==='yokup'?' · alta en Yokup':'')+'">'+esc(c)+'</span>'; }).join('');
+        return '<a class="circ'+(p.loose?' nocanal':'')+'" role="listitem" href="/cms.html?canal='+encodeURIComponent(p.id)+'"><h3'+(p.loose?' data-es="Sin canal" data-en="No channel"':'')+'>'+esc(p.name||p.id)+'</h3>'+
           '<div class="chips">'+cs+'</div><span class="go" data-es="Abrir circuito →" data-en="Open circuit →">'+T('Abrir circuito →','Open circuit →')+'</span></a>';
       }).join('');
       done('','');
@@ -528,6 +541,6 @@
   })();
 })();
 </script>
-  <script src="/assets/admira-version-watch.js?v=14.09.2026.r8.1915" defer></script>
+  <script src="/assets/admira-version-watch.js?v=14.09.2026.r9.1938" defer></script>
 </body>
 </html>
