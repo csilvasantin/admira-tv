@@ -1,9 +1,9 @@
 {
-  "version": "v.14.09.2026.r6.18:35",
-  "signature": "MorfeoMacMini · MacMini",
-  "agent": "MorfeoMacMini",
-  "machine": "MacMini",
+  "version": "v.14.09.2026.r7.19:13",
+  "signature": "NeoMBP14 · MacBookProNegro14",
+  "agent": "NeoMBP14",
+  "machine": "MacBookProNegro14",
   "day": "14.09.2026",
-  "time": "18:35",
-  "evidence": "PASO 3 del HandON admira.tv (encargo #3320 · FLT-100445): mapa de lo que existe frente al bucle de autocuración pedido y plan por fases en docs/reportes/PASO_3_player-autocuracion.md."
+  "time": "19:13",
+  "evidence": "La tarjeta Señalización pasa a llamarse Cartelería Digital (ES) · Digital Signage (EN) en home, lanzadera, menú y páginas de apps, y da acceso directo a los circuitos: /digitalsignage/#circuitos lista los canales de /grid/projects y abre cms.html?canal=<id>."
 }

@@ -2,18 +2,18 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=14.09.2026.r6.1835"></script>
+<script src="/auth-gate.js?v=14.09.2026.r7.1913"></script>
 <!-- preconnect a orígenes críticos (CSS del chrome + backbone /grid, dominio propio) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
 <link rel="dns-prefetch" href="https://api.admira.store">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Señalización · Admira.tv</title>
+<title>Cartelería Digital · Admira.tv</title>
 <meta name="description" content="La app reina del stack Admira: del Stock de Pixeria a la pantalla con parrilla real. Programa, emite y mide tu cartelería DOOH con proof-of-play por superficie. Con demos vivas conectadas a la red.">
 <meta name="theme-color" content="#070a10">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="canonical" href="https://admira.tv/digitalsignage/">
-<meta property="og:title" content="Señalización · Admira.tv">
+<meta property="og:title" content="Cartelería Digital · Admira.tv">
 <meta property="og:description" content="Del Stock a la pantalla con parrilla real: programa, emite y mide tu cartelería DOOH. Con demos vivas conectadas a la red.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://admira.tv/digitalsignage/">
@@ -21,7 +21,7 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Señalización · Admira.tv">
+<meta name="twitter:title" content="Cartelería Digital · Admira.tv">
 <meta name="twitter:description" content="Del Stock a la pantalla con parrilla real. Con demos vivas conectadas a la red.">
 <meta name="twitter:image" content="https://admira.tv/og-admira.png">
 <script type="application/ld+json">
@@ -30,12 +30,12 @@
   "@type": "WebPage",
   "@id": "https://admira.tv/digitalsignage/",
   "url": "https://admira.tv/digitalsignage/",
-  "name": "Señalización · Admira.tv",
+  "name": "Cartelería Digital · Admira.tv",
   "inLanguage": "es",
   "isPartOf": { "@id": "https://admira.tv/#site" },
   "about": {
     "@type": "SoftwareApplication",
-    "name": "Admira Señalización",
+    "name": "Admira Cartelería Digital",
     "applicationCategory": "Digital Signage",
     "operatingSystem": "Web, macOS, Windows, Linux, Android, iOS, tvOS",
     "description": "Software de cartelería digital DOOH: del Stock de Pixeria a la pantalla con parrilla real, players nativos y proof-of-play por superficie."
@@ -76,6 +76,17 @@
   .lang{display:inline-flex;gap:2px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px;margin-left:10px;vertical-align:middle}
   .lang button{border:0;background:transparent;color:var(--dim);font:700 11px/1 ui-monospace,monospace;padding:5px 10px;border-radius:999px;cursor:pointer}
   .lang button.on{background:var(--green);color:#03140a}
+
+  /* circuitos: acceso directo desde la tarjeta de la home */
+  #circuitos{scroll-margin-top:70px}
+  .circs{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .circ{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:18px;color:var(--txt);text-decoration:none;min-width:0;transition:border-color .2s,transform .12s}
+  .circ:hover{border-color:var(--green);transform:translateY(-1px)}
+  .circ h3{margin:0;font-size:17px}
+  .circ .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .circ .chip{font:600 11.5px ui-monospace,monospace;border:1px solid var(--line);border-radius:999px;padding:3px 9px;color:var(--dim)}
+  .circ .go{font:700 12.5px ui-monospace,monospace;color:var(--green);margin-top:auto}
+  .circs-status{color:var(--dim);text-align:center;margin:12px 0 0;font-size:14px}
 
   /* flujo del stack */
   .flow{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:30px auto 0;font:600 13px ui-monospace,monospace;color:var(--dim)}
@@ -175,19 +186,19 @@
   .back{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 15px;font-weight:600;font-size:13.5px;transition:border-color .2s,color .2s}
   .back:hover{border-color:var(--green);color:#fff}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=14.09.2026.r6.1835">
+  <link rel="stylesheet" href="/admira-frame.css?v=14.09.2026.r7.1913">
 </head>
 <body>
-<script>window.ADMIRA_VERSION='v.14.09.2026.r6.18:35';</script>
-<script src="/admira-nav.js?v=14.09.2026.r6.1835" data-active="apps" data-title="Señalización" defer></script>
-<script src="/admira-frame.js?v=14.09.2026.r6.1835" defer></script>
+<script>window.ADMIRA_VERSION='v.14.09.2026.r7.19:13';</script>
+<script src="/admira-nav.js?v=14.09.2026.r7.1913" data-active="apps" data-title="Cartelería Digital" defer></script>
+<script src="/admira-frame.js?v=14.09.2026.r7.1913" defer></script>
 
 <main id="admskip-target">
 
   <!-- HERO -->
   <header class="hero wrap">
     <span class="kicker"><span class="d"></span><span data-es="La app reina del stack" data-en="The stack's flagship app">La app reina del stack</span></span>
-    <h1><span data-es="Señalización que sale " data-en="Signage that goes ">Señalización que sale </span><span class="g" data-es="a antena" data-en="on air">a antena</span></h1>
+    <h1><span data-es="Cartelería digital que sale " data-en="Digital signage that goes ">Cartelería digital que sale </span><span class="g" data-es="a antena" data-en="on air">a antena</span></h1>
     <p class="en">Digital Signage
       <span class="lang" role="group" aria-label="Idioma / Language">
         <button type="button" data-lang="es" class="on">ES</button><button type="button" data-lang="en">EN</button>
@@ -196,7 +207,8 @@
     <p class="lead" data-es="Del Stock de Pixeria a la pantalla con parrilla real. Programa qué se emite, en qué franja y en qué superficie —y mídelo con proof-of-play. La cartelería del legacy, reconstruida sobre nuestra tecnología viva."
        data-en="From the Pixeria Stock to the screen with a real grid. Schedule what airs, in which band and on which surface —and measure it with proof-of-play. The legacy signage, rebuilt on our live technology.">Del Stock de Pixeria a la pantalla con parrilla real. Programa qué se emite, en qué franja y en qué superficie —y mídelo con proof-of-play. La cartelería del legacy, reconstruida sobre nuestra tecnología viva.</p>
     <div class="hero-actions">
-      <a class="btn primary" href="/cms.html?prog=1"><span data-es="🛰 Planificar emisión" data-en="🛰 Plan emission">🛰 Planificar emisión</span></a>
+      <a class="btn primary" href="#circuitos"><span data-es="📡 Circuitos" data-en="📡 Circuits">📡 Circuitos</span></a>
+      <a class="btn" href="/cms.html?prog=1"><span data-es="🛰 Planificar emisión" data-en="🛰 Plan emission">🛰 Planificar emisión</span></a>
       <a class="btn" href="/canal.html" target="_blank" rel="noopener"><span data-es="▶ Ver el canal" data-en="▶ Watch the channel">▶ Ver el canal</span></a>
       <a class="btn" href="/player/"><span data-es="⤓ Descargar player" data-en="⤓ Get the player">⤓ Descargar player</span></a>
     </div>
@@ -206,6 +218,18 @@
       <span>→</span> <b class="a">/emit</b> <span>proof-of-play</span>
     </div>
   </header>
+
+  <!-- CIRCUITOS (entrada desde la tarjeta «Cartelería Digital» de la home) -->
+  <section class="wrap" id="circuitos" aria-labelledby="circuitosTitle">
+    <div class="sec-head">
+      <p class="eyebrow" data-es="Circuitos" data-en="Circuits">Circuitos</p>
+      <h2 id="circuitosTitle" data-es="Los circuitos de tu red" data-en="Your network circuits">Los circuitos de tu red</h2>
+      <p data-es="Cada canal agrupa circuitos de pantallas. Abre uno para ver su flota, lo que emite y su programación." data-en="Each channel groups screen circuits. Open one to see its fleet, what it airs and its schedule.">Cada canal agrupa circuitos de pantallas. Abre uno para ver su flota, lo que emite y su programación.</p>
+    </div>
+    <div class="circs" id="circList" role="list"></div>
+    <p class="circs-status" id="circStatus" role="status" aria-live="polite" data-es="Cargando circuitos…" data-en="Loading circuits…">Cargando circuitos…</p>
+    <p style="text-align:center;margin:18px 0 0"><a class="btn" href="/cms.html?canal=all"><span data-es="Ver todos los circuitos →" data-en="See all circuits →">Ver todos los circuitos →</span></a></p>
+  </section>
 
   <!-- ARQUITECTURA -->
   <section class="wrap">
@@ -357,7 +381,7 @@
   </section>
 
   <footer class="foot">
-    <span data-es="Señalización · réplica mejorada del legacy new.admira.mobi → admira.tv" data-en="Signage · improved replica of legacy new.admira.mobi → admira.tv">Señalización · réplica mejorada del legacy new.admira.mobi → admira.tv</span>
+    <span data-es="Cartelería Digital · réplica mejorada del legacy new.admira.mobi → admira.tv" data-en="Digital Signage · improved replica of legacy new.admira.mobi → admira.tv">Cartelería Digital · réplica mejorada del legacy new.admira.mobi → admira.tv</span>
     <span>Admira · tv</span>
   </footer>
 
@@ -385,6 +409,22 @@
 
   var API='https://api.admira.store';
   var esc=function(x){ return String(x==null?'':x).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];}); };
+
+  /* ---------- CIRCUITOS: canales de /grid/projects → CMS filtrado por canal ---------- */
+  (function(){
+    var list=document.getElementById('circList'), st=document.getElementById('circStatus');
+    function done(es,en){ st.setAttribute('data-es',es); st.setAttribute('data-en',en); st.textContent=T(es,en); st.hidden=!es; }
+    fetch(API+'/grid/projects',{cache:'no-store'}).then(function(r){ return r.ok?r.json():Promise.reject(); }).then(function(d){
+      var ps=(d&&d.projects)||[];
+      if(!ps.length) return done('Todavía no hay circuitos dados de alta.','No circuits registered yet.');
+      list.innerHTML=ps.map(function(p){
+        var cs=(p.circuits||[]).map(function(c){ return '<span class="chip">'+esc(c)+'</span>'; }).join('');
+        return '<a class="circ" role="listitem" href="/cms.html?canal='+encodeURIComponent(p.id)+'"><h3>'+esc(p.name||p.id)+'</h3>'+
+          '<div class="chips">'+cs+'</div><span class="go" data-es="Abrir circuito →" data-en="Open circuit →">'+T('Abrir circuito →','Open circuit →')+'</span></a>';
+      }).join('');
+      done('','');
+    }).catch(function(){ done('No se pudieron cargar los circuitos. Ábrelos desde «Ver todos».','Circuits could not be loaded. Open them from «See all».'); });
+  })();
 
   /* ---------- DEMO 1: EN ANTENA (grid/screens + signage/now) ---------- */
   (function(){
@@ -488,6 +528,6 @@
   })();
 })();
 </script>
-  <script src="/assets/admira-version-watch.js?v=14.09.2026.r6.1835" defer></script>
+  <script src="/assets/admira-version-watch.js?v=14.09.2026.r7.1913" defer></script>
 </body>
 </html>

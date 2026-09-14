@@ -41,7 +41,7 @@ const GET_CORS = {
 // el registro viejo (7 sitios) hay la acción owner-only "solutions.reseed".
 const SEED_SOLUTIONS = [
   { id: "dashboard",         nm: "Dashboard",           url: "https://admira.tv/dashboard/",         ds: "Los KPIs de tu red en una pantalla." },
-  { id: "digitalsignage",    nm: "Señalización",        url: "https://admira.tv/digitalsignage/",    ds: "Programa y emite tu cartelería en la red." },
+  { id: "digitalsignage",    nm: "Cartelería Digital",  url: "https://admira.tv/digitalsignage/",    ds: "Programa y emite tu cartelería en la red." },
   { id: "contentcatalogue",  nm: "Catálogo",            url: "https://admira.tv/contentcatalogue/",  ds: "Tu biblioteca de creativos, lista para antena." },
   { id: "support",           nm: "Soporte",             url: "https://admira.tv/support/",           ds: "Incidencias, tickets y ayuda del ecosistema." },
   { id: "pushnotifications", nm: "Notificaciones",      url: "https://admira.tv/pushnotifications/",  ds: "La flota se avisa sola: aviso operativo y de contenido." },

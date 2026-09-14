@@ -159,7 +159,7 @@
    * st: 'live' = ● en antena · 'wip' = ○ en construcción. Al encender una app, se cambia SOLO aquí. */
   var APPS=[
     {s:'dashboard',          nm:'Dashboard',            en:'Dashboard',           ds:'Los KPIs de tu red en una pantalla.',            st:'live'},
-    {s:'digitalsignage',     nm:'Señalización',         en:'Digital Signage',     ds:'Programa y emite tu cartelería en la red.',      st:'live'},
+    {s:'digitalsignage',     nm:'Cartelería Digital',   en:'Digital Signage',     ds:'Programa y emite tu cartelería en la red.',      st:'live'},
     {s:'contentcatalogue',   nm:'Catálogo',             en:'Content Catalogue',   ds:'Tu biblioteca de creativos, lista para antena.', st:'live'},
     {s:'support',            nm:'Soporte',              en:'Support',             ds:'Incidencias, tickets y ayuda del ecosistema.',   st:'live'},
     {s:'pushnotifications',  nm:'Notificaciones',       en:'Push Notifications',  ds:'La flota se avisa sola: aviso operativo y de contenido.', st:'live'},
