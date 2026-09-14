@@ -1,9 +1,9 @@
 {
-  "version": "v.14.09.2026.r2.13:57",
+  "version": "v.14.09.2026.r3.14:08",
   "signature": "NeoMBP16 · MacBookPro16",
   "agent": "NeoMBP16",
   "machine": "MacBookPro16",
   "day": "14.09.2026",
-  "time": "13:57",
-  "evidence": "Gemelo CanalKiosk de Jardinets apunta al Fold 8 (samsung-galaxy-fold-8-mupi / circuito samsung-galaxy-fold-8): el viandante manda sus play<num> al Fold y su tema pasa a música (publicado con publica-playlists-kioskos.py, 40 piezas). Pedido por Carlos el 14-sep; el iPad de Admin conserva su tema pero deja de recibir al viandante."
+  "time": "14:08",
+  "evidence": "Contrato de integración del player (mcp/player-contract.md) y secciones en /help#player-integracion y /mcp#player-contrato, llms.txt y manifest.json: identidad por URL y broadcast, lectura de estado, cola de órdenes con acuse, duración editorial, descarga única, autoactualización, cadencias KV, kioskos/gemelo, precedencia del player virtual. Tab A11 en Jardinets con tema música."
 }
