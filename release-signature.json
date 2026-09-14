@@ -1,9 +1,9 @@
 {
-  "version": "v.14.09.2026.r9.19:38",
+  "version": "v.14.09.2026.r10.19:46",
   "signature": "NeoMBP14 · MacBookProNegro14",
   "agent": "NeoMBP14",
   "machine": "MacBookProNegro14",
   "day": "14.09.2026",
-  "time": "19:38",
-  "evidence": "Circuitos alimentados también desde yokup.com: /digitalsignage/#circuitos suma el registro api.admira.store/grid/circuits (altas de yokup.com/circuitos) y la flota viva, y enseña «Sin canal» lo que no está en ningún canal; el CMS filtra por circuito exacto además de por prefijo."
+  "time": "19:46",
+  "evidence": "Los establecimientos que da de alta el comercio en yokup.com/retailer llegan como circuitos (source yokup-retailer) y se ven en verde con su nombre en «Sin canal»; tope de 40 por tarjeta."
 }
