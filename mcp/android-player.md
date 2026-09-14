@@ -184,3 +184,10 @@ Para mejorar: guardar una referencia antes/después, cambiar una sola capa por p
 Código: https://github.com/csilvasantin/admira-player/tree/main/android · https://github.com/csilvasantin/admira-tv · https://github.com/csilvasantin/admira-tv-mcp . Consultar sus revisiones y contratos actuales antes de actuar.
 
 Minitutorial oficial: https://admira.tv/help/tutorials/player-android-usb-mcp.mp4 — guía animada de ADmira Motion, no grabación del dispositivo. Exportación WEBM convertida a MP4 H.264/AAC y fotogramas revisados.
+
+## 9. Identidad, precedencias y Jardinets (NeoMBP16 · 14-09-2026)
+
+- **Identidad por broadcast dirigido.** `adb shell am broadcast -n tv.admira.signage/.ConfigReceiver -a tv.admira.signage.SET --es screen <pantalla> --es circuit <circuito>`. Sin `-n`, Android 14+ encola el broadcast implícito y la app **no lo recibe** (visto en el Fold 8 con Android 16: ni reiniciar la app lo aplica). Tras una reinstalación el player arranca huérfano (`android-<androidId>`) y aparece así en Flota hasta que se le fija identidad; el `standby` guardado sobrevive a la reinstalación: manda `resume`.
+- **Vaciar el tag.** `--es tag ""` no borra nada (adb descarta el extra vacío) y `--es tag '""'` guarda dos comillas literales. Usa `--es tag ' '` (un espacio): el receptor lo recorta y el player deja de mandar `tag=`.
+- **Precedencia de programa.** Un emparejamiento con un player virtual (`GET https://admira.tv/api/virtual-players?device=<pantalla>`) manda sobre la sincro y el modo remoto del circuito: el player sigue la lista por defecto y las reglas del virtual, y `/api/playout` y `/locations/mode` dejan de aplicarse. Para devolver la pantalla a su circuito, desvincular en https://admira.tv/virtual-players/ (sesión); el player relee la asociación cada 15 s y recarga.
+- **Jardinets.** Fold 8 `samsung-galaxy-fold-8-mupi` y Tab A11 `samsung-galaxy-tab-a11-mupi` (SM-X130), circuito `samsung-galaxy-fold-8`, tema música (`control/playlist?screen=<pantalla>-tema`, publicado con `tools/publica-playlists-kioskos.py`). El gemelo CanalKiosk manda `play<num>` al circuito, así llega a las dos. Contrato general: https://admira.tv/mcp/player-contract.md

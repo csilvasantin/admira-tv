@@ -608,5 +608,141 @@
       "real_detection_verified"
     ],
     "observed": "2026-09-14: official r16 reinstall succeeded; standby retained; no live-camera claim"
+  },
+  "player_contract": {
+    "doc": "https://admira.tv/mcp/player-contract.md",
+    "help": "https://admira.tv/help/#player-integracion",
+    "since": "r60 · 14-09-2026",
+    "principle": "Usar el player desde fuera: URL, cola de órdenes, playlists por pantalla y lectura de estado. No se modifica canal.html.",
+    "url_params": {
+      "screen": "clave de todo",
+      "circuit": "necesario para sincro/modo remoto",
+      "machine": "equipo físico",
+      "embed": "mupi",
+      "fit": "screen|content",
+      "stream": "1 = online mientras baja",
+      "muted": "0|1",
+      "volume": "0–1",
+      "bloquean_gobierno_remoto": [
+        "tag",
+        "mode",
+        "sincro",
+        "modeLock"
+      ]
+    },
+    "android_identity": "adb shell am broadcast -n tv.admira.signage/.ConfigReceiver -a tv.admira.signage.SET --es screen <pantalla> --es circuit <circuito>  (-n obligatorio; reinstalar conserva standby → resume)",
+    "read": [
+      {
+        "method": "GET",
+        "url": "https://api.admira.store/signage/screens",
+        "desc": "censo: last_seen, version, loc"
+      },
+      {
+        "method": "GET",
+        "url": "https://api.admira.store/signage/now?screen=<pantalla>",
+        "desc": "item, sinc, standby, device.display.fit/rotation, software.webRelease"
+      },
+      {
+        "method": "GET",
+        "url": "https://api.admira.store/screen/cache?screen=<pantalla>",
+        "desc": "ready[], total, downloading[{id,pct}]"
+      },
+      {
+        "method": "GET",
+        "url": "https://brain.digitalavatar.ai/control/playlist?screen=<pantalla>-tema",
+        "desc": "playlist programada del kiosko (fuente); sin -tema, espejo de lo emitido"
+      },
+      {
+        "method": "GET",
+        "url": "https://admira.tv/api/playout?screen=<pantalla>",
+        "desc": "autonomous|synchronized|extended"
+      },
+      {
+        "method": "GET",
+        "url": "https://api.admira.store/locations/mode?id=<circuito>",
+        "desc": "local|sync|conditional"
+      },
+      {
+        "method": "GET",
+        "url": "https://admira.tv/api/virtual-players?device=<pantalla>",
+        "desc": "emparejamiento con player virtual (manda sobre todo)"
+      }
+    ],
+    "command": {
+      "method": "POST",
+      "url": "https://api.admira.store/locations/cmd",
+      "body": {
+        "id": "<pantalla|circuito>",
+        "screen": "<pantalla>",
+        "cmd": "<orden>"
+      },
+      "ack": "GET https://api.admira.store/locations/cmd/ack?id=<pantalla>&action=<action> → ack.status executed|failed|ignored",
+      "commands": [
+        "next",
+        "prev",
+        "first",
+        "last",
+        "pause",
+        "play",
+        "toggle-pause",
+        "mute",
+        "unmute",
+        "vol-up",
+        "vol-down",
+        "standby",
+        "resume",
+        "rotation-0",
+        "rotation-90",
+        "rotation-180",
+        "rotation-270",
+        "fit-fill",
+        "fit-editorial",
+        "goto-<n>",
+        "seek-<s>",
+        "content-<num>",
+        "content-clear",
+        "tag-<x>",
+        "tag-",
+        "play<num>",
+        "info-show",
+        "info-hide",
+        "hardreload"
+      ]
+    },
+    "worker_cadence": {
+      "now_ttl_s": 300,
+      "now_refresh_s": 240,
+      "cache_ttl_s": 600,
+      "cache_refresh_s": 420,
+      "throttled_budget": "presupuesto diario KV agotado; reset 00:00 UTC"
+    },
+    "kiosks": {
+      "playlist_source": "<pantalla>-tema",
+      "publisher": "tools/publica-playlists-kioskos.py",
+      "twin": "/adcelerate/demo/best/ (SITE_SCREEN, SITE_CIRCUIT → play<num> por circuito)",
+      "jardinets": {
+        "screens": [
+          "samsung-galaxy-fold-8-mupi",
+          "samsung-galaxy-tab-a11-mupi"
+        ],
+        "circuit": "samsung-galaxy-fold-8",
+        "theme": "musica"
+      },
+      "vila": {
+        "screens": [
+          "samsung-galaxy-fold-9-mupi"
+        ]
+      },
+      "lesseps": {
+        "screens": [
+          "iphone17-mupi"
+        ]
+      }
+    },
+    "precedence": [
+      "emparejamiento con player virtual",
+      "sincro / modo remoto del circuito",
+      "local"
+    ]
   }
 }

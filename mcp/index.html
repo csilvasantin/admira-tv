@@ -63,6 +63,16 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
   <div class="status"><span class="dot" id="dot"></span><span id="status">comprobando servidor…</span></div>
 
 
+  <h2 id="player-contrato">Player · contrato de integración (r60)</h2>
+  <div class="card"><p>Para trabajar con el player <b>sin modificar el nuestro</b>: identidad por URL o broadcast, lectura de estado sin sesión, cola de órdenes con acuse, playlists por pantalla y precedencias. Documento completo: <a href="/mcp/player-contract.md">player-contract.md</a> · <a href="/help/#player-integracion">Help</a>.</p>
+  <pre>POST https://api.admira.store/locations/cmd  {"id":"&lt;pantalla&gt;","screen":"&lt;pantalla&gt;","cmd":"fit-fill"}
+GET  https://api.admira.store/locations/cmd/ack?id=&lt;pantalla&gt;&amp;action=&lt;action&gt;   → ack.status executed|failed|ignored
+GET  https://api.admira.store/signage/now?screen=&lt;pantalla&gt;      → item, sinc, standby, device.display.fit/rotation
+GET  https://api.admira.store/screen/cache?screen=&lt;pantalla&gt;     → ready[], total, downloading[{id,pct}]
+GET  https://brain.digitalavatar.ai/control/playlist?screen=&lt;pantalla&gt;-tema   → playlist programada del kiosko</pre>
+  <p>Órdenes: <code>next prev first last · pause play · mute unmute vol-up vol-down · standby resume · rotation-0|90|180|270 · fit-fill|fit-editorial · goto-N · seek-S · content-NUM · content-clear · tag-X · tag- · play&lt;num&gt; · info-show|info-hide · hardreload</code>. Al <code>id</code> del circuito llegan a todas sus pantallas.</p>
+  <p>Lo que hace solo: descarga única con adopción al arrancar; sincro predescargada; <code>#ID</code> nunca online hasta estar en disco; autoactualización al cambiar de pieza (≥ r60); Rellenar sin recortar; <code>goto-N</code> aguanta en sincro; duración editorial única (imagen/audio/interactivo) igual en antena, proof-of-play y mando. Cadencias del worker: <code>now</code> 5 min / 4, caché 10 / 7; <code>throttled:"budget"</code> = presupuesto KV agotado hasta las 00:00 UTC.</p>
+  <p>Precedencia: emparejamiento con player virtual &gt; sincro/modo remoto del circuito &gt; local. Android: identidad por <code>am broadcast -n tv.admira.signage/.ConfigReceiver</code> (el <code>-n</code> es obligatorio); el standby se conserva al reinstalar. Jardinets (14-09): Fold 8 + Tab A11, circuito <code>samsung-galaxy-fold-8</code>, tema música.</p></div>
   <h2 id="android-player">Player Android · instalar, controlar y diagnosticar</h2>
   <div class="card"><p>Guía completa para agentes: <a href="/mcp/android-player.md">Android por USB, OTA, MCP y Xtore</a>. Incluye comandos, contratos, errores, permisos, pairing y criterios de aceptación. <a href="/help/#android-player">Help paso a paso</a>.</p>
   <pre>{"name":"player_info","arguments":{"platform":"android","section":"all"}}</pre>

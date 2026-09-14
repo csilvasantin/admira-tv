@@ -8,6 +8,7 @@
 > Y el PLAYER CONDICIONADO (Xtore): un tótem sin cámara emite su playlist y, cuando alguien pasa
 > por la Puerta Cam, contenido por las categorías de su productor; Zapatillas solo persona/coche/moto/bici, sin sexo/edad.
 
+Contrato de integración del player (usarlo sin modificarlo): https://admira.tv/mcp/player-contract.md
 Manual Android exhaustivo: https://admira.tv/mcp/android-player.md
 MCP player_info {platform:"android",section:"all"}; omitir platform conserva macOS.
 No existen tools player_install/player_resume/player_screenshot: instalación por ADB, mando con sesión autorizada.
@@ -289,6 +290,31 @@ Playlist base: https://admira.tv/parrilla/?project=admiranext&xpace=admiranext&d
 Presencia de runtime y emisión se consultan aparte: registro no es heartbeat ni proof-of-play.
 Varias pestañas del mismo ID comparten playlist: no cuentan como hardware adicional.
 Help: https://admira.tv/help/#player-virtual · MCP: https://admira.tv/mcp/#player-virtual
+
+## Player · contrato de integración (r60 · 14-09-2026)
+
+Documento: https://admira.tv/mcp/player-contract.md · Help: https://admira.tv/help/#player-integracion
+Arrancar: canal.html?embed=mupi&screen=<pantalla>&circuit=<circuito>. screen = clave de todo; sin circuit no hay sincro.
+tag=/mode=/sincro=/modeLock= en la URL BLOQUEAN el gobierno remoto: solo integraciones cerradas.
+Android: adb shell am broadcast -n tv.admira.signage/.ConfigReceiver -a tv.admira.signage.SET --es screen … --es circuit …
+  (-n obligatorio; sin él Android encola el broadcast y la app no lo recibe). Reinstalar conserva standby → manda resume.
+Leer (sin sesión): api.admira.store/signage/screens · /signage/now?screen= (item, sinc, standby, device.display.fit/rotation)
+  · /screen/cache?screen= (ready, total, downloading[{id,pct}]) · brain.digitalavatar.ai/control/playlist?screen=<pantalla>-tema
+  · admira.tv/api/playout?screen= · api.admira.store/locations/mode?id=<circuito> · admira.tv/api/virtual-players?device=
+Mandar: POST api.admira.store/locations/cmd {id,screen,cmd} → action; GET /locations/cmd/ack?id=&action= → executed|failed|ignored.
+  Órdenes: next prev first last · pause play · mute unmute vol-up vol-down · standby resume · rotation-0|90|180|270
+  · fit-fill|fit-editorial · goto-N (0-based, aguanta en sincro) · seek-S · content-NUM (nunca online hasta estar en disco)
+  · content-clear · tag-X / tag- · play<num> · info-show|info-hide · hardreload. Al id del circuito llegan a todas sus pantallas.
+Duración: vídeo real; imagen/interactivo/audio = editorial (parrilla slotSeconds, borrador, por defecto) o ranura de pantalla;
+  audio recortado a su longitud real; misma cifra en antena, /emit y /control/playlist. En sincro manda el máster.
+Descarga: cada pieza UNA vez por dispositivo (adopción al arrancar); la sincro predescarga; stream=1 = online mientras baja (iOS).
+Actualización: el player en emisión se recarga solo al cambiar de pieza cuando cambia version.json (≥ r60); macOS sondea la raíz.
+Cadencias worker: now TTL 300 s / refresco 240; caché TTL 600 / 420. throttled:"budget" = presupuesto KV agotado (reset 00:00 UTC).
+Kioskos: playlist en <pantalla>-tema (tools/publica-playlists-kioskos.py, 40 piezas, conserva num). Gemelo CanalKiosk:
+  SITE_SCREEN/SITE_CIRCUIT → play<num> por circuito. Jardinets = samsung-galaxy-fold-8-mupi + samsung-galaxy-tab-a11-mupi
+  (circuito samsung-galaxy-fold-8, música). Vila = samsung-galaxy-fold-9-mupi. Lesseps = iphone17-mupi.
+Precedencia: emparejamiento virtual (api/virtual-players) > sincro/modo remoto > local. Desvincular: admira.tv/virtual-players/ (sesión).
+Trampas: un screen por aparato; --es tag "" no vacía (usar espacio); «0 de N descargados» en todas = budget del worker.
 
 ## Recursos MCP
 - admiratv://federacion — el protocolo de federación (markdown).
