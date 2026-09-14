@@ -1,10 +1,9 @@
 {
-  "version": "v.14.09.2026.r1.11:51",
-  "signature": "TrinityMBP14 · MacBookProNegro14",
-  "machine": "MacBookProNegro14",
-  "agent": "TrinityMBP14",
-  "deployer": "TrinityMBP14",
-  "evidence": "DCL-d35d57ad72c6b528c2cb0a87 · Android USB, MCP player_info Android, Help y minitutorial",
+  "version": "v.14.09.2026.r2.13:57",
+  "signature": "NeoMBP16 · MacBookPro16",
+  "agent": "NeoMBP16",
+  "machine": "MacBookPro16",
   "day": "14.09.2026",
-  "time": "11:51"
+  "time": "13:57",
+  "evidence": "Gemelo CanalKiosk de Jardinets apunta al Fold 8 (samsung-galaxy-fold-8-mupi / circuito samsung-galaxy-fold-8): el viandante manda sus play<num> al Fold y su tema pasa a música (publicado con publica-playlists-kioskos.py, 40 piezas). Pedido por Carlos el 14-sep; el iPad de Admin conserva su tema pero deja de recibir al viandante."
 }
