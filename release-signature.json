@@ -1,9 +1,9 @@
 {
-  "version": "v.14.09.2026.r4.17:37",
+  "version": "v.14.09.2026.r5.18:29",
   "signature": "MorfeoMacMini · MacMini",
   "agent": "MorfeoMacMini",
   "machine": "MacMini",
   "day": "14.09.2026",
-  "time": "17:37",
-  "evidence": "PASO 1 y PASO 2 del HandON admira.tv (FLT-100421, encargo #3278): inventario de versiones del player Android/iOS/Windows y checklist de stores en docs/reportes/; el canal reconoce AdmiraWindowsPlayer/AdmiraLinuxPlayer por UA y publica su versión (antes salían como Web Player sin versión)."
+  "time": "18:29",
+  "evidence": "Sidecar edge Puerta Cam (Jobs #3275 · FLT-100418): contrato de topics anónimos sex/age_band en videoanalytics/xtore/SIDECAR-TOPICS.md; el relé /api/audiencia-virtual los acepta solo con XTORE_AUDIENCE_TOPICS, validados con el vocabulario de Pixeria y solo para person; bloqueo honesto del banco documentado."
 }

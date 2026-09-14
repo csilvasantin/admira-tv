@@ -33,3 +33,22 @@ test('«none» no se publica: el bus caduca solo', async () => {
   const calls = []; const r = await onRequestPost({ env: environment(), request: req({ screen: 'xtore-virtual-zapatillas', kind: 'none' }), fetchImpl: bus(calls) });
   assert.equal(r.status, 200); assert.equal((await r.json()).relayed, false); assert.equal(calls.length, 0);
 });
+
+// Topics anónimos (Jobs #3275 · FLT-100418): solo con XTORE_AUDIENCE_TOPICS, solo vocabulario de Pixeria, solo personas.
+test('sin XTORE_AUDIENCE_TOPICS, sex/age_band siguen prohibidos; con la lista, viajan validados y solo para person', async () => {
+  const off = environment(); let calls = [];
+  assert.equal((await onRequestPost({ env: off, request: req({ screen: 'xtore-virtual-zapatillas', kind: 'person', sex: 'f' }), fetchImpl: bus(calls) })).status, 400);
+  assert.equal(calls.length, 0);
+  const on = { ...environment(), XTORE_AUDIENCE_TOPICS: 'sex,age_band' }; calls = [];
+  const r = await onRequestPost({ env: on, request: req({ screen: 'xtore-virtual-zapatillas', kind: 'person', sex: 'f', age_band: 'adulto' }), fetchImpl: bus(calls) });
+  assert.equal(r.status, 200); const out = await r.json(); assert.equal(out.sex, 'f'); assert.equal(out.age_band, 'adulto');
+  const sent = JSON.parse(calls[0].init.body); assert.equal(sent.sex, 'f'); assert.equal(sent.age_band, 'adulto'); assert.equal(sent.kind, 'person');
+  assert.deepEqual(Object.keys(sent).sort(), ['age_band', 'confidence', 'kind', 'sex', 'source', 'ts']);
+  for (const body of [{ screen: 'xtore-virtual-zapatillas', kind: 'person', sex: 'x' }, { screen: 'xtore-virtual-zapatillas', kind: 'person', age_band: '30-55' }, { screen: 'xtore-virtual-zapatillas', kind: 'person', face: 'data:…' }]) {
+    calls = []; assert.equal((await onRequestPost({ env: on, request: req(body), fetchImpl: bus(calls) })).status, 400); assert.equal(calls.length, 0);
+  }
+  calls = []; await onRequestPost({ env: on, request: req({ screen: 'xtore-virtual-zapatillas', kind: 'car', sex: 'm', age_band: 'joven' }), fetchImpl: bus(calls) });
+  assert.equal(JSON.parse(calls[0].init.body).sex, 'u'); assert.equal(JSON.parse(calls[0].init.body).age_band, 'unknown');
+  const only = { ...environment(), XTORE_AUDIENCE_TOPICS: 'age_band' }; calls = [];
+  assert.equal((await onRequestPost({ env: only, request: req({ screen: 'xtore-virtual-zapatillas', kind: 'person', sex: 'f' }), fetchImpl: bus(calls) })).status, 400);
+});
