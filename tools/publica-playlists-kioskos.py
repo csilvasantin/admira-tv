@@ -16,6 +16,7 @@ KIOSKOS = {"samsung-galaxy-fold-9-mupi": "musica",   # Fold 9 · Vila (News & Co
            "ipad-admin-mupi": "musica",              # iPad de Admin (iOS 17) · JARDINETS · música (8-sep: pantalla real del gemelo de Jardinets)
            "ipad-luna-mupi": "musica",               # iPad de Luna · Vila · música
            "samsung-galaxy-fold-8-mupi": "musica",      # Fold 8 · JARDINETS · música (14-sep: pantalla real del gemelo de Jardinets, el mismo tema que el iPad)
+           "samsung-galaxy-tab-a11-mupi": "musica",     # Tab A11 (SM-X130) · JARDINETS · música (14-sep, circuito samsung-galaxy-fold-8)
            "iphone-mupi": "creatividad",             # iPhone 17 · Lesseps (app tv.admira.player.ipad)
            "iphone17-mupi": "creatividad",           # iPhone 17 · Lesseps (app antigua)
            "sim-jardinets-kiosko": "tecnologia", "sim-lesseps-kiosko": "creatividad"}   # pantallas de reserva (canal en navegador)
