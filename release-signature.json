@@ -1,9 +1,9 @@
 {
-  "version": "v.14.09.2026.r7.19:13",
+  "version": "v.14.09.2026.r8.19:15",
   "signature": "NeoMBP14 · MacBookProNegro14",
   "agent": "NeoMBP14",
   "machine": "MacBookProNegro14",
   "day": "14.09.2026",
-  "time": "19:13",
-  "evidence": "La tarjeta Señalización pasa a llamarse Cartelería Digital (ES) · Digital Signage (EN) en home, lanzadera, menú y páginas de apps, y da acceso directo a los circuitos: /digitalsignage/#circuitos lista los canales de /grid/projects y abre cms.html?canal=<id>."
+  "time": "19:15",
+  "evidence": "La tarjeta Señalización pasa a llamarse Cartelería Digital (ES) · Digital Signage (EN) en home, lanzadera, menú y páginas de apps, y da acceso directo a los circuitos: /digitalsignage/#circuitos lista los canales de /grid/projects y abre cms.html?canal=<id>. r8: aire bajo «Ver todos los circuitos» (validado con captura)."
 }
