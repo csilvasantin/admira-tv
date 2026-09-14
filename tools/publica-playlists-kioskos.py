@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Publica la playlist temática de cada kiosko digital (Carlos, 7-sep-2026):
-   Vila · News & Coffee → música | Jardinets → tecnología | Lesseps → creatividad.
+   Vila · News & Coffee → música | Jardinets → música (Fold 8, desde 14-sep) | Lesseps → creatividad.
 Fuente: Stock (api.admira.store/stock/list) filtrado por etiquetas; destino:
 brain.digitalavatar.ai/control/playlist?screen=<pantalla>-tema (la FUENTE; <pantalla> a secas es el espejo
 de lo que emite el teléfono), que leen canal.html
@@ -15,7 +15,7 @@ KIOSKOS = {"samsung-galaxy-fold-9-mupi": "musica",   # Fold 9 · Vila (News & Co
            "sim-gracia-kiosko": "musica",            # Vila · reserva (preview configurada)
            "ipad-admin-mupi": "musica",              # iPad de Admin (iOS 17) · JARDINETS · música (8-sep: pantalla real del gemelo de Jardinets)
            "ipad-luna-mupi": "musica",               # iPad de Luna · Vila · música
-           "samsung-galaxy-fold-8-mupi": "tecnologia",  # Fold 8 · Jardinets
+           "samsung-galaxy-fold-8-mupi": "musica",      # Fold 8 · JARDINETS · música (14-sep: pantalla real del gemelo de Jardinets, el mismo tema que el iPad)
            "iphone-mupi": "creatividad",             # iPhone 17 · Lesseps (app tv.admira.player.ipad)
            "iphone17-mupi": "creatividad",           # iPhone 17 · Lesseps (app antigua)
            "sim-jardinets-kiosko": "tecnologia", "sim-lesseps-kiosko": "creatividad"}   # pantallas de reserva (canal en navegador)
