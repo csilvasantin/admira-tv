@@ -1,9 +1,9 @@
 {
-  "version": "v.14.09.2026.r3.14:08",
-  "signature": "NeoMBP16 · MacBookPro16",
-  "agent": "NeoMBP16",
-  "machine": "MacBookPro16",
+  "version": "v.14.09.2026.r4.17:37",
+  "signature": "MorfeoMacMini · MacMini",
+  "agent": "MorfeoMacMini",
+  "machine": "MacMini",
   "day": "14.09.2026",
-  "time": "14:08",
-  "evidence": "Contrato de integración del player (mcp/player-contract.md) y secciones en /help#player-integracion y /mcp#player-contrato, llms.txt y manifest.json: identidad por URL y broadcast, lectura de estado, cola de órdenes con acuse, duración editorial, descarga única, autoactualización, cadencias KV, kioskos/gemelo, precedencia del player virtual. Tab A11 en Jardinets con tema música."
+  "time": "17:37",
+  "evidence": "PASO 1 y PASO 2 del HandON admira.tv (FLT-100421, encargo #3278): inventario de versiones del player Android/iOS/Windows y checklist de stores en docs/reportes/; el canal reconoce AdmiraWindowsPlayer/AdmiraLinuxPlayer por UA y publica su versión (antes salían como Web Player sin versión)."
 }

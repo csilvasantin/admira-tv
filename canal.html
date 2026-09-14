@@ -1246,10 +1246,15 @@ function deviceTelemetryBase(){
   let osVersion=''; const mac=/Mac OS X\s*([0-9_\.]+)/i.exec(ua), android=/Android\s+([0-9.]+)/i.exec(ua), ios=/OS\s+([0-9_]+)/i.exec(ua), win=/Windows NT\s+([0-9.]+)/i.exec(ua);
   if(mac) osVersion=mac[1].replace(/_/g,'.'); else if(android) osVersion=android[1]; else if(ios) osVersion=ios[1].replace(/_/g,'.'); else if(win) osVersion=win[1];
   let player='Web Player', playerVersion=''; const nativeMac=/AdmiraMacOSPlayer\/([^\s(]+)/i.exec(ua), nativeAndroid=/AdmiraAndroidPlayer\/([^\s(]+)/i.exec(ua), nativeIOS=/Admira(?:TV|Player)\/([^\s(]+)/i.exec(ua);
+  // Windows y Linux (Electron) llevan AdmiraWindowsPlayer/x · AdmiraLinuxPlayer/x en el UA (electron/src/config.js) y se
+  // reportaban como «Web Player» sin versión: en players.html y en el mando no se sabía qué build corría (PASO 1, 14-sep-2026).
+  const nativeWin=/AdmiraWindowsPlayer\/([^\s(]+)/i.exec(ua), nativeLinux=/AdmiraLinuxPlayer\/([^\s(]+)/i.exec(ua);
   const androidRelease=(()=>{ const m=/^v\.(\d{2})\.(\d{2})\.(\d{4})\.r(\d+)/.exec(String(window.ADMIRA_VERSION||'')); return m?'AdmiraNeXTv.'+m[3]+'.'+m[1]+'.'+m[2]+'.r'+m[4]:''; })();
   if(nativeMac){ player='Admira macOS Player'; playerVersion=nativeMac[1]; }
   else if(nativeAndroid || (/Android/i.test(ua)&&/\bwv\b/i.test(ua))){ player='AdmiraNeXT Android Player'; playerVersion=(nativeAndroid&&nativeAndroid[1])||androidRelease; }
   else if(nativeIOS){ player='Admira Player'; playerVersion=nativeIOS[1]; }
+  else if(nativeWin){ player='AdmiraNeXT Windows Player'; playerVersion=nativeWin[1]; }
+  else if(nativeLinux){ player='AdmiraNeXT Linux Player'; playerVersion=nativeLinux[1]; }
   const wk=/AppleWebKit\/([0-9.]+)/i.exec(ua), chrome=/(?:Chrome|CriOS)\/([0-9.]+)/i.exec(ua), firefox=/Firefox\/([0-9.]+)/i.exec(ua);
   if(VIRTUAL_PLAYER){player='Player virtual · navegador';playerVersion='';}
   const engine=chrome?'Chromium '+chrome[1]:firefox?'Firefox '+firefox[1]:wk?'WebKit '+wk[1]:'WebView';
