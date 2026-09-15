@@ -1,9 +1,9 @@
 {
-  "version": "v.15.09.2026.r2.09:51",
+  "version": "v.15.09.2026.r3.09:56",
   "signature": "NeoMBP16 · MacBookPro16",
   "agent": "NeoMBP16",
   "machine": "MacBookPro16",
   "day": "15.09.2026",
-  "time": "09:51",
-  "evidence": "ADcelerate Jardinets: el player vertical real es el iPad de Admin (ipad-admin-mupi, principal y fuente de sincro del gemelo) y el Fold 8 horizontal recibe la misma orden vía SITE_EXTRA; una orden play<num> por persona/perfil llega a todas las pantallas reales del sitio (probado: el iPad cambia en ~12 s). Contrato §6 actualizado."
+  "time": "09:56",
+  "evidence": "ADcelerate Jardinets: corrige SITE_CIRCUIT.jardinets=ipad-admin (en r2 la orden principal seguía saliendo al circuito del Fold con screen del iPad); el iPad vertical es el principal y el Fold 8 recibe la misma orden vía SITE_EXTRA."
 }
