@@ -95,8 +95,11 @@ la orden por hecha.
   Un teléfono con `circuit` cuyo modo remoto es `sync` y sin orquestación entra en sincro con su tema.
 - El gemelo (`/adcelerate/demo/best/`) mapea cada sitio a su pantalla real (`SITE_SCREEN`,
   `SITE_CIRCUIT`). Cuando cambia el perfil dominante de la audiencia manda `play<num>` al circuito.
-  Jardinets (14-09): Fold 8 `samsung-galaxy-fold-8-mupi` + Tab A11 `samsung-galaxy-tab-a11-mupi`,
-  circuito `samsung-galaxy-fold-8`, tema música. Vila: `samsung-galaxy-fold-9-mupi`. Lesseps: `iphone17-mupi`.
+  Jardinets (15-09): el player VERTICAL es el iPad de Admin `ipad-admin-mupi` (circuito `ipad-admin`, principal:
+  el gemelo sincroniza con `ipad-admin-mupi-tema`); el Fold 8 `samsung-galaxy-fold-8-mupi` (horizontal, circuito
+  `samsung-galaxy-fold-8`) recibe la MISMA orden vía `SITE_EXTRA` en `best/index.html` (una orden `play<num>`, todas las
+  pantallas reales del sitio). Tab A11 `samsung-galaxy-tab-a11-mupi` sigue en el circuito del Fold. Tema música.
+  Vila: `samsung-galaxy-fold-9-mupi`. Lesseps: `iphone17-mupi`.
 - **Precedencia**: un emparejamiento con un **player virtual** (`/api/virtual-players`) manda sobre
   todo (el player sigue el programa del virtual e ignora la sincro y el modo remoto). Para devolver la
   pantalla a su circuito hay que desvincularla desde https://admira.tv/virtual-players/ (sesión).
