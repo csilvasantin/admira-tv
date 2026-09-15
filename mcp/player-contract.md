@@ -98,7 +98,7 @@ la orden por hecha.
   Jardinets (15-09): el player VERTICAL es el iPad de Admin `ipad-admin-mupi` (circuito `ipad-admin`, principal:
   el gemelo sincroniza con `ipad-admin-mupi-tema`); el Fold 8 `samsung-galaxy-fold-8-mupi` (horizontal, circuito
   `samsung-galaxy-fold-8`) recibe la MISMA orden vía `SITE_EXTRA` en `best/index.html` (una orden `play<num>`, todas las
-  pantallas reales del sitio). Tab A11 `samsung-galaxy-tab-a11-mupi` sigue en el circuito del Fold. Tema música.
+  pantallas reales del sitio). El iPhone de Carlos `iphone17-mupi` (circuito `iphone17`, vertical) también va en `SITE_EXTRA` de Jardinets. Tab A11 `samsung-galaxy-tab-a11-mupi` sigue en el circuito del Fold. Tema música.
   Vila: `samsung-galaxy-fold-9-mupi`. Lesseps: `iphone17-mupi`.
 - **Precedencia**: un emparejamiento con un **player virtual** (`/api/virtual-players`) manda sobre
   todo (el player sigue el programa del virtual e ignora la sincro y el modo remoto). Para devolver la

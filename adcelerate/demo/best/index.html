@@ -13,12 +13,12 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=15.09.2026.r3.0956">
-<link rel="stylesheet" href="../css/style.css?v=15.09.2026.r3.0956">
-<script src="../js/outdoor-sites.js?v=15.09.2026.r3.0956"></script>
-<script src="../js/urban-route.js?v=15.09.2026.r3.0956"></script>
-<script src="../js/dooh-surfaces.js?v=15.09.2026.r3.0956"></script>
-<script src="../js/outdoor-context.js?v=15.09.2026.r3.0956"></script>
+<link rel="stylesheet" href="../css/admira-tokens.css?v=15.09.2026.r4.1005">
+<link rel="stylesheet" href="../css/style.css?v=15.09.2026.r4.1005">
+<script src="../js/outdoor-sites.js?v=15.09.2026.r4.1005"></script>
+<script src="../js/urban-route.js?v=15.09.2026.r4.1005"></script>
+<script src="../js/dooh-surfaces.js?v=15.09.2026.r4.1005"></script>
+<script src="../js/outdoor-context.js?v=15.09.2026.r4.1005"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
   const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
@@ -203,8 +203,8 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=15.09.2026.r3.0956"><link rel="stylesheet" href="../css/hidden-ui.css?v=15.09.2026.r3.0956"><script defer src="../js/hidden-ui.js?v=15.09.2026.r3.0956"></script><script src="../js/pedestrian-layers.js?v=15.09.2026.r3.0956"></script><script src="../js/jardinets-shoes.js?v=15.09.2026.r3.0956"></script><script src="../js/pedestrian-motion.js?v=15.09.2026.r3.0956"></script><script src="../js/interactive-scene.js?v=15.09.2026.r3.0956"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=15.09.2026.r3.0956"></head>
-<script src="../js/pedestrian-music.js?v=15.09.2026.r3.0956"></script>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=15.09.2026.r4.1005"><link rel="stylesheet" href="../css/hidden-ui.css?v=15.09.2026.r4.1005"><script defer src="../js/hidden-ui.js?v=15.09.2026.r4.1005"></script><script src="../js/pedestrian-layers.js?v=15.09.2026.r4.1005"></script><script src="../js/jardinets-shoes.js?v=15.09.2026.r4.1005"></script><script src="../js/pedestrian-motion.js?v=15.09.2026.r4.1005"></script><script src="../js/interactive-scene.js?v=15.09.2026.r4.1005"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=15.09.2026.r4.1005"></head>
+<script src="../js/pedestrian-music.js?v=15.09.2026.r4.1005"></script>
 <body>
 
 <div id="app">
@@ -355,13 +355,13 @@
   </div>
 </div>
 
-<script src="street-walk.js?v=15.09.2026.r3.0956"></script>
-<script src="../js/cenital-panel.js?v=15.09.2026.r3.0956"></script><script src="../js/walk-overview.js?v=15.09.2026.r3.0956"></script><script src="walk-orientation.js?v=15.09.2026.r3.0956"></script><script src="route-walk.js?v=15.09.2026.r3.0956"></script>
-<script src="../js/player-library.js?v=15.09.2026.r3.0956"></script>
-<script src="screen-player.js?v=15.09.2026.r3.0956"></script>
-<script src="screen-audio.js?v=15.09.2026.r3.0956"></script>
-<script src="surface-focus.js?v=15.09.2026.r3.0956"></script>
-<script src="camera-path.js?v=15.09.2026.r3.0956"></script>
+<script src="street-walk.js?v=15.09.2026.r4.1005"></script>
+<script src="../js/cenital-panel.js?v=15.09.2026.r4.1005"></script><script src="../js/walk-overview.js?v=15.09.2026.r4.1005"></script><script src="walk-orientation.js?v=15.09.2026.r4.1005"></script><script src="route-walk.js?v=15.09.2026.r4.1005"></script>
+<script src="../js/player-library.js?v=15.09.2026.r4.1005"></script>
+<script src="screen-player.js?v=15.09.2026.r4.1005"></script>
+<script src="screen-audio.js?v=15.09.2026.r4.1005"></script>
+<script src="surface-focus.js?v=15.09.2026.r4.1005"></script>
+<script src="camera-path.js?v=15.09.2026.r4.1005"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -1176,7 +1176,7 @@ const SITE_SCREEN = { vila: 'samsung-galaxy-fold-9-mupi', jardinets: 'ipad-admin
 const SITE_CIRCUIT = { vila: 'samsung-galaxy-fold-9', jardinets: 'ipad-admin', lesseps: 'iphone17' };   // 15-sep: Jardinets = circuito del iPad de Admin (el Fold 8 va por SITE_EXTRA)
 // Pantallas reales ADICIONALES por sitio (15-sep-2026): cada orden play<num> se manda también a estas parejas circuito/pantalla.
 // Jardinets: el Samsung Fold 8 (horizontal) sigue emitiendo lo que elige el viandante mientras el iPad vertical es el principal.
-const SITE_EXTRA = { jardinets: [{ circuit: 'samsung-galaxy-fold-8', screen: 'samsung-galaxy-fold-8-mupi' }] };   // id que sondea cada teléfono en /locations/cmd   // iPhone: app com.admira.next.player (la TestFlight tv.admira.player.ipad no entra en sincro)
+const SITE_EXTRA = { jardinets: [{ circuit: 'samsung-galaxy-fold-8', screen: 'samsung-galaxy-fold-8-mupi' }, { circuit: 'iphone17', screen: 'iphone17-mupi' }] };   // 15-sep: el iPhone de Carlos (vertical) también sigue al CanalKiosk de Jardinets   // id que sondea cada teléfono en /locations/cmd   // iPhone: app com.admira.next.player (la TestFlight tv.admira.player.ipad no entra en sincro)
 let syncClock = { offset: 0, slotMs: 20000, master: [], own: new Map(), at: 0 };
 let syncSite = '', syncQueueSig = '';
 function liveMirrorOn(){ return syncClock.master.length > 0; }
