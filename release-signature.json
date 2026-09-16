@@ -1,9 +1,9 @@
 {
-  "version": "v.16.09.2026.r1.09:19",
+  "version": "v.16.09.2026.r2.12:53",
   "signature": "NeoMBP16 · MacBookPro16",
   "agent": "NeoMBP16",
   "machine": "MacBookPro16",
   "day": "16.09.2026",
-  "time": "09:19",
-  "evidence": "El ACL v2 deja de leerse sin credencial: GET /accesscontrol/api/state y /audit respondian 200 a cualquiera con los correos y roles de todo el grupo. Ahora exigen la misma puerta que /users/api (Bearer del ID token de Google o sesion HttpOnly) y ademas administrar algo (owner, o rol owner/admin en alguna solucion); respuestas no-store y private. 6 pruebas nuevas en functions/accesscontrol/api/acl-v2-sin-lectura-publica.test.mjs. Mision Yokup DCL-b489173dd2d284be5d18616e (b)."
+  "time": "12:53",
+  "evidence": "Dos entregas. canal r66: la edad desconocida del bus deja de emitirse como adulto — el consumidor lee decision.age_seg y, si no lo hay, traduce label.age_band; lo que no se reconoce viaja como null y decide el catch-all (encargo #3355 de Morfeo). Jardinets: dos zonas nuevas en el gemelo — papelera (Queen, #taza + #papelera) y armario de contadores (Michael Jackson, #taza + #contador); al pulsarlas se manda tag-<zona> a las pantallas del sitio y a la taza (playertaza), que pixela a 32x16. Alta en mcp/llms.txt y mcp/manifest.json. Las esquinas de las dos zonas siguen SIN calibrar y por eso no se pintan; las piezas del Stock todavia no llevan sus etiquetas. 18 pruebas nuevas; suite 641 pasan y 4 fallan, los 4 previos y ajenos. Misiones DCL-2b94dc8baee08e3c5b18ccec y DCL-939c02b9902233bf7ecdb0d5."
 }
