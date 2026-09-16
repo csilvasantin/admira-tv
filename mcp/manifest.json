@@ -746,7 +746,8 @@
                 "papelera"
               ],
               "contenido": "Queen",
-              "calibrada": false
+              "calibrada": true,
+              "donde": "cubo negro con la caja de carton asomando, junto al cajero (rumbo ~291-296)"
             },
             {
               "id": "contador",
@@ -755,10 +756,11 @@
                 "contador"
               ],
               "contenido": "Michael Jackson",
-              "calibrada": false
+              "calibrada": true,
+              "donde": "dos armarios grises con la pintada TAZO y su pegatina (rumbo ~252-256)"
             }
           ],
-          "pendiente": "esquinas sin calibrar (corners:null): las zonas no se pintan hasta medirlas con DoohSurfaces.unproject sobre el panorama L6xcO37SQfBmCxsT9lPdjQ"
+          "calibracion": "medida con DoohSurfaces.unproject sobre el panorama L6xcO37SQfBmCxsT9lPdjQ y comprobada dibujando el cuadrilatero encima del objeto"
         }
       },
       "vila": {

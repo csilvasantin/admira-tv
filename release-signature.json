@@ -1,9 +1,9 @@
 {
-  "version": "v.16.09.2026.r2.12:53",
+  "version": "v.16.09.2026.r3.13:04",
   "signature": "NeoMBP16 · MacBookPro16",
   "agent": "NeoMBP16",
   "machine": "MacBookPro16",
   "day": "16.09.2026",
-  "time": "12:53",
-  "evidence": "Dos entregas. canal r66: la edad desconocida del bus deja de emitirse como adulto — el consumidor lee decision.age_seg y, si no lo hay, traduce label.age_band; lo que no se reconoce viaja como null y decide el catch-all (encargo #3355 de Morfeo). Jardinets: dos zonas nuevas en el gemelo — papelera (Queen, #taza + #papelera) y armario de contadores (Michael Jackson, #taza + #contador); al pulsarlas se manda tag-<zona> a las pantallas del sitio y a la taza (playertaza), que pixela a 32x16. Alta en mcp/llms.txt y mcp/manifest.json. Las esquinas de las dos zonas siguen SIN calibrar y por eso no se pintan; las piezas del Stock todavia no llevan sus etiquetas. 18 pruebas nuevas; suite 641 pasan y 4 fallan, los 4 previos y ajenos. Misiones DCL-2b94dc8baee08e3c5b18ccec y DCL-939c02b9902233bf7ecdb0d5."
+  "time": "13:04",
+  "evidence": "Las dos zonas de Jardinets quedan vivas. Calibradas sobre el panorama con DoohSurfaces.unproject y comprobadas dibujando el cuadrilatero encima del objeto: papelera = cubo negro con la caja de carton junto al cajero (rumbo ~291-296) -> Queen; contador = los dos armarios grises con la pintada TAZO (rumbo ~252-256) -> Michael Jackson. Las dos piezas del Stock ya llevan sus etiquetas (Queen #taza+#papelera id 1789552888779-9rpc7t, Michael Jackson #taza+#contador id 1789552590273-md8zll), puestas con PATCH /stock/<id>/meta tags_add y verificadas en el indice publico. Al pulsar se manda tag-<zona> a las pantallas del sitio y a la taza (playertaza), que pixela a 32x16. MCP actualizado. 11 pruebas de las zonas; suite 641 pasan y 4 fallan, los 4 previos y ajenos. Mision DCL-939c02b9902233bf7ecdb0d5."
 }

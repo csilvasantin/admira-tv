@@ -73,7 +73,29 @@ test('sin pantallas de sitio la taza sigue recibiendo lo suyo', () => {
   assert.deepEqual(T.ordenes(T.ZONAS[1], []), [{ id: 'playertaza', screen: 'playertaza', cmd: 'tag-contador' }]);
 });
 
-test('las esquinas no se inventan: las dos zonas nacen sin calibrar y no se pintan', () => {
-  assert.deepEqual(T.sinCalibrar(), ['papelera', 'contador']);
-  for (const zona of T.ZONAS) assert.equal(zona.corners, null);
+test('las dos zonas estan calibradas: cuatro esquinas cada una, y en su sitio', () => {
+  assert.deepEqual(T.sinCalibrar(), []);
+  for (const zona of T.ZONAS) {
+    assert.equal(zona.corners.length, 4, zona.id + ' necesita cuatro esquinas');
+    for (const [rumbo, inclinacion] of zona.corners) {
+      assert.ok(rumbo >= 0 && rumbo < 360, 'rumbo fuera de la rosa: ' + rumbo);
+      assert.ok(inclinacion > -90 && inclinacion < 90, 'inclinacion imposible: ' + inclinacion);
+      // Las dos son mobiliario de acera: se ven POR DEBAJO del horizonte del panorama.
+      assert.ok(inclinacion < 0, zona.id + ' no puede estar por encima del horizonte');
+    }
+  }
+  // Medidas sobre el panorama, no a ojo: la papelera esta junto al cajero (~293 grados)
+  // y los armarios grises de la pintada TAZO mas a la izquierda (~254).
+  const rumboMedio = (z) => z.corners.reduce((n, c) => n + c[0], 0) / 4;
+  assert.ok(Math.abs(rumboMedio(T.ZONAS[0]) - 293) < 4, 'la papelera se ha movido de sitio');
+  assert.ok(Math.abs(rumboMedio(T.ZONAS[1]) - 254) < 4, 'el contador se ha movido de sitio');
+  assert.ok(rumboMedio(T.ZONAS[0]) > rumboMedio(T.ZONAS[1]), 'la papelera queda a la derecha del contador');
+});
+
+test('una zona sin medir no se pinta, aunque el resto si', () => {
+  const guardadas = T.ZONAS[0].corners;
+  T.ZONAS[0].corners = null;
+  try {
+    assert.deepEqual(T.sinCalibrar(), ['papelera']);
+  } finally { T.ZONAS[0].corners = guardadas; }
 });

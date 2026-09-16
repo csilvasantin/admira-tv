@@ -320,8 +320,10 @@ Zonas de la taza (Jardinets, 16-09-2026): dos zonas fotograficas mas en el gemel
   la taza {id:playertaza, screen:playertaza}: su player lee signage/now?screen=playertaza y pixela la pieza a 32x16
   (worker playertaza.csilvasantin.workers.dev, de Smith). No hay ruta nueva: `tag-X` ya estaba en el contrato.
   Codigo: adcelerate/demo/js/jardinets-taza.js (zonas, resolve, ordenes, sinCalibrar) + best/index.html.
-  PENDIENTE: las esquinas de las dos zonas estan SIN CALIBRAR (corners:null) y por eso no se pintan todavia. Se miden
-  con DoohSurfaces.unproject(x,y,pov,zoom,W,H) sobre el panorama L6xcO37SQfBmCxsT9lPdjQ, cuatro esquinas por objeto.
+  Calibradas el 16-09 con DoohSurfaces.unproject sobre el panorama L6xcO37SQfBmCxsT9lPdjQ, cuatro esquinas por objeto y
+  comprobadas dibujando el cuadrilatero encima: papelera = cubo negro con la caja de carton, junto al cajero (rumbo
+  ~291-296); contador = los dos armarios grises con la pintada TAZO (rumbo ~252-256). Las dos piezas ya llevan sus
+  etiquetas en el Stock (Queen #taza+#papelera, Michael Jackson #taza+#contador).
 Precedencia: emparejamiento virtual (api/virtual-players) > sincro/modo remoto > local. Desvincular: admira.tv/virtual-players/ (sesión).
 Trampas: un screen por aparato; --es tag "" no vacía (usar espacio); «0 de N descargados» en todas = budget del worker.
 

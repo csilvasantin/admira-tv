@@ -14,18 +14,26 @@
  * signage/now?screen=playertaza) la pixela. No hace falta ningún empujón nuevo.
  *
  * GEOMETRÍA: `corners` son las cuatro esquinas del objeto en el panorama, en pares
- * [rumbo, inclinación], como en jardinets-shoes.js. Las de estas dos zonas están SIN
- * CALIBRAR a propósito: no se inventan a ojo. Mientras valgan null la zona no se pinta
- * y `sinCalibrar()` dice cuáles faltan. Para medirlas está el modo `?calibrar=taza`.
+ * [rumbo, inclinación], como en jardinets-shoes.js. Las dos están medidas sobre el
+ * panorama con DoohSurfaces.unproject y comprobadas dibujando el cuadrilátero encima
+ * del objeto; no se pusieron a ojo. Una zona sin medir (corners null) no se pinta:
+ * `sinCalibrar()` dice cuáles faltan.
  */
 (function(root){
  const PANO='L6xcO37SQfBmCxsT9lPdjQ';
  const FAMILIA='taza';
  // La taza es una pantalla más de la flota: mismo id de circuito y de pantalla.
  const TAZA={circuit:'playertaza',screen:'playertaza'};
+ // Calibradas el 16-09-2026 contra las dos fotos de Carlos, midiendo con
+ // DoohSurfaces.unproject sobre el propio panorama y comprobando cada cuadrilátero
+ // dibujado encima del objeto antes de escribirlo aquí:
+ //  · papelera — el cubo negro con la caja de cartón asomando, junto al cajero (rumbo ~291-296)
+ //  · contador — los dos armarios grises con la pintada «TAZO» y su pegatina (rumbo ~252-256)
  const ZONAS=[
-  {id:'papelera',etiqueta:'papelera',rotulo:'Papelera · Queen',artista:'Queen',corners:null},
-  {id:'contador',etiqueta:'contador',rotulo:'Contador de luz · Michael Jackson',artista:'Michael Jackson',corners:null}
+  {id:'papelera',etiqueta:'papelera',rotulo:'Papelera · Queen',artista:'Queen',
+   corners:[[291.378724,-14.710939],[296.036033,-14.879443],[295.866197,-21.396128],[290.803065,-21.163882]]},
+  {id:'contador',etiqueta:'contador',rotulo:'Contador de luz · Michael Jackson',artista:'Michael Jackson',
+   corners:[[252.040777,-5.731991],[255.945579,-6.284283],[256,-12.840565],[251.897204,-12.267639]]}
  ];
  // Misma normalización que el resolvedor de música: sin acentos, sin almohadilla.
  const norm=v=>String(v).normalize('NFD').replace(/[̀-ͯ]/g,'').trim().toLowerCase().replace(/^#/,'');
