@@ -99,3 +99,42 @@ test('una zona sin medir no se pinta, aunque el resto si', () => {
     assert.deepEqual(T.sinCalibrar(), ['papelera']);
   } finally { T.ZONAS[0].corners = guardadas; }
 });
+
+// ── Cableado en la página, que es donde fallaba ──────────────────────────────
+// Carlos, 16-09-2026: «no está funcionando como el enlace de las zapatillas, tiene que
+// estar fijado al objeto, del mismo color, y activar el player de admira.tv —el virtual
+// del quiosco— que a su vez activa el real del Samsung Fold». Las tres cosas se fijan
+// aquí para que no se vuelvan a perder.
+const fs = require('node:fs');
+const pagina = fs.readFileSync(require('node:path').join(__dirname, '..', '..', 'best', 'index.html'), 'utf8');
+const css = fs.readFileSync(require('node:path').join(__dirname, '..', '..', 'css', 'interactive-scene.css'), 'utf8');
+
+test('las zonas se recolocan en el mismo bucle que las zapatillas: van pegadas al objeto', () => {
+  const bucle = pagina.slice(pagina.indexOf('function layoutSvPanels()'), pagina.indexOf('function layoutSvPanels()') + 700);
+  assert.match(bucle, /shoeMapping\?\.layout\(\);/);
+  assert.match(bucle, /tazaZonas\?\.layout\(\);/, 'sin esto se quedan clavadas donde se pintaron la primera vez');
+});
+
+test('suena en el player VIRTUAL del quiosco, y es ese el que manda a la pantalla real', () => {
+  assert.match(pagina, /ponerEnElQuiosco\(fila\.item,\[fila\.item\],'Taza · #'\+zona\.etiqueta\)/);
+  // La función compartida es la misma que usa el mapeo de viandantes.
+  assert.match(pagina, /play:\(item,items\)=>ponerEnElQuiosco\(item,items,'Personas · #musica'\)/);
+  const quiosco = pagina.slice(pagina.indexOf('function ponerEnElQuiosco'), pagina.indexOf('let mappedMusicSentAt'));
+  assert.match(quiosco, /screenPlayers\.set\('jardinets-main',mappedMusicPlayer\)/, 'la pieza entra en la pantalla virtual del quiosco');
+  assert.match(quiosco, /mappedMusicToScreen\(item, true\)/, 'y desde ahí sale a la pantalla real');
+  // El reenvío a la pantalla real tiene que entender también los ids de la taza.
+  assert.match(pagina, /replace\(\/\^\(\?:music\|taza\):\/,''\)/);
+});
+
+test('la taza recibe su orden, que para eso existe la zona', () => {
+  assert.match(pagina, /const taza=JardinetsTaza\.ordenes\(zona,\[\]\)\[0\]/);
+  assert.match(pagina, /body:JSON\.stringify\(taza\)/);
+});
+
+test('mismo verde que las zapatillas, no un color propio', () => {
+  const zapatilla = css.slice(css.indexOf('.jardinets-shoe{'), css.indexOf('.jardinets-shoe{') + 260);
+  const taza = css.slice(css.indexOf('.jardinets-taza{'), css.indexOf('.jardinets-taza{') + 260);
+  const borde = (t) => /border:2px solid (#[0-9a-f]{6})/i.exec(t)[1];
+  assert.equal(borde(taza), borde(zapatilla));
+  assert.doesNotMatch(css, /#8cd7f5/i, 'el azul de la primera versión ya no pinta nada');
+});

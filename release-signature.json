@@ -1,9 +1,9 @@
 {
-  "version": "v.16.09.2026.r3.13:04",
+  "version": "v.16.09.2026.r4.13:18",
   "signature": "NeoMBP16 · MacBookPro16",
   "agent": "NeoMBP16",
   "machine": "MacBookPro16",
   "day": "16.09.2026",
-  "time": "13:04",
-  "evidence": "Las dos zonas de Jardinets quedan vivas. Calibradas sobre el panorama con DoohSurfaces.unproject y comprobadas dibujando el cuadrilatero encima del objeto: papelera = cubo negro con la caja de carton junto al cajero (rumbo ~291-296) -> Queen; contador = los dos armarios grises con la pintada TAZO (rumbo ~252-256) -> Michael Jackson. Las dos piezas del Stock ya llevan sus etiquetas (Queen #taza+#papelera id 1789552888779-9rpc7t, Michael Jackson #taza+#contador id 1789552590273-md8zll), puestas con PATCH /stock/<id>/meta tags_add y verificadas en el indice publico. Al pulsar se manda tag-<zona> a las pantallas del sitio y a la taza (playertaza), que pixela a 32x16. MCP actualizado. 11 pruebas de las zonas; suite 641 pasan y 4 fallan, los 4 previos y ajenos. Mision DCL-939c02b9902233bf7ecdb0d5."
+  "time": "13:18",
+  "evidence": "Las zonas de Jardinets, corregidas con Carlos delante. 1) Iban sueltas: el bucle de encuadre relayoutaba las zapatillas y los soportes pero NO las zonas nuevas, asi que se pintaban una vez y se quedaban clavadas mientras el panorama giraba; ahora tazaZonas.layout() va en el mismo bucle y quedan pegadas al objeto. 2) Mismo verde que las zapatillas, no un color propio. 3) El disparo pasa por el player VIRTUAL del quiosco (pantalla jardinets-main del gemelo, la misma que usa el mapeo de viandantes) y es ese player el que manda a la pantalla REAL del sitio; la taza recibe ademas su orden tag-<zona>. Se saco ponerEnElQuiosco como funcion compartida entre viandantes y zonas. 15 pruebas de zonas, cuatro nuevas sobre el cableado de la pagina."
 }

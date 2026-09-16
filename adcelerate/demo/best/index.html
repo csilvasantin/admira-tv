@@ -13,12 +13,12 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=16.09.2026.r3.1304">
-<link rel="stylesheet" href="../css/style.css?v=16.09.2026.r3.1304">
-<script src="../js/outdoor-sites.js?v=16.09.2026.r3.1304"></script>
-<script src="../js/urban-route.js?v=16.09.2026.r3.1304"></script>
-<script src="../js/dooh-surfaces.js?v=16.09.2026.r3.1304"></script>
-<script src="../js/outdoor-context.js?v=16.09.2026.r3.1304"></script>
+<link rel="stylesheet" href="../css/admira-tokens.css?v=16.09.2026.r4.1318">
+<link rel="stylesheet" href="../css/style.css?v=16.09.2026.r4.1318">
+<script src="../js/outdoor-sites.js?v=16.09.2026.r4.1318"></script>
+<script src="../js/urban-route.js?v=16.09.2026.r4.1318"></script>
+<script src="../js/dooh-surfaces.js?v=16.09.2026.r4.1318"></script>
+<script src="../js/outdoor-context.js?v=16.09.2026.r4.1318"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
   const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
@@ -203,8 +203,8 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=16.09.2026.r3.1304"><link rel="stylesheet" href="../css/hidden-ui.css?v=16.09.2026.r3.1304"><script defer src="../js/hidden-ui.js?v=16.09.2026.r3.1304"></script><script src="../js/pedestrian-layers.js?v=16.09.2026.r3.1304"></script><script src="../js/jardinets-shoes.js?v=16.09.2026.r3.1304"></script><script src="../js/jardinets-taza.js?v=16.09.2026.r3.1304"></script><script src="../js/pedestrian-motion.js?v=16.09.2026.r3.1304"></script><script src="../js/interactive-scene.js?v=16.09.2026.r3.1304"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=16.09.2026.r3.1304"></head>
-<script src="../js/pedestrian-music.js?v=16.09.2026.r3.1304"></script>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=16.09.2026.r4.1318"><link rel="stylesheet" href="../css/hidden-ui.css?v=16.09.2026.r4.1318"><script defer src="../js/hidden-ui.js?v=16.09.2026.r4.1318"></script><script src="../js/pedestrian-layers.js?v=16.09.2026.r4.1318"></script><script src="../js/jardinets-shoes.js?v=16.09.2026.r4.1318"></script><script src="../js/jardinets-taza.js?v=16.09.2026.r4.1318"></script><script src="../js/pedestrian-motion.js?v=16.09.2026.r4.1318"></script><script src="../js/interactive-scene.js?v=16.09.2026.r4.1318"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=16.09.2026.r4.1318"></head>
+<script src="../js/pedestrian-music.js?v=16.09.2026.r4.1318"></script>
 <body>
 
 <div id="app">
@@ -355,13 +355,13 @@
   </div>
 </div>
 
-<script src="street-walk.js?v=16.09.2026.r3.1304"></script>
-<script src="../js/cenital-panel.js?v=16.09.2026.r3.1304"></script><script src="../js/walk-overview.js?v=16.09.2026.r3.1304"></script><script src="walk-orientation.js?v=16.09.2026.r3.1304"></script><script src="route-walk.js?v=16.09.2026.r3.1304"></script>
-<script src="../js/player-library.js?v=16.09.2026.r3.1304"></script>
-<script src="screen-player.js?v=16.09.2026.r3.1304"></script>
-<script src="screen-audio.js?v=16.09.2026.r3.1304"></script>
-<script src="surface-focus.js?v=16.09.2026.r3.1304"></script>
-<script src="camera-path.js?v=16.09.2026.r3.1304"></script>
+<script src="street-walk.js?v=16.09.2026.r4.1318"></script>
+<script src="../js/cenital-panel.js?v=16.09.2026.r4.1318"></script><script src="../js/walk-overview.js?v=16.09.2026.r4.1318"></script><script src="walk-orientation.js?v=16.09.2026.r4.1318"></script><script src="route-walk.js?v=16.09.2026.r4.1318"></script>
+<script src="../js/player-library.js?v=16.09.2026.r4.1318"></script>
+<script src="screen-player.js?v=16.09.2026.r4.1318"></script>
+<script src="screen-audio.js?v=16.09.2026.r4.1318"></script>
+<script src="surface-focus.js?v=16.09.2026.r4.1318"></script>
+<script src="camera-path.js?v=16.09.2026.r4.1318"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -1813,10 +1813,14 @@ function stopMappedMusic(){
 }
 const mappedMusic=PedestrianMusic.create({load:()=>PedestrianMusic.fetchCatalog(fetch),stop:stopMappedMusic,isCurrent:number=>screenPlayers.get('jardinets-main')===mappedMusicPlayer&&mappedMusicPlayer?.item?.number===number,
  onState:state=>signMapping.setMusicState(state),
- play:(item,items)=>{
+ play:(item,items)=>ponerEnElQuiosco(item,items,'Personas · #musica')
+});
+// EL PLAYER DEL QUIOSCO, COMPARTIDO. Lo usan el mapeo de viandantes y las zonas de la
+// taza: misma pantalla virtual (`jardinets-main`), mismo reenvío a la pantalla real.
+function ponerEnElQuiosco(item,items,titulo){
   if(mappedMusicPlayer&&screenPlayers.get('jardinets-main')!==mappedMusicPlayer){mappedMusicPlayer.dispose();mappedMusicPlayer=null;mappedPreviousPlayer=null;}
-  mappedMusicNumber=item.number;
-  const playlists=[{id:'scheduled',title:'Personas · #musica',items:items.map(i=>i.id)},{id:'all',title:'Personas · #musica',items:items.map(i=>i.id)}],library={items,playlists};
+  mappedMusicNumber=item.number||0;
+  const playlists=[{id:'scheduled',title:titulo,items:items.map(i=>i.id)},{id:'all',title:titulo,items:items.map(i=>i.id)}],library={items,playlists};
   if(!mappedMusicPlayer){
    mappedPreviousPlayer=screenPlayers.get('jardinets-main')||null;mappedPreviousPlayer?.mute();
    mappedMusicPlayer=ScreenPlayer.create({items,playlists,initialIndex:items.indexOf(item),createVideo:()=>document.createElement('video'),createImage:()=>new Image(),
@@ -1831,11 +1835,10 @@ const mappedMusic=PedestrianMusic.create({load:()=>PedestrianMusic.fetchCatalog(
   // play<num> (/locations/cmd). El canal la pone al momento; como aquí queda en bucle, se reenvía
   // cada vez que la pieza vuelve a empezar, y al soltar a la persona el canal vuelve solo a la sincro.
   mappedMusicToScreen(item, true);
- }
-});
+}
 let mappedMusicSentAt=0, mappedMusicSentId='';
 function mappedMusicToScreen(item, force){
-  const rawId=String(item&&item.id||'').replace(/^music:/,''); if(!rawId) return;
+  const rawId=String(item&&item.id||'').replace(/^(?:music|taza):/,''); if(!rawId) return;
   const now=Date.now(); if(!force && rawId===mappedMusicSentId && now-mappedMusicSentAt<8000) return;
   mappedMusicSentAt=now; mappedMusicSentId=rawId;
   try{ mandarAlaPantalla('jardinets', { id: rawId }).then(ok=>console.info('[Mapping] → pantalla real', SITE_SCREEN.jardinets, rawId, ok?'ok':'sin num/circuito')); }catch(_){}
@@ -1851,24 +1854,39 @@ const signMapping=InteractiveScene.create({getPanorama:()=>sv,container:$('stree
 if(WALK_MODE)mappedMusic.warm().catch(()=>{});
 const shoeMapping=JardinetsShoes.create({getPanorama:()=>sv,container:$('streetview'),warp:quadWarp,isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onLeave:()=>{mappedMusic.stop();screenAudio.mute();routeWalk.cancel();}});
 // ZONAS DE LA TAZA (Carlos, 16-09-2026): la papelera suena a Queen y el armario de
-// contadores a Michael Jackson. Las dos piezas llevan #taza, así que la MISMA orden va
-// al quiosco y a la taza, que pixela a 32×16 lo que tenga en antena.
-// `tag-<zona>` es una orden del contrato del player; no se estrena ninguna ruta.
-// Mientras las esquinas no estén medidas, create() no pinta nada: ver sinCalibrar().
+// contadores a Michael Jackson. Las dos piezas llevan #taza.
+//
+// SUENA DONDE SUENAN LAS PERSONAS, no por un camino aparte (corregido el 16-09 con
+// Carlos delante): la pieza entra en el player VIRTUAL del quiosco —la pantalla
+// `jardinets-main` del gemelo, la misma que usa el mapeo de viandantes— y es ese player
+// el que manda la orden a la pantalla REAL (el Samsung Fold y las demás del sitio) por
+// `mandarAlaPantalla`. Antes se disparaba una orden suelta a /locations/cmd sin pasar
+// por el quiosco: eso encendía la pantalla real sin que el gemelo estuviera emitiendo
+// nada, que es justo lo que no queremos ver.
 async function mandarZonaTaza(zona){
-  const site=syncSiteId();
-  const destinos=[{circuit:SITE_CIRCUIT[site],screen:SITE_SCREEN[site]},...((SITE_EXTRA&&SITE_EXTRA[site])||[])];
-  const oks=await Promise.all(JardinetsTaza.ordenes(zona,destinos).map(async orden=>{
-    try{ const r=await fetch(CMD_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orden)}); return r.ok; }catch(_){ return false; }
-  }));
-  try{ chTag(zona.rotulo+' → '+oks.filter(Boolean).length+'/'+oks.length+' pantallas'); }catch(_){ }
-  return oks.some(Boolean);
+  let fila;
+  try{ fila=(await JardinetsTaza.fetchCatalog(fetch)).find(f=>f.id===zona.id); }
+  catch(e){ try{ chTag(zona.rotulo+' · '+(e.message||'catálogo no disponible')); }catch(_){ } return false; }
+  if(!fila||!fila.item){ try{ chTag(zona.rotulo+' · '+((fila&&fila.error)||'sin pieza')); }catch(_){ } return false; }
+  ponerEnElQuiosco(fila.item,[fila.item],'Taza · #'+zona.etiqueta);
+  // Y la taza, que es una pantalla nuestra más: la orden `tag-<zona>` llega a su player
+  // (playertaza), que lee signage/now y pixela la pieza a 32×16. El quiosco ya ha mandado
+  // la suya a las pantallas reales del sitio dentro de ponerEnElQuiosco.
+  const taza=JardinetsTaza.ordenes(zona,[])[0];
+  let okTaza=false;
+  try{ okTaza=(await fetch(CMD_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(taza)})).ok; }catch(_){ }
+  try{ chTag(zona.rotulo+' → quiosco · '+SITE_SCREEN[syncSiteId()]+(okTaza?' · taza':' · taza sin respuesta')); }catch(_){ }
+  return true;
 }
 const tazaZonas=JardinetsTaza.create({getPanorama:()=>sv,container:$('streetview'),warp:quadWarp,isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onZone:mandarZonaTaza});
 function layoutSvPanels(){
   syncHiddenNavigation();
   shoeMapping?.layout();
   signMapping?.layout();
+  // Las zonas de la taza se recolocan en el MISMO bucle que las zapatillas. Sin esta
+  // línea se pintaban una vez y se quedaban clavadas ahí mientras el panorama giraba:
+  // parecían puestas al tuntún sobre un escaparate (Carlos, 16-09-2026).
+  tazaZonas?.layout();
   const surfaces=surfacesHere();
   for(const surface of DoohSurfaces.all)if(!surfaces.some(s=>s.id===surface.id))$(surface.elementId).style.display='none';
   if (!surfaces.length) { $('sv-signage').classList.remove('show','sv-vis'); return; }
