@@ -108,6 +108,7 @@ test('una zona sin medir no se pinta, aunque el resto si', () => {
 const fs = require('node:fs');
 const pagina = fs.readFileSync(require('node:path').join(__dirname, '..', '..', 'best', 'index.html'), 'utf8');
 const css = fs.readFileSync(require('node:path').join(__dirname, '..', '..', 'css', 'interactive-scene.css'), 'utf8');
+const fuenteModulo = fs.readFileSync(require('node:path').join(__dirname, '..', 'jardinets-taza.js'), 'utf8');
 
 test('las zonas se recolocan en el mismo bucle que las zapatillas: van pegadas al objeto', () => {
   const bucle = pagina.slice(pagina.indexOf('function layoutSvPanels()'), pagina.indexOf('function layoutSvPanels()') + 700);
@@ -131,10 +132,32 @@ test('la taza recibe su orden, que para eso existe la zona', () => {
   assert.match(pagina, /body:JSON\.stringify\(taza\)/);
 });
 
-test('mismo verde que las zapatillas, no un color propio', () => {
-  const zapatilla = css.slice(css.indexOf('.jardinets-shoe{'), css.indexOf('.jardinets-shoe{') + 260);
-  const taza = css.slice(css.indexOf('.jardinets-taza{'), css.indexOf('.jardinets-taza{') + 260);
-  const borde = (t) => /border:2px solid (#[0-9a-f]{6})/i.exec(t)[1];
-  assert.equal(borde(taza), borde(zapatilla));
+// Carlos, 16-09-2026: «que no se vean las zonas seleccionables… lo dejamos invisible,
+// solo pulsa quien lo sabe». Es un escondite, así que nada puede delatarlo: ni borde,
+// ni fondo, ni rótulo, ni un cursor de mano al pasar por encima.
+test('la zona no se ve: sin borde, sin fondo y sin rotulo', () => {
+  const taza = css.slice(css.indexOf('.jardinets-taza{'), css.indexOf('.jardinets-taza[hidden]'));
+  assert.match(taza, /border:0/);
+  assert.match(taza, /background:none/);
+  assert.doesNotMatch(taza, /border:2px solid/);
+  assert.match(css, /\.jardinets-taza span\{display:none\}/, 'el rótulo no asoma ni al pasar por encima');
   assert.doesNotMatch(css, /#8cd7f5/i, 'el azul de la primera versión ya no pinta nada');
+});
+
+test('el cursor no la delata al pasar por encima', () => {
+  const taza = css.slice(css.indexOf('.jardinets-taza{'), css.indexOf('.jardinets-taza[hidden]'));
+  assert.match(taza, /cursor:default/);
+  assert.doesNotMatch(taza, /cursor:pointer/);
+});
+
+test('sigue siendo pulsable: invisible no es desactivada', () => {
+  const taza = css.slice(css.indexOf('.jardinets-taza{'), css.indexOf('.jardinets-taza[hidden]'));
+  assert.match(taza, /pointer-events:auto/);
+  assert.match(fuenteModulo, /el\.addEventListener\('click'/);
+});
+
+test('fuera del recorrido de teclado y sin anunciarse: es un escondite, no un boton', () => {
+  assert.match(fuenteModulo, /el\.tabIndex=-1/);
+  assert.match(fuenteModulo, /setAttribute\('aria-hidden','true'\)/);
+  assert.doesNotMatch(fuenteModulo, /el\.title=zona\.rotulo/, 'un globito al pasar por encima la delataria');
 });

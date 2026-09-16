@@ -1,9 +1,9 @@
 {
-  "version": "v.16.09.2026.r4.13:18",
+  "version": "v.16.09.2026.r5.13:37",
   "signature": "NeoMBP16 · MacBookPro16",
   "agent": "NeoMBP16",
   "machine": "MacBookPro16",
   "day": "16.09.2026",
-  "time": "13:18",
-  "evidence": "Las zonas de Jardinets, corregidas con Carlos delante. 1) Iban sueltas: el bucle de encuadre relayoutaba las zapatillas y los soportes pero NO las zonas nuevas, asi que se pintaban una vez y se quedaban clavadas mientras el panorama giraba; ahora tazaZonas.layout() va en el mismo bucle y quedan pegadas al objeto. 2) Mismo verde que las zapatillas, no un color propio. 3) El disparo pasa por el player VIRTUAL del quiosco (pantalla jardinets-main del gemelo, la misma que usa el mapeo de viandantes) y es ese player el que manda a la pantalla REAL del sitio; la taza recibe ademas su orden tag-<zona>. Se saco ponerEnElQuiosco como funcion compartida entre viandantes y zonas. 15 pruebas de zonas, cuatro nuevas sobre el cableado de la pagina."
+  "time": "13:37",
+  "evidence": "Zonas de Jardinets invisibles a proposito (Carlos: «lo dejamos invisible, solo pulsa quien lo sabe»): sin borde, sin fondo, sin rotulo, sin cursor de mano que las delate al pasar por encima, fuera del recorrido de teclado y sin anunciarse a lectores de pantalla. Siguen siendo pulsables. Ademas se comprobo en vivo que el player VIRTUAL del quiosco SI pinta la pieza con la r4: el lienzo de la superficie jardinets-main y el fotograma del video coinciden en color para Michael Jackson (144,131,105 vs 136,119,93) y para Queen (91,86,92 vs 90,85,91). Lo que Carlos vio era la r3 en cache, donde la orden salia por fuera del quiosco. 18 pruebas de zonas."
 }

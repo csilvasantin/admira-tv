@@ -84,7 +84,10 @@
   const enlaces=pintables.map(zona=>{
    const el=document.createElement('button');
    el.type='button';el.className='jardinets-taza';el.hidden=true;
-   el.setAttribute('aria-label',zona.rotulo);el.title=zona.rotulo;el.dataset.taza=zona.id;
+   // Escondite, no interfaz: sin title (el globito la delataría al pasar por encima),
+   // fuera del recorrido de teclado y sin anunciarse a los lectores de pantalla. Quien
+   // no sepa que está ahí no puede tropezarse con ella; quien lo sabe, pulsa.
+   el.tabIndex=-1;el.setAttribute('aria-hidden','true');el.dataset.taza=zona.id;
    const rotulo=document.createElement('span');rotulo.textContent=zona.rotulo;el.append(rotulo);
    el.addEventListener('pointerdown',e=>e.stopPropagation());
    el.addEventListener('click',e=>{

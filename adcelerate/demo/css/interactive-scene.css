@@ -20,9 +20,15 @@
 #mapped-people-status{max-width:calc(100% - 48px);white-space:normal;line-height:1.5}
 .targets-hidden .mapped-person-hit,.targets-hidden #mapped-pole-slider,.targets-hidden #mapped-no-parking,.targets-hidden #mapped-people-status{display:none!important;pointer-events:none!important}
 
-/* Zonas de la taza (papelera y contador de luz): el MISMO cuerpo y el MISMO verde que
-   las zapatillas — son la misma clase de cosa y Carlos las quiere iguales (16-09-2026). */
-.jardinets-taza{position:absolute;left:0;top:0;width:100px;height:48px;transform-origin:0 0;z-index:26;border:2px solid #c5f58c;border-radius:14px;background:#c5f58c0d;box-sizing:border-box;cursor:pointer;pointer-events:auto;color:#fff;font:inherit;padding:0}.jardinets-taza[hidden]{display:none}.jardinets-taza:hover,.jardinets-taza:focus-visible{background:#c5f58c44;outline:3px solid #e4ffbb}.jardinets-taza span{position:absolute;right:100%;top:0;white-space:nowrap;padding:6px 9px;background:#10251eef;border-radius:6px;font:14px system-ui;opacity:0;pointer-events:none}.jardinets-taza:hover span,.jardinets-taza:focus-visible span{opacity:1}
+/* Zonas de la taza (papelera y contador de luz): INVISIBLES a propósito (Carlos,
+   16-09-2026: «lo dejamos invisible, solo pulsa quien lo sabe»). Mantienen el cuerpo y
+   el sitio de las zapatillas, pero sin borde, sin fondo, sin rótulo y SIN cursor de
+   mano: un puntero que cambia al pasar por encima delataría el escondite. Siguen
+   siendo pulsables; simplemente no se anuncian. */
+.jardinets-taza{position:absolute;left:0;top:0;width:100px;height:48px;transform-origin:0 0;z-index:26;border:0;background:none;box-sizing:border-box;cursor:default;pointer-events:auto;color:transparent;font:inherit;padding:0;-webkit-appearance:none;appearance:none}
+.jardinets-taza[hidden]{display:none}
+.jardinets-taza span{display:none}
+.jardinets-taza:hover,.jardinets-taza:focus,.jardinets-taza:active{background:none;outline:0;border:0}
 .jardinets-shoe{position:absolute;left:0;top:0;width:100px;height:48px;transform-origin:0 0;z-index:26;border:2px solid #c5f58c;border-radius:14px;background:#c5f58c0d;box-sizing:border-box;cursor:pointer;pointer-events:auto;color:#fff;text-decoration:none}.jardinets-shoe[hidden]{display:none}.jardinets-shoe:hover,.jardinets-shoe:focus-visible{background:#c5f58444;outline:3px solid #e4ffbb}.jardinets-shoe span{position:absolute;right:100%;top:0;white-space:nowrap;padding:6px 9px;background:#10251eef;border-radius:6px;font:14px system-ui;opacity:0;pointer-events:none}.jardinets-shoe:hover span,.jardinets-shoe:focus-visible span{opacity:1}
 
 /* Keep the ten levels in DOM/ARIA, without printing a numerical ruler. */
