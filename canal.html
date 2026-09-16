@@ -36,6 +36,7 @@
 <!-- r63 · NUNCA NEGRO EN CONDICIONAL (FLT-100243): los assets de la matriz fuera del feed de 300 se resuelven contra el índice completo del Stock (stockFullIndex, como /play<N>) y entran en el pool + precache; si la regla deja 0 piezas, cae al carrusel del feed y el rótulo dice «CONDICIONAL · sin assets → carrusel». -->
 <!-- BUILD canal v.11.09.2026.r64.18:50 · EMISIÓN POR TIPOLOGÍA (Xtore): el bus v2.2 trae label.kind (person|car|motorcycle|bicycle) y decision.lane (Matrix|TopGun|Persona|Coche|Moto|Bici|neutral); nuevo hecho XPL audKind; las reglas de la matriz casan también por kind (campo kind, tag kind:<k> o id r-coche/r-moto/r-bici/r-persona); un kind no-person nunca casa reglas de sexo m/f; /forcecam coche|moto|bici|persona simula tipologías; evento audience al padre lleva kind+lane; rótulo «CONDICIONAL · playlist normal» cuando la regla que manda no fija assets ni tema; ?seg_api= para matrices de prueba. -->
 <!-- BUILD canal v.11.09.2026.r65.18:58 · PUENTE DESDE ADMIRA.TV: bridgeOriginAllowed admite https://admira.tv y https://www.admira.tv, y el postMessage acepta source 'admira-tv-panel' como alias de 'xpaceos-robot-cli' (panel Xtore → iframe del canal). -->
+<!-- BUILD canal v.16.09.2026.r66.09:23 · LA EDAD DESCONOCIDA YA NO ES «ADULTO» (encargo #3355 de Morfeo · FLT-100491): el consumidor del bus lee primero decision.age_seg —el vocabulario de Pixeria que casan las reglas age de la matriz— y si no lo hay traduce label.age_band con AUD_AGE_MAP. Lo que no se reconoce (unknown, vacío, valor nuevo) viaja como null, no como adulto: las reglas de edad no casan y manda el catch-all, en vez de emitir contenido de adulto sobre una persona sin clasificar. -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
@@ -4188,6 +4189,18 @@ window.XPLCanal = XPLCanal;
 // Una persona con sexo 'u' cuenta como presente SOLO si el bus la pone en un carril (v2.2
 // «Persona»); con el bus v2.1 (lane neutral) sigue siendo neutro, como en r62.
 const AUD_AGE_MAP={ child:'nino', kid:'nino', youth:'joven', young:'joven', teen:'joven', adult:'adulto', senior:'senior', elder:'vejez', old:'vejez' };
+// r66 · Las cinco franjas de Pixeria, que son las que casan las reglas `age` de la matriz.
+// El bus las publica ya traducidas en decision.age_seg (y en label.age_seg) desde
+// admira-tv-mcp v.15.09.2026.r1, así que se prefieren a traducir age_band a mano.
+const AUD_AGE_SEG=new Set(['nino','joven','adulto','senior','vejez']);
+// Edad de la etiqueta, o null. NUNCA 'adulto' por defecto: hasta r65 un age_band
+// desconocido («unknown», vacío o un valor nuevo del bus) se convertía en adulto y la
+// matriz emitía contenido de adulto sobre una persona que nadie había clasificado.
+function audienceAge(lab, dec){
+  const seg=String((dec&&dec.age_seg)||(lab&&lab.age_seg)||'').toLowerCase();
+  if(AUD_AGE_SEG.has(seg)) return seg;
+  return AUD_AGE_MAP[String((lab&&lab.age_band)||'').toLowerCase()]||null;
+}
 const AUD_REMOTE={ on:false, timer:null, fails:0, lane:null, sex:'u', kind:'none', neutralSince:0, polls:0, ok:0, last:null };
 function audienceRemoteLane(d){
   const lab=(d&&d.label)||null, fresh=!!(d&&d.fresh)&&!!lab;
@@ -4197,13 +4210,14 @@ function audienceRemoteLane(d){
   const present=fresh&&(kind!=='person'||sex!=='u'||(!!busLane&&busLane!=='neutral'));
   if(!present) kind='none';
   const lane=!present?'neutral':(busLane&&busLane!=='neutral'?busLane:(sex!=='u'?sex:AUD_KIND_LANE[kind]||kind));
-  return { lab, fresh, sex, kind, present, lane };
+  const age=(present&&kind==='person')?audienceAge(lab,(d&&d.decision)||null):null;
+  return { lab, fresh, sex, kind, present, lane, age };
 }
 function audienceRemoteApply(d){
   const r=audienceRemoteLane(d); AUD_REMOTE.last=r;
   const now=Date.now(), changed=(r.lane!==AUD_REMOTE.lane)||(r.sex!==AUD_REMOTE.sex)||(r.kind!==AUD_REMOTE.kind);
   if(r.present){
-    window.__xplCam={ faces:1, gender:r.sex==='u'?null:r.sex, age:r.kind==='person'?(AUD_AGE_MAP[String(r.lab.age_band||'').toLowerCase()]||'adulto'):null, kind:r.kind, ts:now };
+    window.__xplCam={ faces:1, gender:r.sex==='u'?null:r.sex, age:r.age, kind:r.kind, ts:now };
     AUD_REMOTE.neutralSince=0;
   } else {
     // Neutro: se mantiene un mínimo de 6 s (no re-tickear neutro antes) — un label fresco manda igual.
