@@ -1,9 +1,9 @@
 {
-  "version": "v.16.09.2026.r5.13:37",
+  "version": "v.16.09.2026.r6.14:30",
   "signature": "NeoMBP16 · MacBookPro16",
   "agent": "NeoMBP16",
   "machine": "MacBookPro16",
   "day": "16.09.2026",
-  "time": "13:37",
-  "evidence": "Zonas de Jardinets invisibles a proposito (Carlos: «lo dejamos invisible, solo pulsa quien lo sabe»): sin borde, sin fondo, sin rotulo, sin cursor de mano que las delate al pasar por encima, fuera del recorrido de teclado y sin anunciarse a lectores de pantalla. Siguen siendo pulsables. Ademas se comprobo en vivo que el player VIRTUAL del quiosco SI pinta la pieza con la r4: el lienzo de la superficie jardinets-main y el fotograma del video coinciden en color para Michael Jackson (144,131,105 vs 136,119,93) y para Queen (91,86,92 vs 90,85,91). Lo que Carlos vio era la r3 en cache, donde la orden salia por fuera del quiosco. 18 pruebas de zonas."
+  "time": "14:30",
+  "evidence": "player/reuniones2.ps1 deja de traer la URL del .exe escrita a mano: lee el manifiesto que publica el CI (player.admira.store/windows-release.json), instala la ultima version sellada y COMPRUEBA su SHA-256 antes de ejecutar nada; si no cuadra, borra el fichero y aborta. Con la URL fija seguia instalando el binario del 27 de junio aunque hubiera uno nuevo cada dia. Queda una ultima version conocida por si el manifiesto no responde, y se dice en voz alta que la huella no sustituye a la firma: acredita que el fichero no cambio por el camino, no que lo hayamos hecho nosotros. 5 pruebas nuevas. Prueba interna pedida por Carlos."
 }
