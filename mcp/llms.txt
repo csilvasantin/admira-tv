@@ -313,6 +313,15 @@ Cadencias worker: now TTL 300 s / refresco 240; caché TTL 600 / 420. throttled:
 Kioskos: playlist en <pantalla>-tema (tools/publica-playlists-kioskos.py, 40 piezas, conserva num). Gemelo CanalKiosk:
   SITE_SCREEN/SITE_CIRCUIT → play<num> por circuito. Jardinets = samsung-galaxy-fold-8-mupi + samsung-galaxy-tab-a11-mupi
   (circuito samsung-galaxy-fold-8, música). Vila = samsung-galaxy-fold-9-mupi. Lesseps = iphone17-mupi.
+Zonas de la taza (Jardinets, 16-09-2026): dos zonas fotograficas mas en el gemelo, ademas de las dos zapatillas.
+  Papelera -> Queen (#taza + #papelera) · Armario de contadores -> Michael Jackson (#taza + #contador).
+  Contrato de etiquetas EXACTO, como #musica + #1..#10: si falta una, la zona lo dice y no emite otra cosa.
+  Al pulsar se manda `tag-<zona>` por /locations/cmd a las pantallas del sitio (SITE_CIRCUIT + SITE_EXTRA) Y SIEMPRE a
+  la taza {id:playertaza, screen:playertaza}: su player lee signage/now?screen=playertaza y pixela la pieza a 32x16
+  (worker playertaza.csilvasantin.workers.dev, de Smith). No hay ruta nueva: `tag-X` ya estaba en el contrato.
+  Codigo: adcelerate/demo/js/jardinets-taza.js (zonas, resolve, ordenes, sinCalibrar) + best/index.html.
+  PENDIENTE: las esquinas de las dos zonas estan SIN CALIBRAR (corners:null) y por eso no se pintan todavia. Se miden
+  con DoohSurfaces.unproject(x,y,pov,zoom,W,H) sobre el panorama L6xcO37SQfBmCxsT9lPdjQ, cuatro esquinas por objeto.
 Precedencia: emparejamiento virtual (api/virtual-players) > sincro/modo remoto > local. Desvincular: admira.tv/virtual-players/ (sesión).
 Trampas: un screen por aparato; --es tag "" no vacía (usar espacio); «0 de N descargados» en todas = budget del worker.
 

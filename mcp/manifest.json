@@ -726,7 +726,40 @@
           "samsung-galaxy-tab-a11-mupi"
         ],
         "circuit": "samsung-galaxy-fold-8",
-        "theme": "musica"
+        "theme": "musica",
+        "zonas_interactivas": {
+          "desde": "2026-09-16",
+          "codigo": "adcelerate/demo/js/jardinets-taza.js",
+          "contrato_etiquetas": "exacto, sin sustitutos: #taza + #<zona>",
+          "orden": "tag-<zona> por POST /locations/cmd a las pantallas del sitio (circuit + SITE_EXTRA) y siempre a la taza",
+          "taza": {
+            "id": "playertaza",
+            "screen": "playertaza",
+            "que_hace": "su player lee signage/now?screen=playertaza y pixela la pieza a 32x16",
+            "worker": "https://playertaza.csilvasantin.workers.dev"
+          },
+          "zonas": [
+            {
+              "id": "papelera",
+              "etiquetas": [
+                "taza",
+                "papelera"
+              ],
+              "contenido": "Queen",
+              "calibrada": false
+            },
+            {
+              "id": "contador",
+              "etiquetas": [
+                "taza",
+                "contador"
+              ],
+              "contenido": "Michael Jackson",
+              "calibrada": false
+            }
+          ],
+          "pendiente": "esquinas sin calibrar (corners:null): las zonas no se pintan hasta medirlas con DoohSurfaces.unproject sobre el panorama L6xcO37SQfBmCxsT9lPdjQ"
+        }
       },
       "vila": {
         "screens": [

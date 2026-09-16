@@ -203,7 +203,7 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=16.09.2026.r1.0919"><link rel="stylesheet" href="../css/hidden-ui.css?v=16.09.2026.r1.0919"><script defer src="../js/hidden-ui.js?v=16.09.2026.r1.0919"></script><script src="../js/pedestrian-layers.js?v=16.09.2026.r1.0919"></script><script src="../js/jardinets-shoes.js?v=16.09.2026.r1.0919"></script><script src="../js/pedestrian-motion.js?v=16.09.2026.r1.0919"></script><script src="../js/interactive-scene.js?v=16.09.2026.r1.0919"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=16.09.2026.r1.0919"></head>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=16.09.2026.r1.0919"><link rel="stylesheet" href="../css/hidden-ui.css?v=16.09.2026.r1.0919"><script defer src="../js/hidden-ui.js?v=16.09.2026.r1.0919"></script><script src="../js/pedestrian-layers.js?v=16.09.2026.r1.0919"></script><script src="../js/jardinets-shoes.js?v=16.09.2026.r1.0919"></script><script src="../js/jardinets-taza.js?v=16.09.2026.r1.0919"></script><script src="../js/pedestrian-motion.js?v=16.09.2026.r1.0919"></script><script src="../js/interactive-scene.js?v=16.09.2026.r1.0919"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=16.09.2026.r1.0919"></head>
 <script src="../js/pedestrian-music.js?v=16.09.2026.r1.0919"></script>
 <body>
 
@@ -1850,6 +1850,21 @@ function selectMappedMusic(number,options){
 const signMapping=InteractiveScene.create({getPanorama:()=>sv,container:$('streetview'),foreground:$('sv-signage'),warp:quadWarp,isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onSelect:selectMappedMusic,onClose:()=>{clearTimeout(mappedMusicTimer);mappedMusic.stop();}});
 if(WALK_MODE)mappedMusic.warm().catch(()=>{});
 const shoeMapping=JardinetsShoes.create({getPanorama:()=>sv,container:$('streetview'),warp:quadWarp,isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onLeave:()=>{mappedMusic.stop();screenAudio.mute();routeWalk.cancel();}});
+// ZONAS DE LA TAZA (Carlos, 16-09-2026): la papelera suena a Queen y el armario de
+// contadores a Michael Jackson. Las dos piezas llevan #taza, así que la MISMA orden va
+// al quiosco y a la taza, que pixela a 32×16 lo que tenga en antena.
+// `tag-<zona>` es una orden del contrato del player; no se estrena ninguna ruta.
+// Mientras las esquinas no estén medidas, create() no pinta nada: ver sinCalibrar().
+async function mandarZonaTaza(zona){
+  const site=syncSiteId();
+  const destinos=[{circuit:SITE_CIRCUIT[site],screen:SITE_SCREEN[site]},...((SITE_EXTRA&&SITE_EXTRA[site])||[])];
+  const oks=await Promise.all(JardinetsTaza.ordenes(zona,destinos).map(async orden=>{
+    try{ const r=await fetch(CMD_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orden)}); return r.ok; }catch(_){ return false; }
+  }));
+  try{ chTag(zona.rotulo+' → '+oks.filter(Boolean).length+'/'+oks.length+' pantallas'); }catch(_){ }
+  return oks.some(Boolean);
+}
+const tazaZonas=JardinetsTaza.create({getPanorama:()=>sv,container:$('streetview'),warp:quadWarp,isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onZone:mandarZonaTaza});
 function layoutSvPanels(){
   syncHiddenNavigation();
   shoeMapping?.layout();
