@@ -1,3 +1,5 @@
+import { sessionEmail } from "../../_auth-session.js";
+
 // Acceso (Access Control) v2 — backend same-origin de admira.tv (Pages Functions).
 // Gestión de permisos v2 para TODAS las soluciones del grupo Admira/AdmiraNeXT.
 // Evolución del worker v1 admira-whitelist (que sigue siendo el perímetro de seguridad de admira.live).
@@ -6,9 +8,18 @@
 // bloquean 188.114.96.0/22 → workers.dev inaccesible (lección del equipo).
 //
 // Rutas (catch-all [[path]] bajo /accesscontrol/api/):
-//   GET  /accesscontrol/api/state  → doc ACL completo (lectura pública, compatibilidad operativa)
-//   GET  /accesscontrol/api/audit  → últimos 200 eventos (más reciente primero, pública)
+//   GET  /accesscontrol/api/state  → doc ACL completo — SOLO owner o admin (sesión o Bearer)
+//   GET  /accesscontrol/api/audit  → últimos 200 eventos — mismo requisito que /state
 //   POST /accesscontrol/api/write  → mutaciones autenticadas con Google ID token
+//
+// NINGUNA LECTURA ES PÚBLICA (16-09-2026). Hasta hoy /state y /audit respondían 200 a
+// cualquiera y servían el documento entero: los correos de todo el mundo con sus roles,
+// los owners y el registro de soluciones. La consola v2 ya estaba retirada —/accesscontrol
+// redirige 301 a /users— pero su API se quedó abierta, justo la regla que el ACL v3 de
+// /users/api se escribió para no repetir. Se cierra con la misma puerta que usa v3:
+// Authorization: Bearer <Google ID token> o la sesión HttpOnly de admira.tv, y además
+// hay que administrar algo (owner, o rol owner/admin en alguna solución). Un editor o un
+// viewer ya no descarga el directorio, y un anónimo no ve nada.
 //
 // Persistencia: KV binding ACCESS, doc único "acl:v2" con "rev" incrementable
 // (RMW sobre 1 clave → se relee fresco antes de cada escritura). Auditoría en
@@ -143,7 +154,7 @@ async function readDoc(env) {
   return d;
 }
 
-// Vista pública del doc (contrato de /state).
+// Vista del doc que devuelve /state a quien ya ha pasado la puerta (ver cabecera).
 function statePayload(doc) {
   return {
     v: 2,
@@ -201,26 +212,49 @@ function globalRole(doc, email) {
   return (u && u.roles && u.roles["*"]) || null;
 }
 
+// Lectura del documento: quien administre ALGO. No basta con figurar en el ACL —
+// un viewer o un editor no tienen por qué ver los correos del resto.
+function canReadDoc(doc, email) {
+  const e = norm(email);
+  if (!e) return false;
+  if (isOwner(e)) return true;
+  const u = (doc.users || []).find((x) => norm(x.email) === e);
+  if (!u || !u.roles) return false;
+  return Object.values(u.roles).some((r) => r === "owner" || r === "admin");
+}
+
+// El actor de una petición: Bearer <Google ID token> o la sesión HttpOnly de admira.tv.
+// Mismo orden que verifyActor de /users/api, para que las dos puertas se comporten igual.
+async function requestActor(request, env) {
+  const auth = request.headers.get("Authorization") || "";
+  const m = /^Bearer\s+(.+)$/i.exec(auth);
+  if (!m) return sessionEmail(request, env);
+  return verifyActor(m[1]);
+}
+
 // ── Handlers ────────────────────────────────────────────────────────────────
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: GET_CORS });
 }
 
-export async function onRequestGet(ctx) {
-  const { env, params } = ctx;
-  if (!env.ACCESS) return json({ error: "no_kv" }, 500, GET_CORS);
-  const seg = (Array.isArray(params.path) ? params.path[params.path.length - 1] : params.path) || "";
+// Las lecturas llevan correos: no-store y private, nunca en una caché compartida.
+const GET_HEADERS = { ...GET_CORS, "Cache-Control": "no-store, private", "X-Content-Type-Options": "nosniff" };
 
-  if (seg === "state") {
-    const doc = await readDoc(env);
-    return json(statePayload(doc), 200, GET_CORS);
-  }
-  if (seg === "audit") {
-    const arr = await readAudit(env);
-    const events = arr.slice(-AUDIT_RETURN).reverse(); // más reciente primero
-    return json({ events }, 200, GET_CORS);
-  }
-  return json({ error: "not_found" }, 404, GET_CORS);
+export async function onRequestGet(ctx) {
+  const { request, env, params } = ctx;
+  if (!env.ACCESS) return json({ error: "no_kv" }, 500, GET_HEADERS);
+  const seg = (Array.isArray(params.path) ? params.path[params.path.length - 1] : params.path) || "";
+  if (seg !== "state" && seg !== "audit") return json({ error: "not_found" }, 404, GET_HEADERS);
+
+  const actor = await requestActor(request, env);
+  if (!actor) return json({ error: "unauthorized" }, 401, GET_HEADERS);
+  const doc = await readDoc(env);
+  if (!canReadDoc(doc, actor)) return json({ error: "forbidden" }, 403, GET_HEADERS);
+
+  if (seg === "state") return json(statePayload(doc), 200, GET_HEADERS);
+  const arr = await readAudit(env);
+  const events = arr.slice(-AUDIT_RETURN).reverse(); // más reciente primero
+  return json({ events }, 200, GET_HEADERS);
 }
 
 export async function onRequestPost(ctx) {

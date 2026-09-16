@@ -1,9 +1,9 @@
 {
-  "version": "v.15.09.2026.r5.11:09",
+  "version": "v.16.09.2026.r1.09:19",
   "signature": "NeoMBP16 · MacBookPro16",
   "agent": "NeoMBP16",
   "machine": "MacBookPro16",
-  "day": "15.09.2026",
-  "time": "11:09",
-  "evidence": "player/reuniones2.ps1: instalador de un clic para REUNIONES-2 (Windows) — abre admira.app al iniciar sesion e instala el player .exe de admira.tv. La maquina solo tiene SMB abierto (sin SSH/WinRM/RDP), no se puede instalar en remoto."
+  "day": "16.09.2026",
+  "time": "09:19",
+  "evidence": "El ACL v2 deja de leerse sin credencial: GET /accesscontrol/api/state y /audit respondian 200 a cualquiera con los correos y roles de todo el grupo. Ahora exigen la misma puerta que /users/api (Bearer del ID token de Google o sesion HttpOnly) y ademas administrar algo (owner, o rol owner/admin en alguna solucion); respuestas no-store y private. 6 pruebas nuevas en functions/accesscontrol/api/acl-v2-sin-lectura-publica.test.mjs. Mision Yokup DCL-b489173dd2d284be5d18616e (b)."
 }
