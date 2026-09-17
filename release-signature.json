@@ -1,9 +1,9 @@
 {
-  "version": "v.17.09.2026.r2.09:47",
+  "version": "v.17.09.2026.r3.09:54",
   "signature": "TrinityMBP16 · MacBookPro16",
   "agent": "TrinityMBP16",
   "machine": "MacBookPro16",
   "day": "17.09.2026",
-  "time": "09:47",
-  "evidence": "El instalador específico de REUNIONES-2 fija machine, screen y circuito, verifica SHA-256, instala el player Windows en silencio, lo arranca y no declara éxito hasta encontrar el ejecutable y el proceso vivo. Retira el antiguo acceso directo de navegador que competía por el foco con el kiosko."
+  "time": "09:54",
+  "evidence": "El DGX conserva screen y telemetría propios, comparte el circuito samsung-galaxy-fold-8 y recibe un espejo de 40 piezas del tema de Jardinets. La orden real play722 mostró Westlife simultáneamente en Fold y DGX; después ambos regresaron al flujo normal y coincidieron de nuevo."
 }
