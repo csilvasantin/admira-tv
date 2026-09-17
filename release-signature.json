@@ -1,9 +1,9 @@
 {
-  "version": "v.16.09.2026.r7.18:00",
-  "signature": "MorfeoMacMini · MacMini",
-  "agent": "MorfeoMacMini",
-  "machine": "MacMini",
-  "day": "16.09.2026",
-  "time": "18:00",
-  "evidence": "SIDECAR-TOPICS.md (videoanalytics/xtore): el topic sex/age_band del sidecar Puerta Cam esta VIVO en la pantalla de banco puertacam-bench (productor edge con fixture canonico en el MacMini, admira-tv-mcp/tools/sidecar-edge.mjs) y el player real de Neo (canal r66, ?audience=remote) lo consume: 34 labels visibles < 2 s (sondeo p50 121 / max 549 ms, SSE p50 175 / max 375 ms), __xplCam en 180-563 ms, neutro a los 2 s. Solo viaja {kind, sex, age_band, confidence, source, ts}: sin imagenes ni identidad. Limite honesto: sigue sin clasificador real ni stream; lab != campo. Encargo #3376 de Jobs · FLT-100493."
+  "version": "v.17.09.2026.r1.09:11",
+  "signature": "TrinityMBP16 · MacBookPro16",
+  "agent": "TrinityMBP16",
+  "machine": "MacBookPro16",
+  "day": "17.09.2026",
+  "time": "09:11",
+  "evidence": "La descarga publica de Windows deja de apuntar al binario de junio y usa los alias latest que publica el CI. El player Windows nace con machine y screen estables aunque no haya config.json, se registra para autoarrancar tras el primer inicio y conserva latido, watchdog, reconexion, sello y huella verificable."
 }

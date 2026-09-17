@@ -7,7 +7,7 @@ $app = 'https://admira.app'
 # no se queda apuntando a un binario viejo cada vez que se publica uno nuevo — es lo que
 # pasaba: seguia trayendo el del 27 de junio.
 $manifiesto = 'https://player.admira.store/windows-release.json'
-$fallback   = 'https://player.admira.store/AdmiraSignagePlayer-win-x64-v.16.09.2026.r1.1400.exe'
+$fallback   = 'https://player.admira.store/AdmiraSignagePlayer-win-x64-latest.exe'
 
 Write-Host '== 1/3  Navegador por defecto -> abrir admira.app al iniciar sesion =='
 # Acceso directo en el arranque de Windows que abre admira.app en el navegador por defecto
@@ -61,4 +61,4 @@ if ($sha) {
 Write-Host '== 3/3  Instalando el player =='
 Write-Host '   (App sin firmar: si SmartScreen avisa -> "Mas informacion" -> "Ejecutar de todas formas")'
 Start-Process -FilePath $dst
-Write-Host 'Listo. Sigue el instalador en pantalla. Tras instalar, el player pide screen/circuit de esta pantalla.'
+Write-Host 'Listo. Sigue el instalador en pantalla. Al abrirse, el player se identifica solo en la flota y activa su autoarranque.'

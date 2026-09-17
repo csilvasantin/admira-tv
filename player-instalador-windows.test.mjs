@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const ps1 = readFileSync(new URL('./player/reuniones2.ps1', import.meta.url), 'utf8');
+const page = readFileSync(new URL('./player/index.html', import.meta.url), 'utf8');
 
 test('la versión sale del manifiesto, no de una URL escrita a mano', () => {
   assert.match(ps1, /\$manifiesto\s*=\s*'https:\/\/player\.admira\.store\/windows-release\.json'/);
@@ -17,8 +18,16 @@ test('la versión sale del manifiesto, no de una URL escrita a mano', () => {
 });
 
 test('si el manifiesto no responde, hay una última versión conocida y se avisa', () => {
-  assert.match(ps1, /\$fallback\s*=\s*'https:\/\/player\.admira\.store\/AdmiraSignagePlayer-win-x64-v\.[0-9.r]+\.exe'/);
+  assert.match(ps1, /\$fallback\s*=\s*'https:\/\/player\.admira\.store\/AdmiraSignagePlayer-win-x64-latest\.exe'/);
   assert.match(ps1, /no he podido leer el manifiesto/);
+});
+
+test('la página pública descarga siempre el último Windows, no el binario de junio', () => {
+  assert.match(page, /AdmiraSignagePlayer-win-x64-latest\.exe/);
+  assert.match(page, /AdmiraSignagePlayer-win-x64-latest\.zip/);
+  assert.doesNotMatch(page, /AdmiraSignagePlayer-win-x64-v\.26\.06\.27\.r1/);
+  assert.match(page, /Autoarranque de Windows tras el primer inicio/);
+  assert.match(page, /Identidad automática en la flota/);
 });
 
 test('se comprueba la huella ANTES de ejecutar, y un fallo aborta de verdad', () => {
