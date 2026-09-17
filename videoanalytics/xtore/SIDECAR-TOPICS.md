@@ -22,6 +22,27 @@ Arranque: `node tools/sidecar-edge.mjs puertacam-bench --minutes 480 --status ~/
 ### Evidencia 17-sep (banco, 100 s, `tools/sidecar-observe.mjs`, lectura pública)
 35 labels, **todos visibles < 2000 ms**: sondeo 500 ms p50 178 / p95 250 / max 251 ms; SSE p50 159 / max 275 ms. Nueve tipos de label con el carril que manda el contrato (TopGun, Matrix, Persona, Coche, Moto, Bici) y `neutral (playlist)` entre escenas. `age_seg` correcto en `adulto`, `senior`, `vejez`, `nino`; bajo umbral → `unknown` → `age:null`. Pruebas: 9 nuevas en `test/sidecar-estable.test.mjs`; suite de `admira-tv-mcp` 62 pasan, 0 fallan. Ni el worker del bus ni `canal.html` se han tocado.
 
+### Salud, reconexión y flapping (Jobs #3416 · FLT-100524)
+- **Latido**: el productor reescribe su `--status` cada segundo pase lo que pase (hueco del fixture, stdin callado, bus caído). `updated_at` es el latido; más de 5 s sin él = no está sano.
+- **Reconexión**: una caída son ≥ 3 fallos seguidos. El productor espera 2-4-8… 15 s, sigue latiendo, y al primer acierto vuelve a 1 label/s y lo anota: `reconexiones`, `ultima_reconexion_at`, `caida_desde`, `caida_max_s`. **Probado con una caída real** de un bus falso local (no el de producción): cae 5 s y vuelve → 1 reconexión, caída medida dentro de lo real, ≤ 6 intentos durante la caída, el run termina con código 0. Para el player no cambia nada: durante la caída el bus de verdad habría caído a `neutral` por TTL.
+- **Salud en un comando**: `node tools/sidecar-health.mjs puertacam-bench [--watch 80] [--json]` → proceso vivo, latido, racha, veredicto, bus (`GET /player/<screen>/health`, público) y **coherencia**: si el productor está en una escena con carril, el bus tiene que estar fresco y en ese carril. Exit 0 sano, 1 no sano.
+- **Flapping**: con `--watch` cuenta **rebotes** = un carril con contenido que se pierde y vuelve en < 3 s (Matrix → neutral → Matrix), que es lo que vería el espectador si un label se pierde o llega tarde. `neutral → Moto → neutral` no es un rebote: es una detección corta (las escenas de vehículo del fixture duran 2 s). **Medido 17-sep, 80 s en vivo: 0 rebotes, 20 cambios de carril, 319 sondeos ok y 0 fallidos; la renovación más lenta dentro de una escena fue de 1002 ms, así que quedan 998 ms de margen hasta el TTL de 2000.** Dicho con todas las letras: la primera versión del medidor dio 3 rebotes falsos por contar el neutro como carril; se corrigió y se dejó prueba.
+- Anti-flapeo que ya existía y no se toca: el neutro se sostiene un mínimo de 6 s en el bus (`NEUTRAL_HOLD_MS`) y en `canal.html`, y un label fresco m/f siempre gana al instante.
+
+### Estable frente a laboratorio
+| | estado | evidencia |
+|---|---|---|
+| Transporte edge → bus (contrato de 6 claves, privacidad) | **estable** | 3 h sin rechazos el 16-sep; pruebas de contrato |
+| Consumo del player < 2 s | **estable** | 16 y 17-sep: 34 y 35 labels, máximo 549 y 251 ms |
+| Latido y salud del productor | **estable** | `sidecar-health.mjs`, latido cada segundo |
+| Reconexión tras caída de red o del bus | **estable en prueba** | caída real de un bus local; en producción aún no ha habido ninguna caída que medir |
+| Flapping de carril | **estable en banco** | 0 rebotes en 80 s, margen 998 ms |
+| Un solo productor por pantalla | **estable** | pidfile, segundo arranque sale con código 3 |
+| Percepción: clasificador de sexo y franja | **laboratorio, sin empezar** | solo fixture; ni clasificador ni stream autorizado |
+| Varias personas a la vez (grupos) | **sin decidir** | el contrato es un label por pantalla |
+| Red del sitio real (4G, NAT, cortes largos) | **sin medir** | solo red del MacMini |
+| Productor como servicio permanente | **no, a propósito** | se arranca, se mide y se apaga; hoy vivo hasta las 17:32 |
+
 ### Camino fixture → campo
 | paso | qué corre | qué demuestra | puerta para pasar al siguiente |
 |---|---|---|---|
