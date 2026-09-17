@@ -98,7 +98,7 @@ la orden por hecha.
   Jardinets (15-09): el player VERTICAL es el iPad de Admin `ipad-admin-mupi` (circuito `ipad-admin`, principal:
   el gemelo sincroniza con `ipad-admin-mupi-tema`); el Fold 8 `samsung-galaxy-fold-8-mupi` (horizontal, circuito
   `samsung-galaxy-fold-8`) recibe la MISMA orden vía `SITE_EXTRA` en `best/index.html` (una orden `play<num>`, todas las
-  pantallas reales del sitio). El iPhone de Carlos `iphone17-mupi` (circuito `iphone17`, vertical) también va en `SITE_EXTRA` de Jardinets. Tab A11 `samsung-galaxy-tab-a11-mupi` y el DGX `dgx-spark` conservan un `screen` propio pero siguen en el circuito del Fold `samsung-galaxy-fold-8`; cada uno tiene su `<screen>-tema` con la misma playlist de música. Así no pisan telemetría y sí reciben los mismos cambios y órdenes del CanalKiosk. Tema música.
+  pantallas reales del sitio). El iPhone de Carlos `iphone17-mupi` (circuito `iphone17`, vertical) también va en `SITE_EXTRA` de Jardinets. Tab A11 `samsung-galaxy-tab-a11-mupi` y el DGX `dgx-spark` conservan un `screen` propio pero siguen en el circuito del Fold `samsung-galaxy-fold-8`. El DGX abre además con `leader=samsung-galaxy-fold-8-mupi-tema`: lee directamente el tema canónico del Fold, por lo que una edición en CanalKiosk se refleja sin copiar ni republicar una segunda playlist. Su `dgx-spark-tema`, publicado con la misma música, queda como respaldo. Así no pisan telemetría y sí reciben los mismos contenidos y órdenes del CanalKiosk. Tema música.
   Vila: `samsung-galaxy-fold-9-mupi`. Lesseps: `iphone17-mupi`.
 - **Precedencia**: un emparejamiento con un **player virtual** (`/api/virtual-players`) manda sobre
   todo (el player sigue el programa del virtual e ignora la sincro y el modo remoto). Para devolver la
