@@ -1,6 +1,45 @@
 # Sidecar edge Puerta Cam → topics anónimos (sexo · franja de edad)
 
-Jobs #3275 · FLT-100418 (14-sep-2026), Jobs #3351 · FLT-100472 (15-sep-2026) y Jobs #3376 · FLT-100493 (16-sep-2026) · MorfeoMacMini · MacMini. **Estado 16-sep: el topic está VIVO en banco (productor edge con fixture en el MacMini) y el player real de Neo lo consume en < 1 s; el clasificador real de sexo/edad en el borde sigue bloqueado (ver abajo).** Este documento no es una certificación de cumplimiento.
+Jobs #3275 · FLT-100418 (14-sep-2026), Jobs #3351 · FLT-100472 (15-sep-2026), Jobs #3376 · FLT-100493 (16-sep-2026) y Jobs #3412 · FLT-100520 (17-sep-2026) · MorfeoMacMini · MacMini. **Estado 17-sep: productor edge endurecido y contrato de consumo estable para el player (< 2 s medido otra vez); el camino a campo queda documentado con su puerta de medida; sigue sin haber clasificador real ni stream autorizado.** Estado 16-sep: el topic está VIVO en banco (productor edge con fixture en el MacMini) y el player real de Neo lo consume en < 1 s; el clasificador real de sexo/edad en el borde sigue bloqueado (ver abajo).** Este documento no es una certificación de cumplimiento.
+
+## 17-sep · Productor estable y camino fixture → campo (FLT-100520)
+
+### Contrato de consumo para el player (estable: no cambia respecto al 16-sep)
+- **Leer**: `GET https://mcp-tv.admira.store/audience/<screen>` cada 500 ms (lo que ya hace `canal.html?audience=remote`) o SSE `…/audience/<screen>/stream`. Lectura pública, sin clave. Banco: `<screen>` = `puertacam-bench`.
+- **Usar**: `decision.lane` para el carril y `decision.age_seg` (Pixeria) para la franja. Solo cuenta un label con `fresh:true`. `unknown` es `null` en el player, nunca `adulto`.
+- **Frescura**: TTL del bus 2000 ms. Si el productor calla, falla o se apaga, el bus cae solo a `neutral`/`playlist` en ≤ 2 s más un sondeo (medido el 16-sep: 2,1–2,6 s). El player nunca se queda con un label viejo: **no hace falta ninguna lógica de recuperación en el player**, basta con respetar `fresh`.
+- **Si el productor no corre**: `label:null`, `lane:neutral`. No es un error del player. Hoy 17-sep el banco está vivo de 09:32 a 17:32 (hora de Madrid); para revivirlo otro día, el comando de abajo.
+
+### Qué se endureció en el productor (`admira-tv-mcp/tools/sidecar-edge.mjs`)
+1. **Un solo productor por pantalla**: pidfile junto al `--status`. Un segundo arranque sale con código 3 sin tocar el estado del vivo. Dos productores sobre el mismo topic se pisan el `ts` y el bus rechaza por `stale`. Un pidfile de un proceso muerto se hereda sin intervención.
+2. **Tope de 5 s por publicación**: un `fetch` colgado ya no para el bucle; cuenta como error de red.
+3. **Espera creciente**: a partir de 3 fallos seguidos espera 2, 4, 8… hasta 15 s; al primer acierto vuelve a 1 label/s. Probado contra un bus caído: 3–5 intentos en 7 s en vez de uno por segundo.
+4. **Veredicto tolerante**: el run es bueno si falla ≤ 1 % de los intentos (`--tolerancia`; `0` recupera el criterio estricto del 16-sep). Un 5xx suelto en 3 h ya no marca el run como fallido.
+5. **Métrica de campo en el `--status`**: distribución de lo que el bus ACEPTÓ (`kind`, `sex`, `age_band`) y tasa de `unknown` sobre personas. `--umbral` aplica también a `--source jsonl`.
+
+Arranque: `node tools/sidecar-edge.mjs puertacam-bench --minutes 480 --status ~/.fleet/sidecar/puertacam-bench.status.json --quiet`. Sigue sin ser un LaunchAgent a propósito (pantalla de banco «viva» en `/signage/screens` y ~86 k peticiones/día).
+
+### Evidencia 17-sep (banco, 100 s, `tools/sidecar-observe.mjs`, lectura pública)
+35 labels, **todos visibles < 2000 ms**: sondeo 500 ms p50 178 / p95 250 / max 251 ms; SSE p50 159 / max 275 ms. Nueve tipos de label con el carril que manda el contrato (TopGun, Matrix, Persona, Coche, Moto, Bici) y `neutral (playlist)` entre escenas. `age_seg` correcto en `adulto`, `senior`, `vejez`, `nino`; bajo umbral → `unknown` → `age:null`. Pruebas: 9 nuevas en `test/sidecar-estable.test.mjs`; suite de `admira-tv-mcp` 62 pasan, 0 fallan. Ni el worker del bus ni `canal.html` se han tocado.
+
+### Camino fixture → campo
+| paso | qué corre | qué demuestra | puerta para pasar al siguiente |
+|---|---|---|---|
+| 0 · Fixture (hoy) | `--source fixture` en el MacMini | transporte, contrato y consumo < 2 s | cumplida (16 y 17-sep) |
+| 1 · Replay etiquetado | clasificador candidato EN EL BORDE sobre metraje **consentido**; salida JSONL de etiquetas + etiqueta humana | percepción: tasa de `unknown` y error por franja | `tools/sidecar-field-eval.mjs` dice PASA |
+| 2 · Sombra en el sitio | clasificador real → `--source jsonl` contra una pantalla de **banco**, no la real | `unknown` real del `--status`, latencia < 2 s con `sidecar-observe`, rachas de fallo de red del sitio | una semana sin veredicto malo y `unknown` dentro de la puerta |
+| 3 · Piloto | misma tubería contra la pantalla real; solo `kind` + `sex` mueven carril | impacto en contenido | decisión de Jobs/Carlos |
+| 4 · Edad activa | reglas de `age` del player | — | puerta de franja cumplida en campo, no solo en replay |
+
+- **La puerta** (`node tools/sidecar-field-eval.mjs etiquetas.jsonl --barrido`): una línea por persona, **solo etiquetas** (`{"truth":{sex,age_band},"pred":{kind,sex,age_band,confidence}}`). `pred` pasa por el mismo `labelDeEscena` y el mismo umbral que producción: se mide lo que se emitiría. Informa tasa de `unknown`, error sobre lo emitido, confusión, error por franja (adyacente o grave) y un barrido de umbral para elegirlo con datos. Máximos **propuestos** (son parámetros; los fija quien decide): error de sexo ≤ 5 %, de franja ≤ 15 %, `unknown` ≤ 50 %, ≥ 200 muestras por eje. `tools/fixtures/campo-sintetico.jsonl` es un ejemplo **sintético** de 24 filas para ver el formato: no mide nada real y, como debe, NO PASA.
+- **Privacidad (sin caras a cloud, sin identidad biométrica)**: el clasificador corre en el borde; de su proceso solo salen las seis claves del contrato. `image`, `crop`, `bbox`, `embedding`, `person_id` y `track_id` se descartan antes de la red (probado también en `--source jsonl`). El fichero de evaluación tampoco lleva imágenes ni identificadores. No se guarda historial por persona: el bus conserva el último label 60 s.
+
+### Límites que quedan (honestos)
+1. **No hay clasificador de sexo/edad en el borde ni stream autorizado de Puerta Cam.** El MacMini no tiene runtime de visión (ni OpenCV, ni mediapipe, ni onnxruntime). Los pasos 1–4 no han empezado. Siguiente paso concreto: elegir el runtime del borde y conseguir metraje consentido para el paso 1.
+2. **Lab ≠ campo.** El fixture publica una persona cada vez y con confianza limpia. En calle habrá caras pequeñas, contraluz, gorras y **grupos**: el contrato es un label por pantalla, así que con varias personas alguien tiene que decidir la regla (la de mayor confianza, la más cercana, o `u`/`unknown` si discrepan). Está sin decidir.
+3. Los máximos de la puerta son una propuesta técnica, no una política aprobada.
+4. El relé del portal sigue cerrado (`XTORE_AUDIENCE_TOPICS`); el productor publica directo al bus con clave de flota.
+5. Mientras el productor corre, `puertacam-bench` figura viva en `/signage/screens` (y en yokup como player online).
 
 ## 16-sep · Topic VIVO en banco (FLT-100493)
 - **Qué cambia respecto al 15-sep.** Entonces el productor era un banco de una pasada (7 labels y fin). Hoy hay un **productor edge continuo** en el MacMini (`admira-tv-mcp/tools/sidecar-edge.mjs`) que mantiene el topic `sex`/`age_band` vivo en la pantalla de banco `puertacam-bench` reproduciendo en bucle un **fixture** con el formato canónico de este documento. Neo puede leerlo cuando quiera: `GET https://mcp-tv.admira.store/audience/puertacam-bench`, SSE `…/audience/puertacam-bench/stream`, o directamente el canal `https://admira.tv/canal.html?screen=puertacam-bench&circuit=xtanco&mode=conditional&audience=remote&muted=1`. Ni el worker (bus `v.16.09.2026.r2`) ni `canal.html` se han tocado.
