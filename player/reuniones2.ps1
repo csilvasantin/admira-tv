@@ -1,7 +1,10 @@
-# Admira · REUNIONES-2 — abre el navegador en admira.app al iniciar sesion + instala el player de admira.tv (Windows)
-# Ejecutar en REUNIONES-2:  Boton derecho > "Ejecutar con PowerShell"  (o pegar en una ventana de PowerShell)
+# Admira · REUNIONES-2 — instala y arranca el player nativo de admira.tv (Windows)
+# Ejecutar en REUNIONES-2 desde PowerShell. No requiere asistente: instala en silencio,
+# fija la identidad de flota y comprueba que el proceso queda vivo.
 $ErrorActionPreference = 'Stop'
-$app = 'https://admira.app'
+$machine = 'reuniones-2'
+$screen = 'reuniones-2-mupi'
+$circuit = 'oficina'
 # El instalador YA NO LLEVA LA URL A MANO (16-09-2026). Lee el manifiesto que publica el
 # CI y de ahi saca el .exe de la ultima version sellada y su SHA-256. Asi el instalador
 # no se queda apuntando a un binario viejo cada vez que se publica uno nuevo — es lo que
@@ -9,27 +12,20 @@ $app = 'https://admira.app'
 $manifiesto = 'https://player.admira.store/windows-release.json'
 $fallback   = 'https://player.admira.store/AdmiraSignagePlayer-win-x64-latest.exe'
 
-Write-Host '== 1/3  Navegador por defecto -> abrir admira.app al iniciar sesion =='
-# Acceso directo en el arranque de Windows que abre admira.app en el navegador por defecto
-$startup = [Environment]::GetFolderPath('Startup')
-$lnkPath = Join-Path $startup 'Admira.app.lnk'
-$ws = New-Object -ComObject WScript.Shell
-$lnk = $ws.CreateShortcut($lnkPath)
-$lnk.TargetPath = 'rundll32.exe'
-$lnk.Arguments  = "url.dll,FileProtocolHandler $app"
-$lnk.Description = 'Abrir admira.app'
-$lnk.Save()
-Write-Host "   creado: $lnkPath"
-# Homepage/arranque de Edge (si esta instalado)
-$edgeKey = 'HKCU:\Software\Policies\Microsoft\Edge'
-try {
-  New-Item -Path $edgeKey -Force | Out-Null
-  Set-ItemProperty -Path $edgeKey -Name RestoreOnStartup -Value 4 -Type DWord
-  New-Item -Path "$edgeKey\RestoreOnStartupURLs" -Force | Out-Null
-  Set-ItemProperty -Path "$edgeKey\RestoreOnStartupURLs" -Name '1' -Value $app
-  Write-Host '   Edge configurado para abrir admira.app al arrancar'
-} catch { Write-Host '   (Edge no configurado; el acceso directo de arranque abre admira.app igual)' }
-Start-Process $app
+Write-Host '== 1/3  Identidad persistente de flota =='
+# Una versión anterior de este script abría además admira.app desde Inicio y competía
+# por el foco con el kiosko. Retiramos únicamente ese acceso directo creado por nosotros.
+$legacyShortcut = Join-Path ([Environment]::GetFolderPath('Startup')) 'Admira.app.lnk'
+if (Test-Path $legacyShortcut) { Remove-Item $legacyShortcut -Force }
+# Persistir en el entorno del usuario hace que la identidad llegue también al arranque
+# automático posterior. Se replica en el proceso actual para el primer lanzamiento.
+[Environment]::SetEnvironmentVariable('ADMIRA_MACHINE', $machine, 'User')
+[Environment]::SetEnvironmentVariable('ADMIRA_SCREEN', $screen, 'User')
+[Environment]::SetEnvironmentVariable('ADMIRA_CIRCUIT', $circuit, 'User')
+$env:ADMIRA_MACHINE = $machine
+$env:ADMIRA_SCREEN = $screen
+$env:ADMIRA_CIRCUIT = $circuit
+Write-Host "   machine=$machine · screen=$screen · circuit=$circuit"
 
 Write-Host '== 2/3  Descargando el player de admira.tv (Windows) =='
 $playerUrl = $fallback
@@ -58,7 +54,34 @@ if ($sha) {
   Write-Host '   (sin huella en el manifiesto: se instala sin verificar)'
 }
 
-Write-Host '== 3/3  Instalando el player =='
-Write-Host '   (App sin firmar: si SmartScreen avisa -> "Mas informacion" -> "Ejecutar de todas formas")'
-Start-Process -FilePath $dst
-Write-Host 'Listo. Sigue el instalador en pantalla. Al abrirse, el player se identifica solo en la flota y activa su autoarranque.'
+Write-Host '== 3/3  Instalando y comprobando el player =='
+Write-Host '   App sin firmar: la ejecución directa evita el asistente, pero Windows puede registrar el editor como desconocido.'
+Get-Process -Name 'Admira Signage' -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Process -FilePath $dst -ArgumentList '/S' -Wait
+
+$candidates = @(
+  (Join-Path $env:LOCALAPPDATA 'Programs\Admira Signage\Admira Signage.exe'),
+  (Join-Path $env:LOCALAPPDATA 'Programs\admira-signage-electron\Admira Signage.exe')
+)
+$installed = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $installed) {
+  $programs = Join-Path $env:LOCALAPPDATA 'Programs'
+  if (Test-Path $programs) {
+    $installed = Get-ChildItem -Path $programs -Filter 'Admira Signage.exe' -File -Recurse -ErrorAction SilentlyContinue |
+      Select-Object -ExpandProperty FullName -First 1
+  }
+}
+if (-not $installed) { throw 'El instalador terminó, pero no encuentro Admira Signage.exe en LOCALAPPDATA\Programs.' }
+
+Start-Process -FilePath $installed
+Start-Sleep -Seconds 8
+$running = Get-Process -Name 'Admira Signage' -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $running) { throw "El player se instaló en $installed, pero el proceso no permanece vivo." }
+
+$runKey = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -ErrorAction SilentlyContinue
+$autoStart = $runKey.PSObject.Properties.Value | Where-Object { $_ -is [string] -and $_ -like "*$installed*" } | Select-Object -First 1
+Write-Host "   instalado: $installed"
+Write-Host "   proceso vivo: PID $($running.Id)"
+if ($autoStart) { Write-Host '   autoarranque: registrado' }
+else { Write-Host '   autoarranque: el player lo registrará al completar su primer arranque' }
+Write-Host "Listo. REUNIONES-2 emite como $screen; comprueba el latido en admira.live o admira.tv/cms.html."

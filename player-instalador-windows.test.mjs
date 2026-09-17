@@ -48,3 +48,20 @@ test('los campos que lee son los que el manifiesto publica de verdad', () => {
   for (const campo of ['nombre', 'url', 'sha256']) assert.match(ps1, new RegExp('\\$exe\\.' + campo + '|_\\.' + campo));
   assert.match(ps1, /\$m\.release/);
 });
+
+test('REUNIONES-2 queda identificada y la instalación es desatendida', () => {
+  assert.match(ps1, /\$machine\s*=\s*'reuniones-2'/);
+  assert.match(ps1, /\$screen\s*=\s*'reuniones-2-mupi'/);
+  assert.match(ps1, /\$circuit\s*=\s*'oficina'/);
+  for (const key of ['ADMIRA_MACHINE', 'ADMIRA_SCREEN', 'ADMIRA_CIRCUIT']) {
+    assert.match(ps1, new RegExp(`SetEnvironmentVariable\\('${key}'`));
+  }
+  assert.match(ps1, /Start-Process -FilePath \$dst -ArgumentList '\/S' -Wait/);
+});
+
+test('la instalación no dice listo sin encontrar binario y proceso', () => {
+  assert.match(ps1, /Admira Signage\.exe/);
+  assert.match(ps1, /Get-Process -Name 'Admira Signage'/);
+  assert.match(ps1, /el proceso no permanece vivo/);
+  assert.ok(ps1.indexOf('proceso no permanece vivo') < ps1.indexOf('Write-Host "Listo.'));
+});
