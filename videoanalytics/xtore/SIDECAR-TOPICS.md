@@ -2,6 +2,52 @@
 
 Jobs #3275 · FLT-100418 (14-sep-2026), Jobs #3351 · FLT-100472 (15-sep-2026), Jobs #3376 · FLT-100493 (16-sep-2026) y Jobs #3412 · FLT-100520 (17-sep-2026) · MorfeoMacMini · MacMini. **Estado 17-sep: productor edge endurecido y contrato de consumo estable para el player (< 2 s medido otra vez); el camino a campo queda documentado con su puerta de medida; sigue sin haber clasificador real ni stream autorizado.** Estado 16-sep: el topic está VIVO en banco (productor edge con fixture en el MacMini) y el player real de Neo lo consume en < 1 s; el clasificador real de sexo/edad en el borde sigue bloqueado (ver abajo).** Este documento no es una certificación de cumplimiento.
 
+## 18-sep · Fixture de CAMPO y delta laboratorio vs campo (Jobs #3498 · FLT-100592)
+
+El paso 0 del camino (bench, banco) era un fixture de LABORATORIO: personas limpias, una cada vez,
+confianzas altas (0,74–0,82). El fixture de CAMPO `admira-tv-mcp/tools/fixtures/puertacam-campo-v1.json`
+simula la calle real ante la Puerta Cam: umbral 0,55, confianzas al límite que **caen a `unknown`**
+(gorras, contraluz, caras pequeñas), personas que pasan en 2–4 s, y **grupos resueltos como la persona
+DOMINANTE** (la de más confianza) sostenida mientras el grupo está delante — un label por pantalla,
+sin alternar. Sigue siendo una simulación: NO hay clasificador real ni stream autorizado.
+
+### Delta medido (mismo productor, mismo bus, 90 s cada uno)
+| | Banco (laboratorio) | Campo (fixture) |
+|---|---|---|
+| `unknown` de sexo | 0 % | ~35 % |
+| `unknown` de franja | 0 % | ~26 % |
+| bajo umbral | ~11 % | ~26 % |
+| cambios de carril / 90 s | ~20 | ~36 |
+| **flapping DURO** | 0 | **0** |
+| rebotes benignos (mismo carril vía neutral ≥ 1,5 s) | 0 | 2 |
+| salud (proceso · latido · veredicto · coherencia) | ✓ | ✓ |
+
+**Resultado: el Conditional es ESTABLE en campo.** Health en vivo verde y **cero flapping duro**. La
+calle mete mucho más `unknown` (a propósito: no se adivina) y más cambios de carril, pero ningún salto
+brusco entre contenidos. Los únicos «rebotes» son benignos: el mismo carril (p. ej. Persona) que vuelve
+tras un hueco real de ~2 s de playlist —tráfico normal—, no oscilación que moleste al ojo.
+
+### Cómo se afinó la medida
+`tools/sidecar-health.mjs` ahora distingue **rebote DURO** (salto directo entre contenidos
+Matrix↔TopGun, o reaparición en < 1,5 s, aun pasando por neutral) de **rebote benigno** (mismo carril
+que vuelve tras un hueco de neutral ≥ 1,5 s). La salud juzga el flapping por los DUROS; los benignos se
+cuentan aparte. Así «estable sin flapping» es una afirmación medida, no un umbral a ojo.
+
+### Arranque y health en vivo
+```sh
+node tools/sidecar-edge.mjs puertacam-bench --fixture tools/fixtures/puertacam-campo-v1.json --minutes 20 \
+  --status ~/.fleet/sidecar/puertacam-campo.status.json --quiet
+node tools/sidecar-health.mjs puertacam-bench --status ~/.fleet/sidecar/puertacam-campo.status.json --watch 90
+```
+Health URL viva (pública, sin clave): **https://mcp-tv.admira.store/player/puertacam-bench/health**.
+Presentar en el player: **https://admira.tv/canal.html?screen=puertacam-bench&circuit=xtanco&mode=conditional&audience=remote&muted=1**.
+
+### Límite honesto (lo que el fixture NO es)
+Sigue sin haber clasificador de sexo/edad en el borde ni stream autorizado de Puerta Cam: el fixture de
+campo demuestra que la TUBERÍA aguanta condiciones de calle (mucho `unknown`, tránsito rápido, grupos)
+sin flapping, no que percibamos bien. La validación real (tasa de `unknown` y error por franja con
+metraje consentido) sigue siendo el paso 1 del camino, con `tools/sidecar-field-eval.mjs`.
+
 ## 17-sep · Productor estable y camino fixture → campo (FLT-100520)
 
 ### Contrato de consumo para el player (estable: no cambia respecto al 16-sep)
