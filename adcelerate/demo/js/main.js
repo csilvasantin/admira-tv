@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
 
 const photo = {frame:null, ready:false, signature:'', returnMode:null, mode:'photo', siteId:(OutdoorSites.get(new URLSearchParams(location.search).get('site'))||OutdoorSites.get('vila')).id};
+const audienceSource={mode:AudienceMode.parse(location.search)};
 const humanHUD = HumanView.create({element:document.getElementById('human-hud'),
   send:sendHumanCommand,onExit:closePhoto,onInspect:inspectHumanSupport,onSiteChange:selectHumanSite});
 let selectedSite = 'kiosk';
@@ -109,6 +110,9 @@ function mulberry32(seed) {
 const lerp = (a, b, t) => a + (b - a) * t;
 const easeInOut = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 const $ = id => document.getElementById(id);
+function audienceCounts(){
+  return AudienceMode.counts(audienceSource.mode,state.cur.aforo,Math.min(MAX_CROWD,Math.round(state.cur.aforo*wxCrowdFactor)));
+}
 
 /* ============================== escena base ============================== */
 const canvas = $('scene');
@@ -1135,7 +1139,7 @@ function buildCrowd(data) {
 const _c = new THREE.Color();
 function updateCrowd() {
   if (!figures) return;
-  const n = Math.min(MAX_CROWD, Math.round(state.cur.aforo * wxCrowdFactor));   // aforo ajustado por meteo
+  const n = audienceCounts().effectiveCount;
   figCount = n;
   figures.body.count = n; figures.legs.count = n; figures.head.count = n;
   // umbrales acumulados del mix interpolado → perfil por figura → ropa de su paleta
@@ -1258,6 +1262,7 @@ function buildHUD() {
     $('aforo-reset').onclick = () => { aforoCtl.manual = false; updateAforoUI(); };
     updateAforoUI();
   }
+  document.querySelectorAll('[data-audience-source]').forEach(button=>button.onclick=()=>setAudienceSource(button.dataset.audienceSource));
   $('ficha-close').onclick = () => $('ficha').classList.add('hidden');
   document.querySelectorAll('#cammodes button').forEach(b => {
     b.onclick = () => setCamMode(b.dataset.mode);
@@ -1407,9 +1412,9 @@ function updateExpert(force = false) {
       mix: Object.fromEntries(PERFILES.map(p => [p, +state.cur.mix[p].toFixed(1)])),
       dominante: state.dominante,
     },
-    aforo_fuente: aforoCtl.manual ? 'MANUAL (slider ' + aforoCtl.value + ')' : 'curva simulada (curva 24h)',
+    aforo_fuente: audienceSource.mode==='geomex' ? 'GEOMEX (referencia fija: '+AudienceMode.GEOMEX_COUNT+')' : aforoCtl.manual ? 'MANUAL (slider ' + aforoCtl.value + ')' : 'curva simulada (curva 24h)',
     reloj: rt.active ? 'RT 1:1 (Europe/Madrid)' : (state.auto ? 'AUTO 90s' : 'manual'),
-    fuente: 'simulación de demostración',
+    fuente: audienceSource.mode==='geomex' ? 'GEOMEX · referencia facilitada para la demo' : 'simulación de demostración',
   }, null, 1);
   $('ex-signage').textContent = JSON.stringify({
     signage_now: lastSignageRaw,
@@ -1432,16 +1437,36 @@ function updateExpert(force = false) {
 function updateAforoUI() {
   const src = $('aforo-src'), rst = $('aforo-reset');
   if (!src) return;
-  src.textContent = aforoCtl.manual ? 'aforo manual' : 'curva simulada';
-  src.classList.toggle('manual', aforoCtl.manual);
-  rst.classList.toggle('hidden', !aforoCtl.manual);
+  const geomex=audienceSource.mode==='geomex';
+  src.textContent = geomex ? 'GEOMEX · referencia fija' : aforoCtl.manual ? 'aforo manual' : 'curva simulada';
+  src.classList.toggle('manual', !geomex&&aforoCtl.manual);
+  rst.classList.toggle('hidden', geomex||!aforoCtl.manual);
+  $('audience-title').textContent=geomex?'Audiencia GEOMEX · plaza':'Audiencia simulada · plaza';
+  $('aforo-unit').textContent=geomex?'personas · GEOMEX':'personas · base simulada';
+  $('audience-clock-note').textContent=geomex?'GEOMEX · referencia fija; la hora no altera el aforo':'Audiencia simulada de la plaza · curva de demostración';
+  $('aforo-slider').disabled=geomex;
+  $('aforo-slider').step=geomex?'1':'5';
+  $('aforo-slider').classList.toggle('hidden',geomex);
+  document.querySelectorAll('[data-audience-source]').forEach(button=>{
+    const active=button.dataset.audienceSource===audienceSource.mode;
+    button.setAttribute('aria-pressed',String(active));
+  });
+}
+function setAudienceSource(mode){
+  if(!AudienceMode.valid(mode)||audienceSource.mode===mode)return;
+  audienceSource.mode=mode;
+  const url=new URL(location.href);
+  if(mode==='geomex')url.searchParams.delete('audience');else url.searchParams.set('audience',mode);
+  history.replaceState(null,'',url);
+  updateAforoUI();refreshHUD();updateCrowd();updateWxAdjustHUD();updateExpert(true);
 }
 function refreshHUD() {
   updateUniverseCard();
-  $('aforo').textContent = Math.round(state.cur.aforo);
+  const counts=audienceCounts();
+  $('aforo').textContent = Math.round(counts.baseCount);
   // en automático el slider SIGUE al curva simulada (posición viva)
   const asl = $('aforo-slider');
-  if (asl && !aforoCtl.manual && document.activeElement !== asl) asl.value = String(Math.round(state.cur.aforo));
+  if (asl && document.activeElement !== asl) asl.value = String(Math.round(audienceSource.mode==='geomex'?counts.baseCount:state.cur.aforo));
   const mx = state.cur.mix;
   const tot = PERFILES.reduce((a, p) => a + mx[p], 0) || 1;
   PERFILES.forEach(p => {
@@ -1495,7 +1520,7 @@ function onWeatherLoaded() {
 function updateWxAdjustHUD() {
   const row = $('wx-adjust-row'), b = $('wx-adjust');
   if (!row) return;
-  if (weather.ok && wxCrowdFactor < 0.985) {
+  if (audienceSource.mode==='simulation' && weather.ok && wxCrowdFactor < 0.985) {
     row.classList.remove('hidden');
     b.textContent = Math.round(state.cur.aforo * wxCrowdFactor) + ' · −' + Math.round((1 - wxCrowdFactor) * 100) + '% por meteo';
   } else row.classList.add('hidden');
@@ -1869,16 +1894,18 @@ function tickFlight(now) {
 /* =================== universo compartido, dos vistas =================== */
 function contextSnapshot() {
   const sum = PERFILES.reduce((n,p) => n + state.cur.mix[p], 0) || 1;
+  const counts=audienceCounts();
   return OutdoorContext.validate({siteId:'bcn-kiosk-016', hour:state.hour,
-    baseCount:state.cur.aforo, effectiveCount:Math.min(MAX_CROWD, Math.round(state.cur.aforo * wxCrowdFactor)),
-    mix:Object.fromEntries(PERFILES.map(p => [p,state.cur.mix[p] * 100 / sum])), manual:aforoCtl.manual,
+    baseCount:counts.baseCount, effectiveCount:counts.effectiveCount, audienceMode:audienceSource.mode,
+    mix:Object.fromEntries(PERFILES.map(p => [p,state.cur.mix[p] * 100 / sum])), manual:audienceSource.mode==='simulation'&&aforoCtl.manual,
     selection:selectedSite, layers:{crowd:$('capa-multitud').checked, buildings:$('capa-edificios').checked,
       roads:$('capa-viales').checked, night:$('escena-noche').checked}});
 }
 function updateUniverseCard() {
   const c = contextSnapshot(); if (!c) return;
   $('universe-count').textContent = c.effectiveCount;
-  $('universe-base').textContent = `${fmtHora(c.hour)} · base ${Math.round(c.baseCount)}${c.manual ? ' manual' : ''}${c.effectiveCount < Math.round(c.baseCount) ? ' · ajuste por meteo' : ''}`;
+  $('universe-audience-label').textContent=c.audienceMode==='geomex'?'personas GEOMEX en la plaza':'personas simuladas en la plaza';
+  $('universe-base').textContent = c.audienceMode==='geomex' ? 'GEOMEX · referencia fija' : `${fmtHora(c.hour)} · base ${Math.round(c.baseCount)}${c.manual ? ' manual' : ''}${c.effectiveCount < Math.round(c.baseCount) ? ' · ajuste por meteo' : ''}`;
   $('universe-mix').innerHTML = PERFILES.map(p => `<span>${PERFIL_LABEL[p]} ${Math.round(c.mix[p])}%</span>`).join('');
   $('select-kiosk').classList.toggle('active', selectedSite === 'kiosk');
   $('select-plaza').classList.toggle('active', selectedSite === 'plaza');
@@ -1937,6 +1964,7 @@ function openPhoto(mode = 'photo') {
   document.body.classList.remove('universe-options-open');
   document.body.classList.toggle('human-active',mode === 'human');
   if (mode === 'human') { humanHUD.enter(photo.siteId); updateUniverseCard(); updateHumanUrl(); }
+  if(mode==='human')dispatchEvent(new CustomEvent('admira-interface-set',{detail:{hidden:true}}));
   document.body.classList.add('photo-active');
   $('universe-photo').classList.add('hidden');
   $('universe-human').classList.add('hidden');
@@ -2135,6 +2163,7 @@ function closePhoto() {
   $('photo-view').classList.add('hidden');
   document.body.classList.remove('photo-active','human-active');
   humanHUD.leave();
+  dispatchEvent(new CustomEvent('admira-interface-set',{detail:{hidden:false}}));
   if(photo.mode==='human'){const url=new URL(location.href);url.searchParams.delete('view');history.replaceState(null,'',url);document.title='ADcelerate · Gemelo Plaça de la Vila de Gràcia — demo';document.querySelector('.brand-txt .sub').textContent='Gemelo · Vila de Gràcia';}
   $('universe-photo').classList.remove('hidden');
   $('universe-human').classList.remove('hidden');
@@ -2267,8 +2296,9 @@ function animate(now) {
     if (Math.abs(state.cur.mix[p] - objetivo.mix[p]) > 0.25) moving = true;
     state.cur.mix[p] = lerp(state.cur.mix[p], objetivo.mix[p], k);
   }
-  const effectiveCount = Math.round(state.cur.aforo * wxCrowdFactor);
-  const baseCount = Math.round(state.cur.aforo);
+  const activeCounts=audienceCounts();
+  const effectiveCount = activeCounts.effectiveCount;
+  const baseCount = Math.round(activeCounts.baseCount);
   if ((moving || hourDirty || effectiveCount !== lastEffectiveCount || baseCount !== lastBaseCount) && now - lastHUD > 150) {
     lastEffectiveCount = effectiveCount; lastBaseCount = baseCount;
     lastHUD = now;
@@ -2331,7 +2361,7 @@ if(entry.get('tour')==='dooh')startDoohTour();
 
 // gancho de inspección (demo/debug)
 window.__dbg = {
-  playerRemote,doohTour,startDoohTour,stopDoohTour,setTourTravelMode,screenSound,openPhoto, closePhoto, selectHumanSite, sendHumanCommand, humanHUD, contextSnapshot, focusOverview, zoomUniverse, photo,
+  playerRemote,doohTour,startDoohTour,stopDoohTour,setTourTravelMode,screenSound,openPhoto, closePhoto, selectHumanSite, sendHumanCommand, humanHUD, contextSnapshot, focusOverview, zoomUniverse, photo,setAudienceSource,
   camera, camera2D, controls, state, startFlight, applyFranja, setCamMode, setQuality, nextStock, fly, pan2D, tickPan2D,
   get camMode() { return camMode; },
   get quality() { return quality; },
@@ -2343,6 +2373,7 @@ window.__dbg = {
   weather, wxApplied, loadWeather, wxSample, wxIcon, enterHuman, HUMAN,
   setRT, rtSync, madridNow, rtHourNow, fmtHoraSec, get rt() { return rt; },
   playStock, playerCmd, showToast, jumpHourToSunrise, SUN, aforoCtl,
+  get audienceSource(){return audienceSource.mode;},
   get stockIdx() { return stockIdx; }, get stockQueue() { return stockQueue; }, get stockLive() { return stockLive; },
   get wxCrowdFactor() { return wxCrowdFactor; },
 };

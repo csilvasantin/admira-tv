@@ -13,6 +13,11 @@ Entrada directa: `/adcelerate/demo/?view=human`. El botón **Humano** de la barr
 el antiguo modo humano de Cámara abren esta experiencia; ya no llevan al avatar de
 la maqueta. `/adcelerate/demo/` conserva el entorno 3D como vista general.
 
+La vista Humano entra con la interfaz plegada para dejar limpia la fotografía. La
+marca **ADcelerate** permanece como miga de navegación: al pulsarla muestra u oculta
+la interfaz completa. La tecla **H** conserva el mismo comportamiento y al volver al
+Mapa 3D se restaura la interfaz.
+
 El modo a pie comienza en los paneles publicitarios del quiosco, en el panorama
 Google de marzo de 2023 que tiene conexiones de Street View. W / flecha arriba
 avanza por una conexión real próxima al rumbo actual; S / flecha abajo busca una
@@ -78,9 +83,15 @@ existe la primera conexión verificada. El recorrido hace el desplazamiento late
 y después entra en Jesús, validando ambos enlaces. **Parar recorrido** interrumpe
 la continuación; un movimiento manual o cambio de destino también la cancela.
 
-## Audiencia de demostración
+## Audiencia GEOMEX y simulación de demostración
 
-La curva de 24 horas y las mezclas de perfiles son datos simulados definidos en `js/main.js`. No existe una fuente telco ni una calibración MITMA. La cifra base puede fijarse manualmente entre 0 y 800; la cifra de personas representadas aplica el factor meteorológico existente. Ambas cifras se muestran con su contexto. La meteo se obtiene de Open-Meteo; activar RT cambia reloj/meteo, no convierte la audiencia en una medición real. El contenido del canal puede ser real y es independiente de la audiencia simulada.
+**GEOMEX** es la fuente inicial de audiencia y representa exactamente **54 personas**
+en la plaza. Es una referencia de planificación facilitada para esta demo, no un
+conteo en vivo; por ello no se altera con la hora ni con la meteo. El selector de
+fuente permite volver de forma explícita a **Simulación 24 h**, y la URL conserva
+esa elección con `?audience=simulation` (`?mode=geomex` también abre GEOMEX).
+
+La curva de 24 horas y las mezclas de perfiles son datos simulados definidos en `js/main.js`. No existe una fuente telco ni una calibración MITMA. En Simulación 24 h, la cifra base puede fijarse manualmente entre 0 y 800; la cifra de personas representadas aplica el factor meteorológico existente. Ambas cifras se muestran con su contexto. La meteo se obtiene de Open-Meteo; activar RT cambia reloj/meteo, no convierte la audiencia en una medición real. El contenido del canal puede ser real y es independiente de la audiencia simulada.
 
 ## Vista real opcional
 

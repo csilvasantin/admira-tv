@@ -1,12 +1,15 @@
 /* H: presentation. S: selection overlays. Neither changes camera or playback. */
 (function(){
- const embedded=window.parent!==window,channel='admira-hidden-ui-v1';let hidden=false,selectionHidden=false;
+ const embedded=window.parent!==window,channel='admira-hidden-ui-v1',params=new URLSearchParams(location.search);
+ let hidden=!embedded&&(params.get('view')==='human'||params.get('mode')==='human'||params.get('tour')==='dooh'),selectionHidden=false;
  const frames=()=>[...document.querySelectorAll('#photo-view iframe')];
+ const toggle=document.getElementById('ui-toggle');
  const state=()=>({channel,type:'state',hidden,selectionHidden});
  function apply(value,selection=selectionHidden){
   const resized=hidden!==value,selectionChanged=selectionHidden!==selection;hidden=value;selectionHidden=selection;
   document.documentElement.classList.toggle('ui-hidden',hidden);
   document.documentElement.classList.toggle('targets-hidden',selectionHidden);
+  if(toggle){toggle.setAttribute('aria-expanded',String(!hidden));toggle.setAttribute('aria-label',hidden?'Mostrar interfaz':'Ocultar interfaz');toggle.title=hidden?'Mostrar interfaz':'Ocultar interfaz';}
   frames().forEach(f=>f.contentWindow?.postMessage(state(),location.origin));
   if(resized)window.dispatchEvent(new Event('resize'));
   if(selectionChanged)window.dispatchEvent(new Event('admira-targets-change'));
@@ -27,7 +30,9 @@
    if(e.data.type==='ready')e.source.postMessage(state(),location.origin);
   }
  });
- // Default: interface visible (FLT-100224). H still toggles presentation mode.
- apply(false);
+ toggle?.addEventListener('click',()=>{if(embedded)parent.postMessage({channel,type:'toggle'},location.origin);else apply(!hidden);});
+ addEventListener('admira-interface-set',e=>{if(!embedded&&typeof e.detail?.hidden==='boolean')apply(e.detail.hidden);});
+ // Human deep links begin clean; the ADcelerate crumb and H restore the complete UI.
+ apply(hidden);
  if(embedded)parent.postMessage({channel,type:'ready'},location.origin);
 })();

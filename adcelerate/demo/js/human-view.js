@@ -129,16 +129,17 @@
     function updateAudience(context,labels,recommendation){
       audienceArgs=[context,labels,recommendation];
       const hasAudience=currentSite.audienceSiteId===context.siteId;
+      const geomex=hasAudience&&context.audienceMode==='geomex';
       el('human-audience').textContent=hasAudience?context.effectiveCount:'—';
-      el('human-audience-label').textContent=hasAudience?'personas simuladas en Vila de Gràcia':'Audiencia pendiente de conectar';
-      el('human-audience-base').textContent=hasAudience?'Base '+Math.round(context.baseCount)+(context.manual?' · ajuste manual':' · curva de demostración'):'';
+      el('human-audience-label').textContent=hasAudience?(geomex?'personas · GEOMEX\nen Vila de Gràcia':'personas simuladas en Vila de Gràcia'):'Audiencia pendiente de conectar';
+      el('human-audience-base').textContent=hasAudience?(geomex?'GEOMEX · referencia fija':'Base '+Math.round(context.baseCount)+(context.manual?' · ajuste manual':' · curva de demostración')):'';
       const h=Math.floor(context.hour),m=Math.round((context.hour-h)*60);
       el('human-time').classList.toggle('hidden',!hasAudience);
-      el('human-time').textContent=hasAudience?'SIM · '+String((h+(m===60?1:0))%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0'):'';
+      el('human-time').textContent=hasAudience?(geomex?'GEOMEX · '+context.effectiveCount:'SIM · '+String((h+(m===60?1:0))%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0')):'';
       el('human-audience-mix').textContent=hasAudience?Object.keys(context.mix).map(p=>labels[p]+' '+Math.round(context.mix[p])+'%').join(' · '):'';
       el('human-recommendation').textContent=hasAudience?recommendation:'';
       el('human-recommendation-box').classList.toggle('hidden',!hasAudience);
-      el('human-audience-scope').textContent=hasAudience?'La audiencia pertenece a la simulación de Vila de Gràcia. No mide impactos de este recorrido.':'El modelo 3D corresponde a Vila de Gràcia.';
+      el('human-audience-scope').textContent=hasAudience?(geomex?'Referencia GEOMEX facilitada para esta demo; no es un conteo en vivo.':'La audiencia pertenece a la simulación de Vila de Gràcia. No mide impactos de este recorrido.'):'El modelo 3D corresponde a Vila de Gràcia.';
     }
     return {
       enter(siteId='vila'){if(active)release();active=true;routesSignature='';setSite(sites.get(siteId)||sites.get('vila'));element.classList.remove('hidden');element.tabIndex=-1;element.focus({preventScroll:true});setState({status:'loading',pano:'',heading:currentSite.entry.pov.heading,date:'',position:null,links:[],steps:0,supportVisible:false});},

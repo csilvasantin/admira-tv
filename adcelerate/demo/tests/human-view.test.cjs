@@ -115,6 +115,15 @@ test('radar follows the selected destination rather than the fixed Vila origin',
   assert.ok(relativeTarget(visit,265,sites.get('vila').position).distance>200);
 });
 
+test('GEOMEX presents the fixed planning audience without calling it a live count',t=>{
+  const h=hudHarness(t);h.hud.enter('vila');
+  h.hud.updateAudience({siteId:'bcn-kiosk-016',audienceMode:'geomex',effectiveCount:54,baseCount:54,hour:18,manual:false,mix:{familias:25,jovenes:40,turistas:20,seniors:15}},{familias:'Familias',jovenes:'Jóvenes',turistas:'Turistas',seniors:'Seniors'},'Creatividad B');
+  assert.equal(h.elements.get('#human-audience').textContent,54);
+  assert.match(h.elements.get('#human-audience-label').textContent,/GEOMEX/);
+  assert.equal(h.elements.get('#human-time').textContent,'GEOMEX · 54');
+  assert.match(h.elements.get('#human-audience-scope').textContent,/no es un conteo en vivo/);
+});
+
 test('a route target changes the destination and radar without lending Vila audience to Jardinets',t=>{
   const h=hudHarness(t),sites=require('../js/outdoor-sites.js');h.hud.enter('vila');
   h.hud.updateAudience({siteId:'bcn-kiosk-016',effectiveCount:460,baseCount:460,hour:18,manual:false,mix:{familias:25,jovenes:40,turistas:20,seniors:15}},{familias:'Familias',jovenes:'Jóvenes',turistas:'Turistas',seniors:'Seniors'},'Demo Vila');
