@@ -1840,9 +1840,10 @@ function ponerEnElQuiosco(item,items,titulo){
 let mappedMusicSentAt=0, mappedMusicSentId='';
 // PixelMug CarlosGdG (PUBLIC mug-status, sin editor key): artista + título acortado.
 // Mismo force/throttle que la pantalla real; al parar, limpia a Jardinets / habitual.
+let lastMugKey='';
 function mappedMusicToMug(item){
   let name, verb, id;
-  if(!item){ name='Jardinets'; verb='habitual'; id='stop'; }
+  if(!item){ name='Jardinets'; verb='habitual'; id='stop'; lastMugKey=''; }
   else {
     name=String(item.artist||'Jardinets').trim()||'Jardinets';
     verb=String(item.title||'')
@@ -1853,10 +1854,13 @@ function mappedMusicToMug(item){
     const esc=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
     verb=verb.replace(new RegExp('^'+esc+'\\s*[-–—|:·•]+\\s*','i'),'').trim();
     if(new RegExp('^'+esc+'$','i').test(verb)) verb='';
-    if(verb.length>28) verb=verb.slice(0,27)+'\u2026';
+    if(verb.length>36) verb=verb.slice(0,35)+'\u2026';
     if(!verb) verb='#'+(item.number||'musica');
     id=String(item.id||item.number||'');
   }
+  const mugKey=name+'|'+verb+'|'+id;
+  if(mugKey===lastMugKey) return;
+  lastMugKey=mugKey;
   try{
     fetch('https://playertaza.csilvasantin.workers.dev/api/mug-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,verb,via:'adcelerate-best',source:'mappedMusic',id})})
       .then(async r=>{ let j=null; try{j=await r.json();}catch(_){ } console.info('[Mapping] → PixelMug', name, verb, r.ok?'ok':r.status, j&&j.ok); })
