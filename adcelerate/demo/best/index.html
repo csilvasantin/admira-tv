@@ -13,12 +13,12 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=23.09.2026.r2.1052">
-<link rel="stylesheet" href="../css/style.css?v=23.09.2026.r2.1052">
-<script src="../js/outdoor-sites.js?v=23.09.2026.r2.1052"></script>
-<script src="../js/urban-route.js?v=23.09.2026.r2.1052"></script>
-<script src="../js/dooh-surfaces.js?v=23.09.2026.r2.1052"></script>
-<script src="../js/outdoor-context.js?v=23.09.2026.r2.1052"></script>
+<link rel="stylesheet" href="../css/admira-tokens.css?v=23.09.2026.r3.2358">
+<link rel="stylesheet" href="../css/style.css?v=23.09.2026.r3.2358">
+<script src="../js/outdoor-sites.js?v=23.09.2026.r3.2358"></script>
+<script src="../js/urban-route.js?v=23.09.2026.r3.2358"></script>
+<script src="../js/dooh-surfaces.js?v=23.09.2026.r3.2358"></script>
+<script src="../js/outdoor-context.js?v=23.09.2026.r3.2358"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
   const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
@@ -203,8 +203,8 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=23.09.2026.r2.1052"><link rel="stylesheet" href="../css/hidden-ui.css?v=23.09.2026.r2.1052"><script defer src="../js/hidden-ui.js?v=23.09.2026.r2.1052"></script><script src="../js/pedestrian-layers.js?v=23.09.2026.r2.1052"></script><script src="../js/jardinets-shoes.js?v=23.09.2026.r2.1052"></script><script src="../js/jardinets-taza.js?v=23.09.2026.r2.1052"></script><script src="../js/pedestrian-motion.js?v=23.09.2026.r2.1052"></script><script src="../js/interactive-scene.js?v=23.09.2026.r2.1052"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=23.09.2026.r2.1052"></head>
-<script src="../js/pedestrian-music.js?v=23.09.2026.r2.1052"></script>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=23.09.2026.r3.2358"><link rel="stylesheet" href="../css/hidden-ui.css?v=23.09.2026.r3.2358"><script defer src="../js/hidden-ui.js?v=23.09.2026.r3.2358"></script><script src="../js/pedestrian-layers.js?v=23.09.2026.r3.2358"></script><script src="../js/jardinets-shoes.js?v=23.09.2026.r3.2358"></script><script src="../js/jardinets-taza.js?v=23.09.2026.r3.2358"></script><script src="../js/pedestrian-motion.js?v=23.09.2026.r3.2358"></script><script src="../js/interactive-scene.js?v=23.09.2026.r3.2358"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=23.09.2026.r3.2358"></head>
+<script src="../js/pedestrian-music.js?v=23.09.2026.r3.2358"></script>
 <body>
 
 <div id="app">
@@ -355,13 +355,13 @@
   </div>
 </div>
 
-<script src="street-walk.js?v=23.09.2026.r2.1052"></script>
-<script src="../js/cenital-panel.js?v=23.09.2026.r2.1052"></script><script src="../js/walk-overview.js?v=23.09.2026.r2.1052"></script><script src="walk-orientation.js?v=23.09.2026.r2.1052"></script><script src="route-walk.js?v=23.09.2026.r2.1052"></script>
-<script src="../js/player-library.js?v=23.09.2026.r2.1052"></script>
-<script src="screen-player.js?v=23.09.2026.r2.1052"></script>
-<script src="screen-audio.js?v=23.09.2026.r2.1052"></script>
-<script src="surface-focus.js?v=23.09.2026.r2.1052"></script>
-<script src="camera-path.js?v=23.09.2026.r2.1052"></script>
+<script src="street-walk.js?v=23.09.2026.r3.2358"></script>
+<script src="../js/cenital-panel.js?v=23.09.2026.r3.2358"></script><script src="../js/walk-overview.js?v=23.09.2026.r3.2358"></script><script src="walk-orientation.js?v=23.09.2026.r3.2358"></script><script src="route-walk.js?v=23.09.2026.r3.2358"></script>
+<script src="../js/player-library.js?v=23.09.2026.r3.2358"></script>
+<script src="screen-player.js?v=23.09.2026.r3.2358"></script>
+<script src="screen-audio.js?v=23.09.2026.r3.2358"></script>
+<script src="surface-focus.js?v=23.09.2026.r3.2358"></script>
+<script src="camera-path.js?v=23.09.2026.r3.2358"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -1810,6 +1810,7 @@ function stopMappedMusic(){
  if(screenAudio.owner?.screenId==='jardinets-main')screenAudio.mute();
  if(screenPlayers.get('jardinets-main')===mappedMusicPlayer){if(mappedPreviousPlayer)screenPlayers.set('jardinets-main',mappedPreviousPlayer);else screenPlayers.delete('jardinets-main');}
  mappedMusicPlayer.dispose();mappedMusicPlayer=null;mappedPreviousPlayer=null;mappedMusicNumber=0;emitPlayerState();
+ try{ mappedMusicToMug(null); }catch(_){}
 }
 const mappedMusic=PedestrianMusic.create({load:()=>PedestrianMusic.fetchCatalog(fetch),stop:stopMappedMusic,isCurrent:number=>screenPlayers.get('jardinets-main')===mappedMusicPlayer&&mappedMusicPlayer?.item?.number===number,
  onState:state=>signMapping.setMusicState(state),
@@ -1837,11 +1838,33 @@ function ponerEnElQuiosco(item,items,titulo){
   mappedMusicToScreen(item, true);
 }
 let mappedMusicSentAt=0, mappedMusicSentId='';
+// PixelMug CarlosGdG (PUBLIC mug-status, sin editor key): artista + título acortado.
+// Mismo force/throttle que la pantalla real; al parar, limpia a Jardinets / habitual.
+function mappedMusicToMug(item){
+  let name, verb, id;
+  if(!item){ name='Jardinets'; verb='habitual'; id='stop'; }
+  else {
+    name=String(item.artist||'Jardinets').trim()||'Jardinets';
+    verb=String(item.title||'')
+      .replace(/\s*[(\[]?\s*Official\s*Video\s*[)\]]?/gi,'')
+      .replace(/\s*[(\[]?\s*with\s+Sarah\s+Jane\s+Morris\s*[)\]]?/gi,'')
+      .replace(/\s{2,}/g,' ').trim();
+    if(verb.length>28) verb=verb.slice(0,27)+'\u2026';
+    if(!verb) verb='#'+(item.number||'musica');
+    id=String(item.id||item.number||'');
+  }
+  try{
+    fetch('https://playertaza.csilvasantin.workers.dev/api/mug-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,verb,via:'adcelerate-best',source:'mappedMusic',id})})
+      .then(async r=>{ let j=null; try{j=await r.json();}catch(_){ } console.info('[Mapping] → PixelMug', name, verb, r.ok?'ok':r.status, j&&j.ok); })
+      .catch(e=>console.info('[Mapping] → PixelMug fail', e&&e.message));
+  }catch(_){}
+}
 function mappedMusicToScreen(item, force){
   const rawId=String(item&&item.id||'').replace(/^(?:music|taza):/,''); if(!rawId) return;
   const now=Date.now(); if(!force && rawId===mappedMusicSentId && now-mappedMusicSentAt<8000) return;
   mappedMusicSentAt=now; mappedMusicSentId=rawId;
   try{ mandarAlaPantalla('jardinets', { id: rawId }).then(ok=>console.info('[Mapping] → pantalla real', SITE_SCREEN.jardinets, rawId, ok?'ok':'sin num/circuito')); }catch(_){}
+  try{ mappedMusicToMug(item); }catch(_){}
 }
 setInterval(()=>{ try{ if(!mappedMusicPlayer||screenPlayers.get('jardinets-main')!==mappedMusicPlayer) return; const st=mappedMusicPlayer.state(); if(st&&st.status==='playing'&&Number(st.position)<1.5) mappedMusicToScreen(mappedMusicPlayer.item, false); }catch(_){} }, 1000);
 function selectMappedMusic(number,options){
