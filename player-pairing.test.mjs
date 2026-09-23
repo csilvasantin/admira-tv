@@ -23,15 +23,33 @@ test('playlist is read from logical source while physical identity is retained',
  const calls=[];const ctx=vm.createContext({pairingReady:Promise.resolve(),programScreen:()=>source.screen,programCircuit:()=>source.circuit,scr:{screen:'ipad-local-test',circuit:'luna'},PREVIEW:{on:false},XTORE_PARENT:false,xtoreMusicEnabled:()=>false,DEFAULT_DRAFT:{signature:'',items:[]},fetch:async url=>{calls.push(url);return Response.json({ok:true,draft:{items:[{id:'shoe',asset:'https://example.com/shoe.jpg',type:'image',seconds:12}]}});},rebuild(){},encodeURIComponent,Date});vm.runInContext(fn,ctx);await ctx.loadDefaultDraft();assert.match(calls[0],/screen=xtore-virtual-zapatillas/);assert.equal(ctx.scr.screen,'ipad-local-test');assert.equal(ctx.DEFAULT_DRAFT.items[0]._previewSec,12);
 });
 
-test('paired loop ignores legacy iOS camera flag; conditional and unpaired camera remain available',()=>{
+test('paired Xtore conditional consumes remote audience and never opens the device camera',()=>{
  const html=fs.readFileSync(new URL('./canal.html',import.meta.url),'utf8');
- const start=html.indexOf('function wireCam()');
+ const start=html.indexOf('function usesRemoteAudienceSource(');
  const fn=html.slice(start,html.indexOf('// ── PARRILLA REAL',start));
- for(const mode of ['local','sync','conditional',null]){
-  let starts=0;const checkbox={checked:false};
-  const ctx=vm.createContext({window:{AdmiraPlayerPairing:{source:mode?{mode}:null}},$ :()=>checkbox,qs:new URLSearchParams('cam=1'),LS:()=> '1',camStart(){starts++;},camStop(){}});
+ const cases=[
+  {name:'local paired',source:{mode:'local',screen:'xtore-virtual-zapatillas'},starts:0},
+  {name:'sync paired',source:{mode:'sync',screen:'xtore-virtual-zapatillas'},starts:0},
+  {name:'Xtore conditional paired',source,starts:0,clears:true},
+  {name:'ordinary conditional',source:{mode:'conditional',screen:'shop-window'},starts:1},
+  {name:'unpaired',source:null,starts:1},
+ ];
+ for(const item of cases){
+  let starts=0;const saved=[];const checkbox={checked:false};
+  const ctx=vm.createContext({AUDIENCE_REMOTE:false,window:{AdmiraPlayerPairing:{source:item.source}},$ :()=>checkbox,qs:new URLSearchParams('cam=1'),LS:()=> '1',save(...args){saved.push(args);},camStart(){starts++;},camStop(){}});
   vm.runInContext(fn,ctx);ctx.wireCam();
-  assert.equal(starts,mode==='local'||mode==='sync'?0:1,`mode ${mode}`);
-  assert.equal(checkbox.checked,starts===1);
+  assert.equal(starts,item.starts,item.name);
+  assert.equal(checkbox.checked,starts===1,item.name);
+  assert.equal(saved.some(([key,value])=>key==='adtv_cam'&&value==='0'),!!item.clears,item.name);
  }
+});
+
+test('explicit remote audience also suppresses a legacy local camera request',()=>{
+ const html=fs.readFileSync(new URL('./canal.html',import.meta.url),'utf8');
+ const start=html.indexOf('function usesRemoteAudienceSource(');
+ const fn=html.slice(start,html.indexOf('// ── PARRILLA REAL',start));
+ let starts=0;const saved=[];const checkbox={checked:false};
+ const ctx=vm.createContext({AUDIENCE_REMOTE:true,window:{AdmiraPlayerPairing:{source:null}},$ :()=>checkbox,qs:new URLSearchParams('cam=1'),LS:()=> '1',save(...args){saved.push(args);},camStart(){starts++;},camStop(){}});
+ vm.runInContext(fn,ctx);ctx.wireCam();
+ assert.equal(starts,0);assert.equal(checkbox.checked,false);assert.deepEqual(saved,[['adtv_cam','0']]);
 });
