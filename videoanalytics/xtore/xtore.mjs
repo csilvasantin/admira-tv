@@ -4,7 +4,7 @@ import {CLASSES, SNAPSHOT_TTL, PRESENCE_GRACE, PassageTracker, PassageCounts, va
 import {CutoutJob} from './cutouts.mjs';
 import {installTwinUI} from './twin-ui.mjs?v=avatar-photo-1';
 import {detectObjects} from './detector.mjs';
-import {loadDetectorModel} from './model-loader.mjs?v=detector-progress-1';
+import {loadDetectorModel} from './model-loader.mjs?v=detector-download-2';
 import {installSignageUI} from './signage-ui.mjs';
 import {installHistoryUI} from './history.mjs';
 import {CalibrationPresetStore,compatiblePreset} from './preset.mjs?v=audience-session-1';
@@ -455,6 +455,7 @@ async function startAnalysis(recovering=false){
   if(!sourceVisible()||sourceMuted){suspendAnalysis('source','Esperando que la vista y Puerta Cam estén disponibles. Se reanudará automáticamente.');return;}
   suspendedReason=null;clearTimeout(recoveryTimer);recoveryTimer=0;
   const token=++generation;busy=true;controls();
+  previewCamera(token);
   try{
     await prepareModel();
     if(token!==generation||!stream)return;
@@ -516,7 +517,7 @@ async function loop(token){
 // only a new live crop can replace an expired pair while inference is pending.
 function previewCamera(token){
   clearTimeout(cameraPreviewTimer);
-  if(!analyzing||token!==generation||!stream)return;
+  if(!analysisRequested||token!==generation||!stream)return;
   const views=xpace.cameraOnly?cleanStreet.frames():null;
   if(xpace.cameraOnly&&views&&sourceVisible()&&!sourceMuted&&!calibration){
     const at=performance.now();

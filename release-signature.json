@@ -1,9 +1,9 @@
 {
-  "version": "v.24.09.2026.r6.12:20",
+  "version": "v.24.09.2026.r6.12:35",
   "signature": "TrinityMBP14 · MacBookProNegro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookProNegro14",
   "day": "24.09.2026",
-  "time": "12:20",
-  "evidence": "Yokup #248: Help y minitutorial de demo Xtanco en cuatro pantallas; mostrador solo recuadros sin imágenes. Implementación y 316 tests en XpaceOS."
+  "time": "12:35",
+  "evidence": "Yokup #266: cámara independiente de carga del detector, descarga medida y calentamiento separado; 301 pruebas, modelo e inferencia real en navegador sobre imagen sintética."
 }

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=24.09.2026.r6.1220"></script>
+<script src="/auth-gate.js?v=24.09.2026.r6.1235"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r6.1220">
+  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r6.1235">
 </head>
 <body>
-<script src="/admira-nav.js?v=24.09.2026.r6.1220" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=24.09.2026.r6.1220" defer></script>
+<script src="/admira-nav.js?v=24.09.2026.r6.1235" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=24.09.2026.r6.1235" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -68,7 +68,9 @@
   <section id="xtore-demo-pantallas"><h2>Xtanco · demo real en cuatro pantallas</h2>
 <p>Conecta el analizador de Puerta Cam al gemelo mediante <b>Abrir gemelo · zapatillas</b>. En el Xtanco enlazado, pulsa la <b>cámara pequeña de la esquina, encima de la pantalla del player</b>. Un clic activa la demo; otro recupera las pantallas habituales. También está disponible en <b>Player y cámara → Activar demo zapatillas</b>.</p>
 <ul><li><b>1 · Player virtual:</b> pantalla grande junto a la cámara. Refleja el contenido del player enlazado, con sus condiciones por detección.</li><li><b>2 · Calle en directo:</b> la otra pantalla grande de la pared izquierda muestra el recorte original de Puerta Cam. Esta pantalla contiene vídeo real, no está anonimizada.</li><li><b>3 · Estadísticas:</b> pantalla grande de la pared del fondo. Pasos de sesión, entran/salen, sin dirección, coches, motos, bicis y patinetes. No son ventas ni aforo físico.</li><li><b>Detrás del mostrador:</b> la pantalla pequeña de turnos muestra únicamente recuadros y categorías sobre fondo neutro. No dibuja imágenes de personas, vehículos ni de la calle. Pulsarla amplía esa misma vista de detecciones.</li></ul>
+<p><b>Arranque del detector:</b> con la cámara compartida y encuadrada, la calle se envía al Xtanco desde que pulsas Iniciar análisis, también mientras carga el modelo. La fase 4/5 muestra el porcentaje de descarga (hasta 180 s); la fase 5/5 prepara el motor (hasta 45 s). El mostrador espera hasta recibir detecciones: no inventa recuadros. Después de actualizar esta versión, recarga el analizador y vuelve a compartir Digital Twin 360; se recupera el encuadre compatible, pero la recarga inicia una sesión nueva.</p>
 <p>Si no llegan datos recientes, las pantallas muestran espera o ausencia de señal. El vídeo y las detecciones caducan en 1,5 s y los totales en 4 s sin latido. No vuelven a publicidad simulada mientras la demo está activa. Activar la demo no concede permisos de cámara, no abre automáticamente Puerta Cam y no publica ni graba la señal. Tras recargar, la demo vuelve a estar desactivada.</p>
+<p><a href="/apps/video/xtore-camara-arranque.mp4">Minitutorial · cámara durante el arranque (animación, 15 s)</a></p>
 <p><a href="/apps/video/xtanco-demo-pantallas.mp4">Minitutorial animado · cámara y cuatro pantallas (15 s)</a> · animación explicativa, no grabación de pantalla.</p></section>
   <section id="xtore-audiencia"><h2>Audiencia de sesión · XpaceOS y Pixeria</h2>
 <p>Debajo de Puerta Cam aparecen <b>Personas que han pasado · Personas entran · Personas salen · Coches</b>. Entran significa hacia la cámara; salen, hacia el fondo de la calle. No son entradas físicas a la tienda. Los pasos laterales o sin trayectoria suficiente quedan sin dirección.</p>

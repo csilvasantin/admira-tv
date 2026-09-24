@@ -23,7 +23,7 @@ async function fixture({surface='browser',denied=false,slowLoad=false,slowCaptur
   }
   const get=id=>nodes.get(id)||new Element(id);
   const doc=new Element();doc.hidden=false;doc.getElementById=get;doc.createElement=tag=>{const e=Object.assign(new Element(),{tagName:tag});if(tag==='iframe'){e.sent=[];e.contentWindow={postMessage:(data,origin)=>e.sent.push({data,origin})};}return e;};doc.head=new Element();
-  const win=new Element();win.tf={ready:async()=>{},getBackend:()=> 'fixture'};
+  const win=new Element();win.tf={ready:async()=>{},getBackend:()=> 'fixture',io:{http:()=>({load:async()=>({})})}};
   const twinSent=[],twinPeer={closed:false,postMessage:data=>twinSent.push(data)};
   if(twin){
     win.location={origin:'https://admira.tv',search:'?twinOrigin=https%3A%2F%2Fwww.xpaceos.com&twinSession=00000000-0000-0000-0000-000000000001'};
@@ -861,4 +861,20 @@ test('a stalled engine stops preparing with a retryable error while preserving c
   f.win.tf.ready=async()=>{};await f.get('analyze').emit('click');
   assert.equal(f.get('connection').textContent,'Analizando');assert.equal(f.detections.length,1);
   assert.equal(f.captures.length,1);assert.equal(f.get('scene').srcObject,source);
+});
+
+test('linked street is sent while model warm-up is pending, without fabricated detections, and stops on pause',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','setInterval','Date'],now:10000});
+ const f=await fixture({slowLoad:true,twin:true,storage:savedFraming({tablet:false})});
+ await f.win.emit('message',{source:f.twinPeer,origin:'https://www.xpaceos.com',data:{source:'xpace-xtore-twin',screen:'xtore-virtual-zapatillas',session:'00000000-0000-0000-0000-000000000001',event:'ready'}});
+ const starting=f.get('analyze').emit('click');await flush();
+ const frames=f.twinSent.filter(d=>d.event==='camera');assert.ok(frames.length>0,JSON.stringify({messages:f.twinSent,health:f.get('analysis-health').textContent,status:f.get('status').textContent,calibration:f.get('calibration-status').textContent}));
+ assert.equal(frames.at(-1).modified,false);assert.equal(f.detections.length,0);
+ assert.equal(f.twinSent.filter(d=>d.event==='traffic').length,0);
+ f.get('scene').currentTime++;t.mock.timers.tick(500);await flush();
+ assert.ok(f.twinSent.filter(d=>d.event==='camera').length>frames.length);
+ await f.get('analyze').emit('click');const count=f.twinSent.filter(d=>d.event==='camera').length;
+ f.get('scene').currentTime++;t.mock.timers.tick(1000);await flush();
+ assert.equal(f.twinSent.filter(d=>d.event==='camera').length,count);
+ f.finishLoad();await starting;assert.equal(f.detections.length,0);
 });

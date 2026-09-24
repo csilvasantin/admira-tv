@@ -121,3 +121,9 @@ En el Xtanco enlazado, clic en la cámara de la esquina (`camCPMClick`) alterna 
 Superficies fijas: DS1 = player actual; DS2 = recorte original de Puerta Cam (vídeo identificable); TFT pared larga = snapshot de sesión; gestor de turnos detrás del mostrador = geometría y categorías exclusivamente sobre fondo neutro. No usa el borrado por fondo temporal del analizador y no reutiliza imágenes originales ni modificadas. No lo confundir con anonimizar la pantalla2 ni el resto del producto.
 
 No requiere herramientas MCP nuevas: consume los eventos existentes `playback`, `camera`, `traffic` y `statistics` de la ventana autenticada. Camera/traffic caducan a1,5s; statistics a4s. Player conserva su TTL propio. No señales = pantalla de espera, nunca fallback a vídeo del juego. Desactivar restaura la función normal de cada superficie. Se suspenden temporalmente los overlays que taparían las pantallas; no se modifican sus reglas de emisión ni se manda contenido a pantallas físicas. Help: https://admira.tv/help/#xtore-demo-pantallas
+
+### Arranque y disponibilidad de cámaras (corrección 24/09/2026)
+
+El recorte original se envía desde el inicio solicitado del análisis, antes de esperar el modelo. La preparación se divide en descarga medida (fase 4/5, máximo 180 s) y calentamiento del motor (fase 5/5, máximo 45 s). Los metadatos de trayectorias solo nacen de inferencias reales; la cámara de recuadros permanece en espera hasta entonces. Pausa, desconexión, pérdida de fuente o calibración cancelan el envío. Se mantienen los TTL de cámara/tráfico y el origen de captura; no se concede ni persiste permiso de captura. Recargar el analizador crea una sesión nueva, requiere volver a compartir Digital Twin 360 y recupera el encuadre compatible.
+
+[Guía animada de arranque](https://admira.tv/apps/video/xtore-camara-arranque.mp4), no grabación real.

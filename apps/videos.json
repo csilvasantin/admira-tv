@@ -118,5 +118,9 @@
   "xtanco-demo-pantallas": {
     "src": "/apps/video/xtanco-demo-pantallas.mp4",
     "title": "Xtanco · cámara y cuatro pantallas (animación, 15 s)"
+  },
+  "xtore-camara-arranque": {
+    "src": "/apps/video/xtore-camara-arranque.mp4",
+    "title": "Xtore · cámara durante el arranque (animación, 15 s)"
   }
 }
