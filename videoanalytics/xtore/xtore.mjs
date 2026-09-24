@@ -6,7 +6,7 @@ import {installTwinUI} from './twin-ui.mjs?v=avatar-photo-1';
 import {detectObjects} from './detector.mjs';
 import {loadDetectorModel} from './model-loader.mjs?v=detector-download-2';
 import {installSignageUI} from './signage-ui.mjs';
-import {installHistoryUI} from './history.mjs?v=dooh-history-1';
+import {installHistoryUI} from './history.mjs?v=statistics-1';
 import {CalibrationPresetStore,compatiblePreset} from './preset.mjs?v=audience-session-1';
 import {TrackingOverlay} from './tracking-overlay.mjs?v=track-id-2';
 import {installCleanStreetUI} from './clean-street-ui.mjs?v=track-id-2';
@@ -647,5 +647,11 @@ $('prepare-cutouts').addEventListener('click',async()=>{
 // Do not leave identifiable frames sitting in a hidden tab or the back-forward cache.
 document.addEventListener('visibilitychange',()=>{if(!sourceVisible())suspendAnalysis('hidden','Vista oculta: no se procesan imágenes. Al volver se reanudará el análisis si seguía activo.');else{twins.checkExpiry();controls();scheduleRecovery();}});
 window.addEventListener('beforeunload',event=>{if(history.pending.length||history.lost){event.preventDefault();event.returnValue='';}});
+// Signing in happens in a separate tab so this outbox and the capture survive.
+const resumeHistory=()=>{if(history.pending.length||history.error)history.sync();};
+window.addEventListener('focus',resumeHistory);
+window.addEventListener('online',resumeHistory);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)resumeHistory();});
 window.addEventListener('pagehide',()=>{clearTimeout(historyTimer);twins.clear();disconnect();});
+history.sync();
 tabletIdle();renderCounts();controls();

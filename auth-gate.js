@@ -42,11 +42,13 @@
     "cap-avanzado.html":"digitalsignage-cms", "cap-experto.html":"digitalsignage-cms",
     "cap-folded.html":"digitalsignage-cms",
     "users":"admira-tv", "usuarios":"admira-tv",
-    "accesscontrol":"admira-tv"
+    "accesscontrol":"admira-tv", "videoanalitics":"admira-tv"
   };
   var pathKey = (location.pathname.split('/').filter(Boolean)[0] || 'admira-tv').toLowerCase();
   var SOLUTION = PATH_PROJECTS[pathKey] || pathKey;
   var MANAGEMENT_PAGE = ["users", "usuarios", "accesscontrol"].indexOf(pathKey) >= 0;
+  // Statistics writes require the server cookie, not the legacy visual gate.
+  var REQUIRE_SERVER_SESSION = document.documentElement.hasAttribute("data-auth-server-session");
 
   var REMEMBER_HOURS = 12;       // recordar una sesión validada
   var CONNECT_SECONDS = 1.4;     // duración de la "conexión" antes de mostrar el login
@@ -110,7 +112,7 @@
   // sesión local y el siguiente acceso le pedirá login (y será rechazado).
   try {
     var saved = JSON.parse(localStorage.getItem("admira_tv_gate") || "null");
-    if (saved && saved.email && saved.cred && Date.now() < saved.exp) {
+    if (!REQUIRE_SERVER_SESSION && saved && saved.email && saved.cred && Date.now() < saved.exp) {
       // La sesión recordada nunca basta por sí sola: el servidor vuelve a resolver
       // el permiso exacto de esta app antes de quitar el bloqueo visual.
       serverAccess(saved.cred).then(function (res) {

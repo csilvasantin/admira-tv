@@ -195,3 +195,27 @@ La edición fija `G.manualAudienceTarget` y `G.manualAudienceProfiles` (solo par
 Teclado y etiquetas accesibles; − desactivado en0 y+ en100. El refresco conserva foco y no reemplaza el botón mientras se está pulsando. La UI informa si no se puede colocar un visitante.343 pruebas completas y4 de UI finales; navegador verifica altas, bajas, doble distribución y ausencia de mezcla con DooH.
 
 [Help](https://admira.tv/help/#xtore-categorias) · [Guía animada](https://admira.tv/apps/video/xtanco-categorias-interactivas.mp4).
+
+
+## Estadísticas guardadas · 24 septiembre 2026
+
+Página humana: https://admira.tv/videoanalitics/estadisticas/ (ruta solicitada).
+Alias `/videoanalytics/estadisticas/` redirige a la misma página. Enlace bajo el
+vídeo tras «no son dispositivos físicos», siempre en pestaña nueva.
+
+Reutiliza `GET/POST /videoanalytics/api/history`, sesión HttpOnly verificada y rol
+owner/admin de Admira.tv. No introduce un MCP remoto ni un endpoint público de datos.
+La escritura ya registra cada paso confirmado de Puerta Cam con UUID v4, clase,
+fecha UTC y origen detector/manual; los reintentos conservan UUID y son idempotentes.
+La página lee un día completo de Europe/Madrid, filtra horas [desde,hasta), mantiene
+separadas las horas repetidas al cambiar horario y no rellena intervalos sin registros.
+Personas excluye vehículos y observaciones manuales. Reset no borra registros.
+
+El estado de guardado está junto al enlace. Un 401 ofrece acceso en pestaña separada
+con sesión de servidor (la sesión de IEU o la antigua sesión visual no bastan).
+Al volver al analizador se reintenta la cola en memoria, igual que al recuperar red.
+Mantener el analizador abierto hasta confirmar. Una sesión ya cerrada sin confirmar
+no puede reconstruirse a partir de los ID visuales ni de los totales de la tienda.
+No afirmar persistencia sin confirmación de la API. No se guardan imágenes ni identidad.
+
+[Help](https://admira.tv/help/#xtore-estadisticas) · [Guion del minitutorial; vídeo pendiente](https://admira.tv/mcp/xtore-estadisticas-tutorial.md).

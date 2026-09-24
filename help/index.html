@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=24.09.2026.r11.1339"></script>
+<script src="/auth-gate.js?v=24.09.2026.r12.1806"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r11.1339">
+  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r12.1806">
 </head>
 <body>
-<script src="/admira-nav.js?v=24.09.2026.r11.1339" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=24.09.2026.r11.1339" defer></script>
+<script src="/admira-nav.js?v=24.09.2026.r12.1806" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=24.09.2026.r12.1806" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -46,6 +46,7 @@
     <a href="#xtore-audiencia">Audiencia de sesión / XpaceOS y Pixeria</a>
     <a href="#xtore-categorias">Instore · añadir y quitar por categoría</a>
     <a href="#xtore-conectar-pestanas">Xtanco · conectar Digital Twin por pestañas</a>
+    <a href="#xtore-estadisticas">Estadísticas · personas que pasan</a>
     <a href="#xtore-dooh">DooH · cámara exterior por día y hora</a>
     <a href="#xtore-visitas">Xtanco · visitas con objetivos</a>
     <a href="#xtore-encuadres">Xtore / recuperar cámara, iPad y pantalla</a>
@@ -90,6 +91,11 @@
 <p>La reconexión local conserva <code>twinOrigin</code>, evitando abrir por error el analizador de producción desde el Xtanco local. Los despliegues de producción siguen aceptando solo los orígenes autorizados. El analizador y el Xtanco mantienen su enlace; Digital Twin 360 se abre por separado, sin recibir acceso al controlador de la tienda.</p>
 <p><strong>Límites:</strong> el navegador decide si presenta una pestaña o ventana y puede bloquear nuevas aperturas. Si aparece <code>NotSupportedError</code>, ese contexto no admite captura: abre el flujo en pestañas normales y, si persiste, en un navegador de escritorio compatible con compartir pestañas. No se guarda ni se salta el permiso del selector. Este cambio no automatiza el inicio de sesión ni la orientación interna de IEU, y no garantiza fotogramas o análisis hasta que la fuente esté compartida y el detector activo.</p>
 <p><a href="/apps/video/xtore-conectar-pestanas.mp4">Minitutorial · conectar por pestañas (animación, 15 s)</a>. Guía animada, no grabación real de pantalla.</p></section>
+  <section id="xtore-estadisticas"><h2>Personas que pasan · estadísticas guardadas</h2>
+<p>En <a href="/videoanalytics/xtore/">Video Analytics / Xtore</a>, debajo del vídeo, justo después de «no son dispositivos físicos», pulsa <strong>Ver estadísticas</strong>. Abre <a href="/videoanalitics/estadisticas/">la página de estadísticas</a> en otra pestaña para conservar el análisis y sus pasos pendientes.</p>
+<ol><li>Inicia sesión en Admira.tv con acceso de administrador. La sesión de IEU es independiente.</li><li>El analizador envía automáticamente cada paso confirmado. Bajo el vídeo verás el estado del guardado. Si inicias sesión con pasos pendientes, vuelve al analizador y pulsa «Actualizar / reintentar» en Histórico; las nuevas versiones también reintentan al recuperar el foco o la conexión.</li><li>En Estadísticas elige el día y la franja horaria de Barcelona. Consulta personas, coches, motos y bicis, el desglose por hora y las observaciones manuales separadas. La página consulta cada 30 segundos mientras está visible.</li></ol>
+<p>El histórico permanece en el servidor aunque reinicies la sesión o pulses Reset. Solo se guardan categoría, fecha y un identificador de evento para evitar duplicar los reintentos; no fotos, vídeo ni identidad. El conteo corresponde a pasos, no personas únicas ni entradas físicas a la tienda. Los intervalos sin registros no equivalen a cero tráfico. No cierres ni recargues el analizador con pasos sin confirmar: la cola pendiente está en memoria y no es un guardado permanente. No se recuperan pasos de sesiones ya cerradas que nunca llegaron al servidor.</p>
+<p><a href="/mcp/xtore-estadisticas-tutorial.md">Guion del minitutorial</a>. Vídeo pendiente: el generador oficial exportó un archivo incompleto; todavía no hay una guía animada verificada.</p></section>
   <section id="xtore-dooh"><h2>DooH · audiencia real del escaparate por día y hora</h2>
 <p>En XpaceOS, abre <strong>Modo avanzado → Audiencia → DooH</strong> (o <code>/impactos</code> en el CLI inferior). En <strong>Escaparate · pasos guardados</strong>, elige el día, Desde y Hasta y pulsa Actualizar. Por ejemplo, 10:00–12:00 incluye las horas de las 10 y las 11. El reloj es <strong>Europe/Madrid</strong>, independiente del tiempo simulado del juego.</p>
 <p>Conecta el analizador de la Xtore de Santa Rosa 19 mediante Player y cámara. Su fuente es <strong>Digital Twin 360 → Store → Entrada → Puerta Cam</strong>, encuadrando solo el vídeo de la calle. Inicia el análisis y mantén la captura y el detector activos para registrar nuevos pasos. Consulta el histórico privado con tu sesión de Admira.tv y permisos de administrador.</p>

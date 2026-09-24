@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#090e14">
+<title>Estadísticas de paso · Admira.tv</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://admira.tv/videoanalitics/estadisticas/">
+<link rel="stylesheet" href="./statistics.css">
+<script type="module" src="./statistics.mjs"></script>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="/">Admira<span>.</span>tv</a><nav aria-label="Navegación"><a href="/videoanalytics/xtore/" target="_blank" rel="noopener noreferrer">Abrir analizador ↗</a><a href="/help/#xtore-estadisticas">Ayuda</a></nav></header>
+<main>
+<header class="heading"><p class="eyebrow">PUERTA CAM · SANTA ROSA 19</p><h1>La gente que pasa.</h1><p>Estadísticas guardadas de la cámara exterior de AdmiraXperience.</p></header>
+<form id="filters" class="filters" aria-label="Filtrar estadísticas">
+<label>Día<input id="day" type="date" required></label>
+<label>Desde<select id="start" aria-label="Hora inicial"></select></label>
+<label>Hasta<select id="end" aria-label="Hora final"></select></label>
+<button id="refresh" type="submit">Consultar / actualizar</button>
+<span class="muted">Hora de Barcelona · Europe/Madrid</span>
+</form>
+<p id="status" role="status" aria-live="polite">Consultando registros guardados…</p>
+<div id="login" class="notice" hidden><p>Necesitas una sesión de Admira.tv con acceso de administrador para guardar y consultar. La sesión de Digital Twin 360 es independiente.</p><a class="button" href="./acceso/" target="_blank" rel="noopener noreferrer">Iniciar sesión en Admira.tv ↗</a><p>Conserva abierta la pestaña del analizador. Después de identificarte, vuelve a ella y pulsa «Actualizar / reintentar» en Histórico para enviar los pasos pendientes.</p></div>
+<section class="totals" aria-label="Pasos confirmados en la franja">
+<article class="people"><h2>Personas que han pasado</h2><strong id="total-person">—</strong><p>Pasos confirmados por el detector</p></article>
+<article><h2>Coches</h2><strong id="total-car">—</strong></article>
+<article><h2>Motos</h2><strong id="total-motorcycle">—</strong></article>
+<article><h2>Bicis</h2><strong id="total-bicycle">—</strong></article>
+</section>
+<p id="manual" class="muted">Observaciones manuales: —</p>
+<section class="table-panel"><h2>Por hora</h2><p id="empty">Sin datos confirmados todavía.</p>
+<div class="table-scroll"><table><caption>Registros guardados en la franja seleccionada</caption><thead><tr><th scope="col">Hora local</th><th scope="col">Personas</th><th scope="col">Coches</th><th scope="col">Motos</th><th scope="col">Bicis</th><th scope="col">Manual</th></tr></thead><tbody id="rows"></tbody></table></div></section>
+<aside class="notes"><h2>Qué se guarda</h2><p>Cada paso confirmado conserva su categoría y fecha en el servidor. Reset del analizador reinicia la sesión, pero no borra este histórico. No se guardan fotos, vídeo, edad, género ni identidad.</p><p>Son pasos, no personas únicas ni entradas verificadas en la tienda. Solo se registra mientras el analizador recibe y procesa la cámara. Los intervalos sin registros no demuestran que no pasara nadie; la hora actual puede estar incompleta. Las observaciones manuales, incluidos patinetes, aparecen separadas.</p><p>Se consulta de nuevo cada 30 segundos mientras esta página está visible. El analizador muestra cuántos pasos siguen pendientes de guardar: no lo cierres hasta que el servidor los confirme.</p><a href="/help/#xtore-estadisticas">Guía paso a paso ↗</a></aside>
+</main>
+</body></html>

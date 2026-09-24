@@ -88,6 +88,12 @@ export function installHistoryUI({document,client=new HistoryClient(),onState=()
     $('history-status').textContent=(client.busy?'Sincronizando con el servidor…':client.error?(messages[client.error]||'No se pudo sincronizar. Puedes reintentar.'):client.loaded?`Histórico sincronizado · ${client.rows.reduce((sum,r)=>sum+r.total,0)} pasos en los últimos 31 días.`:'Histórico privado pendiente de conexión.')+
       (client.pending.length?` ${client.pending.length} sin confirmar; no recargues antes de sincronizar.`:'')+(client.lost?` ${client.lost} eventos fuera de cola no se han enviado.`:'')+(client.expired?` ${client.expired} eventos antiguos sin confirmación: no se pueden reintentar.`:'');
     $('history-refresh').disabled=client.busy;renderRows();
+    const save=$('history-save-status'),login=$('history-login');
+    if(save)save.textContent=(client.error?'Guardado pendiente · '+(messages[client.error]||'No se pudo contactar con el servidor.'):
+      client.busy?'Guardando / comprobando registros…':client.loaded?`Guardados en esta pestaña: ${client.saved} pasos.`:'Guardado pendiente de conexión.')+
+      (client.pending.length?` ${client.pending.length} sin confirmar; mantén esta pestaña abierta.`:'')+
+      (client.lost+client.expired?` ${client.lost+client.expired} pasos no se han guardado.`:'');
+    if(login)login.hidden=client.error!=='login';
   };
   client.onState=()=>{render();onState(historySnapshot(client));};
   $('history-day').addEventListener('change',renderRows);

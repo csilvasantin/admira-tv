@@ -2,3 +2,5 @@
 /usuarios/ /users/ 301
 /accesscontrol /users 301
 /accesscontrol/ /users/ 301
+/videoanalytics/estadisticas /videoanalitics/estadisticas/ 302
+/videoanalytics/estadisticas/ /videoanalitics/estadisticas/ 302
