@@ -31,3 +31,6 @@
 #roi #clean-status{position:absolute;bottom:0;left:0;right:0;z-index:3;margin:0;padding:2px 4px;background:#081019ed;color:#d8e8e2;font:10px/1.3 sans-serif;overflow-wrap:anywhere}
 #hide-people[aria-pressed=true]{border-color:var(--green);color:var(--green)}
 .track-label{position:absolute;top:0;left:0;color:inherit;background:#081019e8;padding:1px 3px;font:700 10px/14px ui-monospace,monospace;white-space:nowrap;border-radius:0 0 3px 0}
+
+#saved-presets{margin:6px 0;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);font:inherit;font-size:12px}#restore-preset{margin-bottom:8px}#preset-summary{padding:9px 12px;border:1px solid var(--line);border-radius:8px}
+#capture-framing{scroll-margin-top:130px}

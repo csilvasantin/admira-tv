@@ -790,3 +790,33 @@ test('linked hidden analyzer keeps its player and inference; lost link pauses, r
  await receive('ready');f.get('scene').currentTime++;t.mock.timers.tick(500);
  assert.equal(f.detections.length,3);assert.equal(f.get('analyze').textContent,'Iniciar análisis');
 });
+
+test('returning to the original format restores all three surfaces without restarting analysis',async()=>{
+  const f=await fixture({storage:savedFraming()});await f.get('connect').emit('click');
+  await f.get('edit-coordinates').emit('click');
+  for(const [i,value] of [50,25,75,25,75,85,50,85].entries())f.get(`coord-${12+i}`).value=String(value);
+  await f.get('apply-coordinates').emit('click');await f.get('analyze').emit('click');
+  f.get('scene').videoWidth=1440;await f.get('scene').emit('resize');
+  assert.equal(f.get('tablet').hidden,true);assert.equal(f.get('analyze').disabled,true);
+  f.get('scene').videoWidth=1280;await f.get('scene').emit('resize');
+  assert.equal(f.get('tablet').hidden,false);assert.equal(f.get('analyze').disabled,false);
+  assert.match(f.get('calibration-status').textContent,/cartelería: marcada/);
+  assert.equal(f.get('analyze').textContent,'Iniciar análisis');assert.equal(f.detections.length,1);
+});
+test('recovering a saved framing cancels an unfinished mark but does not request capture or start analysis',async()=>{
+  const f=await fixture({storage:savedFraming()});assert.equal(f.get('restore-preset').disabled,true);
+  await f.get('connect').emit('click');await f.get('set-tablet').emit('click');
+  assert.equal(f.get('analyze').disabled,true);assert.equal(f.get('restore-preset').disabled,false);
+  await f.get('restore-preset').emit('click');
+  assert.equal(f.get('analyze').disabled,false);assert.equal(f.get('tablet').hidden,false);
+  assert.equal(f.captures.length,1);assert.equal(f.detections.length,0);
+  await f.get('stage').emit('click',{clientX:10,clientY:10});
+  assert.equal(f.get('tablet').hidden,false);assert.match(f.get('status').textContent,/Encuadre recuperado/);
+});
+test('recovery rejects another format and forgetting removes the archive as well',async()=>{
+  const storage=savedFraming(),f=await fixture({storage,sourceWidth:1440});
+  await f.get('connect').emit('click');assert.equal(f.get('restore-preset').disabled,true);
+  await f.get('restore-preset').emit('click');assert.equal(f.get('tablet').hidden,true);
+  await f.get('forget-preset').emit('click');assert.equal(storage.getItem(PRESET_KEY),null);
+  f.get('scene').videoWidth=1280;await f.get('scene').emit('resize');assert.equal(f.get('tablet').hidden,true);
+});

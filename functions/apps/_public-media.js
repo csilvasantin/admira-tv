@@ -2,7 +2,7 @@ export const PUBLIC_MEDIA_SLUGS = new Set([
   "dashboard", "digitalsignage", "contentcatalogue", "support", "pushnotifications",
   "virtualassistant", "gamification", "iotmanager", "videoanalytics", "radioanalytics",
   "socialwifi", "queuemanager", "roombooking", "audiobranding", "olfactorymarketing",
-  "virtualreality", "augmentedreality", "xpaceos", "yarig"
+  "virtualreality", "augmentedreality", "xpaceos", "yarig", "xtore-recuperar-encuadres"
 ]);
 
 export function publicMediaFile(file, extension) {

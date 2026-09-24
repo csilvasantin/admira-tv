@@ -5,7 +5,7 @@ import {installTwinUI} from './twin-ui.mjs?v=avatar-photo-1';
 import {detectObjects} from './detector.mjs';
 import {installSignageUI} from './signage-ui.mjs';
 import {installHistoryUI} from './history.mjs';
-import {CalibrationPresetStore,compatiblePreset} from './preset.mjs';
+import {CalibrationPresetStore,compatiblePreset} from './preset.mjs?v=capture-history-1';
 import {TrackingOverlay} from './tracking-overlay.mjs';
 import {installCleanStreetUI} from './clean-street-ui.mjs';
 import {installScooterTracks} from './scooter-tracks.mjs';
@@ -38,11 +38,26 @@ function presetStatus(message){
   const p=presetState.preset;
   const saved=p?`Último preset · ${new Date(p.savedAt).toLocaleString('es-ES')} · ${[p.roi&&'cámara',p.tablet&&'iPad',p.signage&&'DS'].filter(Boolean).join(' + ')}`:'';
   $('preset-status').textContent=message||(saved?`${saved}. Se carga al compartir una vista compatible.`:presetState.state==='unavailable'?'El navegador no permite guardar el preset. Encuadre disponible solo en esta sesión.':presetState.state==='invalid'?'Preset no válido: vuelve a marcar las superficies.':'Sin preset guardado. Marca las superficies una vez.');
+  $('preset-summary').textContent=p?`Encuadre guardado · ${[p.roi&&'cámara',p.tablet&&'iPad',p.signage&&'pantalla'].filter(Boolean).join(' + ')} · se recupera al compartir la misma vista`:presetState.state==='unavailable'?'Guardado no disponible en este navegador · consulta Encuadre y detección':'Sin encuadre guardado en este navegador · configura las zonas una vez';
+  const select=$('saved-presets'),previous=select.value;
+  select.replaceChildren();
+  for(const [i,item] of (presetState.presets||[]).entries()){
+    const option=document.createElement('option');option.value=String(i);
+    option.textContent=`${sourceDimensions&&!compatiblePreset(item,sourceDimensions)?'Otro formato · ':''}${i===0?'Último · ':''}${new Date(item.savedAt).toLocaleString('es-ES')} · ${item.source.join(' × ')} · ${[item.roi&&'cámara',item.tablet&&'iPad',item.signage&&'pantalla'].filter(Boolean).join(' + ')}`;
+    select.append(option);
+  }
+  select.value=(presetState.presets||[])[Number(previous)]?previous:'0';
+  select.disabled=!(presetState.presets||[]).length;
+  presetControls();
   $('forget-preset').disabled=presetState.state==='empty'||(presetState.state==='unavailable'&&!p);
 }
-function restorePreset(){
-  presetState=presetStore.read();presetStatus();
-  const p=presetState.preset;
+function presetControls(){
+  const selected=(presetState.presets||[])[Number($('saved-presets').value)];
+  $('restore-preset').disabled=!stream||!compatiblePreset(selected,sourceDimensions)||!!captureRequest;
+}
+function restorePreset(selected){
+  if(!selected){presetState=presetStore.read(sourceDimensions);presetStatus();}
+  const p=selected||presetState.preset;
   if(!p)return false;
   if(!compatiblePreset(p,sourceDimensions)){
     presetStatus('Preset conservado, pero el formato de esta pestaña es distinto. Vuelve a marcar las superficies.');return false;
@@ -50,23 +65,34 @@ function restorePreset(){
   roiReady=!!p.roi;tabletReady=!!p.tablet;signageReady=!!p.signage;
   calibrationDimensions=[...p.source];
   if(p.roi)roi=[...p.roi];if(p.tablet)quad=p.tablet.map(p=>[...p]);if(p.signage)signageQuad=p.signage.map(p=>[...p]);
+  $('saved-presets').value=String((presetState.presets||[]).indexOf(p));
   $('calibration-status').textContent=`Preset cargado · Cámara: ${roiReady?'marcada':'pendiente'} · iPad: ${tabletReady?'marcado':'pendiente'} · cartelería: ${signageReady?'marcada':'pendiente'}`;
-  presetStatus('Último preset cargado automáticamente. Comprueba la vista antes de iniciar; si has movido el gemelo, vuelve a marcar.');
+  presetStatus('Encuadre recuperado. Comprueba que las tres zonas coinciden antes de iniciar; si has movido el gemelo, vuelve a marcar.');
   return true;
 }
 function savePreset(){
   if(!stream||!sourceDimensions)return;
   const result=presetStore.save({source:calibrationDimensions||sourceDimensions,roi:roiReady?roi:null,tablet:tabletReady?quad:null,signage:signageReady?signageQuad:null});
   if(result.state==='unavailable'){
-    presetState={...result,preset:presetState.preset};
+    presetState={...presetState,state:result.state};
     presetStatus('No se pudo guardar el nuevo encuadre. El último preset guardado no se ha sustituido; el encuadre nuevo solo está en esta sesión.');return;
   }
   presetState=result;
+  $('saved-presets').value='0';
   presetStatus(presetState.state==='saved'?'Último encuadre guardado automáticamente en este navegador.':undefined);
 }
 $('forget-preset').addEventListener('click',()=>{
   if(!presetStore.clear()){presetStatus('No se pudo borrar el preset del navegador.');return;}
-  presetState={state:'empty',preset:null};presetStatus('Preset olvidado. El encuadre actual no cambia; una nueva marcación volverá a guardarlo.');
+  presetState={state:'empty',preset:null,presets:[]};presetStatus('Preset olvidado. El encuadre actual no cambia; una nueva marcación volverá a guardarlo.');
+});
+$('saved-presets').addEventListener('change',presetControls);
+$('restore-preset').addEventListener('click',()=>{
+  const selected=(presetState.presets||[])[Number($('saved-presets').value)];
+  if(!stream||!compatiblePreset(selected,sourceDimensions))return;
+  pause();calibration=null;points=[];stage.classList.remove('calibrating');
+  $('markers').replaceChildren();$('coordinates').hidden=true;
+  restorePreset(selected);layout();controls();savePreset();
+  status('Encuadre recuperado: cámara, iPad y pantalla según las marcas guardadas. Comprueba la superposición y pulsa Iniciar análisis.');
 });
 presetStatus();
 const twins=installTwinUI({document,onOriginalRemoved:()=>clearCapture('Original temporal retirado')});
@@ -97,6 +123,7 @@ function renderCounts(){
   $('event-counter').textContent=`${numberFormat.format(passages.total)} ${passages.total===1?'paso':'pasos'}`;
 }
 function controls(){
+  presetControls();
   const connected=!!stream;
   $('connect').disabled=connected||busy||!!captureRequest;
   $('stop').disabled=!connected&&!captureRequest;
@@ -283,6 +310,7 @@ function updateSourceSize(){
   if(!stream||!scene.videoWidth||!scene.videoHeight)return;
   const next=`${scene.videoWidth} × ${scene.videoHeight}`;
   const dimensions=[scene.videoWidth,scene.videoHeight],first=!sourceSize;
+  const changed=sourceSize&&sourceSize!==next,wasCalibrating=!!calibration;
   if(sourceSize && sourceSize!==next){
     const reference=calibrationDimensions||sourceDimensions;
     const proportional=reference&&Math.abs((reference[0]/reference[1])/(dimensions[0]/dimensions[1])-1)<=.005;
@@ -293,7 +321,7 @@ function updateSourceSize(){
     if(!proportional){roiReady=false;tabletReady=false;signageReady=false;calibrationDimensions=null;$('calibration-status').textContent='Formato nuevo: repite el encuadre';}
   }
   sourceDimensions=dimensions;
-  if(first&&!calibration)restorePreset();
+  if((first&&!calibration)||(changed&&!wasCalibrating&&!roiReady&&!tabletReady&&!signageReady))restorePreset();
   sourceSize=next;stage.style.aspectRatio=`${scene.videoWidth} / ${scene.videoHeight}`;
   $('source-info').textContent=`PESTAÑA COMPARTIDA · ${next}`;layout();controls();
 }

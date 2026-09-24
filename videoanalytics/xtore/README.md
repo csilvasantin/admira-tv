@@ -15,7 +15,7 @@ Comparte esa pestaña mediante el selector nativo de Chrome, sin audio. Se recha
 ventanas y monitores, y no se intenta preseleccionar la pestaña ni copiar cookies.
 La primera vez el usuario confirma el recuadro de cámara y las cuatro esquinas del iPad.
 Las marcaciones válidas de cámara, iPad y cartelería se guardan automáticamente
-como último preset local y se restauran al volver a compartir una vista compatible.
+en un historial local de hasta 12 encuadres y se restauran al volver a compartir una vista compatible.
 El botón principal «Arrancar cámara y análisis» agrupa la selección nativa de
 pestaña, la recuperación de ese preset y el inicio del detector. Si faltan marcas
 o el formato es incompatible, queda conectado para encuadrar y no analiza hasta
@@ -164,18 +164,18 @@ y esos botones, sin solicitar captura ni alterar la sesión de vídeo del usuari
 
 `preset.mjs` conserva solo geometría normalizada (ROI, cuatro esquinas de iPad
 y DS), dimensiones de referencia y fecha. Clave propia
-`admira.xtore.zapatillas.calibration.v1`, esquema v1, máximo 4096 caracteres.
+`admira.xtore.zapatillas.calibration.v1`, lectura compatible con esquema v1 y archivo v2, máximo 32768 caracteres y 12 encuadres.
 Guarda cada marcación válida, también presets parciales; nunca valores iniciales
 sin confirmar, imágenes, permisos, identidad, eventos ni credenciales.
 Es local a navegador y origen: no se sincroniza con la playlist de Flota ni
 entre equipos. Almacenamiento bloqueado, cuota o datos corruptos se explican
 sin fingir persistencia. Un fallo de escritura no sustituye el preset anterior.
-Olvidar borra únicamente esta clave, no el encuadre activo, contadores o histórico.
+Olvidar borra únicamente esta clave (todos los encuadres guardados), no el encuadre activo, contadores o histórico.
 
 Se restaura después del permiso de compartir y de recibir dimensiones válidas,
 sin iniciar detección. Admite escalado proporcional con tolerancia del 0,5 %
 respecto a la referencia fija de calibración, no respecto al último resize.
-Un formato incompatible conserva el preset pero exige nuevas marcas. Un resize
+Un formato incompatible conserva el historial. Al volver al formato de un encuadre guardado se recuperan las zonas y el análisis permanece en pausa para revisarlas. Un resize
 cancela inferencias tardías; si es proporcional conserva las marcas y recupera
 solo el análisis previamente activo al llegar vídeo fresco. Si había selección
 en curso, esta y el diálogo numérico se cancelan sin reanudar automáticamente.
@@ -582,3 +582,33 @@ son el último trackId ni una suma de snapshots. Cámara transmite clean + origi
 del mismo fotograma efímero y frameAt, máximo 480 px por vista. Caducidad/pérdida
 de enlace descartan ambos bitmaps; un fallo de una vista libera la otra. La Xtore
 y el iPad rotulan expresamente el acumulado de personas para distinguirlo de IDs.
+
+
+## Recuperar cámara, iPad y pantalla — 24 septiembre 2026
+
+En **Encuadre y detección → Encuadres guardados**, se conservan hasta 12 marcaciones
+recientes. Cada opción indica fecha, dimensiones y superficies incluidas. Una
+marcación parcial o de otro formato ya no elimina inmediatamente la anterior.
+El preset único de versiones anteriores se conserva y migra al siguiente guardado.
+El inicio busca el más reciente compatible con la proporción de la fuente,
+aunque el último guardado corresponda a otra proporción. No se mezclan zonas
+procedentes de vistas diferentes ni se inventan las que falten.
+
+**Recuperar encuadre seleccionado** aplica una configuración compatible con la
+pestaña ya compartida. Cancela la marcación en curso y deja el análisis en pausa;
+comprueba las zonas y pulsa Iniciar análisis. La configuración elegida pasa a ser
+la más reciente para el próximo arranque. Cambiar de formato y después volver al
+original también recupera las zonas guardadas, sin reiniciar el análisis.
+
+La primera configuración requiere marcar las zonas. Solo persiste en este origen
+y navegador mientras se conserven sus datos. No es una preferencia de cuenta ni
+restaura el giro, zoom o posición de la ventana de vídeo de IEU. Igual proporción
+no acredita igual escena: revisa la superposición. Autorizar la captura de pestaña
+sigue siendo necesario en cada nueva conexión. Este cambio no implementa la API
+ni la preferencia de arranque de IEU descrita en `/mcp/ieu-puertacam-autostart.md`.
+
+Pruebas automáticas: migración v1, varios formatos, límites, datos corruptos,
+cuota agotada, recuperación tras resize, cancelación de una marcación y ausencia
+de captura/análisis implícitos. Son fixtures, no una calibración real de Store.
+
+Minitutorial oficial exportado y revisado: [/apps/video/xtore-recuperar-encuadres.mp4](/apps/video/xtore-recuperar-encuadres.mp4). Animación de 15 s, con subtítulos y base sonora, sin locución; no es una grabación de Store.

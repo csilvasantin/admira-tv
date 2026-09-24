@@ -98,5 +98,9 @@
     "src": "/apps/video/yarig.mp4",
     "title": "Yarig.ai, en 5 minutos",
     "pdf": "/apps/pdf/yarig.pdf"
+  },
+  "xtore-recuperar-encuadres": {
+    "src": "/apps/video/xtore-recuperar-encuadres.mp4",
+    "title": "Xtore: recuperar cámara, iPad y pantalla · animación de 15 s"
   }
 }
