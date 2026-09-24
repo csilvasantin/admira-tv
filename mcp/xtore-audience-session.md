@@ -145,3 +145,13 @@ Requiere partida activa y tienda abierta. G.manualAudienceTarget tiene prioridad
 Con 100 visitantes puede haber solapamiento inicial y menor rendimiento. Pruebas: 0 elimina incluso cola/compra conservando personal; 100 se mantiene ante mensajes nuevos; auto recupera 36 del snapshot de prueba; entradas inválidas no mutan; CLI real verificado 0 y 100.
 
 [Help](https://admira.tv/help/#xtore-resetaudiencia) · [Guía animada](https://admira.tv/apps/video/xtanco-resetaudiencia.mp4).
+
+## Comportamiento de visitantes virtuales (Yokup #278)
+
+Las visitas tienen una misión local: buscar un producto, comparar o acompañar. Itinerario finito de uno a tres muebles distintos, reserva de punto de observación fuera del acceso y pausa de 120–240 ticks (2–4 s a60Hz); destino bloqueado se abandona tras900 ticks, fase de exploración limitada a5400 ticks. Sin visitas accesibles no hay compra simulada. La atención conserva el checkout existente y su probabilidad de conversión.
+
+La navegación conserva durezas y radio corporal. Ante estancamiento recalcula un camino que considera otros visitantes; la separación no deshace un paso ya avanzado hacia una esquina. Admisiones dosificadas (grupos existentes admitidos juntos), colas alejadas de la puerta y votación al paso. camForceExact llama siempre a startCustomerLeave para que la reducción de audiencia tenga trayecto y destino exterior. No modifica los snapshots ni cuenta esas salidas virtuales como personas salen de Puerta Cam.
+
+Un layout cerrado sigue sin ruta: no se concede permiso de atravesar sólidos. En manual/Real el reconciliador conserva el objetivo reponiendo bajas, aunque cada individuo finalice su visita. Contrato de mensajes y herramientas MCP sin cambios.
+
+Pruebas: entradas/salidas mixtas, diez llegadas coincidentes,24 visitas completas sin saltos ni segmentos dentro de muebles, tres destinos distintos con pausas acotadas, layout imposible sin venta y reducción de cámara con salida completa. [Help](https://admira.tv/help/#xtore-visitas) · [Guía animada](https://admira.tv/apps/video/xtanco-visitas-con-objetivo.mp4).

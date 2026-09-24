@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=24.09.2026.r7.1305"></script>
+<script src="/auth-gate.js?v=24.09.2026.r8.1316"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r7.1305">
+  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r8.1316">
 </head>
 <body>
-<script src="/admira-nav.js?v=24.09.2026.r7.1305" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=24.09.2026.r7.1305" defer></script>
+<script src="/admira-nav.js?v=24.09.2026.r8.1316" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=24.09.2026.r8.1316" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -44,6 +44,7 @@
   <nav class="toc">
     <a href="#xtore-demo-pantallas">Xtanco / demo en cuatro pantallas</a>
     <a href="#xtore-audiencia">Audiencia de sesión / XpaceOS y Pixeria</a>
+    <a href="#xtore-visitas">Xtanco · visitas con objetivos</a>
     <a href="#xtore-encuadres">Xtore / recuperar cámara, iPad y pantalla</a>
     <a href="#ieu-puertacam">Store / inicio de Puerta Cam (pendiente)</a>
     <a href="#android-player">Player Android / Samsung Fold</a>
@@ -72,6 +73,13 @@
 <p>Si no llegan datos recientes, las pantallas muestran espera o ausencia de señal. El vídeo y las detecciones caducan en 1,5 s y los totales en 4 s sin latido. No vuelven a publicidad simulada mientras la demo está activa. Activar la demo no concede permisos de cámara, no abre automáticamente Puerta Cam y no publica ni graba la señal. Tras recargar, la demo vuelve a estar desactivada.</p>
 <p><a href="/apps/video/xtore-camara-arranque.mp4">Minitutorial · cámara durante el arranque (animación, 15 s)</a></p>
 <p><a href="/apps/video/xtanco-demo-pantallas.mp4">Minitutorial animado · cámara y cuatro pantallas (15 s)</a> · animación explicativa, no grabación de pantalla.</p></section>
+  <section id="xtore-visitas"><h2>Xtanco · visitas con un objetivo</h2>
+<p>Abre el Xtanco: el comportamiento se aplica automáticamente a los visitantes virtuales. Sus bocadillos muestran el destino, por ejemplo <b>Voy a Estantería</b>, y el paso a <b>Listo para atención</b>. En la ficha del visitante y la lista de clientes, Estado muestra el destino o lo que está mirando.</p>
+<ol><li>Entran y despejan el acceso. Las nuevas llegadas se dosifican para no acumularse en el mismo punto de la puerta; los grupos ya admitidos pueden entrar juntos.</li><li>Buscan el tipo de producto deseado, comparan o acompañan. Cada visita inspecciona entre uno y tres muebles distintos, con paradas de 2–4 segundos de simulación. Los acompañantes siguen a su adulto.</li><li>Tras mirar, pasan a atención y salen. Se conserva la probabilidad de compra: mirar no garantiza una venta. Si ningún destino es accesible, salen sin registrar una compra ficticia.</li></ol>
+<p>Las posiciones de observación y de cola se mantienen fuera de la zona de acceso. Si un destino sigue bloqueado durante 15 segundos de simulación, se intenta el siguiente, sin volver al mismo en círculos. La fase de visita tiene un límite de 90 segundos de simulación; la espera de atención y la salida siguen sus propias reglas.</p>
+<p>La corrección conserva las durezas de los muebles. Recalcula rutas alrededor de otros visitantes cuando no avanzan y evita que la separación entre personas deshaga el último paso de una esquina. Las reducciones del contador de cámara asignan una salida completa. La valoración al salir no detiene a la persona en la puerta.</p>
+<p><b>Límites:</b> un pasillo físicamente cerrado sigue bloqueado hasta retirar el obstáculo; no se atraviesan muebles ni se teletransportan personas. Con mucha densidad siguen existiendo colas y puede bajar el rendimiento. Son objetivos de personajes simulados, no inferencias sobre los peatones reales. En modo manual o Real, el objetivo de audiencia puede reponer a los visitantes que terminan su visita; conservar el mismo total no significa que estén inmóviles.</p>
+<p><a href="/apps/video/xtanco-visitas-con-objetivo.mp4">Minitutorial · visitas con objetivos (animación, 15 s)</a>. Animación explicativa, no grabación real de pantalla.</p></section>
   <section id="xtore-audiencia"><h2>Audiencia de sesión · XpaceOS y Pixeria</h2>
 <h3 id="xtore-resetaudiencia">Fijar visitantes con /resetaudiencia</h3>
 <p>En el Xtanco, abre el modo experto (⌘) para mostrar el CLI inferior de Control Xtore. Escribe el comando y pulsa Enviar / Send. La tienda debe estar abierta.</p>

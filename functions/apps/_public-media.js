@@ -2,7 +2,7 @@ export const PUBLIC_MEDIA_SLUGS = new Set([
   "dashboard", "digitalsignage", "contentcatalogue", "support", "pushnotifications",
   "virtualassistant", "gamification", "iotmanager", "videoanalytics", "radioanalytics",
   "socialwifi", "queuemanager", "roombooking", "audiobranding", "olfactorymarketing",
-  "virtualreality", "augmentedreality", "xpaceos", "yarig", "xtore-recuperar-encuadres", "xtore-analizar-solo-camara", "xtore-preparar-detector", "xtore-audiencia-sesion", "xtanco-demo-pantallas", "xtore-camara-arranque", "xtore-id-pasos", "xtanco-resetaudiencia"
+  "virtualreality", "augmentedreality", "xpaceos", "yarig", "xtore-recuperar-encuadres", "xtore-analizar-solo-camara", "xtore-preparar-detector", "xtore-audiencia-sesion", "xtanco-demo-pantallas", "xtore-camara-arranque", "xtore-id-pasos", "xtanco-resetaudiencia", "xtanco-visitas-con-objetivo"
 ]);
 
 export function publicMediaFile(file, extension) {
