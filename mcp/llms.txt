@@ -8,6 +8,8 @@
 > Y el PLAYER CONDICIONADO (Xtore): un tótem sin cámara emite su playlist y, cuando alguien pasa
 > por la Puerta Cam, contenido por las categorías de su productor; Zapatillas solo persona/coche/moto/bici, sin sexo/edad.
 
+IEU · arranque Puerta Cam por usuario (ESPECIFICACIÓN PENDIENTE, no tool ni función activa): https://admira.tv/mcp/ieu-puertacam-autostart.md
+
 Contrato de integración del player (usarlo sin modificarlo): https://admira.tv/mcp/player-contract.md
 Manual Android exhaustivo: https://admira.tv/mcp/android-player.md
 MCP player_info {platform:"android",section:"all"}; omitir platform conserva macOS.

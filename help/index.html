@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=23.09.2026.r3.2358"></script>
+<script src="/auth-gate.js?v=24.09.2026.r1.1122"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,16 +32,17 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=23.09.2026.r3.2358">
+  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r1.1122">
 </head>
 <body>
-<script src="/admira-nav.js?v=23.09.2026.r3.2358" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=23.09.2026.r3.2358" defer></script>
+<script src="/admira-nav.js?v=24.09.2026.r1.1122" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=24.09.2026.r1.1122" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
 
   <nav class="toc">
+    <a href="#ieu-puertacam">Store / inicio de Puerta Cam (pendiente)</a>
     <a href="#android-player">Player Android / Samsung Fold</a>
     <a href="#player-integracion">Player · integrar sin tocarlo</a>
     <a href="#concepto">Concepto</a><a href="#vistas">Vistas</a><a href="#dispositivos">Dispositivos</a>
@@ -61,6 +62,11 @@
     <p><b>Kioskos y gemelo:</b> la playlist de un kiosko vive en <code>&lt;pantalla&gt;-tema</code> (la publica <code>tools/publica-playlists-kioskos.py</code>); el gemelo CanalKiosk manda <code>play&lt;num&gt;</code> a la pantalla real de cada sitio. Jardinets = Fold 8 <code>samsung-galaxy-fold-8-mupi</code> y Tab A11 <code>samsung-galaxy-tab-a11-mupi</code> (circuito <code>samsung-galaxy-fold-8</code>, tema música). <b>Precedencia:</b> un emparejamiento con un <a href="#player-virtual">player virtual</a> manda sobre la sincro y el modo remoto; para devolver una pantalla a su circuito, desvincúlala en <a href="/virtual-players/">Players virtuales</a>.</p>
     <p class="note">Trampas: dos aparatos con el mismo <code>screen</code> se pisan; <code>--es tag ""</code> no vacía el tag (usa un espacio); «0 de N descargados» en todas las pantallas a la vez es el presupuesto KV del worker (<code>throttled:"budget"</code>), no el player.</p>
   </section>
+  <section id="ieu-puertacam"><h2>Store · abrir Puerta Cam al entrar</h2>
+    <p><b>Mejora solicitada, pendiente de implementar en IEU.</b> El arranque previsto para la cuenta configurada seleccionará Store (Santa Rosa 19), abrirá Entrada, girará hacia Puerta Cam y mostrará su vídeo. Podrás cerrar la cámara y cambiar de escena.</p>
+    <p>El mantenedor de IEU dispone de las <a href="/mcp/ieu-puertacam-autostart.md">instrucciones y pruebas de aceptación</a>. Esto no elimina el selector del navegador para compartir la pestaña con Xtore. Tras conectar la fuente, la presencia detectada condiciona el contenido automáticamente.</p>
+  </section>
+
   <section id="android-player"><h2>Player Android · Samsung Fold</h2>
 <p><a href="/help/tutorials/player-android-usb-mcp.mp4">Ver minitutorial de instalación y MCP</a> · 15 s, guía animada creada con ADmira Motion; no es una grabación del teléfono.</p>
     <p>El player oficial es <b>tv.admira.signage</b>. El APK y el canal web se actualizan por separado. <a href="/player/android-release.json">Última versión distribuida</a> · <a href="/player/admira-player.apk">Descargar APK</a> · <a href="/mcp/android-player.md">Manual técnico completo</a>.</p>
