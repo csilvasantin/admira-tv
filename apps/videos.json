@@ -102,5 +102,9 @@
   "xtore-recuperar-encuadres": {
     "src": "/apps/video/xtore-recuperar-encuadres.mp4",
     "title": "Xtore: recuperar cámara, iPad y pantalla · animación de 15 s"
+  },
+  "xtore-analizar-solo-camara": {
+    "src": "/apps/video/xtore-analizar-solo-camara.mp4",
+    "title": "Xtore: analizar solo con cámara · animación de 15 s"
   }
 }

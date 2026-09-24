@@ -13,11 +13,11 @@ pestaña. No se modifica ni elimina el auth-gate de las páginas existentes.
 El operador abre Digital Twin, selecciona Store → Entrada y muestra Puerta Cam.
 Comparte esa pestaña mediante el selector nativo de Chrome, sin audio. Se rechazan
 ventanas y monitores, y no se intenta preseleccionar la pestaña ni copiar cookies.
-La primera vez el usuario confirma el recuadro de cámara y las cuatro esquinas del iPad.
+La primera vez basta con confirmar el recuadro de cámara. Colocar el iPad y la pantalla es opcional; el player virtual existente funciona sin esas marcas.
 Las marcaciones válidas de cámara, iPad y cartelería se guardan automáticamente
 en un historial local de hasta 12 encuadres y se restauran al volver a compartir una vista compatible.
 El botón principal «Arrancar cámara y análisis» agrupa la selección nativa de
-pestaña, la recuperación de ese preset y el inicio del detector. Si faltan marcas
+pestaña, la recuperación de ese preset y el inicio del detector. Si falta la marca de cámara
 o el formato es incompatible, queda conectado para encuadrar y no analiza hasta
 que el operador lo inicia. «Compartir sin analizar» conserva el flujo manual,
 disponible en el desplegable «Arranque y conexión manual». Pausar y reanudar
@@ -516,7 +516,7 @@ QA manual obligatoria antes de declarar directo validado:
 
 1. Portal → nueva ruta, manteniendo Vídeo y PDF de la tarjeta.
 2. Preparar detector: descarga verificada y estado listo / error reintentable.
-3. Seleccionar la pestaña IEU en Chrome, calibrar cámara e iPad.
+3. Seleccionar la pestaña IEU en Chrome, calibrar la cámara; iPad y pantalla son opcionales.
 4. Verificar persona, coche, moto, bici, oclusiones y paso con baja iluminación.
 5. Ver captura y color correctos, caducidad, pausa, desconexión y cambio de tamaño.
 6. Comprobar en producción las cabeceras CSP/Permissions-Policy de la ruta.
@@ -551,7 +551,7 @@ Referencias primarias:
 `Abrir gemelo · zapatillas` enlaza una ventana de XpaceOS. La entrada inversa es
 `https://www.xpaceos.com/admira-xp/?autostart=xtanco&virtualPlayer=xtore-virtual-zapatillas`.
 Se comparte con esa ventana la reproducción de esta instancia y únicamente el
-recorte Puerta Cam durante el análisis. En el flujo enlazado el iPad es opcional;
+recorte Puerta Cam durante el análisis. El iPad es opcional tanto en el flujo directo como en el enlazado;
 siempre se exige compartir una pestaña y confirmar el recorte de cámara.
 
 No hay un segundo motor de selección: pared y escaparate siguen pieza, posición,
@@ -612,3 +612,16 @@ cuota agotada, recuperación tras resize, cancelación de una marcación y ausen
 de captura/análisis implícitos. Son fixtures, no una calibración real de Store.
 
 Minitutorial oficial exportado y revisado: [/apps/video/xtore-recuperar-encuadres.mp4](/apps/video/xtore-recuperar-encuadres.mp4). Animación de 15 s, con subtítulos y base sonora, sin locución; no es una grabación de Store.
+
+
+## Analizar solo con cámara — 24 septiembre 2026
+
+El arranque manual, el arranque con preset y la recuperación automática requieren
+solo una zona de cámara válida y una fuente conectada. No dependen de colocar el
+iPad ni la pantalla, ni de tener un gemelo XpaceOS enlazado. El player virtual
+existente recibe las condiciones y conserva su posición provisional mientras no
+se coloque en la escena. Marcar superficies sigue pausando el análisis durante
+el ajuste; la cámara continúa siendo obligatoria. No se modifica la selección
+nativa de Digital Twin 360 ni se conceden permisos de captura automáticamente.
+
+Minitutorial: [/apps/video/xtore-analizar-solo-camara.mp4](/apps/video/xtore-analizar-solo-camara.mp4). Animación explicativa; no es grabación real de la cámara.

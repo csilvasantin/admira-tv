@@ -46,7 +46,7 @@ function presetStatus(message){
     option.textContent=`${sourceDimensions&&!compatiblePreset(item,sourceDimensions)?'Otro formato · ':''}${i===0?'Último · ':''}${new Date(item.savedAt).toLocaleString('es-ES')} · ${item.source.join(' × ')} · ${[item.roi&&'cámara',item.tablet&&'iPad',item.signage&&'pantalla'].filter(Boolean).join(' + ')}`;
     select.append(option);
   }
-  select.value=(presetState.presets||[])[Number(previous)]?previous:'0';
+  select.value=previous!==''&&(presetState.presets||[])[Number(previous)]?previous:'0';
   select.disabled=!(presetState.presets||[]).length;
   presetControls();
   $('forget-preset').disabled=presetState.state==='empty'||(presetState.state==='unavailable'&&!p);
@@ -66,8 +66,8 @@ function restorePreset(selected){
   calibrationDimensions=[...p.source];
   if(p.roi)roi=[...p.roi];if(p.tablet)quad=p.tablet.map(p=>[...p]);if(p.signage)signageQuad=p.signage.map(p=>[...p]);
   $('saved-presets').value=String((presetState.presets||[]).indexOf(p));
-  $('calibration-status').textContent=`Preset cargado · Cámara: ${roiReady?'marcada':'pendiente'} · iPad: ${tabletReady?'marcado':'pendiente'} · cartelería: ${signageReady?'marcada':'pendiente'}`;
-  presetStatus('Encuadre recuperado. Comprueba que las tres zonas coinciden antes de iniciar; si has movido el gemelo, vuelve a marcar.');
+  $('calibration-status').textContent=`Preset cargado · Cámara: ${roiReady?'marcada':'pendiente'} · iPad: ${tabletReady?'marcado':'opcional, sin colocar'} · cartelería: ${signageReady?'marcada':'opcional, sin colocar'}`;
+  presetStatus('Encuadre recuperado. Comprueba la zona de cámara y las pantallas que hayas colocado antes de iniciar; si has movido el gemelo, vuelve a marcar.');
   return true;
 }
 function savePreset(){
@@ -127,16 +127,16 @@ function controls(){
   const connected=!!stream;
   $('connect').disabled=connected||busy||!!captureRequest;
   $('stop').disabled=!connected&&!captureRequest;
-  $('hide-people').disabled=!connected||!roiReady||(!tabletReady&&!xpace.cameraOnly)||!!calibration;
+  $('hide-people').disabled=!connected||!roiReady||!!calibration;
   $('add-scooter').disabled=!connected;
   for(const id of ['set-roi','set-tablet','set-signage','edit-coordinates'])$(id).disabled=!connected;
   // Playback owns its browser instance, independently of the captured video.
   signage.setAnalysis(analyzing&&!calibration&&sourceVisible(),!analysisRequested&&!calibration);
   signage.setEligible(sourceVisible());
   layout();
-  $('analyze').disabled=!!captureRequest||(busy&&!analysisRequested)||(connected&&(!roiReady||(!tabletReady&&!xpace.cameraOnly)||!!calibration));
+  $('analyze').disabled=!!captureRequest||(busy&&!analysisRequested)||(connected&&(!roiReady||!!calibration));
   $('analyze').textContent=captureRequest?'Conectando cámara…':analysisRequested?'Pausar análisis':connected?'Iniciar análisis':'Arrancar cámara y análisis';
-  $('analysis-health').textContent=analyzing?'Analizando Puerta Cam':suspendedReason?'Esperando vídeo · reanudación automática':analysisRequested?'Preparando detector…':!connected?'Cámara sin conectar':!roiReady||(!tabletReady&&!xpace.cameraOnly)?(xpace.cameraOnly?'Marca la cámara del escaparate':'Completa cámara e iPad'):'Análisis en pausa';
+  $('analysis-health').textContent=analyzing?'Analizando Puerta Cam':suspendedReason?'Esperando vídeo · reanudación automática':analysisRequested?'Preparando detector…':!connected?'Cámara sin conectar':!roiReady?'Marca la zona de cámara':'Análisis en pausa';
   $('connection').textContent=analyzing?'Analizando':connected?'Pestaña conectada':'Cámara sin conectar';
   $('connection').classList.toggle('live',analyzing);
 }
@@ -181,7 +181,7 @@ function scheduleRecovery(){
         .catch(()=>{if(stream===source&&analysisRequested)status('Esperando que el navegador reanude el vídeo compartido. Puedes pausar o reconectar si la fuente no vuelve.');})
         .finally(()=>{if(sourcePlayPending===request)sourcePlayPending=null;});
     }
-    if(sourceVisible()&&!sourceMuted&&!busy&&!inferences&&!calibration&&roiReady&&(tabletReady||xpace.cameraOnly)&&scene.readyState>=2&&scene.currentTime!==recoveryVideoTime){
+    if(sourceVisible()&&!sourceMuted&&!busy&&!inferences&&!calibration&&roiReady&&scene.readyState>=2&&scene.currentTime!==recoveryVideoTime){
       // A fresh frame in the same authorized source is required. Never infer
       // on the last frozen frame or silently acquire another capture source.
       void startAnalysis(true);
@@ -279,11 +279,11 @@ async function connectSource(startWhenReady=false){
     passages.reset();renderCounts();
     $('empty-scene').hidden=true;
     updateSourceSize();
-    if(startWhenReady&&roiReady&&(tabletReady||xpace.cameraOnly)){await startAnalysis();return;}
+    if(startWhenReady&&roiReady){await startAnalysis();return;}
     if(startWhenReady&&!roiReady&&sourceDimensions){
       startCalibration('roi');
-      status('Cámara conectada sin un encuadre compatible completo. Marca las esquinas superior izquierda e inferior derecha de Puerta Cam; después confirma el iPad si falta y pulsa Iniciar análisis.');
-    }else status(roiReady&&(tabletReady||xpace.cameraOnly)?'Preset cargado. Comprueba que cámara, iPad y DS coinciden con la vista; pulsa Iniciar análisis cuando quieras.':!sourceDimensions?'Pestaña conectada; esperando vídeo para recuperar el encuadre. Cuando esté listo, pulsa Iniciar análisis.':'Pestaña conectada. Marca las superficies pendientes y pulsa Iniciar análisis. No se analiza todavía.');
+      status('Cámara conectada sin un encuadre compatible completo. Marca las esquinas superior izquierda e inferior derecha de Puerta Cam; después pulsa Iniciar análisis. El iPad y la pantalla son opcionales.');
+    }else status(roiReady?'Preset cargado. Comprueba que la zona de cámara coincide con la vista; pulsa Iniciar análisis cuando quieras.':!sourceDimensions?'Pestaña conectada; esperando vídeo para recuperar el encuadre. Cuando esté listo, pulsa Iniciar análisis.':'Pestaña conectada. Marca la zona de cámara y pulsa Iniciar análisis. El iPad y la pantalla son opcionales. No se analiza todavía.');
   }catch(error){
     // A cancelled/older picker must never disconnect a newer capture or replace
     // its status. Its tracks are stopped when the browser eventually returns.
@@ -365,8 +365,8 @@ stage.addEventListener('click',event=>{
 function finishCalibration(){
   calibrationDimensions||=[...sourceDimensions];
   calibration=null;points=[];stage.classList.remove('calibrating');$('markers').replaceChildren();
-  $('calibration-status').textContent=`Cámara: ${roiReady?'marcada':'pendiente'} · iPad: ${tabletReady?'marcado':'pendiente'} · cartelería: ${signageReady?'marcada':'opcional, pendiente'}`;
-  layout();controls();status(roiReady&&(tabletReady||xpace.cameraOnly)?'Encuadre listo. Pulsa Iniciar análisis. Si giras o acercas el gemelo, pausa y vuelve a marcar.':'Marca también la otra zona antes de iniciar el análisis.');
+  $('calibration-status').textContent=`Cámara: ${roiReady?'marcada':'pendiente'} · iPad: ${tabletReady?'marcado':'opcional, sin colocar'} · cartelería: ${signageReady?'marcada':'opcional, sin colocar'}`;
+  layout();controls();status(roiReady?'Cámara lista. Pulsa Iniciar análisis; el player virtual ya está disponible. Si giras o acercas el gemelo, pausa y vuelve a marcar.':'Marca la zona de cámara antes de iniciar el análisis. El iPad y la pantalla son opcionales.');
   savePreset();
 }
 const coordinateNames=['Cámara: izquierda','Cámara: arriba','Cámara: ancho','Cámara: alto','iPad: sup. izq. X','iPad: sup. izq. Y','iPad: sup. der. X','iPad: sup. der. Y','iPad: inf. der. X','iPad: inf. der. Y','iPad: inf. izq. X','iPad: inf. izq. Y'];
@@ -425,7 +425,7 @@ async function prepareModel(){
 }
 $('prepare-model').addEventListener('click',()=>{prepareModel().catch(()=>{});});
 async function startAnalysis(recovering=false){
-  if(!stream||!roiReady||(!tabletReady&&!xpace.cameraOnly)||calibration)return;
+  if(!stream||!roiReady||calibration)return;
   if(recovering&&(!analysisRequested||!suspendedReason))return;
   analysisRequested=true;
   if(!sourceVisible()||sourceMuted){suspendAnalysis('source','Esperando que la vista y Puerta Cam estén disponibles. Se reanudará automáticamente.');return;}

@@ -87,10 +87,10 @@ test('quick start preserves an incompatible preset and requires new explicit mar
   assert.match(f.get('preset-status').textContent,/formato.*distinto/);assert.match(f.get('calibration-status').textContent,/Marcando cámara/);
   assert.equal(storage.getItem(PRESET_KEY),saved);assert.equal(f.get('count-person').textContent,'0');
 });
-test('quick start requires the iPad mark except for an explicitly linked camera-only twin',async t=>{
+test('quick start with only a camera mark works both standalone and with a linked twin',async t=>{
   t.mock.timers.enable({apis:['setTimeout','setInterval']});
-  const f=await fixture({storage:savedFraming({tablet:false})});await f.get('analyze').emit('click');
-  assert.equal(f.detections.length,0);assert.equal(f.get('analyze').disabled,true);assert.match(f.get('status').textContent,/superficies pendientes/);
+  const f=await fixture({storage:savedFraming({tablet:false})});assert.equal(f.get('saved-presets').value,'0');await f.get('analyze').emit('click');
+  assert.equal(f.detections.length,1);assert.equal(f.get('connection').textContent,'Analizando');assert.equal(f.get('tablet').hidden,true);assert.equal(f.get('signage').hidden,false);
   await f.get('stop').emit('click');
   const twin=await fixture({storage:savedFraming({tablet:false}),twin:true});await twin.get('analyze').emit('click');
   assert.equal(twin.detections.length,1);assert.equal(twin.get('connection').textContent,'Analizando');
@@ -381,7 +381,7 @@ test('a monitor/window selection is stopped, not analyzed',async()=>{
   assert.equal(f.track.stopped,true);assert.equal(f.get('stop').disabled,true);
   assert.match(f.get('status').textContent,/no una ventana/);
 });
-test('analysis requires two calibrated surfaces and stopping clears the source',async()=>{
+test('analysis requires camera calibration and stopping clears the source',async()=>{
   const f=await fixture();await f.get('connect').emit('click');
   assert.equal(f.get('analyze').disabled,true);
   await f.calibrate();assert.equal(f.get('analyze').disabled,false);
@@ -819,4 +819,30 @@ test('recovery rejects another format and forgetting removes the archive as well
   await f.get('restore-preset').emit('click');assert.equal(f.get('tablet').hidden,true);
   await f.get('forget-preset').emit('click');assert.equal(storage.getItem(PRESET_KEY),null);
   f.get('scene').videoWidth=1280;await f.get('scene').emit('resize');assert.equal(f.get('tablet').hidden,true);
+});
+
+test('marking only the camera enables analysis and keeps the default player, with optional surfaces absent',async()=>{
+  const f=await fixture(),player=f.get('signage').children[0];await f.get('connect').emit('click');
+  assert.equal(f.get('analyze').disabled,true);await f.get('analyze').emit('click');assert.equal(f.detections.length,0);
+  f.get('stage').getBoundingClientRect=()=>({left:0,top:0,width:1000,height:1000});
+  await f.get('set-roi').emit('click');
+  await f.get('stage').emit('click',{clientX:100,clientY:100});
+  await f.get('stage').emit('click',{clientX:600,clientY:600});
+  assert.equal(f.get('analyze').disabled,false);assert.equal(f.detections.length,0);
+  assert.match(f.get('calibration-status').textContent,/iPad: opcional/);
+  await f.get('analyze').emit('click');assert.equal(f.detections.length,1);
+  assert.equal(f.get('tablet').hidden,true);assert.equal(f.get('signage').hidden,false);
+  assert.equal(f.get('signage').children[0],player);assert.equal(player.removed,undefined);
+  assert.match(f.get('signage-mode').textContent,/Audiencia activa/);
+});
+test('camera-only analysis recovers on fresh video without a tablet and manual pause stays paused',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture({storage:savedFraming({tablet:false})});assert.equal(f.get('saved-presets').value,'0');await f.get('analyze').emit('click');
+  await f.track.emit('mute');f.finishDetection();await flush();
+  await f.track.emit('unmute');f.get('scene').currentTime++;t.mock.timers.tick(500);await flush();
+  assert.equal(f.get('connection').textContent,'Analizando');assert.equal(f.detections.length,2);
+  assert.equal(f.get('tablet').hidden,true);assert.equal(f.get('signage').hidden,false);
+  await f.get('analyze').emit('click');f.finishDetection();await flush();
+  f.get('scene').currentTime++;t.mock.timers.tick(1000);await flush();
+  assert.equal(f.get('analyze').textContent,'Iniciar análisis');assert.equal(f.detections.length,2);
 });

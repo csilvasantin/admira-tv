@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=24.09.2026.r2.1135"></script>
+<script src="/auth-gate.js?v=24.09.2026.r3.1148"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r2.1135">
+  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r3.1148">
 </head>
 <body>
-<script src="/admira-nav.js?v=24.09.2026.r2.1135" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=24.09.2026.r2.1135" defer></script>
+<script src="/admira-nav.js?v=24.09.2026.r3.1148" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=24.09.2026.r3.1148" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -63,9 +63,10 @@
     <p><b>Kioskos y gemelo:</b> la playlist de un kiosko vive en <code>&lt;pantalla&gt;-tema</code> (la publica <code>tools/publica-playlists-kioskos.py</code>); el gemelo CanalKiosk manda <code>play&lt;num&gt;</code> a la pantalla real de cada sitio. Jardinets = Fold 8 <code>samsung-galaxy-fold-8-mupi</code> y Tab A11 <code>samsung-galaxy-tab-a11-mupi</code> (circuito <code>samsung-galaxy-fold-8</code>, tema música). <b>Precedencia:</b> un emparejamiento con un <a href="#player-virtual">player virtual</a> manda sobre la sincro y el modo remoto; para devolver una pantalla a su circuito, desvincúlala en <a href="/virtual-players/">Players virtuales</a>.</p>
     <p class="note">Trampas: dos aparatos con el mismo <code>screen</code> se pisan; <code>--es tag ""</code> no vacía el tag (usa un espacio); «0 de N descargados» en todas las pantallas a la vez es el presupuesto KV del worker (<code>throttled:"budget"</code>), no el player.</p>
   </section>
-  <section id="xtore-encuadres"><h2>Xtore · recuperar cámara, iPad y pantalla</h2>
+  <section id="xtore-encuadres"><h2>Xtore · cámara y pantallas opcionales</h2>
+    <p><b>Para iniciar el análisis basta con marcar la zona de cámara.</b> Colocar el iPad y la pantalla es opcional: el player virtual existente funciona y recibe las condiciones sin colocarlo en la escena. Esto también se aplica al arranque con una cámara guardada y a la recuperación tras una interrupción. <a href="/apps/video/xtore-analizar-solo-camara.mp4">Minitutorial animado: analizar solo con cámara (15 s)</a>.</p>
     <p>Abre <a href="/videoanalytics/xtore/#capture-framing">Encuadre y detección</a>. Comparte la pestaña de IEU con Puerta Cam abierta. Las zonas del encuadre más reciente compatible se recuperan; para volver a uno anterior, elígelo en <b>Encuadres guardados</b> y pulsa <b>Recuperar encuadre seleccionado</b>. Revisa cámara, iPad y pantalla antes de iniciar el análisis.</p>
-    <p>Se conservan hasta 12 encuadres en este navegador, incluidos los anteriores a una marcación parcial. Al volver al formato original de la ventana, se recuperan las zonas guardadas y el análisis queda en pausa. La primera vez hay que marcar las superficies. No se restaura el giro ni zoom de IEU, no se sincroniza por cuenta y el permiso de compartir se concede en cada conexión.</p>
+    <p>Se conservan hasta 12 encuadres en este navegador, incluidos los anteriores a una marcación parcial. Al volver al formato original de la ventana, se recuperan las zonas guardadas y el análisis queda en pausa. La primera vez hay que marcar la cámara; las otras superficies son opcionales. No se restaura el giro ni zoom de IEU, no se sincroniza por cuenta y el permiso de compartir se concede en cada conexión.</p>
     <p><a href="/apps/video/xtore-recuperar-encuadres.mp4">Ver minitutorial animado (15 s)</a> · generado con la herramienta oficial de AdmiraNeXT, exportado y revisado. Animación con texto y base sonora; no es una grabación real ni incluye locución.</p>
   </section>
   <section id="ieu-puertacam"><h2>Store · abrir Puerta Cam al entrar</h2>
