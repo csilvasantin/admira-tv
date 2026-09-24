@@ -188,3 +188,23 @@ test('vehicle crops travel on a separate proof channel and history still rejects
     assert.equal((await proof({env,request:new Request('https://admira.tv/videoanalytics/api/proof',{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://admira.tv',Cookie:'__Host-atv_session=fixture'},body:JSON.stringify({id:personId,jpeg})})})).status,400);
   }finally{d.close();}
 });
+test('a person crop stays private until the synthetic twin replaces it',async()=>{
+  const {onRequest:twin}=await import('../../functions/videoanalytics/api/twin.js');
+  const d=database(),env=envFor(d.db,{email:'admin@example.test',role:'admin'});
+  const personId='33333333-3333-4333-8333-333333333333';
+  const original=btoa(String.fromCharCode(0xff,0xd8,0xff,0xdb,...new Array(80).fill(1)));
+  const synthetic=btoa(String.fromCharCode(0xff,0xd8,0xff,0xdb,...new Array(80).fill(2)));
+  const post=(stage,jpeg)=>twin({env,request:new Request('https://admira.tv/videoanalytics/api/twin',{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://admira.tv',Cookie:'__Host-atv_session=fixture'},body:JSON.stringify({id:personId,stage,jpeg})})});
+  try{
+    await request(env,{events:[event({id:personId,kind:'person'})]});
+    assert.equal((await post('original',original)).status,200);
+    const pending=await (await twin({env,request:new Request(`https://admira.tv/videoanalytics/api/twin?id=${personId}&status=1`,{headers:{Cookie:'__Host-atv_session=fixture'}})})).json();
+    assert.equal(pending.state,'generating');
+    assert.equal((await twin({env,request:new Request(`https://admira.tv/videoanalytics/api/twin?id=${personId}`,{headers:{Cookie:'__Host-atv_session=fixture'}})})).status,404);
+    assert.equal((await post('twin',synthetic)).status,200);
+    assert.equal(d.sqlite.prepare('SELECT COUNT(*) AS n FROM xtore_person_originals').get().n,0);
+    const image=await twin({env,request:new Request(`https://admira.tv/videoanalytics/api/twin?id=${personId}`,{headers:{Cookie:'__Host-atv_session=fixture'}})});
+    assert.equal(image.headers.get('content-type'),'image/jpeg');
+    assert.equal((await post('original',original)).status,200);
+  }finally{d.close();}
+});

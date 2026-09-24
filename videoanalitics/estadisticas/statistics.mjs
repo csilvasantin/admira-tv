@@ -17,7 +17,22 @@ async function paintProof(events,total,kind){
   for(const event of events){
     const item=document.createElement('li'),time=document.createElement('time');
     time.dateTime=new Date(event.at).toISOString();time.textContent=passTime(event.at);item.append(time);
-    if(kind==='person'){const note=document.createElement('span');note.textContent='sin foto · v1 no guarda caras';item.append(note);}
+    if(kind==='person'){
+      const note=document.createElement('span');note.textContent='generando gemelo';item.append(note);
+      try{
+        const status=await fetch(`/videoanalytics/api/twin?id=${encodeURIComponent(event.id)}&status=1`,{credentials:'same-origin',cache:'no-store'});
+        const body=status.ok?await status.json():null;
+        if(body?.state==='ready'){
+          const response=await fetch(`/videoanalytics/api/twin?id=${encodeURIComponent(event.id)}`,{credentials:'same-origin',cache:'no-store'});
+          if(response.ok){
+            const url=URL.createObjectURL(await response.blob()),img=document.createElement('img');
+            img.alt='Gemelo sintético, no la persona real';img.src=url;note.textContent='gemelo';
+            img.addEventListener('click',()=>{$('proof-zoom').src=url;$('proof-light').showModal();});
+            item.append(img);
+          }
+        }
+      }catch{/* the row keeps the time and the generating state */}
+    }
     else{
       try{
         const response=await fetch(`/videoanalytics/api/proof?id=${encodeURIComponent(event.id)}`,{credentials:'same-origin',cache:'no-store'});

@@ -25,7 +25,10 @@ seguridad sigue fuera de este módulo y no está activada.
 - `GET ?view=events` devuelve cada paso `{id,kind,at,source}`, filtrable por `kind`
   y el mismo rango, con `limit`/`offset` hasta 500. No añade fotos ni cambia el POST.
 - El recorte del vehículo va aparte, `POST/GET /videoanalytics/api/proof`, 48 h,
-  solo coche/moto/bici. Las personas no llevan foto en esta versión.
+  solo coche/moto/bici.
+- La persona guarda el original 3 minutos en `/videoanalytics/api/twin` y no se
+  sirve en estadísticas. El gemelo sintético sustituye esa fila; al guardarlo se
+  borra el original.
 - POST admite hasta 100 eventos / 32 KiB, timestamps hasta 7 días atrás y 60 s
   futuros. Scooters solo manuales hasta validar un detector propio.
 - Respuestas privadas `no-store`; no se publican imágenes ni datos en Pixeria.

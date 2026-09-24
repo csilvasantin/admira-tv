@@ -10,8 +10,8 @@ const eventKeys=event=>event&&['id','kind','at','source'].every(key=>key in even
 // This is an in-flight outbox, NOT a local substitute for persistent history.
 // Only acknowledged server rows are displayed as saved. No browser storage.
 export class HistoryClient{
-  constructor({fetchImpl=(...args)=>fetch(...args),now=()=>Date.now(),id=()=>crypto.randomUUID(),onState=()=>{}}={}){
-    Object.assign(this,{fetchImpl,now,id,onState});this.pending=[];this.rows=[];this.proof={kind:'',total:0,events:[]};this.proofQueue=[];this.busy=false;this.saved=0;this.error=null;this.lost=0;this.expired=0;this.loaded=false;this.requested=false;this.updatedAt=null;this.from=null;this.to=null;
+  constructor({fetchImpl=(...args)=>fetch(...args),now=()=>Date.now(),id=()=>crypto.randomUUID(),onState=()=>{},anonymize=null}={}){
+    Object.assign(this,{fetchImpl,now,id,onState,anonymize});this.pending=[];this.rows=[];this.proof={kind:'',total:0,events:[]};this.proofQueue=[];this.personQueue=[];this.busy=false;this.saved=0;this.error=null;this.lost=0;this.expired=0;this.loaded=false;this.requested=false;this.updatedAt=null;this.from=null;this.to=null;
   }
   add(events,source='detector'){
     const queued=[];
@@ -28,6 +28,12 @@ export class HistoryClient{
     if(typeof jpeg!=='string'||jpeg.length<40||jpeg.length>60000)return false;
     if(this.proofQueue.length>=30)this.proofQueue.shift();
     this.proofQueue.push({id,jpeg});
+    return true;
+  }
+  queuePerson(id,jpeg){
+    if(typeof jpeg!=='string'||jpeg.length<40||jpeg.length>60000)return false;
+    if(this.personQueue.length>=20)this.personQueue.shift();
+    this.personQueue.push({id,jpeg,tries:0});
     return true;
   }
   async request(url,options={}){
@@ -55,6 +61,16 @@ export class HistoryClient{
         const ids=new Set(events.map(e=>e.id));this.pending=this.pending.filter(e=>!ids.has(e.id));this.saved+=events.length;sent=true;
         for(const item of this.proofQueue.filter(item=>ids.has(item.id))){
           try{await this.request('/videoanalytics/api/proof',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:item.id,jpeg:item.jpeg})});this.proofQueue=this.proofQueue.filter(queued=>queued.id!==item.id);}catch{/* the passage is saved; the crop can retry */ }
+        }
+        for(const item of this.personQueue.filter(queued=>ids.has(queued.id))){
+          try{
+            await this.request('/videoanalytics/api/twin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:item.id,stage:'original',jpeg:item.jpeg})});
+            let twin=null;
+            if(this.anonymize){try{twin=await this.anonymize(item);}catch{twin=null;}}
+            if(typeof twin==='string'&&twin&&twin!==item.jpeg)await this.request('/videoanalytics/api/twin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:item.id,stage:'twin',jpeg:twin})});
+            item.tries++;item.jpeg='';
+            if(twin||item.tries>2)this.personQueue=this.personQueue.filter(queued=>queued.id!==item.id);
+          }catch{item.tries++;}
         }
       }
       if(sent)data=await this.request(`${API}?from=${from}&to=${to}`);
@@ -88,7 +104,8 @@ export function historySnapshot(client){
     pending:client.pending.length,lost:client.lost,expired:client.expired,
     rows:client.rows.map(({hour,kind,source,total})=>({hour,kind,source,total}))};
 }
-export function installHistoryUI({document,client=new HistoryClient(),onState=()=>{}}){
+export function installHistoryUI({document,client=null,onState=()=>{},anonymize=null}={}){
+  client=client||new HistoryClient({anonymize});
   const $=id=>document.getElementById(id);
   const option=(value,text)=>{const e=document.createElement('option');e.value=value;e.textContent=text;return e;};
   const renderRows=()=>{

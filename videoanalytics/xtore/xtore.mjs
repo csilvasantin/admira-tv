@@ -6,7 +6,9 @@ import {installTwinUI} from './twin-ui.mjs?v=avatar-photo-1';
 import {detectObjects} from './detector.mjs';
 import {loadDetectorModel} from './model-loader.mjs?v=detector-download-2';
 import {installSignageUI} from './signage-ui.mjs';
-import {installHistoryUI} from './history.mjs?v=statistics-1';
+import {generateTwin} from './pixeria.mjs';
+import {toBase64} from './twins.mjs';
+import {installHistoryUI} from './history.mjs?v=proof-twin-1';
 import {CalibrationPresetStore,compatiblePreset} from './preset.mjs?v=audience-session-1';
 import {TrackingOverlay} from './tracking-overlay.mjs?v=track-id-2';
 import {installCleanStreetUI} from './clean-street-ui.mjs?v=track-id-2';
@@ -112,7 +114,19 @@ const xpace=installXpaceLink({document,window,onHistoryRequest:()=>history.sync(
 }});
 const sourceVisible=()=>!document.hidden||xpace.backgroundActive;
 const signage=installSignageUI({document,window,onMirror:state=>xpace.media(state),onStop:()=>xpace.stop()});
-const history=installHistoryUI({document,onState:value=>xpace.history(value)});
+async function anonymizePerson(item){
+  const bytes=Uint8Array.from(atob(item.jpeg),char=>char.charCodeAt(0));
+  const bitmap=await createImageBitmap(new Blob([bytes],{type:'image/jpeg'}));
+  const canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;
+  const context=canvas.getContext('2d',{willReadFrequently:true});
+  context.drawImage(bitmap,0,0);bitmap.close();
+  const image=context.getImageData(0,0,canvas.width,canvas.height);
+  try{
+    const result=await generateTwin({source:{width:canvas.width,height:canvas.height,data:image.data},category:'person',style:'twin',signal:AbortSignal.timeout(90000)});
+    const out=toBase64(result.bytes);result.bytes.fill(0);return out;
+  }finally{image.data.fill(0);canvas.width=1;canvas.height=1;}
+}
+const history=installHistoryUI({document,onState:value=>xpace.history(value),anonymize:anonymizePerson});
 const scooterTracks=installScooterTracks({document,onConfirm:events=>{passages.add(events);renderCounts();queueHistory(events,'manual');}});
 const cleanStreet=installCleanStreetUI({document,getPassages:()=>passages.counts,onToggle:enabled=>{
   xpace.cameraOff();previewVideoTime=-1;
@@ -133,8 +147,11 @@ function vehicleJpeg(source,bbox){
 }
 function queueHistory(events,source='detector'){
   const queued=history.add(events,source)||[];
-  for(const item of queued)if(['car','motorcycle','bicycle'].includes(item.event?.class)){
-    const jpeg=vehicleJpeg(frame,item.event.bbox);if(jpeg)history.queueProof(item.id,jpeg);
+  for(const item of queued){
+    const jpeg=vehicleJpeg(frame,item.event?.bbox);
+    if(!jpeg)continue;
+    if(['car','motorcycle','bicycle'].includes(item.event.class))history.queueProof(item.id,jpeg);
+    else if(item.event.class==='person')history.queuePerson(item.id,jpeg);
   }
   if(!historyTimer)historyTimer=setTimeout(()=>{historyTimer=0;history.sync();},1500);
 }
