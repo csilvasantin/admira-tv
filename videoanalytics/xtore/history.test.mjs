@@ -163,3 +163,28 @@ test('proof of pass loads every detector car and the row count matches the card'
   assert.equal(proof.total,3);assert.equal(proof.events.length,proof.total);
   assert.match(passTime(cars[0].at),/\d{2}:\d{2}:\d{2}/);
 });
+test('vehicle crops travel on a separate proof channel and history still rejects images',async()=>{
+  const {onRequest:proof}=await import('../../functions/videoanalytics/api/proof.js');
+  const d=database(),env=envFor(d.db,{email:'admin@example.test',role:'admin'});
+  const carId='11111111-1111-4111-8111-111111111111',personId='22222222-2222-4222-8222-222222222222';
+  const jpeg=btoa(String.fromCharCode(0xff,0xd8,0xff,0xdb,...new Array(80).fill(0)));
+  const sent=[];let n=0;
+  const client=new HistoryClient({id:()=>n++?personId:carId,fetchImpl:async(url,options)=>{
+    sent.push({url,body:options?.body});
+    if(options?.method==='POST'&&String(url).endsWith('/history')){const body=JSON.parse(options.body);return Response.json({ok:true,accepted:body.events.map(item=>item.id)});}
+    if(options?.method==='POST')return proof({env,request:new Request('https://admira.tv/videoanalytics/api/proof',{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://admira.tv',Cookie:'__Host-atv_session=fixture'},body:options.body})});
+    return Response.json({ok:true,rows:[]});
+  }});
+  try{
+    await request(env,{events:[event({id:carId,kind:'car'}),event({id:personId,kind:'person'})]});
+    const queued=client.add([{class:'car',bbox:[8,8,40,24]}]);
+    assert.equal(client.queueProof(queued[0].id,jpeg),true);
+    await client.sync();
+    const historyPost=sent.find(item=>item.body&&String(item.url).endsWith('/history'));
+    assert.equal(JSON.parse(historyPost.body).events.some(item=>item.jpeg),false);
+    assert.equal(d.sqlite.prepare('SELECT kind FROM xtore_proofs').get().kind,'car');
+    const image=await proof({env,request:new Request(`https://admira.tv/videoanalytics/api/proof?id=${carId}`,{headers:{Cookie:'__Host-atv_session=fixture'}})});
+    assert.equal(image.headers.get('content-type'),'image/jpeg');
+    assert.equal((await proof({env,request:new Request('https://admira.tv/videoanalytics/api/proof',{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://admira.tv',Cookie:'__Host-atv_session=fixture'},body:JSON.stringify({id:personId,jpeg})})})).status,400);
+  }finally{d.close();}
+});

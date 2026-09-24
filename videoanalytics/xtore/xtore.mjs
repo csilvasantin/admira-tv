@@ -120,8 +120,22 @@ const cleanStreet=installCleanStreetUI({document,getPassages:()=>passages.counts
   $('capture-empty').textContent=enabled?'Vídeo original en directo en el iPad':'Esperando un paso confirmado';
 }});
 let historyTimer=0;
+function vehicleJpeg(source,bbox){
+  if(!source||!Array.isArray(bbox)||bbox.length!==4||!bbox.every(Number.isFinite))return '';
+  const [x,y,w,h]=bbox,sx=Math.max(0,Math.floor(x)),sy=Math.max(0,Math.floor(y));
+  const sw=Math.max(1,Math.min(source.width-sx,Math.ceil(w))),sh=Math.max(1,Math.min(source.height-sy,Math.ceil(h)));
+  if(sw<2||sh<2)return '';
+  const scale=Math.min(1,160/Math.max(sw,sh)),canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,Math.round(sw*scale));canvas.height=Math.max(1,Math.round(sh*scale));
+  canvas.getContext('2d').drawImage(source,sx,sy,sw,sh,0,0,canvas.width,canvas.height);
+  const url=canvas.toDataURL('image/jpeg',.72),jpeg=url.slice(url.indexOf(',')+1);
+  return jpeg.length<=60000?jpeg:'';
+}
 function queueHistory(events,source='detector'){
-  history.add(events,source);
+  const queued=history.add(events,source)||[];
+  for(const item of queued)if(['car','motorcycle','bicycle'].includes(item.event?.class)){
+    const jpeg=vehicleJpeg(frame,item.event.bbox);if(jpeg)history.queueProof(item.id,jpeg);
+  }
   if(!historyTimer)historyTimer=setTimeout(()=>{historyTimer=0;history.sync();},1500);
 }
 

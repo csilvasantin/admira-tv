@@ -10,11 +10,28 @@ $('day').value=dayKey(Date.now());$('day').max=dayKey(Date.now());
 let revision=0,busy=false,proofKind='',lastCounts={};
 const LABELS={person:'Personas',car:'Coches',motorcycle:'Motos',bicycle:'Bicis'};
 function clear(){for(const kind of KINDS)$('total-'+kind).textContent='—';$('manual').textContent='Observaciones manuales: —';$('rows').replaceChildren();$('empty').hidden=false;}
-function paintProof(events,total,kind){
+async function paintProof(events,total,kind){
   $('proof-rows').replaceChildren();
   const label=LABELS[kind]||kind;
   $('proof-status').textContent=events.length===total?`${label}: ${events.length} pasos, la misma cifra que la tarjeta.`:`${label}: ${events.length} filas y la tarjeta marca ${total}.`;
-  for(const event of events){const item=document.createElement('li');item.textContent=`${passTime(event.at)} · ${label}`;$('proof-rows').append(item);}
+  for(const event of events){
+    const item=document.createElement('li'),time=document.createElement('time');
+    time.dateTime=new Date(event.at).toISOString();time.textContent=passTime(event.at);item.append(time);
+    if(kind==='person'){const note=document.createElement('span');note.textContent='sin foto · v1 no guarda caras';item.append(note);}
+    else{
+      try{
+        const response=await fetch(`/videoanalytics/api/proof?id=${encodeURIComponent(event.id)}`,{credentials:'same-origin',cache:'no-store'});
+        if(!response.ok){const note=document.createElement('span');note.textContent='sin recorte guardado';item.append(note);}
+        else{
+          const url=URL.createObjectURL(await response.blob()),img=document.createElement('img');
+          img.alt=`Recorte de ${label}`;img.src=url;
+          img.addEventListener('click',()=>{$('proof-zoom').src=url;$('proof-light').showModal();});
+          item.append(img);
+        }
+      }catch{const note=document.createElement('span');note.textContent='sin recorte guardado';item.append(note);}
+    }
+    $('proof-rows').append(item);
+  }
 }
 async function showProof(kind){
   proofKind=kind;
@@ -59,6 +76,7 @@ document.querySelectorAll('.totals article').forEach(card=>{
   card.addEventListener('click',open);
   card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open();}});
 });
+$('proof-close').addEventListener('click',()=>$('proof-light').close());
 $('filters').addEventListener('submit',event=>{event.preventDefault();refresh();});
 for(const id of ['day','start','end'])$(id).addEventListener('change',refresh);
 window.addEventListener('focus',()=>{if(!busy)refresh();});

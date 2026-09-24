@@ -11,15 +11,24 @@ const eventKeys=event=>event&&['id','kind','at','source'].every(key=>key in even
 // Only acknowledged server rows are displayed as saved. No browser storage.
 export class HistoryClient{
   constructor({fetchImpl=(...args)=>fetch(...args),now=()=>Date.now(),id=()=>crypto.randomUUID(),onState=()=>{}}={}){
-    Object.assign(this,{fetchImpl,now,id,onState});this.pending=[];this.rows=[];this.proof={kind:'',total:0,events:[]};this.busy=false;this.saved=0;this.error=null;this.lost=0;this.expired=0;this.loaded=false;this.requested=false;this.updatedAt=null;this.from=null;this.to=null;
+    Object.assign(this,{fetchImpl,now,id,onState});this.pending=[];this.rows=[];this.proof={kind:'',total:0,events:[]};this.proofQueue=[];this.busy=false;this.saved=0;this.error=null;this.lost=0;this.expired=0;this.loaded=false;this.requested=false;this.updatedAt=null;this.from=null;this.to=null;
   }
   add(events,source='detector'){
+    const queued=[];
     for(const event of events){
       if(!Object.hasOwn(CLASSES,event.class)||CLASSES[event.class].manualOnly&&source!=='manual')continue;
       if(this.pending.length>=2000){this.lost++;continue;}
-      this.pending.push({id:this.id(),kind:event.class,at:this.now(),source});
+      const row={id:this.id(),kind:event.class,at:this.now(),source};
+      this.pending.push(row);queued.push({id:row.id,event});
     }
     this.onState(this);
+    return queued;
+  }
+  queueProof(id,jpeg){
+    if(typeof jpeg!=='string'||jpeg.length<40||jpeg.length>60000)return false;
+    if(this.proofQueue.length>=30)this.proofQueue.shift();
+    this.proofQueue.push({id,jpeg});
+    return true;
   }
   async request(url,options={}){
     const response=await this.fetchImpl(url,{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(10000),...options});
@@ -44,6 +53,9 @@ export class HistoryClient{
         const ack=await this.request(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({events})});
         if(!Array.isArray(ack.accepted)||events.some(e=>!ack.accepted.includes(e.id)))throw new Error('unconfirmed');
         const ids=new Set(events.map(e=>e.id));this.pending=this.pending.filter(e=>!ids.has(e.id));this.saved+=events.length;sent=true;
+        for(const item of this.proofQueue.filter(item=>ids.has(item.id))){
+          try{await this.request('/videoanalytics/api/proof',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:item.id,jpeg:item.jpeg})});this.proofQueue=this.proofQueue.filter(queued=>queued.id!==item.id);}catch{/* the passage is saved; the crop can retry */ }
+        }
       }
       if(sent)data=await this.request(`${API}?from=${from}&to=${to}`);
       if(!Array.isArray(data.rows)||data.rows.length>8000||data.rows.some(r=>!Number.isSafeInteger(r.hour)||r.hour<0||!Object.hasOwn(CLASSES,r.kind)||!['detector','manual'].includes(r.source)||!Number.isSafeInteger(r.total)||r.total<0))throw new Error('invalid_history');
@@ -59,8 +71,8 @@ export class HistoryClient{
     if(!Object.hasOwn(CLASSES,kind)||!['detector','manual'].includes(source))throw new Error('invalid_kind');
     const events=[];let offset=0,total=0;
     do{
-      const data=await this.request(`${API}?view=events&from=${from}&to=${to}&kind=${encodeURIComponent(kind)}&source=${source}&limit=200&offset=${offset}`);
-      if(!Number.isSafeInteger(data.total)||data.total<0||!Array.isArray(data.events)||data.events.length>200||data.events.some(event=>!eventKeys(event)||event.kind!==kind||event.source!==source))throw new Error('invalid_history');
+      const data=await this.request(`${API}?view=events&from=${from}&to=${to}&kind=${encodeURIComponent(kind)}&source=${source}&limit=500&offset=${offset}`);
+      if(!Number.isSafeInteger(data.total)||data.total<0||!Array.isArray(data.events)||data.events.length>500||data.events.some(event=>!eventKeys(event)||event.kind!==kind||event.source!==source))throw new Error('invalid_history');
       total=data.total;events.push(...data.events);offset+=data.events.length;
       if(!data.events.length)break;
     }while(events.length<total&&events.length<2000);

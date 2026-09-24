@@ -44,7 +44,7 @@ export async function onRequest({request,env}){
         if(kind!=null&&!KINDS.has(kind))return json({ok:false,error:'invalid_kind'},400);
         if(source!=null&&!['detector','manual'].includes(source))return json({ok:false,error:'invalid_source'},400);
         const limit=params.has('limit')?Number(params.get('limit')):100,offset=params.has('offset')?Number(params.get('offset')):0;
-        if(!Number.isSafeInteger(limit)||limit<1||limit>200||!Number.isSafeInteger(offset)||offset<0||offset>100000)return json({ok:false,error:'invalid_page'},400);
+        if(!Number.isSafeInteger(limit)||limit<1||limit>500||!Number.isSafeInteger(offset)||offset<0||offset>100000)return json({ok:false,error:'invalid_page'},400);
         const clauses=[];const binds=[from,to];
         if(kind){clauses.push('kind = ?');binds.push(kind);}
         if(source){clauses.push('source = ?');binds.push(source);}
