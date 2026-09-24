@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=24.09.2026.r3.1148"></script>
+<script src="/auth-gate.js?v=24.09.2026.r4.1155"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r3.1148">
+  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r4.1155">
 </head>
 <body>
-<script src="/admira-nav.js?v=24.09.2026.r3.1148" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=24.09.2026.r3.1148" defer></script>
+<script src="/admira-nav.js?v=24.09.2026.r4.1155" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=24.09.2026.r4.1155" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -63,6 +63,7 @@
     <p><b>Kioskos y gemelo:</b> la playlist de un kiosko vive en <code>&lt;pantalla&gt;-tema</code> (la publica <code>tools/publica-playlists-kioskos.py</code>); el gemelo CanalKiosk manda <code>play&lt;num&gt;</code> a la pantalla real de cada sitio. Jardinets = Fold 8 <code>samsung-galaxy-fold-8-mupi</code> y Tab A11 <code>samsung-galaxy-tab-a11-mupi</code> (circuito <code>samsung-galaxy-fold-8</code>, tema música). <b>Precedencia:</b> un emparejamiento con un <a href="#player-virtual">player virtual</a> manda sobre la sincro y el modo remoto; para devolver una pantalla a su circuito, desvincúlala en <a href="/virtual-players/">Players virtuales</a>.</p>
     <p class="note">Trampas: dos aparatos con el mismo <code>screen</code> se pisan; <code>--es tag ""</code> no vacía el tag (usa un espacio); «0 de N descargados» en todas las pantallas a la vez es el presupuesto KV del worker (<code>throttled:"budget"</code>), no el player.</p>
   </section>
+  <section id="xtore-detector"><h2>Xtore · preparación del detector</h2><p>La preparación muestra la fase y el tiempo transcurrido. Espera a <b>Detector listo</b>. Si una fase supera su límite, aparece el error y puedes reintentar; con la pestaña conectada, <b>Iniciar análisis</b> conserva la cámara y el encuadre. Si el navegador indica que la página se ha cerrado inesperadamente, habrá que recargar y compartir Digital Twin 360 de nuevo.</p><p><a href="/apps/video/xtore-preparar-detector.mp4">Minitutorial animado · preparar y reintentar (15 s)</a></p></section>
   <section id="xtore-encuadres"><h2>Xtore · cámara y pantallas opcionales</h2>
     <p><b>Para iniciar el análisis basta con marcar la zona de cámara.</b> Colocar el iPad y la pantalla es opcional: el player virtual existente funciona y recibe las condiciones sin colocarlo en la escena. Esto también se aplica al arranque con una cámara guardada y a la recuperación tras una interrupción. <a href="/apps/video/xtore-analizar-solo-camara.mp4">Minitutorial animado: analizar solo con cámara (15 s)</a>.</p>
     <p>Abre <a href="/videoanalytics/xtore/#capture-framing">Encuadre y detección</a>. Comparte la pestaña de IEU con Puerta Cam abierta. Las zonas del encuadre más reciente compatible se recuperan; para volver a uno anterior, elígelo en <b>Encuadres guardados</b> y pulsa <b>Recuperar encuadre seleccionado</b>. Revisa cámara, iPad y pantalla antes de iniciar el análisis.</p>

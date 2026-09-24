@@ -106,5 +106,9 @@
   "xtore-analizar-solo-camara": {
     "src": "/apps/video/xtore-analizar-solo-camara.mp4",
     "title": "Xtore: analizar solo con cámara · animación de 15 s"
+  },
+  "xtore-preparar-detector": {
+    "src": "/apps/video/xtore-preparar-detector.mp4",
+    "title": "Xtore: preparar detector y reintentar · animación 15 s"
   }
 }

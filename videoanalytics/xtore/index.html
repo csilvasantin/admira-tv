@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090e14">
   <meta name="description" content="Xtore: análisis local de Puerta Cam y capturas efímeras en un iPad virtual, con permiso explícito para compartir la pestaña de Digital Twin.">
-  <meta name="admiranext-version" content="v.24.09.2026.r3.11:48">
+  <meta name="admiranext-version" content="v.24.09.2026.r4.11:55">
   <meta name="admiranext-agent" content="TrinityMBA16">
   <title>Xtore · Analítica de vídeo · Admira.tv</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./xtore.css?v=24.09.2026.r3.1148">
-  <script type="module" src="./xtore.mjs?v=camera-only-1"></script>
+  <link rel="stylesheet" href="./xtore.css?v=24.09.2026.r4.1155">
+  <script type="module" src="./xtore.mjs?v=detector-progress-1"></script>
 </head>
 <body>
   <header class="topbar">
@@ -178,11 +178,13 @@
         <label class="threshold" for="bicycle-confidence">Confianza para bicis <output id="bicycle-confidence-value">40 %</output><input id="bicycle-confidence" type="range" min="35" max="80" value="40" step="5"></label>
         <p id="detection-status" class="small" role="status">Diagnóstico de bicis: esperando análisis.</p>
         <details class="help"><summary><span aria-hidden="true">›</span> Pasos rápidos y bicis</summary><p>El detector separa las candidatas de persona y bicicleta para que una no oculte a la otra. Las bicis por debajo del 65 % necesitan tres observaciones con movimiento. Un umbral bajo puede aumentar errores; las candidatas no son pasos confirmados. Objetivo: hasta 8 análisis/s, limitado por el equipo y el vídeo.</p></details>
+        <p class="small"><a href="/apps/video/xtore-preparar-detector.mp4" target="_blank" rel="noopener">Minitutorial · preparar y reintentar ↗</a> · animación 15 s</p>
+        <p class="small">La preparación muestra la fase y los segundos transcurridos. Si falla, pulsa Iniciar análisis para reintentar sin desconectar la cámara.</p>
         <button id="prepare-model" class="text-button">Preparar detector sin conectar la cámara</button>
         <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. La detección no envía fotogramas.</p>
       </aside>
     </div>
-    <footer><span>TrinityMBA16 · <span data-release-version>v.24.09.2026.r3.11:48</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
+    <footer><span>TrinityMBA16 · <span data-release-version>v.24.09.2026.r4.11:55</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
   </main>
 </body>
 </html>

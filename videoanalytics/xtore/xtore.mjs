@@ -3,6 +3,7 @@ import {CLASSES, SNAPSHOT_TTL, PRESENCE_GRACE, PassageTracker, PassageCounts, va
 import {CutoutJob} from './cutouts.mjs';
 import {installTwinUI} from './twin-ui.mjs?v=avatar-photo-1';
 import {detectObjects} from './detector.mjs';
+import {loadDetectorModel} from './model-loader.mjs?v=detector-progress-1';
 import {installSignageUI} from './signage-ui.mjs';
 import {installHistoryUI} from './history.mjs';
 import {CalibrationPresetStore,compatiblePreset} from './preset.mjs?v=capture-history-1';
@@ -26,6 +27,7 @@ let stream=null, generation=0, analyzing=false, busy=false, loopTimer=0, expiryT
 let captureRequest=null;
 let analysisRequested=false,suspendedReason=null,recoveryTimer=0,recoveryVideoTime=-1,sourceMuted=false,inferences=0;
 let sourcePlayPending=null,sourcePlayRetryAt=0;
+let modelPhase='',modelError='';
 let model=null, modelPromise=null, calibration=null, points=[], roiReady=false, tabletReady=false;
 let roi=[.706,.026,.282,.293];
 let quad=[[.773,.491],[.89,.51],[.874,.675],[.75,.647]];
@@ -136,7 +138,7 @@ function controls(){
   layout();
   $('analyze').disabled=!!captureRequest||(busy&&!analysisRequested)||(connected&&(!roiReady||!!calibration));
   $('analyze').textContent=captureRequest?'Conectando cámara…':analysisRequested?'Pausar análisis':connected?'Iniciar análisis':'Arrancar cámara y análisis';
-  $('analysis-health').textContent=analyzing?'Analizando Puerta Cam':suspendedReason?'Esperando vídeo · reanudación automática':analysisRequested?'Preparando detector…':!connected?'Cámara sin conectar':!roiReady?'Marca la zona de cámara':'Análisis en pausa';
+  $('analysis-health').textContent=analyzing?'Analizando Puerta Cam':suspendedReason?'Esperando vídeo · reanudación automática':analysisRequested?(modelPhase||'Preparando detector…'):!connected?'Cámara sin conectar':!roiReady?'Marca la zona de cámara':modelError?'Detector no disponible · reintenta Iniciar análisis':'Análisis en pausa';
   $('connection').textContent=analyzing?'Analizando':connected?'Pestaña conectada':'Cámara sin conectar';
   $('connection').classList.toggle('live',analyzing);
 }
@@ -408,19 +410,20 @@ function loadScript(src,integrity){
 async function prepareModel(){
   if(model)return model;
   if(modelPromise)return modelPromise;
-  $('prepare-model').disabled=true;$('model-status').textContent='Descargando detector local… No se envía ninguna imagen.';
-  modelPromise=(async()=>{
-    // ES2017 avoids the legacy bundle's dynamic Function/regenerator shim;
-    // keep CSP strict rather than enabling unsafe-eval for the entire page.
-    if(typeof window.tf?.ready!=='function')await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.es2017.min.js','sha384-ODzrY1mCTIRZRerZfDIqCoTQafA1St1OwLVc9SsTefnkCF1MeIaVSZ88wuK/NKfH');
-    if(typeof window.cocoSsd?.load!=='function')await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js','sha384-7qLdgfEQyO9ZQi9ArRHigK+IBto4XPk468jAqc+fnsXaZIcMAhQeLwzggRK7aESl');
-    await window.tf.ready();
-    let timedOut=false, timer;
-    const loading=window.cocoSsd.load({base:'mobilenet_v2'}).then(loaded=>{if(timedOut){loaded.dispose();throw new Error('Descarga caducada');}return loaded;});
-    try{model=await Promise.race([loading,new Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;reject(new Error('No se pudo completar la descarga del modelo en 60 segundos.'));},60000);})]);}finally{clearTimeout(timer);}
+  modelError='';const runtime=window;
+  $('prepare-model').disabled=true;
+  modelPromise=loadDetectorModel({getTF:()=>runtime.tf,getCoco:()=>runtime.cocoSsd,loadScript,onProgress:phase=>{
+    modelPhase=phase;$('model-status').textContent=phase;
+    if(analysisRequested)$('analysis-health').textContent=phase;
+  }}).then(loaded=>{
+    model=loaded;modelPhase='';
     $('model-status').textContent=`Detector listo · COCO-SSD 2.2.3 / MobileNet v2 · ${window.tf.getBackend()}. Pendiente de validar precisión con esta cámara.`;
     $('prepare-model').textContent='Detector preparado';return model;
-  })().catch(error=>{modelPromise=null;$('prepare-model').disabled=false;$('model-status').textContent=`${error.message} Reintenta Preparar detector.`;throw error;});
+  }).catch(error=>{
+    modelPromise=null;modelPhase='';modelError=error.message||'No se pudo preparar el detector.';
+    $('prepare-model').disabled=false;$('prepare-model').textContent='Reintentar preparar detector';
+    $('model-status').textContent=modelError;throw error;
+  });
   return modelPromise;
 }
 $('prepare-model').addEventListener('click',()=>{prepareModel().catch(()=>{});});
@@ -439,7 +442,7 @@ async function startAnalysis(recovering=false){
     history.sync();
     status('Analizando solo Puerta Cam. Rectángulos por trayectoria; margen de pérdida de 1,5 s. Vehículos automáticos: 2 s adicionales de contenido tras ese margen. H oculta personas solo en el previo; el iPad y el detector usan el original. Capturas de 6 s, sin repetir conteo.');
     if(!cleanStreet.enabled)tabletIdle();loop(token);previewCamera(token);
-  }catch{if(token===generation)pause('No se ha iniciado el análisis. Revisa el estado del detector.');}
+  }catch{if(token===generation)pause(`No se ha iniciado el análisis. ${modelError} Pulsa Iniciar análisis para reintentar; la cámara y el encuadre se conservan.`);}
   finally{busy=false;controls();}
 }
 $('analyze').addEventListener('click',async()=>{

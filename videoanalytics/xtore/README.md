@@ -625,3 +625,20 @@ el ajuste; la cámara continúa siendo obligatoria. No se modifica la selección
 nativa de Digital Twin 360 ni se conceden permisos de captura automáticamente.
 
 Minitutorial: [/apps/video/xtore-analizar-solo-camara.mp4](/apps/video/xtore-analizar-solo-camara.mp4). Animación explicativa; no es grabación real de la cámara.
+
+
+## Preparación del detector con fases y reintento — 24 septiembre 2026
+
+El cargador muestra biblioteca TensorFlow, biblioteca COCO, inicialización del
+motor y descarga/preparación del modelo, con segundos por fase. Límites: 30 s
+por biblioteca, 15 s para `tf.ready()` y 60 s para cargar y preparar COCO. La última
+fase incluye la primera ejecución interna del modelo; no significa detección
+sobre la cámara. Un error deja disponible el reintento y conserva la captura y
+el encuadre. Un modelo que termina después del límite se libera y no reemplaza
+una carga nueva. No se cambian permisos, backend WebGL ni versión del modelo.
+
+Se observó una pestaña caída en el navegador integrado; la causa de esa caída
+no quedó identificada. La carga aislada del modelo real sí terminó en WebGL.
+Los límites y mensajes corrigen la espera indefinida de inicialización y permiten
+diagnosticar los fallos, pero no garantizan recuperación de un proceso del navegador
+que haya terminado: en ese caso se necesita recargar y volver a compartir.

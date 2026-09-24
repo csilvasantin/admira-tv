@@ -1,9 +1,9 @@
 {
-  "version": "v.24.09.2026.r3.11:48",
+  "version": "v.24.09.2026.r4.11:55",
   "signature": "TrinityMBP14 · MacBookProNegro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookProNegro14",
   "day": "24.09.2026",
-  "time": "11:48",
-  "evidence": "Xtore: analizar con solo la zona de cámara; iPad y cartelería opcionales, mismo player virtual. 286 tests; minitutorial oficial."
+  "time": "11:55",
+  "evidence": "Xtore: preparación por fases con tiempos límite, error y reintento sin perder la captura. 291 tests. Modelo real preparado en WebGL en prueba aislada; caída inicial del renderer no diagnosticada."
 }

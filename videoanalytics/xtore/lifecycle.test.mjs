@@ -392,7 +392,7 @@ test('analysis requires camera calibration and stopping clears the source',async
 test('late model load after disconnect never resumes analysis',async()=>{
   const f=await fixture({slowLoad:true});await f.get('connect').emit('click');await f.calibrate();
   const starting=f.get('analyze').emit('click');
-  await Promise.resolve();await f.get('stop').emit('click');f.finishLoad();await starting;
+  await flush();await f.get('stop').emit('click');f.finishLoad();await starting;
   assert.equal(f.get('connection').textContent,'Cámara sin conectar');assert.equal(f.get('scene').srcObject,null);
   assert.equal(f.get('connect').disabled,false);
 });
@@ -436,7 +436,7 @@ test('manual music tests are cleared before detector loading and stay blocked th
   await f.get('test-person').emit('click');await ack();
   assert.equal(frame.sent.at(-1).data.command,'admiratv audiencia persona');
   assert.equal(f.get('event-counter').textContent,'0 pasos');assert.equal(f.get('capture-canvas').hidden,true);
-  const starting=f.get('analyze').emit('click');await Promise.resolve();
+  const starting=f.get('analyze').emit('click');await flush();
   assert.equal(f.detections.length,0);assert.equal(f.get('test-person').disabled,true);
   assert.equal(frame.sent.at(-1).data.command,'admiratv audiencia u');await ack();
   const loadingCommands=frame.sent.length;await f.get('test-car').emit('click');assert.equal(frame.sent.length,loadingCommands);
@@ -845,4 +845,20 @@ test('camera-only analysis recovers on fresh video without a tablet and manual p
   await f.get('analyze').emit('click');f.finishDetection();await flush();
   f.get('scene').currentTime++;t.mock.timers.tick(1000);await flush();
   assert.equal(f.get('analyze').textContent,'Iniciar análisis');assert.equal(f.detections.length,2);
+});
+
+test('a stalled engine stops preparing with a retryable error while preserving camera and framing',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=await fixture({storage:savedFraming({tablet:false})});
+  f.win.tf.ready=()=>new Promise(()=>{});
+  await f.get('connect').emit('click');const source=f.get('scene').srcObject;
+  const starting=f.get('analyze').emit('click');await flush();
+  assert.match(f.get('analysis-health').textContent,/Inicializando motor/);
+  t.mock.timers.tick(15000);await starting;
+  assert.equal(f.get('scene').srcObject,source);assert.equal(f.track.stopped,false);
+  assert.equal(f.get('analyze').disabled,false);assert.equal(f.get('analyze').textContent,'Iniciar análisis');
+  assert.match(f.get('status').textContent,/15 s.*reintentar/i);assert.equal(f.detections.length,0);
+  f.win.tf.ready=async()=>{};await f.get('analyze').emit('click');
+  assert.equal(f.get('connection').textContent,'Analizando');assert.equal(f.detections.length,1);
+  assert.equal(f.captures.length,1);assert.equal(f.get('scene').srcObject,source);
 });
