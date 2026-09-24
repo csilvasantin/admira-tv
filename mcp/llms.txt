@@ -356,3 +356,7 @@ Trampas: un screen por aparato; --es tag "" no vacía (usar espacio); «0 de N d
 - Audiencia × Emisión: https://www.clearchannel.tv/mcp/
 - Declarar y puntuar el trabajo: https://www.yokup.com/mcp/
 - Directorio de MCP de la suite e identidad común: https://www.admiranext.com/mcp/#directorio
+
+Audiencia de sesión Xtore: https://admira.tv/mcp/xtore-audience-session.md
+Esquema: https://admira.tv/mcp/xtore-audience-session.schema.json
+Contadores entran/salen, exportación JSON y enlace postMessage a XpaceOS Real implementados. Importación de sesiones en Pixeria y tools MCP remotas pendientes; no inventarlas. Total de pasos, no ocupación física.

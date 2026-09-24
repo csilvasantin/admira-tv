@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090e14">
   <meta name="description" content="Xtore: análisis local de Puerta Cam y capturas efímeras en un iPad virtual, con permiso explícito para compartir la pestaña de Digital Twin.">
-  <meta name="admiranext-version" content="v.24.09.2026.r4.11:55">
+  <meta name="admiranext-version" content="v.24.09.2026.r5.12:09">
   <meta name="admiranext-agent" content="TrinityMBA16">
   <title>Xtore · Analítica de vídeo · Admira.tv</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./xtore.css?v=24.09.2026.r4.1155">
-  <script type="module" src="./xtore.mjs?v=detector-progress-1"></script>
+  <link rel="stylesheet" href="./xtore.css?v=24.09.2026.r5.1209">
+  <script type="module" src="./xtore.mjs?v=audience-session-1"></script>
 </head>
 <body>
   <header class="topbar">
@@ -46,10 +46,17 @@
           <div id="roi" hidden><canvas id="clean-preview" hidden aria-label="Vista modificada con fondo temporal, no vídeo original"></canvas><span>Solo se analiza esta zona</span><div id="tracking-overlay" aria-hidden="true"></div><p id="clean-status" hidden role="status"></p></div>
           <div id="markers" aria-hidden="true"></div>
         </div>
-        <div class="viewer-caption"><span id="source-info">PLAYER VIRTUAL · SIN VÍDEO EN DIRECTO</span><span id="camera-passage-count">Personas que han pasado: 0 · Coches: 0 · Motos: 0 · Bicis: 0</span><span>iPad y cartelería virtuales · no son dispositivos físicos</span></div>
+        <div class="viewer-caption"><span id="source-info">PLAYER VIRTUAL · SIN VÍDEO EN DIRECTO</span><span id="camera-passage-count">Personas que han pasado: 0 · Personas entran: 0 · Personas salen: 0 · Coches: 0 · Motos: 0 · Bicis: 0</span><span>iPad y cartelería virtuales · no son dispositivos físicos</span></div>
       </section>
       <aside class="inspector">
         <div class="section-title capture-heading"><h2>Capturas</h2><span id="event-counter">0 pasos</span><button id="reset-counts" title="Poner a cero los contadores actuales sin borrar el histórico">Reset</button></div>
+        <details id="audience-session" class="help"><summary><span aria-hidden="true">›</span> Audiencia de sesión · XpaceOS y Pixeria</summary>
+          <p id="direction-summary" class="small"></p>
+          <p class="small">Entran = del fondo hacia la cámara. Salen = hacia el fondo. Por defecto, el fondo está arriba y la cámara abajo; para una calle en diagonal ajusta el sentido una vez. Se guarda con el encuadre. No se reconstruyen pasos anteriores.</p>
+          <button id="set-direction" disabled>Marcar sentido · fondo → cámara</button>
+          <button id="export-audience">Exportar audiencia de sesión · JSON</button>
+          <p class="small"><a href="/help/#xtore-audiencia" target="_blank" rel="noopener">Help de conexión ↗</a> · <a href="/mcp/xtore-audience-session.md" target="_blank" rel="noopener">Contrato MCP ↗</a></p>
+        </details>
         <details id="history-panel" class="help history-panel"><summary><span aria-hidden="true">›</span> Histórico · día y hora</summary>
           <p class="small">Servidor privado · hora de Madrid · sin imágenes</p>
           <div class="history-filters"><label>Día<select id="history-day" aria-label="Día del histórico"></select></label><label>Hora<select id="history-hour" aria-label="Hora del histórico"><option value="all">Todas las horas</option></select></label></div>
@@ -184,7 +191,7 @@
         <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. La detección no envía fotogramas.</p>
       </aside>
     </div>
-    <footer><span>TrinityMBA16 · <span data-release-version>v.24.09.2026.r4.11:55</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
+    <footer><span>TrinityMBA16 · <span data-release-version>v.24.09.2026.r5.12:09</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
   </main>
 </body>
 </html>

@@ -786,5 +786,15 @@
     "help": "https://admira.tv/help/#ieu-puertacam",
     "description": "Guía para el mantenedor de IEU: preferencia por usuario para abrir Store, Entrada y stream Puerta Cam. No es una herramienta MCP ni una función implementada.",
     "mission": "DCL-8f689f37606366ec97919dff"
+  },
+  "xtore_audience_session": {
+    "contract": "https://admira.tv/mcp/xtore-audience-session.md",
+    "schema": "https://admira.tv/mcp/xtore-audience-session.schema.json",
+    "help": "https://admira.tv/help/#xtore-audiencia",
+    "transport": "paired-window-postMessage",
+    "status": "implemented_in_analyzer_and_xpaceos_linked_store",
+    "pixeria_session_import": "not_implemented",
+    "remote_mcp_session_tools": "not_implemented",
+    "mission": "DCL-faaf5504b3b034ab91d1809e"
   }
 }

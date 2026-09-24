@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://admira.tv/mcp/xtore-audience-session.schema.json",
+  "title": "Xtore audience session v1",
+  "description": "Additionally enforce updatedAt >= startedAt; enter + exit + unknown = counts.person; axis length >= 0.2.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "sessionId",
+    "startedAt",
+    "updatedAt",
+    "revision",
+    "site",
+    "source",
+    "screen",
+    "metric",
+    "state",
+    "counts",
+    "directions",
+    "directionAxis",
+    "directionMeaning"
+  ],
+  "properties": {
+    "schema": {
+      "const": "admira.audience-session.v1"
+    },
+    "sessionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "startedAt": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "updatedAt": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000000
+    },
+    "site": {
+      "const": "admira-xperience-santa-rosa-19"
+    },
+    "source": {
+      "const": "puerta-cam"
+    },
+    "screen": {
+      "const": "xtore-virtual-zapatillas"
+    },
+    "metric": {
+      "const": "cumulative-passages"
+    },
+    "state": {
+      "enum": [
+        "analyzing",
+        "paused",
+        "waiting",
+        "disconnected"
+      ]
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "person",
+        "car",
+        "motorcycle",
+        "bicycle",
+        "scooter"
+      ],
+      "properties": {
+        "person": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000
+        },
+        "car": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000
+        },
+        "motorcycle": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000
+        },
+        "bicycle": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000
+        },
+        "scooter": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000
+        }
+      }
+    },
+    "directions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enter",
+        "exit",
+        "unknown"
+      ],
+      "properties": {
+        "enter": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000
+        },
+        "exit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000
+        },
+        "unknown": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000
+        }
+      }
+    },
+    "directionAxis": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "items": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "directionMeaning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enter",
+        "exit"
+      ],
+      "properties": {
+        "enter": {
+          "const": "toward-camera"
+        },
+        "exit": {
+          "const": "toward-street-end"
+        }
+      }
+    }
+  }
+}

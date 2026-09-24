@@ -1,4 +1,5 @@
-import {installXpaceLink} from './xpace-link.mjs?v=xtanco-entry-1';
+import {DirectionCounter,DEFAULT_DIRECTION_AXIS,validDirectionAxis,audienceSnapshot} from './audience-session.mjs?v=audience-session-1';
+import {installXpaceLink} from './xpace-link.mjs?v=audience-session-1';
 import {CLASSES, SNAPSHOT_TTL, PRESENCE_GRACE, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
 import {CutoutJob} from './cutouts.mjs';
 import {installTwinUI} from './twin-ui.mjs?v=avatar-photo-1';
@@ -6,7 +7,7 @@ import {detectObjects} from './detector.mjs';
 import {loadDetectorModel} from './model-loader.mjs?v=detector-progress-1';
 import {installSignageUI} from './signage-ui.mjs';
 import {installHistoryUI} from './history.mjs';
-import {CalibrationPresetStore,compatiblePreset} from './preset.mjs?v=capture-history-1';
+import {CalibrationPresetStore,compatiblePreset} from './preset.mjs?v=audience-session-1';
 import {TrackingOverlay} from './tracking-overlay.mjs';
 import {installCleanStreetUI} from './clean-street-ui.mjs';
 import {installScooterTracks} from './scooter-tracks.mjs';
@@ -20,6 +21,12 @@ const tablet=$('tablet-canvas'), capture=$('capture-canvas');
 const tracker=new PassageTracker();
 const trackingOverlay=new TrackingOverlay($('tracking-overlay'),{reservedBottom:()=>$('clean-status').hidden?0:$('clean-status').offsetHeight+2});
 const passages=new PassageCounts();
+const directions=new DirectionCounter();
+let directionAxis=DEFAULT_DIRECTION_AXIS.map(p=>[...p]);
+let audienceSessionId=crypto.randomUUID(),audienceStartedAt=Date.now(),audienceRevision=0,audienceUpdatedAt=Date.now();
+function resetAudience(){directions.reset();audienceSessionId=crypto.randomUUID();audienceStartedAt=Date.now();audienceRevision=0;audienceUpdatedAt=Date.now();}
+function sessionAudience(){return audienceSnapshot({sessionId:audienceSessionId,startedAt:audienceStartedAt,revision:audienceRevision,updatedAt:audienceUpdatedAt,counts:passages.counts,directions:directions.snapshot(passages.counts.person),axis:directionAxis,state:analyzing?'analyzing':analysisRequested?'waiting':stream?'paused':'disconnected'});}
+
 const numberFormat=new Intl.NumberFormat('es-ES');
 const cutoutJob=new CutoutJob();
 let segmenter=null,cutoutsEnabled=false,cutoutLoading=false,segmentInput=null,pendingCutout=null,cutoutExpiryTimer=0;
@@ -66,6 +73,7 @@ function restorePreset(selected){
   }
   roiReady=!!p.roi;tabletReady=!!p.tablet;signageReady=!!p.signage;
   calibrationDimensions=[...p.source];
+  directionAxis=(p.directionAxis||DEFAULT_DIRECTION_AXIS).map(p=>[...p]);
   if(p.roi)roi=[...p.roi];if(p.tablet)quad=p.tablet.map(p=>[...p]);if(p.signage)signageQuad=p.signage.map(p=>[...p]);
   $('saved-presets').value=String((presetState.presets||[]).indexOf(p));
   $('calibration-status').textContent=`Preset cargado · Cámara: ${roiReady?'marcada':'pendiente'} · iPad: ${tabletReady?'marcado':'opcional, sin colocar'} · cartelería: ${signageReady?'marcada':'opcional, sin colocar'}`;
@@ -74,7 +82,7 @@ function restorePreset(selected){
 }
 function savePreset(){
   if(!stream||!sourceDimensions)return;
-  const result=presetStore.save({source:calibrationDimensions||sourceDimensions,roi:roiReady?roi:null,tablet:tabletReady?quad:null,signage:signageReady?signageQuad:null});
+  const result=presetStore.save({source:calibrationDimensions||sourceDimensions,roi:roiReady?roi:null,tablet:tabletReady?quad:null,signage:signageReady?signageQuad:null,directionAxis});
   if(result.state==='unavailable'){
     presetState={...presetState,state:result.state};
     presetStatus('No se pudo guardar el nuevo encuadre. El último preset guardado no se ha sustituido; el encuadre nuevo solo está en esta sesión.');return;
@@ -120,18 +128,21 @@ function queueHistory(events,source='detector'){
 function status(message){$('status').textContent=message;}
 function renderCounts(){
   for(const [category,count] of Object.entries(passages.counts))$(`count-${category}`).textContent=numberFormat.format(count);
-  xpace.statistics(passages.counts);
-  $('camera-passage-count').textContent=`Personas que han pasado: ${numberFormat.format(passages.counts.person)} · Coches: ${numberFormat.format(passages.counts.car)} · Motos: ${numberFormat.format(passages.counts.motorcycle)} · Bicis: ${numberFormat.format(passages.counts.bicycle)}`;
+  audienceRevision++;audienceUpdatedAt=Date.now();
+  xpace.statistics(passages.counts,sessionAudience());
+  $('camera-passage-count').textContent=`Personas que han pasado: ${numberFormat.format(passages.counts.person)} · Personas entran: ${numberFormat.format(directions.enter)} · Personas salen: ${numberFormat.format(directions.exit)} · Coches: ${numberFormat.format(passages.counts.car)} · Motos: ${numberFormat.format(passages.counts.motorcycle)} · Bicis: ${numberFormat.format(passages.counts.bicycle)}`;
+  $('direction-summary').textContent=`Hacia la cámara: ${directions.enter} · Hacia el fondo: ${directions.exit} · Sin dirección: ${directions.snapshot(passages.counts.person).unknown}. Son sentidos de paso por la calle, no entradas físicas a la tienda.`;
   $('event-counter').textContent=`${numberFormat.format(passages.total)} ${passages.total===1?'paso':'pasos'}`;
 }
 function controls(){
+  xpace.audience(sessionAudience());
   presetControls();
   const connected=!!stream;
   $('connect').disabled=connected||busy||!!captureRequest;
   $('stop').disabled=!connected&&!captureRequest;
   $('hide-people').disabled=!connected||!roiReady||!!calibration;
   $('add-scooter').disabled=!connected;
-  for(const id of ['set-roi','set-tablet','set-signage','edit-coordinates'])$(id).disabled=!connected;
+  for(const id of ['set-roi','set-tablet','set-signage','edit-coordinates','set-direction'])$(id).disabled=!connected;
   // Playback owns its browser instance, independently of the captured video.
   signage.setAnalysis(analyzing&&!calibration&&sourceVisible(),!analysisRequested&&!calibration);
   signage.setEligible(sourceVisible());
@@ -202,7 +213,7 @@ function suspendAnalysis(reason,message){
 }
 function disconnect(message='Desconectado. Capturas y vídeo borrados de la vista.'){
   pause();
-  tracker.reset();
+  tracker.reset();directions.clearGeometry();
   if(stream)for(const track of stream.getTracks())track.stop();
   stream=null;scene.srcObject=null;scene.removeAttribute('src');scene.load();
   frame.width=1;frame.height=1;sourceSize='';sourceDimensions=null;calibrationDimensions=null;lastVideoTime=-1;sourceMuted=false;sourcePlayPending=null;sourcePlayRetryAt=0;
@@ -277,8 +288,8 @@ async function connectSource(startWhenReady=false){
     if(startWhenReady)await waitForCaptureDimensions(request);
     if(captureRequest!==request)return;
     captureRequest=null;stream=selected;sourceMuted=track.muted===true;generation++;roiReady=false;tabletReady=false;signageReady=false;
-    tracker.reset();
-    passages.reset();renderCounts();
+    tracker.reset();directions.clearGeometry();
+    passages.reset();resetAudience();renderCounts();
     $('empty-scene').hidden=true;
     updateSourceSize();
     if(startWhenReady&&roiReady){await startAnalysis();return;}
@@ -300,7 +311,7 @@ $('stop').addEventListener('click',()=>disconnect());
 $('reset-counts').addEventListener('click',()=>{
   // Do not reset tracking, cancel an inference or discard the archive outbox.
   // Otherwise a person already in view would immediately count again.
-  passages.reset();renderCounts();scooterTracks.clear();twins.cancelOriginal();clearCapture('Contadores reiniciados');
+  passages.reset();resetAudience();renderCounts();scooterTracks.clear();twins.cancelOriginal();clearCapture('Contadores reiniciados');
   status('Contadores a cero. Se conserva el seguimiento y el histórico; los envíos pendientes no se borran.');
 });
 $('add-scooter').addEventListener('click',()=>{
@@ -318,7 +329,7 @@ function updateSourceSize(){
     const proportional=reference&&Math.abs((reference[0]/reference[1])/(dimensions[0]/dimensions[1])-1)<=.005;
     if(proportional&&!calibration)suspendAnalysis('resize','La resolución ha cambiado proporcionalmente. Se conserva el encuadre y se reanudará al llegar vídeo nuevo.');
     else pause('La fuente ha cambiado de formato o interrumpido una marcación. Comprueba las superficies antes de iniciar. El preset anterior se conserva.');
-    tracker.reset();
+    tracker.reset();directions.clearGeometry();
     calibration=null;points=[];stage.classList.remove('calibrating');$('markers').replaceChildren();$('coordinates').hidden=true;
     if(!proportional){roiReady=false;tabletReady=false;signageReady=false;calibrationDimensions=null;$('calibration-status').textContent='Formato nuevo: repite el encuadre';}
   }
@@ -334,12 +345,18 @@ function startCalibration(kind){
   pause();calibration=kind;points=[];stage.classList.add('calibrating');$('markers').replaceChildren();
   stage.scrollIntoView?.({block:'center',behavior:'instant'});
   $('coordinates').hidden=true;
-  if(kind==='roi'){tracker.reset();roiReady=false;$('roi').hidden=true;status('Marca dos puntos en la escena: esquina superior izquierda e inferior derecha del vídeo de Puerta Cam. No incluyas el resto de la tienda.');}
+  if(kind==='roi'){tracker.reset();directions.clearGeometry();roiReady=false;$('roi').hidden=true;status('Marca dos puntos en la escena: esquina superior izquierda e inferior derecha del vídeo de Puerta Cam. No incluyas el resto de la tienda.');}
+  else if(kind==='direction'){status('Marca dos puntos dentro de la cámara: primero el fondo de la calle, después el lado cercano a la cámara. Se guardará este sentido.');}
   else if(kind==='signage'){signageReady=false;$('signage').hidden=true;status('Marca las cuatro esquinas interiores de la pantalla grande: superior izquierda → superior derecha → inferior derecha → inferior izquierda.');}
   else{tabletReady=false;$('tablet').hidden=true;status('Marca las cuatro esquinas interiores del iPad: superior izquierda → superior derecha → inferior derecha → inferior izquierda.');}
-  $('calibration-status').textContent=kind==='roi'?'Marcando cámara: 0 / 2':`Marcando ${kind==='signage'?'cartelería':'iPad'}: 0 / 4`;
+  $('calibration-status').textContent=kind==='direction'?'Marcando sentido: fondo → cámara (0 / 2)':kind==='roi'?'Marcando cámara: 0 / 2':`Marcando ${kind==='signage'?'cartelería':'iPad'}: 0 / 4`;
   controls();
 }
+$('set-direction').addEventListener('click',()=>{if(roiReady)startCalibration('direction');});
+$('export-audience').addEventListener('click',()=>{
+  const data=JSON.stringify(sessionAudience(),null,2),url=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+  const a=document.createElement('a');a.href=url;a.download=`xtore-audience-${audienceSessionId}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
 $('set-roi').addEventListener('click',()=>startCalibration('roi'));
 $('set-tablet').addEventListener('click',()=>startCalibration('tablet'));
 $('set-signage').addEventListener('click',()=>startCalibration('signage'));
@@ -350,13 +367,17 @@ stage.addEventListener('click',event=>{
   points.push(point);
   const marker=document.createElement('span');marker.className='marker';marker.textContent=points.length;
   marker.style.left=`${point[0]*100}%`;marker.style.top=`${point[1]*100}%`;$('markers').append(marker);
-  const required=calibration==='roi'?2:4;
-  $('calibration-status').textContent=`Marcando ${calibration==='roi'?'cámara':calibration==='signage'?'cartelería':'iPad'}: ${points.length} / ${required}`;
+  const required=['roi','direction'].includes(calibration)?2:4;
+  $('calibration-status').textContent=`Marcando ${calibration==='direction'?'sentido fondo → cámara':calibration==='roi'?'cámara':calibration==='signage'?'cartelería':'iPad'}: ${points.length} / ${required}`;
   if(points.length!==required)return;
-  if(calibration==='roi'){
+  if(calibration==='direction'){
+    const axis=points.map(p=>[(p[0]-roi[0])/roi[2],(p[1]-roi[1])/roi[3]]);
+    if(!validDirectionAxis(axis)){startCalibration('direction');status('Marca fondo y cámara dentro del recuadro, suficientemente separados.');return;}
+    directionAxis=axis;directions.clearGeometry();renderCounts();
+  }else if(calibration==='roi'){
     const candidate=[points[0][0],points[0][1],points[1][0]-points[0][0],points[1][1]-points[0][1]];
     if(!validRect(candidate)){startCalibration('roi');status('El recuadro no es válido. Marca primero arriba a la izquierda y después abajo a la derecha.');return;}
-    roi=candidate;roiReady=true;
+    roi=candidate;roiReady=true;directionAxis=DEFAULT_DIRECTION_AXIS.map(p=>[...p]);
   }else{
     if(!validQuad(points)){startCalibration(calibration);status('Las esquinas se cruzan o la pantalla es demasiado pequeña. Repite en sentido horario desde arriba a la izquierda.');return;}
     if(calibration==='signage'){signageQuad=points.map(p=>[...p]);signageReady=true;}
@@ -394,7 +415,7 @@ $('apply-coordinates').addEventListener('click',()=>{
     if(!validQuad(sq)){status('Completa las ocho coordenadas de cartelería o déjalas todas vacías para omitirla.');return;}
     signageQuad=sq;signageReady=true;
   }else signageReady=false;
-  if(r.some((value,i)=>Math.abs(value-roi[i])>.00001))tracker.reset();
+  if(r.some((value,i)=>Math.abs(value-roi[i])>.00001)){tracker.reset();directions.clearGeometry();}
   roi=r;quad=q;roiReady=true;tabletReady=true;$('coordinates').hidden=true;finishCalibration();
 });
 $('confidence').addEventListener('input',()=>{$('confidence-value').value=`${$('confidence').value} %`;});
@@ -469,7 +490,9 @@ async function loop(token){
       try{predictions=await detectObjects(model,window.tf,frame,Math.min(.25,threshold,bikeThreshold));}finally{inferences--;}
       if(!analyzing||token!==generation)return;
       const events=performance.now()-now<PRESENCE_GRACE?tracker.update(predictions,now,width,height,{person:threshold,car:threshold,motorcycle:threshold,bicycle:bikeThreshold}):[];
-      if(events.length){passages.add(events);renderCounts();queueHistory(events);}
+      if(events.length){passages.add(events);queueHistory(events);}
+      const directionChanged=directions.update(tracker.visible(now),events,now,directionAxis);
+      if(events.length||directionChanged)renderCounts();
       $('source-info').textContent=`PUERTA CAM · ${width} × ${height} · ${Math.round(performance.now()-start)} ms / análisis`;
       const bikes=predictions.filter(p=>p.class==='bicycle'),best=bikes.reduce((score,p)=>Math.max(score,p.score),0);
       $('detection-status').textContent=`Bicis candidatas: ${bikes.length} · mejor ${Math.round(best*100)} % · umbral ${Math.round(bikeThreshold*100)} % · ${Math.round(performance.now()-start)} ms`;

@@ -1,3 +1,4 @@
+import {validDirectionAxis} from './audience-session.mjs';
 import {validRect,validQuad} from './core.mjs';
 
 // Geometry only. Never store frames, stream IDs, tab titles, identities or permissions.
@@ -7,7 +8,7 @@ export const PRESET_HISTORY_LIMIT=12;
 const keys=(value,allowed)=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(k=>allowed.includes(k));
 const size=s=>Array.isArray(s)&&s.length===2&&s.every(n=>Number.isInteger(n)&&n>0&&n<=32768);
 export function validPreset(p){
-  return !!(keys(p,['version','savedAt','source','roi','tablet','signage'])&&p.version===1&&
+  return !!(keys(p,['version','savedAt','source','roi','tablet','signage','directionAxis'])&&p.version===1&&(p.directionAxis===undefined||validDirectionAxis(p.directionAxis))&&
     Number.isSafeInteger(p.savedAt)&&p.savedAt>0&&size(p.source)&&
     (p.roi===null||validRect(p.roi))&&(p.tablet===null||validQuad(p.tablet))&&
     (p.signage===null||validQuad(p.signage))&&(p.roi||p.tablet||p.signage));
@@ -32,12 +33,12 @@ export class CalibrationPresetStore{
       return {state:'saved',preset:(source&&presets.find(p=>compatiblePreset(p,source)))||presets[0],presets};
     }catch{return {state:'unavailable',preset:null,presets:[]};}
   }
-  save({source,roi=null,tablet=null,signage=null}){
-    const preset={version:1,savedAt:this.now(),source,roi,tablet,signage};
+  save({source,roi=null,tablet=null,signage=null,directionAxis}){
+    const preset={version:1,savedAt:this.now(),source,roi,tablet,signage,...(directionAxis?{directionAxis}: {})};
     if(!validPreset(preset))return {state:'invalid',preset:null,presets:[]};
     // One atomic write: a partial/new-format mark never deletes the previous
     // complete framing. Identical geometry does not consume another history slot.
-    const geometry=p=>JSON.stringify([p.source,p.roi,p.tablet,p.signage]);
+    const geometry=p=>JSON.stringify([p.source,p.roi,p.tablet,p.signage,p.directionAxis]);
     const previous=this.read().presets;
     const presets=[preset,...previous.filter(p=>geometry(p)!==geometry(preset))].slice(0,PRESET_HISTORY_LIMIT);
     try{

@@ -110,5 +110,9 @@
   "xtore-preparar-detector": {
     "src": "/apps/video/xtore-preparar-detector.mp4",
     "title": "Xtore: preparar detector y reintentar · animación 15 s"
+  },
+  "xtore-audiencia-sesion": {
+    "src": "/apps/video/xtore-audiencia-sesion.mp4",
+    "title": "Xtore · audiencia de sesión y modo Real (animación, 15 s)"
   }
 }

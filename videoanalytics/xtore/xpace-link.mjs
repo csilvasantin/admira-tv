@@ -8,7 +8,7 @@ export function installXpaceLink({window,document,onChange=()=>{}}){
   const status=document.getElementById('xpace-status');
   const qs=new URLSearchParams(window.location?.search||'');
   let peer=null,origin='',session='',ready=false,seq=0,media=null,cameraAt=0,busy=false;
-  let cameraGeneration=0,lastSend=0,lastHeartbeat=0,statistics=null;
+  let cameraGeneration=0,lastSend=0,lastHeartbeat=0,statistics=null,audience=null;
   const requested=qs.get('twinOrigin'),token=qs.get('twinSession');
   if(window.opener&&allowedTwinOrigin(requested,window.location?.origin||'https://admira.tv')&&/^[a-f0-9-]{36}$/.test(token||'')){
     peer=window.opener;origin=requested;session=token;
@@ -18,7 +18,7 @@ export function installXpaceLink({window,document,onChange=()=>{}}){
     if(!peer||peer.closed||!ready)return false;
     try{peer.postMessage({source:'admira-xtore-twin',screen:XTORE_VIRTUAL_SCREEN,session,event,seq:++seq,ts:Date.now(),...extra},origin,transfer);return true;}catch{return false;}
   }
-  function reportStatistics(){if(statistics)send('statistics',{passages:statistics});}
+  function reportStatistics(){if(statistics)send('statistics',{passages:statistics,...(audience?{audience}: {})});}
   function resetCamera(){cameraGeneration++;cameraAt=0;send('camera-off');}
   function hello(){
     if(!peer||peer.closed)return;
@@ -63,10 +63,11 @@ export function installXpaceLink({window,document,onChange=()=>{}}){
     get backgroundActive(){return backgroundActive();},
     get cameraOnly(){return !!peer;},
     media(value){media=value;},
-    statistics(value){
+    audience(value){audience=value;},
+    statistics(value,sessionAudience=null){
       const keys=['person','car','motorcycle','bicycle','scooter'];
       if(!value||!keys.every(k=>Number.isSafeInteger(value[k])&&value[k]>=0&&value[k]<=10000000))return;
-      statistics=Object.fromEntries(keys.map(k=>[k,value[k]]));reportStatistics();
+      audience=sessionAudience;statistics=Object.fromEntries(keys.map(k=>[k,value[k]]));reportStatistics();
     },
     stop(){media=null;send('playback-off');},
     traffic(observations,frameAgeMs=0){
