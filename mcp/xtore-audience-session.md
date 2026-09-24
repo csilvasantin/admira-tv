@@ -113,3 +113,11 @@ Para habilitar recepción de sesión en Pixeria o un MCP remoto, el mantenedor d
 Pruebas automatizadas: aproximación, alejamiento, lateral/ruido, eje diagonal, gap, reinicio y compatibilidad de encuadres. Prueba de gemelo con datos sintéticos 9 y Reset 0; no acredita precisión de Puerta Cam real. Para validar en tienda: una persona camina en cada sentido y se compara conteo manual con el nuevo contador.
 
 Si se ve «—», comprobar enlace y pestaña del analizador; no interpretarlo como cero observado. Si direcciones quedan a cero con pasos >0, revisar eje y continuidad. Si se usa una versión antigua del analizador, el contador histórico de pasos sigue siendo compatible, pero el nuevo modo de sesión espera `audience` v1.
+
+## Demo de cuatro pantallas (24/09/2026, Yokup #248)
+
+En el Xtanco enlazado, clic en la cámara de la esquina (`camCPMClick`) alterna demo. Alternativa accesible: Player y cámara → Activar/Desactivar demo zapatillas. Estado local en memoria, desactivado tras recarga; desconectar conserva el modo mostrando sin señal.
+
+Superficies fijas: DS1 = player actual; DS2 = recorte original de Puerta Cam (vídeo identificable); TFT pared larga = snapshot de sesión; gestor de turnos detrás del mostrador = geometría y categorías exclusivamente sobre fondo neutro. No usa el borrado por fondo temporal del analizador y no reutiliza imágenes originales ni modificadas. No lo confundir con anonimizar la pantalla2 ni el resto del producto.
+
+No requiere herramientas MCP nuevas: consume los eventos existentes `playback`, `camera`, `traffic` y `statistics` de la ventana autenticada. Camera/traffic caducan a1,5s; statistics a4s. Player conserva su TTL propio. No señales = pantalla de espera, nunca fallback a vídeo del juego. Desactivar restaura la función normal de cada superficie. Se suspenden temporalmente los overlays que taparían las pantallas; no se modifican sus reglas de emisión ni se manda contenido a pantallas físicas. Help: https://admira.tv/help/#xtore-demo-pantallas
