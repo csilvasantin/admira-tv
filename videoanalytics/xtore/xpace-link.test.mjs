@@ -49,12 +49,12 @@ for(const entry of ['open-xpace','open-xtanco'])test(`${entry} pairs Xtanco with
  const status={},sent=[],opened=[];let changes=0,focused=0;
  const peer={closed:false,postMessage:(data,origin)=>sent.push({data,origin}),focus(){focused++;}};
  const document={getElementById:id=>buttons[id]||(id==='xpace-status'?status:null),addEventListener(){}};
- const window={location:{origin:'https://admira.tv',search:''},crypto:{randomUUID:()=> '00000000-0000-0000-0000-000000000001'},open:(url,name)=>{opened.push({url,name});return peer;},addEventListener(){}};
+ const window={location:{origin:'https://admira.tv',search:''},crypto:{randomUUID:()=> '00000000-0000-0000-0000-000000000001'},open:(url,name,...features)=>{opened.push({url,name,features});return peer;},addEventListener(){}};
  const link=installXpaceLink({window,document,onChange:()=>changes++});
  assert.equal(link.cameraOnly,false);buttons[entry].click();
  assert.equal(link.cameraOnly,true);assert.equal(changes,1);
  const url=new URL(opened[0].url);
- assert.equal(url.origin,'https://www.xpaceos.com');assert.equal(url.pathname,'/admira-xp/');
+ assert.deepEqual(opened[0].features,[]);assert.equal(url.origin,'https://www.xpaceos.com');assert.equal(url.pathname,'/admira-xp/');
  assert.equal(url.searchParams.get('autostart'),'xtanco');
  assert.equal(url.searchParams.get('virtualPlayer'),'xtore-virtual-zapatillas');
  assert.equal(url.searchParams.get('twinOrigin'),'https://admira.tv');
@@ -151,4 +151,12 @@ test('history travels only to the paired ready window; authenticated requests ar
  t.mock.timers.tick(1500);f.receive({event:'history-request'});assert.equal(requests,2);
  f.link.history({rows:[],loaded:false,error:'access'});assert.equal(f.sent.at(-1).d.history.error,'access');
  f.receive({event:'disconnect'});f.receive({event:'history-request'});assert.equal(requests,2);
+});
+
+
+test('local analyzer keeps its declared twin origin when reopening without opener',t=>{
+ t.mock.timers.enable({apis:['setInterval']});let click,opened;
+ const document={getElementById:id=>id==='xpace-status'?{}:{addEventListener:(_,fn)=>{click=fn;}},addEventListener(){}};
+ const window={location:{origin:'http://localhost:8766',search:'?twinOrigin=http%3A%2F%2Flocalhost%3A8770'},crypto,open:(...args)=>{opened=args;return {postMessage(){}};},addEventListener(){}};
+ installXpaceLink({window,document});click();assert.equal(opened.length,2);assert.equal(new URL(opened[0]).origin,'http://localhost:8770');
 });

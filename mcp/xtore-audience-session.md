@@ -171,3 +171,14 @@ Implementado en XpaceOS → Audiencia → DooH. El histórico utiliza `/videoana
 No hay control de horario de captura programado: los selectores consultan datos ya registrados. El operador debe mantener el detector activo. No se certifica cobertura continua ni conteo de personas únicas, atención o aforo físico. Una hora con registros puede ser parcial; sin registros se muestra —. El backend conserva datos aunque el selector actualmente consulte 31 días. Pixeria no se anuncia como receptor del histórico hasta implementar su propio acceso autenticado.
 
 [Help](https://admira.tv/help/#xtore-dooh) · [Guía animada](https://admira.tv/apps/video/xtore-dooh-dia-hora.mp4).
+
+
+## Apertura por pestañas y reconexión (Yokup #290)
+
+`xtore-window.mjs` y `xpace-link.mjs` llaman a `window.open(url,nombreDeSesion)` sin solicitar popup ni dimensiones. El nombre es único por sesión; se mantiene window.opener para el canal emparejado existente y se reutiliza la ventana viva. No añadir noopener a esta pareja sin sustituir el protocolo. La apertura de Digital Twin 360 sí es un enlace independiente con `target=_blank` y `rel=noopener noreferrer`, también disponible directamente en el panel experto.
+
+`analyzerOriginFor(own,requested,override)` conserva el twinOrigin declarado tras recarga sin opener. En localhost admite el override de desarrollo autorizado y el origen local declarado; en producción solo Admira.tv, con fallback https://admira.tv. El camino inverso conserva el origen autorizado de XpaceOS/local al reabrir el gemelo. No se relajan validaciones de origen, referencia de ventana, sesión, secuencia ni TTL. El analizador distingue NotSupportedError del permiso denegado y ofrece recuperación por pestaña normal; nunca inicia captura silenciosa ni declara éxito tras ese error.
+
+Verificado en navegador integrado: Xtanco localhost8772 abre analizador localhost8766 en pestaña listable, estado Gemelo conectado, y su enlace abre Digital Twin 360 en nueva pestaña con Store/Puerta Cam visibles. No se inició una captura nueva ni se validaron fotogramas nuevos en esta prueba. 337 pruebas XpaceOS y305 analizador, incluyendo pérdida de opener, límites de origen y error de captura recuperable.
+
+[Help](https://admira.tv/help/#xtore-conectar-pestanas) · [Guía animada](https://admira.tv/apps/video/xtore-conectar-pestanas.mp4).

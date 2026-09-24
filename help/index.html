@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=24.09.2026.r9.1326"></script>
+<script src="/auth-gate.js?v=24.09.2026.r10.1333"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r9.1326">
+  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r10.1333">
 </head>
 <body>
-<script src="/admira-nav.js?v=24.09.2026.r9.1326" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=24.09.2026.r9.1326" defer></script>
+<script src="/admira-nav.js?v=24.09.2026.r10.1333" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=24.09.2026.r10.1333" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -44,6 +44,7 @@
   <nav class="toc">
     <a href="#xtore-demo-pantallas">Xtanco / demo en cuatro pantallas</a>
     <a href="#xtore-audiencia">Audiencia de sesión / XpaceOS y Pixeria</a>
+    <a href="#xtore-conectar-pestanas">Xtanco · conectar Digital Twin por pestañas</a>
     <a href="#xtore-dooh">DooH · cámara exterior por día y hora</a>
     <a href="#xtore-visitas">Xtanco · visitas con objetivos</a>
     <a href="#xtore-encuadres">Xtore / recuperar cámara, iPad y pantalla</a>
@@ -74,6 +75,14 @@
 <p>Si no llegan datos recientes, las pantallas muestran espera o ausencia de señal. El vídeo y las detecciones caducan en 1,5 s y los totales en 4 s sin latido. No vuelven a publicidad simulada mientras la demo está activa. Activar la demo no concede permisos de cámara, no abre automáticamente Puerta Cam y no publica ni graba la señal. Tras recargar, la demo vuelve a estar desactivada.</p>
 <p><a href="/apps/video/xtore-camara-arranque.mp4">Minitutorial · cámara durante el arranque (animación, 15 s)</a></p>
 <p><a href="/apps/video/xtanco-demo-pantallas.mp4">Minitutorial animado · cámara y cuatro pantallas (15 s)</a> · animación explicativa, no grabación de pantalla.</p></section>
+  <section id="xtore-conectar-pestanas"><h2>Xtanco · conectar player, analizador y Digital Twin 360</h2>
+<ol><li>En el modo experto del Xtanco, pulsa <strong>Player y cámara</strong>. Abre <strong>Digital Twin 360</strong> desde ese panel: Store → Entrada → Puerta Cam → Ver stream.</li>
+<li>En el panel del Xtanco pulsa <strong>Conectar player y cámara</strong>. El analizador se solicita en una pestaña normal; la sesión y el origen del enlace se conservan. Si ya está enlazado, se reutiliza esa pestaña.</li>
+<li>En el analizador, pulsa <strong>Arrancar cámara y análisis</strong> y comparte la pestaña <strong>Digital Twin 360</strong>. Se recupera el encuadre compatible; cámara, iPad y pantalla conservan sus ajustes existentes. Solo la cámara es necesaria.</li></ol>
+<p><strong>Si estabas usando el popup antiguo:</strong> ciérralo y recarga el Xtanco para usar la nueva apertura. El enlace Abrir Digital Twin 360 está disponible tanto en el panel experto como en el analizador. El botón Abrir gemelo también solicita una pestaña normal.</p>
+<p>La reconexión local conserva <code>twinOrigin</code>, evitando abrir por error el analizador de producción desde el Xtanco local. Los despliegues de producción siguen aceptando solo los orígenes autorizados. El analizador y el Xtanco mantienen su enlace; Digital Twin 360 se abre por separado, sin recibir acceso al controlador de la tienda.</p>
+<p><strong>Límites:</strong> el navegador decide si presenta una pestaña o ventana y puede bloquear nuevas aperturas. Si aparece <code>NotSupportedError</code>, ese contexto no admite captura: abre el flujo en pestañas normales y, si persiste, en un navegador de escritorio compatible con compartir pestañas. No se guarda ni se salta el permiso del selector. Este cambio no automatiza el inicio de sesión ni la orientación interna de IEU, y no garantiza fotogramas o análisis hasta que la fuente esté compartida y el detector activo.</p>
+<p><a href="/apps/video/xtore-conectar-pestanas.mp4">Minitutorial · conectar por pestañas (animación, 15 s)</a>. Guía animada, no grabación real de pantalla.</p></section>
   <section id="xtore-dooh"><h2>DooH · audiencia real del escaparate por día y hora</h2>
 <p>En XpaceOS, abre <strong>Modo avanzado → Audiencia → DooH</strong> (o <code>/impactos</code> en el CLI inferior). En <strong>Escaparate · pasos guardados</strong>, elige el día, Desde y Hasta y pulsa Actualizar. Por ejemplo, 10:00–12:00 incluye las horas de las 10 y las 11. El reloj es <strong>Europe/Madrid</strong>, independiente del tiempo simulado del juego.</p>
 <p>Conecta el analizador de la Xtore de Santa Rosa 19 mediante Player y cámara. Su fuente es <strong>Digital Twin 360 → Store → Entrada → Puerta Cam</strong>, encuadrando solo el vídeo de la calle. Inicia el análisis y mantén la captura y el detector activos para registrar nuevos pasos. Consulta el histórico privado con tu sesión de Admira.tv y permisos de administrador.</p>

@@ -138,5 +138,9 @@
   "xtore-dooh-dia-hora": {
     "src": "/apps/video/xtore-dooh-dia-hora.mp4",
     "title": "Xtore · DooH real por día y hora (animación, 15 s)"
+  },
+  "xtore-conectar-pestanas": {
+    "src": "/apps/video/xtore-conectar-pestanas.mp4",
+    "title": "Xtore · conectar por pestañas (animación, 15 s)"
   }
 }

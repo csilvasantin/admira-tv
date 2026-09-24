@@ -7,7 +7,7 @@ import {PRESET_KEY} from './preset.mjs';
 let serial=0;
 const cleanups=[];
 afterEach(async()=>{for(const cleanup of cleanups.splice(0))await cleanup();});
-async function fixture({surface='browser',denied=false,slowLoad=false,slowCapture=false,slowPlay=false,segment,storage,sourceWidth=1280,sourceHeight=720,twin=false}={}){
+async function fixture({surface='browser',denied=false,captureError=null,slowLoad=false,slowCapture=false,slowPlay=false,segment,storage,sourceWidth=1280,sourceHeight=720,twin=false}={}){
   const nodes=new Map();
   class Element {
     get ownerDocument(){return doc;}
@@ -45,7 +45,7 @@ async function fixture({surface='browser',denied=false,slowLoad=false,slowCaptur
   const firstCapture=captureSource(),{track}=firstCapture;
   Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{getDisplayMedia:async()=>{
     const capture=captures.length?captureSource():firstCapture;captures.push(capture);
-    if(denied)throw Object.assign(new Error(),{name:'NotAllowedError'});
+    if(denied||captureError)throw Object.assign(new Error(),{name:captureError||'NotAllowedError'});
     if(slowCapture)return new Promise((resolve,reject)=>{capture.resolve=()=>resolve(capture.stream);capture.reject=reject;});
     return capture.stream;
   }}}});
@@ -877,4 +877,11 @@ test('linked street is sent while model warm-up is pending, without fabricated d
  f.get('scene').currentTime++;t.mock.timers.tick(1000);await flush();
  assert.equal(f.twinSent.filter(d=>d.event==='camera').length,count);
  f.finishLoad();await starting;assert.equal(f.detections.length,0);
+});
+
+
+test('unsupported capture context gives a recoverable normal-tab route without claiming connection',async()=>{
+ const f=await fixture({captureError:'NotSupportedError'});await f.get('connect').emit('click');
+ assert.match(f.get('status').textContent,/pestaña normal/);assert.match(f.get('status').textContent,/Digital Twin 360/);
+ assert.equal(f.get('stop').disabled,true);assert.equal(f.get('analyze').disabled,false);
 });

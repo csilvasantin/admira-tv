@@ -26,11 +26,11 @@ export function installXpaceLink({window,document,onChange=()=>{},onHistoryReque
   }
   function openTwin(){
     if(peer&&!peer.closed){hello();peer.focus();return;}
-    session=window.crypto.randomUUID();origin='https://www.xpaceos.com';ready=false;
+    session=window.crypto.randomUUID();origin=allowedTwinOrigin(requested,window.location?.origin||'https://admira.tv')?requested:'https://www.xpaceos.com';ready=false;
     const url=new URL('/admira-xp/',origin);
     url.search=new URLSearchParams({autostart:'xtanco',virtualPlayer:XTORE_VIRTUAL_SCREEN,twinOrigin:window.location?.origin||'https://admira.tv',twinSession:session});
-    peer=window.open(url.href,'xtore-zapatillas-'+session,'popup,width=1240,height=850');
-    status.textContent=peer?'Conectando el gemelo…':'Chrome bloqueó la ventana. Permite abrir el gemelo y vuelve a pulsar.';
+    peer=window.open(url.href,'xtore-zapatillas-'+session);
+    status.textContent=peer?'Conectando el gemelo…':'No se pudo abrir la pestaña del gemelo. Permite su apertura y vuelve a pulsar.';
     hello();startTimer();onChange();
   }
   for(const id of ['open-xpace','open-xtanco'])document.getElementById(id)?.addEventListener('click',openTwin);

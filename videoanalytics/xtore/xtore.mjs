@@ -1,5 +1,5 @@
 import {DirectionCounter,DEFAULT_DIRECTION_AXIS,validDirectionAxis,audienceSnapshot} from './audience-session.mjs?v=audience-session-1';
-import {installXpaceLink} from './xpace-link.mjs?v=dooh-history-1';
+import {installXpaceLink} from './xpace-link.mjs?v=normal-tabs-1';
 import {CLASSES, SNAPSHOT_TTL, PRESENCE_GRACE, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
 import {CutoutJob} from './cutouts.mjs';
 import {installTwinUI} from './twin-ui.mjs?v=avatar-photo-1';
@@ -303,7 +303,7 @@ async function connectSource(startWhenReady=false){
     if(captureRequest!==request&&(!request.selected||stream!==request.selected))return;
     if(captureRequest===request)cancelCapture();
     if(stream===request.selected&&stream)disconnect();
-    status(error.name==='NotAllowedError'?'No se ha concedido permiso para compartir. Puedes volver a intentarlo.':`No se pudo compartir la pestaña (${error.name||'error del navegador'}).`);
+    status(error.name==='NotSupportedError'?'Este contexto no permite compartir pestañas. Vuelve a Xtanco y abre el analizador en una pestaña normal desde Player y cámara. Si sigue fallando, abre el flujo en un navegador de escritorio compatible. Digital Twin 360 debe estar en otra pestaña.':error.name==='NotAllowedError'?'No se ha concedido permiso para compartir. Puedes volver a intentarlo.':`No se pudo compartir la pestaña (${error.name||'error del navegador'}).`);
   }finally{if(captureRequest===request)captureRequest=null;controls();}
 }
 $('connect').addEventListener('click',()=>connectSource());
