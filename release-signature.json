@@ -1,9 +1,9 @@
 {
-  "version": "v.24.09.2026.r6.12:52",
+  "version": "v.24.09.2026.r7.13:05",
   "signature": "TrinityMBP14 · MacBookProNegro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookProNegro14",
   "day": "24.09.2026",
-  "time": "12:52",
-  "evidence": "Yokup #270: etiquetas ID de trayectoria y Help de pasos por categoría; 301 tests."
+  "time": "13:05",
+  "evidence": "Yokup #274: Help y contrato CLI resetaudiencia; guía animada oficial exportada y revisada."
 }

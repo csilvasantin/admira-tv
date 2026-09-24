@@ -131,3 +131,17 @@ El recorte original se envía desde el inicio solicitado del análisis, antes de
 ### Barra de sesión y etiquetas de trayectoria
 
 El HUD del Xtanco enlazado se titula Pasos de sesión / Session passages. Usa un único snapshot validado para counts.person, car, motorcycle y bicycle; tras caducar, las cuatro cifras son —, nunca un cero inventado. En otras tiendas mantiene el aforo físico sin columnas de vehículos. Las etiquetas de vídeo dicen Persona · ID N: trackId es secuencial entre categorías, no total, identidad ni personas únicas. El contador de pasos solo incluye trayectorias confirmadas y con desplazamiento; Reset conserva la secuencia de IDs.
+
+## Control manual de demo: /resetaudiencia (Yokup #274)
+
+Comando local del CLI inferior de XpaceOS, disponible también a través del dispatcher existente xtAPI. No se anuncia una nueva tool MCP remota.
+
+- `/resetaudiencia N`: entero decimal de 0 a 100; fija visitantes virtuales, conserva personal, cámara y snapshot agregado. Cero elimina inmediatamente visitantes, sin registrar ventas ficticias. Valores fuera de rango o fraccionarios se rechazan sin mutación.
+- `/resetaudiencia auto`: borra el override y devuelve control al modo CAM seleccionado. En Xtore enlazado Real usa counts.person reciente (máximo automático 80); sin señal no inventa público.
+- Sin argumento: consulta modo y sintaxis.
+
+Requiere partida activa y tienda abierta. G.manualAudienceTarget tiene prioridad frente a camApplyToStore y el cap horario. Reconciliación cada segundo; G.peopleOverride impide nuevas entradas sobre el objetivo. Persistencia en guardado de partida, no entre partidas nuevas de autostart. `/aforo real|exacto|fake` y `/people store` válido liberan este override. No modifica sessionId, revision, counts, direcciones, trayectorias o segmentación. No debe interpretarse como aforo observado ni enviarse a Pixeria como dato medido. Los visitantes añadidos son sintéticos y no consumen check-ins pendientes del club.
+
+Con 100 visitantes puede haber solapamiento inicial y menor rendimiento. Pruebas: 0 elimina incluso cola/compra conservando personal; 100 se mantiene ante mensajes nuevos; auto recupera 36 del snapshot de prueba; entradas inválidas no mutan; CLI real verificado 0 y 100.
+
+[Help](https://admira.tv/help/#xtore-resetaudiencia) · [Guía animada](https://admira.tv/apps/video/xtanco-resetaudiencia.mp4).

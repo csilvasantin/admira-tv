@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=24.09.2026.r6.1252"></script>
+<script src="/auth-gate.js?v=24.09.2026.r7.1305"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r6.1252">
+  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r7.1305">
 </head>
 <body>
-<script src="/admira-nav.js?v=24.09.2026.r6.1252" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=24.09.2026.r6.1252" defer></script>
+<script src="/admira-nav.js?v=24.09.2026.r7.1305" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=24.09.2026.r7.1305" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -73,6 +73,13 @@
 <p><a href="/apps/video/xtore-camara-arranque.mp4">Minitutorial · cámara durante el arranque (animación, 15 s)</a></p>
 <p><a href="/apps/video/xtanco-demo-pantallas.mp4">Minitutorial animado · cámara y cuatro pantallas (15 s)</a> · animación explicativa, no grabación de pantalla.</p></section>
   <section id="xtore-audiencia"><h2>Audiencia de sesión · XpaceOS y Pixeria</h2>
+<h3 id="xtore-resetaudiencia">Fijar visitantes con /resetaudiencia</h3>
+<p>En el Xtanco, abre el modo experto (⌘) para mostrar el CLI inferior de Control Xtore. Escribe el comando y pulsa Enviar / Send. La tienda debe estar abierta.</p>
+<ul><li><code>/resetaudiencia 0</code>: vacía los visitantes de la tienda, incluidos quienes esperan o compran. Conserva al personal y no simula una venta al retirarlos.</li><li><code>/resetaudiencia 100</code>: llena la tienda con 100 visitantes virtuales. Admite cualquier entero de 0 a 100.</li><li><code>/resetaudiencia auto</code>: libera el ajuste manual y vuelve al modo de aforo seleccionado; con el enlace Xtore en Real, vuelve a los pasos de la sesión.</li><li><code>/resetaudiencia</code>: consulta cantidad, modo y sintaxis sin cambiar nada.</li></ul>
+<p>La cabecera indica <b>Sesión/Manual</b>. La cifra fijada tiene prioridad frente a nuevos mensajes de cámara y se repone durante la partida si salen visitantes. Los pasos reales de personas, coches, motos y bicis siguen su curso: no se borran ni se fabrican detecciones. El ajuste se guarda con la partida; iniciar una partida nueva con autostart vuelve al estado inicial. También se libera al elegir <code>/aforo real</code>, <code>/aforo exacto</code>, <code>/aforo fake</code> o usar <code>/people store</code>.</p>
+<p>Es un control de demo virtual, no una medida de aforo físico. Con 100 visitantes puede bajar el rendimiento y se pueden solapar al aparecer. El límite de la representación automática de cámara sigue siendo 80.</p>
+<p><a href="/apps/video/xtanco-resetaudiencia.mp4">Minitutorial · CLI de audiencia (animación, 15 s)</a>. Animación explicativa, no grabación real de pantalla.</p>
+
 <p><b>ID de trayectoria ≠ total:</b> «Persona · ID 62» identifica una trayectoria local, no significa 62 personas. La numeración se comparte entre categorías y puede incluir trayectorias sin paso confirmado; tampoco vuelve a cero al pulsar Reset. «Personas que han pasado: 36» son 36 pasos confirmados de esa categoría en la sesión. No identifica personas únicas.</p>
 <p>En el Xtanco enlazado, <b>Pasos de sesión</b> (Session passages en inglés) sustituye a Real audience y muestra <b>Personas · Coches · Motos · Bicis</b> desde el mismo mensaje del analizador. El total de personas debe coincidir con el analizador en la misma sesión y momento. No es el número de personas presentes ni un ID. Sin mensajes recientes, aparece — en las cuatro categorías; 0 significa cero confirmado.</p>
 <p><a href="/apps/video/xtore-id-pasos.mp4">Minitutorial · ID, pasos y vehículos en la barra (animación, 15 s)</a></p>
