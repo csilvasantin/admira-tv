@@ -122,5 +122,9 @@
   "xtore-camara-arranque": {
     "src": "/apps/video/xtore-camara-arranque.mp4",
     "title": "Xtore · cámara durante el arranque (animación, 15 s)"
+  },
+  "xtore-id-pasos": {
+    "src": "/apps/video/xtore-id-pasos.mp4",
+    "title": "Xtore · ID, pasos y vehículos en la barra (animación, 15 s)"
   }
 }

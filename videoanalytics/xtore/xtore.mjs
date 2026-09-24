@@ -8,8 +8,8 @@ import {loadDetectorModel} from './model-loader.mjs?v=detector-download-2';
 import {installSignageUI} from './signage-ui.mjs';
 import {installHistoryUI} from './history.mjs';
 import {CalibrationPresetStore,compatiblePreset} from './preset.mjs?v=audience-session-1';
-import {TrackingOverlay} from './tracking-overlay.mjs';
-import {installCleanStreetUI} from './clean-street-ui.mjs';
+import {TrackingOverlay} from './tracking-overlay.mjs?v=track-id-2';
+import {installCleanStreetUI} from './clean-street-ui.mjs?v=track-id-2';
 import {installScooterTracks} from './scooter-tracks.mjs';
 
 const $=id=>document.getElementById(id);

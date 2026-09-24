@@ -1,5 +1,5 @@
 import {TemporalStreetBackground,CLEAN_FRAME_TTL,hideShortcut} from './clean-street.mjs';
-import {TrackingOverlay,drawTrackingAnnotations} from './tracking-overlay.mjs';
+import {TrackingOverlay,drawTrackingAnnotations} from './tracking-overlay.mjs?v=track-id-2';
 
 export function installCleanStreetUI({document,onToggle=()=>{},getPassages=()=>null}){
   const $=id=>document.getElementById(id),canvas=$('clean-preview'),tablet=$('tablet-canvas');

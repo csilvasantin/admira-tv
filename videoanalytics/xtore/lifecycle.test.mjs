@@ -225,7 +225,7 @@ test('clean pair retries after a recent raw preview throttled its first send, ke
   await tick(200);
   const first=f.twinSent.filter(d=>d.event==='camera'&&d.modified).at(-1);assert.ok(first);
   assert.equal(first.frameAt,10000);assert.ok(first.originalBitmap);
-  assert.equal(first.bitmap.source.labels.at(-1).text,'Persona #1');
+  assert.equal(first.bitmap.source.labels.at(-1).text,'Persona · ID 1');
   assert.equal(first.bitmap.source.strokes.at(-1).color,trackColor(1));
   await tick(500);
   assert.equal(f.twinSent.filter(d=>d.event==='camera'&&d.modified).at(-1).frameAt,10000);
@@ -287,7 +287,7 @@ test('paired clean camera carries colored trajectory labels while original and i
   const paired=f.twinSent.filter(d=>d.event==='camera'&&d.modified===true).at(-1);assert.ok(paired);
   const clean=paired.bitmap.source,original=paired.originalBitmap.source;
   assert.notEqual(clean,f.get('clean-preview'));assert.equal(clean.lastDrawSource,f.get('clean-preview'));
-  assert.deepEqual(clean.labels.map(label=>label.text),['Persona #1','Persona #2']);
+  assert.deepEqual(clean.labels.map(label=>label.text),['Persona · ID 1','Persona · ID 2']);
   assert.deepEqual(clean.strokes.map(stroke=>stroke.color),[trackColor(1),trackColor(2)]);
   assert.notEqual(clean.strokes[0].color,clean.strokes[1].color);
   assert.equal(original,f.get('tablet-canvas').lastDrawSource);assert.equal(original.lastImageData,undefined);
@@ -479,7 +479,7 @@ test('live presence renews a single count beyond snapshot expiry; a stalled infe
   assert.equal(f.get('count-person').textContent,'1');assert.equal(f.get('capture-canvas').hidden,true);
   assert.equal(frame.sent.at(-1).data.command,'admiratv audiencia persona');
   assert.equal(f.get('tracking-overlay').children.length,1);
-  const box=f.get('tracking-overlay').children[0];assert.equal(box.children[0].textContent,'Persona #1');
+  const box=f.get('tracking-overlay').children[0];assert.equal(box.children[0].textContent,'Persona · ID 1');
   await f.get('reset-counts').emit('click');assert.equal(f.get('tracking-overlay').children[0],box);
   f.get('scene').currentTime++;now+=125;t.mock.timers.tick(125);await flush(); // leave inference pending
   now+=1500;t.mock.timers.tick(1500);await flush();

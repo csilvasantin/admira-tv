@@ -42,7 +42,7 @@ for(const learned of [false,true])test(`paired clean view hides detected bodies 
   const predictions=f.tracks.map(track=>({class:track.class,score:.95,bbox:track.bbox.map((n,i)=>n*(i%2?raw.height:raw.width))}));
   f.ui.update(raw,predictions,f.tracks,1500);const pair=f.ui.frames();assert.ok(pair);
   assert.equal(pair.capturedAt,1500);assert.notEqual(pair.clean,pair.original);
-  assert.deepEqual(pair.clean.labels.map(label=>label.text),['Persona #54','Persona #55']);
+  assert.deepEqual(pair.clean.labels.map(label=>label.text),['Persona · ID 54','Persona · ID 55']);
   assert.deepEqual(pair.clean.boxes.map(box=>box.color),[trackColor(54),trackColor(55)]);
   for(const [x,y] of [[64,78],[128,80]]){
     assert.notDeepEqual(pixel(pair.clean,x,y),pixel(raw,x,y));assert.equal(pixel(pair.clean,x,y)[3],255);

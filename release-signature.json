@@ -1,9 +1,9 @@
 {
-  "version": "v.24.09.2026.r6.12:35",
+  "version": "v.24.09.2026.r6.12:52",
   "signature": "TrinityMBP14 · MacBookProNegro14",
   "agent": "TrinityMBP14",
   "machine": "MacBookProNegro14",
   "day": "24.09.2026",
-  "time": "12:35",
-  "evidence": "Yokup #266: cámara independiente de carga del detector, descarga medida y calentamiento separado; 301 pruebas, modelo e inferencia real en navegador sobre imagen sintética."
+  "time": "12:52",
+  "evidence": "Yokup #270: etiquetas ID de trayectoria y Help de pasos por categoría; 301 tests."
 }

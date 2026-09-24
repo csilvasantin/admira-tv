@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=24.09.2026.r6.1235"></script>
+<script src="/auth-gate.js?v=24.09.2026.r6.1252"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r6.1235">
+  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r6.1252">
 </head>
 <body>
-<script src="/admira-nav.js?v=24.09.2026.r6.1235" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=24.09.2026.r6.1235" defer></script>
+<script src="/admira-nav.js?v=24.09.2026.r6.1252" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=24.09.2026.r6.1252" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -73,6 +73,9 @@
 <p><a href="/apps/video/xtore-camara-arranque.mp4">Minitutorial · cámara durante el arranque (animación, 15 s)</a></p>
 <p><a href="/apps/video/xtanco-demo-pantallas.mp4">Minitutorial animado · cámara y cuatro pantallas (15 s)</a> · animación explicativa, no grabación de pantalla.</p></section>
   <section id="xtore-audiencia"><h2>Audiencia de sesión · XpaceOS y Pixeria</h2>
+<p><b>ID de trayectoria ≠ total:</b> «Persona · ID 62» identifica una trayectoria local, no significa 62 personas. La numeración se comparte entre categorías y puede incluir trayectorias sin paso confirmado; tampoco vuelve a cero al pulsar Reset. «Personas que han pasado: 36» son 36 pasos confirmados de esa categoría en la sesión. No identifica personas únicas.</p>
+<p>En el Xtanco enlazado, <b>Pasos de sesión</b> (Session passages en inglés) sustituye a Real audience y muestra <b>Personas · Coches · Motos · Bicis</b> desde el mismo mensaje del analizador. El total de personas debe coincidir con el analizador en la misma sesión y momento. No es el número de personas presentes ni un ID. Sin mensajes recientes, aparece — en las cuatro categorías; 0 significa cero confirmado.</p>
+<p><a href="/apps/video/xtore-id-pasos.mp4">Minitutorial · ID, pasos y vehículos en la barra (animación, 15 s)</a></p>
 <p>Debajo de Puerta Cam aparecen <b>Personas que han pasado · Personas entran · Personas salen · Coches</b>. Entran significa hacia la cámara; salen, hacia el fondo de la calle. No son entradas físicas a la tienda. Los pasos laterales o sin trayectoria suficiente quedan sin dirección.</p>
 <ol><li>En <a href="/videoanalytics/xtore/#audience-session">Xtore → Audiencia de sesión</a>, ajusta <b>Marcar sentido · fondo → cámara</b> si la calle es diagonal: primero el fondo, luego el lado cercano. El eje se guarda con el encuadre; por defecto va de arriba abajo.</li>
 <li>Inicia el análisis y abre <b>Abrir gemelo · zapatillas</b>. En XpaceOS selecciona <b>Real</b> en el menú de aforo. El objetivo de visitantes virtuales es el total de pasos de la sesión: 9 pasos → objetivo 9, sin restar las salidas. Hay un máximo visual de 80; el dato completo sigue visible. <b>Sesión/Virtuales</b> compara el total con los personajes actuales. El ajuste puede esperar a que acaben compras o salgan clientes.</li>

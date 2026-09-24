@@ -16,7 +16,7 @@ function fixture(t,options={}){
 }
 test('boxes move by normalized coordinates, retain nodes and distinct ID colors, clip at ROI',t=>{
   const f=fixture(t);f.overlay.render([f.obs(1),f.obs(2)]);
-  const [a,b]=f.root.children;assert.notEqual(a.style.color,b.style.color);assert.equal(a.children[0].textContent,'Persona #1');
+  const [a,b]=f.root.children;assert.notEqual(a.style.color,b.style.color);assert.equal(a.children[0].textContent,'Persona · ID 1');
   f.overlay.render([{...f.obs(1),bbox:[.4,.2,.1,.5]},f.obs(2)]);
   assert.equal(f.root.children[0],a);assert.equal(a.style.left,'40%');assert.equal(a.style.color,trackColor(1));
   f.overlay.render([{...f.obs(1),bbox:[-.1,.9,.3,.3]}]);
@@ -25,7 +25,7 @@ test('boxes move by normalized coordinates, retain nodes and distinct ID colors,
 });
 test('overlay expires each observation independently even if inference stalls; clear cancels timers',t=>{
   const f=fixture(t);f.overlay.render([f.obs(1,1400),f.obs(2)]);f.tick(100);
-  assert.equal(f.root.children.length,1);assert.equal(f.root.children[0].children[0].textContent,'Persona #2');
+  assert.equal(f.root.children.length,1);assert.equal(f.root.children[0].children[0].textContent,'Persona · ID 2');
   f.tick(1400);assert.equal(f.root.children.length,0);
   f.overlay.render([f.obs(3)]);f.overlay.clear();f.tick(5000);assert.equal(f.root.children.length,0);
 });
@@ -75,8 +75,9 @@ test('horizontal label estimates include padding and gap; oversized labels hide 
   f.overlay.render([{...f.obs(1),bbox:[0,0,.1,.5]},{...f.obs(2),bbox:[.31,0,.1,.5]}]);
   const entries=[...f.overlay.nodes.values()],rects=entries.map(e=>labelRect(e,f.root,9.5,20));
   assert.ok(entries.every(e=>!e.label.hidden));assert.ok(Math.abs(rects[0].y-rects[1].y)>=24);
-  f.root.clientWidth=100;f.overlay.layoutLabels();assert.ok(entries.every(e=>e.label.hidden));assert.equal(f.root.children.length,2);
-  f.root.clientWidth=101;f.overlay.layoutLabels();assert.ok(entries.every(e=>!e.label.hidden));f.overlay.clear();
+  const labelWidth=Math.ceil(entries[0].label.textContent.length*9.5+6);
+  f.root.clientWidth=labelWidth-1;f.overlay.layoutLabels();assert.ok(entries.every(e=>e.label.hidden));assert.equal(f.root.children.length,2);
+  f.root.clientWidth=labelWidth;f.overlay.layoutLabels();assert.ok(entries.every(e=>!e.label.hidden));f.overlay.clear();
 });
 test('invalid or unavailable reservations fail closed and recover at the next layout',t=>{
   let reserved=NaN;
@@ -91,7 +92,7 @@ test('bitmap annotations retain ID colors, separate labels, clip boxes and omit 
   const obs=id=>({trackId:id,class:'person',bbox:[-.1,.9,.3,.3],ageMs:0,confirmed:true});
   drawTrackingAnnotations(c,320,180,[obs(2),{...obs(1),confirmed:false},{...obs(3),ageMs:1400},{...obs(4),class:'scooter'},{...obs(5),bbox:[2,0,.1,.2]}],100);
   assert.equal(boxes.length,2);assert.equal(labels.length,2);
-  assert.deepEqual(labels.map(label=>label.text),['Persona #1','Persona #2']);
+  assert.deepEqual(labels.map(label=>label.text),['Persona · ID 1','Persona · ID 2']);
   assert.deepEqual(boxes.map(box=>box.color),[trackColor(1),trackColor(2)]);
   assert.deepEqual(boxes[0].dash,[4,3]);assert.deepEqual(boxes[1].dash,[]);
   assert.equal(boxes[0].rect[0],0);assert.ok(boxes[0].rect[1]+boxes[0].rect[3]<=180);

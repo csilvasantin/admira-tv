@@ -16,7 +16,7 @@ export function drawTrackingAnnotations(context,width,height,observations,elapse
   context.save();context.font='bold 12px monospace';context.textAlign='left';context.textBaseline='middle';context.lineWidth=2;
   for(const o of [...observations].sort((a,b)=>a.trackId-b.trackId)){
     const rect=observedRect(o,elapsed);if(!rect)continue;
-    const {left,top,right,bottom}=rect,color=trackColor(o.trackId),text=`${CLASSES[o.class].label} #${o.trackId}`;
+    const {left,top,right,bottom}=rect,color=trackColor(o.trackId),text=`${CLASSES[o.class].label} · ID ${o.trackId}`;
     context.strokeStyle=color;context.setLineDash(!o.confirmed||o.uncertain?[4,3]:[]);
     context.strokeRect(left*width,top*height,(right-left)*width,(bottom-top)*height);
     const w=Math.ceil(context.measureText(text).width+6);
@@ -57,8 +57,8 @@ export class TrackingOverlay{
       const {box,label}=entry;
       Object.assign(box.style,{left:`${left*100}%`,top:`${top*100}%`,width:`${(right-left)*100}%`,height:`${(bottom-top)*100}%`,color:trackColor(o.trackId)});
       box.classList.toggle('uncertain',!o.confirmed||o.uncertain);
-      box.title=`${CLASSES[o.class].label} #${o.trackId}${!o.confirmed?' · confirmando':o.uncertain?' · continuidad breve':''}`;
-      label.textContent=`${CLASSES[o.class].label} #${o.trackId}`;
+      box.title=`Trayectoria ${o.trackId} · ${CLASSES[o.class].label} · identificador local, no total de pasos${!o.confirmed?' · confirmando':o.uncertain?' · continuidad breve':''}`;
+      label.textContent=`${CLASSES[o.class].label} · ID ${o.trackId}`;
       entry.anchor=[left,top];
       entry.until=now+PRESENCE_GRACE-o.ageMs;
     }

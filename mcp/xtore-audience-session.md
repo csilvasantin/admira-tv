@@ -127,3 +127,7 @@ No requiere herramientas MCP nuevas: consume los eventos existentes `playback`, 
 El recorte original se envía desde el inicio solicitado del análisis, antes de esperar el modelo. La preparación se divide en descarga medida (fase 4/5, máximo 180 s) y calentamiento del motor (fase 5/5, máximo 45 s). Los metadatos de trayectorias solo nacen de inferencias reales; la cámara de recuadros permanece en espera hasta entonces. Pausa, desconexión, pérdida de fuente o calibración cancelan el envío. Se mantienen los TTL de cámara/tráfico y el origen de captura; no se concede ni persiste permiso de captura. Recargar el analizador crea una sesión nueva, requiere volver a compartir Digital Twin 360 y recupera el encuadre compatible.
 
 [Guía animada de arranque](https://admira.tv/apps/video/xtore-camara-arranque.mp4), no grabación real.
+
+### Barra de sesión y etiquetas de trayectoria
+
+El HUD del Xtanco enlazado se titula Pasos de sesión / Session passages. Usa un único snapshot validado para counts.person, car, motorcycle y bicycle; tras caducar, las cuatro cifras son —, nunca un cero inventado. En otras tiendas mantiene el aforo físico sin columnas de vehículos. Las etiquetas de vídeo dicen Persona · ID N: trackId es secuencial entre categorías, no total, identidad ni personas únicas. El contador de pasos solo incluye trayectorias confirmadas y con desplazamiento; Reset conserva la secuencia de IDs.
