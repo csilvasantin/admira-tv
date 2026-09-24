@@ -39,6 +39,21 @@ export async function onRequest({request,env}){
       const params=new URL(request.url).searchParams;
       const from=Number(params.get('from')??now-31*DAY),to=Number(params.get('to')??now+60000);
       if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<0||to<=from||to-from>32*DAY)return json({ok:false,error:'invalid_range'},400);
+      if(params.get('view')==='events'){
+        const kind=params.get('kind'),source=params.get('source');
+        if(kind!=null&&!KINDS.has(kind))return json({ok:false,error:'invalid_kind'},400);
+        if(source!=null&&!['detector','manual'].includes(source))return json({ok:false,error:'invalid_source'},400);
+        const limit=params.has('limit')?Number(params.get('limit')):100,offset=params.has('offset')?Number(params.get('offset')):0;
+        if(!Number.isSafeInteger(limit)||limit<1||limit>200||!Number.isSafeInteger(offset)||offset<0||offset>100000)return json({ok:false,error:'invalid_page'},400);
+        const clauses=[];const binds=[from,to];
+        if(kind){clauses.push('kind = ?');binds.push(kind);}
+        if(source){clauses.push('source = ?');binds.push(source);}
+        const filter=clauses.length?` AND ${clauses.join(' AND ')}`:'';
+        const counted=await db.prepare(`SELECT COUNT(*) AS total FROM xtore_passages WHERE at >= ? AND at < ?${filter}`).bind(...binds).all();
+        const total=Number(counted.results?.[0]?.total||0);
+        const {results}=await db.prepare(`SELECT id, kind, at, source FROM xtore_passages WHERE at >= ? AND at < ?${filter} ORDER BY at DESC, id ASC LIMIT ? OFFSET ?`).bind(...binds,limit,offset).all();
+        return json({ok:true,camera:'puerta-cam',timezone:'Europe/Madrid',kind:kind||null,from,to,total,limit,offset,events:results||[]});
+      }
       const {results}=await db.prepare('SELECT CAST(at / 3600000 AS INTEGER) * 3600000 AS hour, kind, source, COUNT(*) AS total FROM xtore_passages WHERE at >= ? AND at < ? GROUP BY hour, kind, source ORDER BY hour DESC').bind(from,to).all();
       return json({ok:true,camera:'puerta-cam',timezone:'Europe/Madrid',rows:results});
     }

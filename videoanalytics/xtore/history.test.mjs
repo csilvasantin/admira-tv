@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {HistoryClient,dayKey} from './history.mjs';
+import {HistoryClient,dayKey,passTime} from './history.mjs';
 import {onRequest} from '../../functions/videoanalytics/api/history.js';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,mkdtempSync,rmSync} from 'node:fs';
@@ -126,4 +126,40 @@ test('paired history exposes only saved buckets, original read time and explicit
   now+=300000;assert.equal(historySnapshot(client).updatedAt,snapshot.updatedAt);
   fail=true;await client.sync();const denied=historySnapshot(client);
   assert.equal(denied.loaded,false);assert.deepEqual(denied.rows,[]);assert.equal(denied.updatedAt,null);assert.equal(denied.from,null);assert.equal(denied.error,'access');
+});
+function eventsRequest(env,query=''){
+  return onRequest({env,request:new Request(`https://admira.tv/videoanalytics/api/history?view=events${query}`,{
+    method:'GET',headers:{Cookie:'__Host-atv_session=fixture'}})});
+}
+test('event detail lists each passage with its time and never returns images',async()=>{
+  const d=database(),env=envFor(d.db,{email:'admin@example.test',role:'admin'});
+  const at=Date.parse('2026-09-24T10:15:07Z');
+  const cars=[event({kind:'car',at}),event({kind:'car',at:at+1000}),event({kind:'car',at:at+2000,source:'manual'})];
+  try{
+    assert.equal((await eventsRequest(envFor(d.db,{session:false}))).status,401);
+    assert.equal((await eventsRequest(envFor(d.db,{email:'viewer@example.test'}))).status,403);
+    await request(env,{events:[...cars,event({kind:'person',at:at+500})]});
+    const page=await (await eventsRequest(env,`&kind=car&source=detector&from=${at-1000}&to=${at+10000}&limit=2&offset=0`)).json();
+    assert.equal(page.total,2);assert.equal(page.events.length,2);assert.equal(page.camera,'puerta-cam');
+    assert.deepEqual(Object.keys(page.events[0]).sort(),['at','id','kind','source']);
+    assert.equal(page.events.every(row=>row.kind==='car'&&row.source==='detector'&&!('image' in row)),true);
+    assert.equal((await eventsRequest(env,'&kind=truck')).status,400);
+    assert.equal((await eventsRequest(env,'&source=camera')).status,400);
+    assert.equal((await eventsRequest(env,'&limit=0')).status,400);
+    const all=await (await request(env)).json();
+    assert.equal(all.rows.reduce((sum,row)=>sum+row.total,0),4);
+  }finally{d.close();}
+});
+test('proof of pass loads every detector car and the row count matches the card',async()=>{
+  const from=Date.parse('2026-09-24T00:00:00Z'),to=from+86400000;
+  const cars=[{id:crypto.randomUUID(),kind:'car',at:from+1000,source:'detector'},{id:crypto.randomUUID(),kind:'car',at:from+61000,source:'detector'},{id:crypto.randomUUID(),kind:'car',at:from+120000,source:'detector'}];
+  const client=new HistoryClient({fetchImpl:async url=>{
+    const query=new URL(url,'https://admira.tv').searchParams;
+    const matched=cars.filter(row=>row.kind===query.get('kind')&&row.source===query.get('source'));
+    const offset=Number(query.get('offset')||0),limit=Number(query.get('limit')||100);
+    return Response.json({ok:true,total:matched.length,events:matched.slice(offset,offset+limit)});
+  }});
+  const proof=await client.loadProof({from,to,kind:'car',source:'detector'});
+  assert.equal(proof.total,3);assert.equal(proof.events.length,proof.total);
+  assert.match(passTime(cars[0].at),/\d{2}:\d{2}:\d{2}/);
 });

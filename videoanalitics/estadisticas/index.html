@@ -23,14 +23,15 @@
 <p id="status" role="status" aria-live="polite">Consultando registros guardados…</p>
 <div id="login" class="notice" hidden><p>Necesitas una sesión de Admira.tv con acceso de administrador para guardar y consultar. La sesión de Digital Twin 360 es independiente.</p><a class="button" href="./acceso/" target="_blank" rel="noopener noreferrer">Iniciar sesión en Admira.tv ↗</a><p>Conserva abierta la pestaña del analizador. Después de identificarte, vuelve a ella y pulsa «Actualizar / reintentar» en Histórico para enviar los pasos pendientes.</p></div>
 <section class="totals" aria-label="Pasos confirmados en la franja">
-<article class="people"><h2>Personas que han pasado</h2><strong id="total-person">—</strong><p>Pasos confirmados por el detector</p></article>
-<article><h2>Coches</h2><strong id="total-car">—</strong></article>
-<article><h2>Motos</h2><strong id="total-motorcycle">—</strong></article>
-<article><h2>Bicis</h2><strong id="total-bicycle">—</strong></article>
+<article class="people" data-kind="person"><h2>Personas que han pasado</h2><strong id="total-person">—</strong><p>Pasos confirmados por el detector</p></article>
+<article data-kind="car"><h2>Coches</h2><strong id="total-car">—</strong></article>
+<article data-kind="motorcycle"><h2>Motos</h2><strong id="total-motorcycle">—</strong></article>
+<article data-kind="bicycle"><h2>Bicis</h2><strong id="total-bicycle">—</strong></article>
 </section>
 <p id="manual" class="muted">Observaciones manuales: —</p>
 <section class="table-panel"><h2>Por hora</h2><p id="empty">Sin datos confirmados todavía.</p>
 <div class="table-scroll"><table><caption>Registros guardados en la franja seleccionada</caption><thead><tr><th scope="col">Hora local</th><th scope="col">Personas</th><th scope="col">Coches</th><th scope="col">Motos</th><th scope="col">Bicis</th><th scope="col">Manual</th></tr></thead><tbody id="rows"></tbody></table></div></section>
+<section id="proof" class="table-panel"><h2>Proof of pass</h2><p class="small">Lista de eventos con hora de Madrid. Sin fotos. Pulsa una tarjeta, por ejemplo Coches.</p><p id="proof-status" role="status">Ninguna clase seleccionada.</p><ol id="proof-rows"></ol></section>
 <aside class="notes"><h2>Qué se guarda</h2><p>Cada paso confirmado conserva su categoría y fecha en el servidor. Reset del analizador reinicia la sesión, pero no borra este histórico. No se guardan fotos, vídeo, edad, género ni identidad.</p><p>Son pasos, no personas únicas ni entradas verificadas en la tienda. Solo se registra mientras el analizador recibe y procesa la cámara. Los intervalos sin registros no demuestran que no pasara nadie; la hora actual puede estar incompleta. Las observaciones manuales, incluidos patinetes, aparecen separadas.</p><p>Se consulta de nuevo cada 30 segundos mientras esta página está visible. El analizador muestra cuántos pasos siguen pendientes de guardar: no lo cierres hasta que el servidor los confirme.</p><a href="/help/#xtore-estadisticas">Guía paso a paso ↗</a></aside>
 </main>
 </body></html>

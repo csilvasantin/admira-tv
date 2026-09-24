@@ -2,13 +2,16 @@ import {CLASSES} from './core.mjs';
 const API='/videoanalytics/api/history';
 const dayFormat=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'});
 const hourFormat=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit',hour12:false});
+const passFormat=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
 export const dayKey=value=>dayFormat.format(new Date(value));
+export const passTime=value=>passFormat.format(new Date(value));
+const eventKeys=event=>event&&['id','kind','at','source'].every(key=>key in event)&&Object.keys(event).every(key=>['id','kind','at','source'].includes(key))&&typeof event.id==='string'&&Object.hasOwn(CLASSES,event.kind)&&['detector','manual'].includes(event.source)&&Number.isSafeInteger(event.at);
 
 // This is an in-flight outbox, NOT a local substitute for persistent history.
 // Only acknowledged server rows are displayed as saved. No browser storage.
 export class HistoryClient{
   constructor({fetchImpl=(...args)=>fetch(...args),now=()=>Date.now(),id=()=>crypto.randomUUID(),onState=()=>{}}={}){
-    Object.assign(this,{fetchImpl,now,id,onState});this.pending=[];this.rows=[];this.busy=false;this.saved=0;this.error=null;this.lost=0;this.expired=0;this.loaded=false;this.requested=false;this.updatedAt=null;this.from=null;this.to=null;
+    Object.assign(this,{fetchImpl,now,id,onState});this.pending=[];this.rows=[];this.proof={kind:'',total:0,events:[]};this.busy=false;this.saved=0;this.error=null;this.lost=0;this.expired=0;this.loaded=false;this.requested=false;this.updatedAt=null;this.from=null;this.to=null;
   }
   add(events,source='detector'){
     for(const event of events){
@@ -51,6 +54,19 @@ export class HistoryClient{
       const repeat=this.requested&&!this.error;this.requested=false;
       if(repeat)return this.sync();
     }
+  }
+  async loadProof({from,to,kind,source='detector'}){
+    if(!Object.hasOwn(CLASSES,kind)||!['detector','manual'].includes(source))throw new Error('invalid_kind');
+    const events=[];let offset=0,total=0;
+    do{
+      const data=await this.request(`${API}?view=events&from=${from}&to=${to}&kind=${encodeURIComponent(kind)}&source=${source}&limit=200&offset=${offset}`);
+      if(!Number.isSafeInteger(data.total)||data.total<0||!Array.isArray(data.events)||data.events.length>200||data.events.some(event=>!eventKeys(event)||event.kind!==kind||event.source!==source))throw new Error('invalid_history');
+      total=data.total;events.push(...data.events);offset+=data.events.length;
+      if(!data.events.length)break;
+    }while(events.length<total&&events.length<2000);
+    this.proof={kind,source,total,events};
+    this.onState(this);
+    return this.proof;
   }
 }
 // Only persisted aggregates cross the paired-window bridge; the outbox never does.

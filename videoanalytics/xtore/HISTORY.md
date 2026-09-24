@@ -22,6 +22,8 @@ seguridad sigue fuera de este módulo y no está activada.
   eventos anteriores. Inserciones parametrizadas en batch D1 atómico.
 - GET retorna agregados por hora UTC, clase y origen. El cliente presenta días y
   horas Europe/Madrid. Rango máximo 32 días; la UI consulta los últimos 31.
+- `GET ?view=events` devuelve cada paso `{id,kind,at,source}`, filtrable por `kind`
+  y el mismo rango, con `limit`/`offset`. No añade fotos ni cambia el POST.
 - POST admite hasta 100 eventos / 32 KiB, timestamps hasta 7 días atrás y 60 s
   futuros. Scooters solo manuales hasta validar un detector propio.
 - Respuestas privadas `no-store`; no se publican imágenes ni datos en Pixeria.
