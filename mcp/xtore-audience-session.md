@@ -182,3 +182,16 @@ No hay control de horario de captura programado: los selectores consultan datos 
 Verificado en navegador integrado: Xtanco localhost8772 abre analizador localhost8766 en pestaña listable, estado Gemelo conectado, y su enlace abre Digital Twin 360 en nueva pestaña con Store/Puerta Cam visibles. No se inició una captura nueva ni se validaron fotogramas nuevos en esta prueba. 337 pruebas XpaceOS y305 analizador, incluyendo pérdida de opener, límites de origen y error de captura recuperable.
 
 [Help](https://admira.tv/help/#xtore-conectar-pestanas) · [Guía animada](https://admira.tv/apps/video/xtore-conectar-pestanas.mp4).
+
+
+## Controles sintéticos por categoría (Yokup #298)
+
+Impacts/CPM → Instore expone botones nativos −/+ por categoría. `adjustAvatarAudience(kind,key,delta)` valida género man/woman/unknown, edad under18/18to60/over60/unknown, delta±1, partida activa, tienda abierta, límite100 y existencia de un miembro al restar. No es una nueva tool MCP ni un endpoint de audiencia real.
+
+Cada alta llama al spawner sintético con un perfil explícito, creado antes de elegir producto/métricas. El atributo no elegido es unknown. El perfil infantil explícito no añade acompañantes automáticamente; se conserva la regla habitual de familias para el resto del spawner. Las bajas eliminan un miembro coincidente y limpian checkout y referencias familiares sin simular compra ni consumir una llegada de fidelización.
+
+La edición fija `G.manualAudienceTarget` y `G.manualAudienceProfiles` (solo pares de atributos). El reconciliador repone perfiles faltantes respetando el total, sin fijar identidades ni inmovilizar avatares. `/resetaudiencia N|auto` descarta la composición. El botón de automático invoca la misma ruta de auto; los modos de cámara/people existentes liberan el override manual. No se mutan snapshots, histórico, cámara, direcciones, TTL ni DooH.
+
+Teclado y etiquetas accesibles; − desactivado en0 y+ en100. El refresco conserva foco y no reemplaza el botón mientras se está pulsando. La UI informa si no se puede colocar un visitante.343 pruebas completas y4 de UI finales; navegador verifica altas, bajas, doble distribución y ausencia de mezcla con DooH.
+
+[Help](https://admira.tv/help/#xtore-categorias) · [Guía animada](https://admira.tv/apps/video/xtanco-categorias-interactivas.mp4).

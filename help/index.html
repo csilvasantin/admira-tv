@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=24.09.2026.r10.1333"></script>
+<script src="/auth-gate.js?v=24.09.2026.r11.1339"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r10.1333">
+  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r11.1339">
 </head>
 <body>
-<script src="/admira-nav.js?v=24.09.2026.r10.1333" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=24.09.2026.r10.1333" defer></script>
+<script src="/admira-nav.js?v=24.09.2026.r11.1339" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=24.09.2026.r11.1339" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -44,6 +44,7 @@
   <nav class="toc">
     <a href="#xtore-demo-pantallas">Xtanco / demo en cuatro pantallas</a>
     <a href="#xtore-audiencia">Audiencia de sesión / XpaceOS y Pixeria</a>
+    <a href="#xtore-categorias">Instore · añadir y quitar por categoría</a>
     <a href="#xtore-conectar-pestanas">Xtanco · conectar Digital Twin por pestañas</a>
     <a href="#xtore-dooh">DooH · cámara exterior por día y hora</a>
     <a href="#xtore-visitas">Xtanco · visitas con objetivos</a>
@@ -75,6 +76,12 @@
 <p>Si no llegan datos recientes, las pantallas muestran espera o ausencia de señal. El vídeo y las detecciones caducan en 1,5 s y los totales en 4 s sin latido. No vuelven a publicidad simulada mientras la demo está activa. Activar la demo no concede permisos de cámara, no abre automáticamente Puerta Cam y no publica ni graba la señal. Tras recargar, la demo vuelve a estar desactivada.</p>
 <p><a href="/apps/video/xtore-camara-arranque.mp4">Minitutorial · cámara durante el arranque (animación, 15 s)</a></p>
 <p><a href="/apps/video/xtanco-demo-pantallas.mp4">Minitutorial animado · cámara y cuatro pantallas (15 s)</a> · animación explicativa, no grabación de pantalla.</p></section>
+  <section id="xtore-categorias"><h2>Instore · gestionar visitantes sintéticos por categoría</h2>
+<p>Abre <strong>Impacts · CPM → Instore</strong> desde Audiencia en modo avanzado o con <code>/impactos</code>. Cada categoría de género y edad tiene <strong>− a la izquierda</strong> y <strong>+ a la derecha</strong>.</p>
+<ul><li><strong>+</strong> añade exactamente un visitante de esa categoría, con su personaje en la tienda. El atributo que no has elegido empieza en Sin dato: + Mujeres añade una mujer con edad sin especificar; + Séniores añade una persona sénior con género sin especificar.</li><li><strong>−</strong> quita inmediatamente un visitante que pertenezca a esa categoría, sin generar una compra. Ambas distribuciones cuentan a los mismos visitantes: quitar una persona también reduce su otra categoría.</li><li>Al editar pasas a <strong>control manual</strong>: se mantiene el total y la composición elegida, reponiendo perfiles cuando terminan sus visitas. Los personajes siguen mirando productos, recibiendo atención y saliendo.</li><li><strong>Volver a audiencia automática</strong> devuelve el control al modo de cámara/juego seleccionado, como <code>/resetaudiencia auto</code>.</li></ul>
+<p>Resta desactivada en cero; suma desactivada con 100 visitantes. Requiere tienda abierta y espacio accesible para colocar al visitante. Sin espacio no se aumenta artificialmente el contador. La configuración se conserva con el guardado normal de la partida; una partida nueva empieza de nuevo. Un <code>/resetaudiencia N</code> posterior sustituye la composición por un objetivo de aforo total.</p>
+<p><strong>Simulación:</strong> los atributos son asignados a personajes, no deducidos de la cámara. Los pasos reales de Puerta Cam, las categorías y el histórico DooH no cambian. Los menores añadidos manualmente pueden representarse sin añadir automáticamente otro acompañante: cada pulsación sigue siendo un solo visitante.</p>
+<p><a href="/apps/video/xtanco-categorias-interactivas.mp4">Minitutorial · categorías interactivas (animación, 15 s)</a>. Animación explicativa, no grabación de pantalla.</p></section>
   <section id="xtore-conectar-pestanas"><h2>Xtanco · conectar player, analizador y Digital Twin 360</h2>
 <ol><li>En el modo experto del Xtanco, pulsa <strong>Player y cámara</strong>. Abre <strong>Digital Twin 360</strong> desde ese panel: Store → Entrada → Puerta Cam → Ver stream.</li>
 <li>En el panel del Xtanco pulsa <strong>Conectar player y cámara</strong>. El analizador se solicita en una pestaña normal; la sesión y el origen del enlace se conservan. Si ya está enlazado, se reutiliza esa pestaña.</li>

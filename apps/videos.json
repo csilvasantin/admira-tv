@@ -142,5 +142,9 @@
   "xtore-conectar-pestanas": {
     "src": "/apps/video/xtore-conectar-pestanas.mp4",
     "title": "Xtore · conectar por pestañas (animación, 15 s)"
+  },
+  "xtanco-categorias-interactivas": {
+    "src": "/apps/video/xtanco-categorias-interactivas.mp4",
+    "title": "Xtanco · categorías interactivas (animación, 15 s)"
   }
 }
