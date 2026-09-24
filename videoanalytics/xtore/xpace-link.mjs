@@ -4,11 +4,11 @@ const ORIGINS=new Set(['https://www.xpaceos.com','https://xpaceos.com']);
 const local=origin=>/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
 export function allowedTwinOrigin(origin,own){return ORIGINS.has(origin)||(local(own)&&local(origin));}
 // Only the explicitly paired window receives data, whether in a tab or popup.
-export function installXpaceLink({window,document,onChange=()=>{}}){
+export function installXpaceLink({window,document,onChange=()=>{},onHistoryRequest=()=>{}}){
   const status=document.getElementById('xpace-status');
   const qs=new URLSearchParams(window.location?.search||'');
   let peer=null,origin='',session='',ready=false,seq=0,media=null,cameraAt=0,busy=false;
-  let cameraGeneration=0,lastSend=0,lastHeartbeat=0,statistics=null,audience=null;
+  let cameraGeneration=0,lastSend=0,lastHeartbeat=0,statistics=null,audience=null,history=null,lastHistoryRequest=-Infinity;
   const requested=qs.get('twinOrigin'),token=qs.get('twinSession');
   if(window.opener&&allowedTwinOrigin(requested,window.location?.origin||'https://admira.tv')&&/^[a-f0-9-]{36}$/.test(token||'')){
     peer=window.opener;origin=requested;session=token;
@@ -40,9 +40,10 @@ export function installXpaceLink({window,document,onChange=()=>{}}){
     if(d.event==='hello'||d.event==='ready'){
       ready=true;lastHeartbeat=Date.now();
       status.textContent='Gemelo conectado · player interior enlazado. Cámara y trayectorias compartidas solo entre estas ventanas.';
-      send('ready');reportStatistics();
+      send('ready');reportStatistics();if(history)send('history',{history});
       onChange();
     }else if(d.event==='heartbeat'){lastHeartbeat=Date.now();}
+    else if(d.event==='history-request'&&backgroundActive()&&Date.now()-lastHistoryRequest>=1500){lastHistoryRequest=Date.now();onHistoryRequest();}
     else if(d.event==='disconnect'){ready=false;media=null;resetCamera();status.textContent='Gemelo desconectado.';onChange();}
   });
   let interval=null;
@@ -62,6 +63,7 @@ export function installXpaceLink({window,document,onChange=()=>{}}){
   return {
     get backgroundActive(){return backgroundActive();},
     get cameraOnly(){return !!peer;},
+    history(value){history=value;send('history',{history});},
     media(value){media=value;},
     audience(value){audience=value;},
     statistics(value,sessionAudience=null){

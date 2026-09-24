@@ -112,3 +112,18 @@ test('Xtore CSP permits its own private API while retaining strict scripts and o
   const headers=readFileSync(new URL('../../_headers',import.meta.url),'utf8').split('/videoanalytics/xtore/*')[1];
   assert.match(headers,/connect-src 'self'/);assert.doesNotMatch(headers,/unsafe-eval/);
 });
+
+test('paired history exposes only saved buckets, original read time and explicit unsaved state',async()=>{
+  const {historySnapshot}=await import('./history.mjs');
+  let now=Date.parse('2026-09-24T10:30:00Z'),fail=false;
+  const hour=Math.floor(now/3600000)*3600000;
+  const client=new HistoryClient({now:()=>now,fetchImpl:async()=>fail?new Response('',{status:403}):Response.json({ok:true,rows:[{hour,kind:'person',source:'detector',total:9}]})});
+  await client.sync();client.add([{class:'person'}]);
+  const snapshot=historySnapshot(client);
+  assert.equal(snapshot.rows[0].total,9);assert.equal(snapshot.pending,1);assert.equal(snapshot.updatedAt,now);
+  assert.equal(snapshot.from,now-31*86400000);assert.equal(snapshot.to,now+60000);
+  assert.equal(JSON.stringify(snapshot).includes(client.pending[0].id),false);
+  now+=300000;assert.equal(historySnapshot(client).updatedAt,snapshot.updatedAt);
+  fail=true;await client.sync();const denied=historySnapshot(client);
+  assert.equal(denied.loaded,false);assert.deepEqual(denied.rows,[]);assert.equal(denied.updatedAt,null);assert.equal(denied.from,null);assert.equal(denied.error,'access');
+});

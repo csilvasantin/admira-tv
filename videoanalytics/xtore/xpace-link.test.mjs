@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {installXpaceLink,allowedTwinOrigin} from './xpace-link.mjs';
-function fixture(t){
+function fixture(t,options={}){
  t.mock.timers.enable({apis:['setInterval','Date'],now:10000});
  const listeners={},nodes=new Map(),sent=[],peer={closed:false,postMessage:(d,o,tr)=>sent.push({d,o,tr})};
  const node=()=>({textContent:'',addEventListener(type,fn){this[type]=fn;}});
  const document={hidden:false,getElementById(id){if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);},addEventListener(type,fn){listeners['doc:'+type]=fn;}};
  const window={location:{origin:'https://admira.tv',search:'?twinOrigin=https%3A%2F%2Fwww.xpaceos.com&twinSession=00000000-0000-0000-0000-000000000001'},opener:peer,addEventListener(type,fn){listeners[type]=fn;}};
- const link=installXpaceLink({window,document});
+ const link=installXpaceLink({window,document,...options});
  const receive=(data,origin='https://www.xpaceos.com',source=peer)=>listeners.message({source,origin,data:{source:'xpace-xtore-twin',screen:'xtore-virtual-zapatillas',session:'00000000-0000-0000-0000-000000000001',...data}});
  return {link,window,document,listeners,sent,receive,peer};
 }
@@ -138,4 +138,17 @@ test('hidden traffic is limited to a living paired heartbeat and expires rather 
  assert.equal(f.link.traffic([],0),false);f.receive({event:'ready'});
  assert.equal(f.link.traffic([],1500),false);assert.equal(f.link.traffic([],0),true);
  f.receive({event:'disconnect'});assert.equal(f.link.traffic([],0),false);
+});
+
+
+test('history travels only to the paired ready window; authenticated requests are rate limited',t=>{
+ let requests=0;const f=fixture(t,{onHistoryRequest:()=>requests++});
+ f.link.history({rows:[],loaded:false});assert.equal(f.sent.some(x=>x.d.event==='history'),false);
+ f.receive({event:'history-request'});assert.equal(requests,0);
+ f.receive({event:'ready'});assert.equal(f.sent.at(-1).d.event,'history');
+ f.receive({event:'history-request'},'https://evil.test');f.receive({event:'history-request'},'https://www.xpaceos.com',{});assert.equal(requests,0);
+ f.receive({event:'history-request'});f.receive({event:'history-request'});assert.equal(requests,1);
+ t.mock.timers.tick(1500);f.receive({event:'history-request'});assert.equal(requests,2);
+ f.link.history({rows:[],loaded:false,error:'access'});assert.equal(f.sent.at(-1).d.history.error,'access');
+ f.receive({event:'disconnect'});f.receive({event:'history-request'});assert.equal(requests,2);
 });

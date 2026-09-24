@@ -155,3 +155,19 @@ La navegación conserva durezas y radio corporal. Ante estancamiento recalcula u
 Un layout cerrado sigue sin ruta: no se concede permiso de atravesar sólidos. En manual/Real el reconciliador conserva el objetivo reponiendo bajas, aunque cada individuo finalice su visita. Contrato de mensajes y herramientas MCP sin cambios.
 
 Pruebas: entradas/salidas mixtas, diez llegadas coincidentes,24 visitas completas sin saltos ni segmentos dentro de muebles, tres destinos distintos con pausas acotadas, layout imposible sin venta y reducción de cámara con salida completa. [Help](https://admira.tv/help/#xtore-visitas) · [Guía animada](https://admira.tv/apps/video/xtanco-visitas-con-objetivo.mp4).
+
+
+## DooH real por día y hora (Yokup #286)
+
+Implementado en XpaceOS → Audiencia → DooH. El histórico utiliza `/videoanalytics/api/history` de Admira.tv, con sesión autenticada y autorización administrativa existentes. El analizador escribe eventos idempotentes al confirmar pasos; XpaceOS no escribe ni estima registros. La consulta abarca los últimos 31 días reales; el juego y `/resetaudiencia` quedan fuera de esta fuente. No se incorpora una tool MCP remota nueva: este documento describe el contrato de ventanas y la API privada ya existente.
+
+- Ventana XpaceOS emparejada → `event: "history-request"` (mismo `source: "xpace-xtore-twin"`, screen, session y origen del enlace). El analizador comprueba ventana exacta, origen y token, conexión viva y límite de una solicitud cada 1500 ms. Consulta autenticada de mismo origen, nunca CORS abierto ni claves en XpaceOS.
+- Analizador → `event: "history"`, dentro del sobre secuenciado y con timestamp existente. Campo `history`: `{schema:"admira.dooh-history.v1", site:"admira-xperience-santa-rosa-19", source:"puerta-cam", timezone:"Europe/Madrid", loaded, busy, error, updatedAt, from, to, pending, lost, expired, rows}`.
+- `updatedAt`, `from`, `to`: milisegundos Unix de la última lectura exitosa y su rango real; nulos antes de cargar o tras perder permisos. No se renueva la fecha por enviar un heartbeat. `rows`: máximo 8000 agregados `{hour,kind,source,total}`, con hour en inicio de hora UTC, kind en person/car/motorcycle/bicycle/scooter y source detector/manual. No salen IDs de eventos, imágenes ni la cola pendiente. Los scooters requieren source manual.
+- Solo los agregados persistidos se muestran como guardados; `pending`, `lost`, `expired` comunican registros sin confirmar o que no pudieron guardarse. 401/403 vacían filas y sellos temporales; un error temporal conserva la última lectura con fecha y aviso de fallo, nunca como dato recién leído.
+- El receptor valida esquema, sitio/fuente, rangos, horas enteras, tipos, totales, duplicados y ventana/origen/sesión/secuencia. Limpia al desconectar y oculta datos si el par no responde durante 4 s. La UI conserva filtros entre actualizaciones y solicita refresco cada 30 s mientras se muestra DooH.
+- Agrupación por fecha/hora de Europe/Madrid, rango `[Desde,Hasta)`, Hasta 24:00 para incluir el día completo. La hora repetida de otoño suma sus dos buckets conservando filas UTC distintas. La hora inexistente de primavera no recibe ceros fabricados. Manual separado de detección automática.
+
+No hay control de horario de captura programado: los selectores consultan datos ya registrados. El operador debe mantener el detector activo. No se certifica cobertura continua ni conteo de personas únicas, atención o aforo físico. Una hora con registros puede ser parcial; sin registros se muestra —. El backend conserva datos aunque el selector actualmente consulte 31 días. Pixeria no se anuncia como receptor del histórico hasta implementar su propio acceso autenticado.
+
+[Help](https://admira.tv/help/#xtore-dooh) · [Guía animada](https://admira.tv/apps/video/xtore-dooh-dia-hora.mp4).

@@ -8,7 +8,7 @@ export const dayKey=value=>dayFormat.format(new Date(value));
 // Only acknowledged server rows are displayed as saved. No browser storage.
 export class HistoryClient{
   constructor({fetchImpl=(...args)=>fetch(...args),now=()=>Date.now(),id=()=>crypto.randomUUID(),onState=()=>{}}={}){
-    Object.assign(this,{fetchImpl,now,id,onState});this.pending=[];this.rows=[];this.busy=false;this.saved=0;this.error=null;this.lost=0;this.expired=0;this.loaded=false;this.requested=false;
+    Object.assign(this,{fetchImpl,now,id,onState});this.pending=[];this.rows=[];this.busy=false;this.saved=0;this.error=null;this.lost=0;this.expired=0;this.loaded=false;this.requested=false;this.updatedAt=null;this.from=null;this.to=null;
   }
   add(events,source='detector'){
     for(const event of events){
@@ -44,8 +44,8 @@ export class HistoryClient{
       }
       if(sent)data=await this.request(`${API}?from=${from}&to=${to}`);
       if(!Array.isArray(data.rows)||data.rows.length>8000||data.rows.some(r=>!Number.isSafeInteger(r.hour)||r.hour<0||!Object.hasOwn(CLASSES,r.kind)||!['detector','manual'].includes(r.source)||!Number.isSafeInteger(r.total)||r.total<0))throw new Error('invalid_history');
-      this.rows=data.rows;this.loaded=true;
-    }catch(error){this.error=error.message;if(['login','access'].includes(this.error)){this.rows=[];this.loaded=false;}}
+      this.rows=data.rows;this.loaded=true;this.updatedAt=this.now();this.from=from;this.to=to;
+    }catch(error){this.error=error.message;if(['login','access'].includes(this.error)){this.rows=[];this.loaded=false;this.updatedAt=null;this.from=null;this.to=null;}}
     finally{
       this.busy=false;this.onState(this);
       const repeat=this.requested&&!this.error;this.requested=false;
@@ -53,7 +53,14 @@ export class HistoryClient{
     }
   }
 }
-export function installHistoryUI({document,client=new HistoryClient()}){
+// Only persisted aggregates cross the paired-window bridge; the outbox never does.
+export function historySnapshot(client){
+  return {schema:'admira.dooh-history.v1',site:'admira-xperience-santa-rosa-19',source:'puerta-cam',timezone:'Europe/Madrid',
+    loaded:client.loaded,busy:client.busy,error:client.error&&(['login','access','unavailable','unconfirmed','invalid_history'].includes(client.error)?client.error:'request'),updatedAt:client.updatedAt,from:client.from,to:client.to,
+    pending:client.pending.length,lost:client.lost,expired:client.expired,
+    rows:client.rows.map(({hour,kind,source,total})=>({hour,kind,source,total}))};
+}
+export function installHistoryUI({document,client=new HistoryClient(),onState=()=>{}}){
   const $=id=>document.getElementById(id);
   const option=(value,text)=>{const e=document.createElement('option');e.value=value;e.textContent=text;return e;};
   const renderRows=()=>{
@@ -82,11 +89,11 @@ export function installHistoryUI({document,client=new HistoryClient()}){
       (client.pending.length?` ${client.pending.length} sin confirmar; no recargues antes de sincronizar.`:'')+(client.lost?` ${client.lost} eventos fuera de cola no se han enviado.`:'')+(client.expired?` ${client.expired} eventos antiguos sin confirmación: no se pueden reintentar.`:'');
     $('history-refresh').disabled=client.busy;renderRows();
   };
-  client.onState=render;
+  client.onState=()=>{render();onState(historySnapshot(client));};
   $('history-day').addEventListener('change',renderRows);
   $('history-hour').addEventListener('change',renderRows);
   $('history-refresh').addEventListener('click',()=>client.sync());
   $('history-panel').addEventListener('toggle',()=>{if($('history-panel').open)client.sync();});
-  render();
+  client.onState();
   return client;
 }

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=24.09.2026.r8.1316"></script>
+<script src="/auth-gate.js?v=24.09.2026.r9.1326"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r8.1316">
+  <link rel="stylesheet" href="/admira-frame.css?v=24.09.2026.r9.1326">
 </head>
 <body>
-<script src="/admira-nav.js?v=24.09.2026.r8.1316" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=24.09.2026.r8.1316" defer></script>
+<script src="/admira-nav.js?v=24.09.2026.r9.1326" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=24.09.2026.r9.1326" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -44,6 +44,7 @@
   <nav class="toc">
     <a href="#xtore-demo-pantallas">Xtanco / demo en cuatro pantallas</a>
     <a href="#xtore-audiencia">Audiencia de sesión / XpaceOS y Pixeria</a>
+    <a href="#xtore-dooh">DooH · cámara exterior por día y hora</a>
     <a href="#xtore-visitas">Xtanco · visitas con objetivos</a>
     <a href="#xtore-encuadres">Xtore / recuperar cámara, iPad y pantalla</a>
     <a href="#ieu-puertacam">Store / inicio de Puerta Cam (pendiente)</a>
@@ -73,6 +74,13 @@
 <p>Si no llegan datos recientes, las pantallas muestran espera o ausencia de señal. El vídeo y las detecciones caducan en 1,5 s y los totales en 4 s sin latido. No vuelven a publicidad simulada mientras la demo está activa. Activar la demo no concede permisos de cámara, no abre automáticamente Puerta Cam y no publica ni graba la señal. Tras recargar, la demo vuelve a estar desactivada.</p>
 <p><a href="/apps/video/xtore-camara-arranque.mp4">Minitutorial · cámara durante el arranque (animación, 15 s)</a></p>
 <p><a href="/apps/video/xtanco-demo-pantallas.mp4">Minitutorial animado · cámara y cuatro pantallas (15 s)</a> · animación explicativa, no grabación de pantalla.</p></section>
+  <section id="xtore-dooh"><h2>DooH · audiencia real del escaparate por día y hora</h2>
+<p>En XpaceOS, abre <strong>Modo avanzado → Audiencia → DooH</strong> (o <code>/impactos</code> en el CLI inferior). En <strong>Escaparate · pasos guardados</strong>, elige el día, Desde y Hasta y pulsa Actualizar. Por ejemplo, 10:00–12:00 incluye las horas de las 10 y las 11. El reloj es <strong>Europe/Madrid</strong>, independiente del tiempo simulado del juego.</p>
+<p>Conecta el analizador de la Xtore de Santa Rosa 19 mediante Player y cámara. Su fuente es <strong>Digital Twin 360 → Store → Entrada → Puerta Cam</strong>, encuadrando solo el vídeo de la calle. Inicia el análisis y mantén la captura y el detector activos para registrar nuevos pasos. Consulta el histórico privado con tu sesión de Admira.tv y permisos de administrador.</p>
+<p>El panel recibe los agregados ya confirmados por el servidor privado del analizador: personas, coches, motos y bicis, con desglose horario de los últimos 31 días. Las observaciones manuales, incluidos patinetes, aparecen aparte. <strong>Esta sesión</strong> mantiene los contadores actuales y las vistas de cámara; puede ir por delante del histórico mientras se confirma un envío. Las dos lecturas no se suman.</p>
+<p><strong>Sin datos inventados:</strong> el aforo virtual, <code>/resetaudiencia</code>, el calendario del juego y las estimaciones CPM no modifican DooH. Sin registros o conexión se muestra —; no significa que hayan pasado cero personas. Solo se registran los intervalos efectivamente analizados; una hora puede estar incompleta y no se extrapolan huecos. Los pasos no equivalen a personas únicas, entradas a la tienda ni miradas al escaparate. No se reconstruye información de antes de la captura.</p>
+<p>Se muestra la última lectura del servidor, los eventos sin confirmar y los errores de acceso. La consulta se refresca cada 30 segundos mientras el panel está abierto y también al guardar nuevos eventos. Al perder el enlace, el histórico deja de mostrarse; al perder permisos, se vacían sus datos. En el cambio de hora de otoño, la misma hora local puede ocupar dos filas con UTC diferente.</p>
+<p><a href="/apps/video/xtore-dooh-dia-hora.mp4">Minitutorial · DooH por día y hora (animación, 15 s)</a>. Guía animada, no grabación real de pantalla. <a href="/mcp/xtore-audience-session.md">Contrato de integración para agentes y mantenedores</a>.</p></section>
   <section id="xtore-visitas"><h2>Xtanco · visitas con un objetivo</h2>
 <p>Abre el Xtanco: el comportamiento se aplica automáticamente a los visitantes virtuales. Sus bocadillos muestran el destino, por ejemplo <b>Voy a Estantería</b>, y el paso a <b>Listo para atención</b>. En la ficha del visitante y la lista de clientes, Estado muestra el destino o lo que está mirando.</p>
 <ol><li>Entran y despejan el acceso. Las nuevas llegadas se dosifican para no acumularse en el mismo punto de la puerta; los grupos ya admitidos pueden entrar juntos.</li><li>Buscan el tipo de producto deseado, comparan o acompañan. Cada visita inspecciona entre uno y tres muebles distintos, con paradas de 2–4 segundos de simulación. Los acompañantes siguen a su adulto.</li><li>Tras mirar, pasan a atención y salen. Se conserva la probabilidad de compra: mirar no garantiza una venta. Si ningún destino es accesible, salen sin registrar una compra ficticia.</li></ol>

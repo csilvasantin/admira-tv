@@ -1,12 +1,12 @@
 import {DirectionCounter,DEFAULT_DIRECTION_AXIS,validDirectionAxis,audienceSnapshot} from './audience-session.mjs?v=audience-session-1';
-import {installXpaceLink} from './xpace-link.mjs?v=audience-session-1';
+import {installXpaceLink} from './xpace-link.mjs?v=dooh-history-1';
 import {CLASSES, SNAPSHOT_TTL, PRESENCE_GRACE, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
 import {CutoutJob} from './cutouts.mjs';
 import {installTwinUI} from './twin-ui.mjs?v=avatar-photo-1';
 import {detectObjects} from './detector.mjs';
 import {loadDetectorModel} from './model-loader.mjs?v=detector-download-2';
 import {installSignageUI} from './signage-ui.mjs';
-import {installHistoryUI} from './history.mjs';
+import {installHistoryUI} from './history.mjs?v=dooh-history-1';
 import {CalibrationPresetStore,compatiblePreset} from './preset.mjs?v=audience-session-1';
 import {TrackingOverlay} from './tracking-overlay.mjs?v=track-id-2';
 import {installCleanStreetUI} from './clean-street-ui.mjs?v=track-id-2';
@@ -106,13 +106,13 @@ $('restore-preset').addEventListener('click',()=>{
 });
 presetStatus();
 const twins=installTwinUI({document,onOriginalRemoved:()=>clearCapture('Original temporal retirado')});
-const xpace=installXpaceLink({document,window,onChange:()=>{
+const xpace=installXpaceLink({document,window,onHistoryRequest:()=>history.sync(),onChange:()=>{
   if(document.hidden&&!xpace.backgroundActive)suspendAnalysis('hidden','Gemelo desconectado: análisis en espera mientras esta pestaña está oculta.');
   else {controls();scheduleRecovery();}
 }});
 const sourceVisible=()=>!document.hidden||xpace.backgroundActive;
 const signage=installSignageUI({document,window,onMirror:state=>xpace.media(state),onStop:()=>xpace.stop()});
-const history=installHistoryUI({document});
+const history=installHistoryUI({document,onState:value=>xpace.history(value)});
 const scooterTracks=installScooterTracks({document,onConfirm:events=>{passages.add(events);renderCounts();queueHistory(events,'manual');}});
 const cleanStreet=installCleanStreetUI({document,getPassages:()=>passages.counts,onToggle:enabled=>{
   xpace.cameraOff();previewVideoTime=-1;

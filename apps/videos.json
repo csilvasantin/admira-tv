@@ -134,5 +134,9 @@
   "xtanco-visitas-con-objetivo": {
     "src": "/apps/video/xtanco-visitas-con-objetivo.mp4",
     "title": "Xtanco · visitas con objetivos (animación, 15 s)"
+  },
+  "xtore-dooh-dia-hora": {
+    "src": "/apps/video/xtore-dooh-dia-hora.mp4",
+    "title": "Xtore · DooH real por día y hora (animación, 15 s)"
   }
 }
