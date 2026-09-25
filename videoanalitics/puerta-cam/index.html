@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="admiranext-version" content="v.25.09.2026.r1.12:52">
+  <title>PUERTA CAM · contrato del gemelo · Admira.tv</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; background: #090e14; color: #e7eef6; font: 16px/1.45 system-ui, sans-serif; }
+    main { max-width: 920px; margin: 0 auto; padding: 28px 18px 64px; }
+    a { color: #3dff9a; }
+    h1 { font-size: 32px; margin: 8px 0; }
+    h2 { margin: 28px 0 8px; }
+    .kicker { color: #3dff9a; font: 700 12px/1 ui-monospace, monospace; letter-spacing: .08em; }
+    .card { border: 1px solid #243140; border-radius: 12px; padding: 14px 16px; margin: 12px 0; background: #0e1620; }
+    .gap { border-color: #8a6a22; }
+    svg { width: 100%; height: auto; }
+    pre { overflow: auto; background: #070b10; border-radius: 8px; padding: 12px; font: 13px/1.4 ui-monospace, monospace; }
+    code { font-family: ui-monospace, monospace; }
+  </style>
+</head>
+<body>
+<main>
+  <p class="kicker">PUERTA CAM · SANTA ROSA 19 · FLT-100986</p>
+  <h1>Flujo, contrato y un coche real.</h1>
+  <p>Primera entrega sobre el trabajo ya publicado en el commit <code>4b61410e</code>. PixerIA, cuando genere el gemelo, solo puede usar modelo, color y silueta. Nada de matrícula, texto ni cara.</p>
+
+  <h2>Flujo</h2>
+  <div class="card">
+    <svg viewBox="0 0 880 420" role="img" aria-label="Flujo de la cámara al gemelo">
+      <rect width="880" height="420" fill="#0e1620"/>
+      <g font-family="ui-monospace, monospace" font-size="13" fill="#e7eef6">
+        <rect x="20" y="24" width="200" height="64" rx="8" fill="#132033" stroke="#3dff9a"/>
+        <text x="36" y="50">1 · Cámara</text>
+        <text x="36" y="70" fill="#9fb3c8">iPad · xtore</text>
+        <rect x="250" y="24" width="200" height="64" rx="8" fill="#132033" stroke="#3dff9a"/>
+        <text x="266" y="50">2 · Detector</text>
+        <text x="266" y="70" fill="#9fb3c8">coche moto bici persona</text>
+        <rect x="480" y="24" width="370" height="64" rx="8" fill="#132033" stroke="#3dff9a"/>
+        <text x="496" y="50">3 · Histórico</text>
+        <text x="496" y="70" fill="#9fb3c8">solo id, clase, hora, origen</text>
+        <path d="M220 56 H250 M450 56 H480" stroke="#3dff9a" stroke-width="2"/>
+        <rect x="20" y="150" width="400" height="110" rx="8" fill="#132033" stroke="#8a6a22"/>
+        <text x="36" y="178">4a · Vehículo</text>
+        <text x="36" y="202" fill="#9fb3c8">recorte del cuadro, 160 px, sin anonimizar</text>
+        <text x="36" y="224" fill="#e7c56a">en producción no hay tabla de capturas</text>
+        <rect x="450" y="150" width="400" height="110" rx="8" fill="#132033" stroke="#3dff9a"/>
+        <text x="466" y="178">4b · Persona</text>
+        <text x="466" y="202" fill="#9fb3c8">original privado 3 min</text>
+        <text x="466" y="224" fill="#9fb3c8">anonimizador → gemelo sintético</text>
+        <path d="M200 88 V120 H220 V150 M660 88 V120 H650 V150" stroke="#9fb3c8" stroke-width="2" fill="none"/>
+        <rect x="20" y="300" width="830" height="90" rx="8" fill="#132033" stroke="#3dff9a"/>
+        <text x="36" y="330">5 · PixerIA · aún no conectada</text>
+        <text x="36" y="354" fill="#9fb3c8">entrada: modelo, color, silueta. Salida: cuatro pieles 8 / 16 / 32 / 64.</text>
+        <text x="36" y="376" fill="#9fb3c8">el mismo registro que el mobiliario de XpaceOS.</text>
+      </g>
+    </svg>
+  </div>
+  <div class="card gap">
+    <strong>Hueco.</strong> El coche confirmado sí entra en el histórico. El recorte se prepara en el navegador y se intenta guardar aparte, pero la base en producción solo tiene <code>xtore_passages</code>. No existe <code>xtore_proofs</code>. El anonimizador hoy actúa sobre la persona, no sobre el vehículo. Por eso este coche real no tiene captura que enseñar, y no se inventa una.
+  </div>
+
+  <h2>Contrato</h2>
+  <p>Un registro por paso, como una pieza de XpaceOS: la saga, la silueta y el color no cambian con la época. Cada nivel es una piel. Las urls de nivel quedan vacías hasta que PixerIA las genere.</p>
+  <pre>{
+  "schema": "admira.xtore-vehicle-twin.v1",
+  "passage": {
+    "id": "uuid",
+    "class": "car | motorcycle | bicycle | person",
+    "at": 0,
+    "timezone": "Europe/Madrid",
+    "hour": "HH:MM:SS",
+    "source": "detector",
+    "site": "admira-xperience-santa-rosa-19",
+    "camera": "puerta-cam"
+  },
+  "capture": {
+    "url": null,
+    "keeps": ["model", "color", "silhouette"],
+    "omits": ["plate", "readable_text", "face", "identity"]
+  },
+  "twin": {
+    "status": "sin_captura | pendiente | generando | listo | fallo",
+    "saga": null,
+    "silhouette": "car",
+    "color": null,
+    "levels": {
+      "8":  { "bits": 8,  "surname": "80",     "name": null, "url": null },
+      "16": { "bits": 16, "surname": "90",     "name": null, "url": null },
+      "32": { "bits": 32, "surname": "Actual", "name": null, "url": null },
+      "64": { "bits": 64, "surname": "Matrix", "name": null, "url": null }
+    }
+  }
+}</pre>
+
+  <h2>Paso real de coche</h2>
+  <div class="card">
+    <p><strong>Clase:</strong> coche · detector</p>
+    <p><strong>Hora de Madrid:</strong> 25-sep-2026, 01:36:40</p>
+    <p><strong>Id:</strong> <code>261c6d47-7b63-4224-82db-5d3c38b617b1</code></p>
+    <p><strong>Instante:</strong> 1790293000509</p>
+    <p><strong>Cámara:</strong> PUERTA CAM, Santa Rosa 19</p>
+    <p><strong>Captura:</strong> no guardada. El histórico tiene el paso. No hay jpeg de ese id, y publicar un dibujo sería otro coche.</p>
+    <p><strong>Gemelo:</strong> sin_captura. Las cuatro urls de nivel están vacías.</p>
+    <p>Las estadísticas por clase y hora siguen en <a href="/videoanalitics/estadisticas/">Proof of pass</a>. Hace falta sesión de administrador para ver la lista.</p>
+  </div>
+  <p>Volver atrás de este sello: <code>v.24.09.2026.r15.22:36</code>, commit <code>4b61410e</code>.</p>
+</main>
+</body>
+</html>
