@@ -13,6 +13,7 @@ import {CalibrationPresetStore,compatiblePreset} from './preset.mjs?v=audience-s
 import {TrackingOverlay} from './tracking-overlay.mjs?v=track-id-2';
 import {installCleanStreetUI} from './clean-street-ui.mjs?v=track-id-2';
 import {installScooterTracks} from './scooter-tracks.mjs';
+import {VaProducer} from './va-producer.mjs?v=va-producer-1';
 
 const $=id=>document.getElementById(id);
 const scene=$('scene'), stage=$('stage'), frame=document.createElement('canvas');
@@ -28,6 +29,8 @@ let directionAxis=DEFAULT_DIRECTION_AXIS.map(p=>[...p]);
 let audienceSessionId=crypto.randomUUID(),audienceStartedAt=Date.now(),audienceRevision=0,audienceUpdatedAt=Date.now();
 function resetAudience(){directions.reset();audienceSessionId=crypto.randomUUID();audienceStartedAt=Date.now();audienceRevision=0;audienceUpdatedAt=Date.now();}
 function sessionAudience(){return audienceSnapshot({sessionId:audienceSessionId,startedAt:audienceStartedAt,revision:audienceRevision,updatedAt:audienceUpdatedAt,counts:passages.counts,directions:directions.snapshot(passages.counts.person),axis:directionAxis,state:analyzing?'analyzing':analysisRequested?'waiting':stream?'paused':'disconnected'});}
+const vaMessages={unauthorized:'inicia sesión',forbidden:'requiere rol administrador',va_bridge_not_configured:'puente sin configurar en servidor',va_scope_denied:'sin permiso VA para esta cuenta',network:'sin conexión'};
+const vaProducer=new VaProducer({snapshot:sessionAudience,onState:p=>{const e=$('va-bridge-status');if(e)e.textContent=p.off?`VA MCP apagado · ${vaMessages[p.off]||p.off}`:p.error?`VA MCP · reintentando (${vaMessages[p.error]||p.error})`:`VA MCP · ${p.published} latidos · revisión ${p.revision}`;}});
 
 const numberFormat=new Intl.NumberFormat('es-ES');
 const cutoutJob=new CutoutJob();
@@ -210,7 +213,7 @@ function pause(message){
   // Pausing detection returns to the normal loop; it is not a screen power-off.
   analysisRequested=false;suspendedReason=null;clearTimeout(recoveryTimer);recoveryTimer=0;
   twins.cancelOriginal();
-  analyzing=false;generation++;clearTimeout(loopTimer);trackingOverlay.clear();cleanStreet.reset();tracker.resetPresence();clearCapture();controls();
+  analyzing=false;generation++;clearTimeout(loopTimer);vaProducer.stop();trackingOverlay.clear();cleanStreet.reset();tracker.resetPresence();clearCapture();controls();
   frameContext.clearRect(0,0,frame.width,frame.height);
   if(message)status(message);
 }
@@ -492,7 +495,7 @@ async function startAnalysis(recovering=false){
     if(token!==generation||!stream)return;
     if(!sourceVisible()||sourceMuted){suspendAnalysis('source','Esperando vídeo disponible; el análisis se reanudará automáticamente.');return;}
     analyzing=true;lastVideoTime=-1;lastFrameAt=performance.now();
-    history.sync();
+    history.sync();vaProducer.start();
     status('Analizando solo Puerta Cam. Rectángulos por trayectoria; margen de pérdida de 1,5 s. Vehículos automáticos: 2 s adicionales de contenido tras ese margen. H oculta personas solo en el previo; el iPad y el detector usan el original. Capturas de 6 s, sin repetir conteo.');
     if(!cleanStreet.enabled)tabletIdle();loop(token);previewCamera(token);
   }catch{if(token===generation)pause(`No se ha iniciado el análisis. ${modelError} Pulsa Iniciar análisis para reintentar; la cámara y el encuadre se conservan.`);}
