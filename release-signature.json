@@ -1,9 +1,9 @@
 {
-  "version": "v.25.09.2026.r1.12:52",
-  "signature": "SmithMacMini · MacMini",
-  "agent": "SmithMacMini",
-  "machine": "MacMini",
-  "day": "25.09.2026",
-  "time": "12:52",
-  "evidence": "Primera entrega PUERTA CAM: diagrama, contrato del gemelo y el coche real 261c6d47. La captura no está en D1."
+  "version": "v.27.09.2026.r1.16:49",
+  "signature": "NeoGrokBotBox · GrokBotBox",
+  "agent": "NeoGrokBotBox",
+  "machine": "GrokBotBox",
+  "day": "27.09.2026",
+  "time": "16:49",
+  "evidence": "Puente VA (#4475/#4528): POST /videoanalytics/api/va-session publica el snapshot agregado en va_session_publish con VA_BRIDGE_KEY (#4539), clave de servicio de solo publicación."
 }
