@@ -159,6 +159,29 @@
         border:1px solid #3a1e26;background:#160c10;color:#ffb0b0;border-radius:10px;padding:9px 11px;font-weight:600;font-size:13px}
   .dngr:hover{border-color:var(--off);color:#fff;background:#22141a}
   .af-expert pre{white-space:pre-wrap;word-break:break-word}
+  html[data-meta="alsea"]{ --accent:#e4002b; --phos:#ffb44c; --ink:#fff6ee; --panel:#1a1012; --panel2:#241418; --bg:#140c0e; }
+  .langbtn,.metabtn{cursor:pointer;border:1px solid var(--line);background:#0c1320;color:var(--ink);border-radius:999px;padding:6px 10px;font:700 11px inherit}
+  html[data-meta="alsea"] .metabtn{border-color:#e4002b;color:#ffb44c}
+  .modes{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+  .criteria{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:8px}
+  .criteria input,.criteria select,.sched input{background:#0c1320;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:8px 10px;font:12.5px inherit;outline:0;width:100%}
+  .secIn{width:68px;background:#0c1320;border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px;font:12px ui-monospace,monospace}
+  .plRow[draggable="true"]{cursor:grab}
+  .plRow.drag{opacity:.55}
+  .totalLine{display:flex;justify-content:space-between;gap:8px;color:var(--dim);font-size:12px;margin:8px 0 4px}
+  .previewBox{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#000}
+  .previewBox .stage{aspect-ratio:16/9;display:grid;place-items:center;background:#05070c}
+  .previewBox video,.previewBox img{width:100%;height:100%;max-height:280px;object-fit:contain;background:#000}
+  .pvBar{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#0c1320}
+  .days{display:flex;gap:6px;flex-wrap:wrap}
+  .day{cursor:pointer;border:1px solid var(--line);background:#0c1320;color:var(--dim);border-radius:8px;padding:6px 8px;font:600 11px inherit}
+  .day.on{border-color:var(--phos);color:#fff6ee;background:rgba(255,180,76,.12)}
+  .proposal{border:1px dashed var(--line);border-radius:10px;padding:10px;margin:8px 0}
+  .air{font:11px ui-monospace,monospace}
+  .air.emitiendo{color:var(--air)} .air.error{color:var(--off)} .air.descargada{color:var(--accent)}
+  .sheet{width:min(980px,100%)}
+  #grpName{flex:1;min-width:160px}
+  #grpSave{flex:0 0 auto}
   @media(max-width:520px){ header{top:52px} }
 </style>
 </head>
@@ -203,15 +226,17 @@ window.ADMIRA_NAV={
 
 <header class="phead">
   <span class="brand">Admira · <b>Playlists</b></span>
-  <span class="sub">conjuntos de contenidos → parrilla real del player</span>
+  <span class="sub" data-i18n="sub">conjuntos de contenidos → circuito y parrilla</span>
   <span class="spacer"></span>
+  <button class="langbtn" id="langToggle" type="button">EN</button>
+  <button class="metabtn" id="metaToggle" type="button">Metaestilo Alsea</button>
   <span class="fleetflag" id="fleetFlag" title="Estado de sincronización de las plantillas">· · ·</span>
   <span class="count" id="hCount">—</span>
 </header>
 
 <div class="tools">
-  <button class="btnp" id="btnNew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Nueva playlist</button>
-  <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input id="q" type="search" placeholder="Buscar playlist por nombre…" autocomplete="off"></div>
+  <button class="btnp" id="btnNew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> <span data-i18n="new">Nueva playlist</span></button>
+  <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input id="q" type="search" data-i18n-ph="search" placeholder="Buscar playlist por nombre…" autocomplete="off"></div>
 </div>
 
 <div class="grid" id="grid"><div class="empty">Cargando…</div></div>
@@ -224,9 +249,51 @@ window.ADMIRA_NAV={
     <div class="sh-hd"><h3>Editar <b>playlist</b></h3><button class="x" data-close="mEdit">✕</button></div>
     <div class="sh-bd">
       <div class="fld"><label>Nombre</label><input id="edName" type="text" placeholder="p.ej. Escaparate mañana · promo verano" maxlength="80"></div>
-      <label style="font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px">Secuencia de contenidos (se reproduce en este orden)</label>
+      <div class="modes" id="edModes">
+        <button class="segbtn on" type="button" data-mode="manual" data-i18n="manual">Manual</button>
+        <button class="segbtn" type="button" data-mode="auto" data-i18n="auto">Automática</button>
+        <button class="segbtn" type="button" data-mode="ia" data-i18n="ia">IA · aprobación</button>
+      </div>
+      <div id="edAuto">
+        <div class="criteria">
+          <label class="fld"><span data-i18n="hashtag">Hashtag del proyecto</span><input id="crHash" type="text" value="#alsea" maxlength="40"></label>
+          <label class="fld"><span data-i18n="type">Tipo</span><select id="crType"><option value="">Cualquiera</option><option value="image">Imagen</option><option value="video">Vídeo</option><option value="animation">Animación</option><option value="audio">Audio</option></select></label>
+          <label class="fld"><span data-i18n="format">Formato</span><select id="crFormat"><option value="">Cualquiera</option><option value="vertical">Vertical</option><option value="horizontal">Horizontal</option></select></label>
+          <label class="fld"><span data-i18n="language">Idioma</span><select id="crLang"><option value="">Cualquiera</option><option value="es">Español</option><option value="en">English</option></select></label>
+          <label class="fld"><span data-i18n="audience">Audiencia</span><select id="crAud"><option value="">Cualquiera</option><option value="all">Todas</option><option value="m">Hombres</option><option value="f">Mujeres</option></select></label>
+          <label class="fld"><span data-i18n="category">Categoría</span><select id="crCat"><option value="">Cualquiera</option><option value="atraer">Atraer</option><option value="producto">Producto</option><option value="promo">Promo</option><option value="marca">Marca</option></select></label>
+          <label class="fld"><span data-i18n="slot">Franja</span><input id="crSlot" type="text" placeholder="mañana" maxlength="40"></label>
+        </div>
+        <p class="hint" data-i18n="regenHint">Si entra una pieza nueva con este hashtag, la playlist se regenera sola.</p>
+        <button class="btnp" id="edRegen" type="button" data-i18n="regen">Regenerar con el Stock</button>
+      </div>
+      <div id="edIa" hidden>
+        <label class="fld"><span data-i18n="every">Cada cuántas piezas entra una cápsula</span><input id="edEvery" type="number" min="1" max="20" value="3"></label>
+        <button class="btnp" id="edPropose" type="button" data-i18n="propose">Proponer mezcla</button>
+        <div class="proposal" id="edProposal"></div>
+      </div>
+      <div class="sched" id="edSched">
+        <label style="font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px" data-i18n="schedule">Programación</label>
+        <div class="days" id="edDays"></div>
+        <div class="criteria">
+          <label class="fld"><span data-i18n="fromDate">Fecha de inicio</span><input id="scStart" type="date"></label>
+          <label class="fld"><span data-i18n="toDate">Fecha de fin</span><input id="scEnd" type="date"></label>
+          <label class="fld"><span data-i18n="fromTime">Desde</span><input id="scFrom" type="time"></label>
+          <label class="fld"><span data-i18n="toTime">Hasta</span><input id="scTo" type="time"></label>
+          <label class="fld"><span data-i18n="priority">Prioridad frente a la parrilla</span><input id="scPri" type="number" min="0" max="99" value="1"></label>
+        </div>
+      </div>
+      <label style="font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px" data-i18n="drag">Arrastra para reordenar</label>
       <div class="plItems" id="edItems"></div>
+      <div class="totalLine"><span data-i18n="total">Duración total</span><b id="edTotal">0 s</b></div>
       <button class="btnp" id="edAdd" style="margin-top:4px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Añadir contenido del Stock</button>
+      <div class="previewBox" id="edPreview">
+        <div class="stage" id="pvStage"></div>
+        <div class="pvBar">
+          <button class="btnp" id="pvPlay" type="button" data-i18n="preview">Vista previa</button>
+          <span class="hint" id="pvCap" data-i18n="previewNote">Vista previa local. No emite en la flota.</span>
+        </div>
+      </div>
     </div>
     <div class="sh-ft">
       <span class="hint" id="edHint"></span>
@@ -270,6 +337,16 @@ window.ADMIRA_NAV={
         <button class="segbtn on" id="segNow" data-scope="now">Emitir ahora (franja actual)</button>
         <button class="segbtn" id="segAll" data-scope="all">Todo el día (todas las franjas)</button>
       </div>
+      <div class="tgOpts" id="playModes">
+        <button class="segbtn on" type="button" data-play="linear" data-i18n="linear">Lineal</button>
+        <button class="segbtn" type="button" data-play="random" data-i18n="random">Aleatorio</button>
+        <button class="segbtn" type="button" data-play="sync" data-i18n="sync">Sincronizado</button>
+        <span class="hint" id="syncHint" data-i18n="syncHint">El primer player es el máster. El resto sigue su reloj.</span>
+      </div>
+      <div class="tgOpts">
+        <input id="grpName" type="text" maxlength="40" placeholder="Nombre del grupo" style="background:#0c1320;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:8px 10px">
+        <button class="abtn" id="grpSave" type="button" data-i18n="group">Grupo</button>
+      </div>
       <div class="fld" id="keyFld" style="display:none"><label>Clave GRID_KEY (para escribir en la parrilla)</label><input id="asKey" type="password" placeholder="clave de escritura del grid" autocomplete="off"></div>
       <div class="tgList" id="tgList"><div class="empty">Cargando players y pantallas…</div></div>
     </div>
@@ -282,9 +359,17 @@ window.ADMIRA_NAV={
   </div>
 </div>
 
-<script>
-'use strict';
+<script type="module">
+import {
+  assignmentPlan, cachePercentOf, circuitsFromSurfaces, copy, decideProposal, formatDuration,
+  itemSeconds, madridClock, metastyle, playbackItems, playerAirState, proofHref, proposeMix, totalSeconds,
+  regenerateAuto, refreshProposal, reorderItems, resolveTargets, scheduleActive, selectByCriteria,
+} from './creator.mjs';
 const $=id=>document.getElementById(id);
+if((location.hostname==='localhost'||location.hostname==='127.0.0.1') && new URLSearchParams(location.search).get('captura')==='1'){
+  const lift=()=>{ document.documentElement.classList.remove('gate-locked'); const gate=document.getElementById('admira-tv-gate'); if(gate) gate.remove(); };
+  lift(); const liftTimer=setInterval(lift, 250); setTimeout(()=>clearInterval(liftTimer), 8000);
+}
 const esc=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 const GRID='https://api.admira.store';
 /* Worker de plantillas COMPARTIDAS en flota (xpl-store). Antes las plantillas vivían solo
@@ -297,6 +382,55 @@ const gkSet=v=>{try{localStorage.setItem('grid_key',v||'')}catch(_){}};
 const plkGet=()=>{try{return localStorage.getItem('adtv_pl_key')||''}catch(_){return''}};
 const plkSet=v=>{try{localStorage.setItem('adtv_pl_key',v||'')}catch(_){}};
 let PL_SHARED=false; // ¿las plantillas están sincronizadas con la flota ahora mismo?
+let LANG=(localStorage.getItem('adtv_pl_lang')==='en')?'en':'es';
+let META=localStorage.getItem('adtv_pl_meta')==='alsea'?'alsea':'admira';
+let GROUPS=(()=>{try{return JSON.parse(localStorage.getItem('adtv_pl_groups')||'[]')}catch(_){return[]}})();
+const DAY_KEYS=['mon','tue','wed','thu','fri','sat','sun'];
+const DAY_ES=['L','M','X','J','V','S','D'];
+const DAY_EN=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+function t(){ return copy(LANG); }
+function saveGroups(){ try{localStorage.setItem('adtv_pl_groups',JSON.stringify(GROUPS))}catch(_){} }
+function applyChrome(){
+  const dict=t();
+  document.querySelectorAll('[data-i18n]').forEach(el=>{ const k=el.dataset.i18n; if(dict[k]) el.textContent=dict[k]; });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{ const k=el.dataset.i18nPh; if(dict[k]) el.placeholder=dict[k]; });
+  const style=metastyle(META);
+  document.documentElement.dataset.meta=style.id;
+  document.documentElement.style.setProperty('--accent', style.accent);
+  document.documentElement.style.setProperty('--phos', style.phos);
+  document.documentElement.style.setProperty('--ink', style.ink);
+  document.documentElement.style.setProperty('--panel', style.panel);
+  const langBtn=$('langToggle'), metaBtn=$('metaToggle');
+  if(langBtn) langBtn.textContent=dict.lang;
+  if(metaBtn) metaBtn.textContent=META==='alsea'?dict.metaAlsea:dict.metaAdmira;
+}
+function readCriteria(){
+  return {
+    hashtag:($('crHash').value||'').trim(),
+    type:$('crType').value,
+    format:$('crFormat').value,
+    language:$('crLang').value,
+    audience:$('crAud').value,
+    category:$('crCat').value,
+    timeSlot:($('crSlot').value||'').trim(),
+  };
+}
+function readSchedule(){
+  const days=[...document.querySelectorAll('#edDays .day.on')].map(el=>el.dataset.day);
+  return {
+    days,
+    start:$('scStart').value||'',
+    end:$('scEnd').value||'',
+    from:$('scFrom').value||'',
+    to:$('scTo').value||'',
+    priority:Math.max(0, Math.min(99, Number($('scPri').value)||0)),
+  };
+}
+function paintDays(selected){
+  const labels=LANG==='en'?DAY_EN:DAY_ES;
+  const on=new Set(selected||[]);
+  $('edDays').innerHTML=DAY_KEYS.map((day,i)=>'<button type="button" class="day'+(on.has(day)?' on':'')+'" data-day="'+day+'">'+labels[i]+'</button>').join('');
+}
 function setFleet(state,msg){
   const el=$('fleetFlag'); if(!el) return;
   if(state==='shared'){ el.textContent='☁ compartidas en flota'; el.className='fleetflag ok';
@@ -362,9 +496,31 @@ function saveAsg(){ try{localStorage.setItem('adtv_pl_assign',JSON.stringify(ASS
 
 /* ── Catálogo (Stock) y destinos (players vivos + superficies de grid) ── */
 let STOCK=[], LIVE=[], SURF=[], LIVEMAP={};
+function takeStock(items){
+  for(const item of items||[]){
+    if(!item||!item.id||!item.url||item.type==='link'||item.type==='furni') continue;
+    const ix=STOCK.findIndex(row=>row.id===item.id);
+    if(ix>=0) STOCK[ix]=item; else STOCK.push(item);
+  }
+}
 async function loadStock(){
-  try{ const d=await fetch(GRID+'/stock/list?limit=300',{cache:'no-store'}).then(r=>r.json());
-    STOCK=(d.items||[]).filter(x=>x&&x.url&&x.type!=='link'&&x.type!=='furni'); }catch(_){ STOCK=[]; }
+  try{ const d=await fetch(GRID+'/stock/list?limit=200',{cache:'no-store'}).then(r=>r.json());
+    STOCK=[]; takeStock(d.items); }catch(_){ STOCK=[]; }
+}
+async function loadStockDeep(){
+  const urls=[GRID+'/stock/list?type=video&limit=200', GRID+'/stock/list?type=image&limit=200', GRID+'/stock/list?type=animation&limit=200'];
+  const pages=await Promise.all(urls.map(url=>fetch(url,{cache:'no-store'}).then(r=>r.json()).catch(()=>null)));
+  pages.forEach(page=>takeStock(page&&page.items));
+}
+function absorbStock(){
+  let changed=false;
+  PLAYLISTS=PLAYLISTS.map(playlist=>{
+    const auto=regenerateAuto(playlist, STOCK);
+    const proposal=refreshProposal(auto.playlist, STOCK);
+    if(auto.changed||proposal.changed) changed=true;
+    return proposal.playlist;
+  });
+  if(changed) savePl();
 }
 async function loadTargets(){
   try{ const d=await fetch(GRID+'/signage/screens',{cache:'no-store'}).then(r=>r.json()); LIVE=(d.screens||[]); }catch(_){ LIVE=[]; }
@@ -404,12 +560,15 @@ function render(){
     const strip=items.slice(0,5).map(it=>'<div class="th">'+thumbHtml(it)+'</div>').join('')+(items.length>5?'<span class="more">+'+(items.length-5)+'</span>':'');
     const asg=(ASSIGN[p.id]||[]);
     const aHtml=asg.length? asg.map(a=>{ const on=screenState(a.screen);
-        return '<div class="aTag '+(on?'on':'off')+'"><span class="d"></span><span class="nm2" title="'+esc(a.screen)+'">'+esc(a.name||a.screen)+'</span><span class="pill">'+(a.scope==='all'?'todo el día':'ahora')+'</span><button class="cx" data-unasg="'+esc(p.id)+'|'+esc(a.screen)+'" title="Retirar de la parrilla">✕</button></div>';
+        const air=a.air?('<span class="air '+esc(a.air)+'">'+esc(t()[a.airKey]||a.air)+'</span>'):'';
+        const proof='<a class="pill" href="'+esc(proofHref(a.screen))+'" target="_blank" rel="noopener">'+esc(t().proof)+'</a>';
+        const role=a.role==='master'?' · máster':(a.role==='follower'?' · sigue':'');
+        return '<div class="aTag '+(on?'on':'off')+'"><span class="d"></span><span class="nm2" title="'+esc(a.screen)+'">'+esc(a.name||a.screen)+esc(role)+'</span>'+air+'<span class="pill">'+(a.scope==='all'?'todo el día':'ahora')+'</span>'+proof+'<button class="cx" data-unasg="'+esc(p.id)+'|'+esc(a.screen)+'" title="Retirar de la parrilla">✕</button></div>';
       }).join('')
       : '<div class="aNone">— sin asignar a ningún player</div>';
     return '<div class="card"><div class="top">'+
       '<div class="plav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h10M4 11h10M4 15.5h6"/><path d="M16.5 12.4 21 15l-4.5 2.6z" fill="currentColor" stroke="none"/></svg></div>'+
-      '<div style="min-width:0"><div class="nm" title="'+esc(p.name)+'">'+esc(p.name||'(sin nombre)')+'</div><div class="meta">'+items.length+' pieza'+(items.length===1?'':'s')+' · '+asg.length+' asignación'+(asg.length===1?'':'es')+'</div></div>'+
+      '<div style="min-width:0"><div class="nm" title="'+esc(p.name)+'">'+esc(p.name||'(sin nombre)')+'</div><div class="meta">'+esc(p.mode||'manual')+' · '+items.length+' pieza'+(items.length===1?'':'s')+' · '+formatDuration(totalSeconds(items), LANG)+' · '+asg.length+' asignación'+(asg.length===1?'':'es')+'</div></div>'+
       '</div><div class="body">'+
         '<div class="strip">'+(strip||'<span class="aNone">vacía</span>')+'</div>'+
         '<div class="assigns">'+aHtml+'</div>'+
@@ -419,42 +578,159 @@ function render(){
 }
 
 /* ════════════════ EDITOR ════════════════ */
-let editId=null, editDraft=null;
+let editId=null, editDraft=null, dragFrom=null, pvTimer=null, pvIndex=0;
+function blankDraft(){
+  return {id:uid(),name:'',items:[],mode:'manual',criteria:{hashtag:'#alsea',type:'',format:'',language:'',audience:'',category:'',timeSlot:''},every:3,proposal:null,schedule:{days:[],start:'',end:'',from:'',to:'',priority:1}};
+}
+function setEditMode(mode){
+  editDraft.mode=mode;
+  document.querySelectorAll('#edModes .segbtn').forEach(btn=>btn.classList.toggle('on', btn.dataset.mode===mode));
+  $('edAuto').hidden=mode==='manual';
+  $('edIa').hidden=mode!=='ia';
+  $('edRegen').hidden=mode!=='auto'&&mode!=='ia';
+}
+function fillEditor(){
+  const criteria=editDraft.criteria||{};
+  $('crHash').value=criteria.hashtag||'';
+  $('crType').value=criteria.type||'';
+  $('crFormat').value=criteria.format||'';
+  $('crLang').value=criteria.language||'';
+  $('crAud').value=criteria.audience||'';
+  $('crCat').value=criteria.category||'';
+  $('crSlot').value=criteria.timeSlot||'';
+  $('edEvery').value=editDraft.every||3;
+  const schedule=editDraft.schedule||{};
+  paintDays(schedule.days||[]);
+  $('scStart').value=schedule.start||'';
+  $('scEnd').value=schedule.end||'';
+  $('scFrom').value=schedule.from||'';
+  $('scTo').value=schedule.to||'';
+  $('scPri').value=schedule.priority!=null?schedule.priority:1;
+  setEditMode(editDraft.mode||'manual');
+  renderProposal();
+}
+function renderTotal(){
+  $('edTotal').textContent=formatDuration(totalSeconds(editDraft&&editDraft.items), LANG);
+}
+function renderProposal(){
+  const host=$('edProposal'); if(!host) return;
+  const proposal=editDraft&&editDraft.proposal;
+  const dict=t();
+  if(!proposal){ host.textContent=dict.pending; return; }
+  const status=proposal.status==='approved'?dict.approved:proposal.status==='rejected'?dict.rejected:dict.pending;
+  const note=proposal.note==='no-capsules'?(' '+dict.noCapsules):'';
+  host.innerHTML='<div>'+esc(status)+esc(note)+'</div><div class="hint">'+((proposal.items||[]).map(item=>esc(item.title||item.id)).slice(0,12).join(' → ')||'—')+'</div>'+
+    '<div class="acts" style="margin-top:8px"><button class="btnp" id="edApprove" type="button">'+esc(dict.approve)+'</button><button class="abtn" id="edReject" type="button">'+esc(dict.reject)+'</button></div>';
+}
 function openEdit(id){
   const p=id?PLAYLISTS.find(x=>x.id===id):null;
   editId=id||null;
-  editDraft=p?JSON.parse(JSON.stringify(p)):{id:uid(),name:'',items:[]};
+  editDraft=p?JSON.parse(JSON.stringify(p)):blankDraft();
+  if(!editDraft.criteria) editDraft.criteria=blankDraft().criteria;
+  if(!editDraft.schedule) editDraft.schedule=blankDraft().schedule;
   $('edName').value=editDraft.name||'';
   $('edHint').textContent=''; $('edHint').className='hint';
+  fillEditor();
   renderEditItems();
+  stopPreview();
   openModal('mEdit'); setTimeout(()=>$('edName').focus(),60);
 }
 function renderEditItems(){
   const host=$('edItems'), its=editDraft.items||[];
-  if(!its.length){ host.innerHTML='<div class="emptyRow">Sin piezas todavía · pulsa «Añadir contenido del Stock»</div>'; return; }
-  host.innerHTML=its.map((it,i)=>'<div class="plRow" data-i="'+i+'">'+
+  if(!its.length){ host.innerHTML='<div class="emptyRow">'+esc(editDraft.mode==='manual'?'Sin piezas todavía · pulsa «Añadir contenido del Stock»':t().emptyAuto)+'</div>'; renderTotal(); return; }
+  host.innerHTML=its.map((it,i)=>'<div class="plRow" draggable="true" data-i="'+i+'">'+
     '<span class="idx">'+(i+1)+'</span>'+
     '<div class="th">'+thumbHtml(it)+'</div>'+
-    '<div class="tx"><div class="tt" title="'+esc(it.title)+'">'+esc(it.title||it.id)+'</div><div class="ty">'+esc(it.type||'')+(it.motor?' · '+esc(it.motor):'')+'</div></div>'+
+    '<div class="tx"><div class="tt" title="'+esc(it.title)+'">'+esc(it.title||it.id)+'</div><div class="ty">'+esc(it.type||'')+(it.tags&&it.tags.length?' · '+esc(it.tags.slice(0,3).join(' ')):'')+'</div></div>'+
+    '<label class="secLab"><input class="secIn" data-sec="'+i+'" type="number" min="2" max="600" value="'+itemSeconds(it)+'" aria-label="'+esc(t().duration)+'"></label>'+
     '<div class="mv"><button data-mv="'+i+'|-1" title="Subir">▲</button><button data-mv="'+i+'|1" title="Bajar">▼</button></div>'+
     '<button class="rm" data-rm="'+i+'" title="Quitar">✕</button>'+
   '</div>').join('');
+  renderTotal();
 }
 $('edItems').addEventListener('click',e=>{
   const mv=e.target.closest('[data-mv]'), rm=e.target.closest('[data-rm]');
-  if(mv){ const [i,dir]=mv.dataset.mv.split('|').map(Number); const j=i+dir; const a=editDraft.items;
-    if(j<0||j>=a.length) return; const t=a[i];a[i]=a[j];a[j]=t; renderEditItems(); }
+  if(mv){ const [i,dir]=mv.dataset.mv.split('|').map(Number); editDraft.items=reorderItems(editDraft.items, i, i+dir); renderEditItems(); }
   else if(rm){ editDraft.items.splice(+rm.dataset.rm,1); renderEditItems(); }
 });
+$('edItems').addEventListener('change',e=>{
+  const input=e.target.closest('[data-sec]'); if(!input||!editDraft) return;
+  editDraft.items[+input.dataset.sec].seconds=itemSeconds({seconds:input.value});
+  renderTotal();
+});
+$('edItems').addEventListener('dragstart',e=>{ const row=e.target.closest('.plRow'); if(!row) return; dragFrom=+row.dataset.i; row.classList.add('drag'); });
+$('edItems').addEventListener('dragover',e=>{ if(e.target.closest('.plRow')) e.preventDefault(); });
+$('edItems').addEventListener('drop',e=>{
+  const row=e.target.closest('.plRow'); if(!row||dragFrom==null) return;
+  e.preventDefault();
+  editDraft.items=reorderItems(editDraft.items, dragFrom, +row.dataset.i);
+  dragFrom=null; renderEditItems();
+});
+$('edModes').addEventListener('click',e=>{ const btn=e.target.closest('[data-mode]'); if(!btn||!editDraft) return; setEditMode(btn.dataset.mode); });
+$('edDays').addEventListener('click',e=>{ const btn=e.target.closest('[data-day]'); if(!btn) return; btn.classList.toggle('on'); });
 $('edAdd').onclick=()=>openPicker();
+function rememberEditor(){
+  editDraft.criteria=readCriteria();
+  editDraft.schedule=readSchedule();
+  editDraft.every=Math.max(1, Math.min(20, Number($('edEvery').value)||3));
+  editDraft.name=($('edName').value||'').trim();
+}
+$('edRegen').onclick=async()=>{
+  rememberEditor();
+  $('edHint').textContent='Leyendo el Stock…'; $('edHint').className='hint';
+  await loadStockDeep();
+  editDraft.items=selectByCriteria(STOCK, editDraft.criteria);
+  renderEditItems();
+  $('edHint').textContent=editDraft.items.length? (editDraft.items.length+' piezas') : t().emptyAuto;
+  $('edHint').className='hint '+(editDraft.items.length?'ok':'err');
+};
+$('edPropose').onclick=async()=>{
+  rememberEditor();
+  $('edHint').textContent='Leyendo el Stock…';
+  await loadStockDeep();
+  const pool=selectByCriteria(STOCK, editDraft.criteria);
+  editDraft.proposal=proposeMix(pool.length?pool:(editDraft.items||[]), {every:editDraft.every});
+  renderProposal();
+  $('edHint').textContent=t().pending; $('edHint').className='hint';
+};
+$('edProposal').addEventListener('click',e=>{
+  if(e.target.closest('#edApprove')){ editDraft=decideProposal(editDraft,'approve'); renderEditItems(); renderProposal(); }
+  else if(e.target.closest('#edReject')){ editDraft=decideProposal(editDraft,'reject'); renderProposal(); }
+});
+function stopPreview(){ if(pvTimer){ clearTimeout(pvTimer); pvTimer=null; } const node=$('pvStage').querySelector('video,audio'); if(node){ try{node.pause()}catch(_){} } }
+function showPreview(index){
+  stopPreview();
+  const items=editDraft&&editDraft.items||[];
+  const stage=$('pvStage');
+  if(!items.length){ stage.innerHTML='<span class="aNone">'+esc(t().emptyAuto)+'</span>'; $('pvCap').textContent=t().previewNote; return; }
+  pvIndex=((index%items.length)+items.length)%items.length;
+  const it=items[pvIndex];
+  $('pvCap').textContent=(pvIndex+1)+' / '+items.length+' · '+(it.title||it.id)+' · '+itemSeconds(it)+' s · '+t().previewNote;
+  if(it.type==='video'||it.type==='animation'){
+    stage.innerHTML='<video src="'+esc(it.url)+'" autoplay muted playsinline></video>';
+    const video=stage.querySelector('video');
+    video.onended=()=>showPreview(pvIndex+1);
+    video.onerror=()=>{ pvTimer=setTimeout(()=>showPreview(pvIndex+1), 1200); };
+  }else if(it.type==='audio'||it.type==='music'||it.type==='locucion'){
+    stage.innerHTML='<audio src="'+esc(it.url)+'" autoplay></audio><div>♪</div>';
+    stage.querySelector('audio').onended=()=>showPreview(pvIndex+1);
+  }else{
+    stage.innerHTML='<img alt="" src="'+esc(it.thumbnail||it.url)+'">';
+    pvTimer=setTimeout(()=>showPreview(pvIndex+1), itemSeconds(it)*1000);
+  }
+}
+$('pvPlay').onclick=()=>{ rememberEditor(); showPreview(0); };
 $('edSave').onclick=()=>{
-  const name=($('edName').value||'').trim();
-  if(!name){ $('edHint').textContent='Ponle un nombre a la playlist.'; $('edHint').className='hint err'; return; }
+  rememberEditor();
+  if(!editDraft.name){ $('edHint').textContent='Ponle un nombre a la playlist.'; $('edHint').className='hint err'; return; }
+  if(editDraft.mode==='ia' && editDraft.proposal && editDraft.proposal.status!=='approved' && !(editDraft.items||[]).length){
+    $('edHint').textContent=t().pending; $('edHint').className='hint err'; return;
+  }
   if(!(editDraft.items||[]).length){ $('edHint').textContent='Añade al menos una pieza.'; $('edHint').className='hint err'; return; }
-  editDraft.name=name; editDraft.updatedAt=Date.now();
+  editDraft.updatedAt=Date.now();
   const ix=PLAYLISTS.findIndex(x=>x.id===editDraft.id);
   if(ix>=0) PLAYLISTS[ix]=editDraft; else PLAYLISTS.unshift(editDraft);
-  savePl(); closeModal('mEdit'); render();
+  savePl(); stopPreview(); closeModal('mEdit'); render();
 };
 
 /* ════════════════ PICKER DE STOCK ════════════════ */
@@ -484,18 +760,19 @@ $('pkGrid').addEventListener('click',e=>{ const el=e.target.closest('[data-pk]')
 ['pkQ','pkType','pkAud','pkCat'].forEach(id=>$(id).addEventListener('input',renderPicker));
 $('pkAddSel').onclick=()=>{
   const add=[...pickSel].map(id=>STOCK.find(x=>x.id===id)).filter(Boolean)
-    .map(it=>({id:it.id,title:it.title||it.id,type:it.type,url:it.url,thumbnail:it.thumbnail||null,category:it.category||null,audience:it.audience||null,motor:it.motor||null}));
+    .map(it=>({id:it.id,title:it.title||it.id,type:it.type,url:it.url,thumbnail:it.thumbnail||null,category:it.category||null,audience:it.audience||null,motor:it.motor||null,tags:Array.isArray(it.tags)?it.tags.slice():[],seconds:itemSeconds(it),orientacion:it.orientacion||null,language:it.language||it.lang||null,timeSlot:it.timeSlot||null}));
   editDraft.items=(editDraft.items||[]).concat(add);
   closeModal('mPick'); renderEditItems();
 };
 
 /* ════════════════ ASIGNADOR ════════════════ */
-let asgId=null, asgScope='now', asgSel=new Set();
+let asgId=null, asgScope='now', asgSel=new Set(), asgCircuits=new Set(), asgPlay='linear', asgGroup=null;
 function openAssign(id){
   const p=PLAYLISTS.find(x=>x.id===id); if(!p) return;
-  asgId=id; asgScope='now'; asgSel=new Set();
+  asgId=id; asgScope='now'; asgSel=new Set(); asgCircuits=new Set(); asgPlay='linear'; asgGroup=null;
   $('asName').textContent=p.name||'playlist';
   $('segNow').classList.add('on'); $('segAll').classList.remove('on');
+  document.querySelectorAll('#playModes .segbtn').forEach(btn=>btn.classList.toggle('on', btn.dataset.play==='linear'));
   $('asHint').textContent=''; $('asHint').className='hint';
   $('keyFld').style.display=gkGet()?'none':'flex'; $('asKey').value='';
   renderTargets();
@@ -505,8 +782,21 @@ function renderTargets(){
   const host=$('tgList');
   const already=new Set((ASSIGN[asgId]||[]).map(a=>a.screen));
   let html='';
+  const circuits=circuitsFromSurfaces(SURF);
+  html+='<div class="grp-h">'+esc(t().circuit)+'</div>';
+  if(!circuits.length) html+='<div class="aNone">— ningún circuito en /grid/screens</div>';
+  else html+=circuits.map(row=>{
+    const on=asgCircuits.has(row.id);
+    return '<div class="tgRow '+(on?'sel':'')+'" data-circuit="'+esc(row.id)+'"><span class="d"></span><div class="tx"><div class="tt">'+esc(row.id)+'</div><div class="ty">'+row.screens.length+' pantallas</div></div><div class="chk">'+(on?'✓':'')+'</div></div>';
+  }).join('');
+  html+='<div class="grp-h">'+esc(t().group)+'</div>';
+  if(!GROUPS.length) html+='<div class="aNone">— guarda una selección con nombre para reutilizarla</div>';
+  else html+=GROUPS.map(group=>{
+    const on=asgGroup&&asgGroup.id===group.id;
+    return '<div class="tgRow '+(on?'sel':'')+'" data-group="'+esc(group.id)+'"><span class="d"></span><div class="tx"><div class="tt">'+esc(group.name||group.id)+'</div><div class="ty">'+(group.screens||[]).length+' players</div></div><div class="chk">'+(on?'✓':'')+'</div></div>';
+  }).join('');
   // Players VIVOS (la estrella): reproducen de verdad su canal
-  html+='<div class="grp-h">Players · en línea y virtuales registrados</div>';
+  html+='<div class="grp-h">'+esc(t().players)+'</div>';
   if(!LIVE.length){ html+='<div class="aNone" style="padding:4px 2px">— ningún player latiendo ahora mismo</div>'; }
   else html+=LIVE.map(s=>{ const on=isLiveOnline(s); const already2=already.has(s.screen);
       return '<div class="tgRow '+(on?'on':'off')+(asgSel.has(s.screen)?' sel':'')+'" data-tg="'+esc(s.screen)+'">'+
@@ -524,8 +814,24 @@ function renderTargets(){
     }).join('');
   host.innerHTML=html;
 }
-$('tgList').addEventListener('click',e=>{ const el=e.target.closest('[data-tg]'); if(!el) return; const id=el.dataset.tg;
-  if(asgSel.has(id)) asgSel.delete(id); else asgSel.add(id); renderTargets(); });
+$('tgList').addEventListener('click',e=>{
+  const circuit=e.target.closest('[data-circuit]');
+  const group=e.target.closest('[data-group]');
+  const el=e.target.closest('[data-tg]');
+  if(circuit){ const id=circuit.dataset.circuit; if(asgCircuits.has(id)) asgCircuits.delete(id); else asgCircuits.add(id); renderTargets(); return; }
+  if(group){ const found=GROUPS.find(row=>row.id===group.dataset.group)||null; asgGroup=(asgGroup&&found&&asgGroup.id===found.id)?null:found; renderTargets(); return; }
+  if(!el) return; const id=el.dataset.tg;
+  if(asgSel.has(id)) asgSel.delete(id); else asgSel.add(id); renderTargets();
+});
+$('playModes').addEventListener('click',e=>{ const btn=e.target.closest('[data-play]'); if(!btn) return; asgPlay=btn.dataset.play; document.querySelectorAll('#playModes .segbtn').forEach(node=>node.classList.toggle('on', node===btn)); });
+$('grpSave').onclick=()=>{
+  const name=($('grpName').value||'').trim();
+  const screens=resolveTargets({circuits:[...asgCircuits], groups:asgGroup?[asgGroup]:[], players:[...asgSel], surfaces:SURF});
+  if(!name||screens.length<2){ $('asHint').textContent='Pon un nombre y al menos dos destinos.'; $('asHint').className='hint err'; return; }
+  GROUPS=GROUPS.filter(row=>row.name!==name);
+  GROUPS.unshift({id:'grp_'+Date.now().toString(36), name, screens});
+  saveGroups(); asgGroup=GROUPS[0]; renderTargets();
+};
 $('segNow').onclick=()=>{ asgScope='now'; $('segNow').classList.add('on'); $('segAll').classList.remove('on'); };
 $('segAll').onclick=()=>{ asgScope='all'; $('segAll').classList.add('on'); $('segNow').classList.remove('on'); };
 
@@ -553,31 +859,44 @@ async function bookToScreen(screen, playlist, scope, key){
   }
   return {ok,fail};
 }
+function targetName(screen){
+  const live=LIVEMAP[screen];
+  if(live&&live.name) return live.name;
+  const surf=SURF.find(row=>row.screen===screen);
+  return (surf&&(surf.name||surf.screen))||screen;
+}
 $('asDo').onclick=async()=>{
   const p=PLAYLISTS.find(x=>x.id===asgId); if(!p) return;
-  if(!asgSel.size){ $('asHint').textContent='Elige al menos un destino.'; $('asHint').className='hint err'; return; }
+  const targets=resolveTargets({circuits:[...asgCircuits], groups:asgGroup?[asgGroup]:[], players:[...asgSel], surfaces:SURF});
+  if(!targets.length){ $('asHint').textContent='Elige un circuito, un grupo o al menos un player.'; $('asHint').className='hint err'; return; }
+  if(!scheduleActive(p.schedule, madridClock())){ $('asHint').textContent='Fuera de la programación de esta playlist. No se emite.'; $('asHint').className='hint err'; return; }
+  if(targets.length>12 && !confirm('Este destino tiene '+targets.length+' pantallas. ¿Programar la playlist en todas?')) return;
   let key=gkGet(); if(!key){ key=($('asKey').value||'').trim(); if(key) gkSet(key); }
   if(!key){ $('asHint').textContent='Falta la clave GRID_KEY para escribir en la parrilla.'; $('asHint').className='hint err'; $('keyFld').style.display='flex'; return; }
   $('asDo').disabled=true; $('asHint').className='hint'; $('asHint').textContent='Programando en la parrilla…';
+  const plan=assignmentPlan(targets, asgPlay);
   let done=0, totOk=0, totFail=0;
-  for(const screen of asgSel){
-    const r=await bookToScreen(screen,p,asgScope,key);
+  for(const row of plan){
+    const playing={...p, items:playbackItems(p.items||[], asgPlay, row.seed||1)};
+    const r=await bookToScreen(row.screen, playing, asgScope, key);
     totOk+=r.ok||0; totFail+=r.fail||0;
     if(r.err==='GRID_KEY incorrecta'){ $('asHint').textContent='✗ '+r.err; $('asHint').className='hint err'; $('asDo').disabled=false; $('keyFld').style.display='flex'; return; }
     if((r.ok||0)>0){
-      const nm=(LIVEMAP[screen]&&screen)||((SURF.find(s=>s.screen===screen)||{}).name)||screen;
       const arr=ASSIGN[p.id]||(ASSIGN[p.id]=[]);
-      if(!arr.some(a=>a.screen===screen)) arr.push({screen,name:nm,scope:asgScope,ts:Date.now(),booked:r.ok});
-      else { const a=arr.find(a=>a.screen===screen); a.scope=asgScope; a.ts=Date.now(); a.booked=r.ok; }
+      const prev=arr.find(a=>a.screen===row.screen);
+      const next={screen:row.screen, name:targetName(row.screen), scope:asgScope, ts:Date.now(), booked:r.ok, role:row.role, mode:row.mode, priority:Number(p.schedule&&p.schedule.priority)||0};
+      if(!prev) arr.push(next); else Object.assign(prev, next);
     }
     done++;
   }
   saveAsg();
+  const master=plan.find(row=>row.role==='master');
   $('asHint').className='hint '+(totOk?'ok':'err');
-  $('asHint').textContent=(totOk?'✓ ':'✗ ')+totOk+' pieza(s) programada(s)'+(totFail?(' · '+totFail+' fallo(s)'):'')+' en '+done+' destino(s). El player las emite en su franja.';
+  $('asHint').textContent=(totOk?'✓ ':'✗ ')+totOk+' pieza(s) programada(s)'+(totFail?(' · '+totFail+' fallo(s)'):'')+' en '+done+' destino(s).'+(master?' Máster: '+master.screen+'. El modo sincronizado de la flota viva se aplica en /players.html, no desde aquí.':'');
   $('asDo').disabled=false;
   render();
   await loadTargets();
+  refreshAir();
 };
 
 /* Retira de la parrilla lo programado por esta playlist en una pantalla (unbook). */
@@ -637,8 +956,61 @@ $('advClearAssigns').onclick=async()=>{
 };
 $('advReload').onclick=async()=>{ await Promise.all([loadRemotePlaylists(),loadStock(),loadTargets()]); render(); };
 
+async function refreshAir(){
+  const screens=[...new Set(Object.values(ASSIGN).flat().map(row=>row.screen))];
+  await Promise.all(screens.slice(0,24).map(async screen=>{
+    const [now, cache]=await Promise.all([
+      fetch(GRID+'/signage/now?screen='+encodeURIComponent(screen),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+      fetch(GRID+'/screen/cache?screen='+encodeURIComponent(screen),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+    ]);
+    const state=playerAirState({now, cachePercent:cachePercentOf(cache), online:screenState(screen)});
+    Object.values(ASSIGN).flat().forEach(row=>{
+      if(row.screen!==screen) return;
+      row.air=state.state; row.airKey=state.labelKey;
+    });
+  }));
+  saveAsg(); render();
+}
+function applyVista(){
+  const params=new URLSearchParams(location.search);
+  const vista=params.get('vista');
+  if(!vista) return;
+  if(vista==='crear'||vista==='preview'){
+    openEdit(null);
+    setEditMode('auto');
+    if(params.get('hashtag')) $('crHash').value=params.get('hashtag');
+    rememberEditor();
+    editDraft.items=selectByCriteria(STOCK, editDraft.criteria);
+    editDraft.name=params.get('nombre')||('Alsea · '+ (editDraft.criteria.hashtag||'#alsea'));
+    $('edName').value=editDraft.name;
+    renderEditItems();
+    if(vista==='preview' && editDraft.items.length) showPreview(0);
+    return;
+  }
+  if(vista==='circuito'){
+    const existing=PLAYLISTS[0];
+    if(!existing){
+      openEdit(null); setEditMode('auto'); rememberEditor();
+      editDraft.items=selectByCriteria(STOCK, editDraft.criteria);
+      editDraft.name='Alsea · circuito'; $('edName').value=editDraft.name;
+      if(editDraft.items.length) PLAYLISTS.unshift(editDraft);
+      closeModal('mEdit');
+    }
+    const id=(PLAYLISTS[0]&&PLAYLISTS[0].id);
+    if(id) openAssign(id);
+    const want=params.get('circuito');
+    if(want){ asgCircuits.add(want); asgPlay=params.get('modo')||'sync'; document.querySelectorAll('#playModes .segbtn').forEach(btn=>btn.classList.toggle('on', btn.dataset.play===asgPlay)); renderTargets(); }
+  }
+}
+$('langToggle').onclick=()=>{ LANG=LANG==='en'?'es':'en'; try{localStorage.setItem('adtv_pl_lang',LANG)}catch(_){} applyChrome(); if(editDraft) paintDays(readSchedule().days); render(); };
+$('metaToggle').onclick=()=>{ META=META==='alsea'?'admira':'alsea'; try{localStorage.setItem('adtv_pl_meta',META)}catch(_){} applyChrome(); };
+
 /* ════════════════ ARRANQUE ════════════════ */
 (async function init(){
+  const boot=new URLSearchParams(location.search);
+  if(boot.get('meta')==='alsea') META='alsea';
+  if(boot.get('lang')==='en') LANG='en';
+  applyChrome();
   setFleet('local');           // provisional hasta confirmar el worker
   refreshExpert();
   render();                    // pinta ya desde la caché local (arranque instantáneo)
@@ -646,12 +1018,18 @@ $('advReload').onclick=async()=>{ await Promise.all([loadRemotePlaylists(),loadS
   refreshExpert();
   render();
   await Promise.all([loadStock(),loadTargets()]);
+  absorbStock();
   render();
+  applyVista();
+  window.__plPhase='listo';
+  window.__plReady=STOCK.length;
+  window.__plMatch=(editDraft&&editDraft.items||[]).length;
   $('stamp').textContent='actualizado '+new Date().toLocaleTimeString('es-ES');
+  refreshAir();
   // refresco periódico: plantillas de la flota (si no hay modal abierto) + estado de players
   setInterval(async()=>{
     if(!document.querySelector('.modal.open')) await loadRemotePlaylists();
-    await loadTargets(); render();
+    await loadTargets(); render(); refreshAir();
   },45000);
 })();
 </script>
