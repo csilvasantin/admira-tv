@@ -85,3 +85,15 @@ test('Starbucks Passeig de Gràcia 103 follows CanalKiosk and opens the XpaceOS 
  assert.match(s.twin.url,/^https:\/\/www\.xpaceos\.com\/admira-xp\/\?.*loc=alsea-sbux-021/);
  assert.equal(Contract.validateWalkCommand({action:'site',siteId:'starbucks'}).siteId,'starbucks');
 });
+
+test('la fachada del Starbucks es una puerta al gemelo Matrix sobre el panorama de entrada',()=>{
+ const Door=require('../js/store-entrance.js'),Surfaces=require('../js/dooh-surfaces.js');
+ const door=Door.doors.find(d=>d.siteId==='starbucks'),site=Sites.get('starbucks');
+ assert.equal(door.pano,site.entry.pano);
+ assert.equal(door.href,site.twin.url);
+ assert.match(door.href,/visual=matrix/);
+ // Con el encuadre de entrada la puerta cae entera dentro de la vista y centrada.
+ const pts=door.corners.map(p=>Surfaces.project(...p,site.entry.pov,site.entry.pov.zoom,1512,917));
+ assert.ok(pts.every(p=>p&&p[0]>0&&p[0]<1512&&p[1]>0&&p[1]<917));
+ const cx=pts.reduce((a,p)=>a+p[0],0)/4;assert.ok(Math.abs(cx-756)<120);
+});

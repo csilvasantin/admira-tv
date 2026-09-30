@@ -13,12 +13,12 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=30.09.2026.r2.1314">
-<link rel="stylesheet" href="../css/style.css?v=30.09.2026.r2.1314">
-<script src="../js/outdoor-sites.js?v=30.09.2026.r2.1314"></script>
-<script src="../js/urban-route.js?v=30.09.2026.r2.1314"></script>
-<script src="../js/dooh-surfaces.js?v=30.09.2026.r2.1314"></script>
-<script src="../js/outdoor-context.js?v=30.09.2026.r2.1314"></script>
+<link rel="stylesheet" href="../css/admira-tokens.css?v=30.09.2026.r3.1321">
+<link rel="stylesheet" href="../css/style.css?v=30.09.2026.r3.1321">
+<script src="../js/outdoor-sites.js?v=30.09.2026.r3.1321"></script>
+<script src="../js/urban-route.js?v=30.09.2026.r3.1321"></script>
+<script src="../js/dooh-surfaces.js?v=30.09.2026.r3.1321"></script>
+<script src="../js/outdoor-context.js?v=30.09.2026.r3.1321"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
   const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
@@ -203,8 +203,8 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=30.09.2026.r2.1314"><link rel="stylesheet" href="../css/hidden-ui.css?v=30.09.2026.r2.1314"><script defer src="../js/hidden-ui.js?v=30.09.2026.r2.1314"></script><script src="../js/pedestrian-layers.js?v=30.09.2026.r2.1314"></script><script src="../js/jardinets-shoes.js?v=30.09.2026.r2.1314"></script><script src="../js/jardinets-taza.js?v=30.09.2026.r2.1314"></script><script src="../js/pedestrian-motion.js?v=30.09.2026.r2.1314"></script><script src="../js/interactive-scene.js?v=30.09.2026.r2.1314"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=30.09.2026.r2.1314"></head>
-<script src="../js/pedestrian-music.js?v=30.09.2026.r2.1314"></script>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=30.09.2026.r3.1321"><link rel="stylesheet" href="../css/hidden-ui.css?v=30.09.2026.r3.1321"><script defer src="../js/hidden-ui.js?v=30.09.2026.r3.1321"></script><script src="../js/pedestrian-layers.js?v=30.09.2026.r3.1321"></script><script src="../js/jardinets-shoes.js?v=30.09.2026.r3.1321"></script><script src="../js/store-entrance.js?v=30.09.2026.r3.1321"></script><script src="../js/jardinets-taza.js?v=30.09.2026.r3.1321"></script><script src="../js/pedestrian-motion.js?v=30.09.2026.r3.1321"></script><script src="../js/interactive-scene.js?v=30.09.2026.r3.1321"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=30.09.2026.r3.1321"></head>
+<script src="../js/pedestrian-music.js?v=30.09.2026.r3.1321"></script>
 <body>
 
 <div id="app">
@@ -355,13 +355,13 @@
   </div>
 </div>
 
-<script src="street-walk.js?v=30.09.2026.r2.1314"></script>
-<script src="../js/cenital-panel.js?v=30.09.2026.r2.1314"></script><script src="../js/walk-overview.js?v=30.09.2026.r2.1314"></script><script src="walk-orientation.js?v=30.09.2026.r2.1314"></script><script src="route-walk.js?v=30.09.2026.r2.1314"></script>
-<script src="../js/player-library.js?v=30.09.2026.r2.1314"></script>
-<script src="screen-player.js?v=30.09.2026.r2.1314"></script>
-<script src="screen-audio.js?v=30.09.2026.r2.1314"></script>
-<script src="surface-focus.js?v=30.09.2026.r2.1314"></script>
-<script src="camera-path.js?v=30.09.2026.r2.1314"></script>
+<script src="street-walk.js?v=30.09.2026.r3.1321"></script>
+<script src="../js/cenital-panel.js?v=30.09.2026.r3.1321"></script><script src="../js/walk-overview.js?v=30.09.2026.r3.1321"></script><script src="walk-orientation.js?v=30.09.2026.r3.1321"></script><script src="route-walk.js?v=30.09.2026.r3.1321"></script>
+<script src="../js/player-library.js?v=30.09.2026.r3.1321"></script>
+<script src="screen-player.js?v=30.09.2026.r3.1321"></script>
+<script src="screen-audio.js?v=30.09.2026.r3.1321"></script>
+<script src="surface-focus.js?v=30.09.2026.r3.1321"></script>
+<script src="camera-path.js?v=30.09.2026.r3.1321"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -1884,6 +1884,8 @@ function selectMappedMusic(number,options){
 const signMapping=InteractiveScene.create({getPanorama:()=>sv,container:$('streetview'),foreground:$('sv-signage'),warp:quadWarp,isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onSelect:selectMappedMusic,onClose:()=>{clearTimeout(mappedMusicTimer);mappedMusic.stop();}});
 if(WALK_MODE)mappedMusic.warm().catch(()=>{});
 const shoeMapping=JardinetsShoes.create({getPanorama:()=>sv,container:$('streetview'),warp:quadWarp,isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onLeave:()=>{mappedMusic.stop();screenAudio.mute();routeWalk.cancel();}});
+// Fachada de la tienda = puerta a su gemelo digital en Matrix (Carlos, 30-09-2026).
+const storeDoor=StoreEntrance.create({getPanorama:()=>sv,container:$('streetview'),warp:quadWarp,isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onLeave:()=>{mappedMusic.stop();screenAudio.mute();routeWalk.cancel();}});
 // ZONAS DE LA TAZA (Carlos, 16-09-2026): la papelera suena a Queen y el armario de
 // contadores a Michael Jackson. Las dos piezas llevan #taza.
 //
@@ -1913,6 +1915,7 @@ const tazaZonas=JardinetsTaza.create({getPanorama:()=>sv,container:$('streetview
 function layoutSvPanels(){
   syncHiddenNavigation();
   shoeMapping?.layout();
+  storeDoor?.layout();
   signMapping?.layout();
   // Las zonas de la taza se recolocan en el MISMO bucle que las zapatillas. Sin esta
   // línea se pintaban una vez y se quedaban clavadas ahí mientras el panorama giraba:

@@ -54,7 +54,7 @@
       el('human-site-note').textContent=site.area+(site.audienceSiteId?' · soporte identificado':' · punto de visita');
       const front=element.querySelector('[data-walk="front"]');front?.classList.toggle('hidden',!site.front);
       const panels=element.querySelector('[data-walk="panels"]');if(panels)panels.textContent=site.front?'Paneles publicitarios':site.twin?'Ver fachada':'Ver quiosco';
-      const twin=el('human-store-twin');if(twin){twin.classList.toggle('hidden',!site.twin);if(site.twin){twin.href=site.twin.url;twin.textContent=site.twin.label+' ↗';}}
+      const twin=el('human-store-twin');if(twin){twin.classList.toggle('hidden',!site.twin);if(site.twin){twin.href=site.twin.url;twin.textContent=site.twin.label+' ▸';}}
       el('human-inspect').textContent=site.twin?'Ficha de la tienda':'Ficha del quiosco';
       if(audienceArgs)updateAudience(...audienceArgs);
       renderTarget();
