@@ -79,7 +79,7 @@ test('historical crossing alternative is an explicit command with boolean, frame
 
 test('Starbucks Passeig de Gràcia 103 follows CanalKiosk and opens the XpaceOS twin',()=>{
  const s=Sites.get('starbucks');
- assert.equal(s.entry.pano,'7RVJ2YrCthJuI8CKimhYUw');
+ assert.equal(s.entry.pano,'bNZ9QjiL55gYQ2iyOhSqMw');
  assert.equal(s.audienceSiteId,null);
  assert.equal(s.front,null);
  assert.match(s.twin.url,/^https:\/\/www\.xpaceos\.com\/admira-xp\/\?.*loc=alsea-sbux-021/);
