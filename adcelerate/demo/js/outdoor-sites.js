@@ -8,6 +8,15 @@
     entry:{pano:'2NoSvJbqMCZ0RXhR8pTSLA',pov:{heading:49.5,pitch:2,zoom:.9}},
     front:{pano:'9xunlB_EXfx7QBkGq7cZfA',pov:{heading:238.13,pitch:2,zoom:0}}
   },{
+    id:'starbucks',name:'Starbucks Passeig de Gràcia 103',area:'Passeig de Gràcia 103 · Eixample',shortLabel:'Starbucks',targetLabel:'Tienda',
+    // Tienda Alsea alsea-sbux-021 (catálogo api.admira.store). La foto de calle más reciente
+    // en este tramo es de enero de 2022 (Google, «103 P.º de Gracia», a 26 m): el edificio es
+    // el correcto pero el local aún no lucía la marca. El interior es el gemelo XpaceOS Matrix.
+    position:{lat:41.39574,lng:2.15979},audienceSiteId:null,
+    inventoryLabel:'TIENDA · STARBUCKS ALSEA',
+    entry:{pano:'7RVJ2YrCthJuI8CKimhYUw',pov:{heading:236,pitch:3,zoom:1.3}},front:null,
+    twin:{label:'Entrar en la tienda · gemelo XpaceOS',url:'https://www.xpaceos.com/admira-xp/?autostart=xtanco&visual=matrix&loc=alsea-sbux-021'}
+  },{
     id:'jardinets',name:'Quiosco de Jardinets',area:'Plaça de Nicolás Salmerón · Jardinets',shortLabel:'Jardinets',targetLabel:'Punto de visita',
     // Street View camera position, verified against the requested photograph.
     // It is not an inventoried coordinate of the physical advertising support.

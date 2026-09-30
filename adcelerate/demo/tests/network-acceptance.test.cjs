@@ -19,8 +19,9 @@ test('Jardinets preserves the verified panorama, camera position and photographi
  assert.ok(Object.isFrozen(site.entry.pov));
 });
 
-test('next kiosk closes the verified Vila, Jardinets and Lesseps circuit',()=>{
- assert.equal(Sites.next('vila').id,'jardinets');
+test('next kiosk closes the verified Vila, Starbucks, Jardinets and Lesseps circuit',()=>{
+ assert.equal(Sites.next('vila').id,'starbucks');
+ assert.equal(Sites.next('starbucks').id,'jardinets');
  assert.equal(Sites.next('jardinets').id,'lesseps');
  assert.equal(Sites.next('lesseps').id,'vila');
  assert.equal(Sites.get('unverified'),null);
@@ -74,4 +75,13 @@ test('historical crossing alternative is an explicit command with boolean, frame
  const data=Contract.message('walk-command',{action:'jesus-2023'});
  assert.equal(Contract.accepts({source,origin,data},source,origin),true);
  assert.equal(Contract.accepts({source:{},origin,data},source,origin),false);
+});
+
+test('Starbucks Passeig de Gràcia 103 follows CanalKiosk and opens the XpaceOS twin',()=>{
+ const s=Sites.get('starbucks');
+ assert.equal(s.entry.pano,'7RVJ2YrCthJuI8CKimhYUw');
+ assert.equal(s.audienceSiteId,null);
+ assert.equal(s.front,null);
+ assert.match(s.twin.url,/^https:\/\/www\.xpaceos\.com\/admira-xp\/\?.*loc=alsea-sbux-021/);
+ assert.equal(Contract.validateWalkCommand({action:'site',siteId:'starbucks'}).siteId,'starbucks');
 });

@@ -1,9 +1,9 @@
 {
-  "version": "v.27.09.2026.r1.16:49",
-  "signature": "NeoGrokBotBox · GrokBotBox",
-  "agent": "NeoGrokBotBox",
-  "machine": "GrokBotBox",
-  "day": "27.09.2026",
-  "time": "16:49",
-  "evidence": "Puente VA (#4475/#4528): POST /videoanalytics/api/va-session publica el snapshot agregado en va_session_publish con VA_BRIDGE_KEY (#4539), clave de servicio de solo publicación."
+  "version": "v.30.09.2026.r1.13:06",
+  "signature": "NeoMBP14 · MacBookProNegro14",
+  "agent": "NeoMBP14",
+  "machine": "MacBookProNegro14",
+  "day": "30.09.2026",
+  "time": "13:06",
+  "evidence": "ADcelerate: nueva parada Starbucks Passeig de Gràcia 103 tras el CanalKiosk (Street View 7RVJ2YrCthJuI8CKimhYUw + enlace al gemelo XpaceOS Matrix); cada quiosco se visita con la interfaz oculta y Jardinets llega sin peatones, como la señal de prohibido. Orden de Carlos 30-sep-2026."
 }

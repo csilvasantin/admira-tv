@@ -2000,6 +2000,8 @@ function selectHumanSite(siteId){
   stopDoohTour('manual');muteScreenSound(true);
   const site=OutdoorSites.get(siteId);if(!site||photo.mode!=='human'||!photo.frame)return;
   photo.siteId=site.id;
+  // Cada quiosco se visita limpio (Carlos, 30-sep-2026): H o la miga la devuelven.
+  dispatchEvent(new CustomEvent('admira-interface-set',{detail:{hidden:true}}));
   humanHUD.enter(site.id);updateUniverseCard();
   photo.frame.title='Exploración a pie · '+site.area;
   const url=new URL(location.href);url.searchParams.delete('side');url.searchParams.delete('cal');history.replaceState(null,'',url);
@@ -2105,6 +2107,7 @@ function sendSurfaceCommand(command){
   }
   muteScreenSound();
   const surface=DoohSurfaces.get(valid.surfaceId),site=OutdoorSites.get(surface.siteId);
+  if(photo.siteId!==site.id)dispatchEvent(new CustomEvent('admira-interface-set',{detail:{hidden:true}}));
   photo.siteId=site.id;humanHUD.setSite(site);updateUniverseCard();updateHumanUrl();
   if(photo.frame)photo.frame.title='Tour DooH · '+surface.label;
   pendingSurfaceCommand=valid;flushSurfaceCommand();

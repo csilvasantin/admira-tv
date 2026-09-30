@@ -53,7 +53,9 @@
       el('human-inventory-label').textContent=site.inventoryLabel;
       el('human-site-note').textContent=site.area+(site.audienceSiteId?' · soporte identificado':' · punto de visita');
       const front=element.querySelector('[data-walk="front"]');front?.classList.toggle('hidden',!site.front);
-      const panels=element.querySelector('[data-walk="panels"]');if(panels)panels.textContent=site.front?'Paneles publicitarios':'Ver quiosco';
+      const panels=element.querySelector('[data-walk="panels"]');if(panels)panels.textContent=site.front?'Paneles publicitarios':site.twin?'Ver fachada':'Ver quiosco';
+      const twin=el('human-store-twin');if(twin){twin.classList.toggle('hidden',!site.twin);if(site.twin){twin.href=site.twin.url;twin.textContent=site.twin.label+' ↗';}}
+      el('human-inspect').textContent=site.twin?'Ficha de la tienda':'Ficha del quiosco';
       if(audienceArgs)updateAudience(...audienceArgs);
       renderTarget();
     }
@@ -86,7 +88,7 @@
       el('human-crossing-alternative').classList.toggle('hidden',!state.canOpenJesus2023);
       el('human-route-stop').classList.toggle('hidden',!state.routeActive);
       el('human-inspect').classList.toggle('nearby',state.supportVisible);
-      el('human-inspect').textContent=state.supportVisible?'E · Inspeccionar soporte':'Ficha del quiosco';
+      el('human-inspect').textContent=state.supportVisible?'E · Inspeccionar soporte':currentSite.twin?'Ficha de la tienda':'Ficha del quiosco';
       element.querySelectorAll('[data-walk]').forEach(button=> {
         button.disabled=(state.status==='loading' && button!==heldButton && !['home','panels','front','release'].includes(button.dataset.walk)) || (['forward','backward'].includes(button.dataset.walk) && !state.links.length && button!==heldButton);
       });

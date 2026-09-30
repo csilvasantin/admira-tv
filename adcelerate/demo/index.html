@@ -7,18 +7,18 @@
 <title>ADcelerate · Gemelo Plaça de la Vila de Gràcia — demo</title>
 <meta name="description" content="Demo ADcelerate: gemelo 3D de la Plaça de la Vila de Gràcia con quiosco, vista real y audiencias simuladas.">
 <link rel="icon" href="../../favicon.svg">
-<link rel="stylesheet" href="css/admira-tokens.css?v=27.09.2026.r1.1649">
-<link rel="stylesheet" href="css/style.css?v=27.09.2026.r1.1649">
-<link rel="stylesheet" href="css/outdoor.css?v=27.09.2026.r1.1649">
-<script src="js/outdoor-sites.js?v=27.09.2026.r1.1649"></script>
-<script src="js/dooh-surfaces.js?v=27.09.2026.r1.1649"></script>
-<script src="js/urban-route.js?v=27.09.2026.r1.1649"></script>
-<script src="js/dooh-tour.js?v=27.09.2026.r1.1649"></script>
-<script src="js/outdoor-context.js?v=27.09.2026.r1.1649"></script>
-<script src="js/player-remote-view.js?v=27.09.2026.r1.1649"></script>
-<script src="js/human-view.js?v=27.09.2026.r1.1649"></script>
-<script src="js/audience-mode.js?v=27.09.2026.r1.1649"></script>
-<link rel="stylesheet" href="css/human.css?v=27.09.2026.r1.1649">
+<link rel="stylesheet" href="css/admira-tokens.css?v=30.09.2026.r1.1306">
+<link rel="stylesheet" href="css/style.css?v=30.09.2026.r1.1306">
+<link rel="stylesheet" href="css/outdoor.css?v=30.09.2026.r1.1306">
+<script src="js/outdoor-sites.js?v=30.09.2026.r1.1306"></script>
+<script src="js/dooh-surfaces.js?v=30.09.2026.r1.1306"></script>
+<script src="js/urban-route.js?v=30.09.2026.r1.1306"></script>
+<script src="js/dooh-tour.js?v=30.09.2026.r1.1306"></script>
+<script src="js/outdoor-context.js?v=30.09.2026.r1.1306"></script>
+<script src="js/player-remote-view.js?v=30.09.2026.r1.1306"></script>
+<script src="js/human-view.js?v=30.09.2026.r1.1306"></script>
+<script src="js/audience-mode.js?v=30.09.2026.r1.1306"></script>
+<link rel="stylesheet" href="css/human.css?v=30.09.2026.r1.1306">
 <script type="importmap">
 {
   "imports": {
@@ -27,7 +27,7 @@
   }
 }
 </script>
-<link rel="stylesheet" href="css/hidden-ui.css?v=27.09.2026.r1.1649"><script defer src="js/hidden-ui.js?v=27.09.2026.r1.1649"></script></head>
+<link rel="stylesheet" href="css/hidden-ui.css?v=30.09.2026.r1.1306"><script defer src="js/hidden-ui.js?v=30.09.2026.r1.1306"></script></head>
 <body>
 
 <div id="app">
@@ -43,6 +43,7 @@
     <div id="human-paths" class="hidden"><b>Conexiones de Street View</b><button id="human-jesus" class="hidden" data-walk="jesus">Entrar en Jesús · 2 pasos →</button><div id="human-crossing-alternative" class="hidden"><button data-walk="jesus-2023">Abrir cruce conectado · marzo 2023</button><small>Cambia a otra fotografía; no es un paso de esta ruta de 2022.</small></div><div id="human-routes"></div><p id="human-no-links">Esta fotografía no tiene conexiones. Vuelve al quiosco para seguir explorando.</p></div>
     <button id="human-inspect">Ficha del quiosco</button>
     <aside id="human-support-card" class="hidden"><button id="human-inspect-close" aria-label="Cerrar ficha">×</button><span id="human-inventory-label" class="human-eyebrow">SOPORTE / OOH MEDIA</span><h2 id="human-site-name">Quiosco News &amp; Coffee</h2><p id="human-site-note" class="human-card-note">Vila de Gràcia · soporte identificado</p><div id="human-screen-audio" class="hidden"><span>Audio del contenido mostrado</span><button id="human-audio-toggle">Activar audio</button><label for="human-audio-volume">Volumen</label><input id="human-audio-volume" type="range" min="0" max="1" step="0.05" value="0.7"><small id="human-audio-status" role="status">Silenciado</small></div><button id="human-player-remote" class="hidden">Mando del player · modo foco</button><div class="human-support-actions"><button data-walk="panels">Paneles publicitarios</button><button data-walk="front">Mostrador · 2017</button></div><div class="human-audience-value"><strong id="human-audience">—</strong><span id="human-audience-label">personas simuladas<br>en el ámbito de Vila de Gràcia</span></div><p id="human-audience-base"></p><p id="human-audience-mix"></p><div id="human-recommendation-box" class="human-recommendation"><span>RECOMENDACIÓN DEMO</span><b id="human-recommendation">—</b></div><p id="human-audience-scope" class="human-card-note">La audiencia pertenece a la simulación de Vila de Gràcia. No mide impactos de este recorrido.</p></aside>
+    <a id="human-store-twin" class="hidden" target="_blank" rel="noopener" href="#">Entrar en la tienda ↗</a>
   </section>
   <section id="player-remote" class="hidden" aria-label="Mando del player en modo foco">
     <header class="remote-heading"><span class="human-eyebrow">MODO FOCO · PLAYER</span><button id="remote-close">← Volver a explorar</button></header>
@@ -210,6 +211,6 @@
   <div id="loading"><div class="spin"></div><p>Cargando gemelo…</p></div>
 </div>
 
-<script type="module" src="js/main.js?v=27.09.2026.r1.1649"></script>
+<script type="module" src="js/main.js?v=30.09.2026.r1.1306"></script>
 </body>
 </html>

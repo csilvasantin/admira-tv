@@ -106,7 +106,7 @@
   for(let n=10;n>=1;n--){const mark=document.createElement('span');mark.textContent=n;mark.dataset.count=n;slider.append(mark);}const thumb=document.createElement('b');thumb.className='mapped-fader-thumb';thumb.setAttribute('aria-hidden','true');slider.append(thumb);container.append(slider);
   const note=document.createElement('output');note.id='mapped-people-status';note.setAttribute('aria-live','polite');note.hidden=true;container.append(note);
   const clean=new Image();clean.src='../assets/mapping/jardinets-clean-registered.png';
-  let loaded=false,count=10,audio=null,pointer=null,projectedPole=null,active=false,musicText='';
+  let loaded=false,arrived=false,count=10,audio=null,pointer=null,projectedPole=null,active=false,musicText='';
   clean.onload=()=>{
    for(const patch of patches){const {canvas,x,y,r,b}=patch;const ctx=canvas.getContext('2d');ctx.drawImage(clean,x/ref.width*clean.width,y/ref.height*clean.height,(r-x)/ref.width*clean.width,(b-y)/ref.height*clean.height,0,0,canvas.width,canvas.height);
     // Feather only the patch seam; interiors remain fully opaque.
@@ -148,7 +148,9 @@
    if(closing)return;const sv=getPanorama(),rect=container.getBoundingClientRect();
    for(const el of [button,slider,note,...patches.map(p=>p.canvas)])if(!el.isConnected)container.append(el);
    for(const el of [dropZone,...sprites,...people])if(el.parentElement!==foreground)foreground.append(el);
-   if(!sv?.getVisible()||sv.getPano()!==anchor.pano){close();return;}
+   if(!sv?.getVisible()||sv.getPano()!==anchor.pano){arrived=false;close();return;}
+   // Cada llegada a Jardinets empieza sin peatones, como al pulsar la señal (Carlos, 30-sep-2026).
+   if(!arrived&&loaded&&isAvailable()){arrived=true;setCount(0);return;}
    const selecting=selectionEnabled();if(personDrag&&!canMove(personDrag.index))endPersonDrag(true);
    note.hidden=!selecting||(!active&&selected===null);
    if(!selecting&&pointer!==null){if(slider.hasPointerCapture(pointer))slider.releasePointerCapture(pointer);pointer=null;slider.classList.remove('dragging');}
