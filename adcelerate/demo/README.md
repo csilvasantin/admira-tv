@@ -186,3 +186,11 @@ de 2024, junto a la plaza. Su única pantalla mantiene la identidad
 hereda las cifras ni las recomendaciones de la simulación de Vila.
 
 Accesos del poste de Jardinets: [zapatillas y llegada a Store](../../docs/Jardinets-zapatillas-Store.md).
+
+## Starbucks · Matrix
+
+En la vista Humano de Starbucks Passeig de Gràcia 103, pulsa el halo difuminado de la fachada para entrar en Matrix en la misma pestaña. No hay rótulo sobre la foto. El halo late suavemente y se intensifica al pasar el ratón o enfocar con Tab; Enter abre el gemelo. Con movimiento reducido permanece estático.
+
+In the Human view of Starbucks Passeig de Gràcia 103, click the blurred entrance halo to open Matrix in the same tab. There is no label over the photograph. The halo gently pulses and brightens on hover or keyboard focus; Tab then Enter opens the twin. Reduced motion keeps the halo static.
+
+[Tutorial](tutorials/starbucks-matrix-door.md)

@@ -360,3 +360,8 @@ Trampas: un screen por aparato; --es tag "" no vacía (usar espacio); «0 de N d
 Audiencia de sesión Xtore: https://admira.tv/mcp/xtore-audience-session.md
 Esquema: https://admira.tv/mcp/xtore-audience-session.schema.json
 Contadores entran/salen, exportación JSON y enlace postMessage a XpaceOS Real implementados. Importación de sesiones en Pixeria y tools MCP remotas pendientes; no inventarlas. Total de pasos, no ocupación física.
+
+## Starbucks Matrix entrance
+En la vista Humano de Starbucks Passeig de Gràcia 103, pulsa el halo difuminado de la fachada para entrar en Matrix en la misma pestaña. No hay rótulo sobre la foto. El halo late suavemente y se intensifica al pasar el ratón o enfocar con Tab; Enter abre el gemelo. Con movimiento reducido permanece estático.
+In the Human view of Starbucks Passeig de Gràcia 103, click the blurred entrance halo to open Matrix in the same tab. There is no label over the photograph. The halo gently pulses and brightens on hover or keyboard focus; Tab then Enter opens the twin. Reduced motion keeps the halo static.
+Tutorial: https://admira.tv/adcelerate/demo/tutorials/starbucks-matrix-door.md

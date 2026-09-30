@@ -8,8 +8,7 @@
  function create({getPanorama,container,warp,isAvailable=()=>true,onLeave=()=>{}}){
   const links=doors.map(door=>{
    const link=document.createElement('a');link.className='store-door';link.href=door.href;link.target='_top';link.hidden=true;
-   link.setAttribute('aria-label',door.label);link.title=door.label;link.dataset.site=door.siteId;
-   const tag=document.createElement('span');tag.textContent=door.tag||'Entrar';link.append(tag);
+   link.setAttribute('aria-label',document.documentElement.lang.startsWith('en')?'Enter Starbucks · Matrix digital twin':door.label);link.dataset.site=door.siteId;
    link.addEventListener('pointerdown',e=>e.stopPropagation());
    link.addEventListener('click',e=>{if(!isAvailable()||getPanorama()?.getPano()!==door.pano){e.preventDefault();return;}e.stopPropagation();onLeave();});
    container.append(link);return link;

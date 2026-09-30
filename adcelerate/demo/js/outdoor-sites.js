@@ -18,7 +18,7 @@
     entry:{pano:'bNZ9QjiL55gYQ2iyOhSqMw',pov:{heading:223,pitch:3,zoom:1.6}},front:null,
     twin:{label:'Entrar en la tienda · gemelo XpaceOS',url:'https://www.xpaceos.com/admira-xp/?autostart=xtanco&visual=matrix&loc=alsea-sbux-021',
       // Fachada pulsable (js/store-entrance.js): arco STARBUCKS + escaparate del 103.
-      door:{pano:'bNZ9QjiL55gYQ2iyOhSqMw',tag:'Entrar · gemelo Matrix',corners:[[213.833,6.2399],[238.8572,5.5457],[238.5509,-4.341],[213.9175,-4.845]]}}
+      door:{pano:'bNZ9QjiL55gYQ2iyOhSqMw',corners:[[213.833,6.2399],[238.8572,5.5457],[238.5509,-4.341],[213.9175,-4.845]]}}
   },{
     id:'jardinets',name:'Quiosco de Jardinets',area:'Plaça de Nicolás Salmerón · Jardinets',shortLabel:'Jardinets',targetLabel:'Punto de visita',
     // Street View camera position, verified against the requested photograph.
