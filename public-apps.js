@@ -1,7 +1,7 @@
 /* Comportamiento de las fichas públicas: vídeo y PDF.
  *
  * Las 20 tarjetas YA vienen en el HTML — las genera tools/gen-apps-grid.py desde
- * apps/public-catalog.json al preparar la publicación. Este script no pinta
+ * apps/home-catalog.json al preparar la publicación. Este script no pinta
  * contenido: sólo engancha lo que necesita al usuario delante.
  *
  * Antes sí lo pintaba: pedía el catálogo por fetch y exigía EXACTAMENTE 20

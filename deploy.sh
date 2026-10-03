@@ -37,7 +37,7 @@ if [ "$MODE" = "both" ]; then
 fi
 
 echo "→ Rejilla de soluciones…"
-# Las tarjetas de la home se GENERAN desde apps/public-catalog.json. Si alguien
+# Las tarjetas de la home se GENERAN desde apps/home-catalog.json (+ pilares.json y public-catalog.json). Si alguien
 # toca el catálogo y no regenera, la home diría algo distinto del catálogo: se
 # para la publicación en vez de servir la contradicción.
 python3 tools/gen-apps-grid.py --check
