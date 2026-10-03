@@ -37,7 +37,7 @@ const ZONAS = {
   studio: [['admira-studio', 'Admira.studio'], ['locuciones-musica', 'Creador de Locuciones y Música'], ['imagenes-videos', 'Creador de Imágenes y Vídeos'], ['adaptador-formatos', 'Adaptador de Formatos']],
   store: [['admira-store', 'Admira.store'], ['circuitos', 'Gestión de Circuitos'], ['inventario-espacios', 'Gestión de Inventario'], ['xperiencias', 'Gestión de Xperiencias']],
   tv: [['admira-tv', 'Admira.tv'], ['digitalsignage', 'Cartelería Digital'], ['hilo-musical', 'Hilo Musical'], ['turnos', 'Gestión de Turnos']],
-  app: [['admira-app', 'Admira.app'], ['direccion-proyecto', 'Dirección de Proyecto'], ['incidencias', 'Gestión de Incidencias'], ['inventario-equipos', 'Gestión del Inventario']],
+  app: [['admira-app', 'Admira.app'], ['direccion-proyecto', 'Dirección de Proyecto'], ['instalacion-mantenimiento', 'Instalación y Mantenimiento'], ['incidencias', 'Gestión de Incidencias']],
   biz: [['admira-biz', 'Admira.biz'], ['dooh', 'DooH'], ['retail-media', 'Retail Media'], ['venta-asistida', 'Venta Asistida']],
 };
 const ORDEN = Object.values(ZONAS).flat().map(([slug]) => slug);
@@ -84,15 +84,14 @@ test('home-catalog: 5 zonas × 4 tarjetas, en el orden exacto y con el pilar abr
       assert.equal(t.pdf, null, `${t.slug}: PDF aún no publicado`);
     }
   }
-  // Los dos inventarios no se confunden: espacios publicitarios vs. equipos de la red.
+  // El inventario vive en Store (espacios y circuitos publicitarios).
   const t = Object.fromEntries(homeCatalog.zonas.flatMap((z) => z.tarjetas).map((x) => [x.slug, x]));
   assert.match(t['inventario-espacios'].description_es, /circuitos publicitarios/);
-  assert.match(t['inventario-equipos'].description_es, /players|activos/);
-  assert.notEqual(t['inventario-espacios'].name_en, t['inventario-equipos'].name_en);
-  // admira.app es la parte de coordinación (Yokup): mantenimiento, incidencias e
-  // inventario. admira.biz es «business»: ingresos con la red (Carlos, 4-oct).
-  assert.match(t['admira-app'].description_es, /mantenimiento.*incidencias.*inventario/);
-  assert.match(t['incidencias'].description_es, /mantenimiento/);
+  // admira.app es la parte de coordinación (Yokup): proyectos, instalación y
+  // mantenimiento, e incidencias (Carlos, 4-oct). admira.biz es «business».
+  assert.match(t['admira-app'].description_es, /instalación, mantenimiento e incidencias/);
+  assert.match(t['instalacion-mantenimiento'].description_es, /instalación.*mantenimiento/);
+  assert.ok(!t['inventario-equipos'], 'Gestión del Inventario sale de la zona App');
   assert.match(t['admira-biz'].description_es, /ingresos/);
   assert.match(t['admira-biz'].description_es, /upselling con DooH/);
   assert.match(t['admira-biz'].description_es, /cross-selling con retail media/);
