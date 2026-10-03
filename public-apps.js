@@ -130,3 +130,60 @@
   document.querySelectorAll("[data-app-video]").forEach(bindVideo);
   document.querySelectorAll("[data-app-pdf]").forEach(bindPdf);
 })();
+
+/* Filtro de los cinco pilares (digitalsignage.ai · 3-oct-2026).
+ *
+ * La leyenda y las 20 tarjetas ya vienen en el HTML (tools/gen-apps-grid.py) en el
+ * orden de los pilares, y los botones llegan `disabled`: sin JS son una leyenda de
+ * colores y se ven todas las soluciones. Aquí sólo se habilitan y se engancha el
+ * filtro. Los botones son <button> nativos —Enter y Espacio ya funcionan— y el
+ * estado se expone con aria-pressed; el contador (#appsStatus, role=status)
+ * anuncia cuántas soluciones quedan a la vista.
+ */
+(function () {
+  "use strict";
+  var grupo = document.getElementById("pilares");
+  var rejilla = document.getElementById("publicApps");
+  if (!grupo || !rejilla) return;
+  var botones = Array.prototype.slice.call(grupo.querySelectorAll("[data-pilar-filtro]"));
+  var tarjetas = Array.prototype.slice.call(rejilla.querySelectorAll("[data-public-app-card]"));
+  var estado = document.getElementById("appsStatus");
+  var total = tarjetas.length;
+
+  function nombreDe(boton) {
+    var nodo = boton && boton.querySelector(".pilar-btn-nombre");
+    return nodo ? nodo.textContent.trim() : "";
+  }
+
+  function aplica(pilar) {
+    var todas = !pilar || pilar === "todas";
+    var visibles = 0;
+    tarjetas.forEach(function (tarjeta) {
+      var ver = todas || tarjeta.getAttribute("data-pilar") === pilar;
+      tarjeta.hidden = !ver;
+      if (ver) visibles += 1;
+    });
+    var activo = null;
+    botones.forEach(function (boton) {
+      var on = boton.getAttribute("data-pilar-filtro") === (todas ? "todas" : pilar);
+      boton.setAttribute("aria-pressed", on ? "true" : "false");
+      if (on) activo = boton;
+    });
+    if (estado) {
+      estado.textContent = todas
+        ? total + " soluciones · " + total + " solutions"
+        : nombreDe(activo) + " · " + visibles + " de " + total + " soluciones · " + visibles + " of " + total + " solutions";
+    }
+  }
+
+  botones.forEach(function (boton) {
+    boton.disabled = false;
+    boton.addEventListener("click", function () {
+      var pilar = boton.getAttribute("data-pilar-filtro");
+      // Volver a pulsar el pilar activo lo suelta: vuelven las 20.
+      if (pilar !== "todas" && boton.getAttribute("aria-pressed") === "true") pilar = "todas";
+      aplica(pilar);
+    });
+  });
+  grupo.classList.add("pilares-listo");
+})();
