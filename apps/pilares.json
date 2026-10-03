@@ -5,8 +5,8 @@
   "fuente_nombre": "digitalsignage.ai",
   "pilares": [
     {"id":"studio","n":"01","nombre":"Studio","verbo_es":"Crear","verbo_en":"Create","dominio":"admira.studio","color":"#FF3366","logo":"la N de ADmiraNeXT"},
-    {"id":"tv","n":"02","nombre":"TV","verbo_es":"Distribuir","verbo_en":"Distribute","dominio":"admira.tv","color":"#FFCC00","logo":"la e de ADmiraNeXT"},
-    {"id":"store","n":"03","nombre":"Store","verbo_es":"Controlar","verbo_en":"Control","dominio":"admira.store","color":"#33FF99","logo":"la X de ADmiraNeXT"},
+    {"id":"store","n":"02","nombre":"Store","verbo_es":"Distribuir","verbo_en":"Distribute","dominio":"admira.store","color":"#33FF99","logo":"la X de ADmiraNeXT"},
+    {"id":"tv","n":"03","nombre":"TV","verbo_es":"Reproducir","verbo_en":"Play","dominio":"admira.tv","color":"#FFCC00","logo":"la e de ADmiraNeXT"},
     {"id":"app","n":"04","nombre":"App","verbo_es":"Coordinar","verbo_en":"Coordinate","dominio":"admira.app","color":"#FF33CC","logo":"la T de ADmiraNeXT"},
     {"id":"biz","n":"05","nombre":"Biz","verbo_es":"Monetizar","verbo_en":"Monetise","dominio":"admira.biz","color":"#26DEEC","logo":"el cian de digitalsignage.ai"}
   ]

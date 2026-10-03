@@ -16,10 +16,14 @@ test('tester is hosted on Admira.tv with private camera policy and local assets'
  assert.match(headers,/\/tester\/\*[\s\S]*camera=\(self\), microphone=\(\)/);
  assert.match(headers,/connect-src 'none'/);
 });
-test('public support card links to support workflow',()=>{
+test('support workflow stays reachable after leaving the public home',()=>{
+ // 4-oct-2026: con las cinco zonas, Soporte sale de la rejilla de la home; su
+ // página y su ficha del catálogo (lanzadera /apps/) siguen en pie.
  const html=readFileSync(new URL('./index.html',import.meta.url),'utf8');
- const card=html.match(/<article[^>]*data-public-app-card="support"[\s\S]*?<\/article>/)?.[0];
- assert.ok(card);assert.match(card,/href="\/support\/"/);
+ assert.doesNotMatch(html,/data-public-app-card="support"/);
+ const catalog=JSON.parse(readFileSync(new URL('./apps/public-catalog.json',import.meta.url),'utf8'));
+ assert.ok(catalog.some((app)=>app.slug==='support'));
+ assert.ok(readFileSync(new URL('./support/index.html',import.meta.url),'utf8').length>0);
 });
 test('support live tool is the first-party gestor at /support/app/',()=>{
  const html=readFileSync(new URL('./support/index.html',import.meta.url),'utf8');

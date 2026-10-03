@@ -1,0 +1,107 @@
+{
+  "nota": "Rejilla de la home de admira.tv: 5 zonas x 4 tarjetas, en el orden dictado por Carlos el 4-oct-2026. La primera tarjeta de cada zona es el propio pilar (tipo «pilar»: su enlace sale del dominio en apps/pilares.json). «desde_catalogo» (hoy sólo Cartelería Digital) reutiliza tal cual la ficha de apps/public-catalog.json (descripción, vídeo, PDF y enlace). En las nuevas, video y pdf quedan a null hasta que existan: se pintan como «pronto». Al rellenarlos, la ruta debe ser /apps/video/<slug>.mp4 y /apps/pdf/<slug>.pdf, y el slug debe entrar en apps/videos.json y en functions/apps/_public-media.js. Lo genera todo tools/gen-apps-grid.py.",
+  "zonas": [
+    {
+      "pilar": "studio",
+      "tarjetas": [
+        {"tipo": "pilar", "slug": "admira-studio", "icon": "◆", "name_es": "Admira.studio", "name_en": "Creative Studio",
+         "description_es": "Crea locuciones, música, imágenes y vídeos, y adapta cada pieza al formato de cada pantalla.",
+         "description_en": "Creates voice-overs, music, images and video, and fits every piece to each screen format.",
+         "status": "available", "video": null, "pdf": null},
+        {"slug": "locuciones-musica", "icon": "♪", "name_es": "Creador de Locuciones y Música", "name_en": "Voice-over & Music Creator",
+         "description_es": "Genera locuciones y piezas musicales con la voz y el tono de la marca para cada espacio.",
+         "description_en": "Generates voice-overs and music tracks in the brand's own voice and tone for every space.",
+         "status": "available", "video": null, "pdf": null},
+        {"slug": "imagenes-videos", "icon": "◧", "name_es": "Creador de Imágenes y Vídeos", "name_en": "Image & Video Creator",
+         "description_es": "Produce imágenes y vídeos para pantalla a partir de una idea, un producto o una campaña.",
+         "description_en": "Produces images and videos for screens from an idea, a product or a whole campaign.",
+         "status": "available", "video": null, "pdf": null},
+        {"slug": "adaptador-formatos", "icon": "⤢", "name_es": "Adaptador de Formatos", "name_en": "Format Adapter",
+         "description_es": "Adapta cada creatividad a la resolución, orientación y duración de cada pantalla sin rehacerla.",
+         "description_en": "Adapts each creative to every screen's resolution, orientation and length without remaking it.",
+         "status": "available", "video": null, "pdf": null}
+      ]
+    },
+    {
+      "pilar": "store",
+      "tarjetas": [
+        {"tipo": "pilar", "slug": "admira-store", "icon": "◆", "name_es": "Admira.store", "name_en": "Distribution Hub",
+         "description_es": "Gestiona circuitos, inventario publicitario y xperiencias para llevar cada campaña a su pantalla.",
+         "description_en": "Manages circuits, ad inventory and experiences to route every campaign to the right screen.",
+         "status": "available", "video": null, "pdf": null},
+        {"slug": "circuitos", "icon": "◈", "name_es": "Gestión de Circuitos", "name_en": "Circuit Management",
+         "description_es": "Agrupa pantallas en circuitos por zona, cadena o audiencia para programar campañas a escala.",
+         "description_en": "Groups screens into circuits by area, chain or audience to schedule campaigns at scale.",
+         "status": "available", "video": null, "pdf": null},
+        {"slug": "inventario-espacios", "icon": "▤", "name_es": "Gestión de Inventario", "name_en": "Ad Inventory Management",
+         "description_es": "Cataloga pantallas, espacios y circuitos publicitarios con su disponibilidad para venderlos.",
+         "description_en": "Catalogues screens, spaces and advertising circuits with their availability to plan and sell them.",
+         "status": "available", "video": null, "pdf": null},
+        {"slug": "xperiencias", "icon": "✧", "name_es": "Gestión de Xperiencias", "name_en": "Experience Management",
+         "description_es": "Diseña y distribuye experiencias interactivas que combinan pantalla, sonido y contexto del espacio.",
+         "description_en": "Designs and distributes interactive experiences that blend screen, sound and the space's context.",
+         "status": "available", "video": null, "pdf": null}
+      ]
+    },
+    {
+      "pilar": "tv",
+      "tarjetas": [
+        {"tipo": "pilar", "slug": "admira-tv", "icon": "◆", "name_es": "Admira.tv", "name_en": "Playback Channel",
+         "description_es": "Reproduce cartelería digital, hilo musical y turnos en cada punto, de una pantalla a toda la red.",
+         "description_en": "Plays digital signage, background music and queue calls at every site, from one screen to the network.",
+         "status": "available", "video": null, "pdf": null},
+        {"slug": "digitalsignage", "desde_catalogo": true},
+        {"slug": "hilo-musical", "icon": "♫", "name_es": "Hilo Musical", "name_en": "Background Music",
+         "description_es": "Programa música ambiental con licencia por franjas y zonas, en sintonía con las pantallas.",
+         "description_en": "Schedules licensed background music by time slot and zone, in tune with what the screens show.",
+         "status": "available", "video": null, "pdf": null},
+        {"slug": "turnos", "icon": "⋮", "name_es": "Gestión de Turnos", "name_en": "Queue Management",
+         "description_es": "Llama turnos en pantalla y ordena la espera para que la atención sea fluida y previsible.",
+         "description_en": "Calls turns on screen and organises waiting so service stays smooth and predictable.",
+         "status": "available", "video": null, "pdf": null}
+      ]
+    },
+    {
+      "pilar": "app",
+      "tarjetas": [
+        {"tipo": "pilar", "slug": "admira-app", "icon": "◆", "name_es": "Admira.app", "name_en": "Network Coordination",
+         "description_es": "Coordina proyectos, mantenimiento, incidencias e inventario para que toda la red siga en marcha.",
+         "description_en": "Coordinates projects, maintenance, incidents and inventory so every screen in the network keeps running.",
+         "status": "available", "video": null, "pdf": null},
+        {"slug": "direccion-proyecto", "icon": "◷", "name_es": "Dirección de Proyecto", "name_en": "Project Management",
+         "description_es": "Planifica despliegues, hitos y equipos de cada proyecto, de la propuesta a la puesta en marcha.",
+         "description_en": "Plans each project's rollouts, milestones and teams, from proposal to go-live.",
+         "status": "available", "video": null, "pdf": null},
+        {"slug": "incidencias", "icon": "△", "name_es": "Gestión de Incidencias", "name_en": "Incident Management",
+         "description_es": "Registra, asigna y resuelve incidencias y mantenimientos con trazabilidad hasta el técnico en campo.",
+         "description_en": "Logs, assigns and resolves network incidents and maintenance, traceable down to the field technician.",
+         "status": "available", "video": null, "pdf": null},
+        {"slug": "inventario-equipos", "icon": "⊟", "name_es": "Gestión del Inventario", "name_en": "Asset Inventory Management",
+         "description_es": "Controla players, pantallas y demás activos de la red: ubicación, estado, garantías y ciclo de vida.",
+         "description_en": "Tracks the network's players, screens and other assets: location, status, warranties and life cycle.",
+         "status": "available", "video": null, "pdf": null}
+      ]
+    },
+    {
+      "pilar": "biz",
+      "tarjetas": [
+        {"tipo": "pilar", "slug": "admira-biz", "icon": "◆", "name_es": "Admira.biz", "name_en": "Network Revenue",
+         "description_es": "Genera ingresos con la red: publicidad DooH, retail media y venta asistida en el punto de venta.",
+         "description_en": "Earns revenue from the network: DooH advertising, retail media and assisted selling in store.",
+         "status": "available", "video": null, "pdf": null},
+        {"slug": "dooh", "icon": "◎", "name_es": "DooH", "name_en": "Digital Out of Home",
+         "description_es": "Comercializa la red como exterior digital con audiencias, compra programática e informes por campaña.",
+         "description_en": "Sells the network as digital out-of-home media with audiences, programmatic buying and reporting.",
+         "status": "available", "video": null, "pdf": null},
+        {"slug": "retail-media", "icon": "⊞", "name_es": "Retail Media", "name_en": "Retail Media Network",
+         "description_es": "Convierte las pantallas de tienda en un canal de marcas medible, justo en el punto de venta.",
+         "description_en": "Turns in-store screens into a measurable channel for brands, right at the point of sale.",
+         "status": "available", "video": null, "pdf": null},
+        {"slug": "venta-asistida", "icon": "✦", "name_es": "Venta Asistida", "name_en": "Assisted Selling",
+         "description_es": "Impulsa upselling, cross-selling y self-selling con avatares y agentes que atienden en el punto de venta.",
+         "description_en": "Drives upselling, cross-selling and self-selling with avatars and agents serving at the point of sale.",
+         "status": "available", "video": null, "pdf": null}
+      ]
+    }
+  ]
+}

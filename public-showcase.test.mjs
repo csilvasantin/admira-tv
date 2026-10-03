@@ -64,13 +64,16 @@ test('sólo se publican los 19 pares de medios verificados y nunca Access Contro
   assert.equal(mediaContext.publicMediaFileTest('../dashboard.mp4','mp4'), '');
 });
 
-test('la home es pública; solo enlaza Soporte como entrada explícita al tester, sin datos DMZ', () => {
+test('la home es pública; no abre herramientas operativas ni datos DMZ', () => {
   assert.doesNotMatch(home, /auth-gate|admira-nav|admira-frame|api\.admira\.store|grid\/screens|signage\/now/i);
-  // Cambio de producto solicitado: la tarjeta Soporte lleva a su página protegida.
-  // No se permite abrir ninguna otra herramienta operativa desde la home.
-  const supportEntry = '<a class="app-action" href="/support/">Abrir Soporte · Tester visual ↗</a>';
-  assert.equal(home.split(supportEntry).length - 1, 1);
-  assert.doesNotMatch(home.replace(supportEntry, ''), /href=["'][^"']*(?:\/apps\/|\/accesscontrol|\/cms|\/parrilla|\/wall|\/support|\/iotmanager|\/alta|\/comprar|\/condicional)/i);
+  // Hasta el 4-oct-2026 la tarjeta Soporte enlazaba su página protegida (/support/).
+  // Con las cinco zonas Soporte sale de la home (su página sigue en /support/), así
+  // que la home ya no abre ninguna herramienta operativa.
+  assert.doesNotMatch(home, /href=["'][^"']*(?:\/apps\/|\/accesscontrol|\/cms|\/parrilla|\/wall|\/support|\/iotmanager|\/alta|\/comprar|\/condicional)/i);
+  // Los únicos destinos externos de las tarjetas son los cinco dominios de los pilares.
+  const grid = home.match(/<!-- apps:generado[\s\S]*?<!-- \/apps:generado -->/)[0];
+  const externos = [...grid.matchAll(/href="(https?:[^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(externos, ['studio', 'store', 'tv', 'app', 'biz'].map((d) => `https://www.admira.${d}/`));
   assert.doesNotMatch(home + client, /Bearer|CLIENT_ID|owners|localStorage|sessionStorage|document\.cookie/i);
   assert.match(client, /credentials: "omit"/);
 });
