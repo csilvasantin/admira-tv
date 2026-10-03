@@ -94,11 +94,14 @@ test('home-catalog: 5 zonas × 4 tarjetas, en el orden exacto y con el pilar abr
   assert.match(t['admira-app'].description_es, /mantenimiento.*incidencias.*inventario/);
   assert.match(t['incidencias'].description_es, /mantenimiento/);
   assert.match(t['admira-biz'].description_es, /ingresos/);
-  assert.match(t['admira-biz'].description_es, /publicidad/);
-  assert.match(t['admira-biz'].description_es, /retail media/);
-  assert.match(t['admira-biz'].description_es, /venta asistida/);
+  assert.match(t['admira-biz'].description_es, /upselling con DooH/);
+  assert.match(t['admira-biz'].description_es, /cross-selling con retail media/);
+  assert.match(t['admira-biz'].description_es, /self selling/);
   assert.match(t['dooh'].name_en, /Digital Out of Home/);
-  for (const v of ['upselling', 'cross-selling', 'self-selling', 'avatares', 'agentes', 'punto de venta']) assert.ok(t['venta-asistida'].description_es.includes(v), `Venta Asistida: ${v}`);
+  // Modelo de ingresos de Carlos (4-oct): DooH = upselling, Retail Media = cross-selling, Venta Asistida = self selling.
+  assert.match(t['dooh'].description_es, /^Upselling:/);
+  assert.match(t['retail-media'].description_es, /^Cross-selling:/);
+  for (const v of ['Self selling', 'quioscos', 'avatares', 'ahorro de personal']) assert.ok(t['venta-asistida'].description_es.includes(v), `Venta Asistida: ${v}`);
 });
 
 test('la home pinta las 20 tarjetas en el orden de las zonas, cada una con su etiqueta de pilar', () => {
