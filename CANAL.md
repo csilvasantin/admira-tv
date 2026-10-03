@@ -47,7 +47,7 @@ aparece si casa con el segmento elegido. Dimensiones (del Stock de Pixeria):
 ## Pantalla / circuito
 
 - Selector de **circuito/tienda** poblado desde las ubicaciones reales del grupo
-  (`https://admira.app/locations.js` → `window.OMNIP_LOCATIONS_DEFAULT`, ~107).
+  (`https://www.clearchannel.tv/locations.js` → `window.OMNIP_LOCATIONS_DEFAULT`, ~107).
 - **ID de pantalla** editable (se autocompleta a `<circuito>-led`).
 - La identidad se muestra en el HUD (📍) y queda lista para la **parrilla por
   pantalla** cuando se construya el backbone `/grid` (ver «Pendiente»).

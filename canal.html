@@ -49,7 +49,7 @@
      player sin red no podría servir el shell del canal desde disco. Idempotente y silencioso. -->
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){try{navigator.serviceWorker.register('/sw.js').catch(function(){});if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().catch(function(){});}}catch(_){/* El player aislado no tiene almacenamiento ni service worker. */}});}</script>
 <!-- El catálogo solo alimenta el selector: una caída de admira.app no debe frenar la emisión. -->
-<script async src="https://admira.app/locations.js" onload="if(typeof loadStores==='function')loadStores()"></script>
+<script async src="https://www.clearchannel.tv/locations.js" onload="if(typeof loadStores==='function')loadStores()"></script>
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
