@@ -1,9 +1,9 @@
 {
-  "version": "v.04.10.2026.r6.18:49",
-  "signature": "SmithMacMini · MacMini",
-  "agent": "SmithMacMini",
+  "version": "v.04.10.2026.r7.21:11",
+  "signature": "HuangMacMini · MacMini",
+  "agent": "HuangMacMini",
   "machine": "MacMini",
   "day": "04.10.2026",
-  "time": "18:49",
-  "evidence": "Entrada de agentes en admira.tv/auth/agente: token bueno 200 con y sin nombre, token malo 401."
+  "time": "21:11",
+  "evidence": "Avatar digital solo por bandera: admira-nav.js carga el cargador común de admiranext.com (bandera admira-tv apagada); fuera /cms, pantallas de emisión e iframes."
 }
