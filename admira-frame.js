@@ -24,6 +24,24 @@
   if (window.__admframe) return;
   window.__admframe = true;
 
+  // ⌘ EXPERTO · CLI con el look de digitalavatar.ai (Carlos, 4-oct-2026): piel compartida de la
+  // suite (www.admiranext.com/suite). admira.tv no traía CLI: la piel monta el suyo en el panel
+  // INFERIOR (ficha del motor + registro + orden «›») y lo que la página ponía en el slot
+  // bottom (mando, diagnóstico, JSON…) queda tras «＋ vista». No en iframes ni en emisión.
+  (function () {
+    if (window.top !== window.self || /(^|[?&])embed=/.test(location.search)) return;
+    var EXPERTO = "https://www.admiranext.com/suite/experto", V = "20261004-experto-tv-1";
+    var css = document.createElement("link");
+    css.rel = "stylesheet"; css.href = EXPERTO + ".css?v=" + V;
+    document.head.appendChild(css);
+    var js = document.createElement("script");
+    js.src = EXPERTO + ".js?v=" + V; js.defer = true;
+    js.setAttribute("data-mount", "#af-panel-bottom");
+    js.setAttribute("data-mount-body", ".af-bd");
+    js.setAttribute("data-version-url", "/version.json");
+    document.head.appendChild(js);
+  })();
+
   // Definición de los tres lados. El SVG dibuja un marco (af-fr) + una franja de panel
   // (af-pn) en el borde correspondiente → el icono «dice» dónde se abre el panel.
   var SIDES = [
