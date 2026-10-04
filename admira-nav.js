@@ -674,3 +674,23 @@
   }
   if(document.body) init(); else document.addEventListener('DOMContentLoaded',init);
 })();
+
+/* AVATAR DIGITAL (encargo avatar · 4-oct-2026) — SOLO BANDERA, sin comandos.
+ * Se carga el cargador común de admiranext.com. Él decide si se ve: elección del
+ * visitante guardada en este navegador > interruptor del proyecto «admira-tv» del panel
+ * central (APAGADO) > apagado. Apagado no descarga el avatar: solo consulta la bandera.
+ * Fuera a propósito: /cms (lleva su copiloto, admira-avatar.js), las pantallas de
+ * emisión (canal, player, virtual-players, wall, signage), /tester (CSP estricta) y
+ * cualquier página embebida en un iframe (el canal va dentro de MUPIs y players).
+ * Sin data-brain: admira.tv no tiene /avatar-ask; pregunta al relevo central. */
+(function(){
+  try{ if(window.self!==window.top) return; }catch(e){ return; }
+  var p=location.pathname||'/';
+  if(/^\/(?:cms|canal|player|virtual-players|wall|signage|tester)(?:[\/.]|$)/i.test(p)) return;
+  if(document.querySelector('script[src*="admira-avatar"],script[data-admira-avatar]')) return;
+  var s=document.createElement('script');
+  s.src='https://www.admiranext.com/assets/avatar.js?v=20261004-avatar-1';
+  s.async=true;
+  s.setAttribute('data-admira-avatar','');
+  (document.head||document.documentElement).appendChild(s);
+})();
