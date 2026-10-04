@@ -1,9 +1,9 @@
 {
-  "version": "v.04.10.2026.r5.01:00",
-  "signature": "MorfeoMacMini · MacMini",
-  "agent": "MorfeoMacMini",
+  "version": "v.04.10.2026.r6.18:49",
+  "signature": "SmithMacMini · MacMini",
+  "agent": "SmithMacMini",
   "machine": "MacMini",
   "day": "04.10.2026",
-  "time": "01:00",
-  "evidence": "Intercambio de dominios admira.biz/admira.app, paso 1C: canal.html carga locations.js de www.clearchannel.tv; suite raíz 933/948 con los 15 fallos previos (mismos nombres que en main)."
+  "time": "18:49",
+  "evidence": "Entrada de agentes en admira.tv/auth/agente: token bueno 200 con y sin nombre, token malo 401."
 }
