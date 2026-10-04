@@ -1,0 +1,1009 @@
+/* admiranext-frame.css — COPIA TAL CUAL del armazón cuadrático canónico de
+ * admiranext.com (csilvasantin/admira-next-web · assets/admira-frame.css @ c19088a,
+ * 5-oct-2026), para la portada de admira.tv (encargos #5136 · #5142 · #5152).
+ * Va en la raíz y no en /assets/: _headers sirve /assets/* como JavaScript y con
+ * nosniff el navegador rechazaría la hoja. Los ajustes propios de la portada viven
+ * en index.html, para que esta copia se pueda resincronizar sin mirar.
+ */
+/* admira-frame.css — la cuadrícula de AdmiraNeXT.
+ *
+ * PORTADO TAL CUAL de yokup-site/yk-frame.css (7-ago-2026, encargo de Carlos:
+ * «tiene que ser una interfaz de cuadrícula como la que utilizamos siempre en
+ * AdmiraNeXT»). Se CONSERVAN los nombres de clase yk-* y el contrato data-yk-*
+ * a propósito: si se renombraran dejaría de ser la misma cuadrícula y se
+ * bifurcarían dos armazones que deben evolucionar juntos.
+ *
+ * Qué es: barra superior FIJA (.yk-bar, 46px, por encima de todo) + dos raíles
+ * verticales deslizantes —izquierda OPCIONES (.yk-rail-left), derecha AVANZADO
+ * (.yk-rail-right)— + franja inferior de nivel experto (data-yk-slot="bottom").
+ * Se abren con .yk-open-left / .yk-open-right sobre el <html>.
+ *
+ * El CSS es presentación pura y no depende de yokup. El JS de allí SÍ (llama a
+ * api.yokup.com para proyectos y RTC), así que NO se porta: admira-frame.js
+ * reimplementa sólo el armazón, sin backend ajeno.
+ *
+ * Única variable que el original tomaba de fuera: --yk-card. Se define aquí.
+ */
+:root{ --yk-card: #101a26; }
+
+/* ============================================================================
+ * yk-frame.css — Marco CUADRÁTICO de AdmiraNeXT para el perímetro de seguridad
+ * de Yokup.  ·  yk-frame v3 (2026-07-12, canon precisado por Carlos)
+ *
+ * CANON v3:
+ *  · BARRA SUPERIOR REAL (.yk-bar): entidad propia del sitio, fixed top:0, ancho
+ *    completo, fondo sólido del tema terminal cian, borde inferior. Estructura:
+ *      [icono OPCIONES] · logotipo YO KUP (→ /) · rótulo de la página ·
+ *      referencias de la home (Plataforma · Agentes IoT · as a Service · Equipo ·
+ *      Incidencias · Asistencia · App) · FLOTA admira.tv + reloj ·
+ *      [icono AVANZADO] [icono EXPERTO]
+ *  · La barra NUNCA se mueve ni se tapa: z-index por encima de paneles.
+ *  · Los tres paneles OVERLAY nacen DESDE el borde inferior de la barra
+ *    (top: var(--yk-bar-h)) y NO encogen el contenido (flotan encima). La esquina
+ *    inferior derecha queda libre para la burbuja del avatar.
+ *  · El contenido recibe padding-top = alto de la barra (única excepción al
+ *    «no empujar»: padding constante, no dependiente de paneles).
+ *  · Los ICONOS viven DENTRO de la barra y NO se mueven: toggle + Escape, estado
+ *    encendido (relleno cian + aria-pressed) cuando su panel está abierto.
+ *
+ * Estética terminal oscuro / fósforo-cian / monospace de la casa (sci-fi
+ * 80s/90s). Los colores salen de las CSS vars de cada página, con fallback.
+ * ==========================================================================*/
+
+:root{
+  --yk-bar-h: 46px;        /* alto de la barra superior real */
+  --yk-rail-w: 300px;      /* ancho de paneles laterales */
+  --yk-rail-h: 240px;      /* alto del panel inferior */
+  --yk-avatar-safe: 132px; /* esquina inf-dcha reservada para la burbuja avatar */
+  --yk-z: 2147483000;      /* por debajo del gate de acceso.js, por encima de todo lo demás */
+  /* fallbacks por si la página no define los tokens */
+  --yk-bg: var(--card, #0a1620);
+  --yk-bg2: var(--bg, #02080d);
+  --yk-ink: var(--ink, #dff8ff);
+  --yk-mut: var(--mut, #75aab9);
+  --yk-dim: var(--dim, #4d7a88);
+  --yk-brand: var(--brand, #78f3ff);
+  /* azul vibrante: el escalón por encima del cian de marca. Marca «estás
+     encima de esto» en el menú y titula la tarjeta de detalle. Va en la paleta
+     y no en .yk-nav porque la tarjeta cuelga de <body>, fuera del menú. */
+  --yk-hi: #5fe0ff;
+  --yk-line: var(--line, rgba(120,243,255,.16));
+  --yk-line2: var(--line2, rgba(120,243,255,.30));
+  --yk-mono: var(--mono, ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace);
+}
+
+/* El contenido baja bajo la barra: padding-top constante. Scoped a las páginas
+ * con marco (html.yk-framed) — vence al reset *{padding:0} de cada página. */
+html.yk-framed body{ padding-top: var(--yk-bar-h); }
+
+/* ============================ BARRA SUPERIOR ============================== */
+.yk-bar{
+  position: fixed; top:0; left:0; right:0;
+  height: var(--yk-bar-h);
+  z-index: calc(var(--yk-z) + 3);   /* SIEMPRE por encima de paneles y contenido */
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 10px;
+  background: var(--yk-bg2);         /* fondo sólido del tema terminal */
+  border-bottom: 1px solid var(--yk-line2);
+  box-shadow: 0 2px 20px rgba(0,0,0,.55), inset 0 -1px 0 rgba(120,243,255,.05);
+  font-family: var(--yk-mono);
+  color: var(--yk-ink);
+}
+
+/* logotipo YO KUP — igual que la landing: puntito cian + YO KUP (enlace a /) */
+.yk-logo{
+  display: inline-flex; align-items: center; gap: 8px;
+  flex: 0 0 auto; text-decoration: none; white-space: nowrap;
+  font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: 14px;
+  color: var(--yk-ink);
+}
+.yk-logo b{ color: var(--yk-brand) }
+.yk-logo .yk-dot{
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--yk-brand); box-shadow: 0 0 16px var(--yk-brand);
+  animation: yk-blink 2s infinite;
+}
+@keyframes yk-blink{ 0%,100%{ opacity:1 } 50%{ opacity:.3 } }
+
+/* rótulo de la página actual (SOPORTE / TICKET / …) */
+.yk-page{
+  flex: 0 0 auto; white-space: nowrap;
+  font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; font-weight: 700;
+  color: var(--yk-brand);
+  padding-left: 13px; border-left: 1px solid var(--yk-line);
+}
+
+/* referencias de la home — zona central compresible (scroll horizontal interno) */
+.yk-nav{
+  display: flex; align-items: center; gap: 15px;
+  /* blindaje: grupo compacto tras el rótulo SIEMPRE — un nav{} legacy de la
+     página (p.ej. justify-content:space-between) no puede esparcir el menú */
+  justify-content: flex-start !important;
+  flex: 1 1 auto; min-width: 0;
+  overflow-x: auto; padding: 4px 2px;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.yk-nav::-webkit-scrollbar{ display: none }
+.yk-nav a{
+  display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:32px;
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--yk-mut); text-decoration: none; white-space: nowrap; transition: .15s;
+}
+.yk-nav a:hover{ color: var(--yk-ink) }
+.yk-nav a.on{ color: var(--yk-brand); font-weight: 700 }
+.yk-nav a[data-yk-open]{ cursor: pointer }
+/* CONTADOR «curso/pend» (2026-08-04): segunda línea centrada bajo el rótulo.
+   Vacío cuando no hay dato (:empty), para que una sección a cero conserve sólo
+   su nombre y no deje una cifra ni un hueco artificial. */
+/* El contador ya NO escribe cifras (Carlos, 2026-08-05): el hover da el detalle
+   y la luz del rótulo da la novedad. El span sigue existiendo porque sostiene la
+   alarma de NOTIFICACIONES, que conserva su rojo — sin número, pero visible: un
+   equipo parado no es una novedad más. Sin alarma no ocupa ni un píxel. */
+.yk-nav-c{ display:block; margin:0; min-height:0; font-size:9.5px;
+  line-height:0; text-align:center; font-weight:600; letter-spacing:.02em;
+  color:var(--yk-dim); font-variant-numeric:tabular-nums }
+.yk-nav a.on .yk-nav-c{ color:var(--yk-brand) }
+.yk-nav-c:empty{ display:none }
+/* INFORMES con deuda: hay misiones terminadas sin su parte. Ámbar, para que se
+   distinga de un contador normal sin gritar como una incidencia. */
+.yk-nav-c.yk-count-debe{ color:#ffb454 }
+.yk-nav a.on .yk-nav-c.yk-count-debe{ color:#ffb454 }
+/* NOTIFICACIONES: equipo parado esperando a un humano. Rojo y con latido — es lo
+   único de la barra que pide ir AHORA, así que se distingue de un contador. */
+/* Alarma sin cifra: un punto rojo con latido bajo el rótulo. */
+.yk-nav-c.yk-count-alarma, .yk-nav a.on .yk-nav-c.yk-count-alarma{
+  width:6px; height:6px; margin:3px auto 0; padding:0; line-height:0;
+  background:#ff5f56; border-radius:50%; box-shadow:0 0 7px #ff5f56;
+  animation:yk-alarma 1.6s ease-in-out infinite }
+.yk-nav a.yk-nuevo .yk-nav-c.yk-count-alarma{ background:#ff5f56 }
+@keyframes yk-alarma{ 0%,100%{ opacity:1 } 50%{ opacity:.55 } }
+@media (prefers-reduced-motion: reduce){ .yk-nav-c.yk-count-alarma{ animation:none } }
+
+/* ============ REFERENCIA LUMÍNICA DE LA BARRA (Carlos, 2026-08-05) =========
+ * La barra es el nexo de todos los proyectos: de un vistazo hay que ver DÓNDE
+ * está pasando algo, sin pulsar nada. Escalera de tres niveles de luz sobre el
+ * mismo cian del sistema — el ámbar (deuda) y el rojo (equipo parado) siguen
+ * reservados para lo suyo y no entran aquí:
+ *   apagado  .yk-mut   → sin novedad desde tu última visita
+ *   encendido .yk-brand + halo + pulso lento → HAY NOVEDAD
+ *   vibrante  --yk-hi  + halo fuerte → estás encima (y sale el detalle)
+ * ------------------------------------------------------------------------- */
+/* NOVEDAD: el rótulo se enciende. Es estado en reposo, así que pulsa despacio
+   para captarse por el rabillo del ojo sin competir con la alarma roja. */
+.yk-nav a.yk-nuevo{
+  color:var(--yk-brand);
+  text-shadow:0 0 10px rgba(120,243,255,.45);
+  animation:yk-nuevo 2.6s ease-in-out infinite;
+}
+.yk-nav a.yk-nuevo .yk-nav-c{ color:var(--yk-brand) }
+/* punto de novedad: marca la sección aunque su contador esté vacío */
+.yk-nav a.yk-nuevo::before{
+  content:""; position:absolute; top:2px; right:-5px;
+  width:5px; height:5px; border-radius:50%;
+  background:var(--yk-brand); box-shadow:0 0 6px var(--yk-brand);
+}
+.yk-nav a{ position:relative }
+@keyframes yk-nuevo{ 0%,100%{ opacity:1 } 50%{ opacity:.62 } }
+
+/* HOVER/FOCO: el azul vibrante. Pisa a .yk-nuevo (estás mirándolo ya) y para
+   el pulso — mientras lees el detalle nada se mueve. */
+.yk-nav a:hover, .yk-nav a:focus-visible,
+.yk-nav a.yk-nuevo:hover, .yk-nav a.yk-nuevo:focus-visible{
+  color:var(--yk-hi);
+  text-shadow:0 0 12px rgba(95,224,255,.65);
+  animation:none;
+}
+.yk-nav a:hover .yk-nav-c, .yk-nav a:focus-visible .yk-nav-c{ color:var(--yk-hi) }
+/* el contador de alarma conserva SIEMPRE su rojo: el hover no lo apaga */
+.yk-nav a:hover .yk-nav-c.yk-count-alarma{ color:#0b0f14 }
+.yk-nav a:hover .yk-nav-c.yk-count-debe{ color:#ffb454 }
+@media (prefers-reduced-motion: reduce){ .yk-nav a.yk-nuevo{ animation:none } }
+
+/* DETALLE AL VUELO: tarjeta bajo el rótulo. No navega, no pliega nada y no
+   empuja la barra — flota. Sin hover, ni existe. */
+.yk-navpop{
+  position:fixed; z-index:calc(var(--yk-z) + 4);
+  min-width:186px; max-width:300px;
+  padding:9px 11px 10px;
+  background:var(--yk-bg); border:1px solid var(--yk-line2); border-radius:8px;
+  box-shadow:0 10px 28px rgba(0,0,0,.55), 0 0 0 1px rgba(120,243,255,.06) inset;
+  font-family:var(--yk-mono); font-size:11px; line-height:1.45; color:var(--yk-ink);
+  opacity:0; transform:translateY(-4px); pointer-events:none;
+  transition:opacity .13s ease, transform .13s ease;
+}
+.yk-navpop.on{ opacity:1; transform:translateY(0) }
+.yk-navpop .yk-pop-h{
+  font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--yk-hi); font-weight:700; margin-bottom:6px;
+}
+.yk-navpop .yk-pop-r{
+  display:flex; justify-content:space-between; gap:14px; padding:1.5px 0;
+  color:var(--yk-mut);
+}
+.yk-navpop .yk-pop-r b{ color:var(--yk-ink); font-weight:700; font-variant-numeric:tabular-nums }
+.yk-navpop .yk-pop-r.debe b{ color:#ffb454 }
+.yk-navpop .yk-pop-r.alarma b{ color:#ff5f56 }
+.yk-navpop .yk-pop-n{
+  margin-top:7px; padding-top:6px; border-top:1px solid var(--yk-line);
+  color:var(--yk-brand); font-size:10px; font-weight:700;
+}
+.yk-navpop .yk-pop-f{ margin-top:6px; color:var(--yk-dim); font-size:9.5px; line-height:1.35 }
+/* móvil: la barra ya esconde .yk-nav, así que la tarjeta tampoco pinta nada */
+@media (max-width:520px){ .yk-navpop{ display:none } }
+
+/* PESTAÑA CADUCA: producción ha publicado otra versión y esta pestaña sigue
+   ejecutando la suya. Los datos se refrescan solos, el código no — así que lo
+   que hay en pantalla puede estar pintado con lógica vieja. Ámbar, no rojo: no
+   es un equipo parado, es un aviso de que hay que recargar. Sale a la derecha,
+   junto a los iconos, y no desplaza el menú. */
+.yk-stale{
+  flex:0 0 auto; margin-left:8px; padding:5px 11px;
+  font-family:var(--yk-mono); font-size:10px; font-weight:800; letter-spacing:.08em;
+  color:#0b0f14; background:#ffb454; border:0; border-radius:999px; cursor:pointer;
+  white-space:nowrap; animation:yk-stale 2.2s ease-in-out infinite;
+}
+.yk-stale:hover{ background:#ffc978 }
+.yk-stale:focus-visible{ outline:2px solid var(--yk-hi); outline-offset:2px }
+@keyframes yk-stale{ 0%,100%{ opacity:1 } 50%{ opacity:.7 } }
+@media (prefers-reduced-motion:reduce){ .yk-stale{ animation:none } }
+@media (max-width:520px){ .yk-stale{ font-size:0; padding:9px } .yk-stale span{ font-size:12px } }
+
+/* ===================== SELECTOR DE PROYECTO (desplegable) ================= */
+/* Absorbe el antiguo rótulo «FLOTA admira.tv»: el botón lee el proyecto activo
+ * y el menú (clic, no hover) permite saltar al otro proyecto. Estética terminal
+ * cian, hermana de los iconos cuadráticos de la barra. */
+.yk-proj{ position: relative; flex: 0 0 auto }
+.yk-proj-btn{
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 32px; padding: 0 10px;
+  font-family: var(--yk-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--yk-ink); cursor: pointer; white-space: nowrap;
+  background: rgba(120,243,255,.05);
+  border: 1px solid var(--yk-line2); border-radius: 8px;
+  transition: background .15s, border-color .15s, box-shadow .15s;
+  user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.yk-proj-btn:hover{
+  border-color: var(--yk-brand);
+  background: rgba(120,243,255,.12);
+  box-shadow: 0 0 14px rgba(120,243,255,.25);
+}
+.yk-proj-btn b{ color: var(--yk-brand); font-weight: 700 }
+.yk-proj-ic{ font-size: 13px; line-height: 1 }
+.yk-proj-cx{ color: var(--yk-mut); font-size: 10px; transition: transform .15s, color .15s }
+.yk-proj-nm .yk-pj-short{ display: none }
+.yk-proj.open .yk-proj-btn{
+  border-color: var(--yk-brand);
+  background: rgba(120,243,255,.12);
+  box-shadow: 0 0 16px rgba(120,243,255,.30);
+}
+.yk-proj.open .yk-proj-cx{ transform: rotate(180deg); color: var(--yk-brand) }
+
+/* menú desplegado bajo el botón (se abre por clic; JS conmuta .open) */
+.yk-proj-menu{
+  position: absolute; top: calc(100% + 8px); right: 0;
+  min-width: 232px; max-width: calc(100vw - 16px);
+  display: none; flex-direction: column; gap: 2px;
+  padding: 6px;
+  background: var(--yk-bg2);
+  border: 1px solid var(--yk-line2); border-radius: 10px;
+  box-shadow: 0 14px 36px rgba(0,0,0,.6), inset 0 0 30px rgba(120,243,255,.03);
+  z-index: calc(var(--yk-z) + 4);
+}
+.yk-proj.open .yk-proj-menu{ display: flex }
+.yk-proj-opt{
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 11px; border-radius: 8px; text-decoration: none;
+  border: 1px solid transparent; transition: .15s;
+  width:100%; background:transparent; color:var(--yk-ink); font:inherit; text-align:left; cursor:pointer;
+}
+.yk-proj-opt:hover{ background: rgba(120,243,255,.10); border-color: var(--yk-line2) }
+.yk-proj-opt .yk-proj-txt{ display: flex; flex-direction: column; gap: 2px }
+.yk-proj-opt .yk-proj-txt b{ font-size: 12px; letter-spacing: .04em; color: var(--yk-ink); font-weight: 700 }
+.yk-proj-opt .yk-proj-txt em{
+  font-style: normal; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--yk-mut);
+}
+.yk-proj-opt.on{ background: rgba(120,243,255,.08); border-color: var(--yk-line2) }
+.yk-proj-opt.on .yk-proj-txt b{ color: var(--yk-brand) }
+.yk-proj-opt:focus-visible{ outline: 2px solid var(--yk-brand); outline-offset: 1px }
+
+/* reloj (separador + hora) */
+.yk-meta{
+  flex: 0 0 auto; white-space: nowrap;
+  font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--yk-mut);
+}
+.yk-meta .yk-sep{ color: var(--yk-dim); margin: 0 4px 0 8px }
+.yk-clock{ color: var(--yk-ink) }
+
+/* ===================== ICONOS CUADRÁTICOS (en la barra) ================== */
+.yk-ico{
+  flex: 0 0 auto;
+  height: 32px; min-width: 32px; padding: 0 9px;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--yk-mono); cursor: pointer;
+  color: var(--yk-brand);
+  background: rgba(120,243,255,.05);
+  border: 1px solid var(--yk-line2);
+  border-radius: 8px;
+  transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+  user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.yk-ico:hover{
+  border-color: var(--yk-brand);
+  background: rgba(120,243,255,.12);
+  box-shadow: 0 0 14px rgba(120,243,255,.25);
+}
+.yk-ico-gl{ font-size: 15px; line-height: 1 }
+/* estado ABIERTO: icono «encendido» (relleno) — NO se mueve */
+.yk-ico[aria-pressed="true"]{
+  color: var(--yk-bg2);
+  background: var(--yk-brand);
+  border-color: var(--yk-brand);
+  box-shadow: 0 0 16px rgba(120,243,255,.45);
+}
+
+/* =============================== PANELES ================================= */
+.yk-rail{
+  position: fixed;
+  z-index: var(--yk-z);   /* por debajo de la barra */
+  background: linear-gradient(180deg, var(--yk-bg), var(--yk-bg2));
+  border: 1px solid var(--yk-line2);
+  box-shadow: 0 0 40px rgba(0,0,0,.6), inset 0 0 40px rgba(120,243,255,.03);
+  transition: transform .28s cubic-bezier(.4,.0,.2,1);
+  overflow: auto;
+  font-family: var(--yk-mono);
+  color: var(--yk-ink);
+  scrollbar-width: thin;
+}
+.yk-rail::-webkit-scrollbar{ width:8px; height:8px }
+.yk-rail::-webkit-scrollbar-thumb{ background: var(--yk-line2); border-radius:8px }
+
+/* --- panel IZQUIERDO (OPCIONES) — nace bajo la barra --- */
+.yk-rail-left{
+  top: var(--yk-bar-h); bottom:0; left:0;
+  width: var(--yk-rail-w);
+  border-left: 0; border-top: 0; border-bottom: 0;
+  transform: translateX(-103%);
+  padding: 18px 14px 22px;
+}
+.yk-open-left .yk-rail-left{ transform: translateX(0) }
+
+/* --- panel DERECHO (AVANZADO) — nace bajo la barra --- */
+.yk-rail-right{
+  top: var(--yk-bar-h); bottom:0; right:0;
+  width: var(--yk-rail-w);
+  border-right: 0; border-top: 0; border-bottom: 0;
+  transform: translateX(103%);
+  padding: 18px 14px 22px;
+}
+.yk-open-right .yk-rail-right{ transform: translateX(0) }
+.yk-adv-nav{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.yk-adv-link{text-decoration:none}
+.yk-project-new{color:var(--yk-brand);border-color:var(--yk-brand)}
+.yk-project-modal{position:fixed;inset:0;z-index:calc(var(--yk-z) + 20);background:rgba(2,8,13,.78);display:grid;place-items:center;padding:18px}
+.yk-project-card{width:min(94vw,620px);max-height:calc(100vh - 36px);overflow:auto;background:var(--yk-card);border:1px solid var(--yk-line2);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.yk-project-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-bottom:12px;border-bottom:1px solid var(--yk-line)}
+.yk-project-hd b{color:var(--yk-brand);font-size:13px;letter-spacing:.12em}.yk-project-hd small{display:block;color:var(--yk-dim);font-size:9px;letter-spacing:.07em;margin-top:5px}
+.yk-project-x{border:0;background:transparent;color:var(--yk-dim);font-size:22px;line-height:1;cursor:pointer}
+.yk-project-field{display:flex;flex-direction:column;gap:6px;color:var(--yk-dim);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase}
+.yk-project-field :is(input,textarea){width:100%;background:#02080d;color:var(--yk-ink);border:1px solid var(--yk-line2);border-radius:8px;padding:9px;font:12px/1.4 var(--yk-mono)}
+.yk-project-field :is(input,textarea):focus{border-color:var(--yk-brand)}.yk-project-field textarea{min-height:66px;resize:vertical}
+.yk-project-actions{display:flex;align-items:center;gap:9px;border-top:1px solid var(--yk-line);padding-top:12px;flex-wrap:wrap}.yk-project-msg{flex:1;min-width:150px;color:var(--yk-dim);font-size:9.5px;letter-spacing:.05em}
+.yk-project-actions button{font:700 9.5px/1 var(--yk-mono);letter-spacing:.1em;padding:8px 11px;cursor:pointer;border:1px solid var(--yk-line2)}.yk-project-cancel{color:var(--yk-dim);background:transparent}.yk-project-save{color:#02080d;background:var(--yk-brand);border-color:var(--yk-brand)!important}.yk-project-save:disabled{opacity:.55;cursor:wait}
+
+/* --- panel INFERIOR (EXPERTO) — deja libre la esquina del avatar --- */
+.yk-rail-bottom{
+  left:0; right: var(--yk-avatar-safe); bottom:0;
+  height: var(--yk-rail-h);
+  border-left: 0; border-right: 0; border-bottom: 0;
+  transform: translateY(103%);
+  padding: 14px 16px 16px;
+}
+.yk-open-bottom .yk-rail-bottom{ transform: translateY(0) }
+
+/* --- cabeceras de panel --- */
+.yk-hd{
+  font-size: 10.5px; letter-spacing:.14em; text-transform:uppercase;
+  color: var(--yk-brand); font-weight:700;
+  padding-bottom: 10px; margin-bottom: 12px;
+  border-bottom: 1px solid var(--yk-line);
+  display:flex; align-items:center; gap:8px;
+}
+.yk-hd::before{ content:""; width:7px; height:7px; border-radius:50%;
+  background: var(--yk-brand); box-shadow:0 0 10px var(--yk-brand) }
+
+/* Contenedores donde caen los nodos movidos: verticalizar y ocupar el ancho */
+.yk-slot{ display:flex; flex-direction:column; align-items:stretch; gap:8px }
+.yk-slot :is(button, a.simBtn, a.bellBtn, .tab, .btn){ width:100%; text-align:left }
+.yk-slot .tabs, .yk-slot .tools{ display:flex; flex-direction:column; gap:8px; width:100% }
+/* dentro del EXPERTO los botones van en fila, no apilados a full-width */
+.yk-expert > .yk-slot{ flex:1; min-height:0 }
+.yk-slot .yk-expert-btns button{ width:auto; text-align:center }
+.yk-empty{
+  font-size: 11px; letter-spacing:.06em; text-transform:uppercase;
+  color: var(--yk-dim); padding: 8px 2px; opacity:.8;
+}
+
+/* --- Panel EXPERTO --- */
+.yk-expert{ display:flex; flex-direction:column; height:100%; gap:10px }
+.yk-expert-btns{ display:flex; gap:8px; flex-wrap:wrap }
+.yk-expert-btns button{
+  font-family: var(--yk-mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+  padding: 8px 12px; border-radius:8px; cursor:pointer;
+  color: var(--yk-brand); background: rgba(120,243,255,.06);
+  border: 1px dashed var(--yk-line2); transition:.15s;
+}
+.yk-expert-btns button:hover{ background: rgba(120,243,255,.14); border-style:solid }
+.yk-expert-out{
+  flex:1; min-height:0; overflow:auto; margin:0;
+  font-family: var(--yk-mono); font-size:11px; line-height:1.5;
+  color: var(--yk-mut); white-space:pre-wrap; word-break:break-word;
+  background: rgba(2,8,13,.5); border:1px solid var(--yk-line); border-radius:10px;
+  padding: 10px 12px;
+}
+.yk-ver{ font-size:10px; letter-spacing:.08em; text-transform:uppercase; color: var(--yk-dim) }
+.yk-ver b{ color: var(--yk-brand) }
+
+/* ============================ RESPONSIVE ================================= */
+/* ≤790px: el nombre del proyecto se compacta (admira.live ▾) para no desplazar
+ * el reloj ni los iconos; la zona de referencias se comprime con scroll. */
+@media (max-width: 790px){
+  .yk-proj-nm .yk-pj-full{ display: none }
+  .yk-proj-nm .yk-pj-short{ display: inline }
+}
+
+/* ============== MENÚ DE SECCIONES DEL CAJÓN (móvil) — FLT-983 ==============
+ * En escritorio la barra ya lista las secciones: aquí NO se pinta nada. Por
+ * debajo de 520px la barra las esconde, así que el mismo menú vive dentro del
+ * cajón OPCIONES. Filas de 44px de alto mínimo, activo en fósforo con barra
+ * lateral, foco visible por teclado. */
+.yk-rail-nav{ display: none }
+.yk-rail-navhd{
+  font-size: 9.5px; letter-spacing:.14em; text-transform:uppercase;
+  color: var(--yk-dim); padding: 0 2px 6px;
+}
+.yk-rail-navlink{
+  display: flex; align-items: center;
+  min-height: 44px; padding: 0 10px;
+  font-size: 12px; letter-spacing:.10em; text-transform:uppercase;
+  color: var(--yk-ink); text-decoration: none;
+  border: 1px solid transparent; border-bottom-color: var(--yk-line);
+  border-left: 2px solid transparent;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.yk-rail-navlink:hover{ color: var(--yk-brand); background: rgba(120,243,255,.06) }
+.yk-rail-navlink.on{
+  color: var(--yk-brand); font-weight: 700;
+  border-left-color: var(--yk-brand);
+  background: rgba(120,243,255,.10);
+}
+.yk-rail-navlink:focus-visible{
+  outline: 2px solid var(--yk-brand); outline-offset: -2px; color: var(--yk-brand);
+}
+/* contador «curso/pend» del cajón (móvil): empujado a la derecha de la fila */
+.yk-rail-navc{ margin-left:auto; font-size:11px; font-weight:600;
+  color:var(--yk-dim); font-variant-numeric:tabular-nums }
+.yk-rail-navlink.on .yk-rail-navc{ color:var(--yk-brand) }
+.yk-rail-navc:empty{ display:none }
+
+/* ≤520px: las referencias y el reloj salen de la barra; el selector queda como
+ * icono + caret (sin nombre); permanecen logo + iconos (quietos). Las secciones
+ * NO desaparecen: se sirven en el cajón OPCIONES (.yk-rail-nav). */
+@media (max-width: 520px){
+  :root{ --yk-rail-w: 92vw; --yk-rail-h: 78vh; --yk-avatar-safe: 0px; }
+  .yk-rail-bottom{ right:0 }
+  .yk-nav, .yk-meta, .yk-page{ display:none }
+  .yk-proj-nm{ display: none }
+  .yk-bar{ gap:10px }
+  /* el cajón sí muestra el menú, y su bloque de secciones puede desplazarse */
+  .yk-rail-nav{ display:flex; flex-direction:column; margin-bottom:14px }
+  /* cuando va detrás del panel de trabajo, el aire cambia de lado */
+  .yk-slot + .yk-rail-nav{
+    margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--yk-line);
+  }
+  /* con las secciones delante, el «— sin opciones» del cajón solo estorba */
+  .yk-rail-left .yk-empty{ display:none }
+  /* área táctil de 44x44 para los iconos de la barra SIN ensanchar la barra
+     (la barra mide 46px y a 320px no cabe un icono de 44 de lado). Se fija por
+     tamaño y no por desplazamientos: el botón es border-box con borde de 1px y
+     el pseudo-elemento se ancla a la caja de relleno, así que unos -6/-4 daban
+     42x42 medidos. Con 44x44 centrado el área es exacta sea cual sea el borde. */
+  .yk-ico{ position:relative; min-width:36px; padding:0 8px }
+  .yk-ico::after{
+    content:""; position:absolute; width:44px; height:44px;
+    left:50%; top:50%; transform:translate(-50%,-50%);
+  }
+  .yk-proj-btn{ position:relative }
+  .yk-proj-btn::after{
+    content:""; position:absolute; width:100%; min-width:44px; height:44px;
+    left:50%; top:50%; transform:translate(-50%,-50%);
+  }
+}
+
+/* foco visible también en los iconos y el selector de la barra */
+.yk-ico:focus-visible, .yk-proj-btn:focus-visible{
+  outline: 2px solid var(--yk-brand); outline-offset: 2px;
+}
+
+/* quien pida menos movimiento, no lo sufre */
+@media (prefers-reduced-motion: reduce){
+  .yk-rail{ transition: none }
+  .yk-logo .yk-dot{ animation: none }
+}
+
+/* --- pie del raíl OPCIONES: AJUSTES + versión, abajo del todo (2026-07-19) --- */
+.yk-rail-left{ display:flex; flex-direction:column }
+.yk-rail-left > .yk-slot{ flex:0 0 auto }
+.yk-rail-foot{ margin-top:auto; padding-top:12px; border-top:1px solid var(--yk-line);
+  display:flex; flex-direction:column; gap:10px }
+.yk-set-btn{ width:100%; text-align:left; font-family:inherit; font-size:10.5px;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--yk-ink);
+  background:transparent; border:1px solid var(--yk-line2); padding:8px 10px;
+  cursor:pointer; display:flex; align-items:center; gap:8px }
+.yk-set-btn:hover{ border-color:var(--yk-brand); color:var(--yk-brand) }
+.yk-set-btn.on{ border-color:var(--yk-brand); color:var(--yk-brand);
+  background:rgba(120,243,255,.08) }
+.yk-set-cx{ margin-left:auto; transition:transform .2s }
+.yk-set.open .yk-set-cx{ transform:rotate(180deg) }
+.yk-set-body{ display:none; flex-direction:column; gap:8px; padding:10px;
+  border:1px solid var(--yk-line); border-top:0 }
+.yk-set.open .yk-set-body{ display:flex }
+.yk-set-row{ display:flex; justify-content:space-between; gap:8px; font-size:10.5px;
+  text-transform:uppercase; letter-spacing:.08em; color:var(--yk-dim) }
+.yk-set-row .yk-set-v{ color:var(--yk-ink); text-transform:none; letter-spacing:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60% }
+.yk-set-out{ font-family:inherit; font-size:10px; letter-spacing:.12em;
+  text-transform:uppercase; color:#ff8866; background:transparent;
+  border:1px solid currentColor; padding:6px 10px; cursor:pointer; text-align:center }
+.yk-set-out:hover{ background:rgba(255,136,102,.08) }
+
+/* --- AJUSTES · PERSONALIZACIÓN (2026-07-19) --- */
+.yk-set-sec{ font-size:9.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--yk-brand); padding-top:4px; border-top:1px solid var(--yk-line) }
+.yk-set-chk{ display:flex; align-items:center; gap:8px; font-size:10.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--yk-ink); cursor:pointer }
+.yk-set-chk input{ accent-color:var(--yk-brand) }
+
+/* --- PANEL DE CONTROL · personalización (2026-07-19) --- */
+.yk-pc{ position:fixed; inset:0; z-index:calc(var(--yk-z) + 10); background:rgba(2,8,13,.72);
+  display:flex; align-items:center; justify-content:center; padding:24px;
+  font-family:var(--yk-mono); color:var(--yk-ink) }
+.yk-pc-card{ width:min(94vw,560px); max-height:86vh; display:flex; flex-direction:column;
+  background:linear-gradient(180deg,var(--yk-bg),var(--yk-bg2));
+  border:1px solid var(--yk-line2); box-shadow:0 0 60px rgba(0,0,0,.7), inset 0 0 40px rgba(120,243,255,.03);
+  padding:18px 16px }
+.yk-pc-body{ overflow:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px }
+.yk-pc-row{ display:flex; align-items:center; gap:10px; border:1px solid var(--yk-line);
+  padding:6px 10px }
+.yk-pc-vis{ width:40px; height:40px; display:flex; align-items:center; justify-content:center; flex:0 0 40px }
+.yk-pc-img{ width:40px; height:40px; object-fit:cover; object-position:center top; border:1px solid var(--yk-line2) }
+.yk-pc-ico{ font-size:22px } .yk-pc-ico.dim{ opacity:.45 }
+.yk-pc-nm{ flex:1; font-size:11.5px; letter-spacing:.06em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.yk-pc-icoin{ width:64px; font-family:inherit; font-size:14px; text-align:center; color:var(--yk-ink);
+  background:transparent; border:1px solid var(--yk-line); padding:5px 4px }
+.yk-pc-foto,.yk-pc-quitar,.yk-pc-save,.yk-pc-close{ font-family:inherit; font-size:9.5px; letter-spacing:.1em;
+  text-transform:uppercase; background:transparent; color:var(--yk-ink); border:1px solid var(--yk-line2);
+  padding:6px 9px; cursor:pointer }
+.yk-pc-foto:hover,.yk-pc-save:hover{ border-color:var(--yk-brand); color:var(--yk-brand) }
+.yk-pc-quitar{ color:var(--yk-dim) } .yk-pc-quitar:hover{ color:#ff8866; border-color:#ff8866 }
+.yk-pc-foot{ display:flex; align-items:center; gap:10px; padding-top:12px; margin-top:10px;
+  border-top:1px solid var(--yk-line) }
+.yk-pc-msg{ flex:1; font-size:10px; letter-spacing:.06em; color:var(--yk-dim) }
+.yk-pc-save{ background:var(--yk-brand); color:#02080d; border-color:var(--yk-brand); font-weight:700 }
+.yk-pc-save:hover{ color:#02080d; filter:brightness(1.1) }
+.yk-pc-save:disabled{ opacity:.6; cursor:wait }
+
+/* --- Panel de control: fila activa (pegado) y arrastre (2026-07-19) --- */
+.yk-pc-row{ cursor:pointer }
+.yk-pc-row.sel{ border-color:var(--yk-brand); box-shadow:inset 0 0 12px rgba(120,243,255,.08) }
+.yk-pc-row.drag{ border-color:var(--yk-brand); background:rgba(120,243,255,.07) }
+
+/* --- Panel de control · Tablero de misiones (2026-07-20) --- */
+.yk-pc-dens{ display:flex; align-items:center; gap:8px; padding:4px 0 }
+.yk-pc-dens .yk-set-k{ font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--yk-dim); flex:1 }
+.yk-pc-densb{ font-family:inherit; font-size:9.5px; letter-spacing:.1em; background:transparent;
+  color:var(--yk-ink); border:1px solid var(--yk-line2); padding:6px 10px; cursor:pointer }
+.yk-pc-densb.on{ background:var(--yk-brand); color:#02080d; border-color:var(--yk-brand); font-weight:700 }
+
+/* ── Ajustes propios de AdmiraNeXT ────────────────────────────────────────────
+   Van al FINAL y aparte, para que el bloque de arriba siga siendo el portado tal
+   cual y se pueda seguir sincronizando con yokup de un vistazo.
+
+   La marca: el original fuerza text-transform:uppercase, que en yokup funciona
+   porque su marca es una palabra («YOKUP»), pero aquí destroza el camelCase que
+   ES la marca — se leía «AD MIRA NEXT», partida en tres. */
+.yk-bar .yk-logo{ text-transform: none; letter-spacing: .01em; font-size: 14px }
+.yk-bar .yk-logo{ gap: 0 }
+
+/* El logotipo oficial (libro-de-estilo.html §7.4 · portada: .titlebar-brand de
+   index.html): «ADmira» en blanco y N·e·X·T en los cuatro neones de la casa, sin
+   cambiar el orden de los colores ni añadir efectos, siempre sobre oscuro. */
+.yk-bar .yk-logo.yk-wordmark{
+  font-family: 'Montserrat', 'Helvetica Neue', system-ui, -apple-system, sans-serif;
+  font-weight: 800; font-size: 17px; letter-spacing: 0; line-height: 1;
+  color: #fff; align-items: baseline;
+}
+.yk-wm-admira{ color: #fff }
+.yk-wm-next{ display: inline-flex }
+.yk-wm-n{ color: #FF3366 }
+.yk-wm-e{ color: #FFCC00 }
+.yk-wm-x{ color: #33FF99 }
+.yk-wm-t{ color: #FF33CC }
+.yk-bar .yk-logo.yk-wordmark:focus-visible{ outline: 2px solid var(--yk-brand); outline-offset: 4px; border-radius: 4px }
+/* Teléfonos estrechos: el logotipo es algo más ancho que el texto plano de antes;
+   se compacta la barra para que ▤ y ⌘ sigan dentro de la pantalla (390 px con tres
+   secciones en la barra, como el generador). */
+@media (max-width: 440px){
+  .yk-bar{ gap: 8px }
+  .yk-bar .yk-logo.yk-wordmark{ font-size: 15px }
+  .yk-bar .yk-barnav{ margin-left: 4px; padding-left: 6px; gap: 4px }
+}
+@media (max-width: 380px){
+  .yk-bar{ padding: 0 6px }
+  .yk-bar .yk-logo.yk-wordmark{ font-size: 14px }
+  .yk-bar .yk-barnav a.yk-ico, .yk-bar .yk-meta .yk-ico{ min-width: 30px; padding: 0 6px }
+  .yk-bar .yk-meta{ gap: 4px }
+}
+
+/* Los raíles cerrados viven FUERA de la pantalla (translateX(±103%), translateY)
+   y, sin esto, ensanchan el documento: medido, 231px de scroll horizontal en
+   escritorio. Es la ley de la casa — cero barra horizontal en responsive— y además
+   el desbordamiento no se ve, así que nadie sabría de dónde sale. */
+html, body{ overflow-x: hidden; max-width: 100% }
+/* …pero con `clip` donde exista: `hidden` en <html> y <body> convierte el <body> en
+   contenedor de scroll que nunca se desplaza, y todo `position: sticky` de la página
+   (la barra de herramientas de /presupuestos, sus columnas, el formulario del
+   business plan) dejaba de pegarse. `clip` recorta igual sin crear ese contenedor. */
+@supports (overflow-x: clip){ html, body{ overflow-x: clip } }
+
+/* En móvil el original esconde .yk-meta —allí lleva reloj y contadores que no caben—,
+   pero aquí dentro viven los ÚNICOS accesos a AVANZADO y a NIVEL EXPERTO: ocultarlos
+   dejaba dos de las cuatro barras inalcanzables desde el teléfono. Son dos iconos y
+   caben de sobra. */
+@media (max-width: 720px){
+  .yk-bar .yk-meta{ display: flex; gap: 6px; margin-left: auto }
+  .yk-bar .yk-meta .yk-ico{ min-width: 34px; padding: 0 8px }
+}
+
+/* Navegación de sección dentro de la barra. Se separa de la marca con una línea
+   fina para que se lea como «dónde estoy» y no como parte del logotipo. */
+.yk-bar .yk-barnav{ display:flex; align-items:center; gap:6px; margin-left:12px; padding-left:12px; border-left:1px solid var(--yk-line) }
+.yk-bar .yk-barnav a{ text-decoration:none }
+.yk-bar .yk-barnav a[aria-current="page"]{ color: var(--yk-brand); border-color: var(--yk-brand) }
+/* En pantallas estrechas el texto sobra, pero el acceso NO: se queda el icono. */
+@media (max-width: 720px){
+  .yk-bar .yk-barnav{ margin-left:8px; padding-left:8px }
+  .yk-bar .yk-barnav a .yk-lbl{ display:none }
+}
+
+/* Modo barra (/presentaciones): ▤ y ⌘ van a la esquina derecha, como manda el canon,
+   y los tres glifos se ven al mismo tamaño (antes ⋯ y ⌄ quedaban diminutos). */
+.yk-bar > .yk-meta{ margin-left: auto; display: flex; gap: 6px }
+.yk-bar > .yk-ico > span[aria-hidden="true"], .yk-bar > .yk-meta > .yk-ico > span[aria-hidden="true"]{ font-size: 15px; line-height: 1 }
+
+/* Estado abierto de un icono: el armazón lo dice con aria-expanded (el original
+   de yokup usaba aria-pressed). Mismo relleno cian: «este panel está abierto». */
+.yk-ico[aria-expanded="true"]{
+  color: var(--yk-bg2);
+  background: var(--yk-brand);
+  border-color: var(--yk-brand);
+  box-shadow: 0 0 16px rgba(120,243,255,.45);
+}
+
+/* ============================================================================
+ * MODO CABECERA (FLT-101373, 2-oct-2026) — <body data-yk-frame="cabecera">
+ *
+ * La familia privada de /analitics (Analitics, Webmaster, Proyectos, Usuarios,
+ * Proyectos y locales, Flota) conserva SU cabecera —la de /analitics: marca
+ * admiraNeXT, navegación y «● Acceso privado»— y el armazón inserta los iconos
+ * del canon en su sitio:
+ *
+ *   [☰] admiraNeXT · Analitics · Webmaster · Proyectos · … ● Acceso privado [▤] [⌘]
+ *
+ * La cabecera se fija arriba (position:fixed) y mide su alto en --yk-bar-h. Los
+ * paneles se SUPERPONEN al contenido en cualquier ancho, con su fondo, borde y
+ * sombra: el contenido no cambia de posición ni de ancho al abrirlos (Carlos,
+ * 3-oct-2026). Hasta entonces, en ≥1100px se acoplaban y lo empujaban. La paleta va fijada aquí para que la barra sea idéntica en todas
+ * las páginas aunque cada una tenga sus colores, y los selectores llevan la
+ * especificidad justa para que los header{}, nav{}, button{} o section{} sueltos
+ * de cada página no la desfiguren.
+ * ==========================================================================*/
+html.yk-head-mode{
+  --yk-brand:#4ae3d1; --yk-hi:#7ff3e4;
+  --yk-bg:#101724; --yk-bg2:#080d17; --yk-card:#101724;
+  --yk-ink:#f2f6fc; --yk-mut:#92a0b4; --yk-dim:#6c7a90;
+  --yk-line:#253042; --yk-line2:#314057;
+  --yk-rail-w: 300px; --yk-rail-h: 260px;
+  scroll-padding-top: calc(var(--yk-bar-h) + 12px);
+}
+/* El contenido sólo baja el alto de la cabecera, que no depende de los paneles.
+   Ninguna regla de este fichero toca margin, padding ni width del contenido según
+   .yk-open-* (lo vigila test/admira-frame-superpuesto.test.js). */
+html.yk-head-mode body{
+  padding-top: var(--yk-bar-h);
+}
+html.yk-head-mode [hidden]{ display:none !important }
+
+html.yk-head-mode header.yk-head{
+  position: fixed; top:0; left:0; right:0; z-index: calc(var(--yk-z) + 10);
+  box-sizing: border-box; height: 76px; margin: 0; padding: 0 4vw;
+  display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; justify-content: flex-start; gap: 0;
+  border: 0; border-bottom: 1px solid var(--yk-line); border-radius: 0;
+  background: #080d17ec; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  color: var(--yk-ink); font: 14px/1.4 system-ui,-apple-system,sans-serif; text-align: left;
+}
+html.yk-head-mode header.yk-head .brand{
+  flex: 0 0 auto; margin: 0 clamp(20px,3.6vw,54px) 0 0; padding: 0; border: 0; background: none;
+  color: var(--yk-ink); text-decoration: none; white-space: nowrap;
+  font: 400 26px/1 system-ui,-apple-system,sans-serif; letter-spacing: -1.5px;
+}
+html.yk-head-mode header.yk-head .brand span{ font-weight: 800 }
+html.yk-head-mode header.yk-head .brand i{ display:inline-block; width:7px; height:7px; background:var(--yk-brand); margin:0 0 1px 4px; border-radius:50% }
+/* El logotipo oficial también en la cabecera de la familia (antes «admiraNeXT.» en
+   minúscula con un punto cian): misma letra y mismos neones que el modo barra. */
+html.yk-head-mode header.yk-head .brand{ font: 800 24px/1 'Montserrat','Helvetica Neue',system-ui,-apple-system,sans-serif; letter-spacing: 0; display: inline-flex; align-items: baseline }
+html.yk-head-mode header.yk-head .brand i{ display: none }
+html.yk-head-mode header.yk-head nav{
+  display: flex; flex: 0 1 auto; min-width: 0; gap: clamp(16px,2.2vw,32px); margin: 0; padding: 0;
+  border: 0; background: none; font-size: 13px; color: var(--yk-mut); flex-wrap: nowrap;
+}
+html.yk-head-mode header.yk-head nav a{
+  display: inline-block; margin: 0; padding: 4px 0; border: 0; border-radius: 0; background: none;
+  color: inherit; font: inherit; text-decoration: none; white-space: nowrap;
+}
+html.yk-head-mode header.yk-head nav a:hover{ color: var(--yk-ink) }
+html.yk-head-mode header.yk-head nav a[aria-current="page"]{ color: var(--yk-brand) }
+html.yk-head-mode header.yk-head nav a[data-yk-rail-only]{ display: none }
+html.yk-head-mode header.yk-head [data-yk-access]{
+  margin: 0 0 0 auto; padding-left: 16px; font-size: 11px; color: var(--yk-brand); letter-spacing: .06em; white-space: nowrap;
+}
+html.yk-head-mode header.yk-head [data-yk-access="publico"]{ color: var(--yk-mut) }
+html.yk-head-mode header.yk-head .yk-head-meta{
+  display: flex; align-items: center; gap: 8px; margin: 0 0 0 18px; flex: 0 0 auto;
+  font: inherit; letter-spacing: 0; text-transform: none;
+}
+html.yk-head-mode header.yk-head .yk-ico{
+  box-sizing: border-box; width: auto; height: 36px; min-width: 36px; margin: 0; padding: 0 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font: 16px/1 var(--yk-mono); color: var(--yk-brand);
+  background: rgba(74,227,209,.06); border: 1px solid var(--yk-line2); border-radius: 9px; cursor: pointer;
+}
+html.yk-head-mode header.yk-head .yk-ico:hover{ border-color: var(--yk-brand); background: rgba(74,227,209,.13) }
+html.yk-head-mode header.yk-head .yk-ico[aria-expanded="true"]{ color: var(--yk-bg2); background: var(--yk-brand); border-color: var(--yk-brand) }
+html.yk-head-mode header.yk-head :focus-visible{ outline: 2px solid var(--yk-brand); outline-offset: 3px }
+/* ☰ va pegado al borde y separado de la marca (después de la regla general, que pone margin:0) */
+html.yk-head-mode header.yk-head > button.yk-ico{ margin-right: 18px }
+/* Blindaje (3-oct-2026, «la barra superior tiene que ser igual en todas las páginas de
+   un sitio»): la cabecera ya no vive sólo en la intranet, también en /mcp/ y en las
+   páginas de contenido (academia, filosofía, normativa…), cada una con sus header{},
+   nav{}, nav a{}, .brand{} o --mono sueltos. Lo que esas reglas podían colar y la
+   cabecera no fijaba —alto mínimo, huecos, sombras, mayúsculas, interletrado,
+   pseudoelementos, el suavizado de letra (-webkit-font-smoothing de academia, normativa…),
+   la letra monoespaciada de los iconos— queda fijado aquí. */
+html.yk-head-mode{ --yk-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace }
+html.yk-head-mode header.yk-head{ width: auto; max-width: none; min-height: 0; box-shadow: none; transform: none; opacity: 1; overflow: visible; letter-spacing: normal; word-spacing: normal; text-transform: none; text-shadow: none;
+  -webkit-font-smoothing: auto; -moz-osx-font-smoothing: auto; text-rendering: auto; font-kerning: auto; font-feature-settings: normal; font-variant: normal }
+html.yk-head-mode header.yk-head::before, html.yk-head-mode header.yk-head::after{ content: none; display: none }
+html.yk-head-mode header.yk-head .brand{ gap: 0; height: auto; min-height: 0; box-shadow: none; text-transform: none; text-shadow: none }
+html.yk-head-mode header.yk-head nav{ position: static; align-items: center; justify-content: flex-start; width: auto; max-width: none; height: auto; min-height: 0; box-shadow: none; line-height: 1.4; letter-spacing: normal; text-transform: none }
+html.yk-head-mode header.yk-head nav a{ height: auto; min-height: 0; line-height: inherit; letter-spacing: inherit; text-transform: none; text-shadow: none; box-shadow: none; opacity: 1 }
+html.yk-head-mode header.yk-head nav a::before, html.yk-head-mode header.yk-head nav a::after{ content: none; display: none }
+html.yk-head-mode header.yk-head [data-yk-access]{ font-family: inherit; font-weight: 400; text-transform: none; border: 0; background: none; box-shadow: none }
+/* #5053: el nav puede encogerse (min-width:0) y los enlaces, en una sola línea,
+   se pintaban encima de «Página pública» y de ▤ ⌘. Por debajo de 1240 px pasan
+   al ☰. Por encima, .yk-nav-folded (admira-frame.js) hace lo mismo si no caben. */
+@media (max-width: 1239px){
+  html.yk-head-mode header.yk-head nav{ display: none }
+}
+html.yk-head-mode header.yk-head.yk-nav-folded nav{ display: none }
+
+/* Raíles: nacen bajo la cabecera y se superponen; el último abierto queda encima */
+html.yk-head-mode .yk-rail{ font-size: 12px; line-height: 1.45; text-align: left }
+html.yk-head-mode .yk-rail-left, html.yk-head-mode .yk-rail-right{ top: var(--yk-bar-h); bottom: 0; width: var(--yk-rail-w); z-index: calc(var(--yk-z) + 2) }
+html.yk-head-mode .yk-rail-right{ display: flex; flex-direction: column }
+html.yk-head-mode .yk-rail-bottom{ left: 0; right: 0; height: var(--yk-rail-h); display: flex; flex-direction: column; z-index: calc(var(--yk-z) + 1) }
+html.yk-head-mode .yk-rail-navhd{ font: 700 11px/1.3 var(--yk-mono); letter-spacing: .14em; color: var(--yk-brand); padding: 0 2px 12px; margin-bottom: 4px; border-bottom: 1px solid var(--yk-line) }
+html.yk-head-mode .yk-rail-sub{ font: 700 9.5px/1.3 var(--yk-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--yk-dim); margin: 14px 2px 6px }
+html.yk-head-mode .yk-rail-group{ display: flex; flex-direction: column; margin: 0; padding: 0; border: 0; background: none; gap: 0 }
+html.yk-head-mode .yk-rail .yk-rail-navlink{ min-height: 40px; padding: 0 10px; margin: 0; font: 12px var(--yk-mono); letter-spacing: .06em; text-transform: none; border-radius: 0; background: none; color: var(--yk-ink) }
+html.yk-head-mode .yk-rail .yk-rail-navlink[aria-current="page"]{ color: var(--yk-brand); font-weight: 700; border-left-color: var(--yk-brand); background: rgba(74,227,209,.08) }
+html.yk-head-mode .yk-rail .yk-slot{ display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin: 0; padding: 0; border: 0; background: none; box-shadow: none }
+html.yk-head-mode .yk-rail .yk-slot a,
+html.yk-head-mode .yk-rail .yk-slot button{
+  box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 8px; min-height: 38px; margin: 0; padding: 8px 11px;
+  font: 12px/1.3 var(--yk-mono); letter-spacing: .02em; text-align: left; text-decoration: none; text-transform: none;
+  color: var(--yk-ink); background: rgba(74,227,209,.04); border: 1px solid var(--yk-line2); border-radius: 8px; cursor: pointer;
+}
+html.yk-head-mode .yk-rail .yk-slot a:hover,
+html.yk-head-mode .yk-rail .yk-slot button:hover{ border-color: var(--yk-brand); color: var(--yk-brand) }
+html.yk-head-mode .yk-rail .yk-slot a[aria-current="page"]{ border-color: var(--yk-brand); color: var(--yk-brand); background: rgba(74,227,209,.08) }
+html.yk-head-mode .yk-rail .yk-slot .yk-quiet{ border-style: dashed; background: none }
+html.yk-head-mode .yk-rail .yk-slot .yk-danger{ color: #ff9ba6 }
+html.yk-head-mode .yk-rail .yk-slot fieldset{ margin: 0; padding: 10px 12px; border: 1px solid var(--yk-line2); border-radius: 10px; display: flex; flex-direction: column; gap: 8px }
+html.yk-head-mode .yk-rail .yk-slot fieldset label{ display: flex; align-items: center; gap: 8px; margin: 0; font: 12px var(--yk-mono); color: var(--yk-ink); cursor: pointer }
+html.yk-head-mode .yk-rail .yk-slot fieldset label span{ color: var(--yk-mut) }
+html.yk-head-mode .yk-rail .yk-slot fieldset input{ display: inline-block; width: 16px; height: 16px; margin: 0; padding: 0; accent-color: var(--yk-brand) }
+html.yk-head-mode .yk-rail .yk-slot legend{ font: 700 9.5px var(--yk-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--yk-mut); padding: 0 4px }
+html.yk-head-mode .yk-rail .yk-note{ margin: 0; color: var(--yk-mut); font: 11px/1.5 var(--yk-mono) }
+html.yk-head-mode .yk-rail .yk-empty{ text-transform: none; letter-spacing: .02em }
+html.yk-head-mode .yk-rail-foot{ font: 10px var(--yk-mono); letter-spacing: .06em; color: var(--yk-dim) }
+html.yk-head-mode .yk-rail-right > .yk-rail-foot{ margin-top: auto }
+
+/* ⌘ Experto: el CLI */
+html.yk-head-mode .yk-expert{ flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; margin-top: 8px }
+.yk-cli{ flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px }
+.yk-cli-out{
+  flex: 1; min-height: 60px; overflow: auto; margin: 0; padding: 8px 10px;
+  font: 11.5px/1.5 var(--yk-mono); color: var(--yk-mut); white-space: pre-wrap; word-break: break-word;
+  background: rgba(2,8,13,.55); border: 1px solid var(--yk-line); border-radius: 10px;
+}
+.yk-cli-line{ margin: 0 }
+.yk-cli-cmd{ color: var(--yk-brand) }
+.yk-cli-err{ color: #ffbc8c }
+.yk-cli-json{ color: #c9d6e6 }
+.yk-cli-form{ display: flex; align-items: center; gap: 8px; margin: 0; padding: 0 10px; border: 1px solid var(--yk-line2); border-radius: 10px; background: #050a12 }
+.yk-cli-form:focus-within{ border-color: var(--yk-brand) }
+.yk-cli-prompt{ display: inline; margin: 0; font: 700 14px var(--yk-mono); color: var(--yk-brand) }
+.yk-rail .yk-cli-input{
+  flex: 1; min-width: 0; width: auto; display: block; margin: 0; padding: 10px 0;
+  font: 13px var(--yk-mono); color: var(--yk-ink); background: transparent; border: 0; border-radius: 0; outline: none; box-shadow: none;
+}
+
+@media (max-width: 720px){
+  html.yk-head-mode{ --yk-rail-w: min(88vw, 340px); --yk-rail-h: 62vh }
+  html.yk-head-mode header.yk-head{ height: 60px; padding: 0 12px }
+  html.yk-head-mode header.yk-head > button.yk-ico{ margin-right: 10px }
+  html.yk-head-mode header.yk-head .brand{ font-size: 19px; margin-right: 8px }
+  /* la navegación se sirve en ☰; en la barra quedan ☰, la marca, el punto de acceso, ▤ y ⌘ */
+  html.yk-head-mode header.yk-head nav{ display: none }
+  html.yk-head-mode header.yk-head [data-yk-access]{ padding-left: 8px; font-size: 13px }
+  html.yk-head-mode header.yk-head .yk-access-txt{ position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+  html.yk-head-mode header.yk-head .yk-head-meta{ margin-left: 10px; gap: 6px }
+  html.yk-head-mode header.yk-head .yk-ico{ height: 40px; min-width: 40px; padding: 0 8px }
+}
+
+/* ============================================================================
+ * PANELES REDIMENSIONABLES (obligatorio en la UX cuadrática; Carlos, 2-oct-2026)
+ * El tamaño elegido llega como --yk-w-left / --yk-w-right / --yk-h-bottom en el
+ * <html> (admira-frame.js, recordado en admiranext_frame_sizes_v1); sin él manda el
+ * tamaño por defecto (--yk-rail-w / --yk-rail-h). Los tiradores son position:fixed
+ * en el borde INTERIOR de cada panel y sólo aparecen con su panel abierto.
+ * ==========================================================================*/
+.yk-rail-left{ width: var(--yk-w-left, var(--yk-rail-w)); max-width: 92vw }
+.yk-rail-right{ width: var(--yk-w-right, var(--yk-rail-w)); max-width: 92vw }
+.yk-rail-bottom{ height: var(--yk-h-bottom, var(--yk-rail-h)) }
+html.yk-head-mode .yk-rail-left{ width: var(--yk-w-left, var(--yk-rail-w)) }
+html.yk-head-mode .yk-rail-right{ width: var(--yk-w-right, var(--yk-rail-w)) }
+html.yk-head-mode .yk-rail-bottom{ height: var(--yk-h-bottom, var(--yk-rail-h)) }
+
+.yk-resize{
+  position: fixed; z-index: calc(var(--yk-z) + 5);
+  display: none; touch-action: none; background: transparent;
+  outline: none;
+}
+.yk-resize::after{
+  content: ""; position: absolute; border-radius: 3px;
+  background: var(--yk-line2); opacity: .55; transition: background .15s, opacity .15s;
+}
+.yk-resize:hover::after, .yk-resize:focus-visible::after, html.yk-resizing .yk-resize::after{ background: var(--yk-brand); opacity: 1 }
+.yk-resize:focus-visible{ box-shadow: 0 0 0 2px var(--yk-brand) inset }
+/* laterales: franja de 10 px centrada en el borde interior, bajo la barra */
+.yk-resize-left, .yk-resize-right{ top: var(--yk-bar-h); bottom: 0; width: 10px; cursor: col-resize }
+.yk-resize-left{ left: calc(min(var(--yk-w-left, var(--yk-rail-w)), 92vw) - 5px) }
+.yk-resize-right{ right: calc(min(var(--yk-w-right, var(--yk-rail-w)), 92vw) - 5px) }
+.yk-resize-left::after, .yk-resize-right::after{ top: 50%; left: 3px; width: 4px; height: 44px; transform: translateY(-50%) }
+/* inferior: franja de 10 px en el borde superior de ⌘ */
+.yk-resize-bottom{ height: 10px; cursor: row-resize; left: 0; right: var(--yk-avatar-safe); bottom: calc(var(--yk-h-bottom, var(--yk-rail-h)) - 5px) }
+html.yk-head-mode .yk-resize-bottom{ left: 0; right: 0 }
+.yk-resize-bottom::after{ left: 50%; top: 3px; height: 4px; width: 44px; transform: translateX(-50%) }
+.yk-open-left .yk-resize-left, .yk-open-right .yk-resize-right, .yk-open-bottom .yk-resize-bottom{ display: block }
+/* Mientras se arrastra: sin animaciones (el panel sigue al puntero) ni selección de texto */
+html.yk-resizing, html.yk-resizing *{ user-select: none !important; -webkit-user-select: none !important }
+html.yk-resizing .yk-rail{ transition: none !important }
+/* Con ⌘ abierta, lo que la página tiene fijo abajo (el aviso de versión) sube por
+   encima de la franja en vez de quedar tapado; el contenido no se mueve. */
+html.yk-open-bottom .admira-version{ bottom: calc(var(--yk-h-bottom, var(--yk-rail-h)) + 14px) !important }
+/* Pie de los raíles también en modo barra (antes heredaba la letra de la página). */
+.yk-rail-foot{ font: 10px/1.4 var(--yk-mono); letter-spacing: .06em; color: var(--yk-dim) }
+
+/* ============================================================================
+ * MODO AUTOMÁTICO (<body data-yk-auto="on">) — las páginas de admiranext.com que
+ * tenían cabecera propia. Paleta fija de la casa (el logotipo oficial siempre va
+ * sobre oscuro, aunque la página sea de papel) y bloques de ☰ / ▤ con la
+ * especificidad justa para que los a{}, button{} o nav{} de cada página no los
+ * desfiguren.
+ * ==========================================================================*/
+html.yk-auto{
+  --yk-brand:#4ae3d1; --yk-hi:#7ff3e4;
+  --yk-bg:#101724; --yk-bg2:#080d17; --yk-card:#101724;
+  --yk-ink:#f2f6fc; --yk-mut:#92a0b4; --yk-dim:#6c7a90;
+  --yk-line:#253042; --yk-line2:#314057;
+  --yk-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace;
+  scroll-padding-top: calc(var(--yk-bar-h) + 14px);
+}
+html.yk-auto .yk-bar{ box-sizing: border-box; margin: 0; border-radius: 0; text-align: left; font-size: 13px; line-height: 1.2 }
+html.yk-auto .yk-bar .yk-ico{ box-sizing: border-box; margin: 0; font-size: 14px; line-height: 1; text-transform: none; letter-spacing: 0 }
+html.yk-auto .yk-rail{ box-sizing: border-box; font-size: 12px; line-height: 1.45; text-align: left; letter-spacing: 0 }
+html.yk-auto .yk-rail *{ box-sizing: border-box }
+.yk-rail .yk-auto-blk{ display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; border: 0; background: none }
+.yk-rail .yk-auto-hd{ margin: 14px 2px 6px; padding: 0; font: 700 9.5px/1.3 var(--yk-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--yk-dim) }
+.yk-rail .yk-auto-blk > .yk-auto-hd:first-child{ margin-top: 2px }
+.yk-rail .yk-auto-list{ display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; border: 0; background: none; position: static }
+.yk-rail .yk-auto-act{
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; min-height: 36px; margin: 0; padding: 7px 11px;
+  color: var(--yk-ink); background: rgba(8,13,23,.6); border: 1px solid var(--yk-line2); border-radius: 6px;
+  font: 600 11.5px/1.3 var(--yk-mono); letter-spacing: .02em; text-transform: none; text-align: left; text-decoration: none;
+  cursor: pointer; box-shadow: none; white-space: normal;
+}
+.yk-rail .yk-auto-act:hover{ color: var(--yk-brand); border-color: var(--yk-brand); background: rgba(74,227,209,.06) }
+.yk-rail .yk-auto-act[aria-current="page"]{ color: var(--yk-brand); border-color: var(--yk-brand); border-left-width: 3px; font-weight: 800 }
+.yk-rail .yk-auto-act b{ color: var(--yk-brand); font-weight: 700 }
+.yk-rail .yk-auto-act:focus-visible{ outline: 2px solid var(--yk-brand); outline-offset: 1px }
+html.yk-auto .yk-rail-navhd{ margin: 0 0 6px }
+
+/* Al imprimir (presupuestos, benchmarks…) el armazón no sale en el papel. */
+@media print{
+  .yk-bar, .yk-rail, .yk-resize{ display: none !important }
+  html.yk-framed body, html.yk-head-mode body{ padding: 0 !important }
+}
+.yk-rail .yk-auto-note{ margin: 0; padding: 8px 10px; border: 1px dashed var(--yk-line2); border-radius: 6px; color: var(--yk-mut); font: 11px/1.5 var(--yk-mono); letter-spacing: .02em; text-transform: none; background: none }
+
+/* ============================================================================
+ * FONDO COMÚN Y ANCHO DEL CUERPO — modo cabecera (Carlos, 3-oct-2026)
+ * «Vamos a utilizar el mismo fondo de digitalsignage.ai que se ilumina con el ratón
+ * en la intranet de admiranext.com […] y asegurarnos de que la zona central donde
+ * está el cuerpo de la información siempre tiene la misma anchura y no varía de una
+ * categoría a otra.»
+ *
+ * Fondo: el de digitalsignage.ai (.dsn-dots), portado sin librerías y con el cian de
+ * la casa. Una capa fija DETRÁS de todo (z-index:-1, sin eventos de puntero) que
+ * admira-frame.js crea en cada página con la cabecera del sitio:
+ *   · base: rejilla de puntos sutil, estática;
+ *   · reposo: puntos cian en dos esquinas que «respiran» despacio (sólo opacidad);
+ *   · halo: un cuadrado de --d px con puntos cian y una bruma suave, enmascarado en
+ *     círculo, que sigue al ratón con transform (el JS sólo escribe --x/--y dentro de
+ *     un requestAnimationFrame cuando el ratón se mueve); en táctil y con movimiento
+ *     reducido se queda fijo.
+ * Las páginas ya no pintan fondo propio (ni la lluvia Matrix de /webmaster, ni
+ * degradados, ni rejillas): el fondo es el del <body> de aquí, que el navegador
+ * lleva al lienzo, y los puntos van encima del lienzo y debajo del contenido.
+ * ==========================================================================*/
+:root{ --yk-content-w: 1200px; --yk-content-gutter: 16px }
+html:has(> body[data-yk-frame="cabecera"]){ background: none !important }
+body[data-yk-frame="cabecera"]{ background: #070b12 !important }
+.yk-dots{ --gap: 24px; --x: 78vw; --y: 20vh; --d: 560px; position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; contain: strict }
+.yk-dots > i{ position: absolute; display: block }
+.yk-dots-base, .yk-dots-idle{ inset: 0; background-size: var(--gap) var(--gap) }
+.yk-dots-base{ background-image: radial-gradient(circle at 50% 50%, #a9c3d12e 0, #a9c3d12e 1px, transparent 1.5px) }
+.yk-dots-idle{ background-image: radial-gradient(circle at 50% 50%, #4ae3d1 0, #4ae3d1 1px, transparent 1.6px); opacity: .22;
+  -webkit-mask: radial-gradient(ellipse 46% 40% at 88% 8%, #000, transparent 70%), radial-gradient(ellipse 40% 36% at 6% 96%, #000a, transparent 70%);
+          mask: radial-gradient(ellipse 46% 40% at 88% 8%, #000, transparent 70%), radial-gradient(ellipse 40% 36% at 6% 96%, #000a, transparent 70%) }
+.yk-dots-halo{ left: 0; top: 0; width: var(--d); height: var(--d); will-change: transform;
+  transform: translate3d(calc(var(--x) - var(--d) / 2), calc(var(--y) - var(--d) / 2), 0);
+  background-image: radial-gradient(circle at 50% 50%, #4ae3d1 0, #4ae3d1 1.2px, transparent 1.8px); background-size: var(--gap) var(--gap);
+  background-position: calc(var(--d) / 2 - var(--x)) calc(var(--d) / 2 - var(--y));
+  -webkit-mask: radial-gradient(closest-side, #000 0, #000c 30%, #0005 62%, transparent 100%);
+          mask: radial-gradient(closest-side, #000 0, #000c 30%, #0005 62%, transparent 100%);
+  opacity: .85; transition: opacity .5s }
+.yk-dots-halo::before{ content: ''; position: absolute; inset: 0; background: radial-gradient(closest-side, #4ae3d11a, transparent) }
+@media (hover: none), (pointer: coarse){ .yk-dots{ --x: 82vw; --y: 16vh; --d: 440px } .yk-dots-halo{ opacity: .6 } }
+@media (prefers-reduced-motion: no-preference){ .yk-dots-idle{ animation: yk-dots-respira 9s ease-in-out infinite alternate } }
+@keyframes yk-dots-respira{ from{ opacity: .1 } to{ opacity: .34 } }
+@media (prefers-reduced-motion: reduce){ .yk-dots-halo{ opacity: .5; transition: none } }
+@media print{ .yk-dots{ display: none } }
+
+/* Ancho del cuerpo: el contenedor principal de cada página de la intranet lleva
+   data-yk-main y mide EXACTAMENTE --yk-content-w (1200 px), centrado, con 16 px de
+   margen a cada lado en pantallas estrechas. Sin relleno lateral propio: la caja es
+   la misma en todas las categorías. Lo de dentro se adapta (las tablas anchas hacen
+   scroll en su propio contenedor) y nunca ensancha la página. Los paneles ☰ ▤ ⌘ se
+   superponen: no cambian este ancho. */
+body[data-yk-frame="cabecera"] [data-yk-main]{
+  box-sizing: border-box !important; width: min(var(--yk-content-w), calc(100% - 2 * var(--yk-content-gutter))) !important;
+  min-width: 0 !important; max-width: none !important; margin-left: auto !important; margin-right: auto !important;
+  padding-left: 0 !important; padding-right: 0 !important;
+}

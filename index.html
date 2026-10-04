@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" class="yk-head-mode">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -23,14 +23,19 @@
     a{color:inherit}
     button,a{font:inherit}
     :focus-visible{outline:3px solid var(--green);outline-offset:3px}
-    .skip{position:fixed;z-index:100;left:12px;top:10px;transform:translateY(-150%);background:var(--green);color:#04110b;padding:8px 12px;border-radius:8px;font-weight:800}
+    .skip{position:fixed;z-index:2147483647;left:12px;top:10px;transform:translateY(-150%);background:var(--green);color:#04110b;padding:8px 12px;border-radius:8px;font-weight:800}
     .skip:focus{transform:none}
     .shell{position:relative;z-index:1;width:min(var(--max),calc(100% - 36px));margin:auto}
-    .site-head{position:sticky;top:0;z-index:30;background:rgba(7,10,16,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-    .site-head .shell{min-height:64px;display:flex;align-items:center;gap:28px}
-    .brand{font-size:21px;font-weight:900;text-decoration:none;letter-spacing:-.03em}.brand b{color:var(--red)}
-    .site-nav{margin-left:auto;display:flex;align-items:center;gap:18px}.site-nav a{color:var(--dim);text-decoration:none;font-size:14px;font-weight:700}.site-nav a:hover{color:var(--text)}
-    .site-nav .nav-cta{color:#04110b;background:var(--green);padding:8px 13px;border-radius:999px}
+    /* Interfaz cuadrática de AdmiraNeXT (#5136 · #5142 · #5152): la barra es la del canon
+       (/admiranext-frame.css, copia de admiranext.com) con el logotipo oficial; aquí sólo
+       lo propio de la portada: el rótulo visible de ☰ Opciones, ▤ Avanzado y ⌘ Experto
+       (en móvil queda el glifo) y «Ver canal» como llamada a la acción. */
+    html.yk-head-mode header.yk-head .yk-ico .yk-ico-lbl{margin-left:7px;font:600 13px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0}
+    html.yk-head-mode header.yk-head .yk-ico[aria-expanded="true"] .yk-ico-lbl{color:inherit}
+    html.yk-head-mode header.yk-head nav a.nav-cta{padding:6px 12px;border-radius:999px;background:var(--green);color:#04110b;font-weight:700}
+    html.yk-head-mode header.yk-head nav a.nav-cta:hover{color:#04110b;filter:brightness(1.08)}
+    html.yk-head-mode .yk-rail .yk-slot .yk-pilar-act[aria-pressed="true"]{border-color:var(--yk-brand);color:var(--yk-brand);background:rgba(74,227,209,.08)}
+    @media(max-width:1100px){html.yk-head-mode header.yk-head .yk-ico .yk-ico-lbl{display:none}}
     .hero{padding:clamp(72px,11vw,140px) 0 70px;text-align:center}
     .eyebrow{margin:0;color:var(--green);font:800 12px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}
     .hero h1{font-size:clamp(48px,9vw,106px);line-height:.95;letter-spacing:-.055em;margin:20px auto;max-width:1020px}.hero h1 em{font-style:normal;color:var(--red)}
@@ -86,33 +91,79 @@
     .pilar-btn-cuenta{grid-column:1/-1;color:var(--dim);font:650 10.5px ui-monospace,monospace;overflow-wrap:anywhere}
     .ecosystem{border-top:1px solid var(--line)}.eco-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.eco-card{border:1px solid var(--line);border-radius:16px;padding:22px;text-decoration:none;background:var(--panel)}.eco-card small{color:var(--green);font:800 11px ui-monospace,monospace;text-transform:uppercase}.eco-card h3{margin:9px 0 5px;font-size:23px}.eco-card p{margin:0;color:var(--dim);font-size:14px}
     footer{border-top:1px solid var(--line);padding:28px 0 38px;color:var(--dim);font-size:13px}.footer-row{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}.footer-row a{text-decoration:none}.footer-row a:hover{color:var(--green)}
-    .video-dialog[hidden]{display:none}.video-dialog{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:20px;background:rgba(2,5,9,.82);backdrop-filter:blur(5px)}.video-box{width:min(920px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 24px 90px #000}.video-bar{display:flex;align-items:center;gap:16px;padding:12px 15px;border-bottom:1px solid var(--line)}.video-bar h2{margin:0;font-size:16px}.video-close{margin-left:auto;width:38px;height:38px;border:1px solid var(--line);border-radius:9px;background:#0a1019;color:var(--text);cursor:pointer}.video-status{margin:0;padding:10px 15px;color:var(--dim);font-size:13px}.video-box video{display:block;width:100%;max-height:72vh;background:#000}.video-box video[hidden]{display:none}
+    .video-dialog[hidden]{display:none}.video-dialog{position:fixed;inset:0;z-index:2147483646;display:grid;place-items:center;padding:20px;background:rgba(2,5,9,.82);backdrop-filter:blur(5px)}.video-box{width:min(920px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 24px 90px #000}.video-bar{display:flex;align-items:center;gap:16px;padding:12px 15px;border-bottom:1px solid var(--line)}.video-bar h2{margin:0;font-size:16px}.video-close{margin-left:auto;width:38px;height:38px;border:1px solid var(--line);border-radius:9px;background:#0a1019;color:var(--text);cursor:pointer}.video-status{margin:0;padding:10px 15px;color:var(--dim);font-size:13px}.video-box video{display:block;width:100%;max-height:72vh;background:#000}.video-box video[hidden]{display:none}
     @media(max-width:980px){.apps-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pilares-btns{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    @media(max-width:720px){.apps-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.eco-grid{grid-template-columns:1fr}.section-head{grid-template-columns:1fr}.catalog-count{white-space:normal}.site-nav a:not(.nav-cta){display:none}}
+    @media(max-width:720px){.apps-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.eco-grid{grid-template-columns:1fr}.section-head{grid-template-columns:1fr}.catalog-count{white-space:normal}}
     @media(max-width:480px){.shell{width:min(100% - 24px,var(--max))}.apps-grid{grid-template-columns:1fr}.pilares-btns{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.pilar-btn{padding:10px 10px 9px}.hero{padding-top:64px}.app-card{padding:16px}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
   </style>
   <!-- pilares-css:generado — NO editar a mano: tools/gen-apps-grid.py --><style id="pilaresCss">[data-pilar]{--pc-tinte:0.06;--pc-tinte-pilar:0.16}[data-pilar="studio"]{--pc:#FF3366;--pc-rgb:255,51,102;--pc-ink:#e8eef6;--pc-chip-ink:#070a10}[data-pilar="store"]{--pc:#33FF99;--pc-rgb:51,255,153;--pc-ink:#33FF99;--pc-chip-ink:#070a10}[data-pilar="tv"]{--pc:#FFCC00;--pc-rgb:255,204,0;--pc-ink:#FFCC00;--pc-chip-ink:#070a10}[data-pilar="app"]{--pc:#FF33CC;--pc-rgb:255,51,204;--pc-ink:#FF33CC;--pc-chip-ink:#070a10}[data-pilar="biz"]{--pc:#26DEEC;--pc-rgb:38,222,236;--pc-ink:#26DEEC;--pc-chip-ink:#070a10}</style><!-- /pilares-css:generado -->
-  <meta name="admiranext-version" content="v.04.10.2026.r8.22:51">
+  <meta name="admiranext-version" content="v.05.10.2026.r1.00:56">
   <!-- Literal de versión que sondean los players macOS (SignageWebView.fetchChannelVersion lee
        la RAÍZ y busca ese nombre; nada antes de esta línea debe llamarse igual). Sin él nunca
        detectaban release nuevo: admiranext-mupi llevaba 28 releases de retraso el 08-sep.
        sella-versiones.py lo mantiene al sello. -->
-  <script>window.ADMIRA_VERSION='v.04.10.2026.r8.22:51';</script>
+  <script>window.ADMIRA_VERSION='v.05.10.2026.r1.00:56';</script>
+  <link rel="stylesheet" href="/admiranext-frame.css?v=05.10.2026.r1.0056">
+  <script>
+    /* Interfaz cuadrática (#5152): ☰ Opciones lleva, bajo la navegación de la barra, los
+       cinco pilares y el ecosistema (la portada es pública: nada de herramientas operativas
+       de la DMZ, como vigila public-showcase.test.mjs); ▤ Avanzado, el filtro por pilar e «Ir a» las secciones; ⌘ Experto,
+       el CLI con /help, /ir, /seccion, /arriba y /pilar. */
+    window.ADMIRA_FRAME_SITIO = [
+      {grupo: 'Los cinco pilares', enlaces: [['https://www.admira.studio/', 'Admira.studio ↗'], ['https://www.admira.store/', 'Admira.store ↗'], ['https://www.admira.app/', 'Admira.app ↗'], ['https://www.admira.biz/', 'Admira.biz ↗'], ['https://www.digitalsignage.ai/', 'digitalsignage.ai ↗']]},
+      {grupo: 'Ecosistema', enlaces: [['https://www.pixeria.com', 'Pixeria ↗'], ['https://www.xpaceos.com', 'XpaceOS ↗'], ['https://www.admiranext.com', 'ADmiraNeXT ↗']]}
+    ];
+    window.ADMIRA_FRAME_VERBS = (window.ADMIRA_FRAME_VERBS || []).concat([{
+      id: 'pilar', aliases: ['p'], uso: '<todas|studio|store|tv|app|biz>', ayuda: 'Filtra las 20 soluciones por pilar',
+      run: function (args, ctx) {
+        var q = String(args[0] || '').toLowerCase();
+        var b = q && document.querySelector('.pilares [data-pilar-filtro="' + q.replace(/[^a-z]/g, '') + '"]');
+        if (!b) { ctx.error('Uso: /pilar <todas|studio|store|tv|app|biz>'); return; }
+        if (b.disabled) { ctx.error('El filtro aún se está cargando; prueba en un momento'); return; }
+        b.click();
+        var sec = document.getElementById('soluciones');
+        if (sec && sec.scrollIntoView) sec.scrollIntoView({behavior: 'smooth', block: 'start'});
+        ctx.imprimir('→ Pilar: ' + (b.querySelector('.pilar-btn-nombre') || b).textContent);
+      }
+    }]);
+    /* Los enlaces de la barra que van a una sección de la portada (#soluciones,
+       #ecosistema) no son «la página actual»: el armazón los marcaría por apuntar a «/».
+       DOMContentLoaded llega después de los scripts defer, con el armazón ya montado. */
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('a[href^="#"][aria-current="page"]').forEach(function (a) { a.removeAttribute('aria-current'); });
+    });
+  </script>
+  <script defer src="/admiranext-frame.js?v=05.10.2026.r1.0056"></script>
 </head>
-<body>
+<body data-yk-frame="cabecera" data-yk-auto="on" data-yk-secciones="main section h2">
   <a class="skip" href="#main">Saltar al contenido</a>
-  <header class="site-head">
-    <div class="shell">
-      <a class="brand" href="/" aria-label="Admira punto TV">Admira<b>.</b>tv</a>
-      <nav class="site-nav" aria-label="Navegación pública">
-        <a href="#soluciones">20 soluciones</a>
-        <a href="#ecosistema">Ecosistema</a>
-        <a href="/player/">Player</a>
-        <a class="nav-cta" href="/canal.html">Ver canal</a>
-      </nav>
-    </div>
+  <!-- Interfaz cuadrática de AdmiraNeXT (#5136 · #5142 · #5152): barra fija con el logotipo
+       oficial; ☰ Opciones abre el panel izquierdo, ▤ Avanzado el derecho y ⌘ Experto la franja
+       inferior con el CLI. Los paneles flotan sobre la portada y se redimensionan arrastrando. -->
+  <header class="yk-head" data-yk-head>
+    <button type="button" class="yk-ico" id="ykOptionsToggle" aria-controls="ykOptionsRail" aria-expanded="false" title="☰ Opciones"><span aria-hidden="true">☰</span><span class="yk-ico-lbl">Opciones</span></button>
+    <a class="brand" href="/" aria-label="ADmiraNeXT · Inicio de admira.tv"><span class="yk-wm-admira">ADmira</span><span class="yk-wm-next"><span class="yk-wm-n">N</span><span class="yk-wm-e">e</span><span class="yk-wm-x">X</span><span class="yk-wm-t">T</span></span></a>
+    <nav aria-label="Navegación pública">
+      <a href="#soluciones">20 soluciones</a>
+      <a href="#ecosistema">Ecosistema</a>
+      <a href="/player/">Player</a>
+      <a class="nav-cta" href="/canal.html">Ver canal</a>
+    </nav>
+    <span class="private" data-yk-access="publico" title="Página pública">○<span class="yk-access-txt"> Página pública</span></span>
+    <button type="button" class="yk-ico" id="ykAdvancedToggle" aria-controls="ykAdvancedRail" aria-expanded="false" title="▤ Avanzado"><span aria-hidden="true">▤</span><span class="yk-ico-lbl">Avanzado</span></button>
+    <button type="button" class="yk-ico" id="ykExpertToggle" aria-controls="ykExpertRail" aria-expanded="false" title="⌘ Experto"><span aria-hidden="true">⌘</span><span class="yk-ico-lbl">Experto</span></button>
   </header>
+  <div class="yk-slots" hidden>
+    <div data-yk-slot="right" data-yk-label="Filtrar por pilar">
+      <button type="button" class="yk-pilar-act" data-yk-pilar="todas">✱ Todas · 20 soluciones</button>
+      <button type="button" class="yk-pilar-act" data-yk-pilar="studio">01 · Studio · Crear</button>
+      <button type="button" class="yk-pilar-act" data-yk-pilar="store">02 · Store · Distribuir</button>
+      <button type="button" class="yk-pilar-act" data-yk-pilar="tv">03 · TV · Reproducir</button>
+      <button type="button" class="yk-pilar-act" data-yk-pilar="app">04 · App · Coordinar</button>
+      <button type="button" class="yk-pilar-act" data-yk-pilar="biz">05 · Biz · Monetizar</button>
+    </div>
+  </div>
 
   <main id="main">
     <section class="hero">
@@ -175,7 +226,7 @@
     </section>
   </main>
 
-  <footer><div class="shell footer-row"><span>Admira.tv · Experiencias digitales para espacios vivos · v.07.08.2026.r1.18:41 · MorfeoMacMini · MacMini</span><span><a href="/player/">Descargar player</a> · <a href="/canal.html">Ver canal</a></span></div></footer>
+  <footer><div class="shell footer-row"><span>Admira.tv · Experiencias digitales para espacios vivos · v.05.10.2026.r1.00:56 · WozGrokBotBox · GrokBotBox</span><span><a href="/player/">Descargar player</a> · <a href="/canal.html">Ver canal</a></span></div></footer>
 
   <div class="video-dialog" id="appVideoDialog" role="dialog" aria-modal="true" aria-labelledby="appVideoTitle" hidden>
     <div class="video-box">
@@ -184,7 +235,24 @@
       <video id="appVideo" controls playsinline preload="metadata" tabindex="0"></video>
     </div>
   </div>
-  <script src="/public-apps.js?v=04.10.2026.r8.2251" defer></script>
-  <script src="/assets/admira-version-watch.js?v=04.10.2026.r8.2251" defer></script>
+  <script>
+    /* ▤ Avanzado · Filtrar por pilar: cada botón pulsa el filtro original de la rejilla. */
+    document.addEventListener('click', function (e) {
+      var b = e.target && e.target.closest ? e.target.closest('[data-yk-pilar]') : null;
+      if (!b) return;
+      var orig = document.querySelector('.pilares [data-pilar-filtro="' + b.getAttribute('data-yk-pilar') + '"]');
+      if (!orig || orig.disabled) return;
+      orig.click();
+      // Refleja el estado real del filtro (volver a pulsar el pilar activo lo suelta).
+      document.querySelectorAll('[data-yk-pilar]').forEach(function (x) {
+        var o = document.querySelector('.pilares [data-pilar-filtro="' + x.getAttribute('data-yk-pilar') + '"]');
+        x.setAttribute('aria-pressed', String(!!o && o.getAttribute('aria-pressed') === 'true'));
+      });
+      var sec = document.getElementById('soluciones');
+      if (sec && sec.scrollIntoView) sec.scrollIntoView({behavior: 'smooth', block: 'start'});
+    });
+  </script>
+  <script src="/public-apps.js?v=05.10.2026.r1.0056" defer></script>
+  <script src="/assets/admira-version-watch.js?v=05.10.2026.r1.0056" defer></script>
 </body>
 </html>
