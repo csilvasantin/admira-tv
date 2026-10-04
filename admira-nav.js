@@ -321,7 +321,7 @@
      "color:#cdd8e8;font:14px -apple-system,Segoe UI,sans-serif}",
    "html.admnav.admnav-exp .admexp{display:flex}",
    ".admexp .admexp-hd{display:flex;align-items:center;gap:8px;padding:10px 14px 6px;font-size:14px;font-weight:800;color:#cdd8e8}",
-   ".admexp .admexp-bd{padding:2px 14px 14px;font:12.5px ui-monospace,monospace;color:#8595ad}",
+   ".admexp .admexp-bd{display:flex;flex-direction:column;gap:6px;min-height:0;flex:1;padding:2px 14px 10px;font:12.5px ui-monospace,monospace;color:#8595ad}",
    /* asas de arrastre (raíles redimensionables) — role=separator */
    ".admrz{position:fixed;z-index:46;background:transparent;touch-action:none}",
    ".admrz:hover,.admrz.drag{background:rgba(61,240,138,.28)}",
@@ -427,9 +427,14 @@
     // Panel EXPERTO inferior (placeholder). El asa .admrz-exp redimensiona el alto (borde superior).
     return '<aside class="admexp" id="admExp" aria-label="Modo experto" aria-hidden="true">'+
       '<div class="admrz admrz-exp" id="admRzExp" aria-label="Redimensionar consola experto"></div>'+
-      '<div class="admexp-hd">Experto</div>'+
-      '<div class="admexp-bd">Consola de modo experto — próximamente</div>'+
-    '</aside>';
+      '<div class="admexp-hd">⌘ EXPERTO · CLI</div>'+
+      '<div class="admexp-bd">'+
+        '<div id="admExpLog" role="log" style="flex:1;min-height:0;overflow:auto;white-space:pre-wrap"></div>'+
+        '<form id="admExpForm" autocomplete="off" style="display:flex;gap:8px;align-items:center">'+
+          '<span aria-hidden="true">›</span>'+
+          '<input id="admExpIn" type="text" placeholder="/help" spellcheck="false" aria-label="Orden del CLI" style="flex:1;background:#0b1220;color:#e8eef8;border:1px solid #243044;border-radius:8px;padding:8px 10px;font:inherit">'+
+          '<button type="submit" style="background:#123048;color:#9fd8ff;border:1px solid #2a7fa6;border-radius:8px;padding:8px 10px;cursor:pointer">Ejecutar</button>'+
+        '</form></div></aside>';
   }
   function emiSwitchHTML(){
     // Conmutador de emisión Parrilla · Flota · Planificar ↔ Calendario, disponible en TODA página del chrome.
@@ -671,6 +676,33 @@
       else if(e.key==='d'||e.key==='D')window.admToggleDet();
       else if(e.key==='e'||e.key==='E')window.admToggleExp();
     });
+    wireAvatarCli();
+  }
+  function wireAvatarCli(){
+    var form=document.getElementById('admExpForm'), input=document.getElementById('admExpIn'), log=document.getElementById('admExpLog');
+    if(!form||!input||!log) return;
+    var HELP='Comandos en este navegador:\n/help — esta ayuda\n/avatar — estado y las tres opciones\n/avatar good — el calvo, cara 3D (facecap, 52 blendshapes)\n/avatar better — la chica web (Ready Player Me, gafas)\n/avatar best — Neo, MetaHuman; si el host de render está apagado, entra la chica\n/avatarON lo muestra · /avatarOFF lo oculta · /avatar reset vuelve al interruptor del proyecto';
+    function write(text){ log.textContent += (log.textContent?'\n':'') + text; log.scrollTop=log.scrollHeight; }
+    write('Admira.tv · CLI lista. Escribe /help.');
+    form.addEventListener('submit', function(ev){
+      ev.preventDefault();
+      var raw=(input.value||'').trim(); if(!raw) return;
+      input.value=''; write('› '+raw);
+      var verb=raw.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
+      if(verb==='help'||verb==='ayuda'||verb==='?'){ write(HELP); return; }
+      if(verb==='limpiar'||verb==='clear'){ log.textContent=''; return; }
+      if(/^(avatar|avataron|avataroff|avatardigital|digitalavatar)$/.test(verb) || /^cli$/.test(verb) && /^(ayudante|helper)\b/i.test(raw.replace(/^\S+\s*/,''))){
+        var run=function(){ var A=window.AdmiraAvatar||window.AvatarDigital; if(!A){ write('Avatar digital no disponible'); return; } Promise.resolve(A.handle(raw)).then(function(t){ if(t) write(String(t)); }); };
+        if(window.AdmiraAvatar) run();
+        else {
+          var tag=document.querySelector('script[data-admira-avatar]');
+          if(tag) tag.addEventListener('load', run, {once:true});
+          else run();
+        }
+        return;
+      }
+      write('Comando desconocido. Escribe /help.');
+    });
   }
   if(document.body) init(); else document.addEventListener('DOMContentLoaded',init);
 })();
@@ -689,7 +721,7 @@
   if(/^\/(?:cms|canal|player|virtual-players|wall|signage|tester)(?:[\/.]|$)/i.test(p)) return;
   if(document.querySelector('script[src*="admira-avatar"],script[data-admira-avatar]')) return;
   var s=document.createElement('script');
-  s.src='https://www.admiranext.com/assets/avatar.js?v=20261004-avatar-1';
+  s.src='https://www.admiranext.com/assets/avatar.js?v=20261004-avatar-3';
   s.async=true;
   s.setAttribute('data-admira-avatar','');
   (document.head||document.documentElement).appendChild(s);
