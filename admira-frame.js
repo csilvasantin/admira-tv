@@ -30,7 +30,7 @@
   // bottom (mando, diagnóstico, JSON…) queda tras «＋ vista». No en iframes ni en emisión.
   (function () {
     if (window.top !== window.self || /(^|[?&])embed=/.test(location.search)) return;
-    var EXPERTO = "https://www.admiranext.com/suite/experto", V = "20261004-experto-tv-1";
+    var EXPERTO = "https://www.admiranext.com/suite/experto", V = "20261004-avatar-2";
     var css = document.createElement("link");
     css.rel = "stylesheet"; css.href = EXPERTO + ".css?v=" + V;
     document.head.appendChild(css);
