@@ -1,9 +1,9 @@
 {
-  "version": "v.04.10.2026.r8.22:51",
-  "signature": "HuangMacMini · MacMini",
-  "agent": "HuangMacMini",
-  "machine": "MacMini",
-  "day": "04.10.2026",
-  "time": "22:51",
-  "evidence": "Publica /avatar good|better|best de Elon (PR #10) con sello nuevo: admira-nav.js se pide con ?v inmutable y sin subir el sello el cambio no llegaba a quien ya tenía admira.tv abierta."
+  "version": "v.05.10.2026.r1.00:56",
+  "signature": "WozGrokBotBox · GrokBotBox",
+  "agent": "WozGrokBotBox",
+  "machine": "GrokBotBox",
+  "day": "05.10.2026",
+  "time": "00:56",
+  "evidence": "Interfaz cuadrática de AdmiraNeXT en la portada de admira.tv (encargos #5136 · #5142 · #5152): barra fija con el logotipo oficial ADmiraNeXT, ☰ Opciones (panel izquierdo), ▤ Avanzado (panel derecho) y ⌘ Experto (franja inferior con CLI y /help), paneles superpuestos y redimensionables. Armazón copiado de admira-next-web (admiranext-frame.js/.css)."
 }
