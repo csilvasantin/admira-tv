@@ -681,7 +681,7 @@
   function wireAvatarCli(){
     var form=document.getElementById('admExpForm'), input=document.getElementById('admExpIn'), log=document.getElementById('admExpLog');
     if(!form||!input||!log) return;
-    var HELP='Comandos en este navegador:\n/help — esta ayuda\n/avatar — estado y las tres opciones\n/avatar good — el calvo, cara 3D (facecap, 52 blendshapes)\n/avatar better — la chica web (Ready Player Me, gafas)\n/avatar best — Neo, MetaHuman; si el host de render está apagado, entra la chica\n/avatarON lo muestra · /avatarOFF lo oculta · /avatar reset vuelve al interruptor del proyecto';
+    var HELP='Comandos en este navegador:\n/help — esta ayuda\n/marca [id|off] — marca blanca (p. ej. /marca starbucks)\n/avatar — estado y las tres opciones\n/avatar good — el calvo, cara 3D (facecap, 52 blendshapes)\n/avatar better — la chica web (Ready Player Me, gafas)\n/avatar best — Neo, MetaHuman; si el host de render está apagado, entra la chica\n/avatarON lo muestra · /avatarOFF lo oculta · /avatar reset vuelve al interruptor del proyecto';
     function write(text){ log.textContent += (log.textContent?'\n':'') + text; log.scrollTop=log.scrollHeight; }
     write('Admira.tv · CLI lista. Escribe /help.');
     form.addEventListener('submit', function(ev){
@@ -691,6 +691,25 @@
       var verb=raw.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
       if(verb==='help'||verb==='ayuda'||verb==='?'){ write(HELP); return; }
       if(verb==='limpiar'||verb==='clear'){ log.textContent=''; return; }
+      if(/^(marca|brand|marcablanca)$/.test(verb)){
+        var arg=raw.replace(/^\S+\s*/,'').trim();
+        var w=write;
+        (window.AdmiraNavMarca?window.AdmiraNavMarca.load():Promise.resolve(null)).then(function(M){
+          if(!M){w('Marca blanca no disponible.');return;}
+          if(!arg){
+            var cur=M.actual&&M.actual();
+            w(cur?('Marca activa: '+cur.nombre+' ('+cur.id+')'):'Sin marca (Admira). Prueba /marca starbucks');
+            return;
+          }
+          if(/^(off|admira|ninguna|none|reset)$/i.test(arg)){M.desactivar();w('Vuelta a Admira.');return;}
+          M.activar(arg).then(function(r){
+            if(r.ok&&r.off)w('Vuelta a Admira.');
+            else if(r.ok)w('Marca «'+(r.nombre||r.id)+'» aplicada.');
+            else w('No se pudo aplicar «'+arg+'» ('+(r.reason||'error')+').');
+          });
+        });
+        return;
+      }
       if(/^(avatar|avataron|avataroff|avatardigital|digitalavatar)$/.test(verb) || /^cli$/.test(verb) && /^(ayudante|helper)\b/i.test(raw.replace(/^\S+\s*/,''))){
         var run=function(){ var A=window.AdmiraAvatar||window.AvatarDigital; if(!A){ write('Avatar digital no disponible'); return; } Promise.resolve(A.handle(raw)).then(function(t){ if(t) write(String(t)); }); };
         if(window.AdmiraAvatar) run();
@@ -705,6 +724,36 @@
     });
   }
   if(document.body) init(); else document.addEventListener('DOMContentLoaded',init);
+})();
+
+
+/* MARCA BLANCA (demo Starbucks 5-oct-2026) — carga perezosa como en admira.store */
+(function(){
+  if(window.__admiraMbNav) return; window.__admiraMbNav=true;
+  var mbP=null;
+  function wants(){
+    try{
+      var q=new URLSearchParams(location.search).get('marca');
+      if(q!=null && String(q).trim()) return true;
+      if(sessionStorage.getItem('mb:marca')) return true;
+    }catch(e){}
+    return false;
+  }
+  function load(){
+    if(window.AdmiraMarca) return Promise.resolve(window.AdmiraMarca);
+    if(mbP) return mbP;
+    mbP=new Promise(function(res){
+      var s=document.createElement('script');
+      s.src='/assets/marca-blanca.js?v=05.10.2026.starbucks';
+      s.async=true; s.setAttribute('data-admira-marca','');
+      s.onload=function(){res(window.AdmiraMarca||null)};
+      s.onerror=function(){s.remove(); mbP=null; res(null)};
+      (document.head||document.documentElement).appendChild(s);
+    });
+    return mbP;
+  }
+  window.AdmiraNavMarca={load:load, wants:wants};
+  if(wants()) load();
 })();
 
 /* AVATAR DIGITAL (encargo avatar · 4-oct-2026) — SOLO BANDERA, sin comandos.

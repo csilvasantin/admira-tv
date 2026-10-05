@@ -634,8 +634,65 @@
     } catch (e) { imprimir('Error: ' + (e && e.message || e), 'err'); }
   }
 
+
+  // ── Marca blanca (catálogo admiranext.com/marcablanca · demo Starbucks) ──
+  var __mbPromise = null;
+  function __mbWants() {
+    try {
+      var q = new URLSearchParams(location.search).get('marca');
+      if (q != null && String(q).trim()) return true;
+      if (sessionStorage.getItem('mb:marca')) return true;
+    } catch (e) {}
+    return false;
+  }
+  function __cargarMarca() {
+    if (G.AdmiraMarca) return Promise.resolve(G.AdmiraMarca);
+    if (__mbPromise) return __mbPromise;
+    __mbPromise = new Promise(function (resolve) {
+      var s = doc.createElement('script');
+      s.src = '/assets/marca-blanca.js?v=05.10.2026.starbucks';
+      s.async = true;
+      s.setAttribute('data-admira-marca', '');
+      s.onload = function () { resolve(G.AdmiraMarca || null); };
+      s.onerror = function () { s.remove(); __mbPromise = null; resolve(null); };
+      (doc.head || doc.documentElement).appendChild(s);
+    });
+    return __mbPromise;
+  }
+  function __runMarca(args, write) {
+    var arg = (args || []).join(' ').trim();
+    write = write || function () {};
+    return __cargarMarca().then(function (M) {
+      if (!M) { write('Marca blanca no disponible.', 'err'); return; }
+      if (!arg) {
+        var cur = M.actual && M.actual();
+        write(cur ? ('Marca activa: ' + cur.nombre + ' (' + cur.id + ')') : 'Sin marca (Admira). Prueba /marca starbucks');
+        if (M.listar) M.listar().then(function (list) {
+          if (list && list.length) write('Catálogo: ' + list.map(function (x) { return x.id; }).slice(0, 12).join(', '));
+        }).catch(function () {});
+        return;
+      }
+      if (/^(off|admira|ninguna|none|reset)$/i.test(arg)) {
+        M.desactivar(); write('Vuelta a Admira.'); return;
+      }
+      if (/[.:/]/.test(arg) && M.analizar) {
+        var r = M.analizar(arg); write(r.ok ? ('Analizador: ' + r.href) : 'URL no válida', r.ok ? '' : 'err'); return;
+      }
+      return M.activar(arg).then(function (r) {
+        if (r.ok && r.off) write('Vuelta a Admira.');
+        else if (r.ok) write('Marca «' + (r.nombre || r.id) + '» aplicada.');
+        else write('No se pudo aplicar «' + arg + '» (' + (r.reason || 'error') + ').', 'err');
+      });
+    });
+  }
+  if (__mbWants()) __cargarMarca();
+
   // Verbos comunes. /help se genera del registro: un verbo nuevo aparece en la
   // ayuda sin tocarla.
+  verbo({id: 'marca', aliases: ['brand', 'marcablanca'], uso: '[id|off|web]', ayuda: 'Marca blanca del catálogo admiranext.com/marcablanca (p. ej. /marca starbucks)', run: function (args) {
+    var out = (typeof imprimir === 'function') ? imprimir : function (m) { try { console.log(m); } catch (e) {} };
+    __runMarca(args, out);
+  }});
   verbo({id: 'help', aliases: ['ayuda', '?'], ayuda: 'Lista los verbos de esta página', run: function () {
     verbos.slice().sort(function (a, b) { return a.id < b.id ? -1 : 1; }).forEach(function (v) {
       imprimir('/' + v.id + (v.uso ? ' ' + v.uso : '') + ' — ' + v.ayuda +

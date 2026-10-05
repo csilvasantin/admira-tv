@@ -1,0 +1,68 @@
+/* Marca blanca admira.tv · demo Starbucks. Solo se carga con marca activa.
+   Plataforma del cargador: store (catálogo sin tv). Chrome: .yk-bar (home) y .admtop (nav). */
+
+:root[data-mb-marca][data-mb-plataforma="store"]{
+  --bg:var(--mb-fondo);--panel:var(--mb-superficie);--ink:var(--mbx-ink);--muted:var(--mbx-mut);
+  --line:var(--mb-borde);--brand:var(--mbx-brand);--accent:var(--mbx-accent);
+  --yk-ink:var(--mbx-ink);--yk-mut:var(--mbx-mut);--yk-line:var(--mb-borde);
+  --yk-brand:var(--mbx-brand);--yk-panel:var(--mb-superficie);--yk-bg:var(--mb-fondo);
+}
+
+/* Home · admiranext-frame */
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-bar{
+  background:color-mix(in srgb,var(--mb-fondo) 96%,transparent)!important;
+  border-bottom:1px solid var(--mb-borde)!important;color:var(--mbx-ink);
+}
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-bar .yk-logo,
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-bar .yk-wordmark{opacity:.35}
+:root[data-mb-marca][data-mb-plataforma="store"] .mb-bar-logo{
+  display:inline-flex;align-items:center;height:28px;max-width:140px;margin-right:10px;
+  color:var(--mbx-ink);font:800 15px/1 var(--mb-fuente-titulos);text-decoration:none;border-radius:6px;
+}
+:root[data-mb-marca][data-mb-plataforma="store"] .mb-bar-logo :is(img,svg,.mb-logo-img,.mb-logo-svg){
+  height:100%;width:auto;max-width:100%;object-fit:contain;display:block;
+}
+:root[data-mb-marca][data-mb-plataforma="store"] .mb-powered{
+  display:inline-block;padding:0 8px;margin-right:8px;border-left:1px solid var(--mb-borde);
+  color:var(--mbx-mut);font:600 9px/1.3 var(--mb-fuente-mono);letter-spacing:.12em;text-transform:uppercase;
+}
+:root[data-mb-marca][data-mb-plataforma="store"] .mb-powered::before{content:"powered by ";font-weight:400;text-transform:none;letter-spacing:.04em}
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-bar .yk-btn,
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-bar button{
+  border-color:var(--mb-borde)!important;color:var(--mbx-brand);
+}
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-bar .yk-cta,
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-bar a.yk-cta{
+  background:var(--mbx-brand)!important;color:var(--mbx-on-brand)!important;border-color:var(--mbx-brand)!important;
+}
+
+/* Gated chrome · admira-nav */
+:root[data-mb-marca][data-mb-plataforma="store"] header.admtop{
+  background:color-mix(in srgb,var(--mb-fondo) 97%,transparent)!important;
+  border-bottom:1px solid var(--mb-borde)!important;color:var(--mbx-ink);
+}
+:root[data-mb-marca][data-mb-plataforma="store"] header.admtop .admbrand{opacity:.4;color:var(--mbx-mut)}
+:root[data-mb-marca][data-mb-plataforma="store"] header.admtop .admtog{
+  border-color:var(--mb-borde)!important;color:var(--mbx-brand)!important;background:var(--mb-superficie)!important;
+}
+:root[data-mb-marca][data-mb-plataforma="store"] header.admtop .admtog.on,
+:root[data-mb-marca][data-mb-plataforma="store"] header.admtop .admtR-cta{
+  background:var(--mbx-brand)!important;border-color:var(--mbx-brand)!important;color:var(--mbx-on-brand)!important;
+}
+:root[data-mb-marca][data-mb-plataforma="store"] header.admtop .admseg a.on{
+  background:var(--mbx-brand)!important;color:var(--mbx-on-brand)!important;
+}
+
+/* Botón volver en Opciones */
+:root[data-mb-marca][data-mb-plataforma="store"] .mb-volver{
+  display:block;width:calc(100% - 16px);margin:8px;padding:8px 10px;border-radius:8px;
+  border:1px solid var(--mb-borde);background:var(--mb-superficie);color:var(--mbx-ink);
+  font:600 12px var(--mb-fuente-texto);cursor:pointer;
+}
+:root[data-mb-marca][data-mb-plataforma="store"] .mb-volver:hover{border-color:var(--mbx-brand);background:color-mix(in srgb,var(--mbx-brand) 12%,transparent)}
+
+/* Home body accents when branded */
+:root[data-mb-marca][data-mb-plataforma="store"] body{
+  --matrix:var(--mbx-brand);
+}
+:root[data-mb-marca][data-mb-plataforma="store"] ::selection{background:var(--mbx-brand);color:var(--mbx-on-brand)}
