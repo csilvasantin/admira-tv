@@ -775,3 +775,17 @@
   s.setAttribute('data-admira-avatar','');
   (document.head||document.documentElement).appendChild(s);
 })();
+
+/* Sello de versión con novedades (Merovingio, 06-10-2026). El cargador común de admiranext.com
+ * (el mismo mecanismo que el avatar) lee el /version.json de este sitio y enseña sus novedades
+ * al pasar el ratón por el sello. Fuera de iframes; él mismo se apaga en emisión/kiosco. */
+(function(){
+  try{ if(window.self!==window.top) return; }catch(e){ return; }
+  if(/^\/(?:cms|canal|player|virtual-players|wall|signage|tester)(?:[\/.]|$)/i.test(location.pathname||'/')) return;
+  if(document.querySelector('script[data-admira-sello-loader]')) return;
+  var s=document.createElement('script');
+  s.src='https://www.admiranext.com/assets/sello-novedades.js?v=20261006-sello-1';
+  s.defer=true;
+  s.setAttribute('data-admira-sello-loader','');
+  (document.head||document.documentElement).appendChild(s);
+})();
