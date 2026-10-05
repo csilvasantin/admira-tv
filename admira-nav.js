@@ -721,7 +721,7 @@
   if(/^\/(?:cms|canal|player|virtual-players|wall|signage|tester)(?:[\/.]|$)/i.test(p)) return;
   if(document.querySelector('script[src*="admira-avatar"],script[data-admira-avatar]')) return;
   var s=document.createElement('script');
-  s.src='https://www.admiranext.com/assets/avatar.js?v=20261004-avatar-3';
+  s.src='https://www.admiranext.com/assets/avatar.js?v=20261004-avatar-5';
   s.async=true;
   s.setAttribute('data-admira-avatar','');
   (document.head||document.documentElement).appendChild(s);
