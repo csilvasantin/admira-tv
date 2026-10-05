@@ -650,7 +650,7 @@
     if (__mbPromise) return __mbPromise;
     __mbPromise = new Promise(function (resolve) {
       var s = doc.createElement('script');
-      s.src = '/assets/marca-blanca.js?v=05.10.2026.starbucks3';
+      s.src = '/assets/marca-blanca.js?v=05.10.2026.starbucks4';
       s.async = true;
       s.setAttribute('data-admira-marca', '');
       s.onload = function () { resolve(G.AdmiraMarca || null); };

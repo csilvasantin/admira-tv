@@ -76,10 +76,11 @@
 }
 :root[data-mb-marca][data-mb-plataforma="store"] header.yk-head{
   background:color-mix(in srgb,var(--mb-fondo) 96%,transparent)!important;
-  border-bottom:1px solid var(--mb-borde)!important;color:var(--mbx-ink);
+  border-bottom:3px solid var(--mbx-brand)!important;color:var(--mbx-ink);
 }
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-head .brand,
 :root[data-mb-marca][data-mb-plataforma="store"] header.yk-head .yk-wordmark,
-:root[data-mb-marca][data-mb-plataforma="store"] header.yk-head .yk-logo{opacity:.35}
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-head .yk-logo{opacity:.4}
 :root[data-mb-marca][data-mb-plataforma="store"] header.yk-head nav a.nav-cta,
 :root[data-mb-marca][data-mb-plataforma="store"] header.yk-head .nav-cta{
   background:var(--mbx-brand)!important;color:var(--mbx-on-brand)!important;border-color:var(--mbx-brand)!important;

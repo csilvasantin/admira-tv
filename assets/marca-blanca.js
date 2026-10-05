@@ -166,7 +166,7 @@
   const doc = document, html = doc.documentElement;
   const script = doc.currentScript;
   // Los ajustes propios viajan con el mismo sello (?v=) que este fichero.
-  const LOCAL_CSS = '/marca-blanca.css';
+  const LOCAL_CSS = '/marca-blanca.css?v=05.10.2026.starbucks4';
   const session = (() => { try { return root.sessionStorage; } catch (_) { return null; } })();
   const store = {
     get: k => { try { return session && session.getItem(k); } catch (_) { return null; } },
@@ -274,7 +274,7 @@
   // marca escrita) el logo y el «powered by XpaceOS» van detrás de ☰ Opciones.
   function barAnchor() {
     // Home cabecera (admira.tv index)
-    const head = doc.querySelector('header.yk-head .yk-wordmark, header.yk-head a.yk-logo, header.yk-head .yk-brand');
+    const head = doc.querySelector('header.yk-head a.brand, header.yk-head .yk-wordmark, header.yk-head a.yk-logo, header.yk-head .yk-brand');
     if (head) return {before: head};
     // Home AdmiraNeXT frame (modo barra)
     const yk = doc.querySelector('header.yk-bar a.yk-logo, header.yk-bar .yk-wordmark');
