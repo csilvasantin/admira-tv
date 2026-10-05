@@ -179,6 +179,9 @@ window.ADMIRA_NAV={
 <link rel="stylesheet" href="/admira-frame.css?v=05.10.2026.r4.1816">
 
 <!-- AVANZADO (panel derecho): acciones peligrosas -->
+<div class="afSlotHidden" data-af-slot="left" data-hilomusical-lang="starbucks" aria-label="Hilo musical idioma activo">
+  <div id="hiloLangSwitchMount">Hilo musical EN-ES</div>
+</div>
 <div class="afSlotHidden" data-af-slot="right" aria-label="Acciones avanzadas de playlists">
   <button class="dngr" id="advClearAssigns" type="button" title="Retira TODAS las asignaciones (unbook) de todas las playlists">🧹 Limpiar todas las asignaciones</button>
   <button class="dngr" id="advDeleteAll" type="button" title="Borra todas las playlists guardadas en este navegador">🗑 Borrar todas las playlists</button>
@@ -655,5 +658,6 @@ $('advReload').onclick=async()=>{ await Promise.all([loadRemotePlaylists(),loadS
   },45000);
 })();
 </script>
+  <script src="/assets/hilomusical-lang-switch.js?v=05.10.2026.hilomusical"></script>
 </body>
 </html>
