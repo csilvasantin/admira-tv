@@ -273,7 +273,10 @@
   // de la marca XpaceOS, que pasa a «powered by XpaceOS»; en el gemelo (barra en línea, sin
   // marca escrita) el logo y el «powered by XpaceOS» van detrás de ☰ Opciones.
   function barAnchor() {
-    // Home AdmiraNeXT frame
+    // Home cabecera (admira.tv index)
+    const head = doc.querySelector('header.yk-head .yk-wordmark, header.yk-head a.yk-logo, header.yk-head .yk-brand');
+    if (head) return {before: head};
+    // Home AdmiraNeXT frame (modo barra)
     const yk = doc.querySelector('header.yk-bar a.yk-logo, header.yk-bar .yk-wordmark');
     if (yk) return {before: yk};
     // Chrome admira-nav (playlists, digitalsignage, …)

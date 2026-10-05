@@ -744,7 +744,7 @@
     if(mbP) return mbP;
     mbP=new Promise(function(res){
       var s=document.createElement('script');
-      s.src='/assets/marca-blanca.js?v=05.10.2026.starbucks2';
+      s.src='/assets/marca-blanca.js?v=05.10.2026.starbucks3';
       s.async=true; s.setAttribute('data-admira-marca','');
       s.onload=function(){res(window.AdmiraMarca||null)};
       s.onerror=function(){s.remove(); mbP=null; res(null)};

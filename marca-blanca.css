@@ -66,3 +66,32 @@
   --matrix:var(--mbx-brand);
 }
 :root[data-mb-marca][data-mb-plataforma="store"] ::selection{background:var(--mbx-brand);color:var(--mbx-on-brand)}
+
+
+/* Home cabecera (data-yk-frame=cabecera) — no usa .yk-bar */
+:root[data-mb-marca][data-mb-plataforma="store"]{
+  --green:var(--mbx-brand);
+  --cyan:var(--mbx-brand);
+  --acc:var(--mbx-brand);
+}
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-head{
+  background:color-mix(in srgb,var(--mb-fondo) 96%,transparent)!important;
+  border-bottom:1px solid var(--mb-borde)!important;color:var(--mbx-ink);
+}
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-head .yk-wordmark,
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-head .yk-logo{opacity:.35}
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-head nav a.nav-cta,
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-head .nav-cta{
+  background:var(--mbx-brand)!important;color:var(--mbx-on-brand)!important;border-color:var(--mbx-brand)!important;
+}
+:root[data-mb-marca][data-mb-plataforma="store"] header.yk-head .yk-ico{
+  border-color:var(--mb-borde)!important;color:var(--mbx-brand);
+}
+:root[data-mb-marca][data-mb-plataforma="store"] .hero .cta,
+:root[data-mb-marca][data-mb-plataforma="store"] a.cta:not(.secondary),
+:root[data-mb-marca][data-mb-plataforma="store"] .btn-primary,
+:root[data-mb-marca][data-mb-plataforma="store"] button.primary{
+  background:var(--mbx-brand)!important;color:var(--mbx-on-brand)!important;border-color:var(--mbx-brand)!important;
+}
+:root[data-mb-marca][data-mb-plataforma="store"] .hero .kicker,
+:root[data-mb-marca][data-mb-plataforma="store"] .eyebrow{color:var(--mbx-brand)!important}
