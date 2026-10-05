@@ -11,12 +11,6 @@
 /admira-nav.js
   Cache-Control: public, max-age=31536000, immutable
 
-# CSS en /assets: el catch-all de abajo fuerza application/javascript (legacy del vigilante).
-# Sin esta excepción, nosniff impide aplicar marca-blanca.css.
-/assets/marca-blanca.css
-  Content-Type: text/css; charset=utf-8
-  Cache-Control: public, max-age=604800
-
 # EL TIPO SE DECLARA, NO SE HEREDA (13-ago-2026). /assets/admira-version-watch.js se
 # estaba sirviendo como application/vnd.android.package-archive —el tipo de la APK— y
 # con nosniff puesto arriba el navegador se NIEGA a ejecutarlo:

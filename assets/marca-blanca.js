@@ -166,8 +166,7 @@
   const doc = document, html = doc.documentElement;
   const script = doc.currentScript;
   // Los ajustes propios viajan con el mismo sello (?v=) que este fichero.
-  const LOCAL_CSS = (() => {
-    try { const u = new URL('marca-blanca.css', script.src); u.search = new URL(script.src).search; return u.href; } catch (_) { return '/assets/marca-blanca.css'; }
+  const LOCAL_CSS = '/marca-blanca.css'; return '/marca-blanca.css' + q; } catch (_) { return '/marca-blanca.css'; }
   })();
   const session = (() => { try { return root.sessionStorage; } catch (_) { return null; } })();
   const store = {
