@@ -2,11 +2,11 @@ import {DirectionCounter,DEFAULT_DIRECTION_AXIS,validDirectionAxis,audienceSnaps
 import {installXpaceLink} from './xpace-link.mjs?v=normal-tabs-1';
 import {CLASSES, SNAPSHOT_TTL, PRESENCE_GRACE, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
 import {CutoutJob} from './cutouts.mjs';
-import {installTwinUI} from './twin-ui.mjs?v=avatar-photo-1';
+import {installTwinUI} from './twin-ui.mjs?v=twin-edit-1';
 import {detectObjects} from './detector.mjs';
 import {loadDetectorModel} from './model-loader.mjs?v=detector-download-2';
 import {installSignageUI} from './signage-ui.mjs';
-import {generateTwin} from './pixeria.mjs';
+import {generateTwin} from './pixeria.mjs?v=twin-edit-1';
 import {toBase64} from './twins.mjs';
 import {installHistoryUI} from './history.mjs?v=proof-twin-1';
 import {CalibrationPresetStore,compatiblePreset} from './preset.mjs?v=audience-session-1';
