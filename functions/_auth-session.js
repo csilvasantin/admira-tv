@@ -152,6 +152,16 @@ export async function hasAnyAccess(env, email) {
   } catch (_) { return false; }
 }
 
+export async function createLecturaSession(env, { sid, exp }, now = Date.now()) {
+  if (!env.ACCESS || !/^[a-f0-9]{64}$/.test(sid || "")) throw new Error("lectura session unavailable");
+  const token = randomToken(32);
+  const expiresAt = Math.min(Number(exp) * 1000, now + 8 * 60 * 60 * 1000);
+  const record = { email: "lectura@merovingio.box", name: "Lectura", sub: "lectura", lectura: true, sid, expiresAt };
+  const ttl = Math.max(60, Math.ceil((expiresAt - now) / 1000));
+  await env.ACCESS.put(sessionKey(token), JSON.stringify(record), { expirationTtl: ttl });
+  return token;
+}
+
 export async function createSession(env, identity, now = Date.now()) {
   const token = randomToken(32);
   const record = { email: norm(identity.email), name: String(identity.name || ""), sub: String(identity.sub || ""), expiresAt: now + SESSION_TTL_SECONDS * 1000 };

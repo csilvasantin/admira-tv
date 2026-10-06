@@ -1,4 +1,5 @@
 import { accessFor, authHeaders, sessionEmail } from "../_auth-session.js";
+import { lecturaBlocksWrite } from "../_lectura-guard.js";
 
 const PREFIX = "admira-tv:playlist:default:v1:";
 
@@ -94,6 +95,7 @@ export async function onRequestGet({ request, env }) {
 
 export async function onRequestPost({ request, env }) {
   const cors = corsFor(request);
+  if (await lecturaBlocksWrite(request, env)) return json({ ok: false, error: "solo_lectura" }, 403, cors);
   let body;
   try { body = await request.json(); } catch (_) { return json({ ok: false, error: "invalid_json" }, 400, cors); }
   // Sesión del portal (admira.tv) o clave del Stock (pixeria.com, server-to-server).
