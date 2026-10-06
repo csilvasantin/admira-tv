@@ -3,5 +3,10 @@
   "default": [
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
+  ],
+  "v.06.10.2026.r1.11:12": [
+    "Acceso de solo lectura para grabar la demo 365, sin Google",
+    "El enlace caduca a las 8 horas y vale una sola vez",
+    "Una escritura con esa clave responde 403 y se revoca al momento"
   ]
 }
