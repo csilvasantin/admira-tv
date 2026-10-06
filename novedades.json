@@ -4,6 +4,10 @@
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
   ],
+  "v.06.10.2026.r2.13:12": [
+    "⌘ Experto cerrado por defecto: quien entra por primera vez no lo ve; se abre con el ⌘ de la barra",
+    "Abierto o cerrado se recuerda solo en la pestaña: ya no se reabre solo en cada visita"
+  ],
   "v.06.10.2026.r1.11:12": [
     "Acceso de solo lectura para grabar la demo 365, sin Google",
     "El enlace caduca a las 8 horas y vale una sola vez",

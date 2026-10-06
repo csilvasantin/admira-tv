@@ -28,9 +28,10 @@
   // suite (www.admiranext.com/suite). admira.tv no traía CLI: la piel monta el suyo en el panel
   // INFERIOR (ficha del motor + registro + orden «›») y lo que la página ponía en el slot
   // bottom (mando, diagnóstico, JSON…) queda tras «＋ vista». No en iframes ni en emisión.
+  // Cerrado por defecto (Carlos, 6-oct-2026): la piel lo oculta hasta pulsar el ⌘ de la barra (#af-ico-bottom).
   (function () {
     if (window.top !== window.self || /(^|[?&])embed=/.test(location.search)) return;
-    var EXPERTO = "https://www.admiranext.com/suite/experto", V = "20261005-experto-idioma-1";
+    var EXPERTO = "https://www.admiranext.com/suite/experto", V = "20261006-experto-cerrado-1";
     var css = document.createElement("link");
     css.rel = "stylesheet"; css.href = EXPERTO + ".css?v=" + V;
     document.head.appendChild(css);
