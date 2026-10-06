@@ -4,6 +4,11 @@
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
   ],
+  "v.06.10.2026.r3.18:46": [
+    "La verja de acceso ya no se queda sin botón de Google si el arranque seguro falla una vez: se reintenta solo",
+    "Si de verdad no se puede, dice el motivo exacto (código HTTP y del servidor) en vez de un genérico",
+    "«Reintentar» solo aparece cuando hay algo que reintentar"
+  ],
   "v.06.10.2026.r2.13:12": [
     "⌘ Experto cerrado por defecto: quien entra por primera vez no lo ve; se abre con el ⌘ de la barra",
     "Abierto o cerrado se recuerda solo en la pestaña: ya no se reabre solo en cada visita"

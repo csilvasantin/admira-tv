@@ -150,6 +150,9 @@
       "font-family:ui-monospace,'JetBrains Mono',SFMono-Regular,Menlo,monospace;",
       "display:flex;align-items:center;justify-content:center;padding:24px;color:#39d353}",
       "#admira-tv-gate *{box-sizing:border-box}",
+      // [hidden] tiene que ganar a .gbtn{display:flex}: si no, «Reintentar» salía SIEMPRE
+      // bajo el botón de Google y parecía que el acceso había fallado (06-10-2026).
+      "#admira-tv-gate [hidden]{display:none!important}",
       "@keyframes atv-blink{0%,55%{opacity:1}56%,100%{opacity:.28}}",
       "@keyframes atv-flick{0%,100%{opacity:.05}45%{opacity:.02}70%{opacity:.07}}",
       "@keyframes atv-rise{0%{transform:translateY(10px);opacity:0}100%{transform:translateY(0);opacity:1}}",
@@ -392,34 +395,81 @@
   }
 
   // ===== arranque: GIS + montaje =====
-  function initGis() {
-    if (!window.google || !google.accounts || !google.accounts.id) return;
-    var returnTo = location.pathname + location.search + location.hash;
-    fetch("/auth/challenge", {
+  // El reto de acceso (state + nonce, guardado en KV) es lo que habilita el botón de
+  // Google. Si esa petición fallaba UNA vez —un 5xx o un 429 puntual de Cloudflare, un
+  // corte de red, un reto anti-bots— la verja decía «no se pudo iniciar el acceso
+  // seguro», no pintaba el botón y no explicaba nada (06-10-2026). Ahora se reintenta
+  // con espera creciente, se dice el motivo exacto (HTTP + código del servidor) y, si
+  // llega tarde, el botón aparece igual y se limpia el aviso.
+  var CHALLENGE_TRIES = 3;
+  function pideChallenge(returnTo, intento) {
+    return fetch("/auth/challenge", {
       method: "POST", credentials: "same-origin", cache: "no-store",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ flow: "redirect", return_to: returnTo })
     }).then(function (response) {
-      if (!response.ok) throw new Error("challenge");
-      return response.json();
-    }).then(function (challenge) {
+      if (!response.ok) {
+        return response.json().catch(function () { return null; }).then(function (b) {
+          var code = b && b.error ? String(b.error).slice(0, 40) : "";
+          var err = new Error("HTTP " + response.status + (code ? " · " + code : ""));
+          // bad_origin no se arregla reintentando: la página no está en https://admira.tv.
+          err.reintentable = code !== "bad_origin" && response.status !== 405;
+          throw err;
+        });
+      }
+      return response.json().then(function (challenge) {
+        if (!challenge || !challenge.state || !challenge.nonce) throw new Error("respuesta sin reto");
+        return challenge;
+      }, function () { throw new Error("respuesta ilegible"); });
+    }, function () {
+      var err = new Error("sin conexión"); err.reintentable = true; throw err;
+    }).catch(function (err) {
+      if (intento < CHALLENGE_TRIES && err.reintentable !== false) {
+        return new Promise(function (r) { setTimeout(r, 450 * intento * intento); })
+          .then(function () { return pideChallenge(returnTo, intento + 1); });
+      }
+      throw err;
+    });
+  }
+
+  function initGis() {
+    if (!window.google || !google.accounts || !google.accounts.id) return;
+    var returnTo = location.pathname + location.search + location.hash;
+    pideChallenge(returnTo, 1).then(function (challenge) {
       authChallenge = challenge;
-      google.accounts.id.initialize({
-        client_id: CLIENT_ID,
-        nonce: challenge.nonce,
-        state_cookie_domain: "admira.tv",
-        ux_mode: "redirect",
-        login_uri: LOGIN_URI,
-        auto_select: false,
-        cancel_on_tap_outside: false,
-        use_fedcm_for_button: false
-      });
+      try {
+        google.accounts.id.initialize({
+          client_id: CLIENT_ID,
+          nonce: challenge.nonce,
+          state_cookie_domain: "admira.tv",
+          ux_mode: "redirect",
+          login_uri: LOGIN_URI,
+          auto_select: false,
+          cancel_on_tap_outside: false,
+          use_fedcm_for_button: false
+        });
+      } catch (e) {
+        authChallenge = null;
+        throw new Error("Google no se pudo preparar" + (e && e.message ? " · " + String(e.message).slice(0, 60) : ""));
+      }
       gisReady = true;
-      if (phase === "ready") renderGoogleButton();
-    }).catch(function () {
+      if (pendienteRevalidar.indexOf("no se pudo iniciar el acceso seguro") === 0) pendienteRevalidar = "";
+      if (phase === "ready") {
+        renderGoogleButton();
+        // Si el reto llegó después de mostrar el aviso, el aviso ya no es verdad.
+        var el = document.getElementById("atv-err"); if (el && /acceso seguro|Google tarda/.test(el.textContent)) el.textContent = "";
+        var r = document.getElementById("atv-retry"); if (r) r.hidden = true;
+      }
+    }).catch(function (err) {
       gisReady = true;
-      pendienteRevalidar = "no se pudo iniciar el acceso seguro";
-      if (phase === "ready") renderFoot();
+      var motivo = err && err.message ? err.message : "error";
+      try { console.warn("[auth-gate] /auth/challenge:", motivo); } catch (e) {}
+      pendienteRevalidar = "no se pudo iniciar el acceso seguro · " + motivo;
+      if (phase === "ready") {
+        var el = document.getElementById("atv-err");
+        if (el) el.textContent = "✖ No se ha podido comprobar tu permiso (" + pendienteRevalidar + ").";
+        var r = document.getElementById("atv-retry"); if (r) r.hidden = false;
+      }
     });
   }
 

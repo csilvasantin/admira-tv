@@ -70,3 +70,31 @@ test("al identificarse, un error del servidor se dice tal cual", () => {
   assert.match(bloque, /No se ha podido comprobar tu permiso/);
   assert.match(bloque, /Reintenta/);
 });
+
+/* 06-10-2026: «IDENTIFÍCATE PARA CONTINUAR» y debajo «NO SE HA PODIDO COMPROBAR TU
+   PERMISO (NO SE PUDO INICIAR EL ACCESO SEGURO)», sin botón de Google. Un solo fallo
+   de POST /auth/challenge bastaba para dejar la verja sin botón y sin motivo; y
+   «Reintentar» se veía siempre porque .gbtn{display:flex} pisaba el atributo hidden. */
+test("el reto de acceso se reintenta y el fallo dice su motivo exacto", () => {
+  assert.match(gate, /var CHALLENGE_TRIES = 3;/);
+  assert.match(gate, /function pideChallenge\(returnTo, intento\)/);
+  assert.match(gate, /pideChallenge\(returnTo, intento \+ 1\)/);
+  // HTTP + código del servidor en el mensaje, no un genérico.
+  assert.match(gate, /"HTTP " \+ response\.status/);
+  assert.match(gate, /pendienteRevalidar = "no se pudo iniciar el acceso seguro · " \+ motivo/);
+  // bad_origin no se reintenta: no es un fallo pasajero.
+  assert.match(gate, /code !== "bad_origin"/);
+  // El reto tiene que traer state y nonce para pintar el botón.
+  assert.match(gate, /!challenge\.state \|\| !challenge\.nonce/);
+});
+
+test("si el reto llega tarde, el botón aparece y el aviso viejo se limpia", () => {
+  const bloque = gate.slice(gate.indexOf("function initGis()"), gate.indexOf("ready(mount);"));
+  assert.match(bloque, /if \(phase === "ready"\) \{\s*renderGoogleButton\(\);/);
+  assert.match(bloque, /r\.hidden = true/);
+});
+
+test("«Reintentar» solo se ve cuando hay algo que reintentar", () => {
+  assert.match(gate, /"#admira-tv-gate \[hidden\]\{display:none!important\}"/);
+  assert.match(gate, /id="atv-retry" hidden/);
+});
