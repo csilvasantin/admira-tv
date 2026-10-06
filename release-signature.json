@@ -1,9 +1,9 @@
 {
-  "version": "v.06.10.2026.r2.13:12",
-  "signature": "GrokBot · MacBookPro16",
+  "version": "v.06.10.2026.r3.18:46",
+  "signature": "GrokBot · MacMini",
   "agent": "GrokBot",
-  "machine": "MacBookPro16",
+  "machine": "MacMini",
   "day": "06.10.2026",
-  "time": "13:12",
-  "evidence": "⌘ Experto cerrado por defecto (admira-next-web#84): la piel común ya no deja la línea «› /help» al cargar; admira-frame.js pide la piel con ?v=20261006-experto-cerrado-1."
+  "time": "18:46",
+  "evidence": "Verja de acceso: el reto /auth/challenge se reintenta (3 intentos), el fallo dice HTTP y código, el botón de Google aparece aunque el reto llegue tarde y «Reintentar» ya no se ve siempre."
 }
