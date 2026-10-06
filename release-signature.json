@@ -1,9 +1,9 @@
 {
-  "version": "v.06.10.2026.r1.11:12",
-  "signature": "SmithMacMini · MacMini",
-  "agent": "SmithMacMini",
-  "machine": "MacMini",
+  "version": "v.06.10.2026.r2.13:12",
+  "signature": "GrokBot · MacBookPro16",
+  "agent": "GrokBot",
+  "machine": "MacBookPro16",
   "day": "06.10.2026",
-  "time": "11:12",
-  "evidence": "El logo Starbucks entra en la cabecera de inicio de admira.tv (el ancla era a.brand). Demo 6-oct. Vuelta: tag retorno/pre-admira-tv-starbucks-demo-20261005 @ be67262."
+  "time": "13:12",
+  "evidence": "⌘ Experto cerrado por defecto (admira-next-web#84): la piel común ya no deja la línea «› /help» al cargar; admira-frame.js pide la piel con ?v=20261006-experto-cerrado-1."
 }
