@@ -1,9 +1,9 @@
 {
-  "version": "v.06.10.2026.r3.18:46",
+  "version": "v.06.10.2026.r4.18:51",
   "signature": "GrokBot · MacMini",
   "agent": "GrokBot",
   "machine": "MacMini",
   "day": "06.10.2026",
-  "time": "18:46",
-  "evidence": "Verja de acceso: el reto /auth/challenge se reintenta (3 intentos), el fallo dice HTTP y código, el botón de Google aparece aunque el reto llegue tarde y «Reintentar» ya no se ve siempre."
+  "time": "18:51",
+  "evidence": "Con la cookie visor de solo lectura (#5261) el middleware bloqueaba también POST /auth/challenge (403 solo_lectura): ahora /auth/challenge, /auth/callback y /auth/logout quedan fuera del guarda."
 }

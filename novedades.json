@@ -4,6 +4,11 @@
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
   ],
+  "v.06.10.2026.r4.18:51": [
+    "Quien abrió antes un enlace de solo lectura ya puede entrar con Google: el visor no bloquea el acceso",
+    "Adiós al «HTTP 403 · solo_lectura» en la verja de /apps/ y al botón de Google desaparecido",
+    "Cerrar sesión también funciona con el visor; el resto de escrituras siguen prohibidas"
+  ],
   "v.06.10.2026.r3.18:46": [
     "La verja de acceso ya no se queda sin botón de Google si el arranque seguro falla una vez: se reintenta solo",
     "Si de verdad no se puede, dice el motivo exacto (código HTTP y del servidor) en vez de un genérico",
