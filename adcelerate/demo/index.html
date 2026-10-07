@@ -7,18 +7,18 @@
 <title>ADcelerate · Gemelo Plaça de la Vila de Gràcia — demo</title>
 <meta name="description" content="Demo ADcelerate: gemelo 3D de la Plaça de la Vila de Gràcia con quiosco, vista real y audiencias simuladas.">
 <link rel="icon" href="../../favicon.svg">
-<link rel="stylesheet" href="css/admira-tokens.css?v=07.10.2026.r11.1435">
-<link rel="stylesheet" href="css/style.css?v=07.10.2026.r11.1435">
-<link rel="stylesheet" href="css/outdoor.css?v=07.10.2026.r11.1435">
-<script src="js/outdoor-sites.js?v=07.10.2026.r11.1435"></script>
-<script src="js/dooh-surfaces.js?v=07.10.2026.r11.1435"></script>
-<script src="js/urban-route.js?v=07.10.2026.r11.1435"></script>
-<script src="js/dooh-tour.js?v=07.10.2026.r11.1435"></script>
-<script src="js/outdoor-context.js?v=07.10.2026.r11.1435"></script>
-<script src="js/player-remote-view.js?v=07.10.2026.r11.1435"></script>
-<script src="js/human-view.js?v=07.10.2026.r11.1435"></script>
-<script src="js/audience-mode.js?v=07.10.2026.r11.1435"></script>
-<link rel="stylesheet" href="css/human.css?v=07.10.2026.r11.1435">
+<link rel="stylesheet" href="css/admira-tokens.css?v=07.10.2026.r12.1446">
+<link rel="stylesheet" href="css/style.css?v=07.10.2026.r12.1446">
+<link rel="stylesheet" href="css/outdoor.css?v=07.10.2026.r12.1446">
+<script src="js/outdoor-sites.js?v=07.10.2026.r12.1446"></script>
+<script src="js/dooh-surfaces.js?v=07.10.2026.r12.1446"></script>
+<script src="js/urban-route.js?v=07.10.2026.r12.1446"></script>
+<script src="js/dooh-tour.js?v=07.10.2026.r12.1446"></script>
+<script src="js/outdoor-context.js?v=07.10.2026.r12.1446"></script>
+<script src="js/player-remote-view.js?v=07.10.2026.r12.1446"></script>
+<script src="js/human-view.js?v=07.10.2026.r12.1446"></script>
+<script src="js/audience-mode.js?v=07.10.2026.r12.1446"></script>
+<link rel="stylesheet" href="css/human.css?v=07.10.2026.r12.1446">
 <script type="importmap">
 {
   "imports": {
@@ -27,8 +27,8 @@
   }
 }
 </script>
-<link rel="stylesheet" href="css/hidden-ui.css?v=07.10.2026.r11.1435"><script defer src="js/hidden-ui.js?v=07.10.2026.r11.1435"></script><link rel="stylesheet" href="css/taza-camera-cli.css?v=07.10.2026.r11.1435">
-<script src="js/taza-camera-cli-v2.js?v=07.10.2026.r11.1435" defer></script>
+<link rel="stylesheet" href="css/hidden-ui.css?v=07.10.2026.r12.1446"><script defer src="js/hidden-ui.js?v=07.10.2026.r12.1446"></script><link rel="stylesheet" href="css/taza-camera-cli.css?v=07.10.2026.r12.1446">
+<script src="js/taza-camera-cli-v2.js?v=07.10.2026.r12.1446" defer></script>
 </head>
 <body>
 
@@ -213,6 +213,21 @@
   <div id="loading"><div class="spin"></div><p>Cargando gemelo…</p></div>
 </div>
 
-<script type="module" src="js/main.js?v=07.10.2026.r11.1435"></script>
+<script type="module" src="js/main.js?v=07.10.2026.r12.1446"></script>
+<script id="admira-tv-native-demo-bootstrap">
+(function () {
+  var url = new URL(location.href);
+  if (!/^https:\/\/(www\.)?admira\.tv$/.test(url.origin)) return;
+  if (url.pathname !== '/adcelerate/demo/' && url.pathname !== '/adcelerate/demo/index.html') return;
+  var demo = url.searchParams.getAll('ax_demo');
+  if (demo.length !== 1 || demo[0] !== 'tv' || document.querySelector('script[data-admira-demo-engine]')) return;
+  var script = document.createElement('script');
+  script.src = 'https://www.admiranext.com/suite/experto.js?v=20261007-native-demo-control-1';
+  script.defer = true;
+  script.setAttribute('data-pata', 'tv');
+  script.setAttribute('data-admira-demo-engine', '');
+  document.head.appendChild(script);
+})();
+</script>
 </body>
 </html>

@@ -9,6 +9,17 @@ La geometría urbana proviene de `data/gracia-local.json` (OpenStreetMap, ODbL).
 
 ## Humano · exploración fotográfica a pie
 
+El launcher puede pedir el motor común con
+`https://admira.tv/adcelerate/demo/?view=human&site=starbucks&ax_demo=tv`.
+Sólo `ax_demo=tv` en esta ruta HTTPS de `admira.tv` o `www.admira.tv` carga
+`suite/experto.js` con las marcas `data-pata="tv"` y `data-admira-demo-engine`.
+La carga se deduplica y no ejecuta controles de emisión. Sin ese parámetro,
+el arranque nativo permanece igual, incluido `?tour=dooh`.
+El Tour DooH existente recorre Vila, Jardinets y Lesseps; no incluye Starbucks.
+Este bootstrap no crea otro recorrido ni desactiva las integraciones operativas
+del gemelo. Su prueba se ejecuta con `node --test native-demo-bootstrap.test.mjs`
+desde la raíz del repositorio.
+
 Entrada directa: `/adcelerate/demo/?view=human`. El botón **Humano** de la barra y
 el antiguo modo humano de Cámara abren esta experiencia; ya no llevan al avatar de
 la maqueta. `/adcelerate/demo/` conserva el entorno 3D como vista general.
