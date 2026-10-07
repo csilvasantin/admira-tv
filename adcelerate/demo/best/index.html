@@ -1837,6 +1837,14 @@ function ponerEnElQuiosco(item,items,titulo){
   // cada vez que la pieza vuelve a empezar, y al soltar a la persona el canal vuelve solo a la sincro.
   mappedMusicToScreen(item, true);
 }
+addEventListener('message',async event=>{
+ const d=event.data;
+ if(event.origin!==location.origin||event.source!==parent||d?.channel!=='taza-demo-v1'||!['select','stop'].includes(d.action)||!Number.isInteger(d.number)||d.number<0||d.number>10||typeof d.id!=='string')return;
+ try{await mappedMusic.select(d.action==='stop'?0:d.number,{restart:true});
+ const item=mappedMusicPlayer?.item;
+ event.source.postMessage({channel:d.channel,id:d.id,title:item?.title||'',number:d.number,...(d.action!=='stop'&&!item?{error:'No se ha cargado la canción'}:{})},event.origin);
+ }catch(e){event.source.postMessage({channel:d.channel,id:d.id,error:String(e.message)},event.origin);}
+});
 let mappedMusicSentAt=0, mappedMusicSentId='';
 // PixelMug CarlosGdG (PUBLIC mug-status, sin editor key): artista + título acortado.
 // Mismo force/throttle que la pantalla real; al parar, limpia a Jardinets / habitual.

@@ -2381,3 +2381,19 @@ window.__dbg = {
   get wxCrowdFactor() { return wxCrowdFactor; },
 };
 window.__dbgEvalCount = (window.__dbgEvalCount || 0) + 1;
+
+// PlayerTaza demo: explicit opener, exact origin and correlated requests only.
+const tazaOrigins = new Set(['https://ainimation.studio','https://www.ainimation.studio']);
+let tazaRequest = null;
+addEventListener('message', event => {
+  const d=event.data;
+  if(d?.channel!=='taza-demo-v1')return;
+  if(event.source===window.opener && tazaOrigins.has(event.origin) && ['select','stop'].includes(d.action)) {
+    if(!Number.isInteger(d.number)||d.number<0||d.number>10||typeof d.id!=='string')return;
+    if(!photo.frame||!photo.ready){event.source.postMessage({channel:d.channel,id:d.id,error:'Kiosko todavía cargando'},event.origin);return;}
+    tazaRequest={source:event.source,origin:event.origin,id:d.id};
+    photo.frame.contentWindow.postMessage(d,location.origin);
+  } else if(event.origin===location.origin && event.source===photo.frame?.contentWindow && tazaRequest && d.id===tazaRequest.id) {
+    tazaRequest.source.postMessage(d,tazaRequest.origin);tazaRequest=null;
+  }
+});
