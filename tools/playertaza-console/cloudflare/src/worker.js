@@ -1121,6 +1121,7 @@ async function playPixels(env, origin, pixels, meta) {
 }
 __name(playPixels, "playPixels");
 var MCP_TOOLS = [
+  {name:'taza_project_read',description:'Lee el proyecto activo y el estado del puente. No cambia la selección ni envía contenido.',inputSchema:{type:'object',properties:{},additionalProperties:false}},
   {
     name: "taza_now",
     description: "Estado del player y de la taza: c\xE1mara, BLE, GIF 32\xD716, puente iPhone/Bubble y \xFAltimo pulso (nombre \xB7 verbo).",
@@ -1140,8 +1141,9 @@ var MCP_TOOLS = [
         name: { type: "string", description: "Qui\xE9n (\u226416). Se pintan 8 caracteres en 32\xD716." },
         verb: { type: "string", description: "Qu\xE9 hace (\u226424). Se pintan 8 caracteres." },
         text: { type: "string", description: "Alternativa: 'Nombre \xB7 verbo' o 'Nombre verbo'." },
-        via: { type: "string", description: "mcp|yarig|yokup|web. Por defecto mcp." },
-        source: { type: "string", description: "Origen libre, p. ej. yarig.ai" }
+        via: { type: "string", description: "queue-follow (colas), adcelerate-best (CanalKiosk), yarig (Yarigai). El proyecto activo filtra los orígenes." },
+        source: { type: "string", description: "Origen del contenido; mappedMusic para CanalKiosk." },
+        project: { type: "string", description: "starbucks-queue para avisos de pedidos. Requiere via=queue-follow y proyecto activo coincidente." }
       },
       additionalProperties: false
     }
@@ -1241,7 +1243,8 @@ async function handleMcpRpc(env, origin, msg) {
       const args = params && params.arguments || {};
       try {
         let out;
-        if (name === "taza_status_read") out = await readMugStatus(env, origin);
+        if(name==='taza_project_read')out={ok:true,binding:JSON.parse(await env.KV.get(STORE_BINDING_KEY)||'null'),delivery:await iphoneSnapshot(env)};
+        else if (name === "taza_status_read") out = await readMugStatus(env, origin);
         else if (name === "taza_status_write") out = await writeMugStatus(env, origin, args);
         else if (name === "taza_pixels_write") {
           const binding=JSON.parse(await env.KV.get(STORE_BINDING_KEY)||'null');
@@ -1384,6 +1387,12 @@ async function storeRoute(req,env,url){
 
 var worker_default = {
   async fetch(req, env) {
+    const publicUrl=new URL(req.url);
+    if(publicUrl.pathname.startsWith('/taza/')){
+      publicUrl.pathname=publicUrl.pathname.slice(5);
+      publicUrl.hostname='playertaza.csilvasantin.workers.dev';
+      req=new Request(publicUrl,req);
+    }
     const url = new URL(req.url);
     const path = url.pathname.replace(/\/+$/, "") || "/";
     if (["/api/stores","/api/store","/api/store-binding","/api/store-sync"].includes(path)) {

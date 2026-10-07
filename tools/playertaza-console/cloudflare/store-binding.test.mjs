@@ -85,3 +85,12 @@ test('direct queue, activity and MCP pixels cannot bypass selected project',asyn
  assert.equal(out.data.result.isError,true);assert.equal(kv.get('gif'),before);
  }
 });
+test('canonical MCP path discovers project routing and reads active binding',async()=>{
+ const listed=await api('/taza/mcp',{jsonrpc:'2.0',id:1,method:'tools/list'});
+ assert.equal(listed.status,200);
+ const tools=listed.data.result.tools;
+ assert.ok(tools.some(t=>t.name==='taza_project_read'));
+ assert.ok(tools.find(t=>t.name==='taza_status_write').inputSchema.properties.project);
+ const read=await api('/taza/mcp',{jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'taza_project_read',arguments:{}}});
+ assert.equal(JSON.parse(read.data.result.content[0].text).binding.storeId,'canalkiosk-jardinets');
+});

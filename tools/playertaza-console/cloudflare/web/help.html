@@ -1,74 +1,8 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="admiranext-version" content="v.07.10.2026.r1.store-binding">
-  <title>PlayerTaza · help</title>
-  <style>
-    :root { --bg:#0b0d10; --ink:#e8edf2; --muted:#8b96a3; --cyan:#3dffd4; --panel:#14181e; --line:#2a313a; --warn:#5a3a12; }
-    * { box-sizing: border-box; }
-    body { font: 16px/1.55 ui-sans-serif, system-ui, sans-serif; max-width: 44rem; margin: 0 auto; padding: 1.5rem 1.1rem 3rem; background: var(--bg); color: var(--ink); }
-    a { color: var(--cyan); }
-    h1 { font-size: 1.55rem; margin: 0 0 .4rem; }
-    h2 { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 2rem 0 .6rem; }
-    p, li { color: #d5dde4; }
-    ol, ul { padding-left: 1.2rem; }
-    li { margin: .35rem 0; }
-    code { background: var(--panel); padding: .05em .35em; border-radius: 4px; font-size: .92em; }
-    .lead { font-size: 1.05rem; color: var(--ink); }
-    .box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; }
-    .warn { background: #1a140c; border: 1px solid #6a4a1a; border-radius: 12px; padding: 1rem 1.1rem; }
-    .nav { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; color: var(--muted); font-size: .92rem; }
-    footer { margin-top: 2.4rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); padding-top: 1rem; }
-  </style>
-</head>
-<body>
-  <p class="nav"><a href="/">← mesa</a> · <a href="/previo">previo</a> · <a href="/app">app PixelMug</a> · <a href="/help">/help</a> · <a href="/mcp">/mcp</a></p>
-  <h1>PlayerTaza · para personas</h1>
-  <p class="lead">Es la taza PixelMug (pantalla LED en la cerámica) y la mesa donde Carlos y Smith se ven la misma cámara y se hablan. Si llegas hoy y no conoces la casa, basta esta página.</p>
-
-  <h2>Qué es</h2>
-  <div class="box">
-    <p>Una PixelMug / PixelCup P1: taza con una pantalla de LEDs de 32×16. Se carga por USB‑C, pero <strong>el cable no sirve para controlarla</strong>. Se empareja por Bluetooth y luego por Wi‑Fi de 2.4 GHz, con la app <strong>PixelMug</strong> del móvil (Android e iPhone; paquete <code>com.jeejio.pixelmug</code>; antes se llamó Bubble).</p>
-    <p>Smith ve la taza con la cámara del MacBook Pro 14. Esa misma imagen está en la <a href="/">mesa</a>. Ahí se escribe; Smith responde ahí. Lo que escribes también llega al grupo AgoraMatrix de Telegram.</p>
-    <p>El <a href="/previo">portal del previo</a> enseña exactamente el fotograma 32×16 que está emitiendo la taza. Encima hay <strong>dos zonas interactivas</strong>: izquierda Michael Jackson, derecha Queen. Un toque lanza primero el nombre y luego la animación. Si <a href="https://admira.tv/canal.html">admira.tv</a> está emitiendo a uno de los dos, esa zona se ilumina.</p>
-    <p>La <a href="/app">app PixelMug en web</a> es la del móvil: galería, dibujar 32×16, texto, foto, brillo y Wi‑Fi 2.4. Pestaña <strong>Admira</strong>: el player de <a href="https://admira.tv/canal.html?embed=mupi&amp;screen=playertaza">admira.tv</a> se pixela a 32×16 y publica un GIF oficial en <a href="/gif.gif">/gif.gif</a> (32×16, ≤40KB, el formato <code>talPlayGif</code> de PixelMug). El envío Bluetooth directo a la taza sigue pendiente de un protocolo validado. En <strong>Pixeria</strong> importas imágenes del Stock de <a href="https://www.pixeria.com/stock.html">www.pixeria.com</a>. El Bluetooth lo lleva el MacBook Pro 14.</p>
-  </div>
-
-  <h2>Cómo se usa, en cuatro pasos</h2>
-  <ol>
-    <li>Abre la <a href="/">mesa</a>. En este Mac: <code>http://127.0.0.1:4747/</code>. Desde cualquier sitio: <a href="https://playertaza.csilvasantin.workers.dev/">playertaza.csilvasantin.workers.dev</a>. Si alguna red bloquea <code>workers.dev</code>, usa la mesa local o el túnel que Smith tenga abierto.</li>
-    <li>Pon la taza de frente a la cámara, LEDs visibles, en el posavasos. En la cabecera debe poner <strong>cámara viva</strong> y, si está encendida cerca, <strong>PixelCup P1</strong>.</li>
-    <li>Para emparejar: toca la <strong>pantalla LED</strong> (no el asa). Un toque o un desliz cambia de app. Llega al icono de Wi‑Fi y <strong>mantén pulsado 1–2 segundos</strong>. La taza entra en animación de emparejamiento. Manuales viejos hablaban de doble toque; en esta unidad manda la pulsación larga.</li>
-    <li>En el móvil abre PixelMug y sigue el asistente. La taza <strong>solo ve redes 2.4 GHz</strong>. El Google Wifi de esta casa, tal como está usado aquí, le llega como 5 GHz: no sirve. Usa el hotspot 2.4 del teléfono. Escribe en la mesa lo que ves en la taza; Smith te dice lo que ve él.</li>
-  </ol>
-
-  <h2>Hablar</h2>
-  <ul>
-    <li>Escribes en el recuadro de la mesa. Enter envía. Debajo debe poner «En la mesa y en AgoraMatrix».</li>
-    <li>Smith responde en la misma conversación (burbujas a la izquierda, las tuyas a la derecha).</li>
-    <li>Un mensaje con etiqueta <em>Telegram</em> nació en el grupo; uno con etiqueta <em>web</em>, aquí.</li>
-    <li>No hace falta el chat de Grok para esto: el canal es la mesa.</li>
-  </ul>
-
-  <h2>Si se rompe</h2>
-  <div class="warn">
-    <ul>
-      <li><strong>Cámara caída:</strong> el Mac tiene que tener abierta la consola local (<code>server.py</code>). Sin ese proceso no hay foto en la web pública.</li>
-      <li><strong>BLE en silencio:</strong> la taza está apagada, lejos, o no ha salido a emparejar. Enciéndela y acércala.</li>
-      <li><strong>Reloj de la taza atrasado 12 h:</strong> no tiene internet 2.4. Cuando tenga Wi‑Fi, sincroniza sola.</li>
-      <li><strong>La página no carga fuera de casa:</strong> algunas redes españolas bloquean <code>*.workers.dev</code>. Prueba otra red o pide el túnel.</li>
-      <li><strong>Hay dos tazas:</strong> Smith solo oye la primera PixelMug que encuentra por Bluetooth. La otra hay que encenderla y ponerla a emparejar.</li>
-    </ul>
-  </div>
-
-  <h2>Quién sigue el trabajo</h2>
-  <p>Proyecto Yokup: <code>playertaza</code>. Cámara y radio BLE: <strong>SmithMBP14 · MacBook Pro 14</strong>. Player Admira 32×16: <strong>SmithMBP16 · MacBook Pro 16</strong> (misión FLT-1524). Si algo no cuadra, escribe en la mesa o en AgoraMatrix. Un agente de silicio que tenga que continuar lee <a href="/mcp">/mcp</a>.</p>
-  <p>No pongas contraseñas de Wi‑Fi en la mesa ni en esta página.</p>
-
-  <footer>
-    v.02.09.2026.r1.06:40 · SmithMBP14 · MacBookPro14 · <a href="/version.json">version.json</a>
-  </footer>
-</body>
-</html>
+<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PlayerTaza · help</title><style>body{margin:0;background:#0b1017;color:#e8edf2;font:16px/1.65 system-ui,sans-serif}main{max-width:900px;margin:auto;padding:36px 24px 80px}a{color:#54efd3}nav{display:flex;gap:24px;flex-wrap:wrap}h1{font-size:36px;line-height:1.2}h2{margin-top:36px}pre{overflow:auto;background:#17222d;padding:20px;border-radius:12px}code{font-family:ui-monospace,monospace}table{border-collapse:collapse;width:100%}td,th{text-align:left;border-bottom:1px solid #33404b;padding:12px}.lead{font-size:20px;color:#abc1d3}.note{border-left:3px solid #54efd3;padding:12px 20px;background:#131e28}</style><main><nav><a href="https://ainimation.studio/taza/">Player</a><a href="https://ainimation.studio/taza/help">Help</a><a href="https://ainimation.studio/taza/mcp">MCP</a></nav><h1>PlayerTaza · Help</h1><p class="lead">Una taza, un proyecto activo. Elige qué información recibe CarlosGdG y comprueba el resultado con la cámara.</p>
+<h2>Cambiar de proyecto</h2><ol><li>Abre el player y elige <strong>Proyecto</strong>.</li><li>Elige la store y pantalla si corresponde.</li><li>Pulsa <strong>Guardar asociación</strong>. La selección se guarda en Cloudflare y se comparte entre navegadores.</li></ol>
+<table><tr><th>Proyecto</th><th>Contenido</th></tr><tr><td>CanalKiosk</td><td>Selecciones musicales del kiosko de Jardinets.</td></tr><tr><td>Starbucks · Gestión de colas</td><td>Avisos del gestor: pedido preparado, turno o recogida. No requiere pantalla musical.</td></tr><tr><td>Starbucks · Pantalla y música</td><td>Contenido de la store y pantalla seleccionadas.</td></tr><tr><td>Yarigai</td><td>Estados enviados por el productor Yarigai.</td></tr></table>
+<h2>Comprobar la taza</h2><p>Abre <strong>Abrir cámara de este Mac</strong>, selecciona la cámara que mira a la taza y ajusta el brillo del visor. El vídeo permanece en ese navegador. Este brillo cambia la imagen del visor, no los LEDs.</p><p>La previsualización GIF confirma el contenido generado. «En cola» significa pendiente; una respuesta de Bubble confirma el RPC. La prueba final es ver el texto en los LEDs. La etiqueta de destino no demuestra conectividad.</p>
+<h2>Cómo llega el contenido</h2><p>Proyecto → API/MCP de PlayerTaza en Cloudflare → cola → puente persistente del Mac Mini → Bubble → CarlosGdG. La configuración pública y el código están en la nube; el Mini ejecuta el puente de hardware.</p><p>El 7 de octubre se verificó CarlosGdG en el <strong>puesto 1</strong> de PlayerTazaAdmira. El puesto 2 histórico estaba vacío. No deduzcas el puesto por el nombre: compruébalo en Attach Devices antes de modificar la configuración.</p>
+<h2>Si no cambia la taza</h2><ol><li>Comprueba el proyecto activo y el origen del aviso.</li><li>En Bubble, comprueba CarlosGdG Online y su vínculo con PlayerTazaAdmira.</li><li>Si falta conversación del bot, envía /start a PlayerTazaAdmira con el puente activo.</li><li>Si aparece RPC 21000, revisa la vinculación al puesto que usa el puente.</li><li>Si solo cambia el GIF, revisa el resultado de entrega y la cámara; no des el envío por confirmado.</li></ol>
+<h2>Integración con gestión de colas</h2><p>El <a href="https://admira.tv/gestorColas/help">Help del gestor</a> y su <a href="https://admira.tv/gestorColas/mcp">MCP</a> son las direcciones previstas por el equipo. En la comprobación del 7 de octubre de 2026 todavía devolvían 404; la conexión con ese emisor real está pendiente.</p><p>Los desarrolladores deben usar el <a href="https://ainimation.studio/taza/mcp">contrato MCP de PlayerTaza</a>. Los avisos de otro proyecto se rechazan y el Mini descarta trabajos pendientes de una selección anterior. Un emisor que use Bubble directamente queda fuera de este filtro y debe migrarse a la API común.</p>
+<h2>Operación del puente</h2><p>Código: <code>tools/playertaza-bridge</code>. Servicio del Mini: <code>com.admira.playertaza-bubble</code>. Diagnóstico local del servicio: <code>http://127.0.0.1:4748/health</code>. Credenciales en <code>config.private.json</code> del Mini, fuera de Git. Nunca publiques tokens en Help, MCP, logs ni mensajes de equipo.</p><footer><p>Actualizado el 7 de octubre de 2026 · Código versionado en <a href="https://github.com/csilvasantin/admira-tv/tree/codex/jardinets-taza-retry/tools/playertaza-console">GitHub</a>.</p></footer></main></html>

@@ -1,55 +1,40 @@
 {
   "name": "playertaza",
-  "title": "PlayerTaza — player 32×16 en una taza PixelMug",
-  "description": "Servidor MCP para leer y escribir el pulso (nombre · verbo) en la taza LED 32×16. Origen: cualquier agente (yarig.ai u otro). Tablero: yokup.com proyecto playertaza. Destino: GIF talPlayGif y, si el puente Bubble está listo, la cerámica.",
-  "version": "1.0.0",
-  "site": "https://playertaza.csilvasantin.workers.dev",
-  "hub": "https://playertaza.csilvasantin.workers.dev/mcp",
-  "llms_txt": "https://playertaza.csilvasantin.workers.dev/mcp/llms.txt",
-  "help_humans": "https://playertaza.csilvasantin.workers.dev/help",
-  "contact": {
-    "telegram_group": "AgoraMatrix",
-    "yokup_project": "playertaza",
-    "signature": "SmithMBAPlata · MacBookAirPlata"
-  },
+  "version": "1.1.0",
+  "site": "https://ainimation.studio/taza/",
+  "help_humans": "https://ainimation.studio/taza/help",
+  "hub": "https://ainimation.studio/taza/mcp",
   "mcp_server": {
-    "url": "https://playertaza.csilvasantin.workers.dev/mcp",
+    "url": "https://ainimation.studio/taza/mcp",
     "transport": "streamable-http",
-    "protocol_versions": ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"],
     "authentication": {
       "type": "none",
-      "oauth": false,
-      "note": "initialize y tools/list públicos. Escritura de estado corta, con límite de 3 s."
+      "note": "Segmentación funcional, no autenticación de productores."
     }
-  },
-  "http_api": {
-    "base_url": "https://playertaza.csilvasantin.workers.dev",
-    "read": [
-      { "method": "GET", "path": "/api/status", "auth": "no", "desc": "Cámara, BLE, gif_url, mug_status." },
-      { "method": "GET", "path": "/gif.gif", "auth": "no", "desc": "Fotograma 32×16 vigente." },
-      { "method": "GET", "path": "/api/mug-status", "auth": "no", "desc": "Pulso nombre · verbo." }
-    ],
-    "write": [
-      { "method": "POST", "path": "/api/mug-status", "auth": "no", "desc": "{name,verb} o {text}. Pinta /gif.gif y encola Bubble si está listo." },
-      { "method": "POST", "path": "/api/mug-launch", "auth": "no", "desc": "{zone: jackson|queen, step: name|anim}. Nombre y luego animación 32×16." }
-    ]
   },
   "tools": [
-    {
-      "name": "taza_now",
-      "description": "Estado del player y de la taza: cámara, BLE, GIF 32×16, puente iPhone/Bubble y último pulso."
-    },
-    {
-      "name": "taza_status_read",
-      "description": "Lee el pulso actual (nombre · verbo) y la URL del GIF 32×16."
-    },
-    {
+    "taza_project_read",
+    "taza_status_read",
+    "taza_status_write",
+    "taza_now"
+  ],
+  "queue_event_example": {
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
       "name": "taza_status_write",
-      "description": "Escribe el pulso de cualquiera en la taza: name + verb (o text). Origen previsto: yarig.ai → yokup.com → cerámica."
-    },
-    {
-      "name": "taza_launch",
-      "description": "Lanza zona jackson o queen: step=name pinta el nombre; step=anim la animación de 4 fotogramas."
+      "arguments": {
+        "project": "starbucks-queue",
+        "via": "queue-follow",
+        "name": "PEDIDO 42",
+        "verb": "LISTO"
+      }
     }
-  ]
+  },
+  "related": {
+    "queue_help": "https://admira.tv/gestorColas/help",
+    "queue_mcp": "https://admira.tv/gestorColas/mcp",
+    "status": "pending-publication"
+  }
 }
