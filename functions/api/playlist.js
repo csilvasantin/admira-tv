@@ -1,6 +1,6 @@
 import { accessFor, authHeaders, sessionEmail } from "../_auth-session.js";
 import { lecturaBlocksWrite } from "../_lectura-guard.js";
-import { LIVE_KEY, TAGS_PREFIX, STOCK_INDEX, MAX_LIVE, MAX_CIRCUITS, applyCircuits, cleanCircuit, cleanIdIot, buildXpaceIndex, cleanIdentity, xpaceEntry, cleanLive, completeFacts, deduceScreenTags, liveRev, orientationOf, resolveContent, resolveForScreen, targetMatches } from "./_playlist-live.js";
+import { LIVE_KEY, TAGS_PREFIX, STOCK_INDEX, MAX_LIVE, MAX_CIRCUITS, addressedContent, addressKeys, applyCircuits, cleanCircuit, cleanIdIot, buildXpaceIndex, cleanIdentity, xpaceEntry, cleanLive, completeFacts, deduceScreenTags, liveRev, orientationOf, resolveContent, resolveForScreen, targetMatches } from "./_playlist-live.js";
 
 const PREFIX = "admira-tv:playlist:default:v1:";
 
@@ -87,13 +87,28 @@ async function readLive(env) {
   } catch (_) {}
   return { rev: 0, updatedAt: 0, playlists: [], circuits: [] };
 }
-const quick = (url, ttl) => fetch(url, { cf: { cacheTtl: ttl, cacheEverything: true }, signal: AbortSignal.timeout(3500) }).then(r => r.ok ? r.json() : null).catch(() => null);
+// Memoria corta por instancia: cada player pregunta cada 30 s y todos necesitan lo mismo (el índice del Stock, el
+// índice de pantallas, el registro de identidad). Sin ella, 180 pantallas son un millón de lecturas de KV al día.
+const memo = new Map();
+async function remember(key, ms, load) {
+  const hit = memo.get(key), now = Date.now();
+  if (hit && now - hit.at < ms) return hit.value;
+  const value = await load();
+  memo.set(key, { at: now, value });
+  return value;
+}
+export function forgetMemo(key) { if (key) memo.delete(key); else memo.clear(); }
+const fetchJson = (url, ttl) => fetch(url, { cf: { cacheTtl: ttl, cacheEverything: true }, signal: AbortSignal.timeout(3500) }).then(r => r.ok ? r.json() : null).catch(() => null);
+// Las consultas de identidad (parrilla, fichas del catálogo) se recuerdan hasta 5 min; un fallo no se recuerda.
+const quick = async (url, ttl) => { const hit = memo.get("q:" + url); if (hit && Date.now() - hit.at < Math.min(ttl, 300) * 1000) return hit.value; const value = await fetchJson(url, ttl); if (value != null) memo.set("q:" + url, { at: Date.now(), value }); return value; };
 // Un idIoT declarado por el player se comprueba contra el catálogo: sólo cuenta si existe.
 const iotFicha = id => id ? quick("https://api.admira.store/locations/iot/" + encodeURIComponent(id), 600).then(d => (d && d.idIoT && d.location ? d : null)) : Promise.resolve(null);
 const xpaceFicha = id => id ? quick("https://api.admira.store/locations/" + encodeURIComponent(id), 600).then(d => (d && d.id ? d : d && d.location && d.location.id ? d.location : null)) : Promise.resolve(null);
 async function loadStock() {
-  const d = await quick(STOCK_INDEX, 60);
-  return Array.isArray(d) ? d : (d && (d.items || d.assets)) || [];
+  return remember("stock", 45_000, async () => {
+    const d = await fetchJson(STOCK_INDEX, 60);
+    return Array.isArray(d) ? d : (d && (d.items || d.assets)) || [];
+  });
 }
 // Lo que la pantalla dice de sí misma al pedir su playlist (circuito, tamaño, idioma) y, sólo si hay
 // playlists vivas que resolver, lo que la parrilla sabe de ella (circuito y proyecto).
@@ -109,8 +124,7 @@ function hintFacts(screen, q) {
 const XPACE_INDEX_KEY = "admira-tv:screen:xpacio:v1";
 let xpaceTryAt = 0;
 async function xpaceIndex(env, waitUntil) {
-  let cached = null;
-  try { cached = JSON.parse((env.ACCESS && await env.ACCESS.get(XPACE_INDEX_KEY)) || "null"); } catch (_) {}
+  let cached = await remember("xpace-index", 60_000, async () => { try { return JSON.parse((env.ACCESS && await env.ACCESS.get(XPACE_INDEX_KEY)) || "null"); } catch (_) { return null; } });
   const fresh = cached && Date.now() - (Number(cached.builtAt) || 0) < 30 * 60_000;
   if (!fresh && env.ACCESS && Date.now() - xpaceTryAt > 10 * 60_000) {
     xpaceTryAt = Date.now();
@@ -120,6 +134,7 @@ async function xpaceIndex(env, waitUntil) {
       if (!Array.isArray(list)) return null;
       const doc = { builtAt: Date.now(), map: buildXpaceIndex(list) };
       try { await env.ACCESS.put(XPACE_INDEX_KEY, JSON.stringify(doc)); } catch (_) {}
+      memo.set("xpace-index", { at: Date.now(), value: doc });
       return doc;
     })();
     if (typeof waitUntil === "function") { try { waitUntil(rebuild); } catch (_) {} }
@@ -131,8 +146,10 @@ async function xpaceIndex(env, waitUntil) {
 // por el propio editor. Es lo que da a cada pantalla sus identificadores únicos sin que nadie los escriba.
 const IDENTITY_KEY = "admira-tv:screen:identity:v1";
 async function readIdentity(env) {
-  try { const d = JSON.parse((env.ACCESS && await env.ACCESS.get(IDENTITY_KEY)) || "null"); if (d && d.map && typeof d.map === "object") return d; } catch (_) {}
-  return { updatedAt: 0, map: {} };
+  return remember("identity", 60_000, async () => {
+    try { const d = JSON.parse((env.ACCESS && await env.ACCESS.get(IDENTITY_KEY)) || "null"); if (d && d.map && typeof d.map === "object") return d; } catch (_) {}
+    return { updatedAt: 0, map: {} };
+  });
 }
 async function enrichFacts(facts, env, waitUntil) {
   let gridCircuit = "";
@@ -237,17 +254,30 @@ export async function onRequestGet({ request, env, waitUntil }) {
   const activas = live.playlists.filter(p => p && p.enabled !== false);
   // Con playlists vivas se completa siempre; sin ellas, sólo si la pantalla declara su Xpacio: así el editor ya la
   // ve con su proyecto y su circuito ANTES de que exista la primera regla, y lo que enseña es lo que casará.
-  if (activas.length || facts.xpace || facts.iotDeclared) await enrichFacts(facts, env, waitUntil);
+  // La identidad se completa SIEMPRE: una pieza del Stock puede ir dirigida a esta pantalla por su nombre único
+  // aunque no exista ninguna playlist viva.
+  await enrichFacts(facts, env, waitUntil);
   // Se recuerdan las etiquetas PROPIAS; los circuitos definidos se añaden al vuelo, aquí y en el censo del editor.
   const propias = deduceScreenTags(facts), screenTags = applyCircuits(propias, live.circuits);
   const recordar = rememberTags(env, screen, propias, facts);
   try { if (typeof waitUntil === "function") waitUntil(recordar); else await recordar; } catch (_) { await recordar; }
-  if (!draft.items.length && activas.length) {
-    const { hits, items } = resolveForScreen(activas, screenTags, await loadStock(), facts);
-    if (items.length) draft = { screen, playlist: "default", name: hits.map(p => p.name).join(" + ").slice(0, 80), items, rev: liveRev(items),
-      updatedAt: Math.max(...hits.map(p => Number(p.updatedAt) || 0)), live: hits.map(p => ({ id: p.id, name: p.name })) };
+  // Contenido dirigido a esta pantalla o a su centro por hashtag (#starbucks_paseodegracia_103_pantalla1): se
+  // AÑADE a lo que ya tenga, puesto a mano o por playlists vivas, sin repetir pieza.
+  const keys = addressKeys(facts), dirigidas = (keys.exact.size || keys.centre.size) ? addressedContent(await loadStock(), facts) : [];
+  let auto = dirigidas;
+  if (!draft.items.length) {
+    const viva = activas.length ? resolveForScreen(activas, screenTags, await loadStock(), facts) : { hits: [], items: [] };
+    const ya = new Set(viva.items.map(i => i.stockId)), items = [...viva.items, ...dirigidas.filter(i => !ya.has(i.stockId))].slice(0, 200);
+    if (items.length) {
+      draft = { screen, playlist: "default", name: (viva.hits.map(p => p.name).concat(dirigidas.length ? ["Dirigido por hashtag"] : [])).join(" + ").slice(0, 80), items, rev: liveRev(items),
+        updatedAt: Math.max(0, ...viva.hits.map(p => Number(p.updatedAt) || 0)), live: viva.hits.map(p => ({ id: p.id, name: p.name })) };
+      auto = [];   // ya van dentro de la lista
+    }
+  } else {
+    const ya = new Set(draft.items.map(i => String(i.stockId || "")));
+    auto = dirigidas.filter(i => !ya.has(i.stockId));
   }
-  return json({ ok: true, draft, screenTags }, 200, cors);
+  return json({ ok: true, draft, screenTags, auto }, 200, cors);
 }
 
 // Guardar, pausar o borrar una playlist viva. Sólo con sesión del portal (la clave del Stock no vale aquí:
@@ -267,7 +297,7 @@ async function liveWrite(request, env, body, cors) {
       const prev = doc.map[e.screen], next = { p: e.p, x: e.x, n: e.n, xn: e.xn };
       if (!prev || prev.p !== next.p || prev.x !== next.x || prev.n !== next.n || prev.xn !== next.xn) { doc.map[e.screen] = next; changed += 1; }
     }
-    if (changed) { doc.updatedAt = Date.now(); doc.updatedBy = actor; await env.ACCESS.put(IDENTITY_KEY, JSON.stringify(doc)); }
+    if (changed) { doc.updatedAt = Date.now(); doc.updatedBy = actor; await env.ACCESS.put(IDENTITY_KEY, JSON.stringify(doc)); forgetMemo("identity"); }
     return json({ ok: true, changed, total: Object.keys(doc.map).length }, 200, cors);
   }
   let circuits = live.circuits.slice();

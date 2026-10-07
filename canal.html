@@ -1730,6 +1730,8 @@ async function loadDefaultDraft(){
     const d=XTORE_PARENT?await xtorePublicRead('playlist'):await fetch('/api/playlist?screen='+encodeURIComponent(screen)+defaultDraftHints+'&_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
     if(xtoreMusicEnabled()&&(d?.ok!==true||!Array.isArray(d?.draft?.items)))throw new Error('Playlist unavailable');
     let raw=d&&d.draft&&Array.isArray(d.draft.items)?d.draft.items:[];
+    // Piezas dirigidas a esta pantalla por hashtag (su nombre único o el de su centro): se añaden a lo que tenga.
+    if(d&&Array.isArray(d.auto)&&d.auto.length){const ya=new Set(raw.map(it=>String(it.stockId||it.id||'')));raw=raw.concat(d.auto.filter(it=>!ya.has(String(it.stockId||it.id||''))));}
     if(xtoreMusicEnabled()){DEFAULT_DRAFT.ready=true;DEFAULT_DRAFT.assigned=raw.length>0;}
     if(xtoreMusicEnabled())raw=xtoreMusicItems(raw,all);
     const mapped=raw.map((it,ix)=>{const t=String(it.assetType||it.type||'').toLowerCase(),type=(t==='video'||t==='animation')?'video':(t==='audio'||t==='music'||t==='locucion')?'audio':'image';return{id:'default:'+String(it.stockId||it.id||ix),url:it.asset||it.url||'',type,title:it.title||('Contenido '+(ix+1)),motor:'parrilla-default',category:'por-defecto',_default:true,_position:ix,_previewSec:Math.max(2,+it.seconds||10),createdAt:'8'+String(1000+ix)}}).filter(x=>x.url);

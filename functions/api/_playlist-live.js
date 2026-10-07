@@ -114,7 +114,9 @@ function tagHits(pieceTags, wanted) {
   return pieceTags.some(t => t === w || re.test(t));
 }
 
-const TYPES = { visual: ["image", "video"], image: ["image"], video: ["video"], audio: ["audio", "music"] };
+const TYPES = { visual: ["image", "video"], image: ["image"], video: ["video"], audio: ["audio", "music", "locucion"] };
+const AUDIO_TYPES = new Set(["audio", "music", "locucion"]), VISUAL_TYPES = new Set(["image", "video", "animation"]);
+const assetTypeOf = type => (type === "video" || type === "animation") ? "video" : AUDIO_TYPES.has(type) ? "audio" : "image";
 const pieceOrientation = p => orientationOf(p.ancho, p.alto, p.orientacion);
 const stamp = p => { const n = Number(p.createdAt); return Number.isFinite(n) && n > 0 ? n : (Date.parse(p.createdAt) || Number(String(p.id || "").split("-")[0]) || 0); };
 
@@ -149,7 +151,7 @@ export function resolveContent(content, stock, facts = {}, now = Date.now(), fro
     const type = String(p.type || "").toLowerCase();
     return { id: "stock-" + p.id, stockId: String(p.id), title: String(p.title || "Pieza del Stock").slice(0, 240),
       sub: ("viva" + (from ? " · " + from : "")).slice(0, 300), lane: "publicidad", seconds: content.seconds,
-      asset: String(p.url), assetType: type === "video" ? "video" : (type === "audio" || type === "music") ? "audio" : "image",
+      asset: String(p.url), assetType: assetTypeOf(type),
       tags: (Array.isArray(p.tags) ? p.tags : []).map(t => String(t || "").slice(0, 80)).filter(Boolean).slice(0, 32) };
   });
 }
@@ -164,6 +166,50 @@ export function resolveForScreen(playlists, screenTags, stock, facts = {}, now =
   }
   return { hits, items };
 }
+
+// CONTENIDO DIRIGIDO POR HASHTAG (Carlos, 7-oct-2026): una pieza del Stock etiquetada con el nombre único de una
+// pantalla —#starbucks_paseodegracia_103_pantalla1— o de su centro —#starbucks_paseodegracia_103— se emite sola en
+// su destino, sin crear ninguna playlist. Vale para vídeos, imágenes, locuciones y música, importados o creados con
+// IA. La etiqueta del cliente sola (#starbucks) NO emite nada: sólo dice de quién es la pieza.
+// Etiqueta y nombre se comparan sin mayúsculas, tildes ni separadores: «pantalla1» es «Pantalla_1».
+export const destKey = v => String(v == null ? "" : v).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+/** Nombres por los que esta pantalla es destino: exactos (su idIoT, su id de player) y de centro (su Xpacio). */
+export function addressKeys(facts = {}) {
+  const exact = new Set(), centre = new Set(), add = (set, v) => { const k = destKey(v); if (k.length >= 8) set.add(k); };
+  if (facts.iot) { add(exact, facts.iot); add(centre, String(facts.iot).replace(/_[A-Za-z0-9]+_\d+$/, "")); }
+  if (facts.screen) add(exact, facts.screen);
+  if (facts.xpace) add(centre, facts.xpace);
+  for (const k of exact) centre.delete(k);
+  return { exact, centre, audioElement: /_(?:Altavoz|Audio)_\d+$/i.test(String(facts.iot || "")) };
+}
+/**
+ * Piezas dirigidas a esta pantalla. Dirigida a la pantalla, entra tal cual. Dirigida al centro, cada cosa va a su
+ * sitio: el audio a los altavoces, lo visual a las pantallas y sólo en su orientación.
+ */
+export function addressedContent(stock, facts = {}, now = Date.now(), limit = 60) {
+  const keys = addressKeys(facts);
+  if (!keys.exact.size && !keys.centre.size) return [];
+  const orient = facts.orientation || orientationOf(facts.w, facts.h), out = [];
+  for (const p of Array.isArray(stock) ? stock : []) {
+    const type = String((p && p.type) || "").toLowerCase(), audio = AUDIO_TYPES.has(type);
+    if (!p || p.oculto || (!audio && !VISUAL_TYPES.has(type)) || !/^https:\/\//.test(String(p.url || "")) || !vigente(p, now)) continue;
+    const tags = Array.isArray(p.tags) ? p.tags : [];
+    let via = tags.find(t => keys.exact.has(destKey(t))), exact = !!via;
+    if (!via) via = tags.find(t => keys.centre.has(destKey(t)));
+    if (!via) continue;
+    if (!exact) {
+      if (audio !== keys.audioElement) continue;
+      const po = pieceOrientation(p);
+      if (!audio && orient && po && po !== "cuadrada" && orient !== "cuadrada" && po !== orient) continue;
+    }
+    out.push({ p, via, type });
+  }
+  out.sort((a, b) => stamp(b.p) - stamp(a.p));
+  return out.slice(0, limit).map(({ p, via, type }) => ({ id: "stock-" + p.id, stockId: String(p.id), title: String(p.title || "Pieza del Stock").slice(0, 240),
+    sub: ("destino · #" + via).slice(0, 300), lane: "publicidad", seconds: 10, asset: String(p.url), assetType: assetTypeOf(type),
+    tags: tags32(p) }));
+}
+const tags32 = p => (Array.isArray(p.tags) ? p.tags : []).map(t => String(t || "").slice(0, 80)).filter(Boolean).slice(0, 32);
 
 // Índice pantalla → Xpacio a partir del catálogo de Xpacios (api.admira.store/locations): un Xpacio declara
 // sus pantallas en `screen` (alta de un equipo) o en `surfaces[].screen`. De 9.000 fichas sólo unas decenas las
