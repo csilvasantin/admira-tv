@@ -50,5 +50,10 @@
     "Gestor de colas: nueva columna «📥 Recibido»; el pedido en barra aparece al momento",
     "La pantalla del iPad muestra los recibidos ya en «En preparación»",
     "Tocar un recibido lo pasa a preparación; botón directo a Listo"
+  ],
+  "v.07.10.2026.r9.14:24": [
+    "Pantalla del iPad: sigue en vivo tras /reiniciar y quita los avisos viejos",
+    "La pantalla se recarga sola cuando hay versión nueva",
+    "Pulsar otra vez ☰ Opciones, ▤ Avanzado o ⌘ Experto cierra el panel"
   ]
 }

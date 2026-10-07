@@ -35,7 +35,7 @@ section h2{margin:0 0 14px;font-size:clamp(22px,2.8vw,40px)}
 #bocadillo{position:absolute;z-index:2;left:4%;right:4%;top:3%;background:#fff;color:var(--osc);border-radius:24px;padding:16px 20px;font-size:clamp(18px,2.3vw,32px);font-weight:800;line-height:1.15;box-shadow:0 14px 40px #0006;opacity:0;transform:translateY(16px);transition:.35s}
 #bocadillo.on{opacity:1;transform:none}
 /* Con la nube cargada, el bocadillo lo dibuja Admirito (say); el nuestro queda solo como respaldo accesible */
-body.nube #bocadillo{clip-path:inset(50%);opacity:0!important}#bocadillo b{color:var(--listo)}
+#bocadillo b{color:var(--listo)}
 #bocadillo:after{content:'';position:absolute;bottom:-16px;left:46%;border:16px solid transparent;border-bottom:0;border-top-color:#fff}
 footer{grid-column:1/-1;background:#FFE58A;color:#3A2E00;text-align:center;font-weight:700;font-size:13px;padding:7px}
 #activar{position:fixed;inset:0;background:#1E3932f0;display:grid;place-items:center;z-index:9;text-align:center;font-size:clamp(22px,3vw,36px);font-weight:800;cursor:pointer}
@@ -71,30 +71,50 @@ const T={es:{prep:'⏳ En preparación',listo:'✅ ¡Listo para recoger!',vacio:
   html:(n,nom)=>nom?'<b>'+nom+'</b>, your '+M.nombre+' order is ready ☕<br><small>Order '+n+' · collect at the counter</small>':'Order <b>'+n+'</b> is ready ☕ Collect at the counter!',voz:'en-GB'}};
 const esc=x=>String(x||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function textos(){const t=T[lang];document.documentElement.lang=lang;$('hPrep').textContent=t.prep;$('hListo').textContent=t.listo;$('pie').textContent=t.pie;$('lang').textContent=t.btn;$('actT').firstChild.textContent=t.act;$('actS').textContent=t.actS;$('tienda').textContent=tienda?'· '+tienda:'';if(ultimo)pintar(ultimo);}
-const vistos=new Map(),cola=[],recientes=new Set(),said=window.__admiritoSaid=[];let primera=true,hablando=false,vozOk=P.get('voz')==='1',ultimo=null;
+// Estado vivo (Carlos, 7-oct-2026): la pantalla queda abierta horas en el iPad. Los pedidos se siguen por ID
+// (no por número: tras /reiniciar el A001 nuevo NO es el A001 viejo), una sola petición a la vez con
+// límite de 5 s, y al detectar un reinicio se vacía la cola de avisos, se corta la voz y se quita el bocadillo.
+const vistos=new Map(),cola=[],recientes=new Set(),said=window.__admiritoSaid=[];let primera=true,hablando=false,vozOk=P.get('voz')==='1',ultimo=null,enVuelo=false,idsPrev=new Set(),gen=0,fallos=0;
+window.__pantallaStats={tics:0,ok:0,resets:0};
 const act=$('activar');if(vozOk)act.classList.add('off');
 function activar(){vozOk=true;act.classList.add('off');try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}catch(_){}try{const e=document.documentElement;(e.requestFullscreen||e.webkitRequestFullscreen||function(){}).call(e);}catch(_){}}
 act.addEventListener('click',activar);act.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')activar();});
 function vozDe(ss,l){const vs=ss.getVoices()||[],n=x=>(x.lang||'').replace('_','-');return vs.find(v=>n(v)===l&&/Mónica|Monica|Jorge|Marisol|Google español$/i.test(v.name))||vs.find(v=>n(v)===l)||null;}
-function decir(p){const t=T[lang],num=String(p.numero).replace(/[^A-Z0-9]/gi,''),nom=p.nombre||'';const texto=t.dice(num,nom);
-  const b=$('bocadillo');b.innerHTML=t.html(esc(num),esc(nom));b.classList.add('on');
-  try{$('nube').contentWindow.postMessage({source:'ainimation-xperiencia',type:'say',text:texto,lang:t.voz},'https://digitalavatar.ai');}catch(_){}
+const sigueListo=p=>!!(ultimo&&(ultimo.listo||[]).some(x=>x.id===p.id));
+function callar(){cola.length=0;gen++;try{window.speechSynthesis&&speechSynthesis.cancel();}catch(_){}const b=$('bocadillo');b.classList.remove('on');b.innerHTML='';}
+function decir(p){const g=gen,t=T[lang],num=String(p.numero).replace(/[^A-Z0-9]/gi,''),nom=p.nombre||'';
+  if(!sigueListo(p))return Promise.resolve();
+  const texto=t.dice(num,nom),b=$('bocadillo');b.innerHTML=t.html(esc(num),esc(nom));b.classList.add('on');
   let via='pantalla';
-  return new Promise(fin=>{const cerrar=()=>{said.push({numero:num,nombre:nom||null,text:texto,via,lang:t.voz,at:Date.now()});setTimeout(()=>{b.classList.remove('on');fin();},2500);};
-    try{const ss=window.speechSynthesis;if(!vozOk||!ss||typeof SpeechSynthesisUtterance!=='function')return cerrar();
+  return new Promise(fin=>{let hecho=false;const cerrar=()=>{if(hecho)return;hecho=true;said.push({id:p.id,numero:num,nombre:nom||null,text:texto,via,lang:t.voz,at:Date.now()});setTimeout(()=>{if(g===gen)b.classList.remove('on');fin();},1800);};
+    setTimeout(cerrar,8000);
+    try{const ss=window.speechSynthesis;if(!vozOk||!ss||typeof SpeechSynthesisUtterance!=='function')return setTimeout(cerrar,1500);
       const u=new SpeechSynthesisUtterance(texto);u.lang=t.voz;u.rate=.97;const v=vozDe(ss,t.voz);if(v)u.voice=v;via='voz-'+t.voz;
-      let h=false;const ok=()=>{if(!h){h=true;cerrar();}};u.onend=ok;u.onerror=ok;setTimeout(ok,9000);ss.speak(u);}catch(_){cerrar();}});}
-async function siguiente(){if(hablando)return;hablando=true;while(cola.length)await decir(cola.shift());hablando=false;}
-const chips=(a,nuevos)=>a.length?a.map(p=>'<span class="n'+(nuevos&&nuevos.has(p.numero)?' nuevo':'')+'">'+esc(p.numero)+(p.nombre?'<small>'+esc(p.nombre)+'</small>':'')+'</span>').join(''):'<span class="vacio">'+T[lang].vacio+'</span>';
+      u.onend=cerrar;u.onerror=cerrar;ss.speak(u);}catch(_){cerrar();}});}
+async function siguiente(){if(hablando)return;hablando=true;try{while(cola.length){const p=cola.shift();await decir(p);}}finally{hablando=false;}}
+const chips=(a,nuevos)=>a.length?a.map(p=>'<span class="n'+(nuevos&&nuevos.has(p.id)?' nuevo':'')+'">'+esc(p.numero)+(p.nombre?'<small>'+esc(p.nombre)+'</small>':'')+'</span>').join(''):'<span class="vacio">'+T[lang].vacio+'</span>';
 function pintar(d){ultimo=d;$('listo').innerHTML=chips(d.listo||[],recientes);$('prep').innerHTML=chips([...(d.recibido||[]),...(d.preparando||[])]);}
-async function tic(){try{const r=await fetch('/gestorColas/api/estado?sala='+sala,{cache:'no-store'});const d=await r.json();if(!d.ok)throw 0;
-  (d.listo||[]).forEach(p=>{const k=p.llamadas||0;if(!vistos.has(p.numero)||vistos.get(p.numero)<k){const nuevo=!vistos.has(p.numero)||vistos.get(p.numero)<k;vistos.set(p.numero,k);if(nuevo&&(!primera||P.get('anunciar')==='todos')){cola.push(p);recientes.add(p.numero);setTimeout(()=>recientes.delete(p.numero),15000);}}});
-  primera=false;pintar(d);document.body.dataset.ok='1';siguiente();}catch(_){document.body.dataset.ok='0';$('pie').textContent=T[lang].off;}}
+async function tic(){if(enVuelo)return;enVuelo=true;window.__pantallaStats.tics++;const ac=new AbortController(),to=setTimeout(()=>ac.abort(),5000);
+  try{const r=await fetch('/gestorColas/api/estado?sala='+sala+'&_='+Date.now(),{cache:'no-store',signal:ac.signal});const d=await r.json();if(!d.ok)throw 0;
+  const todos=[...(d.recibido||[]),...(d.preparando||[]),...(d.listo||[])],ids=new Set(todos.map(p=>p.id));
+  // Reinicio: ninguno de los pedidos de antes sigue y la numeración ha vuelto atrás (o la cola está vacía).
+  const num=p=>+String(p.numero).replace(/\D/g,'')||0,maxPrev=Math.max(0,...[...vistos.values()].map(v=>v.n));
+  if(idsPrev.size&&![...idsPrev].some(id=>ids.has(id))&&(!todos.length||Math.max(...todos.map(num))<maxPrev)){callar();vistos.clear();recientes.clear();window.__pantallaStats.resets++;}
+  idsPrev=ids;
+  for(let k=cola.length-1;k>=0;k--)if(!(d.listo||[]).some(x=>x.id===cola[k].id))cola.splice(k,1);
+  ultimo=d;
+  (d.listo||[]).forEach(p=>{const k=p.llamadas||0,v=vistos.get(p.id);if(!v||v.k<k){vistos.set(p.id,{k,n:num(p)});if(!primera||P.get('anunciar')==='todos'){cola.push(p);recientes.add(p.id);setTimeout(()=>recientes.delete(p.id),15000);}}});
+  todos.forEach(p=>{if(!vistos.has(p.id))vistos.set(p.id,{k:-1,n:num(p)});});
+  if(vistos.size>400)vistos.clear();
+  primera=false;pintar(d);fallos=0;window.__pantallaStats.ok++;if(document.body.dataset.ok!=='1')$('pie').textContent=T[lang].pie;document.body.dataset.ok='1';siguiente();}
+  catch(_){if(++fallos>=2){document.body.dataset.ok='0';$('pie').textContent=T[lang].off;}}finally{clearTimeout(to);enVuelo=false;}}
 $('lang').onclick=e=>{e.stopPropagation();lang=lang==='es'?'en':'es';textos();};
 setInterval(()=>{$('reloj').textContent=new Date().toLocaleTimeString(lang==='en'?'en-GB':'es-ES',{hour:'2-digit',minute:'2-digit'});},1000);
 try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(()=>{});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&navigator.wakeLock)navigator.wakeLock.request('screen').catch(()=>{});});}catch(_){}
 window.__pantalla={get sala(){return sala;},get lang(){return lang;}};
-$('nube').addEventListener('load',()=>document.body.classList.add('nube'));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)tic();});addEventListener('online',tic);addEventListener('pageshow',tic);
+// Versión nueva publicada → recarga sola (el iPad no tiene a nadie que pulse F5).
+const V0=document.querySelector('meta[name=admiranext-version]').content;setInterval(()=>fetch('/version.json?_='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(v=>{if(v.version&&v.version!==V0&&!hablando)location.reload();}).catch(()=>{}),60000);
 textos();tic();setInterval(tic,2000);
 })();
 </script>
