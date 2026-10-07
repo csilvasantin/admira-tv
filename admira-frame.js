@@ -211,7 +211,18 @@
     }
     function closeAll() { SIDES.forEach(function (s) { if (isOpen(s)) setOpen(s, false); }); }
 
-    scrim.addEventListener("click", closeAll);
+    // El velo cierra los paneles Y deja pasar el clic a lo que hay debajo (Carlos, 7-oct-2026: en
+    // /gestorColas el primer toque en «＋ Pedido en barra» tras abrir Avanzado solo cerraba el panel).
+    scrim.addEventListener("click", function (e) {
+      closeAll();
+      scrim.style.pointerEvents = "none";
+      var below = document.elementFromPoint(e.clientX, e.clientY);
+      setTimeout(function () { scrim.style.pointerEvents = ""; }, 250);
+      if (below && below !== scrim && !scrim.contains(below)) {
+        if (typeof below.focus === "function" && /^(INPUT|TEXTAREA|SELECT)$/.test(below.tagName)) below.focus();
+        below.click();
+      }
+    });
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && anyOpen()) { e.preventDefault(); closeAll(); }
     });
