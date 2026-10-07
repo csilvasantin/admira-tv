@@ -63,5 +63,9 @@
   "v.07.10.2026.r11.14:35": [
     "Pantalla del iPad: con voz real, Admirito pasa al siguiente pedido como mucho a los 4,5 s",
     "La lista «¡Listo para recoger!» muestra primero el pedido más antiguo"
+  ],
+  "v.07.10.2026.r12.14:46": [
+    "El launcher puede cargar el motor común en la vista nativa TV con ax_demo=tv",
+    "La carga exige ruta y dominio oficiales, se deduplica y conserva el arranque normal y el Tour DooH"
   ]
 }

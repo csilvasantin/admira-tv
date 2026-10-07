@@ -1,9 +1,9 @@
 {
-  "version": "v.07.10.2026.r11.14:35",
-  "signature": "GrokBot · MacMini",
-  "agent": "GrokBot",
-  "machine": "MacMini",
+  "version": "v.07.10.2026.r12.14:46",
+  "signature": "TrinityMBP16 · MBP16",
+  "agent": "TrinityMBP16",
+  "machine": "MBP16",
   "day": "07.10.2026",
-  "time": "14:35",
-  "evidence": "Pantalla del iPad: cada aviso tiene tope duro (4,5 s con cola, 6 s sin) aunque la voz no termine; Listo en orden de llegada. Probado con voz real (Mónica es-ES)."
+  "time": "14:46",
+  "evidence": "Bootstrap TV opt-in ax_demo=tv: host/ruta exactos, deduplicación y controles nativos preservados. 54 pruebas de bootstrap, tour, HUD y puente hijo pasan; sin sesión web ni emisión operada."
 }
