@@ -93,6 +93,7 @@
     <p id="doneChan" class="hint" style="margin:0 0 14px;color:var(--txt)"></p>
     <a id="openCanal" class="btn" href="#">▶ Abrir canal en esta pantalla</a>
     <a id="viewMap" class="alt" href="#" target="_blank">Ver en el mapa de Clear Channel ↗</a>
+    <p id="doneIot" class="hint" style="margin-top:14px" hidden>Nombre único (idIoT): <code id="iotName"></code> · con él se le envían playlists desde la Parrilla.</p>
     <p class="hint" style="margin-top:14px">Canal: <code id="canalUrl"></code></p>
   </div>
 </div>
@@ -192,12 +193,16 @@ $('form').addEventListener('submit',async e=>{
     if(err){ setMsg('Error: '+err,'err'); $('go').disabled=false; $('go').textContent='Dar de alta'; return; }
     // OK → mostrar accesos. La URL de canal la construimos nosotros para GARANTIZAR
     // circuit + screen (no dependemos de lo que devuelva el backend).
-    const canal=buildCanal(id);
+    // El alta le pone al equipo su nombre único (idIoT). El canal lo declara desde el primer arranque (&iot=), así
+    // una playlist enviada a ese nombre le llega sin esperar a que se rehaga el índice de pantallas.
+    const idIoT=/^[A-Za-z0-9]+(?:_[A-Za-z0-9]+){2,7}$/.test(j.idIoT||'')?j.idIoT:'';
+    const canal=buildCanal(id)+(idIoT?'&iot='+encodeURIComponent(idIoT):'');
     $('form').style.display='none';
     $('done').classList.add('show');
     $('openCanal').href=canal;
     $('canalUrl').textContent=canal;
     $('doneChan').innerHTML=channelLine(id);
+    $('doneIot').hidden=!idIoT;$('iotName').textContent=idIoT;
     $('viewMap').href='https://clearchannel.tv/?loc='+encodeURIComponent(j.id||id);
   }catch(err){
     setMsg('Fallo de red: '+(err&&err.message||err),'err');
