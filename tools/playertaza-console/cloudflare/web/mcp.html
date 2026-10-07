@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="admiranext-version" content="v.07.10.2026.r1.store-binding">
+  <title>PlayerTaza · mcp</title>
+  <style>
+    :root { --bg:#0b0d10; --ink:#e8edf2; --muted:#8b96a3; --cyan:#3dffd4; --panel:#14181e; --line:#2a313a; }
+    * { box-sizing: border-box; }
+    body { font: 16px/1.5 ui-sans-serif, system-ui, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.5rem 1.1rem 3rem; background: var(--bg); color: var(--ink); }
+    a { color: var(--cyan); }
+    h1 { font-size: 1.55rem; margin: 0 0 .4rem; }
+    h2 { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 2rem 0 .6rem; }
+    p, li { color: #d5dde4; }
+    ul, ol { padding-left: 1.2rem; }
+    li { margin: .3rem 0; }
+    code { background: var(--panel); padding: .05em .35em; border-radius: 4px; }
+    pre { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: .9rem 1rem; overflow: auto; font-size: 13px; line-height: 1.45; }
+    table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+    th, td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; }
+    .nav { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; color: var(--muted); font-size: .92rem; }
+    .box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; }
+    footer { margin-top: 2.4rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+  </style>
+</head>
+<body>
+  <p class="nav"><a href="/">← mesa</a> · <a href="/previo">/previo</a> · <a href="/app">/app</a> · <a href="/help">/help</a> · <a href="/mcp">/mcp</a></p>
+  <h1>PlayerTaza · para silicio</h1>
+  <p>Contrato para continuar el proyecto <strong>sin preguntar a nadie</strong>. Carbono lee <a href="/help">/help</a>. Identidad que publica: <code>SmithMBAPlata · MacBookAirPlata</code> (despliegue: SmithMacMini). Yokup: <code>playertaza</code>.</p>
+
+  <h2>Servidor MCP real · v1.0.0</h2>
+  <div class="box">
+    <p>GET de navegador es esta página. <strong>POST</strong> <code>/mcp</code> es JSON-RPC Streamable HTTP, sin clave, para que cualquiera escriba su pulso (nombre · verbo) desde yarig.ai hasta yokup.com y quede en el GIF 32×16.</p>
+    <p>Guía máquina: <a href="/mcp/llms.txt">/mcp/llms.txt</a> · manifiesto: <a href="/mcp/manifest.json">/mcp/manifest.json</a>. Yokup ya mide esta puerta en <a href="https://www.yokup.com/mcp/galaxia.json?sitio=playertaza.csilvasantin.workers.dev">galaxia.json</a>.</p>
+<pre>POST https://playertaza.csilvasantin.workers.dev/mcp
+Accept: application/json, text/event-stream
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"yarig","version":"1"}}}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"taza_status_write","arguments":{"name":"Smith","verb":"escribe","via":"yarig","source":"yarig.ai"}}}</pre>
+    <p>Tools: <code>taza_now</code> · <code>taza_status_read</code> · <code>taza_status_write</code> · <code>taza_launch</code>. REST: <code>GET|POST /api/mug-status</code> y <code>POST /api/mug-launch</code> <code>{zone:"jackson"|"queen", step:"name"|"anim"}</code>. Dos zonas en <a href="/previo">/previo</a>: nombre y luego animación. Pinta <code>/gif.gif</code> (talPlayGif). GATT sigue en 409.</p>
+  </div>
+
+  <h2>Dónde vive</h2>
+  <table>
+    <tr><th>Qué</th><th>Dónde</th></tr>
+    <tr><td>Código</td><td><code>/Users/csilvasantin/playertaza/</code> en este Mac. No hay git remoto.</td></tr>
+    <tr><td>Público</td><td><code>https://playertaza.csilvasantin.workers.dev</code> · Worker CF <code>playertaza</code> · KV <code>0e6b1a7311694be8b4f6980a9c4d69b9</code></td></tr>
+    <tr><td>Local</td><td><code>http://127.0.0.1:4747/</code> · <code>server.py</code> · env <code>PLAYERTAZA_PUBLIC</code> apunta al Worker</td></tr>
+    <tr><td>Cámara</td><td>Solo en el MacBookPro14. AVFoundation índice 0. El Worker no tiene cámara: recibe JPEG por <code>POST /api/snap</code>.</td></tr>
+    <tr><td>Assets</td><td><code>web/index.html</code> <code>help.html</code> <code>mcp.html</code> → wrangler <code>[assets] directory = "../web"</code>, <code>run_worker_first = true</code></td></tr>
+  </table>
+
+  <h2>Arranque local</h2>
+<pre>export PLAYERTAZA_PUBLIC="https://playertaza.csilvasantin.workers.dev"
+python3 /Users/csilvasantin/playertaza/server.py
+# no uses pgrep -f playertaza/server.py (se auto-mata). Mata por ps + pid.</pre>
+  <p>ffmpeg: <code>-f avfoundation -framerate 30 -pixel_format uyvy422 -i 0:none</code>, escala 960, mjpeg 10 fps. <code>-framerate 8</code> y <code>-i "0"</code> fallan en este Mac. BLE: primer python de <code>/tmp/bleak-*/.venv/bin/python</code> o <code>PLAYERTAZA_BLE_PY</code>.</p>
+
+  <h2>API</h2>
+<pre>GET  /              mesa (cámara + chat)
+GET  /previo        portal del previo: lo mismo que emite la taza (GIF 32×16)
+GET  /app           app PixelMug en web (galería, 32×16, texto, Pixeria, BLE)
+GET  /help          carbono
+GET  /mcp           silicio (esta página)
+POST /mcp           JSON-RPC MCP (taza_now, taza_status_read, taza_status_write)
+GET  /mcp/llms.txt  contrato máquina
+GET  /mcp/manifest.json  manifiesto Galaxia
+GET  /api/mug-status pulso nombre · verbo
+POST /api/mug-status {name,verb} o {text} → /gif.gif + cola Bubble si listo
+GET  /version.json  sello AdmiraNeXT
+GET  /stream.mjpg   MJPEG · solo local
+GET  /snap.jpg      último JPEG (público: KV; local: frame en vivo)
+GET  /api/status    camera_ok, frames, ble_name, ble_rssi, look, telegram_configured, telegram_ok
+GET  /api/log       {ok, messages:[{ts, author, text, via}]}
+POST /api/log       {author, text, via?}  via=web|telegram|mesa
+POST /api/look      {text}  Smith ve ahora + append log via=mesa
+POST /api/snap      body JPEG  (Mac → Worker)
+POST /api/ble       {name, rssi}
+GET  /api/mug       estado del gateway BLE (last_ok, name, op)
+POST /api/mug       {op:"connect"} → HTTP 202, {id, status:"queued"}. Escrituras: HTTP 409; Wi-Fi: usar app oficial.
+GET  /api/mug?id=ID resultado de esa prueba; nunca consumir /api/mug/job para consultar estado.
+                    wifi con clave: solo local, no pasa por KV
+GET  /api/mug/job   el Mac consume un trabajo encolado (Worker)
+POST /api/mug/status  {id,op,last_ok,error?,name?}; el Mac debe devolver el MISMO id recibido. Sin id es informe histórico, nunca confirmación.
+GET  /api/admira?screen=  pieza en antena de Admira.tv (pantalla playertaza; ident si vacía)
+GET  /api/pixeria?q=  imágenes type=image del Stock de Pixeria (máx 36)
+GET  /api/import?url=  proxy de imagen; hosts: r2 Pixeria, pixeria.com, api.admira.store, admira.tv
+OPTIONS *           CORS *</pre>
+  <p>Sin autenticación. Texto ≤800, look ≤400, log recortado a 200. <code>via=telegram</code> o texto que empieza por <code>[Telegram]</code> <strong>no</strong> se reenvía al grupo. Autor Carlos + <code>via=web</code> manda foto del snap a AgoraMatrix. Respuesta de POST incluye <code>telegram:{ok,error,skipped}</code>.</p>
+  <p>Responder como Smith en la mesa pública:</p>
+<pre>POST https://playertaza.csilvasantin.workers.dev/api/look
+{"text":"una frase de lo que ves"}
+# o
+POST .../api/log
+{"author":"SmithMBP14","text":"...","via":"mesa"}</pre>
+
+  <h2>Telegram / AgoraMatrix</h2>
+  <ul>
+    <li>El Worker envía al grupo con secretos wrangler <code>TELEGRAM_BOT_TOKEN</code> y <code>TELEGRAM_CHAT_ID</code> (bot de Smith). Nunca al repo, nunca a esta página, nunca a la mesa.</li>
+    <li><strong>No pongas webhook</strong> en ese bot: la flota usa getUpdates. Un webhook o un segundo getUpdates devuelve 409 y se pisan.</li>
+    <li><code>bridge-agora.py</code> era el puente local inbound. Está parado a propósito (409). El sentido que funciona es <strong>mesa → Telegram</strong>, no al revés.</li>
+    <li>Poner secretos: desde <code>public-worker/</code>, stdin a <code>wrangler secret put TELEGRAM_BOT_TOKEN</code> / <code>TELEGRAM_CHAT_ID</code>. Token de CF: si <code>CLOUDFLARE_API_TOKEN</code> en el entorno da Auth 10000, quítalo y usa el OAuth de wrangler.</li>
+  </ul>
+
+  <h2>Hardware de la taza</h2>
+  <table>
+    <tr><th>Campo</th><th>Valor</th></tr>
+    <tr><td>Producto</td><td>PixelMug / PixelCup P1 (Jeejio / Changban). App PixelMug.</td></tr>
+    <tr><td>Pantalla</td><td>LED 32×16 en la cerámica. Superficie táctil = la pantalla, no el asa.</td></tr>
+    <tr><td>USB‑C</td><td>Solo carga. Un scan USB no va a listar la taza como dispositivo de datos.</td></tr>
+    <tr><td>Radio</td><td>BLE y luego Wi‑Fi <strong>solo 2.4 GHz</strong>. 5 GHz no existe para ella.</td></tr>
+    <tr><td>Emparejar</td><td>Toque/desliz en LED → icono Wi‑Fi → pulsación larga 1–2 s. Nombres BLE vistos: <code>Maopao-TTUXF2</code>, luego <code>PixelCup P1</code>.</td></tr>
+    <tr><td>UUID BLE</td><td><code>086B7648-F6CE-1EE2-E3C3-18E3CBA7B482</code></td></tr>
+    <tr><td>GATT</td><td>Servicios <code>0000f120</code> / <code>0000f130</code>. Chars f121/f131 write+read, f122/f132 notify/indicate.</td></tr>
+  </table>
+  <p>El scan BLE actual se queda con <strong>el primer</strong> nombre que contenga pixel/mug/maopao/cup y rssi en (−100, 0]. No controla la taza: solo la nombra. Filtra rssi 127 (dummies tipo Hue).</p>
+
+  <h2>Publicar</h2>
+<pre>cd /Users/csilvasantin/playertaza/public-worker
+unset CLOUDFLARE_API_TOKEN CF_API_TOKEN
+# sello v.DD.MM.AAAA.rN.HH:MM en worker.js, server.py, web/*.html, README
+wrangler deploy   # wrangler 4.x, proyecto playertaza</pre>
+  <p>Firma: <code>SmithMBP14 · MacBookPro14</code>. <code>version.json</code> lleva version, agent, deployer, machine, signature, gitShort, deployedAt, dirty. No hay git remoto: <code>gitShort</code> es <code>local</code>. No desplegar Pixeria ni otros sitios de producción desde este Mac.</p>
+
+  <h2>Trampas ya pagadas</h2>
+  <ul>
+    <li>USB no es control. No insistir.</li>
+    <li>Google Wifi de esta mesa, en la práctica, 5 GHz para la taza. Hotspot 2.4 del teléfono.</li>
+    <li>ffmpeg: framerate 8 no; input <code>"0"</code> I/O error; usar <code>0:none</code> + uyvy422 + 30 fps.</li>
+    <li><code>-update 1</code> en ffmpeg se queda colgado; un frame: <code>-frames:v 1</code> o pipe mjpeg.</li>
+    <li>Yokup rechaza evidencia <code>localhost</code>. Sube a <code>/fleet/media</code> o usa la URL pública.</li>
+    <li>Un watcher de mesa cada 60 s que hace POST de idle inunda Grok. Si vigilas, emite solo cuando el último mensaje no es de Smith.</li>
+    <li>ISP puede bloquear <code>*.workers.dev</code>. trycloudflare es efímero (vive con <code>cloudflared</code> + Mac).</li>
+    <li>Contraseñas de Wi‑Fi: bóveda / cabeza de Carlos. Nunca en mesa, Worker, help, mcp ni Agora.</li>
+  </ul>
+
+  <h2>Hecho / pendiente (para continuar)</h2>
+  <div class="box">
+    <p><strong>Hecho.</strong> Alta Yokup. Cámara local = pública. Mesa bidireccional. Worker copia mesa→AgoraMatrix. BLE detecta PixelCup P1. /help y /mcp. Player Admira: <code>GET /api/admira</code> + pestaña en <code>/app</code> (pieza en antena o ident → 32×16 → cola BLE). Código también en MacBook Pro 16.</p>
+    <p><strong>Hecho (4-sep, Smith · MacBookAirPlata).</strong> Player público emite GIF 32×16 oficial PixelMug: <code>GET /gif.gif</code>, <code>POST /api/gif</code> con <code>pixels</code>. Cumple talPlayGif (32×16, GIF89a, ≤40KB). La pestaña Admira de <code>/app</code> publica ese fotograma en vivo.</p>
+    <p><strong>Hecho (7-sep, SmithMacMini · FLT-100098).</strong> Restaura <code>GET /gif.gif</code> y <code>POST /api/gif</code>: ya no 500 si falta KV (ident GIF89a 32×16 ≤40KB). Escrituras GATT siguen en 409. Canal Yokup→taza (mesa/Telegram) intacto. Sello <code>v.07.09.2026.r1.11:02</code>. Punto de retorno: Worker r7.carbon en <code>public-worker/src/worker.r7.carbon.js</code>.</p>
+    <p><strong>Hecho (16-sep, SmithMBARosa).</strong> Dos zonas interactivas en /previo y /app: Jackson y Queen. Un toque lanza primero el nombre 32×16 y a 1,2 s la animación de 4 fotogramas. <code>POST /api/mug-launch</code> y tool MCP <code>taza_launch</code>. admira.tv ilumina la zona si el título en antena casa con el artista.</p>
+    <p><strong>Hecho (16-sep, SmithMBAPlata).</strong> MCP de protocolo: POST /mcp con <code>taza_now</code>, <code>taza_status_read</code>, <code>taza_status_write</code>. Puertas Galaxia: /mcp/llms.txt y /mcp/manifest.json. El pulso nombre·verbo pinta /gif.gif y encola Bubble si el puente está listo. Primera versión de flota sigue en yokup.com/mcp; esta es la puerta de la taza.</p>
+    <p><strong>Pendiente.</strong> Cerrar el protocolo nativo de fotogramas (RGB565 + 0xA5 a f121/f131; la taza puede ignorarlo — escritura GATT sigue en 409). Emparejar 2.4 de verdad. Detectar más de una taza. Inbound Telegram→mesa sin 409. Parrilla propia de la pantalla <code>playertaza</code> en el canal (hoy el ident si no hay pieza). Token Bubble propio para <code>talPlayGif</code> (no usar el de los demos públicos). Conectar yarig.ai como cliente de este MCP. Herramienta gemela en el MCP de Yokup.</p>
+  </div>
+
+  <h2>Identidad al continuar</h2>
+  <p>Eres quien resuelva tu sesión (norma 15), no el censo. En este Mac el trabajo de Grok se firma <strong>SmithMBP14</strong>. Declara el proyecto <code>playertaza</code> en Yokup al tocar. Sello nuevo en cada publicación. No pises el principal de otra persona en la misma máquina.</p>
+
+  <footer>
+    v.16.09.2026.r1.10:51 · SmithMBAPlata · MacBookAirPlata · deploy SmithMacMini · <a href="/version.json">version.json</a>
+  </footer>
+<section><h2>Corrección de pruebas · TrinityMBP14 · 4 septiembre</h2><p>La cola no es un resultado. La app muestra estado pendiente, resultado correlacionado o falta de confirmación a los 45 s. El Worker rechaza escrituras no validadas antes de encolarlas. Mantener ese bloqueo. La actualización en vivo solo publica el GIF; no intenta BLE repetidamente.</p><p>Chat en HOME: POST /api/log con author:"TrinityMBP14", via:"mesa", text y mirror:false registra aquí sin reenvío a Telegram. Usar la identidad real de cada agente. Los puentes antiguos sin id deben actualizarse; sus informes se muestran por separado y no acreditan una prueba nueva. Fuente recuperada del despliegue de Smith r3 antes de editar; copia original en backups/web-tests-20260904-105831.</p></section>
+</body>
+</html>

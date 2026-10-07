@@ -1,0 +1,58 @@
+# PlayerTaza · playertaza.csilvasantin.workers.dev
+
+> Player de señalización en una taza PixelMug / PixelCup P1 (LED 32×16).
+> Cualquiera puede escribir su estado (nombre · verbo) desde un agente
+> (yarig.ai u otro cliente MCP) hasta yokup.com, y el fotograma 32×16
+> queda listo para la cerámica.
+
+Sitio: https://playertaza.csilvasantin.workers.dev
+Hub MCP: https://playertaza.csilvasantin.workers.dev/mcp
+Manifest: https://playertaza.csilvasantin.workers.dev/mcp/manifest.json
+Help (carbono): https://playertaza.csilvasantin.workers.dev/help
+Yokup: proyecto `playertaza`
+Versión: v.16.09.2026.r6.13:15
+
+## Servidor MCP real · versión 1.0.0 · 16 de septiembre de 2026
+
+Endpoint canónico: https://playertaza.csilvasantin.workers.dev/mcp
+Streamable HTTP sin estado de sesión. Protocolos negociables:
+2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05.
+GET de navegador sirve la documentación HTML. POST habla JSON-RPC.
+Si `Accept` pide `text/event-stream` y no JSON, la respuesta va en SSE
+`event: message`. No hay OAuth. `initialize` y `tools/list` no exigen clave:
+cualquiera puede leer y escribir un estado corto en la taza.
+
+1. initialize con protocolVersion, capabilities:{} y clientInfo:{name,version}.
+2. notifications/initialized (HTTP 202 vacío).
+3. tools/list descubre las herramientas.
+4. taza_now: cámara, BLE, GIF, puente iPhone/Bubble, último estado.
+5. taza_status_read: el pulso actual (nombre · verbo) y la URL del GIF 32×16.
+6. taza_status_write {name, verb} o {text}: pinta el pulso en /gif.gif
+   (GIF89a 32×16 ≤40 KB, contrato talPlayGif). Si el puente Bubble está
+   listo, encola el mismo fotograma hacia la cerámica. No usa GATT.
+7. taza_launch {zone: jackson|queen, step: name|anim}: nombre y luego
+   animación 4 fotogramas. REST gemelo POST /api/mug-launch.
+
+Ejemplo (NO ejecutarlo como parte de leer esta guía):
+{"name":"Smith","verb":"escribe","via":"yarig"}
+
+Límite: 1 escritura cada 3 s. name ≤16, verb ≤24, text ≤32.
+El GATT crudo (RGB565 + 0xA5 a f121/f131) sigue bloqueado (HTTP 409).
+La vía física validada el 7-sep fue Yokup → taza (Bubble), no GATT.
+
+## API HTTP de apoyo
+
+- GET /api/status — cámara, BLE, gif_url, mug_status
+- GET /gif.gif — último fotograma 32×16
+- GET|POST /api/mug-status — el mismo pulso que las tools MCP
+- POST /api/mug-launch — {zone: jackson|queen, step: name|anim}
+- POST /api/gif — pixels RGB o cuerpo image/gif
+- POST /api/log — mesa pública
+
+## Trampas
+
+- USB-C es solo carga. Wi-Fi de la taza: únicamente 2.4 GHz.
+- workers.dev puede estar bloqueado por ISP españoles; el GIF tiene que
+  ser una URL que Bubble alcance.
+- No reabrir el protocolo GATT 409.
+- Identidad: persona + apellido de máquina (SmithMBAPlata, SmithMacMini).

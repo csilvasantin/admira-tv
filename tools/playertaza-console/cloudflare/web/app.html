@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="admiranext-version" content="v.07.10.2026.r1.store-binding">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>PixelMug · web</title>
+  <style>
+    :root {
+      --bg: #07080c; --card: #12151c; --ink: #f3f6fa; --muted: #8b96a3;
+      --line: #262c36; --accent: #ff4d8d; --cyan: #3dffd4; --led: #1a1208;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #05060a; color: var(--ink);
+      font: 15px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+    .phone {
+      max-width: 430px; margin: 0 auto; min-height: 100vh; background: var(--bg);
+      display: flex; flex-direction: column; border-left: 1px solid #111; border-right: 1px solid #111;
+    }
+    header { padding: 14px 16px 8px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { margin: 0; font-size: 18px; letter-spacing: .04em; }
+    header h1 b { color: var(--accent); font-weight: 800; }
+    header a { color: var(--cyan); font-size: 13px; text-decoration: none; }
+    .hero { padding: 8px 16px 12px; }
+    .mug {
+      background: radial-gradient(120% 80% at 50% 0%, #2a1a12, #0a0a0c);
+      border: 1px solid #3a2a18; border-radius: 18px; padding: 14px;
+    }
+    .led {
+      display: grid; grid-template-columns: repeat(32, 1fr); gap: 1px;
+      background: #000; padding: 6px; border-radius: 8px; aspect-ratio: 32/16;
+    }
+    .led i { width: 100%; padding-bottom: 100%; border-radius: 1px; background: #1a1208; }
+    .meta { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; color: var(--muted); }
+    .meta strong { color: var(--cyan); font-weight: 600; }
+    nav {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px;
+      padding: 8px 10px; border-bottom: 1px solid var(--line);
+    }
+    nav button {
+      background: transparent; border: 0; color: var(--muted); font: 11px/1.2 inherit;
+      padding: 8px 4px; border-radius: 10px; cursor: pointer;
+    }
+    nav button.on { background: #1b1218; color: var(--accent); }
+    main { flex: 1; padding: 12px 16px 24px; overflow: auto; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-bottom: 12px; }
+    h2 { margin: 0 0 8px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button.act, .file {
+      background: var(--accent); color: #fff; border: 0; border-radius: 10px;
+      padding: 10px 14px; font-weight: 700; cursor: pointer; font: inherit;
+    }
+    button.ghost { background: #1c222b; color: var(--ink); border: 1px solid var(--line); }
+    button.act:disabled { opacity: .45; }
+    input, select, textarea {
+      width: 100%; background: #0b0d12; color: var(--ink); border: 1px solid var(--line);
+      border-radius: 10px; padding: 10px 12px; font: inherit; margin: 6px 0;
+    }
+    .palette { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+    .palette b { width: 28px; height: 28px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; display: block; }
+    .palette b.on { border-color: #fff; }
+    .board-wrap { overflow: auto; }
+    canvas#board { width: 100%; image-rendering: pixelated; background: #000; border-radius: 8px; touch-action: none; cursor: crosshair; }
+    .gal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .gal button { background: #0b0d12; border: 1px solid var(--line); border-radius: 10px; padding: 6px; cursor: pointer; }
+    .gal canvas { width: 100%; image-rendering: pixelated; display: block; }
+    .px-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .px-grid button { background: #0b0d12; border: 1px solid var(--line); border-radius: 10px; padding: 0; overflow: hidden; cursor: pointer; }
+    .px-grid img { width: 100%; height: 72px; object-fit: cover; display: block; image-rendering: pixelated; }
+    .px-grid span { display: block; font-size: 10px; color: var(--muted); padding: 4px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+    #toast { min-height: 1.2em; font-size: 13px; color: var(--muted); margin-top: 8px; }
+    #toast.ok { color: var(--cyan); }
+    #toast.bad { color: #ff5d6c; }
+    footer { padding: 8px 16px 16px; color: var(--muted); font-size: 11px; display: flex; justify-content: space-between; }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <header>
+      <h1>Pixel<b>Mug</b> web</h1>
+      <span><a href="/previo">previo</a> · <a href="/">mesa</a></span>
+    </header>
+    <div class="hero">
+      <div class="mug">
+        <div class="led" id="led"></div>
+        <div class="meta">
+          <span id="dev">buscando taza…</span>
+          <strong id="link">BLE</strong>
+        </div>
+      </div>
+    </div>
+    <nav>
+      <button class="on" data-tab="home">Inicio</button>
+      <button data-tab="gal">Galería</button>
+      <button data-tab="draw">Dibujar</button>
+      <button data-tab="text">Texto</button>
+      <button data-tab="pix">Pixeria</button>
+      <button data-tab="admira">Admira</button>
+      <button data-tab="set">Ajustes</button>
+    </nav>
+    <main>
+      <section id="tab-home">
+        <div class="card">
+          <h2>Tu taza</h2>
+          <p id="home-ble">PixelMug P1 · 32×16 LED. La app oficial, en el navegador. El Mac de Smith es la radio Bluetooth.</p>
+          <div class="row">
+            <button class="act" id="btn-connect">Conectar BLE</button>
+            <button class="ghost act" id="btn-heart">Enviar corazón</button>
+            <button class="ghost act" id="btn-home-admira">Player Admira</button>
+          </div>
+          <p class="hint">Toca la pantalla LED de la taza (no el asa) si no aparece. Wi-Fi solo 2.4 GHz.</p>
+        </div>
+        <div class="card">
+          <h2>Qué puedes hacer</h2>
+          <p>Galería, lienzo 32×16, texto, Pixeria y el <strong>player de Admira.tv</strong> pixelado a la taza. Igual que PixelMug en el móvil, más antena.</p>
+        </div>
+      </section>
+      <section id="tab-gal" hidden>
+        <div class="card">
+          <h2>Galería</h2>
+          <div class="gal" id="gal"></div>
+          <p class="hint">Toca un dibujo y Enviar.</p>
+          <button class="act" id="btn-gal-send">Enviar a la taza</button>
+        </div>
+      </section>
+      <section id="tab-draw" hidden>
+        <div class="card">
+          <h2>Lienzo 32×16</h2>
+          <div class="palette" id="pal"></div>
+          <div class="board-wrap"><canvas id="board" width="32" height="16"></canvas></div>
+          <div class="row">
+            <button class="ghost act" id="btn-clear">Borrar</button>
+            <button class="ghost act" id="btn-fill">Rellenar</button>
+            <label class="file act">Foto<input id="file" type="file" accept="image/*" hidden></label>
+            <button class="act" id="btn-draw-send">Enviar</button>
+          </div>
+          <p class="hint">La foto se reduce a 32×16, como en PixelMug 1.0.4.</p>
+        </div>
+      </section>
+      <section id="tab-pix" hidden>
+        <div class="card">
+          <h2>Importar de Pixeria</h2>
+          <p class="hint">Stock público de <a href="https://www.pixeria.com/stock.html" target="_blank" rel="noopener">www.pixeria.com/stock</a>. Elige una imagen y se recorta 2:1 y se pixela a 32×16.</p>
+          <input id="px-q" placeholder="buscar en Pixeria o pegar URL / id">
+          <div class="row">
+            <button class="ghost act" id="btn-px-load">Buscar</button>
+            <button class="act" id="btn-px-url">Importar y pixelar</button>
+            <label class="hint" style="display:flex;align-items:center;gap:6px">
+              <input id="px-hard" type="checkbox" checked> pixel duro
+            </label>
+          </div>
+          <div class="px-grid" id="px-grid"></div>
+        </div>
+      </section>
+      <section id="tab-admira" hidden><section data-store-config style="padding:12px;background:#12151c;border:1px solid #2a313a;border-radius:10px;margin:12px 0"></section><script src="/store-config.js" defer></script>
+        <div class="card">
+          <h2>Player Admira · 32×16</h2>
+          <p class="hint">El player muestra el mismo corte que la taza (estado + GIF 32×16). La antena <code>playertaza</code> en <a href="https://admira.tv/canal.html?embed=mupi&amp;screen=playertaza" target="_blank" rel="noopener">admira.tv/canal</a> no pisa ese corte cuando está en ident.</p>
+          <p id="admira-now">leyendo la taza…</p>
+          <p class="hint">Dos zonas: primero el nombre, luego la animación. admira.tv dice si en antena hay Jackson o Queen (se marca viva).</p>
+          <div class="row">
+            <button class="act" id="btn-zone-jackson">Jackson · nombre → anim</button>
+            <button class="ghost act" id="btn-zone-queen">Queen · nombre → anim</button>
+          </div>
+          <div class="row">
+            <button class="ghost act" id="btn-admira-load">Leer antena</button>
+            <button class="act" id="btn-admira-send">Enviar a la taza</button>
+            <button class="ghost act" id="btn-admira-live">Player en vivo</button>
+          </div>
+          <p class="hint" id="admira-live-hint">En vivo: cada 8 s el player muestra el mismo corte que la taza (estado + /gif.gif). No republica el ident.</p>
+          <p class="hint">El envío GATT a la taza sigue bloqueado hasta validar protocolo. Lo que sí es oficial: <code>talPlayGif</code> con este GIF (32×16, ≤40KB).</p>
+          <div class="row">
+            <a class="ghost act" id="admira-gif-link" href="/gif.gif" target="_blank" rel="noopener">Abrir GIF 32×16</a>
+          </div>
+          <img id="admira-gif" alt="GIF 32×16 del player" width="320" height="160" style="image-rendering:pixelated;width:100%;height:auto;background:#000;border-radius:8px;margin-top:8px">
+        </div>
+      </section>
+      <section id="tab-text" hidden>
+        <div class="card">
+          <h2>Texto</h2>
+          <input id="msg" maxlength="32" placeholder="Hola · PlayerTaza">
+          <div class="row">
+            <select id="tcolor">
+              <option value="#ffffff">blanco</option>
+              <option value="#ff4d8d">rosa</option>
+              <option value="#3dffd4">cian</option>
+              <option value="#ffcc00">amarillo</option>
+              <option value="#ff5d6c">rojo</option>
+            </select>
+            <button class="act" id="btn-text">Enviar texto</button>
+          </div>
+        </div>
+      </section>
+      <section id="tab-set" hidden>
+        <div class="card">
+          <h2>Dispositivo</h2>
+          <label>Nombre<input id="dname" maxlength="20" placeholder="PixelCup P1"></label>
+          <label>Unidad
+            <select id="unit"><option>°C</option><option>°F</option></select>
+          </label>
+          <label>Brillo <input id="bright" type="range" min="8" max="255" value="160"></label>
+          <button class="act" id="btn-bright">Aplicar brillo</button>
+        </div>
+        <div class="card">
+          <h2>Wi-Fi 2.4 GHz</h2>
+          <p class="hint">La taza no ve 5 GHz. Usa el hotspot del teléfono. La clave no se guarda en el Worker.</p>
+          <input id="ssid" maxlength="32" placeholder="nombre de la red 2.4">
+          <input id="wpwd" type="password" maxlength="64" placeholder="contraseña" autocomplete="off">
+          <button class="act" id="btn-wifi">Enviar red a la taza</button>
+        </div>
+      </section>
+      <p id="toast"></p>
+    </main>
+    <footer>
+      <span>v.04.09.2026.r1.10:30</span>
+      <span><a href="/help">/help</a> · <a href="/mcp">/mcp</a></span>
+    </footer>
+  </div>
+  <script>
+    const W = 32, H = 16;
+    const pixels = new Uint8Array(W * H * 3);
+    const COLORS = ["#000000","#ffffff","#ff4d8d","#ff5d6c","#ff9900","#ffcc00","#3dffd4","#4ea1ff","#b07cff"];
+    let color = [255, 77, 141];
+    let tab = "home";
+    const led = document.getElementById("led");
+    const board = document.getElementById("board");
+    const ctx = board.getContext("2d");
+    const toast = document.getElementById("toast");
+    for (let i = 0; i < W * H; i++) {
+      const el = document.createElement("i");
+      led.appendChild(el);
+    }
+    function hexToRgb(h) {
+      const n = h.replace("#","");
+      return [parseInt(n.slice(0,2),16), parseInt(n.slice(2,4),16), parseInt(n.slice(4,6),16)];
+    }
+    function setPx(x, y, rgb) {
+      if (x < 0 || y < 0 || x >= W || y >= H) return;
+      const i = (y * W + x) * 3;
+      pixels[i] = rgb[0]; pixels[i+1] = rgb[1]; pixels[i+2] = rgb[2];
+    }
+    function getPx(x, y) {
+      const i = (y * W + x) * 3;
+      return [pixels[i], pixels[i+1], pixels[i+2]];
+    }
+    function render() {
+      const cells = led.children;
+      ctx.fillStyle = "#000"; ctx.fillRect(0,0,W,H);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 3;
+        const c = `rgb(${pixels[i]},${pixels[i+1]},${pixels[i+2]})`;
+        cells[y * W + x].style.background = (pixels[i]|pixels[i+1]|pixels[i+2]) ? c : "#1a1208";
+        ctx.fillStyle = c; ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    function clear(rgb) {
+      for (let i = 0; i < pixels.length; i += 3) {
+        pixels[i] = rgb[0]; pixels[i+1] = rgb[1]; pixels[i+2] = rgb[2];
+      }
+    }
+    function drawHeart() {
+      clear([8,4,8]);
+      const pts = [[15,3],[16,3],[14,4],[15,4],[16,4],[17,4],[13,5],[14,5],[15,5],[16,5],[17,5],[18,5],[12,6],[13,6],[14,6],[15,6],[16,6],[17,6],[18,6],[19,6],[12,7],[19,7],[13,8],[18,8],[14,9],[17,9],[15,10],[16,10],[15,11],[16,11]];
+      pts.forEach(([x,y]) => setPx(x,y,[255,60,110]));
+      [[15,5],[16,5]].forEach(([x,y]) => setPx(x,y,[255,180,200]));
+    }
+    function drawSmile() {
+      clear([12,10,0]);
+      for (let a = 0; a < 16; a++) {
+        const x = 16 + Math.round(7 * Math.cos(a/16*Math.PI*2));
+        const y = 8 + Math.round(6 * Math.sin(a/16*Math.PI*2));
+        setPx(x,y,[255,204,0]);
+      }
+      setPx(13,6,[40,20,0]); setPx(19,6,[40,20,0]);
+      for (let x = 13; x <= 19; x++) setPx(x, 11, [40,20,0]);
+    }
+    function drawCoffee() {
+      clear([10,8,6]);
+      for (let y = 6; y < 14; y++) for (let x = 10; x < 20; x++) setPx(x,y,[90,50,30]);
+      for (let x = 11; x < 19; x++) setPx(x,6,[255,240,210]);
+      for (let y = 8; y < 12; y++) setPx(20,y,[200,200,200]);
+      setPx(21,9,[200,200,200]); setPx(21,10,[200,200,200]);
+      setPx(14,3,[180,180,180]); setPx(15,4,[180,180,180]); setPx(16,3,[180,180,180]);
+    }
+    function drawFire() {
+      clear([8,2,0]);
+      const cols = [12,13,14,15,16,17,18,19];
+      cols.forEach((x,i) => {
+        for (let y = 15; y > 6 - (i%3); y--) setPx(x,y, y > 11 ? [255,80,0] : [255,180,0]);
+      });
+      setPx(15,5,[255,255,180]); setPx(16,4,[255,255,180]);
+    }
+    function drawTaza() {
+      clear([6,10,12]);
+      for (let x = 4; x < 28; x++) setPx(x, 14, [80,220,200]);
+      for (let y = 4; y < 12; y++) {
+        setPx(8,y,[220,220,230]); setPx(22,y,[220,220,230]);
+      }
+      for (let x = 8; x <= 22; x++) { setPx(x,4,[220,220,230]); setPx(x,12,[220,220,230]); }
+      setPx(14,7,[255,77,141]); setPx(15,7,[255,77,141]); setPx(16,8,[61,255,212]);
+    }
+    const GALLERY = [
+      { name: "corazón", fn: drawHeart },
+      { name: "smile", fn: drawSmile },
+      { name: "café", fn: drawCoffee },
+      { name: "fuego", fn: drawFire },
+      { name: "taza", fn: drawTaza },
+    ];
+    const gal = document.getElementById("gal");
+    GALLERY.forEach((g, idx) => {
+      const b = document.createElement("button");
+      const c = document.createElement("canvas");
+      c.width = W; c.height = H;
+      b.appendChild(c);
+      b.onclick = () => { g.fn(); render(); toastOff("Galería: " + g.name); };
+      gal.appendChild(b);
+      const snap = pixels.slice();
+      g.fn();
+      const gctx = c.getContext("2d");
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 3;
+        gctx.fillStyle = `rgb(${pixels[i]},${pixels[i+1]},${pixels[i+2]})`;
+        gctx.fillRect(x,y,1,1);
+      }
+      pixels.set(snap);
+    });
+    const pal = document.getElementById("pal");
+    COLORS.forEach((h, i) => {
+      const b = document.createElement("b");
+      b.style.background = h;
+      if (i === 2) b.className = "on";
+      b.onclick = () => {
+        pal.querySelectorAll("b").forEach(x => x.classList.remove("on"));
+        b.classList.add("on");
+        color = hexToRgb(h);
+      };
+      pal.appendChild(b);
+    });
+    function paintAt(ev) {
+      const r = board.getBoundingClientRect();
+      const x = Math.floor((ev.clientX - r.left) / r.width * W);
+      const y = Math.floor((ev.clientY - r.top) / r.height * H);
+      setPx(x, y, color); render();
+    }
+    let down = false;
+    board.addEventListener("pointerdown", e => { down = true; board.setPointerCapture(e.pointerId); paintAt(e); });
+    board.addEventListener("pointermove", e => { if (down) paintAt(e); });
+    board.addEventListener("pointerup", () => down = false);
+    document.getElementById("btn-clear").onclick = () => { clear([0,0,0]); render(); };
+    document.getElementById("btn-fill").onclick = () => { clear(color); render(); };
+    document.getElementById("file").onchange = ev => {
+      const f = ev.target.files && ev.target.files[0];
+      if (!f) return;
+      const img = new Image();
+      img.onload = () => {
+        const t = document.createElement("canvas");
+        t.width = W; t.height = H;
+        const tctx = t.getContext("2d");
+        tctx.drawImage(img, 0, 0, W, H);
+        const d = tctx.getImageData(0,0,W,H).data;
+        for (let i = 0; i < W*H; i++) {
+          pixels[i*3] = d[i*4]; pixels[i*3+1] = d[i*4+1]; pixels[i*3+2] = d[i*4+2];
+        }
+        render();
+      };
+      img.src = URL.createObjectURL(f);
+    };
+    document.querySelectorAll("nav button").forEach(btn => {
+      btn.onclick = () => {
+        tab = btn.dataset.tab;
+        document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b === btn));
+        ["home","gal","draw","text","pix","admira","set"].forEach(id => {
+          document.getElementById("tab-" + id).hidden = id !== tab;
+        });
+        if (tab === "pix" && !pxItems.length) loadPixeria();
+        if (tab === "admira") loadAdmira();
+      };
+    });
+    function toastOff(msg, cls) { toast.className = cls || ""; toast.textContent = msg; }
+    async function mug(body) {
+      toastOff("Enviando a la taza…");
+      const r = await fetch("/api/mug", { method: "POST", headers: {"content-type":"application/json"}, body: JSON.stringify(body) });
+      const d = await r.json();
+      if (!d.ok) { toastOff(d.error || "falló", "bad"); return d; }
+      toastOff(d.message || "Enviado por BLE", "ok");
+      return d;
+    }
+    function frameJob() {
+      return { op: "frame", pixels: Array.from(pixels) };
+    }
+    document.getElementById("btn-connect").onclick = () => mug({ op: "connect" });
+    document.getElementById("btn-heart").onclick = () => { drawHeart(); render(); mug(frameJob()); };
+    document.getElementById("btn-home-admira").onclick = () => {
+      document.querySelector('nav button[data-tab="admira"]').click();
+    };
+    document.getElementById("btn-gal-send").onclick = () => mug(frameJob());
+    document.getElementById("btn-draw-send").onclick = () => mug(frameJob());
+    document.getElementById("btn-text").onclick = () => {
+      const text = document.getElementById("msg").value.trim() || "PlayerTaza";
+      const rgb = hexToRgb(document.getElementById("tcolor").value);
+      clear([0,0,0]);
+      // tiny 3x5 digits/letters
+      writeText(text, rgb); render();
+      mug({ op: "text", text, color: rgb, pixels: Array.from(pixels) });
+    };
+    document.getElementById("btn-bright").onclick = () => mug({ op: "brightness", value: Number(document.getElementById("bright").value) });
+    document.getElementById("btn-wifi").onclick = () => {
+      const ssid = document.getElementById("ssid").value.trim();
+      const password = document.getElementById("wpwd").value;
+      if (!ssid) { toastOff("Falta el nombre de la red", "bad"); return; }
+      mug({ op: "wifi", ssid, password }).then(() => { document.getElementById("wpwd").value = ""; });
+    };
+    const FONT = {
+      " ": [0,0,0], A:[7,5,7,5,5], D:[6,5,5,5,6], H:[5,5,7,5,5], M:[5,7,5,5,5],
+      O:[7,5,5,5,7], L:[1,1,1,1,7], P:[7,5,7,1,1], T:[7,2,2,2,2], V:[5,5,5,5,2],
+      Y:[5,5,7,2,2], E:[7,1,7,1,7], R:[7,5,7,5,5], I:[7,2,2,2,7], N:[5,7,7,5,5],
+      S:[7,1,7,4,7], C:[7,1,1,1,7], U:[5,5,5,5,7],
+      "0":[7,5,5,5,7], "1":[2,6,2,2,7], "2":[7,4,7,1,7], "3":[7,4,7,4,7],
+    };
+    function drawAdmira() {
+      clear([4, 8, 12]);
+      writeText("ADMIRA", [61, 255, 212]);
+      for (let x = 2; x < 30; x++) setPx(x, 13, [255, 77, 141]);
+    }
+    function writeText(s, rgb) {
+      let x = 1;
+      s.toUpperCase().slice(0,10).split("").forEach(ch => {
+        const g = FONT[ch] || FONT.A;
+        for (let row = 0; row < 5; row++) {
+          for (let col = 0; col < 3; col++) {
+            if (g[row] & (1 << (2 - col))) setPx(x + col, 5 + row, rgb);
+          }
+        }
+        x += 4;
+      });
+    }
+    const PIX_INDEX = "https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev/stock/index.json";
+    let pxItems = [];
+    function qPx(v) { return (v || "").toString().toLowerCase(); }
+    function pixelateFromImage(img) {
+      const sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height;
+      if (!sw || !sh) return;
+      const ratio = W / H;
+      let cw = sw, ch = sw / ratio;
+      if (ch > sh) { ch = sh; cw = sh * ratio; }
+      const sx = (sw - cw) / 2, sy = (sh - ch) / 2;
+      const t = document.createElement("canvas");
+      t.width = W; t.height = H;
+      const tctx = t.getContext("2d");
+      tctx.imageSmoothingEnabled = false;
+      tctx.drawImage(img, sx, sy, cw, ch, 0, 0, W, H);
+      const d = tctx.getImageData(0, 0, W, H).data;
+      const hard = document.getElementById("px-hard") && document.getElementById("px-hard").checked;
+      const steps = hard ? 6 : 16;
+      const qn = 255 / (steps - 1);
+      for (let i = 0; i < W * H; i++) {
+        const quant = v => Math.max(0, Math.min(255, Math.round(Math.round(v / qn) * qn)));
+        pixels[i * 3] = quant(d[i * 4]);
+        pixels[i * 3 + 1] = quant(d[i * 4 + 1]);
+        pixels[i * 3 + 2] = quant(d[i * 4 + 2]);
+      }
+      render();
+    }
+    function loadImg(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => {
+          const p = new Image();
+          p.crossOrigin = "anonymous";
+          p.onload = () => resolve(p);
+          p.onerror = () => reject(new Error("no se pudo leer la imagen"));
+          p.src = "/api/import?url=" + encodeURIComponent(url);
+        };
+        img.src = url;
+      });
+    }
+    async function importAndPixel(url) {
+      toastOff("Importando de Pixeria…");
+      try {
+        const img = await loadImg(url);
+        pixelateFromImage(img);
+        toastOff("Pixelada a 32×16. Envíala a la taza cuando quieras.", "ok");
+      } catch (e) {
+        toastOff(e.message || "falló la importación", "bad");
+      }
+    }
+    async function loadPixeria() {
+      const q = qPx(document.getElementById("px-q").value);
+      toastOff("Leyendo Stock de Pixeria…");
+      let items = [];
+      try {
+        const d = await (await fetch(PIX_INDEX, { cache: "no-store" })).json();
+        items = d.items || [];
+      } catch (e) {
+        try {
+          const d = await (await fetch("/api/pixeria?q=" + encodeURIComponent(q), { cache: "no-store" })).json();
+          items = d.items || [];
+        } catch (e2) {
+          toastOff("No pude leer el Stock de Pixeria", "bad");
+          return;
+        }
+      }
+      pxItems = items.filter(it => String(it.type || "") === "image");
+      if (q) {
+        pxItems = pxItems.filter(it => {
+          const blob = qPx([it.id, it.prompt, it.title, it.comment, (it.tags || []).join(" "), it.url].join(" "));
+          return blob.includes(q) || (it.url || "").includes(q) || (it.id || "") === q;
+        });
+      }
+      pxItems = pxItems.slice(0, 36);
+      const grid = document.getElementById("px-grid");
+      grid.innerHTML = pxItems.map(it => {
+        const src = it.thumbnail || it.url;
+        const label = (it.title || it.prompt || it.id || "").replace(/</g, "");
+        return `<button data-url="${String(it.url || "").replace(/"/g, "")}" title="${label.slice(0, 120)}"><img alt="" src="${src}"><span>${label.slice(0, 40)}</span></button>`;
+      }).join("") || "<p class='hint'>Sin imágenes con ese filtro.</p>";
+      grid.querySelectorAll("button[data-url]").forEach(b => {
+        b.onclick = () => importAndPixel(b.dataset.url);
+      });
+      toastOff(pxItems.length + " imágenes de Pixeria", "ok");
+    }
+    document.getElementById("btn-px-load").onclick = loadPixeria;
+    document.getElementById("btn-px-url").onclick = () => {
+      const q = document.getElementById("px-q").value.trim();
+      if (!q) { toastOff("Pega una URL o un id de Stock", "bad"); return; }
+      if (/^https?:\/\//i.test(q)) { importAndPixel(q); return; }
+      const hit = pxItems.find(it => it.id === q) || pxItems.find(it => (it.url || "").includes(q));
+      if (hit) importAndPixel(hit.url);
+      else loadPixeria().then(() => {
+        const h = pxItems.find(it => it.id === q);
+        if (h) importAndPixel(h.url);
+      });
+    };
+    let admiraItem = null;
+    let admiraLive = false;
+    let admiraTimer = 0;
+    let admiraLast = "";
+    let admiraFallback = true;
+    function escHtml(s) {
+      return String(s || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    }
+    function mugIsLive(st) {
+      if (!st) return false;
+      const via = String(st.via || "");
+      const verb = String(st.verb || "");
+      if (via === "ident" || verb === "ident") return false;
+      return Boolean(st.name || st.text);
+    }
+    async function mirrorMug() {
+      const [mugRes, airRes] = await Promise.all([
+        fetch("/api/mug-status", { cache: "no-store" }).then((r) => r.json()),
+        fetch("/api/admira?screen=playertaza", { cache: "no-store" }).then((r) => r.json()).catch(() => null)
+      ]);
+      const st = (mugRes && mugRes.status) || {};
+      const air = airRes || {};
+      admiraItem = air.item || null;
+      admiraFallback = !air.item || !!air.fallback || !air.artist;
+      const el = document.getElementById("admira-now");
+      const img = document.getElementById("admira-gif");
+      const link = document.getElementById("admira-gif-link");
+      const at = Number(mugRes && mugRes.gif_at) || Number(st.ts) || 0;
+      if (mugRes && mugRes.gif_url) {
+        img.src = mugRes.gif_url + "?t=" + (at || Date.now());
+        link.href = mugRes.gif_url;
+      }
+      const onMug = mugIsLive(st);
+      // El título del player es el de las dos líneas de la LED: nombre y verbo, una sola vez.
+      const ledTitle = [st.name, st.verb].filter(Boolean).join(" · ");
+      const title = ledTitle || String(st.text || (air.item && air.item.title) || "").trim();
+      const tag = onMug ? "EN TAZA" : (air.live ? "EN ANTENA" : (air.fallback ? "ident" : "playlist"));
+      const bits = ["<strong>" + escHtml(tag) + "</strong>"];
+      if (title) bits.push(escHtml(title));
+      if (st.via) bits.push(escHtml(st.via));
+      el.innerHTML = bits.join(" · ");
+      return { onMug: onMug, air: air, st: st };
+    }
+    async function loadAdmira() {
+      toastOff("Leyendo el corte de la taza…");
+      try {
+        const m = await mirrorMug();
+        toastOff(m.onMug ? "Player = lo que hay en la taza" : "La taza no tiene un corte propio", m.onMug ? "ok" : "bad");
+      } catch (e) {
+        toastOff("No pude leer el corte de la taza", "bad");
+      }
+    }
+    async function publishGif() {
+      const r = await fetch("/api/gif", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ pixels: Array.from(pixels), play: true, name: "ADMIRA", verb: "tv", via: "admira" }),
+      });
+      const d = await r.json().catch(() => ({}));
+      const img = document.getElementById("admira-gif");
+      const link = document.getElementById("admira-gif-link");
+      if (d && d.ok && d.url) {
+        img.src = d.url + "?t=" + Date.now();
+        link.href = d.url;
+        return d;
+      }
+      toastOff(d.error || "no pude publicar el GIF", "bad");
+      return d;
+    }
+    async function sendAdmira(force) {
+      if (admiraFallback) {
+        toastOff("La antena está en ident. El player sigue la taza y no pisa el GIF.", "bad");
+        try { await mirrorMug(); } catch (e) {}
+        return;
+      }
+      const id = admiraItem && admiraItem.id;
+      if (!force && id && id === admiraLast) return;
+      if (!admiraItem) await loadAdmira();
+      const g = await publishGif();
+      if (!(g && g.ok)) return;
+      admiraLast = (admiraItem && admiraItem.id) || "";
+      const queued = g.bubble && g.bubble.queued;
+      toastOff(queued
+        ? "Admira 32×16 en cola Bubble. Mira la taza."
+        : "GIF 32×16 en " + g.url + (g.bubble && g.bubble.message ? " · " + g.bubble.message : " · puente Bubble no listo"),
+        queued ? "ok" : "bad");
+    }
+    function setAdmiraLive(on) {
+      admiraLive = on;
+      document.getElementById("btn-admira-live").textContent = on ? "Parar vivo" : "Player en vivo";
+      document.getElementById("admira-live-hint").textContent = on
+        ? "En vivo: cada 8 s el player repite el corte de la taza. No pisa el GIF."
+        : "En vivo: cada 8 s el player muestra el mismo corte que la taza (estado + /gif.gif). No republica el ident.";
+      if (admiraTimer) { clearInterval(admiraTimer); admiraTimer = 0; }
+      if (on) {
+        loadAdmira();
+        admiraTimer = setInterval(loadAdmira, 8000);
+      }
+    }
+    document.getElementById("btn-admira-load").onclick = loadAdmira;
+    document.getElementById("btn-admira-send").onclick = () => sendAdmira(true);
+    document.getElementById("btn-admira-live").onclick = () => setAdmiraLive(!admiraLive);
+    if (location.hash === "#admira" || location.search.indexOf("tab=admira") >= 0) {
+      document.querySelector('nav button[data-tab="admira"]').click();
+    }
+    async function launchZone(zone) {
+      const btnJ = document.getElementById("btn-zone-jackson");
+      const btnQ = document.getElementById("btn-zone-queen");
+      btnJ.disabled = true; btnQ.disabled = true;
+      toastOff((zone === "queen" ? "Queen" : "Jackson") + " · nombre…");
+      try {
+        const n = await (await fetch("/api/mug-launch", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ zone, step: "name" })
+        })).json();
+        if (!(n && n.ok)) throw new Error((n && n.error) || "nombre");
+        document.getElementById("admira-gif").src = "/gif.gif?t=" + Date.now();
+        await new Promise((r) => setTimeout(r, 1200));
+        toastOff((zone === "queen" ? "Queen" : "Jackson") + " · animación…");
+        const a = await (await fetch("/api/mug-launch", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ zone, step: "anim" })
+        })).json();
+        if (!(a && a.ok)) throw new Error((a && a.error) || "anim");
+        document.getElementById("admira-gif").src = "/gif.gif?t=" + Date.now();
+        const air = a.admira && a.admira.title ? " · " + a.admira.title : "";
+        toastOff("En taza: " + zone + air, "ok");
+      } catch (e) {
+        toastOff("No lancé la zona: " + (e.message || e), "bad");
+      }
+      btnJ.disabled = false; btnQ.disabled = false;
+    }
+    document.getElementById("btn-zone-jackson").onclick = () => launchZone("jackson");
+    document.getElementById("btn-zone-queen").onclick = () => launchZone("queen");
+    document.getElementById("px-q").addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const q = document.getElementById("px-q").value.trim();
+        if (/^https?:\/\//i.test(q)) importAndPixel(q);
+        else loadPixeria();
+      }
+    });
+    async function status() {
+      try {
+        const s = await (await fetch("/api/status", {cache:"no-store"})).json();
+        const mugS = await (await fetch("/api/mug", {cache:"no-store"})).json().catch(() => ({}));
+        const name = s.ble_name || mugS.name || "";
+        document.getElementById("dev").textContent = name ? (name + (s.ble_rssi != null ? " · " + s.ble_rssi : "")) : "taza no vista";
+        document.getElementById("link").textContent = (mugS.ok && mugS.last_ok) ? "BLE listo" : (name ? "a tiro" : "sin taza");
+        document.getElementById("home-ble").textContent = name
+          ? (name + " a la vista. 32×16. Conecta y envía pixel art, texto o una foto.")
+          : "Enciende la taza y acércala. BLE busca nombres PixelCup / PixelMug / Maopao.";
+        if (s.ble_name && !document.getElementById("dname").value) document.getElementById("dname").value = s.ble_name;
+      } catch (e) {
+        document.getElementById("dev").textContent = "sin servidor";
+      }
+    }
+    drawAdmira(); render();
+    status(); setInterval(status, 2000);
+  </script>
+</body>
+</html>
