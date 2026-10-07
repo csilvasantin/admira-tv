@@ -1,9 +1,9 @@
 {
-  "version": "v.07.10.2026.r9.14:24",
+  "version": "v.07.10.2026.r10.14:30",
   "signature": "GrokBot · MacMini",
   "agent": "GrokBot",
   "machine": "MacMini",
   "day": "07.10.2026",
-  "time": "14:24",
-  "evidence": "Pantalla del iPad viva tras /reiniciar (pedidos por ID, avisos viejos fuera, recarga sola con versión nueva) y el icono de cada panel vuelve a cerrarlo."
+  "time": "14:30",
+  "evidence": "Pantalla del iPad: avisos uno por pedido en orden de llegada y cortados si el pedido deja de estar listo."
 }

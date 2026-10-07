@@ -55,5 +55,9 @@
     "Pantalla del iPad: sigue en vivo tras /reiniciar y quita los avisos viejos",
     "La pantalla se recarga sola cuando hay versión nueva",
     "Pulsar otra vez ☰ Opciones, ▤ Avanzado o ⌘ Experto cierra el panel"
+  ],
+  "v.07.10.2026.r10.14:30": [
+    "Pantalla del iPad: Admirito avisa los pedidos listos en orden de llegada, uno a uno",
+    "Si un pedido se recoge mientras se anuncia, el aviso se corta y pasa al siguiente"
   ]
 }
