@@ -216,6 +216,15 @@ contenido por tags del Stock, resueltas en cada consulta (lo recién etiquetado 
 `/parrilla/` → Nueva playlist → Por tag → Playlist viva. Lógica en `functions/api/_playlist-live.js`; pruebas en
 `playlist-viva.test.mjs`. El player no distingue de dónde vienen las piezas: usa el mismo carril «Por defecto».
 
+**Identificadores únicos de destino.** Tres niveles tienen una etiqueta que es de uno solo: `proyecto:<id>`,
+`xpacio:<id del Xpacio>` y `pantalla:<screen>` (p. ej. `proyecto:starbucks` · `xpacio:alsea-sbux-021` ·
+`pantalla:sbux-pg103-p1`). El destino de una regla se lee por facetas: misma clave = cualquiera, claves distintas
+= todas. La identidad de una pantalla se completa en este orden: lo que declara el player (`?project=`, `?xpace=`
+o `?loc=` en la URL del canal) › el registro de identidad que sube la Parrilla (`identity-sync`, KV
+`admira-tv:screen:identity:v1`) › el catálogo de Xpacios (ficha `/locations/<id>` del Xpacio declarado; índice
+pantalla→Xpacio en KV `admira-tv:screen:xpacio:v1`, rehecho por detrás porque el catálogo pesa 9 MB) › el
+proyecto de la parrilla por circuito › la marca del Xpacio. Con `?loc=` basta: circuito y proyecto se deducen.
+
 ## Playlist (cola)
 
 ### Saltar desde el mando (`goto-N`)

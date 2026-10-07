@@ -1,6 +1,6 @@
 import { accessFor, authHeaders, sessionEmail } from "../_auth-session.js";
 import { lecturaBlocksWrite } from "../_lectura-guard.js";
-import { LIVE_KEY, TAGS_PREFIX, STOCK_INDEX, MAX_LIVE, cleanLive, deduceScreenTags, liveRev, orientationOf, resolveContent, resolveForScreen, targetMatches } from "./_playlist-live.js";
+import { LIVE_KEY, TAGS_PREFIX, STOCK_INDEX, MAX_LIVE, buildXpaceIndex, cleanIdentity, xpaceEntry, cleanLive, completeFacts, deduceScreenTags, liveRev, orientationOf, resolveContent, resolveForScreen, targetMatches } from "./_playlist-live.js";
 
 const PREFIX = "admira-tv:playlist:default:v1:";
 
@@ -88,6 +88,7 @@ async function readLive(env) {
   return { rev: 0, updatedAt: 0, playlists: [] };
 }
 const quick = (url, ttl) => fetch(url, { cf: { cacheTtl: ttl, cacheEverything: true }, signal: AbortSignal.timeout(3500) }).then(r => r.ok ? r.json() : null).catch(() => null);
+const xpaceFicha = id => id ? quick("https://api.admira.store/locations/" + encodeURIComponent(id), 600).then(d => (d && d.id ? d : d && d.location && d.location.id ? d.location : null)) : Promise.resolve(null);
 async function loadStock() {
   const d = await quick(STOCK_INDEX, 60);
   return Array.isArray(d) ? d : (d && (d.items || d.assets)) || [];
@@ -96,20 +97,79 @@ async function loadStock() {
 // playlists vivas que resolver, lo que la parrilla sabe de ella (circuito y proyecto).
 function hintFacts(screen, q) {
   const circuit = cleanScreen(q.get("circuit")), w = Number(q.get("w")) || 0, h = Number(q.get("h")) || 0;
-  return { screen, circuit: circuit && circuit !== screen ? circuit : "", w, h, orientation: orientationOf(w, h, q.get("o")), lang: String(q.get("lang") || "").slice(0, 2) };
+  // Identificadores únicos que el propio player puede declarar en su URL: ?project= y ?xpace= (o ?loc=).
+  return { screen, circuit: circuit && circuit !== screen ? circuit : "", project: cleanScreen(q.get("project")), xpace: cleanScreen(q.get("xpace") || q.get("xpacio") || q.get("loc")),
+    w, h, orientation: orientationOf(w, h, q.get("o")), lang: String(q.get("lang") || "").slice(0, 2) };
 }
-async function enrichFacts(facts) {
+// Índice pantalla → Xpacio, compacto y guardado 30 min. El catálogo de Xpacios pesa 9 MB: NUNCA se espera a él
+// en la consulta de un player ni del editor; se sirve lo guardado y se rehace por detrás, como mucho un intento
+// cada 10 min por instancia. Mientras no exista, la identidad la pone el registro que sube la parrilla.
+const XPACE_INDEX_KEY = "admira-tv:screen:xpacio:v1";
+let xpaceTryAt = 0;
+async function xpaceIndex(env, waitUntil) {
+  let cached = null;
+  try { cached = JSON.parse((env.ACCESS && await env.ACCESS.get(XPACE_INDEX_KEY)) || "null"); } catch (_) {}
+  const fresh = cached && Date.now() - (Number(cached.builtAt) || 0) < 30 * 60_000;
+  if (!fresh && env.ACCESS && Date.now() - xpaceTryAt > 10 * 60_000) {
+    xpaceTryAt = Date.now();
+    const rebuild = (async () => {
+      const d = await fetch("https://api.admira.store/locations", { cf: { cacheTtl: 600, cacheEverything: true }, signal: AbortSignal.timeout(12000) }).then(r => r.ok ? r.json() : null).catch(() => null);
+      const list = d && (d.locations || d);
+      if (!Array.isArray(list)) return null;
+      const doc = { builtAt: Date.now(), map: buildXpaceIndex(list) };
+      try { await env.ACCESS.put(XPACE_INDEX_KEY, JSON.stringify(doc)); } catch (_) {}
+      return doc;
+    })();
+    if (typeof waitUntil === "function") { try { waitUntil(rebuild); } catch (_) {} }
+    else cached = (await rebuild) || cached; // sin waitUntil (pruebas) sí se espera
+  }
+  return (cached && cached.map) || {};
+}
+// Registro de identidad: la jerarquía Proyecto → Xpacio → Dispositivo que ve el operador en la parrilla, subida
+// por el propio editor. Es lo que da a cada pantalla sus identificadores únicos sin que nadie los escriba.
+const IDENTITY_KEY = "admira-tv:screen:identity:v1";
+async function readIdentity(env) {
+  try { const d = JSON.parse((env.ACCESS && await env.ACCESS.get(IDENTITY_KEY)) || "null"); if (d && d.map && typeof d.map === "object") return d; } catch (_) {}
+  return { updatedAt: 0, map: {} };
+}
+async function enrichFacts(facts, env, waitUntil) {
+  let gridCircuit = "";
   if (!facts.circuit) {
     const cfg = await quick("https://api.admira.store/grid/config?screen=" + encodeURIComponent(facts.screen), 300);
-    const c = cleanScreen(cfg && cfg.config && cfg.config.circuit);
-    if (c) facts.circuit = c;
+    gridCircuit = cleanScreen(cfg && cfg.config && cfg.config.circuit);
   }
-  if (facts.circuit) {
-    const pr = await quick("https://api.admira.store/grid/projects", 600);
-    const hit = ((pr && pr.projects) || []).find(p => Array.isArray(p.circuits) && p.circuits.map(String).includes(facts.circuit));
-    if (hit && hit.id) facts.project = String(hit.id);
+  // Una pantalla que sólo declara su Xpacio (?loc=alsea-sbux-021) recibe de la ficha de ese Xpacio su circuito
+  // y su proyecto (la marca): no hace falta escribirle los tres identificadores.
+  const [pr, index, identity, xpaceRecord] = await Promise.all([quick("https://api.admira.store/grid/projects", 600), xpaceIndex(env, waitUntil), readIdentity(env), xpaceFicha(facts.xpace)]);
+  const full = completeFacts(facts, { xpaceIndex: index, projects: (pr && pr.projects) || [], gridCircuit, registry: identity.map, xpaceRecord });
+  if (xpaceRecord && full.xpace === String(xpaceRecord.id)) full.xpaceName = xpaceEntry(xpaceRecord).n;
+  return Object.assign(facts, full);
+}
+// Censo para el editor: TODAS las pantallas de la parrilla con su identidad, aunque su player aún no haya pedido
+// nada, fundidas con las que sí se han visto (que además traen orientación e idioma).
+async function fleetIdentities(env, seen, waitUntil) {
+  const lento = url => fetch(url, { cf: { cacheTtl: 300, cacheEverything: true }, signal: AbortSignal.timeout(9000) }).then(r => r.ok ? r.json() : null).catch(() => null);
+  const [gs, pr, index, identity] = await Promise.all([lento("https://api.admira.store/grid/screens"), lento("https://api.admira.store/grid/projects"), xpaceIndex(env, waitUntil), readIdentity(env)]);
+  const projects = (pr && pr.projects) || [], out = new Map(), registry = identity.map;
+  const alta = (screen, circuit, name) => {
+    if (!screen || out.has(screen)) return;
+    const facts = completeFacts({ screen, circuit }, { xpaceIndex: index, projects, registry });
+    out.set(screen, { screen, name: String((registry[screen] && registry[screen].n) || name || screen).slice(0, 80), tags: deduceScreenTags(facts), seenAt: 0 });
+  };
+  for (const s of (gs && (gs.screens || gs)) || []) alta(cleanScreen(s && s.screen), cleanScreen(s && s.circuit), s && s.name);
+  for (const [screen, e] of Object.entries(index)) alta(screen, cleanScreen(e.c), "");       // equipos dados de alta en un Xpacio
+  for (const screen of Object.keys(registry)) alta(screen, "", "");                           // pantallas que sólo conoce la parrilla
+  const xpaces = {}, val = (tags, k) => { const t = (tags || []).find(x => String(x).startsWith(k + ":")); return t ? t.slice(k.length + 1) : ""; };
+  for (const s of seen) {
+    const prev = out.get(s.screen);
+    // Lo que el player declaró (circuito, Xpacio) se completa igual que lo de la parrilla: proyecto incluido.
+    const extra = prev ? [] : deduceScreenTags(completeFacts({ screen: s.screen, circuit: val(s.tags, "circuito"), xpace: val(s.tags, "xpacio"), project: val(s.tags, "proyecto") }, { xpaceIndex: index, projects, registry })).filter(t => !/^(orientacion|idioma):/.test(t));
+    out.set(s.screen, { screen: s.screen, name: (prev && prev.name) || s.screen, tags: [...new Set([...(prev ? prev.tags : []), ...extra, ...s.tags])].sort(), seenAt: s.seenAt });
+    const x = val(s.tags, "xpacio"); if (x && s.xn) xpaces[x] = s.xn;
   }
-  return facts;
+  for (const e of Object.values(index)) xpaces[e.x] = e.n;
+  for (const e of Object.values(registry)) if (e.x && e.xn) xpaces[e.x] = e.xn;
+  return { screens: [...out.values()].sort((a, b) => a.screen.localeCompare(b.screen)), projects: projects.map(p => ({ id: String(p.id), name: String(p.name || p.id) })), xpaces };
 }
 // Registro de etiquetas deducidas, para que el editor enseñe a qué pantallas llega una regla. Las etiquetas
 // van en los metadatos de la clave: se listan sin leer pantalla a pantalla. Sólo se escribe si cambian o caducan.
@@ -119,7 +179,7 @@ async function rememberTags(env, screen, tags, facts) {
     const prev = await env.ACCESS.getWithMetadata(TAGS_PREFIX + screen);
     const meta = prev && prev.metadata, same = meta && Array.isArray(meta.tags) && meta.tags.join("|") === tags.join("|");
     if (same && Date.now() - (Number(meta.seenAt) || 0) < 6 * 3600_000) return;
-    await env.ACCESS.put(TAGS_PREFIX + screen, "1", { metadata: { tags, seenAt: Date.now(), w: facts.w || 0, h: facts.h || 0 }, expirationTtl: 45 * 86400 });
+    await env.ACCESS.put(TAGS_PREFIX + screen, "1", { metadata: { tags, seenAt: Date.now(), w: facts.w || 0, h: facts.h || 0, xn: String(facts.xpaceName || "").slice(0, 80) }, expirationTtl: 45 * 86400 });
   } catch (_) {}
 }
 async function knownScreens(env) {
@@ -128,7 +188,7 @@ async function knownScreens(env) {
   let cursor;
   for (let i = 0; i < 5; i += 1) {
     const page = await env.ACCESS.list({ prefix: TAGS_PREFIX, cursor, limit: 1000 });
-    for (const k of page.keys || []) out.push({ screen: k.name.slice(TAGS_PREFIX.length), tags: (k.metadata && k.metadata.tags) || [], seenAt: (k.metadata && k.metadata.seenAt) || 0 });
+    for (const k of page.keys || []) out.push({ screen: k.name.slice(TAGS_PREFIX.length), tags: (k.metadata && k.metadata.tags) || [], seenAt: (k.metadata && k.metadata.seenAt) || 0, xn: (k.metadata && k.metadata.xn) || "" });
     if (page.list_complete || !page.cursor) break;
     cursor = page.cursor;
   }
@@ -136,11 +196,12 @@ async function knownScreens(env) {
 }
 // Vista de administración: reglas guardadas, pantallas conocidas con sus etiquetas y, con ?preview=, a qué
 // llegaría una regla sin guardarla. Sólo con sesión del portal.
-async function adminGet(request, env, q, cors) {
+async function adminGet(request, env, q, cors, waitUntil) {
   const actor = await actorWithAccess(request, env);
   if (!actor) return json({ ok: false, error: "unauthorized" }, 401, cors);
-  const [live, screens] = await Promise.all([readLive(env), knownScreens(env)]);
-  if (q.get("preview") !== "1") return json({ ok: true, live, screens }, 200, cors);
+  const [live, seen] = await Promise.all([readLive(env), knownScreens(env)]);
+  const fleet = await fleetIdentities(env, seen, waitUntil), screens = fleet.screens;
+  if (q.get("preview") !== "1") return json({ ok: true, live, screens, projects: fleet.projects, xpaces: fleet.xpaces }, 200, cors);
   let rule;
   try { rule = cleanLive(JSON.parse(q.get("rule") || "{}"), actor); } catch (e) { return json({ ok: false, error: String(e.message || e) }, 400, cors); }
   const stock = await loadStock(), matched = screens.filter(s => targetMatches(rule.target, s.tags));
@@ -168,7 +229,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
   // las playlists vivas que le toquen, resueltas ahora mismo contra el Stock.
   const facts = hintFacts(screen, q), live = await readLive(env);
   const activas = live.playlists.filter(p => p && p.enabled !== false);
-  if (activas.length) await enrichFacts(facts);
+  if (activas.length) await enrichFacts(facts, env, waitUntil);
   const screenTags = deduceScreenTags(facts);
   const recordar = rememberTags(env, screen, screenTags, facts);
   try { if (typeof waitUntil === "function") waitUntil(recordar); else await recordar; } catch (_) { await recordar; }
@@ -189,6 +250,17 @@ async function liveWrite(request, env, body, cors) {
   const live = await readLive(env), expected = Number(body.rev) || 0;
   if (expected && expected !== Number(live.rev || 0)) return json({ ok: false, error: "revision_conflict", live }, 409, cors);
   let playlists = live.playlists.slice();
+  if (body.action === "identity-sync") {
+    const list = Array.isArray(body.screens) ? body.screens.slice(0, 500).map(cleanIdentity).filter(Boolean) : [];
+    if (!list.length) return json({ ok: false, error: "identity_empty" }, 400, cors);
+    const doc = await readIdentity(env); let changed = 0;
+    for (const e of list) {
+      const prev = doc.map[e.screen], next = { p: e.p, x: e.x, n: e.n, xn: e.xn };
+      if (!prev || prev.p !== next.p || prev.x !== next.x || prev.n !== next.n || prev.xn !== next.xn) { doc.map[e.screen] = next; changed += 1; }
+    }
+    if (changed) { doc.updatedAt = Date.now(); doc.updatedBy = actor; await env.ACCESS.put(IDENTITY_KEY, JSON.stringify(doc)); }
+    return json({ ok: true, changed, total: Object.keys(doc.map).length }, 200, cors);
+  }
   if (body.action === "live-delete") {
     const id = String(body.id || "");
     if (!playlists.some(p => p.id === id)) return json({ ok: false, error: "live_not_found" }, 404, cors);
@@ -210,7 +282,7 @@ export async function onRequestPost({ request, env }) {
   if (await lecturaBlocksWrite(request, env)) return json({ ok: false, error: "solo_lectura" }, 403, cors);
   let body;
   try { body = await request.json(); } catch (_) { return json({ ok: false, error: "invalid_json" }, 400, cors); }
-  if (body && (body.action === "live-save" || body.action === "live-delete")) return liveWrite(request, env, body, cors);
+  if (body && ["live-save", "live-delete", "identity-sync"].includes(body.action)) return liveWrite(request, env, body, cors);
   // Sesión del portal (admira.tv) o clave del Stock (pixeria.com, server-to-server).
   const actor = await actorWithAccess(request, env) || stockActor(request, env, body);
   if (!actor) return json({ ok: false, error: "unauthorized" }, 401, cors);
