@@ -44,11 +44,18 @@ export function orientationOf(w, h, hint) {
   return ar < 0.8 ? "vertical" : ar > 1.25 ? "horizontal" : "cuadrada";
 }
 
+// IDENTIFICADORES ÚNICOS (Carlos, 7-oct-2026: «lo más importante»): cada proyecto, cada Xpacio (centro) y cada
+// pantalla tiene UNA etiqueta que lo identifica —proyecto:starbucks · xpacio:alsea-sbux-021 · pantalla:<id>— y es
+// con ella con lo que se dice a dónde va una playlist. El resto (circuito, orientación, idioma) son atributos:
+// describen a muchas pantallas a la vez. Los tres niveles únicos, de mayor a menor:
+export const UNIQUE_LEVELS = ["proyecto", "xpacio", "pantalla"];
+
 /** Lo que una pantalla dice de sí misma (más lo que el servidor sabe de ella) → sus etiquetas. */
 export function deduceScreenTags(facts = {}) {
   const tags = new Set(["todas"]);
   const add = (k, v) => { const t = screenTag(k + ":" + (v == null ? "" : v)); if (t) tags.add(t); };
   if (facts.screen) add("pantalla", facts.screen);
+  if (facts.xpace) add("xpacio", facts.xpace);
   if (facts.circuit) add("circuito", facts.circuit);
   if (facts.project) add("proyecto", facts.project);
   const o = facts.orientation || orientationOf(facts.w, facts.h);
@@ -81,11 +88,18 @@ export function cleanLive(raw, actor = "", now = Date.now()) {
   return { id, name, enabled: raw.enabled !== false, content, target, updatedAt: now, updatedBy: String(actor || "").slice(0, 120) };
 }
 
+// El destino se lee por FACETAS: dentro de una misma clave vale cualquiera de las marcadas (pantalla:a o
+// pantalla:b; idioma:es o idioma:ca) y entre claves distintas tienen que cumplirse todas (proyecto:x Y
+// orientacion:vertical). Así «estas tres pantallas» y «las verticales de este Xpacio» se dicen igual.
+const facet = t => { const i = String(t).indexOf(":"); return i < 0 ? String(t) : String(t).slice(0, i); };
 export function targetMatches(target, screenTags) {
   const has = new Set(screenTags || []);
   const all = (target && target.all) || [], any = (target && target.any) || [];
   if (!all.length && !any.length) return false;
-  return all.every(t => has.has(t)) && (!any.length || any.some(t => has.has(t)));
+  const groups = new Map();
+  for (const t of all) { const k = facet(t); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(t); }
+  for (const tags of groups.values()) if (!tags.some(t => has.has(t))) return false;
+  return !any.length || any.some(t => has.has(t));
 }
 
 // Un tag pedido casa con el idéntico y con los que lo contienen como palabra entera («musica» trae
@@ -146,6 +160,49 @@ export function resolveForScreen(playlists, screenTags, stock, facts = {}, now =
     seen.add(it.stockId); items.push(it);
   }
   return { hits, items };
+}
+
+// Índice pantalla → Xpacio a partir del catálogo de Xpacios (api.admira.store/locations): un Xpacio declara
+// sus pantallas en `screen` (alta de un equipo) o en `surfaces[].screen`. De 9.000 fichas sólo unas decenas las
+// declaran, así que se guarda compacto. La marca del Xpacio sirve de proyecto cuando la parrilla no le da uno.
+export const xpaceEntry = loc => ({ x: String(loc.id), n: String(loc.name || "").slice(0, 80), c: String(loc.circuit || ""), b: String((loc.external && loc.external.brand) || loc.client || "") });
+export function buildXpaceIndex(locations) {
+  const index = {};
+  for (const loc of Array.isArray(locations) ? locations : []) {
+    if (!loc || !loc.id) continue;
+    const entry = xpaceEntry(loc);
+    const screens = [loc.screen, ...((Array.isArray(loc.surfaces) ? loc.surfaces : []).map(s => s && s.screen))];
+    for (const s of screens) { const id = String(s || "").trim().toLowerCase(); if (/^[a-z0-9][a-z0-9-]{1,79}$/.test(id) && !index[id]) index[id] = entry; }
+  }
+  return index;
+}
+
+/** Identidad completa de una pantalla: lo que ella declara manda; lo que falta lo ponen el índice y la parrilla. */
+export function completeFacts(facts, { xpaceIndex = {}, projects = [], gridCircuit = "", registry = {}, xpaceRecord = null } = {}) {
+  const out = { ...facts }, reg = registry[out.screen] || null;
+  // Si la pantalla declara su Xpacio (?xpace= / ?loc=), la ficha de ESE Xpacio vale más que el índice.
+  const declared = xpaceRecord && out.xpace && String(xpaceRecord.id || "") === out.xpace ? xpaceEntry(xpaceRecord) : null;
+  const known = declared || xpaceIndex[out.screen] || null;
+  // Orden de autoridad: lo que declara el player › el registro de identidad (la jerarquía Proyecto → Xpacio →
+  // Dispositivo de la parrilla) › el catálogo de Xpacios › la parrilla por circuito › la marca del Xpacio.
+  if (reg) { if (!out.project && reg.p) out.project = reg.p; if (!out.xpace && reg.x) out.xpace = reg.x; }
+  // El circuito de la ficha del Xpacio DECLARADO vale más que el que la parrilla supone por el nombre de la pantalla.
+  if (!out.circuit) out.circuit = (declared && declared.c) || gridCircuit || (known && known.c) || "";
+  if (!out.xpace && known) out.xpace = known.x;
+  if (!out.project && out.circuit) {
+    const hit = (projects || []).find(p => Array.isArray(p.circuits) && p.circuits.map(String).includes(out.circuit));
+    if (hit && hit.id) out.project = String(hit.id);
+  }
+  if (!out.project && known && known.b) out.project = known.b;
+  return out;
+}
+
+/** Entrada saneada del registro de identidad: {p: proyecto, x: xpacio, n: nombre de la pantalla, xn: nombre del Xpacio}. */
+export function cleanIdentity(raw) {
+  const id = v => { const s = String(v || "").trim().toLowerCase(); return /^[a-z0-9][a-z0-9_-]{0,79}$/.test(s) ? s : ""; };
+  const screen = id(raw && raw.screen);
+  if (!screen) return null;
+  return { screen, p: id(raw.project), x: id(raw.xpace), n: String(raw.name || "").trim().slice(0, 80), xn: String(raw.xpaceName || "").trim().slice(0, 80) };
 }
 
 /** Revisión estable: cambia sólo cuando cambia lo que sale por antena. */

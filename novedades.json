@@ -4,6 +4,11 @@
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
   ],
+  "v.07.10.2026.r20.20:29": [
+    "Playlists vivas: el destino se dice con identificadores únicos — proyecto, Xpacio y pantalla",
+    "Ejemplo: proyecto Starbucks · Xpacio Paseo de Gracia 103 · pantalla 1 vertical, y le llega cada vez que se conecta",
+    "A una pantalla le basta declarar su Xpacio (?loc=) para recibir sola su proyecto y su circuito"
+  ],
   "v.07.10.2026.r19.20:09": [
     "Etiquetas del Stock unificadas: «tech» y «tecnología», «gaming» y «videojuego» o los plurales ya son la misma",
     "El canal, la parrilla y las playlists vivas encuentran lo mismo con la forma antigua y con la nueva"

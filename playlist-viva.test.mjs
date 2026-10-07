@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { onRequestGet, onRequestPost } from "./functions/api/playlist.js";
-import { cleanLive, deduceScreenTags, norm, resolveContent, targetMatches, LIVE_KEY, TAGS_PREFIX } from "./functions/api/_playlist-live.js";
+import { buildXpaceIndex, cleanLive, completeFacts, deduceScreenTags, norm, resolveContent, targetMatches, LIVE_KEY, TAGS_PREFIX } from "./functions/api/_playlist-live.js";
 
 const sessionToken = "session-token", sessionKey = `admira-tv:auth:session:${sessionToken}`;
 const cookie = { Cookie: `__Host-atv_session=${sessionToken}`, "Content-Type": "application/json" };
@@ -130,4 +130,76 @@ test("el player manda sus datos al pedir la playlist y el editor guarda la regla
   assert.match(parrilla, /id="plViva"/);
   assert.match(parrilla, /content:\{any:\[\.\.\.plTagSel\],limit:[^}]+\},target:\{all:\[\.\.\.plVivaSel\]\}/);
   assert.match(parrilla, /action:accion\|\|'live-save'/);
+});
+
+// ── Identificadores únicos (Carlos, 7-oct-2026: «lo más importante») ─────────────────────────────
+test("cada proyecto, Xpacio y pantalla tiene su etiqueta única, y el destino se lee por facetas", () => {
+  const tags = deduceScreenTags({ screen: "sbux-pg103-p1", project: "starbucks", xpace: "alsea-sbux-021", circuit: "alsea_starbucks", w: 1080, h: 1920 });
+  for (const t of ["proyecto:starbucks", "xpacio:alsea-sbux-021", "pantalla:sbux-pg103-p1", "orientacion:vertical"]) assert.ok(tags.includes(t), t);
+  assert.equal(targetMatches({ all: ["pantalla:sbux-pg103-p1"] }, tags), true, "una pantalla concreta");
+  assert.equal(targetMatches({ all: ["pantalla:otra", "pantalla:sbux-pg103-p1"] }, tags), true, "dos pantallas marcadas: vale cualquiera de las dos");
+  assert.equal(targetMatches({ all: ["xpacio:alsea-sbux-021", "orientacion:horizontal"] }, tags), false, "entre claves distintas tienen que cumplirse todas");
+  assert.equal(targetMatches({ all: ["proyecto:starbucks", "xpacio:alsea-sbux-021", "orientacion:vertical"] }, tags), true);
+  assert.equal(targetMatches({ all: ["proyecto:365"] }, tags), false);
+});
+
+test("el catálogo de Xpacios da el Xpacio de una pantalla y su marca hace de proyecto si nadie dice otra cosa", () => {
+  const index = buildXpaceIndex([{ id: "alsea-sbux-021", name: "Starbucks Paseo de Gracia", circuit: "alsea_starbucks", external: { brand: "Starbucks" }, surfaces: [{ name: "Menu board", screen: "SBUX-PG103-P1" }, { name: "sin pantalla" }] },
+    { id: "tienda-x", name: "Tienda X", screen: "ipad-admin-mupi" }, { name: "sin id", screen: "nada" }]);
+  assert.deepEqual(Object.keys(index).sort(), ["ipad-admin-mupi", "sbux-pg103-p1"]);
+  const f = completeFacts({ screen: "sbux-pg103-p1" }, { xpaceIndex: index, projects: [{ id: "kiosk", circuits: ["kiosko"] }] });
+  assert.equal(f.xpace, "alsea-sbux-021"); assert.equal(f.circuit, "alsea_starbucks"); assert.equal(f.project, "Starbucks");
+  const declarado = completeFacts({ screen: "sbux-pg103-p1", project: "alsea", xpace: "otro" }, { xpaceIndex: index, registry: { "sbux-pg103-p1": { p: "starbucks", x: "alsea-sbux-021" } } });
+  assert.equal(declarado.project, "alsea"); assert.equal(declarado.xpace, "otro", "lo que declara el propio player manda");
+  const registrado = completeFacts({ screen: "sim-gracia-kiosko", circuit: "gracia" }, { registry: { "sim-gracia-kiosko": { p: "kiosk", x: "gracia" } }, projects: [{ id: "otro", circuits: ["gracia"] }] });
+  assert.equal(registrado.project, "kiosk", "el registro de identidad va antes que la parrilla por circuito"); assert.equal(registrado.xpace, "gracia");
+});
+
+test("una playlist enviada al identificador único de una pantalla llega sólo a esa pantalla, cada vez que se conecta", async () => {
+  const m = mundo({ items: [pieza("a1", ["café"])] });
+  try {
+    const destino = { all: ["proyecto:starbucks", "xpacio:alsea-sbux-021", "pantalla:sbux-pg103-p1"] };
+    assert.equal((await post(m.env, { action: "live-save", playlist: regla({ name: "Pantalla 1", target: destino }) })).status, 200);
+    const yo = await (await get(m.env, "screen=sbux-pg103-p1&project=starbucks&xpace=alsea-sbux-021&w=1080&h=1920")).json();
+    assert.deepEqual(yo.draft.items.map(i => i.stockId), ["a1"]);
+    assert.ok(yo.screenTags.includes("xpacio:alsea-sbux-021") && yo.screenTags.includes("proyecto:starbucks"));
+    const vecina = await (await get(m.env, "screen=sbux-pg103-p2&project=starbucks&xpace=alsea-sbux-021&w=1080&h=1920")).json();
+    assert.deepEqual(vecina.draft.items, [], "la pantalla 2 del mismo Xpacio no la recibe");
+    const otra = await (await get(m.env, "screen=sbux-pg103-p1&project=starbucks&xpace=otro-centro")).json();
+    assert.deepEqual(otra.draft.items, [], "ni una pantalla con ese id en otro Xpacio");
+  } finally { m.fin(); }
+});
+
+test("la jerarquía de la parrilla se registra como identidad y da proyecto y Xpacio a las pantallas", async () => {
+  const m = mundo({ items: [pieza("a1", ["café"])] });
+  try {
+    const sync = { action: "identity-sync", screens: [{ screen: "sim-gracia-kiosko", name: "Canal Kiosk Plaça Vila", project: "kiosk", xpace: "gracia", xpaceName: "CanalKiosk Gràcia" }, { screen: "mala pantalla!", project: "x" }] };
+    assert.equal((await post(m.env, sync, { "Content-Type": "application/json" })).status, 401, "sin sesión no se registra nada");
+    const r = await (await post(m.env, sync)).json();
+    assert.equal(r.ok, true); assert.equal(r.changed, 1); assert.equal(r.total, 1);
+    assert.equal((await (await post(m.env, sync)).json()).changed, 0, "repetirlo no reescribe");
+    await post(m.env, { action: "live-save", playlist: regla({ target: { all: ["xpacio:gracia"] } }) });
+    const d = await (await get(m.env, "screen=sim-gracia-kiosko&w=1080&h=1920")).json();
+    assert.ok(d.screenTags.includes("proyecto:kiosk") && d.screenTags.includes("xpacio:gracia"));
+    assert.deepEqual(d.draft.items.map(i => i.stockId), ["a1"]);
+    const lista = await (await onRequestGet({ request: new Request("https://admira.tv/api/playlist?live=1", { headers: cookie }), env: m.env })).json();
+    const k = lista.screens.find(s => s.screen === "sim-gracia-kiosko");
+    assert.equal(k.name, "Canal Kiosk Plaça Vila"); assert.equal(lista.xpaces.gracia, "CanalKiosk Gràcia");
+  } finally { m.fin(); }
+});
+
+test("una pantalla que sólo declara su Xpacio recibe de su ficha el circuito y el proyecto (Starbucks Pg. Gràcia 103)", () => {
+  const ficha = { id: "alsea-sbux-021", name: "Starbucks Paseo de Gracia", circuit: "alsea_starbucks", external: { brand: "Starbucks" } };
+  const facts = completeFacts({ screen: "sbux-pg103-p1", xpace: "alsea-sbux-021", w: 1080, h: 1920 }, { xpaceRecord: ficha });
+  const tags = deduceScreenTags(facts);
+  for (const t of ["proyecto:starbucks", "xpacio:alsea-sbux-021", "pantalla:sbux-pg103-p1", "circuito:alsea-starbucks", "orientacion:vertical"]) assert.ok(tags.includes(t), t + " en " + tags.join(" "));
+  assert.equal(completeFacts({ screen: "sbux-pg103-p1", xpace: "alsea-sbux-021" }, { xpaceRecord: ficha, gridCircuit: "sbux" }).circuit, "alsea_starbucks", "la ficha declarada gana al circuito supuesto");
+  // La ficha de OTRO Xpacio no se le pega a esta pantalla, y lo que el player declara manda sobre la ficha.
+  assert.equal(completeFacts({ screen: "x", xpace: "otro" }, { xpaceRecord: ficha }).project, undefined);
+  assert.equal(completeFacts({ screen: "x", xpace: "alsea-sbux-021", project: "alsea" }, { xpaceRecord: ficha }).project, "alsea");
+  // «La pantalla 1, vertical, del Starbucks de Pg. Gràcia 103»: casa ella y no su vecina ni una horizontal.
+  const destino = { all: ["proyecto:starbucks", "xpacio:alsea-sbux-021", "pantalla:sbux-pg103-p1", "orientacion:vertical"], any: [] };
+  assert.equal(targetMatches(destino, tags), true);
+  assert.equal(targetMatches(destino, deduceScreenTags(completeFacts({ screen: "sbux-pg103-p2", xpace: "alsea-sbux-021", w: 1080, h: 1920 }, { xpaceRecord: ficha }))), false);
+  assert.equal(targetMatches(destino, deduceScreenTags(completeFacts({ screen: "sbux-pg103-p1", xpace: "alsea-sbux-021", w: 1920, h: 1080 }, { xpaceRecord: ficha }))), false);
 });
