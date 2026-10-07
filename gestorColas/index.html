@@ -2,13 +2,13 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=07.10.2026.r13.1504"></script>
+<script src="/auth-gate.js?v=07.10.2026.r14.1530"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Gestor de colas · Admira.tv</title>
-<meta name="admiranext-version" content="v.07.10.2026.r4.taza-demo">
+<meta name="admiranext-version" content="v.07.10.2026.r14.15:30">
 <meta name="robots" content="noindex">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/admira-frame.css?v=07.10.2026.r13.1504">
+<link rel="stylesheet" href="/admira-frame.css?v=07.10.2026.r14.1530">
 <style>
 :root{--c:#00704A;--osc:#1E3932;--fondo:#f4f2ee;--tx:#14211d}
 body{margin:0;font-family:Inter,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--fondo);color:var(--tx)}
@@ -36,8 +36,8 @@ main{max-width:1200px;margin:0 auto;padding:18px}
 </style>
 </head>
 <body>
-<script src="/admira-nav.js?v=07.10.2026.r13.1504" data-active="apps" data-title="Gestor de colas" defer></script>
-<script src="/admira-frame.js?v=07.10.2026.r13.1504" defer></script>
+<script src="/admira-nav.js?v=07.10.2026.r14.1530" data-active="apps" data-title="Gestor de colas" defer></script>
+<script src="/admira-frame.js?v=07.10.2026.r14.1530" defer></script>
 <main>
   <div class="top"><h1>☕ <span data-t="titulo">Gestor de colas</span> <small id="salaTxt"></small></h1>
     <button class="pill" id="bPantalla" data-t="abrirPantalla">Abrir pantalla iPad</button>
@@ -80,7 +80,7 @@ function textos(){document.documentElement.lang=lang;document.querySelectorAll('
   $('urls').innerHTML=Object.entries(u).map(([k,v])=>'<li><b>'+k+'</b><br><a href="'+v+'" target="_blank" rel="noopener">'+v+'</a></li>').join('');if(ultimo)pintar(ultimo);}
 const esc=x=>String(x||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function fila(p){const l=p.estado==='listo',r=p.estado==='recibido',sig=l?'recogido':r?'preparando':'listo';return '<div class="p" data-n="'+esc(p.numero)+'" data-sig="'+sig+'" title="'+t('tap')+'"><b>'+esc(p.numero)+'</b><span>'+(p.nombre?esc(p.nombre)+' · ':'')+new Date(p.pagado||p.creado).toLocaleTimeString(lang==='en'?'en-GB':'es-ES',{hour:'2-digit',minute:'2-digit'})+(p.llamadas?' · 📣'+p.llamadas:'')+'</span>'+(l?'<button data-llamar="'+esc(p.numero)+'">'+t('bLlamar')+'</button>':'')+'<button data-n2="'+esc(p.numero)+'" data-a="'+sig+'">'+(l?t('bRecoger'):r?t('bPrep'):t('bListo'))+'</button>'+(r?'<button data-n2="'+esc(p.numero)+'" data-a="listo">'+t('bListo')+'</button>':'')+'</div>';}
-function pintar(d){ultimo=d;const re=d.recibido||[],pr=d.preparando||[],li=d.listo||[];$('lRec').innerHTML=re.map(fila).join('')||'<p class="vacio">'+t('vacio')+'</p>';$('cRec').textContent=re.length;$('lPrep').innerHTML=pr.map(fila).join('')||'<p class="vacio">'+t('vacio')+'</p>';$('lListo').innerHTML=li.map(fila).join('')||'<p class="vacio">'+t('vacio')+'</p>';$('cPrep').textContent=pr.length;$('cListo').textContent=li.length;
+function pintar(d){ultimo=d;const re=d.recibido||[],pr=d.preparando||[],li=d.listo||[];$('lRec').innerHTML=re.map(fila).join('')||'<p class="vacio">'+t('vacio')+'</p>';$('cRec').textContent=re.length;$('lPrep').innerHTML=pr.map(fila).join('')||'<p class="vacio">'+t('vacio')+'</p>';$('lListo').innerHTML=[...li].reverse().map(fila).join('')||'<p class="vacio">'+t('vacio')+'</p>';$('cPrep').textContent=pr.length;$('cListo').textContent=li.length;
   $('resumen').innerHTML=t('recibido')+': <b>'+re.length+'</b><br>'+t('prep')+': <b>'+pr.length+'</b><br>'+t('listo')+': <b>'+li.length+'</b><br>'+t('pend')+': <b>'+(d.pendientes||0)+'</b><br>'+t('rec')+': <b>'+(d.recogidos||0)+'</b><br><small>DEMO · '+(lang==='en'?'simulated payment, no prices':'pago simulado, sin precios')+'</small>';$('raw').textContent=JSON.stringify(d,null,2);}
 async function api(op,body){const h={'content-type':'application/json'},k=localStorage.getItem('gc_clave');if(k)h['x-clave-sala']=k;const r=await fetch('/gestorColas/api/'+op+'?sala='+sala,body?{method:'POST',headers:h,credentials:'same-origin',body:JSON.stringify(body)}:{cache:'no-store',credentials:'same-origin'});const d=await r.json();if(!d.ok)throw new Error(d.error||r.status);return d;}
 function aviso(s,mal){$('msg').textContent=s;$('msg').style.color=mal?'#b00020':'#00704A';}
@@ -111,6 +111,6 @@ window.__gestorColas={cmd,get sala(){return sala;},tic};
 textos();tic();setInterval(tic,2000);
 })();
 </script>
-<script src="/assets/admira-version-watch.js?v=07.10.2026.r13.1504" defer></script>
+<script src="/assets/admira-version-watch.js?v=07.10.2026.r14.1530" defer></script>
 </body>
 </html>

@@ -71,5 +71,9 @@
   "v.07.10.2026.r13.15:04": [
     "La demo TV conserva la vista nativa y los cambios de audiencia sin emitir órdenes a pantallas físicas",
     "La música y las zonas de taza permanecen en vista local durante el ensayo; las visitas normales mantienen su comportamiento"
+  ],
+  "v.07.10.2026.r14.15:30": [
+    "Control de barra: la columna Listo muestra primero el pedido más antiguo (FIFO), igual que el iPad",
+    "El iPad del gemelo Starbucks abre este gestor de colas con un toque"
   ]
 }
