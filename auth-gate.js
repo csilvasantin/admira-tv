@@ -42,7 +42,8 @@
     "cap-avanzado.html":"digitalsignage-cms", "cap-experto.html":"digitalsignage-cms",
     "cap-folded.html":"digitalsignage-cms",
     "users":"admira-tv", "usuarios":"admira-tv",
-    "accesscontrol":"admira-tv", "videoanalitics":"admira-tv"
+    "accesscontrol":"admira-tv", "videoanalitics":"admira-tv",
+    "audiencia":"digitalsignage-conditional"
   };
   var pathKey = (location.pathname.split('/').filter(Boolean)[0] || 'admira-tv').toLowerCase();
   var SOLUTION = PATH_PROJECTS[pathKey] || pathKey;

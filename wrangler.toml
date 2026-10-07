@@ -29,6 +29,13 @@ database_name = "admira-xtore-history"
 database_id = "1908cb29-fccf-418f-915c-4c0cbeb1376a"
 migrations_dir = "drizzle"
 
+# Audiencia del quiosco segmentado (8-oct-2026): la MISMA D1 que escribe mcp-ainimation.admira.store/audiencia/evento.
+# /audiencia/ (backoffice) → functions/audiencia/api con sesión + permiso digitalsignage-conditional. Recuentos anónimos, 90 días.
+[[d1_databases]]
+binding = "AUDIENCIA_DB"
+database_name = "kiosko-audiencia"
+database_id = "4b5f2c81-aadf-4b1a-a363-f991c5240613"
+
 # R2 de los vídeos explicativos de la lanzadera (/apps → hover ≥3s sobre el icono).
 # La Pages Function functions/apps/video/[file].js sirve GET /apps/video/<slug>.mp4
 # desde aquí, con soporte de Range. Sube cada vídeo con:
