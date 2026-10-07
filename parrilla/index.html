@@ -89,7 +89,18 @@
     .actions{margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}.actions .primary{padding:11px 18px}.feedback{flex:1;min-width:220px;color:var(--dim);font-size:12px}.feedback.ok{color:#9bffca}.feedback.err{color:#ff9c9c}.note{margin-top:12px;padding:11px 13px;border-left:3px solid var(--blue);background:#0b1220;color:var(--dim);font-size:12px}.note b{color:var(--ink)}.draft-status{font:700 11px ui-monospace,monospace;color:var(--dim);display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;white-space:nowrap}.draft-status::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}.draft-status.on{color:#9bffca;border-color:#2b7050}.draft-status.off{color:var(--amber);border-color:#5a4526}.draft-status.err{color:var(--red);border-color:#5a2b2b}#shareBtn{font-size:12px;padding:8px 12px}
     @media(max-width:850px){.context-picker{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.context-field:last-of-type{grid-column:1/-1}.hero,.layout{grid-template-columns:minmax(0,1fr)}.preview-screen{aspect-ratio:16/9;max-height:none;max-width:620px}.destinations{grid-template-columns:minmax(0,1fr)}}
     @media(max-width:600px){.context-picker{grid-template-columns:minmax(0,1fr)}.context-field:last-of-type,.context-meta{grid-column:1}.page{padding:15px 12px 50px}.slot{grid-template-columns:26px 32px 68px minmax(0,1fr) auto;gap:7px}.slot-thumb{width:68px;height:44px}.slot .lane{display:none}.duration{grid-column:4}.moves{grid-column:5;grid-row:1/3}.destination{grid-template-columns:auto minmax(0,1fr)}.destination .status{grid-column:2}}
-  </style>
+      /* Playlist viva (7-oct-2026): regla por tags + pantallas por etiquetas deducidas */
+    .pl-viva{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:13.5px;line-height:1.4;color:var(--ink)}
+    .pl-viva input{margin-top:2px;accent-color:var(--green);width:18px;height:18px;flex:none}
+    .pl-viva b{color:var(--green)}
+    #plVivaBody{margin-top:12px;display:grid;gap:8px}
+    .pl-viva-num{display:flex;gap:18px;flex-wrap:wrap;margin-top:4px}
+    .pl-viva-num label{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--dim)}
+    .pl-viva-num input{width:76px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--ink);font:inherit}
+    .pl-viva-num input:focus{border-color:var(--green);outline:none}
+    .pl-badge{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:999px;background:var(--green);color:#04130b;font-size:10px;font-weight:800;letter-spacing:.06em;vertical-align:middle}
+    .pl-badge.off{background:var(--dim)}
+</style>
 </head>
 <body>
   <script>
@@ -141,6 +152,14 @@
             <div class="pl-tagadd">
               <input id="plTagInput" type="text" maxlength="40" autocomplete="off" placeholder="…o escríbelo: #musica">
               <button id="plTagAdd" type="button">Buscar</button>
+            </div>
+          </div>
+          <div class="pl-field pl-wide" id="plVivaWrap">
+            <label class="pl-viva"><input type="checkbox" id="plViva"><span><b>Playlist viva</b> · se actualiza sola: entra lo que lleve esos tags en pixeria.com y va a las pantallas que cumplan las etiquetas, sin elegirlas una a una.</span></label>
+            <div id="plVivaBody" hidden>
+              <span>Pantallas por etiqueta <b id="plVivaFuente">se deducen solas</b></span>
+              <div class="pl-chips" id="plVivaTags"></div>
+              <div class="pl-viva-num"><label>Máx. piezas <input id="plVivaLimit" type="number" min="1" max="100" value="20"></label><label>Segundos por pieza <input id="plVivaSecs" type="number" min="2" max="600" value="10"></label></div>
             </div>
           </div>
           <div class="pl-field pl-wide" id="plManualWrap" hidden>
@@ -368,6 +387,67 @@
     const PL_STORE='adtv_playlists_v1';
     let plMode='tag',plTagSel=new Set(),plItemSel=new Set(),plDevSel=new Set();
 
+    // ── PLAYLIST VIVA (7-oct-2026, Carlos) ────────────────────────────────────
+    // «Por tag» congelaba la selección al crearla y había que marcar pantalla a
+    // pantalla. Viva guarda la REGLA en el servidor (/api/playlist): el contenido
+    // se resuelve en cada consulta del player —etiquetar una pieza en pixeria la
+    // mete en antena sin tocar nada aquí— y el destino son las etiquetas que cada
+    // pantalla se deduce sola (circuito, proyecto, orientación, idioma).
+    let plViva=false,plVivaSel=new Set(),plVivaData={live:{rev:0,playlists:[]},screens:[]},plVivaEstado='idle';
+    async function plVivaCarga(){
+      plVivaEstado='cargando';
+      try{
+        const r=await fetch('/api/playlist?live=1&_='+Date.now(),{cache:'no-store',credentials:'same-origin'});
+        if(r.status===401){plVivaEstado='sin-sesion';return}
+        const d=await r.json();if(!d||!d.ok)throw 0;
+        plVivaData={live:d.live||{rev:0,playlists:[]},screens:Array.isArray(d.screens)?d.screens:[]};plVivaEstado='ok';
+      }catch(_){plVivaEstado='error'}
+    }
+    // Etiquetas de pantalla vistas en la flota, con cuántas pantallas la llevan. Las
+    // «pantalla:…» no se ofrecen como chip: para una sola pantalla ya está «Por defecto».
+    function plVivaCatalogo(){
+      const m=new Map();
+      plVivaData.screens.forEach(s=>(s.tags||[]).forEach(t=>{if(/^pantalla:/.test(t))return;m.set(t,(m.get(t)||0)+1)}));
+      const orden=['todas','proyecto','circuito','orientacion','idioma'],ns=t=>t.includes(':')?t.split(':')[0]:t;
+      return [...m.entries()].map(([tag,count])=>({tag,count})).sort((a,b)=>(orden.indexOf(ns(a.tag))-orden.indexOf(ns(b.tag)))||b.count-a.count||a.tag.localeCompare(b.tag,'es'));
+    }
+    function plVivaPantallas(){
+      if(!plVivaSel.size)return[];
+      return plVivaData.screens.filter(s=>[...plVivaSel].every(t=>(s.tags||[]).includes(t)));
+    }
+    function plVivaEtiqueta(t){const i=t.indexOf(':');if(i<0)return t==='todas'?'todas las pantallas':t;const k=t.slice(0,i),v=t.slice(i+1);return ({circuito:'circuito',proyecto:'proyecto',orientacion:'orientación',idioma:'idioma'}[k]||k)+' · '+v}
+    function plVivaPinta(){
+      $('plVivaBody').hidden=!plViva;$('plViva').checked=plViva;
+      // .pl-field es display:grid y no obedece a [hidden]: se oculta por estilo.
+      const campoDev=$('plDevices').closest('.pl-field');if(campoDev)campoDev.style.display=plViva?'none':'';
+      $('plCreate').textContent=DEFAULT_MODE?'Añadir a Por defecto':plViva?'Crear playlist viva':'Crear y asignar';
+      if(!plViva)return;
+      const cat=plVivaCatalogo();
+      $('plVivaFuente').textContent=plVivaEstado==='ok'?plVivaData.screens.length+' pantallas vistas · se deducen solas':plVivaEstado==='sin-sesion'?'inicia sesión en admira.tv':plVivaEstado==='error'?'el servidor no responde':'cargando…';
+      $('plVivaTags').innerHTML=cat.length?cat.map(c=>'<button type="button" class="pl-chip ns-'+esc(c.tag.split(':')[0])+(plVivaSel.has(c.tag)?' is-on':'')+'" data-pl-viva="'+esc(c.tag)+'" aria-pressed="'+(plVivaSel.has(c.tag)?'true':'false')+'">'+esc(plVivaEtiqueta(c.tag))+' <i>'+c.count+'</i></button>').join('')
+        :'<p class="pl-empty">'+(plVivaEstado==='ok'?'Aún no hay pantallas vistas: aparecen solas en cuanto un player pide su playlist.':plVivaEstado==='sin-sesion'?'Las playlists vivas se guardan con tu sesión de admira.tv.':'Cargando las pantallas de la flota…')+'</p>';
+      $('plVivaTags').querySelectorAll('[data-pl-viva]').forEach(b=>b.onclick=()=>{const t=b.dataset.plViva;plVivaSel.has(t)?plVivaSel.delete(t):plVivaSel.add(t);plVivaPinta();plResumen()});
+    }
+    async function plVivaGuarda(playlist,accion){
+      const r=await fetch('/api/playlist',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(Object.assign({action:accion||'live-save',rev:plVivaData.live.rev||0},accion==='live-delete'?{id:playlist.id}:{playlist}))});
+      const d=await r.json().catch(()=>({}));
+      if(r.ok&&d.ok){plVivaData.live=d.live;return{ok:true}}
+      if(r.status===409&&d.live)plVivaData.live=d.live;
+      return{ok:false,motivo:r.status===401?'inicia sesión en admira.tv':r.status===403?'tu sesión es de solo lectura':r.status===409?'otra persona la cambió a la vez; vuelve a intentarlo':({live_name_required:'falta el nombre',live_content_required:'elige al menos un tag',live_target_required:'elige al menos una etiqueta de pantalla'}[d.error]||('HTTP '+r.status))};
+    }
+    async function plVivaCrear(){
+      const name=$('plName').value.trim();
+      if(!name){feedback('Ponle nombre a la playlist.',false);$('plName').focus();return}
+      if(!plTagSel.size){feedback('Elige al menos un tag de contenido.',false);return}
+      if(!plVivaSel.size){feedback('Elige a qué pantallas va: al menos una etiqueta.',false);return}
+      const pantallas=plVivaPantallas(),piezas=Math.min(plPool().length,+$('plVivaLimit').value||20);
+      if(!confirm('Crear la playlist viva «'+name+'»\n\nContenido: '+[...plTagSel].map(t=>'#'+t).join(', ')+' ('+piezas+' piezas ahora)\nPantallas: '+[...plVivaSel].map(plVivaEtiqueta).join(' + ')+' ('+pantallas.length+' ahora)\n\nSe actualiza sola. Las pantallas con piezas puestas a mano en «Por defecto» no cambian.'))return;
+      const res=await plVivaGuarda({name,content:{any:[...plTagSel],limit:+$('plVivaLimit').value||20,seconds:+$('plVivaSecs').value||10},target:{all:[...plVivaSel]}});
+      feedback(res.ok?'✓ Playlist viva «'+name+'» creada: '+piezas+' piezas a '+pantallas.length+' pantalla'+(pantallas.length===1?'':'s')+'. Llega a cada player en su siguiente consulta.':'No se ha guardado: '+res.motivo+'.',res.ok);
+      if(res.ok){$('plName').value='';plPintaGuardadas();plResumen()}
+    }
+
     // ── TAGS DEL STOCK DE PIXERIA ─────────────────────────────────────────────
     // Los tags ya no salen del campo `lane` de esta parrilla —que son dos etiquetas
     // locales— sino del catálogo REAL de pixeria.com: 643 piezas con 361 tags. Se
@@ -518,6 +598,13 @@
         c.checked?plDevSel.add(c.dataset.plDev):plDevSel.delete(c.dataset.plDev);plResumen()});
     }
     function plResumen(){
+      if(plViva&&!DEFAULT_MODE){
+        const piezas=Math.min(plPool().length,+$('plVivaLimit').value||20),pant=plVivaPantallas(),secs=+$('plVivaSecs').value||10;
+        $('plSummary').innerHTML=!plTagSel.size?'Elige al menos un tag de contenido.':!plVivaSel.size?'<b>'+piezas+'</b> pieza'+(piezas===1?'':'s')+' ahora · elige a qué pantallas va.'
+          :'<b>'+piezas+'</b> pieza'+(piezas===1?'':'s')+' ahora · <b>'+(piezas*secs)+' s</b> por vuelta · a <b>'+pant.length+'</b> pantalla'+(pant.length===1?'':'s')+' ahora'+(pant.length?' ('+pant.slice(0,4).map(s=>esc(s.screen)).join(', ')+(pant.length>4?'…':'')+')':'');
+        $('plCreate').disabled=!plTagSel.size||!plVivaSel.size||!$('plName').value.trim();
+        return;
+      }
       const sel=plSeleccion(),segs=sel.reduce((n,it)=>n+(+it.seconds||10),0),devs=plDevSel.size;
       $('plSummary').innerHTML=sel.length
         ? '<b>'+sel.length+'</b> pieza'+(sel.length===1?'':'s')+' · <b>'+segs+' s</b> por vuelta · a <b>'+devs+'</b> dispositivo'+(devs===1?'':'s')
@@ -526,7 +613,10 @@
     }
     function plPintaGuardadas(){
       const list=plLeer();
-      $('plSaved').innerHTML=list.map(p=>'<div class="pl-item"><b>'+esc(p.name)+'</b><small>'+p.items.length+' piezas · '+
+      const vivas=(plVivaData.live.playlists||[]).map(p=>{const n=plVivaData.screens.filter(s=>(p.target.all||[]).every(t=>(s.tags||[]).includes(t))&&(!(p.target.any||[]).length||p.target.any.some(t=>(s.tags||[]).includes(t)))).length;
+        return '<div class="pl-item"><b>'+esc(p.name)+'<span class="pl-badge'+(p.enabled===false?' off':'')+'">'+(p.enabled===false?'EN PAUSA':'VIVA')+'</span></b><small>tags: '+[].concat(p.content.all||[],p.content.any||[]).map(t=>'#'+esc(t)).join(', ')+' · pantallas: '+[].concat(p.target.all||[],p.target.any||[]).map(plVivaEtiqueta).map(esc).join(' + ')+' ('+n+' ahora) · máx. '+p.content.limit+' piezas</small>'+
+        '<span class="pl-acts"><button type="button" data-pl-viva-toggle="'+esc(p.id)+'">'+(p.enabled===false?'Activar':'Pausar')+'</button><button type="button" class="pl-del" data-pl-viva-del="'+esc(p.id)+'">Eliminar</button></span></div>'}).join('');
+      $('plSaved').innerHTML=vivas+list.map(p=>'<div class="pl-item"><b>'+esc(p.name)+'</b><small>'+p.items.length+' piezas · '+
         (p.mode==='tag'?'tags: '+p.tags.map(plTagLabel).map(esc).join(', '):'selección manual')+' · '+p.devices.length+' dispositivos</small>'+
         '<span class="pl-acts"><button type="button" data-pl-apply="'+esc(p.id)+'">Reaplicar</button>'+
         '<button type="button" class="pl-del" data-pl-remove="'+esc(p.id)+'">Eliminar</button></span></div>').join('');
@@ -536,6 +626,15 @@
         const p=plLeer().find(x=>x.id===b.dataset.plRemove);if(!p)return;
         if(!confirm('¿Eliminar la playlist «'+p.name+'»?\n\nNo se toca lo que ya esté emitiendo en las pantallas.'))return;
         plGuardar(plLeer().filter(x=>x.id!==p.id));plPintaGuardadas();feedback('Playlist «'+p.name+'» eliminada.',true)});
+      $('plSaved').querySelectorAll('[data-pl-viva-toggle]').forEach(b=>b.onclick=async()=>{
+        const p=(plVivaData.live.playlists||[]).find(x=>x.id===b.dataset.plVivaToggle);if(!p)return;
+        const res=await plVivaGuarda(Object.assign({},p,{enabled:p.enabled===false}));
+        feedback(res.ok?'Playlist viva «'+p.name+'» '+(p.enabled===false?'activada.':'en pausa: deja de salir en la siguiente consulta de cada player.'):'No se ha cambiado: '+res.motivo+'.',res.ok);plPintaGuardadas()});
+      $('plSaved').querySelectorAll('[data-pl-viva-del]').forEach(b=>b.onclick=async()=>{
+        const p=(plVivaData.live.playlists||[]).find(x=>x.id===b.dataset.plVivaDel);if(!p)return;
+        if(!confirm('¿Eliminar la playlist viva «'+p.name+'»?\n\nLas pantallas que la reciben dejarán de emitirla en su siguiente consulta.'))return;
+        const res=await plVivaGuarda(p,'live-delete');
+        feedback(res.ok?'Playlist viva «'+p.name+'» eliminada.':'No se ha eliminado: '+res.motivo+'.',res.ok);plPintaGuardadas()});
     }
     function plRefresca(){
       const proj=projects.find(p=>p.id===activeProjectId);
@@ -547,7 +646,7 @@
       plItemSel=new Set([...plItemSel].filter(id=>vivos.has(id)));
       $('plTagFuente').textContent=stockEstado==='ok'?'pixeria.com · '+(stockPiezas||[]).length+' piezas':
         stockEstado==='error'?'pixeria.com no responde':'pixeria.com';
-      plPintaTags();plPintaItems();plPintaDevices();plPintaGuardadas();plResumen();
+      plPintaTags();plPintaItems();plPintaDevices();plVivaPinta();plPintaGuardadas();plResumen();
     }
     // Aplicar SOBRESCRIBE el borrador de cada pantalla elegida, que es trabajo de
     // otra gente: se pregunta con los nombres delante y se informa pantalla a
@@ -578,18 +677,21 @@
     // El catálogo se pide al ABRIR, no al cargar la página: son 500 KB que sólo
     // hacen falta si vas a montar una playlist.
     $('plOpen').onclick=()=>{const p=$('plPanel'),abrir=p.hidden;p.hidden=!abrir;$('plOpen').setAttribute('aria-expanded',String(abrir));
-      if(abrir){if(DEFAULT_MODE){plDevSel.add(activeScreenId);$('plName').value='Por defecto'}plRefresca();(DEFAULT_MODE?$('plTagInput'):$('plName')).focus();plCargaStock().then(plRefresca)}};
+      if(abrir){if(DEFAULT_MODE){plDevSel.add(activeScreenId);$('plName').value='Por defecto'}plRefresca();(DEFAULT_MODE?$('plTagInput'):$('plName')).focus();plCargaStock().then(plRefresca);if(!DEFAULT_MODE)plVivaCarga().then(plRefresca)}};
+    $('plViva').onchange=()=>{plViva=$('plViva').checked;plVivaPinta();plResumen()};
+    for(const id of ['plVivaLimit','plVivaSecs'])$(id).addEventListener('input',plResumen);
     $('plTagAdd').onclick=plAnadeTagEscrito;
     $('plTagInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();plAnadeTagEscrito()}});
     $('plClose').onclick=()=>{$('plPanel').hidden=true;$('plOpen').setAttribute('aria-expanded','false')};
-    $('plModeTag').onclick=()=>{plMode='tag';$('plModeTag').classList.add('is-on');$('plModeManual').classList.remove('is-on');
+    $('plModeTag').onclick=()=>{plMode='tag';$('plVivaWrap').style.display=DEFAULT_MODE?'none':'';$('plModeTag').classList.add('is-on');$('plModeManual').classList.remove('is-on');
       $('plModeTag').setAttribute('aria-checked','true');$('plModeManual').setAttribute('aria-checked','false');
       $('plTagWrap').hidden=false;$('plManualWrap').hidden=true;plResumen()};
-    $('plModeManual').onclick=()=>{plMode='manual';$('plModeManual').classList.add('is-on');$('plModeTag').classList.remove('is-on');
+    $('plModeManual').onclick=()=>{plMode='manual';plViva=false;$('plVivaWrap').style.display='none';plVivaPinta();$('plModeManual').classList.add('is-on');$('plModeTag').classList.remove('is-on');
       $('plModeManual').setAttribute('aria-checked','true');$('plModeTag').setAttribute('aria-checked','false');
       $('plManualWrap').hidden=false;$('plTagWrap').hidden=true;plResumen()};
     $('plName').addEventListener('input',plResumen);
     $('plCreate').onclick=async()=>{
+      if(plViva&&!DEFAULT_MODE){await plVivaCrear();return}
       const name=$('plName').value.trim(),sel=plSeleccion();
       if(!name){feedback('Ponle nombre a la playlist.',false);$('plName').focus();return}
       if(!sel.length){feedback('Elige al menos un contenido.',false);return}
@@ -603,7 +705,7 @@
     };
     const loadContextPl=loadContext;loadContext=async function(){await loadContextPl();if(!$('plPanel').hidden)plRefresca()};
 
-    if(DEFAULT_MODE){$('plOpen').textContent='＋ Añadir contenidos a Por defecto';$('plPanelTitle').textContent='Editar playlist · Por defecto';$('plCreate').textContent='Añadir a Por defecto';$('plName').value='Por defecto';$('plName').closest('.pl-field').hidden=true;$('balance').hidden=true}
+    if(DEFAULT_MODE){$('plOpen').textContent='＋ Añadir contenidos a Por defecto';$('plPanelTitle').textContent='Editar playlist · Por defecto';$('plCreate').textContent='Añadir a Por defecto';$('plName').value='Por defecto';$('plName').closest('.pl-field').hidden=true;$('plVivaWrap').style.display='none';$('balance').hidden=true}
     setDraftStatus();render();loadContext().then(()=>{if(DEFAULT_MODE&&$('plPanel').hidden)$('plOpen').click()});setInterval(liveStatus,30000);
   })();
   </script>

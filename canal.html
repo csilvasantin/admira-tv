@@ -1715,8 +1715,14 @@ function xtoreMusicKeydown(event){
 async function loadDefaultDraft(){
   await pairingReady;
   const screen=String(programScreen()||programCircuit()||'').trim();if(!screen||PREVIEW.on)return;
+  // Playlists vivas (7-oct-2026): al pedir su playlist la pantalla dice de qué circuito es, qué tamaño tiene y en qué
+  // idioma está; con eso el servidor le deduce las etiquetas (circuito, proyecto, orientación, idioma) y le manda
+  // las piezas de las playlists vivas que le toquen. Nadie etiqueta pantallas a mano.
+  let defaultDraftHints='';
+  try{const c=String(programCircuit()||'').trim(),l=String((typeof navigator!=='undefined'&&navigator.language)||'').slice(0,2),w=typeof innerWidth==='number'?innerWidth:0,h=typeof innerHeight==='number'?innerHeight:0;
+    defaultDraftHints=(c&&c!==screen?'&circuit='+encodeURIComponent(c):'')+'&w='+w+'&h='+h+(l?'&lang='+encodeURIComponent(l):'');}catch(_){}
   try{
-    const d=XTORE_PARENT?await xtorePublicRead('playlist'):await fetch('/api/playlist?screen='+encodeURIComponent(screen)+'&_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
+    const d=XTORE_PARENT?await xtorePublicRead('playlist'):await fetch('/api/playlist?screen='+encodeURIComponent(screen)+defaultDraftHints+'&_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
     if(xtoreMusicEnabled()&&(d?.ok!==true||!Array.isArray(d?.draft?.items)))throw new Error('Playlist unavailable');
     let raw=d&&d.draft&&Array.isArray(d.draft.items)?d.draft.items:[];
     if(xtoreMusicEnabled()){DEFAULT_DRAFT.ready=true;DEFAULT_DRAFT.assigned=raw.length>0;}
