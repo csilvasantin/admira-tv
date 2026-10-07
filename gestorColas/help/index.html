@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="admiranext-version" content="v.07.10.2026.r3.12:59"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><style>body{margin:0;font-family:Inter,-apple-system,Segoe UI,Roboto,sans-serif;background:#f4f2ee;color:#14211d;line-height:1.55}main{max-width:900px;margin:0 auto;padding:22px}h1{margin:.2em 0}h2{margin-top:1.6em;border-bottom:2px solid #00704A33}code,pre{background:#0000000d;border-radius:6px;padding:1px 6px;font-size:13.5px}pre{padding:12px;overflow:auto}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #0002;padding:6px;text-align:left;vertical-align:top;font-size:14.5px}a{color:#00704A}.lang{float:right}.lang a{font-weight:800;margin-left:8px}[lang=en]{display:none}body.en [lang=es]{display:none}body.en [lang=en]{display:block}body.en span[lang=en],body.en td[lang=en]{display:inline}</style><title>Ayuda · Gestor de colas · Admira.tv</title><link rel="stylesheet" href="/admira-frame.css?v=07.10.2026.r3.1259"></head>
+<body><script src="/admira-nav.js?v=07.10.2026.r3.1259" data-active="apps" data-title="Gestor de colas · Ayuda" defer></script><script src="/admira-frame.js?v=07.10.2026.r3.1259" defer></script>
+<main>
+<p class="lang"><a href="?lang=es" id="les">ES</a><a href="?lang=en" id="len">EN</a></p>
+<div lang="es">
+<h1>☕ Gestor de colas · Ayuda</h1>
+<p>Los pedidos del quiosco <a href="https://www.ainimation.studio/starbucks/">ainimation.studio/starbucks</a> (y los que el avatar guía con «☕ Pedir en el quiosco») reciben un número (A001…) y pasan por <b>recibido → en preparación → listo → recogido</b>. El staff los avanza en el control y la pantalla del iPad los muestra en grande; Admirito anuncia en voz (castellano de España) los que están listos. <b>Demo: pago siempre simulado, sin precios reales.</b></p>
+<h2>Direcciones</h2><table>
+<tr><td><a href="/gestorColas/">admira.tv/gestorColas</a></td><td>Control del staff/administración (sesión Admira). Toca un pedido para avanzarlo.</td></tr>
+<tr><td><a href="/gestorColas/pantalla/?marca=starbucks">admira.tv/gestorColas/pantalla?marca=starbucks</a></td><td>Pantalla del cliente para el iPad (horizontal, pantalla completa, ES|EN). Pública, solo lectura.</td></tr>
+<tr><td><a href="/gestorColas/help/">admira.tv/gestorColas/help</a></td><td>Esta ayuda.</td></tr>
+<tr><td><a href="/gestorColas/mcp">admira.tv/gestorColas/mcp</a></td><td>Servidor MCP (Streamable HTTP, JSON-RPC).</td></tr>
+<tr><td><code>/gestorColas/api/&lt;op&gt;?sala=…</code></td><td>API JSON: <code>estado</code>, <code>listar</code>, <code>pedido</code> (lectura) · <code>crear</code>, <code>avanzar</code>, <code>llamar</code>, <code>reiniciar</code> (POST, con clave o sesión).</td></tr></table>
+<h2>Estados</h2><table>
+<tr><td><b>recibido</b> (pendiente)</td><td>Pedido creado en el quiosco, esperando el pago simulado.</td></tr>
+<tr><td><b>en preparación</b></td><td>Pagado (QR o caja). Sale en «En preparación».</td></tr>
+<tr><td><b>listo</b></td><td>El barista lo marca (o pasa solo a los ~20 s). Sale en «¡Listo para recoger!» y Admirito lo anuncia.</td></tr>
+<tr><td><b>recogido</b></td><td>Lo marca el barista (o solo a los 2 min). Desaparece de la pantalla.</td></tr></table>
+<h2>Comandos (control, panel Opciones)</h2><table>
+<tr><td><code>/marca starbucks|365|admiranext</code></td><td>Cambia de marca y sala.</td></tr><tr><td><code>/sala &lt;slug&gt;</code></td><td>Cualquier otra tienda.</td></tr>
+<tr><td><code>/crear [nombre]</code></td><td>Pedido en barra (sin precio).</td></tr><tr><td><code>/avanzar A001 [preparando|listo|recogido]</code></td><td>Siguiente estado o el indicado.</td></tr>
+<tr><td><code>/llamar A001</code></td><td>Vuelve a anunciarlo en el iPad.</td></tr><tr><td><code>/recoger A001</code></td><td>Marcar recogido.</td></tr>
+<tr><td><code>/reiniciar</code></td><td>Vacía la cola y numera desde A001 (pide confirmación).</td></tr><tr><td><code>/idioma es|en</code> · <code>/pantalla</code> · <code>/help</code></td><td>Idioma, abrir pantalla, ayuda.</td></tr></table>
+<h2>Parámetros de la pantalla</h2><p><code>marca=starbucks|365|admiranext</code> · <code>sala=&lt;slug&gt;</code> · <code>lang=es|en</code> · <code>voz=1</code> (sin el toque inicial, solo si el navegador lo permite) · <code>anunciar=todos</code> (anuncia también los que ya estaban listos al abrir).</p>
+<h2>Montar el iPad</h2><ol>
+<li>En el iPad, abre <b>Safari</b> y entra en <code>admira.tv/gestorColas/pantalla?marca=starbucks</code>.</li>
+<li>Compartir → <b>Añadir a pantalla de inicio</b> → «Pedidos». Ábrelo desde el icono: se ve a pantalla completa, sin barra de Safari.</li>
+<li>Ponlo en <b>horizontal</b> y <b>toca una vez</b> la pantalla para que Admirito pueda hablar (iOS lo exige). Sube el volumen.</li>
+<li>Ajustes → Pantalla y brillo → Bloqueo automático: <b>Nunca</b>. Para dejarlo fijo: Ajustes → Accesibilidad → <b>Acceso guiado</b> y triple clic.</li>
+<li>Voz: Ajustes → Accesibilidad → Contenido leído → Voces → Español (España) (p. ej. Mónica o Jorge).</li></ol>
+<h2>Claves y MCP</h2><p>Leer es libre. Crear, avanzar, llamar y reiniciar piden la <b>clave de la sala</b> (<code>gc_…</code>) o tu sesión Admira. Con sesión, el control la enseña en Avanzado → «Ver clave». En el MCP va como argumento <code>clave</code>, cabecera <code>Authorization: Bearer gc_…</code> o <code>X-Clave-Sala</code>.</p>
+<p>Herramientas: <code>cola_estado</code>, <code>cola_listar</code>, <code>cola_crear_pedido</code>, <code>cola_avanzar</code>, <code>cola_llamar</code>, <code>cola_reiniciar</code>, <code>cola_urls</code>.</p>
+<pre>curl -s https://admira.tv/gestorColas/mcp -H 'content-type: application/json' \
+ -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"cola_estado","arguments":{"marca":"starbucks"}}}'</pre>
+</div>
+<div lang="en">
+<h1>☕ Queue manager · Help</h1>
+<p>Orders from the kiosk <a href="https://www.ainimation.studio/starbucks/">ainimation.studio/starbucks</a> (and those guided by the avatar via “☕ Order at the kiosk”) get a number (A001…) and move through <b>received → preparing → ready → collected</b>. Staff advance them on the control page and the iPad display shows them in large type; Admirito announces ready orders aloud. <b>Demo: payment is always simulated, no real prices.</b></p>
+<h2>URLs</h2><table>
+<tr><td><a href="/gestorColas/">admira.tv/gestorColas</a></td><td>Staff/admin control (Admira sign-in). Tap an order to advance it.</td></tr>
+<tr><td><a href="/gestorColas/pantalla/?marca=starbucks&lang=en">admira.tv/gestorColas/pantalla?marca=starbucks</a></td><td>Customer display for the iPad (landscape, full screen, ES|EN). Public, read-only.</td></tr>
+<tr><td><a href="/gestorColas/help/?lang=en">admira.tv/gestorColas/help</a></td><td>This help.</td></tr>
+<tr><td><a href="/gestorColas/mcp">admira.tv/gestorColas/mcp</a></td><td>MCP server (Streamable HTTP, JSON-RPC).</td></tr>
+<tr><td><code>/gestorColas/api/&lt;op&gt;?sala=…</code></td><td>JSON API: <code>estado</code>, <code>listar</code>, <code>pedido</code> (read) · <code>crear</code>, <code>avanzar</code>, <code>llamar</code>, <code>reiniciar</code> (POST, key or session).</td></tr></table>
+<h2>States</h2><p><b>pendiente</b> (received, awaiting simulated payment) → <b>preparando</b> (paid) → <b>listo</b> (barista marks it, or automatically after ~20 s; announced) → <b>recogido</b> (collected; automatically after 2 min).</p>
+<h2>Commands (control, Options panel)</h2><p><code>/marca starbucks|365|admiranext</code> · <code>/sala &lt;slug&gt;</code> · <code>/crear [name]</code> · <code>/avanzar A001 [preparando|listo|recogido]</code> · <code>/llamar A001</code> · <code>/recoger A001</code> · <code>/reiniciar</code> · <code>/idioma es|en</code> · <code>/pantalla</code> · <code>/help</code></p>
+<h2>Display parameters</h2><p><code>marca</code> · <code>sala</code> · <code>lang=es|en</code> · <code>voz=1</code> · <code>anunciar=todos</code></p>
+<h2>iPad setup</h2><ol><li>Open <b>Safari</b> at <code>admira.tv/gestorColas/pantalla?marca=starbucks</code> (add <code>&amp;lang=en</code> for English).</li><li>Share → <b>Add to Home Screen</b>, open it from the icon (full screen).</li><li>Landscape, <b>tap once</b> to enable voice, raise the volume.</li><li>Auto-Lock: <b>Never</b>; lock it with <b>Guided Access</b>.</li></ol>
+<h2>Keys and MCP</h2><p>Reading is open. Create/advance/call/reset require the <b>room key</b> (<code>gc_…</code>) or an Admira session (control → Advanced → “Show key”). Tools: <code>cola_estado</code>, <code>cola_listar</code>, <code>cola_crear_pedido</code>, <code>cola_avanzar</code>, <code>cola_llamar</code>, <code>cola_reiniciar</code>, <code>cola_urls</code>.</p>
+</div>
+<p style="opacity:.6;font-size:13px"><span title="Gestor de colas: control, pantalla iPad, ayuda y MCP en admira.tv/gestorColas · GrokBot · MacMini">v.07.10.2026.r3.12:59</span></p>
+</main>
+<script>(function(){const q=new URLSearchParams(location.search).get('lang')||(navigator.language||'').slice(0,2);if(q==='en'){document.body.classList.add('en');document.documentElement.lang='en';}})();</script>
+</body></html>

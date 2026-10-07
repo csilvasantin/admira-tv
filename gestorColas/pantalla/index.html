@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Pedidos · Pantalla</title>
+<meta name="admiranext-version" content="v.07.10.2026.r3.12:59">
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Pedidos">
+<meta name="theme-color" content="#1E3932">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+:root{--c:#00704A;--osc:#1E3932;--listo:#00A862;--crema:#F2F0EB}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;-webkit-user-select:none;user-select:none}
+body{font-family:'SoDo Sans',Inter,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--osc);color:#fff;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,.9fr);grid-template-rows:auto 1fr auto;height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left)}
+header{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:12px 22px;background:#0003}
+#logo{width:52px;height:52px;border-radius:50%;background:var(--c);display:grid;place-items:center;font-size:26px;font-weight:900;border:3px solid #fff}
+header h1{margin:0;font-size:clamp(20px,2.6vw,34px);flex:1;letter-spacing:.02em}header h1 small{font-weight:500;opacity:.7;font-size:.6em;margin-left:8px}
+#lang{font:inherit;font-weight:800;border:2px solid #fff8;background:none;color:#fff;border-radius:999px;padding:8px 16px;font-size:16px}
+#reloj{font-size:18px;opacity:.75;font-variant-numeric:tabular-nums}
+section{padding:14px 20px;min-height:0;display:flex;flex-direction:column}
+section h2{margin:0 0 14px;font-size:clamp(22px,2.8vw,40px)}
+.prep h2{color:#cfe9dc}.listo{background:#ffffff12;border-radius:26px 26px 0 0}.listo h2{color:#9EE6C4}
+.nums{display:flex;flex-wrap:wrap;gap:12px;align-content:flex-start;overflow:hidden}
+.n{font-weight:900;border-radius:16px;padding:.08em .38em;font-variant-numeric:tabular-nums;line-height:1.1;text-align:center}
+.prep .n{font-size:clamp(30px,4.4vw,60px);background:#ffffff1f}
+.listo .n{font-size:clamp(46px,7.2vw,104px);background:#fff;color:var(--osc)}
+.n small{display:block;font-size:.3em;font-weight:700;opacity:.8}
+.n.nuevo{background:var(--listo);color:#fff;animation:latido 1s ease-in-out 6}
+@keyframes latido{50%{transform:scale(1.07)}}
+.vacio{opacity:.45;font-size:22px}
+#avatar{position:relative;min-height:0}
+#avatar iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent}
+#bocadillo{position:absolute;z-index:2;left:4%;right:4%;top:3%;background:#fff;color:var(--osc);border-radius:24px;padding:16px 20px;font-size:clamp(18px,2.3vw,32px);font-weight:800;line-height:1.15;box-shadow:0 14px 40px #0006;opacity:0;transform:translateY(16px);transition:.35s}
+#bocadillo.on{opacity:1;transform:none}
+/* Con la nube cargada, el bocadillo lo dibuja Admirito (say); el nuestro queda solo como respaldo accesible */
+body.nube #bocadillo{clip-path:inset(50%);opacity:0!important}#bocadillo b{color:var(--listo)}
+#bocadillo:after{content:'';position:absolute;bottom:-16px;left:46%;border:16px solid transparent;border-bottom:0;border-top-color:#fff}
+footer{grid-column:1/-1;background:#FFE58A;color:#3A2E00;text-align:center;font-weight:700;font-size:13px;padding:7px}
+#activar{position:fixed;inset:0;background:#1E3932f0;display:grid;place-items:center;z-index:9;text-align:center;font-size:clamp(22px,3vw,36px);font-weight:800;cursor:pointer}
+#activar.off{display:none}#activar span{display:block;font-size:.5em;font-weight:500;opacity:.8;margin-top:10px}
+#girar{display:none}
+@media (orientation:portrait){body{grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr 1.2fr auto}#avatar{grid-column:1/-1;order:-1}}
+</style>
+</head>
+<body>
+<header><div id="logo">★</div><h1><span id="marca">Starbucks</span><small id="tienda"></small></h1><span id="reloj"></span><button id="lang" type="button">EN</button></header>
+<section class="prep"><h2 id="hPrep">⏳ En preparación</h2><div class="nums" id="prep"></div></section>
+<section class="listo"><h2 id="hListo">✅ ¡Listo para recoger!</h2><div class="nums" id="listo"></div></section>
+<div id="avatar"><iframe id="nube" title="Admirito" allow="autoplay" src="https://digitalavatar.ai/nube.html?embed=1&amp;kiosk=1&amp;avatar=admirito&amp;tier=avatar&amp;sector=retail&amp;audio=off&amp;caption=off"></iframe><div id="bocadillo" role="status" aria-live="assertive"></div></div>
+<footer id="pie">DEMO · pedidos de ejemplo y pago SIMULADO: no se cobra nada</footer>
+<div id="activar" role="button" tabindex="0"><div id="actT">🔊 Toca para que Admirito avise en voz alta<span id="actS">El iPad necesita un toque para permitir la voz</span></div></div>
+<script>
+(function(){
+const P=new URLSearchParams(location.search),$=id=>document.getElementById(id);
+const MARCAS={starbucks:{sala:'starbucks-paseo-de-gracia',nombre:'Starbucks',c:'#00704A',osc:'#1E3932',logo:'★'},'365':{sala:'365-demo',nombre:'365',c:'#C8102E',osc:'#3a0a12',logo:'365'},admiranext:{sala:'admiranext-demo',nombre:'AdmiraNeXT',c:'#2a6df4',osc:'#0b1a3a',logo:'A'}};
+let sala=(P.get('sala')||P.get('store')||'').replace(/[^a-z0-9-]/g,'');
+let mk=P.get('marca')||Object.keys(MARCAS).find(k=>MARCAS[k].sala===sala)||(sala?'':'starbucks');
+const M=MARCAS[mk]||{nombre:sala.split('-')[0].replace(/^./,c=>c.toUpperCase()),c:'#00704A',osc:'#1E3932',logo:'★'};
+if(!sala)sala=M.sala||'starbucks-paseo-de-gracia';
+document.documentElement.style.setProperty('--c',M.c);document.documentElement.style.setProperty('--osc',M.osc);
+$('marca').textContent=M.nombre;$('logo').textContent=M.logo;document.title=M.nombre+' · Pedidos';
+const tienda=sala.replace(/^[a-z0-9]+-/,'').split('-').map(w=>w&&w[0].toUpperCase()+w.slice(1)).join(' ');
+let lang=(P.get('lang')||'es').slice(0,2)==='en'?'en':'es';
+const T={es:{prep:'⏳ En preparación',listo:'✅ ¡Listo para recoger!',vacio:'—',pie:'DEMO · pedidos de ejemplo y pago SIMULADO: no se cobra nada',btn:'EN',act:'🔊 Toca para que Admirito avise en voz alta',actS:'El iPad necesita un toque para permitir la voz',off:'Sin conexión, reintentando…',
+  dice:(n,nom)=>nom?nom+', tu pedido '+M.nombre+' está preparado. Pedido '+n+', recógelo en barra.':'Pedido '+n+', ya está listo. Recógelo en barra, por favor.',
+  html:(n,nom)=>nom?'<b>'+nom+'</b>, tu pedido '+M.nombre+' está preparado ☕<br><small>Pedido '+n+' · recógelo en barra</small>':'Pedido <b>'+n+'</b> listo ☕ ¡Recógelo en barra!',voz:'es-ES'},
+ en:{prep:'⏳ Preparing',listo:'✅ Ready for pick-up!',vacio:'—',pie:'DEMO · sample orders and SIMULATED payment: nothing is charged',btn:'ES',act:'🔊 Tap so Admirito can announce orders aloud',actS:'The iPad needs one tap to allow voice',off:'Offline, retrying…',
+  dice:(n,nom)=>nom?nom+', your '+M.nombre+' order is ready. Order '+n+', please collect it at the counter.':'Order '+n+' is ready. Please collect it at the counter.',
+  html:(n,nom)=>nom?'<b>'+nom+'</b>, your '+M.nombre+' order is ready ☕<br><small>Order '+n+' · collect at the counter</small>':'Order <b>'+n+'</b> is ready ☕ Collect at the counter!',voz:'en-GB'}};
+const esc=x=>String(x||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function textos(){const t=T[lang];document.documentElement.lang=lang;$('hPrep').textContent=t.prep;$('hListo').textContent=t.listo;$('pie').textContent=t.pie;$('lang').textContent=t.btn;$('actT').firstChild.textContent=t.act;$('actS').textContent=t.actS;$('tienda').textContent=tienda?'· '+tienda:'';if(ultimo)pintar(ultimo);}
+const vistos=new Map(),cola=[],recientes=new Set(),said=window.__admiritoSaid=[];let primera=true,hablando=false,vozOk=P.get('voz')==='1',ultimo=null;
+const act=$('activar');if(vozOk)act.classList.add('off');
+function activar(){vozOk=true;act.classList.add('off');try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}catch(_){}try{const e=document.documentElement;(e.requestFullscreen||e.webkitRequestFullscreen||function(){}).call(e);}catch(_){}}
+act.addEventListener('click',activar);act.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')activar();});
+function vozDe(ss,l){const vs=ss.getVoices()||[],n=x=>(x.lang||'').replace('_','-');return vs.find(v=>n(v)===l&&/Mónica|Monica|Jorge|Marisol|Google español$/i.test(v.name))||vs.find(v=>n(v)===l)||null;}
+function decir(p){const t=T[lang],num=String(p.numero).replace(/[^A-Z0-9]/gi,''),nom=p.nombre||'';const texto=t.dice(num,nom);
+  const b=$('bocadillo');b.innerHTML=t.html(esc(num),esc(nom));b.classList.add('on');
+  try{$('nube').contentWindow.postMessage({source:'ainimation-xperiencia',type:'say',text:texto,lang:t.voz},'https://digitalavatar.ai');}catch(_){}
+  let via='pantalla';
+  return new Promise(fin=>{const cerrar=()=>{said.push({numero:num,nombre:nom||null,text:texto,via,lang:t.voz,at:Date.now()});setTimeout(()=>{b.classList.remove('on');fin();},2500);};
+    try{const ss=window.speechSynthesis;if(!vozOk||!ss||typeof SpeechSynthesisUtterance!=='function')return cerrar();
+      const u=new SpeechSynthesisUtterance(texto);u.lang=t.voz;u.rate=.97;const v=vozDe(ss,t.voz);if(v)u.voice=v;via='voz-'+t.voz;
+      let h=false;const ok=()=>{if(!h){h=true;cerrar();}};u.onend=ok;u.onerror=ok;setTimeout(ok,9000);ss.speak(u);}catch(_){cerrar();}});}
+async function siguiente(){if(hablando)return;hablando=true;while(cola.length)await decir(cola.shift());hablando=false;}
+const chips=(a,nuevos)=>a.length?a.map(p=>'<span class="n'+(nuevos&&nuevos.has(p.numero)?' nuevo':'')+'">'+esc(p.numero)+(p.nombre?'<small>'+esc(p.nombre)+'</small>':'')+'</span>').join(''):'<span class="vacio">'+T[lang].vacio+'</span>';
+function pintar(d){ultimo=d;$('listo').innerHTML=chips(d.listo||[],recientes);$('prep').innerHTML=chips(d.preparando||[]);}
+async function tic(){try{const r=await fetch('/gestorColas/api/estado?sala='+sala,{cache:'no-store'});const d=await r.json();if(!d.ok)throw 0;
+  (d.listo||[]).forEach(p=>{const k=p.llamadas||0;if(!vistos.has(p.numero)||vistos.get(p.numero)<k){const nuevo=!vistos.has(p.numero)||vistos.get(p.numero)<k;vistos.set(p.numero,k);if(nuevo&&(!primera||P.get('anunciar')==='todos')){cola.push(p);recientes.add(p.numero);setTimeout(()=>recientes.delete(p.numero),15000);}}});
+  primera=false;pintar(d);document.body.dataset.ok='1';siguiente();}catch(_){document.body.dataset.ok='0';$('pie').textContent=T[lang].off;}}
+$('lang').onclick=e=>{e.stopPropagation();lang=lang==='es'?'en':'es';textos();};
+setInterval(()=>{$('reloj').textContent=new Date().toLocaleTimeString(lang==='en'?'en-GB':'es-ES',{hour:'2-digit',minute:'2-digit'});},1000);
+try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(()=>{});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&navigator.wakeLock)navigator.wakeLock.request('screen').catch(()=>{});});}catch(_){}
+window.__pantalla={get sala(){return sala;},get lang(){return lang;}};
+$('nube').addEventListener('load',()=>document.body.classList.add('nube'));
+textos();tic();setInterval(tic,2000);
+})();
+</script>
+</body>
+</html>
