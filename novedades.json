@@ -22,5 +22,10 @@
     "Acceso de solo lectura para grabar la demo 365, sin Google",
     "El enlace caduca a las 8 horas y vale una sola vez",
     "Una escritura con esa clave responde 403 y se revoca al momento"
+  ],
+  "v.07.10.2026.r1.07:39": [
+    "El avatar estrena pastilla: AVATAR · Admirito, HUMAN · Luna, METAHUMAN · Neo; púlsala para cambiar",
+    "Desliza o usa ←/→ para subir o bajar de categoría; /avatar avatar|human|metahuman sigue funcionando",
+    "Mismo panel del avatar en las 5 plataformas (avatar.js y experto.js ?v=20261007-pill-1)"
   ]
 }

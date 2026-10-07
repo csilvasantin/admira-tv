@@ -1,9 +1,9 @@
 {
-  "version": "v.06.10.2026.r4.18:51",
+  "version": "v.07.10.2026.r1.07:39",
   "signature": "GrokBot · MacMini",
   "agent": "GrokBot",
   "machine": "MacMini",
-  "day": "06.10.2026",
-  "time": "18:51",
-  "evidence": "Con la cookie visor de solo lectura (#5261) el middleware bloqueaba también POST /auth/challenge (403 solo_lectura): ahora /auth/challenge, /auth/callback y /auth/logout quedan fuera del guarda."
+  "day": "07.10.2026",
+  "time": "07:39",
+  "evidence": "Panel del avatar unificado: pastilla de categoría (avatar/human/metahuman) y pines avatar.js/experto.js 20261007-pill-1."
 }
