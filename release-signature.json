@@ -1,9 +1,9 @@
 {
-  "version": "v.07.10.2026.r5.13:22",
-  "signature": "GrokBot · MacMini",
-  "agent": "GrokBot",
-  "machine": "MacMini",
+  "version": "v.07.10.2026.r6.taza-camera",
+  "signature": "Codex · MacBookAirAzul",
+  "agent": "Codex",
+  "machine": "MacBookAirAzul",
   "day": "07.10.2026",
   "time": "13:22",
-  "evidence": "El velo de Opciones/Avanzado/Experto cierra el panel y deja pasar el clic: el primer toque en ＋ Pedido en barra ya funciona."
+  "evidence": "CLI /demo taza abre cámara pública en esquina de Jardinets; cierre libera el dispositivo."
 }
