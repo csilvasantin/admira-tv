@@ -7,7 +7,7 @@ import { missingConfig, gifRpc, deliveryResult } from './core.mjs';
 const directory = path.dirname(new URL(import.meta.url).pathname);
 const configPath = process.env.PLAYERTAZA_BRIDGE_CONFIG || path.join(directory, 'config.private.json');
 const origin = 'https://playertaza.csilvasantin.workers.dev';
-const health = { process: true, gifReady: false, target: 'CarlosGdG', slot: 2, state: 'starting', lastJob: null };
+const health = { process: true, gifReady: false, target: 'CarlosGdG', slot: 1, state: 'starting', lastJob: null };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 let stopping = false, config = {}, bot = null, sdkConfig = '', busy = false;
 process.on('SIGTERM', () => { stopping = true; });
@@ -31,7 +31,8 @@ async function queue(route, body) {
 }
 async function configure() {
   config = JSON.parse(await fs.readFile(configPath, 'utf8'));
-  if (config.slot !== 2 || config.target !== 'CarlosGdG') throw new Error('Destino incorrecto: requiere CarlosGdG slot 2');
+  if (![1, 2].includes(config.slot) || config.target !== 'CarlosGdG') throw new Error('Destino incorrecto: requiere CarlosGdG y un slot verificado');
+  health.slot = config.slot;
   const missing = missingConfig(config);
   health.missing = missing;
   if (missing.includes('bridgeKey') || missing.includes('botToken')) { health.gifReady = false; health.state = 'awaiting_configuration'; return; }
@@ -62,7 +63,7 @@ async function send(job) {
   let result;
   try {
     const rpc = gifRpc(job, origin);
-    const reply = await bot.setDevMessage(config.chat, { bindingIndex: 2 }, rpc);
+    const reply = await bot.setDevMessage(config.chat, { bindingIndex: config.slot }, rpc);
     result = deliveryResult(reply);
   } catch (error) {
     // Do not log the SDK error object: it may contain credentials or URLs.

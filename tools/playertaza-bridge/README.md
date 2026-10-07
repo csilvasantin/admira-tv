@@ -5,9 +5,9 @@ Reconstruido el 7 de octubre de 2026 a partir del Worker publicado y del
 Node 22 o posterior. `bash install-mini.sh` instala el SDK y un LaunchAgent
 con arranque al inicio de sesión y reinicio si el proceso termina.
 
-Destino único: **CarlosGdG**, binding slot **2**. Identificador histórico:
-`11ZKCBTTUX1FRG00065F`. No modifica el slot 1 Planeta ni registra de nuevo
-los slots existentes. El alias visible de la taza no identifica por sí solo
+Destino único: **CarlosGdG**, binding slot **1**, verificado visualmente en Bubble el 7 de octubre de 2026. Identificador histórico:
+`11ZKCBTTUX1FRG00065F`. La asociación histórica situaba CarlosGdG en el slot 2, pero la cuenta actual
+lo muestra en el slot 1 y el segundo vacío. No registra de nuevo los slots. El alias visible de la taza no identifica por sí solo
 el dispositivo remoto: el slot se debe comprobar en la cuenta Bubble.
 
 Configuración privada fuera de Git: `config.private.json`, permisos 0600.
