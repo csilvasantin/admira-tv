@@ -3,7 +3,7 @@
 // (argumento, Authorization: Bearer o X-Clave-Sala) o sesión Admira.
 import { salaDe, operar, ESCRIBE, autoriza, urls, json, ESTADOS } from "./_lib.js";
 
-const VERSION = "v.07.10.2026.r3.12:59";
+const VERSION = "v.07.10.2026.r4.taza-demo";
 const S = { type: "string" };
 const base = { sala: { ...S, description: "Slug de la tienda/sala (por defecto starbucks-paseo-de-gracia)" }, marca: { ...S, description: "starbucks | 365 | admiranext (atajo de sala)" } };
 const conClave = { ...base, clave: { ...S, description: "Clave de la sala (gc_…); no hace falta con sesión Admira" } };

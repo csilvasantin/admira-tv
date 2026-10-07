@@ -32,7 +32,7 @@
     "Cada pantalla ejecuta únicamente sus órdenes y las dirigidas a todo el circuito",
     "Las órdenes de otra pantalla avanzan el cursor sin generar un ACK rechazado ni repetirse"
   ],
-  "v.07.10.2026.r3.12:59": [
+  "v.07.10.2026.r4.taza-demo": [
     "Gestor de colas en admira.tv/gestorColas: el staff toca un pedido para avanzarlo",
     "Pantalla para el iPad de Starbucks con los números en grande y Admirito avisando en voz",
     "Ayuda ES/EN en /gestorColas/help y MCP en /gestorColas/mcp con clave por sala"
