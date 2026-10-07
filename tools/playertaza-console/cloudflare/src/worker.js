@@ -1388,6 +1388,12 @@ async function storeRoute(req,env,url){
 var worker_default = {
   async fetch(req, env) {
     const publicUrl=new URL(req.url);
+    if(publicUrl.pathname==='/taza')return Response.redirect(publicUrl.origin+'/taza/'+publicUrl.search,302);
+    if(publicUrl.pathname==='/taza/'){
+      const asset=await env.ASSETS.fetch(new Request(new URL('/taza-shell.html',publicUrl.origin)));
+      const headers=new Headers(asset.headers);headers.set('cache-control','no-store');
+      return new Response(asset.body,{status:asset.status,headers});
+    }
     if(publicUrl.pathname.startsWith('/taza/')){
       publicUrl.pathname=publicUrl.pathname.slice(5);
       publicUrl.hostname='playertaza.csilvasantin.workers.dev';

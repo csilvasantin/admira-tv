@@ -34,3 +34,10 @@ zone_id = "8f712c1cf67e94f97d7697de5ea25999"
 [[routes]]
 pattern = "www.ainimation.studio/taza/help*"
 zone_id = "8f712c1cf67e94f97d7697de5ea25999"
+
+[[routes]]
+pattern = "ainimation.studio/taza*"
+zone_id = "8f712c1cf67e94f97d7697de5ea25999"
+[[routes]]
+pattern = "www.ainimation.studio/taza*"
+zone_id = "8f712c1cf67e94f97d7697de5ea25999"
