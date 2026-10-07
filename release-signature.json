@@ -1,9 +1,9 @@
 {
-  "version": "v.07.10.2026.r10.14:30",
+  "version": "v.07.10.2026.r11.14:35",
   "signature": "GrokBot · MacMini",
   "agent": "GrokBot",
   "machine": "MacMini",
   "day": "07.10.2026",
-  "time": "14:30",
-  "evidence": "Pantalla del iPad: avisos uno por pedido en orden de llegada y cortados si el pedido deja de estar listo."
+  "time": "14:35",
+  "evidence": "Pantalla del iPad: cada aviso tiene tope duro (4,5 s con cola, 6 s sin) aunque la voz no termine; Listo en orden de llegada. Probado con voz real (Mónica es-ES)."
 }

@@ -83,19 +83,29 @@ function vozDe(ss,l){const vs=ss.getVoices()||[],n=x=>(x.lang||'').replace('_','
 const sigueListo=p=>!!(ultimo&&(ultimo.listo||[]).some(x=>x.id===p.id));
 function callar(){cola.length=0;gen++;try{window.speechSynthesis&&speechSynthesis.cancel();}catch(_){}const b=$('bocadillo');b.classList.remove('on');b.innerHTML='';}
 let actual=null,cortar=null;
+// Un aviso por pedido con TOPE DURO independiente del audio (Carlos, 7-oct-2026: con voz real el bocadillo
+// se quedaba en A007 y A008 no salía). Tope: 6 s si no hay nadie esperando, 4,5 s si hay cola. Al vencer se
+// corta la voz (speechSynthesis.cancel) y se pasa al siguiente. El vigilante de tic() lo fuerza si algo falla.
+let inicioAviso=0,topeAviso=0;
 function decir(p){const g=gen,t=T[lang],num=String(p.numero).replace(/[^A-Z0-9]/gi,''),nom=p.nombre||'';
   if(!sigueListo(p))return Promise.resolve();
   const texto=t.dice(num,nom),b=$('bocadillo');b.innerHTML=t.html(esc(num),esc(nom));b.classList.add('on');
-  let via='pantalla';
-  // Un aviso dura lo que la voz (máx. 7 s) + 1,2 s de bocadillo; si hay más esperando, el bocadillo se acorta.
-  return new Promise(fin=>{let hecho=false;actual=p;const cerrar=(cortado)=>{if(hecho)return;hecho=true;actual=null;cortar=null;said.push({id:p.id,numero:num,nombre:nom||null,text:texto,via,lang:t.voz,at:Date.now(),cortado:!!cortado});if(cortado){try{speechSynthesis.cancel();}catch(_){}b.classList.remove('on');return fin();}setTimeout(()=>{if(g===gen&&!actual)b.classList.remove('on');fin();},cola.length?400:1200);};
-    cortar=()=>cerrar(true);setTimeout(()=>cerrar(),7000);
-    try{const ss=window.speechSynthesis;if(!vozOk||!ss||typeof SpeechSynthesisUtterance!=='function')return setTimeout(cerrar,1500);
-      const u=new SpeechSynthesisUtterance(texto);u.lang=t.voz;u.rate=.97;const v=vozDe(ss,t.voz);if(v)u.voice=v;via='voz-'+t.voz;
-      u.onend=cerrar;u.onerror=cerrar;ss.speak(u);}catch(_){cerrar();}});}
+  let via='pantalla';const ss=window.speechSynthesis;
+  return new Promise(fin=>{let hecho=false,timer=0;actual=p;inicioAviso=Date.now();
+    const cerrar=(motivo)=>{if(hecho)return;hecho=true;clearTimeout(timer);actual=null;cortar=null;
+      if(motivo!=='fin'){try{ss&&ss.cancel();}catch(_){}}
+      said.push({id:p.id,numero:num,nombre:nom||null,text:texto,via,lang:t.voz,at:inicioAviso,ms:Date.now()-inicioAviso,motivo});
+      if(motivo==='cortado'||cola.length){if(g===gen)b.classList.remove('on');return fin();}
+      setTimeout(()=>{if(g===gen&&!actual)b.classList.remove('on');fin();},900);};
+    cortar=()=>cerrar('cortado');
+    const plazo=()=>{const tope=cola.length?4500:6000;topeAviso=tope;const resto=tope-(Date.now()-inicioAviso);if(resto<=0)return cerrar('tope');timer=setTimeout(plazo,Math.min(resto,500));};
+    plazo();
+    if(!vozOk||!ss||typeof SpeechSynthesisUtterance!=='function'){setTimeout(()=>cerrar('sin-voz'),1800);return;}
+    try{ss.cancel();const u=new SpeechSynthesisUtterance(texto);u.lang=t.voz;u.rate=1.02;const v=vozDe(ss,t.voz);if(v)u.voice=v;via='voz-'+t.voz;
+      u.onend=()=>cerrar('fin');u.onerror=()=>cerrar('error-voz');ss.speak(u);}catch(_){cerrar('error-voz');}});}
 async function siguiente(){if(hablando)return;hablando=true;try{while(cola.length){const p=cola.shift();await decir(p);}}finally{hablando=false;}}
 const chips=(a,nuevos)=>a.length?a.map(p=>'<span class="n'+(nuevos&&nuevos.has(p.id)?' nuevo':'')+'">'+esc(p.numero)+(p.nombre?'<small>'+esc(p.nombre)+'</small>':'')+'</span>').join(''):'<span class="vacio">'+T[lang].vacio+'</span>';
-function pintar(d){ultimo=d;$('listo').innerHTML=chips(d.listo||[],recientes);$('prep').innerHTML=chips([...(d.recibido||[]),...(d.preparando||[])]);}
+function pintar(d){ultimo=d;$('listo').innerHTML=chips([...(d.listo||[])].reverse(),recientes); /* FIFO: el más antiguo arriba */$('prep').innerHTML=chips([...(d.recibido||[]),...(d.preparando||[])]);}
 async function tic(){if(enVuelo)return;enVuelo=true;window.__pantallaStats.tics++;const ac=new AbortController(),to=setTimeout(()=>ac.abort(),5000);
   try{const r=await fetch('/gestorColas/api/estado?sala='+sala+'&_='+Date.now(),{cache:'no-store',signal:ac.signal});const d=await r.json();if(!d.ok)throw 0;
   const todos=[...(d.recibido||[]),...(d.preparando||[]),...(d.listo||[])],ids=new Set(todos.map(p=>p.id));
@@ -106,6 +116,7 @@ async function tic(){if(enVuelo)return;enVuelo=true;window.__pantallaStats.tics+
   for(let k=cola.length-1;k>=0;k--)if(!(d.listo||[]).some(x=>x.id===cola[k].id))cola.splice(k,1);
   ultimo=d;
   if(actual&&cortar&&!(d.listo||[]).some(x=>x.id===actual.id))cortar();
+  if(actual&&cortar&&Date.now()-inicioAviso>(topeAviso||6000)+1500)cortar(); // vigilante
   // El relé da «listo» del más nuevo al más viejo: se anuncian en orden de llegada (el más viejo primero).
   [...(d.listo||[])].reverse().forEach(p=>{const k=p.llamadas||0,v=vistos.get(p.id);if(!v||v.k<k){vistos.set(p.id,{k,n:num(p)});if(!primera||P.get('anunciar')==='todos'){cola.push(p);recientes.add(p.id);window.__colaAvisos=cola.map(x=>x.numero);setTimeout(()=>recientes.delete(p.id),15000);}}});
   todos.forEach(p=>{if(!vistos.has(p.id))vistos.set(p.id,{k:-1,n:num(p)});});
