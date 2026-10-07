@@ -67,5 +67,9 @@
   "v.07.10.2026.r12.14:46": [
     "El launcher puede cargar el motor común en la vista nativa TV con ax_demo=tv",
     "La carga exige ruta y dominio oficiales, se deduplica y conserva el arranque normal y el Tour DooH"
+  ],
+  "v.07.10.2026.r13.15:04": [
+    "La demo TV conserva la vista nativa y los cambios de audiencia sin emitir órdenes a pantallas físicas",
+    "La música y las zonas de taza permanecen en vista local durante el ensayo; las visitas normales mantienen su comportamiento"
   ]
 }

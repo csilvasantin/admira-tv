@@ -13,12 +13,12 @@
 <meta name="description" content="Nivel BEST de la demo ADcelerate: globo fotorrealista de Google (Photorealistic 3D Tiles) centrado en la Plaça de la Vila de Gràcia con vuelo cinematográfico y el kiosko News & Coffee.">
 <link rel="icon" href="../../../favicon.svg">
 <!-- Marco cuadrático COMPARTIDO con el gemelo (una sola fuente de verdad) -->
-<link rel="stylesheet" href="../css/admira-tokens.css?v=07.10.2026.r12.1446">
-<link rel="stylesheet" href="../css/style.css?v=07.10.2026.r12.1446">
-<script src="../js/outdoor-sites.js?v=07.10.2026.r12.1446"></script>
-<script src="../js/urban-route.js?v=07.10.2026.r12.1446"></script>
-<script src="../js/dooh-surfaces.js?v=07.10.2026.r12.1446"></script>
-<script src="../js/outdoor-context.js?v=07.10.2026.r12.1446"></script>
+<link rel="stylesheet" href="../css/admira-tokens.css?v=07.10.2026.r13.1504">
+<link rel="stylesheet" href="../css/style.css?v=07.10.2026.r13.1504">
+<script src="../js/outdoor-sites.js?v=07.10.2026.r13.1504"></script>
+<script src="../js/urban-route.js?v=07.10.2026.r13.1504"></script>
+<script src="../js/dooh-surfaces.js?v=07.10.2026.r13.1504"></script>
+<script src="../js/outdoor-context.js?v=07.10.2026.r13.1504"></script>
 <script>
   window.OUTDOOR_EMBED = window.parent !== window && new URLSearchParams(location.search).get('embed') === '1';
   const outdoorEntry = OutdoorContext.bestEntry(location.search, window.parent !== window);
@@ -203,8 +203,8 @@
   .walk-mode #sv-signage .sv-panel{pointer-events:auto;cursor:pointer}
   .walk-mode #sv-signage .sv-panel:focus-visible{outline:3px solid #62e4a4}
 </style>
-<link rel="stylesheet" href="../js/cenital-panel.css?v=07.10.2026.r12.1446"><link rel="stylesheet" href="../css/hidden-ui.css?v=07.10.2026.r12.1446"><script defer src="../js/hidden-ui.js?v=07.10.2026.r12.1446"></script><script src="../js/pedestrian-layers.js?v=07.10.2026.r12.1446"></script><script src="../js/jardinets-shoes.js?v=07.10.2026.r12.1446"></script><script src="../js/store-entrance.js?v=07.10.2026.r12.1446"></script><script src="../js/jardinets-taza.js?v=07.10.2026.r12.1446"></script><script src="../js/pedestrian-motion.js?v=07.10.2026.r12.1446"></script><script src="../js/interactive-scene.js?v=07.10.2026.r12.1446"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=07.10.2026.r12.1446"></head>
-<script src="../js/pedestrian-music.js?v=07.10.2026.r12.1446"></script>
+<link rel="stylesheet" href="../js/cenital-panel.css?v=07.10.2026.r13.1504"><link rel="stylesheet" href="../css/hidden-ui.css?v=07.10.2026.r13.1504"><script defer src="../js/hidden-ui.js?v=07.10.2026.r13.1504"></script><script src="../js/pedestrian-layers.js?v=07.10.2026.r13.1504"></script><script src="../js/jardinets-shoes.js?v=07.10.2026.r13.1504"></script><script src="../js/store-entrance.js?v=07.10.2026.r13.1504"></script><script src="../js/jardinets-taza.js?v=07.10.2026.r13.1504"></script><script src="../js/pedestrian-motion.js?v=07.10.2026.r13.1504"></script><script src="../js/interactive-scene.js?v=07.10.2026.r13.1504"></script><link rel="stylesheet" href="../css/interactive-scene.css?v=07.10.2026.r13.1504"></head>
+<script src="../js/pedestrian-music.js?v=07.10.2026.r13.1504"></script>
 <body>
 
 <div id="app">
@@ -355,13 +355,13 @@
   </div>
 </div>
 
-<script src="street-walk.js?v=07.10.2026.r12.1446"></script>
-<script src="../js/cenital-panel.js?v=07.10.2026.r12.1446"></script><script src="../js/walk-overview.js?v=07.10.2026.r12.1446"></script><script src="walk-orientation.js?v=07.10.2026.r12.1446"></script><script src="route-walk.js?v=07.10.2026.r12.1446"></script>
-<script src="../js/player-library.js?v=07.10.2026.r12.1446"></script>
-<script src="screen-player.js?v=07.10.2026.r12.1446"></script>
-<script src="screen-audio.js?v=07.10.2026.r12.1446"></script>
-<script src="surface-focus.js?v=07.10.2026.r12.1446"></script>
-<script src="camera-path.js?v=07.10.2026.r12.1446"></script>
+<script src="street-walk.js?v=07.10.2026.r13.1504"></script>
+<script src="../js/cenital-panel.js?v=07.10.2026.r13.1504"></script><script src="../js/walk-overview.js?v=07.10.2026.r13.1504"></script><script src="walk-orientation.js?v=07.10.2026.r13.1504"></script><script src="route-walk.js?v=07.10.2026.r13.1504"></script>
+<script src="../js/player-library.js?v=07.10.2026.r13.1504"></script>
+<script src="screen-player.js?v=07.10.2026.r13.1504"></script>
+<script src="screen-audio.js?v=07.10.2026.r13.1504"></script>
+<script src="surface-focus.js?v=07.10.2026.r13.1504"></script>
+<script src="camera-path.js?v=07.10.2026.r13.1504"></script>
 <script>
 /* ============================================================
    ADcelerate — Nivel BEST (fotorrealista)
@@ -379,6 +379,7 @@ for(const surface of DoohSurfaces.all){
 }
 
 const WALK_MODE = window.OUTDOOR_EMBED && new URLSearchParams(location.search).get('walk') === '1';
+const READONLY_DEMO = new URLSearchParams(location.search).get('readonly') === '1';
 let activeWalkSite = OutdoorSites.get(new URLSearchParams(location.search).get('site')) || OutdoorSites.get('vila');
 let remoteSession=null,remoteTicker=null,remoteLastToken=0,remotePreviewFrame=null;
 let streetWalk = null, lastWalkState = null, walkBootTimer = null, walkBootFailed = false, walkBootGeneration = 0;
@@ -1262,6 +1263,7 @@ function piezaParaPerfil(perfil){
   return lista[n];
 }
 async function mandarAlaPantalla(site, it){
+  if (READONLY_DEMO) return false;
   // num: primero el de la playlist del tema (el worker lo conserva desde el 10-sep), si no el del índice del Stock.
   const st = stockIndexById.get(String(it.id)); const num = (it && it.num) || (st && st.num); const id = SITE_CIRCUIT[site]; if (!num || !id) return false;
   // 15-sep: una orden, todas las pantallas reales del sitio (principal + SITE_EXTRA). ok si alguna la acepta.
@@ -1279,7 +1281,7 @@ function viandanteTick(){
   perfilOverride = { site, item: it, until: Date.now() + syncDurMs(it) };
   chQueue = [{ id: String(it.id || it.url), url: String(it.url).replace(/^https:\/\/www\.admira\.tv\//, 'https://admira.tv/'), type: it.type === 'video' ? 'video' : 'image', title: it.title || '', source: 'viandante', seconds: syncDurMs(it) / 1000, thumb: it.thumb || it.thumbnail || '' }];
   chLive = true; chErr = 0; chIdx = -1; chPlay(0); clearTimeout(chTimer);
-  chTag('viandante ' + dom + ' → ' + chTitle() + ' · también en ' + SITE_SCREEN[site]);
+  chTag('viandante ' + dom + ' → ' + chTitle() + (READONLY_DEMO ? ' · vista local' : ' · también en ' + SITE_SCREEN[site]));
   mandarAlaPantalla(site, it);
 }
 setInterval(viandanteTick, 1000);
@@ -1850,6 +1852,7 @@ let mappedMusicSentAt=0, mappedMusicSentId='';
 // Mismo force/throttle que la pantalla real; al parar, limpia a Jardinets / habitual.
 let lastMugKey='';
 function mappedMusicToMug(item){
+  if (READONLY_DEMO) return;
   let name, verb, id;
   if(!item){ name='Jardinets'; verb='habitual'; id='stop'; lastMugKey=''; }
   else {
@@ -1915,8 +1918,8 @@ async function mandarZonaTaza(zona){
   // la suya a las pantallas reales del sitio dentro de ponerEnElQuiosco.
   const taza=JardinetsTaza.ordenes(zona,[])[0];
   let okTaza=false;
-  try{ okTaza=(await fetch(CMD_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(taza)})).ok; }catch(_){ }
-  try{ chTag(zona.rotulo+' → quiosco · '+SITE_SCREEN[syncSiteId()]+(okTaza?' · taza':' · taza sin respuesta')); }catch(_){ }
+  if (!READONLY_DEMO) try{ okTaza=(await fetch(CMD_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(taza)})).ok; }catch(_){ }
+  try{ chTag(zona.rotulo+' → quiosco · '+SITE_SCREEN[syncSiteId()]+(READONLY_DEMO?' · vista local':okTaza?' · taza':' · taza sin respuesta')); }catch(_){ }
   return true;
 }
 const tazaZonas=JardinetsTaza.create({getPanorama:()=>sv,container:$('streetview'),warp:quadWarp,isAvailable:()=>WALK_MODE&&!remoteSession&&!routeWalk.active,onZone:mandarZonaTaza});

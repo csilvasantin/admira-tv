@@ -13,7 +13,11 @@ El launcher puede pedir el motor común con
 `https://admira.tv/adcelerate/demo/?view=human&site=starbucks&ax_demo=tv`.
 Sólo `ax_demo=tv` en esta ruta HTTPS de `admira.tv` o `www.admira.tv` carga
 `suite/experto.js` con las marcas `data-pata="tv"` y `data-admira-demo-engine`.
-La carga se deduplica y no ejecuta controles de emisión. Sin ese parámetro,
+La carga se deduplica y no ejecuta controles de emisión. La vista de calle
+propaga `readonly=1` al iframe fotográfico: los cambios de audiencia, música y
+zonas de taza conservan la vista local, pero no envían órdenes a pantallas ni
+actualizan la taza física. Las visitas ordinarias conservan esas integraciones.
+Sin ese parámetro,
 el arranque nativo permanece igual, incluido `?tour=dooh`.
 El Tour DooH existente recorre Vila, Jardinets y Lesseps; no incluye Starbucks.
 Este bootstrap no crea otro recorrido ni desactiva las integraciones operativas

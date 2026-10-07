@@ -1952,6 +1952,7 @@ function openPhoto(mode = 'photo') {
   const url = new URL('best/', location.href);
   const params = new URLSearchParams(location.search);
   url.searchParams.set('embed', '1');
+  if (params.get('ax_demo') === 'tv') url.searchParams.set('readonly', '1');
   if (mode === 'human') { url.searchParams.set('walk','1'); url.searchParams.set('side','panels'); url.searchParams.set('site',photo.siteId); photo.initialSiteId=photo.siteId; }
   if (params.has('cal')) url.searchParams.set('cal', params.get('cal'));
   if (['front','panels'].includes(params.get('side'))) url.searchParams.set('side', params.get('side'));
