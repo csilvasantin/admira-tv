@@ -70,6 +70,14 @@
     <p class="hint">id: <span id="idPrev" class="id-prev">—</span> · pantalla: <span id="scrPrev" class="id-prev">—</span></p>
     <p id="chanPrev" class="hint" style="margin:-8px 0 16px;color:var(--txt)"></p>
 
+    <label>Proyecto</label>
+    <select id="project" style="width:100%;background:#08121b;border:1px solid var(--line);border-radius:9px;color:var(--txt);padding:11px 12px;font-size:15px;margin-bottom:8px">
+      <option value="">AdmiraNeXT · equipo propio</option>
+      <option value="__otro">Otro proyecto…</option>
+    </select>
+    <input id="projectOther" placeholder="Nombre del proyecto" maxlength="40" hidden>
+    <p class="hint">Su nombre único empezará por <span id="projPrev" class="id-prev">AdmiraNeXT_</span></p>
+
     <label>Dispositivo (opcional)</label>
     <input id="device" placeholder="MacBook Pro 14" maxlength="60">
 
@@ -108,6 +116,20 @@ const CANAL_BASE='https://www.admira.tv/canal.html';
 const $=id=>document.getElementById(id);
 let coords=null;
 let PROJECTS=[];   // /grid/projects → para decir QUÉ canal emitirá el equipo
+// Proyecto del equipo (Carlos, 7-oct-2026: «que el alta pida el proyecto»): es el primer tramo de su nombre único
+// (idIoT · Starbucks_PaseodeGracia_103_Pantalla_1). La lista es la MISMA con la que el catálogo nombra.
+function projectChoice(){ const v=$('project').value; return v==='__otro' ? $('projectOther').value.replace(/\s+/g,' ').trim() : v; }
+function projectPrefix(){
+  const v=$('project').value, text=v==='__otro' ? projectChoice() : (v ? $('project').selectedOptions[0].textContent : 'AdmiraNeXT');
+  const p=String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,'');
+  return p ? p[0].toUpperCase()+p.slice(1)+'_' : 'AdmiraNeXT_';
+}
+async function loadIotProjects(){
+  try{ const r=await fetch(API_PRIMARY+'/locations/iot-projects',{cache:'no-store'}); const j=await r.json();
+    const otro=$('project').querySelector('option[value="__otro"]');
+    for(const p of (Array.isArray(j.projects)?j.projects:[])){ if(!p||!p.id||!p.label) continue; const o=document.createElement('option'); o.value=p.id; o.textContent=p.label; $('project').insertBefore(o,otro); }
+  }catch(_){}
+}
 
 function slug(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,48); }
 function effId(){ return slug($('circuit').value || $('name').value); }
@@ -137,8 +159,11 @@ function refreshPrev(){
   $('idPrev').textContent=id||'—';
   $('scrPrev').textContent=id?id+'-mupi':'—';
   $('chanPrev').innerHTML=channelLine(id);
+  $('projPrev').textContent=projectPrefix();
   $('go').disabled=!(id && coords);
 }
+$('project').addEventListener('change',()=>{ const otro=$('project').value==='__otro'; $('projectOther').hidden=!otro; if(otro) $('projectOther').focus(); refreshPrev(); });
+$('projectOther').addEventListener('input',refreshPrev);
 $('name').addEventListener('input',()=>{ if(!$('circuit').dataset.touched) $('circuit').value=slug($('name').value); refreshPrev(); });
 $('circuit').addEventListener('input',()=>{ $('circuit').dataset.touched='1'; refreshPrev(); });
 
@@ -172,6 +197,9 @@ $('form').addEventListener('submit',async e=>{
   $('go').disabled=true; $('go').innerHTML='<span class="spin"></span>Registrando…';
   const id=effId();
   const payload={ name, circuit:id, addr:$('addr').value.trim(), device:$('device').value.trim(), orientation:$('orient').value, coords };
+  const proyecto=projectChoice();
+  if($('project').value==='__otro' && !proyecto){ setMsg('Escribe el nombre del proyecto o elige uno de la lista.','err'); $('go').disabled=false; $('go').textContent='Dar de alta'; return; }
+  if(proyecto) payload.project=proyecto;
   // Intenta primero el proxy api.admira.store; si el proxy falla (red / 5xx) cae
   // al worker omnipublicity directo (que en ES puede estar bloqueado — por eso el proxy va primero).
   async function register(){
@@ -211,6 +239,7 @@ $('form').addEventListener('submit',async e=>{
 });
 refreshPrev();
 loadProjects();
+loadIotProjects();
 </script>
   <script src="/assets/admira-version-watch.js?v=07.10.2026.r14.1530" defer></script>
 </body>

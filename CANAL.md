@@ -233,6 +233,8 @@ canal; el servidor lo comprueba en `GET api.admira.store/locations/iot/<idIoT>` 
 le da además Xpacio, proyecto y circuito. En el editor se escribe el idIoT tal cual y se valida antes de aceptarlo.
 El alta de un equipo (`/alta.html` → `POST /locations/register`) le pone el idIoT sola: la respuesta lo trae en
 `idIoT`, la página lo enseña y añade `&iot=` al enlace del canal.
+El alta pide el **proyecto** (lista de `GET /locations/iot-projects` u «Otro»): viaja como `project`, se guarda en la
+ficha, es el primer tramo del idIoT y la etiqueta `proyecto:` de la pantalla.
 
 **Circuitos definidos.** Un circuito es un destino con nombre guardado junto a las reglas (`circuits[]` en
 `admira-tv:playlist:live:v1`): `{id, name, target:{all,any}}`. `applyCircuits` añade `circuito:<id>` a toda pantalla

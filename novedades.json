@@ -4,6 +4,10 @@
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
   ],
+  "v.07.10.2026.r24.21:49": [
+    "Alta de equipos: ahora pide el proyecto (uno de la lista o uno escrito)",
+    "El proyecto es el primer tramo del nombre único del equipo —Starbucks_…— y su etiqueta en las playlists"
+  ],
   "v.07.10.2026.r23.21:35": [
     "Alta de equipos: el equipo nuevo recibe solo su nombre único (idIoT) y la página lo enseña",
     "Su canal lo declara desde el primer arranque, así las playlists enviadas a ese nombre le llegan al momento"
