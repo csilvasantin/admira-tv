@@ -86,7 +86,7 @@ function decir(p){const t=T[lang],num=String(p.numero).replace(/[^A-Z0-9]/gi,'')
       let h=false;const ok=()=>{if(!h){h=true;cerrar();}};u.onend=ok;u.onerror=ok;setTimeout(ok,9000);ss.speak(u);}catch(_){cerrar();}});}
 async function siguiente(){if(hablando)return;hablando=true;while(cola.length)await decir(cola.shift());hablando=false;}
 const chips=(a,nuevos)=>a.length?a.map(p=>'<span class="n'+(nuevos&&nuevos.has(p.numero)?' nuevo':'')+'">'+esc(p.numero)+(p.nombre?'<small>'+esc(p.nombre)+'</small>':'')+'</span>').join(''):'<span class="vacio">'+T[lang].vacio+'</span>';
-function pintar(d){ultimo=d;$('listo').innerHTML=chips(d.listo||[],recientes);$('prep').innerHTML=chips(d.preparando||[]);}
+function pintar(d){ultimo=d;$('listo').innerHTML=chips(d.listo||[],recientes);$('prep').innerHTML=chips([...(d.recibido||[]),...(d.preparando||[])]);}
 async function tic(){try{const r=await fetch('/gestorColas/api/estado?sala='+sala,{cache:'no-store'});const d=await r.json();if(!d.ok)throw 0;
   (d.listo||[]).forEach(p=>{const k=p.llamadas||0;if(!vistos.has(p.numero)||vistos.get(p.numero)<k){const nuevo=!vistos.has(p.numero)||vistos.get(p.numero)<k;vistos.set(p.numero,k);if(nuevo&&(!primera||P.get('anunciar')==='todos')){cola.push(p);recientes.add(p.numero);setTimeout(()=>recientes.delete(p.numero),15000);}}});
   primera=false;pintar(d);document.body.dataset.ok='1';siguiente();}catch(_){document.body.dataset.ok='0';$('pie').textContent=T[lang].off;}}

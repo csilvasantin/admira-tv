@@ -7,7 +7,7 @@ export const RELE = "https://mcp-ainimation.admira.store";
 export const ORIGEN = "https://admira.tv";
 export const SALA = /^[a-z0-9-]{2,80}$/;
 export const MARCAS = { starbucks: "starbucks-paseo-de-gracia", "365": "365-demo", admiranext: "admiranext-demo" };
-export const ESTADOS = ["pendiente", "preparando", "listo", "recogido"];
+export const ESTADOS = ["pendiente", "recibido", "preparando", "listo", "recogido"];
 
 export function salaDe(v, marca) {
   const s = String(v || MARCAS[String(marca || "").toLowerCase()] || MARCAS.starbucks).toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 80);
@@ -58,7 +58,7 @@ export async function operar(env, op, sala, a = {}) {
   if (op === "estado") return { sala, ...(await rele(env, "estado", sala)), urls: urls(sala) };
   if (op === "listar") {
     const d = await rele(env, "estado", sala);
-    let l = [...(d.preparando || []), ...(d.listo || [])];
+    let l = [...(d.recibido || []), ...(d.preparando || []), ...(d.listo || [])];
     if (a.estado) l = l.filter((p) => p.estado === a.estado);
     return { sala, total: l.length, pedidos: l, pendientes_de_pago: d.pendientes, recogidos_recientes: d.recogidos };
   }
