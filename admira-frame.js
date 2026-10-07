@@ -218,6 +218,9 @@
       scrim.style.pointerEvents = "none";
       var below = document.elementFromPoint(e.clientX, e.clientY);
       setTimeout(function () { scrim.style.pointerEvents = ""; }, 250);
+      // Si debajo está el propio icono de un panel (☰ Opciones, ▤, ⌘), el clic YA era «cerrar»: no se
+      // reenvía, o lo volvería a abrir (Carlos, 7-oct-2026: «☰ otra vez no cierra»).
+      if (below && below.closest && below.closest(".af-ico, .af-panel")) return;
       if (below && below !== scrim && !scrim.contains(below)) {
         if (typeof below.focus === "function" && /^(INPUT|TEXTAREA|SELECT)$/.test(below.tagName)) below.focus();
         below.click();
