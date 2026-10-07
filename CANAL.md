@@ -236,6 +236,16 @@ El alta de un equipo (`/alta.html` → `POST /locations/register`) le pone el id
 El alta pide el **proyecto** (lista de `GET /locations/iot-projects` u «Otro»): viaja como `project`, se guarda en la
 ficha, es el primer tramo del idIoT y la etiqueta `proyecto:` de la pantalla.
 
+**Contenido dirigido por hashtag (7-oct-2026).** `addressedContent` (`_playlist-live.js`): una pieza del Stock cuya
+etiqueta, comparada con `destKey` (sin mayúsculas, tildes ni separadores), es el idIoT de la pantalla o su id de player
+se emite en ella; si es el nombre de su centro (idIoT sin `_Tipo_n`, o el id del Xpacio) va al centro: audio
+(`audio|music|locucion`) sólo a elementos `Altavoz`/`Audio`, visual sólo a pantallas y en su orientación. La etiqueta
+del cliente sola no emite. `GET /api/playlist` las funde en la lista si la pantalla no tiene piezas a mano y, si las
+tiene, las devuelve aparte en `auto` para que `canal.html` las añada sin tocar la lista manual. El worker del Stock
+(`pixer-eleven` r4) admite etiquetas de 80 caracteres y lee los hashtags del comentario, el título y el texto.
+La identidad de la pantalla se completa en CADA consulta, con memoria de 45–300 s por instancia (Stock, índice de
+pantallas, registro de identidad, parrilla) para no multiplicar lecturas.
+
 **Circuitos definidos.** Un circuito es un destino con nombre guardado junto a las reglas (`circuits[]` en
 `admira-tv:playlist:live:v1`): `{id, name, target:{all,any}}`. `applyCircuits` añade `circuito:<id>` a toda pantalla
 cuyas etiquetas PROPIAS cumplan la definición, al vuelo en cada consulta y en el censo del editor (no se guardan en las

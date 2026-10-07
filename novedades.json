@@ -4,6 +4,11 @@
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
   ],
+  "v.07.10.2026.r25.22:07": [
+    "Contenido dirigido por hashtag: etiqueta una pieza con el nombre de una pantalla (#starbucks_paseodegracia_103_pantalla1) y se emite sola en ella",
+    "Con el nombre del centro va a todo el centro: lo visual a las pantallas, locuciones y música a los altavoces",
+    "Se añade a la playlist que la pantalla ya tuviera; el hashtag del cliente solo no emite nada"
+  ],
   "v.07.10.2026.r24.21:49": [
     "Alta de equipos: ahora pide el proyecto (uno de la lista o uno escrito)",
     "El proyecto es el primer tramo del nombre único del equipo —Starbucks_…— y su etiqueta en las playlists"

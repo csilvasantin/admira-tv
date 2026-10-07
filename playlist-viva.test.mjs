@@ -1,12 +1,13 @@
 // Playlists vivas por metatags (Carlos, 7-oct-2026): una regla de contenido + etiquetas de pantalla deducidas solas.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { onRequestGet, onRequestPost } from "./functions/api/playlist.js";
-import { applyCircuits, buildXpaceIndex, cleanCircuit, cleanIdIot, cleanLive, completeFacts, deduceScreenTags, idIotOfScreen, norm, resolveContent, targetMatches, LIVE_KEY, TAGS_PREFIX } from "./functions/api/_playlist-live.js";
+import { forgetMemo, onRequestGet, onRequestPost } from "./functions/api/playlist.js";
+import { addressedContent, addressKeys, destKey, applyCircuits, buildXpaceIndex, cleanCircuit, cleanIdIot, cleanLive, completeFacts, deduceScreenTags, idIotOfScreen, norm, resolveContent, targetMatches, LIVE_KEY, TAGS_PREFIX } from "./functions/api/_playlist-live.js";
 
 const sessionToken = "session-token", sessionKey = `admira-tv:auth:session:${sessionToken}`;
 const cookie = { Cookie: `__Host-atv_session=${sessionToken}`, "Content-Type": "application/json" };
 function mundo(stock) {
+  forgetMemo();
   const data = new Map([[sessionKey, JSON.stringify({ email: "csilvasantin@gmail.com", expiresAt: Date.now() + 60000 })]]), meta = new Map();
   const ACCESS = {
     get: async k => data.get(k) ?? null,
@@ -70,11 +71,11 @@ test("es VIVA: al etiquetar otra pieza entra sola, y al pausar la regla deja de 
     const { live } = await (await post(m.env, { action: "live-save", playlist: regla() })).json();
     const q = "screen=sim-gracia-kiosko&w=1080&h=1920";
     const uno = await (await get(m.env, q)).json();
-    stock.items.push(pieza("a9", ["Café"]));
+    stock.items.push(pieza("a9", ["Café"])); forgetMemo("stock");   // en producción, hasta 45 s después
     const dos = await (await get(m.env, q)).json();
     assert.deepEqual(dos.draft.items.map(i => i.stockId), ["a9", "a1"]);
     assert.notEqual(dos.draft.rev, uno.draft.rev, "la revisión cambia cuando cambia lo que sale");
-    stock.items.pop();
+    stock.items.pop(); forgetMemo("stock");
     assert.equal((await (await get(m.env, q)).json()).draft.rev, uno.draft.rev, "y vuelve a la de antes si la pieza pierde el tag");
     assert.equal((await post(m.env, { action: "live-save", playlist: regla({ enabled: false }), rev: live.rev })).status, 200);
     assert.deepEqual((await (await get(m.env, q)).json()).draft.items, []);
@@ -92,11 +93,14 @@ test("lo puesto a mano en la pantalla manda sobre las playlists vivas", async ()
   } finally { m.fin(); }
 });
 
-test("sin playlists vivas no se consulta nada fuera, y el registro de etiquetas sólo se escribe si cambian", async () => {
+test("identidad y Stock se consultan una vez y se recuerdan, y el registro de etiquetas sólo se escribe si cambian", async () => {
   const m = mundo({ items: [] });
   try {
     await get(m.env, "screen=tienda-1&circuit=xtanco&w=1080&h=1920&lang=ca");
-    assert.deepEqual(m.pedidas, [], "ni Stock ni parrilla mientras no haya reglas");
+    assert.deepEqual(m.pedidas.map(u => new URL(u).pathname).sort(), ["/grid/projects"], "la parrilla para su proyecto; el Stock no, porque nada puede ir dirigido a un id tan corto");
+    const fuera = m.pedidas.length;
+    await get(m.env, "screen=tienda-1&circuit=xtanco&w=1080&h=1920&lang=ca");
+    assert.equal(m.pedidas.length, fuera, "la siguiente consulta no sale fuera: 180 pantallas preguntan cada 30 s");
     assert.deepEqual(m.meta.get(TAGS_PREFIX + "tienda-1").tags, ["circuito:xtanco", "idioma:ca", "orientacion:vertical", "pantalla:tienda-1", "todas"]);
     const visto = m.meta.get(TAGS_PREFIX + "tienda-1").seenAt;
     await get(m.env, "screen=tienda-1&circuit=xtanco&w=1080&h=1920&lang=ca");
@@ -206,7 +210,7 @@ test("una pantalla que sólo declara su Xpacio recibe de su ficha el circuito y 
 
 test("sin ninguna playlist viva, la pantalla que declara su Xpacio ya queda registrada con proyecto y circuito", async () => {
   const src = (await import("node:fs")).readFileSync(new URL("./functions/api/playlist.js", import.meta.url), "utf8");
-  assert.match(src, /if \(activas\.length \|\| facts\.xpace \|\| facts\.iotDeclared\) await enrichFacts\(facts, env, waitUntil\)/);
+  assert.match(src, /\n  await enrichFacts\(facts, env, waitUntil\);/, "la identidad se completa siempre");
 });
 
 // ── idIoT como destino (Carlos, 7-oct-2026: «guárdalo en la ficha y que admira.tv lo acepte como destino») ──
@@ -292,4 +296,69 @@ test("el proyecto que el alta guarda en la ficha de un equipo es su proyecto en 
   const ficha = { id: "tablet-barra", name: "Tablet barra", project: "starbucks", screen: "tablet-barra-mupi", surfaces: [{ screen: "tablet-barra-mupi", idIoT: "Starbucks_RambladeCatalunya_5_Pantalla_1" }] };
   const tags = deduceScreenTags(completeFacts({ screen: "tablet-barra-mupi" }, { xpaceIndex: buildXpaceIndex([ficha]) }));
   for (const t of ["proyecto:starbucks", "xpacio:tablet-barra", "pantalla:starbucks-rambladecatalunya-5-pantalla-1"]) assert.ok(tags.includes(t), t);
+});
+
+// ── Contenido dirigido por hashtag (Carlos, 7-oct-2026) ─────────────────────────────────────────────
+// «un contenido importado con el #starbucks_paseodegracia_103_pantalla1 automáticamente se emitirá en esa pantalla
+// añadiéndose a su playlist. Lo mismo si son locuciones, música, imágenes o vídeos creados con IA».
+const P1 = { screen: "tablet-p1", iot: "Starbucks_PaseodeGracia_103_Pantalla_1", xpace: "alsea-sbux-021", w: 1080, h: 1920 };
+test("el hashtag se compara con el nombre único sin mayúsculas, tildes ni separadores", () => {
+  assert.equal(destKey("#starbucks_paseodegracia_103_pantalla1"), destKey("Starbucks_PaseodeGracia_103_Pantalla_1"));
+  const k = addressKeys(P1);
+  assert.ok(k.exact.has("starbuckspaseodegracia103pantalla1")); assert.ok(k.exact.has("tabletp1"));
+  assert.ok(k.centre.has("starbuckspaseodegracia103")); assert.ok(k.centre.has("alseasbux021")); assert.equal(k.audioElement, false);
+  assert.equal(addressKeys({ iot: "Starbucks_PaseodeGracia_103_Altavoz_1" }).audioElement, true);
+  assert.equal(addressKeys({ screen: "x1" }).exact.size, 0, "un id corto no es un destino: chocaría con cualquier etiqueta");
+});
+
+test("dirigida a la pantalla entra tal cual; dirigida al centro, cada cosa va a su sitio; la del cliente sola no emite", () => {
+  const stock = [
+    pieza("d1", ["starbucks", "starbucks_paseodegracia_103_pantalla1"]),
+    pieza("d2", ["starbucks_paseodegracia_103_pantalla2"]),
+    pieza("d3", ["starbucks"]),                                                                       // sólo cliente
+    pieza("d4", ["starbucks_paseodegracia_103"], { orientacion: "vertical" }),                         // al centro
+    pieza("d5", ["starbucks_paseodegracia_103"], { orientacion: "horizontal" }),
+    pieza("d6", ["starbucks_paseodegracia_103"], { type: "locucion", url: "https://stock.admira.store/stock/d6/asset.mp3" }),
+    pieza("d7", ["starbucks_paseodegracia_103_pantalla1"], { type: "music", url: "https://stock.admira.store/stock/d7/asset.mp3" }),
+    pieza("d8", ["starbucks_paseodegracia_103_pantalla1"], { catalogo: { hasta: "2020-01-01" } }),     // caducada
+    pieza("d9", ["Starbucks_PaseodeGracia_103_Pantalla_1"], { type: "image", url: "https://stock.admira.store/stock/d9/asset.jpg" }),
+  ];
+  const p1 = addressedContent(stock, P1);
+  assert.deepEqual(p1.map(i => i.stockId), ["d9", "d7", "d4", "d1"], "lo suyo y lo vertical del centro; ni la pantalla 2, ni lo horizontal, ni lo caducado, ni lo del cliente a secas");
+  assert.equal(p1.find(i => i.stockId === "d7").assetType, "audio", "una música dirigida a la pantalla suena en ella");
+  assert.match(p1.find(i => i.stockId === "d1").sub, /^destino · #starbucks_paseodegracia_103_pantalla1$/);
+  const altavoz = addressedContent(stock, { screen: "altavoz-barra", iot: "Starbucks_PaseodeGracia_103_Altavoz_1" });
+  assert.deepEqual(altavoz.map(i => i.stockId), ["d6"], "del centro, al altavoz sólo le llega el audio");
+  assert.deepEqual(addressedContent(stock, { screen: "otra-tienda-1", iot: "Starbucks_RambladeCatalunya_5_Pantalla_1" }), []);
+  assert.deepEqual(addressedContent(stock, { screen: "x1" }), []);
+});
+
+test("un contenido con el hashtag de la pantalla se emite solo en ella y se añade a lo que ya tenía puesto a mano", async () => {
+  const stock = { items: [pieza("m1", ["otoño"]), pieza("h1", ["starbucks", "starbucks_paseodegracia_103_pantalla2"]), pieza("h2", ["starbucks_paseodegracia_103"], { type: "music", url: "https://stock.admira.store/stock/h2/asset.mp3" })] };
+  const m = conCatalogo(mundo(stock));
+  try {
+    const q = "screen=tablet-nueva&iot=Starbucks_PaseodeGracia_103_Pantalla_2&w=1080&h=1920";
+    const sola = await (await get(m.env, q)).json();
+    assert.deepEqual(sola.draft.items.map(i => i.stockId), ["h1"], "sin playlist de ningún tipo, emite lo dirigido a ella");
+    assert.equal(sola.draft.name, "Dirigido por hashtag"); assert.deepEqual(sola.auto, []);
+    // Con piezas puestas a mano: la lista manual no se toca y lo dirigido viaja aparte para que el player lo añada.
+    const manual = { screen: "tablet-nueva", items: [{ id: "x", stockId: "m1", title: "Manual", asset: "https://stock.admira.store/stock/m1/asset.mp4", assetType: "video", seconds: 8 }] };
+    assert.equal((await post(m.env, manual)).status, 200);
+    const con = await (await get(m.env, q)).json();
+    assert.deepEqual(con.draft.items.map(i => i.stockId), ["m1"]); assert.deepEqual(con.auto.map(i => i.stockId), ["h1"]);
+    // Y otra pantalla no recibe nada.
+    const otra = await (await get(m.env, "screen=tablet-otra&iot=Starbucks_PaseodeGracia_103_Pantalla_1&w=1080&h=1920")).json();
+    assert.deepEqual(otra.draft.items, []); assert.deepEqual(otra.auto, []);
+  } finally { m.fin(); }
+});
+
+test("el player añade a su lista las piezas dirigidas que le manda el servidor", async () => {
+  const src = (await import("node:fs")).readFileSync(new URL("./canal.html", import.meta.url), "utf8");
+  assert.match(src, /Array\.isArray\(d\.auto\)&&d\.auto\.length/); assert.match(src, /raw=raw\.concat\(d\.auto\.filter/);
+});
+
+test("una playlist viva de audio también trae locuciones", () => {
+  const stock = [pieza("l1", ["aviso"], { type: "locucion", url: "https://stock.admira.store/stock/l1/asset.mp3" }), pieza("l2", ["aviso"], { type: "music", url: "https://stock.admira.store/stock/l2/asset.mp3" }), pieza("l3", ["aviso"])];
+  const items = resolveContent({ any: ["aviso"], all: [], none: [], type: "audio", limit: 10, seconds: 10, matchOrientation: true }, stock);
+  assert.deepEqual(items.map(i => i.stockId).sort(), ["l1", "l2"]); assert.ok(items.every(i => i.assetType === "audio"));
 });
