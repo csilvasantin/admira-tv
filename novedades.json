@@ -4,6 +4,11 @@
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
   ],
+  "v.07.10.2026.r18.19:53": [
+    "Playlists vivas: una regla por tags del Stock que se actualiza sola, sin listas fijas",
+    "Van a las pantallas por etiquetas que cada pantalla se deduce sola: circuito, proyecto, orientación e idioma",
+    "Se crean en Parrilla → Nueva playlist → Por tag → Playlist viva"
+  ],
   "v.07.10.2026.r17.19:15": [
     "Pantalla de pedidos: sin voz, el aviso de pedido listo se queda 5 segundos a la vista"
   ],

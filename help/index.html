@@ -172,6 +172,18 @@
     <p>La intensidad del color de cada día/hora indica su <b>ocupación</b> = (contenido propio + vendido) / capacidad. A más lleno, más intenso. Días al 0 % emiten Stock.</p>
   </section>
 
+  <section id="playlists-vivas"><h2>Playlists vivas por etiquetas</h2>
+    <p>En <a href="/parrilla/">Parrilla</a> → <span class="pill">＋ Nueva playlist</span> → <b>Por tag</b>, marca <b>Playlist viva</b>. En vez de una lista fija se guarda una <b>regla</b>:</p>
+    <ul>
+      <li><b>Contenido</b>: los tags de pixeria.com que elijas. Se resuelve en cada consulta del player, así que una pieza que gana el tag entra sola en antena y la que lo pierde sale. Se emiten las más recientes, hasta el máximo que indiques.</li>
+      <li><b>Pantallas</b>: no se eligen una a una. Cada pantalla se deduce sola sus etiquetas al pedir su playlist —<code>circuito</code>, <code>proyecto</code>, <code>orientación</code> e <code>idioma</code>— y la regla va a las que cumplan todas las que marques. <code>todas las pantallas</code> existe, pero hay que marcarla a propósito.</li>
+      <li>Una pieza que declara su orientación no se manda a una pantalla de la contraria, y se respetan las fechas de vigencia de su catálogo.</li>
+      <li>Lo que una pantalla tenga puesto a mano en «Por defecto» manda sobre las playlists vivas. Si le tocan varias, se funden sin repetir pieza.</li>
+      <li><b>Pausar</b> o <b>Eliminar</b> una playlist viva la saca de antena en la siguiente consulta de cada player. Guardarlas exige sesión de admira.tv con permiso de edición.</li>
+    </ul>
+    <p>API: <code>GET /api/playlist?screen=…&amp;circuit=…&amp;w=…&amp;h=…&amp;lang=…</code> devuelve las piezas resueltas y las etiquetas deducidas (<code>screenTags</code>); <code>GET /api/playlist?live=1</code> lista reglas y pantallas vistas; <code>POST {action:"live-save"|"live-delete"}</code> las guarda o borra.</p>
+  </section>
+
   <section id="editar"><h2>Editar la parrilla</h2>
     <p>Pulsa el <span class="pill">🔑</span> e introduce la clave de edición (<code>GRID_KEY</code>, la misma del CMS). Luego, en el modal de un día o en la vista Día, por cada franja:</p>
     <ul>

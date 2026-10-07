@@ -1,0 +1,133 @@
+// Playlists vivas por metatags (Carlos, 7-oct-2026): una regla de contenido + etiquetas de pantalla deducidas solas.
+import test from "node:test";
+import assert from "node:assert/strict";
+import { onRequestGet, onRequestPost } from "./functions/api/playlist.js";
+import { cleanLive, deduceScreenTags, norm, resolveContent, targetMatches, LIVE_KEY, TAGS_PREFIX } from "./functions/api/_playlist-live.js";
+
+const sessionToken = "session-token", sessionKey = `admira-tv:auth:session:${sessionToken}`;
+const cookie = { Cookie: `__Host-atv_session=${sessionToken}`, "Content-Type": "application/json" };
+function mundo(stock) {
+  const data = new Map([[sessionKey, JSON.stringify({ email: "csilvasantin@gmail.com", expiresAt: Date.now() + 60000 })]]), meta = new Map();
+  const ACCESS = {
+    get: async k => data.get(k) ?? null,
+    put: async (k, v, o) => { data.set(k, v); if (o && o.metadata) meta.set(k, o.metadata); },
+    getWithMetadata: async k => ({ value: data.get(k) ?? null, metadata: meta.get(k) ?? null }),
+    list: async ({ prefix }) => ({ keys: [...data.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name, metadata: meta.get(name) })), list_complete: true }),
+  };
+  const pedidas = [], real = globalThis.fetch;
+  globalThis.fetch = async url => { url = String(url); pedidas.push(url);
+    if (url.includes("/stock/index.json")) return Response.json({ items: stock.items });
+    if (url.includes("/grid/config")) return Response.json({ ok: true, config: { circuit: "gracia" } });
+    if (url.includes("/grid/projects")) return Response.json({ ok: true, projects: [{ id: "kiosk", circuits: ["kiosko", "gracia"] }] });
+    return new Response("no", { status: 404 }); };
+  return { env: { ACCESS }, data, meta, pedidas, fin: () => { globalThis.fetch = real; } };
+}
+const pieza = (id, tags, extra = {}) => ({ id, type: "video", title: "Pieza " + id, tags, url: `https://stock.admira.store/stock/${id}/asset.mp4`, createdAt: 1000 + Number(id.replace(/\D/g, "")), ...extra });
+const get = (env, qs) => onRequestGet({ request: new Request("https://admira.tv/api/playlist?" + qs), env });
+const post = (env, body, headers = cookie) => onRequestPost({ request: new Request("https://admira.tv/api/playlist", { method: "POST", headers, body: JSON.stringify(body) }), env });
+const regla = (extra = {}) => ({ name: "Cafés verticales", content: { any: ["#café"], limit: 10, seconds: 12 }, target: { all: ["circuito:gracia", "orientacion:vertical"] }, ...extra });
+
+test("la pantalla se deduce sola sus etiquetas: circuito, proyecto, orientación e idioma", () => {
+  assert.deepEqual(deduceScreenTags({ screen: "Sim-Gracia-Kiosko", circuit: "Gràcia", project: "kiosk", w: 1080, h: 1920, lang: "es-ES" }),
+    ["circuito:gracia", "idioma:es", "orientacion:vertical", "pantalla:sim-gracia-kiosko", "proyecto:kiosk", "todas"]);
+  assert.deepEqual(deduceScreenTags({ screen: "x1", w: 1920, h: 1080 }), ["orientacion:horizontal", "pantalla:x1", "todas"]);
+  assert.equal(targetMatches({ all: ["circuito:gracia"], any: [] }, ["circuito:gracia", "todas"]), true);
+  assert.equal(targetMatches({ all: [], any: [] }, ["todas"]), false, "sin destino no va a ninguna pantalla");
+});
+
+test("el contenido casa por tag sin tildes ni almohadilla, respeta exclusiones, vigencia, orientación y límite", () => {
+  const stock = [pieza("p1", ["Café", "otoño"]), pieza("p2", ["cafe", "interno"]), pieza("p3", ["té"]), pieza("p4", ["café"], { orientacion: "horizontal" }),
+    pieza("p5", ["café"], { catalogo: { hasta: "2020-01-01" } }), pieza("p6", ["café"], { type: "audio" }), pieza("p7", ["café"], { url: "http://inseguro/x.mp4" }), pieza("p8", ["listas café"])];
+  const c = cleanLive(regla({ content: { any: ["#Café"], none: ["interno"], limit: 10, seconds: 12 } })).content;
+  const out = resolveContent(c, stock, { w: 1080, h: 1920 });
+  assert.deepEqual(out.map(i => i.stockId), ["p8", "p1"], "más nuevas primero; fuera interno, horizontal, caducada, audio y no-https");
+  assert.equal(out[0].seconds, 12); assert.equal(out[0].assetType, "video"); assert.equal(norm("#Música_Chill"), "musica chill");
+  assert.deepEqual(resolveContent({ ...c, limit: 1 }, stock, {}).map(i => i.stockId), ["p8"]);
+  assert.throws(() => cleanLive({ name: "x", content: { any: ["a"] }, target: {} }), /live_target_required/);
+  assert.throws(() => cleanLive({ name: "x", content: {}, target: { all: ["todas"] } }), /live_content_required/);
+});
+
+test("guardar exige sesión; la pantalla que cumple recibe las piezas y la que no, nada", async () => {
+  const stock = { items: [pieza("a1", ["café"]), pieza("a2", ["zumo"])] }, m = mundo(stock);
+  try {
+    assert.equal((await post(m.env, { action: "live-save", playlist: regla() }, { "Content-Type": "application/json" })).status, 401);
+    const saved = await post(m.env, { action: "live-save", playlist: regla() });
+    assert.equal(saved.status, 200);
+    const live = (await saved.json()).live;
+    assert.equal(live.playlists[0].id, "cafes-verticales"); assert.equal(live.playlists[0].updatedBy, "csilvasantin@gmail.com");
+    const si = await (await get(m.env, "screen=sim-gracia-kiosko&w=1080&h=1920&lang=es")).json();
+    assert.deepEqual(si.draft.items.map(i => i.stockId), ["a1"]);
+    assert.equal(si.draft.name, "Cafés verticales"); assert.deepEqual(si.draft.live, [{ id: "cafes-verticales", name: "Cafés verticales" }]);
+    assert.ok(si.screenTags.includes("circuito:gracia") && si.screenTags.includes("proyecto:kiosk") && si.screenTags.includes("orientacion:vertical"));
+    const no = await (await get(m.env, "screen=sim-gracia-kiosko&w=1920&h=1080")).json();
+    assert.deepEqual(no.draft.items, [], "horizontal no cumple el destino"); assert.equal(no.draft.name, "Por defecto");
+  } finally { m.fin(); }
+});
+
+test("es VIVA: al etiquetar otra pieza entra sola, y al pausar la regla deja de salir", async () => {
+  const stock = { items: [pieza("a1", ["café"])] }, m = mundo(stock);
+  try {
+    const { live } = await (await post(m.env, { action: "live-save", playlist: regla() })).json();
+    const q = "screen=sim-gracia-kiosko&w=1080&h=1920";
+    const uno = await (await get(m.env, q)).json();
+    stock.items.push(pieza("a9", ["Café"]));
+    const dos = await (await get(m.env, q)).json();
+    assert.deepEqual(dos.draft.items.map(i => i.stockId), ["a9", "a1"]);
+    assert.notEqual(dos.draft.rev, uno.draft.rev, "la revisión cambia cuando cambia lo que sale");
+    stock.items.pop();
+    assert.equal((await (await get(m.env, q)).json()).draft.rev, uno.draft.rev, "y vuelve a la de antes si la pieza pierde el tag");
+    assert.equal((await post(m.env, { action: "live-save", playlist: regla({ enabled: false }), rev: live.rev })).status, 200);
+    assert.deepEqual((await (await get(m.env, q)).json()).draft.items, []);
+    assert.equal((await post(m.env, { action: "live-save", playlist: regla(), rev: 1 })).status, 409, "revisión vieja no pisa");
+  } finally { m.fin(); }
+});
+
+test("lo puesto a mano en la pantalla manda sobre las playlists vivas", async () => {
+  const m = mundo({ items: [pieza("a1", ["café"])] });
+  try {
+    await post(m.env, { action: "live-save", playlist: regla() });
+    await post(m.env, { screen: "sim-gracia-kiosko", items: [{ id: "manual", asset: "https://cdn.example/manual.mp4", assetType: "video" }] });
+    const d = await (await get(m.env, "screen=sim-gracia-kiosko&w=1080&h=1920")).json();
+    assert.deepEqual(d.draft.items.map(i => i.id), ["manual"]); assert.equal(d.draft.live, undefined);
+  } finally { m.fin(); }
+});
+
+test("sin playlists vivas no se consulta nada fuera, y el registro de etiquetas sólo se escribe si cambian", async () => {
+  const m = mundo({ items: [] });
+  try {
+    await get(m.env, "screen=tienda-1&circuit=xtanco&w=1080&h=1920&lang=ca");
+    assert.deepEqual(m.pedidas, [], "ni Stock ni parrilla mientras no haya reglas");
+    assert.deepEqual(m.meta.get(TAGS_PREFIX + "tienda-1").tags, ["circuito:xtanco", "idioma:ca", "orientacion:vertical", "pantalla:tienda-1", "todas"]);
+    const visto = m.meta.get(TAGS_PREFIX + "tienda-1").seenAt;
+    await get(m.env, "screen=tienda-1&circuit=xtanco&w=1080&h=1920&lang=ca");
+    assert.equal(m.meta.get(TAGS_PREFIX + "tienda-1").seenAt, visto, "misma pantalla, mismas etiquetas: no reescribe");
+    await get(m.env, "screen=tienda-1&circuit=xtanco&w=1920&h=1080&lang=ca");
+    assert.ok(m.meta.get(TAGS_PREFIX + "tienda-1").tags.includes("orientacion:horizontal"));
+  } finally { m.fin(); }
+});
+
+test("el editor ve reglas, pantallas conocidas y el previo de una regla; sin sesión, 401", async () => {
+  const m = mundo({ items: [pieza("a1", ["café"]), pieza("a2", ["café"])] });
+  try {
+    await get(m.env, "screen=k1&circuit=gracia&w=1080&h=1920"); await get(m.env, "screen=k2&circuit=gracia&w=1920&h=1080"); await get(m.env, "screen=x9&circuit=xtanco&w=1080&h=1920");
+    await post(m.env, { screen: "k1", items: [{ id: "manual", asset: "https://cdn.example/m.mp4" }] });
+    assert.equal((await get(m.env, "live=1")).status, 401);
+    const admin = r => onRequestGet({ request: new Request("https://admira.tv/api/playlist?" + r, { headers: cookie }), env: m.env });
+    const lista = await (await admin("live=1")).json();
+    assert.deepEqual(lista.screens.map(s => s.screen), ["k1", "k2", "x9"]);
+    const previo = await (await admin("preview=1&rule=" + encodeURIComponent(JSON.stringify(regla())))).json();
+    assert.equal(previo.total, 2); assert.deepEqual(previo.screens, ["k1"]); assert.deepEqual(previo.manual, ["k1"], "avisa de la que tiene playlist a mano");
+    assert.equal(m.data.has(LIVE_KEY), false, "previsualizar no guarda");
+    assert.equal((await post(m.env, { action: "live-delete", id: "no-existe" })).status, 404);
+  } finally { m.fin(); }
+});
+
+test("el player manda sus datos al pedir la playlist y el editor guarda la regla, no una lista", async () => {
+  const { readFileSync } = await import("node:fs");
+  const canal = readFileSync(new URL("./canal.html", import.meta.url), "utf8"), parrilla = readFileSync(new URL("./parrilla/index.html", import.meta.url), "utf8");
+  assert.match(canal, /'\/api\/playlist\?screen='\+encodeURIComponent\(screen\)\+defaultDraftHints\+'&_='/);
+  assert.match(canal, /'&circuit='\+encodeURIComponent\(c\)/); assert.match(canal, /'&w='\+w\+'&h='\+h/);
+  assert.match(parrilla, /id="plViva"/);
+  assert.match(parrilla, /content:\{any:\[\.\.\.plTagSel\],limit:[^}]+\},target:\{all:\[\.\.\.plVivaSel\]\}/);
+  assert.match(parrilla, /action:accion\|\|'live-save'/);
+});

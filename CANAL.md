@@ -207,6 +207,15 @@ emisión). Sin teclado (tablet / WebView) son totalmente inocuos.
     ‖ `#video #genérico #visual #good #atraer`. Nada persistente, no ensucia la emisión.
 - En modo **DIRECTO** (`/direct`) o sin loop, muestran `TEST ⏭ · sin loop` y no tocan nada.
 
+## Playlists vivas por etiquetas (7-oct-2026)
+
+Al pedir su lista por defecto (`/api/playlist?screen=`), el player añade `circuit`, `w`, `h` y `lang`. Con eso el
+servidor le deduce las etiquetas (`circuito:`, `proyecto:`, `orientacion:`, `idioma:`, `pantalla:`, `todas`) y, si la
+pantalla no tiene piezas puestas a mano, le devuelve las de las **playlists vivas** cuyo destino cumpla: reglas de
+contenido por tags del Stock, resueltas en cada consulta (lo recién etiquetado entra solo). Se crean en
+`/parrilla/` → Nueva playlist → Por tag → Playlist viva. Lógica en `functions/api/_playlist-live.js`; pruebas en
+`playlist-viva.test.mjs`. El player no distingue de dónde vienen las piezas: usa el mismo carril «Por defecto».
+
 ## Playlist (cola)
 
 ### Saltar desde el mando (`goto-N`)

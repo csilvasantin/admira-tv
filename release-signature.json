@@ -1,9 +1,9 @@
 {
-  "version": "v.07.10.2026.r17.19:15",
+  "version": "v.07.10.2026.r18.19:53",
   "signature": "NeoMBP16 · MacBookPro16",
   "agent": "NeoMBP16",
   "machine": "MacBookPro16",
   "day": "07.10.2026",
-  "time": "19:15",
-  "evidence": "Pantalla del gestor de colas: sin voz, el aviso de pedido listo se queda 5 s en el bocadillo (antes 2,7 s)."
+  "time": "19:53",
+  "evidence": "Playlists vivas por metatags: regla de contenido por tags del Stock y destino por etiquetas de pantalla deducidas solas, sobre el carril Por defecto."
 }
