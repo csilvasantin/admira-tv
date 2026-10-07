@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { onRequestGet, onRequestPost } from "./functions/api/playlist.js";
-import { buildXpaceIndex, cleanLive, completeFacts, deduceScreenTags, norm, resolveContent, targetMatches, LIVE_KEY, TAGS_PREFIX } from "./functions/api/_playlist-live.js";
+import { applyCircuits, buildXpaceIndex, cleanCircuit, cleanIdIot, cleanLive, completeFacts, deduceScreenTags, idIotOfScreen, norm, resolveContent, targetMatches, LIVE_KEY, TAGS_PREFIX } from "./functions/api/_playlist-live.js";
 
 const sessionToken = "session-token", sessionKey = `admira-tv:auth:session:${sessionToken}`;
 const cookie = { Cookie: `__Host-atv_session=${sessionToken}`, "Content-Type": "application/json" };
@@ -206,5 +206,84 @@ test("una pantalla que sólo declara su Xpacio recibe de su ficha el circuito y 
 
 test("sin ninguna playlist viva, la pantalla que declara su Xpacio ya queda registrada con proyecto y circuito", async () => {
   const src = (await import("node:fs")).readFileSync(new URL("./functions/api/playlist.js", import.meta.url), "utf8");
-  assert.match(src, /if \(activas\.length \|\| facts\.xpace\) await enrichFacts\(facts, env, waitUntil\)/);
+  assert.match(src, /if \(activas\.length \|\| facts\.xpace \|\| facts\.iotDeclared\) await enrichFacts\(facts, env, waitUntil\)/);
+});
+
+// ── idIoT como destino (Carlos, 7-oct-2026: «guárdalo en la ficha y que admira.tv lo acepte como destino») ──
+const PG103 = { id: "alsea-sbux-021", name: "Starbucks Paseo de Gracia", circuit: "alsea_starbucks", external: { brand: "Starbucks" }, surfaces: [{ name: "Menu board", surface: "pantalla" }],
+  iot: [{ idIoT: "Starbucks_PaseodeGracia_103_Pantalla_1", type: "Pantalla", n: 1, player: "sbux-pg103-p1" }, { idIoT: "Starbucks_PaseodeGracia_103_Pantalla_2", type: "Pantalla", n: 2, player: "" }] };
+// El catálogo simulado: resuelve un idIoT (como GET /locations/iot/<idIoT>) y la ficha de su Xpacio.
+function conCatalogo(m) {
+  const prev = globalThis.fetch;
+  globalThis.fetch = async url => { url = String(url);
+    const iot = /\/locations\/iot\/([^/?]+)$/.exec(url);
+    if (iot) { const e = PG103.iot.find(x => x.idIoT.toLowerCase() === decodeURIComponent(iot[1]).toLowerCase());
+      return e ? Response.json({ idIoT: e.idIoT, element: e, location: { id: PG103.id, name: PG103.name, circuit: PG103.circuit, brand: "Starbucks" } }) : new Response("{}", { status: 404 }); }
+    if (url.endsWith("/locations/alsea-sbux-021")) return Response.json({ location: PG103 });
+    if (url.endsWith("/locations")) return Response.json({ locations: [PG103] });
+    return prev(url); };
+  return m;
+}
+
+test("el idIoT guardado en la ficha es otro identificador de la misma pantalla", () => {
+  assert.equal(cleanIdIot(" Starbucks_PaseodeGracia_103_Pantalla_1 "), "Starbucks_PaseodeGracia_103_Pantalla_1");
+  assert.equal(cleanIdIot("pantalla 1"), ""); assert.equal(cleanIdIot("a_b"), "");
+  assert.equal(idIotOfScreen(PG103, "SBUX-PG103-P1"), "Starbucks_PaseodeGracia_103_Pantalla_1");
+  assert.equal(idIotOfScreen({ screen: "x-mupi", surfaces: [{ screen: "x-mupi", idIoT: "AdmiraNeXT_X_1_Pantalla_1" }] }, "x-mupi"), "AdmiraNeXT_X_1_Pantalla_1");
+  const index = buildXpaceIndex([PG103]);
+  assert.equal(index["sbux-pg103-p1"].i, "Starbucks_PaseodeGracia_103_Pantalla_1");
+  const tags = deduceScreenTags(completeFacts({ screen: "sbux-pg103-p1", w: 1080, h: 1920 }, { xpaceIndex: index }));
+  for (const t of ["pantalla:sbux-pg103-p1", "pantalla:starbucks-paseodegracia-103-pantalla-1", "xpacio:alsea-sbux-021", "proyecto:starbucks"]) assert.ok(tags.includes(t), t);
+  assert.equal(targetMatches({ all: ["pantalla:starbucks-paseodegracia-103-pantalla-1"], any: [] }, tags), true);
+});
+
+test("un player que declara su idIoT (?iot=) recibe la playlist enviada a ese nombre, con su Xpacio y su proyecto", async () => {
+  const m = conCatalogo(mundo({ items: [pieza("a1", ["café"])] }));
+  try {
+    const destino = { all: ["pantalla:Starbucks_PaseodeGracia_103_Pantalla_2"] };
+    const guardada = await (await post(m.env, { action: "live-save", playlist: regla({ name: "Pared 2", target: destino }) })).json();
+    assert.deepEqual(guardada.live.playlists[0].target.all, ["pantalla:starbucks-paseodegracia-103-pantalla-2"]);
+    const yo = await (await get(m.env, "screen=tablet-nueva&iot=Starbucks_PaseodeGracia_103_Pantalla_2&w=1080&h=1920")).json();
+    assert.deepEqual(yo.draft.items.map(i => i.stockId), ["a1"]);
+    for (const t of ["pantalla:starbucks-paseodegracia-103-pantalla-2", "pantalla:tablet-nueva", "xpacio:alsea-sbux-021", "proyecto:starbucks", "circuito:alsea-starbucks"]) assert.ok(yo.screenTags.includes(t), t);
+    const inventado = await (await get(m.env, "screen=intruso&iot=Starbucks_PaseodeGracia_103_Pantalla_99")).json();
+    assert.deepEqual(inventado.draft.items, []); assert.ok(!inventado.screenTags.some(t => /pantalla-99|xpacio:/.test(t)), "un idIoT que el catálogo no conoce no da identidad");
+    const contradice = await (await get(m.env, "screen=otro&iot=Starbucks_PaseodeGracia_103_Pantalla_2&loc=otro-centro")).json();
+    assert.deepEqual(contradice.draft.items, [], "ni uno real declarado desde otro Xpacio");
+  } finally { m.fin(); }
+});
+
+// ── Circuitos definidos (Carlos, 7-oct-2026: «definir circuitos para distribuir los contenidos con los metatags») ──
+test("un circuito es un grupo con nombre: toda pantalla que cumple su definición gana circuito:<id>", () => {
+  const c = cleanCircuit({ name: "Starbucks Verticales", target: { all: ["proyecto:Starbucks", "orientacion:vertical", "circuito:starbucks-verticales"] } }, "yo");
+  assert.equal(c.id, "starbucks-verticales"); assert.deepEqual(c.target.all, ["proyecto:starbucks", "orientacion:vertical"], "no se define consigo mismo");
+  assert.throws(() => cleanCircuit({ name: "Vacío", target: {} }), /circuit_target_required/); assert.throws(() => cleanCircuit({ target: { all: ["todas"] } }), /circuit_name_required/);
+  const vertical = ["orientacion:vertical", "pantalla:a", "proyecto:starbucks", "todas"], horizontal = ["orientacion:horizontal", "pantalla:b", "proyecto:starbucks", "todas"];
+  assert.ok(applyCircuits(vertical, [c]).includes("circuito:starbucks-verticales")); assert.ok(!applyCircuits(horizontal, [c]).includes("circuito:starbucks-verticales"));
+  assert.ok(!applyCircuits(vertical, [{ ...c, enabled: false }]).includes("circuito:starbucks-verticales"));
+  const lista = cleanCircuit({ name: "Tres pantallas", target: { all: ["pantalla:a", "pantalla:b", "pantalla:c"] } });
+  assert.ok(applyCircuits(horizontal, [lista]).includes("circuito:tres-pantallas"), "una lista de pantallas también es un circuito");
+});
+
+test("se define un circuito, se le envía una playlist por su etiqueta y llega a sus pantallas; al borrarlo dejan de recibirla", async () => {
+  const m = mundo({ items: [pieza("a1", ["café"])] });
+  try {
+    const circuit = { name: "Kioskos verticales", target: { all: ["proyecto:kiosk", "orientacion:vertical"] } };
+    assert.equal((await post(m.env, { action: "circuit-save", circuit }, { "Content-Type": "application/json" })).status, 401, "sin sesión no se define");
+    const alta = await (await post(m.env, { action: "circuit-save", circuit })).json();
+    assert.equal(alta.ok, true); assert.equal(alta.live.circuits[0].id, "kioskos-verticales"); assert.deepEqual(alta.live.playlists, []);
+    const conRegla = await (await post(m.env, { action: "live-save", playlist: regla({ target: { all: ["circuito:kioskos-verticales"] } }) })).json();
+    assert.equal(conRegla.live.circuits.length, 1, "guardar una playlist no pierde los circuitos");
+    const dentro = await (await get(m.env, "screen=sim-gracia-kiosko&circuit=gracia&w=1080&h=1920")).json();
+    assert.ok(dentro.screenTags.includes("circuito:kioskos-verticales")); assert.deepEqual(dentro.draft.items.map(i => i.stockId), ["a1"]);
+    const fuera = await (await get(m.env, "screen=sim-gracia-led&circuit=gracia&w=1920&h=1080")).json();
+    assert.ok(!fuera.screenTags.includes("circuito:kioskos-verticales")); assert.deepEqual(fuera.draft.items, []);
+    assert.ok(!m.meta.get(TAGS_PREFIX + "sim-gracia-kiosko").tags.includes("circuito:kioskos-verticales"), "se recuerdan las etiquetas propias, no las del circuito definido");
+    const admin = await (await onRequestGet({ request: new Request("https://admira.tv/api/playlist?live=1", { headers: cookie }), env: m.env })).json();
+    assert.equal(admin.circuits.length, 1); assert.ok(admin.screens.find(x => x.screen === "sim-gracia-kiosko").tags.includes("circuito:kioskos-verticales"));
+    const baja = await (await post(m.env, { action: "circuit-delete", id: "kioskos-verticales" })).json();
+    assert.deepEqual(baja.live.circuits, []); assert.equal(baja.live.playlists.length, 1);
+    assert.deepEqual((await (await get(m.env, "screen=sim-gracia-kiosko&circuit=gracia&w=1080&h=1920")).json()).draft.items, []);
+    assert.equal((await post(m.env, { action: "circuit-delete", id: "no-existe" })).status, 404);
+  } finally { m.fin(); }
 });

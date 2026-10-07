@@ -101,6 +101,12 @@
     .pl-viva-fila{display:grid;grid-template-columns:86px minmax(0,1fr);gap:10px;align-items:start;margin:2px 0}
     .pl-viva-fila>b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);padding-top:7px}
     #plVivaYo code{color:var(--green);font-size:12px}
+    /* Circuitos definidos (7-oct-2026): un destino con nombre que se reutiliza como etiqueta circuito:<id> */
+    #plCircuitos{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px;color:var(--dim)}
+    #plCircuitos .pl-circ{display:inline-flex;gap:6px;align-items:center;padding:3px 4px 3px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel2);color:var(--ink)}
+    #plCircuitos .pl-circ i{font-style:normal;color:var(--dim)}
+    #plCircuitos .pl-circ button{border:0;background:transparent;color:var(--dim);cursor:pointer;font:inherit;padding:2px 6px;border-radius:999px}
+    #plCircuitos .pl-circ button:hover{color:#ff8a8a;background:rgba(255,120,120,.12)}
     .pl-badge{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:999px;background:var(--green);color:#04130b;font-size:10px;font-weight:800;letter-spacing:.06em;vertical-align:middle}
     .pl-badge.off{background:var(--dim)}
 </style>
@@ -163,10 +169,15 @@
               <span>A dónde va · identificadores únicos <b id="plVivaFuente">se deducen solos</b></span>
               <div id="plVivaTags"></div>
               <div class="pl-tagadd">
-                <input id="plVivaInput" type="text" maxlength="90" autocomplete="off" placeholder="…o escribe un identificador: pantalla:sbux-pg103-p1">
+                <input id="plVivaInput" type="text" maxlength="90" autocomplete="off" placeholder="…o escribe un identificador: Starbucks_PaseodeGracia_103_Pantalla_1 · xpacio:alsea-sbux-021">
                 <button id="plVivaAdd" type="button">Añadir</button>
                 <button id="plVivaEsta" type="button">Esta pantalla</button>
               </div>
+              <div class="pl-tagadd" id="plCircuitoAlta">
+                <input id="plCircuitoNombre" type="text" maxlength="60" autocomplete="off" placeholder="Nombre del circuito: Starbucks verticales">
+                <button id="plCircuitoGuardar" type="button">Guardar este destino como circuito</button>
+              </div>
+              <div id="plCircuitos"></div>
               <p class="pl-sum" id="plVivaYo"></p>
               <div class="pl-viva-num"><label>Máx. piezas <input id="plVivaLimit" type="number" min="1" max="100" value="20"></label><label>Segundos por pieza <input id="plVivaSecs" type="number" min="2" max="600" value="10"></label></div>
             </div>
@@ -402,7 +413,7 @@
     // se resuelve en cada consulta del player —etiquetar una pieza en pixeria la
     // mete en antena sin tocar nada aquí— y el destino son las etiquetas que cada
     // pantalla se deduce sola (circuito, proyecto, orientación, idioma).
-    let plViva=false,plVivaSel=new Set(),plVivaData={live:{rev:0,playlists:[]},screens:[]},plVivaEstado='idle';
+    let plViva=false,plVivaSel=new Set(),plVivaData={live:{rev:0,playlists:[]},screens:[],circuits:[]},plVivaEstado='idle',plIotNombre={};
     // La jerarquía que el operador ve arriba (1 Proyecto · 2 Xpacio · 3 Dispositivo) ES la identidad de cada
     // pantalla: se sube al servidor para que cada una tenga sus identificadores únicos sin escribirlos.
     async function plVivaIdentidad(){
@@ -416,7 +427,7 @@
         const r=await fetch('/api/playlist?live=1&_='+Date.now(),{cache:'no-store',credentials:'same-origin'});
         if(r.status===401){plVivaEstado='sin-sesion';return}
         const d=await r.json();if(!d||!d.ok)throw 0;
-        plVivaData={live:d.live||{rev:0,playlists:[]},screens:Array.isArray(d.screens)?d.screens:[],projects:d.projects||[],xpaces:d.xpaces||{}};plVivaEstado='ok';
+        plVivaData={live:d.live||{rev:0,playlists:[]},screens:Array.isArray(d.screens)?d.screens:[],projects:d.projects||[],xpaces:d.xpaces||{},circuits:Array.isArray(d.circuits)?d.circuits:[]};plVivaEstado='ok';
       }catch(_){plVivaEstado='error'}
     }
     // IDENTIFICADORES ÚNICOS (7-oct-2026, Carlos): el destino se dice con la etiqueta única de un proyecto, de
@@ -436,7 +447,8 @@
       if(t==='todas')return'todas las pantallas';
       if(k==='proyecto'){const p=(plVivaData.projects||[]).find(x=>x.id===v)||projects.find(x=>x.id===v);return p?p.name:v}
       if(k==='xpacio')return (plVivaData.xpaces||{})[v]||v;
-      if(k==='pantalla'){const sc=plVivaData.screens.find(x=>x.screen===v);return sc&&sc.name&&sc.name!==v?sc.name:v}
+      if(k==='pantalla'){if(plIotNombre[t])return plIotNombre[t];const sc=plVivaData.screens.find(x=>x.screen===v);return sc&&sc.name&&sc.name!==v?sc.name:v}
+      if(k==='circuito'){const c=(plVivaData.circuits||[]).find(x=>x.id===v);return c?'★ '+c.name:v}
       return v;
     }
     function plVivaEtiqueta(t){const k=plNs(t);return t==='todas'?'todas las pantallas':({circuito:'circuito',proyecto:'proyecto',xpacio:'Xpacio',pantalla:'pantalla',orientacion:'orientación',idioma:'idioma'}[k]||k)+' · '+plVivaNombre(t)}
@@ -461,17 +473,63 @@
         :fila('Proyecto',[...new Set([...de('proyecto'),...elegidas('proyecto')])].map(t=>plVivaChip(t,cuenta.get(t)||0)),'ningún proyecto con pantallas')
         +fila('Xpacio',[...new Set([...de('xpacio'),...elegidas('xpacio')])].map(t=>plVivaChip(t,cuenta.get(t)||0)),'ninguna pantalla declara todavía su Xpacio')
         +fila('Pantalla',pantallas.map(t=>plVivaChip(t,null)),'elige proyecto, Xpacio o circuito para ver sus pantallas')+(candidatas.length>40?'<span class="pl-more">y '+(candidatas.length-40)+' pantallas más · afina con otra etiqueta o escribe su identificador</span>':'')
-        +fila('Atributos',[...(cuenta.has('todas')?['todas']:[]),...de('circuito'),...de('orientacion'),...de('idioma'),...[...plVivaSel].filter(t=>!PL_UNICOS.includes(plNs(t))&&!cuenta.has(t))].map(t=>plVivaChip(t,cuenta.get(t)||0)).map((h,ix,arr)=>h),'sin atributos todavía');
+        +fila('Circuito',[...new Set([...(plVivaData.circuits||[]).map(c=>'circuito:'+c.id),...de('circuito'),...elegidas('circuito')])].map(t=>plVivaChip(t,cuenta.get(t)||0)),'ningún circuito todavía · elige un destino y guárdalo abajo con un nombre')
+        +fila('Atributos',[...(cuenta.has('todas')?['todas']:[]),...de('orientacion'),...de('idioma'),...[...plVivaSel].filter(t=>!PL_UNICOS.includes(plNs(t))&&plNs(t)!=='circuito'&&!cuenta.has(t))].map(t=>plVivaChip(t,cuenta.get(t)||0)),'sin atributos todavía');
+      plCircuitosPinta(cuenta);
       $('plVivaTags').querySelectorAll('[data-pl-viva]').forEach(b=>b.onclick=()=>{const t=b.dataset.plViva;plVivaSel.has(t)?plVivaSel.delete(t):plVivaSel.add(t);plVivaPinta();plResumen()});
       const yo=plVivaData.screens.find(s=>s.screen===activeScreenId);
       $('plVivaYo').innerHTML=yo?'Identificadores únicos de esta pantalla: '+yo.tags.filter(t=>PL_UNICOS.includes(plNs(t))).map(t=>'<code>'+esc(t)+'</code>').join(' · '):'Esta pantalla aún no está en el censo: su identificador único es <code>pantalla:'+esc(activeScreenId)+'</code>';
     }
     // Identificador escrito a mano: sirve para una pantalla o un Xpacio que todavía no ha aparecido en el censo.
-    function plVivaAnade(){
-      const bruto=$('plVivaInput').value.trim().toLowerCase().replace(/^#/,'');if(!bruto)return;
-      const m=bruto.match(/^(proyecto|xpacio|pantalla|circuito|orientacion|idioma)\s*[:=]\s*([a-z0-9][a-z0-9_\- ]{0,78})$/);
-      if(!m){feedback('Escríbelo como clave:valor — por ejemplo pantalla:sbux-pg103-p1, xpacio:alsea-sbux-021 o proyecto:starbucks.',false);return}
+    async function plVivaAnade(){
+      const escrito=$('plVivaInput').value.trim().replace(/^#/,'');if(!escrito)return;
+      // idIoT (Starbucks_PaseodeGracia_103_Pantalla_1): el nombre único guardado en la ficha del Xpacio. Se comprueba
+      // contra el catálogo antes de aceptarlo, para no mandar una playlist a un nombre que no existe.
+      if(/^[A-Za-z0-9]+(?:_[A-Za-z0-9]+){2,7}$/.test(escrito)){
+        let d=null;try{const r=await fetch('https://api.admira.store/locations/iot/'+encodeURIComponent(escrito),{cache:'no-store'});d=r.ok?await r.json():null}catch(_){}
+        if(!d||!d.idIoT){feedback('«'+escrito+'» no está en el catálogo de Xpacios. Míralo en el gemelo con /inventario idIoT.',false);return}
+        const tag='pantalla:'+d.idIoT.toLowerCase().replace(/_/g,'-');plIotNombre[tag]=d.idIoT;plVivaSel.add(tag);$('plVivaInput').value='';
+        feedback(d.idIoT+' · '+(d.location&&d.location.name||'')+(d.element&&d.element.name?' · '+d.element.name:'')+(d.element&&d.element.player?'':' · aún sin player vinculado: le llegará cuando su player se declare con ?iot='+d.idIoT),true);
+        plVivaPinta();plResumen();return;
+      }
+      const m=escrito.toLowerCase().match(/^(proyecto|xpacio|pantalla|circuito|orientacion|idioma)\s*[:=]\s*([a-z0-9][a-z0-9_\- ]{0,138})$/);
+      if(!m){feedback('Escribe un idIoT (Starbucks_PaseodeGracia_103_Pantalla_1) o clave:valor — por ejemplo xpacio:alsea-sbux-021 o proyecto:starbucks.',false);return}
       plVivaSel.add(m[1]+':'+m[2].trim().replace(/[\s_]+/g,'-'));$('plVivaInput').value='';plVivaPinta();plResumen();
+    }
+    // CIRCUITOS DEFINIDOS: el destino elegido arriba se guarda con un nombre y pasa a ser la etiqueta
+    // circuito:<id>. Toda pantalla que cumpla la definición entra sola en el circuito, hoy y cuando se conecte.
+    function plCircuitosPinta(cuenta){
+      const lista=plVivaData.circuits||[];
+      $('plCircuitos').innerHTML=lista.length?'Circuitos definidos: '+lista.map(c=>'<span class="pl-circ" title="'+esc((c.target.all||[]).concat(c.target.any||[]).join(' · '))+'">'+esc(c.name)+' <i>'+(n=>n+' pantalla'+(n===1?'':'s'))(cuenta.get('circuito:'+c.id)||0)+'</i><button type="button" data-pl-circ-del="'+esc(c.id)+'" aria-label="Borrar el circuito '+esc(c.name)+'">✕</button></span>').join(''):'';
+      $('plCircuitos').querySelectorAll('[data-pl-circ-del]').forEach(b=>b.onclick=()=>plCircuitoBorra(b.dataset.plCircDel));
+    }
+    async function plCircuitoEnvia(cuerpo){
+      const r=await fetch('/api/playlist',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({rev:plVivaData.live.rev||0},cuerpo))});
+      const d=await r.json().catch(()=>({}));
+      if(r.status===409&&d.live)plVivaData.live=d.live;
+      return {ok:r.ok&&d.ok,status:r.status,error:d.error};
+    }
+    async function plCircuitoGuarda(){
+      const name=$('plCircuitoNombre').value.trim();
+      if(!name){feedback('Ponle un nombre al circuito.',false);$('plCircuitoNombre').focus();return}
+      const definidos=new Set((plVivaData.circuits||[]).map(c=>'circuito:'+c.id)),destino=[...plVivaSel].filter(t=>!definidos.has(t));
+      if(!destino.length){feedback('Elige primero el destino del circuito: proyecto, Xpacio, pantallas o atributos (no otro circuito definido).',false);return}
+      const n=plVivaPantallas(new Set(destino)).length;
+      const res=await plCircuitoEnvia({action:'circuit-save',circuit:{name,target:{all:destino}}});
+      if(!res.ok){feedback(res.status===401?'Inicia sesión en admira.tv para definir circuitos.':res.status===409?'Otra persona acaba de guardar: vuelve a intentarlo.':'No se pudo guardar el circuito ('+(res.error||res.status)+').',false);return}
+      await plVivaCarga();
+      const c=(plVivaData.circuits||[]).find(x=>x.name===name)||(plVivaData.circuits||[]).slice(-1)[0];
+      if(c)plVivaSel=new Set(['circuito:'+c.id]);
+      $('plCircuitoNombre').value='';plVivaPinta();plResumen();
+      feedback('Circuito «'+name+'» definido · '+n+' pantalla'+(n===1?'':'s')+' ahora. La playlist apunta ya al circuito.',true);
+    }
+    async function plCircuitoBorra(id){
+      const c=(plVivaData.circuits||[]).find(x=>x.id===id);if(!c)return;
+      const usan=(plVivaData.live.playlists||[]).filter(p=>(p.target.all||[]).concat(p.target.any||[]).includes('circuito:'+id)).map(p=>p.name);
+      if(!confirm('Borrar el circuito «'+c.name+'»'+(usan.length?'\n\nLo usan estas playlists vivas, que dejarán de llegar a sus pantallas: '+usan.join(', '):'')))return;
+      const res=await plCircuitoEnvia({action:'circuit-delete',id});
+      if(!res.ok){feedback('No se pudo borrar el circuito ('+(res.error||res.status)+').',false);return}
+      plVivaSel.delete('circuito:'+id);await plVivaCarga();plVivaPinta();plResumen();feedback('Circuito «'+c.name+'» borrado.',true);
     }
     async function plVivaGuarda(playlist,accion){
       const r=await fetch('/api/playlist',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
@@ -729,6 +787,7 @@
       if(abrir){if(DEFAULT_MODE){plDevSel.add(activeScreenId);$('plName').value='Por defecto'}plRefresca();(DEFAULT_MODE?$('plTagInput'):$('plName')).focus();plCargaStock().then(plRefresca);if(!DEFAULT_MODE)plVivaCarga().then(plRefresca)}};
     $('plViva').onchange=()=>{plViva=$('plViva').checked;plVivaPinta();plResumen()};
     for(const id of ['plVivaLimit','plVivaSecs'])$(id).addEventListener('input',plResumen);
+    $('plCircuitoGuardar').onclick=plCircuitoGuarda;$('plCircuitoNombre').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();plCircuitoGuarda()}});
     $('plVivaAdd').onclick=plVivaAnade;$('plVivaInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();plVivaAnade()}});
     $('plVivaEsta').onclick=()=>{plVivaSel.add('pantalla:'+activeScreenId);plVivaPinta();plResumen()};
     $('plTagAdd').onclick=plAnadeTagEscrito;

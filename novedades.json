@@ -4,6 +4,11 @@
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
   ],
+  "v.07.10.2026.r22.21:17": [
+    "Circuitos: guarda un destino con nombre («Starbucks verticales») y envíale playlists marcando el circuito",
+    "Toda pantalla que cumpla la definición entra sola en el circuito, hoy y cuando se conecte",
+    "El idIoT de una pantalla (Starbucks_PaseodeGracia_103_Pantalla_1) ya vale como destino: escríbelo tal cual"
+  ],
   "v.07.10.2026.r21.20:30": [
     "Una pantalla que declara su Xpacio aparece en el editor con su proyecto y su circuito desde el primer momento"
   ],

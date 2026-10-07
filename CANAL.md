@@ -225,6 +225,20 @@ o `?loc=` en la URL del canal) › el registro de identidad que sube la Parrilla
 pantalla→Xpacio en KV `admira-tv:screen:xpacio:v1`, rehecho por detrás porque el catálogo pesa 9 MB) › el
 proyecto de la parrilla por circuito › la marca del Xpacio. Con `?loc=` basta: circuito y proyecto se deducen.
 
+**idIoT como destino.** El nombre único de cada elemento IoT (`Starbucks_PaseodeGracia_103_Pantalla_1`) está guardado
+en la ficha de su Xpacio (`surfaces[i].idIoT` · `iot[]`, worker `omnipublicity-api`). Para admira.tv es otro
+identificador de la misma pantalla: la etiqueta `pantalla:starbucks-paseodegracia-103-pantalla-1`. La gana la pantalla
+cuyo player figura en la ficha (índice pantalla→Xpacio, campo `i`) o la que se declara con `?iot=<idIoT>` en la URL del
+canal; el servidor lo comprueba en `GET api.admira.store/locations/iot/<idIoT>` y, si existe y no contradice su Xpacio,
+le da además Xpacio, proyecto y circuito. En el editor se escribe el idIoT tal cual y se valida antes de aceptarlo.
+
+**Circuitos definidos.** Un circuito es un destino con nombre guardado junto a las reglas (`circuits[]` en
+`admira-tv:playlist:live:v1`): `{id, name, target:{all,any}}`. `applyCircuits` añade `circuito:<id>` a toda pantalla
+cuyas etiquetas PROPIAS cumplan la definición, al vuelo en cada consulta y en el censo del editor (no se guardan en las
+etiquetas recordadas: borrar un circuito surte efecto al momento). Se definen en `/parrilla/` → Playlist viva →
+«Guardar este destino como circuito» (`POST circuit-save` / `circuit-delete`, sólo con sesión). Un circuito no se
+define con otro circuito definido.
+
 ## Playlist (cola)
 
 ### Saltar desde el mando (`goto-N`)
