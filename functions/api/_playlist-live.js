@@ -168,7 +168,7 @@ export function resolveForScreen(playlists, screenTags, stock, facts = {}, now =
 // Índice pantalla → Xpacio a partir del catálogo de Xpacios (api.admira.store/locations): un Xpacio declara
 // sus pantallas en `screen` (alta de un equipo) o en `surfaces[].screen`. De 9.000 fichas sólo unas decenas las
 // declaran, así que se guarda compacto. La marca del Xpacio sirve de proyecto cuando la parrilla no le da uno.
-export const xpaceEntry = loc => ({ x: String(loc.id), n: String(loc.name || "").slice(0, 80), c: String(loc.circuit || ""), b: String((loc.external && loc.external.brand) || loc.client || "") });
+export const xpaceEntry = loc => ({ x: String(loc.id), n: String(loc.name || "").slice(0, 80), c: String(loc.circuit || ""), b: String(loc.project || (loc.external && loc.external.brand) || loc.client || "") });
 export const IDIOT_RE = /^[A-Za-z0-9]+(?:_[A-Za-z0-9]+){2,7}$/;
 export const cleanIdIot = v => { const t = String(v || "").trim(); return t.length <= 140 && IDIOT_RE.test(t) ? t : ""; };
 /** idIoT guardado en la ficha para el player `screen`: en su superficie, o en el registro fino iot[]. */
@@ -205,7 +205,7 @@ export function completeFacts(facts, { xpaceIndex = {}, projects = [], gridCircu
     && (!out.xpace || out.xpace === String(iotRecord.location.id))) {
     out.iot = String(iotRecord.idIoT);
     if (!out.xpace) out.xpace = String(iotRecord.location.id);
-    if (!xpaceRecord) xpaceRecord = { id: iotRecord.location.id, name: iotRecord.location.name, circuit: iotRecord.location.circuit, external: { brand: iotRecord.location.brand } };
+    if (!xpaceRecord) xpaceRecord = { id: iotRecord.location.id, name: iotRecord.location.name, circuit: iotRecord.location.circuit, project: iotRecord.location.project, external: { brand: iotRecord.location.brand } };
   }
   // Si la pantalla declara su Xpacio (?xpace= / ?loc=), la ficha de ESE Xpacio vale más que el índice.
   const declared = xpaceRecord && out.xpace && String(xpaceRecord.id || "") === out.xpace ? xpaceEntry(xpaceRecord) : null;

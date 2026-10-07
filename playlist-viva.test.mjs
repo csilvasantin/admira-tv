@@ -287,3 +287,9 @@ test("se define un circuito, se le envía una playlist por su etiqueta y llega a
     assert.equal((await post(m.env, { action: "circuit-delete", id: "no-existe" })).status, 404);
   } finally { m.fin(); }
 });
+
+test("el proyecto que el alta guarda en la ficha de un equipo es su proyecto en admira.tv", () => {
+  const ficha = { id: "tablet-barra", name: "Tablet barra", project: "starbucks", screen: "tablet-barra-mupi", surfaces: [{ screen: "tablet-barra-mupi", idIoT: "Starbucks_RambladeCatalunya_5_Pantalla_1" }] };
+  const tags = deduceScreenTags(completeFacts({ screen: "tablet-barra-mupi" }, { xpaceIndex: buildXpaceIndex([ficha]) }));
+  for (const t of ["proyecto:starbucks", "xpacio:tablet-barra", "pantalla:starbucks-rambladecatalunya-5-pantalla-1"]) assert.ok(tags.includes(t), t);
+});
