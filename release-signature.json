@@ -1,9 +1,9 @@
 {
-  "version": "v.08.10.2026.r1.00:24",
+  "version": "v.08.10.2026.r2.00:39",
   "signature": "GrokBot · MacMini",
   "agent": "GrokBot",
   "machine": "MacMini",
   "day": "08.10.2026",
-  "time": "00:24",
-  "evidence": "Audiencia: backoffice /audiencia (panel anónimo por tienda y hora de Madrid, CSV, reglas → cartas del quiosco segmentado) sobre la D1 kiosko-audiencia; simulación solo en starbucks-qa."
+  "time": "00:39",
+  "evidence": "Audiencia: el aviso de privacidad del panel ya no queda tapado por la cabecera."
 }

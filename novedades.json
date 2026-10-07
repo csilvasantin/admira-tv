@@ -128,5 +128,9 @@
     "Reglas → cartas: menú para grupos, jóvenes, adultos, senior, mujeres y hombres, con prioridad y carta por defecto (ejemplo Starbucks)",
     "Privacidad por diseño: solo recuentos anónimos, nunca imágenes ni huellas faciales; 90 días; pruebas solo en starbucks-qa",
     "Enlace desde Condicional; ES/EN"
+  ],
+  "v.08.10.2026.r2.00:39": [
+    "Audiencia: el aviso de privacidad se ve entero (la cabecera del panel ya no lo tapa)",
+    "Mismo panel, reglas y CSV que la r1"
   ]
 }
