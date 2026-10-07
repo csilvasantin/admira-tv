@@ -1,9 +1,9 @@
 {
-  "version": "v.07.10.2026.r4.taza-demo",
-  "signature": "Codex · MacBookAirAzul",
-  "agent": "Codex",
-  "machine": "MacBookAirAzul",
+  "version": "v.07.10.2026.r5.13:22",
+  "signature": "GrokBot · MacMini",
+  "agent": "GrokBot",
+  "machine": "MacMini",
   "day": "07.10.2026",
-  "time": "12:59",
-  "evidence": "Control explícito desde /taza /demo para seleccionar canciones del kiosko con respuesta correlacionada."
+  "time": "13:22",
+  "evidence": "El velo de Opciones/Avanzado/Experto cierra el panel y deja pasar el clic: el primer toque en ＋ Pedido en barra ya funciona."
 }
