@@ -45,5 +45,10 @@
     "Gestor de colas: un toque en «＋ Pedido en barra» crea siempre un solo pedido, aunque se pulse dos veces",
     "«📣 Llamar» confirma en pantalla que el pedido se ha anunciado",
     "El MCP cola_crear_pedido acepta «idem» para no duplicar"
+  ],
+  "v.07.10.2026.r8.14:06": [
+    "Gestor de colas: nueva columna «📥 Recibido»; el pedido en barra aparece al momento",
+    "La pantalla del iPad muestra los recibidos ya en «En preparación»",
+    "Tocar un recibido lo pasa a preparación; botón directo a Listo"
   ]
 }
