@@ -53,9 +53,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=07.10.2026.r1.0739"></script>
+<script src="xpl-runtime.js?v=07.10.2026.r2.0928"></script>
 <script>
-  window.ADMIRA_VERSION='v.07.10.2026.r1.07:39';
+  window.ADMIRA_VERSION='v.07.10.2026.r2.09:28';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -399,7 +399,7 @@
   <aside id="chan"></aside>
 </div>
 
-<script src="/assets/player-pairing.js?v=07.10.2026.r1.0739"></script>
+<script src="/assets/player-pairing.js?v=07.10.2026.r2.0928"></script>
 <script>
 // Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
 // directo (pub-…r2.dev): más resiliente y evita bloqueos de DNS/filtrado en algunas
@@ -4486,6 +4486,11 @@ async function ackQueuedCommand(c,status){
   await flushCmdAckOutbox();
   return !__cmdAckOutbox.some(x=>x.action===c.action);
 }
+// Misma identidad de pantalla que el coordinator de /locations/cmd: los
+// comandos dirigidos viajan en la cola del circuito junto a los broadcasts.
+function cmdScreenSlug(value){
+  return String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,48);
+}
 async function pollCmd(){
   if(XTORE_PARENT) return; // El iframe aislado sólo acepta el puente de su padre.
   if(!__cmdIds.length||__cmdPolling) return;
@@ -4503,6 +4508,11 @@ async function pollCmd(){
       active=true;
       for(const c of d.commands){
         if(typeof c.cid!=='number'||!Number.isSafeInteger(c.cid)||c.cid<=state.since) continue;
+        const target=cmdScreenSlug(c.screen);
+        if(target&&target!==cmdScreenSlug(scr.screen)){
+          state.since=c.cid; // consumida en esta cola; otra pantalla la ejecuta y acusa
+          continue;
+        }
         c._queueId=id;
         const status=await executeQueuedCommand(c); // orden estricto dentro de cada identidad
         await ackQueuedCommand(c,status);
@@ -4803,6 +4813,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=07.10.2026.r1.0739" defer></script>
+  <script src="/assets/admira-version-watch.js?v=07.10.2026.r2.0928" defer></script>
 </body>
 </html>

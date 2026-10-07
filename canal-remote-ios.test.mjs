@@ -18,6 +18,46 @@ const queuedAckSource = canal.slice(
   canal.indexOf("const LEGACY_ACTION_RE="),
   canal.indexOf("async function executeQueuedCommand", canal.indexOf("const LEGACY_ACTION_RE="))
 );
+const queuedPollSource = canal.slice(
+  canal.indexOf("function cmdScreenSlug("),
+  canal.indexOf("// Backoff por INACTIVIDAD", canal.indexOf("function cmdScreenSlug("))
+);
+
+test("la cola compartida ignora otra pantalla y continúa con órdenes propias y broadcasts", async () => {
+  const executed = [], acked = [], reads = [];
+  const commands = [
+    { cid: 11, screen: 'pantalla-otra', cmd: 'standby' },
+    { cid: 12, screen: 'pantalla-este', cmd: 'resume' },
+    { cid: 13, cmd: 'next' },
+    { cid: 14, screen: '', cmd: 'volume 50' },
+    { cid: 15, screen: 'pantalla-otra', cmd: 'off' },
+  ];
+  const state = { since: 10, init: true };
+  const context = vm.createContext({
+    XTORE_PARENT: false, scr: { screen: '  Pantállá / Éste  ' },
+    __cmdIds: ['shared-circuit'], __cmdState: { 'shared-circuit': state },
+    __cmdPolling: false, __cmdHost: 0, __cmdIdleN: 0,
+    CMD_HOSTS: ['https://api.test/locations/cmd'],
+    async flushCmdAckOutbox() {},
+    async executeQueuedCommand(command) { executed.push(command.cid); return 'executed'; },
+    async ackQueuedCommand(command, status) { acked.push({ cid: command.cid, queue: command._queueId, status }); },
+    async fetch(url) {
+      const since = Number(new URL(url).searchParams.get('since'));
+      reads.push(since);
+      return { ok: true, json: async () => ({ commands: commands.filter(command => command.cid > since) }) };
+    },
+  });
+  vm.runInContext(`${queuedPollSource}\nglobalThis.poll=pollCmd;globalThis.slug=cmdScreenSlug;`, context);
+  await context.poll();
+  assert.deepEqual(executed, [12, 13, 14], 'la orden ajena nunca modifica la emisión');
+  assert.deepEqual(acked, [12, 13, 14].map(cid => ({ cid, queue: 'shared-circuit', status: 'executed' })));
+  assert.equal(state.since, 15, 'el último comando ajeno también avanza el cursor');
+  await context.poll();
+  assert.deepEqual(reads, [10, 15]);
+  assert.deepEqual(executed, [12, 13, 14], 'el siguiente poll no repite comandos');
+  assert.equal(context.slug('  Pantállá / Éste  '), 'pantalla-este');
+  assert.equal(context.slug('A'.repeat(60)), 'a'.repeat(48), 'mismo límite que el servidor');
+});
 
 function playbackHarness({ standby = false, playResults = [undefined] } = {}) {
   const calls = [];
@@ -152,6 +192,16 @@ test("un 400 contractual es terminal: no prueba el alias ni repite el receipt",a
   await h.context.flush();
   assert.equal(h.calls.length,1,"los dos hosts apuntan al mismo coordinator");
   assert.equal(h.calls[0].url,'https://primary.test/locations/cmd/ack');
+  assert.deepEqual(JSON.parse(JSON.stringify(h.context.outbox())),[]);
+  assert.deepEqual(JSON.parse(h.writes.at(-1).value),[]);
+});
+
+test("un 403 de pantalla ajena descarta el receipt sin repetir por el alias ni el siguiente poll",async()=>{
+  const receipt={id:'osx',screen:'macbookpro16',cid:92,action:'66f6e863-771f-4418-b465-59b83d689ca3',status:'executed',queuedAt:Date.now()};
+  const h=queuedAckHarness([receipt],[Response.json({error:'command_screen_mismatch'},{status:403})]);
+  await h.context.flush();
+  await h.context.flush();
+  assert.equal(h.calls.length,1);
   assert.deepEqual(JSON.parse(JSON.stringify(h.context.outbox())),[]);
   assert.deepEqual(JSON.parse(h.writes.at(-1).value),[]);
 });
