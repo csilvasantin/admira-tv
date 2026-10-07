@@ -2,7 +2,7 @@
 <html lang="es" data-auth-server-session>
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=08.10.2026.r1.0024"></script>
+<script src="/auth-gate.js?v=08.10.2026.r2.0039"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Audiencia · quiosco segmentado · Admira.tv</title>
 <meta name="description" content="Audiencia anónima del tótem/quiosco (personas, género, edad, individuo o grupo) y reglas que eligen la carta. Sin imágenes ni huellas faciales.">
@@ -13,7 +13,7 @@
 :root{--bg:#070a10;--panel:#0e131c;--panel2:#121a27;--line:#1e2940;--ink:#cdd8e8;--dim:#8595ad;--air:#39d98a;--off:#ff5a5a;--amber:#ffb44c;--accent:#7aa2ff;--m:#5aa9ff;--f:#ff7ab6}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#11203a33,transparent),var(--bg);color:var(--ink);font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
-header{position:relative;z-index:2;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;background:#070a10e6;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+#audHead{position:relative;z-index:2;margin-top:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;background:#070a10e6;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .brand{font-weight:800;font-size:18px}.brand b{color:var(--accent)}
 .tabs{display:flex;gap:6px}.tabs button,.btn{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:7px 12px;font:inherit;cursor:pointer}
 .tabs button[aria-pressed=true]{background:var(--accent);color:#061023;border-color:var(--accent);font-weight:700}
@@ -41,13 +41,13 @@ footer{color:var(--dim);font-size:12px;padding:20px;text-align:center}
 </style>
 </head>
 <body>
-<header>
+<div id="audHead">
   <div class="brand">Admira<b>.tv</b> · <span data-t="titulo">Audiencia</span></div>
   <div class="tabs"><button data-tab="panel" aria-pressed="true" data-t="tPanel">Panel</button><button data-tab="reglas" aria-pressed="false" data-t="tReglas">Reglas y cartas</button><button data-tab="vivo" aria-pressed="false" data-t="tVivo">En vivo</button></div>
   <div class="sp"></div>
   <a class="btn" href="/condicional.html" data-t="condicional">Condicional (pantallas)</a>
   <button class="btn" id="lang">EN</button>
-</header>
+</div>
 <main>
   <div class="priv" data-t="priv">🔒 Solo recuentos anónimos estimados en el navegador del tótem: personas, género, banda de edad e individuo/grupo por visita. Nunca imágenes, fotogramas ni huellas faciales. Se borran a los 90 días.</div>
   <div class="bar">
@@ -212,7 +212,7 @@ tiendas().then(cargar,cargar);
 setInterval(cargarVivo,10000);
 })();
 </script>
-<script>window.ADMIRA_VERSION='v.08.10.2026.r1.00:24';</script>
-<script src="/admira-nav.js?v=08.10.2026.r1.0024" data-active="condicional" data-title="Audiencia" defer></script>
+<script>window.ADMIRA_VERSION='v.08.10.2026.r2.00:39';</script>
+<script src="/admira-nav.js?v=08.10.2026.r2.0039" data-active="condicional" data-title="Audiencia" defer></script>
 </body>
 </html>
