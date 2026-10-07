@@ -1,9 +1,9 @@
 {
-  "version": "v.07.10.2026.r6.taza-camera",
-  "signature": "Codex · MacBookAirAzul",
-  "agent": "Codex",
-  "machine": "MacBookAirAzul",
+  "version": "v.07.10.2026.r7.14:02",
+  "signature": "GrokBot · MacMini",
+  "agent": "GrokBot",
+  "machine": "MacMini",
   "day": "07.10.2026",
-  "time": "13:22",
-  "evidence": "CLI /demo taza abre cámara pública en esquina de Jardinets; cierre libera el dispositivo."
+  "time": "14:02",
+  "evidence": "Gestor de colas: crear idempotente (un toque = un pedido) y Llamar confirma en pantalla; el pedido fantasma venía de un quiosco en la misma sala."
 }
