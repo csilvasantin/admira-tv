@@ -57,3 +57,11 @@ test('Yarigai project accepts its producer and rejects kiosk writes',async()=>{
  assert.equal((await api('/api/mug-status',{name:'Yarigai',verb:'Estado',via:'yarig',source:'yarig.ai'})).data.ok,true);
  assert.equal((await api('/api/store-sync',{})).data.state,'received');
 });
+test('latest project content queues once when bridge recovers',async()=>{
+ const b=(await api('/api/store-binding',{storeId:'canalkiosk-jardinets',screen:''})).data.binding;
+ kv.set('mugStatus',JSON.stringify({text:'RECOVERY SONG',via:'adcelerate-best',source:'mappedMusic',ts:b.updatedAt+1}));
+ let queued=0;
+ env.IPHONE_QUEUE={idFromName:()=>1,get:()=>({fetch:async req=>{if(new URL(req.url).pathname==='/api/iphone/status')return response({gifReady:true});queued++;return response({id:'recovery-job'});}})};
+ await api('/api/store-sync',{});await api('/api/store-sync',{});
+ assert.equal(queued,1);delete env.IPHONE_QUEUE;
+});
