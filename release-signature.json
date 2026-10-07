@@ -1,9 +1,9 @@
 {
-  "version": "v.07.10.2026.r14.15:30",
-  "signature": "GrokBot · MacMini",
-  "agent": "GrokBot",
-  "machine": "MacMini",
+  "version": "v.07.10.2026.r15.17:25",
+  "signature": "NeoMBP16 · MacBookPro16",
+  "agent": "NeoMBP16",
+  "machine": "MacBookPro16",
   "day": "07.10.2026",
-  "time": "15:30",
-  "evidence": "Control de barra del gestor de colas: Listo en orden FIFO (más antiguo arriba), igual que la pantalla del iPad."
+  "time": "17:25",
+  "evidence": "Pantalla del gestor de colas: sin pantalla intermedia de voz, columna Recibido con barra de progreso y vaso (30 s) y recarga sólo cuando cambia el sello."
 }
