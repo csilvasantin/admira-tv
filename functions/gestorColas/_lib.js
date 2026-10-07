@@ -64,7 +64,9 @@ export async function operar(env, op, sala, a = {}) {
   }
   if (op === "pedido") return await rele(env, "pedido", sala, { query: "&pedido=" + encodeURIComponent(a.pedido || "") });
   if (op === "crear") {
-    const id = "gc-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
+    // Idempotente: el mismo «idem» (un toque, un reintento de red o del MCP) devuelve el MISMO pedido.
+    const idem = String(a.idem || "").replace(/[^A-Za-z0-9._-]/g, "").slice(0, 48);
+    const id = idem.length >= 6 ? "gc-" + idem : "gc-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
     await rele(env, "pedido", sala, { body: { id, nombre: a.nombre || "", total: 0, prefijo: a.prefijo || "A" } });
     return await rele(env, "pagar", sala, { body: { id, via: "caja" } });
   }

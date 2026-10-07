@@ -40,5 +40,10 @@
   "v.07.10.2026.r6.taza-camera": [
     "El primer toque tras abrir Opciones, Avanzado o Experto ya no se pierde: cierra el panel y pulsa lo de debajo",
     "Arreglado en el Gestor de colas (＋ Pedido en barra) y en todas las páginas de admira.tv"
+  ],
+  "v.07.10.2026.r7.14:02": [
+    "Gestor de colas: un toque en «＋ Pedido en barra» crea siempre un solo pedido, aunque se pulse dos veces",
+    "«📣 Llamar» confirma en pantalla que el pedido se ha anunciado",
+    "El MCP cola_crear_pedido acepta «idem» para no duplicar"
   ]
 }
