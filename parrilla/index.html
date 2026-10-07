@@ -460,9 +460,13 @@
     // Comparar tags a pelo no sirve: el tag real está escrito «música» con tilde y
     // quien escribe «#musica» no encontraría NADA sin saber por qué. Se normaliza
     // acento, mayúscula, almohadilla y separadores antes de comparar.
+    // Y además se resuelven las equivalencias del vocabulario (7-oct-2026): «tech» es «tecnología»,
+    // «gaming» es «videojuego», los plurales a una sola forma. Misma tabla que el canal y el servidor.
     function plNorm(t){
-      return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      const TAG_ALIAS={music:"musica",muscia:"musica",technology:"tecnologia",tech:"tecnologia",business:"negocio",creativity:"creatividad",ai:"ia",gaming:"videojuego",videojuegos:"videojuego",robotics:"robotica",historias:"historia",bebida:"bebidas",canciones:"cancion",robot:"robots",comics:"comic",curiosidad:"curiosidades",oferta:"ofertas",artistas:"artista",pelicula:"peliculas",personaje:"personajes",herramienta:"herramientas"};
+      const n=String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
         .toLowerCase().replace(/^#+/,'').replace(/[_\-\s]+/g,' ').trim();
+      return TAG_ALIAS[n]||n;
     }
     function plPiezaTags(p){return Array.isArray(p&&p.tags)?p.tags.filter(t=>String(t||'').trim()):[]}
     async function plCargaStock(){
