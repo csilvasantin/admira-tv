@@ -66,7 +66,9 @@ async function send(job) {
     result = deliveryResult(reply);
   } catch (error) {
     // Do not log the SDK error object: it may contain credentials or URLs.
-    result = { status: 'failed', message: `CarlosGdG: ${error instanceof Error && !/https|token/i.test(error.message) ? error.message.slice(0, 120) : 'error de transporte'}` };
+    const code = Number(error?.code);
+    const detail = String(error?.msg || error?.message || 'error de transporte').replaceAll(config.botToken || '__none__', '[redacted]').replaceAll(config.bridgeKey || '__none__', '[redacted]').replace(/https?:\/\/\S+/g, '[url]').slice(0,160);
+    result = { status: 'failed', message: `CarlosGdG: ${Number.isFinite(code) ? 'RPC '+code+' · ' : ''}${detail}` };
   }
   // Retry reporting without resending the physical RPC.
   for (let attempt = 0; attempt < 3; attempt++) {
