@@ -1,6 +1,6 @@
 import { accessFor, authHeaders, sessionEmail } from "../_auth-session.js";
 import { lecturaBlocksWrite } from "../_lectura-guard.js";
-import { LIVE_KEY, TAGS_PREFIX, STOCK_INDEX, MAX_LIVE, buildXpaceIndex, cleanIdentity, xpaceEntry, cleanLive, completeFacts, deduceScreenTags, liveRev, orientationOf, resolveContent, resolveForScreen, targetMatches } from "./_playlist-live.js";
+import { LIVE_KEY, TAGS_PREFIX, STOCK_INDEX, MAX_LIVE, MAX_CIRCUITS, applyCircuits, cleanCircuit, cleanIdIot, buildXpaceIndex, cleanIdentity, xpaceEntry, cleanLive, completeFacts, deduceScreenTags, liveRev, orientationOf, resolveContent, resolveForScreen, targetMatches } from "./_playlist-live.js";
 
 const PREFIX = "admira-tv:playlist:default:v1:";
 
@@ -83,11 +83,13 @@ async function readDraft(env, screen) {
 async function readLive(env) {
   try {
     const doc = JSON.parse((env.ACCESS && await env.ACCESS.get(LIVE_KEY)) || "null");
-    if (doc && Array.isArray(doc.playlists)) return doc;
+    if (doc && Array.isArray(doc.playlists)) { if (!Array.isArray(doc.circuits)) doc.circuits = []; return doc; }
   } catch (_) {}
-  return { rev: 0, updatedAt: 0, playlists: [] };
+  return { rev: 0, updatedAt: 0, playlists: [], circuits: [] };
 }
 const quick = (url, ttl) => fetch(url, { cf: { cacheTtl: ttl, cacheEverything: true }, signal: AbortSignal.timeout(3500) }).then(r => r.ok ? r.json() : null).catch(() => null);
+// Un idIoT declarado por el player se comprueba contra el catálogo: sólo cuenta si existe.
+const iotFicha = id => id ? quick("https://api.admira.store/locations/iot/" + encodeURIComponent(id), 600).then(d => (d && d.idIoT && d.location ? d : null)) : Promise.resolve(null);
 const xpaceFicha = id => id ? quick("https://api.admira.store/locations/" + encodeURIComponent(id), 600).then(d => (d && d.id ? d : d && d.location && d.location.id ? d.location : null)) : Promise.resolve(null);
 async function loadStock() {
   const d = await quick(STOCK_INDEX, 60);
@@ -98,7 +100,7 @@ async function loadStock() {
 function hintFacts(screen, q) {
   const circuit = cleanScreen(q.get("circuit")), w = Number(q.get("w")) || 0, h = Number(q.get("h")) || 0;
   // Identificadores únicos que el propio player puede declarar en su URL: ?project= y ?xpace= (o ?loc=).
-  return { screen, circuit: circuit && circuit !== screen ? circuit : "", project: cleanScreen(q.get("project")), xpace: cleanScreen(q.get("xpace") || q.get("xpacio") || q.get("loc")),
+  return { screen, circuit: circuit && circuit !== screen ? circuit : "", project: cleanScreen(q.get("project")), xpace: cleanScreen(q.get("xpace") || q.get("xpacio") || q.get("loc")), iotDeclared: cleanIdIot(q.get("iot") || q.get("idiot")),
     w, h, orientation: orientationOf(w, h, q.get("o")), lang: String(q.get("lang") || "").slice(0, 2) };
 }
 // Índice pantalla → Xpacio, compacto y guardado 30 min. El catálogo de Xpacios pesa 9 MB: NUNCA se espera a él
@@ -140,14 +142,16 @@ async function enrichFacts(facts, env, waitUntil) {
   }
   // Una pantalla que sólo declara su Xpacio (?loc=alsea-sbux-021) recibe de la ficha de ese Xpacio su circuito
   // y su proyecto (la marca): no hace falta escribirle los tres identificadores.
-  const [pr, index, identity, xpaceRecord] = await Promise.all([quick("https://api.admira.store/grid/projects", 600), xpaceIndex(env, waitUntil), readIdentity(env), xpaceFicha(facts.xpace)]);
-  const full = completeFacts(facts, { xpaceIndex: index, projects: (pr && pr.projects) || [], gridCircuit, registry: identity.map, xpaceRecord });
+  const iotRecord = await iotFicha(facts.iotDeclared);
+  const xpaceId = facts.xpace || (iotRecord && String(iotRecord.location.id)) || "";
+  const [pr, index, identity, xpaceRecord] = await Promise.all([quick("https://api.admira.store/grid/projects", 600), xpaceIndex(env, waitUntil), readIdentity(env), xpaceFicha(xpaceId)]);
+  const full = completeFacts(facts, { xpaceIndex: index, projects: (pr && pr.projects) || [], gridCircuit, registry: identity.map, xpaceRecord, iotRecord });
   if (xpaceRecord && full.xpace === String(xpaceRecord.id)) full.xpaceName = xpaceEntry(xpaceRecord).n;
   return Object.assign(facts, full);
 }
 // Censo para el editor: TODAS las pantallas de la parrilla con su identidad, aunque su player aún no haya pedido
 // nada, fundidas con las que sí se han visto (que además traen orientación e idioma).
-async function fleetIdentities(env, seen, waitUntil) {
+async function fleetIdentities(env, seen, waitUntil, circuits = []) {
   const lento = url => fetch(url, { cf: { cacheTtl: 300, cacheEverything: true }, signal: AbortSignal.timeout(9000) }).then(r => r.ok ? r.json() : null).catch(() => null);
   const [gs, pr, index, identity] = await Promise.all([lento("https://api.admira.store/grid/screens"), lento("https://api.admira.store/grid/projects"), xpaceIndex(env, waitUntil), readIdentity(env)]);
   const projects = (pr && pr.projects) || [], out = new Map(), registry = identity.map;
@@ -169,6 +173,8 @@ async function fleetIdentities(env, seen, waitUntil) {
   }
   for (const e of Object.values(index)) xpaces[e.x] = e.n;
   for (const e of Object.values(registry)) if (e.x && e.xn) xpaces[e.x] = e.xn;
+  // Los circuitos definidos se aplican AQUÍ, sobre las etiquetas propias: al borrar o cambiar uno, el censo lo refleja al momento.
+  for (const e of out.values()) e.tags = applyCircuits(e.tags, circuits);
   return { screens: [...out.values()].sort((a, b) => a.screen.localeCompare(b.screen)), projects: projects.map(p => ({ id: String(p.id), name: String(p.name || p.id) })), xpaces };
 }
 // Registro de etiquetas deducidas, para que el editor enseñe a qué pantallas llega una regla. Las etiquetas
@@ -200,8 +206,8 @@ async function adminGet(request, env, q, cors, waitUntil) {
   const actor = await actorWithAccess(request, env);
   if (!actor) return json({ ok: false, error: "unauthorized" }, 401, cors);
   const [live, seen] = await Promise.all([readLive(env), knownScreens(env)]);
-  const fleet = await fleetIdentities(env, seen, waitUntil), screens = fleet.screens;
-  if (q.get("preview") !== "1") return json({ ok: true, live, screens, projects: fleet.projects, xpaces: fleet.xpaces }, 200, cors);
+  const fleet = await fleetIdentities(env, seen, waitUntil, live.circuits), screens = fleet.screens;
+  if (q.get("preview") !== "1") return json({ ok: true, live, circuits: live.circuits, screens, projects: fleet.projects, xpaces: fleet.xpaces }, 200, cors);
   let rule;
   try { rule = cleanLive(JSON.parse(q.get("rule") || "{}"), actor); } catch (e) { return json({ ok: false, error: String(e.message || e) }, 400, cors); }
   const stock = await loadStock(), matched = screens.filter(s => targetMatches(rule.target, s.tags));
@@ -213,7 +219,7 @@ async function adminGet(request, env, q, cors, waitUntil) {
 
 export async function onRequestGet({ request, env, waitUntil }) {
   const cors = corsFor(request), q = new URL(request.url).searchParams;
-  if (q.get("live") === "1" || q.get("preview") === "1") return adminGet(request, env, q, cors);
+  if (q.get("live") === "1" || q.get("preview") === "1") return adminGet(request, env, q, cors, waitUntil);
   const screen = cleanScreen(q.get("screen"));
   if (!screen) return json({ ok: false, error: "bad_screen" }, 400, cors);
   // Public virtual playlists are also read by Xtore on www/localhost through
@@ -231,9 +237,10 @@ export async function onRequestGet({ request, env, waitUntil }) {
   const activas = live.playlists.filter(p => p && p.enabled !== false);
   // Con playlists vivas se completa siempre; sin ellas, sólo si la pantalla declara su Xpacio: así el editor ya la
   // ve con su proyecto y su circuito ANTES de que exista la primera regla, y lo que enseña es lo que casará.
-  if (activas.length || facts.xpace) await enrichFacts(facts, env, waitUntil);
-  const screenTags = deduceScreenTags(facts);
-  const recordar = rememberTags(env, screen, screenTags, facts);
+  if (activas.length || facts.xpace || facts.iotDeclared) await enrichFacts(facts, env, waitUntil);
+  // Se recuerdan las etiquetas PROPIAS; los circuitos definidos se añaden al vuelo, aquí y en el censo del editor.
+  const propias = deduceScreenTags(facts), screenTags = applyCircuits(propias, live.circuits);
+  const recordar = rememberTags(env, screen, propias, facts);
   try { if (typeof waitUntil === "function") waitUntil(recordar); else await recordar; } catch (_) { await recordar; }
   if (!draft.items.length && activas.length) {
     const { hits, items } = resolveForScreen(activas, screenTags, await loadStock(), facts);
@@ -263,6 +270,18 @@ async function liveWrite(request, env, body, cors) {
     if (changed) { doc.updatedAt = Date.now(); doc.updatedBy = actor; await env.ACCESS.put(IDENTITY_KEY, JSON.stringify(doc)); }
     return json({ ok: true, changed, total: Object.keys(doc.map).length }, 200, cors);
   }
+  let circuits = live.circuits.slice();
+  if (body.action === "circuit-delete") {
+    const id = String(body.id || "");
+    if (!circuits.some(c => c.id === id)) return json({ ok: false, error: "circuit_not_found" }, 404, cors);
+    circuits = circuits.filter(c => c.id !== id);
+  } else if (body.action === "circuit-save") {
+    let item;
+    try { item = cleanCircuit(body.circuit, actor); } catch (e) { return json({ ok: false, error: String(e.message || e) }, 400, cors); }
+    const at = circuits.findIndex(c => c.id === item.id);
+    if (at >= 0) circuits[at] = { ...item, createdAt: circuits[at].createdAt || item.updatedAt };
+    else { if (circuits.length >= MAX_CIRCUITS) return json({ ok: false, error: "circuit_limit" }, 400, cors); circuits.push({ ...item, createdAt: item.updatedAt }); }
+  } else
   if (body.action === "live-delete") {
     const id = String(body.id || "");
     if (!playlists.some(p => p.id === id)) return json({ ok: false, error: "live_not_found" }, 404, cors);
@@ -274,7 +293,7 @@ async function liveWrite(request, env, body, cors) {
     if (at >= 0) playlists[at] = { ...item, createdAt: playlists[at].createdAt || item.updatedAt };
     else { if (playlists.length >= MAX_LIVE) return json({ ok: false, error: "live_limit" }, 400, cors); playlists.push({ ...item, createdAt: item.updatedAt }); }
   }
-  const updatedAt = Date.now(), next = { rev: Math.max(Number(live.rev) || 0, updatedAt - 1) + 1, updatedAt, updatedBy: actor, playlists };
+  const updatedAt = Date.now(), next = { rev: Math.max(Number(live.rev) || 0, updatedAt - 1) + 1, updatedAt, updatedBy: actor, playlists, circuits };
   await env.ACCESS.put(LIVE_KEY, JSON.stringify(next));
   return json({ ok: true, live: next }, 200, cors);
 }
@@ -284,7 +303,7 @@ export async function onRequestPost({ request, env }) {
   if (await lecturaBlocksWrite(request, env)) return json({ ok: false, error: "solo_lectura" }, 403, cors);
   let body;
   try { body = await request.json(); } catch (_) { return json({ ok: false, error: "invalid_json" }, 400, cors); }
-  if (body && ["live-save", "live-delete", "identity-sync"].includes(body.action)) return liveWrite(request, env, body, cors);
+  if (body && ["live-save", "live-delete", "identity-sync", "circuit-save", "circuit-delete"].includes(body.action)) return liveWrite(request, env, body, cors);
   // Sesión del portal (admira.tv) o clave del Stock (pixeria.com, server-to-server).
   const actor = await actorWithAccess(request, env) || stockActor(request, env, body);
   if (!actor) return json({ ok: false, error: "unauthorized" }, 401, cors);

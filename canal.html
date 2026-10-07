@@ -1724,8 +1724,8 @@ async function loadDefaultDraft(){
   // las piezas de las playlists vivas que le toquen. Nadie etiqueta pantallas a mano.
   let defaultDraftHints='';
   try{const c=String(programCircuit()||'').trim(),l=String((typeof navigator!=='undefined'&&navigator.language)||'').slice(0,2),w=typeof innerWidth==='number'?innerWidth:0,h=typeof innerHeight==='number'?innerHeight:0;
-    const q=typeof qs!=='undefined'&&qs&&typeof qs.get==='function'?qs:null,pj=q&&q.get('project')||'',xp=q&&(q.get('xpace')||q.get('xpacio')||q.get('loc'))||'';
-    defaultDraftHints=(c&&c!==screen?'&circuit='+encodeURIComponent(c):'')+(pj?'&project='+encodeURIComponent(pj):'')+(xp?'&xpace='+encodeURIComponent(xp):'')+'&w='+w+'&h='+h+(l?'&lang='+encodeURIComponent(l):'');}catch(_){}
+    const q=typeof qs!=='undefined'&&qs&&typeof qs.get==='function'?qs:null,pj=q&&q.get('project')||'',xp=q&&(q.get('xpace')||q.get('xpacio')||q.get('loc'))||'',io=q&&(q.get('iot')||q.get('idiot'))||'';
+    defaultDraftHints=(c&&c!==screen?'&circuit='+encodeURIComponent(c):'')+(pj?'&project='+encodeURIComponent(pj):'')+(xp?'&xpace='+encodeURIComponent(xp):'')+(io?'&iot='+encodeURIComponent(io):'')+'&w='+w+'&h='+h+(l?'&lang='+encodeURIComponent(l):'');}catch(_){}
   try{
     const d=XTORE_PARENT?await xtorePublicRead('playlist'):await fetch('/api/playlist?screen='+encodeURIComponent(screen)+defaultDraftHints+'&_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
     if(xtoreMusicEnabled()&&(d?.ok!==true||!Array.isArray(d?.draft?.items)))throw new Error('Playlist unavailable');

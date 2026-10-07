@@ -55,6 +55,9 @@ export function deduceScreenTags(facts = {}) {
   const tags = new Set(["todas"]);
   const add = (k, v) => { const t = screenTag(k + ":" + (v == null ? "" : v)); if (t) tags.add(t); };
   if (facts.screen) add("pantalla", facts.screen);
+  // idIoT: el nombre único guardado en la ficha del Xpacio (Starbucks_PaseodeGracia_103_Pantalla_1). Es otro
+  // identificador de la MISMA pantalla: una playlist puede apuntar al player o al idIoT, y casa igual.
+  if (facts.iot) add("pantalla", facts.iot);
   if (facts.xpace) add("xpacio", facts.xpace);
   if (facts.circuit) add("circuito", facts.circuit);
   if (facts.project) add("proyecto", facts.project);
@@ -166,20 +169,44 @@ export function resolveForScreen(playlists, screenTags, stock, facts = {}, now =
 // sus pantallas en `screen` (alta de un equipo) o en `surfaces[].screen`. De 9.000 fichas sólo unas decenas las
 // declaran, así que se guarda compacto. La marca del Xpacio sirve de proyecto cuando la parrilla no le da uno.
 export const xpaceEntry = loc => ({ x: String(loc.id), n: String(loc.name || "").slice(0, 80), c: String(loc.circuit || ""), b: String((loc.external && loc.external.brand) || loc.client || "") });
+export const IDIOT_RE = /^[A-Za-z0-9]+(?:_[A-Za-z0-9]+){2,7}$/;
+export const cleanIdIot = v => { const t = String(v || "").trim(); return t.length <= 140 && IDIOT_RE.test(t) ? t : ""; };
+/** idIoT guardado en la ficha para el player `screen`: en su superficie, o en el registro fino iot[]. */
+export function idIotOfScreen(loc, screen) {
+  const surfaces = Array.isArray(loc && loc.surfaces) ? loc.surfaces.filter(Boolean) : [], id = String(screen || "").toLowerCase();
+  const hit = (Array.isArray(loc && loc.iot) ? loc.iot : []).find(e => e && String(e.player || "").toLowerCase() === id)
+    || surfaces.find(x => String(x.screen || "").toLowerCase() === id)
+    || (String((loc && loc.screen) || "").toLowerCase() === id && surfaces.length === 1 ? surfaces[0] : null);
+  return cleanIdIot(hit && hit.idIoT);
+}
 export function buildXpaceIndex(locations) {
   const index = {};
   for (const loc of Array.isArray(locations) ? locations : []) {
     if (!loc || !loc.id) continue;
     const entry = xpaceEntry(loc);
-    const screens = [loc.screen, ...((Array.isArray(loc.surfaces) ? loc.surfaces : []).map(s => s && s.screen))];
-    for (const s of screens) { const id = String(s || "").trim().toLowerCase(); if (/^[a-z0-9][a-z0-9-]{1,79}$/.test(id) && !index[id]) index[id] = entry; }
+    const screens = [loc.screen, ...((Array.isArray(loc.surfaces) ? loc.surfaces : []).map(s => s && s.screen)), ...((Array.isArray(loc.iot) ? loc.iot : []).map(e => e && e.player))];
+    for (const s of screens) {
+      const id = String(s || "").trim().toLowerCase();
+      if (!/^[a-z0-9][a-z0-9-]{1,79}$/.test(id) || index[id]) continue;
+      const i = idIotOfScreen(loc, id);
+      index[id] = i ? { ...entry, i } : entry;
+    }
   }
   return index;
 }
 
 /** Identidad completa de una pantalla: lo que ella declara manda; lo que falta lo ponen el índice y la parrilla. */
-export function completeFacts(facts, { xpaceIndex = {}, projects = [], gridCircuit = "", registry = {}, xpaceRecord = null } = {}) {
+export function completeFacts(facts, { xpaceIndex = {}, projects = [], gridCircuit = "", registry = {}, xpaceRecord = null, iotRecord = null } = {}) {
   const out = { ...facts }, reg = registry[out.screen] || null;
+  // ?iot= declarado por el player: sólo vale si el catálogo lo conoce (iotRecord viene de /locations/iot/<idIoT>)
+  // y no contradice el Xpacio que la pantalla diga. Da el idIoT canónico y, si falta, el Xpacio.
+  delete out.iot;
+  if (out.iotDeclared && iotRecord && iotRecord.location && String(iotRecord.idIoT || "").toLowerCase() === String(out.iotDeclared).toLowerCase()
+    && (!out.xpace || out.xpace === String(iotRecord.location.id))) {
+    out.iot = String(iotRecord.idIoT);
+    if (!out.xpace) out.xpace = String(iotRecord.location.id);
+    if (!xpaceRecord) xpaceRecord = { id: iotRecord.location.id, name: iotRecord.location.name, circuit: iotRecord.location.circuit, external: { brand: iotRecord.location.brand } };
+  }
   // Si la pantalla declara su Xpacio (?xpace= / ?loc=), la ficha de ESE Xpacio vale más que el índice.
   const declared = xpaceRecord && out.xpace && String(xpaceRecord.id || "") === out.xpace ? xpaceEntry(xpaceRecord) : null;
   const known = declared || xpaceIndex[out.screen] || null;
@@ -194,6 +221,9 @@ export function completeFacts(facts, { xpaceIndex = {}, projects = [], gridCircu
     if (hit && hit.id) out.project = String(hit.id);
   }
   if (!out.project && known && known.b) out.project = known.b;
+  // La pantalla dada de alta en una ficha trae su idIoT del índice; la que declara su Xpacio, de esa ficha.
+  if (!out.iot) out.iot = (xpaceIndex[out.screen] && xpaceIndex[out.screen].i) || (xpaceRecord && out.xpace === String(xpaceRecord.id) && Array.isArray(xpaceRecord.surfaces) ? idIotOfScreen(xpaceRecord, out.screen) : "") || "";
+  if (!out.iot) delete out.iot;
   return out;
 }
 
@@ -203,6 +233,30 @@ export function cleanIdentity(raw) {
   const screen = id(raw && raw.screen);
   if (!screen) return null;
   return { screen, p: id(raw.project), x: id(raw.xpace), n: String(raw.name || "").trim().slice(0, 80), xn: String(raw.xpaceName || "").trim().slice(0, 80) };
+}
+
+// CIRCUITOS DEFINIDOS (Carlos, 7-oct-2026): un circuito es un grupo de pantallas con nombre —«Starbucks
+// verticales», «Estancos de Gràcia»— definido con los mismos identificadores y atributos que un destino. Toda
+// pantalla que cumpla la definición gana la etiqueta circuito:<id>, y una playlist se envía al circuito por esa
+// etiqueta. La definición se evalúa sobre las etiquetas propias de la pantalla: un circuito no se define con otro
+// circuito definido (sí con el circuito que declara el player).
+export const MAX_CIRCUITS = 200;
+export function cleanCircuit(raw, actor = "", now = Date.now()) {
+  if (!raw || typeof raw !== "object") throw new Error("invalid_circuit");
+  const name = String(raw.name || "").trim().slice(0, 60);
+  if (!name) throw new Error("circuit_name_required");
+  const id = slug(raw.id || name);
+  if (!id) throw new Error("circuit_name_required");
+  const t = raw.target || {}, self = "circuito:" + id;
+  const target = { all: tagList(t.all, screenTag, 200).filter(x => x !== self), any: tagList(t.any, screenTag, 200).filter(x => x !== self) };
+  if (!target.all.length && !target.any.length) throw new Error("circuit_target_required");
+  return { id, name, enabled: raw.enabled !== false, target, updatedAt: now, updatedBy: String(actor || "").slice(0, 120) };
+}
+/** Etiquetas de la pantalla más circuito:<id> de cada circuito definido que la incluya. */
+export function applyCircuits(tags, circuits) {
+  const base = Array.isArray(tags) ? tags : [], out = new Set(base);
+  for (const c of Array.isArray(circuits) ? circuits : []) if (c && c.id && c.enabled !== false && targetMatches(c.target, base)) out.add("circuito:" + c.id);
+  return [...out].sort();
 }
 
 /** Revisión estable: cambia sólo cuando cambia lo que sale por antena. */
