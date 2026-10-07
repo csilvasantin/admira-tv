@@ -105,7 +105,7 @@
   <div class="workspace">
     <aside class="side">
       <div>
-        <section data-store-config style="padding:12px;background:#12151c;border:1px solid #2a313a;border-radius:10px;margin:12px 0"></section><script src="/store-config.js?v=20261007-projects" defer></script>
+        <section data-store-config style="padding:12px;background:#12151c;border:1px solid #2a313a;border-radius:10px;margin:12px 0"></section><script src="/store-config.js?v=20261007-segments" defer></script>
 <p class="cap">Cámara</p>
         <div class="cam"><img id="live" alt="" hidden style="display:none"><video id="local-camera" autoplay muted playsinline hidden style="width:100%;height:100%;object-fit:contain;display:none"></video></div>
         <p><button type="button" id="camera-open">Abrir cámara de este Mac</button> <button type="button" id="camera-stop" disabled>Cerrar cámara</button> <button type="button" id="camera-expand">Ampliar cámara</button></p>
@@ -166,7 +166,7 @@
           tg.textContent = "local";
           tg.className = "pill";
         }
-        lookEl.textContent = (s.look && s.look.text) ? s.look.text : "";
+        lookEl.textContent = "Supervisión visual en directo. El contenido recibido se comprueba en los LEDs.";
       } catch (e) {
         tg.textContent = "sin servidor";
         tg.className = "pill bad";

@@ -396,6 +396,7 @@ var IPhoneQueue = class {
       const job = {
         ok: true,
         id: body.id,
+        bindingRevision: body.bindingRevision || null,
         text: body.text,
         status: "queued",
         createdAt: now,
@@ -974,7 +975,7 @@ async function enqueueMugGif(env, gifBytes, origin) {
     const req = new Request(publicOrigin + "/api/iphone/jobs", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id, kind: "gif", gif: btoa(bin) })
+      body: JSON.stringify({ id, kind: "gif", gif: btoa(bin), bindingRevision: JSON.parse(await env.KV.get(STORE_BINDING_KEY)||'null')?.revision || null })
     });
     const stub = env.IPHONE_QUEUE.get(env.IPHONE_QUEUE.idFromName("pixeltext"));
     const res = await stub.fetch(req);
@@ -1087,6 +1088,8 @@ async function mugLaunch(env, origin, args) {
 }
 __name(mugLaunch, "mugLaunch");
 async function playPixels(env, origin, pixels, meta) {
+  const binding=JSON.parse(await env.KV.get(STORE_BINDING_KEY)||'null');
+  if(!permitsStore(binding,meta))return {ok:false,error:'Proyecto ajeno bloqueado',binding};
   if (!Array.isArray(pixels) || pixels.length < 32 * 16 * 3) return { ok: false, error: "pixels 32\xD716 RGB" };
   const rec = {
     name: String(meta && meta.name || "ADMIRA").slice(0, 16) || "ADMIRA",
@@ -1241,6 +1244,8 @@ async function handleMcpRpc(env, origin, msg) {
         if (name === "taza_status_read") out = await readMugStatus(env, origin);
         else if (name === "taza_status_write") out = await writeMugStatus(env, origin, args);
         else if (name === "taza_pixels_write") {
+          const binding=JSON.parse(await env.KV.get(STORE_BINDING_KEY)||'null');
+          if(!permitsStore(binding,args))return rpcResult(id,{content:[{type:'text',text:JSON.stringify({ok:false,error:'Proyecto ajeno bloqueado'})}],isError:true});
           if (args && args.play === false) {
             const pixels = Array.isArray(args.pixels) ? args.pixels.slice(0, 32 * 16 * 3) : [];
             if (pixels.length < 32 * 16 * 3) out = { ok: false, error: "pixels 32\xD716 RGB" };
@@ -1296,6 +1301,7 @@ async function storeJson(url) {
  if(!r.ok)throw new Error('Catálogo no disponible');return r.json();
 }
 async function getStore(id){
+ if(id==='starbucks-queue')return {id,name:'Starbucks · Gestión de colas',screens:[],demo:false,project:'starbucks-queue'};
  if(id==='yarigai')return {id,name:'Yarigai',screens:[],demo:false,project:'yarigai'};
  if(id==='canalkiosk-jardinets')return {id,name:'CanalKiosk · Jardinets',screens:[{id:'ipad-admin-mupi',name:'Pantalla Jardinets · iPad Admin'},{id:'samsung-galaxy-fold-8-mupi',name:'Fold 8'}],demo:true};
  const d=await storeJson('https://brain.digitalavatar.ai/locations/'+encodeURIComponent(id));
@@ -1307,6 +1313,7 @@ async function getStore(id){
 function permitsStore(binding,args){
  if(!binding?.enabled)return true;
  if(args?.via==='store-follow')return args.storeId===binding.storeId&&args.screen===binding.screen&&args.bindingRevision===binding.revision;
+ if(binding.storeId==='starbucks-queue')return args?.project==='starbucks-queue'&&args?.via==='queue-follow';
  if(binding.storeId==='yarigai')return ['yarig','yarigai','yarig.ai'].includes(String(args?.via||'').toLowerCase())||/^https?:\/\/(www\.)?yarig\.ai(?:\/|$)/i.test(args?.source||'')||['yarig.ai','yarigai'].includes(String(args?.source||'').toLowerCase());
  // Compatibilidad con la demo actual de Jardinets; otros productores no pueden pisarla.
  return binding.storeId==='canalkiosk-jardinets'&&args?.via==='adcelerate-best'&&args?.source==='mappedMusic';
@@ -1325,7 +1332,7 @@ async function storeRoute(req,env,url){
  const p=url.pathname;
  if(p==='/api/stores'&&req.method==='GET'){
   const d=await storeJson('https://brain.digitalavatar.ai/locations?slim=1');
-  return json2({ok:true,stores:[{id:'yarigai',name:'Yarigai',kind:'Proyecto'}, {id:'canalkiosk-jardinets',name:'CanalKiosk · Jardinets',kind:'Demo kiosko'},...(d.locations||[]).map(l=>({id:l.id,name:l.name,kind:l.kind}))]});
+  return json2({ok:true,stores:[{id:'starbucks-queue',name:'Starbucks · Gestión de colas',kind:'Avisos de pedidos'}, {id:'yarigai',name:'Yarigai',kind:'Proyecto'}, {id:'canalkiosk-jardinets',name:'CanalKiosk · Jardinets',kind:'Demo kiosko'},...(d.locations||[]).map(l=>({id:l.id,name:l.name,kind:l.kind}))]});
  }
  if(p==='/api/store'&&req.method==='GET'){
   const id=url.searchParams.get('id')||'';if(!validStoreId(id))return json2({ok:false,error:'ID de store no válido'},400);
@@ -1338,7 +1345,7 @@ async function storeRoute(req,env,url){
   if(b.enabled===false){await env.KV.delete(STORE_BINDING_KEY);return json2({ok:true,binding:null});}
   if(!validStoreId(b.storeId||'')||typeof b.screen!=='string'||b.screen.length>100||b.screen&&!validStoreId(b.screen))return json2({ok:false,error:'Elige una store y un ID de pantalla válido'},400);
   const store=await getStore(b.storeId);
-  const next={enabled:true,storeId:store.id,name:store.name,screen:b.screen,project:store.id==='yarigai'?'yarigai':store.id==='canalkiosk-jardinets'?'canalkiosk':/starbucks|sbux/i.test(store.name+' '+store.id)?'starbucks':'store',mode:store.id==='yarigai'?'producer':store.demo&&!b.screen?'demo':'screen',revision:crypto.randomUUID(),updatedAt:Date.now()};
+  const next={enabled:true,storeId:store.id,name:store.name,screen:b.screen,project:store.id==='starbucks-queue'?'starbucks-queue':store.id==='yarigai'?'yarigai':store.id==='canalkiosk-jardinets'?'canalkiosk':/starbucks|sbux/i.test(store.name+' '+store.id)?'starbucks':'store',mode:['yarigai','starbucks-queue'].includes(store.id)?'producer':store.demo&&!b.screen?'demo':'screen',revision:crypto.randomUUID(),updatedAt:Date.now()};
   await env.KV.put(STORE_BINDING_KEY,JSON.stringify(next));
   return json2({ok:true,binding:next});
  }
@@ -1347,7 +1354,7 @@ async function storeRoute(req,env,url){
   let status=JSON.parse(await env.KV.get('mugStatus')||'null');
   if(binding.mode==='producer'){
    const matches=status?.bindingRevision===binding.revision;
-   return json2({ok:true,binding,state:matches?'received':'waiting',title:matches?status.text:null,message:matches?'Contenido de Yarigai recibido; comprueba los LEDs':'Esperando contenido de Yarigai',delivery:matches?await retryProjectGif(env,url.origin,binding,status):await iphoneSnapshot(env)});
+   return json2({ok:true,binding,state:matches?'received':'waiting',title:matches?status.text:null,message:matches?'Contenido de '+binding.name+' recibido; comprueba los LEDs':'Esperando contenido de '+binding.name,delivery:matches?await retryProjectGif(env,url.origin,binding,status):await iphoneSnapshot(env)});
   }
   if(!binding.screen){
    if(!binding.screen&&binding.mode!=='demo')return json2({ok:true,binding,state:'waiting',message:'Store asociada; elige la pantalla que emite la demo',delivery:await iphoneSnapshot(env)});
@@ -1384,6 +1391,10 @@ var worker_default = {
       try{return await storeRoute(req,env,url);}catch(e){return json2({ok:false,error:String(e.message||e)},502);}
     }
     if (path.startsWith("/api/iphone/")) {
+      if(req.method==='POST'&&['/api/iphone/jobs','/api/iphone/bridge/activity'].includes(path)){
+        const binding=JSON.parse(await env.KV.get(STORE_BINDING_KEY)||'null');
+        if(binding?.enabled)return json2({ok:false,error:'Envío directo bloqueado: usa /api/mug-status con el proyecto seleccionado',binding},409);
+      }
       const response = await iphoneRoute(req, env);
       if (response.ok && ["/api/iphone/bridge/result", "/api/iphone/confirm"].includes(path)) {
         const result = await response.clone().json();

@@ -62,6 +62,10 @@ async function send(job) {
   busy = true; health.state = 'sending'; health.lastJob = { id: job.id, state: 'sending' };
   let result;
   try {
+    const associationResponse = await fetch(origin+'/api/store-binding?_='+Date.now(), {cache:'no-store', signal:AbortSignal.timeout(10000)});
+    if(!associationResponse.ok)throw new Error('No se pudo comprobar el proyecto activo');
+    const {binding} = await associationResponse.json();
+    if(binding?.enabled&&job.bindingRevision!==binding.revision)throw new Error('Envío descartado: el proyecto activo ha cambiado');
     const rpc = gifRpc(job, origin);
     const reply = await bot.setDevMessage(config.chat, { bindingIndex: config.slot }, rpc);
     result = deliveryResult(reply);

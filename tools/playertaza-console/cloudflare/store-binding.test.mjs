@@ -16,7 +16,7 @@ globalThis.fetch=async(url)=>{
 };
 async function api(path,body){const r=await worker.fetch(new Request(origin+path,{method:body?'POST':'GET',headers:body?{'content-type':'application/json'}:{},body:body?JSON.stringify(body):undefined}),env);return {status:r.status,data:await r.json()};}
 test('catalog, persistent binding, and Jardinets demo selection',async()=>{
- kv.clear();assert.equal((await api('/api/stores')).data.stores.length,3);
+ kv.clear();assert.equal((await api('/api/stores')).data.stores.length,4);
  const bind=(await api('/api/store-binding',{storeId:'canalkiosk-jardinets',screen:''})).data.binding;
  assert.equal(bind.mode,'demo');assert.equal((await api('/api/store-binding')).data.binding.revision,bind.revision);
  const accepted=await api('/api/mug-status',{name:'Queen',verb:'Radio ga ga',via:'adcelerate-best',source:'mappedMusic'});
@@ -64,4 +64,24 @@ test('latest project content queues once when bridge recovers',async()=>{
  env.IPHONE_QUEUE={idFromName:()=>1,get:()=>({fetch:async req=>{if(new URL(req.url).pathname==='/api/iphone/status')return response({gifReady:true});queued++;return response({id:'recovery-job'});}})};
  await api('/api/store-sync',{});await api('/api/store-sync',{});
  assert.equal(queued,1);delete env.IPHONE_QUEUE;
+});
+
+test('queue project accepts tagged queue events and rejects kiosk and untagged events',async()=>{
+ kv.clear();const b=(await api('/api/store-binding',{storeId:'starbucks-queue',screen:''})).data.binding;
+ assert.equal(b.project,'starbucks-queue');assert.equal(b.mode,'producer');
+ assert.equal((await api('/api/mug-status',{name:'Kiosk',verb:'song',via:'adcelerate-best',source:'mappedMusic'})).data.ok,false);
+ assert.equal((await api('/api/mug-status',{name:'Order',verb:'ready',via:'queue-follow'})).data.ok,false);
+ const accepted=await api('/api/mug-status',{name:'PEDIDO 42',verb:'LISTO',project:'starbucks-queue',via:'queue-follow'});
+ assert.equal(accepted.data.ok,true);assert.equal((await api('/api/store-sync',{})).data.state,'received');
+ await api('/api/store-binding',{storeId:'canalkiosk-jardinets',screen:''});
+ assert.equal((await api('/api/mug-status',{name:'PEDIDO 43',verb:'LISTO',project:'starbucks-queue',via:'queue-follow'})).data.ok,false);
+});
+test('direct queue, activity and MCP pixels cannot bypass selected project',async()=>{
+ const before=kv.get('gif');
+ assert.equal((await api('/api/iphone/jobs',{kind:'gif',gif:'AAAA'})).status,409);
+ assert.equal((await api('/api/iphone/bridge/activity',{snapshot:{}})).status,409);
+ for(const play of [true,false]){
+ const out=await api('/mcp',{jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'taza_pixels_write',arguments:{pixels:Array(1536).fill(0),play}}});
+ assert.equal(out.data.result.isError,true);assert.equal(kv.get('gif'),before);
+ }
 });
