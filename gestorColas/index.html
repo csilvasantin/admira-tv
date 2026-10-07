@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<script src="/auth-gate.js?v=07.10.2026.r3.1259"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gestor de colas · Admira.tv</title>
+<meta name="admiranext-version" content="v.07.10.2026.r3.12:59">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/admira-frame.css?v=07.10.2026.r3.1259">
+<style>
+:root{--c:#00704A;--osc:#1E3932;--fondo:#f4f2ee;--tx:#14211d}
+body{margin:0;font-family:Inter,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--fondo);color:var(--tx)}
+main{max-width:1200px;margin:0 auto;padding:18px}
+.top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.top h1{margin:0;font-size:24px;flex:1}.top h1 small{font-size:14px;opacity:.65;font-weight:500}
+.pill{border:0;border-radius:999px;padding:9px 16px;font-weight:800;cursor:pointer;background:var(--c);color:#fff;font-size:15px}
+.pill.sec{background:#fff;color:var(--osc);border:2px solid var(--c)}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.col{background:#fff;border-radius:16px;padding:12px;min-height:240px;box-shadow:0 2px 10px #0001}
+.col h2{margin:0 0 10px;font-size:17px;display:flex;justify-content:space-between}
+.p{display:flex;align-items:center;gap:8px;border:1px solid #0002;border-radius:12px;padding:10px;margin-bottom:8px;cursor:pointer;user-select:none}
+.p:active{transform:scale(.98)}.p b{font-size:28px;font-variant-numeric:tabular-nums;min-width:86px}.p span{flex:1;font-size:14px;opacity:.75}
+.p button{border:0;border-radius:9px;padding:8px 10px;font-weight:700;cursor:pointer;background:#eee}
+.listo .p{border-color:var(--c);background:#00704A12}
+.vacio{opacity:.5;font-size:14px}
+#msg{min-height:22px;font-size:14px;margin:8px 0}
+.form{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.form input,.form select{padding:9px 12px;border-radius:10px;border:1px solid #0003;font:inherit}
+.slot h3{margin:4px 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;opacity:.7}
+.slot a{color:var(--c);word-break:break-all}.slot code{background:#0001;padding:1px 5px;border-radius:5px}
+.slot li{margin:5px 0;font-size:13.5px}
+@media (max-width:820px){.cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<script src="/admira-nav.js?v=07.10.2026.r3.1259" data-active="apps" data-title="Gestor de colas" defer></script>
+<script src="/admira-frame.js?v=07.10.2026.r3.1259" defer></script>
+<main>
+  <div class="top"><h1>☕ <span data-t="titulo">Gestor de colas</span> <small id="salaTxt"></small></h1>
+    <button class="pill" id="bPantalla" data-t="abrirPantalla">Abrir pantalla iPad</button>
+    <button class="pill sec" id="bLang">EN</button></div>
+  <div class="form"><input id="nNombre" maxlength="24" data-ph="nombre" placeholder="Nombre (opcional)"><button class="pill" id="bCrear" data-t="crear">＋ Pedido en barra</button></div>
+  <div id="msg" role="status"></div>
+  <div class="cols">
+    <section class="col"><h2><span data-t="prep">⏳ En preparación</span><em id="cPrep">0</em></h2><div id="lPrep"></div></section>
+    <section class="col listo"><h2><span data-t="listo">✅ Listo para recoger</span><em id="cListo">0</em></h2><div id="lListo"></div></section>
+    <section class="col"><h2><span data-t="resumen">📊 Resumen</span></h2><div id="resumen" style="font-size:14px;line-height:1.7"></div></section>
+  </div>
+</main>
+<div data-af-slot="left" class="slot">
+  <h3 data-t="marca">Marca / sala</h3>
+  <select id="selMarca"><option value="starbucks">Starbucks · Paseo de Gracia</option><option value="365">365</option><option value="admiranext">AdmiraNeXT</option></select>
+  <h3 style="margin-top:14px" data-t="comandos">Comandos</h3>
+  <div class="form"><input id="cli" placeholder="/avanzar A001" style="flex:1"></div>
+  <ul><li><code>/marca starbucks|365|admiranext</code></li><li><code>/sala &lt;slug&gt;</code></li><li><code>/crear [nombre]</code></li><li><code>/avanzar A001 [preparando|listo|recogido]</code></li><li><code>/llamar A001</code></li><li><code>/recoger A001</code></li><li><code>/reiniciar</code></li><li><code>/idioma es|en</code></li><li><code>/pantalla</code> · <code>/help</code></li></ul>
+</div>
+<div data-af-slot="right" class="slot">
+  <h3 data-t="enlaces">Enlaces de la sala</h3><ul id="urls"></ul>
+  <h3 data-t="clave">Clave de la sala (MCP / staff)</h3><p><button class="pill sec" id="bClave" data-t="verClave">Ver clave</button> <code id="clave"></code></p>
+  <h3 data-t="ipad">iPad</h3><p style="font-size:13.5px" data-t="ipadTxt">Safari → URL de la pantalla → Compartir → «Añadir a pantalla de inicio» → abrir desde el icono (pantalla completa) y tocar una vez para activar la voz. Acceso guiado para bloquearlo.</p>
+</div>
+<div data-af-slot="bottom" class="slot"><pre id="raw" style="font-size:12px;max-height:260px;overflow:auto"></pre></div>
+<script>
+(function(){
+const P=new URLSearchParams(location.search),$=id=>document.getElementById(id);
+const MARCAS={starbucks:'starbucks-paseo-de-gracia','365':'365-demo',admiranext:'admiranext-demo'};
+let sala=(P.get('sala')||P.get('store')||MARCAS[P.get('marca')]||MARCAS.starbucks).replace(/[^a-z0-9-]/g,'');
+if(P.get('clave')){localStorage.setItem('gc_clave',P.get('clave'));const q=new URLSearchParams(location.search);q.delete('clave');history.replaceState(null,'','?'+q);}
+let lang=(P.get('lang')||localStorage.getItem('gc_lang')||'es')==='en'?'en':'es',ultimo=null;
+const T={es:{titulo:'Gestor de colas',abrirPantalla:'Abrir pantalla iPad',crear:'＋ Pedido en barra',nombre:'Nombre (opcional)',prep:'⏳ En preparación',listo:'✅ Listo para recoger',resumen:'📊 Resumen',marca:'Marca / sala',comandos:'Comandos',enlaces:'Enlaces de la sala',clave:'Clave de la sala (MCP / staff)',verClave:'Ver clave',ipad:'iPad',ipadTxt:'Safari → URL de la pantalla → Compartir → «Añadir a pantalla de inicio» → abrir desde el icono (pantalla completa) y tocar una vez para activar la voz. Acceso guiado para bloquearlo.',bListo:'Listo',bRecoger:'Recogido',bLlamar:'📣 Llamar',vacio:'Sin pedidos',tap:'toca para avanzar',pend:'esperando pago (simulado)',rec:'recogidos recientes',hecho:'Hecho',err:'Error',conf:'¿Vaciar la cola y numerar desde A001?',btn:'EN'},
+en:{titulo:'Queue manager',abrirPantalla:'Open iPad display',crear:'＋ Counter order',nombre:'Name (optional)',prep:'⏳ Preparing',listo:'✅ Ready for pick-up',resumen:'📊 Summary',marca:'Brand / room',comandos:'Commands',enlaces:'Room links',clave:'Room key (MCP / staff)',verClave:'Show key',ipad:'iPad',ipadTxt:'Safari → display URL → Share → “Add to Home Screen” → open from the icon (full screen) and tap once to enable voice. Use Guided Access to lock it.',bListo:'Ready',bRecoger:'Collected',bLlamar:'📣 Call',vacio:'No orders',tap:'tap to advance',pend:'awaiting (simulated) payment',rec:'recently collected',hecho:'Done',err:'Error',conf:'Empty the queue and restart at A001?',btn:'ES'}};
+const t=k=>T[lang][k]||k;
+function textos(){document.documentElement.lang=lang;document.querySelectorAll('[data-t]').forEach(e=>e.textContent=t(e.dataset.t));$('nNombre').placeholder=t('nombre');$('bLang').textContent=t('btn');$('salaTxt').textContent='· '+sala;
+  const m=Object.keys(MARCAS).find(k=>MARCAS[k]===sala);if(m)$('selMarca').value=m;
+  const o=location.origin,u={[lang==='en'?'Display (iPad)':'Pantalla (iPad)']:o+'/gestorColas/pantalla/?sala='+sala+(lang==='en'?'&lang=en':''),[lang==='en'?'Kiosk':'Quiosco']:sala===MARCAS.starbucks?'https://www.ainimation.studio/starbucks/':'https://www.ainimation.studio/xperiencias/kiosko-pedido/?store='+sala,[lang==='en'?'Help':'Ayuda']:o+'/gestorColas/help/','MCP':o+'/gestorColas/mcp'};
+  $('urls').innerHTML=Object.entries(u).map(([k,v])=>'<li><b>'+k+'</b><br><a href="'+v+'" target="_blank" rel="noopener">'+v+'</a></li>').join('');if(ultimo)pintar(ultimo);}
+const esc=x=>String(x||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function fila(p){const l=p.estado==='listo';return '<div class="p" data-n="'+esc(p.numero)+'" data-sig="'+(l?'recogido':'listo')+'" title="'+t('tap')+'"><b>'+esc(p.numero)+'</b><span>'+(p.nombre?esc(p.nombre)+' · ':'')+new Date(p.pagado||p.creado).toLocaleTimeString(lang==='en'?'en-GB':'es-ES',{hour:'2-digit',minute:'2-digit'})+(p.llamadas?' · 📣'+p.llamadas:'')+'</span>'+(l?'<button data-llamar="'+esc(p.numero)+'">'+t('bLlamar')+'</button>':'')+'<button data-n2="'+esc(p.numero)+'" data-a="'+(l?'recogido':'listo')+'">'+(l?t('bRecoger'):t('bListo'))+'</button></div>';}
+function pintar(d){ultimo=d;const pr=d.preparando||[],li=d.listo||[];$('lPrep').innerHTML=pr.map(fila).join('')||'<p class="vacio">'+t('vacio')+'</p>';$('lListo').innerHTML=li.map(fila).join('')||'<p class="vacio">'+t('vacio')+'</p>';$('cPrep').textContent=pr.length;$('cListo').textContent=li.length;
+  $('resumen').innerHTML=t('prep')+': <b>'+pr.length+'</b><br>'+t('listo')+': <b>'+li.length+'</b><br>'+t('pend')+': <b>'+(d.pendientes||0)+'</b><br>'+t('rec')+': <b>'+(d.recogidos||0)+'</b><br><small>DEMO · '+(lang==='en'?'simulated payment, no prices':'pago simulado, sin precios')+'</small>';$('raw').textContent=JSON.stringify(d,null,2);}
+async function api(op,body){const h={'content-type':'application/json'},k=localStorage.getItem('gc_clave');if(k)h['x-clave-sala']=k;const r=await fetch('/gestorColas/api/'+op+'?sala='+sala,body?{method:'POST',headers:h,credentials:'same-origin',body:JSON.stringify(body)}:{cache:'no-store',credentials:'same-origin'});const d=await r.json();if(!d.ok)throw new Error(d.error||r.status);return d;}
+function aviso(s,mal){$('msg').textContent=s;$('msg').style.color=mal?'#b00020':'#00704A';}
+async function hacer(op,body){try{const r=await api(op,body);aviso(t('hecho')+(r.numero?' · '+r.numero+' → '+r.estado:''));tic();return r;}catch(e){aviso(t('err')+': '+e.message,true);}}
+async function tic(){try{pintar(await api('estado'));}catch(e){aviso(t('err')+': '+e.message,true);}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-llamar]');if(b){e.stopPropagation();return hacer('llamar',{pedido:b.dataset.llamar});}
+  const c=e.target.closest('[data-n2]');if(c){e.stopPropagation();return hacer('avanzar',{pedido:c.dataset.n2,a:c.dataset.a});}
+  const p=e.target.closest('.p[data-n]');if(p)hacer('avanzar',{pedido:p.dataset.n,a:p.dataset.sig});});
+$('bCrear').onclick=()=>{hacer('crear',{nombre:$('nNombre').value});$('nNombre').value='';};
+$('bPantalla').onclick=()=>window.open('/gestorColas/pantalla/?sala='+sala+(lang==='en'?'&lang=en':''),'_blank');
+$('bLang').onclick=()=>{lang=lang==='es'?'en':'es';localStorage.setItem('gc_lang',lang);textos();};
+$('selMarca').onchange=e=>cambiaSala(MARCAS[e.target.value]);
+$('bClave').onclick=async()=>{try{$('clave').textContent=(await api('clave')).clave;}catch(e){$('clave').textContent=e.message;}};
+function cambiaSala(s){sala=s;const q=new URLSearchParams(location.search);q.set('sala',s);q.delete('marca');history.replaceState(null,'','?'+q);textos();tic();}
+function cmd(s){const [c,...a]=s.trim().split(/\s+/);const x=(a[0]||'').toUpperCase();
+  if(c==='/marca'&&MARCAS[a[0]])return cambiaSala(MARCAS[a[0]]);if(c==='/sala'&&a[0])return cambiaSala(a[0].toLowerCase().replace(/[^a-z0-9-]/g,''));
+  if(c==='/idioma'){lang=a[0]==='en'?'en':'es';localStorage.setItem('gc_lang',lang);return textos();}
+  if(c==='/crear')return hacer('crear',{nombre:a.join(' ')});if(c==='/avanzar'&&x)return hacer('avanzar',{pedido:x,a:a[1]});
+  if(c==='/llamar'&&x)return hacer('llamar',{pedido:x});if(c==='/recoger'&&x)return hacer('avanzar',{pedido:x,a:'recogido'});
+  if(c==='/reiniciar'){if(confirm(t('conf')))hacer('reiniciar',{confirmar:true});return;}
+  if(c==='/pantalla')return $('bPantalla').click();if(c==='/help')return window.open('/gestorColas/help/','_blank');aviso('? '+s,true);}
+$('cli').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.value){cmd(e.target.value);e.target.value='';}});
+window.__gestorColas={cmd,get sala(){return sala;},tic};
+textos();tic();setInterval(tic,2000);
+})();
+</script>
+<script src="/assets/admira-version-watch.js?v=07.10.2026.r3.1259" defer></script>
+</body>
+</html>

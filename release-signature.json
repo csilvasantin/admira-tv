@@ -1,9 +1,9 @@
 {
-  "version": "v.07.10.2026.r2.09:28",
-  "signature": "TrinityMBP16 · MBP16",
-  "agent": "TrinityMBP16",
-  "machine": "MBP16",
+  "version": "v.07.10.2026.r3.12:59",
+  "signature": "GrokBot · MacMini",
+  "agent": "GrokBot",
+  "machine": "MacMini",
   "day": "07.10.2026",
-  "time": "09:28",
-  "evidence": "El player ignora órdenes dirigidas a otra pantalla del circuito antes de ejecutar o acusar; VM confirma cursor, órdenes propias, broadcasts y 403 terminal."
+  "time": "12:59",
+  "evidence": "Gestor de colas en admira.tv/gestorColas: control del staff, pantalla iPad, ayuda ES/EN y MCP con clave por sala; E2E quiosco→cola→control→pantalla probado en headless."
 }
