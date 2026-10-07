@@ -1,9 +1,9 @@
 {
-  "version": "v.07.10.2026.r12.14:46",
+  "version": "v.07.10.2026.r13.15:04",
   "signature": "TrinityMBP16 · MBP16",
   "agent": "TrinityMBP16",
   "machine": "MBP16",
   "day": "07.10.2026",
-  "time": "14:46",
-  "evidence": "Bootstrap TV opt-in ax_demo=tv: host/ruta exactos, deduplicación y controles nativos preservados. 54 pruebas de bootstrap, tour, HUD y puente hijo pasan; sin sesión web ni emisión operada."
+  "time": "15:04",
+  "evidence": "Demo TV readonly=1: la vista nativa conserva la interacción local sin POST a pantallas ni taza física; visitas normales mantienen envíos. 85 pruebas relacionadas pasan sin web ni autenticación."
 }
