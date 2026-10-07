@@ -731,7 +731,7 @@ function asciiMug(s) {
   return t;
 }
 __name(asciiMug, "asciiMug");
-function statusPixels(name, verb, offsetX = 0) {
+function statusPixels(name, verb, offsetX = 0, pickup = false) {
   const w = 32, h = 16, rgb = new Uint8Array(w * h * 3);
   const set = /* @__PURE__ */ __name((x, y, r, g, b) => {
     if (x < 0 || y < 0 || x >= w || y >= h) return;
@@ -747,7 +747,7 @@ function statusPixels(name, verb, offsetX = 0) {
   }
   const line = /* @__PURE__ */ __name((text, y, r, g, b) => {
     const raw = asciiMug(text).slice(0, 40);
-    let x = -Math.max(0, Number(offsetX) || 0);
+    let x = pickup ? Math.max(0, Math.floor((32 - (raw.length * 4 - 1)) / 2)) : -Math.max(0, Number(offsetX) || 0);
     for (const ch of raw) {
       const glyph = FONT5[ch] || FONT5[" "];
       for (let row = 0; row < 5; row++) {
@@ -758,8 +758,8 @@ function statusPixels(name, verb, offsetX = 0) {
       x += 4;
     }
   }, "line");
-  line(name, 1, 61, 255, 212);
-  line(verb, 10, 255, 77, 141);
+  line(name, 1, pickup ? 0 : 61, pickup ? 108 : 255, pickup ? 85 : 212);
+  line(verb, 10, pickup ? 108 : 255, pickup ? 108 : 77, pickup ? 85 : 141);
   for (let xi = 0; xi < 32; xi++) set(xi, 8, 20, 40, 48);
   return rgb;
 }
@@ -1014,7 +1014,11 @@ async function writeMugStatus(env, origin, args) {
     return { ok: false, error: "espera 3 s entre escrituras", retry_ms: 3e3 - (Date.now() - prev.ts) };
   }
   const rec = { ...parsed, storeId:binding?.storeId||null, screen:binding?.screen||null, bindingRevision:binding?.revision||null, ts: Date.now(), name: asciiMug(parsed.name), verb: asciiMug(parsed.verb), text: asciiMug(parsed.text) };
-  const gif = statusScrollGif(rec.name, rec.verb);
+  // Pickup notices stay still: no shared scrolling offset can erase the name.
+  // Eight 3x5 glyphs fit each 32px row. Preserve the complete name in status.
+  const gif = rec.storeId === 'starbucks-queue'
+    ? gifFromRgb(32, 16, statusPixels(rec.name.slice(0, 8), 'LISTO', 0, true))
+    : statusScrollGif(rec.name, rec.verb);
   await env.KV.put("gif", gif);
   await env.KV.put("gifAt", String(rec.ts));
   await env.KV.put("mugStatus", JSON.stringify(rec));
