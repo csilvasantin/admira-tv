@@ -17,7 +17,7 @@ body{font-family:'SoDo Sans',Inter,-apple-system,'Segoe UI',Roboto,sans-serif;ba
 header{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:12px 22px;background:#0003}
 #logo{width:52px;height:52px;border-radius:50%;background:var(--c);display:grid;place-items:center;font-size:26px;font-weight:900;border:3px solid #fff}
 header h1{margin:0;font-size:clamp(20px,2.6vw,34px);flex:1;letter-spacing:.02em}header h1 small{font-weight:500;opacity:.7;font-size:.6em;margin-left:8px}
-#lang{font:inherit;font-weight:800;border:2px solid #fff8;background:none;color:#fff;border-radius:999px;padding:8px 16px;font-size:16px}
+#lang,#voz{font:inherit;font-weight:800;border:2px solid #fff8;background:none;color:#fff;border-radius:999px;padding:8px 16px;font-size:16px;cursor:pointer}#voz[aria-pressed=false]{opacity:.6}
 #reloj{font-size:18px;opacity:.75;font-variant-numeric:tabular-nums}
 section{padding:14px 20px;min-height:0;display:flex;flex-direction:column}
 section h2{margin:0 0 14px;font-size:clamp(20px,2.3vw,36px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -55,7 +55,7 @@ footer{grid-column:1/-1;background:#FFE58A;color:#3A2E00;text-align:center;font-
 </style>
 </head>
 <body>
-<header><div id="logo">★</div><h1><span id="marca">Starbucks</span><small id="tienda"></small></h1><span id="reloj"></span><button id="lang" type="button">EN</button></header>
+<header><div id="logo">★</div><h1><span id="marca">Starbucks</span><small id="tienda"></small></h1><span id="reloj"></span><button id="voz" type="button" aria-pressed="true">🔊</button><button id="lang" type="button">EN</button></header>
 <section class="reci"><h2 id="hReci">📥 Recibido</h2><div class="filas" id="reci"></div></section>
 <section class="prep"><h2 id="hPrep">⏳ En preparación</h2><div class="nums" id="prep"></div></section>
 <section class="listo"><h2 id="hListo">✅ ¡Listo para recoger!</h2><div class="nums" id="listo"></div></section>
@@ -80,11 +80,11 @@ const T={es:{reci:'📥 Recibido',pasa:'a preparación en',prep:'⏳ En preparac
   dice:(n,nom)=>nom?nom+', your '+M.nombre+' order is ready. Order '+n+', please collect it at the counter.':'Order '+n+' is ready. Please collect it at the counter.',
   html:(n,nom)=>nom?'<b>'+nom+'</b>, your '+M.nombre+' order is ready ☕<br><small>Order '+n+' · collect at the counter</small>':'Order <b>'+n+'</b> is ready ☕ Collect at the counter!',voz:'en-GB'}};
 const esc=x=>String(x||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function textos(){const t=T[lang];document.documentElement.lang=lang;$('hReci').textContent=t.reci;$('hPrep').textContent=t.prep;$('hListo').textContent=t.listo;$('pie').textContent=t.pie;$('lang').textContent=t.btn;$('tienda').textContent=tienda?'· '+tienda:'';if(ultimo)pintar(ultimo);}
+function textos(){const t=T[lang];document.documentElement.lang=lang;$('hReci').textContent=t.reci;$('hPrep').textContent=t.prep;$('hListo').textContent=t.listo;$('pie').textContent=t.pie;$('lang').textContent=t.btn;$('tienda').textContent=tienda?'· '+tienda:'';if(ultimo)pintar(ultimo);try{pintaVoz();}catch(_){}}
 // Estado vivo (Carlos, 7-oct-2026): la pantalla queda abierta horas en el iPad. Los pedidos se siguen por ID
 // (no por número: tras /reiniciar el A001 nuevo NO es el A001 viejo), una sola petición a la vez con
 // límite de 5 s, y al detectar un reinicio se vacía la cola de avisos, se corta la voz y se quita el bocadillo.
-const vistos=new Map(),cola=[],recientes=new Set(),said=window.__admiritoSaid=[];let primera=true,hablando=false,vozOk=P.get('voz')!=='0',ultimo=null,enVuelo=false,idsPrev=new Set(),gen=0,fallos=0;
+const vistos=new Map(),cola=[],recientes=new Set(),said=window.__admiritoSaid=[];let primera=true,hablando=false,vozOk=P.get('voz')!=='0'&&(()=>{try{return localStorage.getItem('gc:voz')!=='off';}catch(_){return true;}})(),ultimo=null,enVuelo=false,idsPrev=new Set(),gen=0,fallos=0;
 window.__pantallaStats={tics:0,ok:0,resets:0};
 // Sin pantalla intermedia (Carlos, 7-oct-2026): ya no se pide «Toca para que Admirito avise en voz alta».
 // La voz se intenta siempre; si el navegador exige un gesto, el primer toque que haya en la pantalla la
@@ -155,6 +155,10 @@ async function tic(){if(enVuelo)return;enVuelo=true;window.__pantallaStats.tics+
   primera=false;pintar(d);fallos=0;window.__pantallaStats.ok++;if(document.body.dataset.ok!=='1')$('pie').textContent=T[lang].pie;document.body.dataset.ok='1';siguiente();}
   catch(_){if(++fallos>=2){document.body.dataset.ok='0';$('pie').textContent=T[lang].off;}}finally{clearTimeout(to);enVuelo=false;}}
 $('lang').onclick=e=>{e.stopPropagation();lang=lang==='es'?'en':'es';textos();};
+// Voz de los avisos a mano (Carlos, 7-oct-2026): se puede parar y volver a activar por si molesta. Se recuerda
+// en este dispositivo; ?voz=0 arranca siempre en silencio (así la abre el gemelo cuando se le para el audio de colas).
+function pintaVoz(){const b=$('voz');b.textContent=vozOk?'🔊':'🔇';b.setAttribute('aria-pressed',String(vozOk));b.title=b.ariaLabel=lang==='en'?(vozOk?'Stop voice announcements':'Turn voice announcements on'):(vozOk?'Parar los avisos de voz':'Activar los avisos de voz');}
+$('voz').onclick=e=>{e.stopPropagation();vozOk=!vozOk;try{if(vozOk)localStorage.removeItem('gc:voz');else localStorage.setItem('gc:voz','off');}catch(_){}if(!vozOk){try{speechSynthesis.cancel();}catch(_){}}pintaVoz();};pintaVoz();
 setInterval(()=>{$('reloj').textContent=new Date().toLocaleTimeString(lang==='en'?'en-GB':'es-ES',{hour:'2-digit',minute:'2-digit'});},1000);
 try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(()=>{});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&navigator.wakeLock)navigator.wakeLock.request('screen').catch(()=>{});});}catch(_){}
 window.__pantalla={get sala(){return sala;},get lang(){return lang;}};
