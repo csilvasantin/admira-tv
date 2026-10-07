@@ -15,10 +15,15 @@ export const TAGS_PREFIX = "admira-tv:screen:tags:v1:";
 export const STOCK_INDEX = "https://stock.admira.store/stock/index.json";
 export const MAX_LIVE = 100;
 
-/** Misma normalización que /parrilla/ (plNorm): sin tildes, minúsculas, sin # y separadores → espacio. */
-export const norm = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "")
+// Equivalencias del vocabulario (7-oct-2026): sinónimos en inglés y plurales apuntan a UNA forma, la misma tabla
+// que canal.html y /parrilla/ (tags-alias.test.mjs comprueba que coinciden). El Stock ya guarda la forma buena;
+// esto es para que una regla o una consulta escrita con la antigua siga encontrando lo mismo.
+export const TAG_ALIAS = {music:"musica",muscia:"musica",technology:"tecnologia",tech:"tecnologia",business:"negocio",creativity:"creatividad",ai:"ia",gaming:"videojuego",videojuegos:"videojuego",robotics:"robotica",historias:"historia",bebida:"bebidas",canciones:"cancion",robot:"robots",comics:"comic",curiosidad:"curiosidades",oferta:"ofertas",artistas:"artista",pelicula:"peliculas",personaje:"personajes",herramienta:"herramientas"};
+const fold = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
   .toLowerCase().replace(/^#+/, "").replace(/[_\-\s]+/g, " ").trim();
-const slug = t => norm(t).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+/** Misma normalización que /parrilla/ (plNorm): sin tildes, minúsculas, sin # y separadores → espacio, y equivalencias. */
+export const norm = t => { const n = fold(t); return TAG_ALIAS[n] || n; };
+const slug = t => fold(t).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
 
 /** Etiqueta de pantalla «clave:valor» (o suelta, como «todas»), siempre en la misma forma. */
 export function screenTag(raw) {

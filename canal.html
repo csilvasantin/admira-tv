@@ -700,8 +700,12 @@ function madridSlot(){ let h=12; try{ h=+new Date().toLocaleString('en-US',{hour
 function screenLbl(){ $('screenLbl').textContent = scr.name ? ('📍 '+scr.name+(scr.screen?(' · '+scr.screen):'')) : (scr.screen?('📍 '+scr.screen):''); const nc=$('nocirc'); if(nc) nc.classList.toggle('show', !scr.circuit); }
 function normTag(v){ return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
 function canonicalAdmiraMode(v){ const m=normTag(v); if(['sync','sincro','sincronizado','admiratvsincro'].includes(m)) return 'sync'; if(['conditional','condicional','xpl','admiratvcondicional'].includes(m)) return 'conditional'; return 'local'; }
-function canonicalPlayTag(v){ const t=normTag(v).replace(/^#/,'').replace(/\s+/g,'-'); if(['music','musica','muscia'].includes(t)) return 'musica'; if(['tecnologia','technology','tech'].includes(t)) return 'tecnologia'; return t; }
-function tagNeedles(v){ const t=canonicalPlayTag(v); if(t==='musica') return ['musica','music','muscia']; if(t==='tecnologia') return ['tecnologia','technology','tech']; return [t]; }
+// Equivalencias de etiquetas (7-oct-2026, limpieza del vocabulario del Stock): sinónimos en inglés y plurales
+// apuntan a UNA forma. Quien siga pidiendo «tech» o «gaming» (mando, matriz condicional, ?tag=) encuentra lo mismo.
+// La MISMA tabla vive en /parrilla/ y en functions/api/_playlist-live.js; tags-alias.test.mjs comprueba que coinciden.
+const TAG_ALIAS={music:"musica",muscia:"musica",technology:"tecnologia",tech:"tecnologia",business:"negocio",creativity:"creatividad",ai:"ia",gaming:"videojuego",videojuegos:"videojuego",robotics:"robotica",historias:"historia",bebida:"bebidas",canciones:"cancion",robot:"robots",comics:"comic",curiosidad:"curiosidades",oferta:"ofertas",artistas:"artista",pelicula:"peliculas",personaje:"personajes",herramienta:"herramientas"};
+function canonicalPlayTag(v){ const t=normTag(v).replace(/^#/,'').replace(/\s+/g,'-'); return TAG_ALIAS[t]||t; }
+function tagNeedles(v){ const t=canonicalPlayTag(v); return [t].concat(Object.keys(TAG_ALIAS).filter(k=>TAG_ALIAS[k]===t)); }
 function matchesSeg(it,s){
   if(s.ids&&s.ids.length){ return s.ids.indexOf(it.id)>=0; }   // assets CONCRETOS elegidos en el CMS → solo esos
   const k=KIND[it.type];
