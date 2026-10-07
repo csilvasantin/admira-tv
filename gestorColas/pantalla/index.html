@@ -82,12 +82,14 @@ act.addEventListener('click',activar);act.addEventListener('keydown',e=>{if(e.ke
 function vozDe(ss,l){const vs=ss.getVoices()||[],n=x=>(x.lang||'').replace('_','-');return vs.find(v=>n(v)===l&&/Mónica|Monica|Jorge|Marisol|Google español$/i.test(v.name))||vs.find(v=>n(v)===l)||null;}
 const sigueListo=p=>!!(ultimo&&(ultimo.listo||[]).some(x=>x.id===p.id));
 function callar(){cola.length=0;gen++;try{window.speechSynthesis&&speechSynthesis.cancel();}catch(_){}const b=$('bocadillo');b.classList.remove('on');b.innerHTML='';}
+let actual=null,cortar=null;
 function decir(p){const g=gen,t=T[lang],num=String(p.numero).replace(/[^A-Z0-9]/gi,''),nom=p.nombre||'';
   if(!sigueListo(p))return Promise.resolve();
   const texto=t.dice(num,nom),b=$('bocadillo');b.innerHTML=t.html(esc(num),esc(nom));b.classList.add('on');
   let via='pantalla';
-  return new Promise(fin=>{let hecho=false;const cerrar=()=>{if(hecho)return;hecho=true;said.push({id:p.id,numero:num,nombre:nom||null,text:texto,via,lang:t.voz,at:Date.now()});setTimeout(()=>{if(g===gen)b.classList.remove('on');fin();},1800);};
-    setTimeout(cerrar,8000);
+  // Un aviso dura lo que la voz (máx. 7 s) + 1,2 s de bocadillo; si hay más esperando, el bocadillo se acorta.
+  return new Promise(fin=>{let hecho=false;actual=p;const cerrar=(cortado)=>{if(hecho)return;hecho=true;actual=null;cortar=null;said.push({id:p.id,numero:num,nombre:nom||null,text:texto,via,lang:t.voz,at:Date.now(),cortado:!!cortado});if(cortado){try{speechSynthesis.cancel();}catch(_){}b.classList.remove('on');return fin();}setTimeout(()=>{if(g===gen&&!actual)b.classList.remove('on');fin();},cola.length?400:1200);};
+    cortar=()=>cerrar(true);setTimeout(()=>cerrar(),7000);
     try{const ss=window.speechSynthesis;if(!vozOk||!ss||typeof SpeechSynthesisUtterance!=='function')return setTimeout(cerrar,1500);
       const u=new SpeechSynthesisUtterance(texto);u.lang=t.voz;u.rate=.97;const v=vozDe(ss,t.voz);if(v)u.voice=v;via='voz-'+t.voz;
       u.onend=cerrar;u.onerror=cerrar;ss.speak(u);}catch(_){cerrar();}});}
@@ -103,7 +105,9 @@ async function tic(){if(enVuelo)return;enVuelo=true;window.__pantallaStats.tics+
   idsPrev=ids;
   for(let k=cola.length-1;k>=0;k--)if(!(d.listo||[]).some(x=>x.id===cola[k].id))cola.splice(k,1);
   ultimo=d;
-  (d.listo||[]).forEach(p=>{const k=p.llamadas||0,v=vistos.get(p.id);if(!v||v.k<k){vistos.set(p.id,{k,n:num(p)});if(!primera||P.get('anunciar')==='todos'){cola.push(p);recientes.add(p.id);setTimeout(()=>recientes.delete(p.id),15000);}}});
+  if(actual&&cortar&&!(d.listo||[]).some(x=>x.id===actual.id))cortar();
+  // El relé da «listo» del más nuevo al más viejo: se anuncian en orden de llegada (el más viejo primero).
+  [...(d.listo||[])].reverse().forEach(p=>{const k=p.llamadas||0,v=vistos.get(p.id);if(!v||v.k<k){vistos.set(p.id,{k,n:num(p)});if(!primera||P.get('anunciar')==='todos'){cola.push(p);recientes.add(p.id);window.__colaAvisos=cola.map(x=>x.numero);setTimeout(()=>recientes.delete(p.id),15000);}}});
   todos.forEach(p=>{if(!vistos.has(p.id))vistos.set(p.id,{k:-1,n:num(p)});});
   if(vistos.size>400)vistos.clear();
   primera=false;pintar(d);fallos=0;window.__pantallaStats.ok++;if(document.body.dataset.ok!=='1')$('pie').textContent=T[lang].pie;document.body.dataset.ok='1';siguiente();}
