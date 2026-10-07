@@ -34,18 +34,28 @@ async function configure() {
   if (config.slot !== 2 || config.target !== 'CarlosGdG') throw new Error('Destino incorrecto: requiere CarlosGdG slot 2');
   const missing = missingConfig(config);
   health.missing = missing;
-  if (missing.length) { health.gifReady = false; health.state = 'awaiting_configuration'; return; }
+  if (missing.includes('bridgeKey') || missing.includes('botToken')) { health.gifReady = false; health.state = 'awaiting_configuration'; return; }
   const fingerprint = JSON.stringify([config.botToken, config.apiUrl]);
   if (fingerprint !== sdkConfig) {
     bot?.stopIm(); bot?.stopMqtt();
     const { BotManager } = await import(pathToFileURL(path.join(directory, 'sdk', 'Bot_0.2.mjs')));
     bot = new BotManager(config.botToken, config.apiUrl || 'https://us.jeejio.com/im');
     // Preserve existing Bubble slots. bindDevices() would rewrite both slots.
-    bot.start({ im: false, mqtt: true });
+    bot.on(async ctx => {
+      // Capture the owner's private conversation on first /start only.
+      // Never overwrite an already configured conversation from a new chat.
+      if (config.chat?.id || ctx?.chat?.type !== 'private' || !ctx.chat.id || ctx?.message?.content !== '/start') return;
+      const latest = JSON.parse(await fs.readFile(configPath, 'utf8'));
+      if (latest.chat?.id) return;
+      latest.chat = ctx.chat;
+      await fs.writeFile(configPath, JSON.stringify(latest, null, 2), { mode: 0o600 });
+      log('conversation_configured');
+    });
+    bot.start({ im: true, mqtt: true });
     sdkConfig = fingerprint;
   }
-  health.gifReady = true;
-  health.state = busy ? 'sending' : 'ready';
+  health.gifReady = missing.length === 0;
+  health.state = missing.length ? 'awaiting_private_start' : busy ? 'sending' : 'ready';
 }
 async function send(job) {
   busy = true; health.state = 'sending'; health.lastJob = { id: job.id, state: 'sending' };

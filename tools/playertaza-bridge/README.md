@@ -13,7 +13,9 @@ el dispositivo remoto: el slot se debe comprobar en la cuenta Bubble.
 Configuración privada fuera de Git: `config.private.json`, permisos 0600.
 Requiere la clave del puente del Worker (`bridgeKey`), el token **propio**
 del bot PlayerTazaAdmira (`botToken`) y el objeto `ctx.chat` de la conversación
-vinculada (`chat`, con id y type). No usar tokens incluidos en ejemplos del SDK.
+vinculada (`chat`, con id y type). El chat se puede recuperar enviando `/start`
+en la conversación privada del bot desde Bubble; se guarda solo el primero y
+nunca reemplaza una conversación ya configurada. No usar tokens incluidos en ejemplos del SDK.
 Si falta algún campo, el proceso queda activo en `awaiting_configuration`
 y no anuncia capacidad de envío. La configuración se relee cada tres segundos.
 
