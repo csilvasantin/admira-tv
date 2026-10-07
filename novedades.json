@@ -27,5 +27,9 @@
     "El avatar estrena pastilla: AVATAR · Admirito, HUMAN · Luna, METAHUMAN · Neo; púlsala para cambiar",
     "Desliza o usa ←/→ para subir o bajar de categoría; /avatar avatar|human|metahuman sigue funcionando",
     "Mismo panel del avatar en las 5 plataformas (avatar.js y experto.js ?v=20261007-pill-1)"
+  ],
+  "v.07.10.2026.r2.09:28": [
+    "Cada pantalla ejecuta únicamente sus órdenes y las dirigidas a todo el circuito",
+    "Las órdenes de otra pantalla avanzan el cursor sin generar un ACK rechazado ni repetirse"
   ]
 }

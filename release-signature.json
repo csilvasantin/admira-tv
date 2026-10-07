@@ -1,9 +1,9 @@
 {
-  "version": "v.07.10.2026.r1.07:39",
-  "signature": "GrokBot · MacMini",
-  "agent": "GrokBot",
-  "machine": "MacMini",
+  "version": "v.07.10.2026.r2.09:28",
+  "signature": "TrinityMBP16 · MBP16",
+  "agent": "TrinityMBP16",
+  "machine": "MBP16",
   "day": "07.10.2026",
-  "time": "07:39",
-  "evidence": "Panel del avatar unificado: pastilla de categoría (avatar/human/metahuman) y pines avatar.js/experto.js 20261007-pill-1."
+  "time": "09:28",
+  "evidence": "El player ignora órdenes dirigidas a otra pantalla del circuito antes de ejecutar o acusar; VM confirma cursor, órdenes propias, broadcasts y 403 terminal."
 }
