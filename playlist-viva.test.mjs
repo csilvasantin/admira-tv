@@ -203,3 +203,8 @@ test("una pantalla que sólo declara su Xpacio recibe de su ficha el circuito y 
   assert.equal(targetMatches(destino, deduceScreenTags(completeFacts({ screen: "sbux-pg103-p2", xpace: "alsea-sbux-021", w: 1080, h: 1920 }, { xpaceRecord: ficha }))), false);
   assert.equal(targetMatches(destino, deduceScreenTags(completeFacts({ screen: "sbux-pg103-p1", xpace: "alsea-sbux-021", w: 1920, h: 1080 }, { xpaceRecord: ficha }))), false);
 });
+
+test("sin ninguna playlist viva, la pantalla que declara su Xpacio ya queda registrada con proyecto y circuito", async () => {
+  const src = (await import("node:fs")).readFileSync(new URL("./functions/api/playlist.js", import.meta.url), "utf8");
+  assert.match(src, /if \(activas\.length \|\| facts\.xpace\) await enrichFacts\(facts, env, waitUntil\)/);
+});

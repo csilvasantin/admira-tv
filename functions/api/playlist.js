@@ -229,7 +229,9 @@ export async function onRequestGet({ request, env, waitUntil }) {
   // las playlists vivas que le toquen, resueltas ahora mismo contra el Stock.
   const facts = hintFacts(screen, q), live = await readLive(env);
   const activas = live.playlists.filter(p => p && p.enabled !== false);
-  if (activas.length) await enrichFacts(facts, env, waitUntil);
+  // Con playlists vivas se completa siempre; sin ellas, sólo si la pantalla declara su Xpacio: así el editor ya la
+  // ve con su proyecto y su circuito ANTES de que exista la primera regla, y lo que enseña es lo que casará.
+  if (activas.length || facts.xpace) await enrichFacts(facts, env, waitUntil);
   const screenTags = deduceScreenTags(facts);
   const recordar = rememberTags(env, screen, screenTags, facts);
   try { if (typeof waitUntil === "function") waitUntil(recordar); else await recordar; } catch (_) { await recordar; }
