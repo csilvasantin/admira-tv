@@ -122,5 +122,11 @@
   "v.07.10.2026.r14.15:30": [
     "Control de barra: la columna Listo muestra primero el pedido más antiguo (FIFO), igual que el iPad",
     "El iPad del gemelo Starbucks abre este gestor de colas con un toque"
+  ],
+  "v.08.10.2026.r1.00:24": [
+    "Audiencia del quiosco segmentado en /audiencia: personas, género, edad e individuo/grupo por tienda y por hora de Madrid, con CSV",
+    "Reglas → cartas: menú para grupos, jóvenes, adultos, senior, mujeres y hombres, con prioridad y carta por defecto (ejemplo Starbucks)",
+    "Privacidad por diseño: solo recuentos anónimos, nunca imágenes ni huellas faciales; 90 días; pruebas solo en starbucks-qa",
+    "Enlace desde Condicional; ES/EN"
   ]
 }

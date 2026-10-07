@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="es" data-auth-server-session>
+<head>
+<meta charset="utf-8">
+<script src="/auth-gate.js?v=08.10.2026.r1.0024"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Audiencia · quiosco segmentado · Admira.tv</title>
+<meta name="description" content="Audiencia anónima del tótem/quiosco (personas, género, edad, individuo o grupo) y reglas que eligen la carta. Sin imágenes ni huellas faciales.">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://admira.tv/audiencia/">
+<style>
+:root{--bg:#070a10;--panel:#0e131c;--panel2:#121a27;--line:#1e2940;--ink:#cdd8e8;--dim:#8595ad;--air:#39d98a;--off:#ff5a5a;--amber:#ffb44c;--accent:#7aa2ff;--m:#5aa9ff;--f:#ff7ab6}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#11203a33,transparent),var(--bg);color:var(--ink);font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+header{position:relative;z-index:2;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;background:#070a10e6;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.brand{font-weight:800;font-size:18px}.brand b{color:var(--accent)}
+.tabs{display:flex;gap:6px}.tabs button,.btn{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:7px 12px;font:inherit;cursor:pointer}
+.tabs button[aria-pressed=true]{background:var(--accent);color:#061023;border-color:var(--accent);font-weight:700}
+.btn.pri{background:var(--air);color:#04130b;border-color:var(--air);font-weight:700}.btn.warn{border-color:var(--amber);color:var(--amber)}
+.sp{flex:1}
+select,input{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:inherit}
+main{padding:18px 20px 60px;max-width:1280px;margin:0 auto}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.priv{background:#0d1a14;border:1px solid #1f4a35;color:#a9e9c8;border-radius:10px;padding:9px 12px;margin-bottom:14px;font-size:13px}
+.grid{display:grid;gap:12px}.k6{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}.c2{grid-template-columns:repeat(auto-fit,minmax(360px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.card h3{margin:0 0 10px;font-size:14px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.kpi .v{font-size:28px;font-weight:800}.kpi .l{color:var(--dim);font-size:12px}
+.hb{display:grid;grid-template-columns:120px 1fr 60px;gap:8px;align-items:center;margin:5px 0}.hb .t{height:12px;background:var(--panel2);border-radius:6px;overflow:hidden}.hb .t i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.hours{display:flex;align-items:flex-end;gap:3px;height:140px;padding-top:8px}.hours div{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:1px;position:relative}.hours div span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--dim)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--dim);font-weight:600}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);font-size:12px}
+.live{color:var(--air)}.dead{color:var(--dim)}.qa{color:var(--amber)}
+.hide{display:none!important}
+.rules td input[type=number]{width:64px}.rules td input[type=text]{width:100%}
+.var{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px;background:var(--panel2)}
+.var .row{display:grid;grid-template-columns:110px 1fr 1fr;gap:6px;align-items:center;margin:4px 0}.var .row input{width:100%}
+.msg{margin-left:8px;font-size:13px}.ok{color:var(--air)}.err{color:var(--off)}
+footer{color:var(--dim);font-size:12px;padding:20px;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Admira<b>.tv</b> · <span data-t="titulo">Audiencia</span></div>
+  <div class="tabs"><button data-tab="panel" aria-pressed="true" data-t="tPanel">Panel</button><button data-tab="reglas" aria-pressed="false" data-t="tReglas">Reglas y cartas</button><button data-tab="vivo" aria-pressed="false" data-t="tVivo">En vivo</button></div>
+  <div class="sp"></div>
+  <a class="btn" href="/condicional.html" data-t="condicional">Condicional (pantallas)</a>
+  <button class="btn" id="lang">EN</button>
+</header>
+<main>
+  <div class="priv" data-t="priv">🔒 Solo recuentos anónimos estimados en el navegador del tótem: personas, género, banda de edad e individuo/grupo por visita. Nunca imágenes, fotogramas ni huellas faciales. Se borran a los 90 días.</div>
+  <div class="bar">
+    <label><span data-t="tienda">Tienda</span> <select id="tienda"></select></label>
+    <label><span data-t="periodo">Periodo</span> <select id="dias"><option value="1">24 h</option><option value="7" selected>7 d</option><option value="30">30 d</option><option value="90">90 d</option></select></label>
+    <label><input type="checkbox" id="verqa"> <span data-t="verqa">Incluir pruebas (qa/demo)</span></label>
+    <button class="btn" id="recargar" data-t="recargar">↻ Actualizar</button>
+    <a class="btn" id="csv" href="#" data-t="csv">⬇ CSV</a>
+    <button class="btn warn" id="simular" data-t="simular">🧪 Simular 30 visitas (starbucks-qa)</button>
+    <span class="msg" id="msg"></span>
+  </div>
+
+  <section id="panel">
+    <div class="grid k6" id="kpis"></div>
+    <div class="grid c2" style="margin-top:12px">
+      <div class="card"><h3 data-t="genero">Género</h3><div id="g"></div></div>
+      <div class="card"><h3 data-t="edad">Edad</h3><div id="e"></div></div>
+      <div class="card"><h3 data-t="tamano">Individuos y grupos</h3><div id="s"></div></div>
+      <div class="card"><h3 data-t="horas">Por hora (Madrid)</h3><div class="hours" id="h"></div><div style="height:16px"></div></div>
+      <div class="card"><h3 data-t="variantes">Cartas mostradas</h3><table id="pv"></table></div>
+      <div class="card"><h3 data-t="reglasHit">Reglas que han saltado</h3><table id="pr"></table></div>
+    </div>
+    <div class="card" style="margin-top:12px"><h3 data-t="recientes">Últimas visitas</h3><div style="overflow:auto"><table id="rec"></table></div></div>
+  </section>
+
+  <section id="reglas" class="hide">
+    <div class="card">
+      <h3 data-t="reglasT">Reglas (gana la de mayor prioridad que case)</h3>
+      <p style="color:var(--dim);margin:0 0 10px" data-t="reglasAyuda">Cada regla mira el segmento que ve la cámara (género, edad, individuo o grupo y franja horaria de Madrid) y elige una carta. Si ninguna casa, sale la carta por defecto. La carta del quiosco no cambia mientras alguien está pidiendo.</p>
+      <div style="overflow:auto"><table class="rules" id="rt"></table></div>
+      <div class="bar" style="margin-top:10px">
+        <button class="btn" id="addRule" data-t="addRule">+ Regla</button>
+        <label><span data-t="porDefecto">Carta por defecto</span> <select id="pdef"></select></label>
+        <label><span data-t="lecturas">Lecturas iguales</span> <input type="number" id="hl" min="1" max="10" style="width:60px"></label>
+        <label><span data-t="minms">Mín. entre cambios (s)</span> <input type="number" id="hm" min="0" max="120" style="width:60px"></label>
+        <label><span data-t="vacio">Vacío → general (s)</span> <input type="number" id="hv" min="1" max="120" style="width:60px"></label>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h3 data-t="variantesT">Cartas (variantes)</h3>
+      <div id="vt"></div>
+      <div class="bar"><input type="text" id="newVarId" placeholder="id-nueva-carta" style="width:180px"><button class="btn" id="addVar" data-t="addVar">+ Carta</button></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h3 data-t="probar">Probar un segmento</h3>
+      <div class="bar">
+        <select id="pp"><option value="1">1</option><option value="2">2</option><option value="3">3+</option></select>
+        <select id="pg"><option value="f">♀</option><option value="m">♂</option><option value="mixto">mixto</option></select>
+        <select id="pe"><option value="nino">niño</option><option value="joven" selected>joven</option><option value="adulto">adulto</option><option value="senior">senior</option></select>
+        <select id="pf"><option value="manana">mañana</option><option value="mediodia">mediodía</option><option value="tarde">tarde</option><option value="noche">noche</option></select>
+        <b id="pres"></b>
+      </div>
+    </div>
+    <div class="bar" style="margin-top:12px">
+      <button class="btn pri" id="guardar" data-t="guardar">Guardar reglas</button>
+      <button class="btn" id="semilla" data-t="semilla">Restaurar ejemplo Starbucks</button>
+      <span class="msg" id="rmsg"></span><span class="msg" id="rinfo" style="color:var(--dim)"></span>
+    </div>
+  </section>
+
+  <section id="vivo" class="hide">
+    <div class="card"><h3 data-t="vivoT">Delante de cada tótem ahora</h3><table id="vv"></table><p style="color:var(--dim)" data-t="vivoAyuda">Se actualiza cada 10 s. Activa el modo segmentado en el quiosco con ?seg=1 o en el gemelo con /totem segmentado on.</p></div>
+  </section>
+</main>
+<footer>admira.tv/audiencia · <span data-t="pie">datos de ainimation.studio/xperiencias/kiosko-pedido (?seg=1) · contrato docs/audiencia-v1.md</span></footer>
+<script>
+(function(){
+'use strict';
+var API=window.AUD_API||'/audiencia/api';
+var T={es:{titulo:'Audiencia',tPanel:'Panel',tReglas:'Reglas y cartas',tVivo:'En vivo',condicional:'Condicional (pantallas)',priv:'🔒 Solo recuentos anónimos estimados en el navegador del tótem: personas, género, banda de edad e individuo/grupo por visita. Nunca imágenes, fotogramas ni huellas faciales. Se borran a los 90 días.',tienda:'Tienda',periodo:'Periodo',verqa:'Incluir pruebas (qa/demo)',recargar:'↻ Actualizar',csv:'⬇ CSV',simular:'🧪 Simular 30 visitas (starbucks-qa)',genero:'Género',edad:'Edad',tamano:'Individuos y grupos',horas:'Por hora (Madrid)',variantes:'Cartas mostradas',reglasHit:'Reglas que han saltado',recientes:'Últimas visitas',reglasT:'Reglas (gana la de mayor prioridad que case)',reglasAyuda:'Cada regla mira el segmento que ve la cámara (género, edad, individuo o grupo y franja horaria de Madrid) y elige una carta. Si ninguna casa, sale la carta por defecto. La carta del quiosco no cambia mientras alguien está pidiendo.',addRule:'+ Regla',porDefecto:'Carta por defecto',lecturas:'Lecturas iguales',minms:'Mín. entre cambios (s)',vacio:'Vacío → general (s)',variantesT:'Cartas (variantes)',addVar:'+ Carta',probar:'Probar un segmento',guardar:'Guardar reglas',semilla:'Restaurar ejemplo Starbucks',vivoT:'Delante de cada tótem ahora',vivoAyuda:'Se actualiza cada 10 s. Activa el modo segmentado en el quiosco con ?seg=1 o en el gemelo con /totem segmentado on.',pie:'datos de ainimation.studio/xperiencias/kiosko-pedido (?seg=1) · contrato docs/audiencia-v1.md',
+ kv:'Visitas',kp:'Personas',kg:'Grupos',kd:'Permanencia media',kc:'Con pedido',kconv:'Conversión',m:'Hombres',f:'Mujeres',nino:'Niños',joven:'Jóvenes',adulto:'Adultos',senior:'Senior',ind:'Individuo',grp:'Grupo',personas:'personas',persona:'persona',
+ hHora:'Hora',hTienda:'Tienda',hDisp:'Dispositivo',hPers:'Pers.',hSeg:'Segmento',hCarta:'Carta',hRegla:'Regla',hPedido:'Pedido',hOrigen:'Origen',hDwell:'Perm.',hCam:'Cámara',hVis:'Visitas',hPeds:'Pedidos',
+ rAct:'Activa',rNombre:'Nombre',rPrio:'Prioridad',rGen:'Género',rEdad:'Edad',rGrupo:'Ind./grupo',rFranja:'Franja',rCarta:'Carta',any:'cualquiera',manana:'mañana',mediodia:'mediodía',tarde:'tarde',noche:'noche',individuo:'individuo',grupo:'grupo',
+ vNombre:'Nombre',vTitulo:'Titular',vSub:'Subtítulo',vOferta:'Oferta',vDest:'Destacados (ids)',quitar:'quitar',sinDatos:'Sin datos en este periodo.',guardado:'Guardado ✓',semillaInfo:'Ejemplo sin guardar: pulsa Guardar para fijarlo.',porQuien:'Guardado por',noEditor:'Tu rol es de lectura: puedes probar pero no guardar.',simOk:'Visitas de demo creadas en starbucks-qa',sale:'Sale la carta',porRegla:'por la regla',porDef:'por defecto',vivoNo:'Ningún tótem ha informado en el último minuto.',err:'Error'},
+ en:{titulo:'Audience',tPanel:'Dashboard',tReglas:'Rules & menus',tVivo:'Live',condicional:'Conditional (screens)',priv:'🔒 Anonymous counts only, estimated in the totem browser: people, gender, age band and individual/group per visit. Never images, frames or face embeddings. Deleted after 90 days.',tienda:'Store',periodo:'Period',verqa:'Include tests (qa/demo)',recargar:'↻ Refresh',csv:'⬇ CSV',simular:'🧪 Simulate 30 visits (starbucks-qa)',genero:'Gender',edad:'Age',tamano:'Individuals and groups',horas:'By hour (Madrid)',variantes:'Menus shown',reglasHit:'Rules fired',recientes:'Latest visits',reglasT:'Rules (highest matching priority wins)',reglasAyuda:'Each rule looks at the segment the camera sees (gender, age, individual or group and Madrid time slot) and picks a menu. If none matches, the default menu is shown. The kiosk never switches menu while someone is ordering.',addRule:'+ Rule',porDefecto:'Default menu',lecturas:'Matching readings',minms:'Min. between changes (s)',vacio:'Empty → general (s)',variantesT:'Menus (variants)',addVar:'+ Menu',probar:'Test a segment',guardar:'Save rules',semilla:'Restore Starbucks example',vivoT:'In front of each totem now',vivoAyuda:'Refreshes every 10 s. Turn on segmented mode with ?seg=1 on the kiosk or /totem segmentado on in the twin.',pie:'data from ainimation.studio/xperiencias/kiosko-pedido (?seg=1) · contract docs/audiencia-v1.md',
+ kv:'Visits',kp:'People',kg:'Groups',kd:'Average dwell',kc:'With order',kconv:'Conversion',m:'Men',f:'Women',nino:'Children',joven:'Young',adulto:'Adults',senior:'Senior',ind:'Individual',grp:'Group',personas:'people',persona:'person',
+ hHora:'Time',hTienda:'Store',hDisp:'Device',hPers:'Ppl',hSeg:'Segment',hCarta:'Menu',hRegla:'Rule',hPedido:'Order',hOrigen:'Origin',hDwell:'Dwell',hCam:'Camera',hVis:'Visits',hPeds:'Orders',
+ rAct:'Active',rNombre:'Name',rPrio:'Priority',rGen:'Gender',rEdad:'Age',rGrupo:'Ind./group',rFranja:'Time slot',rCarta:'Menu',any:'any',manana:'morning',mediodia:'midday',tarde:'afternoon',noche:'night',individuo:'individual',grupo:'group',
+ vNombre:'Name',vTitulo:'Headline',vSub:'Subtitle',vOferta:'Offer',vDest:'Highlights (ids)',quitar:'remove',sinDatos:'No data in this period.',guardado:'Saved ✓',semillaInfo:'Unsaved example: press Save to keep it.',porQuien:'Saved by',noEditor:'Your role is read-only: you can test but not save.',simOk:'Demo visits created in starbucks-qa',sale:'Menu shown',porRegla:'by rule',porDef:'default',vivoNo:'No totem reported in the last minute.',err:'Error'}};
+var L=(function(){try{return localStorage.getItem('aud-lang')||((navigator.language||'es').slice(0,2)==='en'?'en':'es')}catch(e){return 'es'}})();
+if(new URLSearchParams(location.search).get('lang'))L=new URLSearchParams(location.search).get('lang')==='en'?'en':'es';
+function t(k){return (T[L]&&T[L][k])||T.es[k]||k}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function $(id){return document.getElementById(id)}
+function loc(o){return o?(o[L]||o.es||''):''}
+var fmtH=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+function hora(ms){try{return fmtH.format(new Date(ms))}catch(e){return ''}}
+var S={tienda:'',doc:null,editor:false,tiendas:[]};
+function msg(el,txt,ok){el.textContent=txt||'';el.className='msg '+(ok===false?'err':ok?'ok':'')}
+function api(path,opt){opt=opt||{};opt.credentials='same-origin';opt.cache='no-store';if(opt.body){opt.headers={'Content-Type':'application/json'}}
+  return fetch(API+'/'+path,opt).then(function(r){return r.json().catch(function(){return {ok:false,error:'HTTP '+r.status}}).then(function(d){if(!r.ok&&d.ok!==false)d.ok=false;return d})})}
+function applyLang(){document.documentElement.lang=L;$('lang').textContent=L==='es'?'EN':'ES';document.querySelectorAll('[data-t]').forEach(function(n){n.textContent=t(n.getAttribute('data-t'))});}
+function qs(){var o=['real'];if($('verqa').checked){o.push('qa','demo')}else{o.push('demo')}
+  return 'tienda='+encodeURIComponent(S.tienda)+'&dias='+$('dias').value+'&origen='+(S.tienda&&/-qa$/.test(S.tienda)?'real,qa,demo':o.join(','))}
+function hbars(el,rows,total,colors){el.innerHTML=rows.map(function(r,i){var p=total?Math.round(r[1]*100/total):0;return '<div class="hb"><span>'+esc(r[0])+'</span><div class="t"><i style="width:'+p+'%;background:'+(colors&&colors[i]||'var(--accent)')+'"></i></div><span>'+r[1]+' · '+p+'%</span></div>'}).join('')}
+function seg(v){return [v.personas+' '+t(v.personas===1?'persona':'personas'),t(v.grupo==='grupo'?'grp':'ind'),v.genero_seg==='m'?'♂':v.genero_seg==='f'?'♀':'⚥',t(v.edad_seg)].join(' · ')}
+function pinta(d){
+  if(!d.ok){$('kpis').innerHTML='<div class="card err">'+esc(t('err')+': '+(d.error||''))+'</div>';return}
+  var k=d.kpis;
+  var ks=[[t('kv'),k.visitas],[t('kp'),k.personas],[t('kg'),k.grupos+' / '+k.visitas],[t('kd'),Math.round(k.dwell_ms_medio/100)/10+' s'],[t('kc'),k.con_pedido],[t('kconv'),k.conversion+' %']];
+  $('kpis').innerHTML=ks.map(function(x){return '<div class="card kpi"><div class="v">'+esc(x[1])+'</div><div class="l">'+esc(x[0])+'</div></div>'}).join('');
+  hbars($('g'),[[t('m'),d.genero.m],[t('f'),d.genero.f]],d.genero.m+d.genero.f,['var(--m)','var(--f)']);
+  var e=d.edad,te=e.nino+e.joven+e.adulto+e.senior;hbars($('e'),[[t('nino'),e.nino],[t('joven'),e.joven],[t('adulto'),e.adulto],[t('senior'),e.senior]],te);
+  var s=d.tamano,ts=s['1']+s['2']+s['3']+s['4+'];hbars($('s'),[['1 ('+t('ind')+')',s['1']],['2',s['2']],['3',s['3']],['4+',s['4+']]],ts);
+  var mx=Math.max.apply(null,d.por_hora.map(function(h){return h.personas}))||1;
+  $('h').innerHTML=d.por_hora.map(function(h){return '<div title="'+h.h+':00 · '+h.visitas+' '+t('kv')+' · '+h.personas+' '+t('personas')+'" style="height:'+Math.max(1,Math.round(h.personas*100/mx))+'%">'+(h.h%3===0?'<span>'+h.h+'</span>':'')+'</div>'}).join('');
+  var vn=function(id){return S.doc&&S.doc.variantes&&S.doc.variantes[id]?loc(S.doc.variantes[id].nombre):id};
+  $('pv').innerHTML='<tr><th>'+t('hCarta')+'</th><th>'+t('hVis')+'</th><th>'+t('kp')+'</th><th>'+t('hPeds')+'</th></tr>'+(d.por_variante.map(function(v){return '<tr><td>'+esc(vn(v.variante))+'</td><td>'+v.visitas+'</td><td>'+v.personas+'</td><td>'+v.pedidos+'</td></tr>'}).join('')||'<tr><td colspan=4>'+t('sinDatos')+'</td></tr>');
+  $('pr').innerHTML='<tr><th>'+t('hRegla')+'</th><th>'+t('hVis')+'</th><th>'+t('hPeds')+'</th></tr>'+(d.por_regla.map(function(v){return '<tr><td>'+esc(v.regla)+'</td><td>'+v.visitas+'</td><td>'+v.pedidos+'</td></tr>'}).join('')||'<tr><td colspan=3>'+t('sinDatos')+'</td></tr>');
+  $('rec').innerHTML='<tr><th>'+t('hHora')+'</th><th>'+t('hTienda')+'</th><th>'+t('hDisp')+'</th><th>'+t('hSeg')+'</th><th>'+t('hDwell')+'</th><th>'+t('hCarta')+'</th><th>'+t('hRegla')+'</th><th>'+t('hPedido')+'</th><th>'+t('hOrigen')+'</th></tr>'+((d.recientes||[]).map(function(v){return '<tr><td>'+esc(hora(v.inicio))+'</td><td>'+esc(v.tienda)+'</td><td>'+esc(v.dispositivo)+'</td><td>'+esc(seg(v))+'</td><td>'+Math.round(v.dwell_ms/1000)+' s</td><td>'+esc(vn(v.variante||'general'))+'</td><td>'+esc(v.regla||'—')+'</td><td>'+esc(v.pedido_num||'')+'</td><td class="'+(v.origen==='real'?'':'qa')+'">'+esc(v.origen)+'</td></tr>'}).join('')||'<tr><td colspan=9>'+t('sinDatos')+'</td></tr>');
+}
+function cargar(){
+  msg($('msg'),'…');
+  $('csv').href=API+'/csv?'+qs();
+  Promise.all([api('resumen?'+qs()),api('reglas?tienda='+encodeURIComponent(S.tienda))]).then(function(r){S.doc=r[1]&&r[1].variantes?r[1]:S.doc;S.editor=!!(r[1]&&r[1].editor);pinta(r[0]);pintaReglas();msg($('msg'),'')}).catch(function(e){msg($('msg'),t('err')+': '+e.message,false)});
+}
+function cargarVivo(){if($('vivo').classList.contains('hide'))return;api('estado?tienda='+encodeURIComponent(S.tienda)).then(function(d){
+  var rows=(d.dispositivos||[]);
+  $('vv').innerHTML='<tr><th>'+t('hDisp')+'</th><th>'+t('hCam')+'</th><th>'+t('hSeg')+'</th><th>'+t('hCarta')+'</th><th>'+t('hRegla')+'</th><th>'+t('hHora')+'</th></tr>'+(rows.map(function(x){return '<tr><td class="'+(x.vivo?'live':'dead')+'">● '+esc(x.dispositivo)+'</td><td>'+esc(x.camara)+'</td><td>'+(x.personas?esc(x.personas+' '+t(x.personas===1?'persona':'personas')+' · '+t(x.grupo==='grupo'?'grp':'ind')+' · '+(x.genero==='m'?'♂':x.genero==='f'?'♀':'⚥')+' · '+t(x.edad)):'—')+'</td><td>'+esc(x.variante)+'</td><td>'+esc(x.regla||'—')+'</td><td>'+esc(hora(Date.parse(x.ts)))+'</td></tr>'}).join('')||'<tr><td colspan=6>'+t('vivoNo')+'</td></tr>');
+})}
+function opts(list,val,lab){return list.map(function(o){return '<option value="'+esc(o)+'"'+(o===val?' selected':'')+'>'+esc(lab?lab(o):o)+'</option>'}).join('')}
+var GEN=['any','m','f'],EDA=['any','nino','joven','adulto','senior'],GRU=['any','individuo','grupo'],FRA=['any','manana','mediodia','tarde','noche'];
+function genLab(o){return o==='any'?t('any'):o==='m'?'♂ '+t('m'):'♀ '+t('f')}
+function pintaReglas(){var d=S.doc;if(!d)return;var vids=Object.keys(d.variantes||{});
+  $('rt').innerHTML='<tr><th>'+t('rAct')+'</th><th>'+t('rNombre')+'</th><th>'+t('rPrio')+'</th><th>'+t('rGen')+'</th><th>'+t('rEdad')+'</th><th>'+t('rGrupo')+'</th><th>'+t('rFranja')+'</th><th>'+t('rCarta')+'</th><th></th></tr>'+(d.reglas||[]).map(function(r,i){
+    return '<tr data-i="'+i+'"><td><input type="checkbox" data-k="activa"'+(r.activa!==false?' checked':'')+'></td><td><input type="text" data-k="nombre" value="'+esc(r.nombre)+'"></td><td><input type="number" data-k="prioridad" min="0" max="999" value="'+esc(r.prioridad)+'"></td><td><select data-k="genero">'+opts(GEN,r.genero,genLab)+'</select></td><td><select data-k="edad">'+opts(EDA,r.edad,t)+'</select></td><td><select data-k="grupo">'+opts(GRU,r.grupo,t)+'</select></td><td><select data-k="franja">'+opts(FRA,r.franja,t)+'</select></td><td><select data-k="variante">'+opts(vids,r.variante,function(v){return loc(d.variantes[v].nombre)||v})+'</select></td><td><button class="btn" data-del="'+i+'">✕</button></td></tr>'}).join('');
+  $('pdef').innerHTML=opts(vids,d.por_defecto,function(v){return loc(d.variantes[v].nombre)||v});
+  var h=d.histeresis||{};$('hl').value=h.lecturas||3;$('hm').value=Math.round((h.min_ms||8000)/1000);$('hv').value=Math.round((h.vacio_ms||6000)/1000);
+  $('vt').innerHTML=vids.map(function(id){var v=d.variantes[id];function row(k,lab){var o=v[k]||{};return '<div class="row"><span>'+t(lab)+'</span><input data-v="'+esc(id)+'" data-k="'+k+'" data-l="es" placeholder="ES" value="'+esc(o.es||'')+'"><input data-v="'+esc(id)+'" data-k="'+k+'" data-l="en" placeholder="EN" value="'+esc(o.en||'')+'"></div>'}
+    return '<div class="var"><b>'+esc(id)+'</b>'+(id==='general'?'':' <button class="btn" data-delv="'+esc(id)+'" style="float:right">'+t('quitar')+'</button>')+row('nombre','vNombre')+row('titulo','vTitulo')+row('subtitulo','vSub')+row('oferta','vOferta')+'<div class="row"><span>'+t('vDest')+'</span><input data-v="'+esc(id)+'" data-k="destacados" style="grid-column:span 2" value="'+esc((v.destacados||[]).join(', '))+'"></div></div>'}).join('');
+  $('rinfo').textContent=d.semilla?t('semillaInfo'):(d.por?t('porQuien')+' '+d.por+' · '+hora(d.actualizado):'');
+  if(!S.editor)msg($('rmsg'),t('noEditor'));
+  $('guardar').disabled=!S.editor;probar();
+}
+function leerForm(){var d=S.doc;
+  document.querySelectorAll('#rt tr[data-i]').forEach(function(tr){var r=d.reglas[+tr.dataset.i];tr.querySelectorAll('[data-k]').forEach(function(n){var k=n.dataset.k;r[k]=n.type==='checkbox'?n.checked:n.type==='number'?+n.value:n.value})});
+  document.querySelectorAll('#vt [data-v]').forEach(function(n){var v=d.variantes[n.dataset.v],k=n.dataset.k;if(k==='destacados'){v.destacados=n.value.split(/[,\s]+/).filter(Boolean)}else{v[k]=v[k]||{};v[k][n.dataset.l]=n.value}});
+  d.por_defecto=$('pdef').value;d.histeresis={lecturas:+$('hl').value,min_ms:+$('hm').value*1000,vacio_ms:+$('hv').value*1000};return d}
+function casa(r,s){if(!r||r.activa===false||!(s.personas>0))return false;return (r.grupo==='any'||r.grupo===s.grupo)&&(r.genero==='any'||r.genero===s.genero)&&(r.edad==='any'||r.edad===s.edad)&&(r.franja==='any'||r.franja===s.franja)}
+function probar(){if(!S.doc)return;var d=leerForm();var n=+$('pp').value;var s={personas:n,grupo:n>1?'grupo':'individuo',genero:$('pg').value,edad:$('pe').value,franja:$('pf').value};
+  var o=(d.reglas||[]).map(function(r,i){return [r,i]}).sort(function(a,b){return (b[0].prioridad-a[0].prioridad)||(a[1]-b[1])});var w=null;for(var i=0;i<o.length;i++){if(casa(o[i][0],s)){w=o[i][0];break}}
+  var vid=w?w.variante:d.por_defecto;$('pres').textContent='→ '+t('sale')+': '+(loc(d.variantes[vid]&&d.variantes[vid].nombre)||vid)+' ('+(w?t('porRegla')+' '+w.nombre:t('porDef'))+')'}
+function tiendas(){return api('tiendas').then(function(d){S.tiendas=(d.tiendas||[]);var q=new URLSearchParams(location.search).get('tienda');
+  var list=S.tiendas.length?S.tiendas:[{tienda:'starbucks-paseo-de-gracia'},{tienda:'starbucks-qa',qa:true}];
+  S.tienda=q&&list.some(function(x){return x.tienda===q})?q:list[0].tienda;
+  $('tienda').innerHTML=list.map(function(x){return '<option value="'+esc(x.tienda)+'"'+(x.tienda===S.tienda?' selected':'')+'>'+esc(x.tienda+(x.qa?' (QA)':'')+(x.visitas?' · '+x.visitas:''))+'</option>'}).join('');
+  if(d.editor!=null)S.editor=d.editor;})}
+document.querySelectorAll('[data-tab]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-tab]').forEach(function(x){x.setAttribute('aria-pressed',String(x===b));$(x.dataset.tab).classList.toggle('hide',x!==b)});cargarVivo()}});
+$('lang').onclick=function(){L=L==='es'?'en':'es';try{localStorage.setItem('aud-lang',L)}catch(e){}applyLang();cargar()};
+$('tienda').onchange=function(){S.tienda=this.value;cargar();cargarVivo()};$('dias').onchange=cargar;$('verqa').onchange=cargar;$('recargar').onclick=function(){cargar();cargarVivo()};
+$('simular').onclick=function(){msg($('msg'),'…');api('simular',{method:'POST',body:JSON.stringify({tienda:'starbucks-qa',n:30})}).then(function(d){if(d.ok){msg($('msg'),t('simOk')+' ('+d.insertadas+')',true);S.tienda='starbucks-qa';if(![].some.call($('tienda').options,function(o){return o.value==='starbucks-qa'})){$('tienda').insertAdjacentHTML('beforeend','<option value="starbucks-qa">starbucks-qa (QA)</option>')}$('tienda').value='starbucks-qa';cargar()}else msg($('msg'),t('err')+': '+(d.detalle||d.error),false)})};
+$('rt').addEventListener('change',probar);$('vt').addEventListener('change',function(){leerForm();pintaReglas()});['pp','pg','pe','pf'].forEach(function(id){$(id).onchange=probar});
+$('rt').addEventListener('click',function(e){var i=e.target.getAttribute('data-del');if(i!=null){leerForm();S.doc.reglas.splice(+i,1);pintaReglas()}});
+$('vt').addEventListener('click',function(e){var id=e.target.getAttribute('data-delv');if(id){leerForm();delete S.doc.variantes[id];S.doc.reglas=S.doc.reglas.filter(function(r){return r.variante!==id});if(S.doc.por_defecto===id)S.doc.por_defecto='general';pintaReglas()}});
+$('addRule').onclick=function(){leerForm();S.doc.reglas.push({id:'r-'+Date.now().toString(36),nombre:'Nueva regla',activa:true,prioridad:10,genero:'any',edad:'any',grupo:'any',franja:'any',variante:S.doc.por_defecto});pintaReglas()};
+$('addVar').onclick=function(){var id=$('newVarId').value.trim().toLowerCase();if(!/^[a-z0-9][a-z0-9_-]{0,59}$/.test(id)||S.doc.variantes[id])return;leerForm();S.doc.variantes[id]={nombre:{es:id,en:id},titulo:null,subtitulo:null,oferta:null,destacados:[]};$('newVarId').value='';pintaReglas()};
+$('guardar').onclick=function(){var d=leerForm();var doc={por_defecto:d.por_defecto,histeresis:d.histeresis,variantes:d.variantes,reglas:d.reglas};msg($('rmsg'),'…');
+  api('reglas?tienda='+encodeURIComponent(S.tienda),{method:'PUT',body:JSON.stringify({doc:doc})}).then(function(r){if(r.ok){S.doc=r;msg($('rmsg'),t('guardado'),true);pintaReglas()}else msg($('rmsg'),t('err')+': '+((r.errores||[]).join(' · ')||r.error),false)})};
+$('semilla').onclick=function(){api('reglas?tienda='+encodeURIComponent(S.tienda)+'&semilla=1').then(function(d){S.doc=d;pintaReglas()})};
+applyLang();
+tiendas().then(cargar,cargar);
+setInterval(cargarVivo,10000);
+})();
+</script>
+<script>window.ADMIRA_VERSION='v.08.10.2026.r1.00:24';</script>
+<script src="/admira-nav.js?v=08.10.2026.r1.0024" data-active="condicional" data-title="Audiencia" defer></script>
+</body>
+</html>
