@@ -20,7 +20,7 @@ window.TazaDemo = function({api,project,status,say,expected}) {
         let result,lastError;
         for(let attempt=0;attempt<6;attempt++){await check(g);try{result=await send([6,4,10][i]);break;}catch(e){lastError=e;await pause(1500);}}
         if(!result)throw lastError;
-        await check(g);expected(result.title);say('Paso '+(i+1)+'/3: el kiosko ha seleccionado '+result.title+'. Comprueba el nombre en la taza. Siguiente cambio en 30 segundos.');
+        await check(g);expected(result.title);say('Paso '+(i+1)+'/3: el kiosko ha seleccionado '+result.title+'. Comprueba el nombre en la taza.'+(i<2?' Siguiente cambio en 30 segundos.':' Última canción de la demo.'));
       }else{
         const id='taza-demo-'+crypto.randomUUID();
         const p=await order('pedido',{id,nombre:['Demo Ana','Demo Luis','Demo Eva'][i],total:0,prep:600});
