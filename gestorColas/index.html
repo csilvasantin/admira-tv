@@ -17,15 +17,24 @@ main{max-width:1200px;margin:0 auto;padding:18px}
 .top h1{margin:0;font-size:24px;flex:1}.top h1 small{font-size:14px;opacity:.65;font-weight:500}
 .pill{border:0;border-radius:999px;padding:9px 16px;font-weight:800;cursor:pointer;background:var(--c);color:#fff;font-size:15px}
 .pill.sec{background:#fff;color:var(--osc);border:2px solid var(--c)}
-.cols{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
-.recibido .p{border-style:dashed}
-.col{background:#fff;border-radius:16px;padding:12px;min-height:240px;box-shadow:0 2px 10px #0001}
-.col h2{margin:0 0 10px;font-size:17px;display:flex;justify-content:space-between}
-.p{display:flex;align-items:center;gap:8px;border:1px solid #0002;border-radius:12px;padding:10px;margin-bottom:8px;cursor:pointer;user-select:none}
-.p:active{transform:scale(.98)}.p b{font-size:28px;font-variant-numeric:tabular-nums;min-width:86px}.p span{flex:1;font-size:14px;opacity:.75}
-.p button{border:0;border-radius:9px;padding:8px 10px;font-weight:700;cursor:pointer;background:#eee}
-.listo .p{border-color:var(--c);background:#00704A12}
-.vacio{opacity:.5;font-size:14px}
+.resumen{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}.resumen span{background:#fff;border-radius:999px;padding:7px 14px;font-weight:700;font-size:15px;box-shadow:0 1px 4px #0001}
+/* KDS de barra (7-oct-2026): comandas por orden de llegada con líneas, espera y botones táctiles para iPad */
+.kds{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;align-items:start}
+.c{background:#fff;border-radius:18px;padding:12px 14px 14px;border-top:10px solid #8aa59b;box-shadow:0 2px 12px #0002}
+.c.preparando{border-top-color:#FFB800}.c.listo{border-top-color:var(--c);background:#f3faf6}
+.c.nueva{animation:latido 1s ease-in-out 6}@keyframes latido{50%{box-shadow:0 0 0 7px #FFB800}}
+.ch{display:flex;align-items:baseline;gap:10px}.ch b{font-size:38px;font-weight:900;font-variant-numeric:tabular-nums}
+.ch .nom{flex:1;font-size:19px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip{font-size:13px;font-weight:800;border-radius:999px;padding:4px 10px;background:#eef2f0;white-space:nowrap}.listo .chip{background:var(--c);color:#fff}.preparando .chip{background:#fff1c7}
+.meta{display:flex;justify-content:space-between;font-size:15px;opacity:.85;margin:2px 0 8px;font-variant-numeric:tabular-nums}.meta .esp{font-weight:800}.esp.amb{color:#9a6a00}.esp.roja{color:#D62B1F}
+.c ul{list-style:none;margin:0 0 10px;padding:0;border-top:1px solid #0001}.c li{padding:7px 0;border-bottom:1px solid #0001;display:flex;gap:10px}
+.c li .q{font-size:21px;font-weight:900;min-width:42px;color:var(--c)}.c li .n{font-size:18px;font-weight:800;line-height:1.2}.c li .o{display:block;font-size:14.5px;font-weight:500;opacity:.8;margin-top:2px}
+.sin{opacity:.6;font-size:14px;padding:4px 0}
+.bt{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bt button{font:inherit;font-size:17px;font-weight:900;border:0;border-radius:14px;min-height:60px;padding:6px;cursor:pointer;color:#fff;touch-action:manipulation}
+.bt .preparando{background:#b07b00}.bt .listo{background:var(--c)}.bt .recogido{background:var(--osc)}.bt button[aria-pressed=true]{outline:4px solid #0002;filter:saturate(.4) brightness(1.25);cursor:default}.bt button:disabled{opacity:.55}
+.llamar{margin-top:8px;width:100%;border:2px solid var(--c);background:#fff;color:var(--osc);border-radius:12px;min-height:46px;font:inherit;font-weight:800;cursor:pointer}
+#nueva{position:fixed;left:50%;top:70px;transform:translate(-50%,-20px);opacity:0;visibility:hidden;background:#FFB800;color:#2b1d00;font-weight:900;font-size:21px;padding:13px 20px;border-radius:16px;box-shadow:0 10px 30px #0004;transition:transform .3s,opacity .3s,visibility .3s;z-index:50;max-width:calc(100vw - 32px)}#nueva.on{transform:translate(-50%,0);opacity:1;visibility:visible}
+.vacio{opacity:.5;font-size:16px;grid-column:1/-1;text-align:center;padding:40px 0}
 #msg{min-height:22px;font-size:14px;margin:8px 0}
 .form{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 .form input,.form select{padding:9px 12px;border-radius:10px;border:1px solid #0003;font:inherit}
@@ -44,12 +53,9 @@ main{max-width:1200px;margin:0 auto;padding:18px}
     <button class="pill sec" id="bLang">EN</button></div>
   <div class="form"><input id="nNombre" maxlength="24" data-ph="nombre" placeholder="Nombre (opcional)"><button class="pill" id="bCrear" data-t="crear">＋ Pedido en barra</button></div>
   <div id="msg" role="status"></div>
-  <div class="cols">
-    <section class="col recibido"><h2><span data-t="recibido">📥 Recibido</span><em id="cRec">0</em></h2><div id="lRec"></div></section>
-    <section class="col"><h2><span data-t="prep">⏳ En preparación</span><em id="cPrep">0</em></h2><div id="lPrep"></div></section>
-    <section class="col listo"><h2><span data-t="listo">✅ Listo para recoger</span><em id="cListo">0</em></h2><div id="lListo"></div></section>
-    <section class="col"><h2><span data-t="resumen">📊 Resumen</span></h2><div id="resumen" style="font-size:14px;line-height:1.7"></div></section>
-  </div>
+  <div class="resumen" id="resumen"></div>
+  <div class="kds" id="kds" aria-live="polite"></div>
+  <div id="nueva" role="status" aria-live="assertive"></div>
 </main>
 <div data-af-slot="left" class="slot">
   <h3 data-t="marca">Marca / sala</h3>
@@ -71,24 +77,44 @@ const MARCAS={starbucks:'starbucks-paseo-de-gracia','365':'365-demo',admiranext:
 let sala=(P.get('sala')||P.get('store')||MARCAS[P.get('marca')]||MARCAS.starbucks).replace(/[^a-z0-9-]/g,'');
 if(P.get('clave')){localStorage.setItem('gc_clave',P.get('clave'));const q=new URLSearchParams(location.search);q.delete('clave');history.replaceState(null,'','?'+q);}
 let lang=(P.get('lang')||localStorage.getItem('gc_lang')||'es')==='en'?'en':'es',ultimo=null;
-const T={es:{titulo:'Gestor de colas',abrirPantalla:'Abrir pantalla iPad',crear:'＋ Pedido en barra',nombre:'Nombre (opcional)',recibido:'📥 Recibido',bPrep:'Preparar',prep:'⏳ En preparación',listo:'✅ Listo para recoger',resumen:'📊 Resumen',marca:'Marca / sala',comandos:'Comandos',enlaces:'Enlaces de la sala',clave:'Clave de la sala (MCP / staff)',verClave:'Ver clave',ipad:'iPad',ipadTxt:'Safari → URL de la pantalla → Compartir → «Añadir a pantalla de inicio» → abrir desde el icono (pantalla completa) y tocar una vez para activar la voz. Acceso guiado para bloquearlo.',bListo:'Listo',bRecoger:'Recogido',bLlamar:'📣 Llamar',vacio:'Sin pedidos',tap:'toca para avanzar',pend:'esperando pago (simulado)',rec:'recogidos recientes',hecho:'Hecho',llamado:'📣 Pedido %n llamado (%k) · la pantalla lo anuncia ahora',creado:'＋ Pedido %n creado',reiniciado:'Cola vaciada · el siguiente pedido será A001',err:'Error',conf:'¿Vaciar la cola y numerar desde A001?',btn:'EN'},
-en:{titulo:'Queue manager',abrirPantalla:'Open iPad display',crear:'＋ Counter order',nombre:'Name (optional)',recibido:'📥 Received',bPrep:'Prepare',prep:'⏳ Preparing',listo:'✅ Ready for pick-up',resumen:'📊 Summary',marca:'Brand / room',comandos:'Commands',enlaces:'Room links',clave:'Room key (MCP / staff)',verClave:'Show key',ipad:'iPad',ipadTxt:'Safari → display URL → Share → “Add to Home Screen” → open from the icon (full screen) and tap once to enable voice. Use Guided Access to lock it.',bListo:'Ready',bRecoger:'Collected',bLlamar:'📣 Call',vacio:'No orders',tap:'tap to advance',pend:'awaiting (simulated) payment',rec:'recently collected',hecho:'Done',llamado:'📣 Order %n called (%k) · the display announces it now',creado:'＋ Order %n created',reiniciado:'Queue emptied · next order will be A001',err:'Error',conf:'Empty the queue and restart at A001?',btn:'ES'}};
+const T={es:{titulo:'Gestor de colas',abrirPantalla:'Abrir pantalla iPad',crear:'＋ Pedido en barra',nombre:'Nombre (opcional)',recibido:'📥 Recibido',bPrep:'Preparar',prep:'⏳ En preparación',listo:'✅ Listo para recoger',resumen:'📊 Resumen',marca:'Marca / sala',comandos:'Comandos',enlaces:'Enlaces de la sala',clave:'Clave de la sala (MCP / staff)',verClave:'Ver clave',ipad:'iPad',ipadTxt:'Safari → URL de la pantalla → Compartir → «Añadir a pantalla de inicio» → abrir desde el icono (pantalla completa) y tocar una vez para activar la voz. Acceso guiado para bloquearlo.',bListo:'Listo',bRecoger:'Recogido',bLlamar:'📣 Llamar',vacio:'Sin pedidos',tap:'toca para avanzar',pend:'esperando pago (simulado)',rec:'recogidos recientes',hecho:'Hecho',llamado:'📣 Pedido %n llamado (%k) · la pantalla lo anuncia ahora',creado:'＋ Pedido %n creado',reiniciado:'Cola vaciada · el siguiente pedido será A001',err:'Error',conf:'¿Vaciar la cola y numerar desde A001?',btn:'EN',bPrep2:'Preparando',bEnt:'Entregado',esp:'espera',sin:'Sin detalle de productos (pedido en barra o cola sin clave)',mas:'+%n líneas más',nueva:'🔔 Nueva comanda',recibidoC:'Recibido',prepC:'En preparación',listoC:'Listo'},
+en:{titulo:'Queue manager',abrirPantalla:'Open iPad display',crear:'＋ Counter order',nombre:'Name (optional)',recibido:'📥 Received',bPrep:'Prepare',prep:'⏳ Preparing',listo:'✅ Ready for pick-up',resumen:'📊 Summary',marca:'Brand / room',comandos:'Commands',enlaces:'Room links',clave:'Room key (MCP / staff)',verClave:'Show key',ipad:'iPad',ipadTxt:'Safari → display URL → Share → “Add to Home Screen” → open from the icon (full screen) and tap once to enable voice. Use Guided Access to lock it.',bListo:'Ready',bRecoger:'Collected',bLlamar:'📣 Call',vacio:'No orders',tap:'tap to advance',pend:'awaiting (simulated) payment',rec:'recently collected',hecho:'Done',llamado:'📣 Order %n called (%k) · the display announces it now',creado:'＋ Order %n created',reiniciado:'Queue emptied · next order will be A001',err:'Error',conf:'Empty the queue and restart at A001?',btn:'ES',bPrep2:'Preparing',bEnt:'Handed over',esp:'waiting',sin:'No product detail (counter order or queue without key)',mas:'+%n more lines',nueva:'🔔 New order',recibidoC:'Received',prepC:'Preparing',listoC:'Ready'}};
 const t=k=>T[lang][k]||k;
 function textos(){document.documentElement.lang=lang;document.querySelectorAll('[data-t]').forEach(e=>e.textContent=t(e.dataset.t));$('nNombre').placeholder=t('nombre');$('bLang').textContent=t('btn');$('salaTxt').textContent='· '+sala;
   const m=Object.keys(MARCAS).find(k=>MARCAS[k]===sala);if(m)$('selMarca').value=m;
   const o=location.origin,u={[lang==='en'?'Display (iPad)':'Pantalla (iPad)']:o+'/gestorColas/pantalla/?sala='+sala+(lang==='en'?'&lang=en':''),[lang==='en'?'Kiosk':'Quiosco']:sala===MARCAS.starbucks?'https://www.ainimation.studio/starbucks/':'https://www.ainimation.studio/xperiencias/kiosko-pedido/?store='+sala,[lang==='en'?'Help':'Ayuda']:o+'/gestorColas/help/','MCP':o+'/gestorColas/mcp'};
   $('urls').innerHTML=Object.entries(u).map(([k,v])=>'<li><b>'+k+'</b><br><a href="'+v+'" target="_blank" rel="noopener">'+v+'</a></li>').join('');if(ultimo)pintar(ultimo);}
 const esc=x=>String(x||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function fila(p){const l=p.estado==='listo',r=p.estado==='recibido',sig=l?'recogido':r?'preparando':'listo';return '<div class="p" data-n="'+esc(p.numero)+'" data-sig="'+sig+'" title="'+t('tap')+'"><b>'+esc(p.numero)+'</b><span>'+(p.nombre?esc(p.nombre)+' · ':'')+new Date(p.pagado||p.creado).toLocaleTimeString(lang==='en'?'en-GB':'es-ES',{hour:'2-digit',minute:'2-digit'})+(p.llamadas?' · 📣'+p.llamadas:'')+'</span>'+(l?'<button data-llamar="'+esc(p.numero)+'">'+t('bLlamar')+'</button>':'')+'<button data-n2="'+esc(p.numero)+'" data-a="'+sig+'">'+(l?t('bRecoger'):r?t('bPrep'):t('bListo'))+'</button>'+(r?'<button data-n2="'+esc(p.numero)+'" data-a="listo">'+t('bListo')+'</button>':'')+'</div>';}
-function pintar(d){ultimo=d;const re=d.recibido||[],pr=d.preparando||[],li=d.listo||[];$('lRec').innerHTML=re.map(fila).join('')||'<p class="vacio">'+t('vacio')+'</p>';$('cRec').textContent=re.length;$('lPrep').innerHTML=pr.map(fila).join('')||'<p class="vacio">'+t('vacio')+'</p>';$('lListo').innerHTML=[...li].reverse().map(fila).join('')||'<p class="vacio">'+t('vacio')+'</p>';$('cPrep').textContent=pr.length;$('cListo').textContent=li.length;
-  $('resumen').innerHTML=t('recibido')+': <b>'+re.length+'</b><br>'+t('prep')+': <b>'+pr.length+'</b><br>'+t('listo')+': <b>'+li.length+'</b><br>'+t('pend')+': <b>'+(d.pendientes||0)+'</b><br>'+t('rec')+': <b>'+(d.recogidos||0)+'</b><br><small>DEMO · '+(lang==='en'?'simulated payment, no prices':'pago simulado, sin precios')+'</small>';$('raw').textContent=JSON.stringify(d,null,2);}
-async function api(op,body){const h={'content-type':'application/json'},k=localStorage.getItem('gc_clave');if(k)h['x-clave-sala']=k;const r=await fetch('/gestorColas/api/'+op+'?sala='+sala,body?{method:'POST',headers:h,credentials:'same-origin',body:JSON.stringify(body)}:{cache:'no-store',credentials:'same-origin'});const d=await r.json();if(!d.ok)throw new Error(d.error||r.status);return d;}
+// Etiquetas de la carta para las líneas sin optionsText (ids tamano/leche/temperatura/extras del quiosco).
+let ETQ={};fetch('https://www.ainimation.studio/xperiencias/kiosko-pedido/menu.starbucks.json').then(r=>r.json()).then(m=>{const e={};(m.items||[]).forEach(i=>(i.optionGroups||[]).forEach(g=>(g.choices||[]).forEach(c=>{(e[g.id]=e[g.id]||{})[c.id]=c.label;})));ETQ=e;if(ultimo)pintar(ultimo);}).catch(()=>{});
+const etq=(g,id)=>{const l=ETQ[g]&&ETQ[g][id];return l?(typeof l==='string'?l:l[lang]||l.es):String(id).replace(/-/g,' ');};
+const opciones=l=>l.optionsText||Object.entries(l.options||{}).flatMap(([g,v])=>(Array.isArray(v)?v:[v]).map(x=>etq(g,x))).join(' · ');
+const mmss=ms=>{const s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
+let vistos=null,nuevas=new Map(),skew=0,ocupado=new Set(),ultHtml='';const KDS=window.__gcKds={renders:0,sonidos:0,nuevas:[]};
+let ac=null;document.addEventListener('pointerdown',()=>{try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume&&ac.resume();}catch(_){}},{once:true});
+function ding(){KDS.sonidos++;if(!ac)return;try{const t0=ac.currentTime;[880,1320].forEach((f,i)=>{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;o.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(.0001,t0+i*.18);g.gain.exponentialRampToValueAtTime(.3,t0+i*.18+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+i*.18+.5);o.start(t0+i*.18);o.stop(t0+i*.18+.55);});}catch(_){}}
+function tarjeta(p){const e=p.estado,ls=p.lineas||[],desde=p.pagado||p.creado,esp=Date.now()+skew-new Date(desde).getTime(),oc=ocupado.has(p.numero),n=esc(p.numero);
+  const b=(a,k)=>'<button type="button" class="'+a+'" data-n2="'+n+'" data-a="'+a+'" aria-pressed="'+(e===a)+'"'+(e===a||oc?' disabled':'')+'>'+esc(t(k))+'</button>';
+  return '<article class="c '+esc(e)+(nuevas.has(p.id)?' nueva':'')+'" data-numero="'+n+'">'
+   +'<div class="ch"><b>'+n+'</b><span class="nom">'+esc(p.nombre||'')+'</span><span class="chip">'+esc(t({recibido:'recibidoC',preparando:'prepC',listo:'listoC'}[e]||e))+'</span></div>'
+   +'<div class="meta"><span>🕑 '+new Date(desde).toLocaleTimeString(lang==='en'?'en-GB':'es-ES',{hour:'2-digit',minute:'2-digit'})+(p.llamadas?' · 📣'+p.llamadas:'')+'</span><span class="esp'+(esp>300000?' roja':esp>180000?' amb':'')+'" data-desde="'+esc(desde)+'">'+esc(t('esp'))+' '+mmss(esp)+'</span></div>'
+   +(ls.length?'<ul>'+ls.map(l=>{const o=opciones(l);return '<li><span class="q">'+esc(l.qty)+'×</span><span class="n">'+esc(l.name)+(o?'<span class="o">'+esc(o)+'</span>':'')+'</span></li>';}).join('')+(p.lineas_mas?'<li class="sin">'+esc(t('mas').replace('%n',p.lineas_mas))+'</li>':'')+'</ul>':'<p class="sin">'+esc(t('sin'))+'</p>')
+   +'<div class="bt">'+b('preparando','bPrep2')+b('listo','bListo')+b('recogido','bEnt')+'</div>'
+   +(e==='listo'?'<button type="button" class="llamar" data-llamar="'+n+'">'+esc(t('bLlamar'))+'</button>':'')+'</article>';}
+function avisarNuevas(l){if(!vistos){vistos=new Set(l.map(p=>p.id));return;}const ns=l.filter(p=>!vistos.has(p.id));l.forEach(p=>vistos.add(p.id));if(!ns.length)return;
+  ns.forEach(p=>{nuevas.set(p.id,Date.now());KDS.nuevas.push(p.numero);});const nv=$('nueva');nv.textContent=t('nueva')+' · '+ns.map(p=>p.numero+(p.nombre?' '+p.nombre:'')).join(', ');nv.classList.add('on');clearTimeout(avisarNuevas.t);avisarNuevas.t=setTimeout(()=>nv.classList.remove('on'),6000);ding();}
+function pintar(d){ultimo=d;const re=d.recibido||[],pr=d.preparando||[],li=d.listo||[];if(d.ahora)skew=new Date(d.ahora).getTime()-Date.now();
+  const l=[...re,...pr,...li].sort((a,b)=>(a.pagado||a.creado)<(b.pagado||b.creado)?-1:1);
+  for(const[id,at]of nuevas)if(Date.now()-at>8000)nuevas.delete(id);avisarNuevas(l);
+  const html=l.length?l.map(tarjeta).join(''):'<p class="vacio">'+t('vacio')+'</p>';if(html!==ultHtml){ultHtml=html;$('kds').innerHTML=html;KDS.renders++;}
+  $('resumen').innerHTML='<span>'+t('recibido')+' <b>'+re.length+'</b></span><span>'+t('prep')+' <b>'+pr.length+'</b></span><span>'+t('listo')+' <b>'+li.length+'</b></span><span>'+t('pend')+' <b>'+(d.pendientes||0)+'</b></span><span>'+t('rec')+' <b>'+(d.recogidos||0)+'</b></span><span><small>DEMO · '+(lang==='en'?'simulated payment':'pago simulado')+'</small></span>';$('raw').textContent=JSON.stringify(d,null,2);}
+setInterval(()=>{document.querySelectorAll('#kds .esp[data-desde]').forEach(s=>{const ms=Date.now()+skew-new Date(s.dataset.desde).getTime();s.textContent=t('esp')+' '+mmss(ms);s.className='esp'+(ms>300000?' roja':ms>180000?' amb':'');});},1000);
+async function api(op,body){const h={'content-type':'application/json'},k=localStorage.getItem('gc_clave');if(k)h['x-clave-sala']=k;const r=await fetch('/gestorColas/api/'+op+'?sala='+sala,body?{method:'POST',headers:h,credentials:'same-origin',body:JSON.stringify(body)}:{cache:'no-store',credentials:'same-origin',headers:k?{'x-clave-sala':k}:{}});const d=await r.json();if(!d.ok)throw new Error(d.error||r.status);return d;}
 function aviso(s,mal){$('msg').textContent=s;$('msg').style.color=mal?'#b00020':'#00704A';}
 async function hacer(op,body){try{const r=await api(op,body);aviso(op==='llamar'?t('llamado').replace('%n',r.numero).replace('%k',r.llamadas||1):op==='crear'?t('creado').replace('%n',r.numero):op==='reiniciar'?t('reiniciado'):t('hecho')+(r.numero?' · '+r.numero+' → '+r.estado:''));tic();return r;}catch(e){aviso(t('err')+': '+e.message,true);}}
 async function tic(){try{pintar(await api('estado'));}catch(e){aviso(t('err')+': '+e.message,true);}}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-llamar]');if(b){e.stopPropagation();b.disabled=true;b.textContent='📣 …';return hacer('llamar',{pedido:b.dataset.llamar});}
-  const c=e.target.closest('[data-n2]');if(c){e.stopPropagation();return hacer('avanzar',{pedido:c.dataset.n2,a:c.dataset.a});}
-  const p=e.target.closest('.p[data-n]');if(p)hacer('avanzar',{pedido:p.dataset.n,a:p.dataset.sig});});
+  const c=e.target.closest('[data-n2]');if(c&&!c.disabled){e.stopPropagation();const n=c.dataset.n2;ocupado.add(n);ultHtml='';if(ultimo)pintar(ultimo);return hacer('avanzar',{pedido:n,a:c.dataset.a}).finally(()=>{ocupado.delete(n);ultHtml='';tic();});}});
 // Un toque = un pedido: botón bloqueado mientras se crea y clave de idempotencia por toque (doble clic,
 // reintentos o un clic reenviado por el velo de los paneles nunca crean dos).
 let creando=null;function crear(nombre){if(creando)return creando;const b=$('bCrear');b.disabled=true;const idem=(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)).replace(/-/g,'');

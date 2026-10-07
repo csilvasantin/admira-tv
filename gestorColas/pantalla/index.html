@@ -139,7 +139,7 @@ function pintaRecibidos(){const d=ultimo;if(!d)return;const caja=$('reci'),lista
 setInterval(pintaRecibidos,200);
 function pintar(d){ultimo=d;$('listo').innerHTML=chips([...(d.listo||[])].reverse(),recientes); /* FIFO: el más antiguo arriba */$('prep').innerHTML=chips([...(d.preparando||[])]);pintaRecibidos();}
 async function tic(){if(enVuelo)return;enVuelo=true;window.__pantallaStats.tics++;const ac=new AbortController(),to=setTimeout(()=>ac.abort(),5000);
-  try{const r=await fetch('/gestorColas/api/estado?sala='+sala+'&_='+Date.now(),{cache:'no-store',signal:ac.signal});const d=await r.json();if(!d.ok)throw 0;
+  try{const r=await fetch('/gestorColas/api/estado?sala='+sala+'&publico=1&_='+Date.now(),{cache:'no-store',signal:ac.signal});const d=await r.json();if(!d.ok)throw 0;
   {const t=Date.parse(d.ahora);if(t)desfase=t-Date.now();}
   const todos=[...(d.recibido||[]),...(d.preparando||[]),...(d.listo||[])],ids=new Set(todos.map(p=>p.id));
   // Reinicio: ninguno de los pedidos de antes sigue y la numeración ha vuelto atrás (o la cola está vacía).

@@ -36,13 +36,33 @@ export async function autoriza(request, env, sala, clave) {
   return { ok: false };
 }
 
-export async function rele(env, op, sala, { query = "", body } = {}) {
+/**
+ * Clave de barra con la que ESTE servidor habla con el relé (cierre de la cola, 7-oct-2026): COLA_BARRA_KEY si
+ * existe; si no, la clave de sala gc_ derivada de COLAS_SEED (el relé la acepta cuando tiene el mismo COLAS_SEED).
+ * Nunca sale al navegador: admira.tv valida sesión o clave de sala y solo entonces llama al relé con ella.
+ */
+export async function claveBarra(env, sala) {
+  if (env.COLA_BARRA_KEY) return env.COLA_BARRA_KEY;
+  return env.COLAS_SEED ? claveDe(env, sala) : "";
+}
+
+/** Llama al relé. `auth` = la petición ya pasó `autoriza`: solo entonces viajan las claves (detalle y escritura). */
+export async function rele(env, op, sala, { query = "", body, auth = false } = {}) {
   const headers = { "content-type": "application/json" };
-  if (env.COLA_ADMIN) headers["x-cola-admin"] = env.COLA_ADMIN;
+  if (auth) {
+    if (env.COLA_ADMIN) headers["x-cola-admin"] = env.COLA_ADMIN;
+    const k = await claveBarra(env, sala); if (k) headers["x-cola-clave"] = k;
+  }
   const r = await fetch(`${RELE}/cola/${op}?store=${encodeURIComponent(sala)}${query}`, body ? { method: "POST", headers, body: JSON.stringify(body) } : { headers });
   const d = await r.json().catch(() => ({ ok: false, error: "relé sin respuesta" }));
   if (!r.ok || d.ok === false) throw new Error(d.error || "relé HTTP " + r.status);
   return d;
+}
+
+/** Líneas de un «pedido en barra» (mismo formato que el quiosco); el relé las sanea y limita a 10. */
+export function lineasDe(v) {
+  let l = v; if (typeof l === "string") { try { l = JSON.parse(l); } catch (_) { l = []; } }
+  return Array.isArray(l) ? l.slice(0, 10).filter((x) => x && typeof x === "object") : [];
 }
 
 export const urls = (sala) => ({
@@ -53,26 +73,30 @@ export const urls = (sala) => ({
   ayuda: `${ORIGEN}/gestorColas/help/`, mcp: `${ORIGEN}/gestorColas/mcp`,
 });
 
-/** Operaciones comunes de API y MCP. */
-export async function operar(env, op, sala, a = {}) {
-  if (op === "estado") return { sala, ...(await rele(env, "estado", sala)), urls: urls(sala) };
+/**
+ * Operaciones comunes de API y MCP. `auth` (sesión Admira o clave de sala ya comprobadas) da el detalle de
+ * barra: líneas y nombre completo. Sin ella el relé devuelve solo número y nombre de pila (cola cerrada).
+ */
+export async function operar(env, op, sala, a = {}, { auth = false } = {}) {
+  if (op === "estado") return { sala, ...(await rele(env, "estado", sala, { auth })), urls: urls(sala) };
   if (op === "listar") {
-    const d = await rele(env, "estado", sala);
+    const d = await rele(env, "estado", sala, { auth });
     let l = [...(d.recibido || []), ...(d.preparando || []), ...(d.listo || [])];
     if (a.estado) l = l.filter((p) => p.estado === a.estado);
-    return { sala, total: l.length, pedidos: l, pendientes_de_pago: d.pendientes, recogidos_recientes: d.recogidos };
+    l.sort((x, y) => ((x.pagado || x.creado) < (y.pagado || y.creado) ? -1 : 1));
+    return { sala, total: l.length, pedidos: l, pendientes_de_pago: d.pendientes, recogidos_recientes: d.recogidos, detalle: !!(d.acceso ? d.acceso.detalle : auth) };
   }
-  if (op === "pedido") return await rele(env, "pedido", sala, { query: "&pedido=" + encodeURIComponent(a.pedido || "") });
+  if (op === "pedido") return await rele(env, "pedido", sala, { query: "&pedido=" + encodeURIComponent(a.pedido || ""), auth });
   if (op === "crear") {
     // Idempotente: el mismo «idem» (un toque, un reintento de red o del MCP) devuelve el MISMO pedido.
     const idem = String(a.idem || "").replace(/[^A-Za-z0-9._-]/g, "").slice(0, 48);
     const id = idem.length >= 6 ? "gc-" + idem : "gc-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
-    await rele(env, "pedido", sala, { body: { id, nombre: a.nombre || "", total: 0, prefijo: a.prefijo || "A" } });
-    return await rele(env, "pagar", sala, { body: { id, via: "caja" } });
+    await rele(env, "pedido", sala, { body: { id, nombre: a.nombre || "", total: 0, prefijo: a.prefijo || "A", lines: lineasDe(a.lineas || a.lines) }, auth: true });
+    return await rele(env, "pagar", sala, { body: { id, via: "caja" }, auth: true });
   }
-  if (op === "avanzar") { if (a.a && !ESTADOS.includes(a.a)) throw new Error("estado inválido: " + a.a); return await rele(env, "avanzar", sala, { body: { numero: a.pedido, id: a.pedido, a: a.a } }); }
-  if (op === "llamar") return await rele(env, "llamar", sala, { body: { numero: a.pedido, id: a.pedido } });
-  if (op === "reiniciar") { if (a.confirmar !== true && a.confirmar !== "true") throw new Error("reiniciar exige confirmar:true"); return { sala, ...(await rele(env, "reiniciar", sala, { body: {} })) }; }
+  if (op === "avanzar") { if (a.a && !ESTADOS.includes(a.a)) throw new Error("estado inválido: " + a.a); return await rele(env, "avanzar", sala, { body: { numero: a.pedido, id: a.pedido, a: a.a }, auth: true }); }
+  if (op === "llamar") return await rele(env, "llamar", sala, { body: { numero: a.pedido, id: a.pedido }, auth: true });
+  if (op === "reiniciar") { if (a.confirmar !== true && a.confirmar !== "true") throw new Error("reiniciar exige confirmar:true"); return { sala, ...(await rele(env, "reiniciar", sala, { body: {}, auth: true })) }; }
   throw new Error("operación desconocida: " + op);
 }
 export const ESCRIBE = new Set(["crear", "avanzar", "llamar", "reiniciar"]);
