@@ -115,9 +115,11 @@ function decir(p){const g=gen,t=T[lang],num=String(p.numero).replace(/[^A-Z0-9]/
     cortar=()=>cerrar('cortado');
     const plazo=()=>{const tope=cola.length?4500:6000;topeAviso=tope;const resto=tope-(Date.now()-inicioAviso);if(resto<=0)return cerrar('tope');timer=setTimeout(plazo,Math.min(resto,500));};
     plazo();
-    if(!vozOk||!ss||typeof SpeechSynthesisUtterance!=='function'){setTimeout(()=>cerrar('sin-voz'),1800);return;}
+    // Sin voz (parada a mano, sin soporte o bloqueada por el navegador) el bocadillo es el único aviso: se queda 5 s.
+    const SOLO_TEXTO=5000;
+    if(!vozOk||!ss||typeof SpeechSynthesisUtterance!=='function'){setTimeout(()=>cerrar('sin-voz'),SOLO_TEXTO);return;}
     try{ss.cancel();const u=new SpeechSynthesisUtterance(texto);u.lang=t.voz;u.rate=1.02;const v=vozDe(ss,t.voz);if(v)u.voice=v;via='voz-'+t.voz;
-      u.onend=()=>cerrar('fin');u.onerror=()=>setTimeout(()=>cerrar('error-voz'),Math.max(0,1800-(Date.now()-inicioAviso)));ss.speak(u);}catch(_){setTimeout(()=>cerrar('error-voz'),1800);}});}
+      u.onend=()=>cerrar('fin');u.onerror=()=>setTimeout(()=>cerrar('error-voz'),Math.max(0,SOLO_TEXTO-(Date.now()-inicioAviso)));ss.speak(u);}catch(_){setTimeout(()=>cerrar('error-voz'),SOLO_TEXTO);}});}
 async function siguiente(){if(hablando)return;hablando=true;try{while(cola.length){const p=cola.shift();await decir(p);}}finally{hablando=false;}}
 const chips=(a,nuevos)=>a.length?a.map(p=>'<span class="n'+(nuevos&&nuevos.has(p.id)?' nuevo':'')+'">'+esc(p.numero)+(p.nombre?'<small>'+esc(p.nombre)+'</small>':'')+'</span>').join(''):'<span class="vacio">'+T[lang].vacio+'</span>';
 // Vaso para llevar con la manga del color de la marca (dibujo propio, sin logotipo).

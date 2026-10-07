@@ -1,9 +1,9 @@
 {
-  "version": "v.07.10.2026.r16.17:35",
+  "version": "v.07.10.2026.r17.19:15",
   "signature": "NeoMBP16 · MacBookPro16",
   "agent": "NeoMBP16",
   "machine": "MacBookPro16",
   "day": "07.10.2026",
-  "time": "17:35",
-  "evidence": "Pantalla del gestor de colas: botón 🔊/🔇 en la cabecera para parar o activar los avisos de voz; se recuerda en el dispositivo."
+  "time": "19:15",
+  "evidence": "Pantalla del gestor de colas: sin voz, el aviso de pedido listo se queda 5 s en el bocadillo (antes 2,7 s)."
 }
