@@ -375,7 +375,7 @@ var IPhoneQueue = class {
         ready: !!hb?.ready && now - hb.ts < 15e3,
         gifReady: !!hb?.gifReady && now - hb.ts < 15e3,
         activeId: active || null,
-        message: hb?.ready && now - hb.ts < 15e3 ? "iPhone conectado \xB7 Bubble" : "Conecta y desbloquea el iPhone; inicia el puente en el Mac."
+        message: (hb?.ready || hb?.gifReady) && now - hb.ts < 15e3 ? "iPhone conectado \xB7 Bubble" : "Conecta y desbloquea el iPhone; inicia el puente en el Mac."
       });
     }
     if (p === "/api/iphone/jobs" && req.method === "POST") {
@@ -466,7 +466,7 @@ var IPhoneQueue = class {
 };
 var __defProp22 = Object.defineProperty;
 var __name22 = /* @__PURE__ */ __name2((target, value) => __defProp22(target, "name", { value, configurable: true }), "__name");
-var VERSION = "v.07.10.2026.r2.store-binding";
+var VERSION = "v.07.10.2026.r3.projects-mcp";
 var ADMIRA_SCREEN = "playertaza";
 var ADMIRA_LIVE_SCREENS = ["playertaza", "samsung-galaxy-fold-8-mupi", "admiranext-mupi"];
 var ADMIRA_IDENT = "https://admira.tv/og-admira.png";
@@ -1228,7 +1228,7 @@ async function handleMcpRpc(env, origin, msg) {
         protocolVersion: supported.includes(offered) ? offered : "2025-03-26",
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: "PlayerTaza", version: VERSION },
-        instructions: "PlayerTaza \xB7 taza LED 32\xD716. taza_now para el estado, taza_status_read para el pulso, taza_status_write({name,verb}) para que cualquiera pinte su estado (yarig.ai \u2192 yokup.com proyecto playertaza). GATT bloqueado."
+        instructions: "PlayerTaza 32×16. Consulta taza_project_read antes de escribir. taza_status_write respeta el proyecto activo: starbucks-queue con via queue-follow para pedidos; CanalKiosk usa adcelerate-best/mappedMusic. No cambies el proyecto automáticamente. Cola/GIF no confirma reproducción física. Help: https://ainimation.studio/taza/help"
       });
     }
     case "notifications/initialized":
