@@ -8,6 +8,7 @@
 //   DELETE /api/programacion/<recurso>/<id>?rev=N           la borra (la copia final queda en la auditoría)
 //   GET    /api/programacion/historial/<tipo>/<id>          sus revisiones (las 50 últimas) y cómo está ahora
 //   GET    /api/programacion/auditoria[?entidad=&id=&actor=&accion=&antes=&limite=]   paginada por `antes`
+//   POST   /api/programacion/importar[?aplicar=1&cursor=&limite=]   importador del legado (E5): simula o aplica
 // con <recurso> = playlists · asignaciones · circuitos.
 //
 // Todo pasa por almacen.js (E1): un solo db.batch con bloqueo optimista por `rev` (409 revision_conflict con la
@@ -29,6 +30,7 @@
 import { authHeaders } from "../../../_auth-session.js";
 import * as A from "../../_programacion/almacen.js";
 import { autorizarEscritura, autorizarLectura } from "../../_programacion/acceso.js";
+import { importar } from "../../_programacion/importar.js";
 import { ESTADOS, MAX_ITEMS, MAX_REGLAS, slugId } from "../../_programacion/modelo.js";
 import { MAX_FRANJAS } from "../../_programacion/horario.js";
 
@@ -115,6 +117,7 @@ function tramos(url) {
 function enrutar(t) {
   if (!t) return null;
   if (t.length === 1 && t[0] === "auditoria") return { tipo: "auditoria", metodos: ["GET"] };
+  if (t.length === 1 && t[0] === "importar") return { tipo: "importar", metodos: ["POST"] };
   if (t.length === 3 && t[0] === "historial" && TIPOS[t[1]]) return { tipo: "historial", recurso: TIPOS[t[1]], id: t[2], metodos: ["GET"] };
   if (!RECURSOS[t[0]]) return null;
   if (t.length === 1) return { tipo: "coleccion", recurso: t[0], metodos: ["GET", "POST"] };
@@ -148,6 +151,8 @@ export async function onRequest({ request, env = {} }) {
   const ruta = enrutar(tramos(url));
   if (!ruta) return json({ ok: false, error: "ruta_desconocida" }, 404);
   if (!ruta.metodos.includes(metodo)) return metodoNoPermitido(ruta.metodos);
+  // El importador (E5) tiene su propio acceso (sólo la sesión del portal) y su propia lectura del KV: importar.js.
+  if (ruta.tipo === "importar") return importar({ request, env });
   const escribe = metodo !== "GET";
   const auth = escribe ? await autorizarEscritura(request, env) : await autorizarLectura(request, env);
   if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);

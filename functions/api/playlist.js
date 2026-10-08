@@ -2,7 +2,9 @@ import { accessFor, authHeaders, sessionEmail } from "../_auth-session.js";
 import { lecturaBlocksWrite } from "../_lectura-guard.js";
 import { LIVE_KEY, TAGS_PREFIX, STOCK_INDEX, MAX_LIVE, MAX_CIRCUITS, addressedContent, addressKeys, applyCircuits, cleanCircuit, cleanIdIot, buildXpaceIndex, cleanIdentity, xpaceEntry, cleanLive, completeFacts, deduceScreenTags, liveRev, orientationOf, resolveContent, resolveForScreen, targetMatches } from "./_playlist-live.js";
 
-const PREFIX = "admira-tv:playlist:default:v1:";
+// Exportado para el importador del legado (E5, _programacion/importar.js): lee las mismas claves, sin escribirlas.
+export const DRAFT_PREFIX = "admira-tv:playlist:default:v1:";
+const PREFIX = DRAFT_PREFIX;
 
 // Escritura server-to-server desde el Stock de Pixeria (Yokup #3183, NeoMBA16, 12-sep-2026):
 // pixeria.com/stock.html «Asignar al circuito…» escribe la playlist por defecto de cada
