@@ -2,22 +2,27 @@
 // (functions/api/emision.js) con un KV en memoria y las APIs de arriba (parrilla, Stock, modo…) simuladas.
 // Se prueba a 1440×900 y en iPad (1180×820 y 820×1180), que es donde lo va a mirar Carlos.
 //
-// Playwright no es dependencia del repo: se carga de PLAYWRIGHT_MODULE (ruta a playwright/index.mjs) o de un
-// `playwright` resoluble; si no hay, la prueba se salta. Con EMISION_SHOTS=<carpeta> deja las capturas allí.
-//   PLAYWRIGHT_MODULE=…/node_modules/playwright/index.mjs node --test emision-e2e.test.mjs
+// Playwright no es dependencia del repo: se carga de PLAYWRIGHT_PATH (carpeta node_modules/playwright),
+// PLAYWRIGHT_MODULE (ruta a playwright/index.mjs) o un `playwright` resoluble; si no hay, la prueba se salta.
+// Con EMISION_SHOTS=<carpeta> deja las capturas allí.
+//   PLAYWRIGHT_PATH=…/node_modules/playwright node --test emision-e2e.test.mjs
 import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import { onRequestGet } from "./functions/api/emision.js";
 import { forgetMemo } from "./functions/api/playlist.js";
 import { madridClock } from "./functions/api/_emision.js";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
+// Mismo convenio que parrilla-por-defecto.e2e.test.mjs (PLAYWRIGHT_PATH) o la ruta al módulo (PLAYWRIGHT_MODULE).
 let pw = null;
-try { pw = await import(process.env.PLAYWRIGHT_MODULE || "playwright"); } catch (_) { pw = null; }
+try {
+  pw = process.env.PLAYWRIGHT_PATH ? createRequire(import.meta.url)(process.env.PLAYWRIGHT_PATH) : await import(process.env.PLAYWRIGHT_MODULE || "playwright");
+} catch (_) { pw = null; }
 const SHOTS = process.env.EMISION_SHOTS || "";
 
 // ── Mundo simulado: una pantalla de Alcampo con «Por defecto» y una reserva pagada heredada AHORA ──────────
