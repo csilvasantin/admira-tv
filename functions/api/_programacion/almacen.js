@@ -39,6 +39,9 @@ const ENTIDADES = {
   },
 };
 
+/** Las columnas de contenido que escribe cada entidad (sin id, rev ni sellos): lo que compara el importador (E5). */
+export const COLUMNAS = Object.freeze(Object.fromEntries(Object.entries(ENTIDADES).map(([k, E]) => [k, Object.freeze([...E.columnas])])));
+
 const valorSql = v => (v === undefined ? null : typeof v === "boolean" ? (v ? 1 : 0) : v !== null && typeof v === "object" ? JSON.stringify(v) : v);
 const ficha = () => (globalThis.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 function deFila(E, fila) {
@@ -178,7 +181,7 @@ export async function candidatas(db, screenTags, { ahora = Date.now(), horizonte
 }
 
 // ── Circuitos ───────────────────────────────────────────────────────────────────────────────────────────────────
-function limpiarCircuito(raw) {
+export function limpiarCircuito(raw) {
   const nombre = String((raw && (raw.nombre || raw.name)) || "").trim().slice(0, 60);
   if (!nombre) throw new Error("nombre_requerido");
   const id = slugId(raw.id || nombre), destino = limpiarDestino(raw.destino || raw.target);
@@ -192,6 +195,31 @@ export const guardarCircuito = (db, raw, opciones = {}) => validado(d => escribi
 export const borrarCircuito = (db, id, opciones = {}) => borrar(db, "circuito", id, opciones);
 export async function listarCircuitos(db) {
   return filas(await db.prepare("SELECT * FROM circuito ORDER BY id").all()).map(f => deFila(ENTIDADES.circuito, f));
+}
+
+// ── Importador del legado (E5) ──────────────────────────────────────────────────────────────────────────────────
+/**
+ * Lo que el importador necesita de la D1 para un tramo, en una sola ida (batch = lectura coherente):
+ *   · las asignaciones del legado (ref_externa «kv:…») y las de los ids que el tramo va a escribir;
+ *   · las playlists de esos ids, enteras;
+ *   · el índice ligero (id y origen) de las playlists del legado, para los huérfanos, sin leer sus piezas;
+ *   · todos los circuitos y la versión.
+ * Sólo SELECT. Los ids viajan en un único parámetro JSON (D1 admite 100 parámetros por sentencia).
+ */
+export async function leerParaImportar(db, { playlists = [], asignaciones = [] } = {}) {
+  const ids = lista => JSON.stringify([...new Set((lista || []).map(String))]);
+  const [as, ps, legado, cs, meta] = await db.batch([
+    db.prepare("SELECT * FROM asignacion WHERE (ref_externa >= 'kv:' AND ref_externa < 'kv;') OR id IN (SELECT value FROM json_each(?)) ORDER BY id").bind(ids(asignaciones)),
+    db.prepare("SELECT * FROM playlist WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id").bind(ids(playlists)),
+    db.prepare("SELECT id, origen, actualizado_por FROM playlist WHERE origen >= 'legado:' AND origen < 'legado;' ORDER BY id"),
+    db.prepare("SELECT * FROM circuito ORDER BY id"),
+    db.prepare("SELECT version FROM meta WHERE id = 1"),
+  ]);
+  return {
+    asignaciones: filas(as).map(f => deFila(ENTIDADES.asignacion, f)), playlists: filas(ps).map(f => deFila(ENTIDADES.playlist, f)),
+    legado: { playlists: filas(legado).map(f => ({ id: f.id, origen: f.origen, actualizado_por: f.actualizado_por })) },
+    circuitos: filas(cs).map(f => deFila(ENTIDADES.circuito, f)), version: Number((filas(meta)[0] || { version: 0 }).version),
+  };
 }
 
 // ── Historial, auditoría, meta y sombra ─────────────────────────────────────────────────────────────────────────
