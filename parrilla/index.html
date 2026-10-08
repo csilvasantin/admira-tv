@@ -7,7 +7,7 @@
   <meta name="description" content="Editor de parrilla municipal y publicitaria de Admira.tv.">
   <meta name="theme-color" content="#070a10">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <script>if(!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)){document.write('<script src="/auth-gate.js?v=08.10.2026.r3.1834"><\/script>')}</script>
+  <script>if(!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)){document.write('<script src="/auth-gate.js?v=08.10.2026.r4.1844"><\/script>')}</script>
   <script src="https://www.clearchannel.tv/locations.js?v=14.07.2026.r17"></script>
   <style>
     :root{--bg:#070a10;--panel:#0e141d;--panel2:#121b28;--line:#223049;--ink:#d9e4f2;--dim:#8999ae;--green:#3df08a;--blue:#7aa2ff;--amber:#ffbd59;--red:#ff6262}
@@ -135,7 +135,7 @@
     window.ADMIRA_NAV={active:'parrilla',title:'Parrilla por Xpacio',topRight:'<a class="admtR" href="/playlists/">Playlists</a><a class="admtR admtR-cta" href="/canal.html" target="_blank" rel="noopener">Ver canal ↗</a>'};
   </script>
   <script src="/assets/virtual-players.js"></script>
-  <script src="/admira-nav.js?v=08.10.2026.r3.1834"></script>
+  <script src="/admira-nav.js?v=08.10.2026.r4.1844"></script>
 
   <main class="page">
     <section class="context-picker" aria-label="Selector de proyecto, Xpacio y dispositivo IoT">
@@ -229,7 +229,7 @@
         <div class="preview-screen"><img id="previewImage" src="/parrilla/assets/logo.svg" alt="Vista previa del contenido"><video id="previewVideo" muted playsinline controls loop hidden></video><span class="counter" id="previewCounter">1 / 10</span></div>
         <div class="preview-caption"><strong id="previewTitle">Ajuntament · Sempre amb tu</strong><span id="previewLane">Ayuntamiento · atemporal</span></div>
         <div class="preview-controls"><button class="btn" id="prevBtn" type="button">←</button><button class="btn" id="playBtn" type="button">▶ Reproducir</button><button class="btn" id="openPreviewBtn" type="button">⛶ Ampliar</button><button class="btn" id="nextBtn" type="button">→</button></div>
-        <div class="preview-controls" style="margin-top:8px"><button class="btn" id="viewChannelBtn" type="button" title="Abre el canal reproduciendo este borrador en bucle, en una pestaña nueva">📺 Ver en canal</button></div>
+        <div class="preview-controls" style="margin-top:8px;flex-wrap:wrap"><button class="btn" id="viewChannelBtn" type="button" title="Abre el canal reproduciendo este borrador en bucle, en una pestaña nueva">📺 Ver en canal</button><a class="btn" id="emisionLink" href="/emision/" target="_blank" rel="noopener" style="text-decoration:none" title="Qué emite de verdad esta pantalla ahora y quién manda sobre «Por defecto»">¿Qué emite ahora? ↗</a></div>
       </aside>
     </section>
 
@@ -910,5 +910,6 @@
     setDraftStatus();render();loadContext().then(()=>{if(DEFAULT_MODE&&$('plPanel').hidden)$('plOpen').click()});setInterval(liveStatus,30000);
   })();
   </script>
+  <script src="/emision/aviso-parrilla.js?v=08.10.2026.r4.1844" defer></script>
 </body>
 </html>
