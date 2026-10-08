@@ -293,7 +293,7 @@ plural.
 | `PATCH /<recurso>/<id>` | Cambia **sólo los campos que llegan**, sobre la fila actual (los de primer nivel se sustituyen enteros: `items`, `destino` o `franjas` van completos). Exige `rev`. | Las mismas que PUT |
 | `DELETE /<recurso>/<id>` | La borra de verdad. Exige `rev`. | 200 `{ok, borrado, version}` · 404 · 409 `revision_conflict` o `playlist_en_uso` · 428 |
 | `GET /historial/<tipo>/<id>` | Las revisiones (50 como mucho, de la última a la primera, con `datos`, `autor`, `en` y `motivo`) y cómo está ahora (`actual`, `null` si se borró). | 200 `{ok, version, tipo, id, actual, revisiones}` · 404 si no hay ni fila ni revisiones · 403 `solo_lectura` al visor |
-| `POST /importar` | El importador del legado (E5): simula por defecto y escribe con `?aplicar=1`. Sólo sesión del portal. | Ver «Importador del legado (E5)» |
+| `POST /importar` | El importador del legado (E5): simula por defecto y escribe con `?aplicar=1` (opciones `pisar` y `archivar`). Sólo sesión del portal. | Ver «Importador del legado (E5)» |
 | `GET /auditoria` | Las escrituras aceptadas, de la más reciente a la más antigua. Filtros: `entidad`, `id`, `actor`, `accion` (`crear`, `actualizar`, `borrar`, `banderas`). Paginada: `limite` (50 por defecto, 200 como mucho) y `antes=<siguiente>`. | 200 `{ok, version, entradas, siguiente}` · 400 `entidad_invalida` / `antes_invalido` · 403 `solo_lectura` al visor |
 
 En todas:
@@ -381,42 +381,59 @@ Todos salen en `omitidas` con su motivo.
   - Si no, `actualizar`, con la `rev` que tiene la fila y la lista de `cambios`.
   - Si no hay fila, `crear`.
 - **Una segunda pasada sale toda `igual`** y no sube `meta.version`.
-- **No pisa lo ajeno.** Si el id lo ocupa algo que no salió del legado, la operación es `omitir` · `id_ocupado` (y la de su
-  asignación, `playlist_omitida`). «No salió del legado» quiere decir:
+- **No pisa lo ajeno, ni con `pisar`.** Si el id lo ocupa algo que no salió del legado, la operación es `omitir` ·
+  `id_ocupado` (y la de su asignación, `playlist_omitida`). «No salió del legado» quiere decir:
   - una playlist sin origen `legado:…`;
   - un circuito que no creó el importador;
-  - una asignación con otra `ref_externa`.
-- **Lo que sí salió del legado se actualiza aunque se haya editado después por la API.** La operación lo avisa en `pisa`
-  (el último actor), para verlo en la simulación antes de aplicar.
-- **Nunca borra.** Lo que está en la D1 y ya no en el KV se informa en `huerfanos`, con su motivo:
+  - una asignación con otra `ref_externa`, o con la suya pero creada por otro (`creado_por` que no es `importador:…`).
+- **Tampoco lo editado fuera (decisión de Carlos).** Si algo que salió del legado se cambió después por otro camino (su
+  `actualizado_por` no es `importador:…`; por ejemplo, la API de E4) y ya no coincide con lo traducido, la operación es
+  `omitir` · `editado_fuera`, con `actualizado_por`. **Sólo con `?pisar=1`** se actualiza, y la operación lo avisa en
+  `pisa` (el último actor). Si lo editado coincide con lo traducido, sale `igual`.
+- **Nunca borra.** Lo que está en la D1 y ya no en el KV se informa en `huerfanos`, con su motivo. **Sólo con
+  `?archivar=1`** (decisión de Carlos), las asignaciones huérfanas se archivan:
 
-| Motivo | Cuándo |
-|---|---|
-| `viva_eliminada` | La viva ya no está en el documento (asignación y playlist). |
-| `circuito_eliminado` | El circuito ya no está (sólo los que creó el importador). |
-| `borrador_vacio`, `sintetico`, `ilegible`, `sin_valor` | El borrador sigue, pero hoy no manda nada. |
-| `sin_clave_kv` | La clave del borrador ya no existe. Se mira en el último tramo, con la lista de todas las claves. |
+| Motivo | Cuándo | Con `?archivar=1` |
+|---|---|---|
+| `viva_eliminada` | La viva ya no está en el documento (asignación y playlist). | Se archiva la asignación. |
+| `circuito_eliminado` | El circuito ya no está (sólo los que creó el importador). | Sólo se informa. |
+| `borrador_vacio`, `ilegible`, `sin_valor` | El borrador sigue, pero hoy no manda nada. | Se archiva la asignación. |
+| `sintetico` | El borrador guardado lleva `synthetic: true`. | Sólo se informa (desviación 35). |
+| `sin_clave_kv` | La clave del borrador ya no existe. Se mira en el último tramo, con la lista de todas las claves. | Se archiva la asignación. |
+
+- **Archivar** es guardar la asignación con `estado: "archivada"` y su `rev`: deja de emitirse (el resolver y
+  `candidatas()` sólo miran las `activa`), pero la fila sigue, con su historial. La operación es `archivar`, con el motivo
+  del huérfano y `cambios: ["estado"]`.
+  - Sólo se archiva lo del importador: ref `kv:…` y creada por él. Lo demás sale `omitir` · `ajena`.
+  - Lo editado fuera sale `omitir` · `editado_fuera`, salvo con `?pisar=1` (con el aviso `pisa`).
+  - Lo ya archivado sale `igual` · `ya_archivada`: la pasada siguiente no escribe nada.
+  - Las playlists huérfanas no se tocan (no tienen estado) y los circuitos tampoco: no tienen asignaciones propias, se
+    usan por la etiqueta `circuito:<id>` en los destinos.
+  - Si la fuente vuelve al KV, la asignación es del importador y se reactiva en la importación siguiente.
 
 ### Petición y respuesta
 
 **Parámetros** (todos en la URL; no lleva cuerpo):
 
 - `aplicar=1`: escribe. Sin él, simulación.
+- `pisar=1`: actualiza también lo editado fuera del importador (si no, `omitir` · `editado_fuera`).
+- `archivar=1`: archiva las asignaciones huérfanas del importador (si no, sólo se informan).
 - `cursor`: el `siguiente` de la respuesta anterior.
 - `limite`: borradores por tramo, 50 por defecto y 100 como mucho.
 - `muestra`: cuántas operaciones enseñar, 25 por defecto y 500 como mucho. Van primero las que escriben u omiten y
   después las `igual`.
 
-**Simulación** (por defecto). Sólo `SELECT` en la D1 y sólo `get`/`list` en el KV. Por ejemplo:
+**Simulación** (por defecto). Sólo `SELECT` en la D1 y sólo `get`/`list` en el KV, también con `pisar` y `archivar`: lo
+que se simula con unas opciones es lo que se aplica con ellas. Por ejemplo:
 
 ```json
 {
-  "ok": true, "modo": "simulacion", "version": 5,
+  "ok": true, "modo": "simulacion", "opciones": { "pisar": false, "archivar": false }, "version": 5,
   "tramo": { "vivas": "leidas", "borradores": 2, "continuacion": false },
   "resumen": { "escrituras": 1, "omitidas": 1, "huerfanos": 0,
-    "circuito": { "crear": 0, "actualizar": 0, "igual": 1, "omitir": 0 },
-    "playlist": { "crear": 0, "actualizar": 1, "igual": 1, "omitir": 0 },
-    "asignacion": { "crear": 0, "actualizar": 0, "igual": 2, "omitir": 0 } },
+    "circuito": { "crear": 0, "actualizar": 0, "archivar": 0, "igual": 1, "omitir": 0 },
+    "playlist": { "crear": 0, "actualizar": 1, "archivar": 0, "igual": 1, "omitir": 0 },
+    "asignacion": { "crear": 0, "actualizar": 0, "archivar": 0, "igual": 2, "omitir": 0 } },
   "muestra": [{ "entidad": "playlist", "id": "defecto-alcampo-alcala", "ref": "kv:default:alcampo-alcala",
     "accion": "actualizar", "motivo": "contenido_cambiado", "rev": 1, "cambios": ["items", "duracion_s"] }],
   "omitidas": [{ "ref": "kv:default:alcampo-parla", "motivo": "sintetico", "clave": "admira-tv:playlist:default:v1:alcampo-parla" }],
@@ -430,11 +447,11 @@ Todos salen en `omitidas` con su motivo.
 
 **Aplicar** (`?aplicar=1`). Ejecuta el plan con `guardarPlaylist`, `guardarAsignacion` y `guardarCircuito` de
 `almacen.js`. Cada escritura es su propio `db.batch`, con revisión, auditoría y `meta.version + 1`. El actor es
-`importador:<email>` y el motivo, `importador E5 · <ref>`. Las playlists se escriben antes que sus asignaciones. La
-respuesta es la de la simulación más:
+`importador:<email>` y el motivo, `importador E5 · <ref>` (al archivar, `… · archivada: <motivo>`). Las playlists se
+escriben antes que sus asignaciones, y lo que se archiva va al final. La respuesta es la de la simulación más:
 
 - `version_antes` y `version`;
-- `aplicadas: {crear, actualizar}`;
+- `aplicadas: {crear, actualizar, archivar}`;
 - `fallidas: [{entidad, id, ref, accion, status, error}]`. Por ejemplo, un 409 si alguien escribió entretanto: basta con
   repetir. Con alguna fallida, `ok: false`, pero el estado sigue siendo 200;
 - `pendientes`;
@@ -572,20 +589,25 @@ Desviaciones añadidas en E5:
     - La playlist se identifica por el id de la traducción (`defecto-<pantalla>`, `viva-<id>`) y se da por propia si su
       origen empieza por `legado:`.
     - El circuito se identifica por su id y se da por propio si lo creó el importador (`creado_por` = `importador:…`).
+    - La asignación se identifica por su `ref_externa` y se da por propia si además la creó el importador. Otra con la
+      misma ref (puesta a mano por la API) es `id_ocupado` y no se toca ni con `pisar`.
     - `kv:circuito:<id>` sólo existe en el plan y en los huérfanos.
 32. **Los circuitos largos no pierden pantallas.** `/parrilla/` guarda el destino entero en `target.all` (hasta 200),
     pero el modelo acota `all` a 48.
     - Con `any` vacío, la faceta más larga pasa a `any`, que significa lo mismo (`circuitoDesdeLegado` de `legado.js`).
     - Si ni así cabe, el circuito se omite con `destino_excede_limite`; no se recorta.
-33. **Lo importado que se edite por la API se vuelve a pisar con lo del KV** (con el aviso `pisa` en la simulación).
-    Hasta el corte (E13) manda el KV. **Pendiente de confirmar con Carlos**; la alternativa es omitir lo editado.
-34. **Los huérfanos sólo se informan**: ni se borran ni se archivan. Un borrador que se vacía deja activa su asignación en
-    la D1, y el motor nuevo seguiría sirviendo la lista vieja a esa pantalla hasta que alguien la archive
-    (`PATCH {estado: "archivada", rev}`). **Pendiente de decidir con Carlos** si el importador debería archivarlos con
-    una opción explícita.
+33. **Lo importado que se edite fuera del importador no se pisa por defecto** (decisión de Carlos). Sale `omitir` ·
+    `editado_fuera` con `actualizado_por`; con `?pisar=1` se actualiza con lo del KV y el aviso `pisa`. «Editado fuera»
+    es que el último `actualizado_por` no sea `importador:…`. Ojo con E7: si la doble escritura escribe en la D1 con el
+    email de quien guarda en el KV, el importador verá esas filas como editadas fuera (y, si las crea, como ajenas).
+34. **Los huérfanos se informan; sólo con `?archivar=1` se archivan sus asignaciones** (decisión de Carlos). Nunca se
+    borra nada. Sin archivar, un borrador que se vacía deja activa su asignación en la D1 y el motor nuevo seguiría
+    sirviendo la lista vieja a esa pantalla. Se archivan sólo las del importador y no editadas fuera (salvo `pisar`); las
+    playlists y los circuitos huérfanos sólo se informan, y `sintetico` no se archiva (ver la 35).
 35. **Un borrador guardado con `synthetic: true` no se importa**, como pide el plan. Hoy `playlist.js` sólo mira `items`
     y lo emitiría como lista a mano, pero ningún código guarda esa marca (POST `/api/playlist` no la escribe): es una
-    guarda, y si apareciera uno, la sombra (E6) lo marcaría.
+    guarda, y si apareciera uno, la sombra (E6) lo marcaría. Por lo mismo, su asignación importada antes (si la hubiera)
+    no se archiva con `?archivar=1`: sólo se informa.
 36. **La pantalla sale de la clave del KV**, no del `screen` del valor, porque es la clave lo que lee `playlist.js`.
     - Dos claves que dan el mismo slug (`a--b` y `a-b`) no se importan dos veces: la segunda sale `ref_duplicada`.
     - Lo mismo pasa con dos ids que el recorte a 60 deja iguales: la segunda sale `id_duplicado`.
@@ -603,7 +625,7 @@ Desviaciones añadidas en E5:
 | **E2** | `horario.js` y `resolver.js` puros, más las pruebas de horario, de resolver (con paridad) y de almacén. | **Hecha** |
 | **E3** | Exportar `hintFacts`/`enrichFacts` (y `loadStock`). `GET /api/programacion?screen=` sirve el resolver con `/grid/day` y el Stock leídos y memoria por `meta.version`. Sin consumidores. Crear la D1 real. | **Hecha**, salvo «Crear la D1 real», que lanza Carlos (ver «Activar la D1»). Hasta entonces la ruta responde 503 `programacion_db_no_configurada`. |
 | **E4** | API de escritura de playlists, asignaciones y circuitos con sesión y permiso `digitalsignage-player`, 409 por `rev`, historial y auditoría consultables. Claves de servicio para Pixeria. | **Hecha**. La clave de servicio queda apagada hasta que Carlos ponga el secreto (ver «Activar la clave de servicio de Pixeria»); sin la D1, la API responde 503 `programacion_db_no_configurada`. |
-| **E5** | Importador del legado: borradores, vivas y circuitos del KV a la D1 con `legado.js`, idempotente por `ref_externa`. | **Hecha**. `POST /api/programacion/importar` simula por defecto y escribe con `?aplicar=1`. Sin la D1 responde 503 `programacion_db_no_configurada`; para usarlo, ver «Cómo importar». |
+| **E5** | Importador del legado: borradores, vivas y circuitos del KV a la D1 con `legado.js`, idempotente por `ref_externa`. | **Hecha**. `POST /api/programacion/importar` simula por defecto y escribe con `?aplicar=1`; `?pisar=1` y `?archivar=1` son opcionales. Sin la D1 responde 503 `programacion_db_no_configurada`; para usarlo, ver «Cómo importar». |
 | E6 | Modo sombra: el resolver corre en paralelo a lo de hoy, se compara la firma con la decisión de `_emision.js` (la réplica de `canal.html`), se guarda en `sombra` y hay un panel de discrepancias. | Pendiente |
 | E7 | Doble escritura: lo que hoy se guarda en el KV desde la parrilla y desde playlists se escribe también en la D1 hasta el corte. | Pendiente |
 | E8 | Mando en vivo persistido, con caducidad de 2 h o al borde de franja; `mando.html` lo usa. | Pendiente |
@@ -661,8 +683,9 @@ const importar = q => fetch("/api/programacion/importar" + (q ? "?" + q : ""), {
    - `resumen`: cuántas operaciones son `crear`, `actualizar`, `igual` y `omitir` por entidad;
    - `omitidas`: lo sintético y lo vacío es lo esperado; `invalido`, `destino_excede_limite`, `ref_duplicada` o
      `id_duplicado` hay que mirarlo;
-   - `muestra`: cualquier `omitir` · `id_ocupado` y cualquier `pisa` (lo editado por la API que se va a pisar);
-   - `huerfanos`: no se borran nunca. Si sobran, se archivan a mano por la API de E4.
+   - `muestra`: cualquier `omitir` · `id_ocupado` (algo ajeno ocupa el id) y cualquier `omitir` · `editado_fuera` (lo
+     importado que alguien retocó por la API: no se pisa salvo con `pisar=1`);
+   - `huerfanos`: lo que ya no está en el KV. No se borran nunca; se pueden archivar en el paso 4.
 3. **Aplicar**, también tramo a tramo:
 
    ```js
@@ -671,9 +694,15 @@ const importar = q => fetch("/api/programacion/importar" + (q ? "?" + q : ""), {
    hechos.map(h => [h.ok, h.aplicadas, h.fallidas.length, h.pendientes])
    ```
 
-   Si hay `fallidas` (por ejemplo, un 409 porque alguien escribió entretanto), repetir el paso 3: es idempotente.
-4. **Comprobar.**
-   - Otra simulación (paso 1) tiene que dar `resumen.escrituras = 0` en todos los tramos.
+   Si hay `fallidas` (por ejemplo, un 409 porque alguien escribió entretanto), repetir el paso 3: es idempotente. Para
+   pisar lo editado fuera, repetir los pasos 1 a 3 añadiendo `pisar=1` a cada llamada, sólo después de revisar qué se
+   va a pisar (`pisa` en la muestra).
+4. **Archivar huérfanos (opcional).** Simular con `archivar=1` (y, si se quiere, `pisar=1`) como en el paso 1, revisar
+   las operaciones `archivar` y las `omitir` · `ajena` o `editado_fuera`, y aplicar con `aplicar=1&archivar=1` como en el
+   paso 3. Las asignaciones quedan `archivada`, no se borran; si su fuente vuelve al KV, la importación siguiente las
+   reactiva.
+5. **Comprobar.**
+   - Otra simulación (paso 1, con las mismas opciones) tiene que dar `resumen.escrituras = 0` en todos los tramos.
    - `GET /api/programacion?screen=<una pantalla con borrador>` tiene que servir las mismas piezas que `/api/playlist`.
    - `GET /api/programacion/auditoria?actor=importador:<email>` enseña lo escrito.
 
@@ -740,9 +769,12 @@ simulada, con un KV simulado con `list` y `get`:
 - los circuitos largos (sin perder pantallas) y las filas ajenas (`id_ocupado`);
 - que la simulación no escribe: sólo SELECT en la D1 y nada en el KV;
 - aplicar, y que la segunda pasada sale toda `igual`;
-- un cambio en el legado: `actualizar` con la `rev` buena, `pisa` si se editó por la API, y el peso de las vivas
-  reordenadas;
-- los huérfanos, que no se borran;
+- un cambio en el legado: `actualizar` con la `rev` buena, y el peso de las vivas reordenadas;
+- lo editado por la API: `omitir` · `editado_fuera` por defecto, `?pisar=1` lo sobrescribe (con `pisa`), la simulación
+  no escribe y la pasada siguiente sale toda igual;
+- los huérfanos, que no se borran; con `?archivar=1` se archivan sólo las asignaciones del importador no editadas fuera
+  (con `pisar`, también ésas; nunca las ajenas ni por `sintetico`), la simulación no escribe, la segunda pasada no
+  escribe nada y una viva que vuelve reactiva su asignación;
 - el acceso: 401, 403, el visor y la clave de servicio;
 - los tramos con cursor y el tope de escrituras por petición;
 - que, tras importar, `GET /api/programacion` sirve lo mismo que hoy `playlist.js` y que la paridad de `legado.js`.
