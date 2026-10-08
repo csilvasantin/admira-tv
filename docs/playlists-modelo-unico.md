@@ -291,13 +291,13 @@ plural.
 | `PUT /<recurso>/<id>` | La **sustituye entera**: lo que no llega vuelve a su valor por defecto. Exige `rev`. | 200 `{ok, <entidad>, version}` · 404 · 409 `revision_conflict` (con `actual`) · 422 · 428 `rev_requerida` |
 | `PATCH /<recurso>/<id>` | Cambia **sólo los campos que llegan**, sobre la fila actual (los de primer nivel se sustituyen enteros: `items`, `destino` o `franjas` van completos). Exige `rev`. | Las mismas que PUT |
 | `DELETE /<recurso>/<id>` | La borra de verdad. Exige `rev`. | 200 `{ok, borrado, version}` · 404 · 409 `revision_conflict` o `playlist_en_uso` · 428 |
-| `GET /historial/<tipo>/<id>` | Las revisiones (50 como mucho, de la última a la primera, con `datos`, `autor`, `en` y `motivo`) y cómo está ahora (`actual`, `null` si se borró). | 200 `{ok, version, tipo, id, actual, revisiones}` · 404 si no hay ni fila ni revisiones |
-| `GET /auditoria` | Las escrituras aceptadas, de la más reciente a la más antigua. Filtros: `entidad`, `id`, `actor`, `accion` (`crear`, `actualizar`, `borrar`, `banderas`). Paginada: `limite` (50 por defecto, 200 como mucho) y `antes=<siguiente>`. | 200 `{ok, version, entradas, siguiente}` · 400 `entidad_invalida` / `antes_invalido` |
+| `GET /historial/<tipo>/<id>` | Las revisiones (50 como mucho, de la última a la primera, con `datos`, `autor`, `en` y `motivo`) y cómo está ahora (`actual`, `null` si se borró). | 200 `{ok, version, tipo, id, actual, revisiones}` · 404 si no hay ni fila ni revisiones · 403 `solo_lectura` al visor |
+| `GET /auditoria` | Las escrituras aceptadas, de la más reciente a la más antigua. Filtros: `entidad`, `id`, `actor`, `accion` (`crear`, `actualizar`, `borrar`, `banderas`). Paginada: `limite` (50 por defecto, 200 como mucho) y `antes=<siguiente>`. | 200 `{ok, version, entradas, siguiente}` · 400 `entidad_invalida` / `antes_invalido` · 403 `solo_lectura` al visor |
 
 En todas:
 
 - 401 `unauthorized` sin sesión (ni clave, si es una escritura); 403 `forbidden` sin el permiso; 403 `solo_lectura` si
-  escribe el visor.
+  el visor escribe o pide historial o auditoría.
 - 503 `programacion_db_no_configurada` sin el binding y 503 `programacion_db_sin_esquema` sin la migración, como en E3.
   Se comprueba **después** del acceso, así que sin sesión la respuesta es 401. Un fallo de la D1 es 503
   `programacion_lectura_fallida` o `programacion_escritura_fallida` y queda en el log.
@@ -332,6 +332,10 @@ asignación (`PATCH {estado: "archivada", rev}`).
 - **Leer** (todo GET): la sesión del portal con permiso `digitalsignage-player` (`readSession` + `accessFor`, de
   `_auth-session.js`) o la sesión de lectura viva (el visor, con `lecturaStillLive`). Es la postura de `autorizar` de
   `/api/emision` y de E3, sin la puerta pública de las pantallas virtuales, porque aquí no hay pantalla.
+- **El visor no ve quién escribió.** Historial y auditoría llevan los emails de los actores, así que al visor le
+  responden 403 `solo_lectura`, antes de tocar la D1. En las listas y lecturas sueltas de playlists, asignaciones y
+  circuitos le llegan las filas sin `creado_por` ni `actualizado_por`. La sesión del portal con `digitalsignage-player`
+  lo ve todo.
 - **Escribir** (POST, PUT, PATCH y DELETE):
   - la sesión del portal con permiso `digitalsignage-player`. El actor de la auditoría, la revisión y
     `creado_por`/`actualizado_por` es su email;
@@ -428,8 +432,9 @@ Desviaciones añadidas en E4:
     queda para cuando haya más de un cliente de servicio o haga falta acotar por proyecto.
 23. **La clave de servicio sólo abre escrituras.** Para leer hace falta sesión. Pixeria conoce la `rev` por la respuesta
     de su propia escritura y, si se le adelanta alguien, por el `actual` del 409.
-24. **El visor lee.** Igual que en `/api/emision` y E3, la sesión de lectura viva lee playlists, asignaciones, historial y
-    auditoría (con los emails de los actores). No escribe.
+24. **El visor lee las entidades, pero no ve los actores.** Igual que en `/api/emision` y E3, la sesión de lectura viva
+    lee playlists, asignaciones y circuitos, aunque sin `creado_por` ni `actualizado_por`. Historial y auditoría le dan
+    403 `solo_lectura`, porque llevan los emails de quien escribió. No escribe.
 25. **La validación es 422, no 400.** El almacén sigue devolviendo 400; la ruta lo traduce y añade `campo` y `mensaje`.
 26. **Sin `rev`, 428 `rev_requerida`** en PUT, PATCH y DELETE (el almacén ya lo hacía en el borrado).
 27. **PATCH es una fusión superficial** sobre la fila actual. Una mezcla que se puso por defecto queda guardada como dicha:
@@ -536,7 +541,8 @@ simulados:
 - el CRUD de playlists, asignaciones y circuitos, con `meta.version + 1` en cada escritura;
 - el 409 por una `rev` vieja en PUT, PATCH y DELETE, sin revisión, auditoría ni versión;
 - el 422 con el campo culpable, el 400 de un JSON roto y el 428 sin `rev`;
-- el acceso: 401, 403, el visor (lee, no escribe) y el email de la sesión como actor;
+- el acceso: 401, 403, el visor (lee las entidades sin los actores, no escribe, y 403 en historial y auditoría) y el
+  email de la sesión como actor;
 - la clave de servicio: `Bearer` y `X-Programacion-Key`, el actor `servicio:…`, que no abre lecturas y que sin el
   secreto está apagada;
 - el historial, la auditoría (filtros y páginas) y la copia final del borrado;

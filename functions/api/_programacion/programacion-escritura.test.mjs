@@ -288,13 +288,36 @@ prueba("acceso: 401 sin sesión, 403 sin permiso, el visor lee pero no escribe y
   const alta = await api(env, "POST", "playlists", { cuerpo: fija(), token: T.editora });
   assert.deepEqual([alta.status, alta.body.playlist.creado_por], [201, EDITORA]);
   assert.deepEqual((await A.auditoria(db)).map(a => [a.actor, a.accion]), [[EDITORA, "crear"]]);
-  // El visor (sesión de lectura viva) lee como en /api/emision, pero no escribe.
+  // El visor (sesión de lectura viva) lee las playlists como en /api/emision, pero sin ver quién escribió, y no escribe.
   const visor = await api(env, "GET", "playlists/cafes", { token: T.visor });
-  assert.deepEqual([visor.status, visor.body.playlist.id], [200, "cafes"]);
+  assert.deepEqual([visor.status, visor.body.playlist.id, visor.body.playlist.nombre], [200, "cafes", "Cafés"]);
   assert.ok(calls.some(u => u.startsWith("https://data.yokup.com/api/lectura/sesion")), "comprobó que el visor sigue vivo");
+  const lista = await api(env, "GET", "playlists", { token: T.visor });
+  assert.deepEqual(lista.body.playlists.map(p => p.id), ["cafes"]);
+  for (const fila of [visor.body.playlist, ...lista.body.playlists]) {
+    assert.ok(!("creado_por" in fila) && !("actualizado_por" in fila), "el visor no ve los emails de los actores");
+  }
+  assert.ok(!JSON.stringify([visor.body, lista.body]).includes(EDITORA));
   const escribe = await api(env, "PATCH", "playlists/cafes", { cuerpo: { rev: 1, nombre: "Visor" }, token: T.visor });
   assert.deepEqual([escribe.status, escribe.body.error], [403, "solo_lectura"]);
   assert.equal(await version(db), 1);
+});
+
+prueba("privacidad: el visor no ve historial ni auditoría (403 solo_lectura, sin tocar la D1); el portal con permiso sí", async () => {
+  const { env } = await mundo();
+  await api(env, "POST", "playlists", { cuerpo: fija(), token: T.editora });
+  for (const ruta of ["auditoria", "auditoria?entidad=playlist&id=cafes", "historial/playlist/cafes", "historial/circuitos/x", "historial/asignacion/no-hay"]) {
+    const r = await api(env, "GET", ruta, { token: T.visor });
+    assert.deepEqual([ruta, r.status, r.body], [ruta, 403, { ok: false, error: "solo_lectura" }]);
+    const sinD1 = await api({ ACCESS: env.ACCESS }, "GET", ruta, { token: T.visor });
+    assert.equal(sinD1.status, 403, "se cierra antes de mirar la D1");
+  }
+  // Una sesión del portal con digitalsignage-player (sin ser dueña) lo ve todo, con los actores.
+  const auditoria = await api(env, "GET", "auditoria", { token: T.editora });
+  assert.deepEqual([auditoria.status, auditoria.body.entradas.map(e => e.actor)], [200, [EDITORA]]);
+  const historial = await api(env, "GET", "historial/playlist/cafes", { token: T.editora });
+  assert.deepEqual([historial.status, historial.body.revisiones.map(r => r.autor), historial.body.actual.creado_por], [200, [EDITORA], EDITORA]);
+  assert.equal((await api(env, "GET", "playlists/cafes", { token: T.editora })).body.playlist.actualizado_por, EDITORA);
 });
 
 prueba("clave de servicio de Pixeria: Bearer o X-Programacion-Key, actor servicio:…, sólo para escribir y apagada sin el secreto", async () => {

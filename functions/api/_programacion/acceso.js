@@ -2,7 +2,8 @@
 //
 // LECTURA. La misma postura que /api/emision y GET /api/programacion (autorizar de emision.js), sin la puerta pública
 // de las pantallas virtuales (aquí no hay pantalla): la sesión del portal con permiso digitalsignage-player o la
-// sesión de lectura viva (el visor, que /auth/session admite en digitalsignage-player).
+// sesión de lectura viva (el visor, que /auth/session admite en digitalsignage-player). Devuelve `lectura: true` para
+// el visor, y la ruta le cierra lo que lleva emails de actores (historial y auditoría).
 //
 // ESCRITURA. La sesión del portal con permiso digitalsignage-player (actor = su email) o la clave de servicio de
 // Pixeria (actor = servicio:<X-Actor o «pixeria»), server to server:

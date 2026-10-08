@@ -18,6 +18,8 @@
 // ACCESO (acceso.js): leer, con la sesión del portal y permiso digitalsignage-player (o la sesión de lectura viva);
 // escribir, con esa misma sesión (actor = su email) o con la clave de servicio de Pixeria (X-Programacion-Key o
 // Authorization: Bearer; actor = servicio:<X-Actor o «pixeria»>). Sin CORS: la clave es sólo server to server.
+// El visor (sesión de lectura) no ve quién escribió: historial y auditoría le dan 403 solo_lectura, y en las listas y
+// lecturas sueltas no lleva creado_por ni actualizado_por.
 //
 // RUTA [recurso]/[[resto]] y no [[ruta]]: en Pages un comodín [[ruta]] también casa con la base (/api/programacion) y,
 // como el router ordena las rutas por número de tramos, le ganaría a functions/api/programacion.js. Con [recurso]
@@ -149,6 +151,8 @@ export async function onRequest({ request, env = {} }) {
   const escribe = metodo !== "GET";
   const auth = escribe ? await autorizarEscritura(request, env) : await autorizarLectura(request, env);
   if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);
+  // Historial y auditoría llevan los emails de los actores: el visor no los ve (antes de tocar la D1).
+  if (auth.lectura && (ruta.tipo === "auditoria" || ruta.tipo === "historial")) return json({ ok: false, error: "solo_lectura" }, 403);
 
   const db = env.PROGRAMACION_DB;
   if (!db || typeof db.prepare !== "function" || typeof db.batch !== "function") return json({ ok: false, error: "programacion_db_no_configurada" }, 503);
@@ -159,9 +163,9 @@ export async function onRequest({ request, env = {} }) {
   try {
     if (ruta.tipo === "auditoria") return await verAuditoria(db, q, meta);
     if (ruta.tipo === "historial") return await verHistorial(db, ruta, meta);
-    if (ruta.tipo === "coleccion") return metodo === "GET" ? await listar(db, ruta, q, meta) : await crear(db, ruta, request, q, auth);
+    if (ruta.tipo === "coleccion") return metodo === "GET" ? await listar(db, ruta, q, meta, auth) : await crear(db, ruta, request, q, auth);
     if (!ID_RE.test(ruta.id)) return json({ ok: false, error: "no_existe" }, 404);
-    if (metodo === "GET") return await leerUna(db, ruta, meta);
+    if (metodo === "GET") return await leerUna(db, ruta, meta, auth);
     if (metodo === "DELETE") return await borrar(db, ruta, request, q, auth);
     return await actualizar(db, ruta, request, q, auth, metodo === "PATCH");
   } catch (e) {
@@ -170,15 +174,19 @@ export async function onRequest({ request, env = {} }) {
   }
 }
 
-async function listar(db, { recurso }, q, meta) {
+/** Lo que ve el visor: la fila sin quién la creó ni quién la cambió por última vez. */
+const sinActores = ({ creado_por, actualizado_por, ...resto }) => resto;
+const vista = auth => (auth.lectura ? sinActores : fila => fila);
+
+async function listar(db, { recurso }, q, meta, auth) {
   const R = RECURSOS[recurso], malo = R.filtros && R.filtros(q);
   if (malo) return json({ ok: false, error: malo }, 400);
-  return json({ ok: true, version: meta.version, [recurso]: await R.listar(db, q) });
+  return json({ ok: true, version: meta.version, [recurso]: (await R.listar(db, q)).map(vista(auth)) });
 }
 
-async function leerUna(db, { recurso, id }, meta) {
+async function leerUna(db, { recurso, id }, meta, auth) {
   const R = RECURSOS[recurso], fila = await R.leer(db, id);
-  return fila ? json({ ok: true, version: meta.version, [R.entidad]: fila }) : json({ ok: false, error: "no_existe" }, 404);
+  return fila ? json({ ok: true, version: meta.version, [R.entidad]: vista(auth)(fila) }) : json({ ok: false, error: "no_existe" }, 404);
 }
 
 async function crear(db, { recurso }, request, q, auth) {
