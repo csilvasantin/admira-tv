@@ -286,7 +286,7 @@ function procedenciaDe(fuente, it, ctx) {
   if (fuente === "xtore") return { tipo: "stock", es: "Stock · lo último con #musica", en: "Stock · latest #musica" };
   const p = ctx.porDefecto;
   if (p === "tag") return { tipo: "stock", es: "Stock · etiquetado #default", en: "Stock · tagged #default" };
-  if (p === "motor") return { tipo: "stock", es: "Stock · sin el material de referencia", en: "Stock · reference material filtered out" };
+  if (p === "motor") return { tipo: "stock", es: "Stock · sin material de referencia", en: "Stock · no reference material" };
   return { tipo: "stock", es: "Stock", en: "Stock" };
 }
 

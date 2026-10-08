@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<script src="/auth-gate.js?v=08.10.2026.r2.0039"></script>
+<link rel="preconnect" href="https://api.admira.store" crossorigin>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#070a10">
+<meta name="robots" content="noindex">
+<title>Qué emite · Admira.tv</title>
+<meta name="description" content="Qué emite ahora cada pantalla de Admira.tv: la fuente que gana, por qué, qué capas quedan anuladas y la lista de piezas que sonarían.">
+<style>
+  :root{--bg:#070a10;--panel:#0e141d;--panel2:#121b28;--line:#223049;--ink:#d9e4f2;--dim:#8999ae;--green:#3df08a;--blue:#7aa2ff;--amber:#ffbd59;--red:#ff6b6b;--violet:#c08bff;--cyan:#5fd4ff;--steel:#9fb3c8}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(900px 520px at 72% -10%,#16305a55,transparent),var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+  button,input,select{font:inherit}
+  .afSlotHidden{display:none}.af-panel .afSlotHidden{display:block}
+  main.em{max-width:1280px;margin:0 auto;padding:16px 22px 70px;display:grid;gap:14px;min-width:0}
+  .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0}
+  .eyebrow{margin:0 0 6px;color:var(--dim);font:700 10px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}
+  /* Contexto: proyecto · pantalla · instante */
+  .ctx{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.6fr);gap:12px;align-items:end;border-color:#315071;background:linear-gradient(135deg,#132238,#0d151f)}
+  .fld{display:grid;gap:6px;min-width:0}
+  .fld>label,.fld>span{color:#8fa3bb;font:700 10px ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}
+  select,input[type=time],input[type=text]{width:100%;min-width:0;background:#0b1522;color:var(--ink);border:1px solid #2b3d58;border-radius:10px;padding:9px 10px;min-height:42px}
+  select:focus,input:focus{outline:2px solid #3b6aa8;outline-offset:1px}
+  .when{display:flex;gap:8px;align-items:center;min-width:0;flex-wrap:wrap}
+  .when input[type=time]{width:auto;flex:0 0 118px}
+  .seg{display:inline-flex;border:1px solid #2b3d58;border-radius:10px;overflow:hidden;flex:0 0 auto}
+  .seg button{background:#0b1522;color:var(--dim);border:0;padding:9px 12px;min-height:42px;cursor:pointer}
+  .seg button[aria-pressed=true]{background:#17345a;color:#fff;font-weight:700}
+  .bands{display:flex;gap:6px;flex-wrap:wrap;grid-column:1/-1}
+  .band{background:#0b1522;border:1px solid #263a55;color:var(--dim);border-radius:999px;padding:5px 11px;cursor:pointer;font:600 12px ui-monospace,monospace;min-height:32px}
+  .band.on{border-color:var(--blue);color:#fff}
+  .band b{color:var(--amber);font-weight:700}
+  .band.now::after{content:" ●";color:var(--green)}
+  .ctx-foot{grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:var(--dim);font-size:12px}
+  .ctx-foot .sp{flex:1}
+  .btn{background:#0d1a2a;color:var(--ink);border:1px solid #315071;border-radius:10px;padding:9px 13px;min-height:42px;cursor:pointer;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:7px}
+  .btn:hover{border-color:var(--green);color:var(--green)}
+  .btn.pri{background:var(--green);color:#04130b;border-color:var(--green)}
+  .btn.pri:hover{color:#04130b;filter:brightness(1.08)}
+  .btn[disabled]{opacity:.45;cursor:default}
+  /* «Ahora emite» */
+  .hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 18px;align-items:start;border-width:1px 1px 1px 5px;border-left-color:var(--fc,var(--steel))}
+  .hero h1{margin:0;font-size:22px;line-height:1.2;display:flex;flex-wrap:wrap;gap:8px 10px;align-items:baseline}
+  .hero h1 .src{color:var(--fc,var(--steel))}
+  .hero .who{color:var(--dim);font-size:13px;font-weight:600}
+  .rotulo{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:999px;background:#05080c;border:1px solid #23344c;color:var(--fc,var(--steel));font:700 12px ui-monospace,monospace;letter-spacing:.04em;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .motivo{margin:10px 0 0;font-size:16px;line-height:1.5;color:#e9f1fb}
+  .facts{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;color:var(--dim);font-size:13px}
+  .facts b{color:var(--ink)}
+  .obs{margin-top:10px;font-size:13px;color:var(--dim)}
+  .obs .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#55606f;margin-right:6px;vertical-align:1px}
+  .obs.live .dot{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .hero-act{display:grid;gap:8px;justify-items:stretch;min-width:180px}
+  .state{color:var(--dim);font-size:13px}
+  .err{color:#ffb4b4}
+  /* Capas + avisos */
+  .cols{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;align-items:start}
+  h2{margin:0 0 10px;font-size:15px}
+  .stack{list-style:none;margin:0;padding:0;display:grid;gap:7px;counter-reset:capa}
+  .layer{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:4px 10px;align-items:start;padding:9px 11px;border:1px solid #1c2a3f;border-radius:12px;background:#0b121c}
+  .layer::before{counter-increment:capa;content:counter(capa);grid-row:1/3;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:#122033;color:var(--dim);font:700 12px ui-monospace,monospace}
+  .layer .nm{font-weight:700}
+  .layer .dt{grid-column:2/4;color:var(--dim);font-size:13px}
+  .chip{justify-self:end;white-space:nowrap;padding:2px 9px;border-radius:999px;font:700 11px ui-monospace,monospace;letter-spacing:.04em;border:1px solid #2a3a52;color:var(--dim)}
+  .layer.activa{border-color:#2b6b49;background:linear-gradient(90deg,#0f2a1d,#0b121c 70%)}
+  .layer.activa::before{background:var(--green);color:#04130b}
+  .layer.activa .chip{color:var(--green);border-color:#2b6b49}
+  .layer.anulada .chip{color:#ffb0a0;border-color:#6b3a33}
+  .layer.anulada .nm{text-decoration:line-through;text-decoration-color:#a35a50}
+  .layer.vacia,.layer.inactiva,.layer.no-aplica{opacity:.72}
+  /* Las capas que no influyen (inactivas o que no aplican) van en una línea: el detalle, al pasar o tocar. */
+  .layer.inactiva,.layer.no-aplica{padding:6px 11px;align-items:center}
+  .layer.inactiva .dt,.layer.no-aplica .dt{display:none}
+  .layer.inactiva.open .dt,.layer.no-aplica.open .dt{display:block}
+  .layer.inactiva::before,.layer.no-aplica::before{grid-row:auto;width:20px;height:20px}
+  .layer.inactiva,.layer.no-aplica{cursor:pointer}
+  .notes{display:grid;gap:8px}
+  .note{padding:9px 11px;border-radius:11px;border:1px solid #2a3a52;background:#0b121c;font-size:13px}
+  .note.aviso{border-color:#6b5426;background:#1c160a;color:#ffe2a8}
+  .note.info{border-color:#24476b;color:#cfe1ff}
+  .note.sup{color:var(--dim)}
+  details.sups summary{cursor:pointer;color:var(--dim);font-size:13px;margin:6px 0}
+  /* Piezas */
+  .list-head{display:flex;gap:10px 16px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px}
+  .list-head h2{margin:0}
+  .list-head .tot{color:var(--dim);font-size:13px}
+  .pieces{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+  .pc{border:1px solid #1c2a3f;border-radius:12px;background:#0b121c;overflow:hidden;display:grid;grid-template-rows:auto 1fr;min-width:0}
+  .pc .th{position:relative;aspect-ratio:16/9;background:#05080c;display:grid;place-items:center;overflow:hidden}
+  .pc .th img,.pc .th video{width:100%;height:100%;object-fit:contain;display:block}
+  .pc .th .ph{color:#3b4b60;font-size:28px}
+  .pc .pos{position:absolute;top:6px;left:6px;background:#05080cd9;border:1px solid #2a3a52;border-radius:7px;padding:1px 7px;font:700 11px ui-monospace,monospace;color:var(--ink)}
+  .pc .dur{position:absolute;bottom:6px;right:6px;background:#05080cd9;border-radius:7px;padding:1px 7px;font:700 11px ui-monospace,monospace;color:var(--ink)}
+  .pc .bd{padding:8px 10px 10px;display:grid;gap:5px;min-width:0}
+  .pc .tt{font-weight:700;font-size:13px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+  .pc .pr{font-size:12px;color:var(--dim)}
+  .pc .tags{display:flex;gap:5px;flex-wrap:wrap}
+  .pc .tag{font:600 10.5px ui-monospace,monospace;padding:1px 7px;border-radius:999px;border:1px solid #2a3a52;color:var(--dim)}
+  .pc .tag.parrilla{color:var(--amber);border-color:#6b5426}
+  .pc .tag.viva{color:var(--green);border-color:#2b6b49}
+  .pc .tag.hashtag,.pc .tag.hashtag-mando{color:var(--cyan);border-color:#235a6b}
+  .pc .warn{font-size:12px;color:#ffe2a8}
+  .pc.on{outline:2px solid var(--green)}
+  .empty{padding:28px;text-align:center;color:var(--dim);border:1px dashed #2a3a52;border-radius:12px}
+  /* Diálogos: aviso de «Ver en canal» y previo local */
+  dialog{background:var(--panel);color:var(--ink);border:1px solid #315071;border-radius:16px;padding:0;max-width:min(640px,calc(100vw - 32px));width:100%}
+  dialog::backdrop{background:#000a}
+  .dlg{padding:18px 20px;display:grid;gap:12px}
+  .dlg h3{margin:0;font-size:17px}
+  .dlg p{margin:0;color:#cfd9e6}
+  .dlg ul{margin:0;padding-left:18px;color:#cfd9e6}
+  .dlg .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  #previo{max-width:min(980px,calc(100vw - 24px))}
+  .stage{position:relative;background:#000;border-radius:12px;overflow:hidden;margin:0 auto;max-height:68vh;display:grid;place-items:center}
+  .stage img,.stage video{width:100%;height:100%;object-fit:contain;display:block}
+  .stage .badge{position:absolute;top:8px;left:8px;background:#140e02dd;border:1px solid #ffbd5999;color:var(--amber);border-radius:999px;padding:3px 10px;font:700 11px ui-monospace,monospace}
+  .stage .now{position:absolute;bottom:0;left:0;right:0;padding:8px 12px;background:linear-gradient(transparent,#000c);font-size:13px}
+  .bar{height:3px;background:#1a2638}.bar i{display:block;height:100%;width:0;background:var(--green)}
+  .af-expert pre{white-space:pre-wrap;word-break:break-word;max-height:50vh;overflow:auto;font-size:12px}
+  .adv{display:grid;gap:10px;font-size:13px}
+  .adv label{display:grid;gap:5px;color:var(--dim)}
+  .adv .rowl{display:flex;gap:8px;align-items:center}
+  /* iPad y menos: una columna para capas y avisos; el contexto en dos filas */
+  @media(max-width:1100px){.cols{grid-template-columns:minmax(0,1fr)}}
+  @media(max-width:900px){
+    main.em{padding:14px 16px 60px}
+    .ctx{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+    .ctx .fld.when-f{grid-column:1/-1}
+    .hero{grid-template-columns:minmax(0,1fr)}
+    .hero-act{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));min-width:0}
+    .pieces{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+  }
+  @media(max-width:560px){.ctx{grid-template-columns:minmax(0,1fr)}.hero h1{font-size:19px}.motivo{font-size:15px}}
+</style>
+</head>
+<body>
+<script>
+/* Chrome cuadrático unificado (lo monta /admira-nav.js): la MISMA barra que el resto del sitio. Lo propio de
+   esta vista va en el contenido y en los paneles ▤ (Avanzado) y ⌘ (Experto), nunca en la barra. */
+window.ADMIRA_VERSION='v.08.10.2026.r2.00:39';
+window.ADMIRA_NAV={title:'Qué emite cada pantalla'};
+</script>
+<script src="/assets/virtual-players.js"></script>
+<script src="/admira-nav.js?v=08.10.2026.r2.0039"></script>
+<script src="/admira-frame.js?v=08.10.2026.r2.0039" defer></script>
+<link rel="stylesheet" href="/admira-frame.css?v=08.10.2026.r2.0039">
+
+<!-- AVANZADO (panel derecho): simulaciones y refresco -->
+<div class="afSlotHidden adv" data-af-slot="right" aria-label="Opciones avanzadas de la vista de emisión">
+  <label><span data-t="simTag">Simular un hashtag del mando</span>
+    <span class="rowl"><input type="text" id="simTag" maxlength="40" autocomplete="off" placeholder="#musica"><button class="btn" id="simTagGo" type="button" data-t="aplicar">Aplicar</button></span></label>
+  <p class="state" data-t="simTagHelp">El hashtag que el mando pone en un player vive en el propio player y no se publica: simúlalo para ver qué pasaría.</p>
+  <label class="rowl"><input type="checkbox" id="auto" checked> <span data-t="auto">Actualizar cada 30 s cuando miras «ahora»</span></label>
+  <a class="btn" id="toParrilla" href="/parrilla/?playlist=default" data-t="toParrilla">Editar «Por defecto» en la parrilla ↗</a>
+</div>
+
+<!-- EXPERTO (panel inferior): la respuesta cruda de /api/emision -->
+<div class="afSlotHidden af-expert" data-af-slot="bottom" aria-label="Respuesta cruda de /api/emision">
+  <pre id="raw">{}</pre>
+</div>
+
+<main class="em" id="emision">
+  <section class="card ctx" aria-label="Pantalla e instante">
+    <div class="fld"><label for="proyecto" data-t="proyecto">Proyecto</label><select id="proyecto"><option data-t="cargando">Cargando…</option></select></div>
+    <div class="fld"><label for="pantalla" data-t="pantalla">Pantalla</label><select id="pantalla"><option data-t="cargando">Cargando…</option></select></div>
+    <div class="fld when-f"><span data-t="instante">Instante</span>
+      <div class="when">
+        <div class="seg" role="group" aria-label="Instante"><button type="button" id="ahoraBtn" aria-pressed="true" data-t="ahora">Ahora</button><button type="button" id="horaBtn" aria-pressed="false" data-t="otraHora">Otra hora hoy</button></div>
+        <input type="time" id="hora" step="300" aria-label="Hora de hoy en Madrid" disabled>
+        <div class="seg" role="group" aria-label="Idioma"><button type="button" id="langEs" aria-pressed="true">ES</button><button type="button" id="langEn" aria-pressed="false">EN</button></div>
+      </div>
+    </div>
+    <div class="bands" id="franjas" aria-label="Franjas de hoy"></div>
+    <div class="ctx-foot"><span id="ctxMeta">—</span><span class="sp"></span><button class="btn" id="recargar" type="button" data-t="recargar">↻ Actualizar</button></div>
+  </section>
+
+  <section class="card hero" id="hero" aria-live="polite" aria-busy="true">
+    <div>
+      <p class="eyebrow" id="heroEyebrow" data-t="ahoraEmite">Ahora emite</p>
+      <h1><span class="src" id="fuente">—</span><span class="who" id="quien"></span></h1>
+      <span class="rotulo" id="etiqueta" title="Rótulo que pinta el player">—</span>
+      <p class="motivo" id="motivo"><span class="state" data-t="eligePantalla">Elige una pantalla.</span></p>
+      <div class="facts" id="facts"></div>
+      <div class="obs" id="obs"></div>
+    </div>
+    <div class="hero-act">
+      <button class="btn pri" id="previoBtn" type="button" disabled data-t="previoLocal">▶ Previo local</button>
+      <button class="btn" id="verCanal" type="button" disabled data-t="verCanal">Ver en canal ↗</button>
+    </div>
+  </section>
+
+  <div class="cols">
+    <section class="card" aria-labelledby="capasT">
+      <h2 id="capasT" data-t="capas">Pila de prioridades</h2>
+      <ol class="stack" id="capas"></ol>
+    </section>
+    <section class="card" aria-labelledby="avisosT">
+      <h2 id="avisosT" data-t="avisos">Avisos</h2>
+      <div class="notes" id="avisos"></div>
+      <details class="sups"><summary data-t="supuestos">Qué se supone (lo que el servidor no ve)</summary><div class="notes" id="supuestos"></div></details>
+    </section>
+  </div>
+
+  <section class="card" aria-labelledby="piezasT">
+    <div class="list-head"><h2 id="piezasT" data-t="piezas">Piezas en el orden en que sonarían</h2><span class="tot" id="total"></span></div>
+    <ol class="pieces" id="piezas"></ol>
+  </section>
+</main>
+
+<dialog id="avisoCanal" aria-labelledby="avisoCanalT">
+  <div class="dlg">
+    <h3 id="avisoCanalT" data-t="avisoCanalT">canal.html no tiene un modo de solo lectura</h3>
+    <p data-t="avisoCanal1">Abierto con la pantalla elegida, la pestaña se hace pasar por ella:</p>
+    <ul>
+      <li data-t="avisoCanal2">cuenta pases en las estadísticas de esa pantalla y publica su playlist al mando;</li>
+      <li data-t="avisoCanal3">puede ejecutar y dar por hechas órdenes del mando dirigidas a esa pantalla;</li>
+      <li data-t="avisoCanal4">deja esa pantalla guardada en este navegador para la próxima vez que abras el canal.</li>
+    </ul>
+    <p data-t="avisoCanal5">Ábrelo sólo para comprobar un momento y cierra la pestaña después. Para mirar sin tocar nada, usa el previo local.</p>
+    <div class="row"><button class="btn" id="avisoCancelar" type="button" data-t="cancelar">Cancelar</button><button class="btn" id="avisoPrevio" type="button" data-t="previoLocal">▶ Previo local</button><button class="btn pri" id="avisoAbrir" type="button" data-t="abrirIgual">Abrir igualmente ↗</button></div>
+  </div>
+</dialog>
+
+<dialog id="previo" aria-labelledby="previoT">
+  <div class="dlg">
+    <h3 id="previoT"><span data-t="previoT">Previo local</span> · <span id="previoScreen"></span></h3>
+    <div class="stage" id="stage"><span class="badge" data-t="previoBadge">PREVIO LOCAL · no emite nada</span><div class="now" id="stageNow"></div></div>
+    <div class="bar"><i id="stageBar"></i></div>
+    <div class="row"><button class="btn" id="stPrev" type="button" aria-label="Anterior">←</button><button class="btn" id="stPlay" type="button" data-t="pausa">❚❚ Pausa</button><button class="btn" id="stNext" type="button" aria-label="Siguiente">→</button><button class="btn" id="stClose" type="button" data-t="cerrar">Cerrar</button></div>
+  </div>
+</dialog>
+
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id)};
+  var API='https://api.admira.store';
+  var Q=new URLSearchParams(location.search);
+  var L=(function(){var q=Q.get('lang');if(q)return q==='en'?'en':'es';try{var s=localStorage.getItem('emision-lang');if(s)return s}catch(_){}return (navigator.language||'es').slice(0,2)==='en'?'en':'es'})();
+  var I={
+    es:{proyecto:'Proyecto',pantalla:'Pantalla',instante:'Instante',ahora:'Ahora',otraHora:'Otra hora hoy',recargar:'↻ Actualizar',ahoraEmite:'Ahora emite',aLas:'A las',eligePantalla:'Elige una pantalla.',previoLocal:'▶ Previo local',verCanal:'Ver en canal ↗',capas:'Pila de prioridades',avisos:'Avisos',supuestos:'Qué se supone (lo que el servidor no ve)',piezas:'Piezas en el orden en que sonarían',cargando:'Cargando…',simTag:'Simular un hashtag del mando',aplicar:'Aplicar',simTagHelp:'El hashtag que el mando pone en un player vive en el propio player y no se publica: simúlalo para ver qué pasaría.',auto:'Actualizar cada 30 s cuando miras «ahora»',toParrilla:'Editar «Por defecto» en la parrilla ↗',avisoCanalT:'canal.html no tiene un modo de solo lectura',avisoCanal1:'Abierto con la pantalla elegida, la pestaña se hace pasar por ella:',avisoCanal2:'cuenta pases en las estadísticas de esa pantalla y publica su playlist al mando;',avisoCanal3:'puede ejecutar y dar por hechas órdenes del mando dirigidas a esa pantalla;',avisoCanal4:'deja esa pantalla guardada en este navegador para la próxima vez que abras el canal.',avisoCanal5:'Ábrelo sólo para comprobar un momento y cierra la pestaña después. Para mirar sin tocar nada, usa el previo local.',cancelar:'Cancelar',abrirIgual:'Abrir igualmente ↗',previoT:'Previo local',previoBadge:'PREVIO LOCAL · no emite nada',pausa:'❚❚ Pausa',seguir:'▶ Seguir',cerrar:'Cerrar',
+      fuentes:{xtore:'Música de Xtore',mural:'Mural extendido',hashtag:'Hashtag del mando',defecto:'Por defecto',sincro:'Sincro',stock:'Stock'},
+      estados:{activa:'ACTIVA','anulada':'ANULADA',vacia:'VACÍA',inactiva:'INACTIVA','no-aplica':'NO APLICA'},anuladaPor:'por',
+      sinAvisos:'Sin avisos.',vacio:'La lista sale vacía: la pantalla no tendría nada que emitir.',piezasN:function(n){return n===1?'1 pieza':n+' piezas'},
+      total:function(d){var t=d.segundos?('≈ '+dur(d.segundos)):'';return (t?t+' por vuelta':'')+(d.desconocidas?((t?' + ':'')+d.desconocidas+(d.desconocidas===1?' vídeo':' vídeos')+' hasta su final'):'')},
+      franja:'Franja',sinFranja:'fuera de franja',madrid:'hora de Madrid',vivo:'La pantalla dice que emite',haceS:'hace',sinSenal:'Sin señal de la pantalla en los últimos 5 min.',standby:'En standby (apagada).',publico:'pública (player virtual)',coincide:'su lista publicada coincide',noCoincide:'su lista publicada NO coincide',
+      error401:'Inicia sesión para ver esta pantalla.',error403:'No tienes permiso para ver esta pantalla (Reproductores · digitalsignage-player).',errorRed:'No se pudo consultar la emisión.',otras:'Otras pantallas',virtuales:'Players virtuales',porTag:'simulando',simulado:'simulado',duracionDesc:'vídeo · hasta el final',sinTitulo:'sin título',noMedidas:''},
+    en:{proyecto:'Project',pantalla:'Screen',instante:'Moment',ahora:'Now',otraHora:'Another time today',recargar:'↻ Refresh',ahoraEmite:'Now playing',aLas:'At',eligePantalla:'Pick a screen.',previoLocal:'▶ Local preview',verCanal:'Open in channel ↗',capas:'Priority stack',avisos:'Warnings',supuestos:'Assumptions (what the server cannot see)',piezas:'Pieces in play order',cargando:'Loading…',simTag:'Simulate a remote hashtag',aplicar:'Apply',simTagHelp:'A hashtag set from the remote lives in the player and is not published: simulate it to see what would happen.',auto:'Refresh every 30 s while looking at «now»',toParrilla:'Edit the default playlist in the grid ↗',avisoCanalT:'canal.html has no read-only mode',avisoCanal1:'Opened with the chosen screen, the tab impersonates it:',avisoCanal2:'it counts plays in that screen’s statistics and publishes its playlist to the remote;',avisoCanal3:'it may run and acknowledge remote commands meant for that screen;',avisoCanal4:'it leaves that screen saved in this browser for the next time you open the channel.',avisoCanal5:'Open it only for a quick check and close the tab afterwards. To look without touching anything, use the local preview.',cancelar:'Cancel',abrirIgual:'Open anyway ↗',previoT:'Local preview',previoBadge:'LOCAL PREVIEW · plays nothing on air',pausa:'❚❚ Pause',seguir:'▶ Resume',cerrar:'Close',
+      fuentes:{xtore:'Xtore music',mural:'Extended wall',hashtag:'Remote hashtag',defecto:'Default playlist',sincro:'Sync',stock:'Stock'},
+      estados:{activa:'ACTIVE','anulada':'OVERRIDDEN',vacia:'EMPTY',inactiva:'INACTIVE','no-aplica':'N/A'},anuladaPor:'by',
+      sinAvisos:'No warnings.',vacio:'The list is empty: the screen would have nothing to play.',piezasN:function(n){return n===1?'1 piece':n+' pieces'},
+      total:function(d){var t=d.segundos?('≈ '+dur(d.segundos)):'';return (t?t+' per loop':'')+(d.desconocidas?((t?' + ':'')+d.desconocidas+(d.desconocidas===1?' video':' videos')+' to the end'):'')},
+      franja:'Slot',sinFranja:'outside any slot',madrid:'Madrid time',vivo:'The screen says it is playing',haceS:'',sinSenal:'No signal from the screen in the last 5 min.',standby:'In standby (off).',publico:'public (virtual player)',coincide:'its published list matches',noCoincide:'its published list does NOT match',
+      error401:'Sign in to see this screen.',error403:'You are not allowed to see this screen (Players · digitalsignage-player).',errorRed:'Could not query the emission.',otras:'Other screens',virtuales:'Virtual players',porTag:'simulating',simulado:'simulated',duracionDesc:'video · to the end',sinTitulo:'untitled',noMedidas:''}
+  };
+  var FC={xtore:'var(--violet)',mural:'var(--cyan)',hashtag:'var(--amber)',defecto:'var(--green)',sincro:'var(--blue)',stock:'var(--steel)'};
+  var ICO={video:'▶',image:'▣',audio:'♪',interactive:'☝'};
+  function t(k){return I[L][k]}
+  function tx(o){return o?(o[L]||o.es||''):''}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function dur(s){s=Math.round(s);if(s<60)return s+' s';var m=Math.floor(s/60),r=s%60;return m+' min'+(r?' '+r+' s':'')}
+  function safeUrl(u){u=String(u||'');return /^https:\/\//i.test(u)?u:''}
+
+  var projects=[],screens=[],state={project:Q.get('project')||'',screen:Q.get('screen')||Q.get('device')||'',hora:Q.get('at')||'',tag:Q.get('tag')||''},last=null,timer=0,req=0;
+
+  function applyLang(){
+    document.documentElement.lang=L;
+    $('langEs').setAttribute('aria-pressed',L==='es');$('langEn').setAttribute('aria-pressed',L==='en');
+    document.querySelectorAll('[data-t]').forEach(function(n){var v=t(n.getAttribute('data-t'));if(typeof v==='string')n.textContent=v});
+    $('stPlay').textContent=paused?t('seguir'):t('pausa');
+    fillSelectors();if(last)render(last);
+  }
+  function setLang(l){L=l;try{localStorage.setItem('emision-lang',l)}catch(_){}syncUrl();applyLang()}
+
+  // ── Proyectos y pantallas (la parrilla: /grid/projects y /grid/screens) ──
+  function screensOf(pid){
+    if(pid==='_virtual')return screens.filter(function(s){return s.virtual});
+    var p=projects.find(function(x){return x.id===pid});
+    if(pid==='_otras')return screens.filter(function(s){return !s.virtual&&!projects.some(function(x){return (x.circuits||[]).indexOf(s.circuit)>=0})});
+    return p?screens.filter(function(s){return !s.virtual&&(p.circuits||[]).indexOf(s.circuit)>=0}):[];
+  }
+  function projectOf(screen){
+    var s=screens.find(function(x){return x.screen===screen});if(!s)return '';
+    if(s.virtual)return '_virtual';
+    var p=projects.find(function(x){return (x.circuits||[]).indexOf(s.circuit)>=0});return p?p.id:'_otras';
+  }
+  function fillSelectors(){
+    if(!projects.length&&!screens.length)return;
+    var opts=projects.filter(function(p){return screensOf(p.id).length}).map(function(p){return [p.id,p.name||p.id]});
+    if(screensOf('_otras').length)opts.push(['_otras',t('otras')]);
+    if(screensOf('_virtual').length)opts.push(['_virtual',t('virtuales')]);
+    if(!state.project||!opts.some(function(o){return o[0]===state.project}))state.project=(state.screen&&projectOf(state.screen))||(opts[0]&&opts[0][0])||'';
+    $('proyecto').innerHTML=opts.map(function(o){return '<option value="'+esc(o[0])+'"'+(o[0]===state.project?' selected':'')+'>'+esc(o[1])+' · '+screensOf(o[0]).length+'</option>'}).join('');
+    var list=screensOf(state.project).slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name),'es')});
+    if(state.screen&&!screens.some(function(s){return s.screen===state.screen}))list.unshift({screen:state.screen,name:state.screen});
+    if(!state.screen||!list.some(function(s){return s.screen===state.screen}))state.screen=(list[0]&&list[0].screen)||'';
+    $('pantalla').innerHTML=list.map(function(s){return '<option value="'+esc(s.screen)+'"'+(s.screen===state.screen?' selected':'')+'>'+esc(s.name&&s.name!==s.screen?s.name+' · '+s.screen:s.screen)+'</option>'}).join('');
+  }
+  function loadCatalog(){
+    var jget=function(u){return fetch(u,{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).catch(function(){return null})};
+    return Promise.all([jget(API+'/grid/projects'),jget(API+'/grid/screens'),
+      (window.AdmiraVirtualPlayers?window.AdmiraVirtualPlayers.list().catch(function(){return []}):Promise.resolve([]))]).then(function(r){
+      projects=((r[0]&&r[0].projects)||[]).map(function(p){return {id:String(p.id),name:String(p.name||p.id),circuits:(p.circuits||[]).map(String)}});
+      screens=((r[1]&&(r[1].screens||r[1]))||[]).filter(function(s){return s&&s.screen}).map(function(s){return {screen:String(s.screen),name:String(s.name||s.screen),circuit:String(s.circuit||'')}});
+      (r[2]||[]).forEach(function(v){if(v&&v.screen&&!screens.some(function(s){return s.screen===v.screen}))screens.push({screen:String(v.screen),name:String(v.name||v.screen),circuit:String(v.circuit||''),virtual:true})});
+      fillSelectors();
+    });
+  }
+
+  // ── Instante: «ahora» u otra hora de hoy (hora de Madrid) ──
+  function madridOffset(){
+    try{var p=new Intl.DateTimeFormat('en-US',{timeZone:'Europe/Madrid',timeZoneName:'shortOffset'}).formatToParts(new Date()).find(function(x){return x.type==='timeZoneName'});
+      var m=/GMT([+-])(\d{1,2})(?::?(\d{2}))?/.exec(p&&p.value||'');if(m)return m[1]+String(m[2]).padStart(2,'0')+':'+(m[3]||'00');}catch(_){}
+    return '+02:00';
+  }
+  function madridToday(){try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch(_){return new Date().toISOString().slice(0,10)}}
+  function madridNow(){try{return new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date())}catch(_){return ''}}
+  function hm(s){var m=/^(\d{1,2}):(\d{2})/.exec(String(s||''));return m?(+m[1])*60+(+m[2]):0}
+  function nowBand(b){var n=hm(madridNow()),f=hm(b.from),to=hm(b.to);if(to<=f)to+=1440;if(n<f)n+=1440;return n>=f&&n<to}
+  function atParam(){return state.hora?madridToday()+'T'+state.hora+':00'+madridOffset():''}
+  function setHora(h){
+    state.hora=h||'';
+    $('ahoraBtn').setAttribute('aria-pressed',!state.hora);$('horaBtn').setAttribute('aria-pressed',!!state.hora);
+    $('hora').disabled=!state.hora;$('hora').value=state.hora||madridNow();
+    syncUrl();consulta();
+  }
+  function syncUrl(){
+    var u=new URL(location.href);
+    [['project',state.project],['screen',state.screen],['at',state.hora],['tag',state.tag],['lang',L==='en'?'en':'']].forEach(function(kv){if(kv[1])u.searchParams.set(kv[0],kv[1]);else u.searchParams.delete(kv[0])});
+    u.searchParams.delete('device');
+    try{history.replaceState(null,'',u)}catch(_){}
+    var p=$('toParrilla');if(p)p.href='/parrilla/?playlist=default'+(state.screen?'&device='+encodeURIComponent(state.screen):'');
+  }
+
+  // ── Consulta ──
+  function consulta(){
+    clearTimeout(timer);
+    if(!state.screen){return}
+    var my=++req;$('hero').setAttribute('aria-busy','true');
+    var url='/api/emision?screen='+encodeURIComponent(state.screen)+(state.hora?'&at='+encodeURIComponent(atParam()):'')+(state.tag?'&tag='+encodeURIComponent(state.tag):'');
+    fetch(url,{cache:'no-store',credentials:'same-origin'}).then(function(r){return r.json().catch(function(){return null}).then(function(d){return {status:r.status,d:d}})}).then(function(x){
+      if(my!==req)return;
+      if(x.status!==200||!x.d||!x.d.ok){showError(x.status===401?t('error401'):x.status===403?t('error403'):t('errorRed'));return}
+      last=x.d;render(last);
+    }).catch(function(){if(my===req)showError(t('errorRed'))}).then(function(){
+      if(my!==req)return;$('hero').setAttribute('aria-busy','false');
+      if(!state.hora&&$('auto').checked)timer=setTimeout(consulta,30000);
+    });
+  }
+  function showError(msg){
+    last=null;$('fuente').textContent='—';$('quien').textContent='';$('etiqueta').textContent='—';
+    $('motivo').innerHTML='<span class="err">'+esc(msg)+'</span>';$('facts').innerHTML='';$('obs').innerHTML='';
+    $('capas').innerHTML='';$('avisos').innerHTML='';$('supuestos').innerHTML='';$('piezas').innerHTML='';$('total').textContent='';
+    $('previoBtn').disabled=true;$('verCanal').disabled=!state.screen;$('raw').textContent='{}';
+  }
+
+  function render(d){
+    var hero=$('hero');hero.style.setProperty('--fc',FC[d.fuente]||'var(--steel)');
+    $('heroEyebrow').textContent=d.ahora?t('ahoraEmite'):(t('aLas')+' '+(d.madrid&&d.madrid.hora||'')+' · '+t('madrid'));
+    $('fuente').textContent=I[L].fuentes[d.fuente]||d.fuente;$('fuente').dataset.fuente=d.fuente;
+    $('quien').textContent=(d.nombre&&d.nombre!==d.screen?d.nombre+' · ':'')+d.screen;
+    $('etiqueta').textContent=tx(d.etiqueta)||'—';
+    $('motivo').textContent=tx(d.motivo);
+    var f=[];
+    f.push('<span><b>'+esc(I[L].piezasN((d.piezas||[]).length))+'</b>'+(d.duracionTotal?' · '+esc(I[L].total(d.duracionTotal)):'')+'</span>');
+    f.push('<span>'+esc(t('franja'))+': <b>'+esc(d.franja?(d.franja.label+' '+d.franja.from+'–'+d.franja.to):t('sinFranja'))+'</b></span>');
+    if(d.pantalla&&d.pantalla.orientacion)f.push('<span>'+esc(d.pantalla.orientacion)+(d.pantalla.ancho?' · '+d.pantalla.ancho+'×'+d.pantalla.alto:'')+'</span>');
+    if(d.publico)f.push('<span>'+esc(t('publico'))+'</span>');
+    var h=(d.capas||[]).find(function(c){return c.id==='hashtag'&&c.origen==='simulado'});if(h)f.push('<span style="color:var(--amber)">'+esc(t('porTag'))+' #'+esc(h.tag)+'</span>');
+    $('facts').innerHTML=f.join('');
+    var o=d.observado,obs=$('obs');obs.className='obs';
+    if(!o){obs.innerHTML=''}
+    else if(o.standby){obs.innerHTML='<span class="dot"></span>'+esc(t('standby'))}
+    else if(o.vivo&&o.ahora){obs.className='obs live';var hace=o.ultimaSenal?Math.max(0,Math.round((Date.now()-o.ultimaSenal)/1000)):null;
+      obs.innerHTML='<span class="dot"></span>'+esc(t('vivo'))+' «'+esc(o.ahora.titulo||o.ahora.id)+'»'+(hace!=null?' · '+(L==='es'?'hace '+hace+' s':hace+' s ago'):'')+(o.publicada&&o.publicada.coincide!=null?' · '+esc(o.publicada.coincide?t('coincide'):t('noCoincide')):'')}
+    else obs.innerHTML='<span class="dot"></span>'+esc(t('sinSenal'));
+    // Capas
+    $('capas').innerHTML=(d.capas||[]).map(function(c){
+      var chip=I[L].estados[c.estado]||c.estado;if(c.anuladaPor)chip+=' '+t('anuladaPor')+' '+(I[L].fuentes[c.anuladaPor]||(c.anuladaPor==='parrilla'?(L==='es'?'parrilla':'bookings'):c.anuladaPor)).toUpperCase();
+      return '<li class="layer '+esc(c.estado)+'" data-capa="'+esc(c.id)+'" title="'+esc(tx(c.detalle))+'"><span class="nm">'+esc(tx(c.nombre))+(c.n?' <span class="state">· '+c.n+'</span>':'')+'</span><span class="chip">'+esc(chip)+'</span><span class="dt">'+esc(tx(c.detalle))+'</span></li>';
+    }).join('');
+    $('avisos').innerHTML=(d.avisos||[]).length?(d.avisos||[]).map(function(a){return '<div class="note '+esc(a.nivel||'info')+'">'+esc(tx(a))+'</div>'}).join(''):'<div class="note sup">'+esc(t('sinAvisos'))+'</div>';
+    $('supuestos').innerHTML=(d.supuestos||[]).map(function(a){return '<div class="note sup">'+esc(tx(a))+'</div>'}).join('');
+    // Franjas
+    $('franjas').innerHTML=(d.franjas||[]).map(function(b){var n=(b.conCreatividad||0);
+      return '<button type="button" class="band'+(b.activa?' on':'')+(nowBand(b)?' now':'')+'" data-from="'+esc(b.from)+'" title="'+esc(b.label)+'">'+esc(b.label)+' '+esc(b.from)+'–'+esc(b.to)+(n?' · <b>'+n+'</b>':'')+'</button>'}).join('');
+    // Piezas
+    var ps=d.piezas||[];
+    $('total').textContent=I[L].piezasN(ps.length)+(d.duracionTotal?' · '+I[L].total(d.duracionTotal):'');
+    $('piezas').innerHTML=ps.length?ps.map(function(p){
+      var th=safeUrl(p.miniatura),media=th?'<img loading="lazy" decoding="async" alt="" src="'+esc(th)+'">':(p.medio==='video'&&safeUrl(p.url)?'<video muted playsinline preload="none" data-src="'+esc(safeUrl(p.url))+'"></video>':'<span class="ph">'+(ICO[p.medio]||'▣')+'</span>');
+      var pr=p.procedencia||{};
+      return '<li class="pc" data-pos="'+p.pos+'"><div class="th">'+media+'<span class="pos">'+p.pos+'</span><span class="dur">'+esc(p.duracion?dur(p.duracion):(p.medio==='video'?t('duracionDesc'):'—'))+'</span></div>'+
+        '<div class="bd"><span class="tt" title="'+esc(p.titulo)+'">'+esc(p.titulo||t('sinTitulo'))+'</span><span class="pr">'+esc(tx(pr))+'</span>'+
+        '<span class="tags"><span class="tag">'+esc(p.tipo)+'</span>'+(p.carril?'<span class="tag">'+esc(p.carril)+'</span>':'')+(pr.tipo?'<span class="tag '+esc(pr.tipo)+'">'+esc(pr.tipo)+'</span>':'')+(p.num!=null?'<span class="tag">#'+esc(p.num)+'</span>':'')+'</span>'+
+        (p.formato?'<span class="warn">⚠ '+esc(tx(p.formato))+'</span>':'')+'</div></li>';
+    }).join(''):'<li class="empty">'+esc(t('vacio'))+'</li>';
+    lazyVideos();
+    $('previoBtn').disabled=!ps.length;$('verCanal').disabled=!d.screen;
+    $('ctxMeta').textContent=(d.circuito?d.circuito+' · ':'')+d.screen+' · '+(d.madrid?d.madrid.fecha+' '+d.madrid.hora:'')+' ('+t('madrid')+')';
+    $('raw').textContent=JSON.stringify(d,null,2);
+  }
+  // Vídeos sin póster: sólo se cargan (metadatos) cuando la tarjeta entra en pantalla.
+  var io=('IntersectionObserver' in window)?new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){var v=e.target;io.unobserve(v);v.preload='metadata';v.src=v.getAttribute('data-src')+'#t=0.5'}})},{rootMargin:'200px'}):null;
+  function lazyVideos(){document.querySelectorAll('#piezas video[data-src]').forEach(function(v){if(io)io.observe(v);else{v.preload='metadata';v.src=v.getAttribute('data-src')+'#t=0.5'}})}
+
+  // ── Previo local: recorre la lista en esta página. No llama a nada que emita. ──
+  var pIdx=0,pTimer=0,paused=false,pT0=0,pDur=0,raf=0;
+  function stageAspect(){var p=last&&last.pantalla||{};return p.orientacion==='vertical'?'9/16':p.orientacion==='cuadrada'?'1/1':'16/9'}
+  function playAt(i){
+    var ps=(last&&last.piezas)||[];if(!ps.length)return;
+    pIdx=(i+ps.length)%ps.length;var p=ps[pIdx],st=$('stage');clearTimeout(pTimer);cancelAnimationFrame(raf);
+    st.style.aspectRatio=stageAspect();st.style.width=stageAspect()==='9/16'?'min(100%,38vh)':'100%';
+    st.querySelectorAll('img,video,audio,.ph').forEach(function(n){n.remove()});
+    var url=safeUrl(p.url),el;
+    if(p.medio==='video'&&url){el=document.createElement('video');el.muted=true;el.playsInline=true;el.autoplay=true;el.src=url;el.onended=function(){next()};el.onerror=function(){pTimer=setTimeout(next,1500)}}
+    else if(p.medio==='image'&&url){el=document.createElement('img');el.alt='';el.src=url}
+    else{el=document.createElement('div');el.className='ph';el.style.cssText='color:#8999ae;font-size:40px';el.textContent=ICO[p.medio]||'♪'}
+    st.insertBefore(el,st.firstChild);
+    $('stageNow').textContent=p.pos+'/'+ps.length+' · '+(p.titulo||'')+(p.duracion?' · '+dur(p.duracion):'');
+    document.querySelectorAll('#piezas .pc.on').forEach(function(n){n.classList.remove('on')});var card=document.querySelector('#piezas .pc[data-pos="'+p.pos+'"]');if(card)card.classList.add('on');
+    pDur=(p.duracion||(p.medio==='video'?0:9))*1000;pT0=Date.now();
+    if(pDur&&!(p.medio==='video'))pTimer=setTimeout(next,pDur);
+    else if(p.medio==='video'&&p.duracion)pTimer=setTimeout(next,pDur+400);
+    tick();
+  }
+  function tick(){var b=$('stageBar');if(pDur)b.style.width=Math.min(100,(Date.now()-pT0)/pDur*100)+'%';else{var v=$('stage').querySelector('video');b.style.width=v&&v.duration?(v.currentTime/v.duration*100)+'%':'0%'}raf=requestAnimationFrame(tick)}
+  function next(){if(!paused)playAt(pIdx+1)}
+  function stopPrevio(){clearTimeout(pTimer);cancelAnimationFrame(raf);$('stage').querySelectorAll('video').forEach(function(v){try{v.pause();v.removeAttribute('src');v.load()}catch(_){}});document.querySelectorAll('#piezas .pc.on').forEach(function(n){n.classList.remove('on')})}
+  function openPrevio(){if(!last||!(last.piezas||[]).length)return;paused=false;$('stPlay').textContent=t('pausa');$('previoScreen').textContent=last.screen;var d=$('previo');if(d.showModal)d.showModal();else d.setAttribute('open','');playAt(0)}
+
+  // ── Eventos ──
+  $('proyecto').addEventListener('change',function(){state.project=this.value;state.screen='';fillSelectors();syncUrl();consulta()});
+  $('pantalla').addEventListener('change',function(){state.screen=this.value;syncUrl();consulta()});
+  $('ahoraBtn').addEventListener('click',function(){setHora('')});
+  $('horaBtn').addEventListener('click',function(){setHora(state.hora||madridNow())});
+  $('hora').addEventListener('change',function(){if(this.value)setHora(this.value)});
+  $('franjas').addEventListener('click',function(e){var b=e.target.closest('.band');if(b)setHora(b.getAttribute('data-from'))});
+  $('capas').addEventListener('click',function(e){var li=e.target.closest('.layer.inactiva,.layer.no-aplica');if(li)li.classList.toggle('open')});
+  $('langEs').addEventListener('click',function(){setLang('es')});$('langEn').addEventListener('click',function(){setLang('en')});
+  $('recargar').addEventListener('click',consulta);
+  $('auto').addEventListener('change',function(){consulta()});
+  $('simTagGo').addEventListener('click',function(){state.tag=$('simTag').value.trim().replace(/^#+/,'');syncUrl();consulta()});
+  $('simTag').addEventListener('keydown',function(e){if(e.key==='Enter')$('simTagGo').click()});
+  $('previoBtn').addEventListener('click',openPrevio);
+  $('verCanal').addEventListener('click',function(){var d=$('avisoCanal');if(d.showModal)d.showModal();else d.setAttribute('open','')});
+  $('avisoCancelar').addEventListener('click',function(){$('avisoCanal').close()});
+  $('avisoPrevio').addEventListener('click',function(){$('avisoCanal').close();openPrevio()});
+  $('avisoAbrir').addEventListener('click',function(){$('avisoCanal').close();if(state.screen)window.open('/canal.html?screen='+encodeURIComponent(state.screen),'_blank','noopener')});
+  $('stPrev').addEventListener('click',function(){playAt(pIdx-1)});$('stNext').addEventListener('click',function(){playAt(pIdx+1)});
+  $('stPlay').addEventListener('click',function(){paused=!paused;this.textContent=paused?t('seguir'):t('pausa');var v=$('stage').querySelector('video');if(paused){clearTimeout(pTimer);if(v)v.pause()}else{if(v)v.play().catch(function(){});else playAt(pIdx+1)}});
+  $('stClose').addEventListener('click',function(){$('previo').close()});
+  $('previo').addEventListener('close',stopPrevio);
+
+  $('simTag').value=state.tag?'#'+state.tag:'';
+  if(state.hora&&/^\d{2}:\d{2}$/.test(state.hora)){$('ahoraBtn').setAttribute('aria-pressed','false');$('horaBtn').setAttribute('aria-pressed','true');$('hora').disabled=false;$('hora').value=state.hora}else{state.hora='';$('hora').value=madridNow()}
+  applyLang();
+  loadCatalog().then(function(){syncUrl();consulta()});
+})();
+</script>
+</body>
+</html>
