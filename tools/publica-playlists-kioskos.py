@@ -8,9 +8,33 @@ de lo que emite el teléfono), que leen canal.html
 Desde el 10-sep-2026 el worker (omnipublicity-api) NO caduca los <screen>-tema (antes 24 h: el iPad
 de Jardinets arrancaba al día siguiente sin tema y caía al máster global) y conserva num/perfil.
 Se vuelve a ejecutar solo cuando cambie el Stock o el reparto de temas.
+
+CLAVE (8-oct-2026, E0 del modelo único de playlists): escribir un <pantalla>-tema exige la clave
+CONTROL_PLAYLIST_KEY del worker; leer, no. El script la busca, por este orden, en la variable de
+entorno CONTROL_PLAYLIST_KEY y en la bóveda admira-vault (~/Claude/admira-vault/vault-get.sh
+CONTROL_PLAYLIST_KEY; otra ruta con ADMIRA_VAULT_DIR). La envía en la cabecera X-Control-Key y nunca
+la imprime. La clave no se escribe en el repo: se guarda en la bóveda con
+~/Claude/admira-vault/guarda-secreto.sh CONTROL_PLAYLIST_KEY. Sin clave solo funciona mientras el
+worker no tenga el secreto puesto; con el secreto puesto, el worker responde 401 y el script se para.
 Uso: python3 tools/publica-playlists-kioskos.py [--dry]"""
-import json, re, sys, urllib.request
+import json, os, re, subprocess, sys, urllib.error, urllib.request
 UA = {"User-Agent": "Mozilla/5.0 admira-tv/playlists"}
+CLAVE_NOMBRE = "CONTROL_PLAYLIST_KEY"
+
+def clave_de_escritura():
+    """(clave, origen) para escribir los -tema: entorno → bóveda. Nunca se imprime el valor."""
+    v = os.environ.get(CLAVE_NOMBRE, "").strip()
+    if v: return v, "entorno"
+    vault = os.environ.get("ADMIRA_VAULT_DIR") or os.path.expanduser("~/Claude/admira-vault")
+    helper = os.path.join(vault, "vault-get.sh")
+    if os.path.isfile(helper):
+        try:
+            r = subprocess.run(["bash", helper, CLAVE_NOMBRE], capture_output=True, text=True, timeout=20)
+            v = r.stdout.strip() if r.returncode == 0 else ""
+            if v: return v, "bóveda"
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return "", "no encontrada"
 KIOSKOS = {"samsung-galaxy-fold-9-mupi": "musica",   # Fold 9 · Vila (News & Coffee) — pantalla real
            "sim-gracia-kiosko": "musica",            # Vila · reserva (preview configurada)
            "ipad-admin-mupi": "musica",              # iPad de Admin (iOS 17) · JARDINETS · música (8-sep: pantalla real del gemelo de Jardinets)
@@ -33,10 +57,31 @@ def perfil_de(i):
     if re.search(r"familia|vida m[ií]a|b[eé]same|cari[nñ]o|mam[aá]|amigo|ni[nñ]|kids|orenes|ocio", t): return "familias"
     return "turistas"
 
+PLAYLIST_API = "https://brain.digitalavatar.ai/control/playlist"
+
 def get(url):
     return json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA)))
+def peticion_tema(screen, its, clave):
+    """POST del tema de una pantalla. La clave va en X-Control-Key (el worker también acepta Bearer)."""
+    headers = {**UA, "Content-Type": "application/json"}
+    if clave: headers["X-Control-Key"] = clave
+    return urllib.request.Request(PLAYLIST_API, data=json.dumps({"screen": screen + "-tema", "items": its}).encode(),
+                                  headers=headers, method="POST")
+def publica_tema(screen, its, clave):
+    """Escribe el tema y devuelve la respuesta. Un 401 (falta la clave o no vale) para el script."""
+    try:
+        return urllib.request.urlopen(peticion_tema(screen, its, clave), timeout=30).read().decode()[:80]
+    except urllib.error.HTTPError as e:
+        if e.code != 401: raise
+        # El cuerpo solo dice missing_control_key / invalid_control_key; la clave nunca se imprime.
+        sys.exit(f"✗ {screen}-tema: el worker rechaza la escritura (401 {e.read().decode()[:80]}). Exporta "
+                 f"{CLAVE_NOMBRE} o guárdala en la bóveda: ~/Claude/admira-vault/guarda-secreto.sh {CLAVE_NOMBRE}")
 def main():
     dry = "--dry" in sys.argv
+    clave, origen = clave_de_escritura()
+    print(f"clave de escritura de los -tema: {origen}")
+    if not clave and not dry:
+        print(f"  aviso: sin {CLAVE_NOMBRE}; solo funcionará mientras el worker no tenga el secreto puesto", file=sys.stderr)
     # El índice público trae TODO el Stock (889 piezas); /stock/list corta en 200.
     stock = get("https://stock.admira.store/stock/index.json"); items = stock.get("items", stock) if isinstance(stock, dict) else stock
     def tagged(i, ts): return any(str(t).lower() in ts for t in (i.get("tags") or []))
@@ -55,7 +100,7 @@ def main():
     conocidas = {}
     for screen in KIOSKOS:
         try:
-            for it in get("https://brain.digitalavatar.ai/control/playlist?screen=" + screen).get("items", []):
+            for it in get(PLAYLIST_API + "?screen=" + screen).get("items", []):
                 d = int(it.get("dur") or 0)
                 if d > 0 and d != DUR: conocidas[it["id"]] = d
         except Exception: pass
@@ -67,7 +112,5 @@ def main():
                 "url": i["url"], "thumb": i.get("thumbnail") or "", "dur": conocidas.get(i["id"], DUR), "perfil": perfil_de(i)} for i in listas[tema]]
         print(f"{screen} ← {tema}: {len(its)} piezas" + (" (dry)" if dry else ""))
         if dry or not its: continue
-        r = urllib.request.Request("https://brain.digitalavatar.ai/control/playlist", data=json.dumps({"screen": screen + "-tema", "items": its}).encode(),
-                                   headers={**UA, "Content-Type": "application/json"})
-        print("  ", urllib.request.urlopen(r).read().decode()[:80])
+        print("  ", publica_tema(screen, its, clave))
 if __name__ == "__main__": main()
