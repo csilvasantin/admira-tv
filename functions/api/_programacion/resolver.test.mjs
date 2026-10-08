@@ -269,3 +269,30 @@ test("playlist mixta: los huecos se llenan del Stock con su regla, sin repetir l
   assert.throws(() => limpiarPlaylist({ nombre: "x", tipo: "viva" }), /viva_sin_reglas/);
   assert.throws(() => limpiarPlaylist({ nombre: "x", items: new Array(201).fill(item("a")) }), /demasiados_items/);
 });
+
+test("parrilla de varios días (E3): la franja nocturna de la víspera sigue de madrugada y se ven los bordes de mañana", () => {
+  const AYER = "2026-10-13", MANANA = "2026-10-15";
+  const dias = [
+    parrilla([["noche", "22:00", "02:00", [slot("paid", "NOCHE-AYER")]]], AYER),
+    { ...parrilla([["dia", "08:00", "20:00", [slot("paid", "P1")]], ["noche", "22:00", "02:00", [slot("paid", "NOCHE-HOY")]]]), config: { slotSeconds: 12 } },
+    parrilla([["dia", "08:00", "20:00", [slot("paid", "P-MANANA")]]], MANANA),
+  ];
+  const entrada = { facts: FACTS, stock: [], playlists: [fija("mano", ["m1", "m2"])], asignaciones: [aMano("mano", "mano")], parrilla: dias };
+  // 01:00 de hoy: manda la noche de AYER (pertenece al día en que empieza), no la de hoy.
+  const madrugada = resolver({ ...entrada, ahora: M(HOY, "01:00") });
+  assert.deepEqual(ids(madrugada.spots), ["grid:NOCHE-AYER"]);
+  assert.equal(madrugada.validoHasta, M(HOY, "02:00"));
+  assert.deepEqual(madrugada.siguiente.items.map(i => i.id), ["stock-m1", "stock-m2"]);
+  // Cada franja lleva la duración editorial de su día.
+  const dia = resolver({ ...entrada, ahora: AHORA });
+  assert.deepEqual(dia.spots.map(s => [s.id, s.seconds]), [["grid:P1", 12]]);
+  // 23:00 de hoy: la noche de hoy, y su fin (02:00 de mañana) es el borde; después, el día de mañana.
+  const noche = resolver({ ...entrada, ahora: M(HOY, "23:00") });
+  assert.deepEqual(ids(noche.spots), ["grid:NOCHE-HOY"]);
+  assert.equal(noche.validoHasta, M(MANANA, "02:00"));
+  const tras = resolver({ ...entrada, ahora: M(MANANA, "03:00") });
+  assert.equal(tras.validoHasta, M(MANANA, "08:00"), "sin el día siguiente, validoHasta saltaría a +48 h");
+  assert.deepEqual(tras.siguiente.items.map(i => i.id), ["stock-m1", "stock-m2", "grid:P-MANANA"]);
+  // Una sola respuesta sigue valiendo como antes.
+  assert.deepEqual(ids(resolver({ ...entrada, parrilla: dias[1], ahora: AHORA }).spots), ["grid:P1"]);
+});

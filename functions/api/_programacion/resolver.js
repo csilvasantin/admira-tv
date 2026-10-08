@@ -5,7 +5,8 @@
 //   screenTags   opcional: si llegan, mandan; si no, deduceScreenTags(facts) + applyCircuits(circuitos)
 //   asignaciones normalizadas (modelo.limpiarAsignacion o filas del almacén) y playlists (array o mapa por id)
 //   stock        índice del Stock (stock.admira.store/stock/index.json)
-//   parrilla     respuesta de /grid/day de pixer-worker para la pantalla (capa de venta aparte, decisión 1)
+//   parrilla     respuesta de /grid/day de pixer-worker para la pantalla (capa de venta aparte, decisión 1), o una lista
+//                de ellas, una por día (E3 pasa la víspera, el día y el siguiente)
 //   mando        {tipo:'hashtag'|'id'|'directo', valor, desde}: el mando en vivo del operador (decisión 2)
 //
 // Algoritmo (diseño aprobado por Carlos el 8-oct-2026):
@@ -50,25 +51,35 @@ export function intercalar(base, spots, cada = CADENCIA_DEFECTO) {
 }
 
 // ── Contexto: lo que no depende del instante ────────────────────────────────────────────────────────────────────
+// Una respuesta de /grid/day o varias (una por día). Cada franja se ancla a la fecha de SU día: la que cruza la
+// medianoche pertenece al día en que empieza, como las franjas de una asignación. Con la víspera y el día siguiente,
+// el resolver ve la franja nocturna de ayer que sigue viva de madrugada y los bordes de mañana para validoHasta.
 function leerParrilla(p, ahora, zona) {
-  if (!p || !Array.isArray(p.bands)) return { bandas: [], segundos: 10 };
-  const fecha = esFecha(String(p.date || "")) ? String(p.date) : partesLocales(ahora, zona).fecha;
-  const segundos = Math.max(2, Math.min(120, Number(p.config && p.config.slotSeconds) || 10)), bandas = [];
-  for (const b of p.bands) {
-    const desde = aMinutos(b && b.from, 1439), hasta = aMinutos(b && b.to);
-    if (desde == null || hasta == null) continue;
-    const inicio = aUtc(fecha, desde, zona), fin = hasta > desde ? aUtc(fecha, hasta, zona) : aUtc(sumarDias(fecha, 1), hasta, zona);
-    if (fin > inicio) bandas.push({ id: String(b.id || ""), label: String(b.label || b.id || ""), inicio, fin, slots: Array.isArray(b.slots) ? b.slots : [] });
+  const dias = (Array.isArray(p) ? p : [p]).filter(d => d && Array.isArray(d.bands));
+  if (!dias.length) return { bandas: [], segundos: 10 };
+  const deDia = d => Math.max(2, Math.min(120, Number(d.config && d.config.slotSeconds) || 10)), bandas = [];
+  for (const d of dias) {
+    const fecha = esFecha(String(d.date || "")) ? String(d.date) : partesLocales(ahora, zona).fecha, segundos = deDia(d);
+    for (const b of d.bands) {
+      const desde = aMinutos(b && b.from, 1439), hasta = aMinutos(b && b.to);
+      if (desde == null || hasta == null) continue;
+      const inicio = aUtc(fecha, desde, zona), fin = hasta > desde ? aUtc(fecha, hasta, zona) : aUtc(sumarDias(fecha, 1), hasta, zona);
+      if (fin > inicio) bandas.push({ id: String(b.id || ""), label: String(b.label || b.id || ""), inicio, fin, segundos, slots: Array.isArray(b.slots) ? b.slots : [] });
+    }
   }
-  return { fecha, bandas, segundos };
+  // Si dos días se solapan, manda la franja que empezó antes (la de la víspera).
+  bandas.sort((a, b) => a.inicio - b.inicio);
+  return { bandas, segundos: deDia(dias[0]) };
 }
+/** Circuitos en la forma de cleanCircuit (KV de hoy) o en la del almacén (nombre/destino/activo) → la de applyCircuits. */
+export const circuitosComunes = lista => (Array.isArray(lista) ? lista : []).filter(Boolean)
+  .map(c => ({ id: c.id, enabled: c.enabled ?? c.activo, target: c.target || c.destino }));
+/** Etiquetas de la pantalla: las que se deduce de su identidad más circuito:<id> de cada circuito definido que la incluya. */
+export const etiquetasDe = (facts, circuitos) => applyCircuits(deduceScreenTags(facts && typeof facts === "object" ? facts : {}), circuitosComunes(circuitos));
 function contexto(entrada, ahora) {
   const zona = entrada.zona || ZONA, facts = entrada.facts && typeof entrada.facts === "object" ? entrada.facts : {};
-  // Circuitos en la forma de cleanCircuit (KV de hoy) o en la del almacén (nombre/destino/activo).
-  const circuitos = (Array.isArray(entrada.circuitos) ? entrada.circuitos : []).filter(Boolean)
-    .map(c => ({ id: c.id, enabled: c.enabled ?? c.activo, target: c.target || c.destino }));
   const screenTags = Array.isArray(entrada.screenTags) ? [...new Set(entrada.screenTags.map(String))].sort()
-    : applyCircuits(deduceScreenTags(facts), circuitos);
+    : etiquetasDe(facts, entrada.circuitos);
   const playlists = new Map();
   const fuente = entrada.playlists instanceof Map ? [...entrada.playlists.values()] : Array.isArray(entrada.playlists) ? entrada.playlists : Object.values(entrada.playlists || {});
   for (const p of fuente) if (p && p.id) playlists.set(String(p.id), p);
@@ -100,7 +111,7 @@ function implicitas(ctx, t) {
     const id = String(s.bookingId || s.creative.url);
     if (!capa || vistos.has(id)) continue;           // un booking de varios slots sale una vez por vuelta, como hoy
     vistos.add(id);
-    const it = itemDeSlot(s, banda, ctx.parrilla.segundos);
+    const it = itemDeSlot(s, banda, banda.segundos);
     if (s.playlistId === RUNDOWN_EXACTO) rundown.push({ it, pos: Number.isFinite(s.position) ? s.position : 9999 });
     else (capa === "pagada" ? pagadas : propias).push(it);
   }

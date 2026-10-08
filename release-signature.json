@@ -1,9 +1,9 @@
 {
-  "version": "v.08.10.2026.r4.18:44",
+  "version": "v.08.10.2026.r5.19:37",
   "signature": "MorfeoMacMini · MacMini",
   "agent": "MorfeoMacMini",
   "machine": "MacMini",
   "day": "08.10.2026",
-  "time": "18:44",
-  "evidence": "Qué emite cada pantalla: /emision/ y /api/emision (réplica sin efectos de rebuild() del player, probada contra canal.html), enlaces desde parrilla y Flota y aviso de «Por defecto» anulada."
+  "time": "19:37",
+  "evidence": "Modelo único de playlists E3: GET /api/programacion sirve el resolver desde la D1 admira-programacion (sin efectos, memoria por meta.version); 503 programacion_db_no_configurada hasta crear la D1."
 }
