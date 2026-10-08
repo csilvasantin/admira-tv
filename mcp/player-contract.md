@@ -92,6 +92,9 @@ la orden por hecha.
 
 - La playlist de un kiosko vive en `control/playlist?screen=<pantalla>-tema`. La publica
   `tools/publica-playlists-kioskos.py` (Stock filtrado por tema; 40 piezas; conserva `num`).
+  Escribir un `-tema` exige la clave `CONTROL_PLAYLIST_KEY` del worker (`X-Control-Key` o
+  `Authorization: Bearer`). El script la lee del entorno o de la bóveda, nunca del repo. Leer no
+  la necesita, y el espejo `<pantalla>` que publica el player sigue abierto.
   Un teléfono con `circuit` cuyo modo remoto es `sync` y sin orquestación entra en sincro con su tema.
 - El gemelo (`/adcelerate/demo/best/`) mapea cada sitio a su pantalla real (`SITE_SCREEN`,
   `SITE_CIRCUIT`). Cuando cambia el perfil dominante de la audiencia manda `play<num>` al circuito.
