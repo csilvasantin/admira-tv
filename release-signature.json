@@ -1,9 +1,9 @@
 {
-  "version": "v.08.10.2026.r6.20:00",
+  "version": "v.08.10.2026.r7.20:27",
   "signature": "MorfeoMacMini · MacMini",
   "agent": "MorfeoMacMini",
   "machine": "MacMini",
   "day": "08.10.2026",
-  "time": "20:00",
-  "evidence": "Modelo único de playlists E4: API de escritura /api/programacion/{playlists,asignaciones,circuitos,historial,auditoria} con sesión digitalsignage-player, clave de servicio opcional, 409 por rev y auditoría; 503 hasta crear la D1."
+  "time": "20:27",
+  "evidence": "Modelo único de playlists E5: POST /api/programacion/importar (simulación por defecto, ?aplicar=1, idempotente por ref_externa, sin borrar; ?pisar=1 y ?archivar=1 explícitos); 503 hasta crear la D1."
 }
