@@ -132,5 +132,9 @@
   "v.08.10.2026.r2.00:39": [
     "Audiencia: el aviso de privacidad se ve entero (la cabecera del panel ya no lo tapa)",
     "Mismo panel, reglas y CSV que la r1"
+  ],
+  "v.08.10.2026.r8.20:55": [
+    "El player condicional vuelve a arrancar sin el error de etiquetas",
+    "Conserva las etiquetas guardadas y las equivalencias del Stock"
   ]
 }

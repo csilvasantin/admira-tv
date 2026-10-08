@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=08.10.2026.r7.2027"></script>
+<script src="/auth-gate.js?v=08.10.2026.r8.2055"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=08.10.2026.r7.2027">
+  <link rel="stylesheet" href="/admira-frame.css?v=08.10.2026.r8.2055">
 </head>
 <body>
-<script src="/admira-nav.js?v=08.10.2026.r7.2027" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=08.10.2026.r7.2027" defer></script>
+<script src="/admira-nav.js?v=08.10.2026.r8.2055" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=08.10.2026.r8.2055" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -219,6 +219,8 @@
   </section>
 
   <section id="player-virtual"><h2>Player virtual · navegador</h2>
+    <p><b>Recuperación del arranque (8-oct-2026):</b> corregido el error de inicialización de etiquetas que detenía el canal antes de cargar su playlist. Si ves «Player detenido por error» en una pestaña abierta antes de esta actualización, pulsa «Reanudar bucle Admira.tv». Se conservan las etiquetas y el encuadre guardados; no necesitas borrar datos del navegador.</p>
+    <p lang="en"><b>Startup recovery (8 Oct 2026):</b> fixed tag initialization stopping the channel before its playlist loads. If a tab opened before this update shows “Player stopped due to an error”, click “Resume Admira.tv loop”. Saved tags and framing remain available; no browser data reset is required.</p>
     <p><b>Presencia continua en zapatillas:</b> solo <code>xtore-virtual-zapatillas</code>. Se confirma en dos fotogramas fuertes, tres para bici de confianza baja, aunque no se mueva. El último fotograma y la última evidencia fuerte deben tener menos de 1,5 s; una inferencia lenta no convierte un fotograma viejo en nuevo. La memoria geométrica de hasta 8 s evita repetir conteos, no prolonga presencia. Al reaparecer se reconfirma sin contar de nuevo un paso ya registrado. Prioridad: bici → moto → coche → persona.</p>
     <p><b>Rectángulos locales:</b> sobre Puerta Cam verás clase y #ID de trayectoria con color estable; no identifican individuos. Línea discontinua indica confirmación o continuidad breve incierta. Las etiquetas se distribuyen para no solaparse; si falta espacio se oculta texto, no la caja. Caducan por temporizador propio y se borran al pausar, ocultar, desconectar o recalibrar. Solo cruza la categoría al player, sin IDs, cajas, colores ni imágenes. Presencia quieta no suma pasos ni crea capturas; las capturas ordinarias conservan sus 6 s sin renovarse. Patinete sigue manual, sin detector, rectángulo automático ni orden musical.</p>
     <p class="note">Contrato documental local MCP 0.2.11 / Help 2026-09-12.9, misión DCL-b7723cea465ac94cb685d1de. H y cola automática de vehículos incluidas en v.12.09.2026.r15.15:52; contrato de implementación, no certificación de cámara real. No es cámara real ni emisión actual; no añade herramientas MCP, permisos, D1 o grabador.</p>

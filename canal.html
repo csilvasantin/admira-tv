@@ -53,9 +53,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=08.10.2026.r7.2027"></script>
+<script src="xpl-runtime.js?v=08.10.2026.r8.2055"></script>
 <script>
-  window.ADMIRA_VERSION='v.07.10.2026.r4.taza-demo';
+  window.ADMIRA_VERSION='v.08.10.2026.r8.20:55';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -399,7 +399,7 @@
   <aside id="chan"></aside>
 </div>
 
-<script src="/assets/player-pairing.js?v=08.10.2026.r7.2027"></script>
+<script src="/assets/player-pairing.js?v=08.10.2026.r8.2055"></script>
 <script>
 // Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
 // directo (pub-…r2.dev): más resiliente y evita bloqueos de DNS/filtrado en algunas
@@ -561,6 +561,10 @@ const URL_TAG=(qs.get('tag')||'').toLowerCase().trim();
 // remoto pisándola en bucle.
 const URL_SYNC = syncParam!=null;
 let _liveMode=false;  // modo pedido EN VIVO por el operador (cmd sincro/local/condicional/modo) — manda sobre pollMode
+// Equivalencias de etiquetas (7-oct-2026, limpieza del vocabulario del Stock): sinónimos en inglés y plurales
+// apuntan a UNA forma. Quien siga pidiendo «tech» o «gaming» (mando, matriz condicional, ?tag=) encuentra lo mismo.
+// La MISMA tabla vive en /parrilla/ y en functions/api/_playlist-live.js; tags-alias.test.mjs comprueba que coinciden.
+const TAG_ALIAS={music:"musica",muscia:"musica",technology:"tecnologia",tech:"tecnologia",business:"negocio",creativity:"creatividad",ai:"ia",gaming:"videojuego",videojuegos:"videojuego",robotics:"robotica",historias:"historia",bebida:"bebidas",canciones:"cancion",robot:"robots",comics:"comic",curiosidad:"curiosidades",oferta:"ofertas",artistas:"artista",pelicula:"peliculas",personaje:"personajes",herramienta:"herramientas"};
 const LIVE_TAG_KEY='adtv_live_tag:'+(scr.screen||scr.circuit||scr.machine||'unbound');
 const _storedLiveTag=canonicalPlayTag(LS(LIVE_TAG_KEY,''));
 let _liveTag=!!_storedLiveTag;   // playlist alternativa puesta EN VIVO desde el mando
@@ -700,10 +704,7 @@ function madridSlot(){ let h=12; try{ h=+new Date().toLocaleString('en-US',{hour
 function screenLbl(){ $('screenLbl').textContent = scr.name ? ('📍 '+scr.name+(scr.screen?(' · '+scr.screen):'')) : (scr.screen?('📍 '+scr.screen):''); const nc=$('nocirc'); if(nc) nc.classList.toggle('show', !scr.circuit); }
 function normTag(v){ return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
 function canonicalAdmiraMode(v){ const m=normTag(v); if(['sync','sincro','sincronizado','admiratvsincro'].includes(m)) return 'sync'; if(['conditional','condicional','xpl','admiratvcondicional'].includes(m)) return 'conditional'; return 'local'; }
-// Equivalencias de etiquetas (7-oct-2026, limpieza del vocabulario del Stock): sinónimos en inglés y plurales
-// apuntan a UNA forma. Quien siga pidiendo «tech» o «gaming» (mando, matriz condicional, ?tag=) encuentra lo mismo.
-// La MISMA tabla vive en /parrilla/ y en functions/api/_playlist-live.js; tags-alias.test.mjs comprueba que coinciden.
-const TAG_ALIAS={music:"musica",muscia:"musica",technology:"tecnologia",tech:"tecnologia",business:"negocio",creativity:"creatividad",ai:"ia",gaming:"videojuego",videojuegos:"videojuego",robotics:"robotica",historias:"historia",bebida:"bebidas",canciones:"cancion",robot:"robots",comics:"comic",curiosidad:"curiosidades",oferta:"ofertas",artistas:"artista",pelicula:"peliculas",personaje:"personajes",herramienta:"herramientas"};
+
 function canonicalPlayTag(v){ const t=normTag(v).replace(/^#/,'').replace(/\s+/g,'-'); return TAG_ALIAS[t]||t; }
 function tagNeedles(v){ const t=canonicalPlayTag(v); return [t].concat(Object.keys(TAG_ALIAS).filter(k=>TAG_ALIAS[k]===t)); }
 function matchesSeg(it,s){
@@ -4826,6 +4827,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=08.10.2026.r7.2027" defer></script>
+  <script src="/assets/admira-version-watch.js?v=08.10.2026.r8.2055" defer></script>
 </body>
 </html>

@@ -1,9 +1,9 @@
 {
-  "version": "v.08.10.2026.r7.20:27",
-  "signature": "MorfeoMacMini · MacMini",
-  "agent": "MorfeoMacMini",
+  "version": "v.08.10.2026.r8.20:55",
+  "signature": "OraculoMacMini · MacMini",
+  "agent": "OraculoMacMini",
   "machine": "MacMini",
   "day": "08.10.2026",
-  "time": "20:27",
-  "evidence": "Modelo único de playlists E5: POST /api/programacion/importar (simulación por defecto, ?aplicar=1, idempotente por ref_externa, sin borrar; ?pisar=1 y ?archivar=1 explícitos); 503 hasta crear la D1."
+  "time": "20:55",
+  "evidence": "Corrección del arranque del canal: inicializar TAG_ALIAS antes de restaurar etiquetas guardadas; regresión de Xtore y etiquetas ES/EN."
 }

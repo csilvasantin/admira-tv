@@ -114,3 +114,9 @@ la orden por hecha.
 - El mando muestra «0 de N descargados» en todas las pantallas cuando el worker responde
   `throttled:"budget"`; no es del player.
 - El botón «VERSIÓN NUEVA» del avisador compartido no debe verse en una pantalla pública: el canal ya lo oculta en emisión.
+
+## Arranque y recuperación / Startup and recovery · 2026-10-08
+
+ES: El canal inicializa las equivalencias de etiquetas antes de restaurar la etiqueta guardada de la pantalla, incluso cuando está vacía. Corrige `Cannot access 'TAG_ALIAS' before initialization`, que abortaba el arranque del iframe condicional de `xtore-virtual-zapatillas` antes de confirmar el puente y cargar su playlist. Una instancia ya detenida requiere «Reanudar bucle Admira.tv» en el analizador o recargar el canal. No se borran etiquetas, encuadres ni historial; no cambia el contrato de órdenes ni requiere nuevas herramientas MCP.
+
+EN: The channel initializes tag aliases before restoring the screen's saved tag, including an empty tag. This fixes `Cannot access 'TAG_ALIAS' before initialization`, which aborted the `xtore-virtual-zapatillas` conditional iframe before the bridge handshake and playlist load. An already stopped instance needs “Resume Admira.tv loop” in the analyzer or a channel reload. Saved tags, framing and history are preserved; the command contract and MCP tools are unchanged.
