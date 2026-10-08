@@ -1,9 +1,9 @@
 {
-  "version": "v.08.10.2026.r5.19:37",
+  "version": "v.08.10.2026.r6.20:00",
   "signature": "MorfeoMacMini · MacMini",
   "agent": "MorfeoMacMini",
   "machine": "MacMini",
   "day": "08.10.2026",
-  "time": "19:37",
-  "evidence": "Modelo único de playlists E3: GET /api/programacion sirve el resolver desde la D1 admira-programacion (sin efectos, memoria por meta.version); 503 programacion_db_no_configurada hasta crear la D1."
+  "time": "20:00",
+  "evidence": "Modelo único de playlists E4: API de escritura /api/programacion/{playlists,asignaciones,circuitos,historial,auditoria} con sesión digitalsignage-player, clave de servicio opcional, 409 por rev y auditoría; 503 hasta crear la D1."
 }
