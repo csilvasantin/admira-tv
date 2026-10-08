@@ -36,6 +36,19 @@ binding = "AUDIENCIA_DB"
 database_name = "kiosko-audiencia"
 database_id = "4b5f2c81-aadf-4b1a-a363-f991c5240613"
 
+# Modelo único de playlists (E1–E2, 8-oct-2026 · docs/playlists-modelo-unico.md): D1 «admira-programacion».
+# PREPARADO Y COMENTADO: la base aún no existe y un binding sin database_id real rompería el despliegue.
+# Para activarlo (lo lanza Carlos):
+#   1. npx wrangler d1 create admira-programacion            → copia el database_id que devuelve
+#   2. pega el id abajo y descomenta las cinco líneas
+#   3. npx wrangler d1 migrations apply admira-programacion --remote   (aplica migrations/programacion/0001.sql)
+# Nadie lo lee todavía: functions/api/_programacion/ es lógica pura + almacén probado con una D1 simulada.
+# [[d1_databases]]
+# binding = "PROGRAMACION_DB"
+# database_name = "admira-programacion"
+# database_id = "PENDIENTE-de-wrangler-d1-create"
+# migrations_dir = "migrations/programacion"
+
 # R2 de los vídeos explicativos de la lanzadera (/apps → hover ≥3s sobre el icono).
 # La Pages Function functions/apps/video/[file].js sirve GET /apps/video/<slug>.mp4
 # desde aquí, con soporte de Range. Sube cada vídeo con:
