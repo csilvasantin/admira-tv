@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=08.10.2026.r8.2055"></script>
+<script src="/auth-gate.js?v=08.10.2026.r9.2133"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admira.tv · MCP — el canal, conectado</title>
 <meta name="description" content="Servidor MCP de Admira.tv: qué hay en antena en cada pantalla, proof-of-play, cómo poner una pantalla a emitir, federación con circuitos externos y el player condicionado por audiencia (Xtore).">
@@ -23,8 +23,8 @@
 <script>
 window.ADMIRA_NAV={title:'MCP · el canal conectado'};
 </script>
-<script src="/admira-nav.js?v=08.10.2026.r8.2055" defer></script>
-<script src="/admira-frame.js?v=08.10.2026.r8.2055" defer></script>
+<script src="/admira-nav.js?v=08.10.2026.r9.2133" defer></script>
+<script src="/admira-frame.js?v=08.10.2026.r9.2133" defer></script>
 <style>
   :root{ --bg:#02080d; --panel:#0a1620; --line:#16303a; --txt:#dff8ff; --mut:#75aab9; --acc:#78f3ff; --pur:#88ffaa; --good:#88ffaa; }
   *{box-sizing:border-box}
@@ -52,7 +52,7 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
   a{color:var(--acc)}
   footer{color:var(--mut);font-size:13px;margin-top:38px;border-top:1px solid var(--line);padding-top:18px}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=08.10.2026.r8.2055">
+  <link rel="stylesheet" href="/admira-frame.css?v=08.10.2026.r9.2133">
 </head>
 <body>
 <div class="wrap">
@@ -258,6 +258,7 @@ totem.postMessage({source:'xpaceos-robot-cli', requestId:'x1', command:'admiratv
     <p style="margin:10px 0 0;color:var(--mut);font-size:14px">Placeholders de hoy (Stock, hasta los de Lucas): Matrix <code>1786643541589-rb1gz3</code> · Top Gun <code>1786533143983-n2y09e</code>; el neutro ya no tiene creative fijo (es la playlist). Estado real el 11-09-2026 18:51: reglas vivas r-hombre · r-mujer · r-neutro; Persona/Coche/Moto/Bici <b>sin anuncio</b> aún. Guía para personas: <a href="/help/#xtore">/help/#xtore</a>. Analizador: <a href="/videoanalytics/xtore/">/videoanalytics/xtore/</a>. Contrato del canal: <code>CANAL.md</code> § «Audiencia remota» y «Tipología» del repo admira-tv.</p>
   </div>
 
+  <section id="xtore-demo-setup"><h2>Preparar demo Xtore / Prepare Xtore demo</h2><p>ES: Entrada desde Analítica de vídeo; cuadrática compartida cerrada, preparación del detector y comprobación de cámara, encuadre, análisis, reproducción y sonido. Compartir requiere selección explícita en Chrome.</p><p>EN: Video Analytics entry; shared closed quadratic shell, detector preparation and camera/framing/analysis/playback/audio checks. Chrome capture selection stays explicit.</p><p><a href="/mcp/xtore-demo-setup.md">Contrato ES/EN</a> · <a href="/help/#xtore-preparar-demo">Tutorial ES/EN</a> · <a href="/videoanalytics/xtore/">Abrir setup / Open setup</a>. Documentación; no nueva herramienta ni comando remoto / Documentation; no new tool or remote command.</p></section>
   <h2>Conectar</h2>
   <pre>{ "mcpServers": { "admiratv": { "url": "https://mcp-tv.admira.store/mcp" } } }</pre>
 

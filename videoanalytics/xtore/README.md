@@ -2,6 +2,15 @@
 
 TrinityMBA16 · v.11.09.2026.r1.16:00 · FLT-100252 / FLT-100256
 
+## Preparar demo / Prepare demo
+
+La entrada principal es Admira.tv → Analítica de vídeo → Preparar demo Xtore.
+El botón abre/reutiliza Digital Twin, prepara el detector y reanuda el player.
+Compartir Puerta Cam sigue siendo una acción explícita del operador.
+Options left, Advanced right, Expert/CLI below use the shared quadratic shell, closed on entry.
+Tutorial ES/EN: https://admira.tv/help/#xtore-preparar-demo.
+Contrato completo ES/EN, límites y criterios de disponibilidad: [Preparar demo](../../mcp/xtore-demo-setup.md).
+
 ## Qué implementa
 
 La tarjeta pública de Analítica de vídeo entra en `/videoanalytics/xtore/`.

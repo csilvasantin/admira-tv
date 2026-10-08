@@ -136,5 +136,10 @@
   "v.08.10.2026.r8.20:55": [
     "El player condicional vuelve a arrancar sin el error de etiquetas",
     "Conserva las etiquetas guardadas y las equivalencias del Stock"
+  ],
+  "v.08.10.2026.r9.21:33": [
+    "Preparar demo Xtore desde Analítica de vídeo: abre Digital Twin y prepara detector y player",
+    "Cuadrática compartida: Opciones izquierda, Avanzado derecha y Experto/CLI abajo, cerrados al entrar",
+    "La demo indica cámara, encuadre, detector, reproducción y sonido; compartir la pestaña sigue siendo explícito"
   ]
 }

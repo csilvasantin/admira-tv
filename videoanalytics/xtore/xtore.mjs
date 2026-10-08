@@ -1,3 +1,4 @@
+import {installDemoSetup} from './demo-setup.mjs?v=demo-setup-1';
 import {DirectionCounter,DEFAULT_DIRECTION_AXIS,validDirectionAxis,audienceSnapshot} from './audience-session.mjs?v=audience-session-1';
 import {installXpaceLink} from './xpace-link.mjs?v=normal-tabs-1';
 import {CLASSES, SNAPSHOT_TTL, PRESENCE_GRACE, PassageTracker, PassageCounts, validRect, validQuad, quadMatrix} from './core.mjs';
@@ -5,7 +6,7 @@ import {CutoutJob} from './cutouts.mjs';
 import {installTwinUI} from './twin-ui.mjs?v=avatar-photo-1';
 import {detectObjects} from './detector.mjs';
 import {loadDetectorModel} from './model-loader.mjs?v=detector-download-2';
-import {installSignageUI} from './signage-ui.mjs';
+import {installSignageUI} from './signage-ui.mjs?v=demo-setup-1';
 import {generateTwin} from './pixeria.mjs';
 import {toBase64} from './twins.mjs';
 import {installHistoryUI} from './history.mjs?v=proof-twin-1';
@@ -689,3 +690,20 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)resumeHist
 window.addEventListener('pagehide',()=>{clearTimeout(historyTimer);twins.clear();disconnect();});
 history.sync();
 tabletIdle();renderCounts();controls();
+
+installDemoSetup({document,window,prepareDetector:prepareModel,resumePlayer:()=>signage.resume(),share:()=>connectSource(true),startAnalysis:()=>startAnalysis(),snapshot:()=>({
+  connected:!!stream,capturing:!!captureRequest,sourceMuted,videoReady:scene.readyState>=2,videoTime:scene.currentTime,
+  framing:roiReady&&!calibration,detector:!!model,modelError,analyzing,analysisRequested,player:signage.snapshot()
+})});
+
+// Existing fragment links still reach their controls after moving into native panels.
+function revealQuadraticFragment(hash){
+  const target=document.getElementById(String(hash||'').replace(/^#/,''));
+  const panel=target?.closest?.('.af-panel');
+  const side=panel?.id?.replace('af-panel-','');
+  const toggle=side&&document.getElementById('af-ico-'+side);
+  if(toggle&&toggle.getAttribute('aria-expanded')!=='true')toggle.click();
+}
+document.addEventListener('click',event=>{const anchor=event.target.closest?.('a[href^="#"]');if(anchor)revealQuadraticFragment(anchor.hash);});
+window.addEventListener('hashchange',()=>revealQuadraticFragment(window.location?.hash));
+if(window.location?.hash)revealQuadraticFragment(window.location?.hash);

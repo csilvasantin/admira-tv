@@ -365,3 +365,9 @@ Contadores entran/salen, exportación JSON y enlace postMessage a XpaceOS Real i
 En la vista Humano de Starbucks Passeig de Gràcia 103, pulsa el halo difuminado de la fachada para entrar en Matrix en la misma pestaña. No hay rótulo sobre la foto. El halo late suavemente y se intensifica al pasar el ratón o enfocar con Tab; Enter abre el gemelo. Con movimiento reducido permanece estático.
 In the Human view of Starbucks Passeig de Gràcia 103, click the blurred entrance halo to open Matrix in the same tab. There is no label over the photograph. The halo gently pulses and brightens on hover or keyboard focus; Tab then Enter opens the twin. Reduced motion keeps the halo static.
 Tutorial: https://admira.tv/adcelerate/demo/tutorials/starbucks-matrix-door.md
+
+## Xtore demo setup / Preparar demo
+
+ES: Lanzar desde https://admira.tv/videoanalytics/ → Preparar demo Xtore. Cuadrática compartida cerrada al entrar. Preparar demo abre/reutiliza Digital Twin y prepara detector/player; Compartir Puerta Cam requiere selector Chrome explícito. No nuevo tool MCP/CLI ni apertura automática de cámara IEU.
+EN: Launch from Video Analytics → Prepare Xtore demo. Shared quadratic shell starts closed. Setup opens/reuses Digital Twin and prepares detector/player; Share Puerta Cam requires explicit Chrome selection. No new MCP/CLI tool or automatic IEU camera navigation.
+Contract/tutorial ES/EN: https://admira.tv/mcp/xtore-demo-setup.md and https://admira.tv/help/#xtore-preparar-demo.

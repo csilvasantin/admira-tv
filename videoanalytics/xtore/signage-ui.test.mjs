@@ -133,3 +133,31 @@ test('unconfirmed sound command shows a retry without stopping or falsely muting
   t.mock.timers.tick(2501);assert.equal(f.frame(),frame);assert.equal(f.get('mute-signage').disabled,false);
   assert.equal(f.get('mute-signage')['aria-pressed'],'false');assert.match(f.get('signage-audio').textContent,/Sin confirmación/);
 });
+
+test('demo status requires current player progress and confirmed enabled audio; foreign and stopped players cannot claim readiness',t=>{
+  t.mock.method(Date,'now',()=>clock);
+  let clock=1000;
+  const f=fixture(t),frame=f.frame();f.ack();
+  assert.equal(f.ui.snapshot().playing,false);
+  assert.equal(f.ui.snapshot().audioEnabled,false);
+  const mirror=position=>f.emit({event:'mirror-state',playback:{id:'piece',type:'audio',position,paused:false}});
+  mirror(0);assert.equal(f.ui.snapshot().playing,true);
+  f.emit({event:'audio-state',muted:false,volume:0.7});assert.equal(f.ui.snapshot().audioEnabled,true);
+  clock+=1600;mirror(0);assert.equal(f.ui.snapshot().playing,false,'unchanged progress is stale despite heartbeat');
+  mirror(1);assert.equal(f.ui.snapshot().playing,true);
+  f.emit({event:'media-state',phase:'audio-blocked',id:'piece',mode:'conditional',music:true,muted:false,volume:1});
+  assert.equal(f.ui.snapshot().audioBlocked,true);assert.equal(f.ui.snapshot().audioEnabled,false);
+  f.emit({event:'media-state',phase:'playing',id:'piece',mode:'conditional',muted:true,volume:1});
+  assert.equal(f.ui.snapshot().audioEnabled,false);
+  f.emit({event:'audio-state',muted:false,volume:0});assert.equal(f.ui.snapshot().audioEnabled,false);
+  f.emit({event:'audio-state',muted:false,volume:1});assert.equal(f.ui.snapshot().audioEnabled,true);
+  f.emit({event:'mirror-state',playback:{id:'piece',type:'audio',position:2,paused:true}});assert.equal(f.ui.snapshot().playing,false);
+  f.emit({event:'mirror-state',playback:{id:'image',type:'image',position:0,paused:false}});
+  clock+=1000;f.emit({event:'mirror-state',playback:{id:'image',type:'image',position:0,paused:false}});
+  assert.equal(f.ui.snapshot().playing,true,'image heartbeat is playback evidence');
+  clock+=1500;assert.equal(f.ui.snapshot().playing,false,'image heartbeat must also be fresh');
+  f.ui.resume();assert.equal(f.frame(),frame,'prepare reuses the active frame');
+  f.ui.stop();assert.deepEqual(f.ui.snapshot(),{running:false,audioBlocked:false,playing:false,audioEnabled:false});
+  f.emit({event:'mirror-state',playback:{id:'late',type:'video',position:9,paused:false}},frame);
+  assert.equal(f.ui.snapshot().playing,false);
+});

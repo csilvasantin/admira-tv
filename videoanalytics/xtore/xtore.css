@@ -34,3 +34,18 @@
 
 #saved-presets{margin:6px 0;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);font:inherit;font-size:12px}#restore-preset{margin-bottom:8px}#preset-summary{padding:9px 12px;border:1px solid var(--line);border-radius:8px}
 #capture-framing{scroll-margin-top:130px}
+
+/* Reuse the site's native quadratic shell; only the Xtore content is laid out here. */
+html.af-on main{max-width:1600px;padding:24px;margin:52px auto 0;width:100%;box-sizing:border-box}
+html.af-on .workspace{display:block}.workspace .viewer{position:relative;top:auto}
+.demo-setup{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:16px 20px;margin:0 0 20px}
+.demo-actions,.demo-checks,.demo-recovery{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.demo-actions .badge{margin-left:auto}.demo-actions button{min-height:44px}.demo-checks{padding:0;list-style:none;margin:14px 0;color:var(--muted);font-size:13px;gap:12px 22px}.demo-checks .ready{color:var(--green)}
+#demo-next{margin:8px 0;font-size:15px}#demo-open-status{margin:8px 0 0}.demo-recovery:empty{display:none}.demo-recovery button{font-size:12px;margin-top:10px}
+.xtore-options,.inspector{box-sizing:border-box;width:min(370px,calc(100vw - 55px));max-width:100%;min-width:0}
+.xtore-options .toolbar{position:static;display:flex;flex-direction:column;align-items:stretch;padding:0;border:0;background:none}
+.xtore-options .toolbar .local-note{display:block;width:auto}.xtore-options .toolbar button,.xtore-options .toolbar .button{width:100%;box-sizing:border-box;text-align:left}
+.xtore-links{display:flex;flex-direction:column;gap:12px;padding:15px 0;border-top:1px solid var(--line)}
+.inspector{padding:0;border:0;border-radius:0;background:none}.inspector .capture{max-height:220px}
+.xtore-expert{max-width:100%;padding:12px}.xtore-expert h2{margin:0}.xtore-expert a{color:var(--green)}
+@media(max-width:600px){html.af-on main{padding:14px}.demo-setup{padding:14px}.demo-actions .badge{width:100%;margin:0}.demo-actions button{flex:1}.demo-checks{gap:10px}.heading{margin-bottom:16px}}

@@ -802,5 +802,40 @@
     "description_es": "En la vista Humano de Starbucks Passeig de Gràcia 103, pulsa el halo difuminado de la fachada para entrar en Matrix en la misma pestaña. No hay rótulo sobre la foto. El halo late suavemente y se intensifica al pasar el ratón o enfocar con Tab; Enter abre el gemelo. Con movimiento reducido permanece estático.",
     "description_en": "In the Human view of Starbucks Passeig de Gràcia 103, click the blurred entrance halo to open Matrix in the same tab. There is no label over the photograph. The halo gently pulses and brightens on hover or keyboard focus; Tab then Enter opens the twin. Reduced motion keeps the halo static.",
     "tutorial": "https://admira.tv/adcelerate/demo/tutorials/starbucks-matrix-door.md"
+  },
+  "xtore_demo_setup": {
+    "url": "https://admira.tv/videoanalytics/xtore/",
+    "contract": "https://admira.tv/mcp/xtore-demo-setup.md",
+    "tutorial": "https://admira.tv/help/#xtore-preparar-demo",
+    "scope": "browser UI; documentary integration; no new MCP tool",
+    "shell": {
+      "left": "Opciones",
+      "right": "Avanzado",
+      "bottom": "Experto/CLI",
+      "initial": "closed"
+    },
+    "permission": "Explicit Chrome tab selection per new capture; no camera audio",
+    "readiness": [
+      "fresh camera frames <1500ms",
+      "valid framing",
+      "detector",
+      "active analysis",
+      "confirmed advancing player",
+      "confirmed enabled player audio"
+    ],
+    "preserves": [
+      "preferences",
+      "counts",
+      "framing",
+      "history",
+      "native CLI"
+    ],
+    "pending": [
+      "IEU automatic Puerta Cam navigation"
+    ],
+    "languages": [
+      "es",
+      "en"
+    ]
   }
 }

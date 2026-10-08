@@ -5,24 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090e14">
   <meta name="description" content="Xtore: análisis local de Puerta Cam y capturas efímeras en un iPad virtual, con permiso explícito para compartir la pestaña de Digital Twin.">
-  <meta name="admiranext-version" content="v.08.10.2026.r8.20:55">
-  <meta name="admiranext-agent" content="TrinityMBA16">
+  <meta name="admiranext-version" content="v.08.10.2026.r9.21:33">
+  <meta name="admiranext-agent" content="OraculoMacMini">
   <title>Xtore · Analítica de vídeo · Admira.tv</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./xtore.css?v=08.10.2026.r8.2055">
-  <script type="module" src="./xtore.mjs?v=va-producer-1"></script>
+  <link rel="stylesheet" href="./xtore.css?v=08.10.2026.r9.2133">
+  <link rel="stylesheet" href="/admira-frame.css?v=08.10.2026.r9.2133">
+  <script src="/admira-nav.js?v=08.10.2026.r9.2133" data-active="apps" data-title="Xtore · Preparar demo" defer></script>
+  <script src="/admira-frame.js?v=08.10.2026.r9.2133" defer></script>
+  <script type="module" src="./xtore.mjs?v=demo-setup-1"></script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/">Admira<span>.</span>tv</a>
-    <nav aria-label="Navegación"><a href="/videoanalytics/">Sobre la solución</a><a href="/#soluciones">Todas las soluciones ↗</a></nav>
-  </header>
-  <main>
+  <main id="admskip-target">
     <header class="heading">
       <div><p class="eyebrow">VIDEO ANALYTICS / XTORE</p><h1>La calle activa la Xtore.</h1><p class="intro">Puerta Cam detecta. El iPad muestra. La cartelería responde.</p></div>
       <span id="connection" class="badge">Cámara sin conectar</span>
     </header>
-    <section class="toolbar" aria-label="Conexión y análisis">
+    <section class="demo-setup" aria-label="Preparar demo Xtore">
+      <div class="demo-actions"><button id="prepare-demo" class="primary">Preparar demo</button><button id="demo-share">Compartir Puerta Cam</button><span id="demo-ready" class="badge" role="status">Preparación pendiente</span></div>
+      <ol class="demo-checks" aria-label="Estado de la demo"><li id="demo-check-camera">○ Cámara</li><li id="demo-check-framing">○ Encuadre</li><li id="demo-check-detector">○ Detector</li><li id="demo-check-player">○ Player</li><li id="demo-check-audio">○ Sonido habilitado</li></ol>
+      <p id="demo-next" role="status">Abre Puerta Cam y comparte esa pestaña.</p>
+      <p id="demo-open-status" class="small">Preparar demo abre Digital Twin y prepara el detector. Chrome te pedirá elegir la pestaña al compartir.</p>
+      <div class="demo-recovery"><button id="demo-start-analysis" hidden>Iniciar análisis</button><button id="demo-review" hidden>Marcar Puerta Cam</button><button id="demo-retry-detector" hidden>Reintentar detector</button><button id="demo-retry-player">Reanudar player</button></div>
+    </section>
+    <div class="workspace">
+      <section class="viewer" aria-label="Escena Xtore con iPad virtual">
+        <div id="stage" class="stage">
+          <video id="scene" muted playsinline aria-label="Pestaña compartida de Digital Twin"></video>
+          <div id="empty-scene" class="empty-scene"><span class="scene-mark" aria-hidden="true">⌗</span><h2>Tu Xtore, conectada.</h2><p>La escena real aparecerá aquí al compartir la pestaña.<br>No hay vídeo ni detecciones simuladas.</p><span class="small">Chrome de escritorio · sesión de IEU necesaria</span></div>
+          <div id="tablet" hidden aria-label="Player virtual sobre el iPad"><canvas id="tablet-canvas" width="640" height="480"></canvas><div id="tablet-tracking" hidden aria-hidden="true"></div></div>
+          <div id="signage" hidden aria-label="Cartelería digital virtual"><div id="signage-idle">Admira.tv<br><small id="signage-idle-label">Player en espera</small><small>Consulta el estado en Cartelería condicionada</small></div></div>
+          <div id="roi" hidden><canvas id="clean-preview" hidden aria-label="Vista modificada con fondo temporal, no vídeo original"></canvas><span>Solo se analiza esta zona</span><div id="tracking-overlay" aria-hidden="true"></div><p id="clean-status" hidden role="status"></p></div>
+          <div id="markers" aria-hidden="true"></div>
+        </div>
+        <div class="viewer-caption"><span id="source-info">PLAYER VIRTUAL · SIN VÍDEO EN DIRECTO</span><span id="camera-passage-count">Personas que han pasado: 0 · Personas entran: 0 · Personas salen: 0 · Coches: 0 · Motos: 0 · Bicis: 0</span><span>iPad y cartelería virtuales · no son dispositivos físicos · <a href="/videoanalitics/estadisticas/" target="_blank" rel="noopener noreferrer">Ver estadísticas ↗</a></span><span id="history-save-status" role="status">Comprobando guardado…</span><span id="va-bridge-status" role="status">VA MCP · en espera del análisis</span><a id="history-login" href="/videoanalitics/estadisticas/acceso/" target="_blank" rel="noopener noreferrer" hidden>Iniciar sesión para guardar ↗</a></div>
+      </section>
+
+    </div>
+    <footer><span>OraculoMacMini · <span data-release-version>v.08.10.2026.r9.21:33</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
+  </main>
+  <section class="xtore-options" data-af-slot="left" aria-label="Opciones de Xtore"><h2>Conexión y análisis</h2>    <section class="toolbar" aria-label="Conexión y análisis">
       <button id="analyze" class="primary" disabled>Arrancar cámara y análisis</button>
       <a class="button" href="https://digitaltwin.ieu.ai/" target="_blank" rel="noopener noreferrer">Abrir Digital Twin 360 ↗</a>
       <button id="stop" disabled>Desconectar</button>
@@ -36,19 +58,8 @@
     <p id="xpace-status" class="small" role="status">Gemelo sin conectar. Al abrirlo compartes el player y el recorte de Puerta Cam con esa ventana de XpaceOS. No se graba ni se publica el vídeo.</p>
     <p id="preset-summary" class="small" role="status">Comprobando el encuadre guardado…</p>
     <a class="small" href="#capture-framing">Ver y recuperar encuadres guardados ↓</a>
-    <div class="workspace">
-      <section class="viewer" aria-label="Escena Xtore con iPad virtual">
-        <div id="stage" class="stage">
-          <video id="scene" muted playsinline aria-label="Pestaña compartida de Digital Twin"></video>
-          <div id="empty-scene" class="empty-scene"><span class="scene-mark" aria-hidden="true">⌗</span><h2>Tu Xtore, conectada.</h2><p>La escena real aparecerá aquí al compartir la pestaña.<br>No hay vídeo ni detecciones simuladas.</p><span class="small">Chrome de escritorio · sesión de IEU necesaria</span></div>
-          <div id="tablet" hidden aria-label="Player virtual sobre el iPad"><canvas id="tablet-canvas" width="640" height="480"></canvas><div id="tablet-tracking" hidden aria-hidden="true"></div></div>
-          <div id="signage" hidden aria-label="Cartelería digital virtual"><div id="signage-idle">Admira.tv<br><small id="signage-idle-label">Player en espera</small><small>Consulta el estado en Cartelería condicionada</small></div></div>
-          <div id="roi" hidden><canvas id="clean-preview" hidden aria-label="Vista modificada con fondo temporal, no vídeo original"></canvas><span>Solo se analiza esta zona</span><div id="tracking-overlay" aria-hidden="true"></div><p id="clean-status" hidden role="status"></p></div>
-          <div id="markers" aria-hidden="true"></div>
-        </div>
-        <div class="viewer-caption"><span id="source-info">PLAYER VIRTUAL · SIN VÍDEO EN DIRECTO</span><span id="camera-passage-count">Personas que han pasado: 0 · Personas entran: 0 · Personas salen: 0 · Coches: 0 · Motos: 0 · Bicis: 0</span><span>iPad y cartelería virtuales · no son dispositivos físicos · <a href="/videoanalitics/estadisticas/" target="_blank" rel="noopener noreferrer">Ver estadísticas ↗</a></span><span id="history-save-status" role="status">Comprobando guardado…</span><span id="va-bridge-status" role="status">VA MCP · en espera del análisis</span><a id="history-login" href="/videoanalitics/estadisticas/acceso/" target="_blank" rel="noopener noreferrer" hidden>Iniciar sesión para guardar ↗</a></div>
-      </section>
-      <aside class="inspector">
+<nav class="xtore-links" aria-label="Navegación de Xtore"><a href="/videoanalytics/">Analítica de vídeo</a><a href="/help/#xtore-preparar-demo">Ayuda · Preparar demo</a><a href="/apps/">Todas las soluciones</a></nav></section>
+      <div class="inspector" data-af-slot="right">
         <div class="section-title capture-heading"><h2>Capturas</h2><span id="event-counter">0 pasos</span><button id="reset-counts" title="Poner a cero los contadores actuales sin borrar el histórico">Reset</button></div>
         <details id="audience-session" class="help"><summary><span aria-hidden="true">›</span> Audiencia de sesión · XpaceOS y Pixeria</summary>
           <p id="direction-summary" class="small"></p>
@@ -189,9 +200,7 @@
         <p class="small">La calle se envía al gemelo mientras se prepara el detector. La descarga muestra porcentaje y segundos; después se prepara el motor. Los recuadros y la segmentación empiezan cuando el detector está listo. Si falla, pulsa Iniciar análisis para reintentar sin desconectar la cámara.</p>
         <button id="prepare-model" class="text-button">Preparar detector sin conectar la cámara</button>
         <p id="model-status" class="small">COCO-SSD / MobileNet v2 · se descarga al iniciar. La detección no envía fotogramas.</p>
-      </aside>
-    </div>
-    <footer><span>TrinityMBA16 · <span data-release-version>v.08.10.2026.r8.20:55</span></span><span>Superposición de cuatro esquinas · patrón CanalKiosk</span><span id="bridge-state">Puente directo al player · MCP remoto no activado</span></footer>
-  </main>
+      </div>
+  <section class="af-expert xtore-expert" data-af-slot="bottom" aria-label="Diagnóstico Xtore"><h2>Xtore · Diagnóstico e integración</h2><p>El análisis, el player y sus controles continúan al cerrar estos paneles.</p><div class="af-tools"><a href="/mcp/xtore-demo-setup.md" target="_blank" rel="noopener">Contrato de Preparar demo ES/EN ↗</a><a href="/mcp/player-contract.md" target="_blank" rel="noopener">Contrato del player ↗</a></div><p>Pruebas de reglas, encuadres, histórico y recortes: Avanzado. La consola compartida conserva sus comandos e historial.</p></section>
 </body>
 </html>
