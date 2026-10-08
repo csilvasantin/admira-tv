@@ -1,4 +1,4 @@
-// POST /api/programacion/importar[?aplicar=1][&pisar=1][&cursor=…][&limite=N][&muestra=N]
+// POST /api/programacion/importar[?aplicar=1][&pisar=1][&archivar=1][&cursor=…][&limite=N][&muestra=N]
 //
 // IMPORTADOR DEL LEGADO (E5 · modelo único de playlists, docs/playlists-modelo-unico.md). Lo enruta la API de E4
 // (functions/api/programacion/[recurso]/[[resto]].js); el plan lo hace importador.js, que es puro.
@@ -9,6 +9,8 @@
 //     auditoría y meta.version + 1— y el actor de la auditoría es importador:<email>.
 //   · Lo importado que luego se editó por otro camino no se toca (`omitir` · `editado_fuera`) salvo con ?pisar=1. La
 //     simulación y la aplicación respetan las mismas opciones: lo que se simula es lo que se aplica.
+//   · Los huérfanos sólo se informan; con ?archivar=1, las asignaciones huérfanas del importador se archivan (estado
+//     «archivada»). Nada se borra nunca.
 //
 // LEE EL KV (ACCESS), NUNCA LO ESCRIBE: sólo get y list. El documento de vivas (admira-tv:playlist:live:v1, con sus
 // circuitos) va en el primer tramo; los borradores «Por defecto» (admira-tv:playlist:default:v1:<pantalla>) se leen
@@ -25,7 +27,7 @@ import { LIVE_KEY } from "../_playlist-live.js";
 import { DRAFT_PREFIX } from "../playlist.js";
 import { PROYECTO, actorDeServicio } from "./acceso.js";
 import * as A from "./almacen.js";
-import { ACTOR, idsNecesarios, planificar, sinDatos, traducir } from "./importador.js";
+import { ACTOR, ESCRIBEN, idsNecesarios, planificar, sinDatos, traducir } from "./importador.js";
 
 // Escrituras en la D1 por petición: un db.batch de 5 a 10 sentencias cada una (almacen.js). Con 50 se queda lejos del
 // tope de 1000 consultas por invocación de Workers, aunque D1 contara cada sentencia del batch por separado.
@@ -98,7 +100,7 @@ export async function importar({ request, env = {} }) {
   const kv = env.ACCESS;
   if (!kv || typeof kv.get !== "function" || typeof kv.list !== "function") return json({ ok: false, error: "kv_no_disponible" }, 503);
 
-  const aplicar = q.get("aplicar") === "1", opciones = { pisar: q.get("pisar") === "1" }, tramo = deCursor(q.get("cursor"));
+  const aplicar = q.get("aplicar") === "1", opciones = { pisar: q.get("pisar") === "1", archivar: q.get("archivar") === "1" }, tramo = deCursor(q.get("cursor"));
   if (!tramo) return json({ ok: false, error: "cursor_invalido" }, 400);
   const limite = entero(q.get("limite"), 1, MAX_LIMITE, LIMITE_DEFECTO), muestra = entero(q.get("muestra"), 0, MAX_MUESTRA, MUESTRA_DEFECTO);
 
@@ -145,17 +147,18 @@ export async function importar({ request, env = {} }) {
   });
 }
 
-/** Ejecuta las escrituras del plan, en orden y con tope. Nunca borra: sólo guardar* de almacen.js. */
+/** Ejecuta las escrituras del plan, en orden y con tope. Nunca borra: sólo guardar* de almacen.js (archivar es guardar con
+ *  estado «archivada» y la rev de la fila). */
 async function ejecutar(db, operaciones, actor) {
-  const aplicadas = { crear: 0, actualizar: 0 }, fallidas = [];
+  const aplicadas = { crear: 0, actualizar: 0, archivar: 0 }, fallidas = [];
   let hechas = 0, pendientes = 0, version = null;
   for (const op of operaciones) {
-    if (op.accion !== "crear" && op.accion !== "actualizar") continue;
+    if (!ESCRIBEN.has(op.accion)) continue;
     if (hechas >= MAX_ESCRITURAS) { pendientes += 1; continue; }
     hechas += 1;
     let r;
     try {
-      r = await GUARDAR[op.entidad](db, op.datos, { actor, rev: op.accion === "crear" ? 0 : op.rev, motivo: "importador E5 · " + op.ref });
+      r = await GUARDAR[op.entidad](db, op.datos, { actor, rev: op.accion === "crear" ? 0 : op.rev, motivo: "importador E5 · " + op.ref + (op.accion === "archivar" ? " · archivada: " + op.motivo : "") });
     } catch (e) {
       console.error("programacion: importar escritura", e);
       return { error: true, aplicadas, fallidas };

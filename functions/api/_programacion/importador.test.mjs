@@ -145,8 +145,8 @@ test("plan de una mezcla realista: borrador con piezas, sintético, vacío, viva
   assert.deepEqual(plan.omitidas.map(o => [o.ref, o.motivo]).sort(), [["kv:default:alcampo-mostoles", "borrador_vacio"], ["kv:default:alcampo-parla", "sintetico"]]);
   assert.deepEqual(plan.huerfanos, []);
   assert.equal(plan.vivas, "leidas");
-  assert.deepEqual(plan.resumen, { escrituras: 9, omitidas: 2, huerfanos: 0, circuito: { crear: 1, actualizar: 0, igual: 0, omitir: 0 },
-    playlist: { crear: 4, actualizar: 0, igual: 0, omitir: 0 }, asignacion: { crear: 4, actualizar: 0, igual: 0, omitir: 0 } });
+  assert.deepEqual(plan.resumen, { escrituras: 9, omitidas: 2, huerfanos: 0, circuito: { crear: 1, actualizar: 0, archivar: 0, igual: 0, omitir: 0 },
+    playlist: { crear: 4, actualizar: 0, archivar: 0, igual: 0, omitir: 0 }, asignacion: { crear: 4, actualizar: 0, archivar: 0, igual: 0, omitir: 0 } });
   // La traducción es la de legado.js: directa · sustituye para el borrador; fusiona con peso N, N-1… para las vivas.
   const a = id => operacion(plan, "asignacion", id).datos;
   assert.deepEqual([a("defecto-alcampo-alcala").ref_externa, a("defecto-alcampo-alcala").directa, a("defecto-alcampo-alcala").mezcla, a("defecto-alcampo-alcala").destino],
@@ -189,6 +189,14 @@ test("no pisa lo ajeno: un id ocupado por algo que no salió del legado se omite
   const dobles = traducir({ borradores: [{ pantalla: "alcampo-alcala", valor: borrador("x", ["a"]) }, { pantalla: "alcampo--alcala", valor: borrador("x", ["b"]) }] });
   assert.deepEqual([dobles.unidades.length, dobles.omitidas.map(o => o.motivo)], [1, ["ref_duplicada"]]);
   // Un borrador ilegible o sin piezas válidas se omite con el motivo; los demás siguen.
+  // Archivar: nunca por `sintetico` (hoy playlist.js emitiría ese borrador), y nunca lo ajeno.
+  const filaAs = (id, ref, extra = {}) => ({ id, playlist_id: id, destino: { all: ["pantalla:" + id], any: [] }, ref_externa: ref, estado: "activa", rev: 1,
+    creado_por: "importador:x", actualizado_por: "importador:x", ...extra });
+  const conArchivo = planificar({ archivar: true, borradores: [{ pantalla: "a-1", valor: borrador("a-1", ["x"], { synthetic: true }) }, { pantalla: "a-2", valor: borrador("a-2", []) }],
+    d1: { asignaciones: [filaAs("defecto-a-1", "kv:default:a-1"), filaAs("defecto-a-2", "kv:default:a-2"), filaAs("otra", "kv:default:a-3", { creado_por: EDITORA })] }, pantallas: ["a-1", "a-2"] });
+  assert.deepEqual(conArchivo.operaciones.map(o => [o.id, o.accion, o.motivo]), [["defecto-a-2", "archivar", "borrador_vacio"], ["otra", "omitir", "ajena"]]);
+  assert.deepEqual(conArchivo.huerfanos.map(h => [h.id, h.motivo]), [["defecto-a-1", "sintetico"], ["defecto-a-2", "borrador_vacio"], ["otra", "sin_clave_kv"]]);
+  assert.deepEqual(operacion(conArchivo, "asignacion", "defecto-a-2").datos.estado, "archivada");
   const raros = traducir({ borradores: [{ pantalla: "a-1", valor: "{roto" }, { pantalla: "a-2", valor: JSON.stringify({ items: [{ asset: "http://inseguro" }] }) }, { pantalla: "a-3", valor: null }] });
   assert.deepEqual(raros.omitidas.map(o => [o.ref, o.motivo, o.error]), [["kv:default:a-1", "ilegible", undefined], ["kv:default:a-2", "invalido", "pieza_invalida"], ["kv:default:a-3", "sin_valor", undefined]]);
 });
@@ -217,7 +225,7 @@ prueba("aplicar: escribe por almacen.js como importador:<email>, y la segunda pa
   const r = await importar(env, "aplicar=1");
   assert.equal(r.status, 200);
   assert.deepEqual([r.body.ok, r.body.modo, r.body.version_antes, r.body.version, r.body.aplicadas, r.body.fallidas, r.body.pendientes, r.body.completo],
-    [true, "aplicado", 0, 9, { crear: 9, actualizar: 0 }, [], 0, true]);
+    [true, "aplicado", 0, 9, { crear: 9, actualizar: 0, archivar: 0 }, [], 0, true]);
   assert.ok(r.body.muestra.every(o => o.resultado && o.resultado.status === 201 && o.resultado.rev === 1));
   assert.deepEqual([await cuenta(db, "playlist"), await cuenta(db, "asignacion"), await cuenta(db, "circuito")], [4, 4, 1]);
   const auditoria = await A.auditoria(db);
@@ -247,7 +255,7 @@ prueba("un cambio en el legado: actualizar sólo lo que cambió, con la rev de l
     motivo: "contenido_cambiado", rev: 1, cambios: ["items", "duracion_s"] });
   assert.equal(operacion(sim.body, "asignacion", "defecto-alcampo-alcala").accion, "igual");
   const ap = await importar(env, "aplicar=1");
-  assert.deepEqual([ap.body.aplicadas, ap.body.muestra[0].resultado, ap.body.version], [{ crear: 0, actualizar: 1 }, { status: 200, rev: 2 }, 10]);
+  assert.deepEqual([ap.body.aplicadas, ap.body.muestra[0].resultado, ap.body.version], [{ crear: 0, actualizar: 1, archivar: 0 }, { status: 200, rev: 2 }, 10]);
   assert.deepEqual((await A.leerPlaylist(db, "defecto-alcampo-alcala")).items.map(i => i.stockId), ["m1", "m2", "m3"]);
   // Lo que reescribió el propio importador sigue siendo suyo: otro cambio en el legado se aplica sin más (rev 2 → 3).
   kv.store.set(DRAFT_PREFIX + "alcampo-alcala", borrador("alcampo-alcala", ["m1"]));
@@ -275,7 +283,7 @@ prueba("lo editado fuera del importador no se pisa (omitir · editado_fuera) sal
   // Por defecto no se tocan, ni al simular ni al aplicar: se omiten con quién las editó.
   for (const query of ["", "aplicar=1"]) {
     const r = await importar(env, query);
-    assert.deepEqual([r.body.opciones, r.body.resumen.escrituras, r.body.resumen.playlist.omitir, r.body.resumen.asignacion.omitir], [{ pisar: false }, 0, 1, 1], query);
+    assert.deepEqual([r.body.opciones, r.body.resumen.escrituras, r.body.resumen.playlist.omitir, r.body.resumen.asignacion.omitir], [{ pisar: false, archivar: false }, 0, 1, 1], query);
     assert.deepEqual(editadas(r).map(o => [o.entidad, o.id, o.accion, o.motivo, o.actualizado_por, o.rev, o.cambios, "pisa" in o]), [
       ["asignacion", "viva-ofertas-madrid", "omitir", "editado_fuera", EDITORA, 2, ["peso"], false],
       ["playlist", "defecto-alcampo-alcala", "omitir", "editado_fuera", EDITORA, 2, ["nombre"], false]], query);
@@ -288,7 +296,7 @@ prueba("lo editado fuera del importador no se pisa (omitir · editado_fuera) sal
   assert.ok(d.sql.slice(antes).every(q => /^\s*select\b/i.test(q)), "la simulación con pisar tampoco escribe");
   assert.equal(await version(db), v0);
   const ap = await importar(env, "pisar=1&aplicar=1");
-  assert.deepEqual([ap.body.opciones, ap.body.aplicadas, editadas(ap).map(o => o.resultado.rev)], [{ pisar: true }, { crear: 0, actualizar: 2 }, [3, 3]]);
+  assert.deepEqual([ap.body.opciones, ap.body.aplicadas, editadas(ap).map(o => o.resultado.rev)], [{ pisar: true, archivar: false }, { crear: 0, actualizar: 2, archivar: 0 }, [3, 3]]);
   assert.deepEqual([(await A.leerPlaylist(db, "defecto-alcampo-alcala")).nombre, (await A.leerAsignacion(db, "viva-ofertas-madrid")).peso], ["Por defecto", 2]);
   // Ya las escribió el importador: la pasada siguiente, sin pisar, sale toda igual.
   const tras = await importar(env);
@@ -318,6 +326,59 @@ prueba("huérfanos: lo que ya no está en el KV se informa y no se borra", async
   assert.deepEqual({ playlist: await cuenta(db, "playlist"), asignacion: await cuenta(db, "asignacion"), circuito: await cuenta(db, "circuito") }, antes);
   assert.equal((await A.auditoria(db, { accion: "borrar" })).length, 0);
   assert.equal((await A.leerAsignacion(db, "viva-marca")).estado, "pausada", "ni se archiva: sólo se informa");
+});
+
+prueba("?archivar=1 archiva (nunca borra) sólo las asignaciones huérfanas del importador no editadas fuera; con ?pisar=1, también ésas", async () => {
+  const { db, d, kv, env } = await mundo(legadoMixto());
+  await importar(env, "aplicar=1");
+  const alta = cuerpo => onRequest({ request: new Request("https://admira.tv/api/programacion/asignaciones", { method: "POST",
+    headers: { Cookie: "__Host-atv_session=" + T.editora, "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) }), env });
+  // No son del importador: una que reclama una viva que no existe (con su ref) y una manual sin ref.
+  assert.equal((await alta({ id: "ajena", playlist_id: "viva-marca", destino: { all: ["todas"] }, ref_externa: "kv:viva:fantasma" })).status, 201);
+  assert.equal((await alta({ id: "manual", playlist_id: "viva-marca", destino: { all: ["todas"] } })).status, 201);
+  // El legado cambia: fuera la viva «Marca» y el circuito; alcalá se vacía; leganés desaparece y la editora lo retocó.
+  kv.store.set(LIVE_KEY, JSON.stringify({ ...LIVE, playlists: [VIVAS[0]], circuits: [] }));
+  kv.store.set(DRAFT_PREFIX + "alcampo-alcala", borrador("alcampo-alcala", []));
+  kv.store.delete(DRAFT_PREFIX + "alcampo-leganes");
+  assert.equal((await parche(env, "asignaciones/defecto-alcampo-leganes", { rev: 1, nombre: "Retocada" })).status, 200);
+  const huerfanas = r => r.body.muestra.filter(o => o.entidad === "asignacion" && o.id !== "viva-ofertas-madrid").map(o => [o.id, o.accion, o.motivo]);
+  const estados = async () => Object.fromEntries((await A.listarAsignaciones(db)).map(a => [a.id, a.estado]));
+  const v0 = await version(db), filas = { asignacion: await cuenta(db, "asignacion"), playlist: await cuenta(db, "playlist") };
+  // Sin la opción, como siempre: sólo se informan (y la viva que queda se reordena: peso 2 → 1).
+  const informe = await importar(env);
+  assert.deepEqual([informe.body.resumen.asignacion.archivar, informe.body.resumen.escrituras, informe.body.huerfanos.length], [0, 1, 8]);
+  // Con archivar=1, la simulación lo anuncia sin escribir: dos se archivan; la ajena y la retocada se omiten.
+  const antes = d.sql.length, sim = await importar(env, "archivar=1&muestra=50");
+  assert.deepEqual(sim.body.opciones, { pisar: false, archivar: true });
+  assert.deepEqual(huerfanas(sim), [["ajena", "omitir", "ajena"], ["viva-marca", "archivar", "viva_eliminada"],
+    ["defecto-alcampo-alcala", "archivar", "borrador_vacio"], ["defecto-alcampo-leganes", "omitir", "editado_fuera"]]);
+  assert.deepEqual([sim.body.resumen.asignacion.archivar, sim.body.resumen.escrituras], [2, 3]);
+  assert.equal(operacion(sim.body, "asignacion", "defecto-alcampo-leganes").actualizado_por, EDITORA);
+  assert.ok(d.sql.slice(antes).every(q => /^\s*select\b/i.test(q)), "la simulación con archivar no escribe");
+  assert.equal(await version(db), v0);
+  // Aplicar: archivadas, no borradas; las demás, intactas. Playlists y circuito sólo se informan.
+  const ap = await importar(env, "archivar=1&aplicar=1");
+  assert.deepEqual(ap.body.aplicadas, { crear: 0, actualizar: 1, archivar: 2 });
+  assert.deepEqual(await estados(), { ajena: "activa", "defecto-alcampo-alcala": "archivada", "defecto-alcampo-leganes": "activa", manual: "activa",
+    "viva-marca": "archivada", "viva-ofertas-madrid": "activa" });
+  assert.deepEqual({ asignacion: await cuenta(db, "asignacion"), playlist: await cuenta(db, "playlist") }, filas);
+  assert.equal(await cuenta(db, "circuito"), 1);
+  assert.equal((await A.auditoria(db, { accion: "borrar" })).length, 0);
+  assert.deepEqual((await A.historial(db, "asignacion", "viva-marca"))[0].motivo, "importador E5 · kv:viva:marca · archivada: viva_eliminada");
+  // Segunda pasada: nada que escribir (las archivadas salen igual · ya_archivada).
+  const otra = await importar(env, "archivar=1&aplicar=1&muestra=50");
+  assert.deepEqual([otra.body.resumen.escrituras, huerfanas(otra).filter(h => h[1] === "igual").map(h => h[2])], [0, ["ya_archivada", "ya_archivada"]]);
+  // Con pisar=1 se archiva también la retocada (con el aviso), pero la ajena nunca: no es del importador.
+  const pisando = await importar(env, "archivar=1&pisar=1&aplicar=1&muestra=50");
+  assert.deepEqual([pisando.body.aplicadas.archivar, operacion(pisando.body, "asignacion", "defecto-alcampo-leganes").pisa, operacion(pisando.body, "asignacion", "ajena").motivo],
+    [1, EDITORA, "ajena"]);
+  assert.deepEqual([(await estados())["defecto-alcampo-leganes"], (await estados()).ajena, (await estados()).manual], ["archivada", "activa", "activa"]);
+  assert.equal((await importar(env, "archivar=1&pisar=1")).body.resumen.escrituras, 0, "y la pasada siguiente, toda igual");
+  // Si la viva vuelve al KV, su asignación archivada se reactiva (es del importador): el legado sigue mandando.
+  kv.store.set(LIVE_KEY, JSON.stringify(LIVE));
+  const vuelve = await importar(env, "aplicar=1&muestra=50");
+  assert.deepEqual([operacion(vuelve.body, "asignacion", "viva-marca").accion, operacion(vuelve.body, "asignacion", "viva-marca").cambios], ["actualizar", ["estado"]]);
+  assert.equal((await estados())["viva-marca"], "pausada");
 });
 
 prueba("acceso: sólo la sesión del portal con digitalsignage-player; ni el visor, ni la clave de servicio", async () => {

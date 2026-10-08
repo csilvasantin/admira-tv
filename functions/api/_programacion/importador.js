@@ -25,7 +25,11 @@
 //   · viva_eliminada / circuito_eliminado: con el documento de vivas en el tramo;
 //   · borrador_vacio, sintetico, ilegible, sin_valor: el borrador del tramo existe, pero hoy no manda nada;
 //   · sin_clave_kv: en el último tramo, con la lista completa de pantallas que tienen borrador en el KV.
-// Los borradores sintéticos (synthetic: true) no se importan: los compone playlist.js en cada consulta, no se guardan.
+// Con la opción `archivar`, las ASIGNACIONES huérfanas se archivan (estado «archivada»: dejan de emitirse y siguen en la
+// D1 con su historial): `archivar`, con el motivo del huérfano. Sólo las del importador —con ref_externa «kv:…» y
+// creadas por él; las demás, `omitir` · `ajena`— y no editadas fuera, salvo con `pisar`. Las playlists no tienen
+// estado y los circuitos no tienen asignaciones propias (se usan por la etiqueta circuito:<id> en los destinos): ésos
+// sólo se informan. Tampoco se archiva por `sintetico`: hoy playlist.js emitiría ese borrador como lista a mano.
 import { screenTag } from "../_playlist-live.js";
 import { COLUMNAS, limpiarCircuito } from "./almacen.js";
 import { circuitoDesdeLegado, desdeBorrador, desdeViva, vivasDe } from "./legado.js";
@@ -42,6 +46,9 @@ const idDefecto = pantalla => slugId("defecto-" + pantalla);
 const ENTIDADES = ["circuito", "playlist", "asignacion"];
 const LIMPIAR = { playlist: limpiarPlaylist, asignacion: limpiarAsignacion, circuito: limpiarCircuito };
 
+// Las acciones que escriben, y los motivos de huérfano por los que una asignación se puede archivar.
+export const ESCRIBEN = new Set(["crear", "actualizar", "archivar"]);
+const ARCHIVABLES = new Set(["viva_eliminada", "borrador_vacio", "sin_clave_kv", "sin_valor", "ilegible"]);
 const deImportador = actor => String(actor || "").startsWith(ACTOR);
 const codigo = e => String((e && e.message) || e || "error");
 /** JSON con las claves ordenadas: dos contenidos iguales dan el mismo texto aunque se hayan escrito en otro orden. */
@@ -156,10 +163,11 @@ function operacion(entidad, ref, nuevo, fila, propia, pisar) {
  *   live, borradores: como en traducir() (o `traduccion` ya hecha);
  *   pantallas: sólo en el último tramo, TODAS las pantallas con clave de borrador en el KV (null si no se sabe);
  *   d1: {playlists, asignaciones, circuitos, legado: {playlists: [{id, origen}]}}, como lo da leerParaImportar();
- *   pisar: actualizar también lo editado fuera del importador (si no, `omitir` · `editado_fuera`).
+ *   pisar: actualizar también lo editado fuera del importador (si no, `omitir` · `editado_fuera`);
+ *   archivar: archivar las asignaciones huérfanas del importador (si no, sólo se informan).
  * → {operaciones (en orden de aplicación, con `datos` para escribir), omitidas, huerfanos, vivas, resumen}.
  */
-export function planificar({ live = undefined, borradores = [], pantallas = null, d1 = {}, traduccion = null, pisar = false } = {}) {
+export function planificar({ live = undefined, borradores = [], pantallas = null, d1 = {}, traduccion = null, pisar = false, archivar = false } = {}) {
   const t = traduccion || traducir({ live, borradores });
   const asignaciones = Array.isArray(d1.asignaciones) ? d1.asignaciones : [], circuitos = Array.isArray(d1.circuitos) ? d1.circuitos : [];
   const legadoPl = (d1.legado && Array.isArray(d1.legado.playlists) ? d1.legado.playlists : []).filter(p => String(p.origen || "").startsWith(ORIGEN_LEGADO));
@@ -178,7 +186,8 @@ export function planificar({ live = undefined, borradores = [], pantallas = null
     const filaPl = plPorId.get(u.playlist.id);
     const opPl = operacion("playlist", u.ref, u.playlist, filaPl, !!filaPl && String(filaPl.origen || "").startsWith(ORIGEN_LEGADO), pisar);
     const deRef = porRef.get(u.ref), filaAs = deRef || asigPorId.get(u.asignacion.id);
-    let opAs = operacion("asignacion", u.ref, u.asignacion, filaAs, !!deRef, pisar);
+    // La asignación es del importador si lleva su ref_externa y la creó él (otra con esa ref no se pisa ni con `pisar`).
+    let opAs = operacion("asignacion", u.ref, u.asignacion, filaAs, !!deRef && deImportador(deRef.creado_por), pisar);
     // Si la playlist es de otro, la asignación tampoco se escribe: apuntaría a la ajena. (Una playlist del legado editada
     // fuera sigue siendo la suya: su asignación se escribe igual.)
     if (opPl.motivo === "id_ocupado" && (opAs.accion === "crear" || opAs.accion === "actualizar")) {
@@ -219,9 +228,23 @@ export function planificar({ live = undefined, borradores = [], pantallas = null
     for (const p of legadoPl) if (p.origen === "legado:kv-default" && !suyas.has(p.id)) anota("playlist", p, null, "sin_clave_kv");
   }
 
+  if (archivar) {
+    for (const h of huerfanos) {
+      if (h.entidad !== "asignacion" || !ARCHIVABLES.has(h.motivo)) continue;
+      const fila = asigPorId.get(h.id), base = { entidad: "asignacion", id: fila.id, ref: h.ref, rev: Number(fila.rev) };
+      if (fila.estado === "archivada") { operaciones.push({ ...base, accion: "igual", motivo: "ya_archivada" }); continue; }
+      if (!deImportador(fila.creado_por)) { operaciones.push({ ...base, accion: "omitir", motivo: "ajena", actualizado_por: fila.actualizado_por || "" }); continue; }
+      const fuera = editadaFuera(fila);
+      if (fuera && !pisar) { operaciones.push({ ...base, accion: "omitir", motivo: "editado_fuera", cambios: ["estado"], actualizado_por: fila.actualizado_por || "" }); continue; }
+      const op = { ...base, accion: "archivar", motivo: h.motivo, cambios: ["estado"], datos: { ...fila, estado: "archivada" } };
+      if (fuera) op.pisa = fila.actualizado_por || "";
+      operaciones.push(op);
+    }
+  }
+
   const resumen = { escrituras: 0, omitidas: t.omitidas.length, huerfanos: huerfanos.length };
-  for (const e of ENTIDADES) resumen[e] = { crear: 0, actualizar: 0, igual: 0, omitir: 0 };
-  for (const op of operaciones) { resumen[op.entidad][op.accion] += 1; if (op.accion === "crear" || op.accion === "actualizar") resumen.escrituras += 1; }
+  for (const e of ENTIDADES) resumen[e] = { crear: 0, actualizar: 0, archivar: 0, igual: 0, omitir: 0 };
+  for (const op of operaciones) { resumen[op.entidad][op.accion] += 1; if (ESCRIBEN.has(op.accion)) resumen.escrituras += 1; }
   return { operaciones, omitidas: t.omitidas, huerfanos, vivas: t.vivas, resumen };
 }
 
