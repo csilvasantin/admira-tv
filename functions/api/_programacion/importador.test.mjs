@@ -237,7 +237,7 @@ prueba("aplicar: escribe por almacen.js como importador:<email>, y la segunda pa
   assert.deepEqual(kv.escrituras, [], "el KV nunca se escribe");
 });
 
-prueba("un cambio en el legado: actualizar sólo lo que cambió, con la rev de la fila; si alguien lo editó, se avisa en `pisa`", async () => {
+prueba("un cambio en el legado: actualizar sólo lo que cambió, con la rev de la fila", async () => {
   const { db, kv, env } = await mundo(legadoMixto());
   await importar(env, "aplicar=1");
   kv.store.set(DRAFT_PREFIX + "alcampo-alcala", borrador("alcampo-alcala", ["m1", "m2", "m3"]));
@@ -249,19 +249,53 @@ prueba("un cambio en el legado: actualizar sólo lo que cambió, con la rev de l
   const ap = await importar(env, "aplicar=1");
   assert.deepEqual([ap.body.aplicadas, ap.body.muestra[0].resultado, ap.body.version], [{ crear: 0, actualizar: 1 }, { status: 200, rev: 2 }, 10]);
   assert.deepEqual((await A.leerPlaylist(db, "defecto-alcampo-alcala")).items.map(i => i.stockId), ["m1", "m2", "m3"]);
-  // Alguien la edita por la API de E4; el legado vuelve a cambiar: se actualiza con su rev (3) y se dice a quién se pisa.
-  assert.equal((await onRequest({ request: new Request("https://admira.tv/api/programacion/playlists/defecto-alcampo-alcala", { method: "PATCH",
-    headers: { Cookie: "__Host-atv_session=" + T.editora, "Content-Type": "application/json" }, body: JSON.stringify({ rev: 2, nombre: "Retocada" }) }), env })).status, 200);
+  // Lo que reescribió el propio importador sigue siendo suyo: otro cambio en el legado se aplica sin más (rev 2 → 3).
   kv.store.set(DRAFT_PREFIX + "alcampo-alcala", borrador("alcampo-alcala", ["m1"]));
-  const otra = await importar(env);
-  assert.deepEqual([otra.body.muestra[0].accion, otra.body.muestra[0].rev, otra.body.muestra[0].pisa, otra.body.muestra[0].cambios], ["actualizar", 3, EDITORA, ["nombre", "items", "duracion_s"]]);
-  assert.equal((await importar(env, "aplicar=1")).body.muestra[0].resultado.rev, 4);
+  const otra = await importar(env, "aplicar=1");
+  assert.deepEqual([otra.body.muestra[0].accion, otra.body.muestra[0].rev, otra.body.muestra[0].cambios, otra.body.muestra[0].resultado.rev], ["actualizar", 2, ["items", "duracion_s"], 3]);
   // Reordenar las vivas cambia su peso (el orden K conserva el del documento): se actualizan las asignaciones.
   kv.store.set(LIVE_KEY, JSON.stringify({ ...LIVE, playlists: [VIVAS[1], VIVAS[0]] }));
   const orden = await importar(env, "aplicar=1");
   assert.deepEqual(orden.body.muestra.filter(o => o.accion !== "igual").map(o => [o.id, o.rev, o.cambios, o.resultado.rev]),
     [["viva-marca", 1, ["peso"], 2], ["viva-ofertas-madrid", 1, ["peso"], 2]]);
   assert.deepEqual([(await A.leerAsignacion(db, "viva-marca")).peso, (await A.leerAsignacion(db, "viva-ofertas-madrid")).peso], [2, 1]);
+});
+
+/** PATCH por la API de E4 con la sesión de la editora: «editar fuera» del importador. */
+const parche = (env, ruta, cuerpo) => onRequest({ request: new Request("https://admira.tv/api/programacion/" + ruta, { method: "PATCH",
+  headers: { Cookie: "__Host-atv_session=" + T.editora, "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) }), env });
+
+prueba("lo editado fuera del importador no se pisa (omitir · editado_fuera) salvo con ?pisar=1, al simular y al aplicar", async () => {
+  const { db, d, env } = await mundo(legadoMixto());
+  await importar(env, "aplicar=1");
+  // La editora retoca por la API de E4 la playlist importada de alcalá y la asignación de la viva «Ofertas Madrid».
+  assert.equal((await parche(env, "playlists/defecto-alcampo-alcala", { rev: 1, nombre: "Retocada" })).status, 200);
+  assert.equal((await parche(env, "asignaciones/viva-ofertas-madrid", { rev: 1, peso: 7 })).status, 200);
+  const v0 = await version(db), editadas = r => r.body.muestra.filter(o => o.accion !== "igual");
+  // Por defecto no se tocan, ni al simular ni al aplicar: se omiten con quién las editó.
+  for (const query of ["", "aplicar=1"]) {
+    const r = await importar(env, query);
+    assert.deepEqual([r.body.opciones, r.body.resumen.escrituras, r.body.resumen.playlist.omitir, r.body.resumen.asignacion.omitir], [{ pisar: false }, 0, 1, 1], query);
+    assert.deepEqual(editadas(r).map(o => [o.entidad, o.id, o.accion, o.motivo, o.actualizado_por, o.rev, o.cambios, "pisa" in o]), [
+      ["asignacion", "viva-ofertas-madrid", "omitir", "editado_fuera", EDITORA, 2, ["peso"], false],
+      ["playlist", "defecto-alcampo-alcala", "omitir", "editado_fuera", EDITORA, 2, ["nombre"], false]], query);
+  }
+  assert.equal(await version(db), v0);
+  assert.equal((await A.leerPlaylist(db, "defecto-alcampo-alcala")).nombre, "Retocada");
+  // Con ?pisar=1, la simulación lo anuncia (sin escribir) y la aplicación lo pisa, con el aviso `pisa`.
+  const antes = d.sql.length, sim = await importar(env, "pisar=1");
+  assert.deepEqual(editadas(sim).map(o => [o.id, o.accion, o.motivo, o.pisa, o.rev]), [["viva-ofertas-madrid", "actualizar", "contenido_cambiado", EDITORA, 2], ["defecto-alcampo-alcala", "actualizar", "contenido_cambiado", EDITORA, 2]]);
+  assert.ok(d.sql.slice(antes).every(q => /^\s*select\b/i.test(q)), "la simulación con pisar tampoco escribe");
+  assert.equal(await version(db), v0);
+  const ap = await importar(env, "pisar=1&aplicar=1");
+  assert.deepEqual([ap.body.opciones, ap.body.aplicadas, editadas(ap).map(o => o.resultado.rev)], [{ pisar: true }, { crear: 0, actualizar: 2 }, [3, 3]]);
+  assert.deepEqual([(await A.leerPlaylist(db, "defecto-alcampo-alcala")).nombre, (await A.leerAsignacion(db, "viva-ofertas-madrid")).peso], ["Por defecto", 2]);
+  // Ya las escribió el importador: la pasada siguiente, sin pisar, sale toda igual.
+  const tras = await importar(env);
+  assert.deepEqual([tras.body.resumen.escrituras, tras.body.resumen.playlist.omitir + tras.body.resumen.asignacion.omitir], [0, 0]);
+  // Lo idéntico no cuenta como editado: si la edición coincide con el legado, sale igual aunque la hiciera otro.
+  assert.equal((await parche(env, "playlists/viva-marca", { rev: 1, nombre: "Marca" })).status, 200);
+  assert.equal(operacion((await importar(env, "muestra=50")).body, "playlist", "viva-marca").accion, "igual");
 });
 
 prueba("huérfanos: lo que ya no está en el KV se informa y no se borra", async () => {

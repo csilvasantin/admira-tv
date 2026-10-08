@@ -1,4 +1,4 @@
-// POST /api/programacion/importar[?aplicar=1][&cursor=…][&limite=N][&muestra=N]
+// POST /api/programacion/importar[?aplicar=1][&pisar=1][&cursor=…][&limite=N][&muestra=N]
 //
 // IMPORTADOR DEL LEGADO (E5 · modelo único de playlists, docs/playlists-modelo-unico.md). Lo enruta la API de E4
 // (functions/api/programacion/[recurso]/[[resto]].js); el plan lo hace importador.js, que es puro.
@@ -7,6 +7,8 @@
 //     operaciones, fuentes omitidas y huérfanos) sin escribir nada.
 //   · Con ?aplicar=1 lo ejecuta con almacen.js —cada escritura es su db.batch con bloqueo optimista, revisión,
 //     auditoría y meta.version + 1— y el actor de la auditoría es importador:<email>.
+//   · Lo importado que luego se editó por otro camino no se toca (`omitir` · `editado_fuera`) salvo con ?pisar=1. La
+//     simulación y la aplicación respetan las mismas opciones: lo que se simula es lo que se aplica.
 //
 // LEE EL KV (ACCESS), NUNCA LO ESCRIBE: sólo get y list. El documento de vivas (admira-tv:playlist:live:v1, con sus
 // circuitos) va en el primer tramo; los borradores «Por defecto» (admira-tv:playlist:default:v1:<pantalla>) se leen
@@ -96,7 +98,7 @@ export async function importar({ request, env = {} }) {
   const kv = env.ACCESS;
   if (!kv || typeof kv.get !== "function" || typeof kv.list !== "function") return json({ ok: false, error: "kv_no_disponible" }, 503);
 
-  const aplicar = q.get("aplicar") === "1", tramo = deCursor(q.get("cursor"));
+  const aplicar = q.get("aplicar") === "1", opciones = { pisar: q.get("pisar") === "1" }, tramo = deCursor(q.get("cursor"));
   if (!tramo) return json({ ok: false, error: "cursor_invalido" }, 400);
   const limite = entero(q.get("limite"), 1, MAX_LIMITE, LIMITE_DEFECTO), muestra = entero(q.get("muestra"), 0, MAX_MUESTRA, MUESTRA_DEFECTO);
 
@@ -114,14 +116,14 @@ export async function importar({ request, env = {} }) {
   try {
     const traduccion = traducir({ live: leido.live, borradores: leido.borradores });
     const d1 = await A.leerParaImportar(db, idsNecesarios(traduccion));
-    plan = planificar({ traduccion, pantallas, d1 });
+    plan = planificar({ traduccion, pantallas, d1, ...opciones });
   } catch (e) {
     console.error("programacion: importar lectura", e);
     return json({ ok: false, error: "programacion_lectura_fallida" }, 503);
   }
 
   const cuerpo = {
-    ok: true, modo: aplicar ? "aplicado" : "simulacion", version: meta.version,
+    ok: true, modo: aplicar ? "aplicado" : "simulacion", opciones, version: meta.version,
     tramo: { vivas: tramo.vivas ? plan.vivas : "fuera_del_tramo", borradores: leido.borradores.length, continuacion: !!tramo.kv },
     resumen: plan.resumen,
   };

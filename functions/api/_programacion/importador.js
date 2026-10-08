@@ -16,8 +16,10 @@
 //
 // NO PISA LO AJENO. Una fila con el mismo id que no salió del legado (una playlist sin origen «legado:…», un circuito
 // que no creó el importador, una asignación con otra ref_externa) y distinta de lo traducido se `omite` con motivo
-// `id_ocupado`; su asignación, con `playlist_omitida`. Lo que sí salió del legado se actualiza aunque alguien lo haya
-// editado después por la API: la operación lo avisa en `pisa` (el último actor) para revisarlo en la simulación.
+// `id_ocupado`; su asignación, con `playlist_omitida`.
+// NI LO EDITADO FUERA. Lo que salió del legado pero se cambió después por otro camino (su `actualizado_por` no es el
+// importador: la API de E4, por ejemplo) tampoco se actualiza: `omitir` · `editado_fuera`, con `actualizado_por`.
+// Sólo con la opción `pisar` se actualiza igualmente, y la operación lo avisa en `pisa` (el último actor).
 //
 // NUNCA BORRA. Lo que está en la D1 y ya no en el KV se informa en `huerfanos`:
 //   · viva_eliminada / circuito_eliminado: con el documento de vivas en el tramo;
@@ -133,14 +135,19 @@ export function idsNecesarios(traduccion) {
 }
 
 // ── Plan ────────────────────────────────────────────────────────────────────────────────────────────────────────
-function operacion(entidad, ref, nuevo, fila, propia) {
+/** ¿La última escritura de la fila no la hizo el importador? (la API de E4, otro proceso…) */
+export const editadaFuera = fila => !deImportador(fila && fila.actualizado_por);
+
+function operacion(entidad, ref, nuevo, fila, propia, pisar) {
   const base = { entidad, id: nuevo.id, ref };
   if (!fila) return { ...base, accion: "crear", motivo: "nueva", datos: nuevo };
   const cambios = diferencias(entidad, contenido(entidad, nuevo), fila), id = fila.id, rev = Number(fila.rev);
   if (!cambios.length) return { ...base, id, accion: "igual", motivo: "identica", rev };
   if (!propia) return { ...base, id, accion: "omitir", motivo: "id_ocupado", rev, cambios, actualizado_por: fila.actualizado_por || "" };
+  const fuera = editadaFuera(fila);
+  if (fuera && !pisar) return { ...base, id, accion: "omitir", motivo: "editado_fuera", rev, cambios, actualizado_por: fila.actualizado_por || "" };
   const op = { ...base, id, accion: "actualizar", motivo: "contenido_cambiado", rev, cambios, datos: { ...nuevo, id } };
-  if (fila.actualizado_por && !deImportador(fila.actualizado_por)) op.pisa = fila.actualizado_por;
+  if (fuera) op.pisa = fila.actualizado_por || "";
   return op;
 }
 
@@ -148,10 +155,11 @@ function operacion(entidad, ref, nuevo, fila, propia) {
  * El plan de un tramo.
  *   live, borradores: como en traducir() (o `traduccion` ya hecha);
  *   pantallas: sólo en el último tramo, TODAS las pantallas con clave de borrador en el KV (null si no se sabe);
- *   d1: {playlists, asignaciones, circuitos, legado: {playlists: [{id, origen}]}}, como lo da leerParaImportar().
+ *   d1: {playlists, asignaciones, circuitos, legado: {playlists: [{id, origen}]}}, como lo da leerParaImportar();
+ *   pisar: actualizar también lo editado fuera del importador (si no, `omitir` · `editado_fuera`).
  * → {operaciones (en orden de aplicación, con `datos` para escribir), omitidas, huerfanos, vivas, resumen}.
  */
-export function planificar({ live = undefined, borradores = [], pantallas = null, d1 = {}, traduccion = null } = {}) {
+export function planificar({ live = undefined, borradores = [], pantallas = null, d1 = {}, traduccion = null, pisar = false } = {}) {
   const t = traduccion || traducir({ live, borradores });
   const asignaciones = Array.isArray(d1.asignaciones) ? d1.asignaciones : [], circuitos = Array.isArray(d1.circuitos) ? d1.circuitos : [];
   const legadoPl = (d1.legado && Array.isArray(d1.legado.playlists) ? d1.legado.playlists : []).filter(p => String(p.origen || "").startsWith(ORIGEN_LEGADO));
@@ -164,15 +172,16 @@ export function planificar({ live = undefined, borradores = [], pantallas = null
   for (const u of t.unidades) {
     if (u.circuito) {
       const fila = circPorId.get(u.circuito.id);
-      operaciones.push(operacion("circuito", u.ref, u.circuito, fila, !!fila && deImportador(fila.creado_por)));
+      operaciones.push(operacion("circuito", u.ref, u.circuito, fila, !!fila && deImportador(fila.creado_por), pisar));
       continue;
     }
     const filaPl = plPorId.get(u.playlist.id);
-    const opPl = operacion("playlist", u.ref, u.playlist, filaPl, !!filaPl && String(filaPl.origen || "").startsWith(ORIGEN_LEGADO));
+    const opPl = operacion("playlist", u.ref, u.playlist, filaPl, !!filaPl && String(filaPl.origen || "").startsWith(ORIGEN_LEGADO), pisar);
     const deRef = porRef.get(u.ref), filaAs = deRef || asigPorId.get(u.asignacion.id);
-    let opAs = operacion("asignacion", u.ref, u.asignacion, filaAs, !!deRef);
-    // Sin su playlist, la asignación tampoco se escribe: apuntaría a la de otro.
-    if (opPl.accion === "omitir" && (opAs.accion === "crear" || opAs.accion === "actualizar")) {
+    let opAs = operacion("asignacion", u.ref, u.asignacion, filaAs, !!deRef, pisar);
+    // Si la playlist es de otro, la asignación tampoco se escribe: apuntaría a la ajena. (Una playlist del legado editada
+    // fuera sigue siendo la suya: su asignación se escribe igual.)
+    if (opPl.motivo === "id_ocupado" && (opAs.accion === "crear" || opAs.accion === "actualizar")) {
       const { datos, pisa, ...resto } = opAs;
       opAs = { ...resto, accion: "omitir", motivo: "playlist_omitida" };
     }
