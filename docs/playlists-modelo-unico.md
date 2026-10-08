@@ -1,7 +1,7 @@
 # Modelo único de playlists de admira.tv
 
 Diseño aprobado por Carlos el 8-oct-2026. Este documento recoge el diseño, las tres decisiones de Carlos, lo que hacen las
-entregas E1, E2 y E3, en qué se aparta la implementación del diseño y el plan completo de entregas.
+entregas E1 a E4, en qué se aparta la implementación del diseño y el plan completo de entregas.
 
 ## Por qué
 
@@ -95,7 +95,7 @@ Las tres son las opciones recomendadas.
 | `asignacion`, `asignacion_revision` | Entidad, con `inicio_utc`/`fin_utc` precalculados, y sus revisiones. |
 | `asignacion_destino` | Índice invertido etiqueta → asignación (filtro previo; la comprobación exacta la hace el resolver). |
 | `circuito` | Circuitos definidos, que hoy viven dentro del documento de vivas. |
-| `clave_servicio` | Claves de escrituras servidor a servidor. Sólo se guarda el hash SHA-256; el valor vive en `admira-vault`. |
+| `clave_servicio` | Claves de escrituras servidor a servidor. Sólo se guarda el hash SHA-256; el valor vive en `admira-vault`. **E4 todavía no la usa**: la clave de Pixeria es un secreto de Pages (desviación 22). |
 | `auditoria` | Una fila por escritura aceptada, con la `version` resultante. |
 | `sombra` | Comparación entre el legado y el motor nuevo, por pantalla. |
 
@@ -265,6 +265,89 @@ Después va todo lo del resolver: `instante`, `local`, `capa`, `exacta`, `nombre
 }
 ```
 
+## API de escritura (E4)
+
+`/api/programacion/<recurso>[/<id>]`, `/api/programacion/historial/<tipo>/<id>` y `/api/programacion/auditoria`, en
+`functions/api/programacion/[recurso]/[[resto]].js`. El acceso está en `functions/api/_programacion/acceso.js`. Todo pasa
+por `almacen.js` (E1), así que cada escritura aceptada es un solo `db.batch` con bloqueo optimista, revisión, auditoría
+y `meta.version + 1`: la memoria de `GET /api/programacion` se invalida sola en la consulta siguiente. **Todavía no la
+consume nadie**: los editores llegan en E10 y E11, y el importador (E5) escribe con `almacen.js` directamente.
+
+**Por qué `[recurso]/[[resto]]` y no `[[ruta]]`.** En Pages, un comodín `[[ruta]]` también casa con la base
+(`/api/programacion`) y el router prueba las rutas por número de tramos, así que le ganaría a `functions/api/programacion.js`
+(comprobado en el bundle de `wrangler pages functions build`). Con `[recurso]` delante hace falta al menos un tramo:
+`GET /api/programacion?screen=` sigue yendo a E3.
+
+### Rutas
+
+`<recurso>` es `playlists`, `asignaciones` o `circuitos`. En `historial/<tipo>` y en `?entidad=` vale el singular o el
+plural.
+
+| Método y ruta | Qué hace | Respuestas |
+|---|---|---|
+| `GET /<recurso>` | Lista. Filtros: `playlists?proyecto=&limite=` (500 como mucho) · `asignaciones?playlist_id=&estado=&limite=` (1000) · `circuitos` (todos). | 200 `{ok, version, <recurso>: […]}` · 400 `estado_invalido` |
+| `POST /<recurso>` | Crea. Sin `id`, sale del nombre (playlists y circuitos) o es `asg-xxxxxxxx` (asignaciones). | 201 `{ok, <entidad>, version}` con `Location` · 409 `ya_existe` (con `actual`) · 422 |
+| `GET /<recurso>/<id>` | Lee una. | 200 `{ok, version, <entidad>}` · 404 `no_existe` |
+| `PUT /<recurso>/<id>` | La **sustituye entera**: lo que no llega vuelve a su valor por defecto. Exige `rev`. | 200 `{ok, <entidad>, version}` · 404 · 409 `revision_conflict` (con `actual`) · 422 · 428 `rev_requerida` |
+| `PATCH /<recurso>/<id>` | Cambia **sólo los campos que llegan**, sobre la fila actual (los de primer nivel se sustituyen enteros: `items`, `destino` o `franjas` van completos). Exige `rev`. | Las mismas que PUT |
+| `DELETE /<recurso>/<id>` | La borra de verdad. Exige `rev`. | 200 `{ok, borrado, version}` · 404 · 409 `revision_conflict` o `playlist_en_uso` · 428 |
+| `GET /historial/<tipo>/<id>` | Las revisiones (50 como mucho, de la última a la primera, con `datos`, `autor`, `en` y `motivo`) y cómo está ahora (`actual`, `null` si se borró). | 200 `{ok, version, tipo, id, actual, revisiones}` · 404 si no hay ni fila ni revisiones · 403 `solo_lectura` al visor |
+| `GET /auditoria` | Las escrituras aceptadas, de la más reciente a la más antigua. Filtros: `entidad`, `id`, `actor`, `accion` (`crear`, `actualizar`, `borrar`, `banderas`). Paginada: `limite` (50 por defecto, 200 como mucho) y `antes=<siguiente>`. | 200 `{ok, version, entradas, siguiente}` · 400 `entidad_invalida` / `antes_invalido` · 403 `solo_lectura` al visor |
+
+En todas:
+
+- 401 `unauthorized` sin sesión (ni clave, si es una escritura); 403 `forbidden` sin el permiso; 403 `solo_lectura` si
+  el visor escribe o pide historial o auditoría.
+- 503 `programacion_db_no_configurada` sin el binding y 503 `programacion_db_sin_esquema` sin la migración, como en E3.
+  Se comprueba **después** del acceso, así que sin sesión la respuesta es 401. Un fallo de la D1 es 503
+  `programacion_lectura_fallida` o `programacion_escritura_fallida` y queda en el log.
+- 404 `ruta_desconocida` y 405 con `Allow` para el método que no toca. Un `<id>` que no es un id posible
+  (`[a-z0-9-]`, 60 como mucho) es 404 `no_existe`.
+
+**La revisión (`rev`).** Va en el cuerpo (`{"rev": 3, …}`), en `?rev=3` o en `If-Match: "3"`. Sin ella, PUT, PATCH y
+DELETE responden 428 `rev_requerida` sin escribir (un PUT sin `rev` crearía). Si no es la de la fila, la respuesta es
+409 `revision_conflict` con la fila actual en `actual` y no queda rastro: ni revisión, ni auditoría, ni versión. En
+PATCH, la fusión se hace sobre la fila leída, pero el `UPDATE … WHERE rev = ?` del almacén sigue mandando: si otro
+escribe entretanto, también es 409.
+
+**El motivo.** `motivo` en el cuerpo (o `?motivo=` en DELETE) queda en la revisión y en la auditoría (300 caracteres).
+
+**Validación → 422.** Es la de `modelo.js` y `horario.js`. El almacén la devuelve como 400 y la ruta la traduce a 422
+con el campo culpable y un mensaje legible:
+
+```json
+{ "ok": false, "error": "fechas_invertidas", "campo": "fecha_hasta", "mensaje": "fecha_hasta es anterior a fecha_desde." }
+```
+
+`playlist_inexistente` (una asignación que apunta a una playlist que no existe) también es 422, con `campo: "playlist_id"`.
+Un cuerpo que no es un objeto JSON es 400 `json_invalido`, y uno de más de 2 millones de caracteres, 413.
+
+**Borrar.** Es un borrado de verdad, el que ya hacía `almacen.js`: la copia final queda en la auditoría
+(`detalle.datos`), y las revisiones de playlists y asignaciones se conservan hasta que se cree otra con el mismo id. Una
+playlist a la que apunta una asignación sin archivar no se borra (409 `playlist_en_uso`): primero se archiva la
+asignación (`PATCH {estado: "archivada", rev}`).
+
+### Acceso
+
+- **Leer** (todo GET): la sesión del portal con permiso `digitalsignage-player` (`readSession` + `accessFor`, de
+  `_auth-session.js`) o la sesión de lectura viva (el visor, con `lecturaStillLive`). Es la postura de `autorizar` de
+  `/api/emision` y de E3, sin la puerta pública de las pantallas virtuales, porque aquí no hay pantalla.
+- **El visor no ve quién escribió.** Historial y auditoría llevan los emails de los actores, así que al visor le
+  responden 403 `solo_lectura`, antes de tocar la D1. En las listas y lecturas sueltas de playlists, asignaciones y
+  circuitos le llegan las filas sin `creado_por` ni `actualizado_por`. La sesión del portal con `digitalsignage-player`
+  lo ve todo.
+- **Escribir** (POST, PUT, PATCH y DELETE):
+  - la sesión del portal con permiso `digitalsignage-player`. El actor de la auditoría, la revisión y
+    `creado_por`/`actualizado_por` es su email;
+  - o la **clave de servicio de Pixeria**, server to server, en `X-Programacion-Key: <clave>` (la recomendada) o en
+    `Authorization: Bearer <clave>`. Se compara en tiempo constante (los SHA-256 de las dos) con el secreto de Pages
+    `PROGRAMACION_SERVICE_KEY`. El actor es `servicio:<X-Actor>` (minúsculas, guiones) o `servicio:pixeria`. **Sin el
+    secreto puesto, la clave está apagada**: sólo vale la sesión, y quien llegue con clave recibe 401;
+  - una clave equivocada no cuenta: sin sesión es 401; con sesión, manda la sesión;
+  - la sesión de lectura no escribe: 403 `solo_lectura` (lo mismo que ya hace el guarda global de
+    `functions/_middleware.js`).
+- **Sin CORS.** La clave sólo se usa entre servidores; nunca en un navegador ni en la URL.
+
 ## Paridad con hoy
 
 `functions/api/_programacion/legado.js` traduce el legado del KV al modelo:
@@ -342,6 +425,30 @@ Desviaciones añadidas en E3:
     de player.
 21. **Errores 503 de más:** `programacion_db_sin_esquema` (la D1 existe sin la migración) y `programacion_lectura_fallida`.
 
+Desviaciones añadidas en E4:
+
+22. **La clave de Pixeria es un secreto de Pages (`PROGRAMACION_SERVICE_KEY`), no la tabla `clave_servicio`.** Es una
+    sola clave, con permiso de escritura sobre las tres entidades, sin ámbitos por proyecto. La tabla (hash y `ambitos`)
+    queda para cuando haya más de un cliente de servicio o haga falta acotar por proyecto.
+23. **La clave de servicio sólo abre escrituras.** Para leer hace falta sesión. Pixeria conoce la `rev` por la respuesta
+    de su propia escritura y, si se le adelanta alguien, por el `actual` del 409.
+24. **El visor lee las entidades, pero no ve los actores.** Igual que en `/api/emision` y E3, la sesión de lectura viva
+    lee playlists, asignaciones y circuitos, aunque sin `creado_por` ni `actualizado_por`. Historial y auditoría le dan
+    403 `solo_lectura`, porque llevan los emails de quien escribió. No escribe.
+25. **La validación es 422, no 400.** El almacén sigue devolviendo 400; la ruta lo traduce y añade `campo` y `mensaje`.
+26. **Sin `rev`, 428 `rev_requerida`** en PUT, PATCH y DELETE (el almacén ya lo hacía en el borrado).
+27. **PATCH es una fusión superficial** sobre la fila actual. Una mezcla que se puso por defecto queda guardada como dicha:
+    si un PATCH cambia el destino de directa a grupo, la mezcla sigue siendo `sustituye` hasta que se cambie o se mande
+    `mezcla: null`.
+28. **`slugId` quita el guion final que deja el recorte a 60 (arreglado en E4).** Recortaba después de quitar los guiones
+    de los bordes, así que un nombre largo podía dar un id acabado en «-» que `slugId` ya no reproducía al actualizar: esa
+    fila no se podía guardar otra vez con `guardar*`. Ahora `slugId(slugId(x)) === slugId(x)`, en `modelo.js`, y vale
+    igual para la API, el almacén y el importador de E5. Sólo cambian los ids que antes acababan en «-»; como la D1
+    todavía no existe, no hay filas que migrar.
+29. **Los circuitos no tienen historial de revisiones** (no hay tabla en `0001.sql`). `historial/circuito/<id>` devuelve
+    `revisiones: []`, la fila actual y una `nota` que remite a la auditoría. Las auditorías de escritura de un circuito
+    sólo guardan nombre y motivo; la de su borrado, la copia completa.
+
 ## Plan de entregas
 
 | Entrega | Contenido | Estado |
@@ -350,7 +457,7 @@ Desviaciones añadidas en E3:
 | **E1** | D1: esquema `0001.sql`, almacén con bloqueo optimista, revisiones, poda, auditoría y versión, probado con una D1 simulada. Binding preparado y comentado. | **Hecha** |
 | **E2** | `horario.js` y `resolver.js` puros, más las pruebas de horario, de resolver (con paridad) y de almacén. | **Hecha** |
 | **E3** | Exportar `hintFacts`/`enrichFacts` (y `loadStock`). `GET /api/programacion?screen=` sirve el resolver con `/grid/day` y el Stock leídos y memoria por `meta.version`. Sin consumidores. Crear la D1 real. | **Hecha**, salvo «Crear la D1 real», que lanza Carlos (ver «Activar la D1»). Hasta entonces la ruta responde 503 `programacion_db_no_configurada`. |
-| E4 | API de escritura de playlists, asignaciones y circuitos con sesión y permiso `digitalsignage-player`, 409 por `rev`, historial y auditoría consultables. Claves de servicio para Pixeria. | Pendiente |
+| **E4** | API de escritura de playlists, asignaciones y circuitos con sesión y permiso `digitalsignage-player`, 409 por `rev`, historial y auditoría consultables. Claves de servicio para Pixeria. | **Hecha**. La clave de servicio queda apagada hasta que Carlos ponga el secreto (ver «Activar la clave de servicio de Pixeria»); sin la D1, la API responde 503 `programacion_db_no_configurada`. |
 | E5 | Importador del legado: borradores, vivas y circuitos del KV a la D1 con `legado.js`, idempotente por `ref_externa`. | Pendiente |
 | E6 | Modo sombra: el resolver corre en paralelo a lo de hoy, se compara la firma con la decisión de `_emision.js` (la réplica de `canal.html`), se guarda en `sombra` y hay un panel de discrepancias. | Pendiente |
 | E7 | Doble escritura: lo que hoy se guarda en el KV desde la parrilla y desde playlists se escribe también en la D1 hasta el corte. | Pendiente |
@@ -388,6 +495,27 @@ Desviaciones añadidas en E3:
    `version: 0` y `motor: "apagado"`. Con la D1 vacía sólo salen la parrilla y lo dirigido por hashtag; si no hay nada,
    la capa es `relleno`.
 
+## Activar la clave de servicio de Pixeria (lo lanza Carlos)
+
+Hasta entonces, la API sólo admite la sesión del portal.
+
+1. Generar el valor y guardarlo en `admira-vault`. Usar una clave hexadecimal: una que empiece por `mbl_` la tomaría el
+   guarda global de `functions/_middleware.js` por una clave de lectura y la enviaría a data.yokup.com para reconocerla.
+
+   ```bash
+   openssl rand -hex 32
+   ```
+
+2. Ponerla como secreto del proyecto de Pages (pide el valor por la entrada estándar, así que no queda en el historial):
+
+   ```bash
+   npx wrangler pages secret put PROGRAMACION_SERVICE_KEY --project-name admira-tv
+   ```
+
+3. Pixeria la manda en `X-Programacion-Key` desde su servidor, con `X-Actor` para distinguir el proceso (por ejemplo,
+   `X-Actor: stock`, que queda como `servicio:stock`).
+4. Para revocarla, `npx wrangler pages secret delete PROGRAMACION_SERVICE_KEY --project-name admira-tv`, o poner otra.
+
 ## Pruebas
 
 ```bash
@@ -407,4 +535,18 @@ simulados:
 - la memoria por `meta.version`: acierto sin cambios y fallo tras una escritura;
 - que no escribe nada: ni KV (tampoco el índice de Xpacios), ni D1 (sólo SELECT), ni nada que no sea GET.
 
-La ruta se compila con `npx wrangler@4.119.0 pages functions build --outdir /tmp/fx-e3`.
+`programacion-escritura.test.mjs` prueba la API de escritura (E4) sobre la misma D1 simulada:
+
+- el 503 sin binding y sin esquema, y las rutas (404, 405 con `Allow`);
+- el CRUD de playlists, asignaciones y circuitos, con `meta.version + 1` en cada escritura;
+- el 409 por una `rev` vieja en PUT, PATCH y DELETE, sin revisión, auditoría ni versión;
+- el 422 con el campo culpable, el 400 de un JSON roto y el 428 sin `rev`;
+- el acceso: 401, 403, el visor (lee las entidades sin los actores, no escribe, y 403 en historial y auditoría) y el
+  email de la sesión como actor;
+- la clave de servicio: `Bearer` y `X-Programacion-Key`, el actor `servicio:…`, que no abre lecturas y que sin el
+  secreto está apagada;
+- el historial, la auditoría (filtros y páginas) y la copia final del borrado;
+- que tras una escritura por la API, `GET /api/programacion` deja de acertar en su memoria y sirve lo nuevo.
+
+Las rutas se compilan con `npx wrangler@4.119.0 pages functions build --outdir /tmp/fx-e4`. En el bundle, `GET
+/api/programacion` sigue yendo a `programacion.js` y `/api/programacion/<algo>` a la ruta de E4.

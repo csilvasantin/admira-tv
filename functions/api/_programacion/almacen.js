@@ -187,6 +187,7 @@ function limpiarCircuito(raw) {
   if (!destino.all.length && !destino.any.length) throw new Error("destino_requerido");
   return { id, nombre, destino, activo: (raw.activo ?? raw.enabled) !== false };
 }
+export const leerCircuito = (db, id) => leer(db, ENTIDADES.circuito, id);
 export const guardarCircuito = (db, raw, opciones = {}) => validado(d => escribir(db, "circuito", d, opciones), limpiarCircuito, raw);
 export const borrarCircuito = (db, id, opciones = {}) => borrar(db, "circuito", id, opciones);
 export async function listarCircuitos(db) {
@@ -200,10 +201,14 @@ export async function historial(db, entidad, id, { limite = MAX_REVISIONES } = {
   const rs = filas(await db.prepare(`SELECT rev, datos, autor, en, motivo FROM ${E.revisiones} WHERE ${E.fk} = ? ORDER BY rev DESC LIMIT ?`).bind(id, Math.max(1, Math.min(MAX_REVISIONES, Number(limite) || MAX_REVISIONES))).all());
   return rs.map(r => ({ ...r, datos: JSON.parse(r.datos) }));
 }
-export async function auditoria(db, { entidad = null, id = null, limite = 100 } = {}) {
+/** Auditoría, de la más reciente a la más antigua. `antes` (un id de auditoría) pagina: sólo las anteriores a ésa. */
+export async function auditoria(db, { entidad = null, id = null, actor = null, accion = null, antes = null, limite = 100 } = {}) {
   const where = [], binds = [];
   if (entidad) { where.push("entidad = ?"); binds.push(entidad); }
   if (id) { where.push("entidad_id = ?"); binds.push(id); }
+  if (actor) { where.push("actor = ?"); binds.push(String(actor)); }
+  if (accion) { where.push("accion = ?"); binds.push(String(accion)); }
+  if (Number(antes) > 0) { where.push("id < ?"); binds.push(Math.floor(Number(antes))); }
   const sql = "SELECT * FROM auditoria" + (where.length ? " WHERE " + where.join(" AND ") : "") + " ORDER BY id DESC LIMIT ?";
   return filas(await db.prepare(sql).bind(...binds, Math.max(1, Math.min(1000, Number(limite) || 100))).all()).map(r => ({ ...r, detalle: JSON.parse(r.detalle || "{}") }));
 }
