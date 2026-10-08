@@ -1,9 +1,9 @@
 {
-  "version": "v.08.10.2026.r10.21:38",
-  "signature": "OraculoMacMini · MacMini",
-  "agent": "OraculoMacMini",
+  "version": "v.09.10.2026.r1.00:06",
+  "signature": "MorfeoMacMini · MacMini",
+  "agent": "MorfeoMacMini",
   "machine": "MacMini",
-  "day": "08.10.2026",
-  "time": "21:38",
-  "evidence": "Preparar demo Xtore: guía visible de encuadre y errores de captura; selector Chrome comprobado sin conceder captura; 60 pruebas centradas aprobadas."
+  "day": "09.10.2026",
+  "time": "00:06",
+  "evidence": "Modelo único de playlists: D1 admira-programacion conectada (binding PROGRAMACION_DB) con 0001.sql aplicado; /api/programacion deja de responder 503."
 }

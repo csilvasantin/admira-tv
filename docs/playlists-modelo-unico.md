@@ -639,7 +639,11 @@ Desviaciones añadidas en E5:
 > Las entregas E3 a E14 se han reconstruido a partir del resumen del diseño. Si el mensaje de diseño original las ordena de
 > otra forma, manda el original.
 
-## Activar la D1 (lo lanza Carlos)
+## Activar la D1 (hecho el 9-oct-2026)
+
+Carlos creó `admira-programacion` (región WEUR, id `13926d62-95aa-4276-84ef-13ffddf884d2`), el bloque de `wrangler.toml`
+está descomentado y `0001.sql` aplicado en remoto: 12 tablas, `meta.version = 0`, motor apagado y sombra desactivada.
+Los pasos de abajo quedan como referencia para recrearla.
 
 1. Crear la base y copiar el `database_id` que devuelve:
 
