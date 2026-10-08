@@ -1,9 +1,9 @@
 {
-  "version": "v.08.10.2026.r2.00:39",
-  "signature": "GrokBot · MacMini",
-  "agent": "GrokBot",
+  "version": "v.08.10.2026.r3.18:34",
+  "signature": "MorfeoMacMini · MacMini",
+  "agent": "MorfeoMacMini",
   "machine": "MacMini",
   "day": "08.10.2026",
-  "time": "00:39",
-  "evidence": "Audiencia: el aviso de privacidad del panel ya no queda tapado por la cabecera."
+  "time": "18:34",
+  "evidence": "Playlists (fase 1): «Por defecto» de pantallas con playlist viva o #hashtag sin 409 falsos y con «Fijar a mano»; «Crear y asignar» emite de verdad (Por defecto, no /grid/draft); leer la playlist no pisa el censo; borrar la copia local no borra la flota; proyectos de /grid/projects, duración 2-600 s y nombre conservado."
 }

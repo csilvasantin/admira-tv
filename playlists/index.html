@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=08.10.2026.r2.0039"></script>
+<script src="/auth-gate.js?v=08.10.2026.r3.1834"></script>
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
 <link rel="dns-prefetch" href="https://api.admira.store">
@@ -174,9 +174,9 @@ window.ADMIRA_NAV={
 };
 </script>
 <script src="/assets/virtual-players.js"></script>
-<script src="/admira-nav.js?v=08.10.2026.r2.0039"></script>
-<script src="/admira-frame.js?v=08.10.2026.r2.0039" defer></script>
-<link rel="stylesheet" href="/admira-frame.css?v=08.10.2026.r2.0039">
+<script src="/admira-nav.js?v=08.10.2026.r3.1834"></script>
+<script src="/admira-frame.js?v=08.10.2026.r3.1834" defer></script>
+<link rel="stylesheet" href="/admira-frame.css?v=08.10.2026.r3.1834">
 
 <!-- AVANZADO (panel derecho): acciones peligrosas -->
 <div class="afSlotHidden" data-af-slot="left" data-hilomusical-lang="starbucks" aria-label="Hilo musical idioma activo">
@@ -184,7 +184,8 @@ window.ADMIRA_NAV={
 </div>
 <div class="afSlotHidden" data-af-slot="right" aria-label="Acciones avanzadas de playlists">
   <button class="dngr" id="advClearAssigns" type="button" title="Retira TODAS las asignaciones (unbook) de todas las playlists">🧹 Limpiar todas las asignaciones</button>
-  <button class="dngr" id="advDeleteAll" type="button" title="Borra todas las playlists guardadas en este navegador">🗑 Borrar todas las playlists</button>
+  <button class="dngr" id="advDeleteAll" type="button" title="Borra solo la copia local de este navegador; la flota no se toca">🗑 Borrar la copia local de este navegador</button>
+  <button class="dngr" id="advDeleteFleet" type="button" title="Borra TODAS las plantillas compartidas en la flota (xpl-store), para todos los navegadores">⚠ Borrar todas las plantillas de la flota…</button>
   <button class="admni" id="advReload" type="button" style="cursor:pointer;border:1px solid var(--line);background:#0e1420;color:var(--ink);border-radius:10px;padding:9px 11px"><span class="ic">↻</span><span class="t">Recargar catálogo y players</span></button>
 </div>
 
@@ -632,7 +633,35 @@ $('expCopy').onclick=()=>{ try{ navigator.clipboard.writeText(JSON.stringify({pl
 $('expImport').onclick=()=>{ const s=prompt('Pega el JSON {playlists:[...], assignments:{...}}'); if(!s) return;
   try{ const o=JSON.parse(s); if(Array.isArray(o.playlists)) PLAYLISTS=o.playlists; if(o.assignments&&typeof o.assignments==='object') ASSIGN=o.assignments; savePl(); saveAsg(); render(); }
   catch(_){ alert('JSON no válido'); } };
-$('advDeleteAll').onclick=()=>{ if(confirm('¿Borrar TODAS las playlists de este navegador? (no retira lo ya programado en la parrilla)')){ PLAYLISTS=[]; savePl(); render(); } };
+/* Borrar la COPIA LOCAL: sólo este navegador (8-oct-2026). Antes llamaba a savePl(), que publicaba la lista vacía en
+   la flota (xpl-store) y borraba las plantillas de todos. Ahora no escribe nada fuera: vacía la caché y vuelve a leer
+   la flota, que es la que manda; si la flota tiene plantillas, reaparecen y se dice. */
+async function clearLocalPlaylists(){
+  PLAYLISTS=[]; try{localStorage.removeItem('adtv_playlists')}catch(_){}
+  refreshExpert(); render();
+  await loadRemotePlaylists();   // con la lista local vacía no hay nada que migrar: sólo lee
+  refreshExpert(); render();
+  return PLAYLISTS.length;
+}
+$('advDeleteAll').onclick=async()=>{
+  if(!confirm('¿Borrar la copia local de las playlists de este navegador?\n\nNo toca las plantillas compartidas en la flota ni lo programado en la parrilla. Si la flota tiene plantillas, volverán a aparecer al sincronizar.')) return;
+  const quedan=await clearLocalPlaylists();
+  setTimeout(()=>alert(quedan?'Copia local borrada. La flota conserva '+quedan+' plantilla'+(quedan===1?'':'s')+' y se han vuelto a cargar. Para borrarlas de la flota usa «Borrar todas las plantillas de la flota…».':'Copia local borrada.'),0);
+};
+/* Borrar de la FLOTA: acción aparte y con confirmación fuerte (hay que escribir BORRAR). */
+$('advDeleteFleet').onclick=async()=>{
+  await loadRemotePlaylists(); render();
+  const n=PLAYLISTS.length;
+  if(!n){ alert('No hay plantillas que borrar.'); return; }
+  const escrito=prompt('Vas a borrar las '+n+' plantillas compartidas en la FLOTA, para todos los navegadores y equipos.\nNo se puede deshacer (no retira lo ya programado en la parrilla).\n\nEscribe BORRAR para confirmar:');
+  if(String(escrito||'').trim()!=='BORRAR'){ alert('No se ha borrado nada.'); return; }
+  const antes=PLAYLISTS; PLAYLISTS=[];
+  try{localStorage.setItem('adtv_playlists','[]')}catch(_){}
+  const ok=await pushRemotePlaylists();
+  if(!ok){ PLAYLISTS=antes; try{localStorage.setItem('adtv_playlists',JSON.stringify(antes))}catch(_){} }
+  refreshExpert(); render();
+  alert(ok?'Plantillas de la flota borradas.':'No se pudo borrar en la flota; se conservan las plantillas.');
+};
 $('advClearAssigns').onclick=async()=>{
   if(!confirm('¿Retirar de la parrilla TODAS las asignaciones de todas las playlists?')) return;
   const key=gkGet(); if(!key){ alert('Falta la clave GRID_KEY (ábrela en «Asignar»).'); return; }
@@ -658,6 +687,6 @@ $('advReload').onclick=async()=>{ await Promise.all([loadRemotePlaylists(),loadS
   },45000);
 })();
 </script>
-  <script src="/assets/hilomusical-lang-switch.js?v=08.10.2026.r2.0039"></script>
+  <script src="/assets/hilomusical-lang-switch.js?v=08.10.2026.r3.1834"></script>
 </body>
 </html>
