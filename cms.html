@@ -1921,10 +1921,12 @@ $('progBands').addEventListener('click',e=>{
         const parrillaDevice=(g&&g.screen)||p.screen;
         const parrillaUrl='/parrilla/?project='+encodeURIComponent(parrillaProject)+'&xpace='+encodeURIComponent(parrillaXpace)+'&device='+encodeURIComponent(parrillaDevice)+'&playlist=default';
         const parrillaLink='<a class="ebPlaylistLink" href="'+parrillaUrl+'" title="Abrir y editar la playlist Por defecto de '+esc(p.screen)+'"><b>Por defecto</b><span aria-hidden="true">↗</span></a>';
+        // ¿Qué emite de verdad? /emision/ dice qué fuente gana ahora y si algo anula «Por defecto» (8-oct-2026).
+        const emisionLink='<a class="ebPlaylistLink" href="/emision/?screen='+encodeURIComponent(parrillaDevice)+'" title="Qué emite ahora '+esc(parrillaDevice)+' y quién manda sobre Por defecto">¿Qué emite?<span aria-hidden="true">↗</span></a>';
         if(g){
-          chanCell = '<div>'+parrillaLink+'</div><div class="ebMeta">'+esc(pr?pr.name:g.circuit)+' · '+esc(g.name||g.screen)+'</div>'; }
+          chanCell = '<div>'+parrillaLink+' · '+emisionLink+'</div><div class="ebMeta">'+esc(pr?pr.name:g.circuit)+' · '+esc(g.name||g.screen)+'</div>'; }
         else {
-          chanCell = '<div>'+parrillaLink+'</div><div class="ebMeta">playlist base · '+esc(p.screen)+'</div>'; }
+          chanCell = '<div>'+parrillaLink+' · '+emisionLink+'</div><div class="ebMeta">playlist base · '+esc(p.screen)+'</div>'; }
         const pieceProgress=info.duration&&info.startedAt
           ? '<span class="ebPieceProgress" role="progressbar" aria-label="Progreso de reproducción" aria-valuemin="0" aria-valuemax="'+info.duration+'" data-duration="'+info.duration+'" data-started-at="'+info.startedAt+'"><span class="ebPieceProgressTrack"><i></i></span><span class="ebPieceProgressText">quedan '+durationTxt(info.duration)+'</span></span>'
           : '<span class="ebPieceProgress missing"><span class="ebPieceProgressTrack"><i></i></span><span class="ebPieceProgressText">progreso —</span></span>';

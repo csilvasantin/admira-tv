@@ -204,6 +204,33 @@ test("/emision/ en escritorio e iPad, con las APIs simuladas", { skip: !pw && "P
       }
     });
 
+    await t.test("la parrilla avisa cuando «Por defecto» está anulada y enlaza al dispositivo activo", async () => {
+      // Banco mínimo con lo que el script espera de /parrilla/: el selector de contexto y el enlace.
+      const html = '<!doctype html><meta charset="utf-8"><main><section class="context-picker">ctx</section><a id="emisionLink" href="/emision/">¿Qué emite ahora? ↗</a></main><script src="/emision/aviso-parrilla.js"></script>';
+      const ctx = await browser.newContext({ viewport: { width: 1180, height: 820 } });
+      await ctx.route("**/*", async route => {
+        const url = route.request().url();
+        if (url.includes("/__parrilla")) return route.fulfill({ contentType: "text/html", body: html });
+        if (url.includes("/api/emision")) {
+          const screen = new URL(url).searchParams.get("screen");
+          assert.equal(new URL(url).searchParams.get("resumen"), "1");
+          const anulada = screen === "alcampo-alcala";
+          return route.fulfill({ json: { ok: true, screen, capas: [{ id: "defecto", estado: anulada ? "anulada" : "activa", anuladaPor: "parrilla", detalle: { es: "La reserva pagada de la franja 10-14 de Alcampo anula «Por defecto»." } }] } });
+        }
+        return route.continue();
+      });
+      const page = await ctx.newPage();
+      await page.goto(base + "/__parrilla/?playlist=default&device=alcampo-alcala");
+      await page.waitForSelector("#emisionAviso:not([hidden])");
+      assert.match(await page.textContent("#emisionAviso"), /«Por defecto» no se está emitiendo ahora.*una reserva de la parrilla.*La reserva pagada de la franja 10-14 de Alcampo/);
+      assert.equal(await page.getAttribute("#emisionLink", "href"), "/emision/?screen=alcampo-alcala");
+      // Otro dispositivo (la parrilla cambia ?device= con replaceState): el aviso se va
+      await page.evaluate(() => history.replaceState(null, "", "?playlist=default&device=alcampo-arenal"));
+      await page.waitForSelector("#emisionAviso[hidden]", { state: "attached", timeout: 8000 });
+      assert.equal(await page.getAttribute("#emisionLink", "href"), "/emision/?screen=alcampo-arenal");
+      await ctx.close();
+    });
+
     await t.test("cambiar de proyecto rellena sus pantallas", async () => {
       const { ctx, page } = await abrir(browser, base, { width: 1180, height: 820 }, "screen=alcampo-alcala&lang=es");
       await page.selectOption("#proyecto", "xtanco");

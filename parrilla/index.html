@@ -229,7 +229,7 @@
         <div class="preview-screen"><img id="previewImage" src="/parrilla/assets/logo.svg" alt="Vista previa del contenido"><video id="previewVideo" muted playsinline controls loop hidden></video><span class="counter" id="previewCounter">1 / 10</span></div>
         <div class="preview-caption"><strong id="previewTitle">Ajuntament · Sempre amb tu</strong><span id="previewLane">Ayuntamiento · atemporal</span></div>
         <div class="preview-controls"><button class="btn" id="prevBtn" type="button">←</button><button class="btn" id="playBtn" type="button">▶ Reproducir</button><button class="btn" id="openPreviewBtn" type="button">⛶ Ampliar</button><button class="btn" id="nextBtn" type="button">→</button></div>
-        <div class="preview-controls" style="margin-top:8px"><button class="btn" id="viewChannelBtn" type="button" title="Abre el canal reproduciendo este borrador en bucle, en una pestaña nueva">📺 Ver en canal</button></div>
+        <div class="preview-controls" style="margin-top:8px;flex-wrap:wrap"><button class="btn" id="viewChannelBtn" type="button" title="Abre el canal reproduciendo este borrador en bucle, en una pestaña nueva">📺 Ver en canal</button><a class="btn" id="emisionLink" href="/emision/" target="_blank" rel="noopener" style="text-decoration:none" title="Qué emite de verdad esta pantalla ahora y quién manda sobre «Por defecto»">¿Qué emite ahora? ↗</a></div>
       </aside>
     </section>
 
@@ -910,5 +910,6 @@
     setDraftStatus();render();loadContext().then(()=>{if(DEFAULT_MODE&&$('plPanel').hidden)$('plOpen').click()});setInterval(liveStatus,30000);
   })();
   </script>
+  <script src="/emision/aviso-parrilla.js?v=08.10.2026.r3.1834" defer></script>
 </body>
 </html>
