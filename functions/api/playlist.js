@@ -104,7 +104,9 @@ const quick = async (url, ttl) => { const hit = memo.get("q:" + url); if (hit &&
 // Un idIoT declarado por el player se comprueba contra el catálogo: sólo cuenta si existe.
 const iotFicha = id => id ? quick("https://api.admira.store/locations/iot/" + encodeURIComponent(id), 600).then(d => (d && d.idIoT && d.location ? d : null)) : Promise.resolve(null);
 const xpaceFicha = id => id ? quick("https://api.admira.store/locations/" + encodeURIComponent(id), 600).then(d => (d && d.id ? d : d && d.location && d.location.id ? d.location : null)) : Promise.resolve(null);
-async function loadStock() {
+// loadStock, hintFacts y enrichFacts se exportan (E3 del modelo único, docs/playlists-modelo-unico.md) para que
+// /api/programacion los reutilice tal cual: mismo comportamiento y la misma memoria por instancia.
+export async function loadStock() {
   return remember("stock", 45_000, async () => {
     const d = await fetchJson(STOCK_INDEX, 60);
     return Array.isArray(d) ? d : (d && (d.items || d.assets)) || [];
@@ -112,7 +114,7 @@ async function loadStock() {
 }
 // Lo que la pantalla dice de sí misma al pedir su playlist (circuito, tamaño, idioma) y, sólo si hay
 // playlists vivas que resolver, lo que la parrilla sabe de ella (circuito y proyecto).
-function hintFacts(screen, q) {
+export function hintFacts(screen, q) {
   const circuit = cleanScreen(q.get("circuit")), w = Number(q.get("w")) || 0, h = Number(q.get("h")) || 0;
   // Identificadores únicos que el propio player puede declarar en su URL: ?project= y ?xpace= (o ?loc=).
   return { screen, circuit: circuit && circuit !== screen ? circuit : "", project: cleanScreen(q.get("project")), xpace: cleanScreen(q.get("xpace") || q.get("xpacio") || q.get("loc")), iotDeclared: cleanIdIot(q.get("iot") || q.get("idiot")),
@@ -154,7 +156,7 @@ async function readIdentity(env) {
     return { updatedAt: 0, map: {} };
   });
 }
-async function enrichFacts(facts, env, waitUntil) {
+export async function enrichFacts(facts, env, waitUntil) {
   let gridCircuit = "";
   if (!facts.circuit) {
     const cfg = await quick("https://api.admira.store/grid/config?screen=" + encodeURIComponent(facts.screen), 300);
