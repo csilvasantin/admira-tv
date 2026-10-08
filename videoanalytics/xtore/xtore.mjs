@@ -693,7 +693,7 @@ tabletIdle();renderCounts();controls();
 
 installDemoSetup({document,window,prepareDetector:prepareModel,resumePlayer:()=>signage.resume(),share:()=>connectSource(true),startAnalysis:()=>startAnalysis(),snapshot:()=>({
   connected:!!stream,capturing:!!captureRequest,sourceMuted,videoReady:scene.readyState>=2,videoTime:scene.currentTime,
-  framing:roiReady&&!calibration,detector:!!model,modelError,analyzing,analysisRequested,player:signage.snapshot()
+  framing:roiReady&&!calibration,calibrating:!!calibration,statusMessage:$('status').textContent,detector:!!model,modelError,analyzing,analysisRequested,player:signage.snapshot()
 })});
 
 // Existing fragment links still reach their controls after moving into native panels.

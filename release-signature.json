@@ -1,9 +1,9 @@
 {
-  "version": "v.08.10.2026.r9.21:33",
+  "version": "v.08.10.2026.r10.21:38",
   "signature": "OraculoMacMini · MacMini",
   "agent": "OraculoMacMini",
   "machine": "MacMini",
   "day": "08.10.2026",
-  "time": "21:33",
-  "evidence": "Preparar demo Xtore: cuadrática compartida, disponibilidad real de cámara/detector/análisis/player/audio y ayuda ES/EN con MCP real."
+  "time": "21:38",
+  "evidence": "Preparar demo Xtore: guía visible de encuadre y errores de captura; selector Chrome comprobado sin conceder captura; 60 pruebas centradas aprobadas."
 }

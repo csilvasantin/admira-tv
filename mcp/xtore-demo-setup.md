@@ -11,7 +11,7 @@ Player: xtore-virtual-zapatillas (virtual browser player; no physical device).
 1. En Admira.tv → Analítica de vídeo, pulsa **Preparar demo Xtore**.
 2. Pulsa **Preparar demo**. Abre Digital Twin en una pestaña con nombre estable (reutiliza la abierta por este setup), prepara el detector y reanuda el player existente. Conserva su preferencia de silencio.
 3. En Digital Twin abre **Store → Entrada → Puerta Cam → Ver stream**. Vuelve al analizador y pulsa **Compartir Puerta Cam**. Elige esa pestaña en el selector de Chrome. Cada nueva captura requiere permiso explícito; no se capturan monitores ni ventanas, ni audio de la cámara.
-4. Con un encuadre compatible guardado se recuperan las zonas y se solicita el análisis. Comprueba visualmente la cámara: la proporción no identifica una vista ni detecta cambios de zoom. Si falta la cámara, pulsa **Marcar cámara**, confirma sus cuatro esquinas y después **Iniciar análisis**. iPad y pantalla son opcionales.
+4. Con un encuadre compatible guardado se recuperan las zonas y se solicita el análisis. Comprueba visualmente la cámara: la proporción no identifica una vista ni detecta cambios de zoom. Si falta la cámara, pulsa **Marcar cámara**, marca la esquina superior izquierda y la inferior derecha y después **Iniciar análisis**. iPad y pantalla son opcionales.
 5. Si el navegador bloquea el audio, pulsa **Toca para activar el sonido** dentro del player. Si estaba silenciado, actívalo. Espera **Listo para enseñar**.
 
 La cuadrática usa los componentes compartidos admira-nav y admira-frame: **Opciones** izquierda, **Avanzado** derecha y **Experto/CLI** abajo, cerrados al entrar. Se mantienen los controles previos, identidad, encuadres, histórico y CLI nativa. Experto enlaza este contrato; no añade un comando remoto de preparación.
@@ -25,7 +25,7 @@ Reintentar detector o reanudar player no borra preferencias, conteos, encuadres 
 1. In Admira.tv → Video Analytics, choose **Prepare Xtore demo**.
 2. Click **Preparar demo / Prepare demo**. This opens Digital Twin in a stable named tab (reusing the tab opened by this setup), warms the detector and resumes the existing player, retaining its mute preference.
 3. In Digital Twin open **Store → Entrada → Puerta Cam → Ver stream**. Return and click **Compartir Puerta Cam / Share Puerta Cam**. Select that tab in Chrome. Each new capture requires explicit permission; windows, monitors and camera audio are excluded.
-4. A compatible saved framing restores its zones and requests analysis. Visually confirm the view: matching aspect ratio does not identify a camera or detect zoom changes. Otherwise use **Marcar cámara / Mark camera**, confirm its four corners, then **Iniciar análisis / Start analysis**. Tablet and display placement are optional.
+4. A compatible saved framing restores its zones and requests analysis. Visually confirm the view: matching aspect ratio does not identify a camera or detect zoom changes. Otherwise use **Marcar cámara / Mark camera**, mark its top-left and bottom-right corners, then **Iniciar análisis / Start analysis**. Tablet and display placement are optional.
 5. If autoplay is blocked, click **Toca para activar el sonido / Tap to enable sound** inside the player. Unmute if needed. Wait for **Listo para enseñar / Ready to present**.
 
 The shared quadratic shell uses admira-nav and admira-frame: Options left, Advanced right, Expert/CLI below; closed on entry. Existing controls, identity, framing, history and native CLI remain available. Expert links this contract; no remote setup command is introduced.

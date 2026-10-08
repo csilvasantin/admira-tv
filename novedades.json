@@ -141,5 +141,10 @@
     "Preparar demo Xtore desde Analítica de vídeo: abre Digital Twin y prepara detector y player",
     "Cuadrática compartida: Opciones izquierda, Avanzado derecha y Experto/CLI abajo, cerrados al entrar",
     "La demo indica cámara, encuadre, detector, reproducción y sonido; compartir la pestaña sigue siendo explícito"
+  ],
+  "v.08.10.2026.r10.21:38": [
+    "Preparar demo Xtore con la cuadrática compartida y los paneles cerrados al entrar",
+    "La barra principal muestra los pasos para marcar Puerta Cam y los motivos si no se comparte la pestaña",
+    "La cámara se marca con dos esquinas; iPad y pantalla siguen siendo opcionales"
   ]
 }

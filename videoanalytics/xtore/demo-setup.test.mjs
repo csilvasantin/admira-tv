@@ -50,3 +50,12 @@ test('Xtore production policy allows exact native Expert resources while retaini
  assert.ok(headers.includes("frame-ancestors 'none'"));
  assert.ok(!headers.includes('unsafe-eval'));
 });
+
+test('camera framing guidance and capture refusal remain visible without opening panels',async()=>{
+ assert.match(demoReadiness({...complete,framing:false,calibrating:true,statusMessage:'Marca dos puntos en la escena'}).message,/Marca dos puntos/);
+ const f=fixture();f.setState({...complete,connected:false,statusMessage:'No se ha concedido permiso para compartir. Puedes volver a intentarlo.'});
+ await f.get('demo-share').click();
+ assert.match(f.get('demo-next').textContent,/No se ha concedido permiso/);
+ assert.equal(f.get('demo-share').disabled,false);
+ assert.equal(f.controller.render().ready,false);
+});

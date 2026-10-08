@@ -2,12 +2,12 @@ export const DIGITAL_TWIN_URL='https://digitaltwin.ieu.ai/';
 export function demoReadiness(s){
   const checks={camera:!!s.cameraFresh,framing:!!s.framing,detector:!!s.detector,player:!!s.player?.playing,audio:s.player?.audioEnabled===true};
   const ready=Object.values(checks).every(Boolean)&&s.analyzing===true;
-  let message=ready?'Listo para enseñar · análisis y player activos':!checks.camera?'Abre Store → Entrada → Puerta Cam y comparte esa pestaña':!checks.framing?'Marca Puerta Cam o recupera un encuadre compatible':!checks.detector?(s.modelError?'Reintenta preparar el detector':'Preparando detector…'):!s.analyzing?(s.analysisRequested?'Esperando que se recupere el análisis…':'Pulsa Iniciar análisis para activar la demo'):s.player?.audioBlocked?'Pulsa «Toca para activar el sonido» dentro del player':!checks.player?'Esperando reproducción · revisa el player':!checks.audio?'Habilita el sonido en el player':'Comprobando la demo…';
+  let message=ready?'Listo para enseñar · análisis y player activos':!checks.camera?'Abre Store → Entrada → Puerta Cam y comparte esa pestaña':!checks.framing?(s.calibrating&&s.statusMessage?s.statusMessage:'Marca Puerta Cam o recupera un encuadre compatible'):!checks.detector?(s.modelError?'Reintenta preparar el detector':'Preparando detector…'):!s.analyzing?(s.analysisRequested?'Esperando que se recupere el análisis…':'Pulsa Iniciar análisis para activar la demo'):s.player?.audioBlocked?'Pulsa «Toca para activar el sonido» dentro del player':!checks.player?'Esperando reproducción · revisa el player':!checks.audio?'Habilita el sonido en el player':'Comprobando la demo…';
   return {ready,checks,message};
 }
 export function installDemoSetup({document,window,snapshot,prepareDetector,resumePlayer,share,startAnalysis,now=()=>Date.now(),schedule=setInterval,cancel=clearInterval}){
   const $=id=>document.getElementById(id);
-  let twin=null,preparing=false,prepared=false,lastFrameTime=-1,lastFrameAt=-Infinity;
+  let twin=null,preparing=false,prepared=false,lastFrameTime=-1,lastFrameAt=-Infinity,shareMessage='';
   function render(){
     const s=snapshot();
     if(s.connected&&Number.isFinite(s.videoTime)&&s.videoTime!==lastFrameTime){lastFrameTime=s.videoTime;lastFrameAt=now();}
@@ -15,7 +15,7 @@ export function installDemoSetup({document,window,snapshot,prepareDetector,resum
     const state=demoReadiness({...s,cameraFresh:s.connected&&!s.sourceMuted&&s.videoReady&&now()-lastFrameAt<1500});
     $('demo-ready').textContent=state.ready?'Listo para enseñar':'Preparación pendiente';
     $('demo-ready').classList.toggle('live',state.ready);
-    $('demo-next').textContent=state.message;
+    $('demo-next').textContent=s.capturing?'Elige la pestaña de Puerta Cam en Chrome; puedes cancelar.':!s.connected&&shareMessage?shareMessage:state.message;
     const labels={camera:'Cámara',framing:'Encuadre',detector:'Detector',player:'Player',audio:'Sonido habilitado'};
     for(const [key,ok] of Object.entries(state.checks)){
       const node=$('demo-check-'+key);node.textContent=(ok?'✓ ':'○ ')+labels[key];node.classList.toggle('ready',ok);
@@ -32,6 +32,7 @@ export function installDemoSetup({document,window,snapshot,prepareDetector,resum
   }
   async function prepare(){
     if(preparing)return;
+    shareMessage='';
     // Open synchronously from the gesture. Reuse only this setup's named tab.
     // IEU selects its own office/camera; no invented deep-link or device command.
     if(!twin||twin.closed)twin=window.open(DIGITAL_TWIN_URL,'xtore-demo-digitaltwin');
@@ -42,7 +43,11 @@ export function installDemoSetup({document,window,snapshot,prepareDetector,resum
     finally{preparing=false;render();}
   }
   $('prepare-demo').addEventListener('click',prepare);
-  $('demo-share').addEventListener('click',()=>share());
+  $('demo-share').addEventListener('click',async()=>{
+    shareMessage='';
+    try{await share();}catch{shareMessage='No se pudo compartir. Vuelve a esta pestaña e inténtalo de nuevo.';}
+    finally{const s=snapshot();if(!s.connected&&!s.capturing)shareMessage=s.statusMessage||shareMessage||'No se ha compartido la pestaña. Puedes volver a intentarlo.';render();}
+  });
   $('demo-retry-player').addEventListener('click',()=>{resumePlayer();render();});
   $('demo-retry-detector').addEventListener('click',prepare);
   $('demo-review').addEventListener('click',()=>$('set-roi').click());
