@@ -20,8 +20,12 @@ export const MAX_DESTINO_ALL = 48, MAX_DESTINO_ANY = 500;
 
 const texto = (v, max) => String(v == null ? "" : v).trim().slice(0, max);
 const entero = (v, min, max, def) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : def; };
-/** Identificador estable en minúsculas y guiones (la misma forma que las etiquetas de pantalla). */
-export const slugId = v => screenTag(String(v == null ? "" : v).replace(/:/g, "-")).slice(0, 60);
+/**
+ * Identificador estable en minúsculas y guiones (la misma forma que las etiquetas de pantalla). El guion final que
+ * deja el recorte a 60 se quita: sin eso, un nombre largo daba un id acabado en «-» que slugId no reproducía al
+ * actualizar (slugId(slugId(x)) !== slugId(x)) y la fila ya no se podía guardar.
+ */
+export const slugId = v => screenTag(String(v == null ? "" : v).replace(/:/g, "-")).slice(0, 60).replace(/-+$/, "");
 const nuevoId = prefijo => prefijo + "-" + (globalThis.crypto && crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : Date.now().toString(36));
 
 // ── Destino ─────────────────────────────────────────────────────────────────────────────────────────────────────

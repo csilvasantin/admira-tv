@@ -435,10 +435,11 @@ Desviaciones añadidas en E4:
 27. **PATCH es una fusión superficial** sobre la fila actual. Una mezcla que se puso por defecto queda guardada como dicha:
     si un PATCH cambia el destino de directa a grupo, la mezcla sigue siendo `sustituye` hasta que se cambie o se mande
     `mezcla: null`.
-28. **El id se fija en la ruta antes de llegar al modelo.** `slugId` de `modelo.js` recorta a 60 caracteres después de
-    quitar los guiones de los bordes, así que un nombre largo puede dar un id acabado en «-» que `slugId` ya no reproduce:
-    esa fila no se podría actualizar con `guardarPlaylist`. La API quita ese guion final al crear. Lo que escriba
-    directamente con `almacen.js` (el importador de E5) tiene el mismo problema: **pendiente** de arreglar `slugId`.
+28. **`slugId` quita el guion final que deja el recorte a 60 (arreglado en E4).** Recortaba después de quitar los guiones
+    de los bordes, así que un nombre largo podía dar un id acabado en «-» que `slugId` ya no reproducía al actualizar: esa
+    fila no se podía guardar otra vez con `guardar*`. Ahora `slugId(slugId(x)) === slugId(x)`, en `modelo.js`, y vale
+    igual para la API, el almacén y el importador de E5. Sólo cambian los ids que antes acababan en «-»; como la D1
+    todavía no existe, no hay filas que migrar.
 29. **Los circuitos no tienen historial de revisiones** (no hay tabla en `0001.sql`). `historial/circuito/<id>` devuelve
     `revisiones: []`, la fila actual y una `nota` que remite a la auditoría. Las auditorías de escritura de un circuito
     sólo guardan nombre y motivo; la de su borrado, la copia completa.

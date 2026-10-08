@@ -8,6 +8,7 @@ import { d1Memoria } from "./_d1-memoria.mjs";
 import * as A from "./almacen.js";
 import { aMinutos, aUtc } from "./horario.js";
 import { resolver } from "./resolver.js";
+import { slugId } from "./modelo.js";
 
 const SQL = await readFile(new URL("../../../migrations/programacion/0001.sql", import.meta.url), "utf8");
 const sinSqlite = !(await d1Memoria());
@@ -97,6 +98,32 @@ prueba("poda: tras 55 escrituras quedan las 50 últimas revisiones", async () =>
   assert.equal(await cuenta(db, "playlist_revision"), 50);
   assert.equal(await cuenta(db, "auditoria"), 55, "la auditoría no se poda");
   assert.equal((await A.leerMeta(db)).version, 55);
+});
+
+prueba("nombre largo: el id no acaba en guion tras el recorte a 60 y la fila se puede actualizar con guardar*", async () => {
+  const db = await d1Memoria(SQL);
+  // El carácter 60 del slug es un guion: antes quedaba «…-alca-» y slugId de ese id ya era «…-alca».
+  const largo = "Campaña de otoño para todas las pantallas del circuito Alca mpo Madrid", esperado = "campana-de-otono-para-todas-las-pantallas-del-circuito-alca";
+  assert.equal(slugId(largo), esperado);
+  assert.equal(slugId(slugId(largo)), slugId(largo), "slugId es estable");
+  assert.equal(slugId("a".repeat(59) + " b"), "a".repeat(59));
+  const alta = await A.guardarPlaylist(db, playlist({ id: undefined, nombre: largo }), yo);
+  assert.deepEqual([alta.status, alta.playlist.id], [201, esperado]);
+  // Actualizar dando sólo el nombre (el id sale otra vez de él) o el id devuelto: la misma fila.
+  const porNombre = await A.guardarPlaylist(db, playlist({ id: undefined, nombre: largo, items: [item("c9")] }), { ...yo, rev: 1 });
+  assert.deepEqual([porNombre.status, porNombre.playlist.id, porNombre.playlist.rev], [200, esperado, 2]);
+  const porId = await A.guardarPlaylist(db, playlist({ id: alta.playlist.id, nombre: "Corta" }), { ...yo, rev: 2 });
+  assert.deepEqual([porId.status, porId.playlist.id, porId.playlist.nombre, porId.playlist.rev], [200, esperado, "Corta", 3]);
+  // Lo mismo con un id largo dado a mano, en asignaciones y en circuitos.
+  const idLargo = "asignacion de la campana de otono en todas las pantallas del-circuito";
+  const asg = await A.guardarAsignacion(db, { id: idLargo, playlist_id: esperado, destino: { all: ["todas"] } }, yo);
+  assert.equal(asg.status, 201);
+  assert.ok(!asg.asignacion.id.endsWith("-") && asg.asignacion.id.length <= 60, asg.asignacion.id);
+  assert.equal((await A.guardarAsignacion(db, { id: idLargo, playlist_id: esperado, destino: { all: ["todas"] }, estado: "pausada" }, { ...yo, rev: 1 })).status, 200);
+  const circ = await A.guardarCircuito(db, { nombre: largo, destino: { any: ["pantalla:x"] } }, yo);
+  assert.deepEqual([circ.status, circ.circuito.id], [201, esperado]);
+  assert.equal((await A.guardarCircuito(db, { nombre: largo, destino: { any: ["pantalla:y"] } }, { ...yo, rev: 1 })).status, 200);
+  assert.equal(await cuenta(db, "playlist"), 1, "ninguna fila huérfana con el id viejo");
 });
 
 prueba("asignación: exige playlist, precalcula inicio/fin, indexa el destino y candidatas() la encuentra", async () => {

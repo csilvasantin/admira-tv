@@ -113,7 +113,7 @@ prueba("playlists: crear, listar, leer, PUT, PATCH y borrar; cada escritura sube
   assert.equal(alta.headers.get("Location"), "/api/programacion/playlists/cafes");
   assert.deepEqual([alta.body.ok, alta.body.version, alta.body.playlist.rev, alta.body.playlist.creado_por, alta.body.playlist.duracion_s], [true, 1, 1, DUENO, 20]);
   assert.equal("escritura" in alta.body.playlist, false, "la ficha interna no sale");
-  // Sin id, sale del nombre (sin el guion final que slugId deja al recortar un nombre largo a 60 caracteres).
+  // Sin id, sale del nombre; uno largo se recorta a 60 sin guion final (modelo.slugId) y se puede actualizar.
   const largo = "Campaña de otoño para todas las pantallas del circuito Alca mpo Madrid";
   const otra = await api(env, "POST", "playlists", { cuerpo: { nombre: largo, proyecto: "alcampo", items: [item("a1")] } });
   assert.deepEqual([otra.status, otra.body.playlist.id, otra.body.version], [201, "campana-de-otono-para-todas-las-pantallas-del-circuito-alca", 2]);

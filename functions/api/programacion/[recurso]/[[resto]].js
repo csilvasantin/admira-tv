@@ -37,26 +37,19 @@ const ID_RE = /^[a-z0-9][a-z0-9-]{0,59}$/;
 
 const json = (value, status = 200, extra = {}) => Response.json(value, { status, headers: authHeaders(extra) });
 const metodoNoPermitido = permitidos => new Response(null, { status: 405, headers: authHeaders({ Allow: permitidos.join(", ") }) });
-/**
- * El id canónico: el de modelo.slugId sin guion final. slugId recorta a 60 caracteres DESPUÉS de quitar los guiones de
- * los bordes, así que un nombre largo puede dar un id acabado en «-» que slugId ya no reproduce (y que luego no se
- * podría actualizar). Aquí se fija el id antes de que lo vea el modelo.
- */
-const idCanonico = v => slugId(v).replace(/-+$/, "");
-
 // ── Recursos ────────────────────────────────────────────────────────────────────────────────────────────────────
 const RECURSOS = {
   playlists: {
-    entidad: "playlist", leer: A.leerPlaylist, guardar: A.guardarPlaylist, borrar: A.borrarPlaylist, idDeNombre: true,
+    entidad: "playlist", leer: A.leerPlaylist, guardar: A.guardarPlaylist, borrar: A.borrarPlaylist,
     listar: (db, q) => A.listarPlaylists(db, { proyecto: q.get("proyecto"), limite: q.get("limite") }),
   },
   asignaciones: {
-    entidad: "asignacion", leer: A.leerAsignacion, guardar: A.guardarAsignacion, borrar: A.borrarAsignacion, idDeNombre: false,
+    entidad: "asignacion", leer: A.leerAsignacion, guardar: A.guardarAsignacion, borrar: A.borrarAsignacion,
     listar: (db, q) => A.listarAsignaciones(db, { playlist_id: q.get("playlist_id") || q.get("playlist"), estado: q.get("estado"), limite: q.get("limite") }),
     filtros: q => (q.get("estado") && !ESTADOS.includes(q.get("estado")) ? "estado_invalido" : ""),
   },
   circuitos: {
-    entidad: "circuito", leer: A.leerCircuito, guardar: A.guardarCircuito, borrar: A.borrarCircuito, idDeNombre: true,
+    entidad: "circuito", leer: A.leerCircuito, guardar: A.guardarCircuito, borrar: A.borrarCircuito,
     listar: db => A.listarCircuitos(db),
   },
 };
@@ -191,11 +184,9 @@ async function leerUna(db, { recurso, id }, meta) {
 async function crear(db, { recurso }, request, q, auth) {
   const R = RECURSOS[recurso], b = await cuerpo(request);
   if (b.error) return json({ ok: false, error: b.error }, b.status);
-  const datos = { ...b.valor };
-  const semilla = datos.id != null && datos.id !== "" ? datos.id : R.idDeNombre ? datos.nombre || datos.name : null;
-  if (semilla != null && semilla !== "") { const id = idCanonico(semilla); if (id) datos.id = id; }
-  // rev 0: el almacén crea (INSERT); un id ya cogido es 409 ya_existe con la fila que hay.
-  return responder(await R.guardar(db, datos, { actor: auth.actor, rev: 0, motivo: motivoDe(b.valor, q) }), recurso);
+  // rev 0: el almacén crea (INSERT); un id ya cogido es 409 ya_existe con la fila que hay. Sin id, lo pone el modelo
+  // (del nombre en playlists y circuitos; asg-xxxxxxxx en asignaciones).
+  return responder(await R.guardar(db, b.valor, { actor: auth.actor, rev: 0, motivo: motivoDe(b.valor, q) }), recurso);
 }
 
 async function actualizar(db, { recurso, id }, request, q, auth, parcial) {
@@ -205,7 +196,7 @@ async function actualizar(db, { recurso, id }, request, q, auth, parcial) {
   // Sin rev el almacén CREARÍA: una actualización sin rev no se intenta.
   if (!rev) return json({ ok: false, error: "rev_requerida" }, 428);
   const dado = b.valor.id;
-  if (dado != null && dado !== "" && String(dado) !== id && idCanonico(dado) !== id) return invalido("id_no_coincide");
+  if (dado != null && dado !== "" && slugId(dado) !== id) return invalido("id_no_coincide");
   let datos = { ...b.valor, id };
   if (parcial) {
     // PATCH: lo que llega se pone encima de la fila actual (los campos de primer nivel se sustituyen enteros). Si
