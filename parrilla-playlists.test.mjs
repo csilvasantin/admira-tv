@@ -156,14 +156,17 @@ test("la pastilla ofrece la creación y los dos modos", () => {
   assert.match(html, /id="plDevices"/);
 });
 
-test("asignar avisa de que sobrescribe, nombra las pantallas y no finge sin GRID_KEY", () => {
+// 8-oct-2026: asignar ya no escribe /grid/draft (sólo lo leía el previo y nunca salía por antena) sino la
+// playlist «Por defecto» de cada pantalla con la sesión de admira.tv. La lógica se ejecuta de verdad, contra la
+// API con un KV simulado, en playlists-editores.test.mjs; aquí quedan las garantías de forma.
+test("asignar escribe «Por defecto» de cada pantalla, avisa de que sustituye y nombra las pantallas con lo que tienen", () => {
   const aplicar = extrae("plAplicar");
-  // Sin clave no hay escritura remota posible: se dice, no se simula.
-  assert.match(aplicar, /if\(!key\)\{feedback\(/);
-  assert.match(aplicar, /Sin GRID_KEY no se puede asignar/);
-  // Confirmación con los nombres de las pantallas delante.
-  assert.match(aplicar, /devs\.map\(s=>'· '\+s\.name\)\.join\('\\n'\)/);
-  assert.match(aplicar, /Se sobrescribe el borrador de cada uno/);
+  assert.doesNotMatch(aplicar, /grid\/draft/, "el borrador de /grid/draft no se emite: no se escribe ahí");
+  assert.match(aplicar, /fetch\('\/api\/playlist',\{method:'POST',credentials:'same-origin'/);
+  assert.match(aplicar, /rev:\+d\.rev\|\|0/);
+  // Confirmación con los nombres de las pantallas, y lo que tiene ahora cada una, delante.
+  assert.match(aplicar, /devs\.map\(\(s,i\)=>'· '\+s\.name\+' — ahora: '\+plEstadoPorDefecto\(actual\[i\]\)\)\.join\('\\n'\)/);
+  assert.match(aplicar, /Se SUSTITUYE la playlist «Por defecto» de cada uno/);
   // El destino se vuelve a filtrar por proyecto en el momento de aplicar, no sólo
   // al elegir: una playlist guardada ayer no puede escribir fuera de su proyecto.
   assert.match(aplicar, /plDevicesProyecto\(\)\.filter\(s=>pl\.devices\.includes\(s\.screen\)\)/);

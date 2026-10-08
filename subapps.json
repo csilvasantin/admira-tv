@@ -493,5 +493,22 @@
       "https://api.admira.store/signage/now",
       "/api/playout"
     ]
+  },
+  {
+    "n": 37,
+    "alias": "37.- Qué emite",
+    "slug": "emision",
+    "name_es": "Qué emite",
+    "familia": "Emisión",
+    "estado": "emite",
+    "en_vitrina": false,
+    "ruta": "/emision/",
+    "peso_kb": 45,
+    "ficheros": 2,
+    "apis": [
+      "/api/emision",
+      "https://api.admira.store/grid/projects",
+      "https://api.admira.store/grid/screens"
+    ]
   }
 ]
