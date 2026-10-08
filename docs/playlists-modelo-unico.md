@@ -1,7 +1,7 @@
 # Modelo único de playlists de admira.tv
 
 Diseño aprobado por Carlos el 8-oct-2026. Este documento recoge el diseño, las tres decisiones de Carlos, lo que hacen las
-entregas E1 y E2, en qué se aparta la implementación del diseño y el plan completo de entregas.
+entregas E1, E2 y E3, en qué se aparta la implementación del diseño y el plan completo de entregas.
 
 ## Por qué
 
@@ -172,6 +172,99 @@ Algoritmo:
   `por_debajo_de_la_base`, `omitida_por_base_exacta`, `ignorada_por_emergencia` o `ignorada_por_mando`;
 - `validoHasta`, `siguiente`, `rev` y `screenTags`.
 
+## API de lectura (E3)
+
+`GET /api/programacion?screen=<id>[&at=<ISO o ms>][&tag=<hashtag>]`, en `functions/api/programacion.js`. Sirve la salida
+del resolver para una pantalla en un instante. **Todavía no la consume nadie**: el player llegará en E9, detrás de bandera.
+
+**Parámetros.**
+
+- `screen` (obligatorio): el id de la pantalla, con el mismo formato que `/api/playlist` y `/api/emision`.
+- `at` (opcional): el instante, en ISO o en milisegundos. Si falta, es ahora.
+- `tag` (opcional): simula el mando en vivo por hashtag desde `at` (`{tipo:'hashtag', valor, desde: at}`), que caduca
+  según la decisión 2.
+- Las pistas del player (`w`, `h`, `o`, `lang`, `circuit`, `project`, `xpace`/`loc`, `iot`) se aceptan igual que en
+  `/api/playlist`.
+
+**Qué lee.** Nada de esto escribe.
+
+1. **D1** (`PROGRAMACION_DB`), con `almacen.js`: `leerMeta` en cada consulta y, si hace falta, `listarCircuitos` y
+   `candidatas`.
+2. **Parrilla.** `/grid/day` de api.admira.store, una lectura pública sin `GRID_KEY`, pedida igual que en `/api/emision`
+   (sin `&date=` si es hoy). Se piden **tres días**: la víspera, el día de `at` y el siguiente. El resolver acepta ahora
+   una lista de días.
+3. **Stock.** `loadStock` de `playlist.js`: `stock.admira.store/stock/index.json`, el mismo índice que las vivas de hoy.
+4. **Identidad.** `hintFacts` + `enrichFacts` de `playlist.js`, que E3 exporta sin cambiarles el comportamiento (con
+   ellas, también `loadStock`).
+   - Si pregunta el player (`w`/`h`/`lang` o `player=1`), habla por sí mismo, como en `/api/playlist`.
+   - Si no, las pistas que falten salen de lo que la pantalla dejó registrado al pedir su playlist
+     (`admira-tv:screen:tags:v1:<pantalla>`), como en `/api/emision`.
+   - `enrichFacts` recibe un `ACCESS` de solo lectura (`soloLectura` de `emision.js`): ni el censo de etiquetas ni el
+     índice de Xpacios se escriben desde aquí.
+
+**Memoria por instancia.**
+
+- Lo leído de la D1 se guarda con la clave `meta.version`. Cada consulta lee sólo la fila de `meta`.
+- Mientras la versión no cambie, se reutilizan los circuitos y las candidatas. Las candidatas se guardan por etiquetas de
+  la pantalla y hora de `at`: se piden desde el inicio de la hora con 49 h de horizonte, así que valen para cualquier
+  instante de esa hora.
+- Cuando una escritura sube la versión, se olvida todo lo anterior.
+- La parrilla y lo que la pantalla dejó registrado se recuerdan 60 s; el Stock, 45 s (la memoria de `playlist.js`). Un
+  fallo de red no se recuerda.
+- Hay un tope de 500 entradas por memoria.
+
+**Acceso.** Es la misma postura que `/api/emision`, porque reutiliza su `autorizar`:
+
+- las pantallas virtuales (`virtual-*`, `xtore-virtual-*`) se leen sin sesión;
+- el resto, con la sesión del portal y permiso `digitalsignage-player`, o con la sesión de lectura viva.
+
+`auth-gate.js` no cambia: sólo asigna proyectos a páginas, y E3 no tiene página.
+
+**Respuestas.**
+
+| Estado | Cuándo |
+|---|---|
+| 400 `bad_screen` / `bad_at` | Pantalla o instante ilegibles. |
+| 401 / 403 | Sin sesión o sin permiso (igual que `/api/emision`). |
+| 503 `programacion_db_no_configurada` | No hay binding `PROGRAMACION_DB`. Es **lo normal en producción** hasta que se cree la D1, y por eso la fusión es segura con el binding comentado. |
+| 503 `programacion_db_sin_esquema` | La D1 existe, pero sin la migración `0001.sql`. |
+| 503 `programacion_lectura_fallida` | Falló una lectura de la D1. Queda en el log. |
+| 405 | Cualquier método que no sea GET. |
+| 200 | La salida del resolver con un sobre. |
+
+El sobre lleva:
+
+- `ok`, `screen`, `at` (ISO), `ahora` y `publico`;
+- `version` (`meta.version`), `motor` (la bandera `motor` de `meta`: `apagado`, `sombra` o `encendido`) y `memoria`
+  (`acierto` si circuitos y candidatas salieron de la memoria; `fallo` si se leyeron);
+- `lecturas`: `{parrilla: [fechas leídas], stock: número de piezas, autorretrato: true/false}`.
+
+Después va todo lo del resolver: `instante`, `local`, `capa`, `exacta`, `nombre`, `items`, `spots`, `cadencia`, `base`,
+`mando`, `fuentes`, `validoHasta`, `rev`, `screenTags` y `siguiente`. Por ejemplo, abreviado:
+
+```json
+{
+  "ok": true, "screen": "alcampo-alcala", "at": "2026-10-14T08:00:00.000Z", "ahora": false, "publico": false,
+  "version": 2, "motor": "apagado", "memoria": "fallo",
+  "instante": 1791964800000, "local": "2026-10-14 10:00",
+  "capa": "por_defecto", "exacta": false, "nombre": "Por defecto", "base": ["defecto-alcampo-alcala"],
+  "items": [
+    { "id": "stock-s1", "stockId": "s1", "title": "Pieza s1", "seconds": 10, "asset": "https://stock.admira.store/stock/s1/a.mp4", "assetType": "video" },
+    "… s2, s3, s4 …",
+    { "id": "grid:b-77", "title": "Oferta semanal", "sub": "parrilla · 8-12 · Alcampo", "seconds": 15, "asset": "https://cdn.admira.store/oferta.mp4", "spot": true, "capa": "pagada" }
+  ],
+  "spots": [{ "id": "grid:b-77", "…": "…" }], "cadencia": 4, "mando": null,
+  "fuentes": [
+    { "id": "defecto-alcampo-alcala", "capa": "por_defecto", "mezcla": "sustituye", "papel": "base", "piezas": 4 },
+    { "id": "parrilla:manana:pagada", "capa": "pagada", "mezcla": "intercala", "papel": "spot", "piezas": 1 }
+  ],
+  "validoHasta": 1791972000000, "rev": 2875901350,
+  "screenTags": ["circuito:alcampo", "pantalla:alcampo-alcala", "proyecto:alcampo", "todas"],
+  "siguiente": { "en": 1791972000000, "capa": "por_defecto", "nombre": "Por defecto", "base": ["defecto-alcampo-alcala"], "items": ["…"] },
+  "lecturas": { "parrilla": ["2026-10-13", "2026-10-14", "2026-10-15"], "stock": 0, "autorretrato": false }
+}
+```
+
 ## Paridad con hoy
 
 `functions/api/_programacion/legado.js` traduce el legado del KV al modelo:
@@ -197,9 +290,9 @@ Cambios **intencionados** respecto a hoy:
 
 ## Desviaciones del diseño
 
-1. **`hintFacts` y `enrichFacts` no se reutilizan dentro del resolver.** `playlist.js` no los exporta y `enrichFacts` hace
-   red, mientras que el resolver es puro y `playlist.js` lo está tocando otra línea de trabajo. Por eso el resolver recibe
-   `facts` ya completados y él mismo aplica `deduceScreenTags` + `applyCircuits`. Exportar las dos funciones queda para E3.
+1. **`hintFacts` y `enrichFacts` no se reutilizan dentro del resolver.** `enrichFacts` hace red y el resolver es puro. Por
+   eso el resolver recibe `facts` ya completados y él mismo aplica `deduceScreenTags` + `applyCircuits`. **E3** exporta
+   las dos funciones de `playlist.js` y las usa `/api/programacion`, que es quien llama al resolver.
 2. **Columna `escritura` (ficha de escritura).** Está en `playlist`, `asignacion` y `circuito`. Hace falta porque en D1 un
    batch no se detiene cuando un UPDATE devuelve `changes = 0`: sin la ficha, la revisión, la auditoría y la versión se
    escribirían igualmente en un 409.
@@ -227,6 +320,28 @@ Cambios **intencionados** respecto a hoy:
 13. **Mezcla por defecto de una asignación.** Si es directa, `sustituye`; si es de grupo, `fusiona`.
 14. **El rundown de la parrilla cuenta como directo**, porque `/grid/day` es por pantalla.
 
+Desviaciones añadidas en E3:
+
+15. **La parrilla se lee de tres días.** `/api/emision` sólo lee el día de `at`; `/api/programacion` lee también la víspera
+    y el siguiente, y el resolver acepta una lista de días.
+    - Sin la víspera, la franja nocturna de ayer (por ejemplo, 22:00–02:00) no contaría de madrugada.
+    - Sin el siguiente, `validoHasta` saltaría a +48 h tras la última franja del día.
+    - Cada franja se ancla a la fecha de su día y lleva su propia duración editorial (`slotSeconds`).
+    - **Diferencia con `canal.html` y el worker:** `gridBandIsNow()` mira sólo los minutos, así que a las 00:30 toma la
+      franja 22:00–02:00 del documento de HOY. El motor nuevo toma la de AYER, que es la que empezó (la misma regla que en
+      las franjas de una asignación). E6 (sombra) lo marcará como discrepancia si la víspera y el día no venden lo mismo.
+16. **Los circuitos salen sólo de la D1** (tabla `circuito`). Los del KV (`admira-tv:playlist:live:v1`) llegarán con el
+    importador (E5). Hasta entonces, un destino `circuito:<circuito definido>` no casa en el motor nuevo.
+17. **Stock: `stock/index.json`** (`loadStock`), el índice que usan las vivas y `resolveContent`, y no `/stock/list`, que es
+    el que leen `canal.html` y `/api/emision` para su réplica.
+18. **Además de `hintFacts` y `enrichFacts`, se exporta `loadStock`**, para no duplicar la lectura del Stock ni su memoria.
+    No cambia el comportamiento de `playlist.js`.
+19. **`tag` sólo simula el mando por hashtag.** Ni `#ID` ni directo: el mando persistido llega en E8.
+20. **El acceso es el de `/api/emision`, con sesión.** El player (`canal.html`) no tiene sesión, así que E9 necesitará otra
+    puerta. **Pendiente de decidir con Carlos:** una lectura pública por pantalla, como la de `/api/playlist`, o una clave
+    de player.
+21. **Errores 503 de más:** `programacion_db_sin_esquema` (la D1 existe sin la migración) y `programacion_lectura_fallida`.
+
 ## Plan de entregas
 
 | Entrega | Contenido | Estado |
@@ -234,7 +349,7 @@ Cambios **intencionados** respecto a hoy:
 | **E0** | Diseño y las tres decisiones de Carlos. | Hecha (8-oct-2026) |
 | **E1** | D1: esquema `0001.sql`, almacén con bloqueo optimista, revisiones, poda, auditoría y versión, probado con una D1 simulada. Binding preparado y comentado. | **Hecha** |
 | **E2** | `horario.js` y `resolver.js` puros, más las pruebas de horario, de resolver (con paridad) y de almacén. | **Hecha** |
-| E3 | Crear la D1 real. Exportar `hintFacts`/`enrichFacts`. `GET /api/programacion?screen=` sirve el resolver con `/grid/day` y el Stock leídos y memoria por `meta.version`. Sin consumidores. | Pendiente |
+| **E3** | Exportar `hintFacts`/`enrichFacts` (y `loadStock`). `GET /api/programacion?screen=` sirve el resolver con `/grid/day` y el Stock leídos y memoria por `meta.version`. Sin consumidores. Crear la D1 real. | **Hecha**, salvo «Crear la D1 real», que lanza Carlos (ver «Activar la D1»). Hasta entonces la ruta responde 503 `programacion_db_no_configurada`. |
 | E4 | API de escritura de playlists, asignaciones y circuitos con sesión y permiso `digitalsignage-player`, 409 por `rev`, historial y auditoría consultables. Claves de servicio para Pixeria. | Pendiente |
 | E5 | Importador del legado: borradores, vivas y circuitos del KV a la D1 con `legado.js`, idempotente por `ref_externa`. | Pendiente |
 | E6 | Modo sombra: el resolver corre en paralelo a lo de hoy, se compara la firma con la decisión de `_emision.js` (la réplica de `canal.html`), se guarda en `sombra` y hay un panel de discrepancias. | Pendiente |
@@ -269,10 +384,27 @@ Cambios **intencionados** respecto a hoy:
    `npx wrangler d1 execute admira-programacion --remote --file=migrations/programacion/0001.sql`. Es idempotente, pero
    así la migración no queda registrada en `d1_migrations`.
 
+4. Tras desplegar, comprobar con sesión que `GET /api/programacion?screen=<una pantalla>` ya no da 503 y responde
+   `version: 0` y `motor: "apagado"`. Con la D1 vacía sólo salen la parrilla y lo dirigido por hashtag; si no hay nada,
+   la capa es `relleno`.
+
 ## Pruebas
 
 ```bash
 node --test 'functions/api/_programacion/*.test.mjs'
 ```
 
-Las pruebas del almacén usan `node:sqlite` (Node 22.13 o posterior). Sin él, se saltan en vez de fallar.
+Las pruebas del almacén y de la ruta usan `node:sqlite` (Node 22.13 o posterior). Sin él, se saltan en vez de fallar.
+
+`programacion-api.test.mjs` prueba `GET /api/programacion` sobre la D1 simulada con la migración real, con el KV y la red
+simulados:
+
+- el 503 sin binding y sin esquema;
+- el acceso de `/api/emision`;
+- la playlist directa;
+- que los grupos se sumen y que lo directo gane;
+- `at`, `tag` y la identidad;
+- la memoria por `meta.version`: acierto sin cambios y fallo tras una escritura;
+- que no escribe nada: ni KV (tampoco el índice de Xpacios), ni D1 (sólo SELECT), ni nada que no sea GET.
+
+La ruta se compila con `npx wrangler@4.119.0 pages functions build --outdir /tmp/fx-e3`.
