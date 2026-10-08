@@ -118,6 +118,9 @@ function hintFacts(screen, q) {
   return { screen, circuit: circuit && circuit !== screen ? circuit : "", project: cleanScreen(q.get("project")), xpace: cleanScreen(q.get("xpace") || q.get("xpacio") || q.get("loc")), iotDeclared: cleanIdIot(q.get("iot") || q.get("idiot")),
     w, h, orientation: orientationOf(w, h, q.get("o")), lang: String(q.get("lang") || "").slice(0, 2) };
 }
+// ¿Pregunta el player? canal.html manda siempre &w=…&h=… (y &lang= si lo sabe); otro player puede decir player=1.
+// La parrilla, Pixeria y el Adaptador piden sólo ?screen=: leen, pero no hablan por la pantalla.
+export const fromPlayer = q => ["w", "h", "lang"].some(k => q.has(k)) || q.get("player") === "1";
 // Índice pantalla → Xpacio, compacto y guardado 30 min. El catálogo de Xpacios pesa 9 MB: NUNCA se espera a él
 // en la consulta de un player ni del editor; se sirve lo guardado y se rehace por detrás, como mucho un intento
 // cada 10 min por instancia. Mientras no exista, la identidad la pone el registro que sube la parrilla.
@@ -248,6 +251,10 @@ export async function onRequestGet({ request, env, waitUntil }) {
     });
   }
   let draft = await readDraft(env, screen);
+  // Revisión de lo GUARDADO (0 si nada): es la que vale para escribir, también cuando la lista que se ve la
+  // componen las playlists vivas o el hashtag (8-oct-2026: el hash de esa lista provocaba un 409 falso).
+  const savedRev = Number(draft.rev) || 0;
+  draft.synthetic = false;
   // La pantalla se deduce sus etiquetas en cada consulta. Si no tiene piezas puestas a mano, recibe las de
   // las playlists vivas que le toquen, resueltas ahora mismo contra el Stock.
   const facts = hintFacts(screen, q), live = await readLive(env);
@@ -259,8 +266,13 @@ export async function onRequestGet({ request, env, waitUntil }) {
   await enrichFacts(facts, env, waitUntil);
   // Se recuerdan las etiquetas PROPIAS; los circuitos definidos se añaden al vuelo, aquí y en el censo del editor.
   const propias = deduceScreenTags(facts), screenTags = applyCircuits(propias, live.circuits);
-  const recordar = rememberTags(env, screen, propias, facts);
-  try { if (typeof waitUntil === "function") waitUntil(recordar); else await recordar; } catch (_) { await recordar; }
+  // El censo de etiquetas lo escribe SÓLO el player, que declara sus pistas (w/h/lang, o player=1). Si grabaran
+  // también las lecturas de la parrilla, Pixeria o el Adaptador —sin orientación ni idioma—, pisarían el censo con
+  // etiquetas pobres (8-oct-2026). Para ellos, leer no tiene efectos.
+  if (fromPlayer(q)) {
+    const recordar = rememberTags(env, screen, propias, facts);
+    try { if (typeof waitUntil === "function") waitUntil(recordar); else await recordar; } catch (_) { await recordar; }
+  }
   // Contenido dirigido a esta pantalla o a su centro por hashtag (#starbucks_paseodegracia_103_pantalla1): se
   // AÑADE a lo que ya tenga, puesto a mano o por playlists vivas, sin repetir pieza.
   const keys = addressKeys(facts), dirigidas = (keys.exact.size || keys.centre.size) ? addressedContent(await loadStock(), facts) : [];
@@ -269,8 +281,13 @@ export async function onRequestGet({ request, env, waitUntil }) {
     const viva = activas.length ? resolveForScreen(activas, screenTags, await loadStock(), facts) : { hits: [], items: [] };
     const ya = new Set(viva.items.map(i => i.stockId)), items = [...viva.items, ...dirigidas.filter(i => !ya.has(i.stockId))].slice(0, 200);
     if (items.length) {
-      draft = { screen, playlist: "default", name: (viva.hits.map(p => p.name).concat(dirigidas.length ? ["Dirigido por hashtag"] : [])).join(" + ").slice(0, 80), items, rev: liveRev(items),
-        updatedAt: Math.max(0, ...viva.hits.map(p => Number(p.updatedAt) || 0)), live: viva.hits.map(p => ({ id: p.id, name: p.name })) };
+      // Borrador SINTÉTICO: nadie lo ha guardado, lo componen las reglas en esta consulta. Se dice explícitamente
+      // (synthetic + origin) para que ningún editor lo tome por una lista manual; `rev` es la de lo guardado (0 si
+      // nada) y `liveRev` es la huella de lo que sale, que cambia cuando entra o sale una pieza.
+      const vivas = viva.hits.map(p => ({ id: p.id, name: p.name })), hashtag = items.length - viva.items.length;
+      draft = { screen, playlist: "default", name: (viva.hits.map(p => p.name).concat(hashtag ? ["Dirigido por hashtag"] : [])).join(" + ").slice(0, 80), items, rev: savedRev,
+        liveRev: liveRev(items), synthetic: true, origin: { live: vivas, hashtag },
+        updatedAt: Math.max(0, ...viva.hits.map(p => Number(p.updatedAt) || 0)), live: vivas };
       auto = [];   // ya van dentro de la lista
     }
   } else {
@@ -342,8 +359,10 @@ export async function onRequestPost({ request, env }) {
   if (!screen || !Array.isArray(body && body.items) || body.items.length > 200) return json({ ok: false, error: "invalid_playlist" }, 400, cors);
   const items = body.items.map(cleanItem).filter(Boolean);
   if (items.length !== body.items.length) return json({ ok: false, error: "invalid_item" }, 400, cors);
-  const previous = await readDraft(env, screen), expected = Number(body.rev) || 0;
-  if (expected && expected !== Number(previous.rev || 0)) return json({ ok: false, error: "revision_conflict", draft: previous }, 409, cors);
+  const previous = await readDraft(env, screen), expected = Number(body.rev) || 0, stored = Number(previous.rev) || 0;
+  // Sólo hay conflicto si había algo guardado (rev > 0) y quien escribe trae otra revisión. Con nada guardado no
+  // hay a quién pisar: un rev que no sea número, o el de un borrador sintético de un cliente antiguo, no es un 409.
+  if (stored && expected && expected !== stored) return json({ ok: false, error: "revision_conflict", draft: previous }, 409, cors);
   const updatedAt = Date.now(), rev = Math.max(Number(previous.rev) || 0, updatedAt - 1) + 1;
   const name = String((body && body.name) || "").trim().slice(0, 80) || "Por defecto";
   const draft = { screen, playlist: "default", name, items, rev, updatedAt, updatedBy: actor };

@@ -74,9 +74,11 @@ test("es VIVA: al etiquetar otra pieza entra sola, y al pausar la regla deja de 
     stock.items.push(pieza("a9", ["Café"])); forgetMemo("stock");   // en producción, hasta 45 s después
     const dos = await (await get(m.env, q)).json();
     assert.deepEqual(dos.draft.items.map(i => i.stockId), ["a9", "a1"]);
-    assert.notEqual(dos.draft.rev, uno.draft.rev, "la revisión cambia cuando cambia lo que sale");
+    // La huella de lo que sale va en liveRev; rev es la de lo GUARDADO (nada → 0), la que vale para escribir.
+    assert.notEqual(dos.draft.liveRev, uno.draft.liveRev, "la huella cambia cuando cambia lo que sale");
+    assert.equal(uno.draft.rev, 0); assert.equal(dos.draft.rev, 0); assert.equal(dos.draft.synthetic, true);
     stock.items.pop(); forgetMemo("stock");
-    assert.equal((await (await get(m.env, q)).json()).draft.rev, uno.draft.rev, "y vuelve a la de antes si la pieza pierde el tag");
+    assert.equal((await (await get(m.env, q)).json()).draft.liveRev, uno.draft.liveRev, "y vuelve a la de antes si la pieza pierde el tag");
     assert.equal((await post(m.env, { action: "live-save", playlist: regla({ enabled: false }), rev: live.rev })).status, 200);
     assert.deepEqual((await (await get(m.env, q)).json()).draft.items, []);
     assert.equal((await post(m.env, { action: "live-save", playlist: regla(), rev: 1 })).status, 409, "revisión vieja no pisa");

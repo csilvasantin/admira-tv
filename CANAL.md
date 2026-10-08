@@ -215,6 +215,9 @@ pantalla no tiene piezas puestas a mano, le devuelve las de las **playlists viva
 contenido por tags del Stock, resueltas en cada consulta (lo recién etiquetado entra solo). Se crean en
 `/parrilla/` → Nueva playlist → Por tag → Playlist viva. Lógica en `functions/api/_playlist-live.js`; pruebas en
 `playlist-viva.test.mjs`. El player no distingue de dónde vienen las piezas: usa el mismo carril «Por defecto».
+El borrador que componen las reglas llega marcado (`synthetic:true`, `origin`, `rev` de lo guardado y `liveRev`
+como huella de lo que sale): los editores lo enseñan en lectura y sólo pasa a lista manual con «Fijar a mano». El
+censo de etiquetas sólo lo escribe el player (`w`/`h`/`lang` o `player=1`); pruebas en `playlist-arreglos.test.mjs`.
 
 **Identificadores únicos de destino.** Tres niveles tienen una etiqueta que es de uno solo: `proyecto:<id>`,
 `xpacio:<id del Xpacio>` y `pantalla:<screen>` (p. ej. `proyecto:starbucks` · `xpacio:alsea-sbux-021` ·
