@@ -95,7 +95,8 @@ test("callback valida doble CSRF + nonce, crea sesión first-party y conserva el
     const request = googlePost({ credential: "fake", g_csrf_token: "csrf", state: body.state }, `__Host-atv_challenge=${challengeCookie}; g_csrf_token=csrf`);
     const completed = await callback({ request, env: { ACCESS: kv } });
     assert.equal(completed.status, 303);
-    assert.equal(completed.headers.get("location"), "https://admira.tv/cms?canal=kiosk");
+    // Desde el 9-oct-2026 la vuelta lleva el token de Google en el fragmento (lo recoge y borra auth-gate.js; lo usa brain).
+    assert.equal(completed.headers.get("location"), "https://admira.tv/cms?canal=kiosk#admira_gcred=fake");
     const setCookie = completed.headers.get("set-cookie");
     assert.match(setCookie, /__Host-atv_session=.*HttpOnly; Secure; SameSite=Lax/);
     const token = cookieValue(setCookie, "__Host-atv_session");
