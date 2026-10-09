@@ -1,9 +1,9 @@
 {
-  "version": "v.09.10.2026.r10.18:35",
+  "version": "v.09.10.2026.r11.19:09",
   "signature": "MorfeoMacMini · MacMini",
   "agent": "MorfeoMacMini",
   "machine": "MacMini",
   "day": "09.10.2026",
-  "time": "18:35",
-  "evidence": "Acceso: el token de Google vuelve al navegador tras el login por redirección (fragmento recogido y borrado por la verja); el mando de /remotecontrol/ vuelve a hablar con brain."
+  "time": "19:09",
+  "evidence": "Mando: standby y resume en cada tarjeta de /remotecontrol/ (cola de brain) y aviso de pantalla apagada; canal.html los ejecuta también por la cola de brain."
 }
