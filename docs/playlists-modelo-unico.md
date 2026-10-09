@@ -396,7 +396,7 @@ Todos salen en `omitidas` con su motivo.
 | Motivo | Cuándo | Con `?archivar=1` |
 |---|---|---|
 | `viva_eliminada` | La viva ya no está en el documento (asignación y playlist). | Se archiva la asignación. |
-| `circuito_eliminado` | El circuito ya no está (sólo los que creó el importador). | Sólo se informa. |
+| `circuito_eliminado` | El circuito ya no está (sólo los que creó el importador). | Se apaga el circuito (`activo: false`). |
 | `borrador_vacio`, `ilegible`, `sin_valor` | El borrador sigue, pero hoy no manda nada. | Se archiva la asignación. |
 | `sintetico` | El borrador guardado lleva `synthetic: true`. | Sólo se informa (desviación 35). |
 | `sin_clave_kv` | La clave del borrador ya no existe. Se mira en el último tramo, con la lista de todas las claves. | Se archiva la asignación. |
@@ -407,9 +407,13 @@ Todos salen en `omitidas` con su motivo.
   - Sólo se archiva lo del importador: ref `kv:…` y creada por él. Lo demás sale `omitir` · `ajena`.
   - Lo editado fuera sale `omitir` · `editado_fuera`, salvo con `?pisar=1` (con el aviso `pisa`).
   - Lo ya archivado sale `igual` · `ya_archivada`: la pasada siguiente no escribe nada.
-  - Las playlists huérfanas no se tocan (no tienen estado) y los circuitos tampoco: no tienen asignaciones propias, se
-    usan por la etiqueta `circuito:<id>` en los destinos.
-  - Si la fuente vuelve al KV, la asignación es del importador y se reactiva en la importación siguiente.
+  - Las playlists huérfanas no se tocan (no tienen estado).
+  - Los circuitos huérfanos del importador se **apagan** (`activo: false`; decisión de Carlos del 9-oct-2026, la misma
+    regla que el espejo de E7, desviación 41): dejan de dar `circuito:<id>` a las pantallas. Mismas reglas: sólo los que
+    creó el importador, `omitir` · `editado_fuera` salvo con `?pisar=1` (con `pisa`), `igual` · `ya_apagado` si ya lo
+    está. Cuentan como `archivar` de `circuito` en `resumen` y en `aplicadas`, con `cambios: ["activo"]` y el motivo
+    `importador E5 · kv:circuito:<id> · apagado: circuito_eliminado`.
+  - Si la fuente vuelve al KV, la asignación (o el circuito) es del importador y se reactiva en la importación siguiente.
 
 ### Petición y respuesta
 
@@ -417,7 +421,8 @@ Todos salen en `omitidas` con su motivo.
 
 - `aplicar=1`: escribe. Sin él, simulación.
 - `pisar=1`: actualiza también lo editado fuera del importador (si no, `omitir` · `editado_fuera`).
-- `archivar=1`: archiva las asignaciones huérfanas del importador (si no, sólo se informan).
+- `archivar=1`: archiva las asignaciones huérfanas del importador y apaga sus circuitos huérfanos (si no, sólo se
+  informan).
 - `cursor`: el `siguiente` de la respuesta anterior.
 - `limite`: borradores por tramo, 50 por defecto y 100 como mucho.
 - `muestra`: cuántas operaciones enseñar, 25 por defecto y 500 como mucho. Van primero las que escriben u omiten y
@@ -705,7 +710,8 @@ Desviaciones añadidas en E5:
 34. **Los huérfanos se informan; sólo con `?archivar=1` se archivan sus asignaciones** (decisión de Carlos). Nunca se
     borra nada. Sin archivar, un borrador que se vacía deja activa su asignación en la D1 y el motor nuevo seguiría
     sirviendo la lista vieja a esa pantalla. Se archivan sólo las del importador y no editadas fuera (salvo `pisar`); las
-    playlists y los circuitos huérfanos sólo se informan, y `sintetico` no se archiva (ver la 35).
+    playlists huérfanas sólo se informan, los circuitos huérfanos se apagan (desde E7, ver la 41) y `sintetico` no se
+    archiva (ver la 35).
 35. **Un borrador guardado con `synthetic: true` no se importa**, como pide el plan. Hoy `playlist.js` sólo mira `items`
     y lo emitiría como lista a mano, pero ningún código guarda esa marca (POST `/api/playlist` no la escribe): es una
     guarda, y si apareciera uno, la sombra (E6) lo marcaría. Por lo mismo, su asignación importada antes (si la hubiera)
@@ -725,10 +731,12 @@ Desviaciones añadidas en E7:
 40. **El espejo archiva siempre y nunca pisa**: es el importador con `archivar` y sin `pisar`. Como refleja el documento de
     vivas entero, la primera escritura de vivas con la bandera encendida archiva también las asignaciones de vivas borradas
     antes (con la bandera apagada), igual que `?archivar=1`. Los borradores, en cambio, sólo se reflejan de uno en uno.
-41. **Un circuito borrado se apaga (`activo: false`)**; el importador sólo lo informa (`circuito_eliminado`). Sin eso, el
-    motor nuevo seguiría dando `circuito:<id>` a pantallas que hoy ya no lo tienen y las vivas que lo usan llegarían a
-    donde hoy no llegan. Nunca se borra; si el circuito vuelve al KV, el importador o el espejo lo reactivan (es suyo). Lo
-    editado fuera no se apaga. **Pendiente de confirmar con Carlos** si `?archivar=1` del importador debe hacer lo mismo.
+41. **Un circuito borrado se apaga (`activo: false`)**, en el espejo y en el importador con `?archivar=1` (decisión de
+    Carlos, 9-oct-2026; en E5 sólo se informaba como `circuito_eliminado`). Sin eso, el motor nuevo seguiría dando
+    `circuito:<id>` a pantallas que hoy ya no lo tienen y las vivas que lo usan llegarían a donde hoy no llegan. Nunca se
+    borra; si el circuito vuelve al KV, el importador o el espejo lo reactivan (es suyo). Sólo los que creó el
+    importador, y lo editado fuera no se apaga salvo con `?pisar=1`. La regla vive en `planificar()`, así que el espejo y
+    el importador no pueden discrepar.
 42. **`actualizado_en` de lo reflejado es la hora del KV** (`updatedAt`), no la del espejo, y lo más nuevo no se pisa
     (`obsoleto`). El importador sigue escribiendo con su propia hora.
 43. **Marcas en la auditoría sin subir la versión** (`espejo_fallido`, `espejo_omitido`): la columna `accion` no tiene
@@ -827,8 +835,8 @@ const importar = q => fetch("/api/programacion/importar" + (q ? "?" + q : ""), {
    va a pisar (`pisa` en la muestra).
 4. **Archivar huérfanos (opcional).** Simular con `archivar=1` (y, si se quiere, `pisar=1`) como en el paso 1, revisar
    las operaciones `archivar` y las `omitir` · `ajena` o `editado_fuera`, y aplicar con `aplicar=1&archivar=1` como en el
-   paso 3. Las asignaciones quedan `archivada`, no se borran; si su fuente vuelve al KV, la importación siguiente las
-   reactiva.
+   paso 3. Las asignaciones quedan `archivada` y los circuitos, apagados; no se borran, y si su fuente vuelve al KV, la
+   importación siguiente los reactiva.
 5. **Comprobar.**
    - Otra simulación (paso 1, con las mismas opciones) tiene que dar `resumen.escrituras = 0` en todos los tramos.
    - `GET /api/programacion?screen=<una pantalla con borrador>` tiene que servir las mismas piezas que `/api/playlist`.
@@ -864,13 +872,12 @@ Con la D1 importada (ver «Cómo importar») y desplegada la rama de E7.
 **Reconciliar** (cuando `espejo.fallidos` > 0 en la simulación, tras una caída de la D1 o ante cualquier duda):
 
 1. Simular con `archivar=1` todos los tramos. Las `escrituras` son la deriva; sin `archivar=1` no se ve la de los
-   borradores vaciados ni la de las vivas borradas (sólo saldrían en `huerfanos`).
+   borradores vaciados, las vivas borradas ni los circuitos borrados (sólo saldrían en `huerfanos`).
 2. Si hay escrituras, aplicar con `aplicar=1&archivar=1` y volver a simular: 0 escrituras.
 3. Lo `omitir` · `editado_fuera` no es deriva del espejo: es una edición por la API que no se pisa. Se decide entidad a
    entidad: deshacerla por la API o, después de revisar `pisa`, `pisar=1`.
-4. Los circuitos borrados con la bandera apagada o durante un fallo no los apaga el importador (desviación 41): basta con
-   cualquier escritura nueva del documento de vivas (guardar una viva o un circuito, aunque sea sin cambios), porque el
-   espejo lo refleja entero. Lo mismo arregla la deriva de cualquier viva.
+4. Para el documento de vivas (vivas y circuitos) basta también con cualquier escritura nueva (guardar una viva o un
+   circuito, aunque sea sin cambios): el espejo lo refleja entero, con `archivar`.
 
 ## Activar la clave de servicio de Pixeria (lo lanza Carlos)
 
@@ -936,8 +943,9 @@ simulada, con un KV simulado con `list` y `get`:
 - lo editado por la API: `omitir` · `editado_fuera` por defecto, `?pisar=1` lo sobrescribe (con `pisa`), la simulación
   no escribe y la pasada siguiente sale toda igual;
 - los huérfanos, que no se borran; con `?archivar=1` se archivan sólo las asignaciones del importador no editadas fuera
-  (con `pisar`, también ésas; nunca las ajenas ni por `sintetico`), la simulación no escribe, la segunda pasada no
-  escribe nada y una viva que vuelve reactiva su asignación;
+  (con `pisar`, también ésas; nunca las ajenas ni por `sintetico`) y se apagan sus circuitos (no los ajenos; los
+  editados fuera, sólo con `pisar`), la simulación no escribe, la segunda pasada no escribe nada y una viva o un circuito
+  que vuelven se reactivan;
 - el acceso: 401, 403, el visor y la clave de servicio;
 - los tramos con cursor y el tope de escrituras por petición;
 - que, tras importar, `GET /api/programacion` sirve lo mismo que hoy `playlist.js` y que la paridad de `legado.js`.
