@@ -360,7 +360,7 @@ operaciones. Traduce con `legado.js`, la misma traducción de las pruebas de par
 
 | Fuente en el KV | Referencia | En la D1 |
 |---|---|---|
-| Borrador «Por defecto» `admira-tv:playlist:default:v1:<pantalla>` con piezas | `kv:default:<pantalla>` | Playlist fija `defecto-<pantalla>` + asignación directa, `por_defecto` · `sustituye`. |
+| Borrador «Por defecto» `admira-tv:playlist:default:v1:<pantalla>` con piezas | `kv:default:<pantalla>` | Playlist fija `defecto-<pantalla>` + asignación directa, `por_defecto` · `sustituye`. Si no cabe en 60, el id lleva huella (desviación 48). |
 | Cada viva de `admira-tv:playlist:live:v1` | `kv:viva:<id>` | Playlist viva `viva-<id>` + asignación por su destino, `por_defecto` · `fusiona`, peso N, N−1, … (las apagadas, `pausada`). |
 | Cada circuito definido del mismo documento | `kv:circuito:<id>` | Circuito `<id>`. |
 
@@ -718,7 +718,8 @@ Desviaciones añadidas en E5:
     no se archiva con `?archivar=1`: sólo se informa.
 36. **La pantalla sale de la clave del KV**, no del `screen` del valor, porque es la clave lo que lee `playlist.js`.
     - Dos claves que dan el mismo slug (`a--b` y `a-b`) no se importan dos veces: la segunda sale `ref_duplicada`.
-    - Lo mismo pasa con dos ids que el recorte a 60 deja iguales: la segunda sale `id_duplicado`.
+    - Dos ids que el recorte a 60 dejaba iguales ya no chocan: llevan huella (desviación 48). `id_duplicado` queda para
+      el caso, improbable, de que dos huellas de 8 hexadecimales coincidan.
 37. **El peso de las vivas depende de su posición en el documento.** Añadir, quitar o reordenar una viva cambia el peso
     de las demás, y sus asignaciones se actualizan (una revisión cada una). Es lo que conserva el orden K de hoy.
 38. **La clave de servicio no abre el importador** y recibe 403 `importador_solo_sesion` (no 401): se la reconoce, pero
@@ -747,6 +748,24 @@ Desviaciones añadidas en E7:
 46. **Si la D1 no acepta ni la marca, sólo queda el log.** El espejo no escribe marcas en el KV.
 47. **Las cuentas del espejo salen en la simulación del importador, que es `POST`** (`POST /api/programacion/importar`
     sin `aplicar`): no hay un `GET` del importador (sigue siendo 405).
+48. **Ids estables para las fuentes largas** (decisión de Carlos, 9-oct-2026). Un id tiene 60 caracteres como mucho y
+    `defecto-<pantalla>` no cabe con pantallas de más de 52 (`cleanScreen` admite 80), ni `viva-<id>` con vivas de más de
+    55. El recorte daba el mismo id a dos fuentes con el mismo principio, y la segunda pisaba o se omitía.
+    - `idLegado()` de `legado.js` (con `idDefecto` e `idViva`) es la única fuente de esos ids, para el importador, el
+      espejo y la paridad: si el id entero cabe, es el de siempre (`slugId`); si no, se recorta a 51 y se le añade `-` y
+      8 hexadecimales del SHA-256 del id entero (`huella.js`, síncrono, comprobado contra `node:crypto`). Es el mismo en
+      cada pasada y en cualquier máquina, y `slugId` lo deja igual, así que `guardar*` no lo toca.
+    - **Los ids que caben no cambian**: toda pantalla de hasta 52 caracteres y toda viva de hasta 55 dan el id de antes,
+      por construcción (`idLegado` devuelve entonces `slugId`), y las pruebas lo comparan con la fórmula de antes en
+      cientos de casos. Las 34 importadas el 9-oct-2026 sólo cambian si alguna pasa de esas longitudes.
+    - La `ref_externa` de un borrador lleva la pantalla entera (`slugEntero`, el `slugId` sin el recorte; si cabe en 60,
+      es el mismo): con más de 60, la recortada también coincidía. La lista de pantallas con clave de los huérfanos usa
+      la misma forma.
+    - Si alguna pantalla de producción tuviera más de 52 caracteres, su id cambiaría: el importador crearía la playlist
+      nueva, la asignación (encontrada por su ref) pasaría a apuntarla y la vieja saldría en `huerfanos`.
+    - **No cambia el destino**: sigue siendo la etiqueta de pantalla de hoy (`screenTag`, que recorta a 60). Dos
+      pantallas de más de 60 caracteres con el mismo principio ya comparten hoy la etiqueta `pantalla:…` en el legado; eso
+      queda como está.
 
 ## Plan de entregas
 
@@ -936,6 +955,10 @@ simulados:
 simulada, con un KV simulado con `list` y `get`:
 
 - el plan de una mezcla realista (borrador con piezas, sintético, vacío, vivas con destino y un circuito);
+- los ids de las fuentes largas: la huella es el SHA-256 de `node:crypto`; los ids, refs e ids de vivas que caben son los
+  de antes (cientos de pantallas y vivas con la forma de las de hoy) y `slugEntero` es `slugId` mientras cabe; dos
+  pantallas de más de 52 caracteres (y dos de más de 60) y dos vivas largas con el mismo principio dan ids distintos y
+  fijos, y el plan las importa todas;
 - los circuitos largos (sin perder pantallas) y las filas ajenas (`id_ocupado`);
 - que la simulación no escribe: sólo SELECT en la D1 y nada en el KV;
 - aplicar, y que la segunda pasada sale toda `igual`;
@@ -965,7 +988,9 @@ simulada y un KV simulado:
 - lo editado fuera (`editado_fuera`, también al vaciar un borrador o borrar un circuito), lo ajeno (`id_ocupado`) y lo que
   llega tarde (`obsoleto`, y dos espejos a la vez en cualquier orden) no se pisan;
 - los sintéticos, `identity-sync` y el `GET` no tocan la D1;
-- la respuesta sale antes de que termine el espejo (con la D1 bloqueada, el manejador ya ha respondido).
+- la respuesta sale antes de que termine el espejo (con la D1 bloqueada, el manejador ya ha respondido);
+- pantallas y vivas largas: el espejo da los mismos ids con huella que el importador, cada una con lo suyo, y vaciar
+  una archiva sólo su asignación.
 
 Las rutas se compilan con `npx wrangler@4.119.0 pages functions build --outdir /tmp/fx-e5`. En el bundle:
 
