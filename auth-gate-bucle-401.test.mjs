@@ -22,7 +22,13 @@ for (const pagina of ["./users/index.html", "./remotecontrol/index.html"]) {
   test(`${pagina}: no llama a la API antes de entrar ni recarga en bucle ante un 401`, () => {
     const html = leer(pagina);
     assert.match(html, /AdmiraTvAuth\.ready\(\)/, "arranca tras AdmiraTvAuth.ready()");
-    assert.match(html, /\.expired\(\)/, "un 401 pasa por AdmiraTvAuth.expired()");
+    // /users/ habla con la API de admira.tv: su 401 es sesión caducada (expired). /remotecontrol/ habla con brain, que
+    // pide el token de Google: su 401 no cierra la sesión de admira.tv, sólo avisa (mandoSinCredencial).
+    if (pagina.includes("users")) assert.match(html, /\.expired\(\)/, "un 401 pasa por AdmiraTvAuth.expired()");
+    else {
+      assert.match(html, /function mandoSinCredencial\(/, "un 401 de brain avisa sin cerrar la sesión");
+      assert.doesNotMatch(html, /status\s*===\s*401\)\s*\{[^}]*(expired|clear)\(\)/, "un 401 de brain no cierra la sesión");
+    }
     // El botón «Salir» sí borra y recarga (lo pide la persona); lo que no puede es hacerlo la respuesta 401.
     assert.doesNotMatch(html, /status\s*===\s*401\)\s*\{[^}]*location\.reload\(\)/, "un 401 no recarga por su cuenta");
     assert.doesNotMatch(html, /setTimeout\(load,\s*\d+\)/, "sin reintento a ciegas de la carga sin sesión");

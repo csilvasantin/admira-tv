@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=09.10.2026.r8.0846"></script>
+<script src="/auth-gate.js?v=09.10.2026.r9.1825"></script>
 <script>window.ADMIRA_VERSION='v.07.10.2026.r4.taza-demo';</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
@@ -658,12 +658,32 @@
     if(format) q.set('format',format);
     return q.toString();
   }
+  // 401 de brain (el mando): NO es la sesión de admira.tv la que caducó. brain sólo acepta el token de Google y la
+  // verja entra por redirección (la sesión vive en una cookie del servidor), así que con esa sesión brain responde 401.
+  // Antes se cerraba la sesión de admira.tv y se recargaba (en bucle hasta el 9-oct, una vez después): ahora se avisa
+  // encima de la página, sin moverla, y sólo se vuelve a entrar si la persona lo pide.
+  let avisoMando=null;
+  function mandoSinCredencial(){
+    if(avisoMando) return;
+    avisoMando=document.createElement('div');
+    avisoMando.setAttribute('role','alert');
+    avisoMando.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;max-width:min(92vw,560px);padding:12px 14px;border-radius:12px;background:#1b0f12;border:1px solid #ff6b6b;color:#ffd9d9;font:13px/1.45 system-ui,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.5)';
+    avisoMando.innerHTML='<b>🔒 El mando necesita tu credencial de Google.</b> Tu sesión de admira.tv sigue abierta; los controles de esta página hablan con brain, que pide además el token de Google. '+
+      '<span style="display:inline-flex;gap:8px;margin-top:8px"><button type="button" data-mando="entrar" style="padding:6px 10px;border-radius:8px;border:1px solid #ff6b6b;background:#ff6b6b;color:#1b0f12;font-weight:700;cursor:pointer">Volver a identificarme</button>'+
+      '<button type="button" data-mando="cerrar" style="padding:6px 10px;border-radius:8px;border:1px solid #6b3a40;background:transparent;color:#ffd9d9;cursor:pointer">Cerrar aviso</button></span>';
+    avisoMando.addEventListener('click',e=>{
+      const b=e.target.closest('button'); if(!b) return;
+      if(b.dataset.mando==='entrar'){ const A=window.AdmiraTvAuth; Promise.resolve(A&&A.clear&&A.clear()).then(()=>location.reload()); }
+      else { avisoMando.remove(); }
+    });
+    document.body.appendChild(avisoMando);
+  }
   async function loadAudit(){
     const box=$('audit-log'); if(box) box.innerHTML='<div class="audit-row">Actualizando…</div>';
     try{
       const r=await fetch(API+'/control/audit?'+auditQuery(''),{headers:authHeaders(),cache:'no-store'});
       const d=await r.json();
-      if(r.status===401){ const A=window.AdmiraTvAuth; if(A&&A.expired) A.expired(); else if(A&&A.clear) A.clear(); throw new Error('sesión caducada: vuelve a entrar'); }
+      if(r.status===401){ mandoSinCredencial(); throw new Error('el mando necesita volver a identificarte'); }
       if(!r.ok) throw new Error(d.error||('http '+r.status));
       CONTROL_ACCESS=d.access||{role:d.role||'observer',screens:[],circuits:[]}; applyRoleUi();
       if(!box)return;
@@ -740,10 +760,9 @@
             logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="tx">✓ enviado</span> · '+esc(cmd);
             waitReceipt(scr,j.id,t0,lastEl,logLn);
           } else if(status===401) {
-            // Una recarga como mucho por minuto (AdmiraTvAuth.expired): la verja vuelve a pedir entrar.
-            const A=window.AdmiraTvAuth, recarga=A&&A.expired?A.expired():(A&&A.clear&&A.clear(),false);
-            if(lastEl) lastEl.innerHTML='<span class="warn">🔒 sesión caducada · '+(recarga?'reconectando…':'vuelve a entrar')+'</span>';
-            logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">🔒 sesión caducada</span>';
+            mandoSinCredencial();
+            if(lastEl) lastEl.innerHTML='<span class="warn">🔒 el mando necesita identificarte</span>';
+            logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">🔒 sin credencial del mando</span>';
           } else if(status===403) {
             if(lastEl) lastEl.innerHTML='<span class="warn">🔒 fuera de alcance · '+esc((j&&j.role)||CONTROL_ACCESS.role)+'</span>';
             logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">🔒 '+esc((j&&j.error)||'forbidden')+'</span>';
@@ -1350,6 +1369,6 @@
     setInterval(loadAudit,30000);
   });
 </script>
-  <script src="/assets/admira-version-watch.js?v=09.10.2026.r8.0846" defer></script>
+  <script src="/assets/admira-version-watch.js?v=09.10.2026.r9.1825" defer></script>
 </body>
 </html>
