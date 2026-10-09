@@ -222,6 +222,68 @@ export async function leerParaImportar(db, { playlists = [], asignaciones = [] }
   };
 }
 
+// ── Doble escritura (E7) ────────────────────────────────────────────────────────────────────────────────────────
+/**
+ * Una bandera de meta.banderas (lo que devuelve leerMeta), o `defecto` si no está o si no hay meta. Tolera que el campo
+ * falte: las banderas nuevas (espejo, …) no existen en la fila hasta que alguien las fija.
+ */
+export function bandera(meta, nombre, defecto = false) {
+  const b = meta && meta.banderas;
+  return b && typeof b === "object" && Object.prototype.hasOwnProperty.call(b, nombre) ? b[nombre] : defecto;
+}
+/**
+ * Lo que necesita el espejo de UNA escritura del legado, en una sola ida (batch = lectura coherente). Es lo mismo que
+ * leerParaImportar, pero acotado a lo que toca esa escritura:
+ *   · las asignaciones de esas ref_externa y de esos ids (con `vivas`, además todas las «kv:viva:…», para archivar las
+ *     de las vivas que ya no están);
+ *   · las playlists de esos ids, enteras;
+ *   · con `vivas`, todos los circuitos (sin `vivas`, ninguno);
+ *   · meta (versión y banderas): el espejo vuelve a mirar su bandera con la misma lectura.
+ * Sólo SELECT. Los ids viajan en un único parámetro JSON.
+ */
+export async function leerParaEspejo(db, { refs = [], asignaciones = [], playlists = [], vivas = false } = {}) {
+  const ids = lista => JSON.stringify([...new Set((lista || []).map(String))]);
+  const deVivas = vivas ? " OR (ref_externa >= 'kv:viva:' AND ref_externa < 'kv:viva;')" : "";
+  const [as, ps, cs, meta] = await db.batch([
+    db.prepare(`SELECT * FROM asignacion WHERE ref_externa IN (SELECT value FROM json_each(?)) OR id IN (SELECT value FROM json_each(?))${deVivas} ORDER BY id`)
+      .bind(ids(refs), ids(asignaciones)),
+    db.prepare("SELECT * FROM playlist WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id").bind(ids(playlists)),
+    db.prepare(vivas ? "SELECT * FROM circuito ORDER BY id" : "SELECT * FROM circuito WHERE 0"),
+    db.prepare("SELECT version, banderas FROM meta WHERE id = 1"),
+  ]);
+  const m = filas(meta)[0];
+  return {
+    asignaciones: filas(as).map(f => deFila(ENTIDADES.asignacion, f)), playlists: filas(ps).map(f => deFila(ENTIDADES.playlist, f)),
+    circuitos: filas(cs).map(f => deFila(ENTIDADES.circuito, f)), legado: { playlists: [] },
+    meta: m ? { version: Number(m.version), banderas: JSON.parse(m.banderas || "{}") } : null,
+  };
+}
+/**
+ * Marcas del espejo en la auditoría (espejo_fallido, espejo_omitido): [{actor, accion, entidad, id, rev, detalle, ahora}].
+ * No son escrituras del modelo: no suben meta.version (no invalidan la memoria de lectura) y llevan la versión actual.
+ */
+export async function anotarAuditoria(db, marcas = []) {
+  const lista = (Array.isArray(marcas) ? marcas : [marcas]).filter(Boolean);
+  if (!lista.length) return { ok: true, anotadas: 0 };
+  await db.batch(lista.map(m => db.prepare("INSERT INTO auditoria (en, actor, accion, entidad, entidad_id, rev, version, detalle) SELECT ?, ?, ?, ?, ?, ?, version, ? FROM meta WHERE id = 1")
+    .bind(Number(m.ahora) || Date.now(), String(m.actor || ""), String(m.accion), String(m.entidad), String(m.id), m.rev == null ? null : Number(m.rev), JSON.stringify(m.detalle || {}))));
+  return { ok: true, anotadas: lista.length };
+}
+/** Cuántas marcas del espejo hay desde `desde`, por acción y motivo, y la última. Sólo SELECT (lo usa la simulación). */
+export async function resumenEspejo(db, { desde = 0 } = {}) {
+  const rs = filas(await db.prepare("SELECT accion, json_extract(detalle, '$.motivo') AS motivo, COUNT(*) AS n, MAX(en) AS ultima FROM auditoria "
+    + "WHERE en >= ? AND accion IN ('espejo_fallido', 'espejo_omitido') GROUP BY accion, motivo ORDER BY accion, motivo").bind(Number(desde) || 0).all());
+  const out = { fallidos: 0, omitidos: 0, editado_fuera: 0, motivos: { fallido: {}, omitido: {} }, ultima: null };
+  for (const r of rs) {
+    const n = Number(r.n) || 0, clase = r.accion === "espejo_fallido" ? "fallido" : "omitido", motivo = String(r.motivo || "sin_motivo");
+    out[clase === "fallido" ? "fallidos" : "omitidos"] += n;
+    out.motivos[clase][motivo] = (out.motivos[clase][motivo] || 0) + n;
+    if (clase === "omitido" && motivo === "editado_fuera") out.editado_fuera += n;
+    out.ultima = Math.max(out.ultima || 0, Number(r.ultima) || 0) || null;
+  }
+  return out;
+}
+
 // ── Historial, auditoría, meta y sombra ─────────────────────────────────────────────────────────────────────────
 export async function historial(db, entidad, id, { limite = MAX_REVISIONES } = {}) {
   const E = ENTIDADES[entidad];

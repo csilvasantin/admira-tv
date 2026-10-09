@@ -41,8 +41,9 @@ export const refBorrador = pantalla => "kv:default:" + slugId(pantalla);
 export const refViva = id => "kv:viva:" + id;
 export const refCircuito = id => "kv:circuito:" + id;
 const REF_BORRADOR = "kv:default:", REF_VIVA = "kv:viva:";
-// El id que legado.js da a la playlist de un borrador (slugId recorta a 60: una pantalla larga no cabe entera).
-const idDefecto = pantalla => slugId("defecto-" + pantalla);
+// El id que legado.js da a la playlist de un borrador (slugId recorta a 60: una pantalla larga no cabe entera). Lo usa
+// también el espejo (E7, espejo.js) para leer de la D1 lo de una pantalla.
+export const idDefecto = pantalla => slugId("defecto-" + pantalla);
 const ENTIDADES = ["circuito", "playlist", "asignacion"];
 const LIMPIAR = { playlist: limpiarPlaylist, asignacion: limpiarAsignacion, circuito: limpiarCircuito };
 
