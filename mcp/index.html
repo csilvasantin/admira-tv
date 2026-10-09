@@ -62,6 +62,42 @@ window.ADMIRA_NAV={title:'MCP · el canal conectado'};
 
   <div class="status"><span class="dot" id="dot"></span><span id="status">comprobando servidor…</span></div>
 
+  <h2 id="cambios-2026-10-09">Cambios del 8 y 9 de octubre de 2026</h2>
+  <div class="card"><p>Registro para el Consejo y los agentes, cada PR con su descripción y su documentación: <a href="/mcp/cambios-2026-10-09.md">cambios-2026-10-09.md</a> · <a href="/help/#novedades-2026-10-09">Help</a>. admira.tv #54–#67 (playlists, «Qué emite», modelo único E1–E7, verja sin bucle, parrilla en el iPad) y, como referencia, omnipublicity-api #34, pixeria #86–#88, pixer-worker #8, xpaceos #100 y el player nativo de iPad. Documentación, no herramientas MCP nuevas.</p>
+  <p style="margin:0;color:var(--mut);font-size:14px">EN: 8–9 Oct 2026 changelog for the council and agents, with every PR described and linked.</p></div>
+
+  <h2 id="programacion">Programación · modelo único de playlists</h2>
+  <div class="card"><p>Playlists + asignaciones + un resolver por capas (emergencia 500 · pagada 400 · propia 300 · por defecto 200 · relleno 100) en la D1 <code>admira-programacion</code>. <b>Hasta el corte (E13) manda el KV de siempre</b>: la D1 se compara (sombra) y se mantiene al día (espejo). Estado del 9-oct: 34 playlists + 34 asignaciones importadas (versión 68); <code>sombra</code> y <code>espejo</code> encendidos por Carlos, <code>motor</code> apagado (versión 69). Contrato: <a href="/mcp/programacion.md">programacion.md</a> · diseño: <a href="/docs/playlists-modelo-unico.md">playlists-modelo-unico.md</a> · panel: <a href="/programacion/sombra/">/programacion/sombra/</a> · <a href="/help/#programacion">Help</a>.</p>
+  <pre>GET    /api/programacion?screen=&lt;id&gt;[&amp;at=&lt;ISO|ms&gt;][&amp;tag=&lt;hashtag&gt;]        resolver de solo lectura (sesión; virtuales públicas)
+GET|POST|PUT|PATCH|DELETE /api/programacion/{playlists,asignaciones,circuitos}[/:id]   rev obligatoria · 409 · 428 · 422
+GET    /api/programacion/historial/&lt;tipo&gt;/&lt;id&gt; · /api/programacion/auditoria[?accion=espejo_fallido]
+POST   /api/programacion/importar[?aplicar=1&amp;pisar=1&amp;archivar=1&amp;cursor=]     simula por defecto
+GET|POST /api/programacion/banderas  {sombra?, espejo?, motivo}                 sólo sesión · motor → 409 hasta E13
+GET    /api/programacion/sombra[?veredicto=distinta&amp;motivo=&amp;pantalla=]</pre>
+  <p>Escritura con la sesión del portal (permiso <code>digitalsignage-player</code>) o la clave de servicio <code>PROGRAMACION_SERVICE_KEY</code> (<code>X-Programacion-Key</code>), que hoy <b>no está puesta</b>. No hay herramienta MCP de programación: es HTTP con sesión. <b>No encender <code>motor</code></b> ni forzarlo por SQL.</p>
+  <p style="margin:0;color:var(--mut);font-size:14px">EN: Unified playlist model. Legacy KV still drives players; shadow comparison and double write are on, the engine stays off until E13.</p></div>
+
+  <h2 id="emision">Qué emite cada pantalla · /api/emision</h2>
+  <div class="card"><p>Réplica pura de <code>rebuild()</code> de <code>canal.html</code>: qué fuente gana ahora (o a otra hora), por qué, qué capas quedan anuladas y las piezas en orden. Pila: Xtore › mural › previo › hashtag › «Por defecto» › sincro › Stock con la parrilla cada 4. <code>observado.vivo</code> = latido en <code>/signage/now</code> hace menos de 5 min. Contrato: <a href="/mcp/emision.md">emision.md</a> · página: <a href="/emision/">/emision/</a> · <a href="/help/#que-emite">Help</a>.</p>
+  <pre>GET https://admira.tv/api/emision?screen=&lt;pantalla&gt;[&amp;at=&lt;ISO|ms&gt;][&amp;tag=&lt;hashtag&gt;][&amp;resumen=1]
+→ {fuente, motivo, etiqueta, capas[{id, estado, anuladaPor}], piezas[{pos, titulo, duracion, procedencia}], avisos, supuestos,
+   observado{vivo, standby, ahora, publicada{n, parece, coincide}}}</pre>
+  <p>Sin efectos. Pantallas virtuales sin sesión; el resto con sesión <code>digitalsignage-player</code> o visor. No abras <code>canal.html?screen=&lt;pantalla real&gt;</code> para mirar: se hace pasar por ella.</p>
+  <p style="margin:0;color:var(--mut);font-size:14px">EN: What a screen plays now and what overrides its default playlist, without side effects.</p></div>
+
+  <h2 id="ipad-nativo">Player nativo de iPad</h2>
+  <div class="card"><p>App SwiftUI + AVPlayer (repo privado <code>csilvasantin/admira-player-ipad</code>, v0.1 del 9-oct): «Por defecto» + Stock + parrilla cada 4, disco primero, sin red, informa a <code>/signage/now</code>, <code>/control/playlist</code>, <code>/screen/cache</code> y <code>/emit</code>. Verificado en el iPad de Admin como <code>altadis-bcn-001-p1-vertical</code> (<code>vivo: true</code>). Instalación por USB con <code>tools/instalar-ipad.sh &lt;pantalla&gt;</code>; firma gratuita de 7 días (caduca el 16-oct). Fuera de la v1: sincro, mural, hashtag del mando, Xtore y órdenes del mando. <a href="/mcp/ipad-nativo.md">ipad-nativo.md</a> · <a href="/help/#ipad-nativo">Help</a>.</p>
+  <p style="margin:0;color:var(--mut);font-size:14px">EN: Native iPad player; free signing expires every 7 days and needs a reinstall.</p></div>
+
+  <h2 id="ipad-pruebas">Probar en el iPad por USB</h2>
+  <div class="card"><p>Para agentes del Mac Mini: <code>~/Claude/tools/ipad-venv/bin/pymobiledevice3</code> — capturas (<code>developer dvt screenshot</code>, sin sudo), abrir apps (<code>developer dvt launch</code>), Safari (<code>webinspector opened-tabs|launch|js-shell</code>) y puente CDP (<code>webinspector cdp</code> → http://127.0.0.1:9222/). Requiere Modo de desarrollador e Inspector web + Automatización remota en Safari. Trampas: emparejamiento atascado, «Desarrollador no fiable» y sesiones de automatización sin cookies. <a href="/mcp/ipad-pruebas.md">ipad-pruebas.md</a>.</p>
+  <p style="margin:0;color:var(--mut);font-size:14px">EN: How agents screenshot, open apps and drive Safari on the USB iPad.</p></div>
+
+  <h2 id="acceso-paginas">Páginas con verja · ready() y expired()</h2>
+  <div class="card"><p>Toda página que llame a una API al arrancar espera a <code>AdmiraTvAuth.ready()</code> (antes de la primera llamada y de sus refrescos) y pasa cada 401 por <code>AdmiraTvAuth.expired()</code> (una recarga por minuto como mucho). Arregló el bucle de recarga de <code>/users/</code> y <code>/remotecontrol/</code> (#64). <a href="/mcp/acceso-paginas.md">acceso-paginas.md</a> · <a href="/help/#paginas-acceso">Help</a>.</p>
+  <pre>((window.AdmiraTvAuth &amp;&amp; AdmiraTvAuth.ready) ? AdmiraTvAuth.ready() : Promise.resolve()).then(arrancar);
+if (r.status === 401 &amp;&amp; !AdmiraTvAuth.expired()) avisar('Sesión caducada: vuelve a entrar');</pre>
+  <p style="margin:0;color:var(--mut);font-size:14px">EN: Gated pages wait for ready() and route 401s through expired().</p></div>
 
 <h2 id="audiencia-sesion">Xtore · audiencia de sesión</h2><div class="card"><p><a href="/mcp/xtore-audience-session.md">Contrato XpaceOS / Pixeria</a> · <a href="/mcp/xtore-audience-session.schema.json">Esquema JSON</a> · <a href="/help/#xtore-audiencia">Help</a>. Contadores y enlace entre ventanas implementados; importación de sesiones en Pixeria y nuevas tools remotas pendientes.</p></div>
   <h2 id="ieu-puertacam">IEU · inicio automático de Puerta Cam</h2>
