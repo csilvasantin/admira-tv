@@ -95,7 +95,7 @@
   function setBusy(on){busy=on;document.body.classList.toggle('loading',on)}
   function api(path,opts){
     opts=opts||{};opts.headers=Object.assign({'Authorization':auth()},opts.headers||{});opts.cache='no-store';opts.credentials='same-origin';
-    return fetch(API+path,opts).then(function(r){return r.json().catch(function(){return {}}).then(function(d){if(r.status===401){window.AdmiraTvAuth&&window.AdmiraTvAuth.clear();location.reload();throw new Error('Sesión caducada')}if(!r.ok){var e=new Error(d.error||('HTTP '+r.status));e.status=r.status;e.data=d;throw e}return d})});
+    return fetch(API+path,opts).then(function(r){return r.json().catch(function(){return {}}).then(function(d){if(r.status===401){var A=window.AdmiraTvAuth;if(A&&A.expired)A.expired();else if(A){A.clear()}throw new Error('Sesión caducada: vuelve a entrar')}if(!r.ok){var e=new Error(d.error||('HTTP '+r.status));e.status=r.status;e.data=d;throw e}return d})});
   }
   function projects(){return state&&state.projects||[]}
   function users(){return state&&state.users||[]}
@@ -289,7 +289,8 @@
   $('newRole').addEventListener('change',ajustaRolNuevo);
   $('refresh').onclick=load;$('logout').onclick=function(){window.AdmiraTvAuth&&window.AdmiraTvAuth.clear();location.reload()};
   $('auditRefresh').onclick=function(){api('/audit').then(function(d){$('audit').innerHTML=(d.events||[]).map(function(e){return '<div class="event"><span>'+new Date(e.ts).toLocaleString('es-ES')+'</span><b>'+esc(e.actor)+'</b><span>'+esc(e.action)+'</span><span>'+esc(e.target)+' · '+esc(e.detail||'')+'</span></div>'}).join('')||'<div class="empty">Sin eventos</div>'}).catch(function(e){toast('Auditoría no disponible: '+e.message,'err')})};
-  if(!auth()){toast('Esperando una sesión Google válida…','err');setTimeout(load,600)}else load();
+  // Se espera a que la verja deje pasar: sin sesión, llamar a la API antes recargaba la página en bucle (9-oct-2026).
+  if(window.AdmiraTvAuth&&window.AdmiraTvAuth.ready)window.AdmiraTvAuth.ready().then(load);else load();
 })();
 </script>
 </body>

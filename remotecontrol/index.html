@@ -663,7 +663,7 @@
     try{
       const r=await fetch(API+'/control/audit?'+auditQuery(''),{headers:authHeaders(),cache:'no-store'});
       const d=await r.json();
-      if(r.status===401){ if(window.AdmiraTvAuth&&window.AdmiraTvAuth.clear)window.AdmiraTvAuth.clear(); location.reload(); return; }
+      if(r.status===401){ const A=window.AdmiraTvAuth; if(A&&A.expired) A.expired(); else if(A&&A.clear) A.clear(); throw new Error('sesión caducada: vuelve a entrar'); }
       if(!r.ok) throw new Error(d.error||('http '+r.status));
       CONTROL_ACCESS=d.access||{role:d.role||'observer',screens:[],circuits:[]}; applyRoleUi();
       if(!box)return;
@@ -740,10 +740,10 @@
             logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="tx">✓ enviado</span> · '+esc(cmd);
             waitReceipt(scr,j.id,t0,lastEl,logLn);
           } else if(status===401) {
-            if(window.AdmiraTvAuth&&window.AdmiraTvAuth.clear) window.AdmiraTvAuth.clear();
-            if(lastEl) lastEl.innerHTML='<span class="warn">🔒 sesión caducada · reconectando…</span>';
+            // Una recarga como mucho por minuto (AdmiraTvAuth.expired): la verja vuelve a pedir entrar.
+            const A=window.AdmiraTvAuth, recarga=A&&A.expired?A.expired():(A&&A.clear&&A.clear(),false);
+            if(lastEl) lastEl.innerHTML='<span class="warn">🔒 sesión caducada · '+(recarga?'reconectando…':'vuelve a entrar')+'</span>';
             logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">🔒 sesión caducada</span>';
-            setTimeout(()=>location.reload(),900);
           } else if(status===403) {
             if(lastEl) lastEl.innerHTML='<span class="warn">🔒 fuera de alcance · '+esc((j&&j.role)||CONTROL_ACCESS.role)+'</span>';
             logLn.innerHTML=stamp()+' <span class="id">'+esc(scr)+'</span> · <span class="warn">🔒 '+esc((j&&j.error)||'forbidden')+'</span>';
@@ -1341,11 +1341,14 @@
   $('a-type').addEventListener('change',loadAudit);
   $('a-limit').addEventListener('change',loadAudit);
   ['a-screen','a-actor'].forEach(id=>$(id).addEventListener('keydown',e=>{ if(e.key==='Enter')loadAudit(); }));
-  load();
-  loadAudit();
-  restartTimer();
-  restartPrevioTimer();
-  setInterval(loadAudit,30000);
+  // Se espera a que la verja deje pasar antes de llamar a la API (un 401 sin sesión recargaba en bucle, 9-oct-2026).
+  // Los refrescos periódicos también arrancan después: si no, el primero llegaba sin sesión y daba 401.
+  ((window.AdmiraTvAuth&&window.AdmiraTvAuth.ready)?window.AdmiraTvAuth.ready():Promise.resolve()).then(()=>{
+    load(); loadAudit();
+    restartTimer();
+    restartPrevioTimer();
+    setInterval(loadAudit,30000);
+  });
 </script>
   <script src="/assets/admira-version-watch.js?v=09.10.2026.r3.0636" defer></script>
 </body>
