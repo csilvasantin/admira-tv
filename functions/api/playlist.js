@@ -1,6 +1,7 @@
 import { accessFor, authHeaders, sessionEmail } from "../_auth-session.js";
 import { lecturaBlocksWrite } from "../_lectura-guard.js";
 import { LIVE_KEY, TAGS_PREFIX, STOCK_INDEX, MAX_LIVE, MAX_CIRCUITS, addressedContent, addressKeys, applyCircuits, cleanCircuit, cleanIdIot, buildXpaceIndex, cleanIdentity, xpaceEntry, cleanLive, completeFacts, deduceScreenTags, liveRev, orientationOf, resolveContent, resolveForScreen, targetMatches } from "./_playlist-live.js";
+import { sombraTrasRespuesta } from "./_programacion/gancho-sombra.js";
 
 // Exportado para el importador del legado (E5, _programacion/importar.js): lee las mismas claves, sin escribirlas.
 export const DRAFT_PREFIX = "admira-tv:playlist:default:v1:";
@@ -298,7 +299,11 @@ export async function onRequestGet({ request, env, waitUntil }) {
     const ya = new Set(draft.items.map(i => String(i.stockId || "")));
     auto = dirigidas.filter(i => !ya.has(i.stockId));
   }
-  return json({ ok: true, draft, screenTags, auto }, 200, cors);
+  const respuesta = { ok: true, draft, screenTags, auto };
+  // Modo sombra (E6, docs/playlists-modelo-unico.md): si pregunta el player, compara por detrás (waitUntil, después de
+  // responder) con el motor nuevo. Nunca retrasa, cambia ni rompe esta respuesta; con la bandera apagada, no hace nada.
+  if (fromPlayer(q)) sombraTrasRespuesta({ env, waitUntil, screen, q, respuesta });
+  return json(respuesta, 200, cors);
 }
 
 // Guardar, pausar o borrar una playlist viva. Sólo con sesión del portal (la clave del Stock no vale aquí:

@@ -144,7 +144,9 @@ export async function onRequestGet({ request, env = {}, waitUntil }) {
   if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);
 
   const ahora = Math.abs(at - Date.now()) < 120_000;
-  const ro = { ...env, ACCESS: soloLectura(env.ACCESS) };
+  // Sin PROGRAMACION_DB: la consulta en proceso a /api/playlist imita las pistas del player, pero no es el player y no
+  // debe encargar la comparación del modo sombra (E6).
+  const ro = { ...env, ACCESS: soloLectura(env.ACCESS), PROGRAMACION_DB: undefined };
   const swallow = p => { try { if (typeof waitUntil === "function") waitUntil(Promise.resolve(p).catch(() => {})); } catch (_) {} };
   const clock = madridClock(at), hoy = madridClock(Date.now()).date;
 
