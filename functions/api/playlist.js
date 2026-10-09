@@ -1,6 +1,9 @@
 import { accessFor, authHeaders, sessionEmail } from "../_auth-session.js";
 import { lecturaBlocksWrite } from "../_lectura-guard.js";
 import { LIVE_KEY, TAGS_PREFIX, STOCK_INDEX, MAX_LIVE, MAX_CIRCUITS, addressedContent, addressKeys, applyCircuits, cleanCircuit, cleanIdIot, buildXpaceIndex, cleanIdentity, xpaceEntry, cleanLive, completeFacts, deduceScreenTags, liveRev, orientationOf, resolveContent, resolveForScreen, targetMatches } from "./_playlist-live.js";
+// Doble escritura (E7 del modelo único): tras guardar en el KV, lo mismo va a la D1 en waitUntil, detrás de la bandera
+// meta.banderas.espejo. No cambia la respuesta ni su latencia; ver _programacion/espejo.js.
+import { espejar } from "./_programacion/espejo.js";
 
 // Exportado para el importador del legado (E5, _programacion/importar.js): lee las mismas claves, sin escribirlas.
 export const DRAFT_PREFIX = "admira-tv:playlist:default:v1:";
@@ -303,7 +306,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
 
 // Guardar, pausar o borrar una playlist viva. Sólo con sesión del portal (la clave del Stock no vale aquí:
 // una regla puede llegar a muchas pantallas a la vez).
-async function liveWrite(request, env, body, cors) {
+async function liveWrite(request, env, body, cors, waitUntil) {
   const actor = await actorWithAccess(request, env);
   if (!actor) return json({ ok: false, error: "unauthorized" }, 401, cors);
   if (!env.ACCESS) return json({ ok: false, error: "storage_unavailable" }, 503, cors);
@@ -346,15 +349,16 @@ async function liveWrite(request, env, body, cors) {
   }
   const updatedAt = Date.now(), next = { rev: Math.max(Number(live.rev) || 0, updatedAt - 1) + 1, updatedAt, updatedBy: actor, playlists, circuits };
   await env.ACCESS.put(LIVE_KEY, JSON.stringify(next));
+  espejar({ env, waitUntil }, { vivas: { antes: live, despues: next, accion: body.action }, actor });
   return json({ ok: true, live: next }, 200, cors);
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request, env, waitUntil }) {
   const cors = corsFor(request);
   if (await lecturaBlocksWrite(request, env)) return json({ ok: false, error: "solo_lectura" }, 403, cors);
   let body;
   try { body = await request.json(); } catch (_) { return json({ ok: false, error: "invalid_json" }, 400, cors); }
-  if (body && ["live-save", "live-delete", "identity-sync", "circuit-save", "circuit-delete"].includes(body.action)) return liveWrite(request, env, body, cors);
+  if (body && ["live-save", "live-delete", "identity-sync", "circuit-save", "circuit-delete"].includes(body.action)) return liveWrite(request, env, body, cors, waitUntil);
   // Sesión del portal (admira.tv) o clave del Stock (pixeria.com, server-to-server).
   const actor = await actorWithAccess(request, env) || stockActor(request, env, body);
   if (!actor) return json({ ok: false, error: "unauthorized" }, 401, cors);
@@ -371,5 +375,6 @@ export async function onRequestPost({ request, env }) {
   const name = String((body && body.name) || "").trim().slice(0, 80) || "Por defecto";
   const draft = { screen, playlist: "default", name, items, rev, updatedAt, updatedBy: actor };
   await env.ACCESS.put(PREFIX + screen, JSON.stringify(draft));
+  espejar({ env, waitUntil }, { borrador: { pantalla: screen, valor: draft }, actor });
   return json({ ok: true, draft, rev, updatedAt }, 200, cors);
 }
