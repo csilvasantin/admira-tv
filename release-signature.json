@@ -1,9 +1,9 @@
 {
-  "version": "v.09.10.2026.r8.08:46",
+  "version": "v.09.10.2026.r9.18:25",
   "signature": "MorfeoMacMini · MacMini",
   "agent": "MorfeoMacMini",
   "machine": "MacMini",
   "day": "09.10.2026",
-  "time": "08:46",
-  "evidence": "Help y MCP del 8-9 oct: modelo único (programacion.md), Qué emite (emision.md), player nativo iPad, pruebas por USB-C, contrato de acceso de páginas y changelog; manifest y llms.txt al día."
+  "time": "18:25",
+  "evidence": "Remote control: un 401 de brain (falta el token de Google con la sesión por redirección) ya no cierra la sesión de admira.tv; avisa con «Volver a identificarme»."
 }
