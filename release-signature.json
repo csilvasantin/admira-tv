@@ -1,9 +1,9 @@
 {
-  "version": "v.09.10.2026.r2.06:29",
-  "signature": "MorfeoMacMini · MacMini",
-  "agent": "MorfeoMacMini",
+  "version": "v.09.10.2026.r3.06:36",
+  "signature": "Smith · MacMini",
+  "agent": "Smith",
   "machine": "MacMini",
   "day": "09.10.2026",
-  "time": "06:29",
-  "evidence": "Modelo único E6+E7: modo sombra (comparación tras la respuesta del player, tabla sombra, panel /programacion/sombra/) y doble escritura KV→D1 (espejo en waitUntil), ambas apagadas; /api/programacion/banderas enciende sombra y espejo."
+  "time": "06:36",
+  "evidence": "⌘ Experto: /idioma y /language alternan ESP↔ENG y /arquitectura · /architecture abren el organigrama tecnológico de admiranext.com (assets/experto-verbos-suite.js vía ADMIRA_FRAME_VERBS). Preparado por GrokBotBox; firma del agente que despliega."
 }
