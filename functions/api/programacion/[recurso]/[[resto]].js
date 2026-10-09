@@ -9,6 +9,9 @@
 //   GET    /api/programacion/historial/<tipo>/<id>          sus revisiones (las 50 últimas) y cómo está ahora
 //   GET    /api/programacion/auditoria[?entidad=&id=&actor=&accion=&antes=&limite=]   paginada por `antes`
 //   POST   /api/programacion/importar[?aplicar=1&cursor=&limite=]   importador del legado (E5): simula o aplica
+//   GET    /api/programacion/banderas                       banderas de despliegue (E6): motor y sombra
+//   POST   /api/programacion/banderas  {sombra, motivo}     enciende o apaga el modo sombra (motor: 409 hasta E13)
+//   GET    /api/programacion/sombra[?veredicto=&motivo=&pantalla=&antes=&limite=]   modo sombra (E6), paginado
 // con <recurso> = playlists · asignaciones · circuitos.
 //
 // Todo pasa por almacen.js (E1): un solo db.batch con bloqueo optimista por `rev` (409 revision_conflict con la
@@ -20,7 +23,8 @@
 // escribir, con esa misma sesión (actor = su email) o con la clave de servicio de Pixeria (X-Programacion-Key o
 // Authorization: Bearer; actor = servicio:<X-Actor o «pixeria»>). Sin CORS: la clave es sólo server to server.
 // El visor (sesión de lectura) no ve quién escribió: historial y auditoría le dan 403 solo_lectura, y en las listas y
-// lecturas sueltas no lleva creado_por ni actualizado_por.
+// lecturas sueltas no lleva creado_por ni actualizado_por. El modo sombra (E6) no lleva emails: el visor lo lee. Las
+// banderas sólo las ve y las cambia la sesión del portal (banderas.js): ni el visor ni la clave de servicio.
 //
 // RUTA [recurso]/[[resto]] y no [[ruta]]: en Pages un comodín [[ruta]] también casa con la base (/api/programacion) y,
 // como el router ordena las rutas por número de tramos, le ganaría a functions/api/programacion.js. Con [recurso]
@@ -31,12 +35,16 @@ import { authHeaders } from "../../../_auth-session.js";
 import * as A from "../../_programacion/almacen.js";
 import { autorizarEscritura, autorizarLectura } from "../../_programacion/acceso.js";
 import { importar } from "../../_programacion/importar.js";
+import { banderas } from "../../_programacion/banderas.js";
+import { cuentasSombra, listarSombra } from "../../_programacion/sombra.js";
+import { VEREDICTOS } from "../../_programacion/comparador.js";
 import { ESTADOS, MAX_ITEMS, MAX_REGLAS, slugId } from "../../_programacion/modelo.js";
 import { MAX_FRANJAS } from "../../_programacion/horario.js";
 
 const BASE = "/api/programacion";
 const MAX_CUERPO = 2_000_000;                       // caracteres; D1 no guarda filas de más de 2 MB
 const LIMITE_AUDITORIA = 50, MAX_LIMITE_AUDITORIA = 200;
+const LIMITE_SOMBRA = 50, MAX_LIMITE_SOMBRA = 200;
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,59}$/;
 
 const json = (value, status = 200, extra = {}) => Response.json(value, { status, headers: authHeaders(extra) });
@@ -118,6 +126,8 @@ function enrutar(t) {
   if (!t) return null;
   if (t.length === 1 && t[0] === "auditoria") return { tipo: "auditoria", metodos: ["GET"] };
   if (t.length === 1 && t[0] === "importar") return { tipo: "importar", metodos: ["POST"] };
+  if (t.length === 1 && t[0] === "banderas") return { tipo: "banderas", metodos: ["GET", "POST"] };
+  if (t.length === 1 && t[0] === "sombra") return { tipo: "sombra", metodos: ["GET"] };
   if (t.length === 3 && t[0] === "historial" && TIPOS[t[1]]) return { tipo: "historial", recurso: TIPOS[t[1]], id: t[2], metodos: ["GET"] };
   if (!RECURSOS[t[0]]) return null;
   if (t.length === 1) return { tipo: "coleccion", recurso: t[0], metodos: ["GET", "POST"] };
@@ -153,6 +163,8 @@ export async function onRequest({ request, env = {} }) {
   if (!ruta.metodos.includes(metodo)) return metodoNoPermitido(ruta.metodos);
   // El importador (E5) tiene su propio acceso (sólo la sesión del portal) y su propia lectura del KV: importar.js.
   if (ruta.tipo === "importar") return importar({ request, env });
+  // Las banderas (E6), también: sólo la sesión del portal, para leer y para escribir.
+  if (ruta.tipo === "banderas") return banderas({ request, env });
   const escribe = metodo !== "GET";
   const auth = escribe ? await autorizarEscritura(request, env) : await autorizarLectura(request, env);
   if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);
@@ -168,6 +180,7 @@ export async function onRequest({ request, env = {} }) {
   try {
     if (ruta.tipo === "auditoria") return await verAuditoria(db, q, meta);
     if (ruta.tipo === "historial") return await verHistorial(db, ruta, meta);
+    if (ruta.tipo === "sombra") return await verSombra(db, q, meta);
     if (ruta.tipo === "coleccion") return metodo === "GET" ? await listar(db, ruta, q, meta, auth) : await crear(db, ruta, request, q, auth);
     if (!ID_RE.test(ruta.id)) return json({ ok: false, error: "no_existe" }, 404);
     if (metodo === "GET") return await leerUna(db, ruta, meta, auth);
@@ -250,4 +263,25 @@ async function verAuditoria(db, q, meta) {
     accion: q.get("accion") || null, antes: antes ? Number(antes) : null, limite: limite + 1 });
   const entradas = filas.slice(0, limite);
   return json({ ok: true, version: meta.version, entradas, siguiente: filas.length > limite ? entradas[entradas.length - 1].id : null });
+}
+
+/** GET /sombra: una fila por pantalla con su veredicto, de la que cambió más recientemente a la que menos. */
+async function verSombra(db, q, meta) {
+  const veredicto = q.get("veredicto") || null, motivo = q.get("motivo") || null, pantalla = q.get("pantalla") || null, crudo = q.get("antes");
+  if (veredicto && !VEREDICTOS.includes(veredicto)) return json({ ok: false, error: "veredicto_invalido" }, 400);
+  if (motivo && !/^[a-z_]{1,40}$/.test(motivo)) return json({ ok: false, error: "motivo_invalido" }, 400);
+  if (pantalla && !/^[a-z0-9][a-z0-9-]{1,79}$/.test(pantalla)) return json({ ok: false, error: "pantalla_invalida" }, 400);
+  // `antes` es el `siguiente` de la página anterior: <en>.<pantalla> de su última fila.
+  const m = crudo ? /^(\d{1,15})\.([a-z0-9][a-z0-9-]{1,79})$/.exec(crudo) : null;
+  if (crudo && !m) return json({ ok: false, error: "antes_invalido" }, 400);
+  const limite = entero(q.get("limite"), 1, MAX_LIMITE_SOMBRA, LIMITE_SOMBRA);
+  const [lista, resumen] = await Promise.all([
+    listarSombra(db, { veredicto, motivo, pantalla, antes: m ? { en: Number(m[1]), pantalla: m[2] } : null, limite: limite + 1 }),
+    cuentasSombra(db),
+  ]);
+  const filas = lista.slice(0, limite), ultima = filas[filas.length - 1];
+  return json({
+    ok: true, version: meta.version, banderas: { sombra: !!(meta.banderas && meta.banderas.sombra === true), motor: String((meta.banderas && meta.banderas.motor) || "apagado") },
+    ...resumen, filas, siguiente: lista.length > limite ? `${ultima.desde}.${ultima.pantalla}` : null,
+  });
 }

@@ -244,13 +244,18 @@ export async function leerMeta(db) {
   const m = await db.prepare("SELECT version, esquema, banderas, actualizado_en FROM meta WHERE id = 1").first();
   return m ? { version: Number(m.version), esquema: Number(m.esquema), banderas: JSON.parse(m.banderas || "{}"), actualizado_en: Number(m.actualizado_en) } : null;
 }
-/** Banderas de despliegue (motor: apagado · sombra · encendido, …): se funden con las que hay. Auditado. */
-export async function fijarBanderas(db, cambios, { actor = "", ahora = Date.now() } = {}) {
+/**
+ * Banderas de despliegue (motor: apagado · sombra · encendido, …): se funden con las que hay. Auditado: la auditoría
+ * lleva {cambios, antes, motivo}, con `antes` = lo que valían esas banderas (null si no existían).
+ */
+export async function fijarBanderas(db, cambios, { actor = "", ahora = Date.now(), motivo = "" } = {}) {
   const limpias = {};
   for (const [k, v] of Object.entries(cambios || {})) if (/^[a-z_]{1,40}$/.test(k) && ["string", "number", "boolean"].includes(typeof v)) limpias[k] = typeof v === "string" ? v.slice(0, 80) : v;
-  const actual = await leerMeta(db), banderas = { ...((actual && actual.banderas) || {}), ...limpias };
+  const actual = await leerMeta(db), previas = (actual && actual.banderas) || {}, banderas = { ...previas, ...limpias };
+  const antes = Object.fromEntries(Object.keys(limpias).map(k => [k, k in previas ? previas[k] : null]));
+  const detalle = { cambios: limpias, antes, ...(motivo ? { motivo: String(motivo).slice(0, 300) } : {}) };
   const res = await db.batch([
-    db.prepare("INSERT INTO auditoria (en, actor, accion, entidad, entidad_id, rev, version, detalle) SELECT ?, ?, 'banderas', 'meta', 'banderas', NULL, version + 1, ? FROM meta WHERE id = 1").bind(ahora, actor, JSON.stringify(limpias)),
+    db.prepare("INSERT INTO auditoria (en, actor, accion, entidad, entidad_id, rev, version, detalle) SELECT ?, ?, 'banderas', 'meta', 'banderas', NULL, version + 1, ? FROM meta WHERE id = 1").bind(ahora, actor, JSON.stringify(detalle)),
     db.prepare("UPDATE meta SET banderas = ?, version = version + 1, actualizado_en = ? WHERE id = 1").bind(JSON.stringify(banderas), ahora),
     db.prepare("SELECT version FROM meta WHERE id = 1"),
   ]);
