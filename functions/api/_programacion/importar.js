@@ -28,6 +28,7 @@ import { DRAFT_PREFIX } from "../playlist.js";
 import { PROYECTO, actorDeServicio } from "./acceso.js";
 import * as A from "./almacen.js";
 import { ACTOR, ESCRIBEN, idsNecesarios, planificar, sinDatos, traducir } from "./importador.js";
+import { espejoDe } from "./espejo.js";
 
 // Escrituras en la D1 por petición: un db.batch de 5 a 10 sentencias cada una (almacen.js). Con 50 se queda lejos del
 // tope de 1000 consultas por invocación de Workers, aunque D1 contara cada sentencia del batch por separado.
@@ -35,6 +36,7 @@ export const MAX_ESCRITURAS = 50;
 const LIMITE_DEFECTO = 50, MAX_LIMITE = 100;       // borradores por tramo (un KV.get cada uno)
 const MUESTRA_DEFECTO = 25, MAX_MUESTRA = 500, MAX_LISTA = 500;
 const MAX_PAGINAS_CLAVES = 20;                     // 20 × 1000 claves de borrador como mucho para los huérfanos
+const DIAS_ESPEJO = 7;                             // ventana de las marcas de la doble escritura (E7) que se cuentan
 const GUARDAR = { playlist: A.guardarPlaylist, asignacion: A.guardarAsignacion, circuito: A.guardarCircuito };
 
 const json = (value, status = 200) => Response.json(value, { status, headers: authHeaders() });
@@ -128,6 +130,8 @@ export async function importar({ request, env = {} }) {
     ok: true, modo: aplicar ? "aplicado" : "simulacion", opciones, version: meta.version,
     tramo: { vivas: tramo.vivas ? plan.vivas : "fuera_del_tramo", borradores: leido.borradores.length, continuacion: !!tramo.kv },
     resumen: plan.resumen,
+    // Doble escritura (E7): su bandera y las marcas que dejó en la auditoría (fallos y omisiones: editado_fuera…).
+    espejo: await resumenDelEspejo(db, meta),
   };
   let pendientes = 0;
   if (aplicar) {
@@ -145,6 +149,12 @@ export async function importar({ request, env = {} }) {
     huerfanos_borradores: leido.fin ? (pantallas ? "comprobados" : "sin_comprobar") : "en_el_ultimo_tramo",
     completo: !siguiente, siguiente,
   });
+}
+
+/** La bandera del espejo y sus marcas de los últimos DIAS_ESPEJO días. Sólo SELECT; si falla, null (no tumba el importador). */
+async function resumenDelEspejo(db, meta) {
+  try { return { bandera: espejoDe(meta), dias: DIAS_ESPEJO, ...(await A.resumenEspejo(db, { desde: Date.now() - DIAS_ESPEJO * 86_400_000 })) }; }
+  catch (e) { console.error("programacion: importar espejo", e); return null; }
 }
 
 /** Ejecuta las escrituras del plan, en orden y con tope. Nunca borra: sólo guardar* de almacen.js (archivar es guardar con
