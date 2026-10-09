@@ -1,9 +1,9 @@
 {
-  "version": "v.09.10.2026.r6.07:22",
+  "version": "v.09.10.2026.r7.07:30",
   "signature": "MorfeoMacMini · MacMini",
   "agent": "MorfeoMacMini",
   "machine": "MacMini",
   "day": "09.10.2026",
-  "time": "07:22",
-  "evidence": "Parrilla: las miniaturas de vídeo y el previo muestran la portada del Stock (poster/thumbnail); en el iPad ya no salen en negro."
+  "time": "07:30",
+  "evidence": "Parrilla: la Vista previa enseña la portada del Stock mientras su vídeo no reproduce; en el iPad deja de verse negra."
 }
