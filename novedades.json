@@ -146,5 +146,9 @@
     "Preparar demo Xtore con la cuadrática compartida y los paneles cerrados al entrar",
     "La barra principal muestra los pasos para marcar Puerta Cam y los motivos si no se comparte la pestaña",
     "La cámara se marca con dos esquinas; iPad y pantalla siguen siendo opcionales"
+  ],
+  "v.09.10.2026.r3.06:36": [
+    "⌘ Experto: /idioma o /language alternan castellano ↔ inglés; /idioma ESP|ENG lo fija.",
+    "⌘ Experto: /arquitectura (castellano) y /architecture (inglés) abren el organigrama tecnológico de la Suite en admiranext.com."
   ]
 }
