@@ -1,7 +1,7 @@
 # Modelo único de playlists de admira.tv
 
 Diseño aprobado por Carlos el 8-oct-2026. Este documento recoge el diseño, las tres decisiones de Carlos, lo que hacen las
-entregas E1 a E5, en qué se aparta la implementación del diseño y el plan completo de entregas.
+entregas E1 a E7, en qué se aparta la implementación del diseño y el plan completo de entregas.
 
 ## Por qué
 
@@ -97,7 +97,7 @@ Las tres son las opciones recomendadas.
 | `circuito` | Circuitos definidos, que hoy viven dentro del documento de vivas. |
 | `clave_servicio` | Claves de escrituras servidor a servidor. Sólo se guarda el hash SHA-256; el valor vive en `admira-vault`. **E4 todavía no la usa**: la clave de Pixeria es un secreto de Pages (desviación 22). |
 | `auditoria` | Una fila por escritura aceptada, con la `version` resultante. |
-| `sombra` | Comparación entre el legado y el motor nuevo, por pantalla. |
+| `sombra` | Comparación entre el legado y el motor nuevo: una fila por pantalla con el último veredicto (ver «Modo sombra (E6)»). |
 
 **Escritura con bloqueo optimista en un solo `db.batch`**, que en D1 es una transacción
 (`functions/api/_programacion/almacen.js`):
@@ -294,7 +294,9 @@ plural.
 | `DELETE /<recurso>/<id>` | La borra de verdad. Exige `rev`. | 200 `{ok, borrado, version}` · 404 · 409 `revision_conflict` o `playlist_en_uso` · 428 |
 | `GET /historial/<tipo>/<id>` | Las revisiones (50 como mucho, de la última a la primera, con `datos`, `autor`, `en` y `motivo`) y cómo está ahora (`actual`, `null` si se borró). | 200 `{ok, version, tipo, id, actual, revisiones}` · 404 si no hay ni fila ni revisiones · 403 `solo_lectura` al visor |
 | `POST /importar` | El importador del legado (E5): simula por defecto y escribe con `?aplicar=1` (opciones `pisar` y `archivar`). Sólo sesión del portal. | Ver «Importador del legado (E5)» |
-| `GET /auditoria` | Las escrituras aceptadas, de la más reciente a la más antigua. Filtros: `entidad`, `id`, `actor`, `accion` (`crear`, `actualizar`, `borrar`, `banderas`). Paginada: `limite` (50 por defecto, 200 como mucho) y `antes=<siguiente>`. | 200 `{ok, version, entradas, siguiente}` · 400 `entidad_invalida` / `antes_invalido` · 403 `solo_lectura` al visor |
+| `GET /auditoria` | Las escrituras aceptadas, de la más reciente a la más antigua. Filtros: `entidad`, `id`, `actor`, `accion` (`crear`, `actualizar`, `borrar`, `banderas` y, desde E7, las marcas `espejo_fallido` y `espejo_omitido`). Paginada: `limite` (50 por defecto, 200 como mucho) y `antes=<siguiente>`. | 200 `{ok, version, entradas, siguiente}` · 400 `entidad_invalida` / `antes_invalido` · 403 `solo_lectura` al visor |
+
+Las rutas `GET/POST /banderas` y `GET /sombra` (E6) van por este mismo router; están en «Modo sombra (E6)».
 
 En todas:
 
@@ -360,7 +362,7 @@ operaciones. Traduce con `legado.js`, la misma traducción de las pruebas de par
 
 | Fuente en el KV | Referencia | En la D1 |
 |---|---|---|
-| Borrador «Por defecto» `admira-tv:playlist:default:v1:<pantalla>` con piezas | `kv:default:<pantalla>` | Playlist fija `defecto-<pantalla>` + asignación directa, `por_defecto` · `sustituye`. |
+| Borrador «Por defecto» `admira-tv:playlist:default:v1:<pantalla>` con piezas | `kv:default:<pantalla>` | Playlist fija `defecto-<pantalla>` + asignación directa, `por_defecto` · `sustituye`. Si no cabe en 60, el id lleva huella (desviación 59). |
 | Cada viva de `admira-tv:playlist:live:v1` | `kv:viva:<id>` | Playlist viva `viva-<id>` + asignación por su destino, `por_defecto` · `fusiona`, peso N, N−1, … (las apagadas, `pausada`). |
 | Cada circuito definido del mismo documento | `kv:circuito:<id>` | Circuito `<id>`. |
 
@@ -396,7 +398,7 @@ Todos salen en `omitidas` con su motivo.
 | Motivo | Cuándo | Con `?archivar=1` |
 |---|---|---|
 | `viva_eliminada` | La viva ya no está en el documento (asignación y playlist). | Se archiva la asignación. |
-| `circuito_eliminado` | El circuito ya no está (sólo los que creó el importador). | Sólo se informa. |
+| `circuito_eliminado` | El circuito ya no está (sólo los que creó el importador). | Se apaga el circuito (`activo: false`). |
 | `borrador_vacio`, `ilegible`, `sin_valor` | El borrador sigue, pero hoy no manda nada. | Se archiva la asignación. |
 | `sintetico` | El borrador guardado lleva `synthetic: true`. | Sólo se informa (desviación 35). |
 | `sin_clave_kv` | La clave del borrador ya no existe. Se mira en el último tramo, con la lista de todas las claves. | Se archiva la asignación. |
@@ -407,9 +409,13 @@ Todos salen en `omitidas` con su motivo.
   - Sólo se archiva lo del importador: ref `kv:…` y creada por él. Lo demás sale `omitir` · `ajena`.
   - Lo editado fuera sale `omitir` · `editado_fuera`, salvo con `?pisar=1` (con el aviso `pisa`).
   - Lo ya archivado sale `igual` · `ya_archivada`: la pasada siguiente no escribe nada.
-  - Las playlists huérfanas no se tocan (no tienen estado) y los circuitos tampoco: no tienen asignaciones propias, se
-    usan por la etiqueta `circuito:<id>` en los destinos.
-  - Si la fuente vuelve al KV, la asignación es del importador y se reactiva en la importación siguiente.
+  - Las playlists huérfanas no se tocan (no tienen estado).
+  - Los circuitos huérfanos del importador se **apagan** (`activo: false`; decisión de Carlos del 9-oct-2026, la misma
+    regla que el espejo de E7, desviación 52): dejan de dar `circuito:<id>` a las pantallas. Mismas reglas: sólo los que
+    creó el importador, `omitir` · `editado_fuera` salvo con `?pisar=1` (con `pisa`), `igual` · `ya_apagado` si ya lo
+    está. Cuentan como `archivar` de `circuito` en `resumen` y en `aplicadas`, con `cambios: ["activo"]` y el motivo
+    `importador E5 · kv:circuito:<id> · apagado: circuito_eliminado`.
+  - Si la fuente vuelve al KV, la asignación (o el circuito) es del importador y se reactiva en la importación siguiente.
 
 ### Petición y respuesta
 
@@ -417,7 +423,8 @@ Todos salen en `omitidas` con su motivo.
 
 - `aplicar=1`: escribe. Sin él, simulación.
 - `pisar=1`: actualiza también lo editado fuera del importador (si no, `omitir` · `editado_fuera`).
-- `archivar=1`: archiva las asignaciones huérfanas del importador (si no, sólo se informan).
+- `archivar=1`: archiva las asignaciones huérfanas del importador y apaga sus circuitos huérfanos (si no, sólo se
+  informan).
 - `cursor`: el `siguiente` de la respuesta anterior.
 - `limite`: borradores por tramo, 50 por defecto y 100 como mucho.
 - `muestra`: cuántas operaciones enseñar, 25 por defecto y 500 como mucho. Van primero las que escriben u omiten y
@@ -444,6 +451,9 @@ que se simula con unas opciones es lo que se aplica con ellas. Por ejemplo:
 - `tramo.vivas` vale `leidas`, `sin_documento` (no hay clave: ni vivas ni circuitos), `ilegible` (no se importan ni se
   buscan sus huérfanos) o `fuera_del_tramo` (de continuación).
 - `huerfanos_borradores` vale `comprobados`, `en_el_ultimo_tramo` o `sin_comprobar` (más de 20.000 claves).
+- `espejo` (desde E7, en simulación y al aplicar): la bandera de la doble escritura y sus marcas de los últimos 7 días,
+  `{bandera, dias, fallidos, omitidos, editado_fuera, motivos: {fallido: {…}, omitido: {…}}, ultima}`, o `null` si no se
+  pudieron leer. Ver «Doble escritura (E7)».
 
 **Aplicar** (`?aplicar=1`). Ejecuta el plan con `guardarPlaylist`, `guardarAsignacion` y `guardarCircuito` de
 `almacen.js`. Cada escritura es su propio `db.batch`, con revisión, auditoría y `meta.version + 1`. El actor es
@@ -478,6 +488,272 @@ escriben antes que sus asignaciones, y lo que se archiva va al final. La respues
 | 503 `programacion_lectura_fallida` / `programacion_escritura_fallida` | Falló la D1. Si fue al escribir, la respuesta dice qué se aplicó; repetir es seguro. |
 | 400 `cursor_invalido` | Un `cursor` que no salió de esta ruta. |
 | 405 | Cualquier método que no sea POST (`Allow: POST`). |
+
+## Modo sombra (E6)
+
+El motor nuevo corre **en paralelo** a lo de hoy, sin cambiar lo que emite ninguna pantalla: cuando un player pide su
+playlist, por detrás se compara lo que ha recibido con lo que resolvería el motor nuevo para esa pantalla en ese instante,
+y el veredicto queda en la tabla `sombra`. Sólo con `meta.banderas.sombra = true`; el motor (`meta.banderas.motor`) sigue
+apagado hasta el corte (E13).
+
+### Piezas
+
+| Fichero | Qué hace |
+|---|---|
+| `functions/api/_programacion/comparador.js` | Puro. Firma normalizada de cada lado y veredicto con motivo. |
+| `functions/api/_programacion/gancho-sombra.js` | Lo único que importa `playlist.js`: decide si toca y encarga el trabajo a `waitUntil`. |
+| `functions/api/_programacion/sombra.js` | Evalúa los dos lados, registra en `sombra` y lista para la API (se carga con `import()` dinámico desde el gancho). |
+| `functions/api/_programacion/banderas.js` | `GET/POST /api/programacion/banderas`, enrutada por la API de E4. |
+| `programacion/sombra/index.html` | El panel de discrepancias. |
+
+Para no duplicar lecturas, E6 extrae dos funciones sin cambiar su comportamiento: `modoDe` en `emision.js` (orquestación ›
+modo remoto › lo que la pantalla informa, y la sincro) y `lecturasDe` + `resolverCon` en `programacion.js` (lo que lee
+`GET /api/programacion`, con su memoria).
+
+### Los dos lados
+
+- **Lo de hoy (el legado).** `decide()` de `_emision.js`, la réplica de `rebuild()` de `canal.html`, con la misma foto que
+  `/api/emision` (orquestación de `/api/playout` en proceso con un KV de solo lectura, modo remoto del circuito, lo que la
+  pantalla informa en `/signage/now`, sincro y `/stock/list`). Hay dos diferencias con `/api/emision`:
+  - el «Por defecto» es la respuesta que **de verdad** acaba de recibir el player, no una consulta nueva;
+  - el día de `/grid/day` es **el mismo** que leyó el motor nuevo, para que los dos lados miren la misma parrilla.
+- **El motor nuevo.** `lecturasDe` + `resolverCon` de `programacion.js`, con las pistas del propio player (`w`, `h`,
+  `lang`…). Son las mismas lecturas y la misma memoria por `meta.version` que `GET /api/programacion`.
+
+### Firma y veredicto (`comparador.js`)
+
+**Firma.** Capa normalizada, si la lista es exacta, la cadencia de los spots y las claves de las piezas en orden.
+
+- La clave de una pieza es `grid:<booking>` si viene de la parrilla y, si no, `a:<asset>`. Los dos lados llevan siempre
+  el asset; el `stockId` del legado depende de que la pieza siga entre las 300 de `/stock/list`.
+- Capas del legado normalizadas: `defecto` → `por_defecto`; el Stock con la parrilla entrelazada → `relleno`; el rundown
+  50/50 que manda solo → `propia` exacta; `hashtag` → `mando`; `sincro`, `mural` y `xtore` se quedan como están.
+- Cuando un lado no decide la lista (el Stock de reserva del player, o la capa `relleno` del motor nuevo), su firma lleva
+  **sólo los spots**: no depende del catálogo y no cambia con cada pieza nueva del Stock.
+- Se guarda en corto: `<capa>·<tamaño>·<huella FNV-1a>`, por ejemplo `por_defecto·12p+2s·9f3a2c1b` o `relleno·stock+1s·…`.
+
+**Veredicto.** `igual` si las dos firmas coinciden. Si no, el comparador busca una explicación del diseño (`equivalente`)
+y, si no la hay, es `distinta`. Por orden:
+
+| Motivo | Veredicto | Cuándo |
+|---|---|---|
+| `misma_lista` | igual | Las firmas coinciden. |
+| `orquestacion_por_encima` | equivalente | Hoy manda la sincro, el mural extendido o la música de Xtore: orquestación por encima de cualquier playlist, fuera del modelo único. |
+| `relleno_del_player` | equivalente | Sin lista propia en los dos lados: el Stock de reserva frente a la capa `relleno` con `items: []` (paso 9). Los spots casan. |
+| `franja_nocturna_de_ayer` | equivalente | De madrugada, en una franja que cruza la medianoche: el legado toma la de HOY y el motor nuevo la de AYER (desviación 15). Lo que no es parrilla casa. |
+| `rundown_exacto` | equivalente | El rundown 50/50 es base exacta y la reserva suelta que el legado entrelazaba no entra (desviación 6). |
+| `parrilla_intercala` | equivalente | Hoy la parrilla anula «Por defecto»; el motor nuevo la conserva y teje los spots (decisión 1). La base y los spots casan. |
+| `parrilla_vendida` | equivalente | Reservas `sold`/`accepted` (o sólo con estado): el motor nuevo las intercala (decisión 1) y `canal.html` sólo toma `kind` own o paid. |
+| `viva_directa_gana` | equivalente | Una viva que sólo nombra la pantalla deja fuera a las de grupo (decisión 3); hoy se funden todas. |
+| `nuevo_vacio` | distinta | El legado emite una lista y el motor nuevo no tiene nada. |
+| `solo_en_nuevo` | distinta | El motor nuevo tiene lista y el legado no tiene «Por defecto». |
+| `capa_distinta` | distinta | Otra capa (por ejemplo, una toma pagada que sólo existe en la D1). |
+| `piezas_distintas` / `orden_distinto` | distinta | La base no casa: otras piezas, o las mismas en otro orden. |
+| `spots_distintos` / `cadencia_distinta` | distinta | La base casa, pero no los spots o su cadencia. |
+| `exacta_distinta` | distinta | Una lista es exacta y la otra no. |
+
+Los spots «casan» si son los mismos, sin contar los que el motor nuevo teje por la decisión 1 y el legado no ve. El mando
+en vivo del operador vive en el player y no se publica: los dos lados lo suponen ausente.
+
+### El gancho en el GET del player
+
+En `functions/api/playlist.js`, sólo en el camino del GET del player (al final de `onRequestGet`), una llamada:
+
+```js
+const respuesta = { ok: true, draft, screenTags, auto };
+if (fromPlayer(q)) sombraTrasRespuesta({ env, waitUntil, screen, q, respuesta });
+return json(respuesta, 200, cors);
+```
+
+- **Sólo el player:** `fromPlayer(q)` (`w`, `h`, `lang` o `player=1`), la misma pista que decide quién graba el censo de
+  etiquetas. La consulta en proceso de `/api/emision` imita esas pistas, así que llega sin `PROGRAMACION_DB` y no encarga
+  nada. Las pantallas virtuales salen antes y tampoco.
+- **Nunca retrasa, cambia ni rompe la respuesta.**
+  - La parte síncrona sólo mira memoria de la instancia, va en `try/catch` y no lanza.
+  - El trabajo se encarga a `waitUntil` y empieza en la tarea siguiente (`setTimeout 0`), con la respuesta ya fuera.
+  - Sólo arranca si `waitUntil` lo aceptó.
+  - Tiene un plazo de 10 s; un fallo o el plazo dejan una línea en el log (`programacion: sombra <pantalla> <error>`).
+- **Sin efecto con la bandera apagada.** Sin `waitUntil`, sin el binding o con la bandera apagada no se escribe nada. La
+  bandera se relee como mucho una vez por minuto en cada instancia y, sabida apagada, no se encarga ningún trabajo.
+
+### Muestreo y escrituras
+
+- **Evaluaciones.** Una por pantalla cada **10 min** en cada instancia (memoria de la instancia). Al empezar, se relee la
+  bandera (fresca) y la fila de la pantalla.
+- **Escrituras.** En `sombra` hay **una fila por pantalla**. Su clave es `(pantalla, en)`, con `en` = desde cuándo dura el
+  veredicto.
+  - La primera vez, o si cambia el veredicto, el motivo o una firma, se reescribe la fila en un `db.batch` (borrar e
+    insertar: 2 sentencias). Lo anterior queda resumido en `detalle.anterior` y `detalle.cambios` cuenta los cambios.
+  - Sin cambios, nada. Sólo si la última comprobación (`detalle.ultima`) tiene más de **una hora** se renueva (1 `UPDATE`).
+  - Fusible por instancia: como mucho **240 sentencias de escritura por hora**. Si se agota, no se escribe y se vuelve a
+    intentar en la evaluación siguiente.
+- **Columnas.**
+  - `coincide`: 1 igual (las firmas coinciden, el sentido de E1), 2 equivalente, 0 distinta.
+  - `capa`: la del motor nuevo.
+  - `version`: `meta.version` al cambiar.
+  - `firma_legado` y `firma_nueva`: las firmas cortas.
+  - `detalle`: veredicto, motivo, el resumen de cada lado (claves en corto), la diferencia, `primera`, `ultima`, `cambios`,
+    `anterior` y `lecturas`. Sin emails.
+
+**Volumen esperado para ~130 pantallas** (el plan gratuito de D1 da 100.000 filas escritas y 5 millones leídas al día; D1
+cuenta también la fila del índice `sombra_discrepancias` cuando cambian `coincide` o `en`):
+
+| Concepto | Cuenta | Filas escritas al día |
+|---|---|---|
+| Primera vez | 130 pantallas × (insertar + índice) | ≈ 260, una sola vez |
+| Última comprobación | ≤ 130 pantallas × 24 h × 1 fila (`detalle` no está indexado) | ≤ 3.120 |
+| Cambios | ~6 por pantalla y día (bordes de franja con reservas, ediciones) × 130 × (borrar + insertar, con índice ≈ 4) | ≈ 3.100 |
+| **Total esperado** | | **≈ 6.500 al día (≈ 6,5 % del plan gratuito)** |
+| Tope por instancia (fusible) | 240 sentencias por hora ≈ 120 cambios ≈ 480 filas por hora | ≤ 11.500 al día por instancia |
+
+- **Lecturas.** Por evaluación, la fila de `meta`, la de `sombra` y, al cambiar de hora o de `meta.version`, las
+  candidatas (memoria compartida con E3). Como mucho 130 × 6 × 24 ≈ 18.700 evaluaciones al día por instancia, unas
+  40.000–60.000 filas leídas. Con la bandera apagada, una lectura de `meta` por minuto y por instancia.
+- **Red por evaluación.** `/grid/day` de tres días (memoria de 60 s), `/stock/list` y la sincro (60 s), `/signage/now`,
+  `/locations/mode` y el estado de orquestación del KV (60 s). Son unas 8 subpeticiones, lejos del tope de 50.
+
+### Bandera: `GET/POST /api/programacion/banderas`
+
+| Método | Qué hace | Respuestas |
+|---|---|---|
+| `GET` | Lee las banderas. | 200 `{ok, version, banderas: {motor, sombra, espejo}, editables: ["sombra", "espejo"], bloqueadas: {motor: "motor_bloqueado_hasta_E13"}}` |
+| `POST {"sombra"?: true\|false, "espejo"?: true\|false, "motivo": "…"}` | Enciende o apaga el modo sombra (E6) y/o la doble escritura (E7); al menos una, y sólo se escriben las que cambian. Auditado (`accion: banderas`, `detalle: {cambios, antes, motivo}`) y sube `meta.version`. Si ya tenía ese valor, no escribe nada: `{cambiado: false}`. | 200 `{ok, cambiado, version, banderas}` · 409 `motor_bloqueado_hasta_E13` si trae `motor` (no escribe) · 422 `bandera_requerida` / `bandera_invalida` / `bandera_desconocida` con `campo` · 400 `json_invalido` · 405 `Allow: GET, POST` |
+
+- **Acceso: sólo la sesión del portal** con `digitalsignage-player`, también para leer (`autorizarSesion` de
+  `acceso.js`). El visor recibe 403 `solo_lectura` y la clave de servicio, 403 `banderas_solo_sesion`: una bandera la
+  decide una persona y la auditoría queda a su email.
+- Como en E3 y E4, 503 `programacion_db_no_configurada` / `programacion_db_sin_esquema` después del acceso.
+- Al cambiarla, la instancia que atiende la petición relee la bandera ya; las demás, en menos de un minuto.
+- `espejo` (E7) se añadió al integrar E6 y E7 (9-oct-2026): la misma ruta, el mismo acceso y la misma auditoría. Las
+  demás instancias releen el espejo en menos de 30 s (desviación 56).
+
+### Discrepancias: `GET /api/programacion/sombra`
+
+`?veredicto=igual|equivalente|distinta&motivo=<motivo>&pantalla=<id>&limite=N&antes=<siguiente>`
+
+- **Responde** `{ok, version, banderas: {sombra, motor}, cuentas: {igual, equivalente, distinta, total}, motivos:
+  [{veredicto, motivo, n}], filas, siguiente}`.
+- **Cada fila** lleva `pantalla`, `veredicto`, `motivo`, `capa`, `version` y `firmas: {legado, nuevo}`. Además:
+  - `desde` (cuándo empezó el veredicto), `primera` (primera vez vista), `ultima` (última comprobación, con una hora de
+    margen) y `cambios`;
+  - `legado` y `nuevo`, el resumen de cada lado;
+  - `diferencia` (piezas y spots que sólo están en un lado) y `anterior`.
+- **Orden y páginas.** De la que cambió más recientemente a la que menos. `limite` es 50 por defecto y 200 como mucho;
+  `antes` es el `siguiente` de la página anterior (`<en>.<pantalla>`). Las cuentas son siempre de toda la tabla.
+- **Errores.** 400 `veredicto_invalido` / `motivo_invalido` / `pantalla_invalida` / `antes_invalido`; 405 `Allow: GET`.
+- **Acceso.** El de las lecturas de E4: la sesión del portal o el visor (no lleva emails). La clave de servicio no lee.
+
+### Panel: `/programacion/sombra/`
+
+- **Contenido.** Una fila por pantalla con su veredicto, el motivo en palabras, las capas y las firmas de los dos lados, y
+  desde / última comprobación / primera vez.
+  - Enlaza a `/emision/?screen=` (qué emite hoy) y a `/api/programacion?screen=` (qué resolvería el motor nuevo).
+  - El detalle despliega las claves de cada lado, con las que difieren marcadas, y lo anterior.
+- **Filtros.** Chips por veredicto (por defecto, `distinta`; «Todas» guarda `?veredicto=` vacío) y, si hay más de uno, por
+  motivo.
+- **Shell.** Bilingüe ES/EN y la misma barra que el resto del sitio (`admira-nav.js` + `admira-frame.js`). En ▤ Avanzado
+  están la bandera, con confirmación (el visor recibe 403 al cambiarla), y el refresco cada minuto; en ⌘ Experto, la
+  respuesta cruda.
+- **Acceso.** `auth-gate.js` mapea `programacion` a `digitalsignage-player`, como `emision`.
+
+## Doble escritura (E7)
+
+Hasta el corte (E13), lo que se guarda en el KV por `POST /api/playlist` se escribe también en la D1. Lo hace
+`functions/api/_programacion/espejo.js`, con **una sola llamada** en cada manejador de escritura de `playlist.js`
+(`espejar(…)`, justo después de guardar en el KV y antes de devolver la respuesta). La lectura del player (`GET`) no se
+toca. Va detrás de la bandera **`meta.banderas.espejo`, apagada por defecto**.
+
+### Qué se refleja
+
+Todas las escrituras de hoy que cambian lo que emite una pantalla pasan por `POST /api/playlist`:
+
+| Escritura del legado | Quién la hace | En la D1 |
+|---|---|---|
+| Borrador «Por defecto» con piezas (`{screen, items, rev}`) | `/parrilla/` en modo «Por defecto» (`runPush`) y «aplicar a dispositivos»; Pixeria (`stock.html`, `players-programar`) con la clave del Stock | Playlist `defecto-<pantalla>` + su asignación directa, como el importador. |
+| Borrador vaciado (`items: []`; no hay borrado de borradores) | Las mismas | Se **archiva** la asignación (nunca se borra), como `?archivar=1`. La playlist se queda. Si se vuelve a llenar, se reactiva. |
+| `live-save` (crear, cambiar, apagar una viva) | `/parrilla/` (playlists vivas) | El documento de vivas **entero**: `viva-<id>` + su asignación, con el peso N, N−1, … del importador (añadir una viva cambia el peso de las demás); las apagadas, `pausada`. |
+| `live-delete` | `/parrilla/` | Lo mismo, y la asignación de la viva que ya no está se **archiva**. |
+| `circuit-save` | `/parrilla/` (circuitos definidos) | El circuito, con las reglas del importador: `destino_excede_limite` se omite, no se recorta. |
+| `circuit-delete` | `/parrilla/` | El circuito que ya no está se **apaga** (`activo: false`), nunca se borra (desviación 52). |
+
+No se reflejan, porque no son playlists ni asignaciones o no viven en este KV:
+
+- los borradores **sintéticos**: no son datos guardados (los compone el `GET` en cada consulta). El espejo los descarta antes
+  de tocar la D1;
+- `identity-sync` (el registro de identidad de las pantallas), el censo de etiquetas y el índice de Xpacios: el motor nuevo
+  los lee del mismo KV, con `enrichFacts`;
+- la parrilla de venta (`/grid/draft`, `/grid/book`, `/grid/unbook` en api.admira.store) y `/playlists/` (`xpl.admira.store`):
+  viven fuera de este KV; la parrilla sigue siendo una capa aparte que el motor lee (decisión 1).
+
+### Cómo escribe
+
+- **La misma traducción que el importador.** `traducir()` + `planificar()` de `importador.js` (con `legado.js` debajo), con
+  `archivar` y sin `pisar`, sobre lo que se acaba de guardar en el KV. Lo escrito es, columna a columna, lo que escribiría
+  una importación completa del mismo KV: después, la simulación del importador sale toda `igual`.
+- **Lectura acotada.** `leerParaEspejo` de `almacen.js` lee sólo la asignación y la playlist de esa pantalla o, para el
+  documento de vivas, las asignaciones `kv:viva:…`, sus playlists y los circuitos; en la misma ida, la fila de `meta`.
+- **Actor `importador:espejo:<email o servicio>`.** El importador sigue tomando esas filas por suyas (desviación 33). Con la
+  sesión del portal es el email; con la clave del Stock, `importador:espejo:pixeria-stock`. Quién guardó en el KV, con su
+  origen completo, va en el motivo: `espejo E7 · <ref> · <borrador|live-save|…> · por <quien>` (al archivar,
+  `… · archivada: <motivo>`; al apagar un circuito, `… · apagado: circuito_eliminado`).
+- **Hora del legado.** Se escribe con `ahora` = el `updatedAt` del KV, así que `actualizado_en` en la D1 es el de la
+  escritura del legado.
+- **Escrituras fuera de orden.** Si la fila de la D1 es más nueva que la escritura que se refleja (otro espejo o el
+  importador ya escribieron algo posterior), no se pisa: `espejo_omitido` · `obsoleto`. Un 409 (otro escribió entretanto)
+  se reintenta releyendo, hasta 3 veces; lo ya escrito sale `igual`.
+
+### `waitUntil`, no en línea
+
+El espejo corre en `waitUntil`, después de que el manejador tenga su respuesta. Se eligió así porque:
+
+- la respuesta del legado es **la misma**: ni un campo ni una cabecera de más (las pruebas comparan el texto y las cabeceras
+  con y sin D1);
+- la latencia **no cambia**: el manejador no espera a la D1. En línea, hasta con un plazo corto, cada guardado pagaría al
+  menos una ida a la D1 (está en WEUR; desde colos lejanos son decenas de ms), también con la bandera apagada, y un plazo
+  que corta a mitad deja la D1 a medias igualmente;
+- `espejar()` no lanza nunca: sólo mira si hay binding; el trabajo empieza en una microtarea.
+
+El precio: quien guarda no se entera de un fallo del espejo, y si la instancia se recicla antes de terminar (`waitUntil`
+da 30 s; el espejo se corta a los 15 s), lo pendiente se pierde. Por eso cada fallo deja una marca y la reconciliación es
+el importador.
+
+### Conflictos: lo editado fuera no se pisa
+
+Como el importador sin `?pisar=1` (decisión de Carlos):
+
+- lo que salió del legado y alguien editó después por la API de E4 (`actualizado_por` que no es `importador:…`) **no se
+  escribe**: esa entidad se queda como la dejó la persona y queda `espejo_omitido` · `editado_fuera` en la auditoría, con
+  `actualizado_por`. El resto de la escritura sí se refleja (por ejemplo, la asignación de una playlist retocada);
+- lo ajeno tampoco: `id_ocupado`, `playlist_omitida` y `ajena`, con su marca;
+- lo que la traducción no admite (`invalido`, `destino_excede_limite`, `ref_duplicada`, `id_duplicado`) también deja marca.
+
+Las omisiones se marcan sólo para lo que tocó esa escritura: una viva retocada no se vuelve a marcar en cada guardado de
+otra, salvo que su traducción cambie (por ejemplo, su peso).
+
+### Fallos y reconciliación
+
+- Un fallo de la D1 (una excepción, un rechazo o los 15 s del plazo) **no cambia la respuesta del legado**, va al log
+  (`programacion: espejo …`) y deja `espejo_fallido` en la auditoría, con `motivo` (`fallo_d1`, `tiempo_agotado`,
+  `conflicto` tras los reintentos o `rechazada`), la `ref` del KV, el origen y quién guardó.
+- Las marcas **no son escrituras del modelo**: no suben `meta.version` (no invalidan la memoria de lectura de E3) y llevan la
+  versión del momento. `entidad`/`entidad_id` son los de la entidad afectada (`asignacion`/`defecto-<pantalla>` para un
+  borrador) o `meta`/`espejo` si falló el documento de vivas entero. Se consultan con
+  `GET /api/programacion/auditoria?accion=espejo_fallido` (o `espejo_omitido`).
+- Si la D1 no acepta ni la marca, sólo queda el log: el espejo nunca escribe en el KV. La simulación del importador lo
+  detecta igual.
+- La simulación del importador (`POST /api/programacion/importar` sin `aplicar`) cuenta las marcas de los últimos 7 días en
+  `espejo`: `fallidos`, `omitidos`, `editado_fuera` y el desglose por motivo.
+
+### La bandera
+
+- `meta.banderas.espejo`: `true` (también vale `1`, `"on"`, `"encendido"`…) la enciende; si falta, está apagada. Se lee con
+  `bandera()` de `almacen.js`, que tolera que el campo no exista. **La enciende Carlos** (ver «Activar la doble escritura»).
+- **E6 expone las banderas en `/api/programacion/banderas`: ese endpoint tiene que aceptar `espejo` (booleano).**
+  `fijarBanderas` ya lo admite (clave `[a-z_]`, valor booleano).
+- **Memoria por instancia: 30 s, y por `meta.version`.** Con la bandera apagada y la memoria caliente, el espejo no toca la
+  D1; en frío, lee sólo la fila de `meta` (en `waitUntil`, así que tampoco cuesta al legado). Con la bandera encendida no hay
+  lectura de más: la de los datos trae `meta` y vuelve a mirar la bandera, así que **apagarla es inmediato**. Encenderla
+  tarda hasta 30 s en llegar a cada instancia: lo guardado en ese rato lo recoge la importación del procedimiento de abajo.
 
 ## Paridad con hoy
 
@@ -603,18 +879,93 @@ Desviaciones añadidas en E5:
 34. **Los huérfanos se informan; sólo con `?archivar=1` se archivan sus asignaciones** (decisión de Carlos). Nunca se
     borra nada. Sin archivar, un borrador que se vacía deja activa su asignación en la D1 y el motor nuevo seguiría
     sirviendo la lista vieja a esa pantalla. Se archivan sólo las del importador y no editadas fuera (salvo `pisar`); las
-    playlists y los circuitos huérfanos sólo se informan, y `sintetico` no se archiva (ver la 35).
+    playlists huérfanas sólo se informan, los circuitos huérfanos se apagan (desde E7, ver la 41) y `sintetico` no se
+    archiva (ver la 35).
 35. **Un borrador guardado con `synthetic: true` no se importa**, como pide el plan. Hoy `playlist.js` sólo mira `items`
     y lo emitiría como lista a mano, pero ningún código guarda esa marca (POST `/api/playlist` no la escribe): es una
     guarda, y si apareciera uno, la sombra (E6) lo marcaría. Por lo mismo, su asignación importada antes (si la hubiera)
     no se archiva con `?archivar=1`: sólo se informa.
 36. **La pantalla sale de la clave del KV**, no del `screen` del valor, porque es la clave lo que lee `playlist.js`.
     - Dos claves que dan el mismo slug (`a--b` y `a-b`) no se importan dos veces: la segunda sale `ref_duplicada`.
-    - Lo mismo pasa con dos ids que el recorte a 60 deja iguales: la segunda sale `id_duplicado`.
+    - Dos ids que el recorte a 60 dejaba iguales ya no chocan: llevan huella (desviación 59). `id_duplicado` queda para
+      el caso, improbable, de que dos huellas de 8 hexadecimales coincidan.
 37. **El peso de las vivas depende de su posición en el documento.** Añadir, quitar o reordenar una viva cambia el peso
     de las demás, y sus asignaciones se actualizan (una revisión cada una). Es lo que conserva el orden K de hoy.
 38. **La clave de servicio no abre el importador** y recibe 403 `importador_solo_sesion` (no 401): se la reconoce, pero
     importar es cosa de una persona con sesión.
+
+Desviaciones añadidas en E6:
+
+39. **La firma usa el asset, no el `stockId`.** Las claves son `grid:<booking>` para la parrilla y `a:<asset>` para el
+    resto. El `stockId` del legado sale de `/stock/list` (las 300 piezas más nuevas) y faltaría en las piezas viejas.
+40. **El relleno se compara sólo por sus spots.** El Stock de reserva del legado frente a la capa `relleno` del motor
+    nuevo es siempre `equivalente` (`relleno_del_player`) si casan los spots y su cadencia. Ninguna de las dos firmas
+    depende del catálogo, para no reescribir la fila con cada pieza nueva del Stock.
+41. **La orquestación queda fuera del modelo.** Si hoy manda la sincro, el mural extendido o la música de Xtore, el
+    veredicto es `equivalente` · `orquestacion_por_encima`. **Pendiente de confirmar con Carlos** que, tras el corte,
+    sigan por encima del modelo único (el diseño no las menciona).
+42. **`parrilla_vendida` es una diferencia intencionada nueva.** Por la decisión 1, el motor nuevo intercala las reservas
+    `sold` y `accepted` (y las que sólo traen estado); `canal.html` sólo toma `kind` own o paid.
+43. **El legado de la sombra no es exactamente `/api/emision`.** Usa la respuesta que recibió el player (no otra consulta)
+    y el mismo `/grid/day` que el motor nuevo. No lee el autorretrato (habla el player) ni las duraciones medidas
+    (`tech`), que no cuentan para la firma. No conoce el hashtag del mando: los dos lados lo suponen ausente.
+44. **Una fila por pantalla en `sombra`.** La clave de `0001.sql` es `(pantalla, en)`; se usa con `en` = desde cuándo dura
+    el veredicto. Un cambio borra e inserta en un `db.batch`, así que dos instancias a la vez no duplican la fila.
+    `coincide` pasa a tener tres valores (1 igual, 2 equivalente, 0 distinta): el índice `sombra_discrepancias` sigue
+    sirviendo para `coincide = 0`. `registrarSombra` de E1 queda como estaba (nadie la usa).
+45. **El muestreo es por instancia.** Con N instancias, una pantalla puede evaluarse hasta N veces cada 10 min. Las
+    escrituras no se multiplican porque cada evaluación lee la fila guardada antes de escribir; el fusible acota el resto.
+46. **Las banderas sólo con sesión, también para leer.** La auditoría de `fijarBanderas` pasa de las banderas sueltas a
+    `{cambios, antes, motivo}`. Un POST con el valor que ya tiene no escribe.
+47. **`/api/emision` llama a `/api/playlist` sin `PROGRAMACION_DB`.** Su consulta en proceso imita las pistas del player
+    (`fromPlayer` sería cierto) y, si no, encargaría evaluaciones al mirar la página.
+48. **CPU.** La evaluación (`resolver`, `decide` y leer `/stock/list`) va en `waitUntil`. En el plan gratuito de Workers
+    (10 ms de CPU por invocación) podría cortarse alguna. Si pasa, se pierde esa evaluación, nunca la respuesta del
+    player, que ya ha salido.
+49. **Panel en `/programacion/sombra/`, fuera del censo de subapps.** `programacion/` no tiene `index.html`, así que
+    `subapps.json` no lo exige. Se puede añadir si Carlos lo quiere numerado.
+
+Desviaciones añadidas en E7:
+
+50. **El espejo corre en `waitUntil`, no en línea** (ver «`waitUntil`, no en línea»). Quien guarda no se entera de un fallo
+    del espejo: lo dicen la auditoría (`espejo_fallido`), el log y la simulación del importador.
+51. **El espejo archiva siempre y nunca pisa**: es el importador con `archivar` y sin `pisar`. Como refleja el documento de
+    vivas entero, la primera escritura de vivas con la bandera encendida archiva también las asignaciones de vivas borradas
+    antes (con la bandera apagada), igual que `?archivar=1`. Los borradores, en cambio, sólo se reflejan de uno en uno.
+52. **Un circuito borrado se apaga (`activo: false`)**, en el espejo y en el importador con `?archivar=1` (decisión de
+    Carlos, 9-oct-2026; en E5 sólo se informaba como `circuito_eliminado`). Sin eso, el motor nuevo seguiría dando
+    `circuito:<id>` a pantallas que hoy ya no lo tienen y las vivas que lo usan llegarían a donde hoy no llegan. Nunca se
+    borra; si el circuito vuelve al KV, el importador o el espejo lo reactivan (es suyo). Sólo los que creó el
+    importador, y lo editado fuera no se apaga salvo con `?pisar=1`. La regla vive en `planificar()`, así que el espejo y
+    el importador no pueden discrepar.
+53. **`actualizado_en` de lo reflejado es la hora del KV** (`updatedAt`), no la del espejo, y lo más nuevo no se pisa
+    (`obsoleto`). El importador sigue escribiendo con su propia hora.
+54. **Marcas en la auditoría sin subir la versión** (`espejo_fallido`, `espejo_omitido`): la columna `accion` no tiene
+    `CHECK`, así que no hace falta migración (el comentario de `0001.sql` sólo lista las cuatro de E1).
+55. **Las omisiones se marcan sólo para lo que tocó la escritura**, para no repetir la misma marca en cada guardado.
+56. **La bandera se recuerda 30 s por instancia.** «Bandera apagada = sin D1» vale con la memoria caliente; en frío hay una
+    lectura de la fila de `meta`, en `waitUntil`.
+57. **Si la D1 no acepta ni la marca, sólo queda el log.** El espejo no escribe marcas en el KV.
+58. **Las cuentas del espejo salen en la simulación del importador, que es `POST`** (`POST /api/programacion/importar`
+    sin `aplicar`): no hay un `GET` del importador (sigue siendo 405).
+59. **Ids estables para las fuentes largas** (decisión de Carlos, 9-oct-2026). Un id tiene 60 caracteres como mucho y
+    `defecto-<pantalla>` no cabe con pantallas de más de 52 (`cleanScreen` admite 80), ni `viva-<id>` con vivas de más de
+    55. El recorte daba el mismo id a dos fuentes con el mismo principio, y la segunda pisaba o se omitía.
+    - `idLegado()` de `legado.js` (con `idDefecto` e `idViva`) es la única fuente de esos ids, para el importador, el
+      espejo y la paridad: si el id entero cabe, es el de siempre (`slugId`); si no, se recorta a 51 y se le añade `-` y
+      8 hexadecimales del SHA-256 del id entero (`huella.js`, síncrono, comprobado contra `node:crypto`). Es el mismo en
+      cada pasada y en cualquier máquina, y `slugId` lo deja igual, así que `guardar*` no lo toca.
+    - **Los ids que caben no cambian**: toda pantalla de hasta 52 caracteres y toda viva de hasta 55 dan el id de antes,
+      por construcción (`idLegado` devuelve entonces `slugId`), y las pruebas lo comparan con la fórmula de antes en
+      cientos de casos. Las 34 importadas el 9-oct-2026 sólo cambian si alguna pasa de esas longitudes.
+    - La `ref_externa` de un borrador lleva la pantalla entera (`slugEntero`, el `slugId` sin el recorte; si cabe en 60,
+      es el mismo): con más de 60, la recortada también coincidía. La lista de pantallas con clave de los huérfanos usa
+      la misma forma.
+    - Si alguna pantalla de producción tuviera más de 52 caracteres, su id cambiaría: el importador crearía la playlist
+      nueva, la asignación (encontrada por su ref) pasaría a apuntarla y la vieja saldría en `huerfanos`.
+    - **No cambia el destino**: sigue siendo la etiqueta de pantalla de hoy (`screenTag`, que recorta a 60). Dos
+      pantallas de más de 60 caracteres con el mismo principio ya comparten hoy la etiqueta `pantalla:…` en el legado; eso
+      queda como está.
 
 ## Plan de entregas
 
@@ -626,8 +977,8 @@ Desviaciones añadidas en E5:
 | **E3** | Exportar `hintFacts`/`enrichFacts` (y `loadStock`). `GET /api/programacion?screen=` sirve el resolver con `/grid/day` y el Stock leídos y memoria por `meta.version`. Sin consumidores. Crear la D1 real. | **Hecha**, salvo «Crear la D1 real», que lanza Carlos (ver «Activar la D1»). Hasta entonces la ruta responde 503 `programacion_db_no_configurada`. |
 | **E4** | API de escritura de playlists, asignaciones y circuitos con sesión y permiso `digitalsignage-player`, 409 por `rev`, historial y auditoría consultables. Claves de servicio para Pixeria. | **Hecha**. La clave de servicio queda apagada hasta que Carlos ponga el secreto (ver «Activar la clave de servicio de Pixeria»); sin la D1, la API responde 503 `programacion_db_no_configurada`. |
 | **E5** | Importador del legado: borradores, vivas y circuitos del KV a la D1 con `legado.js`, idempotente por `ref_externa`. | **Hecha**. `POST /api/programacion/importar` simula por defecto y escribe con `?aplicar=1`; `?pisar=1` y `?archivar=1` son opcionales. Sin la D1 responde 503 `programacion_db_no_configurada`; para usarlo, ver «Cómo importar». |
-| E6 | Modo sombra: el resolver corre en paralelo a lo de hoy, se compara la firma con la decisión de `_emision.js` (la réplica de `canal.html`), se guarda en `sombra` y hay un panel de discrepancias. | Pendiente |
-| E7 | Doble escritura: lo que hoy se guarda en el KV desde la parrilla y desde playlists se escribe también en la D1 hasta el corte. | Pendiente |
+| **E6** | Modo sombra: el resolver corre en paralelo a lo de hoy, se compara la firma con la decisión de `_emision.js` (la réplica de `canal.html`), se guarda en `sombra` y hay un panel de discrepancias. | **Hecha**. Queda apagada (`sombra: false`) hasta que Carlos la encienda (ver «Activar el modo sombra»). |
+| **E7** | Doble escritura: lo que hoy se guarda en el KV desde la parrilla y desde playlists se escribe también en la D1 hasta el corte. | **Hecha**, detrás de la bandera `espejo` (apagada). La enciende Carlos: ver «Activar la doble escritura (E7)». El endpoint de banderas de E6 tiene que aceptar `espejo`. |
 | E8 | Mando en vivo persistido, con caducidad de 2 h o al borde de franja; `mando.html` lo usa. | Pendiente |
 | E9 | Player: `canal.html` consume `items`, `spots`, `cadencia` y `exacta`, vuelve a preguntar en `validoHasta` y precarga `siguiente`. Detrás de bandera. | Pendiente |
 | E10 | Editor de playlists fijas, vivas y mixtas con huecos (`/playlists/` y `/parrilla/`). | Pendiente |
@@ -703,15 +1054,49 @@ const importar = q => fetch("/api/programacion/importar" + (q ? "?" + q : ""), {
    va a pisar (`pisa` en la muestra).
 4. **Archivar huérfanos (opcional).** Simular con `archivar=1` (y, si se quiere, `pisar=1`) como en el paso 1, revisar
    las operaciones `archivar` y las `omitir` · `ajena` o `editado_fuera`, y aplicar con `aplicar=1&archivar=1` como en el
-   paso 3. Las asignaciones quedan `archivada`, no se borran; si su fuente vuelve al KV, la importación siguiente las
-   reactiva.
+   paso 3. Las asignaciones quedan `archivada` y los circuitos, apagados; no se borran, y si su fuente vuelve al KV, la
+   importación siguiente los reactiva.
 5. **Comprobar.**
    - Otra simulación (paso 1, con las mismas opciones) tiene que dar `resumen.escrituras = 0` en todos los tramos.
    - `GET /api/programacion?screen=<una pantalla con borrador>` tiene que servir las mismas piezas que `/api/playlist`.
    - `GET /api/programacion/auditoria?actor=importador:<email>` enseña lo escrito.
 
 Hasta el corte (E13) el KV sigue mandando: después de cambiar el legado se puede volver a importar, y sólo se escribe lo
-que cambió. La doble escritura de E7 hará que no haga falta.
+que cambió. Con la doble escritura de E7 encendida no hace falta: el importador queda para reconciliar (ver «Activar la
+doble escritura (E7)»).
+
+## Activar la doble escritura (E7) (lo lanza Carlos)
+
+Con la D1 importada (ver «Cómo importar») y desplegada la rama de E7.
+
+1. **Encender la bandera** `espejo`, con el OK de Carlos, con el endpoint de banderas de E6 (`/api/programacion/banderas`,
+   con `{"espejo": true}`) una vez fusionado E6: es el camino previsto. Como respaldo, con SQL en la D1 remota, que deja la
+   misma auditoría y sube la versión igual que `fijarBanderas`:
+
+   ```bash
+   npx wrangler d1 execute admira-programacion --remote --command "INSERT INTO auditoria (en, actor, accion, entidad, entidad_id, rev, version, detalle) SELECT CAST(strftime('%s','now') AS INTEGER) * 1000, 'csilvasantin@gmail.com', 'banderas', 'meta', 'banderas', NULL, version + 1, '{\"espejo\":true}' FROM meta WHERE id = 1; UPDATE meta SET banderas = json_set(banderas, '$.espejo', json('true')), version = version + 1, actualizado_en = CAST(strftime('%s','now') AS INTEGER) * 1000 WHERE id = 1;"
+   ```
+
+2. **Esperar un minuto** (la memoria de 30 s de cada instancia) y **cerrar el hueco**: simular y aplicar como en «Cómo
+   importar», pasos 1 a 3, **con `archivar=1`** (es lo que hace el espejo), para recoger lo guardado mientras la bandera
+   estaba apagada.
+3. **Comprobar.**
+   - Una simulación con `archivar=1` (todos los tramos) da `resumen.escrituras = 0` y `espejo.bandera: true`.
+   - Guardar algo de prueba en `/parrilla/` (el «Por defecto» de una pantalla de pruebas) y ver en
+     `GET /api/programacion/historial/playlist/defecto-<pantalla>` una revisión de `importador:espejo:<email>` con el motivo
+     `espejo E7 · kv:default:<pantalla> · borrador · por <email>`.
+   - Otra simulación con `archivar=1`: otra vez 0 escrituras.
+4. **Apagar** es poner `espejo` a `false` (con el mismo endpoint o el mismo SQL con `json('false')`): es inmediato.
+
+**Reconciliar** (cuando `espejo.fallidos` > 0 en la simulación, tras una caída de la D1 o ante cualquier duda):
+
+1. Simular con `archivar=1` todos los tramos. Las `escrituras` son la deriva; sin `archivar=1` no se ve la de los
+   borradores vaciados, las vivas borradas ni los circuitos borrados (sólo saldrían en `huerfanos`).
+2. Si hay escrituras, aplicar con `aplicar=1&archivar=1` y volver a simular: 0 escrituras.
+3. Lo `omitir` · `editado_fuera` no es deriva del espejo: es una edición por la API que no se pisa. Se decide entidad a
+   entidad: deshacerla por la API o, después de revisar `pisa`, `pisar=1`.
+4. Para el documento de vivas (vivas y circuitos) basta también con cualquier escritura nueva (guardar una viva o un
+   circuito, aunque sea sin cambios): el espejo lo refleja entero, con `archivar`.
 
 ## Activar la clave de servicio de Pixeria (lo lanza Carlos)
 
@@ -733,6 +1118,42 @@ Hasta entonces, la API sólo admite la sesión del portal.
 3. Pixeria la manda en `X-Programacion-Key` desde su servidor, con `X-Actor` para distinguir el proceso (por ejemplo,
    `X-Actor: stock`, que queda como `servicio:stock`).
 4. Para revocarla, `npx wrangler pages secret delete PROGRAMACION_SERVICE_KEY --project-name admira-tv`, o poner otra.
+
+## Activar el modo sombra (lo lanza Carlos)
+
+Con E6 desplegado y la sesión del portal abierta en admira.tv. El sello de la release pone el token nuevo a
+`auth-gate.js`, que ya conoce `/programacion/`.
+
+1. **Comprobar la bandera.** Tiene que salir `sombra: false` y `motor: "apagado"`:
+
+   ```js
+   await fetch("/api/programacion/banderas", { credentials: "same-origin" }).then(r => r.json())
+   ```
+
+2. **Encenderla.** Desde el panel, en ▤ Avanzado → «Encender el modo sombra» (pide confirmación). O desde DevTools:
+
+   ```js
+   await fetch("/api/programacion/banderas", { method: "POST", credentials: "same-origin",
+     headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sombra: true, motivo: "arranque E6" }) }).then(r => r.json())
+   ```
+
+   Responde `{cambiado: true, version: N + 1, banderas: {motor: "apagado", sombra: true}}`. Las instancias la leen en
+   menos de un minuto.
+3. **Mirar el panel** (`/programacion/sombra/`). Cada pantalla aparece en cuanto su player pide la playlist, en unos 10
+   minutos. Lo esperado:
+   - las pantallas con lista propia, `igual`;
+   - las demás, `equivalente` · `relleno_del_player`;
+   - las que tienen reservas en la franja, `parrilla_intercala`;
+   - las de sincro, mural o Xtore, `orquestacion_por_encima`.
+4. **Revisar las `distinta`.** Cada fila enlaza a `/emision/?screen=` y a `/api/programacion?screen=`. Causas típicas:
+   - el KV cambió después de importar (volver a importar, ver «Cómo importar»);
+   - un borrador guardado con `synthetic: true` (desviación 35);
+   - una asignación dada de alta por la API de E4 que hoy no existe.
+5. **Vigilar la D1.** En el panel de Cloudflare (D1 → `admira-programacion` → Metrics), las filas escritas al día deberían
+   rondar las 6.500 para ~130 pantallas. Si suben mucho, apagar y revisar qué pantalla cambia de firma en cada evaluación
+   (`cambios` en el panel).
+6. **Apagar** cuando haga falta: `{sombra: false}` por la misma ruta o desde el panel. Las filas se conservan.
+7. **Quién la tocó:** `GET /api/programacion/auditoria?accion=banderas`.
 
 ## Pruebas
 
@@ -770,6 +1191,10 @@ simulados:
 simulada, con un KV simulado con `list` y `get`:
 
 - el plan de una mezcla realista (borrador con piezas, sintético, vacío, vivas con destino y un circuito);
+- los ids de las fuentes largas: la huella es el SHA-256 de `node:crypto`; los ids, refs e ids de vivas que caben son los
+  de antes (cientos de pantallas y vivas con la forma de las de hoy) y `slugEntero` es `slugId` mientras cabe; dos
+  pantallas de más de 52 caracteres (y dos de más de 60) y dos vivas largas con el mismo principio dan ids distintos y
+  fijos, y el plan las importa todas;
 - los circuitos largos (sin perder pantallas) y las filas ajenas (`id_ocupado`);
 - que la simulación no escribe: sólo SELECT en la D1 y nada en el KV;
 - aplicar, y que la segunda pasada sale toda `igual`;
@@ -777,15 +1202,71 @@ simulada, con un KV simulado con `list` y `get`:
 - lo editado por la API: `omitir` · `editado_fuera` por defecto, `?pisar=1` lo sobrescribe (con `pisa`), la simulación
   no escribe y la pasada siguiente sale toda igual;
 - los huérfanos, que no se borran; con `?archivar=1` se archivan sólo las asignaciones del importador no editadas fuera
-  (con `pisar`, también ésas; nunca las ajenas ni por `sintetico`), la simulación no escribe, la segunda pasada no
-  escribe nada y una viva que vuelve reactiva su asignación;
+  (con `pisar`, también ésas; nunca las ajenas ni por `sintetico`) y se apagan sus circuitos (no los ajenos; los
+  editados fuera, sólo con `pisar`), la simulación no escribe, la segunda pasada no escribe nada y una viva o un circuito
+  que vuelven se reactivan;
 - el acceso: 401, 403, el visor y la clave de servicio;
 - los tramos con cursor y el tope de escrituras por petición;
 - que, tras importar, `GET /api/programacion` sirve lo mismo que hoy `playlist.js` y que la paridad de `legado.js`.
 
+`comparador.test.mjs` prueba el comparador (E6) con los dos lados de verdad: `decide()` con la respuesta de
+`/api/playlist` y `resolver()` con lo que dejaría el importador. Cubre:
+
+- cada veredicto y motivo: igual, el rundown 50/50, el relleno con y sin parrilla, la parrilla que se intercala, las
+  reservas vendidas, la franja nocturna de ayer, la viva directa, el rundown exacto, la orquestación y cada `distinta`;
+- que la firma del relleno no cambia con el Stock;
+- las claves, la huella y que el detalle no lleva emails.
+
+`sombra.test.mjs` prueba el gancho y el registro con la D1 simulada, el KV y la red simulados y el reloj fijado:
+
+- con la bandera apagada, la respuesta no cambia, no se escribe nada y la bandera se lee como mucho una vez por minuto;
+- encendida, no se toca la D1 antes de responder y la primera vez se registra la fila;
+- una evaluación por pantalla cada 10 min, nada si no cambia, la última comprobación una vez por hora y una sola
+  evaluación con dos peticiones a la vez;
+- reescritura sólo al cambiar, con una fila por pantalla y lo anterior resumido;
+- la respuesta no se rompe nunca: ni con una D1 caída, ni con una evaluación que lanza, ni con un `waitUntil` que lanza,
+  ni con el plazo;
+- sólo el player;
+- el fusible de escrituras.
+
+`sombra-api.test.mjs` prueba las rutas de E6:
+
+- `banderas`: el acceso (sólo la sesión del portal), la auditoría con `antes` y `motivo`, que repetir no escribe, el 409
+  del motor, los 422 y que el gancho relee la bandera al cambiarla;
+- `sombra`: cuentas, filtros, páginas sin perder ni repetir filas, los 400 y el acceso (el visor lee, sin emails).
+
+`programacion-sombra-pagina.test.mjs` (en la raíz) prueba el panel:
+
+- la misma barra que el resto del sitio y lo propio en los paneles;
+- el gate con el token canónico y el permiso de `/programacion/`;
+- los enlaces de cada fila, los motivos en ES y EN, y que la bandera se cambia con confirmación y nunca el motor.
+
+Las rutas se compilan con `npx wrangler@4.119.0 pages functions build --outdir /tmp/fx-e6`. Se ha comprobado repitiendo
+las peticiones contra el bundle:
+
+`espejo.test.mjs` prueba la doble escritura (E7) con los manejadores de verdad de `POST /api/playlist`, sobre la misma D1
+simulada y un KV simulado:
+
+- **la prueba de identidad**: cada escritura del legado (borrador con sesión y con la clave del Stock, pantalla virtual,
+  otra versión, vaciado y vuelta a llenar; `live-save` al crear, al añadir otra y al apagarla; `live-delete`;
+  `circuit-save`, también uno que no cabe; `circuit-delete`) se refleja, y después la simulación del importador (con y sin
+  `archivar=1`) sale toda `igual` y una importación nueva del mismo KV en una D1 vacía da, columna a columna, el mismo
+  contenido; lo que la D1 del espejo tiene de más está archivado o apagado;
+- con la bandera apagada, la respuesta es la misma (texto y cabeceras), no se escribe nada y, con la memoria caliente, no
+  se ejecuta ni una sentencia en la D1; encenderla, apagarla (inmediato) y una bandera en texto;
+- un fallo de la D1 no cambia la respuesta, deja `espejo_fallido` sin subir la versión y la simulación lo cuenta; el
+  importador lo reconcilia. Una D1 caída o colgada no tumba nada (`tiempo_agotado`);
+- lo editado fuera (`editado_fuera`, también al vaciar un borrador o borrar un circuito), lo ajeno (`id_ocupado`) y lo que
+  llega tarde (`obsoleto`, y dos espejos a la vez en cualquier orden) no se pisan;
+- los sintéticos, `identity-sync` y el `GET` no tocan la D1;
+- la respuesta sale antes de que termine el espejo (con la D1 bloqueada, el manejador ya ha respondido);
+- pantallas y vivas largas: el espejo da los mismos ids con huella que el importador, cada una con lo suyo, y vaciar
+  una archiva sólo su asignación.
+
 Las rutas se compilan con `npx wrangler@4.119.0 pages functions build --outdir /tmp/fx-e5`. En el bundle:
 
 - `GET /api/programacion` sigue yendo a `programacion.js`;
-- `/api/programacion/<algo>` va a la ruta de E4, también `POST /api/programacion/importar`.
-
-Se ha comprobado repitiendo las peticiones contra el bundle.
+- `/api/programacion/<algo>` va a la ruta de E4, también `POST /api/programacion/importar` y las nuevas `banderas` y
+  `sombra` (con sus 405);
+- el GET del player con la bandera encendida devuelve su respuesta y registra la fila por detrás (el `import()` del
+  gancho queda dentro del bundle).

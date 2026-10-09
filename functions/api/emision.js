@@ -71,20 +71,52 @@ async function autorretrato(env, screen) {
 }
 
 /** fetchSyncState() de canal.html: tema propio del kiosko › playlist del líder del grupo › máster global. */
-async function sincro(screen, leader, temaPedido) {
-  const state = await getJson(BRAIN + "/sync/state");
+async function sincro(screen, leader, temaPedido, leer = getJson) {
+  const state = await leer(BRAIN + "/sync/state");
   if (!(state && Array.isArray(state.items) && state.items.length)) return { remote: null };
   let items = state.items, own = false, leaderList = false;
   const tema = temaPedido || (screen + "-tema");
-  const propia = await getJson(BRAIN + "/control/playlist?screen=" + encodeURIComponent(tema));
+  const propia = await leer(BRAIN + "/control/playlist?screen=" + encodeURIComponent(tema));
   if (propia && Array.isArray(propia.items) && propia.items.length) {
     items = propia.items.map(i => Object.assign({}, i, { thumbnail: i.thumbnail || i.thumb || "", _dur: Number(i._dur || i.dur) || 0 })); own = true;
   } else if (leader) {
-    const p = await getJson(BRAIN + "/control/playlist?screen=" + encodeURIComponent(leader));
+    const p = await leer(BRAIN + "/control/playlist?screen=" + encodeURIComponent(leader));
     if (p && Array.isArray(p.items) && p.items.length) { items = p.items.map(i => Object.assign({}, i, { thumbnail: i.thumbnail || i.thumb || "", _dur: Number(i._dur || i.dur) || 0 })); leaderList = true; }
   }
   items = items.map(i => { const dur = Number(i._dur || i.dur) || 0; return Object.assign({}, i, { _dur: dur > 0 ? dur : 0 }); });
   return { remote: { items, slotMs: state.slotMs || 20000 }, own, leaderList };
+}
+
+/**
+ * Modo de la pantalla: orquestación (/api/playout) › modo remoto del circuito (/locations/mode) › lo que la pantalla
+ * informa (/signage/now, sólo para «ahora»). Devuelve el `mode` y la `sync` que espera decide(), más los supuestos y
+ * avisos que eso añade. Lo usan esta ruta y el modo sombra (E6, _programacion/sombra.js); `leer` permite al modo
+ * sombra pasar su lector con memoria.
+ */
+export async function modoDe({ screen, q, plan, now, ahora, leer = getJson }) {
+  const supuestos = [], avisos = [];
+  const modeId = cleanScreen(q.get("circuit")) || screen;   // el player sondea su ?circuit= o, sin él, su propio id
+  const configured = !!(plan && plan.configured), planMode = String((plan && plan.mode) || "autonomous");
+  let syncOn = false, why = "", leader = "", mode = "local";
+  if (configured && planMode === "synchronized") { syncOn = true; why = "grupo"; leader = String((plan.group && plan.group.leader) || ""); }
+  else if (!(configured && planMode === "extended")) {
+    const remoto = await leer(API + "/locations/mode?id=" + encodeURIComponent(modeId));
+    const m = canonMode(remoto && remoto.mode);
+    if (m === "sync") { syncOn = true; why = "remoto"; }
+    else if (!(configured && planMode === "autonomous") && remoto && remoto.mode) mode = m;
+  }
+  const item = now && now.item, sinc = item && item.sinc;
+  const vivo = !!(now && now.lastSeen && Date.now() - Number(now.lastSeen) < FRESCO_MS);
+  if (ahora && vivo && sinc && sinc.on && sinc.modo === "sync" && !syncOn) {
+    syncOn = true; why = "observado";
+    supuestos.push(T("La pantalla informa que está en sincro aunque ni su grupo ni su circuito la piden: se toma lo que dice la pantalla (sincro pedida en su URL).", "The screen reports it is in sync although neither its group nor its circuit asks for it: the screen's word is taken (sync requested in its URL)."));
+  }
+  if (syncOn) mode = "sync";
+  if (ahora && vivo && sinc && syncOn && why !== "observado" && sinc.modo && sinc.modo !== "sync") {
+    avisos.push({ nivel: "aviso", ...T(`La configuración pide sincro, pero la pantalla informa modo «${sinc.modo}»: puede tener un tag o un modo puesto a mano.`, `The configuration asks for sync, but the screen reports «${sinc.modo}» mode: it may have a hand-set tag or mode.`) });
+  }
+  const sync = syncOn ? { on: true, why, leader, ...(await sincro(screen, leader, cleanScreen(q.get("leader")), leer)) } : { on: false };
+  return { mode, sync, supuestos, avisos };
 }
 
 /** De qué tipo parece la lista que la pantalla publicó al mando (control/playlist), por los prefijos de sus ids. */
@@ -112,7 +144,9 @@ export async function onRequestGet({ request, env = {}, waitUntil }) {
   if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);
 
   const ahora = Math.abs(at - Date.now()) < 120_000;
-  const ro = { ...env, ACCESS: soloLectura(env.ACCESS) };
+  // Sin PROGRAMACION_DB: la consulta en proceso a /api/playlist imita las pistas del player, pero no es el player y no
+  // debe encargar la comparación del modo sombra (E6).
+  const ro = { ...env, ACCESS: soloLectura(env.ACCESS), PROGRAMACION_DB: undefined };
   const swallow = p => { try { if (typeof waitUntil === "function") waitUntil(Promise.resolve(p).catch(() => {})); } catch (_) {} };
   const clock = madridClock(at), hoy = madridClock(Date.now()).date;
 
@@ -138,27 +172,11 @@ export async function onRequestGet({ request, env = {}, waitUntil }) {
   const supuestos = [], avisos = [];
 
   // ── Modo: orquestación (/api/playout) › modo remoto del circuito (/locations/mode) › lo que la pantalla informa ──
-  const modeId = cleanScreen(q.get("circuit")) || screen;   // el player sondea su ?circuit= o, sin él, su propio id
-  const configured = !!(plan && plan.configured), planMode = String((plan && plan.mode) || "autonomous");
-  let syncOn = false, why = "", leader = "", mode = "local";
-  if (configured && planMode === "synchronized") { syncOn = true; why = "grupo"; leader = String((plan.group && plan.group.leader) || ""); }
-  else if (!(configured && planMode === "extended")) {
-    const remoto = await getJson(API + "/locations/mode?id=" + encodeURIComponent(modeId));
-    const m = canonMode(remoto && remoto.mode);
-    if (m === "sync") { syncOn = true; why = "remoto"; }
-    else if (!(configured && planMode === "autonomous") && remoto && remoto.mode) mode = m;
-  }
+  const modo = await modoDe({ screen, q, plan, now, ahora });
+  const { mode, sync } = modo;
+  supuestos.push(...modo.supuestos); avisos.push(...modo.avisos);
   const item = now && now.item, sinc = item && item.sinc;
   const vivo = !!(now && now.lastSeen && Date.now() - Number(now.lastSeen) < FRESCO_MS);
-  if (ahora && vivo && sinc && sinc.on && sinc.modo === "sync" && !syncOn) {
-    syncOn = true; why = "observado";
-    supuestos.push(T("La pantalla informa que está en sincro aunque ni su grupo ni su circuito la piden: se toma lo que dice la pantalla (sincro pedida en su URL).", "The screen reports it is in sync although neither its group nor its circuit asks for it: the screen's word is taken (sync requested in its URL)."));
-  }
-  if (syncOn) mode = "sync";
-  if (ahora && vivo && sinc && syncOn && why !== "observado" && sinc.modo && sinc.modo !== "sync") {
-    avisos.push({ nivel: "aviso", ...T(`La configuración pide sincro, pero la pantalla informa modo «${sinc.modo}»: puede tener un tag o un modo puesto a mano.`, `The configuration asks for sync, but the screen reports «${sinc.modo}» mode: it may have a hand-set tag or mode.`) });
-  }
-  const sync = syncOn ? { on: true, why, leader, ...(await sincro(screen, leader, cleanScreen(q.get("leader")))) } : { on: false };
 
   // ── Inventario técnico que la propia pantalla midió (duración y medidas por pieza) ──
   const tech = {};

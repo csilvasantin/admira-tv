@@ -26,23 +26,24 @@
 //   · borrador_vacio, sintetico, ilegible, sin_valor: el borrador del tramo existe, pero hoy no manda nada;
 //   · sin_clave_kv: en el último tramo, con la lista completa de pantallas que tienen borrador en el KV.
 // Con la opción `archivar`, las ASIGNACIONES huérfanas se archivan (estado «archivada»: dejan de emitirse y siguen en la
-// D1 con su historial): `archivar`, con el motivo del huérfano. Sólo las del importador —con ref_externa «kv:…» y
-// creadas por él; las demás, `omitir` · `ajena`— y no editadas fuera, salvo con `pisar`. Las playlists no tienen
-// estado y los circuitos no tienen asignaciones propias (se usan por la etiqueta circuito:<id> en los destinos): ésos
-// sólo se informan. Tampoco se archiva por `sintetico`: hoy playlist.js emitiría ese borrador como lista a mano.
+// D1 con su historial) y los CIRCUITOS huérfanos se apagan (activo: false: dejan de dar circuito:<id> a las pantallas;
+// decisión de Carlos, 9-oct-2026, la misma regla que el espejo de E7): `archivar`, con el motivo del huérfano. Sólo los
+// del importador (creados por él) y no editados fuera, salvo con `pisar`. De las asignaciones, además, sólo las que
+// llevan ref_externa «kv:…»; las demás, `omitir` · `ajena`. Las playlists no tienen estado: ésas sólo se informan.
+// Tampoco se archiva por `sintetico`: hoy playlist.js emitiría ese borrador como lista a mano.
 import { screenTag } from "../_playlist-live.js";
 import { COLUMNAS, limpiarCircuito } from "./almacen.js";
-import { circuitoDesdeLegado, desdeBorrador, desdeViva, vivasDe } from "./legado.js";
+import { circuitoDesdeLegado, desdeBorrador, desdeViva, idDefecto, idViva, refDefecto, slugEntero, vivasDe } from "./legado.js";
 import { limpiarAsignacion, limpiarPlaylist, slugId } from "./modelo.js";
 
 export const ACTOR = "importador:";
 const ORIGEN_LEGADO = "legado:";
-export const refBorrador = pantalla => "kv:default:" + slugId(pantalla);
+export const refBorrador = refDefecto;   // con la pantalla entera (legado.js: ids de las fuentes largas)
 export const refViva = id => "kv:viva:" + id;
 export const refCircuito = id => "kv:circuito:" + id;
 const REF_BORRADOR = "kv:default:", REF_VIVA = "kv:viva:";
-// El id que legado.js da a la playlist de un borrador (slugId recorta a 60: una pantalla larga no cabe entera).
-const idDefecto = pantalla => slugId("defecto-" + pantalla);
+// El id que legado.js da a la playlist de un borrador (con huella si la pantalla es larga). Lo usa también el espejo (E7).
+export { idDefecto };
 const ENTIDADES = ["circuito", "playlist", "asignacion"];
 const LIMPIAR = { playlist: limpiarPlaylist, asignacion: limpiarAsignacion, circuito: limpiarCircuito };
 
@@ -164,7 +165,8 @@ function operacion(entidad, ref, nuevo, fila, propia, pisar) {
  *   pantallas: sólo en el último tramo, TODAS las pantallas con clave de borrador en el KV (null si no se sabe);
  *   d1: {playlists, asignaciones, circuitos, legado: {playlists: [{id, origen}]}}, como lo da leerParaImportar();
  *   pisar: actualizar también lo editado fuera del importador (si no, `omitir` · `editado_fuera`);
- *   archivar: archivar las asignaciones huérfanas del importador (si no, sólo se informan).
+ *   archivar: archivar las asignaciones huérfanas del importador y apagar sus circuitos huérfanos (si no, sólo se
+ *             informan).
  * → {operaciones (en orden de aplicación, con `datos` para escribir), omitidas, huerfanos, vivas, resumen}.
  */
 export function planificar({ live = undefined, borradores = [], pantallas = null, d1 = {}, traduccion = null, pisar = false, archivar = false } = {}) {
@@ -205,7 +207,7 @@ export function planificar({ live = undefined, borradores = [], pantallas = null
     huerfanos.push({ entidad, id: fila.id, ref: ref || null, motivo, actualizado_por: fila.actualizado_por || "" });
   };
   if (t.doc) {
-    const presentes = vivasDe(t.doc), refs = new Set(presentes.map(p => refViva(p.id))), ids = new Set(presentes.map(p => slugId("viva-" + p.id)));
+    const presentes = vivasDe(t.doc), refs = new Set(presentes.map(p => refViva(p.id))), ids = new Set(presentes.map(p => idViva(p.id)));
     for (const a of asignaciones) if (String(a.ref_externa || "").startsWith(REF_VIVA) && !refs.has(a.ref_externa)) anota("asignacion", a, a.ref_externa, "viva_eliminada");
     for (const p of legadoPl) if (p.origen === "legado:kv-viva" && !ids.has(p.id)) anota("playlist", p, null, "viva_eliminada");
     const enKV = new Set((Array.isArray(t.doc.circuits) ? t.doc.circuits : []).filter(c => c && c.id).map(c => slugId(c.id)));
@@ -220,7 +222,7 @@ export function planificar({ live = undefined, borradores = [], pantallas = null
     anota("playlist", legadoPl.find(p => p.id === id && p.origen === "legado:kv-default"), null, o.motivo);
   }
   if (Array.isArray(pantallas)) {
-    const conClave = new Set(pantallas.map(s => slugId(s)).filter(Boolean)), suyas = new Set([...conClave].map(idDefecto));
+    const conClave = new Set(pantallas.map(s => slugEntero(s)).filter(Boolean)), suyas = new Set([...conClave].map(idDefecto));
     for (const a of asignaciones) {
       const ref = String(a.ref_externa || "");
       if (ref.startsWith(REF_BORRADOR) && !conClave.has(ref.slice(REF_BORRADOR.length))) anota("asignacion", a, ref, "sin_clave_kv");
@@ -229,14 +231,18 @@ export function planificar({ live = undefined, borradores = [], pantallas = null
   }
 
   if (archivar) {
+    // Archivar = guardar la fila fuera de antena con su rev: la asignación, «archivada»; el circuito, apagado (activo:
+    // false). Ni una ni otro se borran, y si su fuente vuelve al KV, la importación siguiente los reactiva.
     for (const h of huerfanos) {
-      if (h.entidad !== "asignacion" || !ARCHIVABLES.has(h.motivo)) continue;
-      const fila = asigPorId.get(h.id), base = { entidad: "asignacion", id: fila.id, ref: h.ref, rev: Number(fila.rev) };
-      if (fila.estado === "archivada") { operaciones.push({ ...base, accion: "igual", motivo: "ya_archivada" }); continue; }
+      const circuito = h.entidad === "circuito" && h.motivo === "circuito_eliminado";
+      if (!circuito && (h.entidad !== "asignacion" || !ARCHIVABLES.has(h.motivo))) continue;
+      const fila = (circuito ? circPorId : asigPorId).get(h.id), base = { entidad: h.entidad, id: fila.id, ref: h.ref, rev: Number(fila.rev) };
+      const campo = circuito ? "activo" : "estado";
+      if (circuito ? fila.activo === false : fila.estado === "archivada") { operaciones.push({ ...base, accion: "igual", motivo: circuito ? "ya_apagado" : "ya_archivada" }); continue; }
       if (!deImportador(fila.creado_por)) { operaciones.push({ ...base, accion: "omitir", motivo: "ajena", actualizado_por: fila.actualizado_por || "" }); continue; }
       const fuera = editadaFuera(fila);
-      if (fuera && !pisar) { operaciones.push({ ...base, accion: "omitir", motivo: "editado_fuera", cambios: ["estado"], actualizado_por: fila.actualizado_por || "" }); continue; }
-      const op = { ...base, accion: "archivar", motivo: h.motivo, cambios: ["estado"], datos: { ...fila, estado: "archivada" } };
+      if (fuera && !pisar) { operaciones.push({ ...base, accion: "omitir", motivo: "editado_fuera", cambios: [campo], actualizado_por: fila.actualizado_por || "" }); continue; }
+      const op = { ...base, accion: "archivar", motivo: h.motivo, cambios: [campo], datos: circuito ? { ...fila, activo: false } : { ...fila, estado: "archivada" } };
       if (fuera) op.pisa = fila.actualizado_por || "";
       operaciones.push(op);
     }

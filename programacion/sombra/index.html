@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<script src="/auth-gate.js?v=09.10.2026.r2.0629"></script>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#070a10">
+<meta name="robots" content="noindex">
+<title>Modo sombra · Admira.tv</title>
+<meta name="description" content="Modo sombra del modelo único de playlists: qué pantallas emiten hoy lo mismo que resolvería el motor nuevo, cuáles difieren por diseño y cuáles hay que revisar.">
+<style>
+  :root{--bg:#070a10;--panel:#0e141d;--panel2:#121b28;--line:#223049;--ink:#d9e4f2;--dim:#8999ae;--green:#3df08a;--blue:#7aa2ff;--amber:#ffbd59;--red:#ff6b6b;--violet:#c08bff;--cyan:#5fd4ff;--steel:#9fb3c8}
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{margin:0;background:radial-gradient(900px 520px at 72% -10%,#16305a55,transparent),var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+  button,input,select{font:inherit}
+  .afSlotHidden{display:none}.af-panel .afSlotHidden{display:block}
+  main.sb{max-width:1280px;margin:0 auto;padding:16px 22px 70px;display:grid;gap:14px;min-width:0}
+  .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0}
+  .eyebrow{margin:0 0 6px;color:var(--dim);font:700 10px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}
+  h1{margin:0;font-size:21px;line-height:1.25}
+  h2{margin:0 0 10px;font-size:15px}
+  .intro{margin:8px 0 0;color:#cfd9e6;max-width:900px}
+  /* Contexto: bandera, versión, idioma y filtros */
+  .ctx{display:grid;gap:12px;border-color:#315071;background:linear-gradient(135deg,#132238,#0d151f)}
+  .ctx-top{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap}
+  .ctx-top .sp{flex:1}
+  .estado{display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border-radius:999px;border:1px solid #2a3a52;font:700 12px ui-monospace,monospace;letter-spacing:.04em;color:var(--dim)}
+  .estado .dot{width:8px;height:8px;border-radius:50%;background:#55606f}
+  .estado.on{color:var(--green);border-color:#2b6b49}.estado.on .dot{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .meta{color:var(--dim);font-size:12px}
+  .seg{display:inline-flex;border:1px solid #2b3d58;border-radius:10px;overflow:hidden;flex:0 0 auto}
+  .seg button{background:#0b1522;color:var(--dim);border:0;padding:9px 12px;min-height:42px;cursor:pointer}
+  .seg button[aria-pressed=true]{background:#17345a;color:#fff;font-weight:700}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{background:#0b1522;border:1px solid #263a55;color:var(--dim);border-radius:999px;padding:6px 12px;cursor:pointer;font:600 12px ui-monospace,monospace;min-height:34px;display:inline-flex;gap:6px;align-items:center}
+  .chip b{color:var(--ink)}
+  .chip[aria-pressed=true]{border-color:var(--blue);color:#fff;background:#122744}
+  .chip.distinta b{color:var(--red)}.chip.equivalente b{color:var(--amber)}.chip.igual b{color:var(--green)}
+  .chip.motivo{font-weight:500}
+  .btn{background:#0d1a2a;color:var(--ink);border:1px solid #315071;border-radius:10px;padding:9px 13px;min-height:42px;cursor:pointer;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:7px}
+  .btn:hover{border-color:var(--green);color:var(--green)}
+  .btn.pri{background:var(--green);color:#04130b;border-color:var(--green)}
+  .btn[disabled]{opacity:.45;cursor:default}
+  .state{color:var(--dim);font-size:13px}
+  .err{color:#ffb4b4}
+  /* Filas: una por pantalla (rejilla, sin scroll horizontal; en móvil se apilan) */
+  .list-head{display:flex;gap:10px 16px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px}
+  .list-head h2{margin:0}
+  .rows{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+  .row{border:1px solid #1c2a3f;border-left-width:4px;border-radius:12px;background:#0b121c;min-width:0}
+  .row.distinta{border-left-color:var(--red)}.row.equivalente{border-left-color:var(--amber)}.row.igual{border-left-color:var(--green)}
+  .row-main{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.7fr) minmax(0,1.3fr) minmax(0,1fr) auto;gap:6px 14px;align-items:center;padding:10px 12px}
+  .scr{font-weight:700;word-break:break-word}
+  .scr small{display:block;color:var(--dim);font-weight:500;font-size:12px}
+  .ver{display:inline-block;padding:1px 8px;border-radius:999px;font:700 11px ui-monospace,monospace;letter-spacing:.04em;border:1px solid #2a3a52;margin-right:6px}
+  .ver.distinta{color:var(--red);border-color:#6b3a33}.ver.equivalente{color:var(--amber);border-color:#6b5426}.ver.igual{color:var(--green);border-color:#2b6b49}
+  .mot{font-size:13px;color:#e9f1fb}
+  .capas{font:600 12px ui-monospace,monospace;color:var(--steel);word-break:break-word}
+  .capas .fl{color:var(--dim);margin:0 4px}
+  .firmas{display:block;color:var(--dim);font:500 11px ui-monospace,monospace;margin-top:3px;word-break:break-all}
+  .cuando{font-size:12px;color:var(--dim)}
+  .cuando b{color:var(--ink);font-weight:600}
+  .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .acts a,.acts button{font-size:12px;min-height:34px;padding:6px 10px}
+  .row-det{display:none;border-top:1px solid #1c2a3f;padding:10px 12px;font-size:13px}
+  .row.open .row-det{display:grid;gap:10px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .row-det h3{margin:0 0 6px;font-size:12px;color:var(--dim);font-family:ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase}
+  .claves{display:flex;gap:5px;flex-wrap:wrap}
+  .clave{font:600 11px ui-monospace,monospace;padding:1px 7px;border-radius:999px;border:1px solid #2a3a52;color:var(--ink)}
+  .clave.grid{color:var(--amber);border-color:#6b5426}
+  .clave.solo{color:#ffb0a0;border-color:#6b3a33}
+  .dif{grid-column:1/-1;color:#cfd9e6}
+  .empty{padding:28px;text-align:center;color:var(--dim);border:1px dashed #2a3a52;border-radius:12px}
+  .more{display:flex;justify-content:center;margin-top:12px}
+  .adv{display:grid;gap:10px;font-size:13px}
+  .adv label{display:flex;gap:8px;align-items:center;color:var(--dim)}
+  .af-expert pre{white-space:pre-wrap;word-break:break-word;max-height:50vh;overflow:auto;font-size:12px}
+  @media(max-width:1000px){.row-main{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr)}.acts{justify-content:flex-start}}
+  @media(max-width:700px){main.sb{padding:14px 16px 60px}.row-main{grid-template-columns:minmax(0,1fr)}.row.open .row-det{grid-template-columns:minmax(0,1fr)}h1{font-size:19px}}
+</style>
+</head>
+<body>
+<script>
+/* Chrome cuadrático unificado (lo monta /admira-nav.js): la MISMA barra que el resto del sitio. Lo propio de
+   esta vista va en el contenido y en los paneles ▤ (Avanzado) y ⌘ (Experto), nunca en la barra. */
+window.ADMIRA_VERSION='v.09.10.2026.r2.06:29';
+window.ADMIRA_NAV={title:'Modo sombra'};
+</script>
+<script src="/admira-nav.js?v=09.10.2026.r2.0629"></script>
+<script src="/admira-frame.js?v=09.10.2026.r2.0629" defer></script>
+<link rel="stylesheet" href="/admira-frame.css?v=09.10.2026.r2.0629">
+
+<!-- AVANZADO (panel derecho): la bandera y el refresco -->
+<div class="afSlotHidden adv" data-af-slot="right" aria-label="Opciones avanzadas del modo sombra">
+  <p class="state"><span data-t="banderaT">Bandera del modo sombra</span>: <b id="banderaTxt">—</b></p>
+  <button class="btn" id="bandera" type="button" disabled>—</button>
+  <p class="state" data-t="banderaHelp">Encendida, cada player compara por detrás lo que recibe con lo que resolvería el motor nuevo (una vez cada 10 min por pantalla) y deja aquí el veredicto. No cambia lo que emite ninguna pantalla. El motor nuevo sigue apagado hasta el corte (E13).</p>
+  <label><input type="checkbox" id="auto" checked> <span data-t="auto">Actualizar cada minuto</span></label>
+</div>
+
+<!-- EXPERTO (panel inferior): la respuesta cruda de /api/programacion/sombra -->
+<div class="afSlotHidden af-expert" data-af-slot="bottom" aria-label="Respuesta cruda de /api/programacion/sombra">
+  <pre id="raw">{}</pre>
+</div>
+
+<main class="sb" id="sombra">
+  <section class="card ctx" aria-label="Estado y filtros">
+    <div>
+      <p class="eyebrow" data-t="eyebrow">Modelo único de playlists · E6</p>
+      <h1 data-t="titulo">Modo sombra: lo de hoy frente al motor nuevo</h1>
+      <p class="intro" data-t="intro">Una fila por pantalla con el último veredicto: igual (la misma lista), equivalente (difiere sólo en lo que el diseño cambia a propósito) o distinta (hay que revisarla antes del corte).</p>
+    </div>
+    <div class="ctx-top">
+      <span class="estado" id="estado"><span class="dot"></span><span id="estadoTxt">—</span></span>
+      <span class="meta" id="meta"></span>
+      <span class="sp"></span>
+      <div class="seg" role="group" aria-label="Idioma"><button type="button" id="langEs" aria-pressed="true">ES</button><button type="button" id="langEn" aria-pressed="false">EN</button></div>
+      <button class="btn" id="recargar" type="button" data-t="recargar">↻ Actualizar</button>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Filtrar por veredicto"></div>
+    <div class="chips" id="motivos" role="group" aria-label="Filtrar por motivo"></div>
+  </section>
+
+  <section class="card" aria-labelledby="filasT" aria-live="polite">
+    <div class="list-head"><h2 id="filasT" data-t="filas">Pantallas</h2><span class="state" id="total"></span></div>
+    <ol class="rows" id="filas"><li class="empty" data-t="cargando">Cargando…</li></ol>
+    <div class="more"><button class="btn" id="mas" type="button" hidden data-t="mas">Cargar más</button></div>
+  </section>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id)};
+  var API='/api/programacion/sombra',BANDERAS='/api/programacion/banderas';
+  var Q=new URLSearchParams(location.search);
+  var L=(function(){var q=Q.get('lang');if(q)return q==='en'?'en':'es';try{var s=localStorage.getItem('sombra-lang');if(s)return s}catch(_){}return (navigator.language||'es').slice(0,2)==='en'?'en':'es'})();
+  var I={
+    es:{eyebrow:'Modelo único de playlists · E6',titulo:'Modo sombra: lo de hoy frente al motor nuevo',intro:'Una fila por pantalla con el último veredicto: igual (la misma lista), equivalente (difiere sólo en lo que el diseño cambia a propósito) o distinta (hay que revisarla antes del corte).',
+      recargar:'↻ Actualizar',filas:'Pantallas',cargando:'Cargando…',mas:'Cargar más',banderaT:'Bandera del modo sombra',banderaHelp:'Encendida, cada player compara por detrás lo que recibe con lo que resolvería el motor nuevo (una vez cada 10 min por pantalla) y deja aquí el veredicto. No cambia lo que emite ninguna pantalla. El motor nuevo sigue apagado hasta el corte (E13).',auto:'Actualizar cada minuto',
+      on:'SOMBRA ENCENDIDA',off:'SOMBRA APAGADA',encender:'Encender el modo sombra',apagar:'Apagar el modo sombra',encendida:'encendida',apagada:'apagada',
+      confirmarOn:'¿Encender el modo sombra? Los players empezarán a comparar por detrás con el motor nuevo y a escribir en la D1 (pocas escrituras: ver el runbook). No cambia lo que emiten.',confirmarOff:'¿Apagar el modo sombra? Se dejará de comparar; las filas registradas se conservan.',
+      version:'versión',motor:'motor',todas:'Todas',veredictos:{igual:'Igual',equivalente:'Equivalente',distinta:'Distinta'},
+      desde:'desde',ultima:'última comprobación',primera:'vista por primera vez',cambios:function(n){return n===1?'1 cambio':n+' cambios'},
+      emision:'Qué emite ↗',json:'Motor nuevo ↗',detalle:'Detalle',legado:'Hoy (legado)',nuevo:'Motor nuevo',soloLegado:'sólo hoy',soloNuevo:'sólo en el nuevo',spots:'spots',anterior:'Antes',
+      vacio:'Sin filas todavía. Con la bandera apagada no se compara nada; encendida, cada pantalla aparece en cuanto su player pide la playlist (como mucho, en 10 min).',vacioFiltro:'Ninguna pantalla con este filtro.',
+      error401:'Inicia sesión para ver el modo sombra.',error403:'No tienes permiso (Reproductores · digitalsignage-player).',errorRed:'No se pudo consultar el modo sombra.',error503:'La D1 del modelo único no está disponible.',banderaError:'No se pudo cambiar la bandera',
+      total:function(n,t){return n+' de '+t+' pantallas'},hace:function(m){return m<1?'ahora':m<60?'hace '+m+' min':m<1440?'hace '+Math.round(m/60)+' h':'hace '+Math.round(m/1440)+' d'},
+      motivos:{misma_lista:'Misma lista',relleno_del_player:'Sin lista propia: el relleno lo pone el player',parrilla_intercala:'La parrilla ya no anula «Por defecto»: se intercala (decisión 1)',parrilla_vendida:'Reservas vendidas o aceptadas: el motor nuevo las intercala y hoy no salen (decisión 1)',franja_nocturna_de_ayer:'Madrugada: el motor nuevo toma la franja nocturna de ayer (desviación 15)',viva_directa_gana:'Una viva dirigida sólo a la pantalla deja fuera a las de grupo (decisión 3)',rundown_exacto:'El rundown 50/50 es base exacta: lo suelto de la franja no entra (desviación 6)',orquestacion_por_encima:'Sincro, mural o música de Xtore mandan por encima: fuera del modelo único',
+        capa_distinta:'Otra capa',nuevo_vacio:'El motor nuevo no tiene nada para esta pantalla',solo_en_nuevo:'Sólo el motor nuevo tiene lista para esta pantalla',piezas_distintas:'Piezas distintas',orden_distinto:'Mismas piezas, otro orden',spots_distintos:'Otros spots de parrilla',cadencia_distinta:'Otra cadencia de spots',exacta_distinta:'Una lista es exacta y la otra no'}},
+    en:{eyebrow:'Single playlist model · E6',titulo:'Shadow mode: today versus the new engine',intro:'One row per screen with its latest verdict: equal (same list), equivalent (differs only in what the design changes on purpose) or different (to be reviewed before the cut-over).',
+      recargar:'↻ Refresh',filas:'Screens',cargando:'Loading…',mas:'Load more',banderaT:'Shadow mode flag',banderaHelp:'When on, each player compares in the background what it gets with what the new engine would resolve (once every 10 min per screen) and leaves the verdict here. It does not change what any screen plays. The new engine stays off until the cut-over (E13).',auto:'Refresh every minute',
+      on:'SHADOW ON',off:'SHADOW OFF',encender:'Turn shadow mode on',apagar:'Turn shadow mode off',encendida:'on',apagada:'off',
+      confirmarOn:'Turn shadow mode on? Players will start comparing with the new engine in the background and writing to D1 (few writes: see the runbook). It does not change what they play.',confirmarOff:'Turn shadow mode off? Comparisons stop; recorded rows are kept.',
+      version:'version',motor:'engine',todas:'All',veredictos:{igual:'Equal',equivalente:'Equivalent',distinta:'Different'},
+      desde:'since',ultima:'last check',primera:'first seen',cambios:function(n){return n===1?'1 change':n+' changes'},
+      emision:'What it plays ↗',json:'New engine ↗',detalle:'Details',legado:'Today (legacy)',nuevo:'New engine',soloLegado:'only today',soloNuevo:'only in the new one',spots:'spots',anterior:'Before',
+      vacio:'No rows yet. With the flag off nothing is compared; when on, each screen shows up as soon as its player asks for its playlist (within 10 min).',vacioFiltro:'No screen matches this filter.',
+      error401:'Sign in to see shadow mode.',error403:'You are not allowed (Players · digitalsignage-player).',errorRed:'Could not query shadow mode.',error503:'The single-model D1 is not available.',banderaError:'Could not change the flag',
+      total:function(n,t){return n+' of '+t+' screens'},hace:function(m){return m<1?'now':m<60?m+' min ago':m<1440?Math.round(m/60)+' h ago':Math.round(m/1440)+' d ago'},
+      motivos:{misma_lista:'Same list',relleno_del_player:'No own list: the player provides the fill',parrilla_intercala:'Bookings no longer override the default playlist: they are woven in (decision 1)',parrilla_vendida:'Sold or accepted bookings: the new engine weaves them in and today they do not play (decision 1)',franja_nocturna_de_ayer:'Early hours: the new engine takes yesterday’s night slot (deviation 15)',viva_directa_gana:'A live playlist aimed only at this screen leaves group ones out (decision 3)',rundown_exacto:'The 50/50 rundown is an exact base: loose bookings in the slot stay out (deviation 6)',orquestacion_por_encima:'Sync, video wall or Xtore music rule above: outside the single model',
+        capa_distinta:'Another layer',nuevo_vacio:'The new engine has nothing for this screen',solo_en_nuevo:'Only the new engine has a list for this screen',piezas_distintas:'Different pieces',orden_distinto:'Same pieces, another order',spots_distintos:'Other booking spots',cadencia_distinta:'Another spot cadence',exacta_distinta:'One list is exact and the other is not'}}
+  };
+  var ORDEN=['distinta','equivalente','igual'];
+  function t(k){return I[L][k]}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function motivoTxt(m){return (I[L].motivos[m])||m||'—'}
+  function fecha(ms){if(!ms)return '—';try{return new Intl.DateTimeFormat(L==='en'?'en-GB':'es-ES',{timeZone:'Europe/Madrid',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(ms))}catch(_){return new Date(ms).toISOString().slice(0,16)}}
+  function hace(ms){return ms?I[L].hace(Math.max(0,Math.round((Date.now()-ms)/60000))):''}
+
+  var state={veredicto:Q.has('veredicto')?Q.get('veredicto'):'distinta',motivo:Q.get('motivo')||''},last=null,filas=[],siguiente=null,req=0,timer=0,abiertas={};
+  if(['','distinta','equivalente','igual'].indexOf(state.veredicto)<0)state.veredicto='';
+
+  function applyLang(){
+    document.documentElement.lang=L;
+    $('langEs').setAttribute('aria-pressed',L==='es');$('langEn').setAttribute('aria-pressed',L==='en');
+    document.querySelectorAll('[data-t]').forEach(function(n){var v=t(n.getAttribute('data-t'));if(typeof v==='string')n.textContent=v});
+    if(last)render();
+  }
+  function setLang(l){L=l;try{localStorage.setItem('sombra-lang',l)}catch(_){}syncUrl();applyLang()}
+  function syncUrl(){
+    var u=new URL(location.href);
+    [['veredicto',state.veredicto],['motivo',state.motivo],['lang',L==='en'?'en':'']].forEach(function(kv){if(kv[1])u.searchParams.set(kv[0],kv[1]);else u.searchParams.delete(kv[0])});
+    if(!state.veredicto)u.searchParams.set('veredicto','');
+    try{history.replaceState(null,'',u)}catch(_){}
+  }
+
+  // ── Consulta ──
+  function url(antes){
+    var p=new URLSearchParams();if(state.veredicto)p.set('veredicto',state.veredicto);if(state.motivo)p.set('motivo',state.motivo);p.set('limite','100');if(antes)p.set('antes',antes);
+    return API+'?'+p.toString();
+  }
+  function consulta(mas){
+    clearTimeout(timer);
+    var my=++req;
+    fetch(url(mas?siguiente:''),{cache:'no-store',credentials:'same-origin'}).then(function(r){return r.json().catch(function(){return null}).then(function(d){return {status:r.status,d:d}})}).then(function(x){
+      if(my!==req)return;
+      if(x.status!==200||!x.d||!x.d.ok){showError(x.status===401?t('error401'):x.status===403?t('error403'):x.status===503?t('error503'):t('errorRed'));return}
+      last=x.d;filas=mas?filas.concat(x.d.filas||[]):(x.d.filas||[]);siguiente=x.d.siguiente||null;render();
+    }).catch(function(){if(my===req)showError(t('errorRed'))}).then(function(){
+      if(my===req&&$('auto').checked)timer=setTimeout(function(){consulta(false)},60000);
+    });
+  }
+  function showError(msg){last=null;filas=[];$('filas').innerHTML='<li class="empty err">'+esc(msg)+'</li>';$('mas').hidden=true;$('total').textContent='';$('raw').textContent='{}'}
+
+  // ── Pintar ──
+  function render(){
+    var d=last,b=d.banderas||{},c=d.cuentas||{igual:0,equivalente:0,distinta:0,total:0};
+    $('estado').className='estado'+(b.sombra?' on':'');$('estadoTxt').textContent=b.sombra?t('on'):t('off');
+    $('meta').textContent=t('version')+' '+d.version+' · '+t('motor')+' '+(b.motor||'apagado');
+    $('banderaTxt').textContent=b.sombra?t('encendida'):t('apagada');
+    var bt=$('bandera');bt.disabled=false;bt.textContent=b.sombra?t('apagar'):t('encender');bt.className='btn'+(b.sombra?'':' pri');
+    $('chips').innerHTML=[['',t('todas'),c.total]].concat(ORDEN.map(function(v){return [v,I[L].veredictos[v],c[v]||0]})).map(function(x){
+      return '<button type="button" class="chip '+esc(x[0])+'" data-veredicto="'+esc(x[0])+'" aria-pressed="'+(state.veredicto===x[0])+'">'+esc(x[1])+' <b>'+esc(x[2])+'</b></button>'}).join('');
+    var ms=(d.motivos||[]).filter(function(m){return !state.veredicto||m.veredicto===state.veredicto});
+    $('motivos').innerHTML=ms.length>1||state.motivo?ms.map(function(m){
+      return '<button type="button" class="chip motivo" data-motivo="'+esc(m.motivo)+'" aria-pressed="'+(state.motivo===m.motivo)+'" title="'+esc(m.motivo)+'">'+esc(motivoTxt(m.motivo))+' <b>'+esc(m.n)+'</b></button>'}).join(''):'';
+    $('total').textContent=I[L].total(filas.length,c.total);
+    $('filas').innerHTML=filas.length?filas.map(fila).join(''):'<li class="empty">'+esc(c.total?t('vacioFiltro'):t('vacio'))+'</li>';
+    $('mas').hidden=!siguiente;
+    $('raw').textContent=JSON.stringify(d,null,2);
+  }
+  function claves(lista,solo){solo=solo||[];return '<span class="claves">'+(lista||[]).map(function(k){return '<span class="clave'+(/^grid:/.test(k)?' grid':'')+(solo.indexOf(k)>=0?' solo':'')+'">'+esc(k)+'</span>'}).join('')+'</span>'}
+  function fila(f){
+    var lg=f.legado||{},nv=f.nuevo||{},df=f.diferencia||{},base=df.base||{},sp=df.spots||{},s=encodeURIComponent(f.pantalla);
+    var det='<div><h3>'+esc(t('legado'))+' · '+esc(lg.fuente||lg.capa||'')+(lg.franja?' · '+esc(lg.franja):'')+'</h3>'+claves(lg.claves,(base.soloLegado||[]).concat(sp.soloLegado||[]))+'</div>'+
+      '<div><h3>'+esc(t('nuevo'))+' · '+esc(nv.capa||'')+(nv.nombre?' · '+esc(nv.nombre):'')+(nv.cadencia?' · '+esc(t('spots'))+' /'+esc(nv.cadencia):'')+'</h3>'+claves(nv.claves,(base.soloNuevo||[]).concat(sp.soloNuevo||[]))+'</div>';
+    var dif=[];
+    if((base.soloLegado||[]).length)dif.push(t('soloLegado')+': '+base.soloLegado.join(', '));
+    if((base.soloNuevo||[]).length)dif.push(t('soloNuevo')+': '+base.soloNuevo.join(', '));
+    if((sp.soloLegado||[]).length||(sp.soloNuevo||[]).length)dif.push(t('spots')+' — '+t('soloLegado')+': '+((sp.soloLegado||[]).join(', ')||'—')+' · '+t('soloNuevo')+': '+((sp.soloNuevo||[]).join(', ')||'—'));
+    if(f.anterior)dif.push(t('anterior')+': '+(I[L].veredictos[f.anterior.veredicto]||f.anterior.veredicto)+' · '+motivoTxt(f.anterior.motivo)+' ('+fecha(f.anterior.desde)+' → '+fecha(f.anterior.hasta)+')');
+    if(dif.length)det+='<p class="dif">'+dif.map(esc).join('<br>')+'</p>';
+    return '<li class="row '+esc(f.veredicto)+(abiertas[f.pantalla]?' open':'')+'" data-pantalla="'+esc(f.pantalla)+'">'+
+      '<div class="row-main">'+
+        '<span class="scr">'+esc(f.pantalla)+'<small>'+esc(t('version'))+' '+esc(f.version)+(f.cambios?' · '+esc(I[L].cambios(f.cambios)):'')+'</small></span>'+
+        '<span><span class="ver '+esc(f.veredicto)+'">'+esc((I[L].veredictos[f.veredicto]||f.veredicto).toUpperCase())+'</span><span class="mot">'+esc(motivoTxt(f.motivo))+'</span></span>'+
+        '<span class="capas">'+esc(lg.capa||'—')+'<span class="fl">→</span>'+esc(f.capa||nv.capa||'—')+'<span class="firmas" title="firma_legado · firma_nueva">'+esc((f.firmas||{}).legado||'')+'<br>'+esc((f.firmas||{}).nuevo||'')+'</span></span>'+
+        '<span class="cuando">'+esc(t('desde'))+' <b>'+esc(fecha(f.desde))+'</b><br>'+esc(t('ultima'))+' <b title="'+esc(fecha(f.ultima))+'">'+esc(hace(f.ultima))+'</b><br><span title="'+esc(t('primera'))+'">'+esc(t('primera'))+' '+esc(fecha(f.primera))+'</span></span>'+
+        '<span class="acts"><button class="btn" type="button" data-abrir="1" aria-expanded="'+(!!abiertas[f.pantalla])+'">'+esc(t('detalle'))+'</button>'+
+          '<a class="btn" href="/emision/?screen='+s+'" target="_blank" rel="noopener">'+esc(t('emision'))+'</a>'+
+          '<a class="btn" href="/api/programacion?screen='+s+'" target="_blank" rel="noopener">'+esc(t('json'))+'</a></span>'+
+      '</div><div class="row-det">'+det+'</div></li>';
+  }
+
+  // ── Bandera (▤): sólo la cambia la sesión del portal; el visor recibe 403 ──
+  function cambiarBandera(){
+    if(!last)return;var on=!(last.banderas&&last.banderas.sombra);
+    if(!window.confirm(on?t('confirmarOn'):t('confirmarOff')))return;
+    $('bandera').disabled=true;
+    fetch(BANDERAS,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({sombra:on,motivo:'panel /programacion/sombra/'})})
+      .then(function(r){return r.json().catch(function(){return null}).then(function(d){return {status:r.status,d:d}})})
+      .then(function(x){if(x.status!==200||!x.d||!x.d.ok){window.alert(t('banderaError')+' · HTTP '+x.status+(x.d&&x.d.error?' · '+x.d.error:''))}consulta(false)})
+      .catch(function(){window.alert(t('banderaError'));consulta(false)});
+  }
+
+  // ── Eventos ──
+  $('chips').addEventListener('click',function(e){var b=e.target.closest('[data-veredicto]');if(!b)return;state.veredicto=b.getAttribute('data-veredicto');state.motivo='';syncUrl();consulta(false)});
+  $('motivos').addEventListener('click',function(e){var b=e.target.closest('[data-motivo]');if(!b)return;var m=b.getAttribute('data-motivo');state.motivo=state.motivo===m?'':m;syncUrl();consulta(false)});
+  $('filas').addEventListener('click',function(e){var b=e.target.closest('[data-abrir]');if(!b)return;var li=b.closest('.row'),p=li.getAttribute('data-pantalla');abiertas[p]=!abiertas[p];li.classList.toggle('open',!!abiertas[p]);b.setAttribute('aria-expanded',!!abiertas[p])});
+  $('mas').addEventListener('click',function(){consulta(true)});
+  $('recargar').addEventListener('click',function(){consulta(false)});
+  $('auto').addEventListener('change',function(){consulta(false)});
+  $('bandera').addEventListener('click',cambiarBandera);
+  $('langEs').addEventListener('click',function(){setLang('es')});$('langEn').addEventListener('click',function(){setLang('en')});
+
+  applyLang();syncUrl();consulta(false);
+})();
+</script>
+</body>
+</html>

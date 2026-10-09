@@ -11,6 +11,9 @@
 //   · se compara en tiempo constante con env.PROGRAMACION_SERVICE_KEY (un secreto de Pages: lo pone Carlos);
 //   · sin ese secreto, la clave de servicio está apagada (no es un error: sólo vale la sesión).
 // La sesión de lectura (visor) no escribe: 403 solo_lectura, igual que el guarda global de functions/_middleware.js.
+//
+// SÓLO SESIÓN (autorizarSesion, E6). Para lo que decide una persona y queda a su nombre, como las banderas de
+// despliegue: la sesión del portal con permiso; ni el visor ni la clave de servicio, ni siquiera para leer.
 import { accessFor, readSession } from "../../_auth-session.js";
 import { lecturaStillLive } from "../../_lectura-guard.js";
 
@@ -36,6 +39,18 @@ export async function autorizarEscritura(request, env) {
   if (servicio) return { ok: true, actor: servicio, servicio: true };
   const session = await readSession(request, env).catch(() => null);
   if (!session) return sin(401, "unauthorized");
+  if (session.lectura) return sin(403, "solo_lectura");
+  const access = await accessFor(env, session.email, PROYECTO, false);
+  return access.allowed ? { ok: true, actor: norm(session.email) } : sin(403, "forbidden");
+}
+
+/**
+ * Sólo la sesión del portal con permiso: ni el visor (403 solo_lectura) ni la clave de servicio (403 `codigoServicio`).
+ * Para lo que decide una persona y queda a su nombre, como las banderas de despliegue (E6). 401 sin nada.
+ */
+export async function autorizarSesion(request, env, codigoServicio = "solo_sesion") {
+  const session = await readSession(request, env).catch(() => null);
+  if (!session) return (await actorDeServicio(request, env)) ? sin(403, codigoServicio) : sin(401, "unauthorized");
   if (session.lectura) return sin(403, "solo_lectura");
   const access = await accessFor(env, session.email, PROYECTO, false);
   return access.allowed ? { ok: true, actor: norm(session.email) } : sin(403, "forbidden");

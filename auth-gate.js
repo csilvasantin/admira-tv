@@ -44,7 +44,7 @@
     "users":"admira-tv", "usuarios":"admira-tv",
     "accesscontrol":"admira-tv", "videoanalitics":"admira-tv",
     "audiencia":"digitalsignage-conditional",
-    "emision":"digitalsignage-player"
+    "emision":"digitalsignage-player", "programacion":"digitalsignage-player"
   };
   var pathKey = (location.pathname.split('/').filter(Boolean)[0] || 'admira-tv').toLowerCase();
   var SOLUTION = PATH_PROJECTS[pathKey] || pathKey;
