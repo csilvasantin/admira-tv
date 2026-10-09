@@ -1,9 +1,9 @@
 {
-  "version": "v.09.10.2026.r5.07:04",
+  "version": "v.09.10.2026.r6.07:22",
   "signature": "MorfeoMacMini · MacMini",
   "agent": "MorfeoMacMini",
   "machine": "MacMini",
   "day": "09.10.2026",
-  "time": "07:04",
-  "evidence": "Parrilla en el iPad: la tarjeta del orden de emisión se compacta por el ancho de su columna (container query) y no se descoloca en Safari; antes salían cajas vacías."
+  "time": "07:22",
+  "evidence": "Parrilla: las miniaturas de vídeo y el previo muestran la portada del Stock (poster/thumbnail); en el iPad ya no salen en negro."
 }
