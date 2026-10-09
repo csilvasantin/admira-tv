@@ -122,3 +122,17 @@ test("las columnas de .slot caben en la escaleta a 320px", () => {
     `al título le quedan ${anchoEscaleta - minimoSlot}px a 320px: demasiado apurado`,
   );
 });
+
+// iPad en vertical (9-oct-2026): ventana de 1024 px y columna «Orden de emisión» de ~386 px. La regla compacta sólo
+// saltaba por el ancho de la VENTANA (@media max-width:600px), el título quedaba en 0 px y Safari colocaba el contenido
+// de cada tarjeta fuera de ella (filas de la rejilla calculadas con la altura previa a encoger la columna flex).
+test("la tarjeta del orden de emisión se compacta por el ancho de su columna y no se descoloca en Safari", () => {
+  assert.match(html, /\.rundown\{[^}]*container-type:inline-size/, "la columna es contenedor de consultas");
+  assert.match(html, /\.slot\{[^}]*align-content:start/, "las filas empiezan arriba (Safari)");
+  assert.match(html, /\.slot\{[^}]*flex-shrink:0/, "la tarjeta no encoge dentro de la columna flex");
+  const i = html.indexOf("@container (max-width:560px){");
+  assert.ok(i > 0, "hay versión compacta por ancho de columna");
+  const bloque = html.slice(i, html.indexOf("}}", i) + 2);
+  assert.match(bloque, /\.slot\{grid-template-columns:26px 32px 68px minmax\(0,1fr\) auto/);
+  assert.match(bloque, /\.slot \.lane\{display:none\}/);
+});
