@@ -1,9 +1,9 @@
 {
-  "version": "v.09.10.2026.r4.06:54",
+  "version": "v.09.10.2026.r5.07:04",
   "signature": "MorfeoMacMini · MacMini",
   "agent": "MorfeoMacMini",
   "machine": "MacMini",
   "day": "09.10.2026",
-  "time": "06:54",
-  "evidence": "Acceso: /users/ y /remotecontrol/ esperan a la verja (AdmiraTvAuth.ready) y un 401 recarga como mucho una vez por minuto (AdmiraTvAuth.expired); se acaba el bucle de recarga sin sesión que impedía entrar."
+  "time": "07:04",
+  "evidence": "Parrilla en el iPad: la tarjeta del orden de emisión se compacta por el ancho de su columna (container query) y no se descoloca en Safari; antes salían cajas vacías."
 }
