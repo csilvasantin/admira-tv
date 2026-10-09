@@ -58,6 +58,30 @@
 
   function norm(e) { return String(e).toLowerCase().trim(); }
 
+  // Token de Google que deja /auth/callback en el fragmento de la vuelta (#admira_gcred=…, 9-oct-2026). Se recoge y se
+  // BORRA de la dirección aquí, en la primera línea útil del primer script de la página, antes de que ningún otro
+  // script (analítica incluida) pueda leer location. Se guarda como lo guardaba el acceso por ventana emergente, para
+  // que AdmiraTvAuth.authorization() lo ofrezca a brain (el mando); la sesión de admira.tv sigue en su cookie.
+  (function tomarCredencialDeVuelta() {
+    var h = String(location.hash || "");
+    var m = /(?:^#|&)admira_gcred=([^&]*)/.exec(h);
+    if (!m) return;
+    var limpio = h.replace(/(^#|&)admira_gcred=[^&]*/, "$1").replace(/^#&/, "#").replace(/&&/g, "&").replace(/&$/, "");
+    if (limpio === "#") limpio = "";
+    try { history.replaceState(history.state, "", location.pathname + location.search + limpio); } catch (e) {}
+    try {
+      var cred = decodeURIComponent(m[1]);
+      var payload = JSON.parse(decodeURIComponent(
+        atob(cred.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
+          .split("").map(function (c) { return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2); }).join("")
+      ));
+      if (!payload || !payload.email || payload.email_verified === false) return;
+      localStorage.setItem("admira_tv_gate", JSON.stringify({
+        email: norm(payload.email), exp: Date.now() + 12 * 3600 * 1000, cred: cred, credAt: Date.now(), via: "callback"
+      }));
+    } catch (e) {}
+  })();
+
   // Contrato mínimo para páginas que necesitan autenticar escrituras reales en
   // un backend. El gate sigue siendo visual, pero nunca obliga a cada pantalla a
   // conocer la forma interna de localStorage ni a duplicar el manejo de sesión.

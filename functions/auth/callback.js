@@ -25,7 +25,13 @@ export async function onRequestPost({ request, env }) {
   if (!identity) return fail("Google no ha podido validar esta cuenta.", 401);
   if (!(await hasAnyAccess(env, identity.email))) return fail("Esta cuenta no tiene acceso a Admira.tv.", 403);
   const token = await createSession(env, identity);
-  const headers = new Headers(authHeaders({ Location: PUBLIC_ORIGIN + challenge.returnPath }));
+  // El token de Google viaja al navegador en el FRAGMENTO de la vuelta (#admira_gcred=…): el fragmento no se envía a
+  // ningún servidor ni queda en registros. auth-gate.js lo recoge, lo guarda como hacía el acceso por ventana emergente
+  // y lo borra de la dirección antes que cualquier otro script. Lo necesitan las páginas que hablan con brain (el mando
+  // de /remotecontrol/), que sólo acepta el token de Google; la sesión de admira.tv sigue en su cookie (9-oct-2026).
+  const vuelta = challenge.returnPath + (challenge.returnPath.includes("#") ? "&" : "#") +
+    "admira_gcred=" + encodeURIComponent(String(form.credential || ""));
+  const headers = new Headers(authHeaders({ Location: PUBLIC_ORIGIN + vuelta }));
   headers.append("Set-Cookie", sessionCookie(token));
   headers.append("Set-Cookie", clearChallengeCookie());
   return new Response(null, { status: 303, headers });
