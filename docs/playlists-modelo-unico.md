@@ -869,9 +869,9 @@ doble escritura (E7)»).
 
 Con la D1 importada (ver «Cómo importar») y desplegada la rama de E7.
 
-1. **Encender la bandera** `espejo` con el endpoint de banderas de E6 (`/api/programacion/banderas`, con `{"espejo": true}`).
-   Mientras ese endpoint no esté, con SQL en la D1 remota, que deja la misma auditoría y sube la versión igual que
-   `fijarBanderas`:
+1. **Encender la bandera** `espejo`, con el OK de Carlos, con el endpoint de banderas de E6 (`/api/programacion/banderas`,
+   con `{"espejo": true}`) una vez fusionado E6: es el camino previsto. Como respaldo, con SQL en la D1 remota, que deja la
+   misma auditoría y sube la versión igual que `fijarBanderas`:
 
    ```bash
    npx wrangler d1 execute admira-programacion --remote --command "INSERT INTO auditoria (en, actor, accion, entidad, entidad_id, rev, version, detalle) SELECT CAST(strftime('%s','now') AS INTEGER) * 1000, 'csilvasantin@gmail.com', 'banderas', 'meta', 'banderas', NULL, version + 1, '{\"espejo\":true}' FROM meta WHERE id = 1; UPDATE meta SET banderas = json_set(banderas, '$.espejo', json('true')), version = version + 1, actualizado_en = CAST(strftime('%s','now') AS INTEGER) * 1000 WHERE id = 1;"
