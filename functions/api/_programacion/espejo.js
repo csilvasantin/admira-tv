@@ -13,7 +13,7 @@
 //       - el documento de vivas (live-save, live-delete, circuit-save, circuit-delete) → TODAS sus vivas, con el peso
 //         N, N−1, … del importador, y todos sus circuitos (destino_excede_limite incluido: se omite, no se recorta). Las
 //         asignaciones de las vivas que ya no están se archivan; los circuitos que ya no están se APAGAN (activo:
-//         false, nunca se borran: desviación 41).
+//         false, nunca se borran: desviación 41), con la misma regla que el importador con ?archivar=1.
 //     Lo escrito es lo que escribiría una importación completa del mismo KV: la simulación del importador sale `igual`.
 //   · EL ACTOR es importador:espejo:<email o servicio>, así el importador sigue tomando esas filas por suyas (desviación
 //     33). Quién guardó en el KV va en el motivo («espejo E7 · <ref> · <acción> · por <quien>»).
@@ -31,7 +31,7 @@
 //   · LOS BORRADORES SINTÉTICOS NUNCA SE REFLEJAN: no son datos guardados (los compone el GET en cada consulta).
 import * as A from "./almacen.js";
 import { vivasDe } from "./legado.js";
-import { ACTOR, ESCRIBEN, editadaFuera, idDefecto, idsNecesarios, planificar, refBorrador, refCircuito, refViva, traducir } from "./importador.js";
+import { ACTOR, ESCRIBEN, idDefecto, idsNecesarios, planificar, refBorrador, refCircuito, refViva, traducir } from "./importador.js";
 import { slugId } from "./modelo.js";
 
 export const ACTOR_ESPEJO = ACTOR + "espejo:";
@@ -127,21 +127,6 @@ const entidadDeRef = ref => {
   return { entidad: "playlist", id: idDefecto(id) };
 };
 
-/** Los circuitos del importador que ya no están en el KV se apagan (activo: false), con las reglas de archivar. */
-function apagarCircuitos(plan, d1) {
-  const porId = new Map(d1.circuitos.map(c => [c.id, c])), ops = [];
-  for (const h of plan.huerfanos) {
-    if (h.entidad !== "circuito" || h.motivo !== "circuito_eliminado") continue;
-    const fila = porId.get(h.id);
-    if (!fila) continue;
-    const base = { entidad: "circuito", id: fila.id, ref: h.ref, rev: Number(fila.rev) };
-    if (fila.activo === false) ops.push({ ...base, accion: "igual", motivo: "ya_apagado" });
-    else if (editadaFuera(fila)) ops.push({ ...base, accion: "omitir", motivo: "editado_fuera", cambios: ["activo"], actualizado_por: fila.actualizado_por || "" });
-    else ops.push({ ...base, accion: "archivar", motivo: "circuito_eliminado", cambios: ["activo"], datos: { ...fila, activo: false } });
-  }
-  return ops;
-}
-
 // ── Espejo ──────────────────────────────────────────────────────────────────────────────────────────────────────
 function conPlazo(promesa, ms) {
   let reloj;
@@ -162,8 +147,7 @@ async function aplicar(db, c, actor, base) {
     const d1 = await A.leerParaEspejo(db, lectura);
     // La misma lectura trae meta: si la bandera se apagó entretanto, no se escribe nada.
     if (!recuerda(d1.meta)) return { estado: "apagado" };
-    const plan = planificar({ traduccion, d1, archivar: true });
-    const ops = [...plan.operaciones, ...(c.vivas ? apagarCircuitos(plan, d1) : [])];
+    const plan = planificar({ traduccion, d1, archivar: true }), ops = plan.operaciones;
     const filas = { playlist: new Map(d1.playlists.map(f => [f.id, f])), asignacion: new Map(d1.asignaciones.map(f => [f.id, f])), circuito: new Map(d1.circuitos.map(f => [f.id, f])) };
     const escritas = [], obsoletas = [], fallidas = [];
     let conflicto = false, version = null;
