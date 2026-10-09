@@ -141,38 +141,52 @@ export async function onRequestGet({ request, env = {}, waitUntil }) {
   try { meta = await leerMeta(db); } catch (e) { console.error("programacion: meta", e); meta = null; }
   if (!meta) return json({ ok: false, error: "programacion_db_sin_esquema" }, 503);
 
-  const swallow = p => { try { if (typeof waitUntil === "function") waitUntil(Promise.resolve(p).catch(() => {})); } catch (_) {} };
-  let circuitos, cand, yo, parrilla, stock;
-  try {
-    [circuitos, yo, parrilla, stock] = await Promise.all([
-      deVersion(meta.version, "circuitos", () => listarCircuitos(db)),
-      identidad(env, screen, q, swallow),
-      parrillaDe(screen, at),
-      loadStock().catch(() => []),
-    ]);
-    // Candidatas por etiquetas y por hora: pedidas desde el inicio de la hora con una hora más de horizonte, valen para
-    // cualquier T de esa hora (el resolver filtra lo que de verdad cubre T).
-    const screenTags = etiquetasDe(yo.facts, circuitos.valor), tramo = Math.floor(at / HORA_MS) * HORA_MS;
-    cand = await deVersion(meta.version, `candidatas:${tramo}:${screenTags.join(",")}`,
-      () => candidatas(db, screenTags, { ahora: tramo, horizonteMs: HORIZONTE_MS + HORA_MS, atrasMs: MANDO_MAX_MS }));
-    cand.screenTags = screenTags;
-  } catch (e) {
+  let l;
+  try { l = await lecturasDe({ env, db, meta, screen, at, q, waitUntil }); }
+  catch (e) {
     console.error("programacion: lectura", e);
     return json({ ok: false, error: "programacion_lectura_fallida" }, 503);
   }
 
-  const tag = String(q.get("tag") || "").trim().slice(0, 80);
-  const r = resolver({
-    ahora: at, facts: yo.facts, screenTags: cand.screenTags, circuitos: circuitos.valor,
-    asignaciones: cand.valor.asignaciones, playlists: cand.valor.playlists, stock, parrilla,
-    mando: tag ? { tipo: "hashtag", valor: tag, desde: at } : null,
-  });
+  const r = resolverCon(l, at, q.get("tag"));
   return json({
     ok: true, screen, at: new Date(at).toISOString(), ahora: Math.abs(at - Date.now()) < 120_000, publico: !!auth.publico,
     version: meta.version, motor: String((meta.banderas && meta.banderas.motor) || "apagado"),
-    memoria: circuitos.acierto && cand.acierto ? "acierto" : "fallo",
+    memoria: l.acierto ? "acierto" : "fallo",
     ...r,
-    lecturas: { parrilla: parrilla.map(d => d.date), stock: stock.length, autorretrato: yo.autorretrato },
+    lecturas: { parrilla: l.parrilla.map(d => d.date), stock: l.stock.length, autorretrato: l.yo.autorretrato },
+  });
+}
+
+/**
+ * Todo lo que el resolver necesita para una pantalla en `at`, con la memoria de esta instancia: circuitos y candidatas
+ * de la D1 (por meta.version), identidad, parrilla de tres días y Stock. Lanza si falla una lectura de la D1. Lo usan
+ * esta ruta y el modo sombra (E6, _programacion/sombra.js), que así comparten memoria y lecturas.
+ */
+export async function lecturasDe({ env = {}, db, meta, screen, at, q, waitUntil }) {
+  const swallow = p => { try { if (typeof waitUntil === "function") waitUntil(Promise.resolve(p).catch(() => {})); } catch (_) {} };
+  const [circuitos, yo, parrilla, stock] = await Promise.all([
+    deVersion(meta.version, "circuitos", () => listarCircuitos(db)),
+    identidad(env, screen, q, swallow),
+    parrillaDe(screen, at),
+    loadStock().catch(() => []),
+  ]);
+  // Candidatas por etiquetas y por hora: pedidas desde el inicio de la hora con una hora más de horizonte, valen para
+  // cualquier T de esa hora (el resolver filtra lo que de verdad cubre T).
+  const screenTags = etiquetasDe(yo.facts, circuitos.valor), tramo = Math.floor(at / HORA_MS) * HORA_MS;
+  const cand = await deVersion(meta.version, `candidatas:${tramo}:${screenTags.join(",")}`,
+    () => candidatas(db, screenTags, { ahora: tramo, horizonteMs: HORIZONTE_MS + HORA_MS, atrasMs: MANDO_MAX_MS }));
+  return { circuitos: circuitos.valor, asignaciones: cand.valor.asignaciones, playlists: cand.valor.playlists, screenTags,
+    yo, parrilla, stock, acierto: circuitos.acierto && cand.acierto };
+}
+
+/** El resolver sobre lo leído por lecturasDe; `tag` simula el mando en vivo por hashtag desde `at` (decisión 2). */
+export function resolverCon(l, at, tag = "") {
+  const t = String(tag || "").trim().slice(0, 80);
+  return resolver({
+    ahora: at, facts: l.yo.facts, screenTags: l.screenTags, circuitos: l.circuitos,
+    asignaciones: l.asignaciones, playlists: l.playlists, stock: l.stock, parrilla: l.parrilla,
+    mando: t ? { tipo: "hashtag", valor: t, desde: at } : null,
   });
 }
 
