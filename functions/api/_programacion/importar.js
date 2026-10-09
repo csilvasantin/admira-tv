@@ -10,7 +10,7 @@
 //   · Lo importado que luego se editó por otro camino no se toca (`omitir` · `editado_fuera`) salvo con ?pisar=1. La
 //     simulación y la aplicación respetan las mismas opciones: lo que se simula es lo que se aplica.
 //   · Los huérfanos sólo se informan; con ?archivar=1, las asignaciones huérfanas del importador se archivan (estado
-//     «archivada»). Nada se borra nunca.
+//     «archivada») y sus circuitos huérfanos se apagan (activo: false). Nada se borra nunca.
 //
 // LEE EL KV (ACCESS), NUNCA LO ESCRIBE: sólo get y list. El documento de vivas (admira-tv:playlist:live:v1, con sus
 // circuitos) va en el primer tramo; los borradores «Por defecto» (admira-tv:playlist:default:v1:<pantalla>) se leen
@@ -158,7 +158,7 @@ async function resumenDelEspejo(db, meta) {
 }
 
 /** Ejecuta las escrituras del plan, en orden y con tope. Nunca borra: sólo guardar* de almacen.js (archivar es guardar con
- *  estado «archivada» y la rev de la fila). */
+ *  estado «archivada», o el circuito con activo: false, y la rev de la fila). */
 async function ejecutar(db, operaciones, actor) {
   const aplicadas = { crear: 0, actualizar: 0, archivar: 0 }, fallidas = [];
   let hechas = 0, pendientes = 0, version = null;
@@ -168,7 +168,7 @@ async function ejecutar(db, operaciones, actor) {
     hechas += 1;
     let r;
     try {
-      r = await GUARDAR[op.entidad](db, op.datos, { actor, rev: op.accion === "crear" ? 0 : op.rev, motivo: "importador E5 · " + op.ref + (op.accion === "archivar" ? " · archivada: " + op.motivo : "") });
+      r = await GUARDAR[op.entidad](db, op.datos, { actor, rev: op.accion === "crear" ? 0 : op.rev, motivo: "importador E5 · " + op.ref + (op.accion === "archivar" ? (op.entidad === "circuito" ? " · apagado: " : " · archivada: ") + op.motivo : "") });
     } catch (e) {
       console.error("programacion: importar escritura", e);
       return { error: true, aplicadas, fallidas };

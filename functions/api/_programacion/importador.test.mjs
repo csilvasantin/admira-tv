@@ -328,7 +328,7 @@ prueba("huérfanos: lo que ya no está en el KV se informa y no se borra", async
   assert.equal((await A.leerAsignacion(db, "viva-marca")).estado, "pausada", "ni se archiva: sólo se informa");
 });
 
-prueba("?archivar=1 archiva (nunca borra) sólo las asignaciones huérfanas del importador no editadas fuera; con ?pisar=1, también ésas", async () => {
+prueba("?archivar=1 archiva (nunca borra) sólo las asignaciones huérfanas del importador no editadas fuera, y apaga sus circuitos; con ?pisar=1, también ésas", async () => {
   const { db, d, kv, env } = await mundo(legadoMixto());
   await importar(env, "aplicar=1");
   const alta = cuerpo => onRequest({ request: new Request("https://admira.tv/api/programacion/asignaciones", { method: "POST",
@@ -352,22 +352,27 @@ prueba("?archivar=1 archiva (nunca borra) sólo las asignaciones huérfanas del 
   assert.deepEqual(sim.body.opciones, { pisar: false, archivar: true });
   assert.deepEqual(huerfanas(sim), [["ajena", "omitir", "ajena"], ["viva-marca", "archivar", "viva_eliminada"],
     ["defecto-alcampo-alcala", "archivar", "borrador_vacio"], ["defecto-alcampo-leganes", "omitir", "editado_fuera"]]);
-  assert.deepEqual([sim.body.resumen.asignacion.archivar, sim.body.resumen.escrituras], [2, 3]);
+  assert.deepEqual([sim.body.resumen.asignacion.archivar, sim.body.resumen.circuito.archivar, sim.body.resumen.escrituras], [2, 1, 4]);
+  assert.deepEqual(operacion(sim.body, "circuito", "madrid"), { entidad: "circuito", id: "madrid", ref: "kv:circuito:madrid", rev: 1, accion: "archivar", motivo: "circuito_eliminado", cambios: ["activo"] });
   assert.equal(operacion(sim.body, "asignacion", "defecto-alcampo-leganes").actualizado_por, EDITORA);
   assert.ok(d.sql.slice(antes).every(q => /^\s*select\b/i.test(q)), "la simulación con archivar no escribe");
   assert.equal(await version(db), v0);
-  // Aplicar: archivadas, no borradas; las demás, intactas. Playlists y circuito sólo se informan.
+  // Aplicar: archivadas, no borradas; las demás, intactas. Las playlists sólo se informan; el circuito se apaga (decisión
+  // de Carlos, 9-oct-2026: la misma regla que el espejo de E7).
   const ap = await importar(env, "archivar=1&aplicar=1");
-  assert.deepEqual(ap.body.aplicadas, { crear: 0, actualizar: 1, archivar: 2 });
+  assert.deepEqual(ap.body.aplicadas, { crear: 0, actualizar: 1, archivar: 3 });
   assert.deepEqual(await estados(), { ajena: "activa", "defecto-alcampo-alcala": "archivada", "defecto-alcampo-leganes": "activa", manual: "activa",
     "viva-marca": "archivada", "viva-ofertas-madrid": "activa" });
   assert.deepEqual({ asignacion: await cuenta(db, "asignacion"), playlist: await cuenta(db, "playlist") }, filas);
   assert.equal(await cuenta(db, "circuito"), 1);
+  assert.deepEqual([(await A.leerCircuito(db, "madrid")).activo, (await A.auditoria(db, { entidad: "circuito", id: "madrid" }))[0].detalle.motivo],
+    [false, "importador E5 · kv:circuito:madrid · apagado: circuito_eliminado"]);
   assert.equal((await A.auditoria(db, { accion: "borrar" })).length, 0);
   assert.deepEqual((await A.historial(db, "asignacion", "viva-marca"))[0].motivo, "importador E5 · kv:viva:marca · archivada: viva_eliminada");
   // Segunda pasada: nada que escribir (las archivadas salen igual · ya_archivada).
   const otra = await importar(env, "archivar=1&aplicar=1&muestra=50");
   assert.deepEqual([otra.body.resumen.escrituras, huerfanas(otra).filter(h => h[1] === "igual").map(h => h[2])], [0, ["ya_archivada", "ya_archivada"]]);
+  assert.deepEqual([operacion(otra.body, "circuito", "madrid").accion, operacion(otra.body, "circuito", "madrid").motivo], ["igual", "ya_apagado"]);
   // Con pisar=1 se archiva también la retocada (con el aviso), pero la ajena nunca: no es del importador.
   const pisando = await importar(env, "archivar=1&pisar=1&aplicar=1&muestra=50");
   assert.deepEqual([pisando.body.aplicadas.archivar, operacion(pisando.body, "asignacion", "defecto-alcampo-leganes").pisa, operacion(pisando.body, "asignacion", "ajena").motivo],
@@ -379,6 +384,31 @@ prueba("?archivar=1 archiva (nunca borra) sólo las asignaciones huérfanas del 
   const vuelve = await importar(env, "aplicar=1&muestra=50");
   assert.deepEqual([operacion(vuelve.body, "asignacion", "viva-marca").accion, operacion(vuelve.body, "asignacion", "viva-marca").cambios], ["actualizar", ["estado"]]);
   assert.equal((await estados())["viva-marca"], "pausada");
+  // Y el circuito, que vuelve con el documento, se enciende otra vez.
+  assert.deepEqual([operacion(vuelve.body, "circuito", "madrid").accion, operacion(vuelve.body, "circuito", "madrid").cambios, (await A.leerCircuito(db, "madrid")).activo],
+    ["actualizar", ["activo"], true]);
+});
+
+prueba("?archivar=1 con circuitos: sólo los del importador; lo editado fuera no se apaga salvo con ?pisar=1 (con el aviso)", async () => {
+  const { db, kv, env } = await mundo(legadoMixto());
+  await importar(env, "aplicar=1");
+  // Un circuito puesto a mano por la API (no es del importador) y el del legado, retocado por la editora.
+  const alta = cuerpo => onRequest({ request: new Request("https://admira.tv/api/programacion/circuitos", { method: "POST",
+    headers: { Cookie: "__Host-atv_session=" + T.editora, "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) }), env });
+  assert.equal((await alta({ nombre: "A mano", destino: { all: ["pantalla:alcampo-alcala"] } })).status, 201);
+  assert.equal((await parche(env, "circuitos/madrid", { rev: 1, nombre: "Madrid centro" })).status, 200);
+  kv.store.set(LIVE_KEY, JSON.stringify({ ...LIVE, circuits: [] }));
+  const v0 = await version(db);
+  const sim = await importar(env, "archivar=1&muestra=50");
+  assert.deepEqual(sim.body.huerfanos.filter(h => h.entidad === "circuito").map(h => [h.id, h.motivo]), [["madrid", "circuito_eliminado"]], "el ajeno ni es huérfano");
+  assert.deepEqual([operacion(sim.body, "circuito", "madrid").accion, operacion(sim.body, "circuito", "madrid").motivo, operacion(sim.body, "circuito", "madrid").actualizado_por,
+    operacion(sim.body, "circuito", "madrid").cambios, sim.body.resumen.circuito.archivar], ["omitir", "editado_fuera", EDITORA, ["activo"], 0]);
+  assert.equal((await importar(env, "archivar=1&aplicar=1")).body.aplicadas.archivar, 0);
+  assert.equal(await version(db), v0);
+  const ap = await importar(env, "archivar=1&pisar=1&aplicar=1&muestra=50");
+  assert.deepEqual([ap.body.aplicadas.archivar, operacion(ap.body, "circuito", "madrid").pisa, ap.body.resumen.circuito.archivar], [1, EDITORA, 1]);
+  assert.deepEqual([(await A.leerCircuito(db, "madrid")).activo, (await A.leerCircuito(db, "a-mano")).activo], [false, true]);
+  assert.equal((await importar(env, "archivar=1")).body.resumen.escrituras, 0, "la pasada siguiente, toda igual");
 });
 
 prueba("acceso: sólo la sesión del portal con digitalsignage-player; ni el visor, ni la clave de servicio", async () => {
