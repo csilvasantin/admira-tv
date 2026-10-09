@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=09.10.2026.r7.0730"></script>
+<script src="/auth-gate.js?v=09.10.2026.r8.0846"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,16 +32,22 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=09.10.2026.r7.0730">
+  <link rel="stylesheet" href="/admira-frame.css?v=09.10.2026.r8.0846">
 </head>
 <body>
-<script src="/admira-nav.js?v=09.10.2026.r7.0730" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=09.10.2026.r7.0730" defer></script>
+<script src="/admira-nav.js?v=09.10.2026.r8.0846" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=09.10.2026.r8.0846" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
 
   <nav class="toc">
+    <a href="#novedades-2026-10-09">Novedades 8–9 oct</a>
+    <a href="#que-emite">Qué emite cada pantalla</a>
+    <a href="#programacion">Programación · modelo único</a>
+    <a href="#parrilla-ipad">Parrilla en el iPad</a>
+    <a href="#ipad-nativo">Player nativo de iPad</a>
+    <a href="#paginas-acceso">Para quien programa páginas</a>
     <a href="#xtore-demo-pantallas">Xtanco / demo en cuatro pantallas</a>
     <a href="#xtore-audiencia">Audiencia de sesión / XpaceOS y Pixeria</a>
     <a href="#xtore-categorias">Instore · añadir y quitar por categoría</a>
@@ -55,12 +61,81 @@
     <a href="#android-player">Player Android / Samsung Fold</a>
     <a href="#player-integracion">Player · integrar sin tocarlo</a>
     <a href="#concepto">Concepto</a><a href="#vistas">Vistas</a><a href="#dispositivos">Dispositivos</a>
-    <a href="#ocupacion">Ocupación</a><a href="#editar">Editar</a><a href="#vender">Vender cuñas</a>
+    <a href="#ocupacion">Ocupación</a><a href="#playlists-vivas">Playlists vivas</a><a href="#editar">Editar</a><a href="#vender">Vender cuñas</a>
     <a href="#ventas">Informe de ventas</a><a href="#real">Planificado vs real</a><a href="#segmentar">Segmentación</a><a href="#xtore">Player condicionado Xtore</a>
     <a href="#hilo">Hilo Musical</a><a href="#multixpacio">Multi-Xpacio</a><a href="#ia">PixerIA</a>
     <a href="#clonar">Clonar</a><a href="#gcal">Google Calendar</a><a href="#alertas">Alertas</a><a href="#auto">Automatización</a>
     <a href="#apps">Apps de la lanzadera</a><a href="#enlaces">Enlaces</a>
   </nav>
+
+  <section id="novedades-2026-10-09"><h2>Novedades del 8 y 9 de octubre de 2026</h2>
+    <p>Lo que cambió esos dos días, para seguirlo desde el Consejo. Todo está publicado y comprobado salvo donde se dice. Registro completo, con los enlaces a cada cambio: <a href="/mcp/cambios-2026-10-09.md">cambios-2026-10-09.md</a>.</p>
+    <ul>
+      <li><b>#54 · Playlists, arreglos de la fase 1:</b> la Parrilla dice cuándo una pantalla «sigue la playlist viva X» y ofrece <b>Fijar a mano</b>; borrar plantillas de la flota exige escribir BORRAR. <a href="#playlists-vivas">Playlists vivas</a>.</li>
+      <li><b>#55 · Qué emite cada pantalla:</b> página nueva <a href="/emision/">/emision/</a>. <a href="#que-emite">Cómo se usa</a>.</li>
+      <li><b>#56 · Kioskos con clave:</b> el script que publica las playlists de los kioskos ya lee su clave de la bóveda.</li>
+      <li><b>#57–#62 · Modelo único de programación:</b> base de datos nueva, importada, con modo sombra y doble escritura encendidos y el motor apagado. <a href="#programacion">Qué es y qué está encendido</a>.</li>
+      <li><b>#64 · Fin del bucle de recarga</b> en <a href="/users/">Usuarios</a> y en el <a href="/remotecontrol/">Mando</a> sin sesión. <a href="#paginas-acceso">Nota para quien programa páginas</a>.</li>
+      <li><b>#65–#67 · Parrilla en el iPad:</b> tarjetas completas y portadas del Stock. <a href="#parrilla-ipad">Detalle</a>.</li>
+      <li><b>Player nativo de iPad</b> (repo nuevo, privado): emite y se ve vivo en «Qué emite». <a href="#ipad-nativo">Qué es</a>.</li>
+      <li><b>En otros repos:</b> Pixeria sube al Stock por partes los vídeos grandes (#87, #88) y respeta lo sintético al asignar (#86); el worker del Stock comprueba el tamaño y limpia (#8); XpaceOS vuelve a poner gente caminando por defecto (#100); omnipublicity prepara la clave de los <code>-tema</code> (#34). Las 18 pantallas de prueba de Altadis BCN ya están en la parrilla y programadas desde «Programar players» de Pixeria.</li>
+    </ul>
+    <p lang="en"><b>EN:</b> 8–9 Oct 2026 changes: playlist fixes, the “what each screen plays” page, the unified programming model (shadow mode and double write on, engine off), no more login reload loop, the grid on iPad and a native iPad player. Full changelog with links: <a href="/mcp/cambios-2026-10-09.md">cambios-2026-10-09.md</a>.</p>
+  </section>
+
+  <section id="que-emite"><h2>Qué emite cada pantalla</h2>
+    <p>Abre <a href="/emision/">admira.tv/emision</a> (también desde la Parrilla, «¿Qué emite ahora? ↗», o desde Flota). Elige <b>proyecto</b> y <b>pantalla</b>, y mira <b>Ahora</b> u <b>otra hora de hoy</b> (los chips de franja saltan a cada franja de la parrilla). La dirección se puede compartir: <code>/emision/?screen=&lt;pantalla&gt;</code>.</p>
+    <ul>
+      <li><b>Ahora emite:</b> la fuente que gana, por qué y el rótulo que pondría el canal. Si la pantalla está viva verás un punto verde: ha dado señal en los últimos 5 minutos. «Coincide» quiere decir que la lista que la pantalla publicó es la misma que se predice.</li>
+      <li><b>Pila de prioridades:</b> gana la primera que se cumple — <span class="pill">Música de Xtore</span> › <span class="pill">Mural extendido</span> › <span class="pill">Previo de borrador</span> (nunca en antena) › <span class="pill">Hashtag del mando</span> › <span class="pill">Por defecto</span> › <span class="pill">Sincro</span> › <span class="pill">Stock con la parrilla cada 4 piezas</span>. Cada capa dice si está activa, anulada (y por quién), vacía o no aplica.</li>
+      <li><b>«Por defecto» anulada:</b> si la franja actual tiene reservas propias o pagadas con creatividad, o la pantalla está en sincro, «Por defecto» no sale. La Parrilla lo avisa encima del editor de «Por defecto».</li>
+      <li><b>Avisos y supuestos:</b> lo que no cuadra (piezas con otra orientación, lecturas que fallan) y lo que el servidor no puede ver. El hashtag que el mando pone en un player no se publica: usa <b>Simular un hashtag del mando</b> para ver qué pasaría.</li>
+      <li><b>Piezas:</b> en el orden en que sonarían, con miniatura, duración y de dónde sale cada una (a mano, playlist viva, hashtag, reserva de la parrilla, Stock…).</li>
+    </ul>
+    <p><b>▶ Previo local</b> recorre la lista en la propia página sin emitir nada. <b>Ver en canal ↗</b> avisa antes: el canal no tiene modo de solo lectura y, abierto con una pantalla real, se hace pasar por ella (cuenta pases, publica su lista al mando y puede ejecutar órdenes). Úsalo sólo un momento y cierra la pestaña.</p>
+    <p class="note">Hace falta sesión con permiso de Player; las pantallas virtuales se pueden mirar sin sesión. Para agentes: <a href="/mcp/emision.md">emision.md</a> (API <code>/api/emision</code>, campos y trampas).</p>
+    <p lang="en"><b>EN:</b> <a href="/emision/">/emision/</a> shows what a screen is playing now (or at another time today), which source wins and what overrides the default playlist, following the player's priority: Xtore music › extended wall › draft preview › remote hashtag › default playlist › sync › Stock with a grid booking every 4 pieces. A green dot means the screen reported in the last 5 minutes. Use the local preview; opening the channel with a real screen id impersonates that screen.</p>
+  </section>
+
+  <section id="programacion"><h2>Programación · modelo único de playlists</h2>
+    <p><b>Qué es.</b> Una sola forma de decir qué sale en cada pantalla y cuándo, que sustituirá a las piezas que hoy se pisan entre sí («Por defecto», playlists vivas, hashtag, parrilla y mando). Tiene tres partes: <b>playlists</b> (qué se emite), <b>asignaciones</b> (a qué pantallas, qué días y en qué franjas) y un <b>motor</b> que decide por capas: <span class="pill">emergencia</span> › <span class="pill">pagada</span> › <span class="pill">propia</span> › <span class="pill">por defecto</span> › <span class="pill">relleno</span>.</p>
+    <p><b>Las tres decisiones de Carlos (8-oct):</b> la parrilla sigue siendo la capa de venta aparte y sus reservas se intercalan; el mando en vivo manda <b>2 horas o hasta el siguiente cambio de franja</b>, respetando lo vendido; y lo asignado directamente a una pantalla gana, mientras que lo que llega por grupos se suma.</p>
+    <p><b>Qué está encendido hoy (9-oct):</b></p>
+    <ul>
+      <li>La base de datos nueva existe y tiene importado lo de hoy: 34 playlists y 34 asignaciones. Comparada con «Qué emite», las 7 pantallas comprobadas salen idénticas; las que no tienen lista propia quedan en «relleno», como está previsto.</li>
+      <li><b>Modo sombra</b> encendido: cada vez que un player pide su lista, se compara por detrás con lo que diría el motor nuevo.</li>
+      <li><b>Doble escritura</b> encendida: lo que se guarda en la Parrilla se copia también a la base nueva.</li>
+      <li><b>Motor apagado:</b> las pantallas emiten exactamente como antes. Se sigue programando en <a href="/parrilla/">Parrilla</a> y <a href="/playlists/">Playlists</a>, sin cambiar nada.</li>
+    </ul>
+    <p><b>Panel de sombra:</b> <a href="/programacion/sombra/">admira.tv/programacion/sombra</a>. Una fila por pantalla: <span class="pill">igual</span> (lo mismo), <span class="pill">equivalente</span> (difiere por una decisión de diseño, por ejemplo una pantalla sin lista propia o una reserva que ahora se intercala) o <span class="pill">distinta</span> (hay que mirarla). Cada fila enlaza a «Qué emite» y a lo que resolvería el motor. Si ves una <b>distinta</b>, avisa a un agente en AgoraMatrix con el nombre de la pantalla.</p>
+    <p><b>Qué viene:</b> mando en vivo con caducidad (E8), que el player lea el motor nuevo (E9; falta decidir cómo accede), editores de playlists y de programación (E10–E11), emergencias (E12), el corte (E13) y la retirada de lo antiguo (E14). El motor sólo se enciende en el corte, por circuito.</p>
+    <p class="note">Para agentes: <a href="/mcp/programacion.md">programacion.md</a> (endpoints, banderas, runbooks y qué no hacer). Diseño completo: <a href="/docs/playlists-modelo-unico.md">playlists-modelo-unico.md</a>.</p>
+    <p lang="en"><b>EN:</b> The unified playlist model describes what each screen plays as playlists plus assignments, resolved by layers (emergency › paid › own › default › filler). As of 9 Oct 2026 its database is imported (34 playlists, 34 assignments), shadow comparison and double write are on, and the engine is off, so screens play exactly as before. Watch discrepancies at <a href="/programacion/sombra/">/programacion/sombra/</a>.</p>
+  </section>
+
+  <section id="parrilla-ipad"><h2>Parrilla en el iPad</h2>
+    <ul>
+      <li><b>Tarjetas completas en vertical (#65):</b> en el iPad en vertical la columna «Orden de emisión» es estrecha (unos 386 px) y las tarjetas salían vacías. Ahora se adaptan al ancho de la columna: número, miniatura, título, origen, duración y flechas dentro de cada tarjeta.</li>
+      <li><b>Portadas del Stock (#66 y #67):</b> Safari del iPad no pinta el primer fotograma de los vídeos, así que las miniaturas y la <b>Vista previa</b> eran negras. Ahora enseñan la portada del Stock mientras no se reproducen; pulsa ▶ para verlos. Si una pieza no tiene portada, se ve como antes.</li>
+    </ul>
+    <p class="note">Si aún ves cajas vacías o negras, recarga la página para tomar la versión del 9-oct (v.09.10.2026.r7 o posterior). En escritorio no cambia nada.</p>
+    <p lang="en"><b>EN:</b> On iPad in portrait the grid's running-order cards are complete again, and video thumbnails and the preview show the Stock cover, because iPad Safari does not paint a video's first frame. Reload if you still see empty or black boxes.</p>
+  </section>
+
+  <section id="ipad-nativo"><h2>Player nativo de iPad</h2>
+    <p><b>Qué es.</b> Una app de iPad (no una web dentro de una app) que emite lo mismo que el canal para una pantalla: su «Por defecto», las reservas de la parrilla y el Stock. Descarga todo antes de emitir, sigue emitiendo sin red, no corta una pieza a medias y avisa a admira.tv de lo que emite, así que <a href="#que-emite">Qué emite</a> la ve viva. Se comprobó el 9-oct en el iPad de Admin como la pantalla de prueba <code>altadis-bcn-001-p1-vertical</code>.</p>
+    <p><b>Cómo se instala:</b> un agente conecta el iPad por cable al Mac Mini y ejecuta un script que compila, firma, instala y abre la app con su pantalla. La primera vez, en el iPad: «Confiar en este ordenador», activar el <b>Modo de desarrollador</b> y, tras instalar, Ajustes → General → VPN y gestión de dispositivos → <b>Confiar</b>. Para dejarlo fijo en la app se usa <b>Acceso guiado</b> (triple clic en el botón lateral). Una pulsación larga de 1,5 s en la pantalla enseña su estado.</p>
+    <p><b>Caduca a los 7 días:</b> hoy se firma con la cuenta gratuita de Carlos, que dura una semana. La instalación del 9-oct <b>deja de abrir el 16-oct</b>; hay que volver a conectarlo e instalar (no se pierde la pantalla ni lo descargado). Con la cuenta de pago de Admira duraría un año.</p>
+    <p><b>Todavía no hace:</b> sincro, mural extendido, hashtag del mando, Xtore ni las órdenes del mando (standby, siguiente, volumen…). Ponle siempre una pantalla de prueba: la app informa como esa pantalla.</p>
+    <p class="note">Para agentes: <a href="/mcp/ipad-nativo.md">ipad-nativo.md</a> (instalación, verificación y preguntas abiertas) y <a href="/mcp/ipad-pruebas.md">ipad-pruebas.md</a> (cómo probar en el iPad por USB).</p>
+    <p lang="en"><b>EN:</b> A native iPad app that plays what the channel plays for one screen, caches everything first, keeps playing offline and reports to admira.tv so “what each screen plays” shows it alive. An agent installs it over USB. The free signing lasts 7 days: the 9 Oct install stops opening on 16 Oct and must be reinstalled. Use Guided Access to keep it on screen.</p>
+  </section>
+
+  <section id="paginas-acceso"><h2>Para quien programa páginas · la verja y la sesión</h2>
+    <p>Toda página con verja que llame a una API al arrancar tiene que <b>esperar a <code>AdmiraTvAuth.ready()</code></b> antes de la primera llamada y de sus refrescos, y pasar <b>cada 401 por <code>AdmiraTvAuth.expired()</code></b>, que recarga como mucho una vez por minuto. Sin eso, sin sesión, la página recargaba en bucle y nunca llegaba a enseñar el botón de Google (pasó en Usuarios y en el Mando el 9-oct). Contrato y ejemplo: <a href="/mcp/acceso-paginas.md">acceso-paginas.md</a>.</p>
+    <p class="note">Si eres usuario y una página dice «sesión caducada: vuelve a entrar», recarga y entra con tu cuenta de Google.</p>
+    <p lang="en"><b>EN:</b> Gated pages that call an API on load must wait for <code>AdmiraTvAuth.ready()</code> and route every 401 through <code>AdmiraTvAuth.expired()</code> (one reload per minute at most). See <a href="/mcp/acceso-paginas.md">acceso-paginas.md</a>.</p>
+  </section>
 
   <section id="player-integracion"><h2>Player · integrar sin tocarlo (r60 · 14-09-2026)</h2>
     <p>Todo lo que un proyecto ajeno necesita del player se hace <b>desde fuera</b>: parámetros de URL, la cola de órdenes, playlists por pantalla y lectura de estado. El contrato completo, para personas y agentes: <a href="/mcp/player-contract.md">player-contract.md</a> · <a href="/mcp/#player-contrato">MCP</a>.</p>
@@ -197,6 +272,7 @@
     </ul>
     <p>API: <code>GET /api/playlist?screen=…&amp;circuit=…&amp;project=…&amp;xpace=…&amp;w=…&amp;h=…&amp;lang=…</code> devuelve las piezas resueltas y las etiquetas deducidas (<code>screenTags</code>); <code>GET /api/playlist?live=1</code> lista reglas y pantallas vistas; <code>POST {action:"live-save"|"live-delete"}</code> las guarda o borra; <code>POST {action:"identity-sync", screens:[{screen,project,xpace}]}</code> registra la identidad de las pantallas (lo hace sola la Parrilla). <code>POST {action:"circuit-save", circuit:{name,target}}</code> y <code>{action:"circuit-delete", id}</code> definen y borran circuitos; el player añade <code>&amp;iot=</code> si lo lleva en su dirección.</p>
     <p>Cuando la lista de una pantalla la componen las playlists vivas o el #hashtag (nadie la ha guardado a mano), el <code>draft</code> llega con <code>synthetic:true</code>, su origen en <code>origin:{live:[{id,name}],hashtag:n}</code>, <code>rev</code> = la revisión de lo guardado (0 si nada) y <code>liveRev</code> = la huella de lo que sale. La Parrilla la enseña en lectura con <b>Fijar a mano</b>; guardar con esa <code>rev</code> no da conflicto. Las etiquetas de la pantalla sólo se registran cuando pregunta el player (<code>w</code>/<code>h</code>/<code>lang</code> o <code>player=1</code>): leer la lista desde la Parrilla, Pixeria o el Adaptador no tiene efectos.</p>
+    <p><b>Al guardar (8-oct-2026, #54):</b> en la Parrilla, una pantalla cuya lista componen las reglas dice «Esta pantalla sigue la playlist viva …» y se ve en lectura. <b>Fijar a mano</b> la guarda como lista manual y deja de seguir esas reglas. <b>Crear y asignar</b> sustituye la «Por defecto» de cada dispositivo marcado (máximo 200 piezas), que es la que su player emite; si seguía una viva, deja de seguirla. Guardar sólo da conflicto (409) si otra persona guardó esa pantalla entretanto: recarga y repite. En <a href="/playlists/">Playlists</a>, «Borrar» sólo vacía la copia de este navegador; borrar las plantillas compartidas de la flota es otra acción y pide escribir <code>BORRAR</code>. Para ver qué emite de verdad cada pantalla, <a href="#que-emite">Qué emite</a>.</p>
   </section>
 
   <section id="editar"><h2>Editar la parrilla</h2>

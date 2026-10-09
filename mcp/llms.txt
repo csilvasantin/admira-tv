@@ -17,6 +17,40 @@ No existen tools player_install/player_resume/player_screenshot: instalación po
 
 Ayuda para humanos: https://admira.tv/help/  (la guía de personas del canal y del CMS)
 
+## Novedades 8–9-oct-2026 (programación, qué emite, iPad, verja)
+
+Registro con cada PR y su documentación: https://admira.tv/mcp/cambios-2026-10-09.md · Help: https://admira.tv/help/#novedades-2026-10-09
+- Qué emite cada pantalla (#55): GET https://admira.tv/api/emision?screen=<id>[&at=][&tag=][&resumen=1] → fuente, motivo,
+  capas (activa|anulada|inactiva|vacia|no-aplica), piezas en orden, avisos, supuestos, observado. Réplica pura de rebuild()
+  de canal.html: Xtore › mural › previo › hashtag › Por defecto › sincro › Stock + parrilla cada 4. Sin efectos.
+  observado.vivo = latido /signage/now < 5 min; publicada.coincide = su lista es la predicha. Virtuales públicas; resto
+  sesión digitalsignage-player. Página /emision/. NO abras canal.html?screen=<real> para mirar: se hace pasar por ella.
+  Contrato: https://admira.tv/mcp/emision.md
+- Modelo único de playlists (#57–#62): https://admira.tv/mcp/programacion.md · diseño https://admira.tv/docs/playlists-modelo-unico.md
+  Hasta el corte (E13) MANDA EL KV; la D1 admira-programacion se compara (sombra) y se refleja (espejo). Estado 9-oct:
+  34 playlists + 34 asignaciones importadas (versión 68); sombra=true, espejo=true, motor=apagado (versión 69, Carlos);
+  simulación posterior 0 escrituras. Ningún player lee aún /api/programacion (E9 pendiente; acceso por decidir).
+  Leer: GET /api/programacion?screen=&at=&tag= (sesión; virtuales públicas). Escribir:
+  /api/programacion/{playlists,asignaciones,circuitos}[/:id] con sesión digitalsignage-player (PROGRAMACION_SERVICE_KEY
+  opcional, NO puesta). rev obligatoria: 428 sin ella · 409 revision_conflict con actual · 422 con campo.
+  Importador POST /api/programacion/importar: simula por defecto; ?aplicar=1 ?pisar=1 ?archivar=1 ?cursor=.
+  Banderas GET/POST /api/programacion/banderas {sombra?, espejo?, motivo} sólo sesión; motor → 409 hasta E13: NO forzarlo.
+  Sombra GET /api/programacion/sombra?veredicto=distinta · panel https://admira.tv/programacion/sombra/
+  Reconciliar tras espejo_fallido (auditoria?accion=espejo_fallido): simular y aplicar con archivar=1. No hay tool MCP.
+- Páginas con verja (#64): esperar AdmiraTvAuth.ready() antes de llamar a la API y de los refrescos; cada 401 por
+  AdmiraTvAuth.expired() (una recarga/min como mucho). https://admira.tv/mcp/acceso-paginas.md
+- Parrilla en el iPad (#65–#67): tarjetas por @container; miniaturas y vista previa con la portada del Stock.
+- Player nativo de iPad (repo privado csilvasantin/admira-player-ipad, v0.1): Por defecto + Stock + parrilla cada 4,
+  disco primero, sin red; informa /signage/now, /control/playlist, /screen/cache, /emit. Verificado 9-oct en
+  altadis-bcn-001-p1-vertical (vivo:true). Firma gratuita 7 días (caduca 16-oct): reinstalar con tools/instalar-ipad.sh.
+  https://admira.tv/mcp/ipad-nativo.md · probar por USB (pymobiledevice3, CDP): https://admira.tv/mcp/ipad-pruebas.md
+- Relacionado: omnipublicity-api #34 (-tema con CONTROL_PLAYLIST_KEY, aún no puesta) · pixeria #86 (añadir respeta lo
+  sintético, rev + 1 relectura en 409) · pixeria #87/#88 (Stock por partes > 8 MB, partes de 25 MB, /stock-publish
+  r2Staged) · pixer-worker #8 (tamaño verificado, barrido 24 h) · xpaceos #100 (/gente on por defecto, marca elegido) ·
+  Programar players de Pixeria: 18 pantallas de prueba Altadis BCN (circuito altadis_bcn, «· PRUEBA») programadas.
+EN: 8–9 Oct 2026: /api/emision (what plays now), unified playlist model (KV still rules; shadow and double write on,
+engine off), AdmiraTvAuth.ready()/expired() for gated pages, grid on iPad, native iPad player. See the links above.
+
 ## Player virtual Xtore · música por defecto
 
 - Recuperación del análisis solicitado: ocultación, mute, más de 3 s sin fotogramas y

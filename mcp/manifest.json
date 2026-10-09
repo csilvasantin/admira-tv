@@ -837,5 +837,276 @@
       "es",
       "en"
     ]
+  },
+  "programacion": {
+    "doc": "https://admira.tv/mcp/programacion.md",
+    "design": "https://admira.tv/docs/playlists-modelo-unico.md",
+    "help": "https://admira.tv/help/#programacion",
+    "panel": "https://admira.tv/programacion/sombra/",
+    "since": "E1–E7 · 8/9-10-2026 (admira.tv #57–#62)",
+    "principle": "Hasta el corte (E13) manda el KV de siempre: la D1 se compara (sombra) y se mantiene al día (espejo). Ningún player lee aún /api/programacion; lo que emite hoy una pantalla es /api/emision.",
+    "status": {
+      "observed": "2026-10-09",
+      "d1": "admira-programacion (WEUR) · binding PROGRAMACION_DB · migrations/programacion/0001.sql",
+      "imported": {
+        "playlists": 34,
+        "asignaciones": 34,
+        "version": 68
+      },
+      "parity_emision": "7 de 7 pantallas comprobadas idénticas; sin lista propia → capa relleno (diseñado)",
+      "flags": {
+        "sombra": true,
+        "espejo": true,
+        "motor": "apagado",
+        "version": 69,
+        "set_by": "Carlos"
+      },
+      "dry_run_after_flags": "0 escrituras",
+      "service_key": "PROGRAMACION_SERVICE_KEY no puesta: sólo escribe la sesión del portal"
+    },
+    "layers": {
+      "emergencia": 500,
+      "pagada": 400,
+      "propia": 300,
+      "por_defecto": 200,
+      "relleno": 100
+    },
+    "mixes": [
+      "sustituye",
+      "fusiona",
+      "anade",
+      "intercala"
+    ],
+    "decisions": [
+      "La parrilla /grid es una capa de venta aparte: el motor la lee y sus reservas se intercalan.",
+      "El mando en vivo manda 2 h o hasta el siguiente borde de franja, respetando lo vendido.",
+      "Por defecto: lo directo gana y lo de grupo se suma; peso como válvula de escape."
+    ],
+    "read": [
+      {
+        "method": "GET",
+        "path": "/api/programacion?screen=<id>[&at=<ISO|ms>][&tag=<hashtag>]",
+        "auth": "pantallas virtuales sin sesión; resto sesión digitalsignage-player o visor",
+        "desc": "Salida del resolver con sobre {version, motor, memoria, lecturas}. Sólo lectura. 400 bad_screen/bad_at · 401/403 · 503 programacion_db_*."
+      },
+      {
+        "method": "GET",
+        "path": "/api/programacion/{playlists,asignaciones,circuitos}[/:id]",
+        "auth": "sesión digitalsignage-player o visor (sin creado_por/actualizado_por)",
+        "desc": "Listas y lecturas sueltas."
+      },
+      {
+        "method": "GET",
+        "path": "/api/programacion/historial/<tipo>/<id>",
+        "auth": "sesión digitalsignage-player (visor → 403 solo_lectura)",
+        "desc": "Hasta 50 revisiones y la fila actual."
+      },
+      {
+        "method": "GET",
+        "path": "/api/programacion/auditoria[?entidad=&id=&actor=&accion=&limite=&antes=]",
+        "auth": "sesión digitalsignage-player (visor → 403 solo_lectura)",
+        "desc": "Escrituras aceptadas y marcas espejo_fallido/espejo_omitido, paginadas."
+      },
+      {
+        "method": "GET",
+        "path": "/api/programacion/sombra[?veredicto=&motivo=&pantalla=&limite=&antes=]",
+        "auth": "sesión o visor",
+        "desc": "Veredictos del modo sombra: cuentas, motivos y una fila por pantalla."
+      },
+      {
+        "method": "GET",
+        "path": "/api/programacion/banderas",
+        "auth": "sólo sesión del portal",
+        "desc": "{version, banderas:{motor, sombra, espejo}, editables, bloqueadas}."
+      }
+    ],
+    "write": [
+      {
+        "method": "POST|PUT|PATCH|DELETE",
+        "path": "/api/programacion/{playlists,asignaciones,circuitos}[/:id]",
+        "auth": "sesión digitalsignage-player, o X-Programacion-Key (PROGRAMACION_SERVICE_KEY, hoy apagada)",
+        "desc": "rev obligatoria en PUT/PATCH/DELETE: 428 rev_requerida sin ella, 409 revision_conflict (con actual) si no coincide, 422 con campo, 409 playlist_en_uso al borrar."
+      },
+      {
+        "method": "POST",
+        "path": "/api/programacion/importar[?aplicar=1&pisar=1&archivar=1&cursor=&limite=&muestra=]",
+        "auth": "sólo sesión (clave → 403 importador_solo_sesion)",
+        "desc": "Importador KV→D1. Simula por defecto; idempotente por ref_externa; nunca borra."
+      },
+      {
+        "method": "POST",
+        "path": "/api/programacion/banderas",
+        "auth": "sólo sesión del portal (visor → 403 solo_lectura; clave → 403 banderas_solo_sesion)",
+        "desc": "{sombra?, espejo?, motivo}. Auditado. motor → 409 motor_bloqueado_hasta_E13 sin escribir."
+      }
+    ],
+    "runbooks": [
+      "importador: simular → revisar → aplicar con las mismas opciones → simular otra vez (0 escrituras)",
+      "reconciliar tras espejo_fallido: simular y aplicar con archivar=1",
+      "panel de sombra: revisar sólo las distinta",
+      "no encender motor ni forzarlo por SQL"
+    ],
+    "pending": [
+      "E8 mando en vivo persistido",
+      "E9 el player lee /api/programacion (acceso por decidir; recomendado lectura pública por pantalla)",
+      "E10–E14",
+      "desviación 6: spots sobre base exacta"
+    ],
+    "mcp_tools": "ninguna: HTTP con sesión"
+  },
+  "emision": {
+    "doc": "https://admira.tv/mcp/emision.md",
+    "help": "https://admira.tv/help/#que-emite",
+    "page": "https://admira.tv/emision/",
+    "since": "8-10-2026 (admira.tv #55)",
+    "endpoint": {
+      "method": "GET",
+      "path": "/api/emision?screen=<id>[&at=<ISO|ms>][&tag=<hashtag>][&resumen=1]",
+      "auth": "pantallas virtuales sin sesión; resto sesión digitalsignage-player o visor",
+      "effects": "ninguno"
+    },
+    "priority": [
+      "xtore",
+      "mural",
+      "previo (nunca en antena)",
+      "hashtag",
+      "defecto",
+      "sincro",
+      "stock + parrilla cada 4"
+    ],
+    "layer_states": [
+      "activa",
+      "anulada",
+      "inactiva",
+      "vacia",
+      "no-aplica"
+    ],
+    "observado": {
+      "vivo": "lastSeen de /signage/now hace menos de 5 min",
+      "ahora": "pieza que la pantalla dice emitir",
+      "publicada": "lista publicada en brain /control/playlist: n, parece, coincide"
+    },
+    "replica": "functions/api/_emision.js decide() = rebuild() de canal.html (emision-canal-equivalencia.test.mjs)",
+    "trap": "canal.html no tiene modo de solo lectura: abierto con una pantalla real se hace pasar por ella; usar el previo local"
+  },
+  "ipad_nativo": {
+    "doc": "https://admira.tv/mcp/ipad-nativo.md",
+    "help": "https://admira.tv/help/#ipad-nativo",
+    "repo": "https://github.com/csilvasantin/admira-player-ipad",
+    "repo_visibility": "private",
+    "contract": "https://github.com/csilvasantin/admira-player-ipad/blob/main/docs/contrato-player.md",
+    "installer": "https://github.com/csilvasantin/admira-player-ipad/blob/main/tools/instalar-ipad.sh",
+    "version": "0.1 · 9-10-2026",
+    "stack": "SwiftUI + AVPlayer, sin WKWebView",
+    "bundle": "com.csilvasantin.admiraplayer",
+    "signing": {
+      "team": "Personal Team gratuito de Carlos",
+      "expires_after_days": 7,
+      "current_install_expires": "2026-10-16",
+      "renew": "tools/instalar-ipad.sh <pantalla> con el iPad por USB"
+    },
+    "v1": [
+      "Por defecto + hashtag dirigido",
+      "Stock (#default › cortafuegos › todo, máx. 50) + parrilla cada 4 o 50/50",
+      "disco primero",
+      "sin red",
+      "no corta piezas",
+      "informa /signage/now, /control/playlist, /screen/cache, /emit"
+    ],
+    "out_of_v1": [
+      "sincro",
+      "mural extendido",
+      "hashtag del mando",
+      "Xtore",
+      "órdenes del mando",
+      "Xperiencias interactivas",
+      "/signage/shot"
+    ],
+    "verified": {
+      "date": "2026-10-09",
+      "device": "iPad de Admin (iPad7,1, iPadOS 17.7.11)",
+      "screen": "altadis-bcn-001-p1-vertical",
+      "emision": "observado.vivo true"
+    },
+    "kiosk": "Acceso guiado (Single App Mode exige iPad supervisado)",
+    "open_questions": [
+      "id de pantalla por iPad",
+      "equipo de pago JTVR8HASG7 + TestFlight",
+      "sustituir admiranext-player-ios (WKWebView)",
+      "sonido por defecto",
+      "AV1 vs H.264 (asset-h264.mp4)",
+      "nombre",
+      "órdenes del mando en v2"
+    ]
+  },
+  "ipad_pruebas": {
+    "doc": "https://admira.tv/mcp/ipad-pruebas.md",
+    "tool": "~/Claude/tools/ipad-venv/bin/pymobiledevice3 (11.26.0, Mac Mini)",
+    "device": "iPad de Admin (iPad7,1, iPadOS 17.7.11) por USB-C",
+    "commands": [
+      "usbmux list",
+      "mounter auto-mount",
+      "developer dvt screenshot <png>",
+      "developer dvt launch <bundle>",
+      "webinspector opened-tabs",
+      "webinspector launch <url>",
+      "webinspector js-shell [--automation --url <url>]",
+      "webinspector cdp (http://127.0.0.1:9222/)"
+    ],
+    "requires_on_device": [
+      "Modo de desarrollador",
+      "Safari → Avanzado → Inspector web",
+      "Safari → Avanzado → Automatización remota"
+    ],
+    "pitfalls": [
+      "emparejamiento CoreDevice atascado: desenchufar, enchufar y Confiar",
+      "«Desarrollador no fiable»: Ajustes → General → VPN y gestión de dispositivos → Confiar",
+      "las sesiones de automatización no tienen cookies: las páginas con verja se quedan en el acceso",
+      "developer screenshot (lockdown) no funciona: usar developer dvt screenshot",
+      "tras reiniciar el iPad, mounter auto-mount otra vez"
+    ],
+    "mcp_tools": "ninguna: herramientas locales del Mac Mini"
+  },
+  "acceso_paginas": {
+    "doc": "https://admira.tv/mcp/acceso-paginas.md",
+    "help": "https://admira.tv/help/#paginas-acceso",
+    "since": "9-10-2026 (admira.tv #64)",
+    "source": "auth-gate.js · window.AdmiraTvAuth",
+    "contract": {
+      "ready": "Promesa que se cumple al quitar gate-locked. Esperarla antes de la primera llamada a la API y de los refrescos periódicos.",
+      "expired": "Tras un 401: tira la sesión y recarga una vez por minuto como mucho (true); si no recarga devuelve false y la página debe decirlo."
+    },
+    "test": "auth-gate-bucle-401.test.mjs"
+  },
+  "cambios_2026_10_09": {
+    "doc": "https://admira.tv/mcp/cambios-2026-10-09.md",
+    "help": "https://admira.tv/help/#novedades-2026-10-09",
+    "admira_tv_prs": [
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      64,
+      65,
+      66,
+      67
+    ],
+    "related": [
+      "https://github.com/csilvasantin/omnipublicity-api/pull/34",
+      "https://github.com/csilvasantin/pixeria/pull/86",
+      "https://github.com/csilvasantin/pixeria/pull/87",
+      "https://github.com/csilvasantin/pixeria/pull/88",
+      "https://github.com/csilvasantin/pixer-worker/pull/8",
+      "https://github.com/csilvasantin/xpaceos/pull/100"
+    ],
+    "languages": [
+      "es",
+      "en"
+    ]
   }
 }
