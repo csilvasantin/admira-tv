@@ -226,7 +226,7 @@ test("la vista previa y el visor a pantalla completa llevan la portada como post
   const vid = { poster: "", attrs: new Set(["poster"]), removeAttribute(a) { this.attrs.delete(a); this.poster = ""; } };
   const ctx = conIndice({
     items: [{ stockId: "v-poster", assetType: "video" }, { stockId: "v-nada", assetType: "video" }, { stockId: "v-poster", assetType: "image" }],
-    liveByPosition: {}, current: 0, $: (id) => (id === "previewVideo" ? vid : null),
+    liveByPosition: {}, current: 0, $: (id) => (id === "previewVideo" ? vid : null), coverPreview() {},
   });
   vm.runInContext(extrae("posterPreview"), ctx);
   vm.runInContext("posterPreview()", ctx);
@@ -246,4 +246,129 @@ test("el índice se pide desde liveStatus, en paralelo y sin frenar el primer pi
   // Y es la MISMA descarga que el catálogo de tags: no hay un segundo fetch del índice en la página.
   assert.equal(html.match(/stock\.admira\.store\/stock\/index\.json/g).length, 1);
   assert.match(extrae("cargaPortadas"), /plCargaStock\(\)/);
+});
+
+/* Vista previa en el iPad (9-oct-2026, tras el despliegue de las tarjetas): el poster de #previewVideo no basta. Con un
+   src que aún no ha cargado, Safari lo esconde y pinta el vídeo negro con el ▶ tachado. La portada va como <img> encima
+   mientras el vídeo no esté reproduciéndose de verdad. Se ejecutan preview(), posterPreview(), coverPreview() y el
+   enlace de eventos del propio HTML contra un <video> de mentira que, como en iOS, no emite 'playing' por su cuenta. */
+const ORIGIN = "http://localhost:8817";
+class VideoFalso {
+  constructor() { this.hidden = true; this.attrs = new Map(); this.l = {}; this._src = ""; this.paused = true; this.currentTime = 0; this.asignaciones = 0; }
+  get src() { return this._src; }
+  set src(v) { const habia = this._src; this._src = new URL(v, ORIGIN).href; this.asignaciones++; this.paused = true; if (habia) this.emit("emptied"); }
+  get poster() { return this.attrs.get("poster") || ""; }
+  set poster(v) { this.attrs.set("poster", String(v)); }
+  getAttribute(k) { return this.attrs.has(k) ? this.attrs.get(k) : null; }
+  removeAttribute(k) { this.attrs.delete(k); }
+  addEventListener(t, f) { (this.l[t] ||= []).push(f); }
+  emit(t) { (this.l[t] || []).forEach((f) => f()); }
+  pause() { if (!this.paused) { this.paused = true; this.emit("pause"); } }
+  play() { this.paused = false; return Promise.resolve(); }
+}
+class ImgFalsa {
+  constructor() { this.hidden = true; this.attrs = new Map(); this.l = {}; this.dataset = {}; this.pedidas = 0; }
+  get src() { return this.attrs.get("src") || ""; }
+  set src(v) { this.attrs.set("src", String(v)); this.pedidas++; }
+  getAttribute(k) { return this.attrs.has(k) ? this.attrs.get(k) : null; }
+  removeAttribute(k) { this.attrs.delete(k); }
+  addEventListener(t, f) { (this.l[t] ||= []).push(f); }
+  emit(t) { (this.l[t] || []).forEach((f) => f()); }
+}
+const PIEZAS_PREVIA = [
+  { id: "a", title: "Con poster", lane: "municipal", seconds: 10, assetType: "video", stockId: "v-poster", asset: "https://stock.admira.store/stock/v-poster/asset.mp4" },
+  { id: "b", title: "Sin portada", lane: "publicidad", seconds: 10, assetType: "video", stockId: "v-nada", asset: "https://stock.admira.store/stock/v-nada/asset.mp4" },
+  { id: "c", title: "Imagen", lane: "municipal", seconds: 10, asset: "/parrilla/assets/logo.svg" },
+  { id: "d", title: "YouTube", lane: "publicidad", seconds: 10, assetType: "video", stockId: "1783978476349-n8j27g", asset: "https://stock.admira.store/stock/1783978476349-n8j27g/asset.mp4?v=484305" },
+];
+function previa() {
+  const vid = new VideoFalso(), cov = new ImgFalsa(), nodos = { previewVideo: vid, previewCover: cov };
+  const $ = (id) => (nodos[id] ||= { hidden: false, textContent: "", src: "", removeAttribute() {} });
+  const ctx = conIndice({
+    $, location: { origin: ORIGIN }, URL, items: PIEZAS_PREVIA.map((x) => ({ ...x })), liveByPosition: {}, current: 0,
+    previewedIndex: -1, playing: false, previewRodando: false, DEFAULT_MODE: false, resolvedTitle: (i) => PIEZAS_PREVIA[i].title,
+  });
+  for (const fn of ["posterPreview", "coverPreview", "enlazaPortadaPreview", "preview"]) vm.runInContext(extrae(fn), ctx);
+  vm.runInContext("enlazaPortadaPreview()", ctx);
+  return { ctx, vid, cov, run: (src) => vm.runInContext(src, ctx) };
+}
+const POSTER = "https://stock.admira.store/stock/v-poster/poster.jpg", YT = "https://img.youtube.com/vi/hCzwv9RPLkE/hqdefault.jpg";
+
+test("vista previa: la portada tapa el vídeo hasta que se reproduce de verdad y vuelve al parar", () => {
+  const { vid, cov, run } = previa();
+  run("preview()");
+  assert.equal(vid.hidden, false);
+  assert.equal(cov.hidden, false, "parada: se ve la portada, no el negro de iOS");
+  assert.equal(cov.src, POSTER);
+  assert.equal(vid.poster, POSTER, "el poster se mantiene");
+  // ▶ Reproducir: en iOS 'playing' puede no llegar nunca y la portada sigue ahí.
+  run("playing=true;preview()");
+  assert.equal(vid.paused, false);
+  assert.equal(cov.hidden, false);
+  vid.emit("playing");
+  assert.equal(cov.hidden, true, "reproduciéndose de verdad, se ve el vídeo");
+  // Un repintado a mitad (liveStatus cada 30 s, cambiar la duración) no la saca encima del vídeo que corre.
+  run("preview()");
+  assert.equal(cov.hidden, true);
+  // ⏸ Pausar.
+  run("playing=false");vid.pause();
+  assert.equal(cov.hidden, false);
+  vid.play(); vid.emit("playing"); assert.equal(cov.hidden, true);
+  vid.emit("ended");
+  assert.equal(cov.hidden, false, "al acabar, otra vez la portada");
+});
+
+test("vista previa: al cambiar de pieza vuelve la portada (la nueva), y sin portada o con imagen no hay capa", () => {
+  const { vid, cov, run } = previa();
+  run("playing=true;preview()"); vid.emit("playing");
+  assert.equal(cov.hidden, true);
+  // Siguiente pieza mientras se reproduce: nuevo src → portada de la nueva hasta su 'playing'.
+  run("current=3;preview()");
+  assert.equal(cov.hidden, false);
+  assert.equal(cov.src, YT);
+  vid.emit("playing"); assert.equal(cov.hidden, true);
+  // Vídeo sin portada en el Stock: ni poster ni capa, como antes.
+  run("playing=false;current=1;preview()");
+  assert.equal(cov.hidden, true);
+  assert.equal(vid.getAttribute("poster"), null);
+  // Imagen: el vídeo se oculta y la capa también.
+  run("current=2;preview()");
+  assert.equal(vid.hidden, true);
+  assert.equal(cov.hidden, true);
+  // Lista vacía.
+  run("items=[];current=0;preview()");
+  assert.equal(cov.hidden, true);
+});
+
+test("vista previa: si la portada no carga se oculta y no se vuelve a pedir; otra pieza sí la enseña", () => {
+  const { cov, run } = previa();
+  run("preview()");
+  assert.equal(cov.hidden, false);
+  cov.emit("error");
+  assert.equal(cov.hidden, true);
+  const pedidas = cov.pedidas;
+  run("preview();preview()");
+  assert.equal(cov.hidden, true, "rota, no reaparece en cada repintado");
+  assert.equal(cov.pedidas, pedidas, "ni se vuelve a descargar");
+  run("current=3;preview()");
+  assert.equal(cov.hidden, false);
+  assert.equal(cov.src, YT);
+});
+
+test("vista previa: el src se sigue asignando al elegir la pieza, como en escritorio", () => {
+  const { vid, run } = previa();
+  run("preview()");
+  assert.equal(vid.src, "https://stock.admira.store/stock/v-poster/asset.mp4", "no se espera a ▶ Reproducir");
+  assert.equal(vid.paused, true);
+  run("preview()");
+  assert.equal(vid.asignaciones, 1, "repintar no recarga el vídeo");
+});
+
+test("vista previa: la capa va entre el vídeo y el contador, encaja como el vídeo y no tapa sus controles", () => {
+  assert.match(html, /<video id="previewVideo" muted playsinline controls loop hidden><\/video><img id="previewCover" class="preview-cover" alt="" hidden><span class="counter" id="previewCounter">/);
+  assert.match(html, /\.preview-screen \.preview-cover\{position:absolute;inset:0;pointer-events:none\}/);
+  // Misma regla que el vídeo: contain, así respeta vertical u horizontal según la caja (9:16 o 16:9 en estrecho).
+  assert.match(html, /\.preview-screen img,\.preview-screen video\{width:100%;height:100%;object-fit:contain;/);
+  assert.match(html, /\.preview-screen \[hidden\]\{display:none\}/, "hidden gana a display:block");
+  assert.match(html, /\n\s*enlazaPortadaPreview\(\);\n/, "los eventos del vídeo se enlazan al cargar");
 });
