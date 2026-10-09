@@ -8,7 +8,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { d1Memoria } from "./_d1-memoria.mjs";
 import * as A from "./almacen.js";
-import { circuitoDesdeLegado, desdeLegado } from "./legado.js";
+import { circuitoDesdeLegado, desdeBorrador, desdeLegado, desdeViva, idDefecto, idViva, refDefecto, slugEntero } from "./legado.js";
+import { sha256Hex } from "./huella.js";
+import { slugId } from "./modelo.js";
+import { createHash } from "node:crypto";
 import { planificar, traducir } from "./importador.js";
 import { MAX_ESCRITURAS } from "./importar.js";
 import { resolver } from "./resolver.js";
@@ -199,6 +202,72 @@ test("no pisa lo ajeno: un id ocupado por algo que no salió del legado se omite
   assert.deepEqual(operacion(conArchivo, "asignacion", "defecto-a-2").datos.estado, "archivada");
   const raros = traducir({ borradores: [{ pantalla: "a-1", valor: "{roto" }, { pantalla: "a-2", valor: JSON.stringify({ items: [{ asset: "http://inseguro" }] }) }, { pantalla: "a-3", valor: null }] });
   assert.deepEqual(raros.omitidas.map(o => [o.ref, o.motivo, o.error]), [["kv:default:a-1", "ilegible", undefined], ["kv:default:a-2", "invalido", "pieza_invalida"], ["kv:default:a-3", "sin_valor", undefined]]);
+});
+
+// ── Ids de las fuentes largas (E7) ──────────────────────────────────────────────────────────────────────────────
+// Lo de antes, tal cual: los ids y refs que ya están en la D1 (34 pantallas importadas el 9-oct-2026) salen de aquí.
+const antes = { defecto: p => slugId("defecto-" + p), legadoDefecto: p => slugId("defecto-" + slugId(p)), viva: id => slugId("viva-" + id), ref: p => "kv:default:" + slugId(p) };
+const azar = (n, alfabeto, semilla) => { let x = semilla; return Array.from({ length: n }, () => { x = (x * 1103515245 + 12345) % 2147483648; return alfabeto[x % alfabeto.length]; }).join(""); };
+
+test("huella: el SHA-256 síncrono es el de node:crypto", () => {
+  const casos = ["", "abc", "defecto-" + "a".repeat(70), "ñandú € 𝄞", "x".repeat(55), "x".repeat(56), "x".repeat(64), "y".repeat(1000)];
+  for (let n = 0; n < 150; n += 1) casos.push(azar(n, "abcdefghijklmnopqrstuvwxyz0123456789-_ :#ÁéÑü€", n + 1));
+  for (const c of casos) assert.equal(sha256Hex(c), createHash("sha256").update(c, "utf8").digest("hex"), JSON.stringify(c));
+});
+
+test("ids largos: los cortos (todos los de hoy) no cambian; slugEntero es slugId mientras cabe en 60", () => {
+  const hoy = ["alcampo-alcala", "alcampo-getafe", "alcampo-esplugues", "virtual-xtanco", "xtore-virtual-demo-store", "macbookpro16", "sim-gracia-kiosko",
+    "starbucks-paseodegracia-103-pantalla1", "a1", "a--b", "pantalla-con-52-caracteres-exactos-0123456789-abcdef"];
+  assert.equal(hoy.at(-1).length, 52);
+  // Pantallas válidas para cleanScreen de hasta 52 caracteres: defecto-<pantalla> cabe en 60.
+  for (let i = 0; i < 400; i += 1) hoy.push("p" + azar(1 + (i % 51), "abcdefghijklmnopqrstuvwxyz0123456789--", i + 7));
+  for (const p of hoy) {
+    assert.ok(slugEntero("defecto-" + p).length <= 60, p);
+    assert.equal(idDefecto(p), antes.defecto(p), p);
+    assert.equal(desdeBorrador({ screen: p, items: [{ asset: "https://x.y/a.mp4" }] }).playlist.id, antes.legadoDefecto(p), p);
+    assert.equal(refDefecto(p), antes.ref(p), p);
+  }
+  // Vivas: el id de cleanLive (60 como mucho) con viva- cabe si tiene 55 o menos.
+  for (let i = 0; i < 300; i += 1) {
+    const id = cleanLive({ name: azar(1 + (i % 55), "abcdefghijklmnopqrstuvwxyz0123456789 -", i + 3) + "x", content: { any: ["a"] }, target: { any: ["todas"] } }).id;
+    if (id.length > 55) continue;
+    assert.equal(idViva(id), antes.viva(id), id);
+    assert.equal(desdeViva({ id, name: "n", content: { any: ["a"] }, target: { any: ["todas"] } }, 0, 1).playlist.id, antes.viva(id), id);
+  }
+  // slugEntero es slugId sin el recorte: con cualquier texto (tildes, mayúsculas, #, :, _, espacios) que quepa, igual.
+  for (let i = 0; i < 2000; i += 1) {
+    const t = azar(i % 70, "abcAB019 -_:#.é Ñü/", i + 11);
+    if (slugEntero(t).length <= 60) assert.equal(slugEntero(t), slugId(t), JSON.stringify(t));
+    else assert.equal(slugEntero(t).slice(0, 60).replace(/-+$/, ""), slugId(t), JSON.stringify(t));
+  }
+});
+
+test("ids largos: dos pantallas de más de 52 caracteres con el mismo principio dan ids distintos y estables", () => {
+  const pre = "alcampo-centro-comercial-la-gavia-planta-baja-pasillo";            // 53
+  const [a, b] = [pre + "-tv1", pre + "-tv2"];
+  assert.equal(antes.defecto(a), antes.defecto(b), "antes chocaban");
+  // Los mismos en cada pasada, en cualquier máquina: recorte + «-» + 8 hexadecimales del SHA-256 del id entero.
+  assert.deepEqual([idDefecto(a), idDefecto(b)], ["defecto-alcampo-centro-comercial-la-gavia-planta-ba-fc208a2e", "defecto-alcampo-centro-comercial-la-gavia-planta-ba-fd5e62bc"]);
+  assert.equal(idDefecto(a), "defecto-alcampo-centro-comercial-la-gavia-planta-ba-" + sha256Hex(slugEntero("defecto-" + a)).slice(0, 8));
+  for (const id of [idDefecto(a), idDefecto(b)]) {
+    assert.ok(id.length <= 60 && /^defecto-[a-z0-9-]+-[0-9a-f]{8}$/.test(id), id);
+    assert.equal(slugId(id), id, "guardar* lo deja tal cual");
+  }
+  // Con más de 60, también chocaba la ref: ahora lleva la pantalla entera.
+  const largo = "alcampo-centro-comercial-la-gavia-planta-baja-pasillo-central-cajas-tv", [c, d] = [largo + "-izq-01", largo + "-der-02"];
+  assert.equal(antes.ref(c), antes.ref(d));
+  assert.deepEqual([refDefecto(c), refDefecto(d)], ["kv:default:" + c, "kv:default:" + d]);
+  assert.deepEqual([idDefecto(c), idDefecto(d)], ["defecto-alcampo-centro-comercial-la-gavia-planta-ba-4dc8cf88", "defecto-alcampo-centro-comercial-la-gavia-planta-ba-57dc4eae"]);
+  // Vivas largas con el mismo principio.
+  const v = "promociones-de-otono-para-los-hipermercados-de-la-comunidad";
+  assert.equal(antes.viva(v + "-a"), antes.viva(v + "-b"));
+  assert.deepEqual([idViva(v + "-a"), idViva(v + "-b")], ["viva-promociones-de-otono-para-los-hipermercados-de-bd821714", "viva-promociones-de-otono-para-los-hipermercados-de-bfff8418"]);
+  // El plan: las cuatro pantallas y las dos vivas se importan todas, sin ref_duplicada ni id_duplicado.
+  const live = { playlists: [v + "-a", v + "-b"].map(id => ({ id, name: id, content: { any: ["oferta"] }, target: { any: ["todas"] } })), circuits: [] };
+  const plan = planificar({ live, borradores: [a, b, c, d].map(p => ({ pantalla: p, valor: borrador(p, ["s-" + p.slice(-3)]) })), d1: {} });
+  assert.deepEqual([plan.omitidas, plan.resumen.playlist.crear, plan.resumen.asignacion.crear], [[], 6, 6]);
+  assert.deepEqual(new Set(plan.operaciones.map(o => o.id)).size, 6);
+  assert.deepEqual(plan.operaciones.filter(o => o.entidad === "asignacion").map(o => o.datos.ref_externa).slice(2), [a, b, c, d].map(refDefecto));
 });
 
 // ── POST /api/programacion/importar ─────────────────────────────────────────────────────────────────────────────

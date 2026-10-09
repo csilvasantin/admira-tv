@@ -30,8 +30,8 @@
 //     la bandera encendida no hay lectura de más: la de los datos trae también meta y vuelve a mirar la bandera.
 //   · LOS BORRADORES SINTÉTICOS NUNCA SE REFLEJAN: no son datos guardados (los compone el GET en cada consulta).
 import * as A from "./almacen.js";
-import { vivasDe } from "./legado.js";
-import { ACTOR, ESCRIBEN, idDefecto, idsNecesarios, planificar, refBorrador, refCircuito, refViva, traducir } from "./importador.js";
+import { idDefecto, idViva, vivasDe } from "./legado.js";
+import { ACTOR, ESCRIBEN, idsNecesarios, planificar, refBorrador, refCircuito, refViva, traducir } from "./importador.js";
 import { slugId } from "./modelo.js";
 
 export const ACTOR_ESPEJO = ACTOR + "espejo:";
@@ -123,7 +123,7 @@ function preparar(cambio) {
 const entidadDeRef = ref => {
   const [, tipo, ...resto] = String(ref).split(":"), id = resto.join(":");
   if (tipo === "circuito") return { entidad: "circuito", id: slugId(id) || id };
-  if (tipo === "viva") return { entidad: "playlist", id: slugId("viva-" + id) };
+  if (tipo === "viva") return { entidad: "playlist", id: idViva(id) };
   return { entidad: "playlist", id: idDefecto(id) };
 };
 

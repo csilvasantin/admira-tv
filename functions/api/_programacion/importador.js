@@ -33,18 +33,17 @@
 // Tampoco se archiva por `sintetico`: hoy playlist.js emitiría ese borrador como lista a mano.
 import { screenTag } from "../_playlist-live.js";
 import { COLUMNAS, limpiarCircuito } from "./almacen.js";
-import { circuitoDesdeLegado, desdeBorrador, desdeViva, vivasDe } from "./legado.js";
+import { circuitoDesdeLegado, desdeBorrador, desdeViva, idDefecto, idViva, refDefecto, slugEntero, vivasDe } from "./legado.js";
 import { limpiarAsignacion, limpiarPlaylist, slugId } from "./modelo.js";
 
 export const ACTOR = "importador:";
 const ORIGEN_LEGADO = "legado:";
-export const refBorrador = pantalla => "kv:default:" + slugId(pantalla);
+export const refBorrador = refDefecto;   // con la pantalla entera (legado.js: ids de las fuentes largas)
 export const refViva = id => "kv:viva:" + id;
 export const refCircuito = id => "kv:circuito:" + id;
 const REF_BORRADOR = "kv:default:", REF_VIVA = "kv:viva:";
-// El id que legado.js da a la playlist de un borrador (slugId recorta a 60: una pantalla larga no cabe entera). Lo usa
-// también el espejo (E7, espejo.js) para leer de la D1 lo de una pantalla.
-export const idDefecto = pantalla => slugId("defecto-" + pantalla);
+// El id que legado.js da a la playlist de un borrador (con huella si la pantalla es larga). Lo usa también el espejo (E7).
+export { idDefecto };
 const ENTIDADES = ["circuito", "playlist", "asignacion"];
 const LIMPIAR = { playlist: limpiarPlaylist, asignacion: limpiarAsignacion, circuito: limpiarCircuito };
 
@@ -208,7 +207,7 @@ export function planificar({ live = undefined, borradores = [], pantallas = null
     huerfanos.push({ entidad, id: fila.id, ref: ref || null, motivo, actualizado_por: fila.actualizado_por || "" });
   };
   if (t.doc) {
-    const presentes = vivasDe(t.doc), refs = new Set(presentes.map(p => refViva(p.id))), ids = new Set(presentes.map(p => slugId("viva-" + p.id)));
+    const presentes = vivasDe(t.doc), refs = new Set(presentes.map(p => refViva(p.id))), ids = new Set(presentes.map(p => idViva(p.id)));
     for (const a of asignaciones) if (String(a.ref_externa || "").startsWith(REF_VIVA) && !refs.has(a.ref_externa)) anota("asignacion", a, a.ref_externa, "viva_eliminada");
     for (const p of legadoPl) if (p.origen === "legado:kv-viva" && !ids.has(p.id)) anota("playlist", p, null, "viva_eliminada");
     const enKV = new Set((Array.isArray(t.doc.circuits) ? t.doc.circuits : []).filter(c => c && c.id).map(c => slugId(c.id)));
@@ -223,7 +222,7 @@ export function planificar({ live = undefined, borradores = [], pantallas = null
     anota("playlist", legadoPl.find(p => p.id === id && p.origen === "legado:kv-default"), null, o.motivo);
   }
   if (Array.isArray(pantallas)) {
-    const conClave = new Set(pantallas.map(s => slugId(s)).filter(Boolean)), suyas = new Set([...conClave].map(idDefecto));
+    const conClave = new Set(pantallas.map(s => slugEntero(s)).filter(Boolean)), suyas = new Set([...conClave].map(idDefecto));
     for (const a of asignaciones) {
       const ref = String(a.ref_externa || "");
       if (ref.startsWith(REF_BORRADOR) && !conClave.has(ref.slice(REF_BORRADOR.length))) anota("asignacion", a, ref, "sin_clave_kv");

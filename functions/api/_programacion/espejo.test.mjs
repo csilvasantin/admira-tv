@@ -11,6 +11,7 @@ import { d1Memoria } from "./_d1-memoria.mjs";
 import * as A from "./almacen.js";
 import { contenido } from "./importador.js";
 import { ACTOR_ESPEJO, MEMORIA_MS, actorEspejo, espejar, olvidarBanderas } from "./espejo.js";
+import { idDefecto } from "./legado.js";
 import { onRequest } from "../programacion/[recurso]/[[resto]].js";
 import { DRAFT_PREFIX, forgetMemo, onRequestGet, onRequestPost } from "../playlist.js";
 import { LIVE_KEY } from "../_playlist-live.js";
@@ -222,6 +223,33 @@ prueba("cada escritura del legado se refleja igual que una importación nueva de
   assert.equal((await A.auditoria(db, { accion: "borrar" })).length, 0);
   assert.ok(kv.escrituras.every(([op, k]) => op === "put" && (k.startsWith(DRAFT_PREFIX) || k === LIVE_KEY)), JSON.stringify(kv.escrituras));
   assert.deepEqual(errores, []);
+});
+
+prueba("pantallas y vivas largas: el espejo y el importador dan los mismos ids (con huella) y no se pisan entre ellas", async () => {
+  const { db, env } = await mundo();
+  const pre = "alcampo-centro-comercial-la-gavia-planta-baja-pasillo", largo = pre + "-central-cajas-tv";
+  const pantallas = [pre + "-tv1", pre + "-tv2", largo + "-izq-01", largo + "-der-02"];
+  for (const [i, screen] of pantallas.entries()) {
+    const r = await guardar(env, { screen, items: [pieza("p" + i)] });
+    assert.deepEqual([r.status, r.espejo.estado, r.espejo.escritas.map(e => e.accion)], [200, "hecho", ["crear", "crear"]], screen);
+  }
+  const ids = pantallas.map(idDefecto);
+  assert.equal(new Set(ids).size, 4);
+  for (const [i, id] of ids.entries()) {
+    assert.deepEqual((await A.leerPlaylist(db, id)).items.map(x => x.stockId), ["p" + i], "cada una con lo suyo: " + id);
+    assert.equal((await A.leerAsignacion(db, id)).ref_externa, "kv:default:" + pantallas[i]);
+  }
+  // Dos vivas cuyo id de hoy (58 caracteres) es distinto, pero viva-<id> no cabe en 60 y antes chocaba.
+  const nombre = "Promociones de otoño para los hipermercados de la región";
+  for (const sufijo of ["A", "B"]) assert.equal((await guardar(env, { action: "live-save", playlist: { ...MARCA, name: nombre + " " + sufijo } })).espejo.estado, "hecho");
+  const vivas = (await todas(db, "asignacion")).filter(x => x.id.startsWith("viva-")).map(x => x.id);
+  assert.equal(vivas.length, 2);
+  assert.ok(vivas.every(id => id.length <= 60 && /-[0-9a-f]{8}$/.test(id)), vivas.join(" "));
+  await igualQueImportar(env, db);
+  // Vaciar una larga archiva SU asignación (la ref entera la encuentra), no la de su vecina.
+  assert.deepEqual((await guardar(env, { screen: pantallas[3], items: [] })).espejo.escritas, [{ entidad: "asignacion", id: ids[3], accion: "archivar", rev: 2 }]);
+  assert.deepEqual([(await A.leerAsignacion(db, ids[2])).estado, (await A.leerAsignacion(db, ids[3])).estado], ["activa", "archivada"]);
+  await igualQueImportar(env, db);
 });
 
 // ── Bandera ─────────────────────────────────────────────────────────────────────────────────────────────────────
