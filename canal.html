@@ -4594,6 +4594,11 @@ async function applyCtrlCmd(cmd){
     case 'last':  testNav('last'); return 'executed';
     case 'pause': setPaused(true); return 'executed';
     case 'play':  return remoteStartPlayback();
+    // standby/resume desde /remotecontrol/ (cola de brain, 9-oct-2026): lo mismo que por /locations/cmd.
+    case 'standby': standbyOn(true); flashCli('⏻ standby (apagada)'); return 'executed';
+    case 'resume':
+      try{ await remoteStartPlayback(); flashCli('▶ reanudada'); return 'executed'; }
+      catch(_){ try{ tap.classList.add('show'); }catch(__){} return 'failed'; }
     case 'toggle-pause':
       if(_standby||paused) return remoteStartPlayback();
       setPaused(true); return 'executed';
