@@ -1,9 +1,9 @@
 {
-  "version": "v.09.10.2026.r3.06:36",
-  "signature": "Smith · MacMini",
-  "agent": "Smith",
+  "version": "v.09.10.2026.r4.06:54",
+  "signature": "MorfeoMacMini · MacMini",
+  "agent": "MorfeoMacMini",
   "machine": "MacMini",
   "day": "09.10.2026",
-  "time": "06:36",
-  "evidence": "⌘ Experto: /idioma y /language alternan ESP↔ENG y /arquitectura · /architecture abren el organigrama tecnológico de admiranext.com (assets/experto-verbos-suite.js vía ADMIRA_FRAME_VERBS). Preparado por GrokBotBox; firma del agente que despliega."
+  "time": "06:54",
+  "evidence": "Acceso: /users/ y /remotecontrol/ esperan a la verja (AdmiraTvAuth.ready) y un 401 recarga como mucho una vez por minuto (AdmiraTvAuth.expired); se acaba el bucle de recarga sin sesión que impedía entrar."
 }

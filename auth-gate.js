@@ -80,6 +80,29 @@
     clear: function () {
       clearStoredSession();
       return fetch("/auth/logout", { method: "POST", credentials: "same-origin" }).catch(function () {});
+    },
+    // Promesa que se cumple cuando la verja deja pasar (quita «gate-locked»). Las páginas que llaman a su API al
+    // arrancar deben esperarla: sin sesión, un 401 antes de entrar recargaba la página y la verja volvía a empezar
+    // sin llegar a pintar el botón de Google (bucle en /users/ en el iPad, 9-oct-2026).
+    ready: function () {
+      return new Promise(function (resolve) {
+        var root = document.documentElement;
+        if (!root.classList.contains("gate-locked")) return resolve();
+        var obs = new MutationObserver(function () {
+          if (!root.classList.contains("gate-locked")) { obs.disconnect(); resolve(); }
+        });
+        obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+      });
+    },
+    // Un 401 de la API con la página ya abierta: la sesión caducó. Se tira y se recarga UNA vez para que la verja
+    // pida entrar; si vuelve a pasar en menos de un minuto no se recarga (devuelve false) y la página lo dice.
+    expired: function () {
+      var key = "admira_tv_gate_401", now = Date.now(), prev = 0;
+      try { prev = Number(sessionStorage.getItem(key)) || 0; } catch (e) {}
+      if (now - prev < 60000) { clearStoredSession(); return false; }
+      try { sessionStorage.setItem(key, String(now)); } catch (e) {}
+      window.AdmiraTvAuth.clear().then(function () { location.reload(); });
+      return true;
     }
   };
 
