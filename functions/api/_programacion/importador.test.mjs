@@ -8,7 +8,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { d1Memoria } from "./_d1-memoria.mjs";
 import * as A from "./almacen.js";
-import { circuitoDesdeLegado, desdeLegado } from "./legado.js";
+import { circuitoDesdeLegado, desdeBorrador, desdeLegado, desdeViva, idDefecto, idViva, refDefecto, slugEntero } from "./legado.js";
+import { sha256Hex } from "./huella.js";
+import { slugId } from "./modelo.js";
+import { createHash } from "node:crypto";
 import { planificar, traducir } from "./importador.js";
 import { MAX_ESCRITURAS } from "./importar.js";
 import { resolver } from "./resolver.js";
@@ -201,6 +204,72 @@ test("no pisa lo ajeno: un id ocupado por algo que no salió del legado se omite
   assert.deepEqual(raros.omitidas.map(o => [o.ref, o.motivo, o.error]), [["kv:default:a-1", "ilegible", undefined], ["kv:default:a-2", "invalido", "pieza_invalida"], ["kv:default:a-3", "sin_valor", undefined]]);
 });
 
+// ── Ids de las fuentes largas (E7) ──────────────────────────────────────────────────────────────────────────────
+// Lo de antes, tal cual: los ids y refs que ya están en la D1 (34 pantallas importadas el 9-oct-2026) salen de aquí.
+const antes = { defecto: p => slugId("defecto-" + p), legadoDefecto: p => slugId("defecto-" + slugId(p)), viva: id => slugId("viva-" + id), ref: p => "kv:default:" + slugId(p) };
+const azar = (n, alfabeto, semilla) => { let x = semilla; return Array.from({ length: n }, () => { x = (x * 1103515245 + 12345) % 2147483648; return alfabeto[x % alfabeto.length]; }).join(""); };
+
+test("huella: el SHA-256 síncrono es el de node:crypto", () => {
+  const casos = ["", "abc", "defecto-" + "a".repeat(70), "ñandú € 𝄞", "x".repeat(55), "x".repeat(56), "x".repeat(64), "y".repeat(1000)];
+  for (let n = 0; n < 150; n += 1) casos.push(azar(n, "abcdefghijklmnopqrstuvwxyz0123456789-_ :#ÁéÑü€", n + 1));
+  for (const c of casos) assert.equal(sha256Hex(c), createHash("sha256").update(c, "utf8").digest("hex"), JSON.stringify(c));
+});
+
+test("ids largos: los cortos (todos los de hoy) no cambian; slugEntero es slugId mientras cabe en 60", () => {
+  const hoy = ["alcampo-alcala", "alcampo-getafe", "alcampo-esplugues", "virtual-xtanco", "xtore-virtual-demo-store", "macbookpro16", "sim-gracia-kiosko",
+    "starbucks-paseodegracia-103-pantalla1", "a1", "a--b", "pantalla-con-52-caracteres-exactos-0123456789-abcdef"];
+  assert.equal(hoy.at(-1).length, 52);
+  // Pantallas válidas para cleanScreen de hasta 52 caracteres: defecto-<pantalla> cabe en 60.
+  for (let i = 0; i < 400; i += 1) hoy.push("p" + azar(1 + (i % 51), "abcdefghijklmnopqrstuvwxyz0123456789--", i + 7));
+  for (const p of hoy) {
+    assert.ok(slugEntero("defecto-" + p).length <= 60, p);
+    assert.equal(idDefecto(p), antes.defecto(p), p);
+    assert.equal(desdeBorrador({ screen: p, items: [{ asset: "https://x.y/a.mp4" }] }).playlist.id, antes.legadoDefecto(p), p);
+    assert.equal(refDefecto(p), antes.ref(p), p);
+  }
+  // Vivas: el id de cleanLive (60 como mucho) con viva- cabe si tiene 55 o menos.
+  for (let i = 0; i < 300; i += 1) {
+    const id = cleanLive({ name: azar(1 + (i % 55), "abcdefghijklmnopqrstuvwxyz0123456789 -", i + 3) + "x", content: { any: ["a"] }, target: { any: ["todas"] } }).id;
+    if (id.length > 55) continue;
+    assert.equal(idViva(id), antes.viva(id), id);
+    assert.equal(desdeViva({ id, name: "n", content: { any: ["a"] }, target: { any: ["todas"] } }, 0, 1).playlist.id, antes.viva(id), id);
+  }
+  // slugEntero es slugId sin el recorte: con cualquier texto (tildes, mayúsculas, #, :, _, espacios) que quepa, igual.
+  for (let i = 0; i < 2000; i += 1) {
+    const t = azar(i % 70, "abcAB019 -_:#.é Ñü/", i + 11);
+    if (slugEntero(t).length <= 60) assert.equal(slugEntero(t), slugId(t), JSON.stringify(t));
+    else assert.equal(slugEntero(t).slice(0, 60).replace(/-+$/, ""), slugId(t), JSON.stringify(t));
+  }
+});
+
+test("ids largos: dos pantallas de más de 52 caracteres con el mismo principio dan ids distintos y estables", () => {
+  const pre = "alcampo-centro-comercial-la-gavia-planta-baja-pasillo";            // 53
+  const [a, b] = [pre + "-tv1", pre + "-tv2"];
+  assert.equal(antes.defecto(a), antes.defecto(b), "antes chocaban");
+  // Los mismos en cada pasada, en cualquier máquina: recorte + «-» + 8 hexadecimales del SHA-256 del id entero.
+  assert.deepEqual([idDefecto(a), idDefecto(b)], ["defecto-alcampo-centro-comercial-la-gavia-planta-ba-fc208a2e", "defecto-alcampo-centro-comercial-la-gavia-planta-ba-fd5e62bc"]);
+  assert.equal(idDefecto(a), "defecto-alcampo-centro-comercial-la-gavia-planta-ba-" + sha256Hex(slugEntero("defecto-" + a)).slice(0, 8));
+  for (const id of [idDefecto(a), idDefecto(b)]) {
+    assert.ok(id.length <= 60 && /^defecto-[a-z0-9-]+-[0-9a-f]{8}$/.test(id), id);
+    assert.equal(slugId(id), id, "guardar* lo deja tal cual");
+  }
+  // Con más de 60, también chocaba la ref: ahora lleva la pantalla entera.
+  const largo = "alcampo-centro-comercial-la-gavia-planta-baja-pasillo-central-cajas-tv", [c, d] = [largo + "-izq-01", largo + "-der-02"];
+  assert.equal(antes.ref(c), antes.ref(d));
+  assert.deepEqual([refDefecto(c), refDefecto(d)], ["kv:default:" + c, "kv:default:" + d]);
+  assert.deepEqual([idDefecto(c), idDefecto(d)], ["defecto-alcampo-centro-comercial-la-gavia-planta-ba-4dc8cf88", "defecto-alcampo-centro-comercial-la-gavia-planta-ba-57dc4eae"]);
+  // Vivas largas con el mismo principio.
+  const v = "promociones-de-otono-para-los-hipermercados-de-la-comunidad";
+  assert.equal(antes.viva(v + "-a"), antes.viva(v + "-b"));
+  assert.deepEqual([idViva(v + "-a"), idViva(v + "-b")], ["viva-promociones-de-otono-para-los-hipermercados-de-bd821714", "viva-promociones-de-otono-para-los-hipermercados-de-bfff8418"]);
+  // El plan: las cuatro pantallas y las dos vivas se importan todas, sin ref_duplicada ni id_duplicado.
+  const live = { playlists: [v + "-a", v + "-b"].map(id => ({ id, name: id, content: { any: ["oferta"] }, target: { any: ["todas"] } })), circuits: [] };
+  const plan = planificar({ live, borradores: [a, b, c, d].map(p => ({ pantalla: p, valor: borrador(p, ["s-" + p.slice(-3)]) })), d1: {} });
+  assert.deepEqual([plan.omitidas, plan.resumen.playlist.crear, plan.resumen.asignacion.crear], [[], 6, 6]);
+  assert.deepEqual(new Set(plan.operaciones.map(o => o.id)).size, 6);
+  assert.deepEqual(plan.operaciones.filter(o => o.entidad === "asignacion").map(o => o.datos.ref_externa).slice(2), [a, b, c, d].map(refDefecto));
+});
+
 // ── POST /api/programacion/importar ─────────────────────────────────────────────────────────────────────────────
 prueba("simulación (por defecto): el plan con cuentas y muestra, sin escribir nada en la D1 ni en el KV", async () => {
   const { db, d, kv, env } = await mundo(legadoMixto());
@@ -328,7 +397,7 @@ prueba("huérfanos: lo que ya no está en el KV se informa y no se borra", async
   assert.equal((await A.leerAsignacion(db, "viva-marca")).estado, "pausada", "ni se archiva: sólo se informa");
 });
 
-prueba("?archivar=1 archiva (nunca borra) sólo las asignaciones huérfanas del importador no editadas fuera; con ?pisar=1, también ésas", async () => {
+prueba("?archivar=1 archiva (nunca borra) sólo las asignaciones huérfanas del importador no editadas fuera, y apaga sus circuitos; con ?pisar=1, también ésas", async () => {
   const { db, d, kv, env } = await mundo(legadoMixto());
   await importar(env, "aplicar=1");
   const alta = cuerpo => onRequest({ request: new Request("https://admira.tv/api/programacion/asignaciones", { method: "POST",
@@ -352,22 +421,27 @@ prueba("?archivar=1 archiva (nunca borra) sólo las asignaciones huérfanas del 
   assert.deepEqual(sim.body.opciones, { pisar: false, archivar: true });
   assert.deepEqual(huerfanas(sim), [["ajena", "omitir", "ajena"], ["viva-marca", "archivar", "viva_eliminada"],
     ["defecto-alcampo-alcala", "archivar", "borrador_vacio"], ["defecto-alcampo-leganes", "omitir", "editado_fuera"]]);
-  assert.deepEqual([sim.body.resumen.asignacion.archivar, sim.body.resumen.escrituras], [2, 3]);
+  assert.deepEqual([sim.body.resumen.asignacion.archivar, sim.body.resumen.circuito.archivar, sim.body.resumen.escrituras], [2, 1, 4]);
+  assert.deepEqual(operacion(sim.body, "circuito", "madrid"), { entidad: "circuito", id: "madrid", ref: "kv:circuito:madrid", rev: 1, accion: "archivar", motivo: "circuito_eliminado", cambios: ["activo"] });
   assert.equal(operacion(sim.body, "asignacion", "defecto-alcampo-leganes").actualizado_por, EDITORA);
   assert.ok(d.sql.slice(antes).every(q => /^\s*select\b/i.test(q)), "la simulación con archivar no escribe");
   assert.equal(await version(db), v0);
-  // Aplicar: archivadas, no borradas; las demás, intactas. Playlists y circuito sólo se informan.
+  // Aplicar: archivadas, no borradas; las demás, intactas. Las playlists sólo se informan; el circuito se apaga (decisión
+  // de Carlos, 9-oct-2026: la misma regla que el espejo de E7).
   const ap = await importar(env, "archivar=1&aplicar=1");
-  assert.deepEqual(ap.body.aplicadas, { crear: 0, actualizar: 1, archivar: 2 });
+  assert.deepEqual(ap.body.aplicadas, { crear: 0, actualizar: 1, archivar: 3 });
   assert.deepEqual(await estados(), { ajena: "activa", "defecto-alcampo-alcala": "archivada", "defecto-alcampo-leganes": "activa", manual: "activa",
     "viva-marca": "archivada", "viva-ofertas-madrid": "activa" });
   assert.deepEqual({ asignacion: await cuenta(db, "asignacion"), playlist: await cuenta(db, "playlist") }, filas);
   assert.equal(await cuenta(db, "circuito"), 1);
+  assert.deepEqual([(await A.leerCircuito(db, "madrid")).activo, (await A.auditoria(db, { entidad: "circuito", id: "madrid" }))[0].detalle.motivo],
+    [false, "importador E5 · kv:circuito:madrid · apagado: circuito_eliminado"]);
   assert.equal((await A.auditoria(db, { accion: "borrar" })).length, 0);
   assert.deepEqual((await A.historial(db, "asignacion", "viva-marca"))[0].motivo, "importador E5 · kv:viva:marca · archivada: viva_eliminada");
   // Segunda pasada: nada que escribir (las archivadas salen igual · ya_archivada).
   const otra = await importar(env, "archivar=1&aplicar=1&muestra=50");
   assert.deepEqual([otra.body.resumen.escrituras, huerfanas(otra).filter(h => h[1] === "igual").map(h => h[2])], [0, ["ya_archivada", "ya_archivada"]]);
+  assert.deepEqual([operacion(otra.body, "circuito", "madrid").accion, operacion(otra.body, "circuito", "madrid").motivo], ["igual", "ya_apagado"]);
   // Con pisar=1 se archiva también la retocada (con el aviso), pero la ajena nunca: no es del importador.
   const pisando = await importar(env, "archivar=1&pisar=1&aplicar=1&muestra=50");
   assert.deepEqual([pisando.body.aplicadas.archivar, operacion(pisando.body, "asignacion", "defecto-alcampo-leganes").pisa, operacion(pisando.body, "asignacion", "ajena").motivo],
@@ -379,6 +453,31 @@ prueba("?archivar=1 archiva (nunca borra) sólo las asignaciones huérfanas del 
   const vuelve = await importar(env, "aplicar=1&muestra=50");
   assert.deepEqual([operacion(vuelve.body, "asignacion", "viva-marca").accion, operacion(vuelve.body, "asignacion", "viva-marca").cambios], ["actualizar", ["estado"]]);
   assert.equal((await estados())["viva-marca"], "pausada");
+  // Y el circuito, que vuelve con el documento, se enciende otra vez.
+  assert.deepEqual([operacion(vuelve.body, "circuito", "madrid").accion, operacion(vuelve.body, "circuito", "madrid").cambios, (await A.leerCircuito(db, "madrid")).activo],
+    ["actualizar", ["activo"], true]);
+});
+
+prueba("?archivar=1 con circuitos: sólo los del importador; lo editado fuera no se apaga salvo con ?pisar=1 (con el aviso)", async () => {
+  const { db, kv, env } = await mundo(legadoMixto());
+  await importar(env, "aplicar=1");
+  // Un circuito puesto a mano por la API (no es del importador) y el del legado, retocado por la editora.
+  const alta = cuerpo => onRequest({ request: new Request("https://admira.tv/api/programacion/circuitos", { method: "POST",
+    headers: { Cookie: "__Host-atv_session=" + T.editora, "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) }), env });
+  assert.equal((await alta({ nombre: "A mano", destino: { all: ["pantalla:alcampo-alcala"] } })).status, 201);
+  assert.equal((await parche(env, "circuitos/madrid", { rev: 1, nombre: "Madrid centro" })).status, 200);
+  kv.store.set(LIVE_KEY, JSON.stringify({ ...LIVE, circuits: [] }));
+  const v0 = await version(db);
+  const sim = await importar(env, "archivar=1&muestra=50");
+  assert.deepEqual(sim.body.huerfanos.filter(h => h.entidad === "circuito").map(h => [h.id, h.motivo]), [["madrid", "circuito_eliminado"]], "el ajeno ni es huérfano");
+  assert.deepEqual([operacion(sim.body, "circuito", "madrid").accion, operacion(sim.body, "circuito", "madrid").motivo, operacion(sim.body, "circuito", "madrid").actualizado_por,
+    operacion(sim.body, "circuito", "madrid").cambios, sim.body.resumen.circuito.archivar], ["omitir", "editado_fuera", EDITORA, ["activo"], 0]);
+  assert.equal((await importar(env, "archivar=1&aplicar=1")).body.aplicadas.archivar, 0);
+  assert.equal(await version(db), v0);
+  const ap = await importar(env, "archivar=1&pisar=1&aplicar=1&muestra=50");
+  assert.deepEqual([ap.body.aplicadas.archivar, operacion(ap.body, "circuito", "madrid").pisa, ap.body.resumen.circuito.archivar], [1, EDITORA, 1]);
+  assert.deepEqual([(await A.leerCircuito(db, "madrid")).activo, (await A.leerCircuito(db, "a-mano")).activo], [false, true]);
+  assert.equal((await importar(env, "archivar=1")).body.resumen.escrituras, 0, "la pasada siguiente, toda igual");
 });
 
 prueba("acceso: sólo la sesión del portal con digitalsignage-player; ni el visor, ni la clave de servicio", async () => {

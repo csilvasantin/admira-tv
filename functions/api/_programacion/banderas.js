@@ -1,11 +1,14 @@
 // GET/POST /api/programacion/banderas — banderas de despliegue del modelo único (E6 · docs/playlists-modelo-unico.md).
 // Lo enruta la API de E4 (functions/api/programacion/[recurso]/[[resto]].js).
 //
-//   GET                                   {ok, version, banderas: {motor, sombra}, editables, bloqueadas}
-//   POST {"sombra": true|false, "motivo"}  enciende o apaga el modo sombra (auditado: accion «banderas»)
+//   GET                                                     {ok, version, banderas: {motor, sombra, espejo}, editables, bloqueadas}
+//   POST {"sombra"?: true|false, "espejo"?: true|false, "motivo"}  enciende o apaga (auditado: accion «banderas»)
 //
-// · `sombra` es la única editable. Con ella encendida, el GET del player compara por detrás con el motor nuevo y
-//   registra en la tabla `sombra` (gancho-sombra.js, sombra.js).
+// · Editables: `sombra` y `espejo` (al menos una por POST; sólo se escriben las que cambian).
+//   - `sombra` (E6): el GET del player compara por detrás con el motor nuevo y registra en la tabla `sombra`
+//     (gancho-sombra.js, sombra.js).
+//   - `espejo` (E7): cada escritura del legado en el KV se refleja también en la D1 (espejo.js). Las demás instancias
+//     la releen en menos de 30 s.
 // · `motor` sólo se lee: cualquier POST que lo traiga es 409 motor_bloqueado_hasta_E13, sin escribir nada. Encender
 //   el motor nuevo es el corte (E13).
 // · Poner el valor que ya tiene no escribe (ni auditoría ni versión): {cambiado: false}.
@@ -18,13 +21,15 @@ import { authHeaders } from "../../_auth-session.js";
 import { autorizarSesion } from "./acceso.js";
 import * as A from "./almacen.js";
 import { olvidarBandera } from "./gancho-sombra.js";
+import { espejoDe, olvidarBanderas as olvidarEspejo } from "./espejo.js";
 
-export const EDITABLES = Object.freeze(["sombra"]);
+export const EDITABLES = Object.freeze(["sombra", "espejo"]);
 export const BLOQUEADAS = Object.freeze({ motor: "motor_bloqueado_hasta_E13" });
 const MAX_CUERPO = 10_000;
 
 const json = (value, status = 200) => Response.json(value, { status, headers: authHeaders() });
-const vista = banderas => ({ motor: String((banderas && banderas.motor) || "apagado"), sombra: !!(banderas && banderas.sombra === true) });
+const vista = banderas => ({ motor: String((banderas && banderas.motor) || "apagado"), sombra: !!(banderas && banderas.sombra === true),
+  espejo: espejoDe({ banderas }) });
 const invalido = (error, campo, mensaje) => json({ ok: false, error, campo, mensaje }, 422);
 
 async function cuerpo(request) {
@@ -50,12 +55,18 @@ export async function banderas({ request, env = {} }) {
   if ("motor" in b) return json({ ok: false, error: BLOQUEADAS.motor, banderas: vista(meta.banderas) }, 409);
   const otra = Object.keys(b).find(k => k !== "motivo" && !EDITABLES.includes(k));
   if (otra) return invalido("bandera_desconocida", otra, `Sólo se puede cambiar: ${EDITABLES.join(", ")}.`);
-  if (!("sombra" in b)) return invalido("bandera_requerida", "sombra", "Falta la bandera: {\"sombra\": true} o {\"sombra\": false}.");
-  if (typeof b.sombra !== "boolean") return invalido("bandera_invalida", "sombra", "sombra debe ser true o false.");
-  if (vista(meta.banderas).sombra === b.sombra) return json({ ok: true, cambiado: false, version: meta.version, banderas: vista(meta.banderas) });
+  const pedidas = EDITABLES.filter(k => k in b);
+  if (!pedidas.length) return invalido("bandera_requerida", "sombra", `Falta la bandera: ${EDITABLES.map(k => `{"${k}": true}`).join(" o ")}.`);
+  const mala = pedidas.find(k => typeof b[k] !== "boolean");
+  if (mala) return invalido("bandera_invalida", mala, `${mala} debe ser true o false.`);
+  const actual = vista(meta.banderas), cambios = {};
+  for (const k of pedidas) if (actual[k] !== b[k]) cambios[k] = b[k];
+  if (!Object.keys(cambios).length) return json({ ok: true, cambiado: false, version: meta.version, banderas: actual });
   let r;
-  try { r = await A.fijarBanderas(db, { sombra: b.sombra }, { actor: auth.actor, motivo: String(b.motivo || "") }); }
+  try { r = await A.fijarBanderas(db, cambios, { actor: auth.actor, motivo: String(b.motivo || "") }); }
   catch (e) { console.error("programacion: banderas", e); return json({ ok: false, error: "programacion_escritura_fallida" }, 503); }
-  olvidarBandera();   // en esta instancia, el gancho la relee ya; en las demás, en menos de un minuto
+  // En esta instancia, el gancho de la sombra y el espejo las releen ya; en las demás, en menos de un minuto / 30 s.
+  if ("sombra" in cambios) olvidarBandera();
+  if ("espejo" in cambios) olvidarEspejo();
   return json({ ok: true, cambiado: true, version: r.version, banderas: vista(r.banderas) });
 }

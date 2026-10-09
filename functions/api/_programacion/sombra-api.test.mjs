@@ -69,7 +69,7 @@ prueba("banderas: sólo la sesión del portal con permiso, también para leer (n
     }
   }
   const leer = await api(env, "GET", "banderas", { token: T.editora });
-  assert.deepEqual(leer.body, { ok: true, version: 0, banderas: { motor: "apagado", sombra: false }, editables: ["sombra"], bloqueadas: { motor: "motor_bloqueado_hasta_E13" } });
+  assert.deepEqual(leer.body, { ok: true, version: 0, banderas: { motor: "apagado", sombra: false, espejo: false }, editables: ["sombra", "espejo"], bloqueadas: { motor: "motor_bloqueado_hasta_E13" } });
   assert.match(leer.headers.get("Cache-Control"), /no-store/);
   const metodo = await api(env, "PUT", "banderas", { cuerpo: {} });
   assert.deepEqual([metodo.status, metodo.headers.get("Allow")], [405, "GET, POST"]);
@@ -81,7 +81,7 @@ prueba("banderas: sólo la sesión del portal con permiso, también para leer (n
 prueba("banderas: encender y apagar la sombra queda auditado a nombre de quien lo hace; repetir no escribe", async () => {
   const { db, env } = await mundo();
   const on = await api(env, "POST", "banderas", { cuerpo: { sombra: true, motivo: "arranca el modo sombra" } });
-  assert.deepEqual(on.body, { ok: true, cambiado: true, version: 1, banderas: { motor: "apagado", sombra: true } });
+  assert.deepEqual(on.body, { ok: true, cambiado: true, version: 1, banderas: { motor: "apagado", sombra: true, espejo: false } });
   assert.deepEqual((await A.leerMeta(db)).banderas, { motor: "apagado", sombra: true });
   const [audit] = (await api(env, "GET", "auditoria?accion=banderas")).body.entradas;
   assert.deepEqual([audit.actor, audit.accion, audit.entidad, audit.entidad_id, audit.version], [DUENO, "banderas", "meta", "banderas", 1]);
@@ -99,9 +99,10 @@ prueba("banderas: motor bloqueado hasta E13 (409 sin escribir) y 422 a lo que no
   const { db, env } = await mundo();
   for (const cuerpo of [{ motor: "encendido" }, { motor: "apagado" }, { motor: "sombra", sombra: true }]) {
     const r = await api(env, "POST", "banderas", { cuerpo });
-    assert.deepEqual([r.status, r.body.error, r.body.banderas], [409, "motor_bloqueado_hasta_E13", { motor: "apagado", sombra: false }], JSON.stringify(cuerpo));
+    assert.deepEqual([r.status, r.body.error, r.body.banderas], [409, "motor_bloqueado_hasta_E13", { motor: "apagado", sombra: false, espejo: false }], JSON.stringify(cuerpo));
   }
-  const casos = [[{ sombra: "si" }, "bandera_invalida", "sombra"], [{ sombra: 1 }, "bandera_invalida", "sombra"], [{ otra: true }, "bandera_desconocida", "otra"],
+  const casos = [[{ sombra: "si" }, "bandera_invalida", "sombra"], [{ sombra: 1 }, "bandera_invalida", "sombra"], [{ otra: true }, "bandera_desconocida", "otra"], [{ espejo: "si" }, "bandera_invalida", "espejo"],
+    [{ sombra: true, espejo: 1 }, "bandera_invalida", "espejo"],
     [{}, "bandera_requerida", "sombra"], [{ motivo: "x" }, "bandera_requerida", "sombra"]];
   for (const [cuerpo, error, campo] of casos) {
     const r = await api(env, "POST", "banderas", { cuerpo });
@@ -187,4 +188,20 @@ prueba("sombra: acceso de las lecturas de E4 (el visor también lee: no lleva em
   console.error = () => {};   // la ruta deja en el log el fallo de leer meta sin la migración
   try { assert.equal((await api({ ACCESS: kv(), PROGRAMACION_DB: await d1Memoria("") }, "GET", "sombra")).body.error, "programacion_db_sin_esquema"); }
   finally { console.error = error; }
+});
+
+prueba("banderas: el espejo de E7 se enciende y apaga por la misma ruta, junto a la sombra o solo, y queda auditado", async () => {
+  const { db, env } = await mundo();
+  const on = await api(env, "POST", "banderas", { cuerpo: { espejo: true, motivo: "arranca la doble escritura" } });
+  assert.deepEqual(on.body, { ok: true, cambiado: true, version: 1, banderas: { motor: "apagado", sombra: false, espejo: true } });
+  assert.equal((await A.leerMeta(db)).banderas.espejo, true);
+  const [audit] = (await api(env, "GET", "auditoria?accion=banderas")).body.entradas;
+  assert.deepEqual(audit.detalle.cambios, { espejo: true });
+  const ambas = await api(env, "POST", "banderas", { cuerpo: { sombra: true, espejo: true } });
+  assert.deepEqual([ambas.body.cambiado, ambas.body.version, ambas.body.banderas], [true, 2, { motor: "apagado", sombra: true, espejo: true }]);
+  assert.deepEqual((await api(env, "GET", "auditoria?accion=banderas")).body.entradas[0].detalle.cambios, { sombra: true }, "sólo se escribe lo que cambia");
+  const igual = await api(env, "POST", "banderas", { cuerpo: { espejo: true } });
+  assert.deepEqual([igual.body.cambiado, igual.body.version], [false, 2]);
+  const off = await api(env, "POST", "banderas", { cuerpo: { espejo: false } });
+  assert.deepEqual([off.body.cambiado, off.body.banderas.espejo, off.body.banderas.sombra], [true, false, true]);
 });
