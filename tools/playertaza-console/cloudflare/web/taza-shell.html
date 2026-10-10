@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PlayerTaza · AInimation Studio</title>
+  <meta name="description" content="PlayerTaza: contenido de la taza y configuración de la store vinculada.">
+  <link rel="canonical" href="https://www.ainimation.studio/taza/">
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; background: #0b1017; color: #fff; font-family: system-ui, sans-serif; }
+    body { display: flex; flex-direction: column; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 16px; border-bottom: 1px solid #263342; }
+    header a { color: #b8d9ff; font-size: 13px; }
+    iframe { display: block; flex: 1; width: 100%; border: 0; min-height: 0; }
+    main { position: relative; flex: 1; min-height: 0; display: flex; }
+    #aviso { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%) scale(.9); width: min(86vw, 86vh); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #00A862, #00704A 70%, #1E3932); color: #fff; display: grid; place-items: center; text-align: center; padding: 9%; box-sizing: border-box; font-weight: 900; font-size: clamp(22px, 5vmin, 64px); line-height: 1.1; box-shadow: 0 0 0 10px #fff2, 0 20px 60px #0009; opacity: 0; pointer-events: none; transition: .4s; }
+    #aviso.on { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+    #aviso small { display: block; font-size: .45em; font-weight: 600; opacity: .9; margin-top: .6em; }
+  </style>
+  <link rel="stylesheet" href="/taza/control.css?v=quadratic-2">
+</head>
+<body>
+  <header><button class="square" data-panel="options" aria-label="Opciones · panel izquierdo">▣</button><strong>PlayerTaza · AInimation</strong><nav><a href="/taza/help">Help</a> · <a href="/taza/mcp">MCP</a> · <a href="https://playertaza.csilvasantin.workers.dev/" target="_blank" rel="noopener">Abrir player</a></nav><button class="square" data-panel="advanced" aria-label="Avanzado · panel derecho">◧</button><button class="square" data-panel="expert" aria-label="Experto · panel inferior">⌘</button></header>
+  <main><iframe src="https://playertaza.csilvasantin.workers.dev/" title="PlayerTaza: player y configuración de stores" allow="camera; bluetooth; autoplay; fullscreen" allowfullscreen></iframe><div id="aviso" role="status" aria-live="assertive"></div></main>
+  <aside id="options" class="control-panel left" hidden><h2>Opciones <button data-close>Cerrar ×</button></h2><label>Proyecto<select id="project"><option value="canalkiosk-jardinets">CanalKiosk · Jardinets</option><option value="starbucks-queue">Starbucks · Gestión de colas</option><option value="yarigai">Yarigai</option></select></label><button id="associate">Activar proyecto</button><p id="association" role="status">Consultando asociación…</p><p>La asociación se comparte con la taza. Los envíos de otros proyectos quedan filtrados.</p><a href="/taza/help">Ayuda</a> · <a href="/taza/mcp">MCP</a></aside>
+  <aside id="advanced" class="control-panel right" hidden><h2>Avanzado <button data-close>Cerrar ×</button></h2><h3>Admirito · guía de pruebas</h3><iframe id="guide-avatar" title="Avatar Admirito" src="https://digitalavatar.ai/nube.html?kiosk=1&amp;avatar=admirito&amp;tier=good&amp;sector=retail&amp;audio=off" allow="autoplay"></iframe><p id="guidance" role="status">Inicia una prueba para comprobar el proyecto, el envío y la pantalla física.</p><button id="test-start">Guiar prueba</button><button id="test-confirm" disabled>Lo veo en la taza</button><button id="test-fail" disabled>No coincide</button><p>La confirmación visual la realizas mirando la cámara del player. El avatar no analiza el vídeo.</p><pre id="diagnostics">Sin consulta</pre></aside>
+  <aside id="expert" class="control-panel bottom" hidden><h2>Experto · CLI <button data-close>Cerrar ×</button></h2><p>Comandos: /demo 1 · /demo 2 · /demo stop · help · status · project canalkiosk|colas|yarigai · test · confirm · fail · clear</p><pre id="terminal" role="log" aria-live="polite">PlayerTaza · consola de control
+Escribe help para empezar.</pre><form id="command-form"><label for="command">›</label><input id="command" autocomplete="off" spellcheck="false" placeholder="status" aria-label="Comando CLI"><button>Ejecutar</button></form></aside>
+  <script src="/taza/demo.js?v=demo-1" defer></script>
+  <script src="/taza/control.js?v=demo-1" defer></script>
+  <script>
+  // Taza + cola (7-oct-2026): cuando un pedido con nombre pasa a «listo», la taza lo muestra:
+  // «NOMBRE, tu pedido Starbucks está preparado». Pedidos de demo, pago SIMULADO.
+  (function(){
+    var P=new URLSearchParams(location.search),store=(P.get('store')||'starbucks-paseo-de-gracia').replace(/[^a-z0-9-]/g,'')||'starbucks-paseo-de-gracia';
+    var mug='https://playertaza.csilvasantin.workers.dev',revision=null;
+    var relay='https://mcp-ainimation.admira.store',vistos={},primera=true,cola=[],ocupada=false,el=document.getElementById('aviso');
+    var esc=function(x){return String(x||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
+    window.__tazaAvisos=[];
+    function mostrar(){ if(ocupada||!cola.length) return; ocupada=true; var p=cola.shift();
+      var txt=p.nombre?p.nombre+', tu pedido Starbucks está preparado':'Pedido '+p.numero+', tu pedido Starbucks está preparado';
+      el.innerHTML=(p.nombre?esc(p.nombre)+',<br>':'')+'tu pedido Starbucks está preparado ☕<small>Pedido '+esc(p.numero)+' · recógelo en barra</small>';
+      el.classList.add('on');
+      fetch(mug+'/api/mug-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({project:'starbucks-queue',via:'queue-follow',source:'gestorColas',name:p.nombre||('PEDIDO '+p.numero),verb:'PEDIDO LISTO'})}).then(function(r){return r.json();}).then(function(d){el.dataset.delivery=d.ok&&d.bubble&&d.bubble.queued?'queued':'not-sent';}).catch(function(){el.dataset.delivery='error';});
+      window.__tazaAvisos.push({numero:p.numero,nombre:p.nombre||null,text:txt,at:Date.now()});
+      setTimeout(function(){ el.classList.remove('on'); setTimeout(function(){ ocupada=false; mostrar(); },500); },8000); }
+    function tic(){ fetch(mug+'/api/store-binding?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+      if(!d.binding||d.binding.project!=='starbucks-queue'){cola=[];primera=true;revision=null;el.classList.remove('on');return;}
+      if(revision!==d.binding.revision){revision=d.binding.revision;vistos={};primera=true;}
+      return fetch(relay+'/cola/estado?store='+store,{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+      (d.listo||[]).forEach(function(p){ if(!vistos[p.numero]){ vistos[p.numero]=1; if(!primera) cola.push(p); } }); primera=false; mostrar(); }); }).catch(function(){cola=[];el.classList.remove('on');}); }
+    tic(); setInterval(tic,2000);
+  })();
+  </script>
+</body>
+</html>

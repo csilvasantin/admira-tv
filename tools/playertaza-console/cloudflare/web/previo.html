@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="admiranext-version" content="v.07.10.2026.r1.store-binding">
+  <title>PlayerTaza · previo</title>
+  <style>
+    :root {
+      --bg: #07080a;
+      --ink: #e8edf2;
+      --muted: #8b96a3;
+      --cyan: #3dffd4;
+      --pink: #ff4d8d;
+      --line: #2a313a;
+      --ceramic: #d8d2c8;
+      --face: #050607;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink);
+      font: 16px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+    body {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px 16px 32px;
+    }
+    header {
+      width: min(960px, 100%);
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    h1 { margin: 0; font-size: 1.15rem; }
+    h1 span { color: var(--cyan); }
+    nav { display: flex; gap: 14px; font-size: .92rem; color: var(--muted); }
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .lede { width: min(960px, 100%); color: var(--muted); margin: 0 0 22px; max-width: 46rem; }
+    .stage {
+      width: min(960px, 100%);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+    }
+    .mug-face {
+      width: 100%;
+      max-width: 920px;
+      background: linear-gradient(180deg, #ece7df, var(--ceramic) 38%, #b9b1a6);
+      border-radius: 28px;
+      padding: 18px 18px 22px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.5);
+    }
+    .led {
+      position: relative;
+      background: var(--face);
+      border-radius: 12px;
+      overflow: hidden;
+      aspect-ratio: 32 / 16;
+      outline: 1px solid rgba(0,0,0,.35);
+    }
+    .led img {
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+      background: #000;
+      pointer-events: none;
+    }
+    .zones {
+      position: absolute; inset: 0;
+      display: grid; grid-template-columns: 1fr 1fr;
+    }
+    .zone {
+      position: relative; margin: 0; padding: 0; border: 0;
+      background: transparent; cursor: pointer; color: inherit;
+    }
+    .zone + .zone { border-left: 1px solid rgba(255,255,255,.18); }
+    .zone:hover, .zone:focus-visible { background: rgba(61,255,212,.14); }
+    .zone.live { box-shadow: inset 0 0 0 2px #3dffd4; }
+    .zone:disabled { cursor: wait; opacity: .7; }
+    .zone b {
+      position: absolute; left: 8px; right: 8px; bottom: 8px;
+      font-size: clamp(11px, 1.8vw, 14px); letter-spacing: .16em;
+      text-transform: uppercase; font-weight: 800;
+      text-shadow: 0 1px 6px #000;
+    }
+    .zone.jackson b { color: #ff4d8d; text-align: left; }
+    .zone.queen b { color: #ffd24a; text-align: right; }
+    .meta {
+      width: min(920px, 100%);
+      display: grid;
+      gap: 6px;
+      text-align: center;
+    }
+    .pulse { font-size: clamp(1.3rem, 4vw, 2rem); font-weight: 700; letter-spacing: .04em; }
+    .pulse b { color: var(--cyan); }
+    .pulse em { color: var(--pink); font-style: normal; }
+    .title { color: var(--ink); }
+    .src { color: var(--muted); font-size: .92rem; }
+    .pills { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+    .pill {
+      font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+      padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted);
+    }
+    .pill.ok { color: var(--cyan); border-color: #1c6; }
+    .pill.bad { color: #ff5d6c; border-color: #ff5d6c; }
+    footer { width: min(960px, 100%); margin-top: 28px; color: var(--muted); font-size: .82rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Player<span>Taza</span> · previo</h1>
+    <nav>
+      <a href="/">mesa</a>
+      <a href="/app">app</a>
+      <a href="/help">ayuda</a>
+      <a href="/gif.gif">gif 32×16</a>
+    </nav>
+  </header>
+  <p class="lede">Dos zonas en la cerámica: izquierda Michael Jackson, derecha Queen. Un toque lanza primero el <b>nombre</b> y luego la <b>animación</b>. Si admira.tv está emitiendo a uno de los dos, esa zona se ilumina y manda ella.</p>
+  <div class="stage">
+    <div class="mug-face">
+      <div class="led">
+        <img id="face" alt="Previo 32×16 de la taza" src="/gif.gif" width="32" height="16">
+        <div class="zones">
+          <button type="button" class="zone jackson" id="zone-jackson" data-zone="jackson" title="Lanzar Michael Jackson: nombre, luego animación"><b>Jackson</b></button>
+          <button type="button" class="zone queen" id="zone-queen" data-zone="queen" title="Lanzar Queen: nombre, luego animación"><b>Queen</b></button>
+        </div>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="pulse" id="pulse">leyendo…</div>
+      <div class="title" id="title"></div>
+      <div class="src" id="src"></div>
+      <div class="pills">
+        <span class="pill" id="live-pill">previo…</span>
+        <span class="pill" id="age-pill">—</span>
+      </div>
+    </div>
+  </div>
+  <footer>v.16.09.2026.r6.13:15 · 32×16 · dos zonas · talPlayGif · <a href="/version.json">version.json</a></footer>
+  <script>
+    const face = document.getElementById("face");
+    const pulse = document.getElementById("pulse");
+    const title = document.getElementById("title");
+    const src = document.getElementById("src");
+    const livePill = document.getElementById("live-pill");
+    const agePill = document.getElementById("age-pill");
+    const zoneJackson = document.getElementById("zone-jackson");
+    const zoneQueen = document.getElementById("zone-queen");
+    let gifAt = 0;
+    let launching = false;
+    function esc(s) {
+      return String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+    function ago(ts) {
+      if (!ts) return "sin fotograma";
+      const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+      if (s < 5) return "ahora";
+      if (s < 60) return "hace " + s + " s";
+      if (s < 3600) return "hace " + Math.round(s / 60) + " min";
+      return "hace " + Math.round(s / 3600) + " h";
+    }
+    async function tick() {
+      try {
+        const d = await (await fetch("/api/mug-status", { cache: "no-store" })).json();
+        const st = (d && d.status) || {};
+        const at = Number(d && d.gif_at) || st.ts || 0;
+        if (at && at !== gifAt) {
+          gifAt = at;
+          face.src = "/gif.gif?t=" + at;
+        }
+        const name = st.name || "TAZA";
+        const verb = st.verb || "";
+        if (!launching) pulse.innerHTML = "<b>" + esc(name) + "</b>" + (verb ? " · <em>" + esc(verb) + "</em>" : "");
+        title.textContent = (st.item && st.item.title) ? st.item.title : (st.text || "");
+        const bits = [];
+        if (st.source) bits.push(st.source);
+        if (st.via) bits.push(st.via);
+        if (st.item && st.item.type) bits.push(st.item.type);
+        src.textContent = bits.join(" · ");
+        livePill.textContent = "en taza";
+        livePill.className = "pill ok";
+        agePill.textContent = ago(at);
+      } catch (e) {
+        livePill.textContent = "sin previo";
+        livePill.className = "pill bad";
+      }
+      try {
+        const now = await (await fetch("/api/admira?screen=playertaza", { cache: "no-store" })).json();
+        const artist = now && now.artist;
+        zoneJackson.classList.toggle("live", artist === "jackson");
+        zoneQueen.classList.toggle("live", artist === "queen");
+        if (!title.textContent && now && now.item && now.item.title) title.textContent = now.item.title;
+      } catch (e) {}
+    }
+    async function launch(zone) {
+      if (launching) return;
+      launching = true;
+      zoneJackson.disabled = true;
+      zoneQueen.disabled = true;
+      pulse.innerHTML = zone === "queen"
+        ? "<b>QUEEN</b> · <em>nombre…</em>"
+        : "<b>JACKSON</b> · <em>nombre…</em>";
+      try {
+        const n = await (await fetch("/api/mug-launch", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ zone, step: "name" })
+        })).json();
+        if (!(n && n.ok)) throw new Error((n && n.error) || "nombre");
+        face.src = "/gif.gif?t=" + Date.now();
+        await new Promise((r) => setTimeout(r, 1200));
+        pulse.innerHTML = zone === "queen"
+          ? "<b>QUEEN</b> · <em>animación</em>"
+          : "<b>JACKSON</b> · <em>animación</em>";
+        const a = await (await fetch("/api/mug-launch", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ zone, step: "anim" })
+        })).json();
+        if (!(a && a.ok)) throw new Error((a && a.error) || "anim");
+        face.src = "/gif.gif?t=" + Date.now();
+        gifAt = a.status && a.status.ts || Date.now();
+        const air = a.admira && a.admira.title ? " · " + a.admira.title : "";
+        src.textContent = "zona " + zone + air;
+      } catch (e) {
+        livePill.textContent = "no lanzó";
+        livePill.className = "pill bad";
+      }
+      launching = false;
+      zoneJackson.disabled = false;
+      zoneQueen.disabled = false;
+    }
+    zoneJackson.onclick = () => launch("jackson");
+    zoneQueen.onclick = () => launch("queen");
+    tick();
+    setInterval(tick, 800);
+  </script>
+</body>
+</html>

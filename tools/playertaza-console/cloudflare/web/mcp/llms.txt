@@ -1,0 +1,12 @@
+# PlayerTaza
+Canonical MCP endpoint (POST JSON-RPC): https://ainimation.studio/taza/mcp
+Human guide: https://ainimation.studio/taza/help
+Read taza_project_read before writing. Do not change the active project automatically.
+For Starbucks queue events call taza_status_write with project=starbucks-queue,
+via=queue-follow, name=PEDIDO 42, verb=LISTO. Requires that project to be selected.
+Other projects are rejected. Wait retry_ms on rate limiting (one write per 3 s).
+GIF/queued does not mean physical playback. Inspect delivery and the live camera.
+Bubble secrets stay private on the Mac Mini; producers use the common API.
+Current API has no OAuth; project labels are functional routing, not authentication.
+Documentation of the queue producer is planned at admira.tv/gestorColas/help and /mcp;
+it returned 404 on 2026-10-07 and the actual emitter integration remains unverified.

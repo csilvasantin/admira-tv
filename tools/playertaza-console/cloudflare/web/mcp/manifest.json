@@ -1,0 +1,40 @@
+{
+  "name": "playertaza",
+  "version": "1.1.0",
+  "site": "https://ainimation.studio/taza/",
+  "help_humans": "https://ainimation.studio/taza/help",
+  "hub": "https://ainimation.studio/taza/mcp",
+  "mcp_server": {
+    "url": "https://ainimation.studio/taza/mcp",
+    "transport": "streamable-http",
+    "authentication": {
+      "type": "none",
+      "note": "Segmentación funcional, no autenticación de productores."
+    }
+  },
+  "tools": [
+    "taza_project_read",
+    "taza_status_read",
+    "taza_status_write",
+    "taza_now"
+  ],
+  "queue_event_example": {
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "taza_status_write",
+      "arguments": {
+        "project": "starbucks-queue",
+        "via": "queue-follow",
+        "name": "PEDIDO 42",
+        "verb": "LISTO"
+      }
+    }
+  },
+  "related": {
+    "queue_help": "https://admira.tv/gestorColas/help",
+    "queue_mcp": "https://admira.tv/gestorColas/mcp",
+    "status": "pending-publication"
+  }
+}

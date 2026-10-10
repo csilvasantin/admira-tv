@@ -1850,11 +1850,43 @@ addEventListener('message',async event=>{
 let mappedMusicSentAt=0, mappedMusicSentId='';
 // PixelMug CarlosGdG (PUBLIC mug-status, sin editor key): artista + título acortado.
 // Mismo force/throttle que la pantalla real; al parar, limpia a Jardinets / habitual.
-let lastMugKey='';
+let lastMugKey='',pendingMug=null,mugSending=false,mugRetryTimer=null;
+function scheduleMugRetry(delay=10000){
+ clearTimeout(mugRetryTimer);
+ mugRetryTimer=setTimeout(()=>{mugRetryTimer=null;flushMappedMug(true);},delay);
+}
+async function flushMappedMug(checkBridge=false){
+ if(mugSending||!pendingMug)return;
+ mugSending=true;
+ const pending=pendingMug;
+ try{
+  if(checkBridge){
+   const r=await fetch('https://playertaza.csilvasantin.workers.dev/mcp',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'taza_now',arguments:{}}}),signal:AbortSignal.timeout(10000)});
+   const rpc=await r.json();
+   const snapshot=JSON.parse(rpc.result?.content?.find(c=>c.type==='text')?.text||'{}');
+   if(!r.ok||snapshot.iphone?.gifReady!==true)throw new Error('Puente de la taza desconectado');
+   // Una selección nueva durante la consulta sustituye la pendiente anterior.
+   if(pendingMug!==pending)return;
+  }
+  const r=await fetch('https://playertaza.csilvasantin.workers.dev/api/mug-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pending.body),signal:AbortSignal.timeout(10000)});
+  const j=await r.json();
+  if(!r.ok||j.ok!==true)throw new Error(j.error||'Envío rechazado');
+  if(pendingMug!==pending)return;
+  if(j.bubble?.queued===true){
+   lastMugKey=pending.key;pendingMug=null;
+   console.info('[Mapping] → PixelMug en cola; reproducción pendiente de comprobar',j.bubble.id);
+  }else console.info('[Mapping] → PixelMug GIF publicado; esperando al puente');
+ }catch(e){console.info('[Mapping] → PixelMug pendiente',e&&e.message);}
+ finally{
+  mugSending=false;
+  if(pendingMug)scheduleMugRetry(pendingMug!==pending?0:10000);
+ }
+}
+window.addEventListener('online',()=>{if(pendingMug)flushMappedMug(true);});
 function mappedMusicToMug(item){
   if (READONLY_DEMO) return;
   let name, verb, id;
-  if(!item){ name='Jardinets'; verb='habitual'; id='stop'; lastMugKey=''; }
+  if(!item){ name='Jardinets'; verb='habitual'; id='stop'; }
   else {
     name=String(item.artist||'Jardinets').trim()||'Jardinets';
     verb=String(item.title||'')
@@ -1870,13 +1902,12 @@ function mappedMusicToMug(item){
     id=String(item.id||item.number||'');
   }
   const mugKey=name+'|'+verb+'|'+id;
-  if(mugKey===lastMugKey) return;
-  lastMugKey=mugKey;
-  try{
-    fetch('https://playertaza.csilvasantin.workers.dev/api/mug-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,verb,via:'adcelerate-best',source:'mappedMusic',id})})
-      .then(async r=>{ let j=null; try{j=await r.json();}catch(_){ } console.info('[Mapping] → PixelMug', name, verb, r.ok?'ok':r.status, j&&j.ok); })
-      .catch(e=>console.info('[Mapping] → PixelMug fail', e&&e.message));
-  }catch(_){}
+  if(pendingMug?.key===mugKey)return;
+  // Volver a la última pieza enviada también cancela una selección pendiente.
+  if(mugKey===lastMugKey&&!mugSending){pendingMug=null;clearTimeout(mugRetryTimer);return;}
+  pendingMug={key:mugKey,body:{name,verb,via:'adcelerate-best',source:'mappedMusic',id}};
+  clearTimeout(mugRetryTimer);
+  flushMappedMug();
 }
 function mappedMusicToScreen(item, force){
   const rawId=String(item&&item.id||'').replace(/^(?:music|taza):/,''); if(!rawId) return;

@@ -1,0 +1,43 @@
+name = "playertaza"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+preview_urls = false
+
+[assets]
+directory = "web"
+binding = "ASSETS"
+run_worker_first = true
+
+[[kv_namespaces]]
+binding = "KV"
+id = "0e6b1a7311694be8b4f6980a9c4d69b9"
+
+# Canal iPhone/Bubble (Trinity r7.carbon). No recrear: mismo tag ya aplicado en prod.
+[[durable_objects.bindings]]
+name = "IPHONE_QUEUE"
+class_name = "IPhoneQueue"
+
+[[migrations]]
+tag = "iphone-text-v1"
+new_sqlite_classes = ["IPhoneQueue"]
+
+[[routes]]
+pattern = "ainimation.studio/taza/mcp*"
+zone_id = "8f712c1cf67e94f97d7697de5ea25999"
+[[routes]]
+pattern = "www.ainimation.studio/taza/mcp*"
+zone_id = "8f712c1cf67e94f97d7697de5ea25999"
+[[routes]]
+pattern = "ainimation.studio/taza/help*"
+zone_id = "8f712c1cf67e94f97d7697de5ea25999"
+[[routes]]
+pattern = "www.ainimation.studio/taza/help*"
+zone_id = "8f712c1cf67e94f97d7697de5ea25999"
+
+[[routes]]
+pattern = "ainimation.studio/taza*"
+zone_id = "8f712c1cf67e94f97d7697de5ea25999"
+[[routes]]
+pattern = "www.ainimation.studio/taza*"
+zone_id = "8f712c1cf67e94f97d7697de5ea25999"
