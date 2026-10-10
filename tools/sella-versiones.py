@@ -21,7 +21,11 @@ import re
 import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
-LITERAL = re.compile(r"(window\.ADMIRA_VERSION\s*=\s*')(v\.[0-9.]+r[0-9]+(?:\.[0-9:]+)?)(')")
+# El valor se acepta TAL CUAL venga, tenga la forma que tenga. Antes el patrón exigía
+# v.DD.MM.AAAA.rN[.HH:MM]: el 7-oct alguien selló a mano `v.07.10.2026.r4.taza-demo`, el
+# sufijo no casaba, 38 páginas se quedaron fuera del sellado y --check decía ✓ durante
+# cinco releases. Un literal que el sellador no reconoce es justo el que hay que corregir.
+LITERAL = re.compile(r"""(window\.ADMIRA_VERSION\s*=\s*(['"]))([^'"]*)(\2)""")
 # El token de caché de los assets PROPIOS (?v=…). Es lo mismo que el literal de
 # versión pero peor: mientras el rótulo solo miente, un token congelado hace que el
 # navegador siga sirviendo el JS y el CSS VIEJOS. El 12-ago se publicaron seis
@@ -29,15 +33,15 @@ LITERAL = re.compile(r"(window\.ADMIRA_VERSION\s*=\s*')(v\.[0-9.]+r[0-9]+(?:\.[0
 # el CMS pedía admira-nav.js?v=04.08.2026.r4 y esa URL ya estaba en su caché.
 # Solo assets propios (rutas relativas o /): los externos no se tocan.
 TOKEN = re.compile(r'((?:href|src)="/?(?!//|https?:)[A-Za-z0-9._/-]+\.(?:js|css)\?v=)([^"]*)(")')
-SELLO_META = re.compile(r'<meta name="admiranext-version" content="([^"]+)"')
-SELLO_TEXTO = re.compile(r'(<span data-release-version>)[^<]*(</span>)')
+SELLO_META = re.compile(r'(<meta name="admiranext-version" content=")([^"]*)(")')
+SELLO_TEXTO = re.compile(r'(<span data-release-version>)([^<]*)(</span>)')
 
 
 def sello_canonico():
     m = SELLO_META.search((RAIZ / "index.html").read_text(encoding="utf-8"))
     if not m:
         sys.exit("✖ no encuentro el sello canónico en index.html")
-    return m.group(1)
+    return m.group(2)
 
 
 def main():
@@ -51,12 +55,13 @@ def main():
         if any(p in f.parts for p in ("node_modules", ".git", ".wrangler", ".claude")):
             continue
         texto = f.read_text(encoding="utf-8")
-        if "ADMIRA_VERSION" not in texto and "?v=" not in texto and "data-release-version" not in texto:
+        if not any(s in texto for s in ("ADMIRA_VERSION", "?v=", "data-release-version", "admiranext-version")):
             continue
-        nuevo = LITERAL.sub(lambda m: m.group(1) + sello + m.group(3), texto)
-        if "data-release-version" in texto:
-            nuevo = SELLO_META.sub(lambda m: m.group(0).replace(m.group(1), sello), nuevo)
-            nuevo = SELLO_TEXTO.sub(lambda m: m.group(1) + sello + m.group(2), nuevo)
+        nuevo = LITERAL.sub(lambda m: m.group(1) + sello + m.group(4), texto)
+        # El <meta> se sella en TODAS las páginas que lo lleven, no solo en las que pintan
+        # el sello: un <meta> propio que nadie mantiene es otra versión que acaba mintiendo.
+        nuevo = SELLO_META.sub(lambda m: m.group(1) + sello + m.group(3), nuevo)
+        nuevo = SELLO_TEXTO.sub(lambda m: m.group(1) + sello + m.group(3), nuevo)
         # El token va sin la «v.» y sin los dos puntos de la hora: es una clave de
         # caché, no un sello que nadie vaya a leer.
         clave = sello.lstrip("v.").replace(":", "")
@@ -65,7 +70,9 @@ def main():
             continue
         rel = f.relative_to(RAIZ)
         clave = sello.lstrip("v.").replace(":", "")
-        viejos = ({m.group(2) for m in LITERAL.finditer(texto)} - {sello}) | \
+        viejos = ({m.group(3) for m in LITERAL.finditer(texto)} - {sello}) | \
+                 ({m.group(2) for m in SELLO_META.finditer(texto)} - {sello}) | \
+                 ({m.group(2) for m in SELLO_TEXTO.finditer(texto)} - {sello}) | \
                  ({m.group(2) for m in TOKEN.finditer(texto)} - {clave})
         desfasados.append(f"{rel} → {', '.join(sorted(viejos))}")
         if not solo_mirar:
