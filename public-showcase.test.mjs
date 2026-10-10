@@ -26,6 +26,15 @@ const expected = [
   'olfactorymarketing','virtualreality','augmentedreality','xpaceos','yarig'
 ];
 
+// Tutoriales de 15 s de Xtore y Xtanco (24-sep-2026): vídeo público sin PDF ni card de
+// catálogo. Lista cerrada a propósito: publicar otro medio obliga a nombrarlo aquí.
+const tutoriales = [
+  'xtore-recuperar-encuadres','xtore-analizar-solo-camara','xtore-preparar-detector',
+  'xtore-audiencia-sesion','xtanco-demo-pantallas','xtore-camara-arranque','xtore-id-pasos',
+  'xtanco-resetaudiencia','xtanco-visitas-con-objetivo','xtore-dooh-dia-hora',
+  'xtore-conectar-pestanas','xtanco-categorias-interactivas'
+];
+
 test('la allowlist pública contiene exactamente las 20 apps canónicas', () => {
   assert.equal(catalog.length, 20);
   assert.deepEqual(catalog.map((app) => app.slug), expected);
@@ -55,7 +64,8 @@ test('sólo se publican los 19 pares de medios verificados y nunca Access Contro
   assert.ok(manifest.accesscontrol, 'el medio DMZ existe y por eso debe bloquearse expresamente');
   const declared = mediaAllowlist.match(/new Set\(\[([\s\S]*?)\]\)/)?.[1] || '';
   const allowed = [...declared.matchAll(/"([a-z0-9_-]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(allowed, expected.filter((slug) => slug !== 'adcelerate'));
+  assert.deepEqual(allowed, [...expected.filter((slug) => slug !== 'adcelerate'), ...tutoriales]);
+  for (const slug of tutoriales) assert.equal(manifest[slug].src, `/apps/video/${slug}.mp4`, slug);
   assert.doesNotMatch(mediaAllowlist, /"accesscontrol"/);
   assert.match(videoFunction, /publicMediaFile\(file, "mp4"\)/);
   assert.match(pdfFunction, /publicMediaFile\(file, "pdf"\)/);

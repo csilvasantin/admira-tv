@@ -50,14 +50,17 @@ test("el gate usa redirect top-level sin popup ni FedCM", async () => {
 });
 
 test("todas las páginas protegidas versionan el gate para no resucitar el popup antiguo", async () => {
-  const { execFile } = await import("node:child_process");
-  const { promisify } = await import("node:util");
+  const { readdir } = await import("node:fs/promises");
   const index = await readFile(new URL("./index.html", import.meta.url), "utf8");
   const version = index.match(/admiranext-version" content="([^"]+)/)?.[1];
   assert.ok(version, "index.html debe declarar la versión canónica");
   const cacheKey = version.replace(/^v\./, "").replaceAll(":", "");
-  const { stdout } = await promisify(execFile)("rg", ["-l", "/auth-gate\\.js", "--glob", "*.html", "."]);
-  const pages = stdout.trim().split("\n").filter(Boolean);
+  // Recorrido propio en vez de `rg`: ripgrep no está en todos los equipos de la flota y el
+  // test fallaba con ENOENT sin haber mirado nada. Como rg, no entra en carpetas ocultas.
+  const todas = (await readdir(new URL("./", import.meta.url), { recursive: true }))
+    .filter((f) => f.endsWith(".html") && !f.split("/").some((p) => p.startsWith(".") || p === "node_modules"));
+  const pages = [];
+  for (const f of todas) if ((await readFile(new URL(f, import.meta.url), "utf8")).includes("/auth-gate.js")) pages.push(f);
   assert.ok(pages.length >= 40);
   for (const page of pages) {
     const html = await readFile(new URL(page, import.meta.url), "utf8");

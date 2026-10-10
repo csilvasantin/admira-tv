@@ -36,7 +36,7 @@ test('la ficha local analiza la señal sin reconectar la salida de audio', () =>
 });
 
 test('Superficies y Sitios nacen compactados y cargan el detalle al abrir', () => {
-  assert.match(cms, /gapSection\('surfaces','Superficies de parrilla sin player/);
+  assert.match(cms, /gapSection\('surfaces','Players virtuales sin player real asociado'/);
   assert.match(cms, /gapSection\('sites','Sitios \(mapa\) sin player vivo'/);
   assert.match(cms, /<details class="ebGapSection"/);
   assert.match(cms, /Pulsa para cargar el detalle/);
