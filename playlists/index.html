@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=09.10.2026.r11.1909"></script>
+<script src="/auth-gate.js?v=10.10.2026.r1.1652"></script>
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
 <link rel="dns-prefetch" href="https://api.admira.store">
@@ -123,6 +123,12 @@
   .pkTools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
   .pkTools input,.pkTools select{background:#0c1320;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:8px 10px;font:12.5px inherit;outline:0}
   .pkTools input{flex:1;min-width:150px}
+  /* Tinta electrónica: filtro «apto tinta» + envío directo de una pieza (content-<nº>) */
+  .pkInkBar{display:none;align-items:center;gap:8px;flex-wrap:wrap;margin:-4px 0 12px;font-size:12px;color:var(--dim)}
+  .pkInkBar.on{display:flex}
+  .pkInkBar select{background:#0c1320;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:6px 9px;font:12px inherit}
+  .pkInk{display:block;width:calc(100% - 12px);margin:0 6px 7px;padding:5px 6px;border:1px solid var(--line);border-radius:7px;background:#101a2b;color:var(--ink);font:600 11px inherit;cursor:pointer}
+  .pkInk:hover{border-color:var(--phos)} .pkInk[disabled]{opacity:.6;cursor:progress}
   .pkGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
   .pkItem{position:relative;cursor:pointer;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0c1320}
   .pkItem .th{aspect-ratio:1/1;background:#000;display:grid;place-items:center;color:var(--dim);font-size:22px}
@@ -165,7 +171,7 @@
 <body>
 <script>
 /* Config del chrome cuadrático unificado (lo monta /admira-nav.js). */
-window.ADMIRA_VERSION='v.09.10.2026.r11.19:09';
+window.ADMIRA_VERSION='v.10.10.2026.r1.16:52';
 window.ADMIRA_NAV={
   active:'playlists', title:'Playlists · conjuntos de contenidos',
   topRight:
@@ -174,9 +180,10 @@ window.ADMIRA_NAV={
 };
 </script>
 <script src="/assets/virtual-players.js"></script>
-<script src="/admira-nav.js?v=09.10.2026.r11.1909"></script>
-<script src="/admira-frame.js?v=09.10.2026.r11.1909" defer></script>
-<link rel="stylesheet" href="/admira-frame.css?v=09.10.2026.r11.1909">
+<script src="/assets/admira-eink.js"></script>
+<script src="/admira-nav.js?v=10.10.2026.r1.1652"></script>
+<script src="/admira-frame.js?v=10.10.2026.r1.1652" defer></script>
+<link rel="stylesheet" href="/admira-frame.css?v=10.10.2026.r1.1652">
 
 <!-- AVANZADO (panel derecho): acciones peligrosas -->
 <div class="afSlotHidden" data-af-slot="left" data-hilomusical-lang="starbucks" aria-label="Hilo musical idioma activo">
@@ -248,10 +255,11 @@ window.ADMIRA_NAV={
     <div class="sh-bd">
       <div class="pkTools">
         <input id="pkQ" type="search" placeholder="Buscar por título o etiqueta…" autocomplete="off">
-        <select id="pkType"><option value="">Todo tipo</option><option value="image">Imagen</option><option value="video">Vídeo</option><option value="animation">Animación</option><option value="audio">Audio/música</option></select>
+        <select id="pkType"><option value="">Todo tipo</option><option value="image">Imagen</option><option value="video">Vídeo</option><option value="animation">Animación</option><option value="audio">Audio/música</option><option value="eink">🖋️ Apto tinta (imagen vertical)</option></select>
         <select id="pkAud"><option value="">Toda audiencia</option><option value="m">Hombres</option><option value="f">Mujeres</option></select>
         <select id="pkCat"><option value="">Toda categoría</option><option value="atraer">Atraer</option><option value="producto">Producto</option><option value="promo">Promo</option><option value="marca">Marca</option></select>
       </div>
+      <div class="pkInkBar" id="pkInkBar"><span>🖋️ Enviar a tinta:</span><select id="pkInkTarget" aria-label="Pantalla de tinta electrónica de destino"></select><span id="pkInkMsg" aria-live="polite"></span></div>
       <div class="pkGrid" id="pkGrid"><div class="empty">Cargando Stock…</div></div>
     </div>
     <div class="sh-ft">
@@ -467,23 +475,55 @@ function openPicker(){ pickSel=new Set(); $('pkQ').value=''; $('pkType').value='
 function renderPicker(){
   const q=($('pkQ').value||'').toLowerCase().trim(), ty=$('pkType').value, au=$('pkAud').value, ca=$('pkCat').value;
   const list=STOCK.filter(it=>{
-    if(ty){ if(ty==='audio'){ if(!['audio','music','locucion'].includes(it.type)) return false; } else if(it.type!==ty) return false; }
+    if(ty){ if(ty==='audio'){ if(!['audio','music','locucion'].includes(it.type)) return false; } else if(ty==='eink'){ if(!AdmiraEink.apto(it)) return false; } else if(it.type!==ty) return false; }
     if(au && it.audience!==au) return false;
     if(ca && it.category!==ca) return false;
     if(q){ const hay=((it.title||'')+' '+((it.tags||[]).join(' '))).toLowerCase(); if(!hay.includes(q)) return false; }
     return true;
   }).slice(0,240);
-  const g=$('pkGrid');
+  const g=$('pkGrid'), inkOn=paintInkBar();
   if(!STOCK.length){ g.innerHTML='<div class="empty">No pude leer el Stock (/stock/list).</div>'; return; }
   if(!list.length){ g.innerHTML='<div class="empty">Sin piezas para ese filtro.</div>'; return; }
   g.innerHTML=list.map(it=>'<div class="pkItem'+(pickSel.has(it.id)?' sel':'')+'" data-pk="'+esc(it.id)+'">'+
     '<span class="tg">'+esc(it.type==='music'||it.type==='locucion'?'audio':it.type)+'</span>'+
     '<div class="th">'+thumbHtml(it)+'</div>'+
     '<div class="cap" title="'+esc(it.title)+'">'+esc(it.title||it.id)+'</div>'+
+    (inkOn&&it.num&&AdmiraEink.apto(it)?'<button type="button" class="pkInk" data-ink="'+esc(it.num)+'" title="Fijar esta pieza en la pantalla de tinta (content-'+esc(it.num)+')">🖋️ enviar a tinta</button>':'')+
   '</div>').join('');
   $('pkHint').textContent=pickSel.size+' seleccionada'+(pickSel.size===1?'':'s');
 }
-$('pkGrid').addEventListener('click',e=>{ const el=e.target.closest('[data-pk]'); if(!el) return; const id=el.dataset.pk;
+/* ── Enviar a tinta: content-<nº> a la cola del mando de la pantalla eink ── */
+const INK_CMD='https://api.admira.store/locations/cmd', INK_TIMEOUT_MS=180000;
+function inkScreens(){ return LIVE.filter(s=>AdmiraEink.isEink(s)); }
+function paintInkBar(){
+  const list=inkScreens(), bar=$('pkInkBar'), sel=$('pkInkTarget'), keep=sel.value;
+  bar.classList.toggle('on',list.length>0);
+  sel.innerHTML=list.map(s=>'<option value="'+esc(s.screen)+'">'+esc((s.locName||s.screen)+(s.online?'':' · sin señal'))+'</option>').join('');
+  if(keep&&list.some(s=>s.screen===keep)) sel.value=keep;
+  return list.length>0;
+}
+async function sendToInk(num,btn){
+  const screen=$('pkInkTarget').value, cmd='content-'+num, msg=$('pkInkMsg');
+  if(!screen||!/^\d{1,6}$/.test(String(num))) return;
+  btn.disabled=true; btn.textContent='🖋️ enviando…'; msg.textContent='#'+num+' → '+screen+' · en cola';
+  try{
+    const r=await fetch(INK_CMD,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:screen,screen,cmd})}), d=await r.json();
+    if(!r.ok||!d||!d.ok||!d.action) throw new Error('la cola no dio recibo');
+    msg.textContent='#'+num+' → '+screen+' · pintando el panel (≈75 s)';
+    const t0=Date.now(); let status='timeout';
+    while(Date.now()-t0<INK_TIMEOUT_MS){
+      await new Promise(ok=>setTimeout(ok,2500));
+      const a=await fetch(INK_CMD+'/ack?id='+encodeURIComponent(screen)+'&action='+encodeURIComponent(d.action)+'&_='+Date.now(),{cache:'no-store'}).then(x=>x.json()).catch(()=>null);
+      const ack=a&&a.seen&&a.ack;
+      if(ack&&ack.action===d.action&&(ack.status==='executed'||ack.status==='failed')){ status=ack.status; break; }
+    }
+    btn.textContent=status==='executed'?'✓ en tinta':status==='failed'?'✗ rechazada':'⌛ sin confirmar';
+    msg.textContent='#'+num+' → '+screen+' · '+(status==='executed'?'✓ enviada y pintada':status==='failed'?'✗ el puente la rechazó':'⌛ sin acuse todavía');
+  }catch(e){ btn.textContent='✗ no enviada'; msg.textContent='No se pudo enviar #'+num+': '+e.message; }
+  finally{ setTimeout(()=>{ if(btn.isConnected){ btn.disabled=false; btn.textContent='🖋️ enviar a tinta'; } },4000); }
+}
+$('pkGrid').addEventListener('click',e=>{ const ink=e.target.closest('[data-ink]'); if(ink){ e.stopPropagation(); sendToInk(ink.dataset.ink,ink); return; }
+  const el=e.target.closest('[data-pk]'); if(!el) return; const id=el.dataset.pk;
   if(pickSel.has(id)) pickSel.delete(id); else pickSel.add(id); renderPicker(); });
 ['pkQ','pkType','pkAud','pkCat'].forEach(id=>$(id).addEventListener('input',renderPicker));
 $('pkAddSel').onclick=()=>{
@@ -687,6 +727,6 @@ $('advReload').onclick=async()=>{ await Promise.all([loadRemotePlaylists(),loadS
   },45000);
 })();
 </script>
-  <script src="/assets/hilomusical-lang-switch.js?v=09.10.2026.r11.1909"></script>
+  <script src="/assets/hilomusical-lang-switch.js?v=10.10.2026.r1.1652"></script>
 </body>
 </html>

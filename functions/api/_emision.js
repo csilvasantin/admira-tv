@@ -39,6 +39,8 @@ export const normTag = v => String(v || "").toLowerCase().normalize("NFD").repla
 export function canonicalPlayTag(v) { const t = normTag(v).replace(/^#/, "").replace(/\s+/g, "-"); return TAG_ALIAS[t] || t; }
 export function tagNeedles(v) { const t = canonicalPlayTag(v); return [t].concat(Object.keys(TAG_ALIAS).filter(k => TAG_ALIAS[k] === t)); }
 export const tieneTagDefault = it => (it && Array.isArray(it.tags) ? it.tags : []).some(t => String(t).toLowerCase().trim() === TAG_DEFAULT);
+// Tinta electrónica fuera del feed DOOH: copia de la regla explícita de canal.html (esTinta).
+export const esTinta = it => (it && Array.isArray(it.tags) ? it.tags : []).some(t => /^#?eink(-|$)/.test(String(t).toLowerCase().trim()));
 
 /** Segmento «de casa» del player: lo que tiene una pantalla que nadie ha segmentado a mano. */
 export const SEG_CASA = Object.freeze({ medio: "all", audience: "all", category: "all", age: "all", slot: "all", tag: "", format: "" });
@@ -390,7 +392,7 @@ export function decide(input = {}) {
   if (!fuente && syncOn) {
     fuente = "sincro";
     const remote = sync.remote && Array.isArray(sync.remote.items) && sync.remote.items.length ? sync.remote.items : null;
-    playlist = remote ? remote.slice() : defaultOrder(pool.filter(it => !it._grid)).slice(0, SYNC_MASTER_MAX);
+    playlist = remote ? remote.slice() : defaultOrder(pool.filter(it => !it._grid && !esTinta(it))).slice(0, SYNC_MASTER_MAX);
     const antes = defectoTiene ? T(` y anula «Por defecto» (${piezasTxt(draftItems.length).es})`, ` and overrides the default playlist (${piezasTxt(draftItems.length).en})`) : T("", "");
     motivo = T(`En sincro porque ${syncPor.es}: emite ${syncTxt.es}${antes.es}${grid.items.length ? " y la parrilla de la franja" : ""}.`,
       `In sync because ${syncPor.en}: it plays ${syncTxt.en}${antes.en}${grid.items.length ? " and the slot bookings" : ""}.`);
@@ -407,13 +409,14 @@ export function decide(input = {}) {
   if (!fuente) {
     fuente = "stock";
     const sinDecidir = !grid.items.length && !syncOn;
-    let base = pool;
+    const dooh = pool.filter(it => !esTinta(it));
+    let base = dooh;
     if (sinDecidir) {
-      const marcadas = pool.filter(tieneTagDefault);
-      if (marcadas.length) { base = marcadas; porDefecto = "tag"; cortafuegos = pool.length - marcadas.length; }
+      const marcadas = dooh.filter(tieneTagDefault);
+      if (marcadas.length) { base = marcadas; porDefecto = "tag"; cortafuegos = dooh.length - marcadas.length; }
       else {
-        const emitibles = pool.filter(it => !MOTOR_REFERENCIA.test(String(it.motor || "")));
-        if (emitibles.length >= CORTAFUEGOS_MIN) { base = emitibles; porDefecto = "motor"; cortafuegos = pool.length - emitibles.length; }
+        const emitibles = dooh.filter(it => !MOTOR_REFERENCIA.test(String(it.motor || "")));
+        if (emitibles.length >= CORTAFUEGOS_MIN) { base = emitibles; porDefecto = "motor"; cortafuegos = dooh.length - emitibles.length; }
         else cortafuegos = -1;
       }
     }

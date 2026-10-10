@@ -1,9 +1,9 @@
 {
-  "version": "v.09.10.2026.r11.19:09",
-  "signature": "MorfeoMacMini · MacMini",
-  "agent": "MorfeoMacMini",
-  "machine": "MacMini",
-  "day": "09.10.2026",
-  "time": "19:09",
-  "evidence": "Mando: standby y resume en cada tarjeta de /remotecontrol/ (cola de brain) y aviso de pantalla apagada; canal.html los ejecuta también por la cola de brain."
+  "version": "v.10.10.2026.r1.16:52",
+  "signature": "NeoMBP16 · MacBookPro16",
+  "agent": "NeoMBP16",
+  "machine": "MacBookPro16",
+  "day": "10.10.2026",
+  "time": "16:52",
+  "evidence": "Player de tinta electrónica (role eink): Mando → Status y players.html muestran eink-sy11-ab con su estado guardado en device.eink; «enviar a tinta» desde Playlists; piezas tag eink fuera del feed DOOH por regla explícita. Encargo 5579."
 }
