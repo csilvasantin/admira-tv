@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=09.10.2026.r10.1835"></script>
+<script src="/auth-gate.js?v=09.10.2026.r11.1909"></script>
 <script>window.ADMIRA_VERSION='v.07.10.2026.r4.taza-demo';</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ADMIRA.TV · REMOTE CONTROL — Equipos conectados</title>
@@ -148,11 +148,13 @@
   .prev .capage{position:absolute;bottom:6px;right:6px;z-index:2;font-size:9px;letter-spacing:.08em;
     color:var(--txt);background:rgba(6,10,15,.74);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
   /* MANDO por tarjeta: TODAS las funciones en UNA sola línea, iconos pequeños */
-  .ctlrow{display:flex;gap:4px;margin:8px 0 2px;flex-wrap:wrap}
-  .ctlrow button.b{flex:1 1 0;min-width:30px;padding:6px 2px;border-radius:9px;gap:2px}
+  .ctlrow{display:flex;gap:3px;margin:8px 0 2px;flex-wrap:wrap}
+  .ctlrow button.b{flex:1 1 0;min-width:26px;padding:6px 2px;border-radius:9px;gap:2px}
   .ctlrow button.b .ico{font-size:14px;line-height:1}
   .ctlrow button.b .lab{font-size:6.5px;letter-spacing:.03em;white-space:nowrap;overflow:hidden;max-width:100%}
   .ctlrow button.b.mid{background:linear-gradient(160deg,#0e1c2a,#0a141e);border-color:#20415a}
+  .ctlrow button.b.pwr{border-color:#5a3a1f}.ctlrow button.b.pwr .ico{color:#ff8e3c}
+  .card.standby .now{border-color:#5a3a1f}.card.standby .now .lab{color:#ff8e3c}
   button.b{position:relative;border:1px solid var(--line);background:linear-gradient(160deg,#0c1824,#081019);
     color:var(--txt);border-radius:12px;font-family:var(--mono);cursor:pointer;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
@@ -575,7 +577,10 @@
     {cmd:'vol-up',      ico:'🔊', lab:'Vol +'},
     {cmd:'ontop-toggle',ico:'📌', lab:'On-top'},
     {cmd:'hud',         ico:'🅗', lab:'HUD'},
-    {cmd:'play',        ico:'▶', lab:'Arrancar'}
+    {cmd:'play',        ico:'▶', lab:'Arrancar'},
+    // Apagar (negro, sin sonido, sigue latiendo con standby:true) y volver a emitir (9-oct-2026).
+    {cmd:'standby',     ico:'⏻', lab:'Standby', cls:'pwr'},
+    {cmd:'resume',      ico:'☀', lab:'Resume', cls:'pwr'}
   ];
 
   function platIcon(ua){
@@ -795,7 +800,7 @@
     card.className='card';
     card.dataset.screen=scr;
     const padHtml=CMDS.map(c=>'<button class="b '+c.cls+'" data-cmd="'+c.cmd+'"><span class="ico">'+c.ico+'</span><span class="lab">'+c.lab+'</span></button>').join('');
-    const btnHtml=BTNS.map(c=>'<button class="b" data-cmd="'+c.cmd+'"><span class="ico">'+c.ico+'</span><span class="lab">'+c.lab+'</span></button>').join('');
+    const btnHtml=BTNS.map(c=>'<button class="b'+(c.cls?' '+c.cls:'')+'" data-cmd="'+c.cmd+'"><span class="ico">'+c.ico+'</span><span class="lab">'+c.lab+'</span></button>').join('');
     card.innerHTML=
       '<div class="chead">'+
         '<span class="plat" data-plat></span>'+
@@ -1123,8 +1128,13 @@
       .then(d=>{
         const rec=cards[scr]; if(!rec) return;
         const it=d&&d.item?d.item:(d&&d.ok===false?null:(d&&d.id?d:null));
-        rec.lastItem=it||null;
-        if(it&&(it.title||it.id)){
+        const apagada=!!(d&&d.standby);
+        rec.el.classList.toggle('standby',apagada);
+        rec.lastItem=apagada?null:(it||null);
+        if(apagada){
+          rec.nowEl.innerHTML='<div class="lab">⏻ En standby</div><div class="ttl">Pantalla apagada</div>'+
+            '<div class="ty">sigue latiendo · ☀ Resume la vuelve a encender</div>';
+        } else if(it&&(it.title||it.id)){
           rec.nowEl.innerHTML='<div class="lab">Emitiendo ahora</div>'+
             '<div class="ttl">'+esc(it.title||it.id)+'</div>'+
             '<div class="ty">'+esc(it.type||'media')+(it.id?(' · '+esc(String(it.id).slice(0,20))):'')+'</div>';
@@ -1369,6 +1379,6 @@
     setInterval(loadAudit,30000);
   });
 </script>
-  <script src="/assets/admira-version-watch.js?v=09.10.2026.r10.1835" defer></script>
+  <script src="/assets/admira-version-watch.js?v=09.10.2026.r11.1909" defer></script>
 </body>
 </html>
