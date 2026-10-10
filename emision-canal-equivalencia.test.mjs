@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
-import { decide, CFG, MEDIA, KIND, TAG_DEFAULT, CORTAFUEGOS_MIN, SYNC_MASTER_MAX, MOTOR_REFERENCIA, canonicalPlayTag } from "./functions/api/_emision.js";
+import { decide, CFG, MEDIA, KIND, TAG_DEFAULT, CORTAFUEGOS_MIN, SYNC_MASTER_MAX, MOTOR_REFERENCIA, canonicalPlayTag, esTinta } from "./functions/api/_emision.js";
 import { TAG_ALIAS } from "./functions/api/_playlist-live.js";
 
 // /api/emision dice qué emitiría una pantalla replicando rebuild() de canal.html (functions/api/_emision.js).
@@ -70,6 +70,7 @@ async function player(sc) {
     ${constLine("MOTOR_REFERENCIA")}
     ${constLine("CORTAFUEGOS_MIN")}
     ${constLine("tieneTagDefault")}
+    ${constLine("esTinta")}
     ${constLine("SYNC_MASTER_MAX")}
     ${constLine("GRID_API")}
     var cfg={imgSec:9,audioSec:18,interSec:60,max:50,refreshSec:30};
@@ -128,6 +129,10 @@ const STOCK_DEFAULT = STOCK.map((p, i) => i % 7 === 0 ? { ...p, tags: [...p.tags
 const STOCK_REFERENCIA = STOCK.map((p, i) => i % 3 === 0 ? { ...p, motor: "yt-dlp" } : p);
 const STOCK_POBRE = STOCK.slice(0, 8).map((p, i) => i < 4 ? { ...p, motor: "Telegram Import" } : p);
 const STOCK_RARO = [...STOCK.slice(0, 5), { id: "lnk", type: "link", url: "https://x", createdAt: iso(99) }, { id: "sinurl", type: "video", createdAt: iso(98) }];
+// Piezas de tinta electrónica: imagen, tag «eink» (o «eink-<pantalla>»), alguna incluso con #default.
+const STOCK_TINTA = STOCK.map((p, i) => i % 6 === 0 ? { ...p, type: "image", tags: i % 12 === 0 ? ["eink", "eink-sy11-ab", "default"] : ["EINK-sy11-ab"] } : p);
+const STOCK_TINTA_DEFAULT = STOCK_TINTA.map((p, i) => i % 6 === 1 ? { ...p, tags: ["default"] } : p);
+const STOCK_TINTA_POBRE = STOCK_TINTA.slice(0, 8);
 const STOCK_MUSICA = STOCK.map((p, i) => i % 4 === 0 ? { ...p, type: "music", tags: ["música", "chill"] } : i % 4 === 1 ? { ...p, tags: ["music"] } : p);
 
 const banda = (id, from, to, slots = []) => ({ id, label: id, from, to, capacity: 6, slots: [...slots, ...Array.from({ length: Math.max(0, 6 - slots.length) }, () => ({ kind: "free", status: "free" }))], isNow: from === "12:00" });
@@ -158,6 +163,11 @@ const ESCENARIOS = {
   "Parrilla de otro día no cuenta": { screen: "alcampo-alcala", stock: STOCK, draft: DRAFT, grid: { ...dia([reserva("ayer")]), date: "2026-10-07", bands: dia([reserva("ayer")]).bands.map(b => ({ ...b, isNow: false })) }, fuente: "defecto" },
   "Parrilla editorial 50/50 manda sola": { screen: "alcampo-alcala", stock: STOCK, draft: VACIO,
     grid: dia([reserva("m2", "own", { playlistId: "municipal-50-50", position: 2 }), reserva("m1", "paid", { playlistId: "municipal-50-50", position: 1 })]), fuente: "stock" },
+  "Tinta electrónica fuera de la rotación del Stock": { screen: "alcampo-alcala", stock: STOCK_TINTA, grid: dia(), draft: VACIO, fuente: "stock" },
+  "Tinta electrónica fuera aunque lleve #default": { screen: "alcampo-alcala", stock: STOCK_TINTA_DEFAULT, draft: VACIO, fuente: "stock" },
+  "Tinta electrónica fuera aunque el Stock sea pobre": { screen: "alcampo-alcala", stock: STOCK_TINTA_POBRE, draft: VACIO, fuente: "stock" },
+  "Tinta electrónica fuera de la sincro sin máster": { screen: "alcampo-alcala", stock: STOCK_TINTA, draft: VACIO, syncOn: true, fuente: "sincro" },
+  "Tinta electrónica entra si el mando la pide por su etiqueta": { screen: "alcampo-alcala", stock: STOCK_TINTA, draft: VACIO, liveTag: "eink-sy11-ab", fuente: "hashtag" },
   "Hashtag del mando con alias": { screen: "alcampo-alcala", stock: STOCK_MUSICA, draft: DRAFT, grid: dia([reserva("p1")]), liveTag: "Music", fuente: "hashtag" },
   "Hashtag del mando sin piezas": { screen: "alcampo-alcala", stock: STOCK, draft: DRAFT, liveTag: "inexistente", fuente: "hashtag" },
   "Sincro con el máster anula Por defecto": { screen: "alcampo-alcala", stock: STOCK, draft: DRAFT, grid: dia([reserva("p1")]), syncOn: true,
@@ -208,3 +218,22 @@ for (const [nombre, sc] of Object.entries(ESCENARIOS)) {
     assert.equal(rep.etiqueta.es, real.label, "rótulo distinto al del player");
   });
 }
+
+test("la tinta electrónica no entra en el feed DOOH por regla explícita, no por su motor", () => {
+  const tinta = new Set(STOCK_TINTA.filter(p => p.tags.some(t => /^eink/i.test(t))).map(p => p.id));
+  assert.ok(tinta.size >= 10);
+  for (const stock of [STOCK_TINTA, STOCK_TINTA_DEFAULT, STOCK_TINTA_POBRE]) {
+    const rep = emision({ screen: "alcampo-alcala", stock, draft: VACIO });
+    assert.ok(rep.piezas.length > 0, "la pantalla no se queda muda");
+    assert.deepEqual(rep.piezas.filter(p => tinta.has(p.id)), [], "una pieza de tinta se coló en la rotación");
+  }
+  // Ninguna de estas piezas lleva un motor de referencia: las aparta la etiqueta.
+  assert.ok(STOCK_TINTA.every(p => !MOTOR_REFERENCIA.test(p.motor)));
+  // Pedida por su etiqueta desde el mando sí sale: es una decisión expresa.
+  const pedida = emision({ screen: "alcampo-alcala", stock: STOCK_TINTA, draft: VACIO, liveTag: "eink-sy11-ab" });
+  assert.ok(pedida.piezas.length > 0 && pedida.piezas.every(p => tinta.has(p.id)));
+  // La regla es la misma en el player y en la réplica, y no confunde otros tags.
+  assert.match(canal, /const esTinta=it=>.*\/\^#\?eink\(-\|\$\)\//);
+  assert.equal(esTinta({ tags: ["einkaufen", "tinta-electronica"] }), false);
+  assert.equal(esTinta({ tags: ["#eink"] }), true);
+});

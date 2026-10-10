@@ -17,7 +17,7 @@ test("[1] la sincro no re-monta la antena si el máster no cambió", () => {
   // El reloj del máster se refresca SIEMPRE, gateado no.
   assert.match(canal, /SYNC_REMOTE=\{ items, slotMs:d\.slotMs\|\|20000, offset:\(d\.serverNow\|\|Date\.now\(\)\)-Date\.now\(\) \};\s+\/\/ el reloj/);
   // Y tras recuperarse con firma igual, el rótulo no sigue diciendo SIN MÁSTER.
-  assert.match(canal, /else if\(syncOn\)\{ try\{ setLive\('SINCRO CANAL · '/);
+  assert.match(canal, /else if\(syncOn\)\{ try\{ setLive\('SINCRO '\+\(_syncOwnPlaylist\?/);
 });
 
 test("[2] next() no re-baja el catálogo: los 5 s quedan SOLO para import y novedad", () => {

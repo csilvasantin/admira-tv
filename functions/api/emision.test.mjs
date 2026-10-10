@@ -220,10 +220,11 @@ test("Stock con #default cuando no hay nada decidido; ?resumen=1 no trae piezas"
 });
 
 test("otro día: pide la parrilla de esa fecha y no mezcla lo observado ahora", async () => {
-  const r = await get("screen=alcampo-alcala&at=" + encodeURIComponent("2026-10-10T10:00:00+02:00"), { ACCESS: kv(session()) });
+  // Fecha lejana a propósito: con «2026-10-10» el test dejó de pasar justo ese día, porque ya no era «otro día».
+  const r = await get("screen=alcampo-alcala&at=" + encodeURIComponent("2031-03-15T10:00:00+01:00"), { ACCESS: kv(session()) });
   assert.equal(r.body.ahora, false);
   assert.equal(r.body.observado, null);
-  assert.ok(calls.some(c => /grid\/day\?screen=alcampo-alcala&date=20261010/.test(c.url)));
+  assert.ok(calls.some(c => /grid\/day\?screen=alcampo-alcala&date=20310315/.test(c.url)));
   assert.ok(!calls.some(c => /signage\/now/.test(c.url)));
 });
 

@@ -510,5 +510,78 @@
       "https://api.admira.store/grid/projects",
       "https://api.admira.store/grid/screens"
     ]
+  },
+  {
+    "n": 38,
+    "alias": "38.- Pedidos en barra",
+    "slug": "gestorColas",
+    "name_es": "Pedidos en barra",
+    "familia": "Tienda",
+    "estado": "emite",
+    "en_vitrina": false,
+    "ruta": "/gestorColas/",
+    "peso_kb": 51,
+    "ficheros": 4,
+    "apis": [
+      "/gestorColas/api/estado",
+      "https://mcp-ainimation.admira.store/cola"
+    ]
+  },
+  {
+    "n": 39,
+    "alias": "39.- Audiencia segmentada",
+    "slug": "audiencia",
+    "name_es": "Audiencia segmentada",
+    "familia": "Medición",
+    "estado": "parcial",
+    "en_vitrina": false,
+    "ruta": "/audiencia/",
+    "peso_kb": 28,
+    "ficheros": 1,
+    "apis": [
+      "/audiencia/api/estado",
+      "/audiencia/api/reglas"
+    ]
+  },
+  {
+    "n": 40,
+    "alias": "40.- AdmiraXperience",
+    "slug": "admiraxperience",
+    "name_es": "AdmiraXperience",
+    "familia": "Inmersivo",
+    "estado": "escaparate",
+    "en_vitrina": false,
+    "ruta": "/admiraxperience/",
+    "peso_kb": 33,
+    "ficheros": 8,
+    "apis": []
+  },
+  {
+    "n": 41,
+    "alias": "41.- Tester visual",
+    "slug": "tester",
+    "name_es": "Tester visual",
+    "familia": "Plataforma",
+    "estado": "parcial",
+    "en_vitrina": false,
+    "ruta": "/tester/",
+    "peso_kb": 22,
+    "ficheros": 4,
+    "apis": []
+  },
+  {
+    "n": 42,
+    "alias": "42.- Players virtuales",
+    "slug": "virtual-players",
+    "name_es": "Players virtuales",
+    "familia": "Emisión",
+    "estado": "emite",
+    "en_vitrina": false,
+    "ruta": "/virtual-players/",
+    "peso_kb": 8,
+    "ficheros": 3,
+    "apis": [
+      "/api/virtual-players"
+    ]
   }
 ]

@@ -53,9 +53,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=09.10.2026.r11.1909"></script>
+<script src="xpl-runtime.js?v=10.10.2026.r1.1652"></script>
 <script>
-  window.ADMIRA_VERSION='v.09.10.2026.r11.19:09';
+  window.ADMIRA_VERSION='v.10.10.2026.r1.16:52';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -399,7 +399,7 @@
   <aside id="chan"></aside>
 </div>
 
-<script src="/assets/player-pairing.js?v=09.10.2026.r11.1909"></script>
+<script src="/assets/player-pairing.js?v=10.10.2026.r1.1652"></script>
 <script>
 // Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
 // directo (pub-…r2.dev): más resiliente y evita bloqueos de DNS/filtrado en algunas
@@ -887,7 +887,7 @@ function syncFinishCurrent(){
   clearTimeout(timer); timer=setTimeout(next,Math.max(300,line.remaining));
 }
 // El máster lo dicta el worker (única autoridad) si está cargado; si no, cálculo local determinista.
-function syncMasterOrder(){ return (SYNC_REMOTE&&SYNC_REMOTE.items&&SYNC_REMOTE.items.length)?SYNC_REMOTE.items:defaultOrder(all.filter(it=>!it._grid)).slice(0,SYNC_MASTER_MAX); }
+function syncMasterOrder(){ return (SYNC_REMOTE&&SYNC_REMOTE.items&&SYNC_REMOTE.items.length)?SYNC_REMOTE.items:defaultOrder(all.filter(it=>!it._grid&&!esTinta(it))).slice(0,SYNC_MASTER_MAX); }
 function xplUrl(){
   const base=qs.get('xpl')||LS('adtv_xpl','https://xpl.xpaceos.com/admira-tv.json');
   try{ save('adtv_xpl',base); }catch(_){}
@@ -1549,6 +1549,14 @@ const CORTAFUEGOS_MIN=6;   // por debajo de esto la pantalla se quedaría casi m
 let _cortafuegos=0;        // >0 piezas apartadas · -1 no se pudo aplicar · 0 no aplica
 let _porDefecto='';        // qué mandó: 'tag' · 'motor' · '' (nada, hay parrilla o filtro)
 const tieneTagDefault=it=>(it&&Array.isArray(it.tags)?it.tags:[]).some(t=>String(t).toLowerCase().trim()===TAG_DEFAULT);
+// TINTA ELECTRÓNICA fuera del feed DOOH — regla explícita, no un apaño por procedencia.
+// Las piezas etiquetadas «eink» (o «eink-<pantalla>») están hechas para paneles de
+// tinta de 4 colores y 480x800: en una pantalla de vídeo son un cartel pobre. Antes se
+// apartaban publicándolas con un motor «site capsule» para que cayeran en MOTOR_REFERENCIA,
+// que solo actúa sin nada decidido y se rinde con menos de CORTAFUEGOS_MIN piezas.
+// Esta regla vale siempre para la rotación del Stock y la sincro; solo entran si el
+// operador las pide por su etiqueta o por su nº (#ID), que son decisiones expresas.
+const esTinta=it=>(it&&Array.isArray(it.tags)?it.tags:[]).some(t=>/^#?eink(-|$)/.test(String(t).toLowerCase().trim()));
 let gridInjected=[], gridExactMode=false;
 let _gridSig='·';   // firma de la última parrilla aplicada ('·' = imposible → el primer loadGrid siempre aplica)
 function gridBadge(txt){ let b=$('gridBadge'); if(!b){ b=document.createElement('div'); b.id='gridBadge'; b.style.cssText='position:absolute;top:8px;right:8px;z-index:40;background:rgba(22,16,4,.82);border:1px solid rgba(255,200,90,.45);color:#ffd866;border-radius:999px;padding:4px 11px;font:12px ui-monospace,Menlo,monospace;backdrop-filter:blur(4px)'; ($('mupi')||document.body).appendChild(b); } b.style.display=txt?'block':'none'; b.textContent=txt; }
@@ -2608,14 +2616,16 @@ function rebuild(restart){
   //   4. el catálogo entero                    → solo si lo anterior dejaría la pantalla muda
   // La cuarta existe por doctrina DOOH: una pantalla en negro es peor que una
   // pantalla con algo inesperado, y esa regla no la rompe ninguna de las otras.
-  let base = all;
+  // La tinta electrónica no entra en esta rotación (ver esTinta): ni #default la mete.
+  const dooh = all.filter(it=>!esTinta(it));
+  let base = dooh;
   _cortafuegos = 0; _porDefecto = '';
   if(sinDecidir){
-    const marcadas = all.filter(tieneTagDefault);
-    if(marcadas.length){ base = marcadas; _porDefecto = 'tag'; _cortafuegos = all.length - marcadas.length; }
+    const marcadas = dooh.filter(tieneTagDefault);
+    if(marcadas.length){ base = marcadas; _porDefecto = 'tag'; _cortafuegos = dooh.length - marcadas.length; }
     else {
-      const emitibles = all.filter(it=>!MOTOR_REFERENCIA.test(String(it.motor||'')));
-      if(emitibles.length >= CORTAFUEGOS_MIN){ base = emitibles; _porDefecto = 'motor'; _cortafuegos = all.length - emitibles.length; }
+      const emitibles = dooh.filter(it=>!MOTOR_REFERENCIA.test(String(it.motor||'')));
+      if(emitibles.length >= CORTAFUEGOS_MIN){ base = emitibles; _porDefecto = 'motor'; _cortafuegos = dooh.length - emitibles.length; }
       else { _cortafuegos = -1; }
     }
   }
@@ -4832,6 +4842,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=09.10.2026.r11.1909" defer></script>
+  <script src="/assets/admira-version-watch.js?v=10.10.2026.r1.1652" defer></script>
 </body>
 </html>

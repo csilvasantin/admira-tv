@@ -10,7 +10,10 @@ const root=dirname(fileURLToPath(import.meta.url)),deploy=readFileSync(join(root
 function block(start,end){const a=deploy.indexOf(start),b=deploy.indexOf(end,a+start.length);assert.ok(a>=0&&b>a);return deploy.slice(a,b);}
 const guards=block('release="$(sed','git_full="$(git')+block('sw_cache="$(sed','\necho "→ Cloudflare Pages');
 assert.doesNotMatch(guards,/\bnpx\b|vault-get|git push/);
-const run=cwd=>spawnSync('bash',['-c','set -euo pipefail\n'+guards],{cwd,encoding:'utf8',env:{PATH:process.env.PATH,ADMIRA_RELEASE_AGENT:'TrinityMBP16',ADMIRA_RELEASE_MACHINE:'MBP16'}});
+// Publica quien firma: el agente y el equipo salen de release-signature.json. Con un firmante
+// fijo el test solo pasaba mientras la última publicación fuera suya.
+const firma=JSON.parse(readFileSync(join(root,'release-signature.json'),'utf8'));
+const run=cwd=>spawnSync('bash',['-c','set -euo pipefail\n'+guards],{cwd,encoding:'utf8',env:{PATH:process.env.PATH,ADMIRA_RELEASE_AGENT:firma.agent,ADMIRA_RELEASE_MACHINE:firma.machine}});
 
 test('actual publisher guards accept the canonical static signature and service-worker cache',()=>{
   const result=run(root);assert.equal(result.status,0,result.stdout+result.stderr);

@@ -4,6 +4,12 @@
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
   ],
+  "v.10.10.2026.r1.16:52": [
+    "Nuevo tipo de player: tinta electrónica. El Mando → Status enseña el panel, el firmware, el último envío y el estado, y ya no ofrece vídeo, volumen ni rotación a una pantalla que solo pinta imagen.",
+    "Playlists: filtro «apto tinta» (imagen vertical) y botón «enviar a tinta» en cada pieza.",
+    "Las piezas etiquetadas «eink» ya no entran en la rotación de las pantallas de vídeo.",
+    "Room Booking: el panel de puerta puede ser de tinta, con su «Ahora / Siguiente»."
+  ],
   "v.07.10.2026.r26.22:48": [
     "Contenido dirigido por hashtag: etiqueta una pieza con el nombre de una pantalla (#starbucks_paseodegracia_103_pantalla1) y se emite sola en ella",
     "Con el nombre del centro va a todo el centro: lo visual a las pantallas, locuciones y música a los altavoces",
