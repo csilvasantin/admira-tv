@@ -9,15 +9,16 @@ const between=(start,end)=>{const a=html.indexOf(start),b=html.indexOf(end,a+sta
 const flag=html.match(/^const READONLY_DEMO = .*;$/m)[0];
 const screen=between('async function mandarAlaPantalla(','function viandanteTick(');
 const audience=between('function viandanteTick(','setInterval(viandanteTick');
-const mug=between('function mappedMusicToMug(','function mappedMusicToScreen(');
+// La taza guarda la última selección y la reintenta (PR 28): el estado y el envío viven justo antes de mappedMusicToMug.
+const mug=between("let lastMugKey='',pendingMug=null",'function mappedMusicToScreen(');
 const zone=between('async function mandarZonaTaza(','const tazaZonas=');
 function fixture(query){
   const requests=[],preview=[],labels=[];
   const item={id:'coffee',num:712,title:'Coffee'};
-  const context=vm.createContext({location:{search:query},URLSearchParams,Date,Map,console:{info(){}},chTimer:null,clearTimeout(){},setTimeout(){return 1;},
+  const context=vm.createContext({location:{search:query},URLSearchParams,Date,Map,AbortSignal,window:{addEventListener(){}},console:{info(){}},chTimer:null,clearTimeout(){},setTimeout(){return 1;},
     fetch:async(url,options)=>{requests.push({url,options});return{ok:true,json:async()=>({ok:true})};},
     stockIndexById:new Map([[item.id,item]]),SITE_CIRCUIT:{jardinets:'fixture-circuit'},SITE_SCREEN:{jardinets:'fixture-screen'},SITE_EXTRA:{jardinets:[{circuit:'extra-circuit',screen:'extra-screen'}]},CMD_URL:'https://api.admira.store/locations/cmd',
-    lastMugKey:'',liveMirrorOn:()=>true,currentAudience:()=>({mix:{}}),dominanteDe:()=> 'tourists',perfilDominante:'adults',perfilOverride:null,syncSiteId:()=> 'jardinets',piezaParaPerfil:()=>item,syncDurMs:()=>9000,chQueue:[],chIdx:0,_chSig:'old',chPlay:()=>preview.push('audience'),chTitle:()=> 'Coffee',chTag:s=>labels.push(s),
+    liveMirrorOn:()=>true,currentAudience:()=>({mix:{}}),dominanteDe:()=> 'tourists',perfilDominante:'adults',perfilOverride:null,syncSiteId:()=> 'jardinets',piezaParaPerfil:()=>item,syncDurMs:()=>9000,chQueue:[],chIdx:0,_chSig:'old',chPlay:()=>preview.push('audience'),chTitle:()=> 'Coffee',chTag:s=>labels.push(s),
     JardinetsTaza:{fetchCatalog:async()=>[{id:'fixture-zone',item}],ordenes:()=>[{id:'fixture-mug',cmd:'tag-fixture'}]},ponerEnElQuiosco:()=>preview.push('zone')});
   vm.runInContext(flag+'\n'+screen+audience+mug+zone,context);
   return{context,requests,preview,labels,call:expression=>vm.runInContext(expression,context)};
