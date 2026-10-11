@@ -13,7 +13,7 @@ export class TwinSession {
   wipeResult(){this.result?.bytes.fill(0);this.result=null;clearTimeout(this.resultTimer);}
   clear(){
     this.version++;this.controller?.abort();this.wipeSource();this.wipeResult();
-    this.category=null;this.style=null;this.url=null;this.phase='empty';this.emit();
+    this.category=null;this.style=null;this.url=null;this.error=null;this.phase='empty';this.emit();
   }
   select(source,category){
     if(['generating','publishing','review','publish-unknown'].includes(this.phase)){source?.data?.fill(0);return false;}
@@ -51,10 +51,10 @@ export class TwinSession {
       this.resultExpiresAt=this.now()+RESULT_TTL;
       this.resultTimer=setTimeout(()=>this.expireResult(),RESULT_TTL);
       this.emit();return true;
-    }catch{
+    }catch(error){
       result?.bytes?.fill(0);
       if(version!==this.version)return false;
-      this.wipeSource();this.phase='failed';this.emit();return false;
+      this.error=error?.message||null;this.wipeSource();this.phase='failed';this.emit();return false;
     }
   }
   async publishReviewed(reviewed){

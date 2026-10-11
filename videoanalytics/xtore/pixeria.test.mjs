@@ -19,15 +19,16 @@ const args=()=>({source:{width:8,height:8,data:new Uint8ClampedArray(256).fill(6
 test('generate sends the selected original only to edit; public payload contains only the result',async t=>{
   const requests=[],f=fixtures(t,async(url,options)=>{
     requests.push({url,...options,body:JSON.parse(options.body)});
-    return Response.json(url.endsWith('/image/edit')?{ok:true,image:generated}:{ok:true,id:'1789123456789-abc123',url:'https://api.admira.store/stock/asset/1789123456789-abc123'});
+    return Response.json(url.endsWith('/twin-edit')?{ok:true,image:generated}:{ok:true,id:'1789123456789-abc123',url:'https://api.admira.store/stock/asset/1789123456789-abc123'});
   });
   const input=args(),result=await generateTwin(input);
   await publishTwin({...input,result});
   assert.equal(requests.length,2);
-  assert.equal(requests[0].url,'https://api.admira.store/image/edit');assert.equal(requests[0].body.image,original);
+  assert.equal(requests[0].url,'/videoanalytics/api/twin-edit');assert.deepEqual(requests[0].body,{image:original,category:'person',style:'8bit'});
+  assert.equal(requests[0].credentials,'same-origin');assert.equal(requests[1].credentials,'omit');
   assert.equal(requests[1].url,'https://api.admira.store/stock/publish');assert.equal(requests[1].body.base64,'iVBORwkIBwY=');
   assert.ok(!['source','image','sourceUrl','r2Staged'].some(key=>key in requests[1].body));
-  for(const request of requests){assert.equal(request.credentials,'omit');assert.equal(request.redirect,'error');assert.equal(request.cache,'no-store');}
+  for(const request of requests){assert.equal(request.redirect,'error');assert.equal(request.cache,'no-store');}
   assert.equal(f.canvas.width,1);assert.equal(f.canvas.height,1);
 });
 test('an unchanged or undecodable image never becomes a publishable result',async t=>{
@@ -46,4 +47,8 @@ test('generation stops waiting after 90 seconds without an automatic retry',asyn
 test('an oversized edit response is rejected before JSON/image decoding',async t=>{
   fixtures(t,async()=>new Response(new Uint8Array(8_100_001)));
   await assert.rejects(generateTwin(args()),/response-too-large/);
+});
+test('a 401 from the edit relay surfaces as login, not as a bad photo',async t=>{
+  fixtures(t,async()=>new Response('{"ok":false,"error":"unauthorized"}',{status:401}));
+  await assert.rejects(generateTwin(args()),/login/);
 });
