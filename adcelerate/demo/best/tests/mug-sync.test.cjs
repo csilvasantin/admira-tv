@@ -7,7 +7,7 @@ function harness(fetch){
  const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
  const code=html.slice(html.indexOf("let lastMugKey="),html.indexOf('function mappedMusicToScreen'));
  const timers=new Map();let next=0;
- const ctx=vm.createContext({fetch,AbortSignal,console:{info(){}},window:{addEventListener(){}},setTimeout(fn){timers.set(++next,fn);return next},clearTimeout(id){timers.delete(id)}});
+ const ctx=vm.createContext({READONLY_DEMO:false,fetch,AbortSignal,console:{info(){}},window:{addEventListener(){}},setTimeout(fn){timers.set(++next,fn);return next},clearTimeout(id){timers.delete(id)}});
  vm.runInContext(code+';globalThis.select=mappedMusicToMug;',ctx);
  return {select:ctx.select,async settle(){for(let i=0;i<10;i++)await new Promise(setImmediate)},async retry(){const jobs=[...timers.values()];timers.clear();for(const fn of jobs)fn();await this.settle()},timers};
 }
