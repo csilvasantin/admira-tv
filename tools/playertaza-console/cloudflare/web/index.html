@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="admiranext-version" content="v.07.10.2026.camera-live">
+  <title>PlayerTaza</title>
+  <style>
+    :root {
+      --bg: #0b0d10; --panel: #14181e; --ink: #e8edf2; --muted: #8b96a3;
+      --cyan: #3dffd4; --bad: #ff5d6c; --line: #2a313a; --me: #1b3a4a;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+      font: 15px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+    body { display: flex; flex-direction: column; }
+    header {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 10px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap;
+    }
+    header h1 { margin: 0; font-size: 16px; font-weight: 700; }
+    header h1 span { color: var(--cyan); }
+    nav { display: flex; gap: 14px; font-size: 13px; }
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .pills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .pill { font-size: 11px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); }
+    .pill.ok { color: var(--cyan); border-color: #1c6; }
+    .pill.bad { color: var(--bad); border-color: var(--bad); }
+    .workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(330px, 48%) minmax(0, 1fr); }
+    .side {
+      border-right: 1px solid var(--line); padding: 12px; display: flex;
+      flex-direction: column; gap: 10px; min-width: 0;
+    }
+    .cam {
+      background: #000; border: 1px solid var(--line); border-radius: 10px;
+      overflow: hidden; aspect-ratio: 16 / 9; max-height: none;
+    }
+    .cam img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .mug-preview {
+      background: #000; border: 1px solid var(--line); border-radius: 10px;
+      overflow: hidden; aspect-ratio: 32 / 16;
+    }
+    .mug-preview img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; }
+    .cap { margin: 0; font-size: 11px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+    .look { margin: 0; font-size: 12px; color: var(--muted); max-height: 4.6em; overflow: auto; }
+    .chat {
+      min-width: 0; min-height: 0; display: flex; flex-direction: column;
+      background: var(--panel);
+    }
+    #log { flex: 1; overflow: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .msg { max-width: 88%; }
+    .msg .who { font-size: 11px; color: var(--muted); display: flex; gap: 8px; }
+    .msg p { margin: 4px 0 0; white-space: pre-wrap; word-break: break-word; padding: 8px 12px; border-radius: 12px; }
+    .msg.smith { align-self: flex-start; }
+    .msg.smith p { background: #10241f; border: 1px solid #1e4a40; }
+    .msg.carlos { align-self: flex-end; }
+    .msg.carlos .who { justify-content: flex-end; }
+    .msg.carlos p { background: var(--me); border: 1px solid #2b5f78; }
+    .badge { font-size: 10px; text-transform: uppercase; color: var(--muted); }
+    .composer { padding: 12px 16px 14px; border-top: 1px solid var(--line); }
+    form { display: flex; gap: 8px; }
+    form input {
+      flex: 1; background: #0b0d10; color: var(--ink); border: 1px solid var(--line);
+      border-radius: 10px; padding: 12px; font: inherit;
+    }
+    form button {
+      background: var(--cyan); color: #04110c; border: 0; border-radius: 10px;
+      padding: 12px 18px; font-weight: 700; cursor: pointer;
+    }
+    form button:disabled { opacity: .5; cursor: wait; }
+    #send-status { min-height: 1.1em; margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+    #send-status.ok { color: var(--cyan); }
+    #send-status.bad { color: var(--bad); }
+    @media (max-width: 720px) {
+      .workspace { grid-template-columns: 1fr; }
+      .side {
+        flex-direction: row; align-items: stretch; border-right: 0;
+        border-bottom: 1px solid var(--line); padding: 10px;
+      }
+      .cam { width: 42%; max-height: 110px; aspect-ratio: 4 / 3; }
+      .mug-box { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+      .look { max-height: 3.2em; }
+    }
+
+    body.camera-expanded .workspace {grid-template-columns:minmax(0,7fr) minmax(0,3fr);}
+    body.camera-expanded .side {width:auto;}
+    body.camera-expanded .cam {width:100%;height:auto;aspect-ratio:16 / 9;max-height:none;}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Player<span>Taza</span></h1>
+    <nav>
+      <a href="/previo">Previo</a>
+      <a href="/app">App</a>
+      <a href="/help">Ayuda</a>
+    </nav>
+    <div class="pills">
+      <span id="cam-pill" class="pill">cámara…</span>
+      <span id="ble-pill" class="pill">BLE…</span>
+      <span id="tg-pill" class="pill">Agora…</span>
+    </div>
+  </header>
+  <div class="workspace">
+    <aside class="side">
+      <div>
+        <section data-store-config style="padding:12px;background:#12151c;border:1px solid #2a313a;border-radius:10px;margin:12px 0"></section><script src="/store-config.js?v=20261007-segments" defer></script>
+<p class="cap">Cámara</p>
+        <div class="cam"><img id="live" alt="" hidden style="display:none"><video id="local-camera" autoplay muted playsinline hidden style="width:100%;height:100%;object-fit:contain;display:none"></video></div>
+        <p><button type="button" id="camera-open">Abrir cámara de este Mac</button> <button type="button" id="camera-stop" disabled>Cerrar cámara</button> <button type="button" id="camera-expand">Ampliar cámara</button></p>
+        <label>Cámara <select id="camera-device" aria-label="Cámara" disabled></select></label>
+        <label>Brillo del visor <input id="camera-brightness" type="range" min="25" max="150" value="65" aria-label="Brillo del visor"><output id="camera-brightness-value">65%</output></label>
+        <p id="camera-message" role="status">La cámara de este Mac se muestra aquí, sin subir imágenes.</p>
+      </div>
+      <div class="mug-box">
+        <p class="cap"><a href="/previo">Taza 32×16</a></p>
+        <div class="mug-preview"><a href="/previo"><img id="gif" alt="GIF de la taza" src="/gif.gif"></a></div>
+        <p class="look" id="look"></p>
+      </div>
+    </aside>
+    <section class="chat">
+      <div id="log"></div>
+      <div class="composer">
+        <form id="form">
+          <input id="text" maxlength="800" placeholder="Escribe y pulsa Enviar" autocomplete="off" autofocus>
+          <button id="send" type="submit">Enviar</button>
+        </form>
+        <p id="send-status"></p>
+      </div>
+    </section>
+  </div>
+  <script src="/local-camera.js?v=20261007-live"></script>
+  <script>
+    const logEl = document.getElementById("log");
+    const pill = document.getElementById("cam-pill");
+    const ble = document.getElementById("ble-pill");
+    const tg = document.getElementById("tg-pill");
+    const lookEl = document.getElementById("look");
+    const live = document.getElementById("live");
+    const gif = document.getElementById("gif");
+    const input = document.getElementById("text");
+    const sendBtn = document.getElementById("send");
+    const sendStatus = document.getElementById("send-status");
+    let lastSig = "";
+    let stickBottom = true;
+    logEl.addEventListener("scroll", () => {
+      stickBottom = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 48;
+    });
+    setInterval(() => { gif.src = "/gif.gif?t=" + Date.now(); }, 4000);
+
+    async function status() {
+      try {
+        const s = await (await fetch("/api/status", { cache: "no-store" })).json();
+        if (s.ble_name) {
+          ble.textContent = "CarlosGdG · destino";
+          ble.className = "pill";
+        } else {
+          ble.textContent = "sin taza";
+          ble.className = "pill";
+        }
+        if (s.telegram_configured) {
+          tg.textContent = s.telegram_ok ? "Agora" : "Agora?";
+          tg.className = "pill " + (s.telegram_ok ? "ok" : "");
+        } else {
+          tg.textContent = "local";
+          tg.className = "pill";
+        }
+        lookEl.textContent = "Supervisión visual en directo. El contenido recibido se comprueba en los LEDs.";
+      } catch (e) {
+        tg.textContent = "sin servidor";
+        tg.className = "pill bad";
+      }
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+    function originOf(m) {
+      const via = String(m.via || "").toLowerCase();
+      const text = String(m.text || "");
+      if (via === "telegram" || text.startsWith("[Telegram]")) return "Telegram";
+      if (/smith/i.test(m.author || "")) return "mesa";
+      return "web";
+    }
+    function displayText(m) {
+      return String(m.text || "").replace(/^\[Telegram\]\s*/, "");
+    }
+    function render(messages) {
+      const sig = messages.map(m => (m.ts || "") + ":" + (m.text || "")).join("|");
+      if (sig === lastSig) return;
+      lastSig = sig;
+      logEl.innerHTML = messages.map(m => {
+        const who = m.author || "";
+        const cls = /smith/i.test(who) ? "msg smith" : "msg carlos";
+        const t = new Date(m.ts).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+        return `<div class="${cls}"><div class="who"><span>${escapeHtml(who)} · ${t}</span><span class="badge">${escapeHtml(originOf(m))}</span></div><p>${escapeHtml(displayText(m))}</p></div>`;
+      }).join("");
+      if (stickBottom) logEl.scrollTop = logEl.scrollHeight;
+    }
+    async function pullLog() {
+      const d = await (await fetch("/api/log", { cache: "no-store" })).json();
+      render(d.messages || []);
+    }
+    document.getElementById("form").addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = "";
+      sendBtn.disabled = true;
+      sendStatus.textContent = "Enviando…";
+      sendStatus.className = "";
+      try {
+        const r = await fetch("/api/log", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ author: "Carlos", text, via: "web" })
+        });
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error || "falló el envío");
+        sendStatus.textContent = (d.telegram && d.telegram.ok) ? "Enviado" : "En la mesa";
+        sendStatus.className = (d.telegram && d.telegram.ok) ? "ok" : "";
+      } catch (e) {
+        sendStatus.textContent = "No se pudo enviar";
+        sendStatus.className = "bad";
+        input.value = text;
+      }
+      sendBtn.disabled = false;
+      await pullLog();
+      input.focus();
+    });
+    status(); pullLog();
+    setInterval(status, 1500);
+    setInterval(pullLog, 900);
+    input.focus();
+  </script>
+</body>
+</html>
