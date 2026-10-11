@@ -90,3 +90,44 @@ test("páginas: el control es un KDS (líneas, espera, botones táctiles) y la p
   assert.doesNotMatch(ctl, /mcp-ainimation\.admira\.store/, "el navegador nunca llama al relé directamente");
   assert.match(pan, /api\/estado\?sala='\+sala\+'&publico=1/);
 });
+
+// Encargo 5672 (11-oct-2026): sondeo más ligero y aviso bilingüe.
+test("lectura de la pantalla (?publico=1): el relé recibe una sola petición mientras dura la memoria; una escritura la olvida", async () => {
+  const { olvidaEstado, ESTADO_TTL } = await import("./functions/gestorColas/api/[op].js");
+  olvidaEstado(); const ll = releSimulado(); const gc = await claveDe(env, SALA);
+  const leer = () => api(ctx(`/gestorColas/api/estado?sala=${SALA}&publico=1&_=${Math.random()}`)).then((r) => r.json());
+  const a = await leer(), b = await leer(), c = await leer();
+  assert.equal(ll.length, 1, "tres lecturas seguidas, una sola al relé");
+  assert.equal(a.recibido[0].lineas, undefined); assert.equal(c.recibido[0].nombre, "Ana", "sigue sin detalle");
+  assert.ok(Date.parse(b.ahora) >= Date.parse(a.ahora) || !a.ahora);
+  assert.ok(ESTADO_TTL >= 1000 && ESTADO_TTL <= 2000, "memoria de 1-2 s");
+  await api(ctx(`/gestorColas/api/avanzar?sala=${SALA}`, { method: "POST", headers: { "x-clave-sala": gc }, body: { pedido: "A001", a: "listo" } }));
+  await leer();
+  assert.equal(ll.filter((x) => /\/cola\/estado/.test(x.url)).length, 2, "tras avanzar un pedido se vuelve a preguntar al relé");
+  await api(ctx(`/gestorColas/api/estado?sala=starbucks-qa&publico=1`));
+  assert.match(ll.at(-1).url, /store=starbucks-qa/, "cada sala tiene su memoria");
+  olvidaEstado();
+});
+
+test("la lectura con detalle (barra) nunca sale de la memoria pública", async () => {
+  const { olvidaEstado } = await import("./functions/gestorColas/api/[op].js");
+  olvidaEstado(); const ll = releSimulado(); const gc = await claveDe(env, SALA);
+  await api(ctx(`/gestorColas/api/estado?sala=${SALA}&publico=1`));
+  const r = await (await api(ctx(`/gestorColas/api/estado?sala=${SALA}`, { headers: { "x-clave-sala": gc } }))).json();
+  assert.deepEqual(r.recibido[0].lineas, [LATTE]); assert.equal(ll.length, 2);
+  olvidaEstado();
+});
+
+test("pantalla y KDS: sondeo adaptativo (2 s con pedidos, 6 s con la cola vacía) en lugar de un intervalo fijo", () => {
+  const pantalla = fs.readFileSync("gestorColas/pantalla/index.html", "utf8"), kds = fs.readFileSync("gestorColas/index.html", "utf8");
+  for (const h of [pantalla, kds]) { assert.doesNotMatch(h, /setInterval\(tic,2000\)/); assert.match(h, /reloj=setTimeout\(ronda,c\)/); }
+  assert.match(pantalla, /const RAPIDO=2000,LENTO=6000/); assert.match(kds, /vacia\(ultimo\)\?6000:2000/);
+});
+
+test("pantalla: el aviso se dice y se escribe en los dos idiomas en la misma llamada; ?bilingue=0 lo deja en uno", () => {
+  const h = fs.readFileSync("gestorColas/pantalla/index.html", "utf8");
+  assert.match(h, /const BILINGUE=P\.get\('bilingue'\)!=='0'/);
+  assert.match(h, /partes=\[\[t\.dice\(num,nom\),t\.voz\]\]\.concat\(t2\?\[\[t2\.dice\(num,nom\),t2\.voz\]\]:\[\]\)/);
+  assert.match(h, /if\(i\+1<partes\.length\)habla\(i\+1\);else cerrar\('fin'\)/, "la segunda locución empieza al acabar la primera");
+  assert.match(h, /\(cola\.length\?4500:6000\)\*partes\.length/, "el tope del aviso se dobla con dos idiomas");
+});

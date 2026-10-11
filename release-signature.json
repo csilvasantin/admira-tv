@@ -1,9 +1,9 @@
 {
-  "version": "v.11.10.2026.r1.15:08",
+  "version": "v.11.10.2026.r2.15:21",
   "signature": "NeoMBP16 · MacBookPro16",
   "agent": "NeoMBP16",
   "machine": "MacBookPro16",
   "day": "11.10.2026",
-  "time": "15:08",
-  "evidence": "Demo Starbucks: el canal con ?marca=<cliente> ya no dice Admira en la pestaña ni en el icono; avatar de Xtore por relé con sesión (PR 21, 401 en /image/edit); reintento de la taza de Jardinets (PR 28). Encargo 5671."
+  "time": "15:21",
+  "evidence": "Gestor de colas: sondeo adaptativo de pantalla y KDS (2 s con pedidos, 6 s con la cola vacía) con memoria de 1,5 s en la lectura pública; aviso bilingüe ES+EN en la misma llamada, probado en la sala starbucks-qa. Encargo 5672."
 }
