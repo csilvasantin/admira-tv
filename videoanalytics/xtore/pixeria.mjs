@@ -1,15 +1,17 @@
-import {decodeImage,stockPayload,twinPrompt} from './twins.mjs';
+import {decodeImage,stockPayload} from './twins.mjs';
 
 const API='https://api.admira.store';
+// /image/edit es de pago (401 sin sesión Pixeria): va por el relé con la sesión de Admira.tv.
+const EDIT='/videoanalytics/api/twin-edit';
 // No original is sent to Stock, spawn queues, URL importers, logs or browser storage.
-async function request(path,body,signal){
+async function request(url,body,signal,credentials='omit'){
   const controller=new AbortController(),cancel=()=>controller.abort();
   signal.addEventListener('abort',cancel,{once:true});
   const timer=setTimeout(cancel,90_000);
   if(signal.aborted)cancel();
   try{
-    const response=await fetch(API+path,{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
-    if(!response.ok){await response.body?.cancel();throw new Error('pixeria-unavailable');}
+    const response=await fetch(url,{method:'POST',mode:credentials==='omit'?'cors':'same-origin',credentials,cache:'no-store',redirect:'error',referrerPolicy:'no-referrer',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
+    if(!response.ok){await response.body?.cancel();throw new Error(response.status===401?'login':response.status===403?'access':'pixeria-unavailable');}
     const reader=response.body.getReader(),chunks=[];let size=0;
     try{
       while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>8_100_000)throw new Error('response-too-large');chunks.push(value);}
@@ -26,7 +28,7 @@ export async function generateTwin({source,category,style,signal}){
     canvas.getContext('2d').putImageData(new ImageData(source.data,source.width,source.height),0,0);
     original=canvas.toDataURL('image/png');
     canvas.width=1;canvas.height=1;
-    const response=await request('/image/edit',{image:original,mime:'image/png',sys:'Genera un objeto ficticio redibujado. No describas ni clasifiques atributos sensibles. Nunca copies una identidad real.',prompt:twinPrompt(category,style)},signal);
+    const response=await request(EDIT,{image:original,category,style},signal,'same-origin');
     if(signal.aborted||!response.ok||response.image===original)throw new Error('no-new-result');
     result=decodeImage(response.image);response.image=null;
     // Decode before declaring success; a data URL alone is not a usable image.
@@ -38,7 +40,7 @@ export async function generateTwin({source,category,style,signal}){
   finally{original=null;canvas.width=1;canvas.height=1;}
 }
 export async function publishTwin({result,category,style,signal}){
-  const response=await request('/stock/publish',stockPayload(result,category,style),signal);
+  const response=await request(API+'/stock/publish',stockPayload(result,category,style),signal);
   if(!response.ok||!response.id||!response.url)throw new Error('publication-unconfirmed');
   return {id:response.id,url:response.url};
 }

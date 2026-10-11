@@ -1,5 +1,5 @@
 import {TwinSession,STYLES,CATEGORIES} from './twins.mjs';
-import {generateTwin,publishTwin} from './pixeria.mjs';
+import {generateTwin,publishTwin} from './pixeria.mjs?v=twin-edit-1';
 import {readAvatarPhoto} from './avatar-source.mjs';
 
 export function installTwinUI({document,generate=generateTwin,publish=publishTwin,readPhoto=readAvatarPhoto,onOriginalRemoved=()=>{}}){
@@ -18,7 +18,7 @@ export function installTwinUI({document,generate=generateTwin,publish=publishTwi
   };
   const session=new TwinSession({generate,publish,onChange:s=>{
     const phase=s.phase;
-    $('twin-status').textContent=loadingPhoto?'Abriendo foto en este navegador…':messages[phase];
+    $('twin-status').textContent=loadingPhoto?'Abriendo foto en este navegador…':phase==='failed'&&s.error==='login'?'Inicia sesión en Admira.tv para generar el avatar. Copia temporal retirada.':phase==='failed'&&s.error==='access'?'Tu cuenta no tiene acceso a Admira.tv para generar avatares. Copia temporal retirada.':messages[phase];
     $('twin-photo').disabled=loadingPhoto||['generating','publishing','review','publish-unknown'].includes(phase);
     const sourceCanvas=$('twin-source');
     sourceCanvas.hidden=!s.source;
