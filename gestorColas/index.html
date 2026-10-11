@@ -2,13 +2,13 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=11.10.2026.r1.1508"></script>
+<script src="/auth-gate.js?v=11.10.2026.r2.1521"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Gestor de colas · Admira.tv</title>
-<meta name="admiranext-version" content="v.11.10.2026.r1.15:08">
+<meta name="admiranext-version" content="v.11.10.2026.r2.15:21">
 <meta name="robots" content="noindex">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/admira-frame.css?v=11.10.2026.r1.1508">
+<link rel="stylesheet" href="/admira-frame.css?v=11.10.2026.r2.1521">
 <style>
 :root{--c:#00704A;--osc:#1E3932;--fondo:#f4f2ee;--tx:#14211d}
 body{margin:0;font-family:Inter,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--fondo);color:var(--tx)}
@@ -45,8 +45,8 @@ main{max-width:1200px;margin:0 auto;padding:18px}
 </style>
 </head>
 <body>
-<script src="/admira-nav.js?v=11.10.2026.r1.1508" data-active="apps" data-title="Gestor de colas" defer></script>
-<script src="/admira-frame.js?v=11.10.2026.r1.1508" defer></script>
+<script src="/admira-nav.js?v=11.10.2026.r2.1521" data-active="apps" data-title="Gestor de colas" defer></script>
+<script src="/admira-frame.js?v=11.10.2026.r2.1521" defer></script>
 <main>
   <div class="top"><h1>☕ <span data-t="titulo">Gestor de colas</span> <small id="salaTxt"></small></h1>
     <button class="pill" id="bPantalla" data-t="abrirPantalla">Abrir pantalla iPad</button>
@@ -134,9 +134,14 @@ function cmd(s){const [c,...a]=s.trim().split(/\s+/);const x=(a[0]||'').toUpperC
   if(c==='/pantalla')return $('bPantalla').click();if(c==='/help')return window.open('/gestorColas/help/','_blank');aviso('? '+s,true);}
 $('cli').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.value){cmd(e.target.value);e.target.value='';}});
 window.__gestorColas={cmd,get sala(){return sala;},tic};
-textos();tic();setInterval(tic,2000);
+// Sondeo adaptativo (encargo 5672): 2 s con comandas a la vista, 6 s con la barra vacía. Una acción del barista
+// (crear, avanzar, llamar) sigue refrescando al instante porque hacer() llama a tic().
+let reloj=0;function vacia(d){return !d||!((d.recibido||[]).length||(d.preparando||[]).length||(d.listo||[]).length);}
+async function ronda(){clearTimeout(reloj);await tic();const c=vacia(ultimo)?6000:2000;window.__gestorColas.cada=c;reloj=setTimeout(ronda,c);}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)ronda();});
+textos();ronda();
 })();
 </script>
-<script src="/assets/admira-version-watch.js?v=11.10.2026.r1.1508" defer></script>
+<script src="/assets/admira-version-watch.js?v=11.10.2026.r2.1521" defer></script>
 </body>
 </html>

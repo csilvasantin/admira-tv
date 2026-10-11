@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>Pedidos · Pantalla</title>
-<meta name="admiranext-version" content="v.11.10.2026.r1.15:08">
+<meta name="admiranext-version" content="v.11.10.2026.r2.15:21">
 <meta name="robots" content="noindex">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Pedidos">
@@ -48,6 +48,7 @@ section h2{margin:0 0 14px;font-size:clamp(20px,2.3vw,36px);white-space:nowrap;o
 #bocadillo.on{opacity:1;transform:none}
 /* Con la nube cargada, el bocadillo lo dibuja Admirito (say); el nuestro queda solo como respaldo accesible */
 #bocadillo b{color:var(--listo)}
+#bocadillo .otro{display:block;margin-top:8px;padding-top:8px;border-top:1px solid #0002;font-size:.78em;font-weight:700;opacity:.8}
 #bocadillo:after{content:'';position:absolute;bottom:-16px;left:46%;border:16px solid transparent;border-bottom:0;border-top-color:#fff}
 footer{grid-column:1/-1;background:#FFE58A;color:#3A2E00;text-align:center;font-weight:700;font-size:13px;padding:7px}
 #girar{display:none}
@@ -73,6 +74,9 @@ document.documentElement.style.setProperty('--c',M.c);document.documentElement.s
 $('marca').textContent=M.nombre;$('logo').textContent=M.logo;document.title=M.nombre+' · Pedidos';
 const tienda=sala.replace(/^[a-z0-9]+-/,'').split('-').map(w=>w&&w[0].toUpperCase()+w.slice(1)).join(' ');
 let lang=(P.get('lang')||'es').slice(0,2)==='en'?'en':'es';
+// Aviso bilingüe (encargo 5672): cada llamada se dice y se escribe en los dos idiomas, primero el de la pantalla
+// y después el otro. ?bilingue=0 vuelve al aviso en un solo idioma.
+const BILINGUE=P.get('bilingue')!=='0';const otro=()=>lang==='es'?'en':'es';
 const T={es:{reci:'📥 Recibido',pasa:'a preparación en',prep:'⏳ En preparación',listo:'✅ ¡Listo para recoger!',vacio:'—',pie:'DEMO · pedidos de ejemplo y pago SIMULADO: no se cobra nada',btn:'EN',off:'Sin conexión, reintentando…',
   dice:(n,nom)=>nom?nom+', tu pedido '+M.nombre+' está preparado. Pedido '+n+', recógelo en barra.':'Pedido '+n+', ya está listo. Recógelo en barra, por favor.',
   html:(n,nom)=>nom?'<b>'+nom+'</b>, tu pedido '+M.nombre+' está preparado ☕<br><small>Pedido '+n+' · recógelo en barra</small>':'Pedido <b>'+n+'</b> listo ☕ ¡Recógelo en barra!',voz:'es-ES'},
@@ -104,22 +108,28 @@ let actual=null,cortar=null;
 let inicioAviso=0,topeAviso=0;
 function decir(p){const g=gen,t=T[lang],num=String(p.numero).replace(/[^A-Z0-9]/gi,''),nom=p.nombre||'';
   if(!sigueListo(p))return Promise.resolve();
-  const texto=t.dice(num,nom),b=$('bocadillo');b.innerHTML=t.html(esc(num),esc(nom));b.classList.add('on');
+  const t2=BILINGUE?T[otro()]:null,partes=[[t.dice(num,nom),t.voz]].concat(t2?[[t2.dice(num,nom),t2.voz]]:[]);
+  const texto=partes.map(x=>x[0]).join(' · '),b=$('bocadillo');b.innerHTML=t.html(esc(num),esc(nom))+(t2?'<span class="otro" lang="'+otro()+'">'+t2.html(esc(num),esc(nom))+'</span>':'');b.classList.add('on');
   let via='pantalla';const ss=window.speechSynthesis;
+  const dichas=[];
   return new Promise(fin=>{let hecho=false,timer=0;actual=p;inicioAviso=Date.now();
     const cerrar=(motivo)=>{if(hecho)return;hecho=true;clearTimeout(timer);actual=null;cortar=null;
       if(motivo!=='fin'){try{ss&&ss.cancel();}catch(_){}}
-      said.push({id:p.id,numero:num,nombre:nom||null,text:texto,via,lang:t.voz,at:inicioAviso,ms:Date.now()-inicioAviso,motivo});
+      said.push({id:p.id,numero:num,nombre:nom||null,text:texto,via,lang:partes.map(x=>x[1]).join('+'),dichas,at:inicioAviso,ms:Date.now()-inicioAviso,motivo});
       if(motivo==='cortado'||cola.length){if(g===gen)b.classList.remove('on');return fin();}
       setTimeout(()=>{if(g===gen&&!actual)b.classList.remove('on');fin();},900);};
     cortar=()=>cerrar('cortado');
-    const plazo=()=>{const tope=cola.length?4500:6000;topeAviso=tope;const resto=tope-(Date.now()-inicioAviso);if(resto<=0)return cerrar('tope');timer=setTimeout(plazo,Math.min(resto,500));};
+    const plazo=()=>{const tope=(cola.length?4500:6000)*partes.length;topeAviso=tope;const resto=tope-(Date.now()-inicioAviso);if(resto<=0)return cerrar('tope');timer=setTimeout(plazo,Math.min(resto,500));};
     plazo();
     // Sin voz (parada a mano, sin soporte o bloqueada por el navegador) el bocadillo es el único aviso: se queda 5 s.
-    const SOLO_TEXTO=5000;
+    const SOLO_TEXTO=5000*partes.length;
     if(!vozOk||!ss||typeof SpeechSynthesisUtterance!=='function'){setTimeout(()=>cerrar('sin-voz'),SOLO_TEXTO);return;}
-    try{ss.cancel();const u=new SpeechSynthesisUtterance(texto);u.lang=t.voz;u.rate=1.02;const v=vozDe(ss,t.voz);if(v)u.voice=v;via='voz-'+t.voz;
-      u.onend=()=>cerrar('fin');u.onerror=()=>setTimeout(()=>cerrar('error-voz'),Math.max(0,SOLO_TEXTO-(Date.now()-inicioAviso)));ss.speak(u);}catch(_){setTimeout(()=>cerrar('error-voz'),SOLO_TEXTO);}});}
+    // Una locución por idioma, encadenadas: la segunda empieza cuando acaba la primera, cada una con su voz.
+    try{ss.cancel();via='voz-'+partes.map(x=>x[1]).join('+');
+      const falla=()=>setTimeout(()=>cerrar('error-voz'),Math.max(0,SOLO_TEXTO-(Date.now()-inicioAviso)));
+      const habla=i=>{if(hecho)return;const u=new SpeechSynthesisUtterance(partes[i][0]);u.lang=partes[i][1];u.rate=1.02;const v=vozDe(ss,partes[i][1]);if(v)u.voice=v;
+        u.onend=()=>{dichas.push(partes[i][1]);if(i+1<partes.length)habla(i+1);else cerrar('fin');};u.onerror=falla;ss.speak(u);};
+      habla(0);}catch(_){setTimeout(()=>cerrar('error-voz'),SOLO_TEXTO);}});}
 async function siguiente(){if(hablando)return;hablando=true;try{while(cola.length){const p=cola.shift();await decir(p);}}finally{hablando=false;}}
 const chips=(a,nuevos)=>a.length?a.map(p=>'<span class="n'+(nuevos&&nuevos.has(p.id)?' nuevo':'')+'">'+esc(p.numero)+(p.nombre?'<small>'+esc(p.nombre)+'</small>':'')+'</span>').join(''):'<span class="vacio">'+T[lang].vacio+'</span>';
 // Vaso para llevar con la manga del color de la marca (dibujo propio, sin logotipo).
@@ -164,12 +174,19 @@ $('voz').onclick=e=>{e.stopPropagation();vozOk=!vozOk;try{if(vozOk)localStorage.
 setInterval(()=>{$('reloj').textContent=new Date().toLocaleTimeString(lang==='en'?'en-GB':'es-ES',{hour:'2-digit',minute:'2-digit'});},1000);
 try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(()=>{});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&navigator.wakeLock)navigator.wakeLock.request('screen').catch(()=>{});});}catch(_){}
 window.__pantalla={get sala(){return sala;},get lang(){return lang;}};
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)tic();});addEventListener('online',tic);addEventListener('pageshow',tic);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)ronda();});addEventListener('online',()=>ronda());addEventListener('pageshow',()=>ronda());
 // Versión nueva publicada → recarga sola (el iPad no tiene a nadie que pulse F5).
 // Se compara con el sello que había AL ABRIR (antes era el <meta> de esta página, que no se sella con el
 // release: la pantalla se recargaba sola cada minuto y volvía a pedir el toque de voz).
 let V0='';const sello=()=>fetch('/version.json?_='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(v=>{if(!v.version)return;if(!V0){V0=v.version;return;}if(v.version!==V0&&!hablando)location.reload();}).catch(()=>{});sello();setInterval(sello,60000);
-textos();tic();setInterval(tic,2000);
+// Sondeo adaptativo (encargo 5672, 11-oct-2026): cada 2 s sin caché eran ~43.000 peticiones al día por pantalla,
+// casi todas con la cola vacía. Con pedidos en curso o un aviso sonando se sigue preguntando cada 2 s; con la
+// cola vacía, cada 6 s. ?sondeo=<s> lo fija a mano (2-30). window.__pantallaStats.cada dice el ritmo actual.
+const RAPIDO=2000,LENTO=6000,FIJO=Math.min(30,Math.max(2,+P.get('sondeo')||0))*1000*(P.has('sondeo')?1:0);
+function cadencia(){if(FIJO)return FIJO;const d=ultimo;if(!d||document.body.dataset.ok==='0')return RAPIDO;
+  return ((d.recibido||[]).length||(d.preparando||[]).length||(d.listo||[]).length||hablando||cola.length)?RAPIDO:LENTO;}
+let reloj=0;async function ronda(){clearTimeout(reloj);await tic();const c=cadencia();window.__pantallaStats.cada=c;reloj=setTimeout(ronda,c);}
+textos();ronda();
 })();
 </script>
 </body>

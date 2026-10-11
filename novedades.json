@@ -4,6 +4,11 @@
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
   ],
+  "v.11.10.2026.r2.15:21": [
+    "Gestor de colas: cada pedido listo se anuncia en español y en inglés en la misma llamada (voz y bocadillo)",
+    "Pantalla de pedidos y KDS preguntan cada 6 s con la cola vacía y cada 2 s con pedidos: un tercio de las peticiones",
+    "?bilingue=0 deja el aviso en un solo idioma y ?sondeo=<s> fija el ritmo a mano"
+  ],
   "v.11.10.2026.r1.15:08": [
     "Canal en marca blanca: con ?marca=starbucks la pestaña y el icono dejan de decir Admira (emisión limpia de la demo)",
     "Xtore: «Crear avatar» vuelve a funcionar; la generación pasa por un relé con tu sesión de Admira.tv",
