@@ -608,6 +608,7 @@
     var id = normal(def.id);
     verbos = verbos.filter(function (v) { return v.id !== id; });
     verbos.push({id: id, aliases: (def.aliases || []).map(normal), uso: def.uso || '', ayuda: def.ayuda || '', run: def.run});
+    if(G.AdmiraExperto)suiteAction(G.AdmiraExperto,verbos[verbos.length-1]);
   }
   function imprimir(linea, tipo) {
     if (!cli) return;
@@ -622,18 +623,11 @@
     limpiar: function () { if (cli) cli.out.textContent = ''; }
   };
   function ejecutar(orden) {
-    var limpio = String(orden || '').trim();
-    if (!limpio) return;
-    imprimir('› ' + limpio, 'cmd');
-    var partes = limpio.replace(/^\//, '').split(/\s+/);
-    var v = buscarVerbo(partes[0]);
-    if (!v) { imprimir('Verbo desconocido: /' + partes[0] + ' · escribe /help', 'err'); return; }
-    try {
-      var r = v.run(partes.slice(1), ctx, limpio);
-      if (r && typeof r.then === 'function') r.then(null, function (e) { imprimir('Error: ' + (e && e.message || e), 'err'); });
-    } catch (e) { imprimir('Error: ' + (e && e.message || e), 'err'); }
+    if(G.AdmiraExperto)return G.AdmiraExperto.exec(orden,cli&&cli.out);
+    imprimir('Motor de comandos cargando. Inténtalo de nuevo.','err');
   }
-
+  function suiteAction(engine,def){engine.registerAdapter({id:'tv-action-'+def.id,verbs:[{name:def.id,alias:def.aliases||[],args:def.uso||'',desc:[def.ayuda||def.id,def.ayuda||def.id],run:function(args,log,command){return def.run(args,ctx,command.raw);}}]});}
+  (G.AdmiraCommandAdapters=G.AdmiraCommandAdapters||[]).push(function(engine){engine.registerAdapter({id:'tv'});verbos.forEach(function(def){suiteAction(engine,def);});});
 
   // ── Marca blanca (catálogo admiranext.com/marcablanca · demo Starbucks) ──
   var __mbPromise = null;
@@ -796,3 +790,5 @@
   };
   if (typeof CustomEvent === 'function' && doc.dispatchEvent) doc.dispatchEvent(new CustomEvent('admira-frame:ready'));
 })();
+
+;(function(){var s=document.createElement("script");s.src="https://www.admiranext.com/suite/loader.js?v=20261012-unified-1";s.defer=true;document.head.appendChild(s);})();
