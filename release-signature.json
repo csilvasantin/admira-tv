@@ -1,9 +1,9 @@
 {
-  "version": "v.12.10.2026.r2.12:11",
+  "version": "v.12.10.2026.r3.14:37",
   "signature": "NeoMBP14 · MacBookProNegro14",
   "agent": "NeoMBP14",
   "machine": "MacBookProNegro14",
   "day": "12.10.2026",
-  "time": "12:11",
-  "evidence": "Playlists: arreglos de la revisión del selector de contenidos (filtro de orientación que no esconde las piezas sin formato declarado, orientación medida en la vista previa y nunca de portadas de YouTube, foco en la vista previa, imágenes pesadas sin descargar, piezas recién subidas). Misión Hoy #75 · PR 78."
+  "time": "14:37",
+  "evidence": "Playlists: editor completo (ordenar arrastrando, duración por pieza y de la vuelta, duplicar y eliminar una playlist, guardado por playlist con aviso de conflicto). Va con el worker xpl-store 9165177 (upsert/remove). Misión DCL-c845432521a65990306443b8."
 }
