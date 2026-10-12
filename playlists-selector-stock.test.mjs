@@ -30,7 +30,7 @@ function abre({ indice, lista = [], indiceCae = false, storage = {} } = {}) {
     return new Response("no", { status: 404 });
   };
   const ctx = {
-    document: { getElementById: $, querySelector: () => null, querySelectorAll: () => [], addEventListener() {} },
+    document: { getElementById: $, querySelector: () => null, querySelectorAll: () => [], addEventListener() {}, removeEventListener() {}, createElement: () => elemento("nuevo"), body: { classList: clases() } },
     localStorage: { getItem: k => (ls.has(k) ? ls.get(k) : null), setItem: (k, v) => ls.set(k, String(v)), removeItem: k => ls.delete(k) },
     fetch: red, confirm: () => true, prompt: () => null, alert() {}, setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
     console, URL, location: { href: "http://localhost/playlists/" }, navigator: { clipboard: { writeText() {} } },
