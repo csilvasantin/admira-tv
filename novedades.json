@@ -4,6 +4,11 @@
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
   ],
+  "v.12.10.2026.r2.12:11": [
+    "Playlists: al filtrar por vertical u horizontal salen primero las piezas confirmadas y detrás las que no declaran formato, en vez de esconderlas",
+    "La vista previa mide el vídeo real y corrige la orientación; las miniaturas de YouTube ya no cuentan",
+    "Las piezas recién subidas a Pixeria aparecen en el selector al momento y las imágenes pesadas ya no se descargan para la miniatura"
+  ],
   "v.12.10.2026.r1.12:06": [
     "Playlists: el selector de contenidos enseña el Stock entero (más de 1.100 piezas; antes sólo las 160 más recientes)",
     "Cada pieza con su portada, su nº, su orientación y vista previa antes de añadirla; se busca por título, etiqueta o #número",

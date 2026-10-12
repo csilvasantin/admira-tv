@@ -33,7 +33,7 @@ function abre({ indice, lista = [], indiceCae = false, storage = {} } = {}) {
     document: { getElementById: $, querySelector: () => null, querySelectorAll: () => [], addEventListener() {} },
     localStorage: { getItem: k => (ls.has(k) ? ls.get(k) : null), setItem: (k, v) => ls.set(k, String(v)), removeItem: k => ls.delete(k) },
     fetch: red, confirm: () => true, prompt: () => null, alert() {}, setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
-    console, navigator: { clipboard: { writeText() {} } },
+    console, URL, location: { href: "http://localhost/playlists/" }, navigator: { clipboard: { writeText() {} } },
     AdmiraVirtualPlayers: { list: async () => [], merge: (a, b) => a.concat(b), label: () => "" },
     AdmiraEink: { apto: () => false, isEink: () => false },
   };
@@ -69,7 +69,7 @@ test("el selector lee el índice completo del Stock y sólo ofrece lo que un pla
   const b = abre({ indice: INDICE });
   await reposa();
   assert.ok(b.pedidas.includes("https://stock.admira.store/stock/index.json"), "pide el índice completo");
-  assert.ok(!b.pedidas.some(u => u.includes("/stock/list")), "y no las «últimas 300» de /stock/list");
+  assert.ok(!b.pedidas.some(u => u.includes("/stock/list?limit=300")), "y no las «últimas 300» de /stock/list");
   assert.equal(b.js("STOCK_FULL"), true);
   assert.equal(b.js("STOCK.length"), 135, "5 con nombre + 130 corrientes: fuera enlaces, muebles, cápsulas, guiones, NPC, HTML y lo que no tiene url");
   assert.deepEqual(plano(b.js("STOCK.filter(x=>x.num>1400).map(x=>x.type)")), ["video", "video", "image", "music"]);
@@ -102,8 +102,11 @@ test("filtros: orientación declarada (campo, medidas o tag), audio y categoría
   await reposa();
   b.js("openEdit(null); openPicker()");
   const con = (id, v) => { b.$("pkQ").value = ""; ["pkType", "pkAud", "pkCat", "pkOri"].forEach(x => { b.$(x).value = x === id ? v : ""; }); b.js("renderPicker()"); return plano(b.js("pkList.map(x=>x.num)")); };
-  assert.deepEqual(con("pkOri", "v"), [1457, 1455], "campo orientacion y alto > ancho");
-  assert.deepEqual(con("pkOri", "h"), [1456], "tag «horizontal»");
+  const sinDato = [14, ...CORRIENTES.map(x => x.num)];   // vídeos que no declaran formato: van detrás, no se esconden
+  assert.deepEqual(con("pkOri", "v"), [1457, 1455, ...sinDato], "campo orientacion y alto > ancho delante; fuera el horizontal y el audio");
+  assert.match(b.$("pkSrc").textContent, /^2 verticales confirmadas primero · después 131 que no declaran formato/);
+  assert.match(b.$("pkGrid").innerHTML, /data-pk="p14">[\s\S]*?<span class="or">\?<\/span>/, "las dudosas llevan «?»");
+  assert.deepEqual(con("pkOri", "h"), [1456, ...sinDato], "tag «horizontal»");
   assert.deepEqual(con("pkType", "audio"), [1454], "music cuenta como audio");
   assert.match(b.$("pkCat").innerHTML, /<option value="marca">Marca · 135<\/option>/, "las categorías salen del Stock, con su cuenta");
 });
@@ -155,4 +158,25 @@ test("Escape cierra sólo el modal de encima: el selector no se lleva el editor 
   assert.doesNotMatch(PLAYLISTS, /querySelectorAll\('\.modal\.open'\)\.forEach\(m=>m\.classList\.remove\('open'\)\)/, "ya no se cierran todos de golpe");
   // el modal de la vista previa va el último en el documento: es el que queda encima y el primero que se cierra
   assert.ok(PLAYLISTS.indexOf('id="mPrev"') > PLAYLISTS.indexOf('id="mAssign"') && PLAYLISTS.indexOf('id="mAssign"') > PLAYLISTS.indexOf('id="mPick"'));
+});
+
+test("lo recién subido que aún no está en el índice entra por la cabeza de /stock/list y no se da por borrado", async () => {
+  const b = abre({ indice: INDICE, lista: [pieza(1500, { title: "Recién subida" }), pieza(1457)] });
+  await reposa();
+  assert.ok(b.pedidas.some(u => u.includes("/stock/list?limit=60")), "pide la cabeza en vivo");
+  assert.deepEqual(plano(b.js("STOCK.slice(0,2).map(x=>x.num)")), [1500, 1457], "la nueva va delante y la repetida no se duplica");
+  assert.equal(b.js("STOCK.length"), 136); assert.equal(b.js("STOCK_IDS.has('p1500')"), true);
+});
+
+test("la orientación no se aprende de portadas de YouTube (siempre 4:3) y las imágenes sin portada de más de 1,5 MB no se bajan", async () => {
+  const b = abre({ indice: [pieza(7, { type: "image", mime: "image/png", size: 26_000_000 }), pieza(6, { type: "image", mime: "image/png", size: 200_000 }), ...INDICE] });
+  await reposa();
+  assert.equal(b.js("portadaFiable('https://img.youtube.com/vi/abc/hqdefault.jpg')"), false);
+  assert.equal(b.js("portadaFiable('https://i.ytimg.com/vi/abc/hqdefault.jpg')"), false);
+  assert.equal(b.js("portadaFiable('https://stock.admira.store/stock/p1/poster.jpg')"), true);
+  assert.equal(b.js("thumbHtml(STOCKMAP.p7)"), "🖼", "26 MB: icono");
+  assert.match(b.js("thumbHtml(STOCKMAP.p6)"), /^<img src="https:\/\/stock\.admira\.store\/stock\/p6\/asset\.mp4"/, "200 KB: el original vale de miniatura");
+  // lo que mide la vista previa manda sobre lo aprendido, pero nunca sobre lo que la pieza declara
+  b.js("oriApunta('p14','h')"); assert.equal(b.js("oriDe(STOCKMAP.p14)"), "h");
+  b.js("oriApunta('p1457','h')"); assert.equal(b.js("oriDe(STOCKMAP.p1457)"), "v", "declarada vertical: lo aprendido no la pisa");
 });

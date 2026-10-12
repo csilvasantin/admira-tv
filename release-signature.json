@@ -1,9 +1,9 @@
 {
-  "version": "v.12.10.2026.r1.12:06",
+  "version": "v.12.10.2026.r2.12:11",
   "signature": "NeoMBP14 · MacBookProNegro14",
   "agent": "NeoMBP14",
   "machine": "MacBookProNegro14",
   "day": "12.10.2026",
-  "time": "12:06",
-  "evidence": "Playlists: el selector de contenidos lee el Stock completo (1.125 piezas emitibles; antes 162 de 1.423), con portadas de vídeo, vista previa, búsqueda por nº de pieza, filtro de orientación y paginado. Misión Hoy #75 · ventana 0082.12/10/2026.11:51."
+  "time": "12:11",
+  "evidence": "Playlists: arreglos de la revisión del selector de contenidos (filtro de orientación que no esconde las piezas sin formato declarado, orientación medida en la vista previa y nunca de portadas de YouTube, foco en la vista previa, imágenes pesadas sin descargar, piezas recién subidas). Misión Hoy #75 · PR 78."
 }
