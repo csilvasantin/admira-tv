@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=11.10.2026.r2.1521"></script>
+<script src="/auth-gate.js?v=12.10.2026.r1.1206"></script>
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
 <link rel="dns-prefetch" href="https://api.admira.store">
@@ -15,6 +15,7 @@
   :root{ --bg:#070a10; --panel:#0e131c; --panel2:#121a27; --line:#1e2940; --ink:#cdd8e8; --dim:#8595ad;
          --air:#39d98a; --off:#ff5a5a; --amber:#ffb44c; --accent:#7aa2ff; --robot:#c08bff; --phos:#3df08a; }
   *{box-sizing:border-box}
+  [hidden]{display:none!important}
   body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#11203a33,transparent),var(--bg);
        color:var(--ink);font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
   /* la barra superior (admira-nav) ya desplaza el contenido 52px; el sub-encabezado va en flujo normal
@@ -137,6 +138,35 @@
   .pkItem .tg{position:absolute;top:5px;left:5px;font:10px ui-monospace,monospace;background:#000a;border-radius:5px;padding:1px 5px;color:var(--phos)}
   .pkItem.sel{border-color:var(--phos);box-shadow:0 0 0 1px var(--phos)}
   .pkItem.sel::after{content:'✓';position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:50%;background:var(--phos);color:#04110b;font:800 12px sans-serif;display:grid;place-items:center}
+  /* Selector a la altura del Stock (12-oct-2026): nº de pieza, orientación, «ya está», vista previa y paginado */
+  .pkItem .th{position:relative}
+  .pkItem .th img{position:absolute;inset:0}               /* la portada no estira la tarjeta: todas miden lo mismo */
+  .pkItem .tg,.pkItem .pv,.pkItem.sel::after{z-index:2}   /* la portada es ahora un contexto posicionado: lo de encima, encima */
+  .pkTools #pkQ{flex:1 1 100%}                             /* el buscador ocupa su fila; los filtros, la siguiente */
+  .pkTools select{flex:1 1 130px;min-width:0}
+  .pkItem .nu{position:absolute;left:5px;bottom:5px;font:10px ui-monospace,monospace;background:#000b;border-radius:5px;padding:1px 5px;color:var(--ink)}
+  .pkItem .or{position:absolute;right:5px;bottom:5px;font:10px ui-monospace,monospace;background:#000b;border-radius:5px;padding:1px 5px;color:var(--accent)}
+  .pkItem .or:empty{display:none}
+  .pkItem .ya{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font:700 10.5px ui-monospace,monospace;
+              background:#000c;color:var(--amber);padding:3px 2px;letter-spacing:.3px}
+  .pkItem .pv{position:absolute;top:28px;right:5px;width:24px;height:24px;border-radius:7px;border:1px solid var(--line);background:#000b;
+              color:var(--ink);font-size:12px;line-height:1;padding:0;cursor:pointer;display:grid;place-items:center}
+  .pkItem .pv:hover,.pkItem .pv:focus-visible{border-color:var(--phos);color:#fff;outline:0}
+  .pkMore{display:block;margin:14px auto 2px}
+  .pkSrc{font:11px ui-monospace,monospace;color:var(--dim);margin:-4px 0 10px}
+  .pkSrc.warn{color:var(--amber)}
+  .plRow .th{cursor:zoom-in}
+  .plRow .gone{color:var(--amber)}
+  /* vista previa de una pieza: el medio real, por encima del selector */
+  #mPrev .sheet{width:min(880px,100%)}
+  .pvStage{background:#000;border:1px solid var(--line);border-radius:12px;display:grid;place-items:center;min-height:200px;overflow:hidden}
+  .pvStage video,.pvStage img{display:block;max-width:100%;max-height:58vh}
+  .pvStage audio{width:min(520px,92%);margin:26px 0}
+  .pvStage .pvAud{display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px;color:var(--dim);font-size:34px}
+  .pvMeta{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px}
+  .pvTitle{font-weight:700;font-size:14px;margin-top:11px;line-height:1.3}
+  .pvNav{display:flex;gap:8px}
+  .pvNav .abtn{flex:none;width:42px}
 
   /* asignador de targets */
   .tgOpts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
@@ -171,7 +201,7 @@
 <body>
 <script>
 /* Config del chrome cuadrático unificado (lo monta /admira-nav.js). */
-window.ADMIRA_VERSION='v.11.10.2026.r2.15:21';
+window.ADMIRA_VERSION='v.12.10.2026.r1.12:06';
 window.ADMIRA_NAV={
   active:'playlists', title:'Playlists · conjuntos de contenidos',
   topRight:
@@ -181,9 +211,9 @@ window.ADMIRA_NAV={
 </script>
 <script src="/assets/virtual-players.js"></script>
 <script src="/assets/admira-eink.js"></script>
-<script src="/admira-nav.js?v=11.10.2026.r2.1521"></script>
-<script src="/admira-frame.js?v=11.10.2026.r2.1521" defer></script>
-<link rel="stylesheet" href="/admira-frame.css?v=11.10.2026.r2.1521">
+<script src="/admira-nav.js?v=12.10.2026.r1.1206"></script>
+<script src="/admira-frame.js?v=12.10.2026.r1.1206" defer></script>
+<link rel="stylesheet" href="/admira-frame.css?v=12.10.2026.r1.1206">
 
 <!-- AVANZADO (panel derecho): acciones peligrosas -->
 <div class="afSlotHidden" data-af-slot="left" data-hilomusical-lang="starbucks" aria-label="Hilo musical idioma activo">
@@ -227,7 +257,7 @@ window.ADMIRA_NAV={
 
 <div class="grid" id="grid"><div class="empty">Cargando…</div></div>
 
-<footer>Contenido: <code>Stock de Pixeria</code> (/stock/list) · Reproducción: <code>parrilla /grid</code> que <code>canal.html</code> honra (gridWeave) · Players vivos: <code>/signage/screens</code> · <span id="stamp"></span></footer>
+<footer>Contenido: <code>Stock de Pixeria</code> (índice completo) · Reproducción: <code>parrilla /grid</code> que <code>canal.html</code> honra (gridWeave) · Players vivos: <code>/signage/screens</code> · <span id="stamp"></span></footer>
 
 <!-- ── MODAL EDITOR ─────────────────────────────────────────────────── -->
 <div class="modal" id="mEdit">
@@ -252,18 +282,22 @@ window.ADMIRA_NAV={
 <div class="modal" id="mPick">
   <div class="sheet">
     <div class="sh-hd"><h3>Contenido del <b>Stock de Pixeria</b></h3><button class="x" data-close="mPick">✕</button></div>
-    <div class="sh-bd">
+    <div class="sh-bd" id="pkBody">
       <div class="pkTools">
-        <input id="pkQ" type="search" placeholder="Buscar por título o etiqueta…" autocomplete="off">
+        <input id="pkQ" type="search" placeholder="Buscar por título, etiqueta o #número…" autocomplete="off">
         <select id="pkType"><option value="">Todo tipo</option><option value="image">Imagen</option><option value="video">Vídeo</option><option value="animation">Animación</option><option value="audio">Audio/música</option><option value="eink">🖋️ Apto tinta (imagen vertical)</option></select>
         <select id="pkAud"><option value="">Toda audiencia</option><option value="m">Hombres</option><option value="f">Mujeres</option></select>
         <select id="pkCat"><option value="">Toda categoría</option><option value="atraer">Atraer</option><option value="producto">Producto</option><option value="promo">Promo</option><option value="marca">Marca</option></select>
+        <select id="pkOri" aria-label="Orientación de la pieza"><option value="">Toda orientación</option><option value="v">Vertical</option><option value="h">Horizontal</option></select>
       </div>
+      <div class="pkSrc" id="pkSrc" aria-live="polite"></div>
       <div class="pkInkBar" id="pkInkBar"><span>🖋️ Enviar a tinta:</span><select id="pkInkTarget" aria-label="Pantalla de tinta electrónica de destino"></select><span id="pkInkMsg" aria-live="polite"></span></div>
       <div class="pkGrid" id="pkGrid"><div class="empty">Cargando Stock…</div></div>
+      <button class="abtn pkMore" id="pkMore" type="button" hidden>Mostrar más</button>
     </div>
     <div class="sh-ft">
       <span class="hint" id="pkHint">0 seleccionadas</span>
+      <button class="abtn" id="pkClear" type="button" style="flex:none" hidden>Limpiar selección</button>
       <span class="spacer" style="flex:1"></span>
       <button class="abtn" data-close="mPick">Cancelar</button>
       <button class="btnp" id="pkAddSel">Añadir a la playlist</button>
@@ -290,6 +324,25 @@ window.ADMIRA_NAV={
       <span class="spacer" style="flex:1"></span>
       <button class="abtn" data-close="mAssign">Cerrar</button>
       <button class="btnp" id="asDo">Asignar y emitir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL VISTA PREVIA DE UNA PIEZA ──────────────────────────────── -->
+<div class="modal" id="mPrev">
+  <div class="sheet">
+    <div class="sh-hd"><h3>Vista previa · <b id="pvNum">pieza</b></h3><button class="x" data-close="mPrev">✕</button></div>
+    <div class="sh-bd">
+      <div class="pvStage" id="pvStage"></div>
+      <div class="pvTitle" id="pvTitle"></div>
+      <div class="pvMeta" id="pvMeta"></div>
+    </div>
+    <div class="sh-ft">
+      <div class="pvNav"><button class="abtn" id="pvPrev" type="button" title="Pieza anterior (←)">‹</button><button class="abtn" id="pvNext" type="button" title="Pieza siguiente (→)">›</button></div>
+      <span class="hint" id="pvHint"></span>
+      <span class="spacer" style="flex:1"></span>
+      <button class="abtn" data-close="mPrev" style="flex:none">Cerrar</button>
+      <button class="btnp" id="pvToggle" type="button">＋ Seleccionar</button>
     </div>
   </div>
 </div>
@@ -374,10 +427,50 @@ function saveAsg(){ try{localStorage.setItem('adtv_pl_assign',JSON.stringify(ASS
 
 /* ── Catálogo (Stock) y destinos (players vivos + superficies de grid) ── */
 let STOCK=[], LIVE=[], SURF=[], LIVEMAP={};
-async function loadStock(){
-  try{ const d=await fetch(GRID+'/stock/list?limit=300',{cache:'no-store'}).then(r=>r.json());
-    STOCK=(d.items||[]).filter(x=>x&&x.url&&x.type!=='link'&&x.type!=='furni'); }catch(_){ STOCK=[]; }
+/* El Stock ENTERO (12-oct-2026). Antes se pedía /stock/list?limit=300, que devuelve las ~200 últimas: de 1.400 piezas
+   el selector enseñaba 160 y el resto no se podía poner en una playlist. El índice completo es el mismo que leen
+   /parrilla/ y las playlists vivas (functions/api/playlist.js). Si no responde, se sigue con /stock/list y se avisa. */
+const STOCK_INDEX='https://stock.admira.store/stock/index.json';
+let STOCKMAP={}, STOCK_IDS=null, STOCK_FULL=false, STOCK_LISTO=false;
+/* Sólo lo que un player puede emitir: imagen, vídeo o audio. Enlaces, muebles 3D, sprites de NPC, guiones y cápsulas
+   de texto tienen `url`, pero programados en la parrilla salen como un vídeo que no carga (pantalla en negro). */
+const NO_EMITE=new Set(['link','furni','twin-npc','guion']);
+function emitible(x){
+  if(!x||!x.id||!x.url||NO_EMITE.has(x.type)) return false;
+  const m=String(x.mime||'');
+  return !m||/^(image|video|audio)\//.test(m);
 }
+async function loadStock(){
+  let items=null; STOCK_FULL=false;
+  try{ const d=await fetch(STOCK_INDEX).then(r=>r.json()); const l=Array.isArray(d)?d:(d&&d.items);
+    if(Array.isArray(l)&&l.length){ items=l; STOCK_FULL=true; } }catch(_){}
+  if(!items){ try{ const d=await fetch(GRID+'/stock/list?limit=300',{cache:'no-store'}).then(r=>r.json()); items=d.items||[]; }catch(_){ items=[]; } }
+  STOCK=items.filter(emitible);
+  STOCKMAP={}; STOCK.forEach(x=>{ STOCKMAP[x.id]=x; });
+  STOCK_IDS=STOCK_FULL?new Set(items.map(x=>x&&x.id)):null;   // con el índice completo se sabe qué piezas ya no existen
+  STOCK_LISTO=true;
+  // quien abrió el selector o el editor antes de que llegara el Stock lo ve llegar, sin perder lo que tenía marcado
+  if($('mPick').classList.contains('open')){ pkOpciones(); renderPicker(); }
+  if($('mEdit').classList.contains('open')&&editDraft) renderEditItems();
+}
+/* Orientación de una pieza: la declarada (orientacion · ancho×alto · tag) y, si no hay, la que se ve en su portada. */
+let ORI_SEEN=(()=>{try{return JSON.parse(localStorage.getItem('adtv_pl_ori')||'{}')||{}}catch(_){return{}}})();
+function oriDe(it){
+  if(!it) return '';
+  const o=String(it.orientacion||'').toLowerCase();
+  if(o[0]==='v'||o==='portrait') return 'v';
+  if(o[0]==='h'||o==='landscape') return 'h';
+  if(it.ancho>0&&it.alto>0) return it.alto>it.ancho?'v':'h';
+  const t=(it.tags||[]).map(x=>String(x).toLowerCase());
+  if(t.includes('vertical')) return 'v';
+  if(t.includes('horizontal')) return 'h';
+  return ORI_SEEN[it.id]||'';
+}
+const oriTxt=o=>o==='v'?'▯ vertical':o==='h'?'▭ horizontal':'';
+const oriMini=o=>o==='v'?'▯ V':o==='h'?'▭ H':'';
+const esAudio=t=>t==='audio'||t==='music'||t==='locucion';
+const sinAcentos=s=>String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const pesoTxt=n=>!(n>0)?'':n>=1048576?(n/1048576).toFixed(1).replace('.',',')+' MB':Math.max(1,Math.round(n/1024))+' KB';
 async function loadTargets(){
   try{ const d=await fetch(GRID+'/signage/screens',{cache:'no-store'}).then(r=>r.json()); LIVE=(d.screens||[]); }catch(_){ LIVE=[]; }
   const virtuals=await AdmiraVirtualPlayers.list().catch(()=>[]); LIVE=AdmiraVirtualPlayers.merge(LIVE,virtuals);
@@ -395,9 +488,11 @@ function screenState(screen){
 
 /* ── Tipo de creativo para la parrilla (idéntico a cms.html progPick) ── */
 function creativeType(t){ return (t==='image'||t==='animation'||t==='digital-twin')?'image':(t==='audio'||t==='music'||t==='locucion')?'audio':'video'; }
+function coverOf(it){ const s=(it&&STOCKMAP[it.id])||{}; return (it&&(it.thumbnail||it.poster))||s.thumbnail||s.poster||''; }
 function thumbHtml(it){
   if(!it) return '🎬';
-  if(it.thumbnail) return '<img src="'+esc(it.thumbnail)+'" loading="lazy" alt="">';
+  const c=coverOf(it);   // los vídeos traen `poster` más a menudo que `thumbnail`: sin esto salían en negro
+  if(c) return '<img src="'+esc(c)+'" loading="lazy" alt="">';
   const t=it.type;
   if(t==='image'||t==='animation'||t==='digital-twin') return '<img src="'+esc(it.url)+'" loading="lazy" alt="">';
   return t==='video'?'▶':(t==='audio'||t==='music'||t==='locucion')?'♪':'🖼';
@@ -446,13 +541,22 @@ function renderEditItems(){
   if(!its.length){ host.innerHTML='<div class="emptyRow">Sin piezas todavía · pulsa «Añadir contenido del Stock»</div>'; return; }
   host.innerHTML=its.map((it,i)=>'<div class="plRow" data-i="'+i+'">'+
     '<span class="idx">'+(i+1)+'</span>'+
-    '<div class="th">'+thumbHtml(it)+'</div>'+
-    '<div class="tx"><div class="tt" title="'+esc(it.title)+'">'+esc(it.title||it.id)+'</div><div class="ty">'+esc(it.type||'')+(it.motor?' · '+esc(it.motor):'')+'</div></div>'+
+    '<div class="th" data-pvrow="'+i+'" title="Vista previa">'+thumbHtml(it)+'</div>'+
+    '<div class="tx"><div class="tt" title="'+esc(it.title)+'">'+esc(it.title||it.id)+'</div><div class="ty">'+rowMeta(it)+'</div></div>'+
     '<div class="mv"><button data-mv="'+i+'|-1" title="Subir">▲</button><button data-mv="'+i+'|1" title="Bajar">▼</button></div>'+
     '<button class="rm" data-rm="'+i+'" title="Quitar">✕</button>'+
   '</div>').join('');
 }
+/* Línea de datos de una fila: nº del Stock · tipo · orientación · motor, y el aviso de pieza desaparecida. */
+function rowMeta(it){
+  const s=STOCKMAP[it.id], o=oriDe(s||it);
+  const gone=STOCK_IDS&&!STOCK_IDS.has(it.id);
+  return (s&&s.num?'#'+esc(s.num)+' · ':'')+esc(it.type||'')+(o?' · '+oriTxt(o):'')+(it.motor?' · '+esc(it.motor):'')+
+    (gone?' · <span class="gone" title="Esta pieza ya no está en el Stock de Pixeria: el player no podrá emitirla.">⚠ ya no está en el Stock</span>':'');
+}
 $('edItems').addEventListener('click',e=>{
+  const pvr=e.target.closest('[data-pvrow]');
+  if(pvr){ const it=editDraft.items[+pvr.dataset.pvrow]; if(it) openPreview(Object.assign({},STOCKMAP[it.id]||{},it),null); return; }
   const mv=e.target.closest('[data-mv]'), rm=e.target.closest('[data-rm]');
   if(mv){ const [i,dir]=mv.dataset.mv.split('|').map(Number); const j=i+dir; const a=editDraft.items;
     if(j<0||j>=a.length) return; const t=a[i];a[i]=a[j];a[j]=t; renderEditItems(); }
@@ -470,27 +574,86 @@ $('edSave').onclick=()=>{
 };
 
 /* ════════════════ PICKER DE STOCK ════════════════ */
-let pickSel=new Set();
-function openPicker(){ pickSel=new Set(); $('pkQ').value=''; $('pkType').value=''; $('pkAud').value=''; $('pkCat').value=''; renderPicker(); openModal('mPick'); setTimeout(()=>$('pkQ').focus(),60); }
-function renderPicker(){
-  const q=($('pkQ').value||'').toLowerCase().trim(), ty=$('pkType').value, au=$('pkAud').value, ca=$('pkCat').value;
-  const list=STOCK.filter(it=>{
-    if(ty){ if(ty==='audio'){ if(!['audio','music','locucion'].includes(it.type)) return false; } else if(ty==='eink'){ if(!AdmiraEink.apto(it)) return false; } else if(it.type!==ty) return false; }
+const PK_PAGE=60;                 // piezas por tanda: el Stock entero no se pinta de golpe
+let pickSel=new Set(), pkList=[], pkShown=PK_PAGE;
+function openPicker(){
+  pickSel=new Set(); $('pkQ').value=''; $('pkType').value=''; $('pkAud').value=''; $('pkCat').value=''; $('pkOri').value='';
+  pkOpciones(); renderPicker(); openModal('mPick'); setTimeout(()=>$('pkQ').focus(),60);
+}
+/* Las categorías del desplegable salen del propio Stock (con cuántas piezas tiene cada una), no de una lista fija. */
+function pkOpciones(){
+  const n={}; STOCK.forEach(it=>{ if(it.category) n[it.category]=(n[it.category]||0)+1; });
+  const cats=Object.keys(n).sort((a,b)=>n[b]-n[a]||a.localeCompare(b)); if(!cats.length) return;
+  const sel=$('pkCat'), keep=sel.value;
+  sel.innerHTML='<option value="">Toda categoría</option>'+cats.map(c=>'<option value="'+esc(c)+'">'+esc(c[0].toUpperCase()+c.slice(1))+' · '+n[c]+'</option>').join('');
+  sel.value=n[keep]?keep:'';
+}
+/* Busca por palabras (todas tienen que estar) en título y etiquetas, sin acentos; «#1457» o «1457» es el nº de pieza. */
+const PK_HAY=new WeakMap();
+function pkHay(it){ let h=PK_HAY.get(it); if(h==null){ h=sinAcentos((it.title||'')+' '+((it.tags||[]).join(' '))); PK_HAY.set(it,h); } return h; }
+function pkCasa(it,palabras){
+  for(const w of palabras){
+    const n=/^#?(\d{1,6})$/.exec(w);
+    if(n){ if(String(it.num)===n[1]) continue; if(w[0]==='#') return false; }
+    if(w===String(it.id||'').toLowerCase()) continue;   // el id interno, entero (los ids llevan cifras: no se buscan a trozos)
+    if(!pkHay(it).includes(w.replace(/^#/,''))) return false;
+  }
+  return true;
+}
+function pkFiltra(){
+  const palabras=sinAcentos($('pkQ').value).split(/\s+/).filter(Boolean), ty=$('pkType').value, au=$('pkAud').value, ca=$('pkCat').value, or=$('pkOri').value;
+  return STOCK.filter(it=>{
+    if(ty){ if(ty==='audio'){ if(!esAudio(it.type)) return false; } else if(ty==='eink'){ if(!AdmiraEink.apto(it)) return false; } else if(it.type!==ty) return false; }
     if(au && it.audience!==au) return false;
     if(ca && it.category!==ca) return false;
-    if(q){ const hay=((it.title||'')+' '+((it.tags||[]).join(' '))).toLowerCase(); if(!hay.includes(q)) return false; }
-    return true;
-  }).slice(0,240);
-  const g=$('pkGrid'), inkOn=paintInkBar();
-  if(!STOCK.length){ g.innerHTML='<div class="empty">No pude leer el Stock (/stock/list).</div>'; return; }
-  if(!list.length){ g.innerHTML='<div class="empty">Sin piezas para ese filtro.</div>'; return; }
-  g.innerHTML=list.map(it=>'<div class="pkItem'+(pickSel.has(it.id)?' sel':'')+'" data-pk="'+esc(it.id)+'">'+
-    '<span class="tg">'+esc(it.type==='music'||it.type==='locucion'?'audio':it.type)+'</span>'+
-    '<div class="th">'+thumbHtml(it)+'</div>'+
+    if(or && oriDe(it)!==or) return false;
+    return !palabras.length||pkCasa(it,palabras);
+  });
+}
+function pkEnPlaylist(){ const m={}; ((editDraft&&editDraft.items)||[]).forEach(x=>{ m[x.id]=(m[x.id]||0)+1; }); return m; }
+function pkTile(it,ya,inkOn){
+  const veces=ya[it.id]||0;
+  return '<div class="pkItem'+(pickSel.has(it.id)?' sel':'')+'" data-pk="'+esc(it.id)+'">'+
+    '<span class="tg">'+esc(esAudio(it.type)?'audio':it.type)+'</span>'+
+    '<button type="button" class="pv" data-pv="'+esc(it.id)+'" title="Vista previa" aria-label="Vista previa de '+esc(it.title||it.id)+'">▶</button>'+
+    '<div class="th">'+thumbHtml(it)+(it.num?'<span class="nu">#'+esc(it.num)+'</span>':'')+'<span class="or">'+oriMini(oriDe(it))+'</span>'+
+      (veces?'<span class="ya">ya está'+(veces>1?' ×'+veces:'')+'</span>':'')+'</div>'+
     '<div class="cap" title="'+esc(it.title)+'">'+esc(it.title||it.id)+'</div>'+
     (inkOn&&it.num&&AdmiraEink.apto(it)?'<button type="button" class="pkInk" data-ink="'+esc(it.num)+'" title="Fijar esta pieza en la pantalla de tinta (content-'+esc(it.num)+')">🖋️ enviar a tinta</button>':'')+
-  '</div>').join('');
-  $('pkHint').textContent=pickSel.size+' seleccionada'+(pickSel.size===1?'':'s');
+  '</div>';
+}
+function pkPie(){
+  const n=pickSel.size, vistas=Math.min(pkShown,pkList.length);
+  $('pkHint').textContent=n+' seleccionada'+(n===1?'':'s')+(pkList.length?' · '+vistas+' de '+pkList.length+' pieza'+(pkList.length===1?'':'s'):'');
+  $('pkClear').hidden=!n;
+  const quedan=pkList.length-vistas; $('pkMore').hidden=quedan<=0;
+  if(quedan>0) $('pkMore').textContent='Mostrar '+Math.min(PK_PAGE,quedan)+' más · quedan '+quedan;
+}
+function renderPicker(){
+  pkList=pkFiltra(); pkShown=PK_PAGE;
+  const g=$('pkGrid'), inkOn=paintInkBar(), src=$('pkSrc');
+  src.className='pkSrc'+(STOCK_FULL?'':' warn');
+  src.textContent=!STOCK.length?'':STOCK_FULL?'Stock completo · '+STOCK.length+' piezas emitibles, de la más reciente a la más antigua'
+    :'⚠ El índice completo del Stock no responde: sólo se ven las '+STOCK.length+' piezas más recientes.';
+  if(!STOCK.length){ g.innerHTML='<div class="empty">'+(STOCK_LISTO?'No pude leer el Stock de Pixeria.':'Cargando el Stock de Pixeria…')+'</div>'; pkPie(); return; }
+  if(!pkList.length){ g.innerHTML='<div class="empty">Sin piezas para ese filtro.</div>'; pkPie(); return; }
+  const ya=pkEnPlaylist();
+  g.innerHTML=pkList.slice(0,pkShown).map(it=>pkTile(it,ya,inkOn)).join('');
+  $('pkBody').scrollTop=0;
+  pkPie();
+}
+/* Siguiente tanda: se añade al final, sin repintar lo que ya está (no parpadea ni pierde el sitio). */
+function pkMas(){
+  if(pkShown>=pkList.length) return;
+  const ya=pkEnPlaylist(), inkOn=inkScreens().length>0, desde=pkShown;
+  pkShown=Math.min(pkList.length,pkShown+PK_PAGE);
+  $('pkGrid').insertAdjacentHTML('beforeend',pkList.slice(desde,pkShown).map(it=>pkTile(it,ya,inkOn)).join(''));
+  pkPie();
+}
+function pkToggle(id,el){
+  if(pickSel.has(id)) pickSel.delete(id); else pickSel.add(id);
+  if(el) el.classList.toggle('sel',pickSel.has(id));   // sin repintar: no se recargan las portadas
+  pkPie();
 }
 /* ── Enviar a tinta: content-<nº> a la cola del mando de la pantalla eink ── */
 const INK_CMD='https://api.admira.store/locations/cmd', INK_TIMEOUT_MS=180000;
@@ -523,15 +686,63 @@ async function sendToInk(num,btn){
   finally{ setTimeout(()=>{ if(btn.isConnected){ btn.disabled=false; btn.textContent='🖋️ enviar a tinta'; } },4000); }
 }
 $('pkGrid').addEventListener('click',e=>{ const ink=e.target.closest('[data-ink]'); if(ink){ e.stopPropagation(); sendToInk(ink.dataset.ink,ink); return; }
-  const el=e.target.closest('[data-pk]'); if(!el) return; const id=el.dataset.pk;
-  if(pickSel.has(id)) pickSel.delete(id); else pickSel.add(id); renderPicker(); });
-['pkQ','pkType','pkAud','pkCat'].forEach(id=>$(id).addEventListener('input',renderPicker));
+  const pv=e.target.closest('[data-pv]'); if(pv){ e.stopPropagation(); openPreview(STOCKMAP[pv.dataset.pv],pkList); return; }
+  const el=e.target.closest('[data-pk]'); if(!el) return; pkToggle(el.dataset.pk,el); });
+['pkQ','pkType','pkAud','pkCat','pkOri'].forEach(id=>$(id).addEventListener('input',renderPicker));
+$('pkMore').onclick=pkMas;
+$('pkBody').addEventListener('scroll',e=>{ const b=e.currentTarget||$('pkBody'); if(b.scrollTop+b.clientHeight>b.scrollHeight-260) pkMas(); });
+$('pkClear').onclick=()=>{ pickSel=new Set(); renderPicker(); };
+/* La portada dice la orientación de las piezas que no la declaran (casi todas): se apunta al cargar y se recuerda. */
+let oriT=0;
+$('pkGrid').addEventListener('load',e=>{
+  const img=e.target, tile=img&&img.closest&&img.closest('[data-pk]');
+  if(!tile||!img.naturalWidth||!img.naturalHeight) return;
+  const it=STOCKMAP[tile.dataset.pk]; if(!it||oriDe(it)) return;
+  ORI_SEEN[it.id]=img.naturalHeight>img.naturalWidth?'v':'h';
+  const b=tile.querySelector('.or'); if(b) b.textContent=oriMini(ORI_SEEN[it.id]);
+  clearTimeout(oriT); oriT=setTimeout(()=>{ try{localStorage.setItem('adtv_pl_ori',JSON.stringify(ORI_SEEN))}catch(_){} },1500);
+},true);
 $('pkAddSel').onclick=()=>{
-  const add=[...pickSel].map(id=>STOCK.find(x=>x.id===id)).filter(Boolean)
-    .map(it=>({id:it.id,title:it.title||it.id,type:it.type,url:it.url,thumbnail:it.thumbnail||null,category:it.category||null,audience:it.audience||null,motor:it.motor||null}));
+  const add=[...pickSel].map(id=>STOCKMAP[id]).filter(Boolean)
+    .map(it=>({id:it.id,title:it.title||it.id,type:it.type,url:it.url,thumbnail:it.thumbnail||it.poster||null,category:it.category||null,audience:it.audience||null,motor:it.motor||null}));
   editDraft.items=(editDraft.items||[]).concat(add);
   closeModal('mPick'); renderEditItems();
 };
+
+/* ════════════════ VISTA PREVIA DE UNA PIEZA ════════════════ */
+let pvItem=null, pvLista=null;   // pvLista: la lista filtrada del selector (para ‹ ›) o null si se abre desde el editor
+function openPreview(it,lista){
+  if(!it) return;
+  pvItem=it; pvLista=Array.isArray(lista)?lista:null;
+  const t=it.type, c=coverOf(it), st=$('pvStage');
+  if(esAudio(t)) st.innerHTML='<div class="pvAud">'+(c?'<img src="'+esc(c)+'" alt="" style="max-height:30vh">':'♪')+'<audio src="'+esc(it.url)+'" controls autoplay></audio></div>';
+  else if(t==='image'||t==='digital-twin'||(t==='animation'&&!/^video\//.test(String(it.mime||'')))) st.innerHTML='<img src="'+esc(it.url)+'" alt="">';
+  else st.innerHTML='<video src="'+esc(it.url)+'" controls autoplay playsinline'+(c?' poster="'+esc(c)+'"':'')+'></video>';
+  $('pvNum').textContent=it.num?'#'+it.num:'pieza';
+  $('pvTitle').textContent=it.title||it.id||'';
+  const o=oriDe(it), datos=[esAudio(t)?'audio':t, oriTxt(o), pesoTxt(it.size), it.category, it.audience&&it.audience!=='all'?(it.audience==='m'?'hombres':it.audience==='f'?'mujeres':it.audience):'']
+    .concat((it.tags||[]).slice(0,8).map(x=>'#'+x)).filter(Boolean);
+  $('pvMeta').innerHTML=datos.map(d=>'<span class="pill">'+esc(d)+'</span>').join('')+'<span class="pill" id="pvDur" hidden></span>';
+  const m=st.querySelector('video,audio');
+  if(m) m.addEventListener('loadedmetadata',()=>{ const d=m.duration, el=$('pvDur'); if(!el||!isFinite(d)||d<=0) return;
+    el.textContent='⏱ '+Math.floor(d/60)+':'+String(Math.round(d%60)).padStart(2,'0'); el.hidden=false; });
+  pvPinta(); openModal('mPrev');
+}
+function pvPinta(){
+  const enSelector=!!pvLista, i=enSelector?pvLista.indexOf(pvItem):-1;
+  $('pvPrev').hidden=$('pvNext').hidden=!enSelector; $('pvToggle').hidden=!enSelector;
+  if(!enSelector){ $('pvHint').textContent=''; return; }
+  $('pvPrev').disabled=i<=0; $('pvNext').disabled=i<0||i>=pvLista.length-1;
+  const sel=pickSel.has(pvItem.id), veces=pkEnPlaylist()[pvItem.id]||0;
+  $('pvToggle').textContent=sel?'✓ Seleccionada · quitar':'＋ Seleccionar';
+  $('pvHint').textContent=(i>=0?(i+1)+' de '+pvLista.length:'')+(veces?' · ya está en la playlist'+(veces>1?' ×'+veces:''):'');
+}
+function pvMueve(d){ if(!pvLista) return; const j=pvLista.indexOf(pvItem)+d; if(j>=0&&j<pvLista.length) openPreview(pvLista[j],pvLista); }
+function pvCierra(){ $('pvStage').innerHTML=''; pvItem=null; }   // vaciar el escenario corta el vídeo o el audio
+$('pvPrev').onclick=()=>pvMueve(-1);
+$('pvNext').onclick=()=>pvMueve(1);
+$('pvToggle').onclick=()=>{ if(!pvItem) return; const id=pvItem.id;
+  pkToggle(id,[...$('pkGrid').querySelectorAll('[data-pk]')].find(x=>x.dataset.pk===id)||null); pvPinta(); };
 
 /* ════════════════ ASIGNADOR ════════════════ */
 let asgId=null, asgScope='now', asgSel=new Set();
@@ -650,10 +861,17 @@ $('grid').addEventListener('click',e=>{
 $('btnNew').onclick=()=>openEdit(null);
 $('q').addEventListener('input',render);
 document.addEventListener('click',e=>{ const c=e.target.closest('[data-close]'); if(c) closeModal(c.dataset.close); });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open')); });
+/* Escape cierra SÓLO el modal de encima (12-oct-2026): antes cerraba todos, y un Escape en el selector de contenidos
+   se llevaba también el editor con la playlist a medio hacer. Con la vista previa abierta, ← → pasan de pieza. */
+document.addEventListener('keydown',e=>{
+  const abiertos=[...document.querySelectorAll('.modal.open')], top=abiertos[abiertos.length-1];
+  if(!top) return;
+  if(e.key==='Escape'){ e.preventDefault(); closeModal(top.id); }
+  else if(top.id==='mPrev'&&(e.key==='ArrowLeft'||e.key==='ArrowRight')&&!/^(INPUT|SELECT|TEXTAREA|VIDEO|AUDIO)$/.test((e.target&&e.target.tagName)||'')){ e.preventDefault(); pvMueve(e.key==='ArrowLeft'?-1:1); }
+});
 function openModal(id){ $(id).classList.add('open'); }
-function closeModal(id){ $(id).classList.remove('open'); }
-document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
+function closeModal(id){ $(id).classList.remove('open'); if(id==='mPrev') pvCierra(); }
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) closeModal(m.id); }));
 
 /* topRight «＋ Playlist» de la barra */
 function wireTopNew(){ const b=$('trNew'); if(b&&!b.__w){ b.__w=1; b.onclick=()=>openEdit(null); } }
@@ -727,6 +945,6 @@ $('advReload').onclick=async()=>{ await Promise.all([loadRemotePlaylists(),loadS
   },45000);
 })();
 </script>
-  <script src="/assets/hilomusical-lang-switch.js?v=11.10.2026.r2.1521"></script>
+  <script src="/assets/hilomusical-lang-switch.js?v=12.10.2026.r1.1206"></script>
 </body>
 </html>

@@ -1,9 +1,9 @@
 {
-  "version": "v.11.10.2026.r2.15:21",
-  "signature": "NeoMBP16 · MacBookPro16",
-  "agent": "NeoMBP16",
-  "machine": "MacBookPro16",
-  "day": "11.10.2026",
-  "time": "15:21",
-  "evidence": "Gestor de colas: sondeo adaptativo de pantalla y KDS (2 s con pedidos, 6 s con la cola vacía) con memoria de 1,5 s en la lectura pública; aviso bilingüe ES+EN en la misma llamada, probado en la sala starbucks-qa. Encargo 5672."
+  "version": "v.12.10.2026.r1.12:06",
+  "signature": "NeoMBP14 · MacBookProNegro14",
+  "agent": "NeoMBP14",
+  "machine": "MacBookProNegro14",
+  "day": "12.10.2026",
+  "time": "12:06",
+  "evidence": "Playlists: el selector de contenidos lee el Stock completo (1.125 piezas emitibles; antes 162 de 1.423), con portadas de vídeo, vista previa, búsqueda por nº de pieza, filtro de orientación y paginado. Misión Hoy #75 · ventana 0082.12/10/2026.11:51."
 }
