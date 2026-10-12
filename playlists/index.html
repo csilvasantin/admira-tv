@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=12.10.2026.r1.1202"></script>
+<script src="/auth-gate.js?v=12.10.2026.r1.1206"></script>
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
 <link rel="dns-prefetch" href="https://api.admira.store">
@@ -140,11 +140,12 @@
   .pkItem.sel::after{content:'✓';position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:50%;background:var(--phos);color:#04110b;font:800 12px sans-serif;display:grid;place-items:center}
   /* Selector a la altura del Stock (12-oct-2026): nº de pieza, orientación, «ya está», vista previa y paginado */
   .pkItem .th{position:relative}
+  .pkItem .th img{position:absolute;inset:0}               /* la portada no estira la tarjeta: todas miden lo mismo */
   .pkItem .tg,.pkItem .pv,.pkItem.sel::after{z-index:2}   /* la portada es ahora un contexto posicionado: lo de encima, encima */
   .pkTools #pkQ{flex:1 1 100%}                             /* el buscador ocupa su fila; los filtros, la siguiente */
   .pkTools select{flex:1 1 130px;min-width:0}
   .pkItem .nu{position:absolute;left:5px;bottom:5px;font:10px ui-monospace,monospace;background:#000b;border-radius:5px;padding:1px 5px;color:var(--ink)}
-  .pkItem .or{position:absolute;right:5px;bottom:5px;font:12px/1.2 ui-monospace,monospace;background:#000b;border-radius:5px;padding:1px 5px;color:var(--accent)}
+  .pkItem .or{position:absolute;right:5px;bottom:5px;font:10px ui-monospace,monospace;background:#000b;border-radius:5px;padding:1px 5px;color:var(--accent)}
   .pkItem .or:empty{display:none}
   .pkItem .ya{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font:700 10.5px ui-monospace,monospace;
               background:#000c;color:var(--amber);padding:3px 2px;letter-spacing:.3px}
@@ -200,7 +201,7 @@
 <body>
 <script>
 /* Config del chrome cuadrático unificado (lo monta /admira-nav.js). */
-window.ADMIRA_VERSION='v.12.10.2026.r1.12:02';
+window.ADMIRA_VERSION='v.12.10.2026.r1.12:06';
 window.ADMIRA_NAV={
   active:'playlists', title:'Playlists · conjuntos de contenidos',
   topRight:
@@ -210,9 +211,9 @@ window.ADMIRA_NAV={
 </script>
 <script src="/assets/virtual-players.js"></script>
 <script src="/assets/admira-eink.js"></script>
-<script src="/admira-nav.js?v=12.10.2026.r1.1202"></script>
-<script src="/admira-frame.js?v=12.10.2026.r1.1202" defer></script>
-<link rel="stylesheet" href="/admira-frame.css?v=12.10.2026.r1.1202">
+<script src="/admira-nav.js?v=12.10.2026.r1.1206"></script>
+<script src="/admira-frame.js?v=12.10.2026.r1.1206" defer></script>
+<link rel="stylesheet" href="/admira-frame.css?v=12.10.2026.r1.1206">
 
 <!-- AVANZADO (panel derecho): acciones peligrosas -->
 <div class="afSlotHidden" data-af-slot="left" data-hilomusical-lang="starbucks" aria-label="Hilo musical idioma activo">
@@ -466,6 +467,7 @@ function oriDe(it){
   return ORI_SEEN[it.id]||'';
 }
 const oriTxt=o=>o==='v'?'▯ vertical':o==='h'?'▭ horizontal':'';
+const oriMini=o=>o==='v'?'▯ V':o==='h'?'▭ H':'';
 const esAudio=t=>t==='audio'||t==='music'||t==='locucion';
 const sinAcentos=s=>String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const pesoTxt=n=>!(n>0)?'':n>=1048576?(n/1048576).toFixed(1).replace('.',',')+' MB':Math.max(1,Math.round(n/1024))+' KB';
@@ -614,7 +616,7 @@ function pkTile(it,ya,inkOn){
   return '<div class="pkItem'+(pickSel.has(it.id)?' sel':'')+'" data-pk="'+esc(it.id)+'">'+
     '<span class="tg">'+esc(esAudio(it.type)?'audio':it.type)+'</span>'+
     '<button type="button" class="pv" data-pv="'+esc(it.id)+'" title="Vista previa" aria-label="Vista previa de '+esc(it.title||it.id)+'">▶</button>'+
-    '<div class="th">'+thumbHtml(it)+(it.num?'<span class="nu">#'+esc(it.num)+'</span>':'')+'<span class="or">'+oriTxt(oriDe(it)).slice(0,1)+'</span>'+
+    '<div class="th">'+thumbHtml(it)+(it.num?'<span class="nu">#'+esc(it.num)+'</span>':'')+'<span class="or">'+oriMini(oriDe(it))+'</span>'+
       (veces?'<span class="ya">ya está'+(veces>1?' ×'+veces:'')+'</span>':'')+'</div>'+
     '<div class="cap" title="'+esc(it.title)+'">'+esc(it.title||it.id)+'</div>'+
     (inkOn&&it.num&&AdmiraEink.apto(it)?'<button type="button" class="pkInk" data-ink="'+esc(it.num)+'" title="Fijar esta pieza en la pantalla de tinta (content-'+esc(it.num)+')">🖋️ enviar a tinta</button>':'')+
@@ -697,7 +699,7 @@ $('pkGrid').addEventListener('load',e=>{
   if(!tile||!img.naturalWidth||!img.naturalHeight) return;
   const it=STOCKMAP[tile.dataset.pk]; if(!it||oriDe(it)) return;
   ORI_SEEN[it.id]=img.naturalHeight>img.naturalWidth?'v':'h';
-  const b=tile.querySelector('.or'); if(b) b.textContent=oriTxt(ORI_SEEN[it.id]).slice(0,1);
+  const b=tile.querySelector('.or'); if(b) b.textContent=oriMini(ORI_SEEN[it.id]);
   clearTimeout(oriT); oriT=setTimeout(()=>{ try{localStorage.setItem('adtv_pl_ori',JSON.stringify(ORI_SEEN))}catch(_){} },1500);
 },true);
 $('pkAddSel').onclick=()=>{
@@ -943,6 +945,6 @@ $('advReload').onclick=async()=>{ await Promise.all([loadRemotePlaylists(),loadS
   },45000);
 })();
 </script>
-  <script src="/assets/hilomusical-lang-switch.js?v=12.10.2026.r1.1202"></script>
+  <script src="/assets/hilomusical-lang-switch.js?v=12.10.2026.r1.1206"></script>
 </body>
 </html>
