@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=12.10.2026.r1.1206"></script>
+<script src="/auth-gate.js?v=12.10.2026.r2.1211"></script>
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
 <link rel="dns-prefetch" href="https://api.admira.store">
@@ -201,7 +201,7 @@
 <body>
 <script>
 /* Config del chrome cuadrático unificado (lo monta /admira-nav.js). */
-window.ADMIRA_VERSION='v.12.10.2026.r1.12:06';
+window.ADMIRA_VERSION='v.12.10.2026.r2.12:11';
 window.ADMIRA_NAV={
   active:'playlists', title:'Playlists · conjuntos de contenidos',
   topRight:
@@ -211,9 +211,9 @@ window.ADMIRA_NAV={
 </script>
 <script src="/assets/virtual-players.js"></script>
 <script src="/assets/admira-eink.js"></script>
-<script src="/admira-nav.js?v=12.10.2026.r1.1206"></script>
-<script src="/admira-frame.js?v=12.10.2026.r1.1206" defer></script>
-<link rel="stylesheet" href="/admira-frame.css?v=12.10.2026.r1.1206">
+<script src="/admira-nav.js?v=12.10.2026.r2.1211"></script>
+<script src="/admira-frame.js?v=12.10.2026.r2.1211" defer></script>
+<link rel="stylesheet" href="/admira-frame.css?v=12.10.2026.r2.1211">
 
 <!-- AVANZADO (panel derecho): acciones peligrosas -->
 <div class="afSlotHidden" data-af-slot="left" data-hilomusical-lang="starbucks" aria-label="Hilo musical idioma activo">
@@ -341,7 +341,7 @@ window.ADMIRA_NAV={
       <div class="pvNav"><button class="abtn" id="pvPrev" type="button" title="Pieza anterior (←)">‹</button><button class="abtn" id="pvNext" type="button" title="Pieza siguiente (→)">›</button></div>
       <span class="hint" id="pvHint"></span>
       <span class="spacer" style="flex:1"></span>
-      <button class="abtn" data-close="mPrev" style="flex:none">Cerrar</button>
+      <button class="abtn" id="pvClose" data-close="mPrev" style="flex:none">Cerrar</button>
       <button class="btnp" id="pvToggle" type="button">＋ Seleccionar</button>
     </div>
   </div>
@@ -442,9 +442,16 @@ function emitible(x){
 }
 async function loadStock(){
   let items=null; STOCK_FULL=false;
-  try{ const d=await fetch(STOCK_INDEX).then(r=>r.json()); const l=Array.isArray(d)?d:(d&&d.items);
-    if(Array.isArray(l)&&l.length){ items=l; STOCK_FULL=true; } }catch(_){}
-  if(!items){ try{ const d=await fetch(GRID+'/stock/list?limit=300',{cache:'no-store'}).then(r=>r.json()); items=d.items||[]; }catch(_){ items=[]; } }
+  // El índice es una foto que se rehace al cambiar el Stock; lo recién subido puede no estar aún. La cabeza de
+  // /stock/list (en vivo) se pide a la vez y lo que falte va delante: ni se echa de menos ni se da por borrado.
+  const lista=n=>fetch(GRID+'/stock/list?limit='+n,{cache:'no-store'}).then(r=>r.json()).then(d=>(d&&d.items)||[]).catch(()=>null);
+  const [indice,cabeza]=await Promise.all([
+    fetch(STOCK_INDEX).then(r=>r.json()).then(d=>Array.isArray(d)?d:(d&&d.items)).catch(()=>null), lista(60)]);
+  if(Array.isArray(indice)&&indice.length){
+    const ids=new Set(indice.map(x=>x&&x.id));
+    items=(cabeza||[]).filter(x=>x&&x.id&&!ids.has(x.id)).concat(indice); STOCK_FULL=true;
+  }
+  if(!items) items=(await lista(300))||[];
   STOCK=items.filter(emitible);
   STOCKMAP={}; STOCK.forEach(x=>{ STOCKMAP[x.id]=x; });
   STOCK_IDS=STOCK_FULL?new Set(items.map(x=>x&&x.id)):null;   // con el índice completo se sabe qué piezas ya no existen
@@ -454,9 +461,11 @@ async function loadStock(){
   if($('mEdit').classList.contains('open')&&editDraft) renderEditItems();
 }
 /* Orientación de una pieza: la declarada (orientacion · ancho×alto · tag) y, si no hay, la que se ve en su portada. */
-let ORI_SEEN=(()=>{try{return JSON.parse(localStorage.getItem('adtv_pl_ori')||'{}')||{}}catch(_){return{}}})();
-function oriDe(it){
-  if(!it) return '';
+let ORI_SEEN=(()=>{try{return JSON.parse(localStorage.getItem('adtv_pl_ori2')||'{}')||{}}catch(_){return{}}})();
+let oriT=0;
+function oriApunta(id,o){ ORI_SEEN[id]=o; clearTimeout(oriT); oriT=setTimeout(()=>{ try{localStorage.setItem('adtv_pl_ori2',JSON.stringify(ORI_SEEN))}catch(_){} },1500); }
+function oriDe(it){ return it?(oriDecl(it)||ORI_SEEN[it.id]||''):''; }
+function oriDecl(it){
   const o=String(it.orientacion||'').toLowerCase();
   if(o[0]==='v'||o==='portrait') return 'v';
   if(o[0]==='h'||o==='landscape') return 'h';
@@ -464,7 +473,7 @@ function oriDe(it){
   const t=(it.tags||[]).map(x=>String(x).toLowerCase());
   if(t.includes('vertical')) return 'v';
   if(t.includes('horizontal')) return 'h';
-  return ORI_SEEN[it.id]||'';
+  return '';
 }
 const oriTxt=o=>o==='v'?'▯ vertical':o==='h'?'▭ horizontal':'';
 const oriMini=o=>o==='v'?'▯ V':o==='h'?'▭ H':'';
@@ -488,12 +497,15 @@ function screenState(screen){
 
 /* ── Tipo de creativo para la parrilla (idéntico a cms.html progPick) ── */
 function creativeType(t){ return (t==='image'||t==='animation'||t==='digital-twin')?'image':(t==='audio'||t==='music'||t==='locucion')?'audio':'video'; }
+const THUMB_MAX=1572864;   // 1,5 MB
 function coverOf(it){ const s=(it&&STOCKMAP[it.id])||{}; return (it&&(it.thumbnail||it.poster))||s.thumbnail||s.poster||''; }
 function thumbHtml(it){
   if(!it) return '🎬';
   const c=coverOf(it);   // los vídeos traen `poster` más a menudo que `thumbnail`: sin esto salían en negro
   if(c) return '<img src="'+esc(c)+'" loading="lazy" alt="">';
   const t=it.type;
+  // Sin portada, la miniatura de una imagen es el original: hay 144 así y la mayor pesa 26 MB. Las grandes, con icono.
+  if((t==='image'||t==='animation'||t==='digital-twin')&&((it.size||(STOCKMAP[it.id]||{}).size||0)>THUMB_MAX)) return '🖼';
   if(t==='image'||t==='animation'||t==='digital-twin') return '<img src="'+esc(it.url)+'" loading="lazy" alt="">';
   return t==='video'?'▶':(t==='audio'||t==='music'||t==='locucion')?'♪':'🖼';
 }
@@ -578,7 +590,7 @@ const PK_PAGE=60;                 // piezas por tanda: el Stock entero no se pin
 let pickSel=new Set(), pkList=[], pkShown=PK_PAGE;
 function openPicker(){
   pickSel=new Set(); $('pkQ').value=''; $('pkType').value=''; $('pkAud').value=''; $('pkCat').value=''; $('pkOri').value='';
-  pkOpciones(); renderPicker(); openModal('mPick'); setTimeout(()=>$('pkQ').focus(),60);
+  pkOpciones(); renderPicker(); openModal('mPick'); setTimeout(()=>{ if(!$('mPrev').classList.contains('open')) $('pkQ').focus(); },60);
 }
 /* Las categorías del desplegable salen del propio Stock (con cuántas piezas tiene cada una), no de una lista fija. */
 function pkOpciones(){
@@ -600,15 +612,22 @@ function pkCasa(it,palabras){
   }
   return true;
 }
+/* Con filtro de orientación van primero las confirmadas y DETRÁS las que no dicen nada (casi 9 de cada 10 piezas no la
+   declaran): esconderlas dejaba el filtro en 17 piezas. Sólo se quitan las del otro formato y el audio. */
+let pkOriSeguras=0, pkOriFiltro='';
 function pkFiltra(){
   const palabras=sinAcentos($('pkQ').value).split(/\s+/).filter(Boolean), ty=$('pkType').value, au=$('pkAud').value, ca=$('pkCat').value, or=$('pkOri').value;
-  return STOCK.filter(it=>{
+  const lista=STOCK.filter(it=>{
     if(ty){ if(ty==='audio'){ if(!esAudio(it.type)) return false; } else if(ty==='eink'){ if(!AdmiraEink.apto(it)) return false; } else if(it.type!==ty) return false; }
     if(au && it.audience!==au) return false;
     if(ca && it.category!==ca) return false;
-    if(or && oriDe(it)!==or) return false;
+    if(or){ if(esAudio(it.type)) return false; const o=oriDe(it); if(o&&o!==or) return false; }
     return !palabras.length||pkCasa(it,palabras);
   });
+  pkOriFiltro=or; pkOriSeguras=0;
+  if(!or) return lista;
+  const seguras=lista.filter(it=>oriDe(it)===or); pkOriSeguras=seguras.length;
+  return seguras.concat(lista.filter(it=>!oriDe(it)));
 }
 function pkEnPlaylist(){ const m={}; ((editDraft&&editDraft.items)||[]).forEach(x=>{ m[x.id]=(m[x.id]||0)+1; }); return m; }
 function pkTile(it,ya,inkOn){
@@ -616,7 +635,7 @@ function pkTile(it,ya,inkOn){
   return '<div class="pkItem'+(pickSel.has(it.id)?' sel':'')+'" data-pk="'+esc(it.id)+'">'+
     '<span class="tg">'+esc(esAudio(it.type)?'audio':it.type)+'</span>'+
     '<button type="button" class="pv" data-pv="'+esc(it.id)+'" title="Vista previa" aria-label="Vista previa de '+esc(it.title||it.id)+'">▶</button>'+
-    '<div class="th">'+thumbHtml(it)+(it.num?'<span class="nu">#'+esc(it.num)+'</span>':'')+'<span class="or">'+oriMini(oriDe(it))+'</span>'+
+    '<div class="th">'+thumbHtml(it)+(it.num?'<span class="nu">#'+esc(it.num)+'</span>':'')+'<span class="or">'+(oriMini(oriDe(it))||(pkOriFiltro?'?':''))+'</span>'+
       (veces?'<span class="ya">ya está'+(veces>1?' ×'+veces:'')+'</span>':'')+'</div>'+
     '<div class="cap" title="'+esc(it.title)+'">'+esc(it.title||it.id)+'</div>'+
     (inkOn&&it.num&&AdmiraEink.apto(it)?'<button type="button" class="pkInk" data-ink="'+esc(it.num)+'" title="Fijar esta pieza en la pantalla de tinta (content-'+esc(it.num)+')">🖋️ enviar a tinta</button>':'')+
@@ -633,8 +652,9 @@ function renderPicker(){
   pkList=pkFiltra(); pkShown=PK_PAGE;
   const g=$('pkGrid'), inkOn=paintInkBar(), src=$('pkSrc');
   src.className='pkSrc'+(STOCK_FULL?'':' warn');
-  src.textContent=!STOCK.length?'':STOCK_FULL?'Stock completo · '+STOCK.length+' piezas emitibles, de la más reciente a la más antigua'
-    :'⚠ El índice completo del Stock no responde: sólo se ven las '+STOCK.length+' piezas más recientes.';
+  src.textContent=!STOCK.length?'':!STOCK_FULL?'⚠ El índice completo del Stock no responde: sólo se ven las '+STOCK.length+' piezas más recientes.'
+    :pkOriFiltro?pkOriSeguras+' '+(pkOriFiltro==='v'?'verticales':'horizontales')+' confirmadas primero · después '+(pkList.length-pkOriSeguras)+' que no declaran formato (?): míralas en la vista previa'
+    :'Stock completo · '+STOCK.length+' piezas emitibles, de la más reciente a la más antigua';
   if(!STOCK.length){ g.innerHTML='<div class="empty">'+(STOCK_LISTO?'No pude leer el Stock de Pixeria.':'Cargando el Stock de Pixeria…')+'</div>'; pkPie(); return; }
   if(!pkList.length){ g.innerHTML='<div class="empty">Sin piezas para ese filtro.</div>'; pkPie(); return; }
   const ya=pkEnPlaylist();
@@ -693,14 +713,14 @@ $('pkMore').onclick=pkMas;
 $('pkBody').addEventListener('scroll',e=>{ const b=e.currentTarget||$('pkBody'); if(b.scrollTop+b.clientHeight>b.scrollHeight-260) pkMas(); });
 $('pkClear').onclick=()=>{ pickSel=new Set(); renderPicker(); };
 /* La portada dice la orientación de las piezas que no la declaran (casi todas): se apunta al cargar y se recuerda. */
-let oriT=0;
+const PORTADA_AJENA=/(^|\.)(youtube\.com|ytimg\.com|youtu\.be)$/i;   // sus miniaturas son 4:3 sea como sea el vídeo
+function portadaFiable(src){ try{ return !PORTADA_AJENA.test(new URL(src,location.href).hostname); }catch(_){ return false; } }
 $('pkGrid').addEventListener('load',e=>{
   const img=e.target, tile=img&&img.closest&&img.closest('[data-pk]');
-  if(!tile||!img.naturalWidth||!img.naturalHeight) return;
+  if(!tile||!img.naturalWidth||!img.naturalHeight||!portadaFiable(img.currentSrc||img.src)) return;
   const it=STOCKMAP[tile.dataset.pk]; if(!it||oriDe(it)) return;
-  ORI_SEEN[it.id]=img.naturalHeight>img.naturalWidth?'v':'h';
+  oriApunta(it.id,img.naturalHeight>img.naturalWidth?'v':'h');
   const b=tile.querySelector('.or'); if(b) b.textContent=oriMini(ORI_SEEN[it.id]);
-  clearTimeout(oriT); oriT=setTimeout(()=>{ try{localStorage.setItem('adtv_pl_ori',JSON.stringify(ORI_SEEN))}catch(_){} },1500);
 },true);
 $('pkAddSel').onclick=()=>{
   const add=[...pickSel].map(id=>STOCKMAP[id]).filter(Boolean)
@@ -720,13 +740,21 @@ function openPreview(it,lista){
   else st.innerHTML='<video src="'+esc(it.url)+'" controls autoplay playsinline'+(c?' poster="'+esc(c)+'"':'')+'></video>';
   $('pvNum').textContent=it.num?'#'+it.num:'pieza';
   $('pvTitle').textContent=it.title||it.id||'';
-  const o=oriDe(it), datos=[esAudio(t)?'audio':t, oriTxt(o), pesoTxt(it.size), it.category, it.audience&&it.audience!=='all'?(it.audience==='m'?'hombres':it.audience==='f'?'mujeres':it.audience):'']
+  const o=oriDe(it), datos=[esAudio(t)?'audio':t, pesoTxt(it.size), it.category, it.audience&&it.audience!=='all'?(it.audience==='m'?'hombres':it.audience==='f'?'mujeres':it.audience):'']
     .concat((it.tags||[]).slice(0,8).map(x=>'#'+x)).filter(Boolean);
-  $('pvMeta').innerHTML=datos.map(d=>'<span class="pill">'+esc(d)+'</span>').join('')+'<span class="pill" id="pvDur" hidden></span>';
-  const m=st.querySelector('video,audio');
-  if(m) m.addEventListener('loadedmetadata',()=>{ const d=m.duration, el=$('pvDur'); if(!el||!isFinite(d)||d<=0) return;
+  $('pvMeta').innerHTML='<span class="pill" id="pvOri"'+(o?'':' hidden')+'>'+esc(oriTxt(o))+'</span>'+datos.map(d=>'<span class="pill">'+esc(d)+'</span>').join('')+'<span class="pill" id="pvDur" hidden></span>';
+  const m=st.querySelector('video,audio'), foto=st.querySelector('img');
+  // El medio real dice su formato mejor que cualquier portada: se apunta (si la pieza no lo declara) y corrige lo aprendido.
+  const mide=(w,h)=>{ if(!(w>0&&h>0)||oriDecl(it)||!STOCKMAP[it.id]) return; oriApunta(it.id,h>w?'v':'h');
+    const p=$('pvOri'); if(p){ p.textContent=oriTxt(ORI_SEEN[it.id]); p.hidden=false; } };
+  if(m) m.addEventListener('loadedmetadata',()=>{ mide(m.videoWidth,m.videoHeight);
+    const d=m.duration, el=$('pvDur'); if(!el||!isFinite(d)||d<=0) return;
     el.textContent='⏱ '+Math.floor(d/60)+':'+String(Math.round(d%60)).padStart(2,'0'); el.hidden=false; });
+  else if(foto&&!esAudio(t)) foto.addEventListener('load',()=>mide(foto.naturalWidth,foto.naturalHeight));
   pvPinta(); openModal('mPrev');
+  // El foco pasa a la vista previa: si se queda en el buscador de detrás, las flechas no pasan de pieza y lo que se
+  // teclea filtra el selector a ciegas (Safari no enfoca un botón al pulsarlo).
+  try{ (pvLista?$('pvToggle'):$('pvClose')).focus(); }catch(_){}
 }
 function pvPinta(){
   const enSelector=!!pvLista, i=enSelector?pvLista.indexOf(pvItem):-1;
@@ -945,6 +973,6 @@ $('advReload').onclick=async()=>{ await Promise.all([loadRemotePlaylists(),loadS
   },45000);
 })();
 </script>
-  <script src="/assets/hilomusical-lang-switch.js?v=12.10.2026.r1.1206"></script>
+  <script src="/assets/hilomusical-lang-switch.js?v=12.10.2026.r2.1211"></script>
 </body>
 </html>
