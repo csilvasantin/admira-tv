@@ -460,6 +460,10 @@ async function guardaUna(pl,base,force){
   const enLocal=()=>{ const ix=PLAYLISTS.findIndex(x=>x.id===pl.id); if(ix>=0) PLAYLISTS[ix]=pl; else PLAYLISTS.unshift(pl); };
   const key=pideClave();
   if(!key) return soloAqui(enLocal,'local');
+  // Si este navegador no estaba al día con la flota (trabajaba en local, o acaba de poner la clave), primero se
+  // sincroniza: ahí se suben las playlists que sólo vivían aquí. Sin esto, adoptar la lista de la flota tras
+  // guardar UNA se llevaría por delante las demás.
+  if(!PL_SHARED) await loadRemotePlaylists();
   setFleet('saving');
   try{
     if(PL_OPS){
@@ -471,7 +475,8 @@ async function guardaUna(pl,base,force){
     }
     const lista=await leeFlota(), i=lista.findIndex(x=>x.id===pl.id);
     if(!force&&base!=null&&(i<0||Number(lista[i].updatedAt)!==Number(base))){ setFleet(PL_SHARED?'shared':'local'); return {estado:'conflicto',actual:i>=0?lista[i]:null}; }
-    if(i>=0) lista[i]=pl; else lista.unshift(pl);
+    const sellada=Object.assign({},pl,{updatedAt:Date.now()});   // el almacén antiguo no sella: se sella aquí, y sólo lo que de verdad se escribe
+    if(i>=0) lista[i]=sellada; else lista.unshift(sellada);
     const {d}=await escribeFlota({key,playlists:lista});
     if(d&&d.ok){ adoptaFlota(lista); return {estado:'ok'}; }
     if(claveMala(d)){ plkSet(''); return soloAqui(enLocal,'error','clave incorrecta'); }
@@ -482,6 +487,7 @@ async function borraUna(id){
   const enLocal=()=>{ PLAYLISTS=PLAYLISTS.filter(x=>x.id!==id); };
   const key=pideClave();
   if(!key) return soloAqui(enLocal,'local');
+  if(!PL_SHARED) await loadRemotePlaylists();
   setFleet('saving');
   try{
     if(PL_OPS){
@@ -588,7 +594,11 @@ function apuntaDur(id,d){
   if(!(d>0)||!isFinite(d)) return;
   DUR[id]=Math.round(d*10)/10;
   clearTimeout(durT); durT=setTimeout(()=>{ try{localStorage.setItem('adtv_pl_dur',JSON.stringify(DUR))}catch(_){} },1500);
-  if($('mEdit').classList.contains('open')&&editDraft&&!arrastre) renderEditItems();
+  if(!$('mEdit').classList.contains('open')||!editDraft) return;
+  // Sólo la celda de esa pieza y el total: repintar la lista entera cada vez que llega una medida se comía los
+  // clics en ▲▼ y ✕ que pillaba por medio, y soltaba la fila que se estuviera arrastrando.
+  $('edTotal').textContent=vueltaTxt(editDraft.items);
+  (editDraft.items||[]).forEach((it,i)=>{ if(it.id!==id) return; const c=$('edItems').querySelector('.plRow[data-i="'+i+'"] .du'); if(c) c.outerHTML=duraHtml(it); });
 }
 /* Mide de una en una las piezas de la lista que aún no se conocen. Lo que falla no se reintenta en esta visita. */
 const durVistas=new Set(); let durCola=[], durOcupado=false;
@@ -602,7 +612,7 @@ function mideSiguiente(){
   durOcupado=true; m.preload='metadata'; m.muted=true;
   let hecho=false;
   const acaba=d=>{ if(hecho) return; hecho=true; clearTimeout(tope); try{ m.removeAttribute('src'); m.load(); }catch(_){} durOcupado=false; apuntaDur(it.id,d); mideSiguiente(); };
-  const tope=setTimeout(()=>acaba(0),12000);
+  const tope=setTimeout(()=>acaba(0),8000);   // hay navegadores (ahorro de batería en iOS) que no leen la cabecera sin que se toque el vídeo
   m.addEventListener('loadedmetadata',()=>acaba(m.duration));
   m.addEventListener('error',()=>acaba(0));
   m.src=it.url;
@@ -719,7 +729,7 @@ function duraHtml(it){
 /* Arrastrar para ordenar, con ratón o con el dedo. Mientras se arrastra no se repinta la lista (se perdería la fila
    que se lleva): sólo se marca el hueco donde caería, y al soltar se mueve de verdad. ▲▼ siguen para el teclado. */
 function arrastraMueve(e){
-  if(!arrastre) return;
+  if(!arrastre||(e.pointerId!=null&&arrastre.pid!=null&&e.pointerId!==arrastre.pid)) return;
   const filas=[...$('edItems').querySelectorAll('.plRow')]; let a=filas.length;
   for(let i=0;i<filas.length;i++){ const r=filas[i].getBoundingClientRect(); if(e.clientY<r.top+r.height/2){ a=i; break; } }
   arrastre.a=a;
@@ -729,8 +739,8 @@ function arrastraMueve(e){
   if(e.clientY<caja.top+44) $('edBody').scrollTop-=16; else if(e.clientY>caja.bottom-44) $('edBody').scrollTop+=16;
 }
 function arrastraFin(e){
-  if(!arrastre) return;
-  const {de,a}=arrastre, suelta=!e||e.type==='pointerup'; arrastre=null;
+  if(!arrastre||(e&&e.pointerId!=null&&arrastre.pid!=null&&e.pointerId!==arrastre.pid)) return;   // otro dedo no suelta la fila
+  const {de,a}=arrastre, suelta=!!e&&e.type==='pointerup'; arrastre=null;   // cancelar o perder el puntero no mueve nada
   document.removeEventListener('pointermove',arrastraMueve); document.removeEventListener('pointerup',arrastraFin); document.removeEventListener('pointercancel',arrastraFin);
   document.body.classList.remove('ordenando');
   if(suelta) editDraft.items=mueve(editDraft.items,de,a);
@@ -739,7 +749,10 @@ function arrastraFin(e){
 $('edItems').addEventListener('pointerdown',e=>{
   const g=e.target.closest('[data-grip]'); if(!g||arrastre||(e.button!=null&&e.button>0)) return;
   e.preventDefault();
-  arrastre={de:+g.dataset.grip,a:null};
+  arrastre={de:+g.dataset.grip,a:null,pid:e.pointerId};
+  // Con el puntero capturado, soltar fuera de la ventana o que el sistema se lo lleve (una llamada, un gesto) acaba
+  // el arrastre en vez de dejarlo enganchado para siempre.
+  try{ g.setPointerCapture(e.pointerId); g.addEventListener('lostpointercapture',arrastraFin); }catch(_){}
   const fila=g.closest('.plRow'); if(fila) fila.classList.add('arrastrando');
   document.body.classList.add('ordenando');
   document.addEventListener('pointermove',arrastraMueve); document.addEventListener('pointerup',arrastraFin); document.addEventListener('pointercancel',arrastraFin);
@@ -764,7 +777,7 @@ $('edSave').onclick=async()=>{
   const name=($('edName').value||'').trim(), aviso=(t,c)=>{ $('edHint').textContent=t; $('edHint').className='hint'+(c?' '+c:''); };
   if(!name) return aviso('Ponle un nombre a la playlist.','err');
   if(!(editDraft.items||[]).length) return aviso('Añade al menos una pieza.','err');
-  editDraft.name=name; editDraft.updatedAt=Date.now();
+  editDraft.name=name;   // el sello (updatedAt) lo pone quien escribe en la flota: puesto aquí, un guardado fallido lo dejaba cambiado y el siguiente intento parecía un conflicto con «otra persona»
   editDraft.items.forEach(it=>{ const d=durDe(it); if(d>0) it.dur=d; });   // lo medido viaja con la playlist: quien la abra ve la vuelta sin volver a medir
   $('edSave').disabled=true; aviso('Guardando…');
   try{
@@ -778,7 +791,12 @@ $('edSave').onclick=async()=>{
       }
       r=await guardaUna(editDraft,editBase,true);
     }
-    closeModal('mEdit'); render();
+    render();
+    if(r.estado==='ok') return closeModal('mEdit');
+    // No ha llegado a la flota: el editor NO se cierra (cerrarlo sin decir nada parecía un guardado, y la siguiente
+    // sincronización devolvía la versión anterior).
+    aviso(r.estado==='local'?'Sin guardar en la flota (sin conexión o sin clave): queda sólo en este navegador y se perderá al sincronizar. Vuelve a pulsar «Guardar» cuando haya conexión.'
+      :'Sin guardar en la flota: '+(($('fleetFlag').textContent||'').replace(/^⚠\s*/,'')||'el almacén lo ha rechazado')+'. Tu edición sigue aquí; vuelve a pulsar «Guardar».','err');
   }finally{ $('edSave').disabled=false; }
 };
 /* Eliminar UNA playlist. Si sigue programada en alguna pantalla, primero se retira de su parrilla: borrar la plantilla
@@ -790,9 +808,13 @@ async function eliminaPlaylist(id){
   if(!confirm('¿Eliminar la playlist «'+(p.name||'')+'» ('+(p.items||[]).length+' pieza'+((p.items||[]).length===1?'':'s')+')?\n\n'+
       (asg.length?'Está asignada a '+asg.length+' pantalla'+(asg.length===1?'':'s')+': se retirará de su parrilla.\n':'')+
       'Se borra para todos los equipos y no se puede deshacer.')) return;
-  for(const a of asg) await unassign(id,a.screen);
+  if(asg.length) pideClave();   // la clave de plantillas, antes de tocar la parrilla: que no se quede a medias por cancelarla después
+  for(const a of asg){
+    if(!(await unassign(id,a.screen))){ alert('No he podido retirar «'+(p.name||'')+'» de la parrilla de '+(a.name||a.screen)+' (sin conexión o clave GRID_KEY incorrecta). No se ha eliminado.'); render(); return; }
+  }
   const r=await borraUna(id);
-  if(r.estado==='error') alert('No he podido eliminarla de la flota (sin conexión o clave incorrecta). No se ha borrado nada.');
+  if(r.estado==='error') alert(asg.length?'La he retirado de la parrilla, pero no he podido eliminarla de la flota (sin conexión o clave incorrecta). Sigue en la lista, sin asignar.'
+    :'No he podido eliminarla de la flota (sin conexión o clave incorrecta). No se ha borrado nada.');
   render();
 }
 
@@ -1031,7 +1053,7 @@ async function bookToScreen(screen, playlist, scope, key){
   let bands=(day&&day.bands)||[];
   if(!bands.length) return {ok:0,fail:playlist.items.length,err:'la pantalla no tiene franjas'};
   const target = scope==='all' ? bands : (bands.filter(b=>b.isNow).length?bands.filter(b=>b.isNow):bands.slice(0,1));
-  let ok=0, fail=0;
+  let ok=0, fail=0; const ids=[];   // las reservas que crea ESTA asignación: con ellas se retira exactamente lo suyo
   for(const b of target){
     let free=(b.free!=null?b.free:99);
     for(const it of playlist.items){
@@ -1041,11 +1063,11 @@ async function bookToScreen(screen, playlist, scope, key){
         const r=await fetch(GRID+'/grid/book',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
           key, screen, date, bandId:b.id, status:'own',
           advertiser:'Playlist · '+playlist.name, title:it.title||it.id, category:it.category||null, creative })}).then(r=>r.json());
-        if(r&&r.ok){ ok++; free--; } else { fail++; if(r&&/key|clave|403|auth/i.test(JSON.stringify(r.error||''))) return {ok,fail,err:'GRID_KEY incorrecta'}; }
+        if(r&&r.ok){ ok++; free--; if(r.id) ids.push(String(r.id)); } else { fail++; if(r&&/key|clave|403|auth/i.test(JSON.stringify(r.error||''))) return {ok,fail,err:'GRID_KEY incorrecta'}; }
       }catch(_){ fail++; }
     }
   }
-  return {ok,fail};
+  return {ok,fail,ids,date};
 }
 $('asDo').onclick=async()=>{
   const p=PLAYLISTS.find(x=>x.id===asgId); if(!p) return;
@@ -1061,8 +1083,9 @@ $('asDo').onclick=async()=>{
     if((r.ok||0)>0){
       const nm=(LIVEMAP[screen]&&screen)||((SURF.find(s=>s.screen===screen)||{}).name)||screen;
       const arr=ASSIGN[p.id]||(ASSIGN[p.id]=[]);
-      if(!arr.some(a=>a.screen===screen)) arr.push({screen,name:nm,scope:asgScope,ts:Date.now(),booked:r.ok});
-      else { const a=arr.find(a=>a.screen===screen); a.scope=asgScope; a.ts=Date.now(); a.booked=r.ok; }
+      const adv='Playlist · '+p.name;
+      if(!arr.some(a=>a.screen===screen)) arr.push({screen,name:nm,scope:asgScope,ts:Date.now(),booked:r.ok,ids:r.ids||[],date:r.date,adv});
+      else { const a=arr.find(a=>a.screen===screen); a.scope=asgScope; a.ts=Date.now(); a.booked=r.ok; a.ids=(a.date===r.date&&Array.isArray(a.ids)?a.ids:[]).concat(r.ids||[]); a.date=r.date; a.adv=adv; }
     }
     done++;
   }
@@ -1074,20 +1097,34 @@ $('asDo').onclick=async()=>{
   await loadTargets();
 };
 
-/* Retira de la parrilla lo programado por esta playlist en una pantalla (unbook). */
+/* Retira de la parrilla lo que ESTA playlist programó en una pantalla. Devuelve true si no queda nada suyo.
+   Se retiran las reservas que hizo la propia asignación (sus ids). Las asignaciones antiguas, de antes de apuntarlos,
+   se buscan por el anunciante con que se programaron («Playlist · nombre»). Ya NO se busca por título de pieza:
+   dos playlists con las mismas piezas —una y su copia— se quitaban las reservas la una a la otra. */
 async function unassign(plId, screen){
-  const p=PLAYLISTS.find(x=>x.id===plId); const key=gkGet();
-  if(!key){ alert('Falta la clave GRID_KEY para retirar de la parrilla. Ábrela en «Asignar».'); return; }
-  const date=todayMadrid();
+  const p=PLAYLISTS.find(x=>x.id===plId), key=gkGet();
+  if(!key){ alert('Falta la clave GRID_KEY para retirar de la parrilla. Ábrela en «Asignar».'); return false; }
+  const reg=(ASSIGN[plId]||[]).find(a=>a.screen===screen)||{}, date=reg.date||todayMadrid();
+  let limpio=true;
   try{
-    const day=await fetch(GRID+'/grid/day?screen='+encodeURIComponent(screen)+'&date='+encodeURIComponent(date),{cache:'no-store'}).then(r=>r.json());
-    const adv='Playlist · '+((p&&p.name)||'');
-    const ids=[]; ((day&&day.bands)||[]).forEach(b=>{ (b.slots||[]).forEach(s=>{ if(s.kind==='own'&&s.bookingId&&(s.advertiser===adv||(p&&(p.items||[]).some(it=>it.title===s.title)))) ids.push(s.bookingId); }); });
-    for(const id of ids){ try{ await fetch(GRID+'/grid/unbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,screen,date,id})}); }catch(_){} }
-  }catch(_){}
-  if(ASSIGN[plId]) ASSIGN[plId]=ASSIGN[plId].filter(a=>a.screen!==screen);
-  if(ASSIGN[plId]&&!ASSIGN[plId].length) delete ASSIGN[plId];
+    let ids=Array.isArray(reg.ids)&&reg.ids.length?reg.ids.slice():null;
+    if(!ids){
+      const day=await fetch(GRID+'/grid/day?screen='+encodeURIComponent(screen)+'&date='+encodeURIComponent(date),{cache:'no-store'}).then(r=>r.json());
+      const adv=reg.adv||('Playlist · '+((p&&p.name)||''));
+      ids=[]; ((day&&day.bands)||[]).forEach(b=>{ (b.slots||[]).forEach(s=>{ if(s.kind==='own'&&s.bookingId&&s.advertiser===adv) ids.push(s.bookingId); }); });
+    }
+    for(const id of ids){
+      const r=await fetch(GRID+'/grid/unbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,screen,date,id})});
+      let d=null; try{ d=await r.json(); }catch(_){}
+      if(!(r.ok&&d&&d.ok)&&r.status!==404) limpio=false;   // 404: esa reserva ya no estaba
+    }
+  }catch(_){ limpio=false; }
+  if(limpio){   // sólo se da por retirada si la parrilla lo ha confirmado
+    if(ASSIGN[plId]) ASSIGN[plId]=ASSIGN[plId].filter(a=>a.screen!==screen);
+    if(ASSIGN[plId]&&!ASSIGN[plId].length) delete ASSIGN[plId];
+  }
   saveAsg(); render(); loadTargets();
+  return limpio;
 }
 
 /* ════════════════ EVENTOS TARJETAS + GLOBAL ════════════════ */
@@ -1098,7 +1135,7 @@ $('grid').addEventListener('click',e=>{
   else if(de) eliminaPlaylist(de.dataset.del);
   else if(ed) openEdit(ed.dataset.edit);
   else if(as) openAssign(as.dataset.assign);
-  else if(un){ const [pl,sc]=un.dataset.unasg.split('|'); if(confirm('¿Retirar la playlist de la parrilla de '+sc+'?')) unassign(pl,sc); }
+  else if(un){ const [pl,sc]=un.dataset.unasg.split('|'); if(confirm('¿Retirar la playlist de la parrilla de '+sc+'?')) unassign(pl,sc).then(ok=>{ if(!ok&&gkGet()) alert('No he podido retirarla de la parrilla de '+sc+' (sin conexión o clave GRID_KEY incorrecta). Sigue programada.'); }); }
 });
 $('btnNew').onclick=()=>openEdit(null);
 $('q').addEventListener('input',render);

@@ -17,8 +17,8 @@ function elemento(id) {
   };
 }
 /** Almacén simulado. `ops:true` = el xpl-store nuevo (upsert/remove con conflicto); `ops:false` = el antiguo (sólo conjunto). */
-function almacen({ flota = [], ops = true, cae = false } = {}) {
-  const posts = []; let reloj = 5000;
+function almacen({ flota = [], ops = true, cae = false, parrilla = [] } = {}) {
+  const posts = [], retiradas = []; let reloj = 5000, unbookFalla = false;
   const red = async (url, opts = {}) => {
     url = String(url); const method = String(opts.method || "GET").toUpperCase();
     if (url.startsWith("https://xpl.admira.store/playlists")) {
@@ -37,20 +37,22 @@ function almacen({ flota = [], ops = true, cae = false } = {}) {
       if (!Array.isArray(b.playlists)) return Response.json({ error: "nada que guardar" }, { status: 400 });
       flota.splice(0, flota.length, ...structuredClone(b.playlists)); return Response.json({ ok: true, count: flota.length });
     }
+    if (url.includes("/grid/day")) return Response.json({ bands: [{ id: "b1", isNow: true, slots: structuredClone(parrilla) }] });
+    if (url.includes("/grid/unbook")) { const b = JSON.parse(opts.body); retiradas.push(b.id); return unbookFalla ? Response.json({ error: "bad-key" }, { status: 403 }) : Response.json({ ok: true }); }
     if (url.endsWith("/stock/index.json")) return Response.json({ items: [] });
     if (url.includes("/stock/list")) return Response.json({ items: [] });
     if (url.includes("/signage/screens") || url.includes("/grid/screens")) return Response.json({ screens: [] });
     return new Response("no", { status: 404 });
   };
-  return { flota, posts, red, cae: v => { cae = v; } };
+  return { flota, posts, retiradas, red, cae: v => { cae = v; }, unbookFalla: v => { unbookFalla = v; } };
 }
-function abre(alm, { storage = {}, confirma = () => true } = {}) {
+function abre(alm, { storage = {}, confirma = () => true, pregunta = () => null, sinClave = false } = {}) {
   const els = new Map(), $ = id => { if (!els.has(id)) els.set(id, elemento(id)); return els.get(id); };
-  const ls = new Map(Object.entries({ adtv_pl_key: "clave-xpl", ...storage })), dialogos = [], avisos = [];
+  const ls = new Map(Object.entries({ ...(sinClave ? {} : { adtv_pl_key: "clave-xpl" }), ...storage })), dialogos = [], avisos = [];
   const ctx = {
     document: { getElementById: $, querySelector: () => null, querySelectorAll: () => [], addEventListener() {}, removeEventListener() {}, createElement: () => elemento("nuevo"), body: { classList: clases() } },
     localStorage: { getItem: k => (ls.has(k) ? ls.get(k) : null), setItem: (k, v) => ls.set(k, String(v)), removeItem: k => ls.delete(k) },
-    fetch: alm.red, confirm: m => { dialogos.push(String(m)); return confirma(String(m)); }, prompt: () => null, alert: m => avisos.push(String(m)),
+    fetch: alm.red, confirm: m => { dialogos.push(String(m)); return confirma(String(m)); }, prompt: m => { dialogos.push(String(m)); return pregunta(String(m)); }, alert: m => avisos.push(String(m)),
     setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
     console, URL, location: { href: "http://localhost/playlists/" }, navigator: { clipboard: { writeText() {} } },
     AdmiraVirtualPlayers: { list: async () => [], merge: (a, b) => a.concat(b), label: () => "" }, AdmiraEink: { apto: () => false, isEink: () => false },
@@ -154,6 +156,7 @@ test("playlist nueva: va delante, se guarda con las duraciones medidas y sin red
   b.js("openEdit(null)"); b.$("edName").value = "Sin red"; b.js("editDraft.items=" + JSON.stringify([pieza("p7")]));
   await b.js("$('edSave').onclick()");
   assert.equal(b.js("PLAYLISTS[0].name"), "Sin red"); assert.equal(b.js("PL_SHARED"), false);
+  assert.match(b.$("edHint").textContent, /Sin guardar en la flota \(sin conexión o sin clave\): queda sólo en este navegador/, "no se cierra como si hubiera guardado");
   assert.match(b.$("fleetFlag").textContent, /solo locales/, "y se dice que no está compartida");
   assert.equal(alm.flota.length, 2);
 });
@@ -190,4 +193,72 @@ test("eliminar: cancelar no borra, una playlist asignada exige la clave de la pa
   respuesta = true; alm.cae(true);
   await b.js("eliminaPlaylist('pl_a')");
   assert.match(b.avisos.at(-1), /No he podido eliminarla de la flota/); assert.equal(b.js("PLAYLISTS.length"), 2, "sigue aquí: la flota la devolvería al sincronizar");
+});
+
+test("lo que sólo vivía en este navegador se sube al poner la clave: guardar una no se lleva las demás", async () => {
+  const locales = [PL("pl_a", "Sólo mía A", 100), PL("pl_b", "Sólo mía B", 200)];
+  const alm = almacen({ flota: [] });
+  const b = abre(alm, { sinClave: true, pregunta: () => "clave-xpl", storage: { adtv_playlists: JSON.stringify(locales) } }); await reposa();
+  assert.equal(b.js("PL_SHARED"), false); assert.equal(alm.flota.length, 0, "sin clave no se ha subido nada todavía");
+  b.js("openEdit(null)"); b.$("edName").value = "Nueva"; b.js("editDraft.items=" + JSON.stringify([pieza("p1")]));
+  await b.js("$('edSave').onclick()");
+  assert.match(b.dialogos[0], /Clave de escritura de plantillas/);
+  assert.deepEqual(alm.flota.map(p => p.name), ["Nueva", "Sólo mía A", "Sólo mía B"], "las dos locales se han subido antes y siguen ahí");
+  assert.deepEqual(plano(b.js("PLAYLISTS.map(p=>p.id)")).length, 3);
+  // Editar una que era local tampoco da un falso «otra persona la ha eliminado».
+  const antes = b.dialogos.length;
+  b.js("openEdit('pl_a')"); b.$("edName").value = "A cambiada"; await b.js("$('edSave').onclick()");
+  assert.equal(b.dialogos.length, antes); assert.equal(alm.flota.find(p => p.id === "pl_a").name, "A cambiada");
+});
+
+test("un guardado que falla no cierra el editor ni convierte el siguiente intento en un conflicto con «otra persona»", async () => {
+  const alm = almacen({ flota: [PL("pl_a", "Mañanas", 100)] });
+  const b = abre(alm); await reposa();
+  b.js("openEdit('pl_a')"); b.$("mEdit").classList.add("open"); b.$("edName").value = "Mañanas 2";
+  alm.cae(true); await b.js("$('edSave').onclick()");
+  assert.equal(b.$("mEdit").classList.contains("open"), true, "sigue abierto"); assert.match(b.$("edHint").textContent, /Sin guardar en la flota/);
+  assert.equal(b.js("PLAYLISTS[0].updatedAt"), 100, "el sello no se toca aquí: lo pone quien escribe en la flota");
+  alm.cae(false); await b.js("$('edSave').onclick()");
+  assert.equal(b.dialogos.length, 0, "ni un aviso de conflicto"); assert.equal(alm.flota[0].name, "Mañanas 2");
+  assert.equal(b.$("mEdit").classList.contains("open"), false);
+  // Con la clave mal puesta tampoco se cierra, y dice por qué.
+  const mala = abre(alm, { storage: { adtv_pl_key: "otra" } }); await reposa();
+  mala.js("openEdit('pl_a')"); mala.$("mEdit").classList.add("open"); mala.$("edName").value = "Mañanas 3";
+  await mala.js("$('edSave').onclick()");
+  assert.equal(mala.$("mEdit").classList.contains("open"), true); assert.match(mala.$("edHint").textContent, /Sin guardar en la flota: clave incorrecta/);
+  assert.equal(alm.flota[0].name, "Mañanas 2");
+});
+
+test("retirar de la parrilla toca sólo las reservas de ESA playlist, y si no se puede no se elimina", async () => {
+  const parrilla = [
+    { kind: "own", bookingId: "bk_mia_1", advertiser: "Playlist · Mañanas (copia)", title: "Pieza p1" },
+    { kind: "own", bookingId: "bk_original", advertiser: "Playlist · Mañanas", title: "Pieza p1" },   // mismas piezas: la original
+  ];
+  const alm = almacen({ parrilla, flota: [PL("pl_a", "Mañanas", 100), PL("pl_c", "Mañanas (copia)", 200), PL("pl_v", "Vieja", 300)] });
+  const asign = { pl_c: [{ screen: "led-1", name: "LED 1", scope: "now", ids: ["bk_mia_1", "bk_mia_2"], date: "2026-10-12", adv: "Playlist · Mañanas (copia)" }],
+    pl_a: [{ screen: "led-1", name: "LED 1", scope: "now" }] };   // asignación antigua, sin ids
+  const b = abre(alm, { storage: { adtv_pl_assign: JSON.stringify(asign), grid_key: "clave-grid" } }); await reposa();
+  // No se puede retirar (clave de parrilla mala): ni se elimina ni se da por retirada.
+  alm.unbookFalla(true); await b.js("eliminaPlaylist('pl_c')");
+  assert.match(b.avisos.at(-1), /No he podido retirar «Mañanas \(copia\)» de la parrilla de LED 1[\s\S]*No se ha eliminado/);
+  assert.equal(alm.flota.length, 3); assert.equal(plano(b.js("ASSIGN.pl_c")).length, 1, "sigue constando como asignada");
+  // Ahora sí: se retiran SUS reservas (las que apuntó al asignar), no la de la original aunque lleve las mismas piezas.
+  alm.unbookFalla(false); alm.retiradas.length = 0; await b.js("eliminaPlaylist('pl_c')");
+  assert.deepEqual(alm.retiradas, ["bk_mia_1", "bk_mia_2"]); assert.equal(alm.flota.find(p => p.id === "pl_c"), undefined);
+  assert.equal(b.js("ASSIGN.pl_c"), undefined);
+  // Una asignación antigua (sin ids) se busca por su anunciante exacto, nunca por el título de las piezas.
+  alm.retiradas.length = 0; assert.equal(await b.js("unassign('pl_a','led-1')"), true);
+  assert.deepEqual(alm.retiradas, ["bk_original"]);
+  assert.doesNotMatch(PAGINA, /some\(it=>it\.title===s\.title\)/, "el cruce por título de pieza ya no existe");
+});
+
+test("una medida que llega toca el total y su celda, sin repintar la lista (no se come clics ni suelta el arrastre)", async () => {
+  const b = abre(almacen()); await reposa();
+  b.js("openEdit(null,{id:'x',name:'X',items:" + JSON.stringify([pieza("v1"), pieza("v2")]) + "})"); b.$("mEdit").classList.add("open");
+  const filas = b.$("edItems").innerHTML;
+  b.js("apuntaDur('v1',65)");
+  assert.equal(b.$("edItems").innerHTML, filas, "la lista no se vuelve a escribir");
+  assert.equal(b.$("edTotal").textContent, "Vuelta ≈ 1:05 · 1 pieza sin medir");
+  assert.match(PAGINA, /setPointerCapture\(e\.pointerId\)[\s\S]{0,80}lostpointercapture/, "el arrastre no se queda enganchado si se pierde el puntero");
+  assert.match(PAGINA, /e\.pointerId!==arrastre\.pid\)\) return;/, "y otro dedo no lo suelta");
 });
