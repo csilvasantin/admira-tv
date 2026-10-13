@@ -1,8 +1,8 @@
 # Pantalla física y sincro / Physical display and synchronization
 
-ES: AdmiraSignageMac 1.7.4 acepta `display` como ID físico de CoreGraphics. El ID se obtiene de `NSScreenNumber`; no es el número de orden del monitor. En modo ventana, el player ocupa el área visible del monitor elegido; en kiosko, cubre su marco completo. Si el ID no existe, conserva la selección habitual. Solo modifica su propia ventana. Los controles de pausa y standby conservan su comportamiento.
+ES: AdmiraSignageMac 1.7.5 acepta `display` como ID físico de CoreGraphics. El ID se obtiene de `NSScreenNumber`; no es el número de orden del monitor. En modo ventana, el player ocupa el área visible del monitor elegido; en kiosko, cubre su marco completo. Si el ID no existe, conserva la selección habitual. Solo modifica su propia ventana. Los controles de pausa y standby conservan su comportamiento.
 
-EN: AdmiraSignageMac 1.7.4 accepts `display` as a physical CoreGraphics display ID, obtained from `NSScreenNumber`; it is not the monitor’s array index. Windowed mode fills the selected display’s visible area; kiosk mode fills its full frame. An unavailable ID keeps the regular selection. Only this player's window changes. Pause and standby controls keep their behavior.
+EN: AdmiraSignageMac 1.7.5 accepts `display` as a physical CoreGraphics display ID, obtained from `NSScreenNumber`; it is not the monitor’s array index. Windowed mode fills the selected display’s visible area; kiosk mode fills its full frame. An unavailable ID keeps the regular selection. Only this player's window changes. Pause and standby controls keep their behavior.
 
 ```sh
 defaults write tv.admira.signage.mac display -string 1
@@ -56,3 +56,8 @@ EN: All six private sync sources share the 7/9/16 s, 32 s cycle. V–H–V uses 
 ES: El kiosko restaura su propia ventana si estaba minimizada y la coloca en el Space activo como aplicación accesoria; ventana activa no equivale a contenido visible. EN: Kiosk restores its own minimized window and joins the active Space as an accessory app; an active app alone does not prove visible playback.
 
 ES: El kiosko puede compartir el Space de una aplicación ya a pantalla completa, sin cambiar su ventana. EN: Kiosk can join an existing app’s fullscreen Space without modifying its window. AppKit: https://developer.apple.com/documentation/appkit/nswindow/collectionbehavior-swift.struct/canjoinallapplications
+
+
+ES: El reloj se mide al recibir /sync/state, antes de descargar el tema; la demora de una lista propia no desplaza el reloj de esa pantalla. Para verificar reproducción directa, `diagnostics=1` escribe una muestra por segundo en `~/Library/Caches/AdmiraSignageDiagnostics/<screen>.json`: pieza, línea temporal, posición y fotogramas decodificados. Es lectura local opcional, sin envío y desactivada por defecto; requiere reinicio al cambiar la preferencia. No sustituye una medición óptica de los paneles.
+
+EN: Clock offset is measured when /sync/state arrives, before downloading the theme; private-playlist latency cannot shift a screen's clock. Optional `diagnostics=1` writes one read-only sample per second to `~/Library/Caches/AdmiraSignageDiagnostics/<screen>.json`: item, timeline, playback position and decoded frames. Local only, no upload, off by default; restart after changing the preference. This does not replace optical panel measurements.

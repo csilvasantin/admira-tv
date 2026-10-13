@@ -1117,7 +1117,7 @@
     "mcp": "player_info {platform:macos,section:all}; no schema change"
   },
   "macos_physical_display": {
-    "nativeVersion": "1.7.4",
+    "nativeVersion": "1.7.5",
     "config": "display / kioskGroup / focusOwner / escapeHook",
     "doc": "https://admira.tv/docs/macos-display.md",
     "es": "Pantalla completa por defecto; seis fuentes V–H–V sincronizadas, foco central único y Esc cierra grupo local; hook explícito para Mac remoto.",
@@ -1125,6 +1125,8 @@
     "activeSpace": {
       "es": "Kiosko accesorio en el Space activo, restaura su ventana minimizada.",
       "en": "Accessory kiosk joins the active Space and restores its minimized window."
-    }
+    },
+    "diagnostics": "diagnostics=1: local read-only WKWebView state, off by default",
+    "clock": "Capture master offset before per-screen theme download"
   }
 }

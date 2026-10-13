@@ -216,5 +216,10 @@
     "macOS 1.7.4: los seis kioskos cubren sus monitores, también con otro Space a pantalla completa",
     "Cuatro verticales y dos horizontales Starbucks comparten el mismo ciclo",
     "Esc cierra los seis players de los dos Macs configurados, sin rearranque"
+  ],
+  "v.13.10.2026.r9.22:36": [
+    "El reloj de sincro ya no depende del tiempo de descarga de cada playlist",
+    "Seis players Starbucks V–H–V a pantalla completa y salida conjunta con Esc",
+    "Diagnóstico local de vídeo opcional y ayuda ES/EN MCP actualizada"
   ]
 }

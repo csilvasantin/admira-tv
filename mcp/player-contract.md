@@ -131,6 +131,8 @@ ES: El canal mide el timeout de decodificación desde `playing` y acepta un foto
 
 EN: The channel measures decoding timeout from `playing` and accepts a presented frame as proof; delayed native startup is not mistaken for a broken codec.
 
-ES/EN: macOS 1.7.4 · seis players V–H–V a pantalla completa, foco central y Esc por grupo: https://admira.tv/docs/macos-display.md
+ES/EN: macOS 1.7.5 · seis players V–H–V a pantalla completa, foco central y Esc por grupo: https://admira.tv/docs/macos-display.md
 
 ES/EN: kioskGroup + focusOwner (solo central / center only); escapeHook explícito para cierre entre Macs / explicit trusted hook for cross-Mac exit. Guía y tutorial CLI / CLI guide: https://admira.tv/docs/macos-display.md
+
+ES/EN: Reloj medido antes de descargar tema / clock measured before theme download. diagnostics=1: prueba local de vídeo, sin envío / local read-only video proof, no upload; apagado por defecto / off by default.
