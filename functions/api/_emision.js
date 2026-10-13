@@ -22,6 +22,7 @@
 //   5. sincro con el máster (grupo de /api/playout o modo remoto del circuito)
 //   6. Stock: #default › cortafuegos por procedencia › todo (máx. 50), con la parrilla entrelazada cada 4
 import { TAG_ALIAS, orientationOf } from "./_playlist-live.js";
+import { assetTypeOf } from "./_asset-type.js";
 
 // ── Constantes copiadas de canal.html (el test de equivalencia comprueba que siguen siendo las mismas) ──────────
 export const MEDIA = ["video", "animation", "image", "digital-twin", "audio", "music", "locucion", "interactive"];
@@ -133,7 +134,7 @@ export function gridInjectedFrom(day, at) {
     if (!(s.creative && s.creative.url)) { sinCreatividad.push(s); continue; }
     if (seen.has(s.bookingId)) continue;
     seen.add(s.bookingId);
-    out.push({ id: "grid:" + s.bookingId, url: s.creative.url, type: (s.creative.type === "audio" ? "audio" : s.creative.type === "video" ? "video" : "image"),
+    out.push({ id: "grid:" + s.bookingId, url: s.creative.url, type: assetTypeOf(s.creative.assetType || s.creative.type),
       title: s.title || s.advertiser || "Parrilla", motor: "parrilla", category: "parrilla", _previewSec: gsec, _grid: true, _gridKind: s.kind,
       _playlistId: s.playlistId || "", _position: Number.isFinite(s.position) ? s.position : null, _lane: s.lane || "", createdAt: "9" + Date.now(),
       _slot: s });
@@ -160,7 +161,7 @@ export function defaultDraftItems(resp, { xtoreMusic = false, pool = [] } = {}) 
   }
   if (xtoreMusic) raw = xtoreMusicItems(raw, pool);
   return raw.map((it, ix) => {
-    const t = String(it.assetType || it.type || "").toLowerCase(), type = (t === "video" || t === "animation") ? "video" : (t === "audio" || t === "music" || t === "locucion") ? "audio" : "image";
+    const type = assetTypeOf(it.assetType || it.type);
     return { id: "default:" + String(it.stockId || it.id || ix), url: it.asset || it.url || "", type, title: it.title || ("Contenido " + (ix + 1)), motor: "parrilla-default",
       category: "por-defecto", _default: true, _position: ix, _previewSec: Math.max(2, +it.seconds || 10), createdAt: "8" + String(1000 + ix), _src: it };
   }).filter(x => x.url);

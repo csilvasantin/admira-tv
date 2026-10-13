@@ -1,5 +1,6 @@
 import { accessFor, authHeaders, sessionEmail } from "../_auth-session.js";
 import { lecturaBlocksWrite } from "../_lectura-guard.js";
+import { assetTypeOf } from "./_asset-type.js";
 import { LIVE_KEY, TAGS_PREFIX, STOCK_INDEX, MAX_LIVE, MAX_CIRCUITS, addressedContent, addressKeys, applyCircuits, cleanCircuit, cleanIdIot, buildXpaceIndex, cleanIdentity, xpaceEntry, cleanLive, completeFacts, deduceScreenTags, liveRev, orientationOf, resolveContent, resolveForScreen, targetMatches } from "./_playlist-live.js";
 import { sombraTrasRespuesta } from "./_programacion/gancho-sombra.js";
 // Doble escritura (E7 del modelo único): tras guardar en el KV, lo mismo va a la D1 en waitUntil, detrás de la bandera
@@ -66,9 +67,7 @@ function cleanItem(raw, index) {
   if (!raw || typeof raw !== "object") return null;
   const asset = String(raw.asset || raw.url || "").trim().slice(0, 1000);
   if (!/^https:\/\//i.test(asset)) return null;
-  const sourceType = String(raw.assetType || raw.type || "image").toLowerCase();
-  const assetType = ["video", "animation"].includes(sourceType) ? "video" :
-    ["audio", "music", "locucion"].includes(sourceType) ? "audio" : "image";
+  const assetType = assetTypeOf(raw.assetType || raw.type);
   const id = String(raw.id || raw.stockId || `item-${index + 1}`).trim().slice(0, 160);
   const tags = Array.isArray(raw.tags) ? raw.tags.map(tag => String(tag || "").trim().slice(0, 80)).filter(Boolean).slice(0, 32) : [];
   return { id, stockId: String(raw.stockId || "").trim().slice(0, 160), title: String(raw.title || `Contenido ${index + 1}`).trim().slice(0, 240),
