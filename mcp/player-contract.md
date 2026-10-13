@@ -126,3 +126,7 @@ EN: The channel initializes tag aliases before restoring the screen's saved tag,
 AdmiraSignageMac 1.7.1 reintenta una vez el vídeo silenciado del canal rechazado con NotAllowedError mediante la API nativa. No necesita clic; conserva pausa/standby/mute y no cambia energía ni permisos. Native player 1.7.1 starts policy-blocked muted channel video once through the native API; no click is required and pause/standby/mute, power settings and permissions are retained.
 
 Guía / Guide: https://admira.tv/docs/macos-muted-autoplay.md. `player_info {platform:"macos",section:"all"}` conserva su esquema y publica versión, instalación y comportamiento vigentes / retains its schema and publishes current release, install and behavior.
+
+ES: El canal mide el timeout de decodificación desde `playing` y acepta un fotograma presentado como prueba; no confunde el arranque nativo tardío con un códec defectuoso.
+
+EN: The channel measures decoding timeout from `playing` and accepts a presented frame as proof; delayed native startup is not mistaken for a broken codec.

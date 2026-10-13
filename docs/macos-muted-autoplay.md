@@ -22,3 +22,9 @@ Telemetría / Telemetry: https://api.admira.store/signage/now?screen=macbookpro1
 Contenido / Content: Stock 1791911750081-gwi050 (Frappuccino), 1791911786480-11avm9 (Horchata), 1791911820935-6aajy5 (Your Drink Your Story).
 
 No se añaden comandos ni contratos MCP / No commands or MCP contracts are added. Los controles de playlist, mute, pause/play y standby conservan sus APIs / Playlist, mute, pause/play and standby APIs retain their contracts.
+
+## Primer fotograma / First frame
+
+ES: El canal empieza la espera de decodificación cuando llega `playing`, no cuando se solicita `play()`. Un bloqueo de permiso puede esperar hasta 15 segundos a la recuperación nativa. Un fotograma presentado por `requestVideoFrameCallback` confirma decodificación aunque el contador agregado de WebKit vaya retrasado. Se conserva el respaldo para vídeos realmente defectuosos.
+
+EN: The channel measures its decoding window from `playing`, not the initial `play()` request. A policy block may wait up to 15 seconds for native recovery. A frame presented through `requestVideoFrameCallback` proves decoding even while WebKit’s aggregate counter lags. Genuinely faulty videos retain their fallback.

@@ -198,5 +198,9 @@
   ],
   "v.13.10.2026.r4.19:50": [
     "Ayuda macOS ES/EN: autoarranque nativo silenciado, respeto de pausa/standby y verificación de una vuelta completa."
+  ],
+  "v.13.10.2026.r5.19:58": [
+    "macOS: la espera del primer fotograma empieza al reproducir; el arranque tardío ya no cae por error al título negro.",
+    "Conserva pausa, standby y el respaldo de vídeos realmente defectuosos."
   ]
 }

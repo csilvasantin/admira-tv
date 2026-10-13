@@ -65,9 +65,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=13.10.2026.r4.1950"></script>
+<script src="xpl-runtime.js?v=13.10.2026.r5.1958"></script>
 <script>
-  window.ADMIRA_VERSION='v.13.10.2026.r4.19:50';
+  window.ADMIRA_VERSION='v.13.10.2026.r5.19:58';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -411,7 +411,7 @@
   <aside id="chan"></aside>
 </div>
 
-<script src="/assets/player-pairing.js?v=13.10.2026.r4.1950"></script>
+<script src="/assets/player-pairing.js?v=13.10.2026.r5.1958"></script>
 <script>
 // Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
 // directo (pub-…r2.dev): más resiliente y evita bloqueos de DNS/filtrado en algunas
@@ -2237,6 +2237,15 @@ function mediaAdvance(token,ended=false){
   if(typeof localInfoRepeatAdvance==='function'&&localInfoRepeatAdvance(ended))return;
   if(ended&&syncOn)syncFinishCurrent();else next();
 }
+// A policy-denied video has not had a decoding opportunity yet. Count the
+// decoding window from actual playback and accept a rendered frame callback.
+function videoDecodeGuardWait(v, started, frames, now){
+  if(frames>0 || v._admiraDecodedFrameSeen) return -1;
+  if(!v.error && v.paused && v._admiraAutoplayBlocked && now-started<15000) return 750;
+  const began=v._admiraPlaybackBeganAt || started;
+  if(!v.error && now-began<3500) return Math.max(100,3500-(now-began));
+  return 0;
+}
 async function play(i, forced){
   if(_standby) return;
   guardPlayStarted();               // guardia de emisión: empieza a contar el turno              // en standby no se reproduce nada (ni audio detrás del negro)
@@ -2318,6 +2327,11 @@ async function play(i, forced){
     v.style.opacity='0';
     const _reveal=()=>{ try{ v.style.opacity='1'; }catch(_){} };
     v.addEventListener('playing', _reveal, {once:true}); setTimeout(_reveal, 1200);
+    v.addEventListener('playing',()=>{ v._admiraPlaybackBeganAt=Date.now(); },{once:true});
+    // WebKit's aggregate counter can lag behind the first visible frame.
+    if(typeof v.requestVideoFrameCallback==='function'){
+      v.requestVideoFrameCallback(()=>{ v._admiraDecodedFrameSeen=true; });
+    }
     if(XTORE_PARENT)v.addEventListener('playing',()=>{if(_tok===_playTok){v._xtoreAutoplayBlocked=false;v._xtorePlaybackStarted=true;emitFrameState(it,'playing');}},{once:true});
     v.onloadedmetadata=()=>{ if(_tok!==_playTok) return;
       if(!v.videoWidth&&!v.videoHeight&&!AV1_OK&&!_codecBad.has(String(it.id))&&VSRC===SRC){ codecBadMark(it,'sin-pista-video'); play(cur,it); return; }
@@ -2369,7 +2383,9 @@ async function play(i, forced){
       // and its sound button until the user gesture, as with audio-only music.
       if(xtoreMusicEnabled()&&v.paused&&!v.error){decodeStarted=Date.now();setTimeout(checkDecoded,750);return;}
       let frames=0; try{ frames=(v.getVideoPlaybackQuality?v.getVideoPlaybackQuality().totalVideoFrames:(v.webkitDecodedFrameCount||0))||0; }catch(_){}
-      if(frames>0 || (XTORE_PARENT&&v.videoWidth>0&&v.currentTime>0&&v.readyState>=2)) return;
+      const decodeWait=videoDecodeGuardWait(v,decodeStarted,frames,Date.now());
+      if(decodeWait<0 || (XTORE_PARENT&&v.videoWidth>0&&v.currentTime>0&&v.readyState>=2)) return;
+      if(decodeWait>0){setTimeout(checkDecoded,decodeWait);return;}
       if(xtoreMusicEnabled()&&!v.error&&Date.now()-decodeStarted<3500){setTimeout(checkDecoded,750);return;}
       // Online Xtore may still be buffering. Allow up to 15 s for actual
       // media data before falling back; do not diagnose a codec from latency.
@@ -4854,6 +4870,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=13.10.2026.r4.1950" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.10.2026.r5.1958" defer></script>
 </body>
 </html>
