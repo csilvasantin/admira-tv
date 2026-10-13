@@ -1,9 +1,7 @@
 {
-  "version": "v.12.10.2026.r3.14:37",
-  "signature": "NeoMBP14 · MacBookProNegro14",
-  "agent": "NeoMBP14",
-  "machine": "MacBookProNegro14",
-  "day": "12.10.2026",
-  "time": "14:37",
-  "evidence": "Playlists: editor completo (ordenar arrastrando, duración por pieza y de la vuelta, duplicar y eliminar una playlist, guardado por playlist con aviso de conflicto). Va con el worker xpl-store 9165177 (upsert/remove). Misión DCL-c845432521a65990306443b8."
+  "version": "v.13.10.2026.r1.18:12",
+  "deployer": "TrinityMacStudio",
+  "machine": "MacStudio",
+  "signature": "TrinityMacStudio · MacStudio",
+  "agent": "TrinityMacStudio"
 }

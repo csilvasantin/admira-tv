@@ -681,6 +681,13 @@
   function wireAvatarCli(){
     var form=document.getElementById('admExpForm'), input=document.getElementById('admExpIn'), log=document.getElementById('admExpLog');
     if(!form||!input||!log) return;
+    // The existing TV console delegates shared commands to the suite engine.
+    // Its native actions remain available; the engine captures only its own commands.
+    if(!window.__admiraCommandsLoader && !document.getElementById('admira-command-loader')){
+      var suite=document.createElement('script');
+      suite.id='admira-command-loader';suite.src='https://www.admiranext.com/suite/loader.js?v=20261013-alsea-1';suite.defer=true;
+      document.head.appendChild(suite);
+    }
     var HELP='Comandos en este navegador:\n/help — esta ayuda\n/marca [id|off] — marca blanca (p. ej. /marca starbucks)\n/avatar — estado y las tres opciones\n/avatar good — el calvo, cara 3D (facecap, 52 blendshapes)\n/avatar better — la chica web (Ready Player Me, gafas)\n/avatar best — Neo, MetaHuman; si el host de render está apagado, entra la chica\n/avatarON lo muestra · /avatarOFF lo oculta · /avatar reset vuelve al interruptor del proyecto';
     function write(text){ log.textContent += (log.textContent?'\n':'') + text; log.scrollTop=log.scrollHeight; }
     write('Admira.tv · CLI lista. Escribe /help.');
