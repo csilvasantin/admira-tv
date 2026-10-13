@@ -10,9 +10,9 @@ set -euo pipefail
 # OJO, el bucket viejo (pub-9a6a58b6…) que repartía la v.26.07.10.r1 —la app 1.2 de
 # julio, que DEGRADABA equipos que ya tenían la 1.3— está en otra cuenta a la que
 # no llegamos desde aquí; sus URLs siguen vivas y sirviendo lo viejo. No apuntes ahí.
-VERSION="v.13.10.2026.r1.19:36"
+VERSION="v.13.10.2026.r2.22:14"
 # dominio propio: LaLiga bloquea workers.dev/r2.dev en horas de fútbol, FLT-1633
-URL="https://playerapp.admira.store/AdmiraSignageMac-v.13.10.2026.r1.1936.zip"
+URL="https://playerapp.admira.store/AdmiraSignageMac-v.13.10.2026.r2.2214.zip"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
 echo "→ Descargando AdmiraSignageMac ${VERSION}…"

@@ -202,5 +202,9 @@
   "v.13.10.2026.r5.19:58": [
     "macOS: la espera del primer fotograma empieza al reproducir; el arranque tardío ya no cae por error al título negro.",
     "Conserva pausa, standby y el respaldo de vídeos realmente defectuosos."
+  ],
+  "v.13.10.2026.r6.22:14": [
+    "macOS 1.7.2 permite indicar el monitor físico para cada player.",
+    "Starbucks MacStudio: dos verticales y un horizontal con reloj común y tramos de 7, 9 y 16 segundos."
   ]
 }

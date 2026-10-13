@@ -130,3 +130,5 @@ Guía / Guide: https://admira.tv/docs/macos-muted-autoplay.md. `player_info {pla
 ES: El canal mide el timeout de decodificación desde `playing` y acepta un fotograma presentado como prueba; no confunde el arranque nativo tardío con un códec defectuoso.
 
 EN: The channel measures decoding timeout from `playing` and accepts a presented frame as proof; delayed native startup is not mistaken for a broken codec.
+
+ES/EN: macOS 1.7.2 · display físico y tres playlists Starbucks sincronizadas: https://admira.tv/docs/macos-display.md

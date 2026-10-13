@@ -409,3 +409,5 @@ Contract/tutorial ES/EN: https://admira.tv/mcp/xtore-demo-setup.md and https://a
 ## macOS · Autoarranque silenciado / Muted autonomous startup
 
 AdmiraSignageMac 1.7.1: native recovery of muted channel NotAllowedError once per element, preserving pause, standby and user preferences. No physical click or power-mode change. ES/EN guide: https://admira.tv/docs/macos-muted-autoplay.md. MCP player_info platform macos unchanged. Verify visible motion and a full loop, not only on_air titles.
+
+ES/EN: macOS 1.7.2 · display físico y tres playlists Starbucks sincronizadas: https://admira.tv/docs/macos-display.md
