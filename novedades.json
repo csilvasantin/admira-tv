@@ -195,5 +195,8 @@
     "Player macOS 1.7.1: el vídeo silenciado arranca sin clic, incluso bajo la política de bajo consumo del MacBook.",
     "Conserva pausa, standby, mute, encuadre e historial; no cambia el modo de energía.",
     "Descarga universal, tutorial ES/EN y player_info MCP actualizados."
+  ],
+  "v.13.10.2026.r4.19:50": [
+    "Ayuda macOS ES/EN: autoarranque nativo silenciado, respeto de pausa/standby y verificación de una vuelta completa."
   ]
 }
