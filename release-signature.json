@@ -2,5 +2,6 @@
   "version": "v.13.10.2026.r1.18:12",
   "deployer": "TrinityMacStudio",
   "machine": "MacStudio",
-  "signature": "TrinityMacStudio · MacStudio"
+  "signature": "TrinityMacStudio · MacStudio",
+  "agent": "TrinityMacStudio"
 }
