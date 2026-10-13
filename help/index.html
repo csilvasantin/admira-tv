@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=13.10.2026.r6.2214"></script>
+<script src="/auth-gate.js?v=13.10.2026.r7.2227"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ayuda · Admira.tv CMS</title>
 <meta name="description" content="Guía del CMS de emisión de Admira.tv: calendario, dispositivos, edición, venta de cuñas, Hilo Musical, segmentación, player condicionado Xtore, multi-Xpacio, PixerIA y alertas.">
@@ -32,11 +32,11 @@
   .links b{color:var(--txt)} .links span{font-size:12px;color:var(--dim)}
   .note{font-size:13px;color:var(--dim)}
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=13.10.2026.r6.2214">
+  <link rel="stylesheet" href="/admira-frame.css?v=13.10.2026.r7.2227">
 </head>
 <body>
-<script src="/admira-nav.js?v=13.10.2026.r6.2214" data-active="help" data-title="Ayuda del CMS" defer></script>
-<script src="/admira-frame.js?v=13.10.2026.r6.2214" defer></script>
+<script src="/admira-nav.js?v=13.10.2026.r7.2227" data-active="help" data-title="Ayuda del CMS" defer></script>
+<script src="/admira-frame.js?v=13.10.2026.r7.2227" defer></script>
 <div class="wrap">
   <h1>Guía del CMS de emisión</h1>
   <p class="lead">Cómo programar, vender y medir la emisión de cada Xpacio (tienda) desde <a href="/cms/calendar/">admira.tv/cms/calendar</a>.</p>
@@ -409,6 +409,6 @@
 <section id="starbucks-door"><h2>Starbucks · Acceso a Matrix / Enter Matrix</h2><p>ES: En la vista Humano de Starbucks Passeig de Gràcia 103, pulsa el halo difuminado de la fachada para entrar en Matrix en la misma pestaña. No hay rótulo sobre la foto. El halo late suavemente y se intensifica al pasar el ratón o enfocar con Tab; Enter abre el gemelo. Con movimiento reducido permanece estático.</p><p>EN: In the Human view of Starbucks Passeig de Gràcia 103, click the blurred entrance halo to open Matrix in the same tab. There is no label over the photograph. The halo gently pulses and brightens on hover or keyboard focus; Tab then Enter opens the twin. Reduced motion keeps the halo static.</p><p><a href="https://admira.tv/adcelerate/demo/?view=human&amp;site=starbucks">Starbucks · vista de calle / street view</a></p></section>
 <section id="demo-engine"><h2>Demos · motor compartido / Shared engine</h2><p><code>/demo lista</code> · <code>/demo editor</code> · <code>/demo studio|store|tv|app|biz</code> · <code>/demo ios [iphone|watch] [playlist|#tag]</code></p><p>El editor publica para las cinco aplicaciones y sus páginas interiores. / The editor publishes across all five applications and their interior pages.</p><p><a href="https://www.admiranext.com/mcp/DEMO-ENGINE.md">Contrato ES/EN / ES/EN contract</a></p></section>
 <section id="macos-muted-autoplay"><h2>macOS · Vídeo silenciado sin clic / Muted video without a click</h2><p>ES: AdmiraSignageMac 1.7.1 inicia mediante la API nativa el vídeo silenciado del canal cuando WebKit bloquea su autoarranque. La espera del primer fotograma empieza al reproducir, evitando un falso respaldo negro. Reintenta una vez por pieza y conserva pausa, standby, mute, encuadre e historial. Asigna la playlist al screen exacto desde Parrilla → Por defecto, abre el player habitual y comprueba movimiento visible y una vuelta completa.</p><p lang="en">EN: AdmiraSignageMac 1.7.1 starts muted channel video through the native API when WebKit blocks page autoplay. Its first-frame timeout starts with playback, preventing a false black fallback. It retries once per item and retains pause, standby, mute, framing and history. Assign the playlist to the exact screen through Rundown → Default, start the regular player and verify visible motion and a full loop.</p><p><a href="/docs/macos-muted-autoplay.md">Contrato y tutorial / Contract and guide</a> · <a href="/player/">Descargar / Download</a></p></section>
-<section id="macos-display"><h2>macOS · Elegir pantalla y sincronizar / Choose display and synchronize</h2><p>ES: El player 1.7.2 acepta la preferencia display con el ID físico del monitor: ocupa su área visible en modo ventana o su marco completo en kiosko. Para listas de distinta orientación, publica primero el tema propio de cada screen con el mismo orden y duración por pieza; después activa sincro=1 y verifica una vuelta completa.</p><p lang="en">EN: Player 1.7.2 accepts the display preference with the physical monitor ID: it fills its visible area in windowed mode or full frame in kiosk mode. For playlists with different orientations, publish each screen’s own theme with matching order and item durations before enabling sincro=1, then verify a full loop.</p><p><a href="/docs/macos-display.md">Guía, CLI y contrato Starbucks / Guide, CLI and Starbucks contract</a></p></section>
+<section id="macos-display"><h2>macOS · Elegir pantalla y sincronizar / Choose display and synchronize</h2><p>ES: El player 1.7.3 acepta la preferencia display con el ID físico del monitor: ocupa su área visible en modo ventana o su marco completo en kiosko. Para listas de distinta orientación, publica primero el tema propio de cada screen con el mismo orden y duración por pieza; después activa sincro=1 y verifica una vuelta completa.</p><p lang="en">EN: Player 1.7.3 accepts the display preference with the physical monitor ID: it fills its visible area in windowed mode or full frame in kiosk mode. For playlists with different orientations, publish each screen’s own theme with matching order and item durations before enabling sincro=1, then verify a full loop.</p><p>ES: Para tres kioskos simultáneos, configura el mismo kioskGroup y focusOwner=1 solo en el central (laterales: 0). Esc cierra el grupo local. Un escapeHook local explícito permite cerrar también el otro Mac; el grupo solo no activa salida remota. Las seis fuentes Starbucks V–H–V comparten el ciclo de 32 segundos.</p><p lang="en">EN: For three simultaneous kiosks, set the same kioskGroup and focusOwner=1 only on the center (sides: 0). Escape closes the local group. An explicit local escapeHook can also close the peer Mac; the group alone does not enable remote exit. All six Starbucks V–H–V sources share the 32 second cycle.</p><p><a href="/docs/macos-display.md">Guía, CLI y contrato Starbucks / Guide, CLI and Starbucks contract</a></p></section>
 </body>
 </html>

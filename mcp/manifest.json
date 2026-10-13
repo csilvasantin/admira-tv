@@ -1117,10 +1117,10 @@
     "mcp": "player_info {platform:macos,section:all}; no schema change"
   },
   "macos_physical_display": {
-    "nativeVersion": "1.7.2",
-    "config": "display / ADMIRA_DISPLAY / -display",
+    "nativeVersion": "1.7.3",
+    "config": "display / kioskGroup / focusOwner / escapeHook",
     "doc": "https://admira.tv/docs/macos-display.md",
-    "es": "Monitor físico por CGDisplayID; playlists por orientación con reloj y duraciones comunes.",
-    "en": "Physical monitor by CGDisplayID; orientation playlists share clock and durations."
+    "es": "Pantalla completa por defecto; seis fuentes V–H–V sincronizadas, foco central único y Esc cierra grupo local; hook explícito para Mac remoto.",
+    "en": "Fullscreen by default; six synchronized V–H–V sources, one center focus owner and Escape closes local group; explicit hook for peer Mac."
   }
 }

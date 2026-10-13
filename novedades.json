@@ -206,5 +206,10 @@
   "v.13.10.2026.r6.22:14": [
     "macOS 1.7.2 permite indicar el monitor físico para cada player.",
     "Starbucks MacStudio: dos verticales y un horizontal con reloj común y tramos de 7, 9 y 16 segundos."
+  ],
+  "v.13.10.2026.r7.22:27": [
+    "macOS 1.7.3: tres players V–H–V por Mac, todos a pantalla completa",
+    "Los seis players Starbucks comparten el mismo ciclo; Esc cierra los dos Macs configurados",
+    "Foco único en el central; ayuda ES/EN y contrato MCP actualizados"
   ]
 }
