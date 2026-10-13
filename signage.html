@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=13.10.2026.r1.1812"></script>
+<script src="/auth-gate.js?v=13.10.2026.r2.1854"></script>
 <!-- r32: preconnect a orígenes críticos (CSS del chrome + backbone /grid) -->
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
@@ -16,7 +16,7 @@
 <!-- Chrome "portería" SOLO al navegar; NO en el display a pantalla completa (clean=1/chrome=0/embed=mupi). -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
   if(p.get('chrome')==='0'||p.get('clean')==='1'||p.get('embed')==='mupi')return;
-  var s=document.createElement('script');s.src='/admira-nav.js?v=04.08.2026.r4';
+  var s=document.createElement('script');s.src='/admira-nav.js?v=13.10.2026.r2.1854';
   s.setAttribute('data-active','');s.setAttribute('data-title','Pixer Signage');document.head.appendChild(s);
   var f=document.createElement('script');f.src='/admira-frame.js?v=14.07.2026.r47';f.defer=true;document.head.appendChild(f);
 }catch(e){}})();</script>
@@ -69,7 +69,7 @@
     mix-blend-mode:overlay;
   }
 </style>
-  <link rel="stylesheet" href="/admira-frame.css?v=13.10.2026.r1.1812">
+  <link rel="stylesheet" href="/admira-frame.css?v=13.10.2026.r2.1854">
 </head>
 <body>
 
@@ -198,6 +198,6 @@ async function tick() {
 tick();
 setInterval(tick, POLL_MS);
 </script>
-  <script src="/assets/admira-version-watch.js?v=13.10.2026.r1.1812" defer></script>
+  <script src="/assets/admira-version-watch.js?v=13.10.2026.r2.1854" defer></script>
 </body>
 </html>

@@ -186,5 +186,9 @@
   "v.13.10.2026.r1.18:12": [
     "La consola de Canal conecta sus comandos compartidos al motor Experto de la suite.",
     "/demo alsea abre el lanzador privado del generador. Las acciones propias de TV siguen en su consola."
+  ],
+  "v.13.10.2026.r2.18:54": [
+    "Canal y Signage dejan de cargar el script de navegación con una dirección de agosto que permanecía en caché.",
+    "La consola de ambas vistas recibe el motor común y el lanzador /demo alsea."
   ]
 }
