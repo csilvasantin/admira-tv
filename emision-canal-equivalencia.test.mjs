@@ -44,7 +44,7 @@ const feed = /all=\(XTORE_PARENT\?xtoreCatalogItems\(items\):(items\.filter\(i=>
 
 const FUNCS = ["rebuild", "defaultOrder", "matchesSeg", "matches", "normTag", "canonicalPlayTag", "tagNeedles", "gridWeave",
   "injectTaggedContent", "freshTailOrder", "syncMasterOrder", "condLiveLabel", "extendedItem", "xtoreMusicItems",
-  "xtoreLatestStock", "xtoreMusicRebuild", "loadGrid", "loadDefaultDraft", "madridSlot"];
+  "xtoreLatestStock", "xtoreMusicRebuild", "loadGrid", "loadDefaultDraft", "playlistAssetKind", "madridSlot"];
 
 /** Ejecuta el player real con un escenario y devuelve lo que pondría en antena. */
 async function player(sc) {

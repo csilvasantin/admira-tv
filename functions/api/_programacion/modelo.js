@@ -9,6 +9,7 @@
 // `anade` se guarda sin eñe para no depender de la codificación en SQL y en URLs; se acepta «añade» al entrar.
 
 import { cleanLive, screenTag } from "../_playlist-live.js";
+import { assetTypeOf } from "../_asset-type.js";
 import { limpiarProgramacion, rangoUtc } from "./horario.js";
 
 export const CAPAS = Object.freeze({ emergencia: 500, pagada: 400, propia: 300, por_defecto: 200, relleno: 100 });
@@ -53,8 +54,7 @@ export function limpiarPieza(raw, index = 0) {
   if (!raw || typeof raw !== "object") return null;
   const asset = texto(raw.asset || raw.url, 1000);
   if (!/^https:\/\//i.test(asset)) return null;
-  const tipoFuente = String(raw.assetType || raw.type || "image").toLowerCase();
-  const assetType = ["video", "animation"].includes(tipoFuente) ? "video" : ["audio", "music", "locucion"].includes(tipoFuente) ? "audio" : "image";
+  const assetType = assetTypeOf(raw.assetType || raw.type);
   const tags = Array.isArray(raw.tags) ? raw.tags.map(t => texto(t, 80)).filter(Boolean).slice(0, 32) : [];
   return { tipo: "pieza", id: texto(raw.id || raw.stockId || `item-${index + 1}`, 160), stockId: texto(raw.stockId, 160),
     title: texto(raw.title || `Contenido ${index + 1}`, 240), sub: texto(raw.sub, 300), lane: raw.lane === "municipal" ? "municipal" : "publicidad",

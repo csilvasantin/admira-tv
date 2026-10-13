@@ -424,6 +424,7 @@ const MEDIA = ['video','animation','image','digital-twin','audio','music','locuc
 // descargue y se pinte: es un documento que corre solo dentro de un iframe, así
 // que ni se precachea ni se captura como fotograma. Ver INTERACTIVO más abajo.
 const KIND = { video:'video', animation:'video', image:'image', 'digital-twin':'image', 'twin-npc':'image', audio:'audio', music:'audio', locucion:'audio', interactive:'interactive', xperiencia:'interactive' };
+function playlistAssetKind(it){ const kind=KIND[String(it&&(it.assetType||it.type)||'').trim().toLowerCase()]; return typeof kind==='string'?kind:'image'; }
 const qs = new URLSearchParams(location.search);
 const pairingReady = window.AdmiraPlayerPairing?.ready || Promise.resolve();
 function programScreen(){return window.AdmiraPlayerPairing?.source?.screen || scr.screen;}
@@ -1584,7 +1585,7 @@ async function loadGrid(){ await pairingReady; if(!scr.screen) return;
     // programados ocupan ESA ranura, no la de la pantalla. Un vídeo sigue yendo hasta su final.
     const _gsec=Math.max(2,Math.min(120,Number(d.config&&d.config.slotSeconds)||10));
     if(cur) for(const s of cur.slots){ if((s.kind==='own'||s.kind==='paid') && s.creative && s.creative.url && !seen.has(s.bookingId)){ seen.add(s.bookingId);
-      out.push({ id:'grid:'+s.bookingId, url:s.creative.url, type:(s.creative.type==='audio'?'audio':s.creative.type==='video'?'video':'image'), title:s.title||s.advertiser||'Parrilla', motor:'parrilla', category:'parrilla', _previewSec:_gsec, _grid:true, _gridKind:s.kind, _playlistId:s.playlistId||'', _position:Number.isFinite(s.position)?s.position:null, _lane:s.lane||'', createdAt:'9'+Date.now() }); } }
+      out.push({ id:'grid:'+s.bookingId, url:s.creative.url, type:playlistAssetKind(s.creative), title:s.title||s.advertiser||'Parrilla', motor:'parrilla', category:'parrilla', _previewSec:_gsec, _grid:true, _gridKind:s.kind, _playlistId:s.playlistId||'', _position:Number.isFinite(s.position)?s.position:null, _lane:s.lane||'', createdAt:'9'+Date.now() }); } }
     gridExactMode=out.length>0 && out.every(x=>x._playlistId==='municipal-50-50');
     if(gridExactMode) out.sort((a,b)=>(a._position??9999)-(b._position??9999));
     gridInjected=out;
@@ -1593,7 +1594,7 @@ async function loadGrid(){ await pairingReady; if(!scr.screen) return;
     // cada 60 s aunque /grid/day devolviera lo mismo todo el día. La franja resuelta entra
     // en la firma solo con slot 'auto' (los cruces de las 12/16/21h de Madrid deben seguir
     // re-segmentando); el push del camino de skip es no-op salvo reintento r45 pendiente.
-    const _gsig=out.map(x=>x.id+'~'+x.url+'~'+(x._position??'')+'~'+(x._previewSec||'')).join('|')+'|'+(seg.slot==='auto'?madridSlot():'');
+    const _gsig=out.map(x=>x.id+'~'+x.url+'~'+x.type+'~'+(x._position??'')+'~'+(x._previewSec||'')).join('|')+'|'+(seg.slot==='auto'?madridSlot():'');
     if(_gsig===_gridSig){ try{ signagePlaylistPush(); }catch(_){} return; }
     _gridSig=_gsig;
     all=all.filter(a=>!a._grid).concat(gridInjected); rebuild(false);
@@ -1612,7 +1613,7 @@ async function loadRundownPreview(){
   try{
     const d=await fetch(GRID_API+'/grid/draft?screen='+encodeURIComponent(scrId)+'&playlist='+encodeURIComponent(pl)+'&_='+Date.now(),{cache:'no-store'}).then(r=>r.json());
     const draft=d&&d.draft, raw=(draft&&Array.isArray(draft.items))?draft.items:[];
-    const mapped=raw.map((it,ix)=>{ const t=String(it.assetType||it.type||'').toLowerCase(); const type=(t==='video'||t==='animation')?'video':(t==='audio'||t==='music'||t==='locucion')?'audio':'image'; return { id:'preview:'+ix+':'+(it.id||''), url:it.asset||it.url||'', type, title:it.title||('Slot '+(ix+1)), motor:'borrador', category:'borrador', _lane:it.lane||'', _position:ix, _num:ix+1, _preview:true, _previewSec:Math.max(2,+it.seconds||10), createdAt:'9'+String(1000+ix) }; }).filter(x=>x.url);
+    const mapped=raw.map((it,ix)=>{ const type=playlistAssetKind(it); return { id:'preview:'+ix+':'+(it.id||''), url:it.asset||it.url||'', type, title:it.title||('Slot '+(ix+1)), motor:'borrador', category:'borrador', _lane:it.lane||'', _position:ix, _num:ix+1, _preview:true, _previewSec:Math.max(2,+it.seconds||10), createdAt:'9'+String(1000+ix) }; }).filter(x=>x.url);
     if(!mapped.length){ previewFallback(raw.length?'borrador sin assets reproducibles':'sin borrador remoto para esta pantalla'); return; }
     PREVIEW.items=mapped; all=mapped.slice();
     const t=draft&&+draft.updatedAt?new Date(+draft.updatedAt):null;
@@ -1759,7 +1760,7 @@ async function loadDefaultDraft(){
     if(d&&Array.isArray(d.auto)&&d.auto.length){const ya=new Set(raw.map(it=>String(it.stockId||it.id||'')));raw=raw.concat(d.auto.filter(it=>!ya.has(String(it.stockId||it.id||''))));}
     if(xtoreMusicEnabled()){DEFAULT_DRAFT.ready=true;DEFAULT_DRAFT.assigned=raw.length>0;}
     if(xtoreMusicEnabled())raw=xtoreMusicItems(raw,all);
-    const mapped=raw.map((it,ix)=>{const t=String(it.assetType||it.type||'').toLowerCase(),type=(t==='video'||t==='animation')?'video':(t==='audio'||t==='music'||t==='locucion')?'audio':'image';return{id:'default:'+String(it.stockId||it.id||ix),url:it.asset||it.url||'',type,title:it.title||('Contenido '+(ix+1)),motor:'parrilla-default',category:'por-defecto',_default:true,_position:ix,_previewSec:Math.max(2,+it.seconds||10),createdAt:'8'+String(1000+ix)}}).filter(x=>x.url);
+    const mapped=raw.map((it,ix)=>{const type=playlistAssetKind(it);return{id:'default:'+String(it.stockId||it.id||ix),url:it.asset||it.url||'',type,title:it.title||('Contenido '+(ix+1)),motor:'parrilla-default',category:'por-defecto',_default:true,_position:ix,_previewSec:Math.max(2,+it.seconds||10),createdAt:'8'+String(1000+ix)}}).filter(x=>x.url);
     const signature=(xtoreMusicEnabled()?(DEFAULT_DRAFT.assigned?'assigned:':'stock:'):'')+mapped.map(x=>x.id+'|'+x.type+'|'+x.url+'|'+x._previewSec).join('~');
     if(signature===DEFAULT_DRAFT.signature){if(xtoreMusicEnabled()&&!playlist.length)rebuild(false);return;}
     DEFAULT_DRAFT.items=mapped;DEFAULT_DRAFT.signature=signature;rebuild(false);

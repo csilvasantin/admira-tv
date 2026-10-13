@@ -25,6 +25,7 @@
 // Mando en vivo: gana sobre la base hasta 2 h o el siguiente borde de franja; lo pagado se sigue intercalando.
 
 import { addressedContent, applyCircuits, deduceScreenTags, norm, resolveContent, targetMatches } from "../_playlist-live.js";
+import { assetTypeOf as tipoAsset } from "../_asset-type.js";
 import { CADENCIA_DEFECTO, CAPAS, MAX_ITEMS, esDirecta, ordenK } from "./modelo.js";
 import { HORA_MS, HORIZONTE_MS, ZONA, aMinutos, aUtc, cubre, esFecha, partesLocales, proximoBorde, sumarDias } from "./horario.js";
 
@@ -32,7 +33,6 @@ export const MANDO_MAX_MS = 2 * HORA_MS;
 export const RUNDOWN_EXACTO = "municipal-50-50";
 const PAGADO = new Set(["paid", "sold", "accepted"]);
 
-const tipoAsset = t => { t = String(t || "").toLowerCase(); return t === "video" || t === "animation" ? "video" : ["audio", "music", "locucion"].includes(t) ? "audio" : "image"; };
 const clave = it => (it.stockId ? "s:" + it.stockId : "a:" + (it.asset || it.id));
 const sinTipo = it => { const { tipo, ...resto } = it; return resto; };
 

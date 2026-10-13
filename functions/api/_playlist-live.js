@@ -10,6 +10,8 @@
 // puestas a mano, mandan ellas; si no, recibe lo que digan las playlists vivas que le toquen.
 // Lógica pura (sin red ni KV) para poder probarla; playlist.js pone el almacenamiento y la sesión.
 
+import { assetTypeOf } from "./_asset-type.js";
+
 export const LIVE_KEY = "admira-tv:playlist:live:v1";
 export const TAGS_PREFIX = "admira-tv:screen:tags:v1:";
 export const STOCK_INDEX = "https://stock.admira.store/stock/index.json";
@@ -116,7 +118,6 @@ function tagHits(pieceTags, wanted) {
 
 const TYPES = { visual: ["image", "video"], image: ["image"], video: ["video"], audio: ["audio", "music", "locucion"] };
 const AUDIO_TYPES = new Set(["audio", "music", "locucion"]), VISUAL_TYPES = new Set(["image", "video", "animation"]);
-const assetTypeOf = type => (type === "video" || type === "animation") ? "video" : AUDIO_TYPES.has(type) ? "audio" : "image";
 const pieceOrientation = p => orientationOf(p.ancho, p.alto, p.orientacion);
 const stamp = p => { const n = Number(p.createdAt); return Number.isFinite(n) && n > 0 ? n : (Date.parse(p.createdAt) || Number(String(p.id || "").split("-")[0]) || 0); };
 
