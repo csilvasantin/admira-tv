@@ -1108,5 +1108,12 @@
       "es",
       "en"
     ]
+  },
+  "macos_muted_autoplay": {
+    "nativeVersion": "1.7.1",
+    "guide": "https://admira.tv/docs/macos-muted-autoplay.md",
+    "es": "Recupera una vez por pieza el autoarranque silenciado bloqueado; conserva pausas, standby, mute y energía.",
+    "en": "Starts policy-blocked muted video once per item; preserves pause, standby, mute and power settings.",
+    "mcp": "player_info {platform:macos,section:all}; no schema change"
   }
 }

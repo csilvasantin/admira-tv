@@ -405,3 +405,7 @@ Tutorial: https://admira.tv/adcelerate/demo/tutorials/starbucks-matrix-door.md
 ES: Lanzar desde https://admira.tv/videoanalytics/ → Preparar demo Xtore. Cuadrática compartida cerrada al entrar. Preparar demo abre/reutiliza Digital Twin y prepara detector/player; Compartir Puerta Cam requiere selector Chrome explícito. No nuevo tool MCP/CLI ni apertura automática de cámara IEU.
 EN: Launch from Video Analytics → Prepare Xtore demo. Shared quadratic shell starts closed. Setup opens/reuses Digital Twin and prepares detector/player; Share Puerta Cam requires explicit Chrome selection. No new MCP/CLI tool or automatic IEU camera navigation.
 Contract/tutorial ES/EN: https://admira.tv/mcp/xtore-demo-setup.md and https://admira.tv/help/#xtore-preparar-demo.
+
+## macOS · Autoarranque silenciado / Muted autonomous startup
+
+AdmiraSignageMac 1.7.1: native recovery of muted channel NotAllowedError once per element, preserving pause, standby and user preferences. No physical click or power-mode change. ES/EN guide: https://admira.tv/docs/macos-muted-autoplay.md. MCP player_info platform macos unchanged. Verify visible motion and a full loop, not only on_air titles.

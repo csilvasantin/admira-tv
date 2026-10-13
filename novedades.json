@@ -190,5 +190,10 @@
   "v.13.10.2026.r2.18:54": [
     "Canal y Signage dejan de cargar el script de navegación con una dirección de agosto que permanecía en caché.",
     "La consola de ambas vistas recibe el motor común y el lanzador /demo alsea."
+  ],
+  "v.13.10.2026.r3.19:40": [
+    "Player macOS 1.7.1: el vídeo silenciado arranca sin clic, incluso bajo la política de bajo consumo del MacBook.",
+    "Conserva pausa, standby, mute, encuadre e historial; no cambia el modo de energía.",
+    "Descarga universal, tutorial ES/EN y player_info MCP actualizados."
   ]
 }
