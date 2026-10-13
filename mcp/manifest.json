@@ -1117,10 +1117,14 @@
     "mcp": "player_info {platform:macos,section:all}; no schema change"
   },
   "macos_physical_display": {
-    "nativeVersion": "1.7.3",
+    "nativeVersion": "1.7.4",
     "config": "display / kioskGroup / focusOwner / escapeHook",
     "doc": "https://admira.tv/docs/macos-display.md",
     "es": "Pantalla completa por defecto; seis fuentes V–H–V sincronizadas, foco central único y Esc cierra grupo local; hook explícito para Mac remoto.",
-    "en": "Fullscreen by default; six synchronized V–H–V sources, one center focus owner and Escape closes local group; explicit hook for peer Mac."
+    "en": "Fullscreen by default; six synchronized V–H–V sources, one center focus owner and Escape closes local group; explicit hook for peer Mac.",
+    "activeSpace": {
+      "es": "Kiosko accesorio en el Space activo, restaura su ventana minimizada.",
+      "en": "Accessory kiosk joins the active Space and restores its minimized window."
+    }
   }
 }
