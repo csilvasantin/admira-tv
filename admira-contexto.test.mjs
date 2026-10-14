@@ -32,7 +32,7 @@ class Nodo {
 function clases(...ini) { const s = new Set(ini); return { contains: (c) => s.has(c), add: (c) => s.add(c), remove: (c) => s.delete(c) }; }
 
 /* Un navegador mínimo: carga de scripts (shared/contexto.js de verdad, AdmiraMarca simulado), eventos y fetch. */
-function navegador({ href = "https://morfeo-5979-contexto.admira-tv.pages.dev/parrilla/", local = {}, rolServidor = {}, guardado = {}, experto = true, tokenCaido = 0 } = {}) {
+function navegador({ href = "https://morfeo-5979-contexto.admira-tv.pages.dev/parrilla/", local = {}, rolServidor = {}, guardado = {}, experto = true, tokenCaido = 0, sinCtx = false } = {}) {
   const llamadas = [];
   const servidor = { ctx: new Map(Object.entries(guardado)) }; // email → {marca, proyecto}
   const emailDe = (auth) => ({ "Bearer tok-superuser": "csilvasantin@gmail.com", "Bearer tok-reader": "reader@preview.invalid", "Bearer tok-prod": "csilvasantin@gmail.com" })[auth || ""] || "";
@@ -46,6 +46,7 @@ function navegador({ href = "https://morfeo-5979-contexto.admira-tv.pages.dev/pa
     const email = emailDe(headers.get("Authorization"));
     const superusuario = email === "csilvasantin@gmail.com" && rolServidor[email] !== "lector";
     if (url.pathname === "/ctx") {
+      if (sinCtx) return json({ error: "not-found" }, 404);
       if (!email) return json({ error: "session-required" }, 401);
       const actual = servidor.ctx.get(email) || { marca: null, proyecto: null };
       if ((init.method || "GET") === "POST") {
@@ -182,6 +183,13 @@ test("en producción, sin la API configurada (503), /proyecto explica que aún n
   assert.match(out.lineas.join("\n"), /todavía no está activo en producción/);
   assert.equal((await window.AdmiraContextoTv.ejecutar("/marca lumbre", out)).ok, true);
   assert.match(out.lineas.join("\n"), /Marca: lumbre/);
+});
+
+test("en producción, con la API sin /ctx (404), /proyecto también explica que aún no está activo", async () => {
+  const { window } = navegador({ href: "https://admira.tv/parrilla/", sinCtx: true });
+  const out = salida();
+  assert.equal((await window.AdmiraContextoTv.ejecutar("/proyecto starbucks", out)).ok, false);
+  assert.match(out.lineas.join("\n"), /todavía no está activo en producción/);
 });
 
 test("solo se filtran lecturas GET de pantallas, playlists y contenidos", () => {
