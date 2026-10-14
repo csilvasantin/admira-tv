@@ -84,7 +84,7 @@ en:{titulo:'Queue manager',abrirPantalla:'Open iPad display',crear:'＋ Counter 
 const t=k=>T[lang][k]||k;
 function textos(){document.documentElement.lang=lang;document.querySelectorAll('[data-t]').forEach(e=>e.textContent=t(e.dataset.t));$('nNombre').placeholder=t('nombre');$('bLang').textContent=t('btn');$('salaTxt').textContent='· '+sala;
   const m=Object.keys(MARCAS).find(k=>MARCAS[k]===sala);$('selMarca').value=m||'';
-  const o=location.origin,u={[lang==='en'?'Display (iPad)':'Pantalla (iPad)']:o+'/gestorColas/pantalla/?sala='+sala+(lang==='en'?'&lang=en':''),[lang==='en'?'Kiosk':'Quiosco']:sala===MARCAS.starbucks?'https://www.ainimation.studio/starbucks/':'https://www.ainimation.studio/xperiencias/kiosko-pedido/?store='+sala,[lang==='en'?'Help':'Ayuda']:o+'/gestorColas/help/','MCP':o+'/gestorColas/mcp'};
+  const o=location.origin,u={[lang==='en'?'Display (iPad)':'Pantalla (iPad)']:o+'/gestorColas/pantalla/?sala='+sala+(lang==='en'?'&lang=en':''),[(lang==='en'?'Kiosk':'Quiosco')+(sala===MARCAS.starbucks?'':lang==='en'?' · room provisioning required':' · requiere aprovisionamiento de sala')]:sala===MARCAS.starbucks?'https://www.ainimation.studio/starbucks/':'https://www.ainimation.studio/xperiencias/kiosko-pedido/?store='+sala,[lang==='en'?'Help':'Ayuda']:o+'/gestorColas/help/','MCP':o+'/gestorColas/mcp'};
   $('urls').innerHTML=Object.entries(u).map(([k,v])=>'<li><b>'+k+'</b><br><a href="'+v+'" target="_blank" rel="noopener">'+v+'</a></li>').join('');if(ultimo)pintar(ultimo);connectionText();createButton();}
 const esc=x=>String(x||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // Etiquetas de la carta para las líneas sin optionsText (ids tamano/leche/temperatura/extras del quiosco).

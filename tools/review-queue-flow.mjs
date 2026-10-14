@@ -14,7 +14,8 @@ const ROOT=process.env.TV_QUEUE_WORKTREE||fileURLToPath(new URL('../',import.met
 const OUT=process.env.TV_QUEUE_EVIDENCE_DIR||'/tmp/admira-tv-queue-review';
 const RELAY=process.env.AINIMATION_WORKTREE;if(!RELAY)throw new Error('AINIMATION_WORKTREE must point to the approved ainimation source checkout');
 const require=createRequire(import.meta.url);
-const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
+const SERVE=process.argv.includes('--serve');
+const {chromium}=SERVE?{}:require(process.env.PLAYWRIGHT_PATH||'playwright');
 const {onRequest:facade,olvidaEstado}=await import(pathToFileURL(ROOT+'/functions/gestorColas/api/[op].js'));
 const {claveDe,RELE}=await import(pathToFileURL(ROOT+'/functions/gestorColas/_lib.js'));
 const {ColaTienda}=await import(pathToFileURL(RELAY+'/mcp/server/src/cola.js'));
@@ -22,7 +23,7 @@ const {acceso}=await import(pathToFileURL(RELAY+'/mcp/server/src/cola-acceso.js'
 const env={COLAS_SEED:'test-only-in-memory-no-real-secret'};
 const A='oraculo-review-a',B='oraculo-review-b';
 const keys={[A]:await claveDe(env,A),[B]:await claveDe(env,B)};
-const memory=new Map(),objects=new Map(),requests=[],checks=[],blocked=[],authChecks=[],errors=[];
+const memory=new Map(),objects=new Map(),requests=[],checks=[],blocked=[],expectedBlockedContext=[],authChecks=[],errors=[];
 const originalFetch=globalThis.fetch;
 function room(s){if(!objects.has(s)){const data=new Map();memory.set(s,data);objects.set(s,new ColaTienda({storage:{get:async k=>structuredClone(data.get(k)),put:async(k,v)=>data.set(k,structuredClone(v))}},{}));}return objects.get(s);}
 globalThis.fetch=async(input,init)=>{
@@ -35,9 +36,40 @@ globalThis.fetch=async(input,init)=>{
 };
 await mkdir(OUT,{recursive:true});await unlink(OUT+'/failure.json').catch(()=>{});
 const banner='<aside style="position:fixed;bottom:0;left:0;right:0;z-index:2147483647;background:#7a2300;color:white;font:600 14px system-ui;padding:10px;text-align:center">DEMONSTRACIÓN AISLADA · no valida autorización de producción · memoria de prueba</aside>';
-const server=http.createServer(async(req,res)=>{try{const u=new URL(req.url,'http://local');let file=decodeURIComponent(u.pathname);if(file.endsWith('/'))file+='index.html';const actual=path.resolve(ROOT,'.'+file);if(!actual.startsWith(ROOT+'/'))throw Error('path');let body=await readFile(actual);const ext=path.extname(actual);if(ext==='.html')body=Buffer.from(body.toString().replace('</body>',banner+'</body>'));res.writeHead(200,{'content-type':({'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'})[ext]||'application/octet-stream'});res.end(body);}catch{res.writeHead(404);res.end();}});
-await new Promise(r=>server.listen(0,'127.0.0.1',r));
+const contextNotice='/* Shared project context is outside this in-memory queue fixture; no production authorization verified. */';
+const bootstrap='<script>for(const [room,key] of Object.entries('+JSON.stringify(keys)+'))localStorage.setItem("gc_clave:"+room,key);document.addEventListener("click",e=>{const a=e.target.closest("a[href]");if(a&&new URL(a.href,location.href).origin!==location.origin){e.preventDefault();alert("Demostración aislada: enlaces externos desactivados / Isolated demonstration: external links disabled");}},true);</script>';
+const server=http.createServer(async(req,res)=>{try{
+ const u=new URL(req.url,'http://local');
+ const json=(status,data)=>{res.writeHead(status,{'content-type':'application/json','cache-control':'no-store'});res.end(JSON.stringify(data));};
+ if(SERVE){
+  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; frame-src 'none'; font-src 'self' data:; form-action 'self'; base-uri 'self'");
+  res.setHeader('Cache-Control','no-store');
+  if(u.pathname==='/'){
+   res.writeHead(200,{'content-type':'text/html'});res.end('<!doctype html><html lang="es"><meta charset="utf-8"><title>Turnos · demostración aislada</title><style>body{font:18px system-ui;margin:40px;line-height:1.7}a{margin-right:20px}</style><h1>Turnos · demostración aislada</h1><p>Relé real en memoria. No contiene pedidos reales, no comprueba autorización de producción y no llama a servicios externos. El estado desaparece al detener el servidor.</p><p><a href="/gestorColas/?sala='+A+'&lang=es">Control ES · sala A</a><a href="/gestorColas/?sala='+A+'&lang=en">Control EN · sala A</a><a href="/gestorColas/?sala='+B+'&lang=es">Control ES · sala B</a><a href="/gestorColas/pantalla/?sala='+A+'&lang=en&voz=0">Pantalla pública · sala A</a></p>'+banner+'</html>');return;
+  }
+  if(u.pathname==='/auth-gate.js'){res.writeHead(410,{'content-type':'text/javascript'});res.end('/* Auth assets are outside the isolated queue fixture. No production authorization verified. */');return;}
+  if(u.pathname.startsWith('/auth/')||u.pathname.startsWith('/users/api/'))return json(403,{ok:false,error:'production-auth-outside-isolated-fixture'});
+  if(u.pathname.startsWith('/gestorColas/api/')){
+   if(!['GET','POST','OPTIONS'].includes(req.method))return json(405,{ok:false,error:'method-not-allowed'});
+   if(req.headers.origin&&req.headers.origin!==('http://'+req.headers.host))return json(403,{ok:false,error:'cross-origin-not-allowed'});
+   if(![A,B].includes(u.searchParams.get('sala')))return json(400,{ok:false,error:'only-isolated-rooms-allowed'});
+   let text='';for await(const chunk of req){text+=chunk;if(text.length>65536)return json(413,{ok:false,error:'body-too-large'});}
+   const op=u.pathname.split('/').pop();if(op==='clave')return json(403,{ok:false,error:'no-production-session-in-fixture'});
+   const body=text?JSON.parse(text):null;if(body?.sala&&body.sala!==u.searchParams.get('sala'))return json(400,{ok:false,error:'only-isolated-rooms-allowed'});
+   const reply=await facade({request:new Request('http://'+req.headers.host+req.url,{method:req.method,headers:req.headers,...(text?{body:text}:{})}),env,params:{op}});
+   res.writeHead(reply.status,{'content-type':'application/json','cache-control':'no-store'});res.end(await reply.text());return;
+  }
+ }
+ if(u.pathname==='/admira-contexto.js'){res.writeHead(200,{'content-type':'text/javascript'});res.end(contextNotice);return;}
+ if(u.pathname.includes('/.'))throw Error('path');
+ let file=decodeURIComponent(u.pathname);if(file.endsWith('/'))file+='index.html';const actual=path.resolve(ROOT,'.'+file);if(!actual.startsWith(ROOT+'/'))throw Error('path');let body=await readFile(actual);const ext=path.extname(actual);if(ext==='.html')body=Buffer.from(body.toString().replace('</body>',(SERVE?bootstrap:'')+banner+'</body>'));res.writeHead(200,{'content-type':({'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'})[ext]||'application/octet-stream'});res.end(body);
+}catch{res.writeHead(404);res.end();}});
+await new Promise(r=>server.listen(SERVE?Number(process.env.TV_QUEUE_REVIEW_PORT||8760):0,'127.0.0.1',r));
 const base='http://127.0.0.1:'+server.address().port;
+if(SERVE){
+ console.log(JSON.stringify({url:base,isolated:true,productionAuthorizationVerified:false,externalRequests:false,rooms:[A,B],storage:'volatile-memory',shutdown:'SIGINT or SIGTERM'}));
+ await new Promise(resolve=>{for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>server.close(resolve));});globalThis.fetch=originalFetch;process.exit(0);
+}
 const browser=await chromium.launch({headless:true,...(process.env.TV_REVIEW_CHROME?{executablePath:process.env.TV_REVIEW_CHROME}:{})});
 const context=await browser.newContext({viewport:{width:1440,height:950},recordVideo:{dir:OUT},serviceWorkers:'block'});
 let failCall=false,loseCreate=false,delayRead=false,releaseRead=null;
@@ -46,6 +78,8 @@ await context.addInitScript(keys=>{for(const [room,key] of Object.entries(keys))
 await context.route('**/*',async route=>{
  const req=route.request(),u=new URL(req.url());
  try{
+ if(u.origin===base&&u.pathname==='/admira-contexto.js')return route.fulfill({status:200,contentType:'text/javascript',body:contextNotice});
+ if(u.origin==='https://pixer-ctx-5934-preview.csilvasantin.workers.dev'&&u.pathname==='/ctx'&&req.method()==='POST'){expectedBlockedContext.push({origin:u.origin,path:u.pathname,method:req.method()});return route.abort('blockedbyclient');}
  if(u.origin===base&&(u.pathname==='/auth-gate.js'||u.pathname.startsWith('/auth/')||u.pathname.startsWith('/users/api/'))){if(u.pathname==='/auth-gate.js')return route.fulfill({status:410,contentType:'text/javascript',body:'/* Not loaded in isolated UI fixture. No auth decision fabricated. */'});return route.abort('blockedbyclient');}
  if(u.origin===base&&u.pathname.startsWith('/gestorColas/api/')){
   const op=u.pathname.split('/').pop(),s=u.searchParams.get('sala');assert.ok([A,B].includes(s),'Unexpected room');
@@ -104,7 +138,7 @@ try{
  checks.push('Language button and command persist URL, room switches and reload (EN to ES to EN)');
  await en.evaluate(()=>window.__gestorColas.tic());await en.screenshot({path:OUT+'/07-number-reuse-safe-en.png'});
  assert.equal(errors.length,0,errors.join('\n'));assert.equal(blocked.length,0,'Unexpected mutation attempted');
- console.log(JSON.stringify({ok:true,checks,authChecks,requests:requests.length,screenshots:7,isolated:true,realQueueWrites:0},null,2));
- await writeFile(OUT+'/proof.json',JSON.stringify({at:new Date().toISOString(),executor:'MBP16',agent:'OraculoMacMini',ok:true,checks,authChecks,requests,blocked,errors,isolated:true,realQueueWrites:0,limitations:['Local headless UI fixture only: auth assets not loaded, production authorization not validated; never fabricate /auth/session or access answers','Actual facade and relay handlers with dummy room keys and in-memory storage; no live queue mutation or production deployment','Voice disabled; visual public announcement verified, audible output not proven']},null,2));
-}catch(e){await writeFile(OUT+'/failure.json',JSON.stringify({message:e.message,stack:e.stack,checks,authChecks,errors,blocked},null,2));throw e;}
+ console.log(JSON.stringify({ok:true,checks,authChecks,expectedBlockedContext,requests:requests.length,screenshots:7,isolated:true,realQueueWrites:0},null,2));
+ await writeFile(OUT+'/proof.json',JSON.stringify({at:new Date().toISOString(),executor:'MBP16',agent:'OraculoMacMini',ok:true,checks,authChecks,requests,blocked,expectedBlockedContext,errors,isolated:true,realQueueWrites:0,limitations:['Local headless UI fixture only: auth assets and shared project context not loaded, production authorization not validated; never fabricate /auth/session or access answers','Actual facade and relay handlers with dummy room keys and in-memory storage; no live queue mutation or production deployment','Voice disabled; visual public announcement verified, audible output not proven']},null,2));
+}catch(e){await writeFile(OUT+'/failure.json',JSON.stringify({message:e.message,stack:e.stack,checks,authChecks,errors,blocked,expectedBlockedContext},null,2));throw e;}
 finally{await context.close();await browser.close();await new Promise(r=>server.close(r));globalThis.fetch=originalFetch;}
