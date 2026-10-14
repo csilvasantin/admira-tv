@@ -1,8 +1,8 @@
 {
   "version": "v.14.10.2026.r9.13:27",
-  "agent": "SubNeoMBP14",
-  "deployer": "SubNeoMBP14",
+  "agent": "NeoMBP14",
+  "deployer": "NeoMBP14",
   "machine": "MacBookProNegro14",
-  "signature": "SubNeoMBP14 · MacBookProNegro14",
+  "signature": "NeoMBP14 · MacBookProNegro14",
   "mission": "DCL-5da4653d859552490fd5ae1d"
 }
