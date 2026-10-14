@@ -255,5 +255,9 @@
     "Stock: Proyecto → Circuito → Ubicación → Dispositivo, con destinos reales.",
     "Guardar y distribuir añade a la playlist actual conservando las piezas y evitando duplicados.",
     "Las tarjetas muestran Playlist y sus destinos al pasar el cursor."
+  ],
+  "v.14.10.2026.r10.13:34": [
+    "⌘ Experto: /bugito abre el banco de pruebas de Bugito (el Admirito diablillo que provoca incidencias en un player virtual de laboratorio) en admira.biz.",
+    "El panel del avatar carga el cargador común que conoce a los personajes de Admirito."
   ]
 }

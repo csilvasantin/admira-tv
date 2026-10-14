@@ -17,7 +17,7 @@
     #aviso.on { opacity: 1; transform: translate(-50%,-50%) scale(1); }
     #aviso small { display: block; font-size: .45em; font-weight: 600; opacity: .9; margin-top: .6em; }
   </style>
-  <link rel="stylesheet" href="/taza/control.css?v=14.10.2026.r8.1248">
+  <link rel="stylesheet" href="/taza/control.css?v=14.10.2026.r10.1334">
 </head>
 <body>
   <header><button class="square" data-panel="options" aria-label="Opciones · panel izquierdo">▣</button><strong>PlayerTaza · AInimation</strong><nav><a href="/taza/help">Help</a> · <a href="/taza/mcp">MCP</a> · <a href="https://playertaza.csilvasantin.workers.dev/" target="_blank" rel="noopener">Abrir player</a></nav><button class="square" data-panel="advanced" aria-label="Avanzado · panel derecho">◧</button><button class="square" data-panel="expert" aria-label="Experto · panel inferior">⌘</button></header>
@@ -26,8 +26,8 @@
   <aside id="advanced" class="control-panel right" hidden><h2>Avanzado <button data-close>Cerrar ×</button></h2><h3>Admirito · guía de pruebas</h3><iframe id="guide-avatar" title="Avatar Admirito" src="https://digitalavatar.ai/nube.html?kiosk=1&amp;avatar=admirito&amp;tier=good&amp;sector=retail&amp;audio=off" allow="autoplay"></iframe><p id="guidance" role="status">Inicia una prueba para comprobar el proyecto, el envío y la pantalla física.</p><button id="test-start">Guiar prueba</button><button id="test-confirm" disabled>Lo veo en la taza</button><button id="test-fail" disabled>No coincide</button><p>La confirmación visual la realizas mirando la cámara del player. El avatar no analiza el vídeo.</p><pre id="diagnostics">Sin consulta</pre></aside>
   <aside id="expert" class="control-panel bottom" hidden><h2>Experto · CLI <button data-close>Cerrar ×</button></h2><p>Comandos: /demo 1 · /demo 2 · /demo stop · help · status · project canalkiosk|colas|yarigai · test · confirm · fail · clear</p><pre id="terminal" role="log" aria-live="polite">PlayerTaza · consola de control
 Escribe help para empezar.</pre><form id="command-form"><label for="command">›</label><input id="command" autocomplete="off" spellcheck="false" placeholder="status" aria-label="Comando CLI"><button>Ejecutar</button></form></aside>
-  <script src="/taza/demo.js?v=14.10.2026.r8.1248" defer></script>
-  <script src="/taza/control.js?v=14.10.2026.r8.1248" defer></script>
+  <script src="/taza/demo.js?v=14.10.2026.r10.1334" defer></script>
+  <script src="/taza/control.js?v=14.10.2026.r10.1334" defer></script>
   <script>
   // Taza + cola (7-oct-2026): cuando un pedido con nombre pasa a «listo», la taza lo muestra:
   // «NOMBRE, tu pedido Starbucks está preparado». Pedidos de demo, pago SIMULADO.
