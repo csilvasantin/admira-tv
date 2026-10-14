@@ -246,3 +246,20 @@ test('sin asociación de equipo en la ficha nueva se descarta el idIoT del índi
   assert.equal(receives(piece([], { comment: '#starbucks #paseodegracia103 #ipad' }), f), false,
     'sin equipo asociado no se puede inferir un iPad único del local');
 });
+
+test('etiquetas inferidas de búsqueda nunca se convierten en destinos de emisión', () => {
+  const searchOnly = piece(['starbucks', 'paseodegracia103', 'música', '1982'], {routingTags:[]});
+  for (const f of [ipad, display, elsewhere]) assert.equal(receives(searchOnly,f),false);
+  const directed = piece(['starbucks','música','1982','otra-marca'], {routingTags:['starbucks','paseodegracia103','ipad']});
+  assert.equal(receives(directed,ipad),true); assert.equal(receives(directed,display),false); assert.equal(receives(directed,elsewhere),false);
+});
+
+test('reimportar un legado conserva su dirección anterior aunque se infiera otra marca',()=>{
+ const p=piece(['starbucks','paseodegracia103','1982','música','otra-marca'],{comment:'#starbucks #paseodegracia103 #ipad',routingSource:{tags:['starbucks','paseodegracia103','ipad'],comment:'#starbucks #paseodegracia103 #ipad'}});
+ assert.equal(receives(p,ipad),true);assert.equal(receives(p,display),false);assert.equal(receives(p,elsewhere),false);
+});
+
+test('contrato del importador: la nota con destino y una etiqueta manual temática mantienen el reparto',()=>{
+ const p=piece(['starbucks','paseodegracia103','ipad','favorito','música','1982'],{comment:'music top songs 1982 #starbucks #paseodegracia103 #ipad',routingSource:{tags:['favorito'],comment:'music top songs 1982 #starbucks #paseodegracia103 #ipad'}});
+ assert.equal(receives(p,ipad),true);assert.equal(receives(p,display),false);assert.equal(receives(p,elsewhere),false);
+});
