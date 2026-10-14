@@ -85,6 +85,7 @@ export function circuitoDesdeLegado(c) {
     const [mayor] = [...facetas.entries()].sort((a, b) => b[1].length - a[1].length)[0];
     destino = { all: all.filter(tag => String(tag).split(":")[0] !== mayor), any: facetas.get(mayor) };
   }
+  if (c && c.service) destino.service = c.service;
   return { id: c && c.id, nombre: (c && (c.name || c.nombre)) || "", destino, activo: !!c && (c.enabled ?? c.activo) !== false };
 }
 

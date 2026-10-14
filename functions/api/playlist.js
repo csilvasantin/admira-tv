@@ -1,7 +1,7 @@
 import { accessFor, authHeaders, sessionEmail } from "../_auth-session.js";
 import { lecturaBlocksWrite } from "../_lectura-guard.js";
 import { assetTypeOf } from "./_asset-type.js";
-import { LIVE_KEY, TAGS_PREFIX, STOCK_INDEX, MAX_LIVE, MAX_CIRCUITS, addressedContent, addressKeys, destinationSelectors, applyCircuits, cleanCircuit, cleanIdIot, buildXpaceIndex, cleanIdentity, xpaceEntry, cleanLive, completeFacts, deduceScreenTags, liveRev, orientationOf, resolveContent, resolveForScreen, targetMatches } from "./_playlist-live.js";
+import { LIVE_KEY, TAGS_PREFIX, STOCK_INDEX, MAX_LIVE, MAX_CIRCUITS, addressedContent, addressKeys, destinationSelectors, serviceBindings, applyCircuits, cleanCircuit, cleanIdIot, buildXpaceIndex, cleanIdentity, xpaceEntry, cleanLive, completeFacts, deduceScreenTags, liveRev, orientationOf, resolveContent, resolveForScreen, targetMatches } from "./_playlist-live.js";
 import { sombraTrasRespuesta } from "./_programacion/gancho-sombra.js";
 // Doble escritura (E7 del modelo único): tras guardar en el KV, lo mismo va a la D1 en waitUntil, detrás de la bandera
 // meta.banderas.espejo. No cambia la respuesta ni su latencia; ver _programacion/espejo.js.
@@ -284,7 +284,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
   }
   // Contenido dirigido a esta pantalla o a su centro por hashtag (#starbucks_paseodegracia_103_pantalla1): se
   // AÑADE a lo que ya tenga, puesto a mano o por playlists vivas, sin repetir pieza.
-  const keys = addressKeys(facts), dirigidas = (keys.exact.size || keys.centre.size || destinationSelectors(facts).brand.size) ? addressedContent(await loadStock(), facts) : [];
+  const keys = addressKeys(facts), dirigidas = (keys.exact.size || keys.centre.size || destinationSelectors(facts).brand.size) ? addressedContent(await loadStock(), facts, Date.now(), 60, serviceBindings(live.circuits, propias)) : [];
   let auto = dirigidas;
   if (!draft.items.length) {
     const viva = activas.length ? resolveForScreen(activas, screenTags, await loadStock(), facts) : { hits: [], items: [] };

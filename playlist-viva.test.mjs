@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { forgetMemo, onRequestGet, onRequestPost } from "./functions/api/playlist.js";
-import { addressedContent, addressKeys, destKey, applyCircuits, buildXpaceIndex, cleanCircuit, cleanIdIot, cleanLive, completeFacts, deduceScreenTags, idIotOfScreen, norm, resolveContent, targetMatches, LIVE_KEY, TAGS_PREFIX } from "./functions/api/_playlist-live.js";
+import { addressedContent, addressKeys, destKey, serviceBindings, applyCircuits, buildXpaceIndex, cleanCircuit, cleanIdIot, cleanLive, completeFacts, deduceScreenTags, idIotOfScreen, norm, resolveContent, targetMatches, LIVE_KEY, TAGS_PREFIX } from "./functions/api/_playlist-live.js";
 
 const sessionToken = "session-token", sessionKey = `admira-tv:auth:session:${sessionToken}`;
 const cookie = { Cookie: `__Host-atv_session=${sessionToken}`, "Content-Type": "application/json" };
@@ -363,4 +363,45 @@ test("una playlist viva de audio también trae locuciones", () => {
   const stock = [pieza("l1", ["aviso"], { type: "locucion", url: "https://stock.admira.store/stock/l1/asset.mp3" }), pieza("l2", ["aviso"], { type: "music", url: "https://stock.admira.store/stock/l2/asset.mp3" }), pieza("l3", ["aviso"])];
   const items = resolveContent({ any: ["aviso"], all: [], none: [], type: "audio", limit: 10, seconds: 10, matchOrientation: true }, stock);
   assert.deepEqual(items.map(i => i.stockId).sort(), ["l1", "l2"]); assert.ok(items.every(i => i.assetType === "audio"));
+});
+
+
+const musicalPhone = {screen:"iphone17-mupi",project:"admiranext",iot:"AdmiraNeXT_iPhonedeCarlos_Pantalla_1",xpace:"iphone17",w:440,h:956};
+const musicalCircuit = () => cleanCircuit({name:"Starbucks hilo musical",target:{all:["pantalla:iphone17-mupi"]},service:{brand:"starbucks",use:"hilomusical"}});
+test("hilo musical: cliente y uso explícitos llegan sólo al destino configurado conservando el medio", () => {
+  const circuit = musicalCircuit(), bindings = serviceBindings([circuit],deduceScreenTags(musicalPhone));
+  const stock = [pieza("v1",["starbucks","hilomusical"],{orientacion:"horizontal"}),pieza("a2",["starbucks","backgroundmusic"],{type:"music"}),
+    pieza("x3",["sneakerstore","hilomusical"]),pieza("x4",["starbucks","hilomusical","ipad"]),pieza("x5",["starbucks","hilomusical","paseodegracia103"]),
+    pieza("x6",["starbucks","hilomusical"],{routingSource:{tags:[],comment:""}}),pieza("x7",["hilomusical"]),pieza("x8",["starbucks","hilomusical"],{oculto:true})];
+  const out = addressedContent(stock,musicalPhone,Date.now(),60,bindings);
+  assert.deepEqual(out.map(i=>i.stockId),["a2","v1"]);
+  assert.equal(out[0].assetType,"audio");assert.equal(out[0].seconds,600);assert.equal(out[1].assetType,"video");
+  for(const facts of [P1,{screen:"samsung-fold",project:"starbucks",w:1920,h:1080},{screen:"other-store",project:"starbucks",xpace:"rambla5"}])
+    assert.deepEqual(addressedContent(stock,facts,Date.now(),60,serviceBindings([circuit],deduceScreenTags(facts))),[]);
+  assert.deepEqual(addressedContent(stock,musicalPhone),[],"sin servicio no cae a reparto general");
+  assert.deepEqual(serviceBindings([{...circuit,enabled:false}],deduceScreenTags(musicalPhone)),[]);
+});
+test("el servicio se valida sin modificar los circuitos generales ni la identidad física", () => {
+  assert.equal(cleanCircuit({name:"General",target:{all:["todas"]}}).service,undefined);
+  assert.deepEqual(cleanCircuit({name:"Music",target:{all:["todas"]},service:{brand:"starbuck",use:"backgroundmusic"}}).service,{brand:"starbucks",use:"hilomusical"});
+  for(const service of [{brand:"",use:"hilomusical"},{brand:"starbucks",use:"video"},{brand:"starbucks cafe",use:"hilomusical"}])
+    assert.throws(()=>cleanCircuit({name:"Bad",target:{all:["todas"]},service}),/invalid_circuit_service/);
+  assert.ok(deduceScreenTags(musicalPhone).includes("proyecto:admiranext"));
+});
+test("API: circuito musical protegido, pieza nueva automática, deduplicación y aislamiento", async () => {
+  const stock={items:[pieza("new1",["starbucks","hilomusical"],{routingSource:{tags:["starbucks","hilomusical"],comment:""}})]},m=mundo(stock);
+  try {
+    const circuit=musicalCircuit();
+    assert.equal((await post(m.env,{action:"circuit-save",circuit},{"Content-Type":"application/json","X-Notify-Key":"some-stock-key"})).status,401);
+    const saved=await (await post(m.env,{action:"circuit-save",circuit})).json();assert.equal(saved.ok,true);
+    const q="screen=iphone17-mupi&project=admiranext&w=440&h=956";
+    assert.deepEqual((await (await get(m.env,q)).json()).draft.items.map(i=>i.stockId),["new1"]);
+    await post(m.env,{screen:"iphone17-mupi",items:[{id:"manual",stockId:"manual1",asset:"https://cdn.example/manual.mp4",assetType:"video"}]});
+    const d=await (await get(m.env,q)).json();assert.deepEqual(d.auto.map(i=>i.stockId),["new1"]);assert.equal(d.draft.items[0].stockId,"manual1");
+    await post(m.env,{screen:"iphone17-mupi",items:[...d.draft.items,...d.auto]});
+    assert.deepEqual((await (await get(m.env,q)).json()).auto,[]);
+    assert.deepEqual((await (await get(m.env,"screen=tablet-p1&project=starbucks&w=1080&h=1920")).json()).draft.items,[]);
+    stock.items.push(pieza("new2",["starbucks","backgroundmusic"]));forgetMemo("stock");
+    assert.deepEqual((await (await get(m.env,q)).json()).auto.map(i=>i.stockId),["new2"]);
+  } finally {m.fin();}
 });

@@ -190,7 +190,7 @@ const routeKey = v => ROUTE_ALIAS[destKey(v)] || destKey(v);
 const THEMES = new Set(("cafe café bebidas bebida musica music audio video imagen image locucion publicidad lifestyle " +
   "good better best vertical horizontal portrait landscape cuadrada sincronia sincro pantallas alsea " +
   "otoño navidad verano invierno primavera ofertas oferta promocion promo catalogo creador ia demo " +
-  "interactivo animaciones robots inspiracion marca hilomusical es en ca textosanimados logooficial " +
+  "interactivo animaciones robots inspiracion marca hilomusical backgroundmusic es en ca textosanimados logooficial " +
   "seispantallas metaestilo trinitystyle originalia adaptation adaptacion mostrador").split(/\s+/).map(routeKey));
 for (const t of [...Object.keys(TAG_ALIAS), ...Object.values(TAG_ALIAS)]) THEMES.add(routeKey(t));
 const DEVICE_TYPES = new Set(["ipad", "iphone", "tpv", "pantalla", "altavoz", "audio", "tablet", "kiosko", "totem", "monitor"]);
@@ -285,26 +285,37 @@ export function addressedDestination(tags, facts = {}, context = {}) {
  * Piezas dirigidas a esta pantalla. Dirigida a la pantalla, entra tal cual. Dirigida al centro, cada cosa va a su
  * sitio: el audio a los altavoces, lo visual a las pantallas y sólo en su orientación.
  */
-export function addressedContent(stock, facts = {}, now = Date.now(), limit = 60) {
+export function addressedContent(stock, facts = {}, now = Date.now(), limit = 60, bindings = []) {
   const keys = addressKeys(facts), selectors = destinationSelectors(facts);
   if (selectors.identityConflict || (!keys.exact.size && !keys.centre.size && !selectors.brand.size)) return [];
   const orient = facts.orientation || orientationOf(facts.w, facts.h), out = [];
   for (const p of Array.isArray(stock) ? stock : []) {
     const type = String((p && p.type) || "").toLowerCase(), audio = AUDIO_TYPES.has(type);
     if (!p || p.oculto || (!audio && !VISUAL_TYPES.has(type)) || !/^https:\/\//.test(String(p.url || "")) || !vigente(p, now)) continue;
-    const destination = addressedDestination(pieceTags(p, selectors), facts, { keys, selectors });
+    const tags = pieceTags(p, selectors), musical = tags.some(t => musicUse(t));
+    // Un uso explícito necesita un destino configurado para ese servicio. Nunca cae al
+    // reparto visual general de la marca; reconocer música en el vídeo tampoco lo activa.
+    let destination = null;
+    if (musical) {
+      for (const binding of bindings) {
+        if (!binding || binding.use !== "hilomusical" || !tags.some(t => routeKey(t) === binding.brand)) continue;
+        const serviceSelectors = { ...selectors, brand: new Set([...selectors.brand, binding.brand]) };
+        destination = addressedDestination(tags, facts, { keys, selectors: serviceSelectors });
+        if (destination) break;
+      }
+    } else destination = addressedDestination(tags, facts, { keys, selectors });
     if (!destination) continue;
     const { via, exact } = destination;
-    if (!exact) {
+    if (!exact && !musical) {
       if (audio !== keys.audioElement) continue;
       const po = pieceOrientation(p);
       if (!audio && orient && po && po !== "cuadrada" && orient !== "cuadrada" && po !== orient) continue;
     }
-    out.push({ p, via, type });
+    out.push({ p, via, type, musical });
   }
   out.sort((a, b) => stamp(b.p) - stamp(a.p));
-  return out.slice(0, limit).map(({ p, via, type }) => ({ id: "stock-" + p.id, stockId: String(p.id), title: String(p.title || "Pieza del Stock").slice(0, 240),
-    sub: ("destino · #" + via).slice(0, 300), lane: "publicidad", seconds: 10, asset: String(p.url), assetType: assetTypeOf(type),
+  return out.slice(0, limit).map(({ p, via, type, musical }) => ({ id: "stock-" + p.id, stockId: String(p.id), title: String(p.title || "Pieza del Stock").slice(0, 240),
+    sub: ("destino · #" + via + (musical ? " · hilo musical" : "")).slice(0, 300), lane: "publicidad", seconds: musical && AUDIO_TYPES.has(type) ? 600 : 10, asset: String(p.url), assetType: assetTypeOf(type),
     tags: tags32(p) }));
 }
 const tags32 = p => (Array.isArray(p.tags) ? p.tags : []).map(t => String(t || "").slice(0, 80)).filter(Boolean).slice(0, 32);
@@ -393,6 +404,22 @@ export function cleanIdentity(raw) {
 // etiqueta. La definición se evalúa sobre las etiquetas propias de la pantalla: un circuito no se define con otro
 // circuito definido (sí con el circuito que declara el player).
 export const MAX_CIRCUITS = 200;
+const musicUse = v => ["hilomusical", "backgroundmusic"].includes(destKey(v)) ? "hilomusical" : "";
+/** Servicio opcional de un circuito: cliente y uso, sin cambiar la identidad física. */
+export function cleanService(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("invalid_circuit_service");
+  const brand = routeKey(raw.brand), use = musicUse(raw.use);
+  if (!brand || brand.length > 60 || !/^[a-z0-9_-]+$/i.test(String(raw.brand || "")) || !use) throw new Error("invalid_circuit_service");
+  return { brand, use };
+}
+export function serviceBindings(circuits, tags) {
+  const out = [];
+  for (const c of Array.isArray(circuits) ? circuits : []) {
+    if (!c || c.enabled === false || !c.service || !targetMatches(c.target, tags)) continue;
+    try { out.push(cleanService(c.service)); } catch (_) { /* configuración inválida: no distribuir */ }
+  }
+  return out;
+}
 export function cleanCircuit(raw, actor = "", now = Date.now()) {
   if (!raw || typeof raw !== "object") throw new Error("invalid_circuit");
   const name = String(raw.name || "").trim().slice(0, 60);
@@ -402,7 +429,8 @@ export function cleanCircuit(raw, actor = "", now = Date.now()) {
   const t = raw.target || {}, self = "circuito:" + id;
   const target = { all: tagList(t.all, screenTag, 200).filter(x => x !== self), any: tagList(t.any, screenTag, 200).filter(x => x !== self) };
   if (!target.all.length && !target.any.length) throw new Error("circuit_target_required");
-  return { id, name, enabled: raw.enabled !== false, target, updatedAt: now, updatedBy: String(actor || "").slice(0, 120) };
+  const service = raw.service == null ? {} : { service: cleanService(raw.service) };
+  return { id, name, enabled: raw.enabled !== false, target, ...service, updatedAt: now, updatedBy: String(actor || "").slice(0, 120) };
 }
 /** Etiquetas de la pantalla más circuito:<id> de cada circuito definido que la incluya. */
 export function applyCircuits(tags, circuits) {

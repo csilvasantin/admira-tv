@@ -16,6 +16,7 @@
 import { MAX_REVISIONES, limpiarAsignacion, limpiarDestino, limpiarPlaylist, slugId } from "./modelo.js";
 import { HORIZONTE_MS } from "./horario.js";
 import { MANDO_MAX_MS } from "./resolver.js";
+import { cleanService } from "../_playlist-live.js";
 
 const ENTIDADES = {
   playlist: {
@@ -188,6 +189,10 @@ export function limpiarCircuito(raw) {
   // Un circuito no se define con su propia etiqueta (igual que cleanCircuit).
   destino.all = destino.all.filter(t => t !== "circuito:" + id); destino.any = destino.any.filter(t => t !== "circuito:" + id);
   if (!destino.all.length && !destino.any.length) throw new Error("destino_requerido");
+  // El JSON del destino del circuito conserva su servicio opcional. all/any siguen
+  // siendo los únicos criterios de coincidencia; no necesita una migración de D1.
+  const service = raw.service ?? (raw.destino && raw.destino.service);
+  if (service != null) destino.service = cleanService(service);
   return { id, nombre, destino, activo: (raw.activo ?? raw.enabled) !== false };
 }
 export const leerCircuito = (db, id) => leer(db, ENTIDADES.circuito, id);
