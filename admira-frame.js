@@ -31,7 +31,7 @@
   // Cerrado por defecto (Carlos, 6-oct-2026): la piel lo oculta hasta pulsar el ⌘ de la barra (#af-ico-bottom).
   (function () {
     if (window.top !== window.self || /(^|[?&])embed=/.test(location.search)) return;
-    var EXPERTO = "https://www.admiranext.com/suite/experto", V = "20261014-personajes-1";
+    var EXPERTO = "https://www.admiranext.com/suite/experto", V = "20261014-personajes-2";
     var css = document.createElement("link");
     css.rel = "stylesheet"; css.href = EXPERTO + ".css?v=" + V;
     document.head.appendChild(css);
