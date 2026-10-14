@@ -250,5 +250,10 @@
     "Creador de incidencias: el mando de laboratorio puede girar la emisión (fault-rotate) y devolverla (fault-clear); sólo players virtual-lab-*.",
     "El player declara en /signage/now la orientación que pinta de verdad (painted, paintedRotation), medida en pantalla.",
     "El fallo inyectado se suma al giro del operador sin tocarlo y caduca solo a los 30 minutos."
+  ],
+  "v.14.10.2026.r8.12:48": [
+    "Stock: Proyecto → Circuito → Ubicación → Dispositivo, con destinos reales.",
+    "Guardar y distribuir añade a la playlist actual conservando las piezas y evitando duplicados.",
+    "Las tarjetas muestran Playlist y sus destinos al pasar el cursor."
   ]
 }
