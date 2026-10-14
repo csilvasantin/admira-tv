@@ -3,7 +3,7 @@
 // emergencia, spots que ya no borran el por defecto, mando en vivo con caducidad, relleno, validoHasta y siguiente.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addressedContent, applyCircuits, cleanLive, deduceScreenTags, resolveForScreen } from "../_playlist-live.js";
+import { addressedContent, applyCircuits, cleanLive, deduceScreenTags, serviceBindings, resolveForScreen } from "../_playlist-live.js";
 import { aMinutos, aUtc, HORIZONTE_MS } from "./horario.js";
 import { desdeLegado } from "./legado.js";
 import { limpiarAsignacion, limpiarPlaylist, ordenK } from "./modelo.js";
@@ -27,7 +27,7 @@ const parrilla = (bandas, fecha = HOY) => ({ ok: true, date: fecha, config: { sl
 // Lo que emite HOY una pantalla con playlist.js + canal.html: borrador a mano (más lo dirigido por hashtag que el
 // canal pega detrás) o, si no hay borrador, las vivas fundidas y después lo dirigido. Copia fiel de onRequestGet.
 function legadoHoy({ live = { playlists: [], circuits: [] }, draft = null, stock, facts = FACTS, now = AHORA }) {
-  const tags = applyCircuits(deduceScreenTags(facts), live.circuits || []), dirigidas = addressedContent(stock, facts, now);
+  const tags = applyCircuits(deduceScreenTags(facts), live.circuits || []), dirigidas = addressedContent(stock, facts, now, 60, serviceBindings(live.circuits || [], deduceScreenTags(facts)));
   if (draft && draft.items.length) { const ya = new Set(draft.items.map(i => String(i.stockId || ""))); return [...draft.items, ...dirigidas.filter(i => !ya.has(i.stockId))]; }
   const v = resolveForScreen(live.playlists.filter(p => p.enabled !== false), tags, stock, facts, now), ya = new Set(v.items.map(i => i.stockId));
   return [...v.items, ...dirigidas.filter(i => !ya.has(i.stockId))].slice(0, 200);
@@ -295,4 +295,10 @@ test("parrilla de varios días (E3): la franja nocturna de la víspera sigue de 
   assert.deepEqual(tras.siguiente.items.map(i => i.id), ["stock-m1", "stock-m2", "grid:P-MANANA"]);
   // Una sola respuesta sigue valiendo como antes.
   assert.deepEqual(ids(resolver({ ...entrada, parrilla: dias[1], ahora: AHORA }).spots), ["grid:P1"]);
+});
+
+test("paridad hilo musical de circuito: legado y modelo nuevo conservan vídeo y destino", () => {
+ const facts={screen:"iphone17-mupi",project:"admiranext",w:440,h:956},stock=[pieza("newmusic",["starbucks","hilomusical"],{orientacion:"horizontal"})];
+ const live={playlists:[],circuits:[{id:"hilo-starbucks",name:"Hilo Starbucks",target:{all:["pantalla:iphone17-mupi"]},service:{brand:"starbucks",use:"hilomusical"}}]};
+ const r=resolver({facts,stock,ahora:AHORA,...desdeLegado({live})});assert.deepEqual(huella(r.items),huella(legadoHoy({live,stock,facts})));assert.equal(r.items[0].assetType,"video");
 });
