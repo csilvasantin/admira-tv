@@ -346,12 +346,12 @@ export function completeFacts(facts, { xpaceIndex = {}, projects = [], gridCircu
     if (!out.xpace) out.xpace = String(iotRecord.location.id);
     if (!xpaceRecord) xpaceRecord = { id: iotRecord.location.id, name: iotRecord.location.name, circuit: iotRecord.location.circuit, project: iotRecord.location.project, external: { brand: iotRecord.location.brand } };
   }
-  // Si la pantalla declara su Xpacio (?xpace= / ?loc=), la ficha de ESE Xpacio vale más que el índice.
-  const declared = xpaceRecord && out.xpace && String(xpaceRecord.id || "") === out.xpace ? xpaceEntry(xpaceRecord) : null;
-  const known = declared || xpaceIndex[out.screen] || null;
-  // Orden de autoridad: lo que declara el player › el registro de identidad (la jerarquía Proyecto → Xpacio →
-  // Dispositivo de la parrilla) › el catálogo de Xpacios › la parrilla por circuito › la marca del Xpacio.
+  // El registro se aplica ANTES de elegir la ficha: tras mover un player, el índice puede conservar
+  // hasta 30 minutos su antiguo Xpacio y su antiguo idIoT.
   if (reg) { if (!out.project && reg.p) out.project = reg.p; if (!out.xpace && reg.x) out.xpace = reg.x; }
+  const declared = xpaceRecord && out.xpace && String(xpaceRecord.id || "") === out.xpace ? xpaceEntry(xpaceRecord) : null;
+  const indexed = xpaceIndex[out.screen] || null;
+  const known = declared || (indexed && (!out.xpace || indexed.x === out.xpace) ? indexed : null);
   // El circuito de la ficha del Xpacio DECLARADO vale más que el que la parrilla supone por el nombre de la pantalla.
   if (!out.circuit) out.circuit = (declared && declared.c) || gridCircuit || (known && known.c) || "";
   if (!out.xpace && known) out.xpace = known.x;
@@ -360,8 +360,8 @@ export function completeFacts(facts, { xpaceIndex = {}, projects = [], gridCircu
     if (hit && hit.id) out.project = String(hit.id);
   }
   if (!out.project && known && known.b) out.project = known.b;
-  // La pantalla dada de alta en una ficha trae su idIoT del índice; la que declara su Xpacio, de esa ficha.
-  if (!out.iot) out.iot = (xpaceIndex[out.screen] && xpaceIndex[out.screen].i) || (xpaceRecord && out.xpace === String(xpaceRecord.id) && Array.isArray(xpaceRecord.surfaces) ? idIotOfScreen(xpaceRecord, out.screen) : "") || "";
+  // La ficha actual manda sobre el índice. Nunca se combina el Xpacio nuevo con el idIoT anterior.
+  if (!out.iot) out.iot = (declared ? idIotOfScreen(xpaceRecord, out.screen) : "") || (indexed && (!out.xpace || indexed.x === out.xpace) ? indexed.i : "") || "";
   if (reg && reg.n) out.name = reg.n;
   if (reg && reg.xn) out.xpaceName = reg.xn;
   if (known && known.n) out.xpaceName = known.n;
