@@ -7,7 +7,7 @@
   <meta name="description" content="Editor de parrilla municipal y publicitaria de Admira.tv.">
   <meta name="theme-color" content="#070a10">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <script>if(!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)){document.write('<script src="/auth-gate.js?v=14.10.2026.r2.0940"><\/script>')}</script>
+  <script>if(!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)){document.write('<script src="/auth-gate.js?v=14.10.2026.r3.1004"><\/script>')}</script>
   <script src="https://www.clearchannel.tv/locations.js?v=14.07.2026.r17"></script>
   <style>
     :root{--bg:#070a10;--panel:#0e141d;--panel2:#121b28;--line:#223049;--ink:#d9e4f2;--dim:#8999ae;--green:#3df08a;--blue:#7aa2ff;--amber:#ffbd59;--red:#ff6262}
@@ -140,11 +140,11 @@
 </head>
 <body>
   <script>
-    window.ADMIRA_VERSION='v.14.10.2026.r2.09:40';
+    window.ADMIRA_VERSION='v.14.10.2026.r3.10:04';
     window.ADMIRA_NAV={active:'parrilla',title:'Parrilla por Xpacio',topRight:'<a class="admtR" href="/playlists/">Playlists</a><a class="admtR admtR-cta" href="/canal.html" target="_blank" rel="noopener">Ver canal ↗</a>'};
   </script>
   <script src="/assets/virtual-players.js"></script>
-  <script src="/admira-nav.js?v=14.10.2026.r2.0940"></script>
+  <script src="/admira-nav.js?v=14.10.2026.r3.1004"></script>
 
   <main class="page">
     <section class="context-picker" aria-label="Selector de proyecto, Xpacio y dispositivo IoT">
@@ -350,6 +350,21 @@
       // el destino de forma inequívoca. Se crea sólo como contexto de edición; no
       // inventa que esté online ni altera la topología guardada.
       const routeScreen=query.get('device')||query.get('screen'),routeProject=query.get('project')||'admiranext',routeLocation=query.get('xpace')||routeScreen;
+      // El censo de telemetría puede llevar el circuito antiguo del player. La identidad de programación
+      // del servidor manda al abrir un destino concreto, para no cambiar silenciosamente a otra pantalla.
+      if(routeScreen){
+        try{
+          const r=await fetch('/api/playlist?screen='+encodeURIComponent(routeScreen),{cache:'no-store'}),d=r.ok?await r.json():null;
+          const tags=d&&d.screenTags||[],value=k=>{const t=tags.find(t=>t.startsWith(k+':'));return t?t.slice(k.length+1):''};
+          const project=value('proyecto'),xpacio=value('xpacio'),found=screens.find(s=>s.screen===routeScreen);
+          if(project&&xpacio){
+            if(!projects.some(p=>p.id===project))projects.push({id:project,name:project,circuits:[]});
+            if(found){found.projectId=project;found.locationId=xpacio;}
+            else screens.push({screen:routeScreen,name:routeScreen,circuit:xpacio,locationId:xpacio,bands:4,pixerScreens:[routeScreen],projectId:project,programmable:true,offlineContext:true});
+            activeProjectId=project;activeLocationId=xpacio;activeScreenId=routeScreen;
+          }
+        }catch(_){}
+      }
       if(routeScreen&&!screens.some(s=>s.screen===routeScreen)){
         if(!projects.some(p=>p.id===routeProject))projects.push({id:routeProject,name:routeProject==='admiranext'?'Canal AdmiraNeXT':String(routeProject).replace(/-/g,' '),circuits:[routeLocation]});
         screens.push({screen:routeScreen,name:String(routeScreen).replace(/-/g,' '),circuit:routeLocation,locationId:routeLocation,bands:4,pixerScreens:[routeScreen],projectId:routeProject,programmable:true,offlineContext:true});
@@ -985,6 +1000,6 @@
     setDraftStatus();render();loadContext().then(()=>{if(DEFAULT_MODE&&$('plPanel').hidden)$('plOpen').click()});setInterval(liveStatus,30000);
   })();
   </script>
-  <script src="/emision/aviso-parrilla.js?v=14.10.2026.r2.0940" defer></script>
+  <script src="/emision/aviso-parrilla.js?v=14.10.2026.r3.1004" defer></script>
 </body>
 </html>

@@ -226,5 +226,10 @@
     "Parrilla: busca contenidos por título, tag o #número y filtra por formato al crear una playlist a mano.",
     "Mostrar más da acceso a todo el catálogo reproducible; las piezas marcadas se conservan al cambiar de búsqueda.",
     "Cambiar de proyecto actualiza los dispositivos del creador y descarta destinos del proyecto anterior."
+  ],
+  "v.14.10.2026.r3.10:04": [
+    "Importa por hashtags: marca, local y dispositivo se acotan entre sí.",
+    "Starbucks Paseo de Gracia 103 ya tiene asociado el iPad físico ipad-admin-mupi.",
+    "Los destinos desconocidos o ambiguos se bloquean; las piezas se añaden a Por defecto."
   ]
 }
