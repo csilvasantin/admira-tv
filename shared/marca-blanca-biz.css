@@ -1,0 +1,143 @@
+/* Marca blanca · hoja puente de biz para el cargador común (marca-blanca.js). La carga el cargador solo en
+   esa web y todas sus reglas van bajo :root[data-mb-marca][data-mb-web="biz"]: en las demás webs no aplica.
+   Origen: marca-blanca.css de clearchannel-tv (admira.biz). Encargo #5979. */
+/* Marca blanca en admira.app / clearchannel.tv (FLT-101331). Solo se descarga cuando hay
+   marca activa (marca-blanca.js la inserta) y todo va bajo
+   :root[data-mb-marca][data-mb-web="biz"], que pone el cargador común: sin marca
+   esta hoja no existe en la página y la web queda exactamente como siempre.
+   Tokens: --mb-* del catálogo (admiranext.com/marcablanca) y --mbx-*, que marca-blanca.js
+   calcula para que los textos de la barra y los paneles cumplan AA (≥ 4,5:1).
+   El mapa satélite y el espacio del globo no se tocan. Ver docs/marca-blanca.md. */
+
+/* 1 · Puente propio de la plataforma app (gana al común y a brand.css). Las variables de
+   siempre de la web leen la marca, con los textos ya corregidos para ser legibles. */
+:root[data-mb-marca][data-mb-web="biz"]{
+  --bg:var(--mb-fondo);--card:var(--mb-superficie);--card2:var(--mb-superficie-alt);--line:var(--mb-borde);
+  --ink:var(--mbx-ink);--text:var(--mbx-ink);--mut:var(--mbx-mut);--dim:var(--mbx-mut);
+  --brand:var(--mbx-brand);--accent:var(--mbx-accent);--good:var(--mbx-ok);--warn:var(--mbx-error);--danger:var(--mbx-error);
+  --mbx-panel:color-mix(in srgb,var(--mb-superficie) 96%,transparent);
+  --mbx-inset:color-mix(in srgb,var(--mb-superficie-alt) 88%,transparent);
+  --mbx-soft:color-mix(in srgb,var(--mbx-brand) 12%,transparent);
+  --mbx-fondo:var(--mb-fondo);--mbx-borde:var(--mb-borde);
+}
+/* galaxy-shell.css fija los colores de la portada en la barra y los paneles de cada página:
+   con marca, esos mismos elementos llevan los de la marca. */
+:root[data-mb-marca][data-mb-web="biz"] :is(body > header,#header-navigation,#advanced-tools,#expert-panel){
+  --bg:var(--mb-fondo);--card:var(--mb-superficie);--card2:var(--mb-superficie-alt);--line:var(--mb-borde);
+  --ink:var(--mbx-ink);--text:var(--mbx-ink);--mut:var(--mbx-mut);
+  --brand:var(--mbx-brand);--accent:var(--mbx-accent);--good:var(--mbx-ok);--warn:var(--mbx-error);
+  font-family:var(--mb-fuente-texto)
+}
+/* brand.css pinta el fondo de admira.app con un hex fijo: con marca, el de la marca (en la portada
+   queda tapado por el espacio y el globo, que no cambian). */
+:root[data-mb-marca][data-mb-web="biz"] body{font-family:var(--mb-fuente-texto);background:var(--mb-fondo);color:var(--mbx-ink)}
+
+/* 2 · Barra: fondo de la marca casi opaco (contraste estable sobre el globo) y logo del
+   cliente seguido de un «powered by ADMIRA·APP» discreto. */
+:root[data-mb-marca][data-mb-web="biz"] body > header{
+  background:color-mix(in srgb,var(--mb-fondo) 97%,transparent);border-bottom:1px solid var(--mb-borde);
+  box-shadow:var(--mb-sombra-sm,none);color:var(--mbx-ink)
+}
+:root[data-mb-marca][data-mb-web="biz"] body > header .logo{display:flex;align-items:center;gap:10px;min-width:0;color:var(--mbx-ink);text-shadow:none;font-family:var(--mb-fuente-etiquetas)}
+:root[data-mb-marca][data-mb-web="biz"] .mb-bar-logo{display:inline-flex;align-items:center;flex:0 1 auto;height:28px;max-width:200px;min-width:0;color:var(--mbx-ink);line-height:0;text-decoration:none;border-radius:var(--mb-radio-sm,6px);font:700 16px/1 var(--mb-fuente-titulos);letter-spacing:var(--mb-titulos-tracking,normal);white-space:nowrap}
+:root[data-mb-marca][data-mb-web="biz"] .mb-bar-logo[hidden]{display:none}
+:root[data-mb-marca][data-mb-web="biz"] .mb-bar-logo .mb-logo-svg,
+:root[data-mb-marca][data-mb-web="biz"] .mb-bar-logo .mb-logo-img{height:100%;width:auto;max-width:100%;display:block;object-fit:contain}
+:root[data-mb-marca][data-mb-web="biz"] .mb-bar-logo:focus-visible{outline:2px solid var(--mbx-brand);outline-offset:3px}
+:root[data-mb-marca][data-mb-web="biz"] body > header .logo .logo-home{
+  display:inline-block;padding:7px 0 7px 10px;border-left:1px solid var(--mb-borde);color:var(--mbx-mut);
+  font:600 9px/1.3 var(--mb-fuente-mono);letter-spacing:.14em;text-shadow:none;white-space:nowrap
+}
+:root[data-mb-marca][data-mb-web="biz"] body > header .logo .logo-home::before{content:"powered by ";letter-spacing:.04em;font-weight:400;text-transform:none}
+:root[data-mb-marca][data-mb-web="biz"] body > header .logo .logo-home:hover{color:var(--mbx-ink);text-shadow:none}
+:root[data-mb-marca][data-mb-web="biz"] body > header .logo .galaxy-shell-section{color:var(--mbx-mut);margin-left:0}
+@media(max-width:600px){:root[data-mb-marca][data-mb-web="biz"] body > header .logo .logo-home{display:none}}
+
+/* Botones de la barra y estado pulsado. */
+:root[data-mb-marca][data-mb-web="biz"] .mode-toggle{border-radius:var(--mb-radio-md,10px)}
+:root[data-mb-marca][data-mb-web="biz"] .mode-toggle.header-login{border-radius:var(--mb-radio-boton,10px);font-family:var(--mb-fuente-etiquetas)}
+:root[data-mb-marca][data-mb-web="biz"] .mode-toggle[aria-expanded=true]{color:var(--mbx-on-brand);background:var(--mbx-brand);border-color:var(--mbx-brand)}
+:root[data-mb-marca][data-mb-web="biz"] .search{background:var(--mb-superficie);border-color:var(--mb-borde);border-radius:var(--mb-radio-md,10px)}
+:root[data-mb-marca][data-mb-web="biz"] .search:focus-within{box-shadow:0 0 0 3px var(--mbx-soft)}
+:root[data-mb-marca][data-mb-web="biz"] .search .hint{background:var(--mbx-soft)}
+:root[data-mb-marca][data-mb-web="biz"] .suggest{background:var(--mbx-panel)}
+:root[data-mb-marca][data-mb-web="biz"] .suggest .item:hover,:root[data-mb-marca][data-mb-web="biz"] .suggest .item.active{background:var(--mbx-soft)}
+
+/* 3 · Paneles ☰ ▤ ⌘: superficie y textos de la marca, tipografía de etiquetas. */
+:root[data-mb-marca][data-mb-web="biz"] .mode-panel{background:var(--mb-superficie);color:var(--mbx-ink);box-shadow:var(--mb-sombra-md,0 12px 40px #0008)}
+:root[data-mb-marca][data-mb-web="biz"] :is(.mode-panel-head,.expert-bar,.map-tools-heading){font-family:var(--mb-fuente-etiquetas)}
+:root[data-mb-marca][data-mb-web="biz"] .options-panel :is(a,.lang-switch,.mb-volver){border-radius:var(--mb-radio-sm,8px)}
+:root[data-mb-marca][data-mb-web="biz"] .lang-switch{background:var(--mbx-inset)}
+:root[data-mb-marca][data-mb-web="biz"] .lang-switch .lang-btn{background:var(--mbx-soft);color:var(--mbx-brand);border-radius:var(--mb-radio-sm,6px)}
+:root[data-mb-marca][data-mb-web="biz"] .mb-volver{display:flex;align-items:center;justify-content:flex-start;width:100%;padding:10px;margin:0;border:1px solid var(--mbx-brand);border-radius:var(--mb-radio-sm,8px);background:var(--mbx-soft);color:var(--mbx-brand);font:600 13px/1.3 var(--mb-fuente-texto);text-align:left;cursor:pointer;flex-shrink:0}
+:root[data-mb-marca][data-mb-web="biz"] .mb-volver::before{content:"↩";margin-right:8px}
+:root[data-mb-marca][data-mb-web="biz"] .mb-volver:hover{background:var(--mbx-brand);color:var(--mbx-on-brand)}
+:root[data-mb-marca][data-mb-web="biz"] .mb-volver:focus-visible{outline:2px solid var(--mbx-brand);outline-offset:3px}
+:root[data-mb-marca][data-mb-web="biz"] .header-circuit-btn{background:var(--mbx-inset);border-color:color-mix(in srgb,var(--mbx-accent) 45%,transparent);border-radius:var(--mb-radio-boton,8px);font-family:var(--mb-fuente-etiquetas)}
+:root[data-mb-marca][data-mb-web="biz"] .advanced-actions .header-circuit-btn{background:transparent;border-color:var(--mb-borde);color:var(--mbx-brand)}
+:root[data-mb-marca][data-mb-web="biz"] :is(.header-circuit-btn:hover,.header-circuit-btn.active,.advanced-actions .header-circuit-btn:hover){background:var(--mbx-brand);color:var(--mbx-on-brand);border-color:var(--mbx-brand)}
+:root[data-mb-marca][data-mb-web="biz"] #advanced-tools #neoFab{background:var(--mbx-soft);color:var(--mbx-brand);border-color:var(--mb-borde);font-family:var(--mb-fuente-etiquetas)}
+:root[data-mb-marca][data-mb-web="biz"] #advanced-tools #neoFab:hover{border-color:var(--mbx-brand)}
+:root[data-mb-marca][data-mb-web="biz"] :is(.mode-resize,.expert-module-resizer):is(:hover,:focus-visible),
+:root[data-mb-marca][data-mb-web="biz"] :is(.expert-layout-tools button,.expert-module-head button):hover{background:var(--mbx-soft)}
+:root[data-mb-marca][data-mb-web="biz"] .expert-module-head{background:color-mix(in srgb,var(--mb-superficie-alt) 70%,transparent)}
+:root[data-mb-marca][data-mb-web="biz"] .expert-command-form input{background:var(--mb-fondo);color:var(--mbx-ink);font-family:var(--mb-fuente-mono);border-radius:var(--mb-radio-sm,8px)}
+:root[data-mb-marca][data-mb-web="biz"] :is(.expert-command-form button,.expert-verb-btn){background:var(--mbx-brand);color:var(--mbx-on-brand);border-radius:var(--mb-radio-boton,8px)}
+:root[data-mb-marca][data-mb-web="biz"] :is(.expert-chip,.expert-routine-btn,.expert-routine-del,.expert-save-routine){border-radius:var(--mb-radio-sm,8px)}
+:root[data-mb-marca][data-mb-web="biz"] .expert-chip{border-radius:var(--mb-radio-pill,999px)}
+:root[data-mb-marca][data-mb-web="biz"] .expert-log li.error .expert-log-line{color:var(--mbx-error)}
+:root[data-mb-marca][data-mb-web="biz"] :is(.expert-module-content,.expert-log,.expert-routine-btn,.expert-chip,.expert-command-form){font-family:var(--mb-fuente-mono)}
+
+/* 4 · Fichas y paneles flotantes de la portada: fondos de la marca en vez del azul noche. */
+:root[data-mb-marca][data-mb-web="biz"] :is(aside.panel,.circuit-panel,.live-ticker,.addr-card,.status-pill,.map-tour-stop,.mars-hint,.zoom-grp,.iso-bar){background:var(--mbx-panel);color:var(--mbx-ink)}
+:root[data-mb-marca][data-mb-web="biz"] :is(.circuit-select,.circuit-stat,.circuit-list-wrap,.circuit-target-view,.target-option,aside.panel .seg-pill,.bidfeed-empty){background:var(--mbx-inset)}
+:root[data-mb-marca][data-mb-web="biz"] .ctrl-btn:not(.zoom-grp .ctrl-btn){background:var(--mbx-panel)}
+:root[data-mb-marca][data-mb-web="biz"] :is(.circuit-point:hover,.layer-btn:hover,.layer-btn.active){background:var(--mbx-soft)}
+:root[data-mb-marca][data-mb-web="biz"] aside.panel .ph h2,:root[data-mb-marca][data-mb-web="biz"] .demo-card h2{font-family:var(--mb-fuente-titulos);font-weight:var(--mb-peso-titulos,700);letter-spacing:var(--mb-titulos-tracking,normal);text-transform:var(--mb-titulos-transform,none)}
+:root[data-mb-marca][data-mb-web="biz"] aside.panel .actions a{border-radius:var(--mb-radio-boton,6px)}
+/* Texto sobre relleno de marca o de «en directo». */
+:root[data-mb-marca][data-mb-web="biz"] :is(aside.panel .actions a:hover,aside.panel .actions a.primary,aside.panel .actions a#p-twin.launch,.ctrl-btn.active,.circuit-buy,.target-actions .target-apply,.circuit-demo.previo.active,.planet-modal .pm-ok,.surface .twin-launch.ok){color:var(--mbx-on-brand)}
+:root[data-mb-marca][data-mb-web="biz"] :is(.surface .twin-launch:not(.ok):not(.err),.bid-row .bf-live,.bf-btn.on){background:var(--mbx-ok-fill);color:var(--mbx-on-ok)}
+:root[data-mb-marca][data-mb-web="biz"] .planet-modal :is(.planet-card,p),:root[data-mb-marca][data-mb-web="biz"] .wish-modal .wish-card{color:var(--mbx-ink)}
+:root[data-mb-marca][data-mb-web="biz"] .planet-modal .planet-card,:root[data-mb-marca][data-mb-web="biz"] .wish-modal .wish-card{background:var(--mb-superficie)}
+:root[data-mb-marca][data-mb-web="biz"] .splash{background:var(--mbx-panel)}
+
+/* Tarjeta de la demo guiada (intro.css lleva sus colores escritos a mano). */
+:root[data-mb-marca][data-mb-web="biz"] .demo-card{color:var(--mbx-ink);background:var(--mbx-panel);border-color:var(--mb-borde);font-family:var(--mb-fuente-texto);border-radius:var(--mb-radio-lg,16px);box-shadow:var(--mb-sombra-lg,0 24px 70px rgba(0,0,0,.55))}
+:root[data-mb-marca][data-mb-web="biz"] .demo-card a{color:var(--mbx-brand)}
+:root[data-mb-marca][data-mb-web="biz"] :is(.demo-head,.demo-plan small,.demo-note,.demo-x){color:var(--mbx-mut)}
+:root[data-mb-marca][data-mb-web="biz"] .demo-x:hover{color:var(--mbx-ink)}
+:root[data-mb-marca][data-mb-web="biz"] .demo-dots i{background:var(--mb-borde)}
+:root[data-mb-marca][data-mb-web="biz"] .demo-dots i.on{background:var(--mbx-brand)}
+:root[data-mb-marca][data-mb-web="biz"] .demo-plan li{border-bottom-color:var(--mb-borde)}
+:root[data-mb-marca][data-mb-web="biz"] :is(.demo-total b,.demo-counter b,.demo-bought){color:var(--mbx-ok)}
+:root[data-mb-marca][data-mb-web="biz"] .demo-tag.sim{color:var(--mbx-on-accent);background:var(--mbx-accent)}
+:root[data-mb-marca][data-mb-web="biz"] .demo-tag.est{color:var(--mbx-accent);border-color:var(--mbx-accent)}
+:root[data-mb-marca][data-mb-web="biz"] .demo-tag.real{color:var(--mbx-on-ok);background:var(--mbx-ok-fill)}
+:root[data-mb-marca][data-mb-web="biz"] :is(.demo-buy,.demo-next){color:var(--mbx-on-brand);background:var(--mbx-brand);border-radius:var(--mb-radio-boton,10px)}
+:root[data-mb-marca][data-mb-web="biz"] .demo-back{color:var(--mbx-ink);border-color:var(--mb-borde);border-radius:var(--mb-radio-boton,999px)}
+:root[data-mb-marca][data-mb-web="biz"] .demo-audio{color:var(--mbx-brand);background:var(--mbx-soft);border-color:var(--mbx-brand)}
+
+/* La entrada en vídeo lleva grabados los clusters de serie: con marca no se enseña (marca-blanca.js
+   ya la oculta al arrancar; esto lo mantiene si la página la vuelve a mostrar). */
+:root[data-mb-marca][data-mb-web="biz"] .intro-video{visibility:hidden}
+
+/* Aviso del mapa al pasar por un Xpacio. */
+:root[data-mb-marca][data-mb-web="biz"] .xp-tooltip .maplibregl-popup-content{background:var(--mbx-panel);border-color:var(--mb-borde);color:var(--mbx-ink)}
+:root[data-mb-marca][data-mb-web="biz"] .xp-tooltip :is(.xp-name){color:var(--mbx-ink)}
+:root[data-mb-marca][data-mb-web="biz"] .xp-tooltip :is(.xp-addr,.xp-meta,.xp-idle){color:var(--mbx-mut)}
+:root[data-mb-marca][data-mb-web="biz"] .xp-tooltip .xp-live{color:var(--mbx-ok)}
+:root[data-mb-marca][data-mb-web="biz"] .xp-tooltip .xp-circuit{color:var(--mbx-on-brand);background:var(--mbx-brand)}
+
+/* Firma de versión: legible sobre el mapa con cualquier marca. */
+:root[data-mb-marca][data-mb-web="biz"] .release-signature{color:var(--mbx-mut);background:var(--mbx-panel);padding:1px 6px;border-radius:4px;opacity:.9}
+:root[data-mb-marca][data-mb-web="biz"] ::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--mbx-brand) 30%,transparent);background-clip:padding-box}
+
+/* 5 · Resto de páginas: lo justo para que nada quede ilegible. brand.css da el degradado
+   oscuro de la barra a cualquier <header>, también a las cabeceras de contenido. */
+:root[data-mb-marca][data-mb-web="biz"] :not(body) > header{background:none}
+/* Botones de contenido con relleno de marca y texto escrito a mano (about, marketplace). */
+:root[data-mb-marca][data-mb-web="biz"] .cta:not(.secondary){color:var(--mbx-on-brand)}
+/* /help/ tiene su propia paleta (--tx, --acc…): se traduce a la de la marca. */
+:root[data-mb-marca][data-mb-web="biz"]{--tx:var(--mbx-ink);--acc:var(--mbx-brand);--acc2:var(--mbx-ok);--gold:var(--mbx-accent);--bg2:var(--mb-superficie-alt);--line2:var(--mb-borde)}
+:root[data-mb-marca][data-mb-web="biz"] .wrap code{background:var(--mb-superficie-alt)}

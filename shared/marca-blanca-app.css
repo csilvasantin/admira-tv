@@ -1,0 +1,105 @@
+/* Marca blanca · hoja puente de app para el cargador común (marca-blanca.js). La carga el cargador solo en
+   esa web y todas sus reglas van bajo :root[data-mb-marca][data-mb-web="app"]: en las demás webs no aplica.
+   Origen: yokup-site/yk-marca.css de tool (admira.app · Yokup). Encargo #5979. */
+/* Marca blanca en Yokup (yokup.com, FLT-101338). Solo se descarga cuando hay marca
+   activa (yk-marca.js la inserta) y todo va bajo
+   html[data-mb-marca][data-mb-web="app"], que pone el cargador común: sin marca
+   esta hoja no existe en la página y Yokup queda exactamente como siempre.
+   Tokens: --mb-* del catálogo (admiranext.com/marcablanca) y --mbx-*, que yk-marca.js
+   calcula para que los textos cumplan AA (≥ 4,5:1) con cualquier marca, también las claras.
+   Los tokens de Yokup (--p-*, --yk-*, --bg, --ink…) se declaran en <body> (body.yk-light,
+   body.inc-portal, body.yk-claro) o en :root; el puente común de marcablanca.css, en
+   <html>, pierde frente a <body>. Por eso aquí todo apunta a «… body» y se carga después.
+   No se recolorean medios: vídeo, lienzos, mapas, fotos ni el xterm.
+   Ver docs/marca-blanca-yokup.md. */
+
+/* 1 · Puente propio de la plataforma yokup: el marco, la paleta del portal y las variables
+   de siempre de cada página leen la marca (con los textos ya corregidos a AA). */
+html[data-mb-marca][data-mb-web="app"]{background:var(--mb-fondo)}
+html[data-mb-marca][data-mb-web="app"] body{
+  /* marco cuadrático */
+  --yk-bg:var(--mb-superficie);--yk-bg2:var(--mb-fondo);--yk-card:var(--mb-superficie);--yk-field:var(--mb-superficie);
+  --yk-ink:var(--mbx-ink);--yk-mut:var(--mbx-mut);--yk-dim:var(--mbx-mut);--yk-hi:var(--mbx-ink);
+  --yk-brand:var(--mbx-brand);--yk-on-brand:var(--mbx-on-brand);--yk-dark:var(--mbx-brand);--yk-live:var(--mbx-ok-fill);
+  --yk-line:var(--mb-borde);--yk-line2:var(--mb-borde);--yk-tint:var(--mbx-soft);--yk-tint2:var(--mbx-soft-2);
+  --yk-ok:var(--mbx-ok);--yk-err:var(--mbx-error);--yk-warn:var(--mbx-warn);
+  --yk-sans:var(--mb-fuente-texto);--yk-mono:var(--mb-fuente-mono);
+  /* paleta del Portal del comercio */
+  --p-ink:var(--mbx-ink);--p-muted:var(--mbx-mut);--p-paper:var(--mb-fondo);--p-line:var(--mb-borde);--p-line2:var(--mb-borde);
+  --p-dark:var(--mbx-brand);--p-dark2:var(--mbx-brand);--p-green:var(--mbx-brand);--p-accent:var(--mbx-accent);
+  --p-live:var(--mbx-ok-fill);--p-red:var(--mbx-error);--p-amber:var(--mbx-warn);--p-lime:var(--mbx-soft-2);
+  --p-soft:var(--mb-superficie-alt);--p-soft-line:var(--mb-borde);--p-hover:var(--mbx-brand);--p-sel:var(--mbx-brand);
+  --p-sans:var(--mb-fuente-texto);--p-head:var(--mb-fuente-titulos);
+  /* páginas de la flota (body.yk-claro / yk-light / inc-portal) */
+  --bg:var(--mb-fondo);--card:var(--mb-superficie);--card2:var(--mb-superficie-alt);
+  --ink:var(--mbx-ink);--mut:var(--mbx-mut);--dim:var(--mbx-mut);--brand:var(--mbx-brand);--accent:var(--mbx-accent);
+  --good:var(--mbx-ok);--warn:var(--mbx-error);--violet:var(--mbx-brand);--line:var(--mb-borde);--line2:var(--mb-borde);
+  --sans:var(--mb-fuente-texto);
+  /* portales (installer-portal.css, home.css, fichas): sus nombres sin prefijo */
+  --muted:var(--mbx-mut);--paper:var(--mb-fondo);--lime:var(--mbx-soft-2);--dark:var(--mbx-brand);--red:var(--mbx-error);
+  --olive:var(--mbx-accent);--green:var(--mbx-brand);--soft:var(--mb-superficie-alt);--dark2:var(--mbx-brand);
+  /* derivados */
+  --mbx-panel:color-mix(in srgb,var(--mb-superficie) 97%,transparent);
+  --mbx-soft:color-mix(in srgb,var(--mbx-brand) 9%,var(--mb-superficie));
+  --mbx-soft-2:color-mix(in srgb,var(--mbx-brand) 17%,var(--mb-superficie));
+  background:var(--mb-fondo);color:var(--mbx-ink);font-family:var(--mb-fuente-texto);
+}
+html[data-mb-marca][data-mb-web="app"] body :is(h1,h2,h3){font-family:var(--mb-fuente-titulos);letter-spacing:var(--mb-titulos-tracking,normal)}
+html[data-mb-marca][data-mb-web="app"] ::selection{background:var(--mbx-brand);color:var(--mbx-on-brand)}
+html[data-mb-marca][data-mb-web="app"] :focus-visible{outline-color:var(--mbx-brand)}
+
+/* 2 · Rellenos con el color de marca escritos con texto blanco: texto legible encima. */
+html[data-mb-marca][data-mb-web="app"] body :is(.primary:not(.yk-frame *),.btn.primary,button.primary,a.primary,.kb button,.tab.on,.kpi.on,.tk-portal,.inc-action.advance,.btn.res,.btn.solid,.slot.sel,.day-chip.sel,.flt.on,.skip-link){color:var(--mbx-on-brand)}
+html[data-mb-marca][data-mb-web="app"] body :is(.primary:not(.yk-frame *),.btn.primary,button.primary,a.primary){background:var(--mbx-brand);border-color:var(--mbx-brand)}
+/* acentos del portal escritos a mano (installer-portal.css, retailer-portal.css, home.css) */
+html[data-mb-marca][data-mb-web="app"] body :is(.live-dot,.small-dot){background:var(--mbx-ok-fill)}
+html[data-mb-marca][data-mb-web="app"] body :is(h1 em,.hero h1 span,.training-hero h1 span){color:var(--mbx-brand)}
+html[data-mb-marca][data-mb-web="app"] body :is(.connection-card,.mode-note,.inc-kb-card,.learning-note){background:var(--mb-superficie-alt);border-color:var(--mb-borde)}
+html[data-mb-marca][data-mb-web="app"] body .brand span{color:var(--mbx-brand)}
+/* héroes oscuros de las fichas (inventario, informe): superficie de marca */
+html[data-mb-marca][data-mb-web="app"] body :is(.sheet .hero,.rp .hero){background:var(--mbx-brand);color:var(--mbx-on-brand)}
+
+/* 3 · La barra: fondo de la marca casi opaco y, en el lugar del logo yokup●, el logo del
+   cliente seguido de un «powered by Yokup» discreto. */
+html[data-mb-marca][data-mb-web="app"] .yk-bar{background:color-mix(in srgb,var(--mb-fondo) 97%,transparent);border-bottom:1px solid var(--mb-borde);box-shadow:var(--mb-sombra-sm,none);color:var(--mbx-ink)}
+html[data-mb-marca][data-mb-web="app"] .mb-bar-logo{display:inline-flex;align-items:center;flex:0 1 auto;height:30px;max-width:150px;min-width:0;color:var(--mbx-ink);line-height:0;text-decoration:none;border-radius:var(--mb-radio-sm,6px);font:700 16px/1 var(--mb-fuente-titulos);letter-spacing:var(--mb-titulos-tracking,normal);white-space:nowrap}
+html[data-mb-marca][data-mb-web="app"] .mb-bar-logo[hidden]{display:none}
+html[data-mb-marca][data-mb-web="app"] .mb-bar-logo :is(.mb-logo-svg,.mb-logo-img,svg,img){height:100%;width:auto;max-width:100%;display:block;object-fit:contain}
+html[data-mb-marca][data-mb-web="app"] .mb-bar-logo:focus-visible{outline:2px solid var(--mbx-brand);outline-offset:3px}
+/* «yokup●» pasa a «powered by Yokup», pequeño y en el gris de la marca. */
+html[data-mb-marca][data-mb-web="app"] .yk-bar .yk-logo{align-items:center;padding:7px 0 7px 10px;border-left:1px solid var(--mb-borde);border-radius:0;color:var(--mbx-mut);font:600 9px/1.3 var(--mb-fuente-mono);letter-spacing:.14em;text-transform:uppercase}
+html[data-mb-marca][data-mb-web="app"] .yk-bar .yk-logo::before{content:"powered by ";white-space:pre;letter-spacing:.04em;font-weight:400;text-transform:none}
+html[data-mb-marca][data-mb-web="app"] .yk-bar .yk-logo-dot{display:none}
+html[data-mb-marca][data-mb-web="app"] .yk-bar .yk-logo:hover{color:var(--mbx-ink)}
+html[data-mb-marca][data-mb-web="app"] .yk-bar :is(.yk-page,.yk-nav a){color:var(--mbx-mut);font-family:var(--mb-fuente-etiquetas)}
+html[data-mb-marca][data-mb-web="app"] .yk-bar .yk-nav a.on{color:var(--mbx-ink);box-shadow:inset 0 -2px 0 var(--mbx-brand)}
+@media(max-width:600px){html[data-mb-marca][data-mb-web="app"] .yk-bar :is(.yk-logo,.yk-page){display:none}}
+/* Iconos ☰ ▤ ⌘ y selector de proyecto. */
+html[data-mb-marca][data-mb-web="app"] .yk-bar :is(.yk-ico,.yk-proj-btn){background:var(--mb-superficie);border:1px solid var(--mb-borde);border-radius:var(--mb-radio-sm,7px);box-shadow:none;color:var(--mbx-brand)}
+html[data-mb-marca][data-mb-web="app"] .yk-bar :is(.yk-ico,.yk-proj-btn):hover{border-color:var(--mbx-brand);background:var(--mbx-soft)}
+html[data-mb-marca][data-mb-web="app"] .yk-bar .yk-ico[aria-pressed="true"]{background:var(--mbx-brand);border-color:var(--mbx-brand);color:var(--mbx-on-brand)}
+
+/* 4 · Raíles Opciones (☰) y Avanzado (▤) y Experto (⌘): superficie, bordes, radios y textos. */
+html[data-mb-marca][data-mb-web="app"] .yk-rail{background:var(--mb-superficie);border-color:var(--mb-borde);box-shadow:var(--mb-sombra-md,none);color:var(--mbx-ink);font-family:var(--mb-fuente-etiquetas)}
+html[data-mb-marca][data-mb-web="app"] .yk-rail-left{border-top:2px solid var(--mbx-brand)}
+html[data-mb-marca][data-mb-web="app"] .yk-rail-right{border-top:2px solid var(--mbx-accent)}
+html[data-mb-marca][data-mb-web="app"] .yk-rail-bottom{border-top:2px solid var(--mbx-ok-fill)}
+html[data-mb-marca][data-mb-web="app"] .yk-rail .yk-hd{color:var(--mbx-brand);border-bottom-color:var(--mb-borde)}
+html[data-mb-marca][data-mb-web="app"] .yk-rail .yk-hd::before{background:var(--mbx-brand)}
+html[data-mb-marca][data-mb-web="app"] .yk-rail :is(.yk-pub-link,.yk-rail-navlink,.yk-set-btn,.yk-slot [data-yk-links] a){color:var(--mbx-ink);border-radius:var(--mb-radio-sm,8px)}
+html[data-mb-marca][data-mb-web="app"] .yk-rail :is(.yk-pub-link,.yk-rail-navlink,.yk-set-btn,.yk-slot [data-yk-links] a):hover{color:var(--mbx-brand);background:var(--mbx-soft)}
+html[data-mb-marca][data-mb-web="app"] .yk-rail :is(.yk-pub-link.on,[aria-current="page"]){border-left-color:var(--mbx-brand);background:var(--mbx-soft-2);color:var(--mbx-ink)}
+html[data-mb-marca][data-mb-web="app"] .yk-rail :is(.yk-rail-navhd,.yk-ver,.yk-empty,.yk-lcli-hint){color:var(--mbx-mut)}
+/* «Volver a Admira» (solo existe con marca activa). */
+html[data-mb-marca][data-mb-web="app"] .yk-rail .mb-volver{display:flex;align-items:center;justify-content:flex-start;width:100%;margin:0 0 12px;padding:10px 12px;border:1px solid var(--mbx-brand);border-radius:var(--mb-radio-sm,8px);background:var(--mbx-soft);color:var(--mbx-brand);font:600 13px/1.3 var(--mb-fuente-texto);text-align:left;cursor:pointer;flex-shrink:0}
+html[data-mb-marca][data-mb-web="app"] .yk-rail .mb-volver::before{content:"↩";margin-right:8px}
+html[data-mb-marca][data-mb-web="app"] .yk-rail .mb-volver:hover{background:var(--mbx-brand);color:var(--mbx-on-brand)}
+html[data-mb-marca][data-mb-web="app"] .yk-rail .mb-volver:focus-visible{outline:2px solid var(--mbx-brand);outline-offset:3px}
+/* Consola local del Experto. */
+html[data-mb-marca][data-mb-web="app"] .yk-local-cli .yk-lcli-log{background:var(--mb-superficie-alt);border-color:var(--mb-borde);color:var(--mbx-ink);font-family:var(--mb-fuente-mono)}
+html[data-mb-marca][data-mb-web="app"] .yk-local-cli .yk-lcli-in,html[data-mb-marca][data-mb-web="app"] .yk-local-cli .yk-lcli-prompt{color:var(--mbx-brand)}
+html[data-mb-marca][data-mb-web="app"] .yk-slot .yk-local-cli .yk-lcli-input{background:var(--mb-superficie);border-color:var(--mb-borde);color:var(--mbx-ink);font-family:var(--mb-fuente-mono)}
+html[data-mb-marca][data-mb-web="app"] .yk-slot .yk-local-cli .yk-lcli-run{background:var(--mbx-brand);border-color:var(--mbx-brand);color:var(--mbx-on-brand);border-radius:var(--mb-radio-boton,8px)}
+
+/* 5 · Lo que no cambia: medios, mapas, lienzos y el terminal de los CLIs. */
+html[data-mb-marca][data-mb-web="app"] :is(canvas,video,img:not(.mb-logo-img),iframe,.maplibregl-map){filter:none;mix-blend-mode:normal}

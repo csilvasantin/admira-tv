@@ -44,6 +44,7 @@
   }
 
   function projectFor(screen) {
+    if (screen.projectId) return screen.projectId;
     const haystack = `${screen.screen} ${screen.name} ${screen.circuit}`.toLowerCase();
     if (/kiosk|kiosko|gracia/.test(haystack)) return 'kiosk';
     if (/xtanco|xtore/.test(haystack)) return 'xtanco';
@@ -182,6 +183,15 @@
     } catch (_) {
       projects = FALLBACK_PROJECTS.slice();
       screens = sourceXtancos().length ? mergeSourceDevices(FALLBACK_SCREENS) : FALLBACK_SCREENS.slice();
+    }
+    // Filtro por cliente del ⌘ Experto (/proyecto, encargo #5979, módulo común): con un cliente activo el proyecto no
+    // sale de /grid/projects sino del contexto verificado en el servidor, y solo quedan las pantallas que la API
+    // devolvió filtradas. Sin cliente activo, todo sigue igual.
+    if (window.AdmiraContextoTv) {
+      await window.AdmiraContextoTv.listo(8000);
+      const vista = window.AdmiraContextoTv.recortar(projects, screens);
+      projects = vista.projects;
+      screens = vista.screens;
     }
     render();
   }
