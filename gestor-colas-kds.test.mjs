@@ -86,7 +86,7 @@ test("páginas: el control es un KDS (líneas, espera, botones táctiles) y la p
   const ctl = fs.readFileSync("gestorColas/index.html", "utf8"), pan = fs.readFileSync("gestorColas/pantalla/index.html", "utf8");
   assert.match(ctl, /id="kds"/); assert.match(ctl, /data-a="'\+a\+'"/); for (const k of ["bPrep2", "bListo", "bEnt"]) assert.match(ctl, new RegExp(`b\\('[a-z]+','${k}'\\)`));
   assert.match(ctl, /bEnt:'Entregado'/); assert.match(ctl, /bEnt:'Handed over'/); assert.match(ctl, /min-height:60px/);
-  assert.match(ctl, /headers:k\?\{'x-clave-sala':k\}/, "la clave de sala también acompaña las lecturas");
+  assert.match(ctl, /RoomClient/, "el control usa el cliente de sala probado por separado");
   assert.doesNotMatch(ctl, /mcp-ainimation\.admira\.store/, "el navegador nunca llama al relé directamente");
   assert.match(pan, /api\/estado\?sala='\+sala\+'&publico=1/);
 });
@@ -129,5 +129,5 @@ test("pantalla: el aviso se dice y se escribe en los dos idiomas en la misma lla
   assert.match(h, /const BILINGUE=P\.get\('bilingue'\)!=='0'/);
   assert.match(h, /partes=\[\[t\.dice\(num,nom\),t\.voz\]\]\.concat\(t2\?\[\[t2\.dice\(num,nom\),t2\.voz\]\]:\[\]\)/);
   assert.match(h, /if\(i\+1<partes\.length\)habla\(i\+1\);else cerrar\('fin'\)/, "la segunda locución empieza al acabar la primera");
-  assert.match(h, /\(cola\.length\?4500:6000\)\*partes\.length/, "el tope del aviso se dobla con dos idiomas");
+
 });

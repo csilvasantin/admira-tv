@@ -53,7 +53,9 @@ export async function rele(env, op, sala, { query = "", body, auth = false } = {
     if (env.COLA_ADMIN) headers["x-cola-admin"] = env.COLA_ADMIN;
     const k = await claveBarra(env, sala); if (k) headers["x-cola-clave"] = k;
   }
-  const r = await fetch(`${RELE}/cola/${op}?store=${encodeURIComponent(sala)}${query}`, body ? { method: "POST", headers, body: JSON.stringify(body) } : { headers });
+  const r = await fetch(`${RELE}/cola/${op}?store=${encodeURIComponent(sala)}${query}`, {
+    headers, signal: AbortSignal.timeout(8000), ...(body ? { method: "POST", body: JSON.stringify(body) } : {})
+  });
   const d = await r.json().catch(() => ({ ok: false, error: "relé sin respuesta" }));
   if (!r.ok || d.ok === false) throw new Error(d.error || "relé HTTP " + r.status);
   return d;
@@ -91,8 +93,10 @@ export async function operar(env, op, sala, a = {}, { auth = false } = {}) {
     // Idempotente: el mismo «idem» (un toque, un reintento de red o del MCP) devuelve el MISMO pedido.
     const idem = String(a.idem || "").replace(/[^A-Za-z0-9._-]/g, "").slice(0, 48);
     const id = idem.length >= 6 ? "gc-" + idem : "gc-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
-    await rele(env, "pedido", sala, { body: { id, nombre: a.nombre || "", total: 0, prefijo: a.prefijo || "A", lines: lineasDe(a.lineas || a.lines) }, auth: true });
-    return await rele(env, "pagar", sala, { body: { id, via: "caja" }, auth: true });
+    const alta = await rele(env, "pedido", sala, { body: { id, nombre: a.nombre || "", total: 0, prefijo: a.prefijo || "A", lines: lineasDe(a.lineas || a.lines) }, auth: true });
+    // Counter staff may create but do not gain the kiosk/admin payment role.
+    // Use the token for this exact order, exclusively between servers.
+    return await rele(env, "pagar", sala, { body: { id, via: "caja", ...(alta.pago ? { pago: alta.pago } : {}) }, auth: true });
   }
   if (op === "avanzar") { if (a.a && !ESTADOS.includes(a.a)) throw new Error("estado inválido: " + a.a); return await rele(env, "avanzar", sala, { body: { numero: a.pedido, id: a.pedido, a: a.a }, auth: true }); }
   if (op === "llamar") return await rele(env, "llamar", sala, { body: { numero: a.pedido, id: a.pedido }, auth: true });

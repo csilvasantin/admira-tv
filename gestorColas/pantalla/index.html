@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>Pedidos · Pantalla</title>
-<meta name="admiranext-version" content="v.14.10.2026.r13.19:37">
+<meta name="admiranext-version" content="v.14.10.2026.r15.20:59">
 <meta name="robots" content="noindex">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Pedidos">
@@ -103,9 +103,11 @@ const sigueListo=p=>!!(ultimo&&(ultimo.listo||[]).some(x=>x.id===p.id));
 function callar(){cola.length=0;gen++;try{window.speechSynthesis&&speechSynthesis.cancel();}catch(_){}const b=$('bocadillo');b.classList.remove('on');b.innerHTML='';}
 let actual=null,cortar=null;
 // Un aviso por pedido con TOPE DURO independiente del audio (Carlos, 7-oct-2026: con voz real el bocadillo
-// se quedaba en A007 y A008 no salía). Tope: 6 s si no hay nadie esperando, 4,5 s si hay cola. Al vencer se
-// corta la voz (speechSynthesis.cancel) y se pasa al siguiente. El vigilante de tic() lo fuerza si algo falla.
+// se quedaba en A007 y A008 no salía). Cada idioma dispone de 10–30 s, según la longitud del texto,
+// estimando 100 palabras/minuto y 4 s de margen. La cola no acorta un anuncio ya empezado: cortar a
+// los 12 s interrumpía el inglés real del MBP16. Al vencer se cancela y se pasa al siguiente; tic() vigila.
 let inicioAviso=0,topeAviso=0;
+function tiempoVoz(partes){return partes.reduce((ms,[texto])=>ms+Math.min(30000,Math.max(10000,4000+String(texto).trim().split(/\s+/u).length*600)),0);}
 function decir(p){const g=gen,t=T[lang],num=String(p.numero).replace(/[^A-Z0-9]/gi,''),nom=p.nombre||'';
   if(!sigueListo(p))return Promise.resolve();
   const t2=BILINGUE?T[otro()]:null,partes=[[t.dice(num,nom),t.voz]].concat(t2?[[t2.dice(num,nom),t2.voz]]:[]);
@@ -119,7 +121,7 @@ function decir(p){const g=gen,t=T[lang],num=String(p.numero).replace(/[^A-Z0-9]/
       if(motivo==='cortado'||cola.length){if(g===gen)b.classList.remove('on');return fin();}
       setTimeout(()=>{if(g===gen&&!actual)b.classList.remove('on');fin();},900);};
     cortar=()=>cerrar('cortado');
-    const plazo=()=>{const tope=(cola.length?4500:6000)*partes.length;topeAviso=tope;const resto=tope-(Date.now()-inicioAviso);if(resto<=0)return cerrar('tope');timer=setTimeout(plazo,Math.min(resto,500));};
+    const plazo=()=>{const tope=tiempoVoz(partes);topeAviso=tope;const resto=tope-(Date.now()-inicioAviso);if(resto<=0)return cerrar('tope');timer=setTimeout(plazo,Math.min(resto,500));};
     plazo();
     // Sin voz (parada a mano, sin soporte o bloqueada por el navegador) el bocadillo es el único aviso: se queda 5 s.
     const SOLO_TEXTO=5000*partes.length;
@@ -185,7 +187,7 @@ let V0='';const sello=()=>fetch('/version.json?_='+Date.now(),{cache:'no-store'}
 const RAPIDO=2000,LENTO=6000,FIJO=Math.min(30,Math.max(2,+P.get('sondeo')||0))*1000*(P.has('sondeo')?1:0);
 function cadencia(){if(FIJO)return FIJO;const d=ultimo;if(!d||document.body.dataset.ok==='0')return RAPIDO;
   return ((d.recibido||[]).length||(d.preparando||[]).length||(d.listo||[]).length||hablando||cola.length)?RAPIDO:LENTO;}
-let reloj=0;async function ronda(){clearTimeout(reloj);await tic();const c=cadencia();window.__pantallaStats.cada=c;reloj=setTimeout(ronda,c);}
+let reloj=0,pollGeneration=0;async function ronda(){const g=++pollGeneration;clearTimeout(reloj);await tic();if(g!==pollGeneration)return;const c=cadencia();window.__pantallaStats.cada=c;reloj=setTimeout(ronda,c);}
 textos();ronda();
 })();
 </script>
