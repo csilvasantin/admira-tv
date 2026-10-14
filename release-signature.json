@@ -1,8 +1,7 @@
 {
-  "version": "v.14.10.2026.r12.18:19",
-  "agent": "MorfeoMacMini",
-  "deployer": "MorfeoMacMini",
-  "machine": "MacMini",
-  "signature": "MorfeoMacMini · MacMini",
-  "mission": "FLT-102171"
+  "version": "v.14.10.2026.r13.19:37",
+  "agent": "NeoMacStudio",
+  "deployer": "NeoMacStudio",
+  "machine": "MacStudio",
+  "signature": "NeoMacStudio · MacStudio"
 }
