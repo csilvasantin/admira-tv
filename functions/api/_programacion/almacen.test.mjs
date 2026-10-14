@@ -8,6 +8,7 @@ import { d1Memoria } from "./_d1-memoria.mjs";
 import * as A from "./almacen.js";
 import { aMinutos, aUtc } from "./horario.js";
 import { resolver } from "./resolver.js";
+import { circuitoDesdeLegado } from "./legado.js";
 import { slugId } from "./modelo.js";
 
 const SQL = await readFile(new URL("../../../migrations/programacion/0001.sql", import.meta.url), "utf8");
@@ -219,4 +220,15 @@ prueba("de punta a punta: lo que guarda el almacén es lo que resuelve el resolv
   assert.equal(r.validoHasta, M("2026-10-14", "13:00"));
   assert.equal(r.siguiente.capa, "propia");
   assert.deepEqual(r.siguiente.items.map(i => i.stockId), ["k1"]);
+});
+
+prueba("el espejo D1 conserva el servicio musical y el resolver respeta destino, marca y medio", async () => {
+ const db=await d1Memoria(SQL),c={id:"starbucks-hilo",name:"Starbucks hilo",target:{all:["pantalla:iphone17-mupi"]},service:{brand:"starbucks",use:"backgroundmusic"}};
+ const save=await A.guardarCircuito(db,circuitoDesdeLegado(c),yo);assert.equal(save.ok,true);
+ const circuitos=await A.listarCircuitos(db);assert.deepEqual(circuitos[0].destino.service,{brand:"starbucks",use:"hilomusical"});
+ const stock=[{id:"music-video",type:"video",url:"https://cdn.example/music.mp4",tags:["starbucks","backgroundmusic"],orientacion:"horizontal"}];
+ const facts={screen:"iphone17-mupi",project:"admiranext",w:440,h:956};
+ const r=resolver({facts,circuitos,stock,ahora:T0,siguiente:false});assert.deepEqual(r.items.map(i=>i.stockId),["music-video"]);assert.equal(r.items[0].assetType,"video");
+ assert.deepEqual(resolver({facts:{...facts,screen:"starbucks-ipad"},circuitos,stock,ahora:T0,siguiente:false}).items,[]);
+ const saved=await A.guardarCircuito(db,circuitos[0],{...yo,rev:circuitos[0].rev});assert.equal(saved.ok,true);assert.deepEqual(saved.circuito.destino.service,circuitos[0].destino.service);
 });

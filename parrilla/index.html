@@ -7,7 +7,7 @@
   <meta name="description" content="Editor de parrilla municipal y publicitaria de Admira.tv.">
   <meta name="theme-color" content="#070a10">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <script>if(!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)){document.write('<script src="/auth-gate.js?v=14.10.2026.r5.1113"><\/script>')}</script>
+  <script>if(!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)){document.write('<script src="/auth-gate.js?v=14.10.2026.r6.1208"><\/script>')}</script>
   <script src="https://www.clearchannel.tv/locations.js?v=14.07.2026.r17"></script>
   <style>
     :root{--bg:#070a10;--panel:#0e141d;--panel2:#121b28;--line:#223049;--ink:#d9e4f2;--dim:#8999ae;--green:#3df08a;--blue:#7aa2ff;--amber:#ffbd59;--red:#ff6262}
@@ -54,6 +54,11 @@
 .pl-tagadd button{padding:9px 15px;border:1px solid #334966;border-radius:10px;background:#0d1a2a;color:var(--ink);
   font:800 12px ui-monospace,monospace;cursor:pointer;flex:none}
 .pl-tagadd button:hover{border-color:var(--green);color:var(--green)}
+#plCircuitoAlta{flex-wrap:wrap;align-items:end}
+#plCircuitoAlta>input{flex:1 1 240px;width:auto}
+#plCircuitoAlta label{display:grid;gap:6px;flex:1 1 180px;font-size:12px;color:var(--dim)}
+#plCircuitoAlta label[hidden],#plCircuitoUsoAyuda[hidden]{display:none}
+#plCircuitoAlta select{padding:10px 12px;border:1px solid #334966;border-radius:10px;background:#09111c;color:var(--ink);font:inherit}
 .pl-field[hidden]{display:none}
 .pl-stock-tools{display:flex;gap:8px;flex-wrap:wrap}
 .pl-stock-tools input{flex:1 1 220px;min-width:0}
@@ -140,11 +145,11 @@
 </head>
 <body>
   <script>
-    window.ADMIRA_VERSION='v.14.10.2026.r5.11:13';
+    window.ADMIRA_VERSION='v.14.10.2026.r6.12:08';
     window.ADMIRA_NAV={active:'parrilla',title:'Parrilla por Xpacio',topRight:'<a class="admtR" href="/playlists/">Playlists</a><a class="admtR admtR-cta" href="/canal.html" target="_blank" rel="noopener">Ver canal ↗</a>'};
   </script>
   <script src="/assets/virtual-players.js"></script>
-  <script src="/admira-nav.js?v=14.10.2026.r5.1113"></script>
+  <script src="/admira-nav.js?v=14.10.2026.r6.1208"></script>
 
   <main class="page">
     <section class="context-picker" aria-label="Selector de proyecto, Xpacio y dispositivo IoT">
@@ -202,8 +207,11 @@
               </div>
               <div class="pl-tagadd" id="plCircuitoAlta">
                 <input id="plCircuitoNombre" type="text" maxlength="60" autocomplete="off" placeholder="Nombre del circuito: Starbucks verticales">
+                <label>Uso del destino <select id="plCircuitoUso"><option value="">Pantallas generales</option><option value="hilomusical">Hilo musical</option></select></label>
+                <label id="plCircuitoClienteWrap" hidden>Cliente del hilo musical <input id="plCircuitoCliente" type="text" maxlength="60" placeholder="starbucks" autocomplete="off"></label>
                 <button id="plCircuitoGuardar" type="button">Guardar este destino como circuito</button>
               </div>
+              <p class="pl-sum" id="plCircuitoUsoAyuda" hidden>Al importar con #cliente #hilomusical o #cliente #backgroundmusic, el contenido llegará a este destino. Conserva vídeo y audio; sólo se importa audio si lo eliges.</p>
               <div id="plCircuitos"></div>
               <p class="pl-sum" id="plVivaYo"></p>
               <div class="pl-viva-num"><label>Máx. piezas <input id="plVivaLimit" type="number" min="1" max="100" value="20"></label><label>Segundos por pieza <input id="plVivaSecs" type="number" min="2" max="600" value="10"></label></div>
@@ -629,7 +637,7 @@
     // circuito:<id>. Toda pantalla que cumpla la definición entra sola en el circuito, hoy y cuando se conecte.
     function plCircuitosPinta(cuenta){
       const lista=plVivaData.circuits||[];
-      $('plCircuitos').innerHTML=lista.length?'Circuitos definidos: '+lista.map(c=>'<span class="pl-circ" title="'+esc((c.target.all||[]).concat(c.target.any||[]).join(' · '))+'">'+esc(c.name)+' <i>'+(n=>n+' pantalla'+(n===1?'':'s'))(cuenta.get('circuito:'+c.id)||0)+'</i><button type="button" data-pl-circ-del="'+esc(c.id)+'" aria-label="Borrar el circuito '+esc(c.name)+'">✕</button></span>').join(''):'';
+      $('plCircuitos').innerHTML=lista.length?'Circuitos definidos: '+lista.map(c=>'<span class="pl-circ" title="'+esc((c.target.all||[]).concat(c.target.any||[]).join(' · '))+'">'+esc(c.name)+(c.service?' · #'+esc(c.service.brand)+' #'+esc(c.service.use):'')+' <i>'+(n=>n+' pantalla'+(n===1?'':'s'))(cuenta.get('circuito:'+c.id)||0)+'</i><button type="button" data-pl-circ-del="'+esc(c.id)+'" aria-label="Borrar el circuito '+esc(c.name)+'">✕</button></span>').join(''):'';
       $('plCircuitos').querySelectorAll('[data-pl-circ-del]').forEach(b=>b.onclick=()=>plCircuitoBorra(b.dataset.plCircDel));
     }
     async function plCircuitoEnvia(cuerpo){
@@ -641,17 +649,21 @@
     async function plCircuitoGuarda(){
       const name=$('plCircuitoNombre').value.trim();
       if(!name){feedback('Ponle un nombre al circuito.',false);$('plCircuitoNombre').focus();return}
+      const use=$('plCircuitoUso').value,brand=$('plCircuitoCliente').value.trim().toLowerCase();
+      if(use&&!/^[a-z0-9][a-z0-9_-]{0,59}$/.test(brand)){feedback('Escribe el identificador del cliente, por ejemplo starbucks.',false);$('plCircuitoCliente').focus();return}
       const definidos=new Set((plVivaData.circuits||[]).map(c=>'circuito:'+c.id)),destino=[...plVivaSel].filter(t=>!definidos.has(t));
       if(!destino.length){feedback('Elige primero el destino del circuito: proyecto, Xpacio, pantallas o atributos (no otro circuito definido).',false);return}
       const n=plVivaPantallas(new Set(destino)).length;
-      const res=await plCircuitoEnvia({action:'circuit-save',circuit:{name,target:{all:destino}}});
+      const res=await plCircuitoEnvia({action:'circuit-save',circuit:{name,target:{all:destino},...(use?{service:{brand,use}}:{})}});
       if(!res.ok){feedback(res.status===401?'Inicia sesión en admira.tv para definir circuitos.':res.status===409?'Otra persona acaba de guardar: vuelve a intentarlo.':'No se pudo guardar el circuito ('+(res.error||res.status)+').',false);return}
       await plVivaCarga();
       const c=(plVivaData.circuits||[]).find(x=>x.name===name)||(plVivaData.circuits||[]).slice(-1)[0];
       if(c)plVivaSel=new Set(['circuito:'+c.id]);
-      $('plCircuitoNombre').value='';plVivaPinta();plResumen();
+      $('plCircuitoNombre').value='';$('plCircuitoUso').value='';$('plCircuitoCliente').value='';plCircuitoUsoPinta();plVivaPinta();plResumen();
       feedback('Circuito «'+name+'» definido · '+n+' pantalla'+(n===1?'':'s')+' ahora. La playlist apunta ya al circuito.',true);
     }
+    function plCircuitoUsoPinta(){const musical=$('plCircuitoUso').value==='hilomusical';$('plCircuitoClienteWrap').hidden=!musical;$('plCircuitoUsoAyuda').hidden=!musical;}
+    $('plCircuitoUso').onchange=plCircuitoUsoPinta;
     async function plCircuitoBorra(id){
       const c=(plVivaData.circuits||[]).find(x=>x.id===id);if(!c)return;
       const usan=(plVivaData.live.playlists||[]).filter(p=>(p.target.all||[]).concat(p.target.any||[]).includes('circuito:'+id)).map(p=>p.name);
@@ -1000,6 +1012,6 @@
     setDraftStatus();render();loadContext().then(()=>{if(DEFAULT_MODE&&$('plPanel').hidden)$('plOpen').click()});setInterval(liveStatus,30000);
   })();
   </script>
-  <script src="/emision/aviso-parrilla.js?v=14.10.2026.r5.1113" defer></script>
+  <script src="/emision/aviso-parrilla.js?v=14.10.2026.r6.1208" defer></script>
 </body>
 </html>

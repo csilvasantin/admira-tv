@@ -240,5 +240,10 @@
     "Las importaciones distinguen etiquetas de búsqueda y destinos explícitos.",
     "Las etiquetas inferidas del vídeo no añaden pantallas a la emisión.",
     "Reimportar un vídeo conserva su dirección anterior al enriquecer etiquetas."
+  ],
+  "v.14.10.2026.r6.12:08": [
+    "Hilo musical por #cliente #hilomusical o #backgroundmusic: sólo a su destino configurado.",
+    "Nuevo uso Hilo musical al definir circuitos en Parrilla, conservando vídeo y audio.",
+    "Prueba en iPhone vertical con vídeo visible y giro corregido."
   ]
 }

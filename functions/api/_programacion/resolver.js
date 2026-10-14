@@ -24,7 +24,7 @@
 //  10. validoHasta (próximo borde de programación, de franja de parrilla o de caducidad del mando; ≤ 48 h) y siguiente.
 // Mando en vivo: gana sobre la base hasta 2 h o el siguiente borde de franja; lo pagado se sigue intercalando.
 
-import { addressedContent, applyCircuits, deduceScreenTags, norm, resolveContent, targetMatches } from "../_playlist-live.js";
+import { addressedContent, applyCircuits, deduceScreenTags, serviceBindings, norm, resolveContent, targetMatches } from "../_playlist-live.js";
 import { assetTypeOf as tipoAsset } from "../_asset-type.js";
 import { CADENCIA_DEFECTO, CAPAS, MAX_ITEMS, esDirecta, ordenK } from "./modelo.js";
 import { HORA_MS, HORIZONTE_MS, ZONA, aMinutos, aUtc, cubre, esFecha, partesLocales, proximoBorde, sumarDias } from "./horario.js";
@@ -73,7 +73,7 @@ function leerParrilla(p, ahora, zona) {
 }
 /** Circuitos en la forma de cleanCircuit (KV de hoy) o en la del almacén (nombre/destino/activo) → la de applyCircuits. */
 export const circuitosComunes = lista => (Array.isArray(lista) ? lista : []).filter(Boolean)
-  .map(c => ({ id: c.id, enabled: c.enabled ?? c.activo, target: c.target || c.destino }));
+  .map(c => ({ id: c.id, enabled: c.enabled ?? c.activo, target: c.target || c.destino, service: c.service || (c.destino && c.destino.service) }));
 /** Etiquetas de la pantalla: las que se deduce de su identidad más circuito:<id> de cada circuito definido que la incluya. */
 export const etiquetasDe = (facts, circuitos) => applyCircuits(deduceScreenTags(facts && typeof facts === "object" ? facts : {}), circuitosComunes(circuitos));
 function contexto(entrada, ahora) {
@@ -85,7 +85,7 @@ function contexto(entrada, ahora) {
   for (const p of fuente) if (p && p.id) playlists.set(String(p.id), p);
   const relevantes = (Array.isArray(entrada.asignaciones) ? entrada.asignaciones : [])
     .filter(a => a && (a.estado == null ? "activa" : a.estado) === "activa" && targetMatches(a.destino, screenTags));
-  return { zona, facts, screenTags, playlists, relevantes, parrilla: leerParrilla(entrada.parrilla, ahora, zona),
+  return { zona, facts, screenTags, playlists, relevantes, bindings: serviceBindings(circuitosComunes(entrada.circuitos), deduceScreenTags(facts)), parrilla: leerParrilla(entrada.parrilla, ahora, zona),
     stock: Array.isArray(entrada.stock) ? entrada.stock : [], mando: entrada.mando && typeof entrada.mando === "object" ? entrada.mando : null };
 }
 
@@ -99,7 +99,7 @@ function itemDeSlot(s, banda, segundos) {
     bookingId: String(s.bookingId || "") };
 }
 function implicitas(ctx, t) {
-  const out = [], dirigidas = addressedContent(ctx.stock, ctx.facts, t);
+  const out = [], dirigidas = addressedContent(ctx.stock, ctx.facts, t, 60, ctx.bindings);
   if (dirigidas.length) out.push(implicita("implicita:hashtag", "por_defecto", "anade", "Dirigido por hashtag", dirigidas));
   const banda = ctx.parrilla.bandas.find(b => b.inicio <= t && t < b.fin);
   if (!banda) return out;
