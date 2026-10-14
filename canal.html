@@ -1048,7 +1048,7 @@ function applyDisplayRotation(delta){ return setDisplayRotation(displayRotation+
 // El mando de laboratorio (fault-rotate / fault-clear por la cola /locations/cmd) gira la
 // emisión SIN tocar el giro del operador (displayRotation, rotation-N del mando): los dos
 // se suman al pintar y fault-clear devuelve exactamente lo que había. Salvaguardas:
-//  · el backend rechaza fault-* (403) salvo para pantallas de laboratorio (macbookpro16, virtual-*);
+//  · el backend rechaza fault-* (403) salvo para players de laboratorio (virtual-lab-*, p. ej. virtual-lab-bugito);
 //  · aquí, además, la orden tiene que venir DIRIGIDA a esta pantalla: un broadcast del circuito no vale;
 //  · caduca sola a los FAULT_TTL_MS: un olvido no deja un player girado para siempre.
 // La telemetría NO lleva ninguna marca de prueba. Declara lo que se pinta, medido del DOM
@@ -1065,7 +1065,8 @@ function faultCommand(raw){
 function faultActive(f,now){
   if(!f||typeof f!=='object'||f.type!=='rotate'||![90,180,270].includes(f.angle)) return null;
   const at=Number(f.at), until=Number(f.until);
-  if(!Number.isFinite(at)||!Number.isFinite(until)||until<=now||until-at>FAULT_TTL_MS) return null;
+  // Un `at` del futuro (reloj adelantado o registro manipulado) alargaría el fallo: se rechaza.
+  if(!Number.isFinite(at)||!Number.isFinite(until)||until<=now||at>now+60000||until-at>FAULT_TTL_MS) return null;
   return {type:'rotate',angle:f.angle,at,until};
 }
 let injectedFault=(()=>{ try{ return faultActive(JSON.parse(LS(FAULT_KEY,'null')),Date.now()); }catch(_){ return null; } })();
@@ -1390,7 +1391,11 @@ window.addEventListener('offline',()=>refreshDeviceTelemetry(true));
 // Sin keepalive (r7): en WebKit de iOS 17 la cuota de 64 KiB de cuerpos keepalive no se libera
 // y, tras unos POST, todos los siguientes se rechazan en silencio → el iPad latía UNA vez por
 // carga y perdía proof-of-play. Estos envíos ocurren con la página viva: fetch normal.
-function _postNow(item){ if(XTORE_PARENT&&xtoreMusicEnabled())return; try{ if(item) item.audio=playerAudioState(); DEVICE_TELEMETRY.audio=playerAudioState(); fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},
+function _postNow(item){ if(XTORE_PARENT&&xtoreMusicEnabled())return; try{ if(item) item.audio=playerAudioState(); DEVICE_TELEMETRY.audio=playerAudioState();
+  // Lo pintado se MIDE justo antes de serializar: refreshDeviceTelemetry sustituye DEVICE_TELEMETRY tras
+  // esperar a storage.estimate y podía publicar la medida de antes de un giro (Creador de incidencias).
+  try{ if(DEVICE_TELEMETRY.display) Object.assign(DEVICE_TELEMETRY.display,measuredPaint()); }catch(_){}
+  fetch(NOW_API,{method:'POST',headers:{'Content-Type':'application/json'},
   body:JSON.stringify({ screen:scr.screen, producer:TELEMETRY_PRODUCER, item, standby:false, role:'canal', version:window.ADMIRA_VERSION||'', device:DEVICE_TELEMETRY, health:guardHealth(),
     loc:scr.circuit||'', locName:scr.name||scr.circuit||'', machine:scr.machine||'' })}).catch(()=>{}); }catch(_){} }
 // ── GUARDIA DE EMISIÓN (06-09-2026, DCL-6cfb6dea, foco admira.tv · players Android/iOS) ─────────

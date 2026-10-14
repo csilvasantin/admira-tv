@@ -34,13 +34,21 @@ Identidad nativa:
 | Qué | Dónde |
 |---|---|
 | Censo de la flota (última señal, versión web, ubicación) | `GET https://api.admira.store/signage/screens` |
-| Qué emite ahora una pantalla, sincro, standby, telemetría (`device.display.fit`, `rotation`, `software.webRelease`) | `GET https://api.admira.store/signage/now?screen=<pantalla>` |
+| Qué emite ahora una pantalla, sincro, standby, telemetría (`device.display.fit`, `rotation`, `paintedRotation`, `painted`, `software.webRelease`) | `GET https://api.admira.store/signage/now?screen=<pantalla>` |
 | Inventario de disco: `ready[]`, `total`, `downloading[{id,pct}]` | `GET https://api.admira.store/screen/cache?screen=<pantalla>` |
 | Playlist programada del kiosko (FUENTE) | `GET https://brain.digitalavatar.ai/control/playlist?screen=<pantalla>-tema` |
 | Espejo de lo que emite (con duraciones reales descubiertas) | `GET https://brain.digitalavatar.ai/control/playlist?screen=<pantalla>` |
 | Orquestación (autonomous / synchronized / extended) | `GET https://admira.tv/api/playout?screen=<pantalla>` |
 | Modo remoto del circuito (local / sync / conditional) | `GET https://api.admira.store/locations/mode?id=<circuito>` |
 | Emparejamiento con un player virtual | `GET https://admira.tv/api/virtual-players?device=<pantalla>` |
+
+Telemetría de lo que se pinta (`device.display`, desde el Creador de incidencias):
+
+- `rotation` (0·90·180·270): giro del **operador** (`rotation-N`), el que pinta el selector del mando.
+- `fit` (`editorial`·`fill`·`cover`): ajuste del marco (`fit-*`).
+- `paintedRotation` (0·90·180·270): giro **medido** del transform de `#mupi`; incluye un fallo inyectado.
+- `painted` (`horizontal`·`vertical`): orientación de la composición respecto al panel físico, medida igual.
+  No hay marca de prueba: el detector compara `painted` con la orientación que el plano espera.
 
 Cadencias (desde el 07-09): `now` caduca a los 5 min y se reescribe como mucho cada 4 si no cambia
 la pieza; el inventario de caché caduca a los 10 min y se reescribe cada 7 si no cambia. Un POST que
@@ -72,6 +80,7 @@ la orden por hecha.
 | `play<num>` | Emite la pieza `#num` por encima de la playlist (lo usa el gemelo CanalKiosk, por circuito). |
 | `info-show` · `info-hide` | Ficha «Contenido en antena» (con captura para el mando). |
 | `hardreload` | Recarga la página del player (coge el release publicado). |
+| `fault-rotate` (`-90`·`-180`·`-270`) · `fault-clear` | **Sólo laboratorio** (Creador de incidencias, DCL-34d5bbccb9cc227bb752a419): fallo inyectado «formato girado», que se suma al giro del operador sin tocarlo; `fault-clear` lo retira y caduca solo a los 30 min. El backend responde **403** salvo para players `virtual-lab-*` y con la cola de la propia pantalla (`id` = `screen`); el player sólo lo ejecuta dirigido a él (un broadcast acusa `failed`). |
 
 ## 4. Duración de cada pieza (la misma cifra en antena, proof-of-play y mando)
 

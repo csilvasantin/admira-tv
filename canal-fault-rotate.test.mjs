@@ -37,7 +37,7 @@ function computedTransform(style) {
   return `matrix(${c}, ${s}, ${-s}, ${c}, 0, 0)`;
 }
 
-function player({ screen = "macbookpro16", ancho = 1728, alto = 1117, almacen = new Map(), ahora = () => Date.now() } = {}) {
+function player({ screen = "virtual-lab-bugito", ancho = 1728, alto = 1117, almacen = new Map(), ahora = () => Date.now() } = {}) {
   const mupi = { style: {} };
   const posts = [], flashes = [], timers = [];
   const ctx = vm.createContext({
@@ -72,7 +72,7 @@ test("las órdenes de laboratorio se reconocen y nada más", () => {
 
 test("formato girado: pinta 90° y la telemetría declara lo que se pinta, sin marca de prueba", () => {
   const p = player();
-  const status = p.run(`applyFaultCommand(faultCommand('fault-rotate'),{screen:'macbookpro16'})`);
+  const status = p.run(`applyFaultCommand(faultCommand('fault-rotate'),{screen:'virtual-lab-bugito'})`);
   assert.equal(status, "executed");
   assert.equal(p.mupi.style.transform, "rotate(90deg)");
   const display = p.run("DEVICE_TELEMETRY.display");
@@ -80,16 +80,16 @@ test("formato girado: pinta 90° y la telemetría declara lo que se pinta, sin m
   assert.equal(display.paintedRotation, 90);
   assert.equal(display.painted, "vertical", "panel apaisado + cuarto de vuelta = composición vertical");
   assert.doesNotMatch(JSON.stringify(display), /fault|lab|prueba|inject/i, "nada que el detector pueda leer para hacer trampa");
-  const guardado = JSON.parse(p.almacen.get("adtv_fault:macbookpro16"));
+  const guardado = JSON.parse(p.almacen.get("adtv_fault:virtual-lab-bugito"));
   assert.equal(guardado.type, "rotate");
   assert.equal(guardado.until - guardado.at, 30 * 60000, "caduca sola a los 30 min");
   assert.ok(p.timers.some((t) => t.ms > 29 * 60000), "deja armada la caducidad");
 
-  assert.equal(p.run(`applyFaultCommand(faultCommand('fault-clear'),{screen:'macbookpro16'})`), "executed");
+  assert.equal(p.run(`applyFaultCommand(faultCommand('fault-clear'),{screen:'virtual-lab-bugito'})`), "executed");
   assert.equal(p.mupi.style.transform, "");
   assert.equal(p.run("DEVICE_TELEMETRY.display.painted"), "horizontal");
   assert.equal(p.run("DEVICE_TELEMETRY.display.paintedRotation"), 0);
-  assert.equal(p.almacen.has("adtv_fault:macbookpro16"), false);
+  assert.equal(p.almacen.has("adtv_fault:virtual-lab-bugito"), false);
 });
 
 test("se suma al giro del operador y la vuelta devuelve exactamente lo que había", () => {
@@ -97,11 +97,11 @@ test("se suma al giro del operador y la vuelta devuelve exactamente lo que habí
   p.run("setDisplayRotation(90)");   // monitor montado en vertical sobre un SO apaisado
   assert.equal(p.mupi.style.transform, "rotate(90deg)");
   assert.equal(p.run("DEVICE_TELEMETRY.display.painted"), "vertical");
-  p.run(`applyFaultCommand(faultCommand('fault-rotate'),{screen:'macbookpro16'})`);
+  p.run(`applyFaultCommand(faultCommand('fault-rotate'),{screen:'virtual-lab-bugito'})`);
   assert.equal(p.mupi.style.transform, "rotate(180deg)");
   assert.equal(p.run("DEVICE_TELEMETRY.display.painted"), "horizontal", "una pantalla vertical que pinta en horizontal también es formato girado");
   assert.equal(p.run("DEVICE_TELEMETRY.display.rotation"), 90);
-  p.run(`applyFaultCommand(faultCommand('fault-clear'),{screen:'macbookpro16'})`);
+  p.run(`applyFaultCommand(faultCommand('fault-clear'),{screen:'virtual-lab-bugito'})`);
   assert.equal(p.mupi.style.transform, "rotate(90deg)");
   assert.equal(p.run("displayRotation"), 90);
 });
@@ -117,14 +117,19 @@ test("sólo la orden dirigida a esta pantalla: nunca un broadcast del circuito",
 
 test("un fallo guardado sobrevive a la recarga del player hasta que caduca", () => {
   let ahora = 1_000_000;
-  const almacen = new Map([["adtv_fault:macbookpro16", JSON.stringify({ type: "rotate", angle: 90, at: ahora - 60000, until: ahora + 60000 })]]);
+  const almacen = new Map([["adtv_fault:virtual-lab-bugito", JSON.stringify({ type: "rotate", angle: 90, at: ahora - 60000, until: ahora + 60000 })]]);
   const p = player({ almacen, ahora: () => ahora });
   assert.equal(p.run("effectiveRotation()"), 90, "tras recargar sigue girado");
   ahora += 120000;
   assert.equal(p.run("effectiveRotation()"), 0, "caducado no se pinta");
   // Un registro manipulado con una vida mayor que la permitida no se acepta.
-  const larga = new Map([["adtv_fault:macbookpro16", JSON.stringify({ type: "rotate", angle: 90, at: 0, until: 10 * 3600000 })]]);
+  const larga = new Map([["adtv_fault:virtual-lab-bugito", JSON.stringify({ type: "rotate", angle: 90, at: 0, until: 10 * 3600000 })]]);
   assert.equal(player({ almacen: larga, ahora: () => 1000 }).run("effectiveRotation()"), 0);
+  // Un `at` del futuro (reloj adelantado) no se acepta: alargaría el fallo más allá de los 30 min.
+  const futura = new Map([["adtv_fault:virtual-lab-bugito", JSON.stringify({ type: "rotate", angle: 90, at: 1000 + 120000, until: 1000 + 120000 + 60000 })]]);
+  assert.equal(player({ almacen: futura, ahora: () => 1000 }).run("effectiveRotation()"), 0);
+  const casi = new Map([["adtv_fault:virtual-lab-bugito", JSON.stringify({ type: "rotate", angle: 90, at: 1000 + 30000, until: 1000 + 60000 })]]);
+  assert.equal(player({ almacen: casi, ahora: () => 1000 }).run("effectiveRotation()"), 90, "un desfase de segundos sí se tolera");
 });
 
 test("la orientación pintada se mide del transform real y del panel físico", () => {
@@ -160,7 +165,7 @@ test("el giro animado se vuelve a medir al terminar la transición y se publica 
   let enTransicion = true;
   p.ctx.getComputedStyle = (el) => ({ transform: enTransicion ? "none" : computedTransform(el.style) });
   p.run("_nowItem={id:'x'}");
-  p.run(`applyFaultCommand(faultCommand('fault-rotate'),{screen:'macbookpro16'})`);
+  p.run(`applyFaultCommand(faultCommand('fault-rotate'),{screen:'virtual-lab-bugito'})`);
   assert.equal(p.run("DEVICE_TELEMETRY.display.painted"), "horizontal", "medida en mitad de la transición");
   const remedida = p.timers.filter((t) => t.ms === 450).at(-1);
   assert.ok(remedida, "queda programada la nueva medida");
@@ -172,4 +177,11 @@ test("el giro animado se vuelve a medir al terminar la transición y se publica 
   assert.equal(p.posts.length, antes + 1, "y se publica al momento");
   remedida.fn();
   assert.equal(p.posts.length, antes + 1, "sin cambio no vuelve a publicar");
+});
+
+test("cada POST de /signage/now mide lo pintado justo antes de serializar", () => {
+  const post = extrae("_postNow");
+  const medida = post.indexOf("Object.assign(DEVICE_TELEMETRY.display,measuredPaint())");
+  assert.ok(medida > 0, "mide dentro de _postNow");
+  assert.ok(medida < post.indexOf("JSON.stringify("), "antes de serializar el cuerpo");
 });

@@ -86,6 +86,26 @@ del bloque de control**; con una pieza vertical conserva el marco 9:16 al lado.
 Arranca **en mudo** (para que el autoplay funcione); al desmutear, en algunos
 navegadores hace falta un gesto (hay overlay «toca para arrancar» de respaldo).
 
+### Fallo inyectado «formato girado» · Creador de incidencias (DCL-34d5bbccb9cc227bb752a419)
+
+El ▤ Modo avanzado del plano (clearchannel-tv, `plano.html`) envía al player, por la cola
+`/locations/cmd`, una orden que lo estropea a propósito para comprobar que el agente detector
+abre la incidencia en Yokup y la cierra al volver a la normalidad:
+
+- `fault-rotate` (alias `fault-rotate-90|180|270`, `fault:rotate`) gira la emisión; `fault-clear`
+  la devuelve. Se **suma** al giro del operador (`rotation-N`) sin tocarlo, así que la vuelta deja
+  exactamente lo que había. Se guarda en `localStorage adtv_fault:<screen>` y **caduca sola a los
+  30 min** (también tras recargar; un `at` del futuro se rechaza).
+- **Sólo laboratorio.** El backend (omnipublicity-api `src/fault-lab.js`) responde 403 salvo para
+  players `virtual-lab-*` (el de pruebas es `virtual-lab-bugito`) con la cola de la propia
+  pantalla; el player, además, sólo la ejecuta si viene dirigida a él (un broadcast acusa
+  `failed`). Ninguna pantalla física está habilitada hasta tener un id dedicado (el MBP16 emite
+  como `macbookpro16`, que sale del hostname).
+- **Telemetría honesta.** `/signage/now` declara en `device.display` `paintedRotation` y `painted`
+  (horizontal | vertical respecto al panel), **medidos** del transform calculado de `#mupi`: en cada
+  POST y otra vez al terminar la transición del giro (.35 s). `rotation` sigue siendo el giro del
+  operador. No hay ningún campo de «prueba»: el detector compara lo pintado con lo que espera el plano.
+
 ### Contrato de autonomía Digital Signage (DS)
 
 Al iniciar el player nativo en modo **Digital Signage**, la máquina queda autónoma:
