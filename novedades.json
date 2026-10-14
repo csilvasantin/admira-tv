@@ -221,5 +221,10 @@
     "El reloj de sincro ya no depende del tiempo de descarga de cada playlist",
     "Seis players Starbucks V–H–V a pantalla completa y salida conjunta con Esc",
     "Diagnóstico local de vídeo opcional y ayuda ES/EN MCP actualizada"
+  ],
+  "v.14.10.2026.r2.09:40": [
+    "Parrilla: busca contenidos por título, tag o #número y filtra por formato al crear una playlist a mano.",
+    "Mostrar más da acceso a todo el catálogo reproducible; las piezas marcadas se conservan al cambiar de búsqueda.",
+    "Cambiar de proyecto actualiza los dispositivos del creador y descarta destinos del proyecto anterior."
   ]
 }

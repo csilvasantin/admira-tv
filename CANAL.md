@@ -209,6 +209,19 @@ emisión). Sin teclado (tablet / WebView) son totalmente inocuos.
 
 ## Playlists vivas por etiquetas (7-oct-2026)
 
+**Selección manual del Stock (14-oct-2026).** En `/parrilla/` → Nueva playlist → A mano, se puede buscar por título,
+tag o `#número` exacto, sin distinguir mayúsculas ni tildes, y filtrar por imagen, vídeo/animación o audio.
+Por ejemplo, `starbucks café` encuentra las piezas que contienen ambas palabras. «Mostrar más» da acceso a todos los
+resultados por tandas de 60; sólo se añaden las piezas marcadas. Cambiar la búsqueda, el formato o los tags conserva
+las marcas, y el contador indica cuántas quedan fuera del filtro actual. La selección se conserva mientras se edita
+el formulario; no se recupera al recargar. El selector manual ofrece archivos HTTPS reproducibles; no ofrece guiones,
+cápsulas de texto ni Xperiencias HTML (el previo manual de la Parrilla todavía no las soporta).
+
+Al cambiar de proyecto con el creador abierto se actualizan los destinos y se descartan los dispositivos del proyecto
+anterior. «Crear y asignar a Por defecto» sigue limitado a 200 piezas por pantalla, exige confirmación y sustituye la
+lista de los dispositivos marcados; si seguían una playlist viva, pasan a una lista manual. El caso de prueba de
+Starbucks usa pantallas y Stock simulados: no publica campañas reales del cliente.
+
 Al pedir su lista por defecto (`/api/playlist?screen=`), el player añade `circuit`, `w`, `h` y `lang`. Con eso el
 servidor le deduce las etiquetas (`circuito:`, `proyecto:`, `orientacion:`, `idioma:`, `pantalla:`, `todas`) y, si la
 pantalla no tiene piezas puestas a mano, le devuelve las de las **playlists vivas** cuyo destino cumpla: reglas de

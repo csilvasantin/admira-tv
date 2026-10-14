@@ -36,7 +36,7 @@ const STOCK = [pieza("c1", "Café de temporada", ["café"]), pieza("c2", "Desayu
 const REGLA = { name: "Cafés de temporada", content: { any: ["café"], limit: 10, seconds: 12 }, target: { all: ["circuito:gracia"] } };
 
 const token = "session-token", cookie = { Cookie: `__Host-atv_session=${token}` };
-function api(url) {
+function api(url, stock = STOCK) {
   const u = new URL(url), json = v => Response.json(v);
   if (u.pathname === "/grid/projects") return json({ ok: true, projects: structuredClone(PROYECTOS) });
   if (u.pathname === "/grid/screens") return json({ ok: true, screens: structuredClone(PANTALLAS) });
@@ -44,24 +44,24 @@ function api(url) {
   if (u.pathname === "/signage/screens") return json({ screens: [] });
   if (u.pathname === "/grid/tag-sync") return json({ targets: [] });
   if (u.pathname === "/grid/day") return json({ bands: [] });
-  if (u.pathname.endsWith("/stock/index.json")) return json({ items: STOCK });
+  if (u.pathname.endsWith("/stock/index.json")) return json({ items: stock });
   return new Response("", { status: 404 });
 }
 const TIPOS = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json" };
 
-async function escena(viewport) {
+async function escena(viewport, stock = STOCK) {
   forgetMemo();
   const data = new Map([[`admira-tv:auth:session:${token}`, JSON.stringify({ email: "csilvasantin@gmail.com", expiresAt: Date.now() + 3600_000 })]]), meta = new Map();
   const ACCESS = { get: async k => data.get(k) ?? null, put: async (k, v, o) => { data.set(k, v); if (o && o.metadata) meta.set(k, o.metadata); },
     getWithMetadata: async k => ({ value: data.get(k) ?? null, metadata: meta.get(k) ?? null }),
     list: async ({ prefix }) => ({ keys: [...data.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name, metadata: meta.get(name) })), list_complete: true }) };
-  const real = globalThis.fetch; globalThis.fetch = async url => api(String(url));
+  const real = globalThis.fetch; globalThis.fetch = async url => api(String(url), stock);
   const escritas = [], env = { ACCESS };
   const llama = async (method, path, body) => {
     const r = await (method === "POST" ? onRequestPost : onRequestGet)({ request: new Request("https://admira.tv" + path, { method, headers: { ...cookie, "Content-Type": "application/json" }, body: method === "POST" ? body : undefined }), env });
     return { status: r.status, body: await r.text() };
   };
-  const browser = await pw.chromium.launch(), context = await browser.newContext({ viewport, deviceScaleFactor: 1, locale: "es-ES" });
+  const browser = await pw.chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || undefined }), context = await browser.newContext({ viewport, deviceScaleFactor: 1, locale: "es-ES" });
   await context.route("**/*", async route => {
     const req = route.request(), u = new URL(req.url());
     if (u.origin === ORIGIN && u.pathname === "/api/playlist") {
@@ -78,7 +78,7 @@ async function escena(viewport) {
     if (u.hostname === "stock.admira.store" && /\/stock\/([^/]+)\/asset\./.test(u.pathname)) {
       const id = u.pathname.split("/")[2]; return route.fulfill({ status: 200, contentType: "image/png", body: await readFile(join(ROOT, IMG[id] || "og-admira.png")) });
     }
-    if (u.hostname === "api.admira.store" || u.hostname === "stock.admira.store") { const r = api(u.href); return route.fulfill({ status: r.status, contentType: "application/json", body: await r.text() }); }
+    if (u.hostname === "api.admira.store" || u.hostname === "stock.admira.store") { const r = api(u.href, stock); return route.fulfill({ status: r.status, contentType: "application/json", body: await r.text() }); }
     return route.fulfill({ status: 404, body: "" });   // nada sale a la red
   });
   const page = await context.newPage();
@@ -165,5 +165,71 @@ test("B1 · «Crear y asignar» en la parrilla escribe «Por defecto» de las pa
       assert.deepEqual(emite.items.map(i => i.stockId), ["p1", "p2"]); assert.equal(emite.name, "Mañanas Alcampo");
     }
     assert.match(await e.page.textContent("#feedback"), /^2 de 2 dispositivos/);
+  } finally { await e.fin(); }
+});
+
+for (const [tam, viewport] of [["1440", { width: 1440, height: 900 }], ["ipad", { width: 1180, height: 820 }]]) {
+  test(`Starbucks · ${tam}: búsqueda, catálogo completo y selección conservada hasta asignar`, { skip: SKIP }, async () => {
+    const stock = Array.from({ length: 205 }, (_, i) => ({ ...pieza('s'+i, 'Campaña '+i, ['campaña']), num: i+1 }));
+    stock.push({ ...pieza('sb', 'Starbucks · Café de otoño', ['starbucks', 'cafetería']), num: 1457 });
+    stock.push({ ...pieza('audio', 'Starbucks · ambiente', ['starbucks']), num: 1458, type: 'music', url: 'https://stock.admira.store/stock/audio/asset.mp3' });
+    stock.push({ ...pieza('guion', 'Starbucks · guion sin producir', ['starbucks']), num: 1459, type: 'guion' });
+    const e = await escena(viewport, stock);
+    try {
+      await e.page.goto(ORIGIN + '/parrilla/?project=starbucks&xpace=sbux-pg103&device=sbux-pg103-p1');
+      await e.page.waitForFunction(() => document.querySelector('#projectSelect').value === 'starbucks');
+      await e.page.click('#plOpen');
+      await e.page.waitForSelector('[data-pl-tag="starbucks"]');
+      await e.page.click('#plModeManual');
+      assert.equal(await e.page.locator('#plTagWrap').isVisible(), true, 'tags disponibles también a mano');
+      assert.equal(await e.page.locator('[data-pl-item]').count(), 60);
+      for (const n of [120, 180, 207]) { await e.page.click('#plItemsMore'); assert.equal(await e.page.locator('[data-pl-item]').count(), n); }
+      assert.equal(await e.page.locator('#plItemsMore').isVisible(), false);
+      await e.page.check('[data-pl-item="stock-s204"]');
+      await e.page.fill('#plItemQuery', 'starbucks cafe');
+      assert.equal(await e.page.locator('[data-pl-item]').count(), 1, 'sin acento, todas las palabras, pieza después de la 200');
+      await e.page.check('[data-pl-item="stock-sb"]');
+      await e.page.focus('[data-pl-item="stock-sb"]');
+      await e.page.press('[data-pl-item="stock-sb"]', 'Space');
+      assert.equal(await e.page.evaluate(() => document.activeElement.dataset.plItem), 'stock-sb', 'conserva el foco al marcar con teclado');
+      await e.page.press('[data-pl-item="stock-sb"]', 'Space');
+      assert.match(await e.page.textContent('#plItemsCount'), /2 seleccionadas · 1 fuera de esta búsqueda/);
+      await e.page.fill('#plItemQuery', 'starbucks');
+      await e.page.selectOption('#plItemType', 'audio');
+      assert.equal(await e.page.locator('[data-pl-item]').count(), 1);
+      assert.equal(await e.page.locator('[data-pl-item="stock-audio"]').count(), 1);
+      await e.page.selectOption('#plItemType', '');
+      await e.page.fill('#plItemQuery', '#1457');
+      assert.equal(await e.page.locator('[data-pl-item]').count(), 1);
+      assert.equal(await e.page.isChecked('[data-pl-item="stock-sb"]'), true);
+      await e.page.fill('#plItemQuery', 'no existe');
+      assert.match(await e.page.textContent('#plItems'), /No hay piezas reproducibles/);
+      assert.match(await e.page.textContent('#plItemsCount'), /2 seleccionadas · 2 fuera de esta búsqueda/);
+      await e.page.fill('#plItemQuery', 'starbucks');
+      await e.page.fill('#plName', 'Starbucks · Café de otoño');
+      await e.page.check('[data-pl-dev="sbux-pg103-p1"]');
+      assert.equal(await e.page.locator('#plCreate').isEnabled(), true);
+      await captura(e.page, `starbucks-selector-${tam}`, { fullPage: true });
+      await e.page.click('#plCreate');
+      await e.page.waitForFunction(() => /1 de 1 dispositivos/.test(document.querySelector('#feedback').textContent));
+      const escritura = e.escritas.find(x => x.screen === 'sbux-pg103-p1' && !x.action);
+      assert.deepEqual(escritura.items.map(x => x.stockId), ['s204', 'sb']);
+      assert.match(e.dialogos.at(-1), /Se SUSTITUYE la playlist «Por defecto»/);
+    } finally { await e.fin(); }
+  });
+}
+
+test('cambiar proyecto con el creador abierto refresca destinos y descarta selecciones del proyecto anterior', { skip: SKIP }, async () => {
+  const e = await escena({ width: 1440, height: 900 });
+  try {
+    await e.page.goto(ORIGIN + '/parrilla/?project=kiosk&xpace=gracia&device=sim-gracia-kiosko');
+    await e.page.waitForFunction(() => document.querySelector('#projectSelect').value === 'kiosk');
+    await e.page.click('#plOpen'); await e.page.check('[data-pl-dev="sim-gracia-kiosko"]');
+    await e.page.selectOption('#projectSelect', 'alcampo');
+    assert.equal(await e.page.locator('[data-pl-dev="sim-gracia-kiosko"]').count(), 0);
+    assert.equal(await e.page.locator('[data-pl-dev]').count(), 3);
+    assert.equal(await e.page.locator('[data-pl-dev]:checked').count(), 0);
+    assert.equal(await e.page.locator('#plCreate').isEnabled(), false);
+    assert.equal(await e.page.textContent('#plDevScope'), 'Canal Alcampo');
   } finally { await e.fin(); }
 });

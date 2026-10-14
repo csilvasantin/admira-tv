@@ -7,7 +7,7 @@
   <meta name="description" content="Editor de parrilla municipal y publicitaria de Admira.tv.">
   <meta name="theme-color" content="#070a10">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <script>if(!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)){document.write('<script src="/auth-gate.js?v=13.10.2026.r9.2236"><\/script>')}</script>
+  <script>if(!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)){document.write('<script src="/auth-gate.js?v=14.10.2026.r2.0940"><\/script>')}</script>
   <script src="https://www.clearchannel.tv/locations.js?v=14.07.2026.r17"></script>
   <style>
     :root{--bg:#070a10;--panel:#0e141d;--panel2:#121b28;--line:#223049;--ink:#d9e4f2;--dim:#8999ae;--green:#3df08a;--blue:#7aa2ff;--amber:#ffbd59;--red:#ff6262}
@@ -54,6 +54,11 @@
 .pl-tagadd button{padding:9px 15px;border:1px solid #334966;border-radius:10px;background:#0d1a2a;color:var(--ink);
   font:800 12px ui-monospace,monospace;cursor:pointer;flex:none}
 .pl-tagadd button:hover{border-color:var(--green);color:var(--green)}
+.pl-field[hidden]{display:none}
+.pl-stock-tools{display:flex;gap:8px;flex-wrap:wrap}
+.pl-stock-tools input{flex:1 1 220px;min-width:0}
+.pl-stock-tools input,.pl-stock-tools select{padding:9px 12px;border:1px solid #334966;border-radius:10px;background:#09111c;color:var(--ink)}
+.pl-stock-more{justify-self:start;padding:8px 12px;border:1px solid #334966;border-radius:9px;background:#0d1a2a;color:var(--ink);cursor:pointer}
 .pl-list{max-height:210px;overflow:auto;display:grid;gap:5px;padding:9px;border:1px solid #263a54;
   border-radius:11px;background:#08101a}
 .pl-row{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:8px;cursor:pointer;min-width:0}
@@ -135,11 +140,11 @@
 </head>
 <body>
   <script>
-    window.ADMIRA_VERSION='v.13.10.2026.r9.22:36';
+    window.ADMIRA_VERSION='v.14.10.2026.r2.09:40';
     window.ADMIRA_NAV={active:'parrilla',title:'Parrilla por Xpacio',topRight:'<a class="admtR" href="/playlists/">Playlists</a><a class="admtR admtR-cta" href="/canal.html" target="_blank" rel="noopener">Ver canal ↗</a>'};
   </script>
   <script src="/assets/virtual-players.js"></script>
-  <script src="/admira-nav.js?v=13.10.2026.r9.2236"></script>
+  <script src="/admira-nav.js?v=14.10.2026.r2.0940"></script>
 
   <main class="page">
     <section class="context-picker" aria-label="Selector de proyecto, Xpacio y dispositivo IoT">
@@ -205,8 +210,15 @@
             </div>
           </div>
           <div class="pl-field pl-wide" id="plManualWrap" hidden>
-            <span>Contenidos</span>
+            <label for="plItemQuery">Buscar contenido del Stock</label>
+            <div class="pl-stock-tools">
+              <input id="plItemQuery" type="search" autocomplete="off" placeholder="Starbucks · café · #1457">
+              <select id="plItemType" aria-label="Formato del contenido"><option value="">Todos los formatos</option><option value="video">Vídeo y animación</option><option value="image">Imagen</option><option value="audio">Audio</option></select>
+            </div>
+            <p class="pl-sum">Busca por título, tag o número de pieza. La búsqueda no cambia lo que ya has marcado.</p>
             <div class="pl-list" id="plItems"></div>
+            <button class="pl-stock-more" id="plItemsMore" type="button" hidden>Mostrar más</button>
+            <p class="pl-sum" id="plItemsCount" role="status" aria-live="polite"></p>
           </div>
           <div class="pl-field pl-wide">
             <span>Dispositivos IoT del proyecto <b id="plDevScope"></b></span>
@@ -344,9 +356,9 @@
       }
       renderContext();items=load();current=0;liveByPosition={};render();await liveStatus();
     }
-    function switchProject(projectId){save();stop(true);activeProjectId=projectId;activeLocationId=(locationsFor(projectId)[0]||{}).id||'';activeScreenId=(devicesFor(activeLocationId)[0]||{}).screen||activeScreenId;items=load();current=0;liveByPosition={};renderContext();render();liveStatus()}
-    function switchLocation(locationId){save();stop(true);activeLocationId=locationId;activeScreenId=(devicesFor(locationId)[0]||{}).screen||activeScreenId;items=load();current=0;liveByPosition={};renderContext();render();liveStatus()}
-    function switchScreen(screenId){save();stop(true);activeScreenId=screenId;items=load();current=0;liveByPosition={};renderContext();render();liveStatus()}
+    function switchProject(projectId){save();stop(true);activeProjectId=projectId;activeLocationId=(locationsFor(projectId)[0]||{}).id||'';activeScreenId=(devicesFor(activeLocationId)[0]||{}).screen||activeScreenId;items=load();current=0;liveByPosition={};renderContext();render();liveStatus();if(!$('plPanel').hidden)plRefresca()}
+    function switchLocation(locationId){save();stop(true);activeLocationId=locationId;activeScreenId=(devicesFor(locationId)[0]||{}).screen||activeScreenId;items=load();current=0;liveByPosition={};renderContext();render();liveStatus();if(!$('plPanel').hidden)plRefresca()}
+    function switchScreen(screenId){save();stop(true);activeScreenId=screenId;items=load();current=0;liveByPosition={};renderContext();render();liveStatus();if(!$('plPanel').hidden)plRefresca()}
     // ── Portadas del Stock (9-oct-2026) ──────────────────────────────────────────
     // En el iPad (Safari, iPadOS 17.7) los <video> de las miniaturas no cargan nunca: readyState 0 y peticiones
     // canceladas, así que cada tarjeta era una caja negra con ▶, y la vista previa, negra hasta darle al play. El índice
@@ -726,7 +738,7 @@
       return piezas.filter(p=>plPiezaTags(p).some(t=>claves.has(plNorm(t))));
     }
     function plSeleccion(){
-      const pool=plPool().map(plPiezaAItem);
+      const pool=(plMode==='manual'?(stockPiezas||[]):plPool()).map(plPiezaAItem);
       return plMode==='tag'?pool:pool.filter(it=>plItemSel.has(it.id));
     }
     function plLeer(){try{const all=JSON.parse(localStorage.getItem(PL_STORE)||'{}');return Array.isArray(all[activeProjectId])?all[activeProjectId]:[]}catch(_){return[]}}
@@ -776,24 +788,48 @@
         casan.slice(0,5).map(c=>c.tag+' ('+c.count+')').join(', ')+(casan.length>5?'…':''),true);
       plPintaTags();plPintaItems();plResumen();
     }
-    const PL_FILAS_VISIBLES=200;
-    function plPintaItems(){
+    const PL_FILAS_VISIBLES=60;
+    let plFilasLimite=PL_FILAS_VISIBLES;
+    // La búsqueda sólo cambia lo visible. La selección manual se guarda por id,
+    // de modo que buscar otra campaña no elimina las piezas ya marcadas.
+    function plManualCoincide(p,consulta,tipo){
+      const t=String(p.type||'image').toLowerCase();
+      if(tipo==='video'&&!['video','animation'].includes(t))return false;
+      if(tipo==='audio'&&!['audio','music','locucion'].includes(t))return false;
+      if(tipo==='image'&&t!=='image')return false;
+      const q=String(consulta||'').trim();
+      if(/^#\d+$/.test(q))return String(p.num)===q.slice(1);
+      const texto=plNorm([p.title||'',...plPiezaTags(p)].join(' '));
+      return plNorm(q).split(/\s+/).filter(Boolean).every(palabra=>texto.includes(palabra)||String(p.num)===palabra||String(p.id).toLowerCase()===palabra);
+    }
+    function plManualPool(){
+      return plPool().filter(p=>plEmitible(plPiezaAItem(p))&&plManualCoincide(p,$('plItemQuery').value,$('plItemType').value));
+    }
+    function plCuentaItems(pool){
+      pool=pool||plManualPool().map(plPiezaAItem);
+      const seleccion=plMode==='manual'?plSeleccion():[],visibles=new Set(pool.map(it=>it.id)),fuera=seleccion.filter(it=>!visibles.has(it.id)).length;
+      $('plItemsCount').textContent=seleccion.length+' seleccionadas'+(fuera?' · '+fuera+' fuera de esta búsqueda':'')+' · '+Math.min(pool.length,plFilasLimite)+' de '+pool.length+' resultados';
+    }
+    function plPintaItems(mas){
+      if(!mas)plFilasLimite=PL_FILAS_VISIBLES;
+      $('plItemsMore').hidden=true;
+      $('plItemsCount').textContent='';
       if(stockEstado==='cargando'){$('plItems').innerHTML='<p class="pl-empty">Cargando piezas de pixeria.com…</p>';return}
-      const pool=plPool().map(plPiezaAItem);
+      const piezas=plManualPool(),pool=piezas.map(plPiezaAItem);
+      plCuentaItems(pool);
       if(!pool.length){
         $('plItems').innerHTML='<p class="pl-empty">'+(stockEstado==='error'
           ?'Sin catálogo de pixeria no hay piezas que ofrecer.'
-          :plTagSel.size?'Ningún contenido del Stock lleva esos tags.':'El catálogo de pixeria está vacío.')+'</p>';
+          :(stockPiezas||[]).length?'No hay piezas reproducibles con estos filtros. Prueba otro título, tag, número o formato.':'El catálogo de pixeria está vacío.')+'</p>';
         return;
       }
-      // Se pinta un tope de filas para no ahogar el navegador con 643, pero se
-      // DICE cuántas quedan fuera: recortar en silencio se lee como «no hay más».
-      const vistas=pool.slice(0,PL_FILAS_VISIBLES),ocultas=pool.length-vistas.length;
-      $('plItems').innerHTML=vistas.map(it=>'<label class="pl-row" title="'+esc(it.tags.join(', '))+'"><input type="checkbox" data-pl-item="'+esc(it.id)+'"'+
-        (plItemSel.has(it.id)?' checked':'')+'><b>'+esc(it.title)+'</b><small>'+esc(it.tags.slice(0,3).join(' · ')||'sin tags')+'</small></label>').join('')+
-        (ocultas?'<p class="pl-empty">y '+ocultas+' piezas más que también entran · afina con otro tag para verlas</p>':'');
+      const vistas=pool.slice(0,plFilasLimite),ocultas=pool.length-vistas.length;
+      $('plItems').innerHTML=vistas.map((it,i)=>'<label class="pl-row" title="'+esc(it.tags.join(', '))+'"><input type="checkbox" data-pl-item="'+esc(it.id)+'"'+
+        (plItemSel.has(it.id)?' checked':'')+'><b>'+esc(it.title)+'</b><small>'+esc(piezas[i].num!=null?'#'+piezas[i].num+' · ':'')+esc(it.assetType)+' · '+esc(it.tags.slice(0,3).join(' · ')||'sin tags')+'</small></label>').join('');
+      $('plItemsMore').hidden=!ocultas;
+      $('plItemsMore').textContent='Mostrar '+Math.min(PL_FILAS_VISIBLES,ocultas)+' más · quedan '+ocultas;
       $('plItems').querySelectorAll('[data-pl-item]').forEach(c=>c.onchange=()=>{
-        c.checked?plItemSel.add(c.dataset.plItem):plItemSel.delete(c.dataset.plItem);plResumen()});
+        c.checked?plItemSel.add(c.dataset.plItem):plItemSel.delete(c.dataset.plItem);plCuentaItems(pool);plResumen()});
     }
     function plPintaDevices(){
       const devs=plDevicesProyecto();
@@ -856,7 +892,7 @@
       $('plDevScope').textContent=proj?proj.name:'';
       plDevSel=new Set([...plDevSel].filter(id=>plDevicesProyecto().some(s=>s.screen===id)));
       // Lo marcado a mano se conserva mientras siga existiendo en el conjunto.
-      const vivos=new Set(plPool().map(p=>'stock-'+p.id));
+      const vivos=new Set((stockPiezas||[]).map(p=>'stock-'+p.id));
       plItemSel=new Set([...plItemSel].filter(id=>vivos.has(id)));
       $('plTagFuente').textContent=stockEstado==='ok'?'pixeria.com · '+(stockPiezas||[]).length+' piezas':
         stockEstado==='error'?'pixeria.com no responde':'pixeria.com';
@@ -917,7 +953,10 @@
       $('plTagWrap').hidden=false;$('plManualWrap').hidden=true;plResumen()};
     $('plModeManual').onclick=()=>{plMode='manual';plViva=false;$('plVivaWrap').style.display='none';plVivaPinta();$('plModeManual').classList.add('is-on');$('plModeTag').classList.remove('is-on');
       $('plModeManual').setAttribute('aria-checked','true');$('plModeTag').setAttribute('aria-checked','false');
-      $('plManualWrap').hidden=false;$('plTagWrap').hidden=true;plResumen()};
+      $('plManualWrap').hidden=false;$('plTagWrap').hidden=false;plPintaItems();plResumen()};
+    $('plItemQuery').addEventListener('input',()=>plPintaItems());
+    $('plItemType').addEventListener('change',()=>plPintaItems());
+    $('plItemsMore').onclick=()=>{plFilasLimite+=PL_FILAS_VISIBLES;plPintaItems(true)};
     $('plName').addEventListener('input',plResumen);
     $('plCreate').onclick=async()=>{
       if(plViva&&!DEFAULT_MODE){await plVivaCrear();return}
@@ -946,6 +985,6 @@
     setDraftStatus();render();loadContext().then(()=>{if(DEFAULT_MODE&&$('plPanel').hidden)$('plOpen').click()});setInterval(liveStatus,30000);
   })();
   </script>
-  <script src="/emision/aviso-parrilla.js?v=13.10.2026.r9.2236" defer></script>
+  <script src="/emision/aviso-parrilla.js?v=14.10.2026.r2.0940" defer></script>
 </body>
 </html>
