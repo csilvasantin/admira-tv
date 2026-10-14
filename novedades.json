@@ -245,5 +245,10 @@
     "Hilo musical por #cliente #hilomusical o #backgroundmusic: sólo a su destino configurado.",
     "Nuevo uso Hilo musical al definir circuitos en Parrilla, conservando vídeo y audio.",
     "Prueba en iPhone vertical con vídeo visible y giro corregido."
+  ],
+  "v.14.10.2026.r7.12:17": [
+    "Creador de incidencias: el mando de laboratorio puede girar la emisión (fault-rotate) y devolverla (fault-clear); sólo players virtual-lab-*.",
+    "El player declara en /signage/now la orientación que pinta de verdad (painted, paintedRotation), medida en pantalla.",
+    "El fallo inyectado se suma al giro del operador sin tocarlo y caduca solo a los 30 minutos."
   ]
 }

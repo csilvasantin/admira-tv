@@ -1,8 +1,8 @@
 {
-  "version": "v.14.10.2026.r6.12:08",
-  "agent": "TrinityMBP14",
-  "deployer": "TrinityMBP14",
+  "version": "v.14.10.2026.r7.12:17",
+  "agent": "NeoMBP14",
+  "deployer": "NeoMBP14",
   "machine": "MacBookProNegro14",
-  "signature": "TrinityMBP14 · MacBookProNegro14",
-  "mission": "DCL-e1b1f5639708e9a74eb23dbc"
+  "signature": "NeoMBP14 · MacBookProNegro14",
+  "mission": "DCL-34d5bbccb9cc227bb752a419"
 }

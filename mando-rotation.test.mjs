@@ -38,7 +38,9 @@ test('el player aplica grados absolutos y conserva el giro incremental anterior'
   assert.match(canal, /DISPLAY_ROTATION_KEY='adtv_display_rotation:'/);
   assert.match(canal, /function setDisplayRotation\(degrees\)/);
   assert.match(canal, /displayRotation=\(\(Math\.round\(n\/90\)\*90\)%360\+360\)%360/);
-  assert.match(canal, /mupi\.style\.transform=displayRotation\?'rotate\('\+displayRotation\+'deg\)'/);
+  // El giro del operador se pinta sumado al fallo inyectado de laboratorio (Creador de incidencias).
+  assert.match(canal, /const mupi=\$\('mupi'\), turn=effectiveRotation\(\); if\(mupi\) mupi\.style\.transform=turn\?'rotate\('\+turn\+'deg\)':''/);
+  assert.match(canal, /function effectiveRotation\(\)\{ return \(\(\(typeof displayRotation==='number'\?displayRotation:0\)\+faultRotation\(\)\)%360\+360\)%360; \}/);
   assert.match(canal, /quarterTurn\?aW:aH/);
   assert.match(canal, /\^rotation-\(0\|90\|180\|270\)\$/);
   assert.match(canal, /setDisplayRotation\(Number\(rotation\[1\]\)\)/);
