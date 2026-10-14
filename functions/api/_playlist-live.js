@@ -228,6 +228,11 @@ export function destinationSelectors(facts = {}) {
   return { brand, site, device, ambiguous, identityConflict, destinationIds };
 }
 function pieceTags(p, selectors) {
+  // New imports separate search inference from the operator's explicit address. In particular,
+  // recognizing a brand in a frame or description must never start broadcasting there.
+  if (Array.isArray(p.routingTags)) return p.routingTags;
+  // Reimported legacy media keeps precisely the address it had before enrichment.
+  if (p.routingSource && Array.isArray(p.routingSource.tags)) p = {...p,tags:p.routingSource.tags,comment:p.routingSource.comment};
   const original = Array.isArray(p.tags) ? p.tags : [];
   const explicit = original.flatMap(t => [...String(t).matchAll(/#([\p{L}\p{N}_:.-]+)/gu)].map(m => m[1]));
   const raw = original.flatMap(t => String(t).includes("#")
