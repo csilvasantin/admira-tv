@@ -182,9 +182,10 @@ test("sólo dirigidas a ESTA pantalla: un broadcast o la orden de otra no tocan 
 
 test("sobrevive a la recarga hasta que caduca; un registro manipulado no se acepta", () => {
   let ahora = 1_000_000;
-  const almacen = new Map([["adtv_fault_surface:virtual-lab-bugito", JSON.stringify({ popup: { at: ahora - 60000, until: ahora + 60000 }, half: { at: 0, until: 10 * 3600000 }, otro: { at: ahora, until: ahora + 1000 } })]]);
+  const almacen = new Map([["adtv_fault_surface:virtual-lab-bugito", JSON.stringify({ popup: { at: ahora - 60000, until: ahora + 60000 }, half: { at: 0, until: 10 * 3600000 },
+    canvas: { at: ahora + 10 * 60000, until: ahora + 20 * 60000 }, otro: { at: ahora, until: ahora + 1000 } })]]);
   const p = player({ almacen, ahora: () => ahora });
-  assert.deepEqual(Object.keys(JSON.parse(JSON.stringify(p.run("__surface()")))), ["popup"], "el de vida mayor que la permitida y el desconocido fuera");
+  assert.deepEqual(Object.keys(JSON.parse(JSON.stringify(p.run("__surface()")))), ["popup"], "fuera el de vida mayor que la permitida, el de fecha futura y el desconocido");
   assert.ok(p.d.document.getElementById("faultPopup"), "tras recargar se vuelve a pintar");
   const caducidad = p.timers.filter((t) => t.ms >= 1000).at(-1);
   ahora += 120000; caducidad.fn();

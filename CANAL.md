@@ -106,6 +106,26 @@ abre la incidencia en Yokup y la cierra al volver a la normalidad:
   POST y otra vez al terminar la transición del giro (.35 s). `rotation` sigue siendo el giro del
   operador. No hay ningún campo de «prueba»: el detector compara lo pintado con lo que espera el plano.
 
+### Fallos de superficie · Bugito (DCL-5da4653d859552490fd5ae1d)
+
+El banco de pruebas Bugito (clearchannel-tv `bugito.html`: player virtual `virtual-lab-bugito` a la
+izquierda y Bugito, la piel diablillo de Admirito, a la derecha) manda tres fallos más por la misma cola y
+con las mismas salvaguardas (sólo `virtual-lab-*`, dirigidos, 30 min, `at` futuro rechazado). Se pueden
+sumar entre sí y `fault-clear` los retira todos (con el giro). Se guardan en `adtv_fault_surface:<screen>`.
+
+- `fault-canvas` · **cambio de resolución**: el lienzo (`#mupi`) toma la proporción contraria a la del
+  hueco (un panel 16:9 emite en un lienzo 9:16 con bandas), en editorial y en fill.
+- `fault-popup` · **popup encima**: una ventana «Aviso del sistema» (`#faultPopup`, 58vw × 46vh) encima de
+  la emisión. Simula un aviso del SO: lleva `data-adm-ok` (el vigilante ALWAYS ON TOP la respeta) y
+  `z-index` máximo (por encima de `#wrap`).
+- `fault-half` · **pantalla a medio abrir**: el contenido sólo ocupa la mitad de arriba del lienzo y abajo
+  asoma la persiana (fondo del propio marco, no una capa).
+
+Telemetría medida del DOM, sin marca de prueba, en `device.display`: `canvas` `{w,h}` (caja del lienzo sobre
+el panel, px CSS), `visible` (% del lienzo donde se ve `#stage`) y `overlay` (% de lo visible de `#stage`
+tapado por capas ajenas al player: rejilla 32×18 de `elementFromPoint`; lo que no cuelga de `#wrap` cuenta).
+El panel de un player virtual es su ventana (un iframe 16:9 dentro de un móvil vertical pinta en horizontal).
+
 ### Contrato de autonomía Digital Signage (DS)
 
 Al iniciar el player nativo en modo **Digital Signage**, la máquina queda autónoma:

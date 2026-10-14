@@ -34,7 +34,7 @@ Identidad nativa:
 | Qué | Dónde |
 |---|---|
 | Censo de la flota (última señal, versión web, ubicación) | `GET https://api.admira.store/signage/screens` |
-| Qué emite ahora una pantalla, sincro, standby, telemetría (`device.display.fit`, `rotation`, `paintedRotation`, `painted`, `software.webRelease`) | `GET https://api.admira.store/signage/now?screen=<pantalla>` |
+| Qué emite ahora una pantalla, sincro, standby, telemetría (`device.display.fit`, `rotation`, `paintedRotation`, `painted`, `canvas`, `overlay`, `visible`, `software.webRelease`) | `GET https://api.admira.store/signage/now?screen=<pantalla>` |
 | Inventario de disco: `ready[]`, `total`, `downloading[{id,pct}]` | `GET https://api.admira.store/screen/cache?screen=<pantalla>` |
 | Playlist programada del kiosko (FUENTE) | `GET https://brain.digitalavatar.ai/control/playlist?screen=<pantalla>-tema` |
 | Espejo de lo que emite (con duraciones reales descubiertas) | `GET https://brain.digitalavatar.ai/control/playlist?screen=<pantalla>` |
@@ -49,6 +49,9 @@ Telemetría de lo que se pinta (`device.display`, desde el Creador de incidencia
 - `paintedRotation` (0·90·180·270): giro **medido** del transform de `#mupi`; incluye un fallo inyectado.
 - `painted` (`horizontal`·`vertical`): orientación de la composición respecto al panel físico, medida igual.
   No hay marca de prueba: el detector compara `painted` con la orientación que el plano espera.
+- `canvas` (`{w,h}`, px CSS): caja **medida** del lienzo sobre el panel (Bugito · «cambio de resolución»).
+- `overlay` (0–100): % de la emisión tapado por capas ajenas al player, medido por hit-testing (Bugito · «popup encima»).
+- `visible` (0–100): % del lienzo donde se ve el contenido (Bugito · «pantalla a medio abrir»).
 
 Cadencias (desde el 07-09): `now` caduca a los 5 min y se reescribe como mucho cada 4 si no cambia
 la pieza; el inventario de caché caduca a los 10 min y se reescribe cada 7 si no cambia. Un POST que
@@ -81,6 +84,7 @@ la orden por hecha.
 | `info-show` · `info-hide` | Ficha «Contenido en antena» (con captura para el mando). |
 | `hardreload` | Recarga la página del player (coge el release publicado). |
 | `fault-rotate` (`-90`·`-180`·`-270`) · `fault-clear` | **Sólo laboratorio** (Creador de incidencias, DCL-34d5bbccb9cc227bb752a419): fallo inyectado «formato girado», que se suma al giro del operador sin tocarlo; `fault-clear` lo retira y caduca solo a los 30 min. El backend responde **403** salvo para players `virtual-lab-*` y con la cola de la propia pantalla (`id` = `screen`); el player sólo lo ejecuta dirigido a él (un broadcast acusa `failed`). |
+| `fault-canvas` · `fault-popup` · `fault-half` | **Sólo laboratorio** (Bugito, DCL-5da4653d859552490fd5ae1d): cambio de resolución (lienzo de proporción contraria), aviso del sistema encima y pantalla a medio abrir. Mismas salvaguardas y caducidad que `fault-rotate`; se suman entre sí y `fault-clear` los retira todos. |
 
 ## 4. Duración de cada pieza (la misma cifra en antena, proof-of-play y mando)
 

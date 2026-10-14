@@ -1149,7 +1149,8 @@ function surfaceFaultsActive(raw,now){
   for(const k of SURFACE_FAULTS){
     const f=raw[k]; if(!f||typeof f!=='object') continue;
     const at=Number(f.at), until=Number(f.until);
-    if(Number.isFinite(at)&&Number.isFinite(until)&&until>now&&until-at<=FAULT_TTL_MS) out[k]={at,until};
+    // Como faultActive: un `at` del futuro (reloj adelantado o registro manipulado) alargaría el fallo.
+    if(Number.isFinite(at)&&Number.isFinite(until)&&until>now&&at<=now+60000&&until-at<=FAULT_TTL_MS) out[k]={at,until};
   }
   return out;
 }
