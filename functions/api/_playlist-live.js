@@ -171,7 +171,7 @@ export function resolveForScreen(playlists, screenTags, stock, facts = {}, now =
 // CONTENIDO DIRIGIDO POR HASHTAG (Carlos, 7-oct-2026): una pieza del Stock etiquetada con el nombre único de una
 // pantalla —#starbucks_paseodegracia_103_pantalla1— o de su centro —#starbucks_paseodegracia_103— se emite sola en
 // su destino, sin crear ninguna playlist. Vale para vídeos, imágenes, locuciones y música, importados o creados con
-// IA. La etiqueta del cliente sola (#starbucks) NO emite nada: sólo dice de quién es la pieza.
+// IA. La marca sola también dirige a su playlist general; los hashtags separados acotan local y dispositivo.
 // Etiqueta y nombre se comparan sin mayúsculas, tildes ni separadores: «pantalla1» es «Pantalla_1».
 export const destKey = v => String(v == null ? "" : v).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 /** Nombres por los que esta pantalla es destino: exactos (su idIoT, su id de player) y de centro (su Xpacio). */
@@ -183,21 +183,113 @@ export function addressKeys(facts = {}) {
   for (const k of exact) centre.delete(k);
   return { exact, centre, audioElement: /_(?:Altavoz|Audio)_\d+$/i.test(String(facts.iot || "")) };
 }
+// Los hashtags separados forman una dirección por intersección, nunca por unión. Los temas conocidos
+// se pueden mezclar; una etiqueta desconocida bloquea la ruta corta para no ampliar un destino mal escrito.
+const ROUTE_ALIAS = { starbuck: "starbucks" };
+const routeKey = v => ROUTE_ALIAS[destKey(v)] || destKey(v);
+const THEMES = new Set(("cafe café bebidas bebida musica music audio video imagen image locucion publicidad lifestyle " +
+  "good better best vertical horizontal portrait landscape cuadrada sincronia sincro pantallas alsea " +
+  "otoño navidad verano invierno primavera ofertas oferta promocion promo catalogo creador ia demo " +
+  "interactivo animaciones robots inspiracion marca hilomusical es en ca textosanimados logooficial " +
+  "seispantallas metaestilo trinitystyle originalia adaptation adaptacion mostrador").split(/\s+/).map(routeKey));
+for (const t of [...Object.keys(TAG_ALIAS), ...Object.values(TAG_ALIAS)]) THEMES.add(routeKey(t));
+const DEVICE_TYPES = new Set(["ipad", "iphone", "tpv", "pantalla", "altavoz", "audio", "tablet", "kiosko", "totem", "monitor"]);
+const iotParts = v => /^(.*)_([^_]+)_(\d+)$/.exec(String(v || ""));
+export function destinationSelectors(facts = {}) {
+  const brand = new Set(), site = new Set(), device = new Set(), ambiguous = new Set();
+  const add = (set, v) => { const k = routeKey(v); if (k) set.add(k); };
+  add(brand, facts.project);
+  const parts = iotParts(facts.iot);
+  const identityConflict = !!(parts && facts.project && routeKey(facts.project) !== routeKey(parts[1].split("_")[0]));
+  if (parts) {
+    const bits = parts[1].split("_");
+    add(brand, bits[0]); add(site, bits.slice(1).join("")); add(site, parts[1]);
+    add(device, parts[2]); add(device, parts[2] + parts[3]);
+  }
+  add(site, facts.xpace);
+  const street = String(facts.xpaceAddress || "").split("·")[0].trim();
+  if (street) add(site, street);
+  let name = String(facts.xpaceName || "");
+  for (const b of brand) name = name.replace(new RegExp(b, "ig"), "").trim();
+  if (name) { add(site, name); if (!/\d/.test(name) && /\d/.test(street)) add(site, name + " " + street.match(/\d+[A-Za-z]?/)[0]); }
+  add(device, facts.screen); add(device, facts.iot); add(device, facts.name);
+  // Un alias de tipo (#ipad) solo identifica un dispositivo si el inventario del local es inequívoco.
+  const devices = Array.isArray(facts.devices) ? facts.devices : [];
+  const exact = new Set([routeKey(facts.screen), routeKey(facts.iot)]);
+  for (const alias of device) {
+    if (exact.has(alias)) continue;
+    const same = devices.filter(d => {
+      const parts = iotParts(d.idIoT);
+      return [d.name, d.type, parts && parts[2], parts && parts[2] + parts[3]].some(v => v && routeKey(v) === alias);
+    });
+    if (same.length !== 1) ambiguous.add(alias);
+  }
+  const destinationIds = new Set([facts.screen, ...(Array.isArray(facts.destinationIds) ? facts.destinationIds : []), ...devices.map(d => d.player)].filter(Boolean).map(destKey));
+  return { brand, site, device, ambiguous, identityConflict, destinationIds };
+}
+function pieceTags(p, selectors) {
+  const original = Array.isArray(p.tags) ? p.tags : [];
+  const explicit = original.flatMap(t => [...String(t).matchAll(/#([\p{L}\p{N}_:.-]+)/gu)].map(m => m[1]));
+  const raw = original.flatMap(t => String(t).includes("#")
+    ? [...String(t).matchAll(/#([\p{L}\p{N}_:.-]+)/gu)].map(m => m[1]) : [t]);
+  // Comentarios contiene los # que ha escrito el operador. La categorización automática del Stock
+  // no debe añadir ni quitar calificadores de esa dirección. Una dirección completa ya guardada sigue
+  // acotando el destino, para que añadir #starbucks a una pieza específica no la amplíe a toda la marca.
+  const hashes = [...String(p.comment || "").matchAll(/#([\p{L}\p{N}_:.-]+)/gu)].map(m => m[1]);
+  return [...new Set(hashes.length ? [...hashes, ...explicit, ...raw.filter(t => /_[^_]+_\d/.test(String(t)) || selectors.destinationIds.has(destKey(t)))] : raw)];
+}
+export function addressedDestination(tags, facts = {}, context = {}) {
+  const keys = context.keys || addressKeys(facts), selectors = context.selectors || destinationSelectors(facts);
+  if (selectors.identityConflict) return null;
+  const tagged = tags.map(t => ({ raw: t, key: routeKey(t) })).filter(t => t.key);
+  // Una dirección compuesta heredada es más específica que la marca; una dirección ajena no cae a marca.
+  const compound = tagged.filter(t => /_[^_]+_\d+$/.test(String(t.raw)) || /^(?:pantalla|xpacio):/i.test(t.raw));
+  const legacyExact = tagged.find(t => keys.exact.has(destKey(t.raw)));
+  const legacyCentre = tagged.find(t => keys.centre.has(destKey(t.raw)));
+  if (compound.length || legacyExact || legacyCentre) {
+    const hit = legacyExact || legacyCentre;
+    if (!hit) return null;
+    let device = false;
+    for (const t of tagged) {
+      if (keys.exact.has(destKey(t.raw)) || keys.centre.has(destKey(t.raw)) || selectors.brand.has(t.key) || selectors.site.has(t.key)) continue;
+      if (selectors.device.has(t.key)) { if (selectors.ambiguous.has(t.key)) return null; device = true; continue; }
+      if (DEVICE_TYPES.has(t.key)) return null;
+      if (THEMES.has(t.key) || /^(?:content-language|campaign):/.test(String(t.raw)) || /^(?:\d+:\d+)$/.test(String(t.raw))) continue;
+      return null; // también una ruta heredada debe respetar los calificadores separados
+    }
+    return { via: hit.raw, exact: !!legacyExact || device };
+  }
+  if (!tagged.some(t => selectors.brand.has(t.key))) return null;
+  let site = false, device = false;
+  for (const t of tagged) {
+    if (selectors.brand.has(t.key)) continue;
+    if (selectors.site.has(t.key)) { site = true; continue; }
+    if (selectors.device.has(t.key)) {
+      if (selectors.ambiguous.has(t.key)) return null;
+      device = true; continue;
+    }
+    if (DEVICE_TYPES.has(t.key)) return null; // un dispositivo distinto no se convierte en un tema
+    if (THEMES.has(t.key) || /^(?:content-language|campaign):/.test(String(t.raw)) || /^(?:\d+:\d+)$/.test(String(t.raw))) continue;
+    return null;
+  }
+  // Un tipo corto sin local no puede dirigirse a todos los iPads de la marca.
+  if (device && !site && !tagged.some(t => keys.exact.has(destKey(t.raw)))) return null;
+  return { via: tagged.filter(t => selectors.brand.has(t.key) || selectors.site.has(t.key) || selectors.device.has(t.key)).map(t => String(t.raw).replace(/^#/, "")).join(" #"), exact: device };
+}
 /**
  * Piezas dirigidas a esta pantalla. Dirigida a la pantalla, entra tal cual. Dirigida al centro, cada cosa va a su
  * sitio: el audio a los altavoces, lo visual a las pantallas y sólo en su orientación.
  */
 export function addressedContent(stock, facts = {}, now = Date.now(), limit = 60) {
-  const keys = addressKeys(facts);
-  if (!keys.exact.size && !keys.centre.size) return [];
+  const keys = addressKeys(facts), selectors = destinationSelectors(facts);
+  if (selectors.identityConflict || (!keys.exact.size && !keys.centre.size && !selectors.brand.size)) return [];
   const orient = facts.orientation || orientationOf(facts.w, facts.h), out = [];
   for (const p of Array.isArray(stock) ? stock : []) {
     const type = String((p && p.type) || "").toLowerCase(), audio = AUDIO_TYPES.has(type);
     if (!p || p.oculto || (!audio && !VISUAL_TYPES.has(type)) || !/^https:\/\//.test(String(p.url || "")) || !vigente(p, now)) continue;
-    const tags = Array.isArray(p.tags) ? p.tags : [];
-    let via = tags.find(t => keys.exact.has(destKey(t))), exact = !!via;
-    if (!via) via = tags.find(t => keys.centre.has(destKey(t)));
-    if (!via) continue;
+    const destination = addressedDestination(pieceTags(p, selectors), facts, { keys, selectors });
+    if (!destination) continue;
+    const { via, exact } = destination;
     if (!exact) {
       if (audio !== keys.audioElement) continue;
       const po = pieceOrientation(p);
@@ -270,6 +362,14 @@ export function completeFacts(facts, { xpaceIndex = {}, projects = [], gridCircu
   if (!out.project && known && known.b) out.project = known.b;
   // La pantalla dada de alta en una ficha trae su idIoT del índice; la que declara su Xpacio, de esa ficha.
   if (!out.iot) out.iot = (xpaceIndex[out.screen] && xpaceIndex[out.screen].i) || (xpaceRecord && out.xpace === String(xpaceRecord.id) && Array.isArray(xpaceRecord.surfaces) ? idIotOfScreen(xpaceRecord, out.screen) : "") || "";
+  if (reg && reg.n) out.name = reg.n;
+  if (reg && reg.xn) out.xpaceName = reg.xn;
+  if (known && known.n) out.xpaceName = known.n;
+  if (xpaceRecord && out.xpace === String(xpaceRecord.id)) {
+    out.xpaceName = String(xpaceRecord.name || out.xpaceName || "");
+    out.xpaceAddress = String(xpaceRecord.addr || "");
+    out.devices = Array.isArray(xpaceRecord.iot) ? xpaceRecord.iot : [];
+  }
   if (!out.iot) delete out.iot;
   return out;
 }

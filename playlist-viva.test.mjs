@@ -313,7 +313,7 @@ test("el hashtag se compara con el nombre único sin mayúsculas, tildes ni sepa
   assert.equal(addressKeys({ screen: "x1" }).exact.size, 0, "un id corto no es un destino: chocaría con cualquier etiqueta");
 });
 
-test("dirigida a la pantalla entra tal cual; dirigida al centro, cada cosa va a su sitio; la del cliente sola no emite", () => {
+test("dirigida a la pantalla entra tal cual; dirigida al centro o marca, cada cosa va a su sitio", () => {
   const stock = [
     pieza("d1", ["starbucks", "starbucks_paseodegracia_103_pantalla1"]),
     pieza("d2", ["starbucks_paseodegracia_103_pantalla2"]),
@@ -326,12 +326,12 @@ test("dirigida a la pantalla entra tal cual; dirigida al centro, cada cosa va a 
     pieza("d9", ["Starbucks_PaseodeGracia_103_Pantalla_1"], { type: "image", url: "https://stock.admira.store/stock/d9/asset.jpg" }),
   ];
   const p1 = addressedContent(stock, P1);
-  assert.deepEqual(p1.map(i => i.stockId), ["d9", "d7", "d4", "d1"], "lo suyo y lo vertical del centro; ni la pantalla 2, ni lo horizontal, ni lo caducado, ni lo del cliente a secas");
+  assert.deepEqual(p1.map(i => i.stockId), ["d9", "d7", "d4", "d3", "d1"], "lo suyo, la marca general y lo vertical del centro; ni pantalla 2, ni horizontal, ni caducado");
   assert.equal(p1.find(i => i.stockId === "d7").assetType, "audio", "una música dirigida a la pantalla suena en ella");
   assert.match(p1.find(i => i.stockId === "d1").sub, /^destino · #starbucks_paseodegracia_103_pantalla1$/);
   const altavoz = addressedContent(stock, { screen: "altavoz-barra", iot: "Starbucks_PaseodeGracia_103_Altavoz_1" });
   assert.deepEqual(altavoz.map(i => i.stockId), ["d6"], "del centro, al altavoz sólo le llega el audio");
-  assert.deepEqual(addressedContent(stock, { screen: "otra-tienda-1", iot: "Starbucks_RambladeCatalunya_5_Pantalla_1" }), []);
+  assert.deepEqual(addressedContent(stock, { screen: "otra-tienda-1", iot: "Starbucks_RambladeCatalunya_5_Pantalla_1" }).map(i => i.stockId), ["d3"], "otra tienda de la marca solo recibe la pieza general");
   assert.deepEqual(addressedContent(stock, { screen: "x1" }), []);
 });
 

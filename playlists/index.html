@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="/auth-gate.js?v=14.10.2026.r2.0940"></script>
+<script src="/auth-gate.js?v=14.10.2026.r3.1004"></script>
 <link rel="preconnect" href="https://api.admira.store" crossorigin>
 <link rel="preconnect" href="https://www.carlossilva.info">
 <link rel="dns-prefetch" href="https://api.admira.store">
@@ -216,7 +216,7 @@
 <body>
 <script>
 /* Config del chrome cuadrático unificado (lo monta /admira-nav.js). */
-window.ADMIRA_VERSION='v.14.10.2026.r2.09:40';
+window.ADMIRA_VERSION='v.14.10.2026.r3.10:04';
 window.ADMIRA_NAV={
   active:'playlists', title:'Playlists · conjuntos de contenidos',
   topRight:
@@ -226,9 +226,9 @@ window.ADMIRA_NAV={
 </script>
 <script src="/assets/virtual-players.js"></script>
 <script src="/assets/admira-eink.js"></script>
-<script src="/admira-nav.js?v=14.10.2026.r2.0940"></script>
-<script src="/admira-frame.js?v=14.10.2026.r2.0940" defer></script>
-<link rel="stylesheet" href="/admira-frame.css?v=14.10.2026.r2.0940">
+<script src="/admira-nav.js?v=14.10.2026.r3.1004"></script>
+<script src="/admira-frame.js?v=14.10.2026.r3.1004" defer></script>
+<link rel="stylesheet" href="/admira-frame.css?v=14.10.2026.r3.1004">
 
 <!-- AVANZADO (panel derecho): acciones peligrosas -->
 <div class="afSlotHidden" data-af-slot="left" data-hilomusical-lang="starbucks" aria-label="Hilo musical idioma activo">
@@ -264,6 +264,19 @@ window.ADMIRA_NAV={
   <span class="fleetflag" id="fleetFlag" title="Estado de sincronización de las plantillas">· · ·</span>
   <span class="count" id="hCount">—</span>
 </header>
+
+<details id="hashtagHelp" style="margin:16px 20px;padding:14px;border:1px solid var(--line);border-radius:12px">
+  <summary style="cursor:pointer;font-weight:700">Importar y distribuir con hashtags</summary>
+  <p>En <a href="https://www.admira.studio/stock.html" target="_blank" rel="noopener" style="color:var(--air)">Stock de Admira Studio</a>, pulsa 📥, pega la URL y escribe los hashtags en <b>Comentarios</b>. También puedes etiquetar una pieza ya publicada.</p>
+  <ul>
+    <li><code>#starbucks</code>: playlist general de la marca.</li>
+    <li><code>#starbucks #paseodegracia103</code>: solo los players de ese local.</li>
+    <li><code>#starbucks #paseodegracia103 #ipad</code>: solo el iPad asociado al local.</li>
+  </ul>
+  <p><code>#starbuck</code> equivale a <code>#starbucks</code>. Los destinos se acotan entre sí. Un nombre desconocido bloquea la ruta corta; si hay varios iPads en el local, utiliza el ID completo de player o idIoT. Los temas conocidos como <code>#cafe</code> o <code>#bebidas</code> pueden acompañar el destino.</p>
+  <p>Las piezas se añaden a <b>Por defecto</b> sin duplicarlas ni borrar lo asignado a mano. Para marca/local, lo visual respeta la orientación y el audio va a altavoces; al indicar un dispositivo concreto se respeta ese destino. La parrilla y el mando pueden tener prioridad. La reproducción requiere que el player esté conectado y descargue el archivo compatible.</p>
+  <a href="/parrilla/?playlist=default&amp;project=starbucks&amp;xpace=alsea-sbux-021&amp;device=ipad-admin-mupi" style="color:var(--air)">Comprobar Por defecto del iPad de Paseo de Gracia 103 →</a>
+</details>
 
 <div class="tools">
   <button class="btnp" id="btnNew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Nueva playlist</button>
@@ -1224,6 +1237,6 @@ $('advReload').onclick=async()=>{ await Promise.all([loadRemotePlaylists(),loadS
   },45000);
 })();
 </script>
-  <script src="/assets/hilomusical-lang-switch.js?v=14.10.2026.r2.0940"></script>
+  <script src="/assets/hilomusical-lang-switch.js?v=14.10.2026.r3.1004"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 import { accessFor, authHeaders, sessionEmail } from "../_auth-session.js";
 import { lecturaBlocksWrite } from "../_lectura-guard.js";
 import { assetTypeOf } from "./_asset-type.js";
-import { LIVE_KEY, TAGS_PREFIX, STOCK_INDEX, MAX_LIVE, MAX_CIRCUITS, addressedContent, addressKeys, applyCircuits, cleanCircuit, cleanIdIot, buildXpaceIndex, cleanIdentity, xpaceEntry, cleanLive, completeFacts, deduceScreenTags, liveRev, orientationOf, resolveContent, resolveForScreen, targetMatches } from "./_playlist-live.js";
+import { LIVE_KEY, TAGS_PREFIX, STOCK_INDEX, MAX_LIVE, MAX_CIRCUITS, addressedContent, addressKeys, destinationSelectors, applyCircuits, cleanCircuit, cleanIdIot, buildXpaceIndex, cleanIdentity, xpaceEntry, cleanLive, completeFacts, deduceScreenTags, liveRev, orientationOf, resolveContent, resolveForScreen, targetMatches } from "./_playlist-live.js";
 import { sombraTrasRespuesta } from "./_programacion/gancho-sombra.js";
 // Doble escritura (E7 del modelo único): tras guardar en el KV, lo mismo va a la D1 en waitUntil, detrás de la bandera
 // meta.banderas.espejo. No cambia la respuesta ni su latencia; ver _programacion/espejo.js.
@@ -170,10 +170,12 @@ export async function enrichFacts(facts, env, waitUntil) {
   // Una pantalla que sólo declara su Xpacio (?loc=alsea-sbux-021) recibe de la ficha de ese Xpacio su circuito
   // y su proyecto (la marca): no hace falta escribirle los tres identificadores.
   const iotRecord = await iotFicha(facts.iotDeclared);
-  const xpaceId = facts.xpace || (iotRecord && String(iotRecord.location.id)) || "";
-  const [pr, index, identity, xpaceRecord] = await Promise.all([quick("https://api.admira.store/grid/projects", 600), xpaceIndex(env, waitUntil), readIdentity(env), xpaceFicha(xpaceId)]);
+  const [pr, index, identity] = await Promise.all([quick("https://api.admira.store/grid/projects", 600), xpaceIndex(env, waitUntil), readIdentity(env)]);
+  const xpaceId = facts.xpace || (iotRecord && String(iotRecord.location.id)) || (identity.map[facts.screen] && identity.map[facts.screen].x) || (index[facts.screen] && index[facts.screen].x) || "";
+  const xpaceRecord = await xpaceFicha(xpaceId);
   const full = completeFacts(facts, { xpaceIndex: index, projects: (pr && pr.projects) || [], gridCircuit, registry: identity.map, xpaceRecord, iotRecord });
   if (xpaceRecord && full.xpace === String(xpaceRecord.id)) full.xpaceName = xpaceEntry(xpaceRecord).n;
+  full.destinationIds = [...new Set([...Object.keys(identity.map), ...Object.keys(index)])];
   return Object.assign(facts, full);
 }
 // Censo para el editor: TODAS las pantallas de la parrilla con su identidad, aunque su player aún no haya pedido
@@ -282,7 +284,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
   }
   // Contenido dirigido a esta pantalla o a su centro por hashtag (#starbucks_paseodegracia_103_pantalla1): se
   // AÑADE a lo que ya tenga, puesto a mano o por playlists vivas, sin repetir pieza.
-  const keys = addressKeys(facts), dirigidas = (keys.exact.size || keys.centre.size) ? addressedContent(await loadStock(), facts) : [];
+  const keys = addressKeys(facts), dirigidas = (keys.exact.size || keys.centre.size || destinationSelectors(facts).brand.size) ? addressedContent(await loadStock(), facts) : [];
   let auto = dirigidas;
   if (!draft.items.length) {
     const viva = activas.length ? resolveForScreen(activas, screenTags, await loadStock(), facts) : { hits: [], items: [] };
