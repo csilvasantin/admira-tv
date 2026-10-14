@@ -6,6 +6,7 @@ La entrada operativa es `/gestorColas/`; la pantalla pública es `/gestorColas/p
 
 Cambios comprobables:
 
+- Los anuncios reservan tiempo según el texto de cada idioma, sin acortarlo cuando hay otros pedidos. El límite sigue acotado para recuperar una voz atascada. En el MBP16, el límite anterior de 12 s interrumpía el inglés.
 - Los botones envían el ID estable del pedido. Un A001 anterior a un reinicio no puede actuar sobre el nuevo A001.
 - Una llamada fallida recupera el botón. “Llamada registrada” confirma el servidor; la voz requiere la pantalla y sus permisos de audio.
 - El alta conserva nombre y nonce hasta la confirmación. Un reintento, incluso tras recargar la misma pestaña, reutiliza el mismo pedido.
@@ -19,6 +20,8 @@ La ayuda ES/EN explica recuperación, cambio de sala, reinicio compartido y tiem
 
 The operational entry is `/gestorColas/`; the public display is `/gestorColas/pantalla/`. The Home Queue card now opens the control. The flow is received → preparing → ready → collected. The demonstration relay still simulates payments; this review adds no real charges.
 
+Voice announcements reserve time for each language based on text length, without shortening speech when another order is waiting. The bounded deadline still recovers stuck speech. The previous 12-second limit interrupted English on MBP16.
+
 Buttons use stable order IDs. Failed calls release their buttons. Order creation retains its name and nonce through retries and same-tab reloads. Room changes clear old orders and discard late responses; credentials remain scoped to each room. Reads have deadlines, share pending requests and refresh after writes. An earlier read cannot repopulate the public cache after an action. The exact-order payment token stays between servers; no administrator permissions are added.
 
 The ES/EN help documents recovery, room switching, shared resets and relay timings: 30 seconds received, 60 seconds preparing and 120 seconds ready.
@@ -26,7 +29,7 @@ The ES/EN help documents recovery, room switching, shared resets and relay timin
 ## Validación / Validation
 
 ```sh
-node --test gestor-colas-kds.test.mjs gestor-colas-room-client.test.mjs gestor-colas-consistency.test.mjs
+node --test gestor-colas-kds.test.mjs gestor-colas-room-client.test.mjs gestor-colas-consistency.test.mjs gestor-colas-voice.test.mjs
 python3 tools/gen-apps-grid.py --check
 ```
 

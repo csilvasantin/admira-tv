@@ -103,9 +103,11 @@ const sigueListo=p=>!!(ultimo&&(ultimo.listo||[]).some(x=>x.id===p.id));
 function callar(){cola.length=0;gen++;try{window.speechSynthesis&&speechSynthesis.cancel();}catch(_){}const b=$('bocadillo');b.classList.remove('on');b.innerHTML='';}
 let actual=null,cortar=null;
 // Un aviso por pedido con TOPE DURO independiente del audio (Carlos, 7-oct-2026: con voz real el bocadillo
-// se quedaba en A007 y A008 no salía). Tope: 6 s si no hay nadie esperando, 4,5 s si hay cola. Al vencer se
-// corta la voz (speechSynthesis.cancel) y se pasa al siguiente. El vigilante de tic() lo fuerza si algo falla.
+// se quedaba en A007 y A008 no salía). Cada idioma dispone de 10–30 s, según la longitud del texto,
+// estimando 100 palabras/minuto y 4 s de margen. La cola no acorta un anuncio ya empezado: cortar a
+// los 12 s interrumpía el inglés real del MBP16. Al vencer se cancela y se pasa al siguiente; tic() vigila.
 let inicioAviso=0,topeAviso=0;
+function tiempoVoz(partes){return partes.reduce((ms,[texto])=>ms+Math.min(30000,Math.max(10000,4000+String(texto).trim().split(/\s+/u).length*600)),0);}
 function decir(p){const g=gen,t=T[lang],num=String(p.numero).replace(/[^A-Z0-9]/gi,''),nom=p.nombre||'';
   if(!sigueListo(p))return Promise.resolve();
   const t2=BILINGUE?T[otro()]:null,partes=[[t.dice(num,nom),t.voz]].concat(t2?[[t2.dice(num,nom),t2.voz]]:[]);
@@ -119,7 +121,7 @@ function decir(p){const g=gen,t=T[lang],num=String(p.numero).replace(/[^A-Z0-9]/
       if(motivo==='cortado'||cola.length){if(g===gen)b.classList.remove('on');return fin();}
       setTimeout(()=>{if(g===gen&&!actual)b.classList.remove('on');fin();},900);};
     cortar=()=>cerrar('cortado');
-    const plazo=()=>{const tope=(cola.length?4500:6000)*partes.length;topeAviso=tope;const resto=tope-(Date.now()-inicioAviso);if(resto<=0)return cerrar('tope');timer=setTimeout(plazo,Math.min(resto,500));};
+    const plazo=()=>{const tope=tiempoVoz(partes);topeAviso=tope;const resto=tope-(Date.now()-inicioAviso);if(resto<=0)return cerrar('tope');timer=setTimeout(plazo,Math.min(resto,500));};
     plazo();
     // Sin voz (parada a mano, sin soporte o bloqueada por el navegador) el bocadillo es el único aviso: se queda 5 s.
     const SOLO_TEXTO=5000*partes.length;
