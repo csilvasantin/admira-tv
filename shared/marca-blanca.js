@@ -1,18 +1,25 @@
-// Marca blanca en admira.tv (demo Starbucks 6-oct-2026 · port desde admira.store FLT-101337).
-// Viste Digital Signage con una marca del catálogo https://www.admiranext.com/marcablanca
-// (tokens --mb-*, logo, nombre, favicon y tipografía).
+// Shared brand loader for studio/store/tv/app/biz. Derived from Studio FLT-101333.
+// Preserves its catalogue, analyzer, contrast, modes, favicon and shell behavior.
+// Viste la web con una marca del catálogo único de https://www.admiranext.com/marcablanca
+// (tokens --mb-*, logo, nombre, favicon y tipografía), igual que admira.app (FLT-101331).
 //
-// Enganche: admiranext-frame.js (home) y admira-nav.js (páginas gated) insertan este
-// fichero solo si la pestaña pide marca (?marca=) o se usa /marca. Sin marca activa no
-// hay red a admiranext.com.
+// Un solo mecanismo: assets/site-nav.js (el shell común de las páginas con la barra de las
+// 4 bandas) carga este fichero con su mismo sello. Ninguna página lo carga a mano.
 //
-// Plataforma del cargador común: «store» (el catálogo no tiene «tv»; los tokens --mb-*
-// bastan y marca-blanca.css mapea al chrome TV: .yk-bar / .admtop).
+// Sin marca activa (ni ?marca=<id> ni marca recordada en la pestaña, o ?marca=admira/off)
+// este fichero no hace nada más: no inserta estilos ni pide nada a admiranext.com.
+// Con marca, primero comprueba que existe en el catálogo (/marcablanca/api/marcas/<id>,
+// 8 s como mucho) y solo entonces carga marcablanca.css + marcablanca.js (plataforma
+// «studio», sin arranque automático) y marca-blanca.css (los ajustes propios de Admira Studio)
+// y la aplica. Si algo falla, Admira Studio se queda como estaba. Ver docs/marca-blanca.md.
 (function (root) {
   'use strict';
 
   const BASE = 'https://www.admiranext.com/marcablanca/';
-  const PLATAFORMA = 'store';
+  // One loader for all five platforms; host integration may override the platform.
+  const platformScript = typeof document !== 'undefined' ? document.currentScript : null;
+  const hostPlatform = typeof location !== 'undefined' ? location.hostname.replace(/^www\./, '').split('.').pop() : 'studio';
+  const PLATAFORMA = (platformScript && platformScript.dataset.plataforma) || (['studio','store','tv','app','biz'].includes(hostPlatform) ? hostPlatform : 'studio');
   const SESSION_KEY = 'mb:marca';        // la misma clave que usa el cargador común
   const MODE_KEY = 'mb:modo';
   const ID_RE = /^[a-z0-9][a-z0-9-]{0,40}$/;
@@ -126,8 +133,8 @@
     const score = c => Math.min(...backgrounds.map(bg => contrast(c, bg)));
     return score('#000000') >= score('#ffffff') ? '#000000' : '#ffffff';
   }
-  // Tokens --mbx-* que usa marca-blanca.css para los textos y rellenos de XpaceOS: barra,
-  // paneles Opciones / Avanzado, consola Experto y las variables de cada página.
+  // Tokens --mbx-* que usa marca-blanca.css para los textos y rellenos de Admira Studio: barra,
+  // paneles, módulos y los colores por tipo de contenido (imagen, vídeo, audio, música).
   function shellTokens(vars, modo) {
     const g = name => (vars && vars['--mb-' + name]) || '';
     const base = modo === 'claro' ? {r: 255, g: 255, b: 255, a: 1} : {r: 0, g: 0, b: 0, a: 1};
@@ -154,7 +161,11 @@
       '--mbx-on-accent': pick([g('acento-texto'), g('primario-texto'), '#ffffff', '#000000'], [solid(accent, sup)]),
       '--mbx-on-ok': pick(['#000000', '#ffffff'], [solidOk]),
       '--mbx-ok-fill': g('ok') || ok,
-      '--mbx-info': pick([g('info'), g('primario'), g('texto')], bgs),
+      // Colores por tipo de contenido de Admira Studio (chips, cabeceras de módulo, etiquetas).
+      '--mbx-image': pick([g('secundario'), g('primario'), g('texto')], bgs),
+      '--mbx-video': pick([g('acento'), g('primario'), g('texto')], bgs),
+      '--mbx-audio': pick([g('info'), g('primario'), g('texto')], bgs),
+      '--mbx-music': pick([g('acento'), g('secundario'), g('primario'), g('texto')], bgs),
     };
   }
 
@@ -166,7 +177,9 @@
   const doc = document, html = doc.documentElement;
   const script = doc.currentScript;
   // Los ajustes propios viajan con el mismo sello (?v=) que este fichero.
-  const LOCAL_CSS = '/marca-blanca.css?v=05.10.2026.starbucks4';
+  const LOCAL_CSS = (() => {
+    try { const u = new URL('marca-blanca.css', script.src); u.search = new URL(script.src).search; return u.href; } catch (_) { return '/marca-blanca.css'; }
+  })();
   const session = (() => { try { return root.sessionStorage; } catch (_) { return null; } })();
   const store = {
     get: k => { try { return session && session.getItem(k); } catch (_) { return null; } },
@@ -215,7 +228,7 @@
       doc.head.append(link);
     });
   }
-  // Si el puente común no llega, los ajustes locales bastan: llevan su propio puente store.
+  // Si el puente común no llega, los ajustes locales bastan: llevan su propio puente studio.
   function loadCss() {
     if (!cssPromise) {
       cssPromise = Promise.all([
@@ -235,7 +248,7 @@
         s.async = true;
         s.setAttribute('data-mb-plataforma', PLATAFORMA);
         s.setAttribute('data-mb-modo', modo || 'marca');
-        s.setAttribute('data-mb-auto', 'false');   // la aplica XpaceOS cuando ha comprobado el catálogo
+        s.setAttribute('data-mb-auto', 'false');   // la aplica Admira Studio cuando ha comprobado el catálogo
         s.setAttribute('data-admira-marca', '');
         s.onload = () => (root.MarcaBlanca ? resolve(root.MarcaBlanca) : reject(new Error('marcablanca.js sin MarcaBlanca')));
         s.onerror = () => { s.remove(); reject(new Error('no se pudo cargar marcablanca.js')); };
@@ -268,75 +281,39 @@
     return catalogPromise;
   }
 
-  // ─── Lo que XpaceOS añade a la marca: logo en la barra, «Volver a Admira», título ───
-  // La barra es la de las 4 bandas: en el shell común (#topBar.xs-bar) el logo va delante
-  // de la marca XpaceOS, que pasa a «powered by XpaceOS»; en el gemelo (barra en línea, sin
-  // marca escrita) el logo y el «powered by XpaceOS» van detrás de ☰ Opciones.
-  function barAnchor() {
-    // Home cabecera (admira.tv index)
-    const head = doc.querySelector('header.yk-head a.brand, header.yk-head .yk-wordmark, header.yk-head a.yk-logo, header.yk-head .yk-brand');
-    if (head) return {before: head};
-    // Home AdmiraNeXT frame (modo barra)
-    const yk = doc.querySelector('header.yk-bar a.yk-logo, header.yk-bar .yk-wordmark');
-    if (yk) return {before: yk};
-    // Chrome admira-nav (playlists, digitalsignage, …)
-    const brand = doc.querySelector('header.admtop .admbrand');
-    if (brand) return {before: brand};
-    // Fallback store/xpace (por si se reutiliza el fichero)
-    const xs = doc.querySelector('#topBar .xs-brand');
-    if (xs) return {before: xs};
-    const opts = doc.querySelector('#topBar #pfOptions, header.yk-bar .yk-btn-opts, header.admtop .admtog');
-    return opts ? {after: opts} : null;
-  }
-  function slotInPlace(slot, at) {
-    if (!slot || !at) return false;
-    if (at.before) return slot.nextElementSibling === at.before;
-    const next = slot.nextElementSibling;
-    return slot.previousElementSibling === at.after && !!next && next.classList.contains('mb-powered');
-  }
+  // ─── Lo que Admira Studio añade a la marca: logo en la barra, «Volver a Admira», título ───
+  // La barra de las 4 bandas (.pf-topbar) la montan cuadratura.js o site-nav.js después de
+  // este fichero, y site-nav.js rehace la cabecera de algunas familias: el logo y el botón
+  // se colocan cuando la barra existe y se reponen si la página la vuelve a montar.
   function logoSlot(create) {
     let slot = doc.getElementById('mb-bar-logo');
     if (!create) return slot;
-    const at = barAnchor();
-    if (!at) return slot;
-    if (slotInPlace(slot, at)) return slot;
+    const home = doc.querySelector('.pf-topbar .pf-topbar-brand');
+    if (!home) return slot;
+    if (slot && slot.nextElementSibling === home) return slot;
     if (!slot) {
       slot = doc.createElement('a');
       slot.id = 'mb-bar-logo';
       slot.className = 'mb-bar-logo mb-logo';
       slot.setAttribute('data-mb-logo', '');
     }
-    // En las páginas, el logo lleva al inicio como la marca XpaceOS; en el gemelo no saca
-    // de la escena (sin href: es solo la identidad del cliente).
-    if (at.before) { slot.href = at.before.getAttribute('href') || '/'; slot.removeAttribute('role'); }
-    else { slot.removeAttribute('href'); slot.setAttribute('role', 'img'); }
-    if (at.before) at.before.parentNode.insertBefore(slot, at.before);
-    else {
-      at.after.after(slot);
-      let powered = doc.getElementById('mb-powered');
-      if (!powered) {
-        powered = doc.createElement('span');
-        powered.id = 'mb-powered';
-        powered.className = 'mb-powered';
-        powered.textContent = 'Admira.tv';
-      }
-      slot.after(powered);
-    }
+    slot.href = home.getAttribute('href') || '/';
+    home.parentNode.insertBefore(slot, home);
     return slot;
   }
   function backButton(create) {
     let b = doc.getElementById('mb-volver');
     if (b || !create) return b;
-    const rail = doc.querySelector('#xsOptions, nav.quad-menu.quad-left, .yk-rail-left, #admRail, aside.admrail, .adm-opciones');
+    const rail = doc.querySelector('.rail-left');
     if (!rail) return null;
     b = doc.createElement('button');
     b.type = 'button';
     b.id = 'mb-volver';
     b.className = 'mb-volver';
     b.textContent = T('Volver a Admira', 'Back to Admira');
-    b.addEventListener('click', () => { desactivar(); const t = doc.getElementById('pfOptions'); if (t) t.focus(); });
-    // Arriba del todo, bajo el título «Opciones»: a la vista sin desplazar el panel.
-    const hd = rail.querySelector(':scope > .qm-title');
+    b.addEventListener('click', () => { desactivar(); const t = doc.querySelector('.pf-window-left, .pix-nav-icon-menu'); if (t) t.focus(); });
+    // Arriba del todo, bajo la cabecera «Opciones»: a la vista sin desplazar el raíl.
+    const hd = rail.querySelector(':scope > .rail-hd');
     rail.insertBefore(b, hd ? hd.nextSibling : rail.firstChild);
     return b;
   }
@@ -344,7 +321,7 @@
     const slot = logoSlot(true);
     if (!slot || !current) return;
     slot.hidden = false;
-    slot.setAttribute('aria-label', current.nombre + (slot.hasAttribute('href') ? T(' · volver al inicio', ' · back to home') : ''));
+    slot.setAttribute('aria-label', current.nombre + T(' · volver al inicio', ' · back to home'));
     slot.title = current.nombre + (current.propuesta
       ? T(' · propuesta generada automáticamente, no es la marca oficial', ' · automatically generated proposal, not the official brand')
       : current.ejemplo ? T(' · marca ficticia de ejemplo', ' · fictional sample brand') : '');
@@ -363,11 +340,12 @@
       } else slot.textContent = current.nombre;   // marca sin logo
     }
   }
-  // ¿Falta algo? (la barra o el panel de Opciones existen, pero sin el logo o sin el botón)
+  // ¿Falta algo? (la barra o el raíl de Opciones existen, pero sin el logo o sin el botón)
   function chromeMissing() {
-    const at = barAnchor();
-    if (at && !slotInPlace(doc.getElementById('mb-bar-logo'), at)) return true;
-    return !!doc.querySelector('#xsOptions, nav.quad-menu.quad-left') && !doc.getElementById('mb-volver');
+    const home = doc.querySelector('.pf-topbar .pf-topbar-brand');
+    const slot = doc.getElementById('mb-bar-logo');
+    if (home && !(slot && slot.nextElementSibling === home)) return true;
+    return !!doc.querySelector('.rail-left') && !doc.getElementById('mb-volver');
   }
   function ensureChrome() {
     chromeQueued = false;
@@ -477,7 +455,7 @@
         return Object.assign({ok: true}, current);
       })
       .catch(error => {
-        // Nada a medias: sin marca previa se deja XpaceOS como estaba.
+        // Nada a medias: sin marca previa se deja Admira Studio como estaba.
         if (!previous || !current) { cleanup(); current = null; }
         const reason = (error && error.reason) || 'network';
         if (reason === 'unknown' && store.get(SESSION_KEY) === id) store.del(SESSION_KEY);
@@ -489,14 +467,13 @@
     unwatchChrome();
     clearRoot();
     const slot = logoSlot(false); if (slot) slot.remove();
-    const powered = doc.getElementById('mb-powered'); if (powered) powered.remove();
     const b = backButton(false); if (b) b.remove();
     restoreTitle();
     restoreSnapshot();
     removeCss();
   }
 
-  /** Vuelve a Admira (XpaceOS), sin recargar. */
+  /** Vuelve a Admira Studio, sin recargar. */
   function desactivar() {
     const was = current;
     store.del(SESSION_KEY);
@@ -530,7 +507,12 @@
     listar, activar, desactivar, analizar,
   }));
 
-  // Arranque: solo si esta pestaña tiene marca.
+  // Context owns boot when present; it restores the server context before applying brand.
+  if (root.AdmiraContexto) {
+    root.AdmiraContexto.ready.then(() => { const id = root.AdmiraContexto.actual().marca; if (id && (!current || current.id !== id)) activar(id); });
+    return;
+  }
+  // Standalone compatibility: existing brand-only integrations retain their behavior.
   const decision = decide(location.search, session);
   if (decision.forget) { store.del(SESSION_KEY); store.del(MODE_KEY); }
   if (decision.id) {

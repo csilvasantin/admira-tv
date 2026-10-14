@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<script src="/admira-contexto.js?v=14.10.2026.r10.1349"></script>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#070a10">
+<meta name="robots" content="noindex">
+<title>Demo · Marca y proyecto · Admira.tv</title>
+<meta name="description" content="Demo del filtro por marca y por cliente de admira.tv: /marca cambia el aspecto y /proyecto (solo superusuario) deja ver solo las pantallas, playlists y contenidos de un cliente.">
+<style>
+  :root{--bg:#070a10;--panel:#0e141d;--panel2:#121b28;--line:#223049;--ink:#d9e4f2;--dim:#8999ae;--green:#3df08a;--blue:#7aa2ff;--amber:#ffbd59;--red:#ff6b6b;--cyan:#5fd4ff}
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{margin:0;background:radial-gradient(900px 520px at 72% -10%,#16305a55,transparent),var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+  button{font:inherit}
+  main.ctxd{max-width:1180px;margin:0 auto;padding:16px 16px 90px;display:grid;gap:14px;min-width:0}
+  .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0}
+  .eyebrow{margin:0 0 6px;color:var(--dim);font:700 10px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}
+  h1{margin:0;font-size:21px;line-height:1.25}
+  h2{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:baseline}
+  h2 .n{color:var(--dim);font:600 12px ui-monospace,monospace}
+  p{margin:8px 0 0;color:#cfd9e6;max-width:900px}
+  .aviso{border-color:#7a5b16;background:linear-gradient(135deg,#2a2108,#141006);color:#ffe2a3}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .chip{display:inline-flex;gap:6px;align-items:center;border:1px solid #263a55;border-radius:999px;padding:5px 12px;background:#0b1522;color:var(--dim);font:600 12px ui-monospace,monospace;overflow-wrap:anywhere}
+  .chip b{color:#fff}
+  .chip.on{border-color:var(--green);color:var(--green)}
+  .chip.err{border-color:var(--red);color:var(--red)}
+  .acciones{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .acciones button,.acciones a{min-height:40px;padding:8px 14px;border-radius:10px;border:1px solid #2b3d58;background:#10223a;color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;font:600 13px ui-monospace,monospace}
+  .acciones a{background:transparent;color:var(--cyan)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+  ul.lista{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+  ul.lista li{border:1px solid #1f2d44;border-radius:10px;padding:8px 10px;background:#0a111b;min-width:0}
+  ul.lista b{display:block;overflow-wrap:anywhere}
+  ul.lista code{color:var(--dim);font-size:12px;overflow-wrap:anywhere}
+  .vacio{color:var(--dim)}
+  .estado{margin-top:10px;font:600 12px ui-monospace,monospace;color:var(--dim);overflow-wrap:anywhere}
+  .estado.err{color:var(--red)}
+  .afSlotHidden{display:none}.af-panel .afSlotHidden{display:block}
+  /* Con una marca activa (/marca), la demo se viste con sus tokens --mb-* / --mbx-* como el resto del chrome. */
+  :root[data-mb-marca] body{background:var(--mb-fondo);color:var(--mbx-ink)}
+  :root[data-mb-marca] .card:not(.aviso){background:var(--mb-superficie);border-color:var(--mb-borde);color:var(--mbx-ink)}
+  :root[data-mb-marca] .card p,:root[data-mb-marca] .eyebrow,:root[data-mb-marca] h2 .n,:root[data-mb-marca] .estado,:root[data-mb-marca] ul.lista code{color:var(--mbx-mut)}
+  :root[data-mb-marca] .chip,:root[data-mb-marca] ul.lista li{background:var(--mb-superficie-alt,var(--mb-fondo));border-color:var(--mb-borde);color:var(--mbx-mut)}
+  :root[data-mb-marca] .chip b{color:var(--mbx-ink)}
+  :root[data-mb-marca] .acciones button{background:var(--mbx-brand);border-color:var(--mbx-brand);color:var(--mbx-on-brand,#fff)}
+  :root[data-mb-marca] .acciones a{color:var(--mbx-brand);border-color:var(--mb-borde)}
+</style>
+</head>
+<body>
+<script>
+/* Demo del filtro por marca y por cliente (encargo #5979). Usa el mismo admira-contexto.js que las páginas de
+   admira.tv y el CLI del ⌘ Experto de admira-frame. En una preview (*.admira-tv.pages.dev) habla con el sandbox
+   de #5934: sesiones sintéticas y cuatro pantallas de prueba. En admira.tv, con la API y la sesión reales. */
+window.ADMIRA_VERSION='v.14.10.2026.r10.13:49';
+window.ADMIRA_NAV={title:'Demo · marca y proyecto'};
+window.ADMIRA_CONTEXTO_TV={recargar:false};
+</script>
+<script src="/admira-nav.js?v=14.10.2026.r10.1349"></script>
+<script src="/admira-frame.js?v=14.10.2026.r10.1349" defer></script>
+<link rel="stylesheet" href="/admira-frame.css?v=14.10.2026.r10.1349">
+
+<main class="ctxd">
+  <section class="card aviso" id="avisoPreview" hidden>
+    <p class="eyebrow">Preview aislada</p>
+    <div>Sesiones sintéticas y cuatro pantallas de prueba del sandbox de la API común (encargo #5934): dos de Starbucks, una de Xtanco y otra que dice ser de Starbucks sin serlo. El permiso de superusuario se consulta en la whitelist real. No toca producción.</div>
+  </section>
+
+  <section class="card">
+    <p class="eyebrow">⌘ Experto · paraguas global</p>
+    <h1>Una marca y un cliente para toda la suite</h1>
+    <p><b>/marca &lt;id&gt;</b> cambia solo el aspecto. <b>/proyecto &lt;id&gt;</b> deja ver únicamente las pantallas, playlists y contenidos de ese cliente; solo puede usarlo un superusuario y lo comprueba el servidor. <b>off</b> quita cualquiera de los dos.</p>
+    <div class="chips" id="chips"></div>
+    <div class="acciones">
+      <button type="button" data-cmd="/proyecto starbucks">/proyecto starbucks</button>
+      <button type="button" data-cmd="/marca lumbre">/marca lumbre</button>
+      <button type="button" data-cmd="/proyecto off">/proyecto off</button>
+      <button type="button" data-cmd="/marca off">/marca off</button>
+      <a id="cambiarRol" hidden></a>
+    </div>
+    <div class="estado" id="estado" role="status">Preparando el contexto…</div>
+  </section>
+
+  <div class="grid">
+    <section class="card"><h2>Pantallas <span class="n" id="nPantallas"></span></h2><ul class="lista" id="pantallas"><li class="vacio">…</li></ul></section>
+    <section class="card"><h2>Playlists de hoy <span class="n" id="nPlaylists"></span></h2><ul class="lista" id="playlists"><li class="vacio">…</li></ul></section>
+    <section class="card"><h2>Contenidos <span class="n" id="nContenidos"></span></h2><ul class="lista" id="contenidos"><li class="vacio">…</li></ul></section>
+  </div>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id)};
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+  var TV=window.AdmiraContextoTv;
+  if(!TV){$('estado').textContent='No se pudo cargar el filtro de marca y proyecto.';$('estado').className='estado err';return;}
+  var rolLector=false;try{rolLector=sessionStorage.getItem('admira_ctx_rol')==='reader'}catch(_){}
+  if(TV.preview){
+    $('avisoPreview').hidden=false;
+    var a=$('cambiarRol');a.hidden=false;
+    var u=new URL(location.href);u.searchParams.delete('proyecto');u.searchParams.delete('marca');u.searchParams.set('rol',rolLector?'superusuario':'lector');
+    a.href=u.pathname+u.search;a.textContent=rolLector?'Entrar como superusuario de prueba':'Entrar como usuario normal de prueba';
+  }
+  function chips(s,err){
+    var c=[];
+    c.push('<span class="chip'+(s&&s.marca?' on':'')+'">Marca <b>'+esc(s&&s.marca||'Admira')+'</b></span>');
+    c.push('<span class="chip'+(s&&s.proyecto?' on':'')+'">Proyecto <b>'+esc(s&&s.proyecto||'todos')+'</b></span>');
+    c.push('<span class="chip">Sesión <b>'+(TV.preview?(rolLector?'usuario normal (prueba)':'superusuario (prueba)'):(s&&s.synced?(s.superusuario?'superusuario':'usuario'):'sin sesión'))+'</b></span>');
+    c.push('<span class="chip">API <b>'+esc(TV.api.replace(/^https:\/\//,''))+'</b></span>');
+    if(err)c.push('<span class="chip err">'+esc(err)+'</span>');
+    $('chips').innerHTML=c.join('');
+  }
+  function lista(id,nId,filas,vacio){
+    $(nId).textContent='// '+filas.length;
+    $(id).innerHTML=filas.length?filas.join(''):'<li class="vacio">'+esc(vacio)+'</li>';
+  }
+  function leer(ruta){return window.AdmiraContexto.request(ruta).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d&&d.error||('HTTP '+r.status));return d})})}
+  var ultimoError='';
+  function pintar(){
+    var s=window.AdmiraContexto&&window.AdmiraContexto.actual();
+    chips(s,ultimoError);
+    return Promise.all([
+      leer('/signage/screens').then(function(d){return d.screens||[]}),
+      leer('/stock').then(function(d){return d.items||[]})
+    ]).then(function(r){
+      var pantallas=r[0],contenidos=r[1];
+      lista('pantallas','nPantallas',pantallas.map(function(p){return'<li><b>'+esc(p.name||p.screen)+'</b><code>'+esc(p.screen)+' · '+esc(p.locationId||p.loc||'sin local')+'</code></li>'}),'Ninguna pantalla en este proyecto.');
+      lista('contenidos','nContenidos',contenidos.map(function(c){return'<li><b>'+esc(c.title||c.id)+'</b><code>'+esc(c.id)+' · '+esc(c.type||'')+(c.locationId?' · '+esc(c.locationId):'')+'</code></li>'}),'Ningún contenido en este proyecto.');
+      $('estado').textContent=s&&s.proyecto?'Filtrando por '+s.proyecto+': solo sus pantallas, playlists y contenidos.':'Sin filtro de proyecto: se ve todo lo que permite la sesión.';
+      $('estado').className='estado';
+      return Promise.all(pantallas.slice(0,12).map(function(p){
+        return leer('/grid/playlist?screen='+encodeURIComponent(p.screen)).then(function(d){return'<li><b>'+esc(p.name||p.screen)+'</b><code>'+esc(d.total||0)+' piezas hoy · '+esc(d.date||'')+'</code></li>'},function(e){return'<li><b>'+esc(p.name||p.screen)+'</b><code>'+esc(e.message)+'</code></li>'});
+      })).then(function(filas){lista('playlists','nPlaylists',filas,'Sin playlists.')});
+    },function(e){
+      ['pantallas','playlists','contenidos'].forEach(function(id){$(id).innerHTML='<li class="vacio">Lectura rechazada: '+esc(e.message)+'</li>'});
+      $('estado').textContent='La lectura falla en vez de enseñar la lista sin filtrar ('+e.message+').';$('estado').className='estado err';
+    });
+  }
+  // Los botones escriben la orden en el ⌘ Experto, como si se tecleara.
+  document.querySelectorAll('[data-cmd]').forEach(function(b){b.addEventListener('click',function(){
+    var cmd=b.getAttribute('data-cmd');
+    var X=window.AdmiraExperto;if(X&&X.open&&!(X.isOpen&&X.isOpen()))X.open();
+    setTimeout(function(){
+      if(window.AdmiraExperto&&window.AdmiraExperto.exec)window.AdmiraExperto.exec(cmd);
+      else TV.ejecutar(cmd,function(t,c){$('estado').textContent=t;$('estado').className='estado'+(c?' err':'')});
+    },250);
+  })});
+  document.addEventListener('admira:contexto',function(){ultimoError='';pintar()});
+  document.addEventListener('admira:contexto-error',function(e){ultimoError='Rechazado: '+(e.detail&&e.detail.error||'error');chips(window.AdmiraContexto&&window.AdmiraContexto.actual(),ultimoError)});
+  TV.listo().then(pintar);
+})();
+</script>
+</body>
+</html>
