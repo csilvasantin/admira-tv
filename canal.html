@@ -1173,18 +1173,45 @@ function overlayPct(rect,hit,isPlayer){
   }
   return Math.round(100*tapados/total);
 }
+// Capas ajenas al player colgadas de <body> y a la vista (la ventana del sistema, un aviso…). Sin ninguna,
+// nada puede tapar la emisión (ALWAYS ON TOP oculta las demás): el % tapado es 0 sin hacer hit-testing.
+function capasAjenas(wrap){
+  const out=[], kids=(document.body&&document.body.children)||[];
+  for(let i=0;i<kids.length;i++){ const n=kids[i];
+    if(!n||n===wrap||/^(SCRIPT|STYLE|LINK|TEMPLATE|NOSCRIPT|META)$/.test(n.tagName||'')) continue;
+    try{ const cs=getComputedStyle(n); if(cs.display==='none'||cs.visibility==='hidden') continue; }catch(_){}
+    out.push(n);
+  }
+  return out;
+}
+// Tamaño DESTINO del lienzo (el que fitMupi fija en el estilo de #mupi), en el sentido del panel: no depende
+// de la transición de .35 s ni del transform del giro, así que dos medidas seguidas no bailan.
+function lienzoDestino(mupi){
+  const w=parseFloat(mupi.style.width), h=parseFloat(mupi.style.height);
+  if(!(w>0&&h>0)) return null;
+  const quarter=(typeof effectiveRotation==='function'?effectiveRotation():0)%180!==0;
+  return quarter?{w:Math.round(h),h:Math.round(w)}:{w:Math.round(w),h:Math.round(h)};
+}
 function measuredSurface(){
-  if(typeof document==='undefined'||!document.elementFromPoint) return {};
+  if(typeof document==='undefined'||!document.body||!document.documentElement) return {};
   try{
     const mupi=$('mupi'), stage=$('stage'), wrap=$('wrap'); if(!mupi||!stage||!wrap) return {};
-    const m=visibleRect(mupi), s=visibleRect(stage), mA=rectArea(m); if(mA<1) return {};
-    const dentro={l:Math.max(m.l,s.l),t:Math.max(m.t,s.t),r:Math.min(m.r,s.r),b:Math.min(m.b,s.b)};
-    const root=document.documentElement, body=document.body;
-    return {
-      canvas:{w:Math.round(m.r-m.l),h:Math.round(m.b-m.t)},
-      visible:Math.round(100*rectArea(dentro)/mA),
-      overlay:overlayPct(dentro,(x,y)=>document.elementFromPoint(x,y),el=>el===root||el===body||wrap.contains(el))
-    };
+    const out={};
+    // visible: área de #stage dentro del lienzo, con medidas de maquetación (sin transform ni transición).
+    const mA=(mupi.offsetWidth||0)*(mupi.offsetHeight||0);
+    if(mA>0) out.visible=Math.round(100*Math.min(1,((stage.offsetWidth||0)*(stage.offsetHeight||0))/mA));
+    // canvas: sólo a pantalla completa (fit fill|cover); en editorial el marco sigue a cada pieza y no se declara.
+    if(document.documentElement.classList.contains('screen-fit')){ const c=lienzoDestino(mupi); if(c) out.canvas=c; }
+    // overlay: hit-testing (rejilla 32×18) sólo si hay alguna capa ajena a la vista.
+    const ajenas=capasAjenas(wrap);
+    if(!ajenas.length) out.overlay=0;
+    else if(document.elementFromPoint){
+      const m=visibleRect(mupi), st=visibleRect(stage);
+      const dentro={l:Math.max(m.l,st.l),t:Math.max(m.t,st.t),r:Math.min(m.r,st.r),b:Math.min(m.b,st.b)};
+      const root=document.documentElement, body=document.body;
+      out.overlay=overlayPct(dentro,(x,y)=>document.elementFromPoint(x,y),el=>el===root||el===body||wrap.contains(el));
+    }
+    return out;
   }catch(_){ return {}; }
 }
 function paintSurfaceFaults(){

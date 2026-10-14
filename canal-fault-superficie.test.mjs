@@ -30,17 +30,21 @@ const bloque = canal.slice(inicio, fin);
 
 // ── Un DOM mínimo con geometría: rectángulos fijos por elemento y hit-testing por capas ──
 function rect(l, t, w, h) { return { left: l, top: t, right: l + w, bottom: t + h, width: w, height: h }; }
-function dom({ ancho = 1600, alto = 900 } = {}) {
+function dom({ ancho = 1600, alto = 900, completa = true } = {}) {
   const nodos = new Map();
   const el = (id, r, padre = null) => {
-    const n = { id, padre, r, style: {}, hijos: [], clases: new Set(),
+    const n = { id, padre, r, style: {}, hijos: [], clases: new Set(), tagName: 'DIV',
+      get offsetWidth() { return n.r.width; }, get offsetHeight() { return n.r.height; },
       classList: { toggle(c, on) { on ? n.clases.add(c) : n.clases.delete(c); }, contains: (c) => n.clases.has(c) },
       getBoundingClientRect: () => n.r, contains(o) { for (let x = o; x; x = x.padre) if (x === n) return true; return false; },
       setAttribute() {}, remove() { nodos.delete(n.id); body.hijos = body.hijos.filter((h) => h !== n); }, innerHTML: "" };
     nodos.set(id, n); return n;
   };
   const root = el("html", rect(0, 0, ancho, alto)), body = el("body", rect(0, 0, ancho, alto), root);
+  root.classList = { contains: (c) => c === "screen-fit" && completa, toggle() {}, add() {} };
+  Object.defineProperty(body, "children", { get: () => [wrap, ...body.hijos] });
   const wrap = el("wrap", rect(0, 0, ancho, alto), body), mupi = el("mupi", rect(0, 0, ancho, alto), wrap), stage = el("stage", rect(0, 0, ancho, alto), mupi);
+  mupi.style.width = `${ancho}px`; mupi.style.height = `${alto}px`;   // lo que deja fitMupi a pantalla completa
   const document = {
     documentElement: root, body,
     getElementById: (id) => nodos.get(id) || null,
@@ -63,8 +67,8 @@ function dom({ ancho = 1600, alto = 900 } = {}) {
   return { document, nodos, wrap, mupi, stage, root, body };
 }
 
-function player({ screen = "virtual-lab-bugito", almacen = new Map(), ahora = () => Date.now(), virtual = true, ancho = 1600, alto = 900 } = {}) {
-  const d = dom({ ancho, alto });
+function player({ screen = "virtual-lab-bugito", almacen = new Map(), ahora = () => Date.now(), virtual = true, ancho = 1600, alto = 900, completa = true } = {}) {
+  const d = dom({ ancho, alto, completa });
   const posts = [], flashes = [], timers = [];
   let encuadres = 0;
   const ctx = vm.createContext({
@@ -149,7 +153,8 @@ test("cambio de resolución: re-encuadra el lienzo y la telemetría declara su c
   orden(p, "fault-canvas");
   assert.ok(p.encuadres() > antes, "re-encuadra el marco");
   assert.equal(p.run("surfaceFaultOn('canvas')"), true);
-  // Lo que deja fitMupi: un lienzo 9:16 centrado en el panel 16:9.
+  // Lo que deja fitMupi: un lienzo 9:16 centrado en el panel 16:9 (estilo destino y caja).
+  p.d.mupi.style.width = "506px"; p.d.mupi.style.height = "900px";
   p.d.mupi.r = rect(547, 0, 506, 900); p.d.stage.r = rect(547, 0, 506, 900);
   p.run("Object.assign(DEVICE_TELEMETRY.display,measuredPaint())");
   const dsp = display(p);
@@ -237,4 +242,32 @@ test("cableado: telemetría y re-medida llevan las medidas de superficie; el man
   assert.doesNotMatch(extrae("measuredSurface"), /surfaceFaults|surfaceFaultOn|SURFACE_/, "se mide el DOM, no el estado del fallo");
   assert.doesNotMatch(extrae("applyCtrlCmd"), /fault-|applyFaultCommand|setSurfaceFaults/);
   assert.doesNotMatch(extrae("runCli"), /fault-|setSurfaceFaults/);
+});
+
+test("revisión: el lienzo es el tamaño DESTINO (no el de la transición) y sólo a pantalla completa", () => {
+  const p = player();
+  // A mitad de la transición de .35 s la caja mide otra cosa; el estilo destino manda.
+  p.d.mupi.r = rect(210, 118, 1180, 664); p.d.stage.r = rect(210, 118, 1180, 664);
+  assert.deepEqual(JSON.parse(JSON.stringify(p.run("measuredSurface()").canvas)), { w: 1600, h: 900 });
+  // Con un cuarto de vuelta, el estilo está en el sentido del marco sin girar: se devuelve en el del panel.
+  p.run("setInjectedFault({type:'rotate',angle:90,at:Date.now(),until:Date.now()+60000})");
+  p.d.mupi.style.width = "900px"; p.d.mupi.style.height = "1600px";
+  assert.deepEqual(JSON.parse(JSON.stringify(p.run("measuredSurface()").canvas)), { w: 1600, h: 900 });
+  // En editorial el marco sigue a cada pieza: no se declara canvas.
+  const ed = player({ completa: false });
+  assert.equal("canvas" in ed.run("measuredSurface()"), false);
+  assert.equal(ed.run("measuredSurface()").visible, 100);
+});
+
+test("revisión: sin capas ajenas en <body> no hay hit-testing (0 % tapado sin 576 elementFromPoint)", () => {
+  const p = player();
+  let llamadas = 0;
+  const original = p.d.document.elementFromPoint;
+  p.d.document.elementFromPoint = (...a) => { llamadas++; return original(...a); };
+  assert.equal(p.run("measuredSurface()").overlay, 0);
+  assert.equal(llamadas, 0);
+  orden(p, "fault-popup");
+  llamadas = 0;
+  assert.ok(p.run("measuredSurface()").overlay > 10);
+  assert.equal(llamadas, 32 * 18, "con una capa ajena, la rejilla completa");
 });
