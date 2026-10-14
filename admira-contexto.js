@@ -179,7 +179,8 @@
   function textoError(e) {
     var m = String(e && e.message || e || 'error');
     if (e && e.status === 403 && !ERRORES[m]) m = 'superuser-required';
-    if (m === 'session-required' && tokenNoConfigurado) return T('El filtro por cliente todavía no está activo en producción.', 'The client filter is not active in production yet.');
+    // Sin clave en admira.tv (503) o sin /ctx en la API (404): el filtro aún no está activo, no es un fallo de sesión.
+    if ((m === 'session-required' && tokenNoConfigurado) || (e && e.status === 404)) return T('El filtro por cliente todavía no está activo en producción.', 'The client filter is not active in production yet.');
     if (/^brand-/.test(m)) return T('No se pudo aplicar esa marca (', 'Could not apply that brand (') + m.slice(6) + ').';
     var t = ERRORES[m];
     return t ? T(t[0], t[1]) : T('No se pudo cambiar el contexto: ', 'Could not change the context: ') + m;
