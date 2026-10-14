@@ -67,9 +67,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=14.10.2026.r15.2059"></script>
+<script src="xpl-runtime.js?v=14.10.2026.r16.2113"></script>
 <script>
-  window.ADMIRA_VERSION='v.14.10.2026.r15.20:59';
+  window.ADMIRA_VERSION='v.14.10.2026.r16.21:13';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -426,7 +426,7 @@
   <aside id="chan"></aside>
 </div>
 
-<script src="/assets/player-pairing.js?v=14.10.2026.r15.2059"></script>
+<script src="/assets/player-pairing.js?v=14.10.2026.r16.2113"></script>
 <script>
 // Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
 // directo (pub-…r2.dev): más resiliente y evita bloqueos de DNS/filtrado en algunas
@@ -1073,11 +1073,12 @@ const FAULT_TTL_MS=30*60000;
 // Bugito (DCL-5da4653d859552490fd5ae1d): fallos de superficie, ver «BUGITO · fallos de superficie».
 const SURFACE_FAULTS=['canvas','popup','half'];
 function faultCommand(raw){
-  const cmd=String(raw||'').trim().replace(/^\//,'').split(/\s+/)[0].toLowerCase().replace(/^fault[:_]/,'fault-');
+  const words=String(raw||'').trim().replace(/^\//,'').toLowerCase().split(/\s+/);
+  const cmd=words[0].replace(/^fault[:_]/,'fault-'), off=words[1]==='off';
   if(cmd==='fault-clear') return {op:'clear'};
-  if(cmd.indexOf('fault-')===0&&SURFACE_FAULTS.includes(cmd.slice(6))) return {op:cmd.slice(6)};
+  if(cmd.indexOf('fault-')===0&&SURFACE_FAULTS.includes(cmd.slice(6))) return off?{op:'remove',kind:cmd.slice(6)}:{op:cmd.slice(6)};
   const m=/^fault-rotate(?:-(90|180|270))?$/.exec(cmd);
-  return m?{op:'rotate',angle:Number(m[1]||90)}:null;
+  return m?(off?{op:'remove',kind:'rotate'}:{op:'rotate',angle:Number(m[1]||90)}):null;
 }
 function faultActive(f,now){
   if(!f||typeof f!=='object'||f.type!=='rotate'||![90,180,270].includes(f.angle)) return null;
@@ -1259,6 +1260,14 @@ function applyFaultCommand(fault,c){
   const target=cmdScreenSlug(c&&c.screen);
   if(!target||target!==cmdScreenSlug(scr.screen)) return 'failed';
   if(fault.op==='clear'){ setInjectedFault(null); setSurfaceFaults({}); flashCli('✓ prueba de laboratorio retirada'); return 'executed'; }
+  // Recuperación independiente: «fault-<tipo> off» no altera los otros fallos ni sus caducidades.
+  if(fault.op==='remove'){
+    if(fault.kind==='rotate') setInjectedFault(null);
+    else if(SURFACE_FAULTS.includes(fault.kind)){
+      const next=Object.assign({},surfaceFaults); delete next[fault.kind]; setSurfaceFaults(next);
+    } else return 'failed';
+    flashCli('✓ prueba retirada · '+(SURFACE_LABEL[fault.kind]||'formato girado')); return 'executed';
+  }
   if(SURFACE_FAULTS.includes(fault.op)){
     const now=Date.now(); setSurfaceFaults(Object.assign({},surfaceFaults,{[fault.op]:{at:now,until:now+FAULT_TTL_MS}}));
     flashCli('⚠ prueba de laboratorio · '+SURFACE_LABEL[fault.op]); return 'executed';
@@ -5117,6 +5126,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=14.10.2026.r15.2059" defer></script>
+  <script src="/assets/admira-version-watch.js?v=14.10.2026.r16.2113" defer></script>
 </body>
 </html>

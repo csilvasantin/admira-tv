@@ -279,5 +279,9 @@
     "Bugito: el mando de laboratorio puede provocar tres incidencias más en un player virtual-lab-*: cambio de resolución (fault-canvas), popup encima del contenido (fault-popup) y pantalla a medio abrir (fault-half); fault-clear las retira.",
     "El player declara en /signage/now lo que mide en pantalla: el lienzo (canvas, a pantalla completa), el % visible y el % tapado por capas ajenas.",
     "Cada fallo caduca solo a los 30 minutos y se puede sumar a los demás."
+  ],
+  "v.14.10.2026.r16.21:13": [
+    "Bugito permite retirar por separado giro, resolución, popup y pantalla a medio abrir con fault-<tipo> off.",
+    "Los demás fallos conservan su estado y caducidad: el vigilante puede cerrar cada incidencia de Yokup de forma independiente."
   ]
 }

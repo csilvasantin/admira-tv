@@ -176,6 +176,44 @@ test("se suman entre sí y fault-clear los retira todos, con el giro", () => {
   assert.equal(p.almacen.has("adtv_fault:virtual-lab-bugito"), false);
 });
 
+test("cuatro fallos simultáneos se retiran por separado sin renovar ni borrar los restantes", () => {
+  const p = player();
+  for (const kind of ['rotate', 'canvas', 'popup', 'half']) assert.equal(orden(p, `fault-${kind}`), 'executed');
+  const initial = JSON.parse(JSON.stringify(p.run('__surface()')));
+  assert.equal(orden(p, 'fault-rotate off'), 'executed');
+  assert.equal(p.run('faultRotation()'), 0);
+  assert.deepEqual(JSON.parse(JSON.stringify(p.run('__surface()'))), initial);
+  assert.ok(p.d.document.getElementById('faultPopup'));
+  assert.equal(p.d.mupi.classList.contains('fault-half'), true);
+  assert.equal(orden(p, 'fault-canvas off'), 'executed');
+  assert.deepEqual(JSON.parse(JSON.stringify(p.run('__surface()'))), {popup:initial.popup, half:initial.half});
+  assert.ok(p.d.document.getElementById('faultPopup'));
+  assert.equal(orden(p, 'fault-popup off'), 'executed');
+  assert.equal(p.d.document.getElementById('faultPopup'), null);
+  assert.deepEqual(JSON.parse(JSON.stringify(p.run('__surface()'))), {half:initial.half});
+  assert.equal(p.d.mupi.classList.contains('fault-half'), true);
+  assert.equal(orden(p, 'fault-half off'), 'executed');
+  assert.deepEqual(JSON.parse(JSON.stringify(p.run('__surface()'))), {});
+  assert.equal(p.d.mupi.classList.contains('fault-half'), false);
+  assert.equal(p.almacen.has('adtv_fault_surface:virtual-lab-bugito'), false);
+  assert.equal(p.almacen.has('adtv_fault:virtual-lab-bugito'), false);
+});
+
+test("retirar un fallo conserva el giro del operador y rechaza destinos ajenos o broadcast", () => {
+  const p = player();
+  p.run('displayRotation=180');
+  orden(p, 'fault-rotate'); orden(p, 'fault-popup');
+  assert.equal(orden(p, 'fault-popup off', ''), 'failed');
+  assert.equal(orden(p, 'fault-rotate off', 'virtual-lab-otro'), 'failed');
+  assert.equal(p.run('faultRotation()'), 90);
+  assert.ok(p.d.document.getElementById('faultPopup'));
+  assert.equal(orden(p, '/FAULT:rotate OFF'), 'executed');
+  assert.equal(p.run('effectiveRotation()'), 180);
+  assert.ok(p.d.document.getElementById('faultPopup'));
+  assert.equal(orden(p, 'fault-rotate off'), 'executed', 'retirada idempotente');
+  assert.equal(p.run('effectiveRotation()'), 180);
+});
+
 test("sólo dirigidas a ESTA pantalla: un broadcast o la orden de otra no tocan nada", () => {
   const p = player();
   assert.equal(orden(p, "fault-popup", ""), "failed");

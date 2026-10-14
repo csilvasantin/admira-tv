@@ -1,7 +1,7 @@
 {
-  "version": "v.14.10.2026.r15.20:59",
-  "agent": "OraculoMacMini",
-  "deployer": "OraculoMacMini",
-  "machine": "MacMini",
-  "signature": "OraculoMacMini · MacMini"
+  "version": "v.14.10.2026.r16.21:13",
+  "agent": "TrinityMacStudio",
+  "deployer": "TrinityMacStudio",
+  "machine": "MacStudio",
+  "signature": "TrinityMacStudio · MacStudio"
 }
