@@ -185,7 +185,7 @@ let V0='';const sello=()=>fetch('/version.json?_='+Date.now(),{cache:'no-store'}
 const RAPIDO=2000,LENTO=6000,FIJO=Math.min(30,Math.max(2,+P.get('sondeo')||0))*1000*(P.has('sondeo')?1:0);
 function cadencia(){if(FIJO)return FIJO;const d=ultimo;if(!d||document.body.dataset.ok==='0')return RAPIDO;
   return ((d.recibido||[]).length||(d.preparando||[]).length||(d.listo||[]).length||hablando||cola.length)?RAPIDO:LENTO;}
-let reloj=0;async function ronda(){clearTimeout(reloj);await tic();const c=cadencia();window.__pantallaStats.cada=c;reloj=setTimeout(ronda,c);}
+let reloj=0,pollGeneration=0;async function ronda(){const g=++pollGeneration;clearTimeout(reloj);await tic();if(g!==pollGeneration)return;const c=cadencia();window.__pantallaStats.cada=c;reloj=setTimeout(ronda,c);}
 textos();ronda();
 })();
 </script>

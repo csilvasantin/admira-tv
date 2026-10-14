@@ -6,14 +6,25 @@ import { salaDe, operar, ESCRIBE, autoriza, claveDe, urls, json } from "../_lib.
 // avance) se adelanta lo que lleve guardada la respuesta, para que la barra de «recibido» no dé saltos.
 export const ESTADO_TTL = 1500;
 const memoria = new Map();
-export function olvidaEstado(sala) { if (sala) memoria.delete(sala); else memoria.clear(); }
+const pendientes = new Map();
+export function olvidaEstado(sala) {
+  if (sala) { memoria.delete(sala); pendientes.delete(sala); }
+  else { memoria.clear(); pendientes.clear(); }
+}
 async function estadoPublico(env, sala) {
   const m = memoria.get(sala), edad = m ? Date.now() - m.t : Infinity;
   if (m && edad < ESTADO_TTL) { const t = Date.parse(m.d.ahora); return t ? { ...m.d, ahora: new Date(t + edad).toISOString() } : m.d; }
-  const d = await operar(env, "estado", sala, {}, { auth: false });
-  if (memoria.size > 200) memoria.clear();
-  memoria.set(sala, { t: Date.now(), d });
-  return d;
+  if (pendientes.has(sala)) return pendientes.get(sala);
+  const lectura = operar(env, "estado", sala, {}, { auth: false }).then(d => {
+    // An earlier read must not repopulate the cache after a successful write.
+    if (pendientes.get(sala) === lectura) {
+      if (memoria.size > 200) memoria.clear();
+      memoria.set(sala, { t: Date.now(), d });
+    }
+    return d;
+  }).finally(() => { if (pendientes.get(sala) === lectura) pendientes.delete(sala); });
+  pendientes.set(sala, lectura);
+  return lectura;
 }
 
 export async function onRequest({ request, env, params }) {
