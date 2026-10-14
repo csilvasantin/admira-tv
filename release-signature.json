@@ -1,8 +1,8 @@
 {
-  "version": "v.14.10.2026.r10.13:49",
-  "agent": "NeoMBP14",
-  "deployer": "NeoMBP14",
-  "machine": "MacBookProNegro14",
-  "signature": "NeoMBP14 · MacBookProNegro14",
-  "mission": "DCL-5da4653d859552490fd5ae1d"
+  "version": "v.14.10.2026.r11.17:45",
+  "agent": "MorfeoMacMini",
+  "deployer": "MorfeoMacMini",
+  "machine": "MacMini",
+  "signature": "MorfeoMacMini · MacMini",
+  "mission": "FLT-102171"
 }
