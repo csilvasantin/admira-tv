@@ -55,6 +55,17 @@
   }
 
   var opciones = {api: API, expert: expertoAbierto, fetch: fetchOriginal};
+  // Producción: token de la sesión de admira.tv. Si el servidor aún no está configurado (503), se recuerda para
+  // explicar que el filtro por cliente no está activo, en vez de pedir un inicio de sesión que ya existe.
+  var tokenNoConfigurado = false;
+  if (!esPreview) {
+    opciones.tokenProvider = function () {
+      return fetchOriginal('/auth/api-token', {credentials: 'include', cache: 'no-store'}).then(function (r) {
+        tokenNoConfigurado = r.status === 503;
+        return r.ok ? r.json() : {ok: false};
+      }, function () { return {ok: false}; });
+    };
+  }
   if (esPreview) {
     // Sesión sintética del sandbox (firma exclusiva de la preview): el rol se consulta en la whitelist real.
     opciones.tokenProvider = function () {
@@ -168,6 +179,7 @@
   function textoError(e) {
     var m = String(e && e.message || e || 'error');
     if (e && e.status === 403 && !ERRORES[m]) m = 'superuser-required';
+    if (m === 'session-required' && tokenNoConfigurado) return T('El filtro por cliente todavía no está activo en producción.', 'The client filter is not active in production yet.');
     if (/^brand-/.test(m)) return T('No se pudo aplicar esa marca (', 'Could not apply that brand (') + m.slice(6) + ').';
     var t = ERRORES[m];
     return t ? T(t[0], t[1]) : T('No se pudo cambiar el contexto: ', 'Could not change the context: ') + m;

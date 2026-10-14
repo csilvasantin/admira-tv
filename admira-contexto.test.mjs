@@ -32,7 +32,7 @@ class Nodo {
 function clases(...ini) { const s = new Set(ini); return { contains: (c) => s.has(c), add: (c) => s.add(c), remove: (c) => s.delete(c) }; }
 
 /* Un navegador mínimo: carga de scripts (shared/contexto.js de verdad, AdmiraMarca simulado), eventos y fetch. */
-function navegador({ href = "https://morfeo-5979-contexto.admira-tv.pages.dev/parrilla/", local = {}, rolServidor = {}, guardado = {}, experto = true } = {}) {
+function navegador({ href = "https://morfeo-5979-contexto.admira-tv.pages.dev/parrilla/", local = {}, rolServidor = {}, guardado = {}, experto = true, tokenCaido = 0 } = {}) {
   const llamadas = [];
   const servidor = { ctx: new Map(Object.entries(guardado)) }; // email → {marca, proyecto}
   const emailDe = (auth) => ({ "Bearer tok-superuser": "csilvasantin@gmail.com", "Bearer tok-reader": "reader@preview.invalid", "Bearer tok-prod": "csilvasantin@gmail.com" })[auth || ""] || "";
@@ -42,7 +42,7 @@ function navegador({ href = "https://morfeo-5979-contexto.admira-tv.pages.dev/pa
     const headers = new Headers(init.headers);
     llamadas.push({ url: url.href, method: init.method || "GET", auth: headers.get("Authorization") || "", body: init.body || "" });
     if (url.pathname === "/preview/session") return json({ ok: true, token: "tok-" + url.searchParams.get("role"), exp: Math.floor(Date.now() / 1000) + 900 });
-    if (url.pathname === "/auth/api-token") return json({ ok: true, token: "tok-prod", exp: Math.floor(Date.now() / 1000) + 900 });
+    if (url.pathname === "/auth/api-token") return tokenCaido ? json({ ok: false, error: "api-token-unconfigured" }, tokenCaido) : json({ ok: true, token: "tok-prod", exp: Math.floor(Date.now() / 1000) + 900 });
     const email = emailDe(headers.get("Authorization"));
     const superusuario = email === "csilvasantin@gmail.com" && rolServidor[email] !== "lector";
     if (url.pathname === "/ctx") {
@@ -173,6 +173,15 @@ test("en producción usa api.admira.store y /auth/api-token, y la lectura filtra
   assert.equal(lecturas.length, 1, "una sola lectura, sin bucle");
   assert.equal(new URL(lecturas[0].url).searchParams.get("proyecto"), "starbucks");
   assert.ok(!llamadas.some((c) => c.url.startsWith(SANDBOX)), "nada del sandbox en producción");
+});
+
+test("en producción, sin la API configurada (503), /proyecto explica que aún no está activo y /marca funciona", async () => {
+  const { window } = navegador({ href: "https://admira.tv/parrilla/", tokenCaido: 503 });
+  const out = salida();
+  assert.equal((await window.AdmiraContextoTv.ejecutar("/proyecto starbucks", out)).ok, false);
+  assert.match(out.lineas.join("\n"), /todavía no está activo en producción/);
+  assert.equal((await window.AdmiraContextoTv.ejecutar("/marca lumbre", out)).ok, true);
+  assert.match(out.lineas.join("\n"), /Marca: lumbre/);
 });
 
 test("solo se filtran lecturas GET de pantallas, playlists y contenidos", () => {
