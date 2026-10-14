@@ -87,11 +87,6 @@
       (doc.head || html).appendChild(s);
     });
   }
-  if (!doc.querySelector('link[data-admira-marca-tv]')) {
-    var css = doc.createElement('link');
-    css.rel = 'stylesheet'; css.href = '/marca-blanca-tv.css' + V; css.setAttribute('data-admira-marca-tv', '');
-    (doc.head || html).appendChild(css);
-  }
   var cargaContexto = G.AdmiraContexto ? Promise.resolve(true) : cargar('/shared/contexto.js' + V);
   var cargaMarca = G.AdmiraMarca ? Promise.resolve(true) : cargar('/shared/marca-blanca.js' + V, {'data-plataforma': 'tv'});
   Promise.all([cargaContexto, cargaMarca]).then(function () { resolverModulo(G.AdmiraContexto || null); });
@@ -287,32 +282,6 @@
     if (!p || esperar || !lecturasVistas || CFG.recargar === false) return;
     try { if (sessionStorage.getItem('admira_ctx_recarga') === p) return; sessionStorage.setItem('admira_ctx_recarga', p); } catch (_) { return; }
     location.reload();
-  });
-
-  // El cargador común coloca el logo en la barra de admira.studio; aquí, en la de admira.tv.
-  function anclaBarra() {
-    var a = doc.querySelector('header.yk-head a.brand, header.yk-head .yk-wordmark, header.yk-head a.yk-logo, header.yk-bar a.yk-logo, header.yk-bar .yk-wordmark, header.admtop .admbrand');
-    return a || null;
-  }
-  doc.addEventListener('marcablanca:aplicada', function (e) {
-    if (!e.detail || e.target !== html) return;
-    var ancla = anclaBarra(), m = e.detail.marca || {};
-    if (!ancla) return;
-    var slot = doc.getElementById('mb-bar-logo');
-    if (!slot) { slot = doc.createElement('a'); slot.id = 'mb-bar-logo'; slot.className = 'mb-bar-logo mb-logo'; }
-    slot.textContent = '';
-    slot.href = ancla.getAttribute('href') || '/';
-    slot.setAttribute('aria-label', (m.nombre || m.id || '') + T(' · volver al inicio', ' · back to home'));
-    var logo = m.logo;
-    if (logo && logo.imagen && !logo.svg) {
-      var img = doc.createElement('img'); img.src = logo.imagen; img.alt = logo.alt || m.nombre || ''; img.className = 'mb-logo-img'; img.decoding = 'async';
-      slot.appendChild(img);
-    } else slot.textContent = m.nombre || m.id || '';
-    if (slot.nextElementSibling !== ancla) ancla.parentNode.insertBefore(slot, ancla);
-  });
-  doc.addEventListener('admira:marca', function (e) {
-    if (e.detail) return;
-    var slot = doc.getElementById('mb-bar-logo'); if (slot) slot.remove();
   });
 
   G.AdmiraContextoTv = Object.freeze({

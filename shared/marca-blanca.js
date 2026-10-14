@@ -12,6 +12,9 @@
 // 8 s como mucho) y solo entonces carga marcablanca.css + marcablanca.js (plataforma
 // «studio», sin arranque automático) y marca-blanca.css (los ajustes propios de Admira Studio)
 // y la aplica. Si algo falla, Admira Studio se queda como estaba. Ver docs/marca-blanca.md.
+//
+// Encargo #5979: el mismo fichero viste las cinco webs de la suite. Cada una tiene su entrada en WEBS (abajo):
+// hoja puente propia (marca-blanca-<web>.css, bajo data-mb-web), variante del catálogo y anclas de su chrome.
 (function (root) {
   'use strict';
 
@@ -20,6 +23,40 @@
   const platformScript = typeof document !== 'undefined' ? document.currentScript : null;
   const hostPlatform = typeof location !== 'undefined' ? location.hostname.replace(/^www\./, '').split('.').pop() : 'studio';
   const PLATAFORMA = (platformScript && platformScript.dataset.plataforma) || (['studio','store','tv','app','biz'].includes(hostPlatform) ? hostPlatform : 'studio');
+  // Cada web de la suite viste la marca sobre SU chrome (encargo #5979). Por web:
+  //   catalogo  variante del catálogo de admiranext.com que pinta (la que ya usaba cada web antes del cargador común);
+  //   css       hoja puente de esa web (todas sus reglas van bajo :root[data-mb-marca][data-mb-web="<web>"]);
+  //   logo      selectores, por orden, del elemento delante del que va el logo del cliente; si no hay ninguno,
+  //   tras      el logo va detrás de este, seguido de «powered by <powered>»;
+  //   volver    dónde va «Volver a Admira» (dentro: detrás de volverTras o delante de volverAntes); foco al salir.
+  // Una web nueva se añade aquí y con su hoja marca-blanca-<web>.css. Una página puede cambiar las anclas con
+  // data-ancla-logo / data-ancla-tras / data-ancla-volver en el <script> (y la variante con data-catalogo).
+  const WEBS = {
+    studio: {catalogo: 'studio', css: 'marca-blanca.css', powered: 'Admira Studio',
+      logo: ['.pf-topbar .pf-topbar-brand'], volver: '.rail-left', volverTras: ':scope > .rail-hd', foco: '.pf-window-left, .pix-nav-icon-menu'},
+    store: {catalogo: 'store', css: 'marca-blanca-store.css', powered: 'XpaceOS',
+      logo: ['#topBar .xs-brand'], tras: '#topBar #pfOptions', volver: '#xsOptions, nav.quad-menu.quad-left', volverTras: ':scope > .qm-title', foco: '#pfOptions'},
+    tv: {catalogo: 'store', css: 'marca-blanca-tv.css', powered: 'Admira.tv',
+      logo: ['header.yk-head a.brand', 'header.yk-head .yk-wordmark', 'header.yk-head a.yk-logo', 'header.yk-head .yk-brand', 'header.yk-bar a.yk-logo', 'header.yk-bar .yk-wordmark', 'header.admtop .admbrand'],
+      tras: 'header.yk-bar .yk-btn-opts, header.admtop .admtog', volver: '.yk-rail-left, #admRail, aside.admrail, .adm-opciones', volverTras: ':scope > .qm-title', foco: '#ykExpertToggle, #admExpTog'},
+    app: {catalogo: 'yokup', css: 'marca-blanca-app.css', powered: 'Yokup',
+      logo: ['#yk-frame .yk-bar .yk-logo'], volver: '#yk-rail-left, .yk-rail-left', volverTras: ':scope > .yk-hd', foco: '.yk-ico[data-yk-panel="left"]'},
+    biz: {catalogo: 'app', css: 'marca-blanca-biz.css', powered: 'Admira.biz',
+      logo: ['body > header.galaxy-shell .logo .logo-home', 'body > header .logo .logo-home'], volver: '#header-navigation', volverAntes: '.lang-switch', foco: '#header-menu-toggle'},
+  };
+  const WEB = WEBS[PLATAFORMA] ? PLATAFORMA : 'studio';
+  function chromeDe(web, dataset) {
+    const base = WEBS[web] || WEBS.studio, d = dataset || {};
+    const lista = v => String(v).split(',').map(x => x.trim()).filter(Boolean);
+    return Object.assign({}, base, {
+      catalogo: d.catalogo || base.catalogo,
+      logo: d.anclaLogo ? lista(d.anclaLogo) : base.logo,
+      tras: d.anclaTras || base.tras || '',
+      volver: d.anclaVolver || base.volver || '',
+    });
+  }
+  const CHROME = chromeDe(WEB, platformScript && platformScript.dataset);
+  const CATALOGO = CHROME.catalogo;
   const SESSION_KEY = 'mb:marca';        // la misma clave que usa el cargador común
   const MODE_KEY = 'mb:modo';
   const ID_RE = /^[a-z0-9][a-z0-9-]{0,40}$/;
@@ -169,7 +206,7 @@
     };
   }
 
-  const api = {BASE, PLATAFORMA, SESSION_KEY, MODE_KEY, SEED, OFF, ID_RE, TIMEOUT, fold, isOff, decide, decideMode, looksLikeUrl, normalizeUrl, analyzerUrl, brandUrl, parseArg, parseColor, contrast, pick, shellTokens};
+  const api = {BASE, PLATAFORMA, WEB, WEBS, CATALOGO, chromeDe, SESSION_KEY, MODE_KEY, SEED, OFF, ID_RE, TIMEOUT, fold, isOff, decide, decideMode, looksLikeUrl, normalizeUrl, analyzerUrl, brandUrl, parseArg, parseColor, contrast, pick, shellTokens};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof document === 'undefined' || root.AdmiraMarca) return;
 
@@ -178,7 +215,7 @@
   const script = doc.currentScript;
   // Los ajustes propios viajan con el mismo sello (?v=) que este fichero.
   const LOCAL_CSS = (() => {
-    try { const u = new URL('marca-blanca.css', script.src); u.search = new URL(script.src).search; return u.href; } catch (_) { return '/marca-blanca.css'; }
+    try { const u = new URL(CHROME.css, script.src); u.search = new URL(script.src).search; return u.href; } catch (_) { return '/' + CHROME.css; }
   })();
   const session = (() => { try { return root.sessionStorage; } catch (_) { return null; } })();
   const store = {
@@ -233,7 +270,7 @@
     if (!cssPromise) {
       cssPromise = Promise.all([
         timeout(addLink(BASE + 'marcablanca.css'), TIMEOUT, 'marcablanca.css').catch(() => null),
-        timeout(addLink(LOCAL_CSS), TIMEOUT, 'marca-blanca.css'),
+        timeout(addLink(LOCAL_CSS), TIMEOUT, CHROME.css),
       ]);
       cssPromise.catch(() => { cssPromise = null; });
     }
@@ -246,7 +283,7 @@
         const s = doc.createElement('script');
         s.src = BASE + 'marcablanca.js';
         s.async = true;
-        s.setAttribute('data-mb-plataforma', PLATAFORMA);
+        s.setAttribute('data-mb-plataforma', CATALOGO);
         s.setAttribute('data-mb-modo', modo || 'marca');
         s.setAttribute('data-mb-auto', 'false');   // la aplica Admira Studio cuando ha comprobado el catálogo
         s.setAttribute('data-admira-marca', '');
@@ -281,40 +318,75 @@
     return catalogPromise;
   }
 
-  // ─── Lo que Admira Studio añade a la marca: logo en la barra, «Volver a Admira», título ───
-  // La barra de las 4 bandas (.pf-topbar) la montan cuadratura.js o site-nav.js después de
-  // este fichero, y site-nav.js rehace la cabecera de algunas familias: el logo y el botón
-  // se colocan cuando la barra existe y se reponen si la página la vuelve a montar.
+  // ─── Lo que cada web añade a la marca: logo en su barra, «Volver a Admira», título ───
+  // Las anclas salen de WEBS (CHROME). Las barras las montan scripts de cada web después de este fichero y
+  // algunas se rehacen: el logo y el botón se colocan cuando existen y se reponen si la página los vuelve a montar.
+  function anclaLogo() {
+    for (const sel of CHROME.logo) { const el = doc.querySelector(sel); if (el) return {before: el}; }
+    const tras = CHROME.tras && doc.querySelector(CHROME.tras);
+    return tras ? {after: tras} : null;
+  }
+  function enSuSitio(slot, at) {
+    if (!slot || !at) return false;
+    if (at.before) return slot.nextElementSibling === at.before;
+    const next = slot.nextElementSibling;
+    return slot.previousElementSibling === at.after && !!next && next.id === 'mb-powered';
+  }
   function logoSlot(create) {
     let slot = doc.getElementById('mb-bar-logo');
     if (!create) return slot;
-    const home = doc.querySelector('.pf-topbar .pf-topbar-brand');
-    if (!home) return slot;
-    if (slot && slot.nextElementSibling === home) return slot;
+    const at = anclaLogo();
+    if (!at || enSuSitio(slot, at)) return slot;
     if (!slot) {
       slot = doc.createElement('a');
       slot.id = 'mb-bar-logo';
       slot.className = 'mb-bar-logo mb-logo';
       slot.setAttribute('data-mb-logo', '');
+      // Si la marca de la web es un botón (en admira.biz reencuadra el mapa), el logo hace lo mismo.
+      slot.addEventListener('click', event => {
+        const home = (anclaLogo() || {}).before;
+        if (home && home.tagName !== 'A') { event.preventDefault(); home.click(); }
+      });
     }
-    slot.href = home.getAttribute('href') || '/';
-    home.parentNode.insertBefore(slot, home);
+    if (at.before) {
+      // El logo lleva al inicio, como la marca de la web.
+      slot.href = at.before.getAttribute('href') || '/';
+      slot.removeAttribute('role');
+      at.before.parentNode.insertBefore(slot, at.before);
+      const p = doc.getElementById('mb-powered'); if (p) p.remove();
+    } else {
+      // Barra sin marca escrita (p. ej. el gemelo): el logo es solo la identidad del cliente.
+      slot.removeAttribute('href');
+      slot.setAttribute('role', 'img');
+      at.after.after(slot);
+      let powered = doc.getElementById('mb-powered');
+      if (!powered) {
+        powered = doc.createElement('span');
+        powered.id = 'mb-powered';
+        powered.className = 'mb-powered';
+        powered.textContent = CHROME.powered;
+      }
+      slot.after(powered);
+    }
     return slot;
   }
   function backButton(create) {
     let b = doc.getElementById('mb-volver');
     if (b || !create) return b;
-    const rail = doc.querySelector('.rail-left');
+    const rail = CHROME.volver && doc.querySelector(CHROME.volver);
     if (!rail) return null;
     b = doc.createElement('button');
     b.type = 'button';
     b.id = 'mb-volver';
     b.className = 'mb-volver';
+    b.dataset.shellTextEs = 'Volver a Admira';
+    b.dataset.shellTextEn = 'Back to Admira';
     b.textContent = T('Volver a Admira', 'Back to Admira');
-    b.addEventListener('click', () => { desactivar(); const t = doc.querySelector('.pf-window-left, .pix-nav-icon-menu'); if (t) t.focus(); });
-    // Arriba del todo, bajo la cabecera «Opciones»: a la vista sin desplazar el raíl.
-    const hd = rail.querySelector(':scope > .rail-hd');
-    rail.insertBefore(b, hd ? hd.nextSibling : rail.firstChild);
+    b.addEventListener('click', () => { desactivar(); const t = CHROME.foco && doc.querySelector(CHROME.foco); if (t) t.focus(); });
+    // Arriba del todo, bajo el título del raíl (o delante de lo que diga la web): a la vista sin desplazar.
+    const antes = CHROME.volverAntes && rail.querySelector(CHROME.volverAntes);
+    const hd = !antes && CHROME.volverTras && rail.querySelector(CHROME.volverTras);
+    rail.insertBefore(b, antes || (hd ? hd.nextSibling : rail.firstChild));
     return b;
   }
   function paintSlot() {
@@ -336,16 +408,15 @@
         slot.append(img);
       } else if (logo && logo.svg && root.MarcaBlanca.aplicar) {
         slot.textContent = current.nombre;
-        root.MarcaBlanca.aplicar(current.id, {objetivo: slot, plataforma: PLATAFORMA, modo: current.modo, favicon: false}).catch(() => {});
+        root.MarcaBlanca.aplicar(current.id, {objetivo: slot, plataforma: CATALOGO, modo: current.modo, favicon: false}).catch(() => {});
       } else slot.textContent = current.nombre;   // marca sin logo
     }
   }
   // ¿Falta algo? (la barra o el raíl de Opciones existen, pero sin el logo o sin el botón)
   function chromeMissing() {
-    const home = doc.querySelector('.pf-topbar .pf-topbar-brand');
-    const slot = doc.getElementById('mb-bar-logo');
-    if (home && !(slot && slot.nextElementSibling === home)) return true;
-    return !!doc.querySelector('.rail-left') && !doc.getElementById('mb-volver');
+    const at = anclaLogo();
+    if (at && !enSuSitio(doc.getElementById('mb-bar-logo'), at)) return true;
+    return !!(CHROME.volver && doc.querySelector(CHROME.volver)) && !doc.getElementById('mb-volver');
   }
   function ensureChrome() {
     chromeQueued = false;
@@ -410,7 +481,7 @@
       if (prop.startsWith('--mb-') || prop.startsWith('--mbx-')) html.style.removeProperty(prop);
     }
     html.style.removeProperty('color-scheme');
-    for (const a of ['data-mb-marca', 'data-mb-modo', 'data-mb-plataforma', 'data-mb-ejemplo']) html.removeAttribute(a);
+    for (const a of ['data-mb-marca', 'data-mb-modo', 'data-mb-plataforma', 'data-mb-ejemplo', 'data-mb-web']) html.removeAttribute(a);
   }
 
   /**
@@ -433,7 +504,8 @@
         const slot = logoSlot(true);
         if (slot && !previous) slot.hidden = true;
         else if (slot) slot.replaceChildren();
-        return MB.aplicar(id, {plataforma: PLATAFORMA, modo}).then(detail => ({detail, m}));
+        html.setAttribute('data-mb-web', WEB);
+        return MB.aplicar(id, {plataforma: CATALOGO, modo}).then(detail => ({detail, m}));
       })
       .then(({detail, m}) => {
         const marca = detail.marca || m;
@@ -467,6 +539,7 @@
     unwatchChrome();
     clearRoot();
     const slot = logoSlot(false); if (slot) slot.remove();
+    const powered = doc.getElementById('mb-powered'); if (powered) powered.remove();
     const b = backButton(false); if (b) b.remove();
     restoreTitle();
     restoreSnapshot();
