@@ -255,5 +255,10 @@
     "Stock: Proyecto → Circuito → Ubicación → Dispositivo, con destinos reales.",
     "Guardar y distribuir añade a la playlist actual conservando las piezas y evitando duplicados.",
     "Las tarjetas muestran Playlist y sus destinos al pasar el cursor."
+  ],
+  "v.14.10.2026.r9.13:27": [
+    "Bugito: el mando de laboratorio puede provocar tres incidencias más en un player virtual-lab-*: cambio de resolución (fault-canvas), popup encima del contenido (fault-popup) y pantalla a medio abrir (fault-half); fault-clear las retira.",
+    "El player declara en /signage/now lo que mide en pantalla: el lienzo (canvas, a pantalla completa), el % visible y el % tapado por capas ajenas.",
+    "Cada fallo caduca solo a los 30 minutos y se puede sumar a los demás."
   ]
 }

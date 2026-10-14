@@ -50,6 +50,7 @@
 <!-- BUILD canal v.11.09.2026.r65.18:58 · PUENTE DESDE ADMIRA.TV: bridgeOriginAllowed admite https://admira.tv y https://www.admira.tv, y el postMessage acepta source 'admira-tv-panel' como alias de 'xpaceos-robot-cli' (panel Xtore → iframe del canal). -->
 <!-- BUILD canal v.16.09.2026.r66.09:23 · LA EDAD DESCONOCIDA YA NO ES «ADULTO» (encargo #3355 de Morfeo · FLT-100491): el consumidor del bus lee primero decision.age_seg —el vocabulario de Pixeria que casan las reglas age de la matriz— y si no lo hay traduce label.age_band con AUD_AGE_MAP. Lo que no se reconoce (unknown, vacío, valor nuevo) viaja como null, no como adulto: las reglas de edad no casan y manda el catch-all, en vez de emitir contenido de adulto sobre una persona sin clasificar. -->
 <!-- CREADOR DE INCIDENCIAS (DCL-34d5bbccb9cc227bb752a419) · FORMATO GIRADO: fault-rotate[-90|-180|-270] / fault-clear por /locations/cmd, sólo dirigidas a ESTA pantalla (el backend las limita a pantallas de laboratorio) y con caducidad de 30 min; se suma al giro del operador sin tocarlo. /signage/now declara display.paintedRotation y display.painted medidos del DOM, sin marca de prueba. -->
+<!-- BUGITO (DCL-5da4653d859552490fd5ae1d) · FALLOS DE SUPERFICIE del banco de pruebas Bugito: fault-canvas (cambio de resolución: lienzo de proporción contraria), fault-popup (aviso del sistema encima) y fault-half (pantalla a medio abrir), con las mismas salvaguardas y caducidad que fault-rotate; fault-clear los retira todos. /signage/now declara display.canvas, display.visible y display.overlay medidos del DOM, sin marca de prueba; el panel de un player virtual es su ventana. -->
 <!-- Chrome "portería" SOLO al navegar la página; NO cuando se emite/empotra (embed=mupi/clean=1/chrome=0),
      para no ensuciar la emisión a pantalla completa. -->
 <script>(function(){try{var p=new URLSearchParams(location.search);
@@ -66,9 +67,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=14.10.2026.r8.1248"></script>
+<script src="xpl-runtime.js?v=14.10.2026.r9.1327"></script>
 <script>
-  window.ADMIRA_VERSION='v.14.10.2026.r8.12:48';
+  window.ADMIRA_VERSION='v.14.10.2026.r9.13:27';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -175,6 +176,19 @@
   .screen-fit #wrap{ padding:0; gap:0; }
   .screen-fit #mupi{ width:100vw; height:100vh; max-width:none; max-height:none; border-radius:0; box-shadow:none; }
   .screen-fit .skel-stage{ width:100%; height:100%; max-height:none; aspect-ratio:auto; border:0; border-radius:0; }
+  /* Bugito (DCL-5da4653d…): fallos de superficie del banco de pruebas. «A medio abrir»: el contenido
+     sólo ocupa la mitad de arriba y abajo asoma la persiana (fondo del propio marco, no una capa). */
+  #mupi.fault-half #stage{ bottom:50%; overflow:hidden; }
+  #mupi.fault-half{ background:repeating-linear-gradient(180deg,#2b313a 0 16px,#12161b 16px 21px); }
+  #faultPopup{ position:fixed; z-index:2147483647; left:50%; top:50%; transform:translate(-50%,-50%); width:58vw; min-height:46vh;
+    display:flex; flex-direction:column; background:#eceff3; color:#1b2027; border-radius:1.2vmin; overflow:hidden;
+    box-shadow:0 2vmin 6vmin rgba(0,0,0,.6); font:clamp(11px,2.2vmin,22px)/1.35 -apple-system,"Segoe UI",Roboto,sans-serif; }
+  #faultPopup .fp-bar{ display:flex; justify-content:space-between; padding:1.2vmin 1.8vmin; background:#d5dae1; font-weight:600; }
+  #faultPopup .fp-body{ flex:1; padding:3vmin 3.2vmin; display:flex; flex-direction:column; gap:1.4vmin; }
+  #faultPopup .fp-body b{ font-size:1.5em; }
+  #faultPopup .fp-btns{ display:flex; justify-content:flex-end; gap:1.6vmin; padding:2vmin 3vmin; }
+  #faultPopup .fp-btns span{ padding:1vmin 2.4vmin; border-radius:.8vmin; background:#fff; border:1px solid #b8c0cb; }
+  #faultPopup .fp-btns .fp-pri{ background:#2f6fe4; color:#fff; border-color:#2f6fe4; }
   /* MODO EXTENDIDO: cada player enseña una tesela del mismo lienzo. */
   #stage.extended-tile{overflow:hidden;display:block}
   #stage.extended-tile>video,#stage.extended-tile>img{
@@ -412,7 +426,7 @@
   <aside id="chan"></aside>
 </div>
 
-<script src="/assets/player-pairing.js?v=14.10.2026.r8.1248"></script>
+<script src="/assets/player-pairing.js?v=14.10.2026.r9.1327"></script>
 <script>
 // Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
 // directo (pub-…r2.dev): más resiliente y evita bloqueos de DNS/filtrado en algunas
@@ -1056,9 +1070,12 @@ function applyDisplayRotation(delta){ return setDisplayRotation(displayRotation+
 // compara con la orientación que el plano espera de esa pantalla.
 const FAULT_KEY='adtv_fault:'+(scr.screen||scr.circuit||'unbound');
 const FAULT_TTL_MS=30*60000;
+// Bugito (DCL-5da4653d859552490fd5ae1d): fallos de superficie, ver «BUGITO · fallos de superficie».
+const SURFACE_FAULTS=['canvas','popup','half'];
 function faultCommand(raw){
   const cmd=String(raw||'').trim().replace(/^\//,'').split(/\s+/)[0].toLowerCase().replace(/^fault[:_]/,'fault-');
   if(cmd==='fault-clear') return {op:'clear'};
+  if(cmd.indexOf('fault-')===0&&SURFACE_FAULTS.includes(cmd.slice(6))) return {op:cmd.slice(6)};
   const m=/^fault-rotate(?:-(90|180|270))?$/.exec(cmd);
   return m?{op:'rotate',angle:Number(m[1]||90)}:null;
 }
@@ -1085,9 +1102,13 @@ function paintedOrientation(angle,panelW,panelH){ const quarter=(Number(angle)||
 function measuredPaint(){
   let angle=effectiveRotation();
   try{ const mupi=$('mupi'); if(mupi){ const t=getComputedStyle(mupi).transform; angle=(!t||t==='none')?0:transformAngle(t); } }catch(_){}
-  const w=(window.screen&&screen.width)||innerWidth, h=(window.screen&&screen.height)||innerHeight;
-  return {paintedRotation:angle, painted:paintedOrientation(angle,w,h)};
+  // Un player virtual vive en una ventana o un iframe: su panel es esa ventana, no el monitor que la aloja
+  // (un iframe 16:9 en un móvil vertical pinta en horizontal aunque `screen` sea vertical).
+  const virtual=typeof VIRTUAL_PLAYER!=='undefined'&&VIRTUAL_PLAYER;
+  const w=virtual?innerWidth:((window.screen&&screen.width)||innerWidth), h=virtual?innerHeight:((window.screen&&screen.height)||innerHeight);
+  return {paintedRotation:angle, painted:paintedOrientation(angle,w,h), ...measuredSurface()};
 }
+const MEASURED_KEYS=['paintedRotation','painted','canvas','overlay','visible'];
 // #mupi anima el giro (transition .35 s en web; el player macOS lo quita): mientras dura, el
 // transform calculado aún es el de antes. Se vuelve a MEDIR al terminar y, si cambió, se publica.
 function remeasurePaint(){
@@ -1095,7 +1116,7 @@ function remeasurePaint(){
   remeasurePaint._t=setTimeout(()=>{ try{
     if(typeof DEVICE_TELEMETRY==='undefined'||!DEVICE_TELEMETRY||!DEVICE_TELEMETRY.display) return;
     const m=measuredPaint(), d=DEVICE_TELEMETRY.display;
-    if(d.paintedRotation===m.paintedRotation&&d.painted===m.painted) return;
+    if(MEASURED_KEYS.every(k=>JSON.stringify(d[k])===JSON.stringify(m[k]))) return;
     Object.assign(d,m); if(_nowItem) _postNow(_nowItem);
   }catch(_){} },450);
 }
@@ -1109,15 +1130,144 @@ function setInjectedFault(f){
   armFaultExpiry();
   setDisplayRotation(displayRotation);   // re-pinta, re-encuadra y publica la telemetría al momento
 }
+// ── BUGITO · fallos de superficie (DCL-5da4653d859552490fd5ae1d) ──────────────────────────
+// El banco de pruebas Bugito (admira.biz/bugito.html, ▤ Creador de incidencias) manda por la misma
+// cola, con las mismas salvaguardas que fault-rotate, tres fallos más que se pueden sumar entre sí:
+//  · fault-canvas «cambio de resolución»: el lienzo pasa a la proporción contraria a la del panel
+//                 (una pantalla horizontal emite en un lienzo vertical con bandas, y al revés);
+//  · fault-popup  «popup encima del contenido»: una ventana de aviso del sistema tapa la emisión;
+//  · fault-half   «pantalla a medio abrir»: el contenido sólo ocupa la mitad de arriba del lienzo.
+// Cada uno caduca solo a los FAULT_TTL_MS y fault-clear los retira todos (con el giro). La
+// telemetría NO dice qué fallo hay: declara lo que el player MIDE en el DOM —display.canvas
+// (caja del lienzo), display.visible (% del lienzo con contenido) y display.overlay (% de la
+// emisión tapado por capas ajenas al player)— y el detector lo compara con lo que espera el plano.
+const SURFACE_FAULT_KEY='adtv_fault_surface:'+(scr.screen||scr.circuit||'unbound');
+const SURFACE_LABEL={canvas:'cambio de resolución',popup:'popup encima',half:'pantalla a medio abrir'};
+function surfaceFaultsActive(raw,now){
+  const out={};
+  if(!raw||typeof raw!=='object'||Array.isArray(raw)) return out;
+  for(const k of SURFACE_FAULTS){
+    const f=raw[k]; if(!f||typeof f!=='object') continue;
+    const at=Number(f.at), until=Number(f.until);
+    // Como faultActive: un `at` del futuro (reloj adelantado o registro manipulado) alargaría el fallo.
+    if(Number.isFinite(at)&&Number.isFinite(until)&&until>now&&at<=now+60000&&until-at<=FAULT_TTL_MS) out[k]={at,until};
+  }
+  return out;
+}
+let surfaceFaults=(()=>{ try{ return surfaceFaultsActive(JSON.parse(LS(SURFACE_FAULT_KEY,'null')),Date.now()); }catch(_){ return {}; } })();
+function surfaceFaultOn(k){ try{ const f=surfaceFaults[k]; return !!(f&&f.until>Date.now()); }catch(_){ return false; } }
+// Rectángulo visible de un elemento (recortado a la ventana), en px CSS.
+function visibleRect(el){
+  const r=el.getBoundingClientRect(), vw=innerWidth, vh=innerHeight;
+  return {l:Math.max(0,r.left),t:Math.max(0,r.top),r:Math.min(vw,r.right),b:Math.min(vh,r.bottom)};
+}
+function rectArea(r){ return Math.max(0,r.r-r.l)*Math.max(0,r.b-r.t); }
+// % de la emisión tapado: rejilla de 32×18 puntos sobre lo que se ve de #stage; un punto está tapado
+// si lo que queda encima no es del player (fuera de #wrap: una ventana o capa ajena).
+function overlayPct(rect,hit,isPlayer){
+  const W=rect.r-rect.l, H=rect.b-rect.t; if(!(W>0&&H>0)) return 0;
+  let tapados=0, total=0;
+  for(let iy=0;iy<18;iy++) for(let ix=0;ix<32;ix++){
+    total++; const el=hit(rect.l+W*(ix+.5)/32, rect.t+H*(iy+.5)/18);
+    if(el&&!isPlayer(el)) tapados++;
+  }
+  return Math.round(100*tapados/total);
+}
+// Capas ajenas al player colgadas de <body> y a la vista (la ventana del sistema, un aviso…). Sin ninguna,
+// nada puede tapar la emisión (ALWAYS ON TOP oculta las demás): el % tapado es 0 sin hacer hit-testing.
+function capasAjenas(wrap){
+  const out=[], kids=(document.body&&document.body.children)||[];
+  for(let i=0;i<kids.length;i++){ const n=kids[i];
+    if(!n||n===wrap||/^(SCRIPT|STYLE|LINK|TEMPLATE|NOSCRIPT|META)$/.test(n.tagName||'')) continue;
+    try{ const cs=getComputedStyle(n); if(cs.display==='none'||cs.visibility==='hidden') continue; }catch(_){}
+    out.push(n);
+  }
+  return out;
+}
+// Tamaño DESTINO del lienzo (el que fitMupi fija en el estilo de #mupi), en el sentido del panel: no depende
+// de la transición de .35 s ni del transform del giro, así que dos medidas seguidas no bailan.
+function lienzoDestino(mupi){
+  const w=parseFloat(mupi.style.width), h=parseFloat(mupi.style.height);
+  if(!(w>0&&h>0)) return null;
+  const quarter=(typeof effectiveRotation==='function'?effectiveRotation():0)%180!==0;
+  return quarter?{w:Math.round(h),h:Math.round(w)}:{w:Math.round(w),h:Math.round(h)};
+}
+function measuredSurface(){
+  if(typeof document==='undefined'||!document.body||!document.documentElement) return {};
+  try{
+    const mupi=$('mupi'), stage=$('stage'), wrap=$('wrap'); if(!mupi||!stage||!wrap) return {};
+    const out={};
+    // visible: área de #stage dentro del lienzo, con medidas de maquetación (sin transform ni transición).
+    const mA=(mupi.offsetWidth||0)*(mupi.offsetHeight||0);
+    if(mA>0) out.visible=Math.round(100*Math.min(1,((stage.offsetWidth||0)*(stage.offsetHeight||0))/mA));
+    // canvas: sólo a pantalla completa (fit fill|cover); en editorial el marco sigue a cada pieza y no se declara.
+    if(document.documentElement.classList.contains('screen-fit')){ const c=lienzoDestino(mupi); if(c) out.canvas=c; }
+    // overlay: hit-testing (rejilla 32×18) sólo si hay alguna capa ajena a la vista.
+    const ajenas=capasAjenas(wrap);
+    if(!ajenas.length) out.overlay=0;
+    else if(document.elementFromPoint){
+      const m=visibleRect(mupi), st=visibleRect(stage);
+      const dentro={l:Math.max(m.l,st.l),t:Math.max(m.t,st.t),r:Math.min(m.r,st.r),b:Math.min(m.b,st.b)};
+      const root=document.documentElement, body=document.body;
+      out.overlay=overlayPct(dentro,(x,y)=>document.elementFromPoint(x,y),el=>el===root||el===body||wrap.contains(el));
+    }
+    return out;
+  }catch(_){ return {}; }
+}
+function paintSurfaceFaults(){
+  if(typeof document==='undefined'||!document.body) return;
+  try{
+    const mupi=$('mupi'); if(mupi&&mupi.classList) mupi.classList.toggle('fault-half',surfaceFaultOn('half'));
+    let pop=document.getElementById('faultPopup');
+    if(surfaceFaultOn('popup')){
+      if(!pop){
+        // Simula una ventana del SISTEMA (fuera del control del player): por eso se salta el vigilante
+        // ALWAYS ON TOP (data-adm-ok) y queda por encima de #wrap (2147483646). Lo que el player mide
+        // —el % tapado— es lo que vería un panel con un aviso del SO encima.
+        pop=document.createElement('div'); pop.id='faultPopup'; pop.setAttribute('data-adm-ok','1'); pop.setAttribute('role','alertdialog'); pop.setAttribute('aria-label','Aviso del sistema');
+        pop.innerHTML='<div class="fp-bar"><span>⚠ Aviso del sistema</span><span class="fp-x">✕</span></div>'+
+          '<div class="fp-body"><b>Actualización pendiente</b><p>Este equipo necesita reiniciarse para terminar de instalar las actualizaciones.</p></div>'+
+          '<div class="fp-btns"><span>Más tarde</span><span class="fp-pri">Reiniciar ahora</span></div>';
+        document.body.appendChild(pop);
+      }
+    } else if(pop) pop.remove();
+  }catch(_){}
+}
+function armSurfaceExpiry(){
+  clearTimeout(armSurfaceExpiry._t);
+  const ks=Object.keys(surfaceFaults); if(!ks.length) return;
+  const next=Math.min(...ks.map(k=>surfaceFaults[k].until));
+  armSurfaceExpiry._t=setTimeout(()=>{
+    const quedan=surfaceFaultsActive(surfaceFaults,Date.now());
+    if(Object.keys(quedan).length===ks.length){ armSurfaceExpiry(); return; }
+    setSurfaceFaults(quedan); if(!Object.keys(quedan).length) flashCli('✓ fin de la prueba de laboratorio');
+  },Math.max(1000,next-Date.now()));
+}
+function setSurfaceFaults(next){
+  surfaceFaults=surfaceFaultsActive(next,Date.now());
+  try{ if(Object.keys(surfaceFaults).length) save(SURFACE_FAULT_KEY,JSON.stringify(surfaceFaults)); else localStorage.removeItem(SURFACE_FAULT_KEY); }catch(_){}
+  armSurfaceExpiry();
+  paintSurfaceFaults();
+  try{ fitMupi._retry=0; fitMupi(); }catch(_){}
+  // Medida al momento (el popup ya está) y otra al terminar la transición del marco (.35 s).
+  try{ if(DEVICE_TELEMETRY&&DEVICE_TELEMETRY.display) Object.assign(DEVICE_TELEMETRY.display,measuredPaint()); }catch(_){}
+  try{ if(_nowItem) setTimeout(()=>_postNow(_nowItem),0); }catch(_){}
+  remeasurePaint();
+}
 function applyFaultCommand(fault,c){
   // Nunca por broadcast del circuito: sólo la orden dirigida a ESTA pantalla.
   const target=cmdScreenSlug(c&&c.screen);
   if(!target||target!==cmdScreenSlug(scr.screen)) return 'failed';
-  if(fault.op==='clear'){ setInjectedFault(null); flashCli('✓ prueba de laboratorio retirada'); return 'executed'; }
+  if(fault.op==='clear'){ setInjectedFault(null); setSurfaceFaults({}); flashCli('✓ prueba de laboratorio retirada'); return 'executed'; }
+  if(SURFACE_FAULTS.includes(fault.op)){
+    const now=Date.now(); setSurfaceFaults(Object.assign({},surfaceFaults,{[fault.op]:{at:now,until:now+FAULT_TTL_MS}}));
+    flashCli('⚠ prueba de laboratorio · '+SURFACE_LABEL[fault.op]); return 'executed';
+  }
   const now=Date.now(); setInjectedFault({type:'rotate',angle:fault.angle,at:now,until:now+FAULT_TTL_MS});
   flashCli('⚠ prueba de laboratorio · giro '+fault.angle+'°'); return 'executed';
 }
 armFaultExpiry();
+armSurfaceExpiry(); paintSurfaceFaults();
 // ── RELLENAR (r59): el marco ocupa TODA la superficie del dispositivo ─────────────
 // «editorial» conserva el marco 9:16 del MUPI (una pieza horizontal se ve pequeña en
 // un teléfono girado 90°). «fill» reutiliza el contrato `screen-fit` del player físico:
@@ -1192,6 +1342,13 @@ function fitMupi(){ const mupi=$('mupi'), wrap=$('wrap'); if(!mupi||!wrap) retur
   // Y #wrap es flex: con flex-shrink 1 el marco girado (más ancho que el viewport) se
   // encogía a 440×440 en el iPhone aunque el inline dijera 833/956 px.
   mupi.style.maxWidth=quarterTurn?'none':''; mupi.style.maxHeight=quarterTurn?'none':''; mupi.style.flexShrink=quarterTurn?'0':'';
+  // Bugito · «cambio de resolución» (fault-canvas): el lienzo toma la proporción CONTRARIA a la del
+  // hueco disponible (un panel 16:9 emite en un lienzo 9:16 centrado, con bandas), en editorial y en fill.
+  if(typeof surfaceFaultOn==='function'&&surfaceFaultOn('canvas')){
+    const ar=aH/aW; let fh=aH, fw=fh*ar; if(fw>aW){ fw=aW; fh=fw/ar; }
+    mupi.style.height=Math.round(quarterTurn?fw:fh)+'px'; mupi.style.width=Math.round(quarterTurn?fh:fw)+'px'; mupi.style.aspectRatio='auto';
+    return;
+  }
   // `fit=screen` es un contrato explícito del player físico: el marco ocupa la
   // superficie completa y la propia media decide sus barras mediante contain.
   // Al girar 90/270°, el rectángulo SIN transformar intercambia sus lados para
@@ -4960,6 +5117,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=14.10.2026.r8.1248" defer></script>
+  <script src="/assets/admira-version-watch.js?v=14.10.2026.r9.1327" defer></script>
 </body>
 </html>
