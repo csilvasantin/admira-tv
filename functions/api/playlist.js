@@ -33,7 +33,7 @@ function sameSecret(left, right) {
   for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
 }
-function stockActor(request, env, body) {
+export function stockActor(request, env, body) {
   if (!env.STOCK_NOTIFY_KEY) return null;
   const secret = request.headers.get("X-Notify-Key") || (body && body.secret) || "";
   if (!sameSecret(secret, env.STOCK_NOTIFY_KEY)) return null;
@@ -180,14 +180,14 @@ export async function enrichFacts(facts, env, waitUntil) {
 }
 // Censo para el editor: TODAS las pantallas de la parrilla con su identidad, aunque su player aún no haya pedido
 // nada, fundidas con las que sí se han visto (que además traen orientación e idioma).
-async function fleetIdentities(env, seen, waitUntil, circuits = []) {
+async function fleetIdentities(env, seen, waitUntil, circuits = [], withFacts = false) {
   const lento = url => fetch(url, { cf: { cacheTtl: 300, cacheEverything: true }, signal: AbortSignal.timeout(9000) }).then(r => r.ok ? r.json() : null).catch(() => null);
   const [gs, pr, index, identity] = await Promise.all([lento("https://api.admira.store/grid/screens"), lento("https://api.admira.store/grid/projects"), xpaceIndex(env, waitUntil), readIdentity(env)]);
   const projects = (pr && pr.projects) || [], out = new Map(), registry = identity.map;
   const alta = (screen, circuit, name) => {
     if (!screen || out.has(screen)) return;
     const facts = completeFacts({ screen, circuit }, { xpaceIndex: index, projects, registry });
-    out.set(screen, { screen, name: String((registry[screen] && registry[screen].n) || name || screen).slice(0, 80), tags: deduceScreenTags(facts), seenAt: 0 });
+    out.set(screen, { screen, name: String((registry[screen] && registry[screen].n) || name || screen).slice(0, 80), tags: deduceScreenTags(facts), seenAt: 0, ...(withFacts ? {facts} : {}) });
   };
   for (const s of (gs && (gs.screens || gs)) || []) alta(cleanScreen(s && s.screen), cleanScreen(s && s.circuit), s && s.name);
   for (const [screen, e] of Object.entries(index)) alta(screen, cleanScreen(e.c), "");       // equipos dados de alta en un Xpacio
@@ -197,7 +197,8 @@ async function fleetIdentities(env, seen, waitUntil, circuits = []) {
     const prev = out.get(s.screen);
     // Lo que el player declaró (circuito, Xpacio) se completa igual que lo de la parrilla: proyecto incluido.
     const extra = prev ? [] : deduceScreenTags(completeFacts({ screen: s.screen, circuit: val(s.tags, "circuito"), xpace: val(s.tags, "xpacio"), project: val(s.tags, "proyecto") }, { xpaceIndex: index, projects, registry })).filter(t => !/^(orientacion|idioma):/.test(t));
-    out.set(s.screen, { screen: s.screen, name: (prev && prev.name) || s.screen, tags: [...new Set([...(prev ? prev.tags : []), ...extra, ...s.tags])].sort(), seenAt: s.seenAt });
+    const facts = withFacts ? ((prev && prev.facts) || completeFacts({screen:s.screen,circuit:val(s.tags,"circuito"),xpace:val(s.tags,"xpacio"),project:val(s.tags,"proyecto")},{xpaceIndex:index,projects,registry})) : null;
+    out.set(s.screen, { screen: s.screen, name: (prev && prev.name) || s.screen, tags: [...new Set([...(prev ? prev.tags : []), ...extra, ...s.tags])].sort(), seenAt: s.seenAt, ...(facts ? {facts} : {}) });
     const x = val(s.tags, "xpacio"); if (x && s.xn) xpaces[x] = s.xn;
   }
   for (const e of Object.values(index)) xpaces[e.x] = e.n;
@@ -205,6 +206,30 @@ async function fleetIdentities(env, seen, waitUntil, circuits = []) {
   // Los circuitos definidos se aplican AQUÍ, sobre las etiquetas propias: al borrar o cambiar uno, el censo lo refleja al momento.
   for (const e of out.values()) e.tags = applyCircuits(e.tags, circuits);
   return { screens: [...out.values()].sort((a, b) => a.screen.localeCompare(b.screen)), projects: projects.map(p => ({ id: String(p.id), name: String(p.name || p.id) })), xpaces };
+}
+// Lectura de integración del Stock: identidad compacta, listas guardadas y piezas
+// efectivas. Reutiliza el mismo resolver que emite el player, sin registrar lecturas.
+export async function stockPlaylistSnapshot(env, waitUntil) {
+  const live = await readLive(env), seen = await knownScreens(env);
+  const fleet = await fleetIdentities(env, seen, waitUntil, live.circuits, true), stock = await loadStock();
+  const sites = [...new Set(fleet.screens.map(s=>s.facts.xpace).filter(Boolean))];
+  const records = new Map(await Promise.all(sites.slice(0,40).map(async id=>[id,await xpaceFicha(id)])));
+  const playlists = [];
+  for (let i=0;i<fleet.screens.length;i+=20) await Promise.all(fleet.screens.slice(i,i+20).map(async s=>{
+    const f = s.facts, record = records.get(f.xpace);
+    if (record) { const full=completeFacts(f,{xpaceRecord:record,xpaceIndex:{[s.screen]:{x:f.xpace,i:f.iot}},projects:[]});Object.assign(f,full);f.devices=Array.isArray(record.iot)?record.iot:[];f.xpaceAddress=String(record.addr||"");f.xpaceName=String(record.name||""); }
+    f.destinationIds=fleet.screens.map(x=>x.screen);
+    f.orientation=(s.tags.find(t=>t.startsWith("orientacion:"))||"").slice(12);
+    f.lang=(s.tags.find(t=>t.startsWith("idioma:"))||"").slice(7);
+    const propias=deduceScreenTags(f), draft=await readDraft(env,s.screen);
+    const auto=addressedContent(stock,f,Date.now(),60,serviceBindings(live.circuits,propias));
+    const viva=resolveForScreen(live.playlists.filter(p=>p.enabled!==false),applyCircuits(propias,live.circuits),stock,f);
+    const base=draft.items.length?draft.items:viva.items, ids=new Set(base.map(x=>String(x.stockId)));
+    const effective=[...base,...auto.filter(x=>!ids.has(String(x.stockId)))];
+    playlists.push({screen:s.screen,name:draft.items.length?draft.name:(viva.hits.map(x=>x.name).join(" + ")||(auto.length?"Dirigido por hashtag":"Por defecto")),rev:draft.rev||0,
+      manual:draft.items,items:draft.items.length?effective:effective.slice(0,200),synthetic:!draft.items.length&&(viva.items.length>0||auto.length>0)});
+  }));
+  return {...fleet,circuits:live.circuits,playlists,partial:sites.length>40};
 }
 // Registro de etiquetas deducidas, para que el editor enseñe a qué pantallas llega una regla. Las etiquetas
 // van en los metadatos de la clave: se listan sin leer pantalla a pantalla. Sólo se escribe si cambian o caducan.
@@ -376,7 +401,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
   const previous = await readDraft(env, screen), expected = Number(body.rev) || 0, stored = Number(previous.rev) || 0;
   // Sólo hay conflicto si había algo guardado (rev > 0) y quien escribe trae otra revisión. Con nada guardado no
   // hay a quién pisar: un rev que no sea número, o el de un borrador sintético de un cliente antiguo, no es un 409.
-  if (stored && expected && expected !== stored) return json({ ok: false, error: "revision_conflict", draft: previous }, 409, cors);
+  if ((body.guardRevision ? expected !== stored : stored && expected && expected !== stored)) return json({ ok: false, error: "revision_conflict", draft: previous }, 409, cors);
   const updatedAt = Date.now(), rev = Math.max(Number(previous.rev) || 0, updatedAt - 1) + 1;
   const name = String((body && body.name) || "").trim().slice(0, 80) || "Por defecto";
   const draft = { screen, playlist: "default", name, items, rev, updatedAt, updatedBy: actor };
