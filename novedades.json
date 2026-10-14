@@ -4,6 +4,9 @@
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
   ],
+  "v.14.10.2026.r13.19:37": [
+    "Publicación de prueba desde el Mac Studio (NeoMacStudio · MacStudio): el mismo contenido que la r12, para comprobar que este equipo puede publicar admira.tv."
+  ],
   "v.14.10.2026.r12.18:19": [
     "admira.tv firma con su propia clave el token de sesión para la API común y lo deja comprobar en /auth/verify: es lo que necesita /proyecto para filtrar por cliente (encargo #5979, camino A)."
   ],
