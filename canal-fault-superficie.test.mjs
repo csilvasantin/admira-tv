@@ -122,6 +122,11 @@ test("popup encima: pinta la ventana de aviso y la telemetría mide el % tapado,
   assert.equal(guardado.popup.until - guardado.popup.at, 30 * 60000, "caduca sola a los 30 min");
   assert.ok(p.posts.length === 0 && p.timers.some((t) => t.ms === 0), "publica al momento (setTimeout 0)");
   assert.match(p.flashes.at(-1), /popup encima/);
+  // Es una ventana del SISTEMA: el vigilante ALWAYS ON TOP la respeta y queda encima de #wrap (2147483646).
+  assert.match(extrae("paintSurfaceFaults"), /pop\.setAttribute\('data-adm-ok','1'\)/);
+  assert.match(extrae("isOwn"), /getAttribute\('data-adm-ok'\)==='1'/);
+  assert.match(canal, /#faultPopup\{ position:fixed; z-index:2147483647;/);
+  assert.match(canal, /w\.style\.zIndex='2147483646'/);
 });
 
 test("medio abrir: el contenido ocupa la mitad del lienzo; la persiana es el fondo del marco, no una capa", () => {
@@ -134,7 +139,7 @@ test("medio abrir: el contenido ocupa la mitad del lienzo; la persiana es el fon
   const dsp = display(p);
   assert.equal(dsp.visible, 50);
   assert.equal(dsp.overlay, 0, "lo de abajo es del player: no cuenta como capa encima");
-  assert.match(canal, /#mupi\.fault-half #stage\{ bottom:50%; \}/);
+  assert.match(canal, /#mupi\.fault-half #stage\{ bottom:50%; overflow:hidden; \}/, "la persiana tapa de verdad la mitad de abajo");
   assert.match(canal, /#mupi\.fault-half\{ background:repeating-linear-gradient/);
 });
 
