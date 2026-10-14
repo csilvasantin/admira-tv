@@ -1,0 +1,155 @@
+/* Marca blanca · hoja puente de store para el cargador común (marca-blanca.js). La carga el cargador solo en
+   esa web y todas sus reglas van bajo :root[data-mb-marca][data-mb-web="store"]: en las demás webs no aplica.
+   Origen: assets/marca-blanca.css de admira-store. Encargo #5979. */
+/* Marca blanca en XpaceOS / admira.store (FLT-101337). Solo se descarga cuando hay marca
+   activa (assets/marca-blanca.js la inserta) y todo va bajo
+   :root[data-mb-marca][data-mb-web="store"], que pone el cargador común: sin marca
+   esta hoja no existe en la página y XpaceOS queda exactamente como siempre.
+   Tokens: --mb-* del catálogo (admiranext.com/marcablanca) y --mbx-*, que marca-blanca.js
+   calcula para que los textos cumplan AA (≥ 4,5:1) con cualquier marca, también las claras.
+   El gemelo: se visten su barra, sus paneles Opciones/Avanzado y la consola Experto; la
+   escena 3D, los modelos, las texturas y el lienzo no se recolorean (aquí no hay filtros ni
+   mezclas sobre medios). Ver admira-xp/docs/marca-blanca.md. */
+
+/* 1 · Puente propio de la plataforma store (gana al común: va después y con los textos ya
+   corregidos). Las variables de siempre de cada página leen la marca. Una página muy pintada
+   a mano puede pedir solo la barra y los paneles (data-marca="barra" en xpace-shell.js →
+   html[data-mb-alcance="barra"]); entonces las secciones 1 y 2 no la tocan. */
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]){
+  --bg:var(--mb-fondo);--card:var(--mb-superficie);--card2:var(--mb-superficie-alt);--panel:var(--mb-superficie);--line:var(--mb-borde);
+  --ink:var(--mbx-ink);--txt:var(--mbx-ink);--text:var(--mbx-ink);--fg:var(--mbx-ink);
+  --mut:var(--mbx-mut);--muted:var(--mbx-mut);--dim:var(--mbx-mut);
+  --brand:var(--mbx-brand);--acc:var(--mbx-brand);--cyan:var(--mbx-brand);--acc2:var(--mbx-accent);--accent:var(--mbx-accent);
+  --good:var(--mbx-ok);--green:var(--mbx-ok);--warn:var(--mbx-warn);--err:var(--mbx-error);--bad:var(--mbx-error);--danger:var(--mbx-error);
+  --mbx-panel:color-mix(in srgb,var(--mb-superficie) 97%,transparent);
+  --mbx-inset:var(--mb-superficie-alt);
+  --mbx-soft:color-mix(in srgb,var(--mbx-brand) 10%,transparent);
+  --mbx-soft-2:color-mix(in srgb,var(--mbx-brand) 18%,transparent);
+}
+
+/* 2 · Página: fondo, texto y tipografía de la marca allí donde la página usa variables. */
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page{background:var(--mb-fondo);color:var(--mbx-ink);font-family:var(--mb-fuente-texto)}
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page :is(h1,h2,h3){font-family:var(--mb-fuente-titulos);letter-spacing:var(--mb-titulos-tracking,normal)}
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page :is(code,pre,kbd,samp){font-family:var(--mb-fuente-mono)}
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) ::selection{background:var(--mbx-brand);color:var(--mbx-on-brand)}
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) :focus-visible{outline-color:var(--mbx-brand)}
+/* Botones rellenos con el color de marca: texto legible encima. */
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page :is(.cta:not(.secondary):not(.sec):not(.event),.btn.primary,button.primary,a.primary){background:var(--mbx-brand);color:var(--mbx-on-brand);border-color:var(--mbx-brand)}
+
+/* Islas oscuras escritas a mano que leen el texto de la marca: código, comandos, botones
+   de copiar, héroes estrellados de la portada y lenovo, panel de pasos de XpaceScan. */
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page :is(code,pre){background:var(--mbx-inset);color:var(--mbx-ink);border-color:var(--mb-borde)}
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page :is(.cmd,button.copy,.route span){background:var(--mb-superficie);color:var(--mbx-ink);border-color:var(--mb-borde)}
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page :is(.cmd,button.copy):hover{border-color:var(--mbx-brand);background:var(--mbx-soft)}
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page .hero{background:var(--mb-fondo)}
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page .hero::after{background:none}
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page .starfield,:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page .shooting-star{display:none}
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page .hero h1 .grad{background:none;-webkit-background-clip:border-box;background-clip:border-box;color:var(--mbx-brand)}
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page #tips{background:var(--mbx-panel);color:var(--mbx-mut)}
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page #tips b{color:var(--mbx-ink)}
+:root[data-mb-marca][data-mb-web="store"]:not([data-mb-alcance="barra"]) body.xs-page .pill{background:var(--mb-superficie);color:var(--mbx-ink);border-color:var(--mb-borde)}
+
+/* 3 · La barra de las 4 bandas (shell común y gemelo): fondo de la marca casi opaco y, en
+   el lugar de la marca, el logo del cliente seguido de un «powered by XpaceOS» discreto. */
+:root[data-mb-marca][data-mb-web="store"] #topBar{
+  --xp-bg:var(--mb-fondo);--xp-panel:var(--mb-superficie);--xp-panel-2:var(--mb-superficie-alt);--xp-line:var(--mb-borde);
+  --xp-cyan:var(--mbx-brand);--xp-mint:var(--mbx-ok);--xp-gold:var(--mbx-accent);--xp-ink:var(--mbx-ink);--xp-muted:var(--mbx-mut);--xp-danger:var(--mbx-error);
+  background:color-mix(in srgb,var(--mb-fondo) 97%,transparent)!important;border-bottom:1px solid var(--mb-borde)!important;
+  box-shadow:var(--mb-sombra-sm,none)!important;color:var(--mbx-ink)}
+:root[data-mb-marca][data-mb-web="store"] .mb-bar-logo{display:inline-flex;align-items:center;flex:0 1 auto;height:30px;max-width:150px;min-width:0;color:var(--mbx-ink);line-height:0;text-decoration:none;border-radius:var(--mb-radio-sm,6px);font:700 16px/1 var(--mb-fuente-titulos);letter-spacing:var(--mb-titulos-tracking,normal);white-space:nowrap}
+:root[data-mb-marca][data-mb-web="store"] .mb-bar-logo[hidden]{display:none}
+:root[data-mb-marca][data-mb-web="store"] .mb-bar-logo :is(.mb-logo-svg,.mb-logo-img,svg,img){height:100%;width:auto;max-width:100%;display:block;object-fit:contain}
+:root[data-mb-marca][data-mb-web="store"] .mb-bar-logo:focus-visible{outline:2px solid var(--mbx-brand);outline-offset:3px}
+/* Shell común: «XpaceOS» pasa a «powered by XpaceOS», pequeño y en el gris de la marca. */
+:root[data-mb-marca][data-mb-web="store"] #topBar.xs-bar .xs-brand{padding:7px 0 7px 10px;border-left:1px solid var(--mb-borde);color:var(--mbx-mut);font:600 9px/1.3 var(--mb-fuente-mono);letter-spacing:.14em;text-transform:uppercase;text-shadow:none}
+:root[data-mb-marca][data-mb-web="store"] #topBar.xs-bar .xs-brand::before{content:"powered by ";letter-spacing:.04em;font-weight:400;text-transform:none}
+:root[data-mb-marca][data-mb-web="store"] #topBar.xs-bar .xs-brand:hover{color:var(--mbx-ink)}
+:root[data-mb-marca][data-mb-web="store"] #topBar.xs-bar .xs-section{color:var(--mbx-mut);font-family:var(--mb-fuente-etiquetas)}
+/* Gemelo: el «powered by XpaceOS» va detrás del logo. */
+:root[data-mb-marca][data-mb-web="store"] #topBar .mb-powered{display:inline-block;flex:0 0 auto;padding:7px 4px 7px 10px;border-left:1px solid var(--mb-borde);color:var(--mbx-mut);font:600 9px/1.3 var(--mb-fuente-mono);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
+:root[data-mb-marca][data-mb-web="store"] #topBar .mb-powered::before{content:"powered by ";letter-spacing:.04em;font-weight:400;text-transform:none}
+@media(max-width:600px){:root[data-mb-marca][data-mb-web="store"] #topBar :is(.xs-brand,.xs-section,.mb-powered){display:none}}
+/* Iconos ☰ ▤ ⌘. */
+:root[data-mb-marca][data-mb-web="store"] #topBar .quad-icon{background:var(--mb-superficie)!important;border:1px solid var(--mb-borde)!important;border-radius:var(--mb-radio-sm,7px);box-shadow:none!important;color:var(--mbx-brand)}
+:root[data-mb-marca][data-mb-web="store"] #topBar .quad-icon:hover{border-color:var(--mbx-brand)!important;background:var(--mbx-soft)!important}
+:root[data-mb-marca][data-mb-web="store"] #topBar .quad-icon.is-active{background:var(--mbx-brand)!important;border-color:var(--mbx-brand)!important;color:var(--mbx-on-brand)}
+/* Contenido de la barra del gemelo (KPIs, competencia, chip de proyecto, avisos). */
+:root[data-mb-marca][data-mb-web="store"] #topBar :is(.stat-val,.comp-pct){color:var(--mbx-ink)}
+:root[data-mb-marca][data-mb-web="store"] #topBar :is(.stat-label,.comp-name,.audience-kind,.funnel-kind){color:var(--mbx-mut)}
+:root[data-mb-marca][data-mb-web="store"] #topBar .funnel-arrow{color:var(--mbx-brand)}
+:root[data-mb-marca][data-mb-web="store"] #topBar .funnel-step.is-demo .stat-val{color:var(--mbx-accent)}
+:root[data-mb-marca][data-mb-web="store"] #topBar .sep{background:var(--mb-borde)}
+:root[data-mb-marca][data-mb-web="store"] #topBar .comp-box{background:var(--mb-superficie);box-shadow:none}
+:root[data-mb-marca][data-mb-web="store"] #topBar :is(#projectContextChip,.project-context-chip){background:var(--mb-superficie);color:var(--mbx-ink);border-color:var(--mb-borde)}
+/* El juego pinta en línea beneficio (+/−) y cuota de competencia (líder / promoción / resto):
+   sobre una marca clara esos verdes y grises no se leen. Mismo significado, tokens AA. */
+:root[data-mb-marca][data-mb-web="store"] #topBar :is(#bbProfit,.comp-pct)[style*="color"]{color:var(--mbx-ink)!important}
+:root[data-mb-marca][data-mb-web="store"] #topBar :is(#bbProfit[style*="102, 238, 102"],.comp-pct[style*="68, 255, 136"]){color:var(--mbx-ok)!important}
+:root[data-mb-marca][data-mb-web="store"] #topBar :is(#bbProfit[style*="238, 102, 102"],.comp-pct[style*="255, 68, 68"]){color:var(--mbx-error)!important}
+:root[data-mb-marca][data-mb-web="store"] #topBar #bbSat.sat-low{color:var(--mbx-error)!important}
+:root[data-mb-marca][data-mb-web="store"] #topBar #bbSat.sat-mid{color:var(--mbx-warn)!important}
+:root[data-mb-marca][data-mb-web="store"] #topBar #xpTopNotify{background:var(--mbx-soft);border-color:var(--mbx-brand);color:var(--mbx-brand)}
+:root[data-mb-marca][data-mb-web="store"] #topBar #xpTopNotify .xp-notify-act{background:var(--mb-superficie);border-color:var(--mbx-brand);color:var(--mbx-brand)}
+
+/* 4 · Paneles Opciones (☰) y Avanzado (▤) y consola Experto (⌘): superficie y textos de la marca. */
+:root[data-mb-marca][data-mb-web="store"] :is(.quad-menu,.xs-expert,#telegramDock,#characterDock){
+  --xp-bg:var(--mb-fondo);--xp-panel:var(--mb-superficie);--xp-panel-2:var(--mb-superficie-alt);--xp-line:var(--mb-borde);
+  --xp-cyan:var(--mbx-brand);--xp-mint:var(--mbx-ok);--xp-gold:var(--mbx-accent);--xp-ink:var(--mbx-ink);--xp-muted:var(--mbx-mut);--xp-danger:var(--mbx-error);
+  --xs-surface:var(--mbx-panel);--xs-edge:var(--mb-borde);--xs-soft:var(--mbx-soft);
+  --xs-font:var(--mb-fuente-etiquetas);
+}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu{background:var(--mbx-panel)!important;border-color:var(--mb-borde)!important;box-shadow:var(--mb-sombra-md,none)!important;color:var(--mbx-ink);font-family:var(--mb-fuente-etiquetas)}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu.quad-left{border-top:2px solid var(--mbx-brand)!important}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu.quad-right{border-top:2px solid var(--mbx-accent)!important}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu.quad-bottom{border-top:2px solid var(--mbx-ok)!important}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu :is(.qm-title,.qm-head,.qm-acc-head,button,a){font-family:var(--mb-fuente-etiquetas)}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu .qm-title{color:var(--mbx-brand)!important;border-bottom-color:var(--mb-borde)!important;text-shadow:none!important}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu .qm-head{color:var(--mbx-accent)!important;border-bottom-color:var(--mb-borde)!important}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu :is(.qm-hint,.qm-version,.xs-empty,label){color:var(--mbx-mut)!important}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu :is(a,button){color:var(--mbx-ink);border-radius:var(--mb-radio-sm,8px)}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu :is(a,button):hover{color:var(--mbx-brand)!important;border-color:var(--mbx-brand)!important;background:var(--mbx-soft)!important}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu :is(a,button)[aria-current="page"]{color:var(--mbx-brand);border-color:var(--mbx-brand)}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu :is(select,input:not([type=checkbox]):not([type=radio])){background:var(--mb-superficie);color:var(--mbx-ink);border-color:var(--mb-borde)}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu .qm-acc-body{border-top-color:var(--mb-borde)!important}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu .qm-acc-body button{background:var(--mbx-inset)!important;color:var(--mbx-ink)!important}
+:root[data-mb-marca][data-mb-web="store"] .quad-menu .expert-menu-group :is(h2,small,span,strong){color:var(--mbx-ink)}
+/* Consola Experto del shell común. */
+:root[data-mb-marca][data-mb-web="store"] .xs-expert .xs-log{background:var(--mbx-inset);border-color:var(--mb-borde);color:var(--mbx-ink);font-family:var(--mb-fuente-mono)}
+:root[data-mb-marca][data-mb-web="store"] .xs-expert .xs-log li{color:var(--mbx-ink)}
+:root[data-mb-marca][data-mb-web="store"] .xs-expert .xs-log li.xs-in,:root[data-mb-marca][data-mb-web="store"] .xs-expert .xs-prompt{color:var(--mbx-brand)}
+:root[data-mb-marca][data-mb-web="store"] .xs-expert .xs-cli :is(input,textarea){background:var(--mb-superficie);border-color:var(--mb-borde);color:var(--mbx-ink);font-family:var(--mb-fuente-mono)}
+:root[data-mb-marca][data-mb-web="store"] .xs-expert .xs-cli button{background:var(--mbx-brand);border-color:var(--mbx-brand);color:var(--mbx-on-brand);border-radius:var(--mb-radio-boton,8px)}
+:root[data-mb-marca][data-mb-web="store"] .xs-expert :is(.xs-hint,.xs-close){color:var(--mbx-mut)}
+:root[data-mb-marca][data-mb-web="store"] .xs-expert .qm-head{color:var(--mbx-ok)!important}
+/* Consola Experto del gemelo (dock inferior): superficies, campo, acciones y log. */
+:root[data-mb-marca][data-mb-web="store"] #telegramDock{color:var(--mbx-ink)}
+:root[data-mb-marca][data-mb-web="store"] :is(#telegramDock,#characterDock) .tg-pane,
+:root[data-mb-marca][data-mb-web="store"] :is(#telegramDock,#characterDock) .char-pane{background:var(--mbx-panel)!important;border-color:var(--mb-borde)!important;box-shadow:var(--mb-sombra-sm,none)!important;color:var(--mbx-ink)}
+:root[data-mb-marca][data-mb-web="store"] #telegramComposer{background:var(--mb-superficie)!important;color:var(--mbx-ink)!important;font-family:var(--mb-fuente-mono)}
+:root[data-mb-marca][data-mb-web="store"] #telegramComposer::placeholder{color:var(--mbx-mut)}
+:root[data-mb-marca][data-mb-web="store"] :is(#telegramDock,#characterDock) :is(.tg-actions,.tg-quick-actions){background:var(--mbx-inset)!important;border-color:var(--mb-borde)!important}
+:root[data-mb-marca][data-mb-web="store"] :is(#telegramDock,#characterDock) .tg-actions button{background:var(--mb-superficie)!important;border-color:var(--mb-borde)!important;color:var(--mbx-brand)!important}
+:root[data-mb-marca][data-mb-web="store"] :is(#telegramDock,#characterDock) .tg-actions button.primary{background:var(--mbx-brand)!important;border-color:var(--mbx-brand)!important;color:var(--mbx-on-brand)!important}
+:root[data-mb-marca][data-mb-web="store"] :is(#telegramDock,#characterDock) .tg-quick-btn{background:var(--mb-superficie)!important;border-color:var(--mb-borde)!important;color:var(--mbx-ink)!important}
+:root[data-mb-marca][data-mb-web="store"] :is(#telegramDock,#characterDock) .tg-quick-btn span{color:var(--mbx-mut)!important}
+:root[data-mb-marca][data-mb-web="store"] :is(#telegramDock,#characterDock) .tg-quick-btn.is-active{border-color:var(--mbx-ok)!important;background:var(--mbx-soft)!important}
+:root[data-mb-marca][data-mb-web="store"] :is(#telegramDock,#characterDock) :is(.expert-section-label,.expert-menu-group h2){color:var(--mbx-brand)!important}
+:root[data-mb-marca][data-mb-web="store"] #telegramDock.compose-start #telegramLastResponse:empty::before{color:var(--mbx-mut)}
+:root[data-mb-marca][data-mb-web="store"] #telegramDock .expert-divider::before{background:var(--mb-borde)}
+:root[data-mb-marca][data-mb-web="store"] #telegramDock :is(.expert-view-pane,#telegramLastResponse){background:var(--mbx-inset);color:var(--mbx-ink)}
+:root[data-mb-marca][data-mb-web="store"] #telegramDock .expert-menu-group{border-top-color:var(--mb-borde)}
+:root[data-mb-marca][data-mb-web="store"] :is(#telegramDock,#characterDock) .tg-line{color:var(--mbx-ink)!important;border-left-color:var(--mb-borde)}
+:root[data-mb-marca][data-mb-web="store"] :is(#telegramDock,#characterDock) .tg-line.out{border-left-color:var(--mbx-brand)}
+:root[data-mb-marca][data-mb-web="store"] :is(#telegramDock,#characterDock) .tg-line.bot{border-left-color:var(--mbx-accent)}
+:root[data-mb-marca][data-mb-web="store"] :is(#telegramDock,#characterDock) .tg-line.err{border-left-color:var(--mbx-error)}
+
+/* 5 · Lo que no cambia: el lienzo y los medios del gemelo y de las páginas. */
+:root[data-mb-marca][data-mb-web="store"] :is(canvas,video,img:not(.mb-logo-img),iframe){filter:none;mix-blend-mode:normal}
+
+/* Active customer identity replaces the generic wordmark in every shared top bar. */
+:root[data-mb-marca][data-mb-web="store"] #topBar :is(.xs-brand,.mb-powered){display:none!important}
+
+/* Starbucks lock-up from the historical kiosk: imago plus white wordmark. */
+:root[data-mb-marca="starbucks"][data-mb-web="store"] #mb-bar-logo.mb-starbucks-lockup{background:#006241;gap:7px;padding:3px 9px 3px 4px;box-sizing:border-box;height:34px;max-width:170px;flex-shrink:0}
+:root[data-mb-marca="starbucks"][data-mb-web="store"] #mb-bar-logo .mb-starbucks-wordmark{color:#fff;line-height:1;font:800 12px/1 Inter,Arial,sans-serif;letter-spacing:.08em}
+:root[data-mb-marca="starbucks"][data-mb-web="store"] #mb-bar-logo :is(img,svg){max-width:28px}
