@@ -39,6 +39,8 @@
   .vacio{color:var(--dim)}
   .estado{margin-top:10px;font:600 12px ui-monospace,monospace;color:var(--dim);overflow-wrap:anywhere}
   .estado.err{color:var(--red)}
+  .url{margin-top:6px;font:12px ui-monospace,monospace;color:var(--dim);overflow-wrap:anywhere}
+  .url span{color:var(--ink)}
   .afSlotHidden{display:none}.af-panel .afSlotHidden{display:block}
   /* Con una marca activa (/marca), la demo se viste con sus tokens --mb-* / --mbx-* como el resto del chrome. */
   :root[data-mb-marca] body{background:var(--mb-fondo);color:var(--mbx-ink)}
@@ -82,6 +84,7 @@ window.ADMIRA_CONTEXTO_TV={recargar:false};
       <a id="cambiarRol" hidden></a>
     </div>
     <div class="estado" id="estado" role="status">Preparando el contexto…</div>
+    <p class="url">URL de esta página: <span id="urlActual"></span></p>
   </section>
 
   <div class="grid">
@@ -120,7 +123,10 @@ window.ADMIRA_CONTEXTO_TV={recargar:false};
   }
   function leer(ruta){return window.AdmiraContexto.request(ruta).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d&&d.error||('HTTP '+r.status));return d})})}
   var ultimoError='';
+  // La URL se ve en la página (y en las capturas): el contexto la reescribe con ?marca= y ?proyecto= verificados.
+  function verUrl(){$('urlActual').textContent=location.href}
   function pintar(){
+    verUrl();
     var s=window.AdmiraContexto&&window.AdmiraContexto.actual();
     chips(s,ultimoError);
     return Promise.all([
@@ -150,6 +156,7 @@ window.ADMIRA_CONTEXTO_TV={recargar:false};
     },250);
   })});
   document.addEventListener('admira:contexto',function(){ultimoError='';pintar()});
+  verUrl();
   document.addEventListener('admira:contexto-error',function(e){ultimoError='Rechazado: '+(e.detail&&e.detail.error||'error');chips(window.AdmiraContexto&&window.AdmiraContexto.actual(),ultimoError)});
   TV.listo().then(pintar);
 })();
