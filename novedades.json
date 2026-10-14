@@ -231,5 +231,9 @@
     "Importa por hashtags: marca, local y dispositivo se acotan entre sí.",
     "Starbucks Paseo de Gracia 103 ya tiene asociado el iPad físico ipad-admin-mupi.",
     "Los destinos desconocidos o ambiguos se bloquean; las piezas se añaden a Por defecto."
+  ],
+  "v.14.10.2026.r4.10:16": [
+    "Un player trasladado usa el idIoT de su ficha actual, aunque el índice conserve el anterior.",
+    "Importación real Starbucks #1523: prueba exclusiva del iPad de Paseo de Gracia 103."
   ]
 }

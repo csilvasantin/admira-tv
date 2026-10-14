@@ -202,3 +202,47 @@ test('añadir un comentario de marca no amplía una pieza con ID de player guard
   assert.equal(receives(p, display), false);
   assert.equal(receives(p, elsewhere), false);
 });
+
+const movedScreen = 'ipad-admin-mupi';
+const movedIot = 'Starbucks_PaseodeGracia_103_iPad_1';
+const staleIndex = {
+  [movedScreen]: { x: 'ipad-admin', n: 'iPad de administración', c: 'admiranext', b: 'admiranext', i: 'AdmiraNeXT_iPaddeAdmin_Pantalla_1' },
+};
+const canonicalLocation = {
+  id: 'alsea-sbux-021', name: 'Starbucks Paseo de Gracia 103', circuit: 'alsea_starbucks', project: 'starbucks',
+  addr: 'Paseo de Gracia 103',
+  iot: [{ idIoT: movedIot, type: 'iPad', name: 'iPad', player: movedScreen }],
+};
+
+test('tras trasladar un player, la ficha del Xpacio registrado gana al índice antiguo', () => {
+  const f = completeFacts({ screen: movedScreen }, {
+    xpaceIndex: staleIndex,
+    registry: { [movedScreen]: { p: 'starbucks', x: 'alsea-sbux-021', n: 'iPad', xn: canonicalLocation.name } },
+    xpaceRecord: canonicalLocation,
+  });
+  assert.equal(f.xpace, 'alsea-sbux-021');
+  assert.equal(f.project, 'starbucks');
+  assert.equal(f.iot, movedIot);
+  assert.equal(f.circuit, 'alsea_starbucks');
+  assert.equal(f.xpaceName, canonicalLocation.name);
+  assert.equal(receives(piece([], { comment: '#starbucks #paseodegracia103 #ipad' }), f), true);
+});
+
+test('un Xpacio declarado con ficha canónica nunca hereda el idIoT de otro Xpacio', () => {
+  const f = completeFacts({ screen: movedScreen, xpace: 'alsea-sbux-021' }, {
+    xpaceIndex: staleIndex, xpaceRecord: canonicalLocation,
+  });
+  assert.equal(f.project, 'starbucks');
+  assert.equal(f.iot, movedIot);
+  assert.equal(receives(piece([], { comment: '#starbucks #paseodegracia103 #ipad' }), f), true);
+});
+
+test('sin asociación de equipo en la ficha nueva se descarta el idIoT del índice de otro local', () => {
+  const f = completeFacts({ screen: movedScreen, xpace: 'alsea-sbux-021' }, {
+    xpaceIndex: staleIndex, xpaceRecord: { ...canonicalLocation, iot: [] },
+  });
+  assert.equal(f.project, 'starbucks');
+  assert.equal(f.iot, undefined);
+  assert.equal(receives(piece([], { comment: '#starbucks #paseodegracia103 #ipad' }), f), false,
+    'sin equipo asociado no se puede inferir un iPad único del local');
+});
