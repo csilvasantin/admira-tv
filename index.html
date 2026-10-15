@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Admira.tv · Experiencias digitales para espacios vivos</title>
+  <title data-es="Admira.tv · Experiencias digitales para espacios vivos" data-en="Admira.tv · Digital experiences for spaces that come alive">Admira.tv · Experiencias digitales para espacios vivos</title>
   <meta name="description" content="Descubre las 20 soluciones de Admira para crear, operar y medir experiencias digitales en espacios físicos.">
   <meta name="theme-color" content="#070a10">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -28,14 +28,25 @@
     .shell{position:relative;z-index:1;width:min(var(--max),calc(100% - 36px));margin:auto}
     /* Interfaz cuadrática de AdmiraNeXT (#5136 · #5142 · #5152): la barra es la del canon
        (/admiranext-frame.css, copia de admiranext.com) con el logotipo oficial; aquí sólo
-       lo propio de la portada: el rótulo visible de ☰ Opciones, ▤ Avanzado y ⌘ Experto
-       (en móvil queda el glifo) y «Ver canal» como llamada a la acción. */
+       lo propio de la portada: el rótulo visible de ☰ Opciones y ▤ Avanzado (en móvil
+       queda el glifo), la píldora de idioma y «Ver canal» como llamada a la acción. */
     html.yk-head-mode header.yk-head .yk-ico .yk-ico-lbl{margin-left:7px;font:600 13px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0}
     html.yk-head-mode header.yk-head .yk-ico[aria-expanded="true"] .yk-ico-lbl{color:inherit}
     html.yk-head-mode header.yk-head nav a.nav-cta{padding:6px 12px;border-radius:999px;background:var(--green);color:#04110b;font-weight:700}
     html.yk-head-mode header.yk-head nav a.nav-cta:hover{color:#04110b;filter:brightness(1.08)}
     html.yk-head-mode .yk-rail .yk-slot .yk-pilar-act[aria-pressed="true"]{border-color:var(--yk-brand);color:var(--yk-brand);background:rgba(74,227,209,.08)}
     @media(max-width:1100px){html.yk-head-mode header.yk-head .yk-ico .yk-ico-lbl{display:none}}
+    /* La portada no tiene ⌘ Experto (Carlos, 15-oct-2026). En su hueco, la píldora de idioma
+       (ENG pasa la portada a inglés; ESP la devuelve al español) con la caja de ☰ y ▤ con su
+       glifo solo: 36 × 36 y, en móvil, 40 × 40. La letra baja a 12 px y el ancho se fija para
+       que tres letras no la ensanchen; el .81 de suite/header.js la reduce igual que a ellos
+       (por eso lleva data-admira-compact-control). */
+    html.yk-head-mode header.yk-head .yk-ico.yk-lang{width:36px;min-width:36px;padding:0;font:700 12px/1 var(--yk-mono);letter-spacing:.02em}
+    @media(max-width:720px){html.yk-head-mode header.yk-head .yk-ico.yk-lang{width:40px;min-width:40px}}
+    /* Portada en inglés (portada-idioma.js pone <html lang="en">): de cada par ES/EN que pinta
+       tools/gen-apps-grid.py queda sólo la mitad inglesa. En español sigue como siempre. */
+    html[lang="en"] .app-description:not(.app-description-en){display:none}
+    html[lang="en"] .app-description-en{margin-top:0;color:#c2cddd;font-size:13px}
     .hero{padding:clamp(72px,11vw,140px) 0 70px;text-align:center}
     .eyebrow{margin:0;color:var(--green);font:800 12px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}
     .hero h1{font-size:clamp(48px,9vw,106px);line-height:.95;letter-spacing:-.055em;margin:20px auto;max-width:1020px}.hero h1 em{font-style:normal;color:var(--red)}
@@ -108,25 +119,13 @@
   <script>
     /* Interfaz cuadrática (#5152): ☰ Opciones lleva, bajo la navegación de la barra, los
        cinco pilares y el ecosistema (la portada es pública: nada de herramientas operativas
-       de la DMZ, como vigila public-showcase.test.mjs); ▤ Avanzado, el filtro por pilar e «Ir a» las secciones; ⌘ Experto,
-       el CLI con /help, /ir, /seccion, /arriba y /pilar. */
+       de la DMZ, como vigila public-showcase.test.mjs); ▤ Avanzado, el filtro por pilar e «Ir a» las secciones.
+       La portada NO tiene ⌘ Experto (Carlos, 15-oct-2026; <body data-yk-experto="off">): ni
+       CLI ni motor de la suite. En su hueco va la píldora de idioma (/assets/portada-idioma.js). */
     window.ADMIRA_FRAME_SITIO = [
       {grupo: 'Los cinco pilares', enlaces: [['https://www.admira.studio/', 'Admira.studio ↗'], ['https://www.admira.store/', 'Admira.store ↗'], ['https://www.admira.app/', 'Admira.app ↗'], ['https://www.admira.biz/', 'Admira.biz ↗'], ['https://www.digitalsignage.ai/', 'digitalsignage.ai ↗']]},
       {grupo: 'Ecosistema', enlaces: [['https://www.pixeria.com', 'Pixeria ↗'], ['https://www.xpaceos.com', 'XpaceOS ↗'], ['https://www.admiranext.com', 'ADmiraNeXT ↗']]}
     ];
-    window.ADMIRA_FRAME_VERBS = (window.ADMIRA_FRAME_VERBS || []).concat([{
-      id: 'pilar', aliases: ['p'], uso: '<todas|studio|store|tv|app|biz>', ayuda: 'Filtra las 20 soluciones por pilar',
-      run: function (args, ctx) {
-        var q = String(args[0] || '').toLowerCase();
-        var b = q && document.querySelector('.pilares [data-pilar-filtro="' + q.replace(/[^a-z]/g, '') + '"]');
-        if (!b) { ctx.error('Uso: /pilar <todas|studio|store|tv|app|biz>'); return; }
-        if (b.disabled) { ctx.error('El filtro aún se está cargando; prueba en un momento'); return; }
-        b.click();
-        var sec = document.getElementById('soluciones');
-        if (sec && sec.scrollIntoView) sec.scrollIntoView({behavior: 'smooth', block: 'start'});
-        ctx.imprimir('→ Pilar: ' + (b.querySelector('.pilar-btn-nombre') || b).textContent);
-      }
-    }]);
     /* Los enlaces de la barra que van a una sección de la portada (#soluciones,
        #ecosistema) no son «la página actual»: el armazón los marcaría por apuntar a «/».
        DOMContentLoaded llega después de los scripts defer, con el armazón ya montado. */
@@ -134,47 +133,50 @@
       document.querySelectorAll('a[href^="#"][aria-current="page"]').forEach(function (a) { a.removeAttribute('aria-current'); });
     });
   </script>
-  <script defer src="/assets/experto-verbos-suite.js?v=15.10.2026.r4.1423"></script>
+  <!-- Idioma de la portada (ENG/ESP): antes que el armazón, para que éste copie en ☰ la
+       navegación ya traducida. -->
+  <script defer src="/assets/portada-idioma.js?v=15.10.2026.r4.1423"></script>
   <script defer src="/admiranext-frame.js?v=15.10.2026.r4.1423"></script>
 </head>
-<body data-yk-frame="cabecera" data-yk-auto="on" data-yk-secciones="main section h2">
-  <a class="skip" href="#main">Saltar al contenido</a>
+<body data-yk-frame="cabecera" data-yk-auto="on" data-yk-experto="off" data-yk-secciones="main section h2">
+  <a class="skip" href="#main" data-es="Saltar al contenido" data-en="Skip to content">Saltar al contenido</a>
   <!-- Interfaz cuadrática de AdmiraNeXT (#5136 · #5142 · #5152): barra fija con el logotipo
-       oficial; ☰ Opciones abre el panel izquierdo, ▤ Avanzado el derecho y ⌘ Experto la franja
-       inferior con el CLI. Los paneles flotan sobre la portada y se redimensionan arrastrando. -->
+       oficial; ☰ Opciones abre el panel izquierdo y ▤ Avanzado el derecho. Los paneles flotan
+       sobre la portada y se redimensionan arrastrando. La portada NO tiene ⌘ Experto (Carlos,
+       15-oct-2026): en su hueco, la píldora de idioma, ENG para inglés y ESP para volver. -->
   <header class="yk-head" data-yk-head>
     <button type="button" class="yk-ico" id="ykOptionsToggle" aria-controls="ykOptionsRail" aria-expanded="false" title="☰ Opciones"><span aria-hidden="true">☰</span><span class="yk-ico-lbl">Opciones</span></button>
-    <a class="brand" href="/" aria-label="ADmiraNeXT · Inicio de admira.tv"><span class="yk-wm-admira">ADmira</span><span class="yk-wm-next"><span class="yk-wm-n">N</span><span class="yk-wm-e">e</span><span class="yk-wm-x">X</span><span class="yk-wm-t">T</span></span></a>
-    <nav aria-label="Navegación pública">
+    <a class="brand" href="/" aria-label="ADmiraNeXT · Inicio de admira.tv" data-es-aria-label="ADmiraNeXT · Inicio de admira.tv" data-en-aria-label="ADmiraNeXT · admira.tv home"><span class="yk-wm-admira">ADmira</span><span class="yk-wm-next"><span class="yk-wm-n">N</span><span class="yk-wm-e">e</span><span class="yk-wm-x">X</span><span class="yk-wm-t">T</span></span></a>
+    <nav aria-label="Navegación pública" data-es-aria-label="Navegación pública" data-en-aria-label="Public navigation">
       <a href="#soluciones">20 soluciones</a>
       <a href="#ecosistema">Ecosistema</a>
       <a href="/player/">Player</a>
       <a class="nav-cta" href="/canal.html">Ver canal</a>
     </nav>
-    <span class="private" data-yk-access="publico" title="Página pública">○<span class="yk-access-txt"> Página pública</span></span>
+    <span class="private" data-yk-access="publico" title="Página pública" data-es-title="Página pública" data-en-title="Public page">○<span class="yk-access-txt" data-es=" Página pública" data-en=" Public page"> Página pública</span></span>
     <button type="button" class="yk-ico" id="ykAdvancedToggle" aria-controls="ykAdvancedRail" aria-expanded="false" title="▤ Avanzado"><span aria-hidden="true">▤</span><span class="yk-ico-lbl">Avanzado</span></button>
-    <button type="button" class="yk-ico" id="ykExpertToggle" aria-controls="ykExpertRail" aria-expanded="false" title="⌘ Experto"><span aria-hidden="true">⌘</span><span class="yk-ico-lbl">Experto</span></button>
+    <button type="button" class="yk-ico yk-lang" id="ykLangToggle" data-yk-hueco-experto data-admira-compact-control lang="en" aria-label="ENG · Switch to English" title="Switch to English">ENG</button>
   </header>
   <div class="yk-slots" hidden>
     <div data-yk-slot="right" data-yk-label="Filtrar por pilar">
-      <button type="button" class="yk-pilar-act" data-yk-pilar="todas">✱ Todas · 20 soluciones</button>
-      <button type="button" class="yk-pilar-act" data-yk-pilar="studio">01 · Studio · Crear</button>
-      <button type="button" class="yk-pilar-act" data-yk-pilar="store">02 · Store · Distribuir</button>
-      <button type="button" class="yk-pilar-act" data-yk-pilar="tv">03 · TV · Reproducir</button>
-      <button type="button" class="yk-pilar-act" data-yk-pilar="app">04 · App · Coordinar</button>
-      <button type="button" class="yk-pilar-act" data-yk-pilar="biz">05 · Biz · Monetizar</button>
+      <button type="button" class="yk-pilar-act" data-yk-pilar="todas" data-es="✱ Todas · 20 soluciones" data-en="✱ All · 20 solutions">✱ Todas · 20 soluciones</button>
+      <button type="button" class="yk-pilar-act" data-yk-pilar="studio" data-es="01 · Studio · Crear" data-en="01 · Studio · Create">01 · Studio · Crear</button>
+      <button type="button" class="yk-pilar-act" data-yk-pilar="store" data-es="02 · Store · Distribuir" data-en="02 · Store · Distribute">02 · Store · Distribuir</button>
+      <button type="button" class="yk-pilar-act" data-yk-pilar="tv" data-es="03 · TV · Reproducir" data-en="03 · TV · Play">03 · TV · Reproducir</button>
+      <button type="button" class="yk-pilar-act" data-yk-pilar="app" data-es="04 · App · Coordinar" data-en="04 · App · Coordinate">04 · App · Coordinar</button>
+      <button type="button" class="yk-pilar-act" data-yk-pilar="biz" data-es="05 · Biz · Monetizar" data-en="05 · Biz · Monetise">05 · Biz · Monetizar</button>
     </div>
   </div>
 
   <main id="main">
     <section class="hero">
       <div class="shell">
-        <p class="eyebrow">Admira Xperience · espacio, contenido y contexto</p>
-        <h1>Espacios que <em>responden</em>.</h1>
-        <p class="hero-lead">Veinte soluciones conectadas para crear, operar y medir experiencias digitales útiles en tiendas, oficinas, eventos y espacios públicos.</p>
+        <p class="eyebrow" data-es="Admira Xperience · espacio, contenido y contexto" data-en="Admira Xperience · space, content and context">Admira Xperience · espacio, contenido y contexto</p>
+        <h1><span data-es="Espacios que " data-en="Spaces that ">Espacios que </span><em data-es="responden" data-en="respond">responden</em>.</h1>
+        <p class="hero-lead" data-es="Veinte soluciones conectadas para crear, operar y medir experiencias digitales útiles en tiendas, oficinas, eventos y espacios públicos." data-en="Twenty connected solutions to create, run and measure meaningful digital experiences in stores, offices, events and public spaces.">Veinte soluciones conectadas para crear, operar y medir experiencias digitales útiles en tiendas, oficinas, eventos y espacios públicos.</p>
         <div class="hero-actions">
-          <a class="button primary" href="#soluciones">Descubrir las 20 soluciones</a>
-          <a class="button" href="/canal.html">▶ Ver Admira.tv</a>
+          <a class="button primary" href="#soluciones" data-es="Descubrir las 20 soluciones" data-en="Explore the 20 solutions">Descubrir las 20 soluciones</a>
+          <a class="button" href="/canal.html" data-es="▶ Ver Admira.tv" data-en="▶ Watch Admira.tv">▶ Ver Admira.tv</a>
         </div>
       </div>
     </section>
@@ -183,9 +185,9 @@
       <div class="shell">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Catálogo público · Public catalogue</p>
-            <h2 id="solutionsTitle">Una plataforma, 20 formas de activar el espacio.</h2>
-            <p>Nombres y explicaciones en español e inglés. Los vídeos y dosieres se activan sólo cuando existe un recurso público verificado (mientras tanto, «pronto»); las herramientas de operación permanecen dentro de la DMZ.</p>
+            <p class="eyebrow" data-es="Catálogo público · Public catalogue" data-en="Public catalogue">Catálogo público · Public catalogue</p>
+            <h2 id="solutionsTitle" data-es="Una plataforma, 20 formas de activar el espacio." data-en="One platform, 20 ways to activate your space.">Una plataforma, 20 formas de activar el espacio.</h2>
+            <p data-es="Nombres y explicaciones en español e inglés. Los vídeos y dosieres se activan sólo cuando existe un recurso público verificado (mientras tanto, «pronto»); las herramientas de operación permanecen dentro de la DMZ." data-en="Solution names in English and Spanish. Videos and brochures go live only once a verified public resource exists (until then they read “pronto”, coming soon); operations tools stay inside the DMZ.">Nombres y explicaciones en español e inglés. Los vídeos y dosieres se activan sólo cuando existe un recurso público verificado (mientras tanto, «pronto»); las herramientas de operación permanecen dentro de la DMZ.</p>
           </div>
           <div class="catalog-count" id="appsStatus" role="status" aria-live="polite">20 soluciones · 20 solutions</div>
         </div>
@@ -217,21 +219,21 @@
 
     <section class="ecosystem" id="ecosistema" aria-labelledby="ecosystemTitle">
       <div class="shell">
-        <div class="section-head"><div><p class="eyebrow">Ecosistema</p><h2 id="ecosystemTitle">Crear. Operar. Emitir.</h2></div></div>
+        <div class="section-head"><div><p class="eyebrow" data-es="Ecosistema" data-en="Ecosystem">Ecosistema</p><h2 id="ecosystemTitle" data-es="Crear. Operar. Emitir." data-en="Create. Operate. Broadcast.">Crear. Operar. Emitir.</h2></div></div>
         <div class="eco-grid">
-          <a class="eco-card" href="https://www.pixeria.com" target="_blank" rel="noopener"><small>01 · Crear</small><h3>Pixeria</h3><p>Contenido y narrativa para cada experiencia.</p></a>
-          <a class="eco-card" href="https://www.xpaceos.com" target="_blank" rel="noopener"><small>02 · Operar</small><h3>XpaceOS</h3><p>El gemelo digital que coordina el espacio.</p></a>
-          <a class="eco-card" href="/canal.html"><small>03 · Emitir</small><h3>Admira.tv</h3><p>El canal que lleva el contenido a cada pantalla.</p></a>
+          <a class="eco-card" href="https://www.pixeria.com" target="_blank" rel="noopener"><small data-es="01 · Crear" data-en="01 · Create">01 · Crear</small><h3>Pixeria</h3><p data-es="Contenido y narrativa para cada experiencia." data-en="Content and storytelling for every experience.">Contenido y narrativa para cada experiencia.</p></a>
+          <a class="eco-card" href="https://www.xpaceos.com" target="_blank" rel="noopener"><small data-es="02 · Operar" data-en="02 · Operate">02 · Operar</small><h3>XpaceOS</h3><p data-es="El gemelo digital que coordina el espacio." data-en="The digital twin that orchestrates the space.">El gemelo digital que coordina el espacio.</p></a>
+          <a class="eco-card" href="/canal.html"><small data-es="03 · Emitir" data-en="03 · Broadcast">03 · Emitir</small><h3>Admira.tv</h3><p data-es="El canal que lleva el contenido a cada pantalla." data-en="The channel that brings content to every screen.">El canal que lleva el contenido a cada pantalla.</p></a>
         </div>
       </div>
     </section>
   </main>
 
-  <footer><div class="shell footer-row"><span>Admira.tv · Experiencias digitales para espacios vivos · v.05.10.2026.r1.00:56 · WozGrokBotBox · GrokBotBox</span><span><a href="/player/">Descargar player</a> · <a href="/canal.html">Ver canal</a></span></div></footer>
+  <footer><div class="shell footer-row"><span><span data-es="Admira.tv · Experiencias digitales para espacios vivos" data-en="Admira.tv · Digital experiences for spaces that come alive">Admira.tv · Experiencias digitales para espacios vivos</span> · v.05.10.2026.r1.00:56 · WozGrokBotBox · GrokBotBox</span><span><a href="/player/" data-es="Descargar player" data-en="Download player">Descargar player</a> · <a href="/canal.html" data-es="Ver canal" data-en="Watch channel">Ver canal</a></span></div></footer>
 
   <div class="video-dialog" id="appVideoDialog" role="dialog" aria-modal="true" aria-labelledby="appVideoTitle" hidden>
     <div class="video-box">
-      <div class="video-bar"><h2 id="appVideoTitle">Vídeo</h2><button class="video-close" id="appVideoClose" type="button" aria-label="Cerrar vídeo">✕</button></div>
+      <div class="video-bar"><h2 id="appVideoTitle">Vídeo</h2><button class="video-close" id="appVideoClose" type="button" aria-label="Cerrar vídeo" data-es-aria-label="Cerrar vídeo" data-en-aria-label="Close video">✕</button></div>
       <p class="video-status" id="appVideoStatus" role="status" aria-live="assertive"></p>
       <video id="appVideo" controls playsinline preload="metadata" tabindex="0"></video>
     </div>
