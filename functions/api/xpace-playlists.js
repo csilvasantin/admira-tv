@@ -5,13 +5,20 @@ const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control
 const allowedKeys=new Set(['operation','stockId','expectedRevision','requestId','seedStockIds']);
 export async function registerVirtualProjection(binding,env,name){
  if(!binding.source_screen.startsWith('virtual-xp-'))return {status:'not-required'};
+ let timer,expired=false;
  try{
   if(!env.VIRTUAL_PLAYERS)return {status:'pending'};
   const registry=env.VIRTUAL_PLAYERS.getByName(binding.source_screen);
-  // This is the local programming projection, not the commercial circuit.
-  if(!await registry.readPlayer())await registry.register({screen:binding.source_screen,name,circuit:binding.source_screen,mode:'conditional'});
-  return {status:'ready'};
- }catch{return {status:'pending'};}
+  const projection=(async()=>{
+   // This is the local programming projection, not the commercial circuit.
+   const existing=await registry.readPlayer();
+   if(expired)return {status:'pending'};
+   if(!existing)await registry.register({screen:binding.source_screen,name,circuit:binding.source_screen,mode:'conditional'});
+   return {status:'ready'};
+  })();
+  // This auxiliary service must not turn a committed D1 save into a BFF timeout.
+  return await Promise.race([projection,new Promise(resolve=>{timer=setTimeout(()=>{expired=true;resolve({status:'pending'});},1500);})]);
+ }catch{return {status:'pending'};}finally{clearTimeout(timer);}
 }
 export async function automaticItems(binding,env){
  if(binding.auto_mode!=='screen')return [];

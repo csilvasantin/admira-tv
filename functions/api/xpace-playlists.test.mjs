@@ -44,3 +44,15 @@ test('a failed fleet projection does not misreport an atomic save; resolve retri
  assert.equal(retried.registry.status,'ready');assert.equal(retried.revision,1);assert.equal(await count(db),1);
  assert.equal((await db.prepare('SELECT COUNT(*) n FROM xpace_playlist_request').first()).n,1);
 });
+
+test('a retained fleet RPC has a deadline after the atomic save and cannot register late',async()=>{
+ const db=await d1Memoria(sql);let release,registered=0;
+ const registry={getByName:()=>({readPlayer:()=>new Promise(resolve=>{release=resolve;}),register:async()=>{registered++;}})};
+ const started=Date.now(),response=await run(db,{operation:'add',stockId:'stock-one',expectedRevision:0,requestId:id},{registry});
+ assert.equal(response.status,200);const data=await response.json();assert.equal(data.saved,true);assert.equal(data.registry.status,'pending');assert.equal(data.revision,1);
+ assert.ok(Date.now()-started<4000,'auxiliary RPC returns before the 6-second BFF deadline');
+ assert.equal((await db.prepare('SELECT COUNT(*) n FROM xpace_playlist_request').first()).n,1);
+ release(null);await new Promise(resolve=>setTimeout(resolve,0));assert.equal(registered,0);
+ const replay=await(await run(db,{operation:'add',stockId:'stock-one',expectedRevision:0,requestId:id})).json();
+ assert.equal(replay.replayed,true);assert.equal(replay.revision,1);assert.equal(replay.effectiveItems.length,1);
+});
