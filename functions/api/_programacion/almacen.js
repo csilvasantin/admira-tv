@@ -17,6 +17,7 @@ import { MAX_REVISIONES, limpiarAsignacion, limpiarDestino, limpiarPlaylist, slu
 import { HORIZONTE_MS } from "./horario.js";
 import { MANDO_MAX_MS } from "./resolver.js";
 import { cleanService } from "../_playlist-live.js";
+import { protectedEntity,bindingForPlaylist,authorityFence } from "./xpace-binding.js";
 
 const ENTIDADES = {
   playlist: {
@@ -64,10 +65,13 @@ async function leer(db, E, id) {
 }
 
 /** Escritura genérica con bloqueo optimista. rev 0/ausente = crear; rev > 0 = actualizar esa revisión. */
-async function escribir(db, entidad, datos, { actor = "", rev = 0, ahora = Date.now(), motivo = "" } = {}) {
+async function escribir(db, entidad, datos, { actor = "", rev = 0, ahora = Date.now(), motivo = "", bindingId = "", receipt = null, accompanying = null } = {}) {
+  const protectedBinding=await protectedEntity(db,entidad,datos.id);
+  if(protectedBinding&&protectedBinding.id!==bindingId)return {ok:false,status:409,error:"playlist_scope_required"};
+  if(entidad==='asignacion'){const targetBinding=await bindingForPlaylist(db,datos.playlist_id);if(targetBinding&&targetBinding.id!==bindingId)return {ok:false,status:409,error:"playlist_scope_required"};}
   const E = ENTIDADES[entidad], id = datos.id, tok = ficha(), crear = !(Number(rev) > 0), nuevo = crear ? 1 : Number(rev) + 1;
   const vals = E.columnas.map(c => valorSql(datos[c]));
-  const guarda = E.guardaEscritura, gSql = guarda ? guarda.sql : "1", gBinds = guarda ? guarda.binds(datos) : [];
+  const guarda = E.guardaEscritura, fence=await authorityFence(db,entidad,id,{bindingId,targetPlaylist:datos.playlist_id}),gSql = (guarda ? guarda.sql : "1")+' AND '+fence.sql, gBinds = [...(guarda ? guarda.binds(datos) : []),...fence.args];
   const mia = `EXISTS (SELECT 1 FROM ${E.tabla} WHERE id = ? AND escritura = ?)`, yo = [id, tok];
   const stmts = [crear
     ? db.prepare(`INSERT INTO ${E.tabla} (id, ${E.columnas.join(", ")}, rev, escritura, creado_en, creado_por, actualizado_en, actualizado_por) `
@@ -87,6 +91,9 @@ async function escribir(db, entidad, datos, { actor = "", rev = 0, ahora = Date.
     stmts.push(db.prepare(`INSERT OR IGNORE INTO asignacion_destino (etiqueta, asignacion_id, modo) SELECT json_extract(value, '$[0]'), ?, json_extract(value, '$[1]') FROM json_each(?) WHERE ${mia}`)
       .bind(id, JSON.stringify(pares), ...yo));
   }
+  if(receipt&&entidad==="playlist")stmts.push(db.prepare(`INSERT INTO xpace_playlist_request(binding_id,actor,request_id,body_hash,result,created_at) SELECT ?,?,?,?,?,? WHERE ${mia}`)
+    .bind(receipt.bindingId,actor,receipt.requestId,receipt.bodyHash,JSON.stringify({playlist:{...datos,rev:nuevo,actualizado_en:ahora,actualizado_por:actor},...(receipt.effectiveItems?{effectiveItems:receipt.effectiveItems}:{})}),ahora,...yo));
+  if(typeof accompanying==="function")stmts.push(...accompanying({db,mia,yo,rev:nuevo}));
   stmts.push(...cierre(db, { ahora, actor, accion: crear ? "crear" : "actualizar", entidad, id, rev: nuevo, detalle: { motivo: String(motivo).slice(0, 300), nombre: datos.nombre || "" } }, mia, yo));
   stmts.push(db.prepare(`SELECT * FROM ${E.tabla} WHERE id = ? AND escritura = ?`).bind(...yo));
   let res;
@@ -96,6 +103,7 @@ async function escribir(db, entidad, datos, { actor = "", rev = 0, ahora = Date.
     throw e;
   }
   if (!cambios(res[0])) {
+    const nowProtected=await protectedEntity(db,entidad,id);if(nowProtected&&nowProtected.id!==bindingId)return {ok:false,status:409,error:'playlist_scope_required'};
     if (crear) return { ok: false, status: (guarda && guarda.status) || 409, error: (guarda && guarda.error) || "conflicto" };
     const actual = await leer(db, E, id);
     if (!actual) return { ok: false, status: 404, error: "no_existe" };
@@ -115,15 +123,16 @@ function cierre(db, { ahora, actor, accion, entidad, id, rev, detalle }, mia, yo
 }
 
 async function borrar(db, entidad, id, { actor = "", rev, ahora = Date.now(), motivo = "" } = {}) {
-  const E = ENTIDADES[entidad], tok = ficha(), guarda = E.guardaBorrado;
+  if(await protectedEntity(db,entidad,id))return {ok:false,status:409,error:"playlist_scope_required"};
+  const E = ENTIDADES[entidad], tok = ficha(), guarda = E.guardaBorrado,fence=await authorityFence(db,entidad,id);
   if (!(Number(rev) > 0)) return { ok: false, status: 428, error: "rev_requerida" };
   // La copia final viaja en la auditoría: es lo que permite deshacer un borrado.
   const ultima = await leer(db, E, id);
   if (!ultima) return { ok: false, status: 404, error: "no_existe" };
   if (Number(ultima.rev) !== Number(rev)) return { ok: false, status: 409, error: "revision_conflict", actual: ultima };
   const mia = `EXISTS (SELECT 1 FROM ${E.tabla} WHERE id = ? AND escritura = ?)`, yo = [id, tok];
-  const stmts = [db.prepare(`UPDATE ${E.tabla} SET escritura = ? WHERE id = ? AND rev = ?${guarda ? " AND " + guarda.sql : ""}`)
-    .bind(tok, id, Number(rev), ...(guarda ? guarda.binds(id) : []))];
+  const stmts = [db.prepare(`UPDATE ${E.tabla} SET escritura = ? WHERE id = ? AND rev = ?${guarda ? " AND " + guarda.sql : ""} AND ${fence.sql}`)
+    .bind(tok, id, Number(rev), ...(guarda ? guarda.binds(id) : []),...fence.args)];
   if (entidad === "asignacion") stmts.push(db.prepare(`DELETE FROM asignacion_destino WHERE asignacion_id = ? AND ${mia}`).bind(id, ...yo));
   stmts.push(...cierre(db, { ahora, actor, accion: "borrar", entidad, id, rev: Number(rev), detalle: { motivo: String(motivo).slice(0, 300), datos: ultima } }, mia, yo));
   stmts.push(db.prepare(`DELETE FROM ${E.tabla} WHERE id = ? AND escritura = ?`).bind(...yo));

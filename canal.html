@@ -67,9 +67,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=14.10.2026.r16.2113"></script>
+<script src="xpl-runtime.js?v=15.10.2026.r2.1348"></script>
 <script>
-  window.ADMIRA_VERSION='v.14.10.2026.r16.21:13';
+  window.ADMIRA_VERSION='v.15.10.2026.r2.13:48';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -426,7 +426,7 @@
   <aside id="chan"></aside>
 </div>
 
-<script src="/assets/player-pairing.js?v=14.10.2026.r16.2113"></script>
+<script src="/assets/player-pairing.js?v=15.10.2026.r2.1348"></script>
 <script>
 // Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
 // directo (pub-…r2.dev): más resiliente y evita bloqueos de DNS/filtrado en algunas
@@ -1649,7 +1649,7 @@ function signageNowPush(it){
   // enseñaba la pieza anterior con el título de la nueva. Aquí es donde se sabe que
   // la pieza cambió de verdad, así que aquí se pide la captura.
   if(cambiaPieza){ try{ shotSoon(); }catch(_){} }
-  if(!_nowKeep) _nowKeep=setInterval(()=>{ if(!_nowItem) return; _nowItem.ts=Date.now(); _postNow(_nowItem); }, 60000);
+  if(!_nowKeep) _nowKeep=setInterval(()=>{ if(_nowItem){ _nowItem.ts=Date.now(); _postNow(_nowItem); } else if(DEFAULT_DRAFT.managedEmpty) _postNow(null); }, 60000);
 }
 // ── STANDBY / BLACKOUT remoto: apaga la pantalla (negro + pausa) SIN cerrar la app.
 // Persistente: si la pantalla reinicia estando en standby, arranca apagada hasta que
@@ -1681,7 +1681,7 @@ function standbyOn(on){
 // Solo POSTea cuando cambia la FIRMA (ids en orden) → apenas gasta writes de KV.
 // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
 const PLAYLIST_API='https://brain.digitalavatar.ai/control/playlist';
-let _plSig='';
+let _plSig=null;
 function signagePlaylistPush(){
   if(XTORE_PARENT&&xtoreMusicEnabled())return;
   if(PREVIEW.on||!scr.screen) return;   // el previo de borrador jamás contamina el mando
@@ -1701,7 +1701,7 @@ function signagePlaylistPush(){
   if(sig===_plSig) return;
   _plSig=sig;
   try{ fetch(PLAYLIST_API,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ screen:scr.screen, items })}).catch(()=>{ _plSig=''; }); }catch(_){ _plSig=''; }   // si falla, reintenta en el próximo rebuild
+    body:JSON.stringify({ screen:scr.screen, items })}).catch(()=>{ _plSig=null; }); }catch(_){ _plSig=null; }   // si falla, reintenta en el próximo rebuild
 }
 
 // Audiencia por cámara → /signage/now (clearchannel la muestra bajo impr/day y CPM).
@@ -1882,7 +1882,7 @@ function previewFallback(msg){
 // a ser la programación base del player: orden exacto, duración editorial y
 // caché disco-primero. Sincro, extendido, parrilla horaria y un tag remoto siguen
 // teniendo precedencia explícita; una lista vacía conserva el fallback seguro.
-const DEFAULT_DRAFT={items:[],signature:'',ready:false,assigned:false};
+const DEFAULT_DRAFT={items:[],signature:'',ready:false,assigned:false,managedEmpty:false};
 let _xtoreMusicBase=true, _xtoreMusicItem=null;
 function xtoreMusicItems(items,catalog=[]){
   const known=new Map(catalog.map(it=>[String(it.id),it]));
@@ -2001,19 +2001,22 @@ async function loadDefaultDraft(){
     const q=typeof qs!=='undefined'&&qs&&typeof qs.get==='function'?qs:null,pj=q&&q.get('project')||'',xp=q&&(q.get('xpace')||q.get('xpacio')||q.get('loc'))||'',io=q&&(q.get('iot')||q.get('idiot'))||'';
     defaultDraftHints=(c&&c!==screen?'&circuit='+encodeURIComponent(c):'')+(pj?'&project='+encodeURIComponent(pj):'')+(xp?'&xpace='+encodeURIComponent(xp):'')+(io?'&iot='+encodeURIComponent(io):'')+'&w='+w+'&h='+h+(l?'&lang='+encodeURIComponent(l):'');}catch(_){}
   try{
-    const d=XTORE_PARENT?await xtorePublicRead('playlist'):await fetch('/api/playlist?screen='+encodeURIComponent(screen)+defaultDraftHints+'&_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
-    if(xtoreMusicEnabled()&&(d?.ok!==true||!Array.isArray(d?.draft?.items)))throw new Error('Playlist unavailable');
+    const d=XTORE_PARENT?await xtorePublicRead('playlist'):await fetch('/api/playlist?screen='+encodeURIComponent(screen)+defaultDraftHints+'&_='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json():null);
+    if(d?.ok!==true||!Array.isArray(d?.draft?.items))throw new Error('Playlist unavailable');
     let raw=d&&d.draft&&Array.isArray(d.draft.items)?d.draft.items:[];
     // Piezas dirigidas a esta pantalla por hashtag (su nombre único o el de su centro): se añaden a lo que tenga.
     if(d&&Array.isArray(d.auto)&&d.auto.length){const ya=new Set(raw.map(it=>String(it.stockId||it.id||'')));raw=raw.concat(d.auto.filter(it=>!ya.has(String(it.stockId||it.id||''))));}
-    if(xtoreMusicEnabled()){DEFAULT_DRAFT.ready=true;DEFAULT_DRAFT.assigned=raw.length>0;}
+    DEFAULT_DRAFT.managedEmpty=d?.draft?.managedEmpty===true;
+    if(DEFAULT_DRAFT.managedEmpty)raw=[];
+    const firstValidRead=!DEFAULT_DRAFT.ready;
+    DEFAULT_DRAFT.ready=true;DEFAULT_DRAFT.assigned=raw.length>0||DEFAULT_DRAFT.managedEmpty;
     if(xtoreMusicEnabled())raw=xtoreMusicItems(raw,all);
     const mapped=raw.map((it,ix)=>{const type=playlistAssetKind(it);return{id:'default:'+String(it.stockId||it.id||ix),url:it.asset||it.url||'',type,title:it.title||('Contenido '+(ix+1)),motor:'parrilla-default',category:'por-defecto',_default:true,_position:ix,_previewSec:Math.max(2,+it.seconds||10),createdAt:'8'+String(1000+ix)}}).filter(x=>x.url);
-    const signature=(xtoreMusicEnabled()?(DEFAULT_DRAFT.assigned?'assigned:':'stock:'):'')+mapped.map(x=>x.id+'|'+x.type+'|'+x.url+'|'+x._previewSec).join('~');
-    if(signature===DEFAULT_DRAFT.signature){if(xtoreMusicEnabled()&&!playlist.length)rebuild(false);return;}
+    const signature=(DEFAULT_DRAFT.managedEmpty?'managed-empty:':'')+(xtoreMusicEnabled()?(DEFAULT_DRAFT.assigned?'assigned:':'stock:'):'')+mapped.map(x=>x.id+'|'+x.type+'|'+x.url+'|'+x._previewSec).join('~');
+    if(signature===DEFAULT_DRAFT.signature){if(firstValidRead||xtoreMusicEnabled()&&!playlist.length)rebuild(false);return;}
     DEFAULT_DRAFT.items=mapped;DEFAULT_DRAFT.signature=signature;rebuild(false);
   }catch(_){
-    if(xtoreMusicEnabled()&&!DEFAULT_DRAFT.ready){
+    if(!DEFAULT_DRAFT.ready){
       stage.innerHTML='<div class="empty">No se pudo consultar la playlist. Reintentando…</div>';
       nowEl.textContent='Playlist pendiente de consulta';
       emitFrameState({id:'playlist-default'},'playlist-unavailable');
@@ -2824,6 +2827,17 @@ function defaultOrder(arr){
   });
 }
 function rebuild(restart){
+  if(String(programScreen()||programCircuit()||'').trim()&&!PREVIEW.on&&!DEFAULT_DRAFT.ready){
+    stage.innerHTML='<div class="empty">Consultando la playlist de esta pantalla…</div>';nowEl.textContent='Playlist pendiente de consulta';return;
+  }
+  if(DEFAULT_DRAFT.managedEmpty){
+    ++_playTok;clearTimeout(timer);stopBar();usesAdv=false;xtoreMusicRelease();playlist=[];cur=-1;
+    // La API admite item:null: presencia viva sin una emisión ni standby inventados.
+    _nowItem=null;_postNow(null);
+    if(!_nowKeep)_nowKeep=setInterval(()=>{if(_nowItem){_nowItem.ts=Date.now();_postNow(_nowItem);}else if(DEFAULT_DRAFT.managedEmpty)_postNow(null);},60000);
+    stage.innerHTML='<div class="empty">Playlist vacía · añade contenidos desde el mando de este establecimiento</div>';nowEl.textContent='Playlist vacía';
+    try{renderChan();renderRail();signagePlaylistPush();}catch(_){}return;
+  }
   if(xtoreMusicEnabled()){xtoreMusicRebuild();return;}
   // Un rebuild CON restart es una orden explícita (cambio de segmento, tag del
   // mando, /reload…): manda más que la novedad, así que se le corta el turno.
@@ -5126,6 +5140,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=14.10.2026.r16.2113" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.10.2026.r2.1348" defer></script>
 </body>
 </html>

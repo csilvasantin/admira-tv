@@ -29,6 +29,7 @@ import { PROYECTO, actorDeServicio } from "./acceso.js";
 import * as A from "./almacen.js";
 import { ACTOR, ESCRIBEN, idsNecesarios, planificar, sinDatos, traducir } from "./importador.js";
 import { espejoDe } from "./espejo.js";
+import { protectedEntity } from './xpace-binding.js';
 
 // Escrituras en la D1 por petición: un db.batch de 5 a 10 sentencias cada una (almacen.js). Con 50 se queda lejos del
 // tope de 1000 consultas por invocación de Workers, aunque D1 contara cada sentencia del batch por separado.
@@ -121,6 +122,7 @@ export async function importar({ request, env = {} }) {
     const traduccion = traducir({ live: leido.live, borradores: leido.borradores });
     const d1 = await A.leerParaImportar(db, idsNecesarios(traduccion));
     plan = planificar({ traduccion, pantallas, d1, ...opciones });
+    for(const op of plan.operaciones)if(ESCRIBEN.has(op.accion)&&await protectedEntity(db,op.entidad,op.id)){op.accion='omitir';op.motivo='xpace_authority';}
   } catch (e) {
     console.error("programacion: importar lectura", e);
     return json({ ok: false, error: "programacion_lectura_fallida" }, 503);
