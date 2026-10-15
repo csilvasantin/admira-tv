@@ -59,7 +59,7 @@ main{max-width:1200px;margin:0 auto;padding:18px}
 </main>
 <div data-af-slot="left" class="slot">
   <h3 data-t="marca">Marca / sala</h3>
-  <select id="selMarca"><option value="starbucks">Starbucks · Paseo de Gracia</option><option value="365">365</option><option value="admiranext">AdmiraNeXT</option></select>
+  <select id="selMarca"><option value="starbucks">Starbucks · Paseo de Gracia</option><option value="starbucks-diagonal">Starbucks · Diagonal 634</option><option value="365">365</option><option value="admiranext">AdmiraNeXT</option></select>
   <h3 style="margin-top:14px" data-t="comandos">Comandos</h3>
   <div class="form"><input id="cli" placeholder="/avanzar A001" style="flex:1"></div>
   <ul><li><code>/marca starbucks|365|admiranext</code></li><li><code>/sala &lt;slug&gt;</code></li><li><code>/crear [nombre]</code></li><li><code>/avanzar A001 [preparando|listo|recogido]</code></li><li><code>/llamar A001</code></li><li><code>/recoger A001</code></li><li><code>/reiniciar</code></li><li><code>/idioma es|en</code></li><li><code>/pantalla</code> · <code>/help</code></li></ul>
@@ -74,7 +74,8 @@ main{max-width:1200px;margin:0 auto;padding:18px}
 import {RoomClient,PendingOrder} from "/gestorColas/room-client.mjs?v=queue-flow-1";
 (function(){
 const P=new URLSearchParams(location.search),$=id=>document.getElementById(id);
-const MARCAS={starbucks:'starbucks-paseo-de-gracia','365':'365-demo',admiranext:'admiranext-demo'};
+// Diagonal 634 con su propia sala (Carlos, 16-oct-2026: «pide una cola propia para Diagonal»).
+const MARCAS={starbucks:'starbucks-paseo-de-gracia','starbucks-diagonal':'starbucks-diagonal-634','365':'365-demo',admiranext:'admiranext-demo'};
 let sala=(P.get('sala')||P.get('store')||MARCAS[P.get('marca')]||MARCAS.starbucks).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,80);
 const client=new RoomClient(sala,{storage:localStorage}),pendingOrders=new PendingOrder(sessionStorage);
 if(P.get('clave')){client.setKey(P.get('clave'));const q=new URLSearchParams(location.search);q.delete('clave');history.replaceState(null,'','?'+q+location.hash);}
