@@ -24,6 +24,22 @@
   var html = doc.documentElement;
   var CFG = G.ADMIRA_CONTEXTO_TV || {};
 
+  // «alsea» es Starbucks (Carlos, 15-oct-2026: Alsea opera Starbucks; por si alguien se equivoca). El módulo
+  // común (shared/, copia de admira-design) no se toca: se traduce aquí, antes de cargarlo, en la URL
+  // (?marca= y ?proyecto=), en la marca recordada de la pestaña y en /marca y /proyecto.
+  var ALIAS_MARCA = {alsea: 'starbucks'};
+  function canonica(v) { var s = String(v == null ? '' : v).trim().toLowerCase(); return ALIAS_MARCA[s] || ''; }
+  try {
+    var u0 = new URL(location.href), cambio = false;
+    ['marca', 'proyecto'].forEach(function (k) {
+      var c = u0.searchParams.has(k) && canonica(u0.searchParams.get(k));
+      if (c) { u0.searchParams.set(k, c); cambio = true; }
+    });
+    if (cambio) history.replaceState(history.state, '', u0.pathname + u0.search + u0.hash);
+    var mb0 = canonica(sessionStorage.getItem('mb:marca'));
+    if (mb0) sessionStorage.setItem('mb:marca', mb0);
+  } catch (_) {}
+
   // El fetch de verdad: el módulo común lo usa para /ctx y para sus lecturas, así nunca vuelve a pasar por el filtro.
   var fetchOriginal = G.fetch ? G.fetch.bind(G) : null;
 
@@ -198,6 +214,7 @@
     if (!m) return Promise.resolve({ok: false, error: 'unknown-context-command'});
     var esMarca = /^(marca|brand|marcablanca)$/i.test(m[1]);
     var arg = (m[2] || '').trim();
+    if (canonica(arg)) arg = canonica(arg);
     return modulo.then(function (C) {
       if (!C) { escribir(T('El filtro de marca y proyecto no está disponible.', 'Brand and project filter unavailable.'), 'err'); return {ok: false, error: 'context-unavailable'}; }
       if (esMarca && /^(lista|list)$/i.test(arg)) {
