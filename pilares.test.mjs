@@ -112,7 +112,7 @@ test('la home pinta las 20 tarjetas en el orden de las zonas, cada una con su et
     const p = porId[zona];
     assert.ok(c.texto.includes(`${p.n} · ${p.nombre} · ${p.verbo_es} · ${p.verbo_en}`), `${c.slug}: falta «${p.n} · ${p.nombre} · ${p.verbo_es} · ${p.verbo_en}»`);
     const nombre = ZONAS[zona][i % 4][1];
-    assert.match(c.cuerpo, new RegExp(`<h3>(?:<a [^>]*>)?${nombre}(?:</a>)?</h3>`), `${c.slug}: nombre`);
+    assert.match(c.cuerpo, new RegExp(`<h3><(a|span) [^>]*>${nombre}</\\1></h3>`), `${c.slug}: nombre`);
     assert.equal(c.clases.includes('app-card-pilar'), i % 4 === 0, `${c.slug}: sólo la primera de la zona es la del pilar`);
   }
   for (const slug of FUERA_DE_LA_HOME) {
@@ -161,7 +161,7 @@ test('sin medio publicado, Vídeo y PDF aparecen como «pronto»: presentes, ari
 });
 
 test('la leyenda enlaza digitalsignage.ai, cuenta 4 por pilar y sus botones son accesibles sin JS y con JS', () => {
-  assert.match(home, /Los cinco pilares · <a href="https:\/\/www\.digitalsignage\.ai\/" target="_blank" rel="noopener">digitalsignage\.ai/);
+  assert.match(home, /Los cinco pilares<\/span> · <a href="https:\/\/www\.digitalsignage\.ai\/" target="_blank" rel="noopener">digitalsignage\.ai/);
   const botones = [...home.matchAll(/<button type="button" class="pilar-btn[^"]*"[^>]*>[\s\S]*?<\/button>/g)].map((m) => m[0]);
   assert.equal(botones.length, 6, 'Todas + 5 pilares');
   for (const b of botones) {
@@ -260,5 +260,5 @@ test('los contadores escritos a mano siguen diciendo 20', () => {
   assert.match(home, /Descubrir las 20 soluciones/);
   assert.match(home, /Una plataforma, 20 formas de activar el espacio\./);
   assert.match(home, /id="appsStatus"[^>]*>20 soluciones · 20 solutions</);
-  assert.match(home, /<span class="pilar-btn-cuenta">20 soluciones<\/span>/);
+  assert.match(home, /<span class="pilar-btn-cuenta"[^>]*>20 soluciones<\/span>/);
 });

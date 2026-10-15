@@ -32,12 +32,21 @@
     finally { clearTimeout(timer); }
   }
 
+  // La portada en inglés (assets/portada-idioma.js pone <html lang="en">): los avisos también.
+  function enIngles() {
+    var raiz = typeof document !== "undefined" && document.documentElement;
+    return !!(raiz && /^en/i.test(raiz.lang || ""));
+  }
+
   function cleanFailedVideo(player, announcer, reason) {
-    var message = reason === "timeout" ? "El vídeo está tardando demasiado y se ha detenido." : "El vídeo no está disponible temporalmente.";
+    var en = typeof document !== "undefined" && !!document.documentElement && /^en/i.test(document.documentElement.lang || "");
+    var message = reason === "timeout"
+      ? (en ? "The video is taking too long and has been stopped." : "El vídeo está tardando demasiado y se ha detenido.")
+      : (en ? "The video is temporarily unavailable." : "El vídeo no está disponible temporalmente.");
     try { player.pause(); player.removeAttribute("src"); player.load(); } catch (_) {}
     player.hidden = true;
     player.setAttribute("aria-hidden", "true");
-    announcer.textContent = message + " Puedes cerrar esta ventana y seguir explorando.";
+    announcer.textContent = message + (en ? " You can close this window and keep exploring." : " Puedes cerrar esta ventana y seguir explorando.");
     return message;
   }
 
@@ -49,8 +58,12 @@
   function bindVideo(button) {
     var card = button.closest(".app-card");
     var src = button.getAttribute("data-app-video");
-    var name = (card && card.getAttribute("data-app-title")) || "Vídeo";
-    button.addEventListener("click", function () { openVideo(name, src, button); });
+    // En inglés, el título del vídeo es el nombre inglés (el que enseña ya la tarjeta).
+    function name() {
+      var h3 = enIngles() && card && card.querySelector("h3");
+      return (h3 && h3.textContent.trim()) || (card && card.getAttribute("data-app-title")) || (enIngles() ? "Video" : "Vídeo");
+    }
+    button.addEventListener("click", function () { openVideo(name(), src, button); });
   }
 
   function bindPdf(button) {
@@ -59,16 +72,17 @@
     var feedback = mediaStatusOf(card);
     button.addEventListener("click", async function () {
       button.disabled = true;
-      button.textContent = "Comprobando…";
-      if (feedback) feedback.textContent = "Comprobando disponibilidad del PDF.";
+      var en = enIngles();
+      button.textContent = en ? "Checking…" : "Comprobando…";
+      if (feedback) feedback.textContent = en ? "Checking the PDF is available." : "Comprobando disponibilidad del PDF.";
       var available = await probePublicMedia(src, fetch, 8000);
       if (!available) {
         button.disabled = false;
-        button.textContent = "Reintentar PDF";
-        if (feedback) feedback.textContent = "El PDF no está disponible temporalmente. La página permanece abierta.";
+        button.textContent = en ? "Retry PDF" : "Reintentar PDF";
+        if (feedback) feedback.textContent = en ? "The PDF is temporarily unavailable. The page stays open." : "El PDF no está disponible temporalmente. La página permanece abierta.";
         return;
       }
-      if (feedback) feedback.textContent = "PDF disponible. Iniciando descarga.";
+      if (feedback) feedback.textContent = en ? "PDF available. Starting the download." : "PDF disponible. Iniciando descarga.";
       var download = document.createElement("a");
       download.href = src;
       download.download = "";
@@ -85,7 +99,7 @@
     title.textContent = name;
     video.hidden = false;
     video.removeAttribute("aria-hidden");
-    videoStatus.textContent = "Cargando vídeo…";
+    videoStatus.textContent = enIngles() ? "Loading video…" : "Cargando vídeo…";
     video.src = src;
     video.load();
     clearTimeout(videoTimer);
@@ -122,7 +136,7 @@
   }
 
   close.addEventListener("click", closeVideo);
-  video.addEventListener("canplay", function () { if (video.hidden) return; clearTimeout(videoTimer); videoTimer = null; videoStatus.textContent = "Vídeo listo para reproducir."; });
+  video.addEventListener("canplay", function () { if (video.hidden) return; clearTimeout(videoTimer); videoTimer = null; videoStatus.textContent = enIngles() ? "Video ready to play." : "Vídeo listo para reproducir."; });
   video.addEventListener("error", function () { if (video.hidden) return; clearTimeout(videoTimer); videoTimer = null; cleanFailedVideo(video, videoStatus, "error"); });
   dialog.addEventListener("click", function (event) { if (event.target === dialog) closeVideo(); });
   document.addEventListener("keydown", onDialogKey, true);
@@ -149,6 +163,13 @@
   var tarjetas = Array.prototype.slice.call(rejilla.querySelectorAll("[data-public-app-card]"));
   var estado = document.getElementById("appsStatus");
   var total = tarjetas.length;
+  var actual = "todas";
+
+  // La portada en inglés (assets/portada-idioma.js pone <html lang="en">): el recuento también.
+  function enIngles() {
+    var raiz = document.documentElement;
+    return !!(raiz && /^en/i.test(raiz.lang || ""));
+  }
 
   function nombreDe(boton) {
     var nodo = boton && boton.querySelector(".pilar-btn-nombre");
@@ -169,10 +190,13 @@
       boton.setAttribute("aria-pressed", on ? "true" : "false");
       if (on) activo = boton;
     });
+    actual = todas ? "todas" : pilar;
     if (estado) {
+      var en = enIngles();
       estado.textContent = todas
-        ? total + " soluciones · " + total + " solutions"
-        : nombreDe(activo) + " · " + visibles + " de " + total + " soluciones · " + visibles + " of " + total + " solutions";
+        ? (en ? total + " solutions" : total + " soluciones · " + total + " solutions")
+        : (en ? nombreDe(activo) + " · " + visibles + " of " + total + " solutions"
+          : nombreDe(activo) + " · " + visibles + " de " + total + " soluciones · " + visibles + " of " + total + " solutions");
     }
   }
 
@@ -186,4 +210,7 @@
     });
   });
   grupo.classList.add("pilares-listo");
+  // Al cambiar de idioma (y si la portada ya abre en inglés) el recuento se vuelve a decir.
+  if (typeof document.addEventListener === "function") document.addEventListener("admira:languagechange", function () { aplica(actual); });
+  if (enIngles()) aplica(actual);
 })();
