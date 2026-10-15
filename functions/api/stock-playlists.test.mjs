@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {stockCatalog,appendStockItems} from './_stock-playlists.js';
 import {onRequestGet,onRequestPost} from './stock-playlists.js';
-import {forgetMemo,stockPlaylistSnapshot} from './playlist.js';
+import {forgetMemo,stockPlaylistSnapshot,onRequestGet as playerGet} from './playlist.js';
+import {cleanCircuit,serviceBindings,deduceScreenTags} from './_playlist-live.js';
 const phone='iphone17-mupi',ipad='ipad-admin-mupi',secret='service-test';
 const piece=id=>({id,type:'video',url:`https://stock.admira.store/stock/${id}/asset.mp4`,title:id,tags:[],routingSource:{tags:[],comment:''}});
 const item=id=>({id:'stock-'+id,stockId:id,title:id,asset:piece(id).url,assetType:'video',seconds:40});
@@ -26,6 +27,24 @@ test('catálogo: servicio Starbucks apunta a iPhone sin cambiar su proyecto fís
 test('una playlist conserva todas sus rutas físicas y de servicio sin multiplicar su identidad',()=>{
  const data=stockCatalog({screens:[{screen:phone,facts:{screen:phone,project:'admiranext',xpace:'iphone17'}}],circuits:['starbucks','sneakerstore'].map(brand=>({id:brand,target:{all:['pantalla:'+phone]},service:{brand,use:'hilomusical'}})),playlists:[{screen:phone,name:'music',items:[item('song')]}]});
  assert.deepEqual(data.assignments.map(a=>a.project),['admiranext','starbucks','sneakerstore']);assert.equal(new Set(data.assignments.map(a=>a.id)).size,1);
+});
+test('circuito de catálogo Starbucks ofrece el iPad sin cambiar identidad ni habilitar contenido de marca',async t=>{
+ const f=fixture(t),demo=cleanCircuit({id:'starbucks-demo-ipad',name:'Demo iPad',catalogProject:'starbucks',target:{all:['pantalla:'+ipad]}});
+ f.store.set('admira-tv:screen:identity:v1',JSON.stringify({map:{[ipad]:{p:'admiranext',x:'ipad-admin',n:'iPad de Admin',xn:'iPad de Admin'}}}));
+ const index=JSON.parse(f.store.get('admira-tv:screen:xpacio:v1'));index.map[ipad]={x:'ipad-admin',n:'iPad de Admin',c:'ipad-admin',b:'admiranext'};f.store.set('admira-tv:screen:xpacio:v1',JSON.stringify(index));
+ f.store.set('admira-tv:playlist:live:v1',JSON.stringify({rev:2,playlists:[],circuits:[demo]}));
+ f.store.set('admira-tv:playlist:default:v1:'+ipad,JSON.stringify({screen:ipad,name:'Starbucks demo',items:[item('demo1'),item('demo2')],rev:5}));
+ f.stock.push(piece('demo1'),piece('demo2'),...Array.from({length:25},(_,i)=>({...piece('brand'+i),tags:['starbucks'],routingSource:{tags:['starbucks'],comment:''}})));
+ const before=f.store.get('admira-tv:playlist:default:v1:'+ipad),r=await onRequestGet({request:request(),env:f.env}),catalog=await r.json();
+ assert.ok(catalog.rows.some(r=>r.project==='starbucks'&&r.circuit==='starbucks-demo-ipad'&&r.screen===ipad));
+ assert.equal(catalog.rows.some(r=>r.circuit==='starbucks-demo-ipad'&&r.screen===phone),false);
+ assert.deepEqual(catalog.assignments.find(a=>a.screen===ipad&&a.project==='starbucks').stockIds,['demo1','demo2']);
+ const player=await (await playerGet({request:new Request('https://admira.tv/api/playlist?screen='+ipad+'&player=1&o=vertical'),env:f.env})).json();
+ assert.deepEqual(player.draft.items.map(i=>i.stockId),['demo1','demo2']);assert.deepEqual(player.auto,[]);assert.ok(player.screenTags.includes('proyecto:admiranext'));assert.equal(player.screenTags.includes('proyecto:starbucks'),false);
+ assert.deepEqual(serviceBindings([demo],deduceScreenTags({screen:ipad,project:'admiranext'})),[]);
+ assert.equal(f.store.get('admira-tv:playlist:default:v1:'+ipad),before);
+ const again=await onRequestPost({request:request({screens:[ipad],stockIds:['demo1']}),env:f.env});
+ assert.equal((await again.json()).results[0].added,0);assert.equal(f.store.get('admira-tv:playlist:default:v1:'+ipad),before);
 });
 const rule=(id,target,tag)=>({id,name:id,enabled:true,target:{all:target},content:{type:'visual',all:[tag],any:[],none:[],limit:200,seconds:30,matchOrientation:false}});
 test('pertenencias resueltas con identidad actual; ignora proyecto antiguo del censo',async t=>{

@@ -430,7 +430,12 @@ export function cleanCircuit(raw, actor = "", now = Date.now()) {
   const target = { all: tagList(t.all, screenTag, 200).filter(x => x !== self), any: tagList(t.any, screenTag, 200).filter(x => x !== self) };
   if (!target.all.length && !target.any.length) throw new Error("circuit_target_required");
   const service = raw.service == null ? {} : { service: cleanService(raw.service) };
-  return { id, name, enabled: raw.enabled !== false, target, ...service, updatedAt: now, updatedBy: String(actor || "").slice(0, 120) };
+  // Pertenencia en el selector de Stock; no es una identidad del player ni un servicio
+  // que habilite contenidos dirigidos por marca. Permite agrupar demos manuales.
+  const project = String(raw.catalogProject || "").trim().toLowerCase();
+  if (project && !/^[a-z0-9][a-z0-9_-]{0,79}$/.test(project)) throw new Error("invalid_catalog_project");
+  const catalog = project ? { catalogProject: project } : {};
+  return { id, name, enabled: raw.enabled !== false, target, ...service, ...catalog, updatedAt: now, updatedBy: String(actor || "").slice(0, 120) };
 }
 /** Etiquetas de la pantalla más circuito:<id> de cada circuito definido que la incluya. */
 export function applyCircuits(tags, circuits) {

@@ -368,6 +368,16 @@ test("una playlist viva de audio también trae locuciones", () => {
 
 const musicalPhone = {screen:"iphone17-mupi",project:"admiranext",iot:"AdmiraNeXT_iPhonedeCarlos_Pantalla_1",xpace:"iphone17",w:440,h:956};
 const musicalCircuit = () => cleanCircuit({name:"Starbucks hilo musical",target:{all:["pantalla:iphone17-mupi"]},service:{brand:"starbucks",use:"hilomusical"}});
+test('pertenencia de catálogo se valida y persiste al editar con clientes antiguos; no es un servicio musical',async()=>{
+ const m=mundo({items:[]}),circuit={id:'starbucks-demo-ipad',name:'Demo iPad',catalogProject:'Starbucks',target:{all:['pantalla:ipad-admin-mupi']}};
+ try{
+  const first=await (await post(m.env,{action:'circuit-save',circuit})).json();assert.equal(first.live.circuits[0].catalogProject,'starbucks');assert.equal(first.live.circuits[0].service,undefined);
+  const {catalogProject,...legacy}=circuit;
+  const edited=await (await post(m.env,{action:'circuit-save',circuit:{...legacy,name:'Demo iPad renombrada'},rev:first.live.rev})).json();assert.equal(edited.live.circuits[0].catalogProject,'starbucks');
+  const cleared=await (await post(m.env,{action:'circuit-save',circuit:{...legacy,catalogProject:''},rev:edited.live.rev})).json();assert.equal(cleared.live.circuits[0].catalogProject,undefined);
+  assert.throws(()=>cleanCircuit({...circuit,catalogProject:'starbucks/<script>'}),/invalid_catalog_project/);
+ }finally{m.fin();}
+});
 test("hilo musical: cliente y uso explícitos llegan sólo al destino configurado conservando el medio", () => {
   const circuit = musicalCircuit(), bindings = serviceBindings([circuit],deduceScreenTags(musicalPhone));
   const stock = [pieza("v1",["starbucks","hilomusical"],{orientacion:"horizontal"}),pieza("a2",["starbucks","backgroundmusic"],{type:"music"}),

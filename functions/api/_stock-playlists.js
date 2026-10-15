@@ -12,7 +12,7 @@ export function stockCatalog(snapshot) {
     const contexts=[row];
     for (const c of snapshot.circuits || []) {
       if (!c || c.enabled===false || !targetMatches(c.target,base)) continue;
-      const project=c.service?.brand||row.project;
+      const project=c.catalogProject||c.service?.brand||row.project;
       contexts.push({...row,project,projectName:names.get(project)||project,circuit:c.id,circuitName:c.name||c.id,service:c.service?.use||''});
     }
     rows.push(...contexts);
