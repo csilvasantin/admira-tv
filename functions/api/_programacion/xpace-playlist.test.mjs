@@ -2,11 +2,16 @@ import test from 'node:test';import assert from 'node:assert/strict';import {rea
 import {d1Memoria} from './_d1-memoria.mjs';
 import * as A from './almacen.js';
 import {ensureVirtualPlaylist,mutateScopedPlaylist,readBoundPlaylist,scopeIdentity,verifyPlaylistGrant} from './xpace-playlist.js';
-import {effectiveXpaceItems} from './xpace-binding.js';
+import {effectiveXpaceItems,boundDraft} from './xpace-binding.js';
 import {preparePhysicalPlaylist,activatePhysicalPlaylist,PHYSICAL_DRAIN_MS} from './xpace-physical-bootstrap.js';
 const sql=await readFile(new URL('../../../migrations/programacion/0001.sql',import.meta.url),'utf8')+await readFile(new URL('../../../migrations/programacion/0002_xpace_playlist.sql',import.meta.url),'utf8');
 const scope=venueId=>({projectId:'test-retail',venueId,channelId:'music'}),actor='editor@example.com',requestId='b7618c03-fd72-45c0-afc0-96114832f2a1';
 const item=id=>({id,stockId:id,title:id,asset:'https://stock.admira.store/stock/'+id+'/asset.mp4',assetType:'video',seconds:10});
+test('player channel kind comes from the authoritative binding',()=>{
+ const playlist={nombre:'Demo',items:[],rev:1,opciones:{channelKind:'music'}};
+ assert.equal(boundDraft({source_screen:'virtual-qa',channel_kind:'signage'},playlist).channelKind,'signage');
+ assert.equal(boundDraft({source_screen:'iphone17-mupi',channel_kind:'music'},playlist).channelKind,'music');
+});
 test('three venues have independent persistent authorities; seed retained by first add',async()=>{
  const db=await d1Memoria(sql),a=await ensureVirtualPlaylist(db,scope('venue-one'),{actor,seedItems:[item('seed-one')]}),b=await ensureVirtualPlaylist(db,scope('venue-two'),{actor,seedItems:[item('seed-one')]}),c=await ensureVirtualPlaylist(db,scope('venue-three'),{actor});
  assert.notEqual(a.playlist_id,b.playlist_id);assert.notEqual(a.source_screen,c.source_screen);
@@ -18,10 +23,12 @@ test('three venues have independent persistent authorities; seed retained by fir
 test('CAS and request identity leave one mutation; changed body on repeated ID is rejected',async()=>{
  const db=await d1Memoria(sql),binding=await ensureVirtualPlaylist(db,scope('venue-one'),{actor,seedItems:[item('seed-one')]});
  const operation={operation:'add',stockId:'added-one',expectedRevision:1,requestId};
- const [a,b]=await Promise.all([mutateScopedPlaylist(db,binding,operation,{actor,stock:[item('added-one')]}),mutateScopedPlaylist(db,binding,{...operation,requestId:'b7618c03-fd72-45c0-afc0-96114832f2a2'},{actor,stock:[item('added-one')]})]);
+ const second={...operation,requestId:'b7618c03-fd72-45c0-afc0-96114832f2a2'};
+ const [a,b]=await Promise.all([mutateScopedPlaylist(db,binding,operation,{actor,stock:[item('added-one')]}),mutateScopedPlaylist(db,binding,second,{actor,stock:[item('added-one')]})]);
  assert.deepEqual([a.ok,b.ok].sort(),[false,true]);assert.equal((await A.leerPlaylist(db,binding.playlist_id)).rev,2);
- const replay=await mutateScopedPlaylist(db,binding,operation,{actor,stock:[item('added-one')]});assert.equal(replay.replayed,true);assert.equal(replay.playlist.rev,2);
- const changed=await mutateScopedPlaylist(db,binding,{...operation,stockId:'other-one'},{actor,stock:[item('other-one')]});assert.equal(changed.error,'request_id_conflict');
+ const winner=a.ok?operation:second;
+ const replay=await mutateScopedPlaylist(db,binding,winner,{actor,stock:[item('added-one')]});assert.equal(replay.replayed,true);assert.equal(replay.playlist.rev,2);
+ const changed=await mutateScopedPlaylist(db,binding,{...winner,stockId:'other-one'},{actor,stock:[item('other-one')]});assert.equal(changed.error,'request_id_conflict');
 });
 test('remove automatic piece persists exclusion; remove last persists managed-empty and add exits empty',async()=>{
  const db=await d1Memoria(sql),binding=await ensureVirtualPlaylist(db,scope('venue-one'),{actor,seedItems:[item('seed-one')]});

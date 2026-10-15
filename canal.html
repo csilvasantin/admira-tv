@@ -67,9 +67,9 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
-<script src="xpl-runtime.js?v=15.10.2026.r2.1348"></script>
+<script src="xpl-runtime.js?v=15.10.2026.r3.1402"></script>
 <script>
-  window.ADMIRA_VERSION='v.15.10.2026.r2.13:48';
+  window.ADMIRA_VERSION='v.15.10.2026.r3.14:02';
   const __adtvParams = new URLSearchParams(location.search);
   const __adtvClean = __adtvParams.get('chrome') === '0' || __adtvParams.get('clean') === '1' || __adtvParams.get('embed') === 'mupi';
   if (__adtvClean) document.documentElement.classList.add('clean');
@@ -426,7 +426,7 @@
   <aside id="chan"></aside>
 </div>
 
-<script src="/assets/player-pairing.js?v=15.10.2026.r2.1348"></script>
+<script src="/assets/player-pairing.js?v=15.10.2026.r3.1402"></script>
 <script>
 // Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
 // directo (pub-…r2.dev): más resiliente y evita bloqueos de DNS/filtrado en algunas
@@ -877,11 +877,17 @@ function startAdv(ms){ usesAdv=true; advTotal=ms; advElapsed=0; advStart=Date.no
 function editorialSec(it){
   const k=KIND[(it&&it.type)||'image']||'image';
   if(k==='video') return Math.max(0,Number(it&&it._dur)||0);
-  if(k==='audio'&&typeof xtoreMusicEnabled==='function'&&xtoreMusicEnabled())return Math.max(0,Number(it&&it._dur)||0);
+  if(k==='audio'&&(it?._fullMusic||typeof xtoreMusicEnabled==='function'&&xtoreMusicEnabled()))return Math.max(0,Number(it&&it._dur)||0);
   if(k==='image') return Math.max(2,Number(it._previewSec||cfg.imgSec)||0);
   if(k==='interactive') return Math.max(5,Number(it._previewSec||it._interSec||it.dur||it.seconds||cfg.interSec)||0);
   const slot=Math.max(3,Number(it._previewSec||cfg.audioSec)||0), real=Number(it._dur)||0;
   return (real>0&&real<slot)?Math.max(1,Math.ceil(real)):slot;
+}
+function armAudioAdvance(it){
+  const seconds=editorialSec(it);
+  // Local music advances on ended/error; elapsed wall time would cut buffering or pauses.
+  if(!syncOn&&it._fullMusic)return;
+  startAdv(syncOn?syncRemainingMs():seconds*1000);
 }
 function syncNow(){ return Date.now()+(SYNC_REMOTE?SYNC_REMOTE.offset:syncTimeOffset); }   // reloj del máster central si está
 function syncFallbackSlotMs(){ return (SYNC_REMOTE&&SYNC_REMOTE.slotMs)?SYNC_REMOTE.slotMs:syncSlotSec*1000; }
@@ -1594,7 +1600,7 @@ function guardTick(){
   if(_standby||directOn||PREVIEW.on||paused){ g.lastProgressAt=now; g.lastPlayAt=now; return; }   // quieta A PROPÓSITO: no es un atasco
   // Full songs have no total slot deadline. A paused/blocked element waits for a
   // gesture; an actively playing element must still make progress through the file.
-  if(xtoreMusicEnabled()&&mediaEl&&['AUDIO','VIDEO'].includes(mediaEl.tagName)){
+  if((xtoreMusicEnabled()||mediaEl?._admiraFullMusic)&&mediaEl&&['AUDIO','VIDEO'].includes(mediaEl.tagName)){
     const pos=Number(mediaEl.currentTime)||0;
     if(mediaEl.paused||mediaEl.ended||pos!==g.lastPos){g.lastPos=pos;g.lastProgressAt=now;}
     else if(now-g.lastProgressAt>GUARD_STALL_S*1000){g.stalls++;guardRecover('audio atascado '+Math.round((now-g.lastProgressAt)/1000)+'s');return;}
@@ -1882,7 +1888,7 @@ function previewFallback(msg){
 // a ser la programación base del player: orden exacto, duración editorial y
 // caché disco-primero. Sincro, extendido, parrilla horaria y un tag remoto siguen
 // teniendo precedencia explícita; una lista vacía conserva el fallback seguro.
-const DEFAULT_DRAFT={items:[],signature:'',ready:false,assigned:false,managedEmpty:false};
+const DEFAULT_DRAFT={items:[],signature:'',ready:false,assigned:false,managedEmpty:false,music:false};
 let _xtoreMusicBase=true, _xtoreMusicItem=null;
 function xtoreMusicItems(items,catalog=[]){
   const known=new Map(catalog.map(it=>[String(it.id),it]));
@@ -2007,12 +2013,13 @@ async function loadDefaultDraft(){
     // Piezas dirigidas a esta pantalla por hashtag (su nombre único o el de su centro): se añaden a lo que tenga.
     if(d&&Array.isArray(d.auto)&&d.auto.length){const ya=new Set(raw.map(it=>String(it.stockId||it.id||'')));raw=raw.concat(d.auto.filter(it=>!ya.has(String(it.stockId||it.id||''))));}
     DEFAULT_DRAFT.managedEmpty=d?.draft?.managedEmpty===true;
+    DEFAULT_DRAFT.music=d?.draft?.managed===true&&d?.draft?.channelKind==='music';
     if(DEFAULT_DRAFT.managedEmpty)raw=[];
     const firstValidRead=!DEFAULT_DRAFT.ready;
     DEFAULT_DRAFT.ready=true;DEFAULT_DRAFT.assigned=raw.length>0||DEFAULT_DRAFT.managedEmpty;
     if(xtoreMusicEnabled())raw=xtoreMusicItems(raw,all);
-    const mapped=raw.map((it,ix)=>{const type=playlistAssetKind(it);return{id:'default:'+String(it.stockId||it.id||ix),url:it.asset||it.url||'',type,title:it.title||('Contenido '+(ix+1)),motor:'parrilla-default',category:'por-defecto',_default:true,_position:ix,_previewSec:Math.max(2,+it.seconds||10),createdAt:'8'+String(1000+ix)}}).filter(x=>x.url);
-    const signature=(DEFAULT_DRAFT.managedEmpty?'managed-empty:':'')+(xtoreMusicEnabled()?(DEFAULT_DRAFT.assigned?'assigned:':'stock:'):'')+mapped.map(x=>x.id+'|'+x.type+'|'+x.url+'|'+x._previewSec).join('~');
+    const mapped=raw.map((it,ix)=>{const type=playlistAssetKind(it);return{id:'default:'+String(it.stockId||it.id||ix),url:it.asset||it.url||'',type,title:it.title||('Contenido '+(ix+1)),motor:'parrilla-default',category:'por-defecto',_default:true,_fullMusic:DEFAULT_DRAFT.music,_position:ix,_previewSec:Math.max(2,+it.seconds||10),createdAt:'8'+String(1000+ix)}}).filter(x=>x.url);
+    const signature=(DEFAULT_DRAFT.music?'music:':'')+(DEFAULT_DRAFT.managedEmpty?'managed-empty:':'')+(xtoreMusicEnabled()?(DEFAULT_DRAFT.assigned?'assigned:':'stock:'):'')+mapped.map(x=>x.id+'|'+x.type+'|'+x.url+'|'+x._previewSec).join('~');
     if(signature===DEFAULT_DRAFT.signature){if(firstValidRead||xtoreMusicEnabled()&&!playlist.length)rebuild(false);return;}
     DEFAULT_DRAFT.items=mapped;DEFAULT_DRAFT.signature=signature;rebuild(false);
   }catch(_){
@@ -2570,6 +2577,7 @@ async function play(i, forced){
     else if(codecNeedsFallback(it)){ codecCard=true; try{ guardState().lastReason='codec:card'; }catch(_){} }
   }
   // Keep the previous surface while probing the optional codec variant.
+  if(DEFAULT_DRAFT.music&&!xtoreMusicEnabled())xtoreMusicRelease();
   stage.innerHTML='';
   const CARD_SRC=codecCard?(it.thumbnail||it.thumb||it.poster||('data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920"><rect width="100%" height="100%" fill="#000"/><text x="50%" y="48%" fill="#cfe9f5" font-family="-apple-system,system-ui,sans-serif" font-size="56" font-weight="600" text-anchor="middle">'+String(title).replace(/[<>&]/g,' ')+'</text><text x="50%" y="55%" fill="#7aa" font-family="ui-monospace,monospace" font-size="24" text-anchor="middle">// esta pantalla no decodifica este vídeo (AV1)</text></svg>'))):'';
   if(k==='video'&&!codecCard){
@@ -2697,7 +2705,7 @@ async function play(i, forced){
   } else {
     stage.innerHTML='<div class="audio-card"><div class="ico">♫</div><div class="wave">'
       +Array.from({length:9},(_,i)=>'<i style="animation-delay:'+(i*0.09)+'s"></i>').join('')+'</div><strong>'+(xtoreMusicEnabled()?title.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):title)+'</strong></div>';
-    const a=document.createElement('audio'); a.src=SRC; a.autoplay=true; a.preload='auto'; a.onerror=()=>setTimeout(()=>mediaAdvance(_tok),600); a.onended=()=>mediaAdvance(_tok,true);
+    const a=document.createElement('audio'); a._admiraFullMusic=!!it._fullMusic; a.src=SRC; a.autoplay=true; a.preload='auto'; a.onerror=()=>setTimeout(()=>mediaAdvance(_tok),600); a.onended=()=>mediaAdvance(_tok,true);
     if(xtoreMusicEnabled())xtoreMusicPrepareStart(a,it,_tok);
     if(XTORE_PARENT)a.addEventListener('playing',()=>{if(_tok===_playTok)emitFrameState(it,'playing');},{once:true});
     // Longitud real del fichero → _dur (como el vídeo): la ranura editorial se recorta a
@@ -2706,14 +2714,14 @@ async function play(i, forced){
       const before=editorialSec(it); it._dur=Math.ceil(a.duration);
       try{ signagePlaylistPush(); }catch(_){}
       if(_nowItem&&String(_nowItem.id)===String(it.id)){ _nowItem.dur=syncOn?Math.round(syncSlotMs()/1000):editorialSec(it); _nowItem.ts=Date.now(); _postNow(_nowItem); }
-      if(!syncOn&&usesAdv&&editorialSec(it)!==before) startAdv(editorialSec(it)*1000);   // cuña más corta que la ranura: la barra y el corte siguen al fichero
+      if(!syncOn&&usesAdv&&editorialSec(it)!==before) armAudioAdvance(it);
       localInfoRender();
       if(xtoreMusicApplyStart(a,it,_tok))xtoreMusicPlayAudio(a,it,_tok);
     };
     mediaEl=a; applyAudio(); stage.querySelector('.audio-card').appendChild(a);
     if(xtoreMusicEnabled())xtoreMusicPlayAudio(a,it,_tok);
     else {a.play().then(()=>tap.classList.remove('show')).catch(()=>{ if(!muted) tap.classList.add('show'); });
-      startAdv(syncOn?syncRemainingMs():editorialSec(it)*1000);}
+      armAudioAdvance(it);}
   }
   // El previo NUNCA reporta a la antena real (ni proof-of-play ni espejo en vivo).
   if(!PREVIEW.on){ try{ emitRecord(it); }catch(_){} try{ signageNowPush(it); }catch(_){} }
@@ -5140,6 +5148,6 @@ if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); 
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
 </script>
-  <script src="/assets/admira-version-watch.js?v=15.10.2026.r2.1348" defer></script>
+  <script src="/assets/admira-version-watch.js?v=15.10.2026.r3.1402" defer></script>
 </body>
 </html>
