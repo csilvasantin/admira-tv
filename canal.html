@@ -2640,7 +2640,7 @@ async function play(i, forced){
     if(seamless){
       coffeeTransitions.reveal(v,()=>_tok===_playTok&&!_standby,()=>syncOn?Math.min(v.duration-.25,(syncElapsedMs()/1000)%v.duration):v.currentTime);
       // Adopted warm videos have already fired their metadata event.
-      if(v.readyState>=1)v.onloadedmetadata();
+      if(v.readyState>=1){v.onloadedmetadata();if(_tok!==_playTok)return;}
       const following=playlist[(cur+1)%playlist.length];
       if(coffeeItem(following)&&(KIND[following.type]||'image')==='video')cachedSrc(following).then(src=>{if(_tok===_playTok&&!_standby)coffeeTransitions.prepare(String(following.id)+'|'+following.url,src||following.url);});
     }
