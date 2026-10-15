@@ -364,6 +364,9 @@ async function liveWrite(request, env, body, cors, waitUntil) {
     let item;
     try { item = cleanCircuit(body.circuit, actor); } catch (e) { return json({ ok: false, error: String(e.message || e) }, 400, cors); }
     const at = circuits.findIndex(c => c.id === item.id);
+    // Los editores antiguos no conocen la pertenencia de Stock: un cambio de nombre
+    // o destino debe conservarla. catalogProject:"" permite retirarla explícitamente.
+    if (at >= 0 && !Object.hasOwn(body.circuit, "catalogProject") && circuits[at].catalogProject) item.catalogProject = circuits[at].catalogProject;
     if (at >= 0) circuits[at] = { ...item, createdAt: circuits[at].createdAt || item.updatedAt };
     else { if (circuits.length >= MAX_CIRCUITS) return json({ ok: false, error: "circuit_limit" }, 400, cors); circuits.push({ ...item, createdAt: item.updatedAt }); }
   } else
