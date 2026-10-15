@@ -58,7 +58,7 @@
         {"slug": "turnos",
           "href": "/gestorColas/",
           "entry_label": "Abrir control · Open control →",
-          "entry_aria": "Gestión de turnos: abrir control / Open queue control", "icon": "⋮", "name_es": "Gestión de Turnos", "name_en": "Queue Management",
+          "entry_aria": "Gestión de turnos: abrir control / Open queue control", "entry_label_en": "Open control →", "entry_aria_en": "Queue Management: open queue control", "icon": "⋮", "name_es": "Gestión de Turnos", "name_en": "Queue Management",
          "description_es": "Llama turnos en pantalla y ordena la espera para que la atención sea fluida y previsible.",
          "description_en": "Calls turns on screen and organises waiting so service stays smooth and predictable.",
          "status": "available", "video": null, "pdf": null}

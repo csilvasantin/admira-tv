@@ -133,7 +133,7 @@ test('PDF 404 o fallo de red se detectan con HEAD lazy y no abandonan la home', 
   assert.match(client, /function bindPdf\(button\)/);
   assert.match(client, /button\.addEventListener\("click", async function/);
   assert.match(client, /La página permanece abierta/);
-  assert.match(client, /button\.textContent = "Reintentar PDF"/);
+  assert.match(client, /button\.textContent = (?:en \? "Retry PDF" : )?"Reintentar PDF"/);
   assert.ok(client.indexOf('button.addEventListener("click", async function') < client.indexOf('probePublicMedia(src, fetch'));
 });
 

@@ -204,7 +204,18 @@ def url_segura(valor, slug, tipo):
     return esperada if valor == esperada else ""
 
 
-def boton_pronto(texto, que, nombre_es):
+def bilingue(es, en):
+    """Atributos del par ES/EN que lee assets/portada-idioma.js (texto). Si los dos dicen
+    lo mismo (Admira.studio, DooH…) no hace falta par."""
+    return "" if es == en else ' data-es="{}" data-en="{}"'.format(esc(es), esc(en))
+
+
+def bilingue_attr(attr, es, en):
+    """El atributo en español (el de siempre) y su par ES/EN para portada-idioma.js."""
+    return ' {a}="{es}" data-es-{a}="{es}" data-en-{a}="{en}"'.format(a=attr, es=esc(es), en=esc(en))
+
+
+def boton_pronto(texto, texto_en, que, que_en, nombre_es, nombre_en):
     """Botón de un medio que aún no existe: presente, pero `aria-disabled`.
 
     Sigue siendo enfocable para que un lector de pantalla lo encuentre y anuncie
@@ -212,9 +223,12 @@ def boton_pronto(texto, que, nombre_es):
     le engancha nada y pulsarlo no hace nada.
     """
     return (
-        '<button type="button" class="app-action app-pronto" aria-disabled="true"'
-        ' aria-label="{} de {}: próximamente">{} · pronto</button>'
-    ).format(esc(que), esc(nombre_es), esc(texto))
+        '<button type="button" class="app-action app-pronto" aria-disabled="true"{}{}>{} · pronto</button>'
+    ).format(
+        bilingue_attr("aria-label", "{} de {}: próximamente".format(que, nombre_es), "{} {}: coming soon".format(nombre_en, que_en)),
+        bilingue("{} · pronto".format(texto), "{} · coming soon".format(texto_en)),
+        esc(texto),
+    )
 
 
 def tarjeta(app, pilar):
@@ -223,6 +237,7 @@ def tarjeta(app, pilar):
     es_pilar = app.get("_pilar")
     disponible = app.get("status") == "available"
     estado = "Disponible · Available" if disponible else "Próximamente · Coming soon"
+    estado_en = "Available" if disponible else "Coming soon"
     video = url_segura(app.get("video"), slug, "video")
     pdf = url_segura(app.get("pdf"), slug, "pdf")
     # Tarjeta con entrada propia: el título enlaza y la tarjeta entera es clicable
@@ -236,41 +251,55 @@ def tarjeta(app, pilar):
         href = pilar["url"]
         externo = True
         entry_label = "Abrir {} →".format(pilar["dominio"])
+        entry_label_en = "Open {} →".format(pilar["dominio"])
         entry_aria = "{}: abrir {} en otra pestaña".format(nombre_es, pilar["dominio"])
+        entry_aria_en = "{}: open {} in a new tab".format(nombre_en, pilar["dominio"])
     else:
         href = str(app.get("href") or "")
         if not (disponible and href.startswith("/") and not href.startswith("//")):
             href = ""
         entry_label = app.get("entry_label") or "Abrir →"
+        entry_label_en = app.get("entry_label_en") or "Open →"
         entry_aria = app.get("entry_aria") or "{}: abrir la app".format(nombre_es)
-    titulo_html = esc(nombre_es)
+        entry_aria_en = app.get("entry_aria_en") or "{}: open the app".format(nombre_en)
+    # En inglés el título de una solución dice el nombre inglés (y .app-name-en se oculta: lo
+    # repetiría). La tarjeta del pilar conserva la marca (Admira.studio…) con su línea inglesa.
+    nombre_titulo_en = nombre_es if es_pilar else nombre_en
+    titulo_html = '<span class="app-name"{}>{}</span>'.format(bilingue(nombre_es, nombre_titulo_en), esc(nombre_es))
     if href:
         titulo_html = (
-            '<a class="app-entry" href="{}"{} aria-label="{}">{}</a>'
+            '<a class="app-entry" href="{}"{}{}{}>{}</a>'
         ).format(
             esc(href),
             ' target="_blank" rel="noopener"' if externo else "",
-            esc(entry_aria),
+            bilingue_attr("aria-label", entry_aria, entry_aria_en),
+            bilingue(nombre_es, nombre_titulo_en),
             esc(nombre_es),
         )
 
     acciones = []
     if href:
-        acciones.append('<span class="app-entry-label">{}</span>'.format(esc(entry_label)))
+        acciones.append('<span class="app-entry-label"{}>{}</span>'.format(bilingue(entry_label, entry_label_en), esc(entry_label)))
     if video:
         acciones.append(
-            '<button type="button" class="app-action app-video" data-app-video="{}"'
-            ' aria-label="Ver vídeo de {}">▶ Vídeo</button>'.format(esc(video), esc(nombre_es))
+            '<button type="button" class="app-action app-video" data-app-video="{}"{}{}>▶ Vídeo</button>'.format(
+                esc(video),
+                bilingue_attr("aria-label", "Ver vídeo de {}".format(nombre_es), "Watch the {} video".format(nombre_en)),
+                bilingue("▶ Vídeo", "▶ Video"),
+            )
         )
     else:
-        acciones.append(boton_pronto("▶ Vídeo", "Vídeo", nombre_es))
+        acciones.append(boton_pronto("▶ Vídeo", "▶ Video", "Vídeo", "video", nombre_es, nombre_en))
     if pdf:
+        # El texto «↓ PDF» es el mismo en los dos idiomas (y public-apps.js lo cambia al comprobar).
         acciones.append(
-            '<button type="button" class="app-action app-pdf" data-app-pdf="{}"'
-            ' aria-label="Descargar PDF de {}">↓ PDF</button>'.format(esc(pdf), esc(nombre_es))
+            '<button type="button" class="app-action app-pdf" data-app-pdf="{}"{}>↓ PDF</button>'.format(
+                esc(pdf),
+                bilingue_attr("aria-label", "Descargar PDF de {}".format(nombre_es), "Download the {} PDF".format(nombre_en)),
+            )
         )
     else:
-        acciones.append(boton_pronto("↓ PDF", "PDF", nombre_es))
+        acciones.append(boton_pronto("↓ PDF", "↓ PDF", "PDF", "PDF", nombre_es, nombre_en))
     acciones.append('<span class="app-media-status" role="status" aria-live="polite"></span>')
 
     clases = "app-card"
@@ -281,9 +310,9 @@ def tarjeta(app, pilar):
     return (
         '<article class="{clases}" data-public-app-card="{slug}" data-pilar="{pid}" data-app-title="{titulo}">'
         '<div class="app-card-head"><span class="app-icon" aria-hidden="true">{icono}</span>'
-        '<span class="app-state">{estado}</span></div>'
-        '<p class="app-pilar" title="{pdom}"><span class="app-pilar-n">{pn}</span>'
-        '<span class="app-pilar-txt"> · {pnom} · {pves}</span>'
+        '<span class="app-state" data-es="{estado}" data-en="{estado_en}">{estado}</span></div>'
+        '<p class="app-pilar" title="{pdom}" data-es-title="{pdom}" data-en-title="{pdom_en}"><span class="app-pilar-n">{pn}</span>'
+        '<span class="app-pilar-txt" data-es=" · {pnom} · {pves}" data-en=" · {pnom} · {pven}"> · {pnom} · {pves}</span>'
         '<span class="app-pilar-en" lang="en"> · {pven}</span></p>'
         "<h3>{titulo_html}</h3>"
         '<p class="app-name-en" lang="en">{nen}</p>'
@@ -298,6 +327,7 @@ def tarjeta(app, pilar):
         titulo=esc("{} · {}".format(nombre_es, nombre_en)),
         icono=esc(app.get("icon", "")),
         estado=esc(estado),
+        estado_en=esc(estado_en),
         nen=esc(nombre_en),
         des=esc(app.get("description_es")),
         den=esc(app.get("description_en")),
@@ -308,6 +338,7 @@ def tarjeta(app, pilar):
         pves=esc(pilar["verbo_es"]),
         pven=esc(pilar["verbo_en"]),
         pdom=esc("Pilar {} · {}".format(etiqueta_pilar(pilar), pilar["dominio"])),
+        pdom_en=esc("Pillar {} · {} · {} · {}".format(pilar["n"], pilar["nombre"], pilar["verbo_en"], pilar["dominio"])),
     )
 
 
@@ -337,27 +368,29 @@ def filtro_pilares(datos, pilares, cuenta, total):
     botones = [
         '<button type="button" class="pilar-btn pilar-btn-todas" data-pilar-filtro="todas"'
         ' aria-pressed="true" disabled>'
-        '<span class="pilar-btn-n" aria-hidden="true">✱</span><span class="pilar-btn-nombre">Todas</span>'
+        '<span class="pilar-btn-n" aria-hidden="true">✱</span><span class="pilar-btn-nombre" data-es="Todas" data-en="All">Todas</span>'
         '<span class="pilar-btn-verbo"><span lang="en">All</span></span>'
-        '<span class="pilar-btn-cuenta">{t} soluciones</span></button>'.format(t=total)
+        '<span class="pilar-btn-cuenta" data-es="{t} soluciones" data-en="{t} solutions">{t} soluciones</span></button>'.format(t=total)
     ]
     for p in pilares:
         n = cuenta[p["id"]]
         botones.append(
             '<button type="button" class="pilar-btn" data-pilar="{id}" data-pilar-filtro="{id}"'
-            ' aria-pressed="false" aria-label="{aria}" disabled>'
+            ' aria-pressed="false" aria-label="{aria}" data-es-aria-label="{aria}" data-en-aria-label="{aria_en}" disabled>'
             '<span class="pilar-btn-n">{n}</span><span class="pilar-btn-nombre">{nom}</span>'
-            '<span class="pilar-btn-verbo">{ves} · <span lang="en">{ven}</span></span>'
+            '<span class="pilar-btn-verbo"><span class="pilar-btn-es">{ves} · </span><span lang="en">{ven}</span></span>'
             '<span class="pilar-btn-cuenta">{dom} · {k}</span></button>'.format(
                 id=esc(p["id"]), n=esc(p["n"]), nom=esc(p["nombre"]),
                 ves=esc(p["verbo_es"]), ven=esc(p["verbo_en"]), dom=esc(p["dominio"]), k=n,
                 aria=esc("Pilar {} · {}: {} {}".format(
                     etiqueta_pilar(p), p["dominio"], n, "solución" if n == 1 else "soluciones")),
+                aria_en=esc("Pillar {} · {} · {} · {}: {} {}".format(
+                    p["n"], p["nombre"], p["verbo_en"], p["dominio"], n, "solution" if n == 1 else "solutions")),
             )
         )
     return (
         '<div class="pilares" id="pilares">'
-        '<p class="pilares-titulo" id="pilaresTitulo">{tes} · '
+        '<p class="pilares-titulo" id="pilaresTitulo"><span class="pilares-titulo-es" data-es="{tes}" data-en="{ten}">{tes}</span> · '
         '<a href="{url}" target="_blank" rel="noopener">{fuente}<span aria-hidden="true"> ↗</span></a>'
         '<span class="pilares-titulo-en" lang="en"> · {ten}</span></p>'
         '<div class="pilares-btns" role="group" aria-labelledby="pilaresTitulo">{b}</div>'

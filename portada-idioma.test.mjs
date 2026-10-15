@@ -144,8 +144,15 @@ test('cada texto traducible lleva su par ES/EN y el español es el texto de siem
   assert.equal((home.match(/ data-es="/g) || []).length, (home.match(/ data-en="/g) || []).length);
   assert.equal((home.match(/ data-es-aria-label="/g) || []).length, (home.match(/ data-en-aria-label="/g) || []).length);
   assert.equal((home.match(/ data-es-title="/g) || []).length, (home.match(/ data-en-title="/g) || []).length);
-  // El CSS deja sólo la mitad inglesa de los pares generados; el HTML generado no lleva data-es.
+  // Descripciones: el CSS deja sólo la mitad inglesa. El resto de las tarjetas y del filtro de
+  // pilares (estado, pilar, nombre, botones, recuento) lleva su par desde tools/gen-apps-grid.py.
   assert.match(home, /html\[lang="en"\] \.app-description:not\(\.app-description-en\)\{display:none\}/);
   const generado = home.match(/<!-- apps:generado[\s\S]*?<!-- \/apps:generado -->/)[0] + home.match(/<!-- pilares:generado[\s\S]*?<!-- \/pilares:generado -->/)[0];
-  assert.doesNotMatch(generado, /data-es/);
+  for (const par of ['data-es="Disponible · Available" data-en="Available"', 'data-es="▶ Vídeo · pronto" data-en="▶ Video · coming soon"',
+    'data-es="Gestión de Turnos" data-en="Queue Management"', 'data-es="Abrir admira.studio →" data-en="Open admira.studio →"',
+    'data-es="Todas" data-en="All"', 'data-es="20 soluciones" data-en="20 solutions"', 'data-es="Los cinco pilares" data-en="The five pillars"']) {
+    assert.ok(generado.includes(par), `falta el par ${par}`);
+  }
+  assert.match(home, /html\[lang="en"\] \.app-card:not\(\.app-card-pilar\) \.app-name-en,[^{]*\.pilar-btn-es,[^{]*\{display:none\}/, 'en inglés no se repite el nombre ni quedan restos en español');
+  assert.ok(!generado.includes('data-en="Creative Studio"'), 'la tarjeta del pilar conserva su marca en inglés');
 });
