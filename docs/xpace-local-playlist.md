@@ -22,6 +22,10 @@ Después de activar, comprobar siete IDs y orden tanto en `/api/playlist?screen=
 
 `canal.html` espera la primera respuesta válida de su pantalla antes de emitir. Un vacío válido detiene y libera medios, publica playlist `[]` y `item:null, standby:false`, y conserva el latido. Un error de red no se interpreta como vacío. El primer vacío también se publica en el mando; no se conserva una pieza retirada como ON AIR.
 
+En un canal de música asociado, los audios se reproducen hasta su final real, aunque Stock no publique su duración. El avance local usa `ended`, sin recortar pausas o buffering por un temporizador ni por el límite editorial de tres minutos. La guardia sigue recuperando medios atascados, y cambiar de pieza libera el medio anterior. Los canales de señalización conservan su duración editorial.
+
+El registro de flota virtual es una proyección auxiliar de la autoridad D1. Utiliza su identidad local como circuito; no reutiliza el circuito comercial compartido. Si la flota no responde, el guardado confirmado sigue siendo válido y la siguiente consulta reintenta el registro (`registry.status: pending`); no se acredita asociación física.
+
 ## EN
 
 Each playlist belongs to a registered project, venue and channel (`music` or `screen-<surfaceId>`). AdmiraNext checks commercial access and issues a 60-second signed grant. TV validates its scope, context, operation and surface inventory; clients cannot choose physical screens. Read access does not grant editing or hardware association.
@@ -35,3 +39,7 @@ For associated opt-in screens, D1 is the only playlist authority. Legacy writers
 Hardware preparation/activation requires separate human TV owner/admin authorization or audited administrative D1 access. Apply migration0002 after guards are live, prepare the binding, drain old writers for 30 seconds, validate the fresh legacy revision and ordered effective IDs, then atomically adopt six manual items plus the existing screen automatic item. A changed source blocks activation. Normal editor grants cannot prepare or activate hardware.
 
 Reload the physical WebView after publication and verify its receipts before claiming delivery. D1 persistence is separate from physical playback. The player waits for a valid screen response before starting; an intentional empty list stops/releases media, publishes `items:[]` and neutral `item:null, standby:false`, and keeps the device heartbeat. Network errors do not mean empty.
+
+Associated music channels play audio to its natural end even when Stock has no duration metadata. Local advancement uses `ended`, so a timer or the three-minute editorial guard cannot cut buffering or pauses short. Progress monitoring still recovers stalled media, and switching tracks releases the previous media. Signage channels retain editorial audio slots.
+
+The virtual fleet registry is an auxiliary projection of D1 authority. It uses its local identity as its circuit, preserving the commercial circuit separately. An unavailable registry cannot invalidate a confirmed save; subsequent reads retry registration (`registry.status: pending`) without claiming physical association.

@@ -9,15 +9,19 @@ function functionSource(source, name) {
   const start = source.indexOf(`function ${name}(`);
   assert.notEqual(start, -1, `falta ${name}`);
   const brace = source.indexOf('{', start);
-  let depth = 0, quote = '', escaped = false;
+  let depth = 0, quote = '', escaped = false, lineComment=false, blockComment=false;
   for (let i = brace; i < source.length; i += 1) {
     const c = source[i];
+    if(lineComment){if(c==='\n')lineComment=false;continue;}
+    if(blockComment){if(c==='*'&&source[i+1]==='/'){blockComment=false;i++;}continue;}
     if (quote) {
       if (escaped) escaped = false;
       else if (c === '\\') escaped = true;
       else if (c === quote) quote = '';
       continue;
     }
+    if(c==='/'&&source[i+1]==='/'){lineComment=true;i++;continue;}
+    if(c==='/'&&source[i+1]==='*'){blockComment=true;i++;continue;}
     if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
     if (c === '{') depth += 1;
     else if (c === '}' && --depth === 0) return source.slice(start, i + 1);
@@ -51,6 +55,24 @@ test('un audio más corto que su ranura ocupa su longitud real, nunca de más', 
   assert.equal(sec({ type:'locucion', _dur: 5.2, _previewSec: 10 }), 6);
   assert.equal(sec({ type:'audio', _dur: 180 }), 18);            // canción de 3 min → ranura
   assert.equal(sec({ type:'audio', _dur: 180, _previewSec: 30 }), 30);
+});
+
+test('el hilo musical asociado reproduce el audio completo; la señalización conserva su ranura', () => {
+  const sec=editorialSec();
+  assert.equal(sec({type:'audio',_fullMusic:true,_previewSec:10}),0);
+  assert.equal(sec({type:'audio',_fullMusic:true,_previewSec:10,_dur:180}),180);
+  assert.equal(sec({type:'audio',_previewSec:10,_dur:180}),10);
+  const armed=[];
+  const context=vm.createContext({editorialSec:sec,syncOn:false,syncRemainingMs:()=>4500,startAdv:ms=>armed.push(ms)});
+  vm.runInContext(`${functionSource(canal,'armAudioAdvance')}\nglobalThis.arm=armAudioAdvance;`,context);
+  context.arm({type:'audio',_fullMusic:true,_previewSec:10});
+  assert.deepEqual(armed,[],'unknown duration waits for metadata or ended');
+  context.arm({type:'audio',_fullMusic:true,_previewSec:10,_dur:180});
+  assert.deepEqual(armed,[],'local music advances only at its natural end');
+  context.arm({type:'audio',_previewSec:10,_dur:180});
+  assert.deepEqual(armed,[10000]);
+  context.syncOn=true;context.arm({type:'audio',_fullMusic:true});
+  assert.equal(armed.at(-1),4500,'synchronized playback retains its timeline');
 });
 
 test('vídeo: duración real conocida o 0 (desconocida); nunca hereda la ranura de imagen', () => {

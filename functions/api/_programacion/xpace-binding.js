@@ -30,5 +30,5 @@ export function effectiveXpaceItems(playlist,auto=[]){
 }
 export function boundDraft(binding,playlist){
  const options=playlist.opciones?.xpace||{};
- return {screen:binding.source_screen,playlist:'default',name:playlist.nombre,items:effectiveXpaceItems(playlist),rev:playlist.rev,updatedAt:playlist.actualizado_en,updatedBy:playlist.actualizado_por,synthetic:false,managed:true,managedEmpty:!!options.managedEmpty,bindingId:binding.id,excludedStockIds:options.excludedStockIds||[]};
+ return {screen:binding.source_screen,playlist:'default',name:playlist.nombre,items:effectiveXpaceItems(playlist),rev:playlist.rev,updatedAt:playlist.actualizado_en,updatedBy:playlist.actualizado_por,synthetic:false,managed:true,channelKind:binding.channel_kind,managedEmpty:!!options.managedEmpty,bindingId:binding.id,excludedStockIds:options.excludedStockIds||[]};
 }

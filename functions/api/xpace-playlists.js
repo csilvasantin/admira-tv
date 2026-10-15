@@ -3,6 +3,23 @@ import {bindingForScope,scopeIdentity,verifyPlaylistGrant,readBoundPlaylist,ensu
 import {legacySeed} from './_programacion/xpace-seeds.js';
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const allowedKeys=new Set(['operation','stockId','expectedRevision','requestId','seedStockIds']);
+export async function registerVirtualProjection(binding,env,name){
+ if(!binding.source_screen.startsWith('virtual-xp-'))return {status:'not-required'};
+ let timer,expired=false;
+ try{
+  if(!env.VIRTUAL_PLAYERS)return {status:'pending'};
+  const registry=env.VIRTUAL_PLAYERS.getByName(binding.source_screen);
+  const projection=(async()=>{
+   // This is the local programming projection, not the commercial circuit.
+   const existing=await registry.readPlayer();
+   if(expired)return {status:'pending'};
+   if(!existing)await registry.register({screen:binding.source_screen,name,circuit:binding.source_screen,mode:'conditional'});
+   return {status:'ready'};
+  })();
+  // This auxiliary service must not turn a committed D1 save into a BFF timeout.
+  return await Promise.race([projection,new Promise(resolve=>{timer=setTimeout(()=>{expired=true;resolve({status:'pending'});},1500);})]);
+ }catch{return {status:'pending'};}finally{clearTimeout(timer);}
+}
 export async function automaticItems(binding,env){
  if(binding.auto_mode!=='screen')return [];
  const response=await playerPlaylist({env,request:new Request('https://admira.tv/api/playlist?screen='+encodeURIComponent(binding.source_screen))});
@@ -58,7 +75,6 @@ export async function onRequest({request,env},deps={}){
     const identity=await scopeIdentity(scope);
     binding=await ensureVirtualPlaylist(db,scope,{actor:grant.sub,seedItems:finalItems,name:(context?.venueName||scope.venueId)+' · '+scope.channelId,initialOptions:{managedEmpty:finalItems.length===0,excludedStockIds:body.operation==='remove'?[body.stockId]:[]},receipt:{bindingId:identity.bindingId,requestId:body.requestId,bodyHash:command.bodyHash,effectiveItems:finalItems}});
     saved=await readReceipt(db,binding.id,grant.sub,body.requestId,command.bodyHash);if(!saved)return json({ok:false,error:'revision_conflict'},409);if(!saved.ok)return json(saved,saved.status||409);saved.replayed=!binding.created;
-    const registry=env.VIRTUAL_PLAYERS?.getByName(binding.source_screen);if(registry&&!await registry.readPlayer())await registry.register({screen:binding.source_screen,name:context?.venueName||scope.venueId,circuit:context?.circuitId||scope.projectId,mode:'conditional'});
    }else{
     const ids=await scopeIdentity(scope);return json({ok:true,scope,binding:{id:ids.bindingId,source_screen:ids.screen,channel_kind:scope.channelId==='music'?'music':'signage',virtual:true},revision:0,effectiveItems:seed,empty:seed.length===0,capabilities:{read:true,add:grant.operations.includes('add'),remove:grant.operations.includes('remove')},initialized:false,bootstrap:'known-server-selection'});
    }
@@ -68,7 +84,8 @@ export async function onRequest({request,env},deps={}){
    saved=await mutateScopedPlaylist(db,binding,body,{actor:grant.sub,stock,auto});if(!saved.ok)return json(saved,saved.status||409);
   }
   let read=await readBoundPlaylist(db,binding,auto);if(!read.ok)return json(read,read.status||409);
+  const registry=await registerVirtualProjection(binding,env,context?.venueName||scope.venueId);
   if(saved?.replayed&&saved.playlist&&saved.effectiveItems)read={...read,playlist:saved.playlist,effectiveItems:saved.effectiveItems};
-  return json({ok:true,scope,binding:{id:binding.id,source_screen:binding.source_screen,channel_kind:binding.channel_kind,virtual:binding.source_screen.startsWith('virtual-')},revision:read.playlist.rev,effectiveItems:read.effectiveItems,empty:read.effectiveItems.length===0,managedEmpty:!!read.playlist.opciones?.xpace?.managedEmpty,capabilities:{read:true,add:grant.operations.includes('add'),remove:grant.operations.includes('remove')},initialized:true,persistence:'admira.tv:PROGRAMACION_DB',...(saved?{saved:true,replayed:!!saved.replayed}:{}),physicalReceipt:null});
+  return json({ok:true,scope,binding:{id:binding.id,source_screen:binding.source_screen,channel_kind:binding.channel_kind,virtual:binding.source_screen.startsWith('virtual-')},registry,revision:read.playlist.rev,effectiveItems:read.effectiveItems,empty:read.effectiveItems.length===0,managedEmpty:!!read.playlist.opciones?.xpace?.managedEmpty,capabilities:{read:true,add:grant.operations.includes('add'),remove:grant.operations.includes('remove')},initialized:true,persistence:'admira.tv:PROGRAMACION_DB',...(saved?{saved:true,replayed:!!saved.replayed}:{}),physicalReceipt:null});
  }catch(error){console.error('xpace-playlist operation failed',error?.message?.replace(/https?:\/\/\S+/g,'[url]'));return json({ok:false,error:'playlist_temporarily_unavailable'},503);}
 }
