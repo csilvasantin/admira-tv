@@ -47,3 +47,8 @@ test('only the coffee programme opts in and adopted metadata is applied before p
  assert.match(canal,/if\(v.readyState>=1\)v.onloadedmetadata\(\)/);
  assert.match(canal,/if\(typeof coffeeTransitions!=='undefined'\)coffeeTransitions.clear\(\)/);
 });
+
+test('the optional helper is cached offline and cannot prevent the ordinary player from booting',()=>{
+ const sw=readFileSync(new URL('./sw.js',import.meta.url),'utf8');assert.equal(sw.split("'/assets/seamless-video.js'").length-1,2);
+ const canal=readFileSync(new URL('./canal.html',import.meta.url),'utf8');assert.match(canal,/window\.AdmiraSeamlessVideo\?window\.AdmiraSeamlessVideo\.create/);assert.match(canal,/const seamless=!!window\.AdmiraSeamlessVideo/);
+});
