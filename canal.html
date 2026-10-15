@@ -426,6 +426,7 @@
   <aside id="chan"></aside>
 </div>
 
+<script src="/assets/seamless-video.js?v=coffee-seamless-1"></script>
 <script src="/assets/player-pairing.js?v=15.10.2026.r4.1423"></script>
 <script>
 // Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
@@ -1670,6 +1671,7 @@ function standbyOn(on){
   on=!!on; _standby=on; save('adtv_standby', on?'1':'0');
   let ov=document.getElementById('standby-ov');
   if(on){
+    if(typeof coffeeTransitions!=='undefined')coffeeTransitions.clear();
     if(!ov){ ov=document.createElement('div'); ov.id='standby-ov'; ov.setAttribute('data-adm-ok','1');
       ov.style.cssText='position:fixed;inset:0;z-index:2147483646;background:#000;'; document.body.appendChild(ov); }
     setPaused(true); _nowItem=null;               // deja de espejar el asset
@@ -2509,6 +2511,8 @@ function videoDecodeGuardWait(v, started, frames, now){
   if(!v.error && now-began<3500) return Math.max(100,3500-(now-began));
   return 0;
 }
+const coffeeTransitions=window.AdmiraSeamlessVideo.create(stage);
+function coffeeItem(it){return !!it&&String(it.id||'').startsWith('starbucks-gdg51-seven-20261015-r');}
 async function play(i, forced){
   if(_standby) return;
   guardPlayStarted();               // guardia de emisión: empieza a contar el turno              // en standby no se reproduce nada (ni audio detrás del negro)
@@ -2578,22 +2582,26 @@ async function play(i, forced){
   }
   // Keep the previous surface while probing the optional codec variant.
   if(DEFAULT_DRAFT.music&&!xtoreMusicEnabled())xtoreMusicRelease();
+  const seamless=coffeeItem(it)&&k==='video'&&!codecCard;
+  if(seamless)coffeeTransitions.freeze();else coffeeTransitions.clear();
   stage.innerHTML='';
+  if(seamless)coffeeTransitions.attach();
   const CARD_SRC=codecCard?(it.thumbnail||it.thumb||it.poster||('data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920"><rect width="100%" height="100%" fill="#000"/><text x="50%" y="48%" fill="#cfe9f5" font-family="-apple-system,system-ui,sans-serif" font-size="56" font-weight="600" text-anchor="middle">'+String(title).replace(/[<>&]/g,' ')+'</text><text x="50%" y="55%" fill="#7aa" font-family="ui-monospace,monospace" font-size="24" text-anchor="middle">// esta pantalla no decodifica este vídeo (AV1)</text></svg>'))):'';
   if(k==='video'&&!codecCard){
-    const v=document.createElement('video');
+    const warmKey=String(it.id)+'|'+it.url;
+    const v=(seamless&&coffeeTransitions.take(warmKey))||document.createElement('video');
     try{ v.crossOrigin='anonymous'; }catch(_){}   // permite capturar el frame en canvas SI el asset trae CORS; si no, se reintenta sin él (onerror) → la emisión SIEMPRE se ve
     let _coRetry=false;
-    v.src=VSRC; v.autoplay=true; v.playsInline=true; v.preload='auto';
+    if(v.src!==VSRC)v.src=VSRC; v.autoplay=true; v.playsInline=true; v.preload='auto';
     if(xtoreMusicEnabled())xtoreMusicPrepareStart(v,it,_tok);
     // Oculto hasta que el vídeo PINTE frames: así nunca se ve el botón de play nativo
     // del navegador (Samsung Internet/WebView) en el hueco de carga entre contenidos.
     v.style.opacity='0';
     const _reveal=()=>{ try{ v.style.opacity='1'; }catch(_){} };
-    v.addEventListener('playing', _reveal, {once:true}); setTimeout(_reveal, 1200);
+    if(!seamless){v.addEventListener('playing', _reveal, {once:true}); setTimeout(_reveal, 1200);}
     v.addEventListener('playing',()=>{ v._admiraPlaybackBeganAt=Date.now(); },{once:true});
     // WebKit's aggregate counter can lag behind the first visible frame.
-    if(typeof v.requestVideoFrameCallback==='function'){
+    if(!seamless&&typeof v.requestVideoFrameCallback==='function'){
       v.requestVideoFrameCallback(()=>{ v._admiraDecodedFrameSeen=true; });
     }
     if(XTORE_PARENT)v.addEventListener('playing',()=>{if(_tok===_playTok){v._xtoreAutoplayBlocked=false;v._xtorePlaybackStarted=true;emitFrameState(it,'playing');}},{once:true});
@@ -2629,6 +2637,13 @@ async function play(i, forced){
       setTimeout(()=>mediaAdvance(_tok),600); };
     v.ontimeupdate=()=>{ if(v.duration&&!paused) bar.style.width=(v.currentTime/v.duration*100)+'%'; };
     mediaEl=v; applyAudio(); stage.appendChild(v);
+    if(seamless){
+      coffeeTransitions.reveal(v,()=>_tok===_playTok&&!_standby,()=>syncOn?Math.min(v.duration-.25,(syncElapsedMs()/1000)%v.duration):v.currentTime);
+      // Adopted warm videos have already fired their metadata event.
+      if(v.readyState>=1)v.onloadedmetadata();
+      const following=playlist[(cur+1)%playlist.length];
+      if(coffeeItem(following)&&(KIND[following.type]||'image')==='video')cachedSrc(following).then(src=>{if(_tok===_playTok&&!_standby)coffeeTransitions.prepare(String(following.id)+'|'+following.url,src||following.url);});
+    }
     if(xtoreMusicEnabled())xtoreMusicPlayAudio(v,it,_tok);
     else v.play().then(()=>tap.classList.remove('show')).catch(()=>{
       // autoarranque bloqueado → reintenta en mute (señalética: nunca un botón de play al público)
