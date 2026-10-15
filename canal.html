@@ -2511,7 +2511,7 @@ function videoDecodeGuardWait(v, started, frames, now){
   if(!v.error && now-began<3500) return Math.max(100,3500-(now-began));
   return 0;
 }
-const coffeeTransitions=window.AdmiraSeamlessVideo.create(stage);
+const coffeeTransitions=window.AdmiraSeamlessVideo?window.AdmiraSeamlessVideo.create(stage):{clear(){}};
 function coffeeItem(it){return !!it&&String(it.id||'').startsWith('starbucks-gdg51-seven-20261015-r');}
 async function play(i, forced){
   if(_standby) return;
@@ -2582,7 +2582,7 @@ async function play(i, forced){
   }
   // Keep the previous surface while probing the optional codec variant.
   if(DEFAULT_DRAFT.music&&!xtoreMusicEnabled())xtoreMusicRelease();
-  const seamless=coffeeItem(it)&&k==='video'&&!codecCard;
+  const seamless=!!window.AdmiraSeamlessVideo&&coffeeItem(it)&&k==='video'&&!codecCard;
   if(seamless)coffeeTransitions.freeze();else coffeeTransitions.clear();
   stage.innerHTML='';
   if(seamless)coffeeTransitions.attach();
