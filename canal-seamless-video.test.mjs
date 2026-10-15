@@ -44,11 +44,16 @@ test('only the coffee programme opts in and adopted metadata is applied before p
  const canal=readFileSync(new URL('./canal.html',import.meta.url),'utf8');
  assert.match(canal,/startsWith\('starbucks-gdg51-seven-20261015-r'\)/);
  assert.match(canal,/if\(!seamless\)\{v.addEventListener\('playing', _reveal/);
- assert.match(canal,/if\(v.readyState>=1\)v.onloadedmetadata\(\)/);
+ assert.match(canal,/if\(v.readyState>=1\)\{v.onloadedmetadata\(\);if\(_tok!==_playTok\)return;/);
  assert.match(canal,/if\(typeof coffeeTransitions!=='undefined'\)coffeeTransitions.clear\(\)/);
 });
 
 test('the optional helper is cached offline and cannot prevent the ordinary player from booting',()=>{
  const sw=readFileSync(new URL('./sw.js',import.meta.url),'utf8');assert.equal(sw.split("'/assets/seamless-video.js'").length-1,2);
  const canal=readFileSync(new URL('./canal.html',import.meta.url),'utf8');assert.match(canal,/window\.AdmiraSeamlessVideo\?window\.AdmiraSeamlessVideo\.create/);assert.match(canal,/const seamless=!!window\.AdmiraSeamlessVideo/);
+});
+
+test('a decoded pre-seek frame is rejected even when currentTime already points to the target',()=>{
+ const f=fixture();f.c.freeze();f.c.attach();const v=new f.Node('video');v.style.opacity='0';v.currentTime=5;f.c.reveal(v,()=>true,()=>5);
+ f.frames.shift()(0,{mediaTime:0});assert.equal(v.style.opacity,'0');f.frames.shift()(0,{mediaTime:5});assert.equal(v.style.opacity,'1');
 });

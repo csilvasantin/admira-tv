@@ -22,11 +22,16 @@
     function attach(){if(hold)stage.appendChild(hold);}
     function reveal(video, valid, target){
       const turn=serial;
-      function frame(){
+      function frame(now,metadata){
         if(turn!==serial||!valid())return;
         // A pre-seek frame is not the next programme frame. Wait for the
         // shared clock seek to finish, including warm videos with metadata.
-        if(video.seeking||video.readyState<2||Math.abs(video.currentTime-target())>.3){schedule();return;}
+        const decodedTime=metadata&&Number.isFinite(metadata.mediaTime)?metadata.mediaTime:video.currentTime;
+        const clockTime=target();
+        if(video.seeking||video.readyState<2||Math.abs(decodedTime-clockTime)>.3){
+          if(!video.seeking&&video.readyState>=2&&Math.abs(video.currentTime-clockTime)>.3)video.currentTime=clockTime;
+          schedule();return;
+        }
         video._admiraDecodedFrameSeen=true;video.style.opacity='1';
         const previous=hold;if(!previous)return;
         previous.style.transition='opacity 320ms linear';
