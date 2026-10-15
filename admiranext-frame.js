@@ -1,9 +1,10 @@
 /* admiranext-frame.js — COPIA del armazón cuadrático canónico de admiranext.com
  * (csilvasantin/admira-next-web · assets/admira-frame.js @ c19088a, 5-oct-2026),
  * para la portada de admira.tv (encargos #5136 · #5142 · #5152).
- * Dos cambios respecto al canon: icono() reutiliza el botón si la página ya lo trae
- * en su HTML (#ykOptionsToggle, #ykAdvancedToggle, #ykExpertToggle), y la ayuda de /ir
- * nombra el dominio en el que corre (en admiranext.com sigue diciendo «admiranext.com»).
+ * Tres cambios respecto al canon: icono() reutiliza el botón si la página ya lo trae
+ * en su HTML (#ykOptionsToggle, #ykAdvancedToggle, #ykExpertToggle), la ayuda de /ir
+ * nombra el dominio en el que corre (en admiranext.com sigue diciendo «admiranext.com»)
+ * y <body data-yk-experto="off"> quita ⌘ Experto entero (la portada, 15-oct-2026).
  * Ojo: NO es /admira-frame.js (el armazón «af-*» propio de las páginas internas de
  * admira.tv); los dos conviven y ninguna página carga los dos.
  */
@@ -62,6 +63,12 @@
 
   var cabecera = body.dataset.ykFrame === 'cabecera' ? doc.querySelector('[data-yk-head]') : null;
   var modoCabecera = !!cabecera;
+  // Página SIN ⌘ Experto (Carlos, 15-oct-2026: «la primera página no tiene modo
+  // Experto»): <body data-yk-experto="off"> deja sólo ☰ y ▤. No se crea el botón ⌘ ni
+  // la franja inferior, no hay CLI y no se carga el motor de la suite. El hueco de ⌘
+  // (el extremo derecho) es para el control que la página marque con
+  // data-yk-hueco-experto: en la portada, la píldora de idioma ENG/ESP.
+  var sinExperto = body.dataset.ykExperto === 'off';
 
   var titulo = body.dataset.ykTitle || 'ADMIRANEXT';
   var nomIzq = body.dataset.ykRailLeft || 'OPCIONES';
@@ -84,7 +91,8 @@
   // nombre: el icono declara con aria-controls qué cajón abre y el cajón lleva ese
   // mismo id. Sin ese par, un lector de pantalla ve tres botones sueltos y tres
   // regiones huérfanas, y no hay forma de saber que ▤ abre «AVANZADO».
-  var LADOS = ['left', 'right', 'bottom'];
+  // Sin ⌘ Experto el lado inferior no existe: ni botón, ni cajón, ni tirador.
+  var LADOS = sinExperto ? ['left', 'right'] : ['left', 'right', 'bottom'];
   var IDS = {
     left: {toggle: 'ykOptionsToggle', rail: 'ykOptionsRail'},
     right: {toggle: 'ykAdvancedToggle', rail: 'ykAdvancedRail'},
@@ -110,13 +118,20 @@
   }
   var btnIzq = icono('left', nomIzq);
   var btnDer = icono('right', nomDer);
-  var btnAbajo = icono('bottom', nomAbajo);
+  // Sin ⌘ Experto no se reutiliza ni se crea su botón (icono() lo crearía si faltara).
+  var btnAbajo = sinExperto ? null : icono('bottom', nomAbajo);
 
   // El canon de la casa fija el orden de la esquina derecha: EXPERTO en el extremo
-  // y AVANZADO a su izquierda.
+  // y AVANZADO a su izquierda. Sin EXPERTO, su hueco es del control de la página.
   var meta = el('div', modoCabecera ? 'yk-meta yk-head-meta' : 'yk-meta');
   meta.appendChild(btnDer);
-  meta.appendChild(btnAbajo);
+  if (btnAbajo) meta.appendChild(btnAbajo);
+  else {
+    var sobra = doc.getElementById(IDS.bottom.toggle);
+    if (sobra && sobra.parentNode) sobra.parentNode.removeChild(sobra);
+    var hueco = doc.querySelector('[data-yk-hueco-experto]');
+    if (hueco) meta.appendChild(hueco);
+  }
 
   // /proyectos/, /proyectos/index.html y /proyectos son la misma página; /flota.html
   // y /flota también (Pages sirve las dos).
@@ -369,14 +384,16 @@
 
   // La CUARTA barra: el nivel experto es un raíl inferior (.yk-rail-bottom), no una
   // sección suelta; se abre con .yk-open-bottom igual que los otros dos.
-  var hayCli = modoCabecera || modoAuto || body.dataset.ykCli === 'on';
-  var hayAbajo = hayCli || doc.querySelectorAll('[data-yk-slot="bottom"]').length > 0;
+  // Sin ⌘ Experto (data-yk-experto="off") no hay CLI ni franja: la .yk-expert queda
+  // fuera del documento y el cargador de la suite no tiene dónde montar su motor.
+  var hayCli = !sinExperto && (modoCabecera || modoAuto || body.dataset.ykCli === 'on');
+  var hayAbajo = !sinExperto && (hayCli || doc.querySelectorAll('[data-yk-slot="bottom"]').length > 0);
   var railAbajo = el('aside', 'yk-rail yk-rail-bottom');
   railAbajo.id = IDS.bottom.rail;
   railAbajo.setAttribute('aria-label', nomAbajo);
   railAbajo.appendChild(el('div', 'yk-rail-navhd', modoCabecera ? GLIFOS.bottom + ' EXPERTO · CLI' : 'NIVEL EXPERTO'));
   var experto = el('div', 'yk-expert');
-  doc.querySelectorAll('[data-yk-slot="bottom"]').forEach(function (n) { experto.appendChild(n); });
+  if (hayAbajo) doc.querySelectorAll('[data-yk-slot="bottom"]').forEach(function (n) { experto.appendChild(n); });
   railAbajo.appendChild(experto);
 
   if (!modoCabecera) body.insertBefore(bar, body.firstChild);
@@ -431,7 +448,7 @@
   sincronizar();   // plegado por defecto, y dicho: los tres botones nacen en false
   btnIzq.addEventListener('click', function () { abrir('left', !abierto('left')); });
   btnDer.addEventListener('click', function () { if (!abierto('right')) construirIrA(); abrir('right', !abierto('right')); });
-  btnAbajo.addEventListener('click', function () {
+  if (btnAbajo) btnAbajo.addEventListener('click', function () {
     abrir('bottom', !abierto('bottom'));
     if (abierto('bottom') && cli && cli.input.focus) cli.input.focus();
   });
@@ -627,7 +644,7 @@
     imprimir('Motor de comandos cargando. Inténtalo de nuevo.','err');
   }
   function suiteAction(engine,def){engine.registerAdapter({id:'tv-action-'+def.id,verbs:[{name:def.id,alias:def.aliases||[],args:def.uso||'',desc:[def.ayuda||def.id,def.ayuda||def.id],run:function(args,log,command){return def.run(args,ctx,command.raw);}}]});}
-  (G.AdmiraCommandAdapters=G.AdmiraCommandAdapters||[]).push(function(engine){engine.registerAdapter({id:'tv'});verbos.forEach(function(def){suiteAction(engine,def);});});
+  if (!sinExperto) (G.AdmiraCommandAdapters=G.AdmiraCommandAdapters||[]).push(function(engine){engine.registerAdapter({id:'tv'});verbos.forEach(function(def){suiteAction(engine,def);});});
 
   // ── Filtro por marca y por cliente (encargo #5979 · paraguas global, fase 2) ──
   // Sustituye a la marca blanca propia: admira-contexto.js carga el módulo común (shared/contexto.js +
@@ -745,4 +762,5 @@
   if (typeof CustomEvent === 'function' && doc.dispatchEvent) doc.dispatchEvent(new CustomEvent('admira-frame:ready'));
 })();
 
-;(function(){var s=document.createElement("script");s.src="https://www.admiranext.com/suite/loader.js?v=20261012-unified-1";s.defer=true;document.head.appendChild(s);})();
+// El motor de ⌘ Experto (la suite de admiranext.com). Una página sin Experto no lo carga.
+;(function(){if(document.body&&document.body.dataset.ykExperto==="off")return;var s=document.createElement("script");s.src="https://www.admiranext.com/suite/loader.js?v=20261012-unified-1";s.defer=true;document.head.appendChild(s);})();
