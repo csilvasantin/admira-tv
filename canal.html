@@ -1670,7 +1670,7 @@ function standbyOn(on){
   on=!!on; _standby=on; save('adtv_standby', on?'1':'0');
   let ov=document.getElementById('standby-ov');
   if(on){
-    if(!ov){ ov=document.createElement('div'); ov.id='standby-ov';
+    if(!ov){ ov=document.createElement('div'); ov.id='standby-ov'; ov.setAttribute('data-adm-ok','1');
       ov.style.cssText='position:fixed;inset:0;z-index:2147483646;background:#000;'; document.body.appendChild(ov); }
     setPaused(true); _nowItem=null;               // deja de espejar el asset
     _postStandby(); if(!_sbKeep) _sbKeep=setInterval(_postStandby, 60000);
