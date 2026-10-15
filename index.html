@@ -50,6 +50,14 @@
     /* Las tarjetas y el filtro de pilares, en inglés: el título ya dice el nombre inglés y los
        restos en español (o el inglés repetido) se ocultan. */
     html[lang="en"] .app-card:not(.app-card-pilar) .app-name-en,html[lang="en"] .app-pilar-en,html[lang="en"] .pilares-titulo-en,html[lang="en"] .pilar-btn-es,html[lang="en"] .pilar-btn-todas .pilar-btn-verbo{display:none}
+    /* Con marca blanca la portada sigue oscura (Carlos, 15-oct-2026): la página no cambia de fondo, así que
+       tarjetas, filtro de pilares, ecosistema y vídeo conservan sus superficies y bordes oscuros (la hoja
+       puente de la marca les daba los de la marca, blancos o crema en las de modo claro, con el texto claro
+       encima: «Todas» no se leía). El color de la marca entra por --mbh-acento, que /assets/portada-marca.js
+       aclara lo justo para leerse sobre lo oscuro, y el botón principal por --mbh-boton. Sin marca, nada cambia. */
+    :root[data-mb-marca] main,:root[data-mb-marca] footer,:root[data-mb-marca] .video-dialog{--panel:#0c121c;--panel2:#101927;--line:#223047;--text:#e8eef6;--dim:#9eacc0;--green:var(--mbh-acento,#3df08a)}
+    :root[data-mb-marca][data-mb-web="tv"] main .eyebrow{color:var(--mbh-acento,#3df08a)!important}
+    :root[data-mb-marca] main .button.primary{background:var(--mbh-boton,var(--green));border-color:var(--mbh-boton,var(--green));color:var(--mbh-boton-texto,#04110b)}
     .hero{padding:clamp(72px,11vw,140px) 0 70px;text-align:center}
     .eyebrow{margin:0;color:var(--green);font:800 12px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}
     .hero h1{font-size:clamp(48px,9vw,106px);line-height:.95;letter-spacing:-.055em;margin:20px auto;max-width:1020px}.hero h1 em{font-style:normal;color:var(--red)}
@@ -139,6 +147,8 @@
   <!-- Idioma de la portada (ENG/ESP): antes que el armazón, para que éste copie en ☰ la
        navegación ya traducida. -->
   <script defer src="/assets/portada-idioma.js?v=15.10.2026.r4.1423"></script>
+  <!-- El color de la marca blanca, legible sobre la portada oscura (--mbh-*). -->
+  <script defer src="/assets/portada-marca.js?v=15.10.2026.r4.1423"></script>
   <script defer src="/admiranext-frame.js?v=15.10.2026.r4.1423"></script>
 </head>
 <body data-yk-frame="cabecera" data-yk-auto="on" data-yk-experto="off" data-yk-secciones="main section h2">
