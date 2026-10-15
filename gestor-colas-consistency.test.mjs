@@ -62,3 +62,12 @@ test('Diagonal 634 has its own room in the control selector, apart from Paseo de
  assert.match(html,/const MARCAS=\{starbucks:'starbucks-paseo-de-gracia','starbucks-diagonal':'starbucks-diagonal-634',/);
  assert.notEqual(await claveDe(env,'starbucks-diagonal-634'),await claveDe(env,'starbucks-paseo-de-gracia'),'its own staff key');
 });
+
+test('the iPad display names the venue as written: «Paseo de Gracia», «Diagonal 634»',async()=>{
+ const {readFileSync}=await import('node:fs'),html=readFileSync(new URL('./gestorColas/pantalla/index.html',import.meta.url),'utf8');
+ const linea=html.split('\n').filter(l=>/^const (MENORES|tienda)=/.test(l)).join('\n');
+ const nombre=sala=>new Function('sala',linea+'\nreturn tienda;')(sala);
+ assert.equal(nombre('starbucks-paseo-de-gracia'),'Paseo de Gracia');
+ assert.equal(nombre('starbucks-diagonal-634'),'Diagonal 634');
+ assert.equal(nombre('starbucks-la-rambla-de-mar'),'La Rambla de Mar','the first word keeps its capital');
+});

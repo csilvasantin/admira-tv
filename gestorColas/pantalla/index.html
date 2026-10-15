@@ -72,7 +72,9 @@ const M=MARCAS[mk]||{nombre:sala.split('-')[0].replace(/^./,c=>c.toUpperCase()),
 if(!sala)sala=M.sala||'starbucks-paseo-de-gracia';
 document.documentElement.style.setProperty('--c',M.c);document.documentElement.style.setProperty('--osc',M.osc);
 $('marca').textContent=M.nombre;$('logo').textContent=M.logo;document.title=M.nombre+' · Pedidos';
-const tienda=sala.replace(/^[a-z0-9]+-/,'').split('-').map(w=>w&&w[0].toUpperCase()+w.slice(1)).join(' ');
+// Nombre del local desde la sala: «de», «del», «la»… en minúscula salvo al empezar (Carlos, 16-oct-2026: «Paseo de Gracia», no «Paseo De Gracia»).
+const MENORES=new Set(['de','del','la','las','los','el','y','i','d']);
+const tienda=sala.replace(/^[a-z0-9]+-/,'').split('-').map((w,i)=>!w||(i&&MENORES.has(w))?w:w[0].toUpperCase()+w.slice(1)).join(' ');
 let lang=(P.get('lang')||'es').slice(0,2)==='en'?'en':'es';
 // Aviso bilingüe (encargo 5672): cada llamada se dice y se escribe en los dos idiomas, primero el de la pantalla
 // y después el otro. ?bilingue=0 vuelve al aviso en un solo idioma.
