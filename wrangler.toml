@@ -2,6 +2,8 @@
 # El site estático vive en la raíz del repo; las Pages Functions en ./functions.
 name = "admira-tv"
 compatibility_date = "2024-09-23"
+# Inventario de Xpaces: fetch(cache: no-store) requiere esta capacidad de runtime.
+compatibility_flags = ["cache_option_enabled"]
 pages_build_output_dir = "."
 
 [[durable_objects.bindings]]
