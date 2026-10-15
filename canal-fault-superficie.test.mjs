@@ -143,7 +143,7 @@ test("medio abrir: el contenido ocupa la mitad del lienzo; la persiana es el fon
   const dsp = display(p);
   assert.equal(dsp.visible, 50);
   assert.equal(dsp.overlay, 0, "lo de abajo es del player: no cuenta como capa encima");
-  assert.match(canal, /#mupi\.fault-half #stage\{ bottom:50%; overflow:hidden; \}/, "la persiana tapa de verdad la mitad de abajo");
+  assert.match(canal, /#mupi\.fault-half #stage\{ bottom:50% !important; overflow:hidden; \}/, "la persiana tapa de verdad la mitad de abajo");
   assert.match(canal, /#mupi\.fault-half\{ background:repeating-linear-gradient/);
 });
 

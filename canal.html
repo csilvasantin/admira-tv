@@ -178,7 +178,7 @@
   .screen-fit .skel-stage{ width:100%; height:100%; max-height:none; aspect-ratio:auto; border:0; border-radius:0; }
   /* Bugito (DCL-5da4653d…): fallos de superficie del banco de pruebas. «A medio abrir»: el contenido
      sólo ocupa la mitad de arriba y abajo asoma la persiana (fondo del propio marco, no una capa). */
-  #mupi.fault-half #stage{ bottom:50%; overflow:hidden; }
+  #mupi.fault-half #stage{ bottom:50% !important; overflow:hidden; }
   #mupi.fault-half{ background:repeating-linear-gradient(180deg,#2b313a 0 16px,#12161b 16px 21px); }
   #faultPopup{ position:fixed; z-index:2147483647; left:50%; top:50%; transform:translate(-50%,-50%); width:58vw; min-height:46vh;
     display:flex; flex-direction:column; background:#eceff3; color:#1b2027; border-radius:1.2vmin; overflow:hidden;
