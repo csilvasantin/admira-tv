@@ -55,3 +55,10 @@ test('expired session and signed-in user without access cannot write; valid exis
   assert.equal((await api(ctx('llamar',{cookie,environment,body:{pedido:'stable-id'}}))).status,200);assert.equal(calls,1);
  }finally{globalThis.fetch=original;}
 });
+
+test('Diagonal 634 has its own room in the control selector, apart from Paseo de Gracia',async()=>{
+ const {readFileSync}=await import('node:fs'),html=readFileSync(new URL('./gestorColas/index.html',import.meta.url),'utf8');
+ assert.match(html,/<option value="starbucks-diagonal">Starbucks · Diagonal 634<\/option>/);
+ assert.match(html,/const MARCAS=\{starbucks:'starbucks-paseo-de-gracia','starbucks-diagonal':'starbucks-diagonal-634',/);
+ assert.notEqual(await claveDe(env,'starbucks-diagonal-634'),await claveDe(env,'starbucks-paseo-de-gracia'),'its own staff key');
+});
