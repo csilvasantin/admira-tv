@@ -4,6 +4,9 @@
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
   ],
+  "v.15.10.2026.r4.14:23": [
+    "La validación de pantallas de Xpaces admite consultas de inventario sin caché en el runtime publicado."
+  ],
   "v.15.10.2026.r3.14:02": [
     "Playlists locales: el registro virtual usa su propia identidad y reintenta sin invalidar un guardado confirmado.",
     "Los audios del hilo musical asociado se reproducen completos y liberan el medio anterior; la señalización conserva sus ranuras."
