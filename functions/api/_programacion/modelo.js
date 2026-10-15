@@ -97,6 +97,11 @@ export function limpiarPlaylist(raw) {
   if (tipo === "viva" && items.length) throw new Error("items_en_viva");
   const o = raw.opciones && typeof raw.opciones === "object" ? raw.opciones : {};
   const opciones = { exacta: o.exacta === true, segundos: entero(o.segundos, 2, 600, 10) };
+  if (o.xpace && typeof o.xpace === "object") {
+    const exclusions=o.xpace.excludedStockIds;
+    if(exclusions!=null&&(!Array.isArray(exclusions)||exclusions.length>1000||exclusions.some(id=>typeof id!=="string"||!id||id.length>160)))throw Error("exclusiones_invalidas");
+    opciones.xpace={managedEmpty:o.xpace.managedEmpty===true,excludedStockIds:[...new Set(exclusions||[])]};
+  }
   const reglaDe = h => (typeof h.regla === "number" ? reglas[h.regla] : h.regla);
   const duracion_s = items.reduce((s, it) => s + (it.tipo === "pieza" ? it.seconds : it.cuantas * reglaDe(it).seconds), 0);
   return { id, nombre, proyecto: slugId(raw.proyecto), tipo, items, reglas, opciones, duracion_s, origen: texto(raw.origen || "manual", 80) };

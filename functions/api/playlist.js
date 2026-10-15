@@ -6,6 +6,9 @@ import { sombraTrasRespuesta } from "./_programacion/gancho-sombra.js";
 // Doble escritura (E7 del modelo único): tras guardar en el KV, lo mismo va a la D1 en waitUntil, detrás de la bandera
 // meta.banderas.espejo. No cambia la respuesta ni su latencia; ver _programacion/espejo.js.
 import { espejar } from "./_programacion/espejo.js";
+import {bindingForScreen,boundDraft,scopedScreenCandidate} from './_programacion/xpace-binding.js';
+import {leerPlaylist} from './_programacion/almacen.js';
+import {replaceBoundDraft,verifyPlaylistGrant} from './_programacion/xpace-playlist.js';
 
 // Exportado para el importador del legado (E5, _programacion/importar.js): lee las mismas claves, sin escribirlas.
 export const DRAFT_PREFIX = "admira-tv:playlist:default:v1:";
@@ -75,7 +78,9 @@ function cleanItem(raw, index) {
     seconds: Math.max(2, Math.min(600, Number(raw.seconds) || 10)), asset, assetType, tags };
 }
 
-async function readDraft(env, screen) {
+async function readDraft(env, screen,legacyOnly=false) {
+  const binding=legacyOnly||!scopedScreenCandidate(screen)?null:await bindingForScreen(env.PROGRAMACION_DB,screen);
+  if(binding){if(binding.state!=='active')throw Error('playlist_initializing');const playlist=await leerPlaylist(env.PROGRAMACION_DB,binding.playlist_id);if(!playlist)throw Error('bound_playlist_missing');return {...boundDraft(binding,playlist),autoMode:binding.auto_mode};}
   try {
     const raw = env.ACCESS && await env.ACCESS.get(PREFIX + screen);
     const draft = raw && JSON.parse(raw);
@@ -222,12 +227,13 @@ export async function stockPlaylistSnapshot(env, waitUntil) {
     f.orientation=(s.tags.find(t=>t.startsWith("orientacion:"))||"").slice(12);
     f.lang=(s.tags.find(t=>t.startsWith("idioma:"))||"").slice(7);
     const propias=deduceScreenTags(f), draft=await readDraft(env,s.screen);
-    const auto=addressedContent(stock,f,Date.now(),60,serviceBindings(live.circuits,propias));
+    const excluded=new Set(draft.excludedStockIds||[]);
+    const auto=draft.managed&&(draft.managedEmpty||draft.autoMode!=='screen')?[]:addressedContent(stock,f,Date.now(),60,serviceBindings(live.circuits,propias)).filter(item=>!excluded.has(String(item.stockId)));
     const viva=resolveForScreen(live.playlists.filter(p=>p.enabled!==false),applyCircuits(propias,live.circuits),stock,f);
-    const base=draft.items.length?draft.items:viva.items, ids=new Set(base.map(x=>String(x.stockId)));
+    const base=draft.managed?draft.items:draft.items.length?draft.items:viva.items, ids=new Set(base.map(x=>String(x.stockId)));
     const effective=[...base,...auto.filter(x=>!ids.has(String(x.stockId)))];
-    playlists.push({screen:s.screen,name:draft.items.length?draft.name:(viva.hits.map(x=>x.name).join(" + ")||(auto.length?"Dirigido por hashtag":"Por defecto")),rev:draft.rev||0,
-      manual:draft.items,items:draft.items.length?effective:effective.slice(0,200),synthetic:!draft.items.length&&(viva.items.length>0||auto.length>0)});
+    playlists.push({screen:s.screen,name:draft.managed||draft.items.length?draft.name:(viva.hits.map(x=>x.name).join(" + ")||(auto.length?"Dirigido por hashtag":"Por defecto")),rev:draft.rev||0,
+      manual:draft.items,items:effective.slice(0,200),managedEmpty:!!draft.managedEmpty,synthetic:!draft.managed&&!draft.items.length&&(viva.items.length>0||auto.length>0)});
   }));
   return {...fleet,circuits:live.circuits,playlists,partial:sites.length>40};
 }
@@ -271,20 +277,28 @@ async function adminGet(request, env, q, cors, waitUntil) {
   return json({ ok: true, rule, pieces: pieces.slice(0, 12), total: pieces.length, screens: matched.map(s => s.screen), manual: withManual }, 200, cors);
 }
 
-export async function onRequestGet({ request, env, waitUntil }) {
+export async function onRequestGet({ request, env, waitUntil,legacyOnly=false }) {
   const cors = corsFor(request), q = new URL(request.url).searchParams;
   if (q.get("live") === "1" || q.get("preview") === "1") return adminGet(request, env, q, cors, waitUntil);
   const screen = cleanScreen(q.get("screen"));
   if (!screen) return json({ ok: false, error: "bad_screen" }, 400, cors);
+  // legacyOnly is an internal migration helper, never a URL/query parameter.
+  let binding=null;
+  if(!legacyOnly&&scopedScreenCandidate(screen)){
+    if(!env.PROGRAMACION_DB)return json({ok:false,error:'programacion_unavailable'},503,cors);
+    try{binding=await bindingForScreen(env.PROGRAMACION_DB,screen);}catch{return json({ok:false,error:'programacion_unavailable'},503,cors);}
+    if(screen.startsWith('virtual-xp-')&&!binding)return json({ok:false,error:'playlist_binding_missing'},404,cors);
+  }
+  if(binding&&binding.state!=='active')return json({ok:false,error:'playlist_initializing'},409,cors);
   // Public virtual playlists are also read by Xtore on www/localhost through
   // its bounded parent bridge. Never enable cross-origin credentialed writes.
   if (/^(?:xtore-)?virtual-[a-z0-9-]+$/.test(screen)) {
-    const draft = await readDraft(env, screen);
-    return Response.json({ ok: true, draft: { screen, playlist: 'default', items: draft.items, rev: draft.rev } }, {
+    const draft = await readDraft(env, screen,legacyOnly);
+    return Response.json({ ok: true, draft: { ...draft,screen, playlist: 'default', items: draft.items, rev: draft.rev },auto:[] }, {
       headers: authHeaders({ 'Access-Control-Allow-Origin': '*' }),
     });
   }
-  let draft = await readDraft(env, screen);
+  let draft = await readDraft(env, screen,legacyOnly);
   // Revisión de lo GUARDADO (0 si nada): es la que vale para escribir, también cuando la lista que se ve la
   // componen las playlists vivas o el hashtag (8-oct-2026: el hash de esa lista provocaba un 409 falso).
   const savedRev = Number(draft.rev) || 0;
@@ -310,8 +324,8 @@ export async function onRequestGet({ request, env, waitUntil }) {
   // Contenido dirigido a esta pantalla o a su centro por hashtag (#starbucks_paseodegracia_103_pantalla1): se
   // AÑADE a lo que ya tenga, puesto a mano o por playlists vivas, sin repetir pieza.
   const keys = addressKeys(facts), dirigidas = (keys.exact.size || keys.centre.size || destinationSelectors(facts).brand.size) ? addressedContent(await loadStock(), facts, Date.now(), 60, serviceBindings(live.circuits, propias)) : [];
-  let auto = dirigidas;
-  if (!draft.items.length) {
+  let auto = draft.managed&&(draft.managedEmpty||draft.autoMode!=='screen')?[]:dirigidas;
+  if (!draft.items.length&&!draft.managed) {
     const viva = activas.length ? resolveForScreen(activas, screenTags, await loadStock(), facts) : { hits: [], items: [] };
     const ya = new Set(viva.items.map(i => i.stockId)), items = [...viva.items, ...dirigidas.filter(i => !ya.has(i.stockId))].slice(0, 200);
     if (items.length) {
@@ -326,7 +340,8 @@ export async function onRequestGet({ request, env, waitUntil }) {
     }
   } else {
     const ya = new Set(draft.items.map(i => String(i.stockId || "")));
-    auto = dirigidas.filter(i => !ya.has(i.stockId));
+    const excluded=new Set(draft.excludedStockIds||[]);
+    auto = auto.filter(i => !ya.has(i.stockId)&&!excluded.has(String(i.stockId)));
   }
   const respuesta = { ok: true, draft, screenTags, auto };
   // Modo sombra (E6, docs/playlists-modelo-unico.md): si pregunta el player, compara por detrás (waitUntil, después de
@@ -401,6 +416,15 @@ export async function onRequestPost({ request, env, waitUntil }) {
   if (!screen || !Array.isArray(body && body.items) || body.items.length > 200) return json({ ok: false, error: "invalid_playlist" }, 400, cors);
   const items = body.items.map(cleanItem).filter(Boolean);
   if (items.length !== body.items.length) return json({ ok: false, error: "invalid_item" }, 400, cors);
+  if(scopedScreenCandidate(screen)&&!env.PROGRAMACION_DB)return json({ok:false,error:'programacion_unavailable'},503,cors);
+  const binding=scopedScreenCandidate(screen)?await bindingForScreen(env.PROGRAMACION_DB,screen):null;
+  if(screen.startsWith('virtual-xp-')&&!binding)return json({ok:false,error:'playlist_binding_missing'},404,cors);
+  if(binding){
+    const grant=await verifyPlaylistGrant((request.headers.get('Authorization')||'').replace(/^Bearer /,''),env.XPACE_PLAYLIST_GRANT_SECRET);
+    if(!grant||grant.scope.projectId!==binding.project_id||grant.scope.venueId!==binding.venue_id||grant.scope.channelId!==binding.channel_id||!['add','remove'].every(op=>grant.operations.includes(op)))return json({ok:false,error:'playlist_scope_required'},403,cors);
+    const result=await replaceBoundDraft(env.PROGRAMACION_DB,binding,{...body,items},grant.sub);
+    return json(result,result.status||200,cors);
+  }
   const previous = await readDraft(env, screen), expected = Number(body.rev) || 0, stored = Number(previous.rev) || 0;
   // Sólo hay conflicto si había algo guardado (rev > 0) y quien escribe trae otra revisión. Con nada guardado no
   // hay a quién pisar: un rev que no sea número, o el de un borrador sintético de un cliente antiguo, no es un 409.

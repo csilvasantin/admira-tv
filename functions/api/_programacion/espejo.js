@@ -30,6 +30,7 @@
 //     la bandera encendida no hay lectura de más: la de los datos trae también meta y vuelve a mirar la bandera.
 //   · LOS BORRADORES SINTÉTICOS NUNCA SE REFLEJAN: no son datos guardados (los compone el GET en cada consulta).
 import * as A from "./almacen.js";
+import {protectedEntity} from './xpace-binding.js';
 import { idDefecto, idViva, vivasDe } from "./legado.js";
 import { ACTOR, ESCRIBEN, idsNecesarios, planificar, refBorrador, refCircuito, refViva, traducir } from "./importador.js";
 import { slugId } from "./modelo.js";
@@ -153,6 +154,7 @@ async function aplicar(db, c, actor, base) {
     let conflicto = false, version = null;
     for (const op of ops) {
       if (!ESCRIBEN.has(op.accion)) continue;
+      if(await protectedEntity(db,op.entidad,op.id)){op.accion='omitir';op.motivo='xpace_authority';continue;}
       const fila = filas[op.entidad].get(op.id);
       // Llega tarde: la fila ya tiene algo posterior a esta escritura del KV. No se pisa lo más nuevo con lo viejo.
       if (op.accion !== "crear" && fila && Number(fila.actualizado_en) > c.en) { obsoletas.push(op); continue; }

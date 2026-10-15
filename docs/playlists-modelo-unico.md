@@ -3,6 +3,10 @@
 Diseño aprobado por Carlos el 8-oct-2026. Este documento recoge el diseño, las tres decisiones de Carlos, lo que hacen las
 entregas E1 a E7, en qué se aparta la implementación del diseño y el plan completo de entregas.
 
+## Asociación por establecimiento (15-oct-2026)
+
+La autoridad D1 puede activarse por establecimiento/canal mediante un binding opt-in. Las pantallas asociadas ya no aceptan escritores KV, importación ni reconciliación sin su permiso scoped; la protección se comprueba también dentro de la transacción SQL. No cambia la flota no asociada. Contrato, migración y activación administrativa: [Playlists por establecimiento](xpace-local-playlist.md).
+
 ## Por qué
 
 Hoy, lo que emite una pantalla sale de varias piezas que se pisan entre sí sin una regla escrita:

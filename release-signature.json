@@ -1,7 +1,7 @@
 {
-  "version": "v.14.10.2026.r16.21:13",
-  "agent": "TrinityMacStudio",
-  "deployer": "TrinityMacStudio",
-  "machine": "MacStudio",
-  "signature": "TrinityMacStudio · MacStudio"
+  "version": "v.15.10.2026.r2.13:48",
+  "agent": "TrinityMBP14",
+  "deployer": "TrinityMBP14",
+  "machine": "MacBookProNegro14",
+  "signature": "TrinityMBP14 · MacBookProNegro14"
 }
