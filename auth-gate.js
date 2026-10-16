@@ -42,7 +42,7 @@
     "cap-avanzado.html":"digitalsignage-cms", "cap-experto.html":"digitalsignage-cms",
     "cap-folded.html":"digitalsignage-cms",
     "users":"admira-tv", "usuarios":"admira-tv",
-    "accesscontrol":"admira-tv", "videoanalitics":"admira-tv",
+    "accesscontrol":"admira-tv", "videoanalitics":"admira-tv", "gestorcolas":"admira-tv",
     "audiencia":"digitalsignage-conditional",
     "emision":"digitalsignage-player", "programacion":"digitalsignage-player"
   };
