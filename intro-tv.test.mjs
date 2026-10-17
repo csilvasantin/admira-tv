@@ -37,8 +37,8 @@ test('una vez por idioma, sin «reducir movimiento», sin marca blanca; ?intro=0
 });
 
 test('vídeo y música del idioma; 1080p desde 1600 píxeles reales', () => {
-  assert.equal(intro.pickSource(1920, 1, 'es'), '/assets/intro-tv/intro-tv-a-es-1080.mp4');
-  assert.equal(intro.pickSource(1280, 1, 'en'), '/assets/intro-tv/intro-tv-a-en-720.mp4');
+  assert.equal(intro.pickSource(1920, 1, 'es'), '/media/intro-tv/intro-tv-a-es-1080.mp4');
+  assert.equal(intro.pickSource(1280, 1, 'en'), '/media/intro-tv/intro-tv-a-en-720.mp4');
   assert.equal(intro.pickMusic('', 'es'), 'campanas');
   assert.equal(intro.pickMusic('', 'en'), 'pulso');
   assert.equal(intro.pickMusic('?musica=0', 'es'), '');
@@ -69,4 +69,11 @@ test('la intro queda por encima del marco de admira.tv (cabecera, raíles y avis
   const src = read('assets/intro-tv/intro.js');
   const z = Number((src.match(/\.tv-intro\{[^}]*z-index:(\d+)/) || [])[1]);
   assert.ok(z > 2147483010, 'z-index ' + z + ' por encima de la cabecera');
+});
+
+test('vídeos y música fuera de /assets/ (allí _headers fuerza application/javascript)', () => {
+  for (const src of [...Object.values(intro.SOURCES).flatMap(set => Object.values(set)), ...Object.values(intro.MUSIC)]) {
+    assert.match(src, /^\/media\/intro-tv\//, src);
+  }
+  assert.match(read('_headers'), /^\/assets\/\*\n  Content-Type: application\/javascript/m, 'la regla sigue ahí: por eso van en /media/');
 });
