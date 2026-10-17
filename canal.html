@@ -1116,7 +1116,7 @@ function measuredPaint(){
   // (un iframe 16:9 en un móvil vertical pinta en horizontal aunque `screen` sea vertical).
   const virtual=typeof VIRTUAL_PLAYER!=='undefined'&&VIRTUAL_PLAYER;
   const w=virtual?innerWidth:((window.screen&&screen.width)||innerWidth), h=virtual?innerHeight:((window.screen&&screen.height)||innerHeight);
-  return {paintedRotation:angle, painted:paintedOrientation(angle,w,h), playbackPaused:typeof paused==='boolean'?paused:false, ...measuredSurface()};
+  return {paintedRotation:angle, painted:paintedOrientation(angle,w,h), playbackPaused:typeof mediaEl!=='undefined'&&mediaEl&&typeof mediaEl.paused==='boolean'?mediaEl.paused:(typeof paused==='boolean'?paused:false), ...measuredSurface()};
 }
 const MEASURED_KEYS=['paintedRotation','painted','canvas','overlay','visible','chromeTop','playbackPaused'];
 // #mupi anima el giro (transition .35 s en web; el player macOS lo quita): mientras dura, el

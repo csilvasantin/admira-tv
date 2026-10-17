@@ -312,3 +312,5 @@ test("revisión: sin capas ajenas en <body> no hay hit-testing (0 % tapado sin 5
 });
 
 test('title bar is detected from the actual top band and independently removed',()=>{const p=player();assert.equal(orden(p,'fault-title'),'executed');assert.ok(p.d.document.getElementById('faultTitlebar'));assert.ok(p.run('measuredSurface().chromeTop')>=36);orden(p,'fault-popup');orden(p,'fault-title off');assert.equal(p.run('measuredSurface().chromeTop'),0);assert.ok(p.run('measuredSurface().overlay')>10);orden(p,'fault-clear');assert.equal(p.run('measuredSurface().overlay'),0);});
+
+test('pause telemetry reads the actual media element rather than assuming the command succeeded',()=>{const p=player();p.run('globalThis.mediaEl={paused:true}');assert.equal(p.run('measuredPaint().playbackPaused'),true);p.run('mediaEl.paused=false');assert.equal(p.run('measuredPaint().playbackPaused'),false);});
