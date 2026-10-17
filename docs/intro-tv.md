@@ -21,8 +21,9 @@ Lleva el fondo oscuro con rejilla de puntos, titulares blancos en la letra del s
 - **Música:** una por idioma: castellano «Tic-tac y campanas» e inglés «Pulso». Si el navegador no deja sonar, queda el botón «🔊 Activar sonido». `?musica=campanas|pulso|0`.
 - **Ficheros:**
   - `assets/intro-tv/intro.js`;
-  - vídeos `intro-tv-a-{es,en}-{1080,720}.mp4`;
-  - músicas `musica-campanas.mp4` y `musica-pulso.mp4`, en `.mp4` porque Cloudflare no sirve `.m4a` por rangos.
+  - en `media/intro-tv/`: vídeos `intro-tv-a-{es,en}-{1080,720}.mp4` y músicas `musica-campanas.mp4` y `musica-pulso.mp4`;
+  - van en `media/` y no en `assets/` porque el `_headers` de admira.tv sirve todo `/assets/*` como `application/javascript` con `nosniff`;
+  - las músicas van en `.mp4` porque Cloudflare no sirve `.m4a` por rangos.
 - **Cómo se hizo:**
   - es la misma maqueta animada que las intros de xpaceos.com, admira.store y admira.studio, con `?tema=tv`;
   - se capturó fotograma a fotograma a 30 fps y se codificó en H.264 con AVFoundation.

@@ -12,6 +12,8 @@
    - 1080p desde 1600 píxeles reales de ancho; 720p en el resto.
    - Música: una por idioma (castellano «Tic-tac y campanas», inglés «Pulso»). Intenta sonar; si el navegador no
      deja, queda el botón «Activar sonido». ?musica=campanas|pulso|0. Va en .mp4: Cloudflare no sirve .m4a por rangos.
+   Vídeos y música en /media/intro-tv/ y no en /assets/: el _headers de admira.tv sirve todo /assets/* como
+   application/javascript (con nosniff), y un vídeo con ese tipo puede no reproducirse.
    Contrato / contract: docs/intro-tv.md */
 (function (root, factory) {
   const api = factory(root);
@@ -21,12 +23,12 @@
   'use strict';
   const SEEN_KEY = 'admiratv_intro_a';
   const SOURCES = {
-    es: {1080: '/assets/intro-tv/intro-tv-a-es-1080.mp4', 720: '/assets/intro-tv/intro-tv-a-es-720.mp4'},
-    en: {1080: '/assets/intro-tv/intro-tv-a-en-1080.mp4', 720: '/assets/intro-tv/intro-tv-a-en-720.mp4'}
+    es: {1080: '/media/intro-tv/intro-tv-a-es-1080.mp4', 720: '/media/intro-tv/intro-tv-a-es-720.mp4'},
+    en: {1080: '/media/intro-tv/intro-tv-a-en-1080.mp4', 720: '/media/intro-tv/intro-tv-a-en-720.mp4'}
   };
   // .mp4 y no .m4a: admira.store está en Cloudflare, que no guarda .m4a en caché ni lo sirve por rangos (206);
   // sin rangos, la música no se puede poner en el segundo del vídeo. Mismo audio AAC.
-  const MUSIC = {campanas: '/assets/intro-tv/musica-campanas.mp4', pulso: '/assets/intro-tv/musica-pulso.mp4'};
+  const MUSIC = {campanas: '/media/intro-tv/musica-campanas.mp4', pulso: '/media/intro-tv/musica-pulso.mp4'};
   const BRAND_KEY = 'mb:marca';
   const BRAND_OFF = ['off', 'admira', 'ninguna', 'ninguno', 'none', 'default', 'apagar', 'quitar', 'reset'];
   const LANG_KEY = 'admtv-lang';
