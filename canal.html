@@ -1080,7 +1080,7 @@ function applyDisplayRotation(delta){ return setDisplayRotation(displayRotation+
 const FAULT_KEY='adtv_fault:'+(scr.screen||scr.circuit||'unbound');
 const FAULT_TTL_MS=30*60000;
 // Bugito (DCL-5da4653d859552490fd5ae1d): fallos de superficie, ver «BUGITO · fallos de superficie».
-const SURFACE_FAULTS=['canvas','popup','half'];
+const SURFACE_FAULTS=['canvas','popup','half','title'];
 function faultCommand(raw){
   const words=String(raw||'').trim().replace(/^\//,'').toLowerCase().split(/\s+/);
   const cmd=words[0].replace(/^fault[:_]/,'fault-'), off=words[1]==='off';
@@ -1116,9 +1116,9 @@ function measuredPaint(){
   // (un iframe 16:9 en un móvil vertical pinta en horizontal aunque `screen` sea vertical).
   const virtual=typeof VIRTUAL_PLAYER!=='undefined'&&VIRTUAL_PLAYER;
   const w=virtual?innerWidth:((window.screen&&screen.width)||innerWidth), h=virtual?innerHeight:((window.screen&&screen.height)||innerHeight);
-  return {paintedRotation:angle, painted:paintedOrientation(angle,w,h), ...measuredSurface()};
+  return {paintedRotation:angle, painted:paintedOrientation(angle,w,h), playbackPaused:typeof paused==='boolean'?paused:false, ...measuredSurface()};
 }
-const MEASURED_KEYS=['paintedRotation','painted','canvas','overlay','visible'];
+const MEASURED_KEYS=['paintedRotation','painted','canvas','overlay','visible','chromeTop','playbackPaused'];
 // #mupi anima el giro (transition .35 s en web; el player macOS lo quita): mientras dura, el
 // transform calculado aún es el de antes. Se vuelve a MEDIR al terminar y, si cambió, se publica.
 function remeasurePaint(){
@@ -1152,7 +1152,7 @@ function setInjectedFault(f){
 // (caja del lienzo), display.visible (% del lienzo con contenido) y display.overlay (% de la
 // emisión tapado por capas ajenas al player)— y el detector lo compara con lo que espera el plano.
 const SURFACE_FAULT_KEY='adtv_fault_surface:'+(scr.screen||scr.circuit||'unbound');
-const SURFACE_LABEL={canvas:'cambio de resolución',popup:'popup encima',half:'pantalla a medio abrir'};
+const SURFACE_LABEL={canvas:'cambio de resolución',popup:'popup encima',half:'pantalla a medio abrir',title:'barra de título encima'};
 function surfaceFaultsActive(raw,now){
   const out={};
   if(!raw||typeof raw!=='object'||Array.isArray(raw)) return out;
@@ -1202,11 +1202,23 @@ function lienzoDestino(mupi){
   const quarter=(typeof effectiveRotation==='function'?effectiveRotation():0)%180!==0;
   return quarter?{w:Math.round(h),h:Math.round(w)}:{w:Math.round(w),h:Math.round(h)};
 }
+// Measure a foreign full-width top band from hit-testing, without reading injection state.
+function measuredTopChrome(wrap){
+  if(!document.elementFromPoint) return null;
+  let height=0;
+  for(let y=2;y<Math.min(innerHeight*.15,120);y+=4){
+    let covered=0;
+    for(let x=0;x<9;x++){const el=document.elementFromPoint(innerWidth*(x+.5)/9,y);if(el&&el!==document.body&&el!==document.documentElement&&!wrap.contains(el))covered++;}
+    if(covered<8)break;
+    height=y+2;
+  }
+  return height;
+}
 function measuredSurface(){
   if(typeof document==='undefined'||!document.body||!document.documentElement) return {};
   try{
     const mupi=$('mupi'), stage=$('stage'), wrap=$('wrap'); if(!mupi||!stage||!wrap) return {};
-    const out={};
+    const out={chromeTop:0};
     // visible: área de #stage dentro del lienzo, con medidas de maquetación (sin transform ni transición).
     const mA=(mupi.offsetWidth||0)*(mupi.offsetHeight||0);
     if(mA>0) out.visible=Math.round(100*Math.min(1,((stage.offsetWidth||0)*(stage.offsetHeight||0))/mA));
@@ -1216,6 +1228,7 @@ function measuredSurface(){
     const ajenas=capasAjenas(wrap);
     if(!ajenas.length) out.overlay=0;
     else if(document.elementFromPoint){
+      out.chromeTop=measuredTopChrome(wrap);
       const m=visibleRect(mupi), st=visibleRect(stage);
       const dentro={l:Math.max(m.l,st.l),t:Math.max(m.t,st.t),r:Math.min(m.r,st.r),b:Math.min(m.b,st.b)};
       const root=document.documentElement, body=document.body;
@@ -1241,6 +1254,10 @@ function paintSurfaceFaults(){
         document.body.appendChild(pop);
       }
     } else if(pop) pop.remove();
+    let title=document.getElementById('faultTitlebar');
+    if(surfaceFaultOn('title')){
+      if(!title){title=document.createElement('div');title.id='faultTitlebar';title.setAttribute('data-adm-ok','1');title.setAttribute('role','banner');title.textContent='Admira Player — ventana de reproducción     −   □   ×';title.style.cssText='position:fixed;z-index:2147483647;left:0;top:0;width:100%;height:38px;box-sizing:border-box;background:#d7dce3;color:#18212c;font:15px system-ui;display:flex;align-items:center;padding:0 14px;pointer-events:auto';document.body.appendChild(title);}
+    }else if(title)title.remove();
   }catch(_){}
 }
 function armSurfaceExpiry(){
@@ -5178,6 +5195,10 @@ function shotSoon(){
   _shotSoonTimer=setTimeout(()=>{ try{ shotTick(); }catch(_){} }, 1200);
 }
 window.shotSoon=shotSoon;
+
+
+// Phone laboratory: keep measured state fresh during pauses; no extra traffic for other players.
+if(scr.screen==='virtual-lab-admirito-fold') setInterval(()=>{try{if(_nowItem)_postNow(_nowItem);}catch(_){}},10000);
 
 // si arrancamos ya en sincro (persistido/URL), engancha el máster central
 if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); syncStateTimer=setInterval(fetchSyncState,30000); }

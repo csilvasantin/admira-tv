@@ -62,6 +62,7 @@ function dom({ ancho = 1600, alto = 900, completa = true } = {}) {
     n.padre = body; if (n.id) nodos.set(n.id, n);
     // El popup del canal: 58vw × 46vh centrado (lo que dice su CSS).
     if (n.id === "faultPopup") n.r = rect(ancho * 0.21, alto * 0.27, ancho * 0.58, alto * 0.46);
+    if (n.id === "faultTitlebar") n.r = rect(0,0,ancho,38);
     body.hijos.push(n);
   };
   return { document, nodos, wrap, mupi, stage, root, body };
@@ -108,7 +109,7 @@ test("las tres órdenes de superficie se reconocen; variantes no", () => {
 test("sin fallos el player declara lienzo entero, 100 % visible y nada encima", () => {
   const p = player();
   const m = JSON.parse(JSON.stringify(p.run("measuredPaint()")));
-  assert.deepEqual(m, { paintedRotation: 0, painted: "horizontal", canvas: { w: 1600, h: 900 }, visible: 100, overlay: 0 });
+  assert.deepEqual(m, { paintedRotation: 0, painted: "horizontal", canvas: { w: 1600, h: 900 }, visible: 100, overlay: 0, chromeTop: 0, playbackPaused: false });
 });
 
 test("popup encima: pinta la ventana de aviso y la telemetría mide el % tapado, sin decir que es una prueba", () => {
@@ -274,7 +275,7 @@ test("encuadre: con fault-canvas el marco toma la proporción contraria del huec
 
 test("cableado: telemetría y re-medida llevan las medidas de superficie; el mando y la CLI no", () => {
   assert.match(extrae("measuredPaint"), /\.\.\.measuredSurface\(\)/);
-  assert.match(canal, /const MEASURED_KEYS=\['paintedRotation','painted','canvas','overlay','visible'\];/);
+  assert.match(canal, /const MEASURED_KEYS=\['paintedRotation','painted','canvas','overlay','visible','chromeTop','playbackPaused'\];/);
   assert.match(extrae("remeasurePaint"), /MEASURED_KEYS\.every/);
   assert.match(extrae("deviceTelemetryBase"), /\.\.\.measuredPaint\(\) \}/);
   assert.doesNotMatch(extrae("measuredSurface"), /surfaceFaults|surfaceFaultOn|SURFACE_/, "se mide el DOM, no el estado del fallo");
@@ -307,5 +308,7 @@ test("revisión: sin capas ajenas en <body> no hay hit-testing (0 % tapado sin 5
   orden(p, "fault-popup");
   llamadas = 0;
   assert.ok(p.run("measuredSurface()").overlay > 10);
-  assert.equal(llamadas, 32 * 18, "con una capa ajena, la rejilla completa");
+  assert.equal(llamadas, 32 * 18 + 9, "con una capa ajena, la rejilla completa");
 });
+
+test('title bar is detected from the actual top band and independently removed',()=>{const p=player();assert.equal(orden(p,'fault-title'),'executed');assert.ok(p.d.document.getElementById('faultTitlebar'));assert.ok(p.run('measuredSurface().chromeTop')>=36);orden(p,'fault-popup');orden(p,'fault-title off');assert.equal(p.run('measuredSurface().chromeTop'),0);assert.ok(p.run('measuredSurface().overlay')>10);orden(p,'fault-clear');assert.equal(p.run('measuredSurface().overlay'),0);});
