@@ -22,7 +22,7 @@ function functionSource(source, name) {
 }
 
 test('en kiosko el canal vigila /version.json y se recarga en el siguiente cambio de pieza', () => {
-  assert.match(canal, /function next\(\)\{ if\(directOn\) return; if\(kioskReloadIfDue\(\)\) return; if\(finishForcedTagPlayback\(\)\) return;/);
+  assert.match(canal, /function next\(\)\{ if\(paused\|\|directOn\) return; if\(kioskReloadIfDue\(\)\) return; if\(finishForcedTagPlayback\(\)\) return;/);
   const check = functionSource(canal, 'kioskVersionCheck');
   assert.match(check, /if\(!__adtvClean\) return;/);
   assert.match(check, /fetch\('\/version\.json\?vw='\+Date\.now\(\),\{cache:'no-store'\}\)/);

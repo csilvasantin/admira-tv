@@ -37,7 +37,7 @@ test('sin media en el segmento no hay turno que vigilar: cero recuperaciones fal
 });
 
 test('cada turno arranca el reloj de la guardia y la recuperación avanza o, si no puede, recarga', () => {
-  assert.match(canal, /async function play\(i, forced\)\{\n  if\(_standby\) return;\n  guardPlayStarted\(\);/);
+  assert.match(canal, /async function play\(i, forced\)\{\n  if\(_standby\|\|paused\) return;\n  guardPlayStarted\(\);/);
   assert.match(canal, /try\{ next\(\); \}catch\(_\)\{ try\{ location\.reload\(\); \}catch\(__\)\{\} \}/);
   assert.match(canal, /g\.recoveries\+\+; g\.lastRecoveryAt=Date\.now\(\); g\.lastReason=String\(reason\|\|''\)\.slice\(0,80\)/);
 });

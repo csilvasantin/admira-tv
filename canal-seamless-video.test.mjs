@@ -44,7 +44,7 @@ test('only the coffee programme opts in and adopted metadata is applied before p
  const canal=readFileSync(new URL('./canal.html',import.meta.url),'utf8');
  assert.match(canal,/startsWith\('starbucks-gdg51-seven-20261015-r'\)/);
  assert.match(canal,/if\(!seamless\)\{v.addEventListener\('playing', _reveal/);
- assert.match(canal,/if\(v.readyState>=1\)\{v.onloadedmetadata\(\);if\(_tok!==_playTok\)return;/);
+ assert.match(canal,/if\(v.readyState>=1\)\{v.onloadedmetadata\(\);if\(_tok!==_playTok\|\|paused\)return;/);
  assert.match(canal,/if\(typeof coffeeTransitions!=='undefined'\)coffeeTransitions.clear\(\)/);
 });
 

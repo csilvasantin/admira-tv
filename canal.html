@@ -629,7 +629,9 @@ let pendingImport=null, _measuring=false, _statusT=null, _statusT2=null;
 let directOn=false; try{ if(localStorage.getItem('adtv_direct')) directOn=true; }catch(_){}
 if(syncOn&&directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
 let applyingXpl=false;
-let paused=false, usesAdv=false, advTotal=0, advElapsed=0, advStart=0;
+// Operator intent survives feed refreshes, watchdog reloads and delayed media callbacks.
+const PAUSE_INTENT_KEY='adtv_operator_pause:'+(scr.screen||scr.circuit||scr.machine||'unbound');
+let paused=LS(PAUSE_INTENT_KEY,'0')==='1', usesAdv=false, advTotal=0, advElapsed=0, advStart=0;
 let syncTimeOffset=0;
 // SINCRO: máster central (única autoridad). Si está cargado, manda sobre el cálculo
 // local → todas las pantallas en sync emiten EXACTAMENTE lo mismo (mismo orden+reloj).
@@ -864,7 +866,7 @@ function barFromAdv(){ const el=advElapsed+(paused?0:Date.now()-advStart); bar.s
 // en kiosko (el modo del player 24/7) y era el timer más frecuente del canal (8,3/s)
 // pintando lo invisible. El avance real del bucle (timer=setTimeout(next,ms)) NO se toca.
 function startBar(){ stopBar(); if(__adtvClean) return; barTimer=setInterval(barFromAdv,120); }
-function startAdv(ms){ usesAdv=true; advTotal=ms; advElapsed=0; advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,ms); startBar(); }
+function startAdv(ms){ usesAdv=true; advTotal=ms; advElapsed=0; advStart=Date.now(); clearTimeout(timer); timer=null; if(paused)return; timer=setTimeout(next,ms); startBar(); }
 // ── RANURA EDITORIAL (r58): segundos que OCUPA una pieza en la emisión local ──────
 // Una sola regla para reproducir, para el proof-of-play (/emit) y para lo que se
 // publica al mando (/signage/now y /control/playlist), así los tres cuentan lo mismo:
@@ -2498,13 +2500,14 @@ function cacheBadge(){ if(qs.get('cachehud')!=='1') return;
 }
 
 function mediaAdvance(token,ended=false){
-  if(token!==_playTok)return;
+  if(token!==_playTok||paused)return;
   if(typeof localInfoRepeatAdvance==='function'&&localInfoRepeatAdvance(ended))return;
   if(ended&&syncOn)syncFinishCurrent();else next();
 }
 // A policy-denied video has not had a decoding opportunity yet. Count the
 // decoding window from actual playback and accept a rendered frame callback.
 function videoDecodeGuardWait(v, started, frames, now){
+  if(v._admiraOperatorPaused) return 750;
   if(frames>0 || v._admiraDecodedFrameSeen) return -1;
   if(!v.error && v.paused && v._admiraAutoplayBlocked && now-started<15000) return 750;
   const began=v._admiraPlaybackBeganAt || started;
@@ -2514,7 +2517,7 @@ function videoDecodeGuardWait(v, started, frames, now){
 const coffeeTransitions=window.AdmiraSeamlessVideo?window.AdmiraSeamlessVideo.create(stage):{clear(){}};
 function coffeeItem(it){return !!it&&String(it.id||'').startsWith('starbucks-gdg51-seven-20261015-r');}
 async function play(i, forced){
-  if(_standby) return;
+  if(_standby||paused) return;
   guardPlayStarted();               // guardia de emisión: empieza a contar el turno              // en standby no se reproduce nada (ni audio detrás del negro)
   const _tok=++_playTok;
   if(xtoreMusicEnabled())xtoreMusicRelease();
@@ -2538,7 +2541,7 @@ async function play(i, forced){
   // Excepciones (documentadas): sync de canal (saltar rompe el índice sincronizado → se
   // mantiene el fallback online), /play<N> forzado (orden manual del operador) y los items
   // NO cacheables (embeds/iframe/link → se emiten online como siempre).
-  let _csrc=await cachedSrc(it); if(_tok!==_playTok) return;
+  let _csrc=await cachedSrc(it); if(_tok!==_playTok||paused) return;
   // Pieza pedida por #ID desde el mando que AÚN está bajando: jamás se emite online,
   // tampoco con ?stream=1 (la app iOS arranca así). Con stream el bucle llegaba a ella
   // por su posición (va delante) y la estrenaba a medio descargar. Se salta hasta que
@@ -2549,7 +2552,7 @@ async function play(i, forced){
     return;
   }
   if(!STREAM_OK && !xtoreMusicEnabled() && !syncOn && !forced && cacheable(it) && !_csrc){
-    const found=await firstCachedFrom(cur); if(_tok!==_playTok) return;
+    const found=await firstCachedFrom(cur); if(_tok!==_playTok||paused) return;
     if(found){ if(found.idx!==cur){ cur=found.idx; it=playlist[cur]; } _csrc=found.src; }
     // CONTINUIDAD (r52): si hay emisión viva en pantalla, el placeholder de
     // descarga NO la corta — la pieza actual sigue (en loop) hasta que el
@@ -2576,7 +2579,7 @@ async function play(i, forced){
   // imagen para que el latido y el proof-of-play se publiquen igual que con cualquier pieza).
   let VSRC=SRC, codecCard=false;
   if(k==='video'&&!AV1_OK&&(codecNeedsFallback(it)||/\/stock\/[^\/?#]+\/asset\.mp4/i.test(String(it.url||'')))){
-    const alt=await h264VariantFor(it); if(_tok!==_playTok) return;
+    const alt=await h264VariantFor(it); if(_tok!==_playTok||paused) return;
     if(alt){ VSRC=alt; it._fromCache=false; }
     else if(codecNeedsFallback(it)){ codecCard=true; try{ guardState().lastReason='codec:card'; }catch(_){} }
   }
@@ -2605,7 +2608,7 @@ async function play(i, forced){
       v.requestVideoFrameCallback(()=>{ v._admiraDecodedFrameSeen=true; });
     }
     if(XTORE_PARENT)v.addEventListener('playing',()=>{if(_tok===_playTok){v._xtoreAutoplayBlocked=false;v._xtorePlaybackStarted=true;emitFrameState(it,'playing');}},{once:true});
-    v.onloadedmetadata=()=>{ if(_tok!==_playTok) return;
+    v.onloadedmetadata=()=>{ if(_tok!==_playTok||paused) return;
       if(!v.videoWidth&&!v.videoHeight&&!AV1_OK&&!_codecBad.has(String(it.id))&&VSRC===SRC){ codecBadMark(it,'sin-pista-video'); play(cur,it); return; }
       if(v.duration&&isFinite(v.duration)){
       it._dur=Math.ceil(v.duration);
@@ -2632,21 +2635,23 @@ async function play(i, forced){
       if(xtoreMusicApplyStart(v,it,_tok))xtoreMusicPlayAudio(v,it,_tok);
     };
     v.onended=()=>mediaAdvance(_tok,true);
-    v.onerror=()=>{ if(_tok!==_playTok)return; const ec=v.error&&v.error.code; if((ec===4||ec===3)&&!_codecBad.has(String(it.id))&&VSRC===SRC){ codecBadMark(it,'err'+ec); play(cur,it); return; }   // códec no soportado → respaldo (variante H.264 o portada), sin romper la sincro
+    v.onerror=()=>{ if(_tok!==_playTok||paused)return; const ec=v.error&&v.error.code; if((ec===4||ec===3)&&!_codecBad.has(String(it.id))&&VSRC===SRC){ codecBadMark(it,'err'+ec); play(cur,it); return; }   // códec no soportado → respaldo (variante H.264 o portada), sin romper la sincro
       if(!_coRetry && v.crossOrigin){ _coRetry=true; try{ v.removeAttribute('crossorigin'); if(xtoreMusicEnabled())xtoreMusicPrepareStart(v,it,_tok); v.load(); if(xtoreMusicEnabled())xtoreMusicPlayAudio(v,it,_tok);else v.play().catch(()=>{}); }catch(_){} return; }   // asset sin CORS: reintenta sin crossorigin (orta la emisión)
       setTimeout(()=>mediaAdvance(_tok),600); };
     v.ontimeupdate=()=>{ if(v.duration&&!paused) bar.style.width=(v.currentTime/v.duration*100)+'%'; };
+    v.addEventListener('play',()=>{if(paused)v.pause();});
     mediaEl=v; applyAudio(); stage.appendChild(v);
     if(seamless){
-      coffeeTransitions.reveal(v,()=>_tok===_playTok&&!_standby,()=>syncOn?Math.min(v.duration-.25,(syncElapsedMs()/1000)%v.duration):v.currentTime);
+      coffeeTransitions.reveal(v,()=>_tok===_playTok&&!_standby&&!paused,()=>syncOn?Math.min(v.duration-.25,(syncElapsedMs()/1000)%v.duration):v.currentTime);
       // Adopted warm videos have already fired their metadata event.
-      if(v.readyState>=1){v.onloadedmetadata();if(_tok!==_playTok)return;}
+      if(v.readyState>=1){v.onloadedmetadata();if(_tok!==_playTok||paused)return;}
       const following=playlist[(cur+1)%playlist.length];
-      if(coffeeItem(following)&&(KIND[following.type]||'image')==='video')cachedSrc(following).then(src=>{if(_tok===_playTok&&!_standby)coffeeTransitions.prepare(String(following.id)+'|'+following.url,src||following.url);});
+      if(coffeeItem(following)&&(KIND[following.type]||'image')==='video')cachedSrc(following).then(src=>{if(_tok===_playTok&&!_standby&&!paused)coffeeTransitions.prepare(String(following.id)+'|'+following.url,src||following.url);});
     }
     if(xtoreMusicEnabled())xtoreMusicPlayAudio(v,it,_tok);
     else v.play().then(()=>tap.classList.remove('show')).catch(()=>{
       // autoarranque bloqueado → reintenta en mute (señalética: nunca un botón de play al público)
+      if(paused)return;
       try{ v.muted=true; v.play().then(()=>tap.classList.remove('show')).catch(()=>tap.classList.add('show')); }catch(_){ tap.classList.add('show'); }
     });
     if(syncOn) timer=setTimeout(next,syncRemainingMs());
@@ -2658,6 +2663,7 @@ async function play(i, forced){
     let decodeStarted=Date.now();
     function checkDecoded(){
       if(_tok!==_playTok || !mediaEl || mediaEl!==v) return;
+      if(paused){setTimeout(checkDecoded,750);return;}
       // An autoplay permission block is not a decoding failure. Keep this piece
       // and its sound button until the user gesture, as with audio-only music.
       if(xtoreMusicEnabled()&&v.paused&&!v.error){decodeStarted=Date.now();setTimeout(checkDecoded,750);return;}
@@ -2689,7 +2695,7 @@ async function play(i, forced){
       it._dim={w:im.naturalWidth,h:im.naturalHeight}; mupiAR=im.naturalWidth/im.naturalHeight; fitMupi();
       if(_extendedAssignment){ mupiAR=window.innerWidth/Math.max(1,window.innerHeight); fitMupi(); }
       emitFrameState(it,XTORE_PARENT?'playing':'selected'); localInfoRender(); };
-    im.onerror=()=>{ if(_tok!==_playTok)return; if(!_coRetryI && im.crossOrigin){ _coRetryI=true; try{ im.removeAttribute('crossorigin'); im.src=codecCard?CARD_SRC:SRC; }catch(_){} return; }   // asset sin CORS: recarga sin crossorigin (la emisión SIEMPRE se ve)
+    im.onerror=()=>{ if(_tok!==_playTok||paused)return; if(!_coRetryI && im.crossOrigin){ _coRetryI=true; try{ im.removeAttribute('crossorigin'); im.src=codecCard?CARD_SRC:SRC; }catch(_){} return; }   // asset sin CORS: recarga sin crossorigin (la emisión SIEMPRE se ve)
       setTimeout(()=>mediaAdvance(_tok),600); };
     im.src=codecCard?CARD_SRC:SRC; stage.appendChild(im); startAdv(syncOn?syncRemainingMs():editorialSec(it)*1000);
   } else if(k==='interactive'){
@@ -2733,6 +2739,7 @@ async function play(i, forced){
       localInfoRender();
       if(xtoreMusicApplyStart(a,it,_tok))xtoreMusicPlayAudio(a,it,_tok);
     };
+    a.addEventListener('play',()=>{if(paused)a.pause();});
     mediaEl=a; applyAudio(); stage.querySelector('.audio-card').appendChild(a);
     if(xtoreMusicEnabled())xtoreMusicPlayAudio(a,it,_tok);
     else {a.play().then(()=>tap.classList.remove('show')).catch(()=>{ if(!muted) tap.classList.add('show'); });
@@ -2743,7 +2750,7 @@ async function play(i, forced){
 }
 // antes de cada nuevo contenido, revisa si hay novedades en stock (nuevas
 // importaciones o tags/categorías editados) — con throttle para no saturar.
-function next(){ if(directOn) return; if(kioskReloadIfDue()) return; if(finishForcedTagPlayback()) return; if(PREVIEW.on){ play(cur+1); return; }
+function next(){ if(paused||directOn) return; if(kioskReloadIfDue()) return; if(finishForcedTagPlayback()) return; if(PREVIEW.on){ play(cur+1); return; }
   // NOVEDAD AL AIRE: mientras dure su turno la pieza nueva se repite sola; al
   // agotarse, freshEnd() deja cur EN ella para que el loop siga por la siguiente
   // (o arranca otra novedad que hubiera entrado mientras).
@@ -2755,7 +2762,7 @@ function next(){ if(directOn) return; if(kioskReloadIfDue()) return; if(finishFo
   // la baja latencia es doctrina: import pendiente (✓ de Telegram) y novedad al aire (r53).
   { const _ivl=(pendingImport||freshOn())?5000:Math.max(10,+cfg.refreshSec||30)*1000;
     if(Date.now()-_lastFeed>_ivl){ try{ loadFeed(false); }catch(_){} } } if(syncOn){ play(syncIndex()); return; } play(cur+1); }
-function prev(){ if(directOn) return; if(syncOn){ play(syncIndex()); return; } play(cur-1); }
+function prev(){ if(paused||directOn) return; if(syncOn){ play(syncIndex()); return; } play(cur-1); }
 // ── AUTOACTUALIZACIÓN EN KIOSKO (r60) ────────────────────────────────────────────
 // Un player en emisión (embed/clean) no tiene a nadie que pulse «⟳ VERSIÓN NUEVA»: el
 // botón del avisador compartido salía en pantallas públicas (su clase .admira-stale pasa
@@ -2789,9 +2796,20 @@ if(__adtvClean){
 }
 
 function setPaused(p){
-  paused=p; document.body.classList.toggle('paused',p); $('pause').textContent=p?'▶':'⏸';
-  if(p){ if(mediaEl&&mediaEl.pause) mediaEl.pause(); if(usesAdv){ advElapsed+=Date.now()-advStart; clearTimeout(timer); timer=null; } stopBar(); }
-  else { if(syncOn){ play(syncIndex()); return; } if(mediaEl&&mediaEl.play&&!mediaEl._xtoreStartPending) mediaEl.play().catch(()=>{}); if(usesAdv){ advStart=Date.now(); clearTimeout(timer); timer=setTimeout(next,Math.max(0,advTotal-advElapsed)); startBar(); } }
+  const wasPaused=paused;
+  paused=!!p; save(PAUSE_INTENT_KEY,paused?'1':'0');
+  document.body.classList.toggle('paused',paused); $('pause').textContent=paused?'▶':'⏸';
+  if(mediaEl)mediaEl._admiraOperatorPaused=paused;
+  if(paused){
+    if(mediaEl&&mediaEl.pause)mediaEl.pause();
+    if(usesAdv&&!wasPaused)advElapsed+=Date.now()-advStart;
+    clearTimeout(timer);timer=null;stopBar();
+  } else {
+    if(syncOn){play(syncIndex());return;}
+    if(!mediaEl&&playlist.length){play(cur>=0?cur:0);return;}
+    if(mediaEl&&mediaEl.play&&!mediaEl._xtoreStartPending)mediaEl.play().catch(()=>{});
+    if(usesAdv){advStart=Date.now();clearTimeout(timer);timer=setTimeout(next,Math.max(0,advTotal-advElapsed));startBar();}
+  }
 }
 
 // PLAY REMOTO = intención de ARRANCAR, no solo de quitar una pausa. En iPhone el
@@ -4794,6 +4812,9 @@ async function executeQueuedCommand(c){
     try{ await remoteStartPlayback(); flashCli('▶ reanudada'); return 'executed'; }
     catch(_){ try{ tap.classList.add('show'); }catch(__){} return 'failed'; }
   }
+  // Playback commands must use the confirmed player dispatcher, not runCli:
+  // runCli has no plain pause/play command and previously acknowledged a no-op.
+  if(['pause','play','next','prev','first','last','mute','unmute','vol-up','vol-down','toggle-pause'].includes(cmd)) return applyCtrlCmd(cmd);
   // Creador de incidencias: fallo inyectado de laboratorio (fault-rotate[-90|-180|-270] / fault-clear).
   const fault=faultCommand(raw);
   if(fault) return applyFaultCommand(fault,c);
