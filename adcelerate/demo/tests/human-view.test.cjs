@@ -25,7 +25,7 @@ test('panorama date uses only valid returned metadata, never a default historic 
     assert.equal(dateLabel(date),'Fecha de imagen no disponible');
 });
 
-function hudHarness(t,withButtons=false){
+function hudHarness(t,withButtons=false,options={}){
   const {create}=require('../js/human-view.js');
   const elements=new Map(),keys={};
   const node=()=>({classList:{add(){},remove(){},toggle(){}},style:{},dataset:{},textContent:'',replacements:0,
@@ -38,7 +38,7 @@ function hudHarness(t,withButtons=false){
   global.document={createElement:node};global.addEventListener=(event,fn)=>{keys[event]=fn;};
   t.after(()=>{global.document=prevDocument;global.addEventListener=prevEvents;});
   const sent=[];
-  const hud=create({element,send:x=>sent.push(x),onExit(){},onInspect(){}});
+  const hud=create({element,send:x=>sent.push(x),onExit(){},onInspect(){},...options});
   return {element,elements,keys,sent,hud};
 }
 test('human entry immediately owns keyboard focus without capturing editable controls',t=>{
@@ -146,4 +146,18 @@ test('Lesseps appears as a third destination with its own empty audience state a
   h.hud.updateAudience({siteId:'bcn-kiosk-016',effectiveCount:460,baseCount:460,hour:18,manual:false,mix:{familias:25,jovenes:40,turistas:20,seniors:15}},{},'Vila only');
   assert.equal(h.elements.get('#human-audience').textContent,'—');assert.equal(h.elements.get('#human-time').textContent,'');
   assert.equal(h.elements.get('#human-audience-label').textContent,'Audiencia pendiente de conectar');assert.equal(h.elements.get('#human-recommendation').textContent,'');
+});
+
+test('Destino offers on foot or direct with the shared Paseo multiplier, and a destination walk shows its stop control',t=>{
+  const changes=[],h=hudHarness(t,false,{onTravelChange:mode=>changes.push(mode)});h.hud.enter('jardinets');
+  const button=h.elements.get('#human-site-travel'),attributes={};button.setAttribute=(name,value)=>{attributes[name]=value;};
+  h.hud.setTravel({mode:'walk',speed:8});
+  assert.equal(button.textContent,'A pie ×8');assert.equal(attributes['aria-pressed'],'true');
+  button.onclick();assert.deepEqual(changes,['direct']);
+  h.hud.setTravel({mode:'direct',speed:8});
+  assert.equal(button.textContent,'Directo');assert.equal(attributes['aria-pressed'],'false');
+  button.onclick();assert.deepEqual(changes,['direct','walk']);
+  const stop=h.elements.get('#human-route-stop'),hidden=[];stop.classList.toggle=(name,value)=>hidden.push(value);
+  const state={status:'ready',pano:'a',heading:40,date:'2023-03',position:null,links:[],steps:0,supportVisible:false};
+  h.hud.setState({...state,routeActive:true});h.hud.setState(state);assert.deepEqual(hidden,[false,true]);
 });

@@ -7,7 +7,7 @@ import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
 const photo = {frame:null, parked:null, key:'', ready:false, signature:'', returnMode:null, mode:'photo', siteId:(OutdoorSites.get(new URLSearchParams(location.search).get('site'))||OutdoorSites.get('vila')).id};
 const audienceSource={mode:AudienceMode.parse(location.search)};
 const humanHUD = HumanView.create({element:document.getElementById('human-hud'),
-  send:sendHumanCommand,onExit:closePhoto,onInspect:inspectHumanSupport,onSiteChange:selectHumanSite});
+  send:sendHumanCommand,onExit:closePhoto,onInspect:inspectHumanSupport,onSiteChange:selectHumanSite,onTravelChange:setTourTravelMode});
 let selectedSite = 'kiosk';
 let pendingSurfaceCommand=null,doohUiTimer=null;
 let tourTravelMode=new URLSearchParams(location.search).get('travel')==='direct'?'direct':'walk';
@@ -17,6 +17,7 @@ const playerRemote=PlayerRemoteView.create({element:document.getElementById('pla
 const doohTour=DoohTour.create({stops:DoohSurfaces.all,send:sendSurfaceCommand,sendRoute:sendRouteCommand,findRoute:UrbanRoutes.find,
   canFocus:(id,pano)=>DoohSurfaces.poseFor?!!DoohSurfaces.poseFor(id,pano):DoohSurfaces.get(id)?.pano===pano,
   onChange:renderDoohTour,dwellMs:9000});
+const destinationWalk=DestinationWalk.create({findRoute:UrbanRoutes.find,sendRoute:sendRouteCommand,onChange:renderDestinationWalk});
 
 /* ============================== datos de demo ============================== */
 // «Audiencia simulada de la plaza · curva de demostración» — deterministas
@@ -1349,6 +1350,7 @@ function buildHUD() {
   $('human-paths-toggle').addEventListener('click',()=>{if(!$('human-paths').classList.contains('hidden'))stopDoohTour('manual');});
   $('dooh-tour-pause').onclick=()=>{const status=doohTour.getState().status;if(status==='paused'||status==='error')doohTour.resume();else doohTour.pause();};
   $('dooh-tour-end').onclick=()=>stopDoohTour('user');
+  $('human-route-stop').addEventListener('click',()=>destinationWalk.cancel('manual'));
   $('universe-return').onclick = closePhoto;
   $('select-kiosk').onclick = () => { selectedSite = 'kiosk'; updateUniverseCard(); if (!photo.frame) focusKiosk(); };
   $('select-plaza').onclick = () => { selectedSite = 'plaza'; updateUniverseCard(); if (!photo.frame) focusOverview(); };
@@ -1959,7 +1961,7 @@ function openPhoto(mode = 'photo') {
   const frame = parked ? parked.frame : document.createElement('iframe');
   frame.title = mode==='human' ? 'Exploración a pie · '+OutdoorSites.get(photo.siteId).area : 'Vista real del quiosco de Vila de Gràcia';
   frame.allow = 'fullscreen; autoplay';
-  photo.frame = frame; photo.key = key; photo.ready = false; photo.signature = '';
+  photo.frame = frame; photo.key = key; photo.ready = false; photo.signature = ''; photo.walk = null;
   if (parked) { frame.hidden = false; frame.contentWindow.postMessage(OutdoorContext.message('resume', {siteId:photo.siteId}), location.origin); }
   else { frame.src = url.href; $('photo-view').replaceChildren(frame); }
   $('photo-view').classList.remove('hidden');
@@ -2003,9 +2005,17 @@ function selectHumanSite(siteId){
   if(playerRemote.isOpen())playerRemote.close();
   stopDoohTour('manual');muteScreenSound(true);
   const site=OutdoorSites.get(siteId);if(!site||photo.mode!=='human'||!photo.frame)return;
-  photo.siteId=site.id;
   // Cada quiosco se visita limpio (Carlos, 30-sep-2026): H o la miga la devuelven.
   dispatchEvent(new CustomEvent('admira-interface-set',{detail:{hidden:true}}));
+  // A pie (Carlos, 21-oct-2026): con Paseo elegido se camina la ruta catalogada desde la foto actual
+  // hasta la foto de entrada del destino. Sin ruta desde aquí, salto directo como siempre.
+  const walk=photo.walk,here=photo.ready&&walk?.siteId===photo.siteId&&['ready','unavailable'].includes(walk.status);
+  if(tourTravelMode==='walk'&&here&&destinationWalk.start(site.id,walk.pano,{speed:tourSpeed}))return;
+  jumpToSite(site);
+}
+function jumpToSite(site){
+  destinationWalk.cancel('direct');
+  photo.siteId=site.id;
   humanHUD.enter(site.id);updateUniverseCard();
   photo.frame.title='Exploración a pie · '+site.area;
   const url=new URL(location.href);url.searchParams.delete('side');url.searchParams.delete('cal');history.replaceState(null,'',url);
@@ -2018,12 +2028,13 @@ function sendHumanCommand(payload) {
   const command=OutdoorContext.validateWalkCommand(payload);if(!command)return;
   if(command.action==='inspect'){
     if(['locating','travelling','loading','playing'].includes(doohTour.getState().status))doohTour.pause();
-  }else if(command.action!=='release'){stopDoohTour('manual');muteScreenSound();}
+  }else if(command.action!=='release'){stopDoohTour('manual');destinationWalk.cancel('manual');muteScreenSound();}
   if (!photo.frame || !photo.ready || photo.mode !== 'human') return;
   photo.frame.contentWindow.postMessage(OutdoorContext.message('walk-command',command),location.origin);
 }
 function startDoohTour(surfaceId){
   if(playerRemote.isOpen())playerRemote.close();
+  destinationWalk.cancel('tour');
   muteScreenSound(true);openPhoto('human');
   $('human-support-card').classList.add('hidden');
   $('human-paths').classList.add('hidden');
@@ -2033,6 +2044,7 @@ function startDoohTour(surfaceId){
 }
 function syncTourSpeedControls(){
   for(const id of ['dooh-travel-mode','dooh-active-speed'])$(id).value=tourTravelMode==='direct'?'direct':String(tourSpeed);
+  humanHUD.setTravel({mode:tourTravelMode,speed:tourSpeed});
 }
 function setTourTravelMode(value){
   const nextMode=value==='direct'?'direct':'walk';
@@ -2042,6 +2054,10 @@ function setTourTravelMode(value){
   const url=new URL(location.href);url.searchParams.set('travel',tourTravelMode);url.searchParams.set('speed',String(tourSpeed));
   history.replaceState(null,'',url);
   doohTour.configure({mode:tourTravelMode,speed:tourSpeed});
+  if(destinationWalk.isActive()){
+    if(tourTravelMode==='direct')jumpToSite(OutdoorSites.get(destinationWalk.getState().siteId));
+    else destinationWalk.setSpeed(tourSpeed);
+  }
 }
 function sendPlayerCommand(command){
   if(!photo.frame||!photo.ready)return;
@@ -2145,6 +2161,19 @@ function renderDoohTour(state){
   if(state.status==='playing')doohUiTimer=setInterval(paintDoohProgress,250);
   if(state.status==='stopped'&&state.reason==='manual')showToast('Tour DooH detenido · control manual');
 }
+function renderDestinationWalk(state){
+  const walking=state.status==='travelling',site=OutdoorSites.get(state.siteId);
+  humanHUD.setRouteTarget(walking?state.siteId:null);
+  if(photo.walk?.siteId===photo.siteId)humanHUD.setState({...photo.walk,routeActive:walking});
+  if(state.status==='arrived'){
+    // El hijo ya cambió de sitio al llegar: el HUD, la URL y la ficha pasan al destino.
+    photo.siteId=site.id;humanHUD.setSite(site);updateUniverseCard();updateHumanUrl();
+    if(photo.frame)photo.frame.title='Exploración a pie · '+site.area;
+    if(photo.walk?.siteId===site.id)humanHUD.setState(photo.walk);
+  }
+  else if(state.status==='error'&&photo.frame&&photo.mode==='human'){showToast('Sin continuación verificada · salto directo a '+site.shortLabel);jumpToSite(site);}
+  else if(state.status==='cancelled'&&state.reason==='manual')showToast('Paseo a '+site.shortLabel+' detenido · control manual');
+}
 for(const event of ['pointerdown','wheel'])$('dooh-start-shield').addEventListener(event,()=>stopDoohTour('manual'),{passive:true});
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&playerRemote.isOpen())playerRemote.close();
@@ -2165,7 +2194,7 @@ function discardParkedPhoto() {
 }
 function closePhoto() {
   if(playerRemote.isOpen())playerRemote.close();
-  stopDoohTour('mode');muteScreenSound(true);doohTour.observePosition(null);
+  stopDoohTour('mode');destinationWalk.cancel('mode');muteScreenSound(true);doohTour.observePosition(null);photo.walk=null;
   if (!photo.frame) return;
   const frame = photo.frame, handshaken = photo.ready;
   photo.frame = null; photo.ready = false; photo.signature = '';
@@ -2204,13 +2233,14 @@ addEventListener('message', event => {
   if (event.data.type === 'ready') { photo.ready=true;photo.signature='';sendPhotoContext();$('dooh-start-shield').classList.add('hidden');if(doohTour.isActive())flushSurfaceCommand();else if(photo.mode==='human'&&photo.initialSiteId!==photo.siteId)sendHumanCommand({action:'site',siteId:photo.siteId}); }
   if (event.data.type === 'close') {if(playerRemote.isOpen())playerRemote.close();else closePhoto();}
   if(event.data.type==='player-state')playerRemote.accept(OutdoorContext.validatePlayerState(event.data.payload));
-  if(event.data.type==='route-state')doohTour.acceptRoute(OutdoorContext.validateRouteState(event.data.payload));
+  if(event.data.type==='route-state'){const route=OutdoorContext.validateRouteState(event.data.payload);if(!destinationWalk.accept(route))doohTour.acceptRoute(route);}
   if(event.data.type==='audio-state'){const audio=OutdoorContext.validateAudioState(event.data.payload);if(audio.requestId===screenSound.requestId&&audio.screenId===screenSound.screenId){screenSound.status=audio.status;screenSound.volume=audio.volume;renderScreenSound();}}
   if(event.data.type==='surface-state')doohTour.accept(OutdoorContext.validateSurfaceState(event.data.payload));
   if(event.data.type==='surface-interaction'&&!playerRemote.isOpen()){stopDoohTour('manual');muteScreenSound();}
   if(event.data.type==='walk-state'&&photo.mode==='human'){
     const walk=OutdoorContext.validateWalkState(event.data.payload),sameSite=(walk.siteId||'vila')===photo.siteId;
-    if(sameSite)humanHUD.setState(walk);
+    photo.walk={...walk,siteId:walk.siteId||'vila'};
+    if(sameSite)humanHUD.setState({...walk,routeActive:destinationWalk.isActive()});
     if(sameSite||(doohTour.isActive()&&doohTour.getState().routeId))doohTour.observePosition(walk);
   }
   if (event.data.type === 'support-select' && photo.mode === 'human' && (event.data.payload?.siteId||'vila')===photo.siteId) inspectHumanSupport(event.data.payload?.screenId,true);
@@ -2377,7 +2407,7 @@ if(entry.get('tour')==='dooh')startDoohTour();
 
 // gancho de inspección (demo/debug)
 window.__dbg = {
-  playerRemote,doohTour,startDoohTour,stopDoohTour,setTourTravelMode,screenSound,openPhoto, closePhoto, selectHumanSite, sendHumanCommand, humanHUD, contextSnapshot, focusOverview, zoomUniverse, photo,setAudienceSource,
+  playerRemote,doohTour,destinationWalk,startDoohTour,stopDoohTour,setTourTravelMode,screenSound,openPhoto, closePhoto, selectHumanSite, sendHumanCommand, humanHUD, contextSnapshot, focusOverview, zoomUniverse, photo,setAudienceSource,
   camera, camera2D, controls, state, startFlight, applyFranja, setCamMode, setQuality, nextStock, fly, pan2D, tickPan2D,
   get camMode() { return camMode; },
   get quality() { return quality; },
