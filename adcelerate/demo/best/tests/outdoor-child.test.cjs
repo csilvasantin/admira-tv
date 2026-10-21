@@ -13,7 +13,7 @@ const valid = () => ({siteId:'bcn-kiosk-016',hour:9.75,baseCount:173.5,effective
 function fixture(embedded=true,walkMode=false) {
   const listeners={},sent=[],calls={boot:0,refresh:0,stop:0,hide:0,walk:0,surfaceCancel:0,surfaceFocus:[],manual:0,routeStart:[],routeSpeed:[],routeCancel:0,audio:[],mute:0};
   const parent={postMessage:(message,origin)=>sent.push({message,origin})};
-  const context=vm.createContext({window:{OUTDOOR_EMBED:embedded,parent},location:{origin:'https://admira.tv'},OutdoorContext,OutdoorSites,DoohSurfaces:require('../../js/dooh-surfaces.js'),sv:{getPano:()=>null},activeWalkSite:OutdoorSites.get('vila'),bootWalk:async()=>calls.walk++,walkLoadFailure:()=>{},
+  const context=vm.createContext({window:{OUTDOOR_EMBED:embedded,parent},location:{origin:'https://admira.tv'},OutdoorContext,OutdoorSites,DoohSurfaces:require('../../js/dooh-surfaces.js'),sv:{getPano:()=>null},activeWalkSite:OutdoorSites.get('vila'),bootWalk:async(...args)=>{calls.walk++;(calls.walkArgs??=[]).push(args);},walkLoadFailure:()=>{},
     addEventListener:(name,fn)=>{listeners[name]=fn;},boot:()=>calls.boot++,refreshFranja:()=>calls.refresh++,
     surfaceFocus:{cancel:()=>calls.surfaceCancel++,focus:(...args)=>calls.surfaceFocus.push(args)},manualSurfaceInteraction:()=>calls.manual++,inspectVisibleSurface:()=>calls.inspect=(calls.inspect||0)+1,
     routeWalk:{setSpeed:(...args)=>calls.routeSpeed.push(args),cancel:()=>calls.routeCancel++,start:(...args)=>calls.routeStart.push(args)},screenAudio:{mute:()=>calls.mute++,command:c=>calls.audio.push(c)},
@@ -57,6 +57,7 @@ test('a parked walking child resumes at the requested kiosk without reloading Go
   f.dispatch(OutdoorContext.message('resume',{siteId:'jardinets'}));
   assert.equal(vm.runInContext('outdoorStopped',f.context),false);assert.equal(vm.runInContext('activeWalkSite.id',f.context),'jardinets');
   assert.equal(f.calls.walk,1);assert.equal(f.calls.channelResume,1);assert.equal(f.calls.boot,1);
+  assert.deepEqual(f.calls.walkArgs.at(-1),[],'resume keeps the side of the iframe URL, like a fresh start');
   assert.equal(f.sent.length,sent+1);assert.equal(f.sent.at(-1).message.type,'ready');
 });
 test('resume is refused from another window, for an unknown kiosk, before boot, while running or outside the walk',()=>{

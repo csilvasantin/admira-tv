@@ -410,7 +410,7 @@ function resumeOutdoorChild(siteId){
   const site=OutdoorSites.get(siteId);
   if(!WALK_MODE||!outdoorStopped||!outdoorBooted||!site)return;
   outdoorStopped=false;activeWalkSite=site;resumeChannel();
-  bootWalk('panels').catch(()=>walkLoadFailure());
+  bootWalk().catch(()=>walkLoadFailure());   // mismo lado que un arranque nuevo con esta URL
   window.parent.postMessage(OutdoorContext.message('ready'),location.origin);
 }
 function installOutdoorChild(){
@@ -1304,7 +1304,7 @@ setInterval(viandanteTick, 1000);
 function chSkip(){ chErr++; if (chErr > chQueue.length){ chLive = false; chItem = null; return; } chNext(); }
 function chNext(){ if (liveMirrorOn()) return; chPlay(chIdx + 1); }
 function chPlay(i){
-  clearTimeout(chTimer); if (!chQueue.length) return;
+  clearTimeout(chTimer); if (outdoorStopped || !chQueue.length) return;   // aparcado: el canal no se rearranca
   const seq = ++chSeq;
   chIdx = ((i % chQueue.length) + chQueue.length) % chQueue.length;
   chItem = chQueue[chIdx]; chImg = null;chAt=performance.now();

@@ -2167,13 +2167,14 @@ function closePhoto() {
   if(playerRemote.isOpen())playerRemote.close();
   stopDoohTour('mode');muteScreenSound(true);doohTour.observePosition(null);
   if (!photo.frame) return;
-  const frame = photo.frame;
+  const frame = photo.frame, handshaken = photo.ready;
   photo.frame = null; photo.ready = false; photo.signature = '';
   frame.contentWindow.postMessage(OutdoorContext.message('stop'), location.origin);
   // «stop» deja el hijo sin render de Google, audio, ruta ni bucles de fondo. La vista a pie se aparca
   // oculta para volver sin recargar Google (Carlos, 21-oct-2026) y se destruye si no se vuelve en
-  // PHOTO_PARK_MS; las demás vistas se destruyen como siempre.
-  if (photo.mode === 'human') { discardParkedPhoto(); frame.hidden = true; photo.parked = {frame, key:photo.key, timer:setTimeout(discardParkedPhoto, PHOTO_PARK_MS)}; }
+  // PHOTO_PARK_MS; las demás vistas se destruyen como siempre. Solo se aparca un hijo que ya saludó y
+  // recibió su contexto: uno cerrado a medio cargar no sabría reanudarse y se quedaría en «Cargando…».
+  if (photo.mode === 'human' && handshaken) { discardParkedPhoto(); frame.hidden = true; photo.parked = {frame, key:photo.key, timer:setTimeout(discardParkedPhoto, PHOTO_PARK_MS)}; }
   else frame.remove();
   $('photo-view').classList.add('hidden');
   document.body.classList.remove('photo-active','human-active');
