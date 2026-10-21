@@ -13,11 +13,11 @@ const valid = () => ({siteId:'bcn-kiosk-016',hour:9.75,baseCount:173.5,effective
 function fixture(embedded=true,walkMode=false) {
   const listeners={},sent=[],calls={boot:0,refresh:0,stop:0,hide:0,walk:0,surfaceCancel:0,surfaceFocus:[],manual:0,routeStart:[],routeSpeed:[],routeCancel:0,audio:[],mute:0};
   const parent={postMessage:(message,origin)=>sent.push({message,origin})};
-  const context=vm.createContext({window:{OUTDOOR_EMBED:embedded,parent},location:{origin:'https://admira.tv'},OutdoorContext,OutdoorSites,DoohSurfaces:require('../../js/dooh-surfaces.js'),sv:{getPano:()=>null},activeWalkSite:OutdoorSites.get('vila'),bootWalk:async()=>calls.walk++,walkLoadFailure:()=>{},
+  const context=vm.createContext({window:{OUTDOOR_EMBED:embedded,parent},location:{origin:'https://admira.tv'},OutdoorContext,OutdoorSites,DoohSurfaces:require('../../js/dooh-surfaces.js'),sv:{getPano:()=>null},activeWalkSite:OutdoorSites.get('vila'),bootWalk:async(...args)=>{calls.walk++;(calls.walkArgs??=[]).push(args);},walkLoadFailure:()=>{},
     addEventListener:(name,fn)=>{listeners[name]=fn;},boot:()=>calls.boot++,refreshFranja:()=>calls.refresh++,
     surfaceFocus:{cancel:()=>calls.surfaceCancel++,focus:(...args)=>calls.surfaceFocus.push(args)},manualSurfaceInteraction:()=>calls.manual++,inspectVisibleSurface:()=>calls.inspect=(calls.inspect||0)+1,
     routeWalk:{setSpeed:(...args)=>calls.routeSpeed.push(args),cancel:()=>calls.routeCancel++,start:(...args)=>calls.routeStart.push(args)},screenAudio:{mute:()=>calls.mute++,command:c=>calls.audio.push(c)},
-    playerStockAbort:null,remoteSession:null,closePlayerRemote:()=>{},screenPlayers:new Map(),handlePlayerCommand:p=>(calls.player??=[]).push(p),streetWalk:null,WALK_MODE:walkMode,walkBootTimer:null,walkBootFailed:false,walkBootGeneration:0,clearTimeout,stopCam:()=>calls.stop++,hideStreetView:()=>calls.hide++,fmtHm:()=> '09:45',FRANJAS:[{aforo:460}],selFranjaIdx:0,_shotDone:false});
+    playerStockAbort:null,remoteSession:null,closePlayerRemote:()=>{},screenPlayers:new Map(),handlePlayerCommand:p=>(calls.player??=[]).push(p),streetWalk:null,WALK_MODE:walkMode,walkBootTimer:null,walkBootFailed:false,walkBootGeneration:0,clearTimeout,stopCam:()=>calls.stop++,hideStreetView:()=>calls.hide++,pauseChannel:()=>calls.channelPause=(calls.channelPause||0)+1,resumeChannel:()=>calls.channelResume=(calls.channelResume||0)+1,fmtHm:()=> '09:45',FRANJAS:[{aforo:460}],selFranjaIdx:0,_shotDone:false});
   vm.runInContext(bridge+';installOutdoorChild();',context);
   const dispatch=(data,overrides={})=>listeners.message?.({data,origin:'https://admira.tv',source:parent,...overrides});
   return {context,listeners,sent,calls,dispatch};
@@ -50,6 +50,24 @@ test('stop cancels camera/panorama and refuses delayed context restarts',()=>{
   f.dispatch(OutdoorContext.message('context',valid()));
   assert.equal(f.calls.stop,1);assert.equal(f.calls.hide,1);assert.equal(f.calls.boot,0);assert.equal(f.calls.surfaceCancel,1);
   assert.equal(vm.runInContext('_shotDone',f.context),true);
+});
+test('a parked walking child resumes at the requested kiosk without reloading Google',()=>{
+  const f=fixture(true,true);f.dispatch(OutdoorContext.message('context',valid()));f.dispatch(OutdoorContext.message('stop'));
+  assert.equal(f.calls.channelPause,1);assert.equal(vm.runInContext('outdoorStopped',f.context),true);const sent=f.sent.length;
+  f.dispatch(OutdoorContext.message('resume',{siteId:'jardinets'}));
+  assert.equal(vm.runInContext('outdoorStopped',f.context),false);assert.equal(vm.runInContext('activeWalkSite.id',f.context),'jardinets');
+  assert.equal(f.calls.walk,1);assert.equal(f.calls.channelResume,1);assert.equal(f.calls.boot,1);
+  assert.deepEqual(f.calls.walkArgs.at(-1),[],'resume keeps the side of the iframe URL, like a fresh start');
+  assert.equal(f.sent.length,sent+1);assert.equal(f.sent.at(-1).message.type,'ready');
+});
+test('resume is refused from another window, for an unknown kiosk, before boot, while running or outside the walk',()=>{
+  const resume=OutdoorContext.message('resume',{siteId:'starbucks'});
+  const live=fixture(true,true);live.dispatch(OutdoorContext.message('context',valid()));live.dispatch(resume);assert.equal(live.calls.walk,0);
+  const f=fixture(true,true);f.dispatch(OutdoorContext.message('context',valid()));f.dispatch(OutdoorContext.message('stop'));
+  f.dispatch(resume,{source:{}});f.dispatch(resume,{origin:'https://other.example'});f.dispatch(OutdoorContext.message('resume',{siteId:'atlantis'}));
+  assert.equal(f.calls.walk,0);assert.equal(vm.runInContext('outdoorStopped',f.context),true);
+  const early=fixture(true,true);early.dispatch(OutdoorContext.message('stop'));early.dispatch(resume);assert.equal(early.calls.walk,0);
+  const photo=fixture(true,false);photo.dispatch(OutdoorContext.message('context',valid()));photo.dispatch(OutdoorContext.message('stop'));photo.dispatch(resume);assert.equal(photo.calls.walk,0);
 });
 test('Escape closes child through the exact parent origin and cancels rendering intent',()=>{
   const f=fixture();let prevented=false;

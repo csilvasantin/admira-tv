@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
 
-const photo = {frame:null, ready:false, signature:'', returnMode:null, mode:'photo', siteId:(OutdoorSites.get(new URLSearchParams(location.search).get('site'))||OutdoorSites.get('vila')).id};
+const photo = {frame:null, parked:null, key:'', ready:false, signature:'', returnMode:null, mode:'photo', siteId:(OutdoorSites.get(new URLSearchParams(location.search).get('site'))||OutdoorSites.get('vila')).id};
 const audienceSource={mode:AudienceMode.parse(location.search)};
 const humanHUD = HumanView.create({element:document.getElementById('human-hud'),
   send:sendHumanCommand,onExit:closePhoto,onInspect:inspectHumanSupport,onSiteChange:selectHumanSite});
@@ -1945,9 +1945,6 @@ function openPhoto(mode = 'photo') {
   controls.enabled = false;
   vid.pause(); clearTimeout(stockTimer);
   $('ficha').classList.add('hidden');
-  const frame = document.createElement('iframe');
-  frame.title = mode==='human' ? 'Exploración a pie · '+OutdoorSites.get(photo.siteId).area : 'Vista real del quiosco de Vila de Gràcia';
-  frame.allow = 'fullscreen; autoplay';
   doohTour.observePosition(null);
   const url = new URL('best/', location.href);
   const params = new URLSearchParams(location.search);
@@ -1956,9 +1953,15 @@ function openPhoto(mode = 'photo') {
   if (mode === 'human') { url.searchParams.set('walk','1'); url.searchParams.set('side','panels'); url.searchParams.set('site',photo.siteId); photo.initialSiteId=photo.siteId; }
   if (params.has('cal')) url.searchParams.set('cal', params.get('cal'));
   if (['front','panels'].includes(params.get('side'))) url.searchParams.set('side', params.get('side'));
-  photo.frame = frame; photo.ready = false; photo.signature = '';
-  frame.src = url.href;
-  $('photo-view').replaceChildren(frame);
+  // Volver a pie reutiliza el iframe aparcado: Google ya está cargado y no se recarga.
+  const key = url.href.replace(/([?&])site=[^&]*&?/, '$1'), parked = mode === 'human' && photo.parked?.key === key ? photo.parked : null;
+  if (parked) { photo.parked = null; clearTimeout(parked.timer); } else discardParkedPhoto();
+  const frame = parked ? parked.frame : document.createElement('iframe');
+  frame.title = mode==='human' ? 'Exploración a pie · '+OutdoorSites.get(photo.siteId).area : 'Vista real del quiosco de Vila de Gràcia';
+  frame.allow = 'fullscreen; autoplay';
+  photo.frame = frame; photo.key = key; photo.ready = false; photo.signature = '';
+  if (parked) { frame.hidden = false; frame.contentWindow.postMessage(OutdoorContext.message('resume', {siteId:photo.siteId}), location.origin); }
+  else { frame.src = url.href; $('photo-view').replaceChildren(frame); }
   $('photo-view').classList.remove('hidden');
   for (const id of ['sidebar','rightbar']) $(id).classList.remove('open');
   for (const id of ['tg-left','tg-right']) $(id).classList.remove('on');
@@ -2155,15 +2158,24 @@ function resizePhotoViewport() {
     ? Math.max(30, $('universe-card').getBoundingClientRect().height + 50) + 'px' : '';
 }
 new ResizeObserver(resizePhotoViewport).observe($('universe-card'));
+const PHOTO_PARK_MS = 120000;
+function discardParkedPhoto() {
+  const parked = photo.parked; if (!parked) return;
+  photo.parked = null; clearTimeout(parked.timer); parked.frame.remove();
+}
 function closePhoto() {
   if(playerRemote.isOpen())playerRemote.close();
   stopDoohTour('mode');muteScreenSound(true);doohTour.observePosition(null);
   if (!photo.frame) return;
-  const frame = photo.frame;
+  const frame = photo.frame, handshaken = photo.ready;
   photo.frame = null; photo.ready = false; photo.signature = '';
   frame.contentWindow.postMessage(OutdoorContext.message('stop'), location.origin);
-  // Destroy the browsing context: no hidden Google renderer, audio, route or delayed callback survives.
-  frame.remove();
+  // «stop» deja el hijo sin render de Google, audio, ruta ni bucles de fondo. La vista a pie se aparca
+  // oculta para volver sin recargar Google (Carlos, 21-oct-2026) y se destruye si no se vuelve en
+  // PHOTO_PARK_MS; las demás vistas se destruyen como siempre. Solo se aparca un hijo que ya saludó y
+  // recibió su contexto: uno cerrado a medio cargar no sabría reanudarse y se quedaría en «Cargando…».
+  if (photo.mode === 'human' && handshaken) { discardParkedPhoto(); frame.hidden = true; photo.parked = {frame, key:photo.key, timer:setTimeout(discardParkedPhoto, PHOTO_PARK_MS)}; }
+  else frame.remove();
   $('photo-view').classList.add('hidden');
   document.body.classList.remove('photo-active','human-active');
   humanHUD.leave();

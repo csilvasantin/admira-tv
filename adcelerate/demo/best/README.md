@@ -4,7 +4,8 @@ Motor fotorreal de la [vista real del universo outdoor](../README.md). La entrad
 pública `best/` abre ahora el universo Three.js; este motor se carga solo cuando
 el usuario elige acercarse al quiosco. Conserva Google Photorealistic 3D Tiles,
 la llegada guiada y los panoramas fechados. El iframe `?embed=1` espera el contexto
-validado del parent antes de cargar Google y se destruye al volver al universo.
+validado del parent antes de cargar Google. Al volver al universo, la vista a pie
+se apaga y queda aparcada dos minutos para volver sin recargar Google; después se destruye.
 
 Ficheros: `index.html` (renderer hijo), `camera-path.js` (trayectoria y esperas),
 `street-walk.js` (pasos por enlaces reales de Street View),
@@ -23,7 +24,7 @@ sin crear el globo Map3D ni cargar el modelo GLB. Arranca en los paneles de marz
 - **E o clic en un panel visible:** inspeccionar el soporte. La ficha del quiosco
   también está disponible desde el HUD.
 - **Volver al quiosco / Mostrador:** saltos explícitos a puntos conocidos, que no
-  suman pasos. Escape o Mapa 3D destruyen el iframe y conservan el universo.
+  suman pasos. Escape o Mapa 3D apagan y aparcan el iframe y conservan el universo.
 
 Verificado el 6 de septiembre de 2026 con `StreetViewService`: el panorama de los
 paneles `2NoSvJbqMCZ0RXhR8pTSLA` devuelve dos conexiones; el del mostrador
