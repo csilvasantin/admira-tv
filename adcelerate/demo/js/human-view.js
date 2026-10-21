@@ -18,7 +18,7 @@
     const [year,month]=date.split('-').map(Number);
     return new Intl.DateTimeFormat('es',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(year,month-1,1)));
   }
-  function create({element,send,onExit,onInspect,onSiteChange=()=>{}}) {
+  function create({element,send,onExit,onInspect,onSiteChange=()=>{},onTravelChange=()=>{}}) {
     let active=false, current=null, routesSignature='', currentSite=sites.get('vila'), routeTarget=null, audienceArgs=null, heldKey=null, heldPointer=null, heldButton=null;
     const el=id=>element.querySelector('#'+id);
     const command=action=>{ if(active)send({action}); };
@@ -44,6 +44,16 @@
     }));
     el('human-site-select').onchange=event=>onSiteChange(event.target.value);
     el('human-next-site').onclick=()=>onSiteChange(sites.next((routeTarget||currentSite).id).id);
+    // «Destino» a pie o directo comparte el modo del Tour DooH (Carlos, 21-oct-2026).
+    let travel={mode:'walk',speed:1};
+    el('human-site-travel').onclick=()=>onTravelChange(travel.mode==='walk'?'direct':'walk');
+    function setTravel({mode,speed}){
+      travel={mode:mode==='direct'?'direct':'walk',speed};
+      const button=el('human-site-travel');
+      button.textContent=travel.mode==='walk'?'A pie ×'+speed:'Directo';
+      button.setAttribute('aria-pressed',String(travel.mode==='walk'));
+      button.title=travel.mode==='walk'?'Ir a pie por Street View · pulsa para saltar directo':'Saltar directo · pulsa para ir a pie por Street View';
+    }
     function setSite(site){
       if(!site)return;currentSite=site;
       el('human-location').textContent='HUMANO / '+(site.shortLabel||site.area).toLocaleUpperCase('es');
@@ -146,7 +156,7 @@
     return {
       enter(siteId='vila'){if(active)release();active=true;routesSignature='';setSite(sites.get(siteId)||sites.get('vila'));element.classList.remove('hidden');element.tabIndex=-1;element.focus({preventScroll:true});setState({status:'loading',pano:'',heading:currentSite.entry.pov.heading,date:'',position:null,links:[],steps:0,supportVisible:false});},
       leave(){release();active=false;element.classList.add('hidden');el('human-support-card').classList.add('hidden');el('human-paths').classList.add('hidden');},
-      setState,setSite,setRouteTarget,
+      setState,setSite,setRouteTarget,setTravel,
       inspect(){el('human-support-card').classList.remove('hidden');},
       updateAudience
     };

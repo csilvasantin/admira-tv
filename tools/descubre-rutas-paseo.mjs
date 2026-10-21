@@ -19,15 +19,21 @@ const ROOT = fileURLToPath(new URL("../adcelerate/demo/", import.meta.url));
 const ROUTES_JS = ROOT + "js/urban-route.js", EVIDENCE = ROOT + "data/urban-route-evidence.json";
 const PAGE = "https://admira.tv/adcelerate/demo/?view=human&site=vila";
 const CHECK = process.argv.includes("--check");
-const MISSION = "Paseo al día · Carlos, 21-oct-2026";
+const MISSION = "Paseo al día y Destino a pie a Starbucks · Carlos, 21-oct-2026";
 
 // El circuito del Tour DooH es Vila → Jardinets → Lesseps → Vila; Jardinets → Vila cubre arrancar
 // el tour desde Jardinets. Cada ruta va de la foto calibrada de un quiosco a la del siguiente.
+// Starbucks (Passeig de Gràcia 103) no tiene pantalla y no entra en el circuito, pero «Destino» va a
+// pie hasta su foto de entrada desde Jardinets y desde Vila, y vuelve (Carlos, 21-oct-2026).
 const RUTAS = [
   { id: "vila-jardinets", from: "vila", to: "jardinets" },
   { id: "jardinets-lesseps", from: "jardinets", to: "lesseps" },
   { id: "lesseps-vila", from: "lesseps", to: "vila" },
   { id: "jardinets-vila", from: "jardinets", to: "vila" },
+  { id: "jardinets-starbucks", from: "jardinets", to: "starbucks" },
+  { id: "starbucks-jardinets", from: "starbucks", to: "jardinets" },
+  { id: "vila-starbucks", from: "vila", to: "starbucks" },
+  { id: "starbucks-vila", from: "starbucks", to: "vila" },
 ];
 const LIMITS = { MAX_STEP_METRES: 35, HANDOFF_METRES: 10, HANDOFF_PENALTY: 40, MIN_DATE: "2022-01",
   DATE_CHANGE_PENALTY: 12, CORRIDOR_SLACK: 600, MAX_CALLS: 4000 };

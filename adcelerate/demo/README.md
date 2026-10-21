@@ -67,13 +67,25 @@ resuelve las conexiones reales y descarta respuestas de navegación obsoletas.
 ## Recorrido entre quioscos
 
 El selector **Destino** y **Siguiente quiosco** alternan entre Vila de Gràcia,
-Jardinets y Lesseps. **Volver al quiosco** regresa a la entrada del destino seleccionado.
-Los cambios entre destinos son accesos directos a fotografías verificadas, no
-pasos ficticios por la calle. El selector, la ficha, el radar, el título y la URL
-siguen el destino actual. Enlaces reproducibles:
+Starbucks (Passeig de Gràcia 103), Jardinets y Lesseps. **Volver al quiosco** regresa
+a la entrada del destino seleccionado. El selector, la ficha, el radar, el título y
+la URL siguen el destino actual.
+
+Junto a **Destino**, el botón **A pie ×N / Directo** elige cómo ir; comparte el modo
+y la velocidad del Tour DooH (`travel` y `speed` en la URL). **A pie** camina por
+Street View la ruta catalogada que sale de la fotografía actual hacia la de entrada
+del destino (`js/destination-walk.js`), con el mismo motor, margen nativo de 0,6 s
+y relevos que el Paseo del tour: desde Jardinets o Vila hasta la puerta de Starbucks
+y de vuelta, o entre quioscos por el circuito. Al llegar a Starbucks la cámara mira
+a su entrada. Si no hay ruta catalogada desde la foto actual (por ejemplo, de
+Lesseps a Starbucks, o tras pasear a mano fuera de una ruta), el cambio es un acceso
+directo a la fotografía verificada, como en **Directo**, nunca pasos ficticios.
+Tomar el control (W/A/D o flechas del teclado, las flechas de Google, **Parar recorrido**) detiene el paseo
+donde esté; si un tramo deja de existir, aviso y salto directo. Enlaces reproducibles:
 
 - `/adcelerate/demo/?view=human&site=vila`
 - `/adcelerate/demo/?view=human&site=jardinets`
+- `/adcelerate/demo/?view=human&site=starbucks`
 - `/adcelerate/demo/?view=human&site=lesseps`
 
 El catálogo compartido `js/outdoor-sites.js` identifica Vila, Jardinets y Lesseps. Jardinets
@@ -176,7 +188,10 @@ explícita. No sustituye una calle sin conexión por un salto oculto.
 Las rutas dirigidas de `js/urban-route.js` proceden de conexiones de Google
 verificadas; su evidencia está en `data/urban-route-evidence.json`. El circuito
 recorre Vila → Jardinets (40 enlaces), Jardinets → Lesseps (115) y Lesseps → Vila
-(124); Jardinets → Vila (40) cubre empezar el tour en Jardinets.
+(124); Jardinets → Vila (40) cubre empezar el tour en Jardinets. Starbucks no
+tiene pantalla y queda fuera del circuito, pero **Destino** camina Jardinets →
+Starbucks (29), Starbucks → Jardinets (30), Vila → Starbucks (58) y Starbucks → Vila
+(56) hasta su fotografía de entrada (`bNZ9…`, agosto de 2026).
 Cada enlace se comprueba de nuevo contra los enlaces del panorama cargado.
 
 Google renueva sus fotos y caduca IDs de panorama. El 21-oct-2026 el Paseo se

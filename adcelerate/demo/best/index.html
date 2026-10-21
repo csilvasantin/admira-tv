@@ -1583,6 +1583,8 @@ const routeWalk=RouteWalk.create({getRoute:id=>UrbanRoutes.get(id),getWalker:()=
     const homePov=homePano===activeWalkSite.entry.pano?activeWalkSite.entry.pov:{heading:pose?.pov.heading??sv.getPov().heading,pitch:0,zoom:.9};
     streetWalk?.setSite({homePano,homePov,frontPano:activeWalkSite.front?.pano,frontPov:activeWalkSite.front?.pov});
     if(streetWalk)handleWalkState(streetWalk.getState());
+    // Starbucks has no screen whose focus follows the arrival: face its calibrated entrance (Carlos, 21-oct-2026).
+    if(!pose&&homePano===activeWalkSite.entry.pano)walkOrientation.turn(homePov.heading)?.catch(()=>{});
   },
   onState:state=>{if(!outdoorStopped)window.parent.postMessage(OutdoorContext.message('route-state',state),location.origin);},
 });

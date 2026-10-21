@@ -2,13 +2,16 @@ const {test}=require('node:test');const assert=require('node:assert/strict');
 const routes=require('../js/urban-route.js'),context=require('../js/outdoor-context.js');
 const evidence=require('../data/urban-route-evidence.json');
 const sites=require('../js/outdoor-sites.js'),surfaces=require('../js/dooh-surfaces.js');
-test('four directed paths join the calibrated kiosk photographs and match their verified step evidence',()=>{
-  assert.deepEqual(routes.all.map(r=>r.id),['vila-jardinets','jardinets-lesseps','lesseps-vila','jardinets-vila']);
+test('eight directed paths join the visit photographs and match their verified step evidence',()=>{
+  assert.deepEqual(routes.all.map(r=>r.id),['vila-jardinets','jardinets-lesseps','lesseps-vila','jardinets-vila',
+    'jardinets-starbucks','starbucks-jardinets','vila-starbucks','starbucks-vila']);
   for(const route of routes.all){
     const proof=evidence.routes.find(r=>r.id===route.id);assert.deepEqual(route.panos,proof.panos);
     assert.deepEqual([...route.handoffs],proof.handoffs);assert.equal(proof.steps.length,route.panos.length-1);
     assert.equal(route.panos[0],sites.get(route.fromSiteId).entry.pano);assert.equal(route.panos.at(-1),sites.get(route.toSiteId).entry.pano);
-    assert.ok(surfaces.all.some(s=>s.siteId===route.toSiteId&&surfaces.hasPose(s.id,route.panos.at(-1))),`calibrated arrival for ${route.id}`);
+    // A kiosk arrival is a calibrated screen pose; Starbucks has no screen and arrives at its entrance photograph.
+    if(surfaces.all.some(s=>s.siteId===route.toSiteId))
+      assert.ok(surfaces.all.some(s=>s.siteId===route.toSiteId&&surfaces.hasPose(s.id,route.panos.at(-1))),`calibrated arrival for ${route.id}`);
     proof.steps.forEach((step,i)=>{
       assert.equal(step.from,route.panos[i]);assert.equal(step.to,route.panos[i+1]);
       const destination=evidence.nodes[step.to];assert.equal(destination.status,'OK');assert.equal(destination.date,step.date);
@@ -34,6 +37,16 @@ test('the tour circuit Vila → Jardinets → Lesseps → Vila is closed from ea
     assert.equal(routes.find(sites.get(from).entry.pano,to)?.id,id);
   // The arrival at Vila is the panel photograph itself, reached by an explicit catalogued handoff.
   const back=routes.get('lesseps-vila');assert.equal(back.panos.at(-1),'2NoSvJbqMCZ0RXhR8pTSLA');assert.ok(back.handoffs.includes(back.panos.length-2));
+});
+test('«Destino» reaches the Starbucks entrance photograph on foot from Jardinets and from Vila, and walks back',()=>{
+  assert.equal(sites.get('starbucks').entry.pano,'bNZ9QjiL55gYQ2iyOhSqMw');assert.ok(!surfaces.all.some(s=>s.siteId==='starbucks'));
+  for(const [from,to] of [['jardinets','starbucks'],['vila','starbucks'],['starbucks','jardinets'],['starbucks','vila']]){
+    const route=routes.find(sites.get(from).entry.pano,to);
+    assert.equal(route?.id,from+'-'+to);assert.equal(route.panos.at(-1),sites.get(to).entry.pano);
+  }
+  // The Starbucks routes leave the tour circuit untouched: from each kiosk the tour still finds its own leg.
+  assert.equal(routes.find(sites.get('jardinets').entry.pano,'vila')?.id,'jardinets-vila');
+  assert.equal(routes.find(sites.get('vila').entry.pano,'jardinets')?.id,'vila-jardinets');
 });
 test('handoffs are rejected in the middle of a route or when they replace the whole walk',()=>{
   const base={id:'r',fromSiteId:'vila',toSiteId:'jardinets',panos:['a','b','c','d']};
