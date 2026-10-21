@@ -52,8 +52,11 @@ panorama de los paneles para el que fueron calibradas; no se arrastran a otra ca
 
 La inspección solo abre información y recomendaciones de demostración. No compra
 inventario, no emite anuncios ni contabiliza impactos del recorrido. Se conservan
-la hora, aforo, selección y capas del universo. **Mapa 3D** o Escape destruyen el
-renderer fotográfico y recuperan la cámara anterior. La tarjeta de audiencia de
+la hora, aforo, selección y capas del universo. **Mapa 3D** o Escape apagan el
+renderer fotográfico y recuperan la cámara anterior. La vista a pie queda aparcada
+y oculta dos minutos, sin Street View, audio, ruta, canal ni consultas de fondo:
+volver a pie dentro de ese plazo la reutiliza sin recargar Google (unos 0,3–0,5 s
+en lugar de 0,7–0,9 s). Pasado el plazo se destruye. La tarjeta de audiencia de
 la maqueta se oculta durante el modo humano para priorizar la imagen.
 
 El contrato versión 1 añade `walk-command`, `walk-state` y `support-select`.
@@ -171,14 +174,34 @@ una ruta comprobada, se detiene y ofrece control manual o una **Visita directa**
 explícita. No sustituye una calle sin conexión por un salto oculto.
 
 Las rutas dirigidas de `js/urban-route.js` proceden de conexiones de Google
-verificadas; su evidencia está en `data/urban-route-evidence.json`. El circuito completo recorre Vila → Jardinets (40 enlaces iniciales),
-Jardinets → Lesseps (137) y Lesseps → la vista conectada de Vila (98).
-La siguiente salida desde esa vista de Vila tiene 39 enlaces. Las conexiones
-que faltan en el SDK obligan a pasar por Vila, Matilde y Sant Joaquim: no se
-promete un trayecto recto por Gran de Gràcia.
+verificadas; su evidencia está en `data/urban-route-evidence.json`. El circuito
+recorre Vila → Jardinets (40 enlaces), Jardinets → Lesseps (115) y Lesseps → Vila
+(124); Jardinets → Vila (40) cubre empezar el tour en Jardinets.
 Cada enlace se comprueba de nuevo contra los enlaces del panorama cargado.
-La vuelta llega a otra fotografía conectada de Vila, donde se calibran las mismas
-dos pantallas: conserva sus identidades y evita saltar a la imagen inicial.
+
+Google renueva sus fotos y caduca IDs de panorama. El 21-oct-2026 el Paseo se
+rompía en el paso 9: la llegada conectada a Vila (`xyBUN…`) ya no existía y las
+tres fotografías calibradas de los quioscos habían quedado como islas, sin enlaces
+de entrada desde la red actual, que llega a 1–7 m de cada una por otra captura.
+Por eso una ruta puede empezar o terminar con un **relevo**: cambio explícito de
+fotografía en el mismo punto (≤ 10 m), catalogado en `handoffs` y en la evidencia,
+como «Abrir cruce conectado» en Mozart. Nunca cuenta como paso ni aparece en
+medio de una ruta. Así la llegada vuelve a ser la fotografía donde están medidas
+las pantallas.
+
+Para comprobar o rehacer las rutas (solo metadatos; Google sirve las imágenes en
+vivo y no se precargan ni guardan):
+
+```
+PLAYWRIGHT_PATH=/ruta/a/node_modules/playwright node tools/descubre-rutas-paseo.mjs --check
+PLAYWRIGHT_PATH=/ruta/a/node_modules/playwright node tools/descubre-rutas-paseo.mjs
+```
+
+A ×4–×8 cada tramo dura unos 0,6 s: es el margen que necesita la transición
+nativa del visor de Google antes del siguiente salto. Con 0,3 s el visor vuelve
+a la foto anterior y el paseo se corta (medido en headless con GPU Apple M4).
+Si aun así vuelve atrás, el paseo repite ese salto hasta tres veces, o acepta la
+llegada tardía de Google al destino, en lugar de pararse.
 La fecha corresponde siempre al panorama que se está mostrando.
 
 El panel distingue los tramos de calle de los 9 segundos de exposición. Pausar

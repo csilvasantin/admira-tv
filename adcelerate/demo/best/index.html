@@ -401,12 +401,24 @@ function stopOutdoorChild(){
   _shotDone = true;
   stopCam();
   hideStreetView();
+  pauseChannel();
+}
+// Aparcado (Carlos, 21-oct-2026): al volver al mapa el padre oculta este iframe en vez de destruirlo,
+// para no recargar Google al volver a pie. «stop» ya lo ha apagado todo (ruta, foco, audio, reproductores,
+// Street View, canal y bucles de fondo); el padre lo destruye si no se vuelve en dos minutos.
+function resumeOutdoorChild(siteId){
+  const site=OutdoorSites.get(siteId);
+  if(!WALK_MODE||!outdoorStopped||!outdoorBooted||!site)return;
+  outdoorStopped=false;activeWalkSite=site;resumeChannel();
+  bootWalk('panels').catch(()=>walkLoadFailure());
+  window.parent.postMessage(OutdoorContext.message('ready'),location.origin);
 }
 function installOutdoorChild(){
   if (!window.OUTDOOR_EMBED) return;
   addEventListener('message', event => {
     if (!OutdoorContext.accepts(event, window.parent, location.origin)) return;
     if (event.data.type === 'stop') { stopOutdoorChild(); return; }
+    if (event.data.type === 'resume') { resumeOutdoorChild(event.data.payload.siteId); return; }
     if(event.data.type==='player-command'&&!outdoorStopped&&WALK_MODE){handlePlayerCommand(event.data.payload);return;}
     if(remoteSession&&['walk-command','surface-command','route-command'].includes(event.data.type))return;
     if(event.data.type==='audio-command'&&!outdoorStopped&&WALK_MODE){screenAudio.command(event.data.payload);return;}
@@ -553,7 +565,7 @@ function updateRtChip() {
   }
 }
 function rtSync() {
-  if (!rt.active) return;
+  if (!rt.active || outdoorStopped) return;
   const i = nearestFranjaByHour(madridHour());   // franja más cercana a la hora actual
   if (i !== selFranjaIdx) { selFranjaIdx = i; refreshFranja(); }
   updateRtChip();
@@ -929,6 +941,7 @@ function setThumb(dom){
 
 /* ============================ feed real del circuito ============================ */
 async function pollSignage(){
+  if (outdoorStopped) return;   // aparcado: sin red de fondo
   try{
     const r = await fetch(SIGNAGE_URL, { cache: 'no-store' });
     const j = await r.json();
@@ -1130,7 +1143,7 @@ function loadCreLive(){
   for (const p of PERFILES){ const im = new Image(); im.crossOrigin = 'anonymous'; im.src = '../creatividades/' + p + '.png'; creLive[p] = im; }
 }
 async function chLoad(){
-  if (liveMirrorOn()) return;   // la antena real manda mientras late
+  if (outdoorStopped || liveMirrorOn()) return;   // la antena real manda mientras late
   try{
     // La parrilla es la fuente prioritaria: conserva exactamente el orden que Carlos
     // define en admira.tv/parrilla. Solo caemos a Stock cuando no hay programación.
@@ -1183,6 +1196,7 @@ let syncSite = '', syncQueueSig = '';
 function liveMirrorOn(){ return syncClock.master.length > 0; }
 function syncSiteId(){ return (typeof activeWalkSite !== 'undefined' && activeWalkSite && activeWalkSite.id) || 'vila'; }
 async function syncClockRefresh(){
+  if (outdoorStopped) return;
   try{
     const d = await fetch(SYNC_STATE_URL + '?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json());
     if (d && Array.isArray(d.items) && d.items.length){ syncClock.master = d.items; syncClock.slotMs = d.slotMs || 20000; syncClock.offset = (d.serverNow || Date.now()) - Date.now(); syncClock.at = Date.now(); }
@@ -1214,7 +1228,7 @@ function syncTimelineTwin(items){
   return { index, elapsed: Math.max(0, pos - start), duration: durations[index] };
 }
 function syncTick(){
-  if (!liveMirrorOn()) return;
+  if (outdoorStopped || !liveMirrorOn()) return;
   if (perfilOverride){ if (Date.now() < perfilOverride.until && perfilOverride.site === syncSiteId()){ if (chVid.paused && chItem && chItem.type === 'video') chVid.play().catch(() => {}); return; } perfilOverride = null; syncQueueSig = ''; }
   const items = syncItems(); if (!items.length) return;
   const site = syncSiteId();
@@ -1272,7 +1286,7 @@ async function mandarAlaPantalla(site, it){
   return oks.some(Boolean);
 }
 function viandanteTick(){
-  if (!liveMirrorOn()) return;
+  if (outdoorStopped || !liveMirrorOn()) return;
   let dom = ''; try{ dom = dominanteDe(currentAudience().mix) || ''; }catch(_){ return; }
   if (!dom || dom === perfilDominante){ return; }
   const primera = !perfilDominante; perfilDominante = dom;
@@ -1308,6 +1322,9 @@ function chPlay(i){
     chTimer = setTimeout(chNext, (chItem.seconds || IMG_SECONDS) * 1000);
   }
 }
+// Aparcado (Carlos, 21-oct-2026): el canal se para con el iframe oculto y retoma la pieza al volver.
+function pauseChannel(){ clearTimeout(chTimer); chVid.pause(); }
+function resumeChannel(){ if (chQueue.length && !liveMirrorOn()) chPlay(Math.max(0, chIdx)); }
 function chTitle(){ return chItem ? String(chItem.title || chItem.id || '').replace(/&#39;/g, "'").slice(0, 52) : ''; }
 
 // ---- pintado de la pantalla: media a cover + banda ADcelerate + chip EN VIVO ----
@@ -2029,6 +2046,7 @@ function quadWarp(w, h, d){
 // ---- bucle de render de la capa viva (glue vs PiP / Street View) ----
 function liveTick(){
   requestAnimationFrame(liveTick);
+  if (outdoorStopped) return;
   const glued = $('kiosk-live'), pip = $('pip-live');
   if (!glued || !pip) return;
   if (SV_ON){   // «a pie ante el kiosko»: pintar las dos pantallas del MUPI, ocultar glue/PiP del globo

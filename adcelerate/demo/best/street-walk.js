@@ -137,6 +137,11 @@
         release();if(pending||state.pano!==JESUS_PATH[0])return false;
         guidedPath=JESUS_PATH.slice(1);state.routeActive=true;return guidedStep();
       }
+      if(action==='handoff'){
+        // Catalogued route ends only: same spot, another photograph, never a walking step.
+        release();if(pending||typeof input.pano!=='string'||!input.pano||input.pano.length>250)return false;
+        return navigate(input.pano,'handoff');
+      }
       if(action in seeds){
         release();if(!seeds[action]){onFeedback('Este quiosco no tiene una vista alternativa verificada.');return false;}
         // An explicit return replaces a pending hop and invalidates its late callbacks.

@@ -54,6 +54,11 @@ test('postMessage is accepted only from the intended window and exact origin', (
   for (const type of ['ready', 'close', 'stop']) {
     assert.equal(accepts({...event, data:message(type)}, child, origin), true);
   }
+  // Resuming a parked walking view names a catalogued kiosk and nothing else.
+  assert.equal(accepts({...event, data:message('resume', {siteId:'jardinets'})}, child, origin), true);
+  for (const payload of [undefined, {}, {siteId:'atlantis'}, {siteId:7}])
+    assert.equal(accepts({...event, data:message('resume', payload)}, child, origin), false);
+  assert.equal(accepts({...event, source:otherWindow, data:message('resume', {siteId:'vila'})}, child, origin), false);
 });
 
 test('historical BEST URLs open the universe and preserve explicit side/calibration intent', () => {

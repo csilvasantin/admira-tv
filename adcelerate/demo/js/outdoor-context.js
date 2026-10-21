@@ -98,15 +98,16 @@
       catalog:p.catalog.map(i=>({id:i.id,title:i.title,type:i.type})),playlists:p.playlists.map(i=>({id:i.id,title:i.title}))};
   }
   function message(type, context) {
-    const payloadType=['walk-state','walk-command','surface-command','surface-state','surface-interaction','route-command','route-state','audio-command','audio-state','player-command','player-state'].includes(type)||(type==='support-select'&&context);
+    const payloadType=['resume','walk-state','walk-command','surface-command','surface-state','surface-interaction','route-command','route-state','audio-command','audio-state','player-command','player-state'].includes(type)||(type==='support-select'&&context);
     const data=payloadType?{payload:context}:(context?{context}:{});
     return {channel:'admira-outdoor', version:1, type, ...data};
   }
   function accepts(event, source, origin) {
     const d = event && event.data;
     return !!(event && event.origin === origin && event.source === source && d &&
-      d.channel === 'admira-outdoor' && d.version === 1 && ['ready','context','close','stop','walk-state','walk-command','support-select','surface-command','surface-state','surface-interaction','route-command','route-state','audio-command','audio-state','player-command','player-state'].includes(d.type) &&
+      d.channel === 'admira-outdoor' && d.version === 1 && ['ready','context','close','stop','resume','walk-state','walk-command','support-select','surface-command','surface-state','surface-interaction','route-command','route-state','audio-command','audio-state','player-command','player-state'].includes(d.type) &&
       (d.type !== 'context' || validate(d.context)) &&
+      (d.type !== 'resume' || (!!d.payload && !!sites.get(d.payload.siteId))) &&
       (d.type !== 'walk-state' || validateWalkState(d.payload)) &&
       (d.type !== 'walk-command' || validateWalkCommand(d.payload)) &&
       (d.type!=='route-command'||validateRouteCommand(d.payload)) &&
