@@ -1,0 +1,22 @@
+# admira.tv
+
+> admira.tv es la capa «distribuir» del triunvirato de Admira: admira.studio crea el contenido, admira.tv lo emite en las pantallas (el canal DOOH, conectado, federado y condicionado) y clearchannel.tv lo vende. Aquí viven el canal, los players y la analítica de audiencia.
+
+## Para agentes
+
+- Servidor MCP de admira.tv (la capa Emitir): https://admira.tv/mcp/
+- llms.txt detallado del MCP (herramientas, contratos del player, novedades): https://admira.tv/mcp/llms.txt
+- El canal (qué hay en antena, playlists, emisión): https://admira.tv/canal
+- Players (nativos macOS, Android, iOS y web; alta por USB/ADB): https://admira.tv/players
+- Audiencia verificada por cámara (Xtore): https://admira.tv/videoanalytics/xtore/
+- Mapa del sitio: https://admira.tv/sitemap.xml
+- Versión desplegada: https://admira.tv/version.json
+
+## Hermanos
+
+- admira.studio (crear) · clearchannel.tv (vender) · www.xpaceos.com (el gemelo digital del comercio físico) · https://mcp.admira.store/llms.txt (MCP de XpaceOS)
+
+## Notas
+
+- Las URLs canónicas van sin extensión (/canal, no /canal.html).
+- Las versiones antiguas publicadas bajo /v.2026.05.02-* están excluidas del rastreo en robots.txt.

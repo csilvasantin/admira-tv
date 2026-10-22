@@ -1,7 +1,7 @@
 {
-  "version": "v.15.10.2026.r4.14:23",
-  "agent": "TrinityMBP14",
-  "deployer": "TrinityMBP14",
-  "machine": "MBP14",
-  "signature": "TrinityMBP14 · MBP14"
+  "version": "v.22.10.2026.r2.11:34",
+  "agent": "SubNeoMBP16",
+  "deployer": "SubNeoMBP16",
+  "machine": "MacBookPro16",
+  "signature": "SubNeoMBP16 · MacBookPro16"
 }

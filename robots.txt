@@ -7,4 +7,7 @@ Disallow: /*?embed=mupi
 Disallow: /*?clean=1
 Disallow: /*?chrome=0
 
+# Versiones antiguas de mayo de 2026 publicadas como copias (48 carpetas): fuera del índice
+Disallow: /v.2026.05.02-
+
 Sitemap: https://admira.tv/sitemap.xml

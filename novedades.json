@@ -4,6 +4,11 @@
     "Sello de versión con novedades al pasar el ratón",
     "Marca NUEVO cuando hay una versión que aún no has visto"
   ],
+  "v.22.10.2026.r2.11:34": [
+    "Descubrimiento limpio: el sitemap apunta a las URLs canónicas sin .html (antes 5 de 16 redirigían con 308).",
+    "llms.txt en la raíz para los agentes: qué es admira.tv, /mcp/, /canal, /players, audiencia Xtore y sitemap.",
+    "robots.txt excluye del rastreo las 48 versiones antiguas de mayo (/v.2026.05.02-*)."
+  ],
   "v.15.10.2026.r4.14:23": [
     "La validación de pantallas de Xpaces admite consultas de inventario sin caché en el runtime publicado."
   ],
