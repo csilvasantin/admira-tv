@@ -18,6 +18,7 @@ import {fileURLToPath} from 'node:url';
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 const catalog = JSON.parse(await read('./apps/public-catalog.json'));
 const homeCatalog = JSON.parse(await read('./apps/home-catalog.json'));
+const demos = JSON.parse(await read('./apps/demo-videos.json')).videos;
 const datos = JSON.parse(await read('./apps/pilares.json'));
 const home = await read('./index.html');
 const client = await read('./public-apps.js');
@@ -50,8 +51,8 @@ const FUERA_DE_LA_HOME = ['dashboard', 'contentcatalogue', 'support', 'pushnotif
   'gamification', 'iotmanager', 'videoanalytics', 'radioanalytics', 'socialwifi', 'queuemanager', 'roombooking',
   'audiobranding', 'olfactorymarketing', 'virtualreality', 'augmentedreality', 'xpaceos', 'yarig'];
 
-const tarjetasHtml = [...home.matchAll(/<article class="(app-card[^"]*)" data-public-app-card="([a-z0-9-]+)" data-pilar="([a-z]+)"[^>]*>([\s\S]*?)<\/article>/g)]
-  .map(([, clases, slug, pilar, cuerpo]) => ({clases: clases.split(' '), slug, pilar, cuerpo, texto: cuerpo.replace(/<[^>]+>/g, '')}));
+const tarjetasHtml = [...home.matchAll(/<article class="(app-card[^"]*)" id="solucion-([a-z0-9-]+)" data-public-app-card="([a-z0-9-]+)" data-pilar="([a-z]+)"[^>]*>([\s\S]*?)<\/article>/g)]
+  .map(([, clases, ancla, slug, pilar, cuerpo]) => ({clases: clases.split(' '), ancla, slug, pilar, cuerpo, texto: cuerpo.replace(/<[^>]+>/g, '')}));
 
 test('los cinco pilares tienen exactamente los colores del logo y los verbos de Carlos, en orden studio·store·tv·app·biz', () => {
   assert.equal(pilares.length, 5);
@@ -146,7 +147,7 @@ test('Cartelería Digital conserva descripción, vídeo, PDF y enlace del catál
 });
 
 test('sin medio publicado, Vídeo y PDF aparecen como «pronto»: presentes, aria-disabled y sin acción', () => {
-  for (const c of tarjetasHtml.filter((x) => !REUTILIZADAS.includes(x.slug))) {
+  for (const c of tarjetasHtml.filter((x) => !REUTILIZADAS.includes(x.slug) && !demos[x.slug])) {
     const pronto = [...c.cuerpo.matchAll(/<button[^>]*class="app-action app-pronto"[^>]*>([^<]*)<\/button>/g)];
     assert.equal(pronto.length, 2, `${c.slug}: dos botones «pronto»`);
     assert.deepEqual(pronto.map((m) => m[1]), ['▶ Vídeo · pronto', '↓ PDF · pronto'], c.slug);
@@ -158,6 +159,39 @@ test('sin medio publicado, Vídeo y PDF aparecen como «pronto»: presentes, ari
     assert.doesNotMatch(c.cuerpo, /data-app-(video|pdf)=/, `${c.slug}: sin medio real`);
   }
   assert.match(home, /\.app-action\.app-pronto\{[^}]*cursor:not-allowed/);
+});
+
+test('el vídeo de demo sólo sale del Stock etiquetado, y el PDF que no existe sigue en «pronto»', () => {
+  const stock = /^https:\/\/stock\.admira\.store\/stock\/[0-9]+-[a-z0-9]+\/asset\.mp4\?v=[0-9]+$/;
+  assert.deepEqual(Object.keys(demos).sort(), ['admira-biz', 'admira-store', 'admira-studio']);
+  for (const [slug, video] of Object.entries(demos)) {
+    assert.match(video.src, stock, slug);
+    if (video.src_en) assert.match(video.src_en, stock, slug);
+    const c = tarjetasHtml.find((x) => x.slug === slug);
+    assert.match(c.cuerpo, new RegExp(`data-app-video="${video.src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`), slug);
+    assert.match(c.cuerpo, /↓ PDF · pronto/, `${slug}: no hay dosier real`);
+    assert.doesNotMatch(c.cuerpo, /▶ Vídeo · pronto/, slug);
+  }
+  assert.match(tarjetasHtml.find((x) => x.slug === 'admira-biz').cuerpo, /data-app-video-en="https:\/\/stock\.admira\.store\/stock\/1792604795452-61e27p\/asset\.mp4\?v=25469907"/);
+  const urls = [...home.matchAll(/https:\/\/stock\.admira\.store\/[^"'\s]+/g)].map((m) => m[0]);
+  const permitidas = new Set(Object.values(demos).flatMap((v) => [v.src, v.src_en].filter(Boolean)));
+  assert.deepEqual([...new Set(urls)].sort(), [...permitidas].sort());
+});
+
+test('cada solución tiene ancla #solucion-<slug> y «Pedir demo» con el asunto relleno', () => {
+  assert.equal(tarjetasHtml.length, 20);
+  for (const c of tarjetasHtml) {
+    assert.equal(c.ancla, c.slug, c.slug);
+    assert.match(c.cuerpo, /class="app-action app-demo" href="mailto:hola@admiranext.com\?subject=/, c.slug);
+    assert.match(c.cuerpo, /data-es="Pedir demo" data-en="Request a demo"/, c.slug);
+    const fila = Object.values(ZONAS).flat().find((par) => par[0] === c.slug);
+    const asunto = encodeURIComponent(`Pedir demo · ${fila[1]}`).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    assert.match(c.cuerpo, new RegExp(`subject=${asunto}`), c.slug);
+    assert.match(c.cuerpo, /%2F%20Request%20a%20demo%20/, c.slug);
+  }
+  assert.match(client, /#solucion-\(\[a-z0-9-\]\+\)/);
+  assert.match(client, /data-app-video-en/);
+  assert.match(home, /scroll-margin-top:calc\(var\(--yk-bar-h, 72px\) \+ 16px\)/);
 });
 
 test('la leyenda enlaza digitalsignage.ai, cuenta 4 por pilar y sus botones son accesibles sin JS y con JS', () => {
@@ -212,7 +246,7 @@ test('el generador está sincronizado (lo que comprueba deploy.sh)', () => {
 });
 
 test('el filtro muestra sólo el pilar pulsado, «Todas» devuelve las 20 y anuncia el recuento', () => {
-  const filtro = client.match(/\/\* Filtro de los cinco pilares[\s\S]*$/)?.[0];
+  const filtro = client.match(/\/\* Filtro de los cinco pilares[\s\S]*?\}\)\(\);/)?.[0];
   assert.ok(filtro, 'bloque del filtro en public-apps.js');
   const nodo = (attrs = {}) => ({
     attrs: {...attrs}, hidden: false, disabled: true, listeners: {}, textContent: '', classList: {set: new Set(), add(c) { this.set.add(c); }},

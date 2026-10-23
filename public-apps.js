@@ -57,13 +57,16 @@
 
   function bindVideo(button) {
     var card = button.closest(".app-card");
-    var src = button.getAttribute("data-app-video");
     // En inglés, el título del vídeo es el nombre inglés (el que enseña ya la tarjeta).
     function name() {
       var h3 = enIngles() && card && card.querySelector("h3");
       return (h3 && h3.textContent.trim()) || (card && card.getAttribute("data-app-title")) || (enIngles() ? "Video" : "Vídeo");
     }
-    button.addEventListener("click", function () { openVideo(name(), src, button); });
+    function srcDe() {
+      var en = button.getAttribute("data-app-video-en");
+      return (enIngles() && en) ? en : button.getAttribute("data-app-video");
+    }
+    button.addEventListener("click", function () { openVideo(name(), srcDe(), button); });
   }
 
   function bindPdf(button) {
@@ -213,4 +216,30 @@
   // Al cambiar de idioma (y si la portada ya abre en inglés) el recuento se vuelve a decir.
   if (typeof document.addEventListener === "function") document.addEventListener("admira:languagechange", function () { aplica(actual); });
   if (enIngles()) aplica(actual);
+})();
+
+/* #solucion-<slug> abre esa tarjeta y, si tiene vídeo real, el diálogo.
+ * El ancla ya hace scroll sin JS (:target). Aquí, si un filtro la escondía,
+ * se vuelven a enseñar las 20 y se arranca el vídeo. */
+(function () {
+  "use strict";
+  function abrir() {
+    var hash = "";
+    try { hash = location.hash || ""; } catch (_) { return; }
+    var m = /^#solucion-([a-z0-9-]+)$/.exec(hash);
+    if (!m) return;
+    var card = document.querySelector('[data-public-app-card="' + m[1] + '"]');
+    if (!card || card.id !== "solucion-" + m[1]) return;
+    if (card.hidden) {
+      var todas = document.querySelector('[data-pilar-filtro="todas"]');
+      if (todas && !todas.disabled) todas.click();
+    }
+    var reduce = false;
+    try { reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (_) {}
+    try { card.scrollIntoView({block: "center", behavior: reduce ? "auto" : "smooth"}); } catch (_) {}
+    var video = card.querySelector("[data-app-video]");
+    if (video) video.click();
+  }
+  window.addEventListener("hashchange", abrir);
+  abrir();
 })();

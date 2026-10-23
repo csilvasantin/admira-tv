@@ -43,12 +43,16 @@ import json
 import pathlib
 import re
 import sys
+from urllib.parse import quote
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 HOME_CATALOGO = RAIZ / "apps" / "home-catalog.json"
 CATALOGO = RAIZ / "apps" / "public-catalog.json"
 PILARES = RAIZ / "apps" / "pilares.json"
+DEMOS = RAIZ / "apps" / "demo-videos.json"
 INDEX = RAIZ / "index.html"
+STOCK_VIDEO = re.compile(r"^https://stock\.admira\.store/stock/[0-9]+-[a-z0-9]+/asset\.mp4\?v=[0-9]+$")
+DEMO_MAIL = "hola@admiranext.com"
 ABRE = "<!-- apps:generado — NO editar a mano: tools/gen-apps-grid.py -->"
 CIERRA = "<!-- /apps:generado -->"
 ABRE_FILTRO = "<!-- pilares:generado — NO editar a mano: tools/gen-apps-grid.py -->"
@@ -193,6 +197,32 @@ def etiqueta_pilar(p):
     return "{} · {} · {}".format(p["n"], p["nombre"], p["verbo_es"])
 
 
+def carga_demos():
+    """Vídeos de demo ya publicados en el Stock. Una URL que no sea ese asset se rechaza."""
+    if not DEMOS.exists():
+        return {}
+    datos = json.loads(DEMOS.read_text(encoding="utf-8"))
+    videos = datos.get("videos") if isinstance(datos, dict) else None
+    if not isinstance(videos, dict):
+        sys.exit("✖ apps/demo-videos.json no trae el objeto `videos`")
+    for slug, video in videos.items():
+        if not SLUG.fullmatch(slug):
+            sys.exit("✖ slug de demo inválido: {}".format(slug))
+        if not isinstance(video, dict) or not video.get("src"):
+            sys.exit("✖ {} no trae `src`".format(slug))
+        for campo in ("src", "src_en"):
+            if video.get(campo) and not STOCK_VIDEO.fullmatch(video[campo]):
+                sys.exit("✖ {} {} no es un asset de stock.admira.store".format(slug, campo))
+    return videos
+
+
+def mailto_demo(nombre_es, nombre_en):
+    """La demo (/adcelerate/demo/) no tiene un campo de solución: el correo sale con el asunto relleno."""
+    asunto = "Pedir demo · {} / Request a demo · {}".format(nombre_es, nombre_en)
+    cuerpo = "Solución: {}\nSolution: {}\n".format(nombre_es, nombre_en)
+    return "mailto:{}?subject={}&body={}".format(DEMO_MAIL, quote(asunto, safe=""), quote(cuerpo, safe=""))
+
+
 def url_segura(valor, slug, tipo):
     """Misma regla que tenía el JS: sólo se acepta la ruta canónica del slug.
 
@@ -231,7 +261,7 @@ def boton_pronto(texto, texto_en, que, que_en, nombre_es, nombre_en):
     )
 
 
-def tarjeta(app, pilar):
+def tarjeta(app, pilar, demos):
     slug = app["slug"]
     nombre_es, nombre_en = app["name_es"], app["name_en"]
     es_pilar = app.get("_pilar")
@@ -239,6 +269,10 @@ def tarjeta(app, pilar):
     estado = "Disponible · Available" if disponible else "Próximamente · Coming soon"
     estado_en = "Available" if disponible else "Coming soon"
     video = url_segura(app.get("video"), slug, "video")
+    video_en = ""
+    if not video and slug in demos:
+        video = demos[slug]["src"]
+        video_en = demos[slug].get("src_en") or ""
     pdf = url_segura(app.get("pdf"), slug, "pdf")
     # Tarjeta con entrada propia: el título enlaza y la tarjeta entera es clicable
     # —el patrón que estrenó Analítica de vídeo (Xtore, 11-sep)—. Vídeo y PDF quedan
@@ -282,8 +316,9 @@ def tarjeta(app, pilar):
         acciones.append('<span class="app-entry-label"{}>{}</span>'.format(bilingue(entry_label, entry_label_en), esc(entry_label)))
     if video:
         acciones.append(
-            '<button type="button" class="app-action app-video" data-app-video="{}"{}{}>▶ Vídeo</button>'.format(
+            '<button type="button" class="app-action app-video" data-app-video="{}"{}{}{}>▶ Vídeo</button>'.format(
                 esc(video),
+                ' data-app-video-en="{}"'.format(esc(video_en)) if video_en else "",
                 bilingue_attr("aria-label", "Ver vídeo de {}".format(nombre_es), "Watch the {} video".format(nombre_en)),
                 bilingue("▶ Vídeo", "▶ Video"),
             )
@@ -300,6 +335,13 @@ def tarjeta(app, pilar):
         )
     else:
         acciones.append(boton_pronto("↓ PDF", "↓ PDF", "PDF", "PDF", nombre_es, nombre_en))
+    acciones.append(
+        '<a class="app-action app-demo" href="{}"{}{}>Pedir demo</a>'.format(
+            esc(mailto_demo(nombre_es, nombre_en)),
+            bilingue_attr("aria-label", "Pedir demo de {}".format(nombre_es), "Request a demo of {}".format(nombre_en)),
+            bilingue("Pedir demo", "Request a demo"),
+        )
+    )
     acciones.append('<span class="app-media-status" role="status" aria-live="polite"></span>')
 
     clases = "app-card"
@@ -308,7 +350,7 @@ def tarjeta(app, pilar):
     if es_pilar:
         clases += " app-card-pilar"
     return (
-        '<article class="{clases}" data-public-app-card="{slug}" data-pilar="{pid}" data-app-title="{titulo}">'
+        '<article class="{clases}" id="solucion-{slug}" data-public-app-card="{slug}" data-pilar="{pid}" data-app-title="{titulo}">'
         '<div class="app-card-head"><span class="app-icon" aria-hidden="true">{icono}</span>'
         '<span class="app-state" data-es="{estado}" data-en="{estado_en}">{estado}</span></div>'
         '<p class="app-pilar" title="{pdom}" data-es-title="{pdom}" data-en-title="{pdom_en}"><span class="app-pilar-n">{pn}</span>'
@@ -413,10 +455,14 @@ def reemplaza(texto, abre, cierra, bloque):
 
 def main():
     datos, pilares = carga_pilares()
+    demos = carga_demos()
     tarjetas = carga_zonas(pilares)
+    for app, _pilar in tarjetas:
+        if app["slug"] in demos and url_segura(app.get("video"), app["slug"], "video"):
+            sys.exit("✖ {} ya tiene vídeo de catálogo y también uno de demo".format(app["slug"]))
     cuenta = {p["id"]: sum(1 for _, pz in tarjetas if pz["id"] == p["id"]) for p in pilares}
 
-    bloque = "\n".join([ABRE] + [tarjeta(a, p) for a, p in tarjetas] + [CIERRA])
+    bloque = "\n".join([ABRE] + [tarjeta(a, p, demos) for a, p in tarjetas] + [CIERRA])
     original = INDEX.read_text(encoding="utf-8")
     nuevo = reemplaza(original, ABRE, CIERRA, bloque)
     nuevo = reemplaza(nuevo, ABRE_FILTRO, CIERRA_FILTRO,
