@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title data-es="Playlist en vivo · Admira.tv" data-en="Live playlist · Admira.tv">Playlist en vivo · Admira.tv</title>
+  <meta name="description" content="Lo que está saliendo ahora y lo siguiente, leído de una pantalla real. Sin escribir en la emisión.">
+  <meta name="theme-color" content="#070a10">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="canonical" href="https://admira.tv/envivo/">
+  <style>
+    :root{--bg:#070a10;--panel:#0c121c;--panel2:#101927;--line:#223047;--text:#e8eef6;--dim:#9eacc0;--green:#3df08a;--red:#ff4b55}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    a{color:inherit}
+    button{font:inherit}
+    :focus-visible{outline:3px solid var(--green);outline-offset:3px}
+    .shell{width:min(880px,calc(100% - 32px));margin:0 auto;padding:28px 0 64px}
+    .bar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .home{font-weight:800;text-decoration:none}
+    .lang{min-width:44px;min-height:44px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--text);font-weight:800;cursor:pointer}
+    .eyebrow{margin:28px 0 0;color:var(--green);font:800 12px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}
+    h1{margin:8px 0 0;font-size:clamp(36px,7vw,64px);letter-spacing:-.045em;line-height:.95}
+    .note{color:var(--dim);max-width:68ch}
+    .live{display:flex;align-items:center;gap:8px;margin:22px 0 0;font-weight:800}
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red)}
+    .ficha{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
+    .ficha h2{margin:0 0 10px;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--green)}
+    .portada{display:block;width:100%;max-height:420px;aspect-ratio:16/9;object-fit:cover;border-radius:12px;background:#000}
+    .sin{display:grid;place-items:center;width:100%;aspect-ratio:16/9;border-radius:12px;border:1px dashed var(--line);color:var(--dim)}
+    .portada[hidden],.sin[hidden]{display:none}
+    .titulo{margin:12px 0 0;font-size:clamp(22px,4vw,34px);letter-spacing:-.03em;line-height:1.15}
+    .meta{margin:6px 0 0;color:var(--dim);overflow-wrap:anywhere}
+    .siguiente{display:grid;grid-template-columns:112px minmax(0,1fr);gap:14px;align-items:center}
+    .siguiente .portada,.siguiente .sin{aspect-ratio:1;max-height:none}
+    .estado{color:var(--dim);min-height:1.4em}
+    .refrescar{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--text);font-weight:800;cursor:pointer}
+    @media(max-width:480px){
+      .shell{width:min(100% - 24px,880px)}
+      .siguiente{grid-template-columns:1fr}
+      .refrescar{width:100%}
+    }
+    @media(prefers-reduced-motion:reduce){.dot{box-shadow:none}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="bar">
+      <a class="home" href="/">Admira.tv</a>
+      <button type="button" class="lang" id="ykLangToggle">ENG</button>
+    </div>
+    <p class="eyebrow" data-es="Solo lectura" data-en="Read only">Solo lectura</p>
+    <h1 data-es="Playlist en vivo" data-en="Live playlist">Playlist en vivo</h1>
+    <p class="note" data-es="La playlist cliente.xpacio.hilomusical de Starbucks no está en la lectura pública: hilomusical/next?store=starbucks devuelve la cola vacía. Esta página lee lo que la pantalla informa ahora (signage/now) y la pieza siguiente de la cola que publicó. No escribe en la emisión ni en las playlists." data-en="Starbucks’ cliente.xpacio.hilomusical playlist is not in the public read: hilomusical/next?store=starbucks returns an empty queue. This page reads what the screen reports now (signage/now) and the next piece of the queue it published. It does not write to playout or playlists.">La playlist cliente.xpacio.hilomusical de Starbucks no está en la lectura pública: hilomusical/next?store=starbucks devuelve la cola vacía. Esta página lee lo que la pantalla informa ahora (signage/now) y la pieza siguiente de la cola que publicó. No escribe en la emisión ni en las playlists.</p>
+    <p class="live"><span class="dot" aria-hidden="true"></span><span data-es="Pantalla" data-en="Screen">Pantalla</span> <span id="pantallaNombre">xpaceos-web</span></p>
+
+    <article class="ficha" aria-labelledby="ahoraRotulo">
+      <h2 id="ahoraRotulo" data-es="Ahora" data-en="Now">Ahora</h2>
+      <img class="portada" id="ahoraPortada" alt="" hidden>
+      <div class="sin" id="ahoraSinPortada" hidden data-es="Sin portada" data-en="No cover">Sin portada</div>
+      <p class="titulo" id="ahoraTitulo">Leyendo…</p>
+      <p class="meta" id="ahoraMeta"></p>
+    </article>
+
+    <article class="ficha" aria-labelledby="siguienteRotulo">
+      <h2 id="siguienteRotulo" data-es="Siguiente" data-en="Next">Siguiente</h2>
+      <div class="siguiente">
+        <img class="portada" id="siguientePortada" alt="" hidden>
+        <div class="sin" id="siguienteSinPortada" hidden data-es="Sin portada" data-en="No cover">Sin portada</div>
+        <div>
+          <p class="titulo" id="siguienteTitulo">—</p>
+          <p class="meta" id="siguienteNota"></p>
+        </div>
+      </div>
+    </article>
+
+    <p class="estado" id="envivoEstado" role="status"></p>
+    <button type="button" class="refrescar" id="envivoRefrescar" data-es="Actualizar" data-en="Refresh">Actualizar</button>
+  </main>
+  <script defer src="/assets/portada-idioma.js?v=23.10.2026.r2"></script>
+  <script defer src="/envivo/envivo.js?v=23.10.2026.r2"></script>
+</body>
+</html>
