@@ -1,0 +1,21 @@
+{
+  "nota": "Vídeos reales del Stock con la etiqueta demo (índice stock.admira.store, 23-oct-2026). Sólo entran piezas que nombran una solución de la home. El generador no acepta otra URL. Donde no hay vídeo, la tarjeta sigue en «pronto».",
+  "videos": {
+    "admira-studio": {
+      "stockId": "1792701048324-eywxf8",
+      "src": "https://stock.admira.store/stock/1792701048324-eywxf8/asset.mp4?v=7923268",
+      "title": "Un prompt. Una tienda. · demo de lanzamiento · admira.studio crea, admira.store emite · v2"
+    },
+    "admira-store": {
+      "stockId": "1792701048324-eywxf8",
+      "src": "https://stock.admira.store/stock/1792701048324-eywxf8/asset.mp4?v=7923268",
+      "title": "Un prompt. Una tienda. · demo de lanzamiento · admira.studio crea, admira.store emite · v2"
+    },
+    "admira-biz": {
+      "stockId": "1792604778928-pk035m",
+      "src": "https://stock.admira.store/stock/1792604778928-pk035m/asset.mp4?v=27135014",
+      "src_en": "https://stock.admira.store/stock/1792604795452-61e27p/asset.mp4?v=25469907",
+      "title": "Demo · Comercial (Admirito) en admira.biz, con la voz de Admirito"
+    }
+  }
+}
