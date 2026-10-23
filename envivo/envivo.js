@@ -21,7 +21,7 @@
     return {
       estado: "en-antena",
       titulo: item.title || item.id,
-      portada: (publicada && publicada.thumb) || item.thumbnail || "",
+      portada: (publicada && publicada.thumb) || item.thumbnail || (item.type === "image" ? item.url : "") || "",
       duracion: Number(item.dur) || 0,
       desde: Number(item.startedAt) || 0,
       siguiente: siguiente ? { titulo: siguiente.title || siguiente.id, portada: siguiente.thumb || "" } : null,
@@ -69,6 +69,7 @@
     img.alt = titulo || "";
     img.hidden = false;
     vacio.hidden = true;
+    img.onerror = function () { img.hidden = true; vacio.hidden = false; };
     if (img.getAttribute("src") !== src) img.src = src;
   }
 

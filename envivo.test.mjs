@@ -41,4 +41,10 @@ test('la pieza de ahora y la siguiente salen de los dos GET, sin inventar', () =
   assert.equal(api.pantallaDe(''), 'xpaceos-web');
   assert.equal(api.pantallaDe('?screen=XpaceOS-Web'), 'xpaceos-web');
   assert.equal(api.pantallaDe('?screen=../emit'), 'xpaceos-web');
+  const imagen = api.pistaDe(
+    { item: { id: 'img', title: 'favicon-32.png', type: 'image', url: 'https://api.admira.store/stock/asset/img?v=1' } },
+    { items: [{ id: 'img', title: 'favicon-32.png', thumb: '' }, { id: 'b', title: 'Siguiente', thumb: 'https://stock.admira.store/stock/b/poster.jpg' }] }
+  );
+  assert.equal(api.portadaSegura(imagen.portada), 'https://api.admira.store/stock/asset/img?v=1');
+  assert.equal(imagen.siguiente.titulo, 'Siguiente');
 });
