@@ -58,13 +58,25 @@
     :root[data-mb-marca] main,:root[data-mb-marca] footer,:root[data-mb-marca] .video-dialog{--panel:#0c121c;--panel2:#101927;--line:#223047;--text:#e8eef6;--dim:#9eacc0;--green:var(--mbh-acento,#3df08a)}
     :root[data-mb-marca][data-mb-web="tv"] main .eyebrow{color:var(--mbh-acento,#3df08a)!important}
     :root[data-mb-marca] main .button.primary{background:var(--mbh-boton,var(--green));border-color:var(--mbh-boton,var(--green));color:var(--mbh-boton-texto,#04110b)}
-    .hero{padding:clamp(72px,11vw,140px) 0 70px;text-align:center}
+    .hero{padding:clamp(36px,5vw,72px) 0 70px;text-align:center}
     .eyebrow{margin:0;color:var(--green);font:800 12px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}
     .hero h1{font-size:clamp(48px,9vw,106px);line-height:.95;letter-spacing:-.055em;margin:20px auto;max-width:1020px}.hero h1 em{font-style:normal;color:var(--red)}
     .hero-lead{max-width:760px;margin:0 auto;color:var(--dim);font-size:clamp(17px,2.2vw,22px)}
     .hero-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:30px}
     .button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 18px;border:1px solid var(--line);border-radius:999px;text-decoration:none;font-weight:800}.button.primary{background:var(--green);border-color:var(--green);color:#04110b}.button:hover{transform:translateY(-1px);border-color:var(--green)}
     section{padding:72px 0}
+    /* En antena ahora: el canal real (/canal), empotrado en limpio, silenciado y en sincro.
+       El iframe es opaco (sandbox sin allow-same-origin): no hereda pantalla ni circuito
+       guardados, así que no se hace pasar por un player. rtb=0 y shot=0 apagan anuncios
+       y capturas. La lista la pone el propio canal y ya da la vuelta sola. */
+    .onair{padding:18px 0 8px}
+    .onair-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+    .onair-copy{min-width:0}
+    .onair-bar h2{display:flex;align-items:center;gap:10px;margin:0;font-size:clamp(22px,3vw,34px);letter-spacing:-.03em;line-height:1.1}
+    .onair-dot{width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red);flex:none}
+    .onair-note{margin:6px 0 0;color:var(--dim);font-size:14px;max-width:52ch}
+    .onair-stage{position:relative;width:100%;aspect-ratio:16/9;max-height:min(58vh,560px);min-height:180px;background:#000;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+    .onair-stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;pointer-events:none}
     .section-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:24px;margin-bottom:28px}.section-head h2{margin:8px 0 0;font-size:clamp(32px,5vw,56px);letter-spacing:-.04em;line-height:1}.section-head p{margin:0;color:var(--dim);max-width:690px}.catalog-count{font:800 12px ui-monospace,monospace;color:var(--green);white-space:nowrap}
     .apps-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
     .app-card{display:flex;min-width:0;flex-direction:column;background:linear-gradient(155deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;padding:17px;box-shadow:0 18px 48px rgba(0,0,0,.14)}
@@ -116,7 +128,8 @@
     .video-dialog[hidden]{display:none}.video-dialog{position:fixed;inset:0;z-index:2147483646;display:grid;place-items:center;padding:20px;background:rgba(2,5,9,.82);backdrop-filter:blur(5px)}.video-box{width:min(920px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 24px 90px #000}.video-bar{display:flex;align-items:center;gap:16px;padding:12px 15px;border-bottom:1px solid var(--line)}.video-bar h2{margin:0;font-size:16px}.video-close{margin-left:auto;width:38px;height:38px;border:1px solid var(--line);border-radius:9px;background:#0a1019;color:var(--text);cursor:pointer}.video-status{margin:0;padding:10px 15px;color:var(--dim);font-size:13px}.video-box video{display:block;width:100%;max-height:72vh;background:#000}.video-box video[hidden]{display:none}
     @media(max-width:980px){.apps-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pilares-btns{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media(max-width:720px){.apps-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.eco-grid{grid-template-columns:1fr}.section-head{grid-template-columns:1fr}.catalog-count{white-space:normal}}
-    @media(max-width:480px){.shell{width:min(100% - 24px,var(--max))}.apps-grid{grid-template-columns:1fr}.pilares-btns{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.pilar-btn{padding:10px 10px 9px}.hero{padding-top:64px}.app-card{padding:16px}}
+    @media(max-width:720px){.onair-stage{max-height:min(52vh,420px)}}
+    @media(max-width:480px){.shell{width:min(100% - 24px,var(--max))}.apps-grid{grid-template-columns:1fr}.pilares-btns{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.pilar-btn{padding:10px 10px 9px}.onair{padding-top:12px}.onair-bar{flex-direction:column;align-items:stretch}.onair-bar .button{width:100%}.onair-stage{min-height:168px;border-radius:12px}.hero{padding-top:28px}.app-card{padding:16px}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
   </style>
   <!-- pilares-css:generado — NO editar a mano: tools/gen-apps-grid.py --><style id="pilaresCss">[data-pilar]{--pc-tinte:0.06;--pc-tinte-pilar:0.16}[data-pilar="studio"]{--pc:#FF3366;--pc-rgb:255,51,102;--pc-ink:#e8eef6;--pc-chip-ink:#070a10}[data-pilar="store"]{--pc:#33FF99;--pc-rgb:51,255,153;--pc-ink:#33FF99;--pc-chip-ink:#070a10}[data-pilar="tv"]{--pc:#FFCC00;--pc-rgb:255,204,0;--pc-ink:#FFCC00;--pc-chip-ink:#070a10}[data-pilar="app"]{--pc:#FF33CC;--pc-rgb:255,51,204;--pc-ink:#FF33CC;--pc-chip-ink:#070a10}[data-pilar="biz"]{--pc:#26DEEC;--pc-rgb:38,222,236;--pc-ink:#26DEEC;--pc-chip-ink:#070a10}</style><!-- /pilares-css:generado -->
@@ -184,6 +197,21 @@
   </div>
 
   <main id="main">
+    <section class="onair" id="en-antena" aria-labelledby="onAirTitle">
+      <div class="shell">
+        <div class="onair-bar">
+          <div class="onair-copy">
+            <h2 id="onAirTitle"><span class="onair-dot" aria-hidden="true"></span><span data-es="En antena ahora" data-en="On air now">En antena ahora</span></h2>
+            <p class="onair-note" data-es="La emisión real del canal, en silencio y sin controles." data-en="The real broadcast of the channel, muted and without controls.">La emisión real del canal, en silencio y sin controles.</p>
+          </div>
+          <a class="button primary" href="/adcelerate/demo/" data-es="Pide una demo" data-en="Request a demo">Pide una demo</a>
+        </div>
+        <div class="onair-stage">
+          <iframe src="/canal.html?clean=1&amp;muted=1&amp;stream=1&amp;sincro=1&amp;fit=screen&amp;rtb=0&amp;shot=0" title="Emisión en directo del canal de Admira.tv, en silencio" data-es-title="Emisión en directo del canal de Admira.tv, en silencio" data-en-title="Admira.tv channel, live and muted" allow="autoplay" sandbox="allow-scripts" referrerpolicy="no-referrer" tabindex="-1"></iframe>
+        </div>
+      </div>
+    </section>
+
     <section class="hero">
       <div class="shell">
         <p class="eyebrow" data-es="Admira Xperience · espacio, contenido y contexto" data-en="Admira Xperience · space, content and context">Admira Xperience · espacio, contenido y contexto</p>
