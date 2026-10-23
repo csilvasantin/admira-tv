@@ -312,6 +312,9 @@
     .topbar .sub,.topbar .center-ttl{display:none}
     .iconbtn{width:38px;height:38px}
   }
+  .shotint{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--dim);margin:4px 0}
+  .shotint select,.shotint input{background:transparent;color:inherit;border:1px solid rgba(255,255,255,.18);border-radius:6px;font:inherit;padding:3px 5px}
+  .shotint .ok{color:var(--acc)}
 </style>
 </head>
 <body>
@@ -428,6 +431,13 @@
       <div class="fld">
         <div class="tog" id="f-previo-video"><span>Reproducir vídeo (solo Contenido)</span><span class="sw"></span></div>
       </div>
+      <div class="fld shotint" id="f-shotint">
+        <label><span>📷 Captura nativa · por defecto</span></label>
+        <select id="f-shotint-global"><option value="">15 s (fábrica)</option><option value="8">8 s</option><option value="15">15 s</option><option value="30">30 s</option><option value="60">1 min</option><option value="300">5 min</option><option value="0">apagada</option></select>
+        <input id="f-gridkey" type="password" placeholder="GRID_KEY (para guardar)" autocomplete="off" size="14">
+        <span id="f-shotint-msg"></span>
+      </div>
+      <p class="note"><b>📷 Captura nativa</b> = cada cuántos segundos capturan los players nativos (Mac/iOS) lo que emiten (de <b>/signage/shot/interval</b>). Global para toda la flota y, en cada tarjeta, un ajuste propio que lo pisa. Lo aplican en ≤ 1 min.</p>
       <p class="note"><b>Contenido en antena</b> = el asset emitido (de <b>/signage/now</b>), <i>no</i> captura del cristal — los vídeos se ven como fotograma fijo salvo que actives reproducir. <b>📷 Captura real</b> = el fotograma que el propio player sube (de <b>/signage/shot</b>) con su antigüedad; los players antiguos aún no la suben (placeholder honesto). El <b>Refresco</b> (Off/5/10/30s) aplica a ambos modos.</p>
     </div>
   </div>
@@ -795,6 +805,36 @@
 
   // ─── Render / actualización de tarjetas (idempotente por screen) ───
   const cards={};       // screen → rec
+  // ─── INTERVALO DE CAPTURA NATIVA (GET/PUT /signage/shot/interval, pixer-worker) ───
+  const SHOTINT_API='https://api.admira.store/signage/shot/interval';
+  const SHOTINT={global:null,screens:{}};
+  const gridKey=()=>{ try{ return localStorage.getItem('grid_key')||''; }catch(_){ return ''; } };   // misma clave que cms.html
+  function loadShotIntervals(){
+    return fetch(SHOTINT_API+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+      if(!d||!d.ok) return;
+      SHOTINT.global=d.global; SHOTINT.screens=d.screens||{};
+      const g=document.getElementById('f-shotint-global'); if(g) g.value=d.global==null?'':String(d.global);
+      Object.keys(cards).forEach(scr=>{ const sel=cards[scr].el.querySelector('[data-shotint]'); if(sel) sel.value=SHOTINT.screens[scr]!=null?String(SHOTINT.screens[scr]):''; });
+    }).catch(()=>{});
+  }
+  function putShotInterval(screen,value,msgEl){
+    const key=gridKey();
+    if(!key){ if(msgEl) msgEl.textContent='falta GRID_KEY'; return; }
+    if(msgEl){ msgEl.className=''; msgEl.textContent='guardando…'; }
+    fetch(SHOTINT_API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({key,screen:screen||'*',interval:value===''?null:Number(value)})})
+      .then(r=>r.json().then(d=>({r,d}))).then(({r,d})=>{
+        if(!r.ok||!d.ok){ if(msgEl) msgEl.textContent='✗ '+(d.reason||r.status); return; }
+        if(screen){ if(d.interval==null) delete SHOTINT.screens[screen]; else SHOTINT.screens[screen]=d.interval; } else SHOTINT.global=d.interval;
+        if(msgEl){ msgEl.className='ok'; msgEl.textContent='✓'; setTimeout(()=>{ msgEl.textContent=''; },2500); }
+      }).catch(()=>{ if(msgEl) msgEl.textContent='✗ red'; });
+  }
+  (()=>{   // el script va tras el marcado: los controles ya existen
+    const g=document.getElementById('f-shotint-global'), k=document.getElementById('f-gridkey');
+    if(k){ k.value=gridKey(); k.addEventListener('change',()=>{ try{ localStorage.setItem('grid_key',k.value||''); }catch(_){} }); }
+    if(g) g.addEventListener('change',()=>putShotInterval('',g.value,document.getElementById('f-shotint-msg')));
+  })();
+  loadShotIntervals(); setInterval(loadShotIntervals,60000);
   const infoByScreen={};// screen → info (para filtros/lote)
   const manualScreens=new Set();
   let firstLoad=true;
@@ -813,6 +853,7 @@
       '</div>'+
       '<div class="now" data-now><div class="lab">Emitiendo ahora</div><div class="ttl">—</div></div>'+
       '<div class="prev" data-prev></div>'+
+      '<div class="shotint">📷 captura cada <select data-shotint><option value="">global</option><option value="8">8 s</option><option value="15">15 s</option><option value="30">30 s</option><option value="60">1 min</option><option value="300">5 min</option><option value="0">apagada</option></select><span data-shotintmsg></span></div>'+
       '<div class="dlwrap" data-dl><div class="tr"><div class="br" data-dlbar></div></div><div class="tx" data-dltx></div></div>'+
       '<div class="ctlrow">'+padHtml+btnHtml+'</div>'+
       '<div class="tagrow"><input data-tagin placeholder="tag(s): musica,vertical — vacío = todo" autocomplete="off" spellcheck="false">'+
@@ -843,6 +884,9 @@
       plListEl:card.querySelector('[data-plist]'),
       plOpen:false, plItems:[], plKey:'', plOnAir:-1,
       lastItem:null, prevKey:'', shotKey:''};
+    const siSel=card.querySelector('[data-shotint]'), siMsg=card.querySelector('[data-shotintmsg]');
+    if(SHOTINT.screens[scr]!=null) siSel.value=String(SHOTINT.screens[scr]);
+    siSel.addEventListener('change',()=>putShotInterval(scr,siSel.value,siMsg));
     // playlist plegable: al abrir carga; los clicks en filas saltan con goto-<n>
     rec.plBarEl.addEventListener('click',()=>{
       // en modo SOLO la parrilla izquierda es fija: no se pliega
@@ -1106,7 +1150,7 @@
           if(rec.shotKey!=='none'){ rec.shotKey='none'; box.innerHTML=shotPh('sin captura<br><span style="opacity:.72">player sin fase 2</span>'); }
           return;
         }
-        const ageTx='captura hace '+shotAgeTxt(m.ageSeconds);
+        const ageTx='captura '+new Date(m.ts).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · hace '+shotAgeTxt(m.ageSeconds);
         const key='shot|'+m.ts;
         if(key===rec.shotKey){ const a=box.querySelector('[data-shotage]'); if(a) a.textContent=ageTx; return; }  // mismo frame → solo edad
         rec.shotKey=key;
