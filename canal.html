@@ -1667,7 +1667,7 @@ function signageNowPush(it){
   const effectiveDuration=syncOn?Math.round(syncSlotMs()/1000):editorialSec(it);
   const effectiveStartedAt=syncOn?(now-Math.round(syncElapsedMs())):now;
   const item={ id:it.id, url:it.url, type:it.type||'image', ar:(mupiAR||itemAR(it)||(9/16)),
-    title:(it.title||it.prompt||'').slice(0,80), dur:effectiveDuration, startedAt:effectiveStartedAt, ts:now, aud:_lastAud, audio:playerAudioState(), sinc };
+    title:(it.title||it.prompt||'').slice(0,80), poster:(()=>{ const p=String(it.poster||it.thumbnail||it.thumb||((it.type==='image'||it.type==='animation')?it.url:'')||''); return /^https:\/\//.test(p)?p.slice(0,500):''; })(), dur:effectiveDuration, startedAt:effectiveStartedAt, ts:now, aud:_lastAud, audio:playerAudioState(), sinc };
   const cambiaPieza = !_nowItem || String(_nowItem.id)!==String(item.id);
   _nowItem=item; _postNow(item);
   // Foto y título salen JUNTOS. El título viaja en este beat y cambia al instante; la
