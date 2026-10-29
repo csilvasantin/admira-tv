@@ -15,7 +15,7 @@ test("[1] la sincro no re-monta la antena si el máster no cambió", () => {
   assert.match(canal, /const sig=items\.map\(i=>i\.id\+':'\+Math\.round\(Number\(i\._dur\|\|i\.dur\)\|\|0\)\)\.join\(','\)\+'\|'\+\(d\.slotMs\|\|20000\)\+'\|'\+leader/);
   assert.match(canal, /if\(syncOn && \(sig!==_syncSig \|\| !hadRemote\)\)\{ _syncSig=sig; rebuild\(true\); \}/);
   // El reloj del máster se refresca SIEMPRE, gateado no.
-  assert.match(canal, /SYNC_REMOTE=\{ items, slotMs:d\.slotMs\|\|20000, offset:\(d\.serverNow\|\|Date\.now\(\)\)-Date\.now\(\) \};\s+\/\/ el reloj/);
+  assert.match(canal, /SYNC_REMOTE=\{ items, slotMs:d\.slotMs\|\|20000, offset:masterClockOffset \};\s+\/\/ reloj medido/);
   // Y tras recuperarse con firma igual, el rótulo no sigue diciendo SIN MÁSTER.
   assert.match(canal, /else if\(syncOn\)\{ try\{ setLive\('SINCRO '\+\(_syncOwnPlaylist\?/);
 });

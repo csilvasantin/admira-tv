@@ -67,6 +67,7 @@
 <!-- Motor condicional XPL (catálogo de hechos/acciones + engine). Copia vendorizada
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
+<script src="/assets/mba-auto-sync.js?v=20261029-auto1"></script>
 <script src="xpl-runtime.js?v=22.10.2026.r2.1134"></script>
 <script>
   window.ADMIRA_VERSION='v.22.10.2026.r2.11:34';
@@ -658,7 +659,52 @@ function clearExtendedAssignment(){
   if(!_extendedAssignment) return false;
   _extendedAssignment=null; _extendedClockOffset=0; paintExtendedTile(); seenSig=''; return true;
 }
+var _mbaAutoCoordinator=null, _mbaPreparedRevision='';
+function applyMBAAutoSnapshot(snapshot,offset){
+  if(!syncOn||!snapshot) return;
+  const changed=!SYNC_REMOTE||SYNC_REMOTE.autoRevision!==snapshot.revision;
+  SYNC_REMOTE={items:snapshot.items,slotMs:20000,offset,epochMs:snapshot.epochMs,autoRevision:snapshot.revision};
+  _syncOwnPlaylist=true;
+  if(changed){ _syncSig='mba:'+snapshot.revision; rebuild(true); }
+}
+async function fetchMBAAutoState(){
+  const api=window.AdmiraMBAAutoSync;
+  if(!api||!api.isTargetScreen(scr.screen)||!syncOn) return false;
+  if(!_mbaAutoCoordinator) _mbaAutoCoordinator=api.create({
+    onChange:applyMBAAutoSnapshot,
+    onClock:offset=>{ if(SYNC_REMOTE&&SYNC_REMOTE.autoRevision) SYNC_REMOTE.offset=offset; }
+  });
+  try{
+    const r=await fetch('https://brain.digitalavatar.ai/sync/mba/state?screen='+encodeURIComponent(scr.screen)+'&t='+Date.now(),{cache:'no-store'});
+    if(!r.ok) throw new Error('mba sync http '+r.status);
+    const packet=await r.json(), receivedAt=Date.now();
+    const active=_mbaAutoCoordinator.receive(packet,receivedAt);
+    applyMBAAutoSnapshot(active,_mbaAutoCoordinator.offset);
+    try{localStorage.setItem('adtv_mba_auto_state',JSON.stringify({packet,offset:_mbaAutoCoordinator.offset}));}catch(_){}
+    const pending=_mbaAutoCoordinator.pending;
+    if(pending&&pending.revision!==_mbaPreparedRevision){
+      _mbaPreparedRevision=pending.revision;
+      const changed=pending.items.filter(i=>!active.items.some(a=>a.id===i.id&&a.url===i.url));
+      // Download new assets ahead of the common activation; never mutate the active timeline.
+      Promise.resolve().then(async()=>{for(const item of changed){try{await fetchToCache(item);}catch(_){}}});
+    }
+    return true;
+  }catch(error){
+    if(_mbaAutoCoordinator.current){applyMBAAutoSnapshot(_mbaAutoCoordinator.current,_mbaAutoCoordinator.offset);return true;}
+    try{
+      const saved=JSON.parse(localStorage.getItem('adtv_mba_auto_state')||'null');
+      if(saved&&saved.packet&&Number.isFinite(saved.offset)){
+        saved.packet.serverNow=Date.now()+saved.offset;
+        const active=_mbaAutoCoordinator.receive(saved.packet,Date.now());
+        applyMBAAutoSnapshot(active,_mbaAutoCoordinator.offset);return true;
+      }
+    }catch(_){}
+    console.warn('[canal] MBA auto sincro no disponible; conserva la fuente anterior',String(error&&error.message||error));
+    return false;
+  }
+}
 async function fetchSyncState(){
+  if(typeof fetchMBAAutoState==='function'&&await fetchMBAAutoState()) return;
   try{
     const d=await fetch(SYNC_API+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('http '+r.status)));
     // Measure when the clock arrives. Fetching the screen's theme below can take
@@ -910,7 +956,7 @@ function syncItemDurationMs(it){
 function syncTimeline(){
   if(!playlist.length) return {index:0,duration:syncFallbackSlotMs(),elapsed:0,remaining:syncFallbackSlotMs(),total:syncFallbackSlotMs()};
   const durations=playlist.map(syncItemDurationMs), total=durations.reduce((sum,ms)=>sum+ms,0)||syncFallbackSlotMs();
-  const now=syncNow(), pos=((now%total)+total)%total;
+  const now=syncNow()-(SYNC_REMOTE&&SYNC_REMOTE.epochMs||0), pos=((now%total)+total)%total;
   let start=0,index=durations.length-1;
   for(let i=0;i<durations.length;i++){ if(pos<start+durations[i]){ index=i; break; } start+=durations[i]; }
   const duration=durations[index], elapsed=Math.max(0,pos-start);
@@ -1662,7 +1708,7 @@ function signageNowPush(it){
   // franja y de cuántas piezas es su bucle. Dos pantallas sincronizadas de verdad
   // dicen el MISMO idx; si dicen distinto, o el reloj o el bucle no coinciden.
   const sinc = { on:(syncOn||!!_extendedAssignment)?1:0, modo:_extendedAssignment?'extended':playoutMode };
-  if(syncOn){ try{ sinc.idx=syncIndex(); sinc.slot=Math.round(syncSlotMs()/1000); sinc.n=playlist.length; }catch(_){} }
+  if(syncOn){ try{ sinc.idx=syncIndex(); sinc.slot=Math.round(syncSlotMs()/1000); sinc.n=playlist.length; if(SYNC_REMOTE&&SYNC_REMOTE.autoRevision){sinc.revision=SYNC_REMOTE.autoRevision;sinc.group='mba-admira-tv';} }catch(_){} }
   if(_extendedAssignment&&_extendedAssignment.tile){ sinc.tile=_extendedAssignment.tile; sinc.revision=_extendedAssignment.revision||0; }
   const effectiveDuration=syncOn?Math.round(syncSlotMs()/1000):editorialSec(it);
   const effectiveStartedAt=syncOn?(now-Math.round(syncElapsedMs())):now;
@@ -2188,9 +2234,9 @@ async function runTechnicalAnalysis(){
   if(_techBusy) return; _techBusy=true;
   try{ while(_techQ.length){ const it=_techQ.shift(),id=String(it&&it.id||''); _techQueued.delete(id); try{ const tech=await analyzeCachedContent(it); if(tech){
       _cacheTech.set(id,tech);
-      if(tech.duration>0){ const sec=Math.ceil(tech.duration); it._dur=sec;
-        for(const p of playlist){ if(String(p&&p.id||'')===id) p._dur=sec; }
-        for(const p of all){ if(String(p&&p.id||'')===id) p._dur=sec; }
+      if(tech.duration>0){ const sec=Math.ceil(tech.duration); if(!it._syncDurationLocked) it._dur=sec;
+        for(const p of playlist){ if(String(p&&p.id||'')===id&&!p._syncDurationLocked) p._dur=sec; }
+        for(const p of all){ if(String(p&&p.id||'')===id&&!p._syncDurationLocked) p._dur=sec; }
       }
       saveCacheTech(); _cacheSig=''; cacheReport(); signagePlaylistPush();
     } }catch(_){} await new Promise(r=>setTimeout(r,80)); } }
@@ -2628,7 +2674,7 @@ async function play(i, forced){
     v.onloadedmetadata=()=>{ if(_tok!==_playTok||paused) return;
       if(!v.videoWidth&&!v.videoHeight&&!AV1_OK&&!_codecBad.has(String(it.id))&&VSRC===SRC){ codecBadMark(it,'sin-pista-video'); play(cur,it); return; }
       if(v.duration&&isFinite(v.duration)){
-      it._dur=Math.ceil(v.duration);
+      if(!it._syncDurationLocked) it._dur=Math.ceil(v.duration);
       // Devuelve la duración descubierta al máster. Antes sólo se corregía /signage/now:
       // la playlist seguía en dur:0 y el temporizador sincro mantenía el corte de 20 s.
       try{ signagePlaylistPush(); }catch(_){}
@@ -2749,7 +2795,7 @@ async function play(i, forced){
     // Longitud real del fichero → _dur (como el vídeo): la ranura editorial se recorta a
     // ella, el mando recibe la duración verdadera y el proof-of-play no apunta de más.
     a.onloadedmetadata=()=>{ if(_tok!==_playTok||!a.duration||!isFinite(a.duration)) return;
-      const before=editorialSec(it); it._dur=Math.ceil(a.duration);
+      const before=editorialSec(it); if(!it._syncDurationLocked) it._dur=Math.ceil(a.duration);
       try{ signagePlaylistPush(); }catch(_){}
       if(_nowItem&&String(_nowItem.id)===String(it.id)){ _nowItem.dur=syncOn?Math.round(syncSlotMs()/1000):editorialSec(it); _nowItem.ts=Date.now(); _postNow(_nowItem); }
       if(!syncOn&&usesAdv&&editorialSec(it)!==before) armAudioAdvance(it);
@@ -3001,7 +3047,7 @@ function rebuild(restart){
     // El rótulo dice DE DÓNDE sale la playlist: «KIOSKO <screen>» (su tema, el mismo que emite el
     // gemelo) o «MÁSTER GLOBAL» (sin tema publicado). Antes ambos decían «SINCRO CANAL» y el iPad de
     // Jardinets podía llevar un día emitiendo otra cosa sin que nadie lo viera (10-sep-2026).
-    setLive(SYNC_REMOTE ? ('SINCRO '+(_syncOwnPlaylist?('KIOSKO '+scr.screen):'CANAL · máster global')+' · '+playlist.length+' en loop')
+    setLive(SYNC_REMOTE ? ('SINCRO '+(SYNC_REMOTE.autoRevision?'MBA · automático':_syncOwnPlaylist?('KIOSKO '+scr.screen):'CANAL · máster global')+' · '+playlist.length+' en loop')
                         : ('SINCRO SIN MÁSTER · '+playlist.length+' en loop · orden propio'),
             playlist.length>0 && !!SYNC_REMOTE);
     renderChan();
@@ -3092,7 +3138,7 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   saveCatalog();   // persiste el último catálogo bueno para arranque offline
   guardState().source='live';
   // etiquetas de formato/aspecto/resolución desde la caché de dimensiones (instantáneo).
-  for(const it of all){ const dd=dimCache[it.id]; if(dd){ applyFmt(it,dd); if(dd.dur>0) it._dur=Math.ceil(dd.dur); it._fmtDone=true; } }
+  for(const it of all){ const dd=dimCache[it.id]; if(dd){ applyFmt(it,dd); if(dd.dur>0&&!it._syncDurationLocked) it._dur=Math.ceil(dd.dur); it._fmtDone=true; } }
   // la firma incluye tags+categoría: si editas el metadato de un vídeo, se detecta y reordena.
   const sig=all.map(v=>v.id+'~'+((v.tags||[]).join('.'))+'~'+(v.category||'')+(xtoreMusicEnabled()?'~'+v.type+'~'+v.url+'~'+v.createdAt:'')).join(',')+'|'+JSON.stringify(seg)+'|'+cfg.max+'|'+playoutMode;
   const isNew=(sig!==seenSig);
@@ -4105,7 +4151,7 @@ async function measurePass(){ if(xtoreMusicEnabled()||_measuring) return;
   const todo=all.filter(it=>{ const k=KIND[it.type]; return (k==='video'||k==='image')&&!it._fmtDone; }); if(!todo.length) return;
   _measuring=true; let i=0, changed=false;
   async function wk(){ while(i<todo.length){ const it=todo[i++]; let dim=dimCache[it.id];
-    if(!dim){ dim=await measureMedia(it); if(dim) dimCache[it.id]=dim; } it._fmtDone=true; if(dim){ applyFmt(it,dim); if(dim.dur>0) it._dur=Math.ceil(dim.dur); changed=true; } } }
+    if(!dim){ dim=await measureMedia(it); if(dim) dimCache[it.id]=dim; } it._fmtDone=true; if(dim){ applyFmt(it,dim); if(dim.dur>0&&!it._syncDurationLocked) it._dur=Math.ceil(dim.dur); changed=true; } } }
   await Promise.all([wk(),wk(),wk(),wk()]); _measuring=false;
   if(changed){ try{ save('adtv_dims',JSON.stringify(dimCache)); }catch(_){} seenSig=''; renderChan(); renderRail();
     try{ signagePlaylistPush(); }catch(_){}
