@@ -20,6 +20,8 @@ function functionSource(source, name) {
       else if (c === quote) quote = '';
       continue;
     }
+    // Escaped slashes in a regex literal are not the start of a line comment.
+    if(c==='\\'){i++;continue;}
     if(c==='/'&&source[i+1]==='/'){lineComment=true;i++;continue;}
     if(c==='/'&&source[i+1]==='*'){blockComment=true;i++;continue;}
     if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
