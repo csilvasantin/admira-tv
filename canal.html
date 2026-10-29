@@ -1695,7 +1695,7 @@ window.addEventListener('offline',()=>refreshDeviceTelemetry(true));
 // Sin keepalive (r7): en WebKit de iOS 17 la cuota de 64 KiB de cuerpos keepalive no se libera
 // y, tras unos POST, todos los siguientes se rechazan en silencio → el iPad latía UNA vez por
 // carga y perdía proof-of-play. Estos envíos ocurren con la página viva: fetch normal.
-function _postNow(item){ if(XTORE_PARENT&&xtoreMusicEnabled())return; try{ if(item) item.audio=playerAudioState(); DEVICE_TELEMETRY.audio=playerAudioState();
+function _postNow(item){ if(XTORE_PARENT&&xtoreMusicEnabled())return; try{ if(item){item.audio=playerAudioState();if(item.sinc&&item.sinc.on&&typeof precisionSyncStatus==='function')item.sinc.precision=precisionSyncStatus();} DEVICE_TELEMETRY.audio=playerAudioState();
   // Lo pintado se MIDE justo antes de serializar: refreshDeviceTelemetry sustituye DEVICE_TELEMETRY tras
   // esperar a storage.estimate y podía publicar la medida de antes de un giro (Creador de incidencias).
   try{ if(DEVICE_TELEMETRY.display) Object.assign(DEVICE_TELEMETRY.display,measuredPaint()); }catch(_){}

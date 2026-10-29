@@ -5,6 +5,19 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const api=createRequire(import.meta.url)('./assets/precision-sync.js');
 const mba=createRequire(import.meta.url)('./assets/mba-auto-sync.js');
+test('every existing heartbeat path samples current precision immediately before serialization',()=>{
+ const html=readFileSync(new URL('./canal.html',import.meta.url),'utf8');
+ const code=html.slice(html.indexOf('function _postNow(item){'),html.indexOf('// ── GUARDIA DE EMISIÓN'));
+ let sent;const live={servo:{mode:'locked',driftMs:12},mediaTime:7.5};
+ const ctx=vm.createContext({XTORE_PARENT:false,xtoreMusicEnabled:()=>false,playerAudioState:()=>({muted:true}),
+  precisionSyncStatus:()=>live,DEVICE_TELEMETRY:{},NOW_API:'https://test.invalid/now',scr:{screen:'test'},
+  TELEMETRY_PRODUCER:'test',window:{ADMIRA_VERSION:'test'},guardHealth:()=>({}),
+  fetch:(url,options)=>{sent=JSON.parse(options.body);return Promise.resolve({ok:true});}});
+ vm.runInContext(code,ctx);ctx.item={id:'a',sinc:{on:1,precision:{servo:{mode:'awaiting-media'},mediaTime:0}}};
+ vm.runInContext('_postNow(item)',ctx);assert.deepEqual(sent.item.sinc.precision,live);
+ ctx.item.sinc.on=0;ctx.item.sinc.precision=null;vm.runInContext('_postNow(item)',ctx);assert.equal(sent.item.sinc.precision,null);
+ vm.runInContext('_postNow(null)',ctx);assert.equal(sent.item,null);
+});
 const samples=offset=>Array.from({length:9},(_,i)=>({offset:offset+(i>4?2000:0),rtt:i>4?800:20+i}));
 function clock(){let wall=100000,mono=0,saved;const c=api.createClock({wallNow:()=>wall,monoNow:()=>mono,save:v=>saved=v});
  return {c,step:ms=>{wall+=ms;mono+=ms;},jump:ms=>wall+=ms,get saved(){return saved;}};}
