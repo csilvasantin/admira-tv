@@ -175,9 +175,20 @@ test('only a validated within-band asset lead survives a new identity; another a
  s=h.run(5000);assert.equal(s.seeks,1);assert.ok(Math.abs(s.driftMs)<=35);
  h.swap('a|https://s/a-new-url|228',4);assert.equal(h.tick().nextSeekLeadMs,40);
 });
-test('asset lead cache is limited to32entries and fixed-rate guards never resume paused or disabled media',()=>{
- const h=seekHarness();for(let i=0;i<33;i++){h.swap('asset-'+i,i+1);h.run(20000);}
- h.swap('asset-0',40);assert.equal(h.tick().leadSource,'default');
+test('asset lead cache evicts after 129 entries and fixed-rate guards never resume paused or disabled media',()=>{
+ const h=seekHarness();for(let i=0;i<129;i++){h.swap('asset-'+i,i+1);h.run(20000);}
+ h.swap('asset-0',140);assert.equal(h.tick().leadSource,'default');
+ h.swap('asset-128',141);assert.equal(h.tick().leadSource,'asset');
  h.media.paused=true;assert.equal(h.tick().mode,'idle');assert.equal(h.media.paused,true);
  h.media.paused=false;assert.equal(h.tick(false).mode,'idle');assert.equal(h.writes,0);
+});
+
+test('50 MBA assets and 120 generic-theme assets retain their learned lead through another full cycle',()=>{
+ for(const count of [50,120]){
+  const h=seekHarness();for(let i=0;i<count;i++){h.swap('programme-'+i,i+1);h.run(20000);}
+  for(let i=0;i<count;i++){
+   h.swap('programme-'+i,count+i+1);assert.equal(h.tick().leadSource,'asset',`count ${count} asset ${i}`);
+   const state=h.run(5000);assert.equal(state.seeks,1);assert.ok(Math.abs(state.driftMs)<=35);
+  }
+ }
 });

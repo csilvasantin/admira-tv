@@ -238,7 +238,7 @@
         nextLead = clamp(pending.usedLead - residual, 0, 2000);
         if (assetKey && Math.abs(residual) <= 35) {
           learnedAssets.delete(assetKey); learnedAssets.set(assetKey, nextLead);
-          if (learnedAssets.size > 32) learnedAssets.delete(learnedAssets.keys().next().value);
+          if (learnedAssets.size > 128) learnedAssets.delete(learnedAssets.keys().next().value);
         }
         state = {...state, mode: 'settled', settledLatencyMs: input.nowMs - pending.startedAt,
           residualAfterSeekMs: residual, nextSeekLeadMs: nextLead, leadSource: 'measured', seekInFlight: false};

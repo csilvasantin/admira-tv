@@ -44,7 +44,8 @@ Pausa del operador, standby, modo local, directo, previo, buffering y autoplay
 bloqueado no fuerzan reproducción.
 
 En WebKit el adelanto aprendido se conserva sólo en memoria, por clave publicada
-ID+URL+duración, con máximo 32 piezas. Sólo se guarda si el residual asentado queda
+ID+URL+duración, con máximo 128 piezas: cubre el grupo MBA de 50 y temas de hasta
+120. Sólo se guarda si el residual asentado queda
 dentro de ±35 ms; otro archivo o duración inicia su propia adquisición. No se
 persisten calibraciones ni se presupone el mismo coste de decoder entre codecs.
 La primera adquisición puede requerir varios saltos y segundos. Una nueva vuelta
