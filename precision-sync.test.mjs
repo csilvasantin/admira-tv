@@ -130,7 +130,7 @@ test('a stalled seek times out without a seek storm and a paused operator never 
 });
 test('canal telemetry refuses a servo sample from the previous media token',()=>{
  const html=readFileSync(new URL('./canal.html',import.meta.url),'utf8');
- const source=html.slice(html.indexOf('function precisionSyncStatus(){'),html.indexOf('// The same servo controls'));
+ const source=html.slice(html.indexOf('function precisionSyncStatus(){'),html.indexOf('function precisionSyncTick(){'));
  const ctx=vm.createContext({_precisionClock:{status:()=>({ready:true})},_precisionServo:{status:()=>({identity:1,driftMs:800,seeks:26,totalSeeks:30})},
  _playTok:2,mediaEl:media(),_precisionFrames:new WeakMap(),syncOn:false,performance:{now:()=>0},syncNow:()=>100});
  vm.runInContext(source,ctx);const state=vm.runInContext('precisionSyncStatus()',ctx);
