@@ -68,7 +68,7 @@
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
 <script src="/assets/mba-auto-sync.js?v=20261029-auto1"></script>
-<script src="/assets/precision-sync.js?v=20261029-fine1"></script>
+<script src="/assets/precision-sync.js?v=20261029-fine2"></script>
 <script src="xpl-runtime.js?v=22.10.2026.r2.1134"></script>
 <script>
   window.ADMIRA_VERSION='v.22.10.2026.r2.11:34';
@@ -640,7 +640,7 @@ var _precisionClock=window.AdmiraPrecisionSync&&AdmiraPrecisionSync.createClock(
   load:()=>JSON.parse(localStorage.getItem('adtv_precision_clock')||'null'),
   save:value=>localStorage.setItem('adtv_precision_clock',JSON.stringify(value))
 });
-var _precisionServo=window.AdmiraPrecisionSync&&AdmiraPrecisionSync.createServo();
+var _precisionServo=window.AdmiraPrecisionSync&&AdmiraPrecisionSync.createServo({strategy:qs.get('syncservo')||'auto'});
 var _precisionRefreshTimer=null, _precisionBoundaryAt=0, _precisionRefreshing=false;
 var _precisionFrames=new WeakMap();
 // SINCRO: máster central (única autoridad). Si está cargado, manda sobre el cálculo
@@ -971,14 +971,15 @@ function precisionObserveVideo(video,token){
 }
 function precisionSyncStatus(){
   const clock=_precisionClock?_precisionClock.status():{ready:false,source:'legacy'};
-  const servo=_precisionServo?_precisionServo.status():{mode:'unavailable'};
+  const sample=_precisionServo?_precisionServo.status():{mode:'unavailable'};
+  const servo=sample.identity===_playTok?sample:{mode:'awaiting-media',identity:_playTok,driftMs:null,rate:1,seeks:0,totalSeeks:sample.totalSeeks||0,seekLatencyMs:null,seekInFlight:false};
   const frame=mediaEl&&_precisionFrames.get(mediaEl),line=syncOn?syncTimeline():null;
   const frameAge=frame?performance.now()-frame.expectedDisplayTime:null;
   const frameDriftMs=frame&&line&&line.index===cur&&frameAge<1000?(frame.mediaTime*1000-line.elapsed+frameAge):null;
-  return {clock,servo,mediaTime:mediaEl&&Number.isFinite(mediaEl.currentTime)?mediaEl.currentTime:null,
+  return {clock,servo,mediaToken:_playTok,mediaTime:mediaEl&&Number.isFinite(mediaEl.currentTime)?mediaEl.currentTime:null,
     frameDriftMs,measuredAt:syncNow(),outputCalibration:'unmeasured'};
 }
-// The same servo controls video AND audio on WKWebView, Android WebView, Electron and browsers.
+// A common clock drives video/audio; the measured WebKit adapter keeps rate fixed.
 function precisionSyncTick(){
   if(!_precisionServo)return;
   const eligible=(syncOn||!!_extendedAssignment)&&!paused&&!_standby&&!directOn&&!PREVIEW.on;
@@ -992,7 +993,9 @@ function precisionSyncTick(){
       if(performance.now()-_precisionBoundaryAt>1000){_precisionBoundaryAt=performance.now();play(line.index);}
     }else targetSec=line.elapsed/1000;
   }
-  _precisionServo.tick({media:mediaEl,enabled:eligible,targetSec,nowMs:performance.now(),
+  const syncAsset=playlist[cur],publishedSec=Number(syncAsset&&(syncAsset._dur||syncAsset.dur))||0;
+  const assetKey=syncAsset&&publishedSec>0?JSON.stringify([String(syncAsset.id),syncAsset.url,Math.ceil(publishedSec)]):null;
+  _precisionServo.tick({media:mediaEl,enabled:eligible,targetSec,nowMs:performance.now(),assetKey,
     identity:_playTok,circular:!!_extendedAssignment});
 }
 function syncFallbackSlotMs(){ return (SYNC_REMOTE&&SYNC_REMOTE.slotMs)?SYNC_REMOTE.slotMs:syncSlotSec*1000; }
@@ -3910,6 +3913,7 @@ function localInfoRender(){
     const fine=precisionSyncStatus(),c=fine.clock,s=fine.servo;
     row('reloj sincro',c.ready?c.source+' · RTT '+Math.round(c.rttMs||0)+' ms · ±'+Math.ceil(c.uncertaintyMs||0)+' ms estimados':'adquiriendo reloj fino',c.ready?'ok':'bad');
     row('desfase del medio',s.driftMs==null?'sin muestra':Math.round(s.driftMs)+' ms · '+s.mode+' · '+s.rate.toFixed(3)+'×');
+    row('ajustes por pieza',s.seeks+' saltos'+(s.seekLatencyMs==null?'':' · seek '+Math.round(s.seekLatencyMs)+' ms')+(s.seekInFlight?' · esperando seek':''));
     row('salida de audio','latencia acústica sin medir');
   }
   row('resolución',resolution);
