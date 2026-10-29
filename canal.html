@@ -489,7 +489,13 @@ const save = (k,v)=>{ try{ localStorage.setItem(k,v); }catch(_){} };
 const AUDIENCE_REMOTE = /^(remote|remota|bus)$/i.test(qs.get('audience')||'') || /^(1|on|true|yes)$/i.test(qs.get('va')||'');
 const AUDIENCE_API = String(qs.get('audience_api')||'https://mcp-tv.admira.store').replace(/\/+$/,'');
 const segSaved = JSON.parse(LS('adtv_seg','{}')||'{}');
+// ?ids=<a>,<b>,… (Carlos, 29-oct-2026 · misión DCL-fb1c7a60): piezas CONCRETAS del Stock para este
+// player, p. ej. la lista de 3 de cada Xperiencia del mapa de admiranext.com. Va por el mismo camino
+// que los assets de una regla de la matriz (seg.ids): resolveMatrixAssets trae las que no estén entre
+// las 300 recientes y el precache las baja. Si ninguna está, el player sigue con su ?tag= como siempre.
+const URL_IDS=[...new Set(String(qs.get('ids')||'').split(',').map(s=>s.trim()).filter(s=>/^[A-Za-z0-9-]{1,80}$/.test(s)))].slice(0,12);
 const seg = {
+  ids: URL_IDS.length ? URL_IDS.slice() : null,
   medio: qs.get('medio')||segSaved.medio||'all', audience: (AUDIENCE_REMOTE&&/^(remote|remota|bus)$/i.test(qs.get('audience')||''))?'all':(qs.get('audience')||segSaved.audience||'all'),
   category: qs.get('category')||segSaved.category||'all', age: qs.get('age')||segSaved.age||'all',
   slot: qs.get('slot')||segSaved.slot||'all', tag: (qs.get('tag')||segSaved.tag||'').toLowerCase().trim(),
@@ -2544,7 +2550,7 @@ function resolveMatrixAssets(ids){
     let found=0;
     for(const id of missing){ const it=full.find(x=>x&&String(x.id)===id&&x.url&&MEDIA.includes(x.type)); if(!it) continue;
       const copy=Object.assign({},it,{_num:it.num,_matrix:true}); _matrixExtra.set(id,copy); found++; }
-    if(found&&mergeMatrixExtras()){ precacheIds(ids); if(playoutMode==='conditional'){ seenSig=''; rebuild(false); } }
+    if(found&&mergeMatrixExtras()){ precacheIds(ids); if(playoutMode==='conditional'||URL_IDS.length){ seenSig=''; rebuild(false); } }
     return found>0;
   }).catch(()=>false).finally(()=>{ _matrixResolving=null; });
   return _matrixResolving;
@@ -3096,7 +3102,7 @@ function rebuild(restart){
   // del feed (segmento sin ids) y lo dice en el rótulo. La regla vuelve a mandar en cuanto
   // resolveMatrixAssets incorpora la pieza (rebuild) o el CMS corrige la matriz.
   _condFallback=false;
-  if(!syncOn && playoutMode==='conditional' && seg.ids && seg.ids.length && !playlist.length){
+  if(!syncOn && (playoutMode==='conditional'||URL_IDS.length) && seg.ids && seg.ids.length && !playlist.length){
     const sinIds=Object.assign({},seg,{ids:null});
     playlist=base.filter(it=>matchesSeg(it,sinIds)).slice(0,Math.max(1,cfg.max)); _condFallback=true;
     try{ resolveMatrixAssets(seg.ids); }catch(_){}
@@ -3197,6 +3203,7 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   // número PERSISTENTE de cada asset (lo asigna el worker y va en el meta/stock). Para /play<N>.
   all.forEach(it=>{ it._num=it.num; });
   try{ mergeMatrixExtras(); }catch(_){}   // r63: los assets de la matriz fuera del feed siguen en el pool
+  try{ if(URL_IDS.length) resolveMatrixAssets(URL_IDS); }catch(_){}   // ?ids= fuera de las 300 recientes
   saveCatalog();   // persiste el último catálogo bueno para arranque offline
   guardState().source='live';
   // etiquetas de formato/aspecto/resolución desde la caché de dimensiones (instantáneo).
@@ -4669,7 +4676,8 @@ const XPLCanal = (function(){
     try{ flashCli('◆ segmentación cámara→contenido activa'); }catch(_){}
   }
   function stop(){ if(timer){ clearInterval(timer); timer=null; } if(mtimer){ clearInterval(mtimer); mtimer=null; }
-    lastSig=''; if(typeof seg==='object'&&seg.ids){ seg.ids=null; } }   // no dejar local/sync filtrado a assets
+    // No dejar local/sync filtrado a assets de una regla; las piezas fijadas con ?ids= siguen mandando.
+    lastSig=''; if(typeof seg==='object'&&seg.ids){ seg.ids=URL_IDS.length?URL_IDS.slice():null; } }
 
   return { start, stop, tick, refreshMatrix:fetchMatrix, get world(){ return world; }, get want(){ return want; }, get engine(){ return engine; } };
 })();
