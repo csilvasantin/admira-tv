@@ -24,6 +24,7 @@
     const now = options.now || Date.now, schedule = options.setTimeout || setTimeout;
     const cancel = options.clearTimeout || clearTimeout;
     let current = null, pending = null, offset = 0, timer = null;
+    const clockNow = () => options.serverNow ? options.serverNow() : now() + offset;
     function apply(next) {
       if (current && (next.epochMs < current.epochMs ||
           next.epochMs === current.epochMs && next.revision === current.revision)) return;
@@ -34,9 +35,9 @@
       if (timer !== null) cancel(timer);
       timer = null;
       if (!pending) return;
-      const wait = pending.epochMs - (now() + offset);
+      const wait = pending.epochMs - clockNow();
       if (wait <= 0) { const due = pending; pending = null; apply(due); return; }
-      timer = schedule(arm, Math.min(wait, 2147483647));
+      timer = schedule(arm, Math.min(wait, options.serverNow ? 1000 : 2147483647));
     }
     function receive(packet, receivedAt) {
       if (!packet || packet.ok !== true || packet.group !== 'mba-admira-tv' || !Number.isFinite(packet.serverNow)) {
@@ -46,7 +47,7 @@
       const active = snapshot(packet.active), next = packet.pending ? snapshot(packet.pending) : null;
       if (next && next.epochMs <= active.epochMs) throw new Error('invalid_mba_activation');
       offset = packet.serverNow - (receivedAt == null ? now() : receivedAt);
-      const candidate = next && next.epochMs <= now() + offset ? next : active;
+      const candidate = next && next.epochMs <= clockNow() ? next : active;
       apply(candidate);
       // An older response must not cancel a revision already prepared for activation.
       if (next && (!current || next.epochMs > current.epochMs) && (!pending || next.epochMs >= pending.epochMs)) pending = next;

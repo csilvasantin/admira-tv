@@ -68,6 +68,7 @@
      del canónico xpaceos/admira-xp/scripts/xpl-runtime.js — el adapter XPLCanal (abajo,
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
 <script src="/assets/mba-auto-sync.js?v=20261029-auto1"></script>
+<script src="/assets/precision-sync.js?v=20261029-fine1"></script>
 <script src="xpl-runtime.js?v=22.10.2026.r2.1134"></script>
 <script>
   window.ADMIRA_VERSION='v.22.10.2026.r2.11:34';
@@ -634,6 +635,14 @@ let applyingXpl=false;
 const PAUSE_INTENT_KEY='adtv_operator_pause:'+(scr.screen||scr.circuit||scr.machine||'unbound');
 let paused=LS(PAUSE_INTENT_KEY,'0')==='1', usesAdv=false, advTotal=0, advElapsed=0, advStart=0;
 let syncTimeOffset=0;
+// Common HTTPS four-timestamp clock. Wall-clock changes cannot move an acquired timeline.
+var _precisionClock=window.AdmiraPrecisionSync&&AdmiraPrecisionSync.createClock({
+  load:()=>JSON.parse(localStorage.getItem('adtv_precision_clock')||'null'),
+  save:value=>localStorage.setItem('adtv_precision_clock',JSON.stringify(value))
+});
+var _precisionServo=window.AdmiraPrecisionSync&&AdmiraPrecisionSync.createServo();
+var _precisionRefreshTimer=null, _precisionBoundaryAt=0, _precisionRefreshing=false;
+var _precisionFrames=new WeakMap();
 // SINCRO: máster central (única autoridad). Si está cargado, manda sobre el cálculo
 // local → todas las pantallas en sync emiten EXACTAMENTE lo mismo (mismo orden+reloj).
 // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
@@ -671,6 +680,7 @@ async function fetchMBAAutoState(){
   const api=window.AdmiraMBAAutoSync;
   if(!api||!api.isTargetScreen(scr.screen)||!syncOn) return false;
   if(!_mbaAutoCoordinator) _mbaAutoCoordinator=api.create({
+    serverNow:()=>syncNow(),
     onChange:applyMBAAutoSnapshot,
     onClock:offset=>{ if(SYNC_REMOTE&&SYNC_REMOTE.autoRevision) SYNC_REMOTE.offset=offset; }
   });
@@ -751,13 +761,11 @@ async function fetchSyncState(){
       // en antena cada 30 s aunque el máster fuera idéntico (re-decode + parpadeo + un
       // pase falso de proof-of-play por sondeo). Ahora solo si el máster CAMBIÓ o si
       // veníamos sin máster (boot, re-encendido de sincro, o el toggle lo anuló).
-      // La duración forma parte del contrato de sincro. El worker conserva 20 s como
-      // respaldo, pero cada cápsula con metadatos gobierna su tramo completo. Mezclamos
-      // también el inventario técnico local: ya conoce la duración de los assets en disco
-      // aunque una playlist antigua todavía haya publicado `dur:0`.
-      items=items.map(i=>{ const tech=(typeof _cacheTech!=='undefined'&&_cacheTech.get)?_cacheTech.get(String(i.id)):null;
-        const dur=Number(i._dur||i.dur||(tech&&tech.duration))||0;
-        return Object.assign({},i,{_dur:dur>0?dur:0}); });
+      // Only published durations govern a shared timeline. A decoder/cache may learn
+      // a different value, but cannot move this screen's boundaries independently.
+      // Legacy sources without duration retain the master's common fallback slot.
+      items=items.map(i=>{const dur=Number(i._dur||i.dur)||0;
+        return Object.assign({},i,{_dur:dur>0?dur:0,_syncDurationLocked:true});});
       const sig=items.map(i=>i.id+':'+Math.round(Number(i._dur||i.dur)||0)).join(',')+'|'+(d.slotMs||20000)+'|'+leader;
       const hadRemote=!!SYNC_REMOTE;
       SYNC_REMOTE={ items, slotMs:d.slotMs||20000, offset:masterClockOffset };   // reloj medido antes de descargar el tema
@@ -938,12 +946,61 @@ function armAudioAdvance(it){
   if(!syncOn&&it._fullMusic)return;
   startAdv(syncOn?syncRemainingMs():seconds*1000);
 }
-function syncNow(){ return Date.now()+(SYNC_REMOTE?SYNC_REMOTE.offset:syncTimeOffset); }   // reloj del máster central si está
+function syncNow(){
+  if(typeof _precisionClock!=='undefined'&&_precisionClock&&_precisionClock.ready) return _precisionClock.now();
+  return Date.now()+(SYNC_REMOTE?SYNC_REMOTE.offset:syncTimeOffset);
+}
+function extendedSyncNow(){ return _precisionClock&&_precisionClock.ready?_precisionClock.now():Date.now()+_extendedClockOffset; }
+async function refreshPrecisionClock(){
+  if(!_precisionClock||_precisionRefreshing)return;
+  clearTimeout(_precisionRefreshTimer);
+  if(!syncOn&&!_extendedAssignment){_precisionRefreshTimer=setTimeout(refreshPrecisionClock,10000);return;}
+  _precisionRefreshing=true;
+  const ok=await _precisionClock.synchronize(window.fetch.bind(window),'https://brain.digitalavatar.ai/sync/clock').catch(()=>false);
+  _precisionRefreshing=false;
+  _precisionRefreshTimer=setTimeout(refreshPrecisionClock,ok?300000:10000);
+}
+function precisionObserveVideo(video,token){
+  if(typeof video.requestVideoFrameCallback!=='function')return;
+  const frame=(at,metadata)=>{
+    if(token!==_playTok||mediaEl!==video)return;
+    _precisionFrames.set(video,{mediaTime:metadata.mediaTime,expectedDisplayTime:metadata.expectedDisplayTime});
+    video.requestVideoFrameCallback(frame);
+  };
+  video.requestVideoFrameCallback(frame);
+}
+function precisionSyncStatus(){
+  const clock=_precisionClock?_precisionClock.status():{ready:false,source:'legacy'};
+  const servo=_precisionServo?_precisionServo.status():{mode:'unavailable'};
+  const frame=mediaEl&&_precisionFrames.get(mediaEl),line=syncOn?syncTimeline():null;
+  const frameAge=frame?performance.now()-frame.expectedDisplayTime:null;
+  const frameDriftMs=frame&&line&&line.index===cur&&frameAge<1000?(frame.mediaTime*1000-line.elapsed+frameAge):null;
+  return {clock,servo,mediaTime:mediaEl&&Number.isFinite(mediaEl.currentTime)?mediaEl.currentTime:null,
+    frameDriftMs,measuredAt:syncNow(),outputCalibration:'unmeasured'};
+}
+// The same servo controls video AND audio on WKWebView, Android WebView, Electron and browsers.
+function precisionSyncTick(){
+  if(!_precisionServo)return;
+  const eligible=(syncOn||!!_extendedAssignment)&&!paused&&!_standby&&!directOn&&!PREVIEW.on;
+  let targetSec=NaN;
+  if(eligible&&_extendedAssignment&&mediaEl&&mediaEl.duration>0)targetSec=(extendedSyncNow()/1000)%mediaEl.duration;
+  else if(eligible&&playlist.length){
+    const line=syncTimeline();
+    if(line.index!==cur&&SYNC_REMOTE){
+      // Reacquire after buffering/background suspension or a new clock lock, without
+      // advancing a paused operator or repeatedly remounting an in-flight async play().
+      if(performance.now()-_precisionBoundaryAt>1000){_precisionBoundaryAt=performance.now();play(line.index);}
+    }else targetSec=line.elapsed/1000;
+  }
+  _precisionServo.tick({media:mediaEl,enabled:eligible,targetSec,nowMs:performance.now(),
+    identity:_playTok,circular:!!_extendedAssignment});
+}
 function syncFallbackSlotMs(){ return (SYNC_REMOTE&&SYNC_REMOTE.slotMs)?SYNC_REMOTE.slotMs:syncSlotSec*1000; }
 function syncItemDurationMs(it){
   if(!it) return syncFallbackSlotMs();
   const tech=(typeof _cacheTech!=='undefined'&&_cacheTech.get)?_cacheTech.get(String(it.id)):null;
   let sec=Number(it._dur||it.dur||(tech&&tech.duration)||it._previewSec||it.seconds)||0;
+  if(it._syncDurationLocked){const published=Number(it._dur||it.dur)||0;return published>0?Math.max(1000,Math.ceil(published)*1000):syncFallbackSlotMs();}
   const kind=KIND[it.type]||'image';
   if(sec<=0&&kind==='image') sec=Math.max(2,Number(cfg.imgSec)||0);
   if(sec<=0&&kind==='audio') sec=Math.max(3,Number(cfg.audioSec)||0);
@@ -1710,6 +1767,7 @@ function signageNowPush(it){
   const sinc = { on:(syncOn||!!_extendedAssignment)?1:0, modo:_extendedAssignment?'extended':playoutMode };
   if(syncOn){ try{ sinc.idx=syncIndex(); sinc.slot=Math.round(syncSlotMs()/1000); sinc.n=playlist.length; if(SYNC_REMOTE&&SYNC_REMOTE.autoRevision){sinc.revision=SYNC_REMOTE.autoRevision;sinc.group='mba-admira-tv';} }catch(_){} }
   if(_extendedAssignment&&_extendedAssignment.tile){ sinc.tile=_extendedAssignment.tile; sinc.revision=_extendedAssignment.revision||0; }
+  if(syncOn||_extendedAssignment)sinc.precision=precisionSyncStatus();
   const effectiveDuration=syncOn?Math.round(syncSlotMs()/1000):editorialSec(it);
   const effectiveStartedAt=syncOn?(now-Math.round(syncElapsedMs())):now;
   const item={ id:it.id, url:it.url, type:it.type||'image', ar:(mupiAR||itemAR(it)||(9/16)),
@@ -1721,7 +1779,7 @@ function signageNowPush(it){
   // enseñaba la pieza anterior con el título de la nueva. Aquí es donde se sabe que
   // la pieza cambió de verdad, así que aquí se pide la captura.
   if(cambiaPieza){ try{ shotSoon(); }catch(_){} }
-  if(!_nowKeep) _nowKeep=setInterval(()=>{ if(_nowItem){ _nowItem.ts=Date.now(); _postNow(_nowItem); } else if(DEFAULT_DRAFT.managedEmpty) _postNow(null); }, 60000);
+  if(!_nowKeep) _nowKeep=setInterval(()=>{ if(_nowItem){ _nowItem.ts=Date.now(); if(syncOn||_extendedAssignment)_nowItem.sinc.precision=precisionSyncStatus(); _postNow(_nowItem); } else if(DEFAULT_DRAFT.managedEmpty) _postNow(null); }, 60000);
 }
 // ── STANDBY / BLACKOUT remoto: apaga la pantalla (negro + pausa) SIN cerrar la app.
 // Persistente: si la pantalla reinicia estando en standby, arranca apagada hasta que
@@ -2684,13 +2742,13 @@ async function play(i, forced){
         _nowItem.ts=Date.now(); _postNow(_nowItem);
       }
       if(v.videoWidth&&v.videoHeight){ it._dim={w:v.videoWidth,h:v.videoHeight}; mupiAR=_extendedAssignment?(window.innerWidth/Math.max(1,window.innerHeight)):(v.videoWidth/v.videoHeight); fitMupi(); emitFrameState(it,xtoreMusicEnabled()?(v._xtoreAutoplayBlocked?'audio-blocked':v._xtorePlaybackStarted?'playing':'selected'):'selected'); }
-      if(_extendedAssignment&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.25,((Date.now()+_extendedClockOffset)/1000)%v.duration); }catch(_){} }
+      if(_extendedAssignment&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.02,(extendedSyncNow()/1000)%v.duration); }catch(_){} }
       else if(syncOn&&v.duration>1){
         const target=syncIndex();
         // Si una duración nueva cambia el punto de la línea temporal, convergemos al
         // índice correcto. Si seguimos en la misma pieza, rearmamos con su final real.
         if(target!==cur){ play(target); return; }
-        try{ v.currentTime=Math.min(v.duration-0.25,(syncElapsedMs()/1000)%v.duration); }catch(_){}
+        try{ v.currentTime=Math.min(v.duration-0.02,syncElapsedMs()/1000); }catch(_){}
         clearTimeout(timer); timer=setTimeout(next,syncRemainingMs());
       }
       localInfoRender();
@@ -2703,7 +2761,7 @@ async function play(i, forced){
       setTimeout(()=>mediaAdvance(_tok),600); };
     v.ontimeupdate=()=>{ if(v.duration&&!paused) bar.style.width=(v.currentTime/v.duration*100)+'%'; };
     v.addEventListener('play',()=>{if(paused)v.pause();});
-    mediaEl=v; applyAudio(); stage.appendChild(v);
+    mediaEl=v; applyAudio(); stage.appendChild(v); precisionObserveVideo(v,_tok);
     if(seamless){
       coffeeTransitions.reveal(v,()=>_tok===_playTok&&!_standby&&!paused,()=>syncOn?Math.min(v.duration-.25,(syncElapsedMs()/1000)%v.duration):v.currentTime);
       // Adopted warm videos have already fired their metadata event.
@@ -2799,6 +2857,7 @@ async function play(i, forced){
       try{ signagePlaylistPush(); }catch(_){}
       if(_nowItem&&String(_nowItem.id)===String(it.id)){ _nowItem.dur=syncOn?Math.round(syncSlotMs()/1000):editorialSec(it); _nowItem.ts=Date.now(); _postNow(_nowItem); }
       if(!syncOn&&usesAdv&&editorialSec(it)!==before) armAudioAdvance(it);
+      if(syncOn&&!paused){const target=syncIndex();if(target!==cur){play(target);return;}try{a.currentTime=Math.min(a.duration-.02,syncElapsedMs()/1000);}catch(_){}armAudioAdvance(it);}
       localInfoRender();
       if(xtoreMusicApplyStart(a,it,_tok))xtoreMusicPlayAudio(a,it,_tok);
     };
@@ -3847,6 +3906,12 @@ function localInfoRender(){
   row('progreso',dur?localInfoClock(elapsed)+' / '+localInfoClock(dur):'—');
   const audio=playerAudioState();
   row('audio',audio.muted?'SILENCIADO':'ACTIVO · '+audio.volume+'%'+(audio.analyzed?' · señal '+audio.level+'%':''),audio.muted?'bad':'ok');
+  if(syncOn||_extendedAssignment){
+    const fine=precisionSyncStatus(),c=fine.clock,s=fine.servo;
+    row('reloj sincro',c.ready?c.source+' · RTT '+Math.round(c.rttMs||0)+' ms · ±'+Math.ceil(c.uncertaintyMs||0)+' ms estimados':'adquiriendo reloj fino',c.ready?'ok':'bad');
+    row('desfase del medio',s.driftMs==null?'sin muestra':Math.round(s.driftMs)+' ms · '+s.mode+' · '+s.rate.toFixed(3)+'×');
+    row('salida de audio','latencia acústica sin medir');
+  }
   row('resolución',resolution);
   row('tamaño',meta?testSize(meta,localInfoRender):'—');
   row('origen',meta?(meta.motor||meta.category||'stock'):'—');
@@ -4749,13 +4814,7 @@ function applyPlayoutAssignment(d){
   if(mode==='extended'&&d.item&&d.tile){
     const signature=rev+'|'+d.item.id+'|'+d.tile.index;
     if(_extendedAssignment&&_extendedAssignment._signature===signature){
-      // Cada sondeo corrige deriva real sin reiniciar el clip. Compara sobre el
-      // círculo de la duración para no saltar falsamente cerca del final.
-      if(mediaEl&&mediaEl.tagName==='VIDEO'&&mediaEl.duration>1){
-        const target=((Date.now()+_extendedClockOffset)/1000)%mediaEl.duration;
-        const raw=Math.abs(mediaEl.currentTime-target), drift=Math.min(raw,mediaEl.duration-raw);
-        if(drift>.7) try{ mediaEl.currentTime=target; }catch(_){}
-      }
+      // Position is continuously corrected by the common 250 ms servo.
       return true;
     }
     // Extended es una orden completa: apaga los motores que podrían reconstruir
@@ -5247,6 +5306,10 @@ window.shotSoon=shotSoon;
 if(scr.screen==='virtual-lab-admirito-fold') setInterval(()=>{try{if(_nowItem)_postNow(_nowItem);}catch(_){}},10000);
 
 // si arrancamos ya en sincro (persistido/URL), engancha el máster central
+setTimeout(refreshPrecisionClock,0);
+setInterval(precisionSyncTick,250);
+window.addEventListener('online',()=>{clearTimeout(_precisionRefreshTimer);refreshPrecisionClock();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){clearTimeout(_precisionRefreshTimer);refreshPrecisionClock();precisionSyncTick();}});
 if(syncOn){ fetchSyncState(); if(syncStateTimer) clearInterval(syncStateTimer); syncStateTimer=setInterval(fetchSyncState,30000); }
 // directo persistente (sobrevive recarga) o por URL ?direct=
 const _dr=qs.get('direct')||LS('adtv_direct',''); if(_dr) enterDirect(_dr);
