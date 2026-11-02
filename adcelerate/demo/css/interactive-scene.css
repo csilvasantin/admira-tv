@@ -69,3 +69,16 @@
 .store-door:focus-visible{outline:2px solid #d7f5e3;outline-offset:4px}
 @keyframes store-door-glow{50%{opacity:.75}}
 @media (prefers-reduced-motion:reduce){.store-door::before{animation:none;opacity:.55}}
+
+#mapped-drop-zone.is-dragging-person{border-width:3px;animation:mapped-zone-pulse 1s ease-in-out infinite}
+#mapped-drop-zone.is-over{border-style:solid}
+@keyframes mapped-zone-pulse{50%{box-shadow:0 0 26px #c4fa7870}}
+.mapped-character.is-consumed{transition:opacity .35s ease,scale .35s ease;opacity:0;scale:.2}
+#mapped-masthead{position:absolute;z-index:35;display:flex;justify-content:center;gap:.04em;pointer-events:none;font:900 30px/1.1 Georgia,'Times New Roman',serif;letter-spacing:.01em;text-shadow:0 2px 8px #0009}
+#mapped-masthead[hidden]{display:none!important}
+.mapped-letter{color:transparent;-webkit-text-stroke:1px #f4ecd880;transition:color .4s ease,transform .4s ease}
+.mapped-letter.is-target{-webkit-text-stroke:1.5px #c4fa78;transform:translateY(-3px)}
+.mapped-letter.is-lit{color:#f4ecd8;-webkit-text-stroke:0}
+.mapped-letter.is-arriving{transform:scale(1.4)}
+.mapped-letter-final{opacity:0;transition:opacity .6s ease}
+#mapped-masthead.is-complete .mapped-letter-final{opacity:1}
