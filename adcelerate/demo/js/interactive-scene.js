@@ -7,7 +7,10 @@
   root.addEventListener('keydown',e=>keyboard?.down(e),true);
   root.addEventListener('keyup',e=>keyboard?.up(e),true);
  }
- const MASTHEAD_LETTERS=['e','l','P','e','r','i','o','d','i','c'],MASTHEAD_FINAL='o';
+ const MASTHEAD_LETTERS=['e','l','P','e','r','i','ó','d','i','c'],MASTHEAD_FINAL='o';
+ // Red «el Periódico» sign, left face of the kiosk (pano L6xcO37…). Estimated from Carlos' photo, scaled
+ // against jardinets-main (screen 428–537px ≈ 288.40°–292.52°): ~26.5px/° horizontal, ~22.6px/° vertical.
+ const SIGN_CORNERS={tl:[280.85,5.00],tr:[288.17,5.53],br:[288.17,3.23],bl:[280.85,2.79]},SIGN_W=400,SIGN_H=80;
  const letterForPerson=n=>MASTHEAD_LETTERS[n-1]??null;
  const mastheadComplete=consumed=>MASTHEAD_LETTERS.every((_,i)=>!!consumed[i]);
  function consumeOnDrop(consumed,index,{inside,cancel=false}){if(cancel||!inside||consumed[index])return false;consumed[index]=true;return true;}
@@ -48,7 +51,7 @@
   const dropZone=document.createElement('div');dropZone.id='mapped-drop-zone';dropZone.hidden=true;foreground.append(dropZone);
   const consumed=Array(MASTHEAD_LETTERS.length).fill(false);
   const masthead=document.createElement('div');masthead.id='mapped-masthead';masthead.hidden=true;masthead.setAttribute('aria-label','elPeriodico');
-  const letters=MASTHEAD_LETTERS.map((ch,i)=>{const l=document.createElement('span');l.className='mapped-letter';l.dataset.person=String(i+1);l.textContent=ch;masthead.append(l);return l;});
+  const letters=MASTHEAD_LETTERS.map((ch,i)=>{if(i===2){const gap=document.createElement('span');gap.className='mapped-letter-gap';masthead.append(gap);}const l=document.createElement('span');l.className='mapped-letter';l.dataset.person=String(i+1);l.textContent=ch;masthead.append(l);return l;});
   const finalLetter=document.createElement('span');finalLetter.className='mapped-letter mapped-letter-final';finalLetter.textContent=MASTHEAD_FINAL;masthead.append(finalLetter);foreground.append(masthead);
   function renderMasthead(){letters.forEach((l,i)=>l.classList.toggle('is-lit',consumed[i]));const done=mastheadComplete(consumed);finalLetter.classList.toggle('is-lit',done);masthead.classList.toggle('is-complete',done);}
   const canMove=i=>!consumed[i]&&loaded&&sourceLoaded&&i<count&&isAvailable()&&selectionEnabled()&&getPanorama()?.getVisible()&&getPanorama()?.getPano()===anchor.pano;
@@ -179,7 +182,8 @@
    dropZone.classList.toggle('is-dragging-person',!!personDrag?.started);
    if(box&&personDrag?.started){dropZone.textContent+=' · suelta para «'+letterForPerson(zoneIndex+1)+'»';}
    const mbox=selecting&&isAvailable()&&(personDrag?.started||consumed.some(Boolean))&&targetBounds();masthead.hidden=!mbox;
-   if(mbox){Object.assign(masthead.style,{left:mbox.left+'px',top:Math.max(0,mbox.top-46)+'px',width:(mbox.right-mbox.left)+'px'});letters.forEach((l,i)=>l.classList.toggle('is-target',personDrag?.started&&personDrag.index===i));}
+   const signPts=mbox&&project(Object.values(SIGN_CORNERS));if(signPts&&signPts.some(p=>!p))masthead.hidden=true;
+   if(!masthead.hidden&&signPts){Object.assign(masthead.style,{left:'0',top:'0',width:SIGN_W+'px',height:SIGN_H+'px'});masthead.style.transform=warp(SIGN_W,SIGN_H,signPts);letters.forEach((l,i)=>l.classList.toggle('is-target',personDrag?.started&&personDrag.index===i));}
    const p=projectRay([anchor.heading,anchor.pitch]),edge=projectRay([anchor.heading+4,anchor.pitch]);
    button.hidden=!selecting||!isAvailable()||!p||p[0]<0||p[1]<0||p[0]>rect.width||p[1]>rect.height;
    if(!button.hidden){const size=Math.max(24,Math.min(300,edge?Math.abs(edge[0]-p[0])*2:60));Object.assign(button.style,{left:p[0]+'px',top:p[1]+'px',width:size+'px',height:size+'px'});}
@@ -190,5 +194,5 @@
   addEventListener('pagehide',()=>{stopWalking();audio?.close();});new ResizeObserver(layout).observe(container);
   return {layout,close,setMusicState};
  }
- const api={anchor,create,MASTHEAD_LETTERS,MASTHEAD_FINAL,letterForPerson,mastheadComplete,consumeOnDrop};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.InteractiveScene=api;
+ const api={anchor,create,SIGN_CORNERS,MASTHEAD_LETTERS,MASTHEAD_FINAL,letterForPerson,mastheadComplete,consumeOnDrop};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.InteractiveScene=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
