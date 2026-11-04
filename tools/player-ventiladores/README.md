@@ -21,8 +21,12 @@ en informes HID de 512 bytes y va a su ventilador.
 | `repetir` | repeat, espejo | un solo canal cuyos fotogramas van a los 7 | `supercomputer-ventiladores` |
 | `extender` | extend, adaptar, adapt, estirar | una pieza estirada sobre los 7 como un mural (`ajuste` cubrir/estirar/contener, `columnas`, `orden`) | — |
 | `sincro` | sync, relevo | la pieza pasa de un ventilador al siguiente cada `paso` s sin reiniciarse; varias piezas = carrusel | — |
+| `identificar` | identify | cada pantalla enseña su número, su puerto y su posición | — |
 
-Independiente y repetir usan el canal publicado **tal cual** (contrato `mcp/player-contract.md`:
+Disposición física (confirmada el 4-nov-2026 con `identificar`): 1-2-3 en columna en el cristal lateral
+(1 arriba), 4-5-6 en la fila de abajo (6 delante, 4 detrás) y 7 trasero.
+
+Identificar, como extender y sincro, lo pinta `escena.html`. Independiente y repetir usan el canal publicado **tal cual** (contrato `mcp/player-contract.md`:
 `embed=mupi&clean=1&fit=screen`, `screen`, `circuit`, `machine`, `muted=1`), con su censo, mando y
 actualizaciones. Extender y sincro los pinta `escena.html`, servida por el propio puente, con un reloj
 común (`Date.now()` del PC) y las piezas del Stock bajadas una vez a `%LOCALAPPDATA%\AdmiraVentiladores\medios`.
@@ -37,8 +41,9 @@ La lógica de modos y luz vive en `escena.mjs` (sin APIs de Node: la usan el pue
 
 ## Gemelo y nube
 
-Cada 3 s el puente manda su informe (escena, luz, RPM, fps, envíos) y una miniatura 160×160 de cada
-pantalla a `https://www.admira.store/supercomputer/api/maquina` con su clave Bearer
+Cada 3 s el puente manda su informe (escena, luz, RPM, fps, envíos) y una miniatura de cada pantalla
+(captura a tamaño real con calidad 40; una captura con `clip`+`scale` repinta la página a escala y el
+screencast la mandaba al ventilador) a `https://www.admira.store/supercomputer/api/maquina` con su clave Bearer
 (`~/.admira_supercomputer_key`), y recibe lo deseado por el gemelo. Si la revisión deseada es más nueva
 que la aplicada, la aplica. La función de admira.store la reenvía al Worker `supercomputer`
 (`nube/`, Durable Object; `npx wrangler@4 deploy` desde esa carpeta), que no usa KV.

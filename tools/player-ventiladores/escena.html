@@ -8,10 +8,15 @@
   #lienzo { position: absolute; inset: 0; overflow: hidden; }
   #lienzo > video, #lienzo > img { position: absolute; display: none; }
   #lienzo > .on { display: block; }
+  /* Identificar: número grande del ventilador, su puerto y su posición en la cadena. */
+  #numero { position: absolute; inset: 0; display: none; place-items: center; text-align: center;
+    font: 800 210px/1 system-ui, sans-serif; color: #04101f; }
+  #numero small { display: block; font: 700 30px/1.2 ui-monospace, Menlo, monospace; margin-top: 6px; }
 </style>
 </head>
 <body>
 <div id="lienzo"></div>
+<div id="numero"></div>
 <script type="module">
 // Render de un ventilador en los modos extender y sincro. Lo abre el puente en Chrome sin
 // ventana (un Chrome por ventilador) y captura su screencast. Todos los ventiladores usan el
@@ -51,6 +56,15 @@ function pintar() {
   requestAnimationFrame(pintar);
   if (!estado) return;
   const a = asignacion(estado.escena, fan, Date.now());
+  const numero = document.getElementById('numero');
+  if (a.tipo === 'numero') {
+    const f = (estado.fans || []).find(x => x.n === fan) || {};
+    numero.style.display = 'grid';
+    numero.style.background = `hsl(${(fan - 1) * 51} 85% 60%)`;
+    numero.innerHTML = `<div>${fan}<small>${f.port != null ? `puerto ${f.port} · pos ${f.index}` : ''}</small></div>`;
+    return;
+  }
+  numero.style.display = 'none';
   const visible = a.tipo === 'negro' || a.tipo === 'canal' ? null : elemento(a.pieza);
   for (const [id, el] of elementos) {
     const on = el === visible;

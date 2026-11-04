@@ -48,6 +48,12 @@ test('extender: cada ventilador es una tesela de la rejilla en el orden pedido',
   assert.deepEqual([g.filas, asignacion(g, 6, 0).fila, asignacion(g, 6, 0).col], [2, 1, 1]);
 });
 
+test('identificar: cada pantalla enseña su propio número, sin piezas', () => {
+  const e = normalizarEscena({ modo: 'identify' });
+  assert.equal(e.modo, 'identificar');
+  assert.deepEqual(asignacion(e, 5, 0), { tipo: 'numero', fan: 5 });
+});
+
 test('independiente y repetir los pinta el canal', () => {
   assert.equal(asignacion(normalizarEscena({ modo: 'repeat' }), 3).tipo, 'canal');
   assert.equal(asignacion(normalizarEscena({ modo: 'independiente' }), 3).tipo, 'canal');

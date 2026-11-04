@@ -11,9 +11,11 @@ const ALIAS_MODO = {
   independiente: 'independiente', independent: 'independiente', autonomo: 'independiente', 'autónomo': 'independiente', autonomous: 'independiente',
   repetir: 'repetir', repeat: 'repetir', repeticion: 'repetir', 'repetición': 'repetir', espejo: 'repetir', mirror: 'repetir',
   extender: 'extender', extend: 'extender', extendido: 'extender', extended: 'extender', adaptar: 'extender', adapt: 'extender', estirar: 'extender', stretch: 'extender',
-  sincro: 'sincro', sync: 'sincro', sincronizar: 'sincro', synchronized: 'sincro', relevo: 'sincro'
+  sincro: 'sincro', sync: 'sincro', sincronizar: 'sincro', synchronized: 'sincro', relevo: 'sincro',
+  identificar: 'identificar', identify: 'identificar', numeros: 'identificar', 'números': 'identificar'
 };
-export const MODOS = ['independiente', 'repetir', 'extender', 'sincro'];
+//  · identificar    — cada pantalla enseña su número, puerto y posición (para ubicarlos en el gemelo)
+export const MODOS = ['independiente', 'repetir', 'extender', 'sincro', 'identificar'];
 export const modoCanonico = m => ALIAS_MODO[String(m ?? '').toLowerCase().trim()] || null;
 
 const ALIAS_AJUSTE = { cubrir: 'cubrir', cover: 'cubrir', estirar: 'estirar', stretch: 'estirar', fill: 'estirar', contener: 'contener', contain: 'contener' };
@@ -44,6 +46,7 @@ export function normalizarEscena(raw = {}, fans = 7) {
 //  extender → una tesela de la rejilla; sincro → la pieza que le toca en este paso o negro.
 // El reloj de vídeo es común: t = (ahora − epoch) / 1000, así el relevo no reinicia la pieza.
 export function asignacion(escena, fan, ahora = Date.now()) {
+  if (escena.modo === 'identificar') return { tipo: 'numero', fan };
   const pos = escena.orden.indexOf(fan);
   if (pos < 0) return { tipo: 'negro' };
   const t = Math.max(0, (ahora - escena.epoch) / 1000);

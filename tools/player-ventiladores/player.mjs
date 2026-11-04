@@ -106,7 +106,8 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/escena.json') {
       const piezas = estado?.escena?.piezas ?? [];
       const lista = await Promise.all(piezas.map(async id => [id, await medios.asegurar(id).catch(() => null)]));
-      return json(res, { escena: estado?.escena, medios: Object.fromEntries(lista.filter(([, m]) => m)) });
+      return json(res, { escena: estado?.escena, medios: Object.fromEntries(lista.filter(([, m]) => m)),
+        fans: fans.map(f => ({ n: f.n, port: f.port, index: f.index })) });
     }
     if (url.pathname === '/estado') return json(res, { estado, informe: informe(), nube });
     if (req.method === 'POST' && (url.pathname === '/escena' || url.pathname === '/luz')) {
@@ -221,7 +222,7 @@ async function aplicarLuz() {
 setInterval(() => { if (estado?.luz?.sigueVideo && estado.escena.modo === 'sincro') aplicarLuz(); }, 250).unref();
 
 // ── Nube: el gemelo de admira.store/supercomputer ──────────────────────────────
-// Cada 3 s: informe + miniaturas → nube; la respuesta trae la escena y la luz deseadas.
+// Cada 3 s: informe + miniaturas (400×400, JPEG calidad 40) → nube; la respuesta trae la escena y la luz deseadas.
 async function claveNube() {
   if (cfg.nube?.clave) return cfg.nube.clave;
   const fichero = (cfg.nube?.claveFichero || '~/.admira_supercomputer_key').replace(/^~/, os.homedir());
