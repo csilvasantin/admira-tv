@@ -37,6 +37,11 @@ const server = http.createServer((req, res) => {
   health.fans = fans.map(f => ({ n: f.n, port: f.port, index: f.index, rpm: f.rpm, sent: f.sent, errors: f.errors, lastError: f.lastError || undefined }));
   res.end(JSON.stringify(health, null, 2));
 });
+// Puerto ocupado = ya hay otro player: dos emitiendo a los mismos ventiladores se pisarían.
+server.on('error', e => {
+  log('health_port_error', { port: cfg.healthPort, error: e.code || e.message });
+  if (e.code === 'EADDRINUSE') process.exit(1);
+});
 server.listen(cfg.healthPort, '127.0.0.1');
 
 // Cada ventilador recibe siempre el fotograma más reciente, a como mucho cfg.fps;
@@ -124,7 +129,7 @@ async function run() {
   health.state = 'emitting';
   // Medida de fps y respaldo: si el screencast se calla 4 s, una captura refresca el fotograma.
   // Cada 10 s se leen las RPM: sin L-Connect nadie más vigila que los ventiladores giren.
-  for (let tick = 0; !stopping && !cdp.closed && chrome.child.exitCode === null; tick++) {
+  for (let tick = 0; !stopping && !cdp.closed; tick++) {
     await delay(1000);
     for (const p of players) {
       p.fps = p.window; p.window = 0;
@@ -134,11 +139,17 @@ async function run() {
   }
 }
 
-async function shutdown() {
-  stopping = true; health.state = 'stopping';
+// Browser.close cierra el Chrome real aunque no sea el proceso que lanzamos.
+async function closeAll() {
   for (const p of players) await p.page?.close();
+  if (cdp && !cdp.closed) await Promise.race([cdp.send('Browser.close').catch(() => {}), delay(2000)]);
   cdp?.close(); chrome?.child.kill();
   for (const f of fans) f.close();
+}
+
+async function shutdown() {
+  stopping = true; health.state = 'stopping';
+  await closeAll();
   server.close();
 }
 process.on('SIGINT', () => { shutdown().then(() => process.exit(0)); });
@@ -148,9 +159,7 @@ while (!stopping) {
   try { await run(); }
   catch (e) { health.state = 'error'; log('error', { error: String(e.message || e) }); }
   if (stopping) break;
-  for (const p of players) await p.page?.close();
-  cdp?.close(); chrome?.child.kill();
-  for (const f of fans) f.close();
+  await closeAll();
   fans = []; players = [];
   log('restarting', { inSeconds: 5 });
   await delay(5000);

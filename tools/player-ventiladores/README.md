@@ -33,6 +33,15 @@ npm start                  # emite; Ctrl+C para parar
 .\lconnect.ps1 reanudar    # vuelven los vídeos, el RGB y las curvas de L-Connect
 ```
 
+Arranque automático al iniciar sesión (tarea programada «Admira Player Ventiladores», con
+privilegios altos para poder pausar L-Connect; log en `%LOCALAPPDATA%\AdmiraVentiladores\logs\player.log`):
+
+```powershell
+.\autoarranque.ps1 instalar   # aviso de Windows; arranca ya
+.\autoarranque.ps1 estado
+.\autoarranque.ps1 quitar     # para el player, borra la tarea y reanuda L-Connect
+```
+
 `npm run dry-run` renderiza sin tocar el USB (sirve para probar el canal con L-Connect activo).
 `npm test` prueba el protocolo y la URL.
 

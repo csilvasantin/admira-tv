@@ -13,7 +13,10 @@ export async function launchChrome(chromePath, profileDir) {
     '--autoplay-policy=no-user-gesture-required', '--mute-audio', '--hide-scrollbars',
     '--no-first-run', '--no-default-browser-check', '--window-size=400,400',
     '--disable-background-timer-throttling', '--disable-renderer-backgrounding',
-    '--disable-backgrounding-occluded-windows', 'about:blank'
+    '--disable-backgrounding-occluded-windows',
+    // La tarea programada corre con privilegios altos (para pausar L-Connect) y Chrome, si se
+    // ve elevado, se relanza sin ellos en otro proceso: el hijo moría y el perfil quedaba tomado.
+    '--do-not-de-elevate', 'about:blank'
   ];
   const child = spawn(chromePath, args, { stdio: 'ignore', windowsHide: true });
   for (let i = 0; i < 100; i++) {
