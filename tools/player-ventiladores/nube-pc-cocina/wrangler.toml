@@ -1,0 +1,20 @@
+# Copia independiente para PC-COCINA. Secretos NUEVOS (MAQUINA_KEY, PROXY_KEY), distintos de los de METAHUMAN.
+# Nube de la Supercomputer: gemelo (admira.store/supercomputer) ⇄ puente de METAHUMAN.
+# Sin dominio propio: nadie llama a este Worker desde fuera de Cloudflare. El gemelo y el puente
+# entran por www.admira.store/supercomputer/api/* (función de Pages), que lo llama por dentro;
+# así el bloqueo de *.workers.dev de los ISP españoles no afecta a la máquina.
+# Despliegue: npx wrangler@4 deploy (desde esta carpeta, con NODE_EXTRA_CA_CERTS en este PC).
+# Secretos (wrangler secret put): MAQUINA_KEY (el puente; copia en ~/.admira_supercomputer_key)
+# y PROXY_KEY (la función de admira.store; allí es el secreto de Pages SUPERCOMPUTER_PROXY_KEY).
+name = "supercomputer-pc-cocina"
+main = "worker.mjs"
+compatibility_date = "2026-06-01"
+workers_dev = true
+
+[[durable_objects.bindings]]
+name = "SUPERCOMPUTER"
+class_name = "Supercomputer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Supercomputer"]
