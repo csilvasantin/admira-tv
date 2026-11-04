@@ -1,50 +1,56 @@
-# Player admira.tv en los ventiladores de METAHUMAN
+# La Supercomputer · player admira.tv en los ventiladores de METAHUMAN
 
 Proyecto dirigido por **Woz** (Consejo AdmiraNext). Arrancado el 4 de noviembre de 2026.
+Gemelo digital: **https://www.admira.store/supercomputer/** (con sesión; guía en
+`csilvasantin/admira-store` · `admira-xp/docs/supercomputer.md`).
 
 METAHUMAN (Windows) lleva 7 ventiladores **Lian Li UNI FAN TL LCD**, cada uno con una
-pantalla redonda de 400×400 (USB `04FC:7393`, una interfaz HID por ventilador) colgando
-del controlador UNI FAN TL (`0416:7372`): 3 en el puerto 0, 3 en el 1 y 1 en el 2.
+pantalla redonda de 400×400 (USB `04FC:7393`, una interfaz HID por ventilador) y un anillo RGB,
+colgando del controlador UNI FAN TL (`0416:7372`): 3 en el puerto 0, 3 en el 1 y 1 en el 2.
+Numeración: ventilador 1 = puerto 0, primero de la cadena; el 7 es el del puerto 2.
 
 ## Cómo funciona
 
-El canal (`canal.html`) corre **tal cual** en Chrome sin ventana a 400×400, con el
-contrato público del player (`mcp/player-contract.md`): `embed=mupi&clean=1&fit=screen`,
-`screen`, `circuit`, `machine`, `muted=1`. Cada fotograma del screencast de DevTools
-(JPEG) se trocea en informes HID de 512 bytes y se manda a la pantalla del ventilador.
-No hay copia del player: censo, órdenes del mando, playlist, sincro y actualizaciones
-son las del canal publicado.
+Cada pantalla se pinta en un Chrome sin ventana a 400×400 (un Chrome por player: en headless
+solo pinta la ventana activa de cada navegador) y cada fotograma del screencast (JPEG) se trocea
+en informes HID de 512 bytes y va a su ventilador.
 
-| Modo (`config.json`) | Pantalla(s) en admira.tv |
-|---|---|
-| `espejo` (por defecto) | `metahuman-ventiladores`: los 7 pintan lo mismo |
-| `independiente` (el de METAHUMAN) | `metahuman-ventilador-1` … `-7`, una por ventilador |
+| Modo (`escena.modo`) | También | Qué pinta | Pantalla(s) en admira.tv |
+|---|---|---|---|
+| `independiente` | independent, autónomo | un canal de admira.tv por ventilador, con sus piezas por `?ids=` | `supercomputer-ventilador-1` … `-7` |
+| `repetir` | repeat, espejo | un solo canal cuyos fotogramas van a los 7 | `supercomputer-ventiladores` |
+| `extender` | extend, adaptar, adapt, estirar | una pieza estirada sobre los 7 como un mural (`ajuste` cubrir/estirar/contener, `columnas`, `orden`) | — |
+| `sincro` | sync, relevo | la pieza pasa de un ventilador al siguiente cada `paso` s sin reiniciarse; varias piezas = carrusel | — |
 
-En METAHUMAN cada ventilador tiene **su propio vídeo** del Stock, fijado con el `?ids=` del canal
-(`ids` en `config.json`, por número de ventilador):
+Independiente y repetir usan el canal publicado **tal cual** (contrato `mcp/player-contract.md`:
+`embed=mupi&clean=1&fit=screen`, `screen`, `circuit`, `machine`, `muted=1`), con su censo, mando y
+actualizaciones. Extender y sincro los pinta `escena.html`, servida por el propio puente, con un reloj
+común (`Date.now()` del PC) y las piezas del Stock bajadas una vez a `%LOCALAPPDATA%\AdmiraVentiladores\medios`.
+Circuito `supercomputer`, equipo `METAHUMAN`, UA `AdmiraWindowsPlayer/tl-lcd-2.0`.
 
-| Ventilador | Pieza del Stock |
-|---|---|
-| 1 | #1942 · gaussian splatting 3D (`1793694892530-3r3zol`) |
-| 2 | #1926 · Tesla Cybercab (`1793529764459-enls1w`) |
-| 3 | #1897 · Back to the Future, cuadrado 1080×1080 (`1793045953771-x9tbz7`) |
-| 4 | #1378 · anuncio de café recién hecho (`auto-8985fa5f5f9ec8776256`) |
-| 5 | #1240 · Prince · When Doves Cry, cápsula sonora (`auto-6e62ad523f2d7f7a4a9b`) |
-| 6 | #829 · Japón, bandera ASCII (`auto-69b7b99959e1f062947f`) |
-| 7 | #408 · Paquiño: el mar llega a tu mesa (`auto-91202a4b0f9a4ebbfbd9`) |
+**Iluminación** (`luz`): efectos del controlador (apagado, fijo, arcoíris, respirar, ciclo, meteoro,
+pista, ola, carrera), `color`, `brillo` 0–4 (o porcentaje), `velocidad` 0–4, `ventiladores` con luz propia
+por número y `sigueVideo` (en sincro solo brilla el ventilador que tiene la pieza). «Respirar» es un
+efecto de grupo y se aplica al puerto entero. El puente solo envía lo que cambia.
 
-Para cambiar un vídeo basta con editar `config.json`: el player lo detecta en 3 s, sale y
-`arrancar.ps1` lo relanza con la configuración nueva (lo mismo si cambia su código).
+La lógica de modos y luz vive en `escena.mjs` (sin APIs de Node: la usan el puente, `escena.html` y la nube).
 
-Circuito `metahuman-ventiladores`, equipo `METAHUMAN`. El canal se identifica como
-`AdmiraNeXT Windows Player` versión `tl-lcd-1.0` (token `AdmiraWindowsPlayer/` en el UA).
-Numeración: ventilador 1 = puerto 0, primero de la cadena; el 7 es el del puerto 2.
+## Gemelo y nube
+
+Cada 3 s el puente manda su informe (escena, luz, RPM, fps, envíos) y una miniatura 160×160 de cada
+pantalla a `https://www.admira.store/supercomputer/api/maquina` con su clave Bearer
+(`~/.admira_supercomputer_key`), y recibe lo deseado por el gemelo. Si la revisión deseada es más nueva
+que la aplicada, la aplica. La función de admira.store la reenvía al Worker `supercomputer`
+(`nube/`, Durable Object; `npx wrangler@4 deploy` desde esa carpeta), que no usa KV.
+
+Manda siempre lo más reciente: lo que llega del gemelo o de la API local se guarda en
+`%LOCALAPPDATA%\AdmiraVentiladores\estado.json`; editar `config.json` también cuenta (su fecha es su revisión).
 
 ## Uso
 
 ```powershell
 npm install
-.\lconnect.ps1 pausar      # aviso de Windows; L-Connect deja de mandar sus vídeos
+.\lconnect.ps1 pausar      # aviso de Windows; L-Connect deja de mandar sus vídeos y su RGB
 npm start                  # emite; Ctrl+C para parar
 .\lconnect.ps1 reanudar    # vuelven los vídeos, el RGB y las curvas de L-Connect
 ```
@@ -53,21 +59,27 @@ Arranque automático al iniciar sesión (tarea programada «Admira Player Ventil
 privilegios altos para poder pausar L-Connect; log en `%LOCALAPPDATA%\AdmiraVentiladores\logs\player.log`):
 
 ```powershell
-.\autoarranque.ps1 instalar   # aviso de Windows; arranca ya
+.\autoarranque.ps1 instalar   # aviso de Windows; arranca ya. Repetirlo reinicia el player
 .\autoarranque.ps1 estado
 .\autoarranque.ps1 quitar     # para el player, borra la tarea y reanuda L-Connect
 ```
 
-`npm run dry-run` renderiza sin tocar el USB (sirve para probar el canal con L-Connect activo).
-`npm test` prueba el protocolo y la URL.
+Si cambia `config.json` o el código, el player sale y `arrancar.ps1` lo relanza en 5 s (sin elevación).
+`npm run dry-run` renderiza sin tocar el USB. `npm test` prueba protocolo, URL, modos y luz.
 
-Estado local: `http://127.0.0.1:4749/health` (fps por pantalla, envíos por ventilador, RPM).
-Último fotograma: `/player/1.jpg` (lo que pinta el canal) y `/fan/<n>.jpg` (lo enviado al ventilador n).
+API local (solo `127.0.0.1:4749`):
 
-`config.json` (sin secretos, versionado) admite `mode`, `screen`, `screenPrefix`, `circuit`,
-`machine`, `ids` (`{"1": ["<id>"]}`, o `{"espejo": [...]}`; hasta 12 por player), `fps` (≤ 30),
-`quality`, `brightness` y `rotation` (`{"7": 270}`). Sin `brightness` ni `rotation` no se tocan
-los ajustes que dejó L-Connect en cada pantalla.
+| Ruta | Qué |
+|---|---|
+| `GET /health` | fps por pantalla, envíos por ventilador, RPM, estado de la nube |
+| `GET /estado` | escena y luz aplicadas, informe completo |
+| `POST /escena` | `{"modo":"sincro","pieza":"<id>","paso":3}` · `{"modo":"extend","pieza":"<id>","ajuste":"estirar"}` · … |
+| `POST /luz` | `{"efecto":"arcoiris","brillo":75}` · `{"efecto":"fijo","color":"#00d26a","ventiladores":{"7":{"color":"#ff0040"}}}` |
+| `GET /player/<n>.jpg` · `/fan/<n>.jpg` | último fotograma pintado / enviado |
+
+`config.json` (sin secretos, versionado): `escena`, `luz`, `nube` (`{"api": "...", "claveFichero": "~/..."}`),
+`screen`, `screenPrefix`, `circuit`, `machine`, `fps` (≤ 30), `quality`, `brightness` y `rotation`
+(`{"7": 270}`). El formato anterior (`mode` + `ids`) sigue valiendo.
 
 ## Relevo con L-Connect
 
@@ -75,11 +87,20 @@ L-Connect 3 emite continuamente a las pantallas (modo sincronizado) y además go
 RGB, la bomba Galahad II Trinity y las curvas de los ventiladores. Si los dos emiten a la vez
 se pisan, así que mientras emite admira.tv su servicio queda **pausado** (solo parado: el
 tipo de inicio no cambia y vuelve al reiniciar el PC). El player lee cada 10 s las RPM del
-controlador, sin escribir nada, y registra `fan_stopped` si algún ventilador marca 0.
+controlador y registra `fan_stopped` si algún ventilador marca 0. Nunca fija velocidades.
+
+## Fallos del canal que el puente sortea
+
+Con `?ids=` y arranque en frío, el canal puede quedarse en «DESCARGANDO CONTENIDOS 1/1 · …» con la pieza
+ya en disco (no se llama a `maybeResumeCold()`). El puente lo detecta y recarga esa página, como haría
+`hardreload`, como mucho una vez por minuto. Reportado en AgoraMatrix; no se parchea `canal.html`.
 
 ## Protocolo
 
-Informe HID de salida `0x02`, 512 bytes: `[0x02, cmd, tamaño total 4 BE, nº de paquete 3 BE,
+Pantalla: informe HID de salida `0x02`, 512 bytes: `[0x02, cmd, tamaño total 4 BE, nº de paquete 3 BE,
 longitud 2 BE]` + 501 bytes. Fotograma = JPEG 400×400 con `cmd 0x46` (streaming sin acuse).
-`0x3E` lee serie/puerto/posición; el player nunca reescribe la serie. Referencia:
-[sgtaziz/lian-li-linux](https://github.com/sgtaziz/lian-li-linux) (MIT), `tl_lcd.rs` y `tl_fan`.
+`0x3E` lee serie/puerto/posición; el player nunca reescribe la serie.
+Controlador: informe `0x01` de 64 bytes `[0x01, cmd, 0, 0, 0, longitud, datos]`. `0xA1` RPM,
+`0xA3` luz por ventilador, `0xAD` grupos y `0xB0` luz de grupo (20 bytes: destino, efecto, brillo,
+velocidad, 4 colores, dirección, apagado, nº de colores). Referencia:
+[sgtaziz/lian-li-linux](https://github.com/sgtaziz/lian-li-linux) (MIT), `tl_lcd.rs`, `tl_fan` y `lianli-shared/rgb.rs`.

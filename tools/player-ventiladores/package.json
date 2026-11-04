@@ -8,7 +8,7 @@
   "scripts": {
     "start": "node player.mjs",
     "dry-run": "node player.mjs --dry-run",
-    "test": "node --test core.test.mjs"
+    "test": "node --test core.test.mjs escena.test.mjs"
   },
   "dependencies": {
     "node-hid": "^3.4.0"

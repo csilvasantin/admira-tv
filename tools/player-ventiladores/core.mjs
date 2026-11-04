@@ -52,14 +52,27 @@ export function numberFans(fans) {
   return [...fans].sort((a, b) => a.port - b.port || a.index - b.index).map((f, i) => ({ ...f, n: i + 1 }));
 }
 
-// «espejo»: una pantalla para todo el grupo (los 7 ventiladores pintan lo mismo).
-// «independiente»: una pantalla por ventilador, como manda el contrato (un ID por aparato).
-// `ids` fija piezas concretas del Stock con el ?ids= del canal (en espejo, la clave "espejo").
-export function playersFor(fans, cfg) {
-  if (cfg.mode === 'independiente') {
-    return fans.map(f => ({ screen: `${cfg.screenPrefix}-${f.n}`, fans: [f.n], ids: cfg.ids[String(f.n)] || [] }));
+// Qué Chrome hace falta para cada modo de la escena (ver escena.mjs):
+//  · independiente → un canal por ventilador (`<screenPrefix>-<n>`, un ID por aparato como manda el
+//    contrato) con sus piezas fijadas por ?ids=;
+//  · repetir → un solo canal (`screen`) cuyos fotogramas van a los 7;
+//  · extender y sincro → la página de escena del puente, una por ventilador, con el reloj común.
+export function planEscena(escena, fans, cfg) {
+  const nums = fans.map(f => f.n);
+  if (escena.modo === 'repetir') return [{ screen: cfg.screen, fans: nums, url: canalUrl(cfg, cfg.screen, escena.piezas) }];
+  if (escena.modo === 'independiente') {
+    return nums.map(n => {
+      const screen = `${cfg.screenPrefix}-${n}`;
+      return { screen, fans: [n], url: canalUrl(cfg, screen, escena.ids[String(n)] || []) };
+    });
   }
-  return [{ screen: cfg.screen, fans: fans.map(f => f.n), ids: cfg.ids.espejo || [] }];
+  return nums.map(n => ({ screen: `escena-${n}`, fans: [n], url: `http://127.0.0.1:${cfg.healthPort}/escena.html?fan=${n}` }));
+}
+
+// Escena de partida si config.json no trae «escena»: el formato anterior (mode + ids).
+export function escenaDeConfig(cfg) {
+  if (cfg.escena) return cfg.escena;
+  return cfg.mode === 'independiente' ? { modo: 'independiente', ids: cfg.ids } : { modo: 'repetir', piezas: cfg.ids.espejo || [] };
 }
 
 export function canalUrl(cfg, screen, ids = []) {
@@ -76,10 +89,10 @@ export function canalUrl(cfg, screen, ids = []) {
 }
 
 export const DEFAULTS = {
-  mode: 'espejo',
-  screen: 'metahuman-ventiladores',
-  screenPrefix: 'metahuman-ventilador',
-  circuit: 'metahuman-ventiladores',
+  mode: 'espejo',            // formato anterior; si hay «escena» manda la escena
+  screen: 'supercomputer-ventiladores',
+  screenPrefix: 'supercomputer-ventilador',
+  circuit: 'supercomputer',
   machine: 'METAHUMAN',
   canal: 'https://www.admira.tv/canal.html',
   fps: 25,
@@ -87,9 +100,12 @@ export const DEFAULTS = {
   brightness: null,          // null = no tocar lo que dejó L-Connect
   rotation: {},              // { "7": 270 } por número de ventilador; vacío = no tocar
   ids: {},                   // { "1": ["<id del Stock>"], … } o { "espejo": [...] }; vacío = playlist del canal
+  escena: null,              // { modo, ids, piezas, paso, orden, columnas, ajuste } (escena.mjs)
+  luz: null,                 // { efecto, color, brillo, velocidad, ventiladores, sigueVideo }; null = no tocar
+  nube: null,                // { api, clave } del gemelo (admira.store/supercomputer); null = sin nube
   healthPort: 4749,
   chrome: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-  userAgentToken: 'AdmiraWindowsPlayer/tl-lcd-1.0'
+  userAgentToken: 'AdmiraWindowsPlayer/tl-lcd-2.0'
 };
 
 export function mergeConfig(raw = {}) {

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Supercomputer · ventilador</title>
+<style>
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+  #lienzo { position: absolute; inset: 0; overflow: hidden; }
+  #lienzo > video, #lienzo > img { position: absolute; display: none; }
+  #lienzo > .on { display: block; }
+</style>
+</head>
+<body>
+<div id="lienzo"></div>
+<script type="module">
+// Render de un ventilador en los modos extender y sincro. Lo abre el puente en Chrome sin
+// ventana (un Chrome por ventilador) y captura su screencast. Todos los ventiladores usan el
+// mismo reloj (Date.now() del PC): así las teselas y el relevo van alineados.
+import { asignacion } from '/escena.mjs';
+
+const fan = Number(new URLSearchParams(location.search).get('fan')) || 1;
+const lienzo = document.getElementById('lienzo');
+const ajusteCss = { cubrir: 'cover', estirar: 'fill', contener: 'contain' };
+let estado = null;                 // { escena, medios: { id: { url, tipo } } }
+const elementos = new Map();       // id de pieza → <video>/<img>
+
+function elemento(id) {
+  if (elementos.has(id)) return elementos.get(id);
+  const medio = estado.medios[id];
+  if (!medio) return null;
+  const el = document.createElement(medio.tipo === 'image' ? 'img' : 'video');
+  if (el.tagName === 'VIDEO') { el.muted = true; el.loop = true; el.playsInline = true; el.preload = 'auto'; el.autoplay = true; }
+  el.src = medio.url;
+  lienzo.appendChild(el);
+  elementos.set(id, el);
+  return el;
+}
+
+// Corrige la deriva respecto al reloj común: salto si va muy desfasado, ajuste fino si no.
+function alinear(video, t) {
+  if (!(video.duration > 0)) return;
+  const objetivo = t % video.duration;
+  let d = objetivo - video.currentTime;
+  if (d > video.duration / 2) d -= video.duration; else if (d < -video.duration / 2) d += video.duration;
+  if (Math.abs(d) > 0.5) { video.currentTime = objetivo; video.playbackRate = 1; }
+  else video.playbackRate = 1 + Math.max(-0.08, Math.min(0.08, d * 0.6));
+  if (video.paused) video.play().catch(() => {});
+}
+
+function pintar() {
+  requestAnimationFrame(pintar);
+  if (!estado) return;
+  const a = asignacion(estado.escena, fan, Date.now());
+  const visible = a.tipo === 'negro' || a.tipo === 'canal' ? null : elemento(a.pieza);
+  for (const [id, el] of elementos) {
+    const on = el === visible;
+    el.classList.toggle('on', on);
+    // En sincro todas las piezas siguen corriendo ocultas: al llegar a este ventilador ya van por su segundo.
+    if (el.tagName === 'VIDEO' && estado.escena.piezas.includes(id)) alinear(el, a.t ?? (Date.now() - estado.escena.epoch) / 1000);
+  }
+  if (!visible) return;
+  const s = visible.style;
+  if (a.tipo === 'tesela') {
+    s.width = a.columnas * 100 + '%'; s.height = a.filas * 100 + '%';
+    s.left = -a.col * 100 + '%'; s.top = -a.fila * 100 + '%';
+    s.objectFit = ajusteCss[a.ajuste] || 'cover';
+  } else {
+    s.width = '100%'; s.height = '100%'; s.left = '0'; s.top = '0'; s.objectFit = 'cover';
+  }
+}
+
+async function sondear() {
+  try {
+    const r = await fetch('/escena.json', { cache: 'no-store' });
+    if (r.ok) {
+      estado = await r.json();
+      for (const [id, el] of elementos) if (!estado.escena.piezas.includes(id)) { el.remove(); elementos.delete(id); }
+    }
+  } catch {}
+  setTimeout(sondear, 1000);
+}
+sondear();
+requestAnimationFrame(pintar);
+</script>
+</body>
+</html>

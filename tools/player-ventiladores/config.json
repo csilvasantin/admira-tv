@@ -1,12 +1,16 @@
 {
-  "mode": "independiente",
-  "ids": {
-    "1": ["1793694892530-3r3zol"],
-    "2": ["1793529764459-enls1w"],
-    "3": ["1793045953771-x9tbz7"],
-    "4": ["auto-8985fa5f5f9ec8776256"],
-    "5": ["auto-6e62ad523f2d7f7a4a9b"],
-    "6": ["auto-69b7b99959e1f062947f"],
-    "7": ["auto-91202a4b0f9a4ebbfbd9"]
-  }
+  "escena": {
+    "modo": "independiente",
+    "ids": {
+      "1": ["1793694892530-3r3zol"],
+      "2": ["1793529764459-enls1w"],
+      "3": ["1793045953771-x9tbz7"],
+      "4": ["auto-8985fa5f5f9ec8776256"],
+      "5": ["auto-6e62ad523f2d7f7a4a9b"],
+      "6": ["auto-69b7b99959e1f062947f"],
+      "7": ["auto-91202a4b0f9a4ebbfbd9"]
+    }
+  },
+  "luz": { "efecto": "fijo", "color": "#00d26a", "brillo": 4 },
+  "nube": { "api": "https://www.admira.store/supercomputer/api" }
 }

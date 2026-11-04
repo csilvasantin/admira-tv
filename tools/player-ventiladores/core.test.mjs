@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPacket, framePackets, settingsPayload, parseIdentity, numberFans, playersFor, canalUrl, mergeConfig, isJpeg, MAX_PAYLOAD } from './core.mjs';
+import { buildPacket, framePackets, settingsPayload, parseIdentity, numberFans, planEscena, escenaDeConfig, canalUrl, mergeConfig, isJpeg, MAX_PAYLOAD } from './core.mjs';
+import { normalizarEscena } from './escena.mjs';
 
 test('el paquete sigue la cabecera HID de la TL LCD', () => {
   const p = buildPacket(0x48, 0x10000, 0x0102, new Uint8Array(501).fill(0xab));
@@ -35,16 +36,29 @@ test('los ventiladores se numeran por puerto y posición en la cadena', () => {
   assert.deepEqual(n.map(f => [f.port, f.index, f.n]), [[0, 0, 1], [0, 1, 2], [1, 2, 3], [2, 0, 4]]);
 });
 
-test('espejo: una pantalla para todo el grupo; independiente: una por ventilador', () => {
+test('plan por modo: un canal por ventilador, un canal para los 7, o la escena local por ventilador', () => {
   const fans = numberFans([{ port: 0, index: 0 }, { port: 0, index: 1 }]);
-  assert.deepEqual(playersFor(fans, mergeConfig()), [{ screen: 'metahuman-ventiladores', fans: [1, 2], ids: [] }]);
-  assert.deepEqual(playersFor(fans, mergeConfig({ mode: 'independiente', ids: { 2: 'auto-69b7b99959e1f062947f' } })),
-    [{ screen: 'metahuman-ventilador-1', fans: [1], ids: [] }, { screen: 'metahuman-ventilador-2', fans: [2], ids: ['auto-69b7b99959e1f062947f'] }]);
+  const cfg = mergeConfig();
+  const ind = planEscena(normalizarEscena({ modo: 'independiente', ids: { 2: 'auto-69b7b99959e1f062947f' } }, 2), fans, cfg);
+  assert.deepEqual(ind.map(p => [p.screen, p.fans, new URL(p.url).searchParams.get('ids')]),
+    [['supercomputer-ventilador-1', [1], null], ['supercomputer-ventilador-2', [2], 'auto-69b7b99959e1f062947f']]);
+  const rep = planEscena(normalizarEscena({ modo: 'repeat', pieza: 'abc' }, 2), fans, cfg);
+  assert.deepEqual(rep.map(p => [p.screen, p.fans, new URL(p.url).searchParams.get('ids')]), [['supercomputer-ventiladores', [1, 2], 'abc']]);
+  for (const modo of ['sincro', 'extend']) {
+    assert.deepEqual(planEscena(normalizarEscena({ modo, pieza: 'abc' }, 2), fans, cfg).map(p => p.url),
+      ['http://127.0.0.1:4749/escena.html?fan=1', 'http://127.0.0.1:4749/escena.html?fan=2']);
+  }
+});
+
+test('config.json del formato anterior (mode + ids) sigue valiendo como escena', () => {
+  assert.deepEqual(escenaDeConfig(mergeConfig({ mode: 'independiente', ids: { 1: 'x' } })), { modo: 'independiente', ids: { 1: ['x'] } });
+  assert.deepEqual(escenaDeConfig(mergeConfig({ ids: { espejo: 'y' } })), { modo: 'repetir', piezas: ['y'] });
+  assert.deepEqual(escenaDeConfig(mergeConfig({ escena: { modo: 'sincro' } })), { modo: 'sincro' });
 });
 
 test('cada player puede fijar sus piezas del Stock con ?ids= (mismo filtro que el canal)', () => {
   const cfg = mergeConfig({ ids: { espejo: ['1793045953771-x9tbz7', 'auto-8985fa5f5f9ec8776256'] } });
-  const u = new URL(canalUrl(cfg, 'metahuman-ventiladores', cfg.ids.espejo));
+  const u = new URL(canalUrl(cfg, 'supercomputer-ventiladores', cfg.ids.espejo));
   assert.equal(u.searchParams.get('ids'), '1793045953771-x9tbz7,auto-8985fa5f5f9ec8776256');
   assert.equal(new URL(canalUrl(cfg, 'x')).searchParams.has('ids'), false, 'sin ids, la playlist del canal');
   assert.throws(() => mergeConfig({ ids: { 1: '../x' } }));
@@ -52,9 +66,9 @@ test('cada player puede fijar sus piezas del Stock con ?ids= (mismo filtro que e
 });
 
 test('la URL del canal usa el contrato público del player (sin tocar canal.html)', () => {
-  const u = new URL(canalUrl(mergeConfig(), 'metahuman-ventiladores'));
+  const u = new URL(canalUrl(mergeConfig(), 'supercomputer-ventiladores'));
   assert.equal(u.origin + u.pathname, 'https://www.admira.tv/canal.html');
-  for (const [k, v] of Object.entries({ embed: 'mupi', clean: '1', fit: 'screen', screen: 'metahuman-ventiladores', circuit: 'metahuman-ventiladores', machine: 'METAHUMAN', muted: '1' })) {
+  for (const [k, v] of Object.entries({ embed: 'mupi', clean: '1', fit: 'screen', screen: 'supercomputer-ventiladores', circuit: 'supercomputer', machine: 'METAHUMAN', muted: '1' })) {
     assert.equal(u.searchParams.get(k), v, k);
   }
   for (const k of ['tag', 'mode', 'sincro', 'modeLock']) assert.equal(u.searchParams.has(k), false, `${k} bloquearía el gobierno remoto`);

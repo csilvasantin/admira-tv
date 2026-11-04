@@ -90,6 +90,9 @@ export async function openPlayerPage(cdp, { url, side, quality, userAgent }) {
   return {
     targetId, sessionId, startScreencast,
     screenshot: () => s('Page.captureScreenshot', { format: 'jpeg', quality }).then(r => Buffer.from(r.data, 'base64')),
+    // Miniatura para el gemelo: 160×160, unos 5 KB.
+    miniatura: () => s('Page.captureScreenshot', { format: 'jpeg', quality: 55, clip: { x: 0, y: 0, width: side, height: side, scale: 0.4 } })
+      .then(r => Buffer.from(r.data, 'base64')),
     evaluate: expression => s('Runtime.evaluate', { expression, returnByValue: true }).then(r => r.result?.value),
     ack: frameId => s('Page.screencastFrameAck', { sessionId: frameId }),
     reload: () => s('Page.reload', { ignoreCache: false }),
