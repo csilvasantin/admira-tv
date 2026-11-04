@@ -90,6 +90,7 @@ export async function openPlayerPage(cdp, { url, side, quality, userAgent }) {
   return {
     targetId, sessionId, startScreencast,
     screenshot: () => s('Page.captureScreenshot', { format: 'jpeg', quality }).then(r => Buffer.from(r.data, 'base64')),
+    evaluate: expression => s('Runtime.evaluate', { expression, returnByValue: true }).then(r => r.result?.value),
     ack: frameId => s('Page.screencastFrameAck', { sessionId: frameId }),
     reload: () => s('Page.reload', { ignoreCache: false }),
     close: () => cdp.send('Target.closeTarget', { targetId }).catch(() => {})

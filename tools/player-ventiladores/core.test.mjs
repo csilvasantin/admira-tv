@@ -37,9 +37,18 @@ test('los ventiladores se numeran por puerto y posición en la cadena', () => {
 
 test('espejo: una pantalla para todo el grupo; independiente: una por ventilador', () => {
   const fans = numberFans([{ port: 0, index: 0 }, { port: 0, index: 1 }]);
-  assert.deepEqual(playersFor(fans, mergeConfig()), [{ screen: 'metahuman-ventiladores', fans: [1, 2] }]);
-  assert.deepEqual(playersFor(fans, mergeConfig({ mode: 'independiente' })),
-    [{ screen: 'metahuman-ventilador-1', fans: [1] }, { screen: 'metahuman-ventilador-2', fans: [2] }]);
+  assert.deepEqual(playersFor(fans, mergeConfig()), [{ screen: 'metahuman-ventiladores', fans: [1, 2], ids: [] }]);
+  assert.deepEqual(playersFor(fans, mergeConfig({ mode: 'independiente', ids: { 2: 'auto-69b7b99959e1f062947f' } })),
+    [{ screen: 'metahuman-ventilador-1', fans: [1], ids: [] }, { screen: 'metahuman-ventilador-2', fans: [2], ids: ['auto-69b7b99959e1f062947f'] }]);
+});
+
+test('cada player puede fijar sus piezas del Stock con ?ids= (mismo filtro que el canal)', () => {
+  const cfg = mergeConfig({ ids: { espejo: ['1793045953771-x9tbz7', 'auto-8985fa5f5f9ec8776256'] } });
+  const u = new URL(canalUrl(cfg, 'metahuman-ventiladores', cfg.ids.espejo));
+  assert.equal(u.searchParams.get('ids'), '1793045953771-x9tbz7,auto-8985fa5f5f9ec8776256');
+  assert.equal(new URL(canalUrl(cfg, 'x')).searchParams.has('ids'), false, 'sin ids, la playlist del canal');
+  assert.throws(() => mergeConfig({ ids: { 1: '../x' } }));
+  assert.equal(mergeConfig({ ids: { 1: Array.from({ length: 20 }, (_, i) => 'p' + i) } }).ids['1'].length, 12);
 });
 
 test('la URL del canal usa el contrato público del player (sin tocar canal.html)', () => {

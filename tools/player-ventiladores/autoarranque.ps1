@@ -31,8 +31,9 @@ trap { Write-Output "ERROR: $_"; Stop-Transcript | Out-Null; exit 1 }
 # el puerto de salud y el USB queden libres antes de volver a arrancar.
 function Stop-Player {
   Stop-ScheduledTask -TaskName $nombre -ErrorAction SilentlyContinue
-  Get-CimInstance Win32_Process -Filter "Name='node.exe' OR Name='chrome.exe'" |
-    Where-Object { $_.CommandLine -match 'player\.mjs|AdmiraVentiladores' } |
+  Get-CimInstance Win32_Process -Filter "Name='node.exe' OR Name='chrome.exe' OR Name='powershell.exe'" |
+    Where-Object { $_.CommandLine -match 'player\.mjs|AdmiraVentiladores|arrancar\.ps1' } |
+    Sort-Object { $_.Name -ne 'powershell.exe' } |   # primero el bucle de arrancar.ps1, o relanzaría el player
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 }
 

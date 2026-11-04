@@ -18,7 +18,23 @@ son las del canal publicado.
 | Modo (`config.json`) | Pantalla(s) en admira.tv |
 |---|---|
 | `espejo` (por defecto) | `metahuman-ventiladores`: los 7 pintan lo mismo |
-| `independiente` | `metahuman-ventilador-1` … `-7`, una por ventilador |
+| `independiente` (el de METAHUMAN) | `metahuman-ventilador-1` … `-7`, una por ventilador |
+
+En METAHUMAN cada ventilador tiene **su propio vídeo** del Stock, fijado con el `?ids=` del canal
+(`ids` en `config.json`, por número de ventilador):
+
+| Ventilador | Pieza del Stock |
+|---|---|
+| 1 | #1942 · gaussian splatting 3D (`1793694892530-3r3zol`) |
+| 2 | #1926 · Tesla Cybercab (`1793529764459-enls1w`) |
+| 3 | #1897 · Back to the Future, cuadrado 1080×1080 (`1793045953771-x9tbz7`) |
+| 4 | #1378 · anuncio de café recién hecho (`auto-8985fa5f5f9ec8776256`) |
+| 5 | #1240 · Prince · When Doves Cry, cápsula sonora (`auto-6e62ad523f2d7f7a4a9b`) |
+| 6 | #829 · Japón, bandera ASCII (`auto-69b7b99959e1f062947f`) |
+| 7 | #408 · Paquiño: el mar llega a tu mesa (`auto-91202a4b0f9a4ebbfbd9`) |
+
+Para cambiar un vídeo basta con editar `config.json`: el player lo detecta en 3 s, sale y
+`arrancar.ps1` lo relanza con la configuración nueva (lo mismo si cambia su código).
 
 Circuito `metahuman-ventiladores`, equipo `METAHUMAN`. El canal se identifica como
 `AdmiraNeXT Windows Player` versión `tl-lcd-1.0` (token `AdmiraWindowsPlayer/` en el UA).
@@ -48,9 +64,10 @@ privilegios altos para poder pausar L-Connect; log en `%LOCALAPPDATA%\AdmiraVent
 Estado local: `http://127.0.0.1:4749/health` (fps por pantalla, envíos por ventilador, RPM).
 Último fotograma: `/player/1.jpg` (lo que pinta el canal) y `/fan/<n>.jpg` (lo enviado al ventilador n).
 
-`config.json` (opcional, fuera de Git) admite `mode`, `screen`, `screenPrefix`, `circuit`,
-`machine`, `fps` (≤ 30), `quality`, `brightness` y `rotation` (`{"7": 270}`). Sin `brightness`
-ni `rotation` no se tocan los ajustes que dejó L-Connect en cada pantalla.
+`config.json` (sin secretos, versionado) admite `mode`, `screen`, `screenPrefix`, `circuit`,
+`machine`, `ids` (`{"1": ["<id>"]}`, o `{"espejo": [...]}`; hasta 12 por player), `fps` (≤ 30),
+`quality`, `brightness` y `rotation` (`{"7": 270}`). Sin `brightness` ni `rotation` no se tocan
+los ajustes que dejó L-Connect en cada pantalla.
 
 ## Relevo con L-Connect
 

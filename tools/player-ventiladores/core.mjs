@@ -54,15 +54,17 @@ export function numberFans(fans) {
 
 // «espejo»: una pantalla para todo el grupo (los 7 ventiladores pintan lo mismo).
 // «independiente»: una pantalla por ventilador, como manda el contrato (un ID por aparato).
+// `ids` fija piezas concretas del Stock con el ?ids= del canal (en espejo, la clave "espejo").
 export function playersFor(fans, cfg) {
   if (cfg.mode === 'independiente') {
-    return fans.map(f => ({ screen: `${cfg.screenPrefix}-${f.n}`, fans: [f.n] }));
+    return fans.map(f => ({ screen: `${cfg.screenPrefix}-${f.n}`, fans: [f.n], ids: cfg.ids[String(f.n)] || [] }));
   }
-  return [{ screen: cfg.screen, fans: fans.map(f => f.n) }];
+  return [{ screen: cfg.screen, fans: fans.map(f => f.n), ids: cfg.ids.espejo || [] }];
 }
 
-export function canalUrl(cfg, screen) {
+export function canalUrl(cfg, screen, ids = []) {
   const u = new URL(cfg.canal);
+  if (ids.length) u.searchParams.set('ids', ids.join(','));
   u.searchParams.set('embed', 'mupi');
   u.searchParams.set('clean', '1');
   u.searchParams.set('fit', 'screen');
@@ -84,6 +86,7 @@ export const DEFAULTS = {
   quality: 80,
   brightness: null,          // null = no tocar lo que dejó L-Connect
   rotation: {},              // { "7": 270 } por número de ventilador; vacío = no tocar
+  ids: {},                   // { "1": ["<id del Stock>"], … } o { "espejo": [...] }; vacío = playlist del canal
   healthPort: 4749,
   chrome: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   userAgentToken: 'AdmiraWindowsPlayer/tl-lcd-1.0'
@@ -92,6 +95,13 @@ export const DEFAULTS = {
 export function mergeConfig(raw = {}) {
   const cfg = { ...DEFAULTS, ...raw, rotation: { ...DEFAULTS.rotation, ...(raw.rotation || {}) } };
   if (!['espejo', 'independiente'].includes(cfg.mode)) throw new Error(`modo desconocido: ${cfg.mode}`);
+  // Mismo filtro que el canal (URL_IDS): letras, números y guiones; como mucho 12 por player.
+  cfg.ids = Object.fromEntries(Object.entries(raw.ids || {}).map(([k, v]) => {
+    const list = [].concat(v || []).map(String);
+    const bad = list.find(id => !/^[A-Za-z0-9-]{1,80}$/.test(id));
+    if (bad) throw new Error(`id del Stock inválido para ${k}: ${bad}`);
+    return [k, list.slice(0, 12)];
+  }));
   for (const k of ['screen', 'screenPrefix', 'circuit']) {
     if (cfg[k] && !/^[a-z0-9-]+$/i.test(cfg[k])) throw new Error(`${k} solo admite letras, números y guiones`);
   }
