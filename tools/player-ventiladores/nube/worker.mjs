@@ -60,7 +60,7 @@ export class Supercomputer extends DurableObject {
           deseado = { escena: this.informe.escena, luz: this.informe.luz ?? null, revision: Number(this.informe.revision) || 1, por: 'METAHUMAN', at: Date.now() };
           await this.ctx.storage.put('deseado', deseado);
         }
-        return json({ ok: true, deseado });
+        return json({ ok: true, deseado, ahora: Date.now() });
       }
       if (url.pathname === '/estado' && metodo === 'GET') {
         const ahora = Date.now();
@@ -80,7 +80,10 @@ export class Supercomputer extends DurableObject {
         const cambio = url.pathname === '/escena'
           ? { escena: { ...normalizarEscena(body, 7), epoch: 0 } }   // el puente pone el reloj al aplicarla
           : { luz: body === null ? null : normalizarLuz(body) };
-        const deseado = { ...actual, ...cambio, revision: Math.max(Date.now(), (Number(actual.revision) || 0) + 1), por: usuario, at: Date.now() };
+        // La revisión gana siempre a la última que informó la máquina: su reloj no es el nuestro
+        // (METAHUMAN iba 48 s adelantado el 4-nov-2026) y un cambio del gemelo no puede quedar «viejo».
+        const revision = Math.max(Date.now(), (Number(actual.revision) || 0) + 1, (Number(this.informe?.revision) || 0) + 1);
+        const deseado = { ...actual, ...cambio, revision, por: usuario, at: Date.now() };
         await this.ctx.storage.put('deseado', deseado);
         return json({ ok: true, deseado });
       }
