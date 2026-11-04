@@ -23,8 +23,9 @@ en informes HID de 512 bytes y va a su ventilador.
 | `sincro` | sync, relevo | la pieza pasa de un ventilador al siguiente cada `paso` s sin reiniciarse; varias piezas = carrusel | — |
 | `identificar` | identify | cada pantalla enseña su número, su puerto y su posición | — |
 
-Disposición física (confirmada el 4-nov-2026 con `identificar`): 1-2-3 en columna en el cristal lateral
-(1 arriba), 4-5-6 en la fila de abajo (6 delante, 4 detrás) y 7 trasero.
+Disposición física (confirmada el 4-nov-2026 con `identificar` y una foto): vista desde la ventana
+principal, 1-2-3 en columna en el panel de cristal de la derecha (delante, 1 arriba, pantallas hacia dentro),
+4-5-6 en el suelo (4 detrás a la izquierda, 6 delante a la derecha) y 7 trasero arriba a la izquierda.
 
 Identificar, como extender y sincro, lo pinta `escena.html`. Independiente y repetir usan el canal publicado **tal cual** (contrato `mcp/player-contract.md`:
 `embed=mupi&clean=1&fit=screen`, `screen`, `circuit`, `machine`, `muted=1`), con su censo, mando y
