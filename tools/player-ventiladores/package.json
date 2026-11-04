@@ -1,0 +1,16 @@
+{
+  "name": "admira-player-ventiladores",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Player de admira.tv en los ventiladores UNI FAN TL LCD (USB 04FC:7393)",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node player.mjs",
+    "dry-run": "node player.mjs --dry-run",
+    "test": "node --test core.test.mjs"
+  },
+  "dependencies": {
+    "node-hid": "^3.4.0"
+  }
+}
