@@ -26,7 +26,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === '/salud') return json({ ok: true, servicio: 'supercomputer' });
-    const maquina = url.pathname === '/maquina';
+    const maquina = url.pathname === '/maquina' || (url.pathname === '/streamdeck' && request.method === 'POST');
     const ok = maquina
       ? igual((request.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''), env.MAQUINA_KEY)
       : igual(request.headers.get('x-proxy-key'), env.PROXY_KEY);
@@ -40,6 +40,7 @@ export class Supercomputer extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.informe = null; this.visto = 0; this.miniaturas = new Map();
+    this.sd = null; // Stream Deck XL: { serial, at, pageId, keyCount, hash, bytes, visto }
   }
 
   async deseado() { return (await this.ctx.storage.get('deseado')) || null; }
@@ -86,6 +87,36 @@ export class Supercomputer extends DurableObject {
         const deseado = { ...actual, ...cambio, revision, por: usuario, at: Date.now() };
         await this.ctx.storage.put('deseado', deseado);
         return json({ ok: true, deseado });
+      }
+      // Stream Deck XL de METAHUMAN: el puente lee el perfil activo de Elgato y sube la cara (atlas 8×4).
+      if (url.pathname === '/streamdeck' && metodo === 'POST') {
+        const body = await request.json();
+        const b64 = String(body.facePngBase64 || '');
+        const sdPrev = this.sd;
+        if (b64) {
+          if (b64.length > 1600000) return json({ ok: false, error: 'too_large' }, 413);
+          const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+          const h = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+          const hash = [...h.slice(0, 8)].map(x => x.toString(16).padStart(2, '0')).join('');
+          this.sd = { bytes, hash };
+        } else if (!sdPrev) return json({ ok: false, error: 'no_face' }, 400);
+        Object.assign(this.sd, { serial: String(body.serial || '').slice(0, 40), at: Number(body.at) || 0,
+          pageId: String(body.pageId || '').slice(0, 60), keyCount: Number(body.keyCount) || 0, visto: Date.now() });
+        return json({ ok: true, hash: this.sd.hash });
+      }
+      if (url.pathname === '/streamdeck/estado' && metodo === 'GET') {
+        const sd = this.sd, ahora = Date.now();
+        return json({ ok: true, ahora, enLinea: !!sd && ahora - sd.visto < 15000, visto: sd?.visto || 0,
+          serial: sd?.serial || null, pageId: sd?.pageId || null, keyCount: sd?.keyCount || 0, hash: sd?.hash || null });
+      }
+      if (url.pathname === '/streamdeck/face.png' && metodo === 'GET') {
+        const sd = this.sd;
+        if (!sd) return new Response(null, { status: 404, headers: { 'cache-control': 'no-store' } });
+        const etag = '"' + sd.hash + '"';
+        const h = { 'content-type': 'image/png', 'cache-control': 'no-store', etag, 'x-visto': String(sd.visto),
+          'x-en-linea': Date.now() - sd.visto < 15000 ? '1' : '0' };
+        if (request.headers.get('if-none-match') === etag) return new Response(null, { status: 304, headers: h });
+        return new Response(sd.bytes, { headers: h });
       }
       return json({ ok: false, error: 'not_found' }, 404);
     } catch (e) {
