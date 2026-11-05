@@ -133,12 +133,12 @@ function eventsRequest(env,query=''){
 }
 test('event detail lists each passage with its time and never returns images',async()=>{
   const d=database(),env=envFor(d.db,{email:'admin@example.test',role:'admin'});
-  const at=Date.parse('2026-09-24T10:15:07Z');
+  const at=Date.now()-10000; // validateEvents only keeps passages from the last 7 days
   const cars=[event({kind:'car',at}),event({kind:'car',at:at+1000}),event({kind:'car',at:at+2000,source:'manual'})];
   try{
     assert.equal((await eventsRequest(envFor(d.db,{session:false}))).status,401);
     assert.equal((await eventsRequest(envFor(d.db,{email:'viewer@example.test'}))).status,403);
-    await request(env,{events:[...cars,event({kind:'person',at:at+500})]});
+    assert.equal((await request(env,{events:[...cars,event({kind:'person',at:at+500})]})).status,200);
     const page=await (await eventsRequest(env,`&kind=car&source=detector&from=${at-1000}&to=${at+10000}&limit=2&offset=0`)).json();
     assert.equal(page.total,2);assert.equal(page.events.length,2);assert.equal(page.camera,'puerta-cam');
     assert.deepEqual(Object.keys(page.events[0]).sort(),['at','id','kind','source']);
