@@ -5,12 +5,13 @@ import path from 'node:path';
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-export async function launchChrome(chromePath, profileDir) {
+// `audio`: true solo para el player que suena; los demás llevan --mute-audio (un solo audio en el PC).
+export async function launchChrome(chromePath, profileDir, { audio = false } = {}) {
   await fs.mkdir(profileDir, { recursive: true });
   await fs.rm(path.join(profileDir, 'DevToolsActivePort'), { force: true });
   const args = [
     '--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profileDir}`,
-    '--autoplay-policy=no-user-gesture-required', '--mute-audio', '--hide-scrollbars',
+    '--autoplay-policy=no-user-gesture-required', ...(audio ? [] : ['--mute-audio']), '--hide-scrollbars',
     '--no-first-run', '--no-default-browser-check', '--window-size=400,400',
     '--disable-background-timer-throttling', '--disable-renderer-backgrounding',
     '--disable-backgrounding-occluded-windows',

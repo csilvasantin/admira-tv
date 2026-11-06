@@ -2,7 +2,7 @@
 // Cada pantalla se pinta en un Chrome sin ventana a 400×400 y su screencast va por USB al
 // ventilador. Modos (escena.mjs): independiente y repetir usan el canal de admira.tv tal cual;
 // extender y sincro usan la página de escena del puente con un reloj común. La iluminación
-// RGB va por el controlador UNI FAN TL. El gemelo (admira.store/supercomputer) manda la escena
+// RGB va por el controlador UNI FAN TL y la de los cables (gráfica y 24 pines) por el Strimer Plus. El gemelo (admira.store/supercomputer) manda la escena
 // y la luz a través de la nube y recibe el estado y las miniaturas.
 //   node player.mjs            → emite en los ventiladores
 //   node player.mjs --dry-run  → solo renderiza (sin USB): ver /player/1.jpg
@@ -12,7 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SIDE, isJpeg, mergeConfig, planEscena, escenaDeConfig } from './core.mjs';
-import { normalizarEscena, normalizarLuz, luzDe } from './escena.mjs';
+import { normalizarEscena, normalizarLuz, luzDe, luzDispositivo } from './escena.mjs';
 import { launchChrome, Cdp, openPlayerPage } from './cdp.mjs';
 import { Medios } from './medios.mjs';
 
@@ -28,7 +28,7 @@ const profileRoot = path.join(datos, 'perfiles');
 const estadoPath = path.join(datos, 'estado.json');
 const medios = new Medios(path.join(datos, 'medios'));
 const health = { state: 'starting', dryRun, circuit: cfg.circuit, players: [], fans: [] };
-let stopping = false, fans = [], players = [], controlador = null, estado = null;
+let stopping = false, fans = [], players = [], controlador = null, strimer = null, estado = null;
 let nube = { activa: !!cfg.nube?.api, ok: null, at: 0, error: '' };
 const luzAplicada = new Map();
 
@@ -85,8 +85,20 @@ function informe() {
     players: players.map(p => ({ screen: p.screen, fans: p.fans, fps: p.fps, frames: p.frames })),
     fans: (fans.length ? fans : players.flatMap(p => p.fans.map(n => ({ n })))).map(f => ({
       n: f.n, port: f.port, index: f.index, rpm: f.rpm, sent: f.sent, errors: f.errors,
-      fps: players.find(p => p.fans.includes(f.n))?.fps ?? 0 }))
+      fps: players.find(p => p.fans.includes(f.n))?.fps ?? 0 })),
+    dispositivos: dispositivos(),
+    audio: { ...(estado?.escena?.audio || { ventilador: 0, salida: '', volumen: 1 }),
+      suena: players.filter(p => p.audio).map(p => p.screen), salidas: salidasAudio }
   };
+}
+
+// Otras luces de la caja para el gemelo: si el puente las controla y por qué no, cuando no.
+// La memoria (DDR5 con controlador ENE) va por SMBus, no por USB: sin driver para ese bus no hay control.
+const MEMORIA_SIN_CONTROL = 'La luz de la memoria va por SMBus (controlador ENE) y el puente aún no tiene driver para ese bus: sigue en su arcoíris de fábrica.';
+function dispositivos() {
+  const cable = { conectado: !!strimer, via: strimer ? strimer.producto : null,
+    motivo: strimer ? undefined : (dryRun ? 'dry-run: sin USB' : 'no se encontró el Strimer Plus (USB 0CF2:A200)') };
+  return { grafica: { ...cable }, placa: { ...cable }, memoria: { conectado: false, via: null, motivo: MEMORIA_SIN_CONTROL } };
 }
 
 const server = http.createServer(async (req, res) => {
@@ -193,10 +205,55 @@ function numeroEncima(n) {
     `if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',poner);else poner();setInterval(poner,2000);})()`;
 }
 
+// Perfil ocupado (6-nov-2026 en PC-COCINA): si un arranque fallido deja un Chrome vivo con el perfil de un player,
+// el Chrome nuevo le pasa los argumentos y sale sin abrir DevTools, y el player se reiniciaba en bucle. Se abre
+// entonces con un perfil de respaldo; el Chrome que lo tenía no se toca.
+async function abrirChrome(p) {
+  const op = { audio: !!p.audio };
+  try { return await launchChrome(cfg.chrome, path.join(profileRoot, p.screen), op); }
+  catch (e) {
+    log('perfil_ocupado', { screen: p.screen, error: e.message, respaldo: p.screen + '-b' });
+    return launchChrome(cfg.chrome, path.join(profileRoot, p.screen + '-b'), op);
+  }
+}
+
+// Salida de audio por nombre (el de Windows, que es el que enseña Chrome): cada origen ve otros deviceId, así que la
+// página busca el dispositivo por su nombre y le manda sus vídeos con setSinkId. Para ver los nombres y elegir una
+// salida que no es la predeterminada, Chrome pide el permiso de micrófono: se concede solo al player que suena y
+// solo si se pidió una salida concreta (no abre el micrófono).
+function salidaEncima(nombre) {
+  return `(()=>{const nombre=${JSON.stringify(nombre)};let id=null;` +
+    `const buscar=()=>navigator.mediaDevices.enumerateDevices().then(ds=>{const d=ds.find(x=>x.kind==='audiooutput'&&x.label===nombre);id=d?d.deviceId:null;}).catch(()=>{});` +
+    `const poner=()=>{if(!id)return;document.querySelectorAll('audio,video').forEach(m=>{if(m.setSinkId&&m.sinkId!==id)m.setSinkId(id).catch(()=>{});});};` +
+    `buscar().then(poner);setInterval(()=>{(id?Promise.resolve():buscar()).then(poner);},1000);})()`;
+}
+async function permisoSalida(p) {
+  for (const permissions of [['audioCapture', 'speakerSelection'], ['audioCapture']]) {
+    try { await p.cdp.send('Browser.grantPermissions', { permissions }); return true; } catch {}
+  }
+  log('audio_permiso_error', { screen: p.screen });
+  return false;
+}
+
+// Salidas de audio del PC (Windows): los nombres de los puntos de reproducción, para elegir en el gemelo.
+let salidasAudio = [];
+async function listarSalidas() {
+  if (process.platform !== 'win32') return;
+  const { execFile } = await import('node:child_process');
+  // Los puntos de reproducción son SWD\MMDEVAPI\{0.0.0.…}; los de grabación, {0.0.1.…}.
+  const ps = String.raw`Get-CimInstance Win32_PnPEntity -Filter "PNPClass='AudioEndpoint'" | Where-Object { $_.DeviceID -like 'SWD\MMDEVAPI\{0.0.0.*' -and $_.Status -eq 'OK' } | ForEach-Object { $_.Name }`;
+  execFile('powershell.exe', ['-NoProfile', '-Command', ps], { windowsHide: true, timeout: 15000 }, (e, out) => {
+    if (!e) salidasAudio = String(out).split(/\r?\n/).map(s => s.trim()).filter(Boolean).slice(0, 20);
+  });
+}
+
 async function startPlayer(p) {
-  p.chrome = await launchChrome(cfg.chrome, path.join(profileRoot, p.screen));
+  p.chrome = await abrirChrome(p);
   p.cdp = await Cdp.connect(p.chrome.ws);
-  const encima = cfg.numeros && p.fans.length === 1 && p.url.startsWith(cfg.canal) ? numeroEncima(p.fans[0]) : undefined;
+  const scripts = [];
+  if (cfg.numeros && p.fans.length === 1 && p.url.startsWith(cfg.canal)) scripts.push(numeroEncima(p.fans[0]));
+  if (p.audio && p.salida && await permisoSalida(p)) scripts.push(salidaEncima(p.salida));
+  const encima = scripts.length ? scripts.join(';') : undefined;
   p.page = await openPlayerPage(p.cdp, { url: p.url, side: SIDE, quality: cfg.quality, userAgent: await userAgent(p.cdp), encima });
   p.cdp.on((method, params, sessionId) => {
     if (sessionId !== p.page.sessionId) return;
@@ -210,7 +267,7 @@ async function startPlayer(p) {
       p.page.startScreencast().catch(() => {});
     }
   });
-  log('player_started', { screen: p.screen, fans: p.fans, url: p.url });
+  log('player_started', { screen: p.screen, fans: p.fans, url: p.url, audio: p.audio || undefined, salida: p.salida || undefined });
 }
 
 async function cerrarPlayer(p) {
@@ -223,14 +280,17 @@ async function cerrarPlayer(p) {
 // leen /escena.json cada segundo), los que sobran se cierran y los nuevos se abren.
 async function sincronizarPlayers() {
   const plan = planEscena(estado.escena, fans.length ? fans : Array.from({ length: 7 }, (_, i) => ({ n: i + 1 })), cfg);
-  const clave = p => `${p.screen} ${p.url} ${p.fans.join(',')}`;
+  const clave = p => `${p.screen} ${p.url} ${p.fans.join(',')} ${p.audio ? 'audio:' + p.salida : ''}`;
   const quedan = players.filter(p => plan.some(q => clave(q) === p.clave));
   const salen = players.filter(p => !quedan.includes(p));
   const entran = plan.filter(q => !quedan.some(p => p.clave === clave(q)))
     .map(q => ({ ...q, clave: clave(q), frames: 0, window: 0, fps: 0, last: null, lastAt: 0, chrome: null, cdp: null, page: null, mini: null }));
   players = [...quedan, ...entran].sort((a, b) => a.fans[0] - b.fans[0]);
   await Promise.all(salen.map(cerrarPlayer));
-  await Promise.all(entran.map(startPlayer));
+  // Se espera a todos antes de dar el fallo: con Promise.all el primero que fallaba reiniciaba el player mientras
+  // los demás Chrome seguían arrancando, y quedaban vivos fuera de `players` con su perfil tomado.
+  const fallo = (await Promise.allSettled(entran.map(startPlayer))).find(r => r.status === 'rejected');
+  if (fallo) throw fallo.reason;
 }
 
 // ── Iluminación ────────────────────────────────────────────────────────────────
@@ -239,7 +299,9 @@ async function sincronizarPlayers() {
 const LUZ_SECUENCIA = normalizarLuz({ efecto: 'fijo', color: '#00d26a', brillo: 4 });
 async function aplicarLuz() {
   const luz = estado?.luz ?? (estado?.escena?.modo === 'secuencia' ? LUZ_SECUENCIA : null);
-  if (!controlador || !luz || !fans.length) return;
+  if (!luz) return;
+  await aplicarLuzCables(luz);
+  if (!controlador || !fans.length) return;
   const ahora = Date.now(), respirar = new Map();
   for (const f of fans) {
     const l = luzDe(luz, f.n, estado.escena, ahora), k = JSON.stringify(l);
@@ -250,6 +312,16 @@ async function aplicarLuz() {
   }
   for (const [port, l] of respirar) {
     await controlador.luzPuerto(port, fans.filter(f => f.port === port).length, l).catch(e => log('luz_error', { port, error: e.message }));
+  }
+}
+// Cables Strimer (gráfica y 24 pines): su luz propia o la general. No siguen el relevo de sincro/secuencia.
+async function aplicarLuzCables(luz) {
+  if (!strimer) return;
+  for (const clave of ['grafica', 'placa']) {
+    const l = luzDispositivo(luz, clave), k = JSON.stringify(l);
+    if (luzAplicada.get(clave) === k) continue;
+    luzAplicada.set(clave, k);
+    await strimer.luz(clave, l).catch(e => { luzAplicada.delete(clave); log('luz_error', { dispositivo: clave, error: e.message }); });
   }
 }
 setInterval(() => {
@@ -299,7 +371,9 @@ async function openUsb() {
     }
   }
   controlador = await Controlador.abrir().catch(() => null);
-  log('fans_ready', { fans: list.map(f => ({ n: f.n, port: f.port, index: f.index })), controlador: !!controlador });
+  const { Strimer } = await import('./strimer.mjs');
+  strimer = await Strimer.abrir().catch(e => { log('strimer_error', { error: e.message }); return null; });
+  log('fans_ready', { fans: list.map(f => ({ n: f.n, port: f.port, index: f.index })), controlador: !!controlador, strimer: !!strimer });
   return list;
 }
 
@@ -331,6 +405,7 @@ async function unstickCold(p) {
 }
 
 async function run() {
+  listarSalidas();
   fans = await openUsb();
   if (!dryRun && !fans.length) throw new Error('no se encontró ningún ventilador TL LCD');
   estado = estado ?? await estadoInicial();
@@ -360,6 +435,7 @@ async function closeAll() {
   await Promise.all(players.map(cerrarPlayer));
   for (const f of fans) f.close();
   controlador?.close(); controlador = null;
+  strimer?.close(); strimer = null;
 }
 
 async function shutdown() {
@@ -369,7 +445,7 @@ async function shutdown() {
 }
 // Recarga en caliente: si cambia config.json o el código, el player sale y arrancar.ps1 lo relanza.
 // Así cambiar los vídeos de los ventiladores no exige reiniciar la tarea (que pide elevación).
-const watched = [configPath, ...['core.mjs', 'player.mjs', 'cdp.mjs', 'tl-lcd.mjs', 'escena.mjs', 'medios.mjs'].map(f => path.join(directory, f))];
+const watched = [configPath, ...['core.mjs', 'player.mjs', 'cdp.mjs', 'tl-lcd.mjs', 'strimer.mjs', 'escena.mjs', 'medios.mjs'].map(f => path.join(directory, f))];
 const stamp = async f => (await fs.stat(f).catch(() => null))?.mtimeMs ?? 0;
 const stamps = await Promise.all(watched.map(stamp));
 setInterval(async () => {

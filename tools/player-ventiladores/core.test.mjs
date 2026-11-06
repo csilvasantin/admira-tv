@@ -84,3 +84,18 @@ test('solo se emiten JPEG completos', () => {
   assert.equal(isJpeg(Buffer.from([0xff, 0xd8, 1, 2, 0xff, 0xd9])), true);
   assert.equal(isJpeg(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 0])), false);
 });
+
+test('audio: solo suena el ventilador elegido, con muted=0 en el canal o audio=1 en la escena', () => {
+  const cfg = mergeConfig({ machine: 'PC-COCINA' }), fans = [{ n: 1 }, { n: 2 }, { n: 3 }];
+  const ind = planEscena(normalizarEscena({ modo: 'independiente', audio: { ventilador: 2, volumen: 0.5 } }, 3), fans, cfg);
+  assert.deepEqual(ind.map(p => p.audio), [false, true, false]);
+  assert.deepEqual(ind.map(p => new URL(p.url).searchParams.get('muted')), ['1', '0', '1']);
+  assert.equal(new URL(ind[1].url).searchParams.get('volume'), '0.5');
+  const sec = planEscena(normalizarEscena({ modo: 'secuencia', pieza: 'abc', audio: { ventilador: 1, salida: 'Altavoces (Realtek(R) Audio)' } }, 3), fans, cfg);
+  assert.deepEqual(sec.map(p => new URL(p.url).searchParams.get('audio')), ['1', null, null]);
+  assert.equal(sec[0].salida, 'Altavoces (Realtek(R) Audio)');
+  const rep = planEscena(normalizarEscena({ modo: 'repetir', pieza: 'abc', audio: { ventilador: 3 } }, 3), fans, cfg);
+  assert.equal(rep.length, 1); assert.equal(rep[0].audio, true, 'en repetir un solo canal: con sonido');
+  const mudo = planEscena(normalizarEscena({ modo: 'independiente' }, 3), fans, cfg);
+  assert.ok(mudo.every(p => !p.audio && new URL(p.url).searchParams.get('muted') === '1'), 'sin audio, todo callado como antes');
+});

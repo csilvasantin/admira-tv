@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { modoCanonico, normalizarEscena, asignacion, normalizarLuz, cargaLuz, luzDe, colorRgb, efectoCanonico } from './escena.mjs';
+import { modoCanonico, normalizarEscena, asignacion, normalizarLuz, cargaLuz, luzDe, colorRgb, efectoCanonico, luzDispositivo, cargaStrimer, dispositivoCanonico } from './escena.mjs';
 
 test('los modos se entienden en castellano y en inglés', () => {
   for (const [dicho, modo] of [['sincro', 'sincro'], ['sync', 'sincro'], ['Repeat', 'repetir'], ['repetir', 'repetir'],
@@ -113,4 +113,39 @@ test('secuencia: la luz acompaña siempre al vídeo, aunque la general esté apa
   assert.equal(luzDe(luz, 2, e, 1000).brillo, 0, 'los demás no');
   assert.ok(luzDe(luz, 2, e, 9000).brillo > 0, 'a los 8 s el relevo pasa al 2');
   assert.equal(luzDe(normalizarLuz({ efecto: 'respirar' }), 1, e, 0).efecto, 'fijo', 'respirar es de grupo: fijo');
+});
+
+test('dispositivos: los cables Strimer y la memoria siguen a la general salvo luz propia', () => {
+  assert.equal(dispositivoCanonico('GPU'), 'grafica');
+  assert.equal(dispositivoCanonico('24 pines'), 'placa');
+  assert.equal(dispositivoCanonico('RAM'), 'memoria');
+  assert.equal(dispositivoCanonico('teclado'), null);
+  const l = normalizarLuz({ efecto: 'arcoiris', brillo: 3, dispositivos: { gpu: { efecto: 'fijo', color: '#ff0000' }, teclado: { efecto: 'fijo' }, ram: null } });
+  assert.deepEqual(Object.keys(l.dispositivos), ['grafica'], 'solo claves conocidas y con objeto');
+  assert.equal(luzDispositivo(l, 'grafica').efecto, 'fijo');
+  assert.deepEqual(luzDispositivo(l, 'grafica').colores, [[255, 0, 0]]);
+  assert.equal(luzDispositivo(l, 'grafica').brillo, 3, 'hereda de la general lo que no dice');
+  assert.equal(luzDispositivo(l, 'placa').efecto, 'arcoiris', 'sin luz propia, la general');
+  assert.equal(normalizarLuz({}).dispositivos && Object.keys(normalizarLuz({}).dispositivos).length, 0);
+});
+
+test('Strimer: modo, velocidad y brillo del firmware y colores en R, B, G', () => {
+  const fijo = cargaStrimer(normalizarLuz({ efecto: 'fijo', color: '#0a0b0c', brillo: 4, velocidad: 2 }));
+  assert.equal(fijo.modo, 1);
+  assert.equal(fijo.brillo, 0, 'brillo 4 = el máximo del firmware (0)');
+  assert.equal(fijo.velocidad, 0);
+  assert.equal(fijo.colores.length, 27 * 3, 'fijo: el color en los 27 LED');
+  assert.deepEqual(fijo.colores.slice(0, 3), [10, 12, 11], 'R, B, G');
+  const arco = cargaStrimer(normalizarLuz({ efecto: 'rainbow', brillo: 0, velocidad: 4 }));
+  assert.deepEqual([arco.modo, arco.brillo, arco.velocidad, arco.colores.length], [5, 4, 254, 18]);
+  const off = cargaStrimer(normalizarLuz({ efecto: 'apagado' }));
+  assert.deepEqual([off.modo, off.colores.length], [0, 0]);
+  assert.equal(cargaStrimer(normalizarLuz({ efecto: 'meteoro', colores: ['#ff0000', '#0000ff'] })).colores.length, 6);
+});
+
+test('audio: un solo ventilador, salida por nombre y volumen 0–1', async () => {
+  const { normalizarAudio } = await import('./escena.mjs');
+  assert.deepEqual(normalizarAudio(undefined), { ventilador: 0, salida: '', volumen: 1 });
+  assert.deepEqual(normalizarAudio({ fan: 9, output: ' Altavoces\u0007 ', volume: 2 }, 7), { ventilador: 7, salida: 'Altavoces', volumen: 1 });
+  assert.equal(normalizarEscena({ modo: 'secuencia', audio: { ventilador: 1, volumen: 0.333 } }).audio.volumen, 0.33);
 });

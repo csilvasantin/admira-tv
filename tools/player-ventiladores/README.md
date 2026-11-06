@@ -49,7 +49,32 @@ y los demás quedan a brillo 0 (se revisa cada 250 ms, como en sincro con `sigue
 `apagado` o `respirar` (de grupo: encendería a los vecinos), el activo pasa a `fijo` con su color; sin luz
 configurada se usa verde fijo `#00d26a`, brillo 4.
 
-La lógica de modos y luz vive en `escena.mjs` (sin APIs de Node: la usan el puente, `escena.html` y la nube).
+**Otras luces de la caja** (`luz.dispositivos`, PC-COCINA, 6-nov-2026): sin luz propia siguen a la general, como
+los ventiladores (no siguen el relevo de sincro/secuencia). `{"efecto":"fijo","color":"#00d26a","dispositivos":{"grafica":{"efecto":"arcoiris"}}}`.
+
+| Clave | Alias | Qué | Cómo |
+|---|---|---|---|
+| `grafica` | gpu, pcie | cable Strimer Plus de la gráfica | `strimer.mjs`, USB `0CF2:A200`, puertos 6-11 (canal 2) |
+| `placa` | atx, 24pin | cable Strimer Plus de 24 pines | mismo Strimer, puertos 0-5 (canal 1) |
+| `memoria` | ram, dram | la RAM (en PC-COCINA, 2 × DDR5 Lexar con controlador ENE) | **sin control**: va por SMBus y el puente no tiene driver para ese bus |
+
+Strimer: informe 0xE0; por puerto, `[E0, 0x10|puerto, modo, velocidad, dir, brillo]` por característica y
+`[E0, 0x30|puerto, 27 × (R, B, G)]` por salida; luego `[E0, 0x2C, 0x0F, 0xFF]` activa los 12 puertos. 40 ms entre
+órdenes. Velocidad y brillo van al revés que en el controlador TL (0 = máximo). Referencia: `strimer_plus.rs` de
+[sgtaziz/lian-li-linux](https://github.com/sgtaziz/lian-li-linux) (MIT). Los canales de PC-COCINA se comprobaron
+con la webcam apagando uno cada vez. El informe trae `dispositivos` (`conectado`, `via` y `motivo` si no).
+
+**Audio** (`escena.audio`, PC-COCINA, 6-nov-2026): `{"ventilador": 1, "salida": "", "volumen": 1}`. Como mucho suena
+un ventilador (`0` = ninguno, lo de antes; en repetir hay un solo canal y cualquier número es «con sonido»). Solo
+su Chrome arranca sin `--mute-audio` (`launchChrome(…, { audio })`), con `muted=0&volume=` en el canal o
+`audio=1&volumen=` en `escena.html` (suena la primera pieza; en extender y secuencia es la única). `salida` es el
+nombre del dispositivo de Windows, el mismo que enseña Chrome (vacío = el predeterminado): la página lo busca por
+nombre y usa `setSinkId`; para eso el puente concede el permiso de micrófono (`Browser.grantPermissions`) solo a
+ese Chrome y solo si se pidió una salida concreta. El informe trae `audio.suena` y `audio.salidas` (los puntos de
+reproducción de Windows). Cambiar el audio reinicia los dos players afectados. Comprobado en PC-COCINA con el
+micrófono de la webcam: −36 dBFS con el ventilador 1 sonando frente a −47 dBFS silenciado.
+
+La lógica de modos, luz y audio vive en `escena.mjs` (sin APIs de Node: la usan el puente, `escena.html` y la nube).
 
 ## Gemelo y nube
 
@@ -63,7 +88,8 @@ que la aplicada, la aplica. La función de admira.store la reenvía al Worker `s
 `nube/worker.mjs` (y `nube-pc-cocina/worker.mjs`) importan `../escena.mjs`: el Worker solo acepta los modos que
 conoce la `escena.mjs` con la que se desplegó (con una vieja, `secuencia` da «modo desconocido»). Si cambia
 `escena.mjs`, hay que redesplegar el Worker y comprobarlo con una petición real: en PC-COCINA, el 6-nov, el
-Durable Object siguió con el código viejo tras desplegar.
+Durable Object siguió con el código viejo tras desplegar. Con una `escena.mjs` anterior al 6-nov-2026 (tarde), la
+nube descarta además `luz.dispositivos` y `escena.audio`, y un cambio desde el gemelo los apaga.
 
 Manda siempre lo más reciente: lo que llega del gemelo o de la API local se guarda en
 `%LOCALAPPDATA%\AdmiraVentiladores\estado.json`; editar `config.json` también cuenta (su fecha es su revisión).
@@ -87,7 +113,11 @@ privilegios altos para poder pausar L-Connect; log en `%LOCALAPPDATA%\AdmiraVent
 ```
 
 Si cambia `config.json` o el código, el player sale y `arrancar.ps1` lo relanza en 5 s (sin elevación).
-`npm run dry-run` renderiza sin tocar el USB. `npm test` prueba protocolo, URL, modos y luz.
+Si un perfil de Chrome sigue tomado por un Chrome que quedó vivo (pasó en PC-COCINA el 6-nov: el player se reiniciaba
+en bucle con «Chrome no abrió el puerto de DevTools»), ese player se abre con el perfil de respaldo `<pantalla>-b`
+(`perfil_ocupado` en el log). Los Chrome de un arranque fallido ya no quedan sueltos: `sincronizarPlayers` espera a
+que terminen todos antes de dar el fallo.
+`npm run dry-run` renderiza sin tocar el USB. `npm test` prueba protocolo, URL, modos, luz, Strimer y audio.
 
 API local (solo `127.0.0.1:4749`):
 
@@ -95,9 +125,9 @@ API local (solo `127.0.0.1:4749`):
 |---|---|
 | `GET /health` | fps por pantalla, envíos por ventilador, RPM, estado de la nube |
 | `GET /estado` | escena y luz aplicadas, informe completo |
-| `POST /escena` | `{"modo":"sincro","pieza":"<id>","paso":3}` · `{"modo":"extend","pieza":"<id>","ajuste":"estirar"}` · `{"modo":"secuencia","pieza":"<id>"}` · … |
+| `POST /escena` | `{"modo":"sincro","pieza":"<id>","paso":3}` · `{"modo":"extend","pieza":"<id>","ajuste":"estirar"}` · `{"modo":"secuencia","pieza":"<id>","audio":{"ventilador":1}}` · … |
 | `POST /duracion` | `{"pieza":"<id>","s":23.8}`: la manda `escena.html` en secuencia; solo vale para la pieza de la secuencia en curso |
-| `POST /luz` | `{"efecto":"arcoiris","brillo":75}` · `{"efecto":"fijo","color":"#00d26a","ventiladores":{"7":{"color":"#ff0040"}}}` |
+| `POST /luz` | `{"efecto":"arcoiris","brillo":75}` · `{"efecto":"fijo","color":"#00d26a","ventiladores":{"7":{"color":"#ff0040"}}}` · `{…,"dispositivos":{"grafica":{"efecto":"arcoiris"}}}` |
 | `GET /player/<n>.jpg` · `/fan/<n>.jpg` | último fotograma pintado / enviado |
 
 `config.json` (sin secretos, versionado): `escena`, `luz`, `nube` (`{"api": "...", "claveFichero": "~/..."}`),

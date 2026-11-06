@@ -23,9 +23,14 @@
 // mismo reloj (Date.now() del PC): así las teselas y el relevo van alineados.
 // En secuencia cada página precarga la pieza oculta, mide su duración y se la pasa al puente
 // (POST /duracion), que la usa para el relevo de la luz.
+// Audio (?audio=1&volumen=0–1): esta página suena; el resto, en silencio.
 import { asignacion } from '/escena.mjs';
 
-const fan = Number(new URLSearchParams(location.search).get('fan')) || 1;
+const qs = new URLSearchParams(location.search);
+const fan = Number(qs.get('fan')) || 1;
+// Audio: solo la página del ventilador que suena trae ?audio=1 (su Chrome va sin --mute-audio). Suena la primera
+// pieza, que en extender y secuencia es la única; las demás páginas siguen calladas.
+const conAudio = qs.get('audio') === '1', volumen = Math.max(0, Math.min(1, Number(qs.get('volumen') ?? 1) || 0));
 const lienzo = document.getElementById('lienzo');
 const ajusteCss = { cubrir: 'cover', estirar: 'fill', contener: 'contain' };
 let estado = null;                 // { escena, medios: { id: { url, tipo } } }
@@ -36,7 +41,10 @@ function elemento(id) {
   const medio = estado.medios[id];
   if (!medio) return null;
   const el = document.createElement(medio.tipo === 'image' ? 'img' : 'video');
-  if (el.tagName === 'VIDEO') { el.muted = true; el.loop = true; el.playsInline = true; el.preload = 'auto'; el.autoplay = true; }
+  if (el.tagName === 'VIDEO') {
+    el.muted = !(conAudio && id === estado.escena.piezas[0]); el.volume = volumen;
+    el.loop = true; el.playsInline = true; el.preload = 'auto'; el.autoplay = true;
+  }
   el.src = medio.url;
   lienzo.appendChild(el);
   elementos.set(id, el);

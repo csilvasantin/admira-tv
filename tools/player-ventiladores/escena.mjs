@@ -44,7 +44,22 @@ export function normalizarEscena(raw = {}, fans = 7) {
     // secuencia: duración de la pieza en segundos. La mide la página de escena al cargar el vídeo y se la pasa
     // al puente; mientras no se sepa (0) se usa `paso`.
     duracion: Number(raw.duracion) > 0 ? Math.min(3600, Number(raw.duracion)) : 0,
+    audio: normalizarAudio(raw.audio, fans),
     revision: Number(raw.revision) || 0
+  };
+}
+
+// Audio (PC-COCINA, 6-nov-2026): como mucho suena un ventilador, para que no se oigan siete pistas a la vez.
+//  · ventilador: el que suena (1..fans); 0 = ninguno. En repetir hay un solo canal: cualquier número = con sonido.
+//  · salida: nombre del dispositivo de salida de Windows (el que enseña Chrome); vacío = el predeterminado del PC.
+//  · volumen: 0–1.
+export function normalizarAudio(raw, fans = 7) {
+  const a = raw && typeof raw === 'object' ? raw : {};
+  const v = Number(a.volumen ?? a.volume);
+  return {
+    ventilador: entero(a.ventilador ?? a.fan ?? 0, 0, fans, 0),
+    salida: String(a.salida ?? a.output ?? '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 160),
+    volumen: Number.isFinite(v) ? Math.round(Math.max(0, Math.min(1, v)) * 100) / 100 : 1
   };
 }
 
@@ -112,12 +127,53 @@ function luzSimple(raw = {}, base = {}) {
   return { efecto, brillo, velocidad: entero(raw.velocidad ?? raw.speed, 0, 4, base.velocidad ?? 2), colores };
 }
 
-// { efecto, color|colores, brillo, velocidad, ventiladores: { "3": {…} }, sigueVideo }
+// Otras luces de la caja (PC-COCINA, 6-nov-2026): los dos cables Strimer Plus (el de la gráfica y el de 24 pines
+// de la placa) y la memoria. Como los ventiladores, sin luz propia siguen a la general.
+const ALIAS_DISPOSITIVO = {
+  grafica: 'grafica', 'gráfica': 'grafica', gpu: 'grafica', pcie: 'grafica', strimergpu: 'grafica',
+  placa: 'placa', atx: 'placa', '24pin': 'placa', '24pines': 'placa', motherboard: 'placa', strimeratx: 'placa',
+  memoria: 'memoria', ram: 'memoria', dram: 'memoria', memory: 'memoria'
+};
+export const DISPOSITIVOS_LUZ = ['grafica', 'placa', 'memoria'];
+export const dispositivoCanonico = d => ALIAS_DISPOSITIVO[String(d ?? '').toLowerCase().replace(/[\s_-]/g, '')] || null;
+
+// { efecto, color|colores, brillo, velocidad, ventiladores: { "3": {…} }, dispositivos: { grafica: {…} }, sigueVideo }
 export function normalizarLuz(raw = {}) {
   const general = luzSimple(raw);
   const ventiladores = Object.fromEntries(Object.entries(raw.ventiladores || {})
     .filter(([k]) => /^[1-9]$/.test(k)).map(([k, v]) => [k, luzSimple(v, general)]));
-  return { ...general, ventiladores, sigueVideo: !!raw.sigueVideo, revision: Number(raw.revision) || 0 };
+  const dispositivos = {};
+  for (const [k, v] of Object.entries(raw.dispositivos || {})) {
+    const c = dispositivoCanonico(k);
+    if (c && v && typeof v === 'object') dispositivos[c] = luzSimple(v, general);
+  }
+  return { ...general, ventiladores, dispositivos, sigueVideo: !!raw.sigueVideo, revision: Number(raw.revision) || 0 };
+}
+
+// Luz efectiva de un dispositivo: la suya o la general (sin el relevo de sincro/secuencia, que es de los ventiladores).
+export function luzDispositivo(luz, clave) {
+  const propia = luz?.dispositivos?.[clave];
+  if (propia) return propia;
+  return { efecto: luz.efecto, brillo: luz.brillo, velocidad: luz.velocidad, colores: luz.colores };
+}
+
+// Strimer Plus (USB 0CF2:A200): modo, velocidad y brillo del firmware y los colores en el orden que espera (R, B, G).
+// Velocidad y brillo van al revés que en el controlador TL (0 = el más rápido / el más brillante).
+// Referencia: sgtaziz/lian-li-linux (MIT), crates/lianli-devices/src/strimer_plus.rs.
+const MODO_STRIMER = { apagado: 0, fijo: 1, respirar: 2, ciclo: 4, arcoiris: 5, ola: 24, carrera: 27, pista: 28, meteoro: 32 };
+const ARCOIRIS_STRIMER = [[255, 0, 0], [255, 105, 0], [255, 215, 0], [0, 255, 0], [0, 0, 255], [170, 0, 255]];
+export const LEDS_STRIMER = 27;
+export function cargaStrimer(luz) {
+  const colores = luz.efecto === 'apagado' ? []
+    : ['arcoiris', 'ciclo'].includes(luz.efecto) ? ARCOIRIS_STRIMER
+      : ['fijo', 'respirar'].includes(luz.efecto) ? Array(LEDS_STRIMER).fill(luz.colores[0])
+        : luz.colores;
+  return {
+    modo: MODO_STRIMER[luz.efecto] ?? MODO_STRIMER.fijo,
+    velocidad: [2, 1, 0, 255, 254][luz.velocidad] ?? 0,
+    brillo: [4, 3, 2, 1, 0][luz.brillo] ?? 0,
+    colores: colores.flatMap(c => [c[0], c[2], c[1]])
+  };
 }
 
 // Carga de 20 bytes de SetFanLight (0xA3) / SetFanGroupLight (0xB0):
