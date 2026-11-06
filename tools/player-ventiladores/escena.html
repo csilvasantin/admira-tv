@@ -24,7 +24,7 @@
 // En secuencia cada página precarga la pieza oculta, mide su duración y se la pasa al puente
 // (POST /duracion), que la usa para el relevo de la luz.
 // Audio (?audio=1&volumen=0–1): esta página suena; el resto, en silencio.
-import { asignacion } from '/escena.mjs';
+import { asignacion, turnoSecuencia } from '/escena.mjs';
 
 const qs = new URLSearchParams(location.search);
 const fan = Number(qs.get('fan')) || 1;
@@ -92,9 +92,17 @@ function pintar() {
   }
   numero.style.display = 'none';
   const visible = a.tipo === 'negro' || a.tipo === 'canal' ? null : elemento(a.pieza);
+  // Secuencia: el activo (y la página que suena) siguen el turno en curso; los que esperan dejan la pieza parada al
+  // principio, lista para su turno (con «cada x s» el turno la empieza desde el principio).
+  const turno = escena.modo === 'secuencia' ? turnoSecuencia(escena, (Date.now() - escena.epoch) / 1000) : null;
   for (const [id, el] of elementos) {
     const on = el === visible;
     el.classList.toggle('on', on);
+    if (turno && el.tagName === 'VIDEO' && id === escena.piezas[0]) {
+      if (on || conAudio) alinear(el, turno.t);
+      else { if (!el.paused) el.pause(); if (el.currentTime > 0.05) el.currentTime = 0; }
+      continue;
+    }
     // En sincro todas las piezas siguen corriendo ocultas: al llegar a este ventilador ya van por su segundo.
     if (el.tagName === 'VIDEO' && estado.escena.piezas.includes(id)) alinear(el, a.t ?? (Date.now() - estado.escena.epoch) / 1000);
   }

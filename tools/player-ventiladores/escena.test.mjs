@@ -98,10 +98,11 @@ test('secuencia: la pieza entera en cada ventilador, del 1 al 7, y vuelta a empe
   assert.equal(asignacion(e, 4, 0).tipo, 'negro');
 });
 
-test('secuencia: sin duración medida usa paso, y solo toma la primera pieza', () => {
+test('secuencia: sin duración (imagen o aún sin medir) 10 s en cada ventilador, y solo la primera pieza', () => {
   const e = normalizarEscena({ modo: 'secuencia', piezas: ['a', 'b'], paso: 5, epoch: 0 });
   assert.equal(e.duracion, 0);
-  assert.equal(asignacion(e, 2, 5000).pieza, 'a');
+  assert.equal(asignacion(e, 1, 9999).tipo, 'pieza', 'el paso de sincro no cuenta en secuencia');
+  assert.equal(asignacion(e, 2, 10000).pieza, 'a');
   assert.equal(normalizarEscena({ modo: 'secuencia', duracion: 99999 }).duracion, 3600);
 });
 
@@ -164,4 +165,18 @@ test('Galahad II Trinity: ventiladores de arriba (0x85) y bomba (0x83)', () => {
   const off = cargaGalahad(normalizarLuz({ efecto: 'apagado' }), 'superiores');
   assert.deepEqual([off[0], off[1], off[16]], [3, 0, 1], 'apagado: fijo, brillo 0 y la marca de apagado');
   assert.equal(cargaGalahad(normalizarLuz({ efecto: 'ola' }))[0], 7);
+});
+
+test('secuencia «cada x s»: el relevo a los segundos pedidos, desde el principio de la pieza en cada ventilador', () => {
+  const e = normalizarEscena({ modo: 'secuencia', pieza: 'v1', duracion: 23.8, cada: 10, epoch: 0 });
+  assert.equal(e.cada, 10);
+  const quien = ahora => [1, 2, 3, 4, 5, 6, 7].filter(f => asignacion(e, f, ahora).tipo === 'pieza');
+  assert.deepEqual(quien(9999), [1]);
+  assert.deepEqual(quien(10000), [2], 'a los 10 s, aunque la pieza dure 23,8');
+  assert.equal(asignacion(e, 2, 12000).t, 2, 'el 2 la empieza desde el principio');
+  assert.equal(normalizarEscena({ modo: 'secuencia', cada: 'x' }).cada, 0, 'sin número: al acabar la pieza');
+  assert.equal(normalizarEscena({ modo: 'secuencia', every: 99999 }).cada, 3600);
+  const luz = normalizarLuz({ efecto: 'fijo', color: '#00ff00' });
+  assert.equal(luzDe(luz, 2, e, 10500).brillo, 4, 'la luz sigue el relevo de cada x s');
+  assert.equal(luzDe(luz, 1, e, 10500).brillo, 0);
 });

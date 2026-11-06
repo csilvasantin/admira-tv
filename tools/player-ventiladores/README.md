@@ -32,6 +32,12 @@ precarga la pieza oculta y en marcha, mide `video.duration` y se la manda al pue
 guarda en `escena.duracion` (segundos, ≤ 3600) sin subir la revisión. Mientras no se conoce, el relevo usa `paso`.
 Si se vuelve a mandar la misma pieza, la duración medida se conserva. Ejemplo: `{"modo":"secuencia","pieza":"<id>"}`.
 
+**Cambio de ventilador** (`escena.cada`, Carlos 6-nov-2026): `0` = al acabar la pieza (por defecto); `1`–`3600` = segundos
+en cada ventilador, que empieza la pieza desde el principio (si dura más se corta, si dura menos vuelve a empezar). Una
+imagen, o un vídeo aún sin medir, está 10 s (`SECUENCIA_SIN_FIN`). En `escena.html`, los que esperan dejan la pieza parada al
+principio, lista para su turno; el activo y la página que suena siguen el turno en curso (el audio acompaña al que se ve).
+Ejemplo: `{"modo":"secuencia","pieza":"<id>","cada":10}`.
+
 Disposición física (confirmada el 4-nov-2026 con `identificar` y una foto): vista desde la ventana
 principal, 1-2-3 en columna en el panel de cristal de la derecha (delante, 1 arriba, pantallas hacia dentro),
 4-5-6 en el suelo (4 detrás a la izquierda, 6 delante a la derecha) y 7 trasero arriba a la izquierda.

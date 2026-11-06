@@ -42,8 +42,10 @@ export function normalizarEscena(raw = {}, fans = 7) {
     ajuste: ALIAS_AJUSTE[String(raw.ajuste ?? '').toLowerCase()] || 'cubrir',
     epoch: Number(raw.epoch) > 0 ? Number(raw.epoch) : 0,    // origen del reloj común (ms)
     // secuencia: duración de la pieza en segundos. La mide la página de escena al cargar el vídeo y se la pasa
-    // al puente; mientras no se sepa (0) se usa `paso`.
+    // al puente; mientras no se sepa (0), o si es una imagen, cada ventilador la tiene SECUENCIA_SIN_FIN s.
     duracion: Number(raw.duracion) > 0 ? Math.min(3600, Number(raw.duracion)) : 0,
+    // secuencia: segundos en cada ventilador (Carlos, 6-nov-2026). 0 = al acabar la pieza (lo de siempre).
+    cada: entero(raw.cada ?? raw.every, 0, 3600, 0),
     audio: normalizarAudio(raw.audio, fans),
     revision: Number(raw.revision) || 0
   };
@@ -63,9 +65,13 @@ export function normalizarAudio(raw, fans = 7) {
   };
 }
 
-// Secuencia: qué ventilador tiene la pieza en el instante t (s desde epoch) y por qué segundo va.
+// Secuencia: qué ventilador tiene la pieza en el instante t (s desde epoch) y por qué segundo va. Cada ventilador
+// la tiene `cada` segundos si se pidió (y la empieza desde el principio: si dura más, se corta; si dura menos, vuelve a
+// empezar); si no, lo que dura la pieza; y una imagen (sin duración) SECUENCIA_SIN_FIN segundos.
+export const SECUENCIA_SIN_FIN = 10;
 export function turnoSecuencia(escena, t) {
-  const d = escena.duracion > 0 ? escena.duracion : escena.paso, vuelta = Math.floor(Math.max(0, t) / d);
+  const d = escena.cada > 0 ? escena.cada : (escena.duracion > 0 ? escena.duracion : SECUENCIA_SIN_FIN);
+  const vuelta = Math.floor(Math.max(0, t) / d);
   return { fan: escena.orden[vuelta % escena.orden.length], t: Math.max(0, t) - vuelta * d, d };
 }
 
