@@ -67,11 +67,13 @@ export class Cdp {
 }
 
 // Una pestaña de 400×400 con el canal, emitiendo JPEG por screencast.
-export async function openPlayerPage(cdp, { url, side, quality, userAgent }) {
+// `encima` (opcional): script que se inyecta en cada documento antes que los suyos (sobrevive a recargas).
+export async function openPlayerPage(cdp, { url, side, quality, userAgent, encima }) {
   const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank', newWindow: true, width: side, height: side });
   const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
   const s = (m, p) => cdp.send(m, p, sessionId);
   await s('Page.enable');
+  if (encima) await s('Page.addScriptToEvaluateOnNewDocument', { source: encima });
   await s('Network.enable');
   await s('Network.setUserAgentOverride', { userAgent });
   await s('Emulation.setDeviceMetricsOverride', { width: side, height: side, deviceScaleFactor: 1, mobile: false, screenWidth: side, screenHeight: side });

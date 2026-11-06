@@ -53,9 +53,11 @@ function aplicar(nuevo, origen) {
 async function aplicarYa(nuevo, origen) {
   const escena = normalizarEscena(nuevo.escena ?? estado?.escena ?? { modo: 'independiente' }, numFans());
   const luz = nuevo.luz === undefined ? (estado?.luz ?? null) : (nuevo.luz ? normalizarLuz(nuevo.luz) : null);
-  if (['extender', 'sincro'].includes(escena.modo)) {
+  if (['extender', 'sincro', 'secuencia'].includes(escena.modo)) {
     if (!escena.piezas.length) throw new Error(`${escena.modo} necesita al menos una pieza`);
     if (!escena.epoch) escena.epoch = Date.now();
+    // Secuencia: la duración la mide la página de escena (POST /duracion); si es la misma pieza se conserva.
+    if (escena.modo === 'secuencia' && !escena.duracion && estado?.escena?.piezas?.[0] === escena.piezas[0]) escena.duracion = estado.escena.duracion || 0;
     await Promise.all(escena.piezas.map(id => medios.asegurar(id)));   // sin hueco negro al cambiar
   }
   estado = { escena, luz, revision: Number(nuevo.revision) || Date.now(), origen, at: Date.now() };
@@ -110,6 +112,19 @@ const server = http.createServer(async (req, res) => {
         fans: fans.map(f => ({ n: f.n, port: f.port, index: f.index })) });
     }
     if (url.pathname === '/estado') return json(res, { estado, informe: informe(), nube });
+    // Secuencia: la página de escena mide la duración del vídeo y la manda aquí. Solo cambia el reloj del
+    // relevo (no es una escena nueva ni sube la revisión); la luz se recalcula con ella.
+    if (req.method === 'POST' && url.pathname === '/duracion') {
+      const { pieza, s } = await leerCuerpo(req);
+      const e = estado?.escena, d = Number(s);
+      if (e?.modo === 'secuencia' && e.piezas[0] === pieza && d > 0 && d <= 3600 && Math.abs((e.duracion || 0) - d) > 0.05) {
+        e.duracion = Math.round(d * 1000) / 1000;
+        await fs.writeFile(estadoPath, JSON.stringify(estado, null, 2)).catch(() => {});
+        log('secuencia_duracion', { pieza, s: e.duracion });
+        luzAplicada.clear();
+      }
+      return json(res, { ok: true, duracion: e?.duracion ?? 0 });
+    }
     if (req.method === 'POST' && (url.pathname === '/escena' || url.pathname === '/luz')) {
       const cuerpo = await leerCuerpo(req);
       const nuevo = url.pathname === '/escena' ? { escena: cuerpo } : { luz: cuerpo };
@@ -164,10 +179,25 @@ async function userAgent(cdp) {
 
 // Un Chrome por player, cada uno con su perfil. En headless solo pinta la ventana activa de
 // cada navegador: con 7 ventanas en un mismo Chrome, el screencast de las 6 de detrás se callaba.
+// Número del ventilador encima del vídeo (config «numeros»: true · PC-COCINA, 6-nov-2026). Solo en los players
+// del canal con un único ventilador (modo independiente): en repetir la misma imagen va a los 7, y las páginas
+// de escena (extender, sincro, identificar) las pinta escena.html, que en identificar ya enseña el número.
+function numeroEncima(n) {
+  const estilo = 'position:fixed;left:50%;top:8%;transform:translateX(-50%);z-index:2147483647;pointer-events:none;' +
+    'min-width:66px;height:66px;padding:0 12px;box-sizing:border-box;border-radius:33px;background:rgba(0,0,0,.55);' +
+    'color:#fff;font:800 46px/66px system-ui,"Segoe UI",sans-serif;text-align:center;text-shadow:0 2px 6px #000;' +
+    'box-shadow:0 0 0 3px rgba(255,255,255,.85)';
+  return `(()=>{const poner=()=>{if(document.getElementById('admira-num'))return;const d=document.createElement('div');` +
+    `d.id='admira-num';d.textContent=${JSON.stringify(String(n))};d.style.cssText=${JSON.stringify(estilo)};` +
+    `(document.body||document.documentElement).appendChild(d);};` +
+    `if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',poner);else poner();setInterval(poner,2000);})()`;
+}
+
 async function startPlayer(p) {
   p.chrome = await launchChrome(cfg.chrome, path.join(profileRoot, p.screen));
   p.cdp = await Cdp.connect(p.chrome.ws);
-  p.page = await openPlayerPage(p.cdp, { url: p.url, side: SIDE, quality: cfg.quality, userAgent: await userAgent(p.cdp) });
+  const encima = cfg.numeros && p.fans.length === 1 && p.url.startsWith(cfg.canal) ? numeroEncima(p.fans[0]) : undefined;
+  p.page = await openPlayerPage(p.cdp, { url: p.url, side: SIDE, quality: cfg.quality, userAgent: await userAgent(p.cdp), encima });
   p.cdp.on((method, params, sessionId) => {
     if (sessionId !== p.page.sessionId) return;
     if (method === 'Page.screencastFrame') {
@@ -204,12 +234,15 @@ async function sincronizarPlayers() {
 }
 
 // ── Iluminación ────────────────────────────────────────────────────────────────
-// Solo se envía lo que cambia; con «la luz sigue al vídeo» en sincro se revisa cada 250 ms.
+// Solo se envía lo que cambia; con «la luz sigue al vídeo» en sincro, y siempre en secuencia, se revisa cada 250 ms.
+// Secuencia sin luz configurada: verde fijo, para que el relevo se vea igual.
+const LUZ_SECUENCIA = normalizarLuz({ efecto: 'fijo', color: '#00d26a', brillo: 4 });
 async function aplicarLuz() {
-  if (!controlador || !estado?.luz || !fans.length) return;
+  const luz = estado?.luz ?? (estado?.escena?.modo === 'secuencia' ? LUZ_SECUENCIA : null);
+  if (!controlador || !luz || !fans.length) return;
   const ahora = Date.now(), respirar = new Map();
   for (const f of fans) {
-    const l = luzDe(estado.luz, f.n, estado.escena, ahora), k = JSON.stringify(l);
+    const l = luzDe(luz, f.n, estado.escena, ahora), k = JSON.stringify(l);
     if (luzAplicada.get(f.n) === k) continue;
     luzAplicada.set(f.n, k);
     if (l.efecto === 'respirar') respirar.set(f.port, l);   // efecto de grupo: todo el puerto
@@ -219,7 +252,9 @@ async function aplicarLuz() {
     await controlador.luzPuerto(port, fans.filter(f => f.port === port).length, l).catch(e => log('luz_error', { port, error: e.message }));
   }
 }
-setInterval(() => { if (estado?.luz?.sigueVideo && estado.escena.modo === 'sincro') aplicarLuz(); }, 250).unref();
+setInterval(() => {
+  if (estado?.escena?.modo === 'secuencia' || (estado?.luz?.sigueVideo && estado.escena.modo === 'sincro')) aplicarLuz();
+}, 250).unref();
 
 // ── Nube: el gemelo de admira.store/supercomputer ──────────────────────────────
 // Cada 3 s: informe + miniaturas (400×400, JPEG calidad 40) → nube; la respuesta trae la escena y la luz deseadas.
