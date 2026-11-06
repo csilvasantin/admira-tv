@@ -21,15 +21,21 @@ en informes HID de 512 bytes y va a su ventilador.
 | `repetir` | repeat, espejo | un solo canal cuyos fotogramas van a los 7 | `supercomputer-ventiladores` |
 | `extender` | extend, adaptar, adapt, estirar | una pieza estirada sobre los 7 como un mural (`ajuste` cubrir/estirar/contener, `columnas`, `orden`) | — |
 | `sincro` | sync, relevo | la pieza pasa de un ventilador al siguiente cada `paso` s sin reiniciarse; varias piezas = carrusel | — |
+| `secuencia` | sequence, secuencial, sequential, cadena, chain | la pieza **entera** en el ventilador 1, luego entera en el 2… hasta el último de `orden`, y vuelta a empezar; los demás en negro. Solo usa la primera pieza | — |
 | `identificar` | identify | cada pantalla enseña su número, su puerto y su posición | — |
+
+**Secuencia** (llegó de PC-COCINA, probada allí el 6-nov-2026 con un clip de 23,8 s): cada página de escena
+precarga la pieza oculta y en marcha, mide `video.duration` y se la manda al puente (`POST /duracion`), que la
+guarda en `escena.duracion` (segundos, ≤ 3600) sin subir la revisión. Mientras no se conoce, el relevo usa `paso`.
+Si se vuelve a mandar la misma pieza, la duración medida se conserva. Ejemplo: `{"modo":"secuencia","pieza":"<id>"}`.
 
 Disposición física (confirmada el 4-nov-2026 con `identificar` y una foto): vista desde la ventana
 principal, 1-2-3 en columna en el panel de cristal de la derecha (delante, 1 arriba, pantallas hacia dentro),
 4-5-6 en el suelo (4 detrás a la izquierda, 6 delante a la derecha) y 7 trasero arriba a la izquierda.
 
-Identificar, como extender y sincro, lo pinta `escena.html`. Independiente y repetir usan el canal publicado **tal cual** (contrato `mcp/player-contract.md`:
+Identificar, como extender, sincro y secuencia, lo pinta `escena.html`. Independiente y repetir usan el canal publicado **tal cual** (contrato `mcp/player-contract.md`:
 `embed=mupi&clean=1&fit=screen`, `screen`, `circuit`, `machine`, `muted=1`), con su censo, mando y
-actualizaciones. Extender y sincro los pinta `escena.html`, servida por el propio puente, con un reloj
+actualizaciones. Extender, sincro y secuencia los pinta `escena.html`, servida por el propio puente, con un reloj
 común (`Date.now()` del PC) y las piezas del Stock bajadas una vez a `%LOCALAPPDATA%\AdmiraVentiladores\medios`.
 Circuito `supercomputer`, equipo `METAHUMAN`, UA `AdmiraWindowsPlayer/tl-lcd-2.0`.
 
@@ -37,6 +43,11 @@ Circuito `supercomputer`, equipo `METAHUMAN`, UA `AdmiraWindowsPlayer/tl-lcd-2.0
 pista, ola, carrera), `color`, `brillo` 0–4 (o porcentaje), `velocidad` 0–4, `ventiladores` con luz propia
 por número y `sigueVideo` (en sincro solo brilla el ventilador que tiene la pieza). «Respirar» es un
 efecto de grupo y se aplica al puerto entero. El puente solo envía lo que cambia.
+
+En **secuencia** la luz acompaña siempre al vídeo, sin `sigueVideo`: solo brilla el ventilador que tiene la pieza
+y los demás quedan a brillo 0 (se revisa cada 250 ms, como en sincro con `sigueVideo`). Si la luz general es
+`apagado` o `respirar` (de grupo: encendería a los vecinos), el activo pasa a `fijo` con su color; sin luz
+configurada se usa verde fijo `#00d26a`, brillo 4.
 
 La lógica de modos y luz vive en `escena.mjs` (sin APIs de Node: la usan el puente, `escena.html` y la nube).
 
@@ -48,6 +59,11 @@ screencast la mandaba al ventilador) a `https://www.admira.store/supercomputer/a
 (`~/.admira_supercomputer_key`), y recibe lo deseado por el gemelo. Si la revisión deseada es más nueva
 que la aplicada, la aplica. La función de admira.store la reenvía al Worker `supercomputer`
 (`nube/`, Durable Object; `npx wrangler@4 deploy` desde esa carpeta), que no usa KV.
+
+`nube/worker.mjs` (y `nube-pc-cocina/worker.mjs`) importan `../escena.mjs`: el Worker solo acepta los modos que
+conoce la `escena.mjs` con la que se desplegó (con una vieja, `secuencia` da «modo desconocido»). Si cambia
+`escena.mjs`, hay que redesplegar el Worker y comprobarlo con una petición real: en PC-COCINA, el 6-nov, el
+Durable Object siguió con el código viejo tras desplegar.
 
 Manda siempre lo más reciente: lo que llega del gemelo o de la API local se guarda en
 `%LOCALAPPDATA%\AdmiraVentiladores\estado.json`; editar `config.json` también cuenta (su fecha es su revisión).
@@ -79,13 +95,21 @@ API local (solo `127.0.0.1:4749`):
 |---|---|
 | `GET /health` | fps por pantalla, envíos por ventilador, RPM, estado de la nube |
 | `GET /estado` | escena y luz aplicadas, informe completo |
-| `POST /escena` | `{"modo":"sincro","pieza":"<id>","paso":3}` · `{"modo":"extend","pieza":"<id>","ajuste":"estirar"}` · … |
+| `POST /escena` | `{"modo":"sincro","pieza":"<id>","paso":3}` · `{"modo":"extend","pieza":"<id>","ajuste":"estirar"}` · `{"modo":"secuencia","pieza":"<id>"}` · … |
+| `POST /duracion` | `{"pieza":"<id>","s":23.8}`: la manda `escena.html` en secuencia; solo vale para la pieza de la secuencia en curso |
 | `POST /luz` | `{"efecto":"arcoiris","brillo":75}` · `{"efecto":"fijo","color":"#00d26a","ventiladores":{"7":{"color":"#ff0040"}}}` |
 | `GET /player/<n>.jpg` · `/fan/<n>.jpg` | último fotograma pintado / enviado |
 
 `config.json` (sin secretos, versionado): `escena`, `luz`, `nube` (`{"api": "...", "claveFichero": "~/..."}`),
-`screen`, `screenPrefix`, `circuit`, `machine`, `fps` (≤ 30), `quality`, `brightness` y `rotation`
-(`{"7": 270}`). El formato anterior (`mode` + `ids`) sigue valiendo.
+`screen`, `screenPrefix`, `circuit`, `machine`, `fps` (≤ 30), `quality`, `brightness`, `rotation`
+(`{"7": 270}`) y `numeros`. El formato anterior (`mode` + `ids`) sigue valiendo.
+
+`"numeros": true` (desactivado si no está): cada ventilador enseña su número en un círculo encima del vídeo, arriba
+y centrado. Se inyecta por CDP antes que los scripts de la página (`numeroEncima` en `player.mjs`,
+`Page.addScriptToEvaluateOnNewDocument` vía la opción `encima` de `openPlayerPage` en `cdp.mjs`), así que
+sobrevive a las recargas del canal y no toca `canal.html`. Solo en los players del canal con un único ventilador
+(modo independiente): en repetir la misma imagen va a los 7, y las páginas de escena las pinta `escena.html`
+(en identificar ya enseña el número). Activo en PC-COCINA desde el 6-nov-2026.
 
 ## Relevo con L-Connect
 

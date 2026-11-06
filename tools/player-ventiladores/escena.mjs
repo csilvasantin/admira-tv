@@ -7,7 +7,10 @@
 //  · repetir        — la misma pieza en los 7, al mismo tiempo (repeat, espejo)
 //  · extender       — una pieza estirada sobre los 7 como un mural (extend, adaptar, adapt)
 //  · sincro         — la pieza pasa de un ventilador al siguiente sin perder el hilo (sync, relevo)
+//  · secuencia      — la pieza entera en un ventilador, luego entera en el siguiente, del 1 al 7, y vuelta a
+//                     empezar; solo se enciende el que la tiene (sequence, secuencial · PC-COCINA, 6-nov-2026)
 const ALIAS_MODO = {
+  secuencia: 'secuencia', sequence: 'secuencia', secuencial: 'secuencia', sequential: 'secuencia', cadena: 'secuencia', chain: 'secuencia',
   independiente: 'independiente', independent: 'independiente', autonomo: 'independiente', 'autónomo': 'independiente', autonomous: 'independiente',
   repetir: 'repetir', repeat: 'repetir', repeticion: 'repetir', 'repetición': 'repetir', espejo: 'repetir', mirror: 'repetir',
   extender: 'extender', extend: 'extender', extendido: 'extender', extended: 'extender', adaptar: 'extender', adapt: 'extender', estirar: 'extender', stretch: 'extender',
@@ -15,7 +18,7 @@ const ALIAS_MODO = {
   identificar: 'identificar', identify: 'identificar', numeros: 'identificar', 'números': 'identificar'
 };
 //  · identificar    — cada pantalla enseña su número, puerto y posición (para ubicarlos en el gemelo)
-export const MODOS = ['independiente', 'repetir', 'extender', 'sincro', 'identificar'];
+export const MODOS = ['independiente', 'repetir', 'extender', 'sincro', 'secuencia', 'identificar'];
 export const modoCanonico = m => ALIAS_MODO[String(m ?? '').toLowerCase().trim()] || null;
 
 const ALIAS_AJUSTE = { cubrir: 'cubrir', cover: 'cubrir', estirar: 'estirar', stretch: 'estirar', fill: 'estirar', contener: 'contener', contain: 'contener' };
@@ -38,8 +41,17 @@ export function normalizarEscena(raw = {}, fans = 7) {
     columnas, filas: entero(raw.filas, 1, fans, Math.ceil(fans / columnas)),
     ajuste: ALIAS_AJUSTE[String(raw.ajuste ?? '').toLowerCase()] || 'cubrir',
     epoch: Number(raw.epoch) > 0 ? Number(raw.epoch) : 0,    // origen del reloj común (ms)
+    // secuencia: duración de la pieza en segundos. La mide la página de escena al cargar el vídeo y se la pasa
+    // al puente; mientras no se sepa (0) se usa `paso`.
+    duracion: Number(raw.duracion) > 0 ? Math.min(3600, Number(raw.duracion)) : 0,
     revision: Number(raw.revision) || 0
   };
+}
+
+// Secuencia: qué ventilador tiene la pieza en el instante t (s desde epoch) y por qué segundo va.
+export function turnoSecuencia(escena, t) {
+  const d = escena.duracion > 0 ? escena.duracion : escena.paso, vuelta = Math.floor(Math.max(0, t) / d);
+  return { fan: escena.orden[vuelta % escena.orden.length], t: Math.max(0, t) - vuelta * d, d };
 }
 
 // Qué pinta el ventilador `fan` (número físico 1..7) en el instante `ahora` (ms).
@@ -59,6 +71,12 @@ export function asignacion(escena, fan, ahora = Date.now()) {
     const n = escena.orden.length, paso = Math.floor(t / escena.paso);
     const k = (((pos - paso) % n) + n) % n;                  // la pieza k avanza un ventilador por paso
     return k < escena.piezas.length ? { tipo: 'pieza', pieza: escena.piezas[k], t, k } : { tipo: 'negro' };
+  }
+  if (escena.modo === 'secuencia') {
+    // Una sola pieza (la primera): entera en cada ventilador, en el orden de `orden`. Los demás, en negro.
+    if (!escena.piezas.length) return { tipo: 'negro' };
+    const turno = turnoSecuencia(escena, t);
+    return turno.fan === fan ? { tipo: 'pieza', pieza: escena.piezas[0], t: turno.t } : { tipo: 'negro' };
   }
   return { tipo: 'canal' };                                  // independiente y repetir los pinta el canal
 }
@@ -119,10 +137,15 @@ export function cargaLuz(destino, luz) {
 
 // Luz efectiva de cada ventilador. Con sigueVideo en sincro, el ventilador que tiene la pieza
 // se enciende con la luz general y los demás quedan a brillo mínimo.
+// En secuencia la luz acompaña siempre al vídeo (sin casilla): solo brilla el ventilador activo, y si la
+// luz general está apagada se enciende en fijo con su color para que se vea el relevo.
 export function luzDe(luz, fan, escena, ahora = Date.now()) {
   const propia = luz.ventiladores[String(fan)] || luz;
-  if (luz.sigueVideo && escena?.modo === 'sincro' && asignacion(escena, fan, ahora).tipo === 'negro') {
+  const sigue = escena?.modo === 'secuencia' || (luz.sigueVideo && escena?.modo === 'sincro');
+  if (sigue && asignacion(escena, fan, ahora).tipo === 'negro') {
     return { ...propia, efecto: 'fijo', brillo: 0 };
   }
+  // «respirar» es de grupo (todo el puerto): en secuencia se cambia por fijo para no encender a los vecinos.
+  if (escena?.modo === 'secuencia' && ['apagado', 'respirar'].includes(propia.efecto)) return { ...propia, efecto: 'fijo', brillo: propia.brillo || 4 };
   return propia;
 }

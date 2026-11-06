@@ -83,3 +83,34 @@ test('con sigueVideo, en sincro solo brilla el ventilador que tiene la pieza', (
   assert.equal(luzDe(l, 2, e, 0).brillo, 0);
   assert.equal(luzDe(l, 2, e, 4000).brillo, 4);
 });
+
+test('secuencia: la pieza entera en cada ventilador, del 1 al 7, y vuelta a empezar', () => {
+  assert.equal(modoCanonico('sequence'), 'secuencia');
+  assert.equal(modoCanonico('Secuencia'), 'secuencia');
+  const e = normalizarEscena({ modo: 'secuencia', pieza: 'v1', duracion: 10, epoch: 0 });
+  const quien = ahora => [1, 2, 3, 4, 5, 6, 7].filter(f => asignacion(e, f, ahora).tipo === 'pieza');
+  assert.deepEqual(quien(0), [1]);
+  assert.deepEqual(quien(9999), [1], 'el 1 la pone entera');
+  assert.deepEqual(quien(10000), [2]);
+  assert.equal(asignacion(e, 2, 13000).t, 3, 'en el 2 empieza desde el principio');
+  assert.deepEqual(quien(69000), [7]);
+  assert.deepEqual(quien(70000), [1], 'da la vuelta');
+  assert.equal(asignacion(e, 4, 0).tipo, 'negro');
+});
+
+test('secuencia: sin duración medida usa paso, y solo toma la primera pieza', () => {
+  const e = normalizarEscena({ modo: 'secuencia', piezas: ['a', 'b'], paso: 5, epoch: 0 });
+  assert.equal(e.duracion, 0);
+  assert.equal(asignacion(e, 2, 5000).pieza, 'a');
+  assert.equal(normalizarEscena({ modo: 'secuencia', duracion: 99999 }).duracion, 3600);
+});
+
+test('secuencia: la luz acompaña siempre al vídeo, aunque la general esté apagada', () => {
+  const e = normalizarEscena({ modo: 'secuencia', pieza: 'v1', duracion: 8, epoch: 0 });
+  const luz = normalizarLuz({ efecto: 'apagado', color: '#00ff00' });
+  assert.equal(luzDe(luz, 1, e, 1000).efecto, 'fijo');
+  assert.ok(luzDe(luz, 1, e, 1000).brillo > 0, 'el activo brilla');
+  assert.equal(luzDe(luz, 2, e, 1000).brillo, 0, 'los demás no');
+  assert.ok(luzDe(luz, 2, e, 9000).brillo > 0, 'a los 8 s el relevo pasa al 2');
+  assert.equal(luzDe(normalizarLuz({ efecto: 'respirar' }), 1, e, 0).efecto, 'fijo', 'respirar es de grupo: fijo');
+});

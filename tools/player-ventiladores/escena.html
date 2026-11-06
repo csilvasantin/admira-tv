@@ -18,9 +18,11 @@
 <div id="lienzo"></div>
 <div id="numero"></div>
 <script type="module">
-// Render de un ventilador en los modos extender y sincro. Lo abre el puente en Chrome sin
+// Render de un ventilador en los modos extender, sincro y secuencia. Lo abre el puente en Chrome sin
 // ventana (un Chrome por ventilador) y captura su screencast. Todos los ventiladores usan el
 // mismo reloj (Date.now() del PC): así las teselas y el relevo van alineados.
+// En secuencia cada página precarga la pieza oculta, mide su duración y se la pasa al puente
+// (POST /duracion), que la usa para el relevo de la luz.
 import { asignacion } from '/escena.mjs';
 
 const fan = Number(new URLSearchParams(location.search).get('fan')) || 1;
@@ -52,10 +54,26 @@ function alinear(video, t) {
   if (video.paused) video.play().catch(() => {});
 }
 
+const informadas = new Set();
+function informarDuracion(pieza, s) {
+  if (informadas.has(pieza) || Math.abs((estado.escena.duracion || 0) - s) <= 0.05) return;
+  informadas.add(pieza);
+  fetch('/duracion', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pieza, s }) })
+    .catch(() => informadas.delete(pieza));
+}
+
 function pintar() {
   requestAnimationFrame(pintar);
   if (!estado) return;
-  const a = asignacion(estado.escena, fan, Date.now());
+  let escena = estado.escena;
+  if (escena.modo === 'secuencia' && escena.piezas[0]) {
+    const el = elemento(escena.piezas[0]);   // oculta y en marcha: al llegar su turno ya va por el segundo justo
+    if (el?.tagName === 'VIDEO' && el.duration > 0) {
+      if (!(escena.duracion > 0)) escena = { ...escena, duracion: el.duration };
+      informarDuracion(escena.piezas[0], el.duration);
+    }
+  }
+  const a = asignacion(escena, fan, Date.now());
   const numero = document.getElementById('numero');
   if (a.tipo === 'numero') {
     const f = (estado.fans || []).find(x => x.n === fan) || {};
