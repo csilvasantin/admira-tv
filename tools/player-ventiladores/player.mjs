@@ -12,7 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SIDE, isJpeg, mergeConfig, planEscena, escenaDeConfig, renumerar } from './core.mjs';
-import { normalizarEscena, normalizarLuz, luzDe, luzDispositivo } from './escena.mjs';
+import { normalizarEscena, normalizarLuz, luzDe, luzDispositivo, mismoContenido } from './escena.mjs';
 import { launchChrome, Cdp, openPlayerPage } from './cdp.mjs';
 import { Medios } from './medios.mjs';
 
@@ -55,6 +55,11 @@ async function aplicarYa(nuevo, origen) {
   const luz = nuevo.luz === undefined ? (estado?.luz ?? null) : (nuevo.luz ? normalizarLuz(nuevo.luz) : null);
   if (['extender', 'sincro', 'secuencia'].includes(escena.modo)) {
     if (!escena.piezas.length) throw new Error(`${escena.modo} necesita al menos una pieza`);
+    // Mismo contenido (solo cambió la luz o el audio): el reloj y la duración medida siguen, los vídeos no se reinician.
+    if (mismoContenido(escena, estado?.escena)) {
+      escena.epoch = estado.escena.epoch || escena.epoch;
+      escena.duracion = escena.duracion || estado.escena.duracion || 0;
+    }
     if (!escena.epoch) escena.epoch = Date.now();
     // Secuencia: la duración la mide la página de escena (POST /duracion); si es la misma pieza se conserva.
     if (escena.modo === 'secuencia' && !escena.duracion && estado?.escena?.piezas?.[0] === escena.piezas[0]) escena.duracion = estado.escena.duracion || 0;

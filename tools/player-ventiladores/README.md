@@ -113,6 +113,11 @@ Comprobarlo en `/estado`, que lo contesta el Durable Object (`/salud` solo prueb
 siguió con el código viejo las dos veces que se desplegó el 6-nov, y en las dos se pasó a un DO con otro nombre
 (`pc-cocina`, luego `pc-cocina-2`); el puente vuelve a sembrar lo deseado en su siguiente aviso.
 
+Luz y contenido van por separado (Carlos, 6-nov-2026): la nube guarda la escena con el reloj a cero (`epoch: 0`) y la
+reenvía con cada cambio, también con los de luz; si el contenido es el mismo (`mismoContenido`: modo, piezas, orden, paso,
+cada…; no cuentan el reloj, la duración medida ni el audio), el puente conserva su reloj y los vídeos siguen donde iban.
+Antes, cambiar el color de la bomba reiniciaba la secuencia.
+
 Manda siempre lo más reciente: lo que llega del gemelo o de la API local se guarda en
 `%LOCALAPPDATA%\AdmiraVentiladores\estado.json`; editar `config.json` también cuenta (su fecha es su revisión).
 

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { modoCanonico, normalizarEscena, asignacion, normalizarLuz, cargaLuz, luzDe, colorRgb, efectoCanonico, luzDispositivo, cargaStrimer, dispositivoCanonico, cargaGalahad } from './escena.mjs';
+import { modoCanonico, normalizarEscena, asignacion, normalizarLuz, cargaLuz, luzDe, colorRgb, efectoCanonico, luzDispositivo, cargaStrimer, dispositivoCanonico, cargaGalahad, mismoContenido } from './escena.mjs';
 
 test('los modos se entienden en castellano y en inglés', () => {
   for (const [dicho, modo] of [['sincro', 'sincro'], ['sync', 'sincro'], ['Repeat', 'repetir'], ['repetir', 'repetir'],
@@ -179,4 +179,14 @@ test('secuencia «cada x s»: el relevo a los segundos pedidos, desde el princip
   const luz = normalizarLuz({ efecto: 'fijo', color: '#00ff00' });
   assert.equal(luzDe(luz, 2, e, 10500).brillo, 4, 'la luz sigue el relevo de cada x s');
   assert.equal(luzDe(luz, 1, e, 10500).brillo, 0);
+});
+
+test('mismo contenido: la luz o el audio no reinician el reloj; otra pieza, otro modo o cada x s sí', () => {
+  const viva = normalizarEscena({ modo: 'secuencia', pieza: 'v1', epoch: 1793970000000, duracion: 23.8 });
+  const deLaNube = normalizarEscena({ modo: 'secuencia', pieza: 'v1', epoch: 0, audio: { ventilador: 1 } });
+  assert.equal(mismoContenido(deLaNube, viva), true, 'reloj a cero, sin duración y con otro audio: el mismo contenido');
+  assert.equal(mismoContenido(normalizarEscena({ modo: 'secuencia', pieza: 'v2' }), viva), false, 'otra pieza');
+  assert.equal(mismoContenido(normalizarEscena({ modo: 'secuencia', pieza: 'v1', cada: 10 }), viva), false, 'cada x s');
+  assert.equal(mismoContenido(normalizarEscena({ modo: 'sincro', pieza: 'v1' }), viva), false, 'otro modo');
+  assert.equal(mismoContenido(deLaNube, null), false);
 });

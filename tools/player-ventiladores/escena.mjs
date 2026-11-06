@@ -51,6 +51,15 @@ export function normalizarEscena(raw = {}, fans = 7) {
   };
 }
 
+// ¿Cambia el contenido? Lo que llega de la nube trae la escena con el reloj a cero (epoch 0) aunque solo cambie la luz;
+// si modo, piezas, orden, paso, cada… son los mismos, no es una escena nueva y el reloj sigue (Carlos, 6-nov-2026: «los
+// cambios en la iluminación no tienen que afectar a la reproducción»). Tampoco cuentan el audio ni la duración medida.
+export function mismoContenido(a, b) {
+  if (!a || !b) return false;
+  const clave = e => JSON.stringify({ ...e, epoch: 0, revision: 0, duracion: 0, audio: null });
+  return clave(a) === clave(b);
+}
+
 // Audio (PC-COCINA, 6-nov-2026): como mucho suena un ventilador, para que no se oigan siete pistas a la vez.
 //  · ventilador: el que suena (1..fans); 0 = ninguno. En repetir hay un solo canal: cualquier número = con sonido.
 //  · salida: nombre del dispositivo de salida de Windows (el que enseña Chrome); vacío = el predeterminado del PC.
