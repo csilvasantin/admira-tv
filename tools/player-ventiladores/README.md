@@ -90,6 +90,9 @@ conoce la `escena.mjs` con la que se desplegó (con una vieja, `secuencia` da «
 `escena.mjs`, hay que redesplegar el Worker y comprobarlo con una petición real: en PC-COCINA, el 6-nov, el
 Durable Object siguió con el código viejo tras desplegar. Con una `escena.mjs` anterior al 6-nov-2026 (tarde), la
 nube descarta además `luz.dispositivos` y `escena.audio`, y un cambio desde el gemelo los apaga.
+Comprobarlo en `/estado`, que lo contesta el Durable Object (`/salud` solo prueba el Worker): en PC-COCINA el DO
+siguió con el código viejo las dos veces que se desplegó el 6-nov, y en las dos se pasó a un DO con otro nombre
+(`pc-cocina`, luego `pc-cocina-2`); el puente vuelve a sembrar lo deseado en su siguiente aviso.
 
 Manda siempre lo más reciente: lo que llega del gemelo o de la API local se guarda en
 `%LOCALAPPDATA%\AdmiraVentiladores\estado.json`; editar `config.json` también cuenta (su fecha es su revisión).
