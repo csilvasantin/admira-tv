@@ -110,3 +110,9 @@ test('numeración: el puerto 2 de PC-COCINA sube desde el suelo (5 junto al 4, 7
   assert.equal(mala.aplicada, false, 'dos ventiladores con el 6: se ignora');
   assert.deepEqual(mala.fans.map(f => f.n), [1, 2, 3, 4, 5, 6, 7]);
 });
+
+test('la pantalla no se queda sin señal: reenvío del último fotograma cada mantenerMs (250 por defecto, 100–2000)', () => {
+  assert.equal(mergeConfig().mantenerMs, 250);
+  assert.equal(mergeConfig({ mantenerMs: 10 }).mantenerMs, 100);
+  assert.equal(mergeConfig({ mantenerMs: 99999 }).mantenerMs, 2000);
+});

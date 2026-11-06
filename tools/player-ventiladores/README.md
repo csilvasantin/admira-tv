@@ -13,7 +13,10 @@ Numeración: ventilador 1 = puerto 0, primero de la cadena; el 7 es el del puert
 
 Cada pantalla se pinta en un Chrome sin ventana a 400×400 (un Chrome por player: en headless
 solo pinta la ventana activa de cada navegador) y cada fotograma del screencast (JPEG) se trocea
-en informes HID de 512 bytes y va a su ventilador.
+en informes HID de 512 bytes y va a su ventilador. Si la página no cambia (una imagen fija, o el negro de un ventilador
+que espera turno en secuencia), el puente reenvía el último fotograma cada `mantenerMs` (250 ms): sin señal, la pantalla se
+suelta del streaming y enseña lo que tiene guardado (el logo de Lian Li y los vídeos de L-Connect). Pasó en PC-COCINA el
+6-nov-2026: el reenvío antiguo (cada 2 s y solo al llegar un fotograma) dejaba huecos de 3-5 s y salían «fotogramas raros».
 
 | Modo (`escena.modo`) | También | Qué pinta | Pantalla(s) en admira.tv |
 |---|---|---|---|
@@ -145,7 +148,7 @@ API local (solo `127.0.0.1:4749`):
 
 `config.json` (sin secretos, versionado): `escena`, `luz`, `nube` (`{"api": "...", "claveFichero": "~/..."}`),
 `screen`, `screenPrefix`, `circuit`, `machine`, `fps` (≤ 30), `quality`, `brightness`, `rotation`
-(`{"7": 270}`), `numeros` y `numeracion`. El formato anterior (`mode` + `ids`) sigue valiendo.
+(`{"7": 270}`), `numeros`, `numeracion` y `mantenerMs` (100–2000, 250 por defecto). El formato anterior (`mode` + `ids`) sigue valiendo.
 
 `"numeracion": {"2:0": 7, "2:2": 5}` (PC-COCINA, 6-nov-2026): número lógico por `puerto:posición` (`renumerar` en `core.mjs`).
 Sin ella, el número es el orden de la cadena (puerto y posición). En PC-COCINA la cadena del puerto 2 va de arriba abajo

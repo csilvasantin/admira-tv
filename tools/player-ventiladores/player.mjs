@@ -167,19 +167,24 @@ server.on('error', e => {
 server.listen(cfg.healthPort, '127.0.0.1');
 
 // ── Fotogramas → ventiladores ──────────────────────────────────────────────────
-// Cada ventilador recibe siempre el fotograma más reciente, a como mucho cfg.fps;
-// si el canal no cambia (imagen fija) se reenvía el último cada 2 s para que no caduque.
+// Cada ventilador recibe siempre el fotograma más reciente, a como mucho cfg.fps. Si la página no cambia (imagen fija,
+// o el negro de un ventilador que espera turno en secuencia), se reenvía el último cada cfg.mantenerMs: sin señal, la
+// pantalla TL LCD se suelta del streaming y enseña lo que tiene guardado (el logo de Lian Li y los vídeos de L-Connect).
+// Visto en PC-COCINA el 6-nov-2026: con el reenvío antiguo (cada 2 s y solo al llegar un fotograma) había huecos de 3-5 s.
 function pump(fan) {
   if (fan.busy || stopping) return;
   const now = Date.now(), gap = 1000 / cfg.fps;
   const fresh = fan.pending && fan.pending !== fan.last;
-  const stale = fan.last && now - fan.sentAt > 2000;
+  const stale = fan.last && now - fan.sentAt > cfg.mantenerMs;
   if (!fresh && !stale) return;
   if (now - fan.sentAt < gap) { clearTimeout(fan.timer); fan.timer = setTimeout(() => pump(fan), gap - (now - fan.sentAt)); return; }
   const jpeg = fresh ? fan.pending : fan.last;
   fan.sentAt = now; fan.last = jpeg;
   fan.frame(jpeg).catch(() => {}).finally(() => setImmediate(() => pump(fan)));
 }
+
+// El reenvío no depende de que lleguen fotogramas: un temporizador revisa cada pantalla.
+setInterval(() => { for (const f of fans) pump(f); }, 100).unref();
 
 function deliver(player, jpeg) {
   if (!isJpeg(jpeg) || !players.includes(player)) return;

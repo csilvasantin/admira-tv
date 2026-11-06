@@ -123,6 +123,7 @@ export const DEFAULTS = {
   canal: 'https://www.admira.tv/canal.html',
   fps: 25,
   quality: 80,
+  mantenerMs: 250,           // reenvío del último fotograma si la página no cambia (la TL LCD se suelta sin señal)
   brightness: null,          // null = no tocar lo que dejó L-Connect
   rotation: {},              // { "7": 270 } por número de ventilador; vacío = no tocar
   ids: {},                   // { "1": ["<id del Stock>"], … } o { "espejo": [...] }; vacío = playlist del canal
@@ -150,5 +151,6 @@ export function mergeConfig(raw = {}) {
   }
   cfg.fps = Math.max(1, Math.min(30, Number(cfg.fps) || DEFAULTS.fps));
   cfg.quality = Math.max(30, Math.min(95, Number(cfg.quality) || DEFAULTS.quality));
+  cfg.mantenerMs = Math.max(100, Math.min(2000, Number(cfg.mantenerMs) || DEFAULTS.mantenerMs));
   return cfg;
 }
