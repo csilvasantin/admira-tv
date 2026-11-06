@@ -52,6 +52,22 @@ export function numberFans(fans) {
   return [...fans].sort((a, b) => a.port - b.port || a.index - b.index).map((f, i) => ({ ...f, n: i + 1 }));
 }
 
+// Numeración lógica (config «numeracion», PC-COCINA 6-nov-2026): { "puerto:posición": número }. El orden físico de la
+// cadena no siempre sigue la caja (en PC-COCINA el puerto 2 va de arriba abajo y la secuencia debe subir desde el suelo:
+// 5 junto al 4, luego 6 y 7 arriba). Solo se aplica si el resultado sigue siendo 1..N sin repetir; si no, se ignora.
+export function renumerar(fans, numeracion) {
+  const mapa = numeracion && typeof numeracion === 'object' ? numeracion : {};
+  if (!Object.keys(mapa).length) return { fans, aplicada: false };
+  const nuevos = fans.map(f => {
+    const v = mapa[`${f.port}:${f.index}`];
+    return { ...f, n: v === undefined ? f.n : Number(v) };
+  });
+  const ns = nuevos.map(f => f.n).sort((a, b) => a - b);
+  const valida = ns.every((n, i) => Number.isInteger(n) && n === i + 1);
+  if (!valida) return { fans, aplicada: false, error: `numeración inválida: ${JSON.stringify(mapa)}` };
+  return { fans: nuevos.sort((a, b) => a.n - b.n), aplicada: true };
+}
+
 // Qué Chrome hace falta para cada modo de la escena (ver escena.mjs):
 //  · independiente → un canal por ventilador (`<screenPrefix>-<n>`, un ID por aparato como manda el
 //    contrato) con sus piezas fijadas por ?ids=;
@@ -113,6 +129,7 @@ export const DEFAULTS = {
   escena: null,              // { modo, ids, piezas, paso, orden, columnas, ajuste } (escena.mjs)
   luz: null,                 // { efecto, color, brillo, velocidad, ventiladores, sigueVideo }; null = no tocar
   nube: null,                // { api, clave } del gemelo (admira.store/supercomputer); null = sin nube
+  numeracion: null,          // { "2:0": 7, "2:2": 5 }: número lógico por puerto:posición; null = el orden de la cadena
   healthPort: 4749,
   chrome: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   userAgentToken: 'AdmiraWindowsPlayer/tl-lcd-2.0'

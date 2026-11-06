@@ -145,7 +145,14 @@ API local (solo `127.0.0.1:4749`):
 
 `config.json` (sin secretos, versionado): `escena`, `luz`, `nube` (`{"api": "...", "claveFichero": "~/..."}`),
 `screen`, `screenPrefix`, `circuit`, `machine`, `fps` (≤ 30), `quality`, `brightness`, `rotation`
-(`{"7": 270}`) y `numeros`. El formato anterior (`mode` + `ids`) sigue valiendo.
+(`{"7": 270}`), `numeros` y `numeracion`. El formato anterior (`mode` + `ids`) sigue valiendo.
+
+`"numeracion": {"2:0": 7, "2:2": 5}` (PC-COCINA, 6-nov-2026): número lógico por `puerto:posición` (`renumerar` en `core.mjs`).
+Sin ella, el número es el orden de la cadena (puerto y posición). En PC-COCINA la cadena del puerto 2 va de arriba abajo
+y la columna tiene que subir desde el suelo (el 5 junto al 4, luego el 6 y el 7 arriba), para que la secuencia y el relevo
+no salten del 4 al 7. Solo se aplica si el resultado es 1..N sin repetir (si no, `numeracion_error` en el log). La luz y
+las RPM siguen yendo por puerto y posición. Ojo: editar `config.json` cuenta como revisión nueva y su escena gana a la del
+gemelo al arrancar.
 
 `"numeros": true` (desactivado si no está): cada ventilador enseña su número en un círculo encima del vídeo, arriba
 y centrado. Se inyecta por CDP antes que los scripts de la página (`numeroEncima` en `player.mjs`,

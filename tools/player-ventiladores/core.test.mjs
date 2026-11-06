@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPacket, framePackets, settingsPayload, parseIdentity, numberFans, planEscena, escenaDeConfig, canalUrl, mergeConfig, isJpeg, MAX_PAYLOAD } from './core.mjs';
+import { buildPacket, framePackets, settingsPayload, parseIdentity, numberFans, planEscena, escenaDeConfig, canalUrl, mergeConfig, isJpeg, MAX_PAYLOAD, renumerar } from './core.mjs';
 import { normalizarEscena } from './escena.mjs';
 
 test('el paquete sigue la cabecera HID de la TL LCD', () => {
@@ -98,4 +98,15 @@ test('audio: solo suena el ventilador elegido, con muted=0 en el canal o audio=1
   assert.equal(rep.length, 1); assert.equal(rep[0].audio, true, 'en repetir un solo canal: con sonido');
   const mudo = planEscena(normalizarEscena({ modo: 'independiente' }, 3), fans, cfg);
   assert.ok(mudo.every(p => !p.audio && new URL(p.url).searchParams.get('muted') === '1'), 'sin audio, todo callado como antes');
+});
+
+test('numeración: el puerto 2 de PC-COCINA sube desde el suelo (5 junto al 4, 7 arriba)', () => {
+  const fans = [[0, 0], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]].map(([port, index], i) => ({ port, index, n: i + 1 }));
+  const r = renumerar(fans, { '2:0': 7, '2:2': 5 });
+  assert.equal(r.aplicada, true);
+  assert.deepEqual(r.fans.map(f => `${f.n}=${f.port}:${f.index}`), ['1=0:0', '2=1:0', '3=1:1', '4=1:2', '5=2:2', '6=2:1', '7=2:0']);
+  assert.equal(renumerar(fans, null).aplicada, false, 'sin numeración, la de la cadena');
+  const mala = renumerar(fans, { '2:0': 6 });
+  assert.equal(mala.aplicada, false, 'dos ventiladores con el 6: se ignora');
+  assert.deepEqual(mala.fans.map(f => f.n), [1, 2, 3, 4, 5, 6, 7]);
 });

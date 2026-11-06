@@ -11,7 +11,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SIDE, isJpeg, mergeConfig, planEscena, escenaDeConfig } from './core.mjs';
+import { SIDE, isJpeg, mergeConfig, planEscena, escenaDeConfig, renumerar } from './core.mjs';
 import { normalizarEscena, normalizarLuz, luzDe, luzDispositivo } from './escena.mjs';
 import { launchChrome, Cdp, openPlayerPage } from './cdp.mjs';
 import { Medios } from './medios.mjs';
@@ -370,7 +370,12 @@ async function tickNube() {
 async function openUsb() {
   if (dryRun) return [];
   const { openFans, Controlador } = await import('./tl-lcd.mjs');
-  const list = await openFans();
+  const fisica = await openFans();
+  // Numeración lógica de config.json («numeracion»): los objetos de ventilador conservan sus métodos.
+  const num = renumerar(fisica.map(f => ({ port: f.port, index: f.index, n: f.n })), cfg.numeracion);
+  if (num.error) log('numeracion_error', { error: num.error });
+  if (num.aplicada) for (const f of fisica) f.n = num.fans.find(x => x.port === f.port && x.index === f.index).n;
+  const list = fisica.sort((a, b) => a.n - b.n);
   for (const f of list) {
     f.pending = null; f.last = null; f.sentAt = 0; f.timer = null;
     const deg = cfg.rotation[String(f.n)];
