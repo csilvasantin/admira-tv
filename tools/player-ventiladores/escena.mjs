@@ -128,13 +128,16 @@ function luzSimple(raw = {}, base = {}) {
 }
 
 // Otras luces de la caja (PC-COCINA, 6-nov-2026): los dos cables Strimer Plus (el de la gráfica y el de 24 pines
-// de la placa) y la memoria. Como los ventiladores, sin luz propia siguen a la general.
+// de la placa), los ventiladores de arriba (los del radiador, sin pantalla) y la bomba de la AIO Galahad II Trinity,
+// y la memoria. Como los ventiladores, sin luz propia siguen a la general.
 const ALIAS_DISPOSITIVO = {
   grafica: 'grafica', 'gráfica': 'grafica', gpu: 'grafica', pcie: 'grafica', strimergpu: 'grafica',
   placa: 'placa', atx: 'placa', '24pin': 'placa', '24pines': 'placa', motherboard: 'placa', strimeratx: 'placa',
+  superiores: 'superiores', arriba: 'superiores', radiador: 'superiores', techo: 'superiores', top: 'superiores', radiator: 'superiores',
+  bomba: 'bomba', pump: 'bomba', aio: 'bomba',
   memoria: 'memoria', ram: 'memoria', dram: 'memoria', memory: 'memoria'
 };
-export const DISPOSITIVOS_LUZ = ['grafica', 'placa', 'memoria'];
+export const DISPOSITIVOS_LUZ = ['grafica', 'placa', 'superiores', 'bomba', 'memoria'];
 export const dispositivoCanonico = d => ALIAS_DISPOSITIVO[String(d ?? '').toLowerCase().replace(/[\s_-]/g, '')] || null;
 
 // { efecto, color|colores, brillo, velocidad, ventiladores: { "3": {…} }, dispositivos: { grafica: {…} }, sigueVideo }
@@ -163,6 +166,19 @@ export function luzDispositivo(luz, clave) {
 const MODO_STRIMER = { apagado: 0, fijo: 1, respirar: 2, ciclo: 4, arcoiris: 5, ola: 24, carrera: 27, pista: 28, meteoro: 32 };
 const ARCOIRIS_STRIMER = [[255, 0, 0], [255, 105, 0], [255, 215, 0], [0, 255, 0], [0, 0, 255], [170, 0, 255]];
 export const LEDS_STRIMER = 27;
+
+// Galahad II Trinity (USB 0416:7373): luz de los ventiladores del radiador (orden 0x85) y de la bomba (0x83).
+// Carga de 20 bytes (radiador) o 19 (bomba, con el ámbito delante: 2 = los dos aros): modo, brillo 0–4, velocidad 0–4,
+// 4 colores RGB, dirección, apagado, origen (0 = el propio controlador, no la placa) y, en el radiador, sincronía con
+// la bomba (no) y nº de LED (24). Referencia: sgtaziz/lian-li-linux (MIT), galahad2_trinity.rs y lianli-shared/rgb.rs.
+const MODO_GALAHAD = { fijo: 3, arcoiris: 1, ciclo: 2, respirar: 4, pista: 5, meteoro: 6, ola: 7, carrera: 8 };
+export function cargaGalahad(luz, que = 'superiores') {
+  const apagado = luz.efecto === 'apagado';
+  const colores = [0, 1, 2, 3].flatMap(i => luz.colores[i] || luz.colores[0] || [255, 255, 255]);
+  const comun = [apagado ? MODO_GALAHAD.fijo : (MODO_GALAHAD[luz.efecto] ?? MODO_GALAHAD.fijo),
+    apagado ? 0 : Math.min(4, luz.brillo), Math.min(4, luz.velocidad), ...colores, 0, apagado ? 1 : 0, 0];
+  return que === 'bomba' ? [2, ...comun] : [...comun, 0, 24];
+}
 export function cargaStrimer(luz) {
   const colores = luz.efecto === 'apagado' ? []
     : ['arcoiris', 'ciclo'].includes(luz.efecto) ? ARCOIRIS_STRIMER

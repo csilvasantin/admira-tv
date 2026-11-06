@@ -2,7 +2,7 @@
 // Cada pantalla se pinta en un Chrome sin ventana a 400×400 y su screencast va por USB al
 // ventilador. Modos (escena.mjs): independiente y repetir usan el canal de admira.tv tal cual;
 // extender y sincro usan la página de escena del puente con un reloj común. La iluminación
-// RGB va por el controlador UNI FAN TL y la de los cables (gráfica y 24 pines) por el Strimer Plus. El gemelo (admira.store/supercomputer) manda la escena
+// RGB va por el controlador UNI FAN TL, la de los cables (gráfica y 24 pines) por el Strimer Plus y la de los ventiladores de arriba y la bomba por la AIO Galahad. El gemelo (admira.store/supercomputer) manda la escena
 // y la luz a través de la nube y recibe el estado y las miniaturas.
 //   node player.mjs            → emite en los ventiladores
 //   node player.mjs --dry-run  → solo renderiza (sin USB): ver /player/1.jpg
@@ -28,7 +28,7 @@ const profileRoot = path.join(datos, 'perfiles');
 const estadoPath = path.join(datos, 'estado.json');
 const medios = new Medios(path.join(datos, 'medios'));
 const health = { state: 'starting', dryRun, circuit: cfg.circuit, players: [], fans: [] };
-let stopping = false, fans = [], players = [], controlador = null, strimer = null, estado = null;
+let stopping = false, fans = [], players = [], controlador = null, strimer = null, galahad = null, estado = null;
 let nube = { activa: !!cfg.nube?.api, ok: null, at: 0, error: '' };
 const luzAplicada = new Map();
 
@@ -96,9 +96,16 @@ function informe() {
 // La memoria (DDR5 con controlador ENE) va por SMBus, no por USB: sin driver para ese bus no hay control.
 const MEMORIA_SIN_CONTROL = 'La luz de la memoria va por SMBus (controlador ENE) y el puente aún no tiene driver para ese bus: sigue en su arcoíris de fábrica.';
 function dispositivos() {
+  const sinUsb = dryRun ? 'dry-run: sin USB' : null;
   const cable = { conectado: !!strimer, via: strimer ? strimer.producto : null,
-    motivo: strimer ? undefined : (dryRun ? 'dry-run: sin USB' : 'no se encontró el Strimer Plus (USB 0CF2:A200)') };
-  return { grafica: { ...cable }, placa: { ...cable }, memoria: { conectado: false, via: null, motivo: MEMORIA_SIN_CONTROL } };
+    motivo: strimer ? undefined : (sinUsb || 'no se encontró el Strimer Plus (USB 0CF2:A200)') };
+  const aio = { conectado: !!galahad, via: galahad ? galahad.producto : null,
+    motivo: galahad ? undefined : (sinUsb || 'no se encontró la AIO Galahad II Trinity (USB 0416:7373)') };
+  return {
+    grafica: { ...cable }, placa: { ...cable },
+    superiores: { ...aio, rpm: galahad?.rpm?.ventiladores }, bomba: { ...aio, rpm: galahad?.rpm?.bomba },
+    memoria: { conectado: false, via: null, motivo: MEMORIA_SIN_CONTROL }
+  };
 }
 
 const server = http.createServer(async (req, res) => {
@@ -300,7 +307,7 @@ const LUZ_SECUENCIA = normalizarLuz({ efecto: 'fijo', color: '#00d26a', brillo: 
 async function aplicarLuz() {
   const luz = estado?.luz ?? (estado?.escena?.modo === 'secuencia' ? LUZ_SECUENCIA : null);
   if (!luz) return;
-  await aplicarLuzCables(luz);
+  await aplicarLuzDispositivos(luz);
   if (!controlador || !fans.length) return;
   const ahora = Date.now(), respirar = new Map();
   for (const f of fans) {
@@ -314,14 +321,15 @@ async function aplicarLuz() {
     await controlador.luzPuerto(port, fans.filter(f => f.port === port).length, l).catch(e => log('luz_error', { port, error: e.message }));
   }
 }
-// Cables Strimer (gráfica y 24 pines): su luz propia o la general. No siguen el relevo de sincro/secuencia.
-async function aplicarLuzCables(luz) {
-  if (!strimer) return;
-  for (const clave of ['grafica', 'placa']) {
+// Otras luces: cables Strimer (gráfica y 24 pines) y la AIO Galahad (ventiladores de arriba y bomba). Su luz propia o
+// la general; no siguen el relevo de sincro/secuencia, que es de los ventiladores con pantalla.
+async function aplicarLuzDispositivos(luz) {
+  for (const [clave, dev] of [['grafica', strimer], ['placa', strimer], ['superiores', galahad], ['bomba', galahad]]) {
+    if (!dev) continue;
     const l = luzDispositivo(luz, clave), k = JSON.stringify(l);
     if (luzAplicada.get(clave) === k) continue;
     luzAplicada.set(clave, k);
-    await strimer.luz(clave, l).catch(e => { luzAplicada.delete(clave); log('luz_error', { dispositivo: clave, error: e.message }); });
+    await dev.luz(clave, l).catch(e => { luzAplicada.delete(clave); log('luz_error', { dispositivo: clave, error: e.message }); });
   }
 }
 setInterval(() => {
@@ -373,11 +381,14 @@ async function openUsb() {
   controlador = await Controlador.abrir().catch(() => null);
   const { Strimer } = await import('./strimer.mjs');
   strimer = await Strimer.abrir().catch(e => { log('strimer_error', { error: e.message }); return null; });
-  log('fans_ready', { fans: list.map(f => ({ n: f.n, port: f.port, index: f.index })), controlador: !!controlador, strimer: !!strimer });
+  const { Galahad } = await import('./galahad.mjs');
+  galahad = await Galahad.abrir().catch(e => { log('galahad_error', { error: e.message }); return null; });
+  log('fans_ready', { fans: list.map(f => ({ n: f.n, port: f.port, index: f.index })), controlador: !!controlador, strimer: !!strimer, galahad: !!galahad });
   return list;
 }
 
 async function watchRpm() {
+  await galahad?.leerRpm().catch(() => null);
   const list = await controlador?.rpm().catch(() => null);
   if (!list) return;
   for (const f of fans) f.rpm = list.find(r => r.port === f.port && r.index === f.index)?.rpm;
@@ -436,6 +447,7 @@ async function closeAll() {
   for (const f of fans) f.close();
   controlador?.close(); controlador = null;
   strimer?.close(); strimer = null;
+  galahad?.close(); galahad = null;
 }
 
 async function shutdown() {
@@ -445,7 +457,7 @@ async function shutdown() {
 }
 // Recarga en caliente: si cambia config.json o el código, el player sale y arrancar.ps1 lo relanza.
 // Así cambiar los vídeos de los ventiladores no exige reiniciar la tarea (que pide elevación).
-const watched = [configPath, ...['core.mjs', 'player.mjs', 'cdp.mjs', 'tl-lcd.mjs', 'strimer.mjs', 'escena.mjs', 'medios.mjs'].map(f => path.join(directory, f))];
+const watched = [configPath, ...['core.mjs', 'player.mjs', 'cdp.mjs', 'tl-lcd.mjs', 'strimer.mjs', 'galahad.mjs', 'escena.mjs', 'medios.mjs'].map(f => path.join(directory, f))];
 const stamp = async f => (await fs.stat(f).catch(() => null))?.mtimeMs ?? 0;
 const stamps = await Promise.all(watched.map(stamp));
 setInterval(async () => {

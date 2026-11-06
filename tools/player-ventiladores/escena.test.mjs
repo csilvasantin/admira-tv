@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { modoCanonico, normalizarEscena, asignacion, normalizarLuz, cargaLuz, luzDe, colorRgb, efectoCanonico, luzDispositivo, cargaStrimer, dispositivoCanonico } from './escena.mjs';
+import { modoCanonico, normalizarEscena, asignacion, normalizarLuz, cargaLuz, luzDe, colorRgb, efectoCanonico, luzDispositivo, cargaStrimer, dispositivoCanonico, cargaGalahad } from './escena.mjs';
 
 test('los modos se entienden en castellano y en inglés', () => {
   for (const [dicho, modo] of [['sincro', 'sincro'], ['sync', 'sincro'], ['Repeat', 'repetir'], ['repetir', 'repetir'],
@@ -148,4 +148,20 @@ test('audio: un solo ventilador, salida por nombre y volumen 0–1', async () =>
   assert.deepEqual(normalizarAudio(undefined), { ventilador: 0, salida: '', volumen: 1 });
   assert.deepEqual(normalizarAudio({ fan: 9, output: ' Altavoces\u0007 ', volume: 2 }, 7), { ventilador: 7, salida: 'Altavoces', volumen: 1 });
   assert.equal(normalizarEscena({ modo: 'secuencia', audio: { ventilador: 1, volumen: 0.333 } }).audio.volumen, 0.33);
+});
+
+test('Galahad II Trinity: ventiladores de arriba (0x85) y bomba (0x83)', () => {
+  assert.equal(dispositivoCanonico('radiador'), 'superiores');
+  assert.equal(dispositivoCanonico('pump'), 'bomba');
+  const l = normalizarLuz({ efecto: 'fijo', color: '#0a0b0c', brillo: 3, velocidad: 1, dispositivos: { arriba: { efecto: 'arcoiris' } } });
+  assert.equal(luzDispositivo(l, 'superiores').efecto, 'arcoiris');
+  const v = cargaGalahad(luzDispositivo(l, 'bomba'), 'superiores');
+  assert.equal(v.length, 20);
+  assert.deepEqual(v.slice(0, 6), [3, 3, 1, 10, 11, 12], 'modo fijo, brillo, velocidad y el color en RGB');
+  assert.deepEqual(v.slice(15), [0, 0, 0, 0, 24], 'dirección, encendido, origen propio, sin sincro con la bomba, 24 LED');
+  const b = cargaGalahad(luzDispositivo(l, 'bomba'), 'bomba');
+  assert.equal(b.length, 19); assert.equal(b[0], 2, 'los dos aros');
+  const off = cargaGalahad(normalizarLuz({ efecto: 'apagado' }), 'superiores');
+  assert.deepEqual([off[0], off[1], off[16]], [3, 0, 1], 'apagado: fijo, brillo 0 y la marca de apagado');
+  assert.equal(cargaGalahad(normalizarLuz({ efecto: 'ola' }))[0], 7);
 });

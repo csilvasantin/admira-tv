@@ -56,6 +56,8 @@ los ventiladores (no siguen el relevo de sincro/secuencia). `{"efecto":"fijo","c
 |---|---|---|---|
 | `grafica` | gpu, pcie | cable Strimer Plus de la gráfica | `strimer.mjs`, USB `0CF2:A200`, puertos 6-11 (canal 2) |
 | `placa` | atx, 24pin | cable Strimer Plus de 24 pines | mismo Strimer, puertos 0-5 (canal 1) |
+| `superiores` | arriba, radiador, techo, top | los ventiladores del radiador (arriba, sin pantalla) | `galahad.mjs`, AIO Galahad II Trinity, USB `0416:7373`, orden `0x85` |
+| `bomba` | pump, aio | los aros de la bomba | misma AIO, orden `0x83` (los dos aros) |
 | `memoria` | ram, dram | la RAM (en PC-COCINA, 2 × DDR5 Lexar con controlador ENE) | **sin control**: va por SMBus y el puente no tiene driver para ese bus |
 
 Strimer: informe 0xE0; por puerto, `[E0, 0x10|puerto, modo, velocidad, dir, brillo]` por característica y
@@ -63,6 +65,14 @@ Strimer: informe 0xE0; por puerto, `[E0, 0x10|puerto, modo, velocidad, dir, bril
 órdenes. Velocidad y brillo van al revés que en el controlador TL (0 = máximo). Referencia: `strimer_plus.rs` de
 [sgtaziz/lian-li-linux](https://github.com/sgtaziz/lian-li-linux) (MIT). Los canales de PC-COCINA se comprobaron
 con la webcam apagando uno cada vez. El informe trae `dispositivos` (`conectado`, `via` y `motivo` si no).
+
+Galahad II Trinity: informe 0x01 de 64 bytes `[0x01, orden, 0, 0, 0, longitud, datos…]`; radiador `0x85` con 20 bytes (modo,
+brillo 0–4, velocidad 0–4, 4 colores RGB, dirección, apagado, origen 0 = la propia AIO, sin sincro con la bomba, 24 LED) y
+bomba `0x83` con 19 (los mismos con el ámbito delante, 2 = los dos aros). El saludo `0x81` da las RPM del radiador y de la
+bomba (cada 10 s, con las de los ventiladores TL). Solo luz y lectura: nunca cambia velocidades. Referencia:
+`galahad2_trinity.rs` de sgtaziz/lian-li-linux (MIT). En PC-COCINA, con `0x85` en rojo se tiñe de rojo el techo de la caja.
+La placa de PC-COCINA (ASRock Polychrome USB `26CE:01A2`) tiene sus zonas en arcoíris, pero apagarla no cambia nada visible:
+la memoria no va por ella.
 
 **Audio** (`escena.audio`, PC-COCINA, 6-nov-2026): `{"ventilador": 1, "salida": "", "volumen": 1}`. Como mucho suena
 un ventilador (`0` = ninguno, lo de antes; en repetir hay un solo canal y cualquier número es «con sonido»). Solo
