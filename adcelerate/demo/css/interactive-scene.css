@@ -69,3 +69,17 @@
 .store-door:focus-visible{outline:2px solid #d7f5e3;outline-offset:4px}
 @keyframes store-door-glow{50%{opacity:.75}}
 @media (prefers-reduced-motion:reduce){.store-door::before{animation:none;opacity:.55}}
+
+#mapped-drop-zone.is-dragging-person{border-width:3px;animation:mapped-zone-pulse 1s ease-in-out infinite}
+#mapped-drop-zone.is-over{border-style:solid}
+@keyframes mapped-zone-pulse{50%{box-shadow:0 0 26px #c4fa7870}}
+.mapped-character.is-consumed{transition:opacity .35s ease,scale .35s ease;opacity:0;scale:.2}
+#mapped-masthead{position:absolute;z-index:35;display:flex;align-items:center;justify-content:flex-start;padding-left:14%;box-sizing:border-box;transform-origin:0 0;pointer-events:none;background:transparent;font:700 62px/1 'Arial Narrow','Roboto Condensed','Helvetica Neue',sans-serif;font-stretch:condensed;letter-spacing:-.01em}
+#mapped-masthead[hidden]{display:none!important}
+.mapped-letter-gap{width:.22em}
+.mapped-letter{color:transparent;-webkit-text-stroke:1px #ffffff26;transition:color .4s ease,text-shadow .4s ease,transform .4s ease}
+.mapped-letter.is-target{-webkit-text-stroke:2px #c4fa78;text-shadow:0 0 12px #c4fa78aa;transform:translateY(-4px)}
+.mapped-letter.is-lit{color:#fff;-webkit-text-stroke:0;text-shadow:0 0 10px #fff,0 0 22px #ffffffa0}
+.mapped-letter.is-arriving{transform:scale(1.35)}
+.mapped-letter-final{opacity:0;transition:opacity .6s ease}
+#mapped-masthead.is-complete .mapped-letter-final{opacity:1}

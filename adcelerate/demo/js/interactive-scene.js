@@ -7,6 +7,13 @@
   root.addEventListener('keydown',e=>keyboard?.down(e),true);
   root.addEventListener('keyup',e=>keyboard?.up(e),true);
  }
+ const MASTHEAD_LETTERS=['e','l','P','e','r','i','ó','d','i','c'],MASTHEAD_FINAL='o';
+ // Red «el Periódico» sign, left face of the kiosk (pano L6xcO37…). Estimated from Carlos' photo, scaled
+ // against jardinets-main (screen 428–537px ≈ 288.40°–292.52°): ~26.5px/° horizontal, ~22.6px/° vertical.
+ const SIGN_CORNERS={tl:[280.85,5.00],tr:[288.17,5.53],br:[288.17,3.23],bl:[280.85,2.79]},SIGN_W=400,SIGN_H=80;
+ const letterForPerson=n=>MASTHEAD_LETTERS[n-1]??null;
+ const mastheadComplete=consumed=>MASTHEAD_LETTERS.every((_,i)=>!!consumed[i]);
+ function consumeOnDrop(consumed,index,{inside,cancel=false}){if(cancel||!inside||consumed[index])return false;consumed[index]=true;return true;}
  function create({getPanorama,container,foreground=container,warp,isAvailable=()=>true,onSelect=()=>{},onClose=()=>{}}){
   const geometry=root.PedestrianLayers,ref=geometry.reference,motion=root.PedestrianMotion;
   const selectionEnabled=()=>!document.documentElement.classList.contains('targets-hidden');
@@ -42,7 +49,12 @@
    foreground.append(hit);return hit;
   });
   const dropZone=document.createElement('div');dropZone.id='mapped-drop-zone';dropZone.hidden=true;foreground.append(dropZone);
-  const canMove=i=>loaded&&sourceLoaded&&i<count&&isAvailable()&&selectionEnabled()&&getPanorama()?.getVisible()&&getPanorama()?.getPano()===anchor.pano;
+  const consumed=Array(MASTHEAD_LETTERS.length).fill(false);
+  const masthead=document.createElement('div');masthead.id='mapped-masthead';masthead.hidden=true;masthead.setAttribute('aria-label','elPeriodico');
+  const letters=MASTHEAD_LETTERS.map((ch,i)=>{if(i===2){const gap=document.createElement('span');gap.className='mapped-letter-gap';masthead.append(gap);}const l=document.createElement('span');l.className='mapped-letter';l.dataset.person=String(i+1);l.textContent=ch;masthead.append(l);return l;});
+  const finalLetter=document.createElement('span');finalLetter.className='mapped-letter mapped-letter-final';finalLetter.textContent=MASTHEAD_FINAL;masthead.append(finalLetter);foreground.append(masthead);
+  function renderMasthead(){letters.forEach((l,i)=>l.classList.toggle('is-lit',consumed[i]));const done=mastheadComplete(consumed);finalLetter.classList.toggle('is-lit',done);masthead.classList.toggle('is-complete',done);}
+  const canMove=i=>!consumed[i]&&loaded&&sourceLoaded&&i<count&&isAvailable()&&selectionEnabled()&&getPanorama()?.getVisible()&&getPanorama()?.getPano()===anchor.pano;
   function project(points){const sv=getPanorama(),rect=container.getBoundingClientRect();return points.map(r=>root.DoohSurfaces.project(...r,sv.getPov(),sv.getZoom(),rect.width,rect.height));}
   function targetBounds(){
    const surface=root.DoohSurfaces.get('jardinets-main'),pts=project(Object.values(surface.corners));if(pts.some(p=>!p))return null;
@@ -96,7 +108,9 @@
    const drag=personDrag;if(!drag)return;personDrag=null;const hit=people[drag.index];hit.classList.remove('is-dragging');dropZone.hidden=true;
    if(hit.hasPointerCapture(drag.id))hit.releasePointerCapture(drag.id);
    if(cancel){moved[drag.index]=drag.previous;suppressClick=drag.index;layout();return;}
-   if(!drag.started)return;suppressClick=drag.index;placeMusic(drag.index,true);layout();
+   if(!drag.started)return;suppressClick=drag.index;const inside=inTarget(drag.index);placeMusic(drag.index,true);
+   if(consumeOnDrop(consumed,drag.index,{inside})){const sp=sprites[drag.index];sp.classList.add('is-consumed');setTimeout(()=>{sp.classList.remove('is-consumed');layout();},350);if(selected===drag.index)selectPerson(null);renderMasthead();letters[drag.index].classList.add('is-arriving');setTimeout(()=>letters[drag.index].classList.remove('is-arriving'),700);}
+   layout();
   }
   root.addEventListener('blur',stopWalking);document.addEventListener('visibilitychange',()=>{if(document.hidden)stopWalking();});
   root.addEventListener('pointerdown',e=>{if(selected!==null&&!e.target?.closest?.('.mapped-person-hit'))selectPerson(null);},true);
@@ -141,7 +155,7 @@
   slider.addEventListener('keydown',e=>{const steps={ArrowUp:1,ArrowRight:1,ArrowDown:-1,ArrowLeft:-1};if(e.key in steps){stop(e);e.stopImmediatePropagation();setCount(Math.max(1,count+steps[e.key]));}else if(e.key==='Home'||e.key==='End'){stop(e);e.stopImmediatePropagation();setCount(e.key==='Home'?1:10);}},true);
   let closing=false;
   function close(){
-   if(closing)return;closing=true;endPersonDrag(true);stopWalking();selected=null;walkDistance=0;moved.fill(null);occupants.clear();playbackOwner=null;
+   if(closing)return;closing=true;endPersonDrag(true);stopWalking();selected=null;walkDistance=0;moved.fill(null);consumed.fill(false);renderMasthead();masthead.hidden=true;occupants.clear();playbackOwner=null;
    if(active){active=false;onClose();}count=10;people.forEach(hit=>{hit.hidden=true;hit.classList.remove('is-selected');hit.setAttribute('aria-pressed','false');});sprites.forEach(s=>s.hidden=true);patches.forEach(p=>p.canvas.hidden=true);button.hidden=true;slider.hidden=true;note.hidden=true;dropZone.hidden=true;pointer=null;closing=false;
   }
   function layout(){
@@ -156,15 +170,20 @@
    if(!selecting&&pointer!==null){if(slider.hasPointerCapture(pointer))slider.releasePointerCapture(pointer);pointer=null;slider.classList.remove('dragging');}
    const projectRay=r=>root.DoohSurfaces.project(...r,sv.getPov(),sv.getZoom(),rect.width,rect.height);
    for(const [i,patch] of patches.entries()){
-    const pts=project(moved[i]||patch.rays),valid=!pts.some(p=>!p),shown=isAvailable()&&i<count&&valid;
+    const pts=project(moved[i]||patch.rays),valid=!pts.some(p=>!p),shown=isAvailable()&&i<count&&valid&&!consumed[i];
     people[i].hidden=!selecting||!shown;people[i].disabled=!loaded||!sourceLoaded;
     if(!people[i].hidden)people[i].style.transform=warp(patch.canvas.width,patch.canvas.height,pts);
-    const original=project(patch.rays);patch.canvas.hidden=!loaded||(i<count&&!moved[i])||original.some(p=>!p);
+    const original=project(patch.rays);patch.canvas.hidden=!loaded||(i<count&&!moved[i]&&!consumed[i])||original.some(p=>!p);
     if(!patch.canvas.hidden)patch.canvas.style.transform=warp(patch.canvas.width,patch.canvas.height,original);
-    sprites[i].hidden=!moved[i]||!shown;if(!sprites[i].hidden)sprites[i].style.transform=warp(patch.canvas.width,patch.canvas.height,pts);
+    sprites[i].hidden=!moved[i]||(!shown&&!sprites[i].classList.contains('is-consumed'));if(!sprites[i].hidden)sprites[i].style.transform=warp(patch.canvas.width,patch.canvas.height,pts);
    }
    const zoneIndex=personDrag?.started?personDrag.index:keys.size?0:null,box=zoneIndex!==null&&targetBounds();dropZone.hidden=!box;
    if(box){dropZone.textContent=zoneIndex===0?'Zona de escucha · Top Gun':'Zona de escucha · Persona '+(zoneIndex+1);Object.assign(dropZone.style,{left:box.left+'px',top:box.top+'px',width:(box.right-box.left)+'px',height:(box.bottom-box.top)+'px'});dropZone.classList.toggle('is-over',inTarget(zoneIndex));}
+   dropZone.classList.toggle('is-dragging-person',!!personDrag?.started);
+   if(box&&personDrag?.started){dropZone.textContent+=' · suelta para «'+letterForPerson(zoneIndex+1)+'»';}
+   const mbox=selecting&&isAvailable()&&(personDrag?.started||consumed.some(Boolean))&&targetBounds();masthead.hidden=!mbox;
+   const signPts=mbox&&project(Object.values(SIGN_CORNERS));if(signPts&&signPts.some(p=>!p))masthead.hidden=true;
+   if(!masthead.hidden&&signPts){Object.assign(masthead.style,{left:'0',top:'0',width:SIGN_W+'px',height:SIGN_H+'px'});masthead.style.transform=warp(SIGN_W,SIGN_H,signPts);letters.forEach((l,i)=>l.classList.toggle('is-target',personDrag?.started&&personDrag.index===i));}
    const p=projectRay([anchor.heading,anchor.pitch]),edge=projectRay([anchor.heading+4,anchor.pitch]);
    button.hidden=!selecting||!isAvailable()||!p||p[0]<0||p[1]<0||p[0]>rect.width||p[1]>rect.height;
    if(!button.hidden){const size=Math.max(24,Math.min(300,edge?Math.abs(edge[0]-p[0])*2:60));Object.assign(button.style,{left:p[0]+'px',top:p[1]+'px',width:size+'px',height:size+'px'});}
@@ -175,5 +194,5 @@
   addEventListener('pagehide',()=>{stopWalking();audio?.close();});new ResizeObserver(layout).observe(container);
   return {layout,close,setMusicState};
  }
- const api={anchor,create};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.InteractiveScene=api;
+ const api={anchor,create,SIGN_CORNERS,MASTHEAD_LETTERS,MASTHEAD_FINAL,letterForPerson,mastheadComplete,consumeOnDrop};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.InteractiveScene=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
