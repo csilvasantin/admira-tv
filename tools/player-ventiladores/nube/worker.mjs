@@ -102,12 +102,26 @@ export class Supercomputer extends DurableObject {
         } else if (!sdPrev) return json({ ok: false, error: 'no_face' }, 400);
         Object.assign(this.sd, { serial: String(body.serial || '').slice(0, 40), at: Number(body.at) || 0,
           pageId: String(body.pageId || '').slice(0, 60), keyCount: Number(body.keyCount) || 0, visto: Date.now() });
+        // Ficha de las teclas (6-nov-2026): el puente la manda solo cuando cambia la cara. Por tecla «col,fila»:
+        // n = nombre de la acción, u = UUID sin el prefijo com.elgato.streamdeck., t = título, s/i = estados y el activo.
+        if (body.keys && typeof body.keys === 'object') {
+          const texto = (v, n) => String(v ?? '').slice(0, n);
+          const keys = {};
+          for (const [pos, k] of Object.entries(body.keys).slice(0, 32)) {
+            if (!/^[0-7],[0-3]$/.test(pos) || !k || typeof k !== 'object') continue;
+            keys[pos] = { n: texto(k.n, 40), u: texto(k.u, 60), t: texto(k.t, 80), s: Number(k.s) || 1, i: Number(k.i) || 0 };
+          }
+          Object.assign(this.sd, { keys, pageName: texto(body.pageName, 60), profileName: texto(body.profileName, 60),
+            pages: Number(body.pages) || 0, pageIndex: Number.isInteger(body.pageIndex) ? body.pageIndex : -1, folder: body.folder === true });
+        }
         return json({ ok: true, hash: this.sd.hash });
       }
       if (url.pathname === '/streamdeck/estado' && metodo === 'GET') {
         const sd = this.sd, ahora = Date.now();
         return json({ ok: true, ahora, enLinea: !!sd && ahora - sd.visto < 15000, visto: sd?.visto || 0,
-          serial: sd?.serial || null, pageId: sd?.pageId || null, keyCount: sd?.keyCount || 0, hash: sd?.hash || null });
+          serial: sd?.serial || null, pageId: sd?.pageId || null, keyCount: sd?.keyCount || 0, hash: sd?.hash || null,
+          pageName: sd?.pageName || '', profileName: sd?.profileName || '', pages: sd?.pages || 0, pageIndex: sd?.pageIndex ?? -1,
+          folder: !!sd?.folder, keys: sd?.keys || {} });
       }
       if (url.pathname === '/streamdeck/face.png' && metodo === 'GET') {
         const sd = this.sd;
