@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { modoCanonico, normalizarEscena, asignacion, normalizarLuz, cargaLuz, luzDe, colorRgb, efectoCanonico } from './escena.mjs';
+import { modoCanonico, normalizarEscena, asignacion, normalizarLuz, cargaLuz, luzDe, colorRgb, efectoCanonico, luzDispositivo, cargaStrimer, dispositivoCanonico, cargaGalahad, mismoContenido } from './escena.mjs';
 
 test('los modos se entienden en castellano y en inglés', () => {
   for (const [dicho, modo] of [['sincro', 'sincro'], ['sync', 'sincro'], ['Repeat', 'repetir'], ['repetir', 'repetir'],
@@ -98,10 +98,11 @@ test('secuencia: la pieza entera en cada ventilador, del 1 al 7, y vuelta a empe
   assert.equal(asignacion(e, 4, 0).tipo, 'negro');
 });
 
-test('secuencia: sin duración medida usa paso, y solo toma la primera pieza', () => {
+test('secuencia: sin duración (imagen o aún sin medir) 10 s en cada ventilador, y solo la primera pieza', () => {
   const e = normalizarEscena({ modo: 'secuencia', piezas: ['a', 'b'], paso: 5, epoch: 0 });
   assert.equal(e.duracion, 0);
-  assert.equal(asignacion(e, 2, 5000).pieza, 'a');
+  assert.equal(asignacion(e, 1, 9999).tipo, 'pieza', 'el paso de sincro no cuenta en secuencia');
+  assert.equal(asignacion(e, 2, 10000).pieza, 'a');
   assert.equal(normalizarEscena({ modo: 'secuencia', duracion: 99999 }).duracion, 3600);
 });
 
@@ -113,4 +114,79 @@ test('secuencia: la luz acompaña siempre al vídeo, aunque la general esté apa
   assert.equal(luzDe(luz, 2, e, 1000).brillo, 0, 'los demás no');
   assert.ok(luzDe(luz, 2, e, 9000).brillo > 0, 'a los 8 s el relevo pasa al 2');
   assert.equal(luzDe(normalizarLuz({ efecto: 'respirar' }), 1, e, 0).efecto, 'fijo', 'respirar es de grupo: fijo');
+});
+
+test('dispositivos: los cables Strimer y la memoria siguen a la general salvo luz propia', () => {
+  assert.equal(dispositivoCanonico('GPU'), 'grafica');
+  assert.equal(dispositivoCanonico('24 pines'), 'placa');
+  assert.equal(dispositivoCanonico('RAM'), 'memoria');
+  assert.equal(dispositivoCanonico('teclado'), null);
+  const l = normalizarLuz({ efecto: 'arcoiris', brillo: 3, dispositivos: { gpu: { efecto: 'fijo', color: '#ff0000' }, teclado: { efecto: 'fijo' }, ram: null } });
+  assert.deepEqual(Object.keys(l.dispositivos), ['grafica'], 'solo claves conocidas y con objeto');
+  assert.equal(luzDispositivo(l, 'grafica').efecto, 'fijo');
+  assert.deepEqual(luzDispositivo(l, 'grafica').colores, [[255, 0, 0]]);
+  assert.equal(luzDispositivo(l, 'grafica').brillo, 3, 'hereda de la general lo que no dice');
+  assert.equal(luzDispositivo(l, 'placa').efecto, 'arcoiris', 'sin luz propia, la general');
+  assert.equal(normalizarLuz({}).dispositivos && Object.keys(normalizarLuz({}).dispositivos).length, 0);
+});
+
+test('Strimer: modo, velocidad y brillo del firmware y colores en R, B, G', () => {
+  const fijo = cargaStrimer(normalizarLuz({ efecto: 'fijo', color: '#0a0b0c', brillo: 4, velocidad: 2 }));
+  assert.equal(fijo.modo, 1);
+  assert.equal(fijo.brillo, 0, 'brillo 4 = el máximo del firmware (0)');
+  assert.equal(fijo.velocidad, 0);
+  assert.equal(fijo.colores.length, 27 * 3, 'fijo: el color en los 27 LED');
+  assert.deepEqual(fijo.colores.slice(0, 3), [10, 12, 11], 'R, B, G');
+  const arco = cargaStrimer(normalizarLuz({ efecto: 'rainbow', brillo: 0, velocidad: 4 }));
+  assert.deepEqual([arco.modo, arco.brillo, arco.velocidad, arco.colores.length], [5, 4, 254, 18]);
+  const off = cargaStrimer(normalizarLuz({ efecto: 'apagado' }));
+  assert.deepEqual([off.modo, off.colores.length], [0, 0]);
+  assert.equal(cargaStrimer(normalizarLuz({ efecto: 'meteoro', colores: ['#ff0000', '#0000ff'] })).colores.length, 6);
+});
+
+test('audio: un solo ventilador, salida por nombre y volumen 0–1', async () => {
+  const { normalizarAudio } = await import('./escena.mjs');
+  assert.deepEqual(normalizarAudio(undefined), { ventilador: 0, salida: '', volumen: 1 });
+  assert.deepEqual(normalizarAudio({ fan: 9, output: ' Altavoces\u0007 ', volume: 2 }, 7), { ventilador: 7, salida: 'Altavoces', volumen: 1 });
+  assert.equal(normalizarEscena({ modo: 'secuencia', audio: { ventilador: 1, volumen: 0.333 } }).audio.volumen, 0.33);
+});
+
+test('Galahad II Trinity: ventiladores de arriba (0x85) y bomba (0x83)', () => {
+  assert.equal(dispositivoCanonico('radiador'), 'superiores');
+  assert.equal(dispositivoCanonico('pump'), 'bomba');
+  const l = normalizarLuz({ efecto: 'fijo', color: '#0a0b0c', brillo: 3, velocidad: 1, dispositivos: { arriba: { efecto: 'arcoiris' } } });
+  assert.equal(luzDispositivo(l, 'superiores').efecto, 'arcoiris');
+  const v = cargaGalahad(luzDispositivo(l, 'bomba'), 'superiores');
+  assert.equal(v.length, 20);
+  assert.deepEqual(v.slice(0, 6), [3, 3, 1, 10, 11, 12], 'modo fijo, brillo, velocidad y el color en RGB');
+  assert.deepEqual(v.slice(15), [0, 0, 0, 0, 24], 'dirección, encendido, origen propio, sin sincro con la bomba, 24 LED');
+  const b = cargaGalahad(luzDispositivo(l, 'bomba'), 'bomba');
+  assert.equal(b.length, 19); assert.equal(b[0], 2, 'los dos aros');
+  const off = cargaGalahad(normalizarLuz({ efecto: 'apagado' }), 'superiores');
+  assert.deepEqual([off[0], off[1], off[16]], [3, 0, 1], 'apagado: fijo, brillo 0 y la marca de apagado');
+  assert.equal(cargaGalahad(normalizarLuz({ efecto: 'ola' }))[0], 7);
+});
+
+test('secuencia «cada x s»: el relevo a los segundos pedidos, desde el principio de la pieza en cada ventilador', () => {
+  const e = normalizarEscena({ modo: 'secuencia', pieza: 'v1', duracion: 23.8, cada: 10, epoch: 0 });
+  assert.equal(e.cada, 10);
+  const quien = ahora => [1, 2, 3, 4, 5, 6, 7].filter(f => asignacion(e, f, ahora).tipo === 'pieza');
+  assert.deepEqual(quien(9999), [1]);
+  assert.deepEqual(quien(10000), [2], 'a los 10 s, aunque la pieza dure 23,8');
+  assert.equal(asignacion(e, 2, 12000).t, 2, 'el 2 la empieza desde el principio');
+  assert.equal(normalizarEscena({ modo: 'secuencia', cada: 'x' }).cada, 0, 'sin número: al acabar la pieza');
+  assert.equal(normalizarEscena({ modo: 'secuencia', every: 99999 }).cada, 3600);
+  const luz = normalizarLuz({ efecto: 'fijo', color: '#00ff00' });
+  assert.equal(luzDe(luz, 2, e, 10500).brillo, 4, 'la luz sigue el relevo de cada x s');
+  assert.equal(luzDe(luz, 1, e, 10500).brillo, 0);
+});
+
+test('mismo contenido: la luz o el audio no reinician el reloj; otra pieza, otro modo o cada x s sí', () => {
+  const viva = normalizarEscena({ modo: 'secuencia', pieza: 'v1', epoch: 1793970000000, duracion: 23.8 });
+  const deLaNube = normalizarEscena({ modo: 'secuencia', pieza: 'v1', epoch: 0, audio: { ventilador: 1 } });
+  assert.equal(mismoContenido(deLaNube, viva), true, 'reloj a cero, sin duración y con otro audio: el mismo contenido');
+  assert.equal(mismoContenido(normalizarEscena({ modo: 'secuencia', pieza: 'v2' }), viva), false, 'otra pieza');
+  assert.equal(mismoContenido(normalizarEscena({ modo: 'secuencia', pieza: 'v1', cada: 10 }), viva), false, 'cada x s');
+  assert.equal(mismoContenido(normalizarEscena({ modo: 'sincro', pieza: 'v1' }), viva), false, 'otro modo');
+  assert.equal(mismoContenido(deLaNube, null), false);
 });

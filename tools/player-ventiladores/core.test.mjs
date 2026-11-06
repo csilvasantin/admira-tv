@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPacket, framePackets, settingsPayload, parseIdentity, numberFans, planEscena, escenaDeConfig, canalUrl, mergeConfig, isJpeg, MAX_PAYLOAD } from './core.mjs';
+import { buildPacket, framePackets, settingsPayload, parseIdentity, numberFans, planEscena, escenaDeConfig, canalUrl, mergeConfig, isJpeg, MAX_PAYLOAD, renumerar } from './core.mjs';
 import { normalizarEscena } from './escena.mjs';
 
 test('el paquete sigue la cabecera HID de la TL LCD', () => {
@@ -83,4 +83,36 @@ test('la configuración rechaza modos e IDs inválidos y acota fps', () => {
 test('solo se emiten JPEG completos', () => {
   assert.equal(isJpeg(Buffer.from([0xff, 0xd8, 1, 2, 0xff, 0xd9])), true);
   assert.equal(isJpeg(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 0])), false);
+});
+
+test('audio: solo suena el ventilador elegido, con muted=0 en el canal o audio=1 en la escena', () => {
+  const cfg = mergeConfig({ machine: 'PC-COCINA' }), fans = [{ n: 1 }, { n: 2 }, { n: 3 }];
+  const ind = planEscena(normalizarEscena({ modo: 'independiente', audio: { ventilador: 2, volumen: 0.5 } }, 3), fans, cfg);
+  assert.deepEqual(ind.map(p => p.audio), [false, true, false]);
+  assert.deepEqual(ind.map(p => new URL(p.url).searchParams.get('muted')), ['1', '0', '1']);
+  assert.equal(new URL(ind[1].url).searchParams.get('volume'), '0.5');
+  const sec = planEscena(normalizarEscena({ modo: 'secuencia', pieza: 'abc', audio: { ventilador: 1, salida: 'Altavoces (Realtek(R) Audio)' } }, 3), fans, cfg);
+  assert.deepEqual(sec.map(p => new URL(p.url).searchParams.get('audio')), ['1', null, null]);
+  assert.equal(sec[0].salida, 'Altavoces (Realtek(R) Audio)');
+  const rep = planEscena(normalizarEscena({ modo: 'repetir', pieza: 'abc', audio: { ventilador: 3 } }, 3), fans, cfg);
+  assert.equal(rep.length, 1); assert.equal(rep[0].audio, true, 'en repetir un solo canal: con sonido');
+  const mudo = planEscena(normalizarEscena({ modo: 'independiente' }, 3), fans, cfg);
+  assert.ok(mudo.every(p => !p.audio && new URL(p.url).searchParams.get('muted') === '1'), 'sin audio, todo callado como antes');
+});
+
+test('numeración: el puerto 2 de PC-COCINA sube desde el suelo (5 junto al 4, 7 arriba)', () => {
+  const fans = [[0, 0], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]].map(([port, index], i) => ({ port, index, n: i + 1 }));
+  const r = renumerar(fans, { '2:0': 7, '2:2': 5 });
+  assert.equal(r.aplicada, true);
+  assert.deepEqual(r.fans.map(f => `${f.n}=${f.port}:${f.index}`), ['1=0:0', '2=1:0', '3=1:1', '4=1:2', '5=2:2', '6=2:1', '7=2:0']);
+  assert.equal(renumerar(fans, null).aplicada, false, 'sin numeración, la de la cadena');
+  const mala = renumerar(fans, { '2:0': 6 });
+  assert.equal(mala.aplicada, false, 'dos ventiladores con el 6: se ignora');
+  assert.deepEqual(mala.fans.map(f => f.n), [1, 2, 3, 4, 5, 6, 7]);
+});
+
+test('la pantalla no se queda sin señal: reenvío del último fotograma cada mantenerMs (250 por defecto, 100–2000)', () => {
+  assert.equal(mergeConfig().mantenerMs, 250);
+  assert.equal(mergeConfig({ mantenerMs: 10 }).mantenerMs, 100);
+  assert.equal(mergeConfig({ mantenerMs: 99999 }).mantenerMs, 2000);
 });

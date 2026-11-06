@@ -52,21 +52,46 @@ export function numberFans(fans) {
   return [...fans].sort((a, b) => a.port - b.port || a.index - b.index).map((f, i) => ({ ...f, n: i + 1 }));
 }
 
+// Numeración lógica (config «numeracion», PC-COCINA 6-nov-2026): { "puerto:posición": número }. El orden físico de la
+// cadena no siempre sigue la caja (en PC-COCINA el puerto 2 va de arriba abajo y la secuencia debe subir desde el suelo:
+// 5 junto al 4, luego 6 y 7 arriba). Solo se aplica si el resultado sigue siendo 1..N sin repetir; si no, se ignora.
+export function renumerar(fans, numeracion) {
+  const mapa = numeracion && typeof numeracion === 'object' ? numeracion : {};
+  if (!Object.keys(mapa).length) return { fans, aplicada: false };
+  const nuevos = fans.map(f => {
+    const v = mapa[`${f.port}:${f.index}`];
+    return { ...f, n: v === undefined ? f.n : Number(v) };
+  });
+  const ns = nuevos.map(f => f.n).sort((a, b) => a - b);
+  const valida = ns.every((n, i) => Number.isInteger(n) && n === i + 1);
+  if (!valida) return { fans, aplicada: false, error: `numeración inválida: ${JSON.stringify(mapa)}` };
+  return { fans: nuevos.sort((a, b) => a.n - b.n), aplicada: true };
+}
+
 // Qué Chrome hace falta para cada modo de la escena (ver escena.mjs):
 //  · independiente → un canal por ventilador (`<screenPrefix>-<n>`, un ID por aparato como manda el
 //    contrato) con sus piezas fijadas por ?ids=;
 //  · repetir → un solo canal (`screen`) cuyos fotogramas van a los 7;
 //  · extender y sincro → la página de escena del puente, una por ventilador, con el reloj común.
+// Audio: solo el player del ventilador elegido suena (su Chrome sin --mute-audio); los demás van callados.
 export function planEscena(escena, fans, cfg) {
-  const nums = fans.map(f => f.n);
-  if (escena.modo === 'repetir') return [{ screen: cfg.screen, fans: nums, url: canalUrl(cfg, cfg.screen, escena.piezas) }];
+  const nums = fans.map(f => f.n), audio = escena.audio || { ventilador: 0, salida: '', volumen: 1 };
+  const sonido = n => audio.ventilador > 0 && (n === audio.ventilador || escena.modo === 'repetir') ? audio : null;
+  const con = (item, a) => ({ ...item, audio: !!a, salida: a ? a.salida : '' });
+  if (escena.modo === 'repetir') {
+    const a = sonido(nums[0]);
+    return [con({ screen: cfg.screen, fans: nums, url: canalUrl(cfg, cfg.screen, escena.piezas, a) }, a)];
+  }
   if (escena.modo === 'independiente') {
     return nums.map(n => {
-      const screen = `${cfg.screenPrefix}-${n}`;
-      return { screen, fans: [n], url: canalUrl(cfg, screen, escena.ids[String(n)] || []) };
+      const screen = `${cfg.screenPrefix}-${n}`, a = sonido(n);
+      return con({ screen, fans: [n], url: canalUrl(cfg, screen, escena.ids[String(n)] || [], a) }, a);
     });
   }
-  return nums.map(n => ({ screen: `escena-${n}`, fans: [n], url: `http://127.0.0.1:${cfg.healthPort}/escena.html?fan=${n}` }));
+  return nums.map(n => {
+    const a = sonido(n), extra = a ? `&audio=1&volumen=${a.volumen}` : '';
+    return con({ screen: `escena-${n}`, fans: [n], url: `http://127.0.0.1:${cfg.healthPort}/escena.html?fan=${n}${extra}` }, a);
+  });
 }
 
 // Escena de partida si config.json no trae «escena»: el formato anterior (mode + ids).
@@ -75,7 +100,7 @@ export function escenaDeConfig(cfg) {
   return cfg.mode === 'independiente' ? { modo: 'independiente', ids: cfg.ids } : { modo: 'repetir', piezas: cfg.ids.espejo || [] };
 }
 
-export function canalUrl(cfg, screen, ids = []) {
+export function canalUrl(cfg, screen, ids = [], audio = null) {
   const u = new URL(cfg.canal);
   if (ids.length) u.searchParams.set('ids', ids.join(','));
   u.searchParams.set('embed', 'mupi');
@@ -84,7 +109,8 @@ export function canalUrl(cfg, screen, ids = []) {
   u.searchParams.set('screen', screen);
   if (cfg.circuit) u.searchParams.set('circuit', cfg.circuit);
   if (cfg.machine) u.searchParams.set('machine', cfg.machine);
-  u.searchParams.set('muted', '1');
+  u.searchParams.set('muted', audio ? '0' : '1');   // contrato del player: muted=0/1 · volume=0–1
+  if (audio) u.searchParams.set('volume', String(audio.volumen));
   return u.toString();
 }
 
@@ -97,12 +123,14 @@ export const DEFAULTS = {
   canal: 'https://www.admira.tv/canal.html',
   fps: 25,
   quality: 80,
+  mantenerMs: 250,           // reenvío del último fotograma si la página no cambia (la TL LCD se suelta sin señal)
   brightness: null,          // null = no tocar lo que dejó L-Connect
   rotation: {},              // { "7": 270 } por número de ventilador; vacío = no tocar
   ids: {},                   // { "1": ["<id del Stock>"], … } o { "espejo": [...] }; vacío = playlist del canal
   escena: null,              // { modo, ids, piezas, paso, orden, columnas, ajuste } (escena.mjs)
   luz: null,                 // { efecto, color, brillo, velocidad, ventiladores, sigueVideo }; null = no tocar
   nube: null,                // { api, clave } del gemelo (admira.store/supercomputer); null = sin nube
+  numeracion: null,          // { "2:0": 7, "2:2": 5 }: número lógico por puerto:posición; null = el orden de la cadena
   healthPort: 4749,
   chrome: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   userAgentToken: 'AdmiraWindowsPlayer/tl-lcd-2.0'
@@ -123,5 +151,6 @@ export function mergeConfig(raw = {}) {
   }
   cfg.fps = Math.max(1, Math.min(30, Number(cfg.fps) || DEFAULTS.fps));
   cfg.quality = Math.max(30, Math.min(95, Number(cfg.quality) || DEFAULTS.quality));
+  cfg.mantenerMs = Math.max(100, Math.min(2000, Number(cfg.mantenerMs) || DEFAULTS.mantenerMs));
   return cfg;
 }
