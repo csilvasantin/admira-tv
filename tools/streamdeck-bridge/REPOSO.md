@@ -55,6 +55,13 @@ Prueba local (sin dependencias externas):
 python3 tools/streamdeck-bridge/test_senal_reposo.py
 ```
 
+La comprobación `Stream Deck rest signal` ejecuta estos mismos casos en GitHub
+Actions con Windows y Linux. Tampoco conecta a un dispositivo físico.
+
+Referencia oficial para configurar el GIF: Preferencias → General → Set
+Screensaver y Sleep After, según la [guía de Elgato](https://help.elgato.com/hc/en-us/articles/26543873678477-Elgato-Stream-Deck-How-to-set-an-Image-or-GIF-as-a-Screensaver).
+El tiempo concreto ofrecido en el PC sigue pendiente de comprobar.
+
 ## Guion del minitutorial oficial (pendiente de implementación)
 
 Destino: https://www.admiranext.com/tiktok/. Aún sin vídeo exportado.
