@@ -8,6 +8,7 @@
 // escrituras de KV, que en octubre llegaron al tope diario de la cuenta.
 import { DurableObject } from 'cloudflare:workers';
 import { normalizarEscena, normalizarLuz } from '../escena.mjs';
+import { normalizarReposo } from './streamdeck-reposo.mjs';
 
 const json = (v, status = 200) => new Response(JSON.stringify(v), {
   status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }
@@ -31,6 +32,7 @@ export default {
       ? igual((request.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''), env.MAQUINA_KEY)
       : igual(request.headers.get('x-proxy-key'), env.PROXY_KEY);
     if (!ok) return json({ ok: false, error: 'unauthorized' }, 401);
+    // 'metahuman' es el id interno del Durable Object (el PC ahora se llama AdmiraNeXT01): no se cambia para no perder el estado.
     const stub = env.SUPERCOMPUTER.get(env.SUPERCOMPUTER.idFromName('metahuman'));
     return stub.fetch(request);
   }
@@ -88,7 +90,7 @@ export class Supercomputer extends DurableObject {
         await this.ctx.storage.put('deseado', deseado);
         return json({ ok: true, deseado });
       }
-      // Stream Deck XL de METAHUMAN: el puente lee el perfil activo de Elgato y sube la cara (atlas 8×4).
+      // Stream Deck XL de AdmiraNeXT01 (antes METAHUMAN): el puente lee el perfil activo de Elgato y sube la cara (atlas 8×4).
       if (url.pathname === '/streamdeck' && metodo === 'POST') {
         const body = await request.json();
         const b64 = String(body.facePngBase64 || '');
@@ -114,6 +116,8 @@ export class Supercomputer extends DurableObject {
           Object.assign(this.sd, { keys, pageName: texto(body.pageName, 60), profileName: texto(body.profileName, 60),
             pages: Number(body.pages) || 0, pageIndex: Number.isInteger(body.pageIndex) ? body.pageIndex : -1, folder: body.folder === true });
         }
+        // Señal de REPOSO (10-nov-2026): solo cambia si el cuerpo trae el campo; null la borra. Sin campo, todo como antes.
+        if (Object.prototype.hasOwnProperty.call(body, 'reposo')) this.sd.reposo = normalizarReposo(body.reposo, Date.now());
         return json({ ok: true, hash: this.sd.hash });
       }
       if (url.pathname === '/streamdeck/estado' && metodo === 'GET') {
@@ -121,7 +125,7 @@ export class Supercomputer extends DurableObject {
         return json({ ok: true, ahora, enLinea: !!sd && ahora - sd.visto < 15000, visto: sd?.visto || 0,
           serial: sd?.serial || null, pageId: sd?.pageId || null, keyCount: sd?.keyCount || 0, hash: sd?.hash || null,
           pageName: sd?.pageName || '', profileName: sd?.profileName || '', pages: sd?.pages || 0, pageIndex: sd?.pageIndex ?? -1,
-          folder: !!sd?.folder, keys: sd?.keys || {} });
+          folder: !!sd?.folder, keys: sd?.keys || {}, reposo: sd?.reposo || null });
       }
       if (url.pathname === '/streamdeck/face.png' && metodo === 'GET') {
         const sd = this.sd;
