@@ -69,3 +69,9 @@ bucket_name = "admira-catalogo-imagenes"
 #   TG_CHAT      — chat_id del grupo AgoraMatrix
 #   LEADS_ADMIN  — token para leer/borrar /leads
 # Los VALORES viven en la bóveda admira-vault (secret get ...), nunca aquí.
+
+# Afluencia simulada de PortAventura NeXT, leída por la ficha Informar del player.
+[[d1_databases]]
+binding = "PARK_OCCUPANCY"
+database_name = "portaventura-demo-occupancy"
+database_id = "ba45140f-666b-4bde-b767-5865c2bbf6e7"

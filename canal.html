@@ -429,6 +429,7 @@
 </div>
 
 <script src="/assets/seamless-video.js?v=22.10.2026.r2.1134"></script>
+<script src="/shared/park-player-info.js"></script>
 <script src="/assets/player-pairing.js?v=22.10.2026.r2.1134"></script>
 <script>
 // Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
@@ -3892,6 +3893,9 @@ function localInfoHumanTitle(it,meta){
   const fallback=meta?testName(meta):'';
   return fallback&&!/^#?\d+$/.test(fallback)?fallback:'Contenido sin título';
 }
+function parkPlayerIdentities(){
+  return VIRTUAL_PLAYER || PREVIEW.on ? [] : [scr.machine, scr.screen, scr.name, programScreen()];
+}
 function localInfoRender(){
   const box=$('localInfo'); if(!box||box.hidden) return;
   localInfoRemoteRender();
@@ -3910,6 +3914,7 @@ function localInfoRender(){
   const elapsed=(mediaEl&&isFinite(mediaEl.currentTime))?mediaEl.currentTime:0;
   const dim=it&&it._dim, vw=mediaEl&&mediaEl.videoWidth, vh=mediaEl&&mediaEl.videoHeight;
   const resolution=(vw&&vh)?vw+' × '+vh:(dim&&dim.w&&dim.h?dim.w+' × '+dim.h:'—');
+  window.AdmiraParkPlayerInfo?.render(parkPlayerIdentities(), row);
   row('estado local',disk.text,disk.cls);
   row('tipo',it?(it.type||KIND[it.type]||'—'):'—');
   row('posición',pos);
@@ -5277,6 +5282,7 @@ async function shotTick(forceInfo){
     cv.width=W; cv.height=H;   // asignar SIEMPRE: resetea bitmap y origin-clean (des-tinta el canvas si un asset sin CORS lo tiñó el tick anterior)
     const cx=cv.getContext('2d'); if(!cx) return false;
     cx.drawImage(el,0,0,W,H);
+    if(forceInfo) await window.AdmiraParkPlayerInfo?.refresh(parkPlayerIdentities());
     if(forceInfo||!$('localInfo').hidden) _shotDrawLocalInfo(cx,W,H);
     let data;
     try{ data=cv.toDataURL('image/jpeg',0.5); }
