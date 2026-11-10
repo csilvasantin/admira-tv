@@ -30,6 +30,9 @@ senal.cerrar()
   `os.replace`; reintento con espera variable durante un máximo de 2 s si Windows
   bloquea el rename. Un fallo mantiene intacto el JSON anterior y se comunica al
   llamador; el refresco sigue intentando publicar el estado más reciente.
+- En Windows, un lector también puede recibir temporalmente acceso denegado
+  durante un reemplazo. El puente ya captura errores de lectura y vuelve a
+  intentarlo en el siguiente latido; una lectura completada recibe JSON entero.
 - Cierre normal: retira el fichero para que deje de viajar el estado anterior.
   Un cierre abrupto puede dejarlo: el consumidor debe comprobar su antigüedad.
 

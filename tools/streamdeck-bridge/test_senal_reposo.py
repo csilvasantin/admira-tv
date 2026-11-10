@@ -23,7 +23,17 @@ class Emisor(unittest.TestCase):
         self.addCleanup(self.emisor.cerrar)
 
     def leer(self):
-        return json.loads(self.ruta.read_text())
+        # NTFS puede negar brevemente una apertura mientras reemplaza el nombre.
+        # El puente real reintenta en su siguiente latido; aquí se acelera la
+        # espera, pero no se tolera JSON parcial ni un fichero ausente.
+        limite = time.monotonic() + 2
+        while True:
+            try:
+                return json.loads(self.ruta.read_text())
+            except PermissionError:
+                if time.monotonic() >= limite:
+                    raise
+                time.sleep(0.005)
 
     def esperar(self, condicion):
         limite = time.monotonic() + 2
