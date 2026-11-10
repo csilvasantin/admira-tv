@@ -1,8 +1,11 @@
-# Puente EN VIVO Stream Deck XL (METAHUMAN) -> admira.store/objeto/stream-deck
+# Puente EN VIVO Stream Deck XL (AdmiraNeXT01, antes METAHUMAN) -> admira.store/objeto/stream-deck
 # Lee el perfil Elgato activo (ProfilesV3, Pages.Current), compone atlas 8x4 (1024x512) y lo sube.
 # Desde el 6-nov-2026 pinta tambien los titulos de cada tecla (como hace el software Elgato) y manda
 # la ficha de cada tecla (nombre de la accion, titulo, estados) para que el gemelo la ensene al pulsar.
 # Clave: misma que los ventiladores (config.json nube.clave o ~/.admira_supercomputer_key). Nunca se imprime.
+# Desde el 10-nov-2026 manda tambien la senal de REPOSO (salvapantallas con la playlist admira-tv-streamdeck):
+# lee reposo.json junto a este fichero (lo escribe quien detecta el salvapantallas) y anade la pieza en emision.
+# Sin reposo.json no manda nada nuevo. Contrato: admira.store admira-xp/docs/objeto-stream-deck.md (Senal de reposo).
 # Parar: schtasks /End /TN AdmiraStreamDeckBridge  ·  desactivar: schtasks /Change /TN AdmiraStreamDeckBridge /DISABLE
 import os, json, time, glob, base64, hashlib, io, urllib.request, sys, re
 from PIL import Image, ImageDraw, ImageFont
@@ -16,6 +19,9 @@ PROFILES = os.path.join(os.environ.get('APPDATA', ''), 'Elgato', 'StreamDeck', '
 FONTS = os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')
 LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'puente.log')
 PREFIJO = 'com.elgato.streamdeck.'
+REPOSO = os.environ.get('ADMIRA_SD_REPOSO') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'reposo.json')
+PLAYLIST = 'https://admira.tv/api/playlist?screen=admira-tv-streamdeck'
+POSTER = 'https://stock.admira.store/stock/%s/poster.jpg'
 
 def log(m):
     with open(LOG, 'a', encoding='utf-8') as f: f.write(time.strftime('%Y-%m-%d %H:%M:%S ') + m + '\n')
@@ -143,13 +149,55 @@ def atlas():
             'pages': len(paginas), 'pageIndex': (paginas.index(pid) if pid in paginas else -1), 'folder': carpeta, 'keys': teclas}
     return b.getvalue(), meta, n
 
+_playlist = {'at': 0, 'items': None, 'name': '', 'rev': None}
+def playlist():
+    """Playlist real de admira.tv (la misma que screensaver.py y el player). Cache 5 min; si falla, la ultima buena."""
+    if _playlist['items'] is not None and time.time() - _playlist['at'] < 300: return _playlist
+    try:
+        r = urllib.request.Request(PLAYLIST, headers={'User-Agent': 'admira-streamdeck-bridge'})
+        with urllib.request.urlopen(r, timeout=8) as x: d = json.load(x).get('draft') or {}
+        items = [i for i in (d.get('items') or []) if i.get('assetType') == 'video']
+        _playlist.update(at=time.time(), items=items, name=recorta(d.get('name'), 80), rev=d.get('rev'))
+    except Exception as e:
+        log('playlist %s' % str(e)[:120]); _playlist['at'] = time.time()
+        if _playlist['items'] is None: _playlist['items'] = []
+    return _playlist
+
+def pieza_en(items, desde_ms, ahora_ms):
+    """Pieza en emision: el GIF de screensaver.py encadena los videos a tiempo real y vuelve a empezar."""
+    dur = [max(1, int(i.get('seconds') or 0)) for i in items]
+    if not items or not desde_ms: return None
+    t = ((ahora_ms - desde_ms) / 1000.0) % sum(dur); ini = 0
+    for n, (it, d) in enumerate(zip(items, dur)):
+        if t < ini + d:
+            sid = recorta(it.get('stockId') or it.get('id'), 60)
+            return {'id': sid, 'title': recorta(it.get('title'), 120), 'sub': recorta(it.get('sub'), 80), 'seconds': d,
+                    'index': n, 'total': len(items), 'poster': POSTER % sid if sid else '', 'desde': int(ahora_ms - (t - ini) * 1000)}
+        ini += d
+    return None
+
+def senal_reposo(ahora_ms=None):
+    """Lee reposo.json ({"estado":"reposo"|"activo","desde":ms[,"fuente","pieza"]}). None = no hay senal."""
+    if not os.path.exists(REPOSO): return None
+    ahora_ms = ahora_ms or int(time.time() * 1000)
+    try: r = jload(REPOSO)
+    except Exception as e: log('reposo.json %s' % str(e)[:120]); return None
+    if not isinstance(r, dict) or r.get('estado') not in ('reposo', 'activo'): return None
+    desde = int(r.get('desde') or 0) or int(os.path.getmtime(REPOSO) * 1000)
+    s = {'estado': r['estado'], 'desde': desde, 'ts': ahora_ms, 'fuente': recorta(r.get('fuente') or 'reposo.json', 40)}
+    if r['estado'] == 'reposo':
+        pl = playlist(); items = pl['items'] or []
+        s['playlist'] = {'screen': 'admira-tv-streamdeck', 'name': pl['name'] or 'admira.tv StreamDeck', 'rev': pl['rev'], 'total': len(items)}
+        s['pieza'] = r['pieza'] if isinstance(r.get('pieza'), dict) else pieza_en(items, desde, ahora_ms)
+    return s
+
 def post(body, key):
     r = urllib.request.Request(API, data=json.dumps(body).encode(), method='POST',
         headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'User-Agent': 'admira-streamdeck-bridge'})
     with urllib.request.urlopen(r, timeout=10) as x: return x.status
 
 def main():
-    key = clave(); last = None; once = '--once' in sys.argv
+    key = clave(); last = None; once = '--once' in sys.argv; ultimo_reposo = None
     if '--png' in sys.argv:  # prueba local: guarda el atlas y la ficha sin subir nada
         png, meta, n = atlas(); salida = sys.argv[sys.argv.index('--png') + 1]
         open(salida, 'wb').write(png); open(salida + '.json', 'w', encoding='utf-8').write(json.dumps(meta, ensure_ascii=False, indent=1))
@@ -161,6 +209,10 @@ def main():
             h = hashlib.sha256(png + json.dumps(meta, sort_keys=True).encode()).hexdigest()
             body = {'serial': SERIAL, 'at': int(time.time() * 1000), 'pageId': meta['pageId'], 'keyCount': n}
             if h != last: body['facePngBase64'] = base64.b64encode(png).decode(); body.update(meta)
+            rep = senal_reposo()
+            if rep is not None: body['reposo'] = rep
+            if (rep or {}).get('estado') != ultimo_reposo:
+                ultimo_reposo = (rep or {}).get('estado'); log('reposo %s pieza=%s' % (ultimo_reposo, ((rep or {}).get('pieza') or {}).get('title')))
             st = post(body, key)
             if h != last: log('cara nueva page=%s teclas=%d bytes=%d http=%d' % (meta['pageId'], n, len(png), st)); last = h
         except Exception as e:
