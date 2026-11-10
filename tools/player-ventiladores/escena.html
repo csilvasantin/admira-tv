@@ -12,11 +12,25 @@
   #numero { position: absolute; inset: 0; display: none; place-items: center; text-align: center;
     font: 800 210px/1 system-ui, sans-serif; color: #04101f; }
   #numero small { display: block; font: 700 30px/1.2 ui-monospace, Menlo, monospace; margin-top: 6px; }
+  /* Inquilinos (PortAventuraNeXT): la figura LEGO en su ventilador, o el ventilador vacío. */
+  #casa { position: absolute; inset: 0; display: none; background: radial-gradient(circle at 50% 44%, #2a0a0d 0%, #120507 58%, #050505 74%); }
+  #casa img { position: absolute; left: 50%; top: 47%; height: 72%; transform: translate(-50%, -50%); filter: drop-shadow(0 8px 14px rgba(0,0,0,.75)); }
+  #casa b { position: absolute; left: 0; right: 0; bottom: 13%; text-align: center; color: #F6F1EA; font: 700 22px/1 ui-monospace, Menlo, monospace; letter-spacing: .14em; text-transform: uppercase; }
+  #casa.vacio { background: #000; }
+  #casa.vacio::after { content: ''; position: absolute; inset: 16%; border-radius: 50%; border: 3px dashed rgba(246,241,234,.35); }
+  #casa.vacio:not(.arte) img, #casa.vacio b { display: none; }
+  #casa.arte { background: #000; }
+  #casa.arte::after { content: none; }
+  #casa.arte img { left: 0; top: 0; width: 100%; height: 100%; transform: none; filter: none; }
+  /* Un píxel casi negro que cambia cada fotograma: el screencast de Chrome sin ventana solo manda fotogramas
+     cuando algo se repinta, y tras un cambio fijo (sale la figura) la pantalla se quedaba con el anterior ~4 s. */
+  #pulso { position: absolute; left: 0; top: 0; width: 2px; height: 2px; background: #000; }
 </style>
 </head>
 <body>
 <div id="lienzo"></div>
 <div id="numero"></div>
+<div id="casa"><img alt=""><b></b><i id="pulso"></i></div>
 <script type="module">
 // Render de un ventilador en los modos extender, sincro y secuencia. Lo abre el puente en Chrome sin
 // ventana (un Chrome por ventilador) y captura su screencast. Todos los ventiladores usan el
@@ -33,6 +47,7 @@ const fan = Number(qs.get('fan')) || 1;
 const conAudio = qs.get('audio') === '1', volumen = Math.max(0, Math.min(1, Number(qs.get('volumen') ?? 1) || 0));
 const lienzo = document.getElementById('lienzo');
 const ajusteCss = { cubrir: 'cover', estirar: 'fill', contener: 'contain' };
+let pulsos = 0;
 let estado = null;                 // { escena, medios: { id: { url, tipo } } }
 const elementos = new Map();       // id de pieza → <video>/<img>
 
@@ -91,6 +106,25 @@ function pintar() {
     return;
   }
   numero.style.display = 'none';
+  const casa = document.getElementById('casa');
+  if (a.tipo === 'inquilino' || a.tipo === 'vacio') {
+    for (const el of elementos.values()) { el.classList.remove('on'); if (el.tagName === 'VIDEO' && !el.paused) el.pause(); }
+    document.getElementById('creel')?.classList.remove('vis', 'activo', 'reposo', 'on');   // capa Creel del relevo, fuera
+    casa.style.display = 'block';
+    document.getElementById('pulso').style.background = (pulsos = (pulsos + 1) % 2) ? '#010101' : '#000';
+    casa.classList.toggle('vacio', a.tipo === 'vacio');
+    // Arte de ventilador ya hecho para la Creel House (CREEL_IMGS: un 400×400 por personaje y el «vacío»), si esta
+    // página lo trae; si no, la figura que subió el player del show (POST /pan/figura) con su nombre debajo.
+    const arte = typeof CREEL_IMGS !== 'undefined' ? CREEL_IMGS : null;
+    const clave = a.tipo === 'inquilino' ? a.figura : 'vacio';
+    const src = (arte && arte[clave]) || (a.tipo === 'inquilino' ? (estado.figuras || {})[a.figura] : null);
+    casa.classList.toggle('arte', !!(arte && arte[clave]));
+    const img = casa.querySelector('img');
+    if (src && img.dataset.f !== clave) { img.dataset.f = clave; img.src = src; }
+    casa.querySelector('b').textContent = a.tipo === 'inquilino' && !(arte && arte[clave]) ? (a.nombre || '') : '';
+    return;
+  }
+  casa.style.display = 'none';
   const visible = a.tipo === 'negro' || a.tipo === 'canal' ? null : elemento(a.pieza);
   // Secuencia: el activo (y la página que suena) siguen el turno en curso; los que esperan dejan la pieza parada al
   // principio, lista para su turno (con «cada x s» el turno la empieza desde el principio).

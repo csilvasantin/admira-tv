@@ -198,3 +198,14 @@ Controlador: informe `0x01` de 64 bytes `[0x01, cmd, 0, 0, 0, longitud, datos]`.
 `0xA3` luz por ventilador, `0xAD` grupos y `0xB0` luz de grupo (20 bytes: destino, efecto, brillo,
 velocidad, 4 colores, dirección, apagado, nº de colores). Referencia:
 [sgtaziz/lian-li-linux](https://github.com/sgtaziz/lian-li-linux) (MIT), `tl_lcd.rs`, `tl_fan` y `lianli-shared/rgb.rs`.
+
+## Inquilinos · PortAventuraNeXT (Carlos, 10-nov-2026)
+
+Modo `inquilinos` (también tenants, ocupación, pan): cada ventilador es la casa de una figura LEGO. Lo manda el
+player del show de AdmiraNeXT01/05 desde el mismo PC: `POST /pan` `{ fans: { "2": [[ms, "once"], [ms, null], …] },
+encendidos: [1], nombres, caduca }` (instantes en `Date.now()` del PC), `POST /pan/figura?id=` (PNG/WebP/JPEG, ≤ 2 MB,
+solo si la página no trae arte propio) y `POST /pan/fin`. Solo esas rutas aceptan CORS, y solo de `cfg.pan.origenes`
+(por defecto `https://www.admiranext.com` y `https://admiranext.com`), con `Access-Control-Allow-Private-Network`.
+`escena.html` pinta el arte del personaje (`CREEL_IMGS` si la página lo trae, o la figura subida) o el «vacío»; la luz
+va en fijo ROJO si está ocupado (o en `encendidos`) y BLANCO si está vacío, revisada cada 250 ms. Al entrar se guarda
+la escena y la luz que había (`pan-previo.json`) y se reponen con `/pan/fin` o si el player deja de avisar (`caduca`).

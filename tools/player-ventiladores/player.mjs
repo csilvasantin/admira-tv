@@ -113,6 +113,81 @@ function dispositivos() {
   };
 }
 
+// ── PortAventuraNeXT: los ventiladores como casa de las figuras LEGO (modo inquilinos) ──────────────
+// El player del show (https://www.admiranext.com/demo/PortAventuraNeXT/player/?p=01|05), en este mismo PC, manda
+// la línea de tiempo de cada ventilador (POST /pan), sube una vez cada figura (POST /pan/figura?id=) y avisa al
+// parar (POST /pan/fin). Solo se aceptan esas tres rutas, solo desde los orígenes de cfg.pan.origenes y solo por
+// 127.0.0.1. Al entrar se guarda lo que había (escena y luz) y se repone al salir o si el player deja de avisar
+// (caduca). Nada de esto va a la nube salvo el informe de siempre.
+const ORIGENES_PAN = cfg.pan?.origenes || ['https://www.admiranext.com', 'https://admiranext.com'];
+const figurasDir = path.join(datos, 'figuras');
+const previoPath = path.join(datos, 'pan-previo.json');
+const figuras = new Map();   // id → { fichero, tipo }
+await fs.mkdir(figurasDir, { recursive: true }).catch(() => {});
+for (const f of await fs.readdir(figurasDir).catch(() => [])) {
+  const m = /^([a-z0-9-]{1,40})\.(png|webp|jpg)$/.exec(f);
+  if (m) figuras.set(m[1], { fichero: path.join(figurasDir, f), tipo: { png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg' }[m[2]] });
+}
+const leerBinario = (req, max) => new Promise((ok, ko) => {
+  const partes = []; let n = 0;
+  req.on('data', c => { n += c.length; if (n > max) { req.destroy(); ko(new Error('demasiado grande')); } else partes.push(c); });
+  req.on('end', () => ok(Buffer.concat(partes))); req.on('error', ko);
+});
+function cors(req, res) {
+  const origen = req.headers.origin;
+  if (!origen || !ORIGENES_PAN.includes(origen)) return false;
+  res.setHeader('access-control-allow-origin', origen);
+  res.setHeader('vary', 'origin');
+  res.setHeader('access-control-allow-methods', 'POST, OPTIONS');
+  res.setHeader('access-control-allow-headers', 'content-type');
+  res.setHeader('access-control-allow-private-network', 'true');   // Private/Local Network Access de Chrome
+  res.setHeader('access-control-max-age', '600');
+  return true;
+}
+let previoPan = await fs.readFile(previoPath, 'utf8').then(JSON.parse).catch(() => null);
+async function salirPan(motivo) {
+  if (estado?.escena?.modo !== 'inquilinos') return;
+  const previo = previoPan || { escena: escenaDeConfig(cfg), luz: cfg.luz };
+  previoPan = null; await fs.rm(previoPath, { force: true }).catch(() => {});
+  log('pan_fin', { motivo, vuelve: previo.escena?.modo });
+  await aplicar({ escena: previo.escena, luz: previo.luz ?? null }, 'pan-fin');
+}
+async function rutaPan(req, res, url) {
+  const ok = cors(req, res);
+  if (req.method === 'OPTIONS') { res.statusCode = ok ? 204 : 403; return res.end(); }
+  if (!ok) return json(res, { error: 'origen no permitido' }, 403);
+  if (req.method !== 'POST') return json(res, { error: 'solo POST' }, 405);
+  if (url.pathname === '/pan/figura') {
+    const id = url.searchParams.get('id') || '';
+    const ext = { 'image/png': 'png', 'image/webp': 'webp', 'image/jpeg': 'jpg' }[String(req.headers['content-type'] || '').split(';')[0]];
+    if (!/^[a-z0-9-]{1,40}$/.test(id) || !ext) return json(res, { error: 'figura inválida' }, 400);
+    const bin = await leerBinario(req, 2e6);
+    const fichero = path.join(figurasDir, `${id}.${ext}`);
+    await fs.writeFile(fichero, bin);
+    figuras.set(id, { fichero, tipo: { png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg' }[ext] });
+    return json(res, { ok: true, id });
+  }
+  if (url.pathname === '/pan/fin') { await salirPan('player'); return json(res, { ok: true }); }
+  if (url.pathname !== '/pan') return json(res, { error: 'not found' }, 404);
+  const cuerpo = await leerCuerpo(req);
+  const escena = normalizarEscena({ ...cuerpo, modo: 'inquilinos' }, numFans());
+  const faltan = [...new Set(Object.values(escena.inquilinos).flatMap(p => p.map(([, w]) => w)).filter(w => w && !figuras.has(w)))];
+  if (estado?.escena?.modo === 'inquilinos' && JSON.stringify({ ...estado.escena, caduca: 0, revision: 0 }) === JSON.stringify({ ...escena, caduca: 0, revision: 0 })) {
+    estado.escena.caduca = escena.caduca;           // solo sigue vivo: sin escribir ni registrar
+    return json(res, { ok: true, faltan });
+  }
+  if (estado?.escena?.modo !== 'inquilinos') {
+    previoPan = { escena: estado?.escena, luz: estado?.luz ?? null };
+    await fs.writeFile(previoPath, JSON.stringify(previoPan)).catch(() => {});
+  }
+  await aplicar({ escena, luz: estado?.luz ?? null }, 'pan');
+  return json(res, { ok: true, faltan });
+}
+setInterval(() => {
+  const e = estado?.escena;
+  if (e?.modo === 'inquilinos' && e.caduca && Date.now() > e.caduca) salirPan('caducado').catch(() => {});
+}, 1000).unref();
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', 'http://127.0.0.1');
   try {
@@ -125,6 +200,14 @@ const server = http.createServer(async (req, res) => {
       return res.end(jpeg);
     }
     if (url.pathname.startsWith('/media/')) return medios.servir(url.pathname.slice(7), req, res);
+    if (url.pathname === '/pan' || url.pathname.startsWith('/pan/')) return await rutaPan(req, res, url);
+    const fig = /^\/figura\/([a-z0-9-]{1,40})$/.exec(url.pathname);
+    if (fig) {
+      const f = figuras.get(fig[1]);
+      if (!f) { res.statusCode = 404; return res.end(); }
+      res.setHeader('content-type', f.tipo); res.setHeader('cache-control', 'no-store');
+      return res.end(await fs.readFile(f.fichero));
+    }
     if (ESTATICOS[url.pathname]) {
       res.setHeader('content-type', ESTATICOS[url.pathname]); res.setHeader('cache-control', 'no-store');
       return res.end(await fs.readFile(path.join(directory, url.pathname.slice(1))));
@@ -133,6 +216,7 @@ const server = http.createServer(async (req, res) => {
       const piezas = estado?.escena?.piezas ?? [];
       const lista = await Promise.all(piezas.map(async id => [id, await medios.asegurar(id).catch(() => null)]));
       return json(res, { escena: estado?.escena, medios: Object.fromEntries(lista.filter(([, m]) => m)),
+        figuras: estado?.escena?.modo === 'inquilinos' ? Object.fromEntries([...figuras.keys()].map(id => [id, '/figura/' + id])) : {},
         fans: fans.map(f => ({ n: f.n, port: f.port, index: f.index })) });
     }
     if (url.pathname === '/estado') return json(res, { estado, informe: informe(), nube });
@@ -315,7 +399,7 @@ async function sincronizarPlayers() {
 // Secuencia sin luz configurada: verde fijo, para que el relevo se vea igual.
 const LUZ_SECUENCIA = normalizarLuz({ efecto: 'fijo', color: '#00d26a', brillo: 4 });
 async function aplicarLuz() {
-  const luz = estado?.luz ?? (estado?.escena?.modo === 'secuencia' ? LUZ_SECUENCIA : null);
+  const luz = estado?.luz ?? (['secuencia', 'inquilinos'].includes(estado?.escena?.modo) ? LUZ_SECUENCIA : null);
   if (!luz) return;
   await aplicarLuzDispositivos(luz);
   if (!controlador || !fans.length) return;
@@ -343,7 +427,7 @@ async function aplicarLuzDispositivos(luz) {
   }
 }
 setInterval(() => {
-  if (estado?.escena?.modo === 'secuencia' || (estado?.luz?.sigueVideo && estado.escena.modo === 'sincro')) aplicarLuz();
+  if (['secuencia', 'inquilinos'].includes(estado?.escena?.modo) || (estado?.luz?.sigueVideo && estado.escena.modo === 'sincro')) aplicarLuz();
 }, 250).unref();
 
 // ── Nube: el gemelo de admira.store/supercomputer ──────────────────────────────
