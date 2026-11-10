@@ -102,4 +102,3 @@ class SenalReposo:
         with self._lock:
             if self._senal is not None:
                 self.ruta.unlink(missing_ok=True)
-
