@@ -104,6 +104,19 @@ class Emisor(unittest.TestCase):
             self.assertEqual(self.ruta.read_bytes(), original)
             self.assertEqual(list(self.ruta.parent.glob("*.tmp")), [])
 
+    def test_bloqueo_permanente_tiene_limite_y_conserva_anterior(self):
+        self.emisor.entrar_salvapantallas()
+        original = self.ruta.read_bytes()
+        with self.emisor._lock:
+            with patch.object(senal_reposo, "ESPERA_RENAME_S", 0.04):
+                with patch.object(senal_reposo.os, "replace", side_effect=PermissionError()):
+                    inicio = time.monotonic()
+                    with self.assertRaises(PermissionError):
+                        senal_reposo.escribir_atomico(self.ruta, {"estado": "activo", "desde": 9})
+            self.assertLess(time.monotonic() - inicio, 1)
+            self.assertEqual(self.ruta.read_bytes(), original)
+            self.assertEqual(list(self.ruta.parent.glob("*.tmp")), [])
+
     def test_cerrar_retira_senal_y_no_reaparece(self):
         self.emisor.entrar_salvapantallas()
         self.emisor.cerrar()

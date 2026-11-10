@@ -1,6 +1,6 @@
 # Señal de reposo · #7487 + complemento #7489
 
-Versión del emisor: `2026.11.10.1`. **Integración pendiente; no instalado en el PC.**
+Versión del emisor: `2026.11.10.2`. **Integración pendiente; no instalado en el PC.**
 
 `senal_reposo.py` escribe junto al módulo, por defecto en
 `C:\Users\csilv\admira-tv\tools\streamdeck-bridge\reposo.json`.
@@ -27,7 +27,9 @@ senal.cerrar()
 - Refresco: cada 5 s, conservando `desde`. Se refresca también activo para
   reintentar un fallo temporal de escritura al salir del salvapantallas.
 - Publicación: temporal exclusivo en la misma carpeta, flush/fsync, cierre y
-  `os.replace`; hasta cuatro intentos si Windows bloquea brevemente el rename.
+  `os.replace`; reintento con espera variable durante un máximo de 2 s si Windows
+  bloquea el rename. Un fallo mantiene intacto el JSON anterior y se comunica al
+  llamador; el refresco sigue intentando publicar el estado más reciente.
 - Cierre normal: retira el fichero para que deje de viajar el estado anterior.
   Un cierre abrupto puede dejarlo: el consumidor debe comprobar su antigüedad.
 

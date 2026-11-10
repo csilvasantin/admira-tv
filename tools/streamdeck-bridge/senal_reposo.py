@@ -9,12 +9,14 @@ import logging
 import math
 import os
 from pathlib import Path
+import random
 import tempfile
 import threading
 import time
 
 
-VERSION = "2026.11.10.1"
+VERSION = "2026.11.10.2"
+ESPERA_RENAME_S = 2.0
 RUTA_PREDETERMINADA = Path(__file__).resolve().with_name("reposo.json")
 
 
@@ -33,14 +35,17 @@ def escribir_atomico(ruta, senal):
             archivo.flush()
             os.fsync(archivo.fileno())
         # Windows puede negar brevemente el reemplazo mientras el puente lee.
-        for intento in range(4):
+        limite = time.monotonic() + ESPERA_RENAME_S
+        while True:
             try:
                 os.replace(temporal, ruta)
                 break
             except PermissionError:
-                if intento == 3:
+                restante = limite - time.monotonic()
+                if restante <= 0:
                     raise
-                time.sleep(0.02 * (intento + 1))
+                # Evitar coincidir siempre con un lector periódico de Windows.
+                time.sleep(min(restante, random.uniform(0.01, 0.05)))
     finally:
         if temporal is not None:
             temporal.unlink(missing_ok=True)
