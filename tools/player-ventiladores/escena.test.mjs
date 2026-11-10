@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { modoCanonico, normalizarEscena, asignacion, normalizarLuz, cargaLuz, luzDe, colorRgb, efectoCanonico, luzDispositivo, cargaStrimer, dispositivoCanonico, cargaGalahad, mismoContenido } from './escena.mjs';
+import { modoCanonico, normalizarEscena, asignacion, normalizarLuz, cargaLuz, luzDe, colorRgb, efectoCanonico, luzDispositivo, cargaStrimer, dispositivoCanonico, cargaGalahad, mismoContenido, inquilinoEn } from './escena.mjs';
 
 test('los modos se entienden en castellano y en inglés', () => {
   for (const [dicho, modo] of [['sincro', 'sincro'], ['sync', 'sincro'], ['Repeat', 'repetir'], ['repetir', 'repetir'],
@@ -189,4 +189,30 @@ test('mismo contenido: la luz o el audio no reinician el reloj; otra pieza, otro
   assert.equal(mismoContenido(normalizarEscena({ modo: 'secuencia', pieza: 'v1', cada: 10 }), viva), false, 'cada x s');
   assert.equal(mismoContenido(normalizarEscena({ modo: 'sincro', pieza: 'v1' }), viva), false, 'otro modo');
   assert.equal(mismoContenido(deLaNube, null), false);
+});
+
+// ── Inquilinos (PortAventuraNeXT, Carlos 10-nov-2026 14:51) ─────────────────────────────────────────
+test('inquilinos: la figura sale (vacío, luz BLANCA) y llega otra (ocupado, luz ROJA)', () => {
+  const e = normalizarEscena({ modo: 'pan', fans: { 2: [[0, 'once'], [1000, null], [3000, 'steve']], 1: [[0, null]] }, encendidos: [1], nombres: { once: 'Eleven' } }, 7);
+  assert.equal(e.modo, 'inquilinos');
+  assert.deepEqual(asignacion(e, 2, 500), { tipo: 'inquilino', figura: 'once', nombre: 'Eleven' });
+  assert.deepEqual(asignacion(e, 2, 1500), { tipo: 'vacio' });
+  assert.equal(asignacion(e, 2, 3500).figura, 'steve');
+  assert.deepEqual(luzDe(normalizarLuz({ efecto: 'arcoiris' }), 2, e, 500).colores, [[255, 0, 0]]);
+  assert.deepEqual(luzDe(normalizarLuz({ efecto: 'arcoiris' }), 2, e, 1500).colores, [[255, 255, 255]]);
+  assert.equal(luzDe(null, 2, e, 1500).efecto, 'fijo');
+  // el ventilador 1 del show: siempre rojo aunque esté vacío
+  assert.deepEqual(asignacion(e, 1, 1500), { tipo: 'vacio' });
+  assert.deepEqual(luzDe(null, 1, e, 1500).colores, [[255, 0, 0]]);
+  // un ventilador sin línea de tiempo está vacío y en blanco
+  assert.deepEqual(luzDe(null, 5, e, 0).colores, [[255, 255, 255]]);
+});
+
+test('inquilinos: ids de figura y ventiladores fuera de rango se descartan', () => {
+  const e = normalizarEscena({ modo: 'inquilinos', fans: { 9: [[0, 'x']], 3: [[0, '<script>'], [5, 'ok-1']], a: [[0, 'y']] }, encendidos: [0, 1, 1, 8] }, 7);
+  assert.deepEqual(Object.keys(e.inquilinos), ['3']);
+  assert.deepEqual(e.inquilinos['3'], [[0, null], [5, 'ok-1']]);
+  assert.deepEqual(e.encendidos, [1]);
+  assert.equal(inquilinoEn(e, 3, 4), null);
+  assert.equal(inquilinoEn(e, 3, 5), 'ok-1');
 });

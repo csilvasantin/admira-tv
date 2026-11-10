@@ -15,10 +15,14 @@ const ALIAS_MODO = {
   repetir: 'repetir', repeat: 'repetir', repeticion: 'repetir', 'repetición': 'repetir', espejo: 'repetir', mirror: 'repetir',
   extender: 'extender', extend: 'extender', extendido: 'extender', extended: 'extender', adaptar: 'extender', adapt: 'extender', estirar: 'extender', stretch: 'extender',
   sincro: 'sincro', sync: 'sincro', sincronizar: 'sincro', synchronized: 'sincro', relevo: 'sincro',
-  identificar: 'identificar', identify: 'identificar', numeros: 'identificar', 'números': 'identificar'
+  identificar: 'identificar', identify: 'identificar', numeros: 'identificar', 'números': 'identificar',
+  inquilinos: 'inquilinos', tenants: 'inquilinos', ocupacion: 'inquilinos', 'ocupación': 'inquilinos', occupancy: 'inquilinos', pan: 'inquilinos'
 };
+//  · inquilinos     — cada ventilador es la casa de una figura (PortAventuraNeXT, Carlos 10-nov-2026): enseña su
+//                     inquilino o se queda vacío según una línea de tiempo en ms del PC; la luz va ROJA si está
+//                     ocupado y BLANCA si está vacío (tenants · la manda el player del show por POST /pan)
 //  · identificar    — cada pantalla enseña su número, puerto y posición (para ubicarlos en el gemelo)
-export const MODOS = ['independiente', 'repetir', 'extender', 'sincro', 'secuencia', 'identificar'];
+export const MODOS = ['independiente', 'repetir', 'extender', 'sincro', 'secuencia', 'identificar', 'inquilinos'];
 export const modoCanonico = m => ALIAS_MODO[String(m ?? '').toLowerCase().trim()] || null;
 
 const ALIAS_AJUSTE = { cubrir: 'cubrir', cover: 'cubrir', estirar: 'estirar', stretch: 'estirar', fill: 'estirar', contener: 'contener', contain: 'contener' };
@@ -34,8 +38,9 @@ export function normalizarEscena(raw = {}, fans = 7) {
   const ids = Object.fromEntries(Object.entries(raw.ids || {}).map(([k, v]) => [String(k), lista(v).slice(0, 12)]).filter(([, v]) => v.length));
   const piezas = lista(raw.piezas ?? raw.pieza).slice(0, fans);
   const columnas = entero(raw.columnas, 1, fans, fans);
+  const extra = modo === 'inquilinos' ? normalizarInquilinos(raw, fans) : {};
   return {
-    modo, ids, piezas,
+    modo, ids, piezas, ...extra,
     paso: entero(raw.paso, 1, 120, 4),                       // sincro: segundos en cada ventilador
     orden: orden.length === fans ? orden : todos,            // recorrido de extender y sincro
     columnas, filas: entero(raw.filas, 1, fans, Math.ceil(fans / columnas)),
@@ -49,6 +54,37 @@ export function normalizarEscena(raw = {}, fans = 7) {
     audio: normalizarAudio(raw.audio, fans),
     revision: Number(raw.revision) || 0
   };
+}
+
+// Inquilinos: { inquilinos: { "2": [[ms, "once"], [ms, null], …] }, encendidos: [1], nombres: { once: "Eleven" },
+// colores: { ocupado, vacio }, caduca: ms }. Los instantes son Date.now() del PC (el player del show los pasa a su reloj).
+const FIGURA = /^[a-z0-9-]{1,40}$/;
+export const COLORES_INQUILINOS = { ocupado: [255, 0, 0], vacio: [255, 255, 255] };
+export function normalizarInquilinos(raw = {}, fans = 7) {
+  const inquilinos = {};
+  for (const [k, v] of Object.entries(raw.inquilinos || raw.fans || {})) {
+    const n = Number(k);
+    if (!Number.isInteger(n) || n < 1 || n > fans || !Array.isArray(v)) continue;
+    const pts = v.slice(0, 64).map(p => [Number(Array.isArray(p) ? p[0] : NaN), Array.isArray(p) && FIGURA.test(String(p[1] ?? '')) ? String(p[1]) : null])
+      .filter(([t]) => Number.isFinite(t) && t >= 0).sort((a, b) => a[0] - b[0]);
+    if (pts.length) inquilinos[String(n)] = pts;
+  }
+  const encendidos = lista(raw.encendidos).map(Number).filter((n, i, a) => n >= 1 && n <= fans && a.indexOf(n) === i);
+  const nombres = Object.fromEntries(Object.entries(raw.nombres || {}).filter(([k]) => FIGURA.test(k)).slice(0, 32)
+    .map(([k, v]) => [k, String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').slice(0, 40)]));
+  const c = raw.colores || {};
+  return {
+    inquilinos, encendidos, nombres,
+    colores: { ocupado: c.ocupado ? colorRgb(c.ocupado) : COLORES_INQUILINOS.ocupado, vacio: c.vacio ? colorRgb(c.vacio) : COLORES_INQUILINOS.vacio },
+    caduca: Number(raw.caduca) > 0 ? Number(raw.caduca) : 0
+  };
+}
+/** Inquilino del ventilador `fan` en `ahora` (ms del PC): el id de la figura o null (vacío). */
+export function inquilinoEn(escena, fan, ahora = Date.now()) {
+  const pts = escena?.inquilinos?.[String(fan)] || [];
+  let who = null;
+  for (const [t, w] of pts) { if (t <= ahora) who = w; else break; }
+  return who;
 }
 
 // ¿Cambia el contenido? Lo que llega de la nube trae la escena con el reloj a cero (epoch 0) aunque solo cambie la luz;
@@ -89,6 +125,10 @@ export function turnoSecuencia(escena, t) {
 // El reloj de vídeo es común: t = (ahora − epoch) / 1000, así el relevo no reinicia la pieza.
 export function asignacion(escena, fan, ahora = Date.now()) {
   if (escena.modo === 'identificar') return { tipo: 'numero', fan };
+  if (escena.modo === 'inquilinos') {
+    const figura = inquilinoEn(escena, fan, ahora);
+    return figura ? { tipo: 'inquilino', figura, nombre: escena.nombres?.[figura] || figura } : { tipo: 'vacio' };
+  }
   const pos = escena.orden.indexOf(fan);
   if (pos < 0) return { tipo: 'negro' };
   const t = Math.max(0, (ahora - escena.epoch) / 1000);
@@ -227,6 +267,13 @@ export function cargaLuz(destino, luz) {
 // En secuencia la luz acompaña siempre al vídeo (sin casilla): solo brilla el ventilador activo, y si la
 // luz general está apagada se enciende en fijo con su color para que se vea el relevo.
 export function luzDe(luz, fan, escena, ahora = Date.now()) {
+  if (escena?.modo === 'inquilinos') {
+    // Ocupado (o encendido siempre, como el ventilador 1 del show) = ROJO; vacío = BLANCO. Fijo, brillo máximo.
+    const ocupado = (escena.encendidos || []).includes(fan) || !!inquilinoEn(escena, fan, ahora);
+    const c = escena.colores || COLORES_INQUILINOS;
+    return { efecto: 'fijo', brillo: 4, velocidad: 2, colores: [ocupado ? c.ocupado : c.vacio] };
+  }
+  luz = luz || { efecto: 'fijo', brillo: 4, velocidad: 2, colores: [[255, 255, 255]], ventiladores: {} };
   const propia = luz.ventiladores[String(fan)] || luz;
   const sigue = escena?.modo === 'secuencia' || (luz.sigueVideo && escena?.modo === 'sincro');
   if (sigue && asignacion(escena, fan, ahora).tipo === 'negro') {
