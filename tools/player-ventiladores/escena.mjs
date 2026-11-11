@@ -57,7 +57,10 @@ export function normalizarEscena(raw = {}, fans = 7) {
 }
 
 // Inquilinos: { inquilinos: { "2": [[ms, "once"], [ms, null], …] }, encendidos: [1], nombres: { once: "Eleven" },
-// colores: { ocupado, vacio }, caduca: ms }. Los instantes son Date.now() del PC (el player del show los pasa a su reloj).
+// colores: { ocupado, vacio }, caduca: ms, caidos: { "3": [[ms, "will"]] } }. Los instantes son Date.now() del PC (el
+// player del show los pasa a su reloj). Cacería en la sala (Carlos, 11-nov-2026): `caidos` = cuándo abatieron en la
+// pared a la figura que venía a ese ventilador → el anillo parpadea en ROJO STROBE_MS y luego queda BLANCO con «DOWN».
+export const STROBE_MS = 2000, STROBE_FASE_MS = 250;
 const FIGURA = /^[a-z0-9-]{1,40}$/;
 export const COLORES_INQUILINOS = { ocupado: [255, 0, 0], vacio: [255, 255, 255] };
 export function normalizarInquilinos(raw = {}, fans = 7) {
@@ -69,12 +72,20 @@ export function normalizarInquilinos(raw = {}, fans = 7) {
       .filter(([t]) => Number.isFinite(t) && t >= 0).sort((a, b) => a[0] - b[0]);
     if (pts.length) inquilinos[String(n)] = pts;
   }
+  const caidos = {};
+  for (const [k, v] of Object.entries(raw.caidos || {})) {
+    const n = Number(k);
+    if (!Number.isInteger(n) || n < 1 || n > fans || !Array.isArray(v)) continue;
+    const pts = v.slice(0, 16).map(p => [Number(Array.isArray(p) ? p[0] : NaN), Array.isArray(p) && FIGURA.test(String(p[1] ?? '')) ? String(p[1]) : null])
+      .filter(([t, w]) => Number.isFinite(t) && t >= 0 && w).sort((a, b) => a[0] - b[0]);
+    if (pts.length) caidos[String(n)] = pts;
+  }
   const encendidos = lista(raw.encendidos).map(Number).filter((n, i, a) => n >= 1 && n <= fans && a.indexOf(n) === i);
   const nombres = Object.fromEntries(Object.entries(raw.nombres || {}).filter(([k]) => FIGURA.test(k)).slice(0, 32)
     .map(([k, v]) => [k, String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').slice(0, 40)]));
   const c = raw.colores || {};
   return {
-    inquilinos, encendidos, nombres,
+    inquilinos, caidos, encendidos, nombres,
     colores: { ocupado: c.ocupado ? colorRgb(c.ocupado) : COLORES_INQUILINOS.ocupado, vacio: c.vacio ? colorRgb(c.vacio) : COLORES_INQUILINOS.vacio },
     caduca: Number(raw.caduca) > 0 ? Number(raw.caduca) : 0
   };
@@ -85,6 +96,14 @@ export function inquilinoEn(escena, fan, ahora = Date.now()) {
   let who = null;
   for (const [t, w] of pts) { if (t <= ahora) who = w; else break; }
   return who;
+}
+
+/** Figura abatida camino de `fan` y desde cuándo ({figura, t}), si el ventilador sigue vacío; si no, null. */
+export function caidoEn(escena, fan, ahora = Date.now()) {
+  if (inquilinoEn(escena, fan, ahora)) return null;
+  let out = null;
+  for (const [t, w] of escena?.caidos?.[String(fan)] || []) { if (t <= ahora) out = { figura: w, t }; else break; }
+  return out;
 }
 
 // ¿Cambia el contenido? Lo que llega de la nube trae la escena con el reloj a cero (epoch 0) aunque solo cambie la luz;
@@ -127,7 +146,9 @@ export function asignacion(escena, fan, ahora = Date.now()) {
   if (escena.modo === 'identificar') return { tipo: 'numero', fan };
   if (escena.modo === 'inquilinos') {
     const figura = inquilinoEn(escena, fan, ahora);
-    return figura ? { tipo: 'inquilino', figura, nombre: escena.nombres?.[figura] || figura } : { tipo: 'vacio' };
+    if (figura) return { tipo: 'inquilino', figura, nombre: escena.nombres?.[figura] || figura };
+    const caido = caidoEn(escena, fan, ahora);
+    return caido ? { tipo: 'caido', figura: caido.figura, nombre: escena.nombres?.[caido.figura] || caido.figura } : { tipo: 'vacio' };
   }
   const pos = escena.orden.indexOf(fan);
   if (pos < 0) return { tipo: 'negro' };
@@ -271,6 +292,12 @@ export function luzDe(luz, fan, escena, ahora = Date.now()) {
     // Ocupado (o encendido siempre, como el ventilador 1 del show) = ROJO; vacío = BLANCO. Fijo, brillo máximo.
     const ocupado = (escena.encendidos || []).includes(fan) || !!inquilinoEn(escena, fan, ahora);
     const c = escena.colores || COLORES_INQUILINOS;
+    // Recién abatida la figura que venía: estroboscópico ROJO (fases de STROBE_FASE_MS, el ritmo del bucle de luz).
+    const caido = !ocupado && caidoEn(escena, fan, ahora);
+    if (caido && ahora - caido.t < STROBE_MS) {
+      const on = Math.floor((ahora - caido.t) / STROBE_FASE_MS) % 2 === 0;
+      return { efecto: 'fijo', brillo: on ? 4 : 0, velocidad: 2, colores: [c.ocupado] };
+    }
     return { efecto: 'fijo', brillo: 4, velocidad: 2, colores: [ocupado ? c.ocupado : c.vacio] };
   }
   luz = luz || { efecto: 'fijo', brillo: 4, velocidad: 2, colores: [[255, 255, 255]], ventiladores: {} };
