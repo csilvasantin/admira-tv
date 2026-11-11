@@ -216,3 +216,33 @@ test('inquilinos: ids de figura y ventiladores fuera de rango se descartan', () 
   assert.equal(inquilinoEn(e, 3, 4), null);
   assert.equal(inquilinoEn(e, 3, 5), 'ok-1');
 });
+
+test('cacería en la sala: figura abatida camino del ventilador → estroboscópico ROJO 2 s, luego BLANCO con «DOWN»', async () => {
+  const { caidoEn, STROBE_MS } = await import('./escena.mjs');
+  const e = normalizarEscena({ modo: 'inquilinos', fans: { 3: [[0, 'will'], [1000, null]] }, caidos: { 3: [[1000, 'will']] }, nombres: { will: 'Will' }, encendidos: [1] }, 7);
+  // antes del disparo: ocupado = rojo fijo, sin caído
+  assert.equal(caidoEn(e, 3, 500), null);
+  assert.deepEqual(luzDe(null, 3, e, 500).colores, [[255, 0, 0]]);
+  // disparo a t=1000: fases de 250 ms rojo/apagado durante 2 s
+  const fases = [1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750].map(t => luzDe(null, 3, e, t));
+  assert.deepEqual(fases.map(l => l.brillo), [4, 0, 4, 0, 4, 0, 4, 0]);
+  assert.ok(fases.every(l => l.efecto === 'fijo' && l.colores[0].join() === '255,0,0'));
+  // pasado el estroboscópico: blanco fijo, y la pantalla dice DOWN + nombre
+  const despues = luzDe(null, 3, e, 1000 + STROBE_MS + 10);
+  assert.deepEqual(despues.colores, [[255, 255, 255]]); assert.equal(despues.brillo, 4);
+  assert.deepEqual(asignacion(e, 3, 1000 + STROBE_MS + 10), { tipo: 'caido', figura: 'will', nombre: 'Will' });
+  // otro ventilador sin caídos: igual que antes; el 1 (encendido) sigue rojo
+  assert.deepEqual(asignacion(e, 2, 3000), { tipo: 'vacio' });
+  assert.deepEqual(luzDe(null, 1, e, 1500).colores, [[255, 0, 0]]);
+});
+
+test('cacería en la sala: si llega otro inquilino manda él; caídos inválidos se descartan; sin `caidos` nada cambia', () => {
+  const e = normalizarEscena({ modo: 'inquilinos', fans: { 3: [[0, null], [5000, 'once']] }, caidos: { 3: [[1000, 'will'], [2000, '<x>']], 9: [[0, 'y']], 4: 'no' } }, 7);
+  assert.deepEqual(Object.keys(e.caidos), ['3']); assert.equal(e.caidos['3'].length, 1);
+  assert.equal(asignacion(e, 3, 6000).tipo, 'inquilino');
+  assert.deepEqual(luzDe(null, 3, e, 6000).colores, [[255, 0, 0]]);
+  assert.equal(luzDe(null, 3, e, 6000).brillo, 4);
+  const viejo = normalizarEscena({ modo: 'inquilinos', fans: { 3: [[0, null]] } }, 7);
+  assert.deepEqual(viejo.caidos, {});
+  assert.deepEqual(asignacion(viejo, 3, 1000), { tipo: 'vacio' });
+});
