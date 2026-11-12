@@ -6,6 +6,30 @@ const mosaic = document.createElement('canvas');
 const keys = Array.from(document.querySelectorAll('#galleon-keys canvas'));
 const surfaces = { lcd, mosaic, keys };
 const tracks = { landscape: null, portrait: null };
+const twinOrigins = new Set(['https://admira.store', 'https://www.admira.store']);
+let twinOrigin = '';
+let exporting = false;
+
+window.addEventListener('message', event => {
+  if (event.source !== window.parent || !twinOrigins.has(event.origin)) return;
+  if (event.data?.type === 'admira:galleon:subscribe') twinOrigin = event.origin;
+});
+
+async function publishFrame() {
+  if (!twinOrigin || exporting) return;
+  exporting = true;
+  let landscape, portrait;
+  try {
+    landscape = await createImageBitmap(lcd);
+    portrait = await createImageBitmap(mosaic);
+    window.parent.postMessage({ type: 'admira:galleon:frame', landscape, portrait }, twinOrigin, [landscape, portrait]);
+  } catch {
+    landscape?.close();
+    portrait?.close();
+  } finally {
+    exporting = false;
+  }
+}
 
 function makeTrack(item) {
   if (!item?.url) return null;
@@ -19,6 +43,7 @@ function makeTrack(item) {
     media.loop = true;
     media.preload = 'auto';
   }
+  media.crossOrigin = 'anonymous';
   media.src = url.href;
   return { media, url: url.href, video };
 }
@@ -80,4 +105,5 @@ setInterval(() => {
   });
 }, 100);
 
+setInterval(() => void publishFrame(), 200);
 void refresh();
