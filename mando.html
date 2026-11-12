@@ -221,19 +221,8 @@
     body.tagged-embed{padding:0 10px 12px;min-height:0}
     body.tagged-embed > :is(.topnav,.equipo,.proj-line,[data-mando-pane]), body.tagged-embed #rotationPicker{display:none}
     body.tagged-embed .target-row{grid-template-columns:minmax(0,1fr)}
+    body.galleon-embed > :is(label,.target-row,.target-note,.cinfo){display:none}
     #taggedImport[disabled]{opacity:.65}
-    .tag-preview{margin:8px 0 10px}
-    .tag-preview-status{margin:0;color:var(--muted);font:11px/1.45 var(--mono)}
-    .tag-preview-list{display:grid;gap:5px;margin:5px 0 0;padding:0;list-style:none;max-height:250px;overflow:auto;overscroll-behavior:contain}
-    .tag-preview-item{border:1px solid var(--border);border-radius:9px;padding:6px;background:var(--elev)}
-    .tag-preview-summary{display:grid;grid-template-columns:86px minmax(0,1fr);align-items:center;gap:9px}
-    .tag-preview-summary img{display:block;width:86px;aspect-ratio:16/9;object-fit:contain;background:var(--bg);border-radius:5px}
-    .tag-preview-summary strong{display:block;color:var(--text);font:700 12px/1.35 var(--sans);overflow-wrap:anywhere}
-    .tag-preview-summary small{color:var(--muted);font:10px var(--mono)}
-    .tag-preview-item details{margin-top:6px;color:var(--cyan);font:11px var(--mono)}
-    .tag-preview-item summary{cursor:pointer}
-    .tag-preview-item video,.tag-preview-item audio{display:block;width:100%;margin-top:6px}
-    .tag-preview-item video{max-height:155px;background:#000}
     /* Proyectos (12-nov-2026): filtro del selector y de /players por proyecto */
     .proj-line{font-family:var(--mono);font-size:10px;color:var(--dim);margin:4px 0 0}
     .proj-line a{color:var(--violet);text-decoration:none}.proj-line b{color:var(--amber)}
@@ -253,6 +242,7 @@
     .proj-dev select{max-width:170px;font-size:11px;padding:6px;border-radius:8px;background:var(--elev);color:var(--text);border:1px solid var(--border)}
     .proj-dev .pn{font:10px var(--mono);color:var(--amber)}
   </style>
+  <link rel="stylesheet" href="/assets/admira-stock-monitor.css">
 </head>
 <body>
   <nav class="topnav" aria-label="Navegación AdmiraNeXT">
@@ -324,6 +314,19 @@
   <div class="chips" id="tagChips"></div>
   <div class="tag-preview" id="tagPreview" hidden>
     <p class="tag-preview-status" id="tagPreviewStatus" role="status"></p>
+    <div class="stock-monitor" id="tagMonitor" aria-label="Monitor Sony Broadcast" hidden>
+      <div class="stock-monitor-header"><span class="stock-monitor-brand">SONY</span><span class="stock-monitor-label">BROADCAST MONITOR</span></div>
+      <div class="stock-monitor-glass" id="tagMonitorScreen"></div>
+      <div class="stock-monitor-controls">
+        <span class="stock-monitor-led" aria-hidden="true"></span>
+        <button type="button" id="tagMonitorPlay" aria-label="Reproducir previo">▶ Play</button>
+        <button type="button" id="tagMonitorPause" aria-label="Pausar previo">Ⅱ Pausa</button>
+        <input type="range" id="tagMonitorSeek" aria-label="Posición del previo" min="0" max="0" value="0" step="0.1">
+        <output class="stock-monitor-clock" id="tagMonitorClock">0:00</output>
+        <button type="button" id="tagMonitorSound" aria-label="Activar sonido del previo" aria-pressed="false">♫</button>
+      </div>
+      <div class="stock-monitor-caption"><strong id="tagMonitorTitle"></strong><small id="tagMonitorMeta"></small></div>
+    </div>
     <ul class="tag-preview-list" id="tagPreviewList" aria-label="Vista previa de la importación"></ul>
     <button class="chip" type="button" id="tagPreviewRetry" hidden>Reintentar previo</button>
   </div>
@@ -413,7 +416,13 @@
     var BUTTON_ACTIONS = new WeakMap();
     var PREVIEW_CHECKS = new Map(), previewPaintToken=0;
     var qs = new URLSearchParams(location.search);
-    var taggedEmbed=qs.get('embed')==='tagged';
+    var galleonEmbed=qs.get('embed')==='galleon';
+    var galleonParent=(()=>{ try{
+      var origin=new URL(document.referrer).origin;
+      return ['https://admira.store','https://www.admira.store'].includes(origin)?origin:'';
+    }catch(_){ return ''; } })();
+    var taggedEmbed=qs.get('embed')==='tagged'||galleonEmbed;
+    document.body.classList.toggle('galleon-embed',galleonEmbed);
     document.body.classList.toggle('tagged-embed',taggedEmbed);
 
     // ── Circuitos y pantallas (AGRUPADO POR CIRCUITO) ──
@@ -997,40 +1006,85 @@
       if(action.itemId) return action.itemId;
       try{ return String((await taggedStockItem(action.clean))?.id||''); }catch(_){ return ''; }
     }
-    function closeTaggedMedia(except){
-      taggedPreviewList.querySelectorAll('details[open]').forEach(function(details){
-        if(details===except) return;
-        details.querySelector('video,audio')?.pause();
-        details.open=false;
-      });
+    var tagMonitor=document.getElementById('tagMonitor'), tagMonitorScreen=document.getElementById('tagMonitorScreen');
+    var monitorPlay=document.getElementById('tagMonitorPlay'), monitorPause=document.getElementById('tagMonitorPause');
+    var monitorSeek=document.getElementById('tagMonitorSeek'), monitorClock=document.getElementById('tagMonitorClock');
+    var monitorSound=document.getElementById('tagMonitorSound'), monitorMedia=null, monitorYouTube='', monitorFrame=null;
+    function updateMonitor(){
+      var duration=monitorMedia?.duration, position=monitorMedia?.currentTime||0;
+      var playing=!!monitorFrame||!!(monitorMedia&&!monitorMedia.paused&&!monitorMedia.ended);
+      tagMonitor.toggleAttribute('data-playing',playing);
+      monitorPlay.disabled=playing||!(monitorMedia||monitorYouTube);
+      monitorPause.disabled=!playing;
+      monitorSeek.disabled=!Number.isFinite(duration)||duration<=0;
+      monitorSeek.max=monitorSeek.disabled?0:duration;
+      monitorSeek.value=position;
+      monitorClock.value=Math.floor(position/60)+':'+String(Math.floor(position%60)).padStart(2,'0');
+      monitorSound.disabled=!monitorMedia;
+      var sound=!!monitorMedia&&!monitorMedia.muted;
+      monitorSound.setAttribute('aria-pressed',String(sound));
+      monitorSound.setAttribute('aria-label',sound?'Silenciar previo':'Activar sonido del previo');
     }
-    function taggedPreviewRow(item){
-      var row=document.createElement('li'); row.className='tag-preview-item';
-      var summary=document.createElement('div'); summary.className='tag-preview-summary';
-      var img=document.createElement('img'); img.alt=''; img.loading='lazy';
-      var fallback=previewFallbackData(item);
-      img.src=youtubeFrameCandidates(item,0)[0]||fallback;
-      img.addEventListener('error',function(){ img.src=fallback; },{once:true});
-      var text=document.createElement('div'), title=document.createElement('strong'), meta=document.createElement('small');
-      title.textContent=item.title||item.prompt||'Sin título';
+    function closeTaggedMedia(){
+      monitorMedia?.pause();
+      monitorFrame?.remove(); monitorFrame=null;
+      updateMonitor();
+    }
+    function renderTaggedMonitor(item){
+      closeTaggedMedia();
+      monitorMedia=null; monitorYouTube='';
+      tagMonitorScreen.replaceChildren();
+      var image=document.createElement('img'), fallback=previewFallbackData(item);
+      image.alt=''; image.src=youtubeFrameCandidates(item,0)[0]||fallback;
+      image.addEventListener('error',function(){ image.src=fallback; },{once:true});
+      tagMonitorScreen.append(image);
+      document.getElementById('tagMonitorTitle').textContent=item.title||item.prompt||'Sin título';
       var labels={video:'Vídeo',animation:'Vídeo',image:'Imagen','digital-twin':'Gemelo 3D',audio:'Audio',music:'Música',locucion:'Locución',interactive:'Interactivo'};
-      meta.textContent=(item.num?'#'+item.num+' · ':'')+(labels[item.type]||item.type);
-      text.append(title,meta); summary.append(img,text); row.append(summary);
+      document.getElementById('tagMonitorMeta').textContent=(item.num?'#'+item.num+' · ':'')+(labels[item.type]||item.type);
       var mediaTag=/^(video|animation)$/.test(item.type)?'video':/^(audio|music|locucion)$/.test(item.type)?'audio':'';
-      if(mediaTag&&!youtubeVideoId({url:item.url})){
-        var details=document.createElement('details'), toggle=document.createElement('summary'), player=document.createElement('div');
-        toggle.textContent=mediaTag==='video'?'Ver vídeo':'Escuchar audio';
-        details.append(toggle,player); row.append(details);
-        details.addEventListener('toggle',function(){
-          if(!details.open){ player.querySelector('video,audio')?.pause(); player.replaceChildren(); return; }
-          closeTaggedMedia(details);
-          var media=document.createElement(mediaTag);
-          media.controls=true; media.preload='metadata'; media.playsInline=true; media.src=item.url;
-          if(mediaTag==='video') media.poster=img.src;
-          player.append(media);
+      if(mediaTag==='video') monitorYouTube=youtubeVideoId({url:item.url});
+      if(mediaTag&&!monitorYouTube){
+        monitorMedia=document.createElement(mediaTag);
+        monitorMedia.hidden=mediaTag==='video';
+        monitorMedia.preload='none'; monitorMedia.playsInline=true; monitorMedia.muted=mediaTag==='video';
+        monitorMedia.src=item.url;
+        ['playing','pause','ended','timeupdate','durationchange'].forEach(function(name){ monitorMedia.addEventListener(name,updateMonitor); });
+        monitorMedia.addEventListener('playing',function(event){ if(mediaTag==='video') event.currentTarget.hidden=false; });
+        monitorMedia.addEventListener('error',function(event){
+          if(event.currentTarget!==monitorMedia) return;
+          monitorMedia.hidden=true; monitorMedia=null; updateMonitor(); toast('No se pudo reproducir el previo');
         });
+        tagMonitorScreen.append(monitorMedia);
       }
-      return row;
+      tagMonitor.hidden=false;
+      updateMonitor();
+    }
+    monitorPlay.onclick=function(){
+      if(monitorMedia){ void monitorMedia.play().catch(function(error){ if(error.name!=='AbortError') toast('No se pudo reproducir el previo'); }); return; }
+      if(!monitorYouTube||monitorFrame) return;
+      monitorFrame=document.createElement('iframe');
+      monitorFrame.title='Previo de YouTube'; monitorFrame.allow='autoplay; encrypted-media; picture-in-picture';
+      monitorFrame.src='https://www.youtube-nocookie.com/embed/'+monitorYouTube+'?autoplay=1';
+      tagMonitorScreen.append(monitorFrame); updateMonitor();
+    };
+    monitorPause.onclick=closeTaggedMedia;
+    monitorSeek.oninput=function(){ if(monitorMedia&&!monitorSeek.disabled) monitorMedia.currentTime=Number(monitorSeek.value); };
+    monitorSound.onclick=function(){ if(monitorMedia){ monitorMedia.muted=!monitorMedia.muted; updateMonitor(); } };
+    function renderTaggedResults(items){
+      renderTaggedMonitor(items[0]);
+      taggedPreviewList.hidden=items.length===1;
+      if(items.length===1) return;
+      items.forEach(function(item,index){
+        var row=document.createElement('li'), button=document.createElement('button');
+        button.type='button'; button.textContent=(item.num?'#'+item.num+' · ':'')+(item.title||item.prompt||'Sin título');
+        if(index===0) button.setAttribute('aria-current','true');
+        button.onclick=function(){
+          taggedPreviewList.querySelector('[aria-current]')?.removeAttribute('aria-current');
+          button.setAttribute('aria-current','true');
+          renderTaggedMonitor(item);
+        };
+        row.append(button); taggedPreviewList.append(row);
+      });
     }
     async function loadTaggedPreview(action,version){
       try{
@@ -1046,8 +1100,8 @@
           items.length+' '+(items.length===1?'pieza':'piezas')+' con #'+action.clean):
           (action.kind==='content'?'Pieza no disponible para reproducir':'No hay piezas reproducibles con esa etiqueta');
         if(!items.length) return;
-        taggedPreviewList.append(...items.map(taggedPreviewRow));
-        taggedPreviewReady={query:action.clean,itemId:action.kind==='content'?String(items[0].id):''};
+        renderTaggedResults(items);
+        taggedPreviewReady={query:action.clean,itemId:action.kind==='content'?String(items[0].id):'',items:items};
         taggedApply.disabled=document.getElementById('tagEntry').classList.contains('remote-pending');
       }catch(_){
         if(version!==taggedPreviewVersion) return;
@@ -1059,7 +1113,8 @@
       clearTimeout(taggedPreviewTimer);
       var version=++taggedPreviewVersion, action=taggedCommand(taggedInput.value);
       taggedPreviewReady=null; taggedApply.disabled=true;
-      closeTaggedMedia(); taggedPreviewList.replaceChildren(); taggedPreviewRetry.hidden=true;
+      closeTaggedMedia(); monitorMedia=null; monitorYouTube=''; tagMonitorScreen.replaceChildren();
+      tagMonitor.hidden=true; taggedPreviewList.hidden=true; taggedPreviewList.replaceChildren(); taggedPreviewRetry.hidden=true;
       taggedPreview.hidden=!T||!action.clean;
       if(taggedPreview.hidden) return;
       taggedPreviewStatus.textContent='Buscando en Stock…';
@@ -1154,6 +1209,14 @@
       if(taggedPreviewReady?.query!==action.clean){ toast('Espera a que cargue el previo'); return; }
       action.itemId=taggedPreviewReady.itemId;
       closeTaggedMedia();
+      if(galleonEmbed){
+        if(!galleonParent||window.parent===window) return;
+        var items=taggedPreviewReady.items.filter(function(item){ return /^(video|image|animation)$/.test(item.type); })
+          .slice(0,30).map(function(item){ return {id:String(item.id),num:item.num,title:item.title,type:item.type,url:item.url}; });
+        if(!items.length){ toast('El Galleon admite vídeo e imagen'); return; }
+        window.parent.postMessage({type:'admira:galleon:import',items:items},galleonParent);
+        return;
+      }
       // Un número es el # persistente del Stock: se AÑADE a la playlist y se
       // precarga ASAP. El texto conserva el contrato histórico de filtro por tag.
       var b=button||document.getElementById('tagApply'), entry=document.getElementById('tagEntry'), input=document.getElementById('tagInput');
@@ -1197,7 +1260,9 @@
       var cur=curTag();
       taggedInput.value=cur.charAt(0)==='@'?cur.slice(1):cur;
       scheduleTaggedPreview();
-      var clear=document.createElement('button'); clear.className='chip'; clear.textContent='✕ Limpiar tag'; clear.onclick=function(){ clearTagged(clear); }; box.appendChild(clear);
+      if(!galleonEmbed){
+        var clear=document.createElement('button'); clear.className='chip'; clear.textContent='✕ Limpiar tag'; clear.onclick=function(){ clearTagged(clear); }; box.appendChild(clear);
+      }
       SUGGEST.forEach(function(t){ var c=document.createElement('button'); c.className='chip'+(t===cur?' sel':''); c.textContent='#'+t; c.onclick=function(){
         if(document.getElementById('tagEntry').classList.contains('remote-pending')) return;
         taggedInput.value='#'+t;
@@ -1672,14 +1737,18 @@
       Promise.all([AdmiraProyectos.load(),loadFleetForProjects().catch(function(){})]).then(function(){ addDeclaredDevices(); rebuildTarget(false); renderProyectos(); });
     }
 
-    setTarget(); setMandoView(mandoViewFromHash()); initProyectos();
+    setTarget(); setMandoView(mandoViewFromHash());
+    if(galleonEmbed){
+      taggedInput.value='1995'; scheduleTaggedPreview();
+    }else{
+      initProyectos(); setInterval(pollNow, 5000);
+    }
     if(taggedEmbed&&window.parent!==window){
       new ResizeObserver(function(){
         var height=Math.ceil(document.body.getBoundingClientRect().height);
-        window.parent.postMessage({type:'admira:tagged-size',height:height},location.origin);
+        window.parent.postMessage({type:'admira:tagged-size',height:height},galleonEmbed?galleonParent||location.origin:location.origin);
       }).observe(document.body);
     }
-    setInterval(pollNow, 5000);
     setInterval(function(){ if(!document.hidden) paintPreviewProgress(Date.now()); },500);
   </script>
   <script src="/assets/admira-version-watch.js?v=22.10.2026.r2.1134" defer></script>
