@@ -10,10 +10,34 @@ const twinOrigins = new Set(['https://admira.store', 'https://www.admira.store']
 let twinOrigin = '';
 let exporting = false;
 let playing = false;
+let twinSelection = null;
+
+function stockTrack(item) {
+  if (!item || !['image', 'video', 'animation'].includes(item.type)) return null;
+  try {
+    const url = new URL(item.url);
+    if (url.origin === 'https://api.admira.store' && url.pathname.startsWith('/stock/asset/')) return item;
+    if (url.origin === 'https://stock.admira.store' && url.pathname.startsWith('/stock/')) return item;
+  } catch {}
+  return null;
+}
 
 window.addEventListener('message', event => {
   if (event.source !== window.parent || !twinOrigins.has(event.origin)) return;
   if (event.data?.type === 'admira:galleon:subscribe') twinOrigin = event.origin;
+  if (event.data?.type !== 'admira:galleon:select' || event.origin !== twinOrigin) return;
+  const horizontal = stockTrack(event.data.landscape);
+  const vertical = stockTrack(event.data.portrait);
+  if (!horizontal || !vertical || !Number.isSafeInteger(event.data.sequence) || event.data.sequence === twinSelection) return;
+  twinSelection = event.data.sequence;
+  setTrack('landscape', horizontal);
+  setTrack('portrait', vertical);
+  for (const [orientation, track] of Object.entries(tracks)) {
+    if (!track?.video) continue;
+    track.media.loop = orientation !== 'landscape';
+    track.media.currentTime = 0;
+    void track.media.play().catch(() => {});
+  }
 });
 
 async function publishFrame() {
@@ -22,9 +46,10 @@ async function publishFrame() {
   let landscape, portrait;
   try {
     const framePlaying = playing;
+    const ready = { landscape: Boolean(paintable(tracks.landscape)), portrait: Boolean(paintable(tracks.portrait)) };
     landscape = await createImageBitmap(lcd);
     portrait = await createImageBitmap(mosaic);
-    window.parent.postMessage({ type: 'admira:galleon:frame', landscape, portrait, playing: framePlaying }, twinOrigin, [landscape, portrait]);
+    window.parent.postMessage({ type: 'admira:galleon:frame', landscape, portrait, playing: framePlaying, ready }, twinOrigin, [landscape, portrait]);
   } catch {
     landscape?.close();
     portrait?.close();
@@ -37,7 +62,7 @@ function makeTrack(item) {
   if (!item?.url) return null;
   const url = new URL(item.url);
   if (url.protocol !== 'https:') return null;
-  const video = item.type === 'video';
+  const video = item.type === 'video' || item.type === 'animation';
   const media = document.createElement(video ? 'video' : 'img');
   if (video) {
     media.muted = true;
@@ -58,7 +83,13 @@ function setTrack(orientation, item) {
     current.media.removeAttribute('src');
     current.media.load();
   }
-  tracks[orientation] = makeTrack(item);
+  const track = makeTrack(item);
+  tracks[orientation] = track;
+  if (orientation === 'landscape' && track?.video) track.media.onended = () => {
+    if (tracks.landscape === track && twinSelection !== null) {
+      window.parent.postMessage({ type: 'admira:galleon:ended', sequence: twinSelection }, twinOrigin);
+    }
+  };
 }
 
 function syncTrack(track, elapsed) {
@@ -86,6 +117,7 @@ async function refresh() {
     if (!response.ok) return;
     const plan = await response.json();
     if (!plan.ok) return;
+    if (twinSelection !== null) return;
     const enabled = plan.power !== 'off';
     setTrack('landscape', enabled ? plan.variants?.landscape || plan.item : null);
     setTrack('portrait', enabled ? plan.variants?.portrait : null);

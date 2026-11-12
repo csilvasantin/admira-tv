@@ -99,7 +99,7 @@ function wireExpertNavigation(){
     if(event.origin!==location.origin||event.source!==frame.contentWindow) return;
     if(event.data?.type==='admira:tagged-size'){
       const height=event.data.height;
-      if(Number.isInteger(height)&&height>0&&height<=700) frame.style.height=height+'px';
+      if(Number.isInteger(height)&&height>0&&height<=1200) frame.style.height=height+'px';
       return;
     }
     if(event.data?.type!=='admira:tagged-target') return;
