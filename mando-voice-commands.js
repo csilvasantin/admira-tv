@@ -21,15 +21,16 @@
     ultimo: 'last',
     ultima: 'last',
     final: 'last',
-    pausa: 'toggle-pause',
-    para: 'toggle-pause',
-    pausar: 'toggle-pause',
-    stop: 'toggle-pause',
+    pausa: 'pause',
+    para: 'pause',
+    pausar: 'pause',
+    stop: 'pause',
     sigue: 'play',
     continua: 'play',
     reanuda: 'play',
     play: 'play',
-    reproduce: 'play'
+    reproduce: 'play',
+    reproducir: 'play'
   };
   var FILLER = /^(el|la|lo|los|las|un|una|al|del|de|por|favor|cancion|canciones|contenido|video|tema|pista|ahora|oye|pon|ponme|vamos|anda)$/;
   var KEYS = Object.keys(COMMANDS).sort(function (a, b) { return b.length - a.length; });

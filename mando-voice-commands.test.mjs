@@ -55,15 +55,16 @@ test("hola Admira + comando en la misma frase", () => {
     ["hola Admira último", "last"],
     ["hola Admira ultima", "last"],
     ["hola Admira final", "last"],
-    ["hola Admira, pausa", "toggle-pause"],
-    ["hola admira para", "toggle-pause"],
-    ["hola Admira pausar", "toggle-pause"],
-    ["hola Admira stop", "toggle-pause"],
+    ["hola Admira, pausa", "pause"],
+    ["hola admira para", "pause"],
+    ["hola Admira pausar", "pause"],
+    ["hola Admira stop", "pause"],
     ["hola Admira sigue", "play"],
     ["hola Admira, continúa", "play"],
     ["hola Admira reanuda", "play"],
     ["hola Admira play", "play"],
-    ["hola Admira reproduce", "play"]
+    ["hola Admira reproduce", "play"],
+    ["hola Admira, reproducir", "play"]
   ];
   for (const [phrase, cmd] of cases) {
     const result = parseVoiceUtterance(phrase);
@@ -84,7 +85,7 @@ test("solo «hola Admira» abre una ventana de 5 segundos para un comando suelto
   const open = now + ARM_MS;
   assert.equal(parseVoiceCommand("siguiente", { now, armedUntil: open }), "next");
   assert.equal(parseVoiceUtterance("pausa", { now, armedUntil: open }).type, "command");
-  assert.equal(parseVoiceCommand("pausa", { now, armedUntil: open }), "toggle-pause");
+  assert.equal(parseVoiceCommand("pausa", { now, armedUntil: open }), "pause");
   assert.equal(parseVoiceCommand("desde el principio", { now, armedUntil: open }), "first");
 
   assert.equal(parseVoiceCommand("siguiente", { now: open, armedUntil: open }), null, "al cerrarse ya no vale un comando suelto");
@@ -121,5 +122,6 @@ test("mando.html exige «hola Admira», muestra ignorada y esconde el micrófono
   assert.doesNotMatch(mando, /El control por voz necesita Chrome o Edge/);
   assert.doesNotMatch(mando, /sendRemote\(['"]audioon['"]/)
   assert.doesNotMatch(mando, /sendRemote\(['"]unmute['"]/)
-  assert.match(mando, /toggle-pause/);
+  assert.match(mando, /first\/prev\/pause\/play\/next\/last/);
+  assert.doesNotMatch(mando, /toggle-pause/);
 });
