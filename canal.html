@@ -4902,6 +4902,8 @@ if(PREVIEW.on){
   try{ window.addEventListener('online', ()=>{ try{ loadFeed(true); }catch(_){} }); }catch(_){}
   // Si la pantalla quedó en STANDBY antes de reiniciar, arranca apagada hasta recibir 'resume'
   // (un corte de luz en un kiosko no debe reencender la pantalla que el operador apagó).
+  // ?standby=1|0 (lanzador del Mac Mini, 12-nov-2026): en «sencillo» las laterales arrancan apagadas; el mando las enciende.
+  try{ const q=qs.get('standby'); if(q==='1'||q==='0') save('adtv_standby',q); }catch(_){}
   try{ if(LS('adtv_standby','0')==='1') standbyOn(true); }catch(_){}
   wireCam(); loadGrid(); setInterval(loadGrid, 60000);
   loadDefaultDraft(); setInterval(loadDefaultDraft, 30000);

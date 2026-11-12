@@ -1,11 +1,13 @@
 #!/bin/bash
 # Admira.tv player en el Mac Mini (3 monitores: 1 vertical izq. · 2 central horizontal · 3 vertical dcha.).
 # Uso:  ./macmini-player.command [sencillo|secuencia|extendido|cerrar] [--force]
-#   sencillo   → un player (macmini-2) en la pantalla central.
-#   secuencia  → un player por pantalla: macmini-1, macmini-2, macmini-3 (cada uno autónomo o sincronizado
-#                según https://admira.tv/players).
-#   extendido  → los mismos tres players; el mural V·H·V se activa en https://admira.tv/players
-#                (Extendido · tiras V·H·V) y cada pantalla pinta su tira (la central estirada).
+# Siempre abre LOS TRES players (macmini-1 izq. · macmini-2 central · macmini-3 dcha.); el formato se cambia
+# después desde el panel sin relanzar:
+#   sencillo   → macmini-1 y macmini-3 arrancan apagadas (standby, negro); sólo emite la central.
+#   secuencia  → las tres encendidas, cada una con su player (autónomo o sincronizado en https://admira.tv/players).
+#   extendido  → las tres encendidas; el mural se activa en https://admira.tv/players → Extendido →
+#                «Tiras V·H·V (Mac Mini)» y cada pantalla pinta su tira (la central estirada).
+#   Encender/apagar laterales sin relanzar: https://admira.tv/mando.html?screen=macmini-1 (⏻) y ...=macmini-3.
 #   cerrar     → cierra las ventanas del player abiertas por este lanzador.
 # Normas: Firefox, perfiles propios (no toca las ventanas de Carlos), y NO se aplica si hay actividad de
 # teclado/ratón en los últimos 60 s (salvo --force). No toca el Mac Mini Grande: sólo corre donde se lanza.
@@ -32,16 +34,16 @@ out.sort((a,b)=>a.x-b.x); JSON.stringify(out);
 JXA
 }
 
-open_player() { # $1=screen id  $2=x $3=y $4=w $5=h
-  local id="$1" prof="$PROFILES/$1"; mkdir -p "$prof"
+open_player() { # $1=screen id  $2=standby(0|1)  $3=x $4=y $5=w $6=h
+  local id="$1" sb="$2" prof="$PROFILES/$1"; shift 2; mkdir -p "$prof"
   printf 'user_pref("browser.shell.checkDefaultBrowser", false);\nuser_pref("browser.sessionstore.resume_from_crash", false);\nuser_pref("media.autoplay.default", 0);\nuser_pref("browser.startup.homepage_override.mstone", "ignore");\nuser_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);\n' > "$prof/user.js"
-  "$FIREFOX" --no-remote --new-instance -profile "$prof" "$BASE?screen=$id&clean=1&fit=screen" >/dev/null 2>&1 &
+  "$FIREFOX" --no-remote --new-instance -profile "$prof" "$BASE?screen=$id&clean=1&fit=screen&standby=$sb" >/dev/null 2>&1 &
   local pid=$!; echo "$pid" > "$PIDS/$id.pid"
   # Espera a la ventana y la coloca en su monitor sin teclas (no roba el teclado).
   for _ in $(seq 1 40); do
-    if osascript -e "tell application \"System Events\" to tell (first process whose unix id is $pid) to set {position, size} of window 1 to {{$2, $3}, {$4, $5}}" >/dev/null 2>&1; then
+    if osascript -e "tell application \"System Events\" to tell (first process whose unix id is $pid) to set {position, size} of window 1 to {{$1, $2}, {$3, $4}}" >/dev/null 2>&1; then
       osascript -e "tell application \"System Events\" to tell (first process whose unix id is $pid) to set value of attribute \"AXFullScreen\" of window 1 to true" >/dev/null 2>&1 || true
-      echo "  ✓ $id → ${4}×${5} en ($2,$3)"; return 0; fi
+      echo "  ✓ $id → ${3}×${4} en ($1,$2) · standby=$sb"; return 0; fi
     sleep 0.5
   done; echo "  ✖ $id: la ventana no apareció (¿permiso de Accesibilidad para Terminal?)"
 }
@@ -53,10 +55,11 @@ echo "· $N monitores: $F"
 get() { python3 -c 'import json,sys;f=json.loads(sys.argv[1])[int(sys.argv[2])];print(int(f["x"]),int(f["y"]),int(f["w"]),int(f["h"]))' "$F" "$1"; }
 center=$(( N>=3 ? 1 : 0 ))
 case "$MODE" in
-  sencillo) open_player macmini-2 $(get $center) ;;
-  secuencia|extendido)
-    [ "$N" -ge 3 ] || { echo "✖ hacen falta 3 monitores"; exit 1; }
-    open_player macmini-1 $(get 0); open_player macmini-2 $(get 1); open_player macmini-3 $(get 2)
-    [ "$MODE" = "extendido" ] && echo "· Mural: https://admira.tv/players → Extendido → macmini-1, macmini-2, macmini-3 → «Tiras V·H·V (Mac Mini)»." ;;
+  sencillo|secuencia|extendido) ;;
   *) echo "Modo desconocido: $MODE"; exit 2 ;;
 esac
+if [ "$N" -lt 3 ]; then open_player macmini-2 0 $(get 0); exit 0; fi
+SB=$([ "$MODE" = "sencillo" ] && echo 1 || echo 0)
+open_player macmini-2 0 $(get 1); open_player macmini-1 "$SB" $(get 0); open_player macmini-3 "$SB" $(get 2)
+[ "$MODE" = "extendido" ] && echo "· Mural: https://admira.tv/players → Extendido → macmini-1, macmini-2, macmini-3 → «Tiras V·H·V (Mac Mini)»."
+exit 0
