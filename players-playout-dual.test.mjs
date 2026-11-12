@@ -36,5 +36,5 @@ test('players ofrece Dual H·V y los atajos del Mac Mini',()=>{
   assert.match(players,/data-mode="dual"/);
   for(const k of ['sencillo','secuencia','extendido','dual']) assert.match(players,new RegExp('data-mm="'+k+'"'));
   assert.match(players,/function dualFamilies\(items\)/);
-  assert.match(players,/'macmini-1':'off','macmini-2':'on','macmini-3':'off'/);
+  assert.match(players,/\{\[R\[0\]\]:'off',\[R\[1\]\]:'on',\[R\[2\]\]:'off'\}/);
 });

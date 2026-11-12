@@ -13,7 +13,7 @@ test('cuenta atrás por pantalla con acuse playout-sync',()=>{
   assert.match(players,/cmd:'playout-sync'/);
   assert.match(players,/'⏳ '/);
   assert.match(players,/aplicado en /);
-  assert.match(players,/confirmApplied\(MM\.concat\(before\)/);
+  assert.match(players,/confirmApplied\(body\.screens\.concat\(R,before\)/);
   assert.match(players,/confirmApplied\(state\.selected\.concat\(before\)/);
 });
 test('el player relee la asignación al recibir playout-sync',()=>{
