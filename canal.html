@@ -275,6 +275,10 @@
     border:1px solid rgba(125,255,208,.5); border-radius:999px; color:#7dffd0;
     background:rgba(57,211,83,.09); font-size:13px; font-weight:800; letter-spacing:.06em; }
   #localInfo .li-grid{ display:grid; grid-template-columns:max-content minmax(0,1fr); gap:6px 13px; }
+  /* Estado de la playlist: un segmento por pieza · verde en disco · amarillo bajando · rojo pendiente · gris en línea. */
+  .pl-bar{ display:flex; gap:1px; height:8px; margin-top:10px; border-radius:3px; overflow:hidden; }
+  .pl-bar i{ flex:1; min-width:1px; background:#e04a4a; }
+  .pl-bar i.g{ background:#2fd27a; } .pl-bar i.y{ background:#ffd23f; } .pl-bar i.o{ background:#6b7785; } .pl-bar i.cur{ outline:1px solid #fff; outline-offset:-1px; }
   #localInfo .li-k{ color:#7994a6; text-transform:uppercase; letter-spacing:.08em; }
   #localInfo .li-v{ color:#cfeaff; min-width:0; overflow-wrap:anywhere; }
   #localInfo .li-v.ok{ color:#78ff9d; text-shadow:0 0 7px rgba(67,255,133,.45); }
@@ -399,6 +403,7 @@
     <div class="li-title" id="li-title">sin contenido</div>
     <div class="li-primary-tag" id="li-primary-tag" hidden></div>
     <div class="li-grid" id="li-grid"></div>
+    <div class="pl-bar" id="li-plbar" aria-label="Estado de descarga de la playlist"></div>
     <div class="li-tags" id="li-tags"></div>
     <div class="li-audio muted" id="li-audio" role="img" aria-label="Audio silenciado"><span class="li-audio-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="li-audio-label" id="li-audio-label">MUTE</span></div>
   </aside>
@@ -1805,7 +1810,7 @@ window.addEventListener('offline',()=>refreshDeviceTelemetry(true));
 // Sin keepalive (r7): en WebKit de iOS 17 la cuota de 64 KiB de cuerpos keepalive no se libera
 // y, tras unos POST, todos los siguientes se rechazan en silencio → el iPad latía UNA vez por
 // carga y perdía proof-of-play. Estos envíos ocurren con la página viva: fetch normal.
-function _postNow(item){ if(XTORE_PARENT&&xtoreMusicEnabled())return; try{ if(item){item.audio=playerAudioState();if(item.sinc&&item.sinc.on&&typeof precisionSyncStatus==='function')item.sinc.precision=precisionSyncStatus();} DEVICE_TELEMETRY.audio=playerAudioState();
+function _postNow(item){ if(XTORE_PARENT&&xtoreMusicEnabled())return; try{ if(item){item.audio=playerAudioState();try{item.playlist=playlistInfo();}catch(_){}if(item.sinc&&item.sinc.on&&typeof precisionSyncStatus==='function')item.sinc.precision=precisionSyncStatus();} DEVICE_TELEMETRY.audio=playerAudioState();
   // Lo pintado se MIDE justo antes de serializar: refreshDeviceTelemetry sustituye DEVICE_TELEMETRY tras
   // esperar a storage.estimate y podía publicar la medida de antes de un giro (Creador de incidencias).
   try{ if(DEVICE_TELEMETRY.display) Object.assign(DEVICE_TELEMETRY.display,measuredPaint()); }catch(_){}
@@ -2257,6 +2262,7 @@ async function loadDefaultDraft(){
     // Piezas dirigidas a esta pantalla por hashtag (su nombre único o el de su centro): se añaden a lo que tenga.
     if(d&&Array.isArray(d.auto)&&d.auto.length){const ya=new Set(raw.map(it=>String(it.stockId||it.id||'')));raw=raw.concat(d.auto.filter(it=>!ya.has(String(it.stockId||it.id||''))));}
     DEFAULT_DRAFT.managedEmpty=d?.draft?.managedEmpty===true;
+    DEFAULT_DRAFT.name=String(d?.draft?.name||d?.draft?.playlist?.name||'').slice(0,80);
     DEFAULT_DRAFT.music=d?.draft?.managed===true&&d?.draft?.channelKind==='music';
     if(DEFAULT_DRAFT.managedEmpty)raw=[];
     const firstValidRead=!DEFAULT_DRAFT.ready;
@@ -2445,6 +2451,17 @@ function finishForcedTagPlayback(){
   if(!_standby&&playlist.length) play((forcedIndex>=0?forcedIndex:cur)+1);
   Promise.resolve().then(()=>pollMode()).catch(()=>{});
   return true;
+}
+// PLAYLIST EN ANTENA (Carlos, 12-nov-2026): nombre, total REAL y cuántas piezas hay en disco.
+// El «1 de 50» salía de cfg.max (adtv_max, 50 por defecto): el loop recorta el pool a 50 piezas.
+let _plPool=0, _plSource='';
+function playlistSegments(){ return playlist.slice(0,400).map(it=>!it?'r':(_ready.has(it.id)||it._fromCache)?'g':_dl.has(it.id)?'y':cacheable(it)?'r':'o'); }
+function playlistInfo(){
+  const segs=playlistSegments();
+  const name=_extendedAssignment?(_extendedAssignment.dual?'Dual H·V':'Mural extendido'):PREVIEW.on?'Previo de borrador':syncOn?('Sincro'+(SYNC_GROUP_MASTER?' · '+SYNC_GROUP_MASTER:'')):(_plSource||'Stock');
+  return { name, total:Math.max(playlist.length,_plPool||0), loop:playlist.length, cap:cfg.max, feedCap:all.length>=300,
+    ready:segs.filter(c=>c==='g').length, downloading:segs.filter(c=>c==='y').length, online:segs.filter(c=>c==='o').length,
+    index:cur, segs:segs.join('') };
 }
 async function cacheOpen(){ if(_cache!==null) return _cache; try{ _cache=await caches.open(CACHE_NAME); }catch(_){ _cache=false; } return _cache; }
 // Un interactivo NO se precachea: no es un asset, es una página que se abre. Bajarla
@@ -3111,6 +3128,7 @@ function defaultOrder(arr){
   });
 }
 function rebuild(restart){
+  _plPool=0; _plSource='';
   if(String(programScreen()||programCircuit()||'').trim()&&!PREVIEW.on&&!DEFAULT_DRAFT.ready){
     stage.innerHTML='<div class="empty">Consultando la playlist de esta pantalla…</div>';nowEl.textContent='Playlist pendiente de consulta';return;
   }
@@ -3165,7 +3183,7 @@ function rebuild(restart){
   }
   if(DEFAULT_DRAFT.items.length&&!syncOn&&!gridInjected.length&&(!XTORE_PARENT||_condPlaylist)){
     const previous=playlist[cur]&&String(playlist[cur].id||'');
-    playlist=DEFAULT_DRAFT.items.slice();cur=previous?playlist.findIndex(it=>String(it.id||'')===previous):-1;
+    playlist=DEFAULT_DRAFT.items.slice();_plSource=DEFAULT_DRAFT.name||'Por defecto';_plPool=playlist.length;cur=previous?playlist.findIndex(it=>String(it.id||'')===previous):-1;
     $('segCount').textContent=playlist.length+' en Por defecto';
     setLive('POR DEFECTO · '+playlist.length+' en loop',true);renderChan();renderRail();
     try{signagePlaylistPush()}catch(_){}try{schedulePrecache()}catch(_){}
@@ -3208,7 +3226,9 @@ function rebuild(restart){
       else { _cortafuegos = -1; }
     }
   }
-  playlist=syncOn ? syncMasterOrder() : base.filter(matches).slice(0,Math.max(1,cfg.max));
+  { const pool=syncOn?null:base.filter(matches); _plPool=pool?pool.length:0;
+    _plSource=seg.tag?('#'+seg.tag):_porDefecto==='tag'?'Stock · #default':_porDefecto==='motor'?'Stock · emitibles':'Stock completo';
+    playlist=syncOn ? syncMasterOrder() : pool.slice(0,Math.max(1,cfg.max)); }
   // r63 · RED DE SEGURIDAD del condicional: si la regla de la matriz apunta a assets que
   // no existen (aún) en el pool, la pantalla NO se queda en negro: cae al carrusel completo
   // del feed (segmento sin ids) y lo dice en el rótulo. La regla vuelve a mandar en cuanto
@@ -3216,7 +3236,7 @@ function rebuild(restart){
   _condFallback=false;
   if(!syncOn && (playoutMode==='conditional'||URL_IDS.length) && seg.ids && seg.ids.length && !playlist.length){
     const sinIds=Object.assign({},seg,{ids:null});
-    playlist=base.filter(it=>matchesSeg(it,sinIds)).slice(0,Math.max(1,cfg.max)); _condFallback=true;
+    { const pool=base.filter(it=>matchesSeg(it,sinIds)); _plPool=pool.length; _plSource='Condicional · carrusel'; playlist=pool.slice(0,Math.max(1,cfg.max)); } _condFallback=true;
     try{ resolveMatrixAssets(seg.ids); }catch(_){}
   }
   if(syncOn){
@@ -3315,6 +3335,7 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   // número PERSISTENTE de cada asset (lo asigna el worker y va en el meta/stock). Para /play<N>.
   all.forEach(it=>{ it._num=it.num; });
   try{ mergeMatrixExtras(); }catch(_){}   // r63: los assets de la matriz fuera del feed siguen en el pool
+  try{ if(taggedContentNums.length) ensureTaggedExtras().catch(()=>{}); }catch(_){}   // #ID etiquetados antiguos tras recargar
   try{ if(URL_IDS.length) resolveMatrixAssets(URL_IDS); }catch(_){}   // ?ids= fuera de las 300 recientes
   saveCatalog();   // persiste el último catálogo bueno para arranque offline
   guardState().source='live';
@@ -3395,7 +3416,10 @@ async function queueTaggedContent(num){
   // El tag/num puede haberse puesto hace segundos en Pixeria: no esperamos al
   // refresco periódico. Primero traemos el Stock vivo y sólo entonces resolvemos #ID.
   await loadFeed(false);
-  const it=all.find(x=>String(x&&x._num!=null?x._num:(x&&x.num))===wanted);
+  let it=all.find(x=>String(x&&x._num!=null?x._num:(x&&x.num))===wanted);
+  // #ID fuera de las 300 recientes del feed (12-nov-2026: #667 en el Mac Mini): se resuelve contra el índice
+  // completo del Stock y entra en el pool como extra persistente (mergeMatrixExtras lo re-inyecta en cada refresco).
+  if(!it){ const ext=await stockItemByNum(Number(wanted)); if(ext){ _matrixExtra.set(String(ext.id),ext); mergeMatrixExtras(); it=all.find(x=>String(x&&x.id)===String(ext.id))||ext; } }
   if(!it){ releaseForcedTagPlayback(forcedState); flashCli('✗ contenido #'+wanted+' no encontrado'); return 'ignored'; }
   if(!ownsForcedTagPlayback(forcedState)) return 'ignored';
   forcedState.id=String(it.id||'');
@@ -3435,6 +3459,13 @@ async function gotoPlaylistIndex(n){
 // Índice COMPLETO del Stock (stock.admira.store/stock/index.json, ~930 piezas) sólo cuando un
 // /play<N> apunta fuera del feed de 300; cacheado 10 min. Mismo índice que usa el gemelo.
 let _stockFull=null,_stockFullAt=0;
+async function ensureTaggedExtras(){
+  const have=new Set(all.map(it=>String(it&&it._num!=null?it._num:(it&&it.num))));
+  let added=false;
+  for(const n of taggedContentNums){ if(have.has(String(n))) continue; const it=await stockItemByNum(Number(n)); if(it&&!_matrixExtra.has(String(it.id))){ _matrixExtra.set(String(it.id),it); added=true; } }
+  if(added&&mergeMatrixExtras()){ seenSig=''; rebuild(false); }
+  return added;
+}
 async function stockFullIndex(){
   if(!_stockFull||Date.now()-_stockFullAt>600000){
     const r=await fetch('https://stock.admira.store/stock/index.json?t='+Date.now(),{cache:'no-store'});
@@ -4019,13 +4050,17 @@ function localInfoRender(){
     a.className='li-k'; a.textContent=k; b.className='li-v'+(cls?(' '+cls):''); b.textContent=v||'—';
     grid.appendChild(a); grid.appendChild(b); };
   const samePos=it&&playlist.length&&playlist[cur]&&String(playlist[cur].id)===String(it.id);
-  const disk=localInfoDisk(it), pos=samePos?(cur+1)+' de '+playlist.length:'— de —';
+  const pli=playlistInfo();
+  const disk=localInfoDisk(it), pos=samePos?(cur+1)+' de '+pli.total+(pli.total>pli.loop?' · loop de '+pli.loop:''):'— de '+pli.total;
   $('li-position').textContent=pos;
   const dur=(mediaEl&&isFinite(mediaEl.duration)&&mediaEl.duration>0)?mediaEl.duration:(it&&it._dur)||0;
   const elapsed=(mediaEl&&isFinite(mediaEl.currentTime))?mediaEl.currentTime:0;
   const dim=it&&it._dim, vw=mediaEl&&mediaEl.videoWidth, vh=mediaEl&&mediaEl.videoHeight;
   const resolution=(vw&&vh)?vw+' × '+vh:(dim&&dim.w&&dim.h?dim.w+' × '+dim.h:'—');
   window.AdmiraParkPlayerInfo?.render(parkPlayerIdentities(), row);
+  row('playlist',pli.name+' · '+pli.total+(pli.feedCap?'+':'')+' contenidos'+(pli.total>pli.loop?' (loop de '+pli.loop+', tope '+pli.cap+')':''));
+  row('descargados',pli.ready+' de '+pli.loop+(pli.downloading?' · '+pli.downloading+' bajando':'')+(pli.online?' · '+pli.online+' en línea':''),pli.ready>=pli.loop-pli.online?'ok':'warn');
+  try{ const bar=$('li-plbar'); if(bar) bar.innerHTML=[...pli.segs].map((c,i)=>'<i class="'+c+(i===cur?' cur':'')+'"></i>').join(''); }catch(_){}
   row('estado local',disk.text,disk.cls);
   row('tipo',it?(it.type||KIND[it.type]||'—'):'—');
   row('posición',pos);
