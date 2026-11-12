@@ -3138,7 +3138,9 @@ function defaultOrder(arr){
 }
 function rebuild(restart){
   _plPool=0; _plSource='';
-  if(String(programScreen()||programCircuit()||'').trim()&&!PREVIEW.on&&!DEFAULT_DRAFT.ready){
+  // Mural extendido / Custom · Dual H·V: la asignación del panel no depende de la playlist propia
+  // (12-nov-2026: las verticales del Mac Mini se quedaban en «Consultando la playlist…» con el dual ya enviado).
+  if(String(programScreen()||programCircuit()||'').trim()&&!PREVIEW.on&&!DEFAULT_DRAFT.ready&&!(_extendedAssignment&&_extendedAssignment.item)){
     stage.innerHTML='<div class="empty">Consultando la playlist de esta pantalla…</div>';nowEl.textContent='Playlist pendiente de consulta';return;
   }
   if(DEFAULT_DRAFT.managedEmpty){
@@ -5006,7 +5008,7 @@ function applyPlayoutAssignment(d){
   const rev=Number(d.revision)||0, mode=String(d.mode||'autonomous');
   // Encendido ordenado por el panel (p.ej. Mac Mini «sencillo»: laterales apagadas): una vez por revisión.
   if(d.power&&rev!==_playoutPowerRev){ _playoutPowerRev=rev;
-    try{ if(d.power==='off'&&!_standby) standbyOn(true); else if(d.power==='on'&&_standby) standbyOn(false); }catch(_){} }
+    try{ if(d.power==='off'&&!_standby) standbyOn(true); else if(d.power==='on'&&_standby) standbyOn(false); else if(d.power==='on'&&paused) setPaused(false); }catch(_){} }   // «on» del panel = emitir: también quita una pausa heredada
   if(d.dual&&d.variants) d=dualAssignment(d);
   if(mode==='extended'&&d.item&&d.tile){
     const signature=rev+'|'+d.item.id+'|'+d.tile.index;
