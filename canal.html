@@ -668,8 +668,11 @@ function extendedItem(){
   const raw=_extendedAssignment.item;
   return Object.assign({},raw,{_num:raw.num,motor:'mural extendido',category:'extendido'});
 }
+// En DUAL H·V la tesela es la pantalla entera; si falta la versión de su orientación, la otra se
+// pinta con el marco editorial de siempre (blur-fill) en vez de estirarla.
+function _extendedFills(){ return !!(_extendedAssignment&&!(_extendedAssignment.tile&&_extendedAssignment.tile.fit==='editorial')); }
 function paintExtendedTile(){
-  const tile=_extendedAssignment&&_extendedAssignment.tile;
+  const tile=_extendedFills()&&_extendedAssignment.tile;
   stage.classList.toggle('extended-tile',!!tile);
   if(!tile) return;
   stage.style.setProperty('--wall-cols',String(tile.cols||1)); stage.style.setProperty('--wall-rows',String(tile.rows||1));
@@ -2797,7 +2800,7 @@ async function play(i, forced){
   if(_warmWaiting){ _warmWaiting=false; dlLine(null); }   // fin del switch en caliente
   _coldWaiting=false;   // llegamos aquí = hay algo que emitir
   const k=KIND[it.type]||'image';
-  mupiAR=_extendedAssignment?(window.innerWidth/Math.max(1,window.innerHeight)):itemAR(it); fitMupi();   // el mural llena la tesela; el resto conserva el AR editorial
+  mupiAR=_extendedFills()?(window.innerWidth/Math.max(1,window.innerHeight)):itemAR(it); fitMupi();   // el mural llena la tesela; el resto conserva el AR editorial
   emitFrameState(it);
   const title=(it.title||it.prompt||'sin título').replace(/\n/g,' ').slice(0,64);
   nowEl.textContent='▶ '+title;
@@ -2853,7 +2856,7 @@ async function play(i, forced){
         if(syncOn){ _nowItem.startedAt=Date.now()-Math.round(syncElapsedMs()); _nowItem.sinc.idx=syncIndex(); _nowItem.sinc.slot=Math.round(syncSlotMs()/1000); }
         _nowItem.ts=Date.now(); _postNow(_nowItem);
       }
-      if(v.videoWidth&&v.videoHeight){ it._dim={w:v.videoWidth,h:v.videoHeight}; mupiAR=_extendedAssignment?(window.innerWidth/Math.max(1,window.innerHeight)):(v.videoWidth/v.videoHeight); fitMupi(); emitFrameState(it,xtoreMusicEnabled()?(v._xtoreAutoplayBlocked?'audio-blocked':v._xtorePlaybackStarted?'playing':'selected'):'selected'); }
+      if(v.videoWidth&&v.videoHeight){ it._dim={w:v.videoWidth,h:v.videoHeight}; mupiAR=_extendedFills()?(window.innerWidth/Math.max(1,window.innerHeight)):(v.videoWidth/v.videoHeight); fitMupi(); emitFrameState(it,xtoreMusicEnabled()?(v._xtoreAutoplayBlocked?'audio-blocked':v._xtorePlaybackStarted?'playing':'selected'):'selected'); }
       if(_extendedAssignment&&v.duration>1){ try{ v.currentTime=Math.min(v.duration-0.02,(extendedSyncNow()/1000)%v.duration); }catch(_){} }
       else if(syncOn&&v.duration>1){
         const target=syncIndex();
@@ -2928,7 +2931,7 @@ async function play(i, forced){
     im.alt=title; if(it.type==='twin-npc') im.className='pixel';
     im.onload=()=>{ if(_tok!==_playTok||!im.isConnected||!im.naturalWidth||!im.naturalHeight) return;
       it._dim={w:im.naturalWidth,h:im.naturalHeight}; mupiAR=im.naturalWidth/im.naturalHeight; fitMupi();
-      if(_extendedAssignment){ mupiAR=window.innerWidth/Math.max(1,window.innerHeight); fitMupi(); }
+      if(_extendedFills()){ mupiAR=window.innerWidth/Math.max(1,window.innerHeight); fitMupi(); }
       emitFrameState(it,XTORE_PARENT?'playing':'selected'); localInfoRender(); };
     im.onerror=()=>{ if(_tok!==_playTok||paused)return; if(!_coRetryI && im.crossOrigin){ _coRetryI=true; try{ im.removeAttribute('crossorigin'); im.src=codecCard?CARD_SRC:SRC; }catch(_){} return; }   // asset sin CORS: recarga sin crossorigin (la emisión SIEMPRE se ve)
       setTimeout(()=>mediaAdvance(_tok),600); };
@@ -3125,7 +3128,7 @@ function rebuild(restart){
     const item=extendedItem(), previous=playlist[cur]&&String(playlist[cur].id||'');
     playlist=item?[item]:[]; paintExtendedTile();
     if($('segCount')) $('segCount').textContent='tesela '+((_extendedAssignment.tile&&_extendedAssignment.tile.index||0)+1)+'/'+((_extendedAssignment.tile&&_extendedAssignment.tile.total)||1)+' · mural extendido';
-    setLive('EXTENDIDO · '+((_extendedAssignment.tile&&_extendedAssignment.tile.cols)||1)+'×'+((_extendedAssignment.tile&&_extendedAssignment.tile.rows)||1),!!item);
+    setLive(_extendedAssignment.dual?('DUAL H·V · '+(_extendedAssignment.orientation==='portrait'?'VERTICAL':'HORIZONTAL')):('EXTENDIDO · '+((_extendedAssignment.tile&&_extendedAssignment.tile.cols)||1)+'×'+((_extendedAssignment.tile&&_extendedAssignment.tile.rows)||1)),!!item);
     try{ renderChan(); }catch(_){} renderRail(); try{ schedulePrecache(); }catch(_){}
     if(item&&(restart||cur<0||previous!==String(item.id))){ cur=-1; play(0); }
     return;
@@ -4930,10 +4933,24 @@ if(PREVIEW.on){
 // *.workers.dev y estos players están en España (api.admira.store proxea al mismo worker).
 const MODE_API='https://api.admira.store/locations/mode';
 const PLAYOUT_ASSIGNMENT_API='/api/playout';
-let _playoutRevision=-1;
+let _playoutRevision=-1, _playoutPowerRev=-1;
+// DUAL H·V: misma pieza en sus dos versiones (adaptador de admira.studio). ?orient=portrait|landscape manda;
+// si no, la forma de la ventana. Sin su versión, usa la otra con marco editorial (fit:'editorial').
+function screenOrientation(){ const o=String(qs.get('orient')||'').toLowerCase();
+  if(o==='portrait'||o==='vertical') return 'portrait'; if(o==='landscape'||o==='horizontal') return 'landscape';
+  return window.innerHeight>window.innerWidth?'portrait':'landscape'; }
+function dualAssignment(d){
+  const want=screenOrientation(), other=want==='portrait'?'landscape':'portrait', own=d.variants[want];
+  const item=own||d.variants[other]; if(!item) return d;
+  return Object.assign({},d,{item, orientation:want, tile:Object.assign({},d.tile,{fit:own?'fill':'editorial', orientation:want})});
+}
 function applyPlayoutAssignment(d){
   if(!d||!d.configured) return false;   // contrato nuevo aún sin configurar: conserva el modo histórico
   const rev=Number(d.revision)||0, mode=String(d.mode||'autonomous');
+  // Encendido ordenado por el panel (p.ej. Mac Mini «sencillo»: laterales apagadas): una vez por revisión.
+  if(d.power&&rev!==_playoutPowerRev){ _playoutPowerRev=rev;
+    try{ if(d.power==='off'&&!_standby) standbyOn(true); else if(d.power==='on'&&_standby) standbyOn(false); }catch(_){} }
+  if(d.dual&&d.variants) d=dualAssignment(d);
   if(mode==='extended'&&d.item&&d.tile){
     const signature=rev+'|'+d.item.id+'|'+d.tile.index;
     if(_extendedAssignment&&_extendedAssignment._signature===signature){
@@ -4947,7 +4964,7 @@ function applyPlayoutAssignment(d){
     if(xplTimer){ clearInterval(xplTimer); xplTimer=null; } if(window.XPLCanal) window.XPLCanal.stop();
     _extendedClockOffset=Number(d.serverNow||Date.now())-Date.now();
     _extendedAssignment=Object.assign({},d,{_signature:signature}); _playoutRevision=rev; seenSig=''; cur=-1; rebuild(true);
-    flashCli('▦ extendido · tesela '+(d.tile.index+1)+'/'+d.tile.total); return true;
+    flashCli(d.dual?('◧ dual H·V · versión '+(d.orientation==='portrait'?'vertical':'horizontal')):('▦ extendido · tesela '+(d.tile.index+1)+'/'+d.tile.total)); return true;
   }
   const leftExtended=clearExtendedAssignment();
   if(mode==='synchronized'){

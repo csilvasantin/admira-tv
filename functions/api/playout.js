@@ -2,6 +2,9 @@ import { accessFor, authHeaders, sessionEmail } from "../_auth-session.js";
 import { readGroupState } from "./playout/group.js";
 
 const STATE_KEY = "admira-tv:playout:v1";
+// dual (12-nov-2026, Mac Mini): el MISMO contenido en sus dos versiones del adaptador de admira.studio;
+// cada player escoge la horizontal o la vertical según su pantalla y todos siguen el reloj del servidor.
+const MODES = ["autonomous", "synchronized", "extended", "dual"];
 const DEFAULT_STATE = Object.freeze({ configured: false, mode: "autonomous", screens: [], item: null, layout: { rows: 1, cols: 1 }, revision: 0, updatedAt: 0 });
 
 function json(value, status = 200) {
@@ -69,16 +72,31 @@ async function readState(env) {
   try {
     const raw = env.ACCESS && await env.ACCESS.get(STATE_KEY);
     const state = raw && JSON.parse(raw);
-    if (state && ["autonomous", "synchronized", "extended"].includes(state.mode)) return state;
+    if (state && MODES.includes(state.mode)) return state;
   } catch (_) {}
   return { ...DEFAULT_STATE, screens: [], layout: { ...DEFAULT_STATE.layout } };
 }
 
-function assignmentFor(state, screen) {
+// Encendido por pantalla (standby): { "macmini-1": "off", ... }. Se aplica en el player sólo al cambiar la revisión,
+// así el ⏻ del mando sigue mandando entre dos órdenes del panel.
+export function cleanPower(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const [k, v] of Object.entries(raw).slice(0, 36)) { const s = cleanScreen(k); if (s && (v === "on" || v === "off")) out[s] = v; }
+  return out;
+}
+
+export function cleanVariants(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const landscape = cleanItem(raw.landscape), portrait = cleanItem(raw.portrait);
+  return landscape || portrait ? { landscape, portrait } : null;
+}
+
+export function assignmentFor(state, screen) {
   const selected = state.screens.indexOf(screen);
   const active = state.configured && selected >= 0;
   const mode = active ? state.mode : "autonomous";
-  const assignment = { ok: true, configured: !!state.configured, screen, mode,
+  const assignment = { ok: true, configured: !!state.configured, screen, mode: mode === "dual" ? "extended" : mode,
     revision: Number(state.revision) || 0, updatedAt: Number(state.updatedAt) || 0, serverNow: Date.now() };
   if (mode === "synchronized") assignment.group = { id: "synchronized-main", index: selected, total: state.screens.length,
     leader: state.screens[0] || "" };
@@ -87,6 +105,13 @@ function assignmentFor(state, screen) {
     assignment.item = state.item;
     assignment.tile = tileFor(layout, selected, state.screens.length);
   }
+  if (mode === "dual" && state.variants) {
+    assignment.dual = true;
+    assignment.variants = state.variants;
+    assignment.item = state.variants.landscape || state.variants.portrait;
+    assignment.tile = { index: selected, total: state.screens.length, row: 0, col: 0, rows: 1, cols: 1, x: 0, y: 0, w: 1, h: 1, dual: true };
+  }
+  if (state.power && state.power[screen]) assignment.power = state.power[screen];
   return assignment;
 }
 
@@ -109,13 +134,18 @@ export async function onRequestPost({ request, env }) {
   let body;
   try { body = await request.json(); } catch (_) { return json({ ok: false, error: "invalid_json" }, 400); }
   const mode = String(body && body.mode || "").toLowerCase();
-  if (!["autonomous", "synchronized", "extended"].includes(mode)) return json({ ok: false, error: "bad_mode" }, 400);
+  if (!MODES.includes(mode)) return json({ ok: false, error: "bad_mode" }, 400);
   const screens = Array.from(new Set((Array.isArray(body && body.screens) ? body.screens : []).map(cleanScreen).filter(Boolean))).slice(0, 36);
   if (mode !== "autonomous" && screens.length < 2) return json({ ok: false, error: "two_screens_required" }, 400);
   const item = mode === "extended" ? cleanItem(body && body.item) : null;
   if (mode === "extended" && !item) return json({ ok: false, error: "playable_item_required" }, 400);
+  const variants = mode === "dual" ? cleanVariants(body && body.variants) : null;
+  if (mode === "dual" && !variants) return json({ ok: false, error: "variants_required" }, 400);
+  // Quien entra en un grupo se enciende (sale de standby) salvo que la orden diga lo contrario.
+  const power = cleanPower(body && body.power);
+  if (mode !== "autonomous") for (const s of screens) if (!power[s]) power[s] = "on";
   const previous = await readState(env), updatedAt = Date.now();
-  const state = { configured: true, mode, screens: mode === "autonomous" ? [] : screens, item,
+  const state = { configured: true, mode, screens: mode === "autonomous" ? [] : screens, item, variants, power,
     layout: (mode === "extended" && stripLayoutFor(body && body.layout, screens.length)) || layoutFor(mode === "extended" ? screens.length : 1),
     revision: Math.max(Number(previous.revision) || 0, updatedAt - 1) + 1, updatedAt, updatedBy: actor };
   await env.ACCESS.put(STATE_KEY, JSON.stringify(state));
