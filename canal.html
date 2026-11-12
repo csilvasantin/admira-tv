@@ -616,6 +616,8 @@ let _liveMode=false;  // modo pedido EN VIVO por el operador (cmd sincro/local/c
 const TAG_ALIAS={music:"musica",muscia:"musica",technology:"tecnologia",tech:"tecnologia",business:"negocio",creativity:"creatividad",ai:"ia",gaming:"videojuego",videojuegos:"videojuego",robotics:"robotica",historias:"historia",bebida:"bebidas",canciones:"cancion",robot:"robots",comics:"comic",curiosidad:"curiosidades",oferta:"ofertas",artistas:"artista",pelicula:"peliculas",personaje:"personajes",herramienta:"herramientas"};
 const LIVE_TAG_KEY='adtv_live_tag:'+(scr.screen||scr.circuit||scr.machine||'unbound');
 const _storedLiveTag=canonicalPlayTag(LS(LIVE_TAG_KEY,''));
+// Cuándo se puso el tag en vivo: una orden NUEVA del panel /players (revisión posterior) manda sobre él.
+let _liveTagAt=+LS(LIVE_TAG_KEY+':at','0')||0;
 let _liveTag=!!_storedLiveTag;   // playlist alternativa puesta EN VIVO desde el mando
 if(_liveTag) seg.tag=_storedLiveTag;
 if(URL_TAG && modeParam==null && syncParam==null){ syncOn=false; playoutMode='local'; }
@@ -5028,10 +5030,18 @@ async function pollMode(){
   if(!scr.circuit) return;   // sólo equipos registrados (con circuito/id)
   // Un modo bloqueado por la integración, URL_TAG o tag EN VIVO = decisión
   // explícita del operador: esta pantalla no obedece cambios de modo remotos.
-  if(MODE_LOCK||URL_TAG||URL_SYNC||AUDIENCE_REMOTE||_liveTag||_liveMode||_forcedTagPlayback) return;
+  if(MODE_LOCK||URL_TAG||URL_SYNC||AUDIENCE_REMOTE||_liveMode||_forcedTagPlayback) return;
   try{
     const plan=await fetch(PLAYOUT_ASSIGNMENT_API+'?screen='+encodeURIComponent(scr.screen||scr.circuit)+'&t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
     if(_forcedTagPlayback) return; // la orden pudo entrar mientras esperaba la red
+    // Tag en vivo del mando: manda… hasta que el panel /players da una orden de grupo POSTERIOR a esa pantalla
+    // (12-nov-2026: un #topgun olvidado dejaba el Mac Mini en negro con el Custom · Dual H·V ya enviado).
+    if(_liveTag){
+      const newer=plan&&plan.configured&&String(plan.mode||'autonomous')!=='autonomous'&&Number(plan.revision)>_liveTagAt;
+      if(!newer) return;
+      _liveTag=false; save(LIVE_TAG_KEY,''); save(LIVE_TAG_KEY+':at','0'); seg.tag=''; save('adtv_seg',JSON.stringify(seg)); try{ syncSegPanel(); }catch(_){} seenSig='';
+      flashCli('🎛 tag en vivo retirado · manda el panel Players');
+    }
     // «autonomous» = esta pantalla NO está en ninguna orquestación (grupo sincro/extendido de
     // otros equipos). Antes se aplicaba como LOCAL forzado y el modo remoto de su circuito ya
     // no se consultaba: un kiosko con su propia playlist de sincro nunca podía entrar en sincro
@@ -5114,6 +5124,8 @@ async function flushCmdAckOutbox(){
 }
 async function executeQueuedCommand(c){
   const raw=String(c&&c.cmd||''), cmd=raw.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
+  // El panel /players acaba de guardar: relee la asignación YA y acusa (cuenta atrás por pantalla).
+  if(cmd==='playout-sync'){ try{ await pollMode(); }catch(_){ return 'failed'; } return 'executed'; }
   // SHOW SYNC: reloj de sala con hora de servidor + título + posición en ms (sólo lectura, no toca la emisión).
   if(/^show-?sync/.test(cmd)){
     const ss=typeof window!=='undefined'?window.ADM_SHOWSYNC:null, want=ss&&window.AdmiraShowSync?AdmiraShowSync.commandState(cmd,ss.on):null;
@@ -5346,7 +5358,7 @@ async function applyCtrlCmd(cmd){
       if(aud){ flashCli(forceAudience(aud[1])); return 'executed'; }
       const t=/^tag-([a-z0-9_,+-]*)$/.exec(cmd);
       if(t){
-        if(t[1]){ await loadFeed(false); _liveTag=true; save(LIVE_TAG_KEY,canonicalPlayTag(t[1])); try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}
+        if(t[1]){ await loadFeed(false); _liveTag=true; save(LIVE_TAG_KEY,canonicalPlayTag(t[1])); _liveTagAt=Date.now(); save(LIVE_TAG_KEY+':at',String(_liveTagAt)); try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}
           const n=applyPlayTag(t[1]); flashCli('🎛 tag '+t[1]+' · '+n+' assets'); return n>0?'executed':'failed'; }
         else { _liveTag=false; save(LIVE_TAG_KEY,''); seg.tag=''; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); flashCli('🎛 tag quitado'); }
         return 'executed'; }
