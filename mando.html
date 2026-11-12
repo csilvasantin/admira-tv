@@ -222,6 +222,18 @@
     body.tagged-embed > :is(.topnav,.equipo,.proj-line,[data-mando-pane]), body.tagged-embed #rotationPicker{display:none}
     body.tagged-embed .target-row{grid-template-columns:minmax(0,1fr)}
     #taggedImport[disabled]{opacity:.65}
+    .tag-preview{margin:8px 0 10px}
+    .tag-preview-status{margin:0;color:var(--muted);font:11px/1.45 var(--mono)}
+    .tag-preview-list{display:grid;gap:5px;margin:5px 0 0;padding:0;list-style:none;max-height:250px;overflow:auto;overscroll-behavior:contain}
+    .tag-preview-item{border:1px solid var(--border);border-radius:9px;padding:6px;background:var(--elev)}
+    .tag-preview-summary{display:grid;grid-template-columns:86px minmax(0,1fr);align-items:center;gap:9px}
+    .tag-preview-summary img{display:block;width:86px;aspect-ratio:16/9;object-fit:contain;background:var(--bg);border-radius:5px}
+    .tag-preview-summary strong{display:block;color:var(--text);font:700 12px/1.35 var(--sans);overflow-wrap:anywhere}
+    .tag-preview-summary small{color:var(--muted);font:10px var(--mono)}
+    .tag-preview-item details{margin-top:6px;color:var(--cyan);font:11px var(--mono)}
+    .tag-preview-item summary{cursor:pointer}
+    .tag-preview-item video,.tag-preview-item audio{display:block;width:100%;margin-top:6px}
+    .tag-preview-item video{max-height:155px;background:#000}
     /* Proyectos (12-nov-2026): filtro del selector y de /players por proyecto */
     .proj-line{font-family:var(--mono);font-size:10px;color:var(--dim);margin:4px 0 0}
     .proj-line a{color:var(--violet);text-decoration:none}.proj-line b{color:var(--amber)}
@@ -305,11 +317,16 @@
   <div class="tagrow">
     <div class="tag-entry" id="tagEntry">
       <span class="tag-field"><input id="tagInput" placeholder="p.ej. 712 · navidad · oferta-2x1" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false"><b class="tag-pct" id="tagPct" aria-live="polite"></b></span>
-      <button id="tagApply">Importar</button>
+      <button id="tagApply" aria-describedby="tagPreviewStatus">Importar</button>
     </div>
     <button id="power" style="border-color:var(--border);background:transparent;color:var(--muted)">⏻ Apagar player</button>
   </div>
   <div class="chips" id="tagChips"></div>
+  <div class="tag-preview" id="tagPreview" hidden>
+    <p class="tag-preview-status" id="tagPreviewStatus" role="status"></p>
+    <ul class="tag-preview-list" id="tagPreviewList" aria-label="Vista previa de la importación"></ul>
+    <button class="chip" type="button" id="tagPreviewRetry" hidden>Reintentar previo</button>
+  </div>
   </fieldset>
 
   <section id="playlistView" data-mando-pane="playlist" hidden>
@@ -372,6 +389,7 @@
 
   <script src="/assets/virtual-players.js"></script>
   <script src="/assets/admira-eink.js"></script>
+  <script src="/assets/admira-stock-preview.js"></script>
   <script src="/assets/admira-proyectos.js"></script>
   <script>
     // Dominio propio primero: varios ISP españoles bloquean *.workers.dev y este mando
@@ -466,6 +484,7 @@
       document.querySelectorAll('[data-mando-view-link]').forEach(function(a){
         var active=a.dataset.mandoViewLink===view; if(active) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
       });
+      if(document.getElementById('taggedImport').hidden) closeTaggedMedia();
       if(view==='playlist'&&T) loadRemotePlaylist(previewItem&&previewItem.id);
       if(view==='status'&&T) loadRemoteStatus(true);
       if(view==='contents'&&T) loadRemoteContents(true);
@@ -607,6 +626,7 @@
         document.getElementById('scr').textContent='—';
         document.getElementById('tagInput').value='';
         document.getElementById('tagChips').replaceChildren();
+        scheduleTaggedPreview();
         return;
       }
       var playerParams=new URLSearchParams({screen:T.screen,circuit:T.circuit});
@@ -945,17 +965,105 @@
       var limpio=canonTag(v), contenido=/^\d{1,6}$/.test(limpio);
       return {clean:limpio, kind:contenido?'content':'tag', cmd:contenido?('content-'+limpio):('tag-'+limpio)};
     }
+    var TAG_STOCK_RECENT='https://api.admira.store/stock/list?limit=300&';
+    var TAG_STOCK_INDEX='https://stock.admira.store/stock/index.json?';
+    var taggedStockCache=new Map(), taggedPreviewTimer, taggedPreviewVersion=0, taggedPreviewReady=null;
+    var taggedInput=document.getElementById('tagInput'), taggedApply=document.getElementById('tagApply');
+    var taggedPreview=document.getElementById('tagPreview'), taggedPreviewStatus=document.getElementById('tagPreviewStatus');
+    var taggedPreviewList=document.getElementById('tagPreviewList'), taggedPreviewRetry=document.getElementById('tagPreviewRetry');
+    function taggedStock(url){
+      var cached=taggedStockCache.get(url);
+      if(cached&&cached.expires>Date.now()) return cached.request;
+      var request=fetch(url+'t='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(8000)})
+        .then(async function(response){
+          if(!response.ok) throw new Error('Stock no disponible');
+          var data=await response.json(), items=data&&(data.items||data);
+          if(!Array.isArray(items)) throw new Error('Stock no disponible');
+          return items;
+        });
+      taggedStockCache.set(url,{request:request,expires:Date.now()+30000});
+      request.catch(function(){ if(taggedStockCache.get(url)?.request===request) taggedStockCache.delete(url); });
+      return request;
+    }
+    async function taggedStockItem(number){
+      var recent;
+      try{ recent=await taggedStock(TAG_STOCK_RECENT); }catch(_){ recent=[]; }
+      var match=recent.find(function(item){ return String(item&&item.num)===number; });
+      if(match) return match;
+      var complete=await taggedStock(TAG_STOCK_INDEX);
+      return complete.find(function(item){ return String(item&&item.num)===number; });
+    }
     async function taggedStockId(action){
-      for(var url of ['https://api.admira.store/stock/list?limit=300&', 'https://stock.admira.store/stock/index.json?']){
-        try{
-          var r=await fetch(url+'t='+Date.now(),{cache:'no-store'});
-          var data=r.ok?await r.json():null, items=data&&(data.items||data);
-          if(!Array.isArray(items)) continue;
-          var hit=items.find(function(it){ return String(it&&it.num)===action.clean; });
-          if(hit&&hit.id) return String(hit.id);
-        }catch(_){}
+      if(action.itemId) return action.itemId;
+      try{ return String((await taggedStockItem(action.clean))?.id||''); }catch(_){ return ''; }
+    }
+    function closeTaggedMedia(except){
+      taggedPreviewList.querySelectorAll('details[open]').forEach(function(details){
+        if(details===except) return;
+        details.querySelector('video,audio')?.pause();
+        details.open=false;
+      });
+    }
+    function taggedPreviewRow(item){
+      var row=document.createElement('li'); row.className='tag-preview-item';
+      var summary=document.createElement('div'); summary.className='tag-preview-summary';
+      var img=document.createElement('img'); img.alt=''; img.loading='lazy';
+      var fallback=previewFallbackData(item);
+      img.src=youtubeFrameCandidates(item,0)[0]||fallback;
+      img.addEventListener('error',function(){ img.src=fallback; },{once:true});
+      var text=document.createElement('div'), title=document.createElement('strong'), meta=document.createElement('small');
+      title.textContent=item.title||item.prompt||'Sin título';
+      var labels={video:'Vídeo',animation:'Vídeo',image:'Imagen','digital-twin':'Gemelo 3D',audio:'Audio',music:'Música',locucion:'Locución',interactive:'Interactivo'};
+      meta.textContent=(item.num?'#'+item.num+' · ':'')+(labels[item.type]||item.type);
+      text.append(title,meta); summary.append(img,text); row.append(summary);
+      var mediaTag=/^(video|animation)$/.test(item.type)?'video':/^(audio|music|locucion)$/.test(item.type)?'audio':'';
+      if(mediaTag&&!youtubeVideoId({url:item.url})){
+        var details=document.createElement('details'), toggle=document.createElement('summary'), player=document.createElement('div');
+        toggle.textContent=mediaTag==='video'?'Ver vídeo':'Escuchar audio';
+        details.append(toggle,player); row.append(details);
+        details.addEventListener('toggle',function(){
+          if(!details.open){ player.querySelector('video,audio')?.pause(); player.replaceChildren(); return; }
+          closeTaggedMedia(details);
+          var media=document.createElement(mediaTag);
+          media.controls=true; media.preload='metadata'; media.playsInline=true; media.src=item.url;
+          if(mediaTag==='video') media.poster=img.src;
+          player.append(media);
+        });
       }
-      return '';
+      return row;
+    }
+    async function loadTaggedPreview(action,version){
+      try{
+        var items;
+        if(action.kind==='content'){
+          var item=await taggedStockItem(action.clean);
+          items=AdmiraStockPreview.supported(item)?[item]:[];
+        }else{
+          items=AdmiraStockPreview.match(await taggedStock(TAG_STOCK_RECENT),action.clean);
+        }
+        if(version!==taggedPreviewVersion) return;
+        taggedPreviewStatus.textContent=items.length?(action.kind==='content'?'Previo de #'+action.clean:
+          items.length+' '+(items.length===1?'pieza':'piezas')+' con #'+action.clean):
+          (action.kind==='content'?'Pieza no disponible para reproducir':'No hay piezas reproducibles con esa etiqueta');
+        if(!items.length) return;
+        taggedPreviewList.append(...items.map(taggedPreviewRow));
+        taggedPreviewReady={query:action.clean,itemId:action.kind==='content'?String(items[0].id):''};
+        taggedApply.disabled=document.getElementById('tagEntry').classList.contains('remote-pending');
+      }catch(_){
+        if(version!==taggedPreviewVersion) return;
+        taggedPreviewStatus.textContent='No se pudo cargar el previo del Stock';
+        taggedPreviewRetry.hidden=false;
+      }
+    }
+    function scheduleTaggedPreview(){
+      clearTimeout(taggedPreviewTimer);
+      var version=++taggedPreviewVersion, action=taggedCommand(taggedInput.value);
+      taggedPreviewReady=null; taggedApply.disabled=true;
+      closeTaggedMedia(); taggedPreviewList.replaceChildren(); taggedPreviewRetry.hidden=true;
+      taggedPreview.hidden=!T||!action.clean;
+      if(taggedPreview.hidden) return;
+      taggedPreviewStatus.textContent='Buscando en Stock…';
+      taggedPreviewTimer=setTimeout(function(){ void loadTaggedPreview(action,version); },250);
     }
     async function taggedNow(screen){
       try{
@@ -1043,6 +1151,9 @@
     async function applyTag(t,button){
       var action=taggedCommand(t);
       if(!T||!action.clean){ toast(T?'✗ tag vacío':'Selecciona una pantalla'); return; }
+      if(taggedPreviewReady?.query!==action.clean){ toast('Espera a que cargue el previo'); return; }
+      action.itemId=taggedPreviewReady.itemId;
+      closeTaggedMedia();
       // Un número es el # persistente del Stock: se AÑADE a la playlist y se
       // precarga ASAP. El texto conserva el contrato histórico de filtro por tag.
       var b=button||document.getElementById('tagApply'), entry=document.getElementById('tagEntry'), input=document.getElementById('tagInput');
@@ -1073,16 +1184,25 @@
       setStoredTag(screen,''); document.getElementById('tagInput').value='';
       renderTagChips(); refreshTagline();
     }
-    document.getElementById('tagApply').onclick=function(){ applyTag(document.getElementById('tagInput').value,this); };
-    document.getElementById('tagInput').addEventListener('keydown',function(e){ if(e.key==='Enter') applyTag(this.value,document.getElementById('tagApply')); });
+    taggedApply.onclick=function(){ applyTag(taggedInput.value,this); };
+    taggedInput.addEventListener('input',scheduleTaggedPreview);
+    taggedInput.addEventListener('keydown',function(e){
+      if(e.key==='Enter'&&!taggedApply.disabled) applyTag(this.value,taggedApply);
+    });
+    taggedPreviewRetry.onclick=function(){ taggedStockCache.clear(); scheduleTaggedPreview(); };
     // chips sugeridos: tags frecuentes del Stock (para reutilizar metatags reales)
     var SUGGEST=['navidad','oferta','promo','producto','xtanco-valencia','bcn-prensa'];
     function renderTagChips(){
       var box=document.getElementById('tagChips'); box.innerHTML='';
       var cur=curTag();
-      document.getElementById('tagInput').value=cur.charAt(0)==='@'?cur.slice(1):cur;
+      taggedInput.value=cur.charAt(0)==='@'?cur.slice(1):cur;
+      scheduleTaggedPreview();
       var clear=document.createElement('button'); clear.className='chip'; clear.textContent='✕ Limpiar tag'; clear.onclick=function(){ clearTagged(clear); }; box.appendChild(clear);
-      SUGGEST.forEach(function(t){ var c=document.createElement('button'); c.className='chip'+(t===cur?' sel':''); c.textContent='#'+t; c.onclick=function(){ applyTag(t,c); }; box.appendChild(c); });
+      SUGGEST.forEach(function(t){ var c=document.createElement('button'); c.className='chip'+(t===cur?' sel':''); c.textContent='#'+t; c.onclick=function(){
+        if(document.getElementById('tagEntry').classList.contains('remote-pending')) return;
+        taggedInput.value='#'+t;
+        scheduleTaggedPreview();
+      }; box.appendChild(c); });
     }
     function refreshTagline(){
       var cur=curTag();

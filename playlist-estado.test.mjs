@@ -22,7 +22,7 @@ test('el mando pinta siempre la línea de la playlist con verde/amarillo/rojo',(
 test('#ID fuera del feed de 300 se resuelve contra el índice completo (player y mando) y el botón dice Importar',()=>{
   assert.match(canal,/const ext=await stockItemByNum\(Number\(wanted\)\)/);
   assert.match(canal,/function ensureTaggedExtras\(\)/);
-  assert.match(mando,/<button id="tagApply">Importar<\/button>/);
+  assert.match(mando,/<button id="tagApply"[^>]*>Importar<\/button>/);
   assert.match(mando,/stock\.admira\.store\/stock\/index\.json/);
   assert.match(mando,/remotePlaylistData\(screen\),taggedNow\(screen\)/);
   assert.doesNotMatch(mando,/doneLabel='Sin confirmar'/);

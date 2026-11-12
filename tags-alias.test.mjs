@@ -7,9 +7,10 @@ import { TAG_ALIAS, norm, resolveContent, cleanLive, deduceScreenTags } from "./
 
 const tabla = file => { const s = fs.readFileSync(new URL(file, import.meta.url), "utf8"), m = s.match(/const TAG_ALIAS\s?=\s?(\{[^}]+\});/); assert.ok(m, file + " tiene la tabla"); return JSON.parse(JSON.stringify(vm.runInNewContext("(" + m[1] + ")"))); };
 
-test("canal, parrilla y servidor comparten exactamente las mismas equivalencias", () => {
+test("canal, previo del mando, parrilla y servidor comparten las mismas equivalencias", () => {
   assert.deepEqual(tabla("./canal.html"), { ...TAG_ALIAS });
   assert.deepEqual(tabla("./parrilla/index.html"), { ...TAG_ALIAS });
+  assert.deepEqual(tabla("./assets/admira-stock-preview.js"), { ...TAG_ALIAS });
   for (const [de, a] of Object.entries(TAG_ALIAS)) { assert.notEqual(de, a); assert.equal(TAG_ALIAS[a], undefined, a + " no se reenvía a otra"); }
 });
 

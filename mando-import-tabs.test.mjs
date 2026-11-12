@@ -92,3 +92,25 @@ test('an alias can confirm an alternative playlist as soon as it plays, while ot
   assert.ok(events.some(e => e[0] === 'finish' && e[2] === '✓ En emisión'));
   assert.ok(events.some(e => e[0] === 'progress' && e[1] === 60 && e[2] === 'dl'));
 });
+
+const previewContext = vm.createContext({});
+vm.runInContext(await readFile(new URL('./assets/admira-stock-preview.js', import.meta.url), 'utf8'), previewContext);
+const preview = previewContext.AdmiraStockPreview;
+
+test('the preview is inside the shared importer and Importar waits for the matching preview', () => {
+  assert.match(mando, /<fieldset id="taggedImport"[\s\S]*id="tagPreview"[\s\S]*<\/fieldset>/);
+  assert.match(mando, /taggedInput\.addEventListener\('input',scheduleTaggedPreview\)/);
+  assert.match(mando, /taggedPreviewReady\?\.query!==action\.clean/);
+  assert.match(mando, /if\(version!==taggedPreviewVersion\) return/);
+  assert.match(mando, /taggedInput\.value='#'\+t;\s*scheduleTaggedPreview\(\);/);
+});
+
+test('hashtag previews use the same exact aliases, combinations and ordering as the player', () => {
+  const results = preview.match([
+    { ...asset, id: 'older-tech', tags: ['tecnología', 'ofertas'], category: 'tec', createdAt: '2026-09-01' },
+    { ...asset, id: 'latest-art', tags: ['technology', 'oferta'], category: 'arte', createdAt: '2026-11-01' },
+    { ...asset, id: 'wrong-match', tags: ['tecnología-plus', 'ofertas'] },
+    { ...asset, id: 'wrong-type', type: 'link', tags: ['tech', 'oferta'] },
+  ], 'tech+oferta');
+  assert.deepEqual(Array.from(results, item => item.id), ['latest-art', 'older-tech']);
+});
