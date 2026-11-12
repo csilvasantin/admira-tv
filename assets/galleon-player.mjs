@@ -9,6 +9,7 @@ const tracks = { landscape: null, portrait: null };
 const twinOrigins = new Set(['https://admira.store', 'https://www.admira.store']);
 let twinOrigin = '';
 let exporting = false;
+let playing = false;
 
 window.addEventListener('message', event => {
   if (event.source !== window.parent || !twinOrigins.has(event.origin)) return;
@@ -20,9 +21,10 @@ async function publishFrame() {
   exporting = true;
   let landscape, portrait;
   try {
+    const framePlaying = playing;
     landscape = await createImageBitmap(lcd);
     portrait = await createImageBitmap(mosaic);
-    window.parent.postMessage({ type: 'admira:galleon:frame', landscape, portrait }, twinOrigin, [landscape, portrait]);
+    window.parent.postMessage({ type: 'admira:galleon:frame', landscape, portrait, playing: framePlaying }, twinOrigin, [landscape, portrait]);
   } catch {
     landscape?.close();
     portrait?.close();
@@ -71,7 +73,7 @@ function syncTrack(track, elapsed) {
 
 function paintable(track) {
   if (!track) return null;
-  return (track.video ? track.media.readyState >= 2 : track.media.complete) ? track.media : null;
+  return (track.video ? track.media.readyState >= 2 : track.media.complete && track.media.naturalWidth > 0) ? track.media : null;
 }
 
 async function refresh() {
@@ -99,10 +101,10 @@ async function refresh() {
 }
 
 setInterval(() => {
-  paintGalleon(surfaces, {
-    landscape: paintable(tracks.landscape),
-    portrait: paintable(tracks.portrait),
-  });
+  const landscape = paintable(tracks.landscape);
+  const portrait = paintable(tracks.portrait);
+  paintGalleon(surfaces, { landscape, portrait });
+  playing = Boolean(landscape || portrait);
 }, 100);
 
 setInterval(() => void publishFrame(), 200);
