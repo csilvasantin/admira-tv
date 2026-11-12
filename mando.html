@@ -216,6 +216,24 @@
     .equipo{font-family:var(--mono);font-size:11px;color:var(--amber);margin:-2px 0 8px;display:none}
     .equipo b{color:var(--text)}
     [data-mando-pane][hidden]{display:none!important}
+    /* Proyectos (12-nov-2026): filtro del selector y de /players por proyecto */
+    .proj-line{font-family:var(--mono);font-size:10px;color:var(--dim);margin:4px 0 0}
+    .proj-line a{color:var(--violet);text-decoration:none}.proj-line b{color:var(--amber)}
+    .proj-list{display:grid;gap:6px}
+    .proj-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--border);background:#0d1018;color:var(--text);border-radius:11px;padding:10px 12px;font:12px var(--mono);cursor:pointer}
+    .proj-item:hover{border-color:var(--violet)}
+    .proj-item.on{border-color:var(--violet);background:color-mix(in srgb,var(--violet) 14%,#0d1018);font-weight:700}
+    .proj-item .n{margin-left:auto;color:var(--cyan);font-weight:700}
+    .proj-item.dim{opacity:.75}
+    .proj-new{display:flex;gap:8px;margin-top:10px}
+    .proj-new input,#proyectosBuscar{flex:1;width:100%;font-size:12px;padding:10px 11px;border-radius:10px;background:#0d1018;color:var(--text);border:1px solid var(--border)}
+    .proj-new button{font:700 12px var(--mono);padding:0 14px;border-radius:10px;border:1px solid var(--violet);background:transparent;color:var(--violet);cursor:pointer}
+    .proj-devices{display:grid;gap:5px;margin-top:8px}
+    .proj-dev{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:#0d1018}
+    .proj-dev strong{display:block;font:700 12px var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .proj-dev small{display:block;font:10px var(--mono);color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .proj-dev select{max-width:170px;font-size:11px;padding:6px;border-radius:8px;background:var(--elev);color:var(--text);border:1px solid var(--border)}
+    .proj-dev .pn{font:10px var(--mono);color:var(--amber)}
   </style>
 </head>
 <body>
@@ -226,6 +244,7 @@
     <a class="viewtab" href="#status" data-mando-view-link="status">Status</a>
     <a href="/players">Players</a>
     <a class="viewtab" href="#contents" data-mando-view-link="contents">Contenidos</a>
+    <a class="viewtab" href="#proyectos" data-mando-view-link="proyectos">Proyectos</a>
   </nav>
   <div class="equipo" id="equipo">🖥️ Conectado al player de <b id="equipoName">—</b></div>
 
@@ -241,6 +260,7 @@
     </div>
   </div>
   <div class="cinfo">circuito: <b id="cir">—</b> · pantalla: <b id="scr">—</b></div>
+  <div class="proj-line" id="projLine"><a href="#proyectos">📁 Proyecto: <b id="projName">Todos</b></a> <span id="projCount"></span></div>
   <div class="eink-note" id="einkNote">🖋️ Tinta electrónica · solo imagen · refresco lento. No hay vídeo, volumen ni rotación: envía una pieza con su nº en «Contenido etiquetado».</div>
 
   <div class="stage" data-mando-pane="remote">
@@ -300,6 +320,19 @@
     <div class="content-inventory" id="contentsList"><div class="pl-empty">El player todavía no ha publicado su inventario técnico</div></div>
   </section>
 
+  <section id="proyectosView" data-mando-pane="proyectos" hidden aria-live="polite">
+    <div class="status-head">
+      <h2>Proyectos</h2>
+      <button type="button" id="proyectosRefresh">↻ Actualizar</button>
+    </div>
+    <div class="content-summary" id="proyectosSummary">Cargando proyectos…</div>
+    <div class="proj-list" id="proyectosList"></div>
+    <div class="proj-new" id="proyectosNew" hidden><input id="proyectoNombre" placeholder="Nuevo proyecto (p. ej. Corsair Galleon 100)" maxlength="60" autocomplete="off"><button type="button" id="proyectoCrear">＋ Crear</button></div>
+    <div class="sec">Dispositivos <span class="hint" id="proyectosDevHint"></span></div>
+    <input id="proyectosBuscar" placeholder="Buscar dispositivo…" autocomplete="off" spellcheck="false">
+    <div class="proj-devices" id="proyectosDevices"></div>
+  </section>
+
   <div id="remoteTools" data-mando-pane="remote">
   <!-- ── CONTENIDO ETIQUETADO: #ID añade una pieza; texto filtra por metatag ── -->
   <div class="sec">🏷️ Contenido etiquetado <span class="hint">— #ID añade una pieza; #hashtag crea una playlist alternativa completa</span></div>
@@ -330,6 +363,7 @@
 
   <script src="/assets/virtual-players.js"></script>
   <script src="/assets/admira-eink.js"></script>
+  <script src="/assets/admira-proyectos.js"></script>
   <script>
     // Dominio propio primero: varios ISP españoles bloquean *.workers.dev y este mando
     // se usa desde el móvil, en España. api.admira.store proxea al MISMO worker; el
@@ -366,7 +400,7 @@
       var og=document.createElement('optgroup'); og.label=g.group;
       g.screens.forEach(function(s){
         var circuit = s.circuit || g.circuit;
-        var idx=FLAT.length; FLAT.push({label:g.group+' · '+s.label, circuit:circuit, screen:s.screen});
+        var idx=FLAT.length; FLAT.push({label:g.group+' · '+s.label, circuit:circuit, screen:s.screen, group:g.group, short:s.label});
         var o=document.createElement('option'); o.value=idx; o.textContent=s.label; og.appendChild(o);
       });
       selEl.appendChild(og);
@@ -381,7 +415,7 @@
     if(startIdx<0 && (wantC||wantS)){
       var cCir=wantC||String(wantS||'').replace(/-mupi$/,''); var cScr=wantS||cCir;
       var lab=wantEq?('⭐ '+wantEq):('⭐ '+cScr);
-      var i2=FLAT.length; FLAT.push({label:lab, circuit:cCir, screen:cScr});
+      var i2=FLAT.length; FLAT.push({label:lab, circuit:cCir, screen:cScr, group:'⭐ Este equipo', short:wantEq||cScr, star:true});
       var og2=document.createElement('optgroup'); og2.label='⭐ Este equipo';
       var o2=document.createElement('option'); o2.value=i2; o2.textContent=wantEq||cScr; og2.appendChild(o2);
       selEl.insertBefore(og2, selEl.firstChild); startIdx=i2;
@@ -404,9 +438,10 @@
     var previewPause=document.getElementById('previewPause');
     var previewAudio=document.getElementById('previewAudio');
     var previewOpen=document.getElementById('previewOpen');
-    function mandoViewFromHash(){ var view=location.hash.slice(1); return ['playlist','status','contents'].includes(view)?view:'remote'; }
+    var MANDO_VIEWS=['playlist','status','contents','proyectos'];
+    function mandoViewFromHash(){ var view=location.hash.slice(1); return MANDO_VIEWS.includes(view)?view:'remote'; }
     function setMandoView(view){
-      view=['playlist','status','contents'].includes(view)?view:'remote'; document.body.dataset.mandoView=view;
+      view=MANDO_VIEWS.includes(view)?view:'remote'; document.body.dataset.mandoView=view;
       document.querySelectorAll('[data-mando-pane]').forEach(function(p){ p.hidden=p.dataset.mandoPane!==view; });
       document.querySelectorAll('[data-mando-view-link]').forEach(function(a){
         var active=a.dataset.mandoViewLink===view; if(active) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
@@ -414,6 +449,7 @@
       if(view==='playlist'&&T) loadRemotePlaylist(previewItem&&previewItem.id);
       if(view==='status'&&T) loadRemoteStatus(true);
       if(view==='contents'&&T) loadRemoteContents(true);
+      if(view==='proyectos'&&typeof renderProyectos==='function') renderProyectos();
     }
     window.addEventListener('hashchange',function(){ setMandoView(mandoViewFromHash()); });
     function previewIsInteractive(){ return !!(previewItem&&['interactive','xperiencia'].includes(String(previewItem.type||'').toLowerCase())); }
@@ -1325,7 +1361,114 @@
     document.getElementById('cliSend').onclick=function(){ cliGo(this); };
     document.getElementById('cliInput').addEventListener('keydown',function(e){ if(e.key==='Enter') cliGo(document.getElementById('cliSend')); });
 
-    setTarget(); setMandoView(mandoViewFromHash());
+    // ── PROYECTOS (12-nov-2026): filtra el selector por proyecto y asigna dispositivos ──
+    // Universo de dispositivos = circuitos fijos (FLAT) + flota real (signage/screens, localizaciones
+    // auto-registradas de brain y players virtuales). Cambiar de proyecto solo cambia QUÉ se ve en el
+    // selector: no envía órdenes a ningún player.
+    var FLEET_API='https://brain.digitalavatar.ai/locations?selfreg=1';
+    var urlPinnedIdx=(wantC||wantS||wantN)?(+selEl.value):-1;
+    var fleetOnline=new Map();
+    function proyectosEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    async function loadFleetForProjects(){
+      var res=await Promise.all([
+        fetch(SCREENS_API+'?_='+Date.now(),{cache:'no-store'}).then(function(r){ return r.ok?r.json():{}; }).catch(function(){ return {}; }),
+        fetch(FLEET_API,{cache:'no-store'}).then(function(r){ return r.ok?r.json():{}; }).catch(function(){ return {}; }),
+        AdmiraVirtualPlayers.list().catch(function(){ return []; })
+      ]);
+      var add=addProjectDevice;
+      ((res[0]&&res[0].screens)||[]).forEach(function(p){ if(p&&p.screen){ fleetOnline.set(p.screen,!!p.online); add(p.screen,p.locName&&p.locName!==p.screen?p.locName:(p.name||p.screen),p.loc||p.screen); } });
+      ((res[1]&&res[1].locations)||[]).forEach(function(l){ if(l&&l.screen) add(l.screen,l.name,l.id); });
+      (res[2]||[]).forEach(function(v){ if(v&&v.screen) add(v.screen,v.name,v.circuit); });
+      // El trío de /players existe aunque no esté encendido ahora mismo.
+      ['macmini-1','macmini-2','macmini-3'].forEach(function(m){ add(m,'Mac Mini '+m.slice(-1),m); });
+    }
+    function addProjectDevice(screen,name,circuit){
+      screen=String(screen||'').trim().toLowerCase(); if(!screen) return;
+      var have=FLAT.find(function(t){ return t.screen===screen&&!t.star; });
+      if(have){ if(have.dyn&&name&&have.short===screen){ have.short=have.label=name; if(circuit) have.circuit=circuit; } return; }
+      FLAT.push({label:name||screen, short:name||screen, circuit:circuit||screen.replace(/-mupi$/,''), screen:screen, dyn:true});
+    }
+    // Dispositivos dados de alta en un proyecto aunque aún no hayan dado señal (p. ej. el Corsair Galleon 100).
+    function addDeclaredDevices(){
+      var d=AdmiraProyectos.data(); if(!d||!d.ok) return;
+      d.projects.forEach(function(p){ (p.devices||[]).forEach(function(s){ addProjectDevice(s); }); });
+      Object.keys(d.assign||{}).forEach(function(s){ addProjectDevice(s); });
+    }
+    function targetGroupOf(t){
+      if(t.star) return '⭐ Este equipo';
+      if(t.group) return t.group;
+      var p=AdmiraProyectos.projectOf(t.screen); return p?AdmiraProyectos.label(p):'Otros equipos';
+    }
+    function rebuildTarget(userChange){
+      var f=AdmiraProyectos.current(), cur=+selEl.value, groups=new Map(), shown=[];
+      FLAT.forEach(function(t,i){
+        if(!(t.star||i===urlPinnedIdx||AdmiraProyectos.visible(t.screen,f))) return;
+        var g=targetGroupOf(t), og=groups.get(g);
+        if(!og){ og=document.createElement('optgroup'); og.label=g; groups.set(g,og); }
+        var o=document.createElement('option'); o.value=i; o.textContent=t.short||t.label; og.appendChild(o); shown.push(i);
+      });
+      selEl.replaceChildren(); groups.forEach(function(og){ selEl.appendChild(og); });
+      if(shown.indexOf(cur)>=0){ selEl.value=cur; }
+      else if(shown.length){ selEl.value=shown[0]; setTarget(); }
+      var real=shown.filter(function(i){ return !FLAT[i].star&&i!==urlPinnedIdx; }).length;
+      document.getElementById('projName').textContent=AdmiraProyectos.label(f);
+      document.getElementById('projCount').textContent='· '+real+' de '+FLAT.filter(function(t){ return !t.star; }).length+' pantallas en el selector';
+    }
+    function proyectoScreens(){ return FLAT.filter(function(t){ return !t.star; }).map(function(t){ return t.screen; }); }
+    function renderProyectos(){
+      var d=AdmiraProyectos.data(), sum=document.getElementById('proyectosSummary'), list=document.getElementById('proyectosList');
+      var devs=document.getElementById('proyectosDevices'), nw=document.getElementById('proyectosNew');
+      if(!d){ sum.textContent='Cargando proyectos…'; return; }
+      if(!d.ok){
+        list.replaceChildren(); devs.replaceChildren(); nw.hidden=true;
+        sum.innerHTML=d.status===401?'Inicia sesión en admira.tv para ver tus proyectos. <a class="plain" href="/players">Entrar →</a> · Mientras tanto el selector muestra todas las pantallas.'
+          :'No se pudieron cargar los proyectos ('+proyectosEsc(d.error)+'). El selector muestra todas las pantallas.';
+        return;
+      }
+      var f=AdmiraProyectos.current(), screens=proyectoScreens(), c=AdmiraProyectos.counts(screens);
+      sum.innerHTML=(d.superadmin?'👑 <b>Dios</b> · ves todos los proyectos y puedes mover dispositivos. ':'Ves solo tus proyectos. ')+
+        'El proyecto elegido filtra el selector «Pantalla / tótem» y la lista de equipos de Players.'+(d.seeded?' · Proyectos iniciales sugeridos (se guardan al primer cambio).':'');
+      var items=[];
+      if(d.allowAll) items.push({id:AdmiraProyectos.ALL,label:'🌐 Todos',n:c[AdmiraProyectos.ALL]});
+      d.projects.forEach(function(p){ items.push({id:p.id,label:(p.icon?p.icon+' ':'')+p.name,n:c[p.id]||0}); });
+      if(d.allowAll&&c[AdmiraProyectos.NONE]) items.push({id:AdmiraProyectos.NONE,label:'❔ Sin proyecto',n:c[AdmiraProyectos.NONE],dim:true});
+      list.innerHTML=items.map(function(it){ return '<button type="button" class="proj-item'+(it.id===f?' on':'')+(it.dim?' dim':'')+'" data-proj="'+proyectosEsc(it.id)+'" aria-pressed="'+(it.id===f)+'"><span>'+proyectosEsc(it.label)+'</span><span class="n">'+it.n+'</span></button>'; }).join('');
+      nw.hidden=!d.canEdit;
+      var q=String(document.getElementById('proyectosBuscar').value||'').trim().toLowerCase();
+      var rows=FLAT.filter(function(t){ return !t.star&&AdmiraProyectos.visible(t.screen,f)&&(!q||(t.label+' '+t.screen).toLowerCase().indexOf(q)>=0); });
+      document.getElementById('proyectosDevHint').textContent='— '+rows.length+' en '+AdmiraProyectos.label(f)+(d.canEdit?' · cambia el desplegable para moverlo de proyecto':'');
+      var opts=d.projects.map(function(p){ return [p.id,(p.icon?p.icon+' ':'')+p.name]; }).concat([['','❔ Sin proyecto']]);
+      devs.innerHTML=rows.slice(0,400).map(function(t){
+        var pid=AdmiraProyectos.projectOf(t.screen), on=fleetOnline.get(t.screen);
+        var ctl=d.canEdit?'<select data-assign="'+proyectosEsc(t.screen)+'" aria-label="Proyecto de '+proyectosEsc(t.short||t.label)+'">'+opts.map(function(o){ return '<option value="'+proyectosEsc(o[0])+'"'+(o[0]===pid?' selected':'')+'>'+proyectosEsc(o[1])+'</option>'; }).join('')+'</select>'
+          :'<span class="pn">'+proyectosEsc(pid?AdmiraProyectos.label(pid):'Sin proyecto')+'</span>';
+        return '<div class="proj-dev"><span><strong>'+(on?'🟢 ':'')+proyectosEsc(t.short||t.label)+'</strong><small>'+proyectosEsc(t.screen)+(t.group?' · '+proyectosEsc(t.group):'')+'</small></span>'+ctl+'</div>';
+      }).join('')||'<div class="pl-empty">Ningún dispositivo en este proyecto</div>';
+    }
+    function initProyectos(){
+      document.getElementById('proyectosList').addEventListener('click',function(e){
+        var b=e.target.closest('[data-proj]'); if(!b) return;
+        AdmiraProyectos.setCurrent(b.dataset.proj); rebuildTarget(true); renderProyectos();
+        toast('📁 Proyecto: '+AdmiraProyectos.label(b.dataset.proj));
+      });
+      document.getElementById('proyectosDevices').addEventListener('change',async function(e){
+        var sel=e.target.closest('[data-assign]'); if(!sel) return; sel.disabled=true;
+        try{ await AdmiraProyectos.assign(sel.dataset.assign,sel.value); toast('✓ '+sel.dataset.assign+' → '+AdmiraProyectos.label(sel.value||AdmiraProyectos.NONE)); }
+        catch(err){ toast('✗ No se pudo mover: '+err.message); if(err.status===409) await AdmiraProyectos.load(); }
+        rebuildTarget(false); renderProyectos();
+      });
+      document.getElementById('proyectoCrear').addEventListener('click',async function(){
+        var inp=document.getElementById('proyectoNombre'), name=inp.value.trim(); if(!name) return;
+        try{ await AdmiraProyectos.upsert({name:name}); inp.value=''; toast('✓ Proyecto creado: '+name); }catch(err){ toast('✗ '+err.message); }
+        renderProyectos();
+      });
+      document.getElementById('proyectosBuscar').addEventListener('input',renderProyectos);
+      document.getElementById('proyectosRefresh').addEventListener('click',function(){ AdmiraProyectos.load().then(function(){ rebuildTarget(false); renderProyectos(); }); });
+      AdmiraProyectos.onChange(addDeclaredDevices);
+      Promise.all([AdmiraProyectos.load(),loadFleetForProjects().catch(function(){})]).then(function(){ addDeclaredDevices(); rebuildTarget(false); renderProyectos(); });
+    }
+
+    setTarget(); setMandoView(mandoViewFromHash()); initProyectos();
     setInterval(pollNow, 5000);
     setInterval(function(){ if(!document.hidden) paintPreviewProgress(Date.now()); },500);
   </script>
