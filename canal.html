@@ -194,6 +194,8 @@
   #faultPopup .fp-btns span{ padding:1vmin 2.4vmin; border-radius:.8vmin; background:#fff; border:1px solid #b8c0cb; }
   #faultPopup .fp-btns .fp-pri{ background:#2f6fe4; color:#fff; border-color:#2f6fe4; }
   /* MODO EXTENDIDO: cada player enseña una tesela del mismo lienzo. */
+  /* PANTALLA DE CINE (12-nov-2026): el cursor desaparece a los 2 s de reposo y sólo vuelve al mover el ratón. */
+  html.cursor-idle, html.cursor-idle *{ cursor:none!important; }
   #stage.extended-tile{overflow:hidden;display:block}
   #stage.extended-tile>video,#stage.extended-tile>img{
     position:absolute!important;max-width:none!important;max-height:none!important;
@@ -560,7 +562,7 @@ if(qs.get('machine')) save('adtv_machine', scr.machine);
 // ('all') en vez de la suya, y el proof-of-play no se imputa. El id = screen sin '-mupi'.
 if(!scr.circuit && scr.screen){ scr.circuit = String(scr.screen).replace(/-mupi$/,''); save('adtv_circuit', scr.circuit); }
 let muted  = qs.has('muted') ? qs.get('muted') !== '0' : (LS('adtv_muted','1'))==='1';
-let volume = Math.max(0,Math.min(1,parseFloat(qs.get('volume')||LS('adtv_vol','1'))));
+let volume = (v=>{ let n=parseFloat(v); if(!Number.isFinite(n)) n=1; if(n>1) n=n/100; return Math.max(0,Math.min(1,n)); })(qs.get('volume')||LS('adtv_vol','1'));
 var AUDIO_METER=null;
 var _audioStateTimer=0;
 function playerAudioState(){
@@ -925,9 +927,11 @@ function applyAudio(){
   // This acknowledges audio configuration, not successful autoplay or speaker output.
   try{ if(XTORE_PARENT)window.parent.postMessage({source:'admira-tv-canal',event:'audio-state',...localInfoRemoteAudio()},XTORE_PARENT); }catch(_){}
 }
+// Volumen en 0–1 o en % (12-nov-2026, Mac Mini: «volume 39» llegaba como 39 y se recortaba a 1 → 100 %).
+function normVolume(v,fallback){ let n=parseFloat(v); if(!Number.isFinite(n)) return fallback; if(n>1) n=n/100; return Math.max(0,Math.min(1,n)); }
 function setAudio(on, level){
   muted=!on;
-  if(on) volume=Math.max(0.1,Math.min(1,parseFloat(level)||volume||1));
+  if(on){ const n=normVolume(level,NaN); volume=Number.isFinite(n)&&n>0?Math.max(0.1,n):(volume||1); }
   applyAudio();
   if(on&&mediaEl&&mediaEl.play&&!paused&&!mediaEl._xtoreStartPending) mediaEl.play().catch(()=>{ try{ tap.classList.add('show'); }catch(_){} });
 }
@@ -1215,7 +1219,7 @@ function applyXplDirective(d){
     ['max','refreshSec','imgSec','audioSec'].forEach(k=>{ if(d[k]!=null){ const n=parseInt(d[k],10); if(n&&cfg[k]!==n){ cfg[k]=n; changed=true; } } });
     if(d.refresh!=null){ const n=parseInt(d.refresh,10); if(n&&cfg.refreshSec!==n){ cfg.refreshSec=n; changed=true; } }
     if(d.muted!=null){ muted=!!d.muted; applyAudio(); }
-    if(d.volume!=null){ volume=Math.max(0,Math.min(1,parseFloat(d.volume)||0)); muted=volume===0; applyAudio(); }
+    if(d.volume!=null){ volume=normVolume(d.volume,volume); muted=volume===0; applyAudio(); }
     if(changed){ save('adtv_seg',JSON.stringify(seg)); save('adtv_max',cfg.max); save('adtv_refresh',cfg.refreshSec); syncSegPanel(); seenSig=''; rebuild(true); }
     return changed;
   } finally { applyingXpl=false; }
@@ -5012,6 +5016,12 @@ async function pollMode(){
   }catch(_){}
 }
 pollMode(); setInterval(pollMode, 12000);
+// Cursor oculto en reposo: cualquier movimiento lo enseña 2 s.
+(function(){ let t=0; const root=document.documentElement;
+  const idle=()=>root.classList.add('cursor-idle');
+  const wake=()=>{ root.classList.remove('cursor-idle'); clearTimeout(t); t=setTimeout(idle,2000); };
+  ['mousemove','pointermove','mousedown','touchstart'].forEach(e=>window.addEventListener(e,wake,{passive:true}));
+  t=setTimeout(idle,2000); })();
 
 // ── CONTROL REMOTO POR COMANDOS: el CMS encola (next/prev/audio/volume…) y este
 //   player los ejecuta con su propio runCli. Ignora el backlog al arrancar.
