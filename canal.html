@@ -69,6 +69,7 @@
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
 <script src="/assets/mba-auto-sync.js?v=20261029-auto1"></script>
 <script src="/assets/precision-sync.js?v=20261029-fine3"></script>
+<script src="/assets/showsync.js?v=12.11.2026.r1"></script>
 <script src="xpl-runtime.js?v=22.10.2026.r2.1134"></script>
 <script>
   window.ADMIRA_VERSION='v.22.10.2026.r2.11:34';
@@ -4944,6 +4945,12 @@ async function flushCmdAckOutbox(){
 }
 async function executeQueuedCommand(c){
   const raw=String(c&&c.cmd||''), cmd=raw.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
+  // SHOW SYNC: reloj de sala con hora de servidor + título + posición en ms (sólo lectura, no toca la emisión).
+  if(/^show-?sync/.test(cmd)){
+    const ss=typeof window!=='undefined'?window.ADM_SHOWSYNC:null, want=ss&&window.AdmiraShowSync?AdmiraShowSync.commandState(cmd,ss.on):null;
+    if(typeof want!=='boolean') return 'failed';
+    ss.set(want); flashCli(want?'⏱ show-sync ON':'⏱ show-sync OFF'); return 'executed';
+  }
   if(['standby','blackout','apagar','stop','parar','off'].includes(cmd)){
     standbyOn(true); flashCli('⏻ standby (apagada)'); return 'executed';
   }
@@ -5037,6 +5044,28 @@ function __cmdDelay(){ return __cmdIdleN>=40?10000:3000; }
 function armPollCmd(){ clearTimeout(__cmdTimer); __cmdTimer=setTimeout(async()=>{ try{ await pollCmd(); }catch(_){} armPollCmd(); }, __cmdDelay()); }
 function cmdWake(){ __cmdIdleN=0; clearTimeout(__cmdTimer); Promise.resolve(pollCmd()).catch(()=>{}).then(armPollCmd); }
 pollCmd(); armPollCmd();
+
+// ── SHOW SYNC (12-nov-2026) · reloj de sala para validar la sincro a ojo en todas las pantallas.
+//   showsync-on / showsync-off / showsync-toggle por /locations/cmd (igual en mac/win/linux/ios/android)
+//   o ?showsync=1. Hora del servidor (/api/playout → serverNow) corregida por RTT, re-medida cada 30 s.
+//   Capa con pointer-events:none fuera de #wrap: no la cuenta el medidor de capas que tapan.
+const ADM_SHOWSYNC=(function(){
+  if(!window.AdmiraShowSync) return null;
+  try{
+    const base=/^https?:$/.test(location.protocol)?'':'https://www.admira.tv';
+    const ov=AdmiraShowSync.createOverlay({
+      fetchServerNow:async()=>{ const r=await fetch(base+'/api/playout?screen='+encodeURIComponent(scr.screen||scr.circuit||'showsync')+'&showsync=1&t='+Date.now(),{cache:'no-store'});
+        if(!r.ok) throw new Error('http '+r.status); const d=await r.json(); return Number(d&&d.serverNow); },
+      getState:()=>{ const it=(cur>=0&&playlist[cur])||_nowItem||null, el=mediaEl;
+        const pos=el&&/^(VIDEO|AUDIO)$/.test(el.tagName)?Number(el.currentTime)*1000:NaN;
+        return { screen:scr.screen||scr.circuit||'', title:(it&&it.title)||(_nowItem&&_nowItem.title)||'',
+          positionMs:pos, mode:_extendedAssignment?'extended':(syncOn?'sync':playoutMode) }; }
+    });
+    const start=()=>{ if(ov.initial(location.search)) ov.set(true); };
+    if(document.body) start(); else document.addEventListener('DOMContentLoaded',start,{once:true});
+    window.ADM_SHOWSYNC=ov; return ov;
+  }catch(_){ return null; }
+})();
 
 // ── MANDO REMOTO POR PANTALLA (adcelerate/mando): cola de control por SCREEN.
 //   Una pantalla enrolada usa SU credencial (no ADMIN_TOKEN), ligada server-side
