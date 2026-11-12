@@ -1,0 +1,14 @@
+Three.js r187 (0.187.0), descargado el 2026-11-12 desde jsDelivr (npm):
+- https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.min.js
+- https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.core.min.js
+- https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/loaders/GLTFLoader.js
+- https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/utils/BufferGeometryUtils.js
+- https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/utils/SkeletonUtils.js
+
+A partir de r187, three.module.min.js importa el núcleo desde three.core.js.
+Aquí esa ruta se ha apuntado a three.core.min.js (vendorizado) para no depender
+de internet ni de la versión sin minificar.
+
+En los addons, el import bare "three" se ha sustituido por
+"../../three.module.min.js" para que la página funcione sin internet
+y sin import maps (mejor compatibilidad en WebViews de Android TV).
