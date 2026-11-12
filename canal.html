@@ -69,7 +69,7 @@
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
 <script src="/assets/mba-auto-sync.js?v=20261029-auto1"></script>
 <script src="/assets/precision-sync.js?v=20261029-fine3"></script>
-<script src="/playout-group-math.js?v=12.11.2026.r-group1"></script>
+<script src="/playout-group-math.js?v=12.11.2026.r-group2"></script>
 <script src="/assets/showsync.js?v=12.11.2026.r1"></script>
 <script src="xpl-runtime.js?v=22.10.2026.r2.1134"></script>
 <script>
@@ -1027,6 +1027,49 @@ function syncItemDurationMs(it){
 // (clave KV distinta a la clave principal de playout). El player solo CONSUME ese estado:
 // la orden de grupo la publican el relé de voz / mando (cookie o Bearer de servicio).
 let _groupTransport=null, _applyingGroupTransport=false, _groupTransportTimer=null;
+// PAUSA DE GRUPO AL FOTOGRAMA (12-nov-2026, Zona 0): antes cada player se paraba cuando SU sondeo
+// (1 s) leía la pausa → 880 ms entre pantallas (01 1:40.780 · 02 1:40.188 · 03 1:40.766 · 04 1:41.068 ·
+// 05 1:40.997). Ahora la pausa congela la posición que corresponde a pausedAt (hora del SERVIDOR, igual
+// para todos: clockMs(pausedAt+shift), sin depender del reloj de cada PC ni de cuándo llegó el sondeo),
+// y el play reanuda en el sitio alineado al reloj común, sin re-montar el <video>.
+let _groupFrozenRev=-1, _groupFreezePending=false;
+function groupMediaEl(){ const el=mediaEl; return el&&/^(VIDEO|AUDIO)$/.test(el.tagName)?el:null; }
+function groupSeekFrozen(el){
+  if(!el||!playlist.length) return;
+  const apply=()=>{
+    if(el!==mediaEl||!paused) return;
+    const line=syncTimeline(); if(line.index!==cur) return;
+    try{ el.pause(); }catch(_){}
+    const d=Number(el.duration); let sec=line.elapsed/1000;
+    if(d>0&&isFinite(d)) sec=Math.min(Math.max(0,d-0.02),sec);
+    try{ el.currentTime=sec; }catch(_){}
+  };
+  if(el.readyState>=1) apply(); else el.addEventListener('loadedmetadata',apply,{once:true});
+}
+function groupFreezeAtPausedAt(rev){
+  if(!playlist.length) return;            // sin playlist aún: el siguiente sondeo (1 s) lo reintenta
+  const line=syncTimeline();
+  if(line.index!==cur){
+    // La pieza de pausedAt no es la que está en pantalla (pausa justo en un corte, o arranque en
+    // pausa): se monta y se congela en cuanto tenga metadatos (onloadedmetadata → _groupFreezePending).
+    _groupFrozenRev=rev; _groupFreezePending=true; paused=false;
+    Promise.resolve(play(line.index)).then(()=>{ if(_groupFreezePending&&!groupMediaEl()){ _groupFreezePending=false; setPaused(true); } }).catch(()=>{});
+    return;
+  }
+  const el=groupMediaEl(); if(!el) return;
+  _groupFrozenRev=rev; groupSeekFrozen(el);
+}
+function groupResumeAligned(){
+  const el=groupMediaEl(), line=playlist.length?syncTimeline():null;
+  _groupFreezePending=false;
+  const inPlace=el&&el.tagName==='VIDEO'&&line&&line.index===cur&&!_standby&&!(typeof xtoreMusicEnabled==='function'&&xtoreMusicEnabled())&&el.readyState>=1&&el.duration>0&&isFinite(el.duration);
+  if(!inPlace){ _applyingGroupTransport=true; try{ setPaused(false); }finally{ _applyingGroupTransport=false; } return; }
+  paused=false; save(PAUSE_INTENT_KEY,'0');
+  document.body.classList.remove('paused'); $('pause').textContent='⏸'; el._admiraOperatorPaused=false;
+  try{ el.currentTime=Math.min(el.duration-0.02,syncElapsedMs()/1000); }catch(_){}
+  const p=el.play(); if(p&&p.catch) p.catch(()=>{ try{ el.muted=true; el.play().catch(()=>{}); }catch(_){} });
+  clearTimeout(timer); timer=setTimeout(next,syncRemainingMs());
+}
 function applyGroupTransportState(state){
   if(!state||typeof state!=='object') return;
   const rev=Number(state.revision)||0;
@@ -1035,12 +1078,15 @@ function applyGroupTransportState(state){
   _groupTransport=state;
   if(!syncOn) return;
   const wantPaused=state.pausedAt!=null;
-  if(wantPaused!==paused){
-    _applyingGroupTransport=true;
-    try{ setPaused(wantPaused); }finally{ _applyingGroupTransport=false; }
+  if(wantPaused){
+    if(!paused&&!_groupFreezePending){ _applyingGroupTransport=true; try{ setPaused(true); }finally{ _applyingGroupTransport=false; } }
+    if(!same||_groupFrozenRev!==rev) groupFreezeAtPausedAt(rev);
+    return;
   }
+  _groupFrozenRev=-1;
+  if(paused||_groupFreezePending){ groupResumeAligned(); return; }
   if(!same){
-    try{ const idx=syncIndex(); if(idx!==cur||wantPaused!==paused) play(idx); }catch(_){}
+    try{ const idx=syncIndex(); if(idx!==cur) play(idx); }catch(_){}
   }
 }
 async function pollGroupTransport(){
@@ -2799,6 +2845,8 @@ async function play(i, forced){
         if(target!==cur){ play(target); return; }
         try{ v.currentTime=Math.min(v.duration-0.02,syncElapsedMs()/1000); }catch(_){}
         clearTimeout(timer); timer=setTimeout(next,syncRemainingMs());
+        // Pausa de grupo que cayó en otra pieza: ya está montada en la posición de pausedAt → se congela.
+        if(_groupFreezePending){ _groupFreezePending=false; setPaused(true); groupSeekFrozen(v); }
       }
       localInfoRender();
     }
