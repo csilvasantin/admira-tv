@@ -95,6 +95,9 @@
     .nowbox .vol{margin-top:7px;padding:0 2px;font-size:10px;gap:7px}
     .player-playlist{display:grid;gap:8px;max-height:320px;overflow:auto;padding:3px 4px 3px 1px;scrollbar-color:var(--border) transparent}
     body[data-mando-view="playlist"] .player-playlist{max-height:none;overflow:visible}
+    /* Estado de la playlist del player (Carlos, 12-nov-2026): un segmento por pieza · verde en disco · amarillo bajando · rojo pendiente · gris en línea. */
+    .plstat{margin:8px 0 4px}.plstat-txt{font:700 11px var(--mono);color:var(--dim);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.plstat-txt b{color:var(--text)}
+    .pl-bar{display:flex;gap:1px;height:10px;border-radius:3px;overflow:hidden;background:#111}.pl-bar i{flex:1;min-width:1px;background:#e04a4a}.pl-bar i.g{background:#2fd27a}.pl-bar i.y{background:#ffd23f}.pl-bar i.o{background:#6b7785}.pl-bar i.cur{outline:1px solid #fff;outline-offset:-1px}
     .pl-item{--cmd-progress:0deg;--cmd-ring:var(--cyan);position:relative;width:100%;max-width:100%;display:grid;grid-template-columns:70px minmax(0,1fr) minmax(68px,90px);align-items:center;gap:10px;overflow:hidden;
       padding:7px;text-align:left;border:1px solid var(--border);border-radius:12px;background:#0d1018;color:var(--text);cursor:pointer;font:inherit;transition:.15s}
     .pl-item>*{min-width:0;max-width:100%}
@@ -258,6 +261,7 @@
         <span class="ttl" id="now">…</span>
         <span class="tagline" id="tagline"></span>
       </button>
+      <div class="plstat" id="plStat" aria-live="polite"><div class="plstat-txt" id="plStatTxt">Playlist · esperando al player</div><div class="pl-bar" id="plBar" aria-label="Estado de descarga de la playlist"></div></div>
       <div class="now-controls" aria-label="Control básico de la emisión remota">
         <button class="b media-control" id="previousControl" data-cmd="prev" aria-label="Contenido anterior"><span class="media-control-copy"><span class="media-control-action">⏮ Anterior</span><span class="media-control-title" id="previousTitle">Esperando playlist</span></span></button>
         <button class="b media-control" id="nextControl" data-cmd="next" aria-label="Contenido siguiente"><span class="media-control-copy"><span class="media-control-action">⏭ Siguiente</span><span class="media-control-title" id="nextTitle">Esperando playlist</span></span></button>
@@ -978,7 +982,20 @@
       else wrap.textContent=/video|animation/.test(String(it.type||''))?'▶':/audio|music/.test(String(it.type||''))?'♪':'▧';
       return wrap;
     }
+    var _plCache=null, _plItems=[], _plCurrent='';
+    function plEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    function paintPlaylistStatus(){
+      var info=window._nowPlaylist||null, items=_plItems||[], cache=_plCache;
+      var ready=new Set((cache&&cache.ready||[]).map(String)), dl=new Set((cache&&cache.downloading||[]).map(function(x){ return String(x.id); }));
+      var segs=items.length?items.map(function(it){ var id=String(it&&it.id||''); return ready.has(id)?'g':dl.has(id)?'y':(/interactive|url|direct/.test(String(it&&it.type||''))?'o':'r'); }):String(info&&info.segs||'').split('');
+      var g=segs.filter(function(c){ return c==='g'; }).length, y=segs.filter(function(c){ return c==='y'; }).length;
+      var total=info&&info.total||segs.length, loop=info&&info.loop||segs.length;
+      var txt=document.getElementById('plStatTxt'), bar=document.getElementById('plBar'); if(!txt||!bar) return;
+      txt.innerHTML='▤ <b>'+plEsc(info&&info.name||'Playlist')+'</b> · '+total+(info&&info.feedCap?'+':'')+' contenidos'+(total>loop?' (loop de '+loop+')':'')+' · <b>'+g+'</b> de '+segs.length+' descargados'+(y?' · '+y+' bajando':'');
+      bar.innerHTML=segs.map(function(c,i){ var it=items[i], cur=it&&String(it.id)===String(_plCurrent||''); return '<i class="'+c+(cur?' cur':'')+'" title="'+plEsc((i+1)+'. '+(it&&it.title||''))+'"></i>'; }).join('');
+    }
     function renderRemotePlaylist(items,cache,currentId){
+      _plCache=cache; _plItems=items||[]; _plCurrent=currentId||''; try{ paintPlaylistStatus(); }catch(_){}
       var box=document.getElementById('playlistList'), summary=document.getElementById('playlistSummary'); box.replaceChildren();
       var ready=new Set((cache&&cache.ready||[]).map(String));
       var downloading=new Map((cache&&cache.downloading||[]).map(function(x){ return [String(x.id),Math.max(0,Math.min(100,Number(x.pct)||0))]; }));
@@ -1269,6 +1286,7 @@
         var reportedFit=d&&d.device&&d.device.display&&d.device.display.fit;
         if(reportedFit==='fill'||reportedFit==='editorial'){ fitByScreen.set(target.screen,reportedFit); }
         paintFitOption(); paintStageOrientation(it);
+        window._nowPlaylist=(it&&it.playlist)||window._nowPlaylist||null; if(it&&it.id) _plCurrent=String(it.id); try{ paintPlaylistStatus(); }catch(_){}
         var reportedAudio=(it&&it.audio)||(d&&d.device&&d.device.audio);
         paintPreviewAudio(reportedAudio||null);
         if(reportedAudio&&typeof reportedAudio.muted==='boolean'){

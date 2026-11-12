@@ -15,7 +15,7 @@ test('ficha común: cierre y asa accesibles, contador efectivo y audio en filas 
   for(const [id,label] of [['li-close','Cerrar ficha'],['li-drag','Mover ficha']])
     assert.match(canal,new RegExp('<button id="'+id+'" type="button"[^>]*aria-label="'+label+'"'));
   assert.match(canal,/id="li-position" aria-label="Posición en la playlist"/);
-  assert.match(canal,/pos=samePos\?\(cur\+1\)\+' de '\+playlist.length:'— de —'/);
+  assert.match(canal,/pos=samePos\?\(cur\+1\)\+' de '\+pli\.total/);
   assert.match(canal,/#localInfo .li-toolbar\{ position:sticky/);
   assert.match(canal,/#localInfo .li-audio\{[^}]*flex-direction:column[^}]*gap:6px/);
   assert.match(canal,/class="li-audio-bars" aria-hidden="true"/);
