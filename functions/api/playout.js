@@ -38,8 +38,10 @@ function layoutFor(count) {
 
 // Geometría mixta (Mac Mini, 12-nov-2026): tres monitores vertical·horizontal·vertical en una fila.
 // Cada pantalla recibe una tira del lienzo de anchura proporcional a su relación de aspecto
-// (normalizada a la misma altura) y la estira a su ventana: la central lleva la parte ancha.
-export const VHV_WEIGHTS = Object.freeze([9 / 16, 16 / 9, 9 / 16]);
+// física. Medido en el Mac Mini (12-nov-2026): tres monitores de 32" (70×39 cm); los PHL 328P6A laterales
+// girados 90° (39 cm de ancho) y el SAMSUNG 4K central apaisado (70 cm). Las tiras siguen el ancho real
+// (39·70·39) para que el mural no salte en los biseles; cada tira se estira a su pantalla (la central, a lo alto).
+export const VHV_WEIGHTS = Object.freeze([39, 70, 39]);
 export function stripLayoutFor(raw, count) {
   if (!raw || typeof raw !== "object" || count < 2) return null;
   let weights = raw.preset === "vhv" && count === 3 ? VHV_WEIGHTS.slice() : raw.weights;

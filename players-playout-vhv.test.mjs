@@ -12,7 +12,7 @@ test('preset V·H·V reparte el lienzo en tres tiras proporcionales al aspecto (
   const tot=VHV_WEIGHTS.reduce((a,b)=>a+b,0);
   assert.ok(Math.abs(l.weights[0]-VHV_WEIGHTS[0]/tot)<1e-5);
   assert.ok(Math.abs(l.weights.reduce((a,b)=>a+b,0)-1)<1e-5);
-  assert.ok(l.weights[1]>l.weights[0]*3, 'la central lleva la parte ancha');
+  assert.ok(Math.abs(l.weights[1]-70/148)<1e-5, 'la central lleva su ancho físico (70 de 148 cm)');
   const t=[0,1,2].map(i=>tileFor(l,i,3));
   assert.equal(t[0].x,0); assert.ok(Math.abs(t[1].x-l.weights[0])<1e-5);
   assert.ok(Math.abs(t[2].x+t[2].w-1)<1e-5); assert.ok(t.every(x=>x.h===1&&x.y===0&&x.rows===1));
@@ -35,4 +35,8 @@ test('canal pinta tiras con --wall-sx/--wall-x y players ofrece el reparto V·H�
   assert.match(canal,/--wall-sx/); assert.match(canal,/--wall-x,var\(--wall-col,0\)/);
   assert.match(players,/value="vhv"/); assert.match(players,/body\.layout=\{preset:'vhv'\}/);
   assert.match(players,/'macmini-2':'Mac Mini · 2 \(central\)'/);
+});
+
+test('?standby=1|0 del lanzador fija el apagado inicial de cada pantalla del Mac Mini',()=>{
+  assert.match(canal,/qs\.get\('standby'\)/);
 });
