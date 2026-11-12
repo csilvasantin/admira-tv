@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Corsair Galleon 100 SD · Admira TV</title>
+  <style>
+    html, body { margin: 0; background: #000; }
+    main { display: grid; gap: 12px; width: min(100%, 720px); margin: auto; }
+    #galleon-lcd { display: block; width: 100%; aspect-ratio: 720 / 384; }
+    #galleon-keys { width: min(100%, 480px); margin: auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+    #galleon-keys canvas { display: block; width: 100%; aspect-ratio: 1; }
+  </style>
+</head>
+<body>
+  <main aria-label="Salidas del Corsair Galleon 100 SD">
+    <canvas id="galleon-lcd" width="720" height="384" aria-label="Pantalla superior"></canvas>
+    <div id="galleon-keys" aria-label="Mosaico vertical de 12 teclas">
+      <canvas></canvas><canvas></canvas><canvas></canvas>
+      <canvas></canvas><canvas></canvas><canvas></canvas>
+      <canvas></canvas><canvas></canvas><canvas></canvas>
+      <canvas></canvas><canvas></canvas><canvas></canvas>
+    </div>
+  </main>
+  <script type="module" src="/assets/galleon-player.mjs"></script>
+</body>
+</html>
