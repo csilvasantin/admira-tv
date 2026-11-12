@@ -81,3 +81,14 @@ test('an unchanged playlist never confirms a requested hashtag and a target chan
   assert.equal(await changed.run(), false);
   assert.ok(changed.events.every(e => e[0] !== 'toast' && e[0] !== 'cache'));
 });
+
+test('an alias can confirm an alternative playlist as soon as it plays, while other assets download', async () => {
+  const { events, run } = verification({
+    lists: [{ items: [asset] }],
+    now: { id: asset.id, playlist: { name: '#ofertas', requestedTag: 'oferta' } },
+    cache: { ready: false, pct: 60 },
+  });
+  assert.equal(await run('tag', 'oferta'), true);
+  assert.ok(events.some(e => e[0] === 'finish' && e[2] === '✓ En emisión'));
+  assert.ok(events.some(e => e[0] === 'progress' && e[1] === 60 && e[2] === 'dl'));
+});

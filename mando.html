@@ -1009,7 +1009,7 @@
         }
         var items=list&&list.items||[];
         if(isPiece) items=items.filter(function(it){ return String(it.id)===itemId; });
-        else if(!info||info.name!=='#'+tagAction.clean) items=[];
+        else if(!info||(info.requestedTag!==tagAction.clean&&info.name!=='#'+tagAction.clean)) items=[];
         inPlaylist=items.length>0;
         var ids=items.filter(function(it){ return /^https?:/i.test(it.url||'')&&!/^(interactive|xperiencia)$/i.test(it.type); })
           .map(function(it){ return String(it.id); });
@@ -1023,9 +1023,9 @@
           paintRemoteButton(visual); paintTagDownload(state.pct,state.ready?'done':'dl');
         }
         cached=!!(state&&state.ready);
-        if(inPlaylist&&playing&&(!ids.length||cached)){
+        if(inPlaylist&&playing&&(!isPiece||!ids.length||cached)){
           visual.doneLabel='✓ En emisión';
-          finishRemoteButton(visual,'executed'); paintTagDownload(state?100:0,state?'done':null);
+          finishRemoteButton(visual,'executed'); paintTagDownload(state?state.pct:0,state?(cached?'done':'dl'):null);
           toast(visual.doneLabel+' · #'+tagAction.clean+' · '+screen);
           void pollNow();
           return true;

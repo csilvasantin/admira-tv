@@ -136,7 +136,7 @@ test('salir de una playlist alternativa no borra las piezas añadidas antes por 
 
 test('una pieza descargada finaliza en verde cuando el player confirma la emisión', () => {
   assert.match(mando, /ids\.length>0&&ids\.every\(function\(id\)\{ return ready\.has\(id\); \}\)/);
-  assert.match(mando, /if\(inPlaylist&&playing&&\(!ids\.length\|\|cached\)\)\{\s*visual\.doneLabel='✓ En emisión';\s*finishRemoteButton\(visual,'executed'\)/);
+  assert.match(mando, /if\(inPlaylist&&playing&&\(!isPiece\|\|!ids\.length\|\|cached\)\)\{\s*visual\.doneLabel='✓ En emisión';\s*finishRemoteButton\(visual,'executed'\)/);
   assert.match(mando, /\.tag-entry\.remote-applied input\{border-color:#39d98a/);
 });
 
