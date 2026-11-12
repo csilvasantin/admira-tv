@@ -1426,7 +1426,7 @@
         return;
       }
       var f=AdmiraProyectos.current(), screens=proyectoScreens(), c=AdmiraProyectos.counts(screens);
-      sum.innerHTML=(d.superadmin?'👑 <b>Dios</b> · ves todos los proyectos y puedes mover dispositivos. ':'Ves solo tus proyectos. ')+
+      sum.innerHTML=(d.superadmin?'👑 <b>Dios</b> · ves todos los proyectos y puedes mover dispositivos. ':d.projects.length?'Ves solo tus proyectos. ':'Aún no tienes proyectos asignados: ves todas las pantallas, como hasta ahora. ')+
         'El proyecto elegido filtra el selector «Pantalla / tótem» y la lista de equipos de Players.'+(d.seeded?' · Proyectos iniciales sugeridos (se guardan al primer cambio).':'');
       var items=[];
       if(d.allowAll) items.push({id:AdmiraProyectos.ALL,label:'🌐 Todos',n:c[AdmiraProyectos.ALL]});

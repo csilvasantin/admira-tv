@@ -35,6 +35,9 @@
   function visible(screen, filter) {
     filter = filter || current();
     if (!data || !data.ok) return true;
+    // Transición: un usuario sin ningún proyecto asignado sigue viendo todo, como antes de Proyectos.
+    // Cuando Dios le asigne proyectos (members), pasará a ver solo los suyos.
+    if (!data.allowAll && !data.projects.length) return true;
     if (filter === ALL) return data.allowAll ? true : !!projectOf(screen);
     var p = projectOf(screen);
     return filter === NONE ? !p : p === filter;

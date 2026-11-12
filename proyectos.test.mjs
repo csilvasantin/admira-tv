@@ -88,6 +88,13 @@ test('el cliente usa el mismo algoritmo y persiste el filtro en localStorage', (
   });
 });
 
+test('un usuario sin proyectos asignados sigue viendo todo (transición sin romper el mando)', () => {
+  const ctx = { localStorage: { getItem: () => null, setItem: () => {} }, fetch: async () => ({ ok: true, json: async () => ({ ok: true, allowAll: false, projects: [], assign: {} }) }) };
+  ctx.globalThis = ctx; vm.createContext(ctx);
+  vm.runInContext(readFileSync('assets/admira-proyectos.js', 'utf8'), ctx);
+  return ctx.AdmiraProyectos.load().then(() => { assert.equal(ctx.AdmiraProyectos.visible('bcn-kiosk-001-led'), true); });
+});
+
 test('el mando tiene la pestaña Proyectos justo a la derecha de Contenidos y Players filtra', () => {
   const html = readFileSync('mando.html', 'utf8');
   const nav = html.slice(html.indexOf('<nav class="topnav"'), html.indexOf('</nav>'));
