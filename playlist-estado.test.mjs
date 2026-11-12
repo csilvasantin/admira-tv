@@ -19,3 +19,12 @@ test('el mando pinta siempre la línea de la playlist con verde/amarillo/rojo',(
   assert.match(mando,/\.pl-bar i\.g\{background:#2fd27a\}/); assert.match(mando,/\.pl-bar i\.y\{background:#ffd23f\}/);
   assert.match(mando,/window\._nowPlaylist=\(it&&it\.playlist\)/);
 });
+test('#ID fuera del feed de 300 se resuelve contra el índice completo (player y mando) y el botón dice Importar',()=>{
+  assert.match(canal,/const ext=await stockItemByNum\(Number\(wanted\)\)/);
+  assert.match(canal,/function ensureTaggedExtras\(\)/);
+  assert.match(mando,/<button id="tagApply">Importar<\/button>/);
+  assert.match(mando,/stock\.admira\.store\/stock\/index\.json/);
+  assert.match(mando,/function showTaggedInPlaylist\(action\)/);
+  assert.doesNotMatch(mando,/doneLabel='Sin confirmar'/);
+  assert.match(mando,/Esperando descarga en pantalla/);
+});

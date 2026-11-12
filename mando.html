@@ -306,7 +306,7 @@
   <div class="tagrow">
     <div class="tag-entry" id="tagEntry">
       <span class="tag-field"><input id="tagInput" placeholder="p.ej. 712 · navidad · oferta-2x1" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false"><b class="tag-pct" id="tagPct" aria-live="polite"></b></span>
-      <button id="tagApply">Aplicar</button>
+      <button id="tagApply">Importar</button>
     </div>
     <button id="power" style="border-color:var(--border);background:transparent;color:var(--muted)">⏻ Apagar player</button>
   </div>
@@ -860,7 +860,11 @@
           var rs=await fetch('https://api.admira.store/stock/list?limit=300&t='+Date.now(),{cache:'no-store'});
           var ds=rs.ok?await rs.json():null, items=ds&&(ds.items||ds);
           var hit=Array.isArray(items)&&items.find(function(it){ return String(it&&it.num)===action.clean; });
-          return hit&&hit.id?[String(hit.id)]:[];
+          // Fuera de las 300 recientes (p.ej. #667): índice completo del Stock, igual que el player.
+          if(!hit){ var rf=await fetch('https://stock.admira.store/stock/index.json?t='+Date.now(),{cache:'no-store'}); var df=rf.ok?await rf.json():null, all=df&&(df.items||df);
+            hit=Array.isArray(all)&&all.find(function(it){ return String(it&&it.num)===action.clean; }); }
+          if(hit&&hit.id){ action.item={id:String(hit.id),title:hit.title||('#'+action.clean),type:hit.type,thumbnail:hit.thumbnail||hit.poster||'',num:hit.num,url:hit.url}; action.missing=false; return [String(hit.id)]; }
+          action.missing=true; return [];
         }catch(_){ return []; }
       }
       for(var api of PLAYLIST_APIS) try{
@@ -895,12 +899,19 @@
       entry.style.setProperty('--dl-pct',(state==='done'?100:n)+'%');
       label.textContent=state==='done'?'✓ 100%':state==='stalled'?('⌛ '+n+'%'):('⇩ '+n+'%');
     }
+    // El #ID importado aparece YA en la lista Playlist (rojo hasta que la pantalla lo reporte en disco).
+    function showTaggedInPlaylist(action){
+      if(!action||!action.item) return;
+      if(!remotePlaylistItems.some(function(it){ return String(it&&it.id)===action.item.id; })) remotePlaylistItems=[action.item].concat(remotePlaylistItems);
+      try{ renderRemotePlaylist(remotePlaylistItems,_plCache,_plCurrent); }catch(_){}
+    }
     async function waitTaggedAvailability(sent,tagAction){
-      var visual=sent.action, started=Date.now(), ids=[], lastPct=0;
+      var visual=sent.action, started=Date.now(), ids=[], lastPct=0, lastState=null;
       paintTagDownload(0,'dl');
       while(Date.now()-started<DOWNLOAD_TIMEOUT_MS){
-        if(!ids.length){ var fresh=await taggedExpectedIds(tagAction,sent.receipt,sent.target); if(fresh.length) ids=fresh; }
-        var state=ids.length?await taggedCacheState(sent.target.screen,ids):null;
+        if(!ids.length){ var fresh=await taggedExpectedIds(tagAction,sent.receipt,sent.target); if(fresh.length){ ids=fresh; showTaggedInPlaylist(tagAction); } }
+        if(tagAction.missing){ break; }
+        var state=ids.length?await taggedCacheState(sent.target.screen,ids):null; lastState=state;
         if(state){
           visual.progress=Math.max(.02,Math.min(1,state.pct/100)); lastPct=state.pct;
           if(visual.label) visual.label.textContent=state.ready?'✓ Disponible':('⇩ '+state.pct+'%');
@@ -910,8 +921,11 @@
         }else if(visual.label){ visual.label.textContent='Preparando…'; }
         await new Promise(function(resolve){ setTimeout(resolve,650); });
       }
-      visual.doneLabel='Sin confirmar'; finishRemoteButton(visual,'timeout'); paintTagDownload(lastPct,'stalled');
-      toast('⌛ descarga sin confirmar · '+tagAction.clean); return false;
+      // Nada de «Sin confirmar»: se dice qué pasa y por qué, si se sabe.
+      var why=tagAction.missing?'el #'+tagAction.clean+' no existe en el Stock':!lastState?'la pantalla aún no publica su caché':lastPct>0?'descarga en curso':'la pantalla aún no ha empezado a bajarlo';
+      visual.doneLabel=tagAction.missing?'✗ No existe en Stock':('⌛ Esperando descarga en pantalla · '+lastPct+'%');
+      finishRemoteButton(visual,'timeout'); paintTagDownload(lastPct,'stalled');
+      toast('⌛ #'+tagAction.clean+' · '+why); try{ loadRemotePlaylist(); }catch(_){} return false;
     }
     async function applyTag(t,button){
       var action=taggedCommand(t);

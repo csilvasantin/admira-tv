@@ -3335,6 +3335,7 @@ async function loadFeed(showStatus){ _lastFeed=Date.now(); const _t0=Date.now();
   // número PERSISTENTE de cada asset (lo asigna el worker y va en el meta/stock). Para /play<N>.
   all.forEach(it=>{ it._num=it.num; });
   try{ mergeMatrixExtras(); }catch(_){}   // r63: los assets de la matriz fuera del feed siguen en el pool
+  try{ if(taggedContentNums.length) ensureTaggedExtras().catch(()=>{}); }catch(_){}   // #ID etiquetados antiguos tras recargar
   try{ if(URL_IDS.length) resolveMatrixAssets(URL_IDS); }catch(_){}   // ?ids= fuera de las 300 recientes
   saveCatalog();   // persiste el último catálogo bueno para arranque offline
   guardState().source='live';
@@ -3415,7 +3416,10 @@ async function queueTaggedContent(num){
   // El tag/num puede haberse puesto hace segundos en Pixeria: no esperamos al
   // refresco periódico. Primero traemos el Stock vivo y sólo entonces resolvemos #ID.
   await loadFeed(false);
-  const it=all.find(x=>String(x&&x._num!=null?x._num:(x&&x.num))===wanted);
+  let it=all.find(x=>String(x&&x._num!=null?x._num:(x&&x.num))===wanted);
+  // #ID fuera de las 300 recientes del feed (12-nov-2026: #667 en el Mac Mini): se resuelve contra el índice
+  // completo del Stock y entra en el pool como extra persistente (mergeMatrixExtras lo re-inyecta en cada refresco).
+  if(!it){ const ext=await stockItemByNum(Number(wanted)); if(ext){ _matrixExtra.set(String(ext.id),ext); mergeMatrixExtras(); it=all.find(x=>String(x&&x.id)===String(ext.id))||ext; } }
   if(!it){ releaseForcedTagPlayback(forcedState); flashCli('✗ contenido #'+wanted+' no encontrado'); return 'ignored'; }
   if(!ownsForcedTagPlayback(forcedState)) return 'ignored';
   forcedState.id=String(it.id||'');
@@ -3455,6 +3459,13 @@ async function gotoPlaylistIndex(n){
 // Índice COMPLETO del Stock (stock.admira.store/stock/index.json, ~930 piezas) sólo cuando un
 // /play<N> apunta fuera del feed de 300; cacheado 10 min. Mismo índice que usa el gemelo.
 let _stockFull=null,_stockFullAt=0;
+async function ensureTaggedExtras(){
+  const have=new Set(all.map(it=>String(it&&it._num!=null?it._num:(it&&it.num))));
+  let added=false;
+  for(const n of taggedContentNums){ if(have.has(String(n))) continue; const it=await stockItemByNum(Number(n)); if(it&&!_matrixExtra.has(String(it.id))){ _matrixExtra.set(String(it.id),it); added=true; } }
+  if(added&&mergeMatrixExtras()){ seenSig=''; rebuild(false); }
+  return added;
+}
 async function stockFullIndex(){
   if(!_stockFull||Date.now()-_stockFullAt>600000){
     const r=await fetch('https://stock.admira.store/stock/index.json?t='+Date.now(),{cache:'no-store'});
