@@ -213,6 +213,18 @@
     .equipo{font-family:var(--mono);font-size:11px;color:var(--amber);margin:-2px 0 8px;display:none}
     .equipo b{color:var(--text)}
     [data-mando-pane][hidden]{display:none!important}
+
+    .voice-dock{margin-top:8px;display:grid;gap:6px}
+    .voice-toggle{min-height:48px;font:700 13px/1.15 var(--mono)}
+    .voice-toggle[aria-pressed="true"]{border-color:var(--cyan);color:var(--cyan);background:color-mix(in srgb,var(--cyan) 12%,transparent)}
+    .voice-status{min-height:1.3em;color:var(--muted);font:10px/1.35 var(--mono)}
+    .voice-status.interim{color:var(--dim)}
+    .voice-status.err{color:var(--red)}
+    .voice-log{list-style:none;margin:0;padding:8px 10px;max-height:96px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--elev);color:var(--dim);font:10px/1.4 var(--mono)}
+    .voice-log li{margin:0 0 4px;overflow-wrap:anywhere}
+    .voice-log li:last-child{margin:0}
+    .voice-log li.ok{color:#76f2a8}
+    .voice-log li.err{color:#ff8f8f}
   </style>
 </head>
 <body>
@@ -263,6 +275,11 @@
         <button class="b media-control" id="nextControl" data-cmd="next" aria-label="Contenido siguiente"><span class="media-control-copy"><span class="media-control-action">⏭ Siguiente</span><span class="media-control-title" id="nextTitle">Esperando playlist</span></span></button>
         <button class="b cyan media-control" id="mute"><span class="media-control-copy"><span class="media-control-action" id="muteAction">🔇 Silenciar</span><span class="media-control-title" id="muteTitle">Contenido actual</span></span></button>
         <button class="b media-control" id="infoControl" aria-label="Informar sobre el contenido actual" aria-pressed="false"><span class="media-control-copy"><span class="media-control-action" id="infoAction">ⓘ Informar</span><span class="media-control-title" id="infoTitle">Mostrar la ficha del vídeo</span></span></button>
+      </div>
+      <div class="voice-dock" id="voiceDock">
+        <button type="button" class="b voice-toggle" id="voiceToggle" aria-pressed="false" aria-label="Control por voz de la playlist">🎙 Voz</button>
+        <div class="voice-status" id="voiceStatus" aria-live="polite"></div>
+        <ol class="voice-log" id="voiceLog" hidden></ol>
       </div>
       <div class="vol" title="Volumen del player remoto">🔊 <input type="range" id="vol" min="0" max="100" value="100" aria-label="Volumen del player remoto"><span id="volv">100%</span></div>
       <div class="seek-strip" id="seekStrip" aria-label="Saltar a otro momento del contenido actual"></div>
@@ -326,6 +343,7 @@
 
   <script src="/assets/virtual-players.js"></script>
   <script src="/assets/admira-eink.js"></script>
+  <script src="/mando-voice-commands.js"></script>
   <script>
     // Dominio propio primero: varios ISP españoles bloquean *.workers.dev y este mando
     // se usa desde el móvil, en España. api.admira.store proxea al MISMO worker; el
@@ -1287,6 +1305,98 @@
       }catch(e){ if(e.name!=='AbortError'&&generation===targetGeneration&&requestSeq===nowRequestSeq) document.getElementById('now').textContent='—'; }
       finally{ if(nowController===controller) nowController=null; }
     }
+
+
+    // Control por voz de transporte: el micrófono convierte frases en los
+    // mismos comandos del mando (first/prev/toggle-pause/play/next/last) y
+    // los envía a la pantalla seleccionada. Una orden individual siempre
+    // viaja por screen, igual que sendRemote. El mando no selecciona un
+    // grupo sincronizado entero: el <select> apunta a una pantalla.
+    (function initVoiceRemote(){
+      var toggle=document.getElementById('voiceToggle');
+      var status=document.getElementById('voiceStatus');
+      var logEl=document.getElementById('voiceLog');
+      var SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+      function setStatus(text,cls){ status.textContent=text||''; status.className='voice-status'+(cls?' '+cls:''); }
+      function appendLog(phrase,detail,ok){
+        logEl.hidden=false;
+        var li=document.createElement('li');
+        if(ok===true) li.className='ok';
+        else if(ok===false) li.className='err';
+        li.textContent=phrase+' · '+detail;
+        logEl.insertBefore(li,logEl.firstChild);
+        while(logEl.children.length>8) logEl.removeChild(logEl.lastChild);
+      }
+      if(!SpeechRecognition){
+        setStatus('El control por voz necesita Chrome o Edge','err');
+        toggle.disabled=true;
+        toggle.setAttribute('aria-disabled','true');
+        return;
+      }
+      var rec=null, enabled=false, lastKey='', lastAt=0, DEBOUNCE_MS=1500;
+      function startRec(){
+        rec=new SpeechRecognition();
+        rec.lang='es-ES';
+        rec.continuous=true;
+        rec.interimResults=true;
+        rec.onresult=function(ev){
+          var interim='', finals=[];
+          for(var i=ev.resultIndex;i<ev.results.length;i++){
+            var t=ev.results[i][0].transcript;
+            if(ev.results[i].isFinal) finals.push(t);
+            else interim+=t;
+          }
+          if(interim) setStatus('«'+interim.trim()+'»','interim');
+          finals.forEach(function(t){ handleFinal(t.trim()); });
+        };
+        rec.onerror=function(ev){
+          if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){
+            setStatus('Sin permiso de micrófono','err'); stopVoice(); return;
+          }
+          if(ev.error==='no-speech'||ev.error==='aborted') return;
+          setStatus('Voz: '+ev.error,'err');
+        };
+        rec.onend=function(){ rec=null; if(enabled) startRec(); };
+        try{ rec.start(); }catch(_){ }
+      }
+      function stopVoice(){
+        enabled=false;
+        toggle.setAttribute('aria-pressed','false');
+        if(rec){ try{ rec.onend=null; rec.stop(); }catch(_){ } rec=null; }
+      }
+      function handleFinal(phrase){
+        if(!phrase) return;
+        setStatus('«'+phrase+'»');
+        var cmd=AdmiraVoiceCommands.parseVoiceCommand(phrase);
+        if(!cmd){ appendLog(phrase,'no reconocido',false); return; }
+        var now=Date.now();
+        var key=cmd+'|'+AdmiraVoiceCommands.normalizePhrase(phrase);
+        if(key===lastKey&&now-lastAt<DEBOUNCE_MS){ appendLog(phrase,'ignorado (repetido)'); return; }
+        lastKey=key; lastAt=now;
+        sendVoiceCommand(cmd,phrase);
+      }
+      async function sendVoiceCommand(cmd,phrase){
+        var screen=T&&T.screen||'—';
+        appendLog(phrase,cmd+' → '+screen+' …');
+        try{
+          var sent=await sendRemote(cmd,null,{returnAction:true});
+          var receipt=sent&&sent.receipt, result=sent&&sent.result;
+          var ack=receipt
+            ? ((sent.ok?'✓ ':'✗ ')+cmd+' · ok='+!!receipt.ok+' · cid='+receipt.cid+' · action='+receipt.action+(result?' · '+result:''))
+            : ((sent&&sent.ok?'✓ ':'✗ ')+cmd+(result?' · '+result:' · sin red'));
+          appendLog(phrase,ack+' → '+((sent&&sent.target&&sent.target.screen)||screen), !!(sent&&sent.ok));
+        }catch(e){
+          appendLog(phrase,'✗ '+((e&&e.message)||'error'),false);
+        }
+      }
+      toggle.onclick=function(){
+        if(enabled){ stopVoice(); setStatus('Voz apagada'); return; }
+        enabled=true;
+        toggle.setAttribute('aria-pressed','true');
+        setStatus('Escuchando…');
+        startRec();
+      };
+    })();
 
     // ── CLI libre ──
     function cliGo(button){ var v=document.getElementById('cliInput').value.trim(); if(v){ sendRemote(v,button||document.getElementById('cliSend')); document.getElementById('cliInput').value=''; } }
