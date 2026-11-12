@@ -69,6 +69,7 @@
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
 <script src="/assets/mba-auto-sync.js?v=20261029-auto1"></script>
 <script src="/assets/precision-sync.js?v=20261029-fine3"></script>
+<script src="/playout-group-math.js?v=12.11.2026.r-group1"></script>
 <script src="/assets/showsync.js?v=12.11.2026.r1"></script>
 <script src="xpl-runtime.js?v=22.10.2026.r2.1134"></script>
 <script>
@@ -1021,10 +1022,55 @@ function syncItemDurationMs(it){
 }
 // Línea temporal variable pero determinista: todas las pantallas usan el mismo reloj,
 // orden y duración por pieza. Ya no se trocea un videoclip de 3 min en slots de 20 s.
+
+// Transporte del grupo sincronizado: el estado vive en /api/playout/group
+// (clave KV distinta a la clave principal de playout). En sincro, next/prev/first/last
+// y pausa/play no adelantan esta pantalla sola: publican el shift del grupo.
+let _groupTransport=null, _applyingGroupTransport=false, _groupTransportTimer=null;
+function applyGroupTransportState(state){
+  if(!state||typeof state!=='object') return;
+  const rev=Number(state.revision)||0;
+  if(_groupTransport&&rev<_groupTransport.revision) return;
+  const same=_groupTransport&&_groupTransport.revision===rev&&_groupTransport.shiftMs===state.shiftMs&&_groupTransport.pausedAt===state.pausedAt;
+  _groupTransport=state;
+  if(!syncOn) return;
+  const wantPaused=state.pausedAt!=null;
+  if(wantPaused!==paused){
+    _applyingGroupTransport=true;
+    try{ setPaused(wantPaused); }finally{ _applyingGroupTransport=false; }
+  }
+  if(!same){
+    try{ const idx=syncIndex(); if(idx!==cur||wantPaused!==paused) play(idx); }catch(_){}
+  }
+}
+async function pollGroupTransport(){
+  if(!syncOn) return;
+  try{
+    const d=await fetch('/api/playout/group?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
+    if(d&&d.ok&&d.state) applyGroupTransportState(d.state);
+  }catch(_){}
+}
+function ensureGroupTransportPoll(){
+  if(_groupTransportTimer) return;
+  _groupTransportTimer=setInterval(pollGroupTransport,1000);
+  pollGroupTransport();
+}
+async function postGroupTransport(action){
+  const durations=playlist.length?playlist.map(syncItemDurationMs):undefined;
+  try{
+    const r=await fetch('/api/playout/group',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action,durations})});
+    const d=r.ok?await r.json():null;
+    if(d&&d.ok&&d.state){ applyGroupTransportState(d.state); return true; }
+  }catch(_){}
+  return false;
+}
+
 function syncTimeline(){
   if(!playlist.length) return {index:0,duration:syncFallbackSlotMs(),elapsed:0,remaining:syncFallbackSlotMs(),total:syncFallbackSlotMs()};
   const durations=playlist.map(syncItemDurationMs), total=durations.reduce((sum,ms)=>sum+ms,0)||syncFallbackSlotMs();
-  const now=syncNow()-(SYNC_REMOTE&&SYNC_REMOTE.epochMs||0), pos=((now%total)+total)%total;
+  const epoch=SYNC_REMOTE&&SYNC_REMOTE.epochMs||0;
+  const hasGroup=typeof AdmiraPlayoutGroup!=='undefined'&&AdmiraPlayoutGroup&&typeof _groupTransport!=='undefined'&&_groupTransport;
+  const now=hasGroup?AdmiraPlayoutGroup.clockMs(_groupTransport,syncNow(),durations,epoch):(syncNow()-epoch), pos=((now%total)+total)%total;
   let start=0,index=durations.length-1;
   for(let i=0;i<durations.length;i++){ if(pos<start+durations[i]){ index=i; break; } start+=durations[i]; }
   const duration=durations[index], elapsed=Math.max(0,pos-start);
@@ -1065,6 +1111,7 @@ function setAdmiraSync(on){
     fetchSyncState();                                     // espeja el máster central (única autoridad)
     if(syncStateTimer) clearInterval(syncStateTimer);
     syncStateTimer=setInterval(fetchSyncState,30000);
+    ensureGroupTransportPoll();
     rebuild(true);
     flashCli('🔗 admiraTVsincro · '+SYNC_MASTER);
   } else {
@@ -2883,7 +2930,7 @@ async function play(i, forced){
 }
 // antes de cada nuevo contenido, revisa si hay novedades en stock (nuevas
 // importaciones o tags/categorías editados) — con throttle para no saturar.
-function next(){ if(paused||directOn) return; if(kioskReloadIfDue()) return; if(finishForcedTagPlayback()) return; if(PREVIEW.on){ play(cur+1); return; }
+function next(){ if(directOn) return; if(syncOn){ if(kioskReloadIfDue()) return; if(finishForcedTagPlayback()) return; postGroupTransport('next'); return; } if(paused) return; if(kioskReloadIfDue()) return; if(finishForcedTagPlayback()) return; if(PREVIEW.on){ play(cur+1); return; }
   // NOVEDAD AL AIRE: mientras dure su turno la pieza nueva se repite sola; al
   // agotarse, freshEnd() deja cur EN ella para que el loop siga por la siguiente
   // (o arranca otra novedad que hubiera entrado mientras).
@@ -2894,8 +2941,8 @@ function next(){ if(paused||directOn) return; if(kioskReloadIfDue()) return; if(
   // orden de 1 GB/día de descarga POR PLAYER en reposo. Los 5 s se conservan SOLO donde
   // la baja latencia es doctrina: import pendiente (✓ de Telegram) y novedad al aire (r53).
   { const _ivl=(pendingImport||freshOn())?5000:Math.max(10,+cfg.refreshSec||30)*1000;
-    if(Date.now()-_lastFeed>_ivl){ try{ loadFeed(false); }catch(_){} } } if(syncOn){ play(syncIndex()); return; } play(cur+1); }
-function prev(){ if(paused||directOn) return; if(syncOn){ play(syncIndex()); return; } play(cur-1); }
+    if(Date.now()-_lastFeed>_ivl){ try{ loadFeed(false); }catch(_){} } } if(syncOn){ postGroupTransport('next'); return; } play(cur+1); }
+function prev(){ if(directOn) return; if(syncOn){ postGroupTransport('prev'); return; } if(paused) return; play(cur-1); }
 // ── AUTOACTUALIZACIÓN EN KIOSKO (r60) ────────────────────────────────────────────
 // Un player en emisión (embed/clean) no tiene a nadie que pulse «⟳ VERSIÓN NUEVA»: el
 // botón del avisador compartido salía en pantallas públicas (su clase .admira-stale pasa
@@ -2929,6 +2976,7 @@ if(__adtvClean){
 }
 
 function setPaused(p){
+  if(syncOn&&!directOn&&!_applyingGroupTransport){ postGroupTransport(p?'pause':'play'); return; }
   const wasPaused=paused;
   paused=!!p; save(PAUSE_INTENT_KEY,paused?'1':'0');
   document.body.classList.toggle('paused',paused); $('pause').textContent=paused?'▶':'⏸';
@@ -4039,8 +4087,8 @@ function testNav(action){
   if(directOn||!playlist.length){ testHud('TEST '+ico+' · sin loop'); return; }
   if(action==='next') next();
   else if(action==='prev') prev();
-  else if(action==='first') play(0);
-  else if(action==='last') play(playlist.length-1);
+  else if(action==='first'){ if(syncOn){ postGroupTransport('first'); return; } play(0); }
+  else if(action==='last'){ if(syncOn){ postGroupTransport('last'); return; } play(playlist.length-1); }
   // cur ya está actualizado (play() fija cur de forma síncrona antes del await)
   testHudInfo(ico);
 }
@@ -4849,6 +4897,8 @@ function applyPlayoutAssignment(d){
     const leader=String(d.group&&d.group.leader||'');
     if(leader!==SYNC_GROUP_MASTER){ SYNC_GROUP_MASTER=leader; _syncSig=''; SYNC_REMOTE=null; fetchSyncState(); }
     if(!syncOn||playoutMode!=='sync'||leftExtended) setAdmiraSync(true);
+    if(d.groupTransport) applyGroupTransportState(d.groupTransport);
+    ensureGroupTransportPoll();
   }else if(syncOn||playoutMode!=='local'||leftExtended){
     // Si la sincro la puso el modo remoto del circuito (pantalla sin orquestación), se respeta.
     if(!(_autonomousPlan&&_autonomousRemoteSync)){ SYNC_GROUP_MASTER=''; setAdmiraMode('local'); }

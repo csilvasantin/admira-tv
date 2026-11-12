@@ -1,4 +1,5 @@
 import { accessFor, authHeaders, sessionEmail } from "../_auth-session.js";
+import { readGroupState } from "./playout/group.js";
 
 const STATE_KEY = "admira-tv:playout:v1";
 const DEFAULT_STATE = Object.freeze({ configured: false, mode: "autonomous", screens: [], item: null, layout: { rows: 1, cols: 1 }, revision: 0, updatedAt: 0 });
@@ -64,7 +65,11 @@ function assignmentFor(state, screen) {
 export async function onRequestGet({ request, env }) {
   const screen = cleanScreen(new URL(request.url).searchParams.get("screen"));
   const state = await readState(env);
-  if (screen) return json(assignmentFor(state, screen));
+  if (screen) {
+    const assignment = assignmentFor(state, screen);
+    assignment.groupTransport = await readGroupState(env);
+    return json(assignment);
+  }
   if (!await actorWithAccess(request, env)) return json({ ok: false, error: "unauthorized" }, 401);
   return json({ ok: true, state, serverNow: Date.now() });
 }

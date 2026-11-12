@@ -350,6 +350,7 @@
   <script src="/assets/virtual-players.js"></script>
   <script src="/assets/admira-eink.js"></script>
   <script src="/mando-voice-commands.js"></script>
+  <script src="/playout-group-math.js?v=12.11.2026.r-group1"></script>
   <script>
     // Dominio propio primero: varios ISP españoles bloquean *.workers.dev y este mando
     // se usa desde el móvil, en España. api.admira.store proxea al MISMO worker; el
@@ -626,6 +627,34 @@
       }
       return 'timeout';
     }
+    var GROUP_TRANSPORT_CMDS={next:1,prev:1,first:1,last:1,pause:1,play:1};
+    var _playoutAssignCache=null,_playoutAssignAt=0;
+    async function playoutAssignment(screen){
+      if(_playoutAssignCache&&_playoutAssignCache.screen===screen&&Date.now()-_playoutAssignAt<2500) return _playoutAssignCache.data;
+      try{
+        var r=await fetch('/api/playout?screen='+encodeURIComponent(screen)+'&t='+Date.now(),{cache:'no-store'});
+        var d=r.ok?await r.json():null;
+        _playoutAssignCache={screen:screen,data:d}; _playoutAssignAt=Date.now();
+        return d;
+      }catch(_){ return null; }
+    }
+    function groupDurationsMs(){
+      var items=remotePlaylistItems||[], out=[], i, n;
+      for(i=0;i<items.length;i++){
+        n=Number(items[i]&&(items[i]._dur||items[i].dur||items[i].duration||items[i].seconds))||0;
+        if(n>0&&n<1000) n=n*1000;
+        out.push(Math.max(1,Math.round(n||20000)));
+      }
+      return out;
+    }
+    async function sendGroupTransport(cmd){
+      var payload={action:cmd}, durations=groupDurationsMs();
+      if(durations.length) payload.durations=durations;
+      var r=await fetch('/api/playout/group',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(payload)});
+      var d=null; try{ d=await r.json(); }catch(_){ }
+      if(!r.ok||!d||!d.ok) throw new Error((d&&d.error)||('http '+r.status));
+      return d;
+    }
     async function sendRemote(cmd,button,options){
       var target={screen:T.screen,circuit:T.circuit};
       if(button&&BUTTON_ACTIONS.has(button)) return false;
@@ -634,6 +663,24 @@
         label:options.label||null,originalLabel:options.label?options.label.textContent:'',doneLabel:'',
         state:'pending',progress:.04,startedAt:Date.now(),raf:0,generation:targetGeneration,timeoutMs:ackTimeoutFor(target.screen)};
       if(button){ BUTTON_ACTIONS.set(button,action); paintRemoteButton(action); animateRemoteButton(action); }
+      // Transporte del grupo sincronizado: si esta pantalla está en el grupo de
+      // /api/playout, next/prev/first/last/pause/play van a /api/playout/group.
+      // Cualquier otra orden (y las pantallas autónomas) sigue yendo por screen.
+      if(GROUP_TRANSPORT_CMDS[String(cmd)]){
+        var assign=await playoutAssignment(target.screen);
+        if(assign&&assign.mode==='synchronized'){
+          try{
+            var group=await sendGroupTransport(String(cmd));
+            finishRemoteButton(action,'executed');
+            toast('✓ grupo · '+cmd+' · rev '+((group.state&&group.state.revision)||''));
+            return options.returnAction ? {ok:true,result:'executed',action:action,receipt:{ok:true,cid:(group.state&&group.state.revision)||0,action:'group-'+cmd},target:target} : true;
+          }catch(err){
+            finishRemoteButton(action,'failed');
+            toast('✗ grupo · '+((err&&err.message)||cmd));
+            return options.returnAction ? {ok:false,result:'failed',action:action,target:target} : false;
+          }
+        }
+      }
       // Una orden individual siempre viaja por screen. Usar el circuito aquí podía
       // apagar todos sus players aunque el selector enseñase uno solo.
       var body = JSON.stringify({id:target.screen, screen:target.screen, cmd:cmd});
