@@ -620,6 +620,7 @@ const _storedLiveTag=canonicalPlayTag(LS(LIVE_TAG_KEY,''));
 let _liveTagAt=+LS(LIVE_TAG_KEY+':at','0')||0;
 // Tag en vivo sin piezas → playlist normal y aviso al mando (sin borrar el tag).
 let _liveTagFallback=false, _liveTagEmpty='';
+let _liveTagRequested=_storedLiveTag;
 let _liveTag=!!_storedLiveTag;   // playlist alternativa puesta EN VIVO desde el mando
 if(_liveTag) seg.tag=_storedLiveTag;
 if(URL_TAG && modeParam==null && syncParam==null){ syncOn=false; playoutMode='local'; }
@@ -2467,7 +2468,7 @@ function playlistInfo(){
   const name=_extendedAssignment?(_extendedAssignment.dual?'Dual H·V':'Mural extendido'):PREVIEW.on?'Previo de borrador':syncOn?('Sincro'+(SYNC_GROUP_MASTER?' · '+SYNC_GROUP_MASTER:'')):(_plSource||'Stock');
   return { name, total:Math.max(playlist.length,_plPool||0), loop:playlist.length, cap:cfg.max, feedCap:all.length>=300,
     ready:segs.filter(c=>c==='g').length, downloading:segs.filter(c=>c==='y').length, online:segs.filter(c=>c==='o').length,
-    index:cur, segs:segs.join(''), tagEmpty:(_liveTag&&_liveTagEmpty)||'' };
+    index:cur, segs:segs.join(''), requestedTag:_liveTag&&!_liveTagEmpty?_liveTagRequested:'', tagEmpty:(_liveTag&&_liveTagEmpty)||'' };
 }
 async function cacheOpen(){ if(_cache!==null) return _cache; try{ _cache=await caches.open(CACHE_NAME); }catch(_){ _cache=false; } return _cache; }
 // Un interactivo NO se precachea: no es un asset, es una página que se abre. Bajarla
@@ -3184,6 +3185,7 @@ function rebuild(restart){
     const liveCurrentId=playlist[cur]&&String(playlist[cur].id||'');
     const alternativeSeg={medio:'all',audience:'all',category:'all',age:'all',slot:'all',tag:seg.tag,format:'',ids:[]};
     playlist=defaultOrder(all.filter(it=>it&&!it._grid&&matchesSeg(it,alternativeSeg)));
+    _plSource='#'+canonicalPlayTag(seg.tag);
     cur=liveCurrentId?playlist.findIndex(it=>String(it&&it.id||'')===liveCurrentId):-1;
     $('segCount').textContent=playlist.length+' en playlist alternativa #'+canonicalPlayTag(seg.tag);
     setLive('PLAYLIST ALTERNATIVA #'+canonicalPlayTag(seg.tag)+' · '+playlist.length+' en loop',playlist.length>0);
@@ -5376,7 +5378,7 @@ async function applyCtrlCmd(cmd){
       if(aud){ flashCli(forceAudience(aud[1])); return 'executed'; }
       const t=/^tag-([a-z0-9_,+-]*)$/.exec(cmd);
       if(t){
-        if(t[1]){ await loadFeed(false); _liveTag=true; save(LIVE_TAG_KEY,canonicalPlayTag(t[1])); _liveTagAt=Date.now(); save(LIVE_TAG_KEY+':at',String(_liveTagAt)); try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}
+        if(t[1]){ await loadFeed(false); _liveTag=true; _liveTagRequested=t[1]; save(LIVE_TAG_KEY,canonicalPlayTag(t[1])); _liveTagAt=Date.now(); save(LIVE_TAG_KEY+':at',String(_liveTagAt)); try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}
           const n=applyPlayTag(t[1]); flashCli('🎛 tag '+t[1]+' · '+n+' assets'); return n>0?'executed':'failed'; }
         else { _liveTag=false; save(LIVE_TAG_KEY,''); seg.tag=''; save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); flashCli('🎛 tag quitado'); }
         return 'executed'; }

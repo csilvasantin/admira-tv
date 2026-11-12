@@ -66,7 +66,7 @@ test('el Mando espera el acuse de la tinta el tiempo que tarda en pintar el pane
   assert.match(mando, /var EINK_TIMEOUT_MS = 180000;/);
   assert.match(mando, /limit=ackTimeoutFor\(target\.screen\)/);
   // No publica /screen/cache: el acuse «executed» cierra el envío, sin esperar una descarga.
-  assert.match(mando, /if\(targetIsEink\(\)\)\{ if\(sent\.action\)\{ sent\.action\.doneLabel='✓ Enviado a tinta'/);
+  assert.match(mando, /if\(ink\)\{ if\(sent\.action\)\{ sent\.action\.doneLabel='✓ Enviado a tinta'/);
   assert.match(mando, /else if\(!await waitTaggedAvailability\(sent,action\)\) return;/);
 });
 

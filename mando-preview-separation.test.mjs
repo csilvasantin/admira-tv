@@ -27,7 +27,7 @@ test('la pastilla y los controles de fullscreen gobiernan solo el preview local'
 
 test('los controles básicos viven dentro de Ahora emitiendo y tienen una única salida hacia el player remoto',()=>{
   const pillStart=mando.indexOf('<div class="nowbox">');
-  const pillEnd=mando.indexOf('\n  </div>\n\n  <section id="playlistView"',pillStart);
+  const pillEnd=mando.indexOf('\n  </div>\n\n  <fieldset id="taggedImport"',pillStart);
   assert.notEqual(pillStart,-1);
   assert.notEqual(pillEnd,-1);
   const pill=mando.slice(pillStart,pillEnd);
