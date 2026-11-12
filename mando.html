@@ -217,14 +217,19 @@
     .voice-dock{margin-top:8px;display:grid;gap:6px}
     .voice-toggle{min-height:48px;font:700 13px/1.15 var(--mono)}
     .voice-toggle[aria-pressed="true"]{border-color:var(--cyan);color:var(--cyan);background:color-mix(in srgb,var(--cyan) 12%,transparent)}
+    .voice-dock.armed .voice-toggle{border-color:var(--amber);color:var(--amber);background:color-mix(in srgb,var(--amber) 14%,transparent)}
+    .voice-armed{display:none;align-items:center;justify-content:center;gap:6px;padding:8px 10px;border:1px solid var(--amber);border-radius:10px;background:color-mix(in srgb,var(--amber) 12%,transparent);color:var(--amber);font:700 12px/1.3 var(--mono);letter-spacing:.04em;text-transform:uppercase}
+    .voice-dock.armed .voice-armed{display:flex}
     .voice-status{min-height:1.3em;color:var(--muted);font:10px/1.35 var(--mono)}
     .voice-status.interim{color:var(--dim)}
     .voice-status.err{color:var(--red)}
+    .voice-status.armed{color:var(--amber)}
     .voice-log{list-style:none;margin:0;padding:8px 10px;max-height:96px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--elev);color:var(--dim);font:10px/1.4 var(--mono)}
     .voice-log li{margin:0 0 4px;overflow-wrap:anywhere}
     .voice-log li:last-child{margin:0}
     .voice-log li.ok{color:#76f2a8}
     .voice-log li.err{color:#ff8f8f}
+    .voice-log li.ignored{color:var(--dim);opacity:.55}
   </style>
 </head>
 <body>
@@ -278,6 +283,7 @@
       </div>
       <div class="voice-dock" id="voiceDock">
         <button type="button" class="b voice-toggle" id="voiceToggle" aria-pressed="false" aria-label="Control por voz de la playlist">🎙 Voz</button>
+        <div class="voice-armed" id="voiceArmed" hidden>Di el comando · <b id="voiceArmedSecs">5</b> s</div>
         <div class="voice-status" id="voiceStatus" aria-live="polite"></div>
         <ol class="voice-log" id="voiceLog" hidden></ol>
       </div>
@@ -1307,33 +1313,58 @@
     }
 
 
-    // Control por voz de transporte: el micrófono convierte frases en los
+    // Control por voz de transporte: hay que decir «hola Admira» (o una
+    // variante) y luego el comando. El micrófono convierte esas frases en los
     // mismos comandos del mando (first/prev/toggle-pause/play/next/last) y
     // los envía a la pantalla seleccionada. Una orden individual siempre
     // viaja por screen, igual que sendRemote. El mando no selecciona un
     // grupo sincronizado entero: el <select> apunta a una pantalla.
     (function initVoiceRemote(){
+      var dock=document.getElementById('voiceDock');
       var toggle=document.getElementById('voiceToggle');
       var status=document.getElementById('voiceStatus');
       var logEl=document.getElementById('voiceLog');
+      var armedEl=document.getElementById('voiceArmed');
+      var armedSecs=document.getElementById('voiceArmedSecs');
       var SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
       function setStatus(text,cls){ status.textContent=text||''; status.className='voice-status'+(cls?' '+cls:''); }
-      function appendLog(phrase,detail,ok){
+      function appendLog(phrase,detail,kind){
         logEl.hidden=false;
         var li=document.createElement('li');
-        if(ok===true) li.className='ok';
-        else if(ok===false) li.className='err';
+        if(kind) li.className=kind;
         li.textContent=phrase+' · '+detail;
         logEl.insertBefore(li,logEl.firstChild);
         while(logEl.children.length>8) logEl.removeChild(logEl.lastChild);
       }
       if(!SpeechRecognition){
-        setStatus('El control por voz necesita Chrome o Edge','err');
-        toggle.disabled=true;
-        toggle.setAttribute('aria-disabled','true');
+        toggle.hidden=true;
+        dock.hidden=true;
         return;
       }
       var rec=null, enabled=false, lastKey='', lastAt=0, DEBOUNCE_MS=1500;
+      var armedUntil=0, armedTimer=0, ARM_MS=AdmiraVoiceCommands.ARM_MS||5000;
+      function clearArm(message){
+        armedUntil=0;
+        if(armedTimer){ clearInterval(armedTimer); armedTimer=0; }
+        dock.classList.remove('armed');
+        armedEl.hidden=true;
+        if(message) setStatus(message);
+      }
+      function paintArmed(){
+        var left=armedUntil-Date.now();
+        if(left<=0){ clearArm('Ventana cerrada · di «hola Admira»'); return; }
+        var secs=Math.max(1,Math.ceil(left/1000));
+        armedSecs.textContent=String(secs);
+        armedEl.hidden=false;
+        dock.classList.add('armed');
+        setStatus('Di el comando… '+secs+'s','armed');
+      }
+      function openArm(){
+        armedUntil=Date.now()+ARM_MS;
+        paintArmed();
+        if(armedTimer) clearInterval(armedTimer);
+        armedTimer=setInterval(paintArmed,100);
+      }
       function startRec(){
         rec=new SpeechRecognition();
         rec.lang='es-ES';
@@ -1346,7 +1377,7 @@
             if(ev.results[i].isFinal) finals.push(t);
             else interim+=t;
           }
-          if(interim) setStatus('«'+interim.trim()+'»','interim');
+          if(interim&&Date.now()>=armedUntil) setStatus('«'+interim.trim()+'»','interim');
           finals.forEach(function(t){ handleFinal(t.trim()); });
         };
         rec.onerror=function(ev){
@@ -1362,17 +1393,34 @@
       function stopVoice(){
         enabled=false;
         toggle.setAttribute('aria-pressed','false');
+        clearArm();
         if(rec){ try{ rec.onend=null; rec.stop(); }catch(_){ } rec=null; }
       }
       function handleFinal(phrase){
         if(!phrase) return;
-        setStatus('«'+phrase+'»');
-        var cmd=AdmiraVoiceCommands.parseVoiceCommand(phrase);
-        if(!cmd){ appendLog(phrase,'no reconocido',false); return; }
         var now=Date.now();
-        var key=cmd+'|'+AdmiraVoiceCommands.normalizePhrase(phrase);
-        if(key===lastKey&&now-lastAt<DEBOUNCE_MS){ appendLog(phrase,'ignorado (repetido)'); return; }
+        var result=AdmiraVoiceCommands.parseVoiceUtterance(phrase,{now:now,armedUntil:armedUntil});
+        if(result.type==='ignored'){
+          setStatus('«'+phrase+'»');
+          appendLog(phrase,'ignorada','ignored');
+          return;
+        }
+        if(result.type==='arm'){
+          openArm();
+          appendLog(phrase,'escuchando comando (5 s)');
+          return;
+        }
+        if(result.type==='unrecognized'){
+          setStatus('«'+phrase+'»');
+          appendLog(phrase,'no reconocido','err');
+          return;
+        }
+        var cmd=result.cmd;
+        var key=cmd+'|'+result.text;
+        if(key===lastKey&&now-lastAt<DEBOUNCE_MS){ appendLog(phrase,'ignorado (repetido)','ignored'); return; }
         lastKey=key; lastAt=now;
+        clearArm();
+        setStatus('«'+phrase+'»');
         sendVoiceCommand(cmd,phrase);
       }
       async function sendVoiceCommand(cmd,phrase){
@@ -1384,16 +1432,16 @@
           var ack=receipt
             ? ((sent.ok?'✓ ':'✗ ')+cmd+' · ok='+!!receipt.ok+' · cid='+receipt.cid+' · action='+receipt.action+(result?' · '+result:''))
             : ((sent&&sent.ok?'✓ ':'✗ ')+cmd+(result?' · '+result:' · sin red'));
-          appendLog(phrase,ack+' → '+((sent&&sent.target&&sent.target.screen)||screen), !!(sent&&sent.ok));
+          appendLog(phrase,ack+' → '+((sent&&sent.target&&sent.target.screen)||screen), sent&&sent.ok?'ok':'err');
         }catch(e){
-          appendLog(phrase,'✗ '+((e&&e.message)||'error'),false);
+          appendLog(phrase,'✗ '+((e&&e.message)||'error'),'err');
         }
       }
       toggle.onclick=function(){
         if(enabled){ stopVoice(); setStatus('Voz apagada'); return; }
         enabled=true;
         toggle.setAttribute('aria-pressed','true');
-        setStatus('Escuchando…');
+        setStatus('Escuchando… di «hola Admira»');
         startRec();
       };
     })();

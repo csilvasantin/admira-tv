@@ -1,10 +1,12 @@
 /* Parser puro de frases de transporte por voz del mando (es-ES).
+   La palabra de activación es obligatoria: «hola Admira» (y variantes).
    Se carga en mando.html y se prueba con node en mando-voice-commands.test.mjs. */
 (function (root, factory) {
   var api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.AdmiraVoiceCommands = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  var ARM_MS = 5000;
   var COMMANDS = {
     siguiente: 'next',
     proximo: 'next',
@@ -31,6 +33,7 @@
   };
   var FILLER = /^(el|la|lo|los|las|un|una|al|del|de|por|favor|cancion|canciones|contenido|video|tema|pista|ahora|oye|pon|ponme|vamos|anda)$/;
   var KEYS = Object.keys(COMMANDS).sort(function (a, b) { return b.length - a.length; });
+  var WAKE_RE = /^(hola|ola)\s+(admira|almira)(?:\s+(.*))?$/;
 
   function stripAccents(s) {
     return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -39,9 +42,13 @@
   function normalizePhrase(phrase) {
     var s = stripAccents(phrase).toLowerCase();
     s = s.replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
-    s = s.replace(/^(admira)\s+/, '').replace(/\s+por favor$/, '').trim();
-    if (s === 'admira') return '';
     return s;
+  }
+
+  function matchWake(text) {
+    var m = String(text || '').match(WAKE_RE);
+    if (!m) return null;
+    return { wake: m[1] + ' ' + m[2], rest: (m[3] || '').trim() };
   }
 
   function lookup(text) {
@@ -56,9 +63,42 @@
     return null;
   }
 
-  function parseVoiceCommand(phrase) {
-    return lookup(normalizePhrase(phrase));
+  function parseVoiceUtterance(phrase, options) {
+    options = options || {};
+    var now = options.now != null ? Number(options.now) : 0;
+    var armedUntil = options.armedUntil != null ? Number(options.armedUntil) : 0;
+    var text = normalizePhrase(phrase);
+    if (!text) return { type: 'ignored', cmd: null, text: '', arm: false };
+
+    var wake = matchWake(text);
+    if (wake) {
+      if (!wake.rest) return { type: 'arm', cmd: null, text: text, arm: true };
+      var cmd = lookup(wake.rest);
+      if (cmd) return { type: 'command', cmd: cmd, text: text, arm: false };
+      return { type: 'unrecognized', cmd: null, text: text, arm: false };
+    }
+
+    var armed = armedUntil > now;
+    if (armed) {
+      var armedCmd = lookup(text);
+      if (armedCmd) return { type: 'command', cmd: armedCmd, text: text, arm: false };
+      return { type: 'unrecognized', cmd: null, text: text, arm: true };
+    }
+
+    return { type: 'ignored', cmd: null, text: text, arm: false };
   }
 
-  return { normalizePhrase: normalizePhrase, parseVoiceCommand: parseVoiceCommand, COMMANDS: COMMANDS };
+  function parseVoiceCommand(phrase, options) {
+    var result = parseVoiceUtterance(phrase, options);
+    return result.type === 'command' ? result.cmd : null;
+  }
+
+  return {
+    ARM_MS: ARM_MS,
+    COMMANDS: COMMANDS,
+    normalizePhrase: normalizePhrase,
+    matchWake: matchWake,
+    parseVoiceUtterance: parseVoiceUtterance,
+    parseVoiceCommand: parseVoiceCommand
+  };
 });
