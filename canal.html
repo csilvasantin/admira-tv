@@ -69,6 +69,7 @@
      en el script principal) lo usa para que las reglas conduzcan el contenido real. -->
 <script src="/assets/mba-auto-sync.js?v=20261029-auto1"></script>
 <script src="/assets/precision-sync.js?v=20261029-fine3"></script>
+<script src="/playout-group-math.js?v=12.11.2026.r-group1"></script>
 <script src="/assets/showsync.js?v=12.11.2026.r1"></script>
 <script src="xpl-runtime.js?v=22.10.2026.r2.1134"></script>
 <script>
@@ -1021,10 +1022,46 @@ function syncItemDurationMs(it){
 }
 // Línea temporal variable pero determinista: todas las pantallas usan el mismo reloj,
 // orden y duración por pieza. Ya no se trocea un videoclip de 3 min en slots de 20 s.
+
+// Transporte del grupo sincronizado: el estado vive en /api/playout/group
+// (clave KV distinta a la clave principal de playout). El player solo CONSUME ese estado:
+// la orden de grupo la publican el relé de voz / mando (cookie o Bearer de servicio).
+let _groupTransport=null, _applyingGroupTransport=false, _groupTransportTimer=null;
+function applyGroupTransportState(state){
+  if(!state||typeof state!=='object') return;
+  const rev=Number(state.revision)||0;
+  if(_groupTransport&&rev<_groupTransport.revision) return;
+  const same=_groupTransport&&_groupTransport.revision===rev&&_groupTransport.shiftMs===state.shiftMs&&_groupTransport.pausedAt===state.pausedAt;
+  _groupTransport=state;
+  if(!syncOn) return;
+  const wantPaused=state.pausedAt!=null;
+  if(wantPaused!==paused){
+    _applyingGroupTransport=true;
+    try{ setPaused(wantPaused); }finally{ _applyingGroupTransport=false; }
+  }
+  if(!same){
+    try{ const idx=syncIndex(); if(idx!==cur||wantPaused!==paused) play(idx); }catch(_){}
+  }
+}
+async function pollGroupTransport(){
+  if(!syncOn) return;
+  try{
+    const d=await fetch('/api/playout/group?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null);
+    if(d&&d.ok&&d.state) applyGroupTransportState(d.state);
+  }catch(_){}
+}
+function ensureGroupTransportPoll(){
+  if(_groupTransportTimer) return;
+  _groupTransportTimer=setInterval(pollGroupTransport,1000);
+  pollGroupTransport();
+}
+
 function syncTimeline(){
   if(!playlist.length) return {index:0,duration:syncFallbackSlotMs(),elapsed:0,remaining:syncFallbackSlotMs(),total:syncFallbackSlotMs()};
   const durations=playlist.map(syncItemDurationMs), total=durations.reduce((sum,ms)=>sum+ms,0)||syncFallbackSlotMs();
-  const now=syncNow()-(SYNC_REMOTE&&SYNC_REMOTE.epochMs||0), pos=((now%total)+total)%total;
+  const epoch=SYNC_REMOTE&&SYNC_REMOTE.epochMs||0;
+  const hasGroup=typeof AdmiraPlayoutGroup!=='undefined'&&AdmiraPlayoutGroup&&typeof _groupTransport!=='undefined'&&_groupTransport;
+  const now=hasGroup?AdmiraPlayoutGroup.clockMs(_groupTransport,syncNow(),durations,epoch):(syncNow()-epoch), pos=((now%total)+total)%total;
   let start=0,index=durations.length-1;
   for(let i=0;i<durations.length;i++){ if(pos<start+durations[i]){ index=i; break; } start+=durations[i]; }
   const duration=durations[index], elapsed=Math.max(0,pos-start);
@@ -1065,6 +1102,7 @@ function setAdmiraSync(on){
     fetchSyncState();                                     // espeja el máster central (única autoridad)
     if(syncStateTimer) clearInterval(syncStateTimer);
     syncStateTimer=setInterval(fetchSyncState,30000);
+    ensureGroupTransportPoll();
     rebuild(true);
     flashCli('🔗 admiraTVsincro · '+SYNC_MASTER);
   } else {
@@ -4849,6 +4887,8 @@ function applyPlayoutAssignment(d){
     const leader=String(d.group&&d.group.leader||'');
     if(leader!==SYNC_GROUP_MASTER){ SYNC_GROUP_MASTER=leader; _syncSig=''; SYNC_REMOTE=null; fetchSyncState(); }
     if(!syncOn||playoutMode!=='sync'||leftExtended) setAdmiraSync(true);
+    if(d.groupTransport) applyGroupTransportState(d.groupTransport);
+    ensureGroupTransportPoll();
   }else if(syncOn||playoutMode!=='local'||leftExtended){
     // Si la sincro la puso el modo remoto del circuito (pantalla sin orquestación), se respeta.
     if(!(_autonomousPlan&&_autonomousRemoteSync)){ SYNC_GROUP_MASTER=''; setAdmiraMode('local'); }
