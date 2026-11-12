@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOIR lite · admira.tv</title>
+<style type="text/css">
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; color: #fff; overflow: hidden; font-family: Arial, Helvetica, sans-serif; }
+#video { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #000; }
+#ficha { position: absolute; left: 0; top: 0; right: 0; padding: 12px 18px; background: #000; background: rgba(0,0,0,0.55); font-size: 22px; }
+#titulo { font-weight: bold; }
+#pos { color: #ff3d7a; margin-left: 12px; }
+#estado { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-size: 28px; color: #fff; padding: 0 20px; }
+#estado.error { color: #ff5a5a; }
+#barra { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 0 14px 0; text-align: center; background: #000; background: rgba(0,0,0,0.55); }
+#barra button { font-size: 22px; padding: 10px 16px; margin: 0 4px; color: #fff; background: #222; border: 2px solid #ff2a4a; cursor: pointer; }
+#barra button:focus { background: #ff2a4a; outline: none; }
+#diag { position: absolute; right: 8px; bottom: 74px; font-size: 11px; color: #888; text-align: right; max-width: 60%; }
+</style>
+</head>
+<body>
+<video id="video" autoplay muted playsinline webkit-playsinline></video>
+<div id="ficha"><span id="titulo">NOIR lite</span><span id="pos"></span></div>
+<div id="estado">Cargando playlist&hellip;</div>
+<div id="barra">
+  <button type="button" id="b-primero">Primero</button>
+  <button type="button" id="b-anterior">Anterior</button>
+  <button type="button" id="b-pausa">Pausa</button>
+  <button type="button" id="b-play">Reproduce</button>
+  <button type="button" id="b-siguiente">Siguiente</button>
+  <button type="button" id="b-ultimo">&Uacute;ltimo</button>
+</div>
+<div id="diag"></div>
+<script type="text/javascript">
+/* Kiosko NOIR lite: ES5 puro, sin dependencias, para navegadores antiguos
+   (Opera integrado de la Philips 75BDL3003H). Lee GET /api/playlist?screen= del
+   mismo origen y reproduce los mp4 en un <video> simple. Sin escena 3D ni voz. */
+(function () {
+  var VERSION = 'lite-1';
+  var PANTALLA_DEFECTO = 'admiranext03-a';
+  var API = '/api/playlist';
+  var REFRESCO_MS = 300000;
+
+  function $(id) { return document.getElementById(id); }
+  function texto(el, t) {
+    if (!el) return;
+    if (typeof el.textContent !== 'undefined') el.textContent = t; else el.innerText = t;
+  }
+  function on(el, ev, fn) {
+    if (!el) return;
+    if (el.addEventListener) el.addEventListener(ev, fn, false);
+    else if (el.attachEvent) el.attachEvent('on' + ev, fn);
+  }
+  function param(nombre) {
+    var q = window.location.search ? window.location.search.substring(1) : '';
+    var partes = q.split('&');
+    for (var i = 0; i < partes.length; i++) {
+      var kv = partes[i].split('=');
+      if (decodeURIComponent(kv[0]) === nombre) {
+        return kv.length > 1 ? decodeURIComponent(kv[1].replace(/\+/g, ' ')) : '';
+      }
+    }
+    return null;
+  }
+  function parseJSON(s) {
+    if (window.JSON && window.JSON.parse) return window.JSON.parse(s);
+    return eval('(' + s + ')');
+  }
+
+  var pantalla = param('screen') || PANTALLA_DEFECTO;
+  var audioP = param('audio');
+  var quiereAudio = audioP === '1' || audioP === 'true';
+
+  var video = $('video');
+  var estado = $('estado');
+  var lista = [];
+  var nombreLista = '';
+  var revActual = null;
+  var pendiente = null;
+  var indice = 0;
+  var erroresSeguidos = 0;
+
+  function mostrarEstado(t, esError) {
+    texto(estado, t || '');
+    estado.className = esError ? 'error' : '';
+    estado.style.display = t ? 'block' : 'none';
+  }
+
+  function diagnostico() {
+    var mp4 = '?';
+    try { mp4 = video.canPlayType ? (video.canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"') || 'no') : 'sin canPlayType'; } catch (e) { mp4 = 'err'; }
+    texto($('diag'), 'NOIR ' + VERSION + ' · screen=' + pantalla + ' · mp4:' + mp4 + ' · ' + (navigator.userAgent || ''));
+  }
+
+  function itemsValidos(draft) {
+    var out = [];
+    var items = (draft && draft.items) || [];
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (!it) continue;
+      if (it.assetType && it.assetType !== 'video') continue;
+      var url = it.asset || (it.stockId ? 'https://stock.admira.store/stock/' + encodeURIComponent(it.stockId) + '/asset.mp4' : '');
+      if (url) out.push({ id: it.id, title: it.title || it.id || '', url: url });
+    }
+    return out;
+  }
+
+  function pedirLista(esInicial) {
+    var xhr;
+    try { xhr = new XMLHttpRequest(); } catch (e) { mostrarEstado('Error: este navegador no tiene XMLHttpRequest', true); return; }
+    var url = API + '?screen=' + encodeURIComponent(pantalla) + '&_=' + new Date().getTime();
+    var terminado = false;
+    var temporizador = setTimeout(function () {
+      if (terminado) return;
+      terminado = true;
+      try { xhr.abort(); } catch (e) {}
+      fallo('tiempo agotado (15 s)');
+    }, 15000);
+    function fallo(motivo) {
+      if (esInicial || !lista.length) {
+        mostrarEstado('Error al leer la playlist: ' + motivo + ' · ' + url + ' · reintento en 20 s', true);
+        setTimeout(function () { pedirLista(true); }, 20000);
+      }
+    }
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4 || terminado) return;
+      terminado = true;
+      clearTimeout(temporizador);
+      if (xhr.status !== 200) { fallo('HTTP ' + xhr.status); return; }
+      var data;
+      try { data = parseJSON(xhr.responseText); } catch (e) { fallo('JSON no válido'); return; }
+      if (!data || data.ok === false || !data.draft) { fallo('respuesta sin draft'); return; }
+      var items = itemsValidos(data.draft);
+      if (!items.length) { fallo('playlist vacía'); return; }
+      if (esInicial || !lista.length) {
+        lista = items; nombreLista = data.draft.name || ''; revActual = data.draft.rev;
+        mostrarEstado('', false);
+        cargar(0);
+      } else if (data.draft.rev !== revActual) {
+        pendiente = { items: items, name: data.draft.name || '', rev: data.draft.rev };
+      }
+    };
+    try {
+      xhr.open('GET', url, true);
+      xhr.send(null);
+    } catch (e) {
+      terminado = true; clearTimeout(temporizador);
+      fallo('excepción ' + (e && e.message ? e.message : e));
+    }
+  }
+
+  function ficha() {
+    var it = lista[indice];
+    texto($('titulo'), it ? it.title : 'NOIR lite');
+    texto($('pos'), lista.length ? ((nombreLista ? nombreLista + ' · ' : '') + (indice + 1) + ' / ' + lista.length) : '');
+  }
+
+  function reproducir() {
+    try {
+      var p = video.play();
+      if (p && typeof p.then === 'function') {
+        p.then(null, function () {
+          if (!video.muted) { video.muted = true; try { video.play(); } catch (e2) {} }
+        });
+      }
+    } catch (e) {}
+  }
+
+  function cargar(i) {
+    if (!lista.length) return;
+    indice = ((i % lista.length) + lista.length) % lista.length;
+    var it = lista[indice];
+    video.muted = !quiereAudio;
+    if (!quiereAudio) video.setAttribute('muted', 'muted');
+    video.src = it.url;
+    try { video.load(); } catch (e) {}
+    ficha();
+    reproducir();
+  }
+
+  function adoptarPendiente() {
+    if (!pendiente) return false;
+    var idActual = lista[indice] ? lista[indice].id : null;
+    lista = pendiente.items; nombreLista = pendiente.name; revActual = pendiente.rev; pendiente = null;
+    var pos = -1;
+    for (var i = 0; i < lista.length; i++) { if (lista[i].id === idActual) { pos = i; break; } }
+    indice = pos === -1 ? -1 : pos;
+    return true;
+  }
+
+  function siguiente() { adoptarPendiente(); cargar(indice + 1); }
+  function anterior() { cargar(indice - 1); }
+  function primero() { cargar(0); }
+  function ultimo() { cargar(lista.length - 1); }
+  function pausa() { try { video.pause(); } catch (e) {} }
+  function play() { reproducir(); }
+  function alternar() { if (video.paused) play(); else pausa(); }
+
+  on(video, 'ended', function () { erroresSeguidos = 0; siguiente(); });
+  on(video, 'playing', function () { erroresSeguidos = 0; if (estado.className === 'error') mostrarEstado('', false); });
+  on(video, 'error', function () {
+    var code = video.error ? video.error.code : '?';
+    var it = lista[indice];
+    erroresSeguidos++;
+    mostrarEstado('Error de vídeo (código ' + code + ') en «' + (it ? it.title : '') + '» · ' + (it ? it.url : '') + ' · paso al siguiente', true);
+    if (lista.length && erroresSeguidos < lista.length * 2) setTimeout(siguiente, 3000);
+    else if (lista.length) setTimeout(function () { erroresSeguidos = 0; siguiente(); }, 30000);
+  });
+
+  // Pantalla completa (si el navegador lo permite) al primer clic o tecla.
+  var pidioPantalla = false;
+  function pantallaCompleta() {
+    if (pidioPantalla) return;
+    pidioPantalla = true;
+    var d = document.documentElement;
+    try {
+      if (d.requestFullscreen) d.requestFullscreen();
+      else if (d.webkitRequestFullscreen) d.webkitRequestFullscreen();
+      else if (d.webkitRequestFullScreen) d.webkitRequestFullScreen();
+      else if (d.mozRequestFullScreen) d.mozRequestFullScreen();
+      else if (d.msRequestFullscreen) d.msRequestFullscreen();
+    } catch (e) {}
+    if (quiereAudio) { video.muted = false; reproducir(); }
+  }
+
+  function boton(id, fn) {
+    on($(id), 'click', function (ev) { pantallaCompleta(); fn(); });
+  }
+  boton('b-primero', primero);
+  boton('b-anterior', anterior);
+  boton('b-pausa', pausa);
+  boton('b-play', play);
+  boton('b-siguiente', siguiente);
+  boton('b-ultimo', ultimo);
+  on(document, 'click', function () { pantallaCompleta(); });
+
+  on(document, 'keydown', function (ev) {
+    ev = ev || window.event;
+    var k = ev.keyCode || ev.which;
+    var t = ev.target || ev.srcElement;
+    var enBoton = t && t.tagName && t.tagName.toUpperCase() === 'BUTTON';
+    pantallaCompleta();
+    var hecho = true;
+    if (k === 39 || k === 34 || k === 417 || k === 176) siguiente();       // derecha, AvPág, FF, pista siguiente
+    else if (k === 37 || k === 33 || k === 412 || k === 177) anterior();   // izquierda, RePág, REW, pista anterior
+    else if (k === 36) primero();                                          // Inicio
+    else if (k === 35) ultimo();                                           // Fin
+    else if (k === 415) play();                                            // PLAY del mando
+    else if (k === 19 || k === 413) pausa();                               // PAUSE / STOP del mando
+    else if (k === 179 || k === 32 || (k === 13 && !enBoton)) alternar();  // play/pausa, espacio, OK
+    else hecho = false;
+    if (hecho) {
+      if (ev.preventDefault) ev.preventDefault(); else ev.returnValue = false;
+    }
+  });
+
+  diagnostico();
+  pedirLista(true);
+  setInterval(function () { pedirLista(false); }, REFRESCO_MS);
+})();
+</script>
+</body>
+</html>
