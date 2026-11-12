@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="theme-color" content="#050308">
+  <link rel="icon" href="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==">
+  <title>NOIR — kiosko</title>
+  <style>
+    /* Kiosko: ocupa toda la pantalla, sin scroll. El cursor y los controles
+       solo aparecen tras un toque o movimiento del ratón, y se ocultan a los 4 s. */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #050308;
+      cursor: none;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+    body.controles-visibles,
+    body.controles-visibles * {
+      cursor: default;
+    }
+    canvas#escena {
+      display: block;
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+    /* El <video> alimenta la VideoTexture; en modo escena queda detrás del lienzo.
+       En modo=video (o en el modo bajo automático) se ve a pantalla casi completa. */
+    /* Fuera de pantalla y con tamaño real: así la VideoTexture recibe fotogramas
+       y el <video> no se ve ni en capturas (algunos SoC ignoran opacity en vídeo). */
+    #video {
+      position: fixed;
+      left: -640px;
+      top: 0;
+      width: 640px;
+      height: 360px;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 0;
+      background: transparent;
+    }
+    body.modo-video #video,
+    body.video-sobrepuesto #video {
+      left: 3.5vw;
+      top: 3.5vh;
+      width: 93vw;
+      height: 93vh;
+      opacity: 1;
+      object-fit: contain;
+      z-index: 2;
+      background: transparent;
+    }
+    #controles {
+      position: fixed;
+      left: 50%;
+      bottom: 5.5vh;
+      transform: translateX(-50%);
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.7rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+      max-width: 92vw;
+    }
+    body.controles-visibles #controles {
+      opacity: 1;
+      pointer-events: auto;
+      touch-action: manipulation;
+    }
+    #ficha {
+      color: #ffd0de;
+      text-shadow: 0 0 8px #ff3d7a, 0 0 18px rgba(255, 45, 90, 0.45);
+      font-size: clamp(0.85rem, 2.1vw, 1.15rem);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    #ficha .lista {
+      display: block;
+      margin-top: 0.15rem;
+      color: #9fefff;
+      text-shadow: 0 0 8px #2ad0ff;
+      font-size: 0.78em;
+      letter-spacing: 0.12em;
+    }
+    #botones {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.45rem;
+    }
+    #botones button {
+      appearance: none;
+      background: rgba(8, 6, 12, 0.72);
+      color: #ffd6e4;
+      border: 1px solid rgba(255, 61, 122, 0.7);
+      box-shadow: 0 0 10px rgba(255, 45, 90, 0.28), inset 0 0 8px rgba(255, 45, 90, 0.08);
+      border-radius: 2px;
+      padding: 0.55rem 0.85rem;
+      font-size: clamp(0.75rem, 1.8vw, 0.95rem);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    #botones button:hover,
+    #botones button:focus {
+      outline: none;
+      border-color: #2ad0ff;
+      color: #e8ffff;
+      box-shadow: 0 0 14px rgba(42, 208, 255, 0.45);
+    }
+    #eco-voz {
+      min-height: 1.2em;
+      max-width: 90vw;
+      text-align: center;
+      font-size: clamp(0.75rem, 1.8vw, 0.95rem);
+      letter-spacing: 0.08em;
+      color: rgba(255, 208, 222, 0.9);
+      text-shadow: 0 0 8px rgba(255, 61, 122, 0.5);
+      transition: opacity 0.4s ease;
+    }
+    #eco-voz.ignorado {
+      color: rgba(180, 180, 190, 0.45);
+      text-shadow: none;
+      font-size: clamp(0.7rem, 1.5vw, 0.85rem);
+    }
+    #eco-voz.escucha {
+      color: #9fefff;
+      text-shadow: 0 0 8px #2ad0ff;
+    }
+    #eco-voz.oculto { opacity: 0; }
+  </style>
+</head>
+<body>
+  <canvas id="escena" aria-hidden="true"></canvas>
+  <video id="video" playsinline webkit-playsinline muted crossorigin="anonymous" preload="auto"></video>
+  <div id="controles">
+    <div id="ficha">
+      <span id="titulo-tema"></span>
+      <span class="lista" id="nombre-lista"></span>
+    </div>
+    <div id="botones">
+      <button type="button" data-cmd="primero" aria-label="Primero">Primero</button>
+      <button type="button" data-cmd="anterior" aria-label="Anterior">Anterior</button>
+      <button type="button" data-cmd="pausa" id="boton-pausa" aria-label="Pausa o reanudar">Pausa</button>
+      <button type="button" data-cmd="siguiente" aria-label="Siguiente">Siguiente</button>
+      <button type="button" data-cmd="ultimo" aria-label="Último">Último</button>
+    </div>
+    <div id="eco-voz" class="oculto" aria-live="polite"></div>
+  </div>
+  <script type="module">
+    /**
+     * Prototipo de kiosko 3D para una pantalla Philips con SoC (Android TV o similar).
+     *
+     * ESCENA DE EJEMPLO generada por código (Three.js). No es el archivo 3D real
+     * de la foto de la Philips, que no tenemos.
+     *
+     * El vídeo sale de la playlist pública de admira.tv (GET /api/playlist?screen=),
+     * sin claves ni secretos en el cliente. Solo lecturas públicas.
+     *
+     * Hueco para un modelo real: asigna MODELO_GLB_URL (p. ej. './modelo.glb')
+     * o MODELO_SPLAT_URL cuando exista el archivo.
+     */
+    import * as THREE from './vendor/three.module.min.js';
+
+    const MODELO_GLB_URL = '';
+    const MODELO_SPLAT_URL = '';
+
+    const COLOR_NEON_ROJO = 0xff2a4a;
+    const COLOR_NEON_AZUL = 0x2ad0ff;
+    const COLOR_NEON_ROSA = 0xff3d7a;
+    const COLOR_FONDO = 0x050308;
+
+    const API_PUBLICA = 'https://admira.tv/api/playlist';
+    const API_MISMO_ORIGEN = '/api/playlist';
+    const PANTALLA_DEFECTO = 'admiranext03-a';
+    const INTERVALO_LISTA_MS = 60000;
+    const OCULTAR_CONTROLES_MS = 4000;
+    const VENTANA_WAKE_MS = 5000;
+
+    const params = new URLSearchParams(location.search);
+    const pantallaId = params.get('screen') || PANTALLA_DEFECTO;
+    const modoVideo = (params.get('modo') || 'escena').toLowerCase() === 'video';
+    const quiereAudio = params.get('audio') === '1' || params.get('audio') === 'true';
+    const apiForzada = params.get('api'); // p. ej. /api/playlist si se usa el proxy local
+
+    if (modoVideo) document.body.classList.add('modo-video');
+
+    const lienzo = document.getElementById('escena');
+    const videoEl = document.getElementById('video');
+    const botonPausa = document.getElementById('boton-pausa');
+    const ecoVoz = document.getElementById('eco-voz');
+
+    let renderer, escena, camara, tArranqueMs = 0;
+    let idAnimacion = 0;
+    let modoBajo = false;
+    let candadoPantalla = null;
+    let luces = [];
+    let neones = [];
+    let envTex = null;
+    let texturaVideo = null;
+    let mallaPantalla = null;
+
+    // -------- Pantalla completa --------
+    function pedirPantallaCompleta() {
+      const nodo = document.documentElement;
+      const fn = nodo.requestFullscreen || nodo.webkitRequestFullscreen || nodo.mozRequestFullScreen;
+      if (!fn) return;
+      const activo = document.fullscreenElement || document.webkitFullscreenElement;
+      if (activo) return;
+      Promise.resolve(fn.call(nodo)).catch(() => {
+        // Sin gesto del usuario el navegador suele rechazar la petición; se reintenta al primer toque o tecla.
+      });
+    }
+    pedirPantallaCompleta();
+    ['pointerdown', 'touchstart', 'keydown', 'click'].forEach((tipo) => {
+      window.addEventListener(tipo, pedirPantallaCompleta, { passive: true });
+    });
+
+    // -------- Wake Lock de pantalla --------
+    async function mantenerPantallaDespierta() {
+      if (!('wakeLock' in navigator)) return;
+      try {
+        candadoPantalla = await navigator.wakeLock.request('screen');
+        candadoPantalla.addEventListener('release', () => { candadoPantalla = null; });
+      } catch (err) {
+        // Algunos navegadores exigen HTTPS (o localhost) y un gesto del usuario.
+      }
+    }
+    mantenerPantallaDespierta();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') mantenerPantallaDespierta();
+    });
+
+    window.addEventListener('contextmenu', (ev) => ev.preventDefault());
+    window.addEventListener('gesturestart', (ev) => ev.preventDefault());
+
+    // -------- Utilidades de la escena 3D --------
+    function materialNeon(hex) {
+      return new THREE.MeshStandardMaterial({
+        color: hex,
+        emissive: hex,
+        emissiveIntensity: 3.6,
+        roughness: 0.25,
+        metalness: 0.05,
+        toneMapped: false,
+      });
+    }
+    function materialResplandor(hex, opacidad) {
+      return new THREE.MeshBasicMaterial({
+        color: hex,
+        transparent: true,
+        opacity: opacidad,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        toneMapped: false,
+        side: THREE.DoubleSide,
+      });
+    }
+    function cilindroEntre(a, b, radio, material) {
+      const dir = new THREE.Vector3().subVectors(b, a);
+      const largo = dir.length();
+      if (largo < 1e-5) return new THREE.Mesh(new THREE.SphereGeometry(radio, 8, 8), material);
+      const geo = new THREE.CylinderGeometry(radio, radio, largo, 8, 1);
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.position.copy(a).add(b).multiplyScalar(0.5);
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+      return mesh;
+    }
+    function segmentoNeon(a, b, hex, radio = 0.028) {
+      const grupo = new THREE.Group();
+      const mat = materialNeon(hex);
+      const tubo = cilindroEntre(a, b, radio, mat);
+      const resplandor = cilindroEntre(a, b, radio * 3.2, materialResplandor(hex, 0.28));
+      const tapaA = new THREE.Mesh(new THREE.SphereGeometry(radio, 8, 8), mat);
+      const tapaB = new THREE.Mesh(new THREE.SphereGeometry(radio, 8, 8), mat);
+      tapaA.position.copy(a);
+      tapaB.position.copy(b);
+      grupo.add(tubo, resplandor, tapaA, tapaB);
+      neones.push({ tubo, resplandor, intensidadBase: 3.6 });
+      return grupo;
+    }
+    function tuboCurvoNeon(puntos, hex, radio = 0.028, cerrado = false) {
+      const curva = new THREE.CatmullRomCurve3(puntos, cerrado);
+      const segs = Math.max(24, puntos.length * 6);
+      const tubo = new THREE.Mesh(new THREE.TubeGeometry(curva, segs, radio, 8, cerrado), materialNeon(hex));
+      const resplandor = new THREE.Mesh(
+        new THREE.TubeGeometry(curva, Math.max(16, segs / 2), radio * 3.2, 8, cerrado),
+        materialResplandor(hex, 0.28)
+      );
+      const grupo = new THREE.Group();
+      grupo.add(tubo, resplandor);
+      neones.push({ tubo, resplandor, intensidadBase: 3.6 });
+      return grupo;
+    }
+    function reflejoSuelo(ancho, alto, hex, posicion, rotY = 0) {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 256;
+      const ctx = c.getContext('2d');
+      const col = new THREE.Color(hex);
+      const grad = ctx.createLinearGradient(128, 0, 128, 256);
+      const rgb = `${(col.r * 255) | 0},${(col.g * 255) | 0},${(col.b * 255) | 0}`;
+      grad.addColorStop(0, `rgba(${rgb},0)`);
+      grad.addColorStop(0.2, `rgba(${rgb},0.55)`);
+      grad.addColorStop(1, `rgba(${rgb},0)`);
+      ctx.fillStyle = grad;
+      ctx.filter = 'blur(8px)';
+      ctx.fillRect(40, 0, 176, 256);
+      const tex = new THREE.CanvasTexture(c);
+      const plano = new THREE.Mesh(
+        new THREE.PlaneGeometry(ancho, alto),
+        new THREE.MeshBasicMaterial({
+          map: tex,
+          transparent: true,
+          opacity: 0.55,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          toneMapped: false,
+          side: THREE.DoubleSide,
+        })
+      );
+      plano.rotation.x = -Math.PI / 2;
+      plano.rotation.z = rotY;
+      plano.position.copy(posicion);
+      plano.position.y = 0.012;
+      return plano;
+    }
+    function elipsePuntos(cx, cy, cz, rx, ry, n = 32) {
+      const pts = [];
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        pts.push(new THREE.Vector3(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry, cz));
+      }
+      return pts;
+    }
+    function letraNOIR(letra, hex, origen, escala) {
+      const g = new THREE.Group();
+      const P = (x, y) => new THREE.Vector3(x, y, 0).multiplyScalar(escala).add(origen);
+      if (letra === 'N') {
+        g.add(segmentoNeon(P(-0.38, -0.6), P(-0.38, 0.6), hex));
+        g.add(segmentoNeon(P(-0.38, 0.6), P(0.38, -0.6), hex));
+        g.add(segmentoNeon(P(0.38, -0.6), P(0.38, 0.6), hex));
+      } else if (letra === 'O') {
+        g.add(tuboCurvoNeon(elipsePuntos(origen.x, origen.y, origen.z, 0.38 * escala, 0.62 * escala, 36), hex, 0.022, true));
+      } else if (letra === 'I') {
+        g.add(segmentoNeon(P(0, -0.6), P(0, 0.6), hex));
+        g.add(segmentoNeon(P(-0.16, 0.6), P(0.16, 0.6), hex));
+        g.add(segmentoNeon(P(-0.16, -0.6), P(0.16, -0.6), hex));
+      } else if (letra === 'R') {
+        g.add(segmentoNeon(P(-0.36, -0.6), P(-0.36, 0.6), hex));
+        const bol = [];
+        for (let i = 0; i <= 18; i++) {
+          const t = i / 18;
+          const a = Math.PI / 2 - t * Math.PI;
+          bol.push(P(0.05 + Math.cos(a) * 0.34, 0.30 + Math.sin(a) * 0.30));
+        }
+        g.add(tuboCurvoNeon(bol, hex, 0.022, false));
+        g.add(segmentoNeon(P(-0.05, 0.02), P(0.40, -0.6), hex));
+      }
+      return g;
+    }
+    function texturaSuelo(tam = 512) {
+      const c = document.createElement('canvas');
+      c.width = c.height = tam;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#14141c';
+      ctx.fillRect(0, 0, tam, tam);
+      ctx.strokeStyle = 'rgba(220,220,255,0.05)';
+      ctx.lineWidth = 2;
+      const celda = tam / 6;
+      for (let i = 0; i <= 6; i++) {
+        ctx.beginPath(); ctx.moveTo(i * celda, 0); ctx.lineTo(i * celda, tam); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i * celda); ctx.lineTo(tam, i * celda); ctx.stroke();
+      }
+      const img = ctx.getImageData(0, 0, tam, tam);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const n = (Math.random() - 0.5) * 16;
+        img.data[i] += n; img.data[i + 1] += n; img.data[i + 2] += n;
+      }
+      ctx.putImageData(img, 0, 0);
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(8, 7);
+      tex.anisotropy = 4;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+    function texturaRugosidad(tam = 256) {
+      const c = document.createElement('canvas');
+      c.width = c.height = tam;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#3a3a3a';
+      ctx.fillRect(0, 0, tam, tam);
+      const img = ctx.getImageData(0, 0, tam, tam);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const n = 40 + Math.random() * 70;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = n;
+      }
+      ctx.putImageData(img, 0, 0);
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(8, 7);
+      return tex;
+    }
+    function crearMapaEntorno() {
+      const esc = new THREE.Scene();
+      const piezas = [
+        { c: 0xff2a4a, p: [0, 4, -10], s: [14, 5, 0.3] },
+        { c: 0x2ad0ff, p: [10, 1, 0], s: [0.3, 8, 10] },
+        { c: 0x180814, p: [-10, 1, 0], s: [0.3, 8, 10] },
+        { c: 0x0a0a10, p: [0, -10, 0], s: [24, 0.3, 24] },
+        { c: 0x151018, p: [0, 10, 0], s: [24, 0.3, 24] },
+        { c: 0x221018, p: [0, 2, 10], s: [14, 6, 0.3] },
+      ];
+      for (const p of piezas) {
+        const m = new THREE.Mesh(
+          new THREE.BoxGeometry(p.s[0], p.s[1], p.s[2]),
+          new THREE.MeshBasicMaterial({ color: p.c })
+        );
+        m.position.set(p.p[0], p.p[1], p.p[2]);
+        esc.add(m);
+      }
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      const tex = pmrem.fromScene(esc, 0.04).texture;
+      pmrem.dispose();
+      return tex;
+    }
+
+    function construirHabitacion() {
+      const grupo = new THREE.Group();
+      const matPared = new THREE.MeshStandardMaterial({ color: 0x121018, roughness: 0.88, metalness: 0.04 });
+      const matTecho = new THREE.MeshStandardMaterial({ color: 0x0b0b10, roughness: 0.92, metalness: 0.02 });
+      const suelo = new THREE.Mesh(
+        new THREE.PlaneGeometry(16, 14),
+        new THREE.MeshStandardMaterial({
+          map: texturaSuelo(),
+          roughnessMap: texturaRugosidad(),
+          color: 0x1a1a24,
+          metalness: 0.82,
+          roughness: 0.16,
+          envMapIntensity: 1.55,
+        })
+      );
+      suelo.rotation.x = -Math.PI / 2;
+      suelo.receiveShadow = true;
+      grupo.add(suelo);
+      const paredFondo = new THREE.Mesh(new THREE.BoxGeometry(12, 3.4, 0.18), matPared);
+      paredFondo.position.set(0, 1.7, -3.55);
+      grupo.add(paredFondo);
+      const paredIzq = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.4, 10), matPared);
+      paredIzq.position.set(-5.1, 1.7, -0.4);
+      grupo.add(paredIzq);
+      const paredDer = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.4, 10), matPared);
+      paredDer.position.set(5.1, 1.7, -0.4);
+      grupo.add(paredDer);
+      const techo = new THREE.Mesh(new THREE.BoxGeometry(12, 0.12, 10), matTecho);
+      techo.position.set(0, 3.36, -0.4);
+      grupo.add(techo);
+      const zocaloMat = new THREE.MeshStandardMaterial({ color: 0x2a2a33, metalness: 0.7, roughness: 0.35 });
+      const zocaloF = new THREE.Mesh(new THREE.BoxGeometry(11.6, 0.12, 0.06), zocaloMat);
+      zocaloF.position.set(0, 0.06, -3.45);
+      grupo.add(zocaloF);
+      return grupo;
+    }
+
+    // Pantalla 16:9 con marco de neón y el cartel «NOIR» encima.
+    // El vídeo se proyecta con VideoTexture (modo escena).
+    function construirPantallaYCartel() {
+      const grupo = new THREE.Group();
+      const ancho = 4.4;
+      const alto = 2.475;
+      const z = -3.38;
+      const y = 1.38;
+
+      texturaVideo = new THREE.VideoTexture(videoEl);
+      texturaVideo.colorSpace = THREE.SRGBColorSpace;
+      texturaVideo.minFilter = THREE.LinearFilter;
+      texturaVideo.magFilter = THREE.LinearFilter;
+      texturaVideo.generateMipmaps = false;
+
+      const matPantalla = new THREE.MeshBasicMaterial({
+        map: texturaVideo,
+        color: 0xffffff,
+        toneMapped: false,
+      });
+      // Fondo negro del marco (16:9). El plano del vídeo se escala para no estirar (4:3, etc.).
+      const fondoPantalla = new THREE.Mesh(
+        new THREE.PlaneGeometry(ancho, alto),
+        new THREE.MeshBasicMaterial({ color: 0x050508, toneMapped: false })
+      );
+      fondoPantalla.position.set(0, y, z - 0.005);
+      grupo.add(fondoPantalla);
+      mallaPantalla = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), matPantalla);
+      mallaPantalla.position.set(0, y, z);
+      mallaPantalla.userData.anchoMarco = ancho;
+      mallaPantalla.userData.altoMarco = alto;
+      grupo.add(mallaPantalla);
+
+      // Bisel oscuro alrededor del cristal.
+      const metal = new THREE.MeshStandardMaterial({ color: 0x16161c, metalness: 0.8, roughness: 0.3 });
+      const marcoProf = 0.06;
+      const zMarco = z - 0.02;
+      const tramos = [
+        { s: [ancho + 0.22, 0.1, marcoProf], p: [0, y + alto / 2 + 0.05, zMarco] },
+        { s: [ancho + 0.22, 0.1, marcoProf], p: [0, y - alto / 2 - 0.05, zMarco] },
+        { s: [0.1, alto + 0.22, marcoProf], p: [-ancho / 2 - 0.05, y, zMarco] },
+        { s: [0.1, alto + 0.22, marcoProf], p: [ancho / 2 + 0.05, y, zMarco] },
+      ];
+      for (const tr of tramos) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(tr.s[0], tr.s[1], tr.s[2]), metal);
+        m.position.set(tr.p[0], tr.p[1], tr.p[2]);
+        grupo.add(m);
+      }
+
+      const mx = ancho / 2 + 0.12;
+      const my0 = y - alto / 2 - 0.12;
+      const my1 = y + alto / 2 + 0.12;
+      const mz = z + 0.02;
+      grupo.add(segmentoNeon(new THREE.Vector3(-mx, my0, mz), new THREE.Vector3(mx, my0, mz), COLOR_NEON_ROJO, 0.016));
+      grupo.add(segmentoNeon(new THREE.Vector3(-mx, my1, mz), new THREE.Vector3(mx, my1, mz), COLOR_NEON_ROJO, 0.016));
+      grupo.add(segmentoNeon(new THREE.Vector3(-mx, my0, mz), new THREE.Vector3(-mx, my1, mz), COLOR_NEON_AZUL, 0.016));
+      grupo.add(segmentoNeon(new THREE.Vector3(mx, my0, mz), new THREE.Vector3(mx, my1, mz), COLOR_NEON_AZUL, 0.016));
+
+      // Cartel «NOIR» pequeño sobre el marco.
+      const yLetra = my1 + 0.28;
+      const escala = 0.28;
+      const color = COLOR_NEON_ROSA;
+      const letras = [['N', -0.72], ['O', -0.27], ['I', 0.10], ['R', 0.42]];
+      for (const [L, x] of letras) {
+        grupo.add(letraNOIR(L, color, new THREE.Vector3(x, yLetra, z), escala));
+      }
+
+      grupo.add(reflejoSuelo(4.6, 2.2, COLOR_NEON_ROSA, new THREE.Vector3(0, 0, -2.15)));
+      return grupo;
+    }
+
+    function construirNevera() {
+      const grupo = new THREE.Group();
+      const metal = new THREE.MeshStandardMaterial({
+        color: 0x1c1e26, metalness: 0.85, roughness: 0.28, envMapIntensity: 1.1,
+      });
+      const metalOscuro = new THREE.MeshStandardMaterial({
+        color: 0x101016, metalness: 0.8, roughness: 0.35,
+      });
+      const w = 0.96, h = 2.05, d = 0.78, g = 0.05;
+      const piezas = [
+        { s: [w, h, g], p: [0, h / 2, -d / 2 + g / 2] },
+        { s: [w, g, d], p: [0, h - g / 2, 0] },
+        { s: [w, g, d], p: [0, g / 2, 0] },
+        { s: [g, h, d], p: [-w / 2 + g / 2, h / 2, 0] },
+        { s: [g, h, d], p: [w / 2 - g / 2, h / 2, 0] },
+      ];
+      for (const pz of piezas) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(pz.s[0], pz.s[1], pz.s[2]), metal);
+        m.position.set(pz.p[0], pz.p[1], pz.p[2]);
+        m.castShadow = true;
+        grupo.add(m);
+      }
+      const matInt = new THREE.MeshStandardMaterial({
+        color: 0xbff6ff, emissive: 0x4ad4ff, emissiveIntensity: 2.2,
+        roughness: 0.55, metalness: 0.02, toneMapped: false,
+      });
+      const fondoInt = new THREE.Mesh(new THREE.PlaneGeometry(w - 2 * g - 0.02, h - 2 * g - 0.02), matInt);
+      fondoInt.position.set(0, h / 2, -d / 2 + g + 0.01);
+      grupo.add(fondoInt);
+      const ladoMat = matInt.clone();
+      ladoMat.emissiveIntensity = 1.4;
+      const ladoL = new THREE.Mesh(new THREE.PlaneGeometry(d - 2 * g, h - 2 * g - 0.02), ladoMat);
+      ladoL.position.set(-w / 2 + g + 0.01, h / 2, 0);
+      ladoL.rotation.y = Math.PI / 2;
+      const ladoR = ladoL.clone();
+      ladoR.position.x = w / 2 - g - 0.01;
+      ladoR.rotation.y = -Math.PI / 2;
+      grupo.add(ladoL, ladoR);
+      const baldaMat = new THREE.MeshStandardMaterial({ color: 0xc8d4dc, metalness: 0.6, roughness: 0.3 });
+      const coloresBotella = [0x1b5c3a, 0x6b2a1a, 0x1a3a6b, 0x8a1028, 0xd8e8f0, 0x2a6b4a];
+      for (let i = 0; i < 4; i++) {
+        const y = 0.32 + i * 0.42;
+        const balda = new THREE.Mesh(new THREE.BoxGeometry(w - 2 * g - 0.04, 0.02, d - 2 * g - 0.04), baldaMat);
+        balda.position.set(0, y, 0);
+        grupo.add(balda);
+        for (let c = 0; c < 4; c++) {
+          const hex = coloresBotella[(i * 4 + c) % coloresBotella.length];
+          const botella = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.045, 0.05, 0.28, 10),
+            new THREE.MeshStandardMaterial({
+              color: hex, roughness: 0.15, metalness: 0.1,
+              transparent: true, opacity: 0.88, emissive: hex, emissiveIntensity: 0.22,
+            })
+          );
+          botella.position.set(-0.28 + c * 0.18, y + 0.16, 0.06);
+          grupo.add(botella);
+          const cuello = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.08, 8), botella.material);
+          cuello.position.set(botella.position.x, y + 0.34, 0.06);
+          grupo.add(cuello);
+        }
+      }
+      const marcoProf = 0.05;
+      const marcoFrente = d / 2 + 0.01;
+      const tramosMarco = [
+        { s: [w, 0.08, marcoProf], p: [0, 0.04, marcoFrente] },
+        { s: [w, 0.08, marcoProf], p: [0, h - 0.04, marcoFrente] },
+        { s: [0.07, h, marcoProf], p: [-w / 2 + 0.035, h / 2, marcoFrente] },
+        { s: [0.07, h, marcoProf], p: [w / 2 - 0.035, h / 2, marcoFrente] },
+      ];
+      for (const tr of tramosMarco) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(tr.s[0], tr.s[1], tr.s[2]), metalOscuro);
+        m.position.set(tr.p[0], tr.p[1], tr.p[2]);
+        grupo.add(m);
+      }
+      const cristal = new THREE.Mesh(
+        new THREE.PlaneGeometry(w - 0.16, h - 0.16),
+        new THREE.MeshStandardMaterial({
+          color: 0xc8ecff, metalness: 0.15, roughness: 0.04,
+          transparent: true, opacity: 0.11, envMapIntensity: 1.4,
+        })
+      );
+      cristal.position.set(0, h / 2, marcoFrente + 0.03);
+      grupo.add(cristal);
+      const tirador = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.018, 0.55, 10),
+        new THREE.MeshStandardMaterial({ color: 0xd0d6de, metalness: 0.95, roughness: 0.12 })
+      );
+      tirador.position.set(w / 2 - 0.12, 1.15, marcoFrente + 0.07);
+      grupo.add(tirador);
+      grupo.add(segmentoNeon(
+        new THREE.Vector3(-w / 2 + 0.02, 0.08, marcoFrente + 0.04),
+        new THREE.Vector3(-w / 2 + 0.02, h - 0.05, marcoFrente + 0.04),
+        COLOR_NEON_AZUL, 0.016
+      ));
+      grupo.add(segmentoNeon(
+        new THREE.Vector3(w / 2 - 0.02, 0.08, marcoFrente + 0.04),
+        new THREE.Vector3(w / 2 - 0.02, h - 0.05, marcoFrente + 0.04),
+        COLOR_NEON_AZUL, 0.016
+      ));
+      const luz = new THREE.PointLight(COLOR_NEON_AZUL, 5.2, 7.0, 1.5);
+      luz.position.set(0, 1.4, 0.05);
+      grupo.add(luz);
+      luces.push(luz);
+      grupo.add(reflejoSuelo(1.4, 1.6, COLOR_NEON_AZUL, new THREE.Vector3(0, 0, 0.95)));
+      grupo.position.set(3.15, 0, -1.55);
+      grupo.rotation.y = -0.32;
+      return grupo;
+    }
+
+    function construirPersianas() {
+      const grupo = new THREE.Group();
+      const marcoMat = new THREE.MeshStandardMaterial({ color: 0x2a2c34, metalness: 0.7, roughness: 0.4 });
+      const marco = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.2, 2.6), marcoMat);
+      marco.position.set(-4.95, 1.7, -0.6);
+      grupo.add(marco);
+      const fondoLuz = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.4, 2.0),
+        new THREE.MeshBasicMaterial({ color: 0x3a1020, toneMapped: false })
+      );
+      fondoLuz.position.set(-4.98, 1.7, -0.6);
+      fondoLuz.rotation.y = Math.PI / 2;
+      grupo.add(fondoLuz);
+      const glowVentana = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.4, 2.0),
+        new THREE.MeshBasicMaterial({
+          color: COLOR_NEON_ROJO, transparent: true, opacity: 0.22,
+          blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+        })
+      );
+      glowVentana.position.set(-4.90, 1.7, -0.6);
+      glowVentana.rotation.y = Math.PI / 2;
+      grupo.add(glowVentana);
+      const lamaMat = new THREE.MeshStandardMaterial({
+        color: 0x8b919c, metalness: 0.88, roughness: 0.28, envMapIntensity: 1.2,
+      });
+      const nLamas = 16;
+      const z0 = -0.6;
+      for (let i = 0; i < nLamas; i++) {
+        const lama = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.09, 2.35), lamaMat);
+        lama.position.set(-4.86, 0.75 + (i / (nLamas - 1)) * 2.0, z0);
+        lama.rotation.z = 0.38;
+        lama.castShadow = true;
+        grupo.add(lama);
+      }
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 2.15, 0.06), marcoMat);
+      const r1 = rail.clone();
+      const r2 = rail.clone();
+      r1.position.set(-4.86, 1.7, z0 - 1.2);
+      r2.position.set(-4.86, 1.7, z0 + 1.2);
+      grupo.add(r1, r2);
+      const luz = new THREE.PointLight(COLOR_NEON_ROJO, 1.8, 7, 1.8);
+      luz.position.set(-4.2, 1.7, -0.6);
+      grupo.add(luz);
+      luces.push(luz);
+      grupo.add(reflejoSuelo(1.2, 2.4, COLOR_NEON_ROJO, new THREE.Vector3(-3.6, 0, -0.6), Math.PI / 2));
+      return grupo;
+    }
+
+    function construirNeonesDeSala() {
+      const grupo = new THREE.Group();
+      grupo.add(segmentoNeon(new THREE.Vector3(-4.6, 0.12, -3.40), new THREE.Vector3(4.6, 0.12, -3.40), COLOR_NEON_AZUL, 0.02));
+      grupo.add(segmentoNeon(new THREE.Vector3(-3.4, 3.18, -3.20), new THREE.Vector3(3.4, 3.18, -3.20), COLOR_NEON_ROJO, 0.02));
+      grupo.add(segmentoNeon(new THREE.Vector3(4.95, 0.15, 2.2), new THREE.Vector3(4.95, 0.15, -3.3), COLOR_NEON_AZUL, 0.018));
+      grupo.add(segmentoNeon(new THREE.Vector3(-4.85, 0.2, 1.15), new THREE.Vector3(-4.85, 3.1, 1.15), COLOR_NEON_ROJO, 0.02));
+      const barraMat = new THREE.MeshStandardMaterial({ color: 0x1a1216, metalness: 0.4, roughness: 0.45 });
+      const cub = new THREE.MeshStandardMaterial({ color: 0x2a2428, metalness: 0.7, roughness: 0.3 });
+      const barra = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.72, 0.62), barraMat);
+      barra.position.set(-1.15, 0.36, 1.55);
+      barra.castShadow = true;
+      grupo.add(barra);
+      const tapa = new THREE.Mesh(new THREE.BoxGeometry(3.28, 0.04, 0.7), cub);
+      tapa.position.set(-1.15, 0.74, 1.55);
+      grupo.add(tapa);
+      grupo.add(segmentoNeon(new THREE.Vector3(-2.7, 0.68, 1.88), new THREE.Vector3(0.4, 0.68, 1.88), COLOR_NEON_AZUL, 0.016));
+      grupo.add(reflejoSuelo(3.0, 1.0, COLOR_NEON_AZUL, new THREE.Vector3(-1.15, 0, 2.15)));
+      return grupo;
+    }
+
+    async function cargarModeloRealSiExiste() {
+      if (MODELO_GLB_URL) {
+        const { GLTFLoader } = await import('./vendor/addons/loaders/GLTFLoader.js');
+        const cargador = new GLTFLoader();
+        cargador.load(MODELO_GLB_URL, (gltf) => escena.add(gltf.scene), undefined, (err) => {
+          console.error('No se pudo cargar el .glb:', err);
+        });
+      }
+      if (MODELO_SPLAT_URL) {
+        console.info('MODELO_SPLAT_URL está definido, pero el visor de splats no forma parte de este prototipo mínimo.');
+      }
+    }
+
+    // t = 0 encuadra la pantalla del vídeo, con nevera y persianas a los lados.
+    function poseCamara(tSeg) {
+      const a = (tSeg / 48) * Math.PI * 2;
+      return {
+        x: 0.25 + Math.sin(a) * 0.7,
+        y: 1.48 + Math.sin(a * 2) * 0.07,
+        z: 4.15 + Math.cos(a) * 0.35,
+        lx: 0.02 + Math.sin(a) * 0.06,
+        ly: 1.40,
+        lz: -3.15,
+      };
+    }
+
+    let fotogramas = 0;
+    let tUltimoCalculo = 0;
+    let tInicio = 0;
+    const UMBRAL_FPS = 28;
+
+    // En un SoC flojo, copiar cada fotograma del vídeo a la GPU (VideoTexture)
+    // sale caro. El modo bajo pasa el vídeo a un <video> DOM sobre la escena.
+    function aplicarModoBajo() {
+      if (modoBajo) return;
+      modoBajo = true;
+      renderer.setPixelRatio(1);
+      renderer.shadowMap.enabled = false;
+      for (const n of neones) {
+        if (n.resplandor) n.resplandor.visible = false;
+      }
+      for (const l of luces) l.intensity *= 0.75;
+      if (!modoVideo) {
+        document.body.classList.add('video-sobrepuesto');
+        if (mallaPantalla) mallaPantalla.visible = false;
+      }
+    }
+    function limitarPixelRatio() {
+      const dpr = window.devicePixelRatio || 1;
+      return modoBajo ? 1 : Math.min(Math.max(dpr, 1), 1.5);
+    }
+
+    function iniciarEscena() {
+      renderer = new THREE.WebGLRenderer({
+        canvas: lienzo,
+        antialias: !modoBajo,
+        powerPreference: 'high-performance',
+        alpha: false,
+        stencil: false,
+      });
+      renderer.setPixelRatio(limitarPixelRatio());
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.05;
+      renderer.setClearColor(COLOR_FONDO, 1);
+      renderer.shadowMap.enabled = !modoBajo;
+      renderer.shadowMap.type = THREE.PCFShadowMap;
+
+      escena = new THREE.Scene();
+      escena.background = new THREE.Color(COLOR_FONDO);
+      escena.fog = new THREE.FogExp2(COLOR_FONDO, 0.045);
+
+      camara = new THREE.PerspectiveCamera(48, window.innerWidth / Math.max(window.innerHeight, 1), 0.1, 40);
+      const p0 = poseCamara(0);
+      camara.position.set(p0.x, p0.y, p0.z);
+      camara.lookAt(p0.lx, p0.ly, p0.lz);
+
+      envTex = crearMapaEntorno();
+      escena.environment = envTex;
+      escena.add(new THREE.AmbientLight(0x2a2430, 0.28));
+      const dir = new THREE.DirectionalLight(0xffe8f0, 0.18);
+      dir.position.set(2.5, 4.5, 3.5);
+      dir.castShadow = !modoBajo;
+      dir.shadow.mapSize.set(512, 512);
+      dir.shadow.camera.near = 0.5;
+      dir.shadow.camera.far = 16;
+      escena.add(dir);
+      const luzCartel = new THREE.PointLight(COLOR_NEON_ROSA, 3.4, 9, 1.7);
+      luzCartel.position.set(0, 2.1, -2.4);
+      escena.add(luzCartel);
+      luces.push(luzCartel);
+
+      escena.add(construirHabitacion());
+      escena.add(construirPantallaYCartel());
+      escena.add(construirNevera());
+      escena.add(construirPersianas());
+      escena.add(construirNeonesDeSala());
+
+      lienzo.addEventListener('webglcontextlost', (ev) => {
+        ev.preventDefault();
+        if (idAnimacion) cancelAnimationFrame(idAnimacion);
+        idAnimacion = 0;
+      });
+      lienzo.addEventListener('webglcontextrestored', () => { window.location.reload(); });
+      window.addEventListener('resize', alRedimensionar);
+
+      tArranqueMs = performance.now();
+      tInicio = tArranqueMs;
+      tUltimoCalculo = tInicio;
+      cargarModeloRealSiExiste();
+      animar();
+    }
+
+    function alRedimensionar() {
+      const w = window.innerWidth;
+      const h = Math.max(window.innerHeight, 1);
+      camara.aspect = w / h;
+      camara.updateProjectionMatrix();
+      renderer.setPixelRatio(limitarPixelRatio());
+      renderer.setSize(w, h, false);
+    }
+
+    function animar() {
+      idAnimacion = requestAnimationFrame(animar);
+      const ahora = performance.now();
+      const t = (ahora - tArranqueMs) / 1000;
+      const pose = poseCamara(t);
+      camara.position.set(pose.x, pose.y, pose.z);
+      camara.lookAt(pose.lx, pose.ly, pose.lz);
+      for (let i = 0; i < neones.length; i++) {
+        const n = neones[i];
+        if (!n.tubo.material || n.tubo.material.emissiveIntensity === undefined) continue;
+        const ruido = Math.sin(t * 17 + i * 1.7) * 0.06 + Math.sin(t * 43 + i) * 0.025;
+        n.tubo.material.emissiveIntensity = n.intensidadBase + ruido;
+      }
+      renderer.render(escena, camara);
+      if (!document.documentElement.dataset.primerFotograma) {
+        document.documentElement.dataset.primerFotograma = 'ok';
+      }
+      fotogramas++;
+      if (!modoBajo && ahora - tInicio > 5000 && ahora - tUltimoCalculo > 2000) {
+        const fps = (fotogramas * 1000) / (ahora - tUltimoCalculo);
+        fotogramas = 0;
+        tUltimoCalculo = ahora;
+        if (fps < UMBRAL_FPS) aplicarModoBajo();
+      }
+    }
+
+    // ===================== Playlist pública =====================
+    // GET https://admira.tv/api/playlist?screen=<id>  (sin clave)
+    // Respuesta real comprobada: { ok, draft: { screen, playlist, name, items[], rev, updatedAt, updatedBy, synthetic }, screenTags, auto }
+    // Cada item: { id, stockId, title, sub, lane, seconds, asset, assetType, tags }
+    // Los mp4 están en https://stock.admira.store/stock/<id>/asset.mp4 (la lista ya trae asset con ?v=).
+    // Índice de referencia (no se descarga en bucle): https://stock.admira.store/stock/index.json
+
+    videoEl.crossOrigin = 'anonymous';
+    videoEl.muted = true;
+    videoEl.playsInline = true;
+    videoEl.setAttribute('playsinline', '');
+    videoEl.setAttribute('webkit-playsinline', '');
+
+    let lista = [];
+    let nombreLista = '';
+    let revActual = null;
+    let listaPendiente = null;
+    let nombrePendiente = '';
+    let revPendiente = null;
+    let indice = 0;
+    let apiEnUso = apiForzada || API_PUBLICA;
+
+    function itemsDeDraft(draft) {
+      const items = draft && Array.isArray(draft.items) ? draft.items : [];
+      return items.filter((it) => it && (it.asset || it.stockId) && (it.assetType === 'video' || !it.assetType));
+    }
+    function urlAsset(it) {
+      if (it && it.asset) return it.asset;
+      if (it && it.stockId) return 'https://stock.admira.store/stock/' + encodeURIComponent(it.stockId) + '/asset.mp4';
+      return '';
+    }
+
+    async function pedirDraft(urlBase) {
+      const url = urlBase + '?screen=' + encodeURIComponent(pantallaId);
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 10000);
+      try {
+        const r = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const data = await r.json();
+        if (!data || data.ok === false || !data.draft) throw new Error('respuesta no válida');
+        return data.draft;
+      } finally {
+        clearTimeout(t);
+      }
+    }
+
+    async function refrescarLista(esInicial) {
+      // Se prueba la API configurada y, si falla (p. ej. CORS fuera de localhost),
+      // un proxy del mismo origen en /api/playlist (ver servir.py).
+      const bases = [];
+      if (apiForzada) {
+        bases.push(apiForzada);
+      } else {
+        bases.push(apiEnUso);
+        if (apiEnUso !== API_MISMO_ORIGEN) bases.push(API_MISMO_ORIGEN);
+        if (apiEnUso !== API_PUBLICA) bases.push(API_PUBLICA);
+      }
+      const vistos = new Set();
+      let ultimoError = null;
+      for (const base of bases) {
+        if (vistos.has(base)) continue;
+        vistos.add(base);
+        try {
+          const draft = await pedirDraft(base);
+          apiEnUso = base;
+          aplicarODiferir(draft, esInicial);
+          return;
+        } catch (err) {
+          ultimoError = err;
+          console.warn('No se pudo leer la playlist en', base, err && err.message ? err.message : err);
+        }
+      }
+      // Si la red falla se conserva la última lista; no se interrumpe la reproducción.
+      if (esInicial && lista.length === 0) {
+        console.error('Sin playlist inicial y sin lista previa.', ultimoError);
+      }
+    }
+
+    function aplicarODiferir(draft, esInicial) {
+      const items = itemsDeDraft(draft);
+      const rev = draft.rev;
+      const nombre = draft.name || '';
+      if (esInicial || lista.length === 0) {
+        lista = items;
+        nombreLista = nombre;
+        revActual = rev;
+        listaPendiente = null;
+        indice = 0;
+        cargarTema(0, true);
+        return;
+      }
+      if (rev === revActual) return;
+      // Un cambio de rev se aplica al terminar el tema que suena, no a mitad.
+      listaPendiente = items;
+      nombrePendiente = nombre;
+      revPendiente = rev;
+    }
+
+    function adoptarPendienteSiHay() {
+      if (!listaPendiente) return false;
+      const idActual = lista[indice] && lista[indice].id;
+      lista = listaPendiente;
+      nombreLista = nombrePendiente;
+      revActual = revPendiente;
+      listaPendiente = null;
+      revPendiente = null;
+      let pos = lista.findIndex((it) => it.id === idActual);
+      if (pos === -1) indice = 0;
+      else indice = (pos + 1) % Math.max(lista.length, 1);
+      return true;
+    }
+
+    function ajustarAspectoVideo() {
+      if (!mallaPantalla) return;
+      const vw = videoEl.videoWidth || 0;
+      const vh = videoEl.videoHeight || 0;
+      const ancho = mallaPantalla.userData.anchoMarco || 4.4;
+      const alto = mallaPantalla.userData.altoMarco || 2.475;
+      if (!vw || !vh) {
+        mallaPantalla.scale.set(1, 1, 1);
+        return;
+      }
+      const rVideo = vw / vh;
+      const rMarco = ancho / alto;
+      let sx = 1, sy = 1;
+      if (rVideo > rMarco) sy = rMarco / rVideo; // más ancho: bandas arriba y abajo
+      else sx = rVideo / rMarco;                 // más alto (p. ej. 4:3): bandas a los lados
+      mallaPantalla.scale.set(sx, sy, 1);
+    }
+    videoEl.addEventListener('loadedmetadata', ajustarAspectoVideo);
+
+    function actualizarFicha() {
+      const it = lista[indice];
+      const titulo = document.getElementById('titulo-tema');
+      const listaEl = document.getElementById('nombre-lista');
+      titulo.textContent = it ? (it.title || it.id || '') : '';
+      const n = lista.length;
+      const donde = n ? (indice + 1) + ' / ' + n : '';
+      listaEl.textContent = [nombreLista, donde].filter(Boolean).join(' · ');
+      botonPausa.textContent = videoEl.paused ? 'Reanudar' : 'Pausa';
+    }
+
+    function cargarTema(i, auto) {
+      if (!lista.length) {
+        actualizarFicha();
+        return;
+      }
+      indice = ((i % lista.length) + lista.length) % lista.length;
+      const it = lista[indice];
+      const url = urlAsset(it);
+      if (!url) {
+        console.warn('Tema sin asset', it);
+        return;
+      }
+      videoEl.src = url;
+      videoEl.load();
+      actualizarFicha();
+      if (auto) intentarReproducir();
+    }
+
+    function intentarReproducir() {
+      const p = videoEl.play();
+      if (p && p.catch) p.catch(() => { /* el autoplay con sonido lo bloquea el navegador */ });
+      if (quiereAudio) {
+        videoEl.muted = false;
+        const p2 = videoEl.play();
+        if (p2 && p2.catch) {
+          p2.catch(() => {
+            videoEl.muted = true;
+            videoEl.play().catch(() => {});
+            const desbloquear = () => {
+              videoEl.muted = false;
+              videoEl.play().catch(() => {});
+              window.removeEventListener('pointerdown', desbloquear);
+              window.removeEventListener('keydown', desbloquear);
+            };
+            window.addEventListener('pointerdown', desbloquear, { once: true });
+            window.addEventListener('keydown', desbloquear, { once: true });
+          });
+        }
+      }
+      actualizarFicha();
+    }
+
+    function siguiente() {
+      if (!lista.length) return;
+      cargarTema(indice + 1, true);
+    }
+    function anterior() {
+      if (!lista.length) return;
+      cargarTema(indice - 1, true);
+    }
+    function primero() {
+      if (!lista.length) return;
+      cargarTema(0, true);
+    }
+    function ultimo() {
+      if (!lista.length) return;
+      cargarTema(lista.length - 1, true);
+    }
+    function pausar() {
+      videoEl.pause();
+      actualizarFicha();
+    }
+    function reproducir() {
+      intentarReproducir();
+    }
+    function alternarPausa() {
+      if (videoEl.paused) reproducir();
+      else pausar();
+    }
+
+    videoEl.addEventListener('ended', () => {
+      if (adoptarPendienteSiHay()) cargarTema(indice, true);
+      else siguiente();
+    });
+    videoEl.addEventListener('play', actualizarFicha);
+    videoEl.addEventListener('pause', actualizarFicha);
+    videoEl.addEventListener('playing', () => {
+      document.documentElement.dataset.videoListo = 'ok';
+    });
+    videoEl.addEventListener('error', () => {
+      console.error('Error al cargar el vídeo', videoEl.error);
+      // Si un tema falla, se pasa al siguiente para no dejar la pantalla en negro.
+      setTimeout(() => siguiente(), 800);
+    });
+
+    // ===================== Controles en pantalla y mando =====================
+    let tOcultarControles = 0;
+    function mostrarControles() {
+      document.body.classList.add('controles-visibles');
+      clearTimeout(tOcultarControles);
+      tOcultarControles = setTimeout(() => {
+        document.body.classList.remove('controles-visibles');
+      }, OCULTAR_CONTROLES_MS);
+    }
+    ['pointermove', 'pointerdown', 'touchstart', 'keydown', 'click'].forEach((tipo) => {
+      window.addEventListener(tipo, mostrarControles, { passive: true });
+    });
+
+    document.getElementById('botones').addEventListener('click', (ev) => {
+      const btn = ev.target.closest('button[data-cmd]');
+      if (!btn) return;
+      const cmd = btn.getAttribute('data-cmd');
+      if (cmd === 'primero') primero();
+      else if (cmd === 'anterior') anterior();
+      else if (cmd === 'siguiente') siguiente();
+      else if (cmd === 'ultimo') ultimo();
+      else if (cmd === 'pausa') alternarPausa(); // el botón sí alterna; la voz de «pausa» no
+      mostrarControles();
+    });
+
+    window.addEventListener('keydown', (ev) => {
+      const k = ev.key;
+      if (k === 'ArrowRight' || k === 'MediaTrackNext') { ev.preventDefault(); siguiente(); }
+      else if (k === 'ArrowLeft' || k === 'MediaTrackPrevious') { ev.preventDefault(); anterior(); }
+      else if (k === 'ArrowUp' || k === 'Home') { ev.preventDefault(); primero(); }
+      else if (k === 'ArrowDown' || k === 'End') { ev.preventDefault(); ultimo(); }
+      else if (k === 'Enter' || k === 'NumpadEnter' || k === ' ' || k === 'MediaPlayPause' || k === 'OK') {
+        ev.preventDefault();
+        alternarPausa();
+      } else if (k === 'MediaPlay') {
+        ev.preventDefault();
+        reproducir();
+      } else if (k === 'MediaPause') {
+        ev.preventDefault();
+        pausar();
+      }
+    });
+
+    // ===================== Voz (Web Speech API, es-ES) =====================
+    // El wake word es OBLIGATORIO. Un comando solo se ejecuta si la frase
+    // empieza por «hola Admira» (o variantes del reconocedor: «ola admira»,
+    // «hola, admira», «hola almira»), sin tildes y sin distinguir mayúsculas.
+    // Ejemplo: «hola Admira, siguiente» o «hola Admira reproduce».
+    // Si solo dice «hola Admira», se abre una ventana de 5 s para el comando.
+    // Sin wake word, la frase se ignora y se muestra tenue como «ignorado».
+    //
+    // Comandos (todos exigen el wake word):
+    //   siguiente | anterior | primero/primera | último/última
+    //   pausa / para  → solo pausa, no alterna
+    //   reproduce / reproducir / play / sigue  → reanuda lo que esté en pausa
+    //
+    // Si el navegador no tiene reconocimiento, no se muestra nada ni se lanza error.
+    // El WebView de Android TV o de la Philips probablemente no lo tiene.
+
+    let idEcoVoz = 0;
+    let ventanaWakeHasta = 0;
+
+    function mostrarEco(texto, clase) {
+      ecoVoz.textContent = texto;
+      ecoVoz.className = clase || '';
+      clearTimeout(idEcoVoz);
+      idEcoVoz = setTimeout(() => { ecoVoz.classList.add('oculto'); }, 3500);
+    }
+
+    function normalizarFrase(s) {
+      return String(s || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    // Variantes frecuentes del reconocedor para «hola Admira».
+    const RE_WAKE = /^(hola|ola)\s+(admira|almira)\b/;
+
+    function comandoDeTexto(norm) {
+      if (!norm) return null;
+      // Se acepta el comando solo, o con una coletilla breve («por favor»).
+      if (/^siguiente\b/.test(norm)) return 'siguiente';
+      if (/^anterior\b/.test(norm)) return 'anterior';
+      if (/^primer[oa]\b/.test(norm)) return 'primero';
+      if (/^ultim[oa]\b/.test(norm)) return 'ultimo';
+      if (/^(pausa|para)\b/.test(norm)) return 'pausa';
+      if (/^(reproduce|reproducir|play|sigue)\b/.test(norm)) return 'reproduce';
+      return null;
+    }
+
+    function ejecutarComando(cmd) {
+      if (cmd === 'siguiente') siguiente();
+      else if (cmd === 'anterior') anterior();
+      else if (cmd === 'primero') primero();
+      else if (cmd === 'ultimo') ultimo();
+      else if (cmd === 'pausa') pausar();       // solo pausa, no alterna
+      else if (cmd === 'reproduce') reproducir(); // reanuda lo que esté en pausa
+    }
+
+    function tratarFraseVoz(raw) {
+      const norm = normalizarFrase(raw);
+      if (!norm) return;
+      const ahora = performance.now();
+      if (RE_WAKE.test(norm)) {
+        const resto = norm.replace(RE_WAKE, '').trim();
+        if (!resto) {
+          ventanaWakeHasta = ahora + VENTANA_WAKE_MS;
+          mostrarEco('te escucho…', 'escucha');
+          mostrarControles();
+          return;
+        }
+        const cmd = comandoDeTexto(resto);
+        if (cmd) {
+          ventanaWakeHasta = 0;
+          mostrarEco('hola admira, ' + cmd, '');
+          ejecutarComando(cmd);
+          mostrarControles();
+        } else {
+          ventanaWakeHasta = ahora + VENTANA_WAKE_MS;
+          mostrarEco('te escucho…', 'escucha');
+          mostrarControles();
+        }
+        return;
+      }
+      if (ahora < ventanaWakeHasta) {
+        const cmd = comandoDeTexto(norm);
+        if (cmd) {
+          ventanaWakeHasta = 0;
+          mostrarEco('hola admira, ' + cmd, '');
+          ejecutarComando(cmd);
+          mostrarControles();
+          return;
+        }
+        mostrarEco('ignorado: ' + raw, 'ignorado');
+        return;
+      }
+      mostrarEco('ignorado: ' + raw, 'ignorado');
+    }
+
+    function iniciarReconocimientoVoz() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) return; // sin API: no hay indicador ni error
+      let reconocimiento = null;
+      let quieroSeguir = true;
+      function arrancar() {
+        if (!quieroSeguir) return;
+        try {
+          reconocimiento = new SR();
+          reconocimiento.lang = 'es-ES';
+          reconocimiento.continuous = true;
+          reconocimiento.interimResults = false;
+          reconocimiento.maxAlternatives = 1;
+          reconocimiento.onresult = (ev) => {
+            for (let i = ev.resultIndex; i < ev.results.length; i++) {
+              if (!ev.results[i].isFinal) continue;
+              const dicho = ev.results[i][0] && ev.results[i][0].transcript;
+              if (dicho) tratarFraseVoz(dicho);
+            }
+          };
+          reconocimiento.onerror = (ev) => {
+            // not-allowed / no-speech / aborted: se reintenta en onend si procede, sin lanzar error a la UI.
+            if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+              quieroSeguir = false;
+            }
+          };
+          reconocimiento.onend = () => {
+            if (quieroSeguir) setTimeout(arrancar, 250);
+          };
+          reconocimiento.start();
+        } catch (err) {
+          // El arranque puede exigir un gesto o HTTPS; se reintenta en silencio tras el primero.
+        }
+      }
+      arrancar();
+      const arrancarConGesto = () => arrancar();
+      window.addEventListener('pointerdown', arrancarConGesto, { once: true });
+      window.addEventListener('keydown', arrancarConGesto, { once: true });
+    }
+
+    // -------- Arranque --------
+    function webglDisponible() {
+      try {
+        const c = document.createElement('canvas');
+        return !!(c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl'));
+      } catch (e) {
+        return false;
+      }
+    }
+    if (!webglDisponible()) {
+      console.error('WebGL no está disponible en este navegador.');
+      document.body.classList.add('modo-video'); // al menos se ve el vídeo
+    } else {
+      iniciarEscena();
+    }
+
+    refrescarLista(true);
+    setInterval(() => refrescarLista(false), INTERVALO_LISTA_MS);
+    iniciarReconocimientoVoz();
+  </script>
+</body>
+</html>
