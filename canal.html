@@ -1070,14 +1070,24 @@ function groupResumeAligned(){
   const p=el.play(); if(p&&p.catch) p.catch(()=>{ try{ el.muted=true; el.play().catch(()=>{}); }catch(_){} });
   clearTimeout(timer); timer=setTimeout(next,syncRemainingMs());
 }
+// ¿El grupo está en pausa? Con órdenes en cola (next/pause/play sin duraciones) se resuelve con la
+// playlist de esta pantalla, igual que la línea de tiempo; si no, el campo del servidor.
+function groupWantsPause(state){
+  try{
+    if(playlist.length&&Array.isArray(state.events)&&state.events.length&&typeof AdmiraPlayoutGroup!=='undefined')
+      return AdmiraPlayoutGroup.resolveState(state,playlist.map(syncItemDurationMs)).pausedAt!=null;
+  }catch(_){}
+  return state.paused!=null?!!state.paused:state.pausedAt!=null;
+}
 function applyGroupTransportState(state){
   if(!state||typeof state!=='object') return;
   const rev=Number(state.revision)||0;
   if(_groupTransport&&rev<_groupTransport.revision) return;
-  const same=_groupTransport&&_groupTransport.revision===rev&&_groupTransport.shiftMs===state.shiftMs&&_groupTransport.pausedAt===state.pausedAt;
+  const same=_groupTransport&&_groupTransport.revision===rev&&_groupTransport.shiftMs===state.shiftMs&&_groupTransport.pausedAt===state.pausedAt&&
+    (_groupTransport.events||[]).length===(state.events||[]).length&&_groupTransport.paused===state.paused;
   _groupTransport=state;
   if(!syncOn) return;
-  const wantPaused=state.pausedAt!=null;
+  const wantPaused=groupWantsPause(state);
   if(wantPaused){
     if(!paused&&!_groupFreezePending){ _applyingGroupTransport=true; try{ setPaused(true); }finally{ _applyingGroupTransport=false; } }
     if(!same||_groupFrozenRev!==rev) groupFreezeAtPausedAt(rev);

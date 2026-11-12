@@ -59,7 +59,8 @@ function normalizeGroupState(state) {
     pausedAt: state.pausedAt == null ? null : Number(state.pausedAt),
     revision: Number(state.revision) || 0,
     updatedAt: Number(state.updatedAt) || 0,
-    events: Array.isArray(state.events) ? state.events : []
+    events: Array.isArray(state.events) ? state.events : [],
+    paused: state.paused != null ? !!state.paused : state.pausedAt != null
   };
 }
 async function readGroupStateD1(env) {
