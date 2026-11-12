@@ -21,3 +21,9 @@ test('el mando avisa del tag vacío y enseña cuenta atrás por pantalla',()=>{
   assert.match(mando,/cd=startCmdCountdown\(target\.screen,cmd,ackTimeoutFor\(target\.screen\)\), result=await waitRemoteAck\(host,d,target,cmd\); cd\.done\(result\);/);
   assert.match(mando,/aplicado en /);
 });
+test('el mural/dual no espera a la playlist propia',()=>{
+  assert.match(canal,/!DEFAULT_DRAFT\.ready&&!\(_extendedAssignment&&_extendedAssignment\.item\)\)\{/);
+});
+test('power on del panel quita una pausa heredada',()=>{
+  assert.match(canal,/else if\(d\.power==='on'&&paused\) setPaused\(false\);/);
+});
