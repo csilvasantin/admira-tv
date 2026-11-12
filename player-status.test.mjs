@@ -10,7 +10,8 @@ test('Status es una vista local del mando y no un enlace externo',()=>{
   assert.match(mando,/href="#status" data-mando-view-link="status">Status<\/a>/);
   assert.match(mando,/id="statusView" data-mando-pane="status" hidden/);
   assert.doesNotMatch(mando,/href="https:\/\/www\.admira\.live\/status">Status/);
-  assert.match(mando,/\['playlist','status','contents'\]\.includes\(view\)/);
+  assert.match(mando,/MANDO_VIEWS=\['playlist','status','contents','proyectos'\]/);
+  assert.match(mando,/MANDO_VIEWS\.includes\(view\)/);
 });
 
 test('Status cruza los tres contratos vivos del player',()=>{
