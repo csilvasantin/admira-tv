@@ -215,7 +215,13 @@
     .topnav .sep{flex:0 0 1px;height:16px;background:var(--border);margin:0 2px}
     .equipo{font-family:var(--mono);font-size:11px;color:var(--amber);margin:-2px 0 8px;display:none}
     .equipo b{color:var(--text)}
-    [data-mando-pane][hidden]{display:none!important}
+    [data-mando-pane][hidden], #taggedImport[hidden]{display:none!important}
+    body:not([data-mando-view="remote"]) #power, body.tagged-embed #power{display:none}
+    html:has(body.tagged-embed){overflow:hidden}
+    body.tagged-embed{padding:0 10px 12px;min-height:0}
+    body.tagged-embed > :is(.topnav,.equipo,.proj-line,[data-mando-pane]), body.tagged-embed #rotationPicker{display:none}
+    body.tagged-embed .target-row{grid-template-columns:minmax(0,1fr)}
+    #taggedImport[disabled]{opacity:.65}
     /* Proyectos (12-nov-2026): filtro del selector y de /players por proyecto */
     .proj-line{font-family:var(--mono);font-size:10px;color:var(--dim);margin:4px 0 0}
     .proj-line a{color:var(--violet);text-decoration:none}.proj-line b{color:var(--amber)}
@@ -242,13 +248,13 @@
     <span class="sep"></span>
     <a class="viewtab" href="#playlist" data-mando-view-link="playlist">Playlist</a>
     <a class="viewtab" href="#status" data-mando-view-link="status">Status</a>
-    <a href="/players">Players</a>
+    <a id="playersLink" href="/players">Players</a>
     <a class="viewtab" href="#contents" data-mando-view-link="contents">Contenidos</a>
     <a class="viewtab" href="#proyectos" data-mando-view-link="proyectos">Proyectos</a>
   </nav>
   <div class="equipo" id="equipo">🖥️ Conectado al player de <b id="equipoName">—</b></div>
 
-  <label class="fld">Pantalla / tótem a controlar</label>
+  <label class="fld" for="target">Pantalla / tótem a controlar</label>
   <div class="target-row">
     <select id="target" aria-label="Pantalla o tótem a controlar"></select>
     <div class="rotation-picker" id="rotationPicker" role="group" aria-label="Orientación de la pantalla">
@@ -293,6 +299,19 @@
     </div>
   </div>
 
+  <fieldset id="taggedImport" aria-labelledby="taggedHeading" style="border:0;padding:0;margin:0;min-width:0">
+  <!-- ── CONTENIDO ETIQUETADO: #ID añade una pieza; texto filtra por metatag ── -->
+  <div class="sec" id="taggedHeading">🏷️ Contenido etiquetado <span class="hint">— #ID añade una pieza; #hashtag crea una playlist alternativa completa</span></div>
+  <div class="tagrow">
+    <div class="tag-entry" id="tagEntry">
+      <span class="tag-field"><input id="tagInput" placeholder="p.ej. 712 · navidad · oferta-2x1" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false"><b class="tag-pct" id="tagPct" aria-live="polite"></b></span>
+      <button id="tagApply">Importar</button>
+    </div>
+    <button id="power" style="border-color:var(--border);background:transparent;color:var(--muted)">⏻ Apagar player</button>
+  </div>
+  <div class="chips" id="tagChips"></div>
+  </fieldset>
+
   <section id="playlistView" data-mando-pane="playlist" hidden>
     <p id="virtualPlayerNote" class="hint" hidden>Player virtual · navegador · sin hardware dedicado. La ficha no confirma emisión; esta depende del player abierto.</p>
     <div class="sec" id="playerPlaylist">Playlist completa del player <span class="hint" id="playlistSummary">— cargando inventario</span></div>
@@ -334,16 +353,6 @@
   </section>
 
   <div id="remoteTools" data-mando-pane="remote">
-  <!-- ── CONTENIDO ETIQUETADO: #ID añade una pieza; texto filtra por metatag ── -->
-  <div class="sec">🏷️ Contenido etiquetado <span class="hint">— #ID añade una pieza; #hashtag crea una playlist alternativa completa</span></div>
-  <div class="tagrow">
-    <div class="tag-entry" id="tagEntry">
-      <span class="tag-field"><input id="tagInput" placeholder="p.ej. 712 · navidad · oferta-2x1" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false"><b class="tag-pct" id="tagPct" aria-live="polite"></b></span>
-      <button id="tagApply">Importar</button>
-    </div>
-    <button id="power" style="border-color:var(--border);background:transparent;color:var(--muted)">⏻ Apagar player</button>
-  </div>
-  <div class="chips" id="tagChips"></div>
   <div class="sec">Contenido rápido</div>
   <div class="chips" id="seg">
     <button class="chip" data-cmd="reset">Todo</button>
@@ -386,6 +395,8 @@
     var BUTTON_ACTIONS = new WeakMap();
     var PREVIEW_CHECKS = new Map(), previewPaintToken=0;
     var qs = new URLSearchParams(location.search);
+    var taggedEmbed=qs.get('embed')==='tagged';
+    document.body.classList.toggle('tagged-embed',taggedEmbed);
 
     // ── Circuitos y pantallas (AGRUPADO POR CIRCUITO) ──
     var CIRCUITS = [
@@ -408,8 +419,9 @@
     // objetivo inicial
     var startIdx = 4; // primer kiosko (bcn-kiosk-001)
     var wantC=qs.get('circuit'), wantS=qs.get('screen'), wantN=qs.get('n'), wantEq=qs.get('equipo')||'';
-    if(wantN){ var nn=('000'+wantN).slice(-3); startIdx=FLAT.findIndex(function(t){return t.circuit==='bcn-kiosk-'+nn;}); }
-    else if(wantC||wantS){ startIdx=FLAT.findIndex(function(t){return t.circuit===wantC||t.screen===wantS;}); }
+    if(wantS){ startIdx=FLAT.findIndex(function(t){ return t.screen===wantS; }); }
+    else if(wantC){ startIdx=FLAT.findIndex(function(t){ return t.circuit===wantC; }); }
+    else if(wantN){ var nn=('000'+wantN).slice(-3); startIdx=FLAT.findIndex(function(t){return t.circuit==='bcn-kiosk-'+nn;}); }
     // Circuito/pantalla NO predefinido (p.ej. el equipo concreto que abre el panel de control):
     // lo inyectamos como objetivo propio arriba del selector.
     if(startIdx<0 && (wantC||wantS)){
@@ -425,7 +437,14 @@
       var eqB=document.getElementById('equipo'), eqN=document.getElementById('equipoName');
       if(eqB&&eqN){ eqN.textContent=wantEq; eqB.style.display='block'; }
     }
-    if(startIdx<0) startIdx=4; selEl.value=startIdx;
+    function addEmptyImportTarget(){
+      if(!taggedEmbed) return;
+      var empty=document.createElement('option'); empty.value=''; empty.textContent='Selecciona una pantalla';
+      selEl.insertBefore(empty,selEl.firstChild);
+    }
+    addEmptyImportTarget();
+    if(startIdx<0) startIdx=4;
+    selEl.value=taggedEmbed&&!wantS&&!wantC&&!wantN?'':startIdx;
 
     var T, previewItem=null, previewVisual=null, previewSignature='', previewPaused=false, previewRenderSeq=0, previewAudioState=null;
     var infoShotByScreen=new Map(), infoOpenByScreen=new Map(), rotationByScreen=new Map();
@@ -442,6 +461,7 @@
     function mandoViewFromHash(){ var view=location.hash.slice(1); return MANDO_VIEWS.includes(view)?view:'remote'; }
     function setMandoView(view){
       view=MANDO_VIEWS.includes(view)?view:'remote'; document.body.dataset.mandoView=view;
+      document.getElementById('taggedImport').hidden=!taggedEmbed&&!['remote','playlist','contents'].includes(view);
       document.querySelectorAll('[data-mando-pane]').forEach(function(p){ p.hidden=p.dataset.mandoPane!==view; });
       document.querySelectorAll('[data-mando-view-link]').forEach(function(a){
         var active=a.dataset.mandoViewLink===view; if(active) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
@@ -573,7 +593,24 @@
 
     function setTarget(){
       targetGeneration++; if(nowController){ nowController.abort(); nowController=null; }
-      T = FLAT[+selEl.value];
+      T = selEl.value===''?null:FLAT[+selEl.value];
+      var importer=document.getElementById('taggedImport');
+      importer.disabled=!T;
+      if(taggedEmbed&&window.parent!==window){
+        window.parent.postMessage({type:'admira:tagged-target',screen:T&&T.screen,circuit:T&&T.circuit},location.origin);
+      }
+      document.getElementById('tagInput').readOnly=false;
+      document.getElementById('tagApply').textContent='Importar';
+      if(!T){
+        clearRemoteFeedback();
+        document.getElementById('cir').textContent='—';
+        document.getElementById('scr').textContent='—';
+        document.getElementById('tagInput').value='';
+        document.getElementById('tagChips').replaceChildren();
+        return;
+      }
+      var playerParams=new URLSearchParams({screen:T.screen,circuit:T.circuit});
+      document.getElementById('playersLink').href='/players?'+playerParams;
       document.getElementById('cir').textContent = T.circuit;
       document.getElementById('scr').textContent = T.screen;
       document.getElementById('virtualPlayerNote').hidden=!AdmiraVirtualPlayers.isVirtual(T);
@@ -595,6 +632,9 @@
     function clearRemoteFeedback(){
       document.querySelectorAll('.remote-pending,.remote-applied,.remote-failed,.remote-timeout').forEach(function(el){
         el.classList.remove('remote-pending','remote-applied','remote-failed','remote-timeout'); el.style.removeProperty('--cmd-progress');
+        var action=BUTTON_ACTIONS.get(el);
+        if(action&&action.raf) cancelAnimationFrame(action.raf);
+        BUTTON_ACTIONS.delete(el);
         if('disabled' in el) el.disabled=false; el.removeAttribute('aria-busy');
       });
       paintTagDownload(null);
@@ -618,7 +658,7 @@
       if(!action) return;
       action.state=result==='executed'?'applied':result==='failed'?'failed':'timeout';
       if(action.raf) cancelAnimationFrame(action.raf);
-      if(action.button) BUTTON_ACTIONS.delete(action.button);
+      if(action.button&&BUTTON_ACTIONS.get(action.button)===action) BUTTON_ACTIONS.delete(action.button);
       if(action.generation!==targetGeneration) return;
       action.progress=result==='timeout'?Math.min(.94,action.progress):1; paintRemoteButton(action);
       if(action.label&&action.doneLabel) action.label.textContent=action.doneLabel;
@@ -626,7 +666,7 @@
       // El último resultado confirmado es memoria operativa de TODOS los controles:
       // verde si el player ejecutó la orden; rojo si la rechazó o no respondió.
       // Permanece hasta reintentar ese control o cambiar de player.
-      if(action.label&&action.originalLabel) setTimeout(function(){ if(!action.button||!BUTTON_ACTIONS.has(action.button)) action.label.textContent=action.originalLabel; },1400);
+      if(action.label&&action.originalLabel) setTimeout(function(){ if(action.generation===targetGeneration&&(!action.button||!BUTTON_ACTIONS.has(action.button))) action.label.textContent=action.originalLabel; },1400);
     }
     // CUENTA ATRÁS POR PANTALLA (12-nov-2026): «⏳ macmini-2 · 9 s…» hasta el acuse del player → «✓ aplicado».
     function startCmdCountdown(screen,cmd,limit){
@@ -905,32 +945,24 @@
       var limpio=canonTag(v), contenido=/^\d{1,6}$/.test(limpio);
       return {clean:limpio, kind:contenido?'content':'tag', cmd:contenido?('content-'+limpio):('tag-'+limpio)};
     }
-    async function taggedExpectedIds(action,receipt,target){
-      // #ID pide una pieza concreta; para un metatag la playlist efectiva del
-      // player es la verdad (respeta el segmento y los filtros que tenga activos).
-      if(action.kind==='content'){
+    async function taggedStockId(action){
+      for(var url of ['https://api.admira.store/stock/list?limit=300&', 'https://stock.admira.store/stock/index.json?']){
         try{
-          var rs=await fetch('https://api.admira.store/stock/list?limit=300&t='+Date.now(),{cache:'no-store'});
-          var ds=rs.ok?await rs.json():null, items=ds&&(ds.items||ds);
-          var hit=Array.isArray(items)&&items.find(function(it){ return String(it&&it.num)===action.clean; });
-          // Fuera de las 300 recientes (p.ej. #667): índice completo del Stock, igual que el player.
-          if(!hit){ var rf=await fetch('https://stock.admira.store/stock/index.json?t='+Date.now(),{cache:'no-store'}); var df=rf.ok?await rf.json():null, all=df&&(df.items||df);
-            hit=Array.isArray(all)&&all.find(function(it){ return String(it&&it.num)===action.clean; }); }
-          if(hit&&hit.id){ action.item={id:String(hit.id),title:hit.title||('#'+action.clean),type:hit.type,thumbnail:hit.thumbnail||hit.poster||'',num:hit.num,url:hit.url}; action.missing=false; return [String(hit.id)]; }
-          action.missing=true; return [];
-        }catch(_){ return []; }
+          var r=await fetch(url+'t='+Date.now(),{cache:'no-store'});
+          var data=r.ok?await r.json():null, items=data&&(data.items||data);
+          if(!Array.isArray(items)) continue;
+          var hit=items.find(function(it){ return String(it&&it.num)===action.clean; });
+          if(hit&&hit.id) return String(hit.id);
+        }catch(_){}
       }
-      for(var api of PLAYLIST_APIS) try{
-        var rp=await fetch(api+'?screen='+encodeURIComponent(target.screen)+'&_='+Date.now(),{cache:'no-store'});
-        var dp=rp.ok?await rp.json():null;
-        var queuedAt=Number(receipt&&receipt.ts||0); if(queuedAt&&queuedAt<1e12) queuedAt*=1000;
-        // Si aplicar el mismo tag no cambia la firma, el player no republica la
-        // playlist (dedupe correcto). Damos 2,5 s a una playlist nueva y después
-        // aceptamos la vigente: es la única forma de reconocer un «ya descargado».
-        if(!dp||!Array.isArray(dp.items)||(queuedAt&&Number(dp.ts||0)<queuedAt&&Date.now()-queuedAt<2500)) continue;
-        return dp.items.map(function(it){ return String(it&&it.id||''); }).filter(Boolean);
-      }catch(_){ }
-      return [];
+      return '';
+    }
+    async function taggedNow(screen){
+      try{
+        var response=await fetch(NOW_API+'?screen='+encodeURIComponent(screen),{cache:'no-store'});
+        var data=response.ok?await response.json():null;
+        return data&&!data.standby?data.item:null;
+      }catch(_){ return null; }
     }
     async function taggedCacheState(screen,ids){
       try{
@@ -952,60 +984,93 @@
       entry.style.setProperty('--dl-pct',(state==='done'?100:n)+'%');
       label.textContent=state==='done'?'✓ 100%':state==='stalled'?('⌛ '+n+'%'):('⇩ '+n+'%');
     }
-    // El #ID importado aparece YA en la lista Playlist (rojo hasta que la pantalla lo reporte en disco).
-    function showTaggedInPlaylist(action){
-      if(!action||!action.item) return;
-      if(!remotePlaylistItems.some(function(it){ return String(it&&it.id)===action.item.id; })) remotePlaylistItems=[action.item].concat(remotePlaylistItems);
-      try{ renderRemotePlaylist(remotePlaylistItems,_plCache,_plCurrent); }catch(_){}
-    }
     async function waitTaggedAvailability(sent,tagAction){
-      var visual=sent.action, started=Date.now(), ids=[], lastPct=0, lastState=null;
-      paintTagDownload(0,'dl');
-      while(Date.now()-started<DOWNLOAD_TIMEOUT_MS){
-        if(!ids.length){ var fresh=await taggedExpectedIds(tagAction,sent.receipt,sent.target); if(fresh.length){ ids=fresh; showTaggedInPlaylist(tagAction); } }
-        if(tagAction.missing){ break; }
-        var state=ids.length?await taggedCacheState(sent.target.screen,ids):null; lastState=state;
+      var visual=sent.action, screen=sent.target.screen, started=Date.now(), lastPct=0, lastState=null, inPlaylist=false;
+      var isPiece=tagAction.kind==='content', itemId=isPiece?await taggedStockId(tagAction):'';
+      if(visual.generation===targetGeneration) paintTagDownload(0,'dl');
+      if(isPiece&&!itemId){
+        finishRemoteButton(visual,'failed');
+        if(visual.generation===targetGeneration){
+          paintTagDownload(0,'stalled');
+          toast('✗ No se pudo verificar #'+tagAction.clean+' en Stock');
+        }
+        return false;
+      }
+      var cached=false;
+      while(visual.generation===targetGeneration&&Date.now()-started<DOWNLOAD_TIMEOUT_MS){
+        var results=await Promise.all([remotePlaylistData(screen),taggedNow(screen)]);
+        if(visual.generation!==targetGeneration) break;
+        var list=results[0], now=results[1], info=now&&now.playlist;
+        if(!isPiece&&info&&info.tagEmpty===tagAction.clean){
+          visual.doneLabel='✗ Etiqueta sin contenidos';
+          finishRemoteButton(visual,'failed'); paintTagDownload(0,'stalled');
+          toast('✗ #'+tagAction.clean+' no tiene contenidos en este player');
+          return false;
+        }
+        var items=list&&list.items||[];
+        if(isPiece) items=items.filter(function(it){ return String(it.id)===itemId; });
+        else if(!info||info.name!=='#'+tagAction.clean) items=[];
+        inPlaylist=items.length>0;
+        var ids=items.filter(function(it){ return /^https?:/i.test(it.url||'')&&!/^(interactive|xperiencia)$/i.test(it.type); })
+          .map(function(it){ return String(it.id); });
+        var playing=!!now&&items.some(function(it){ return String(it.id)===String(now.id); });
+        var state=ids.length?await taggedCacheState(screen,ids):null;
+        if(visual.generation!==targetGeneration) break;
+        lastState=state;
         if(state){
           visual.progress=Math.max(.02,Math.min(1,state.pct/100)); lastPct=state.pct;
-          if(visual.label) visual.label.textContent=state.ready?'✓ Disponible':('⇩ '+state.pct+'%');
+          if(visual.label) visual.label.textContent='⇩ '+state.pct+'%';
           paintRemoteButton(visual); paintTagDownload(state.pct,state.ready?'done':'dl');
-          if(state.ready){ visual.doneLabel='✓ Disponible'; finishRemoteButton(visual,'executed');
-            toast('✓ '+tagAction.clean+' disponible en '+sent.target.screen); return true; }
-        }else if(visual.label){ visual.label.textContent='Preparando…'; }
-        await new Promise(function(resolve){ setTimeout(resolve,650); });
+        }
+        cached=!!(state&&state.ready);
+        if(inPlaylist&&playing&&(!ids.length||cached)){
+          visual.doneLabel='✓ En emisión';
+          finishRemoteButton(visual,'executed'); paintTagDownload(state?100:0,state?'done':null);
+          toast(visual.doneLabel+' · #'+tagAction.clean+' · '+screen);
+          void pollNow();
+          return true;
+        }
+        if(!state&&visual.label) visual.label.textContent=inPlaylist?'Preparando…':'Esperando playlist…';
+        await new Promise(function(resolve){ setTimeout(resolve,1200); });
       }
-      // Nada de «Sin confirmar»: se dice qué pasa y por qué, si se sabe.
-      var why=tagAction.missing?'el #'+tagAction.clean+' no existe en el Stock':!lastState?'la pantalla aún no publica su caché':lastPct>0?'descarga en curso':'la pantalla aún no ha empezado a bajarlo';
-      visual.doneLabel=tagAction.missing?'✗ No existe en Stock':('⌛ Esperando descarga en pantalla · '+lastPct+'%');
+      if(visual.generation!==targetGeneration){ finishRemoteButton(visual,'timeout'); return false; }
+      var pending=!inPlaylist?'Esperando playlist':cached?'Esperando emisión':'Esperando descarga';
+      var why=!inPlaylist?'la pieza o etiqueta no figura en la playlist del player':cached?'está en playlist y descargado, pero el player no confirma la emisión':!lastState?'aún no hay confirmación del player':lastPct>0?'descarga en curso':'la pantalla aún no ha empezado a bajarlo';
+      visual.doneLabel='⌛ '+pending;
       finishRemoteButton(visual,'timeout'); paintTagDownload(lastPct,'stalled');
-      toast('⌛ #'+tagAction.clean+' · '+why); try{ loadRemotePlaylist(); }catch(_){} return false;
+      toast('⌛ #'+tagAction.clean+' · '+why); void loadRemotePlaylist(); return false;
     }
     async function applyTag(t,button){
       var action=taggedCommand(t);
-      if(!action.clean){ toast('✗ tag vacío'); return; }
+      if(!T||!action.clean){ toast(T?'✗ tag vacío':'Selecciona una pantalla'); return; }
       // Un número es el # persistente del Stock: se AÑADE a la playlist y se
       // precarga ASAP. El texto conserva el contrato histórico de filtro por tag.
       var b=button||document.getElementById('tagApply'), entry=document.getElementById('tagEntry'), input=document.getElementById('tagInput');
+      if(entry.classList.contains('remote-pending')) return;
+      var generation=targetGeneration, screen=T.screen, ink=targetIsEink();
       paintTagDownload(null);
       var sent=await sendRemote(action.cmd,b,{holdAfterAck:true,returnAction:true,mirror:entry,input:input,label:b});
-      if(!sent||!sent.ok) return;
+      if(!sent||!sent.ok||generation!==targetGeneration){ if(sent&&sent.action&&sent.ok) finishRemoteButton(sent.action,'executed'); return; }
       // La tinta no publica /screen/cache: su acuse «executed» ya es el envío hecho al panel.
-      if(targetIsEink()){ if(sent.action){ sent.action.doneLabel='✓ Enviado a tinta'; finishRemoteButton(sent.action,'executed'); } toast('🖋️ '+action.clean+' enviado a tinta · '+T.screen); }
+      if(ink){ if(sent.action){ sent.action.doneLabel='✓ Enviado a tinta'; finishRemoteButton(sent.action,'executed'); } toast('🖋️ '+action.clean+' enviado a tinta · '+screen); }
       else if(!await waitTaggedAvailability(sent,action)) return;
-      setStoredTag(T.screen, action.kind==='content'?('@'+action.clean):action.clean);
+      if(generation!==targetGeneration) return;
+      setStoredTag(screen, action.kind==='content'?('@'+action.clean):action.clean);
       input.value=action.clean;
       renderTagChips(); refreshTagline();
     }
     async function clearTagged(button){
       // Limpieza secuencial y confirmada: nunca ocultamos un fallo parcial.
       var b=button||document.getElementById('tagApply');
+      if(!T||document.getElementById('tagEntry').classList.contains('remote-pending')) return;
+      var generation=targetGeneration, screen=T.screen;
       // La salida de una playlist alternativa no debe borrar las piezas que el
       // operador hubiera añadido antes por #ID. Ese inventario sólo se limpia
       // cuando la selección activa era precisamente una pieza individual.
       if(curTag().charAt(0)==='@'&&!await sendRemote('content-clear',b)) return;
-      if(!await sendRemote('tag-',b)) return;
+      if(generation!==targetGeneration||!await sendRemote('tag-',b)||generation!==targetGeneration) return;
       paintTagDownload(null);
-      setStoredTag(T.screen,''); document.getElementById('tagInput').value='';
+      setStoredTag(screen,''); document.getElementById('tagInput').value='';
       renderTagChips(); refreshTagline();
     }
     document.getElementById('tagApply').onclick=function(){ applyTag(document.getElementById('tagInput').value,this); };
@@ -1337,6 +1402,7 @@
     }
     infoControl.onclick=function(){ toggleInfo(infoControl); };
     async function pollNow(){
+      if(!T) return;
       var target=T, generation=targetGeneration, requestSeq=++nowRequestSeq;
       if(nowController) nowController.abort(); var controller=new AbortController(); nowController=controller;
       try{
@@ -1417,15 +1483,16 @@
       var p=AdmiraProyectos.projectOf(t.screen); return p?AdmiraProyectos.label(p):'Otros equipos';
     }
     function rebuildTarget(userChange){
-      var f=AdmiraProyectos.current(), cur=+selEl.value, groups=new Map(), shown=[];
+      var f=AdmiraProyectos.current(), cur=selEl.value===''?null:+selEl.value, groups=new Map(), shown=[];
       FLAT.forEach(function(t,i){
         if(!(t.star||i===urlPinnedIdx||AdmiraProyectos.visible(t.screen,f))) return;
         var g=targetGroupOf(t), og=groups.get(g);
         if(!og){ og=document.createElement('optgroup'); og.label=g; groups.set(g,og); }
         var o=document.createElement('option'); o.value=i; o.textContent=t.short||t.label; og.appendChild(o); shown.push(i);
       });
-      selEl.replaceChildren(); groups.forEach(function(og){ selEl.appendChild(og); });
+      selEl.replaceChildren(); addEmptyImportTarget(); groups.forEach(function(og){ selEl.appendChild(og); });
       if(shown.indexOf(cur)>=0){ selEl.value=cur; }
+      else if(taggedEmbed){ selEl.value=''; setTarget(); }
       else if(shown.length){ selEl.value=shown[0]; setTarget(); }
       var real=shown.filter(function(i){ return !FLAT[i].star&&i!==urlPinnedIdx; }).length;
       document.getElementById('projName').textContent=AdmiraProyectos.label(f);
@@ -1486,6 +1553,12 @@
     }
 
     setTarget(); setMandoView(mandoViewFromHash()); initProyectos();
+    if(taggedEmbed&&window.parent!==window){
+      new ResizeObserver(function(){
+        var height=Math.ceil(document.body.getBoundingClientRect().height);
+        window.parent.postMessage({type:'admira:tagged-size',height:height},location.origin);
+      }).observe(document.body);
+    }
     setInterval(pollNow, 5000);
     setInterval(function(){ if(!document.hidden) paintPreviewProgress(Date.now()); },500);
   </script>

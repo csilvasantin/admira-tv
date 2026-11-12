@@ -3184,6 +3184,7 @@ function rebuild(restart){
     const liveCurrentId=playlist[cur]&&String(playlist[cur].id||'');
     const alternativeSeg={medio:'all',audience:'all',category:'all',age:'all',slot:'all',tag:seg.tag,format:'',ids:[]};
     playlist=defaultOrder(all.filter(it=>it&&!it._grid&&matchesSeg(it,alternativeSeg)));
+    _plSource='#'+canonicalPlayTag(seg.tag);
     cur=liveCurrentId?playlist.findIndex(it=>String(it&&it.id||'')===liveCurrentId):-1;
     $('segCount').textContent=playlist.length+' en playlist alternativa #'+canonicalPlayTag(seg.tag);
     setLive('PLAYLIST ALTERNATIVA #'+canonicalPlayTag(seg.tag)+' · '+playlist.length+' en loop',playlist.length>0);

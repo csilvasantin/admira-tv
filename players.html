@@ -52,6 +52,7 @@ a.screen.ink{text-decoration:none;color:inherit;grid-column:1/-1}a.screen.ink sm
 </nav>
 <main class="wrap">
   <section class="hero"><div class="eyebrow">Players · Composición de emisión</div><h1>Modo de reproducción</h1><p>Escoge cómo trabajan juntos los players: independientes, sincronizados o como un único lienzo extendido.</p><div id="current" class="current">● leyendo configuración viva…</div></section>
+  <iframe id="taggedImportFrame" title="Contenido etiquetado" loading="lazy" style="display:block;width:100%;height:325px;border:0"></iframe>
   <section class="modes" aria-label="Modo de los players">
     <button class="mode active" data-mode="autonomous" type="button"><span class="default">por defecto</span><span class="ico">◉</span><h2>Autónomo</h2><p>Cada player usa su programación, caché y ritmo. Ningún equipo depende de otro.</p></button>
     <button class="mode" data-mode="synchronized" type="button"><span class="ico">◌</span><h2>Sincronizado</h2><p>Los equipos escogidos comparten playlist, índice y reloj; el resto sigue autónomo.</p></button>
@@ -75,7 +76,43 @@ const API='https://api.admira.store', PLAYOUT='/api/playout';
 // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
 const FLEET='https://brain.digitalavatar.ai/locations?selfreg=1';
 const $=id=>document.getElementById(id), state={mode:'autonomous',screens:[],items:[],selected:[],item:null,saved:null};
-function wireExpertNavigation(){let source='';try{const ref=new URL(document.referrer);if(ref.origin===location.origin&&ref.pathname.endsWith('/mando.html'))source=ref.search;}catch(_){}document.querySelectorAll('[data-mando-return]').forEach(a=>{const pane=a.dataset.mandoReturn;a.href='/mando.html'+source+'#'+pane;});}
+function wireExpertNavigation(){
+  const source=new URLSearchParams(location.search);
+  if(!source.has('screen')&&!source.has('circuit')){
+    try{
+      const ref=new URL(document.referrer);
+      if(ref.origin===location.origin&&ref.pathname.endsWith('/mando.html')){
+        for(const key of ['screen','circuit','equipo','n']){
+          if(ref.searchParams.has(key)) source.set(key,ref.searchParams.get(key));
+        }
+      }
+    }catch(_){}
+  }
+  const links=document.querySelectorAll('[data-mando-return]');
+  const frame=$('taggedImportFrame');
+  const updateLinks=()=>{
+    const query=source.toString();
+    links.forEach(a=>{ a.href='/mando.html'+(query?'?'+query:'')+'#'+a.dataset.mandoReturn; });
+  };
+  updateLinks();
+  window.addEventListener('message',event=>{
+    if(event.origin!==location.origin||event.source!==frame.contentWindow) return;
+    if(event.data?.type==='admira:tagged-size'){
+      const height=event.data.height;
+      if(Number.isInteger(height)&&height>0&&height<=700) frame.style.height=height+'px';
+      return;
+    }
+    if(event.data?.type!=='admira:tagged-target') return;
+    const {screen,circuit}=event.data;
+    if(screen===source.get('screen')&&circuit===source.get('circuit')) return;
+    for(const key of ['screen','circuit','equipo','n']) source.delete(key);
+    if(screen&&circuit){ source.set('screen',screen); source.set('circuit',circuit); }
+    updateLinks();
+  });
+  const embed=new URLSearchParams(source);
+  embed.set('embed','tagged');
+  frame.src='/mando.html?'+embed;
+}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function orientOf(it){const o=String(it.orientacion||'').toLowerCase();if(o==='horizontal'||o==='vertical')return o;const a=Number(it.ancho),h=Number(it.alto);return a&&h&&a!==h?(a>h?'horizontal':'vertical'):'';}
 function familyRoot(it,by){let cur=it,seen=0;for(const t of it.tags||[])if(/^par-/.test(t)&&by.has(t.slice(4))){cur=by.get(t.slice(4));break;}while(cur&&cur.externalRef&&by.has(cur.externalRef)&&seen++<8)cur=by.get(cur.externalRef);return cur?(cur.externalRef||cur.id):it.id;}

@@ -73,7 +73,7 @@ test('la reproducción forzada conserva el gobierno hasta terminar la cápsula',
 
 test('Limpiar tag espera confirmación secuencial antes de borrar el estado local', () => {
   assert.match(mando, /curTag\(\)\.charAt\(0\)===['"]@['"]&&!await sendRemote\('content-clear',b\)/);
-  assert.match(mando, /if\(!await sendRemote\('tag-',b\)\) return/);
+  assert.match(mando, /if\(generation!==targetGeneration\|\|!await sendRemote\('tag-',b\)\|\|generation!==targetGeneration\) return/);
   assert.match(canal, /function clearTaggedContent\(\)/);
 });
 
@@ -116,7 +116,7 @@ test('el campo de tags mantiene el feedback hasta que la descarga remota está l
   assert.match(mando, /id="tagEntry"/);
   assert.match(mando, /CACHE_API = 'https:\/\/api\.admira\.store\/screen\/cache'/);
   assert.match(mando, /PLAYLIST_APIS = \['\/api\/control\/playlist\/','https:\/\/brain\.digitalavatar\.ai\/control\/playlist'\]/);
-  assert.match(mando, /state\.ready\?'✓ Disponible':\('⇩ '\+state\.pct\+'%'\)/);
+  assert.match(mando, /visual\.label\.textContent='⇩ '\+state\.pct\+'%'/);
   assert.match(mando, /visual\.progress=Math\.max\(\.02,Math\.min\(1,state\.pct\/100\)\)/);
   assert.match(mando, /holdAfterAck:true,returnAction:true,mirror:entry,input:input,label:b/);
   assert.match(mando, /if\(!await waitTaggedAvailability\(sent,action\)\) return/);
@@ -125,18 +125,18 @@ test('el campo de tags mantiene el feedback hasta que la descarga remota está l
 test('la sombra visual del hashtag pertenece a la pantalla exacta, no a todo el circuito', () => {
   assert.match(mando, /var TAG_KEY='mando_tag_by_screen'/);
   assert.match(mando, /function curTag\(\)\{ return tagStore\(\)\[T\.screen\]\|\|''; \}/);
-  assert.match(mando, /setStoredTag\(T\.screen, action\.kind/);
+  assert.match(mando, /setStoredTag\(screen, action\.kind/);
   assert.doesNotMatch(mando, /setStoredTag\(T\.circuit/);
 });
 
 test('salir de una playlist alternativa no borra las piezas añadidas antes por #ID', () => {
   assert.match(mando, /if\(curTag\(\)\.charAt\(0\)===['"]@['"]&&!await sendRemote\(['"]content-clear['"],b\)\) return;/);
-  assert.match(mando, /if\(!await sendRemote\(['"]tag-['"],b\)\) return;/);
+  assert.match(mando, /if\(generation!==targetGeneration\|\|!await sendRemote\('tag-',b\)\|\|generation!==targetGeneration\) return;/);
 });
 
-test('una pieza ya descargada finaliza directamente en verde', () => {
+test('una pieza descargada finaliza en verde cuando el player confirma la emisión', () => {
   assert.match(mando, /ids\.length>0&&ids\.every\(function\(id\)\{ return ready\.has\(id\); \}\)/);
-  assert.match(mando, /if\(state\.ready\)\{ visual\.doneLabel='✓ Disponible'; finishRemoteButton\(visual,'executed'\)/);
+  assert.match(mando, /if\(inPlaylist&&playing&&\(!ids\.length\|\|cached\)\)\{\s*visual\.doneLabel='✓ En emisión';\s*finishRemoteButton\(visual,'executed'\)/);
   assert.match(mando, /\.tag-entry\.remote-applied input\{border-color:#39d98a/);
 });
 

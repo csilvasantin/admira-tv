@@ -24,7 +24,7 @@ test('#ID fuera del feed de 300 se resuelve contra el índice completo (player y
   assert.match(canal,/function ensureTaggedExtras\(\)/);
   assert.match(mando,/<button id="tagApply">Importar<\/button>/);
   assert.match(mando,/stock\.admira\.store\/stock\/index\.json/);
-  assert.match(mando,/function showTaggedInPlaylist\(action\)/);
+  assert.match(mando,/remotePlaylistData\(screen\),taggedNow\(screen\)/);
   assert.doesNotMatch(mando,/doneLabel='Sin confirmar'/);
-  assert.match(mando,/Esperando descarga en pantalla/);
+  assert.match(mando,/Esperando descarga/);
 });
