@@ -14,11 +14,20 @@
 set -euo pipefail
 MODE="${1:-sencillo}"; FORCE="${2:-}"
 FIREFOX="/Applications/Firefox.app/Contents/MacOS/firefox"
+CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+# Navegador: Firefox (perfiles propios). Si Firefox tiene una actualización preparada, cada instancia nueva
+# se queda colgada esperando al actualizador (12-nov-2026: 0 ventanas + aviso de red local): entonces se usa
+# Chrome con perfiles propios (--app, posición y tamaño por argumentos, sin permiso de Accesibilidad).
+BROWSER="${ADMIRA_PLAYER_BROWSER:-auto}"
+if [ "$BROWSER" = "auto" ]; then
+  st="$(cat "$HOME/Library/Caches/Mozilla/updates/Applications/Firefox/updates/0/update.status" 2>/dev/null || true)"
+  if [ -x "$FIREFOX" ] && [ -z "$st" ]; then BROWSER=firefox; elif [ -x "$CHROME" ]; then BROWSER=chrome; else BROWSER=firefox; fi
+fi
 BASE="https://admira.tv/canal.html"
 PROFILES="$HOME/.admira-player/profiles"; PIDS="$HOME/.admira-player/pids"
 mkdir -p "$PROFILES" "$PIDS"
 
-idle_s() { ioreg -c IOHIDSystem | awk '/HIDIdleTime/ {print int($NF/1000000000); exit}'; }
+idle_s() { ioreg -c IOHIDSystem | awk '/HIDIdleTime/ && !d {print int($NF/1000000000); d=1}' || true; }
 if [ "$MODE" != "cerrar" ] && [ "$FORCE" != "--force" ]; then
   i="$(idle_s)"; if [ "${i:-0}" -lt 60 ]; then echo "· Carlos está usando el equipo (inactivo ${i}s < 60s): no abro nada. Repite con --force si quieres."; exit 3; fi
 fi
@@ -36,8 +45,14 @@ JXA
 
 open_player() { # $1=screen id  $2=standby(0|1)  $3=x $4=y $5=w $6=h
   local id="$1" sb="$2" prof="$PROFILES/$1"; shift 2; mkdir -p "$prof"
+  local url="$BASE?screen=$id&clean=1&fit=screen&standby=$sb"
+  if [ "$BROWSER" = "chrome" ]; then
+    "$CHROME" --user-data-dir="$prof-chrome" --no-first-run --no-default-browser-check --disable-session-crashed-bubble \
+      --autoplay-policy=no-user-gesture-required --app="$url" --window-position="$1,$2" --window-size="$3,$4" --kiosk >/dev/null 2>&1 &
+    echo "$!" > "$PIDS/$id.pid"; echo "  ✓ $id (Chrome) → ${3}×${4} en ($1,$2) · standby=$sb"; sleep 2; return 0
+  fi
   printf 'user_pref("browser.shell.checkDefaultBrowser", false);\nuser_pref("browser.sessionstore.resume_from_crash", false);\nuser_pref("media.autoplay.default", 0);\nuser_pref("browser.startup.homepage_override.mstone", "ignore");\nuser_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);\n' > "$prof/user.js"
-  "$FIREFOX" --no-remote --new-instance -profile "$prof" "$BASE?screen=$id&clean=1&fit=screen&standby=$sb" >/dev/null 2>&1 &
+  "$FIREFOX" --no-remote --new-instance -profile "$prof" "$url" >/dev/null 2>&1 &
   local pid=$!; echo "$pid" > "$PIDS/$id.pid"
   # Espera a la ventana y la coloca en su monitor sin teclas (no roba el teclado).
   for _ in $(seq 1 40); do
@@ -51,7 +66,7 @@ open_player() { # $1=screen id  $2=standby(0|1)  $3=x $4=y $5=w $6=h
 close_all
 [ "$MODE" = "cerrar" ] && { echo "✓ players cerrados"; exit 0; }
 F="$(frames)"; N="$(python3 -c 'import json,sys;print(len(json.loads(sys.argv[1])))' "$F")"
-echo "· $N monitores: $F"
+echo "· $N monitores: $F · navegador: $BROWSER"
 get() { python3 -c 'import json,sys;f=json.loads(sys.argv[1])[int(sys.argv[2])];print(int(f["x"]),int(f["y"]),int(f["w"]),int(f["h"]))' "$F" "$1"; }
 center=$(( N>=3 ? 1 : 0 ))
 case "$MODE" in
