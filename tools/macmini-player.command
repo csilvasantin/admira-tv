@@ -63,6 +63,9 @@ open_player() { # $1=screen id  $2=standby(0|1)  $3=x $4=y $5=w $6=h
   done; echo "  ✖ $id: la ventana no apareció (¿permiso de Accesibilidad para Terminal?)"
 }
 
+# Pantalla de cine: si existe el atajo «Admira Cine» (Atajos → Activar enfoque No molestar), se ejecuta
+# para que ningún aviso tape el player. macOS no deja activar un Enfoque sin ese atajo creado una vez a mano.
+cine() { shortcuts list 2>/dev/null | grep -qx "Admira Cine" && shortcuts run "Admira Cine" >/dev/null 2>&1 && echo "· No molestar activado (atajo Admira Cine)" || true; }
 close_all
 [ "$MODE" = "cerrar" ] && { echo "✓ players cerrados"; exit 0; }
 F="$(frames)"; N="$(python3 -c 'import json,sys;print(len(json.loads(sys.argv[1])))' "$F")"
@@ -74,6 +77,7 @@ case "$MODE" in
   *) echo "Modo desconocido: $MODE"; exit 2 ;;
 esac
 if [ "$N" -lt 3 ]; then open_player macmini-2 0 $(get 0); exit 0; fi
+cine
 SB=$([ "$MODE" = "sencillo" ] && echo 1 || echo 0)
 open_player macmini-2 0 $(get 1); open_player macmini-1 "$SB" $(get 0); open_player macmini-3 "$SB" $(get 2)
 [ "$MODE" = "extendido" ] && echo "· Mural: https://admira.tv/players → Extendido → macmini-1, macmini-2, macmini-3 → «Tiras V·H·V (Mac Mini)»."
