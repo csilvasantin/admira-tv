@@ -197,8 +197,10 @@
   #stage.extended-tile{overflow:hidden;display:block}
   #stage.extended-tile>video,#stage.extended-tile>img{
     position:absolute!important;max-width:none!important;max-height:none!important;
-    width:calc(var(--wall-cols,1)*100%)!important;height:calc(var(--wall-rows,1)*100%)!important;
-    left:calc(var(--wall-col,0)*-100%)!important;top:calc(var(--wall-row,0)*-100%)!important;
+    /* --wall-sx/sy = 1/ancho y 1/alto de la tesela; --wall-x/y = desplazamiento en teselas.
+       Con rejilla equivale a cols/rows y col/row; con tiras (Mac Mini V·H·V) cada tira tiene su ancho. */
+    width:calc(var(--wall-sx,var(--wall-cols,1))*100%)!important;height:calc(var(--wall-sy,var(--wall-rows,1))*100%)!important;
+    left:calc(var(--wall-x,var(--wall-col,0))*-100%)!important;top:calc(var(--wall-y,var(--wall-row,0))*-100%)!important;
     object-fit:fill!important
   }
   /* Oculta el botón de play NATIVO del navegador (Samsung Internet/WebView/iOS) que
@@ -672,6 +674,11 @@ function paintExtendedTile(){
   if(!tile) return;
   stage.style.setProperty('--wall-cols',String(tile.cols||1)); stage.style.setProperty('--wall-rows',String(tile.rows||1));
   stage.style.setProperty('--wall-col',String(tile.col||0)); stage.style.setProperty('--wall-row',String(tile.row||0));
+  const cols=Math.max(1,Number(tile.cols)||1), rows=Math.max(1,Number(tile.rows)||1);
+  const w=Number(tile.w)>0?Number(tile.w):1/cols, h=Number(tile.h)>0?Number(tile.h):1/rows;
+  const x=Number.isFinite(Number(tile.x))?Number(tile.x):(tile.col||0)/cols, y=Number.isFinite(Number(tile.y))?Number(tile.y):(tile.row||0)/rows;
+  stage.style.setProperty('--wall-sx',String(1/w)); stage.style.setProperty('--wall-sy',String(1/h));
+  stage.style.setProperty('--wall-x',String(x/w)); stage.style.setProperty('--wall-y',String(y/h));
 }
 function clearExtendedAssignment(){
   if(!_extendedAssignment) return false;
