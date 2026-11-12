@@ -36,6 +36,33 @@ function layoutFor(count) {
   return { rows: Math.max(1, Math.ceil(count / cols)), cols };
 }
 
+// Geometría mixta (Mac Mini, 12-nov-2026): tres monitores vertical·horizontal·vertical en una fila.
+// Cada pantalla recibe una tira del lienzo de anchura proporcional a su relación de aspecto
+// (normalizada a la misma altura) y la estira a su ventana: la central lleva la parte ancha.
+export const VHV_WEIGHTS = Object.freeze([9 / 16, 16 / 9, 9 / 16]);
+export function stripLayoutFor(raw, count) {
+  if (!raw || typeof raw !== "object" || count < 2) return null;
+  let weights = raw.preset === "vhv" && count === 3 ? VHV_WEIGHTS.slice() : raw.weights;
+  if (!Array.isArray(weights) || weights.length !== count) return null;
+  weights = weights.map(Number);
+  if (!weights.every(w => Number.isFinite(w) && w > 0 && w < 100)) return null;
+  const total = weights.reduce((a, b) => a + b, 0);
+  return { rows: 1, cols: count, preset: raw.preset === "vhv" && count === 3 ? "vhv" : "strips",
+    weights: weights.map(w => Math.round(w / total * 1e6) / 1e6) };
+}
+
+export function tileFor(layout, selected, total) {
+  const cols = Math.max(1, Number(layout && layout.cols) || 1), rows = Math.max(1, Number(layout && layout.rows) || 1);
+  const tile = { index: selected, total, row: Math.floor(selected / cols), col: selected % cols, rows, cols };
+  const weights = layout && Array.isArray(layout.weights) && layout.weights.length === total ? layout.weights : null;
+  if (weights) {
+    const x = weights.slice(0, selected).reduce((a, b) => a + b, 0);
+    Object.assign(tile, { row: 0, col: selected, rows: 1, x: Math.round(x * 1e6) / 1e6, y: 0, w: weights[selected], h: 1,
+      preset: layout.preset || "strips" });
+  }
+  return tile; // en rejilla el canal deduce x/y/w/h de col/row/cols/rows (contrato de siempre)
+}
+
 async function readState(env) {
   try {
     const raw = env.ACCESS && await env.ACCESS.get(STATE_KEY);
@@ -54,10 +81,9 @@ function assignmentFor(state, screen) {
   if (mode === "synchronized") assignment.group = { id: "synchronized-main", index: selected, total: state.screens.length,
     leader: state.screens[0] || "" };
   if (mode === "extended") {
-    const layout = state.layout || layoutFor(state.screens.length), cols = Math.max(1, Number(layout.cols) || 1);
+    const layout = state.layout || layoutFor(state.screens.length);
     assignment.item = state.item;
-    assignment.tile = { index: selected, total: state.screens.length, row: Math.floor(selected / cols), col: selected % cols,
-      rows: Math.max(1, Number(layout.rows) || 1), cols };
+    assignment.tile = tileFor(layout, selected, state.screens.length);
   }
   return assignment;
 }
@@ -88,7 +114,7 @@ export async function onRequestPost({ request, env }) {
   if (mode === "extended" && !item) return json({ ok: false, error: "playable_item_required" }, 400);
   const previous = await readState(env), updatedAt = Date.now();
   const state = { configured: true, mode, screens: mode === "autonomous" ? [] : screens, item,
-    layout: layoutFor(mode === "extended" ? screens.length : 1),
+    layout: (mode === "extended" && stripLayoutFor(body && body.layout, screens.length)) || layoutFor(mode === "extended" ? screens.length : 1),
     revision: Math.max(Number(previous.revision) || 0, updatedAt - 1) + 1, updatedAt, updatedBy: actor };
   await env.ACCESS.put(STATE_KEY, JSON.stringify(state));
   return json({ ok: true, state, serverNow: Date.now() });
