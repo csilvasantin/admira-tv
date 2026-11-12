@@ -47,7 +47,9 @@ open_player() { # $1=screen id  $2=standby(0|1)  $3=x $4=y $5=w $6=h
   local id="$1" sb="$2" prof="$PROFILES/$1"; shift 2; mkdir -p "$prof"
   local url="$BASE?screen=$id&clean=1&fit=screen&standby=$sb"
   if [ "$BROWSER" = "chrome" ]; then
-    "$CHROME" --user-data-dir="$prof-chrome" --no-first-run --no-default-browser-check --disable-session-crashed-bubble \
+    # ADMIRA_PLAYER_DEBUG=1 → DevTools sólo en 127.0.0.1:922N (diagnóstico local, sin exponer nada a la red).
+    local dbg=(); [ "${ADMIRA_PLAYER_DEBUG:-0}" = 1 ] && dbg=(--remote-debugging-address=127.0.0.1 --remote-debugging-port="922${id##*-}")
+    "$CHROME" "${dbg[@]}" --user-data-dir="$prof-chrome" --no-first-run --no-default-browser-check --disable-session-crashed-bubble \
       --autoplay-policy=no-user-gesture-required --app="$url" --window-position="$1,$2" --window-size="$3,$4" --kiosk >/dev/null 2>&1 &
     echo "$!" > "$PIDS/$id.pid"; echo "  ✓ $id (Chrome) → ${3}×${4} en ($1,$2) · standby=$sb"; sleep 2; return 0
   fi

@@ -628,6 +628,23 @@
       // Permanece hasta reintentar ese control o cambiar de player.
       if(action.label&&action.originalLabel) setTimeout(function(){ if(!action.button||!BUTTON_ACTIONS.has(action.button)) action.label.textContent=action.originalLabel; },1400);
     }
+    // CUENTA ATRÁS POR PANTALLA (12-nov-2026): «⏳ macmini-2 · 9 s…» hasta el acuse del player → «✓ aplicado».
+    function startCmdCountdown(screen,cmd,limit){
+      function cdEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+      var box=document.getElementById('cmdCountdown');
+      if(!box){ box=document.createElement('div'); box.id='cmdCountdown'; box.setAttribute('aria-live','polite');
+        box.style.cssText='position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:4px;align-items:center;pointer-events:none;font:600 13px/1.3 system-ui,sans-serif';
+        document.body.appendChild(box); }
+      var row=document.createElement('div'), start=Date.now();
+      row.style.cssText='background:rgba(10,14,20,.92);color:#fff;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:6px 14px';
+      var label=cdEsc(screen)+' · '+cdEsc(cmd);
+      function paint(){ var left=Math.max(0,Math.ceil((limit-(Date.now()-start))/1000)); row.innerHTML='⏳ '+label+' · '+left+' s…'; }
+      paint(); box.appendChild(row); var t=setInterval(paint,500);
+      return { done:function(result){ clearInterval(t); var secs=((Date.now()-start)/1000).toFixed(1);
+        row.innerHTML=(result==='executed'?'✓ '+label+' · aplicado en '+secs+' s':result==='failed'?'✗ '+label+' · rechazado':'⌛ '+label+' · sin acuse');
+        row.style.borderColor=result==='executed'?'#2ecc71':result==='failed'?'#e74c3c':'#f5b301';
+        setTimeout(function(){ row.remove(); },4000); } };
+    }
     async function waitRemoteAck(host,receipt,target,cmd){
       var started=Date.now(), limit=ackTimeoutFor(target.screen), pause=limit>REMOTE_TIMEOUT_MS?2000:500;
       while(Date.now()-started<limit){
@@ -660,7 +677,7 @@
           if(!r.ok) throw new Error('http '+r.status);
           var d = await r.json().catch(function(){return null;});
           if(!d||!d.ok||!Number.isSafeInteger(d.cid)||d.cid<=0||!ACTION_RE.test(String(d.action||''))) throw new Error('sin capacidad de acuse');
-          var host=CMD_HOSTS[i], result=await waitRemoteAck(host,d,target,cmd);
+          var host=CMD_HOSTS[i], cd=startCmdCountdown(target.screen,cmd,ackTimeoutFor(target.screen)), result=await waitRemoteAck(host,d,target,cmd); cd.done(result);
           if(result==='executed'&&options.holdAfterAck){
             if(action.raf) cancelAnimationFrame(action.raf); action.raf=0; action.progress=.02; paintRemoteButton(action);
           }else finishRemoteButton(action,result);
@@ -1041,7 +1058,7 @@
       var g=segs.filter(function(c){ return c==='g'; }).length, y=segs.filter(function(c){ return c==='y'; }).length;
       var total=info&&info.total||segs.length, loop=info&&info.loop||segs.length;
       var txt=document.getElementById('plStatTxt'), bar=document.getElementById('plBar'); if(!txt||!bar) return;
-      txt.innerHTML='▤ <b>'+plEsc(info&&info.name||'Playlist')+'</b> · '+total+(info&&info.feedCap?'+':'')+' contenidos'+(total>loop?' (loop de '+loop+')':'')+' · <b>'+g+'</b> de '+segs.length+' descargados'+(y?' · '+y+' bajando':'');
+      txt.innerHTML='▤ <b>'+plEsc(info&&info.name||'Playlist')+'</b> · '+total+(info&&info.feedCap?'+':'')+' contenidos'+(total>loop?' (loop de '+loop+')':'')+' · <b>'+g+'</b> de '+segs.length+' descargados'+(y?' · '+y+' bajando':'')+(info&&info.tagEmpty?' · <b class="pl-warn" style="color:#f5b301">⚠ #'+plEsc(info.tagEmpty)+' no tiene contenidos · emite la playlist normal</b>':'');
       bar.innerHTML=segs.map(function(c,i){ var it=items[i], cur=it&&String(it.id)===String(_plCurrent||''); return '<i class="'+c+(cur?' cur':'')+'" title="'+plEsc((i+1)+'. '+(it&&it.title||''))+'"></i>'; }).join('');
     }
     function renderRemotePlaylist(items,cache,currentId){
