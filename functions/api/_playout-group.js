@@ -97,24 +97,34 @@ const api = (function () {
       pausedAt: state && state.pausedAt == null ? null : Number(state.pausedAt),
       events: Array.isArray(state && state.events) ? state.events.slice() : [],
       revision: Number(state && state.revision) || 0,
-      updatedAt: Number(state && state.updatedAt) || 0
+      updatedAt: Number(state && state.updatedAt) || 0,
+      paused: state && state.paused != null ? !!state.paused : !!(state && state.pausedAt != null)
     };
     if (act === "reset") {
-      return { shiftMs: 0, pausedAt: null, events: [], revision: base.revision + 1, updatedAt: now };
+      return { shiftMs: 0, pausedAt: null, events: [], revision: base.revision + 1, updatedAt: now, paused: false };
     }
     var clean = cleanDurations(durations);
     var needDurations = act === "next" || act === "prev" || act === "first" || act === "last";
     if (clean) {
       var folded = foldEvents(base, clean);
       var next = applyAction(folded, act, now, clean);
-      return { shiftMs: next.shiftMs, pausedAt: next.pausedAt, events: [], revision: base.revision + 1, updatedAt: now };
+      return { shiftMs: next.shiftMs, pausedAt: next.pausedAt, events: [], revision: base.revision + 1, updatedAt: now, paused: next.pausedAt != null };
     }
     if (needDurations) {
       base.events.push({ action: act, at: now });
       return { shiftMs: base.shiftMs, pausedAt: base.pausedAt, events: base.events, revision: base.revision + 1, updatedAt: now };
     }
+    if (base.events.length) {
+      // Hay «next/prev…» sin resolver (se resuelven con las duraciones de cada player): pause/play
+      // también van a la cola, en orden. Aplicarlos a la base y re-jugar luego los eventos
+      // contra pausedAt movía la línea de tiempo (12-nov-2026: la pausa saltaba a otra pieza).
+      // `paused` dice el estado final para quien no pueda resolver la cola.
+      base.events.push({ action: act, at: now });
+      return { shiftMs: base.shiftMs, pausedAt: base.pausedAt, events: base.events, revision: base.revision + 1, updatedAt: now,
+        paused: act === "pause" ? true : act === "play" ? false : !!base.paused };
+    }
     var next2 = applyAction(base, act, now, null);
-    return { shiftMs: next2.shiftMs, pausedAt: next2.pausedAt, events: base.events, revision: base.revision + 1, updatedAt: now };
+    return { shiftMs: next2.shiftMs, pausedAt: next2.pausedAt, events: base.events, revision: base.revision + 1, updatedAt: now, paused: next2.pausedAt != null };
   }
 
   function resolveState(state, durations) {

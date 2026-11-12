@@ -99,3 +99,33 @@ test("el estado de grupo se lee de D1 aunque KV sirva una copia vieja (caché de
   assert.equal(got.state.pausedAt, null);
   assert.equal(GROUP_STATE_KEY, "admira-tv:playout:group:v1");
 });
+
+test("con «next» en cola, pause/play no mueven la línea de tiempo (antes saltaba de pieza)", () => {
+  const durs = DURS_S.map(s => s * 1000);
+  let st = { shiftMs: -197076, pausedAt: null, revision: 8, updatedAt: 0, events: [{ action: "next", at: 1000000 }, { action: "next", at: 2000000 }] };
+  const T = 3000000;
+  const live = AdmiraPlayoutGroup.timeline(durs, st, T, 0);
+  st = AdmiraPlayoutGroup.applyGroupAction(st, "pause", T, null);
+  assert.equal(st.paused, true);
+  const frozen = AdmiraPlayoutGroup.timeline(durs, st, T + 50000, 0);   // 50 s después sigue en el mismo punto
+  assert.equal(frozen.index, live.index); assert.ok(Math.abs(frozen.elapsed - live.elapsed) < 1);
+  assert.notEqual(AdmiraPlayoutGroup.resolveState(st, durs).pausedAt, null);
+  st = AdmiraPlayoutGroup.applyGroupAction(st, "play", T + 60000, null);
+  assert.equal(st.paused, false);
+  assert.equal(AdmiraPlayoutGroup.resolveState(st, durs).pausedAt, null);
+  const resumed = AdmiraPlayoutGroup.timeline(durs, st, T + 60000 + 2000, 0);   // 2 s después del play
+  const expectPos = (live.pos + 2000) % live.total;
+  assert.ok(Math.abs(resumed.pos - expectPos) < 1, resumed.pos + " vs " + expectPos);
+});
+
+test("el player resuelve la pausa con la cola de eventos (top-level pausedAt sigue null)", () => {
+  const p = player(3000500, 0);
+  let st = { shiftMs: 0, pausedAt: null, revision: 8, updatedAt: 0, events: [{ action: "next", at: 1000 }] };
+  st = AdmiraPlayoutGroup.applyGroupAction(st, "pause", 3000000, null);
+  assert.equal(st.pausedAt, null);
+  const exp = AdmiraPlayoutGroup.timeline(DURS_S.map(s => s * 1000), st, 0, 0);
+  p.ctx.cur = exp.index;
+  p.ctx.apply(st);
+  assert.equal(p.ctx.paused, true);
+  assert.ok(Math.abs(p.media.currentTime * 1000 - exp.elapsed) < 1);
+});
