@@ -618,6 +618,8 @@ const LIVE_TAG_KEY='adtv_live_tag:'+(scr.screen||scr.circuit||scr.machine||'unbo
 const _storedLiveTag=canonicalPlayTag(LS(LIVE_TAG_KEY,''));
 // Cuándo se puso el tag en vivo: una orden NUEVA del panel /players (revisión posterior) manda sobre él.
 let _liveTagAt=+LS(LIVE_TAG_KEY+':at','0')||0;
+// Tag en vivo sin piezas → playlist normal y aviso al mando (sin borrar el tag).
+let _liveTagFallback=false, _liveTagEmpty='';
 let _liveTag=!!_storedLiveTag;   // playlist alternativa puesta EN VIVO desde el mando
 if(_liveTag) seg.tag=_storedLiveTag;
 if(URL_TAG && modeParam==null && syncParam==null){ syncOn=false; playoutMode='local'; }
@@ -1923,7 +1925,7 @@ function standbyOn(on){
     if(typeof coffeeTransitions!=='undefined')coffeeTransitions.clear();
     if(!ov){ ov=document.createElement('div'); ov.id='standby-ov'; ov.setAttribute('data-adm-ok','1');
       ov.style.cssText='position:fixed;inset:0;z-index:2147483646;background:#000;'; document.body.appendChild(ov); }
-    setPaused(true); _nowItem=null;               // deja de espejar el asset
+    setPaused(true,{transient:true}); _nowItem=null;               // deja de espejar el asset (pausa de standby: no es intención del operador)
     _postStandby(); if(!_sbKeep) _sbKeep=setInterval(_postStandby, 60000);
     setLive('STANDBY · pantalla apagada', false);
   } else {
@@ -2247,6 +2249,8 @@ function xtoreMusicKeydown(event){
   if(!xtoreMusicEnabled()||!['Enter',' '].includes(event.key))return;
   event.preventDefault();if(!event.repeat)xtoreMusicTap();
 }
+// En pausa del operador y sin nada montado: decirlo en vez de dejar «Consultando la playlist…».
+function pausedNotice(){ try{ if(paused&&!_standby&&!stage.querySelector('video,img,audio,iframe')) stage.innerHTML='<div class="empty">⏸ En pausa · ▶ desde el mando para reanudar</div>'; }catch(_){} }
 async function loadDefaultDraft(){
   await pairingReady;
   const screen=String(programScreen()||programCircuit()||'').trim();if(!screen||PREVIEW.on)return;
@@ -2272,8 +2276,8 @@ async function loadDefaultDraft(){
     if(xtoreMusicEnabled())raw=xtoreMusicItems(raw,all);
     const mapped=raw.map((it,ix)=>{const type=playlistAssetKind(it);return{id:'default:'+String(it.stockId||it.id||ix),url:it.asset||it.url||'',type,title:it.title||('Contenido '+(ix+1)),motor:'parrilla-default',category:'por-defecto',_default:true,_fullMusic:DEFAULT_DRAFT.music,_position:ix,_previewSec:Math.max(2,+it.seconds||10),createdAt:'8'+String(1000+ix)}}).filter(x=>x.url);
     const signature=(DEFAULT_DRAFT.music?'music:':'')+(DEFAULT_DRAFT.managedEmpty?'managed-empty:':'')+(xtoreMusicEnabled()?(DEFAULT_DRAFT.assigned?'assigned:':'stock:'):'')+mapped.map(x=>x.id+'|'+x.type+'|'+x.url+'|'+x._previewSec).join('~');
-    if(signature===DEFAULT_DRAFT.signature){if(firstValidRead||xtoreMusicEnabled()&&!playlist.length)rebuild(false);return;}
-    DEFAULT_DRAFT.items=mapped;DEFAULT_DRAFT.signature=signature;rebuild(false);
+    if(signature===DEFAULT_DRAFT.signature){if(firstValidRead||xtoreMusicEnabled()&&!playlist.length)rebuild(false);pausedNotice();return;}
+    DEFAULT_DRAFT.items=mapped;DEFAULT_DRAFT.signature=signature;rebuild(false);pausedNotice();
   }catch(_){
     if(!DEFAULT_DRAFT.ready){
       stage.innerHTML='<div class="empty">No se pudo consultar la playlist. Reintentando…</div>';
@@ -2463,7 +2467,7 @@ function playlistInfo(){
   const name=_extendedAssignment?(_extendedAssignment.dual?'Dual H·V':'Mural extendido'):PREVIEW.on?'Previo de borrador':syncOn?('Sincro'+(SYNC_GROUP_MASTER?' · '+SYNC_GROUP_MASTER:'')):(_plSource||'Stock');
   return { name, total:Math.max(playlist.length,_plPool||0), loop:playlist.length, cap:cfg.max, feedCap:all.length>=300,
     ready:segs.filter(c=>c==='g').length, downloading:segs.filter(c=>c==='y').length, online:segs.filter(c=>c==='o').length,
-    index:cur, segs:segs.join('') };
+    index:cur, segs:segs.join(''), tagEmpty:(_liveTag&&_liveTagEmpty)||'' };
 }
 async function cacheOpen(){ if(_cache!==null) return _cache; try{ _cache=await caches.open(CACHE_NAME); }catch(_){ _cache=false; } return _cache; }
 // Un interactivo NO se precachea: no es un asset, es una página que se abre. Bajarla
@@ -3057,9 +3061,12 @@ if(__adtvClean){
   try{ const st=document.createElement('style'); st.textContent='.admira-stale{display:none!important}'; document.head.appendChild(st); }catch(_){}
 }
 
+// opt.transient: la pausa la impone el STANDBY, no el operador → no se guarda como intención.
+// (12-nov-2026: macmini-1/3 pasaron por standby en «sencillo» y al relanzarlas en autónomo
+// arrancaban con la pausa guardada: «Consultando la playlist…» para siempre).
 function setPaused(p){
-  const wasPaused=paused;
-  paused=!!p; save(PAUSE_INTENT_KEY,paused?'1':'0');
+  const wasPaused=paused, opt=arguments[1];
+  paused=!!p; if(!(opt&&opt.transient)) save(PAUSE_INTENT_KEY,paused?'1':'0');
   document.body.classList.toggle('paused',paused); $('pause').textContent=paused?'▶':'⏸';
   if(mediaEl)mediaEl._admiraOperatorPaused=paused;
   if(paused){
@@ -3171,7 +3178,7 @@ function rebuild(restart){
   // es una PLAYLIST ALTERNATIVA completa. Neutraliza medio/categoría/audiencia,
   // excluye parrilla/RTB y contenidos añadidos por #ID, y conserva únicamente las
   // piezas cuyo tag canónico coincide. Persiste hasta que el operador mande tag-.
-  if(_liveTag&&seg.tag){
+  if(_liveTag&&seg.tag){   // durante el respaldo seg.tag va vacío: no re-entra
     const liveCurrentId=playlist[cur]&&String(playlist[cur].id||'');
     const alternativeSeg={medio:'all',audience:'all',category:'all',age:'all',slot:'all',tag:seg.tag,format:'',ids:[]};
     playlist=defaultOrder(all.filter(it=>it&&!it._grid&&matchesSeg(it,alternativeSeg)));
@@ -3179,10 +3186,19 @@ function rebuild(restart){
     $('segCount').textContent=playlist.length+' en playlist alternativa #'+canonicalPlayTag(seg.tag);
     setLive('PLAYLIST ALTERNATIVA #'+canonicalPlayTag(seg.tag)+' · '+playlist.length+' en loop',playlist.length>0);
     renderChan(); renderRail(); try{ signagePlaylistPush(); }catch(_){} try{ schedulePrecache(); }catch(_){}
-    if(!playlist.length){ stage.innerHTML='<div class="empty">// ningún contenido con #'+canonicalPlayTag(seg.tag)+'</div>'; nowEl.textContent='// playlist alternativa vacía'; }
-    else if(restart||cur<0||!stage.querySelector('video,img,audio')) play(cur>=0?cur:0);
+    if(!playlist.length){
+      // Tag sin piezas: el tag se CONSERVA (es decisión del operador), pero la pantalla no se queda en negro:
+      // emite su playlist normal y el mando avisa «#tag no tiene contenidos» (playlistInfo().tagEmpty).
+      const keep=seg.tag; _liveTagEmpty=canonicalPlayTag(keep); _liveTagFallback=true; seg.tag='';
+      try{ rebuild(restart); }finally{ seg.tag=keep; _liveTagFallback=false; }
+      nowEl.textContent='#'+_liveTagEmpty+' no tiene contenidos · playlist normal';
+      return;
+    }
+    _liveTagEmpty='';
+    if(restart||cur<0||!stage.querySelector('video,img,audio')) play(cur>=0?cur:0);
     return;
   }
+  if(!_liveTagFallback) _liveTagEmpty='';
   if(DEFAULT_DRAFT.items.length&&!syncOn&&!gridInjected.length&&(!XTORE_PARENT||_condPlaylist)){
     const previous=playlist[cur]&&String(playlist[cur].id||'');
     playlist=DEFAULT_DRAFT.items.slice();_plSource=DEFAULT_DRAFT.name||'Por defecto';_plPool=playlist.length;cur=previous?playlist.findIndex(it=>String(it.id||'')===previous):-1;
@@ -4947,7 +4963,7 @@ if(PREVIEW.on){
   // Si la pantalla quedó en STANDBY antes de reiniciar, arranca apagada hasta recibir 'resume'
   // (un corte de luz en un kiosko no debe reencender la pantalla que el operador apagó).
   // ?standby=1|0 (lanzador del Mac Mini, 12-nov-2026): en «sencillo» las laterales arrancan apagadas; el mando las enciende.
-  try{ const q=qs.get('standby'); if(q==='1'||q==='0') save('adtv_standby',q); }catch(_){}
+  try{ const q=qs.get('standby'); if(q==='1'||q==='0') save('adtv_standby',q); if(q==='0'&&paused){ paused=false; save(PAUSE_INTENT_KEY,'0'); } }catch(_){}   // ?standby=0 = el lanzador quiere emisión: ni standby ni pausa heredada
   try{ if(LS('adtv_standby','0')==='1') standbyOn(true); }catch(_){}
   wireCam(); loadGrid(); setInterval(loadGrid, 60000);
   loadDefaultDraft(); setInterval(loadDefaultDraft, 30000);
