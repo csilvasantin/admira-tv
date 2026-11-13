@@ -43,7 +43,7 @@ function holder() {
 }
 
 let device = null, serial = '', browser = null, page = null, closing = false, lastFrame = -1, sent = 0, lastSaved = 0, yielding = '';
-let told = null, toldAt = 0;
+let told = null, toldAt = 0, hookWaitSince = Date.now();
 const status = extra => fs.writeFileSync(path.join(RUNTIME, 'status.json'), JSON.stringify({ pid: process.pid, screen: SCREEN, url: PAGE_URL,
   serial, connected: Boolean(device), yielding, frames: sent, fps: FPS, version: VERSION, at: Date.now(), ...extra }));
 
@@ -160,7 +160,12 @@ process.on('unhandledRejection', error => { log('rejection ' + String(error?.mes
     if (!device) {
       // Sin fotogramas de la página (p. ej. producción aún sin el gancho nativo) no se toca el USB: el teclado sigue como estaba.
       const hook = await page.evaluate(() => typeof window.admiraGalleonFrames === 'function').catch(() => false);
-      if (!hook || !await openDevice()) { await tell(false); await sleep(3000); continue; }
+      if (!hook) {
+        // La página cargada no trae el gancho (release antiguo o carga a medias): se recarga cada 30 s hasta que aparezca.
+        if (Date.now() - hookWaitSince > 30000) { hookWaitSince = Date.now(); log('sin gancho nativo: recargo la página'); await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {}); }
+        await tell(false); await sleep(3000); continue;
+      }
+      if (!await openDevice()) { await tell(false); await sleep(3000); continue; }
     }
     await tell(true);
     const started = Date.now();
