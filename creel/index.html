@@ -298,6 +298,51 @@
   // la del mando) se reproduce en bucle detrás del título, con tinte Hawkins para que todo siga leyéndose. Vídeo mudo;
   // las imágenes duran su tiempo. Sin playlist, el fondo rojo de siempre. Se vuelve a leer cada minuto.
   var lista = [], listaNombre = "", listaRev = null, idx = -1, media = null, mediaOk = false, mediaTimer = null;
+  // Botón «📺 Pantallas» del mando (Carlos, 14-nov-2026): pantallas-on / pantallas-off / pantallas-toggle por la cola
+  // /locations/cmd (la misma que el resto de players, con acuse). OFF para el vídeo y deja el fondo Stranger Things.
+  var pantallasOn = (function () { try { return localStorage.getItem("creel-pantallas") !== "0"; } catch (e) { return true; } })();
+  function pantallas(on) {
+    pantallasOn = !!on;
+    try { localStorage.setItem("creel-pantallas", pantallasOn ? "1" : "0"); } catch (e) {}
+    if (!pantallasOn) { lista = []; listaRev = null; siguiente(); } else cargaLista();
+    return pantallasOn;
+  }
+  var CMD_HOSTS = ["https://api.admira.store/locations/cmd", "https://brain.digitalavatar.ai/locations/cmd"], cmdHost = 0;
+  var cmdState = { since: 0, init: false }, cmdBusy = false, cmdIdle = 0;
+  function ejecutaOrden(c) {
+    var cmd = String(c && c.cmd || "").replace(/^\//, "").split(/\s+/)[0].toLowerCase();
+    if (cmd === "pantallas-on" || cmd === "pantallas" || cmd === "contenido-on") { pantallas(true); return "executed"; }
+    if (cmd === "pantallas-off" || cmd === "contenido-off") { pantallas(false); return "executed"; }
+    if (cmd === "pantallas-toggle") { pantallas(!pantallasOn); return "executed"; }
+    if (cmd === "playout-sync" || cmd === "reload" || cmd === "recargar") { cargaLista(); return "executed"; }
+    return "failed";
+  }
+  function acusa(c, status) {
+    var body = JSON.stringify({ id: SCREEN, screen: SCREEN, cid: c.cid, action: c.action, status: status, queuedAt: Date.now() });
+    return fetch(CMD_HOSTS[cmdHost] + "/ack", { method: "POST", headers: { "Content-Type": "application/json" }, body: body }).catch(function () {});
+  }
+  function sondeaOrdenes() {
+    if (cmdBusy || typeof fetch !== "function") return;
+    cmdBusy = true;
+    fetch(CMD_HOSTS[cmdHost] + "?id=" + encodeURIComponent(SCREEN) + "&since=" + cmdState.since + "&t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) {
+        if (!d) return;
+        if (!cmdState.init) { cmdState.since = d.seq || 0; cmdState.init = true; return; } // el atraso anterior al arranque no se ejecuta
+        var cmds = Array.isArray(d.commands) ? d.commands : [], seq = Promise.resolve(), activo = false;
+        cmds.forEach(function (c) {
+          if (typeof c.cid !== "number" || c.cid <= cmdState.since) return;
+          if (c.screen && String(c.screen).toLowerCase() !== SCREEN) { cmdState.since = c.cid; return; }
+          activo = true;
+          seq = seq.then(function () { var st = ejecutaOrden(c); cmdState.since = c.cid; return acusa(c, st); });
+        });
+        cmdIdle = activo ? 0 : cmdIdle + 1;
+        return seq;
+      })
+      .catch(function () { cmdHost = (cmdHost + 1) % CMD_HOSTS.length; cmdIdle++; })
+      .then(function () { cmdBusy = false; setTimeout(sondeaOrdenes, cmdIdle >= 40 ? 10000 : 3000); });
+  }
+  sondeaOrdenes();
   function siguiente() {
     if (mediaTimer) { clearTimeout(mediaTimer); mediaTimer = null; }
     if (media && media.tagName === "VIDEO") { try { media.pause(); media.removeAttribute("src"); media.load(); } catch (e) {} }
@@ -318,7 +363,7 @@
     el.src = it.asset; media = el;
   }
   function cargaLista() {
-    if (typeof fetch !== "function") return;
+    if (typeof fetch !== "function" || !pantallasOn) return;
     fetch("/api/playlist?screen=" + SCREEN, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
       var dr = d && d.draft; if (!d || !d.ok || !dr || !dr.items || dr.rev === listaRev) return;
       listaRev = dr.rev; listaNombre = String(dr.name || "");
@@ -353,7 +398,7 @@
         hardware: { dedicated: false, model: "Hotel Creel \u00B7 LED" },
         software: { player: "Hotel Creel \u00B7 LED", playerVersion: "creel-1", webRelease: version, engine: "", userAgent: navigator.userAgent },
         audio: { muted: true, playing: false }, network: { online: navigator.onLine !== false } },
-      health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), embebido: window.parent !== window },
+      health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), embebido: window.parent !== window, pantallas: pantallasOn ? "on" : "off" },
       loc: "portaventura", locName: "Hotel Creel \u00B7 LED (PortAventura)", machine: "" };
     try { fetch(NOW_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(function () {}); } catch (e) {}
   }

@@ -30,3 +30,13 @@ test('el kiosko reproduce de fondo la playlist de admira.tv de la pantalla (mand
   assert.match(html, /: pieza \|\| \{ id: "creel-fondo"/);
   assert.match(html, /setInterval\(cargaLista, 60000\);/);
 });
+
+test('el kiosko obedece «📺 Pantallas» del mando por la cola /locations/cmd (pantallas-on/off/toggle) y acusa', () => {
+  assert.match(html, /var CMD_HOSTS = \["https:\/\/api\.admira\.store\/locations\/cmd", "https:\/\/brain\.digitalavatar\.ai\/locations\/cmd"\]/);
+  assert.match(html, /if \(cmd === "pantallas-on" \|\| cmd === "pantallas" \|\| cmd === "contenido-on"\) \{ pantallas\(true\); return "executed"; \}/);
+  assert.match(html, /if \(cmd === "pantallas-off" \|\| cmd === "contenido-off"\) \{ pantallas\(false\); return "executed"; \}/);
+  assert.match(html, /cmdState\.since = d\.seq \|\| 0; cmdState\.init = true;/);          // el atraso anterior al arranque no se ejecuta
+  assert.match(html, /CMD_HOSTS\[cmdHost\] \+ "\/ack"/);
+  assert.match(html, /localStorage\.setItem\("creel-pantallas", pantallasOn \? "1" : "0"\)/);
+  assert.match(html, /pantallas: pantallasOn \? "on" : "off"/);
+});

@@ -387,6 +387,7 @@
       <button id="tagApply" aria-describedby="tagPreviewStatus">Importar</button>
     </div>
     <button id="power" style="border-color:var(--border);background:transparent;color:var(--muted)">⏻ Apagar player</button>
+    <button id="pantallas" hidden title="Pantalla LED del Hotel Creel: emitir o parar el contenido de admira.tv">📺 Pantallas · ON</button>
   </div>
   <div class="chips" id="tagChips"></div>
   <div class="tag-preview" id="tagPreview" hidden>
@@ -918,6 +919,16 @@
     function setStoredStandby(on){ var s=powerStore(); if(on) s[T.screen]=true; else delete s[T.screen]; localStorage.setItem(POWER_KEY,JSON.stringify(s)); }
     var standby=false, pwr=document.getElementById('power'), powerOp=0;
     var muted=false, mb=document.getElementById('mute'), muteOp=0;
+    // «📺 Pantallas» (Carlos, 14-nov-2026): solo para la pantalla LED del Hotel Creel (el kiosko /creel obedece
+    // pantallas-on / pantallas-off por la cola). Estado recordado por pantalla en este navegador.
+    var pb=document.getElementById('pantallas'), pantallasOp=0;
+    function pantallasScreen(){ return !!(T&&T.screen==='hotel-creel'); }
+    function pantallasOn(){ try{ return localStorage.getItem('adtv_pantallas:'+T.screen)!=='0'; }catch(_){ return true; } }
+    function paintPantallas(){ if(!pb) return; pb.hidden=!pantallasScreen(); var on=pantallasScreen()&&pantallasOn(); pb.textContent=on?'📺 Pantallas · ON':'📺 Pantallas · OFF'; pb.classList.toggle('on',!on); pb.setAttribute('aria-pressed',String(on)); }
+    if(pb) pb.onclick=async function(){
+      var target=T, op=++pantallasOp, desired=!pantallasOn(); var ok=await sendRemote(desired?'pantallas-on':'pantallas-off',pb);
+      if(op!==pantallasOp||T!==target) return; if(ok){ try{ localStorage.setItem('adtv_pantallas:'+target.screen,desired?'1':'0'); }catch(_){} paintPantallas(); }
+    };
     var previousControl=document.getElementById('previousControl'), nextControl=document.getElementById('nextControl'), infoControl=document.getElementById('infoControl');
     function remoteControlImage(it){
       if(!it) return ''; var src=String(it.thumb||it.thumbnail||it.poster||'');
@@ -1014,6 +1025,7 @@
       pwr.textContent=standby?'▶ Arrancar':'⏻ Apagar player'; pwr.classList.toggle('on',standby);
       document.getElementById('muteAction').textContent=muted?'🔊 Activar sonido':'🔇 Silenciar'; mb.classList.toggle('on',muted);
       var muteTitle=document.getElementById('muteTitle').textContent||'Contenido actual'; mb.setAttribute('aria-label',(muted?'Activar sonido':'Silenciar')+': '+muteTitle);
+      paintPantallas();
     }
     function resetRemoteControls(){
       powerOp++; muteOp++; standby=storedStandby(); muted=false; pwr.disabled=false; mb.disabled=false; paintRemoteControls();

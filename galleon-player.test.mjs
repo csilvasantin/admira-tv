@@ -62,3 +62,10 @@ test('el adaptador USB cede el teclado, no roba el foco y sólo relaja la seguri
   assert.match(launcher, /SuccessfulExit<\/key><false\/>/);
   assert.match(launcher, /captura\)/);
 });
+
+test('el mando enseña «📺 Pantallas» solo para hotel-creel y manda pantallas-on/off por la cola confirmada', () => {
+  assert.match(mando, /<button id="pantallas" hidden title="Pantalla LED del Hotel Creel/);
+  assert.match(mando, /function pantallasScreen\(\)\{ return !!\(T&&T\.screen==='hotel-creel'\); \}/);
+  assert.match(mando, /sendRemote\(desired\?'pantallas-on':'pantallas-off',pb\)/);
+  assert.match(mando, /paintPantallas\(\);\n    \}/);
+});
