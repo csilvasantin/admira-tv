@@ -40,3 +40,10 @@ test('el kiosko obedece «📺 Pantallas» del mando por la cola /locations/cmd 
   assert.match(html, /localStorage\.setItem\("creel-pantallas", pantallasOn \? "1" : "0"\)/);
   assert.match(html, /pantallas: pantallasOn \? "on" : "off"/);
 });
+
+test('el kiosko puede emitir la playlist de otra pantalla con ?playlist= (sin cambiar de identidad) y omite las piezas verticales', () => {
+  assert.match(html, /var PLAYLIST_SCREEN = \(function \(\) \{ var v = qs\("playlist"\);/);
+  assert.match(html, /fetch\("\/api\/playlist\?screen=" \+ PLAYLIST_SCREEN/);
+  assert.match(html, /lista = horizontales\.length \? horizontales : todas;/);
+  assert.match(html, /producer: "creel-led-" \+ SCREEN/); // el latido sigue siendo de la pantalla propia
+});
