@@ -1,0 +1,10 @@
+{
+  "name": "admira-galleon-player",
+  "private": true,
+  "description": "Adaptador USB del Corsair Galleon 100 SD: vuelca https://admira.tv/galleon a la LCD superior y a las 12 teclas",
+  "dependencies": {
+    "@elgato-stream-deck/node": "7.9.0",
+    "puppeteer-core": "25.17.0",
+    "sharp": "0.35.5"
+  }
+}
