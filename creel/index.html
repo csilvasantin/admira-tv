@@ -238,7 +238,7 @@
       g.fill();
     }
     g.save();
-    g.translate(W / 2, H * 0.145); // título arriba, bajo la fila de luces (13-nov-2026, como la pantalla de la maqueta)
+    g.translate(W / 2, H * 0.165); // título bajo la fila de luces, con aire (13-nov-2026, como la pantalla de la maqueta)
     g.font = "900 128px Georgia, 'Times New Roman', serif";
     g.textAlign = "center";
     g.textBaseline = "middle";
@@ -264,20 +264,20 @@
     var nombre = escena.cara ? String(escena.cara.quien).toUpperCase().normalize("NFD").replace(/[^A-Z]/g, "") : "";
     for (var li = 0; li < letters.length; li++) {
       var lx = W * 0.05 + li * (W * 0.9 / 25);
-      var ly = H * 0.035;
+      var ly = H * 0.026;
       var on = nombre ? nombre.indexOf(letters.charAt(li)) >= 0 : ((s + li * 0.37) % paso) / paso < 0.7;
       g.globalAlpha = on ? 1 : (nombre ? 0.12 : 0.18);
       g.fillStyle = colores[li % 5];
       g.shadowColor = colores[li % 5];
       g.shadowBlur = on ? (nombre ? 26 : 18) : 0;
       g.beginPath();
-      g.arc(lx, ly, 14, 0, 7);
+      g.arc(lx, ly, 12, 0, 7);
       g.fill();
       g.shadowBlur = 0;
       g.fillStyle = "#1a0a0a";
-      g.font = "700 15px Georgia, serif";
+      g.font = "700 13px Georgia, serif";
       g.textAlign = "center";
-      g.fillText(letters.charAt(li), lx, ly + 5);
+      g.fillText(letters.charAt(li), lx, ly + 4.5);
       g.globalAlpha = 1;
     }
     g.font = "18px ui-monospace, monospace";
