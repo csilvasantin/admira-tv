@@ -217,13 +217,10 @@ if (NATIVE) {
       return { frame: frameCount, error: String(error?.message || error) };
     }
   };
-  const producer = (() => {
-    try {
-      let id = localStorage.getItem('adtv_galleon_producer');
-      if (!id) { id = 'galleon-' + Math.random().toString(36).slice(2, 10); localStorage.setItem('adtv_galleon_producer', id); }
-      return id;
-    } catch { return 'galleon-' + Date.now().toString(36); }
-  })();
+  // Un productor ESTABLE por pantalla: /signage/now concede la pantalla al primer productor que late y rechaza (409)
+  // a cualquier otro durante 3 min. Con un id aleatorio por perfil/origen, cada arranque del adaptador perdía la
+  // pantalla frente a su propia carga anterior (pasó el 13-nov-2026 entre la prueba local y la de producción).
+  const producer = 'galleon-usb-' + SCREEN;
   fetch(API + '/version.json', { cache: 'no-store' }).then(r => r.json()).then(data => { version = String(data?.version || ''); }).catch(() => {});
   const beat = () => {
     // window.admiraGalleonOutput lo escribe el adaptador: si el teclado no recibe la señal (Elgato o el
