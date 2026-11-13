@@ -30,6 +30,8 @@ test('el gemelo puede volver a la señal real y el adaptador USB lee los fotogra
   assert.ok(player.indexOf('window.admiraGalleonFrames = ') > native, 'el gancho de fotogramas sólo existe en modo nativo');
   assert.match(player, /standby: !\(playing && output\.connected\)/);
   assert.match(player, /locName: 'Corsair Galleon 100 SD', machine: 'MacStudio'/);
+  assert.match(player, /const producer = 'galleon-usb-' \+ SCREEN;/);
+  assert.doesNotMatch(player, /adtv_galleon_producer/);
 });
 
 test('/players y el mando dan de alta el Galleon aunque el adaptador USB no esté emitiendo', () => {
