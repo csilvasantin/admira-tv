@@ -26,6 +26,21 @@
   var clima = { tipo: "sol", temp: null, ok: false, forzado: null, real: null };
   var ICONO = { sol: "\u2600\uFE0F", nubes: "\u2601\uFE0F", lluvia: "\uD83C\uDF27\uFE0F", tormenta: "\u26C8\uFE0F" };
   var NOMBRE = { sol: "Sol", nubes: "Nubes", lluvia: "Lluvia", tormenta: "Tormenta" };
+  var scene = null;
+  var storeOrigin = /^https:\/\/(?:[a-z0-9-]+\.)?admira\.store$|^https:\/\/(?:[a-z0-9-]+\.)?admira-store\.pages\.dev$/;
+  window.addEventListener("message", function (event) {
+    var data = event.data;
+    if (parent === window || event.source !== parent || !storeOrigin.test(event.origin) ||
+        !data || data.type !== "creel-frame-request" || data.version !== 1 ||
+        !Number.isSafeInteger(data.seq) || data.seq < 1 ||
+        typeof createImageBitmap !== "function") return;
+
+    scene = data.scene || {};
+    pinta(performance.now());
+    createImageBitmap(canvas).then(function (frame) {
+      parent.postMessage({ type: "creel-frame", version: 1, seq: data.seq, frame: frame }, event.origin, [frame]);
+    }).catch(function () {});
+  });
   var colores = ["#ff4a3d", "#ffd23f", "#3fd2ff", "#5dff8a", "#ff6ad5"];
   var esporas = [];
   var gotas = [];
@@ -98,7 +113,8 @@
   setInterval(leeClima, 10 * 60 * 1000);
 
   function cielo(s) {
-    var tipo = clima.forzado || clima.real || "sol";
+    var tipo = scene && Object.prototype.hasOwnProperty.call(ICONO, scene.weather)
+      ? scene.weather : clima.forzado || clima.real || "sol";
     clima.tipo = tipo;
     if (tipo === "sol") {
       var luz = g.createRadialGradient(W / 2, -H * 0.2, 10, W / 2, -H * 0.2, W * 0.7);
@@ -156,7 +172,8 @@
   }
 
   function hud() {
-    var t = clima.temp == null ? "\u2014 \u00B0C" : Math.round(clima.temp) + " \u00B0C";
+    var temp = scene ? scene.temperature : clima.temp;
+    var t = Number.isFinite(temp) ? Math.round(temp) + " °C" : "— °C";
     var tipo = clima.tipo || "sol";
     g.save();
     g.shadowColor = "rgba(0,0,0,.6)";
@@ -165,13 +182,14 @@
     g.font = "800 64px ui-monospace, monospace";
     g.textAlign = "right";
     g.textBaseline = "top";
-    g.fillText(horaMadrid(), W - 26, H * 0.44);
+    g.fillText(scene && /^\d{2}:\d{2}$/.test(scene.time) ? scene.time : horaMadrid(), W - 26, H * 0.44);
     g.font = "800 50px ui-monospace, monospace";
     g.textAlign = "left";
     g.fillText((ICONO[tipo] || "") + " " + t, 26, H * 0.44);
     g.font = "600 20px ui-monospace, monospace";
     g.fillStyle = "rgba(255,255,255,.75)";
-    var extra = clima.forzado ? " \u00B7 FORZADO" : (clima.ok ? " \u00B7 EN DIRECTO" : "");
+    var extra = scene ? (scene.forced ? " · FORZADO" : scene.forecast ? " · PREVISIÓN" : scene.weatherReady ? " · EN DIRECTO" : "")
+      : clima.forzado ? " · FORZADO" : clima.ok ? " · EN DIRECTO" : "";
     g.fillText("PORTAVENTURA \u00B7 " + String(NOMBRE[tipo] || "").toUpperCase() + extra, 28, H * 0.44 + 62);
     g.restore();
   }
@@ -237,12 +255,12 @@
     g.font = "18px ui-monospace, monospace";
     g.textAlign = "right";
     g.fillStyle = "rgba(255,255,255,.45)";
-    g.fillText("admira.tv \u00B7 sin se\u00F1al", W - 16, H - 12);
+    g.fillText("admira.tv", W - 16, H - 12);
     hud();
   }
 
   var raf = window.requestAnimationFrame || window.webkitRequestAnimationFrame || function (fn) { return setTimeout(function () { fn(Date.now()); }, 16); };
-  function loop(t) { pinta(t || Date.now()); raf(loop); }
+  function loop(t) { if (scene) return; pinta(t || Date.now()); raf(loop); }
   raf(loop);
 })();
 </script>
