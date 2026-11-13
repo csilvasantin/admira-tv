@@ -238,7 +238,7 @@
       g.fill();
     }
     g.save();
-    g.translate(W / 2, H * 0.13); // título más arriba (13-nov-2026, como la pantalla de la maqueta)
+    g.translate(W / 2, H * 0.145); // título arriba, bajo la fila de luces (13-nov-2026, como la pantalla de la maqueta)
     g.font = "900 128px Georgia, 'Times New Roman', serif";
     g.textAlign = "center";
     g.textBaseline = "middle";
@@ -258,24 +258,26 @@
       g.font = "800 46px ui-monospace, monospace"; g.textAlign = "center"; g.fillStyle = "#fff"; g.shadowColor = "#ff2a1f"; g.shadowBlur = 16;
       g.fillText(MSG[escena.nivel](escena.quien), W / 2, H * 0.72); g.shadowBlur = 0;
     }
+    // Luces A–Z en la franja superior; con un personaje elegido se encienden fijas las letras de su nombre (13-nov-2026).
     var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     var paso = escena.nivel === "puerta" ? 0.25 : escena.nivel === "cerca" ? 0.6 : 3;
+    var nombre = escena.cara ? String(escena.cara.quien).toUpperCase().normalize("NFD").replace(/[^A-Z]/g, "") : "";
     for (var li = 0; li < letters.length; li++) {
       var lx = W * 0.05 + li * (W * 0.9 / 25);
-      var ly = H * 0.88;
-      var on = ((s + li * 0.37) % paso) / paso < 0.7;
-      g.globalAlpha = on ? 1 : 0.18;
+      var ly = H * 0.035;
+      var on = nombre ? nombre.indexOf(letters.charAt(li)) >= 0 : ((s + li * 0.37) % paso) / paso < 0.7;
+      g.globalAlpha = on ? 1 : (nombre ? 0.12 : 0.18);
       g.fillStyle = colores[li % 5];
       g.shadowColor = colores[li % 5];
-      g.shadowBlur = on ? 18 : 0;
+      g.shadowBlur = on ? (nombre ? 26 : 18) : 0;
       g.beginPath();
-      g.arc(lx, ly, 17, 0, 7);
+      g.arc(lx, ly, 14, 0, 7);
       g.fill();
       g.shadowBlur = 0;
       g.fillStyle = "#1a0a0a";
-      g.font = "700 18px Georgia, serif";
+      g.font = "700 15px Georgia, serif";
       g.textAlign = "center";
-      g.fillText(letters.charAt(li), lx, ly + 6);
+      g.fillText(letters.charAt(li), lx, ly + 5);
       g.globalAlpha = 1;
     }
     g.font = "18px ui-monospace, monospace";

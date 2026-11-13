@@ -36,7 +36,7 @@ test('el gemelo puede volver a la señal real y el adaptador USB lee los fotogra
 
 test('/players y el mando dan de alta el Galleon aunque el adaptador USB no esté emitiendo', () => {
   assert.match(players, /'corsair-galleon-100':'Corsair Galleon 100 SD'/);
-  assert.match(players, /const DECLARED=\[\{screen:'corsair-galleon-100',name:'Corsair Galleon 100 SD'\}\]/);
+  assert.match(players, /const DECLARED=\[\{screen:'corsair-galleon-100',name:'Corsair Galleon 100 SD'\},\{screen:'hotel-creel',name:'Hotel Creel · LED \(PortAventura\)'\}\]/);
   assert.match(players, /for\(const d of DECLARED\)/);
   assert.match(players, /<section id="galleon" class="panel"><div class="ph"><h2>Corsair Galleon 100 SD<\/h2>/);
   assert.match(players, /data-galleon="\/mando\.html\?screen=corsair-galleon-100"/);
@@ -44,6 +44,7 @@ test('/players y el mando dan de alta el Galleon aunque el adaptador USB no est�
   assert.match(players, /function renderGalleon\(\)/);
   assert.match(players, /renderInk\(\);renderGalleon\(\);\}\);/);
   assert.match(mando, /add\('corsair-galleon-100','Corsair Galleon 100 SD','corsair'\);/);
+  assert.match(mando, /add\('hotel-creel','Hotel Creel · LED \(PortAventura\)','portaventura'\);/); // la pantalla LED del Hotel Creel también está en el mando
 });
 
 test('el adaptador USB cede el teclado, no roba el foco y sólo relaja la seguridad web en pruebas locales', () => {
