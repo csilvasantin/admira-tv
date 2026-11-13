@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Hotel Creel · LED</title>
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; cursor: none; -webkit-user-select: none; user-select: none; }
+  body { position: fixed; inset: 0; }
+  #box { position: absolute; left: 50%; top: 50%; width: 100vw; height: 37.5vw; max-height: 100vh; max-width: 266.666vh; transform: translate(-50%, -50%); background: #000; }
+  #box canvas { display: block; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<div id="box"><canvas id="led" width="1440" height="540"></canvas></div>
+<script>
+(function () {
+  "use strict";
+  var W = 1440, H = 540;
+  var canvas = document.getElementById("led");
+  var g = canvas.getContext("2d");
+  var clima = { tipo: "sol", temp: null, ok: false, forzado: null, real: null };
+  var ICONO = { sol: "\u2600\uFE0F", nubes: "\u2601\uFE0F", lluvia: "\uD83C\uDF27\uFE0F", tormenta: "\u26C8\uFE0F" };
+  var NOMBRE = { sol: "Sol", nubes: "Nubes", lluvia: "Lluvia", tormenta: "Tormenta" };
+  var colores = ["#ff4a3d", "#ffd23f", "#3fd2ff", "#5dff8a", "#ff6ad5"];
+  var esporas = [];
+  var gotas = [];
+  var i;
+  for (i = 0; i < 46; i++) esporas.push({ x: Math.random(), y: Math.random(), v: 0.02 + Math.random() * 0.05, r: 2 + Math.random() * 4 });
+  for (i = 0; i < 220; i++) gotas.push({ x: Math.random(), y: Math.random(), v: 0.5 + Math.random() * 0.7, l: 18 + Math.random() * 26 });
+
+  function pad2(n) {
+    n = Math.floor(n);
+    return n < 10 ? "0" + n : String(n);
+  }
+  function tipoDe(c) {
+    if (c >= 95) return "tormenta";
+    if ((c >= 51 && c <= 67) || (c >= 80 && c <= 82) || (c >= 71 && c <= 77) || c === 85 || c === 86) return "lluvia";
+    if (c >= 2) return "nubes";
+    return "sol";
+  }
+  function horaMadrid() {
+    try {
+      return new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid", hourCycle: "h23" }).format(new Date());
+    } catch (e) {
+      var d = new Date();
+      var utc = d.getTime() + d.getTimezoneOffset() * 60000;
+      var m = new Date(utc + 3600000);
+      return pad2(m.getHours()) + ":" + pad2(m.getMinutes());
+    }
+  }
+  function qs(name) {
+    var s = location.search || "";
+    var q = s.charAt(0) === "?" ? s.slice(1) : s;
+    var parts = q.split("&");
+    for (var j = 0; j < parts.length; j++) {
+      var kv = parts[j].split("=");
+      if (decodeURIComponent(kv[0] || "") === name) return decodeURIComponent((kv[1] || "").replace(/\+/g, " "));
+    }
+    return "";
+  }
+  var f = qs("clima");
+  if (ICONO[f]) clima.forzado = f;
+
+  function leeClima() {
+    var url = "https://api.open-meteo.com/v1/forecast?latitude=41.0868&longitude=1.1548&current=temperature_2m,weather_code,is_day&timezone=Europe%2FMadrid";
+    function ok(j) {
+      try {
+        var c = j.current || {};
+        clima.temp = c.temperature_2m;
+        clima.real = tipoDe(c.weather_code);
+        clima.ok = true;
+      } catch (e) {
+        clima.ok = false;
+      }
+    }
+    function fail() { clima.ok = false; }
+    if (typeof fetch === "function") {
+      fetch(url, { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(ok).catch(fail);
+    } else {
+      var x = new XMLHttpRequest();
+      x.open("GET", url, true);
+      x.onreadystatechange = function () {
+        if (x.readyState !== 4) return;
+        if (x.status >= 200 && x.status < 300) {
+          try { ok(JSON.parse(x.responseText)); } catch (e) { fail(); }
+        } else fail();
+      };
+      x.onerror = fail;
+      x.send();
+    }
+  }
+  leeClima();
+  setInterval(leeClima, 10 * 60 * 1000);
+
+  function cielo(s) {
+    var tipo = clima.forzado || clima.real || "sol";
+    clima.tipo = tipo;
+    if (tipo === "sol") {
+      var luz = g.createRadialGradient(W / 2, -H * 0.2, 10, W / 2, -H * 0.2, W * 0.7);
+      luz.addColorStop(0, "rgba(255,214,92,.6)");
+      luz.addColorStop(0.4, "rgba(255,150,40,.22)");
+      luz.addColorStop(1, "rgba(255,120,0,0)");
+      g.fillStyle = luz;
+      g.fillRect(0, 0, W, H);
+    } else {
+      g.fillStyle = tipo === "nubes" ? "rgba(70,70,85,.45)" : tipo === "lluvia" ? "rgba(20,35,70,.55)" : "rgba(10,10,30,.68)";
+      g.fillRect(0, 0, W, H);
+      g.fillStyle = tipo === "nubes" ? "rgba(200,200,215,.55)" : "rgba(90,95,120,.75)";
+      for (var k = 0; k < 6; k++) {
+        var x = ((k * 0.19 + s * 0.01) % 1.2 - 0.1) * W;
+        var y = H * (0.12 + (k % 2) * 0.08);
+        for (var n = 0; n < 4; n++) {
+          g.beginPath();
+          g.arc(x + n * 46, y + (n % 2) * 12, 44, 0, 7);
+          g.fill();
+        }
+      }
+      if (tipo !== "nubes") {
+        g.strokeStyle = "rgba(190,215,255,.6)";
+        g.lineWidth = 2.2;
+        g.beginPath();
+        for (var d = 0; d < gotas.length; d++) {
+          var drop = gotas[d];
+          var yy = ((drop.y + s * drop.v) % 1) * H;
+          var xx = drop.x * W;
+          g.moveTo(xx, yy);
+          g.lineTo(xx - drop.l * 0.3, yy + drop.l);
+        }
+        g.stroke();
+      }
+      if (tipo === "tormenta" && (s % 3.1) < 0.14) {
+        g.fillStyle = "rgba(230,235,255,.45)";
+        g.fillRect(0, 0, W, H);
+        var lx = W * (0.3 + ((Math.floor(s / 3.1) * 0.37) % 0.5));
+        var ly = 0;
+        g.strokeStyle = "#f4f6ff";
+        g.lineWidth = 6;
+        g.shadowColor = "#9fb4ff";
+        g.shadowBlur = 24;
+        g.beginPath();
+        g.moveTo(lx, ly);
+        while (ly < H * 0.8) {
+          lx += Math.sin(ly * 7.3 + s) * 38;
+          ly += 34;
+          g.lineTo(lx, ly);
+        }
+        g.stroke();
+        g.shadowBlur = 0;
+      }
+    }
+  }
+
+  function hud() {
+    var t = clima.temp == null ? "\u2014 \u00B0C" : Math.round(clima.temp) + " \u00B0C";
+    var tipo = clima.tipo || "sol";
+    g.save();
+    g.shadowColor = "rgba(0,0,0,.6)";
+    g.shadowBlur = 10;
+    g.fillStyle = "#fff";
+    g.font = "800 64px ui-monospace, monospace";
+    g.textAlign = "right";
+    g.textBaseline = "top";
+    g.fillText(horaMadrid(), W - 26, H * 0.44);
+    g.font = "800 50px ui-monospace, monospace";
+    g.textAlign = "left";
+    g.fillText((ICONO[tipo] || "") + " " + t, 26, H * 0.44);
+    g.font = "600 20px ui-monospace, monospace";
+    g.fillStyle = "rgba(255,255,255,.75)";
+    var extra = clima.forzado ? " \u00B7 FORZADO" : (clima.ok ? " \u00B7 EN DIRECTO" : "");
+    g.fillText("PORTAVENTURA \u00B7 " + String(NOMBRE[tipo] || "").toUpperCase() + extra, 28, H * 0.44 + 62);
+    g.restore();
+  }
+
+  function pinta(t) {
+    var s = t / 1000;
+    var fondo = g.createRadialGradient(W / 2, H * 1.15, 10, W / 2, H * 1.15, W * 0.75);
+    fondo.addColorStop(0, "#ff3b2f");
+    fondo.addColorStop(0.35, "#8c0b14");
+    fondo.addColorStop(1, "#2a0308");
+    g.fillStyle = fondo;
+    g.fillRect(0, 0, W, H);
+    var rayo = (s % 7) < 0.12;
+    if (rayo) {
+      g.fillStyle = "rgba(255,240,240,.35)";
+      g.fillRect(0, 0, W, H);
+    }
+    cielo(s);
+    g.fillStyle = "rgba(243,230,255,.75)";
+    for (var e = 0; e < esporas.length; e++) {
+      var sp = esporas[e];
+      var y = ((sp.y - s * sp.v) % 1 + 1) % 1;
+      g.beginPath();
+      g.arc(sp.x * W + Math.sin(s + sp.y * 9) * 12, y * H, sp.r, 0, 7);
+      g.fill();
+    }
+    g.save();
+    g.translate(W / 2, H * 0.2);
+    g.font = "900 128px Georgia, 'Times New Roman', serif";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.shadowColor = "#ff2a1f";
+    g.shadowBlur = 30;
+    g.lineWidth = 4;
+    g.strokeStyle = "#ff3326";
+    g.strokeText("STRANGER THINGS", 0, 0);
+    g.restore();
+    g.font = "700 28px ui-monospace, monospace";
+    g.textAlign = "center";
+    g.fillStyle = "#ffb3a8";
+    g.shadowBlur = 0;
+    g.fillText("H A W K I N S   \u00B7   H O T E L   C R E E L", W / 2, H * 0.35);
+    var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    var paso = 3;
+    for (var li = 0; li < letters.length; li++) {
+      var lx = W * 0.05 + li * (W * 0.9 / 25);
+      var ly = H * 0.88;
+      var on = ((s + li * 0.37) % paso) / paso < 0.7;
+      g.globalAlpha = on ? 1 : 0.18;
+      g.fillStyle = colores[li % 5];
+      g.shadowColor = colores[li % 5];
+      g.shadowBlur = on ? 18 : 0;
+      g.beginPath();
+      g.arc(lx, ly, 17, 0, 7);
+      g.fill();
+      g.shadowBlur = 0;
+      g.fillStyle = "#1a0a0a";
+      g.font = "700 18px Georgia, serif";
+      g.textAlign = "center";
+      g.fillText(letters.charAt(li), lx, ly + 6);
+      g.globalAlpha = 1;
+    }
+    g.font = "18px ui-monospace, monospace";
+    g.textAlign = "right";
+    g.fillStyle = "rgba(255,255,255,.45)";
+    g.fillText("admira.tv \u00B7 sin se\u00F1al", W - 16, H - 12);
+    hud();
+  }
+
+  var raf = window.requestAnimationFrame || window.webkitRequestAnimationFrame || function (fn) { return setTimeout(function () { fn(Date.now()); }, 16); };
+  function loop(t) { pinta(t || Date.now()); raf(loop); }
+  raf(loop);
+})();
+</script>
+</body>
+</html>
