@@ -287,6 +287,30 @@
     hud();
   }
 
+  // Latido en la flota (Carlos, 13-nov-2026): este kiosko ES la pantalla LED del Hotel Creel y late en /signage/now
+  // como «hotel-creel», con la pieza en antena (el personaje en pantalla) y un productor estable, igual que el Galleon.
+  var SCREEN = (function () { var v = qs("screen"); return /^[a-z0-9][a-z0-9-]{1,79}$/.test(v) ? v : "hotel-creel"; })();
+  var NOW_API = "https://api.admira.store/signage/now";
+  var version = "";
+  try { fetch("/version.json", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) { version = String(d && d.version || ""); }).catch(function () {}); } catch (e) {}
+  function beat() {
+    if (typeof fetch !== "function") return;
+    var c = escena.cara;
+    var item = c ? { id: "creel-" + String(c.quien).toLowerCase().replace(/[^a-z0-9]+/g, "-"), title: "Stranger Things \u00B7 " + c.quien + " \u00B7 " + (c.texto || "EN LA PUERTA"), type: "image", url: c.foto || "" }
+                 : { id: "creel-fondo", title: "Stranger Things \u00B7 Hawkins \u00B7 Hotel Creel", type: "animation", url: location.origin + "/creel/" };
+    var body = { screen: SCREEN, producer: "creel-led-" + SCREEN, item: item, standby: false, role: "creel", version: version,
+      device: { display: { width: W, height: H, cssWidth: innerWidth, cssHeight: innerHeight, viewportWidth: innerWidth, viewportHeight: innerHeight, devicePixelRatio: window.devicePixelRatio || 1, orientation: "landscape" },
+        system: { os: "", platform: navigator.platform || "", language: navigator.language || "", timezone: (Intl.DateTimeFormat().resolvedOptions().timeZone || "") },
+        hardware: { dedicated: false, model: "Hotel Creel \u00B7 LED" },
+        software: { player: "Hotel Creel \u00B7 LED", playerVersion: "creel-1", webRelease: version, engine: "", userAgent: navigator.userAgent },
+        audio: { muted: true, playing: false }, network: { online: navigator.onLine !== false } },
+      health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), embebido: window.parent !== window },
+      loc: "portaventura", locName: "Hotel Creel \u00B7 LED (PortAventura)", machine: "" };
+    try { fetch(NOW_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(function () {}); } catch (e) {}
+  }
+  setTimeout(beat, 2000);
+  setInterval(beat, 10000);
+
   var raf = window.requestAnimationFrame || window.webkitRequestAnimationFrame || function (fn) { return setTimeout(function () { fn(Date.now()); }, 16); };
   function loop(t) { pinta(t || Date.now()); raf(loop); }
   raf(loop);
