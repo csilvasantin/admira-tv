@@ -223,6 +223,7 @@
     fondo.addColorStop(1, "#2a0308");
     g.fillStyle = fondo;
     g.fillRect(0, 0, W, H);
+    var conContenido = fondoContenido();
     var rayo = (s % 7) < 0.12;
     if (rayo) {
       g.fillStyle = "rgba(255,240,240,.35)";
@@ -252,7 +253,7 @@
     g.textAlign = "center";
     g.fillStyle = "#ffb3a8";
     g.shadowBlur = 0;
-    g.fillText("H A W K I N S   \u00B7   H O T E L   C R E E L", W / 2, H * 0.265);
+    g.fillText("H A W K I N S   \u00B7   H O T E L   C R E E L", W / 2, H * 0.365); // un 10 % más abajo (13-nov-2026)
     if (escena.cara) retrato(s);
     if (escena.nivel !== "lejos" && escena.quien) {
       g.font = "800 46px ui-monospace, monospace"; g.textAlign = "center"; g.fillStyle = "#fff"; g.shadowColor = "#ff2a1f"; g.shadowBlur = 16;
@@ -283,7 +284,7 @@
     g.font = "18px ui-monospace, monospace";
     g.textAlign = "right";
     g.fillStyle = "rgba(255,255,255,.45)";
-    g.fillText(escena.quien || escena.cara ? "admira.tv \u00B7 maqueta en admira.store" : "admira.tv \u00B7 sin se\u00F1al", W - 16, H - 12);
+    g.fillText(conContenido && lista[idx] ? "admira.tv \u00B7 " + String(lista[idx].title || listaNombre).slice(0, 60) : escena.quien || escena.cara ? "admira.tv \u00B7 maqueta en admira.store" : "admira.tv \u00B7 sin se\u00F1al", W - 16, H - 12);
     hud();
   }
 
@@ -293,11 +294,59 @@
   var NOW_API = "https://api.admira.store/signage/now";
   var version = "";
   try { fetch("/version.json", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) { version = String(d && d.version || ""); }).catch(function () {}); } catch (e) {}
+  // Contenido de admira.tv de fondo (Carlos, 13-nov-2026): la playlist de esta pantalla (/api/playlist?screen=hotel-creel,
+  // la del mando) se reproduce en bucle detrás del título, con tinte Hawkins para que todo siga leyéndose. Vídeo mudo;
+  // las imágenes duran su tiempo. Sin playlist, el fondo rojo de siempre. Se vuelve a leer cada minuto.
+  var lista = [], listaNombre = "", listaRev = null, idx = -1, media = null, mediaOk = false, mediaTimer = null;
+  function siguiente() {
+    if (mediaTimer) { clearTimeout(mediaTimer); mediaTimer = null; }
+    if (media && media.tagName === "VIDEO") { try { media.pause(); media.removeAttribute("src"); media.load(); } catch (e) {} }
+    media = null; mediaOk = false;
+    if (!lista.length) return;
+    idx = (idx + 1) % lista.length;
+    var it = lista[idx], esVideo = it.assetType !== "image", el = document.createElement(esVideo ? "video" : "img");
+    el.crossOrigin = "anonymous";
+    if (esVideo) {
+      el.muted = true; el.playsInline = true; el.preload = "auto"; el.loop = false;
+      el.onended = siguiente; el.onerror = siguiente;
+      el.oncanplay = function () { mediaOk = true; try { el.play().catch(function () {}); } catch (e) {} };
+      mediaTimer = setTimeout(siguiente, (Math.max(2, Number(it.seconds) || 10) + 8) * 1000); // por si el vídeo se atasca
+    } else {
+      el.onload = function () { mediaOk = true; mediaTimer = setTimeout(siguiente, Math.max(2, Number(it.seconds) || 10) * 1000); };
+      el.onerror = siguiente;
+    }
+    el.src = it.asset; media = el;
+  }
+  function cargaLista() {
+    if (typeof fetch !== "function") return;
+    fetch("/api/playlist?screen=" + SCREEN, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
+      var dr = d && d.draft; if (!d || !d.ok || !dr || !dr.items || dr.rev === listaRev) return;
+      listaRev = dr.rev; listaNombre = String(dr.name || "");
+      lista = dr.items.filter(function (i) { return i && /^https:\/\//.test(i.asset || "") && (i.assetType === "video" || i.assetType === "image" || i.assetType === "animation"); });
+      idx = -1; siguiente();
+    }).catch(function () {});
+  }
+  cargaLista();
+  setInterval(cargaLista, 60000);
+  function fondoContenido() {
+    if (!media || !mediaOk || (media.tagName === "VIDEO" && media.readyState < 2)) return false;
+    var mw = media.videoWidth || media.naturalWidth, mh = media.videoHeight || media.naturalHeight;
+    if (!mw || !mh) return false;
+    var k = Math.max(W / mw, H / mh), dw = mw * k, dh = mh * k;
+    try { g.drawImage(media, (W - dw) / 2, (H - dh) / 2, dw, dh); } catch (e) { return false; }
+    g.fillStyle = "rgba(140,11,20,.42)"; g.fillRect(0, 0, W, H); // tinte Hawkins
+    return true;
+  }
+  function piezaEnAntena() {
+    var it = lista[idx]; if (!it) return null;
+    return { id: String(it.stockId || it.id || ""), title: String(it.title || ""), type: it.assetType, url: it.asset, playlist: { name: listaNombre, index: idx + 1, total: lista.length } };
+  }
+
   function beat() {
     if (typeof fetch !== "function") return;
-    var c = escena.cara;
-    var item = c ? { id: "creel-" + String(c.quien).toLowerCase().replace(/[^a-z0-9]+/g, "-"), title: "Stranger Things \u00B7 " + c.quien + " \u00B7 " + (c.texto || "EN LA PUERTA"), type: "image", url: c.foto || "" }
-                 : { id: "creel-fondo", title: "Stranger Things \u00B7 Hawkins \u00B7 Hotel Creel", type: "animation", url: location.origin + "/creel/" };
+    var c = escena.cara, pieza = piezaEnAntena();
+    var item = c ? { id: "creel-" + String(c.quien).toLowerCase().replace(/[^a-z0-9]+/g, "-"), title: "Stranger Things \u00B7 " + c.quien + " \u00B7 " + (c.texto || "EN LA PUERTA"), type: "image", url: c.foto || "", playlist: pieza && pieza.playlist }
+                 : pieza || { id: "creel-fondo", title: "Stranger Things \u00B7 Hawkins \u00B7 Hotel Creel", type: "animation", url: location.origin + "/creel/" };
     var body = { screen: SCREEN, producer: "creel-led-" + SCREEN, item: item, standby: false, role: "creel", version: version,
       device: { display: { width: W, height: H, cssWidth: innerWidth, cssHeight: innerHeight, viewportWidth: innerWidth, viewportHeight: innerHeight, devicePixelRatio: window.devicePixelRatio || 1, orientation: "landscape" },
         system: { os: "", platform: navigator.platform || "", language: navigator.language || "", timezone: (Intl.DateTimeFormat().resolvedOptions().timeZone || "") },
