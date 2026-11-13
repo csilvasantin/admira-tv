@@ -23,7 +23,7 @@ test('el kiosko escucha la maqueta de admira.store (presencia, zona y personaje)
 });
 
 test('el kiosko reproduce de fondo la playlist de admira.tv de la pantalla (mando), con tinte Hawkins, y la cuenta en el latido', () => {
-  assert.match(html, /fetch\("\/api\/playlist\?screen=" \+ SCREEN, \{ cache: "no-store" \}\)/);
+  assert.match(html, /fetch\("\/api\/playlist\?screen=" \+ PLAYLIST_SCREEN, \{ cache: "no-store" \}\)/);
   assert.match(html, /el\.crossOrigin = "anonymous";/);
   assert.match(html, /el\.muted = true; el\.playsInline = true;/);
   assert.match(html, /g\.fillStyle = "rgba\(140,11,20,\.42\)"; g\.fillRect\(0, 0, W, H\); \/\/ tinte Hawkins/);
