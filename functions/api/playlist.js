@@ -23,8 +23,14 @@ const PREFIX = DRAFT_PREFIX;
 // o en X-Notify-Key; nunca en la URL. Solo estos orígenes reciben CORS (sin credenciales).
 const STOCK_ORIGINS = new Set(["https://www.pixeria.com", "https://pixeria.com", "https://pixeria.pages.dev"]);
 const isStockOrigin = origin => STOCK_ORIGINS.has(origin) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin || "");
+// Lectura desde admira.store (13-nov-2026): el gemelo del Hotel Creel pinta en su propia textura 3D la playlist de
+// la pantalla LED (hotel-creel), así la pared ocluye bien al hotel (un iframe quedaría por encima de todo). Solo GET,
+// sin credenciales: escribir sigue exigiendo sesión del portal o la clave del Stock.
+const READ_ORIGINS = /^(https:\/\/(www\.)?admira\.store|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)$/; // + copia local del gemelo
 function corsFor(request) {
   const origin = request.headers.get("Origin") || "";
+  if (READ_ORIGINS.test(origin)) return { "Access-Control-Allow-Origin": origin, "Vary": "Origin", "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "600" };
   if (!isStockOrigin(origin)) return {};
   return { "Access-Control-Allow-Origin": origin, "Vary": "Origin", "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-Notify-Key", "Access-Control-Max-Age": "600" };
