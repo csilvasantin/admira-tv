@@ -114,10 +114,14 @@ async function pushFrame() {
     sharp(lcdJpeg).resize(LCD.width, LCD.height, { fit: 'fill' }).removeAlpha().raw().toBuffer(),
     sharp(mosaicJpeg).resize(MOSAIC.width, MOSAIC.height, { fit: 'fill' }).removeAlpha().raw().toBuffer(),
   ]);
-  if (!device) return false;
-  await device.fillLcd(0, lcdRaw, { format: 'rgb' });
+  const target = device;
+  if (!target || closing) return false;
+  await target.fillLcd(0, lcdRaw, { format: 'rgb' });
   const tiles = keyTiles(mosaicRaw);
-  for (let index = 0; index < tiles.length; index++) await device.fillKeyBuffer(index, tiles[index], { format: 'rgb' });
+  for (let index = 0; index < tiles.length; index++) {
+    if (device !== target || closing) return false; // el teclado se soltó a mitad de fotograma (parada o cesión)
+    await target.fillKeyBuffer(index, tiles[index], { format: 'rgb' });
+  }
   lastFrame = frames.frame;
   sent++;
   if (Date.now() - lastSaved > 5000) {
