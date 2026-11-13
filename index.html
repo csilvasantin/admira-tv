@@ -31,6 +31,8 @@
        lo propio de la portada: el rótulo visible de ☰ Opciones y ▤ Avanzado (en móvil
        queda el glifo), la píldora de idioma y «Ver canal» como llamada a la acción. */
     html.yk-head-mode header.yk-head .yk-ico .yk-ico-lbl{margin-left:7px;font:600 13px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0}
+    html.yk-head-mode header.yk-head .yk-ico[hidden]{display:none}
+    html.yk-head-mode header.yk-head #ykLoginLink{text-decoration:none}
     html.yk-head-mode header.yk-head .yk-ico[aria-expanded="true"] .yk-ico-lbl{color:inherit}
     html.yk-head-mode header.yk-head nav a.nav-cta{padding:6px 12px;border-radius:999px;background:var(--green);color:#04110b;font-weight:700}
     html.yk-head-mode header.yk-head nav a.nav-cta:hover{color:#04110b;filter:brightness(1.08)}
@@ -166,7 +168,8 @@
   <script defer src="/assets/intro-tv/intro.js?v=22.10.2026.r2.1134"></script>
   <!-- El color de la marca blanca, legible sobre la portada oscura (--mbh-*). -->
   <script defer src="/assets/portada-marca.js?v=22.10.2026.r2.1134"></script>
-  <script defer src="/admiranext-frame.js?v=22.10.2026.r2.1134"></script>
+  <script defer src="/admiranext-frame.js?v=login-portada-1"></script>
+  <script defer src="/assets/portada-sesion.js?v=1"></script>
 </head>
 <body data-yk-frame="cabecera" data-yk-auto="on" data-yk-experto="off" data-yk-secciones="main section h2">
   <a class="skip" href="#main" data-es="Saltar al contenido" data-en="Skip to content">Saltar al contenido</a>
@@ -184,7 +187,8 @@
       <a class="nav-cta" href="/canal.html">Ver canal</a>
     </nav>
     <span class="private" data-yk-access="publico" title="Página pública" data-es-title="Página pública" data-en-title="Public page">○<span class="yk-access-txt" data-es=" Página pública" data-en=" Public page"> Página pública</span></span>
-    <button type="button" class="yk-ico" id="ykAdvancedToggle" aria-controls="ykAdvancedRail" aria-expanded="false" title="▤ Avanzado"><span aria-hidden="true">▤</span><span class="yk-ico-lbl">Avanzado</span></button>
+    <a class="yk-ico" id="ykLoginLink" href="/entrar/" aria-label="Iniciar sesión" title="Iniciar sesión" data-es-aria-label="Iniciar sesión" data-en-aria-label="Sign in" data-es-title="Iniciar sesión" data-en-title="Sign in"><span aria-hidden="true">↪</span><span class="yk-ico-lbl" data-es="Iniciar sesión" data-en="Sign in">Iniciar sesión</span></a>
+    <button type="button" class="yk-ico" id="ykAdvancedToggle" hidden disabled aria-controls="ykAdvancedRail" aria-expanded="false" title="▤ Avanzado"><span aria-hidden="true">▤</span><span class="yk-ico-lbl">Avanzado</span></button>
     <button type="button" class="yk-ico yk-lang" id="ykLangToggle" data-yk-hueco-experto data-admira-compact-control lang="en" aria-label="ENG · Switch to English" title="Switch to English">ENG</button>
   </header>
   <div class="yk-slots" hidden>
