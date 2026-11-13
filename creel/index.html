@@ -66,6 +66,44 @@
   var f = qs("clima");
   if (ICONO[f]) clima.forzado = f;
 
+  // Señal de la maqueta del Hotel Creel en admira.store (13-nov-2026): el gemelo manda por postMessage la presencia
+  // (quién se acerca a la puerta), quién entra en la zona de la puerta y la figura elegida, con la foto. Aquí se
+  // pinta lo mismo que en la pantalla de la maqueta: mensaje, y retrato a la derecha con el nombre a la izquierda.
+  var escena = { nivel: "lejos", quien: "", caraZona: null, caraSel: null, cara: null };
+  var caras = {};
+  var ORIGENES = { "https://admira.store": 1, "https://www.admira.store": 1 };
+  var MSG = { cerca: function (q) { return q.toUpperCase() + " SE ACERCA…"; }, puerta: function (q) { return q === "Vecna" ? "VECNA ESTÁ AQUÍ · CORRE" : q === "Once" ? "ONCE PROTEGE LA CASA" : q.toUpperCase() + " EN LA PUERTA · EL MUNDO DEL REVÉS"; } };
+  function cara(url) {
+    if (!url) return null;
+    if (caras[url]) return caras[url];
+    var img = new Image(); img.decoding = "async"; img.src = url; caras[url] = img; return img;
+  }
+  function eligeCara() { escena.cara = escena.caraZona || escena.caraSel; if (escena.cara) cara(escena.cara.foto); }
+  function fotoValida(u) { try { var x = new URL(u); return x.protocol === "https:" && ORIGENES[x.origin] ? x.href : ""; } catch (e) { return ""; } }
+  window.addEventListener("message", function (ev) {
+    if (!ORIGENES[ev.origin] || !ev.data || typeof ev.data !== "object") return;
+    var d = ev.data, nombre = String(d.quien || "").slice(0, 40);
+    if (d.type === "creel-presencia") { escena.nivel = d.nivel === "puerta" || d.nivel === "cerca" ? d.nivel : "lejos"; escena.quien = nombre; }
+    else if (d.type === "creel-zona") { escena.caraZona = d.id >= 0 && nombre ? { quien: nombre, foto: fotoValida(d.foto), texto: "EN LA PUERTA" } : null; eligeCara(); }
+    else if (d.type === "creel-personaje") { escena.caraSel = d.id >= 0 && nombre ? { quien: nombre, foto: fotoValida(d.foto), texto: String(d.zona || "").slice(0, 40).toUpperCase() } : null; eligeCara(); }
+  });
+  function retrato(s) {
+    var c = escena.cara, img = cara(c.foto);
+    var h = H * 0.42, w = h * 0.82, x = W - 26 - w, y = H * 0.40, r = 18;
+    function marco() { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+    g.save(); g.shadowColor = "#ff2a1f"; g.shadowBlur = 34 + Math.sin(s * 3) * 10; g.fillStyle = "#1a0509"; marco(); g.fill(); g.restore();
+    g.save(); marco(); g.clip();
+    if (img && img.complete && img.naturalWidth) {
+      var k = Math.max(w / img.naturalWidth, h / img.naturalHeight), iw = img.naturalWidth * k, ih = img.naturalHeight * k;
+      g.drawImage(img, x + (w - iw) / 2, y, iw, ih);
+    } else { g.fillStyle = "#3a0a12"; g.fillRect(x, y, w, h); g.fillStyle = "#ffb3a8"; g.font = "800 40px ui-monospace, monospace"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(c.quien.toUpperCase(), x + w / 2, y + h / 2); }
+    g.restore();
+    g.lineWidth = 5; g.strokeStyle = "#ff3326"; marco(); g.stroke();
+    g.textAlign = "right"; g.textBaseline = "middle"; g.fillStyle = "#fff"; g.shadowColor = "#ff2a1f"; g.shadowBlur = 14;
+    g.font = "900 44px ui-monospace, monospace"; g.fillText(c.quien.toUpperCase(), x - 26, y + h * 0.42);
+    g.font = "700 24px ui-monospace, monospace"; g.fillStyle = "#ffd9c7"; g.fillText(c.texto || "EN LA PUERTA", x - 26, y + h * 0.42 + 44); g.shadowBlur = 0;
+  }
+
   function leeClima() {
     var url = "https://api.open-meteo.com/v1/forecast?latitude=41.0868&longitude=1.1548&current=temperature_2m,weather_code,is_day&timezone=Europe%2FMadrid";
     function ok(j) {
@@ -162,17 +200,18 @@
     g.shadowColor = "rgba(0,0,0,.6)";
     g.shadowBlur = 10;
     g.fillStyle = "#fff";
-    g.font = "800 64px ui-monospace, monospace";
-    g.textAlign = "right";
-    g.textBaseline = "top";
-    g.fillText(horaMadrid(), W - 26, H * 0.44);
-    g.font = "800 50px ui-monospace, monospace";
+    // Temperatura y, a su derecha, la hora; más pequeño (13-nov-2026, igual que la pantalla de la maqueta).
+    g.font = "800 40px ui-monospace, monospace";
     g.textAlign = "left";
-    g.fillText((ICONO[tipo] || "") + " " + t, 26, H * 0.44);
-    g.font = "600 20px ui-monospace, monospace";
+    g.textBaseline = "top";
+    var linea = (ICONO[tipo] || "") + " " + t;
+    g.fillText(linea, 26, H * 0.44);
+    g.fillStyle = "#ffd9c7";
+    g.fillText(horaMadrid(), 26 + g.measureText(linea).width + 30, H * 0.44);
+    g.font = "600 16px ui-monospace, monospace";
     g.fillStyle = "rgba(255,255,255,.75)";
     var extra = clima.forzado ? " \u00B7 FORZADO" : (clima.ok ? " \u00B7 EN DIRECTO" : "");
-    g.fillText("PORTAVENTURA \u00B7 " + String(NOMBRE[tipo] || "").toUpperCase() + extra, 28, H * 0.44 + 62);
+    g.fillText("PORTAVENTURA \u00B7 " + String(NOMBRE[tipo] || "").toUpperCase() + extra, 28, H * 0.44 + 50);
     g.restore();
   }
 
@@ -214,8 +253,13 @@
     g.fillStyle = "#ffb3a8";
     g.shadowBlur = 0;
     g.fillText("H A W K I N S   \u00B7   H O T E L   C R E E L", W / 2, H * 0.35);
+    if (escena.cara) retrato(s);
+    if (escena.nivel !== "lejos" && escena.quien) {
+      g.font = "800 46px ui-monospace, monospace"; g.textAlign = "center"; g.fillStyle = "#fff"; g.shadowColor = "#ff2a1f"; g.shadowBlur = 16;
+      g.fillText(MSG[escena.nivel](escena.quien), W / 2, H * 0.72); g.shadowBlur = 0;
+    }
     var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    var paso = 3;
+    var paso = escena.nivel === "puerta" ? 0.25 : escena.nivel === "cerca" ? 0.6 : 3;
     for (var li = 0; li < letters.length; li++) {
       var lx = W * 0.05 + li * (W * 0.9 / 25);
       var ly = H * 0.88;
@@ -237,7 +281,7 @@
     g.font = "18px ui-monospace, monospace";
     g.textAlign = "right";
     g.fillStyle = "rgba(255,255,255,.45)";
-    g.fillText("admira.tv \u00B7 sin se\u00F1al", W - 16, H - 12);
+    g.fillText(escena.quien || escena.cara ? "admira.tv \u00B7 maqueta en admira.store" : "admira.tv \u00B7 sin se\u00F1al", W - 16, H - 12);
     hud();
   }
 
