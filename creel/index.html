@@ -238,7 +238,7 @@
       g.fill();
     }
     g.save();
-    g.translate(W / 2, H * 0.2);
+    g.translate(W / 2, H * 0.13); // título más arriba (13-nov-2026, como la pantalla de la maqueta)
     g.font = "900 128px Georgia, 'Times New Roman', serif";
     g.textAlign = "center";
     g.textBaseline = "middle";
@@ -252,7 +252,7 @@
     g.textAlign = "center";
     g.fillStyle = "#ffb3a8";
     g.shadowBlur = 0;
-    g.fillText("H A W K I N S   \u00B7   H O T E L   C R E E L", W / 2, H * 0.35);
+    g.fillText("H A W K I N S   \u00B7   H O T E L   C R E E L", W / 2, H * 0.265);
     if (escena.cara) retrato(s);
     if (escena.nivel !== "lejos" && escena.quien) {
       g.font = "800 46px ui-monospace, monospace"; g.textAlign = "center"; g.fillStyle = "#fff"; g.shadowColor = "#ff2a1f"; g.shadowBlur = 16;
