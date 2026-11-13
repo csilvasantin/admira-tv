@@ -19,4 +19,5 @@ test('el kiosko escucha la maqueta de admira.store (presencia, zona y personaje)
   assert.match(html, /d\.type === "creel-personaje"/);
   assert.match(html, /nombre\.indexOf\(letters\.charAt\(li\)\) >= 0/);
   assert.match(html, /g\.measureText\(linea\)\.width \+ 30/);
+  assert.match(html, /var ly = H \* 0\.026;/);
 });
