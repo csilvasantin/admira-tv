@@ -297,6 +297,9 @@
   // Contenido de admira.tv de fondo (Carlos, 13-nov-2026): la playlist de esta pantalla (/api/playlist?screen=hotel-creel,
   // la del mando) se reproduce en bucle detrás del título, con tinte Hawkins para que todo siga leyéndose. Vídeo mudo;
   // las imágenes duran su tiempo. Sin playlist, el fondo rojo de siempre. Se vuelve a leer cada minuto.
+  // ?playlist=<pantalla> (Carlos, 14-nov-2026): emitir la playlist de OTRA pantalla (p. ej. corsair-galleon-100, el
+  // teclado del Mac Studio) sin cambiar de identidad: el latido y las órdenes siguen siendo de hotel-creel.
+  var PLAYLIST_SCREEN = (function () { var v = qs("playlist"); return /^[a-z0-9][a-z0-9-]{1,79}$/.test(v) ? v : SCREEN; })();
   var lista = [], listaNombre = "", listaRev = null, idx = -1, media = null, mediaOk = false, mediaTimer = null;
   // Botón «📺 Pantallas» del mando (Carlos, 14-nov-2026): pantallas-on / pantallas-off / pantallas-toggle por la cola
   // /locations/cmd (la misma que el resto de players, con acuse). OFF para el vídeo y deja el fondo Stranger Things.
@@ -364,10 +367,14 @@
   }
   function cargaLista() {
     if (typeof fetch !== "function" || !pantallasOn) return;
-    fetch("/api/playlist?screen=" + SCREEN, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
+    fetch("/api/playlist?screen=" + PLAYLIST_SCREEN, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
       var dr = d && d.draft; if (!d || !d.ok || !dr || !dr.items || dr.rev === listaRev) return;
       listaRev = dr.rev; listaNombre = String(dr.name || "");
-      lista = dr.items.filter(function (i) { return i && /^https:\/\//.test(i.asset || "") && (i.assetType === "video" || i.assetType === "image" || i.assetType === "animation"); });
+      var todas = dr.items.filter(function (i) { return i && /^https:\/\//.test(i.asset || "") && (i.assetType === "video" || i.assetType === "image" || i.assetType === "animation"); });
+      // La LED es apaisada: si la playlist trae parejas H·V (como la del Galleon), se emiten solo las horizontales.
+      var esVertical = function (i) { return (i.tags || []).some(function (t) { return t === "vertical" || t === "portrait"; }); };
+      var horizontales = todas.filter(function (i) { return !esVertical(i); });
+      lista = horizontales.length ? horizontales : todas;
       idx = -1; siguiente();
     }).catch(function () {});
   }
