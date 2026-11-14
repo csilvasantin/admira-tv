@@ -78,3 +78,17 @@ test('sin Intl, el respaldo de horaMadrid() sigue el horario de verano de la UE 
   assert.equal(a('2026-10-25T00:59:00Z'), '02:59'); // última hora de verano
   assert.equal(a('2026-10-25T01:00:00Z'), '02:00'); // vuelta a invierno
 });
+
+test('sin Intl, el latido no se rompe: zonaTele() devuelve "" en vez de lanzar', () => {
+  assert.ok(!html.includes('Intl.DateTimeFormat().resolvedOptions().timeZone || ""'), 'beat() no debe llamar a Intl sin try');
+  assert.ok(html.includes('timezone: zonaTele()'));
+  const ini = html.indexOf('function zonaTele()');
+  assert.ok(ini > 0);
+  const fin = html.indexOf('\n  }\n', ini) + 4;
+  const src = html.slice(ini, fin);
+  const sinIntl = { DateTimeFormat() { throw new Error('sin Intl'); } };
+  assert.equal(new Function('Intl', src + '; return zonaTele();')(sinIntl), '');
+  assert.equal(new Function('Intl', src + '; return zonaTele();')(undefined), '');
+  const conIntl = { DateTimeFormat() { return { resolvedOptions() { return { timeZone: 'Europe/Madrid' }; } }; } };
+  assert.equal(new Function('Intl', src + '; return zonaTele();')(conIntl), 'Europe/Madrid');
+});

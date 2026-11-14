@@ -407,6 +407,10 @@
     return { id: String(it.stockId || it.id || ""), title: String(it.title || ""), type: it.assetType, url: it.asset, playlist: { name: listaNombre, index: idx + 1, total: lista.length } };
   }
 
+  // Zona de la tele para el latido: en una TCL sin Intl no debe romper beat() (y cortar /signage/now).
+  function zonaTele() {
+    try { return (typeof Intl !== "undefined" && Intl.DateTimeFormat && Intl.DateTimeFormat().resolvedOptions().timeZone) || ""; } catch (e) { return ""; }
+  }
   function beat() {
     if (typeof fetch !== "function") return;
     var c = escena.cara, pieza = piezaEnAntena();
@@ -414,7 +418,7 @@
                  : pieza || { id: "creel-fondo", title: "Stranger Things \u00B7 Hawkins \u00B7 Hotel Creel", type: "animation", url: location.origin + "/creel/" };
     var body = { screen: SCREEN, producer: "creel-led-" + SCREEN, item: item, standby: false, role: "creel", version: version,
       device: { display: { width: W, height: H, cssWidth: innerWidth, cssHeight: innerHeight, viewportWidth: innerWidth, viewportHeight: innerHeight, devicePixelRatio: window.devicePixelRatio || 1, orientation: "landscape" },
-        system: { os: "", platform: navigator.platform || "", language: navigator.language || "", timezone: (Intl.DateTimeFormat().resolvedOptions().timeZone || "") },
+        system: { os: "", platform: navigator.platform || "", language: navigator.language || "", timezone: zonaTele() },
         hardware: { dedicated: false, model: "Hotel Creel \u00B7 LED" },
         software: { player: "Hotel Creel \u00B7 LED", playerVersion: "creel-1", webRelease: version, engine: "", userAgent: navigator.userAgent },
         audio: { muted: true, playing: false }, network: { online: navigator.onLine !== false } },
