@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es" data-auth-server-session>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Iniciar sesión · Admira.tv</title>
+  <script src="/auth-gate.js?v=login-portada-1"></script>
+</head>
+<body>
+  <main><p>Volviendo a Admira.tv…</p><a href="/">Volver a la portada</a></main>
+  <script>
+    if (window.AdmiraTvAuth) window.AdmiraTvAuth.ready().then(function () {
+      var requested = new URLSearchParams(location.search).get('volver');
+      var target;
+      try { target = new URL(requested || '/', location.origin); } catch (_) {}
+      location.replace(target && target.origin === location.origin && target.pathname === '/'
+        ? '/' + target.search + target.hash : '/');
+    });
+  </script>
+</body>
+</html>
