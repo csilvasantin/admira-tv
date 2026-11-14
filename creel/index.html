@@ -453,6 +453,20 @@
   setTimeout(beat, 2000);
   setInterval(beat, 10000);
 
+  // Pantalla siempre encendida: la TCL emite 24/7 sin mando; con Screen Wake Lock (si el WebView lo tiene) no se atenúa ni salta el salvapantallas.
+  // Se pide al arrancar, al volver a ser visible y cada minuto si se perdió; sin API o si la deniegan, no pasa nada.
+  var wakeLock = null, pidiendoWake = false;
+  function pideWakeLock() {
+    try {
+      if (!navigator.wakeLock || wakeLock || pidiendoWake || document.visibilityState !== "visible") return;
+      pidiendoWake = true;
+      navigator.wakeLock.request("screen").then(function (l) { wakeLock = l; pidiendoWake = false; l.addEventListener("release", function () { wakeLock = null; }); }, function () { pidiendoWake = false; });
+    } catch (e) { pidiendoWake = false; }
+  }
+  document.addEventListener("visibilitychange", pideWakeLock);
+  pideWakeLock();
+  setInterval(pideWakeLock, 60000);
+
   var raf = window.requestAnimationFrame || window.webkitRequestAnimationFrame || function (fn) { return setTimeout(function () { fn(Date.now()); }, 16); };
   function loop(t) { pinta(t || Date.now()); raf(loop); }
   raf(loop);

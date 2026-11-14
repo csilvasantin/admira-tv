@@ -139,3 +139,28 @@ test('refresco nocturno: tras más de 20 h encendida, recarga una vez entre las 
   const lv = html.slice(html.indexOf('function leeVersion()'), html.indexOf('var arranque'));
   assert.ok(lv.indexOf('refrescoNocturno(') > lv.indexOf('version = v;'));
 });
+
+test('pantalla siempre encendida: pide Screen Wake Lock al arrancar, al volver a ser visible y cada minuto, sin romperse si no hay API', async () => {
+  const ini = html.indexOf('var wakeLock = null');
+  const fin = html.indexOf('setInterval(pideWakeLock, 60000);') + 'setInterval(pideWakeLock, 60000);'.length;
+  assert.ok(ini > 0 && fin > ini);
+  const src = html.slice(ini, fin);
+  const monta = (nav, vis = 'visible') => {
+    const ev = {}, ivs = [];
+    const doc = { visibilityState: vis, addEventListener: (k, f) => { ev[k] = f; } };
+    new Function('navigator', 'document', 'setInterval', src)(nav, doc, (f, d) => ivs.push(d));
+    return { ev, ivs, doc };
+  };
+  let pedidos = 0, rel = null;
+  const nav = { wakeLock: { request: (k) => { assert.equal(k, 'screen'); pedidos++; return Promise.resolve({ addEventListener: (e, f) => { rel = f; } }); } } };
+  const m = monta(nav);
+  assert.equal(pedidos, 1); assert.deepEqual(m.ivs, [60000]); assert.equal(typeof m.ev.visibilitychange, 'function');
+  m.ev.visibilitychange(); assert.equal(pedidos, 1);           // pedido en curso: no repite
+  await new Promise(r => setTimeout(r, 0));
+  m.ev.visibilitychange(); assert.equal(pedidos, 1);           // ya lo tiene: no repite
+  rel(); m.ev.visibilitychange(); assert.equal(pedidos, 2);    // se soltó (p. ej. al ocultarse): lo vuelve a pedir
+  assert.doesNotThrow(() => monta({}));                        // WebView sin Wake Lock: nada
+  let p2 = 0; monta({ wakeLock: { request: () => { p2++; return Promise.resolve({ addEventListener() {} }); } } }, 'hidden');
+  assert.equal(p2, 0);                                         // oculta: no lo pide
+  assert.doesNotThrow(() => monta({ wakeLock: { request: () => { throw new Error('NotAllowed'); } } }));
+});
