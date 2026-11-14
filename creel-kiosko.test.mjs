@@ -54,3 +54,8 @@ test('sin red, el kiosko conserva la última temperatura buena (≤6 h) y reinte
   assert.match(html, /localStorage\.setItem\(CLIMA_KEY/);
   assert.match(html, /climaReintento = setTimeout\(leeClima, 2 \* 60 \* 1000\)/);
 });
+
+test('sin dato de clima (ni real ni forzado) el HUD no inventa «Sol»: sin icono y «CLIMA —»', () => {
+  assert.match(html, /var conDato = !!\(clima\.forzado \|\| clima\.real\)/);
+  assert.match(html, /conDato \? String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\) : "CLIMA \\u2014"/);
+});

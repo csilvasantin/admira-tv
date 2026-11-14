@@ -214,14 +214,16 @@
     g.font = "800 40px ui-monospace, monospace";
     g.textAlign = "left";
     g.textBaseline = "top";
-    var linea = (ICONO[tipo] || "") + " " + t;
+    // Sin dato real ni forzado (TCL sin red y sin caché) no se inventa «Sol»: sin icono y «CLIMA —» (14-nov-2026).
+    var conDato = !!(clima.forzado || clima.real);
+    var linea = (conDato ? (ICONO[tipo] || "") + " " : "") + t;
     g.fillText(linea, 26, H * 0.44);
     g.fillStyle = "#ffd9c7";
     g.fillText(horaMadrid(), 26 + g.measureText(linea).width + 30, H * 0.44);
     g.font = "600 16px ui-monospace, monospace";
     g.fillStyle = "rgba(255,255,255,.75)";
     var extra = clima.forzado ? " \u00B7 FORZADO" : (clima.ok ? " \u00B7 EN DIRECTO" : "");
-    g.fillText("PORTAVENTURA \u00B7 " + String(NOMBRE[tipo] || "").toUpperCase() + extra, 28, H * 0.44 + 50);
+    g.fillText("PORTAVENTURA \u00B7 " + (conDato ? String(NOMBRE[tipo] || "").toUpperCase() : "CLIMA \u2014") + extra, 28, H * 0.44 + 50);
     g.restore();
   }
 
