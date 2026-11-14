@@ -44,6 +44,16 @@ test('el kiosko obedece «📺 Pantallas» del mando por la cola /locations/cmd 
 test('el kiosko puede emitir la playlist de otra pantalla con ?playlist= (sin cambiar de identidad) y omite las piezas verticales', () => {
   assert.match(html, /var PLAYLIST_SCREEN = \(function \(\) \{ var v = qs\("playlist"\);/);
   assert.match(html, /fetch\("\/api\/playlist\?screen=" \+ PLAYLIST_SCREEN/);
-  assert.match(html, /lista = horizontales\.length \? horizontales : todas;/);
+  assert.match(html, /listaBase = horizontales\.length \? horizontales : todas;/); // (14-nov: la base; la pared filtra por personaje)
   assert.match(html, /producer: "creel-led-" \+ SCREEN/); // el latido sigue siendo de la pantalla propia
+});
+
+test('el kiosko emite solas las piezas del Stock etiquetadas personaje:<slug> mientras ese personaje manda, y lo cuenta en el latido (Carlos, 14-nov-2026)', () => {
+  assert.match(html, /function slugValido\(v\) \{ v = String\(v \|\| ""\); return \/\^\[a-z0-9\]\[a-z0-9-\]\{0,39\}\$\/\.test\(v\) \? v : ""; \}/);
+  assert.match(html, /slug: slugValido\(d\.slug\), foto: fotoValida\(d\.foto\), texto: "EN LA PUERTA"/);
+  assert.match(html, /\(i\.tags \|\| \[\]\)\.indexOf\("personaje:" \+ slug\) >= 0/);
+  assert.match(html, /listaSlug = slug; lista = slug \? piezasDe\(slug\) : listaBase; idx = -1; siguiente\(\);/);
+  assert.match(html, /if \(slug === listaSlug\) return;/);
+  assert.match(html, /listaBase = horizontales\.length \? horizontales : todas;/);
+  assert.match(html, /personaje: listaSlug \|\| ""/);
 });
