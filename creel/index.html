@@ -47,10 +47,11 @@
     try {
       return new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid", hourCycle: "h23" }).format(new Date());
     } catch (e) {
-      var d = new Date();
-      var utc = d.getTime() + d.getTimezoneOffset() * 60000;
-      var m = new Date(utc + 3600000);
-      return pad2(m.getHours()) + ":" + pad2(m.getMinutes());
+      // Respaldo sin Intl (TCL antigua): horario de la UE, verano del último domingo de marzo al último de octubre a la 01:00 UTC.
+      var d = new Date(), t = d.getTime(), y = d.getUTCFullYear();
+      var ultimoDomingo = function (mes) { var x = new Date(Date.UTC(y, mes + 1, 0, 1)); return x.getTime() - x.getUTCDay() * 86400000; };
+      var m = new Date(t + ((t >= ultimoDomingo(2) && t < ultimoDomingo(9)) ? 7200000 : 3600000));
+      return pad2(m.getUTCHours()) + ":" + pad2(m.getUTCMinutes());
     }
   }
   function qs(name) {

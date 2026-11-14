@@ -59,3 +59,22 @@ test('sin dato de clima (ni real ni forzado) el HUD no inventa «Sol»: sin icon
   assert.match(html, /var conDato = !!\(clima\.forzado \|\| clima\.real\)/);
   assert.match(html, /conDato \? String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\) : "CLIMA \\u2014"/);
 });
+
+test('sin Intl, el respaldo de horaMadrid() sigue el horario de verano de la UE (no +1 h fijo)', () => {
+  const ini = html.indexOf('function horaMadrid()');
+  const fin = html.indexOf('\n  }\n', ini) + 4;
+  const src = html.slice(ini, fin);
+  const pad2 = (n) => (n < 10 ? '0' : '') + n;
+  const sinIntl = { DateTimeFormat() { throw new Error('sin Intl'); } };
+  const a = (iso) => {
+    const fijo = Date.parse(iso);
+    class D extends Date { constructor(...x) { super(...(x.length ? x : [fijo])); } }
+    return new Function('Intl', 'Date', 'pad2', src + '; return horaMadrid();')(sinIntl, D, pad2);
+  };
+  assert.equal(a('2026-11-14T10:05:00Z'), '11:05'); // invierno: UTC+1
+  assert.equal(a('2026-07-01T10:05:00Z'), '12:05'); // verano: UTC+2
+  assert.equal(a('2026-03-29T00:59:00Z'), '01:59'); // justo antes del cambio de marzo
+  assert.equal(a('2026-03-29T01:00:00Z'), '03:00'); // cambio de marzo
+  assert.equal(a('2026-10-25T00:59:00Z'), '02:59'); // última hora de verano
+  assert.equal(a('2026-10-25T01:00:00Z'), '02:00'); // vuelta a invierno
+});
