@@ -122,3 +122,20 @@ test('sin mando, el kiosko se autoactualiza: relee /version.json cada 10 min y r
   assert.deepEqual(await corre('v1', new Error('sin red')), { v: 'v1', recargas: 0 }); // sin red: nunca recarga
   assert.deepEqual(await corre('v1', {}), { v: 'v1', recargas: 0 });                   // respuesta vacía: nada
 });
+
+test('refresco nocturno: tras más de 20 h encendida, recarga una vez entre las 05:00 y 05:59 de Madrid y solo con red', () => {
+  const ini = html.indexOf('var arranque = Date.now();');
+  assert.ok(ini > 0);
+  const fin = html.indexOf('\n', html.indexOf('function refrescoNocturno(', ini)) + 1;
+  const src = html.slice(ini, fin);
+  const f = new Function('Date', src + '; return refrescoNocturno;');
+  const T0 = 1e12, H = 3600000;
+  const r = f({ now: () => T0 });
+  assert.equal(r(T0 + 21 * H, '05:10'), true);   // 21 h encendida y son las 05: recarga
+  assert.equal(r(T0 + 19 * H, '05:10'), false);  // menos de 20 h: no
+  assert.equal(r(T0 + 21 * H, '04:59'), false);  // fuera de la franja: no
+  assert.equal(r(T0 + 21 * H, '15:05'), false);  // las 15 no son las 05
+  // solo se evalúa tras una lectura buena de /version.json (con red), dentro de leeVersion
+  const lv = html.slice(html.indexOf('function leeVersion()'), html.indexOf('var arranque'));
+  assert.ok(lv.indexOf('refrescoNocturno(') > lv.indexOf('version = v;'));
+});

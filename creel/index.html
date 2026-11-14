@@ -314,8 +314,13 @@
       var v = String(d && d.version || ""); if (!v) return;
       if (version && v !== version) { try { location.reload(); } catch (e) {} return; }
       version = v;
+      if (typeof refrescoNocturno === "function" && refrescoNocturno(Date.now(), horaMadrid())) { try { location.reload(); } catch (e) {} }
     }).catch(function () {}); } catch (e) {}
   }
+  // Refresco nocturno (14-nov-2026): la TCL emite 24/7 sin mando y el WebView acumula memoria; si lleva más de 20 h
+  // encendida, entre las 05:00 y las 05:59 de Madrid recarga una vez, y solo tras leer /version.json (hay red).
+  var arranque = Date.now();
+  function refrescoNocturno(ahora, hora) { return ahora - arranque > 20 * 3600000 && String(hora).slice(0, 2) === "05"; }
   leeVersion();
   setInterval(leeVersion, 10 * 60 * 1000);
   // Contenido de admira.tv de fondo (Carlos, 13-nov-2026): la playlist de esta pantalla (/api/playlist?screen=hotel-creel,
