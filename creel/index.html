@@ -306,7 +306,18 @@
   var SCREEN = (function () { var v = qs("screen"); return /^[a-z0-9][a-z0-9-]{1,79}$/.test(v) ? v : "hotel-creel"; })();
   var NOW_API = "https://api.admira.store/signage/now";
   var version = "";
-  try { fetch("/version.json", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) { version = String(d && d.version || ""); }).catch(function () {}); } catch (e) {}
+  // Autoactualización sin mando (14-nov-2026): la TCL no se toca con el mando, así que el kiosko vuelve a leer
+  // /version.json cada 10 min; si arrancó sin red, la versión se rellena al volver la red, y si cambia una versión
+  // ya conocida (nuevo deploy de admira.tv) recarga la página para emitir el kiosko nuevo. Nunca recarga sin red.
+  function leeVersion() {
+    try { fetch("/version.json", { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) {
+      var v = String(d && d.version || ""); if (!v) return;
+      if (version && v !== version) { try { location.reload(); } catch (e) {} return; }
+      version = v;
+    }).catch(function () {}); } catch (e) {}
+  }
+  leeVersion();
+  setInterval(leeVersion, 10 * 60 * 1000);
   // Contenido de admira.tv de fondo (Carlos, 13-nov-2026): la playlist de esta pantalla (/api/playlist?screen=hotel-creel,
   // la del mando) se reproduce en bucle detrás del título, con tinte Hawkins para que todo siga leyéndose. Vídeo mudo;
   // las imágenes duran su tiempo. Sin playlist, el fondo rojo de siempre. Se vuelve a leer cada minuto.

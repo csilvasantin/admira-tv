@@ -101,3 +101,24 @@ test('sin red, si todas las piezas de la playlist fallan seguidas, el fondo espe
   assert.match(html, /mediaTimer = setTimeout\(siguiente, 30000\);/);
   assert.match(html, /mediaOk = true; fallos = 0;/);
 });
+
+test('sin mando, el kiosko se autoactualiza: relee /version.json cada 10 min y recarga solo si cambia una versión conocida', async () => {
+  assert.match(html, /setInterval\(leeVersion, 10 \* 60 \* 1000\);/);
+  const ini = html.indexOf('function leeVersion()');
+  assert.ok(ini > 0);
+  const fin = html.indexOf('\n  }\n', ini) + 4;
+  const src = html.slice(ini, fin);
+  const corre = async (inicial, respuesta) => {
+    let recargas = 0;
+    const loc = { reload() { recargas++; } };
+    const fetchF = () => respuesta instanceof Error ? Promise.reject(respuesta) : Promise.resolve({ ok: true, json: () => Promise.resolve(respuesta) });
+    const f = new Function('fetch', 'location', 'inicial', 'var version = inicial; ' + src + '; leeVersion(); return new Promise(function (r) { setTimeout(function () { r(version); }, 20); });');
+    const v = await f(fetchF, loc, inicial);
+    return { v, recargas };
+  };
+  assert.deepEqual(await corre('', { version: 'v1' }), { v: 'v1', recargas: 0 });      // arrancó sin red: rellena, no recarga
+  assert.deepEqual(await corre('v1', { version: 'v1' }), { v: 'v1', recargas: 0 });    // misma versión: nada
+  assert.deepEqual(await corre('v1', { version: 'v2' }), { v: 'v1', recargas: 1 });    // deploy nuevo: recarga
+  assert.deepEqual(await corre('v1', new Error('sin red')), { v: 'v1', recargas: 0 }); // sin red: nunca recarga
+  assert.deepEqual(await corre('v1', {}), { v: 'v1', recargas: 0 });                   // respuesta vacía: nada
+});
