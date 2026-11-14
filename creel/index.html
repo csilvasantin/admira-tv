@@ -397,7 +397,8 @@
       el.oncanplay = function () { mediaOk = true; fallos = 0; try { el.play().catch(function () {}); } catch (e) {} };
       mediaTimer = setTimeout(siguiente, (Math.max(2, Number(it.seconds) || 10) + 8) * 1000); // por si el vídeo se atasca
     } else {
-      el.onload = function () { mediaOk = true; fallos = 0; mediaTimer = setTimeout(siguiente, Math.max(2, Number(it.seconds) || 10) * 1000); };
+      mediaTimer = setTimeout(falla, 20000); // por si la imagen se atasca sin load ni error (TCP colgado): cuenta como fallo
+      el.onload = function () { if (mediaTimer) clearTimeout(mediaTimer); mediaOk = true; fallos = 0; mediaTimer = setTimeout(siguiente, Math.max(2, Number(it.seconds) || 10) * 1000); };
       el.onerror = falla;
     }
     el.src = it.asset; media = el;

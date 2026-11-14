@@ -228,3 +228,8 @@ test('kiosko /creel: al volver la red se pone al día al instante (clima, playli
   const c = { ok: true, media: null, lista: [], ct: 0, clima: 0, carga: 0, sig: 0 }; mk(c)();
   assert.equal(c.sig, 0);                                                             // sin lista: nada que reintentar
 });
+
+test('una imagen de la playlist que se cuelga (sin load ni error) no atasca el fondo: a los 20 s cuenta como fallo y pasa a la siguiente', () => {
+  assert.match(html, /mediaTimer = setTimeout\(falla, 20000\); \/\/ por si la imagen se atasca/);
+  assert.match(html, /el\.onload = function \(\) \{ if \(mediaTimer\) clearTimeout\(mediaTimer\); mediaOk = true; fallos = 0;/);
+});
