@@ -164,3 +164,20 @@ test('pantalla siempre encendida: pide Screen Wake Lock al arrancar, al volver a
   assert.equal(p2, 0);                                         // oculta: no lo pide
   assert.doesNotThrow(() => monta({ wakeLock: { request: () => { throw new Error('NotAllowed'); } } }));
 });
+
+test('un error al pintar un fotograma no congela el LED (sigue pidiendo fotogramas y solo recarga tras 300 fallos seguidos con red)', () => {
+  const ini = html.indexOf('var fallosPinta = 0;');
+  const fin = html.indexOf('\n  }\n', html.indexOf('function loop(')) + 4;
+  assert.ok(ini > 0 && fin > ini);
+  const src = html.slice(ini, fin);
+  const monta = (pinta, online = true) => {
+    const cola = []; let recargas = 0;
+    const loop = new Function('raf', 'pinta', 'navigator', 'location', src + '; return loop;')(f => cola.push(f), pinta, { onLine: online }, { reload: () => recargas++ });
+    const corre = n => { loop(1); for (let i = 0; i < n && cola.length; i++) cola.shift()(i + 2); };
+    return { corre, cola, rec: () => recargas };
+  };
+  let n = 0; const a = monta(() => { n++; if (n === 3) throw new Error('fotograma roto'); });
+  a.corre(10); assert.equal(n, 11); assert.equal(a.cola.length, 1); assert.equal(a.rec(), 0); // sigue tras el error
+  const b = monta(() => { throw new Error('siempre'); }); b.corre(400); assert.equal(b.rec(), 1); // recarga una vez
+  const c = monta(() => { throw new Error('siempre'); }, false); c.corre(400); assert.equal(c.rec(), 0); // sin red: no
+});

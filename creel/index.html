@@ -468,7 +468,14 @@
   setInterval(pideWakeLock, 60000);
 
   var raf = window.requestAnimationFrame || window.webkitRequestAnimationFrame || function (fn) { return setTimeout(function () { fn(Date.now()); }, 16); };
-  function loop(t) { pinta(t || Date.now()); raf(loop); }
+  // Un error en un fotograma (vídeo raro, clima inesperado, WebView viejo) no debe congelar el LED para siempre:
+  // se pide el siguiente fotograma antes de pintar y el error se traga; si falla 5 s seguidos (300 fotogramas), recarga con red.
+  var fallosPinta = 0;
+  function loop(t) {
+    raf(loop);
+    try { pinta(t || Date.now()); fallosPinta = 0; }
+    catch (e) { fallosPinta++; if (fallosPinta === 300 && navigator.onLine !== false) { try { location.reload(); } catch (e2) {} } }
+  }
   raf(loop);
 })();
 </script>
