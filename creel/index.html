@@ -336,7 +336,7 @@
   function pantallas(on) {
     pantallasOn = !!on;
     try { localStorage.setItem("creel-pantallas", pantallasOn ? "1" : "0"); } catch (e) {}
-    if (!pantallasOn) { lista = []; listaRev = null; siguiente(); } else cargaLista();
+    if (!pantallasOn) { lista = []; listaRev = null; listaDeRed = false; siguiente(); } else cargaLista();
     return pantallasOn;
   }
   var CMD_HOSTS = ["https://api.admira.store/locations/cmd", "https://brain.digitalavatar.ai/locations/cmd"], cmdHost = 0;
@@ -402,18 +402,36 @@
     }
     el.src = it.asset; media = el;
   }
+  // La última playlist buena se recuerda (≤72 h): si la TCL arranca sin red o /api/playlist falla, emite la recordada (las piezas ya vistas salen de la caché HTTP).
+  var LISTA_KEY = "creel-lista-" + PLAYLIST_SCREEN, LISTA_MAX = 72 * 3600000; var listaDeRed = false; // la lista en curso vino de la red (no de la recordada)
+  function aplicaLista(dr) {
+    listaRev = dr.rev; listaNombre = String(dr.name || "");
+    var todas = dr.items.filter(function (i) { return i && /^https:\/\//.test(i.asset || "") && (i.assetType === "video" || i.assetType === "image" || i.assetType === "animation"); });
+    // La LED es apaisada: si la playlist trae parejas H·V (como la del Galleon), se emiten solo las horizontales.
+    var esVertical = function (i) { return (i.tags || []).some(function (t) { return t === "vertical" || t === "portrait"; }); };
+    var horizontales = todas.filter(function (i) { return !esVertical(i); });
+    lista = horizontales.length ? horizontales : todas;
+    idx = -1; fallos = 0; siguiente();
+    return todas;
+  }
+  function recuerdaLista(dr, todas) {
+    try { localStorage.setItem(LISTA_KEY, JSON.stringify({ t: Date.now(), rev: dr.rev, name: String(dr.name || ""), items: todas.map(function (i) { return { id: i.id, stockId: i.stockId, title: i.title, assetType: i.assetType, asset: i.asset, seconds: i.seconds, tags: i.tags }; }) })); } catch (e) {}
+  }
+  function listaRecordada() {
+    if (lista.length || !pantallasOn) return;
+    try {
+      var c = JSON.parse(localStorage.getItem(LISTA_KEY) || "null");
+      if (!c || !c.items || !c.items.length || !(Date.now() - c.t < LISTA_MAX)) return;
+      aplicaLista({ rev: null, name: c.name, items: c.items }); // la primera respuesta buena de la red la sustituye (listaDeRed sigue false)
+    } catch (e) {}
+  }
   function cargaLista() {
-    if (typeof fetch !== "function" || !pantallasOn) return;
-    fetch("/api/playlist?screen=" + PLAYLIST_SCREEN, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
-      var dr = d && d.draft; if (!d || !d.ok || !dr || !dr.items || dr.rev === listaRev) return;
-      listaRev = dr.rev; listaNombre = String(dr.name || "");
-      var todas = dr.items.filter(function (i) { return i && /^https:\/\//.test(i.asset || "") && (i.assetType === "video" || i.assetType === "image" || i.assetType === "animation"); });
-      // La LED es apaisada: si la playlist trae parejas H·V (como la del Galleon), se emiten solo las horizontales.
-      var esVertical = function (i) { return (i.tags || []).some(function (t) { return t === "vertical" || t === "portrait"; }); };
-      var horizontales = todas.filter(function (i) { return !esVertical(i); });
-      lista = horizontales.length ? horizontales : todas;
-      idx = -1; fallos = 0; siguiente();
-    }).catch(function () {});
+    if (typeof fetch !== "function" || !pantallasOn) { if (pantallasOn) listaRecordada(); return; }
+    fetch("/api/playlist?screen=" + PLAYLIST_SCREEN, { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) {
+      var dr = d && d.draft; if (!d || !d.ok || !dr || !dr.items) { listaRecordada(); return; }
+      if (listaDeRed && dr.rev === listaRev) return;
+      listaDeRed = true; recuerdaLista(dr, aplicaLista(dr));
+    }).catch(listaRecordada);
   }
   cargaLista();
   setInterval(cargaLista, 60000);

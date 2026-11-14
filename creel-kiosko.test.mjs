@@ -181,3 +181,36 @@ test('un error al pintar un fotograma no congela el LED (sigue pidiendo fotogram
   const b = monta(() => { throw new Error('siempre'); }); b.corre(400); assert.equal(b.rec(), 1); // recarga una vez
   const c = monta(() => { throw new Error('siempre'); }, false); c.corre(400); assert.equal(c.rec(), 0); // sin red: no
 });
+
+test('la última playlist buena se recuerda (≤72 h) y se emite si la TCL arranca sin red o /api/playlist falla; la red la sustituye', async () => {
+  const ini = html.indexOf('  var LISTA_KEY = ');
+  const fin = html.indexOf('\n  }\n', html.indexOf('function cargaLista(')) + 4;
+  assert.ok(ini > 0 && fin > ini);
+  const src = html.slice(ini, fin);
+  const mk = (store, fetchImpl, now = 1e12) => {
+    const st = { lista: [], sig: 0 };
+    const api = new Function('st', 'localStorage', 'fetch', 'Date', 'PLAYLIST_SCREEN',
+      'var lista = st.lista, listaRev = null, listaNombre = "", idx = -1, fallos = 0, pantallasOn = true; function siguiente() { st.sig++; }' + src +
+      '; return { cargaLista, get lista() { return lista; }, get nombre() { return listaNombre; } };')(st,
+      { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } }, fetchImpl, { now: () => now }, 'hotel-creel');
+    return { api, st };
+  };
+  const tick = () => new Promise(r => setTimeout(r, 0));
+  const items = [{ id: 'a', title: 'A', assetType: 'video', asset: 'https://x/a.mp4', seconds: 10, tags: ['horizontal'], sub: 'fuera' }, { id: 'v', assetType: 'video', asset: 'https://x/v.mp4', tags: ['vertical'] }];
+  const ok = () => Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, draft: { rev: 7, name: 'Creel', items } }) });
+  const store = {};
+  const a = mk(store, ok); a.api.cargaLista(); await tick(); await tick();
+  assert.equal(a.api.lista.length, 1); const c = JSON.parse(store['creel-lista-hotel-creel']);
+  assert.equal(c.items.length, 2); assert.equal(c.items[0].sub, undefined); assert.equal(c.t, 1e12);
+  a.api.cargaLista(); await tick(); await tick(); assert.equal(a.st.sig, 1);          // misma rev de la red: no reinicia
+  const b = mk(store, () => Promise.reject(new Error('sin red')), 1e12 + 3600000); b.api.cargaLista(); await tick(); await tick();
+  assert.equal(b.api.lista.length, 1); assert.equal(b.api.nombre, 'Creel'); assert.equal(b.st.sig, 1); // sin red: la recordada
+  b.api.cargaLista(); await tick(); await tick(); assert.equal(b.st.sig, 1);          // ya emite: no reinicia
+  const e = mk(store, () => Promise.resolve({ ok: false, json: () => Promise.reject(0) })); e.api.cargaLista(); await tick(); await tick();
+  assert.equal(e.api.lista.length, 1);                                               // 5xx: la recordada
+  const v = mk(store, () => Promise.reject(0), 1e12 + 73 * 3600000); v.api.cargaLista(); await tick(); await tick();
+  assert.equal(v.api.lista.length, 0);                                               // más de 72 h: no
+  let red = false; const s = mk(store, () => red ? ok() : Promise.reject(0)); s.api.cargaLista(); await tick(); await tick();
+  red = true; s.api.cargaLista(); await tick(); await tick(); assert.equal(s.st.sig, 2); // vuelve la red: la sustituye
+});
+
