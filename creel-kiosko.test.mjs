@@ -92,3 +92,12 @@ test('sin Intl, el latido no se rompe: zonaTele() devuelve "" en vez de lanzar',
   const conIntl = { DateTimeFormat() { return { resolvedOptions() { return { timeZone: 'Europe/Madrid' }; } }; } };
   assert.equal(new Function('Intl', src + '; return zonaTele();')(conIntl), 'Europe/Madrid');
 });
+
+test('sin red, si todas las piezas de la playlist fallan seguidas, el fondo espera 30 s en vez de girar en bucle', () => {
+  assert.match(html, /var fallos = 0;/);
+  assert.match(html, /el\.onended = siguiente; el\.onerror = falla;/);
+  assert.match(html, /el\.onerror = falla;\n/);
+  assert.match(html, /if \(fallos < lista\.length\) \{ siguiente\(\); return; \}/);
+  assert.match(html, /mediaTimer = setTimeout\(siguiente, 30000\);/);
+  assert.match(html, /mediaOk = true; fallos = 0;/);
+});

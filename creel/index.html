@@ -313,7 +313,7 @@
   // ?playlist=<pantalla> (Carlos, 14-nov-2026): emitir la playlist de OTRA pantalla (p. ej. corsair-galleon-100, el
   // teclado del Mac Studio) sin cambiar de identidad: el latido y las órdenes siguen siendo de hotel-creel.
   var PLAYLIST_SCREEN = (function () { var v = qs("playlist"); return /^[a-z0-9][a-z0-9-]{1,79}$/.test(v) ? v : SCREEN; })();
-  var lista = [], listaNombre = "", listaRev = null, idx = -1, media = null, mediaOk = false, mediaTimer = null;
+  var lista = [], listaNombre = "", listaRev = null, idx = -1, media = null, mediaOk = false, mediaTimer = null; var fallos = 0; // piezas seguidas que no cargan (sin red): freno a 30 s
   // Botón «📺 Pantallas» del mando (Carlos, 14-nov-2026): pantallas-on / pantallas-off / pantallas-toggle por la cola
   // /locations/cmd (la misma que el resto de players, con acuse). OFF para el vídeo y deja el fondo Stranger Things.
   var pantallasOn = (function () { try { return localStorage.getItem("creel-pantallas") !== "0"; } catch (e) { return true; } })();
@@ -359,6 +359,14 @@
       .then(function () { cmdBusy = false; setTimeout(sondeaOrdenes, cmdIdle >= 40 ? 10000 : 3000); });
   }
   sondeaOrdenes();
+  // Si todas las piezas fallan seguidas (TCL sin red), no girar en bucle cerrado: esperar 30 s y reintentar.
+  function falla() {
+    fallos++;
+    if (fallos < lista.length) { siguiente(); return; }
+    if (mediaTimer) clearTimeout(mediaTimer);
+    media = null; mediaOk = false; fallos = 0;
+    mediaTimer = setTimeout(siguiente, 30000);
+  }
   function siguiente() {
     if (mediaTimer) { clearTimeout(mediaTimer); mediaTimer = null; }
     if (media && media.tagName === "VIDEO") { try { media.pause(); media.removeAttribute("src"); media.load(); } catch (e) {} }
@@ -369,12 +377,12 @@
     el.crossOrigin = "anonymous";
     if (esVideo) {
       el.muted = true; el.playsInline = true; el.preload = "auto"; el.loop = false;
-      el.onended = siguiente; el.onerror = siguiente;
-      el.oncanplay = function () { mediaOk = true; try { el.play().catch(function () {}); } catch (e) {} };
+      el.onended = siguiente; el.onerror = falla;
+      el.oncanplay = function () { mediaOk = true; fallos = 0; try { el.play().catch(function () {}); } catch (e) {} };
       mediaTimer = setTimeout(siguiente, (Math.max(2, Number(it.seconds) || 10) + 8) * 1000); // por si el vídeo se atasca
     } else {
-      el.onload = function () { mediaOk = true; mediaTimer = setTimeout(siguiente, Math.max(2, Number(it.seconds) || 10) * 1000); };
-      el.onerror = siguiente;
+      el.onload = function () { mediaOk = true; fallos = 0; mediaTimer = setTimeout(siguiente, Math.max(2, Number(it.seconds) || 10) * 1000); };
+      el.onerror = falla;
     }
     el.src = it.asset; media = el;
   }
@@ -388,7 +396,7 @@
       var esVertical = function (i) { return (i.tags || []).some(function (t) { return t === "vertical" || t === "portrait"; }); };
       var horizontales = todas.filter(function (i) { return !esVertical(i); });
       lista = horizontales.length ? horizontales : todas;
-      idx = -1; siguiente();
+      idx = -1; fallos = 0; siguiente();
     }).catch(function () {});
   }
   cargaLista();
