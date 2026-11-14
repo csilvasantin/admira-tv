@@ -340,7 +340,7 @@
     return pantallasOn;
   }
   var CMD_HOSTS = ["https://api.admira.store/locations/cmd", "https://brain.digitalavatar.ai/locations/cmd"], cmdHost = 0;
-  var cmdState = { since: 0, init: false }, cmdBusy = false, cmdIdle = 0;
+  var cmdState = { since: 0, init: false }, cmdBusy = false, cmdIdle = 0, cmdVuelta = 0; // cmdVuelta: invalida un sondeo colgado
   function ejecutaOrden(c) {
     var cmd = String(c && c.cmd || "").replace(/^\//, "").split(/\s+/)[0].toLowerCase();
     if (cmd === "pantallas-on" || cmd === "pantallas" || cmd === "contenido-on") { pantallas(true); return "executed"; }
@@ -356,10 +356,18 @@
   function sondeaOrdenes() {
     if (cmdBusy || typeof fetch !== "function") return;
     cmdBusy = true;
-    fetch(CMD_HOSTS[cmdHost] + "?id=" + encodeURIComponent(SCREEN) + "&since=" + cmdState.since + "&t=" + Date.now(), { cache: "no-store" })
+    // Si la petición se cuelga (ni respuesta ni error: TCP colgado en la wifi de Planeta), cmdBusy quedaba en true para
+    // siempre y el mando («📺 Pantallas», recargar) dejaba de llegar. Guarda de 15 s: aborta, cambia de host y vuelve a sondear.
+    var vuelta = ++cmdVuelta, ctl = typeof AbortController === "function" ? new AbortController() : null;
+    var guarda = setTimeout(function () {
+      if (vuelta !== cmdVuelta) return;
+      cmdVuelta++; try { if (ctl) ctl.abort(); } catch (e) {}
+      cmdHost = (cmdHost + 1) % CMD_HOSTS.length; cmdIdle++; cmdBusy = false; setTimeout(sondeaOrdenes, 3000);
+    }, 15000);
+    fetch(CMD_HOSTS[cmdHost] + "?id=" + encodeURIComponent(SCREEN) + "&since=" + cmdState.since + "&t=" + Date.now(), { cache: "no-store", signal: ctl ? ctl.signal : undefined })
       .then(function (r) { if (!r.ok) throw 0; return r.json(); })
       .then(function (d) {
-        if (!d) return;
+        if (!d || vuelta !== cmdVuelta) return; // respuesta tardía de un sondeo ya abandonado: no se ejecuta
         if (!cmdState.init) { cmdState.since = d.seq || 0; cmdState.init = true; return; } // el atraso anterior al arranque no se ejecuta
         var cmds = Array.isArray(d.commands) ? d.commands : [], seq = Promise.resolve(), activo = false;
         cmds.forEach(function (c) {
@@ -371,8 +379,8 @@
         cmdIdle = activo ? 0 : cmdIdle + 1;
         return seq;
       })
-      .catch(function () { cmdHost = (cmdHost + 1) % CMD_HOSTS.length; cmdIdle++; })
-      .then(function () { cmdBusy = false; setTimeout(sondeaOrdenes, cmdIdle >= 40 ? 10000 : 3000); });
+      .catch(function () { if (vuelta === cmdVuelta) { cmdHost = (cmdHost + 1) % CMD_HOSTS.length; cmdIdle++; } })
+      .then(function () { clearTimeout(guarda); if (vuelta !== cmdVuelta) return; cmdBusy = false; setTimeout(sondeaOrdenes, cmdIdle >= 40 ? 10000 : 3000); });
   }
   sondeaOrdenes();
   // Si todas las piezas fallan seguidas (TCL sin red), no girar en bucle cerrado: esperar 30 s y reintentar.

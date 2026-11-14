@@ -233,3 +233,11 @@ test('una imagen de la playlist que se cuelga (sin load ni error) no atasca el f
   assert.match(html, /mediaTimer = setTimeout\(falla, 20000\); \/\/ por si la imagen se atasca/);
   assert.match(html, /el\.onload = function \(\) \{ if \(mediaTimer\) clearTimeout\(mediaTimer\); mediaOk = true; fallos = 0;/);
 });
+
+test('un sondeo colgado de /locations/cmd no deja el mando sordo: guarda de 15 s que aborta, cambia de host y vuelve a sondear', () => {
+  assert.match(html, /var vuelta = \+\+cmdVuelta, ctl = typeof AbortController === "function" \? new AbortController\(\) : null;/);
+  assert.match(html, /cmdHost = \(cmdHost \+ 1\) % CMD_HOSTS\.length; cmdIdle\+\+; cmdBusy = false; setTimeout\(sondeaOrdenes, 3000\);\n    \}, 15000\);/);
+  assert.match(html, /signal: ctl \? ctl\.signal : undefined/);
+  assert.match(html, /if \(!d \|\| vuelta !== cmdVuelta\) return;/);
+  assert.match(html, /clearTimeout\(guarda\); if \(vuelta !== cmdVuelta\) return; cmdBusy = false;/);
+});
