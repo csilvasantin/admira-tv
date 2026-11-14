@@ -23,7 +23,7 @@ test('el kiosko escucha la maqueta de admira.store (presencia, zona y personaje)
 });
 
 test('el kiosko reproduce de fondo la playlist de admira.tv de la pantalla (mando), con tinte Hawkins, y la cuenta en el latido', () => {
-  assert.match(html, /fetch\("\/api\/playlist\?screen=" \+ PLAYLIST_SCREEN, \{ cache: "no-store" \}\)/);
+  assert.match(html, /fetch\("\/api\/playlist\?screen=" \+ PLAYLIST_SCREEN, \{ cache: "no-store"(, signal: ctl \? ctl\.signal : undefined)? \}\)/);
   assert.match(html, /el\.crossOrigin = "anonymous";/);
   assert.match(html, /el\.muted = true; el\.playsInline = true;/);
   assert.match(html, /g\.fillStyle = "rgba\(140,11,20,\.42\)"; g\.fillRect\(0, 0, W, H\); \/\/ tinte Hawkins/);
@@ -240,4 +240,12 @@ test('un sondeo colgado de /locations/cmd no deja el mando sordo: guarda de 15 s
   assert.match(html, /signal: ctl \? ctl\.signal : undefined/);
   assert.match(html, /if \(!d \|\| vuelta !== cmdVuelta\) return;/);
   assert.match(html, /clearTimeout\(guarda\); if \(vuelta !== cmdVuelta\) return; cmdBusy = false;/);
+});
+
+test('una petición de playlist colgada no deja la TCL sin fondo ni apila conexiones: guarda de 15 s que aborta y emite la última lista buena', () => {
+  assert.match(html, /var listaBusy = false; \/\/ una sola petición de playlist a la vez/);
+  assert.match(html, /if \(listaBusy\) return;\n    listaBusy = true;/);
+  assert.match(html, /var guarda = setTimeout\(function \(\) \{ if \(!fin\(\)\) return; if \(ctl\) \{ try \{ ctl\.abort\(\); \} catch \(e\) \{\} \} listaRecordada\(\); \}, 15000\);/);
+  assert.match(html, /if \(!fin\(\)\) return; \/\/ respuesta tardía de una petición ya abandonada/);
+  assert.match(html, /\.catch\(function \(\) \{ if \(fin\(\)\) listaRecordada\(\); \}\);/);
 });

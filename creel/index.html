@@ -434,13 +434,21 @@
       aplicaLista({ rev: null, name: c.name, items: c.items }); // la primera respuesta buena de la red la sustituye (listaDeRed sigue false)
     } catch (e) {}
   }
+  var listaBusy = false; // una sola petición de playlist a la vez: colgadas no se apilan (el WebView limita a 6 conexiones por host)
   function cargaLista() {
     if (typeof fetch !== "function" || !pantallasOn) { if (pantallasOn) listaRecordada(); return; }
-    fetch("/api/playlist?screen=" + PLAYLIST_SCREEN, { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) {
+    if (listaBusy) return;
+    listaBusy = true;
+    var hecho = false, ctl = typeof AbortController === "function" ? new AbortController() : null;
+    function fin() { if (hecho) return false; hecho = true; clearTimeout(guarda); listaBusy = false; return true; }
+    // Petición colgada (ni respuesta ni error, p. ej. TCP colgado en la wifi de Planeta): a los 15 s se aborta y se emite la última lista buena.
+    var guarda = setTimeout(function () { if (!fin()) return; if (ctl) { try { ctl.abort(); } catch (e) {} } listaRecordada(); }, 15000);
+    fetch("/api/playlist?screen=" + PLAYLIST_SCREEN, { cache: "no-store", signal: ctl ? ctl.signal : undefined }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) {
+      if (!fin()) return; // respuesta tardía de una petición ya abandonada: se ignora
       var dr = d && d.draft; if (!d || !d.ok || !dr || !dr.items) { listaRecordada(); return; }
       if (listaDeRed && dr.rev === listaRev) return;
       listaDeRed = true; recuerdaLista(dr, aplicaLista(dr));
-    }).catch(listaRecordada);
+    }).catch(function () { if (fin()) listaRecordada(); });
   }
   cargaLista();
   setInterval(cargaLista, 60000);
