@@ -214,3 +214,17 @@ test('la última playlist buena se recuerda (≤72 h) y se emite si la TCL arran
   red = true; s.api.cargaLista(); await tick(); await tick(); assert.equal(s.st.sig, 2); // vuelve la red: la sustituye
 });
 
+
+test('kiosko /creel: al volver la red se pone al día al instante (clima, playlist y fondo en espera)', () => {
+  const ini = html.indexOf('function vuelveRed()');
+  const fin = html.indexOf('\n  }\n', ini) + 4;
+  assert.ok(ini > 0 && fin > ini);
+  assert.match(html, /window\.addEventListener\("online", vuelveRed\);/);
+  const mk = (st) => new Function('st', 'var clima = { ok: st.ok }, climaReintento = 1, media = st.media, lista = st.lista; function clearTimeout() { st.ct++; } function leeClima() { st.clima++; } function cargaLista() { st.carga++; } function siguiente() { st.sig++; }' + html.slice(ini, fin) + '; return vuelveRed;')(st);
+  const a = { ok: false, media: null, lista: [1], ct: 0, clima: 0, carga: 0, sig: 0 }; mk(a)();
+  assert.deepEqual([a.ct, a.clima, a.carga, a.sig], [1, 1, 1, 1]);                    // sin clima y fondo en espera: todo ya
+  const b = { ok: true, media: {}, lista: [1], ct: 0, clima: 0, carga: 0, sig: 0 }; mk(b)();
+  assert.deepEqual([b.ct, b.clima, b.carga, b.sig], [0, 0, 1, 0]);                    // ya emitiendo: no corta la pieza en curso
+  const c = { ok: true, media: null, lista: [], ct: 0, clima: 0, carga: 0, sig: 0 }; mk(c)();
+  assert.equal(c.sig, 0);                                                             // sin lista: nada que reintentar
+});

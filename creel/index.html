@@ -435,6 +435,13 @@
   }
   cargaLista();
   setInterval(cargaLista, 60000);
+  // Al volver la red (evento online) la TCL se pone al día al instante: clima, playlist y, si el fondo espera los 30 s tras fallar todo, reintenta ya (sin esperar 1-2 min).
+  function vuelveRed() {
+    if (!clima.ok) { clearTimeout(climaReintento); leeClima(); }
+    cargaLista();
+    if (!media && lista.length) siguiente();
+  }
+  window.addEventListener("online", vuelveRed);
   function fondoContenido() {
     if (!media || !mediaOk || (media.tagName === "VIDEO" && media.readyState < 2)) return false;
     var mw = media.videoWidth || media.naturalWidth, mh = media.videoHeight || media.naturalHeight;
