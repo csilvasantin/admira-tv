@@ -47,3 +47,10 @@ test('el kiosko puede emitir la playlist de otra pantalla con ?playlist= (sin ca
   assert.match(html, /lista = horizontales\.length \? horizontales : todas;/);
   assert.match(html, /producer: "creel-led-" \+ SCREEN/); // el latido sigue siendo de la pantalla propia
 });
+
+test('sin red, el kiosko conserva la última temperatura buena (≤6 h) y reintenta el clima en 2 min', () => {
+  assert.match(html, /var CLIMA_KEY = "creel-clima-v1"/);
+  assert.match(html, /Date\.now\(\) - cc\.t < 6 \* 3600 \* 1000/);
+  assert.match(html, /localStorage\.setItem\(CLIMA_KEY/);
+  assert.match(html, /climaReintento = setTimeout\(leeClima, 2 \* 60 \* 1000\)/);
+});

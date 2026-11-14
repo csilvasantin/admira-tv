@@ -104,19 +104,29 @@
     g.font = "700 24px ui-monospace, monospace"; g.fillStyle = "#ffd9c7"; g.fillText(c.texto || "EN LA PUERTA", x - 26, y + h * 0.42 + 44); g.shadowBlur = 0;
   }
 
+  // Caché del clima (14-nov-2026): la TCL de Planeta puede arrancar sin red; se pinta la última temperatura
+  // buena (hasta 6 h) en vez de «— °C» mientras llega la lectura en directo.
+  var CLIMA_KEY = "creel-clima-v1", climaReintento = null;
+  try {
+    var cc = JSON.parse(localStorage.getItem(CLIMA_KEY) || "null");
+    if (cc && typeof cc.temp === "number" && Date.now() - cc.t < 6 * 3600 * 1000) { clima.temp = cc.temp; clima.real = cc.real; }
+  } catch (e) {}
   function leeClima() {
     var url = "https://api.open-meteo.com/v1/forecast?latitude=41.0868&longitude=1.1548&current=temperature_2m,weather_code,is_day&timezone=Europe%2FMadrid";
     function ok(j) {
       try {
         var c = j.current || {};
+        if (typeof c.temperature_2m !== "number") throw 0;
         clima.temp = c.temperature_2m;
         clima.real = tipoDe(c.weather_code);
         clima.ok = true;
+        try { localStorage.setItem(CLIMA_KEY, JSON.stringify({ t: Date.now(), temp: clima.temp, real: clima.real })); } catch (e) {}
       } catch (e) {
-        clima.ok = false;
+        fail();
       }
     }
-    function fail() { clima.ok = false; }
+    // Sin red: se conserva la última lectura buena (ya cargada de caché) y se reintenta en 2 min.
+    function fail() { clima.ok = false; clearTimeout(climaReintento); climaReintento = setTimeout(leeClima, 2 * 60 * 1000); }
     if (typeof fetch === "function") {
       fetch(url, { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(ok).catch(fail);
     } else {
