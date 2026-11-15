@@ -300,7 +300,7 @@ test('un latido colgado de /signage/now no apila conexiones con api.admira.store
   const st = { fetches: [], timers: [], aborts: 0 };
   const env = new Function('st', `
     var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540, diag = { errores: 0, ultimo: "" }, arranque = 0, media = null, mediaOk = false;
-    function fpsAhora() { return 60; }
+    function fpsAhora() { return 60; } function memoriaMB() { return 80; }
     var innerWidth = 1920, innerHeight = 1080, navigator = { platform: "", language: "es", userAgent: "tcl", onLine: true }, window = { devicePixelRatio: 1 }; window.parent = window;
     var location = { origin: "https://admira.tv" };
     function piezaEnAntena() { return null; } function zonaTele() { return ""; }
@@ -534,9 +534,22 @@ test('diagnóstico remoto: los errores JS se cuentan y el latido lleva cuántos,
 
 test('fotogramas por segundo: el latido lleva los fps medios desde el latido anterior y qué fondo emite, para ver sin ir a la tele si el LED va a saltos o congelado', () => {
   assert.match(html, /try \{ pinta\(t \|\| Date\.now\(\)\); fallosPinta = 0; fotogramas\+\+; \}/); // solo cuentan los fotogramas pintados bien
-  assert.match(html, /fps: fpsAhora\(Date\.now\(\)\), fondo: !pantallasOn \? "apagado" : media && mediaOk \? \(media\.tagName === "VIDEO" \? "video" : "imagen"\) : "rojo" \}/);
+  assert.match(html, /fps: fpsAhora\(Date\.now\(\)\), memoriaMB: memoriaMB\(\), fondo: !pantallasOn \? "apagado" : media && mediaOk \? \(media\.tagName === "VIDEO" \? "video" : "imagen"\) : "rojo" \}/);
   const ini = html.indexOf('  var fotogramas = 0');
   const fin = html.indexOf('\n', html.indexOf('function fpsAhora', ini));
   const r = new Function('Date', html.slice(ini, fin) + '; var out = []; fotogramas += 600; out.push(fpsAhora(1e12 + 10000)); fotogramas += 150; out.push(fpsAhora(1e12 + 20000)); out.push(fpsAhora(1e12 + 30000)); out.push(fpsAhora(1e12 + 30000)); return out;')({ now: () => 1e12 });
   assert.deepEqual(r, [60, 15, 0, 0]); // fluido, a saltos, congelado y sin tiempo transcurrido (sin dividir por cero)
+});
+
+test('memoria del WebView: el latido lleva los MB de JS en uso (performance.memory) para ver una fuga antes de que cuelgue la TCL, y null sin romper si el WebView no lo da', () => {
+  assert.match(html, /memoriaMB: memoriaMB\(\), fondo:/);
+  const ini = html.indexOf('  function memoriaMB()');
+  const fin = html.indexOf('\n', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const f = (perf) => new Function('performance', html.slice(ini, fin) + '; return memoriaMB();')(perf);
+  assert.equal(f({ memory: { usedJSHeapSize: 85 * 1048576 + 300000 } }), 85);
+  assert.equal(f({}), null);                                  // WebView sin performance.memory
+  assert.equal(f({ memory: { usedJSHeapSize: 0 } }), null);   // cifra vacía: no inventa 0 MB
+  assert.equal(f({ get memory() { throw new Error('bloqueado'); } }), null); // no rompe el latido
+  assert.equal(new Function(html.slice(ini, fin) + '; return memoriaMB();')(), null); // sin performance
 });

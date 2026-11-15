@@ -41,6 +41,10 @@
   // el latido lleva los fps medios desde el latido anterior (≈60 fluido, <20 a saltos, 0 congelado) y qué fondo emite (video, imagen, rojo o apagado).
   var fotogramas = 0, fpsMarca = { n: 0, t: Date.now() };
   function fpsAhora(ahora) { var dt = ahora - fpsMarca.t, f = dt > 0 ? Math.round((fotogramas - fpsMarca.n) * 1000 / dt) : 0; fpsMarca = { n: fotogramas, t: ahora }; return f; }
+  // Memoria del WebView (15-nov-2026): una fuga lenta (vídeos o imágenes que no se liberan) va llenando la memoria de la TCL hasta que el
+  // WebView se cuelga o lo mata Android; el refresco de las 05:00 la vacía, pero sin cifras no se ve si llega justa. El latido lleva los MB de JS en uso
+  // (performance.memory, que dan los WebView Chromium); null si el WebView no lo da, sin romper el latido.
+  function memoriaMB() { try { var m = typeof performance !== "undefined" && performance.memory; return m && m.usedJSHeapSize > 0 ? Math.round(m.usedJSHeapSize / 1048576) : null; } catch (e) { return null; } }
   window.addEventListener("error", function (ev) { anota(ev && (ev.error || ev.message)); });
   window.addEventListener("unhandledrejection", function (ev) { anota(ev && ev.reason); });
   for (i = 0; i < 46; i++) esporas.push({ x: Math.random(), y: Math.random(), v: 0.02 + Math.random() * 0.05, r: 2 + Math.random() * 4 });
@@ -562,7 +566,7 @@
         audio: { muted: true, playing: false }, network: { online: navigator.onLine !== false } },
       health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), embebido: window.parent !== window, pantallas: pantallasOn ? "on" : "off",
         errores: diag.errores, ultimoError: diag.ultimo, encendidaMin: Math.round((Date.now() - arranque) / 60000),
-        fps: fpsAhora(Date.now()), fondo: !pantallasOn ? "apagado" : media && mediaOk ? (media.tagName === "VIDEO" ? "video" : "imagen") : "rojo" },
+        fps: fpsAhora(Date.now()), memoriaMB: memoriaMB(), fondo: !pantallasOn ? "apagado" : media && mediaOk ? (media.tagName === "VIDEO" ? "video" : "imagen") : "rojo" },
       loc: "portaventura", locName: "Hotel Creel \u00B7 LED (PortAventura)", machine: "" };
     // Latido colgado (ni respuesta ni error, p. ej. TCP colgado en la wifi de Planeta): sin guarda, cada 10 s se abría otro POST
     // a api.admira.store, el mismo host que la cola de órdenes, y acababan agotando sus conexiones (15-nov-2026). Uno solo a la vez,
