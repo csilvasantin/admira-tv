@@ -1,0 +1,12 @@
+{
+  "titulo": "PortAventuraNeXT",
+  "playlist": "https://admira.tv/api/playlist?screen=portaventuranext",
+  "pantallas": [
+    "metahuman-mupi",
+    "admiranext02-a",
+    "admiranext03-a",
+    "admiranext04-a",
+    "admiranext05-a"
+  ],
+  "tecla_menu": "5,1"
+}
