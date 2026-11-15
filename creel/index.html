@@ -362,6 +362,15 @@
     if (media && media.tagName === "VIDEO") { try { if (negro) media.pause(); else media.play().catch(function () {}); } catch (e) {} }
     return negro;
   }
+  // Sonido ON/OFF desde admira.store (Carlos, 15-nov-2026): sonido-off silencia el vídeo de la pared (intro incluida)
+  // y se recuerda al recargar, como pantalla-off; sonido-on lo restaura. Antes el kiosko dejaba todo el vídeo en mudo.
+  var mudo = (function () { try { return localStorage.getItem("creel-mudo") === "1"; } catch (e) { return false; } })();
+  function aplicarMudo(on) {
+    mudo = !!on;
+    try { localStorage.setItem("creel-mudo", mudo ? "1" : "0"); } catch (e) {}
+    if (media && media.tagName === "VIDEO") { try { media.muted = mudo; } catch (e) {} }
+    return mudo;
+  }
   var CMD_HOSTS = ["https://api.admira.store/locations/cmd", "https://brain.digitalavatar.ai/locations/cmd"], cmdHost = 0;
   // ?cola=<id> (15-nov-2026): la pared puede ir DENTRO de un player de admira.tv (pieza interactiva de la playlist
   // hotel-creel-pared). Ese player ya obedece tag-* de su propia cola (filtra su playlist), así que la pared escucha
@@ -418,6 +427,8 @@
     if (cmd === "pantallas-toggle") { pantallas(!pantallasOn); return "executed"; }
     if (cmd === "pantalla-off" || cmd === "pared-off" || cmd === "negro-on") { pantallaNegra(true); return "executed"; }
     if (cmd === "pantalla-on" || cmd === "pared-on" || cmd === "negro-off") { pantallaNegra(false); return "executed"; }
+    if (cmd === "sonido-off" || cmd === "sound-off" || cmd === "audio-off") { aplicarMudo(true); return "executed"; }
+    if (cmd === "sonido-on" || cmd === "sound-on" || cmd === "audio-on") { aplicarMudo(false); return "executed"; }
     if (cmd === "playout-sync" || cmd === "reload" || cmd === "recargar") { cargaLista(); return "executed"; }
     if (ordenPersonaje(cmd)) return "executed";
     return "failed";
@@ -442,6 +453,8 @@
           if (ult && (!ts || Date.now() - ts < 30 * 60000) && ult.cmd !== "tag-vecna-truenos") ordenPersonaje(String(ult.cmd));
           var pw = (Array.isArray(d.commands) ? d.commands : []).filter(function (c) { return /^pantalla-(on|off)$/.test(String(c && c.cmd || "")); }).pop();
           if (pw) pantallaNegra(String(pw.cmd) === "pantalla-off");
+          var sw = (Array.isArray(d.commands) ? d.commands : []).filter(function (c) { return /^sonido-(on|off)$/.test(String(c && c.cmd || "")); }).pop();
+          if (sw) aplicarMudo(String(sw.cmd) === "sonido-off");
           return;
         }
         var cmds = Array.isArray(d.commands) ? d.commands : [], seq = Promise.resolve(), activo = false;
@@ -467,7 +480,7 @@
     var it = lista[idx], esVideo = it.assetType !== "image", el = document.createElement(esVideo ? "video" : "img");
     el.crossOrigin = "anonymous";
     if (esVideo) {
-      el.muted = true; el.playsInline = true; el.preload = "auto"; el.loop = false;
+      el.muted = mudo; el.playsInline = true; el.preload = "auto"; el.loop = false;
       el.onended = siguiente; el.onerror = siguiente;
       el.oncanplay = function () { mediaOk = true; if (negro) return; try { el.play().catch(function () {}); } catch (e) {} };
       mediaTimer = setTimeout(siguiente, (Math.max(2, Number(it.seconds) || 10) + 8) * 1000); // por si el vídeo se atasca
@@ -525,7 +538,7 @@
         system: { os: "", platform: navigator.platform || "", language: navigator.language || "", timezone: (Intl.DateTimeFormat().resolvedOptions().timeZone || "") },
         hardware: { dedicated: false, model: "Hotel Creel \u00B7 LED" },
         software: { player: "Hotel Creel \u00B7 LED", playerVersion: "creel-1", webRelease: version, engine: "", userAgent: navigator.userAgent },
-        audio: { muted: true, playing: false }, network: { online: navigator.onLine !== false } },
+        audio: { muted: !!mudo, playing: !!(media && media.tagName === "VIDEO" && !media.paused && !mudo) }, network: { online: navigator.onLine !== false } },
       health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), embebido: window.parent !== window, pantallas: pantallasOn ? "on" : "off" },
       loc: "portaventura", locName: "Hotel Creel \u00B7 LED (PortAventura)", machine: "" };
     try { fetch(NOW_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(function () {}); } catch (e) {}
