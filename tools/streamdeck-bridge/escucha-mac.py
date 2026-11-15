@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # Escucha de arranque del player en un Mac (mismo contrato que el vigilante de los AdmiraNeXT de Windows):
 # sondea su propia cola GET api.admira.store/locations/cmd?id=<maquina>-vigilante y, con la orden `start`,
-# pone en marcha AdmiraSignageMac. Solo entiende `start`; cerrar el player sigue siendo Escape en el propio Mac.
+# pone en marcha AdmiraSignageMac y lo trae al frente. Solo entiende `start`; cerrar el player sigue siendo Escape en el propio Mac.
 # Lo usan los selectores MBP14/MBP16 del Stream Deck (previos.py) para mandar el player a un Mac que no lo tiene abierto.
 # Instalar: escucha-mac.py --instalar   ·   quitar: escucha-mac.py --quitar
 import json, os, subprocess, sys, time, urllib.request
@@ -20,11 +20,14 @@ def ordenes(ident):
     with urllib.request.urlopen(r, timeout=8) as x: return json.load(x).get('commands') or []
 
 def arrancar():
-    if subprocess.run(['pgrep', '-x', 'AdmiraSignageMac'], capture_output=True).returncode == 0: return 'ya estaba'
-    servicio = 'gui/%d/%s' % (os.getuid(), PLAYER)
-    if subprocess.run(['launchctl', 'print', servicio], capture_output=True).returncode == 0:
-        subprocess.run(['launchctl', 'kickstart', servicio], capture_output=True); return 'kickstart'
-    subprocess.run(['open', '-a', 'AdmiraSignageMac'], capture_output=True); return 'open'
+    """Pone el player en marcha y SIEMPRE lo trae al frente: arrancado por launchd se queda detras de las demas ventanas."""
+    como = 'ya estaba'
+    if subprocess.run(['pgrep', '-x', 'AdmiraSignageMac'], capture_output=True).returncode != 0:
+        servicio = 'gui/%d/%s' % (os.getuid(), PLAYER); como = 'open'
+        if subprocess.run(['launchctl', 'print', servicio], capture_output=True).returncode == 0:
+            subprocess.run(['launchctl', 'kickstart', servicio], capture_output=True); como = 'kickstart'; time.sleep(2)
+    subprocess.run(['open', '-a', 'AdmiraSignageMac'], capture_output=True)
+    return como + ' + al frente'
 
 def bucle():
     ident = maquina() + '-vigilante'; visto = None

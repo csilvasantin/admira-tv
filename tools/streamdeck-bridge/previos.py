@@ -151,12 +151,20 @@ def en_linea(pantalla):
     except Exception: pass
     return False
 
+def emitiendo(pantalla):
+    """Id de Stock de la pieza que ese player dice estar emitiendo."""
+    try: return str(((traer('https://api.admira.store/signage/now?screen=' + pantalla, espera=6).get('item') or {}).get('id')) or '')
+    except Exception: return ''
+
 def despertar(pantalla, arr):
     """Player parado: se le pide `start` a su vigilante y se espera a que este en pie. True = hubo que arrancarlo."""
     local = arr.get('proceso') if os.name == 'nt' else None   # proceso = player de este mismo PC; sin el, se mira el censo
     vivo = (lambda: corriendo(local)) if local else (lambda: en_linea(pantalla))
-    if vivo() or not arr.get('vigilante'): return False
-    orden(arr['vigilante'], 'start')
+    if not arr.get('vigilante'): return False
+    estaba = vivo()
+    if estaba and local: return False
+    orden(arr['vigilante'], 'start')   # a un player remoto se le pide siempre: si ya esta abierto, su escucha lo trae al frente
+    if estaba: return False
     for _ in range(15):
         time.sleep(3)
         if vivo(): break
@@ -165,12 +173,22 @@ def despertar(pantalla, arr):
 
 def saltar(num, a):
     """Lo que hace un previo al pulsarlo: play<N> a los destinos marcados, cada uno por su lado (uno parado no frena al resto)."""
-    sel = seleccion(a); hecho = []
+    sel = seleccion(a); hecho = []; pedido = [None]
+    if any(sel.get(e) and p in (a.get('arranque') or {}) for e, p in a['destinos']):
+        try: pedido[0] = next((str(i.get('id')) for i in (traer(STOCK).get('items') or []) if i.get('num') == int(num)), None)
+        except Exception: pass
     def uno(pantalla):
         arr = (a.get('arranque') or {}).get(pantalla)
         arrancado = despertar(pantalla, arr) if arr else False
+        if arrancado: time.sleep(8)   # recien abierto, el player carga su programacion y pisaria la pieza
         r = orden(pantalla, 'play%d' % int(num)) or {}
         if arrancado: r['arrancado'] = True
+        if arrancado or (arr and not arr.get('proceso')):   # player remoto: el censo tarda un minuto en enterarse de que se cerro
+            r['envios'] = 1
+            for _ in range(5):       # se comprueba que emite la pieza pedida; si no, se le vuelve a mandar
+                time.sleep(7)
+                if not pedido[0] or emitiendo(pantalla) == pedido[0]: break
+                orden(pantalla, 'play%d' % int(num)); r['envios'] += 1
         hecho.append(r)
     hilos = [threading.Thread(target=uno, args=(pantalla,)) for etiqueta, pantalla in a['destinos'] if sel.get(etiqueta)]
     for h in hilos: h.start()
