@@ -1,0 +1,5 @@
+{
+  "titulo": "PortAventuraNeXT",
+  "playlist": "https://admira.tv/api/playlist?screen=portaventuranext",
+  "pantallas": ["admiranext01-a", "admiranext02-a", "admiranext03-a", "admiranext04-a", "admiranext05-a"]
+}
