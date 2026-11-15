@@ -44,6 +44,19 @@ test('el kiosko obedece «📺 Pantallas» del mando por la cola /locations/cmd 
 test('el kiosko puede emitir la playlist de otra pantalla con ?playlist= (sin cambiar de identidad) y omite las piezas verticales', () => {
   assert.match(html, /var PLAYLIST_SCREEN = \(function \(\) \{ var v = qs\("playlist"\);/);
   assert.match(html, /fetch\("\/api\/playlist\?screen=" \+ PLAYLIST_SCREEN/);
-  assert.match(html, /lista = horizontales\.length \? horizontales : todas;/);
+  assert.match(html, /listaBase = horizontales\.length \? horizontales : todas;/);
   assert.match(html, /producer: "creel-led-" \+ SCREEN/); // el latido sigue siendo de la pantalla propia
+});
+
+test('la pared obedece al detector de Casa Creel por su propia cola (?cola=): personaje, fondo y truenos, como pantalla.js', () => {
+  assert.match(html, /var COLA = \(function \(\) \{ var v = qs\("cola"\);/);
+  assert.match(html, /fetch\(CMD_HOSTS\[cmdHost\] \+ "\?id=" \+ encodeURIComponent\(COLA\)/);
+  assert.match(html, /if \(cmd === "tag-creel-fondo"\) \{ personaje\(""\); return true; \}/);
+  assert.match(html, /if \(cmd === "tag-vecna-truenos"\) \{/);
+  assert.match(html, /\^tag-creel-\(\[a-z0-9-\]\+\)\$/);
+  assert.match(html, /"sr-whatsit": "Sr\. Whatsit", max: "Max", vecna: "Vecna", once: "Once"/);
+  assert.match(html, /if \(ordenPersonaje\(cmd\)\) return "executed";/);
+  assert.match(html, /function piezasDe\(slug\)/);
+  assert.match(html, /var cc = once \? \["#7ad8ff", "#1d4f8a", "#06122e"\] : vecna \? \["#cf2549", "#6b1041", "#150b27"\]/);
+  assert.match(html, /if \(nivel === "puerta" && !once\) g\.scale\(1, -1\);/);
 });
