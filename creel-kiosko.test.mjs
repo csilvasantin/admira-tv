@@ -25,7 +25,7 @@ test('el kiosko escucha la maqueta de admira.store (presencia, zona y personaje)
 test('el kiosko reproduce de fondo la playlist de admira.tv de la pantalla (mando), con tinte Hawkins, y la cuenta en el latido', () => {
   assert.match(html, /fetch\("\/api\/playlist\?screen=" \+ PLAYLIST_SCREEN, \{ cache: "no-store"(, signal: ctl \? ctl\.signal : undefined)? \}\)/);
   assert.match(html, /el\.crossOrigin = "anonymous";/);
-  assert.match(html, /el\.muted = true; el\.playsInline = true;/);
+  assert.match(html, /el\.muted = mudo; el\.playsInline = true;/);
   assert.match(html, /g\.fillStyle = "rgba\(140,11,20,\.42\)"; g\.fillRect\(0, 0, W, H\); \/\/ tinte Hawkins/);
   assert.match(html, /: pieza \|\| \{ id: "creel-fondo"/);
   assert.match(html, /setInterval\(cargaLista, 60000\);/);
@@ -44,7 +44,7 @@ test('el kiosko obedece «📺 Pantallas» del mando por la cola /locations/cmd 
 test('el kiosko puede emitir la playlist de otra pantalla con ?playlist= (sin cambiar de identidad) y omite las piezas verticales', () => {
   assert.match(html, /var PLAYLIST_SCREEN = \(function \(\) \{ var v = qs\("playlist"\);/);
   assert.match(html, /fetch\("\/api\/playlist\?screen=" \+ PLAYLIST_SCREEN/);
-  assert.match(html, /lista = horizontales\.length \? horizontales : todas;/);
+  assert.match(html, /listaBase = horizontales\.length \? horizontales : todas;/);
   assert.match(html, /producer: "creel-led-" \+ SCREEN/); // el latido sigue siendo de la pantalla propia
 });
 
@@ -190,7 +190,7 @@ test('la última playlist buena se recuerda (≤72 h) y se emite si la TCL arran
   const mk = (store, fetchImpl, now = 1e12) => {
     const st = { lista: [], sig: 0 };
     const api = new Function('st', 'localStorage', 'fetch', 'Date', 'PLAYLIST_SCREEN',
-      'var lista = st.lista, listaRev = null, listaNombre = "", idx = -1, fallos = 0, pantallasOn = true; function siguiente() { st.sig++; }' + src +
+      'var lista = st.lista, listaBase = [], listaSlug = null, listaRev = null, listaNombre = "", idx = -1, fallos = 0, pantallasOn = true; function siguiente() { st.sig++; } function filtraPorPersonaje() { lista = listaBase; idx = -1; siguiente(); }' + src +
       '; return { cargaLista, get lista() { return lista; }, get nombre() { return listaNombre; } };')(st,
       { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } }, fetchImpl, { now: () => now }, 'hotel-creel');
     return { api, st };
@@ -299,7 +299,7 @@ test('un latido colgado de /signage/now no apila conexiones con api.admira.store
   assert.ok(ini > 0 && fin > ini);
   const st = { fetches: [], timers: [], aborts: 0 };
   const env = new Function('st', `
-    var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540, diag = { errores: 0, ultimo: "" }, arranque = 0, media = null, mediaOk = false;
+    var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540, diag = { errores: 0, ultimo: "" }, arranque = 0, media = null, mediaOk = false, mudo = true;
     function fpsAhora() { return 60; } function memoriaMB() { return 80; } function pantallaFija() { return "si"; } function teleVisible() { return "si"; } function climaMin() { return 3; }
     var innerWidth = 1920, innerHeight = 1080, navigator = { platform: "", language: "es", userAgent: "tcl", onLine: true }, window = { devicePixelRatio: 1 }; window.parent = window;
     var location = { origin: "https://admira.tv" };
@@ -335,7 +335,7 @@ test('un vídeo de fondo congelado a mitad (currentTime quieto sin ended ni erro
   assert.ok(ini > 0 && fin > ini);
   const st = { timers: [], creados: [] };
   const env = new Function('st', `
-    var mediaTimer = null, media = null, mediaOk = false, idx = -1, fallos = 0;
+    var mudo = true, negro = false, mediaTimer = null, media = null, mediaOk = false, idx = -1, fallos = 0;
     var lista = [{ assetType: "video", asset: "https://x/a.mp4", seconds: 30 }, { assetType: "video", asset: "https://x/b.mp4", seconds: 30 }];
     function falla() { st.fallas = (st.fallas || 0) + 1; }
     function setTimeout(f, ms) { st.timers.push({ f: f, ms: ms, vivo: true }); return st.timers.length; }
@@ -396,7 +396,7 @@ test('una pieza abandonada (imagen colgada que carga tarde, vídeo ya emitido) n
   assert.ok(ini > 0 && fin > ini);
   const st = { timers: [], creados: [] };
   const env = new Function('st', `
-    var mediaTimer = null, media = null, mediaOk = false, idx = -1, fallos = 0;
+    var mudo = true, negro = false, mediaTimer = null, media = null, mediaOk = false, idx = -1, fallos = 0;
     var lista = [{ assetType: "image", asset: "https://cuelga/a.png", seconds: 10 }, { assetType: "video", asset: "https://x/b.mp4", seconds: 30 }];
     function setTimeout(f, ms) { st.timers.push({ f: f, ms: ms, vivo: true }); return st.timers.length; }
     function clearTimeout(id) { if (id && st.timers[id - 1]) st.timers[id - 1].vivo = false; }
@@ -477,7 +477,7 @@ test('un acuse colgado de /locations/cmd/ack no para el mando: guarda de 5 s que
   assert.ok(ini > 0 && fin > ini);
   const st = { fetches: [], timers: [], aborts: 0 };
   const acusa = new Function('st', `
-    var SCREEN = "creel", CMD_HOSTS = ["https://a/locations/cmd"], cmdHost = 0;
+    var SCREEN = "creel", COLA = "creel", CMD_HOSTS = ["https://a/locations/cmd"], cmdHost = 0;
     function setTimeout(f, ms) { st.timers.push({ f: f, ms: ms, vivo: true }); return st.timers.length; }
     function clearTimeout(id) { if (id && st.timers[id - 1]) st.timers[id - 1].vivo = false; }
     function AbortController() { this.signal = {}; this.abort = function () { st.aborts++; }; }
@@ -595,4 +595,26 @@ test('edad del clima: el latido lleva climaMin (minutos desde la última lectura
   const caduca = html.slice(html.indexOf('  function caducaClima()'), html.indexOf('\n', html.indexOf('  function caducaClima()')));
   const c = new Function('Date', 'var CLIMA_MAX = 6 * 3600 * 1000, clima = { t: 1e12, temp: 19, real: "sol" }; ' + caduca + '; ' + html.slice(ini, fin) + '; caducaClima(); return climaMin();')({ now: () => 1e12 + 6 * 3600 * 1000 });
   assert.equal(c, null);                                        // pasadas 6 h el HUD vuelve a «— °C» y el latido dice null
+});
+
+test('la pared obedece al detector de Casa Creel por su propia cola (?cola=): personaje, fondo y truenos, como pantalla.js', () => {
+  assert.match(html, /var COLA = \(function \(\) \{ var v = qs\("cola"\);/);
+  assert.match(html, /fetch\(CMD_HOSTS\[cmdHost\] \+ "\?id=" \+ encodeURIComponent\(COLA\)/);
+  assert.match(html, /if \(cmd === "tag-creel-fondo"\) \{ personaje\(""\); return true; \}/);
+  assert.match(html, /if \(cmd === "tag-vecna-truenos"\) \{/);
+  assert.match(html, /\^tag-creel-\(\[a-z0-9-\]\+\)\$/);
+  assert.match(html, /"sr-whatsit": "Sr\. Whatsit", max: "Max", vecna: "Vecna", once: "Once"/);
+  assert.match(html, /if \(ordenPersonaje\(cmd\)\) return "executed";/);
+  assert.match(html, /function piezasDe\(slug\)/);
+  assert.match(html, /var cc = once \? \["#7ad8ff", "#1d4f8a", "#06122e"\] : vecna \? \["#cf2549", "#6b1041", "#150b27"\]/);
+  assert.match(html, /if \(nivel === "puerta" && !once\) g\.scale\(1, -1\);/);
+});
+
+test('la pared llena el visor sin franjas (TCL 16:9, 15-nov-2026) y conserva el 8:3 de siempre con ?formato=83', () => {
+  assert.match(html, /lleno = fmt === "169" \|\| fmt === "lleno" \|\| \(fmt !== "83" && a < 2\.2\);/);
+  assert.match(html, /H = Math\.round\(W \/ asp\); L = maqueta\(\);/);
+  assert.match(html, /escala = bw \/ W;/);                       // a la resolución real del visor (devicePixelRatio)
+  assert.match(html, /g\.setTransform\(escala, 0, 0, escala, 0, 0\);/);
+  assert.match(html, /window\.addEventListener\("resize", ajusta\);/);
+  assert.match(html, /H = 540; escala = 1; L = null; caja\.removeAttribute\("style"\);/);
 });

@@ -23,6 +23,36 @@
   var W = 1440, H = 540;
   var canvas = document.getElementById("led");
   var g = canvas.getContext("2d");
+  var caja = document.getElementById("box");
+  // Pantalla llena (Carlos, 15-nov-2026): la TCL de la cocina hace de pantalla gigante de LEDs real y no quiere franjas
+  // negras. Si el visor no es apaisado tipo 8:3 (p. ej. 16:9), la pared se compone para TODO el visor: mismo ancho
+  // lógico (1440) y el alto que pida la proporción, con su propia maqueta vertical y a la resolución real (4K nítido).
+  // ?formato=83 fuerza la pared 8:3 de siempre; ?formato=169 fuerza 16:9. En 8:3 todo sigue exactamente igual.
+  var lleno = false, escala = 1, L = null;
+  function maqueta() {
+    var u = H / 810;
+    return { luzY: 38 * u, luzR: 16, luzF: 17, tituloY: 168 * u, tituloF: 136, hawY: 272 * u, hawF: 32,
+      hudY: 340 * u, hudF: 56, subF: 22, subDy: 72, retY: 320 * u, retH: 400 * u, nomF: 60, texF: 32, texDy: 58,
+      msgY: H - 70 * u, msgF: 50, pieF: 20 };
+  }
+  function ajusta() {
+    var fm = String(location.search || "").match(/[?&]formato=([a-z0-9]+)/i), fmt = fm ? fm[1].toLowerCase() : "";
+    var vw = window.innerWidth || W, vh = window.innerHeight || H, a = vw / vh;
+    lleno = fmt === "169" || fmt === "lleno" || (fmt !== "83" && a < 2.2);
+    if (!lleno) {
+      if (H !== 540 || escala !== 1 || caja.style.width) { H = 540; escala = 1; L = null; caja.removeAttribute("style"); canvas.width = W; canvas.height = H; }
+      return;
+    }
+    var asp = fmt === "169" ? 16 / 9 : Math.max(1, a);
+    var cw = Math.min(vw, vh * asp), ch = cw / asp;
+    H = Math.round(W / asp); L = maqueta();
+    caja.style.cssText = "left:" + ((vw - cw) / 2) + "px;top:" + ((vh - ch) / 2) + "px;width:" + cw + "px;height:" + ch + "px;max-width:none;max-height:none;transform:none";
+    var dpr = window.devicePixelRatio || 1, bw = Math.max(1, Math.round(cw * dpr)), bh = Math.max(1, Math.round(ch * dpr));
+    escala = bw / W;
+    if (canvas.width !== bw || canvas.height !== bh) { canvas.width = bw; canvas.height = bh; }
+  }
+  ajusta();
+  window.addEventListener("resize", ajusta);
   var clima = { tipo: "sol", temp: null, ok: false, forzado: null, real: null };
   var ICONO = { sol: "\u2600\uFE0F", nubes: "\u2601\uFE0F", lluvia: "\uD83C\uDF27\uFE0F", tormenta: "\u26C8\uFE0F" };
   var NOMBRE = { sol: "Sol", nubes: "Nubes", lluvia: "Lluvia", tormenta: "Tormenta" };
@@ -96,18 +126,19 @@
     if (caras[url]) return caras[url];
     var img = new Image(); img.decoding = "async"; img.src = url; caras[url] = img; return img;
   }
-  function eligeCara() { escena.cara = escena.caraZona || escena.caraSel; if (escena.cara) cara(escena.cara.foto); }
+  function eligeCara() { escena.cara = escena.caraZona || escena.caraSel; if (escena.cara) cara(escena.cara.foto); if (typeof filtraPorPersonaje === "function" && lista) filtraPorPersonaje(); }
   function fotoValida(u) { try { var x = new URL(u); return x.protocol === "https:" && ORIGENES[x.origin] ? x.href : ""; } catch (e) { return ""; } }
   window.addEventListener("message", function (ev) {
     if (!ORIGENES[ev.origin] || !ev.data || typeof ev.data !== "object") return;
     var d = ev.data, nombre = String(d.quien || "").slice(0, 40);
     if (d.type === "creel-presencia") { escena.nivel = d.nivel === "puerta" || d.nivel === "cerca" ? d.nivel : "lejos"; escena.quien = nombre; }
-    else if (d.type === "creel-zona") { escena.caraZona = d.id >= 0 && nombre ? { quien: nombre, foto: fotoValida(d.foto), texto: "EN LA PUERTA" } : null; eligeCara(); }
-    else if (d.type === "creel-personaje") { escena.caraSel = d.id >= 0 && nombre ? { quien: nombre, foto: fotoValida(d.foto), texto: String(d.zona || "").slice(0, 40).toUpperCase() } : null; eligeCara(); }
+    else if (d.type === "creel-zona") { escena.caraZona = d.id >= 0 && nombre ? { slug: String(d.slug || "").slice(0, 40), quien: nombre, foto: fotoValida(d.foto), texto: "EN LA PUERTA" } : null; eligeCara(); }
+    else if (d.type === "creel-personaje") { escena.caraSel = d.id >= 0 && nombre ? { slug: String(d.slug || "").slice(0, 40), quien: nombre, foto: fotoValida(d.foto), texto: String(d.zona || "").slice(0, 40).toUpperCase() } : null; eligeCara(); }
   });
   function retrato(s) {
     var c = escena.cara, img = cara(c.foto);
     var h = H * 0.42, w = h * 0.82, x = W - 26 - w, y = H * 0.40, r = 18;
+    if (lleno) { h = L.retH; w = h * 0.82; x = W - 30 - w; y = L.retY; r = 24; }
     function marco() { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
     g.save(); g.shadowColor = "#ff2a1f"; g.shadowBlur = 34 + Math.sin(s * 3) * 10; g.fillStyle = "#1a0509"; marco(); g.fill(); g.restore();
     g.save(); marco(); g.clip();
@@ -118,8 +149,8 @@
     g.restore();
     g.lineWidth = 5; g.strokeStyle = "#ff3326"; marco(); g.stroke();
     g.textAlign = "right"; g.textBaseline = "middle"; g.fillStyle = "#fff"; g.shadowColor = "#ff2a1f"; g.shadowBlur = 14;
-    g.font = "900 44px ui-monospace, monospace"; g.fillText(c.quien.toUpperCase(), x - 26, y + h * 0.42);
-    g.font = "700 24px ui-monospace, monospace"; g.fillStyle = "#ffd9c7"; g.fillText(c.texto || "EN LA PUERTA", x - 26, y + h * 0.42 + 44); g.shadowBlur = 0;
+    g.font = "900 " + (lleno ? L.nomF : 44) + "px ui-monospace, monospace"; g.fillText(c.quien.toUpperCase(), x - 26, y + h * 0.42);
+    g.font = "700 " + (lleno ? L.texF : 24) + "px ui-monospace, monospace"; g.fillStyle = "#ffd9c7"; g.fillText(c.texto || "EN LA PUERTA", x - 26, y + h * 0.42 + (lleno ? L.texDy : 44)); g.shadowBlur = 0;
   }
 
   // Caché del clima (14-nov-2026): la TCL de Planeta puede arrancar sin red; se pinta la última temperatura
@@ -248,32 +279,41 @@
     g.shadowBlur = 10;
     g.fillStyle = "#fff";
     // Temperatura y, a su derecha, la hora; más pequeño (13-nov-2026, igual que la pantalla de la maqueta).
-    g.font = "800 40px ui-monospace, monospace";
+    var hy = lleno ? L.hudY : H * 0.44;
+    g.font = "800 " + (lleno ? L.hudF : 40) + "px ui-monospace, monospace";
     g.textAlign = "left";
     g.textBaseline = "top";
     // Sin dato real ni forzado (TCL sin red y sin caché) no se inventa «Sol»: sin icono y «CLIMA —» (14-nov-2026).
     var conDato = !!(clima.forzado || clima.real);
     var linea = (conDato ? (ICONO[tipo] || "") + " " : "") + t;
-    g.fillText(linea, 26, H * 0.44);
+    g.fillText(linea, 26, hy);
     g.fillStyle = "#ffd9c7";
-    g.fillText(horaMadrid(), 26 + g.measureText(linea).width + 30, H * 0.44);
-    g.font = "600 16px ui-monospace, monospace";
+    g.fillText(horaMadrid(), 26 + g.measureText(linea).width + 30, hy);
+    g.font = "600 " + (lleno ? L.subF : 16) + "px ui-monospace, monospace";
     g.fillStyle = "rgba(255,255,255,.75)";
     var extra = clima.forzado ? " \u00B7 FORZADO" : (clima.ok ? " \u00B7 EN DIRECTO" : "");
-    g.fillText("PORTAVENTURA \u00B7 " + (conDato ? String(NOMBRE[tipo] || "").toUpperCase() : "CLIMA \u2014") + extra, 28, H * 0.44 + 50);
+    g.fillText("PORTAVENTURA \u00B7 " + (conDato ? String(NOMBRE[tipo] || "").toUpperCase() : "CLIMA \u2014") + extra, 28, hy + (lleno ? L.subDy : 50));
     g.restore();
   }
 
   function pinta(t) {
     var s = t / 1000;
+    g.setTransform(escala, 0, 0, escala, 0, 0); // 8:3: escala 1 (igual que siempre); lleno: a la resolución real del visor
+    if (negro) { g.fillStyle = "#000"; g.fillRect(0, 0, W, H); if (media && media.tagName === "VIDEO" && !media.paused) try { media.pause(); } catch (e) {} return; }
+    if (intro && intro.on && pintaIntro()) return;   // intro a pantalla llena, sin tinte ni escena
+    // Igual que pantalla.js de la maqueta (15-nov-2026): Once en la puerta tiñe de azul, Vecna de morado, y con alguien
+    // en la puerta el rayo es más frecuente y el título se da la vuelta (el Mundo del Revés).
+    var nivel = escena.nivel, quien = escena.quien;
+    var once = quien === "Once" && nivel === "puerta", vecna = quien === "Vecna" && nivel !== "lejos";
     var fondo = g.createRadialGradient(W / 2, H * 1.15, 10, W / 2, H * 1.15, W * 0.75);
-    fondo.addColorStop(0, "#ff3b2f");
-    fondo.addColorStop(0.35, "#8c0b14");
-    fondo.addColorStop(1, "#2a0308");
+    var cc = once ? ["#7ad8ff", "#1d4f8a", "#06122e"] : vecna ? ["#cf2549", "#6b1041", "#150b27"] : nivel === "puerta" ? ["#ff6a5c", "#c3101f", "#3a0410"] : ["#ff3b2f", "#8c0b14", "#2a0308"];
+    fondo.addColorStop(0, cc[0]);
+    fondo.addColorStop(0.35, cc[1]);
+    fondo.addColorStop(1, cc[2]);
     g.fillStyle = fondo;
     g.fillRect(0, 0, W, H);
     var conContenido = fondoContenido();
-    var rayo = (s % 7) < 0.12;
+    var rayo = !once && (nivel === "puerta" ? (s % 1.4) < 0.08 : (s % 7) < 0.12);
     if (rayo) {
       g.fillStyle = "rgba(255,240,240,.35)";
       g.fillRect(0, 0, W, H);
@@ -288,25 +328,27 @@
       g.fill();
     }
     g.save();
-    g.translate(W / 2, H * 0.165); // título bajo la fila de luces, con aire (13-nov-2026, como la pantalla de la maqueta)
+    g.translate(W / 2, lleno ? L.tituloY : H * 0.165); // título bajo la fila de luces, con aire (13-nov-2026, como la pantalla de la maqueta)
+    if (nivel === "puerta" && !once) g.scale(1, -1);
     g.font = "900 128px Georgia, 'Times New Roman', serif";
+    if (lleno) { g.font = "900 " + L.tituloF + "px Georgia, 'Times New Roman', serif"; var tw = g.measureText("STRANGER THINGS").width; if (tw > W * 0.94) g.font = "900 " + Math.floor(L.tituloF * W * 0.94 / tw) + "px Georgia, 'Times New Roman', serif"; }
     g.textAlign = "center";
     g.textBaseline = "middle";
-    g.shadowColor = "#ff2a1f";
+    g.shadowColor = once ? "#3fd2ff" : "#ff2a1f";
     g.shadowBlur = 30;
     g.lineWidth = 4;
-    g.strokeStyle = "#ff3326";
+    g.strokeStyle = once ? "#9be3ff" : "#ff3326";
     g.strokeText("STRANGER THINGS", 0, 0);
     g.restore();
-    g.font = "700 28px ui-monospace, monospace";
+    g.font = "700 " + (lleno ? L.hawF : 28) + "px ui-monospace, monospace";
     g.textAlign = "center";
     g.fillStyle = "#ffb3a8";
     g.shadowBlur = 0;
-    g.fillText("H A W K I N S   \u00B7   H O T E L   C R E E L", W / 2, H * 0.365); // un 10 % más abajo (13-nov-2026)
+    g.fillText("H A W K I N S   \u00B7   H O T E L   C R E E L", W / 2, lleno ? L.hawY : H * 0.365); // un 10 % más abajo (13-nov-2026)
     if (escena.cara) retrato(s);
     if (escena.nivel !== "lejos" && escena.quien) {
-      g.font = "800 46px ui-monospace, monospace"; g.textAlign = "center"; g.fillStyle = "#fff"; g.shadowColor = "#ff2a1f"; g.shadowBlur = 16;
-      g.fillText(MSG[escena.nivel](escena.quien), W / 2, H * 0.72); g.shadowBlur = 0;
+      g.font = "800 " + (lleno ? L.msgF : 46) + "px ui-monospace, monospace"; g.textAlign = "center"; g.fillStyle = "#fff"; g.shadowColor = "#ff2a1f"; g.shadowBlur = 16;
+      g.fillText(MSG[escena.nivel](escena.quien), W / 2, lleno ? L.msgY : H * 0.72); g.shadowBlur = 0;
     }
     // Luces A–Z en la franja superior; con un personaje elegido se encienden fijas las letras de su nombre (13-nov-2026).
     var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -314,26 +356,27 @@
     var nombre = escena.cara ? String(escena.cara.quien).toUpperCase().normalize("NFD").replace(/[^A-Z]/g, "") : "";
     for (var li = 0; li < letters.length; li++) {
       var lx = W * 0.05 + li * (W * 0.9 / 25);
-      var ly = H * 0.026;
+      var ly = H * 0.026; var lr = 12;
+      if (lleno) { ly = L.luzY; lr = L.luzR; }
       var on = nombre ? nombre.indexOf(letters.charAt(li)) >= 0 : ((s + li * 0.37) % paso) / paso < 0.7;
       g.globalAlpha = on ? 1 : (nombre ? 0.12 : 0.18);
       g.fillStyle = colores[li % 5];
       g.shadowColor = colores[li % 5];
       g.shadowBlur = on ? (nombre ? 26 : 18) : 0;
       g.beginPath();
-      g.arc(lx, ly, 12, 0, 7);
+      g.arc(lx, ly, lr, 0, 7);
       g.fill();
       g.shadowBlur = 0;
       g.fillStyle = "#1a0a0a";
-      g.font = "700 13px Georgia, serif";
+      g.font = "700 " + (lleno ? L.luzF : 13) + "px Georgia, serif";
       g.textAlign = "center";
-      g.fillText(letters.charAt(li), lx, ly + 4.5);
+      g.fillText(letters.charAt(li), lx, ly + (lleno ? 6 : 4.5));
       g.globalAlpha = 1;
     }
-    g.font = "18px ui-monospace, monospace";
+    g.font = (lleno ? L.pieF : 18) + "px ui-monospace, monospace";
     g.textAlign = "right";
     g.fillStyle = "rgba(255,255,255,.45)";
-    g.fillText(conContenido && lista[idx] ? "admira.tv \u00B7 " + String(lista[idx].title || listaNombre).slice(0, 60) : escena.quien || escena.cara ? "admira.tv \u00B7 maqueta en admira.store" : "admira.tv \u00B7 sin se\u00F1al", W - 16, H - 12);
+    g.fillText(conContenido && lista[idx] ? "admira.tv \u00B7 " + String(lista[idx].title || listaNombre).slice(0, 60) + (listaSlug ? " \u00B7 PIEZA DE " + listaSlug.toUpperCase() : "") : escena.quien || escena.cara ? "admira.tv \u00B7 maqueta en admira.store" : "admira.tv \u00B7 sin se\u00F1al", W - 16, H - 12);
     hud();
   }
 
@@ -375,28 +418,98 @@
   // ?playlist=<pantalla> (Carlos, 14-nov-2026): emitir la playlist de OTRA pantalla (p. ej. corsair-galleon-100, el
   // teclado del Mac Studio) sin cambiar de identidad: el latido y las órdenes siguen siendo de hotel-creel.
   var PLAYLIST_SCREEN = (function () { var v = qs("playlist"); return /^[a-z0-9][a-z0-9-]{1,79}$/.test(v) ? v : SCREEN; })();
-  var lista = [], listaNombre = "", listaRev = null, idx = -1, media = null, mediaOk = false, mediaTimer = null; var fallos = 0; // piezas seguidas que no cargan (sin red): freno a 30 s
+  var lista = [], listaBase = [], listaSlug = "", listaNombre = "", listaRev = null, idx = -1, media = null, mediaOk = false, mediaTimer = null; var fallos = 0; // piezas seguidas que no cargan (sin red): freno a 30 s
   // Botón «📺 Pantallas» del mando (Carlos, 14-nov-2026): pantallas-on / pantallas-off / pantallas-toggle por la cola
   // /locations/cmd (la misma que el resto de players, con acuse). OFF para el vídeo y deja el fondo Stranger Things.
   var pantallasOn = (function () { try { return localStorage.getItem("creel-pantallas") !== "0"; } catch (e) { return true; } })();
   function pantallas(on) {
     pantallasOn = !!on;
     try { localStorage.setItem("creel-pantallas", pantallasOn ? "1" : "0"); } catch (e) {}
-    if (!pantallasOn) { lista = []; listaRev = null; listaDeRed = false; siguiente(); } else cargaLista();
+    if (!pantallasOn) { lista = []; listaBase = []; listaSlug = ""; listaRev = null; listaDeRed = false; siguiente(); } else cargaLista();
     return pantallasOn;
   }
+  // Pantalla ON/OFF desde admira.store (Carlos, 15-nov-2026): pantalla-off deja la pared LED en NEGRO total (sin escena,
+  // sin vídeo, sin audio); pantalla-on vuelve exactamente a lo que había (personaje, hotel/intro o fondo). Se recuerda.
+  var negro = (function () { try { return localStorage.getItem("creel-negro") === "1"; } catch (e) { return false; } })();
+  function pantallaNegra(on) {
+    negro = !!on;
+    try { localStorage.setItem("creel-negro", negro ? "1" : "0"); } catch (e) {}
+    if (media && media.tagName === "VIDEO") { try { if (negro) media.pause(); else media.play().catch(function () {}); } catch (e) {} }
+    return negro;
+  }
+  // Sonido ON/OFF desde admira.store (Carlos, 15-nov-2026): sonido-off silencia el vídeo de la pared (intro incluida)
+  // y se recuerda al recargar, como pantalla-off; sonido-on lo restaura. Antes el kiosko dejaba todo el vídeo en mudo.
+  var mudo = (function () { try { return localStorage.getItem("creel-mudo") === "1"; } catch (e) { return false; } })();
+  function aplicarMudo(on) {
+    mudo = !!on;
+    try { localStorage.setItem("creel-mudo", mudo ? "1" : "0"); } catch (e) {}
+    if (media && media.tagName === "VIDEO") { try { media.muted = mudo; } catch (e) {} }
+    return mudo;
+  }
   var CMD_HOSTS = ["https://api.admira.store/locations/cmd", "https://brain.digitalavatar.ai/locations/cmd"], cmdHost = 0;
+  // ?cola=<id> (15-nov-2026): la pared puede ir DENTRO de un player de admira.tv (pieza interactiva de la playlist
+  // hotel-creel-pared). Ese player ya obedece tag-* de su propia cola (filtra su playlist), así que la pared escucha
+  // otra cola, la que le manda el detector de Casa Creel: hotel-creel-pared-led. Sin ?cola=, la de su pantalla.
+  var COLA = (function () { var v = qs("cola"); return /^[a-z0-9][a-z0-9-]{1,79}$/.test(v) ? v : SCREEN; })();
+  // Personajes de la maqueta (creel-escena.js): slug -> nombre. Las órdenes del detector y de admira.store al iPhone.
+  var PERSONAJES = { will: "Will", mike: "Mike", lucas: "Lucas", dustin: "Dustin", nancy: "Nancy", jonathan: "Jonathan", steve: "Steve",
+    robin: "Robin", holly: "Holly", "sr-whatsit": "Sr. Whatsit", max: "Max", vecna: "Vecna", once: "Once" };
+  var FOTO_SIN = { vecna: 1 }; // sin minifigura en fotos/: retrato con el nombre, como en la maqueta
+  var truenos = null;
+  function personaje(slug) {
+    if (!slug) { escena.nivel = "lejos"; escena.quien = ""; escena.caraZona = null; eligeCara(); return; }
+    var quien = PERSONAJES[slug];
+    escena.nivel = "puerta"; escena.quien = quien;
+    escena.caraZona = { slug: slug, quien: quien, foto: FOTO_SIN[slug] ? "" : "https://admira.store/portaventura/hotel/casa-creel/fotos/lego-" + slug + ".webp", texto: "EN LA PUERTA" };
+    eligeCara();
+  }
+  // Intro de Stranger Things (Carlos, 15-nov-2026): sin ninguna figura en la puerta, la pared emite la cabecera de la
+  // serie a pantalla llena (pieza del Stock etiquetada «intro»), en bucle, hasta que entra alguien. Orden: tag-intro.
+  var INTRO = { asset: "https://stock.admira.store/stock/1794742551326-cff0q6/asset.mp4?v=5100674", assetType: "video", seconds: 54,
+    title: "Stranger Things \u00B7 Intro", stockId: "1794742551326-cff0q6", tags: ["intro"] };
+  var intro = { on: false };
+  function modoIntro(on) {
+    on = !!on; if (intro.on === on) return; intro.on = on;
+    if (on) { listaSlug = "intro"; lista = [INTRO]; idx = -1; siguiente(); } else { listaSlug = null; filtraPorPersonaje(); }
+  }
+  function pintaIntro() {
+    if (!media || !mediaOk || media.tagName !== "VIDEO" || media.readyState < 2) return false;
+    var mw = media.videoWidth, mh = media.videoHeight; if (!mw || !mh) return false;
+    var k = Math.max(W / mw, H / mh), dw = mw * k, dh = mh * k;
+    g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+    try { g.drawImage(media, (W - dw) / 2, (H - dh) / 2, dw, dh); } catch (e) { return false; }
+    return true;
+  }
+  function ordenPersonaje(cmd) {
+    if (cmd === "tag-intro" || cmd === "tag-creel-intro") { personaje(""); modoIntro(true); return true; }
+    if (/^tag-(creel-[a-z0-9-]+|vecna-truenos)$/.test(cmd)) modoIntro(false);
+    if (cmd === "tag-creel-fondo") { personaje(""); return true; }
+    if (cmd === "tag-vecna-truenos") {
+      personaje("vecna"); clima.forzado = "tormenta";
+      if (truenos) clearTimeout(truenos);
+      truenos = setTimeout(function () { clima.forzado = ICONO[f] ? f : null; truenos = null; }, 16000);
+      return true;
+    }
+    var m = /^tag-creel-([a-z0-9-]+)$/.exec(cmd);
+    if (m && PERSONAJES[m[1]]) { personaje(m[1]); return true; }
+    return false;
+  }
   var cmdState = { since: 0, init: false }, cmdBusy = false, cmdIdle = 0, cmdVuelta = 0; // cmdVuelta: invalida un sondeo colgado
   function ejecutaOrden(c) {
     var cmd = String(c && c.cmd || "").replace(/^\//, "").split(/\s+/)[0].toLowerCase();
     if (cmd === "pantallas-on" || cmd === "pantallas" || cmd === "contenido-on") { pantallas(true); return "executed"; }
     if (cmd === "pantallas-off" || cmd === "contenido-off") { pantallas(false); return "executed"; }
     if (cmd === "pantallas-toggle") { pantallas(!pantallasOn); return "executed"; }
+    if (cmd === "pantalla-off" || cmd === "pared-off" || cmd === "negro-on") { pantallaNegra(true); return "executed"; }
+    if (cmd === "pantalla-on" || cmd === "pared-on" || cmd === "negro-off") { pantallaNegra(false); return "executed"; }
+    if (cmd === "sonido-off" || cmd === "sound-off" || cmd === "audio-off") { aplicarMudo(true); return "executed"; }
+    if (cmd === "sonido-on" || cmd === "sound-on" || cmd === "audio-on") { aplicarMudo(false); return "executed"; }
     if (cmd === "playout-sync" || cmd === "reload" || cmd === "recargar") { cargaLista(); return "executed"; }
+    if (ordenPersonaje(cmd)) return "executed";
     return "failed";
   }
   function acusa(c, status) {
-    var body = JSON.stringify({ id: SCREEN, screen: SCREEN, cid: c.cid, action: c.action, status: status, queuedAt: Date.now() });
+    var body = JSON.stringify({ id: COLA, screen: COLA, cid: c.cid, action: c.action, status: status, queuedAt: Date.now() });
     // Si el acuse se cuelga (ni respuesta ni error: TCP colgado en la wifi de Planeta), la cadena de órdenes esperaba y el sondeo
     // del mando se paraba hasta su guarda de 15 s, cambiando de host sin motivo. Guarda de 5 s: aborta el acuse y sigue.
     var ctl = typeof AbortController === "function" ? new AbortController() : null;
@@ -420,15 +533,27 @@
       cmdVuelta++; try { if (ctl) ctl.abort(); } catch (e) {}
       cmdHost = (cmdHost + 1) % CMD_HOSTS.length; cmdIdle++; cmdBusy = false; setTimeout(sondeaOrdenes, 3000);
     }, 15000);
-    fetch(CMD_HOSTS[cmdHost] + "?id=" + encodeURIComponent(SCREEN) + "&since=" + cmdState.since + "&t=" + Date.now(), { cache: "no-store", signal: ctl ? ctl.signal : undefined })
+    fetch(CMD_HOSTS[cmdHost] + "?id=" + encodeURIComponent(COLA) + "&since=" + cmdState.since + "&t=" + Date.now(), { cache: "no-store", signal: ctl ? ctl.signal : undefined })
       .then(function (r) { if (!r.ok) throw 0; return r.json(); })
       .then(function (d) {
         if (!d || vuelta !== cmdVuelta) return; // respuesta tardía de un sondeo ya abandonado: no se ejecuta
-        if (!cmdState.init) { cmdState.since = d.seq || 0; cmdState.init = true; return; } // el atraso anterior al arranque no se ejecuta
+        if (!cmdState.init) {
+          cmdState.since = d.seq || 0; cmdState.init = true; // el atraso anterior al arranque no se ejecuta…
+          // …salvo quién está en la puerta: la última orden de personaje (≤ 30 min) se pinta sin acusarla, para que la
+          // pared no se quede vacía cada vez que el player estrena la pieza.
+          var prev = (Array.isArray(d.commands) ? d.commands : []).filter(function (c) { var k = String(c && c.cmd || ""); return /^tag-(creel-[a-z0-9-]+|vecna-truenos|intro)$/.test(k) && (!c.screen || String(c.screen).toLowerCase() === COLA); });
+          var ult = prev[prev.length - 1], ts = ult && Number(ult.ts || ult.queuedAt || 0); if (ts && ts < 1e12) ts *= 1000; // la cola da segundos
+          if (ult && (!ts || Date.now() - ts < 30 * 60000) && ult.cmd !== "tag-vecna-truenos") ordenPersonaje(String(ult.cmd));
+          var pw = (Array.isArray(d.commands) ? d.commands : []).filter(function (c) { return /^pantalla-(on|off)$/.test(String(c && c.cmd || "")); }).pop();
+          if (pw) pantallaNegra(String(pw.cmd) === "pantalla-off");
+          var sw = (Array.isArray(d.commands) ? d.commands : []).filter(function (c) { return /^sonido-(on|off)$/.test(String(c && c.cmd || "")); }).pop();
+          if (sw) aplicarMudo(String(sw.cmd) === "sonido-off");
+          return;
+        }
         var cmds = Array.isArray(d.commands) ? d.commands : [], seq = Promise.resolve(), activo = false;
         cmds.forEach(function (c) {
           if (typeof c.cid !== "number" || c.cid <= cmdState.since) return;
-          if (c.screen && String(c.screen).toLowerCase() !== SCREEN) { cmdState.since = c.cid; return; }
+          if (c.screen && String(c.screen).toLowerCase() !== COLA) { cmdState.since = c.cid; return; }
           activo = true;
           seq = seq.then(function () { var st = ejecutaOrden(c); cmdState.since = c.cid; return acusa(c, st); });
         });
@@ -436,7 +561,7 @@
         return seq;
       })
       .catch(function () { if (vuelta === cmdVuelta) { cmdHost = (cmdHost + 1) % CMD_HOSTS.length; cmdIdle++; } })
-      .then(function () { clearTimeout(guarda); if (vuelta !== cmdVuelta) return; cmdBusy = false; setTimeout(sondeaOrdenes, cmdIdle >= 40 ? 10000 : 3000); });
+      .then(function () { clearTimeout(guarda); if (vuelta !== cmdVuelta) return; cmdBusy = false; setTimeout(sondeaOrdenes, cmdIdle >= 40 ? 5000 : 1500); });
   }
   sondeaOrdenes();
   // Si todas las piezas fallan seguidas (TCL sin red), no girar en bucle cerrado: esperar 30 s y reintentar.
@@ -456,9 +581,9 @@
     var it = lista[idx], esVideo = it.assetType !== "image", el = document.createElement(esVideo ? "video" : "img");
     el.crossOrigin = "anonymous";
     if (esVideo) {
-      el.muted = true; el.playsInline = true; el.preload = "auto"; el.loop = false;
+      el.muted = mudo; el.playsInline = true; el.preload = "auto"; el.loop = false;
       el.onended = siguiente; el.onerror = falla;
-      el.oncanplay = function () { mediaOk = true; fallos = 0; try { el.play().catch(function () {}); } catch (e) {} };
+      el.oncanplay = function () { mediaOk = true; fallos = 0; if (negro) return; try { el.play().catch(function () {}); } catch (e) {} };
       mediaTimer = setTimeout(siguiente, (Math.max(2, Number(it.seconds) || 10) + 8) * 1000); // por si el vídeo se atasca
     } else {
       mediaTimer = setTimeout(falla, 20000); // por si la imagen se atasca sin load ni error (TCP colgado): cuenta como fallo
@@ -497,8 +622,8 @@
     // La LED es apaisada: si la playlist trae parejas H·V (como la del Galleon), se emiten solo las horizontales.
     var esVertical = function (i) { return (i.tags || []).some(function (t) { return t === "vertical" || t === "portrait"; }); };
     var horizontales = todas.filter(function (i) { return !esVertical(i); });
-    lista = horizontales.length ? horizontales : todas;
-    idx = -1; fallos = 0; siguiente();
+    listaBase = horizontales.length ? horizontales : todas;
+    fallos = 0; listaSlug = null; filtraPorPersonaje(); // con personaje en la puerta, sus piezas; si no, la lista entera
     return todas;
   }
   function recuerdaLista(dr, todas) {
@@ -527,6 +652,15 @@
       if (listaDeRed && dr.rev === listaRev) return;
       listaDeRed = true; recuerdaLista(dr, aplicaLista(dr));
     }).catch(function () { if (fin()) listaRecordada(); });
+  }
+  // Piezas por personaje (como pantalla.js, 14-nov-2026): las piezas etiquetadas personaje:<slug> se emiten solas
+  // mientras ese personaje manda en la pared; sin ninguna suya, la playlist entera.
+  function piezasDe(slug) { return slug ? listaBase.filter(function (i) { return (i.tags || []).indexOf("personaje:" + slug) >= 0; }) : []; }
+  function filtraPorPersonaje() {
+    if (intro && intro.on) return;
+    var slug = escena.cara && escena.cara.slug && piezasDe(escena.cara.slug).length ? escena.cara.slug : "";
+    if (slug === listaSlug) return;
+    listaSlug = slug; lista = slug ? piezasDe(slug) : listaBase; idx = -1; siguiente();
   }
   cargaLista();
   setInterval(cargaLista, 60000);
@@ -566,7 +700,7 @@
         system: { os: "", platform: navigator.platform || "", language: navigator.language || "", timezone: zonaTele() },
         hardware: { dedicated: false, model: "Hotel Creel \u00B7 LED" },
         software: { player: "Hotel Creel \u00B7 LED", playerVersion: "creel-1", webRelease: version, engine: "", userAgent: navigator.userAgent },
-        audio: { muted: true, playing: false }, network: { online: navigator.onLine !== false } },
+        audio: { muted: !!mudo, playing: !!(media && media.tagName === "VIDEO" && !media.paused && !mudo) }, network: { online: navigator.onLine !== false } },
       health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), embebido: window.parent !== window, pantallas: pantallasOn ? "on" : "off",
         errores: diag.errores, ultimoError: diag.ultimo, encendidaMin: Math.round((Date.now() - arranque) / 60000),
         fps: fpsAhora(Date.now()), memoriaMB: memoriaMB(), fondo: !pantallasOn ? "apagado" : media && mediaOk ? (media.tagName === "VIDEO" ? "video" : "imagen") : "rojo", pantallaFija: pantallaFija(), visible: teleVisible(), climaMin: climaMin() },
