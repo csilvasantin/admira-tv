@@ -713,6 +713,10 @@
   function zonaTele() {
     try { return (typeof Intl !== "undefined" && Intl.DateTimeFormat && Intl.DateTimeFormat().resolvedOptions().timeZone) || ""; } catch (e) { return ""; }
   }
+  // Encaje en la TCL para el latido (15-nov-2026 23:20): display.orientation iba fijo a "landscape" aunque el WebView estuviera en
+  // vertical o con la barra de Android comiendo alto. Ahora orientation sale del visor real ("landscape"/"portrait"/"?") y display.encaje
+  // dice "16:9" si el visor es 16:9 (pantalla llena a 1920x1080), "otro" si no (franjas o recorte) y "?" sin medidas. Nunca rompe el latido.
+  function encajeTele(w, h) { try { w = +w; h = +h; if (!(w > 0 && h > 0) || !isFinite(w) || !isFinite(h)) return { orientation: "?", encaje: "?" }; return { orientation: w >= h ? "landscape" : "portrait", encaje: Math.abs(w / h - 16 / 9) < 0.02 ? "16:9" : "otro" }; } catch (e) { return { orientation: "?", encaje: "?" }; } }
   var beatBusy = false, beatVuelta = 0; // un solo latido a la vez: colgados no se apilan
   function beat() {
     if (typeof fetch !== "function") return;
@@ -720,7 +724,7 @@
     var item = c ? { id: "creel-" + String(c.quien).toLowerCase().replace(/[^a-z0-9]+/g, "-"), title: "Stranger Things \u00B7 " + c.quien + " \u00B7 " + (c.texto || "EN LA PUERTA"), type: "image", url: c.foto || "", playlist: pieza && pieza.playlist }
                  : pieza || { id: "creel-fondo", title: "Stranger Things \u00B7 Hawkins \u00B7 Hotel Creel", type: "animation", url: location.origin + "/creel/" };
     var body = { screen: SCREEN, producer: "creel-led-" + SCREEN, item: item, standby: false, role: "creel", version: version,
-      device: { display: { width: W, height: H, cssWidth: innerWidth, cssHeight: innerHeight, viewportWidth: innerWidth, viewportHeight: innerHeight, devicePixelRatio: window.devicePixelRatio || 1, orientation: "landscape" },
+      device: { display: { width: W, height: H, cssWidth: innerWidth, cssHeight: innerHeight, viewportWidth: innerWidth, viewportHeight: innerHeight, devicePixelRatio: window.devicePixelRatio || 1, orientation: encajeTele(innerWidth, innerHeight).orientation, encaje: encajeTele(innerWidth, innerHeight).encaje },
         system: { os: "", platform: navigator.platform || "", language: navigator.language || "", timezone: zonaTele() },
         hardware: { dedicated: false, model: "Hotel Creel \u00B7 LED" },
         software: { player: "Hotel Creel \u00B7 LED", playerVersion: "creel-1", webRelease: version, engine: "", userAgent: navigator.userAgent },
