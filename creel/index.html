@@ -250,6 +250,7 @@
   function pinta(t) {
     var s = t / 1000;
     g.setTransform(escala, 0, 0, escala, 0, 0); // 8:3: escala 1 (igual que siempre); lleno: a la resolución real del visor
+    if (negro) { g.fillStyle = "#000"; g.fillRect(0, 0, W, H); if (media && media.tagName === "VIDEO" && !media.paused) try { media.pause(); } catch (e) {} return; }
     if (intro && intro.on && pintaIntro()) return;   // intro a pantalla llena, sin tinte ni escena
     // Igual que pantalla.js de la maqueta (15-nov-2026): Once en la puerta tiñe de azul, Vecna de morado, y con alguien
     // en la puerta el rayo es más frecuente y el título se da la vuelta (el Mundo del Revés).
@@ -352,6 +353,15 @@
     if (!pantallasOn) { lista = []; listaBase = []; listaSlug = ""; listaRev = null; siguiente(); } else cargaLista();
     return pantallasOn;
   }
+  // Pantalla ON/OFF desde admira.store (Carlos, 15-nov-2026): pantalla-off deja la pared LED en NEGRO total (sin escena,
+  // sin vídeo, sin audio); pantalla-on vuelve exactamente a lo que había (personaje, hotel/intro o fondo). Se recuerda.
+  var negro = (function () { try { return localStorage.getItem("creel-negro") === "1"; } catch (e) { return false; } })();
+  function pantallaNegra(on) {
+    negro = !!on;
+    try { localStorage.setItem("creel-negro", negro ? "1" : "0"); } catch (e) {}
+    if (media && media.tagName === "VIDEO") { try { if (negro) media.pause(); else media.play().catch(function () {}); } catch (e) {} }
+    return negro;
+  }
   var CMD_HOSTS = ["https://api.admira.store/locations/cmd", "https://brain.digitalavatar.ai/locations/cmd"], cmdHost = 0;
   // ?cola=<id> (15-nov-2026): la pared puede ir DENTRO de un player de admira.tv (pieza interactiva de la playlist
   // hotel-creel-pared). Ese player ya obedece tag-* de su propia cola (filtra su playlist), así que la pared escucha
@@ -406,6 +416,8 @@
     if (cmd === "pantallas-on" || cmd === "pantallas" || cmd === "contenido-on") { pantallas(true); return "executed"; }
     if (cmd === "pantallas-off" || cmd === "contenido-off") { pantallas(false); return "executed"; }
     if (cmd === "pantallas-toggle") { pantallas(!pantallasOn); return "executed"; }
+    if (cmd === "pantalla-off" || cmd === "pared-off" || cmd === "negro-on") { pantallaNegra(true); return "executed"; }
+    if (cmd === "pantalla-on" || cmd === "pared-on" || cmd === "negro-off") { pantallaNegra(false); return "executed"; }
     if (cmd === "playout-sync" || cmd === "reload" || cmd === "recargar") { cargaLista(); return "executed"; }
     if (ordenPersonaje(cmd)) return "executed";
     return "failed";
@@ -428,6 +440,8 @@
           var prev = (Array.isArray(d.commands) ? d.commands : []).filter(function (c) { var k = String(c && c.cmd || ""); return /^tag-(creel-[a-z0-9-]+|vecna-truenos|intro)$/.test(k) && (!c.screen || String(c.screen).toLowerCase() === COLA); });
           var ult = prev[prev.length - 1], ts = ult && Number(ult.ts || ult.queuedAt || 0); if (ts && ts < 1e12) ts *= 1000; // la cola da segundos
           if (ult && (!ts || Date.now() - ts < 30 * 60000) && ult.cmd !== "tag-vecna-truenos") ordenPersonaje(String(ult.cmd));
+          var pw = (Array.isArray(d.commands) ? d.commands : []).filter(function (c) { return /^pantalla-(on|off)$/.test(String(c && c.cmd || "")); }).pop();
+          if (pw) pantallaNegra(String(pw.cmd) === "pantalla-off");
           return;
         }
         var cmds = Array.isArray(d.commands) ? d.commands : [], seq = Promise.resolve(), activo = false;
@@ -455,7 +469,7 @@
     if (esVideo) {
       el.muted = true; el.playsInline = true; el.preload = "auto"; el.loop = false;
       el.onended = siguiente; el.onerror = siguiente;
-      el.oncanplay = function () { mediaOk = true; try { el.play().catch(function () {}); } catch (e) {} };
+      el.oncanplay = function () { mediaOk = true; if (negro) return; try { el.play().catch(function () {}); } catch (e) {} };
       mediaTimer = setTimeout(siguiente, (Math.max(2, Number(it.seconds) || 10) + 8) * 1000); // por si el vídeo se atasca
     } else {
       el.onload = function () { mediaOk = true; mediaTimer = setTimeout(siguiente, Math.max(2, Number(it.seconds) || 10) * 1000); };
