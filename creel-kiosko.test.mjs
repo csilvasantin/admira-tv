@@ -300,7 +300,7 @@ test('un latido colgado de /signage/now no apila conexiones con api.admira.store
   const st = { fetches: [], timers: [], aborts: 0 };
   const env = new Function('st', `
     var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540, diag = { errores: 0, ultimo: "" }, arranque = 0, media = null, mediaOk = false;
-    function fpsAhora() { return 60; } function memoriaMB() { return 80; }
+    function fpsAhora() { return 60; } function memoriaMB() { return 80; } function pantallaFija() { return "si"; }
     var innerWidth = 1920, innerHeight = 1080, navigator = { platform: "", language: "es", userAgent: "tcl", onLine: true }, window = { devicePixelRatio: 1 }; window.parent = window;
     var location = { origin: "https://admira.tv" };
     function piezaEnAntena() { return null; } function zonaTele() { return ""; }
@@ -534,7 +534,7 @@ test('diagnóstico remoto: los errores JS se cuentan y el latido lleva cuántos,
 
 test('fotogramas por segundo: el latido lleva los fps medios desde el latido anterior y qué fondo emite, para ver sin ir a la tele si el LED va a saltos o congelado', () => {
   assert.match(html, /try \{ pinta\(t \|\| Date\.now\(\)\); fallosPinta = 0; fotogramas\+\+; \}/); // solo cuentan los fotogramas pintados bien
-  assert.match(html, /fps: fpsAhora\(Date\.now\(\)\), memoriaMB: memoriaMB\(\), fondo: !pantallasOn \? "apagado" : media && mediaOk \? \(media\.tagName === "VIDEO" \? "video" : "imagen"\) : "rojo" \}/);
+  assert.match(html, /fps: fpsAhora\(Date\.now\(\)\), memoriaMB: memoriaMB\(\), fondo: !pantallasOn \? "apagado" : media && mediaOk \? \(media\.tagName === "VIDEO" \? "video" : "imagen"\) : "rojo", pantallaFija: pantallaFija\(\) \}/);
   const ini = html.indexOf('  var fotogramas = 0');
   const fin = html.indexOf('\n', html.indexOf('function fpsAhora', ini));
   const r = new Function('Date', html.slice(ini, fin) + '; var out = []; fotogramas += 600; out.push(fpsAhora(1e12 + 10000)); fotogramas += 150; out.push(fpsAhora(1e12 + 20000)); out.push(fpsAhora(1e12 + 30000)); out.push(fpsAhora(1e12 + 30000)); return out;')({ now: () => 1e12 });
@@ -552,4 +552,17 @@ test('memoria del WebView: el latido lleva los MB de JS en uso (performance.memo
   assert.equal(f({ memory: { usedJSHeapSize: 0 } }), null);   // cifra vacía: no inventa 0 MB
   assert.equal(f({ get memory() { throw new Error('bloqueado'); } }), null); // no rompe el latido
   assert.equal(new Function(html.slice(ini, fin) + '; return memoriaMB();')(), null); // sin performance
+});
+
+test('pantalla fija: el latido dice si el Wake Lock está concedido ("si"), perdido ("no") o el WebView no lo tiene ("sin-api"), para saber sin ir a la tele si la TCL atenuará o saltará el salvapantallas', () => {
+  assert.match(html, /memoriaMB: memoriaMB\(\), fondo: .*, pantallaFija: pantallaFija\(\) \}/);
+  const ini = html.indexOf('  function pantallaFija()');
+  const fin = html.indexOf('\n', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const f = (wakeLock, navigator) => new Function('wakeLock', 'navigator', html.slice(ini, fin) + '; return pantallaFija();')(wakeLock, navigator);
+  assert.equal(f({ released: false }, { wakeLock: {} }), 'si');
+  assert.equal(f(null, { wakeLock: {} }), 'no');       // API sí, pero sin concesión (perdido o denegado)
+  assert.equal(f(null, {}), 'sin-api');                 // WebView viejo sin Screen Wake Lock
+  assert.equal(f(null, { get wakeLock() { throw new Error('bloqueado'); } }), 'sin-api'); // no rompe el latido
+  assert.equal(new Function('wakeLock', html.slice(ini, fin) + '; return pantallaFija();')(null), typeof navigator !== 'undefined' && navigator.wakeLock ? 'no' : 'sin-api');
 });
