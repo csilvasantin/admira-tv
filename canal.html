@@ -2447,9 +2447,12 @@ function releaseForcedTagPlayback(state){
   if(!ownsForcedTagPlayback(state)) return false;
   _forcedTagPlayback=null; Promise.resolve().then(()=>pollMode()).catch(()=>{}); return true;
 }
+function stopForcedLoop(){ if(_forcedTagPlayback&&_forcedTagPlayback.loop){ _forcedTagPlayback.loop=false; _forcedTagPlayback.item=null; } }
 function finishForcedTagPlayback(){
   const state=_forcedTagPlayback;
   if(!state||state.phase!=='playing') return false;
+  // loop<N>: la pieza forzada se repite hasta que llegue otra orden (stopForcedLoop la suelta).
+  if(state.loop&&state.item&&!_standby){ play(0,state.item); return true; }
   _forcedTagPlayback=null; _asapItemId=null;
   // Al acabar la cápsula completa seguimos el loop local sin congelar el último
   // frame. El sondeo inmediato devuelve después el gobierno a sincro/condicional
@@ -3502,9 +3505,10 @@ async function stockItemByNum(pn){
     const copy=Object.assign({},it); copy._num=pn; copy.num=pn; return copy;
   }catch(_){ return null; }
 }
-async function forcePlayNow(it,label){
+async function forcePlayNow(it,label,loop){
   if(!it) return 'ignored';
   const forcedState=beginForcedTagPlayback(label||('play:'+String(it.id||'')));
+  if(loop){ forcedState.loop=true; forcedState.item=it; }
   disableAdmiraSync();
   if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
   try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}
@@ -3551,7 +3555,7 @@ function forceAudience(r){
   try{ const F=window.__xplForce; emitAudienceState(F?(F.gender||AUD_KIND_LANE[F.kind]||F.kind):'neutral', F&&F.gender?F.gender:'u', !!F, F?F.kind:'none'); }catch(_){}
   return msg;
 }
-function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
+function runCli(raw){ const v=String(raw||'').trim(); if(!v) return; stopForcedLoop();
   const cmd=v.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
   const rest=v.replace(/^\s*\/?\S+\s*/,'').trim();
   // Misma ruta que el Remote experto, también disponible en la consola local
@@ -3642,9 +3646,12 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='reset'||cmd==='clear'){ disableAdmiraSync(); Object.assign(seg,segBase()); save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); flashCli('✓ filtros reset'); return; }
   // /play<N> o /play <N> → reproduce el asset con número de importación N, POR ENCIMA
   // de cualquier filtro (forzado). #1 = el más antiguo, #N = el último importado.
-  let pn=null;
+  let pn=null, loopPn=false;
   if(cmd==='play'){ pn=parseInt(v.replace(/^\s*\/?play\s*/i,'').trim(),10); }
   else if(/^play\d+$/.test(cmd)){ pn=parseInt(cmd.slice(4),10); }
+  // loop<N> (Stream Deck de AdmiraNeXT01, 15-nov-2026): como play<N>, pero la pieza se REPITE al terminar en vez de
+  // devolver la pantalla a su programación. Sale del bucle con cualquier otra orden (otro play/loop, next, tag, reload…).
+  else if(/^loop\d+$/.test(cmd)){ pn=parseInt(cmd.slice(4),10); loopPn=true; }
   if(pn!=null){
     if(isNaN(pn)){ flashCli('uso: /play<N>  (1-'+all.length+')'); return; }
     // r8 (08-09-2026): el feed del canal (INDEX = últimas 300 del Stock) no llega a las piezas
@@ -3656,7 +3663,7 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
       // r7: en una pantalla SINCRONIZADA play(0,target) arrancaba la pieza y el tick de sincro
       // la devolvía al índice del máster en el mismo segundo. Misma ventana forzada que goto-N,
       // y se emite YA en línea (sin esperar la descarga).
-      forcePlayNow(target,'play'+pn).catch(()=>{});
+      forcePlayNow(target,(loopPn?'loop':'play')+pn,loopPn).catch(()=>{});
       flashCli('▶ asset #'+pn+' · '+String(target.title||target.prompt||'').slice(0,24));
     };
     const local=all.find(it=>it&&it._num===pn)||playlist.find(it=>it&&(it._num===pn||Number(it.num)===pn));
@@ -5308,6 +5315,7 @@ function ackCtrl(c,result){
   fetch(CTRL_BASE+'/ack',{method:'POST',cache:'no-store',headers:ctrlDeviceHeaders(true),body:JSON.stringify({screen:scr.screen,commandId:String(c.id),result:result||'executed'})}).catch(()=>{});
 }
 async function applyCtrlCmd(cmd){
+  if(/^(next|prev|first|last|goto-|tag-)/.test(String(cmd||''))) stopForcedLoop();
   switch(cmd){
     case 'next':  testNav('next'); return 'executed';
     case 'prev':  testNav('prev'); return 'executed';
