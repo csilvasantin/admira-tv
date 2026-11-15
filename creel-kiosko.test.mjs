@@ -364,3 +364,24 @@ test('un vídeo de fondo congelado a mitad (currentTime quieto sin ended ni erro
   assert.equal(env.estado().idx, 1);
   assert.equal(st.fallas || 0, 0);
 });
+
+test('al volver a ser visible (TCL sale de reposo) se pone al día sin mando y, oculta, el vigilante no salta piezas pausadas por el navegador', () => {
+  assert.match(html, /if \(typeof document !== "undefined" && document\.visibilityState === "hidden"\) \{ vigiaT = -1; vigiaQuieto = 0; return; \}/);
+  assert.match(html, /function vuelveVisible\(\) \{\n    if \(document\.visibilityState !== "visible"\) return;/);
+  assert.match(html, /media\.paused && !media\.ended\) \{ var pr = media\.play\(\);/);
+  assert.match(html, /vuelveRed\(\); leeVersion\(\); beat\(\);/);
+  assert.match(html, /document\.addEventListener\("visibilitychange", vuelveVisible\);/);
+  // el vigilante, con la página oculta, no cuenta segundos quietos
+  const ini = html.indexOf('  var vigiaT = -1, vigiaQuieto = 0;'), fin = html.indexOf('  setInterval(vigilaVideo, 1000);');
+  const st = { saltos: 0 };
+  const env = new Function('st', `
+    var media = { tagName: "VIDEO", currentTime: 3, ended: false, play: function () {} }, mediaOk = true;
+    var document = { visibilityState: "hidden" };
+    function siguiente() { st.saltos++; }
+    ${html.slice(ini, fin)}
+    return { vigila: vigilaVideo, ver: function (v) { document.visibilityState = v; } };`)(st);
+  for (let k = 0; k < 20; k++) env.vigila();
+  assert.equal(st.saltos, 0);
+  env.ver('visible'); for (let k = 0; k < 9; k++) env.vigila();  // visible y de verdad quieto 8 s: sí salta
+  assert.equal(st.saltos, 1);
+});

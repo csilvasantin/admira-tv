@@ -427,6 +427,8 @@
   var vigiaT = -1, vigiaQuieto = 0;
   function vigilaVideo() {
     var v = media;
+    // Con la página oculta (TCL en reposo, WebView en segundo plano) el navegador pausa el vídeo y frena los temporizadores: no es un vídeo congelado, no se salta.
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") { vigiaT = -1; vigiaQuieto = 0; return; }
     if (!v || v.tagName !== "VIDEO" || !mediaOk || v.ended) { vigiaT = -1; vigiaQuieto = 0; return; }
     var t = v.currentTime;
     if (t !== vigiaT) { vigiaT = t; vigiaQuieto = 0; return; }
@@ -541,6 +543,15 @@
   document.addEventListener("visibilitychange", pideWakeLock);
   pideWakeLock();
   setInterval(pideWakeLock, 60000);
+  // Al volver a ser visible (la TCL sale de reposo o el WebView vuelve al frente, 15-nov-2026) la tele se pone al día al instante,
+  // sin mando: el vídeo de fondo que el navegador pausó sigue, y se releen playlist, clima (si faltaba), versión y latido sin esperar 1-10 min.
+  function vuelveVisible() {
+    if (document.visibilityState !== "visible") return;
+    vigiaT = -1; vigiaQuieto = 0;
+    try { if (media && media.tagName === "VIDEO" && mediaOk && media.paused && !media.ended) { var pr = media.play(); if (pr && pr.catch) pr.catch(function () {}); } } catch (e) {}
+    vuelveRed(); leeVersion(); beat();
+  }
+  document.addEventListener("visibilitychange", vuelveVisible);
 
   var raf = window.requestAnimationFrame || window.webkitRequestAnimationFrame || function (fn) { return setTimeout(function () { fn(Date.now()); }, 16); };
   // Un error en un fotograma (vídeo raro, clima inesperado, WebView viejo) no debe congelar el LED para siempre:
