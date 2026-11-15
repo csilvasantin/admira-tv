@@ -401,15 +401,21 @@
     try { fetch("/version.json", { cache: "no-store", signal: ctl ? ctl.signal : undefined }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) {
       if (!vigente()) return; // respuesta tardía de una lectura ya abandonada: se ignora
       var v = String(d && d.version || ""); if (!v) return;
-      if (version && v !== version) { try { location.reload(); } catch (e) {} return; }
+      if (version && v !== version) { try { localStorage.setItem(RECARGA_KEY, "deploy|" + Date.now()); } catch (e) {} try { location.reload(); } catch (e) {} return; }
       version = v;
-      if (typeof refrescoNocturno === "function" && refrescoNocturno(Date.now(), horaMadrid())) { try { location.reload(); } catch (e) {} }
+      if (typeof refrescoNocturno === "function" && refrescoNocturno(Date.now(), horaMadrid())) { try { localStorage.setItem(RECARGA_KEY, "nocturno|" + Date.now()); } catch (e) {} try { location.reload(); } catch (e) {} }
     }).catch(function () { vigente(); }); } catch (e) { vigente(); }
   }
   // Refresco nocturno (14-nov-2026): la TCL emite 24/7 sin mando y el WebView acumula memoria; si lleva más de 20 h
   // encendida, entre las 05:00 y las 05:59 de Madrid recarga una vez, y solo tras leer /version.json (hay red).
   var arranque = Date.now();
   function refrescoNocturno(ahora, hora) { return ahora - arranque > 20 * 3600000 && String(hora).slice(0, 2) === "05"; }
+  // Motivo del último arranque para el latido (15-nov-2026): encendidaMin baja a 0 tanto si la TCL se reinició (corte de luz, mando)
+  // como si la página se recargó sola; antes de cada recarga propia se apunta el motivo ("deploy" | "nocturno" | "pintura") y al
+  // arrancar se lee y se borra. recarga = ese motivo si la marca tiene menos de 2 min, "arranque" si no, null si no hay almacenamiento.
+  var RECARGA_KEY = "creel-recarga";
+  function leeRecarga(ls, ahora) { try { var t = String(ls.getItem(RECARGA_KEY) || ""); ls.removeItem(RECARGA_KEY); var p = t.split("|"), ts = +p[1], d = ahora - ts; return /^(deploy|nocturno|pintura)$/.test(p[0]) && d >= 0 && d < 120000 ? p[0] : "arranque"; } catch (e) { return null; } }
+  var recargaPrevia = (function () { try { return leeRecarga(localStorage, Date.now()); } catch (e) { return null; } })();
   leeVersion();
   setInterval(leeVersion, 10 * 60 * 1000);
   // Contenido de admira.tv de fondo (Carlos, 13-nov-2026): la playlist de esta pantalla (/api/playlist?screen=hotel-creel,
@@ -715,7 +721,7 @@
         audio: { muted: !!mudo, playing: !!(media && media.tagName === "VIDEO" && !media.paused && !mudo) }, network: { online: navigator.onLine !== false } },
       health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), embebido: window.parent !== window, pantallas: pantallasOn ? "on" : "off",
         errores: diag.errores, ultimoError: diag.ultimo, encendidaMin: Math.round((Date.now() - arranque) / 60000),
-        fps: fpsAhora(Date.now()), memoriaMB: memoriaMB(), fondo: fondoLatido(), intro: !!(intro && intro.on), pantallaFija: pantallaFija(), visible: teleVisible(), climaMin: climaMin(), mandoSeg: mandoSeg(), lista: listaOrigen(), listaMin: listaMin() },
+        fps: fpsAhora(Date.now()), memoriaMB: memoriaMB(), fondo: fondoLatido(), intro: !!(intro && intro.on), pantallaFija: pantallaFija(), visible: teleVisible(), climaMin: climaMin(), mandoSeg: mandoSeg(), lista: listaOrigen(), listaMin: listaMin(), recarga: recargaPrevia },
       loc: "portaventura", locName: "Hotel Creel \u00B7 LED (PortAventura)", machine: "" };
     // Latido colgado (ni respuesta ni error, p. ej. TCP colgado en la wifi de Planeta): sin guarda, cada 10 s se abría otro POST
     // a api.admira.store, el mismo host que la cola de órdenes, y acababan agotando sus conexiones (15-nov-2026). Uno solo a la vez,
@@ -771,7 +777,7 @@
   function loop(t) {
     raf(loop);
     try { pinta(t || Date.now()); fallosPinta = 0; fotogramas++; }
-    catch (e) { fallosPinta++; if (fallosPinta === 1) anota(e); if (fallosPinta === 300 && navigator.onLine !== false) { try { location.reload(); } catch (e2) {} } }
+    catch (e) { fallosPinta++; if (fallosPinta === 1) anota(e); if (fallosPinta === 300 && navigator.onLine !== false) { try { localStorage.setItem(RECARGA_KEY, "pintura|" + Date.now()); } catch (e2) {} try { location.reload(); } catch (e2) {} } }
   }
   raf(loop);
 })();

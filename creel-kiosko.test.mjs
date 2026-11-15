@@ -300,7 +300,7 @@ test('un latido colgado de /signage/now no apila conexiones con api.admira.store
   const st = { fetches: [], timers: [], aborts: 0 };
   const env = new Function('st', `
     var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540, diag = { errores: 0, ultimo: "" }, arranque = 0, media = null, mediaOk = false, mudo = true;
-    function fpsAhora() { return 60; } function memoriaMB() { return 80; } function pantallaFija() { return "si"; } function teleVisible() { return "si"; } function climaMin() { return 3; } function mandoSeg() { return 2; } function listaOrigen() { return "red"; } function listaMin() { return 0; } function fondoLatido() { return "rojo"; } var intro = { on: false };
+    function fpsAhora() { return 60; } function memoriaMB() { return 80; } function pantallaFija() { return "si"; } function teleVisible() { return "si"; } function climaMin() { return 3; } function mandoSeg() { return 2; } function listaOrigen() { return "red"; } var recargaPrevia = "arranque"; function listaMin() { return 0; } function fondoLatido() { return "rojo"; } var intro = { on: false };
     var innerWidth = 1920, innerHeight = 1080, navigator = { platform: "", language: "es", userAgent: "tcl", onLine: true }, window = { devicePixelRatio: 1 }; window.parent = window;
     var location = { origin: "https://admira.tv" };
     function piezaEnAntena() { return null; } function zonaTele() { return ""; }
@@ -534,7 +534,7 @@ test('diagnóstico remoto: los errores JS se cuentan y el latido lleva cuántos,
 
 test('fotogramas por segundo: el latido lleva los fps medios desde el latido anterior y qué fondo emite, para ver sin ir a la tele si el LED va a saltos o congelado', () => {
   assert.match(html, /try \{ pinta\(t \|\| Date\.now\(\)\); fallosPinta = 0; fotogramas\+\+; \}/); // solo cuentan los fotogramas pintados bien
-  assert.match(html, /fps: fpsAhora\(Date\.now\(\)\), memoriaMB: memoriaMB\(\), fondo: fondoLatido\(\), intro: !!\(intro && intro\.on\), pantallaFija: pantallaFija\(\), visible: teleVisible\(\), climaMin: climaMin\(\), mandoSeg: mandoSeg\(\), lista: listaOrigen\(\), listaMin: listaMin\(\) \}/);
+  assert.match(html, /fps: fpsAhora\(Date\.now\(\)\), memoriaMB: memoriaMB\(\), fondo: fondoLatido\(\), intro: !!\(intro && intro\.on\), pantallaFija: pantallaFija\(\), visible: teleVisible\(\), climaMin: climaMin\(\), mandoSeg: mandoSeg\(\), lista: listaOrigen\(\), listaMin: listaMin\(\), recarga: recargaPrevia \}/);
   const ini = html.indexOf('  var fotogramas = 0');
   const fin = html.indexOf('\n', html.indexOf('function fpsAhora', ini));
   const r = new Function('Date', html.slice(ini, fin) + '; var out = []; fotogramas += 600; out.push(fpsAhora(1e12 + 10000)); fotogramas += 150; out.push(fpsAhora(1e12 + 20000)); out.push(fpsAhora(1e12 + 30000)); out.push(fpsAhora(1e12 + 30000)); return out;')({ now: () => 1e12 });
@@ -555,7 +555,7 @@ test('memoria del WebView: el latido lleva los MB de JS en uso (performance.memo
 });
 
 test('pantalla fija: el latido dice si el Wake Lock está concedido ("si"), perdido ("no") o el WebView no lo tiene ("sin-api"), para saber sin ir a la tele si la TCL atenuará o saltará el salvapantallas', () => {
-  assert.match(html, /memoriaMB: memoriaMB\(\), fondo: .*, pantallaFija: pantallaFija\(\), visible: teleVisible\(\), climaMin: climaMin\(\), mandoSeg: mandoSeg\(\), lista: listaOrigen\(\), listaMin: listaMin\(\) \}/);
+  assert.match(html, /memoriaMB: memoriaMB\(\), fondo: .*, pantallaFija: pantallaFija\(\), visible: teleVisible\(\), climaMin: climaMin\(\), mandoSeg: mandoSeg\(\), lista: listaOrigen\(\), listaMin: listaMin\(\), recarga: recargaPrevia \}/);
   const ini = html.indexOf('  function pantallaFija()');
   const fin = html.indexOf('\n', ini);
   assert.ok(ini > 0 && fin > ini);
@@ -568,7 +568,7 @@ test('pantalla fija: el latido dice si el Wake Lock está concedido ("si"), perd
 });
 
 test('tele visible: el latido dice si el LED está en primer plano ("si") o la TCL lo mandó al fondo ("no": otra entrada, app, menú o reposo), sin ir a la tele', () => {
-  assert.match(html, /pantallaFija: pantallaFija\(\), visible: teleVisible\(\), climaMin: climaMin\(\), mandoSeg: mandoSeg\(\), lista: listaOrigen\(\), listaMin: listaMin\(\) \}/);
+  assert.match(html, /pantallaFija: pantallaFija\(\), visible: teleVisible\(\), climaMin: climaMin\(\), mandoSeg: mandoSeg\(\), lista: listaOrigen\(\), listaMin: listaMin\(\), recarga: recargaPrevia \}/);
   const ini = html.indexOf('  function teleVisible()');
   const fin = html.indexOf('\n', ini);
   assert.ok(ini > 0 && fin > ini);
@@ -581,7 +581,7 @@ test('tele visible: el latido dice si el LED está en primer plano ("si") o la T
 });
 
 test('edad del clima: el latido lleva climaMin (minutos desde la última lectura buena de Open-Meteo, null sin lectura) para saber sin ir a la tele si el HUD pinta clima en directo, de caché o ninguno', () => {
-  assert.match(html, /visible: teleVisible\(\), climaMin: climaMin\(\), mandoSeg: mandoSeg\(\), lista: listaOrigen\(\), listaMin: listaMin\(\) \}/);
+  assert.match(html, /visible: teleVisible\(\), climaMin: climaMin\(\), mandoSeg: mandoSeg\(\), lista: listaOrigen\(\), listaMin: listaMin\(\), recarga: recargaPrevia \}/);
   const ini = html.indexOf('  function climaMin()');
   const fin = html.indexOf('\n', ini);
   assert.ok(ini > 0 && fin > ini);
@@ -634,7 +634,7 @@ test('pantalla en negro: el latido dice fondo "negro" si la apagaron desde admir
 
 test('mando sordo: el latido lleva mandoSeg, los segundos desde el último sondeo bueno de la cola de órdenes, para ver sin ir a la tele si la TCL no obedece al mando', () => {
   assert.match(html, /return; \/\/ respuesta tardía de un sondeo ya abandonado: no se ejecuta\n        cmdOkTs = Date\.now\(\);/); // solo cuenta una respuesta vigente
-  assert.match(html, /climaMin: climaMin\(\), mandoSeg: mandoSeg\(\), lista: listaOrigen\(\), listaMin: listaMin\(\) \}/);
+  assert.match(html, /climaMin: climaMin\(\), mandoSeg: mandoSeg\(\), lista: listaOrigen\(\), listaMin: listaMin\(\), recarga: recargaPrevia \}/);
   const ini = html.indexOf('  function mandoSeg()'), fin = html.indexOf('\n', ini);
   assert.ok(ini > 0);
   const f = (ts, now) => new Function('cmdOkTs', 'Date', html.slice(ini, fin) + '; return mandoSeg();')(ts, { now: () => now });
@@ -647,7 +647,7 @@ test('mando sordo: el latido lleva mandoSeg, los segundos desde el último sonde
 
 test('lista caída: el latido dice si la playlist viene de la red, de la recordada o no hay, y los minutos desde la última lectura buena', () => {
   assert.match(html, /listaRecordada\(\); return; \}\n      listaOkTs = Date\.now\(\);/); // solo cuenta una respuesta vigente y válida
-  assert.match(html, /mandoSeg: mandoSeg\(\), lista: listaOrigen\(\), listaMin: listaMin\(\) \}/);
+  assert.match(html, /mandoSeg: mandoSeg\(\), lista: listaOrigen\(\), listaMin: listaMin\(\), recarga: recargaPrevia \}/);
   const a = html.indexOf('  function listaOrigen()'), b = html.indexOf('\n', a);
   const c = html.indexOf('  function listaMin()'), d = html.indexOf('\n', c);
   assert.ok(a > 0 && c > 0);
@@ -662,4 +662,24 @@ test('lista caída: el latido dice si la playlist viene de la red, de la recorda
   assert.equal(m(1e12, 1e12 + 30 * 60000 + 5), 30);
   assert.equal(m(1e12 + 5000, 1e12), null);
   assert.equal(new Function('listaOkTs', 'Date', html.slice(c, d) + '; return listaMin();')(1, { now() { throw new Error('x'); } }), null);
+});
+
+test('motivo del arranque: el latido dice si la página se recargó sola (deploy, nocturno, pintura) o arrancó la TCL', () => {
+  assert.match(html, /lista: listaOrigen\(\), listaMin: listaMin\(\), recarga: recargaPrevia \}/);
+  assert.match(html, /localStorage\.setItem\(RECARGA_KEY, "deploy\|" \+ Date\.now\(\)\); \} catch \(e\) \{\} try \{ location\.reload\(\); \}/);
+  assert.match(html, /localStorage\.setItem\(RECARGA_KEY, "nocturno\|" \+ Date\.now\(\)\); \} catch \(e\) \{\} try \{ location\.reload\(\); \}/);
+  assert.match(html, /localStorage\.setItem\(RECARGA_KEY, "pintura\|" \+ Date\.now\(\)\); \} catch \(e2\) \{\} try \{ location\.reload\(\); \}/);
+  const a = html.indexOf('  function leeRecarga('), b = html.indexOf('\n', a);
+  assert.ok(a > 0);
+  const f = new Function('RECARGA_KEY', html.slice(a, b) + '; return leeRecarga;')('creel-recarga');
+  const ls = (v) => { const m = { 'creel-recarga': v }; return { m, getItem: k => m[k] ?? null, removeItem: k => { delete m[k]; } }; };
+  const T = 1e12;
+  let l = ls('deploy|' + (T - 5000)); assert.equal(f(l, T), 'deploy'); assert.equal(l.m['creel-recarga'], undefined); // se lee y se borra
+  assert.equal(f(ls('nocturno|' + (T - 1000)), T), 'nocturno');
+  assert.equal(f(ls('pintura|' + T), T), 'pintura');
+  assert.equal(f(ls(undefined), T), 'arranque');                 // sin marca: arranque en frío
+  assert.equal(f(ls('deploy|' + (T - 300000)), T), 'arranque');  // marca vieja (5 min): no cuenta
+  assert.equal(f(ls('deploy|' + (T + 5000)), T), 'arranque');    // marca del futuro: no cuenta
+  assert.equal(f(ls('<b>|' + T), T), 'arranque');                // motivo desconocido: no se repite
+  assert.equal(f({ getItem() { throw new Error('x'); } }, T), null); // sin almacenamiento: nunca rompe
 });
