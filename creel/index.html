@@ -494,7 +494,11 @@
     if (m && PERSONAJES[m[1]]) { personaje(m[1]); return true; }
     return false;
   }
-  var cmdState = { since: 0, init: false }, cmdBusy = false, cmdIdle = 0, cmdVuelta = 0; // cmdVuelta: invalida un sondeo colgado
+  var cmdState = { since: 0, init: false }, cmdBusy = false, cmdIdle = 0, cmdVuelta = 0, cmdOkTs = 0; // cmdVuelta: invalida un sondeo colgado; cmdOkTs: último sondeo bueno
+  // Para el latido (15-nov-2026): el latido podía seguir llegando a /signage/now con el mando sordo (la cola de órdenes falla o se cuelga
+  // en los dos hosts y la TCL no obedece «📺 Pantallas», personajes ni sonido). mandoSeg = segundos desde el último sondeo bueno de la cola
+  // (≈0-5 sano, >60 sordo; null si aún no leyó ninguno). Nunca rompe el latido.
+  function mandoSeg() { try { return cmdOkTs && Date.now() >= cmdOkTs ? Math.round((Date.now() - cmdOkTs) / 1000) : null; } catch (e) { return null; } }
   function ejecutaOrden(c) {
     var cmd = String(c && c.cmd || "").replace(/^\//, "").split(/\s+/)[0].toLowerCase();
     if (cmd === "pantallas-on" || cmd === "pantallas" || cmd === "contenido-on") { pantallas(true); return "executed"; }
@@ -537,6 +541,7 @@
       .then(function (r) { if (!r.ok) throw 0; return r.json(); })
       .then(function (d) {
         if (!d || vuelta !== cmdVuelta) return; // respuesta tardía de un sondeo ya abandonado: no se ejecuta
+        cmdOkTs = Date.now();
         if (!cmdState.init) {
           cmdState.since = d.seq || 0; cmdState.init = true; // el atraso anterior al arranque no se ejecuta…
           // …salvo quién está en la puerta: la última orden de personaje (≤ 30 min) se pinta sin acusarla, para que la
@@ -703,7 +708,7 @@
         audio: { muted: !!mudo, playing: !!(media && media.tagName === "VIDEO" && !media.paused && !mudo) }, network: { online: navigator.onLine !== false } },
       health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), embebido: window.parent !== window, pantallas: pantallasOn ? "on" : "off",
         errores: diag.errores, ultimoError: diag.ultimo, encendidaMin: Math.round((Date.now() - arranque) / 60000),
-        fps: fpsAhora(Date.now()), memoriaMB: memoriaMB(), fondo: fondoLatido(), intro: !!(intro && intro.on), pantallaFija: pantallaFija(), visible: teleVisible(), climaMin: climaMin() },
+        fps: fpsAhora(Date.now()), memoriaMB: memoriaMB(), fondo: fondoLatido(), intro: !!(intro && intro.on), pantallaFija: pantallaFija(), visible: teleVisible(), climaMin: climaMin(), mandoSeg: mandoSeg() },
       loc: "portaventura", locName: "Hotel Creel \u00B7 LED (PortAventura)", machine: "" };
     // Latido colgado (ni respuesta ni error, p. ej. TCP colgado en la wifi de Planeta): sin guarda, cada 10 s se abría otro POST
     // a api.admira.store, el mismo host que la cola de órdenes, y acababan agotando sus conexiones (15-nov-2026). Uno solo a la vez,
