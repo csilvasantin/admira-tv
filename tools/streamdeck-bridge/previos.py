@@ -133,9 +133,17 @@ def pagina_menu():
 
 def app(arrancar):
     exe = os.path.join(os.environ.get('ProgramFiles', r'C:\Program Files'), 'Elgato', 'StreamDeck', 'StreamDeck.exe')
-    if arrancar: subprocess.Popen([exe], close_fds=True)
+    if arrancar and os.environ.get('SESSIONNAME'): subprocess.Popen([exe], close_fds=True)
+    elif arrancar:
+        # Lanzado por ssh (sesion 0): la app tiene que abrirse en el escritorio del usuario, con una tarea interactiva.
+        subprocess.run(['schtasks', '/Create', '/TN', 'AdmiraStreamDeckRelanzar', '/TR', '"%s"' % exe, '/SC', 'ONCE', '/ST', '00:00', '/IT', '/F'], capture_output=True)
+        r = subprocess.run(['schtasks', '/Run', '/TN', 'AdmiraStreamDeckRelanzar'], capture_output=True, text=True)
+        if r.returncode: print('no pude relanzar la app: ' + (r.stderr or r.stdout).strip())
     else:
         subprocess.run(['taskkill', '/IM', 'StreamDeck.exe', '/F'], capture_output=True); time.sleep(2)
+
+PORTADA = 'Images/' + MARCA + '.png'   # la carpeta de este guion se reconoce por su icono
+def es_mia(v): return any((s.get('Image') or '') == PORTADA for s in (v.get('States') or []))
 
 def accion(nombre, tipo, ajustes_accion, titulo, imagen):
     estado = {'Title': titulo, 'ShowTitle': bool(titulo)}
@@ -150,18 +158,18 @@ def instalar(a):
     man_menu = os.path.join(menu, 'manifest.json'); pm = jload(man_menu)
     acts = (pm.get('Controllers') or [{}])[0].setdefault('Actions', {})
     # Carpeta anterior de este guion: se reutiliza su tecla y su pagina hija.
-    pos = next((k for k, v in acts.items() if v.get('Name') == MARCA), None)
+    pos = next((k for k, v in acts.items() if es_mia(v)), None)
     hija = ((acts.get(pos) or {}).get('Settings') or {}).get('ProfileUUID') if pos else None
     if not pos:
         libres = [p for p in (['%d,%d' % (c, f) for f in range(ROWS) for c in range(COLS)]) if p not in acts]
         pos = a['tecla_menu'] if a['tecla_menu'] and a['tecla_menu'] not in acts else (libres[0] if libres else None)
         if not pos: raise SystemExit('no queda ninguna tecla libre en el menu')
-    hija = hija or str(uuid.uuid4())
+    hija = (hija or str(uuid.uuid4())).lower()
     app(False)
     os.makedirs(COPIAS, exist_ok=True)
     copia = shutil.make_archive(os.path.join(COPIAS, 'perfil-' + time.strftime('%Y%m%d-%H%M%S')), 'zip', perfil)
     img, lista, _ = atlas(a)
-    pd = os.path.join(os.path.dirname(menu), hija); idir = os.path.join(pd, 'Images')
+    pd = os.path.join(os.path.dirname(menu), hija.upper()); idir = os.path.join(pd, 'Images')
     shutil.rmtree(pd, ignore_errors=True); os.makedirs(idir)
     tecla_volver().resize((PX, PX)).save(os.path.join(idir, 'volver.png'))
     hijas = {'0,0': accion('Parent Folder', 'profile.backtoparent', {}, '', 'Images/volver.png')}
@@ -170,13 +178,13 @@ def instalar(a):
         c, f = [int(x) for x in p.split(',')]
         nombre = 'p%02d.png' % n; img.crop((c * PX, f * PX, (c + 1) * PX, (f + 1) * PX)).save(os.path.join(idir, nombre))
         orden = '"%s" "%s" --saltar %s' % (pyw, yo, pieza['num']) if pieza['num'] else ''
-        hijas[p] = accion('Open', 'system.open', {'openInBrowser': True, 'path': orden}, '', 'Images/' + nombre)
+        hijas[p] = accion('Open', 'system.open', {'path': orden}, '', 'Images/' + nombre)
     jsave(os.path.join(pd, 'manifest.json'), {'Controllers': [{'Actions': hijas, 'Type': 'Keypad'}], 'Icon': '', 'Name': a['titulo']})
     os.makedirs(os.path.join(menu, 'Images'), exist_ok=True)
     portada = img.crop((PX, 0, 2 * PX, PX)) if lista else tecla_volver()
     portada.save(os.path.join(menu, 'Images', MARCA + '.png'))
-    carpeta = accion(MARCA, 'profile.openchild', {'ProfileUUID': hija}, a['titulo'], 'Images/' + MARCA + '.png')
-    carpeta['States'][0].update({'FontSize': 9, 'TitleAlignment': 'bottom'})
+    carpeta = accion('Create Folder', 'profile.openchild', {'ProfileUUID': hija}, a['titulo'], PORTADA)
+    carpeta['States'][0].update({'FontFamily': '', 'FontSize': 8, 'FontStyle': '', 'FontUnderline': False, 'OutlineThickness': 2, 'TitleAlignment': 'bottom', 'TitleColor': '#ffffff'})
     acts[pos] = carpeta; jsave(man_menu, pm)
     app(True)
     print('instalado: %d piezas en la carpeta «%s» (tecla %s del menu). Copia del perfil: %s' % (len(lista), a['titulo'], pos, copia))
@@ -185,11 +193,11 @@ def quitar():
     if os.name != 'nt': raise SystemExit('--quitar solo funciona en el Windows del Stream Deck')
     _, menu = pagina_menu(); man_menu = os.path.join(menu, 'manifest.json'); pm = jload(man_menu)
     acts = (pm.get('Controllers') or [{}])[0].get('Actions') or {}
-    pos = next((k for k, v in acts.items() if v.get('Name') == MARCA), None)
+    pos = next((k for k, v in acts.items() if es_mia(v)), None)
     if not pos: print('no habia nada instalado'); return
     app(False)
     hija = (acts[pos].get('Settings') or {}).get('ProfileUUID')
-    if hija: shutil.rmtree(os.path.join(os.path.dirname(menu), hija), ignore_errors=True)
+    if hija: shutil.rmtree(os.path.join(os.path.dirname(menu), hija.upper()), ignore_errors=True)
     del acts[pos]; jsave(man_menu, pm); app(True)
     print('quitada la carpeta de la tecla ' + pos)
 
