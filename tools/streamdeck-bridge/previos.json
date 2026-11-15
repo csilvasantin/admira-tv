@@ -1,12 +1,33 @@
 {
   "titulo": "PortAventuraNeXT",
   "playlist": "https://admira.tv/api/playlist?screen=portaventuranext",
-  "pantallas": [
-    "metahuman-mupi",
-    "admiranext02-a",
-    "admiranext03-a",
-    "admiranext04-a",
-    "admiranext05-a"
+  "tecla_menu": "5,1",
+  "destinos": [
+    [
+      "01",
+      "metahuman-mupi"
+    ],
+    [
+      "02",
+      "admiranext02-a"
+    ],
+    [
+      "03",
+      "admiranext03-a"
+    ],
+    [
+      "04",
+      "admiranext04-a"
+    ],
+    [
+      "05",
+      "admiranext05-a"
+    ]
   ],
-  "tecla_menu": "5,1"
+  "arranque": {
+    "metahuman-mupi": {
+      "proceso": "Admira Signage.exe",
+      "vigilante": "admiranext01-vigilante"
+    }
+  }
 }

@@ -6,6 +6,10 @@
 #   python previos.py --instalar              escribe la pagina en el perfil Elgato y relanza la app (Windows)
 #   python previos.py --quitar                deshace la instalacion (restaura la copia)
 #   pythonw previos.py --saltar 2037          lo que ejecuta cada tecla: salta a la pieza 2037 del Stock
+#   pythonw previos.py --destino 03 on|off    lo que ejecuta cada selector de la fila 4: marca o desmarca un ordenador
+#
+# Fila 4: un selector por ordenador (01-05). Se pueden marcar uno, varios o todos; el previo que se pulse
+# sale solo en los marcados. La seleccion vive en seleccion.json (junto a este fichero); recien instalado, todos.
 #
 # Ajustes en previos.json (junto a este fichero); sin el, valen los de DEFECTO.
 # La pagina se instala como carpeta dentro del menu actual: no se borra ninguna tecla existente.
@@ -16,7 +20,8 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 DEFECTO = {
     'titulo': 'PortAventuraNeXT',
     'playlist': 'https://admira.tv/api/playlist?screen=portaventuranext',
-    'pantallas': [],          # players que saltan al pulsar (screen de admira.tv); vacio = la tecla no manda nada
+    'destinos': [],           # [["01", "screen de admira.tv"], ...]: los selectores de la fila 4 y el player de cada uno
+    'arranque': {},           # {"screen": {"proceso": "x.exe", "vigilante": "id"}}: player local que se arranca si esta parado
     'tecla_menu': '',         # posicion "col,fila" de la carpeta en el menu; vacio = primera libre
 }
 STOCK = 'https://api.admira.store/stock/list?limit=300'
@@ -50,7 +55,7 @@ def piezas(a):
         if not sid: continue
         salida.append({'id': sid, 'num': i.get('num') or nums.get(sid), 'titulo': str(i.get('title') or ''),
                        'tipo': i.get('assetType') or '', 'segundos': i.get('seconds')})
-    return salida[:COLS * ROWS - 1], str(borrador.get('name') or '')   # una tecla queda para «volver»
+    return salida[:COLS * (ROWS - 1) - 1], str(borrador.get('name') or '')   # una tecla para «volver»; la fila 4 son los selectores
 
 def fuente(px):
     for f in [os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts', 'arialbd.ttf'),
@@ -84,6 +89,26 @@ def tecla_volver():
     d.text((PX // 2, PX - 24), 'Menú', fill='#9aa4b8', font=fuente(16), anchor='mm')
     return im
 
+def tecla_destino(etiqueta, marcado):
+    im = Image.new('RGB', (PX, PX), (255, 196, 40) if marcado else (22, 26, 38)); d = ImageDraw.Draw(im)
+    if not marcado: d.rounded_rectangle([6, 6, PX - 7, PX - 7], radius=16, outline=(70, 78, 100), width=3)
+    d.text((PX // 2, PX // 2 - 10), etiqueta, fill='#10131c' if marcado else '#6f7a94', font=fuente(64), anchor='mm')
+    d.text((PX // 2, PX - 24), 'EMITE' if marcado else 'no emite', fill='#10131c' if marcado else '#6f7a94', font=fuente(17), anchor='mm')
+    return im
+
+SELECCION = os.path.join(AQUI, 'seleccion.json')
+def seleccion(a):
+    """Ordenadores marcados: {"01": True, ...}. Sin fichero, todos."""
+    try: guardada = json.load(open(SELECCION, encoding='utf-8'))
+    except Exception: guardada = {}
+    return {e: bool(guardada.get(e, True)) for e, _ in a['destinos']}
+
+def marcar(a, etiqueta, valor):
+    sel = seleccion(a)
+    if etiqueta in sel: sel[etiqueta] = valor
+    open(SELECCION, 'w', encoding='utf-8').write(json.dumps(sel))
+    return sel
+
 def posiciones(n):
     """La 0,0 es «volver»; las piezas se reparten de izquierda a derecha y de arriba abajo."""
     todas = ['%d,%d' % (c, f) for f in range(ROWS) for c in range(COLS)]
@@ -96,18 +121,40 @@ def atlas(a):
     for n, (pos, p) in enumerate(zip(posiciones(len(lista)), lista), 1):
         c, f = [int(x) for x in pos.split(',')]
         img.paste(tecla(p, n), (c * PX, f * PX))
+    sel = seleccion(a)
+    for n, (e, _) in enumerate(a['destinos'][:COLS]): img.paste(tecla_destino(e, sel[e]), (n * PX, (ROWS - 1) * PX))
     return img, lista, nombre
 
+def orden(pantalla, cmd):
+    cuerpo = json.dumps({'id': pantalla, 'screen': pantalla, 'cmd': cmd}).encode(); fallo = None
+    for host in CMD:
+        try:
+            r = urllib.request.Request(host, data=cuerpo, method='POST', headers=dict(UA, **{'Content-Type': 'application/json'}))
+            with urllib.request.urlopen(r, timeout=5) as x: return json.loads(x.read().decode())
+        except Exception as e: fallo = {'ok': False, 'screen': pantalla, 'error': str(e)[:120]}
+    return fallo
+
+def corriendo(proceso):
+    r = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq ' + proceso, '/NH'], capture_output=True, text=True, creationflags=0x08000000)
+    return proceso.lower() in (r.stdout or '').lower()
+
+def despertar(arr):
+    """Player de este mismo PC parado: se lo pide a su vigilante (orden start) y espera a que este en pie."""
+    if os.name != 'nt' or not arr.get('proceso') or corriendo(arr['proceso']): return False
+    if arr.get('vigilante'): orden(arr['vigilante'], 'start')
+    for _ in range(20):
+        time.sleep(1)
+        if corriendo(arr['proceso']): time.sleep(8); return True   # margen para que cargue el canal y empiece a sondear la cola
+    return False
+
 def saltar(num, a):
-    """Lo que hace una tecla al pulsarla: play<N> a cada player configurado. Devuelve lo que contesto la cola."""
-    hecho = []
-    for pantalla in a['pantallas']:
-        cuerpo = json.dumps({'id': pantalla, 'screen': pantalla, 'cmd': 'play%d' % int(num)}).encode()
-        for host in CMD:
-            try:
-                r = urllib.request.Request(host, data=cuerpo, method='POST', headers=dict(UA, **{'Content-Type': 'application/json'}))
-                with urllib.request.urlopen(r, timeout=5) as x: hecho.append(json.loads(x.read().decode())); break
-            except Exception as e: hecho.append({'ok': False, 'screen': pantalla, 'error': str(e)[:120]})
+    """Lo que hace un previo al pulsarlo: play<N> a los ordenadores marcados. Devuelve lo que contesto la cola."""
+    sel = seleccion(a); hecho = []
+    for etiqueta, pantalla in a['destinos']:
+        if not sel.get(etiqueta): continue
+        arr = (a.get('arranque') or {}).get(pantalla)
+        if arr: despertar(arr)
+        hecho.append(orden(pantalla, 'play%d' % int(num)))
     return hecho
 
 # ── Instalacion en el perfil Elgato (solo Windows, con la app Stream Deck instalada) ──────────────
@@ -152,6 +199,20 @@ def accion(nombre, tipo, ajustes_accion, titulo, imagen):
             'Plugin': {'Name': nombre, 'UUID': PREFIJO + tipo, 'Version': '1.0'}, 'Resources': None,
             'Settings': ajustes_accion, 'State': 0, 'States': [estado], 'UUID': PREFIJO + tipo}
 
+def abrir(argumentos):
+    yo = os.path.abspath(__file__); pyw = os.path.join(os.path.dirname(sys.executable), 'pythonw.exe')
+    return accion('Open', 'system.open', {'path': '"%s" "%s" %s' % (pyw, yo, argumentos)}, '', '')
+
+def selector(etiqueta, marcado, idir):
+    """Tecla de dos estados (Multi Action Switch): apagada -> al pulsar marca; encendida -> al pulsar desmarca."""
+    for m in (False, True): tecla_destino(etiqueta, m).save(os.path.join(idir, 'd%s-%d.png' % (etiqueta, m)))
+    t = accion('Multi Action Switch', 'multiactions.routine2', {}, '', '')
+    t['Plugin'] = {'Name': 'Multi Action', 'UUID': PREFIJO + 'multiactions', 'Version': '1.0'}
+    t['States'] = [{'Image': 'Images/d%s-0.png' % etiqueta, 'ShowTitle': False}, {'Image': 'Images/d%s-1.png' % etiqueta, 'ShowTitle': False}]
+    t['State'] = 1 if marcado else 0
+    t['Actions'] = [{'Actions': [abrir('--destino %s on' % etiqueta)]}, {'Actions': [abrir('--destino %s off' % etiqueta)]}]
+    return t
+
 def instalar(a):
     if os.name != 'nt': raise SystemExit('--instalar solo funciona en el Windows del Stream Deck')
     perfil, menu = pagina_menu()
@@ -168,17 +229,17 @@ def instalar(a):
     app(False)
     os.makedirs(COPIAS, exist_ok=True)
     copia = shutil.make_archive(os.path.join(COPIAS, 'perfil-' + time.strftime('%Y%m%d-%H%M%S')), 'zip', perfil)
+    if os.path.exists(SELECCION): os.remove(SELECCION)   # recien instalado, todos marcados (y las teclas, encendidas)
     img, lista, _ = atlas(a)
     pd = os.path.join(os.path.dirname(menu), hija.upper()); idir = os.path.join(pd, 'Images')
     shutil.rmtree(pd, ignore_errors=True); os.makedirs(idir)
     tecla_volver().resize((PX, PX)).save(os.path.join(idir, 'volver.png'))
     hijas = {'0,0': accion('Parent Folder', 'profile.backtoparent', {}, '', 'Images/volver.png')}
-    yo = os.path.abspath(__file__); pyw = os.path.join(os.path.dirname(sys.executable), 'pythonw.exe')
     for n, (p, pieza) in enumerate(zip(posiciones(len(lista)), lista), 1):
         c, f = [int(x) for x in p.split(',')]
         nombre = 'p%02d.png' % n; img.crop((c * PX, f * PX, (c + 1) * PX, (f + 1) * PX)).save(os.path.join(idir, nombre))
-        orden = '"%s" "%s" --saltar %s' % (pyw, yo, pieza['num']) if pieza['num'] else ''
-        hijas[p] = accion('Open', 'system.open', {'path': orden}, '', 'Images/' + nombre)
+        hijas[p] = abrir('--saltar %s' % pieza['num']); hijas[p]['States'][0]['Image'] = 'Images/' + nombre
+    for n, (e, _) in enumerate(a['destinos'][:COLS]): hijas['%d,%d' % (n, ROWS - 1)] = selector(e, True, idir)
     jsave(os.path.join(pd, 'manifest.json'), {'Controllers': [{'Actions': hijas, 'Type': 'Keypad'}], 'Icon': '', 'Name': a['titulo']})
     os.makedirs(os.path.join(menu, 'Images'), exist_ok=True)
     portada = img.crop((PX, 0, 2 * PX, PX)) if lista else tecla_volver()
@@ -205,6 +266,8 @@ def main():
     a = ajustes(); arg = sys.argv[1:]
     if '--saltar' in arg:
         print(json.dumps(saltar(arg[arg.index('--saltar') + 1], a), ensure_ascii=False)); return
+    if '--destino' in arg:
+        i = arg.index('--destino'); print(json.dumps(marcar(a, arg[i + 1], arg[i + 2] != 'off'))); return
     if '--png' in arg:
         salida = arg[arg.index('--png') + 1]; img, lista, nombre = atlas(a); img.save(salida)
         print('playlist «%s»: %d piezas -> %s' % (nombre, len(lista), salida))
@@ -212,6 +275,6 @@ def main():
         return
     if '--instalar' in arg: instalar(a); return
     if '--quitar' in arg: quitar(); return
-    print(__doc__ or 'uso: previos.py --png fichero.png | --instalar | --quitar | --saltar <num>')
+    print('uso: previos.py --png fichero.png | --instalar | --quitar | --saltar <num> | --destino <01> on|off')
 
 if __name__ == '__main__': main()
