@@ -104,9 +104,9 @@ test('sin red, si todas las piezas de la playlist fallan seguidas, el fondo espe
 
 test('sin mando, el kiosko se autoactualiza: relee /version.json cada 10 min y recarga solo si cambia una versión conocida', async () => {
   assert.match(html, /setInterval\(leeVersion, 10 \* 60 \* 1000\);/);
-  const ini = html.indexOf('function leeVersion()');
+  const ini = html.indexOf('  var versionBusy = false');
   assert.ok(ini > 0);
-  const fin = html.indexOf('\n  }\n', ini) + 4;
+  const fin = html.indexOf('\n  }\n', html.indexOf('function leeVersion()', ini)) + 4;
   const src = html.slice(ini, fin);
   const corre = async (inicial, respuesta) => {
     let recargas = 0;
@@ -427,4 +427,44 @@ test('una pieza abandonada (imagen colgada que carga tarde, vídeo ya emitido) n
   assert.equal(d.onerror, null); assert.equal(d.src, '');
   if (d.onerror) d.onerror(); if (c.onload) c.onload();
   assert.ok(espera.vivo); assert.equal(env.estado().media, null);
+});
+
+test('una lectura de /version.json colgada no apila conexiones con admira.tv: una sola a la vez, guarda de 15 s que aborta y una respuesta tardía no recarga ni libera a la siguiente', async () => {
+  assert.match(html, /var versionBusy = false, versionVuelta = 0; \/\/ una sola lectura de \/version\.json a la vez/);
+  assert.match(html, /if \(versionBusy\) return;\n    versionBusy = true;/);
+  assert.match(html, /fetch\("\/version\.json", \{ cache: "no-store", signal: ctl \? ctl\.signal : undefined \}\)/);
+  const ini = html.indexOf('  var versionBusy = false');
+  const fin = html.indexOf('\n  }\n', html.indexOf('function leeVersion()', ini)) + 4;
+  assert.ok(ini > 0 && fin > ini);
+  const st = { fetches: [], timers: [], aborts: 0, recargas: 0 };
+  const env = new Function('st', `
+    var version = "v1", location = { reload: function () { st.recargas++; } };
+    function horaMadrid() { return "12:00"; } function refrescoNocturno() { return false; }
+    function setTimeout(f, ms) { st.timers.push({ f: f, ms: ms, vivo: true }); return st.timers.length; }
+    function clearTimeout(id) { if (id && st.timers[id - 1]) st.timers[id - 1].vivo = false; }
+    function AbortController() { this.signal = {}; this.abort = function () { st.aborts++; }; }
+    function fetch(url, o) { return new Promise(function (res, rej) { st.fetches.push({ url: url, res: res, rej: rej, signal: o.signal }); }); }
+    ${html.slice(ini, fin)}
+    return { lee: leeVersion, ver: function () { return version; } };`)(st);
+  const tick = () => new Promise(r => setImmediate(r));
+  const resp = (v) => ({ ok: true, json: () => Promise.resolve({ version: v }) });
+  env.lee(); env.lee(); env.lee();
+  assert.equal(st.fetches.length, 1);                              // colgada: no se apilan otras lecturas
+  assert.ok(st.fetches[0].signal);
+  assert.match(st.fetches[0].url, /version\.json/);
+  const g = st.timers.find(t => t.ms === 15000 && t.vivo); assert.ok(g);
+  g.f();                                                             // pasan 15 s sin respuesta
+  assert.equal(st.aborts, 1);
+  env.lee(); assert.equal(st.fetches.length, 2);                    // la siguiente lectura sale
+  st.fetches[0].res(resp('v2')); await tick(); await tick();        // respuesta tardía de la abandonada
+  assert.equal(st.recargas, 0);                                      // no recarga por una lectura abandonada
+  env.lee(); assert.equal(st.fetches.length, 2);                    // ni libera a la que está en curso
+  st.fetches[1].res(resp('v1')); await tick(); await tick();
+  assert.equal(st.timers.filter(t => t.ms === 15000 && t.vivo).length, 0); // guarda retirada
+  assert.equal(env.ver(), 'v1'); assert.equal(st.recargas, 0);
+  env.lee(); assert.equal(st.fetches.length, 3);                    // libre tras responder
+  st.fetches[2].rej(new Error('sin red')); await tick();
+  env.lee(); assert.equal(st.fetches.length, 4);                    // un error de red también libera
+  st.fetches[3].res(resp('v3')); await tick(); await tick();
+  assert.equal(st.recargas, 1);                                      // un deploy de verdad sigue recargando
 });

@@ -320,13 +320,23 @@
   // Autoactualización sin mando (14-nov-2026): la TCL no se toca con el mando, así que el kiosko vuelve a leer
   // /version.json cada 10 min; si arrancó sin red, la versión se rellena al volver la red, y si cambia una versión
   // ya conocida (nuevo deploy de admira.tv) recarga la página para emitir el kiosko nuevo. Nunca recarga sin red.
+  // Lectura de /version.json colgada (ni respuesta ni error, p. ej. TCP colgado en la wifi de Planeta): sin guarda, cada 10 min y en cada
+  // vuelta de red o de reposo se abría otra conexión con admira.tv, el mismo host que /api/playlist, y acababan agotando sus conexiones
+  // (15-nov-2026). Una sola a la vez y a los 15 s se aborta; una respuesta tardía de una lectura abandonada no recarga ni libera a la siguiente.
+  var versionBusy = false, versionVuelta = 0; // una sola lectura de /version.json a la vez: colgadas no se apilan
   function leeVersion() {
-    try { fetch("/version.json", { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) {
+    if (versionBusy) return;
+    versionBusy = true;
+    var vuelta = ++versionVuelta, ctl = typeof AbortController === "function" ? new AbortController() : null;
+    var guarda = setTimeout(function () { if (vuelta !== versionVuelta) return; versionVuelta++; versionBusy = false; if (ctl) { try { ctl.abort(); } catch (e) {} } }, 15000);
+    function vigente() { clearTimeout(guarda); if (vuelta !== versionVuelta) return false; versionBusy = false; return true; }
+    try { fetch("/version.json", { cache: "no-store", signal: ctl ? ctl.signal : undefined }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) {
+      if (!vigente()) return; // respuesta tardía de una lectura ya abandonada: se ignora
       var v = String(d && d.version || ""); if (!v) return;
       if (version && v !== version) { try { location.reload(); } catch (e) {} return; }
       version = v;
       if (typeof refrescoNocturno === "function" && refrescoNocturno(Date.now(), horaMadrid())) { try { location.reload(); } catch (e) {} }
-    }).catch(function () {}); } catch (e) {}
+    }).catch(function () { vigente(); }); } catch (e) { vigente(); }
   }
   // Refresco nocturno (14-nov-2026): la TCL emite 24/7 sin mando y el WebView acumula memoria; si lleva más de 20 h
   // encendida, entre las 05:00 y las 05:59 de Madrid recarga una vez, y solo tras leer /version.json (hay red).
