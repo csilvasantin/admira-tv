@@ -250,6 +250,7 @@
   function pinta(t) {
     var s = t / 1000;
     g.setTransform(escala, 0, 0, escala, 0, 0); // 8:3: escala 1 (igual que siempre); lleno: a la resolución real del visor
+    if (intro && intro.on && pintaIntro()) return;   // intro a pantalla llena, sin tinte ni escena
     // Igual que pantalla.js de la maqueta (15-nov-2026): Once en la puerta tiñe de azul, Vecna de morado, y con alguien
     // en la puerta el rayo es más frecuente y el título se da la vuelta (el Mundo del Revés).
     var nivel = escena.nivel, quien = escena.quien;
@@ -368,7 +369,26 @@
     escena.caraZona = { slug: slug, quien: quien, foto: FOTO_SIN[slug] ? "" : "https://admira.store/portaventura/hotel/casa-creel/fotos/lego-" + slug + ".webp", texto: "EN LA PUERTA" };
     eligeCara();
   }
+  // Intro de Stranger Things (Carlos, 15-nov-2026): sin ninguna figura en la puerta, la pared emite la cabecera de la
+  // serie a pantalla llena (pieza del Stock etiquetada «intro»), en bucle, hasta que entra alguien. Orden: tag-intro.
+  var INTRO = { asset: "https://stock.admira.store/stock/1794742551326-cff0q6/asset.mp4?v=5100674", assetType: "video", seconds: 54,
+    title: "Stranger Things \u00B7 Intro", stockId: "1794742551326-cff0q6", tags: ["intro"] };
+  var intro = { on: false };
+  function modoIntro(on) {
+    on = !!on; if (intro.on === on) return; intro.on = on;
+    if (on) { listaSlug = "intro"; lista = [INTRO]; idx = -1; siguiente(); } else { listaSlug = null; filtraPorPersonaje(); }
+  }
+  function pintaIntro() {
+    if (!media || !mediaOk || media.tagName !== "VIDEO" || media.readyState < 2) return false;
+    var mw = media.videoWidth, mh = media.videoHeight; if (!mw || !mh) return false;
+    var k = Math.max(W / mw, H / mh), dw = mw * k, dh = mh * k;
+    g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+    try { g.drawImage(media, (W - dw) / 2, (H - dh) / 2, dw, dh); } catch (e) { return false; }
+    return true;
+  }
   function ordenPersonaje(cmd) {
+    if (cmd === "tag-intro" || cmd === "tag-creel-intro") { personaje(""); modoIntro(true); return true; }
+    if (/^tag-(creel-[a-z0-9-]+|vecna-truenos)$/.test(cmd)) modoIntro(false);
     if (cmd === "tag-creel-fondo") { personaje(""); return true; }
     if (cmd === "tag-vecna-truenos") {
       personaje("vecna"); clima.forzado = "tormenta";
@@ -405,7 +425,7 @@
           cmdState.since = d.seq || 0; cmdState.init = true; // el atraso anterior al arranque no se ejecuta…
           // …salvo quién está en la puerta: la última orden de personaje (≤ 30 min) se pinta sin acusarla, para que la
           // pared no se quede vacía cada vez que el player estrena la pieza.
-          var prev = (Array.isArray(d.commands) ? d.commands : []).filter(function (c) { var k = String(c && c.cmd || ""); return /^tag-(creel-[a-z0-9-]+|vecna-truenos)$/.test(k) && (!c.screen || String(c.screen).toLowerCase() === COLA); });
+          var prev = (Array.isArray(d.commands) ? d.commands : []).filter(function (c) { var k = String(c && c.cmd || ""); return /^tag-(creel-[a-z0-9-]+|vecna-truenos|intro)$/.test(k) && (!c.screen || String(c.screen).toLowerCase() === COLA); });
           var ult = prev[prev.length - 1], ts = ult && Number(ult.ts || ult.queuedAt || 0); if (ts && ts < 1e12) ts *= 1000; // la cola da segundos
           if (ult && (!ts || Date.now() - ts < 30 * 60000) && ult.cmd !== "tag-vecna-truenos") ordenPersonaje(String(ult.cmd));
           return;
@@ -460,6 +480,7 @@
   // mientras ese personaje manda en la pared; sin ninguna suya, la playlist entera.
   function piezasDe(slug) { return slug ? listaBase.filter(function (i) { return (i.tags || []).indexOf("personaje:" + slug) >= 0; }) : []; }
   function filtraPorPersonaje() {
+    if (intro && intro.on) return;
     var slug = escena.cara && escena.cara.slug && piezasDe(escena.cara.slug).length ? escena.cara.slug : "";
     if (slug === listaSlug) return;
     listaSlug = slug; lista = slug ? piezasDe(slug) : listaBase; idx = -1; siguiente();
