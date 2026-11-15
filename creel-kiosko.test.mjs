@@ -324,3 +324,43 @@ test('un latido colgado de /signage/now no apila conexiones con api.admira.store
   assert.equal(st.timers.filter(t => t.ms === 9000 && t.vivo).length, 0); // guarda retirada
   env.beat(); assert.equal(st.fetches.length, 3);                 // libre tras responder
 });
+
+test('un vídeo de fondo congelado a mitad (currentTime quieto sin ended ni error) ya no deja el LED parado: a los 4 s play() y a los 8 s pasa a la siguiente', () => {
+  assert.match(html, /var vigiaT = -1, vigiaQuieto = 0;/);
+  assert.match(html, /setInterval\(vigilaVideo, 1000\);/);
+  assert.match(html, /media = null; mediaOk = false; vigiaT = -1; vigiaQuieto = 0;/);
+  const ini = html.indexOf('  function siguiente() {');
+  const fin = html.indexOf('\n  setInterval(vigilaVideo, 1000);', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const st = { timers: [], creados: [] };
+  const env = new Function('st', `
+    var mediaTimer = null, media = null, mediaOk = false, idx = -1, fallos = 0;
+    var lista = [{ assetType: "video", asset: "https://x/a.mp4", seconds: 30 }, { assetType: "video", asset: "https://x/b.mp4", seconds: 30 }];
+    function falla() { st.fallas = (st.fallas || 0) + 1; }
+    function setTimeout(f, ms) { st.timers.push({ f: f, ms: ms, vivo: true }); return st.timers.length; }
+    function clearTimeout(id) { if (id && st.timers[id - 1]) st.timers[id - 1].vivo = false; }
+    var document = { createElement: function (tag) { var el = { tagName: tag.toUpperCase(), currentTime: 0, ended: false, plays: 0,
+      play: function () { this.plays++; return Promise.resolve(); }, pause: function () {}, removeAttribute: function () {}, load: function () {} }; st.creados.push(el); return el; } };
+    ${html.slice(ini, fin)}
+    return { siguiente: siguiente, vigila: vigilaVideo, estado: function () { return { media: media, mediaOk: mediaOk, idx: idx }; } };`)(st);
+  env.siguiente();
+  const a = env.estado().media; assert.equal(a.src, 'https://x/a.mp4');
+  for (let k = 0; k < 10; k++) env.vigila();                    // aún sin canplay: no se vigila (lo cubre la guarda de duración)
+  assert.equal(env.estado().idx, 0);
+  a.oncanplay(); assert.equal(a.plays, 1);
+  for (let k = 1; k <= 5; k++) { a.currentTime = k; env.vigila(); } // avanza: todo bien
+  assert.equal(env.estado().idx, 0);
+  env.vigila(); env.vigila(); env.vigila(); env.vigila();       // 4 s quieto: se le da un play()
+  assert.equal(a.plays, 2); assert.equal(env.estado().idx, 0);
+  a.currentTime = 6; env.vigila();                               // el play() lo despierta: vuelve a contar desde cero
+  for (let k = 0; k < 7; k++) env.vigila();
+  assert.equal(env.estado().idx, 0);
+  env.vigila();                                                  // 8 s quieto: a la siguiente pieza
+  assert.equal(env.estado().idx, 1);
+  assert.equal(env.estado().media.src, 'https://x/b.mp4');
+  assert.equal(env.estado().mediaOk, false);
+  const b = env.estado().media; b.oncanplay();
+  b.ended = true; for (let k = 0; k < 12; k++) env.vigila();     // terminado: lo resuelve onended, el vigilante no salta
+  assert.equal(env.estado().idx, 1);
+  assert.equal(st.fallas || 0, 0);
+});

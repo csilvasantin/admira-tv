@@ -405,7 +405,7 @@
   function siguiente() {
     if (mediaTimer) { clearTimeout(mediaTimer); mediaTimer = null; }
     if (media && media.tagName === "VIDEO") { try { media.pause(); media.removeAttribute("src"); media.load(); } catch (e) {} }
-    media = null; mediaOk = false;
+    media = null; mediaOk = false; vigiaT = -1; vigiaQuieto = 0;
     if (!lista.length) return;
     idx = (idx + 1) % lista.length;
     var it = lista[idx], esVideo = it.assetType !== "image", el = document.createElement(esVideo ? "video" : "img");
@@ -422,6 +422,19 @@
     }
     el.src = it.asset; media = el;
   }
+  // Vídeo congelado a mitad (decodificador de la TCL o red atascados: currentTime no avanza, sin ended ni error): el LED no se queda
+  // con el fotograma parado hasta la guarda de duración; a los 4 s quieto se le da un play() y a los 8 s pasa a la siguiente pieza.
+  var vigiaT = -1, vigiaQuieto = 0;
+  function vigilaVideo() {
+    var v = media;
+    if (!v || v.tagName !== "VIDEO" || !mediaOk || v.ended) { vigiaT = -1; vigiaQuieto = 0; return; }
+    var t = v.currentTime;
+    if (t !== vigiaT) { vigiaT = t; vigiaQuieto = 0; return; }
+    vigiaQuieto++;
+    if (vigiaQuieto === 4) { try { var pr = v.play(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {} }
+    if (vigiaQuieto >= 8) siguiente();
+  }
+  setInterval(vigilaVideo, 1000);
   // La última playlist buena se recuerda (≤72 h): si la TCL arranca sin red o /api/playlist falla, emite la recordada (las piezas ya vistas salen de la caché HTTP).
   var LISTA_KEY = "creel-lista-" + PLAYLIST_SCREEN, LISTA_MAX = 72 * 3600000; var listaDeRed = false; // la lista en curso vino de la red (no de la recordada)
   function aplicaLista(dr) {
