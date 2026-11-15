@@ -300,7 +300,7 @@ test('un latido colgado de /signage/now no apila conexiones con api.admira.store
   const st = { fetches: [], timers: [], aborts: 0 };
   const env = new Function('st', `
     var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540, diag = { errores: 0, ultimo: "" }, arranque = 0, media = null, mediaOk = false;
-    function fpsAhora() { return 60; } function memoriaMB() { return 80; } function pantallaFija() { return "si"; } function teleVisible() { return "si"; }
+    function fpsAhora() { return 60; } function memoriaMB() { return 80; } function pantallaFija() { return "si"; } function teleVisible() { return "si"; } function climaMin() { return 3; }
     var innerWidth = 1920, innerHeight = 1080, navigator = { platform: "", language: "es", userAgent: "tcl", onLine: true }, window = { devicePixelRatio: 1 }; window.parent = window;
     var location = { origin: "https://admira.tv" };
     function piezaEnAntena() { return null; } function zonaTele() { return ""; }
@@ -534,7 +534,7 @@ test('diagnóstico remoto: los errores JS se cuentan y el latido lleva cuántos,
 
 test('fotogramas por segundo: el latido lleva los fps medios desde el latido anterior y qué fondo emite, para ver sin ir a la tele si el LED va a saltos o congelado', () => {
   assert.match(html, /try \{ pinta\(t \|\| Date\.now\(\)\); fallosPinta = 0; fotogramas\+\+; \}/); // solo cuentan los fotogramas pintados bien
-  assert.match(html, /fps: fpsAhora\(Date\.now\(\)\), memoriaMB: memoriaMB\(\), fondo: !pantallasOn \? "apagado" : media && mediaOk \? \(media\.tagName === "VIDEO" \? "video" : "imagen"\) : "rojo", pantallaFija: pantallaFija\(\), visible: teleVisible\(\) \}/);
+  assert.match(html, /fps: fpsAhora\(Date\.now\(\)\), memoriaMB: memoriaMB\(\), fondo: !pantallasOn \? "apagado" : media && mediaOk \? \(media\.tagName === "VIDEO" \? "video" : "imagen"\) : "rojo", pantallaFija: pantallaFija\(\), visible: teleVisible\(\), climaMin: climaMin\(\) \}/);
   const ini = html.indexOf('  var fotogramas = 0');
   const fin = html.indexOf('\n', html.indexOf('function fpsAhora', ini));
   const r = new Function('Date', html.slice(ini, fin) + '; var out = []; fotogramas += 600; out.push(fpsAhora(1e12 + 10000)); fotogramas += 150; out.push(fpsAhora(1e12 + 20000)); out.push(fpsAhora(1e12 + 30000)); out.push(fpsAhora(1e12 + 30000)); return out;')({ now: () => 1e12 });
@@ -555,7 +555,7 @@ test('memoria del WebView: el latido lleva los MB de JS en uso (performance.memo
 });
 
 test('pantalla fija: el latido dice si el Wake Lock está concedido ("si"), perdido ("no") o el WebView no lo tiene ("sin-api"), para saber sin ir a la tele si la TCL atenuará o saltará el salvapantallas', () => {
-  assert.match(html, /memoriaMB: memoriaMB\(\), fondo: .*, pantallaFija: pantallaFija\(\), visible: teleVisible\(\) \}/);
+  assert.match(html, /memoriaMB: memoriaMB\(\), fondo: .*, pantallaFija: pantallaFija\(\), visible: teleVisible\(\), climaMin: climaMin\(\) \}/);
   const ini = html.indexOf('  function pantallaFija()');
   const fin = html.indexOf('\n', ini);
   assert.ok(ini > 0 && fin > ini);
@@ -568,7 +568,7 @@ test('pantalla fija: el latido dice si el Wake Lock está concedido ("si"), perd
 });
 
 test('tele visible: el latido dice si el LED está en primer plano ("si") o la TCL lo mandó al fondo ("no": otra entrada, app, menú o reposo), sin ir a la tele', () => {
-  assert.match(html, /pantallaFija: pantallaFija\(\), visible: teleVisible\(\) \}/);
+  assert.match(html, /pantallaFija: pantallaFija\(\), visible: teleVisible\(\), climaMin: climaMin\(\) \}/);
   const ini = html.indexOf('  function teleVisible()');
   const fin = html.indexOf('\n', ini);
   assert.ok(ini > 0 && fin > ini);
@@ -578,4 +578,21 @@ test('tele visible: el latido dice si el LED está en primer plano ("si") o la T
   assert.equal(f({}), '?');                                   // WebView sin Page Visibility
   assert.equal(f(undefined), '?');
   assert.equal(f({ get visibilityState() { throw new Error('bloqueado'); } }), '?'); // no rompe el latido
+});
+
+test('edad del clima: el latido lleva climaMin (minutos desde la última lectura buena de Open-Meteo, null sin lectura) para saber sin ir a la tele si el HUD pinta clima en directo, de caché o ninguno', () => {
+  assert.match(html, /visible: teleVisible\(\), climaMin: climaMin\(\) \}/);
+  const ini = html.indexOf('  function climaMin()');
+  const fin = html.indexOf('\n', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const f = (clima, now) => new Function('clima', 'Date', html.slice(ini, fin) + '; return climaMin();')(clima, { now: () => now });
+  assert.equal(f({ t: 1e12 }, 1e12), 0);                        // lectura recién llegada
+  assert.equal(f({ t: 1e12 }, 1e12 + 47 * 60000 + 20000), 47);  // de caché: 47 min
+  assert.equal(f({ t: 0 }, 1e12), null);                        // sin lectura (o caducada a las 6 h)
+  assert.equal(f({}, 1e12), null);
+  assert.equal(f({ t: 1e12 + 60000 }, 1e12), null);             // reloj de la tele hacia atrás: no inventa edad negativa
+  assert.equal(f({ get t() { throw new Error('bloqueado'); } }, 1e12), null); // no rompe el latido
+  const caduca = html.slice(html.indexOf('  function caducaClima()'), html.indexOf('\n', html.indexOf('  function caducaClima()')));
+  const c = new Function('Date', 'var CLIMA_MAX = 6 * 3600 * 1000, clima = { t: 1e12, temp: 19, real: "sol" }; ' + caduca + '; ' + html.slice(ini, fin) + '; caducaClima(); return climaMin();')({ now: () => 1e12 + 6 * 3600 * 1000 });
+  assert.equal(c, null);                                        // pasadas 6 h el HUD vuelve a «— °C» y el latido dice null
 });
