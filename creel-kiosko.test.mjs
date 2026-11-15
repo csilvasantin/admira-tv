@@ -60,3 +60,12 @@ test('la pared obedece al detector de Casa Creel por su propia cola (?cola=): pe
   assert.match(html, /var cc = once \? \["#7ad8ff", "#1d4f8a", "#06122e"\] : vecna \? \["#cf2549", "#6b1041", "#150b27"\]/);
   assert.match(html, /if \(nivel === "puerta" && !once\) g\.scale\(1, -1\);/);
 });
+
+test('la pared llena el visor sin franjas (TCL 16:9, 15-nov-2026) y conserva el 8:3 de siempre con ?formato=83', () => {
+  assert.match(html, /lleno = fmt === "169" \|\| fmt === "lleno" \|\| \(fmt !== "83" && a < 2\.2\);/);
+  assert.match(html, /H = Math\.round\(W \/ asp\); L = maqueta\(\);/);
+  assert.match(html, /escala = bw \/ W;/);                       // a la resolución real del visor (devicePixelRatio)
+  assert.match(html, /g\.setTransform\(escala, 0, 0, escala, 0, 0\);/);
+  assert.match(html, /window\.addEventListener\("resize", ajusta\);/);
+  assert.match(html, /H = 540; escala = 1; L = null; caja\.removeAttribute\("style"\);/);
+});
