@@ -689,6 +689,12 @@
     if (!media && lista.length) siguiente();
   }
   window.addEventListener("online", vuelveRed);
+  // Red de la TCL para el latido (15-nov-2026 22:15): online solo decía si había red en ese instante; la wifi de Planeta puede
+  // cortarse unos segundos y volver entre dos latidos sin que se note. Ahora network lleva cortes (eventos offline desde que arrancó),
+  // corteMin (minutos desde el último, null si ninguno) y, si el WebView expone navigator.connection, tipo, mbps y rttMs. Nunca rompe.
+  var cortesRed = 0, ultimoCorte = 0;
+  try { window.addEventListener("offline", function () { cortesRed++; ultimoCorte = Date.now(); }); } catch (e) {}
+  function redLatido(online, con, cortes, ultimo, ahora) { var r = { online: online, cortes: cortes, corteMin: ultimo ? Math.max(0, Math.round((ahora - ultimo) / 60000)) : null }; try { if (con) { if (con.effectiveType) r.tipo = String(con.effectiveType).slice(0, 8); if (typeof con.downlink === "number" && isFinite(con.downlink)) r.mbps = con.downlink; if (typeof con.rtt === "number" && isFinite(con.rtt)) r.rttMs = con.rtt; } } catch (e) {} return r; }
   function fondoContenido() {
     if (!media || !mediaOk || (media.tagName === "VIDEO" && media.readyState < 2)) return false;
     var mw = media.videoWidth || media.naturalWidth, mh = media.videoHeight || media.naturalHeight;
@@ -718,7 +724,7 @@
         system: { os: "", platform: navigator.platform || "", language: navigator.language || "", timezone: zonaTele() },
         hardware: { dedicated: false, model: "Hotel Creel \u00B7 LED" },
         software: { player: "Hotel Creel \u00B7 LED", playerVersion: "creel-1", webRelease: version, engine: "", userAgent: navigator.userAgent },
-        audio: { muted: !!mudo, playing: !!(media && media.tagName === "VIDEO" && !media.paused && !mudo) }, network: { online: navigator.onLine !== false } },
+        audio: { muted: !!mudo, playing: !!(media && media.tagName === "VIDEO" && !media.paused && !mudo) }, network: redLatido(navigator.onLine !== false, navigator.connection, cortesRed, ultimoCorte, Date.now()) },
       health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), embebido: window.parent !== window, pantallas: pantallasOn ? "on" : "off",
         errores: diag.errores, ultimoError: diag.ultimo, encendidaMin: Math.round((Date.now() - arranque) / 60000),
         fps: fpsAhora(Date.now()), memoriaMB: memoriaMB(), fondo: fondoLatido(), intro: !!(intro && intro.on), pantallaFija: pantallaFija(), visible: teleVisible(), climaMin: climaMin(), mandoSeg: mandoSeg(), lista: listaOrigen(), listaMin: listaMin(), recarga: recargaPrevia },
