@@ -23,6 +23,36 @@
   var W = 1440, H = 540;
   var canvas = document.getElementById("led");
   var g = canvas.getContext("2d");
+  var caja = document.getElementById("box");
+  // Pantalla llena (Carlos, 15-nov-2026): la TCL de la cocina hace de pantalla gigante de LEDs real y no quiere franjas
+  // negras. Si el visor no es apaisado tipo 8:3 (p. ej. 16:9), la pared se compone para TODO el visor: mismo ancho
+  // lógico (1440) y el alto que pida la proporción, con su propia maqueta vertical y a la resolución real (4K nítido).
+  // ?formato=83 fuerza la pared 8:3 de siempre; ?formato=169 fuerza 16:9. En 8:3 todo sigue exactamente igual.
+  var lleno = false, escala = 1, L = null;
+  function maqueta() {
+    var u = H / 810;
+    return { luzY: 38 * u, luzR: 16, luzF: 17, tituloY: 168 * u, tituloF: 136, hawY: 272 * u, hawF: 32,
+      hudY: 340 * u, hudF: 56, subF: 22, subDy: 72, retY: 320 * u, retH: 400 * u, nomF: 60, texF: 32, texDy: 58,
+      msgY: H - 70 * u, msgF: 50, pieF: 20 };
+  }
+  function ajusta() {
+    var fm = String(location.search || "").match(/[?&]formato=([a-z0-9]+)/i), fmt = fm ? fm[1].toLowerCase() : "";
+    var vw = window.innerWidth || W, vh = window.innerHeight || H, a = vw / vh;
+    lleno = fmt === "169" || fmt === "lleno" || (fmt !== "83" && a < 2.2);
+    if (!lleno) {
+      if (H !== 540 || escala !== 1 || caja.style.width) { H = 540; escala = 1; L = null; caja.removeAttribute("style"); canvas.width = W; canvas.height = H; }
+      return;
+    }
+    var asp = fmt === "169" ? 16 / 9 : Math.max(1, a);
+    var cw = Math.min(vw, vh * asp), ch = cw / asp;
+    H = Math.round(W / asp); L = maqueta();
+    caja.style.cssText = "left:" + ((vw - cw) / 2) + "px;top:" + ((vh - ch) / 2) + "px;width:" + cw + "px;height:" + ch + "px;max-width:none;max-height:none;transform:none";
+    var dpr = window.devicePixelRatio || 1, bw = Math.max(1, Math.round(cw * dpr)), bh = Math.max(1, Math.round(ch * dpr));
+    escala = bw / W;
+    if (canvas.width !== bw || canvas.height !== bh) { canvas.width = bw; canvas.height = bh; }
+  }
+  ajusta();
+  window.addEventListener("resize", ajusta);
   var clima = { tipo: "sol", temp: null, ok: false, forzado: null, real: null };
   var ICONO = { sol: "\u2600\uFE0F", nubes: "\u2601\uFE0F", lluvia: "\uD83C\uDF27\uFE0F", tormenta: "\u26C8\uFE0F" };
   var NOMBRE = { sol: "Sol", nubes: "Nubes", lluvia: "Lluvia", tormenta: "Tormenta" };
@@ -90,6 +120,7 @@
   function retrato(s) {
     var c = escena.cara, img = cara(c.foto);
     var h = H * 0.42, w = h * 0.82, x = W - 26 - w, y = H * 0.40, r = 18;
+    if (lleno) { h = L.retH; w = h * 0.82; x = W - 30 - w; y = L.retY; r = 24; }
     function marco() { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
     g.save(); g.shadowColor = "#ff2a1f"; g.shadowBlur = 34 + Math.sin(s * 3) * 10; g.fillStyle = "#1a0509"; marco(); g.fill(); g.restore();
     g.save(); marco(); g.clip();
@@ -100,8 +131,8 @@
     g.restore();
     g.lineWidth = 5; g.strokeStyle = "#ff3326"; marco(); g.stroke();
     g.textAlign = "right"; g.textBaseline = "middle"; g.fillStyle = "#fff"; g.shadowColor = "#ff2a1f"; g.shadowBlur = 14;
-    g.font = "900 44px ui-monospace, monospace"; g.fillText(c.quien.toUpperCase(), x - 26, y + h * 0.42);
-    g.font = "700 24px ui-monospace, monospace"; g.fillStyle = "#ffd9c7"; g.fillText(c.texto || "EN LA PUERTA", x - 26, y + h * 0.42 + 44); g.shadowBlur = 0;
+    g.font = "900 " + (lleno ? L.nomF : 44) + "px ui-monospace, monospace"; g.fillText(c.quien.toUpperCase(), x - 26, y + h * 0.42);
+    g.font = "700 " + (lleno ? L.texF : 24) + "px ui-monospace, monospace"; g.fillStyle = "#ffd9c7"; g.fillText(c.texto || "EN LA PUERTA", x - 26, y + h * 0.42 + (lleno ? L.texDy : 44)); g.shadowBlur = 0;
   }
 
   function leeClima() {
@@ -201,22 +232,24 @@
     g.shadowBlur = 10;
     g.fillStyle = "#fff";
     // Temperatura y, a su derecha, la hora; más pequeño (13-nov-2026, igual que la pantalla de la maqueta).
-    g.font = "800 40px ui-monospace, monospace";
+    var hy = lleno ? L.hudY : H * 0.44;
+    g.font = "800 " + (lleno ? L.hudF : 40) + "px ui-monospace, monospace";
     g.textAlign = "left";
     g.textBaseline = "top";
     var linea = (ICONO[tipo] || "") + " " + t;
-    g.fillText(linea, 26, H * 0.44);
+    g.fillText(linea, 26, hy);
     g.fillStyle = "#ffd9c7";
-    g.fillText(horaMadrid(), 26 + g.measureText(linea).width + 30, H * 0.44);
-    g.font = "600 16px ui-monospace, monospace";
+    g.fillText(horaMadrid(), 26 + g.measureText(linea).width + 30, hy);
+    g.font = "600 " + (lleno ? L.subF : 16) + "px ui-monospace, monospace";
     g.fillStyle = "rgba(255,255,255,.75)";
     var extra = clima.forzado ? " \u00B7 FORZADO" : (clima.ok ? " \u00B7 EN DIRECTO" : "");
-    g.fillText("PORTAVENTURA \u00B7 " + String(NOMBRE[tipo] || "").toUpperCase() + extra, 28, H * 0.44 + 50);
+    g.fillText("PORTAVENTURA \u00B7 " + String(NOMBRE[tipo] || "").toUpperCase() + extra, 28, hy + (lleno ? L.subDy : 50));
     g.restore();
   }
 
   function pinta(t) {
     var s = t / 1000;
+    g.setTransform(escala, 0, 0, escala, 0, 0); // 8:3: escala 1 (igual que siempre); lleno: a la resolución real del visor
     // Igual que pantalla.js de la maqueta (15-nov-2026): Once en la puerta tiñe de azul, Vecna de morado, y con alguien
     // en la puerta el rayo es más frecuente y el título se da la vuelta (el Mundo del Revés).
     var nivel = escena.nivel, quien = escena.quien;
@@ -244,9 +277,10 @@
       g.fill();
     }
     g.save();
-    g.translate(W / 2, H * 0.165); // título bajo la fila de luces, con aire (13-nov-2026, como la pantalla de la maqueta)
+    g.translate(W / 2, lleno ? L.tituloY : H * 0.165); // título bajo la fila de luces, con aire (13-nov-2026, como la pantalla de la maqueta)
     if (nivel === "puerta" && !once) g.scale(1, -1);
     g.font = "900 128px Georgia, 'Times New Roman', serif";
+    if (lleno) { g.font = "900 " + L.tituloF + "px Georgia, 'Times New Roman', serif"; var tw = g.measureText("STRANGER THINGS").width; if (tw > W * 0.94) g.font = "900 " + Math.floor(L.tituloF * W * 0.94 / tw) + "px Georgia, 'Times New Roman', serif"; }
     g.textAlign = "center";
     g.textBaseline = "middle";
     g.shadowColor = once ? "#3fd2ff" : "#ff2a1f";
@@ -255,15 +289,15 @@
     g.strokeStyle = once ? "#9be3ff" : "#ff3326";
     g.strokeText("STRANGER THINGS", 0, 0);
     g.restore();
-    g.font = "700 28px ui-monospace, monospace";
+    g.font = "700 " + (lleno ? L.hawF : 28) + "px ui-monospace, monospace";
     g.textAlign = "center";
     g.fillStyle = "#ffb3a8";
     g.shadowBlur = 0;
-    g.fillText("H A W K I N S   \u00B7   H O T E L   C R E E L", W / 2, H * 0.365); // un 10 % más abajo (13-nov-2026)
+    g.fillText("H A W K I N S   \u00B7   H O T E L   C R E E L", W / 2, lleno ? L.hawY : H * 0.365); // un 10 % más abajo (13-nov-2026)
     if (escena.cara) retrato(s);
     if (escena.nivel !== "lejos" && escena.quien) {
-      g.font = "800 46px ui-monospace, monospace"; g.textAlign = "center"; g.fillStyle = "#fff"; g.shadowColor = "#ff2a1f"; g.shadowBlur = 16;
-      g.fillText(MSG[escena.nivel](escena.quien), W / 2, H * 0.72); g.shadowBlur = 0;
+      g.font = "800 " + (lleno ? L.msgF : 46) + "px ui-monospace, monospace"; g.textAlign = "center"; g.fillStyle = "#fff"; g.shadowColor = "#ff2a1f"; g.shadowBlur = 16;
+      g.fillText(MSG[escena.nivel](escena.quien), W / 2, lleno ? L.msgY : H * 0.72); g.shadowBlur = 0;
     }
     // Luces A–Z en la franja superior; con un personaje elegido se encienden fijas las letras de su nombre (13-nov-2026).
     var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -271,23 +305,24 @@
     var nombre = escena.cara ? String(escena.cara.quien).toUpperCase().normalize("NFD").replace(/[^A-Z]/g, "") : "";
     for (var li = 0; li < letters.length; li++) {
       var lx = W * 0.05 + li * (W * 0.9 / 25);
-      var ly = H * 0.026;
+      var ly = H * 0.026; var lr = 12;
+      if (lleno) { ly = L.luzY; lr = L.luzR; }
       var on = nombre ? nombre.indexOf(letters.charAt(li)) >= 0 : ((s + li * 0.37) % paso) / paso < 0.7;
       g.globalAlpha = on ? 1 : (nombre ? 0.12 : 0.18);
       g.fillStyle = colores[li % 5];
       g.shadowColor = colores[li % 5];
       g.shadowBlur = on ? (nombre ? 26 : 18) : 0;
       g.beginPath();
-      g.arc(lx, ly, 12, 0, 7);
+      g.arc(lx, ly, lr, 0, 7);
       g.fill();
       g.shadowBlur = 0;
       g.fillStyle = "#1a0a0a";
-      g.font = "700 13px Georgia, serif";
+      g.font = "700 " + (lleno ? L.luzF : 13) + "px Georgia, serif";
       g.textAlign = "center";
-      g.fillText(letters.charAt(li), lx, ly + 4.5);
+      g.fillText(letters.charAt(li), lx, ly + (lleno ? 6 : 4.5));
       g.globalAlpha = 1;
     }
-    g.font = "18px ui-monospace, monospace";
+    g.font = (lleno ? L.pieF : 18) + "px ui-monospace, monospace";
     g.textAlign = "right";
     g.fillStyle = "rgba(255,255,255,.45)";
     g.fillText(conContenido && lista[idx] ? "admira.tv \u00B7 " + String(lista[idx].title || listaNombre).slice(0, 60) + (listaSlug ? " \u00B7 PIEZA DE " + listaSlug.toUpperCase() : "") : escena.quien || escena.cara ? "admira.tv \u00B7 maqueta en admira.store" : "admira.tv \u00B7 sin se\u00F1al", W - 16, H - 12);
