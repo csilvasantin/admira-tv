@@ -21,6 +21,7 @@ DEFECTO = {
     'titulo': 'PortAventuraNeXT',
     'playlist': 'https://admira.tv/api/playlist?screen=portaventuranext',
     'destinos': [],           # [["01", "screen de admira.tv"], ...]: los selectores de la fila 4 y el player de cada uno
+    'bucle': [],              # screens donde la pieza enviada se repite hasta mandar otra (el resto vuelve a su programacion)
     'de_inicio': None,        # etiquetas marcadas recien instalado (None = todas)
     'arranque': {},           # {"screen": {"proceso": "x.exe", "vigilante": "id"}}: player local que se arranca si esta parado
     'tecla_menu': '',         # posicion "col,fila" de la carpeta en el menu; vacio = primera libre
@@ -181,14 +182,15 @@ def saltar(num, a):
         arr = (a.get('arranque') or {}).get(pantalla)
         arrancado = despertar(pantalla, arr) if arr else False
         if arrancado: time.sleep(8)   # recien abierto, el player carga su programacion y pisaria la pieza
-        r = orden(pantalla, 'play%d' % int(num)) or {}
+        verbo = 'loop' if pantalla in (a.get('bucle') or []) else 'play'   # loop<N>: la pieza se repite en vez de volver a la programacion
+        r = orden(pantalla, '%s%d' % (verbo, int(num))) or {}
         if arrancado: r['arrancado'] = True
         if arrancado or (arr and not arr.get('proceso')):   # player remoto: el censo tarda un minuto en enterarse de que se cerro
             r['envios'] = 1
             for _ in range(5):       # se comprueba que emite la pieza pedida; si no, se le vuelve a mandar
                 time.sleep(7)
                 if not pedido[0] or emitiendo(pantalla) == pedido[0]: break
-                orden(pantalla, 'play%d' % int(num)); r['envios'] += 1
+                orden(pantalla, '%s%d' % (verbo, int(num))); r['envios'] += 1
         hecho.append(r)
     hilos = [threading.Thread(target=uno, args=(pantalla,)) for etiqueta, pantalla in a['destinos'] if sel.get(etiqueta)]
     for h in hilos: h.start()
