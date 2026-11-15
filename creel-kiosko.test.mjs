@@ -468,3 +468,38 @@ test('una lectura de /version.json colgada no apila conexiones con admira.tv: un
   st.fetches[3].res(resp('v3')); await tick(); await tick();
   assert.equal(st.recargas, 1);                                      // un deploy de verdad sigue recargando
 });
+
+test('un acuse colgado de /locations/cmd/ack no para el mando: guarda de 5 s que aborta y deja seguir la cadena de órdenes', async () => {
+  assert.match(html, /body: body, signal: ctl \? ctl\.signal : undefined \}\)\.then\(listo, listo\);/);
+  const ini = html.indexOf('  function acusa(');
+  const fin = html.indexOf('\n  }\n', ini) + 4;
+  assert.ok(ini > 0 && fin > ini);
+  const st = { fetches: [], timers: [], aborts: 0 };
+  const acusa = new Function('st', `
+    var SCREEN = "creel", CMD_HOSTS = ["https://a/locations/cmd"], cmdHost = 0;
+    function setTimeout(f, ms) { st.timers.push({ f: f, ms: ms, vivo: true }); return st.timers.length; }
+    function clearTimeout(id) { if (id && st.timers[id - 1]) st.timers[id - 1].vivo = false; }
+    function AbortController() { this.signal = {}; this.abort = function () { st.aborts++; }; }
+    function fetch(url, o) { return new Promise(function (res, rej) { st.fetches.push({ url: url, res: res, rej: rej, signal: o.signal }); }); }
+    ${html.slice(ini, fin)}
+    return acusa;`)(st);
+  const tick = () => new Promise(r => setImmediate(r));
+  // acuse colgado: a los 5 s aborta y la promesa se resuelve
+  let hecho = false;
+  acusa({ cid: 1, action: 'reload' }, 'ok').then(() => { hecho = true; });
+  assert.equal(st.fetches.length, 1); assert.match(st.fetches[0].url, /\/ack$/); assert.ok(st.fetches[0].signal);
+  await tick(); assert.equal(hecho, false);
+  const g = st.timers.find(t => t.ms === 5000 && t.vivo); assert.ok(g);
+  g.f(); await tick();
+  assert.equal(hecho, true); assert.equal(st.aborts, 1);
+  // acuse que responde: se resuelve y la guarda se apaga sin abortar
+  let ok = false;
+  acusa({ cid: 2, action: 'next' }, 'ok').then(() => { ok = true; });
+  st.fetches[1].res({ ok: true }); await tick();
+  assert.equal(ok, true); assert.equal(st.timers[1].vivo, false); assert.equal(st.aborts, 1);
+  // error de red: también sigue
+  let err = false;
+  acusa({ cid: 3, action: 'next' }, 'ok').then(() => { err = true; });
+  st.fetches[2].rej(new Error('sin red')); await tick();
+  assert.equal(err, true);
+});

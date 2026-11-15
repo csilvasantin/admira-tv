@@ -372,7 +372,17 @@
   }
   function acusa(c, status) {
     var body = JSON.stringify({ id: SCREEN, screen: SCREEN, cid: c.cid, action: c.action, status: status, queuedAt: Date.now() });
-    return fetch(CMD_HOSTS[cmdHost] + "/ack", { method: "POST", headers: { "Content-Type": "application/json" }, body: body }).catch(function () {});
+    // Si el acuse se cuelga (ni respuesta ni error: TCP colgado en la wifi de Planeta), la cadena de órdenes esperaba y el sondeo
+    // del mando se paraba hasta su guarda de 15 s, cambiando de host sin motivo. Guarda de 5 s: aborta el acuse y sigue.
+    var ctl = typeof AbortController === "function" ? new AbortController() : null;
+    return new Promise(function (fin) {
+      var hecho = false, guarda = null;
+      function listo() { if (hecho) return; hecho = true; clearTimeout(guarda); fin(); }
+      guarda = setTimeout(function () { try { if (ctl) ctl.abort(); } catch (e) {} listo(); }, 5000);
+      try {
+        fetch(CMD_HOSTS[cmdHost] + "/ack", { method: "POST", headers: { "Content-Type": "application/json" }, body: body, signal: ctl ? ctl.signal : undefined }).then(listo, listo);
+      } catch (e) { listo(); }
+    });
   }
   function sondeaOrdenes() {
     if (cmdBusy || typeof fetch !== "function") return;
