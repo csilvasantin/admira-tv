@@ -621,6 +621,12 @@
   setInterval(vigilaVideo, 1000);
   // La última playlist buena se recuerda (≤72 h): si la TCL arranca sin red o /api/playlist falla, emite la recordada (las piezas ya vistas salen de la caché HTTP).
   var LISTA_KEY = "creel-lista-" + PLAYLIST_SCREEN, LISTA_MAX = 72 * 3600000; var listaDeRed = false; // la lista en curso vino de la red (no de la recordada)
+  var listaOkTs = 0; // última lectura buena de /api/playlist (aunque traiga la misma rev)
+  // Para el latido (15-nov-2026): con /api/playlist caído la TCL sigue emitiendo la lista recordada y desde /signage/now no se veía que
+  // ya no recibe cambios de admira.store. lista = "red" | "recordada" | "ninguna"; listaMin = minutos desde la última lectura buena
+  // (null si aún no leyó ninguna). Nunca rompe el latido.
+  function listaOrigen() { try { return !listaBase.length ? "ninguna" : listaDeRed ? "red" : "recordada"; } catch (e) { return null; } }
+  function listaMin() { try { return listaOkTs && Date.now() >= listaOkTs ? Math.floor((Date.now() - listaOkTs) / 60000) : null; } catch (e) { return null; } }
   function aplicaLista(dr) {
     listaRev = dr.rev; listaNombre = String(dr.name || "");
     var todas = dr.items.filter(function (i) { return i && /^https:\/\//.test(i.asset || "") && (i.assetType === "video" || i.assetType === "image" || i.assetType === "animation"); });
@@ -654,6 +660,7 @@
     fetch("/api/playlist?screen=" + PLAYLIST_SCREEN, { cache: "no-store", signal: ctl ? ctl.signal : undefined }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) {
       if (!fin()) return; // respuesta tardía de una petición ya abandonada: se ignora
       var dr = d && d.draft; if (!d || !d.ok || !dr || !dr.items) { listaRecordada(); return; }
+      listaOkTs = Date.now();
       if (listaDeRed && dr.rev === listaRev) return;
       listaDeRed = true; recuerdaLista(dr, aplicaLista(dr));
     }).catch(function () { if (fin()) listaRecordada(); });
@@ -708,7 +715,7 @@
         audio: { muted: !!mudo, playing: !!(media && media.tagName === "VIDEO" && !media.paused && !mudo) }, network: { online: navigator.onLine !== false } },
       health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), embebido: window.parent !== window, pantallas: pantallasOn ? "on" : "off",
         errores: diag.errores, ultimoError: diag.ultimo, encendidaMin: Math.round((Date.now() - arranque) / 60000),
-        fps: fpsAhora(Date.now()), memoriaMB: memoriaMB(), fondo: fondoLatido(), intro: !!(intro && intro.on), pantallaFija: pantallaFija(), visible: teleVisible(), climaMin: climaMin(), mandoSeg: mandoSeg() },
+        fps: fpsAhora(Date.now()), memoriaMB: memoriaMB(), fondo: fondoLatido(), intro: !!(intro && intro.on), pantallaFija: pantallaFija(), visible: teleVisible(), climaMin: climaMin(), mandoSeg: mandoSeg(), lista: listaOrigen(), listaMin: listaMin() },
       loc: "portaventura", locName: "Hotel Creel \u00B7 LED (PortAventura)", machine: "" };
     // Latido colgado (ni respuesta ni error, p. ej. TCP colgado en la wifi de Planeta): sin guarda, cada 10 s se abría otro POST
     // a api.admira.store, el mismo host que la cola de órdenes, y acababan agotando sus conexiones (15-nov-2026). Uno solo a la vez,
