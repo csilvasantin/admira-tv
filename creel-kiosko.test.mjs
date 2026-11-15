@@ -172,7 +172,7 @@ test('un error al pintar un fotograma no congela el LED (sigue pidiendo fotogram
   const src = html.slice(ini, fin);
   const monta = (pinta, online = true) => {
     const cola = []; let recargas = 0;
-    const loop = new Function('raf', 'pinta', 'navigator', 'location', src + '; return loop;')(f => cola.push(f), pinta, { onLine: online }, { reload: () => recargas++ });
+    const loop = new Function('raf', 'pinta', 'navigator', 'location', 'function anota() {}; ' + src + '; return loop;')(f => cola.push(f), pinta, { onLine: online }, { reload: () => recargas++ });
     const corre = n => { loop(1); for (let i = 0; i < n && cola.length; i++) cola.shift()(i + 2); };
     return { corre, cola, rec: () => recargas };
   };
@@ -299,7 +299,7 @@ test('un latido colgado de /signage/now no apila conexiones con api.admira.store
   assert.ok(ini > 0 && fin > ini);
   const st = { fetches: [], timers: [], aborts: 0 };
   const env = new Function('st', `
-    var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540;
+    var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540, diag = { errores: 0, ultimo: "" }, arranque = 0;
     var innerWidth = 1920, innerHeight = 1080, navigator = { platform: "", language: "es", userAgent: "tcl", onLine: true }, window = { devicePixelRatio: 1 }; window.parent = window;
     var location = { origin: "https://admira.tv" };
     function piezaEnAntena() { return null; } function zonaTele() { return ""; }
@@ -515,4 +515,18 @@ test('corte de red largo con la TCL encendida: pasadas 6 h sin lectura buena, el
   assert.deepEqual(mk({ temp: 18, real: 'sol', t: t0 }, t0 + 5 * H), { temp: 18, real: 'sol', t: t0 });     // 5 h: conserva
   assert.deepEqual(mk({ temp: 18, real: 'sol', t: t0 }, t0 + 6 * H), { temp: null, real: null, t: 0 });   // 6 h: caduca
   assert.deepEqual(mk({ temp: null, real: null, t: 0 }, t0 + 9 * H), { temp: null, real: null, t: 0 });   // sin dato: nada
+});
+
+test('diagnóstico remoto: los errores JS se cuentan y el latido lleva cuántos, el último (≤120 caracteres) y los minutos encendida', () => {
+  assert.match(html, /window\.addEventListener\("error", function \(ev\) \{ anota\(ev && \(ev\.error \|\| ev\.message\)\); \}\);/);
+  assert.match(html, /window\.addEventListener\("unhandledrejection", function \(ev\) \{ anota\(ev && ev\.reason\); \}\);/);
+  assert.match(html, /errores: diag\.errores, ultimoError: diag\.ultimo, encendidaMin: Math\.round\(\(Date\.now\(\) - arranque\) \/ 60000\)/);
+  assert.match(html, /catch \(e\) \{ fallosPinta\+\+; if \(fallosPinta === 1\) anota\(e\);/); // un fotograma roto cuenta una vez por racha, no 60 por segundo
+  const ini = html.indexOf('  var diag = ');
+  const fin = html.indexOf('  window.addEventListener("error"', ini);
+  const diag = new Function(html.slice(ini, fin) + '; anota(new Error("x is not a function")); anota({ reason: new Error("fallo de red") }); anota("Script error."); anota(null); anota({ message: "z".repeat(300) }); return diag;')();
+  assert.equal(diag.errores, 5);
+  assert.equal(diag.ultimo, "z".repeat(120));
+  const d2 = new Function(html.slice(ini, fin) + '; anota({ reason: new Error("fallo de red") }); return diag;')();
+  assert.equal(d2.ultimo, "fallo de red");
 });

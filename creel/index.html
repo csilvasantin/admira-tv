@@ -30,6 +30,15 @@
   var esporas = [];
   var gotas = [];
   var i;
+  // Diagnóstico remoto (15-nov-2026): la TCL no se mira de cerca; los errores JS (fotograma, promesa sin catch, WebView viejo) se cuentan
+  // y el latido lleva cuántos, el último (120 caracteres) y los minutos encendida, para ver desde /signage/now si falla sin ir a la tele.
+  var diag = { errores: 0, ultimo: "" };
+  function anota(e) {
+    diag.errores++;
+    try { var m = e && typeof e === "object" ? (e.message || (e.reason && e.reason.message) || e.reason || e.type || "") : e; diag.ultimo = String(m || "error").slice(0, 120); } catch (x) {}
+  }
+  window.addEventListener("error", function (ev) { anota(ev && (ev.error || ev.message)); });
+  window.addEventListener("unhandledrejection", function (ev) { anota(ev && ev.reason); });
   for (i = 0; i < 46; i++) esporas.push({ x: Math.random(), y: Math.random(), v: 0.02 + Math.random() * 0.05, r: 2 + Math.random() * 4 });
   for (i = 0; i < 220; i++) gotas.push({ x: Math.random(), y: Math.random(), v: 0.5 + Math.random() * 0.7, l: 18 + Math.random() * 26 });
 
@@ -547,7 +556,8 @@
         hardware: { dedicated: false, model: "Hotel Creel \u00B7 LED" },
         software: { player: "Hotel Creel \u00B7 LED", playerVersion: "creel-1", webRelease: version, engine: "", userAgent: navigator.userAgent },
         audio: { muted: true, playing: false }, network: { online: navigator.onLine !== false } },
-      health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), embebido: window.parent !== window, pantallas: pantallasOn ? "on" : "off" },
+      health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), embebido: window.parent !== window, pantallas: pantallasOn ? "on" : "off",
+        errores: diag.errores, ultimoError: diag.ultimo, encendidaMin: Math.round((Date.now() - arranque) / 60000) },
       loc: "portaventura", locName: "Hotel Creel \u00B7 LED (PortAventura)", machine: "" };
     // Latido colgado (ni respuesta ni error, p. ej. TCP colgado en la wifi de Planeta): sin guarda, cada 10 s se abría otro POST
     // a api.admira.store, el mismo host que la cola de órdenes, y acababan agotando sus conexiones (15-nov-2026). Uno solo a la vez,
@@ -592,7 +602,7 @@
   function loop(t) {
     raf(loop);
     try { pinta(t || Date.now()); fallosPinta = 0; }
-    catch (e) { fallosPinta++; if (fallosPinta === 300 && navigator.onLine !== false) { try { location.reload(); } catch (e2) {} } }
+    catch (e) { fallosPinta++; if (fallosPinta === 1) anota(e); if (fallosPinta === 300 && navigator.onLine !== false) { try { location.reload(); } catch (e2) {} } }
   }
   raf(loop);
 })();
