@@ -289,3 +289,38 @@ test('una petición de clima colgada no deja el HUD sin reintento ni apila conex
   assert.equal(env.clima.temp, 18); assert.equal(env.clima.ok, true);
   assert.equal(st.timers.filter(t => t.ms === 15000 && t.vivo).length, 0); // guarda retirada al llegar la respuesta
 });
+
+test('un latido colgado de /signage/now no apila conexiones con api.admira.store: uno solo a la vez, guarda de 9 s que aborta y un final tardío no libera al siguiente', async () => {
+  assert.match(html, /var beatBusy = false, beatVuelta = 0; \/\/ un solo latido a la vez/);
+  assert.match(html, /if \(beatBusy\) return;\n    beatBusy = true;/);
+  assert.match(html, /signal: ctl \? ctl\.signal : undefined \}\)\.then\(libre, libre\);/);
+  const ini = html.indexOf('  var beatBusy = false');
+  const fin = html.indexOf('\n  setTimeout(beat, 2000);', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const st = { fetches: [], timers: [], aborts: 0 };
+  const env = new Function('st', `
+    var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540;
+    var innerWidth = 1920, innerHeight = 1080, navigator = { platform: "", language: "es", userAgent: "tcl", onLine: true }, window = { devicePixelRatio: 1 }; window.parent = window;
+    var location = { origin: "https://admira.tv" };
+    function piezaEnAntena() { return null; } function zonaTele() { return ""; }
+    function setTimeout(f, ms) { st.timers.push({ f: f, ms: ms, vivo: true }); return st.timers.length; }
+    function clearTimeout(id) { if (id && st.timers[id - 1]) st.timers[id - 1].vivo = false; }
+    function AbortController() { this.signal = {}; this.abort = function () { st.aborts++; }; }
+    function fetch(url, o) { return new Promise(function (res, rej) { st.fetches.push({ url: url, res: res, rej: rej, signal: o.signal }); }); }
+    ${html.slice(ini, fin)}
+    return { beat: beat };`)(st);
+  const tick = () => new Promise(r => setImmediate(r));
+  env.beat(); env.beat(); env.beat();
+  assert.equal(st.fetches.length, 1);                            // colgado: no se apilan otros POST
+  assert.ok(st.fetches[0].signal);
+  assert.match(st.fetches[0].url, /signage\/now/);
+  const g = st.timers.find(t => t.ms === 9000 && t.vivo); assert.ok(g);
+  g.f();                                                           // pasan 9 s sin respuesta
+  assert.equal(st.aborts, 1);
+  env.beat(); assert.equal(st.fetches.length, 2);                 // el siguiente latido sale a su hora
+  st.fetches[0].rej(new Error('abort')); await tick();            // final tardío del abandonado
+  env.beat(); assert.equal(st.fetches.length, 2);                 // no libera al que está en curso
+  st.fetches[1].res({ ok: true }); await tick();
+  assert.equal(st.timers.filter(t => t.ms === 9000 && t.vivo).length, 0); // guarda retirada
+  env.beat(); assert.equal(st.fetches.length, 3);                 // libre tras responder
+});
