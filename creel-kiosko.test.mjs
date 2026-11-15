@@ -249,3 +249,43 @@ test('una petición de playlist colgada no deja la TCL sin fondo ni apila conexi
   assert.match(html, /if \(!fin\(\)\) return; \/\/ respuesta tardía de una petición ya abandonada/);
   assert.match(html, /\.catch\(function \(\) \{ if \(fin\(\)\) listaRecordada\(\); \}\);/);
 });
+
+test('una petición de clima colgada no deja el HUD sin reintento ni apila conexiones: una sola a la vez, guarda de 15 s que aborta, conserva la caché e ignora respuestas tardías', async () => {
+  assert.match(html, /var climaBusy = false; \/\/ una sola petición de clima a la vez/);
+  assert.match(html, /if \(climaBusy\) return;\n    climaBusy = true;/);
+  assert.match(html, /if \(ctl\) \{ try \{ ctl\.abort\(\); \} catch \(e\) \{\} \} if \(x\) \{ try \{ x\.abort\(\); \} catch \(e\) \{\} \} fail\(\); \}, 15000\), x = null;/);
+  assert.match(html, /if \(!fin\(\)\) return; \/\/ respuesta tardía de una petición ya abandonada: se ignora\n      try \{\n        var c = j\.current/);
+  const ini = html.indexOf('  var climaBusy = false;');
+  const fin = html.indexOf('\n  leeClima();', ini);
+  assert.ok(ini > 0 && fin > ini);
+  // Simulación: fetch que nunca responde (resolvedor guardado), temporizadores manuales y AbortController falso.
+  const st = { fetches: [], timers: [], aborts: 0 };
+  const env = new Function('st', `
+    var clima = { temp: 21, real: "sol", ok: false }, climaReintento = null, CLIMA_KEY = "k";
+    var localStorage = { setItem: function () {} };
+    function tipoDe() { return "nubes"; }
+    function setTimeout(f, ms) { st.timers.push({ f: f, ms: ms, vivo: true }); return st.timers.length; }
+    function clearTimeout(id) { if (id && st.timers[id - 1]) st.timers[id - 1].vivo = false; }
+    function AbortController() { this.signal = {}; this.abort = function () { st.aborts++; }; }
+    var XMLHttpRequest = null;
+    function fetch(url, o) { return new Promise(function (res, rej) { st.fetches.push({ res: res, rej: rej, signal: o.signal }); }); }
+    ${html.slice(ini, fin)}
+    return { leeClima: leeClima, clima: clima };`)(st);
+  env.leeClima(); env.leeClima(); env.leeClima();
+  assert.equal(st.fetches.length, 1);                          // colgada: no se apilan otras
+  assert.ok(st.fetches[0].signal);                              // lleva signal para poder abortarla
+  const g = st.timers.find(t => t.ms === 15000 && t.vivo); assert.ok(g);
+  g.f();                                                         // pasan 15 s sin respuesta
+  assert.equal(st.aborts, 1);
+  assert.equal(env.clima.ok, false);
+  assert.equal(env.clima.temp, 21);                             // conserva la última lectura buena (caché)
+  assert.ok(st.timers.some(t => t.ms === 120000 && t.vivo));    // reintento en 2 min
+  st.fetches[0].res({ ok: true, json: () => ({ current: { temperature_2m: 5, weather_code: 3 } }) });
+  await new Promise(r => setImmediate(r));
+  assert.equal(env.clima.temp, 21);                             // la respuesta tardía se ignora
+  env.leeClima(); assert.equal(st.fetches.length, 2);           // ya libre: puede volver a pedir
+  st.fetches[1].res({ ok: true, json: () => ({ current: { temperature_2m: 18, weather_code: 3 } }) });
+  await new Promise(r => setImmediate(r));
+  assert.equal(env.clima.temp, 18); assert.equal(env.clima.ok, true);
+  assert.equal(st.timers.filter(t => t.ms === 15000 && t.vivo).length, 0); // guarda retirada al llegar la respuesta
+});

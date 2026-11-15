@@ -112,9 +112,18 @@
     var cc = JSON.parse(localStorage.getItem(CLIMA_KEY) || "null");
     if (cc && typeof cc.temp === "number" && Date.now() - cc.t < 6 * 3600 * 1000) { clima.temp = cc.temp; clima.real = cc.real; }
   } catch (e) {}
+  var climaBusy = false; // una sola petición de clima a la vez: colgadas no se apilan (cada 10 min, reintento de 2 min y evento online)
   function leeClima() {
+    if (climaBusy) return;
+    climaBusy = true;
+    var hecho = false, ctl = typeof AbortController === "function" ? new AbortController() : null;
+    function fin() { if (hecho) return false; hecho = true; clearTimeout(guarda); climaBusy = false; return true; }
+    // Petición colgada a Open-Meteo (ni respuesta ni error, p. ej. TCP colgado en la wifi de Planeta): a los 15 s se aborta,
+    // se conserva la última lectura buena (caché) y se reintenta en 2 min, como sin red (15-nov-2026).
+    var guarda = setTimeout(function () { if (!fin()) return; if (ctl) { try { ctl.abort(); } catch (e) {} } if (x) { try { x.abort(); } catch (e) {} } fail(); }, 15000), x = null;
     var url = "https://api.open-meteo.com/v1/forecast?latitude=41.0868&longitude=1.1548&current=temperature_2m,weather_code,is_day&timezone=Europe%2FMadrid";
     function ok(j) {
+      if (!fin()) return; // respuesta tardía de una petición ya abandonada: se ignora
       try {
         var c = j.current || {};
         if (typeof c.temperature_2m !== "number") throw 0;
@@ -127,19 +136,21 @@
       }
     }
     // Sin red: se conserva la última lectura buena (ya cargada de caché) y se reintenta en 2 min.
-    function fail() { clima.ok = false; clearTimeout(climaReintento); climaReintento = setTimeout(leeClima, 2 * 60 * 1000); }
+    function fail() { fin(); clima.ok = false; clearTimeout(climaReintento); climaReintento = setTimeout(leeClima, 2 * 60 * 1000); }
+    function falla() { if (fin()) fail(); } // error de red de la petición en curso (una tardía ya abandonada no reprograma otro reintento)
     if (typeof fetch === "function") {
-      fetch(url, { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(ok).catch(fail);
+      fetch(url, { cache: "no-store", signal: ctl ? ctl.signal : undefined }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(ok, falla);
     } else {
-      var x = new XMLHttpRequest();
+      x = new XMLHttpRequest();
       x.open("GET", url, true);
       x.onreadystatechange = function () {
-        if (x.readyState !== 4) return;
+        if (x.readyState !== 4 || hecho) return;
         if (x.status >= 200 && x.status < 300) {
-          try { ok(JSON.parse(x.responseText)); } catch (e) { fail(); }
-        } else fail();
+          var j; try { j = JSON.parse(x.responseText); } catch (e) { falla(); return; }
+          ok(j);
+        } else falla();
       };
-      x.onerror = fail;
+      x.onerror = falla;
       x.send();
     }
   }
