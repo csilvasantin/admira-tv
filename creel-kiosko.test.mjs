@@ -300,7 +300,7 @@ test('un latido colgado de /signage/now no apila conexiones con api.admira.store
   const st = { fetches: [], timers: [], aborts: 0 };
   const env = new Function('st', `
     var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540, diag = { errores: 0, ultimo: "" }, arranque = 0, media = null, mediaOk = false, mudo = true;
-    function fpsAhora() { return 60; } function memoriaMB() { return 80; } function pantallaFija() { return "si"; } function teleVisible() { return "si"; } function climaMin() { return 3; }
+    function fpsAhora() { return 60; } function memoriaMB() { return 80; } function pantallaFija() { return "si"; } function teleVisible() { return "si"; } function climaMin() { return 3; } function fondoLatido() { return "rojo"; } var intro = { on: false };
     var innerWidth = 1920, innerHeight = 1080, navigator = { platform: "", language: "es", userAgent: "tcl", onLine: true }, window = { devicePixelRatio: 1 }; window.parent = window;
     var location = { origin: "https://admira.tv" };
     function piezaEnAntena() { return null; } function zonaTele() { return ""; }
@@ -534,7 +534,7 @@ test('diagnóstico remoto: los errores JS se cuentan y el latido lleva cuántos,
 
 test('fotogramas por segundo: el latido lleva los fps medios desde el latido anterior y qué fondo emite, para ver sin ir a la tele si el LED va a saltos o congelado', () => {
   assert.match(html, /try \{ pinta\(t \|\| Date\.now\(\)\); fallosPinta = 0; fotogramas\+\+; \}/); // solo cuentan los fotogramas pintados bien
-  assert.match(html, /fps: fpsAhora\(Date\.now\(\)\), memoriaMB: memoriaMB\(\), fondo: !pantallasOn \? "apagado" : media && mediaOk \? \(media\.tagName === "VIDEO" \? "video" : "imagen"\) : "rojo", pantallaFija: pantallaFija\(\), visible: teleVisible\(\), climaMin: climaMin\(\) \}/);
+  assert.match(html, /fps: fpsAhora\(Date\.now\(\)\), memoriaMB: memoriaMB\(\), fondo: fondoLatido\(\), intro: !!\(intro && intro\.on\), pantallaFija: pantallaFija\(\), visible: teleVisible\(\), climaMin: climaMin\(\) \}/);
   const ini = html.indexOf('  var fotogramas = 0');
   const fin = html.indexOf('\n', html.indexOf('function fpsAhora', ini));
   const r = new Function('Date', html.slice(ini, fin) + '; var out = []; fotogramas += 600; out.push(fpsAhora(1e12 + 10000)); fotogramas += 150; out.push(fpsAhora(1e12 + 20000)); out.push(fpsAhora(1e12 + 30000)); out.push(fpsAhora(1e12 + 30000)); return out;')({ now: () => 1e12 });
@@ -617,4 +617,17 @@ test('la pared llena el visor sin franjas (TCL 16:9, 15-nov-2026) y conserva el 
   assert.match(html, /g\.setTransform\(escala, 0, 0, escala, 0, 0\);/);
   assert.match(html, /window\.addEventListener\("resize", ajusta\);/);
   assert.match(html, /H = 540; escala = 1; L = null; caja\.removeAttribute\("style"\);/);
+});
+
+test('pantalla en negro: el latido dice fondo "negro" si la apagaron desde admira.store (pantalla-off) e intro true/false, para distinguir sin ir a la tele un apagado ordenado de un fallo', () => {
+  assert.match(html, /fondo: fondoLatido\(\), intro: !!\(intro && intro\.on\), pantallaFija/);
+  const ini = html.indexOf('  function fondoLatido()'), fin = html.indexOf('\n', ini);
+  const f = (env) => new Function('negro', 'pantallasOn', 'media', 'mediaOk', html.slice(ini, fin) + '; return fondoLatido();')(env.negro, env.on, env.media, env.ok);
+  const video = { tagName: 'VIDEO' }, img = { tagName: 'IMG' };
+  assert.equal(f({ negro: true, on: true, media: video, ok: true }), 'negro');   // pantalla-off: negro aunque el vídeo siga cargado
+  assert.equal(f({ negro: false, on: false, media: video, ok: true }), 'apagado');
+  assert.equal(f({ negro: false, on: true, media: video, ok: true }), 'video');
+  assert.equal(f({ negro: false, on: true, media: img, ok: true }), 'imagen');
+  assert.equal(f({ negro: false, on: true, media: null, ok: false }), 'rojo');
+  assert.equal(f({ negro: false, on: true, media: { get tagName() { throw new Error('x'); } }, ok: true }), '?'); // no rompe el latido
 });
