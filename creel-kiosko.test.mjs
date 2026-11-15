@@ -503,3 +503,16 @@ test('un acuse colgado de /locations/cmd/ack no para el mando: guarda de 5 s que
   st.fetches[2].rej(new Error('sin red')); await tick();
   assert.equal(err, true);
 });
+
+test('corte de red largo con la TCL encendida: pasadas 6 h sin lectura buena, el HUD vuelve a «— °C» y «CLIMA —» (no se queda con el clima de ayer)', () => {
+  assert.match(html, /var CLIMA_MAX = 6 \* 3600 \* 1000;/);
+  assert.match(html, /function fail\(\) \{ fin\(\); clima\.ok = false; caducaClima\(\);/);
+  assert.match(html, /clima\.ok = true;\n        clima\.t = Date\.now\(\);/);
+  const ini = html.indexOf('  var CLIMA_MAX');
+  const fin = html.indexOf('\n', html.indexOf('function caducaClima', ini));
+  const mk = (clima, ahora) => new Function('clima', 'Date', html.slice(ini, fin) + '; caducaClima(); return clima;')(clima, { now: () => ahora });
+  const H = 3600 * 1000, t0 = 1e12;
+  assert.deepEqual(mk({ temp: 18, real: 'sol', t: t0 }, t0 + 5 * H), { temp: 18, real: 'sol', t: t0 });     // 5 h: conserva
+  assert.deepEqual(mk({ temp: 18, real: 'sol', t: t0 }, t0 + 6 * H), { temp: null, real: null, t: 0 });   // 6 h: caduca
+  assert.deepEqual(mk({ temp: null, real: null, t: 0 }, t0 + 9 * H), { temp: null, real: null, t: 0 });   // sin dato: nada
+});

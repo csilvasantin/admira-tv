@@ -110,9 +110,13 @@
   var CLIMA_KEY = "creel-clima-v1", climaReintento = null;
   try {
     var cc = JSON.parse(localStorage.getItem(CLIMA_KEY) || "null");
-    if (cc && typeof cc.temp === "number" && Date.now() - cc.t < 6 * 3600 * 1000) { clima.temp = cc.temp; clima.real = cc.real; }
+    if (cc && typeof cc.temp === "number" && Date.now() - cc.t < 6 * 3600 * 1000) { clima.temp = cc.temp; clima.real = cc.real; clima.t = cc.t; }
   } catch (e) {}
   var climaBusy = false; // una sola petición de clima a la vez: colgadas no se apilan (cada 10 min, reintento de 2 min y evento online)
+  // Corte de red largo con la TCL encendida (15-nov-2026): la caché solo vale 6 h también en marcha, no solo al arrancar.
+  // Pasadas 6 h sin una lectura buena, el HUD deja la temperatura y el cielo de ayer y vuelve a «— °C» y «CLIMA —».
+  var CLIMA_MAX = 6 * 3600 * 1000;
+  function caducaClima() { if (clima.t && Date.now() - clima.t >= CLIMA_MAX) { clima.temp = null; clima.real = null; clima.t = 0; } }
   function leeClima() {
     if (climaBusy) return;
     climaBusy = true;
@@ -130,13 +134,14 @@
         clima.temp = c.temperature_2m;
         clima.real = tipoDe(c.weather_code);
         clima.ok = true;
+        clima.t = Date.now();
         try { localStorage.setItem(CLIMA_KEY, JSON.stringify({ t: Date.now(), temp: clima.temp, real: clima.real })); } catch (e) {}
       } catch (e) {
         fail();
       }
     }
     // Sin red: se conserva la última lectura buena (ya cargada de caché) y se reintenta en 2 min.
-    function fail() { fin(); clima.ok = false; clearTimeout(climaReintento); climaReintento = setTimeout(leeClima, 2 * 60 * 1000); }
+    function fail() { fin(); clima.ok = false; caducaClima(); clearTimeout(climaReintento); climaReintento = setTimeout(leeClima, 2 * 60 * 1000); }
     function falla() { if (fin()) fail(); } // error de red de la petición en curso (una tardía ya abandonada no reprograma otro reintento)
     if (typeof fetch === "function") {
       fetch(url, { cache: "no-store", signal: ctl ? ctl.signal : undefined }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(ok, falla);
