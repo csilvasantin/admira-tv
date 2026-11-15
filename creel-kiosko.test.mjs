@@ -300,7 +300,7 @@ test('un latido colgado de /signage/now no apila conexiones con api.admira.store
   const st = { fetches: [], timers: [], aborts: 0 };
   const env = new Function('st', `
     var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540, diag = { errores: 0, ultimo: "" }, arranque = 0, media = null, mediaOk = false, mudo = true;
-    function fpsAhora() { return 60; } function memoriaMB() { return 80; } function pantallaFija() { return "si"; } function teleVisible() { return "si"; } function climaMin() { return 3; } function mandoSeg() { return 2; } function listaOrigen() { return "red"; } var recargaPrevia = "arranque"; function encajeTele() { return { orientation: "landscape", encaje: "16:9" }; } var cortesRed = 0, ultimoCorte = 0; function redLatido(o) { return { online: o }; } function listaMin() { return 0; } function fondoLatido() { return "rojo"; } var intro = { on: false };
+    function fpsAhora() { return 60; } function memoriaMB() { return 80; } function pantallaFija() { return "si"; } function teleVisible() { return "si"; } function climaMin() { return 3; } function mandoSeg() { return 2; } function listaOrigen() { return "red"; } var recargaPrevia = "arranque"; var desfaseReloj = null; function encajeTele() { return { orientation: "landscape", encaje: "16:9" }; } var cortesRed = 0, ultimoCorte = 0; function redLatido(o) { return { online: o }; } function listaMin() { return 0; } function fondoLatido() { return "rojo"; } var intro = { on: false };
     var innerWidth = 1920, innerHeight = 1080, navigator = { platform: "", language: "es", userAgent: "tcl", onLine: true }, window = { devicePixelRatio: 1 }; window.parent = window;
     var location = { origin: "https://admira.tv" };
     function piezaEnAntena() { return null; } function zonaTele() { return ""; }
@@ -710,4 +710,19 @@ test('encaje en la TCL: el latido da la orientación real del visor y si es 16:9
   assert.deepEqual(f(1080, 1920), { orientation: 'portrait', encaje: 'otro' });
   assert.deepEqual(f(0, 1080), { orientation: '?', encaje: '?' });
   assert.deepEqual(f(undefined, NaN), { orientation: '?', encaje: '?' });
+});
+
+test('reloj de la TCL: el latido da el desfase en segundos frente a la cabecera Date de admira.tv', () => {
+  assert.match(html, /timezone: zonaTele\(\), relojSeg: desfaseReloj \}/);
+  assert.match(html, /relojDesfase\(r\.headers && r\.headers\.get\("Date"\), Date\.now\(\)\); if \(dr !== null\) desfaseReloj = dr;/);
+  const a = html.indexOf('  function relojDesfase('), b = html.indexOf('\n', a);
+  assert.ok(a > 0);
+  const f = new Function(html.slice(a, b) + '; return relojDesfase;')();
+  const T = Date.parse('Mon, 16 Nov 2026 00:20:00 GMT');
+  assert.equal(f('Mon, 16 Nov 2026 00:20:00 GMT', T), 0);            // en hora
+  assert.equal(f('Mon, 16 Nov 2026 00:20:00 GMT', T + 125400), 125);  // TCL adelantada ~2 min
+  assert.equal(f('Mon, 16 Nov 2026 00:20:00 GMT', T - 3600000), -3600); // TCL atrasada 1 h
+  assert.equal(f(null, T), null);                                     // sin cabecera
+  assert.equal(f('basura', T), null);
+  assert.equal(f('Mon, 16 Nov 2026 00:20:00 GMT', NaN), null);
 });
