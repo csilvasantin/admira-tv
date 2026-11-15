@@ -299,7 +299,8 @@ test('un latido colgado de /signage/now no apila conexiones con api.admira.store
   assert.ok(ini > 0 && fin > ini);
   const st = { fetches: [], timers: [], aborts: 0 };
   const env = new Function('st', `
-    var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540, diag = { errores: 0, ultimo: "" }, arranque = 0;
+    var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540, diag = { errores: 0, ultimo: "" }, arranque = 0, media = null, mediaOk = false;
+    function fpsAhora() { return 60; }
     var innerWidth = 1920, innerHeight = 1080, navigator = { platform: "", language: "es", userAgent: "tcl", onLine: true }, window = { devicePixelRatio: 1 }; window.parent = window;
     var location = { origin: "https://admira.tv" };
     function piezaEnAntena() { return null; } function zonaTele() { return ""; }
@@ -529,4 +530,13 @@ test('diagnóstico remoto: los errores JS se cuentan y el latido lleva cuántos,
   assert.equal(diag.ultimo, "z".repeat(120));
   const d2 = new Function(html.slice(ini, fin) + '; anota({ reason: new Error("fallo de red") }); return diag;')();
   assert.equal(d2.ultimo, "fallo de red");
+});
+
+test('fotogramas por segundo: el latido lleva los fps medios desde el latido anterior y qué fondo emite, para ver sin ir a la tele si el LED va a saltos o congelado', () => {
+  assert.match(html, /try \{ pinta\(t \|\| Date\.now\(\)\); fallosPinta = 0; fotogramas\+\+; \}/); // solo cuentan los fotogramas pintados bien
+  assert.match(html, /fps: fpsAhora\(Date\.now\(\)\), fondo: !pantallasOn \? "apagado" : media && mediaOk \? \(media\.tagName === "VIDEO" \? "video" : "imagen"\) : "rojo" \}/);
+  const ini = html.indexOf('  var fotogramas = 0');
+  const fin = html.indexOf('\n', html.indexOf('function fpsAhora', ini));
+  const r = new Function('Date', html.slice(ini, fin) + '; var out = []; fotogramas += 600; out.push(fpsAhora(1e12 + 10000)); fotogramas += 150; out.push(fpsAhora(1e12 + 20000)); out.push(fpsAhora(1e12 + 30000)); out.push(fpsAhora(1e12 + 30000)); return out;')({ now: () => 1e12 });
+  assert.deepEqual(r, [60, 15, 0, 0]); // fluido, a saltos, congelado y sin tiempo transcurrido (sin dividir por cero)
 });
