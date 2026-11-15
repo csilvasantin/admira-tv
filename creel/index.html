@@ -399,12 +399,12 @@
     fallos++;
     if (fallos < lista.length) { siguiente(); return; }
     if (mediaTimer) clearTimeout(mediaTimer);
-    media = null; mediaOk = false; fallos = 0;
+    suelta(media); media = null; mediaOk = false; fallos = 0;
     mediaTimer = setTimeout(siguiente, 30000);
   }
   function siguiente() {
     if (mediaTimer) { clearTimeout(mediaTimer); mediaTimer = null; }
-    if (media && media.tagName === "VIDEO") { try { media.pause(); media.removeAttribute("src"); media.load(); } catch (e) {} }
+    suelta(media);
     media = null; mediaOk = false; vigiaT = -1; vigiaQuieto = 0;
     if (!lista.length) return;
     idx = (idx + 1) % lista.length;
@@ -421,6 +421,13 @@
       el.onerror = falla;
     }
     el.src = it.asset; media = el;
+  }
+  // Pieza abandonada (colgada, fallida o ya emitida): se le quitan los manejadores y se corta su descarga, para que un load/canplay/ended
+  // tardío no recorte la pieza en curso (ni la espera de 30 s sin red) y la TCL no acumule descargas ni decodificadores en 24 h.
+  function suelta(m) {
+    if (!m) return;
+    try { m.onload = null; m.onerror = null; m.oncanplay = null; m.onended = null; } catch (e) {}
+    try { if (m.tagName === "VIDEO") m.pause(); m.removeAttribute("src"); if (m.tagName === "VIDEO") m.load(); } catch (e) {}
   }
   // Vídeo congelado a mitad (decodificador de la TCL o red atascados: currentTime no avanza, sin ended ni error): el LED no se queda
   // con el fotograma parado hasta la guarda de duración; a los 4 s quieto se le da un play() y a los 8 s pasa a la siguiente pieza.

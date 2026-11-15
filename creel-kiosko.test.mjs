@@ -385,3 +385,46 @@ test('al volver a ser visible (TCL sale de reposo) se pone al día sin mando y, 
   env.ver('visible'); for (let k = 0; k < 9; k++) env.vigila();  // visible y de verdad quieto 8 s: sí salta
   assert.equal(st.saltos, 1);
 });
+
+test('una pieza abandonada (imagen colgada que carga tarde, vídeo ya emitido) no manda sobre la siguiente: se le quitan los manejadores y se corta su descarga', () => {
+  assert.match(html, /function suelta\(m\) \{/);
+  assert.match(html, /suelta\(media\); media = null; mediaOk = false; fallos = 0;/);
+  assert.match(html, /mediaTimer = null; \}\n    suelta\(media\);\n    media = null;/);
+  const ini = html.indexOf('\n  function falla() {\n    fallos++;');
+  const fin = html.indexOf('\n  setInterval(vigilaVideo, 1000);', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const st = { timers: [], creados: [] };
+  const env = new Function('st', `
+    var mediaTimer = null, media = null, mediaOk = false, idx = -1, fallos = 0;
+    var lista = [{ assetType: "image", asset: "https://cuelga/a.png", seconds: 10 }, { assetType: "video", asset: "https://x/b.mp4", seconds: 30 }];
+    function setTimeout(f, ms) { st.timers.push({ f: f, ms: ms, vivo: true }); return st.timers.length; }
+    function clearTimeout(id) { if (id && st.timers[id - 1]) st.timers[id - 1].vivo = false; }
+    var document = { createElement: function (tag) { var el = { tagName: tag.toUpperCase(), currentTime: 0, ended: false, cargas: 0, pausas: 0,
+      play: function () { return Promise.resolve(); }, pause: function () { this.pausas++; }, load: function () { this.cargas++; },
+      removeAttribute: function (a) { if (a === "src") this.src = ""; } }; st.creados.push(el); return el; } };
+    ${html.slice(ini, fin)}
+    return { siguiente: siguiente, falla: falla, estado: function () { return { media: media, mediaOk: mediaOk, idx: idx, fallos: fallos }; } };`)(st);
+  const vivos = () => st.timers.filter(t => t.vivo);
+  env.siguiente();
+  const a = env.estado().media; assert.equal(a.tagName, 'IMG'); assert.equal(a.src, 'https://cuelga/a.png');
+  vivos().find(t => t.ms === 20000).f();                          // la imagen se cuelga: a los 20 s cuenta como fallo y pasa al vídeo
+  const b = env.estado().media; assert.equal(b.tagName, 'VIDEO'); assert.equal(env.estado().idx, 1);
+  assert.equal(a.src, '', 'la imagen abandonada deja de descargarse');
+  assert.equal(a.onload, null); assert.equal(a.onerror, null);
+  b.oncanplay();
+  const guardaB = vivos().find(t => t.ms === 38000); assert.ok(guardaB); // guarda de duración del vídeo en curso (30 + 8 s)
+  if (a.onload) a.onload();                                       // la imagen colgada «carga» tarde: no recorta el vídeo
+  assert.ok(guardaB.vivo); assert.equal(vivos().filter(t => t.ms === 10000).length, 0);
+  assert.equal(env.estado().media, b); assert.equal(env.estado().mediaOk, true);
+  b.onended();                                                     // termina el vídeo: vuelve a la imagen
+  assert.equal(b.src, ''); assert.equal(b.pausas, 1); assert.equal(b.cargas, 1); // decodificador liberado
+  assert.equal(b.onended, null); assert.equal(b.oncanplay, null); assert.equal(b.onerror, null);
+  // sin red: todas fallan seguidas y queda la espera de 30 s; un error tardío de la abandonada no la acorta
+  const c = env.estado().media; c.onerror();                       // fallo 1 de 2: pasa a la siguiente
+  const d = env.estado().media; d.onerror();                       // fallo 2 de 2: espera de 30 s
+  assert.equal(env.estado().media, null);
+  const espera = vivos().find(t => t.ms === 30000); assert.ok(espera);
+  assert.equal(d.onerror, null); assert.equal(d.src, '');
+  if (d.onerror) d.onerror(); if (c.onload) c.onload();
+  assert.ok(espera.vivo); assert.equal(env.estado().media, null);
+});
