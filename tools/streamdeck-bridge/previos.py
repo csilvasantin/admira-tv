@@ -9,11 +9,11 @@
 #   pythonw previos.py --destino 03 on|off    lo que ejecuta cada selector de la fila 4: marca o desmarca un ordenador
 #
 # Fila 4: un selector por ordenador (01-05). Se pueden marcar uno, varios o todos; el previo que se pulse
-# sale solo en los marcados. La seleccion vive en seleccion.json (junto a este fichero); recien instalado, todos.
+# sale solo en los marcados. La seleccion vive en seleccion.json (junto a este fichero); recien instalado, los de `de_inicio` (o todos).
 #
 # Ajustes en previos.json (junto a este fichero); sin el, valen los de DEFECTO.
 # La pagina se instala como carpeta dentro del menu actual: no se borra ninguna tecla existente.
-import os, sys, io, json, time, glob, shutil, uuid, subprocess, urllib.request
+import os, sys, io, json, time, glob, shutil, uuid, subprocess, threading, urllib.request
 from PIL import Image, ImageDraw, ImageFont
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
@@ -21,6 +21,7 @@ DEFECTO = {
     'titulo': 'PortAventuraNeXT',
     'playlist': 'https://admira.tv/api/playlist?screen=portaventuranext',
     'destinos': [],           # [["01", "screen de admira.tv"], ...]: los selectores de la fila 4 y el player de cada uno
+    'de_inicio': None,        # etiquetas marcadas recien instalado (None = todas)
     'arranque': {},           # {"screen": {"proceso": "x.exe", "vigilante": "id"}}: player local que se arranca si esta parado
     'tecla_menu': '',         # posicion "col,fila" de la carpeta en el menu; vacio = primera libre
 }
@@ -92,7 +93,9 @@ def tecla_volver():
 def tecla_destino(etiqueta, marcado):
     im = Image.new('RGB', (PX, PX), (255, 196, 40) if marcado else (22, 26, 38)); d = ImageDraw.Draw(im)
     if not marcado: d.rounded_rectangle([6, 6, PX - 7, PX - 7], radius=16, outline=(70, 78, 100), width=3)
-    d.text((PX // 2, PX // 2 - 10), etiqueta, fill='#10131c' if marcado else '#6f7a94', font=fuente(64), anchor='mm')
+    px = 64; f = fuente(px)
+    while px > 20 and d.textlength(etiqueta, font=f) > PX - 20: px -= 2; f = fuente(px)
+    d.text((PX // 2, PX // 2 - 10), etiqueta, fill='#10131c' if marcado else '#6f7a94', font=f, anchor='mm')
     d.text((PX // 2, PX - 24), 'EMITE' if marcado else 'no emite', fill='#10131c' if marcado else '#6f7a94', font=fuente(17), anchor='mm')
     return im
 
@@ -101,7 +104,8 @@ def seleccion(a):
     """Ordenadores marcados: {"01": True, ...}. Sin fichero, todos."""
     try: guardada = json.load(open(SELECCION, encoding='utf-8'))
     except Exception: guardada = {}
-    return {e: bool(guardada.get(e, True)) for e, _ in a['destinos']}
+    inicio = a.get('de_inicio')   # etiquetas marcadas recien instalado; sin la lista, todas
+    return {e: bool(guardada.get(e, inicio is None or e in inicio)) for e, _ in a['destinos']}
 
 def marcar(a, etiqueta, valor):
     sel = seleccion(a)
@@ -138,23 +142,39 @@ def corriendo(proceso):
     r = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq ' + proceso, '/NH'], capture_output=True, text=True, creationflags=0x08000000)
     return proceso.lower() in (r.stdout or '').lower()
 
-def despertar(arr):
-    """Player de este mismo PC parado: se lo pide a su vigilante (orden start) y espera a que este en pie."""
-    if os.name != 'nt' or not arr.get('proceso') or corriendo(arr['proceso']): return False
-    if arr.get('vigilante'): orden(arr['vigilante'], 'start')
-    for _ in range(20):
-        time.sleep(1)
-        if corriendo(arr['proceso']): time.sleep(8); return True   # margen para que cargue el canal y empiece a sondear la cola
+CENSO = 'https://api.admira.store/signage/screens'
+def en_linea(pantalla):
+    """El player ha dado senal en el ultimo minuto (censo de admira.tv)."""
+    try:
+        for x in traer(CENSO, espera=6).get('screens') or []:
+            if x.get('screen') == pantalla: return bool(x.get('online')) and (x.get('age_seconds') or 999) < 60
+    except Exception: pass
     return False
 
+def despertar(pantalla, arr):
+    """Player parado: se le pide `start` a su vigilante y se espera a que este en pie. True = hubo que arrancarlo."""
+    local = arr.get('proceso') if os.name == 'nt' else None   # proceso = player de este mismo PC; sin el, se mira el censo
+    vivo = (lambda: corriendo(local)) if local else (lambda: en_linea(pantalla))
+    if vivo() or not arr.get('vigilante'): return False
+    orden(arr['vigilante'], 'start')
+    for _ in range(15):
+        time.sleep(3)
+        if vivo(): break
+    if local: time.sleep(8)   # margen para que cargue el canal y empiece a sondear la cola
+    return True
+
 def saltar(num, a):
-    """Lo que hace un previo al pulsarlo: play<N> a los ordenadores marcados. Devuelve lo que contesto la cola."""
+    """Lo que hace un previo al pulsarlo: play<N> a los destinos marcados, cada uno por su lado (uno parado no frena al resto)."""
     sel = seleccion(a); hecho = []
-    for etiqueta, pantalla in a['destinos']:
-        if not sel.get(etiqueta): continue
+    def uno(pantalla):
         arr = (a.get('arranque') or {}).get(pantalla)
-        if arr: despertar(arr)
-        hecho.append(orden(pantalla, 'play%d' % int(num)))
+        arrancado = despertar(pantalla, arr) if arr else False
+        r = orden(pantalla, 'play%d' % int(num)) or {}
+        if arrancado: r['arrancado'] = True
+        hecho.append(r)
+    hilos = [threading.Thread(target=uno, args=(pantalla,)) for etiqueta, pantalla in a['destinos'] if sel.get(etiqueta)]
+    for h in hilos: h.start()
+    for h in hilos: h.join()
     return hecho
 
 # ── Instalacion en el perfil Elgato (solo Windows, con la app Stream Deck instalada) ──────────────
@@ -229,7 +249,7 @@ def instalar(a):
     app(False)
     os.makedirs(COPIAS, exist_ok=True)
     copia = shutil.make_archive(os.path.join(COPIAS, 'perfil-' + time.strftime('%Y%m%d-%H%M%S')), 'zip', perfil)
-    if os.path.exists(SELECCION): os.remove(SELECCION)   # recien instalado, todos marcados (y las teclas, encendidas)
+    if os.path.exists(SELECCION): os.remove(SELECCION)   # recien instalado, la seleccion de inicio (y las teclas, a juego)
     img, lista, _ = atlas(a)
     pd = os.path.join(os.path.dirname(menu), hija.upper()); idir = os.path.join(pd, 'Images')
     shutil.rmtree(pd, ignore_errors=True); os.makedirs(idir)
@@ -239,7 +259,7 @@ def instalar(a):
         c, f = [int(x) for x in p.split(',')]
         nombre = 'p%02d.png' % n; img.crop((c * PX, f * PX, (c + 1) * PX, (f + 1) * PX)).save(os.path.join(idir, nombre))
         hijas[p] = abrir('--saltar %s' % pieza['num']); hijas[p]['States'][0]['Image'] = 'Images/' + nombre
-    for n, (e, _) in enumerate(a['destinos'][:COLS]): hijas['%d,%d' % (n, ROWS - 1)] = selector(e, True, idir)
+    for n, (e, _) in enumerate(a['destinos'][:COLS]): hijas['%d,%d' % (n, ROWS - 1)] = selector(e, seleccion(a)[e], idir)
     jsave(os.path.join(pd, 'manifest.json'), {'Controllers': [{'Actions': hijas, 'Type': 'Keypad'}], 'Icon': '', 'Name': a['titulo']})
     os.makedirs(os.path.join(menu, 'Images'), exist_ok=True)
     portada = img.crop((PX, 0, 2 * PX, PX)) if lista else tecla_volver()

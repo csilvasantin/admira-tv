@@ -3,31 +3,19 @@
   "playlist": "https://admira.tv/api/playlist?screen=portaventuranext",
   "tecla_menu": "5,1",
   "destinos": [
-    [
-      "01",
-      "metahuman-mupi"
-    ],
-    [
-      "02",
-      "admiranext02-a"
-    ],
-    [
-      "03",
-      "admiranext03-a"
-    ],
-    [
-      "04",
-      "admiranext04-a"
-    ],
-    [
-      "05",
-      "admiranext05-a"
-    ]
+    ["01", "metahuman-mupi"],
+    ["02", "admiranext02-a"],
+    ["03", "admiranext03-a"],
+    ["04", "admiranext04-a"],
+    ["05", "admiranext05-a"],
+    ["MBP14", "macbookpronegro14"],
+    ["MBP16", "macbookpro16"],
+    ["TCL", "planeta7-tcl-hotel-creel"]
   ],
+  "de_inicio": ["01", "02", "03", "04", "05"],
   "arranque": {
-    "metahuman-mupi": {
-      "proceso": "Admira Signage.exe",
-      "vigilante": "admiranext01-vigilante"
-    }
+    "metahuman-mupi": {"proceso": "Admira Signage.exe", "vigilante": "admiranext01-vigilante"},
+    "macbookpronegro14": {"vigilante": "macbookpronegro14-vigilante"},
+    "macbookpro16": {"vigilante": "macbookpro16-vigilante"}
   }
 }
