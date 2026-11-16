@@ -87,3 +87,9 @@ test('el salto por tecla desplaza el reloj para que el turno elegido empiece aho
   assert.equal(jumpOffsetMs(slots, 7, now), 0);
   assert.equal(jumpOffsetMs([], 0, now), 0);
 });
+
+test('una pieza dirigida por etiqueta (auto, 10 s fijos) deja el turno marcado para aprender la duración real', () => {
+  const auto = { ...ZOO_H, id: 'stock-zoo-h', stockId: 'zoo-h', seconds: 10, secondsGuessed: true, tags: ['horizontal'] };
+  const slots = pairPlaylist([H, V, auto]);
+  assert.deepEqual(slots.map(s => [s.seconds, s.guessed]), [[183, false], [10, true]]);
+});

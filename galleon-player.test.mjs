@@ -123,3 +123,11 @@ test('la rueda derecha es el transporte: pulsar pausa o reanuda (anillo ámbar/a
   assert.match(player, /jumpToSlot\(\(\(\(onAir\.index \+ \(action === 'next' \? 1 : -1\)\) % total\) \+ total\) % total\);/);
   assert.match(player, /paused: pausedAt !== null, ready: readiness\(\)/);
 });
+
+test('las piezas etiquetadas corsair-galleon-100 en el Stock (lista auto de la API) se emiten detrás de la manual y el vídeo enseña su duración real (Carlos, 16-nov-2026)', () => {
+  assert.match(player, /const auto = \(Array\.isArray\(data\.auto\) \? data\.auto : \[\]\)\.map\(item => \(\{ \.\.\.item, secondsGuessed: true \}\)\);/);
+  assert.match(player, /slots: pairPlaylist\(\[\.\.\.draft\.items, \.\.\.auto\]\)/);
+  assert.match(player, /const rev = String\(draft\.rev\) \+ \(auto\.length \? '\+' \+ auto\.map\(item => item\.stockId \|\| item\.id\)\.join\(','\) : ''\);/); // cambia al entrar o salir una etiquetada
+  assert.match(player, /learnDuration\(at\.slot, tracks\.landscape\);/);
+  assert.match(player, /slot\.seconds = Math\.max\(2, Math\.ceil\(duration\)\);/);
+});
