@@ -34,7 +34,7 @@ let playing = false;
 let twinSelection = null;
 let plan = null;
 let clockOffset = 0; // serverNow − Date.now(), medido en cada sondeo del playout
-let playlist = { rev: null, name: '', slots: [] };
+let playlist = { rev: null, name: '', slots: [], ids: [] };
 let sources = { draft: null, auto: [], tagged: [] }; // lista manual del mando, dirigidas por la API y etiquetadas en el Stock
 let onAir = { source: 'none', id: '', title: '', index: -1, total: 0, paired: false };
 let jump = { ms: 0, rev: null }; // salto por tecla o rueda: desplaza el reloj; se olvida al cambiar la playlist
@@ -264,7 +264,9 @@ function composePlaylist() {
   }
   const rev = String(draft.rev) + (extra.length ? '+' + extra.map(item => item.stockId || item.id).join(',') : '');
   if (rev === playlist.rev) return;
-  playlist = { rev, name: String(draft.name || ''), slots: pairPlaylist([...draft.items, ...extra]) };
+  const items = [...draft.items, ...extra];
+  // ids de todas las piezas (el adaptador celebra las que entran nuevas: jingle de recreativa y anillos parpadeando)
+  playlist = { rev, name: String(draft.name || ''), slots: pairPlaylist(items), ids: [...new Set(items.map(item => String(item.stockId || item.id || '')).filter(Boolean))] };
   program();
 }
 
@@ -406,7 +408,7 @@ if (NATIVE) {
   // La LCD va en cada llamada; las teclas sólo cuando han cambiado desde `sinceKeys` (el adaptador recuerda keysRev).
   window.admiraGalleonFrames = sinceKeys => {
     try {
-      const frames = { frame: frameCount, playing, paused: pausedAt !== null, ready: readiness(), onAir, keysRev: keypad.rev, landscape: lcd.toDataURL('image/jpeg', 0.85) };
+      const frames = { frame: frameCount, playing, paused: pausedAt !== null, ready: readiness(), onAir, pieces: playlist.ids, keysRev: keypad.rev, landscape: lcd.toDataURL('image/jpeg', 0.85) };
       if (keypad.painted && keypad.rev !== sinceKeys) frames.keys = mosaic.toDataURL('image/jpeg', 0.85);
       return frames;
     } catch (error) {
