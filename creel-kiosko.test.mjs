@@ -57,7 +57,7 @@ test('sin red, el kiosko conserva la última temperatura buena (≤6 h) y reinte
 
 test('sin dato de clima (ni real ni forzado) el HUD no inventa «Sol»: sin icono y «CLIMA —»', () => {
   assert.match(html, /var conDato = !!\(clima\.forzado \|\| clima\.real\)/);
-  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? "NIEBLA" : nieve \? "NIEVE" : helada \? \(llovizna \? "LLOVIZNA HELADA" : "LLUVIA HELADA"\) : llovizna \? "LLOVIZNA" : chubascos \? "CHUBASCOS" : granizo \? "TORMENTA CON GRANIZO" : cubierto \? "CUBIERTO" : intervalos \? "INTERVALOS" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
+  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? "NIEBLA" : nieve \? "NIEVE" : helada \? \(llovizna \? "LLOVIZNA HELADA" : "LLUVIA HELADA"\) : llovizna \? "LLOVIZNA" : fuerte \? \(chubascos \? "CHUBASCOS FUERTES" : "LLUVIA FUERTE"\) : chubascos \? "CHUBASCOS" : granizo \? "TORMENTA CON GRANIZO" : cubierto \? "CUBIERTO" : intervalos \? "INTERVALOS" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
 });
 
 test('sin Intl, el respaldo de horaMadrid() sigue el horario de verano de la UE (no +1 h fijo)', () => {
@@ -799,7 +799,7 @@ test('nubes de noche: de madrugada las nubes no son gris claro de mediodía (fon
 
 test('niebla: con Open-Meteo 45/48 el HUD dice 🌫️ NIEBLA en vez de ☁️ NUBES (cielo y latido sin cambios)', () => {
   assert.match(html, /clima\.niebla = c\.weather_code === 45 \|\| c\.weather_code === 48;/);
-  assert.match(html, /niebla: clima\.niebla === true(, cubierto: clima\.cubierto === true)? \}\)/);
+  assert.match(html, /niebla: clima\.niebla === true(, cubierto: clima\.cubierto === true)?(, fuerte: clima\.fuerte === true)? \}\)/);
   assert.match(html, /clima\.niebla = cc\.niebla === true;/);
   assert.match(html, /niebla \? "NIEBLA" :/);
   assert.match(html, /niebla \? "\\uD83C\\uDF2B\\uFE0F" :/);
@@ -952,7 +952,7 @@ test('helada: con Open-Meteo 56/57/66/67 el HUD dice LLOVIZNA HELADA o LLUVIA HE
 
 test('cubierto: con Open-Meteo 3 el HUD dice CUBIERTO en vez de NUBES (cielo y latido sin cambios)', () => {
   assert.match(html, /clima\.cubierto = c\.weather_code === 3;/);
-  assert.match(html, /niebla: clima\.niebla === true, cubierto: clima\.cubierto === true \}\)\);/);
+  assert.match(html, /niebla: clima\.niebla === true, cubierto: clima\.cubierto === true(, fuerte: clima\.fuerte === true)? \}\)\);/);
   assert.match(html, /clima\.cubierto = cc\.cubierto === true;/);
   assert.match(html, /var cubierto = conDato && tipo === "nubes" && !niebla && !intervalos && cubiertoReal\(\);/);
   const ini = html.indexOf('  function cubiertoReal() {'), fin = html.indexOf('  function intervalosReal() {', ini);
@@ -964,5 +964,22 @@ test('cubierto: con Open-Meteo 3 el HUD dice CUBIERTO en vez de NUBES (cielo y l
   assert.equal(mk({ real: 'lluvia', cubierto: true })(), false);                      // solo nubes
   assert.equal(mk({ real: 'nubes', cubierto: true, forzado: 'nubes' })(), false);     // forzado manda
   assert.equal(mk({ real: null, cubierto: true })(), false);                          // sin dato
+  assert.equal(mk(null)(), false);                                                    // nunca rompe
+});
+
+test('lluvia fuerte: con Open-Meteo 65/82 el HUD dice LLUVIA FUERTE o CHUBASCOS FUERTES (cielo y latido sin cambios)', () => {
+  assert.match(html, /clima\.fuerte = c\.weather_code === 65 \|\| c\.weather_code === 82;/);
+  assert.match(html, /cubierto: clima\.cubierto === true, fuerte: clima\.fuerte === true \}\)\);/);
+  assert.match(html, /clima\.fuerte = cc\.fuerte === true;/);
+  assert.match(html, /var fuerte = conDato && tipo === "lluvia" && !nieve && !llovizna && !helada && fuerteReal\(\);/);
+  const ini = html.indexOf('  function fuerteReal() {'), fin = html.indexOf('  function intervalosReal() {', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const mk = (clima) => new Function('clima', html.slice(ini, fin) + '; return fuerteReal;')(clima);
+  assert.equal(mk({ real: 'lluvia', fuerte: true })(), true);                         // 65 u 82
+  assert.equal(mk({ real: 'lluvia', fuerte: false })(), false);                       // 61/63/80/81
+  assert.equal(mk({ real: 'lluvia' })(), false);                                      // caché antigua sin campo
+  assert.equal(mk({ real: 'tormenta', fuerte: true })(), false);                      // solo lluvia
+  assert.equal(mk({ real: 'lluvia', fuerte: true, forzado: 'lluvia' })(), false);     // forzado manda
+  assert.equal(mk({ real: null, fuerte: true })(), false);                            // sin dato
   assert.equal(mk(null)(), false);                                                    // nunca rompe
 });
