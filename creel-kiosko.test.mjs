@@ -57,7 +57,7 @@ test('sin red, el kiosko conserva la última temperatura buena (≤6 h) y reinte
 
 test('sin dato de clima (ni real ni forzado) el HUD no inventa «Sol»: sin icono y «CLIMA —»', () => {
   assert.match(html, /var conDato = !!\(clima\.forzado \|\| clima\.real\)/);
-  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? "NIEBLA" : nieve \? "NIEVE" : llovizna \? "LLOVIZNA" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
+  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? "NIEBLA" : nieve \? "NIEVE" : llovizna \? "LLOVIZNA" : intervalos \? "INTERVALOS" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
 });
 
 test('sin Intl, el respaldo de horaMadrid() sigue el horario de verano de la UE (no +1 h fijo)', () => {
@@ -837,7 +837,7 @@ test('nieve: con Open-Meteo 71-77/85/86 el HUD dice ❄️ NIEVE en vez de 🌧�
 
 test('llovizna: con Open-Meteo 51-57 el HUD dice 🌦️ LLOVIZNA en vez de 🌧️ LLUVIA (cielo y latido sin cambios)', () => {
   assert.match(html, /clima\.llovizna = c\.weather_code >= 51 && c\.weather_code <= 57;/);
-  assert.match(html, /dia: clima\.dia, llovizna: clima\.llovizna === true, nieve:/);
+  assert.match(html, /dia: clima\.dia, llovizna: clima\.llovizna === true, (intervalos: clima\.intervalos === true, )?nieve:/);
   assert.match(html, /clima\.llovizna = cc\.llovizna === true;/);
   assert.match(html, /llovizna \? "LLOVIZNA" :/);
   assert.match(html, /llovizna \? "\\uD83C\\uDF26\\uFE0F" :/);
@@ -853,4 +853,24 @@ test('llovizna: con Open-Meteo 51-57 el HUD dice 🌦️ LLOVIZNA en vez de 🌧
   assert.equal(mk({ real: 'lluvia', llovizna: true, forzado: 'lluvia' })(), false);  // forzado manda
   assert.equal(mk({ real: null, llovizna: true })(), false);                         // sin dato
   assert.equal(mk(null)(), false);                                                   // nunca rompe
+});
+
+test('intervalos: con Open-Meteo 2 de día el HUD dice ⛅ INTERVALOS en vez de ☁️ NUBES (de noche, cielo y latido sin cambios)', () => {
+  assert.match(html, /clima\.intervalos = c\.weather_code === 2;/);
+  assert.match(html, /llovizna: clima\.llovizna === true, intervalos: clima\.intervalos === true, nieve:/);
+  assert.match(html, /clima\.intervalos = cc\.intervalos === true;/);
+  assert.match(html, /intervalos \? "INTERVALOS" :/);
+  assert.match(html, /intervalos \? "\\u26C5" :/);
+  assert.match(html, /var intervalos = conDato && tipo === "nubes" && !niebla && intervalosReal\(\);/);
+  const ini = html.indexOf('  function intervalosReal() {'), fin = html.indexOf('  function nubesDeNoche() {', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const mk = (clima, noche = false) => new Function('clima', 'esNoche', html.slice(ini, fin) + '; return intervalosReal;')(clima, () => noche);
+  assert.equal(mk({ real: 'nubes', intervalos: true })(), true);                       // código 2 de día
+  assert.equal(mk({ real: 'nubes', intervalos: true }, true)(), false);                // de noche sigue NUBES
+  assert.equal(mk({ real: 'nubes', intervalos: false })(), false);                     // cubierto (3)
+  assert.equal(mk({ real: 'nubes' })(), false);                                        // caché antigua sin campo
+  assert.equal(mk({ real: 'lluvia', intervalos: true })(), false);                     // solo nubes
+  assert.equal(mk({ real: 'nubes', intervalos: true, forzado: 'nubes' })(), false);    // forzado manda
+  assert.equal(mk({ real: null, intervalos: true })(), false);                         // sin dato
+  assert.equal(mk(null)(), false);                                                     // nunca rompe
 });
