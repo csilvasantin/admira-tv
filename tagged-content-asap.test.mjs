@@ -232,3 +232,78 @@ test('el modo sincro publica la playlist efectiva antes de reproducir y retornar
   assert.match(branch[1], /signagePlaylistPush\(\)/);
   assert.ok(branch[1].indexOf('signagePlaylistPush()') < branch[1].indexOf('play(syncIndex())'));
 });
+
+test('Play por número carga las presentaciones etiquetadas desde su HTML de Stock', async () => {
+  const item = { id: 'capsula-2039', num: 2039, type: 'capsula', mime: 'text/html',
+    tags: ['#PortAventuraNeXT'], url: 'https://stock.admira.store/stock/capsula-2039/asset.bin?v=123' };
+  let stock = [item];
+  const context = vm.createContext({ URL, MEDIA: ['video', 'audio', 'interactive'], stockFullIndex: async () => stock });
+  vm.runInContext(functionSource(canal, 'isStockHtmlCapsule') + '\nasync ' + functionSource(canal, 'stockItemByNum'), context);
+  const media = await context.stockItemByNum(2039);
+  assert.equal(media.type, 'interactive');
+  assert.equal(media._stockPresentation, true);
+  assert.equal(media.url, item.url);
+  assert.match(canal, /it\._stockPresentation\?'allow-scripts':/);
+  for (const change of [
+    { tags: ['portaventuranext-antiguo'] },
+    { url: 'https://unknown.example/stock/capsula-2039/asset.bin' },
+    { url: 'https://stock.admira.store/stock/otro-id/asset.bin' },
+    { mime: 'application/octet-stream' },
+  ]) {
+    stock = [{ ...item, ...change }];
+    assert.equal(await context.stockItemByNum(2039), null);
+  }
+  stock = [{ ...item, type: 'audio', mime: 'audio/mpeg' }];
+  assert.equal((await context.stockItemByNum(2039)).type, 'audio');
+});
+
+test('Play programado usa una hora común, prepara la portada y conserva la emisión hasta la salida', async () => {
+  const pendingTimers = new Map();
+  let current = 1794822600000, serial = 0, loaded, prepared, fired;
+  const frame = {
+    style: {}, setAttribute(){}, remove(){ this.removed = true; },
+    addEventListener(name, callback){ assert.equal(name, 'load'); loaded = callback; },
+  };
+  const context = vm.createContext({
+    _precisionClock: { status: () => ({ready: true, ageMs: 700, uncertaintyMs: 35}), now: () => current },
+    _standby: false, paused: false,
+    stockItemByNum: async (num) => ({id: String(num), _stockPresentation: true}),
+    stockInteractiveFrame: () => frame,
+    stockInteractiveStyle: 'width:100%;height:100%',
+    stage: { after(node){ prepared = node; } },
+    setTimeout: (callback, delay) => { pendingTimers.set(++serial, {callback, delay}); return serial; },
+    clearTimeout: (id) => pendingTimers.delete(id),
+    forcePlayNow: async (...args) => { fired = args; },
+  });
+  vm.runInContext([
+    'let scheduledStock=null, lastStockStart=0;',
+    functionSource(canal, 'cancelScheduledStock'),
+    'async ' + functionSource(canal, 'scheduleStockPlayback'),
+  ].join('\n'), context);
+  const start = current + 18000;
+  assert.equal(await context.scheduleStockPlayback('playat-2044-' + start), 'executed');
+  assert.equal(prepared, frame);
+  assert.equal(frame.inert, true);
+  assert.match(frame.style.cssText, /visibility:hidden/);
+  assert.equal(fired, undefined);
+  loaded();
+  current = start;
+  const timer = pendingTimers.get(serial);
+  assert.equal(timer.delay, 18000);
+  timer.callback();
+  assert.equal(fired[0]._scheduledAt, start);
+  assert.equal(fired[0]._scheduledFrame, frame);
+  assert.equal(fired[1], 'playat2044');
+  assert.equal(fired[2], undefined, 'debe volver a la programación, sin entrar en bucle');
+  assert.equal(await context.scheduleStockPlayback('playat-2044-' + start), 'failed', 'no se repite una orden ya consumida');
+  assert.equal(await context.scheduleStockPlayback('playat-2044-' + (start - 1000)), 'failed');
+
+  assert.equal(await context.scheduleStockPlayback('playat-2044-' + (start + 15000)), 'executed');
+  const superseded = pendingTimers.get(serial);
+  context.cancelScheduledStock();
+  current += 15000;
+  fired = undefined;
+  superseded.callback();
+  assert.equal(frame.removed, true);
+  assert.equal(fired, undefined);
+});

@@ -664,6 +664,7 @@ var _precisionClock=window.AdmiraPrecisionSync&&AdmiraPrecisionSync.createClock(
   save:value=>localStorage.setItem('adtv_precision_clock',JSON.stringify(value))
 });
 var _precisionServo=window.AdmiraPrecisionSync&&AdmiraPrecisionSync.createServo({strategy:qs.get('syncservo')||'auto'});
+const PRECISION_CLOCK_URL='https://brain.digitalavatar.ai/sync/clock';
 var _precisionRefreshTimer=null, _precisionBoundaryAt=0, _precisionRefreshing=false;
 var _precisionFrames=new WeakMap();
 // SINCRO: máster central (única autoridad). Si está cargado, manda sobre el cálculo
@@ -989,7 +990,7 @@ async function refreshPrecisionClock(){
   clearTimeout(_precisionRefreshTimer);
   if(!syncOn&&!_extendedAssignment){_precisionRefreshTimer=setTimeout(refreshPrecisionClock,10000);return;}
   _precisionRefreshing=true;
-  const ok=await _precisionClock.synchronize(window.fetch.bind(window),'https://brain.digitalavatar.ai/sync/clock').catch(()=>false);
+  const ok=await _precisionClock.synchronize(window.fetch.bind(window),PRECISION_CLOCK_URL).catch(()=>false);
   _precisionRefreshing=false;
   _precisionRefreshTimer=setTimeout(refreshPrecisionClock,ok?300000:10000);
 }
@@ -1897,10 +1898,14 @@ function signageNowPush(it){
   if(syncOn){ try{ sinc.idx=syncIndex(); sinc.slot=Math.round(syncSlotMs()/1000); sinc.n=playlist.length; if(SYNC_REMOTE&&SYNC_REMOTE.autoRevision){sinc.revision=SYNC_REMOTE.autoRevision;sinc.group='mba-admira-tv';} }catch(_){} }
   if(_extendedAssignment&&_extendedAssignment.tile){ sinc.tile=_extendedAssignment.tile; sinc.revision=_extendedAssignment.revision||0; }
   if(syncOn||_extendedAssignment)sinc.precision=precisionSyncStatus();
+  if(it._scheduledAt&&_precisionClock?.ready){
+    sinc.scheduled={startAt:it._scheduledAt,uncertaintyMs:_precisionClock.status().uncertaintyMs};
+  }
   const effectiveDuration=syncOn?Math.round(syncSlotMs()/1000):editorialSec(it);
   const effectiveStartedAt=syncOn?(now-Math.round(syncElapsedMs())):now;
+  const measuredStart=it._scheduledAt&&_precisionClock?.ready?Math.round(_precisionClock.now()):effectiveStartedAt;
   const item={ id:it.id, url:it.url, type:it.type||'image', ar:(mupiAR||itemAR(it)||(9/16)),
-    title:(it.title||it.prompt||'').slice(0,80), poster:(()=>{ const p=String(it.poster||it.thumbnail||it.thumb||((it.type==='image'||it.type==='animation')?it.url:'')||''); return /^https:\/\//.test(p)?p.slice(0,500):''; })(), dur:effectiveDuration, startedAt:effectiveStartedAt, ts:now, aud:_lastAud, audio:playerAudioState(), sinc };
+    title:(it.title||it.prompt||'').slice(0,80), poster:(()=>{ const p=String(it.poster||it.thumbnail||it.thumb||((it.type==='image'||it.type==='animation')?it.url:'')||''); return /^https:\/\//.test(p)?p.slice(0,500):''; })(), dur:effectiveDuration, startedAt:measuredStart, ts:now, aud:_lastAud, audio:playerAudioState(), sinc };
   const cambiaPieza = !_nowItem || String(_nowItem.id)!==String(item.id);
   _nowItem=item; _postNow(item);
   // Foto y título salen JUNTOS. El título viaja en este beat y cambia al instante; la
@@ -2447,9 +2452,12 @@ function releaseForcedTagPlayback(state){
   if(!ownsForcedTagPlayback(state)) return false;
   _forcedTagPlayback=null; Promise.resolve().then(()=>pollMode()).catch(()=>{}); return true;
 }
+function stopForcedLoop(){ if(_forcedTagPlayback&&_forcedTagPlayback.loop){ _forcedTagPlayback.loop=false; _forcedTagPlayback.item=null; } }
 function finishForcedTagPlayback(){
   const state=_forcedTagPlayback;
   if(!state||state.phase!=='playing') return false;
+  // loop<N>: la pieza forzada se repite hasta que llegue otra orden (stopForcedLoop la suelta).
+  if(state.loop&&state.item&&!_standby){ play(0,state.item); return true; }
   _forcedTagPlayback=null; _asapItemId=null;
   // Al acabar la cápsula completa seguimos el loop local sin congelar el último
   // frame. El sondeo inmediato devuelve después el gobierno a sincro/condicional
@@ -2784,6 +2792,7 @@ async function play(i, forced){
   if(_standby||paused) return;
   guardPlayStarted();               // guardia de emisión: empieza a contar el turno              // en standby no se reproduce nada (ni audio detrás del negro)
   const _tok=++_playTok;
+  if(activeScheduledStockFrame) clearActiveScheduledStockFrame();
   if(xtoreMusicEnabled())xtoreMusicRelease();
   clearTimeout(timer); stopBar(); bar.style.width='0'; mediaEl=null; usesAdv=false;
   paused=false; document.body.classList.remove('paused'); $('pause').textContent='⏸';
@@ -2972,20 +2981,19 @@ async function play(i, forced){
     // deja tocar y a los `dur` segundos sigue el bucle. Se emite SIEMPRE online
     // (no es cacheable) y cada pase estrena el iframe, así que el interactivo
     // empieza en su atracción y ningún transeúnte hereda la elección del anterior.
-    const f=document.createElement('iframe');
-    f.src=it.url;
-    f.style.cssText='width:100%;height:100%;border:0;display:block;background:#000';
-    f.setAttribute('allow','autoplay; encrypted-media; fullscreen');
-    f.setAttribute('allowfullscreen','');
-    // La Xperiencia es contenido propio del stock, pero sigue siendo un documento
-    // ajeno dentro de la antena: puede correr y sonar, jamás navegar la pantalla
-    // ni abrir ventanas encima de la emisión.
-    const interTags=Array.isArray(it.tags)?it.tags:String(it.tags||'').split(/[,+\s]+/);
-    const isPayment=interTags.some(t=>normTag(t)==='payment');
-    f.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms'+(isPayment?' allow-popups allow-popups-to-escape-sandbox':''));
+    const prepared=it._scheduledFrame;
+    delete it._scheduledFrame;
+    const f=prepared||stockInteractiveFrame(it);
+    if(prepared){
+      // Mantener el iframe conectado al mismo padre evita una recarga en Chromium 130.
+      activeScheduledStockFrame=f;
+      f.style.visibility='visible';
+      f.style.pointerEvents='auto';
+      f.inert=false;
+    }
     f.onerror=()=>setTimeout(()=>mediaAdvance(_tok),600);
     if(XTORE_PARENT)f.addEventListener('load',()=>{if(_tok===_playTok)emitFrameState(it,'document-loaded');},{once:true});
-    stage.appendChild(f);
+    if(!prepared) stage.appendChild(f);
     // Reloj provisional: en cuanto la pieza anuncie su duración, applyXperienciaDuration
     // lo rearma con la suya. `_interSec` recuerda lo que dijo en un pase anterior.
     startAdv(syncOn?syncRemainingMs():editorialSec(it)*1000);
@@ -3495,16 +3503,102 @@ async function stockFullIndex(){
   }
   return _stockFull;
 }
+function isStockHtmlCapsule(it){
+  if(it.type!=='capsula'||it.mime!=='text/html'||!/^[A-Za-z0-9][A-Za-z0-9-]{2,59}$/.test(String(it.id||''))) return false;
+  if(!Array.isArray(it.tags)||!it.tags.some(tag=>String(tag).trim().replace(/^#+/,'').toLowerCase()==='portaventuranext')) return false;
+  try{
+    const u=new URL(it.url);
+    return u.origin==='https://stock.admira.store'&&!u.username&&!u.password&&!u.hash
+      &&u.pathname==='/stock/'+it.id+'/asset.bin'&&(!u.search||/^\?v=[0-9]{1,12}$/.test(u.search));
+  }catch(_){return false;}
+}
 async function stockItemByNum(pn){
   try{
     const full=await stockFullIndex();
-    const it=full.find(x=>x&&Number(x.num)===pn&&x.url&&MEDIA.includes(x.type)); if(!it) return null;
-    const copy=Object.assign({},it); copy._num=pn; copy.num=pn; return copy;
+    const it=full.find(x=>x&&Number(x.num)===pn&&x.url); if(!it) return null;
+    const presentation=isStockHtmlCapsule(it);
+    if(!presentation&&!MEDIA.includes(it.type)) return null;
+    return {...it,_num:pn,num:pn,...(presentation?{type:'interactive',_stockPresentation:true}:{})};
   }catch(_){ return null; }
 }
-async function forcePlayNow(it,label){
+const stockInteractiveStyle='width:100%;height:100%;border:0;display:block;background:#000';
+function stockInteractiveFrame(it){
+  const f=document.createElement('iframe');
+  f.style.cssText=stockInteractiveStyle;
+  f.setAttribute('allow','autoplay; encrypted-media; fullscreen');
+  f.setAttribute('allowfullscreen','');
+  // Sólo las Xperiencias normales permiten formularios y las de pago sus ventanas.
+  const tags=Array.isArray(it.tags)?it.tags:String(it.tags||'').split(/[,+\s]+/);
+  const isPayment=tags.some(t=>normTag(t)==='payment');
+  f.setAttribute('sandbox',it._stockPresentation?'allow-scripts':'allow-scripts allow-same-origin allow-forms'+(isPayment?' allow-popups allow-popups-to-escape-sandbox':''));
+  f.src=it.url;
+  return f;
+}
+
+let scheduledStock=null, lastStockStart=0, activeScheduledStockFrame=null;
+function clearActiveScheduledStockFrame(){
+  activeScheduledStockFrame?.remove();
+  activeScheduledStockFrame=null;
+}
+function cancelScheduledStock(){
+  if(!scheduledStock) return;
+  clearTimeout(scheduledStock.timer);
+  if(scheduledStock.frame) scheduledStock.frame.remove();
+  scheduledStock=null;
+}
+
+function cancelsScheduledStock(cmd){
+  return /^(?:play(?:\d+)?|loop\d+|pause|resume|toggle-pause|next|prev|first|last|reload|hardreload|recargar|reiniciar|actualizar|standby|blackout|stop|apagar|parar|off|(?:goto|content|tag)-.*)$/.test(cmd);
+}
+
+async function scheduleStockPlayback(cmd){
+  const match=/^playat-([1-9]\d{0,5})-(\d{13})$/.exec(cmd);
+  if(!match||!_precisionClock) return 'failed';
+  const at=Number(match[2]), number=Number(match[1]);
+  if(at<=lastStockStart||at<=Number(scheduledStock?.at||0)) return 'failed';
+  cancelScheduledStock();
+  const pending={at,frame:null,loaded:false,timer:null};
+  scheduledStock=pending;
+  const clock=_precisionClock.status();
+  const validClock=clock.ready&&clock.ageMs<300000&&clock.uncertaintyMs!=null&&clock.uncertaintyMs<=250;
+  const [it,locked]=await Promise.all([stockItemByNum(number),validClock||_precisionClock.synchronize(window.fetch.bind(window),PRECISION_CLOCK_URL).catch(()=>false)]);
+  if(scheduledStock!==pending) return 'failed';
+  const remaining=at-_precisionClock.now();
+  const uncertainty=_precisionClock.status().uncertaintyMs;
+  if(!it||!locked||!Number.isFinite(uncertainty)||uncertainty>250||remaining<0||remaining>30000){
+    cancelScheduledStock();
+    return 'failed';
+  }
+  if(it._stockPresentation){
+    const frame=pending.frame=stockInteractiveFrame(it);
+    frame.style.cssText=stockInteractiveStyle+';position:absolute;inset:0;visibility:hidden;pointer-events:none';
+    frame.setAttribute('allow',"autoplay 'none'; fullscreen");
+    frame.inert=true;
+    frame.addEventListener('load',()=>{pending.loaded=true;},{once:true});
+    stage.after(frame);
+  }
+  const start=()=>{
+    if(scheduledStock!==pending) return;
+    const left=at-_precisionClock.now();
+    if(left>2){pending.timer=setTimeout(start,left);return;}
+    if(_standby||paused||left < -500||(pending.frame&&!pending.loaded)){
+      cancelScheduledStock();
+      return;
+    }
+    lastStockStart=at;
+    scheduledStock=null;
+    it._scheduledAt=at;
+    if(pending.frame) it._scheduledFrame=pending.frame;
+    forcePlayNow(it,'playat'+number).catch(()=>{if(pending.frame) pending.frame.remove();});
+  };
+  pending.timer=setTimeout(start,remaining);
+  return 'executed';
+}
+
+async function forcePlayNow(it,label,loop){
   if(!it) return 'ignored';
   const forcedState=beginForcedTagPlayback(label||('play:'+String(it.id||'')));
+  if(loop){ forcedState.loop=true; forcedState.item=it; }
   disableAdmiraSync();
   if(directOn){ directOn=false; try{ localStorage.removeItem('adtv_direct'); }catch(_){} }
   try{ if(playoutMode!=='local') setAdmiraMode('local'); }catch(_){}
@@ -3551,7 +3645,7 @@ function forceAudience(r){
   try{ const F=window.__xplForce; emitAudienceState(F?(F.gender||AUD_KIND_LANE[F.kind]||F.kind):'neutral', F&&F.gender?F.gender:'u', !!F, F?F.kind:'none'); }catch(_){}
   return msg;
 }
-function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
+function runCli(raw){ const v=String(raw||'').trim(); if(!v) return; stopForcedLoop();
   const cmd=v.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
   const rest=v.replace(/^\s*\/?\S+\s*/,'').trim();
   // Misma ruta que el Remote experto, también disponible en la consola local
@@ -3642,9 +3736,12 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
   if(cmd==='reset'||cmd==='clear'){ disableAdmiraSync(); Object.assign(seg,segBase()); save('adtv_seg',JSON.stringify(seg)); syncSegPanel(); seenSig=''; rebuild(true); flashCli('✓ filtros reset'); return; }
   // /play<N> o /play <N> → reproduce el asset con número de importación N, POR ENCIMA
   // de cualquier filtro (forzado). #1 = el más antiguo, #N = el último importado.
-  let pn=null;
+  let pn=null, loopPn=false;
   if(cmd==='play'){ pn=parseInt(v.replace(/^\s*\/?play\s*/i,'').trim(),10); }
   else if(/^play\d+$/.test(cmd)){ pn=parseInt(cmd.slice(4),10); }
+  // loop<N> (Stream Deck de AdmiraNeXT01, 15-nov-2026): como play<N>, pero la pieza se REPITE al terminar en vez de
+  // devolver la pantalla a su programación. Sale del bucle con cualquier otra orden (otro play/loop, next, tag, reload…).
+  else if(/^loop\d+$/.test(cmd)){ pn=parseInt(cmd.slice(4),10); loopPn=true; }
   if(pn!=null){
     if(isNaN(pn)){ flashCli('uso: /play<N>  (1-'+all.length+')'); return; }
     // r8 (08-09-2026): el feed del canal (INDEX = últimas 300 del Stock) no llega a las piezas
@@ -3656,7 +3753,7 @@ function runCli(raw){ const v=String(raw||'').trim(); if(!v) return;
       // r7: en una pantalla SINCRONIZADA play(0,target) arrancaba la pieza y el tick de sincro
       // la devolvía al índice del máster en el mismo segundo. Misma ventana forzada que goto-N,
       // y se emite YA en línea (sin esperar la descarga).
-      forcePlayNow(target,'play'+pn).catch(()=>{});
+      forcePlayNow(target,(loopPn?'loop':'play')+pn,loopPn).catch(()=>{});
       flashCli('▶ asset #'+pn+' · '+String(target.title||target.prompt||'').slice(0,24));
     };
     const local=all.find(it=>it&&it._num===pn)||playlist.find(it=>it&&(it._num===pn||Number(it.num)===pn));
@@ -4430,6 +4527,8 @@ function enterDirect(url){
   let host=''; try{ host=new URL(u).hostname.replace(/^www\./,''); }catch(_){}
   const emb=directEmbed(u);
   mupiAR=16/9; fitMupi();   // el directo suele ser horizontal; si es vídeo, lo afinamos al medir
+  cancelScheduledStock();
+  clearActiveScheduledStockFrame();
   stage.innerHTML='';
   if(emb.type==='video'){
     const v=document.createElement('video'); v.src=emb.src; v.autoplay=true; v.loop=true; v.playsInline=true; v.muted=muted; v.volume=volume;
@@ -5144,6 +5243,8 @@ async function flushCmdAckOutbox(){
 }
 async function executeQueuedCommand(c){
   const raw=String(c&&c.cmd||''), cmd=raw.replace(/^\//,'').split(/\s+/)[0].toLowerCase();
+  if(cmd.startsWith('playat-')) return scheduleStockPlayback(cmd);
+  if(cancelsScheduledStock(cmd)) cancelScheduledStock();
   // El panel /players acaba de guardar: relee la asignación YA y acusa (cuenta atrás por pantalla).
   if(cmd==='playout-sync'){ try{ await pollMode(); }catch(_){ return 'failed'; } return 'executed'; }
   // SHOW SYNC: reloj de sala con hora de servidor + título + posición en ms (sólo lectura, no toca la emisión).
@@ -5308,6 +5409,7 @@ function ackCtrl(c,result){
   fetch(CTRL_BASE+'/ack',{method:'POST',cache:'no-store',headers:ctrlDeviceHeaders(true),body:JSON.stringify({screen:scr.screen,commandId:String(c.id),result:result||'executed'})}).catch(()=>{});
 }
 async function applyCtrlCmd(cmd){
+  if(/^(next|prev|first|last|goto-|tag-)/.test(String(cmd||''))) stopForcedLoop();
   switch(cmd){
     case 'next':  testNav('next'); return 'executed';
     case 'prev':  testNav('prev'); return 'executed';
