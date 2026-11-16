@@ -158,7 +158,7 @@
   var CLIMA_KEY = "creel-clima-v1", climaReintento = null;
   try {
     var cc = JSON.parse(localStorage.getItem(CLIMA_KEY) || "null");
-    if (cc && typeof cc.temp === "number" && Date.now() - cc.t < 6 * 3600 * 1000) { clima.temp = cc.temp; clima.real = cc.real; clima.t = cc.t; clima.dia = typeof cc.dia === "boolean" ? cc.dia : null; clima.niebla = cc.niebla === true; clima.nieve = cc.nieve === true; clima.llovizna = cc.llovizna === true; clima.intervalos = cc.intervalos === true; }
+    if (cc && typeof cc.temp === "number" && Date.now() - cc.t < 6 * 3600 * 1000) { clima.temp = cc.temp; clima.real = cc.real; clima.t = cc.t; clima.dia = typeof cc.dia === "boolean" ? cc.dia : null; clima.niebla = cc.niebla === true; clima.nieve = cc.nieve === true; clima.llovizna = cc.llovizna === true; clima.intervalos = cc.intervalos === true; clima.chubascos = cc.chubascos === true; }
   } catch (e) {}
   var climaBusy = false; // una sola petición de clima a la vez: colgadas no se apilan (cada 10 min, reintento de 2 min y evento online)
   // Corte de red largo con la TCL encendida (15-nov-2026): la caché solo vale 6 h también en marcha, no solo al arrancar.
@@ -199,6 +199,10 @@
   // decía «☁️ … NUBES» como con el cielo cubierto. intervalosReal() = cielo real «nubes» con código 2 y de día (esNoche() falso);
   // entonces el HUD pinta «⛅ … INTERVALOS». De noche sigue «☁️ … NUBES» (sin sol que asome). El cielo se pinta como nubes y el
   // latido sigue diciendo «nubes». Forzado manda. Nunca rompe el HUD.
+  // Chubascos (16-nov-2026 09:20): Open-Meteo 80-82 (chubascos de lluvia, típicos de la costa en otoño) caían en «lluvia» y el
+  // HUD decía «🌧️ … LLUVIA» como con lluvia continua. chubascosReal() = cielo real «lluvia» con código de chubascos; entonces el
+  // HUD pinta «🌧️ … CHUBASCOS». El cielo se pinta como lluvia y el latido sigue diciendo «lluvia». Forzado manda. Nunca rompe.
+  function chubascosReal() { try { return !clima.forzado && clima.real === "lluvia" && clima.chubascos === true; } catch (e) { return false; } }
   function intervalosReal() { try { return !clima.forzado && clima.real === "nubes" && clima.intervalos === true && !esNoche(); } catch (e) { return false; } }
   function nubesDeNoche() { try { return !clima.forzado && !!clima.real && clima.real !== "sol" && esNoche(); } catch (e) { return false; } }
   function leeClima() {
@@ -221,10 +225,11 @@
         clima.nieve = (c.weather_code >= 71 && c.weather_code <= 77) || c.weather_code === 85 || c.weather_code === 86;
         clima.llovizna = c.weather_code >= 51 && c.weather_code <= 57;
         clima.intervalos = c.weather_code === 2;
+        clima.chubascos = c.weather_code >= 80 && c.weather_code <= 82;
         clima.dia = c.is_day === 0 ? false : c.is_day === 1 ? true : null;
         clima.ok = true;
         clima.t = Date.now();
-        try { localStorage.setItem(CLIMA_KEY, JSON.stringify({ t: Date.now(), temp: clima.temp, real: clima.real, dia: clima.dia, llovizna: clima.llovizna === true, intervalos: clima.intervalos === true, nieve: clima.nieve === true, niebla: clima.niebla === true })); } catch (e) {}
+        try { localStorage.setItem(CLIMA_KEY, JSON.stringify({ t: Date.now(), temp: clima.temp, real: clima.real, chubascos: clima.chubascos === true, dia: clima.dia, llovizna: clima.llovizna === true, intervalos: clima.intervalos === true, nieve: clima.nieve === true, niebla: clima.niebla === true })); } catch (e) {}
       } catch (e) {
         fail();
       }
@@ -330,6 +335,7 @@
     var nieve = conDato && tipo === "lluvia" && nieveReal();
     var llovizna = conDato && tipo === "lluvia" && !nieve && lloviznaReal();
     var intervalos = conDato && tipo === "nubes" && !niebla && intervalosReal();
+    var chubascos = conDato && tipo === "lluvia" && !nieve && !llovizna && chubascosReal();
     var linea = (conDato ? (noche ? "\uD83C\uDF19" : niebla ? "\uD83C\uDF2B\uFE0F" : nieve ? "\u2744\uFE0F" : llovizna ? "\uD83C\uDF26\uFE0F" : intervalos ? "\u26C5" : (ICONO[tipo] || "")) + " " : "") + t;
     g.fillText(linea, 26, hy);
     g.fillStyle = "#ffd9c7";
@@ -337,7 +343,7 @@
     g.font = "600 " + (lleno ? L.subF : 16) + "px ui-monospace, monospace";
     g.fillStyle = "rgba(255,255,255,.75)";
     var extra = clima.forzado ? " \u00B7 FORZADO" : (clima.ok ? " \u00B7 EN DIRECTO" : "");
-    g.fillText("PORTAVENTURA \u00B7 " + (conDato ? (noche ? "DESPEJADO" : niebla ? "NIEBLA" : nieve ? "NIEVE" : llovizna ? "LLOVIZNA" : intervalos ? "INTERVALOS" : String(NOMBRE[tipo] || "").toUpperCase()) : "CLIMA \u2014") + extra, 28, hy + (lleno ? L.subDy : 50));
+    g.fillText("PORTAVENTURA \u00B7 " + (conDato ? (noche ? "DESPEJADO" : niebla ? "NIEBLA" : nieve ? "NIEVE" : llovizna ? "LLOVIZNA" : chubascos ? "CHUBASCOS" : intervalos ? "INTERVALOS" : String(NOMBRE[tipo] || "").toUpperCase()) : "CLIMA \u2014") + extra, 28, hy + (lleno ? L.subDy : 50));
     g.restore();
   }
 

@@ -57,7 +57,7 @@ test('sin red, el kiosko conserva la última temperatura buena (≤6 h) y reinte
 
 test('sin dato de clima (ni real ni forzado) el HUD no inventa «Sol»: sin icono y «CLIMA —»', () => {
   assert.match(html, /var conDato = !!\(clima\.forzado \|\| clima\.real\)/);
-  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? "NIEBLA" : nieve \? "NIEVE" : llovizna \? "LLOVIZNA" : intervalos \? "INTERVALOS" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
+  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? "NIEBLA" : nieve \? "NIEVE" : llovizna \? "LLOVIZNA" : chubascos \? "CHUBASCOS" : intervalos \? "INTERVALOS" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
 });
 
 test('sin Intl, el respaldo de horaMadrid() sigue el horario de verano de la UE (no +1 h fijo)', () => {
@@ -759,7 +759,7 @@ test('sistema de la TCL: el latido da el sistema y su versión mayor en system.o
 
 test('de noche y despejado el HUD no pinta el Sol: 🌙 DESPEJADO y luz fría (is_day reciente o tabla de orto/ocaso)', () => {
   assert.match(html, /clima\.dia = c\.is_day === 0 \? false : c\.is_day === 1 \? true : null;/);
-  assert.match(html, /real: clima\.real, dia: clima\.dia[ ,]/);
+  assert.match(html, /real: clima\.real, (chubascos: clima\.chubascos === true, )?dia: clima\.dia[ ,]/);
   assert.match(html, /var noche = conDato && tipo === "sol" && lunaClara\(\);/);
   assert.match(html, /noche \? "DESPEJADO" :/);
   const ini = html.indexOf('  var ORTO = '), fin = html.indexOf('  function leeClima() {', ini);
@@ -873,4 +873,23 @@ test('intervalos: con Open-Meteo 2 de día el HUD dice ⛅ INTERVALOS en vez de 
   assert.equal(mk({ real: 'nubes', intervalos: true, forzado: 'nubes' })(), false);    // forzado manda
   assert.equal(mk({ real: null, intervalos: true })(), false);                         // sin dato
   assert.equal(mk(null)(), false);                                                     // nunca rompe
+});
+
+test('chubascos: con Open-Meteo 80-82 el HUD dice CHUBASCOS en vez de LLUVIA (cielo y latido sin cambios)', () => {
+  assert.match(html, /clima\.chubascos = c\.weather_code >= 80 && c\.weather_code <= 82;/);
+  assert.match(html, /real: clima\.real, chubascos: clima\.chubascos === true, dia:/);
+  assert.match(html, /clima\.chubascos = cc\.chubascos === true;/);
+  assert.match(html, /chubascos \? "CHUBASCOS" :/);
+  assert.match(html, /var chubascos = conDato && tipo === "lluvia" && !nieve && !llovizna && chubascosReal\(\);/);
+  const ini = html.indexOf('  function chubascosReal() {'), fin = html.indexOf('  function intervalosReal() {', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const mk = (clima) => new Function('clima', html.slice(ini, fin) + '; return chubascosReal;')(clima);
+  assert.equal(mk({ real: 'lluvia', chubascos: true })(), true);                      // chubascos 80-82
+  assert.equal(mk({ real: 'lluvia', chubascos: false })(), false);                    // lluvia continua
+  assert.equal(mk({ real: 'lluvia' })(), false);                                      // caché antigua sin campo
+  assert.equal(mk({ real: 'nubes', chubascos: true })(), false);                      // solo lluvia
+  assert.equal(mk({ real: 'tormenta', chubascos: true })(), false);                   // tormenta manda
+  assert.equal(mk({ real: 'lluvia', chubascos: true, forzado: 'lluvia' })(), false);  // forzado manda
+  assert.equal(mk({ real: null, chubascos: true })(), false);                         // sin dato
+  assert.equal(mk(null)(), false);                                                    // nunca rompe
 });
