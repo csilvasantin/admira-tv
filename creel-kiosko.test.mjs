@@ -300,7 +300,7 @@ test('un latido colgado de /signage/now no apila conexiones con api.admira.store
   const st = { fetches: [], timers: [], aborts: 0 };
   const env = new Function('st', `
     var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540, diag = { errores: 0, ultimo: "" }, arranque = 0, media = null, mediaOk = false, mudo = true;
-    function fpsAhora() { return 60; } function memoriaMB() { return 80; } function pantallaFija() { return "si"; } function teleVisible() { return "si"; } function climaMin() { return 3; } function mandoSeg() { return 2; } function listaOrigen() { return "red"; } var recargaPrevia = "arranque"; function motorWeb() { return "Chrome 120"; } var desfaseReloj = null; function encajeTele() { return { orientation: "landscape", encaje: "16:9" }; } var cortesRed = 0, ultimoCorte = 0; function redLatido(o) { return { online: o }; } function listaMin() { return 0; } function fondoLatido() { return "rojo"; } var intro = { on: false };
+    function fpsAhora() { return 60; } function memoriaMB() { return 80; } function pantallaFija() { return "si"; } function teleVisible() { return "si"; } function climaMin() { return 3; } function mandoSeg() { return 2; } function listaOrigen() { return "red"; } var recargaPrevia = "arranque"; function sistemaTele() { return "Android 11"; } function motorWeb() { return "Chrome 120"; } var desfaseReloj = null; function encajeTele() { return { orientation: "landscape", encaje: "16:9" }; } var cortesRed = 0, ultimoCorte = 0; function redLatido(o) { return { online: o }; } function listaMin() { return 0; } function fondoLatido() { return "rojo"; } var intro = { on: false };
     var innerWidth = 1920, innerHeight = 1080, navigator = { platform: "", language: "es", userAgent: "tcl", onLine: true }, window = { devicePixelRatio: 1 }; window.parent = window;
     var location = { origin: "https://admira.tv" };
     function piezaEnAntena() { return null; } function zonaTele() { return ""; }
@@ -737,6 +737,22 @@ test('motor web de la TCL: el latido da el motor y su versión mayor en software
   assert.equal(f('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'), 'Chrome 120');
   assert.equal(f('Mozilla/5.0 (X11; Linux x86_64; rv:115.0) Gecko/20100101 Firefox/115.0'), 'Firefox 115');
   assert.equal(f('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15'), 'Safari 17');
+  assert.equal(f(''), '?');
+  assert.equal(f(undefined), '?');
+});
+
+test('sistema de la TCL: el latido da el sistema y su versión mayor en system.os', () => {
+  assert.match(html, /system: \{ os: sistemaTele\(navigator\.userAgent\), platform:/);
+  assert.doesNotMatch(html, /system: \{ os: "", platform/);
+  const a = html.indexOf('  function sistemaTele('), b = html.indexOf('\n', a);
+  assert.ok(a > 0);
+  const f = new Function(html.slice(a, b) + '; return sistemaTele;')();
+  assert.equal(f('Mozilla/5.0 (Linux; Android 9; Smart TV Build/PPR1; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/87.0.4280.141 Mobile Safari/537.36'), 'Android 9');
+  assert.equal(f('Mozilla/5.0 (Linux; Android 11; BeyondTV4 Build/RTT2.220118.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/120.0.6099.230 Safari/537.36'), 'Android 11');
+  assert.equal(f('Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1'), 'iOS 17');
+  assert.equal(f('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'), 'Windows');
+  assert.equal(f('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15'), 'macOS');
+  assert.equal(f('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'), 'Linux');
   assert.equal(f(''), '?');
   assert.equal(f(undefined), '?');
 });

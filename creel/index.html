@@ -727,6 +727,10 @@
   // tele es un Chromium viejo (sin AbortController, Wake Lock o Intl) sin leer el userAgent entero. motorWeb(ua) da "WebView Chrome 87",
   // "Chrome 120", "Firefox 115", "Safari 17" o "?" si no lo reconoce. Nunca rompe el latido.
   function motorWeb(ua) { try { ua = String(ua || ""); var m = /(?:Chrome|CriOS)\/(\d+)/.exec(ua); if (m) return (/; wv\)|\bwv\b/.test(ua) ? "WebView Chrome " : "Chrome ") + m[1]; m = /Firefox\/(\d+)/.exec(ua); if (m) return "Firefox " + m[1]; m = /Version\/(\d+)[^ ]* (?:Mobile\/\S+ )?Safari\//.exec(ua); if (m) return "Safari " + m[1]; return "?"; } catch (e) { return "?"; } }
+  // Sistema de la TCL para el latido (16-nov-2026 02:25): system.os iba vacío y desde /signage/now no se veía qué Android lleva la tele
+  // (Android TV 9 y anteriores traen WebView viejos y no siempre se actualizan) sin leer el userAgent entero. sistemaTele(ua) da "Android 11",
+  // "Windows", "macOS", "iOS 17", "Linux" o "?" si no lo reconoce. Nunca rompe el latido.
+  function sistemaTele(ua) { try { ua = String(ua || ""); var m = /Android[ \/](\d+)/.exec(ua); if (m) return "Android " + m[1]; if (/Android/.test(ua)) return "Android"; m = /(?:iPhone|iPad|iPod)[^)]*? OS (\d+)/.exec(ua); if (m) return "iOS " + m[1]; if (/Windows/.test(ua)) return "Windows"; if (/Mac OS X|Macintosh/.test(ua)) return "macOS"; if (/CrOS/.test(ua)) return "ChromeOS"; if (/Linux|X11/.test(ua)) return "Linux"; return "?"; } catch (e) { return "?"; } }
   var beatBusy = false, beatVuelta = 0; // un solo latido a la vez: colgados no se apilan
   function beat() {
     if (typeof fetch !== "function") return;
@@ -735,7 +739,7 @@
                  : pieza || { id: "creel-fondo", title: "Stranger Things \u00B7 Hawkins \u00B7 Hotel Creel", type: "animation", url: location.origin + "/creel/" };
     var body = { screen: SCREEN, producer: "creel-led-" + SCREEN, item: item, standby: false, role: "creel", version: version,
       device: { display: { width: W, height: H, cssWidth: innerWidth, cssHeight: innerHeight, viewportWidth: innerWidth, viewportHeight: innerHeight, devicePixelRatio: window.devicePixelRatio || 1, orientation: encajeTele(innerWidth, innerHeight).orientation, encaje: encajeTele(innerWidth, innerHeight).encaje },
-        system: { os: "", platform: navigator.platform || "", language: navigator.language || "", timezone: zonaTele(), relojSeg: desfaseReloj },
+        system: { os: sistemaTele(navigator.userAgent), platform: navigator.platform || "", language: navigator.language || "", timezone: zonaTele(), relojSeg: desfaseReloj },
         hardware: { dedicated: false, model: "Hotel Creel \u00B7 LED" },
         software: { player: "Hotel Creel \u00B7 LED", playerVersion: "creel-1", webRelease: version, engine: motorWeb(navigator.userAgent), userAgent: navigator.userAgent },
         audio: { muted: !!mudo, playing: !!(media && media.tagName === "VIDEO" && !media.paused && !mudo) }, network: redLatido(navigator.onLine !== false, navigator.connection, cortesRed, ultimoCorte, Date.now()) },
