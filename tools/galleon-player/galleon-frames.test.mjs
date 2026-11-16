@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRequire } from 'node:module';
 
-const { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, ringColors, clampVolume } = createRequire(import.meta.url)('./galleon-frames.cjs');
+const { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume } = createRequire(import.meta.url)('./galleon-frames.cjs');
 
 test('la geometría es la del Galleon 100 SD: LCD 720×384 y 12 teclas 160×160 en 3 columnas × 4 filas', () => {
   assert.deepEqual(LCD, { width: 720, height: 384 });
@@ -52,21 +52,23 @@ test('mantener la tecla 12 un segundo sale; un toque breve o cualquier otra tecl
   assert.equal(exits, 1);
 });
 
-test('girar cualquiera de los dos diales sube o baja el volumen a saltos de 5 % y pulsarlo silencia o devuelve el sonido', () => {
+test('girar el dial izquierdo sube o baja el volumen a saltos de 5 % y pulsarlo silencia o devuelve el sonido; el derecho no es volumen', () => {
   const changes = [];
   const volume = createVolumeControl(state => changes.push(state), { volume: 0.5 });
   assert.deepEqual(volume.state(), { volume: 0.5, muted: false });
   assert.equal(volume('rotate', { type: 'button', index: 0 }, 1), false); // las teclas no son ruedas
+  assert.equal(volume('rotate', { type: 'encoder', index: 1 }, 1), false); // el dial derecho es el transporte
+  assert.equal(volume('down', { type: 'encoder', index: 1 }), false);
   assert.equal(volume('rotate', { type: 'encoder', index: 0 }, 1), true);
-  assert.equal(volume('rotate', { type: 'encoder', index: 1 }, -3), true); // giro rápido: varias muescas de golpe
+  assert.equal(volume('rotate', { type: 'encoder', index: 0 }, -3), true); // giro rápido: varias muescas de golpe
   assert.deepEqual(changes, [{ volume: 0.55, muted: false }, { volume: 0.4, muted: false }]);
   assert.equal(volume('rotate', { type: 'encoder', index: 0 }, 0), true); // sin muescas, sin cambio
   assert.equal(changes.length, 2);
-  volume('down', { type: 'encoder', index: 1 });
+  volume('down', { type: 'encoder', index: 0 });
   assert.deepEqual(volume.state(), { volume: 0.4, muted: true });
-  volume('up', { type: 'encoder', index: 1 }); // soltar no hace nada
+  volume('up', { type: 'encoder', index: 0 }); // soltar no hace nada
   assert.equal(changes.length, 3);
-  volume('rotate', { type: 'encoder', index: 1 }, 1); // girar en silencio devuelve el sonido
+  volume('rotate', { type: 'encoder', index: 0 }, 1); // girar en silencio devuelve el sonido
   assert.deepEqual(volume.state(), { volume: 0.45, muted: false });
   volume('down', { type: 'encoder', index: 0 }); volume('down', { type: 'encoder', index: 0 });
   assert.deepEqual(volume.state(), { volume: 0.45, muted: false });
@@ -75,6 +77,26 @@ test('girar cualquiera de los dos diales sube o baja el volumen a saltos de 5 % 
   for (let i = 0; i < 30; i++) volume('rotate', { type: 'encoder', index: 0 }, -1);
   assert.deepEqual(volume.state(), { volume: 0, muted: false }); // tope abajo
   assert.equal(clampVolume(1.7), 1); assert.equal(clampVolume(-2), 0); assert.equal(clampVolume('x'), 0); assert.equal(clampVolume(0.333), 0.33);
+});
+
+test('el dial derecho es el transporte: pulsar pausa o reanuda, girar a la derecha pasa a la siguiente y a la izquierda a la anterior, una orden por giro', () => {
+  let clock = 0;
+  const actions = [];
+  const transport = createTransportControl(action => actions.push(action), { now: () => clock });
+  assert.equal(transport('down', { type: 'encoder', index: 0 }), false); // el izquierdo es el volumen
+  assert.equal(transport('down', { type: 'button', index: 1 }), false);
+  assert.equal(transport('down', { type: 'encoder', index: 1 }), true);
+  transport('up', { type: 'encoder', index: 1 });
+  assert.equal(transport('rotate', { type: 'encoder', index: 1 }, 2), true);
+  transport('rotate', { type: 'encoder', index: 1 }, 1); // mismo giro (dentro del cooldown): no repite
+  clock = 400;
+  transport('rotate', { type: 'encoder', index: 1 }, -1);
+  transport('rotate', { type: 'encoder', index: 1 }, 0); // sin muescas, nada
+  clock = 800;
+  transport('rotate', { type: 'encoder', index: 1 }, -4);
+  assert.deepEqual(actions, ['toggle', 'next', 'prev', 'prev']);
+  assert.deepEqual(transportRing({ paused: false }), [0, 60, 200, 0, 60, 200, 0, 60, 200, 0, 60, 200]);
+  assert.deepEqual(transportRing({ paused: true }), [200, 110, 0, 200, 110, 0, 200, 110, 0, 200, 110, 0]);
 });
 
 test('el anillo del dial enseña el nivel: LEDs verdes según el volumen, todo rojo tenue en silencio', () => {

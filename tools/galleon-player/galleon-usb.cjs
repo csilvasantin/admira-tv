@@ -9,11 +9,12 @@
 // a esa pieza (window.admiraGalleonJump). Cede siempre el teclado: si Elgato Stream Deck
 // o ese controlador tienen el USB, espera sin tocarlo; mantener la tecla 12 un segundo lo devuelve a Elgato.
 // Guarda en ~/.admira-galleon lo último que salió por USB (last-lcd.png, last-keys.png): la captura real.
-// Suena por los altavoces del Mac Studio (sólo la pista horizontal) y las dos ruedas del teclado son el volumen:
-// girar sube o baja a saltos de 5 %, pulsar silencia o devuelve el sonido; el anillo de LEDs enseña el nivel.
+// Suena por los altavoces del Mac Studio. Rueda izquierda = volumen (girar sube o baja a saltos de 5 %, pulsar silencia;
+// anillo verde con el nivel, rojo en silencio). Rueda derecha = transporte (pulsar pausa o reanuda, girar a la derecha
+// pasa a la siguiente pieza y a la izquierda a la anterior; anillo azul en marcha, ámbar en pausa).
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const { execFileSync } = require('node:child_process');
-const { LCD, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, ringColors, clampVolume } = require('./galleon-frames.cjs');
+const { LCD, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume } = require('./galleon-frames.cjs');
 
 const RUNTIME = process.env.ADMIRA_GALLEON_HOME || path.join(os.homedir(), '.admira-galleon');
 const SCREEN = /^[a-z0-9][a-z0-9-]{1,79}$/.test(process.env.ADMIRA_GALLEON_SCREEN || '') ? process.env.ADMIRA_GALLEON_SCREEN : 'corsair-galleon-100';
@@ -35,7 +36,7 @@ function chromeForTesting() {
 }
 const CHROME = process.env.ADMIRA_GALLEON_CHROME || chromeForTesting() || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const FPS = Math.min(15, Math.max(2, Number(process.env.ADMIRA_GALLEON_FPS) || 10));
-const VERSION = 'usb-3 · 16-nov-2026';
+const VERSION = 'usb-4 · 16-nov-2026';
 const VOLUME_FILE = path.join(RUNTIME, 'volume.json');
 const ELGATO_APP = '/Applications/Elgato Stream Deck.app';
 const ELGATO_BIN = ELGATO_APP + '/Contents/MacOS/Stream Deck';
@@ -65,7 +66,7 @@ function holder() {
 let device = null, serial = '', browser = null, page = null, closing = false, lastFrame = -1, lastKeys = -1, sent = 0, lastSaved = 0, yielding = '';
 let told = null, toldAt = 0, hookWaitSince = Date.now();
 const status = extra => fs.writeFileSync(path.join(RUNTIME, 'status.json'), JSON.stringify({ pid: process.pid, screen: SCREEN, url: PAGE_URL,
-  serial, connected: Boolean(device), yielding, frames: sent, fps: FPS, version: VERSION, chrome: CHROME, audio, at: Date.now(), ...extra }));
+  serial, connected: Boolean(device), yielding, frames: sent, fps: FPS, version: VERSION, chrome: CHROME, audio, paused, at: Date.now(), ...extra }));
 
 // ── Volumen: las dos ruedas del teclado. Se recuerda entre arranques en volume.json. ──
 function loadVolume() {
@@ -79,11 +80,30 @@ const volumeControl = createVolumeControl(state => {
   void showVolume();
   status();
 }, audio);
-/** Pinta el nivel en el anillo de LEDs de los dos diales. */
+/** Pinta el nivel en el anillo de LEDs del dial izquierdo (volumen). */
 async function showVolume(target = device) {
   if (!target) return;
-  try { await Promise.all([0, 1].map(index => target.setEncoderRingColors(index, ringColors(audio)))); } catch (error) { log('anillo-error ' + error.message); }
+  try { await target.setEncoderRingColors(0, ringColors(audio)); } catch (error) { log('anillo-error ' + error.message); }
 }
+
+// ── Transporte: la rueda derecha. Pulsar pausa/reanuda; girar pasa a la siguiente o a la anterior pieza. ──
+let paused = false;
+/** Pinta el estado en el anillo del dial derecho: azul en marcha, ámbar en pausa. */
+async function showTransport(target = device) {
+  if (!target) return;
+  try { await target.setEncoderRingColors(1, transportRing({ paused })); } catch (error) { log('anillo-error ' + error.message); }
+}
+async function transportAction(action) {
+  try {
+    const result = await page.evaluate(a => typeof window.admiraGalleonTransport === 'function' ? window.admiraGalleonTransport(a) : null, action);
+    if (!result) { log('transporte ' + action + ' → la página no lo admite'); return; }
+    paused = result.paused === true;
+    log('transporte ' + action + (action === 'toggle' ? (paused ? ' → pausa' : ' → sigue') : (result.moved ? ' → pieza ' + (result.index + 1) : ' → sin playlist')));
+    await showTransport();
+    status();
+  } catch (error) { log('transporte-error ' + error.message); }
+}
+const transportControl = createTransportControl(action => void transportAction(action));
 
 async function releaseDevice(reason) {
   if (!device) return;
@@ -110,14 +130,15 @@ async function openDevice() {
   // Teclas: un toque salta a la pieza que enseña (también en la 12, si se suelta antes del segundo); las ruedas, volumen.
   const gesture = createExitGesture(() => void returnToElgato(), { onTap: index => void jumpTo(index) });
   const taps = createKeyTaps(index => void jumpTo(index));
-  opened.on('down', control => { if (!gesture('down', control) && !taps('down', control)) volumeControl('down', control); });
-  opened.on('up', control => { if (!gesture('up', control) && !taps('up', control)) volumeControl('up', control); });
-  opened.on('rotate', (control, value) => volumeControl('rotate', control, value));
+  opened.on('down', control => { if (!gesture('down', control) && !taps('down', control) && !volumeControl('down', control)) transportControl('down', control); });
+  opened.on('up', control => { if (!gesture('up', control) && !taps('up', control) && !volumeControl('up', control)) transportControl('up', control); });
+  opened.on('rotate', (control, value) => { if (!volumeControl('rotate', control, value)) transportControl('rotate', control, value); });
   try { await opened.setBrightness(100); } catch {}
   try { await opened.clearPanel(); } catch {}
   device = opened;
   serial = found.serialNumber || '';
   await showVolume(opened);
+  await showTransport(opened);
   lastFrame = -1;
   lastKeys = -1;
   log('usb-open ' + found.model + ' ' + serial);
