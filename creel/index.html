@@ -539,7 +539,7 @@
         hardware: { dedicated: false, model: "Hotel Creel \u00B7 LED" },
         software: { player: "Hotel Creel \u00B7 LED", playerVersion: "creel-1", webRelease: version, engine: "", userAgent: navigator.userAgent },
         audio: { muted: !!mudo, playing: !!(media && media.tagName === "VIDEO" && !media.paused && !mudo) }, network: { online: navigator.onLine !== false } },
-      health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), embebido: window.parent !== window, pantallas: pantallasOn ? "on" : "off" },
+      health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), personaje: listaSlug || "", embebido: window.parent !== window, pantallas: pantallasOn ? "on" : "off" },
       loc: "portaventura", locName: "Hotel Creel \u00B7 LED (PortAventura)", machine: "" };
     try { fetch(NOW_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(function () {}); } catch (e) {}
   }

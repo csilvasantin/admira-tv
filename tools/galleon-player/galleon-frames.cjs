@@ -1,6 +1,6 @@
 'use strict';
 // Piezas puras del adaptador USB del Corsair Galleon 100 SD (encargo #7569): geometría, troceado del mosaico en
-// las 12 teclas y el gesto de salida. Sin dependencias, para poder probarlas sin teclado.
+// las 12 teclas, el gesto de salida y las ruedas de volumen. Sin dependencias, para poder probarlas sin teclado.
 
 const LCD = Object.freeze({ width: 720, height: 384 });
 const KEYS = Object.freeze({ columns: 3, rows: 4, size: 160 });
@@ -51,4 +51,45 @@ function createExitGesture(onExit, { index = 11, delay = 1000, now = Date.now, s
   };
 }
 
-module.exports = { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture };
+/** Volumen entre 0 y 1, redondeado a centésimas (los diales van a saltos de 5 %). */
+const clampVolume = value => Math.min(1, Math.max(0, Math.round((Number(value) || 0) * 100) / 100));
+
+/**
+ * Ruedas de volumen (encargo de Carlos, 16-nov-2026): girar cualquiera de los dos diales sube o baja el volumen del
+ * player (`step` por muesca; el teclado manda ±1 por muesca, más si se gira deprisa) y pulsar un dial silencia o
+ * devuelve el sonido. Girar con el sonido silenciado lo recupera. Las teclas no intervienen. `onChange` recibe el
+ * estado nuevo en cada cambio; `handler.state()` lo devuelve en cualquier momento.
+ */
+function createVolumeControl(onChange, { volume = 0.5, muted = false, step = 0.05 } = {}) {
+  const state = { volume: clampVolume(volume), muted: Boolean(muted) };
+  const handler = (event, control, value) => {
+    if (control?.type !== 'encoder') return false;
+    if (event === 'rotate') {
+      const notches = Math.trunc(Number(value) || 0);
+      if (notches === 0) return true;
+      state.volume = clampVolume(state.volume + notches * step);
+      if (state.volume > 0) state.muted = false;
+    } else if (event === 'down') {
+      state.muted = !state.muted;
+    } else {
+      return true;
+    }
+    onChange({ ...state });
+    return true;
+  };
+  handler.state = () => ({ ...state });
+  return handler;
+}
+
+/**
+ * Colores del anillo de LEDs de un dial (RGB por LED, `steps` LEDs): tantos LEDs verdes como volumen hay; en silencio,
+ * todo el anillo en rojo tenue. Así se ve el nivel sin mirar ninguna pantalla.
+ */
+function ringColors({ volume = 0, muted = false } = {}, steps = 4) {
+  const lit = muted ? 0 : Math.round(clampVolume(volume) * steps);
+  const colors = [];
+  for (let index = 0; index < steps; index++) colors.push(...(muted ? [90, 0, 0] : index < lit ? [0, 150, 60] : [6, 6, 6]));
+  return colors;
+}
+
+module.exports = { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createVolumeControl, ringColors, clampVolume };

@@ -25,7 +25,7 @@ test('el kiosko escucha la maqueta de admira.store (presencia, zona y personaje)
 test('el kiosko reproduce de fondo la playlist de admira.tv de la pantalla (mando), con tinte Hawkins, y la cuenta en el latido', () => {
   assert.match(html, /fetch\("\/api\/playlist\?screen=" \+ PLAYLIST_SCREEN, \{ cache: "no-store" \}\)/);
   assert.match(html, /el\.crossOrigin = "anonymous";/);
-  assert.match(html, /el\.muted = true; el\.playsInline = true;/);
+  assert.match(html, /el\.muted = mudo; el\.playsInline = true;/); // mudo persistente (sonido-off, 15-nov-2026)
   assert.match(html, /g\.fillStyle = "rgba\(140,11,20,\.42\)"; g\.fillRect\(0, 0, W, H\); \/\/ tinte Hawkins/);
   assert.match(html, /: pieza \|\| \{ id: "creel-fondo"/);
   assert.match(html, /setInterval\(cargaLista, 60000\);/);
@@ -46,6 +46,14 @@ test('el kiosko puede emitir la playlist de otra pantalla con ?playlist= (sin ca
   assert.match(html, /fetch\("\/api\/playlist\?screen=" \+ PLAYLIST_SCREEN/);
   assert.match(html, /listaBase = horizontales\.length \? horizontales : todas;/);
   assert.match(html, /producer: "creel-led-" \+ SCREEN/); // el latido sigue siendo de la pantalla propia
+});
+
+test('el kiosko emite solas las piezas del Stock etiquetadas personaje:<slug> mientras ese personaje manda, y lo cuenta en el latido (Carlos, 14-nov-2026)', () => {
+  assert.match(html, /\(i\.tags \|\| \[\]\)\.indexOf\("personaje:" \+ slug\) >= 0/);
+  assert.match(html, /listaSlug = slug; lista = slug \? piezasDe\(slug\) : listaBase; idx = -1; siguiente\(\);/);
+  assert.match(html, /if \(slug === listaSlug\) return;/);
+  assert.match(html, /listaBase = horizontales\.length \? horizontales : todas;/);
+  assert.match(html, /personaje: listaSlug \|\| ""/); // el latido cuenta el personaje (o «intro») en antena
 });
 
 test('la pared obedece al detector de Casa Creel por su propia cola (?cola=): personaje, fondo y truenos, como pantalla.js', () => {

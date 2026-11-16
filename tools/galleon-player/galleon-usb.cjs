@@ -7,16 +7,34 @@
 // la misma librería que el controlador Starbucks de AdmiraCorsair. Cede siempre el teclado: si Elgato Stream Deck
 // o ese controlador tienen el USB, espera sin tocarlo; mantener la tecla 12 un segundo lo devuelve a Elgato.
 // Guarda en ~/.admira-galleon lo último que salió por USB (last-lcd.png, last-keys.png): la captura real.
+// Suena por los altavoces del Mac Studio (sólo la pista horizontal) y las dos ruedas del teclado son el volumen:
+// girar sube o baja a saltos de 5 %, pulsar silencia o devuelve el sonido; el anillo de LEDs enseña el nivel.
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const { execFileSync } = require('node:child_process');
-const { LCD, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture } = require('./galleon-frames.cjs');
+const { LCD, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createVolumeControl, ringColors, clampVolume } = require('./galleon-frames.cjs');
 
 const RUNTIME = process.env.ADMIRA_GALLEON_HOME || path.join(os.homedir(), '.admira-galleon');
 const SCREEN = /^[a-z0-9][a-z0-9-]{1,79}$/.test(process.env.ADMIRA_GALLEON_SCREEN || '') ? process.env.ADMIRA_GALLEON_SCREEN : 'corsair-galleon-100';
 const PAGE_URL = process.env.ADMIRA_GALLEON_URL || ('https://admira.tv/galleon?screen=' + SCREEN + '&native=1');
-const CHROME = process.env.ADMIRA_GALLEON_CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+/**
+ * Chrome propio del adaptador: Chrome for Testing, que instala macstudio-galleon.command en ~/.admira-galleon/browsers.
+ * No vale el Google Chrome de /Applications: lanzado sin ventana, macOS lo daba por «ya abierto» y el Dock, Spotlight y
+ * los enlaces dejaban de abrir el Chrome de Carlos (16-nov-2026). El de pruebas tiene otro bundle id y no interfiere.
+ */
+function chromeForTesting() {
+  const root = path.join(RUNTIME, 'browsers', 'chrome');
+  let versions = [];
+  try { versions = fs.readdirSync(root).filter(name => name.startsWith('mac')).sort((a, b) => a.localeCompare(b, 'en', { numeric: true })); } catch { return ''; }
+  for (const name of versions.reverse()) {
+    const binary = path.join(root, name, name.startsWith('mac_arm') ? 'chrome-mac-arm64' : 'chrome-mac-x64', 'Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing');
+    if (fs.existsSync(binary)) return binary;
+  }
+  return '';
+}
+const CHROME = process.env.ADMIRA_GALLEON_CHROME || chromeForTesting() || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const FPS = Math.min(15, Math.max(2, Number(process.env.ADMIRA_GALLEON_FPS) || 10));
-const VERSION = 'usb-1 · 13-nov-2026';
+const VERSION = 'usb-2 · 16-nov-2026';
+const VOLUME_FILE = path.join(RUNTIME, 'volume.json');
 const ELGATO_APP = '/Applications/Elgato Stream Deck.app';
 const ELGATO_BIN = ELGATO_APP + '/Contents/MacOS/Stream Deck';
 const STARBUCKS_READY = path.join(os.homedir(), 'Library/Application Support/AdmiraCorsair/fullscreen/ready.json');
@@ -45,7 +63,25 @@ function holder() {
 let device = null, serial = '', browser = null, page = null, closing = false, lastFrame = -1, sent = 0, lastSaved = 0, yielding = '';
 let told = null, toldAt = 0, hookWaitSince = Date.now();
 const status = extra => fs.writeFileSync(path.join(RUNTIME, 'status.json'), JSON.stringify({ pid: process.pid, screen: SCREEN, url: PAGE_URL,
-  serial, connected: Boolean(device), yielding, frames: sent, fps: FPS, version: VERSION, at: Date.now(), ...extra }));
+  serial, connected: Boolean(device), yielding, frames: sent, fps: FPS, version: VERSION, chrome: CHROME, audio, at: Date.now(), ...extra }));
+
+// ── Volumen: las dos ruedas del teclado. Se recuerda entre arranques en volume.json. ──
+function loadVolume() {
+  try { const saved = JSON.parse(fs.readFileSync(VOLUME_FILE, 'utf8')); return { volume: clampVolume(saved.volume), muted: saved.muted === true }; } catch { return { volume: 0.5, muted: false }; }
+}
+let audio = loadVolume();
+const volumeControl = createVolumeControl(state => {
+  audio = state;
+  try { fs.writeFileSync(VOLUME_FILE, JSON.stringify(state)); } catch {}
+  log('volumen ' + Math.round(state.volume * 100) + '%' + (state.muted ? ' · silencio' : ''));
+  void showVolume();
+  status();
+}, audio);
+/** Pinta el nivel en el anillo de LEDs de los dos diales. */
+async function showVolume(target = device) {
+  if (!target) return;
+  try { await Promise.all([0, 1].map(index => target.setEncoderRingColors(index, ringColors(audio)))); } catch (error) { log('anillo-error ' + error.message); }
+}
 
 async function releaseDevice(reason) {
   if (!device) return;
@@ -70,12 +106,14 @@ async function openDevice() {
   const opened = await openStreamDeck(found.path);
   opened.on('error', error => { log('usb-error ' + error.message); void releaseDevice('usb-error'); });
   const gesture = createExitGesture(() => void returnToElgato());
-  opened.on('down', control => gesture('down', control));
-  opened.on('up', control => gesture('up', control));
+  opened.on('down', control => { if (!gesture('down', control)) volumeControl('down', control); });
+  opened.on('up', control => { if (!gesture('up', control)) volumeControl('up', control); });
+  opened.on('rotate', (control, value) => volumeControl('rotate', control, value));
   try { await opened.setBrightness(100); } catch {}
   try { await opened.clearPanel(); } catch {}
   device = opened;
   serial = found.serialNumber || '';
+  await showVolume(opened);
   lastFrame = -1;
   log('usb-open ' + found.model + ' ' + serial);
   status();
@@ -83,7 +121,9 @@ async function openDevice() {
 }
 
 async function openBrowser() {
-  const args = ['--autoplay-policy=no-user-gesture-required', '--mute-audio', '--disable-background-timer-throttling',
+  // Sin silenciar el audio: el player suena por la salida de audio del Mac (el headless nuevo sí la usa). El volumen lo pone la página
+  // según window.admiraGalleonOutput (volume/muted), que escribe tell().
+  const args = ['--autoplay-policy=no-user-gesture-required', '--disable-background-timer-throttling',
     '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--no-first-run', '--no-default-browser-check',
     '--window-size=760,1100'];
   // Sólo para probar en local una copia de /galleon servida en 127.0.0.1 (la API de admira.tv no da CORS): nunca en producción.
@@ -97,12 +137,13 @@ async function openBrowser() {
   log('page-open ' + PAGE_URL);
 }
 
-/** Dice a la página si el teclado recibe la señal: así su latido en la flota cuenta la verdad. */
+/** Dice a la página si el teclado recibe la señal (así su latido en la flota cuenta la verdad) y el volumen de las ruedas. */
 async function tell(connected) {
-  if (told === connected && Date.now() - toldAt < 1000) return;
-  told = connected;
+  const key = [connected, audio.volume, audio.muted].join('|');
+  if (told === key && Date.now() - toldAt < 1000) return;
+  told = key;
   toldAt = Date.now();
-  try { await page.evaluate(state => { window.admiraGalleonOutput = state; }, { connected, serial, version: VERSION, at: Date.now() }); } catch {}
+  try { await page.evaluate(state => { window.admiraGalleonOutput = state; }, { connected, serial, version: VERSION, at: Date.now(), volume: audio.volume, muted: audio.muted }); } catch {}
 }
 
 async function pushFrame() {
@@ -148,7 +189,7 @@ process.on('uncaughtException', error => { log('exception ' + error.message); vo
 process.on('unhandledRejection', error => { log('rejection ' + String(error?.message || error)); void releaseDevice('rejection').then(() => process.exit(1)); });
 
 (async () => {
-  log('arranque ' + VERSION + ' fps=' + FPS + ' pantalla=' + SCREEN);
+  log('arranque ' + VERSION + ' fps=' + FPS + ' pantalla=' + SCREEN + ' chrome=' + CHROME + ' volumen=' + Math.round(audio.volume * 100) + '%' + (audio.muted ? ' · silencio' : ''));
   status();
   await openBrowser();
   while (!closing) {
