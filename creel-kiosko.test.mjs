@@ -57,7 +57,7 @@ test('sin red, el kiosko conserva la última temperatura buena (≤6 h) y reinte
 
 test('sin dato de clima (ni real ni forzado) el HUD no inventa «Sol»: sin icono y «CLIMA —»', () => {
   assert.match(html, /var conDato = !!\(clima\.forzado \|\| clima\.real\)/);
-  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? "NIEBLA" : nieve \? "NIEVE" : helada \? \(llovizna \? "LLOVIZNA HELADA" : "LLUVIA HELADA"\) : llovizna \? \(densa \? "LLOVIZNA DENSA" : "LLOVIZNA"\) : fuerte \? \(chubascos \? "CHUBASCOS FUERTES" : "LLUVIA FUERTE"\) : debil \? \(chubascos \? "CHUBASCOS D\\u00C9BILES" : "LLUVIA D\\u00C9BIL"\) : chubascos \? "CHUBASCOS" : granizo \? "TORMENTA CON GRANIZO" : cubierto \? "CUBIERTO" : intervalos \? "INTERVALOS" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
+  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? \(escarcha \? "NIEBLA CON ESCARCHA" : "NIEBLA"\) : nieve \? "NIEVE" : helada \? \(llovizna \? "LLOVIZNA HELADA" : "LLUVIA HELADA"\) : llovizna \? \(densa \? "LLOVIZNA DENSA" : "LLOVIZNA"\) : fuerte \? \(chubascos \? "CHUBASCOS FUERTES" : "LLUVIA FUERTE"\) : debil \? \(chubascos \? "CHUBASCOS D\\u00C9BILES" : "LLUVIA D\\u00C9BIL"\) : chubascos \? "CHUBASCOS" : granizo \? "TORMENTA CON GRANIZO" : cubierto \? "CUBIERTO" : intervalos \? "INTERVALOS" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
 });
 
 test('sin Intl, el respaldo de horaMadrid() sigue el horario de verano de la UE (no +1 h fijo)', () => {
@@ -799,9 +799,9 @@ test('nubes de noche: de madrugada las nubes no son gris claro de mediodía (fon
 
 test('niebla: con Open-Meteo 45/48 el HUD dice 🌫️ NIEBLA en vez de ☁️ NUBES (cielo y latido sin cambios)', () => {
   assert.match(html, /clima\.niebla = c\.weather_code === 45 \|\| c\.weather_code === 48;/);
-  assert.match(html, /niebla: clima\.niebla === true(, cubierto: clima\.cubierto === true)?(, fuerte: clima\.fuerte === true)?(, debil: clima\.debil === true)?(, densa: clima\.densa === true)? \}\)/);
+  assert.match(html, /niebla: clima\.niebla === true(, cubierto: clima\.cubierto === true)?(, fuerte: clima\.fuerte === true)?(, debil: clima\.debil === true)?(, densa: clima\.densa === true)?(, escarcha: clima\.escarcha === true)? \}\)/);
   assert.match(html, /clima\.niebla = cc\.niebla === true;/);
-  assert.match(html, /niebla \? "NIEBLA" :/);
+  assert.match(html, /niebla \? (\(escarcha \? "NIEBLA CON ESCARCHA" : )?"NIEBLA"\)? :/);
   assert.match(html, /niebla \? "\\uD83C\\uDF2B\\uFE0F" :/);
   const ini = html.indexOf('  function nieblaReal() {'), fin = html.indexOf('  function nubesDeNoche() {', ini);
   assert.ok(ini > 0 && fin > ini);
@@ -952,7 +952,7 @@ test('helada: con Open-Meteo 56/57/66/67 el HUD dice LLOVIZNA HELADA o LLUVIA HE
 
 test('cubierto: con Open-Meteo 3 el HUD dice CUBIERTO en vez de NUBES (cielo y latido sin cambios)', () => {
   assert.match(html, /clima\.cubierto = c\.weather_code === 3;/);
-  assert.match(html, /niebla: clima\.niebla === true, cubierto: clima\.cubierto === true(, fuerte: clima\.fuerte === true)?(, debil: clima\.debil === true)?(, densa: clima\.densa === true)? \}\)\);/);
+  assert.match(html, /niebla: clima\.niebla === true, cubierto: clima\.cubierto === true(, fuerte: clima\.fuerte === true)?(, debil: clima\.debil === true)?(, densa: clima\.densa === true)?(, escarcha: clima\.escarcha === true)? \}\)\);/);
   assert.match(html, /clima\.cubierto = cc\.cubierto === true;/);
   assert.match(html, /var cubierto = conDato && tipo === "nubes" && !niebla && !intervalos && cubiertoReal\(\);/);
   const ini = html.indexOf('  function cubiertoReal() {'), fin = html.indexOf('  function intervalosReal() {', ini);
@@ -969,7 +969,7 @@ test('cubierto: con Open-Meteo 3 el HUD dice CUBIERTO en vez de NUBES (cielo y l
 
 test('lluvia fuerte: con Open-Meteo 65/82 el HUD dice LLUVIA FUERTE o CHUBASCOS FUERTES (cielo y latido sin cambios)', () => {
   assert.match(html, /clima\.fuerte = c\.weather_code === 65 \|\| c\.weather_code === 82;/);
-  assert.match(html, /cubierto: clima\.cubierto === true, fuerte: clima\.fuerte === true(, debil: clima\.debil === true)?(, densa: clima\.densa === true)? \}\)\);/);
+  assert.match(html, /cubierto: clima\.cubierto === true, fuerte: clima\.fuerte === true(, debil: clima\.debil === true)?(, densa: clima\.densa === true)?(, escarcha: clima\.escarcha === true)? \}\)\);/);
   assert.match(html, /clima\.fuerte = cc\.fuerte === true;/);
   assert.match(html, /var fuerte = conDato && tipo === "lluvia" && !nieve && !llovizna && !helada && fuerteReal\(\);/);
   const ini = html.indexOf('  function fuerteReal() {'), fin = html.indexOf('  function intervalosReal() {', ini);
@@ -986,7 +986,7 @@ test('lluvia fuerte: con Open-Meteo 65/82 el HUD dice LLUVIA FUERTE o CHUBASCOS 
 
 test('lluvia débil: con Open-Meteo 61/80 el HUD dice LLUVIA DÉBIL o CHUBASCOS DÉBILES (cielo y latido sin cambios)', () => {
   assert.match(html, /clima\.debil = c\.weather_code === 61 \|\| c\.weather_code === 80;/);
-  assert.match(html, /fuerte: clima\.fuerte === true, debil: clima\.debil === true(, densa: clima\.densa === true)? \}\)\);/);
+  assert.match(html, /fuerte: clima\.fuerte === true, debil: clima\.debil === true(, densa: clima\.densa === true)?(, escarcha: clima\.escarcha === true)? \}\)\);/);
   assert.match(html, /clima\.debil = cc\.debil === true;/);
   assert.match(html, /var debil = conDato && tipo === "lluvia" && !nieve && !llovizna && !helada && !fuerte && debilReal\(\);/);
   const ini = html.indexOf('  function debilReal() {'), fin = html.indexOf('  function intervalosReal() {', ini);
@@ -1003,7 +1003,7 @@ test('lluvia débil: con Open-Meteo 61/80 el HUD dice LLUVIA DÉBIL o CHUBASCOS 
 
 test('llovizna densa: con Open-Meteo 55 el HUD dice LLOVIZNA DENSA (icono, cielo y latido sin cambios)', () => {
   assert.match(html, /clima\.densa = c\.weather_code === 55;/);
-  assert.match(html, /debil: clima\.debil === true, densa: clima\.densa === true \}\)\);/);
+  assert.match(html, /debil: clima\.debil === true, densa: clima\.densa === true(, escarcha: clima\.escarcha === true)? \}\)\);/);
   assert.match(html, /clima\.densa = cc\.densa === true;/);
   assert.match(html, /var densa = conDato && tipo === "lluvia" && llovizna && !helada && densaReal\(\);/);
   const ini = html.indexOf('  function densaReal() {'), fin = html.indexOf('  function intervalosReal() {', ini);
@@ -1015,5 +1015,23 @@ test('llovizna densa: con Open-Meteo 55 el HUD dice LLOVIZNA DENSA (icono, cielo
   assert.equal(mk({ real: 'nubes', densa: true })(), false);                          // solo lluvia
   assert.equal(mk({ real: 'lluvia', densa: true, forzado: 'lluvia' })(), false);      // forzado manda
   assert.equal(mk({ real: null, densa: true })(), false);                             // sin dato
+  assert.equal(mk(null)(), false);                                                    // nunca rompe
+});
+
+test('niebla con escarcha: con Open-Meteo 48 el HUD dice NIEBLA CON ESCARCHA (icono, cielo y latido sin cambios)', () => {
+  assert.match(html, /clima\.escarcha = c\.weather_code === 48;/);
+  assert.match(html, /densa: clima\.densa === true, escarcha: clima\.escarcha === true \}\)\);/);
+  assert.match(html, /clima\.escarcha = cc\.escarcha === true;/);
+  assert.match(html, /var escarcha = conDato && tipo === "nubes" && niebla && escarchaReal\(\);/);
+  assert.match(html, /niebla \? \(escarcha \? "NIEBLA CON ESCARCHA" : "NIEBLA"\) :/);
+  const ini = html.indexOf('  function escarchaReal() {'), fin = html.indexOf('  function nieveReal() {', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const mk = (clima) => new Function('clima', html.slice(ini, fin) + '; return escarchaReal;')(clima);
+  assert.equal(mk({ real: 'nubes', escarcha: true })(), true);                        // 48
+  assert.equal(mk({ real: 'nubes', escarcha: false })(), false);                      // 45
+  assert.equal(mk({ real: 'nubes' })(), false);                                       // caché antigua sin campo
+  assert.equal(mk({ real: 'lluvia', escarcha: true })(), false);                      // solo nubes
+  assert.equal(mk({ real: 'nubes', escarcha: true, forzado: 'nubes' })(), false);     // forzado manda
+  assert.equal(mk({ real: null, escarcha: true })(), false);                          // sin dato
   assert.equal(mk(null)(), false);                                                    // nunca rompe
 });
