@@ -1,6 +1,7 @@
 {
   "titulo": "PortAventuraNeXT",
   "playlist": "https://admira.tv/api/playlist?screen=portaventuranext",
+  "etiqueta_stock": "portAventuraNeXT",
   "tecla_menu": "5,1",
   "destinos": [
     ["01", "metahuman-mupi"],

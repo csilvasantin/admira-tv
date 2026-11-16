@@ -232,3 +232,27 @@ test('el modo sincro publica la playlist efectiva antes de reproducir y retornar
   assert.match(branch[1], /signagePlaylistPush\(\)/);
   assert.ok(branch[1].indexOf('signagePlaylistPush()') < branch[1].indexOf('play(syncIndex())'));
 });
+
+test('Play por número carga las presentaciones etiquetadas desde su HTML de Stock', async () => {
+  const item = { id: 'capsula-2039', num: 2039, type: 'capsula', mime: 'text/html',
+    tags: ['#PortAventuraNeXT'], url: 'https://stock.admira.store/stock/capsula-2039/asset.bin?v=123' };
+  let stock = [item];
+  const context = vm.createContext({ URL, MEDIA: ['video', 'audio', 'interactive'], stockFullIndex: async () => stock });
+  vm.runInContext(functionSource(canal, 'isStockHtmlCapsule') + '\nasync ' + functionSource(canal, 'stockItemByNum'), context);
+  const media = await context.stockItemByNum(2039);
+  assert.equal(media.type, 'interactive');
+  assert.equal(media._stockPresentation, true);
+  assert.equal(media.url, item.url);
+  assert.match(canal, /it\._stockPresentation\?'allow-scripts':/);
+  for (const change of [
+    { tags: ['portaventuranext-antiguo'] },
+    { url: 'https://unknown.example/stock/capsula-2039/asset.bin' },
+    { url: 'https://stock.admira.store/stock/otro-id/asset.bin' },
+    { mime: 'application/octet-stream' },
+  ]) {
+    stock = [{ ...item, ...change }];
+    assert.equal(await context.stockItemByNum(2039), null);
+  }
+  stock = [{ ...item, type: 'audio', mime: 'audio/mpeg' }];
+  assert.equal((await context.stockItemByNum(2039)).type, 'audio');
+});
