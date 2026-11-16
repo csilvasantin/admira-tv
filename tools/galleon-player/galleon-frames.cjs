@@ -138,4 +138,22 @@ function ringColors({ volume = 0, muted = false } = {}, steps = 4) {
   return colors;
 }
 
-module.exports = { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume };
+/** Título sin los sufijos de formato («· Adaptación · 16:9 · Admira», «· 9:16»…), como la familia de la pieza en la página. */
+const FORMAT_SUFFIX = /\s*(?:·|-|–|—|\|)\s*(?:admira|adaptaci[oó]n|subt[ií]tulos(?: [a-z]{2})?|16:9|9:16|4:3|3:4|horizontal|vertical|landscape|portrait|apaisad[oa]|formato[- ]altern[oa]|locuci[oó]n(?: [a-z]{2})?)\s*$/i;
+function cleanTitle(title) {
+  let text = String(title || '').replace(/\s+/g, ' ').trim(), previous;
+  do { previous = text; text = text.replace(FORMAT_SUFFIX, ''); } while (text !== previous);
+  return text.trim();
+}
+
+/**
+ * Lo que enseña el reloj LaMetric (Carlos, 16-nov-2026): el título de la pieza en antena, sin sufijos de formato, con
+ * «PAUSA ·» delante si el transporte está en pausa; nada (cadena vacía) cuando el teclado no emite.
+ */
+function lametricText(onAir, { paused = false, connected = true } = {}) {
+  const title = cleanTitle(onAir?.title);
+  if (!connected || !title) return '';
+  return (paused ? 'PAUSA · ' : '') + title.slice(0, 120);
+}
+
+module.exports = { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume, cleanTitle, lametricText };

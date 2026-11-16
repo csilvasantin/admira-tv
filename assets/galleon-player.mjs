@@ -12,14 +12,15 @@
 // suena (por el Mac Studio), con el volumen que el adaptador escribe en window.admiraGalleonOutput desde la rueda
 // izquierda; en el gemelo va mudo.
 import { paintLcd, paintKeys } from './galleon-layout.mjs';
-import { jumpOffsetMs, navigatorWindow, pairPlaylist, slotAt, trackOf } from './galleon-schedule.mjs';
+import { jumpOffsetMs, navigatorWindow, pairPlaylist, slotAt, taggedForScreen, trackOf } from './galleon-schedule.mjs';
 
 const params = new URLSearchParams(location.search);
 const SCREEN = /^[a-z0-9][a-z0-9-]{1,79}$/.test(params.get('screen') || '') ? params.get('screen') : 'corsair-galleon-100';
 const NATIVE = params.get('native') === '1';
 const API = /^https:\/\/(www\.)?admira\.tv$/.test(location.origin) ? '' : 'https://admira.tv';
 const NOW_API = 'https://api.admira.store/signage/now';
-const PLAYOUT_MS = 2500, PLAYLIST_MS = 12000, PROGRAM_MS = 500, BEAT_MS = 10000;
+const PLAYOUT_MS = 2500, PLAYLIST_MS = 12000, PROGRAM_MS = 500, BEAT_MS = 10000, STOCK_MS = 60000;
+const STOCK_INDEX = 'https://stock.admira.store/stock/index.json';
 const KEYS_BEFORE = 6, KEYS_AFTER = 6;
 
 const lcd = document.querySelector('#galleon-lcd');
@@ -34,6 +35,7 @@ let twinSelection = null;
 let plan = null;
 let clockOffset = 0; // serverNow − Date.now(), medido en cada sondeo del playout
 let playlist = { rev: null, name: '', slots: [] };
+let sources = { draft: null, auto: [], tagged: [] }; // lista manual del mando, dirigidas por la API y etiquetadas en el Stock
 let onAir = { source: 'none', id: '', title: '', index: -1, total: 0, paired: false };
 let jump = { ms: 0, rev: null }; // salto por tecla o rueda: desplaza el reloj; se olvida al cambiar la playlist
 let pausedAt = null; // reloj del servidor en el que se pausó (rueda derecha); en pausa el programa no toca nada
@@ -216,14 +218,10 @@ async function refreshPlaylist() {
       const data = await response.json();
       const draft = data?.draft;
       if (data?.ok && draft && Array.isArray(draft.items)) {
-        // Piezas dirigidas a esta pantalla por etiqueta en el Stock (corsair-galleon-100): la API las da aparte en `auto`,
-        // sin repetir la lista manual, y con 10 s fijos (la duración real se aprende del vídeo). Se emiten detrás.
-        const auto = (Array.isArray(data.auto) ? data.auto : []).map(item => ({ ...item, secondsGuessed: true }));
-        const rev = String(draft.rev) + (auto.length ? '+' + auto.map(item => item.stockId || item.id).join(',') : '');
-        if (rev !== playlist.rev) {
-          playlist = { rev, name: String(draft.name || ''), slots: pairPlaylist([...draft.items, ...auto]) };
-          program();
-        }
+        // Piezas dirigidas a esta pantalla por la API (`auto`, sin repetir la manual, con 10 s fijos: la duración real se
+        // aprende del vídeo). Se componen con la lista manual y con las etiquetadas en el Stock (refreshStock).
+        sources = { ...sources, draft, auto: (Array.isArray(data.auto) ? data.auto : []).map(item => ({ ...item, secondsGuessed: true })) };
+        composePlaylist();
       }
     }
   } catch {
@@ -231,6 +229,43 @@ async function refreshPlaylist() {
   } finally {
     setTimeout(refreshPlaylist, PLAYLIST_MS);
   }
+}
+
+/** Piezas del Stock etiquetadas con el nombre de esta pantalla (corsair-galleon-100), leídas del índice público. */
+async function refreshStock() {
+  try {
+    const response = await fetch(STOCK_INDEX, { cache: 'no-cache', signal: AbortSignal.timeout(20000) });
+    if (response.ok) {
+      const data = await response.json();
+      const tagged = taggedForScreen(Array.isArray(data) ? data : data?.items || data?.assets || [], SCREEN);
+      if (tagged.map(item => item.stockId).join(',') !== sources.tagged.map(item => item.stockId).join(',')) {
+        sources = { ...sources, tagged };
+        composePlaylist();
+      }
+    }
+  } catch {
+    // Sin índice, siguen las etiquetadas que ya había.
+  } finally {
+    setTimeout(refreshStock, STOCK_MS);
+  }
+}
+
+/** La playlist que se emite: manual del mando + dirigidas por la API + etiquetadas en el Stock, sin repetir pieza. */
+function composePlaylist() {
+  const draft = sources.draft;
+  if (!draft) return;
+  const seen = new Set(draft.items.map(item => String(item.stockId || item.id || '')));
+  const extra = [];
+  for (const item of [...sources.auto, ...sources.tagged]) {
+    const id = String(item.stockId || item.id || '');
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    extra.push(item);
+  }
+  const rev = String(draft.rev) + (extra.length ? '+' + extra.map(item => item.stockId || item.id).join(',') : '');
+  if (rev === playlist.rev) return;
+  playlist = { rev, name: String(draft.name || ''), slots: pairPlaylist([...draft.items, ...extra]) };
+  program();
 }
 
 // ── Navegador de las 12 teclas: previos de las piezas vecinas en la playlist ──
@@ -422,3 +457,4 @@ setInterval(() => void publishFrame(), 200);
 setInterval(program, PROGRAM_MS);
 void refreshPlayout();
 void refreshPlaylist();
+void refreshStock();

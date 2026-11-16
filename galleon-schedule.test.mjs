@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cycleMs, familyKey, jumpOffsetMs, linked, navigatorWindow, orientationOf, pairPlaylist, slotAt, trackOf } from './assets/galleon-schedule.mjs';
+import { cycleMs, familyKey, jumpOffsetMs, linked, navigatorWindow, orientationOf, pairPlaylist, slotAt, taggedForScreen, trackOf } from './assets/galleon-schedule.mjs';
 
 const H = { id: '1794501557972-tiftm4', stockId: '1794501557972-tiftm4', title: 'Así Sonaba 1985… Cuando los 80s No Tenían Competencia · Adaptación · 16:9 · Admira', seconds: 183, asset: 'https://api.admira.store/stock/asset/1794501557972-tiftm4?v=51154428', assetType: 'video', tags: ['horizontal', 'good'] };
 const V = { id: '1794427190641-t7e6p3', stockId: '1794427190641-t7e6p3', title: 'Así Sonaba 1985… Cuando los 80s No Tenían Competencia · 16:9 · subtítulos ES · 9:16', seconds: 179, asset: 'https://api.admira.store/stock/asset/1794427190641-t7e6p3?v=76206571', assetType: 'video', tags: ['vertical', 'formato-alterno'] };
@@ -92,4 +92,21 @@ test('una pieza dirigida por etiqueta (auto, 10 s fijos) deja el turno marcado p
   const auto = { ...ZOO_H, id: 'stock-zoo-h', stockId: 'zoo-h', seconds: 10, secondsGuessed: true, tags: ['horizontal'] };
   const slots = pairPlaylist([H, V, auto]);
   assert.deepEqual(slots.map(s => [s.seconds, s.guessed]), [[183, false], [10, true]]);
+});
+
+test('del índice del Stock salen las piezas etiquetadas con el nombre de la pantalla, con cualquier otra etiqueta libre, como piezas de playlist', () => {
+  const stock = [
+    { id: '1794862042758-1631g8', type: 'video', title: 'Best Songs Of 1986 #oldsong', url: 'https://stock.admira.store/stock/1794862042758-1631g8/asset.mp4?v=3194', tags: ['oldsong', '80smusic', 'vertical', '#corsair-galleon-100'] },
+    { id: '1794000000000-aaaaaa', type: 'image', title: 'Cartel', url: 'https://stock.admira.store/stock/1794000000000-aaaaaa/asset.jpg', tags: ['pantalla:Corsair-Galleon-100'], seconds: 15 },
+    { id: 'oculta', type: 'video', title: 'Oculta', url: 'https://stock.admira.store/x.mp4', tags: ['corsair-galleon-100'], oculto: true },
+    { id: 'otra', type: 'video', title: 'Otra pantalla', url: 'https://stock.admira.store/y.mp4', tags: ['hotel-creel'] },
+    { id: 'interactiva', type: 'interactive', title: 'No es vídeo', url: 'https://stock.admira.store/z', tags: ['corsair-galleon-100'] },
+    { id: 'http', type: 'video', title: 'Sin https', url: 'http://stock.admira.store/w.mp4', tags: ['corsair-galleon-100'] },
+  ];
+  const items = taggedForScreen(stock, 'corsair-galleon-100');
+  assert.deepEqual(items.map(i => [i.stockId, i.assetType, i.seconds, i.secondsGuessed]), [['1794000000000-aaaaaa', 'image', 15, false], ['1794862042758-1631g8', 'video', 10, true]]);
+  assert.equal(orientationOf(items[1]), 'portrait');
+  assert.equal(trackOf(items[1]).url, 'https://stock.admira.store/stock/1794862042758-1631g8/asset.mp4?v=3194');
+  assert.deepEqual(taggedForScreen(stock, ''), []);
+  assert.deepEqual(taggedForScreen(null, 'corsair-galleon-100'), []);
 });

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRequire } from 'node:module';
 
-const { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume } = createRequire(import.meta.url)('./galleon-frames.cjs');
+const { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume, cleanTitle, lametricText } = createRequire(import.meta.url)('./galleon-frames.cjs');
 
 test('la geometría es la del Galleon 100 SD: LCD 720×384 y 12 teclas 160×160 en 3 columnas × 4 filas', () => {
   assert.deepEqual(LCD, { width: 720, height: 384 });
@@ -131,4 +131,15 @@ test('un toque en una tecla salta a su pieza; una pulsación larga no; la tecla 
   gesture('down', { type: 'button', index: 11 });
   timer.fn(); // mantenida un segundo: vuelve a Elgato, sin salto
   assert.deepEqual([jumps, exits], [[11], ['exit']]);
+});
+
+test('el reloj LaMetric enseña el título en antena sin sufijos de formato, con «PAUSA ·» en pausa y nada si el teclado no emite', () => {
+  assert.equal(cleanTitle('Así Sonaba 1985… Cuando los 80s No Tenían Competencia · Adaptación · 16:9 · Admira'), 'Así Sonaba 1985… Cuando los 80s No Tenían Competencia');
+  assert.equal(cleanTitle('Me at the zoo · Locución ES · 9:16 · Admira'), 'Me at the zoo');
+  assert.equal(cleanTitle('  Best Songs   Of 1986 '), 'Best Songs Of 1986');
+  assert.equal(lametricText({ title: 'Me at the zoo · Locución ES · 16:9 · Admira' }), 'Me at the zoo');
+  assert.equal(lametricText({ title: 'Me at the zoo' }, { paused: true }), 'PAUSA · Me at the zoo');
+  assert.equal(lametricText({ title: 'Me at the zoo' }, { connected: false }), '');
+  assert.equal(lametricText({ title: '' }), '');
+  assert.equal(lametricText(null), '');
 });

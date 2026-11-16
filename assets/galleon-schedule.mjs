@@ -132,6 +132,26 @@ export function jumpOffsetMs(slots, index, nowMs) {
   return start - t;
 }
 
+const TAG_KEY = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/^#/, '').replace(/^pantalla:/, '').trim();
+
+/**
+ * Piezas del índice del Stock etiquetadas con el nombre de la pantalla («corsair-galleon-100», también «#…» o
+ * «pantalla:…»), como piezas de playlist (Carlos, 16-nov-2026). Se leen del índice directamente para que valga cualquier
+ * otra etiqueta libre de la pieza (el direccionamiento de la API descarta las que no conoce). Sin duración conocida
+ * (`secondsGuessed`): el player toma la del vídeo. Fuera las ocultas y lo que no sea vídeo, imagen o animación.
+ */
+export function taggedForScreen(stock, screen) {
+  const key = TAG_KEY(screen);
+  if (!key) return [];
+  return (Array.isArray(stock) ? stock : []).filter(piece => piece && typeof piece === 'object' && !piece.oculto
+      && ['video', 'image', 'animation'].includes(String(piece.type || '').toLowerCase()) && /^https:\/\//.test(String(piece.url || ''))
+      && (Array.isArray(piece.tags) ? piece.tags : []).some(tag => TAG_KEY(tag) === key))
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+    .map(piece => ({ id: String(piece.id), stockId: String(piece.id), title: String(piece.title || ''), seconds: Number(piece.seconds) > 0 ? Number(piece.seconds) : 10,
+      secondsGuessed: !(Number(piece.seconds) > 0), asset: String(piece.url), assetType: String(piece.type).toLowerCase(), tags: (piece.tags || []).map(String),
+      width: Number(piece.width) || 0, height: Number(piece.height) || 0 }));
+}
+
 /** Pista reproducible (misma forma que una pieza del playout) a partir de una pieza de playlist o del Stock. */
 export function trackOf(item) {
   if (!item) return null;
