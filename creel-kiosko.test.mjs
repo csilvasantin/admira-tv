@@ -57,7 +57,7 @@ test('sin red, el kiosko conserva la última temperatura buena (≤6 h) y reinte
 
 test('sin dato de clima (ni real ni forzado) el HUD no inventa «Sol»: sin icono y «CLIMA —»', () => {
   assert.match(html, /var conDato = !!\(clima\.forzado \|\| clima\.real\)/);
-  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
+  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? "NIEBLA" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
 });
 
 test('sin Intl, el respaldo de horaMadrid() sigue el horario de verano de la UE (no +1 h fijo)', () => {
@@ -759,7 +759,7 @@ test('sistema de la TCL: el latido da el sistema y su versión mayor en system.o
 
 test('de noche y despejado el HUD no pinta el Sol: 🌙 DESPEJADO y luz fría (is_day reciente o tabla de orto/ocaso)', () => {
   assert.match(html, /clima\.dia = c\.is_day === 0 \? false : c\.is_day === 1 \? true : null;/);
-  assert.match(html, /real: clima\.real, dia: clima\.dia \}/);
+  assert.match(html, /real: clima\.real, dia: clima\.dia[ ,]/);
   assert.match(html, /var noche = conDato && tipo === "sol" && lunaClara\(\);/);
   assert.match(html, /noche \? "DESPEJADO" :/);
   const ini = html.indexOf('  var ORTO = '), fin = html.indexOf('  function leeClima() {', ini);
@@ -795,4 +795,23 @@ test('nubes de noche: de madrugada las nubes no son gris claro de mediodía (fon
   assert.equal(mk({ real: 'nubes', forzado: 'nubes', t: 0 }, '04:20', 10, T)(), false);    // forzado manda
   assert.equal(mk({ real: null, t: 0 }, '04:20', 10, T)(), false);                         // sin dato
   assert.equal(mk({ real: 'nubes', t: 0 }, 'xx', 10, T)(), false);                         // hora rara: no rompe
+});
+
+test('niebla: con Open-Meteo 45/48 el HUD dice 🌫️ NIEBLA en vez de ☁️ NUBES (cielo y latido sin cambios)', () => {
+  assert.match(html, /clima\.niebla = c\.weather_code === 45 \|\| c\.weather_code === 48;/);
+  assert.match(html, /niebla: clima\.niebla === true \}\)/);
+  assert.match(html, /clima\.niebla = cc\.niebla === true;/);
+  assert.match(html, /niebla \? "NIEBLA" :/);
+  assert.match(html, /niebla \? "\\uD83C\\uDF2B\\uFE0F" :/);
+  const ini = html.indexOf('  function nieblaReal() {'), fin = html.indexOf('  function nubesDeNoche() {', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const mk = (clima) => new Function('clima', html.slice(ini, fin) + '; return nieblaReal;')(clima);
+  assert.equal(mk({ real: 'nubes', niebla: true })(), true);                       // código 45/48
+  assert.equal(mk({ real: 'nubes', niebla: false })(), false);                     // nuboso normal
+  assert.equal(mk({ real: 'nubes' })(), false);                                    // caché antigua sin campo
+  assert.equal(mk({ real: 'lluvia', niebla: true })(), false);                     // solo nubes
+  assert.equal(mk({ real: 'sol', niebla: true })(), false);
+  assert.equal(mk({ real: 'nubes', niebla: true, forzado: 'nubes' })(), false);    // forzado manda
+  assert.equal(mk({ real: null, niebla: true })(), false);                         // sin dato
+  assert.equal(mk(null)(), false);                                                 // nunca rompe
 });

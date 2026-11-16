@@ -158,7 +158,7 @@
   var CLIMA_KEY = "creel-clima-v1", climaReintento = null;
   try {
     var cc = JSON.parse(localStorage.getItem(CLIMA_KEY) || "null");
-    if (cc && typeof cc.temp === "number" && Date.now() - cc.t < 6 * 3600 * 1000) { clima.temp = cc.temp; clima.real = cc.real; clima.t = cc.t; clima.dia = typeof cc.dia === "boolean" ? cc.dia : null; }
+    if (cc && typeof cc.temp === "number" && Date.now() - cc.t < 6 * 3600 * 1000) { clima.temp = cc.temp; clima.real = cc.real; clima.t = cc.t; clima.dia = typeof cc.dia === "boolean" ? cc.dia : null; clima.niebla = cc.niebla === true; }
   } catch (e) {}
   var climaBusy = false; // una sola petición de clima a la vez: colgadas no se apilan (cada 10 min, reintento de 2 min y evento online)
   // Corte de red largo con la TCL encendida (15-nov-2026): la caché solo vale 6 h también en marcha, no solo al arrancar.
@@ -183,6 +183,10 @@
   // Nubes de noche (16-nov-2026 04:20): de madrugada con cielo nuboso la TCL pintaba nubes gris claro de mediodía sobre la escena
   // nocturna. nubesDeNoche() = cielo real con nubes, lluvia o tormenta y esNoche(); entonces fondo más oscuro y nubes azul pizarra.
   // Forzado ?clima=nubes manda (se ve como siempre). Nunca rompe el fotograma.
+  // Niebla (16-nov-2026 05:25): Open-Meteo 45/48 (niebla, niebla con escarcha) caía en «nubes» y el HUD decía «☁️ … NUBES»
+  // con la costa de Salou en niebla. nieblaReal() = cielo real «nubes» con código 45/48; entonces el HUD pinta «🌫️ … NIEBLA».
+  // El cielo se pinta como nubes (de noche, azul pizarra) y el latido sigue diciendo «nubes». Forzado manda. Nunca rompe el HUD.
+  function nieblaReal() { try { return !clima.forzado && clima.real === "nubes" && clima.niebla === true; } catch (e) { return false; } }
   function nubesDeNoche() { try { return !clima.forzado && !!clima.real && clima.real !== "sol" && esNoche(); } catch (e) { return false; } }
   function leeClima() {
     if (climaBusy) return;
@@ -200,10 +204,11 @@
         if (typeof c.temperature_2m !== "number") throw 0;
         clima.temp = c.temperature_2m;
         clima.real = tipoDe(c.weather_code);
+        clima.niebla = c.weather_code === 45 || c.weather_code === 48;
         clima.dia = c.is_day === 0 ? false : c.is_day === 1 ? true : null;
         clima.ok = true;
         clima.t = Date.now();
-        try { localStorage.setItem(CLIMA_KEY, JSON.stringify({ t: Date.now(), temp: clima.temp, real: clima.real, dia: clima.dia })); } catch (e) {}
+        try { localStorage.setItem(CLIMA_KEY, JSON.stringify({ t: Date.now(), temp: clima.temp, real: clima.real, dia: clima.dia, niebla: clima.niebla === true })); } catch (e) {}
       } catch (e) {
         fail();
       }
@@ -305,14 +310,15 @@
     // Sin dato real ni forzado (TCL sin red y sin caché) no se inventa «Sol»: sin icono y «CLIMA —» (14-nov-2026).
     var conDato = !!(clima.forzado || clima.real);
     var noche = conDato && tipo === "sol" && lunaClara();
-    var linea = (conDato ? (noche ? "\uD83C\uDF19" : (ICONO[tipo] || "")) + " " : "") + t;
+    var niebla = conDato && tipo === "nubes" && nieblaReal();
+    var linea = (conDato ? (noche ? "\uD83C\uDF19" : niebla ? "\uD83C\uDF2B\uFE0F" : (ICONO[tipo] || "")) + " " : "") + t;
     g.fillText(linea, 26, hy);
     g.fillStyle = "#ffd9c7";
     g.fillText(horaMadrid(), 26 + g.measureText(linea).width + 30, hy);
     g.font = "600 " + (lleno ? L.subF : 16) + "px ui-monospace, monospace";
     g.fillStyle = "rgba(255,255,255,.75)";
     var extra = clima.forzado ? " \u00B7 FORZADO" : (clima.ok ? " \u00B7 EN DIRECTO" : "");
-    g.fillText("PORTAVENTURA \u00B7 " + (conDato ? (noche ? "DESPEJADO" : String(NOMBRE[tipo] || "").toUpperCase()) : "CLIMA \u2014") + extra, 28, hy + (lleno ? L.subDy : 50));
+    g.fillText("PORTAVENTURA \u00B7 " + (conDato ? (noche ? "DESPEJADO" : niebla ? "NIEBLA" : String(NOMBRE[tipo] || "").toUpperCase()) : "CLIMA \u2014") + extra, 28, hy + (lleno ? L.subDy : 50));
     g.restore();
   }
 
