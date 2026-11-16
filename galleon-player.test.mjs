@@ -51,7 +51,6 @@ test('el adaptador USB cede el teclado, no roba el foco y sólo relaja la seguri
   execFileSync(process.execPath, ['--check', new URL('./tools/galleon-player/galleon-usb.cjs', import.meta.url).pathname]);
   assert.match(usb, /model === 'galleon-k100'/);
   assert.match(usb, /headless: true/);
-  assert.match(usb, /'--mute-audio'/);
   assert.match(usb, /Elgato Stream Deck/);
   assert.match(usb, /AdmiraCorsair\/fullscreen\/ready\.json/);
   assert.match(usb, /createExitGesture\(\(\) => void returnToElgato\(\)\)/);
@@ -61,6 +60,30 @@ test('el adaptador USB cede el teclado, no roba el foco y sólo relaja la seguri
   assert.match(launcher, /tv\.admira\.galleon\.player/);
   assert.match(launcher, /SuccessfulExit<\/key><false\/>/);
   assert.match(launcher, /captura\)/);
+});
+
+test('el player suena por el Mac Studio (sólo la pista horizontal) y las dos ruedas del Galleon son el volumen', () => {
+  assert.doesNotMatch(usb, /--mute-audio/);
+  assert.match(usb, /opened\.on\('rotate', \(control, value\) => volumeControl\('rotate', control, value\)\)/);
+  assert.match(usb, /if \(!gesture\('down', control\)\) volumeControl\('down', control\)/); // pulsar un dial silencia; la tecla 12 sigue siendo la salida
+  assert.match(usb, /createVolumeControl\(state => \{/);
+  assert.match(usb, /setEncoderRingColors\(index, ringColors\(audio\)\)/);
+  assert.match(usb, /volume\.json/);
+  assert.match(usb, /volume: audio\.volume, muted: audio\.muted/);
+  assert.match(player, /function applyAudio\(\)/);
+  assert.match(player, /const sounds = orientation === 'landscape' && !audio\.muted;/);
+  assert.match(player, /audio = \{ muted: !output\?\.connected \|\| output\.muted === true \|\| volume === 0, volume \};/);
+  assert.match(player, /audio: \{ muted: audio\.muted, volume: audio\.volume, playing: playing && !audio\.muted \}/);
+  assert.match(player, /const output = NATIVE && window\.admiraGalleonOutput/); // fuera del adaptador la página va muda
+});
+
+test('el adaptador usa su Chrome for Testing (otro bundle id) para no dejar «abierto» el Chrome de Carlos sin ventana', () => {
+  assert.match(usb, /function chromeForTesting\(\)/);
+  assert.match(usb, /process\.env\.ADMIRA_GALLEON_CHROME \|\| chromeForTesting\(\) \|\| '\/Applications\/Google Chrome\.app/);
+  assert.match(launcher, /browsers install chrome@stable --path "\$RUNTIME\/browsers"/);
+  assert.match(launcher, /ADMIRA_GALLEON_CHROME<\/key><string>\$chrome<\/string>/);
+  assert.match(launcher, /navegador\) navegador ;;/);
+  assert.doesNotMatch(launcher, /falta Google Chrome en \/Applications/);
 });
 
 test('el mando enseña «📺 Pantallas» solo para hotel-creel y manda pantallas-on/off por la cola confirmada', () => {

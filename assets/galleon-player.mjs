@@ -5,7 +5,8 @@
 //     servidor (assets/galleon-schedule.mjs), para que el teclado físico y el gemelo 3D coincidan sin hablarse.
 // El gemelo de admira.store se suscribe por postMessage (subscribe/select/live → frame/ended). El adaptador USB
 // del Mac Studio (tools/galleon-player) carga esta página con ?native=1: sólo él late en /signage/now y lee los
-// fotogramas con window.admiraGalleonFrames().
+// fotogramas con window.admiraGalleonFrames(). Sólo en ese modo suena (la pista horizontal, por el Mac Studio), con el
+// volumen que el adaptador escribe en window.admiraGalleonOutput desde las ruedas del teclado; en el gemelo va mudo.
 import { paintGalleon } from './galleon-layout.mjs';
 import { pairPlaylist, slotAt, trackOf } from './galleon-schedule.mjs';
 
@@ -32,6 +33,7 @@ let playlist = { rev: null, name: '', slots: [] };
 let onAir = { source: 'none', id: '', title: '', index: -1, total: 0, paired: false };
 let frameCount = 0;
 let version = '';
+let audio = { muted: true, volume: 0 };
 const serverNow = () => Date.now() + clockOffset;
 
 function stockTrack(item) {
@@ -100,7 +102,7 @@ function makeTrack(item) {
   const video = item.type === 'video' || item.type === 'animation';
   const media = document.createElement(video ? 'video' : 'img');
   if (video) {
-    media.muted = true;
+    media.muted = true; // applyAudio() da voz a la pista horizontal en modo nativo
     media.playsInline = true;
     media.loop = true;
     media.preload = 'auto';
@@ -207,7 +209,21 @@ async function refreshPlaylist() {
   }
 }
 
-// ── Adaptador USB (?native=1): fotogramas para el teclado y latido en la flota ──
+/** Volumen de las ruedas (window.admiraGalleonOutput.volume/muted): suena sólo la pista horizontal, y sólo cuando el
+ * teclado recibe la señal; la vertical es la misma pieza y doblaría el audio. Fuera del adaptador la página va muda. */
+function applyAudio() {
+  const output = NATIVE && window.admiraGalleonOutput && typeof window.admiraGalleonOutput === 'object' ? window.admiraGalleonOutput : null;
+  const volume = output && Number.isFinite(Number(output.volume)) ? Math.min(1, Math.max(0, Number(output.volume))) : 0;
+  audio = { muted: !output?.connected || output.muted === true || volume === 0, volume };
+  for (const [orientation, track] of Object.entries(tracks)) {
+    if (!track?.video) continue;
+    const sounds = orientation === 'landscape' && !audio.muted;
+    if (track.media.muted === sounds) track.media.muted = !sounds;
+    if (sounds && Math.abs(track.media.volume - volume) > 0.001) track.media.volume = volume;
+  }
+}
+
+// ── Adaptador USB (?native=1): fotogramas para el teclado, volumen y latido en la flota ──
 if (NATIVE) {
   window.admiraGalleonFrames = () => {
     try {
@@ -236,7 +252,7 @@ if (NATIVE) {
         system: { os: 'macOS', platform: navigator.platform || '', language: navigator.language || '', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '' },
         hardware: { dedicated: true, model: 'Corsair Galleon 100 SD', serial: String(output.serial || '') },
         software: { player: 'Corsair Galleon 100 SD', playerVersion: String(output.version || ''), webRelease: version, engine: 'Chromium headless', userAgent: navigator.userAgent },
-        audio: { muted: true, playing: false },
+        audio: { muted: audio.muted, volume: audio.volume, playing: playing && !audio.muted },
         network: { online: navigator.onLine !== false },
       },
       health: { source: 'live', ready, output: output.connected ? 'usb' : 'yielded', frame: frameCount },
@@ -248,6 +264,7 @@ if (NATIVE) {
 }
 
 setInterval(() => {
+  applyAudio();
   const landscape = paintable(tracks.landscape);
   const portrait = paintable(tracks.portrait);
   paintGalleon(surfaces, { landscape, portrait });
