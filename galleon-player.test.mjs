@@ -128,7 +128,7 @@ test('las piezas del Stock etiquetadas corsair-galleon-100 (índice del Stock o 
   assert.match(player, /const STOCK_INDEX = 'https:\/\/stock\.admira\.store\/stock\/index\.json';/);
   assert.match(player, /taggedForScreen\(Array\.isArray\(data\) \? data : data\?\.items \|\| data\?\.assets \|\| \[\], SCREEN\)/);
   assert.match(player, /for \(const item of \[\.\.\.sources\.auto, \.\.\.sources\.tagged\]\)/); // detrás de la manual, sin repetir
-  assert.match(player, /slots: pairPlaylist\(\[\.\.\.draft\.items, \.\.\.extra\]\)/);
+  assert.match(player, /const items = \[\.\.\.draft\.items, \.\.\.extra\];/);
   assert.match(player, /const rev = String\(draft\.rev\) \+ \(extra\.length \? '\+' \+ extra\.map\(item => item\.stockId \|\| item\.id\)\.join\(','\) : ''\);/); // cambia al entrar o salir una
   assert.match(player, /learnDuration\(at\.slot, tracks\.landscape\);/);
   assert.match(player, /slot\.seconds = Math\.max\(2, Math\.ceil\(duration\)\);/);
@@ -144,4 +144,15 @@ test('con lametric.json en el Mac Studio, el adaptador enseña en el reloj LaMet
   assert.match(usb, /lametricRequest\('DELETE', '\/device\/notifications\/'/);
   assert.doesNotMatch(usb, /log\([^)]*lametric\.key/); // la clave no se registra
   assert.match(usb, /lametric: lametric \? \{ host: lametric\.host, shown: lametricShown \} : null/); // status.json sin la clave
+});
+
+test('cuando entra una pieza nueva en la playlist suena un jingle de recreativa y los anillos de las dos ruedas parpadean (Carlos, 16-nov-2026)', () => {
+  assert.match(player, /pieces: playlist\.ids, keysRev: keypad\.rev/); // la página cuenta qué piezas hay
+  assert.match(player, /ids: \[\.\.\.new Set\(items\.map\(item => String\(item\.stockId \|\| item\.id \|\| ''\)\)\.filter\(Boolean\)\)\]/);
+  assert.match(usb, /const added = newPieces\(knownPieces, frames\.pieces\);/); // la primera lectura es la base: no celebra
+  assert.match(usb, /if \(added\.length\) void celebrate\(added\.length\);/);
+  assert.match(usb, /fs\.writeFileSync\(ARCADE_FILE, arcadeJingle\(\)\)/);
+  assert.match(usb, /if \(!audio\.muted && audio\.volume > 0\) execFile\('\/usr\/bin\/afplay', \['-v', String\(Math\.max\(0\.2, audio\.volume\)\), ARCADE_FILE\]/);
+  assert.match(usb, /device\.setEncoderRingColors\(index, colors\)/);
+  assert.match(usb, /if \(!target \|\| celebrating\) return;/); // el volumen no pisa el parpadeo
 });

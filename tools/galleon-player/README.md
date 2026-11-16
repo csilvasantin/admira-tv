@@ -23,6 +23,12 @@ contenido **horizontal** y las **12 teclas-pantalla** (3 columnas × 4 filas, 16
   devolviendo el teclado a Elgato; un toque corto en ella salta a +6. Con el playout (Custom · Dual H·V) mandando no
   hay salto. Tras un salto, el gemelo 3D de admira.store (que calcula por reloj) ya no coincide con el teclado.
 
+## Pieza nueva en la playlist (16-nov-2026)
+- Cuando entra una pieza nueva (etiquetada en el Stock o importada en el mando) suena un **jingle de recreativa de los 80**
+  por los altavoces (sintetizado por el adaptador en `~/.admira-galleon/arcade.wav`, `afplay` al volumen del player; en
+  silencio del player no suena) y los **anillos de las dos ruedas parpadean** de colores dos segundos. La primera lectura
+  tras arrancar es la base: no celebra lo que ya había.
+
 ## Sonido y ruedas de volumen (16-nov-2026)
 - El player **suena por los altavoces del Mac Studio**: sólo la pista horizontal (la LCD); la vertical es la misma pieza y
   doblaría el audio. Suena únicamente cuando el teclado recibe la señal (si cede el USB, calla) y sólo en el adaptador: en el

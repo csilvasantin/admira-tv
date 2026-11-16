@@ -141,7 +141,8 @@ function ringColors({ volume = 0, muted = false } = {}, steps = 4) {
 /** Título sin los sufijos de formato («· Adaptación · 16:9 · Admira», «· 9:16»…), como la familia de la pieza en la página. */
 const FORMAT_SUFFIX = /\s*(?:·|-|–|—|\|)\s*(?:admira|adaptaci[oó]n|subt[ií]tulos(?: [a-z]{2})?|16:9|9:16|4:3|3:4|horizontal|vertical|landscape|portrait|apaisad[oa]|formato[- ]altern[oa]|locuci[oó]n(?: [a-z]{2})?)\s*$/i;
 function cleanTitle(title) {
-  let text = String(title || '').replace(/\s+/g, ' ').trim(), previous;
+  // Fuera los hashtags del título (los vídeos importados del Stock los traen: «Best Songs Of 1986 #oldsong #80smusic»).
+  let text = String(title || '').replace(/(^|\s)#[^\s#]+/g, ' ').replace(/\s+/g, ' ').trim(), previous;
   do { previous = text; text = text.replace(FORMAT_SUFFIX, ''); } while (text !== previous);
   return text.trim();
 }
@@ -156,4 +157,54 @@ function lametricText(onAir, { paused = false, connected = true } = {}) {
   return (paused ? 'PAUSA · ' : '') + title.slice(0, 120);
 }
 
-module.exports = { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume, cleanTitle, lametricText };
+/**
+ * Pieza nueva en la playlist (Carlos, 16-nov-2026): parpadeo de recreativa en los anillos de los dos diales. Para el
+ * fotograma `frame` (cada ~80 ms) devuelve los colores de un anillo: los LEDs van rotando en magenta, cian, amarillo y
+ * verde, y en los fotogramas impares se apagan a medias para que titile. `steps` LEDs por anillo.
+ */
+const ARCADE = [[255, 0, 180], [0, 220, 255], [255, 220, 0], [40, 255, 60]];
+function arcadeFlicker(frame, steps = 4) {
+  const colors = [];
+  for (let index = 0; index < steps; index++) {
+    const [r, g, b] = ARCADE[(index + frame) % ARCADE.length];
+    const dim = frame % 2 === 1 && (index + frame) % 2 === 0 ? 0.15 : 1;
+    colors.push(Math.round(r * dim), Math.round(g * dim), Math.round(b * dim));
+  }
+  return colors;
+}
+
+/**
+ * Jingle de recreativa de los 80 (onda cuadrada, 8 bits de espíritu): arpegio ascendente C5·E5·G5·C6 con un «coin»
+ * final, como WAV PCM 16 bits mono a 22 050 Hz (~0,9 s). Se escribe a disco una vez y se reproduce con afplay.
+ */
+function arcadeJingle({ rate = 22050 } = {}) {
+  const notes = [[523.25, 0.09], [659.25, 0.09], [783.99, 0.09], [1046.5, 0.16], [0, 0.04], [1318.5, 0.07], [1567.98, 0.22]];
+  const lengths = notes.map(([, seconds]) => Math.round(seconds * rate));
+  const pcm = Buffer.alloc(lengths.reduce((sum, length) => sum + length, 0) * 2);
+  let at = 0;
+  for (const [index, [frequency]] of notes.entries()) {
+    const length = lengths[index];
+    for (let i = 0; i < length; i++, at++) {
+      if (!frequency) continue;
+      const t = i / rate, envelope = Math.min(1, (length - i) / (rate * 0.03)) * 0.5; // caída corta al final de cada nota
+      const square = Math.sin(2 * Math.PI * frequency * t) >= 0 ? 1 : -1;
+      pcm.writeInt16LE(Math.round(square * envelope * 32767), at * 2);
+    }
+  }
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0); header.writeUInt32LE(36 + pcm.length, 4); header.write('WAVE', 8);
+  header.write('fmt ', 12); header.writeUInt32LE(16, 16); header.writeUInt16LE(1, 20); header.writeUInt16LE(1, 22);
+  header.writeUInt32LE(rate, 24); header.writeUInt32LE(rate * 2, 28); header.writeUInt16LE(2, 32); header.writeUInt16LE(16, 34);
+  header.write('data', 36); header.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([header, pcm]);
+}
+
+/** Piezas que han entrado en la playlist respecto a la lista anterior (null = primera lectura: nada que celebrar). */
+function newPieces(previous, current) {
+  if (!Array.isArray(current)) return [];
+  if (!previous) return [];
+  const known = new Set(previous);
+  return current.filter(id => !known.has(id));
+}
+
+module.exports = { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume, cleanTitle, lametricText, arcadeFlicker, arcadeJingle, newPieces };

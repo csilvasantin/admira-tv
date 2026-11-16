@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRequire } from 'node:module';
 
-const { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume, cleanTitle, lametricText } = createRequire(import.meta.url)('./galleon-frames.cjs');
+const { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume, cleanTitle, lametricText, arcadeFlicker, arcadeJingle, newPieces } = createRequire(import.meta.url)('./galleon-frames.cjs');
 
 test('la geometría es la del Galleon 100 SD: LCD 720×384 y 12 teclas 160×160 en 3 columnas × 4 filas', () => {
   assert.deepEqual(LCD, { width: 720, height: 384 });
@@ -137,9 +137,27 @@ test('el reloj LaMetric enseña el título en antena sin sufijos de formato, con
   assert.equal(cleanTitle('Así Sonaba 1985… Cuando los 80s No Tenían Competencia · Adaptación · 16:9 · Admira'), 'Así Sonaba 1985… Cuando los 80s No Tenían Competencia');
   assert.equal(cleanTitle('Me at the zoo · Locución ES · 9:16 · Admira'), 'Me at the zoo');
   assert.equal(cleanTitle('  Best Songs   Of 1986 '), 'Best Songs Of 1986');
+  assert.equal(cleanTitle('Best Songs Of 1986 #oldsong #80smusic #1986 #music #viralmusic'), 'Best Songs Of 1986'); // sin hashtags
   assert.equal(lametricText({ title: 'Me at the zoo · Locución ES · 16:9 · Admira' }), 'Me at the zoo');
   assert.equal(lametricText({ title: 'Me at the zoo' }, { paused: true }), 'PAUSA · Me at the zoo');
   assert.equal(lametricText({ title: 'Me at the zoo' }, { connected: false }), '');
   assert.equal(lametricText({ title: '' }), '');
   assert.equal(lametricText(null), '');
+});
+
+test('una pieza nueva en la playlist: jingle de recreativa (WAV válido, ~0,9 s) y parpadeo de colores en los anillos; la primera lectura no celebra', () => {
+  const wav = arcadeJingle();
+  assert.equal(wav.toString('ascii', 0, 4), 'RIFF'); assert.equal(wav.toString('ascii', 8, 12), 'WAVE');
+  assert.equal(wav.readUInt32LE(24), 22050); assert.equal(wav.readUInt16LE(22), 1); assert.equal(wav.readUInt16LE(34), 16);
+  const seconds = wav.readUInt32LE(40) / 2 / 22050;
+  assert.ok(seconds > 0.7 && seconds < 1.1, 'dura ' + seconds);
+  assert.ok(wav.readInt16LE(44 + 200) !== 0, 'suena desde el principio');
+  assert.equal(arcadeFlicker(0).length, 12);
+  assert.deepEqual(arcadeFlicker(0).slice(0, 3), [255, 0, 180]);
+  assert.notDeepEqual(arcadeFlicker(0), arcadeFlicker(1)); // titila
+  assert.deepEqual(arcadeFlicker(0), arcadeFlicker(4)); // y rota
+  assert.deepEqual(newPieces(null, ['a', 'b']), []);
+  assert.deepEqual(newPieces(['a', 'b'], ['a', 'b', 'c']), ['c']);
+  assert.deepEqual(newPieces(['a', 'b'], ['a']), []);
+  assert.deepEqual(newPieces(['a'], null), []);
 });

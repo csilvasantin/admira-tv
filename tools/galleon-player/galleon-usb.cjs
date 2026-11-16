@@ -12,10 +12,11 @@
 // Suena por los altavoces del Mac Studio. Rueda izquierda = volumen (girar sube o baja a saltos de 5 %, pulsar silencia;
 // anillo verde con el nivel, rojo en silencio). Rueda derecha = transporte (pulsar pausa o reanuda, girar a la derecha
 // pasa a la siguiente pieza y a la izquierda a la anterior; anillo azul en marcha, ámbar en pausa). Si hay un reloj
-// LaMetric configurado (lametric.json), enseña el título de la pieza en antena.
+// LaMetric configurado (lametric.json), enseña el título de la pieza en antena. Cuando entra una pieza nueva en la
+// playlist: jingle de recreativa por los altavoces y anillos parpadeando.
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
-const { execFileSync } = require('node:child_process');
-const { LCD, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume, lametricText } = require('./galleon-frames.cjs');
+const { execFile, execFileSync } = require('node:child_process');
+const { LCD, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume, lametricText, arcadeFlicker, arcadeJingle, newPieces } = require('./galleon-frames.cjs');
 
 const RUNTIME = process.env.ADMIRA_GALLEON_HOME || path.join(os.homedir(), '.admira-galleon');
 const SCREEN = /^[a-z0-9][a-z0-9-]{1,79}$/.test(process.env.ADMIRA_GALLEON_SCREEN || '') ? process.env.ADMIRA_GALLEON_SCREEN : 'corsair-galleon-100';
@@ -37,7 +38,8 @@ function chromeForTesting() {
 }
 const CHROME = process.env.ADMIRA_GALLEON_CHROME || chromeForTesting() || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const FPS = Math.min(15, Math.max(2, Number(process.env.ADMIRA_GALLEON_FPS) || 10));
-const VERSION = 'usb-5 · 16-nov-2026';
+const VERSION = 'usb-6 · 16-nov-2026';
+const ARCADE_FILE = path.join(RUNTIME, 'arcade.wav');
 const LAMETRIC_FILE = path.join(RUNTIME, 'lametric.json');
 const VOLUME_FILE = path.join(RUNTIME, 'volume.json');
 const ELGATO_APP = '/Applications/Elgato Stream Deck.app';
@@ -84,7 +86,7 @@ const volumeControl = createVolumeControl(state => {
 }, audio);
 /** Pinta el nivel en el anillo de LEDs del dial izquierdo (volumen). */
 async function showVolume(target = device) {
-  if (!target) return;
+  if (!target || celebrating) return;
   try { await target.setEncoderRingColors(0, ringColors(audio)); } catch (error) { log('anillo-error ' + error.message); }
 }
 
@@ -130,11 +132,32 @@ function lametricShow(text) {
   });
 }
 
+// ── Pieza nueva en la playlist (Carlos, 16-nov-2026): jingle de recreativa de los 80 por los altavoces (afplay, al
+// volumen del player, en silencio si el player está en silencio) y los anillos de los dos diales parpadeando 2 s. ──
+let knownPieces = null, celebrating = false;
+try { fs.writeFileSync(ARCADE_FILE, arcadeJingle()); } catch (error) { log('arcade-error ' + error.message); }
+async function celebrate(count) {
+  if (celebrating) return;
+  celebrating = true;
+  log('pieza nueva ×' + count + ': arcade');
+  if (!audio.muted && audio.volume > 0) execFile('/usr/bin/afplay', ['-v', String(Math.max(0.2, audio.volume)), ARCADE_FILE], error => { if (error) log('afplay-error ' + error.message); });
+  try {
+    for (let frame = 0; frame < 24 && device; frame++) {
+      const colors = arcadeFlicker(frame);
+      await Promise.all([0, 1].map(index => device.setEncoderRingColors(index, colors)));
+      await sleep(80);
+    }
+  } catch (error) { log('anillo-error ' + error.message); }
+  celebrating = false;
+  await showVolume();
+  await showTransport();
+}
+
 // ── Transporte: la rueda derecha. Pulsar pausa/reanuda; girar pasa a la siguiente o a la anterior pieza. ──
 let paused = false;
 /** Pinta el estado en el anillo del dial derecho: azul en marcha, ámbar en pausa. */
 async function showTransport(target = device) {
-  if (!target) return;
+  if (!target || celebrating) return;
   try { await target.setEncoderRingColors(1, transportRing({ paused })); } catch (error) { log('anillo-error ' + error.message); }
 }
 async function transportAction(action) {
@@ -248,6 +271,11 @@ async function pushFrame() {
     log('teclas ' + frames.keysRev + ' ' + JSON.stringify(frames.onAir || null));
   }
   lametricShow(lametricText(frames.onAir, { paused, connected: true }));
+  if (Array.isArray(frames.pieces)) {
+    const added = newPieces(knownPieces, frames.pieces);
+    knownPieces = frames.pieces;
+    if (added.length) void celebrate(added.length);
+  }
   if (frames.frame === lastFrame) return Boolean(keysJpeg);
   const lcdJpeg = dataUrlToBuffer(frames.landscape);
   if (!lcdJpeg) return false;
