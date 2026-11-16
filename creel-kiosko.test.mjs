@@ -778,3 +778,21 @@ test('de noche y despejado el HUD no pinta el Sol: 🌙 DESPEJADO y luz fría (i
   assert.equal(mk({ real: 'nubes', t: 0 }, '03:20', 10, T).lunaClara(), false);
   assert.equal(mk({ real: 'sol', t: 0 }, 'xx', 10, T).esNoche(), false);                          // hora rara: no rompe
 });
+
+test('nubes de noche: de madrugada las nubes no son gris claro de mediodía (fondo oscuro y nubes azul pizarra)', () => {
+  assert.match(html, /function nubesDeNoche\(\) \{ try \{ return !clima\.forzado && !!clima\.real && clima\.real !== "sol" && esNoche\(\);/);
+  assert.match(html, /var nn = nubesDeNoche\(\);/);
+  assert.match(html, /nn \? "rgba\(105,118,160,\.5\)" : "rgba\(200,200,215,\.55\)"/);
+  const ini = html.indexOf('  var ORTO = '), fin = html.indexOf('  function leeClima() {', ini);
+  const mk = (clima, hora, mes, ahora) => new Function('clima', 'horaMadrid', 'Date', html.slice(ini, fin) + '; return nubesDeNoche;')(
+    clima, () => hora, Object.assign(function () { return { getMonth: () => mes }; }, { now: () => ahora }));
+  const T = 1e12;
+  assert.equal(mk({ real: 'nubes', t: 0 }, '04:20', 10, T)(), true);                       // noviembre 04:20 nuboso
+  assert.equal(mk({ real: 'lluvia', t: 0 }, '04:20', 10, T)(), true);
+  assert.equal(mk({ real: 'nubes', t: 0 }, '12:00', 10, T)(), false);                      // mediodía: como siempre
+  assert.equal(mk({ real: 'nubes', dia: true, t: T - 60000 }, '04:20', 10, T)(), false);   // is_day reciente manda
+  assert.equal(mk({ real: 'sol', t: 0 }, '04:20', 10, T)(), false);                        // despejado: es la luna
+  assert.equal(mk({ real: 'nubes', forzado: 'nubes', t: 0 }, '04:20', 10, T)(), false);    // forzado manda
+  assert.equal(mk({ real: null, t: 0 }, '04:20', 10, T)(), false);                         // sin dato
+  assert.equal(mk({ real: 'nubes', t: 0 }, 'xx', 10, T)(), false);                         // hora rara: no rompe
+});

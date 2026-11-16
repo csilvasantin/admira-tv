@@ -180,6 +180,10 @@
     } catch (e) { return false; }
   }
   function lunaClara() { return !clima.forzado && clima.real === "sol" && esNoche(); }
+  // Nubes de noche (16-nov-2026 04:20): de madrugada con cielo nuboso la TCL pintaba nubes gris claro de mediodía sobre la escena
+  // nocturna. nubesDeNoche() = cielo real con nubes, lluvia o tormenta y esNoche(); entonces fondo más oscuro y nubes azul pizarra.
+  // Forzado ?clima=nubes manda (se ve como siempre). Nunca rompe el fotograma.
+  function nubesDeNoche() { try { return !clima.forzado && !!clima.real && clima.real !== "sol" && esNoche(); } catch (e) { return false; } }
   function leeClima() {
     if (climaBusy) return;
     climaBusy = true;
@@ -238,9 +242,10 @@
       g.fillStyle = luz;
       g.fillRect(0, 0, W, H);
     } else {
-      g.fillStyle = tipo === "nubes" ? "rgba(70,70,85,.45)" : tipo === "lluvia" ? "rgba(20,35,70,.55)" : "rgba(10,10,30,.68)";
+      var nn = nubesDeNoche();
+      g.fillStyle = tipo === "nubes" ? (nn ? "rgba(18,24,48,.55)" : "rgba(70,70,85,.45)") : tipo === "lluvia" ? (nn ? "rgba(8,14,38,.62)" : "rgba(20,35,70,.55)") : "rgba(10,10,30,.68)";
       g.fillRect(0, 0, W, H);
-      g.fillStyle = tipo === "nubes" ? "rgba(200,200,215,.55)" : "rgba(90,95,120,.75)";
+      g.fillStyle = tipo === "nubes" ? (nn ? "rgba(105,118,160,.5)" : "rgba(200,200,215,.55)") : (nn ? "rgba(55,62,92,.8)" : "rgba(90,95,120,.75)");
       for (var k = 0; k < 6; k++) {
         var x = ((k * 0.19 + s * 0.01) % 1.2 - 0.1) * W;
         var y = H * (0.12 + (k % 2) * 0.08);
