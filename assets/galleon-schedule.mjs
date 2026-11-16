@@ -82,6 +82,8 @@ export function pairPlaylist(items) {
       portrait: portrait || landscape,
       paired: Boolean(mate),
       seconds: Math.max(secondsOf(row.item), secondsOf(mate?.item), 2),
+      // Pieza dirigida por etiqueta (lista `auto` de la API): llega con 10 s fijos; el player aprende la duración real del vídeo.
+      guessed: Boolean(row.item.secondsGuessed || mate?.item?.secondsGuessed),
     });
   }
   return slots;

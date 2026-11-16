@@ -147,6 +147,15 @@ function syncTrack(track, positionMs) {
   if (media.paused) void media.play().catch(() => {});
 }
 
+/** Un turno con duración supuesta (pieza dirigida por etiqueta) toma la real del vídeo en cuanto se conoce. */
+function learnDuration(slot, track) {
+  if (!slot?.guessed || !track?.video) return;
+  const duration = track.media.duration;
+  if (!Number.isFinite(duration) || duration <= 0) return;
+  slot.seconds = Math.max(2, Math.ceil(duration));
+  slot.guessed = false;
+}
+
 function paintable(track) {
   if (!track) return null;
   return (track.video ? track.media.readyState >= 2 : track.media.complete && track.media.naturalWidth > 0) ? track.media : null;
@@ -176,6 +185,7 @@ function program() {
   const landscape = trackOf(at.slot.landscape);
   setTrack('landscape', landscape);
   syncTrack(tracks.landscape, at.offsetMs);
+  learnDuration(at.slot, tracks.landscape);
   onAir = { source: 'playlist', id: String(landscape?.id || ''), title: at.slot.title, index: at.index, total: at.total, paired: at.slot.paired };
   refreshNavigator();
 }
@@ -205,9 +215,15 @@ async function refreshPlaylist() {
     if (response.ok) {
       const data = await response.json();
       const draft = data?.draft;
-      if (data?.ok && draft && Array.isArray(draft.items) && draft.rev !== playlist.rev) {
-        playlist = { rev: draft.rev, name: String(draft.name || ''), slots: pairPlaylist(draft.items) };
-        program();
+      if (data?.ok && draft && Array.isArray(draft.items)) {
+        // Piezas dirigidas a esta pantalla por etiqueta en el Stock (corsair-galleon-100): la API las da aparte en `auto`,
+        // sin repetir la lista manual, y con 10 s fijos (la duración real se aprende del vídeo). Se emiten detrás.
+        const auto = (Array.isArray(data.auto) ? data.auto : []).map(item => ({ ...item, secondsGuessed: true }));
+        const rev = String(draft.rev) + (auto.length ? '+' + auto.map(item => item.stockId || item.id).join(',') : '');
+        if (rev !== playlist.rev) {
+          playlist = { rev, name: String(draft.name || ''), slots: pairPlaylist([...draft.items, ...auto]) };
+          program();
+        }
       }
     }
   } catch {
