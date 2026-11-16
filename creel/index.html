@@ -158,7 +158,7 @@
   var CLIMA_KEY = "creel-clima-v1", climaReintento = null;
   try {
     var cc = JSON.parse(localStorage.getItem(CLIMA_KEY) || "null");
-    if (cc && typeof cc.temp === "number" && Date.now() - cc.t < 6 * 3600 * 1000) { clima.temp = cc.temp; clima.real = cc.real; clima.t = cc.t; }
+    if (cc && typeof cc.temp === "number" && Date.now() - cc.t < 6 * 3600 * 1000) { clima.temp = cc.temp; clima.real = cc.real; clima.t = cc.t; clima.dia = typeof cc.dia === "boolean" ? cc.dia : null; }
   } catch (e) {}
   var climaBusy = false; // una sola petición de clima a la vez: colgadas no se apilan (cada 10 min, reintento de 2 min y evento online)
   // Corte de red largo con la TCL encendida (15-nov-2026): la caché solo vale 6 h también en marcha, no solo al arrancar.
@@ -168,6 +168,18 @@
   // Edad del clima para el latido (15-nov-2026): con «— °C» o una temperatura rara en la TCL no se sabía si Open-Meteo
   // no llega o si el HUD pinta una lectura vieja de caché. climaMin = minutos desde la última lectura buena (null si no hay).
   function climaMin() { try { return clima.t && Date.now() >= clima.t ? Math.round((Date.now() - clima.t) / 60000) : null; } catch (e) { return null; } }
+  // De noche, sin sol (16-nov-2026 03:20): con cielo despejado a las 3 de la mañana la TCL pintaba «☀️ … SOL» y la luz dorada del Sol.
+  // esNoche() usa is_day de Open-Meteo si la lectura tiene <= 30 min; si no (sin red, caché vieja), la tabla de salida/puesta
+  // del Sol en Salou por mes, en hora de Madrid. De noche y despejado: «🌙 … DESPEJADO» y luz fría de luna. Forzado ?clima=sol manda.
+  var ORTO = [[8.25, 17.75], [7.85, 18.35], [7.2, 19.2], [7.35, 20.4], [6.85, 20.9], [6.65, 21.3], [6.85, 21.25], [7.25, 20.75], [7.75, 20], [8, 19], [7.8, 17.75], [8.25, 17.5]];
+  function esNoche() {
+    try {
+      if (typeof clima.dia === "boolean" && clima.t && Date.now() - clima.t <= 30 * 60000) return !clima.dia;
+      var hm = String(horaMadrid()).split(":"), h = Number(hm[0]) + Number(hm[1]) / 60, o = ORTO[new Date().getMonth()];
+      return isNaN(h) || !o ? false : (h < o[0] || h >= o[1]);
+    } catch (e) { return false; }
+  }
+  function lunaClara() { return !clima.forzado && clima.real === "sol" && esNoche(); }
   function leeClima() {
     if (climaBusy) return;
     climaBusy = true;
@@ -184,9 +196,10 @@
         if (typeof c.temperature_2m !== "number") throw 0;
         clima.temp = c.temperature_2m;
         clima.real = tipoDe(c.weather_code);
+        clima.dia = c.is_day === 0 ? false : c.is_day === 1 ? true : null;
         clima.ok = true;
         clima.t = Date.now();
-        try { localStorage.setItem(CLIMA_KEY, JSON.stringify({ t: Date.now(), temp: clima.temp, real: clima.real })); } catch (e) {}
+        try { localStorage.setItem(CLIMA_KEY, JSON.stringify({ t: Date.now(), temp: clima.temp, real: clima.real, dia: clima.dia })); } catch (e) {}
       } catch (e) {
         fail();
       }
@@ -217,10 +230,11 @@
     var tipo = clima.forzado || clima.real || "sol";
     clima.tipo = tipo;
     if (tipo === "sol") {
+      var luna = lunaClara();
       var luz = g.createRadialGradient(W / 2, -H * 0.2, 10, W / 2, -H * 0.2, W * 0.7);
-      luz.addColorStop(0, "rgba(255,214,92,.6)");
-      luz.addColorStop(0.4, "rgba(255,150,40,.22)");
-      luz.addColorStop(1, "rgba(255,120,0,0)");
+      luz.addColorStop(0, luna ? "rgba(185,205,255,.38)" : "rgba(255,214,92,.6)");
+      luz.addColorStop(0.4, luna ? "rgba(90,115,200,.14)" : "rgba(255,150,40,.22)");
+      luz.addColorStop(1, luna ? "rgba(40,60,140,0)" : "rgba(255,120,0,0)");
       g.fillStyle = luz;
       g.fillRect(0, 0, W, H);
     } else {
@@ -285,14 +299,15 @@
     g.textBaseline = "top";
     // Sin dato real ni forzado (TCL sin red y sin caché) no se inventa «Sol»: sin icono y «CLIMA —» (14-nov-2026).
     var conDato = !!(clima.forzado || clima.real);
-    var linea = (conDato ? (ICONO[tipo] || "") + " " : "") + t;
+    var noche = conDato && tipo === "sol" && lunaClara();
+    var linea = (conDato ? (noche ? "\uD83C\uDF19" : (ICONO[tipo] || "")) + " " : "") + t;
     g.fillText(linea, 26, hy);
     g.fillStyle = "#ffd9c7";
     g.fillText(horaMadrid(), 26 + g.measureText(linea).width + 30, hy);
     g.font = "600 " + (lleno ? L.subF : 16) + "px ui-monospace, monospace";
     g.fillStyle = "rgba(255,255,255,.75)";
     var extra = clima.forzado ? " \u00B7 FORZADO" : (clima.ok ? " \u00B7 EN DIRECTO" : "");
-    g.fillText("PORTAVENTURA \u00B7 " + (conDato ? String(NOMBRE[tipo] || "").toUpperCase() : "CLIMA \u2014") + extra, 28, hy + (lleno ? L.subDy : 50));
+    g.fillText("PORTAVENTURA \u00B7 " + (conDato ? (noche ? "DESPEJADO" : String(NOMBRE[tipo] || "").toUpperCase()) : "CLIMA \u2014") + extra, 28, hy + (lleno ? L.subDy : 50));
     g.restore();
   }
 

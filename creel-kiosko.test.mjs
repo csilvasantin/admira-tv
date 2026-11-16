@@ -57,7 +57,7 @@ test('sin red, el kiosko conserva la última temperatura buena (≤6 h) y reinte
 
 test('sin dato de clima (ni real ni forzado) el HUD no inventa «Sol»: sin icono y «CLIMA —»', () => {
   assert.match(html, /var conDato = !!\(clima\.forzado \|\| clima\.real\)/);
-  assert.match(html, /conDato \? String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\) : "CLIMA \\u2014"/);
+  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
 });
 
 test('sin Intl, el respaldo de horaMadrid() sigue el horario de verano de la UE (no +1 h fijo)', () => {
@@ -755,4 +755,26 @@ test('sistema de la TCL: el latido da el sistema y su versión mayor en system.o
   assert.equal(f('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'), 'Linux');
   assert.equal(f(''), '?');
   assert.equal(f(undefined), '?');
+});
+
+test('de noche y despejado el HUD no pinta el Sol: 🌙 DESPEJADO y luz fría (is_day reciente o tabla de orto/ocaso)', () => {
+  assert.match(html, /clima\.dia = c\.is_day === 0 \? false : c\.is_day === 1 \? true : null;/);
+  assert.match(html, /real: clima\.real, dia: clima\.dia \}/);
+  assert.match(html, /var noche = conDato && tipo === "sol" && lunaClara\(\);/);
+  assert.match(html, /noche \? "DESPEJADO" :/);
+  const ini = html.indexOf('  var ORTO = '), fin = html.indexOf('  function leeClima() {', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const mk = (clima, hora, mes, ahora) => new Function('clima', 'horaMadrid', 'Date', html.slice(ini, fin) + '; return { esNoche: esNoche, lunaClara: lunaClara };')(
+    clima, () => hora, Object.assign(function () { return { getMonth: () => mes }; }, { now: () => ahora }));
+  const T = 1e12;
+  assert.equal(mk({ real: 'sol', dia: false, t: T - 60000 }, '12:00', 10, T).esNoche(), true);    // is_day reciente manda
+  assert.equal(mk({ real: 'sol', dia: true, t: T - 60000 }, '03:20', 10, T).esNoche(), false);
+  assert.equal(mk({ real: 'sol', dia: false, t: T - 3600000 }, '12:00', 10, T).esNoche(), false); // lectura vieja: tabla
+  assert.equal(mk({ real: 'sol', t: 0 }, '03:20', 10, T).esNoche(), true);                        // noviembre 03:20
+  assert.equal(mk({ real: 'sol', t: 0 }, '18:30', 10, T).esNoche(), true);                        // noviembre, ya puesto
+  assert.equal(mk({ real: 'sol', t: 0 }, '18:30', 5, T).esNoche(), false);                        // junio, aún de día
+  assert.equal(mk({ real: 'sol', t: 0 }, '03:20', 10, T).lunaClara(), true);
+  assert.equal(mk({ real: 'sol', forzado: 'sol', t: 0 }, '03:20', 10, T).lunaClara(), false);     // forzado manda
+  assert.equal(mk({ real: 'nubes', t: 0 }, '03:20', 10, T).lunaClara(), false);
+  assert.equal(mk({ real: 'sol', t: 0 }, 'xx', 10, T).esNoche(), false);                          // hora rara: no rompe
 });
