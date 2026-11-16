@@ -158,7 +158,7 @@
   var CLIMA_KEY = "creel-clima-v1", climaReintento = null;
   try {
     var cc = JSON.parse(localStorage.getItem(CLIMA_KEY) || "null");
-    if (cc && typeof cc.temp === "number" && Date.now() - cc.t < 6 * 3600 * 1000) { clima.temp = cc.temp; clima.real = cc.real; clima.t = cc.t; clima.dia = typeof cc.dia === "boolean" ? cc.dia : null; clima.niebla = cc.niebla === true; clima.nieve = cc.nieve === true; clima.llovizna = cc.llovizna === true; clima.intervalos = cc.intervalos === true; clima.chubascos = cc.chubascos === true; clima.granizo = cc.granizo === true; }
+    if (cc && typeof cc.temp === "number" && Date.now() - cc.t < 6 * 3600 * 1000) { clima.temp = cc.temp; clima.real = cc.real; clima.t = cc.t; clima.dia = typeof cc.dia === "boolean" ? cc.dia : null; clima.niebla = cc.niebla === true; clima.nieve = cc.nieve === true; clima.llovizna = cc.llovizna === true; clima.intervalos = cc.intervalos === true; clima.chubascos = cc.chubascos === true; clima.granizo = cc.granizo === true; clima.helada = cc.helada === true; }
   } catch (e) {}
   var climaBusy = false; // una sola petición de clima a la vez: colgadas no se apilan (cada 10 min, reintento de 2 min y evento online)
   // Corte de red largo con la TCL encendida (15-nov-2026): la caché solo vale 6 h también en marcha, no solo al arrancar.
@@ -207,6 +207,11 @@
   // «⛈️ … TORMENTA» igual que una tormenta sin granizo. granizoReal() = cielo real «tormenta» con código 96/99; entonces el
   // HUD pinta «⛈️ … TORMENTA CON GRANIZO». Cielo (rayos) y latido («tormenta») sin cambios. Forzado manda. Nunca rompe.
   function granizoReal() { try { return !clima.forzado && clima.real === "tormenta" && clima.granizo === true; } catch (e) { return false; } }
+  // Helada (16-nov-2026 12:20): Open-Meteo 56/57 (llovizna helada) y 66/67 (lluvia helada) caían en «LLOVIZNA» y «LLUVIA»
+  // como si no helara; en la costa es raro pero es el aviso que más importa (suelo resbaladizo en la entrada). heladaReal() =
+  // cielo real «lluvia» con código helado; entonces el HUD pinta «… LLOVIZNA HELADA» o «… LLUVIA HELADA». Cielo (lluvia) y
+  // latido («lluvia») sin cambios. Forzado manda. Nunca rompe.
+  function heladaReal() { try { return !clima.forzado && clima.real === "lluvia" && clima.helada === true; } catch (e) { return false; } }
   function intervalosReal() { try { return !clima.forzado && clima.real === "nubes" && clima.intervalos === true && !esNoche(); } catch (e) { return false; } }
   function nubesDeNoche() { try { return !clima.forzado && !!clima.real && clima.real !== "sol" && esNoche(); } catch (e) { return false; } }
   function leeClima() {
@@ -231,10 +236,11 @@
         clima.intervalos = c.weather_code === 2;
         clima.chubascos = c.weather_code >= 80 && c.weather_code <= 82;
         clima.granizo = c.weather_code === 96 || c.weather_code === 99;
+        clima.helada = c.weather_code === 56 || c.weather_code === 57 || c.weather_code === 66 || c.weather_code === 67;
         clima.dia = c.is_day === 0 ? false : c.is_day === 1 ? true : null;
         clima.ok = true;
         clima.t = Date.now();
-        try { localStorage.setItem(CLIMA_KEY, JSON.stringify({ t: Date.now(), temp: clima.temp, granizo: clima.granizo === true, real: clima.real, chubascos: clima.chubascos === true, dia: clima.dia, llovizna: clima.llovizna === true, intervalos: clima.intervalos === true, nieve: clima.nieve === true, niebla: clima.niebla === true })); } catch (e) {}
+        try { localStorage.setItem(CLIMA_KEY, JSON.stringify({ t: Date.now(), helada: clima.helada === true, temp: clima.temp, granizo: clima.granizo === true, real: clima.real, chubascos: clima.chubascos === true, dia: clima.dia, llovizna: clima.llovizna === true, intervalos: clima.intervalos === true, nieve: clima.nieve === true, niebla: clima.niebla === true })); } catch (e) {}
       } catch (e) {
         fail();
       }
@@ -342,6 +348,7 @@
     var intervalos = conDato && tipo === "nubes" && !niebla && intervalosReal();
     var chubascos = conDato && tipo === "lluvia" && !nieve && !llovizna && chubascosReal();
     var granizo = conDato && tipo === "tormenta" && granizoReal();
+    var helada = conDato && tipo === "lluvia" && !nieve && heladaReal();
     var linea = (conDato ? (noche ? "\uD83C\uDF19" : niebla ? "\uD83C\uDF2B\uFE0F" : nieve ? "\u2744\uFE0F" : llovizna ? "\uD83C\uDF26\uFE0F" : intervalos ? "\u26C5" : (ICONO[tipo] || "")) + " " : "") + t;
     g.fillText(linea, 26, hy);
     g.fillStyle = "#ffd9c7";
@@ -349,7 +356,7 @@
     g.font = "600 " + (lleno ? L.subF : 16) + "px ui-monospace, monospace";
     g.fillStyle = "rgba(255,255,255,.75)";
     var extra = clima.forzado ? " \u00B7 FORZADO" : (clima.ok ? " \u00B7 EN DIRECTO" : "");
-    g.fillText("PORTAVENTURA \u00B7 " + (conDato ? (noche ? "DESPEJADO" : niebla ? "NIEBLA" : nieve ? "NIEVE" : llovizna ? "LLOVIZNA" : chubascos ? "CHUBASCOS" : granizo ? "TORMENTA CON GRANIZO" : intervalos ? "INTERVALOS" : String(NOMBRE[tipo] || "").toUpperCase()) : "CLIMA \u2014") + extra, 28, hy + (lleno ? L.subDy : 50));
+    g.fillText("PORTAVENTURA \u00B7 " + (conDato ? (noche ? "DESPEJADO" : niebla ? "NIEBLA" : nieve ? "NIEVE" : helada ? (llovizna ? "LLOVIZNA HELADA" : "LLUVIA HELADA") : llovizna ? "LLOVIZNA" : chubascos ? "CHUBASCOS" : granizo ? "TORMENTA CON GRANIZO" : intervalos ? "INTERVALOS" : String(NOMBRE[tipo] || "").toUpperCase()) : "CLIMA \u2014") + extra, 28, hy + (lleno ? L.subDy : 50));
     g.restore();
   }
 

@@ -57,7 +57,7 @@ test('sin red, el kiosko conserva la última temperatura buena (≤6 h) y reinte
 
 test('sin dato de clima (ni real ni forzado) el HUD no inventa «Sol»: sin icono y «CLIMA —»', () => {
   assert.match(html, /var conDato = !!\(clima\.forzado \|\| clima\.real\)/);
-  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? "NIEBLA" : nieve \? "NIEVE" : llovizna \? "LLOVIZNA" : chubascos \? "CHUBASCOS" : granizo \? "TORMENTA CON GRANIZO" : intervalos \? "INTERVALOS" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
+  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? "NIEBLA" : nieve \? "NIEVE" : helada \? \(llovizna \? "LLOVIZNA HELADA" : "LLUVIA HELADA"\) : llovizna \? "LLOVIZNA" : chubascos \? "CHUBASCOS" : granizo \? "TORMENTA CON GRANIZO" : intervalos \? "INTERVALOS" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
 });
 
 test('sin Intl, el respaldo de horaMadrid() sigue el horario de verano de la UE (no +1 h fijo)', () => {
@@ -931,4 +931,21 @@ test('deriva anti-quemado: cada 3 min las capas fijas (título, luces, pie, HUD)
   assert.deepEqual(deriva(5 * 180000, false), [0, 0]);                // ?deriva=0
   assert.deepEqual(deriva(NaN, true), [0, 0]);                        // nunca rompe
   assert.deepEqual(deriva(-180000, true), [0, 2]);                    // reloj raro: sigue en el octógono
+});
+
+test('helada: con Open-Meteo 56/57/66/67 el HUD dice LLOVIZNA HELADA o LLUVIA HELADA (cielo y latido sin cambios)', () => {
+  assert.match(html, /clima\.helada = c\.weather_code === 56 \|\| c\.weather_code === 57 \|\| c\.weather_code === 66 \|\| c\.weather_code === 67;/);
+  assert.match(html, /JSON\.stringify\(\{ t: Date\.now\(\), helada: clima\.helada === true, temp:/);
+  assert.match(html, /clima\.helada = cc\.helada === true;/);
+  assert.match(html, /var helada = conDato && tipo === "lluvia" && !nieve && heladaReal\(\);/);
+  const ini = html.indexOf('  function heladaReal() {'), fin = html.indexOf('  function intervalosReal() {', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const mk = (clima) => new Function('clima', html.slice(ini, fin) + '; return heladaReal;')(clima);
+  assert.equal(mk({ real: 'lluvia', helada: true })(), true);                        // 56/57/66/67
+  assert.equal(mk({ real: 'lluvia', helada: false })(), false);                      // lluvia normal
+  assert.equal(mk({ real: 'lluvia' })(), false);                                     // caché antigua sin campo
+  assert.equal(mk({ real: 'nubes', helada: true })(), false);                        // solo lluvia
+  assert.equal(mk({ real: 'lluvia', helada: true, forzado: 'lluvia' })(), false);    // forzado manda
+  assert.equal(mk({ real: null, helada: true })(), false);                           // sin dato
+  assert.equal(mk(null)(), false);                                                   // nunca rompe
 });
