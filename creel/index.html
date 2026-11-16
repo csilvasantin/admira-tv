@@ -158,7 +158,7 @@
   var CLIMA_KEY = "creel-clima-v1", climaReintento = null;
   try {
     var cc = JSON.parse(localStorage.getItem(CLIMA_KEY) || "null");
-    if (cc && typeof cc.temp === "number" && Date.now() - cc.t < 6 * 3600 * 1000) { clima.temp = cc.temp; clima.real = cc.real; clima.t = cc.t; clima.dia = typeof cc.dia === "boolean" ? cc.dia : null; clima.niebla = cc.niebla === true; clima.nieve = cc.nieve === true; clima.llovizna = cc.llovizna === true; clima.intervalos = cc.intervalos === true; clima.chubascos = cc.chubascos === true; clima.granizo = cc.granizo === true; clima.helada = cc.helada === true; clima.cubierto = cc.cubierto === true; clima.fuerte = cc.fuerte === true; clima.debil = cc.debil === true; }
+    if (cc && typeof cc.temp === "number" && Date.now() - cc.t < 6 * 3600 * 1000) { clima.temp = cc.temp; clima.real = cc.real; clima.t = cc.t; clima.dia = typeof cc.dia === "boolean" ? cc.dia : null; clima.niebla = cc.niebla === true; clima.nieve = cc.nieve === true; clima.llovizna = cc.llovizna === true; clima.intervalos = cc.intervalos === true; clima.chubascos = cc.chubascos === true; clima.granizo = cc.granizo === true; clima.helada = cc.helada === true; clima.cubierto = cc.cubierto === true; clima.fuerte = cc.fuerte === true; clima.debil = cc.debil === true; clima.densa = cc.densa === true; }
   } catch (e) {}
   var climaBusy = false; // una sola petición de clima a la vez: colgadas no se apilan (cada 10 min, reintento de 2 min y evento online)
   // Corte de red largo con la TCL encendida (15-nov-2026): la caché solo vale 6 h también en marcha, no solo al arrancar.
@@ -226,6 +226,11 @@
   // entonces el HUD pinta «… LLUVIA DÉBIL» o «… CHUBASCOS DÉBILES». Nieve, llovizna, helada y fuerte mandan si coincidieran.
   // Cielo y latido («lluvia») sin cambios. Forzado manda. Nunca rompe.
   function debilReal() { try { return !clima.forzado && clima.real === "lluvia" && clima.debil === true; } catch (e) { return false; } }
+  // Llovizna densa (16-nov-2026 16:20): Open-Meteo 55 (llovizna densa) se veía igual que una llovizna ligera (51/53):
+  // «🌦️ … LLOVIZNA». densaReal() = cielo real «lluvia» con código 55 y sin forzar; entonces el HUD pinta «… LLOVIZNA DENSA».
+  // Nieve y helada (57 = llovizna helada densa) mandan si coincidieran. Cielo, icono 🌦️ y latido («lluvia») sin cambios.
+  // Forzado manda. Nunca rompe.
+  function densaReal() { try { return !clima.forzado && clima.real === "lluvia" && clima.densa === true; } catch (e) { return false; } }
   function intervalosReal() { try { return !clima.forzado && clima.real === "nubes" && clima.intervalos === true && !esNoche(); } catch (e) { return false; } }
   function nubesDeNoche() { try { return !clima.forzado && !!clima.real && clima.real !== "sol" && esNoche(); } catch (e) { return false; } }
   function leeClima() {
@@ -254,10 +259,11 @@
         clima.cubierto = c.weather_code === 3;
         clima.fuerte = c.weather_code === 65 || c.weather_code === 82;
         clima.debil = c.weather_code === 61 || c.weather_code === 80;
+        clima.densa = c.weather_code === 55;
         clima.dia = c.is_day === 0 ? false : c.is_day === 1 ? true : null;
         clima.ok = true;
         clima.t = Date.now();
-        try { localStorage.setItem(CLIMA_KEY, JSON.stringify({ t: Date.now(), helada: clima.helada === true, temp: clima.temp, granizo: clima.granizo === true, real: clima.real, chubascos: clima.chubascos === true, dia: clima.dia, llovizna: clima.llovizna === true, intervalos: clima.intervalos === true, nieve: clima.nieve === true, niebla: clima.niebla === true, cubierto: clima.cubierto === true, fuerte: clima.fuerte === true, debil: clima.debil === true })); } catch (e) {}
+        try { localStorage.setItem(CLIMA_KEY, JSON.stringify({ t: Date.now(), helada: clima.helada === true, temp: clima.temp, granizo: clima.granizo === true, real: clima.real, chubascos: clima.chubascos === true, dia: clima.dia, llovizna: clima.llovizna === true, intervalos: clima.intervalos === true, nieve: clima.nieve === true, niebla: clima.niebla === true, cubierto: clima.cubierto === true, fuerte: clima.fuerte === true, debil: clima.debil === true, densa: clima.densa === true })); } catch (e) {}
       } catch (e) {
         fail();
       }
@@ -369,6 +375,7 @@
     var cubierto = conDato && tipo === "nubes" && !niebla && !intervalos && cubiertoReal();
     var fuerte = conDato && tipo === "lluvia" && !nieve && !llovizna && !helada && fuerteReal();
     var debil = conDato && tipo === "lluvia" && !nieve && !llovizna && !helada && !fuerte && debilReal();
+    var densa = conDato && tipo === "lluvia" && llovizna && !helada && densaReal();
     var linea = (conDato ? (noche ? "\uD83C\uDF19" : niebla ? "\uD83C\uDF2B\uFE0F" : nieve ? "\u2744\uFE0F" : llovizna ? "\uD83C\uDF26\uFE0F" : intervalos ? "\u26C5" : (ICONO[tipo] || "")) + " " : "") + t;
     g.fillText(linea, 26, hy);
     g.fillStyle = "#ffd9c7";
@@ -376,7 +383,7 @@
     g.font = "600 " + (lleno ? L.subF : 16) + "px ui-monospace, monospace";
     g.fillStyle = "rgba(255,255,255,.75)";
     var extra = clima.forzado ? " \u00B7 FORZADO" : (clima.ok ? " \u00B7 EN DIRECTO" : "");
-    g.fillText("PORTAVENTURA \u00B7 " + (conDato ? (noche ? "DESPEJADO" : niebla ? "NIEBLA" : nieve ? "NIEVE" : helada ? (llovizna ? "LLOVIZNA HELADA" : "LLUVIA HELADA") : llovizna ? "LLOVIZNA" : fuerte ? (chubascos ? "CHUBASCOS FUERTES" : "LLUVIA FUERTE") : debil ? (chubascos ? "CHUBASCOS D\u00C9BILES" : "LLUVIA D\u00C9BIL") : chubascos ? "CHUBASCOS" : granizo ? "TORMENTA CON GRANIZO" : cubierto ? "CUBIERTO" : intervalos ? "INTERVALOS" : String(NOMBRE[tipo] || "").toUpperCase()) : "CLIMA \u2014") + extra, 28, hy + (lleno ? L.subDy : 50));
+    g.fillText("PORTAVENTURA \u00B7 " + (conDato ? (noche ? "DESPEJADO" : niebla ? "NIEBLA" : nieve ? "NIEVE" : helada ? (llovizna ? "LLOVIZNA HELADA" : "LLUVIA HELADA") : llovizna ? (densa ? "LLOVIZNA DENSA" : "LLOVIZNA") : fuerte ? (chubascos ? "CHUBASCOS FUERTES" : "LLUVIA FUERTE") : debil ? (chubascos ? "CHUBASCOS D\u00C9BILES" : "LLUVIA D\u00C9BIL") : chubascos ? "CHUBASCOS" : granizo ? "TORMENTA CON GRANIZO" : cubierto ? "CUBIERTO" : intervalos ? "INTERVALOS" : String(NOMBRE[tipo] || "").toUpperCase()) : "CLIMA \u2014") + extra, 28, hy + (lleno ? L.subDy : 50));
     g.restore();
   }
 
