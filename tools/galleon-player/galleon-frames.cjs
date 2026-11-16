@@ -1,6 +1,6 @@
 'use strict';
 // Piezas puras del adaptador USB del Corsair Galleon 100 SD (encargo #7569): geometría, troceado del mosaico en
-// las 12 teclas, el gesto de salida, los toques del navegador y las ruedas de volumen. Sin dependencias, para poder probarlas sin teclado.
+// las 12 teclas, el gesto de salida, los toques del navegador y las dos ruedas (volumen y transporte). Sin dependencias, para poder probarlas sin teclado.
 
 const LCD = Object.freeze({ width: 720, height: 384 });
 const KEYS = Object.freeze({ columns: 3, rows: 4, size: 160 });
@@ -74,15 +74,15 @@ function createKeyTaps(onTap, { maxHold = 800, now = Date.now } = {}) {
 const clampVolume = value => Math.min(1, Math.max(0, Math.round((Number(value) || 0) * 100) / 100));
 
 /**
- * Ruedas de volumen (encargo de Carlos, 16-nov-2026): girar cualquiera de los dos diales sube o baja el volumen del
- * player (`step` por muesca; el teclado manda ±1 por muesca, más si se gira deprisa) y pulsar un dial silencia o
- * devuelve el sonido. Girar con el sonido silenciado lo recupera. Las teclas no intervienen. `onChange` recibe el
- * estado nuevo en cada cambio; `handler.state()` lo devuelve en cualquier momento.
+ * Rueda de volumen (encargo de Carlos, 16-nov-2026): girar el dial IZQUIERDO (`index` 0) sube o baja el volumen del
+ * player (`step` por muesca; el teclado manda ±1 por muesca, más si se gira deprisa) y pulsarlo silencia o devuelve
+ * el sonido. Girar con el sonido silenciado lo recupera. El otro dial y las teclas no intervienen. `onChange` recibe
+ * el estado nuevo en cada cambio; `handler.state()` lo devuelve en cualquier momento.
  */
-function createVolumeControl(onChange, { volume = 0.5, muted = false, step = 0.05 } = {}) {
+function createVolumeControl(onChange, { volume = 0.5, muted = false, step = 0.05, index = 0 } = {}) {
   const state = { volume: clampVolume(volume), muted: Boolean(muted) };
   const handler = (event, control, value) => {
-    if (control?.type !== 'encoder') return false;
+    if (control?.type !== 'encoder' || control.index !== index) return false;
     if (event === 'rotate') {
       const notches = Math.trunc(Number(value) || 0);
       if (notches === 0) return true;
@@ -101,8 +101,35 @@ function createVolumeControl(onChange, { volume = 0.5, muted = false, step = 0.0
 }
 
 /**
- * Colores del anillo de LEDs de un dial (RGB por LED, `steps` LEDs): tantos LEDs verdes como volumen hay; en silencio,
- * todo el anillo en rojo tenue. Así se ve el nivel sin mirar ninguna pantalla.
+ * Rueda de transporte (Carlos, 16-nov-2026): el dial DERECHO (`index` 1). Pulsarlo pausa o reanuda el vídeo; girarlo a
+ * la derecha pasa a la pieza siguiente y a la izquierda a la anterior. Un giro manda varias muescas seguidas: sólo se
+ * atiende una orden cada `cooldown` ms para no saltar tres piezas de golpe. `onAction` recibe 'toggle' | 'next' | 'prev'.
+ */
+function createTransportControl(onAction, { index = 1, cooldown = 350, now = Date.now } = {}) {
+  let lastRotate = -Infinity;
+  return (event, control, value) => {
+    if (control?.type !== 'encoder' || control.index !== index) return false;
+    if (event === 'down') onAction('toggle');
+    else if (event === 'rotate') {
+      const notches = Math.trunc(Number(value) || 0);
+      if (notches === 0 || now() - lastRotate < cooldown) return true;
+      lastRotate = now();
+      onAction(notches > 0 ? 'next' : 'prev');
+    }
+    return true;
+  };
+}
+
+/** Anillo del dial de transporte: azul entero en marcha, ámbar entero en pausa (otro color que el volumen, a simple vista). */
+function transportRing({ paused = false } = {}, steps = 4) {
+  const colors = [];
+  for (let index = 0; index < steps; index++) colors.push(...(paused ? [200, 110, 0] : [0, 60, 200]));
+  return colors;
+}
+
+/**
+ * Colores del anillo de LEDs del dial de volumen (RGB por LED, `steps` LEDs): tantos LEDs verdes como volumen hay; en
+ * silencio, todo el anillo en rojo tenue. Así se ve el nivel sin mirar ninguna pantalla.
  */
 function ringColors({ volume = 0, muted = false } = {}, steps = 4) {
   const lit = muted ? 0 : Math.round(clampVolume(volume) * steps);
@@ -111,4 +138,4 @@ function ringColors({ volume = 0, muted = false } = {}, steps = 4) {
   return colors;
 }
 
-module.exports = { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, ringColors, clampVolume };
+module.exports = { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume };

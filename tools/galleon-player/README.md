@@ -26,9 +26,12 @@ contenido **horizontal** y las **12 teclas-pantalla** (3 columnas × 4 filas, 16
 - El player **suena por los altavoces del Mac Studio**: sólo la pista horizontal (la LCD); la vertical es la misma pieza y
   doblaría el audio. Suena únicamente cuando el teclado recibe la señal (si cede el USB, calla) y sólo en el adaptador: en el
   gemelo 3D la página va muda.
-- Las **dos ruedas** del teclado son el volumen: girar sube o baja a saltos de 5 %, **pulsar** silencia o devuelve el sonido,
-  girar en silencio lo recupera. El anillo de LEDs de cada dial enseña el nivel (verde) o el silencio (rojo tenue). El nivel
-  se recuerda entre arranques (`~/.admira-galleon/volume.json`, 50 % de inicio) y el latido lo cuenta (`device.audio`).
+- La **rueda izquierda** es el volumen: girar sube o baja a saltos de 5 %, **pulsar** silencia o devuelve el sonido, girar en
+  silencio lo recupera. Su anillo de LEDs enseña el nivel (verde) o el silencio (rojo tenue). El nivel se recuerda entre
+  arranques (`~/.admira-galleon/volume.json`, 50 % de inicio) y el latido lo cuenta (`device.audio`).
+- La **rueda derecha** es el transporte (16-nov-2026): **pulsar** pausa o reanuda el vídeo (al reanudar sigue por donde iba),
+  **girar a la derecha** pasa a la pieza siguiente y **a la izquierda** a la anterior (una orden por giro). Su anillo va en
+  azul en marcha y en ámbar en pausa. Con el playout mandando, pulsar pausa pero no hay siguiente/anterior.
 - Ojo con puppeteer: a todo Chrome sin ventana le añade por su cuenta el interruptor de silencio (`mute-audio`); el adaptador lo
   excluye con `ignoreDefaultArgs`. Si CoreAudio ve el flujo de Chrome pero no se oye nada, mira `chrome://version` del player.
 

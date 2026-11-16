@@ -62,19 +62,19 @@ test('el adaptador USB cede el teclado, no roba el foco y sólo relaja la seguri
   assert.match(launcher, /captura\)/);
 });
 
-test('el player suena por el Mac Studio (sólo la pista horizontal) y las dos ruedas del Galleon son el volumen', () => {
+test('el player suena por el Mac Studio (sólo la pista horizontal) y la rueda izquierda del Galleon es el volumen', () => {
   assert.doesNotMatch(usb, /'--mute-audio'/); // no lo pasamos nosotros…
   assert.match(usb, /ignoreDefaultArgs: \['--' \+ 'mute-audio'\]/); // …y puppeteer tampoco (lo añade a todo headless)
-  assert.match(usb, /opened\.on\('rotate', \(control, value\) => volumeControl\('rotate', control, value\)\)/);
-  assert.match(usb, /if \(!gesture\('down', control\) && !taps\('down', control\)\) volumeControl\('down', control\)/); // pulsar un dial silencia; la tecla 12 sigue siendo la salida
+  assert.match(usb, /if \(!volumeControl\('rotate', control, value\)\) transportControl\('rotate', control, value\)/); // izquierda volumen, derecha transporte
+  assert.match(usb, /if \(!gesture\('down', control\) && !taps\('down', control\) && !volumeControl\('down', control\)\) transportControl\('down', control\)/); // la tecla 12 sigue siendo la salida
   assert.match(usb, /createVolumeControl\(state => \{/);
-  assert.match(usb, /setEncoderRingColors\(index, ringColors\(audio\)\)/);
+  assert.match(usb, /setEncoderRingColors\(0, ringColors\(audio\)\)/);
   assert.match(usb, /volume\.json/);
   assert.match(usb, /volume: audio\.volume, muted: audio\.muted/);
   assert.match(player, /function applyAudio\(\)/);
   assert.match(player, /const sounds = orientation === 'landscape' && !audio\.muted;/);
   assert.match(player, /audio = \{ muted: !output\?\.connected \|\| output\.muted === true \|\| volume === 0, volume \};/);
-  assert.match(player, /audio: \{ muted: audio\.muted, volume: audio\.volume, playing: playing && !audio\.muted \}/);
+  assert.match(player, /audio: \{ muted: audio\.muted, volume: audio\.volume, playing: playing && !audio\.muted && pausedAt === null \}/);
   assert.match(player, /const output = NATIVE && window\.admiraGalleonOutput/); // fuera del adaptador la página va muda
 });
 
@@ -103,7 +103,7 @@ test('las 12 teclas son el navegador de la playlist (6 anteriores arriba, 6 sigu
   assert.match(player, /paintLcd\(lcd, landscape\);/);
   assert.match(player, /if \(jump\.rev !== playlist\.rev\) jump = \{ ms: 0, rev: playlist\.rev \};/); // el salto se olvida con otra playlist
   assert.match(player, /window\.admiraGalleonJump = key => jumpToKey\(Number\(key\)\);/);
-  assert.match(player, /if \(onAir\.source !== 'playlist' \|\| twinSelection !== null\) return false;/); // con playout mandando no hay salto
+  assert.match(player, /if \(onAir\.source !== 'playlist' \|\| twinSelection !== null \|\| !Number\.isInteger\(index\)/); // con playout mandando no hay salto
   assert.match(player, /if \(keypad\.painted && keypad\.rev !== sinceKeys\) frames\.keys = mosaic\.toDataURL/); // teclas sólo si cambiaron
   assert.match(player, /function previewOf\(item\)/);
   assert.doesNotMatch(player, /\blet navigator\b/); // sombrearía window.navigator
@@ -111,4 +111,15 @@ test('las 12 teclas son el navegador de la playlist (6 anteriores arriba, 6 sigu
   assert.match(usb, /window\.admiraGalleonJump\(key\)/);
   assert.match(usb, /window\.admiraGalleonFrames\(since\) : null, lastKeys\)/);
   assert.match(usb, /if \(frames\.frame === lastFrame\) return Boolean\(keysJpeg\);/); // la LCD a cada fotograma; las teclas, al cambiar
+});
+
+test('la rueda derecha es el transporte: pulsar pausa o reanuda (anillo ámbar/azul), girar pasa a la siguiente o a la anterior pieza (Carlos, 16-nov-2026)', () => {
+  assert.match(usb, /createTransportControl\(action => void transportAction\(action\)\)/);
+  assert.match(usb, /setEncoderRingColors\(1, transportRing\(\{ paused \}\)\)/);
+  assert.match(usb, /window\.admiraGalleonTransport\(a\)/);
+  assert.match(player, /window\.admiraGalleonTransport = action => transport\(String\(action\)\);/);
+  assert.match(player, /if \(twinSelection !== null \|\| !plan \|\| pausedAt !== null\) return;/); // en pausa el programa no toca nada
+  assert.match(player, /jump = \{ ms: jump\.ms - \(serverNow\(\) - pausedAt\), rev: playlist\.rev \};/); // al reanudar sigue por donde iba
+  assert.match(player, /jumpToSlot\(\(\(\(onAir\.index \+ \(action === 'next' \? 1 : -1\)\) % total\) \+ total\) % total\);/);
+  assert.match(player, /paused: pausedAt !== null, ready: readiness\(\)/);
 });

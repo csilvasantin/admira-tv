@@ -7,9 +7,10 @@
 //     servidor (assets/galleon-schedule.mjs); un salto por tecla desplaza ese reloj hasta la siguiente revisión.
 // El gemelo de admira.store se suscribe por postMessage (subscribe/select/live → frame/ended). El adaptador USB
 // del Mac Studio (tools/galleon-player) carga esta página con ?native=1: sólo él late en /signage/now, lee los
-// fotogramas con window.admiraGalleonFrames(sinceKeys) y salta con window.admiraGalleonJump(tecla). Sólo en ese
-// modo suena (por el Mac Studio), con el volumen que el adaptador escribe en window.admiraGalleonOutput desde las
-// ruedas del teclado; en el gemelo va mudo.
+// fotogramas con window.admiraGalleonFrames(sinceKeys), salta con window.admiraGalleonJump(tecla) y maneja el
+// transporte con window.admiraGalleonTransport('toggle'|'next'|'prev') desde la rueda derecha. Sólo en ese modo
+// suena (por el Mac Studio), con el volumen que el adaptador escribe en window.admiraGalleonOutput desde la rueda
+// izquierda; en el gemelo va mudo.
 import { paintLcd, paintKeys } from './galleon-layout.mjs';
 import { jumpOffsetMs, navigatorWindow, pairPlaylist, slotAt, trackOf } from './galleon-schedule.mjs';
 
@@ -34,7 +35,8 @@ let plan = null;
 let clockOffset = 0; // serverNow − Date.now(), medido en cada sondeo del playout
 let playlist = { rev: null, name: '', slots: [] };
 let onAir = { source: 'none', id: '', title: '', index: -1, total: 0, paired: false };
-let jump = { ms: 0, rev: null }; // salto por tecla: desplaza el reloj; se olvida al cambiar la playlist
+let jump = { ms: 0, rev: null }; // salto por tecla o rueda: desplaza el reloj; se olvida al cambiar la playlist
+let pausedAt = null; // reloj del servidor en el que se pausó (rueda derecha); en pausa el programa no toca nada
 let keypad = { key: '', map: [], rev: 0, painted: false }; // navegador de teclas: qué turno enseña cada una; rev sube al repintar
 let frameCount = 0;
 let version = '';
@@ -158,7 +160,7 @@ function clear(source) {
 
 /** Decide qué va en la LCD ahora mismo: playout si manda, si no la playlist propia por reloj de servidor (más el salto). */
 function program() {
-  if (twinSelection !== null || !plan) return;
+  if (twinSelection !== null || !plan || pausedAt !== null) return;
   if (plan.power === 'off') return clear('off');
   if (plan.variants || plan.item) {
     setTrack('landscape', plan.variants?.landscape || plan.item);
@@ -294,19 +296,49 @@ async function paintNavigator(key) {
   repaint();
 }
 
-/** Toque en la tecla `key` (0…11, orden físico): salta a la pieza que enseña. Devuelve si había salto posible. */
-function jumpToKey(key) {
-  if (onAir.source !== 'playlist' || twinSelection !== null) return false;
-  const index = keypad.map[key];
-  if (index === null || index === undefined) return false;
+/** Salta al turno `index` de la playlist propia (reanudando si estaba en pausa). Devuelve si había salto posible. */
+function jumpToSlot(index) {
+  if (onAir.source !== 'playlist' || twinSelection !== null || !Number.isInteger(index) || index < 0 || index >= playlist.slots.length) return false;
+  if (pausedAt !== null) resume();
   jump = { ms: jumpOffsetMs(playlist.slots, index, serverNow()), rev: playlist.rev };
   program();
   return true;
 }
 
+/** Toque en la tecla `key` (0…11, orden físico): salta a la pieza que enseña. */
+function jumpToKey(key) {
+  const index = keypad.map[key];
+  return index === null || index === undefined ? false : jumpToSlot(index);
+}
+
+// ── Transporte (rueda derecha): pausa/reanuda, siguiente, anterior ──
+function pause() {
+  if (pausedAt !== null) return;
+  pausedAt = serverNow();
+  if (tracks.landscape?.video) tracks.landscape.media.pause();
+}
+function resume() {
+  if (pausedAt === null) return;
+  // El reloj siguió corriendo en pausa: se desplaza lo pausado para que la pieza siga por donde iba.
+  jump = { ms: jump.ms - (serverNow() - pausedAt), rev: playlist.rev };
+  pausedAt = null;
+  if (tracks.landscape?.video) void tracks.landscape.media.play().catch(() => {});
+  program();
+}
+function transport(action) {
+  if (action === 'toggle') { if (pausedAt === null) pause(); else resume(); }
+  else if (action === 'next' || action === 'prev') {
+    if (onAir.source !== 'playlist' || !playlist.slots.length) return { paused: pausedAt !== null, index: onAir.index, moved: false };
+    const total = playlist.slots.length;
+    jumpToSlot((((onAir.index + (action === 'next' ? 1 : -1)) % total) + total) % total);
+  }
+  return { paused: pausedAt !== null, index: onAir.index, moved: action !== 'toggle' };
+}
+
 /** Volumen de las ruedas (window.admiraGalleonOutput.volume/muted): suena sólo cuando el teclado recibe la señal.
  * Fuera del adaptador la página va muda. */
 function applyAudio() {
+  if (pausedAt !== null && tracks.landscape?.video && !tracks.landscape.media.paused) tracks.landscape.media.pause();
   const output = NATIVE && window.admiraGalleonOutput && typeof window.admiraGalleonOutput === 'object' ? window.admiraGalleonOutput : null;
   const volume = output && Number.isFinite(Number(output.volume)) ? Math.min(1, Math.max(0, Number(output.volume))) : 0;
   audio = { muted: !output?.connected || output.muted === true || volume === 0, volume };
@@ -323,7 +355,7 @@ if (NATIVE) {
   // La LCD va en cada llamada; las teclas sólo cuando han cambiado desde `sinceKeys` (el adaptador recuerda keysRev).
   window.admiraGalleonFrames = sinceKeys => {
     try {
-      const frames = { frame: frameCount, playing, ready: readiness(), onAir, keysRev: keypad.rev, landscape: lcd.toDataURL('image/jpeg', 0.85) };
+      const frames = { frame: frameCount, playing, paused: pausedAt !== null, ready: readiness(), onAir, keysRev: keypad.rev, landscape: lcd.toDataURL('image/jpeg', 0.85) };
       if (keypad.painted && keypad.rev !== sinceKeys) frames.keys = mosaic.toDataURL('image/jpeg', 0.85);
       return frames;
     } catch (error) {
@@ -331,6 +363,7 @@ if (NATIVE) {
     }
   };
   window.admiraGalleonJump = key => jumpToKey(Number(key));
+  window.admiraGalleonTransport = action => transport(String(action));
   // Un productor ESTABLE por pantalla: /signage/now concede la pantalla al primer productor que late y rechaza (409)
   // a cualquier otro durante 3 min. Con un id aleatorio por perfil/origen, cada arranque del adaptador perdía la
   // pantalla frente a su propia carga anterior (pasó el 13-nov-2026 entre la prueba local y la de producción).
@@ -350,10 +383,10 @@ if (NATIVE) {
         system: { os: 'macOS', platform: window.navigator.platform || '', language: window.navigator.language || '', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '' },
         hardware: { dedicated: true, model: 'Corsair Galleon 100 SD', serial: String(output.serial || '') },
         software: { player: 'Corsair Galleon 100 SD', playerVersion: String(output.version || ''), webRelease: version, engine: 'Chromium headless', userAgent: window.navigator.userAgent },
-        audio: { muted: audio.muted, volume: audio.volume, playing: playing && !audio.muted },
+        audio: { muted: audio.muted, volume: audio.volume, playing: playing && !audio.muted && pausedAt === null },
         network: { online: window.navigator.onLine !== false },
       },
-      health: { source: 'live', ready, output: output.connected ? 'usb' : 'yielded', frame: frameCount, jump: jump.ms !== 0 },
+      health: { source: 'live', ready, output: output.connected ? 'usb' : 'yielded', frame: frameCount, jump: jump.ms !== 0, paused: pausedAt !== null },
       loc: 'corsair', locName: 'Corsair Galleon 100 SD', machine: 'MacStudio',
     }) }).catch(() => {});
   };
