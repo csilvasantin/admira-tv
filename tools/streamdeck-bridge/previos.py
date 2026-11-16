@@ -25,6 +25,7 @@ DEFECTO = {
     'presentaciones_activas': True,  # false mientras el player instalado no admita las cápsulas HTML
     'etiqueta_stock': '',     # suma al menú todas las piezas con esta etiqueta de Stock
     'destinos': [],           # [["01", "screen de admira.tv"], ...]: los selectores de la fila 4 y el player de cada uno
+    'sincro': [],              # etiquetas de players que comparten hora de salida en los envíos múltiples
     'bucle': [],              # screens donde la pieza enviada se repite hasta mandar otra (el resto vuelve a su programacion)
     'de_inicio': None,        # etiquetas marcadas recien instalado (None = todas)
     'arranque': {},           # {"screen": {"proceso": "x.exe", "vigilante": "id"}}: player local que se arranca si esta parado
@@ -33,6 +34,8 @@ DEFECTO = {
 STOCK = 'https://stock.admira.store/stock/index.json'
 TIPOS = {'video', 'animation', 'image', 'digital-twin', 'audio', 'music', 'locucion', 'interactive', 'capsula'}
 POSTER = 'https://stock.admira.store/stock/%s/poster.jpg'
+CLOCK = 'https://brain.digitalavatar.ai/sync/clock'
+ADELANTO_MS = 24000
 CMD = ['https://api.admira.store/locations/cmd', 'https://brain.digitalavatar.ai/locations/cmd']
 COLS, ROWS, PX = 8, 4, 144   # la LCD del XL es de 96 px por tecla; Elgato guarda los iconos a 144
 LIMITE_PAGINA = COLS * (ROWS - 1) - 1
@@ -278,10 +281,36 @@ def despertar(pantalla, arr):
     if local: time.sleep(8)   # margen para que cargue el canal y empiece a sondear la cola
     return True
 
+def salida_programada(num, pantallas, a):
+    """Prepara los destinos y encola una única hora de inicio para todos."""
+    for pantalla in pantallas:
+        arr = (a.get('arranque') or {}).get(pantalla)
+        if arr and despertar(pantalla, arr):
+            time.sleep(8)
+    try:
+        reloj = traer(CLOCK, espera=5)
+        ahora = reloj['serverSentAt']
+        if not reloj.get('ok') or reloj.get('protocol') != 'admira-clock-v1' or type(ahora) is not int:
+            raise ValueError('Reloj compartido no disponible')
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        return [{'ok': False, 'screen': p, 'error': str(e)} for p in pantallas]
+    at = ahora + ADELANTO_MS
+    comando = 'playat-%d-%d' % (num, at)
+    with ThreadPoolExecutor(max_workers=len(pantallas)) as workers:
+        resultados = list(workers.map(lambda pantalla: orden(pantalla, comando), pantallas))
+    return [dict(r or {}, screen=p, start_at=at) for r, p in zip(resultados, pantallas)]
+
+
 def saltar(num, a):
     """Lo que hace un previo al pulsarlo: play<N> a los destinos marcados, cada uno por su lado (uno parado no frena al resto)."""
-    sel = seleccion(a); hecho = []; pedido = [None]
-    if any(sel.get(e) and p in (a.get('arranque') or {}) for e, p in a['destinos']):
+    sel = seleccion(a)
+    destinos = [(e, p) for e, p in a['destinos'] if sel.get(e)]
+    sincronizados = [p for e, p in destinos if e in a.get('sincro', []) and p not in a.get('bucle', [])]
+    hecho = salida_programada(int(num), sincronizados, a) if len(sincronizados) > 1 else []
+    if hecho:
+        destinos = [(e, p) for e, p in destinos if p not in sincronizados]
+    pedido = [None]
+    if any(p in (a.get('arranque') or {}) for _, p in destinos):
         try: pedido[0] = next((str(i.get('id')) for i in (traer(STOCK).get('items') or []) if i.get('num') == int(num)), None)
         except Exception: pass
     def uno(pantalla):
@@ -298,7 +327,7 @@ def saltar(num, a):
                 if not pedido[0] or emitiendo(pantalla) == pedido[0]: break
                 orden(pantalla, '%s%d' % (verbo, int(num))); r['envios'] += 1
         hecho.append(r)
-    hilos = [threading.Thread(target=uno, args=(pantalla,)) for etiqueta, pantalla in a['destinos'] if sel.get(etiqueta)]
+    hilos = [threading.Thread(target=uno, args=(pantalla,)) for _, pantalla in destinos]
     for h in hilos: h.start()
     for h in hilos: h.join()
     return hecho

@@ -13,6 +13,7 @@
     ["MBP16", "macbookpro16"],
     ["TCL", "hotel-creel-pared"]
   ],
+  "sincro": ["01", "02", "03", "04", "05"],
   "bucle": ["macbookpronegro14", "macbookpro16"],
   "de_inicio": ["01", "02", "03", "04", "05"],
   "arranque": {
