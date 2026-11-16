@@ -152,6 +152,16 @@ export function taggedForScreen(stock, screen) {
       width: Number(piece.width) || 0, height: Number(piece.height) || 0 }));
 }
 
+/**
+ * Milisegundos que hay que sumar al reloj para que el turno `index` lleve `offsetMs` en este instante: continuidad
+ * cuando cambia la playlist o una duración (el ciclo anclado a la época saltaría a cualquier sitio si no).
+ */
+export function rebaseMs(slots, index, offsetMs, nowMs) {
+  const base = jumpOffsetMs(slots, index, nowMs);
+  const duration = Math.round((slots?.[index]?.seconds || 0) * 1000);
+  return base + Math.max(0, Math.min(Number(offsetMs) || 0, Math.max(0, duration - 1)));
+}
+
 /** Pista reproducible (misma forma que una pieza del playout) a partir de una pieza de playlist o del Stock. */
 export function trackOf(item) {
   if (!item) return null;

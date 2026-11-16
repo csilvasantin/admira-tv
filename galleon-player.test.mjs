@@ -130,7 +130,7 @@ test('las piezas del Stock etiquetadas corsair-galleon-100 (índice del Stock o 
   assert.match(player, /for \(const item of \[\.\.\.sources\.auto, \.\.\.sources\.tagged\]\)/); // detrás de la manual, sin repetir
   assert.match(player, /const items = \[\.\.\.draft\.items, \.\.\.extra\];/);
   assert.match(player, /const rev = String\(draft\.rev\) \+ \(extra\.length \? '\+' \+ extra\.map\(item => item\.stockId \|\| item\.id\)\.join\(','\) : ''\);/); // cambia al entrar o salir una
-  assert.match(player, /learnDuration\(at\.slot, tracks\.landscape\);/);
+  assert.match(player, /learnDuration\(at\.slot, tracks\.landscape, at\);/);
   assert.match(player, /slot\.seconds = Math\.max\(2, Math\.ceil\(duration\)\);/);
   assert.match(player, /void refreshStock\(\);/);
 });
@@ -155,4 +155,11 @@ test('cuando entra una pieza nueva en la playlist suena un jingle de recreativa 
   assert.match(usb, /if \(!audio\.muted && audio\.volume > 0\) execFile\('\/usr\/bin\/afplay', \['-v', String\(Math\.max\(0\.2, audio\.volume\)\), ARCADE_FILE\]/);
   assert.match(usb, /device\.setEncoderRingColors\(index, colors\)/);
   assert.match(usb, /if \(!target \|\| celebrating\) return;/); // el volumen no pisa el parpadeo
+});
+
+test('al recomponer la playlist o aprender una duración, la pieza en antena no salta: se rebasa el reloj (16-nov-2026)', () => {
+  assert.match(player, /const before = onAir\.source === 'playlist' && pausedAt === null \? slotAt\(playlist\.slots, serverNow\(\) \+ jump\.ms\) : null;/);
+  assert.match(player, /jump = \{ ms: keep >= 0 \? rebaseMs\(slots, keep, before\.offsetMs, serverNow\(\)\) : 0, rev \};/);
+  assert.match(player, /if \(at\) jump = \{ ms: rebaseMs\(playlist\.slots, at\.index, at\.offsetMs, serverNow\(\)\), rev: playlist\.rev \};/);
+  assert.match(player, /learnDuration\(at\.slot, tracks\.landscape, at\);/);
 });
