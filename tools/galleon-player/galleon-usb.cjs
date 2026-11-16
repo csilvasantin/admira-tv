@@ -11,10 +11,11 @@
 // Guarda en ~/.admira-galleon lo último que salió por USB (last-lcd.png, last-keys.png): la captura real.
 // Suena por los altavoces del Mac Studio. Rueda izquierda = volumen (girar sube o baja a saltos de 5 %, pulsar silencia;
 // anillo verde con el nivel, rojo en silencio). Rueda derecha = transporte (pulsar pausa o reanuda, girar a la derecha
-// pasa a la siguiente pieza y a la izquierda a la anterior; anillo azul en marcha, ámbar en pausa).
+// pasa a la siguiente pieza y a la izquierda a la anterior; anillo azul en marcha, ámbar en pausa). Si hay un reloj
+// LaMetric configurado (lametric.json), enseña el título de la pieza en antena.
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const { execFileSync } = require('node:child_process');
-const { LCD, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume } = require('./galleon-frames.cjs');
+const { LCD, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, createTransportControl, ringColors, transportRing, clampVolume, lametricText } = require('./galleon-frames.cjs');
 
 const RUNTIME = process.env.ADMIRA_GALLEON_HOME || path.join(os.homedir(), '.admira-galleon');
 const SCREEN = /^[a-z0-9][a-z0-9-]{1,79}$/.test(process.env.ADMIRA_GALLEON_SCREEN || '') ? process.env.ADMIRA_GALLEON_SCREEN : 'corsair-galleon-100';
@@ -36,7 +37,8 @@ function chromeForTesting() {
 }
 const CHROME = process.env.ADMIRA_GALLEON_CHROME || chromeForTesting() || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const FPS = Math.min(15, Math.max(2, Number(process.env.ADMIRA_GALLEON_FPS) || 10));
-const VERSION = 'usb-4 · 16-nov-2026';
+const VERSION = 'usb-5 · 16-nov-2026';
+const LAMETRIC_FILE = path.join(RUNTIME, 'lametric.json');
 const VOLUME_FILE = path.join(RUNTIME, 'volume.json');
 const ELGATO_APP = '/Applications/Elgato Stream Deck.app';
 const ELGATO_BIN = ELGATO_APP + '/Contents/MacOS/Stream Deck';
@@ -66,7 +68,7 @@ function holder() {
 let device = null, serial = '', browser = null, page = null, closing = false, lastFrame = -1, lastKeys = -1, sent = 0, lastSaved = 0, yielding = '';
 let told = null, toldAt = 0, hookWaitSince = Date.now();
 const status = extra => fs.writeFileSync(path.join(RUNTIME, 'status.json'), JSON.stringify({ pid: process.pid, screen: SCREEN, url: PAGE_URL,
-  serial, connected: Boolean(device), yielding, frames: sent, fps: FPS, version: VERSION, chrome: CHROME, audio, paused, at: Date.now(), ...extra }));
+  serial, connected: Boolean(device), yielding, frames: sent, fps: FPS, version: VERSION, chrome: CHROME, audio, paused, lametric: lametric ? { host: lametric.host, shown: lametricShown } : null, at: Date.now(), ...extra }));
 
 // ── Volumen: las dos ruedas del teclado. Se recuerda entre arranques en volume.json. ──
 function loadVolume() {
@@ -86,6 +88,48 @@ async function showVolume(target = device) {
   try { await target.setEncoderRingColors(0, ringColors(audio)); } catch (error) { log('anillo-error ' + error.message); }
 }
 
+// ── LaMetric Time (Carlos, 16-nov-2026): el reloj de LEDs enseña el título de la pieza en antena por su API local. ──
+// Configuración en ~/.admira-galleon/lametric.json {"host":"192.168.86.20","key":"…"} (clave de developer.lametric.com,
+// sólo en este Mac, nunca en el repo ni en el registro). Sin fichero, no se hace nada. Una notificación con cycles 0
+// se queda en el reloj hasta que se sustituye (al cambiar de pieza) o se retira (cuando el teclado deja de emitir).
+function loadLametric() {
+  try {
+    const config = JSON.parse(fs.readFileSync(LAMETRIC_FILE, 'utf8'));
+    return /^[A-Za-z0-9.\-]+$/.test(String(config.host || '')) && typeof config.key === 'string' && config.key ? { host: config.host, key: config.key } : null;
+  } catch { return null; }
+}
+const lametric = loadLametric();
+let lametricShown = '', lametricId = null, lametricRetryAt = 0;
+async function lametricRequest(method, pathname, body) {
+  const auth = Buffer.from('dev:' + lametric.key).toString('base64');
+  const response = await fetch('http://' + lametric.host + ':8080/api/v2' + pathname, { method, headers: { Authorization: 'Basic ' + auth, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(5000) });
+  if (!response.ok) throw new Error('HTTP ' + response.status);
+  return response.json().catch(() => null);
+}
+async function lametricDismiss() {
+  if (lametricId === null) return;
+  const id = lametricId;
+  lametricId = null;
+  try { await lametricRequest('DELETE', '/device/notifications/' + encodeURIComponent(id)); } catch {}
+}
+let lametricBusy = Promise.resolve();
+/** Enseña `text` en el reloj (o lo retira si va vacío); sólo actúa cuando cambia. Las llamadas se encadenan. */
+function lametricShow(text) {
+  if (!lametric || text === lametricShown || Date.now() < lametricRetryAt) return;
+  lametricShown = text;
+  lametricBusy = lametricBusy.then(async () => {
+    await lametricDismiss();
+    if (!text) { log('lametric retirado'); return; }
+    try {
+      // Sin `lifetime`: el reloj rechaza los valores largos (400) y con cycles 0 la notificación ya se queda hasta retirarla.
+      const result = await lametricRequest('POST', '/device/notifications', { priority: 'info', icon_type: 'none', model: { cycles: 0, frames: [{ text }] } });
+      lametricId = result?.success?.id ?? null;
+      log('lametric «' + text.slice(0, 70) + '»');
+    } catch (error) { log('lametric-error ' + error.message); lametricShown = ''; lametricRetryAt = Date.now() + 30000; }
+  });
+}
+
 // ── Transporte: la rueda derecha. Pulsar pausa/reanuda; girar pasa a la siguiente o a la anterior pieza. ──
 let paused = false;
 /** Pinta el estado en el anillo del dial derecho: azul en marcha, ámbar en pausa. */
@@ -98,6 +142,7 @@ async function transportAction(action) {
     const result = await page.evaluate(a => typeof window.admiraGalleonTransport === 'function' ? window.admiraGalleonTransport(a) : null, action);
     if (!result) { log('transporte ' + action + ' → la página no lo admite'); return; }
     paused = result.paused === true;
+    lametricShow(lametricText(await page.evaluate(() => (window.admiraGalleonFrames(-1) || {}).onAir).catch(() => null), { paused, connected: true }));
     log('transporte ' + action + (action === 'toggle' ? (paused ? ' → pausa' : ' → sigue') : (result.moved ? ' → pieza ' + (result.index + 1) : ' → sin playlist')));
     await showTransport();
     status();
@@ -109,6 +154,7 @@ async function releaseDevice(reason) {
   if (!device) return;
   const current = device;
   device = null;
+  lametricShow('');
   try { await current.clearPanel(); } catch {}
   try { await current.close(); } catch {}
   log('usb-released ' + reason);
@@ -201,6 +247,7 @@ async function pushFrame() {
     fs.writeFileSync(path.join(RUNTIME, 'last-keys.png'), await sharp(mosaicRaw, { raw: { width: MOSAIC.width, height: MOSAIC.height, channels: 3 } }).png().toBuffer());
     log('teclas ' + frames.keysRev + ' ' + JSON.stringify(frames.onAir || null));
   }
+  lametricShow(lametricText(frames.onAir, { paused, connected: true }));
   if (frames.frame === lastFrame) return Boolean(keysJpeg);
   const lcdJpeg = dataUrlToBuffer(frames.landscape);
   if (!lcdJpeg) return false;
@@ -223,6 +270,7 @@ async function shutdown(reason) {
   closing = true;
   log('parada ' + reason);
   await releaseDevice('parada');
+  try { await lametricBusy; } catch {}
   try { await browser?.close(); } catch {}
   process.exit(0);
 }

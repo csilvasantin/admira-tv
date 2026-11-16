@@ -12,7 +12,7 @@ contenido **horizontal** y las **12 teclas-pantalla** (3 columnas × 4 filas, 16
 | `macstudio-galleon.command` | este directorio | `instalar · navegador · arrancar · parar · estado · captura`. Servicio de usuario `tv.admira.galleon.player`. |
 | Gemelo 3D | https://www.admira.store/objeto/galleon-100/ | Misma página `/galleon` dentro del gemelo: por defecto enseña la señal real; la «playlist de prueba» es opcional. |
 | Mando | https://admira.tv/mando.html?screen=corsair-galleon-100 | Playlist propia del teclado (Importar #ID). Importa la versión horizontal y la vertical: se emparejan solas (enlace `par-`, mismo título o vecindad). |
-| Etiqueta | Stock | Una pieza etiquetada `corsair-galleon-100` (con sólo etiquetas conocidas además: orientación, temas, idioma) va dirigida al teclado: la API la da en `auto` y la página la emite detrás de la lista manual, aprendiendo la duración real del vídeo (16-nov-2026). |
+| Etiqueta | Stock | Una pieza etiquetada `corsair-galleon-100` (da igual qué otras etiquetas lleve) entra sola en la playlist del teclado: la página lee el índice público del Stock cada minuto y la emite detrás de la lista manual, aprendiendo la duración real del vídeo (16-nov-2026). Las que la API dirige en `auto` también cuentan. |
 
 ## Navegador en las teclas (16-nov-2026)
 - Sólo se decodifica una pista de vídeo (la horizontal, en la LCD): la versión vertical ya no se reproduce, lo que

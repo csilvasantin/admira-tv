@@ -124,10 +124,24 @@ test('la rueda derecha es el transporte: pulsar pausa o reanuda (anillo ámbar/a
   assert.match(player, /paused: pausedAt !== null, ready: readiness\(\)/);
 });
 
-test('las piezas etiquetadas corsair-galleon-100 en el Stock (lista auto de la API) se emiten detrás de la manual y el vídeo enseña su duración real (Carlos, 16-nov-2026)', () => {
-  assert.match(player, /const auto = \(Array\.isArray\(data\.auto\) \? data\.auto : \[\]\)\.map\(item => \(\{ \.\.\.item, secondsGuessed: true \}\)\);/);
-  assert.match(player, /slots: pairPlaylist\(\[\.\.\.draft\.items, \.\.\.auto\]\)/);
-  assert.match(player, /const rev = String\(draft\.rev\) \+ \(auto\.length \? '\+' \+ auto\.map\(item => item\.stockId \|\| item\.id\)\.join\(','\) : ''\);/); // cambia al entrar o salir una etiquetada
+test('las piezas del Stock etiquetadas corsair-galleon-100 (índice del Stock o lista auto de la API) se emiten detrás de la manual y el vídeo enseña su duración real (Carlos, 16-nov-2026)', () => {
+  assert.match(player, /const STOCK_INDEX = 'https:\/\/stock\.admira\.store\/stock\/index\.json';/);
+  assert.match(player, /taggedForScreen\(Array\.isArray\(data\) \? data : data\?\.items \|\| data\?\.assets \|\| \[\], SCREEN\)/);
+  assert.match(player, /for \(const item of \[\.\.\.sources\.auto, \.\.\.sources\.tagged\]\)/); // detrás de la manual, sin repetir
+  assert.match(player, /slots: pairPlaylist\(\[\.\.\.draft\.items, \.\.\.extra\]\)/);
+  assert.match(player, /const rev = String\(draft\.rev\) \+ \(extra\.length \? '\+' \+ extra\.map\(item => item\.stockId \|\| item\.id\)\.join\(','\) : ''\);/); // cambia al entrar o salir una
   assert.match(player, /learnDuration\(at\.slot, tracks\.landscape\);/);
   assert.match(player, /slot\.seconds = Math\.max\(2, Math\.ceil\(duration\)\);/);
+  assert.match(player, /void refreshStock\(\);/);
+});
+
+test('con lametric.json en el Mac Studio, el adaptador enseña en el reloj LaMetric el título en antena y lo retira al ceder el teclado; la clave nunca va al registro', () => {
+  assert.match(usb, /const LAMETRIC_FILE = path\.join\(RUNTIME, 'lametric\.json'\);/);
+  assert.match(usb, /lametricShow\(lametricText\(frames\.onAir, \{ paused, connected: true \}\)\);/);
+  assert.match(usb, /device = null;\n  lametricShow\(''\);/); // al soltar el teclado, el reloj vuelve a su hora
+  assert.match(usb, /\{ priority: 'info', icon_type: 'none', model: \{ cycles: 0, frames: \[\{ text \}\] \} \}/); // sin lifetime (el reloj lo rechaza); se queda hasta sustituir o retirar
+  assert.match(usb, /lametricRetryAt = Date\.now\(\) \+ 30000;/); // tras un error no se insiste a cada fotograma
+  assert.match(usb, /lametricRequest\('DELETE', '\/device\/notifications\/'/);
+  assert.doesNotMatch(usb, /log\([^)]*lametric\.key/); // la clave no se registra
+  assert.match(usb, /lametric: lametric \? \{ host: lametric\.host, shown: lametricShown \} : null/); // status.json sin la clave
 });
