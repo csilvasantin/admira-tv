@@ -911,3 +911,24 @@ test('granizo: con Open-Meteo 96/99 el HUD dice TORMENTA CON GRANIZO (cielo y la
   assert.equal(mk({ real: null, granizo: true })(), false);                            // sin dato
   assert.equal(mk(null)(), false);                                                     // nunca rompe
 });
+
+test('deriva anti-quemado: cada 3 min las capas fijas (título, luces, pie, HUD) se mueven ≤3 px y el fondo no; ?deriva=0 la apaga', () => {
+  assert.match(html, /var derivaOn = qs\("deriva"\) !== "0";/);
+  assert.match(html, /var dz = deriva\(Date\.now\(\), derivaOn\); if \(dz\[0\] \|\| dz\[1\]\) g\.setTransform\(escala, 0, 0, escala, dz\[0\] \* escala, dz\[1\] \* escala\);/);
+  const pin = html.indexOf('  function pinta(t) {'), dzi = html.indexOf('var dz = deriva(', pin), cie = html.indexOf('    cielo(s);', pin), tit = html.indexOf('g.strokeText("STRANGER THINGS"', pin), hud = html.indexOf('    hud();\n  }', pin);
+  assert.ok(pin > 0 && cie > pin && dzi > cie && tit > dzi && hud > tit); // el fondo y el cielo se pintan antes de desplazar; título y HUD después
+  const ini = html.indexOf('  var DERIVA = ['), fin = html.indexOf('  function pinta(t) {', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const src = html.slice(ini, fin).replace(/\n  var derivaOn = [^\n]*/, '');
+  const deriva = new Function(src + '; return deriva;')();
+  assert.deepEqual(deriva(0, true), [0, 0]);
+  assert.deepEqual(deriva(179999, true), [0, 0]);
+  assert.deepEqual(deriva(180000, true), [2, 1]);
+  assert.deepEqual(deriva(8 * 180000, true), [0, 0]);                 // vuelve a (0,0) cada 24 min
+  const vistos = new Set();
+  for (let k = 0; k < 8; k++) { const d = deriva(k * 180000 + 5, true); assert.ok(Math.abs(d[0]) <= 3 && Math.abs(d[1]) <= 3); vistos.add(d.join(',')); }
+  assert.equal(vistos.size, 8);                                         // recorre 8 posiciones distintas
+  assert.deepEqual(deriva(5 * 180000, false), [0, 0]);                // ?deriva=0
+  assert.deepEqual(deriva(NaN, true), [0, 0]);                        // nunca rompe
+  assert.deepEqual(deriva(-180000, true), [0, 2]);                    // reloj raro: sigue en el octógono
+});

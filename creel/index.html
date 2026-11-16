@@ -353,6 +353,13 @@
     g.restore();
   }
 
+  // Deriva anti-quemado (16-nov-2026): la TCL emite 24/7 y el título, HAWKINS, las luces A–Z, el pie y el HUD no se mueven nunca;
+  // semanas así dejan retención (imagen fantasma) en el panel. Cada 3 min esas capas fijas se desplazan unos píxeles (≤3 px lógicos,
+  // ≤4 px en 1920x1080) siguiendo un octógono que vuelve a (0,0) cada 24 min; el fondo, el vídeo, el cielo y las esporas no se mueven,
+  // así que no aparecen bordes. ?deriva=0 la apaga. Nunca rompe el fotograma: ante cualquier dato raro, (0,0).
+  var DERIVA = [[0, 0], [2, 1], [3, -1], [1, -2], [-1, -2], [-3, -1], [-2, 1], [0, 2]];
+  var derivaOn = qs("deriva") !== "0";
+  function deriva(ahora, on) { try { if (!on) return [0, 0]; var n = Math.floor(+ahora / 180000); if (!isFinite(n)) return [0, 0]; return DERIVA[((n % 8) + 8) % 8]; } catch (e) { return [0, 0]; } }
   function pinta(t) {
     var s = t / 1000;
     g.setTransform(escala, 0, 0, escala, 0, 0); // 8:3: escala 1 (igual que siempre); lleno: a la resolución real del visor
@@ -384,6 +391,7 @@
       g.arc(sp.x * W + Math.sin(s + sp.y * 9) * 12, y * H, sp.r, 0, 7);
       g.fill();
     }
+    var dz = deriva(Date.now(), derivaOn); if (dz[0] || dz[1]) g.setTransform(escala, 0, 0, escala, dz[0] * escala, dz[1] * escala); // deriva anti-quemado: solo capas fijas
     g.save();
     g.translate(W / 2, lleno ? L.tituloY : H * 0.165); // título bajo la fila de luces, con aire (13-nov-2026, como la pantalla de la maqueta)
     if (nivel === "puerta" && !once) g.scale(1, -1);
