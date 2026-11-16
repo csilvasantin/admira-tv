@@ -57,7 +57,7 @@ test('sin red, el kiosko conserva la última temperatura buena (≤6 h) y reinte
 
 test('sin dato de clima (ni real ni forzado) el HUD no inventa «Sol»: sin icono y «CLIMA —»', () => {
   assert.match(html, /var conDato = !!\(clima\.forzado \|\| clima\.real\)/);
-  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? "NIEBLA" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
+  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? "NIEBLA" : nieve \? "NIEVE" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
 });
 
 test('sin Intl, el respaldo de horaMadrid() sigue el horario de verano de la UE (no +1 h fijo)', () => {
@@ -814,4 +814,23 @@ test('niebla: con Open-Meteo 45/48 el HUD dice 🌫️ NIEBLA en vez de ☁️ N
   assert.equal(mk({ real: 'nubes', niebla: true, forzado: 'nubes' })(), false);    // forzado manda
   assert.equal(mk({ real: null, niebla: true })(), false);                         // sin dato
   assert.equal(mk(null)(), false);                                                 // nunca rompe
+});
+
+test('nieve: con Open-Meteo 71-77/85/86 el HUD dice ❄️ NIEVE en vez de 🌧️ LLUVIA (cielo y latido sin cambios)', () => {
+  assert.match(html, /clima\.nieve = \(c\.weather_code >= 71 && c\.weather_code <= 77\) \|\| c\.weather_code === 85 \|\| c\.weather_code === 86;/);
+  assert.match(html, /nieve: clima\.nieve === true, niebla:/);
+  assert.match(html, /clima\.nieve = cc\.nieve === true;/);
+  assert.match(html, /nieve \? "NIEVE" :/);
+  assert.match(html, /nieve \? "\\u2744\\uFE0F" :/);
+  const ini = html.indexOf('  function nieveReal() {'), fin = html.indexOf('  function nubesDeNoche() {', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const mk = (clima) => new Function('clima', html.slice(ini, fin) + '; return nieveReal;')(clima);
+  assert.equal(mk({ real: 'lluvia', nieve: true })(), true);                        // código 71-77/85/86
+  assert.equal(mk({ real: 'lluvia', nieve: false })(), false);                      // lluvia normal
+  assert.equal(mk({ real: 'lluvia' })(), false);                                    // caché antigua sin campo
+  assert.equal(mk({ real: 'nubes', nieve: true })(), false);                        // solo lluvia
+  assert.equal(mk({ real: 'tormenta', nieve: true })(), false);
+  assert.equal(mk({ real: 'lluvia', nieve: true, forzado: 'lluvia' })(), false);    // forzado manda
+  assert.equal(mk({ real: null, nieve: true })(), false);                           // sin dato
+  assert.equal(mk(null)(), false);                                                  // nunca rompe
 });
