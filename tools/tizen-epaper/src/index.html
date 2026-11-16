@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>admira.tv · tinta electrónica</title>
+<style>
+  html, body { margin: 0; width: 100%; height: 100%; background: #fff; color: #000; font-family: Arial, sans-serif; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  h1 { font-size: 7vmin; margin: 0 0 3vmin; } p { font-size: 3.4vmin; margin: 1vmin 0; }
+</style>
+</head>
+<body>
+<h1>admira.tv</h1>
+<p>Player de tinta electrónica</p>
+<p id="estado">conectando…</p>
+<script>
+// Cargador de la app personalizada de Samsung Color E-Paper (EMDX): guarda la identidad de ESTE panel y entrega la
+// pantalla al player web de admira.tv (/eink/), que se actualiza solo sin reinstalar la app.
+(function () {
+  var PLAYER = "https://www.admira.tv/eink/", id = "";
+  try { id = localStorage.getItem("eink-screen") || ""; } catch (e) {}
+  if (!/^[a-z0-9][a-z0-9-]{1,79}$/.test(id)) { id = "samsung-epaper-" + Math.random().toString(36).slice(2, 6); try { localStorage.setItem("eink-screen", id); } catch (e) {} }
+  var estado = document.getElementById("estado"), intento = 0;
+  function entra() {
+    intento++; estado.textContent = id + " · conectando (" + intento + ")…";
+    var x = new XMLHttpRequest();
+    x.open("GET", "https://www.admira.tv/version.json?t=" + Date.now(), true); x.timeout = 12000;
+    x.onload = function () { if (x.status >= 200 && x.status < 400) location.replace(PLAYER + "?screen=" + encodeURIComponent(id)); else otra(); };
+    x.onerror = otra; x.ontimeout = otra; x.send();
+  }
+  function otra() { estado.textContent = id + " · sin red, reintento en 20 s"; setTimeout(entra, 20000); }
+  entra();
+})();
+</script>
+</body>
+</html>

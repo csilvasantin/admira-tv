@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://admira.tv/AdmiraEink" version="1.0.0" viewmodes="maximized">
+    <access origin="*" subdomains="true"/>
+    <tizen:application id="AdmiraTV01.AdmiraEink" package="AdmiraTV01" required_version="6.5"/>
+    <tizen:content-security-policy>default-src * data: filesystem:; style-src * data: filesystem: 'unsafe-inline'; script-src * data: filesystem: 'unsafe-inline' 'unsafe-eval'; img-src * data: filesystem:; connect-src * data: filesystem:; frame-src * data: filesystem:;</tizen:content-security-policy>
+    <tizen:allow-navigation>*</tizen:allow-navigation>
+    <author href="https://www.admira.tv" email="info@admira.com"/>
+    <content src="index.html"/>
+    <feature name="http://tizen.org/feature/screen.size.all"/>
+    <feature name="http://tizen.org/feature/network.wifi"/>
+    <icon src="icon.png"/>
+    <name>AdmiraEink</name>
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:profile name="tv-samsung"/>
+    <tizen:setting screen-orientation="auto-rotation" context-menu="disable" background-support="disable" encryption="disable" install-location="auto" hwkey-event="enable"/>
+    <tizen:metadata key="http://samsung.com/tv/metadata/application/epaper.support" value="true"/>
+    <tizen:metadata key="http://tizen.org/metadata/app_ui_type/base_screen_resolution" value="fullscreen"/>
+</widget>
