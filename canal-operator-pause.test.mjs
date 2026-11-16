@@ -11,7 +11,8 @@ const queued=section('async function executeQueuedCommand(c){','\nasync function
 test('legacy queue executes real pause/play and propagates failed play instead of an optimistic CLI ack',async()=>{
  const calls=[];
  const ctx=vm.createContext({applyCtrlCmd:async cmd=>{calls.push(cmd);return cmd==='play'?'failed':'executed';},runCli(){throw Error('must not reach unimplemented CLI');}});
- vm.runInContext(queued+'\nglobalThis.run=executeQueuedCommand',ctx);
+ const stockCancellation=section('function cancelScheduledStock(){','\nasync function scheduleStockPlayback');
+ vm.runInContext('let scheduledStock=null;\n'+stockCancellation+queued+'\nglobalThis.run=executeQueuedCommand',ctx);
  assert.equal(await ctx.run({cmd:'pause'}),'executed');
  assert.equal(await ctx.run({cmd:'/play'}),'failed');
  assert.deepEqual(calls,['pause','play']);
