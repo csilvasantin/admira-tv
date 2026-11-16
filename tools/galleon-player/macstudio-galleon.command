@@ -57,7 +57,11 @@ plist() {
 PLIST
 }
 
-parar() { launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true; }
+parar() {
+  launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+  # launchctl descarga en segundo plano: si se vuelve a cargar antes de que termine, bootstrap falla con «Input/output error».
+  for _ in $(seq 1 20); do launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1 || break; sleep 0.5; done
+}
 arrancar() { copia; plist; parar; launchctl bootstrap "gui/$(id -u)" "$PLIST"; echo "✓ $LABEL en marcha · registro: $RUNTIME/player.log"; }
 
 case "$ACTION" in

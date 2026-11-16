@@ -41,3 +41,31 @@ test('una variante que no se ha cargado conserva negra su superficie', () => {
   assert.deepEqual(mosaic.calls, [['fill', 0, 0, 480, 640]]);
   assert.throws(() => paintGalleon({ lcd, mosaic, keys: [] }, {}), /12 teclas/);
 });
+
+test('el navegador pinta las 12 teclas en orden físico y las compone en el mosaico; la tecla sin pieza queda apagada', async () => {
+  const { paintKeys, paintLcd, wrapTitle } = await import('./assets/galleon-layout.mjs');
+  const text = () => {
+    const calls = [];
+    const context = { fillRect: (...a) => calls.push(['fill', ...a]), drawImage: (...a) => calls.push(['draw', ...a]), fillText: (...a) => calls.push(['text', ...a]), measureText: t => ({ width: t.length * 8 }) };
+    return { width: 0, height: 0, calls, getContext: () => context };
+  };
+  const mosaic = text(), keys = Array.from({ length: 12 }, text);
+  const image = { videoWidth: 1920, videoHeight: 1080 };
+  const entries = Array(12).fill(null);
+  entries[5] = { image, title: 'Me at the zoo · Locución ES', offset: -1, position: 2, total: 2, next: false };
+  entries[6] = { image: null, title: 'Así Sonaba 1985… Cuando los 80s No Tenían Competencia', offset: 1, position: 1, total: 2, next: true };
+  paintKeys({ mosaic, keys }, entries);
+  assert.deepEqual([mosaic.width, mosaic.height], [480, 640]);
+  assert.deepEqual(mosaic.calls.filter(c => c[0] === 'draw').map(c => c.slice(2, 4)), [
+    [0, 0], [160, 0], [320, 0], [0, 160], [160, 160], [320, 160], [0, 320], [160, 320], [320, 320], [0, 480], [160, 480], [320, 480],
+  ]);
+  assert.deepEqual(keys[0].calls, [['fill', 0, 0, 160, 160]]); // apagada
+  assert.deepEqual(keys[5].calls[1], ['draw', image, 0, 0, 160, 90]); // previo 16:9 arriba
+  assert.ok(keys[5].calls.some(c => c[0] === 'text' && c[1] === '-1'));
+  assert.ok(keys[6].calls.some(c => c[0] === 'text' && c[1] === '+1'));
+  assert.ok(keys[6].calls.some(c => c[0] === 'text' && c[1] === '1/2'));
+  assert.deepEqual(wrapTitle(keys[0].getContext(), 'Así Sonaba 1985… Cuando los 80s No Tenían Competencia', 148, 2), ['Así Sonaba 1985…', 'Cuando los 80s No…']);
+  const lcd = text();
+  paintLcd(lcd, image);
+  assert.deepEqual(lcd.calls[1], ['draw', image, 18, 0, 683, 384]);
+});

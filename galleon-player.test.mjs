@@ -14,7 +14,7 @@ const launcher = read('./tools/galleon-player/macstudio-galleon.command');
 test('el player emite en autónomo desde su playlist propia y cede al playout (Custom · Dual H·V / extendido)', () => {
   assert.match(player, /from '\.\/galleon-schedule\.mjs'/);
   assert.match(player, /\/api\/playlist\?screen=' \+ SCREEN/);
-  assert.match(player, /slotAt\(playlist\.slots, serverNow\(\)\)/);
+  assert.match(player, /slotAt\(playlist\.slots, serverNow\(\) \+ jump\.ms\)/);
   assert.match(player, /if \(plan\.variants \|\| plan\.item\)/);
   assert.match(player, /plan\.power === 'off'/);
   assert.match(player, /clockOffset = Number\(next\.serverNow\)/);
@@ -22,7 +22,7 @@ test('el player emite en autónomo desde su playlist propia y cede al playout (C
 
 test('el gemelo puede volver a la señal real y el adaptador USB lee los fotogramas y late sólo con ?native=1', () => {
   assert.match(player, /admira:galleon:live/);
-  assert.match(player, /window\.admiraGalleonFrames = \(\) =>/);
+  assert.match(player, /window\.admiraGalleonFrames = sinceKeys =>/);
   assert.match(player, /window\.admiraGalleonOutput/);
   const native = player.indexOf('if (NATIVE) {');
   assert.ok(native > 0);
@@ -53,7 +53,7 @@ test('el adaptador USB cede el teclado, no roba el foco y sólo relaja la seguri
   assert.match(usb, /headless: true/);
   assert.match(usb, /Elgato Stream Deck/);
   assert.match(usb, /AdmiraCorsair\/fullscreen\/ready\.json/);
-  assert.match(usb, /createExitGesture\(\(\) => void returnToElgato\(\)\)/);
+  assert.match(usb, /createExitGesture\(\(\) => void returnToElgato\(\), \{ onTap: index => void jumpTo\(index\) \}\)/);
   assert.match(usb, /ADMIRA_GALLEON_INSECURE === '1' && \/\^http:\\\/\\\/\(127\\\.0\\\.0\\\.1\|localhost\)/);
   assert.match(usb, /last-lcd\.png/);
   assert.match(usb, /last-keys\.png/);
@@ -63,9 +63,10 @@ test('el adaptador USB cede el teclado, no roba el foco y sólo relaja la seguri
 });
 
 test('el player suena por el Mac Studio (sólo la pista horizontal) y las dos ruedas del Galleon son el volumen', () => {
-  assert.doesNotMatch(usb, /--mute-audio/);
+  assert.doesNotMatch(usb, /'--mute-audio'/); // no lo pasamos nosotros…
+  assert.match(usb, /ignoreDefaultArgs: \['--' \+ 'mute-audio'\]/); // …y puppeteer tampoco (lo añade a todo headless)
   assert.match(usb, /opened\.on\('rotate', \(control, value\) => volumeControl\('rotate', control, value\)\)/);
-  assert.match(usb, /if \(!gesture\('down', control\)\) volumeControl\('down', control\)/); // pulsar un dial silencia; la tecla 12 sigue siendo la salida
+  assert.match(usb, /if \(!gesture\('down', control\) && !taps\('down', control\)\) volumeControl\('down', control\)/); // pulsar un dial silencia; la tecla 12 sigue siendo la salida
   assert.match(usb, /createVolumeControl\(state => \{/);
   assert.match(usb, /setEncoderRingColors\(index, ringColors\(audio\)\)/);
   assert.match(usb, /volume\.json/);
@@ -91,4 +92,23 @@ test('el mando enseña «📺 Pantallas» solo para hotel-creel y manda pantalla
   assert.match(mando, /function pantallasScreen\(\)\{ return !!\(T&&T\.screen==='hotel-creel'\); \}/);
   assert.match(mando, /sendRemote\(desired\?'pantallas-on':'pantallas-off',pb\)/);
   assert.match(mando, /paintPantallas\(\);\n    \}/);
+});
+
+test('las 12 teclas son el navegador de la playlist (6 anteriores arriba, 6 siguientes abajo) y un toque salta; la LCD lleva sola el player (Carlos, 16-nov-2026)', () => {
+  assert.match(player, /import \{ paintLcd, paintKeys \} from '\.\/galleon-layout\.mjs'/);
+  assert.match(player, /navigatorWindow\(total, onAir\.index, \{ before: KEYS_BEFORE, after: KEYS_AFTER \}\)/);
+  assert.match(player, /const KEYS_BEFORE = 6, KEYS_AFTER = 6;/);
+  assert.match(player, /const tracks = \{ landscape: null \};/); // ya no se decodifica la pista vertical
+  assert.doesNotMatch(player, /setTrack\('portrait'/);
+  assert.match(player, /paintLcd\(lcd, landscape\);/);
+  assert.match(player, /if \(jump\.rev !== playlist\.rev\) jump = \{ ms: 0, rev: playlist\.rev \};/); // el salto se olvida con otra playlist
+  assert.match(player, /window\.admiraGalleonJump = key => jumpToKey\(Number\(key\)\);/);
+  assert.match(player, /if \(onAir\.source !== 'playlist' \|\| twinSelection !== null\) return false;/); // con playout mandando no hay salto
+  assert.match(player, /if \(keypad\.painted && keypad\.rev !== sinceKeys\) frames\.keys = mosaic\.toDataURL/); // teclas sólo si cambiaron
+  assert.match(player, /function previewOf\(item\)/);
+  assert.doesNotMatch(player, /\blet navigator\b/); // sombrearía window.navigator
+  assert.match(usb, /createKeyTaps\(index => void jumpTo\(index\)\)/);
+  assert.match(usb, /window\.admiraGalleonJump\(key\)/);
+  assert.match(usb, /window\.admiraGalleonFrames\(since\) : null, lastKeys\)/);
+  assert.match(usb, /if \(frames\.frame === lastFrame\) return Boolean\(keysJpeg\);/); // la LCD a cada fotograma; las teclas, al cambiar
 });

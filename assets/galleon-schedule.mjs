@@ -1,5 +1,5 @@
 // Horario del Corsair Galleon 100 SD en modo autónomo (encargo #7569, Neo, 13-nov-2026).
-// El teclado tiene DOS superficies (LCD 16:9 arriba y mosaico 9:16 en las 12 teclas) y UNA playlist propia
+// El teclado tiene DOS superficies (LCD 16:9 arriba, el player; las 12 teclas, el navegador de la playlist) y UNA playlist propia
 // (la del mando, /api/playlist?screen=corsair-galleon-100). Aquí se empareja cada pieza con su versión de la
 // otra orientación y se decide qué va en antena en cada instante a partir del reloj del servidor, de modo que
 // el teclado físico y el gemelo 3D de admira.store pinten lo mismo sin hablarse entre ellos.
@@ -102,6 +102,32 @@ export function slotAt(slots, nowMs) {
     t -= duration;
   }
   return null;
+}
+
+/**
+ * Navegador de las 12 teclas (Carlos, 16-nov-2026): las dos filas de arriba son las 6 piezas ANTERIORES a la que está en
+ * antena (de la más lejana a la más cercana: −6 … −1) y las dos de abajo las 6 SIGUIENTES (+1 … +6). Devuelve, tecla a
+ * tecla en orden físico, el índice del turno que le toca o null (tecla apagada). En un ciclo de n turnos sólo hay n−1
+ * piezas distintas por lado: más allá, tecla apagada. Sin playlist o sin turno en antena, todo apagado.
+ */
+export function navigatorWindow(total, index, { before = 6, after = 6 } = {}) {
+  const keys = [];
+  const valid = Number.isInteger(total) && total > 1 && Number.isInteger(index) && index >= 0 && index < total;
+  for (let offset = -before; offset <= after; offset++) {
+    if (offset === 0) continue;
+    keys.push(valid && Math.abs(offset) <= total - 1 ? (((index + offset) % total) + total) % total : null);
+  }
+  return keys;
+}
+
+/** Milisegundos que hay que sumar al reloj para que el turno `index` empiece justo ahora (salto por tecla). */
+export function jumpOffsetMs(slots, index, nowMs) {
+  const total = cycleMs(slots);
+  if (!total || !Number.isInteger(index) || index < 0 || index >= slots.length || !Number.isFinite(nowMs)) return 0;
+  let start = 0;
+  for (let i = 0; i < index; i++) start += Math.round(slots[i].seconds * 1000);
+  const t = ((nowMs % total) + total) % total;
+  return start - t;
 }
 
 /** Pista reproducible (misma forma que una pieza del playout) a partir de una pieza de playlist o del Stock. */
