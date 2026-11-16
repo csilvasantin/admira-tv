@@ -57,7 +57,7 @@ test('sin red, el kiosko conserva la última temperatura buena (≤6 h) y reinte
 
 test('sin dato de clima (ni real ni forzado) el HUD no inventa «Sol»: sin icono y «CLIMA —»', () => {
   assert.match(html, /var conDato = !!\(clima\.forzado \|\| clima\.real\)/);
-  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? "NIEBLA" : nieve \? "NIEVE" : llovizna \? "LLOVIZNA" : chubascos \? "CHUBASCOS" : intervalos \? "INTERVALOS" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
+  assert.match(html, /conDato \? \(noche \? "DESPEJADO" : niebla \? "NIEBLA" : nieve \? "NIEVE" : llovizna \? "LLOVIZNA" : chubascos \? "CHUBASCOS" : granizo \? "TORMENTA CON GRANIZO" : intervalos \? "INTERVALOS" : String\(NOMBRE\[tipo\] \|\| ""\)\.toUpperCase\(\)\) : "CLIMA \\u2014"/);
 });
 
 test('sin Intl, el respaldo de horaMadrid() sigue el horario de verano de la UE (no +1 h fijo)', () => {
@@ -892,4 +892,22 @@ test('chubascos: con Open-Meteo 80-82 el HUD dice CHUBASCOS en vez de LLUVIA (ci
   assert.equal(mk({ real: 'lluvia', chubascos: true, forzado: 'lluvia' })(), false);  // forzado manda
   assert.equal(mk({ real: null, chubascos: true })(), false);                         // sin dato
   assert.equal(mk(null)(), false);                                                    // nunca rompe
+});
+
+test('granizo: con Open-Meteo 96/99 el HUD dice TORMENTA CON GRANIZO (cielo y latido sin cambios)', () => {
+  assert.match(html, /clima\.granizo = c\.weather_code === 96 \|\| c\.weather_code === 99;/);
+  assert.match(html, /temp: clima\.temp, granizo: clima\.granizo === true, real: clima\.real,/);
+  assert.match(html, /clima\.granizo = cc\.granizo === true;/);
+  assert.match(html, /granizo \? "TORMENTA CON GRANIZO" :/);
+  assert.match(html, /var granizo = conDato && tipo === "tormenta" && granizoReal\(\);/);
+  const ini = html.indexOf('  function granizoReal() {'), fin = html.indexOf('  function intervalosReal() {', ini);
+  assert.ok(ini > 0 && fin > ini);
+  const mk = (clima) => new Function('clima', html.slice(ini, fin) + '; return granizoReal;')(clima);
+  assert.equal(mk({ real: 'tormenta', granizo: true })(), true);                       // 96/99
+  assert.equal(mk({ real: 'tormenta', granizo: false })(), false);                     // tormenta 95 sin granizo
+  assert.equal(mk({ real: 'tormenta' })(), false);                                     // caché antigua sin campo
+  assert.equal(mk({ real: 'lluvia', granizo: true })(), false);                        // solo tormenta
+  assert.equal(mk({ real: 'tormenta', granizo: true, forzado: 'tormenta' })(), false); // forzado manda
+  assert.equal(mk({ real: null, granizo: true })(), false);                            // sin dato
+  assert.equal(mk(null)(), false);                                                     // nunca rompe
 });
