@@ -300,7 +300,7 @@ test('un latido colgado de /signage/now no apila conexiones con api.admira.store
   const st = { fetches: [], timers: [], aborts: 0 };
   const env = new Function('st', `
     var escena = { cara: null, nivel: "lejos", quien: "" }, clima = { tipo: "sol" }, pantallasOn = true, SCREEN = "hotel-creel", NOW_API = "https://api.admira.store/signage/now", version = "v", W = 1440, H = 540, diag = { errores: 0, ultimo: "" }, arranque = 0, media = null, mediaOk = false, mudo = true;
-    function fpsAhora() { return 60; } function memoriaMB() { return 80; } function pantallaFija() { return "si"; } function teleVisible() { return "si"; } function climaMin() { return 3; } function mandoSeg() { return 2; } function listaOrigen() { return "red"; } var recargaPrevia = "arranque"; var desfaseReloj = null; function encajeTele() { return { orientation: "landscape", encaje: "16:9" }; } var cortesRed = 0, ultimoCorte = 0; function redLatido(o) { return { online: o }; } function listaMin() { return 0; } function fondoLatido() { return "rojo"; } var intro = { on: false };
+    function fpsAhora() { return 60; } function memoriaMB() { return 80; } function pantallaFija() { return "si"; } function teleVisible() { return "si"; } function climaMin() { return 3; } function mandoSeg() { return 2; } function listaOrigen() { return "red"; } var recargaPrevia = "arranque"; function motorWeb() { return "Chrome 120"; } var desfaseReloj = null; function encajeTele() { return { orientation: "landscape", encaje: "16:9" }; } var cortesRed = 0, ultimoCorte = 0; function redLatido(o) { return { online: o }; } function listaMin() { return 0; } function fondoLatido() { return "rojo"; } var intro = { on: false };
     var innerWidth = 1920, innerHeight = 1080, navigator = { platform: "", language: "es", userAgent: "tcl", onLine: true }, window = { devicePixelRatio: 1 }; window.parent = window;
     var location = { origin: "https://admira.tv" };
     function piezaEnAntena() { return null; } function zonaTele() { return ""; }
@@ -725,4 +725,18 @@ test('reloj de la TCL: el latido da el desfase en segundos frente a la cabecera 
   assert.equal(f(null, T), null);                                     // sin cabecera
   assert.equal(f('basura', T), null);
   assert.equal(f('Mon, 16 Nov 2026 00:20:00 GMT', NaN), null);
+});
+
+test('motor web de la TCL: el latido da el motor y su versión mayor en software.engine', () => {
+  assert.match(html, /engine: motorWeb\(navigator\.userAgent\), userAgent: navigator\.userAgent \}/);
+  assert.doesNotMatch(html, /engine: "", userAgent/);
+  const a = html.indexOf('  function motorWeb('), b = html.indexOf('\n', a);
+  assert.ok(a > 0);
+  const f = new Function(html.slice(a, b) + '; return motorWeb;')();
+  assert.equal(f('Mozilla/5.0 (Linux; Android 9; Smart TV Build/PPR1; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/87.0.4280.141 Mobile Safari/537.36'), 'WebView Chrome 87');
+  assert.equal(f('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'), 'Chrome 120');
+  assert.equal(f('Mozilla/5.0 (X11; Linux x86_64; rv:115.0) Gecko/20100101 Firefox/115.0'), 'Firefox 115');
+  assert.equal(f('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15'), 'Safari 17');
+  assert.equal(f(''), '?');
+  assert.equal(f(undefined), '?');
 });

@@ -723,6 +723,10 @@
   // vertical o con la barra de Android comiendo alto. Ahora orientation sale del visor real ("landscape"/"portrait"/"?") y display.encaje
   // dice "16:9" si el visor es 16:9 (pantalla llena a 1920x1080), "otro" si no (franjas o recorte) y "?" sin medidas. Nunca rompe el latido.
   function encajeTele(w, h) { try { w = +w; h = +h; if (!(w > 0 && h > 0) || !isFinite(w) || !isFinite(h)) return { orientation: "?", encaje: "?" }; return { orientation: w >= h ? "landscape" : "portrait", encaje: Math.abs(w / h - 16 / 9) < 0.02 ? "16:9" : "otro" }; } catch (e) { return { orientation: "?", encaje: "?" }; } }
+  // Motor web de la TCL para el latido (16-nov-2026 01:20): software.engine iba vacío y desde /signage/now no se veía si el WebView de la
+  // tele es un Chromium viejo (sin AbortController, Wake Lock o Intl) sin leer el userAgent entero. motorWeb(ua) da "WebView Chrome 87",
+  // "Chrome 120", "Firefox 115", "Safari 17" o "?" si no lo reconoce. Nunca rompe el latido.
+  function motorWeb(ua) { try { ua = String(ua || ""); var m = /(?:Chrome|CriOS)\/(\d+)/.exec(ua); if (m) return (/; wv\)|\bwv\b/.test(ua) ? "WebView Chrome " : "Chrome ") + m[1]; m = /Firefox\/(\d+)/.exec(ua); if (m) return "Firefox " + m[1]; m = /Version\/(\d+)[^ ]* (?:Mobile\/\S+ )?Safari\//.exec(ua); if (m) return "Safari " + m[1]; return "?"; } catch (e) { return "?"; } }
   var beatBusy = false, beatVuelta = 0; // un solo latido a la vez: colgados no se apilan
   function beat() {
     if (typeof fetch !== "function") return;
@@ -733,7 +737,7 @@
       device: { display: { width: W, height: H, cssWidth: innerWidth, cssHeight: innerHeight, viewportWidth: innerWidth, viewportHeight: innerHeight, devicePixelRatio: window.devicePixelRatio || 1, orientation: encajeTele(innerWidth, innerHeight).orientation, encaje: encajeTele(innerWidth, innerHeight).encaje },
         system: { os: "", platform: navigator.platform || "", language: navigator.language || "", timezone: zonaTele(), relojSeg: desfaseReloj },
         hardware: { dedicated: false, model: "Hotel Creel \u00B7 LED" },
-        software: { player: "Hotel Creel \u00B7 LED", playerVersion: "creel-1", webRelease: version, engine: "", userAgent: navigator.userAgent },
+        software: { player: "Hotel Creel \u00B7 LED", playerVersion: "creel-1", webRelease: version, engine: motorWeb(navigator.userAgent), userAgent: navigator.userAgent },
         audio: { muted: !!mudo, playing: !!(media && media.tagName === "VIDEO" && !media.paused && !mudo) }, network: redLatido(navigator.onLine !== false, navigator.connection, cortesRed, ultimoCorte, Date.now()) },
       health: { source: "live", clima: clima.tipo || "", presencia: escena.nivel, quien: escena.quien || (c ? c.quien : ""), embebido: window.parent !== window, pantallas: pantallasOn ? "on" : "off",
         errores: diag.errores, ultimoError: diag.ultimo, encendidaMin: Math.round((Date.now() - arranque) / 60000),
