@@ -1,14 +1,17 @@
-// Player del Corsair Galleon 100 SD (encargo #7569). Pinta la LCD superior (16:9) y el mosaico vertical de las
-// 12 teclas desde la misma señal que el resto de la flota:
-//   · playout (/api/playout): Custom · Dual H·V o extendido mandan, como en cualquier pantalla;
+// Player del Corsair Galleon 100 SD (encargo #7569). Pinta la LCD superior (16:9) con la señal de la flota y las 12
+// teclas como NAVEGADOR de la playlist (Carlos, 16-nov-2026): previo, título y posición de las 6 piezas anteriores
+// (dos filas de arriba) y las 6 siguientes (dos de abajo); tocar una tecla salta a esa pieza. Sólo hay una pista de
+// vídeo (la horizontal): la vertical ya no se decodifica, y las teclas sólo se repintan al cambiar de pieza.
+//   · playout (/api/playout): Custom · Dual H·V o extendido mandan, como en cualquier pantalla (sin saltos);
 //   · autónomo: la playlist propia del teclado (/api/playlist?screen=…) emparejada H·V y anclada al reloj del
-//     servidor (assets/galleon-schedule.mjs), para que el teclado físico y el gemelo 3D coincidan sin hablarse.
+//     servidor (assets/galleon-schedule.mjs); un salto por tecla desplaza ese reloj hasta la siguiente revisión.
 // El gemelo de admira.store se suscribe por postMessage (subscribe/select/live → frame/ended). El adaptador USB
-// del Mac Studio (tools/galleon-player) carga esta página con ?native=1: sólo él late en /signage/now y lee los
-// fotogramas con window.admiraGalleonFrames(). Sólo en ese modo suena (la pista horizontal, por el Mac Studio), con el
-// volumen que el adaptador escribe en window.admiraGalleonOutput desde las ruedas del teclado; en el gemelo va mudo.
-import { paintGalleon } from './galleon-layout.mjs';
-import { pairPlaylist, slotAt, trackOf } from './galleon-schedule.mjs';
+// del Mac Studio (tools/galleon-player) carga esta página con ?native=1: sólo él late en /signage/now, lee los
+// fotogramas con window.admiraGalleonFrames(sinceKeys) y salta con window.admiraGalleonJump(tecla). Sólo en ese
+// modo suena (por el Mac Studio), con el volumen que el adaptador escribe en window.admiraGalleonOutput desde las
+// ruedas del teclado; en el gemelo va mudo.
+import { paintLcd, paintKeys } from './galleon-layout.mjs';
+import { jumpOffsetMs, navigatorWindow, pairPlaylist, slotAt, trackOf } from './galleon-schedule.mjs';
 
 const params = new URLSearchParams(location.search);
 const SCREEN = /^[a-z0-9][a-z0-9-]{1,79}$/.test(params.get('screen') || '') ? params.get('screen') : 'corsair-galleon-100';
@@ -16,12 +19,12 @@ const NATIVE = params.get('native') === '1';
 const API = /^https:\/\/(www\.)?admira\.tv$/.test(location.origin) ? '' : 'https://admira.tv';
 const NOW_API = 'https://api.admira.store/signage/now';
 const PLAYOUT_MS = 2500, PLAYLIST_MS = 12000, PROGRAM_MS = 500, BEAT_MS = 10000;
+const KEYS_BEFORE = 6, KEYS_AFTER = 6;
 
 const lcd = document.querySelector('#galleon-lcd');
 const mosaic = document.createElement('canvas');
 const keys = Array.from(document.querySelectorAll('#galleon-keys canvas'));
-const surfaces = { lcd, mosaic, keys };
-const tracks = { landscape: null, portrait: null };
+const tracks = { landscape: null };
 const twinOrigins = new Set(['https://admira.store', 'https://www.admira.store']);
 let twinOrigin = '';
 let exporting = false;
@@ -31,6 +34,8 @@ let plan = null;
 let clockOffset = 0; // serverNow − Date.now(), medido en cada sondeo del playout
 let playlist = { rev: null, name: '', slots: [] };
 let onAir = { source: 'none', id: '', title: '', index: -1, total: 0, paired: false };
+let jump = { ms: 0, rev: null }; // salto por tecla: desplaza el reloj; se olvida al cambiar la playlist
+let keypad = { key: '', map: [], rev: 0, painted: false }; // navegador de teclas: qué turno enseña cada una; rev sube al repintar
 let frameCount = 0;
 let version = '';
 let audio = { muted: true, volume: 0 };
@@ -63,18 +68,18 @@ window.addEventListener('message', event => {
   if (!horizontal || !vertical || !Number.isSafeInteger(event.data.sequence) || event.data.sequence === twinSelection) return;
   twinSelection = event.data.sequence;
   setTrack('landscape', horizontal);
-  setTrack('portrait', vertical);
-  for (const [orientation, track] of Object.entries(tracks)) {
-    if (!track?.video) continue;
-    track.media.loop = orientation !== 'landscape';
+  const track = tracks.landscape;
+  if (track?.video) {
+    track.media.loop = false;
     track.media.currentTime = 0;
     void track.media.play().catch(() => {});
   }
   onAir = { source: 'twin', id: String(horizontal.id || ''), title: String(event.data.title || ''), index: 0, total: 1, paired: true };
+  refreshNavigator();
 });
 
 function readiness() {
-  return { landscape: Boolean(paintable(tracks.landscape)), portrait: Boolean(paintable(tracks.portrait)) };
+  return { landscape: Boolean(paintable(tracks.landscape)), portrait: keypad.painted };
 }
 
 async function publishFrame() {
@@ -102,7 +107,7 @@ function makeTrack(item) {
   const video = item.type === 'video' || item.type === 'animation';
   const media = document.createElement(video ? 'video' : 'img');
   if (video) {
-    media.muted = true; // applyAudio() da voz a la pista horizontal en modo nativo
+    media.muted = true; // applyAudio() le da voz en modo nativo
     media.playsInline = true;
     media.loop = true;
     media.preload = 'auto';
@@ -147,29 +152,30 @@ function paintable(track) {
 
 function clear(source) {
   setTrack('landscape', null);
-  setTrack('portrait', null);
   onAir = { source, id: '', title: '', index: -1, total: 0, paired: false };
+  refreshNavigator();
 }
 
-/** Decide qué va en cada superficie ahora mismo: playout si manda, si no la playlist propia por reloj de servidor. */
+/** Decide qué va en la LCD ahora mismo: playout si manda, si no la playlist propia por reloj de servidor (más el salto). */
 function program() {
   if (twinSelection !== null || !plan) return;
   if (plan.power === 'off') return clear('off');
   if (plan.variants || plan.item) {
     setTrack('landscape', plan.variants?.landscape || plan.item);
-    setTrack('portrait', plan.variants?.portrait || plan.item);
     const elapsed = serverNow() - Number(plan.updatedAt);
-    if (plan.updatedAt && Number.isFinite(elapsed)) for (const track of Object.values(tracks)) syncTrack(track, Math.max(0, elapsed));
+    if (plan.updatedAt && Number.isFinite(elapsed)) syncTrack(tracks.landscape, Math.max(0, elapsed));
     onAir = { source: 'playout', id: String(plan.item?.id || ''), title: String(plan.item?.title || ''), index: 0, total: 1, paired: Boolean(plan.variants?.landscape && plan.variants?.portrait) };
+    refreshNavigator();
     return;
   }
-  const at = slotAt(playlist.slots, serverNow());
+  if (jump.rev !== playlist.rev) jump = { ms: 0, rev: playlist.rev };
+  const at = slotAt(playlist.slots, serverNow() + jump.ms);
   if (!at) return clear('playlist');
-  const landscape = trackOf(at.slot.landscape), portrait = trackOf(at.slot.portrait);
+  const landscape = trackOf(at.slot.landscape);
   setTrack('landscape', landscape);
-  setTrack('portrait', portrait);
-  for (const track of Object.values(tracks)) syncTrack(track, at.offsetMs);
-  onAir = { source: 'playlist', id: String(landscape?.id || portrait?.id || ''), title: at.slot.title, index: at.index, total: at.total, paired: at.slot.paired };
+  syncTrack(tracks.landscape, at.offsetMs);
+  onAir = { source: 'playlist', id: String(landscape?.id || ''), title: at.slot.title, index: at.index, total: at.total, paired: at.slot.paired };
+  refreshNavigator();
 }
 
 async function refreshPlayout() {
@@ -209,8 +215,97 @@ async function refreshPlaylist() {
   }
 }
 
-/** Volumen de las ruedas (window.admiraGalleonOutput.volume/muted): suena sólo la pista horizontal, y sólo cuando el
- * teclado recibe la señal; la vertical es la misma pieza y doblaría el audio. Fuera del adaptador la página va muda. */
+// ── Navegador de las 12 teclas: previos de las piezas vecinas en la playlist ──
+const previews = new Map(); // url → Promise<lienzo 320×180 | null>
+const PREVIEW = { width: 320, height: 180 };
+
+/** Un fotograma de la pieza (vídeo: al 10 % o a los 2 s; imagen: entera) en un lienzo pequeño; null si no se puede. */
+function previewOf(item) {
+  const track = trackOf(item);
+  if (!track) return Promise.resolve(null);
+  if (previews.has(track.url)) return previews.get(track.url);
+  const promise = new Promise(resolve => {
+    const done = image => {
+      if (!image) return resolve(null);
+      const canvas = document.createElement('canvas');
+      canvas.width = PREVIEW.width; canvas.height = PREVIEW.height;
+      const context = canvas.getContext('2d');
+      const sourceWidth = image.videoWidth || image.naturalWidth, sourceHeight = image.videoHeight || image.naturalHeight;
+      if (!context || !sourceWidth || !sourceHeight) return resolve(null);
+      const scale = Math.min(PREVIEW.width / sourceWidth, PREVIEW.height / sourceHeight);
+      const width = Math.round(sourceWidth * scale), height = Math.round(sourceHeight * scale);
+      context.fillStyle = '#000'; context.fillRect(0, 0, PREVIEW.width, PREVIEW.height);
+      try { context.drawImage(image, Math.floor((PREVIEW.width - width) / 2), Math.floor((PREVIEW.height - height) / 2), width, height); } catch { return resolve(null); }
+      resolve(canvas);
+    };
+    const timer = setTimeout(() => done(null), 20000);
+    if (track.type === 'image') {
+      const image = new Image();
+      image.crossOrigin = 'anonymous';
+      image.onload = () => { clearTimeout(timer); done(image); };
+      image.onerror = () => { clearTimeout(timer); done(null); };
+      image.src = track.url;
+      return;
+    }
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous'; video.muted = true; video.playsInline = true; video.preload = 'auto';
+    const finish = image => { clearTimeout(timer); done(image); video.removeAttribute('src'); video.load(); };
+    video.onerror = () => finish(null);
+    video.onloadeddata = () => {
+      const target = Number.isFinite(video.duration) && video.duration > 0 ? Math.min(2, video.duration * 0.1) : 0;
+      if (target <= 0 || Math.abs(video.currentTime - target) < 0.05) return finish(video);
+      video.onseeked = () => finish(video);
+      video.currentTime = target;
+    };
+    video.src = track.url;
+  });
+  previews.set(track.url, promise);
+  return promise;
+}
+
+/** Qué turno enseña cada tecla ahora; si cambia (otra pieza en antena u otra playlist) repinta las 12 teclas. */
+function refreshNavigator() {
+  const total = onAir.source === 'playlist' ? playlist.slots.length : 0;
+  const map = navigatorWindow(total, onAir.index, { before: KEYS_BEFORE, after: KEYS_AFTER });
+  const key = playlist.rev + ':' + onAir.source + ':' + onAir.index + ':' + map.join(',');
+  if (key === keypad.key) return;
+  keypad = { key, map, rev: keypad.rev + 1, painted: false };
+  void paintNavigator(key);
+}
+
+async function paintNavigator(key) {
+  const entries = keypad.map.map((index, position) => {
+    if (index === null) return null;
+    const slot = playlist.slots[index];
+    const offset = position < KEYS_BEFORE ? position - KEYS_BEFORE : position - KEYS_BEFORE + 1;
+    return { slot, title: slot?.title || '', offset, next: offset > 0, position: index + 1, total: playlist.slots.length, image: null };
+  });
+  const repaint = () => {
+    if (keypad.key !== key) return; // ya hay otra ventana en marcha
+    paintKeys({ mosaic, keys }, entries);
+    keypad.rev++;
+    keypad.painted = true;
+  };
+  repaint(); // primero el texto: la tecla responde al instante aunque el previo tarde
+  await Promise.all(entries.map(async entry => {
+    if (!entry) return;
+    entry.image = await previewOf(entry.slot?.landscape);
+  }));
+  repaint();
+}
+
+/** Toque en la tecla `key` (0…11, orden físico): salta a la pieza que enseña. Devuelve si había salto posible. */
+function jumpToKey(key) {
+  if (onAir.source !== 'playlist' || twinSelection !== null) return false;
+  const index = keypad.map[key];
+  if (index === null || index === undefined) return false;
+  jump = { ms: jumpOffsetMs(playlist.slots, index, serverNow()), rev: playlist.rev };
+  program();
+  return true;
+}
+
+/** Volumen de las ruedas (window.admiraGalleonOutput.volume/muted): suena sólo cuando el teclado recibe la señal.
+ * Fuera del adaptador la página va muda. */
 function applyAudio() {
   const output = NATIVE && window.admiraGalleonOutput && typeof window.admiraGalleonOutput === 'object' ? window.admiraGalleonOutput : null;
   const volume = output && Number.isFinite(Number(output.volume)) ? Math.min(1, Math.max(0, Number(output.volume))) : 0;
@@ -223,16 +318,19 @@ function applyAudio() {
   }
 }
 
-// ── Adaptador USB (?native=1): fotogramas para el teclado, volumen y latido en la flota ──
+// ── Adaptador USB (?native=1): fotogramas para el teclado, saltos, volumen y latido en la flota ──
 if (NATIVE) {
-  window.admiraGalleonFrames = () => {
+  // La LCD va en cada llamada; las teclas sólo cuando han cambiado desde `sinceKeys` (el adaptador recuerda keysRev).
+  window.admiraGalleonFrames = sinceKeys => {
     try {
-      return { frame: frameCount, playing, ready: readiness(), onAir,
-        landscape: lcd.toDataURL('image/jpeg', 0.85), portrait: mosaic.toDataURL('image/jpeg', 0.85) };
+      const frames = { frame: frameCount, playing, ready: readiness(), onAir, keysRev: keypad.rev, landscape: lcd.toDataURL('image/jpeg', 0.85) };
+      if (keypad.painted && keypad.rev !== sinceKeys) frames.keys = mosaic.toDataURL('image/jpeg', 0.85);
+      return frames;
     } catch (error) {
       return { frame: frameCount, error: String(error?.message || error) };
     }
   };
+  window.admiraGalleonJump = key => jumpToKey(Number(key));
   // Un productor ESTABLE por pantalla: /signage/now concede la pantalla al primer productor que late y rechaza (409)
   // a cualquier otro durante 3 min. Con un id aleatorio por perfil/origen, cada arranque del adaptador perdía la
   // pantalla frente a su propia carga anterior (pasó el 13-nov-2026 entre la prueba local y la de producción).
@@ -248,14 +346,14 @@ if (NATIVE) {
     fetch(NOW_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
       screen: SCREEN, producer, item, standby: !(playing && output.connected), role: 'galleon', version,
       device: {
-        display: { width: 720, height: 384, cssWidth: 720, cssHeight: 384, viewportWidth: innerWidth, viewportHeight: innerHeight, devicePixelRatio: 1, orientation: 'landscape', keys: '3×4 · 160 px', mosaic: '480×640' },
-        system: { os: 'macOS', platform: navigator.platform || '', language: navigator.language || '', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '' },
+        display: { width: 720, height: 384, cssWidth: 720, cssHeight: 384, viewportWidth: innerWidth, viewportHeight: innerHeight, devicePixelRatio: 1, orientation: 'landscape', keys: '3×4 · 160 px · navegador', mosaic: '480×640' },
+        system: { os: 'macOS', platform: window.navigator.platform || '', language: window.navigator.language || '', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '' },
         hardware: { dedicated: true, model: 'Corsair Galleon 100 SD', serial: String(output.serial || '') },
-        software: { player: 'Corsair Galleon 100 SD', playerVersion: String(output.version || ''), webRelease: version, engine: 'Chromium headless', userAgent: navigator.userAgent },
+        software: { player: 'Corsair Galleon 100 SD', playerVersion: String(output.version || ''), webRelease: version, engine: 'Chromium headless', userAgent: window.navigator.userAgent },
         audio: { muted: audio.muted, volume: audio.volume, playing: playing && !audio.muted },
-        network: { online: navigator.onLine !== false },
+        network: { online: window.navigator.onLine !== false },
       },
-      health: { source: 'live', ready, output: output.connected ? 'usb' : 'yielded', frame: frameCount },
+      health: { source: 'live', ready, output: output.connected ? 'usb' : 'yielded', frame: frameCount, jump: jump.ms !== 0 },
       loc: 'corsair', locName: 'Corsair Galleon 100 SD', machine: 'MacStudio',
     }) }).catch(() => {});
   };
@@ -266,9 +364,8 @@ if (NATIVE) {
 setInterval(() => {
   applyAudio();
   const landscape = paintable(tracks.landscape);
-  const portrait = paintable(tracks.portrait);
-  paintGalleon(surfaces, { landscape, portrait });
-  playing = Boolean(landscape || portrait);
+  paintLcd(lcd, landscape);
+  playing = Boolean(landscape);
   frameCount++;
 }, 100);
 

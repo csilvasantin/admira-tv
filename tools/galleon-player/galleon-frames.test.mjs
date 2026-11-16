@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRequire } from 'node:module';
 
-const { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createVolumeControl, ringColors, clampVolume } = createRequire(import.meta.url)('./galleon-frames.cjs');
+const { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, ringColors, clampVolume } = createRequire(import.meta.url)('./galleon-frames.cjs');
 
 test('la geometría es la del Galleon 100 SD: LCD 720×384 y 12 teclas 160×160 en 3 columnas × 4 filas', () => {
   assert.deepEqual(LCD, { width: 720, height: 384 });
@@ -83,4 +83,30 @@ test('el anillo del dial enseña el nivel: LEDs verdes según el volumen, todo r
   assert.deepEqual(ringColors({ volume: 0 }), [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]);
   assert.deepEqual(ringColors({ volume: 0.8, muted: true }), [90, 0, 0, 90, 0, 0, 90, 0, 0, 90, 0, 0]);
   assert.equal(ringColors({ volume: 0.3 }, 10).length, 30);
+});
+
+test('un toque en una tecla salta a su pieza; una pulsación larga no; la tecla 12 salta al soltar antes del segundo y sale si se mantiene', () => {
+  let clock = 1000;
+  const taps = [];
+  const tap = createKeyTaps(index => taps.push(index), { maxHold: 800, now: () => clock });
+  assert.equal(tap('down', { type: 'encoder', index: 0 }), false); // las ruedas no son teclas
+  assert.equal(tap('down', { type: 'button', index: 7 }), true);
+  clock += 150;
+  tap('up', { type: 'button', index: 7 });
+  tap('down', { type: 'button', index: 2 });
+  clock += 2000;
+  tap('up', { type: 'button', index: 2 }); // larga: no salta
+  tap('up', { type: 'button', index: 4 }); // soltada sin pulsación conocida: nada
+  assert.deepEqual(taps, [7]);
+
+  const exits = [], jumps = [];
+  let timer = null;
+  const gesture = createExitGesture(() => exits.push('exit'), { onTap: index => jumps.push(index), now: () => clock,
+    setTimer: (fn, ms) => { timer = { fn, ms }; return timer; }, clearTimer: () => { timer = null; } });
+  gesture('down', { type: 'button', index: 11 });
+  gesture('up', { type: 'button', index: 11 }); // toque: salta a +6
+  assert.deepEqual([jumps, exits, timer], [[11], [], null]);
+  gesture('down', { type: 'button', index: 11 });
+  timer.fn(); // mantenida un segundo: vuelve a Elgato, sin salto
+  assert.deepEqual([jumps, exits], [[11], ['exit']]);
 });

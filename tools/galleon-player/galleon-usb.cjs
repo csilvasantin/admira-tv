@@ -2,16 +2,18 @@
 'use strict';
 // Adaptador USB del Corsair Galleon 100 SD (encargo #7569, Neo, 13-nov-2026).
 // Carga https://admira.tv/galleon?native=1 en un Chrome SIN ventana (headless: nada aparece en los monitores de
-// Carlos ni se roba el foco), lee los dos fotogramas que expone window.admiraGalleonFrames() y los vuelca por USB
-// a la LCD superior (720×384, horizontal) y a las 12 teclas (160×160, mosaico vertical) con @elgato-stream-deck/node,
-// la misma librería que el controlador Starbucks de AdmiraCorsair. Cede siempre el teclado: si Elgato Stream Deck
+// Carlos ni se roba el foco), lee lo que expone window.admiraGalleonFrames() y lo vuelca por USB con
+// @elgato-stream-deck/node, la misma librería que el controlador Starbucks de AdmiraCorsair: la LCD superior
+// (720×384, el player) a cada fotograma y las 12 teclas (160×160) sólo cuando cambian, porque desde el 16-nov-2026
+// son el navegador de la playlist (previos de las 6 piezas anteriores y las 6 siguientes); tocar una tecla salta
+// a esa pieza (window.admiraGalleonJump). Cede siempre el teclado: si Elgato Stream Deck
 // o ese controlador tienen el USB, espera sin tocarlo; mantener la tecla 12 un segundo lo devuelve a Elgato.
 // Guarda en ~/.admira-galleon lo último que salió por USB (last-lcd.png, last-keys.png): la captura real.
 // Suena por los altavoces del Mac Studio (sólo la pista horizontal) y las dos ruedas del teclado son el volumen:
 // girar sube o baja a saltos de 5 %, pulsar silencia o devuelve el sonido; el anillo de LEDs enseña el nivel.
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const { execFileSync } = require('node:child_process');
-const { LCD, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createVolumeControl, ringColors, clampVolume } = require('./galleon-frames.cjs');
+const { LCD, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, ringColors, clampVolume } = require('./galleon-frames.cjs');
 
 const RUNTIME = process.env.ADMIRA_GALLEON_HOME || path.join(os.homedir(), '.admira-galleon');
 const SCREEN = /^[a-z0-9][a-z0-9-]{1,79}$/.test(process.env.ADMIRA_GALLEON_SCREEN || '') ? process.env.ADMIRA_GALLEON_SCREEN : 'corsair-galleon-100';
@@ -33,7 +35,7 @@ function chromeForTesting() {
 }
 const CHROME = process.env.ADMIRA_GALLEON_CHROME || chromeForTesting() || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const FPS = Math.min(15, Math.max(2, Number(process.env.ADMIRA_GALLEON_FPS) || 10));
-const VERSION = 'usb-2 · 16-nov-2026';
+const VERSION = 'usb-3 · 16-nov-2026';
 const VOLUME_FILE = path.join(RUNTIME, 'volume.json');
 const ELGATO_APP = '/Applications/Elgato Stream Deck.app';
 const ELGATO_BIN = ELGATO_APP + '/Contents/MacOS/Stream Deck';
@@ -60,7 +62,7 @@ function holder() {
   return holderName;
 }
 
-let device = null, serial = '', browser = null, page = null, closing = false, lastFrame = -1, sent = 0, lastSaved = 0, yielding = '';
+let device = null, serial = '', browser = null, page = null, closing = false, lastFrame = -1, lastKeys = -1, sent = 0, lastSaved = 0, yielding = '';
 let told = null, toldAt = 0, hookWaitSince = Date.now();
 const status = extra => fs.writeFileSync(path.join(RUNTIME, 'status.json'), JSON.stringify({ pid: process.pid, screen: SCREEN, url: PAGE_URL,
   serial, connected: Boolean(device), yielding, frames: sent, fps: FPS, version: VERSION, chrome: CHROME, audio, at: Date.now(), ...extra }));
@@ -105,9 +107,11 @@ async function openDevice() {
   if (!found) return false;
   const opened = await openStreamDeck(found.path);
   opened.on('error', error => { log('usb-error ' + error.message); void releaseDevice('usb-error'); });
-  const gesture = createExitGesture(() => void returnToElgato());
-  opened.on('down', control => { if (!gesture('down', control)) volumeControl('down', control); });
-  opened.on('up', control => { if (!gesture('up', control)) volumeControl('up', control); });
+  // Teclas: un toque salta a la pieza que enseña (también en la 12, si se suelta antes del segundo); las ruedas, volumen.
+  const gesture = createExitGesture(() => void returnToElgato(), { onTap: index => void jumpTo(index) });
+  const taps = createKeyTaps(index => void jumpTo(index));
+  opened.on('down', control => { if (!gesture('down', control) && !taps('down', control)) volumeControl('down', control); });
+  opened.on('up', control => { if (!gesture('up', control) && !taps('up', control)) volumeControl('up', control); });
   opened.on('rotate', (control, value) => volumeControl('rotate', control, value));
   try { await opened.setBrightness(100); } catch {}
   try { await opened.clearPanel(); } catch {}
@@ -115,6 +119,7 @@ async function openDevice() {
   serial = found.serialNumber || '';
   await showVolume(opened);
   lastFrame = -1;
+  lastKeys = -1;
   log('usb-open ' + found.model + ' ' + serial);
   status();
   return true;
@@ -122,13 +127,16 @@ async function openDevice() {
 
 async function openBrowser() {
   // Sin silenciar el audio: el player suena por la salida de audio del Mac (el headless nuevo sí la usa). El volumen lo pone la página
-  // según window.admiraGalleonOutput (volume/muted), que escribe tell().
+  // según window.admiraGalleonOutput (volume/muted), que escribe tell(). OJO: puppeteer añade por su cuenta el interruptor de
+  // silencio (mute-audio) a todo Chrome sin ventana; hay que excluirlo con ignoreDefaultArgs o CoreAudio ve el flujo pero sale
+  // en silencio (así se perdió el sonido el 16-nov-2026).
   const args = ['--autoplay-policy=no-user-gesture-required', '--disable-background-timer-throttling',
     '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--no-first-run', '--no-default-browser-check',
     '--window-size=760,1100'];
   // Sólo para probar en local una copia de /galleon servida en 127.0.0.1 (la API de admira.tv no da CORS): nunca en producción.
   if (process.env.ADMIRA_GALLEON_INSECURE === '1' && /^http:\/\/(127\.0\.0\.1|localhost)[:/]/.test(PAGE_URL)) args.push('--disable-web-security');
-  browser = await puppeteer.launch({ executablePath: CHROME, headless: true, userDataDir: path.join(RUNTIME, 'chrome-profile'), args });
+  browser = await puppeteer.launch({ executablePath: CHROME, headless: true, userDataDir: path.join(RUNTIME, 'chrome-profile'), args,
+    ignoreDefaultArgs: ['--' + 'mute-audio'] });
   browser.on('disconnected', () => { if (!closing) { log('chrome-disconnected'); process.exit(1); } });
   page = await browser.newPage();
   await page.setViewport({ width: 740, height: 1100 });
@@ -146,29 +154,43 @@ async function tell(connected) {
   try { await page.evaluate(state => { window.admiraGalleonOutput = state; }, { connected, serial, version: VERSION, at: Date.now(), volume: audio.volume, muted: audio.muted }); } catch {}
 }
 
+/** Toque en una tecla: la página salta a la pieza que esa tecla enseña (si está en su playlist). */
+async function jumpTo(index) {
+  try {
+    const jumped = await page.evaluate(key => typeof window.admiraGalleonJump === 'function' && window.admiraGalleonJump(key), index);
+    log('tecla ' + (index + 1) + (jumped ? ' → salto' : ' → sin pieza'));
+  } catch (error) { log('salto-error ' + error.message); }
+}
+
 async function pushFrame() {
-  const frames = await page.evaluate(() => typeof window.admiraGalleonFrames === 'function' ? window.admiraGalleonFrames() : null);
-  if (!frames || frames.error || frames.frame === lastFrame) return false;
-  const lcdJpeg = dataUrlToBuffer(frames.landscape), mosaicJpeg = dataUrlToBuffer(frames.portrait);
-  if (!lcdJpeg || !mosaicJpeg) return false;
-  const [lcdRaw, mosaicRaw] = await Promise.all([
-    sharp(lcdJpeg).resize(LCD.width, LCD.height, { fit: 'fill' }).removeAlpha().raw().toBuffer(),
-    sharp(mosaicJpeg).resize(MOSAIC.width, MOSAIC.height, { fit: 'fill' }).removeAlpha().raw().toBuffer(),
-  ]);
+  const frames = await page.evaluate(since => typeof window.admiraGalleonFrames === 'function' ? window.admiraGalleonFrames(since) : null, lastKeys);
+  if (!frames || frames.error) return false;
   const target = device;
   if (!target || closing) return false;
-  await target.fillLcd(0, lcdRaw, { format: 'rgb' });
-  const tiles = keyTiles(mosaicRaw);
-  for (let index = 0; index < tiles.length; index++) {
-    if (device !== target || closing) return false; // el teclado se soltó a mitad de fotograma (parada o cesión)
-    await target.fillKeyBuffer(index, tiles[index], { format: 'rgb' });
+  // Las teclas sólo cuando la página dice que han cambiado (otra pieza en antena): 12 volcados, no 120 por segundo.
+  const keysJpeg = frames.keys !== undefined ? dataUrlToBuffer(frames.keys) : null;
+  if (keysJpeg) {
+    const mosaicRaw = await sharp(keysJpeg).resize(MOSAIC.width, MOSAIC.height, { fit: 'fill' }).removeAlpha().raw().toBuffer();
+    const tiles = keyTiles(mosaicRaw);
+    for (let index = 0; index < tiles.length; index++) {
+      if (device !== target || closing) return false; // el teclado se soltó a mitad (parada o cesión)
+      await target.fillKeyBuffer(index, tiles[index], { format: 'rgb' });
+    }
+    lastKeys = frames.keysRev;
+    fs.writeFileSync(path.join(RUNTIME, 'last-keys.png'), await sharp(mosaicRaw, { raw: { width: MOSAIC.width, height: MOSAIC.height, channels: 3 } }).png().toBuffer());
+    log('teclas ' + frames.keysRev + ' ' + JSON.stringify(frames.onAir || null));
   }
+  if (frames.frame === lastFrame) return Boolean(keysJpeg);
+  const lcdJpeg = dataUrlToBuffer(frames.landscape);
+  if (!lcdJpeg) return false;
+  const lcdRaw = await sharp(lcdJpeg).resize(LCD.width, LCD.height, { fit: 'fill' }).removeAlpha().raw().toBuffer();
+  if (device !== target || closing) return false;
+  await target.fillLcd(0, lcdRaw, { format: 'rgb' });
   lastFrame = frames.frame;
   sent++;
   if (Date.now() - lastSaved > 5000) {
     lastSaved = Date.now();
     fs.writeFileSync(path.join(RUNTIME, 'last-lcd.png'), await sharp(lcdRaw, { raw: { width: LCD.width, height: LCD.height, channels: 3 } }).png().toBuffer());
-    fs.writeFileSync(path.join(RUNTIME, 'last-keys.png'), await sharp(mosaicRaw, { raw: { width: MOSAIC.width, height: MOSAIC.height, channels: 3 } }).png().toBuffer());
     status({ onAir: frames.onAir, ready: frames.ready, playing: frames.playing });
     if (sent === 1 || sent % 600 === 0) log('frames ' + sent + ' ' + JSON.stringify(frames.onAir || null));
   }

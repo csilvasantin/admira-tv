@@ -1,6 +1,6 @@
 'use strict';
 // Piezas puras del adaptador USB del Corsair Galleon 100 SD (encargo #7569): geometría, troceado del mosaico en
-// las 12 teclas, el gesto de salida y las ruedas de volumen. Sin dependencias, para poder probarlas sin teclado.
+// las 12 teclas, el gesto de salida, los toques del navegador y las ruedas de volumen. Sin dependencias, para poder probarlas sin teclado.
 
 const LCD = Object.freeze({ width: 720, height: 384 });
 const KEYS = Object.freeze({ columns: 3, rows: 4, size: 160 });
@@ -35,7 +35,7 @@ function keyTiles(raw, { columns = KEYS.columns, rows = KEYS.rows, size = KEYS.s
  * Gesto de salida: mantener la tecla 12 (índice 11) un segundo devuelve el teclado a Elgato. Un toque breve no
  * hace nada: las teclas son pantalla de contenido y no deben reaccionar a un roce.
  */
-function createExitGesture(onExit, { index = 11, delay = 1000, now = Date.now, setTimer = setTimeout, clearTimer = clearTimeout } = {}) {
+function createExitGesture(onExit, { index = 11, delay = 1000, onTap = null, now = Date.now, setTimer = setTimeout, clearTimer = clearTimeout } = {}) {
   let pressedAt = null, timer = null;
   return (event, control) => {
     if (control?.type !== 'button' || control.index !== index) return false;
@@ -44,8 +44,27 @@ function createExitGesture(onExit, { index = 11, delay = 1000, now = Date.now, s
       timer = setTimer(() => { timer = null; pressedAt = null; onExit(); }, delay);
     }
     if (event === 'up' && pressedAt !== null) {
-      if (timer !== null) { clearTimer(timer); timer = null; }
+      // Soltada antes del segundo: un toque. Desde el navegador (16-nov-2026) el toque también salta de pieza (onTap).
+      if (timer !== null) { clearTimer(timer); timer = null; if (typeof onTap === 'function') onTap(index); }
       pressedAt = null;
+    }
+    return true;
+  };
+}
+
+/**
+ * Toque en una tecla del navegador (Carlos, 16-nov-2026): pulsar y soltar una tecla (antes de `maxHold` ms) salta a la
+ * pieza que enseña. Una pulsación larga no salta (no es un toque). Las ruedas no pasan por aquí.
+ */
+function createKeyTaps(onTap, { maxHold = 800, now = Date.now } = {}) {
+  const pressed = new Map();
+  return (event, control) => {
+    if (control?.type !== 'button') return false;
+    if (event === 'down') pressed.set(control.index, now());
+    else if (event === 'up') {
+      const since = pressed.get(control.index);
+      pressed.delete(control.index);
+      if (since !== undefined && now() - since < maxHold) onTap(control.index);
     }
     return true;
   };
@@ -92,4 +111,4 @@ function ringColors({ volume = 0, muted = false } = {}, steps = 4) {
   return colors;
 }
 
-module.exports = { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createVolumeControl, ringColors, clampVolume };
+module.exports = { LCD, KEYS, MOSAIC, dataUrlToBuffer, keyTiles, createExitGesture, createKeyTaps, createVolumeControl, ringColors, clampVolume };

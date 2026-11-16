@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cycleMs, familyKey, linked, orientationOf, pairPlaylist, slotAt, trackOf } from './assets/galleon-schedule.mjs';
+import { cycleMs, familyKey, jumpOffsetMs, linked, navigatorWindow, orientationOf, pairPlaylist, slotAt, trackOf } from './assets/galleon-schedule.mjs';
 
 const H = { id: '1794501557972-tiftm4', stockId: '1794501557972-tiftm4', title: 'Así Sonaba 1985… Cuando los 80s No Tenían Competencia · Adaptación · 16:9 · Admira', seconds: 183, asset: 'https://api.admira.store/stock/asset/1794501557972-tiftm4?v=51154428', assetType: 'video', tags: ['horizontal', 'good'] };
 const V = { id: '1794427190641-t7e6p3', stockId: '1794427190641-t7e6p3', title: 'Así Sonaba 1985… Cuando los 80s No Tenían Competencia · 16:9 · subtítulos ES · 9:16', seconds: 179, asset: 'https://api.admira.store/stock/asset/1794427190641-t7e6p3?v=76206571', assetType: 'video', tags: ['vertical', 'formato-alterno'] };
@@ -64,4 +64,26 @@ test('una pieza de playlist se vuelve pista con la forma del playout', () => {
   assert.equal(trackOf({ id: 'x', asset: 'http://inseguro', assetType: 'video' }), null);
   assert.equal(trackOf({ id: 'x', asset: 'https://a/b', assetType: 'audio' }), null);
   assert.equal(trackOf(null), null);
+});
+
+test('las 12 teclas enseñan las 6 piezas anteriores (arriba, −6…−1) y las 6 siguientes (abajo, +1…+6), apagadas si no hay tantas', () => {
+  assert.deepEqual(navigatorWindow(20, 10), [4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16]);
+  assert.deepEqual(navigatorWindow(8, 0), [2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6]); // ciclo: −1 es la última del ciclo
+  assert.deepEqual(navigatorWindow(3, 1), [null, null, null, null, 2, 0, 2, 0, null, null, null, null]); // sólo 2 piezas distintas por lado
+  assert.deepEqual(navigatorWindow(2, 0), [null, null, null, null, null, 1, 1, null, null, null, null, null]);
+  assert.deepEqual(navigatorWindow(1, 0), Array(12).fill(null));
+  assert.deepEqual(navigatorWindow(0, -1), Array(12).fill(null));
+  assert.deepEqual(navigatorWindow(5, 2, { before: 2, after: 2 }), [0, 1, 3, 4]);
+});
+
+test('el salto por tecla desplaza el reloj para que el turno elegido empiece ahora mismo', () => {
+  const slots = pairPlaylist([H, V, ZOO_H, ZOO_V]); // 183 s + 23 s
+  const now = 1_700_000_000_000;
+  for (const index of [0, 1]) {
+    const at = slotAt(slots, now + jumpOffsetMs(slots, index, now));
+    assert.equal(at.index, index);
+    assert.equal(at.offsetMs, 0);
+  }
+  assert.equal(jumpOffsetMs(slots, 7, now), 0);
+  assert.equal(jumpOffsetMs([], 0, now), 0);
 });
