@@ -12,7 +12,7 @@
 // suena (por el Mac Studio), con el volumen que el adaptador escribe en window.admiraGalleonOutput desde la rueda
 // izquierda; en el gemelo va mudo.
 import { paintLcd, paintKeys } from './galleon-layout.mjs';
-import { jumpOffsetMs, navigatorWindow, pairPlaylist, slotAt, taggedForScreen, trackOf } from './galleon-schedule.mjs';
+import { jumpOffsetMs, navigatorWindow, pairPlaylist, rebaseMs, slotAt, taggedForScreen, trackOf } from './galleon-schedule.mjs';
 
 const params = new URLSearchParams(location.search);
 const SCREEN = /^[a-z0-9][a-z0-9-]{1,79}$/.test(params.get('screen') || '') ? params.get('screen') : 'corsair-galleon-100';
@@ -149,13 +149,15 @@ function syncTrack(track, positionMs) {
   if (media.paused) void media.play().catch(() => {});
 }
 
-/** Un turno con duración supuesta (pieza dirigida por etiqueta) toma la real del vídeo en cuanto se conoce. */
-function learnDuration(slot, track) {
+/** Un turno con duración supuesta (pieza dirigida por etiqueta) toma la real del vídeo en cuanto se conoce,
+ * manteniendo la posición en antena (el cambio de longitud del ciclo no debe mover la aguja). */
+function learnDuration(slot, track, at) {
   if (!slot?.guessed || !track?.video) return;
   const duration = track.media.duration;
   if (!Number.isFinite(duration) || duration <= 0) return;
   slot.seconds = Math.max(2, Math.ceil(duration));
   slot.guessed = false;
+  if (at) jump = { ms: rebaseMs(playlist.slots, at.index, at.offsetMs, serverNow()), rev: playlist.rev };
 }
 
 function paintable(track) {
@@ -187,7 +189,7 @@ function program() {
   const landscape = trackOf(at.slot.landscape);
   setTrack('landscape', landscape);
   syncTrack(tracks.landscape, at.offsetMs);
-  learnDuration(at.slot, tracks.landscape);
+  learnDuration(at.slot, tracks.landscape, at);
   onAir = { source: 'playlist', id: String(landscape?.id || ''), title: at.slot.title, index: at.index, total: at.total, paired: at.slot.paired };
   refreshNavigator();
 }
@@ -265,8 +267,15 @@ function composePlaylist() {
   const rev = String(draft.rev) + (extra.length ? '+' + extra.map(item => item.stockId || item.id).join(',') : '');
   if (rev === playlist.rev) return;
   const items = [...draft.items, ...extra];
+  // Continuidad: si la pieza en antena sigue en la playlist nueva, sigue por donde iba (el ciclo anclado al reloj
+  // saltaría a cualquier sitio al cambiar de longitud). Si no está, se vuelve al reloj puro.
+  const before = onAir.source === 'playlist' && pausedAt === null ? slotAt(playlist.slots, serverNow() + jump.ms) : null;
+  const slots = pairPlaylist(items);
   // ids de todas las piezas (el adaptador celebra las que entran nuevas: jingle de recreativa y anillos parpadeando)
-  playlist = { rev, name: String(draft.name || ''), slots: pairPlaylist(items), ids: [...new Set(items.map(item => String(item.stockId || item.id || '')).filter(Boolean))] };
+  playlist = { rev, name: String(draft.name || ''), slots, ids: [...new Set(items.map(item => String(item.stockId || item.id || '')).filter(Boolean))] };
+  const sameId = slot => String(trackOf(slot.landscape)?.id || '') === onAir.id;
+  const keep = before && onAir.id ? slots.findIndex(sameId) : -1;
+  jump = { ms: keep >= 0 ? rebaseMs(slots, keep, before.offsetMs, serverNow()) : 0, rev };
   program();
 }
 

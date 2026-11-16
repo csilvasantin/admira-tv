@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cycleMs, familyKey, jumpOffsetMs, linked, navigatorWindow, orientationOf, pairPlaylist, slotAt, taggedForScreen, trackOf } from './assets/galleon-schedule.mjs';
+import { cycleMs, familyKey, jumpOffsetMs, linked, navigatorWindow, orientationOf, pairPlaylist, rebaseMs, slotAt, taggedForScreen, trackOf } from './assets/galleon-schedule.mjs';
 
 const H = { id: '1794501557972-tiftm4', stockId: '1794501557972-tiftm4', title: 'Así Sonaba 1985… Cuando los 80s No Tenían Competencia · Adaptación · 16:9 · Admira', seconds: 183, asset: 'https://api.admira.store/stock/asset/1794501557972-tiftm4?v=51154428', assetType: 'video', tags: ['horizontal', 'good'] };
 const V = { id: '1794427190641-t7e6p3', stockId: '1794427190641-t7e6p3', title: 'Así Sonaba 1985… Cuando los 80s No Tenían Competencia · 16:9 · subtítulos ES · 9:16', seconds: 179, asset: 'https://api.admira.store/stock/asset/1794427190641-t7e6p3?v=76206571', assetType: 'video', tags: ['vertical', 'formato-alterno'] };
@@ -109,4 +109,17 @@ test('del índice del Stock salen las piezas etiquetadas con el nombre de la pan
   assert.equal(trackOf(items[1]).url, 'https://stock.admira.store/stock/1794862042758-1631g8/asset.mp4?v=3194');
   assert.deepEqual(taggedForScreen(stock, ''), []);
   assert.deepEqual(taggedForScreen(null, 'corsair-galleon-100'), []);
+});
+
+test('al cambiar la playlist o una duración, la pieza en antena sigue por donde iba (rebaseMs)', () => {
+  const now = 1_700_000_000_000;
+  const slots = pairPlaylist([H, V, ZOO_H, ZOO_V]);
+  let at = slotAt(slots, now + rebaseMs(slots, 1, 12_000, now));
+  assert.deepEqual([at.index, at.offsetMs], [1, 12_000]);
+  const bigger = pairPlaylist([H, V, ZOO_H, ZOO_V, { id: 'x', title: 'Nueva', seconds: 10, asset: 'https://stock.admira.store/x.mp4', assetType: 'video', tags: ['horizontal'] }]);
+  at = slotAt(bigger, now + rebaseMs(bigger, 1, 12_000, now)); // la misma pieza (índice 1) con la misma posición, en el ciclo nuevo
+  assert.deepEqual([at.index, at.offsetMs, at.total], [1, 12_000, 3]);
+  at = slotAt(slots, now + rebaseMs(slots, 1, 99_000, now)); // una posición más allá del turno se recorta al final
+  assert.deepEqual([at.index, at.offsetMs], [1, 22_999]);
+  assert.equal(rebaseMs([], 0, 5, now), 0);
 });
