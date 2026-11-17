@@ -143,9 +143,10 @@ const TAG_KEY = value => String(value || '').normalize('NFD').replace(/[\u0300-\
 export function taggedForScreen(stock, screen) {
   const key = TAG_KEY(screen);
   if (!key) return [];
+  const accepted = new Set(key === 'corsair-galleon-100' ? [key, 'corsair', 'galleon'] : [key]);
   return (Array.isArray(stock) ? stock : []).filter(piece => piece && typeof piece === 'object' && !piece.oculto
       && ['video', 'image', 'animation'].includes(String(piece.type || '').toLowerCase()) && /^https:\/\//.test(String(piece.url || ''))
-      && (Array.isArray(piece.tags) ? piece.tags : []).some(tag => TAG_KEY(tag) === key))
+      && (Array.isArray(piece.tags) ? piece.tags : []).some(tag => accepted.has(TAG_KEY(tag))))
     .sort((a, b) => String(a.id).localeCompare(String(b.id)))
     .map(piece => ({ id: String(piece.id), stockId: String(piece.id), title: String(piece.title || ''), seconds: Number(piece.seconds) > 0 ? Number(piece.seconds) : 10,
       secondsGuessed: !(Number(piece.seconds) > 0), asset: String(piece.url), assetType: String(piece.type).toLowerCase(), tags: (piece.tags || []).map(String),

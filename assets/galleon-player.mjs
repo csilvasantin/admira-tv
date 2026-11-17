@@ -11,11 +11,13 @@
 // transporte con window.admiraGalleonTransport('toggle'|'next'|'prev') desde la rueda derecha. Sólo en ese modo
 // suena (por el Mac Studio), con el volumen que el adaptador escribe en window.admiraGalleonOutput desde la rueda
 // izquierda; en el gemelo va mudo.
+import { createExclusions } from './galleon-exclusions.mjs';
 import { paintLcd, paintKeys } from './galleon-layout.mjs';
 import { jumpOffsetMs, navigatorWindow, pairPlaylist, rebaseMs, slotAt, taggedForScreen, trackOf } from './galleon-schedule.mjs';
 
 const params = new URLSearchParams(location.search);
 const SCREEN = /^[a-z0-9][a-z0-9-]{1,79}$/.test(params.get('screen') || '') ? params.get('screen') : 'corsair-galleon-100';
+const exclusions = createExclusions({ getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) }, SCREEN);
 const NATIVE = params.get('native') === '1';
 const API = /^https:\/\/(www\.)?admira\.tv$/.test(location.origin) ? '' : 'https://admira.tv';
 const NOW_API = 'https://api.admira.store/signage/now';
@@ -264,9 +266,9 @@ function composePlaylist() {
     seen.add(id);
     extra.push(item);
   }
-  const rev = String(draft.rev) + (extra.length ? '+' + extra.map(item => item.stockId || item.id).join(',') : '');
+  const rev = String(draft.rev) + (extra.length ? '+' + extra.map(item => item.stockId || item.id).join(',') : '') + '|excluded:' + exclusions.revision();
   if (rev === playlist.rev) return;
-  const items = [...draft.items, ...extra];
+  const items = [...draft.items, ...extra].filter(item => !exclusions.has(item));
   // Continuidad: si la pieza en antena sigue en la playlist nueva, sigue por donde iba (el ciclo anclado al reloj
   // saltaría a cualquier sitio al cambiar de longitud). Si no está, se vuelve al reloj puro.
   const before = onAir.source === 'playlist' && pausedAt === null ? slotAt(playlist.slots, serverNow() + jump.ms) : null;
@@ -387,6 +389,20 @@ function resume() {
   if (tracks.landscape?.video) void tracks.landscape.media.play().catch(() => {});
   program();
 }
+function removePaused() {
+  if (pausedAt === null || onAir.source !== 'playlist' || twinSelection !== null) return { removed: false, paused: pausedAt !== null };
+  const index = onAir.index;
+  const slot = playlist.slots[index];
+  if (!slot || String(trackOf(slot.landscape)?.id || '') !== onAir.id) return { removed: false, paused: true };
+  try {
+    const ids = exclusions.removeSlot(slot);
+    if (!ids.length) return { removed: false, paused: true };
+    pausedAt = null;
+    composePlaylist();
+    if (playlist.slots.length) jumpToSlot(Math.min(index, playlist.slots.length - 1));
+    return { removed: true, ids, paused: false };
+  } catch (error) { return { removed: false, paused: true, error: String(error.message || error) }; }
+}
 function transport(action) {
   if (action === 'toggle') { if (pausedAt === null) pause(); else resume(); }
   else if (action === 'next' || action === 'prev') {
@@ -426,6 +442,7 @@ if (NATIVE) {
   };
   window.admiraGalleonJump = key => jumpToKey(Number(key));
   window.admiraGalleonTransport = action => transport(String(action));
+  window.admiraGalleonRemovePaused = removePaused;
   // Un productor ESTABLE por pantalla: /signage/now concede la pantalla al primer productor que late y rechaza (409)
   // a cualquier otro durante 3 min. Con un id aleatorio por perfil/origen, cada arranque del adaptador perdía la
   // pantalla frente a su propia carga anterior (pasó el 13-nov-2026 entre la prueba local y la de producción).

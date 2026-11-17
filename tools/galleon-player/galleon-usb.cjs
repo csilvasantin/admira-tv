@@ -38,7 +38,7 @@ function chromeForTesting() {
 }
 const CHROME = process.env.ADMIRA_GALLEON_CHROME || chromeForTesting() || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const FPS = Math.min(15, Math.max(2, Number(process.env.ADMIRA_GALLEON_FPS) || 10));
-const VERSION = 'usb-6 · 16-nov-2026';
+const VERSION = 'usb-7 · 17-nov-2026';
 const ARCADE_FILE = path.join(RUNTIME, 'arcade.wav');
 const LAMETRIC_FILE = path.join(RUNTIME, 'lametric.json');
 const VOLUME_FILE = path.join(RUNTIME, 'volume.json');
@@ -171,7 +171,28 @@ async function transportAction(action) {
     status();
   } catch (error) { log('transporte-error ' + error.message); }
 }
-const transportControl = createTransportControl(action => void transportAction(action));
+// Serialize wheel commands so pause -> mute observes the acknowledged page state.
+let wheelQueue = Promise.resolve();
+const enqueueWheel = action => { wheelQueue = wheelQueue.then(action).catch(error => log('rueda-error ' + error.message)); };
+const transportControl = createTransportControl(action => enqueueWheel(() => transportAction(action)));
+async function leftPress(control) {
+  const result = await page.evaluate(() => {
+    const frames = window.admiraGalleonFrames?.(-1);
+    if (!frames) return { unavailable: true };
+    if (frames.paused && frames.onAir?.source === 'playlist') {
+      return window.admiraGalleonRemovePaused?.() || { unavailable: true };
+    }
+    return { mute: true };
+  });
+  if (result?.mute) volumeControl('down', control);
+  else if (result?.removed) {
+    paused = result.paused === true;
+    lastKeys = -1;
+    await showTransport();
+    status();
+    log('playlist: retirada local ' + result.ids.join(','));
+  } else log('playlist: retirada no aplicada ' + (result?.error || 'página no preparada'));
+}
 
 async function releaseDevice(reason) {
   if (!device) return;
@@ -199,7 +220,7 @@ async function openDevice() {
   // Teclas: un toque salta a la pieza que enseña (también en la 12, si se suelta antes del segundo); las ruedas, volumen.
   const gesture = createExitGesture(() => void returnToElgato(), { onTap: index => void jumpTo(index) });
   const taps = createKeyTaps(index => void jumpTo(index));
-  opened.on('down', control => { if (!gesture('down', control) && !taps('down', control) && !volumeControl('down', control)) transportControl('down', control); });
+  opened.on('down', control => { if (control?.type === 'encoder' && control.index === 0) { enqueueWheel(() => leftPress(control)); return; } if (!gesture('down', control) && !taps('down', control) && !volumeControl('down', control)) transportControl('down', control); });
   opened.on('up', control => { if (!gesture('up', control) && !taps('up', control) && !volumeControl('up', control)) transportControl('up', control); });
   opened.on('rotate', (control, value) => { if (!volumeControl('rotate', control, value)) transportControl('rotate', control, value); });
   try { await opened.setBrightness(100); } catch {}
