@@ -113,13 +113,21 @@ export function slotAt(slots, nowMs) {
  * piezas distintas por lado: más allá, tecla apagada. Sin playlist o sin turno en antena, todo apagado.
  */
 export function navigatorWindow(total, index, { before = 6, after = 6 } = {}) {
-  const keys = [];
+  const offsets = [];
+  for (let offset = -before; offset <= after; offset++) if (offset) offsets.push(offset);
+  const selected = new Map(), seen = new Set([index]);
   const valid = Number.isInteger(total) && total > 1 && Number.isInteger(index) && index >= 0 && index < total;
-  for (let offset = -before; offset <= after; offset++) {
-    if (offset === 0) continue;
-    keys.push(valid && Math.abs(offset) <= total - 1 ? (((index + offset) % total) + total) % total : null);
+  if (valid) {
+    // Nearest neighbours first; ties go to the next side. Never show a slot twice.
+    for (const offset of [...offsets].sort((a, b) => Math.abs(a) - Math.abs(b) || b - a)) {
+      if (Math.abs(offset) >= total) continue;
+      const target = ((index + offset) % total + total) % total;
+      if (seen.has(target)) continue;
+      seen.add(target);
+      selected.set(offset, target);
+    }
   }
-  return keys;
+  return offsets.map(offset => selected.get(offset) ?? null);
 }
 
 /** Milisegundos que hay que sumar al reloj para que el turno `index` empiece justo ahora (salto por tecla). */
