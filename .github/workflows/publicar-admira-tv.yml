@@ -49,18 +49,8 @@ jobs:
           al_dia() { git fetch --quiet origin main && [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]; }
           al_dia || { echo "· main ya va por delante de este commit: lo publica la siguiente ejecución."; exit 0; }
 
-          # Normativa: como mucho 4 publicaciones por hora. Si la última salió hace menos de 15 min, se espera.
+          # Publicar sin espera artificial (Carlos, 17-nov-2026).
           vivo="$(curl -fsS "https://admira.tv/version.json?t=$(date +%s)")"
-          ultima="$(printf '%s' "$vivo" | jq -r '.deployedAt // empty')"
-          if [ -n "$ultima" ]; then
-            espera=$(( $(date -d "$ultima" +%s) + 900 - $(date +%s) ))
-            if [ "$espera" -gt 0 ]; then
-              echo "· máximo 4 publicaciones por hora: la última fue hace menos de 15 min, espero ${espera}s."
-              sleep "$espera"
-              al_dia || { echo "· mientras esperaba entró otro merge: lo publica la siguiente ejecución."; exit 0; }
-              vivo="$(curl -fsS "https://admira.tv/version.json?t=$(date +%s)")"
-            fi
-          fi
 
           # Sello: el del repo si es de hoy y más nuevo que producción (alguien selló a mano); si no, uno nuevo.
           hoy="$(TZ=Europe/Madrid date +%d.%m.%Y)"
