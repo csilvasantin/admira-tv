@@ -19,8 +19,8 @@ Desde el 14-oct-2026, **cada merge en `main` publica admira.tv solo**. Lo hace G
 
 ## Ritmo y comprobación
 
-- Como mucho 4 publicaciones por hora: si la última salió hace menos de 15 minutos, espera.
-- Si mientras tanto entra otro merge, publica solo el último.
+- Desde el 17-nov-2026, por indicación de Carlos, publica en cuanto el cambio está listo: sin intervalo mínimo ni límite artificial de publicaciones por hora.
+- Las publicaciones siguen serializadas para evitar despliegues simultáneos. Si antes de publicar entra otro merge, se omite el commit antiguo y lo publica la siguiente ejecución.
 - Al final comprueba que `admira.tv/version.json` sirve el commit publicado.
 
 ## Qué necesita
