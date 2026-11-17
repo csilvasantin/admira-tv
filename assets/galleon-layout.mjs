@@ -107,9 +107,14 @@ export function paintKeyTile(canvas, entry) {
   context.textAlign = 'left';
   context.fillText(String(entry.offset > 0 ? '+' + entry.offset : entry.offset), 6, previewHeight + 6);
   context.textAlign = 'right';
-  context.fillStyle = '#9a9a9a';
-  context.font = '13px system-ui, sans-serif';
-  context.fillText(String(entry.position) + '/' + String(entry.total), size - 6, previewHeight + 7);
+  // Same high-contrast position/total badge as the main LCD, over the preview.
+  const counter = String(entry.position) + '/' + String(entry.total);
+  context.font = 'bold 22px system-ui, sans-serif';
+  const counterWidth = Math.min(size - 12, Math.ceil(context.measureText(counter).width) + 14);
+  context.fillStyle = 'rgba(0, 0, 0, 0.78)';
+  context.fillRect(size - 6 - counterWidth, 6, counterWidth, 30);
+  context.fillStyle = '#ffffff';
+  context.fillText(counter, size - 13, 9, size - 26);
   context.textAlign = 'left';
   context.fillStyle = '#fff';
   context.font = '14px system-ui, sans-serif';
