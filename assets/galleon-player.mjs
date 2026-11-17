@@ -331,10 +331,11 @@ function previewOf(item) {
 }
 
 /** Qué turno enseña cada tecla ahora; si cambia (otra pieza en antena u otra playlist) repinta las 12 teclas. */
+function countersMuted() { return NATIVE && window.admiraGalleonOutput?.muted === true; }
 function refreshNavigator() {
   const total = onAir.source === 'playlist' ? playlist.slots.length : 0;
   const map = navigatorWindow(total, onAir.index, { before: KEYS_BEFORE, after: KEYS_AFTER });
-  const key = playlist.rev + ':' + onAir.source + ':' + onAir.index + ':' + map.join(',');
+  const key = playlist.rev + ':' + onAir.source + ':' + onAir.index + ':' + map.join(',') + ':mute:' + countersMuted();
   if (key === keypad.key) return;
   keypad = { key, map, rev: keypad.rev + 1, painted: false };
   void paintNavigator(key);
@@ -349,7 +350,7 @@ async function paintNavigator(key) {
   });
   const repaint = () => {
     if (keypad.key !== key) return; // ya hay otra ventana en marcha
-    paintKeys({ mosaic, keys }, entries);
+    paintKeys({ mosaic, keys }, entries, { muted: countersMuted() });
     keypad.rev++;
     keypad.painted = true;
   };
@@ -476,9 +477,10 @@ if (NATIVE) {
 
 setInterval(() => {
   applyAudio();
+  refreshNavigator();
   const landscape = paintable(tracks.landscape);
   paintLcd(lcd, landscape);
-  paintPlaylistCounter(lcd, playlistCounter(onAir, playlist.slots, { muted: audio.muted, paused: pausedAt !== null }));
+  paintPlaylistCounter(lcd, playlistCounter(onAir, playlist.slots, { muted: countersMuted() }));
   playing = Boolean(landscape);
   frameCount++;
 }, 100);

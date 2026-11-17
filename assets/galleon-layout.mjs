@@ -80,7 +80,7 @@ export function wrapTitle(context, title, width, lines = 2) {
  * Una tecla del navegador (160×160): el previo de la pieza arriba (16:9, 160×90), el título debajo en dos líneas, el
  * desplazamiento («−3», «+1») y la posición en la playlist («4/12»). Sin pieza (`entry` null) la tecla queda apagada.
  */
-export function paintKeyTile(canvas, entry) {
+export function paintKeyTile(canvas, entry, { muted = false } = {}) {
   const { size } = GALLEON_KEYS;
   if (canvas.width !== size) canvas.width = size;
   if (canvas.height !== size) canvas.height = size;
@@ -107,14 +107,18 @@ export function paintKeyTile(canvas, entry) {
   context.textAlign = 'left';
   context.fillText(String(entry.offset > 0 ? '+' + entry.offset : entry.offset), 6, previewHeight + 6);
   context.textAlign = 'right';
-  // Same high-contrast position/total badge as the main LCD, over the preview.
-  const counter = String(entry.position) + '/' + String(entry.total);
-  context.font = 'bold 22px system-ui, sans-serif';
-  const counterWidth = Math.min(size - 12, Math.ceil(context.measureText(counter).width) + 14);
-  context.fillStyle = 'rgba(0, 0, 0, 0.78)';
-  context.fillRect(size - 6 - counterWidth, 6, counterWidth, 30);
-  context.fillStyle = '#ffffff';
-  context.fillText(counter, size - 13, 9, size - 26);
+  if (muted) {
+    // A large central badge is readable on the physical 160px key display.
+    const counter = String(entry.position) + '/' + String(entry.total);
+    context.font = 'bold 44px system-ui, sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillStyle = 'rgba(0, 0, 0, 0.9)';
+    context.fillRect(3, 18, size - 6, 58);
+    context.fillStyle = '#ffffff';
+    context.fillText(counter, size / 2, 47, size - 14);
+  }
+  context.textBaseline = 'top';
   context.textAlign = 'left';
   context.fillStyle = '#fff';
   context.font = '14px system-ui, sans-serif';
@@ -123,7 +127,7 @@ export function paintKeyTile(canvas, entry) {
 }
 
 /** Pinta las 12 teclas (orden físico) y compone el mosaico 480×640 con ellas, para el adaptador USB y el gemelo. */
-export function paintKeys({ mosaic, keys }, entries) {
+export function paintKeys({ mosaic, keys }, entries, options = {}) {
   const { columns, rows, size } = GALLEON_KEYS;
   if (keys.length !== columns * rows) throw new RangeError('El Galleon requiere 12 teclas LCD.');
   if (mosaic.width !== columns * size) mosaic.width = columns * size;
@@ -133,7 +137,7 @@ export function paintKeys({ mosaic, keys }, entries) {
   context.fillStyle = '#000';
   context.fillRect(0, 0, mosaic.width, mosaic.height);
   keys.forEach((key, index) => {
-    paintKeyTile(key, entries?.[index] ?? null);
+    paintKeyTile(key, entries?.[index] ?? null, options);
     context.drawImage(key, (index % columns) * size, Math.floor(index / columns) * size, size, size);
   });
 }

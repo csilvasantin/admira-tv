@@ -1,26 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {playlistCounter,paintPlaylistCounter} from './assets/galleon-counter.mjs';
+import {paintKeyTile} from './assets/galleon-layout.mjs';
 const slots=Array.from({length:15},(_,i)=>({landscape:{id:String(i)},portrait:{id:'v'+i}}));
 const current={source:'playlist',id:'2',index:2,total:15};
-test('shows one-based position and counts paired slots once',()=>{
- assert.equal(playlistCounter(current,slots).text,'3/15');
+test('counters only appear on mute, including pause and empty list',()=>{
+ assert.equal(playlistCounter(current,slots),null);
+ assert.equal(playlistCounter(current,slots,{paused:true}),null);
+ assert.equal(playlistCounter(current,slots,{muted:true}).text,'3/15');
+ assert.equal(playlistCounter(current,slots.slice(1),{muted:true}).text,'2/14');
+ assert.equal(playlistCounter({...current,id:''},[],{muted:true}).text,'0/0');
+ assert.equal(playlistCounter({...current,source:'playout'},slots,{muted:true}),null);
 });
-test('tracks additions and removals even when onAir counters are stale in pause',()=>{
- assert.equal(playlistCounter(current,slots.slice(1),{paused:true}).text,'2/14');
- assert.equal(playlistCounter(current,[...slots,{landscape:{id:'new'}}]).text,'3/16');
- assert.equal(playlistCounter({...current,id:''},[]).text,'0/0');
+function canvas(){
+ const calls=[];const ctx={save(){},restore(){},measureText:t=>({width:t.length*22}),fillRect(){},drawImage(){},fillText(text,...args){calls.push({text,font:this.font,args})}};
+ return {width:720,height:384,calls,getContext:()=>ctx};
+}
+test('main LCD uses 40px text only in mute',()=>{
+ const c=canvas();paintPlaylistCounter(c,playlistCounter(current,slots));assert.equal(c.calls.length,0);
+ paintPlaylistCounter(c,playlistCounter(current,slots,{muted:true}));assert.equal(c.calls[0].text,'3/15');assert.match(c.calls[0].font,/40px/);
 });
-test('mute red, pause amber and playback white; no false counter for playout',()=>{
- assert.equal(playlistCounter(current,slots,{muted:true,paused:true}).color,'#ff6565');
- assert.equal(playlistCounter(current,slots,{paused:true}).color,'#ffd166');
- assert.equal(playlistCounter(current,slots).color,'#ffffff');
- assert.equal(playlistCounter({...current,source:'playout'},slots),null);
-});
-test('draws readable top-right overlay, restores canvas and omits absent counter',()=>{
- const calls=[];const ctx={save:()=>calls.push('save'),restore:()=>calls.push('restore'),measureText:()=>({width:80}),fillRect:(...a)=>calls.push(a),fillText:(...a)=>calls.push(a)};
- const canvas={width:720,height:384,getContext:()=>ctx};
- paintPlaylistCounter(canvas,playlistCounter(current,slots));
- assert.deepEqual(calls,['save',[598,14,108,44],['3/15',692,36],'restore']);
- paintPlaylistCounter(canvas,null);assert.equal(calls.length,4);
+test('small keys use central 44px counter only in mute, empty keys stay blank',()=>{
+ const entry={position:3,total:15,offset:1,next:true,title:'Video'};
+ for(const muted of [true,false]){
+  const c=canvas();paintKeyTile(c,entry,{muted});const counter=c.calls.find(call=>call.text==='3/15');
+  assert.equal(!!counter,muted);if(counter){assert.match(counter.font,/44px/);assert.deepEqual(counter.args,[80,47,146]);}
+ }
+ const empty=canvas();paintKeyTile(empty,null,{muted:true});assert.equal(empty.calls.length,0);
 });

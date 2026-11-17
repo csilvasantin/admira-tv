@@ -54,7 +54,7 @@ test('el navegador pinta las 12 teclas en orden físico y las compone en el mosa
   const entries = Array(12).fill(null);
   entries[5] = { image, title: 'Me at the zoo · Locución ES', offset: -1, position: 2, total: 2, next: false };
   entries[6] = { image: null, title: 'Así Sonaba 1985… Cuando los 80s No Tenían Competencia', offset: 1, position: 1, total: 2, next: true };
-  paintKeys({ mosaic, keys }, entries);
+  paintKeys({ mosaic, keys }, entries, { muted: true });
   assert.deepEqual([mosaic.width, mosaic.height], [480, 640]);
   assert.deepEqual(mosaic.calls.filter(c => c[0] === 'draw').map(c => c.slice(2, 4)), [
     [0, 0], [160, 0], [320, 0], [0, 160], [160, 160], [320, 160], [0, 320], [160, 320], [320, 320], [0, 480], [160, 480], [320, 480],
