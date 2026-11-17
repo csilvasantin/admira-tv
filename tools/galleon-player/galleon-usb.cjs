@@ -38,7 +38,7 @@ function chromeForTesting() {
 }
 const CHROME = process.env.ADMIRA_GALLEON_CHROME || chromeForTesting() || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const FPS = Math.min(15, Math.max(2, Number(process.env.ADMIRA_GALLEON_FPS) || 10));
-const VERSION = 'usb-7 · 17-nov-2026';
+const VERSION = 'usb-8 · 17-nov-2026';
 const ARCADE_FILE = path.join(RUNTIME, 'arcade.wav');
 const LAMETRIC_FILE = path.join(RUNTIME, 'lametric.json');
 const VOLUME_FILE = path.join(RUNTIME, 'volume.json');
@@ -69,8 +69,10 @@ function holder() {
 
 let device = null, serial = '', browser = null, page = null, closing = false, lastFrame = -1, lastKeys = -1, sent = 0, lastSaved = 0, yielding = '';
 let told = null, toldAt = 0, hookWaitSince = Date.now();
+let knownPieces = null; // ids de la playlist que ya conocemos (para celebrar las nuevas)
 const status = extra => fs.writeFileSync(path.join(RUNTIME, 'status.json'), JSON.stringify({ pid: process.pid, screen: SCREEN, url: PAGE_URL,
-  serial, connected: Boolean(device), yielding, frames: sent, fps: FPS, version: VERSION, chrome: CHROME, audio, paused, lametric: lametric ? { host: lametric.host, shown: lametricShown } : null, at: Date.now(), ...extra }));
+  serial, connected: Boolean(device), yielding, frames: sent, fps: FPS, version: VERSION, chrome: CHROME, audio, paused, lametric: lametric ? { host: lametric.host, shown: lametricShown } : null,
+  pieces: knownPieces || [], at: Date.now(), ...extra })); // pieces: ids de la playlist (la tinta china repinta solo con piezas nuevas)
 
 // ── Volumen: las dos ruedas del teclado. Se recuerda entre arranques en volume.json. ──
 function loadVolume() {
@@ -134,7 +136,7 @@ function lametricShow(text) {
 
 // ── Pieza nueva en la playlist (Carlos, 16-nov-2026): jingle de recreativa de los 80 por los altavoces (afplay, al
 // volumen del player, en silencio si el player está en silencio) y los anillos de los dos diales parpadeando 2 s. ──
-let knownPieces = null, celebrating = false;
+let celebrating = false;
 try { fs.writeFileSync(ARCADE_FILE, arcadeJingle()); } catch (error) { log('arcade-error ' + error.message); }
 async function celebrate(count) {
   if (celebrating) return;
