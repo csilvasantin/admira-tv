@@ -145,6 +145,17 @@ test('el reloj LaMetric enseña el título en antena sin sufijos de formato, con
   assert.equal(lametricText(null), '');
 });
 
+test('LaMetric antepone posición y total también en pausa, y actualiza el total al quitar contenidos', () => {
+  const item = { title: 'Best Songs Of 1986', index: 4, total: 8 };
+  assert.equal(lametricText(item), '5/8 · Best Songs Of 1986');
+  assert.equal(lametricText(item, { paused: true }), '5/8 · PAUSA · Best Songs Of 1986');
+  assert.equal(lametricText({ ...item, total: 7 }), '5/7 · Best Songs Of 1986');
+  assert.equal(lametricText({ ...item, index: 0, total: 1 }), '1/1 · Best Songs Of 1986');
+  assert.equal(lametricText(item, { connected: false }), '');
+  assert.equal(lametricText({ ...item, index: -1 }), item.title);
+  assert.equal(lametricText({ ...item, total: 0 }), item.title);
+});
+
 test('una pieza nueva en la playlist: jingle de recreativa (WAV válido, ~0,9 s) y parpadeo de colores en los anillos; la primera lectura no celebra', () => {
   const wav = arcadeJingle();
   assert.equal(wav.toString('ascii', 0, 4), 'RIFF'); assert.equal(wav.toString('ascii', 8, 12), 'WAVE');
