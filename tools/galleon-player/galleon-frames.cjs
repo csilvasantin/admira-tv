@@ -154,7 +154,10 @@ function cleanTitle(title) {
 function lametricText(onAir, { paused = false, connected = true } = {}) {
   const title = cleanTitle(onAir?.title);
   if (!connected || !title) return '';
-  return (paused ? 'PAUSA · ' : '') + title.slice(0, 120);
+  const { index, total } = onAir;
+  const position = Number.isInteger(index) && Number.isInteger(total) && index >= 0 && index < total
+    ? `${index + 1}/${total} · ` : '';
+  return position + (paused ? 'PAUSA · ' : '') + title.slice(0, 120);
 }
 
 /**
