@@ -11,6 +11,7 @@
 // transporte con window.admiraGalleonTransport('toggle'|'next'|'prev') desde la rueda derecha. Sólo en ese modo
 // suena (por el Mac Studio), con el volumen que el adaptador escribe en window.admiraGalleonOutput desde la rueda
 // izquierda; en el gemelo va mudo.
+import { paintPlaylistCounter, playlistCounter } from './galleon-counter.mjs';
 import { createExclusions } from './galleon-exclusions.mjs';
 import { paintLcd, paintKeys } from './galleon-layout.mjs';
 import { jumpOffsetMs, navigatorWindow, pairPlaylist, rebaseMs, slotAt, taggedForScreen, trackOf } from './galleon-schedule.mjs';
@@ -477,6 +478,7 @@ setInterval(() => {
   applyAudio();
   const landscape = paintable(tracks.landscape);
   paintLcd(lcd, landscape);
+  paintPlaylistCounter(lcd, playlistCounter(onAir, playlist.slots, { muted: audio.muted, paused: pausedAt !== null }));
   playing = Boolean(landscape);
   frameCount++;
 }, 100);
