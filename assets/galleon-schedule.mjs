@@ -106,28 +106,11 @@ export function slotAt(slots, nowMs) {
   return null;
 }
 
-/**
- * Navegador de las 12 teclas (Carlos, 16-nov-2026): las dos filas de arriba son las 6 piezas ANTERIORES a la que está en
- * antena (de la más lejana a la más cercana: −6 … −1) y las dos de abajo las 6 SIGUIENTES (+1 … +6). Devuelve, tecla a
- * tecla en orden físico, el índice del turno que le toca o null (tecla apagada). En un ciclo de n turnos sólo hay n−1
- * piezas distintas por lado: más allá, tecla apagada. Sin playlist o sin turno en antena, todo apagado.
- */
-export function navigatorWindow(total, index, { before = 6, after = 6 } = {}) {
-  const offsets = [];
-  for (let offset = -before; offset <= after; offset++) if (offset) offsets.push(offset);
-  const selected = new Map(), seen = new Set([index]);
-  const valid = Number.isInteger(total) && total > 1 && Number.isInteger(index) && index >= 0 && index < total;
-  if (valid) {
-    // Nearest neighbours first; ties go to the next side. Never show a slot twice.
-    for (const offset of [...offsets].sort((a, b) => Math.abs(a) - Math.abs(b) || b - a)) {
-      if (Math.abs(offset) >= total) continue;
-      const target = ((index + offset) % total + total) % total;
-      if (seen.has(target)) continue;
-      seen.add(target);
-      selected.set(offset, target);
-    }
-  }
-  return offsets.map(offset => selected.get(offset) ?? null);
+/** Página de 12 contenidos en orden, incluyendo el actual; sobrantes apagados. */
+export function navigatorWindow(total, index) {
+  const valid = Number.isInteger(total) && total > 0 && Number.isInteger(index) && index >= 0 && index < total;
+  const start = Math.floor(index / 12) * 12;
+  return Array.from({ length: 12 }, (_, key) => valid && start + key < total ? start + key : null);
 }
 
 /** Milisegundos que hay que sumar al reloj para que el turno `index` empiece justo ahora (salto por tecla). */

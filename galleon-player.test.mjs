@@ -94,10 +94,10 @@ test('el mando enseña «📺 Pantallas» solo para hotel-creel y manda pantalla
   assert.match(mando, /paintPantallas\(\);\n    \}/);
 });
 
-test('las 12 teclas son el navegador de la playlist (6 anteriores arriba, 6 siguientes abajo) y un toque salta; la LCD lleva sola el player (Carlos, 16-nov-2026)', () => {
+test('las 12 teclas son el navegador de la playlist por páginas ordenadas de 12 y un toque salta; la LCD lleva sola el player (Carlos, 16-nov-2026)', () => {
   assert.match(player, /import \{ paintLcd, paintKeys \} from '\.\/galleon-layout\.mjs'/);
-  assert.match(player, /navigatorWindow\(total, onAir\.index, \{ before: KEYS_BEFORE, after: KEYS_AFTER \}\)/);
-  assert.match(player, /const KEYS_BEFORE = 6, KEYS_AFTER = 6;/);
+  assert.match(player, /navigatorWindow\(total, onAir\.index\)/);
+  assert.match(player, /active: index === onAir.index/);
   assert.match(player, /const tracks = \{ landscape: null \};/); // ya no se decodifica la pista vertical
   assert.doesNotMatch(player, /setTrack\('portrait'/);
   assert.match(player, /paintLcd\(lcd, landscape\);/);
