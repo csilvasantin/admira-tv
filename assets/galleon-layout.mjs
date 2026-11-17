@@ -105,7 +105,7 @@ export function paintKeyTile(canvas, entry, { muted = false } = {}) {
   context.font = 'bold 15px system-ui, sans-serif';
   context.textBaseline = 'top';
   context.textAlign = 'left';
-  context.fillText(String(entry.offset > 0 ? '+' + entry.offset : entry.offset), 6, previewHeight + 6);
+  context.fillText(entry.active ? 'EN EMISIÓN' : String(entry.offset > 0 ? '+' + entry.offset : entry.offset), 6, previewHeight + 6);
   context.textAlign = 'right';
   if (muted) {
     // A large central badge is readable on the physical 160px key display.
@@ -124,6 +124,13 @@ export function paintKeyTile(canvas, entry, { muted = false } = {}) {
   context.font = '14px system-ui, sans-serif';
   const lines = wrapTitle(context, entry.title, size - 12, 2);
   lines.forEach((line, index) => context.fillText(line, 6, previewHeight + 26 + index * 17));
+  if (entry.active) {
+    context.fillStyle = '#00e676';
+    context.fillRect(0, 0, size, 6);
+    context.fillRect(0, size - 6, size, 6);
+    context.fillRect(0, 0, 6, size);
+    context.fillRect(size - 6, 0, 6, size);
+  }
 }
 
 /** Pinta las 12 teclas (orden físico) y compone el mosaico 480×640 con ellas, para el adaptador USB y el gemelo. */

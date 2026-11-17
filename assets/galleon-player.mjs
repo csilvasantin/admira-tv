@@ -24,7 +24,7 @@ const API = /^https:\/\/(www\.)?admira\.tv$/.test(location.origin) ? '' : 'https
 const NOW_API = 'https://api.admira.store/signage/now';
 const PLAYOUT_MS = 2500, PLAYLIST_MS = 12000, PROGRAM_MS = 500, BEAT_MS = 10000, STOCK_MS = 60000;
 const STOCK_INDEX = 'https://stock.admira.store/stock/index.json';
-const KEYS_BEFORE = 6, KEYS_AFTER = 6;
+
 
 const lcd = document.querySelector('#galleon-lcd');
 const mosaic = document.createElement('canvas');
@@ -334,7 +334,7 @@ function previewOf(item) {
 function countersMuted() { return NATIVE && window.admiraGalleonOutput?.muted === true; }
 function refreshNavigator() {
   const total = onAir.source === 'playlist' ? playlist.slots.length : 0;
-  const map = navigatorWindow(total, onAir.index, { before: KEYS_BEFORE, after: KEYS_AFTER });
+  const map = navigatorWindow(total, onAir.index);
   const key = playlist.rev + ':' + onAir.source + ':' + onAir.index + ':' + map.join(',') + ':mute:' + countersMuted();
   if (key === keypad.key) return;
   keypad = { key, map, rev: keypad.rev + 1, painted: false };
@@ -342,11 +342,11 @@ function refreshNavigator() {
 }
 
 async function paintNavigator(key) {
-  const entries = keypad.map.map((index, position) => {
+  const entries = keypad.map.map(index => {
     if (index === null) return null;
     const slot = playlist.slots[index];
-    const offset = position < KEYS_BEFORE ? position - KEYS_BEFORE : position - KEYS_BEFORE + 1;
-    return { slot, title: slot?.title || '', offset, next: offset > 0, position: index + 1, total: playlist.slots.length, image: null };
+    const offset = index - onAir.index;
+    return { slot, title: slot?.title || '', active: index === onAir.index, offset, next: offset > 0, position: index + 1, total: playlist.slots.length, image: null };
   });
   const repaint = () => {
     if (keypad.key !== key) return; // ya hay otra ventana en marcha

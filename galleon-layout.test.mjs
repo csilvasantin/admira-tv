@@ -69,3 +69,18 @@ test('el navegador pinta las 12 teclas en orden físico y las compone en el mosa
   paintLcd(lcd, image);
   assert.deepEqual(lcd.calls[1], ['draw', image, 18, 0, 683, 384]);
 });
+
+test('el contenido activo tiene borde verde también sin mute', async () => {
+  const { paintKeyTile } = await import('./assets/galleon-layout.mjs');
+  const fills = [], texts = [];
+  const ctx = { fillRect: (...args) => fills.push([ctx.fillStyle, ...args]), fillText: text => texts.push(text), measureText: t => ({width:t.length*8}) };
+  const tile = {width:160,height:160,getContext:()=>ctx};
+  paintKeyTile(tile, {active:true,title:'Actual',position:8,total:12,offset:0});
+  assert.equal(fills.filter(f=>f[0]==='#00e676').length,4);
+  assert.ok(texts.includes('EN EMISIÓN'));
+  assert.ok(!texts.includes('8/12'));
+  fills.length=0;
+  paintKeyTile(tile, {active:false,title:'Otro',position:1,total:12,offset:-7}, {muted:true});
+  assert.equal(fills.filter(f=>f[0]==='#00e676').length,0);
+  assert.ok(texts.includes('1/12'));
+});

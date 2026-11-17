@@ -66,14 +66,13 @@ test('una pieza de playlist se vuelve pista con la forma del playout', () => {
   assert.equal(trackOf(null), null);
 });
 
-test('las 12 teclas enseñan las 6 piezas anteriores (arriba, −6…−1) y las 6 siguientes (abajo, +1…+6), apagadas si no hay tantas', () => {
-  assert.deepEqual(navigatorWindow(20, 10), [4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16]);
-  assert.deepEqual(navigatorWindow(8, 0), [null, null, null, 5, 6, 7, 1, 2, 3, 4, null, null]); // ciclo: −1 es la última del ciclo
-  assert.deepEqual(navigatorWindow(3, 1), [null, null, null, null, null, 0, 2, null, null, null, null, null]); // sólo 2 piezas distintas en todo el teclado
-  assert.deepEqual(navigatorWindow(2, 0), [null, null, null, null, null, null, 1, null, null, null, null, null]);
-  assert.deepEqual(navigatorWindow(1, 0), Array(12).fill(null));
+test('las teclas muestran páginas ordenadas e incluyen el contenido actual', () => {
+  assert.deepEqual(navigatorWindow(20, 10), Array.from({length:12}, (_, i) => i));
+  assert.deepEqual(navigatorWindow(20, 12), [...Array.from({length:8}, (_, i) => i + 12), null, null, null, null]);
+  assert.deepEqual(navigatorWindow(12, 11), navigatorWindow(12, 0));
+  assert.deepEqual(navigatorWindow(13, 12), [12, ...Array(11).fill(null)]);
+  assert.deepEqual(navigatorWindow(1, 0), [0, ...Array(11).fill(null)]);
   assert.deepEqual(navigatorWindow(0, -1), Array(12).fill(null));
-  assert.deepEqual(navigatorWindow(5, 2, { before: 2, after: 2 }), [0, 1, 3, 4]);
 });
 
 test('el salto por tecla desplaza el reloj para que el turno elegido empiece ahora mismo', () => {
@@ -124,15 +123,16 @@ test('al cambiar la playlist o una duración, la pieza en antena sigue por donde
   assert.equal(rebaseMs([], 0, 5, now), 0);
 });
 
-test('every playlist size shows unique neighbours and never the current slot', () => {
+test('cada página incluye el actual, sin duplicados y con huecos sólo al final', () => {
   for (let total = 1; total <= 40; total++) for (let index = 0; index < total; index++) {
     const keys = navigatorWindow(total, index);
     const visible = keys.filter(n => n !== null);
     assert.equal(keys.length, 12);
-    assert.equal(visible.length, Math.min(12, total - 1));
+    assert.equal(visible.length, Math.min(12, total - Math.floor(index / 12) * 12));
     assert.equal(new Set(visible).size, visible.length);
-    assert.ok(!visible.includes(index));
+    assert.ok(visible.includes(index));
+    assert.deepEqual(visible, [...visible].sort((a,b) => a-b));
   }
   const keys = navigatorWindow(8, 4);
-  assert.equal(keys.filter(n => n === null).length, 5);
+  assert.equal(keys.filter(n => n === null).length, 4);
 });
