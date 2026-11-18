@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>admira.tv · player de tinta electrónica</title>
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #fff; overflow: hidden; }
+  #pieza { position: fixed; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; background: #fff; display: none; }
+  #pieza.cubrir { object-fit: cover; }
+  #espera { position: fixed; left: 0; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #000; text-align: center; padding: 6vmin; box-sizing: border-box; }
+  #espera h1 { font-size: 7vmin; margin: 0 0 3vmin; font-weight: 800; }
+  #espera p { font-size: 3.4vmin; margin: 1vmin 0; }
+  #espera code { font-family: ui-monospace, Menlo, monospace; font-size: 4.6vmin; font-weight: 700; border: 0.5vmin solid #000; padding: 1.2vmin 2.4vmin; display: inline-block; margin-top: 2vmin; }
+</style>
+</head>
+<body>
+<img id="pieza" alt="">
+<div id="espera">
+  <h1>admira.tv</h1>
+  <p>Player de tinta electrónica · a la espera de contenido</p>
+  <code id="quien"></code>
+</div>
+<script>
+// Player de tinta electrónica en navegador (16-nov-2026): la pantalla Samsung Color E-Paper (EM13DX, 1200x1600) carga
+// esta página desde su app personalizada (/tizen-epaper/) y pasa a ser un player más de admira.tv, role «eink».
+// Mismo contrato que el puente BLE de la SY11-ab (assets/admira-eink.js): cola /locations/cmd con acuse y latido en
+// /signage/now. Solo imagen fija: de una pieza de vídeo se enseña su póster.
+//   content-<N> · play<N> · loop<N>  → fija la pieza N del Stock          content-clear → vuelve a la espera
+//   refresh → vuelve a pintar          standby / resume → deja de atender / atiende órdenes
+// ?screen=<id> fija la identidad; sin él, la que guardó la app (o una nueva «samsung-epaper-xxxx»). ?cover=1 recorta.
+(function () {
+  "use strict";
+  function qs(k) { var m = new RegExp("[?&]" + k + "=([^&#]*)").exec(location.search); return m ? decodeURIComponent(m[1].replace(/\+/g, " ")) : ""; }
+  function LS(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} return null; }
+  var SCREEN = (function () {
+    var v = qs("screen").toLowerCase();
+    if (/^[a-z0-9][a-z0-9-]{1,79}$/.test(v)) { LS("eink-screen", v); return v; }
+    v = LS("eink-screen");
+    if (!/^[a-z0-9][a-z0-9-]{1,79}$/.test(v || "")) { v = "samsung-epaper-" + Math.random().toString(36).slice(2, 6); LS("eink-screen", v); }
+    return v;
+  })();
+  var CMD_HOSTS = ["https://api.admira.store/locations/cmd", "https://brain.digitalavatar.ai/locations/cmd"], cmdHost = 0;
+  var NOW_API = "https://api.admira.store/signage/now", STOCK = "https://api.admira.store/stock/list?limit=300", INDICE = "https://stock.admira.store/stock/index.json";
+  var IMG = document.getElementById("pieza"), ESPERA = document.getElementById("espera");
+  document.getElementById("quien").textContent = SCREEN;
+  if (qs("cover") === "1") IMG.className = "cubrir";
+  var version = "", actual = null, pausado = LS("eink-pausa") === "1", ultimo = { at: 0, estado: "", error: "" };
+  try { fetch("/version.json", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) { version = String(d && d.version || ""); }).catch(function () {}); } catch (e) {}
+  try { actual = JSON.parse(LS("eink-actual") || "null"); } catch (e) { actual = null; }
+
+  function pinta() {
+    if (!actual || !actual.src) { IMG.style.display = "none"; IMG.removeAttribute("src"); ESPERA.style.display = "flex"; return; }
+    IMG.onload = function () { ultimo = { at: Date.now(), estado: "ok", error: "" }; IMG.style.display = "block"; ESPERA.style.display = "none"; beat(); };
+    IMG.onerror = function () { ultimo = { at: Date.now(), estado: "error", error: "la imagen no carga" }; beat(); };
+    IMG.src = actual.src + (actual.src.indexOf("?") < 0 ? "?" : "&") + "t=" + Date.now();
+  }
+  function porNumero(num) {
+    var busca = function (url) { return fetch(url, { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) { var l = d && d.items || (Array.isArray(d) ? d : []); for (var i = 0; i < l.length; i++) if (Number(l[i].num) === num) return l[i]; return null; }); };
+    return busca(STOCK).catch(function () { return null; }).then(function (it) { return it || busca(INDICE).catch(function () { return null; }); });
+  }
+  function fija(num) {
+    return porNumero(num).then(function (it) {
+      if (!it) return "failed";
+      var tipo = String(it.type || ""), src = /^(image|imagen|digital-twin)$/.test(tipo) ? it.url : (it.thumbnail || it.poster || "");
+      if (!src) return "failed";
+      actual = { num: num, id: String(it.id), title: String(it.title || ""), type: tipo, src: String(src) };
+      LS("eink-actual", JSON.stringify(actual)); pinta(); return "executed";
+    });
+  }
+  function ejecuta(c) {
+    var cmd = String(c && c.cmd || "").replace(/^\//, "").split(/\s+/)[0].toLowerCase(), m;
+    if (cmd === "resume" || cmd === "wake" || cmd === "encender" || cmd === "reanudar") { pausado = false; LS("eink-pausa", null); return "executed"; }
+    if (cmd === "standby" || cmd === "apagar" || cmd === "parar") { pausado = true; LS("eink-pausa", "1"); return "executed"; }
+    if (pausado) return "failed";
+    if ((m = /^(?:content-|play|loop)(\d{1,6})$/.exec(cmd))) return fija(Number(m[1]));
+    if (cmd === "content-clear") { actual = null; LS("eink-actual", null); pinta(); return "executed"; }
+    if (cmd === "refresh" || cmd === "reload" || cmd === "recargar") { pinta(); return "executed"; }
+    if (cmd === "hardreload" || cmd === "actualizar") { setTimeout(function () { location.reload(); }, 500); return "executed"; }
+    return "failed";
+  }
+  function acusa(c, status) {
+    return fetch(CMD_HOSTS[cmdHost] + "/ack", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: SCREEN, screen: SCREEN, cid: c.cid, action: c.action, status: status, queuedAt: Date.now() }) }).catch(function () {});
+  }
+  var estado = { since: 0, init: false }, ocupado = false;
+  function sondea() {
+    if (ocupado) return; ocupado = true;
+    fetch(CMD_HOSTS[cmdHost] + "?id=" + encodeURIComponent(SCREEN) + "&since=" + estado.since + "&t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) {
+        if (!d) return;
+        if (!estado.init) { estado.since = d.seq || 0; estado.init = true; return; } // el atraso anterior al arranque no se ejecuta
+        var seq = Promise.resolve();
+        (Array.isArray(d.commands) ? d.commands : []).forEach(function (c) {
+          if (typeof c.cid !== "number" || c.cid <= estado.since) return;
+          estado.since = c.cid;
+          if (c.screen && String(c.screen).toLowerCase() !== SCREEN) return;
+          seq = seq.then(function () { return Promise.resolve(ejecuta(c)); }).then(function (st) { return acusa(c, st); }).then(beat);
+        });
+        return seq;
+      })
+      .catch(function () { cmdHost = (cmdHost + 1) % CMD_HOSTS.length; })
+      .then(function () { ocupado = false; });
+  }
+  function beat() {
+    var item = actual ? { id: actual.id, num: actual.num, title: actual.title, type: "image", url: actual.src, thumbnail: actual.src }
+                      : { id: "eink-espera", title: "Tinta electrónica · a la espera de contenido", type: "image", url: location.origin + "/eink/player/" };
+    var w = Math.round(innerWidth * (window.devicePixelRatio || 1)), h = Math.round(innerHeight * (window.devicePixelRatio || 1));
+    var body = { screen: SCREEN, producer: "eink-web-" + SCREEN, item: item, standby: pausado, role: "eink", version: version,
+      device: { display: { width: w, height: h, cssWidth: innerWidth, cssHeight: innerHeight, viewportWidth: innerWidth, viewportHeight: innerHeight, devicePixelRatio: window.devicePixelRatio || 1, orientation: innerHeight >= innerWidth ? "portrait" : "landscape" },
+        system: { os: "", platform: navigator.platform || "", language: navigator.language || "", timezone: (function () { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) { return ""; } })() },
+        hardware: { dedicated: true, model: "Tinta electrónica (navegador)" },
+        software: { player: "Admira e-ink web", playerVersion: "eink-web-1", webRelease: version, engine: "", userAgent: navigator.userAgent },
+        eink: { width: w, height: h, colors: "color", lastSendAt: ultimo.at || null, status: ultimo.estado || "", error: ultimo.error || "" },
+        network: { online: navigator.onLine !== false } },
+      health: { source: "live", eink: ultimo.estado || "espera" }, loc: "", locName: "", machine: "" };
+    try { fetch(NOW_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(function () {}); } catch (e) {}
+  }
+  pinta();
+  setTimeout(beat, 1500); setInterval(beat, 60000);
+  setTimeout(sondea, 800); setInterval(sondea, 5000);
+})();
+</script>
+</body>
+</html>
