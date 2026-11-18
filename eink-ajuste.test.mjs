@@ -56,10 +56,18 @@ test('el panel enseña cómo quedará en cada pantalla y manda el modo en la ord
 });
 
 test('el puente del Fold y el player de la Samsung aplican la misma regla', () => {
-  assert.match(puente, /src="\/assets\/admira-eink\.js"/);
+  assert.match(puente, /src="\/assets\/admira-eink\.js\?v=/);
   assert.match(puente, /A\.leeContenido\(cmd\)/);
   assert.match(puente, /A\.ajuste\(img\.naturalWidth, img\.naturalHeight, E\.W, E\.H, modo \|\| "auto"\)/);
-  assert.match(player, /src="\/assets\/admira-eink\.js"/);
+  assert.match(player, /src="\/assets\/admira-eink\.js\?v=/);
   assert.match(player, /A\.leeContenido\(cmd\)/);
   assert.match(player, /A\.ajuste\(IMG\.naturalWidth, IMG\.naturalHeight, innerWidth, innerHeight, "auto"\)/);
+});
+
+// Las páginas que usan la regla piden el script versionado: /assets se sirve con max-age=604800 y un navegador con la
+// copia anterior (sin ajuste ni medidas) dejaba el panel sin tarjetas (18-nov-2026, tras publicar PR 216).
+test('admira-eink.js y eink-sy11.js se piden con versión, para no quedarse con la copia en caché', () => {
+  for (const [nombre, html] of [['panel', panel], ['puente', puente], ['player', player], ['mando', read('./mando.html')], ['players', read('./players.html')], ['playlists', read('./playlists/index.html')]]) {
+    assert.ok(!/src="\/assets\/(admira-eink|eink-sy11)\.js"/.test(html), nombre + ' pide un script de tinta sin versión');
+  }
 });
