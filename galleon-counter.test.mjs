@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {playlistCounter,paintPlaylistCounter} from './assets/galleon-counter.mjs';
+import {playlistCounter,paintPlaylistCounter,playlistTiming,paintPlaylistTiming} from './assets/galleon-counter.mjs';
 import {paintKeyTile} from './assets/galleon-layout.mjs';
 const slots=Array.from({length:15},(_,i)=>({landscape:{id:String(i)},portrait:{id:'v'+i}}));
 const current={source:'playlist',id:'2',index:2,total:15};
@@ -27,4 +27,20 @@ test('small keys use central 44px counter only in mute, empty keys stay blank',(
   assert.equal(!!counter,muted);if(counter){assert.match(counter.font,/44px/);assert.deepEqual(counter.args,[80,47,146]);}
  }
  const empty=canvas();paintKeyTile(empty,null,{muted:true});assert.equal(empty.calls.length,0);
+});
+
+test('duration and countdown follow whole seconds and hide outside muted playlist',()=>{
+ const at = offsetMs => ({index:2, slot:{seconds:125}, offsetMs});
+ const timing = ms => playlistTiming(current,at(ms),{muted:true});
+ assert.deepEqual(timing(0),{duration:'2:05',remaining:'2:05'});
+ assert.equal(timing(999).remaining,'2:05');
+ assert.equal(timing(1000).remaining,'2:04');
+ assert.equal(timing(125000).remaining,'0:00');
+ assert.equal(timing(126000).remaining,'0:00');
+ assert.equal(playlistTiming(current,at(0)),null);
+ assert.equal(playlistTiming(current,null,{muted:true}),null);
+ assert.equal(playlistTiming(current,{...at(0),index:3},{muted:true}),null);
+ assert.equal(playlistTiming(current,{...at(0),slot:{seconds:3661}},{muted:true}).duration,'1:01:01');
+ const c=canvas();paintPlaylistTiming(c,timing(1000));
+ assert.deepEqual(c.calls.map(v=>[v.text,...v.args]),[['2:05',28,43],['−2:04',28,341]]);
 });
