@@ -71,7 +71,7 @@
   // Puente Web Bluetooth de la SY11-ab (18-nov-2026): hace en Chrome (Android) lo que el puente del Mac Studio
   // (~/.admira-eink): escucha la cola /locations/cmd de la pantalla eink-sy11-ab, acusa, late en /signage/now y pinta
   // por Bluetooth con el mismo protocolo (assets/eink-sy11.js). Mientras este puente late, el del Mac se aparta.
-  var E = window.EinkSY11, SCREEN = "eink-sy11-ab", MAQUINA = "Fold", VERSION = "eink-puente-web 18.11.2026.r1";
+  var E = window.EinkSY11, SCREEN = "eink-sy11-ab", MAQUINA = "Fold", VERSION = "eink-puente-web 18.11.2026.r2";
   var CMD_HOSTS = ["https://api.admira.store/locations/cmd", "https://brain.digitalavatar.ai/locations/cmd"], cmdHost = 0;
   var NOW_API = "https://api.admira.store/signage/now", INDICE = "https://stock.admira.store/stock/index.json";
   var PRESUPUESTO_S = 90, RITMO_MS = 90;
@@ -249,6 +249,7 @@
       for (var i = 0; i < lista.length; i++) {
         var c = lista[i]; if (typeof c.cid !== "number" || c.cid <= cola.since) continue;
         cola.since = c.cid; if (c.screen && String(c.screen).toLowerCase() !== SCREEN) continue;
+        if (/^\/?puente-/i.test(String(c.cmd || ""))) continue;   // el relevo es para el otro puente, no para este
         log("orden " + c.cmd); ocupado = true;
         var res; try { res = await ejecuta(c); } catch (e) { log("error: " + e.message); res = "failed"; } finally { ocupado = false; }
         await acusa(c, res); log("acuse " + res); beat();
@@ -283,8 +284,19 @@
         software: { player: "Admira e-ink bridge", playerVersion: VERSION, webRelease: "", engine: "Web Bluetooth", userAgent: navigator.userAgent },
         eink: eink, network: { online: navigator.onLine !== false } },
       health: { ok: st.last.status !== "error", status: st.last.status === "error" ? "error" : (st.last.status || "espera"), error: st.last.error || null, source: "live" } };
-    fetch(NOW_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(function () {});
+    fetch(NOW_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(beatHecho).catch(function () {});
   }
+
+  // Relevo: /signage/now solo acepta un productor por pantalla (concesión de 75 s) y el Mac Studio la renueva cada
+  // 60 s. Esta orden le pide que se aparte (deja de latir y de atender la cola al menos 3 min); al caducar su
+  // concesión, el latido de este puente la reclama y el Mac sigue apartado mientras lo vea latir.
+  function releva() {
+    var body = JSON.stringify({ id: SCREEN, screen: SCREEN, cmd: "puente-" + MAQUINA.toLowerCase() });
+    fetch(CMD_HOSTS[cmdHost], { method: "POST", headers: { "Content-Type": "application/json" }, body: body })
+      .then(function (r) { log(r.ok ? "relevo pedido al Mac Studio: en ~75 s este puente pasa a latir" : "no pude pedir el relevo (" + r.status + ")"); })
+      .catch(function () { log("no pude pedir el relevo: sin red"); });
+  }
+  function beatHecho(r) { if (r && r.status === 409 && !beat.avisado) { beat.avisado = true; log("el Mac aún tiene la pantalla: espero a que caduque su turno"); } else if (r && r.ok && beat.avisado) { beat.avisado = false; log("este puente ya late por eink-sy11-ab"); } }
 
   // ── Pantalla del móvil ────────────────────────────────────────────────
   function pintaActual() { $("actual").textContent = st.actual ? ("#" + st.actual.num + " · " + limpiaTitulo(st.actual.title).slice(0, 60)) : "En blanco o sin pieza"; }
@@ -297,7 +309,7 @@
   async function arranca() {
     $("conectar").textContent = "Cambiar de pantalla"; $("repintar").disabled = false; $("probar").disabled = false;
     estado("Conectado: esperando órdenes", "on", "Escuchando la cola de eink-sy11-ab cada 5 s. El Mac Studio se aparta mientras este puente late.");
-    despierto(); beat();
+    despierto(); releva(); beat();
     try { await enlaza(); var info = await saluda(); suelta(); if (info) { st.firmware = info.firmware; guarda(); log("SY11 al alcance: " + info.firmware + " · " + info.width + "×" + info.height); } else log("conectada, pero no contestó al saludo"); }
     catch (e) { log("prueba de conexión: " + e.message); estado("No llego a la SY11", "err", "Acércate a la pantalla y pulsa «Conectar la SY11» otra vez."); }
   }
