@@ -229,7 +229,7 @@
       var puntos = "punto" + (on ? (st.error ? " err" : " on") : "");
       var visto = on ? ("en línea · " + (edad(rec.age_seconds) || "ahora")) : ("sin latido" + (rec.last_seen ? " desde " + new Date(rec.last_seen).toLocaleString("es-ES", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""));
       // El puente BLE (SY11-ab) puede seguir las novedades del Corsair y de #eink; «pin» = pieza fijada, no sigue.
-      var siguiendo = /AdmiraEinkBridge/i.test(String(rec.user_agent || "")), sigue = typeof e.pin !== "number";
+      var siguiendo = /AdmiraEinkBridge/i.test(String(rec.user_agent || "")) || /e-ink bridge/i.test(String(rec.device && rec.device.software && rec.device.software.player || "")), sigue = typeof e.pin !== "number";
       var acciones = [
         '<button type="button" data-orden="refresh" data-screen="' + esc(k) + '">Repintar</button>',
         '<button type="button" data-orden="content-clear" data-screen="' + esc(k) + '">Dejar en blanco</button>',
@@ -243,7 +243,7 @@
         '<div class="previo vacio" data-previo="' + esc(rec.showing_id || "") + '"></div>' +
         '<div><h3><label><input type="checkbox" data-marca="' + esc(k) + '"' + (marcadas.has(k) ? " checked" : "") + '> <span class="' + puntos + '"></span> ' + esc(rec.locName || k) + '</label></h3>' +
         '<div class="id">' + esc(k) + '</div>' +
-        '<div class="linea">' + esc(visto) + (st.texto ? " · " + esc(st.texto) : "") + '</div>' +
+        '<div class="linea">' + esc(visto) + (st.texto ? " · " + esc(st.texto) : "") + (rec.machine ? " · puente: " + esc(rec.machine) : "") + '</div>' +
         '<div class="linea">' + esc(E.resumen(rec)) + '</div>' +
         (siguiendo ? '<div class="linea">' + (sigue ? "Sigue las novedades del Corsair y de #eink" : "Pieza fijada #" + e.pin + ": no sigue novedades") + '</div>' : "") +
         '<div class="pieza" data-pieza="' + esc(rec.showing_id || "") + '">' + (rec.showing_id ? '<span class="dim">Emitiendo…</span>' : '<span class="dim">Sin pieza</span>') + '</div>' +
