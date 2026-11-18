@@ -9,7 +9,9 @@
   // Órdenes del mando que una pantalla de tinta sí entiende; el resto (vídeo,
   // volumen, rotación, relleno) no tiene sentido y la UI no las ofrece.
   // follow / follow-off: la SY11-ab sigue (o deja de seguir) las novedades del Corsair y de #eink (18-nov-2026).
-  var ORDENES=/^(content-\d{1,6}|content-clear|next|prev|first|last|refresh|standby|resume|follow|follow-off)$/;
+  // content-<N>-cover / -contain: la pieza se adapta a la resolución de cada pantalla rellenando (recorta) o
+  // encajando (bandas blancas); sin sufijo, en automático (ver ajuste()).
+  var ORDENES=/^(content-\d{1,6}(?:-(?:auto|cover|contain))?|content-clear|next|prev|first|last|refresh|standby|resume|follow|follow-off)$/;
 
   function einkOf(rec){
     var d=rec&&rec.device; return d&&d.eink&&typeof d.eink==='object'?d.eink:null;
@@ -92,8 +94,34 @@
   }
   function aceptaOrden(cmd){ return ORDENES.test(String(cmd||'')); }
 
+  // ── Adaptar la pieza a la resolución de la pantalla (18-nov-2026) ──
+  // «480x800» (o device.display) → {w,h}. Sin dato, la SY11-ab: 480×800.
+  function medidas(rec){
+    var m=/^(\d{2,5})\s*[x×]\s*(\d{2,5})$/.exec(String(resolucion(rec)||'').trim());
+    return m?{w:Number(m[1]),h:Number(m[2])}:{w:480,h:800};
+  }
+  // Orden «content-2089-cover» → {num:2089, modo:'cover'}; sin sufijo, modo 'auto'.
+  function leeContenido(cmd){
+    var m=/^(?:content-|play|loop)(\d{1,6})(?:-(auto|cover|contain))?$/.exec(String(cmd||'').replace(/^\//,'').split(/\s+/)[0].toLowerCase());
+    return m?{num:Number(m[1]),modo:m[2]||'auto'}:null;
+  }
+  // Una imagen sw×sh en una pantalla dw×dh. «cover» la escala hasta llenar y recorta lo que sobra (centrado);
+  // «contain» la mete entera y deja bandas blancas. «auto» rellena si se pierde como mucho un 20 % de la imagen
+  // (un 9:16 o un 3:4 en la SY11 de 3:5) y encaja si no (un 16:9 o un cuadrado no se mutilan).
+  // Devuelve el rectángulo donde pintarla y cuánto se recorta o queda en blanco (0..1).
+  var MAX_RECORTE=0.2;
+  function ajuste(sw,sh,dw,dh,modo){
+    sw=Number(sw)||dw; sh=Number(sh)||dh;
+    var ra=sw/sh, rd=dw/dh, perdida=1-Math.min(ra/rd,rd/ra);
+    var m=modo==='cover'||modo==='contain'?modo:(perdida<=MAX_RECORTE+1e-9?'cover':'contain');
+    var k=m==='cover'?Math.max(dw/sw,dh/sh):Math.min(dw/sw,dh/sh), w=sw*k, h=sh*k;
+    return {modo:m, x:(dw-w)/2, y:(dh-h)/2, w:w, h:h, recorte:m==='cover'?perdida:0, bandas:m==='contain'?perdida:0,
+      lados:ra===rd?'':((ra>rd)===(m==='cover')?'izquierda y derecha':'arriba y abajo')};   // dónde recorta o dónde van las bandas
+  }
+
   var api={isEink:isEink,einkOf:einkOf,resumen:resumen,statusRows:statusRows,estado:estado,hora:hora,paleta:paleta,
-    bateria:bateria,apto:apto,isEinkTagged:isEinkTagged,aceptaOrden:aceptaOrden,ICONO:'🖋️',NOMBRE:'Tinta electrónica'};
+    bateria:bateria,apto:apto,isEinkTagged:isEinkTagged,aceptaOrden:aceptaOrden,
+    medidas:medidas,leeContenido:leeContenido,ajuste:ajuste,MAX_RECORTE:MAX_RECORTE,ICONO:'🖋️',NOMBRE:'Tinta electrónica'};
   root.AdmiraEink=api;
   if(typeof module!=='undefined'&&module.exports) module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

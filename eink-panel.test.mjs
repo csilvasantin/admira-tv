@@ -49,7 +49,7 @@ test('el panel usa los contratos de la flota y del Stock', () => {
   for (const url of ['https://api.admira.store/signage/screens', 'https://api.admira.store/locations/cmd', 'https://stock.admira.store/stock/index.json', 'https://api.admira.store/stock/publish'])
     assert.ok(panel.includes(url), url);
   assert.match(panel, /"\/ack\?id="/, 'espera el acuse de cada orden');
-  assert.match(panel, /ACK_LIMIT_MS = 180000/, 'la tinta acusa después de pintar: hasta 3 min');
+  assert.match(panel, /ACK_LIMIT_MS = 240000/, 'la tinta acusa después de pintar y de reintentar un corte: hasta 4 min');
   assert.match(panel, /type: "image", motor: "local"/, 'sube como imagen local, igual que el Stock de admira.studio');
   assert.match(panel, /indexOf\("eink"\) < 0\) t\.unshift\("eink"\)/, 'lo subido lleva siempre #eink');
   assert.ok(!/stock\/list\?/.test(panel), '/stock/list con filtros tarda ~20 s: se filtra el índice público');

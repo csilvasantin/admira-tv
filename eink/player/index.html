@@ -23,12 +23,15 @@
   <p>Player de tinta electrónica · a la espera de contenido</p>
   <code id="quien"></code>
 </div>
+<script src="/assets/admira-eink.js"></script>
 <script>
 // Player de tinta electrónica en navegador (16-nov-2026): la pantalla Samsung Color E-Paper (EM13DX, 1200x1600) carga
 // esta página desde su app personalizada (/tizen-epaper/) y pasa a ser un player más de admira.tv, role «eink».
 // Mismo contrato que el puente BLE de la SY11-ab (assets/admira-eink.js): cola /locations/cmd con acuse y latido en
 // /signage/now. Solo imagen fija: de una pieza de vídeo se enseña su póster.
 //   content-<N> · play<N> · loop<N>  → fija la pieza N del Stock          content-clear → vuelve a la espera
+//   content-<N>-cover / -contain      → la adapta a esta pantalla rellenando (recorta) o encajando (bandas blancas);
+//                                       sin sufijo, automático: la regla de AdmiraEink.ajuste, la misma del panel (18-nov-2026)
 //   refresh → vuelve a pintar          standby / resume → deja de atender / atiende órdenes
 // ?screen=<id> fija la identidad; sin él, la que guardó la app (o una nueva «samsung-epaper-xxxx»). ?cover=1 recorta.
 (function () {
@@ -46,14 +49,19 @@
   var NOW_API = "https://api.admira.store/signage/now", STOCK = "https://api.admira.store/stock/list?limit=300", INDICE = "https://stock.admira.store/stock/index.json";
   var IMG = document.getElementById("pieza"), ESPERA = document.getElementById("espera");
   document.getElementById("quien").textContent = SCREEN;
-  if (qs("cover") === "1") IMG.className = "cubrir";
+  var A = window.AdmiraEink, MODO_DEFECTO = qs("cover") === "1" ? "cover" : "auto";
   var version = "", actual = null, pausado = LS("eink-pausa") === "1", ultimo = { at: 0, estado: "", error: "" };
   try { fetch("/version.json", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) { version = String(d && d.version || ""); }).catch(function () {}); } catch (e) {}
   try { actual = JSON.parse(LS("eink-actual") || "null"); } catch (e) { actual = null; }
 
   function pinta() {
     if (!actual || !actual.src) { IMG.style.display = "none"; IMG.removeAttribute("src"); ESPERA.style.display = "flex"; return; }
-    IMG.onload = function () { ultimo = { at: Date.now(), estado: "ok", error: "" }; IMG.style.display = "block"; ESPERA.style.display = "none"; beat(); };
+    IMG.onload = function () {
+      var modo = actual.modo && actual.modo !== "auto" ? actual.modo : MODO_DEFECTO;
+      if (modo === "auto" && A) modo = A.ajuste(IMG.naturalWidth, IMG.naturalHeight, innerWidth, innerHeight, "auto").modo;
+      IMG.className = modo === "cover" ? "cubrir" : "";
+      ultimo = { at: Date.now(), estado: "ok", error: "" }; IMG.style.display = "block"; ESPERA.style.display = "none"; beat();
+    };
     IMG.onerror = function () { ultimo = { at: Date.now(), estado: "error", error: "la imagen no carga" }; beat(); };
     IMG.src = actual.src + (actual.src.indexOf("?") < 0 ? "?" : "&") + "t=" + Date.now();
   }
@@ -62,12 +70,12 @@
       .then(function (d) { var l = d && d.items || (Array.isArray(d) ? d : []); for (var i = 0; i < l.length; i++) if (Number(l[i].num) === num) return l[i]; return null; }); };
     return busca(STOCK).catch(function () { return null; }).then(function (it) { return it || busca(INDICE).catch(function () { return null; }); });
   }
-  function fija(num) {
+  function fija(num, modo) {
     return porNumero(num).then(function (it) {
       if (!it) return "failed";
       var tipo = String(it.type || ""), src = /^(image|imagen|digital-twin)$/.test(tipo) ? it.url : (it.thumbnail || it.poster || "");
       if (!src) return "failed";
-      actual = { num: num, id: String(it.id), title: String(it.title || ""), type: tipo, src: String(src) };
+      actual = { num: num, id: String(it.id), title: String(it.title || ""), type: tipo, src: String(src), modo: modo || "auto" };
       LS("eink-actual", JSON.stringify(actual)); pinta(); return "executed";
     });
   }
@@ -76,7 +84,7 @@
     if (cmd === "resume" || cmd === "wake" || cmd === "encender" || cmd === "reanudar") { pausado = false; LS("eink-pausa", null); return "executed"; }
     if (cmd === "standby" || cmd === "apagar" || cmd === "parar") { pausado = true; LS("eink-pausa", "1"); return "executed"; }
     if (pausado) return "failed";
-    if ((m = /^(?:content-|play|loop)(\d{1,6})$/.exec(cmd))) return fija(Number(m[1]));
+    if ((m = A ? A.leeContenido(cmd) : (/^(?:content-|play|loop)(\d{1,6})$/.test(cmd) ? { num: Number(/\d+/.exec(cmd)[0]), modo: "auto" } : null))) return fija(m.num, m.modo);
     if (cmd === "content-clear") { actual = null; LS("eink-actual", null); pinta(); return "executed"; }
     if (cmd === "refresh" || cmd === "reload" || cmd === "recargar") { pinta(); return "executed"; }
     if (cmd === "hardreload" || cmd === "actualizar") { setTimeout(function () { location.reload(); }, 500); return "executed"; }

@@ -65,13 +65,14 @@
 </main>
 
 <script src="/assets/eink-sy11.js"></script>
+<script src="/assets/admira-eink.js"></script>
 <script>
 (function () {
   "use strict";
   // Puente Web Bluetooth de la SY11-ab (18-nov-2026): hace en Chrome (Android) lo que el puente del Mac Studio
   // (~/.admira-eink): escucha la cola /locations/cmd de la pantalla eink-sy11-ab, acusa, late en /signage/now y pinta
   // por Bluetooth con el mismo protocolo (assets/eink-sy11.js). Mientras este puente late, el del Mac se aparta.
-  var E = window.EinkSY11, SCREEN = "eink-sy11-ab", MAQUINA = "Fold", VERSION = "eink-puente-web 18.11.2026.r2";
+  var E = window.EinkSY11, A = window.AdmiraEink, SCREEN = "eink-sy11-ab", MAQUINA = "Fold", VERSION = "eink-puente-web 18.11.2026.r3";
   var CMD_HOSTS = ["https://api.admira.store/locations/cmd", "https://brain.digitalavatar.ai/locations/cmd"], cmdHost = 0;
   var NOW_API = "https://api.admira.store/signage/now", INDICE = "https://stock.admira.store/stock/index.json";
   var PRESUPUESTO_S = 90, RITMO_MS = 90;
@@ -162,14 +163,13 @@
     t = String(t || "").replace(/(^|\s)#\S+/g, " ").split(/\s+·\s+(?:Adaptación|Locución|16:9|9:16|subtítulos)/)[0];
     return Array.from(t).filter(function (c) { var n = c.codePointAt(0); return n < 0x2190 || (n >= 0x2c00 && n < 0xfe00); }).join("").replace(/\s+/g, " ").trim();
   }
-  // Imagen: llena el panel si ya es 3:5; si no, contenida sobre blanco. Vídeo: póster en 480×640 + rótulo y título (como el Mac).
-  async function compone(pieza, src, rotulo) {
+  // Orden del panel (sin rótulo): la imagen o el póster se adapta a la resolución de la pantalla con el modo de la
+  // orden (AdmiraEink.ajuste: rellenar recortando, encajar con bandas o automático), igual que en el previo del panel.
+  // Novedad que se sigue (con rótulo): póster encajado en 480×640 + rótulo y título debajo (como el Mac).
+  async function compone(pieza, src, rotulo, modo) {
     var cv = $("previo"), c = cv.getContext("2d"), img = await cargaImagen(src);
-    c.fillStyle = "#fff"; c.fillRect(0, 0, 480, 800); c.imageSmoothingQuality = "high";
-    var esImagen = /^(image|imagen)$/.test(String(pieza.type || ""));
-    var ar = img.naturalWidth / img.naturalHeight;
-    if (esImagen && Math.abs(ar - 0.6) < 0.04 && !rotulo) c.drawImage(img, 0, 0, 480, 800);
-    else if (esImagen && !rotulo) { var k = Math.min(480 / img.naturalWidth, 800 / img.naturalHeight), w = img.naturalWidth * k, h = img.naturalHeight * k; c.drawImage(img, (480 - w) / 2, (800 - h) / 2, w, h); }
+    c.fillStyle = "#fff"; c.fillRect(0, 0, E.W, E.H); c.imageSmoothingQuality = "high";
+    if (!rotulo) { var a = A.ajuste(img.naturalWidth, img.naturalHeight, E.W, E.H, modo || "auto"); c.drawImage(img, a.x, a.y, a.w, a.h); }
     else {
       var k2 = Math.min(480 / img.naturalWidth, 640 / img.naturalHeight), w2 = img.naturalWidth * k2, h2 = img.naturalHeight * k2;
       c.drawImage(img, (480 - w2) / 2, (640 - h2) / 2, w2, h2);
@@ -178,7 +178,7 @@
       var lineas = [], linea = ""; limpiaTitulo(pieza.title).split(" ").forEach(function (p) { var prueba = (linea + " " + p).trim(); if (c.measureText(prueba).width <= 452) linea = prueba; else { lineas.push(linea); linea = p; } });
       lineas.push(linea); lineas.filter(Boolean).slice(0, 3).forEach(function (l, i) { c.fillText(l, 14, 676 + i * 36); });
     }
-    return E.empaqueta(E.trama(c.getImageData(0, 0, 480, 800).data));
+    return E.empaqueta(E.trama(c.getImageData(0, 0, E.W, E.H).data));
   }
   function fuenteDe(p) { return /^(image|imagen|digital-twin)$/.test(String(p.type || "")) ? p.url : (p.thumbnail || p.poster || ""); }
 
@@ -206,11 +206,11 @@
   }
 
   // ── Órdenes de la flota ───────────────────────────────────────────────
-  async function pintaPieza(pieza, rotulo) {
+  async function pintaPieza(pieza, rotulo, modo) {
     var src = fuenteDe(pieza); if (!src) throw new Error("la pieza no tiene imagen");
-    var datos = await compone(pieza, src, rotulo);
+    var datos = await compone(pieza, src, rotulo, modo);
     var ok = await enviaConReintento(datos, "#" + pieza.num + " · " + limpiaTitulo(pieza.title).slice(0, 50));
-    if (ok) { st.actual = { num: pieza.num, id: String(pieza.id), title: String(pieza.title || ""), src: src, type: pieza.type, rotulo: rotulo || "" }; guarda(); pintaActual(); }
+    if (ok) { st.actual = { num: pieza.num, id: String(pieza.id), title: String(pieza.title || ""), src: src, type: pieza.type, rotulo: rotulo || "", modo: modo || "auto" }; guarda(); pintaActual(); }
     return ok;
   }
   async function ejecuta(c) {
@@ -220,17 +220,17 @@
     if (st.paused) return "failed";
     if (cmd === "follow" || cmd === "seguir" || cmd === "seguir-corsair" || cmd === "follow-galleon") { st.follow = true; st.known = null; guarda(); $("seguir").checked = true; return "executed"; }
     if (cmd === "follow-off" || cmd === "no-seguir") { st.follow = false; guarda(); $("seguir").checked = false; return "executed"; }
-    if ((m = /^(?:content-|play|loop)(\d{1,6})$/.exec(cmd))) {
-      var p = await porNumero(Number(m[1])); if (!p) return "failed";
+    if ((m = A.leeContenido(cmd))) {
+      var p = await porNumero(m.num); if (!p) return "failed";
       st.follow = false; $("seguir").checked = false; if (st.known && st.known.indexOf(String(p.id)) < 0) st.known.push(String(p.id)); guarda();
-      return (await pintaPieza(p, "")) ? "executed" : "failed";
+      return (await pintaPieza(p, "", m.modo)) ? "executed" : "failed";
     }
     if (cmd === "content-clear") {
       var cv = $("previo"), cx = cv.getContext("2d"); cx.fillStyle = "#fff"; cx.fillRect(0, 0, 480, 800);
       var ok = await enviaConReintento(E.empaqueta(E.trama(cx.getImageData(0, 0, 480, 800).data)), "blanco");
       if (ok) { st.actual = null; guarda(); pintaActual(); } return ok ? "executed" : "failed";
     }
-    if (cmd === "refresh" || cmd === "reload" || cmd === "recargar") return st.actual && (await pintaPieza({ num: st.actual.num, id: st.actual.id, title: st.actual.title, type: st.actual.type, url: st.actual.src, thumbnail: st.actual.src }, st.actual.rotulo)) ? "executed" : "failed";
+    if (cmd === "refresh" || cmd === "reload" || cmd === "recargar") return st.actual && (await pintaPieza({ num: st.actual.num, id: st.actual.id, title: st.actual.title, type: st.actual.type, url: st.actual.src, thumbnail: st.actual.src }, st.actual.rotulo, st.actual.modo)) ? "executed" : "failed";
     return "failed";
   }
   function acusa(c, status) {
