@@ -65,3 +65,9 @@ test('el puente usa el contrato de la flota y se identifica para que el Mac se a
   assert.match(puente, /navigator\.wakeLock\.request\("screen"\)/, 'mantiene la pantalla del móvil encendida');
   assert.ok(!/auth-gate/.test(puente), 'un puente es un player: sin verja');
 });
+
+test('relevo: al conectar pide al Mac que se aparte y no ejecuta su propia orden de relevo', () => {
+  assert.match(puente, /cmd: "puente-" \+ MAQUINA\.toLowerCase\(\)/);
+  assert.match(puente, /despierto\(\); releva\(\); beat\(\);/);
+  assert.match(puente, /if \(\/\^\\\/\?puente-\/i\.test\(String\(c\.cmd \|\| ""\)\)\) continue;/);
+});
