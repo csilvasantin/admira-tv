@@ -120,14 +120,22 @@ async function lametricDismiss() {
 let lametricBusy = Promise.resolve();
 /** Enseña `text` en el reloj (o lo retira si va vacío); sólo actúa cuando cambia. Las llamadas se encadenan. */
 function lametricShow(text) {
+  // Alternate playlist information with the native clock, including while paused.
+  if (Math.floor(Date.now() / 15000) % 2 === 1) text = '';
   if (!lametric || text === lametricShown || Date.now() < lametricRetryAt) return;
   lametricShown = text;
   lametricBusy = lametricBusy.then(async () => {
     await lametricDismiss();
-    if (!text) { log('lametric retirado'); return; }
     try {
-      // Sin `lifetime`: el reloj rechaza los valores largos (400) y con cycles 0 la notificación ya se queda hasta retirarla.
-      const result = await lametricRequest('POST', '/device/notifications', { priority: 'info', icon_type: 'none', model: { cycles: 0, frames: [{ text }] } });
+      if (!text) {
+        const clock = await lametricRequest('GET', '/device/apps/com.lametric.clock');
+        const id = Object.keys(clock?.widgets || {})[0];
+        if (id) await lametricRequest('PUT', '/device/apps/com.lametric.clock/widgets/' + encodeURIComponent(id) + '/activate');
+        log('lametric reloj');
+        return;
+      }
+      // One scroll only: a stopped controller must not hide the clock indefinitely.
+      const result = await lametricRequest('POST', '/device/notifications', { priority: 'info', icon_type: 'none', model: { cycles: 1, frames: [{ text }] } });
       lametricId = result?.success?.id ?? null;
       log('lametric «' + text.slice(0, 70) + '»');
     } catch (error) { log('lametric-error ' + error.message); lametricShown = ''; lametricRetryAt = Date.now() + 30000; }
