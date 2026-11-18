@@ -8,7 +8,8 @@
   var PALETA={black:'B',white:'W',red:'R',yellow:'Y',negro:'B',blanco:'W',rojo:'R',amarillo:'Y'};
   // Órdenes del mando que una pantalla de tinta sí entiende; el resto (vídeo,
   // volumen, rotación, relleno) no tiene sentido y la UI no las ofrece.
-  var ORDENES=/^(content-\d{1,6}|content-clear|next|prev|first|last|refresh|standby|resume)$/;
+  // follow / follow-off: la SY11-ab sigue (o deja de seguir) las novedades del Corsair y de #eink (18-nov-2026).
+  var ORDENES=/^(content-\d{1,6}|content-clear|next|prev|first|last|refresh|standby|resume|follow|follow-off)$/;
 
   function einkOf(rec){
     var d=rec&&rec.device; return d&&d.eink&&typeof d.eink==='object'?d.eink:null;

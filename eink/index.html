@@ -2,127 +2,431 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<script>
+// /eink sirve a dos públicos (18-nov-2026). Las pantallas de tinta (la app de Samsung Color E-Paper abre
+// /eink/?screen=<id>; Tizen sin parámetro también) siguen yendo a su player, que vive en /eink/player/ y no
+// pasa por la verja de acceso. Las personas ven el panel de control.
+(function () {
+  if (/[?&](screen|player)=/.test(location.search) || /Tizen/i.test(navigator.userAgent)) {
+    location.replace("/eink/player/" + location.search + location.hash);
+  }
+})();
+</script>
+<script src="/auth-gate.js?v=22.10.2026.r2.1134"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>admira.tv · player de tinta electrónica</title>
+<title>Tinta electrónica · panel de control · Admira.tv</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
 <style>
-  html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #fff; overflow: hidden; }
-  #pieza { position: fixed; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; background: #fff; display: none; }
-  #pieza.cubrir { object-fit: cover; }
-  #espera { position: fixed; left: 0; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #000; text-align: center; padding: 6vmin; box-sizing: border-box; }
-  #espera h1 { font-size: 7vmin; margin: 0 0 3vmin; font-weight: 800; }
-  #espera p { font-size: 3.4vmin; margin: 1vmin 0; }
-  #espera code { font-family: ui-monospace, Menlo, monospace; font-size: 4.6vmin; font-weight: 700; border: 0.5vmin solid #000; padding: 1.2vmin 2.4vmin; display: inline-block; margin-top: 2vmin; }
+  :root {
+    --bg: var(--admira-bg, #0a0c12); --elev: var(--admira-bg-elev, #141826);
+    --text: var(--admira-text, #f0e6ff); --muted: var(--admira-text-muted, rgba(216,200,255,.65));
+    --dim: var(--admira-text-dim, rgba(216,200,255,.4));
+    --violet: var(--admira-violet, #aa88ff); --amber: var(--admira-amber, #ffd866);
+    --cyan: var(--admira-cyan, #50c8ff); --green: var(--admira-green, #76b900); --red: var(--admira-red, #e2231a);
+    --border: var(--admira-border, rgba(170,136,255,.25));
+    --mono: var(--admira-font-mono, ui-monospace, Menlo, monospace);
+    --sans: var(--admira-font-sans, -apple-system, system-ui, sans-serif);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100dvh; }
+  main { max-width: 1120px; margin: 0 auto; padding: 18px 16px 60px; }
+  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  header h1 { margin: 0; font-size: 22px; letter-spacing: .01em; }
+  header h1 span { color: var(--violet); }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+  section { background: var(--elev); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+  section > h2 { margin: 0 0 4px; font-size: 16px; }
+  section > .sub { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
+  button, .btn { font: inherit; font-size: 13px; color: var(--text); background: rgba(170,136,255,.12); border: 1px solid var(--border);
+    border-radius: 999px; padding: 7px 13px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--violet); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--violet); color: #0a0c12; border-color: var(--violet); font-weight: 700; }
+  input[type=text], input[type=search] { font: inherit; font-size: 14px; color: var(--text); background: rgba(0,0,0,.25);
+    border: 1px solid var(--border); border-radius: 10px; padding: 8px 11px; width: 100%; }
+  .muted { color: var(--muted); } .dim { color: var(--dim); }
+  .mono { font-family: var(--mono); }
+
+  /* Pantallas */
+  #pantallas { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .pantalla { border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: grid; grid-template-columns: 96px 1fr; gap: 12px; background: rgba(0,0,0,.18); }
+  .pantalla.off { opacity: .55; }
+  .pantalla.sel { border-color: var(--violet); box-shadow: 0 0 0 1px var(--violet) inset; }
+  .pantalla .previo { width: 96px; aspect-ratio: 3 / 5; border-radius: 6px; background: #fff center / cover no-repeat; border: 1px solid rgba(255,255,255,.15); }
+  .pantalla .previo.vacio { background: repeating-linear-gradient(45deg, #1d2233 0 6px, #171b29 6px 12px); }
+  .pantalla h3 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .pantalla h3 label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .pantalla .id { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+  .pantalla .linea { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .pantalla .pieza { font-size: 13px; margin-top: 6px; }
+  .pantalla .acciones { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .pantalla .acciones button { font-size: 12px; padding: 5px 10px; }
+  .punto { width: 9px; height: 9px; border-radius: 50%; background: var(--dim); display: inline-block; flex: none; }
+  .punto.on { background: #2ecc71; box-shadow: 0 0 6px #2ecc71; } .punto.err { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .estado-orden { font-size: 12px; margin-top: 8px; font-family: var(--mono); }
+  .estado-orden.ok { color: #2ecc71; } .estado-orden.ko { color: #ff6b6b; } .estado-orden.espera { color: var(--amber); }
+
+  /* Emitir */
+  .filtros { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .filtros .tabs button.on { background: var(--violet); color: #0a0c12; border-color: var(--violet); }
+  .filtros input { flex: 1 1 220px; width: auto; }
+  #piezas { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; max-height: 520px; overflow: auto; padding: 2px; }
+  .ficha { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; background: rgba(0,0,0,.2); text-align: left; padding: 0; color: var(--text); }
+  .ficha:hover { border-color: var(--violet); }
+  .ficha.sel { border-color: var(--amber); box-shadow: 0 0 0 2px var(--amber); }
+  .ficha .img { aspect-ratio: 3 / 4; background: #222 center / cover no-repeat; position: relative; }
+  .ficha .num { position: absolute; left: 6px; top: 6px; font: 700 11px var(--mono); background: rgba(0,0,0,.7); padding: 2px 6px; border-radius: 6px; }
+  .ficha .tipo { position: absolute; right: 6px; top: 6px; font-size: 11px; background: rgba(0,0,0,.7); padding: 2px 6px; border-radius: 6px; }
+  .ficha .tit { font-size: 11.5px; padding: 6px 7px 8px; line-height: 1.25; max-height: 3.9em; overflow: hidden; }
+  .barra { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+  .barra .resumen { flex: 1 1 260px; font-size: 13px; color: var(--muted); }
+
+  /* Subir */
+  .subir { display: grid; grid-template-columns: 180px 1fr; gap: 16px; align-items: start; }
+  #soltar { aspect-ratio: 3 / 5; border: 2px dashed var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    text-align: center; color: var(--muted); font-size: 13px; padding: 12px; cursor: pointer; background: center / contain no-repeat; }
+  #soltar.encima { border-color: var(--violet); background-color: rgba(170,136,255,.08); }
+  #soltar.lleno { color: transparent; border-style: solid; background-color: #fff; }
+  .campo { margin-bottom: 10px; } .campo label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 10px 0; }
+  #toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(20px); opacity: 0; transition: .2s; background: rgba(10,14,20,.95);
+    border: 1px solid var(--border); border-radius: 999px; padding: 8px 16px; font-size: 13px; pointer-events: none; z-index: 10; }
+  #toast.show { opacity: 1; transform: translateX(-50%); }
+  @media (max-width: 640px) { .subir { grid-template-columns: 1fr; } #soltar { max-width: 200px; } }
 </style>
 </head>
 <body>
-<img id="pieza" alt="">
-<div id="espera">
-  <h1>admira.tv</h1>
-  <p>Player de tinta electrónica · a la espera de contenido</p>
-  <code id="quien"></code>
-</div>
+<main>
+  <header>
+    <h1>🖋️ Tinta <span>electrónica</span></h1>
+    <p>Panel de control de las pantallas de tinta de Admira.tv: estado, emisión y subida de contenidos.</p>
+  </header>
+
+  <section id="sec-pantallas">
+    <h2>Pantallas</h2>
+    <p class="sub">Las que laten ahora en la flota. Marca a cuáles quieres emitir. Cada cambio tarda en torno a un minuto y medio en pintarse.</p>
+    <div id="pantallas"><p class="muted">Buscando pantallas de tinta…</p></div>
+  </section>
+
+  <section id="sec-emitir">
+    <h2>Emitir una pieza del Stock</h2>
+    <p class="sub">Elige una pieza y mándala a las pantallas marcadas. De un vídeo se pinta su póster.</p>
+    <div class="filtros">
+      <div class="tabs" role="tablist">
+        <button type="button" data-fuente="eink" class="on">Para tinta (#eink)</button>
+        <button type="button" data-fuente="image">Imágenes</button>
+        <button type="button" data-fuente="todo">Todo</button>
+      </div>
+      <input type="search" id="buscar" placeholder="Buscar por título, etiqueta o número…" autocomplete="off">
+    </div>
+    <div id="piezas"><p class="muted">Cargando el Stock…</p></div>
+    <div class="barra">
+      <div class="resumen" id="resumenEmitir">Elige una pieza y al menos una pantalla.</div>
+      <button type="button" class="primary" id="emitir" disabled>Emitir</button>
+    </div>
+  </section>
+
+  <section id="sec-subir">
+    <h2>Subir una imagen</h2>
+    <p class="sub">Se guarda en el Stock con la etiqueta #eink. Vertical y con poco detalle es lo que mejor se ve en tinta.</p>
+    <div class="subir">
+      <div id="soltar" tabindex="0" role="button" aria-label="Elegir imagen">Suelta aquí una imagen<br>o pulsa para elegirla</div>
+      <div>
+        <input type="file" id="fichero" accept="image/*" hidden>
+        <div class="campo"><label for="titulo">Título</label><input type="text" id="titulo" maxlength="140" placeholder="Nombre de la pieza en el Stock"></div>
+        <div class="campo"><label for="etiquetas">Etiquetas, separadas por comas</label><input type="text" id="etiquetas" value="eink"></div>
+        <label class="check"><input type="checkbox" id="emitirAlSubir" checked> Emitirla en las pantallas marcadas en cuanto esté en el Stock</label>
+        <div class="barra" style="margin-top:4px">
+          <div class="resumen" id="resumenSubir">Elige una imagen.</div>
+          <button type="button" class="primary" id="subir" disabled>Subir al Stock</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="/assets/admira-eink.js"></script>
 <script>
-// Player de tinta electrónica en navegador (16-nov-2026): la pantalla Samsung Color E-Paper (EM13DX, 1200x1600) carga
-// esta página desde su app personalizada (/tizen-epaper/) y pasa a ser un player más de admira.tv, role «eink».
-// Mismo contrato que el puente BLE de la SY11-ab (assets/admira-eink.js): cola /locations/cmd con acuse y latido en
-// /signage/now. Solo imagen fija: de una pieza de vídeo se enseña su póster.
-//   content-<N> · play<N> · loop<N>  → fija la pieza N del Stock          content-clear → vuelve a la espera
-//   refresh → vuelve a pintar          standby / resume → deja de atender / atiende órdenes
-// ?screen=<id> fija la identidad; sin él, la que guardó la app (o una nueva «samsung-epaper-xxxx»). ?cover=1 recorta.
 (function () {
   "use strict";
-  function qs(k) { var m = new RegExp("[?&]" + k + "=([^&#]*)").exec(location.search); return m ? decodeURIComponent(m[1].replace(/\+/g, " ")) : ""; }
-  function LS(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} return null; }
-  var SCREEN = (function () {
-    var v = qs("screen").toLowerCase();
-    if (/^[a-z0-9][a-z0-9-]{1,79}$/.test(v)) { LS("eink-screen", v); return v; }
-    v = LS("eink-screen");
-    if (!/^[a-z0-9][a-z0-9-]{1,79}$/.test(v || "")) { v = "samsung-epaper-" + Math.random().toString(36).slice(2, 6); LS("eink-screen", v); }
-    return v;
-  })();
-  var CMD_HOSTS = ["https://api.admira.store/locations/cmd", "https://brain.digitalavatar.ai/locations/cmd"], cmdHost = 0;
-  var NOW_API = "https://api.admira.store/signage/now", STOCK = "https://api.admira.store/stock/list?limit=300", INDICE = "https://stock.admira.store/stock/index.json";
-  var IMG = document.getElementById("pieza"), ESPERA = document.getElementById("espera");
-  document.getElementById("quien").textContent = SCREEN;
-  if (qs("cover") === "1") IMG.className = "cubrir";
-  var version = "", actual = null, pausado = LS("eink-pausa") === "1", ultimo = { at: 0, estado: "", error: "" };
-  try { fetch("/version.json", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) { version = String(d && d.version || ""); }).catch(function () {}); } catch (e) {}
-  try { actual = JSON.parse(LS("eink-actual") || "null"); } catch (e) { actual = null; }
+  // Contratos de la flota (los mismos que Mando): censo, órdenes con acuse y Stock.
+  var SCREENS_API = "https://api.admira.store/signage/screens";
+  var CMD_HOSTS = ["https://api.admira.store/locations/cmd", "https://brain.digitalavatar.ai/locations/cmd"];
+  var STOCK_META = "https://stock.admira.store/stock/";          // <id>/meta.json
+  var STOCK_PUBLISH = "https://api.admira.store/stock/publish";
+  var ACK_LIMIT_MS = 180000;   // la tinta acusa DESPUÉS de pintar (~75–90 s) y a veces reintenta
+  var ACTION_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  var MAX_LADO = 2400, MAX_BYTES = 6 * 1024 * 1024;
+  var KNOWN_KEY = "eink-panel-pantallas";
 
-  function pinta() {
-    if (!actual || !actual.src) { IMG.style.display = "none"; IMG.removeAttribute("src"); ESPERA.style.display = "flex"; return; }
-    IMG.onload = function () { ultimo = { at: Date.now(), estado: "ok", error: "" }; IMG.style.display = "block"; ESPERA.style.display = "none"; beat(); };
-    IMG.onerror = function () { ultimo = { at: Date.now(), estado: "error", error: "la imagen no carga" }; beat(); };
-    IMG.src = actual.src + (actual.src.indexOf("?") < 0 ? "?" : "&") + "t=" + Date.now();
+  var E = window.AdmiraEink;
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+  var piezaCache = new Map();          // id → meta del Stock
+  var pantallas = new Map();           // screen → registro del censo (o recordado)
+  var marcadas = new Set();            // screens elegidas para emitir
+  var tocadas = false;                 // el usuario ya eligió a mano (no re-marcar solas)
+  var estadosOrden = new Map();        // screen → {texto, clase}
+  var piezaElegida = null;
+
+  function toast(t) { var el = $("toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.remove("show"); }, 2600); }
+  function lsGet(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function edad(s) { s = Number(s); if (!isFinite(s)) return ""; if (s < 90) return "hace " + Math.round(s) + " s"; if (s < 5400) return "hace " + Math.round(s / 60) + " min"; return "hace " + Math.round(s / 3600) + " h"; }
+  function miniatura(p) { return p && (p.thumbnail || p.poster || (p.type === "image" ? p.url : "")) || ""; }
+
+  async function meta(id) {
+    if (!id || /^eink-espera/.test(id)) return null;
+    if (piezaCache.has(id)) return piezaCache.get(id);
+    try { var r = await fetch(STOCK_META + encodeURIComponent(id) + "/meta.json", { cache: "no-store" }); var d = r.ok ? await r.json() : null; piezaCache.set(id, d); return d; }
+    catch (e) { return null; }
   }
-  function porNumero(num) {
-    var busca = function (url) { return fetch(url, { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); })
-      .then(function (d) { var l = d && d.items || (Array.isArray(d) ? d : []); for (var i = 0; i < l.length; i++) if (Number(l[i].num) === num) return l[i]; return null; }); };
-    return busca(STOCK).catch(function () { return null; }).then(function (it) { return it || busca(INDICE).catch(function () { return null; }); });
+
+  // ── Pantallas ─────────────────────────────────────────────────────────
+  async function cargaPantallas() {
+    var recordadas = lsGet(KNOWN_KEY) || {};
+    try {
+      var r = await fetch(SCREENS_API + "?_=" + Date.now(), { cache: "no-store" });
+      var d = await r.json(), lista = (d && d.screens) || [];
+      var vivas = new Set();
+      lista.filter(E.isEink).forEach(function (rec) {
+        vivas.add(rec.screen); pantallas.set(rec.screen, rec);
+        recordadas[rec.screen] = { screen: rec.screen, role: "eink", locName: rec.locName || "", device: rec.device ? { eink: E.einkOf(rec), display: rec.device.display } : null, last_seen: rec.last_seen || Date.now() };
+      });
+      Object.keys(recordadas).forEach(function (k) { if (!vivas.has(k)) pantallas.set(k, Object.assign({}, recordadas[k], { online: false, recordada: true })); });
+      lsSet(KNOWN_KEY, recordadas);
+      if (!tocadas) pantallas.forEach(function (rec, k) { if (rec.online) marcadas.add(k); });
+    } catch (e) {
+      if (!pantallas.size) $("pantallas").innerHTML = '<p class="muted">No he podido leer el censo de la flota. Reintento en unos segundos.</p>';
+      return;
+    }
+    pintaPantallas();
   }
-  function fija(num) {
-    return porNumero(num).then(function (it) {
-      if (!it) return "failed";
-      var tipo = String(it.type || ""), src = /^(image|imagen|digital-twin)$/.test(tipo) ? it.url : (it.thumbnail || it.poster || "");
-      if (!src) return "failed";
-      actual = { num: num, id: String(it.id), title: String(it.title || ""), type: tipo, src: String(src) };
-      LS("eink-actual", JSON.stringify(actual)); pinta(); return "executed";
+
+  function pintaPantallas() {
+    var box = $("pantallas");
+    if (!pantallas.size) { box.innerHTML = '<p class="muted">Ninguna pantalla de tinta ha latido todavía.</p>'; return; }
+    var orden = Array.from(pantallas.values()).sort(function (a, b) { return (b.online ? 1 : 0) - (a.online ? 1 : 0) || String(a.screen).localeCompare(String(b.screen)); });
+    box.innerHTML = orden.map(function (rec) {
+      var e = E.einkOf(rec) || {}, st = E.estado(rec), on = !!rec.online, k = rec.screen;
+      var puntos = "punto" + (on ? (st.error ? " err" : " on") : "");
+      var visto = on ? ("en línea · " + (edad(rec.age_seconds) || "ahora")) : ("sin latido" + (rec.last_seen ? " desde " + new Date(rec.last_seen).toLocaleString("es-ES", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""));
+      // El puente BLE (SY11-ab) puede seguir las novedades del Corsair y de #eink; «pin» = pieza fijada, no sigue.
+      var siguiendo = /AdmiraEinkBridge/i.test(String(rec.user_agent || "")), sigue = typeof e.pin !== "number";
+      var acciones = [
+        '<button type="button" data-orden="refresh" data-screen="' + esc(k) + '">Repintar</button>',
+        '<button type="button" data-orden="content-clear" data-screen="' + esc(k) + '">Dejar en blanco</button>',
+        e.paused ? '<button type="button" data-orden="resume" data-screen="' + esc(k) + '">Reanudar</button>'
+                 : '<button type="button" data-orden="standby" data-screen="' + esc(k) + '">Pausar</button>'
+      ];
+      if (siguiendo) acciones.push(sigue ? '<button type="button" data-orden="follow-off" data-screen="' + esc(k) + '">Dejar de seguir novedades</button>'
+                                            : '<button type="button" data-orden="follow" data-screen="' + esc(k) + '">Seguir novedades</button>');
+      var est = estadosOrden.get(k);
+      return '<article class="pantalla' + (on ? "" : " off") + (marcadas.has(k) ? " sel" : "") + '" data-screen="' + esc(k) + '">' +
+        '<div class="previo vacio" data-previo="' + esc(rec.showing_id || "") + '"></div>' +
+        '<div><h3><label><input type="checkbox" data-marca="' + esc(k) + '"' + (marcadas.has(k) ? " checked" : "") + '> <span class="' + puntos + '"></span> ' + esc(rec.locName || k) + '</label></h3>' +
+        '<div class="id">' + esc(k) + '</div>' +
+        '<div class="linea">' + esc(visto) + (st.texto ? " · " + esc(st.texto) : "") + '</div>' +
+        '<div class="linea">' + esc(E.resumen(rec)) + '</div>' +
+        (siguiendo ? '<div class="linea">' + (sigue ? "Sigue las novedades del Corsair y de #eink" : "Pieza fijada #" + e.pin + ": no sigue novedades") + '</div>' : "") +
+        '<div class="pieza" data-pieza="' + esc(rec.showing_id || "") + '">' + (rec.showing_id ? '<span class="dim">Mostrando…</span>' : '<span class="dim">Sin pieza</span>') + '</div>' +
+        '<div class="acciones">' + acciones.join("") + '</div>' +
+        (est ? '<div class="estado-orden ' + est.clase + '">' + esc(est.texto) + '</div>' : "") +
+        '</div></article>';
+    }).join("");
+    box.querySelectorAll("[data-previo]").forEach(async function (el) {
+      var p = await meta(el.dataset.previo), src = miniatura(p);
+      if (src) { el.classList.remove("vacio"); el.style.backgroundImage = 'url("' + src.replace(/"/g, "%22") + '")'; }
+      var txt = box.querySelector('[data-pieza="' + CSS.escape(el.dataset.previo) + '"]');
+      if (txt && p) txt.innerHTML = "Mostrando <b>#" + esc(p.num) + "</b> · " + esc(String(p.title || "").slice(0, 70));
     });
+    pintaResumen();
   }
-  function ejecuta(c) {
-    var cmd = String(c && c.cmd || "").replace(/^\//, "").split(/\s+/)[0].toLowerCase(), m;
-    if (cmd === "resume" || cmd === "wake" || cmd === "encender" || cmd === "reanudar") { pausado = false; LS("eink-pausa", null); return "executed"; }
-    if (cmd === "standby" || cmd === "apagar" || cmd === "parar") { pausado = true; LS("eink-pausa", "1"); return "executed"; }
-    if (pausado) return "failed";
-    if ((m = /^(?:content-|play|loop)(\d{1,6})$/.exec(cmd))) return fija(Number(m[1]));
-    if (cmd === "content-clear") { actual = null; LS("eink-actual", null); pinta(); return "executed"; }
-    if (cmd === "refresh" || cmd === "reload" || cmd === "recargar") { pinta(); return "executed"; }
-    if (cmd === "hardreload" || cmd === "actualizar") { setTimeout(function () { location.reload(); }, 500); return "executed"; }
+
+  $("pantallas").addEventListener("change", function (ev) {
+    var k = ev.target && ev.target.dataset && ev.target.dataset.marca; if (!k) return;
+    tocadas = true; if (ev.target.checked) marcadas.add(k); else marcadas.delete(k);
+    var card = ev.target.closest(".pantalla"); if (card) card.classList.toggle("sel", ev.target.checked);
+    pintaResumen();
+  });
+  $("pantallas").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-orden]"); if (!b) return;
+    var cmd = b.dataset.orden;
+    if (cmd === "content-clear" && !confirm("¿Dejar en blanco " + b.dataset.screen + "?")) return;
+    b.disabled = true; orden(b.dataset.screen, cmd).finally(function () { b.disabled = false; });
+  });
+
+  // ── Órdenes con acuse (mismo contrato que Mando: POST → cid/action → GET /ack) ──
+  function marcaEstado(screen, texto, clase) { estadosOrden.set(screen, { texto: texto, clase: clase }); var card = document.querySelector('.pantalla[data-screen="' + CSS.escape(screen) + '"]');
+    if (card) { var el = card.querySelector(".estado-orden"); if (!el) { el = document.createElement("div"); card.lastElementChild.appendChild(el); } el.className = "estado-orden " + clase; el.textContent = texto; } }
+  async function orden(screen, cmd) {
+    var body = JSON.stringify({ id: screen, screen: screen, cmd: cmd });
+    marcaEstado(screen, "→ " + cmd + " · enviando…", "espera");
+    for (var i = 0; i < CMD_HOSTS.length; i++) {
+      var host = CMD_HOSTS[i], ctl = new AbortController(), t = setTimeout(function () { ctl.abort(); }, 4000), d = null;
+      try {
+        var r = await fetch(host, { method: "POST", headers: { "Content-Type": "application/json" }, body: body, signal: ctl.signal });
+        if (!r.ok) throw new Error("http " + r.status);
+        d = await r.json().catch(function () { return null; });
+      } catch (e) { continue; } finally { clearTimeout(t); }
+      if (!d || !d.ok || !Number.isSafeInteger(d.cid) || !ACTION_RE.test(String(d.action || ""))) { marcaEstado(screen, "✗ " + cmd + " · la cola no dio acuse", "ko"); return "failed"; }
+      if (i > 0) CMD_HOSTS.unshift(CMD_HOSTS.splice(i, 1)[0]);
+      var inicio = Date.now(), res = "timeout";
+      while (Date.now() - inicio < ACK_LIMIT_MS) {
+        marcaEstado(screen, "⏳ " + cmd + " · en la pantalla, pintando… " + Math.round((Date.now() - inicio) / 1000) + " s", "espera");
+        await new Promise(function (ok) { setTimeout(ok, 3000); });
+        try {
+          var a = await fetch(host + "/ack?id=" + encodeURIComponent(screen) + "&action=" + encodeURIComponent(d.action) + "&_=" + Date.now(), { cache: "no-store" });
+          var j = a.ok ? await a.json() : null, ack = j && j.seen && j.ack;
+          if (ack && ack.action === d.action && ack.cid === d.cid && ack.cmd === cmd && (ack.status === "executed" || ack.status === "failed")) { res = ack.status; break; }
+        } catch (e) {}
+      }
+      var secs = Math.round((Date.now() - inicio) / 1000);
+      marcaEstado(screen, res === "executed" ? "✓ " + cmd + " · hecho en " + secs + " s" : res === "failed" ? "✗ " + cmd + " · la pantalla no pudo" : "⌛ " + cmd + " · sin confirmación en 3 min", res === "executed" ? "ok" : res === "failed" ? "ko" : "espera");
+      setTimeout(cargaPantallas, 1500);
+      return res;
+    }
+    marcaEstado(screen, "✗ " + cmd + " · sin red con la cola de órdenes", "ko");
     return "failed";
   }
-  function acusa(c, status) {
-    return fetch(CMD_HOSTS[cmdHost] + "/ack", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: SCREEN, screen: SCREEN, cid: c.cid, action: c.action, status: status, queuedAt: Date.now() }) }).catch(function () {});
+
+  // ── Stock: elegir y emitir ────────────────────────────────────────────
+  // El índice público del Stock (CDN, ~400 KB comprimido) se filtra aquí: /stock/list con tag/type/q tarda ~20 s.
+  var STOCK_INDEX = "https://stock.admira.store/stock/index.json";
+  var fuente = "eink", busca = "", indice = { at: 0, items: [] }, MAX_FICHAS = 150;
+  async function leeIndice() {
+    if (Date.now() - indice.at < 60000 && indice.items.length) return indice.items;
+    var r = await fetch(STOCK_INDEX + "?_=" + Math.floor(Date.now() / 60000)), d = await r.json();
+    var items = Array.isArray(d) ? d : (d.items || d.assets || []);
+    indice = { at: Date.now(), items: items.filter(function (p) { return p && !p.oculto && /^(image|video|animation)$/.test(String(p.type)) && Number(p.num) > 0; })
+      .sort(function (a, b) { return Number(b.num) - Number(a.num); }) };
+    indice.items.forEach(function (p) { if (!piezaCache.has(p.id)) piezaCache.set(p.id, p); });
+    return indice.items;
   }
-  var estado = { since: 0, init: false }, ocupado = false;
-  function sondea() {
-    if (ocupado) return; ocupado = true;
-    fetch(CMD_HOSTS[cmdHost] + "?id=" + encodeURIComponent(SCREEN) + "&since=" + estado.since + "&t=" + Date.now(), { cache: "no-store" })
-      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
-      .then(function (d) {
-        if (!d) return;
-        if (!estado.init) { estado.since = d.seq || 0; estado.init = true; return; } // el atraso anterior al arranque no se ejecuta
-        var seq = Promise.resolve();
-        (Array.isArray(d.commands) ? d.commands : []).forEach(function (c) {
-          if (typeof c.cid !== "number" || c.cid <= estado.since) return;
-          estado.since = c.cid;
-          if (c.screen && String(c.screen).toLowerCase() !== SCREEN) return;
-          seq = seq.then(function () { return Promise.resolve(ejecuta(c)); }).then(function (st) { return acusa(c, st); }).then(beat);
-        });
-        return seq;
-      })
-      .catch(function () { cmdHost = (cmdHost + 1) % CMD_HOSTS.length; })
-      .then(function () { ocupado = false; });
+  function casa(p) {
+    if (fuente === "eink" && !E.isEinkTagged(p)) return false;
+    if (fuente === "image" && p.type !== "image") return false;
+    if (!busca) return true;
+    var q = busca.toLowerCase().replace(/^#/, "");
+    if (/^\d+$/.test(q)) return String(p.num) === q;
+    return (String(p.title || "") + " " + (p.tags || []).join(" ")).toLowerCase().indexOf(q) >= 0;
   }
-  function beat() {
-    var item = actual ? { id: actual.id, num: actual.num, title: actual.title, type: "image", url: actual.src, thumbnail: actual.src }
-                      : { id: "eink-espera", title: "Tinta electrónica · a la espera de contenido", type: "image", url: location.origin + "/eink/" };
-    var w = Math.round(innerWidth * (window.devicePixelRatio || 1)), h = Math.round(innerHeight * (window.devicePixelRatio || 1));
-    var body = { screen: SCREEN, producer: "eink-web-" + SCREEN, item: item, standby: pausado, role: "eink", version: version,
-      device: { display: { width: w, height: h, cssWidth: innerWidth, cssHeight: innerHeight, viewportWidth: innerWidth, viewportHeight: innerHeight, devicePixelRatio: window.devicePixelRatio || 1, orientation: innerHeight >= innerWidth ? "portrait" : "landscape" },
-        system: { os: "", platform: navigator.platform || "", language: navigator.language || "", timezone: (function () { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) { return ""; } })() },
-        hardware: { dedicated: true, model: "Tinta electrónica (navegador)" },
-        software: { player: "Admira e-ink web", playerVersion: "eink-web-1", webRelease: version, engine: "", userAgent: navigator.userAgent },
-        eink: { width: w, height: h, colors: "color", lastSendAt: ultimo.at || null, status: ultimo.estado || "", error: ultimo.error || "" },
-        network: { online: navigator.onLine !== false } },
-      health: { source: "live", eink: ultimo.estado || "espera" }, loc: "", locName: "", machine: "" };
-    try { fetch(NOW_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(function () {}); } catch (e) {}
+  async function cargaPiezas() {
+    if (!indice.items.length) $("piezas").innerHTML = '<p class="muted">Cargando el Stock…</p>';
+    try {
+      var items = (await leeIndice()).filter(casa), total = items.length;
+      items = items.slice(0, MAX_FICHAS);
+      if (!items.length) { $("piezas").innerHTML = '<p class="muted">No hay piezas con ese filtro.</p>'; return; }
+      $("piezas").innerHTML = items.map(function (p) {
+        var src = miniatura(p);
+        return '<button type="button" class="ficha' + (piezaElegida && piezaElegida.id === p.id ? " sel" : "") + '" data-id="' + esc(p.id) + '" title="' + esc(p.title) + '">' +
+          '<div class="img" style="background-image:url(&quot;' + esc(src) + '&quot;)"><span class="num">#' + esc(p.num) + '</span><span class="tipo">' + (p.type === "image" ? "imagen" : "vídeo") + '</span></div>' +
+          '<div class="tit">' + esc(p.title || "Sin título") + '</div></button>';
+      }).join("") + (total > MAX_FICHAS ? '<p class="muted" style="grid-column:1/-1">Y ' + (total - MAX_FICHAS) + ' más: afina la búsqueda o busca por número.</p>' : "");
+    } catch (e) { $("piezas").innerHTML = '<p class="muted">No he podido leer el Stock.</p>'; }
   }
-  pinta();
-  setTimeout(beat, 1500); setInterval(beat, 60000);
-  setTimeout(sondea, 800); setInterval(sondea, 5000);
+  document.querySelector(".tabs").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-fuente]"); if (!b) return;
+    fuente = b.dataset.fuente; document.querySelectorAll(".tabs button").forEach(function (x) { x.classList.toggle("on", x === b); }); cargaPiezas();
+  });
+  var tBusca; $("buscar").addEventListener("input", function () { clearTimeout(tBusca); tBusca = setTimeout(function () { busca = $("buscar").value.trim(); cargaPiezas(); }, 350); });
+  $("piezas").addEventListener("click", function (ev) {
+    var b = ev.target.closest(".ficha"); if (!b) return;
+    piezaElegida = piezaCache.get(b.dataset.id) || null;
+    document.querySelectorAll(".ficha").forEach(function (x) { x.classList.toggle("sel", x === b); });
+    pintaResumen();
+  });
+  function destinos() { return Array.from(marcadas).filter(function (k) { return pantallas.has(k); }); }
+  function pintaResumen() {
+    var ds = destinos();
+    $("emitir").disabled = !(piezaElegida && ds.length);
+    $("resumenEmitir").textContent = piezaElegida
+      ? ("#" + piezaElegida.num + " · " + String(piezaElegida.title || "").slice(0, 60) + " → " + (ds.length ? ds.join(", ") : "marca al menos una pantalla"))
+      : "Elige una pieza y al menos una pantalla.";
+  }
+  async function emite(num, screens) {
+    return Promise.all(screens.map(function (k) { return orden(k, "content-" + num); }));
+  }
+  $("emitir").addEventListener("click", async function () {
+    var ds = destinos(); if (!piezaElegida || !ds.length) return;
+    var b = $("emitir"); b.disabled = true; toast("Emitiendo #" + piezaElegida.num + " en " + ds.length + " pantalla" + (ds.length > 1 ? "s" : ""));
+    try { await emite(piezaElegida.num, ds); } finally { pintaResumen(); }
+  });
+
+  // ── Subir al Stock ────────────────────────────────────────────────────
+  var subida = null;   // {mime, base64, width, height}
+  var soltar = $("soltar"), fichero = $("fichero");
+  soltar.addEventListener("click", function () { fichero.click(); });
+  soltar.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); fichero.click(); } });
+  ["dragenter", "dragover"].forEach(function (t) { soltar.addEventListener(t, function (ev) { ev.preventDefault(); soltar.classList.add("encima"); }); });
+  ["dragleave", "drop"].forEach(function (t) { soltar.addEventListener(t, function (ev) { ev.preventDefault(); soltar.classList.remove("encima"); }); });
+  soltar.addEventListener("drop", function (ev) { var f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0]; if (f) prepara(f); });
+  fichero.addEventListener("change", function () { if (fichero.files[0]) prepara(fichero.files[0]); });
+
+  function leeComo(file, modo) { return new Promise(function (ok, ko) { var r = new FileReader(); r.onload = function () { ok(r.result); }; r.onerror = ko; r[modo](file); }); }
+  function cargaImagen(src) { return new Promise(function (ok, ko) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = ko; i.src = src; }); }
+  async function prepara(file) {
+    if (!/^image\//.test(file.type)) { toast("Solo imágenes"); return; }
+    $("resumenSubir").textContent = "Preparando la imagen…"; $("subir").disabled = true;
+    try {
+      var dataUrl = await leeComo(file, "readAsDataURL"), img = await cargaImagen(dataUrl);
+      var w = img.naturalWidth, h = img.naturalHeight, lado = Math.max(w, h);
+      // Las grandes se reducen a 2400 px de lado en JPEG: la tinta más grande de la flota es 1200×1600.
+      if (lado > MAX_LADO || file.size > MAX_BYTES || !/^image\/(png|jpeg|webp|gif)$/.test(file.type)) {
+        var k = Math.min(1, MAX_LADO / lado), cv = document.createElement("canvas");
+        cv.width = Math.round(w * k); cv.height = Math.round(h * k);
+        var cx = cv.getContext("2d"); cx.fillStyle = "#fff"; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(img, 0, 0, cv.width, cv.height);
+        dataUrl = cv.toDataURL("image/jpeg", 0.9); w = cv.width; h = cv.height;
+      }
+      var coma = dataUrl.indexOf(",");
+      subida = { mime: /^data:([^;,]+)/.exec(dataUrl)[1], base64: dataUrl.slice(coma + 1), width: w, height: h };
+      soltar.classList.add("lleno"); soltar.style.backgroundImage = 'url("' + dataUrl + '")';
+      if (!$("titulo").value.trim()) $("titulo").value = file.name.replace(/\.[a-z0-9]+$/i, "").replace(/[_-]+/g, " ").trim();
+      $("resumenSubir").textContent = w + " × " + h + " px · " + (w < h ? "vertical" : w > h ? "horizontal: en tinta vertical saldrá con bandas" : "cuadrada");
+      $("subir").disabled = false;
+    } catch (e) { subida = null; $("resumenSubir").textContent = "No he podido leer esa imagen."; }
+  }
+  function etiquetas() {
+    var t = $("etiquetas").value.split(",").map(function (s) { return s.trim().replace(/^#/, "").toLowerCase(); }).filter(Boolean);
+    if (t.indexOf("eink") < 0) t.unshift("eink");
+    return Array.from(new Set(t)).slice(0, 20);
+  }
+  async function esperaNumero(id) {
+    for (var i = 0; i < 30; i++) {
+      try { var r = await fetch(STOCK_META + encodeURIComponent(id) + "/meta.json?_=" + Date.now(), { cache: "no-store" }); if (r.ok) { var d = await r.json(); if (Number(d.num) > 0) { piezaCache.set(id, d); return d; } } } catch (e) {}
+      $("resumenSubir").textContent = "Subida. Esperando a que el Stock le dé número… " + (i * 3) + " s";
+      await new Promise(function (ok) { setTimeout(ok, 3000); });
+    }
+    return null;
+  }
+  $("subir").addEventListener("click", async function () {
+    if (!subida) return;
+    var titulo = $("titulo").value.trim() || "Tinta electrónica";
+    var b = $("subir"); b.disabled = true; $("resumenSubir").textContent = "Subiendo al Stock…";
+    try {
+      var r = await fetch(STOCK_PUBLISH, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+        type: "image", motor: "local", mime: subida.mime, base64: subida.base64, title: titulo, tags: etiquetas(),
+        comment: "Subida desde el panel de tinta electrónica (admira.tv/eink)", quality: "good",
+        dimensions: { width: subida.width, height: subida.height } }) });
+      var d = await r.json().catch(function () { return null; });
+      if (!r.ok || !d || !d.id) throw new Error((d && d.error) || ("HTTP " + r.status));
+      var pieza = await esperaNumero(d.id);
+      if (!pieza) { $("resumenSubir").textContent = "Subida, pero el Stock aún no le ha dado número. Aparecerá en «Para tinta» en un rato."; b.disabled = false; return; }
+      $("resumenSubir").textContent = "En el Stock como #" + pieza.num + ".";
+      toast("✓ #" + pieza.num + " en el Stock");
+      fuente = "eink"; busca = ""; $("buscar").value = ""; document.querySelectorAll(".tabs button").forEach(function (x) { x.classList.toggle("on", x.dataset.fuente === "eink"); });
+      piezaElegida = pieza; pintaResumen(); if (!indice.items.some(function (p) { return p.id === pieza.id; })) indice.items.unshift(pieza); cargaPiezas();
+      var ds = destinos();
+      if ($("emitirAlSubir").checked && ds.length) { $("resumenSubir").textContent = "En el Stock como #" + pieza.num + ". Emitiendo en " + ds.join(", ") + "…"; await emite(pieza.num, ds); $("resumenSubir").textContent = "En el Stock como #" + pieza.num + " y enviada a " + ds.join(", ") + "."; }
+      subida = null; soltar.classList.remove("lleno"); soltar.style.backgroundImage = ""; $("titulo").value = "";
+    } catch (e) { $("resumenSubir").textContent = "No se pudo subir: " + String(e.message || e).slice(0, 120); b.disabled = false; }
+  });
+
+  cargaPantallas(); setInterval(cargaPantallas, 20000);
+  cargaPiezas();
 })();
 </script>
 </body>
