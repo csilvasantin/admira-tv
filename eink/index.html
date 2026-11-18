@@ -68,7 +68,7 @@
   .estado-orden { font-size: 12px; margin-top: 8px; font-family: var(--mono); }
   .estado-orden.ok { color: #2ecc71; } .estado-orden.ko { color: #ff6b6b; } .estado-orden.espera { color: var(--amber); }
 
-  /* Emitir */
+  /* Enviar */
   .filtros { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
   .filtros .tabs button.on { background: var(--violet); color: #0a0c12; border-color: var(--violet); }
   .filtros input { flex: 1 1 220px; width: auto; }
@@ -82,7 +82,8 @@
   .ficha .tit { font-size: 11.5px; padding: 6px 7px 8px; line-height: 1.25; max-height: 3.9em; overflow: hidden; }
   .barra { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
   .barra .resumen { flex: 1 1 260px; font-size: 13px; color: var(--muted); }
-  /* Progreso de una emisión: de pulsar «Emitir» a que la pantalla confirma que ya la tiene pintada */
+  /* Progreso de un envío: de pulsar «Enviar» a que la pantalla confirma que ya la está emitiendo.
+     Vocabulario (Carlos, 18-nov-2026): «Enviar» la orden, «Enviando…» mientras viaja y se pinta, «Emitiendo» solo cuando ya se ve en la tinta. */
   .progresos { display: grid; gap: 10px; margin-top: 12px; }
   .progreso { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: rgba(0,0,0,.2); }
   .progreso .cab { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; font-size: 13px; }
@@ -112,17 +113,17 @@
 <main>
   <header>
     <h1>🖋️ Tinta <span>electrónica</span></h1>
-    <p>Panel de control de las pantallas de tinta de Admira.tv: estado, emisión y subida de contenidos.</p>
+    <p>Panel de control de las pantallas de tinta de Admira.tv: estado, envío y subida de contenidos.</p>
   </header>
 
   <section id="sec-pantallas">
     <h2>Pantallas</h2>
-    <p class="sub">Las que laten ahora en la flota. Marca a cuáles quieres emitir. Cada cambio tarda en torno a un minuto y medio en pintarse.</p>
+    <p class="sub">Las que laten ahora en la flota. Marca a cuáles quieres enviar. Cada cambio tarda en torno a un minuto y medio en pintarse.</p>
     <div id="pantallas"><p class="muted">Buscando pantallas de tinta…</p></div>
   </section>
 
   <section id="sec-emitir">
-    <h2>Emitir una pieza del Stock</h2>
+    <h2>Enviar una pieza del Stock</h2>
     <p class="sub">Elige una pieza y mándala a las pantallas marcadas. De un vídeo se pinta su póster.</p>
     <div class="filtros">
       <div class="tabs" role="tablist">
@@ -135,7 +136,7 @@
     <div id="piezas"><p class="muted">Cargando el Stock…</p></div>
     <div class="barra">
       <div class="resumen" id="resumenEmitir">Elige una pieza y al menos una pantalla.</div>
-      <button type="button" class="primary" id="emitir" disabled>Emitir</button>
+      <button type="button" class="primary" id="emitir" disabled>Enviar</button>
     </div>
     <div class="progresos" id="progresoEmitir" aria-live="polite"></div>
   </section>
@@ -149,7 +150,7 @@
         <input type="file" id="fichero" accept="image/*" hidden>
         <div class="campo"><label for="titulo">Título</label><input type="text" id="titulo" maxlength="140" placeholder="Nombre de la pieza en el Stock"></div>
         <div class="campo"><label for="etiquetas">Etiquetas, separadas por comas</label><input type="text" id="etiquetas" value="eink"></div>
-        <label class="check"><input type="checkbox" id="emitirAlSubir" checked> Emitirla en las pantallas marcadas en cuanto esté en el Stock</label>
+        <label class="check"><input type="checkbox" id="emitirAlSubir" checked> Enviarla a las pantallas marcadas en cuanto esté en el Stock</label>
         <div class="barra" style="margin-top:4px">
           <div class="resumen" id="resumenSubir">Elige una imagen.</div>
           <button type="button" class="primary" id="subir" disabled>Subir al Stock</button>
@@ -245,7 +246,7 @@
         '<div class="linea">' + esc(visto) + (st.texto ? " · " + esc(st.texto) : "") + '</div>' +
         '<div class="linea">' + esc(E.resumen(rec)) + '</div>' +
         (siguiendo ? '<div class="linea">' + (sigue ? "Sigue las novedades del Corsair y de #eink" : "Pieza fijada #" + e.pin + ": no sigue novedades") + '</div>' : "") +
-        '<div class="pieza" data-pieza="' + esc(rec.showing_id || "") + '">' + (rec.showing_id ? '<span class="dim">Mostrando…</span>' : '<span class="dim">Sin pieza</span>') + '</div>' +
+        '<div class="pieza" data-pieza="' + esc(rec.showing_id || "") + '">' + (rec.showing_id ? '<span class="dim">Emitiendo…</span>' : '<span class="dim">Sin pieza</span>') + '</div>' +
         '<div class="acciones">' + acciones.join("") + '</div>' +
         (est ? '<div class="estado-orden ' + est.clase + '">' + esc(est.texto) + '</div>' : "") +
         '</div></article>';
@@ -254,7 +255,7 @@
       var p = await meta(el.dataset.previo), src = miniatura(p);
       if (src) { el.classList.remove("vacio"); el.style.backgroundImage = 'url("' + src.replace(/"/g, "%22") + '")'; }
       var txt = box.querySelector('[data-pieza="' + CSS.escape(el.dataset.previo) + '"]');
-      if (txt && p) txt.innerHTML = "Mostrando <b>#" + esc(p.num) + "</b> · " + esc(String(p.title || "").slice(0, 70));
+      if (txt && p) txt.innerHTML = "Emitiendo <b>#" + esc(p.num) + "</b> · " + esc(String(p.title || "").slice(0, 70));
     });
     pintaResumen();
   }
@@ -326,7 +327,7 @@
       }
       var secs = Math.round((Date.now() - inicio) / 1000);
       if (reloj) clearInterval(reloj);
-      if (vista) vista.pon(res === "executed" ? "✓ Ya está en la pantalla" : res === "failed" ? "✗ La pantalla no pudo pintarla (se cortó el Bluetooth). Prueba otra vez." : "⌛ Sin confirmación en 3 minutos: mira la tarjeta de la pantalla",
+      if (vista) vista.pon(res === "executed" ? "✓ Emitiendo en la pantalla" : res === "failed" ? "✗ La pantalla no pudo pintarla (se cortó el Bluetooth). Prueba otra vez." : "⌛ Sin confirmación en 3 minutos: mira la tarjeta de la pantalla",
         100, res === "executed" ? "ok" : res === "failed" ? "ko" : "tarde", secs);
       marcaEstado(screen, res === "executed" ? "✓ " + cmd + " · hecho en " + secs + " s" : res === "failed" ? "✗ " + cmd + " · la pantalla no pudo" : "⌛ " + cmd + " · sin confirmación en 3 min", res === "executed" ? "ok" : res === "failed" ? "ko" : "espera");
       setTimeout(cargaPantallas, 1500);
@@ -388,15 +389,15 @@
     var ds = destinos();
     var ocupadas = ds.filter(function (k) { return enCurso.has(k); });
     $("emitir").disabled = !(piezaElegida && ds.length) || ocupadas.length === ds.length;
-    $("emitir").textContent = ocupadas.length ? "Emitiendo…" : "Emitir";
+    $("emitir").textContent = ocupadas.length ? "Enviando…" : "Enviar";
     $("resumenEmitir").textContent = piezaElegida
       ? ("#" + piezaElegida.num + " · " + String(piezaElegida.title || "").slice(0, 60) + " → " + (ds.length ? ds.join(", ") : "marca al menos una pantalla"))
       : "Elige una pieza y al menos una pantalla.";
   }
-  // Una emisión por pantalla a la vez: pulsar otra vez mientras pinta solo encolaba la misma pieza otra vez.
+  // Un envío por pantalla a la vez: pulsar otra vez mientras pinta solo encolaba la misma pieza otra vez.
   async function emite(pieza, screens, caja) {
     var libres = screens.filter(function (k) { return !enCurso.has(k); });
-    if (libres.length < screens.length) toast("Ya hay una emisión en marcha en " + screens.filter(function (k) { return enCurso.has(k); }).join(", "));
+    if (libres.length < screens.length) toast("Ya hay un envío en marcha a " + screens.filter(function (k) { return enCurso.has(k); }).join(", "));
     return Promise.all(libres.map(function (k) {
       var vista = filaProgreso(caja, k, "#" + pieza.num + " · " + String(pieza.title || "").slice(0, 40));
       enCurso.set(k, pieza.num); pintaResumen();
@@ -474,9 +475,9 @@
       piezaElegida = pieza; pintaResumen(); if (!indice.items.some(function (p) { return p.id === pieza.id; })) indice.items.unshift(pieza); cargaPiezas();
       var ds = destinos();
       if ($("emitirAlSubir").checked && ds.length) {
-        $("resumenSubir").textContent = "En el Stock como #" + pieza.num + ". Emitiendo en " + ds.join(", ") + "…";
+        $("resumenSubir").textContent = "En el Stock como #" + pieza.num + ". Enviando a " + ds.join(", ") + "…";
         var res = await emite(pieza, ds, $("progresoSubir")), bien = res.filter(function (x) { return x === "executed"; }).length;
-        $("resumenSubir").textContent = "En el Stock como #" + pieza.num + (bien === res.length && bien ? " y ya en pantalla." : bien ? " · en pantalla en " + bien + " de " + res.length + "." : " · no se pudo pintar: prueba «Emitir».");
+        $("resumenSubir").textContent = "En el Stock como #" + pieza.num + (bien === res.length && bien ? " y emitiéndose en pantalla." : bien ? " · emitiéndose en " + bien + " de " + res.length + " pantallas." : " · no se pudo pintar: prueba «Enviar».");
       }
       subida = null; soltar.classList.remove("lleno"); soltar.style.backgroundImage = ""; $("titulo").value = "";
     } catch (e) { $("resumenSubir").textContent = "No se pudo subir: " + String(e.message || e).slice(0, 120); b.disabled = false; }

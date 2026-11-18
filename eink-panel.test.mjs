@@ -67,7 +67,7 @@ test('al emitir hay progreso en la misma línea hasta el acuse, y no se duplican
   assert.match(panel, /id="progresoSubir"/, 'subir y emitir también enseña el progreso');
   assert.match(panel, /function faseEstimada\(seg\)/);
   assert.match(panel, /seg < ESPERADO_S \? 4 \+ 92 \* seg \/ ESPERADO_S/, 'no llega al 100 % hasta que la pantalla confirma');
-  assert.match(panel, /✓ Ya está en la pantalla/);
+  assert.match(panel, /✓ Emitiendo en la pantalla/);
   assert.match(panel, /!enCurso\.has\(k\)/, 'una emisión por pantalla a la vez');
   assert.ok(!/y enviada a " \+ ds\.join/.test(panel), 'subir no dice «enviada» si la pantalla no pudo pintarla');
 });
@@ -78,4 +78,12 @@ test('las fases estimadas siguen los tiempos reales de la SY11', () => {
   assert.match(ctx.f(2), /recogiendo/); assert.match(ctx.f(8), /Preparando/); assert.match(ctx.f(40), /Bluetooth/);
   assert.match(ctx.f(95), /Pintando/); assert.match(ctx.f(130), /reintentando/);
   assert.ok(ctx.p(0) < 5 && ctx.p(47) > 45 && ctx.p(94) <= 96 && ctx.p(200) <= 99);
+});
+
+test('vocabulario: «Enviar» la orden, «Enviando…» mientras viaja, «Emitiendo» cuando ya se ve en la tinta', () => {
+  assert.match(panel, /id="emitir" disabled>Enviar<\/button>/);
+  assert.match(panel, /ocupadas\.length \? "Enviando…" : "Enviar"/);
+  assert.match(panel, /"Emitiendo <b>#"/, 'la tarjeta dice qué pieza se está emitiendo');
+  assert.ok(!/"Emitiendo…" : "Emitir"/.test(panel), 'el botón no dice «Emitiendo» mientras solo se envía');
+  assert.ok(!/>Emitir<\/button>/.test(panel));
 });
