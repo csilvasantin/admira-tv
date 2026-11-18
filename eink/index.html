@@ -81,6 +81,16 @@
   .ficha .tipo { position: absolute; right: 6px; top: 6px; font-size: 11px; background: rgba(0,0,0,.7); padding: 2px 6px; border-radius: 6px; }
   .ficha .tit { font-size: 11.5px; padding: 6px 7px 8px; line-height: 1.25; max-height: 3.9em; overflow: hidden; }
   .barra { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+  /* Adaptar a la resolución de cada pantalla: cómo encaja la pieza y cómo se verá en cada tinta marcada. */
+  .ajuste { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px; font-size: 13px; }
+  .ajuste .modos { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ajuste .modos button.on { background: var(--violet); color: #0a0c12; border-color: var(--violet); }
+  .asi { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+  .asi:empty { display: none; }
+  .asi figure { margin: 0; width: 132px; }
+  .asi canvas { display: block; width: 100%; height: auto; border-radius: 6px; background: #fff; border: 1px solid rgba(255,255,255,.15); }
+  .asi figcaption { font-size: 11.5px; color: var(--muted); margin-top: 5px; line-height: 1.3; }
+  .asi figcaption b { color: var(--text); font-weight: 600; }
   .barra .resumen { flex: 1 1 260px; font-size: 13px; color: var(--muted); }
   /* Progreso de un envío: de pulsar «Enviar» a que la pantalla confirma que ya la está emitiendo.
      Vocabulario (Carlos, 18-nov-2026): «Enviar» la orden, «Enviando…» mientras viaja y se pinta, «Emitiendo» solo cuando ya se ve en la tinta. */
@@ -134,6 +144,15 @@
       <input type="search" id="buscar" placeholder="Buscar por título, etiqueta o número…" autocomplete="off">
     </div>
     <div id="piezas"><p class="muted">Cargando el Stock…</p></div>
+    <div class="ajuste">
+      <span class="muted">Adaptar a cada pantalla:</span>
+      <div class="modos" id="modos" role="radiogroup" aria-label="Cómo adaptar la pieza a la resolución de cada pantalla">
+        <button type="button" data-modo="auto" class="on" title="Rellena si se recorta poco (hasta un 20 %); si no, la encaja entera">Automático</button>
+        <button type="button" data-modo="cover" title="Llena toda la pantalla y recorta lo que sobra, centrado">Rellenar (recorta)</button>
+        <button type="button" data-modo="contain" title="Se ve entera, con bandas blancas donde no llega">Encajar (bandas blancas)</button>
+      </div>
+    </div>
+    <div class="asi" id="asi" aria-live="polite"></div>
     <div class="barra">
       <div class="resumen" id="resumenEmitir">Elige una pieza y al menos una pantalla.</div>
       <button type="button" class="primary" id="emitir" disabled>Enviar</button>
@@ -163,6 +182,7 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="/assets/admira-eink.js"></script>
+<script src="/assets/eink-sy11.js"></script>
 <script>
 (function () {
   "use strict";
@@ -171,7 +191,8 @@
   var CMD_HOSTS = ["https://api.admira.store/locations/cmd", "https://brain.digitalavatar.ai/locations/cmd"];
   var STOCK_META = "https://stock.admira.store/stock/";          // <id>/meta.json
   var STOCK_PUBLISH = "https://api.admira.store/stock/publish";
-  var ACK_LIMIT_MS = 180000;   // la tinta acusa DESPUÉS de pintar (~75–90 s) y a veces reintenta
+  var ACK_LIMIT_MS = 240000;   // la tinta acusa DESPUÉS de pintar (~75–90 s); si el Bluetooth corta, el puente reintenta
+                               // mientras le quede presupuesto (90 s) y el acuse puede llegar a ~185 s: se espera hasta 4 min
   var ACTION_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   var MAX_LADO = 2400, MAX_BYTES = 6 * 1024 * 1024;
   var KNOWN_KEY = "eink-panel-pantallas";
@@ -238,9 +259,9 @@
       ];
       if (siguiendo) acciones.push(sigue ? '<button type="button" data-orden="follow-off" data-screen="' + esc(k) + '">Dejar de seguir novedades</button>'
                                             : '<button type="button" data-orden="follow" data-screen="' + esc(k) + '">Seguir novedades</button>');
-      var est = estadosOrden.get(k);
+      var est = estadosOrden.get(k), md = E.medidas(rec);
       return '<article class="pantalla' + (on ? "" : " off") + (marcadas.has(k) ? " sel" : "") + '" data-screen="' + esc(k) + '">' +
-        '<div class="previo vacio" data-previo="' + esc(rec.showing_id || "") + '"></div>' +
+        '<div class="previo vacio" style="aspect-ratio:' + md.w + ' / ' + md.h + '" data-previo="' + esc(rec.showing_id || "") + '"></div>' +
         '<div><h3><label><input type="checkbox" data-marca="' + esc(k) + '"' + (marcadas.has(k) ? " checked" : "") + '> <span class="' + puntos + '"></span> ' + esc(rec.locName || k) + '</label></h3>' +
         '<div class="id">' + esc(k) + '</div>' +
         '<div class="linea">' + esc(visto) + (st.texto ? " · " + esc(st.texto) : "") + (rec.machine ? " · puente: " + esc(rec.machine) : "") + '</div>' +
@@ -327,9 +348,9 @@
       }
       var secs = Math.round((Date.now() - inicio) / 1000);
       if (reloj) clearInterval(reloj);
-      if (vista) vista.pon(res === "executed" ? "✓ Emitiendo en la pantalla" : res === "failed" ? "✗ La pantalla no pudo pintarla (se cortó el Bluetooth). Prueba otra vez." : "⌛ Sin confirmación en 3 minutos: mira la tarjeta de la pantalla",
+      if (vista) vista.pon(res === "executed" ? "✓ Emitiendo en la pantalla" : res === "failed" ? "✗ La pantalla no pudo pintarla (se cortó el Bluetooth). Prueba otra vez." : "⌛ Sin confirmación en 4 minutos: mira la tarjeta de la pantalla",
         100, res === "executed" ? "ok" : res === "failed" ? "ko" : "tarde", secs);
-      marcaEstado(screen, res === "executed" ? "✓ " + cmd + " · hecho en " + secs + " s" : res === "failed" ? "✗ " + cmd + " · la pantalla no pudo" : "⌛ " + cmd + " · sin confirmación en 3 min", res === "executed" ? "ok" : res === "failed" ? "ko" : "espera");
+      marcaEstado(screen, res === "executed" ? "✓ " + cmd + " · hecho en " + secs + " s" : res === "failed" ? "✗ " + cmd + " · la pantalla no pudo" : "⌛ " + cmd + " · sin confirmación en 4 min", res === "executed" ? "ok" : res === "failed" ? "ko" : "espera");
       setTimeout(cargaPantallas, 1500);
       return res;
     }
@@ -385,6 +406,65 @@
     pintaResumen();
   });
   function destinos() { return Array.from(marcadas).filter(function (k) { return pantallas.has(k); }); }
+
+  // ── Adaptar a la resolución de cada pantalla (Carlos, 18-nov-2026) ──
+  // Cada tinta tiene su resolución (la SY11-ab 480×800, la Samsung EM13DX 1200×1600). La orden lleva el modo
+  // (content-<N>-cover / -contain; sin sufijo, automático) y cada puente adapta la pieza a SU pantalla con la misma
+  // regla (AdmiraEink.ajuste). Aquí se enseña antes de enviar cómo quedará en cada una, tramada en 4 colores si es BWRY.
+  var modoAjuste = /^(auto|cover|contain)$/.test(lsGet("eink-panel-ajuste") || "") ? lsGet("eink-panel-ajuste") : "auto";
+  function comandoDe(num) { return "content-" + num + (modoAjuste === "auto" ? "" : "-" + modoAjuste); }
+  function marcaModos() { document.querySelectorAll("#modos button").forEach(function (b) { var on = b.dataset.modo === modoAjuste; b.classList.toggle("on", on); b.setAttribute("aria-checked", on ? "true" : "false"); b.setAttribute("role", "radio"); }); }
+  $("modos").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-modo]"); if (!b) return;
+    modoAjuste = b.dataset.modo; lsSet("eink-panel-ajuste", modoAjuste); marcaModos(); pintaAsi(true);
+  });
+  marcaModos();
+  function fuenteDe(p) { return p ? (/^(image|imagen|digital-twin)$/.test(String(p.type || "")) ? p.url : (p.thumbnail || p.poster || "")) : ""; }
+  function cargaCruzada(src, cruzada) { return new Promise(function (ok, ko) { var i = new Image(); if (cruzada) i.crossOrigin = "anonymous"; i.onload = function () { ok(i); }; i.onerror = ko; i.src = src; }); }
+  var imgCache = new Map();   // src → Promise<{img, legible}>
+  function imagenDe(src) {
+    if (!imgCache.has(src)) imgCache.set(src, cargaCruzada(src, true).then(function (img) { return { img: img, legible: true }; })
+      .catch(function () { return cargaCruzada(src, false).then(function (img) { return { img: img, legible: false }; }); }));
+    return imgCache.get(src);
+  }
+  var BWRY = /^BWRY$/;
+  function textoAjuste(a, md) {
+    var r = md.w + "×" + md.h;
+    if (a.recorte < 0.005 && a.bandas < 0.005) return "<b>" + r + "</b> · a medida";
+    if (a.modo === "cover") return "<b>" + r + "</b> · rellena, recorta " + Math.round(a.recorte * 100) + " % " + a.lados;
+    return "<b>" + r + "</b> · entera, bandas blancas " + a.lados + " (" + Math.round(a.bandas * 100) + " %)";
+  }
+  var asiClave = "", asiTurno = 0;
+  async function pintaAsi(forzar) {
+    var ds = destinos(), p = piezaElegida, clave = p ? [p.id, modoAjuste].concat(ds.map(function (k) { var m = E.medidas(pantallas.get(k)); return k + "@" + m.w + "x" + m.h; })).join("|") : "";
+    if (!forzar && clave === asiClave) return;
+    asiClave = clave; var turno = ++asiTurno, caja = $("asi");
+    if (!p || !ds.length) { caja.innerHTML = ""; return; }
+    var src = fuenteDe(p);
+    if (!src) { caja.innerHTML = '<p class="muted">Esta pieza no tiene imagen ni póster que pintar.</p>'; return; }
+    caja.innerHTML = ds.map(function (k) { return '<figure data-k="' + esc(k) + '"><canvas></canvas><figcaption>' + esc(k) + ' · preparando…</figcaption></figure>'; }).join("");
+    var cargada; try { cargada = await imagenDe(src); } catch (e) { if (turno === asiTurno) caja.innerHTML = '<p class="muted">No he podido cargar la imagen de la pieza.</p>'; return; }
+    for (var i = 0; i < ds.length; i++) {
+      if (turno !== asiTurno) return;
+      var k = ds[i], rec = pantallas.get(k), md = E.medidas(rec), e = E.einkOf(rec) || {}, fig = caja.querySelector('figure[data-k="' + CSS.escape(k) + '"]'); if (!fig) continue;
+      var a = E.ajuste(cargada.img.naturalWidth, cargada.img.naturalHeight, md.w, md.h, modoAjuste);
+      // El previo se calcula a la resolución real hasta 480×800; las grandes, reducidas (solo es una muestra).
+      var esc2 = Math.min(1, Math.sqrt(480 * 800 / (md.w * md.h))), cw = Math.round(md.w * esc2), ch = Math.round(md.h * esc2);
+      var cv = fig.querySelector("canvas"), c = cv.getContext("2d"); cv.width = cw; cv.height = ch;
+      c.fillStyle = "#fff"; c.fillRect(0, 0, cw, ch); c.imageSmoothingQuality = "high";
+      c.drawImage(cargada.img, a.x * esc2, a.y * esc2, a.w * esc2, a.h * esc2);
+      var tramada = false;
+      if (cargada.legible && BWRY.test(E.paleta(e.palette) || "") && window.EinkSY11) {
+        try {
+          var datos = c.getImageData(0, 0, cw, ch), idx = window.EinkSY11.trama(datos.data, cw, ch), pal = window.EinkSY11.PALETA;
+          for (var j = 0; j < idx.length; j++) { var q = pal[idx[j]]; datos.data[j * 4] = q[0]; datos.data[j * 4 + 1] = q[1]; datos.data[j * 4 + 2] = q[2]; datos.data[j * 4 + 3] = 255; }
+          c.putImageData(datos, 0, 0); tramada = true;
+        } catch (err) {}
+        await new Promise(function (ok) { setTimeout(ok, 0); });
+      }
+      fig.querySelector("figcaption").innerHTML = esc(rec.locName || k) + "<br>" + textoAjuste(a, md) + (tramada ? " · en 4 colores" : "");
+    }
+  }
   function pintaResumen() {
     var ds = destinos();
     var ocupadas = ds.filter(function (k) { return enCurso.has(k); });
@@ -393,6 +473,7 @@
     $("resumenEmitir").textContent = piezaElegida
       ? ("#" + piezaElegida.num + " · " + String(piezaElegida.title || "").slice(0, 60) + " → " + (ds.length ? ds.join(", ") : "marca al menos una pantalla"))
       : "Elige una pieza y al menos una pantalla.";
+    pintaAsi();
   }
   // Un envío por pantalla a la vez: pulsar otra vez mientras pinta solo encolaba la misma pieza otra vez.
   async function emite(pieza, screens, caja) {
@@ -401,7 +482,7 @@
     return Promise.all(libres.map(function (k) {
       var vista = filaProgreso(caja, k, "#" + pieza.num + " · " + String(pieza.title || "").slice(0, 40));
       enCurso.set(k, pieza.num); pintaResumen();
-      return orden(k, "content-" + pieza.num, vista).finally(function () { enCurso.delete(k); pintaResumen(); });
+      return orden(k, comandoDe(pieza.num), vista).finally(function () { enCurso.delete(k); pintaResumen(); });
     }));
   }
   $("emitir").addEventListener("click", async function () {
