@@ -82,6 +82,17 @@
   .ficha .tit { font-size: 11.5px; padding: 6px 7px 8px; line-height: 1.25; max-height: 3.9em; overflow: hidden; }
   .barra { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
   .barra .resumen { flex: 1 1 260px; font-size: 13px; color: var(--muted); }
+  /* Progreso de una emisión: de pulsar «Emitir» a que la pantalla confirma que ya la tiene pintada */
+  .progresos { display: grid; gap: 10px; margin-top: 12px; }
+  .progreso { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: rgba(0,0,0,.2); }
+  .progreso .cab { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; font-size: 13px; }
+  .progreso .cab b { font-weight: 700; } .progreso .fase { flex: 1 1 220px; color: var(--muted); } .progreso .t { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+  .progreso .pista { height: 8px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 8px; }
+  .progreso .pista i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--violet); transition: width .9s linear;
+    background-image: linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,.35) 50%, rgba(255,255,255,0) 100%); background-size: 200% 100%; animation: brillo 1.6s linear infinite; }
+  .progreso.ok .pista i { background: #2ecc71; animation: none; } .progreso.ko .pista i { background: #ff6b6b; animation: none; } .progreso.tarde .pista i { background: var(--amber); animation: none; }
+  .progreso.ok .fase { color: #2ecc71; } .progreso.ko .fase { color: #ff6b6b; } .progreso.tarde .fase { color: var(--amber); }
+  @keyframes brillo { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
   /* Subir */
   .subir { display: grid; grid-template-columns: 180px 1fr; gap: 16px; align-items: start; }
@@ -126,6 +137,7 @@
       <div class="resumen" id="resumenEmitir">Elige una pieza y al menos una pantalla.</div>
       <button type="button" class="primary" id="emitir" disabled>Emitir</button>
     </div>
+    <div class="progresos" id="progresoEmitir" aria-live="polite"></div>
   </section>
 
   <section id="sec-subir">
@@ -142,6 +154,7 @@
           <div class="resumen" id="resumenSubir">Elige una imagen.</div>
           <button type="button" class="primary" id="subir" disabled>Subir al Stock</button>
         </div>
+        <div class="progresos" id="progresoSubir" aria-live="polite"></div>
       </div>
     </div>
   </section>
@@ -262,9 +275,35 @@
   // ── Órdenes con acuse (mismo contrato que Mando: POST → cid/action → GET /ack) ──
   function marcaEstado(screen, texto, clase) { estadosOrden.set(screen, { texto: texto, clase: clase }); var card = document.querySelector('.pantalla[data-screen="' + CSS.escape(screen) + '"]');
     if (card) { var el = card.querySelector(".estado-orden"); if (!el) { el = document.createElement("div"); card.lastElementChild.appendChild(el); } el.className = "estado-orden " + clase; el.textContent = texto; } }
-  async function orden(screen, cmd) {
+  // Una fila de progreso para una pantalla. La tinta solo acusa al final (tras pintar), así que las fases
+  // intermedias se estiman con lo que tarda de verdad la SY11: recoger la orden ~5 s, preparar la imagen ~5 s,
+  // Bluetooth ~75 s y refresco del panel. La barra no pasa del 96 % hasta que llega el acuse.
+  var ESPERADO_S = 95, enCurso = new Map();
+  function filaProgreso(caja, screen, titulo) {
+    var el = document.createElement("div"); el.className = "progreso"; el.dataset.screen = screen;
+    el.innerHTML = '<div class="cab"><b></b><span class="fase"></span><span class="t"></span></div><div class="pista"><i></i></div>';
+    el.querySelector("b").textContent = titulo + " → " + screen;
+    var viejo = caja.querySelector('.progreso[data-screen="' + CSS.escape(screen) + '"]'); if (viejo) viejo.remove();
+    caja.prepend(el);
+    return { pon: function (fase, pct, clase, segundos) {
+      el.className = "progreso" + (clase ? " " + clase : ""); el.querySelector(".fase").textContent = fase;
+      el.querySelector(".pista i").style.width = Math.max(2, Math.min(100, pct)) + "%";
+      el.querySelector(".t").textContent = segundos == null ? "" : segundos + " s";
+    } };
+  }
+  function faseEstimada(seg) {
+    if (seg < 6) return "La pantalla está recogiendo la orden…";
+    if (seg < 12) return "Preparando la imagen para la tinta (4 colores)…";
+    if (seg < 85) return "Transmitiendo por Bluetooth a la pantalla…";
+    if (seg < 110) return "Pintando la tinta: el panel parpadea unos segundos…";
+    return "Tarda más de lo normal: la pantalla está reintentando tras un corte…";
+  }
+  function pctEstimado(seg) { return seg < ESPERADO_S ? 4 + 92 * seg / ESPERADO_S : Math.min(99, 96 + (seg - ESPERADO_S) / 30); }
+
+  async function orden(screen, cmd, vista) {
     var body = JSON.stringify({ id: screen, screen: screen, cmd: cmd });
     marcaEstado(screen, "→ " + cmd + " · enviando…", "espera");
+    if (vista) vista.pon("Enviando la orden a la cola…", 2, "", 0);
     for (var i = 0; i < CMD_HOSTS.length; i++) {
       var host = CMD_HOSTS[i], ctl = new AbortController(), t = setTimeout(function () { ctl.abort(); }, 4000), d = null;
       try {
@@ -272,9 +311,10 @@
         if (!r.ok) throw new Error("http " + r.status);
         d = await r.json().catch(function () { return null; });
       } catch (e) { continue; } finally { clearTimeout(t); }
-      if (!d || !d.ok || !Number.isSafeInteger(d.cid) || !ACTION_RE.test(String(d.action || ""))) { marcaEstado(screen, "✗ " + cmd + " · la cola no dio acuse", "ko"); return "failed"; }
+      if (!d || !d.ok || !Number.isSafeInteger(d.cid) || !ACTION_RE.test(String(d.action || ""))) { marcaEstado(screen, "✗ " + cmd + " · la cola no dio acuse", "ko"); if (vista) vista.pon("La cola de órdenes no la aceptó", 100, "ko", 0); return "failed"; }
       if (i > 0) CMD_HOSTS.unshift(CMD_HOSTS.splice(i, 1)[0]);
       var inicio = Date.now(), res = "timeout";
+      var reloj = vista ? setInterval(function () { var seg = Math.round((Date.now() - inicio) / 1000); vista.pon(faseEstimada(seg), pctEstimado(seg), "", seg); }, 1000) : 0;
       while (Date.now() - inicio < ACK_LIMIT_MS) {
         marcaEstado(screen, "⏳ " + cmd + " · en la pantalla, pintando… " + Math.round((Date.now() - inicio) / 1000) + " s", "espera");
         await new Promise(function (ok) { setTimeout(ok, 3000); });
@@ -285,11 +325,15 @@
         } catch (e) {}
       }
       var secs = Math.round((Date.now() - inicio) / 1000);
+      if (reloj) clearInterval(reloj);
+      if (vista) vista.pon(res === "executed" ? "✓ Ya está en la pantalla" : res === "failed" ? "✗ La pantalla no pudo pintarla (se cortó el Bluetooth). Prueba otra vez." : "⌛ Sin confirmación en 3 minutos: mira la tarjeta de la pantalla",
+        100, res === "executed" ? "ok" : res === "failed" ? "ko" : "tarde", secs);
       marcaEstado(screen, res === "executed" ? "✓ " + cmd + " · hecho en " + secs + " s" : res === "failed" ? "✗ " + cmd + " · la pantalla no pudo" : "⌛ " + cmd + " · sin confirmación en 3 min", res === "executed" ? "ok" : res === "failed" ? "ko" : "espera");
       setTimeout(cargaPantallas, 1500);
       return res;
     }
     marcaEstado(screen, "✗ " + cmd + " · sin red con la cola de órdenes", "ko");
+    if (vista) vista.pon("✗ Sin red con la cola de órdenes", 100, "ko", 0);
     return "failed";
   }
 
@@ -342,18 +386,27 @@
   function destinos() { return Array.from(marcadas).filter(function (k) { return pantallas.has(k); }); }
   function pintaResumen() {
     var ds = destinos();
-    $("emitir").disabled = !(piezaElegida && ds.length);
+    var ocupadas = ds.filter(function (k) { return enCurso.has(k); });
+    $("emitir").disabled = !(piezaElegida && ds.length) || ocupadas.length === ds.length;
+    $("emitir").textContent = ocupadas.length ? "Emitiendo…" : "Emitir";
     $("resumenEmitir").textContent = piezaElegida
       ? ("#" + piezaElegida.num + " · " + String(piezaElegida.title || "").slice(0, 60) + " → " + (ds.length ? ds.join(", ") : "marca al menos una pantalla"))
       : "Elige una pieza y al menos una pantalla.";
   }
-  async function emite(num, screens) {
-    return Promise.all(screens.map(function (k) { return orden(k, "content-" + num); }));
+  // Una emisión por pantalla a la vez: pulsar otra vez mientras pinta solo encolaba la misma pieza otra vez.
+  async function emite(pieza, screens, caja) {
+    var libres = screens.filter(function (k) { return !enCurso.has(k); });
+    if (libres.length < screens.length) toast("Ya hay una emisión en marcha en " + screens.filter(function (k) { return enCurso.has(k); }).join(", "));
+    return Promise.all(libres.map(function (k) {
+      var vista = filaProgreso(caja, k, "#" + pieza.num + " · " + String(pieza.title || "").slice(0, 40));
+      enCurso.set(k, pieza.num); pintaResumen();
+      return orden(k, "content-" + pieza.num, vista).finally(function () { enCurso.delete(k); pintaResumen(); });
+    }));
   }
   $("emitir").addEventListener("click", async function () {
     var ds = destinos(); if (!piezaElegida || !ds.length) return;
-    var b = $("emitir"); b.disabled = true; toast("Emitiendo #" + piezaElegida.num + " en " + ds.length + " pantalla" + (ds.length > 1 ? "s" : ""));
-    try { await emite(piezaElegida.num, ds); } finally { pintaResumen(); }
+    $("emitir").disabled = true;
+    await emite(piezaElegida, ds, $("progresoEmitir"));
   });
 
   // ── Subir al Stock ────────────────────────────────────────────────────
@@ -420,7 +473,11 @@
       fuente = "eink"; busca = ""; $("buscar").value = ""; document.querySelectorAll(".tabs button").forEach(function (x) { x.classList.toggle("on", x.dataset.fuente === "eink"); });
       piezaElegida = pieza; pintaResumen(); if (!indice.items.some(function (p) { return p.id === pieza.id; })) indice.items.unshift(pieza); cargaPiezas();
       var ds = destinos();
-      if ($("emitirAlSubir").checked && ds.length) { $("resumenSubir").textContent = "En el Stock como #" + pieza.num + ". Emitiendo en " + ds.join(", ") + "…"; await emite(pieza.num, ds); $("resumenSubir").textContent = "En el Stock como #" + pieza.num + " y enviada a " + ds.join(", ") + "."; }
+      if ($("emitirAlSubir").checked && ds.length) {
+        $("resumenSubir").textContent = "En el Stock como #" + pieza.num + ". Emitiendo en " + ds.join(", ") + "…";
+        var res = await emite(pieza, ds, $("progresoSubir")), bien = res.filter(function (x) { return x === "executed"; }).length;
+        $("resumenSubir").textContent = "En el Stock como #" + pieza.num + (bien === res.length && bien ? " y ya en pantalla." : bien ? " · en pantalla en " + bien + " de " + res.length + "." : " · no se pudo pintar: prueba «Emitir».");
+      }
       subida = null; soltar.classList.remove("lleno"); soltar.style.backgroundImage = ""; $("titulo").value = "";
     } catch (e) { $("resumenSubir").textContent = "No se pudo subir: " + String(e.message || e).slice(0, 120); b.disabled = false; }
   });
