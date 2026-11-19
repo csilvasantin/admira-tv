@@ -19,6 +19,7 @@ async function fixture({surface='browser',denied=false,captureError=null,slowLoa
     append(...children){this.children.push(...children);for(const child of children)child.parentNode=this;}replaceChildren(...children){this.children=children;}
     querySelectorAll(tag){return this.children.flatMap(child=>[...(child.tagName===tag?[child]:[]),...child.querySelectorAll(tag)]);}
     getContext(){const node=this;return {save(){},restore(){},setLineDash(value){this.dash=value;},fillRect(){},clearRect(){},strokeRect(...rect){(node.strokes??=[]).push({rect,color:this.strokeStyle,dash:this.dash});},fillText(text){(node.labels??=[]).push({text,color:this.fillStyle});},drawImage:source=>{this.lastDrawSource=source;},putImageData:data=>{this.lastImageData=data;},getImageData:(x,y,width,height)=>({width,height,data:new Uint8ClampedArray(width*height*4).fill(127)}),measureText(){return {width:100};}};}
+    toDataURL(type='image/png'){return `data:${type};base64,${'A'.repeat(64)}`;}
     setAttribute(name,value){this[name]=value;}removeAttribute(name){delete this[name];}load(){}async play(){}remove(){this.removed=true;if(this.parentNode)this.parentNode.children=this.parentNode.children.filter(c=>c!==this);}
   }
   const get=id=>nodes.get(id)||new Element(id);
