@@ -53,7 +53,12 @@ test('el kiosko emite solas las piezas del Stock etiquetadas personaje:<slug> mi
   assert.match(html, /listaSlug = slug; lista = slug \? piezasDe\(slug\) : \(SOLO_FIGURA \? \[\] : listaBase\); idx = -1; siguiente\(\);/);
   // TCL de la cocina (cola hotel-creel-pared-led): solo el vídeo de la figura, una pasada, y negro (19-nov-2026)
   assert.match(html, /var SOLO_FIGURA = qs\("cola"\) === "hotel-creel-pared-led";/);
-  assert.match(html, /if \(SOLO_FIGURA\) \{ g\.fillStyle = "#000"; g\.fillRect\(0, 0, W, H\); if \(listaSlug\) pintaIntro\(\); return; \}/);
+  assert.match(html, /if \(SOLO_FIGURA\) \{ g\.fillStyle = "#000"; g\.fillRect\(0, 0, W, H\); pintaIntro\(\); return; \}/);
+  // …y sin figura, la intro en bucle; tras el corto de la figura, vuelta a la intro (19-nov-2026 17:58)
+  assert.match(html, /if \(SOLO_FIGURA\) modoIntro\(true\);/);
+  assert.match(html, /if \(SOLO_FIGURA && !intro\.on && lista\.length && idx >= lista\.length - 1\) \{ modoIntro\(true\); return; \}/);
+  assert.match(html, /if \(SOLO_FIGURA && !slug\) \{ modoIntro\(true\); return; \}/);
+  assert.match(html, /if \(sf && PERSONAJES\[sf\]\) \{ intro\.on = false; personaje\(sf\); return true; \}/);
   assert.match(html, /if \(slug === listaSlug\) return;/);
   assert.match(html, /listaBase = horizontales\.length \? horizontales : todas;/);
   assert.match(html, /personaje: listaSlug \|\| ""/); // el latido cuenta el personaje (o «intro») en antena

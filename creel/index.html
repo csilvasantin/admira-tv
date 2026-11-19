@@ -96,9 +96,10 @@
   var f = qs("clima");
   if (ICONO[f]) clima.forzado = f;
   // Solo figura (Carlos, 19-nov-2026): en la TCL de la cocina (la pared dentro del player hotel-creel-pared, cola
-  // hotel-creel-pared-led) se emite ÚNICAMENTE el vídeo corto de la figura de Lego (pieza personaje:<slug>) a pantalla
-  // llena, una vez, y después negro. Sin fondo Stranger Things, luces, reloj, clima, escena «EN LA PUERTA», intro ni
-  // bucle general. El resto de pantallas (otras colas) siguen exactamente igual.
+  // hotel-creel-pared-led) se emite ÚNICAMENTE vídeo a pantalla llena: sin figura, la intro de Stranger Things (Stock
+  // #2065, la del Fold) en bucle; al entrar una figura se corta con su vídeo corto (pieza personaje:<slug>), una pasada,
+  // y se vuelve a la intro (Carlos, 19-nov-2026 17:58). Sin fondo pintado, luces, reloj, clima, escena «EN LA PUERTA»
+  // ni bucle general. El resto de pantallas (otras colas) siguen exactamente igual.
   var SOLO_FIGURA = qs("cola") === "hotel-creel-pared-led";
 
   // Señal de la maqueta del Hotel Creel en admira.store (13-nov-2026): el gemelo manda por postMessage la presencia
@@ -256,7 +257,7 @@
     var s = t / 1000;
     g.setTransform(escala, 0, 0, escala, 0, 0); // 8:3: escala 1 (igual que siempre); lleno: a la resolución real del visor
     if (negro) { g.fillStyle = "#000"; g.fillRect(0, 0, W, H); if (media && media.tagName === "VIDEO" && !media.paused) try { media.pause(); } catch (e) {} return; }
-    if (SOLO_FIGURA) { g.fillStyle = "#000"; g.fillRect(0, 0, W, H); if (listaSlug) pintaIntro(); return; } // solo el vídeo de la figura; si no, negro
+    if (SOLO_FIGURA) { g.fillStyle = "#000"; g.fillRect(0, 0, W, H); pintaIntro(); return; } // solo vídeo: la intro en bucle o el corto de la figura
     if (intro && intro.on && pintaIntro()) return;   // intro a pantalla llena, sin tinte ni escena
     // Igual que pantalla.js de la maqueta (15-nov-2026): Once en la puerta tiñe de azul, Vecna de morado, y con alguien
     // en la puerta el rayo es más frecuente y el título se da la vuelta (el Mundo del Revés).
@@ -412,7 +413,12 @@
     return true;
   }
   function ordenPersonaje(cmd) {
-    if (SOLO_FIGURA && (cmd === "tag-intro" || cmd === "tag-creel-intro" || cmd === "tag-creel-fondo")) { personaje(""); return true; } // TCL: negro
+    if (SOLO_FIGURA) { // TCL: intro/fondo = bucle de la intro; figura = su corto (sin pasar por modoIntro(false), que relanzaría la intro)
+      if (cmd === "tag-intro" || cmd === "tag-creel-intro" || cmd === "tag-creel-fondo") { personaje(""); return true; }
+      var sf = cmd === "tag-vecna-truenos" ? "vecna" : (/^tag-creel-([a-z0-9-]+)$/.exec(cmd) || [])[1];
+      if (sf && PERSONAJES[sf]) { intro.on = false; personaje(sf); return true; }
+      return false;
+    }
     if (cmd === "tag-intro" || cmd === "tag-creel-intro") { personaje(""); modoIntro(true); return true; }
     if (/^tag-(creel-[a-z0-9-]+|vecna-truenos)$/.test(cmd)) modoIntro(false);
     if (cmd === "tag-creel-fondo") { personaje(""); return true; }
@@ -482,7 +488,7 @@
     if (mediaTimer) { clearTimeout(mediaTimer); mediaTimer = null; }
     if (media && media.tagName === "VIDEO") { try { media.pause(); media.removeAttribute("src"); media.load(); } catch (e) {} }
     media = null; mediaOk = false;
-    if (SOLO_FIGURA && lista.length && idx >= lista.length - 1) { lista = []; idx = -1; return; } // TCL: una pasada y a negro
+    if (SOLO_FIGURA && !intro.on && lista.length && idx >= lista.length - 1) { modoIntro(true); return; } // TCL: una pasada y vuelta a la intro
     if (!lista.length) return;
     idx = (idx + 1) % lista.length;
     var it = lista[idx], esVideo = it.assetType !== "image", el = document.createElement(esVideo ? "video" : "img");
@@ -517,11 +523,13 @@
   function filtraPorPersonaje() {
     if (intro && intro.on) return;
     var slug = escena.cara && escena.cara.slug && piezasDe(escena.cara.slug).length ? escena.cara.slug : "";
+    if (SOLO_FIGURA && !slug) { modoIntro(true); return; } // TCL: sin vídeo de figura, la intro en bucle
     if (slug === listaSlug) return;
     listaSlug = slug; lista = slug ? piezasDe(slug) : (SOLO_FIGURA ? [] : listaBase); idx = -1; siguiente();
   }
   cargaLista();
   setInterval(cargaLista, 60000);
+  if (SOLO_FIGURA) modoIntro(true); // TCL: arranca con la intro en bucle
   function fondoContenido() {
     if (!media || !mediaOk || (media.tagName === "VIDEO" && media.readyState < 2)) return false;
     var mw = media.videoWidth || media.naturalWidth, mh = media.videoHeight || media.naturalHeight;
