@@ -124,6 +124,8 @@
   // El canon de la casa fija el orden de la esquina derecha: EXPERTO en el extremo
   // y AVANZADO a su izquierda. Sin EXPERTO, su hueco es del control de la página.
   var meta = el('div', modoCabecera ? 'yk-meta yk-head-meta' : 'yk-meta');
+  var login = modoCabecera ? cabecera.querySelector('#ykLoginLink') : null;
+  if (login) meta.appendChild(login);
   meta.appendChild(btnDer);
   if (btnAbajo) meta.appendChild(btnAbajo);
   else {
@@ -412,7 +414,7 @@
   var cli = null;
   function abierto(lado) { return root.classList.contains('yk-open-' + lado); }
   function abrir(lado, valor) {
-    if (!CAJON[lado] || !CAJON[lado].rail) return;
+    if (!CAJON[lado] || !CAJON[lado].rail || (lado === 'right' && valor && btnDer.disabled)) return;
     root.classList.toggle('yk-open-' + lado, valor);
     pila = pila.filter(function (l) { return l !== lado; });
     if (valor) pila.push(lado);
