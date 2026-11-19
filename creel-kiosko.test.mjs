@@ -50,7 +50,10 @@ test('el kiosko puede emitir la playlist de otra pantalla con ?playlist= (sin ca
 
 test('el kiosko emite solas las piezas del Stock etiquetadas personaje:<slug> mientras ese personaje manda, y lo cuenta en el latido (Carlos, 14-nov-2026)', () => {
   assert.match(html, /\(i\.tags \|\| \[\]\)\.indexOf\("personaje:" \+ slug\) >= 0/);
-  assert.match(html, /listaSlug = slug; lista = slug \? piezasDe\(slug\) : listaBase; idx = -1; siguiente\(\);/);
+  assert.match(html, /listaSlug = slug; lista = slug \? piezasDe\(slug\) : \(SOLO_FIGURA \? \[\] : listaBase\); idx = -1; siguiente\(\);/);
+  // TCL de la cocina (cola hotel-creel-pared-led): solo el vídeo de la figura, una pasada, y negro (19-nov-2026)
+  assert.match(html, /var SOLO_FIGURA = qs\("cola"\) === "hotel-creel-pared-led";/);
+  assert.match(html, /if \(SOLO_FIGURA\) \{ g\.fillStyle = "#000"; g\.fillRect\(0, 0, W, H\); if \(listaSlug\) pintaIntro\(\); return; \}/);
   assert.match(html, /if \(slug === listaSlug\) return;/);
   assert.match(html, /listaBase = horizontales\.length \? horizontales : todas;/);
   assert.match(html, /personaje: listaSlug \|\| ""/); // el latido cuenta el personaje (o «intro») en antena

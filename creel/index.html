@@ -95,6 +95,11 @@
   }
   var f = qs("clima");
   if (ICONO[f]) clima.forzado = f;
+  // Solo figura (Carlos, 19-nov-2026): en la TCL de la cocina (la pared dentro del player hotel-creel-pared, cola
+  // hotel-creel-pared-led) se emite ÚNICAMENTE el vídeo corto de la figura de Lego (pieza personaje:<slug>) a pantalla
+  // llena, una vez, y después negro. Sin fondo Stranger Things, luces, reloj, clima, escena «EN LA PUERTA», intro ni
+  // bucle general. El resto de pantallas (otras colas) siguen exactamente igual.
+  var SOLO_FIGURA = qs("cola") === "hotel-creel-pared-led";
 
   // Señal de la maqueta del Hotel Creel en admira.store (13-nov-2026): el gemelo manda por postMessage la presencia
   // (quién se acerca a la puerta), quién entra en la zona de la puerta y la figura elegida, con la foto. Aquí se
@@ -108,7 +113,7 @@
     if (caras[url]) return caras[url];
     var img = new Image(); img.decoding = "async"; img.src = url; caras[url] = img; return img;
   }
-  function eligeCara() { escena.cara = escena.caraZona || escena.caraSel; if (escena.cara) cara(escena.cara.foto); if (typeof filtraPorPersonaje === "function" && lista) filtraPorPersonaje(); }
+  function eligeCara() { if (SOLO_FIGURA) listaSlug = null; escena.cara = escena.caraZona || escena.caraSel; if (escena.cara) cara(escena.cara.foto); if (typeof filtraPorPersonaje === "function" && lista) filtraPorPersonaje(); }
   function fotoValida(u) { try { var x = new URL(u); return x.protocol === "https:" && ORIGENES[x.origin] ? x.href : ""; } catch (e) { return ""; } }
   window.addEventListener("message", function (ev) {
     if (!ORIGENES[ev.origin] || !ev.data || typeof ev.data !== "object") return;
@@ -251,6 +256,7 @@
     var s = t / 1000;
     g.setTransform(escala, 0, 0, escala, 0, 0); // 8:3: escala 1 (igual que siempre); lleno: a la resolución real del visor
     if (negro) { g.fillStyle = "#000"; g.fillRect(0, 0, W, H); if (media && media.tagName === "VIDEO" && !media.paused) try { media.pause(); } catch (e) {} return; }
+    if (SOLO_FIGURA) { g.fillStyle = "#000"; g.fillRect(0, 0, W, H); if (listaSlug) pintaIntro(); return; } // solo el vídeo de la figura; si no, negro
     if (intro && intro.on && pintaIntro()) return;   // intro a pantalla llena, sin tinte ni escena
     // Igual que pantalla.js de la maqueta (15-nov-2026): Once en la puerta tiñe de azul, Vecna de morado, y con alguien
     // en la puerta el rayo es más frecuente y el título se da la vuelta (el Mundo del Revés).
@@ -346,9 +352,9 @@
   var lista = [], listaBase = [], listaSlug = "", listaNombre = "", listaRev = null, idx = -1, media = null, mediaOk = false, mediaTimer = null;
   // Botón «📺 Pantallas» del mando (Carlos, 14-nov-2026): pantallas-on / pantallas-off / pantallas-toggle por la cola
   // /locations/cmd (la misma que el resto de players, con acuse). OFF para el vídeo y deja el fondo Stranger Things.
-  var pantallasOn = (function () { try { return localStorage.getItem("creel-pantallas") !== "0"; } catch (e) { return true; } })();
+  var pantallasOn = SOLO_FIGURA || (function () { try { return localStorage.getItem("creel-pantallas") !== "0"; } catch (e) { return true; } })();
   function pantallas(on) {
-    pantallasOn = !!on;
+    pantallasOn = !!on || SOLO_FIGURA; // en la TCL solo-figura, contenido-off no vacía los vídeos de figura
     try { localStorage.setItem("creel-pantallas", pantallasOn ? "1" : "0"); } catch (e) {}
     if (!pantallasOn) { lista = []; listaBase = []; listaSlug = ""; listaRev = null; siguiente(); } else cargaLista();
     return pantallasOn;
@@ -406,6 +412,7 @@
     return true;
   }
   function ordenPersonaje(cmd) {
+    if (SOLO_FIGURA && (cmd === "tag-intro" || cmd === "tag-creel-intro" || cmd === "tag-creel-fondo")) { personaje(""); return true; } // TCL: negro
     if (cmd === "tag-intro" || cmd === "tag-creel-intro") { personaje(""); modoIntro(true); return true; }
     if (/^tag-(creel-[a-z0-9-]+|vecna-truenos)$/.test(cmd)) modoIntro(false);
     if (cmd === "tag-creel-fondo") { personaje(""); return true; }
@@ -475,6 +482,7 @@
     if (mediaTimer) { clearTimeout(mediaTimer); mediaTimer = null; }
     if (media && media.tagName === "VIDEO") { try { media.pause(); media.removeAttribute("src"); media.load(); } catch (e) {} }
     media = null; mediaOk = false;
+    if (SOLO_FIGURA && lista.length && idx >= lista.length - 1) { lista = []; idx = -1; return; } // TCL: una pasada y a negro
     if (!lista.length) return;
     idx = (idx + 1) % lista.length;
     var it = lista[idx], esVideo = it.assetType !== "image", el = document.createElement(esVideo ? "video" : "img");
@@ -510,7 +518,7 @@
     if (intro && intro.on) return;
     var slug = escena.cara && escena.cara.slug && piezasDe(escena.cara.slug).length ? escena.cara.slug : "";
     if (slug === listaSlug) return;
-    listaSlug = slug; lista = slug ? piezasDe(slug) : listaBase; idx = -1; siguiente();
+    listaSlug = slug; lista = slug ? piezasDe(slug) : (SOLO_FIGURA ? [] : listaBase); idx = -1; siguiente();
   }
   cargaLista();
   setInterval(cargaLista, 60000);
