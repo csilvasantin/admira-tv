@@ -74,14 +74,18 @@ async function actorWithAccess(request, env) {
 
 function cleanItem(raw, index) {
   if (!raw || typeof raw !== "object") return null;
-  const asset = String(raw.asset || raw.url || "").trim().slice(0, 1000);
+  const asset = String(raw.asset || raw.url || raw.src || "").trim().slice(0, 1000);
   if (!/^https:\/\//i.test(asset)) return null;
   const assetType = assetTypeOf(raw.assetType || raw.type);
   const id = String(raw.id || raw.stockId || `item-${index + 1}`).trim().slice(0, 160);
   const tags = Array.isArray(raw.tags) ? raw.tags.map(tag => String(tag || "").trim().slice(0, 80)).filter(Boolean).slice(0, 32) : [];
   return { id, stockId: String(raw.stockId || "").trim().slice(0, 160), title: String(raw.title || `Contenido ${index + 1}`).trim().slice(0, 240),
     sub: String(raw.sub || "").trim().slice(0, 300), lane: raw.lane === "municipal" ? "municipal" : "publicidad",
-    seconds: Math.max(2, Math.min(600, Number(raw.seconds) || 10)), asset, assetType, tags };
+    seconds: Math.max(2, Math.min(600, Number(raw.seconds) || Number(raw.duration) || 10)), asset, assetType, tags,
+    // Elemento URL (20-nov-2026): `auth` dice cómo entra el player si la web tiene bloqueo. "admiranext" = pase de
+    // kiosco (/api/kiosko/pase); "none" = nunca. Sin campo: automático para las rutas de kiosco de admiranext.com.
+    ...(["admiranext", "none"].includes(String(raw.auth || "").toLowerCase()) ? { auth: String(raw.auth).toLowerCase() } : {}),
+    ...(["url", "web", "webpage"].includes(String(raw.type || raw.assetType || "").toLowerCase()) ? { kind: "url" } : {}) };
 }
 
 async function readDraft(env, screen,legacyOnly=false) {

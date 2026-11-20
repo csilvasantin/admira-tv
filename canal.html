@@ -2280,7 +2280,7 @@ async function loadDefaultDraft(){
     const firstValidRead=!DEFAULT_DRAFT.ready;
     DEFAULT_DRAFT.ready=true;DEFAULT_DRAFT.assigned=raw.length>0||DEFAULT_DRAFT.managedEmpty;
     if(xtoreMusicEnabled())raw=xtoreMusicItems(raw,all);
-    const mapped=raw.map((it,ix)=>{const type=playlistAssetKind(it);return{id:'default:'+String(it.stockId||it.id||ix),url:it.asset||it.url||'',type,title:it.title||('Contenido '+(ix+1)),motor:'parrilla-default',category:'por-defecto',_default:true,_fullMusic:DEFAULT_DRAFT.music,_position:ix,_previewSec:Math.max(2,+it.seconds||10),createdAt:'8'+String(1000+ix)}}).filter(x=>x.url);
+    const mapped=raw.map((it,ix)=>{const type=playlistAssetKind(it);return{id:'default:'+String(it.stockId||it.id||ix),url:it.asset||it.url||'',type,_srcId:String(it.id||it.stockId||''),auth:String(it.auth||''),title:it.title||('Contenido '+(ix+1)),motor:'parrilla-default',category:'por-defecto',_default:true,_fullMusic:DEFAULT_DRAFT.music,_position:ix,_previewSec:Math.max(2,+it.seconds||10),createdAt:'8'+String(1000+ix)}}).filter(x=>x.url);
     const signature=(DEFAULT_DRAFT.music?'music:':'')+(DEFAULT_DRAFT.managedEmpty?'managed-empty:':'')+(xtoreMusicEnabled()?(DEFAULT_DRAFT.assigned?'assigned:':'stock:'):'')+mapped.map(x=>x.id+'|'+x.type+'|'+x.url+'|'+x._previewSec).join('~');
     if(signature===DEFAULT_DRAFT.signature){if(firstValidRead||xtoreMusicEnabled()&&!playlist.length)rebuild(false);pausedNotice();return;}
     DEFAULT_DRAFT.items=mapped;DEFAULT_DRAFT.signature=signature;rebuild(false);pausedNotice();
@@ -3522,6 +3522,25 @@ async function stockItemByNum(pn){
   }catch(_){ return null; }
 }
 const stockInteractiveStyle='width:100%;height:100%;border:0;display:block;background:#000';
+// ── ELEMENTO URL CON BLOQUEO (20-nov-2026, Carlos: «incluir urls para que se abran en el player … por ejemplo
+// admiranext.com/analytics con un token si tiene bloqueo»). Una web de admiranext.com con login no se puede abrir con
+// la cookie de sesión dentro de este iframe (contexto de terceros: SameSite=Strict y el WebView de la TCL no acepta
+// cookies de terceros). El canal pide a /api/kiosko/pase un pase de un solo uso para ESA pieza de SU playlist y el
+// iframe abre la dirección de canje: admiranext.com da una sesión de kiosco de solo lectura de 15 min para esa ruta.
+// Ningún token vive en la playlist ni en el repo. `auth:"none"` en la pieza lo desactiva.
+function kioskoNecesario(it){
+  if(!it||String(it.auth||'').toLowerCase()==='none') return false;
+  if(String(it.auth||'').toLowerCase()==='admiranext') return true;
+  try{ const u=new URL(it.url); return u.protocol==='https:'&&/^(www\.)?admiranext\.com$/i.test(u.hostname); }catch(_){ return false; }
+}
+function kioskoAviso(f,txt){ try{ f.removeAttribute('src'); f.srcdoc='<body style="margin:0;display:grid;place-items:center;height:100vh;background:#000;color:#999;font:24px system-ui">🔒 '+String(txt).replace(/[<>&]/g,'')+'</body>'; }catch(_){} }
+async function kioskoSrc(it){
+  const r=await fetch('/api/kiosko/pase',{method:'POST',cache:'no-store',credentials:'same-origin',headers:{'content-type':'application/json'},
+    body:JSON.stringify({screen:String(programScreen()||''),item:String(it._srcId||''),url:String(it.url||'')}),signal:AbortSignal.timeout(8000)});
+  const d=await r.json().catch(()=>null);
+  if(!r.ok||!d||!d.ok||!/^https:\/\/www\.admiranext\.com\/kiosko\/entrar\?pase=/.test(String(d.src||''))) throw new Error((d&&d.error)||('HTTP '+r.status));
+  return d.src;
+}
 function stockInteractiveFrame(it){
   const f=document.createElement('iframe');
   f.style.cssText=stockInteractiveStyle;
@@ -3531,6 +3550,14 @@ function stockInteractiveFrame(it){
   const tags=Array.isArray(it.tags)?it.tags:String(it.tags||'').split(/[,+\s]+/);
   const isPayment=tags.some(t=>normTag(t)==='payment');
   f.setAttribute('sandbox',it._stockPresentation?'allow-scripts':'allow-scripts allow-same-origin allow-forms'+(isPayment?' allow-popups allow-popups-to-escape-sandbox':''));
+  if(kioskoNecesario(it)){
+    // El pase se pide en cada pase de la pieza (un solo uso, 120 s): nunca se guarda ni se cachea.
+    kioskoSrc(it).then(src=>{ f.src=src; }).catch(e=>{
+      // Pieza fuera de las rutas de kiosco o sin playlist publicada: se abre tal cual (web pública).
+      if(String(e&&e.message)==='no_en_playlist') f.src=it.url; else kioskoAviso(f,'Página protegida: sin pase de kiosco ('+String(e&&e.message||'error').slice(0,40)+')');
+    });
+    return f;
+  }
   f.src=it.url;
   return f;
 }
