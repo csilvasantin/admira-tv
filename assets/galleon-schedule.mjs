@@ -131,6 +131,8 @@ const TAG_KEY = value => String(value || '').normalize('NFD').replace(/[\u0300-\
  * otra etiqueta libre de la pieza (el direccionamiento de la API descarta las que no conoce). Sin duración conocida
  * (`secondsGuessed`): el player toma la del vídeo. Fuera las ocultas y lo que no sea vídeo, imagen o animación.
  */
+const prioridadDe = piece => (Number.isInteger(piece?.prioridad) && piece.prioridad >= 0 && piece.prioridad <= 9 ? piece.prioridad : 2);
+
 export function taggedForScreen(stock, screen) {
   const key = TAG_KEY(screen);
   if (!key) return [];
@@ -138,7 +140,9 @@ export function taggedForScreen(stock, screen) {
   return (Array.isArray(stock) ? stock : []).filter(piece => piece && typeof piece === 'object' && !piece.oculto
       && ['video', 'image', 'animation'].includes(String(piece.type || '').toLowerCase()) && /^https:\/\//.test(String(piece.url || ''))
       && (Array.isArray(piece.tags) ? piece.tags : []).some(tag => accepted.has(TAG_KEY(tag))))
-    .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+    // Cola de la playlist (Carlos, 21-nov-2026): prioridad ascendente (sin prioridad = 2, la de toda importación) y, a
+    // igualdad, por llegada (id = instante de alta): lo último importado con #corsair queda al final; #prioridad1 o 0, antes.
+    .sort((a, b) => prioridadDe(a) - prioridadDe(b) || String(a.id).localeCompare(String(b.id)))
     .map(piece => ({ id: String(piece.id), stockId: String(piece.id), title: String(piece.title || ''), seconds: Number(piece.seconds) > 0 ? Number(piece.seconds) : 10,
       secondsGuessed: !(Number(piece.seconds) > 0), asset: String(piece.url), assetType: String(piece.type).toLowerCase(), tags: (piece.tags || []).map(String),
       width: Number(piece.width) || 0, height: Number(piece.height) || 0 }));
