@@ -94,3 +94,12 @@ test('canonical MCP path discovers project routing and reads active binding',asy
  const read=await api('/taza/mcp',{jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'taza_project_read',arguments:{}}});
  assert.equal(JSON.parse(read.data.result.content[0].text).binding.storeId,'canalkiosk-jardinets');
 });
+test('pickup renders each phase beneath the same customer instead of always LISTO',async()=>{
+ kv.clear();await api('/api/store-binding',{storeId:'starbucks-queue',screen:''});const gifs=[];
+ for(const verb of ['RECIBIDO','PREPARANDO','LISTO']){
+  kv.delete('mugStatus');const r=await api('/api/mug-status',{project:'starbucks-queue',via:'queue-follow',source:'gestorColas',name:'Carlos',verb});
+  assert.equal(r.data.ok,true);assert.equal(r.data.status.name,'CARLOS');assert.equal(r.data.status.verb,verb);
+  const gif=Buffer.from(kv.get('gif'));assert.equal(gif.readUInt16LE(6),32);assert.equal(gif.readUInt16LE(8),16);gifs.push(gif);
+ }
+ assert.notDeepEqual(gifs[0],gifs[1]);assert.notDeepEqual(gifs[1],gifs[2]);
+});

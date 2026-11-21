@@ -747,7 +747,8 @@ function statusPixels(name, verb, offsetX = 0, pickup = false) {
   }
   const line = /* @__PURE__ */ __name((text, y, r, g, b) => {
     const raw = asciiMug(text).slice(0, 40);
-    let x = pickup ? Math.max(0, Math.floor((32 - (raw.length * 4 - 1)) / 2)) : -Math.max(0, Number(offsetX) || 0);
+    const advance = pickup && raw.length > 8 ? 3 : 4;
+    let x = pickup ? Math.max(0, Math.floor((32 - (raw.length * advance - (advance === 4 ? 1 : 0))) / 2)) : -Math.max(0, Number(offsetX) || 0);
     for (const ch of raw) {
       const glyph = FONT5[ch] || FONT5[" "];
       for (let row = 0; row < 5; row++) {
@@ -755,7 +756,7 @@ function statusPixels(name, verb, offsetX = 0, pickup = false) {
           if (glyph[row] & 1 << 2 - col) set(x + col, y + row, r, g, b);
         }
       }
-      x += 4;
+      x += advance;
     }
   }, "line");
   line(name, 1, pickup ? 0 : 61, pickup ? 108 : 255, pickup ? 85 : 212);
@@ -1017,7 +1018,7 @@ async function writeMugStatus(env, origin, args) {
   // Pickup notices stay still: no shared scrolling offset can erase the name.
   // Eight 3x5 glyphs fit each 32px row. Preserve the complete name in status.
   const gif = rec.storeId === 'starbucks-queue'
-    ? gifFromRgb(32, 16, statusPixels(rec.name.slice(0, 8), 'LISTO', 0, true))
+    ? gifFromRgb(32, 16, statusPixels(rec.name.slice(0, 8), /PREPAR/i.test(rec.verb) ? 'PREPARANDO' : /RECIB/i.test(rec.verb) ? 'RECIBIDO' : 'LISTO', 0, true))
     : statusScrollGif(rec.name, rec.verb);
   await env.KV.put("gif", gif);
   await env.KV.put("gifAt", String(rec.ts));

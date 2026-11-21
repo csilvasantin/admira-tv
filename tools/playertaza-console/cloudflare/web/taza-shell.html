@@ -31,26 +31,7 @@ Escribe help para empezar.</pre><form id="command-form"><label for="command">›
   <script>
   // Taza + cola (7-oct-2026): cuando un pedido con nombre pasa a «listo», la taza lo muestra:
   // «NOMBRE, tu pedido Starbucks está preparado». Pedidos de demo, pago SIMULADO.
-  (function(){
-    var P=new URLSearchParams(location.search),store=(P.get('store')||'starbucks-paseo-de-gracia').replace(/[^a-z0-9-]/g,'')||'starbucks-paseo-de-gracia';
-    var mug='https://playertaza.csilvasantin.workers.dev',revision=null;
-    var relay='https://mcp-ainimation.admira.store',vistos={},primera=true,cola=[],ocupada=false,el=document.getElementById('aviso');
-    var esc=function(x){return String(x||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
-    window.__tazaAvisos=[];
-    function mostrar(){ if(ocupada||!cola.length) return; ocupada=true; var p=cola.shift();
-      var txt=p.nombre?p.nombre+', tu pedido Starbucks está preparado':'Pedido '+p.numero+', tu pedido Starbucks está preparado';
-      el.innerHTML=(p.nombre?esc(p.nombre)+',<br>':'')+'tu pedido Starbucks está preparado ☕<small>Pedido '+esc(p.numero)+' · recógelo en barra</small>';
-      el.classList.add('on');
-      fetch(mug+'/api/mug-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({project:'starbucks-queue',via:'queue-follow',source:'gestorColas',name:p.nombre||('PEDIDO '+p.numero),verb:'PEDIDO LISTO'})}).then(function(r){return r.json();}).then(function(d){el.dataset.delivery=d.ok&&d.bubble&&d.bubble.queued?'queued':'not-sent';}).catch(function(){el.dataset.delivery='error';});
-      window.__tazaAvisos.push({numero:p.numero,nombre:p.nombre||null,text:txt,at:Date.now()});
-      setTimeout(function(){ el.classList.remove('on'); setTimeout(function(){ ocupada=false; mostrar(); },500); },8000); }
-    function tic(){ fetch(mug+'/api/store-binding?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
-      if(!d.binding||d.binding.project!=='starbucks-queue'){cola=[];primera=true;revision=null;el.classList.remove('on');return;}
-      if(revision!==d.binding.revision){revision=d.binding.revision;vistos={};primera=true;}
-      return fetch(relay+'/cola/estado?store='+store,{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
-      (d.listo||[]).forEach(function(p){ if(!vistos[p.numero]){ vistos[p.numero]=1; if(!primera) cola.push(p); } }); primera=false; mostrar(); }); }).catch(function(){cola=[];el.classList.remove('on');}); }
-    tic(); setInterval(tic,2000);
-  })();
   </script>
+<script type="module" src="/taza/queue-follow.js?v=phases-20261121"></script>
 </body>
 </html>
