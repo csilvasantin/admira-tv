@@ -287,7 +287,22 @@ async function adminGet(request, env, q, cors, waitUntil) {
   return json({ ok: true, rule, pieces: pieces.slice(0, 12), total: pieces.length, screens: matched.map(s => s.screen), manual: withManual }, 200, cors);
 }
 
-export async function onRequestGet({ request, env, waitUntil,legacyOnly=false }) {
+// Editors receive the editable draft. Clients asking for playout receive the effective order.
+export async function onRequestGet(context){
+  const result=await getDraft(context), query=new URL(context.request.url).searchParams;
+  if(query.get('effective')!=='1'||!result.ok||!query.get('screen'))return result;
+  const doc=await result.json();
+  if(!doc.draft)return Response.json(doc,{headers:result.headers});
+  const {priorityState}=await import('./_import-priority.js');
+  let state;
+  try{state=await priorityState(context.env.PROGRAMACION_DB,query.get('screen'));}
+  catch{return json({ok:false,error:'priority_unavailable'},503);}
+  const base=[...doc.draft.items,...(doc.auto||[])], key=i=>i.stockId||i.id;
+  const orderedIds=new Set([...state.front,...state.tail].map(key));
+  const items=state.emergency?[state.emergency]:[...state.front,...base.filter(i=>!orderedIds.has(key(i))),...state.tail];
+  return Response.json({...doc,draft:{...doc.draft,items},auto:[],priority:state},{headers:result.headers});
+}
+async function getDraft({ request, env, waitUntil,legacyOnly=false }) {
   const cors = corsFor(request), q = new URL(request.url).searchParams;
   if (q.get("live") === "1" || q.get("preview") === "1") return adminGet(request, env, q, cors, waitUntil);
   const screen = cleanScreen(q.get("screen"));

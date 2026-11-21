@@ -1,0 +1,9 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prioridad de emisión · Admira TV</title><style>
+:root{color-scheme:dark;font:16px system-ui;background:#09121c;color:#e9f3fb}body{max-width:42rem;margin:4vh auto;padding:1rem}form,label,section{display:grid;gap:.5rem}form,section{margin:1.5rem 0;gap:1rem}input,button,select{box-sizing:border-box;width:100%;padding:.8em;border-radius:6px;border:1px solid #617284;font:inherit}button{background:#b9e4fc;color:#132027;font-weight:600;cursor:pointer}button:disabled{opacity:.5}a{color:#a2def8}[hidden]{display:none!important}
+</style></head><body><a href="/playlists/">← Playlists</a><h1>Prioridad de emisión</h1>
+<label>Pantalla<select id="screen"><option value="">Selecciona una pantalla</option></select></label>
+<section><strong id="incident" role="status"></strong><button type="button" id="end" hidden>Finalizar emergencia y recuperar la playlist</button></section>
+<form><label>ID del contenido en Stock<input id="stock" required maxlength="160" pattern="[A-Za-z0-9_\-]+"></label>
+<label>Prioridad<select id="level"><option value="2">2 · Al final de la playlist</option><option value="1">1 · Emitir primero</option><option value="0">0 · Solo el aviso de emergencia</option></select></label>
+<button id="send" disabled>Añadir al final</button></form><p id="status" role="status"></p><ol id="queue" aria-label="Playlist efectiva"></ol><script type="module" src="/assets/priority-console.mjs"></script></body></html>
