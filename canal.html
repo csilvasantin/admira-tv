@@ -441,6 +441,19 @@
 
 <script src="/assets/seamless-video.js?v=22.10.2026.r2.1134"></script>
 <script src="/shared/park-player-info.js"></script>
+<script>
+(function(){
+  try {
+    const q=new URLSearchParams(location.search),screen=q.get('screen')||localStorage.getItem('adtv_screen');
+    if(!screen||q.has('preview')||!JSON.parse(localStorage.getItem('adtv_import_priority:'+screen))?.emergency)return;
+    document.documentElement.style.visibility='hidden';
+    const dest=new URL('/emergencia/',location.origin);
+    dest.searchParams.set('screen',screen);dest.searchParams.set('back',location.pathname+location.search+location.hash);
+    location.replace(dest.href);
+  }catch{}
+})();
+</script>
+<script src="/assets/import-priorities.js"></script>
 <script src="/assets/player-pairing.js?v=22.10.2026.r2.1134"></script>
 <script>
 // Stock desde api.admira.store (Cloudflare, mismo infra que admira.tv) en vez del R2
@@ -634,6 +647,7 @@ if(PREVIEW.on){ syncOn=false; playoutMode='local'; }
 save('adtv_sync_slot',String(syncSlotSec));
 save('adtv_mode',playoutMode);
 
+let importPriorityState=null, priorityList=null;
 let all=[], playlist=[], cur=-1, seenSig='', timer=null, barTimer=null, mediaEl=null, feedTimer=null, xplTimer=null;
 let customOrder=[]; try{ const o=JSON.parse(LS('adtv_order','[]')); if(Array.isArray(o)) customOrder=o; }catch(_){}
 // Contenidos añadidos por su número persistente de Stock desde el mando experto.
@@ -1258,6 +1272,7 @@ function thumbHtml(it){ const k=KIND[it.type]||'image';
   if(it.thumbnail) return '<img loading="lazy" decoding="async" src="'+it.thumbnail+'" alt="">';
   return k==='video'?'▶':k==='interactive'?'☝':'♪'; }
 function renderRail(){
+  orderImportQueue();
   if(__adtvClean) return;   // el rail está display:none!important en kiosko: regenerar su innerHTML era trabajo invisible (guard aquí: tiene 9 llamadores)
   const host=$('railItems'); if(!host) return;
   if(!playlist.length){ host.innerHTML=''; return; }
@@ -1948,6 +1963,7 @@ function standbyOn(on){
 const PLAYLIST_API='https://brain.digitalavatar.ai/control/playlist';
 let _plSig=null;
 function signagePlaylistPush(){
+  orderImportQueue();
   if(XTORE_PARENT&&xtoreMusicEnabled())return;
   if(PREVIEW.on||!scr.screen) return;   // el previo de borrador jamás contamina el mando
   // (una playlist VACÍA sí se publica: el mando debe reflejar el segmento vacío,
@@ -2437,6 +2453,43 @@ async function runTechnicalAnalysis(){
     } }catch(_){} await new Promise(r=>setTimeout(r,80)); } }
   finally{ _techBusy=false; }
 }
+
+function importChannelItem(item){
+  return {id:item.stockId,stockId:item.stockId,url:item.asset,type:item.assetType,title:item.title,
+    tags:item.tags||[],_exact:true,_previewSec:item.seconds,importPriority:item.priority};
+}
+function orderImportQueue(){
+  if(!importPriorityState || priorityList===playlist || PREVIEW.on)return;
+  const previous=playlist[cur]?.id;
+  playlist=AdmiraImportPriority.ordered(playlist,importPriorityState,importChannelItem);
+  priorityList=playlist;
+  if(previous)cur=playlist.findIndex(x=>x.id===previous);
+}
+function receiveImportPriority(screen,state){
+  if(state.emergency){
+    // Leave the ordinary scheduler completely, including live iframes and background audio.
+    ++_playTok;clearTimeout(timer);
+    document.querySelectorAll('audio,video').forEach(el=>{el.muted=true;el.pause();});
+    document.querySelectorAll('iframe').forEach(el=>el.remove());
+    document.documentElement.style.visibility='hidden';
+    const dest=new URL('/emergencia/',location.origin);
+    dest.searchParams.set('screen',screen);
+    dest.searchParams.set('back',location.pathname+location.search+location.hash);
+    location.replace(dest.href);return;
+  }
+  if(!state.front.length&&!state.tail.length&&!importPriorityState)return;
+  importPriorityState=state;priorityList=null;
+  // Keep the server-assigned queue if a live playlist rebuilds between polls.
+  orderImportQueue();
+  renderRail();signagePlaylistPush();schedulePrecache();
+  const first=state.front[0],receipt='adtv_priority_played:'+screen;
+  if(first&&LS(receipt,'')!==first.event&&!_standby){
+    if(directOn)exitDirect();
+    if(paused)setPaused(false);
+    const item=importChannelItem(first),forced=beginForcedTagPlayback(item.id);
+    markForcedTagPlaying(forced,item);save(receipt,first.event);play(0,item);
+  }else if(cur<0&&playlist.length&&!paused&&!_standby)play(0);
+}
 let _asapItemId=null;   // #ID solicitado: no saltar a otra pieza lista mientras ésta baja
 let _forcedTagPlayback=null, _forcedTagSeq=0;
 function beginForcedTagPlayback(wanted){
@@ -2789,6 +2842,7 @@ function videoDecodeGuardWait(v, started, frames, now){
 const coffeeTransitions=window.AdmiraSeamlessVideo?window.AdmiraSeamlessVideo.create(stage):{clear(){}};
 function coffeeItem(it){return !!it&&String(it.id||'').startsWith('starbucks-gdg51-seven-20261015-r');}
 async function play(i, forced){
+  orderImportQueue();
   if(_standby||paused) return;
   guardPlayStarted();               // guardia de emisión: empieza a contar el turno              // en standby no se reproduce nada (ni audio detrás del negro)
   const _tok=++_playTok;
@@ -4605,6 +4659,7 @@ function tagCounts(){ const c={}; const s=Object.assign({},seg,{tag:''});
 function formatCounts(){ const c={}; const s=Object.assign({},seg,{format:''});
   for(const it of all){ if(!matchesSeg(it,s)) continue; for(const t of (it.tags||[])){ const k=String(t).toLowerCase().trim(); if(k&&FMT_ALL.has(k)) c[k]=(c[k]||0)+1; } } return c; }
 function renderChan(){
+  orderImportQueue();
   const el=$('chan'); if(!el) return;
   if(__adtvClean) return;   // #chan está display:none!important en kiosko
   const counts=tagCounts();
@@ -5096,6 +5151,11 @@ if(PREVIEW.on){
   try{ const q=qs.get('standby'); if(q==='1'||q==='0') save('adtv_standby',q); if(q==='0'&&paused){ paused=false; save(PAUSE_INTENT_KEY,'0'); } }catch(_){}   // ?standby=0 = el lanzador quiere emisión: ni standby ni pausa heredada
   try{ if(LS('adtv_standby','0')==='1') standbyOn(true); }catch(_){}
   wireCam(); loadGrid(); setInterval(loadGrid, 60000);
+  pairingReady.then(()=>{
+    const screen=String(programScreen()||'').trim();
+    if(!PREVIEW.on && /^[a-z0-9][a-z0-9-]{1,79}$/.test(screen))
+      AdmiraImportPriority.watch({screen,onChange:state=>receiveImportPriority(screen,state)});
+  });
   loadDefaultDraft(); setInterval(loadDefaultDraft, 30000);
   startPositionBeat();   // equipos móviles (robot/taxi/bus): latido de posición
   // pseudo-streaming: pre-descarga la playlist a disco y reporta el estado al worker

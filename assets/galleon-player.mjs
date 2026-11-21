@@ -1,3 +1,4 @@
+import './import-priorities.js';
 // Player del Corsair Galleon 100 SD (encargo #7569). Pinta la LCD superior (16:9) con la señal de la flota y las 12
 // teclas como NAVEGADOR de la playlist (Carlos, 16-nov-2026): previo, título y posición de las 6 piezas anteriores
 // (dos filas de arriba) y las 6 siguientes (dos de abajo); tocar una tecla salta a esa pieza. Sólo hay una pista de
@@ -38,6 +39,9 @@ let twinSelection = null;
 let plan = null;
 let clockOffset = 0; // serverNow − Date.now(), medido en cada sondeo del playout
 let playlist = { rev: null, name: '', slots: [], ids: [] };
+let priorityState={emergency:null,front:[],tail:[]}, priorityTurn=null;
+let lastPriority='';
+try {lastPriority=localStorage.getItem('adtv_priority_played:'+SCREEN)||'';} catch {}
 let sources = { draft: null, auto: [], tagged: [] }; // lista manual del mando, dirigidas por la API y etiquetadas en el Stock
 let onAir = { source: 'none', id: '', title: '', index: -1, total: 0, paired: false };
 let jump = { ms: 0, rev: null }; // salto por tecla o rueda: desplaza el reloj; se olvida al cambiar la playlist
@@ -69,6 +73,7 @@ window.addEventListener('message', event => {
     program();
     return;
   }
+  if (priorityState.emergency || priorityTurn) return;
   if (event.data?.type !== 'admira:galleon:select') return;
   const horizontal = stockTrack(event.data.landscape);
   const vertical = stockTrack(event.data.portrait);
@@ -111,8 +116,9 @@ function makeTrack(item) {
   if (!item?.url) return null;
   const url = new URL(item.url);
   if (url.protocol !== 'https:') return null;
-  const video = item.type === 'video' || item.type === 'animation';
-  const media = document.createElement(video ? 'video' : 'img');
+  const audioOnly=item.type==='audio';
+  const video = audioOnly || item.type === 'video' || item.type === 'animation';
+  const media = document.createElement(audioOnly?'audio':video ? 'video' : 'img');
   if (video) {
     media.muted = true; // applyAudio() le da voz en modo nativo
     media.playsInline = true;
@@ -121,7 +127,7 @@ function makeTrack(item) {
   }
   media.crossOrigin = 'anonymous';
   media.src = url.href;
-  return { media, url: url.href, video };
+  return { media, url: url.href, video, audioOnly };
 }
 
 function setTrack(orientation, item) {
@@ -164,7 +170,7 @@ function learnDuration(slot, track, at) {
 }
 
 function paintable(track) {
-  if (!track) return null;
+  if (!track || track.audioOnly) return null;
   return (track.video ? track.media.readyState >= 2 : track.media.complete && track.media.naturalWidth > 0) ? track.media : null;
 }
 
@@ -176,6 +182,19 @@ function clear(source) {
 
 /** Decide qué va en la LCD ahora mismo: playout si manda, si no la playlist propia por reloj de servidor (más el salto). */
 function program() {
+  if(priorityTurn && tracks.landscape?.video && tracks.landscape.url===priorityTurn.asset){
+    const duration=tracks.landscape.media.duration;
+    if(Number.isFinite(duration)&&duration>0)priorityTurn.until=priorityTurn.started+duration*1000;
+  }
+  const immediate=priorityState.emergency || priorityTurn;
+  if(immediate && (priorityState.emergency || serverNow()<priorityTurn.until)){
+    const track=trackOf(immediate);
+    setTrack('landscape',track);
+    if(tracks.landscape?.video && tracks.landscape.media.paused)void tracks.landscape.media.play().catch(()=>{});
+    onAir={source:'playlist',id:immediate.stockId,title:immediate.title,index:0,total:priorityState.emergency?1:playlist.slots.length,paired:false};
+    refreshNavigator();return;
+  }
+  priorityTurn=null;
   if (twinSelection !== null || !plan || pausedAt !== null) return;
   if (plan.power === 'off') return clear('off');
   if (plan.variants || plan.item) {
@@ -257,8 +276,7 @@ async function refreshStock() {
 
 /** La playlist que se emite: manual del mando + dirigidas por la API + etiquetadas en el Stock, sin repetir pieza. */
 function composePlaylist() {
-  const draft = sources.draft;
-  if (!draft) return;
+  const draft=sources.draft || {rev:0,items:[]};
   const seen = new Set(draft.items.map(item => String(item.stockId || item.id || '')));
   const extra = [];
   for (const item of [...sources.auto, ...sources.tagged]) {
@@ -267,9 +285,12 @@ function composePlaylist() {
     seen.add(id);
     extra.push(item);
   }
-  const rev = String(draft.rev) + (extra.length ? '+' + extra.map(item => item.stockId || item.id).join(',') : '') + '|excluded:' + exclusions.revision();
+  const baseRevision = String(draft.rev) + (extra.length ? '+' + extra.map(item => item.stockId || item.id).join(',') : '') + '|excluded:' + exclusions.revision();
+  const events=[priorityState.emergency,...priorityState.front,...priorityState.tail].filter(Boolean);
+  const rev=baseRevision+'|priority:'+events.map(item=>item.event).join(',');
   if (rev === playlist.rev) return;
-  const items = [...draft.items, ...extra].filter(item => !exclusions.has(item));
+  const baseItems = [...draft.items, ...extra].filter(item => !exclusions.has(item));
+  const items = AdmiraImportPriority.ordered(baseItems,priorityState);
   // Continuidad: si la pieza en antena sigue en la playlist nueva, sigue por donde iba (el ciclo anclado al reloj
   // saltaría a cualquier sitio al cambiar de longitud). Si no está, se vuelve al reloj puro.
   const before = onAir.source === 'playlist' && pausedAt === null ? slotAt(playlist.slots, serverNow() + jump.ms) : null;
@@ -480,15 +501,26 @@ setInterval(() => {
   refreshNavigator();
   const landscape = paintable(tracks.landscape);
   paintLcd(lcd, landscape);
-  paintPlaylistCounter(lcd, playlistCounter(onAir, playlist.slots, { muted: countersMuted() }));
+  if(!priorityState.emergency)paintPlaylistCounter(lcd, playlistCounter(onAir, playlist.slots, { muted: countersMuted() }));
   const timedSlot = slotAt(playlist.slots, (pausedAt ?? serverNow()) + jump.ms);
-  paintPlaylistTiming(lcd, playlistTiming(onAir, timedSlot, { muted: countersMuted() }));
+  if(!priorityState.emergency)paintPlaylistTiming(lcd, playlistTiming(onAir, timedSlot, { muted: countersMuted() }));
   playing = Boolean(landscape);
   frameCount++;
 }, 100);
 
 setInterval(() => void publishFrame(), 200);
 setInterval(program, PROGRAM_MS);
+AdmiraImportPriority.watch({screen:SCREEN,origin:API,onChange(state){
+  priorityState=state;
+  const next=state.front[0];
+  if(state.emergency){priorityTurn=null;twinSelection=null;pausedAt=null;}
+  else if(next && next.event!==lastPriority){
+    lastPriority=next.event;
+    try{localStorage.setItem('adtv_priority_played:'+SCREEN,lastPriority);}catch{}
+    priorityTurn={...next,started:serverNow(),until:serverNow()+next.seconds*1000};twinSelection=null;pausedAt=null;
+  }
+  composePlaylist();program();
+}});
 void refreshPlayout();
 void refreshPlaylist();
 void refreshStock();

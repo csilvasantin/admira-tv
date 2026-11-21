@@ -30,6 +30,7 @@ const CACHE = 'admira-shell-v.22.10.2026.r2.11:34';
 const SHELL = [
   '/',
   '/canal',
+  '/emergencia/',
   // El tótem (kiosko iPhone/iPad de los kioskos de prensa) es la OTRA página que tiene
   // que arrancar sin red tras un reinicio: es solo un envoltorio de /canal, pero si su
   // HTML no está en caché el kiosko se queda en blanco aunque el canal sí esté en disco.
@@ -38,6 +39,8 @@ const SHELL = [
   '/admira-nav.js',
   '/xpl-runtime.js',
   '/assets/player-pairing.js',
+  '/assets/import-priorities.js',
+  '/assets/emergency-player.js',
   '/assets/mba-auto-sync.js',
   '/assets/precision-sync.js',
   '/assets/seamless-video.js',
@@ -55,6 +58,8 @@ const CRITICAL = new Set([
   '/admira-nav.js',
   '/xpl-runtime.js',
   '/assets/player-pairing.js',
+  '/assets/import-priorities.js',
+  '/assets/emergency-player.js',
   '/assets/mba-auto-sync.js',
   '/assets/precision-sync.js',
   '/assets/seamless-video.js',
@@ -132,7 +137,7 @@ self.addEventListener('fetch', (e) => {
     // El player navega a /canal.html?embed=mupi → 308 → /canal?embed=mupi. Offline no hay
     // 308, así que para cualquier ruta /canal* caemos al shell de /canal cacheado; last resort /offline.html.
     const isCanal = /^\/canal(\.html)?$/.test(url.pathname);
-    const fallbacks = isCanal ? ['/canal', '/offline.html'] : ['/offline.html'];
+    const fallbacks = url.pathname==='/emergencia/' ? ['/emergencia/'] : isCanal ? ['/canal', '/offline.html'] : ['/offline.html'];
     e.respondWith(networkFirst(req, fallbacks));
     return;
   }

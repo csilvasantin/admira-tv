@@ -159,6 +159,6 @@ export function trackOf(item) {
   if (!item) return null;
   const url = String(item.asset || item.url || '');
   const type = String(item.assetType || item.type || '').toLowerCase();
-  if (!/^https:\/\//.test(url) || !['video', 'image', 'animation'].includes(type)) return null;
+  if (!/^https:\/\//.test(url) || !['video', 'image', 'animation','audio'].includes(type)) return null;
   return { id: String(item.stockId || item.id || ''), type, url, title: String(item.title || '') };
 }

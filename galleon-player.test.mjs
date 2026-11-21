@@ -128,8 +128,8 @@ test('las piezas del Stock etiquetadas corsair-galleon-100 (índice del Stock o 
   assert.match(player, /const STOCK_INDEX = 'https:\/\/stock\.admira\.store\/stock\/index\.json';/);
   assert.match(player, /taggedForScreen\(Array\.isArray\(data\) \? data : data\?\.items \|\| data\?\.assets \|\| \[\], SCREEN\)/);
   assert.match(player, /for \(const item of \[\.\.\.sources\.auto, \.\.\.sources\.tagged\]\)/); // detrás de la manual, sin repetir
-  assert.match(player, /const items = \[\.\.\.draft\.items, \.\.\.extra\]\.filter\(item => !exclusions\.has\(item\)\);/);
-  assert.match(player, /const rev = String\(draft\.rev\) \+ \(extra\.length \? '\+' \+ extra\.map\(item => item\.stockId \|\| item\.id\)\.join\(','\) : ''\) \+ '\|excluded:' \+ exclusions\.revision\(\);/); // cambia al entrar o salir una
+  assert.match(player, /const baseItems = \[\.\.\.draft\.items, \.\.\.extra\]\.filter\(item => !exclusions\.has\(item\)\);/);
+  assert.match(player, /const baseRevision = String\(draft\.rev\) \+ \(extra\.length \? '\+' \+ extra\.map\(item => item\.stockId \|\| item\.id\)\.join\(','\) : ''\) \+ '\|excluded:' \+ exclusions\.revision\(\);/); // cambia al entrar o salir una
   assert.match(player, /learnDuration\(at\.slot, tracks\.landscape, at\);/);
   assert.match(player, /slot\.seconds = Math\.max\(2, Math\.ceil\(duration\)\);/);
   assert.match(player, /void refreshStock\(\);/);

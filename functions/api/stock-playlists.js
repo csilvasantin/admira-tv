@@ -2,6 +2,10 @@ import {sessionEmail,accessFor,authHeaders} from '../_auth-session.js';
 import {stockActor,stockPlaylistSnapshot,onRequestPost as savePlaylist} from './playlist.js';
 import {stockCatalog,appendStockItems} from './_stock-playlists.js';
 
+import {validEvent,writePriority} from './_import-priority.js';
+import {lecturaBlocksWrite} from '../_lectura-guard.js';
+import {bindingForScreen} from './_programacion/xpace-binding.js';
+
 const reply=(body,status=200)=>Response.json(body,{status,headers:authHeaders()});
 const memo=new WeakMap();
 async function allowed(request,env){
@@ -17,21 +21,42 @@ async function snapshot(env,waitUntil,fresh=false){
 export async function onRequestGet({request,env,waitUntil}){
   if(!await allowed(request,env))return reply({ok:false,error:'unauthorized'},401);
   if(!env.ACCESS)return reply({ok:false,error:'storage_unavailable'},503);
-  return reply(stockCatalog(await snapshot(env,waitUntil)));
+  return reply({...stockCatalog(await snapshot(env,waitUntil)),priorityVersion:1});
 }
 export async function onRequestPost({request,env,waitUntil}){
   if(!await allowed(request,env))return reply({ok:false,error:'unauthorized'},401);
   if(!env.ACCESS)return reply({ok:false,error:'storage_unavailable'},503);
   let body;try{body=await request.json();}catch{return reply({ok:false,error:'invalid_json'},400);}
+  if(!body || typeof body!=='object' || Array.isArray(body))return reply({ok:false,error:'invalid_json'},400);
+  const delivery=Object.hasOwn(body||{},'priority') || body?.action==='end-emergency';
+  const priority=body?.action==='end-emergency'?3:body?.priority;
+  if(delivery){
+    if(await lecturaBlocksWrite(request,env))return reply({ok:false,error:'solo_lectura'},403);
+    if(!validEvent(body.event)||(![0,1,2].includes(priority)&&!(priority===3&&validEvent(body.expected))))return reply({ok:false,error:'invalid_priority'},400);
+    if(!env.PROGRAMACION_DB)return reply({ok:false,error:'priority_unavailable'},503);
+  }
   const screens=[...new Set(Array.isArray(body.screens)?body.screens:[])],ids=[...new Set(Array.isArray(body.stockIds)?body.stockIds:[])];
-  if(!screens.length||screens.length>36||!ids.length||ids.length>100||!screens.every(s=>/^[a-z0-9][a-z0-9-]{1,79}$/.test(s))||!ids.every(s=>/^[A-Za-z0-9_-]{1,160}$/.test(s)))return reply({ok:false,error:'invalid_selection'},400);
+  if(!screens.length||screens.length>36||(!ids.length&&priority!==3)||ids.length>100||!screens.every(s=>/^[a-z0-9][a-z0-9-]{1,79}$/.test(s))||!ids.every(s=>/^[A-Za-z0-9_-]{1,160}$/.test(s)))return reply({ok:false,error:'invalid_selection'},400);
   const snap=await snapshot(env,waitUntil,true), known=new Set(snap.screens.map(s=>s.screen));
   if(screens.some(s=>!known.has(s)))return reply({ok:false,error:'unknown_screen'},400);
-  const index=await fetch('https://stock.admira.store/stock/index.json').then(r=>r.ok?r.json():null).catch(()=>null);
+  if(delivery) {
+    if(screens.length!==1||(priority!==3&&ids.length!==1))return reply({ok:false,error:'select_one_destination'},400);
+    // Managed venues have a separate scoped writer. The generic distributor may not override them.
+    if(screens[0].startsWith('virtual-xp-')||await bindingForScreen(env.PROGRAMACION_DB,screens[0]))return reply({ok:false,error:'playlist_scope_required'},403);
+    if(priority===3){
+      const ok=await writePriority(env.PROGRAMACION_DB,{screen:screens[0],event:body.event,priority,expected:body.expected});
+      return reply({ok,error:ok?undefined:'incident_changed'},ok?200:409);
+    }
+  }
+  const index=await fetch('https://stock.admira.store/stock/index.json'+(delivery?'?published='+encodeURIComponent(ids[0]):''),delivery?{cache:'no-store'}:{}).then(r=>r.ok?r.json():null).catch(()=>null);
   if(!Array.isArray(index?.items))return reply({ok:false,error:'stock_unavailable'},503);
   const pieces=ids.map(id=>index.items.find(p=>p.id===id&&!p.oculto));
   if(pieces.some(p=>!p||!['video','image','audio','music','locucion','animation'].includes(p.type)||!/^https:\/\/stock\.admira\.store\//.test(p.url||'')))return reply({ok:false,error:'invalid_stock_item'},400);
   const items=pieces.map(p=>({id:'stock-'+p.id,stockId:p.id,title:p.title||p.id,asset:p.url,assetType:['music','locucion'].includes(p.type)?'audio':p.type,seconds:p.type==='image'?10:600,tags:p.tags||[]}));
+  if(delivery){
+    const ok=await writePriority(env.PROGRAMACION_DB,{screen:screens[0],event:body.event,priority,item:items[0]});
+    return reply({ok,event:body.event,error:ok?undefined:'event_conflict'},ok?200:409);
+  }
   const plans=[];
   for(const screen of screens){
     const draft=snap.playlists.find(p=>p.screen===screen);
