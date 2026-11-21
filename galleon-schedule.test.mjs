@@ -110,6 +110,12 @@ test('del índice del Stock salen las piezas etiquetadas con el nombre de la pan
   assert.deepEqual(taggedForScreen(null, 'corsair-galleon-100'), []);
 });
 
+test('la cola del teclado respeta #prioridadN: sin prioridad = 2 y por llegada; lo nuevo al final, prioridad 1 delante', () => {
+  const v = (id, extra = {}) => ({ id, type: 'video', title: id, url: 'https://stock.admira.store/stock/' + id + '/asset.mp4', tags: ['corsair'], ...extra });
+  const stock = [v('1794000000003-nueva', { prioridad: 2 }), v('1794000000001-vieja'), v('1794000000002-media', { prioridad: 2 }), v('1794000000009-urgente', { prioridad: 1 })];
+  assert.deepEqual(taggedForScreen(stock, 'corsair-galleon-100').map(i => i.stockId), ['1794000000009-urgente', '1794000000001-vieja', '1794000000002-media', '1794000000003-nueva']);
+});
+
 test('al cambiar la playlist o una duración, la pieza en antena sigue por donde iba (rebaseMs)', () => {
   const now = 1_700_000_000_000;
   const slots = pairPlaylist([H, V, ZOO_H, ZOO_V]);
